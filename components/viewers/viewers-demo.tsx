@@ -246,7 +246,7 @@ export function ExtractViewerDemo() {
 
 export function JsonFormSourcesDemo() {
   // Extraction rendered as a JSON form beside the source PDF — hover a form field
-  // to highlight where its value came from. json-form ⨯ pdf-viewer via useSourceLink.
+  // to highlight where its value came from.
   return (
     <div
       className="not-prose flex flex-col overflow-hidden rounded-xl border"

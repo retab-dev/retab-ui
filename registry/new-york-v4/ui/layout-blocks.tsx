@@ -4,10 +4,26 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import {
+  AnchoredDocumentProvider,
+  type AnchoredItem,
+  useAnchoredDocument,
+} from "@/components/ui/anchored-document-viewer"
+import {
+  usePdfAnchoredOverlay,
+  usePdfAnchoredTarget,
+} from "@/components/ui/pdf-anchor-target"
+import {
   PdfViewer,
   type PdfDocumentSource,
   type PdfViewerHandle,
 } from "@/components/ui/pdf-viewer"
+import {
+  ViewerBody,
+  ViewerHeader,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "@/components/ui/viewer"
 
 import {
   documentAiToLayoutDocument,
@@ -18,11 +34,8 @@ import { getScrollTarget } from "./layout-blocks-geometry"
 import { createLayoutItemIndex } from "./layout-blocks-index"
 import { LayoutBlocksPanel } from "./layout-blocks-panel"
 import type { LayoutItem } from "./layout-blocks-types"
-import { LayoutOverlayLayer } from "./layout-overlay-layer"
-import { useLayoutBlockSelection } from "./use-layout-block-selection"
 
 const LOW_CONFIDENCE_THRESHOLD = 0.9
-const INSPECTED_LEVELS = ["block"] as const
 
 export function DocumentAiLayoutBlocks({
   className,
@@ -47,8 +60,6 @@ export function DocumentAiLayoutBlocks({
   )
   const pdfSource = useDocumentAiPdfSource(output)
   const viewerRef = React.useRef<PdfViewerHandle>(null)
-  const lastAutoNavigatedItemIdRef = React.useRef<string | null>(null)
-  const selection = useLayoutBlockSelection()
   const [lowConfidenceOnly, setLowConfidenceOnly] = React.useState(false)
   const visibleItems = React.useMemo(
     () =>
@@ -61,124 +72,150 @@ export function DocumentAiLayoutBlocks({
       }),
     [layoutDocument.items, lowConfidenceOnly]
   )
-
-  const navigateItem = React.useCallback(
-    (item: LayoutItem, options: ScrollToOptions = { behavior: "smooth" }) => {
-      if (
-        options.behavior === "auto" &&
-        lastAutoNavigatedItemIdRef.current === item.id
-      ) {
-        return
-      }
-      if (options.behavior === "auto") {
-        lastAutoNavigatedItemIdRef.current = item.id
-      }
-
-      const page = index.pagesByNumber.get(item.pageNumber)
-      if (!page) return
-      const target = getScrollTarget(item, page)
-      viewerRef.current?.scrollToPageArea(
-        {
-          pageNumber: item.pageNumber,
-          left: target.left,
-          top: target.top,
-          width: target.width,
-          height: target.height,
-        },
-        options
-      )
-    },
-    [index.pagesByNumber]
+  const anchoredItems = React.useMemo(
+    () =>
+      visibleItems.map((item): AnchoredItem => {
+        const page = index.pagesByNumber.get(item.pageNumber)
+        const target = page ? getScrollTarget(item, page) : null
+        return {
+          id: item.id,
+          anchor: target
+            ? {
+                kind: "pdf-area",
+                pageNumber: target.pageNumber,
+                left: target.left,
+                top: target.top,
+                width: target.width,
+                height: target.height,
+              }
+            : null,
+        }
+      }),
+    [index.pagesByNumber, visibleItems]
   )
-
-  const renderPageOverlay = React.useCallback(
-    ({ pageNumber, rotation }: { pageNumber: number; rotation: number }) => {
-      const page = index.pagesByNumber.get(pageNumber)
-      if (!page) return null
-
-      return (
-        <LayoutOverlayLayer
-          interactive
-          activeItemId={selection.activeItemId}
-          items={visibleItems.filter((item) => item.pageNumber === pageNumber)}
-          page={page}
-          rotation={rotation}
-          selectedItemId={selection.selectedItemId}
-          visibleLevels={INSPECTED_LEVELS}
-          onItemClick={(item) => {
-            selection.selectItemId(item.id)
-            navigateItem(item)
-          }}
-          onItemPointerEnter={(item) => selection.setActiveItemId(item.id)}
-          onItemPointerLeave={selection.clearActiveItemId}
-        />
-      )
-    },
-    [index.pagesByNumber, navigateItem, selection, visibleItems]
-  )
+  const target = usePdfAnchoredTarget(viewerRef)
 
   return (
-    <div
+    <AnchoredDocumentProvider items={anchoredItems} target={target}>
+      <DocumentAiLayoutBlocksContent
+        anchoredItems={anchoredItems}
+        className={className}
+        heightClassName={heightClassName}
+        index={index}
+        lowConfidenceOnly={lowConfidenceOnly}
+        pdfSource={pdfSource}
+        setLowConfidenceOnly={setLowConfidenceOnly}
+        viewerRef={viewerRef}
+        visibleItems={visibleItems}
+      />
+    </AnchoredDocumentProvider>
+  )
+}
+
+function DocumentAiLayoutBlocksContent({
+  anchoredItems,
+  className,
+  heightClassName,
+  index,
+  lowConfidenceOnly,
+  pdfSource,
+  setLowConfidenceOnly,
+  viewerRef,
+  visibleItems,
+}: {
+  anchoredItems: readonly AnchoredItem[]
+  className?: string
+  heightClassName: string
+  index: ReturnType<typeof createLayoutItemIndex>
+  lowConfidenceOnly: boolean
+  pdfSource: ReturnType<typeof useDocumentAiPdfSource>
+  setLowConfidenceOnly: React.Dispatch<React.SetStateAction<boolean>>
+  viewerRef: React.RefObject<PdfViewerHandle | null>
+  visibleItems: LayoutItem[]
+}) {
+  const {
+    activeItemId,
+    activateItem,
+    clearSelection,
+    previewItem,
+    selectedItemId,
+  } = useAnchoredDocument()
+  const renderPageOverlay = usePdfAnchoredOverlay({
+    getItemLabel: (item) => {
+      const layoutItem = index.itemsById.get(item.id)
+      const text = layoutItem?.text.replace(/\s+/g, " ").trim()
+      return text ? `OCR block: ${text}` : `OCR block ${item.id}`
+    },
+    items: anchoredItems,
+    mode: "interactive",
+  })
+
+  return (
+    <ViewerRoot
       data-slot="layout-blocks"
-      className={cn(
-        "flex min-h-0 overflow-hidden bg-background",
-        heightClassName,
-        className
-      )}
+      className={cn("bg-background", heightClassName, className)}
+      bare
     >
-      <div className="min-h-0 min-w-0 flex-1">
-        {pdfSource.source ? (
-          <PdfViewer
-            ref={viewerRef}
-            bare
-            className="h-full"
-            renderPageOverlay={renderPageOverlay}
-            source={pdfSource.source}
-          />
-        ) : (
-          <div className="grid h-full place-items-center bg-muted/20 p-6 text-sm text-muted-foreground">
-            {pdfSource.error ?? "Preparing OCR pages..."}
-          </div>
-        )}
-      </div>
-      <aside className="flex min-h-0 w-[320px] shrink-0 flex-col border-l bg-background">
-        <div className="border-b p-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="truncate text-sm font-medium">OCR</div>
-              <div className="text-xs text-muted-foreground">
-                {visibleItems.length} blocks
-              </div>
+      <ViewerHeader>
+        <div className="flex items-center justify-between gap-3 p-3">
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium">OCR</div>
+            <div className="text-xs text-muted-foreground">
+              {visibleItems.length} blocks
             </div>
-            <label className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-              <input
-                type="checkbox"
-                className="size-3.5"
-                checked={lowConfidenceOnly}
-                onChange={(event) =>
-                  setLowConfidenceOnly(event.currentTarget.checked)
-                }
-              />
-              Low confidence
-            </label>
           </div>
+          <label className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              className="size-3.5"
+              checked={lowConfidenceOnly}
+              onChange={(event) =>
+                setLowConfidenceOnly(event.currentTarget.checked)
+              }
+            />
+            Low confidence
+          </label>
         </div>
-        <LayoutBlocksPanel
-          activeItemId={selection.activeItemId}
-          className="min-h-0 flex-1"
-          emptyLabel={
-            lowConfidenceOnly
-              ? "No low-confidence OCR blocks found."
-              : "No OCR blocks found."
-          }
-          items={visibleItems}
-          selectedItemId={selection.selectedItemId}
-          onActiveItemIdChange={selection.setActiveItemId}
-          onNavigateItem={navigateItem}
-          onSelectedItemIdChange={selection.selectItemId}
-        />
-      </aside>
-    </div>
+      </ViewerHeader>
+      <ViewerBody>
+        <ViewerSurface>
+          {pdfSource.source ? (
+            <PdfViewer
+              ref={viewerRef}
+              bare
+              className="h-full"
+              renderPageOverlay={renderPageOverlay}
+              source={pdfSource.source}
+            />
+          ) : (
+            <div className="grid h-full place-items-center bg-muted/20 p-6 text-sm text-muted-foreground">
+              {pdfSource.error ?? "Preparing OCR pages..."}
+            </div>
+          )}
+        </ViewerSurface>
+        <ViewerSidebar className="flex min-h-0 w-[320px] shrink-0 flex-col border-l bg-background md:w-[320px]">
+          <LayoutBlocksPanel
+            activeItemId={activeItemId}
+            className="min-h-0 flex-1"
+            emptyLabel={
+              lowConfidenceOnly
+                ? "No low-confidence OCR blocks found."
+                : "No OCR blocks found."
+            }
+            items={visibleItems}
+            selectedItemId={selectedItemId}
+            onActiveItemIdChange={previewItem}
+            onSelectedItemIdChange={(itemId) => {
+              if (itemId) {
+                activateItem(itemId)
+                return
+              }
+              clearSelection()
+            }}
+          />
+        </ViewerSidebar>
+      </ViewerBody>
+    </ViewerRoot>
   )
 }
 
@@ -229,5 +266,3 @@ export { documentAiToLayoutDocument } from "./layout-blocks-document-ai"
 export { documentAiToPdfBlob } from "./layout-blocks-document-ai-pdf"
 export { createLayoutItemIndex } from "./layout-blocks-index"
 export { LayoutBlocksPanel } from "./layout-blocks-panel"
-export { LayoutOverlayLayer } from "./layout-overlay-layer"
-export { useLayoutBlockSelection } from "./use-layout-block-selection"

@@ -7,12 +7,15 @@ import type {
   SourceAnchor,
   SourceLocation,
 } from "@/lib/document-source"
-import type { SourceTarget } from "@/hooks/use-source-link"
 import {
   PdfHighlight,
   type PageOverlayProps,
   type PdfViewerHandle,
 } from "@/components/ui/pdf-viewer"
+
+export interface SourceTarget {
+  scrollTo?: (source: Source, options: { behavior: ScrollBehavior }) => void
+}
 
 /**
  * Turn a source anchor into a PDF target, or `undefined` when the anchor isn't
@@ -85,9 +88,8 @@ function isValidNormalizedBox({
 }
 
 /**
- * A stable `SourceTarget` over a `PdfViewer` ref — pass to `useSourceLink`. The
- * ref is read lazily (only when scrolling), so this is just the bridge from the
- * generic source contract to the viewer's imperative handle.
+ * A stable source target over a `PdfViewer` ref. The ref is read lazily, so this
+ * is just the bridge from source anchors to the viewer's imperative handle.
  */
 export function usePdfSourceTarget(
   viewerRef: React.RefObject<PdfViewerHandle | null>
@@ -115,8 +117,8 @@ export function usePdfSourceTarget(
 }
 
 /**
- * Build a `renderPageOverlay` callback that draws the active source highlight on
- * its page. Pass `useSourceLink(...).activeSource` straight in.
+ * Build a `renderPageOverlay` callback that draws a source highlight on its
+ * page.
  */
 export function renderPdfSourceOverlay(
   source: Source | undefined

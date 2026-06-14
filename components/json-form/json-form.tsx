@@ -121,7 +121,7 @@ const TABLE_JUMP_ROW_OVERSCAN = 6
  * field (including array-table cells) becomes a hoverable card à la
  * `SourceFieldList`: hovering or focusing it reports the field's path, and the
  * field whose path matches `activePath` gets the highlighted-card treatment.
- * Wire `onFieldHover` + `activePath` straight from a `useSourceLink` result.
+ * Wire `onFieldHover` + `activePath` from a field anchor link.
  */
 export interface FieldSourceLink {
   activePath: string | null
@@ -2493,7 +2493,7 @@ export interface JsonFormProps {
   /**
    * Opt into field-level source linking. When set, every scalar field becomes a
    * hoverable card that reports its path and highlights when active — wire it
-   * straight from a `useSourceLink` result.
+   * straight from a field anchor link.
    */
   sourceLink?: FieldSourceLink
   /**

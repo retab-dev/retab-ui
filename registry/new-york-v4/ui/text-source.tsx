@@ -3,11 +3,14 @@
 import * as React from "react"
 
 import type { Source, SourceAnchor } from "@/lib/document-source"
-import type { SourceTarget } from "@/hooks/use-source-link"
 import type { TextLineRange } from "@/components/ui/text-viewer-ranges"
 
 interface TextSourceHandle {
   scrollToLineRange: (range: TextLineRange, options?: ScrollToOptions) => void
+}
+
+export interface SourceTarget {
+  scrollTo?: (source: Source, options: { behavior: ScrollBehavior }) => void
 }
 
 /** A text_span anchor → a 1-based inclusive line range. */
@@ -40,7 +43,7 @@ function isValidOptionalRange(start?: number, end?: number) {
   )
 }
 
-/** A stable `SourceTarget` over a text-like viewer ref — pass to `useSourceLink`. */
+/** A stable source target over a text-like viewer ref. */
 export function useTextSourceTarget(
   viewerRef: React.RefObject<TextSourceHandle | null>
 ): SourceTarget {
@@ -56,8 +59,7 @@ export function useTextSourceTarget(
 }
 
 /**
- * The line-range highlight prop derived from the active source. Pass
- * `useSourceLink(...).activeSource` straight in.
+ * The line-range highlight prop derived from a source.
  */
 export function sourceToTextHighlight(
   source: Source | undefined

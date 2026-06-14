@@ -3,11 +3,14 @@
 import * as React from "react"
 
 import type { Source, SourceAnchor } from "@/lib/document-source"
-import type { SourceTarget } from "@/hooks/use-source-link"
 import type {
   CsvCellAddress,
   CsvViewerHandle,
 } from "@/components/ui/csv-viewer"
+
+export interface SourceTarget {
+  scrollTo?: (source: Source, options: { behavior: ScrollBehavior }) => void
+}
 
 /** Spreadsheet column letter → 0-based index ("A" → 0, "C" → 2, "AA" → 26). */
 export function columnLetterToIndex(letter: string): number | null {
@@ -42,7 +45,7 @@ export function csvAnchorToTarget(anchor: SourceAnchor): CsvCellAddress | null {
   return null
 }
 
-/** A stable `SourceTarget` over a `CsvViewer` ref — pass to `useSourceLink`. */
+/** A stable source target over a `CsvViewer` ref. */
 export function useCsvSourceTarget(
   viewerRef: React.RefObject<CsvViewerHandle | null>
 ): SourceTarget {
@@ -58,8 +61,7 @@ export function useCsvSourceTarget(
 }
 
 /**
- * The `activeCell` prop for `CsvViewer` derived from the active source. Pass
- * `useSourceLink(...).activeSource` straight in.
+ * The `activeCell` prop for `CsvViewer` derived from a source.
  */
 export function sourceToCsvCell(
   source: Source | undefined

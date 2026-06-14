@@ -2,9 +2,15 @@
 
 import * as React from "react"
 
-import type { Source, SourceMap } from "@/lib/document-source"
-import { useSourceLink } from "@/hooks/use-source-link"
-import { sourceToCsvCell, useCsvSourceTarget } from "@/components/ui/csv-source"
+import type { Source } from "@/lib/document-source"
+import {
+  AnchoredDocumentProvider,
+  type AnchoredDocumentTarget,
+  type AnchoredItem,
+  useAnchoredDocument,
+  useAnchoredFieldLink,
+} from "@/components/ui/anchored-document-viewer"
+import { csvAnchorToTarget } from "@/components/ui/csv-source"
 import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
 import {
   SourceFieldList,
@@ -30,23 +36,54 @@ const FIELDS = (csvSample as CsvField[]).map((field) => ({
       ? `Cell ${field.source.anchor.coordinate ?? field.source.anchor.column}`
       : undefined,
 }))
-const SOURCES: SourceMap = Object.fromEntries(
-  FIELDS.map((field) => [field.key, field.source])
-)
+const ITEMS: AnchoredItem[] = FIELDS.map((field) => {
+  const target = csvAnchorToTarget(field.source.anchor)
+  return {
+    id: field.key,
+    anchor: target
+      ? {
+          kind: "csv-cell",
+          rowIndex: target.rowIndex,
+          columnIndex: target.columnIndex,
+        }
+      : null,
+  }
+})
 
 /**
  * CSV sources block — extracted values linked to the spreadsheet cells they came
- * from. Hovering a field highlights its cell and scrolls to it. Same source-link
- * abstraction, with the CSV viewer's cell handle + the csv_cell adapter.
+ * from. Hovering a field highlights its cell and scrolls to it. Same
+ * anchored-document abstraction, with the CSV viewer's cell target adapter.
  */
 export function CsvSourcesBlock() {
   const viewerRef = React.useRef<CsvViewerHandle>(null)
-  const target = useCsvSourceTarget(viewerRef)
-  const link = useSourceLink({
-    sources: SOURCES,
-    target,
-    initialField: FIELDS[0]?.key,
-  })
+  const target = useCsvAnchoredTarget(viewerRef)
+
+  return (
+    <AnchoredDocumentProvider
+      items={ITEMS}
+      target={target}
+      initialItemId={FIELDS[0]?.key}
+    >
+      <CsvSourcesContent viewerRef={viewerRef} />
+    </AnchoredDocumentProvider>
+  )
+}
+
+function CsvSourcesContent({
+  viewerRef,
+}: {
+  viewerRef: React.RefObject<CsvViewerHandle | null>
+}) {
+  const link = useAnchoredFieldLink()
+  const { activeAnchor, activeItem } = useAnchoredDocument()
+  const activeCell =
+    activeAnchor?.kind === "csv-cell"
+      ? {
+          rowIndex: activeAnchor.rowIndex,
+          columnIndex: activeAnchor.columnIndex,
+        }
+      : null
 
   return (
     <div className="flex h-full min-h-[680px] bg-background">
@@ -56,15 +93,35 @@ export function CsvSourcesBlock() {
           source={{ kind: "text", text: CSV_TEXT, fileName: "sales.csv" }}
           fillHeight
           className="h-full rounded-none border-0"
-          activeCell={sourceToCsvCell(link.activeSource)}
+          activeCell={activeCell}
         />
         <SourceIndicator
           path={link.activePath}
-          found={!!link.activeSource}
+          found={!!activeItem?.anchor}
           className="top-2"
         />
       </div>
       <SourceFieldList fields={FIELDS} link={link} />
     </div>
+  )
+}
+
+function useCsvAnchoredTarget(
+  viewerRef: React.RefObject<CsvViewerHandle | null>
+): AnchoredDocumentTarget {
+  return React.useMemo(
+    () => ({
+      scrollToAnchor: (anchor, options) => {
+        if (anchor.kind !== "csv-cell") return
+        viewerRef.current?.scrollToCell(
+          {
+            rowIndex: anchor.rowIndex,
+            columnIndex: anchor.columnIndex,
+          },
+          options
+        )
+      },
+    }),
+    [viewerRef]
   )
 }

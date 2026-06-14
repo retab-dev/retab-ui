@@ -3,8 +3,11 @@
 import * as React from "react"
 
 import type { Source, SourceAnchor } from "@/lib/document-source"
-import type { SourceTarget } from "@/hooks/use-source-link"
 import type { XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
+
+export interface SourceTarget {
+  scrollTo?: (source: Source, options: { behavior: ScrollBehavior }) => void
+}
 
 /** Spreadsheet column letter → 0-based index ("A" → 0, "B" → 1, "AA" → 26). */
 export function spreadsheetColumnToIndex(letter: string): number | null {
@@ -44,7 +47,7 @@ export function xlsxAnchorToTarget(
   return undefined
 }
 
-/** A stable `SourceTarget` over an `XlsxViewer` ref — pass to `useSourceLink`. */
+/** A stable source target over an `XlsxViewer` ref. */
 export function useXlsxSourceTarget(
   viewerRef: React.RefObject<XlsxViewerHandle | null>
 ): SourceTarget {
@@ -67,8 +70,8 @@ export function useXlsxSourceTarget(
 }
 
 /**
- * The public compatibility `activeCell` prop for `XlsxViewer` derived from the
- * active source. Pass `useSourceLink(...).activeSource` straight in.
+ * The public compatibility `activeCell` prop for `XlsxViewer` derived from a
+ * source.
  */
 export function sourceToXlsxCell(
   source: Source | undefined

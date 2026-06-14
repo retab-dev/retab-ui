@@ -3,11 +3,11 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
-import type { UseSourceLinkResult } from "@/hooks/use-source-link"
+import type { FieldAnchorLink } from "@/components/ui/anchored-document-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 export interface SourceField {
-  /** Join key — must match the `SourceMap` key for this field. */
+  /** Join key — must match the anchored item id for this field. */
   key: string
   label: string
   value: React.ReactNode
@@ -16,9 +16,8 @@ export interface SourceField {
 }
 
 /**
- * A simple field list that drives a `useSourceLink`: hovering a field previews
- * its source in the viewer, clicking pins it. The emitter side of a source
- * block — pair it with any source-capable viewer.
+ * A simple field list that drives anchored document state: hovering a field
+ * previews its anchor in the viewer, clicking selects it.
  */
 export function SourceFieldList({
   fields,
@@ -27,7 +26,7 @@ export function SourceFieldList({
   className,
 }: {
   fields: SourceField[]
-  link: Pick<UseSourceLinkResult, "activePath" | "onFieldHover" | "selectField">
+  link: FieldAnchorLink
   title?: string
   className?: string
 }) {
@@ -56,7 +55,7 @@ export function SourceFieldList({
                 onMouseLeave={() => link.onFieldHover(null)}
                 onFocus={() => link.onFieldHover(field.key)}
                 onBlur={() => link.onFieldHover(null)}
-                onClick={() => link.selectField(field.key)}
+                onClick={() => link.selectField?.(field.key)}
                 className={cn(
                   "flex flex-col gap-0.5 rounded-md border px-3 py-2 text-left transition-colors",
                   active

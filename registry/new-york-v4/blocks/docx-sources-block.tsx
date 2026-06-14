@@ -2,11 +2,16 @@
 
 import * as React from "react"
 
-import type { Source, SourceMap } from "@/lib/document-source"
-import { useSourceLink } from "@/hooks/use-source-link"
+import type { Source } from "@/lib/document-source"
 import {
-  sourceToDocxHighlight,
-  useDocxSourceTarget,
+  AnchoredDocumentProvider,
+  type AnchoredDocumentTarget,
+  type AnchoredItem,
+  useAnchoredDocument,
+  useAnchoredFieldLink,
+} from "@/components/ui/anchored-document-viewer"
+import {
+  docxAnchorToTarget,
 } from "@/components/ui/docx-source"
 import { DocxViewer, type DocxViewerHandle } from "@/components/ui/docx-viewer"
 import {
@@ -33,24 +38,49 @@ const FIELDS = (docxSample as DocxField[]).map((field) => ({
   ...field,
   hint: hintFor(field.source),
 }))
-const SOURCES: SourceMap = Object.fromEntries(
-  FIELDS.map((field) => [field.key, field.source])
-)
+const ITEMS: AnchoredItem[] = FIELDS.map((field) => {
+  const target = docxAnchorToTarget(field.source.anchor, field.source)
+  return {
+    id: field.key,
+    anchor: target
+      ? {
+          kind: "docx-target",
+          target,
+        }
+      : null,
+  }
+})
 
 /**
  * DOCX sources block — values extracted from a Word document, linked to where
  * they came from. Hovering a field highlights its text in the document and
- * scrolls to it. Same source-link abstraction as the other formats, with the
- * docx viewer + its content-match / table-index adapter.
+ * scrolls to it. Same anchored-document abstraction as the other formats, with
+ * the docx viewer target adapter.
  */
 export function DocxSourcesBlock() {
   const viewerRef = React.useRef<DocxViewerHandle>(null)
-  const target = useDocxSourceTarget(viewerRef)
-  const link = useSourceLink({
-    sources: SOURCES,
-    target,
-    initialField: FIELDS[0]?.key,
-  })
+  const target = useDocxAnchoredTarget(viewerRef)
+
+  return (
+    <AnchoredDocumentProvider
+      items={ITEMS}
+      target={target}
+      initialItemId={FIELDS[0]?.key}
+    >
+      <DocxSourcesContent viewerRef={viewerRef} />
+    </AnchoredDocumentProvider>
+  )
+}
+
+function DocxSourcesContent({
+  viewerRef,
+}: {
+  viewerRef: React.RefObject<DocxViewerHandle | null>
+}) {
+  const link = useAnchoredFieldLink()
+  const { activeAnchor, activeItem } = useAnchoredDocument()
+  const highlight =
+    activeAnchor?.kind === "docx-target" ? activeAnchor.target : null
 
   return (
     <div className="flex h-full min-h-[680px] bg-background">
@@ -64,11 +94,25 @@ export function DocxSourcesBlock() {
           }}
           bare
           className="h-full"
-          highlight={sourceToDocxHighlight(link.activeSource)}
+          highlight={highlight}
         />
-        <SourceIndicator path={link.activePath} found={!!link.activeSource} />
+        <SourceIndicator path={link.activePath} found={!!activeItem?.anchor} />
       </div>
       <SourceFieldList fields={FIELDS} link={link} />
     </div>
+  )
+}
+
+function useDocxAnchoredTarget(
+  viewerRef: React.RefObject<DocxViewerHandle | null>
+): AnchoredDocumentTarget {
+  return React.useMemo(
+    () => ({
+      scrollToAnchor: (anchor, options) => {
+        if (anchor.kind !== "docx-target") return
+        viewerRef.current?.scrollToTarget(anchor.target, options)
+      },
+    }),
+    [viewerRef]
   )
 }

@@ -3,8 +3,11 @@
 import * as React from "react"
 
 import type { Source, SourceAnchor } from "@/lib/document-source"
-import type { SourceTarget } from "@/hooks/use-source-link"
 import type { DocxTarget, DocxViewerHandle } from "@/components/ui/docx-viewer"
+
+export interface SourceTarget {
+  scrollTo?: (source: Source, options: { behavior: ScrollBehavior }) => void
+}
 
 /**
  * A docx anchor + source payload -> a viewer-ready `DocxTarget`, or null when
@@ -59,7 +62,7 @@ function isValidOptionalRange(start?: number, end?: number) {
   )
 }
 
-/** A stable `SourceTarget` over a `DocxViewer` ref — pass to `useSourceLink`. */
+/** A stable source target over a `DocxViewer` ref. */
 export function useDocxSourceTarget(
   viewerRef: React.RefObject<DocxViewerHandle | null>
 ): SourceTarget {
@@ -75,8 +78,8 @@ export function useDocxSourceTarget(
 }
 
 /**
- * The `highlight` prop for `DocxViewer` derived from the active source. Pass
- * `useSourceLink(...).activeSource` straight in; non-docx anchors resolve to null.
+ * The `highlight` prop for `DocxViewer` derived from a source; non-docx
+ * anchors resolve to null.
  */
 export function sourceToDocxHighlight(
   source: Source | undefined

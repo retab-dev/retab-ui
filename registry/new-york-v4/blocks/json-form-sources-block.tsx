@@ -5,11 +5,17 @@ import type { JSONSchema7 } from "json-schema"
 import { useForm } from "react-hook-form"
 
 import { extractionSourcesToSourceMap } from "@/lib/document-source"
-import { useSourceLink } from "@/hooks/use-source-link"
 import {
-  renderPdfSourceOverlay,
-  usePdfSourceTarget,
-} from "@/components/ui/pdf-source"
+  AnchoredDocumentProvider,
+  type AnchoredItem,
+  useAnchoredDocument,
+  useAnchoredFieldLink,
+} from "@/components/ui/anchored-document-viewer"
+import {
+  sourceToPdfAnchor,
+  usePdfAnchoredOverlay,
+  usePdfAnchoredTarget,
+} from "@/components/ui/pdf-anchor-target"
 import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { SourceIndicator } from "@/components/ui/source-indicator"
@@ -24,6 +30,10 @@ const PDF_URL = "/samples/jane-doe-bank-statement-5-pages.pdf"
 const schema = sourcesSample.schema as JSONSchema7
 const extraction = sourcesSample.extraction as Record<string, unknown>
 const SOURCES = extractionSourcesToSourceMap(sourcesSample.sources)
+const ITEMS: AnchoredItem[] = Object.entries(SOURCES).map(([id, source]) => ({
+  id,
+  anchor: sourceToPdfAnchor(source),
+}))
 
 /**
  * JSON Form ⨯ PDF sources block — extraction rendered as a form beside the source
@@ -31,10 +41,9 @@ const SOURCES = extractionSourcesToSourceMap(sourcesSample.sources)
  * value came from in the PDF and scrolls to it.
  *
  * This is the abstraction working across components that don't know about each
- * other: `json-form` is source-link-aware — pass the `useSourceLink` result as
- * `sourceLink` and every field reports its path (a dotted RHF path matching the
- * flattened `SourceMap` keys) on hover; the PDF adapter is the target. No
- * bespoke wiring between form and viewer.
+ * other: `json-form` receives a field-anchor link and every field reports its
+ * path on hover; the PDF adapter is the target. No bespoke wiring between form
+ * and viewer.
  */
 export function JsonFormSourcesBlock({
   defaultOpenPaths,
@@ -42,9 +51,28 @@ export function JsonFormSourcesBlock({
   defaultOpenPaths?: readonly string[]
 } = {}) {
   const viewerRef = React.useRef<PdfViewerHandle>(null)
-  const target = usePdfSourceTarget(viewerRef)
-  const link = useSourceLink({ sources: SOURCES, target })
+  const target = usePdfAnchoredTarget(viewerRef)
 
+  return (
+    <AnchoredDocumentProvider items={ITEMS} target={target}>
+      <JsonFormSourcesContent
+        defaultOpenPaths={defaultOpenPaths}
+        viewerRef={viewerRef}
+      />
+    </AnchoredDocumentProvider>
+  )
+}
+
+function JsonFormSourcesContent({
+  defaultOpenPaths,
+  viewerRef,
+}: {
+  defaultOpenPaths?: readonly string[]
+  viewerRef: React.RefObject<PdfViewerHandle | null>
+}) {
+  const link = useAnchoredFieldLink()
+  const { activeItem } = useAnchoredDocument()
+  const renderPageOverlay = usePdfAnchoredOverlay({ mode: "active" })
   const form = useForm<Record<string, unknown>>({ defaultValues: extraction })
 
   return (
@@ -59,9 +87,9 @@ export function JsonFormSourcesBlock({
           }}
           bare
           className="h-full"
-          renderPageOverlay={renderPdfSourceOverlay(link.activeSource)}
+          renderPageOverlay={renderPageOverlay}
         />
-        <SourceIndicator path={link.activePath} found={!!link.activeSource} />
+        <SourceIndicator path={link.activePath} found={!!activeItem?.anchor} />
       </div>
       <aside className="flex w-[420px] flex-shrink-0 flex-col border-l">
         <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">

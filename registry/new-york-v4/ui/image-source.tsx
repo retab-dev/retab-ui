@@ -4,7 +4,6 @@ import * as React from "react"
 
 import type { Source, SourceAnchor, SourceArea } from "@/lib/document-source"
 import { normalizeRotation, rotateNormalizedBox } from "@/lib/image-geometry"
-import type { SourceTarget } from "@/hooks/use-source-link"
 import {
   type ImageFrameOverlayProps,
   type ImageViewerHandle,
@@ -12,6 +11,10 @@ import {
 
 const HIGHLIGHT_CLASS =
   "pointer-events-none absolute z-10 rounded-[2px] border border-primary/70 bg-primary/12 shadow-[0_4px_16px_rgb(0_0_0_/_8%)]"
+
+export interface SourceTarget {
+  scrollTo?: (source: Source, options: { behavior: ScrollBehavior }) => void
+}
 
 export interface ImageSourceTarget {
   frame: number
@@ -109,7 +112,7 @@ function toPercent(value: number): number {
   return Math.round(value * 100 * 1e10) / 1e10
 }
 
-/** A stable `SourceTarget` over an `ImageViewer` ref — pass to `useSourceLink`. */
+/** A stable source target over an `ImageViewer` ref. */
 export function useImageSourceTarget(
   viewerRef: React.RefObject<ImageViewerHandle | null>
 ): SourceTarget {
@@ -131,8 +134,8 @@ export function useImageSourceTarget(
 }
 
 /**
- * Build a `renderFrameOverlay` callback that draws the active source highlight
- * on the image. Pass `useSourceLink(...).activeSource` straight in.
+ * Build a `renderFrameOverlay` callback that draws a source highlight on the
+ * image.
  */
 export function renderImageSourceOverlay(
   source: Source | undefined

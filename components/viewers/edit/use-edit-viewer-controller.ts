@@ -23,8 +23,6 @@ export function useEditViewerController({
   filledDocument,
   mode,
   onModeChange,
-  selectedFieldKey,
-  onSelectedFieldKeyChange,
   status,
   options,
 }: Pick<
@@ -34,8 +32,6 @@ export function useEditViewerController({
   | "filledDocument"
   | "mode"
   | "onModeChange"
-  | "selectedFieldKey"
-  | "onSelectedFieldKeyChange"
   | "options"
 > & {
   status: NonNullable<EditViewerProps["status"]>
@@ -78,53 +74,14 @@ export function useEditViewerController({
     setUncontrolledMode(activeMode)
   }, [activeMode, mode, uncontrolledMode])
 
-  const [internalSelectedFieldKey, setInternalSelectedFieldKey] =
-    React.useState<string | null>(null)
-  const [hoveredFieldKey, setHoveredFieldKey] = React.useState<string | null>(
-    null
-  )
   const [query, setQuery] = React.useState("")
   const [filter, setFilter] = React.useState<EditViewerFilter>("all")
 
-  const selectedFieldKeyValue = selectedFieldKey ?? internalSelectedFieldKey
-  const effectiveFieldKey = hoveredFieldKey ?? selectedFieldKeyValue
   const fieldByKey = React.useMemo(() => createFieldMap(fields), [fields])
-
-  React.useEffect(() => {
-    if (!selectedFieldKeyValue || fieldByKey.has(selectedFieldKeyValue)) return
-    if (selectedFieldKey === undefined) setInternalSelectedFieldKey(null)
-    onSelectedFieldKeyChange?.(null)
-  }, [
-    fieldByKey,
-    onSelectedFieldKeyChange,
-    selectedFieldKey,
-    selectedFieldKeyValue,
-  ])
 
   const filledCount = React.useMemo(
     () => fields.filter(isEditFieldFilled).length,
     [fields]
-  )
-  const setSelectedFieldKey = React.useCallback(
-    (nextSelectedFieldKey: string | null) => {
-      if (selectedFieldKey === undefined) {
-        setInternalSelectedFieldKey(nextSelectedFieldKey)
-      }
-      onSelectedFieldKeyChange?.(nextSelectedFieldKey)
-    },
-    [onSelectedFieldKeyChange, selectedFieldKey]
-  )
-  const selectField = React.useCallback(
-    (nextSelectedFieldKey: string) => {
-      setSelectedFieldKey(nextSelectedFieldKey)
-      const field = fieldByKey.get(nextSelectedFieldKey)
-      if (!field?.bbox) return
-      viewerRef.current?.scrollToPageArea({
-        pageNumber: field.bbox.page,
-        top: field.bbox.top * 100,
-      })
-    },
-    [fieldByKey, setSelectedFieldKey]
   )
   const changeMode = React.useCallback(
     (nextMode: EditViewerMode) => {
@@ -140,7 +97,7 @@ export function useEditViewerController({
     activeStatus: status.state === "idle" ? null : status,
     availableModes,
     changeMode,
-    effectiveFieldKey,
+    fieldByKey,
     fields,
     fieldsByPage,
     filledCount,
@@ -151,10 +108,7 @@ export function useEditViewerController({
       fields.length > 0,
     query,
     resolvedOptions,
-    selectedFieldKey: selectedFieldKeyValue,
-    selectField,
     setFilter,
-    setHoveredFieldKey,
     setQuery,
     viewerRef,
   }

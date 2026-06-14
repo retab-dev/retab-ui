@@ -56,14 +56,3 @@ export type LayoutDocument = {
   pages: LayoutPage[]
   items: LayoutItem[]
 }
-
-export type LayoutBlockSelection = {
-  activeItemId: string | null
-  selectedItemId: string | null
-  effectiveItemId: string | null
-  setActiveItemId: (itemId: string | null) => void
-  selectItemId: (itemId: string | null) => void
-  clearActiveItemId: () => void
-  clearSelectedItemId: () => void
-  clear: () => void
-}

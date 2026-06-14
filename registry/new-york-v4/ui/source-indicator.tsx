@@ -8,8 +8,7 @@ import { cn } from "@/lib/utils"
 /**
  * A floating pill that reports the active field's source state over a viewer:
  * nothing selected, a located field (its path), or a field with no source.
- * Mount it inside a `relative` viewer pane. Feed it from `useSourceLink`:
- * `path={link.activePath} found={!!link.activeSource}`.
+ * Mount it inside a `relative` viewer pane.
  */
 export function SourceIndicator({
   path,

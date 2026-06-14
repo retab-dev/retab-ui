@@ -11,40 +11,37 @@ import {
 } from "@/lib/document-source"
 import { cn } from "@/lib/utils"
 import {
-  useSourceLink,
-  type UseSourceLinkResult,
-} from "@/hooks/use-source-link"
+  AnchoredDocumentProvider,
+  type AnchoredDocumentTarget,
+  type AnchoredItem,
+  type DocumentAnchor,
+  useAnchoredDocument,
+  useAnchoredFieldLink,
+} from "@/components/ui/anchored-document-viewer"
 import { CodeViewer, type CodeViewerHandle } from "@/components/ui/code-viewer"
-import { sourceToCsvCell, useCsvSourceTarget } from "@/components/ui/csv-source"
+import { csvAnchorToTarget } from "@/components/ui/csv-source"
 import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
-import {
-  sourceToDocxHighlight,
-  useDocxSourceTarget,
-} from "@/components/ui/docx-source"
+import { docxAnchorToTarget } from "@/components/ui/docx-source"
 import { DocxViewer, type DocxViewerHandle } from "@/components/ui/docx-viewer"
 import {
-  renderImageSourceOverlay,
-  useImageSourceTarget,
+  imageAnchorToTarget,
+  rotateImageArea,
 } from "@/components/ui/image-source"
 import {
   ImageViewer,
   type ImageViewerHandle,
 } from "@/components/ui/image-viewer"
+import type { ImageFrameOverlayProps } from "@/components/ui/image-viewer-types"
 import {
-  renderPdfSourceOverlay,
-  usePdfSourceTarget,
-} from "@/components/ui/pdf-source"
+  sourceToPdfAnchor,
+  usePdfAnchoredOverlay,
+  usePdfAnchoredTarget,
+} from "@/components/ui/pdf-anchor-target"
 import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { SourceIndicator } from "@/components/ui/source-indicator"
-import {
-  sourceToTextHighlight,
-  useTextSourceTarget,
-} from "@/components/ui/text-source"
-import {
-  sourceToXlsxCell,
-  useXlsxSourceTarget,
-} from "@/components/ui/xlsx-source"
+import { textAnchorToTarget } from "@/components/ui/text-source"
+import { xlsxAnchorToTarget } from "@/components/ui/xlsx-source"
 import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
 import { JsonForm } from "@/components/json-form/json-form"
 import csvSample from "@/components/viewers/sample-data/csv-sources.json"
@@ -74,17 +71,22 @@ APAC,Q2,560000,24,1.11`
 type FlatField = { key: string; label: string; value: string; source: Source }
 
 type Extraction = {
+  items: AnchoredItem[]
   schema: JSONSchema7
-  values: Record<string, unknown>
   sources: SourceMap
+  values: Record<string, unknown>
 }
 
-// Build a JSON form's three inputs (schema, values, source map) from a flat
-// field array, so every format renders the same json-form panel. The schema
-// property names match the source-map keys, which are the paths json-form emits
-// on hover — so the source link resolves without any per-format wiring.
+// Build a JSON form's inputs from a flat field array. The schema property names
+// match the source-map keys, which become anchored item ids for json-form hover
+// and click interactions.
 function flatExtraction(fields: FlatField[]): Extraction {
+  const sources = Object.fromEntries(
+    fields.map((field) => [field.key, field.source])
+  )
+
   return {
+    items: sourcesToAnchoredItems(sources),
     schema: {
       type: "object",
       properties: Object.fromEntries(
@@ -95,18 +97,19 @@ function flatExtraction(fields: FlatField[]): Extraction {
       ),
     },
     values: Object.fromEntries(fields.map((field) => [field.key, field.value])),
-    sources: Object.fromEntries(
-      fields.map((field) => [field.key, field.source])
-    ),
+    sources,
   }
 }
 
 // The PDF tab uses the richer, nested extraction sample (a real /sources
 // response); the rest derive a flat form from their per-format field arrays.
 const PDF_EXTRACTION: Extraction = {
+  items: sourcesToAnchoredItems(
+    extractionSourcesToSourceMap(jsonFormSample.sources)
+  ),
   schema: jsonFormSample.schema as JSONSchema7,
-  values: jsonFormSample.extraction as Record<string, unknown>,
   sources: extractionSourcesToSourceMap(jsonFormSample.sources),
+  values: jsonFormSample.extraction as Record<string, unknown>,
 }
 const IMAGE_EXTRACTION = flatExtraction(imageSample as FlatField[])
 const TEXT_EXTRACTION = flatExtraction(textSample as FlatField[])
@@ -114,28 +117,105 @@ const CSV_EXTRACTION = flatExtraction(csvSample as FlatField[])
 const XLSX_EXTRACTION = flatExtraction(xlsxSample as FlatField[])
 const DOCX_EXTRACTION = flatExtraction(docxSample as FlatField[])
 
+function sourcesToAnchoredItems(sources: SourceMap): AnchoredItem[] {
+  return Object.entries(sources).map(([id, source]) => ({
+    id,
+    anchor: sourceToDocumentAnchor(source),
+  }))
+}
+
+function sourceToDocumentAnchor(source: Source): DocumentAnchor | null {
+  if (source.anchor.kind === "pdf_bbox") {
+    return sourceToPdfAnchor(source)
+  }
+
+  if (source.anchor.kind === "image_bbox") {
+    const target = imageAnchorToTarget(source.anchor)
+    return target
+      ? {
+          kind: "image-area",
+          frameNumber: target.frame,
+          left: target.area.left,
+          top: target.area.top,
+          width: target.area.width,
+          height: target.area.height,
+        }
+      : null
+  }
+
+  if (source.anchor.kind === "text_span") {
+    const target = textAnchorToTarget(source.anchor)
+    return target
+      ? {
+          kind: "text-range",
+          startLine: target.start,
+          endLine: target.end,
+        }
+      : null
+  }
+
+  if (source.anchor.kind === "csv_cell") {
+    const target = csvAnchorToTarget(source.anchor)
+    return target
+      ? {
+          kind: "csv-cell",
+          rowIndex: target.rowIndex,
+          columnIndex: target.columnIndex,
+        }
+      : null
+  }
+
+  if (source.anchor.kind === "spreadsheet_cell") {
+    const target = xlsxAnchorToTarget(source.anchor)
+    return target
+      ? {
+          kind: "xlsx-cell",
+          sheetIndex: target.sheet,
+          rowIndex: target.row,
+          columnIndex: target.col,
+        }
+      : null
+  }
+
+  if (
+    source.anchor.kind === "docx_text_span" ||
+    source.anchor.kind === "docx_table_cell"
+  ) {
+    const target = docxAnchorToTarget(source.anchor, source)
+    return target
+      ? {
+          kind: "docx-target",
+          target,
+        }
+      : null
+  }
+
+  return null
+}
+
 // ── Shared layout: viewer + json-form extraction panel ────────────────────────
 
 /**
  * The extraction shell every tab shares: the source document on the left, the
- * extraction rendered as a JSON form on the right. Hovering a form field reports
- * its path to the source link, which scrolls and highlights the document; the
- * caller wires its viewer's overlay to `link.activeSource`.
+ * extraction rendered as a JSON form on the right. Hovering or clicking a form
+ * field reports its path to the anchored provider, which scrolls and highlights
+ * through the active document target.
  */
 function ExtractionShell({
-  link,
   extraction,
   children,
 }: {
-  link: UseSourceLinkResult
   extraction: Extraction
   children: React.ReactNode
 }) {
+  const link = useAnchoredFieldLink()
+  const { activeItem } = useAnchoredDocument()
+
   return (
     <div className="flex h-full bg-background">
       <div className="relative min-w-0 flex-1">
         {children}
-        <SourceIndicator path={link.activePath} found={!!link.activeSource} />
+        <SourceIndicator path={link.activePath} found={!!activeItem?.anchor} />
       </div>
       <ExtractionForm extraction={extraction} link={link} />
     </div>
@@ -147,15 +227,14 @@ function ExtractionForm({
   link,
 }: {
   extraction: Extraction
-  link: UseSourceLinkResult
+  link: ReturnType<typeof useAnchoredFieldLink>
 }) {
   const form = useForm<Record<string, unknown>>({
     defaultValues: extraction.values,
   })
 
-  // `json-form` is source-link-aware: pass the link and every field
-  // becomes a hoverable card that reports its path (an RHF dot-path matching the
-  // source-map keys) and highlights when active. No per-field wiring needed.
+  // `json-form` is field-anchor-aware: pass the link and every field becomes a
+  // hoverable card that reports its path. No per-field wiring needed.
   return (
     <aside className="flex w-[420px] flex-shrink-0 flex-col border-l">
       <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">
@@ -173,14 +252,201 @@ function ExtractionForm({
   )
 }
 
+const ACTIVE_ANCHOR_CLASS =
+  "pointer-events-none absolute z-10 rounded-[2px] border border-primary/70 bg-primary/12 shadow-[0_4px_16px_rgb(0_0_0_/_8%)]"
+
+function useImageAnchoredTarget(
+  viewerRef: React.RefObject<ImageViewerHandle | null>
+): AnchoredDocumentTarget {
+  return React.useMemo(
+    () => ({
+      scrollToAnchor: (anchor, options) => {
+        if (anchor.kind !== "image-area") return
+        viewerRef.current?.scrollToFrameArea(
+          anchor.frameNumber ?? 1,
+          {
+            left: anchor.left,
+            top: anchor.top,
+            width: anchor.width,
+            height: anchor.height,
+          },
+          options
+        )
+      },
+    }),
+    [viewerRef]
+  )
+}
+
+function useImageAnchoredOverlay() {
+  const { activeAnchor } = useAnchoredDocument()
+
+  return React.useCallback(
+    ({ frameNumber, rotation }: ImageFrameOverlayProps) => {
+      if (
+        activeAnchor?.kind !== "image-area" ||
+        (activeAnchor.frameNumber ?? 1) !== frameNumber
+      ) {
+        return null
+      }
+
+      const renderedArea = rotateImageArea(
+        {
+          left: activeAnchor.left,
+          top: activeAnchor.top,
+          width: activeAnchor.width,
+          height: activeAnchor.height,
+        },
+        rotation
+      )
+
+      return (
+        <div
+          className={ACTIVE_ANCHOR_CLASS}
+          style={{
+            left: `${renderedArea.left}%`,
+            top: `${renderedArea.top}%`,
+            width: `${renderedArea.width}%`,
+            height: `${renderedArea.height}%`,
+          }}
+        />
+      )
+    },
+    [activeAnchor]
+  )
+}
+
+function useTextAnchoredTarget(
+  viewerRef: React.RefObject<CodeViewerHandle | null>
+): AnchoredDocumentTarget {
+  return React.useMemo(
+    () => ({
+      scrollToAnchor: (anchor, options) => {
+        if (anchor.kind !== "text-range") return
+        viewerRef.current?.scrollToLineRange(
+          {
+            start: anchor.startLine,
+            end: anchor.endLine,
+          },
+          options
+        )
+      },
+    }),
+    [viewerRef]
+  )
+}
+
+function useActiveTextHighlight() {
+  const { activeAnchor } = useAnchoredDocument()
+  return activeAnchor?.kind === "text-range"
+    ? {
+        start: activeAnchor.startLine,
+        end: activeAnchor.endLine,
+      }
+    : null
+}
+
+function useCsvAnchoredTarget(
+  viewerRef: React.RefObject<CsvViewerHandle | null>
+): AnchoredDocumentTarget {
+  return React.useMemo(
+    () => ({
+      scrollToAnchor: (anchor, options) => {
+        if (anchor.kind !== "csv-cell") return
+        viewerRef.current?.scrollToCell(
+          {
+            rowIndex: anchor.rowIndex,
+            columnIndex: anchor.columnIndex,
+          },
+          options
+        )
+      },
+    }),
+    [viewerRef]
+  )
+}
+
+function useActiveCsvCell() {
+  const { activeAnchor } = useAnchoredDocument()
+  return activeAnchor?.kind === "csv-cell"
+    ? {
+        rowIndex: activeAnchor.rowIndex,
+        columnIndex: activeAnchor.columnIndex,
+      }
+    : null
+}
+
+function useXlsxAnchoredTarget(
+  viewerRef: React.RefObject<XlsxViewerHandle | null>
+): AnchoredDocumentTarget {
+  return React.useMemo(
+    () => ({
+      scrollToAnchor: (anchor, options) => {
+        if (anchor.kind !== "xlsx-cell") return
+        viewerRef.current?.scrollToCell(
+          anchor.sheetIndex,
+          anchor.rowIndex,
+          anchor.columnIndex,
+          options
+        )
+      },
+    }),
+    [viewerRef]
+  )
+}
+
+function useActiveXlsxCell() {
+  const { activeAnchor } = useAnchoredDocument()
+  return activeAnchor?.kind === "xlsx-cell"
+    ? {
+        sheet: activeAnchor.sheetIndex,
+        row: activeAnchor.rowIndex,
+        col: activeAnchor.columnIndex,
+      }
+    : null
+}
+
+function useDocxAnchoredTarget(
+  viewerRef: React.RefObject<DocxViewerHandle | null>
+): AnchoredDocumentTarget {
+  return React.useMemo(
+    () => ({
+      scrollToAnchor: (anchor, options) => {
+        if (anchor.kind !== "docx-target") return
+        viewerRef.current?.scrollToTarget(anchor.target, options)
+      },
+    }),
+    [viewerRef]
+  )
+}
+
+function useActiveDocxHighlight() {
+  const { activeAnchor } = useAnchoredDocument()
+  return activeAnchor?.kind === "docx-target" ? activeAnchor.target : null
+}
+
 // ── Per-format tabs ───────────────────────────────────────────────────────────
 
 function PdfTab() {
   const viewerRef = React.useRef<PdfViewerHandle>(null)
-  const target = usePdfSourceTarget(viewerRef)
-  const link = useSourceLink({ sources: PDF_EXTRACTION.sources, target })
+  const target = usePdfAnchoredTarget(viewerRef)
+
   return (
-    <ExtractionShell link={link} extraction={PDF_EXTRACTION}>
+    <AnchoredDocumentProvider items={PDF_EXTRACTION.items} target={target}>
+      <PdfTabContent viewerRef={viewerRef} />
+    </AnchoredDocumentProvider>
+  )
+}
+
+function PdfTabContent({
+  viewerRef,
+}: {
+  viewerRef: React.RefObject<PdfViewerHandle | null>
+}) {
+  const renderPageOverlay = usePdfAnchoredOverlay({ mode: "active" })
+
+  return (
+    <ExtractionShell extraction={PDF_EXTRACTION}>
       <PdfViewer
         ref={viewerRef}
         source={{
@@ -190,7 +456,7 @@ function PdfTab() {
         }}
         bare
         className="h-full"
-        renderPageOverlay={renderPdfSourceOverlay(link.activeSource)}
+        renderPageOverlay={renderPageOverlay}
       />
     </ExtractionShell>
   )
@@ -198,10 +464,24 @@ function PdfTab() {
 
 function ImageTab() {
   const viewerRef = React.useRef<ImageViewerHandle>(null)
-  const target = useImageSourceTarget(viewerRef)
-  const link = useSourceLink({ sources: IMAGE_EXTRACTION.sources, target })
+  const target = useImageAnchoredTarget(viewerRef)
+
   return (
-    <ExtractionShell link={link} extraction={IMAGE_EXTRACTION}>
+    <AnchoredDocumentProvider items={IMAGE_EXTRACTION.items} target={target}>
+      <ImageTabContent viewerRef={viewerRef} />
+    </AnchoredDocumentProvider>
+  )
+}
+
+function ImageTabContent({
+  viewerRef,
+}: {
+  viewerRef: React.RefObject<ImageViewerHandle | null>
+}) {
+  const renderFrameOverlay = useImageAnchoredOverlay()
+
+  return (
+    <ExtractionShell extraction={IMAGE_EXTRACTION}>
       <ImageViewer
         ref={viewerRef}
         source={{
@@ -211,7 +491,7 @@ function ImageTab() {
         }}
         bare
         className="h-full"
-        renderFrameOverlay={renderImageSourceOverlay(link.activeSource)}
+        renderFrameOverlay={renderFrameOverlay}
       />
     </ExtractionShell>
   )
@@ -219,10 +499,24 @@ function ImageTab() {
 
 function TextTab() {
   const viewerRef = React.useRef<CodeViewerHandle>(null)
-  const target = useTextSourceTarget(viewerRef)
-  const link = useSourceLink({ sources: TEXT_EXTRACTION.sources, target })
+  const target = useTextAnchoredTarget(viewerRef)
+
   return (
-    <ExtractionShell link={link} extraction={TEXT_EXTRACTION}>
+    <AnchoredDocumentProvider items={TEXT_EXTRACTION.items} target={target}>
+      <TextTabContent viewerRef={viewerRef} />
+    </AnchoredDocumentProvider>
+  )
+}
+
+function TextTabContent({
+  viewerRef,
+}: {
+  viewerRef: React.RefObject<CodeViewerHandle | null>
+}) {
+  const highlight = useActiveTextHighlight()
+
+  return (
+    <ExtractionShell extraction={TEXT_EXTRACTION}>
       <CodeViewer
         ref={viewerRef}
         source={{
@@ -232,7 +526,7 @@ function TextTab() {
         }}
         bare
         className="h-full"
-        highlight={sourceToTextHighlight(link.activeSource)}
+        highlight={highlight}
       />
     </ExtractionShell>
   )
@@ -240,16 +534,30 @@ function TextTab() {
 
 function CsvTab() {
   const viewerRef = React.useRef<CsvViewerHandle>(null)
-  const target = useCsvSourceTarget(viewerRef)
-  const link = useSourceLink({ sources: CSV_EXTRACTION.sources, target })
+  const target = useCsvAnchoredTarget(viewerRef)
+
   return (
-    <ExtractionShell link={link} extraction={CSV_EXTRACTION}>
+    <AnchoredDocumentProvider items={CSV_EXTRACTION.items} target={target}>
+      <CsvTabContent viewerRef={viewerRef} />
+    </AnchoredDocumentProvider>
+  )
+}
+
+function CsvTabContent({
+  viewerRef,
+}: {
+  viewerRef: React.RefObject<CsvViewerHandle | null>
+}) {
+  const activeCell = useActiveCsvCell()
+
+  return (
+    <ExtractionShell extraction={CSV_EXTRACTION}>
       <CsvViewer
         ref={viewerRef}
         source={{ kind: "text", text: CSV_TEXT, fileName: "sales.csv" }}
         fillHeight
         className="h-full rounded-none border-0"
-        activeCell={sourceToCsvCell(link.activeSource)}
+        activeCell={activeCell}
       />
     </ExtractionShell>
   )
@@ -257,10 +565,24 @@ function CsvTab() {
 
 function ExcelTab() {
   const viewerRef = React.useRef<XlsxViewerHandle>(null)
-  const target = useXlsxSourceTarget(viewerRef)
-  const link = useSourceLink({ sources: XLSX_EXTRACTION.sources, target })
+  const target = useXlsxAnchoredTarget(viewerRef)
+
   return (
-    <ExtractionShell link={link} extraction={XLSX_EXTRACTION}>
+    <AnchoredDocumentProvider items={XLSX_EXTRACTION.items} target={target}>
+      <ExcelTabContent viewerRef={viewerRef} />
+    </AnchoredDocumentProvider>
+  )
+}
+
+function ExcelTabContent({
+  viewerRef,
+}: {
+  viewerRef: React.RefObject<XlsxViewerHandle | null>
+}) {
+  const activeCell = useActiveXlsxCell()
+
+  return (
+    <ExtractionShell extraction={XLSX_EXTRACTION}>
       <XlsxViewer
         ref={viewerRef}
         source={{
@@ -270,7 +592,7 @@ function ExcelTab() {
         }}
         bare
         className="h-full"
-        activeCell={sourceToXlsxCell(link.activeSource)}
+        activeCell={activeCell}
       />
     </ExtractionShell>
   )
@@ -278,10 +600,24 @@ function ExcelTab() {
 
 function DocxTab() {
   const viewerRef = React.useRef<DocxViewerHandle>(null)
-  const target = useDocxSourceTarget(viewerRef)
-  const link = useSourceLink({ sources: DOCX_EXTRACTION.sources, target })
+  const target = useDocxAnchoredTarget(viewerRef)
+
   return (
-    <ExtractionShell link={link} extraction={DOCX_EXTRACTION}>
+    <AnchoredDocumentProvider items={DOCX_EXTRACTION.items} target={target}>
+      <DocxTabContent viewerRef={viewerRef} />
+    </AnchoredDocumentProvider>
+  )
+}
+
+function DocxTabContent({
+  viewerRef,
+}: {
+  viewerRef: React.RefObject<DocxViewerHandle | null>
+}) {
+  const highlight = useActiveDocxHighlight()
+
+  return (
+    <ExtractionShell extraction={DOCX_EXTRACTION}>
       <DocxViewer
         ref={viewerRef}
         source={{
@@ -291,7 +627,7 @@ function DocxTab() {
         }}
         bare
         className="h-full"
-        highlight={sourceToDocxHighlight(link.activeSource)}
+        highlight={highlight}
       />
     </ExtractionShell>
   )
@@ -312,8 +648,8 @@ type TabId = (typeof TABS)[number]["id"]
  * Extraction viewer — every source format in one component. A tab bar switches
  * the file format (PDF, image, text, CSV, Excel, Word); each tab is the same
  * extraction shell: the source document beside a JSON form of its extracted
- * values, linked by their sources. The same `useSourceLink` mediator drives
- * every viewer; only the viewer + its source adapter differ per tab.
+ * values, linked by their sources. The same anchored-document provider drives
+ * every viewer; only the viewer + its target adapter differ per tab.
  *
  * Tabs mount lazily on first visit and stay mounted (hidden) afterwards, so each
  * format's viewer keeps its scroll position and avoids re-fetching its document.

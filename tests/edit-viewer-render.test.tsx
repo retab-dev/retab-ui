@@ -199,10 +199,16 @@ describe("EditViewer", () => {
 
     fireEvent.click(screen.getByText("name"))
 
-    expect(viewerMocks.scrollToPageArea).toHaveBeenCalledWith({
-      pageNumber: 1,
-      top: 20,
-    })
+    expect(viewerMocks.scrollToPageArea).toHaveBeenCalledWith(
+      {
+        height: 4,
+        left: 10,
+        pageNumber: 1,
+        top: 20,
+        width: 30,
+      },
+      { behavior: "smooth" }
+    )
   })
 
   it("clears a stale controlled selected field", () => {
