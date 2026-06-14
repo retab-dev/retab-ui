@@ -1,10 +1,21 @@
 // @vitest-environment jsdom
 
 import * as React from "react"
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { Source, SourceAnchor, SourceMap } from "@/lib/document-source"
+import { useSegmentedFieldLink } from "@/components/ui/field-anchor-link"
+import {
+  SegmentedDocumentProvider,
+  useSegmentedDocumentViewport,
+} from "@/components/ui/segmented-document-provider"
 import {
   sourceFieldsToSegmentedDocumentModel,
   sourceMapToSegmentedDocumentModel,
@@ -169,6 +180,68 @@ const sourceFieldSamples = [
   { name: "text", fields: textSample as SampleSourceField[] },
   { name: "xlsx", fields: xlsxSample as SampleSourceField[] },
 ]
+
+function SegmentedFieldLinkProbe({
+  initialPath,
+}: {
+  initialPath: string | null
+}) {
+  const link = useSegmentedFieldLink({ initialPath })
+
+  return (
+    <output
+      data-testid="segmented-link-probe"
+      data-active-anchor={link.activeAnchor ? "true" : "false"}
+    >
+      {link.activePath ?? "none"}
+    </output>
+  )
+}
+
+function SegmentedFieldLinkNavigationProbe({
+  onScroll,
+}: {
+  onScroll: (
+    target: {
+      pageNumber: number
+      top: number
+      left?: number
+      width?: number
+      height?: number
+    },
+    options?: ScrollToOptions
+  ) => void
+}) {
+  const link = useSegmentedFieldLink()
+  const viewport = useSegmentedDocumentViewport()
+
+  React.useEffect(() => {
+    viewport.documentHandlers.setDocumentHandle({
+      scrollToPage: () => {},
+      scrollToPageArea: onScroll,
+    })
+
+    return () => viewport.documentHandlers.setDocumentHandle(null)
+  }, [onScroll, viewport.documentHandlers])
+
+  return (
+    <>
+      <button
+        type="button"
+        onMouseEnter={() => link.onFieldHover("logo")}
+        onClick={() => link.selectField?.("logo")}
+      >
+        logo source
+      </button>
+      <output
+        data-testid="segmented-navigation-probe"
+        data-active-anchor={link.activeAnchor ? "true" : "false"}
+      >
+        {link.activePath ?? "none"}
+      </output>
+    </>
+  )
+}
 
 function expectSourceToResolve(source: Source) {
   switch (source.anchor.kind) {
@@ -660,6 +733,63 @@ describe("source evidence projection", () => {
       "amount",
     ])
     expect(model.anchors).toHaveLength(1)
+  })
+
+  it("activates an initial segmented source path with its page anchor", async () => {
+    const sourceMap = extractionSourcesToSourceMap(
+      jsonFormSourcesSample.sources
+    )
+    const model = sourceMapToSegmentedDocumentModel({
+      sourceMap,
+    })
+
+    render(
+      <SegmentedDocumentProvider model={model}>
+        <SegmentedFieldLinkProbe initialPath="statement_date" />
+      </SegmentedDocumentProvider>
+    )
+
+    await waitFor(() => {
+      const probe = screen.getByTestId("segmented-link-probe")
+      expect(probe.textContent).toBe("statement_date")
+      expect(probe.getAttribute("data-active-anchor")).toBe("true")
+    })
+  })
+
+  it("keeps segmented hover active while navigating to the source", async () => {
+    const model = sourceFieldsToSegmentedDocumentModel([
+      {
+        id: "logo",
+        label: "Logo",
+        source: imageSource,
+      },
+    ])
+    const scrollToPageArea = vi.fn()
+
+    render(
+      <SegmentedDocumentProvider model={model}>
+        <SegmentedFieldLinkNavigationProbe onScroll={scrollToPageArea} />
+      </SegmentedDocumentProvider>
+    )
+
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "logo source" }))
+
+    await waitFor(() => {
+      const probe = screen.getByTestId("segmented-navigation-probe")
+      expect(probe.textContent).toBe("logo")
+      expect(probe.getAttribute("data-active-anchor")).toBe("true")
+    })
+    expect(scrollToPageArea).toHaveBeenLastCalledWith(
+      { pageNumber: 2, left: 15, top: 25, width: 35, height: 45 },
+      { behavior: "auto" }
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "logo source" }))
+
+    expect(scrollToPageArea).toHaveBeenLastCalledWith(
+      { pageNumber: 2, left: 15, top: 25, width: 35, height: 45 },
+      { behavior: "smooth" }
+    )
   })
 })
 
@@ -1629,9 +1759,11 @@ describe("source UI components", () => {
   })
 
   it("SourceIndicator renders empty, found, and missing-source states", () => {
-    const { rerender } = render(
+    const { container, rerender } = render(
       <SourceIndicator path={null} found={false} emptyHint="Pick a field" />
     )
+    expect(container.firstElementChild?.className).toContain("top-3")
+    expect(container.firstElementChild?.className).not.toContain("top-12")
     expect(screen.getByText("Pick a field").textContent).toBe("Pick a field")
 
     rerender(<SourceIndicator path="owner.name" found label="Field source" />)

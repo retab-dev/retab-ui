@@ -9,6 +9,8 @@ import {
   type PptxSize,
 } from "./pptx-viewer-core"
 
+const PPTX_READING_MARKER_RATIO = 0.2
+
 export interface PptxSlideLayout {
   slideCount: number
   slideTopPadding: number
@@ -42,6 +44,16 @@ export interface PptxVisibleSlideInput {
   onVisibleSlideChange?: (slide: number) => void
   onScrollProgressChange?: (progress: number) => void
 }
+
+type PptxReadingAnchor =
+  | {
+      kind: "top"
+    }
+  | {
+      kind: "slide"
+      slideNumber: number
+      yPercent: number
+    }
 
 export function createPptxSlideLayout({
   baseSize,
@@ -165,11 +177,27 @@ export function usePptxVisibleSlide({
   const scrollViewportRef = React.useRef<HTMLDivElement | null>(null)
   const lastReportedSlide = React.useRef(0)
   const lastVisibleSlideCallback = React.useRef(onVisibleSlideChange)
+  const committedLayoutRef = React.useRef(layout)
 
   if (lastVisibleSlideCallback.current !== onVisibleSlideChange) {
     lastVisibleSlideCallback.current = onVisibleSlideChange
     lastReportedSlide.current = 0
   }
+
+  React.useLayoutEffect(() => {
+    const previousLayout = committedLayoutRef.current
+    committedLayoutRef.current = layout
+
+    if (arePptxSlideLayoutsEqual(previousLayout, layout)) return
+
+    const viewport = scrollViewportRef.current
+    if (!viewport) return
+
+    const anchor = capturePptxReadingAnchor(previousLayout, viewport)
+    if (!anchor) return
+
+    restorePptxReadingAnchor(layout, viewport, anchor)
+  }, [layout])
 
   const handleScroll = React.useCallback(() => {
     const viewport = scrollViewportRef.current
@@ -180,7 +208,8 @@ export function usePptxVisibleSlide({
       scrollable > 0 ? clamp(viewport.scrollTop / scrollable, 0, 1) : 0
     )
 
-    const markerScrollTop = viewport.scrollTop + viewport.clientHeight * 0.2
+    const markerScrollTop =
+      viewport.scrollTop + viewport.clientHeight * PPTX_READING_MARKER_RATIO
     const visibleSlide = getPptxSlideAtScrollMarker(layout, markerScrollTop)
 
     if (visibleSlide && visibleSlide !== lastReportedSlide.current) {
@@ -191,4 +220,60 @@ export function usePptxVisibleSlide({
   }, [layout, onScrollProgressChange, onVisibleSlideChange])
 
   return { currentSlide, handleScroll, scrollViewportRef }
+}
+
+function capturePptxReadingAnchor(
+  layout: PptxSlideLayout,
+  viewport: HTMLDivElement
+): PptxReadingAnchor | null {
+  if (layout.slideCount === 0) return null
+  if (viewport.scrollTop <= 0) return { kind: "top" }
+
+  const markerScrollTop =
+    viewport.scrollTop + viewport.clientHeight * PPTX_READING_MARKER_RATIO
+  const slideNumber = getPptxSlideAtScrollMarker(layout, markerScrollTop)
+  const slideTop = getPptxSlideTop(layout, slideNumber - 1)
+  if (layout.slideHeight <= 0) return null
+
+  return {
+    kind: "slide",
+    slideNumber,
+    yPercent: clamp((markerScrollTop - slideTop) / layout.slideHeight, 0, 1),
+  }
+}
+
+function restorePptxReadingAnchor(
+  layout: PptxSlideLayout,
+  viewport: HTMLDivElement,
+  anchor: PptxReadingAnchor
+) {
+  if (anchor.kind === "top") {
+    viewport.scrollTop = 0
+    return
+  }
+
+  if (anchor.slideNumber < 1 || anchor.slideNumber > layout.slideCount) return
+
+  const slideTop = getPptxSlideTop(layout, anchor.slideNumber - 1)
+  const targetTop =
+    slideTop +
+    layout.slideHeight * anchor.yPercent -
+    viewport.clientHeight * PPTX_READING_MARKER_RATIO
+  const maxScrollTop = Math.max(0, layout.totalHeight - viewport.clientHeight)
+  viewport.scrollTop = clamp(targetTop, 0, maxScrollTop)
+}
+
+function arePptxSlideLayoutsEqual(
+  previousLayout: PptxSlideLayout,
+  nextLayout: PptxSlideLayout
+) {
+  return (
+    previousLayout.slideCount === nextLayout.slideCount &&
+    previousLayout.slideTopPadding === nextLayout.slideTopPadding &&
+    previousLayout.slideGap === nextLayout.slideGap &&
+    previousLayout.slideHeight === nextLayout.slideHeight &&
+    previousLayout.slideWidth === nextLayout.slideWidth &&
+    previousLayout.slideStride === nextLayout.slideStride &&
+    previousLayout.totalHeight === nextLayout.totalHeight
+  )
 }

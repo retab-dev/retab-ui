@@ -204,7 +204,7 @@ const FileSystemGridTile = React.forwardRef<
           <FileSystemThumbnail
             file={entry}
             resolveFileSource={fileActions.resolveFileSource}
-            className="w-14"
+            className="size-16"
           />
         )}
       </span>

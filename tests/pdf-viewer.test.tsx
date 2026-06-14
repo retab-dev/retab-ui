@@ -762,6 +762,86 @@ describe("PdfViewer", () => {
     expect(await screen.findByText("75%")).toBeTruthy()
   })
 
+  it("preserves the visible page when fit-width changes after a surface resize", async () => {
+    pdfjsMock.docs.set(
+      "/fit-width-anchor.pdf",
+      makeDoc([
+        [400, 800],
+        [400, 800],
+        [400, 800],
+        [400, 800],
+        [400, 800],
+      ])
+    )
+    let measuredWidth = 232
+    const resizeCallbacks = new Map<Element, ResizeObserverCallback>()
+
+    vi.stubGlobal(
+      "ResizeObserver",
+      class ResizeObserver {
+        private callback: ResizeObserverCallback
+        constructor(callback: ResizeObserverCallback) {
+          this.callback = callback
+        }
+        observe(target: Element) {
+          resizeCallbacks.set(target, this.callback)
+          this.callback([{ target } as ResizeObserverEntry], this as never)
+        }
+        unobserve(target: Element) {
+          resizeCallbacks.delete(target)
+        }
+        disconnect() {}
+      }
+    )
+
+    Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+      configurable: true,
+      get() {
+        if (this.dataset.slot === "pdf-viewer-fit-width-measure") {
+          return measuredWidth
+        }
+        return 832
+      },
+    })
+
+    await act(async () => {
+      render(<PdfViewer source={pdfUrlSource("/fit-width-anchor.pdf")} />)
+    })
+
+    expect(await screen.findByText("50%")).toBeTruthy()
+
+    const viewport = document.querySelector<HTMLElement>(
+      "[data-slot='scroll-area-viewport']"
+    )
+    expect(viewport).toBeTruthy()
+    Object.defineProperty(viewport, "scrollTop", {
+      configurable: true,
+      value: 908,
+      writable: true,
+    })
+    fireEvent.scroll(viewport!)
+
+    await findByTextContent("Page 3 of 5")
+
+    const measureElement = document.querySelector<HTMLElement>(
+      "[data-slot='pdf-viewer-fit-width-measure']"
+    )
+    expect(measureElement).toBeTruthy()
+
+    measuredWidth = 432
+    await act(async () => {
+      resizeCallbacks.get(measureElement!)?.(
+        [{ target: measureElement! } as unknown as ResizeObserverEntry],
+        {} as ResizeObserver
+      )
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    expect(await screen.findByText("100%")).toBeTruthy()
+    expect(await findByTextContent("Page 3 of 5")).toBeTruthy()
+    expect(viewport!.scrollTop).toBe(1888)
+  })
+
   it("returns uncontrolled manual zoom back to fit width", async () => {
     pdfjsMock.docs.set("/uncontrolled-fit.pdf", makeDoc([[400, 800]]))
 
@@ -780,6 +860,49 @@ describe("PdfViewer", () => {
 
     fireEvent.click(screen.getByLabelText("Fit width"))
     expect(await screen.findByText("200%")).toBeTruthy()
+  })
+
+  it("preserves the visible page when manual zoom changes the layout", async () => {
+    pdfjsMock.docs.set(
+      "/manual-zoom-anchor.pdf",
+      makeDoc([
+        [400, 800],
+        [400, 800],
+        [400, 800],
+        [400, 800],
+        [400, 800],
+      ])
+    )
+
+    await act(async () => {
+      render(
+        <PdfViewer
+          source={pdfUrlSource("/manual-zoom-anchor.pdf")}
+          defaultScale={1}
+        />
+      )
+    })
+
+    expect(await screen.findByText("100%")).toBeTruthy()
+
+    const viewport = document.querySelector<HTMLElement>(
+      "[data-slot='scroll-area-viewport']"
+    )
+    expect(viewport).toBeTruthy()
+    Object.defineProperty(viewport, "scrollTop", {
+      configurable: true,
+      value: 1708,
+      writable: true,
+    })
+    fireEvent.scroll(viewport!)
+
+    await findByTextContent("Page 3 of 5")
+
+    fireEvent.click(screen.getByLabelText("Zoom in"))
+
+    expect(await screen.findByText("120%")).toBeTruthy()
+    expect(await findByTextContent("Page 3 of 5")).toBeTruthy()
+    expect(viewport!.scrollTop).toBe(2064)
   })
 
   it("uses the rotated page width for fit-width scale", async () => {

@@ -93,13 +93,16 @@ export function useSegmentedFieldLink(
   }, [options.initialPath, segmentByPath, selectedPath])
 
   const navigateSegment = React.useCallback(
-    (segment: DocumentSegment) => {
+    (
+      segment: DocumentSegment,
+      options?: { behavior?: ScrollBehavior; clearPreview?: boolean }
+    ) => {
       const anchor = anchorBySegmentId.get(segment.id)
       if (anchor) {
-        viewport.navigation.scrollToAnchor(anchor)
+        viewport.navigation.scrollToAnchor(anchor, options)
         return
       }
-      viewport.navigation.scrollToSegmentStart(segment)
+      viewport.navigation.scrollToSegmentStart(segment, options)
     },
     [anchorBySegmentId, viewport.navigation]
   )
@@ -115,7 +118,7 @@ export function useSegmentedFieldLink(
       if (!segment) return
 
       viewport.interaction.previewSegment(segment.id)
-      navigateSegment(segment)
+      navigateSegment(segment, { behavior: "auto", clearPreview: false })
     },
     [navigateSegment, segmentByPath, viewport.interaction]
   )
@@ -127,7 +130,7 @@ export function useSegmentedFieldLink(
 
       setSelectedPath(path)
       viewport.interaction.clearPreview()
-      navigateSegment(segment)
+      navigateSegment(segment, { behavior: "smooth", clearPreview: false })
     },
     [navigateSegment, segmentByPath, viewport.interaction]
   )

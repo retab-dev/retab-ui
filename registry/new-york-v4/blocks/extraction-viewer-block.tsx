@@ -134,6 +134,9 @@ const PDF_SEGMENTED_DOCUMENT = sourceMapToSegmentedDocumentModel({
   ),
   sourceMap: PDF_SOURCE_MAP,
 })
+const PDF_INITIAL_SOURCE_PATH =
+  PDF_EVIDENCE.evidenceItems.find((item) => item.anchor.status === "resolved")
+    ?.id ?? null
 const PDF_EXTRACTION: Extraction = {
   items: PDF_EVIDENCE.anchoredItems,
   schema: jsonFormSample.schema as JSONSchema7,
@@ -442,7 +445,7 @@ function PdfTab() {
 }
 
 function PdfTabContent() {
-  const link = useSegmentedFieldLink()
+  const link = useSegmentedFieldLink({ initialPath: PDF_INITIAL_SOURCE_PATH })
   const segmentedViewport = useSegmentedDocumentViewport()
   const renderPageOverlay = useSegmentedPdfSourceOverlay(link)
   const setPdfViewerHandle = React.useCallback(

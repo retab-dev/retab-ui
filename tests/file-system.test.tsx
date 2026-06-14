@@ -42,13 +42,17 @@ vi.mock("@/components/ui/file-viewer", () => ({
 
 vi.mock("@/components/ui/file-thumbnail", () => ({
   FileThumbnail: ({
+    className,
     file,
     source,
   }: {
+    className?: string
     file?: { name: string }
     source?: { fileName?: string }
   }) => (
-    <span data-testid="file-thumbnail">{source?.fileName ?? file?.name}</span>
+    <span className={className} data-testid="file-thumbnail">
+      {source?.fileName ?? file?.name}
+    </span>
   ),
 }))
 
@@ -323,6 +327,20 @@ describe("FileSystem", () => {
     expect(
       dialog.querySelector("[data-testid='file-viewer']")?.textContent
     ).toBe("viewer:report.pdf")
+  })
+
+  it("renders compact view switcher tabs", () => {
+    render(<FileSystem defaultPath="reports/" items={items} />)
+
+    const tabList = screen.getByRole("tablist")
+    const tabRoot = tabList.closest('[data-slot="file-system-view-tabs"]')
+
+    expect(tabRoot).toBeTruthy()
+    expect(tabList.className.split(/\s+/)).toContain("grid-cols-3")
+    expect(tabList.className.split(/\s+/)).toContain("rounded-md")
+    expect(screen.getByRole("tab", { name: "List view" })).toBeTruthy()
+    expect(screen.getByRole("tab", { name: "Grid view" })).toBeTruthy()
+    expect(screen.getByRole("tab", { name: "Columns view" })).toBeTruthy()
   })
 
   it("renders inferred folders and previews the selected file", async () => {
@@ -818,6 +836,17 @@ describe("FileSystem", () => {
         .getByRole("option", { name: /table.csv/i })
         .getAttribute("aria-selected")
     ).toBe("true")
+  })
+
+  it("renders square thumbnails in the grid view", async () => {
+    render(
+      <FileSystem defaultPath="reports/" defaultView="grid" items={items} />
+    )
+
+    const report = await screen.findByRole("option", { name: /report.pdf/i })
+    const thumbnail = report.querySelector('[data-testid="file-thumbnail"]')
+
+    expect(thumbnail?.className.split(/\s+/)).toContain("size-16")
   })
 
   it("opens the selected grid file from the keyboard", async () => {

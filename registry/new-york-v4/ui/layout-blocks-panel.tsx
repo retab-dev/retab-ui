@@ -54,6 +54,10 @@ export function LayoutBlocksPanel({
           onActiveItemIdChange?.(item.id)
           onNavigateItem?.(item, { behavior: "auto" })
         }}
+        onVisibleItemChange={(item) => {
+          onActiveItemIdChange?.(item.id)
+          onNavigateItem?.(item, { behavior: "auto" })
+        }}
         renderItem={(item, state) => (
           <LayoutItemRow
             item={item}

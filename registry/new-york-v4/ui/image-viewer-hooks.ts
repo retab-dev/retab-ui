@@ -16,6 +16,7 @@ import {
 } from "./image-viewer-virtualization"
 
 const IMAGE_SCROLL_HEADROOM = 48
+const IMAGE_READING_MARKER_RATIO = 0.2
 const IMAGE_VIEWER_HORIZONTAL_PADDING = 32
 
 /** Bounds for the viewer's zoom range, shared by fit-width and the toolbar. */
@@ -121,6 +122,16 @@ function normalizeFrameAreaPercent(value: number): number | null {
   return Math.min(100, Math.max(0, value))
 }
 
+type ImageReadingAnchor =
+  | {
+      kind: "top"
+    }
+  | {
+      frameNumber: number
+      kind: "frame"
+      yPercent: number
+    }
+
 export function useVisibleFrame(
   layout: ImageFrameLayoutModel,
   resetKey: unknown,
@@ -132,6 +143,8 @@ export function useVisibleFrame(
   const [scrollViewportElement, setScrollViewportElement] =
     React.useState<HTMLDivElement | null>(null)
   const lastReportedFrameNumber = React.useRef(0)
+  const committedLayoutRef = React.useRef(layout)
+  const committedResetKeyRef = React.useRef<unknown>(resetKey)
 
   // Swapping the displayed document remounts the frame DOM and resets the
   // scroll position, but this hook's state survives because the content
@@ -152,6 +165,24 @@ export function useVisibleFrame(
     },
     []
   )
+
+  React.useLayoutEffect(() => {
+    const previousLayout = committedLayoutRef.current
+    const previousResetKey = committedResetKeyRef.current
+    committedLayoutRef.current = layout
+    committedResetKeyRef.current = resetKey
+
+    if (!Object.is(previousResetKey, resetKey)) return
+    if (Object.is(previousLayout, layout)) return
+
+    const viewport = scrollViewportRef.current
+    if (!viewport) return
+
+    const anchor = captureImageReadingAnchor(previousLayout, viewport)
+    if (!anchor) return
+
+    restoreImageReadingAnchor(layout, viewport, anchor)
+  }, [layout, resetKey])
 
   const handleScroll = React.useCallback(() => {
     const viewport = scrollViewportRef.current
@@ -180,6 +211,51 @@ export function useVisibleFrame(
     scrollViewportRef,
     setScrollViewportRef,
   }
+}
+
+function captureImageReadingAnchor(
+  layout: ImageFrameLayoutModel,
+  viewport: HTMLDivElement
+): ImageReadingAnchor | null {
+  if (layout.frameCount === 0) return null
+  if (viewport.scrollTop <= 0) return { kind: "top" }
+
+  const markerOffset =
+    viewport.scrollTop + viewport.clientHeight * IMAGE_READING_MARKER_RATIO
+  const frameNumber = getCurrentImageFrameNumber({
+    layout,
+    scrollTop: viewport.scrollTop,
+    viewportHeight: viewport.clientHeight,
+  })
+  const frame = getImageFrameLayout(layout, frameNumber)
+  if (!frame || frame.height <= 0) return null
+
+  return {
+    frameNumber,
+    kind: "frame",
+    yPercent: clamp01((markerOffset - frame.offsetTop) / frame.height),
+  }
+}
+
+function restoreImageReadingAnchor(
+  layout: ImageFrameLayoutModel,
+  viewport: HTMLDivElement,
+  anchor: ImageReadingAnchor
+) {
+  if (anchor.kind === "top") {
+    viewport.scrollTop = 0
+    return
+  }
+
+  const frame = getImageFrameLayout(layout, anchor.frameNumber)
+  if (!frame) return
+
+  const targetTop =
+    frame.offsetTop +
+    frame.height * anchor.yPercent -
+    viewport.clientHeight * IMAGE_READING_MARKER_RATIO
+  const maxScrollTop = Math.max(0, layout.totalHeight - viewport.clientHeight)
+  viewport.scrollTop = Math.min(maxScrollTop, Math.max(0, targetTop))
 }
 
 export function useImageViewerHandle(

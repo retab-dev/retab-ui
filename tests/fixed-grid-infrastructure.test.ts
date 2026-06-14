@@ -2030,6 +2030,48 @@ describe("fixed grid virtualization math", () => {
     })
   })
 
+  it("preserves the semantic grid anchor when item sizes change", () => {
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 30)
+    defineHorizontalViewportMetric(scroller, "clientWidth", 50)
+    defineScrollMetric(scroller, "scrollTop", 45)
+    defineScrollMetric(scroller, "scrollLeft", 68)
+    vi.stubGlobal("ResizeObserver", StubResizeObserver)
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLElement | null>
+    const { result, rerender } = renderHook(
+      ({ rowSize, columnSize }) =>
+        useFixedGridVirtualization({
+          rowCount: 100,
+          columnCount: 100,
+          rowSize,
+          columnSize,
+          rowOverscan: 0,
+          columnOverscan: 0,
+          scrollRef,
+          scrollElement: scroller,
+        }),
+      { initialProps: { rowSize: 10, columnSize: 20 } }
+    )
+
+    expect(result.current.virtualRows[0]?.index).toBe(4)
+    expect(result.current.columnItems[0]?.index).toBe(3)
+
+    rerender({ rowSize: 20, columnSize: 40 })
+
+    expect(scroller.scrollTop).toBe(85)
+    expect(scroller.scrollLeft).toBe(128)
+    expect(result.current.virtualRows[0]?.index).toBe(4)
+    expect(result.current.columnItems[0]?.index).toBe(3)
+  })
+
   it("cancels pending grid viewport reads on unmount", () => {
     const scroller = document.createElement("div")
     defineViewportMetric(scroller, "clientHeight", 100)

@@ -2014,8 +2014,8 @@ describe("viewer architecture", () => {
 
     expect(fieldAnchorLink).toContain("export function useSegmentedFieldLink")
     expect(fieldAnchorLink).toContain("useSegmentedDocument")
-    expect(fieldAnchorLink).toContain("scrollToAnchor(anchor)")
-    expect(fieldAnchorLink).toContain("scrollToSegmentStart(segment)")
+    expect(fieldAnchorLink).toContain("scrollToAnchor(anchor, options)")
+    expect(fieldAnchorLink).toContain("scrollToSegmentStart(segment, options)")
 
     for (const [file, content] of [
       ["json-form-sources-block", jsonFormSources],

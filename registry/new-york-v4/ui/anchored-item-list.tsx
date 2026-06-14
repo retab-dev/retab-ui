@@ -45,6 +45,7 @@ export function AnchoredItemList<Item extends AnchoredItemListItem>({
   onClearPreview,
   onClearSelection,
   onPreviewItem,
+  onVisibleItemChange,
   renderItem,
   selectedItemId,
 }: {
@@ -58,6 +59,7 @@ export function AnchoredItemList<Item extends AnchoredItemListItem>({
   onClearPreview?: () => void
   onClearSelection?: () => void
   onPreviewItem?: (item: Item) => void
+  onVisibleItemChange?: (item: Item) => void
   renderItem: (
     item: Item,
     state: AnchoredItemListRenderState
@@ -66,6 +68,7 @@ export function AnchoredItemList<Item extends AnchoredItemListItem>({
 }) {
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const optionRefs = React.useRef(new Map<string, HTMLButtonElement>())
+  const visibleItemIdRef = React.useRef<string | null>(null)
   const virtualizer = useVirtualizer({
     count: items.length,
     estimateSize: () => estimateSize,
@@ -124,10 +127,36 @@ export function AnchoredItemList<Item extends AnchoredItemListItem>({
     [items, virtualizer]
   )
 
+  const reportVisibleItem = React.useCallback(() => {
+    if (!onVisibleItemChange) return
+    const viewport = viewportRef.current
+    if (!viewport) return
+
+    const marker = viewport.scrollTop + ROW_PADDING
+    const virtualItems = virtualizer.getVirtualItems()
+    const virtualItem =
+      virtualItems.find((row) => row.start + row.size >= marker) ??
+      virtualItems[0]
+    const fallbackIndex = Math.min(
+      items.length - 1,
+      Math.max(0, Math.floor(marker / estimateSize))
+    )
+    const item = virtualItem ? items[virtualItem.index] : items[fallbackIndex]
+    if (!item || item.disabled || item.id === visibleItemIdRef.current) return
+
+    visibleItemIdRef.current = item.id
+    onVisibleItemChange(item)
+  }, [estimateSize, items, onVisibleItemChange, virtualizer])
+
+  const handleViewportScroll = React.useCallback(() => {
+    requestFrame(reportVisibleItem)
+  }, [reportVisibleItem])
+
   return (
     <ScrollArea
       className={cn("min-h-0 flex-1", className)}
       scrollFade
+      viewportProps={{ onScroll: handleViewportScroll }}
       viewportRef={viewportRef}
     >
       {items.length ? (

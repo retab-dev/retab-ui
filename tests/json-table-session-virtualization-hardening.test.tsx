@@ -391,7 +391,7 @@ describe("json table session and virtualization hardening", () => {
       function (
         this: EventTarget,
         type: string,
-        listener: EventListenerOrEventListenerObject,
+        listener: EventListenerOrEventListenerObject | null,
         options?: boolean | AddEventListenerOptions
       ) {
         const slot =

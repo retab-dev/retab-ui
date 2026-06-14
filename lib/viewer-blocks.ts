@@ -7,7 +7,6 @@ type ViewerBlockCategoryId =
   | "primitives"
   | "dropzone"
   | "file-system"
-  | "legends"
   | "run-cards"
 
 type ViewerBlockConfig = {
@@ -33,7 +32,6 @@ export const VIEWER_BLOCK_CATEGORIES = [
   { id: "primitives", label: "Primitives" },
   { id: "dropzone", label: "Dropzone" },
   { id: "file-system", label: "File System" },
-  { id: "legends", label: "Legends" },
   { id: "run-cards", label: "Run Cards" },
 ] as const
 
@@ -421,17 +419,6 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/primitive-cards",
     featured: true,
     categories: ["run-cards"],
-  },
-  {
-    id: "legend-variants",
-    registryName: "legend-variants-block",
-    title: "Legend Variants",
-    description:
-      "The split viewer shown with every legend placement — bar, floating, and a vertical rail — over one ViT paper split result, all sharing one selection.",
-    command: getRegistryAddCommand("legend-variants-block"),
-    docsHref: "/docs/components/split-viewer",
-    viewHref: "/view/blocks/legend-variants",
-    categories: ["legends"],
   },
   {
     id: "pdf-thumbnails",

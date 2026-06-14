@@ -40,10 +40,10 @@ export function PdfThumbnailsBlock() {
           <ViewerBody>
             <ViewerSidebar
               aria-label="PDF pages"
-              width="9rem"
+              width="4.5rem"
               className="border-r"
             >
-              <PdfViewerThumbnails />
+              <PdfViewerThumbnails thumbnailWidth={60} />
             </ViewerSidebar>
             <ViewerSurface>
               <PdfViewerPages bare className="h-full" />

@@ -2523,6 +2523,54 @@ describe("ImageViewer scale semantics", () => {
     expect(onScaleChange).toHaveBeenCalledWith(null)
   })
 
+  it("preserves the visible frame when manual zoom changes the layout", async () => {
+    stubObservableLayout({
+      clientHeight: 600,
+      frameListWidth: 432,
+      isIntersecting: false,
+    })
+    stubCanvasContext()
+    stubTiffMetadataLoading([
+      { width: 400, height: 800 },
+      { width: 400, height: 800 },
+      { width: 400, height: 800 },
+      { width: 400, height: 800 },
+      { width: 400, height: 800 },
+    ])
+
+    let view!: RenderResult
+    await act(async () => {
+      view = render(
+        <ImageViewer
+          source={imageUrlSource("/manual-zoom-anchor.tiff")}
+          defaultScale={1}
+        />
+      )
+    })
+
+    expect(await screen.findByText("100%")).toBeTruthy()
+
+    const viewport = view.container.querySelector(
+      '[data-slot="scroll-area-viewport"]'
+    ) as HTMLElement
+    expect(viewport).toBeTruthy()
+    viewport.scrollTop = 1708
+
+    await act(async () => {
+      fireEvent.scroll(viewport)
+    })
+
+    expect(await screen.findByText("Page 3 of 5")).toBeTruthy()
+
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText("Zoom in"))
+    })
+
+    expect(await screen.findByText("120%")).toBeTruthy()
+    expect(await screen.findByText("Page 3 of 5")).toBeTruthy()
+    expect(viewport.scrollTop).toBe(2064)
+  })
+
   it("normalizes invalid controlled scale values before rendering frame geometry", async () => {
     stubImageLoading(bitmap(100, 50))
     stubObservableLayout({ frameListWidth: 432, isIntersecting: false })

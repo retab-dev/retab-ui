@@ -36,6 +36,10 @@ export type SegmentDocumentHandle = {
   ) => void
 }
 
+export type SegmentNavigationOptions = ScrollToOptions & {
+  clearPreview?: boolean
+}
+
 export interface SegmentViewportController {
   model: SegmentViewportModel
   interaction: SegmentInteraction
@@ -45,9 +49,15 @@ export interface SegmentViewportController {
     setDocumentHandle: (handle: SegmentDocumentHandle | null) => void
   }
   navigation: {
-    scrollToPage: (page: number) => void
-    scrollToSegmentStart: (segment: DocumentSegment) => void
-    scrollToAnchor: (anchor: SegmentAnchor) => void
+    scrollToPage: (page: number, options?: SegmentNavigationOptions) => void
+    scrollToSegmentStart: (
+      segment: DocumentSegment,
+      options?: SegmentNavigationOptions
+    ) => void
+    scrollToAnchor: (
+      anchor: SegmentAnchor,
+      options?: SegmentNavigationOptions
+    ) => void
   }
   rail: {
     setViewportElement: (element: HTMLElement | null) => void
@@ -113,52 +123,71 @@ export function useSegmentViewportController({
   )
 
   const scrollToPage = React.useCallback(
-    (page: number) => {
+    (page: number, options?: SegmentNavigationOptions) => {
       const normalizedPage = normalizePage(page)
       if (normalizedPage == null) return
 
-      interaction.clearPreview()
-      documentHandleRef.current?.scrollToPage(normalizedPage)
+      if (options?.clearPreview !== false) interaction.clearPreview()
+      const scrollOptions = segmentScrollOptions(options)
+      if (scrollOptions) {
+        documentHandleRef.current?.scrollToPage(normalizedPage, scrollOptions)
+      } else {
+        documentHandleRef.current?.scrollToPage(normalizedPage)
+      }
     },
     [interaction]
   )
 
   const scrollToSegmentStart = React.useCallback(
-    (segment: DocumentSegment) => {
+    (segment: DocumentSegment, options?: SegmentNavigationOptions) => {
       const page = firstSegmentPage(segment.pages)
       if (page == null) return
 
-      scrollToPage(page)
+      scrollToPage(page, options)
     },
     [scrollToPage]
   )
 
   const scrollToAnchor = React.useCallback(
-    (anchor: SegmentAnchor) => {
+    (anchor: SegmentAnchor, options?: SegmentNavigationOptions) => {
       const normalizedPage = normalizePage(anchor.pageNumber)
       if (normalizedPage == null) return
 
-      interaction.clearPreview()
+      if (options?.clearPreview !== false) interaction.clearPreview()
+      const scrollOptions = segmentScrollOptions(options)
       const handle = documentHandleRef.current
       if (!handle) return
 
       if (handle.scrollToAnchor) {
-        handle.scrollToAnchor(anchor)
+        if (scrollOptions) {
+          handle.scrollToAnchor(anchor, scrollOptions)
+        } else {
+          handle.scrollToAnchor(anchor)
+        }
         return
       }
 
       if (anchor.bounds && handle.scrollToPageArea) {
-        handle.scrollToPageArea({
+        const target = {
           pageNumber: normalizedPage,
           left: toPageAreaPercent(anchor.bounds.x),
           top: toPageAreaPercent(anchor.bounds.y),
           width: toPageAreaPercent(anchor.bounds.width),
           height: toPageAreaPercent(anchor.bounds.height),
-        })
+        }
+        if (scrollOptions) {
+          handle.scrollToPageArea(target, scrollOptions)
+        } else {
+          handle.scrollToPageArea(target)
+        }
         return
       }
 
-      handle.scrollToPage(normalizedPage)
+      if (scrollOptions) {
+        handle.scrollToPage(normalizedPage, scrollOptions)
+      } else {
+        handle.scrollToPage(normalizedPage)
+      }
     },
     [interaction]
   )
@@ -295,6 +324,14 @@ function clamp01(value: number): number {
 function toPageAreaPercent(value: number): number {
   if (!Number.isFinite(value)) return 0
   return value >= 0 && value <= 1 ? value * 100 : value
+}
+
+function segmentScrollOptions(
+  options: SegmentNavigationOptions | undefined
+): ScrollToOptions | undefined {
+  if (!options) return undefined
+  const { clearPreview: _clearPreview, ...scrollOptions } = options
+  return Object.keys(scrollOptions).length > 0 ? scrollOptions : undefined
 }
 
 export type SegmentedDocumentViewportModel = SegmentViewportModel

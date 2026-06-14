@@ -121,6 +121,39 @@ describe("AnchoredItemList", () => {
     expect(callbacks.clearPreview).toHaveBeenCalledTimes(2)
   })
 
+  it("reports the top visible row while scrolling", async () => {
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      callback(0)
+      return 0
+    })
+    const onVisibleItemChange = vi.fn()
+    render(
+      <div style={{ height: 120 }}>
+        <AnchoredItemList
+          aria-label="Evidence"
+          estimateSize={50}
+          items={[
+            ...ITEMS,
+            { id: "delta", label: "Delta" },
+            { id: "echo", label: "Echo" },
+          ]}
+          onVisibleItemChange={onVisibleItemChange}
+          renderItem={(item) => item.label}
+        />
+      </div>
+    )
+
+    const viewport = screen
+      .getByRole("listbox", { name: "Evidence" })
+      .closest('[data-slot="scroll-area-viewport"]') as HTMLDivElement
+    viewport.scrollTop = 55
+    fireEvent.scroll(viewport)
+
+    expect(onVisibleItemChange).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "bravo" })
+    )
+  })
+
   it("activates focused rows with click, Enter, and Space", () => {
     const callbacks = renderList()
     const alpha = option(/alpha/i)

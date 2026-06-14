@@ -596,6 +596,38 @@ describe("usePptxVisibleSlide", () => {
     expect(onVisibleSlideChange).toHaveBeenCalledWith(2)
   })
 
+  it("preserves the semantic slide anchor when the layout changes", () => {
+    const view = render(
+      <VisibleSlideHarness
+        slideCount={5}
+        baseSize={{ width: 960, height: 720 }}
+        zoomScale={1}
+      />
+    )
+    const viewport = screen.getByTestId("viewport")
+    setElementNumberProperty(viewport, "clientHeight", 600)
+    Object.defineProperty(viewport, "scrollTop", {
+      configurable: true,
+      value: 1608,
+      writable: true,
+    })
+
+    scroll()
+
+    expect(screen.getByTestId("current-slide").textContent).toBe("3")
+
+    view.rerender(
+      <VisibleSlideHarness
+        slideCount={5}
+        baseSize={{ width: 960, height: 720 }}
+        zoomScale={2}
+      />
+    )
+
+    expect(viewport.scrollTop).toBe(3288)
+    expect(screen.getByTestId("current-slide").textContent).toBe("3")
+  })
+
   it("does not query slide DOM geometry while scrolling", () => {
     const onVisibleSlideChange = vi.fn()
     render(

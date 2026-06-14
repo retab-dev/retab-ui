@@ -28,7 +28,6 @@ import { ExtractionViewerBlock } from "@/registry/new-york-v4/blocks/extraction-
 import { FileSystemBlock } from "@/registry/new-york-v4/blocks/file-system-block"
 import { FsLightBlock } from "@/registry/new-york-v4/blocks/fslight-block"
 import { ImageSourcesBlock } from "@/registry/new-york-v4/blocks/image-sources-block"
-import { LegendVariantsBlock } from "@/registry/new-york-v4/blocks/legend-variants-block"
 import { OcrBlock } from "@/registry/new-york-v4/blocks/ocr-block"
 import { ParseViewerBlock } from "@/registry/new-york-v4/blocks/parse-viewer-block"
 import { PartitionViewerBlock } from "@/registry/new-york-v4/blocks/partition-viewer-block"
@@ -71,7 +70,6 @@ const blockComponents = {
   "file-system": FileSystemBlock,
   fslight: FsLightBlock,
   "primitive-cards": PrimitiveCardsBlock,
-  "legend-variants": LegendVariantsBlock,
   "pdf-thumbnails": PdfThumbnailsBlock,
 } satisfies Record<ViewerBlockId, React.ComponentType>
 

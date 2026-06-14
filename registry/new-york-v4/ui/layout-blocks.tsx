@@ -147,17 +147,20 @@ function DocumentAiLayoutBlocksContent({
     [segmentByItemId, segmentedViewport.interaction]
   )
   const navigateItem = React.useCallback(
-    (itemId: string) => {
+    (
+      itemId: string,
+      options?: { behavior?: ScrollBehavior; clearPreview?: boolean }
+    ) => {
       const segment = segmentByItemId.get(itemId)
       if (!segment) return
 
       const anchor = anchorBySegmentId.get(segment.id)
       if (anchor) {
-        segmentedViewport.navigation.scrollToAnchor(anchor)
+        segmentedViewport.navigation.scrollToAnchor(anchor, options)
         return
       }
 
-      segmentedViewport.navigation.scrollToSegmentStart(segment)
+      segmentedViewport.navigation.scrollToSegmentStart(segment, options)
     },
     [anchorBySegmentId, segmentByItemId, segmentedViewport.navigation]
   )
@@ -187,7 +190,7 @@ function DocumentAiLayoutBlocksContent({
           onItemClick={(item) => {
             setSelectedItemId(item.id)
             clearPreview()
-            navigateItem(item.id)
+            navigateItem(item.id, { behavior: "smooth", clearPreview: false })
           }}
           onItemPointerEnter={(item) => previewItem(item.id)}
           onItemPointerLeave={clearPreview}
@@ -283,8 +286,10 @@ function DocumentAiLayoutBlocksContent({
             selectedItemId={selectedItemId}
             onActiveItemIdChange={previewItem}
             onNavigateItem={(item, options) => {
-              if (options?.behavior === "auto") return
-              navigateItem(item.id)
+              navigateItem(item.id, {
+                behavior: options?.behavior,
+                clearPreview: options?.behavior === "auto" ? false : undefined,
+              })
             }}
             onSelectedItemIdChange={(itemId) => {
               if (itemId) {

@@ -24,6 +24,11 @@ import {
   splitTextLines,
 } from "./plain-text-resource"
 
+type CodeReadingAnchor = {
+  lineIndex: number
+  offsetPx: number
+}
+
 export function CodeViewerContent({
   resource,
   className,
@@ -67,6 +72,7 @@ export function CodeViewerContent({
   const [fontScale, setFontScale] = React.useState(1)
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const rowHostRef = React.useRef<HTMLPreElement | null>(null)
+  const pendingScrollAnchorRef = React.useRef<CodeReadingAnchor | null>(null)
   const projector = React.useMemo(() => createCodeProjector(), [])
   const lineHeight = CODE_VIEWER_BASE_LINE_PX * fontScale
   const contentIdentity = React.useMemo(
@@ -84,8 +90,35 @@ export function CodeViewerContent({
 
   useCodeViewerSyntaxStyle()
 
-  const zoom = (factor: number) =>
-    setFontScale((scale) => clampCodeViewerScale(scale * factor))
+  const commitFontScale = React.useCallback(
+    (nextScale: number) => {
+      const clampedScale = clampCodeViewerScale(nextScale)
+      if (clampedScale === fontScale) return
+
+      pendingScrollAnchorRef.current = captureCodeReadingAnchor({
+        lineCount: textLines.length,
+        lineHeight,
+        viewportElement: viewportRef.current,
+      })
+      setFontScale(clampedScale)
+    },
+    [fontScale, lineHeight, textLines.length]
+  )
+
+  const zoom = (factor: number) => commitFontScale(fontScale * factor)
+
+  React.useLayoutEffect(() => {
+    const anchor = pendingScrollAnchorRef.current
+    const viewportElement = viewportRef.current
+    if (!anchor || !viewportElement) return
+
+    pendingScrollAnchorRef.current = null
+    viewportElement.scrollTop = restoreCodeReadingAnchor({
+      anchor,
+      lineCount: textLines.length,
+      lineHeight,
+    })
+  }, [lineHeight, textLines.length])
 
   React.useImperativeHandle(
     forwardedRef ?? null,
@@ -157,7 +190,7 @@ export function CodeViewerContent({
           downloadAction={downloadAction}
           onZoomOut={() => zoom(1 / 1.2)}
           onZoomIn={() => zoom(1.2)}
-          onResetZoom={() => setFontScale(1)}
+          onResetZoom={() => commitFontScale(1)}
         />
       ) : null}
       <CodeViewerViewport
@@ -169,6 +202,49 @@ export function CodeViewerContent({
         viewportRef={viewportRef}
       />
     </CodeViewerFrame>
+  )
+}
+
+function captureCodeReadingAnchor({
+  lineCount,
+  lineHeight,
+  viewportElement,
+}: {
+  lineCount: number
+  lineHeight: number
+  viewportElement: HTMLDivElement | null
+}): CodeReadingAnchor | null {
+  if (!viewportElement || lineCount <= 0 || lineHeight <= 0) return null
+
+  const scrollTop = Math.max(0, viewportElement.scrollTop)
+  const contentTop = Math.max(0, scrollTop - CODE_VIEWER_BLOCK_PADDING)
+  const lineIndex = Math.min(
+    lineCount - 1,
+    Math.max(0, Math.floor(contentTop / lineHeight))
+  )
+
+  return {
+    lineIndex,
+    offsetPx: Math.max(0, contentTop - lineIndex * lineHeight),
+  }
+}
+
+function restoreCodeReadingAnchor({
+  anchor,
+  lineCount,
+  lineHeight,
+}: {
+  anchor: CodeReadingAnchor
+  lineCount: number
+  lineHeight: number
+}) {
+  if (lineCount <= 0 || lineHeight <= 0) return 0
+
+  const lineIndex = Math.min(lineCount - 1, Math.max(0, anchor.lineIndex))
+  return (
+    CODE_VIEWER_BLOCK_PADDING +
+    lineIndex * lineHeight +
+    Math.min(anchor.offsetPx, Math.max(0, lineHeight - 1))
   )
 }
 

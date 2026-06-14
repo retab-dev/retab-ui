@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TabsPrimitive } from "@/components/ui/tabs"
 
 import type {
   FileSystemBrowserState,
@@ -101,25 +101,7 @@ export function FileSystemToolbar({
           </div>
         </div>
       </div>
-      <Tabs
-        value={view}
-        onValueChange={(nextView) => setView(nextView as FileSystemView)}
-        className="hidden gap-0 md:flex"
-      >
-        <TabsList className="h-8 p-0.5">
-          {VIEW_OPTIONS.map((option) => (
-            <TabsTrigger
-              key={option.value}
-              value={option.value}
-              aria-label={`${option.label} view`}
-              title={`${option.label} view`}
-              className="h-7 px-2"
-            >
-              <option.icon className="size-4" aria-hidden />
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <FileSystemViewTabs view={view} setView={setView} />
       <div className="relative w-52 min-w-0 max-sm:w-36">
         <Search
           className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
@@ -137,6 +119,37 @@ export function FileSystemToolbar({
         />
       </div>
     </div>
+  )
+}
+
+function FileSystemViewTabs({
+  setView,
+  view,
+}: {
+  setView: FileSystemHeaderState["setView"]
+  view: FileSystemHeaderState["view"]
+}) {
+  return (
+    <TabsPrimitive.Root
+      value={view}
+      onValueChange={(nextView) => setView(nextView as FileSystemView)}
+      className="hidden md:block"
+      data-slot="file-system-view-tabs"
+    >
+      <TabsPrimitive.List className="relative z-0 grid h-8 grid-cols-3 items-center gap-0.5 rounded-md bg-muted/80 p-0.5 text-muted-foreground">
+        {VIEW_OPTIONS.map((option) => (
+          <TabsPrimitive.Tab
+            key={option.value}
+            value={option.value}
+            aria-label={`${option.label} view`}
+            title={`${option.label} view`}
+            className="flex size-7 cursor-pointer items-center justify-center rounded-sm transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-disabled:pointer-events-none data-disabled:opacity-50 data-active:bg-background data-active:text-foreground data-active:shadow-xs data-active:ring-1 data-active:ring-border/40 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+          >
+            <option.icon aria-hidden />
+          </TabsPrimitive.Tab>
+        ))}
+      </TabsPrimitive.List>
+    </TabsPrimitive.Root>
   )
 }
 

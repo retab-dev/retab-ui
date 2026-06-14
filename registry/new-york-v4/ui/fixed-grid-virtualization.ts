@@ -115,7 +115,13 @@ export function useFixedGridVirtualization({
   })
   const viewport = useFixedGridViewport(
     resolvedScrollElement,
-    rowScrollStrategy
+    rowScrollStrategy,
+    {
+      rowCount,
+      columnCount,
+      rowSize,
+      columnSize,
+    }
   )
 
   const totalRowSize = fixedTotalSize(rowCount, rowSize)
@@ -476,6 +482,20 @@ export interface FixedGridViewport {
   isJumpingColumns: boolean
 }
 
+interface FixedGridLayoutMetrics {
+  rowCount: number
+  columnCount: number
+  rowSize: number
+  columnSize: number
+}
+
+interface FixedGridReadingAnchor {
+  rowIndex: number
+  columnIndex: number
+  rowOffsetPx: number
+  columnOffsetPx: number
+}
+
 interface FixedVirtualWindow {
   count: number
   size: number
@@ -516,13 +536,20 @@ function useResolvedScrollElement({
 
 function useFixedGridViewport(
   scrollElement: HTMLElement | null | undefined,
-  rowScrollStrategy?: FixedGridRowScrollStrategy
+  rowScrollStrategy?: FixedGridRowScrollStrategy,
+  layoutMetrics?: FixedGridLayoutMetrics
 ) {
   const [viewport, setViewport] = React.useState<FixedGridViewport>(
     emptyFixedGridViewport
   )
+  const committedLayoutMetricsRef = React.useRef<FixedGridLayoutMetrics | null>(
+    layoutMetrics ?? null
+  )
 
   useIsomorphicLayoutEffect(() => {
+    const previousLayoutMetrics = committedLayoutMetricsRef.current
+    committedLayoutMetricsRef.current = layoutMetrics ?? null
+
     if (!scrollElement) {
       setViewport((current) =>
         fixedGridViewportEqual(current, emptyFixedGridViewport)
@@ -536,6 +563,24 @@ function useFixedGridViewport(
     let settleTimeout = 0
     let lastScrollTop = scrollElement.scrollTop
     let lastScrollLeft = scrollElement.scrollLeft
+
+    if (
+      previousLayoutMetrics &&
+      layoutMetrics &&
+      didFixedGridItemSizeChange(previousLayoutMetrics, layoutMetrics)
+    ) {
+      const anchor = captureFixedGridReadingAnchor({
+        layoutMetrics: previousLayoutMetrics,
+        scrollElement,
+      })
+      restoreFixedGridReadingAnchor({
+        anchor,
+        layoutMetrics,
+        scrollElement,
+      })
+      lastScrollTop = scrollElement.scrollTop
+      lastScrollLeft = scrollElement.scrollLeft
+    }
 
     const commitViewport = (next: FixedGridViewport) => {
       setViewport((current) => {
@@ -606,9 +651,79 @@ function useFixedGridViewport(
       scrollElement.removeEventListener("scroll", scheduleRead)
       observer?.disconnect()
     }
-  }, [scrollElement, rowScrollStrategy])
+  }, [
+    scrollElement,
+    rowScrollStrategy,
+    layoutMetrics?.rowCount,
+    layoutMetrics?.columnCount,
+    layoutMetrics?.rowSize,
+    layoutMetrics?.columnSize,
+  ])
 
   return viewport
+}
+
+function didFixedGridItemSizeChange(
+  previous: FixedGridLayoutMetrics,
+  next: FixedGridLayoutMetrics
+) {
+  return (
+    previous.rowSize !== next.rowSize || previous.columnSize !== next.columnSize
+  )
+}
+
+function captureFixedGridReadingAnchor({
+  layoutMetrics,
+  scrollElement,
+}: {
+  layoutMetrics: FixedGridLayoutMetrics
+  scrollElement: HTMLElement
+}): FixedGridReadingAnchor {
+  const rowCount = fixedItemCount(layoutMetrics.rowCount)
+  const columnCount = fixedItemCount(layoutMetrics.columnCount)
+  const rowSize = fixedItemSize(layoutMetrics.rowSize)
+  const columnSize = fixedItemSize(layoutMetrics.columnSize)
+  const scrollTop = fixedViewportMetric(scrollElement.scrollTop)
+  const scrollLeft = fixedViewportMetric(scrollElement.scrollLeft)
+  const rowIndex =
+    rowCount > 0 && rowSize > 0
+      ? clamp(Math.floor(scrollTop / rowSize), 0, rowCount - 1)
+      : 0
+  const columnIndex =
+    columnCount > 0 && columnSize > 0
+      ? clamp(Math.floor(scrollLeft / columnSize), 0, columnCount - 1)
+      : 0
+
+  return {
+    rowIndex,
+    columnIndex,
+    rowOffsetPx: Math.max(0, scrollTop - rowIndex * rowSize),
+    columnOffsetPx: Math.max(0, scrollLeft - columnIndex * columnSize),
+  }
+}
+
+function restoreFixedGridReadingAnchor({
+  anchor,
+  layoutMetrics,
+  scrollElement,
+}: {
+  anchor: FixedGridReadingAnchor
+  layoutMetrics: FixedGridLayoutMetrics
+  scrollElement: HTMLElement
+}) {
+  const rowCount = fixedItemCount(layoutMetrics.rowCount)
+  const columnCount = fixedItemCount(layoutMetrics.columnCount)
+  const rowSize = fixedItemSize(layoutMetrics.rowSize)
+  const columnSize = fixedItemSize(layoutMetrics.columnSize)
+  const rowIndex = rowCount > 0 ? clamp(anchor.rowIndex, 0, rowCount - 1) : 0
+  const columnIndex =
+    columnCount > 0 ? clamp(anchor.columnIndex, 0, columnCount - 1) : 0
+
+  scrollElement.scrollTop =
+    rowIndex * rowSize + Math.min(anchor.rowOffsetPx, Math.max(0, rowSize - 1))
+  scrollElement.scrollLeft =
+    columnIndex * columnSize +
+    Math.min(anchor.columnOffsetPx, Math.max(0, columnSize - 1))
 }
 
 export function fixedVirtualItems({

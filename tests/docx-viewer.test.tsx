@@ -2980,6 +2980,62 @@ describe("DocxViewer edge cases", () => {
     expect(host?.style.zoom).toBe("5")
   })
 
+  it("preserves the visible page when manual zoom changes the layout", async () => {
+    docxMock.renderAsync.mockImplementationOnce(async (_buffer, host) => {
+      installRenderedDocument(host, {
+        pageTops: [0, 1100, 2200, 3300, 4400],
+      })
+    })
+
+    await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/manual-zoom-anchor.docx")}
+        defaultScale={1}
+      />
+    )
+
+    expect(await screen.findByText("Page 1 of 5")).toBeTruthy()
+
+    const viewport = document.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )
+    expect(viewport).toBeTruthy()
+    setScrollMetrics(viewport!, {
+      clientHeight: 500,
+      scrollHeight: 7000,
+      scrollTop: 2140,
+    })
+    viewport!.getBoundingClientRect = vi.fn(() => rect(0, 800, 500))
+
+    const host = document.querySelector<HTMLElement>(
+      '[data-slot="docx-viewer"] .docx-wrapper'
+    )?.parentElement
+    expect(host).toBeTruthy()
+    const pageTops = [0, 1100, 2200, 3300, 4400]
+    document
+      .querySelectorAll<HTMLElement>("[data-page-number]")
+      .forEach((page, index) => {
+        page.getBoundingClientRect = vi.fn(() => {
+          const zoom = Number(host!.style.zoom || 1)
+          return rect(
+            pageTops[index]! * zoom - viewport!.scrollTop,
+            816 * zoom,
+            1056 * zoom
+          )
+        })
+      })
+
+    fireEvent.scroll(viewport!)
+
+    expect(await screen.findByText("Page 3 of 5")).toBeTruthy()
+
+    fireEvent.click(screen.getByLabelText("Zoom in"))
+
+    expect(await screen.findByText("120%")).toBeTruthy()
+    expect(await screen.findByText("Page 3 of 5")).toBeTruthy()
+    expect(viewport!.scrollTop).toBeCloseTo(2588, 5)
+  })
+
   it("ignores whitespace-only text highlight targets", async () => {
     const highlights = new Map<string, MockHighlight>()
     installHighlightApi(highlights)

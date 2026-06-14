@@ -2090,6 +2090,35 @@ describe("CodeViewer", () => {
     expect(scrollTo).toHaveBeenCalledWith({ top: 186, behavior: "auto" })
   })
 
+  it("preserves the visible line when manual zoom changes the layout", () => {
+    const viewerRef = React.createRef<CodeViewerHandle>()
+    render(
+      <CodeViewer
+        ref={viewerRef}
+        source={textSource(
+          Array.from({ length: 200 }, (_, index) => `line ${index + 1}`).join(
+            "\n"
+          )
+        )}
+      />
+    )
+
+    const viewportElement = viewerRef.current?.getViewportElement()
+    expect(viewportElement).not.toBeNull()
+    if (!viewportElement) return
+
+    Object.defineProperty(viewportElement, "scrollTop", {
+      configurable: true,
+      value: 1608,
+      writable: true,
+    })
+
+    fireEvent.click(screen.getByLabelText("Zoom in"))
+
+    expect(screen.getByText("120%")).toBeTruthy()
+    expect(viewportElement.scrollTop).toBe(1928)
+  })
+
   it("applies zoom changes to the rendered text metrics", () => {
     const { container } = render(<CodeViewer source={textSource("alpha")} />)
     const pre = container.querySelector("pre")

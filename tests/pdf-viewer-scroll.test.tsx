@@ -157,7 +157,7 @@ describe("usePdfScroll", () => {
     )
 
     await waitFor(() =>
-      expect(screen.getByTestId("page").textContent).toBe("5")
+      expect(screen.getByTestId("page").textContent).toBe("10")
     )
     expect(cancelAnimationFrame).toHaveBeenCalledWith(1)
 
@@ -168,7 +168,7 @@ describe("usePdfScroll", () => {
     expect(initialVisiblePageChange).not.toHaveBeenCalled()
     expect(initialProgressChange).not.toHaveBeenCalled()
     expect(nextProgressChange).toHaveBeenCalled()
-    expect(screen.getByTestId("page").textContent).toBe("5")
+    expect(screen.getByTestId("page").textContent).toBe("10")
   })
 
   it("preserves the semantic page anchor when the layout changes", async () => {

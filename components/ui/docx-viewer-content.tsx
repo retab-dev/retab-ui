@@ -57,17 +57,6 @@ export function DocxViewerContent({
   const [renderError, setRenderError] = React.useState<Error | null>(null)
   if (renderError) throw renderError
 
-  const {
-    currentPage,
-    handleScroll,
-    measureScroll,
-    resetScroll,
-    scrollViewportRef,
-  } = useDocxViewerScroll({
-    onScrollProgressChange,
-    onVisiblePageChange,
-    ready,
-  })
   const { fitWidth, scale, zoomIn, zoomOut } = useDocxViewerScale({
     containerWidth,
     defaultScale,
@@ -75,6 +64,18 @@ export function DocxViewerContent({
     pageWidth,
     resetKey: resource.keys.resource,
     scale: controlledScale,
+  })
+  const {
+    currentPage,
+    handleScroll,
+    measureScroll,
+    resetScroll,
+    scrollViewportRef,
+  } = useDocxViewerScroll({
+    layoutKey: scale,
+    onScrollProgressChange,
+    onVisiblePageChange,
+    ready,
   })
   const scaleRef = React.useRef(scale)
   React.useEffect(() => {
