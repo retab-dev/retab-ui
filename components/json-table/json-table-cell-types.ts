@@ -45,4 +45,5 @@ export interface JsonTableCellProps {
   onCellHoverStart?: (info: JsonTableCellHoverInfo) => void
   onCellHoverEnd?: () => void
   isJsonEditable: boolean
+  ariaColumnIndex: number
 }

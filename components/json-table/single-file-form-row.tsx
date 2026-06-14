@@ -143,6 +143,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     )
     return (
       <TableRow
+        aria-rowindex={rowIdx + 1}
         data-index={rowIdx}
         data-slot="json-table-row"
         className="flex w-full border-b-0 border-border bg-transparent hover:bg-muted/50"
@@ -166,6 +167,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
             docId: documentId,
             primitiveActiveCellStore,
             primitiveEditStore,
+            ariaColumnIndex: (projectedCellIndex ?? colIdx) + 1,
             setPrimitiveActiveCell,
             structuredEditSession,
             startStructuredEditSession,

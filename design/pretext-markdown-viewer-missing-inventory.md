@@ -26,10 +26,12 @@ leaking virtual chunks as visible pages.
 15. Table copy polish beyond current rendered-cell TSV copy.
 16. Broader image polish beyond the current blocked/loading/ready/failed/retry surface with associated captions, lazy loading, max-width containment, decoded aspect-ratio stabilization, and resource blocking.
 17. Component-specific stable block heights for rich blocks beyond current top-level prose/code/table/frontmatter estimates.
-18. Browser regression coverage beyond the current docs/demo smoke check.
+18. Browser regression coverage beyond the current dedicated rich-demo smoke
+    check.
 19. Docs page expansion for migration, threat model, performance limits, and known gaps.
 20. FileViewer rollout verification beyond the current URL, Blob, inline text, and MIME-only Markdown routing tests.
-21. Full shadcn CLI registry install smoke beyond the current generated artifact import-closure test.
+21. Full shadcn CLI registry install smoke beyond the current generated artifact
+    transitive install-tree import-closure test.
 22. Accessibility audit for generated block roles/labels.
 23. Source-mode polish beyond the current virtualized raw Markdown toggle, source-line scrolling, anchored mode switching, and labelled keyboard-focusable source region.
 24. Browser-level fragment navigation regression coverage beyond the current component-level local link, direct hash, hashchange, and popstate tests.
@@ -41,7 +43,7 @@ leaking virtual chunks as visible pages.
 27. Broader Markdown block model work beyond current top-level parser-token blocks and block-aware layout estimates: nested blocks, rich block metadata, and render inputs.
 28. Complete public/private boundaries between parser, layout, virtualization, policy, and render projection modules. The first split now uses `pretext-markdown-parser`, `pretext-markdown-document-model`, `pretext-markdown-layout`, `pretext-markdown-virtualizer`, and `pretext-markdown-policy`; remaining work is to narrow each public API and add more granular architecture tests.
 29. Broader stable block IDs beyond current top-level source-line IDs, including nested table rows, diagrams, callouts, footnotes, and component blocks.
-30. Broader source mapping beyond current top-level block line ranges and document-character offsets, including nested lists, blockquotes, inline spans, and generated rich children.
+30. Broader source mapping beyond current top-level block line ranges, document-character offsets, and offset lookup/intersection helpers, including nested lists, blockquotes, inline spans, and generated rich children.
 31. Broader slug compatibility work beyond the current model-owned slug algorithm and DOM ID handoff, including explicit compatibility decisions against `rehype-slug`.
 32. A layout contract for every block type: fixed height, Pretext-measured height, or measured-with-growth-only height.
 33. Broader no-DOM-measurement policy beyond current block-aware Pretext estimates, with DOM measurement reserved for explicitly rich blocks.
@@ -81,7 +83,7 @@ leaking virtual chunks as visible pages.
 61. Full Mermaid rendering with deterministic pre-layout dimensions.
 62. Mermaid loading/error states that do not shift layout.
 63. Broader Mermaid source-copy polish beyond the current full-source copy control.
-64. Diagram security policy.
+64. Broader diagram security policy beyond the current strict Mermaid config and SVG sanitization boundary.
 65. Broader code block language header polish beyond current normalized language, title/caption metadata, and opt-in Pretty Code line-number metadata.
 66. Code block line virtualization for large fences.
 67. Browser-level code block horizontal scrolling verification beyond the current labelled keyboard-focusable source region and max-content code body.
@@ -159,14 +161,19 @@ leaking virtual chunks as visible pages.
 126. Broader unit tests for the forked Markdown parser beyond current adapter normalization and malformed Markdown recovery fixtures.
 127. Broader unit tests for the forked block layout beyond current top-level block ID and kind-specific estimate coverage.
 128. Broader unit tests for the forked virtualizer/windowing behavior beyond current pixel overscan, intra-chunk source-line offset, and anchor restore coverage.
-129. Browser regression tests proving there are no visible page shells, page gaps, or page labels beyond the current DOM/unit test.
+129. Broader browser regression tests proving there are no visible page shells,
+     page gaps, or page labels beyond the current dedicated rich-demo smoke and
+     DOM/unit tests.
 130. Fragment navigation tests in the new viewer.
 131. Broader source-line highlight tests in the new viewer beyond current source-mode line coverage, rendered/source scroll range coverage, and rendered chunk highlight data attributes.
-132. Browser visual verification for continuous rendering.
-133. Browser scroll stability tests around diagrams, images, tables, and code blocks.
+132. Broader browser visual verification for continuous rendering beyond the
+     current rich-demo smoke.
+133. Broader browser scroll stability tests around diagrams, images, tables,
+     and code blocks beyond the current rich-demo measurement-settling check.
 134. Mobile screenshot verification.
 135. Dark mode screenshot verification.
-136. Registry artifact import smoke test.
+136. Full CLI registry install smoke beyond the current artifact and transitive
+     install-tree import smoke.
 137. Broader FileViewer routing tests beyond current Blob, URL, inline text, and MIME-only Markdown source coverage.
 138. Fuzz tests for malformed Markdown.
 139. XSS/security regression tests for links, images, raw HTML, directives, MDX-like input, and component props.
@@ -195,7 +202,7 @@ leaking virtual chunks as visible pages.
 156. Broader parser error recovery tests for malformed links and images beyond the current malformed-link fixture.
 157. Broader parser error recovery tests for malformed frontmatter beyond the current unterminated-frontmatter fixture.
 158. Block source extraction for every parsed block, not only line ranges.
-159. Byte offset mapping beyond current document-character offsets for blocks, chunks, headings, and frontmatter.
+159. Byte offset mapping beyond current document-character offsets and offset lookup/intersection helpers for blocks, chunks, headings, and frontmatter.
 160. Inline source span mapping for links, emphasis, code spans, footnote refs, and task markers.
 161. Broader comment preservation polish beyond current source-model retention and zero-height rendered output.
 162. Preservation policy for blank-line runs in rendered layout.
@@ -315,7 +322,8 @@ leaking virtual chunks as visible pages.
 264. Broader SVG sanitization coverage beyond the current SVG script/style mounting tests.
 265. CSS injection policy.
 266. Broader DOM clobbering fuzz tests beyond the current raw HTML `id`/`name`
-     prefix regression and heading reserved-name tests.
+     prefix regression, raw internal `data-pretext-*` metadata stripping, and
+     heading reserved-name tests.
 267. Heading ID collision safety review beyond the current duplicate, reserved-name, and exported-slug tests.
 268. Component prop injection tests.
 269. Clipboard content sanitization policy.

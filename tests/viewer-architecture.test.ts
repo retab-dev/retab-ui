@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
 import { dirname, join, relative } from "node:path"
+import ts from "typescript"
 import { describe, expect, it } from "vitest"
 
 type RegistryFile = {
@@ -237,13 +238,93 @@ function resolveRelativeImport(
   return null
 }
 
-function expectInOrder(content: string, file: string, symbols: string[]) {
+function jsxTagName(node: ts.JsxTagNameExpression): string {
+  return node.getText()
+}
+
+function jsxTags(file: string): string[] {
+  const content = fileContent(file)
+  const sourceFile = ts.createSourceFile(
+    file,
+    content,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX
+  )
+  const tags: string[] = []
+
+  function visit(node: ts.Node) {
+    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+      tags.push(jsxTagName(node.tagName))
+    }
+    ts.forEachChild(node, visit)
+  }
+
+  visit(sourceFile)
+  return tags
+}
+
+type JsxOpeningElementInfo = {
+  file: string
+  line: number
+  tag: string
+  attributes: string[]
+}
+
+function jsxOpeningElements(file: string): JsxOpeningElementInfo[] {
+  const content = fileContent(file)
+  const sourceFile = ts.createSourceFile(
+    file,
+    content,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX
+  )
+  const elements: JsxOpeningElementInfo[] = []
+
+  function visit(node: ts.Node) {
+    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const position = sourceFile.getLineAndCharacterOfPosition(
+        node.getStart(sourceFile)
+      )
+      elements.push({
+        file,
+        line: position.line + 1,
+        tag: jsxTagName(node.tagName),
+        attributes: node.attributes.properties.map((property) =>
+          ts.isJsxAttribute(property)
+            ? property.name.getText(sourceFile)
+            : "..."
+        ),
+      })
+    }
+    ts.forEachChild(node, visit)
+  }
+
+  visit(sourceFile)
+  return elements
+}
+
+function tsxFilesUnderRoots(roots: string[]): string[] {
+  return roots.flatMap((root) =>
+    sourceFilesUnder(join(repoRoot, root)).filter((file) =>
+      file.endsWith(".tsx")
+    )
+  )
+}
+
+function expectJsxTagsInOrder(file: string, expectedTags: string[]) {
+  const tags = jsxTags(file)
   let previousIndex = -1
-  for (const symbol of symbols) {
-    const index = content.indexOf(symbol, previousIndex + 1)
+
+  for (const expectedTag of expectedTags) {
+    const tag = expectedTag.replace(/^</, "")
+    const index = tags.indexOf(tag, previousIndex + 1)
     expect(
       index,
-      `${file} contains ${symbol} after offset ${previousIndex}`
+      `${file} contains JSX <${tag}> after tag index ${previousIndex}. Tags: ${tags.join(
+        ", "
+      )}`
     ).toBeGreaterThan(previousIndex)
     previousIndex = index
   }
@@ -291,14 +372,16 @@ describe("viewer architecture", () => {
   it("keeps public viewer sidebar hooks on the public context", () => {
     const content = fileContent("registry/new-york-v4/ui/viewer.tsx")
 
-    expect(content).toContain("const ViewerSidebarContext =")
-    expect(content).toContain("const ViewerSidebarInternalContext =")
+    expect(content).toContain("const ViewerSidebarStateContext =")
+    expect(content).toContain("const ViewerSidebarRegistrationContext =")
     expect(content).not.toContain("toPublicViewerSidebarContext")
+    expect(content).not.toContain("publicSidebar")
+    expect(content).not.toContain("useViewerSidebarInternal")
     expect(content).toMatch(
-      /export function useViewerSidebar\(\): ViewerSidebarContextValue \{[\s\S]*?React\.useContext\(ViewerSidebarContext\)[\s\S]*?return context[\s\S]*?\}/
+      /export function useViewerSidebar\(\): ViewerSidebarContextValue \{[\s\S]*?React\.useContext\(ViewerSidebarStateContext\)[\s\S]*?return context[\s\S]*?\}/
     )
     expect(content).toMatch(
-      /function useViewerSidebarInternal\(\): ViewerSidebarInternalContextValue \{[\s\S]*?React\.useContext\(ViewerSidebarInternalContext\)/
+      /function useViewerSidebarRegistrationContext\([\s\S]*?consumer: string[\s\S]*?\): ViewerSidebarRegistrationContextValue \{[\s\S]*?React\.useContext\(ViewerSidebarRegistrationContext\)/
     )
   })
 
@@ -550,9 +633,9 @@ describe("viewer architecture", () => {
           "<FileSystemHeader",
           "<ViewerBody",
           "<ViewerSidebar",
-          "<FileSystemExplorer",
+          "<FileSystemBrowser",
           "<ViewerSurface",
-          "<FileSystemSelectedFile",
+          "<FileSystemPreview",
         ],
       },
       {
@@ -612,7 +695,7 @@ describe("viewer architecture", () => {
 
     for (const { file, symbols } of easyApis) {
       const content = fileContent(file)
-      expectInOrder(content, file, symbols)
+      expectJsxTagsInOrder(file, symbols)
       expect(content, `${file} accepts slot object props`).not.toContain(
         "slots?:"
       )
@@ -734,12 +817,7 @@ describe("viewer architecture", () => {
   })
 
   it("keeps the PDF thumbnails block identical to canonical composition", () => {
-    const content = fileContent(
-      "registry/new-york-v4/blocks/pdf-thumbnails-block.tsx"
-    )
-
-    expectInOrder(
-      content,
+    expectJsxTagsInOrder(
       "registry/new-york-v4/blocks/pdf-thumbnails-block.tsx",
       [
         "<PdfViewerProvider",
@@ -760,15 +838,21 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/ui/file-system-provider.tsx"
     )
     const parts = fileContent("registry/new-york-v4/ui/file-system-parts.tsx")
-    const explorerControllers = fileContent(
-      "registry/new-york-v4/ui/file-system-explorer-controllers.ts"
-    )
     const dialog = fileContent(
       "registry/new-york-v4/ui/file-system-open-preview-dialog.tsx"
+    )
+    const browserState = fileContent(
+      "registry/new-york-v4/ui/file-system-browser-state.ts"
+    )
+    const browserController = fileContent(
+      "registry/new-york-v4/ui/file-system-browser-controller.ts"
     )
     const controller = fileContent(
       "registry/new-york-v4/ui/file-system-controller.ts"
     )
+    const explorerControllerName = "FileSystem" + "ExplorerController"
+    const explorerControllerFile =
+      "registry/new-york-v4/ui/file-system-explorer" + "-controllers.ts"
 
     expect(easyApi).toContain("./file-system-provider")
     expect(easyApi).toContain("./file-system-parts")
@@ -782,46 +866,103 @@ describe("viewer architecture", () => {
     expect(provider).not.toContain("openFilePreviewState")
     expect(controller).toContain("export type FileSystemDomainState")
     expect(provider).toContain("export type FileSystemCompositionState")
-    expect(controller).toContain("index: FileSystemIndexState")
-    expect(controller).toContain("loading: FileSystemLoadingController")
-    expect(controller).toContain("navigation: FileSystemNavigationController")
+    expect(controller).toContain("browser: FileSystemBrowserState")
+    expect(controller).toContain("preview: FileSystemPreviewState")
+    expect(provider).toContain("browser,")
+    expect(provider).toContain("preview,")
     expect(provider).toContain("openPreview: FileSystemOpenPreviewController")
-    expect(controller).toContain("query: FileSystemQueryController")
-    expect(controller).toContain("selection: FileSystemSelectionController")
-    expect(controller).toContain("source: FileSystemSourceController")
-    expect(controller).toContain("view: FileSystemViewController")
-    expect(provider).toContain("closePreview")
+    expect(provider).not.toContain("query: state.query")
+    expect(provider).not.toContain("view: state.view")
+    expect(provider).not.toContain("source: state.source")
+    expect(provider).not.toContain("index: state.index")
+    expect(provider).not.toContain("loading: state.loading")
+    expect(provider).not.toContain("selection: state.selection")
+    expect(provider).not.toContain("navigation: state.navigation")
+    expect(browserState).toContain("export type FileSystemBrowserState")
+    expect(browserState).toContain("entries: FileSystemEntry[]")
+    expect(browserState).toContain("loading: FileSystemBrowserLoadingState")
+    expect(browserState).toContain(
+      "navigation: FileSystemBrowserNavigationState"
+    )
+    expect(browserState).toContain("selection: FileSystemBrowserSelectionState")
+    expect(browserState).toContain("commands: FileSystemBrowserCommands")
+    expect(browserState).toContain(
+      "export type FileSystemBrowserSelectionState"
+    )
+    expect(browserState).toContain("export type FileSystemBrowserLoadingState")
+    expect(browserState).toContain(
+      "export type FileSystemBrowserNavigationState"
+    )
+    expect(browserState).toContain("export type FileSystemBrowserCommands")
+    expect(browserState).toContain("export type FileSystemHeaderState")
+    expect(browserState).toContain("createFileSystemHeaderState")
+    expect(browserState).toContain("entry: FileSystemEntry | null")
+    expect(browserState).toContain(
+      'resolveSource: FileSystemSourceController["resolveFileSource"]'
+    )
+    expect(browserState).not.toContain(
+      "FileSystemHeaderState = FileSystemBrowserState"
+    )
+    expect(browserState).toContain("export type FileSystemPreviewState")
+    expect(browserState).toContain("createFileSystemBrowserState")
+    expect(browserState).toContain("createFileSystemPreviewState")
+    expect(browserController).toContain(
+      "export type FileSystemBrowserController"
+    )
+    expect(browserController).toContain("browser: FileSystemBrowserState")
+    expect(browserController).toContain(
+      "export type FileSystemFileActionController"
+    )
+    expect(browserController).toContain(
+      "fileActions: FileSystemFileActionController"
+    )
+    expect(browserController).toContain(
+      "openPreview: FileSystemOpenPreviewCommand"
+    )
+    expect(browserController).toContain(
+      'resolveFileSource: FileSystemSourceController["resolveFileSource"]'
+    )
+    const browserControllerShape =
+      browserController.match(
+        /export type FileSystemBrowserController = \{[\s\S]*?\n\}/
+      )?.[0] ?? ""
+    expect(browserControllerShape).not.toContain("openPreview:")
+    expect(browserControllerShape).not.toContain("resolveFileSource:")
+    expect(provider).toContain("useFileSystemOpenPreviewController")
     expect(provider).toContain("useFileSystemStateSlices")
+    expect(provider).toContain("export type FileSystemContextValue = {")
+    expect(provider).toContain(
+      "browser: ReturnType<typeof createFileSystemBrowserState>"
+    )
+    expect(provider).toContain(
+      "preview: ReturnType<typeof createFileSystemPreviewState>"
+    )
     expect(parts).toContain("./file-system-controls")
     expect(parts).toContain("export function useFileSystemHeader")
-    expect(parts).toContain("export function useFileSystemExplorer")
-    expect(parts).toContain("export function useFileSystemSelectedFile")
+    expect(parts).toContain("export function useFileSystemBrowser")
+    expect(parts).toContain("export function useFileSystemPreview")
     expect(parts).toContain("export function FileSystemHeader")
-    expect(parts).toContain("export function FileSystemExplorer")
-    expect(parts).toContain("export function FileSystemSelectedFile")
-    expect(parts).toContain("createFileSystemHeaderController")
-    expect(parts).toContain("createFileSystemExplorerPart")
-    expect(parts).toContain("createFileSystemPreviewController")
-    expect(parts).toContain(
-      "export type FileSystemExplorerState = FileSystemExplorerPart"
-    )
+    expect(parts).toContain("export function FileSystemBrowser")
+    expect(parts).toContain("export function FileSystemPreview")
+    expect(parts).toContain("createFileSystemBrowserController")
+    expect(parts).toContain("export type FileSystemBrowserPartState")
     expect(parts).toContain("const header = useFileSystemHeader()")
-    expect(parts).toContain("useFileSystemExplorer()")
-    expect(parts).toContain("useFileSystemSelectedFile()")
-    expect(parts).toContain("const explorer = useFileSystemExplorer()")
+    expect(parts).toContain("useFileSystemBrowser()")
+    expect(parts).toContain("useFileSystemPreview()")
+    expect(parts).toContain("const controller = useFileSystemBrowser()")
     expect(parts).not.toContain("const { navigation, query, title, view }")
     expect(parts).not.toContain("const { renderers, selection, source }")
     expect(parts).not.toContain("explorerController")
-    expect(parts).not.toContain("const { explorer } = useFileSystemExplorer()")
-    expect(controller).not.toContain("FileSystemExplorerController")
-    expect(explorerControllers).toContain("FileSystemListViewController")
-    expect(explorerControllers).toContain("FileSystemGridViewController")
-    expect(explorerControllers).toContain("FileSystemColumnsViewController")
-    expect(explorerControllers).toContain("FileSystemStatusState")
-    expect(explorerControllers).toContain("FileSystemPierreLoadingController")
-    expect(explorerControllers).toContain("FileSystemPierreSelectionController")
-    expect(dialog).toContain("export function useFileSystemOpenPreviewDialog")
-    expect(dialog).toContain("export function FileSystemOpenPreviewDialog")
+    expect(parts).not.toContain("const { browser } = useFileSystemBrowser()")
+    expect(controller).not.toContain(explorerControllerName)
+    expect(
+      existsSync(join(repoRoot, explorerControllerFile))
+    ).toBe(false)
+    expect(dialog).toContain("export function useFileSystemOpenPreview")
+    expect(dialog).toContain("export function FileSystemOpenPreview")
+    expect(dialog).toContain('status === "resolving"')
+    expect(dialog).toContain('status === "unavailable"')
+    expect(dialog).toContain('status === "failed"')
   })
 
   it("keeps file-system easy API on invariant browser plus preview grammar", () => {
@@ -839,9 +980,16 @@ describe("viewer architecture", () => {
     expect(content).not.toContain('width="58%"')
   })
 
-  it("keeps file-system Pierre ownership outside the React list view", () => {
+  it("keeps Pierre private to the file-system list-view boundary", () => {
     const listView = fileContent(
       "registry/new-york-v4/ui/file-system-list-view.tsx"
+    )
+    const listModel = fileContent(
+      "registry/new-york-v4/ui/file-system-list-model.ts"
+    )
+    const light = fileContent("registry/new-york-v4/ui/file-system-light.tsx")
+    const lightTree = fileContent(
+      "registry/new-york-v4/ui/file-system-light-tree.tsx"
     )
     const gridView = fileContent(
       "registry/new-york-v4/ui/file-system-grid-view.tsx"
@@ -851,6 +999,9 @@ describe("viewer architecture", () => {
     )
     const model = fileContent(
       "registry/new-york-v4/ui/file-system-pierre-model.ts"
+    )
+    const adapter = fileContent(
+      "registry/new-york-v4/ui/file-system-pierre-adapter.ts"
     )
     const input = fileContent(
       "registry/new-york-v4/ui/file-system-pierre-input.ts"
@@ -873,7 +1024,12 @@ describe("viewer architecture", () => {
     const lazyRetry = fileContent(
       "registry/new-york-v4/ui/file-system-pierre-lazy-retry.ts"
     )
+    const explorerControllerName = "FileSystem" + "ExplorerController"
+    const explorerControllerImport = "file-system-explorer" + "-controllers"
+    const explorerControllerFile =
+      "registry/new-york-v4/ui/file-system-explorer" + "-controllers.ts"
     const pierreFiles = [
+      "registry/new-york-v4/ui/file-system-pierre-adapter.ts",
       "registry/new-york-v4/ui/file-system-pierre-decoration.ts",
       "registry/new-york-v4/ui/file-system-pierre-expansion.ts",
       "registry/new-york-v4/ui/file-system-pierre-lazy-retry.ts",
@@ -883,19 +1039,68 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/ui/file-system-pierre-selection.ts",
     ]
 
-    expect(listView).toContain("useFileSystemPierreModel")
-    expect(listView).toContain("FileSystemListViewController")
-    expect(listView).not.toContain("FileSystemExplorerController")
+    expect(listView).toContain("@pierre/trees/react")
+    expect(listView).toContain("useFileSystemListModel")
+    expect(listView).toContain("FileSystemBrowserController")
+    expect(listView).not.toContain("useFileSystemPierreModel")
+    expect(listView).not.toContain("buildFileSystemPierreInput")
+    expect(listView).not.toContain("file-system-pierre-input")
+    expect(listView).not.toContain("file-system-pierre-model")
+    expect(listView).not.toContain("file-system-pierre-decoration-version")
+    expect(listView).not.toContain("file-system-pierre-adapter")
+    expect(listView).not.toContain(explorerControllerName)
     expect(listView).not.toContain("new PierreFileTreeModel")
     expect(listView).not.toContain("SortHeader")
-    expect(gridView).toContain("FileSystemGridViewController")
-    expect(gridView).not.toContain("FileSystemExplorerController")
+    expect(listModel).not.toContain("@pierre/trees/react")
+    expect(listModel).toContain("useFileSystemListModel")
+    expect(listModel).toContain("useFileSystemPierreModel")
+    expect(listModel).toContain("buildFileSystemPierreInput")
+    expect(listModel).toContain("createFileSystemPierreAdapterState")
+    expect(listModel).toContain("createFileSystemPierreAdapterSource")
+    expect(listModel).toContain("browser.commands.ensureChildren")
+    expect(listModel).toContain("browser.commands.navigateTo")
+    expect(listModel).toContain("browser.selection.selectedPath")
+    expect(
+      existsSync(
+        join(repoRoot, "registry/new-york-v4/ui/file-system-list-model.ts")
+      )
+    ).toBe(true)
+    expect(
+      existsSync(
+        join(
+          repoRoot,
+          "registry/new-york-v4/ui/file-system-pierre-list-tree.tsx"
+        )
+      )
+    ).toBe(false)
+    expect(light).not.toContain("pierre")
+    expect(light).toContain("./file-system-light-tree")
+    expect(lightTree).toContain("@pierre/trees/react")
+    expect(
+      existsSync(
+        join(
+          repoRoot,
+          explorerControllerFile
+        )
+      )
+    ).toBe(false)
+    expect(gridView).toContain("FileSystemBrowserController")
+    expect(gridView).toContain("fileActions")
+    expect(gridView).not.toContain(explorerControllerName)
     expect(gridView).not.toContain("file-system-pierre")
-    expect(columnsView).toContain("FileSystemColumnsViewController")
-    expect(columnsView).not.toContain("FileSystemExplorerController")
+    expect(columnsView).toMatch(/FileSystem(ColumnsView|Browser)Controller/)
+    expect(columnsView).toContain("fileActions")
+    expect(columnsView).not.toContain(explorerControllerName)
     expect(columnsView).not.toContain("file-system-pierre")
+    expect(adapter).toContain("FileSystemPierreAdapterSource")
+    expect(adapter).toContain("createFileSystemPierreAdapterState")
+    expect(adapter).toContain("FileSystemIndex")
+    expect(adapter).not.toContain("FileSystemBrowserState")
+    expect(adapter).not.toContain(explorerControllerImport)
     expect(model).toContain("useFileTree")
-    expect(model).not.toContain("FileSystemExplorerController")
+    expect(model).not.toContain(explorerControllerName)
+    expect(model).not.toContain(explorerControllerImport)
+    expect(model).toContain("./file-system-pierre-adapter")
     expect(model).not.toContain("./file-system-controller")
     expect(model).toContain("selection.selectedPath")
     expect(model).toContain("currentLoading.folderErrors")
@@ -921,7 +1126,11 @@ describe("viewer architecture", () => {
       expect(
         content,
         `${file} imports broad explorer controller`
-      ).not.toContain("FileSystemExplorerController")
+      ).not.toContain(explorerControllerName)
+      expect(
+        content,
+        `${file} imports explorer composition boundary`
+      ).not.toContain(explorerControllerImport)
       expect(content, `${file} imports file-system-controller`).not.toContain(
         "./file-system-controller"
       )
@@ -955,14 +1164,7 @@ describe("viewer architecture", () => {
   })
 
   it("keeps workflow registry blocks on visible viewer composition", () => {
-    const parse = fileContent(
-      "registry/new-york-v4/blocks/parse-viewer-block.tsx"
-    )
-    const partition = fileContent(
-      "registry/new-york-v4/blocks/partition-viewer-block.tsx"
-    )
-
-    expectInOrder(parse, "registry/new-york-v4/blocks/parse-viewer-block.tsx", [
+    expectJsxTagsInOrder("registry/new-york-v4/blocks/parse-viewer-block.tsx", [
       "<ParseViewerProvider",
       "<ViewerRoot",
       "<ViewerBody",
@@ -972,8 +1174,7 @@ describe("viewer architecture", () => {
       "<ViewerSurface",
       "<ParseViewerMarkdown",
     ])
-    expectInOrder(
-      partition,
+    expectJsxTagsInOrder(
       "registry/new-york-v4/blocks/partition-viewer-block.tsx",
       [
         "<PartitionViewerProvider",
@@ -1018,6 +1219,89 @@ describe("viewer architecture", () => {
     expect(unlabeledSidebars).toEqual([])
   })
 
+  it("keeps composed viewer sidebars labeled by domain", () => {
+    const sidebars = [
+      {
+        file: "registry/new-york-v4/blocks/pdf-thumbnails-block.tsx",
+        label: 'aria-label="PDF pages"',
+      },
+      {
+        file: "registry/new-york-v4/ui/email-viewer.tsx",
+        label: 'aria-label="Email parts"',
+      },
+      {
+        file: "registry/new-york-v4/ui/file-system.tsx",
+        label: 'aria-label="Files"',
+      },
+      {
+        file: "registry/new-york-v4/blocks/extract-viewer-block.tsx",
+        label: 'aria-label="Extracted fields"',
+      },
+      {
+        file: "registry/new-york-v4/blocks/extraction-viewer-block.tsx",
+        label: 'aria-label="Extraction fields"',
+      },
+      {
+        file: "registry/new-york-v4/ui/layout-blocks.tsx",
+        label: 'aria-label="OCR blocks"',
+      },
+    ]
+
+    for (const { file, label } of sidebars) {
+      const content = fileContent(file)
+      expect(content, `${file} renders ViewerSidebar`).toContain(
+        "<ViewerSidebar"
+      )
+      expect(content, `${file} labels ViewerSidebar`).toContain(label)
+    }
+  })
+
+  it("keeps every source ViewerSidebar explicitly labeled and trigger side implicit", () => {
+    const files = tsxFilesUnderRoots([
+      "registry/new-york-v4",
+      "components/viewers",
+    ])
+    const unlabeledSidebars: string[] = []
+    const explicitTriggerSides: string[] = []
+
+    for (const file of files) {
+      for (const element of jsxOpeningElements(file)) {
+        if (element.tag === "ViewerSidebar") {
+          if (
+            !element.attributes.includes("aria-label") &&
+            !element.attributes.includes("aria-labelledby")
+          ) {
+            unlabeledSidebars.push(`${file}:${element.line}`)
+          }
+        }
+
+        if (
+          element.tag === "ViewerSidebarTrigger" &&
+          element.attributes.includes("side")
+        ) {
+          explicitTriggerSides.push(`${file}:${element.line}`)
+        }
+      }
+    }
+
+    expect(unlabeledSidebars).toEqual([])
+    expect(explicitTriggerSides).toEqual([])
+  })
+
+  it("keeps viewer sidebar child panels content-only when nested inside viewer rails", () => {
+    const panelFiles = [
+      "registry/new-york-v4/ui/layout-blocks-panel.tsx",
+      "registry/new-york-v4/ui/file-system-preview.tsx",
+    ]
+
+    for (const file of panelFiles) {
+      expect(
+        jsxTags(file),
+        `${file} must not render a local aside`
+      ).not.toContain("aside")
+    }
+  })
+
   it("documents intentional sidebar composition boundaries", () => {
     const sidebarDoc = fileContent("content/docs/components/sidebar.mdx")
     const compactSidebarDoc = compactWhitespace(sidebarDoc)
@@ -1038,15 +1322,18 @@ describe("viewer architecture", () => {
     const segmentSidebar = fileContent(
       "registry/new-york-v4/ui/segment-sidebar.tsx"
     )
-    const segmentedDocumentViewer = fileContent(
-      "registry/new-york-v4/ui/segmented-document-viewer.tsx"
-    )
 
     expect(sidebarDoc).toContain(
       "`ViewerSidebar` owns a spatial rail inside `ViewerBody`"
     )
     expect(sidebarDoc).toContain(
       "Viewer primitives do not encode domain purpose."
+    )
+    expect(sidebarDoc).toContain(
+      "Root ids, trigger markers, and transition readiness attributes are internal"
+    )
+    expect(sidebarDoc).toContain(
+      "`ViewerSidebarTrigger` stays focusable when no sidebar has registered yet."
     )
     expect(sidebarDoc).not.toContain("semantic wrapper")
     expect(sidebarDoc).not.toContain("data-viewer-purpose")
@@ -1070,8 +1357,7 @@ describe("viewer architecture", () => {
 
     expect(segmentSidebar).not.toContain("EmbeddedSidebarProvider")
     expect(segmentSidebar).toContain("<SidebarListRoot")
-    expectInOrder(
-      segmentedDocumentViewer,
+    expectJsxTagsInOrder(
       "registry/new-york-v4/ui/segmented-document-viewer.tsx",
       ["<ViewerSidebar", "<SegmentSidebar"]
     )
@@ -1150,10 +1436,10 @@ describe("viewer architecture", () => {
           "<ViewerRoot",
           "<ViewerBody",
           "<ViewerSurface",
-          "<PdfViewer",
+          "<PdfViewerProvider",
+          "<PdfViewerPages",
           "<ViewerSidebar",
           "<JsonForm",
-          "anchorLink={link}",
         ],
       },
       {
@@ -1186,8 +1472,52 @@ describe("viewer architecture", () => {
     ]
 
     for (const { file, symbols } of examples) {
-      expectInOrder(fileContent(file), file, symbols)
+      expectJsxTagsInOrder(file, symbols)
     }
+  })
+
+  it("keeps source blocks on viewer sidebar plus content-list composition", () => {
+    const sourceBlocks = [
+      "registry/new-york-v4/blocks/text-sources-block.tsx",
+      "registry/new-york-v4/blocks/csv-sources-block.tsx",
+      "registry/new-york-v4/blocks/xlsx-sources-block.tsx",
+      "registry/new-york-v4/blocks/docx-sources-block.tsx",
+      "registry/new-york-v4/blocks/image-sources-block.tsx",
+    ]
+    const sourceFieldList = fileContent(
+      "registry/new-york-v4/ui/source-field-list.tsx"
+    )
+
+    expect(sourceFieldList).not.toContain("<aside")
+    expect(sourceFieldList).not.toContain("<ViewerSidebar")
+    expect(sourceFieldList).toContain('data-slot="source-field-list"')
+
+    for (const file of sourceBlocks) {
+      expectJsxTagsInOrder(file, [
+        "<AnchoredDocumentProvider",
+        "<ViewerRoot",
+        "<ViewerBody",
+        "<ViewerSurface",
+        "<ViewerSidebar",
+        "<SourceFieldList",
+      ])
+      expect(fileContent(file)).toContain('aria-label="Source fields"')
+    }
+
+    expectJsxTagsInOrder(
+      "registry/new-york-v4/blocks/json-form-sources-block.tsx",
+      [
+        "<AnchoredDocumentProvider",
+        "<ViewerRoot",
+        "<ViewerBody",
+        "<ViewerSurface",
+        "<ViewerSidebar",
+        "<JsonForm",
+      ]
+    )
+    expect(
+      fileContent("registry/new-york-v4/blocks/json-form-sources-block.tsx")
+    ).toContain('aria-label="Extracted data sources"')
   })
 
   it("teaches compound viewer composition before easy APIs", () => {

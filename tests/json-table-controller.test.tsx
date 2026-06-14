@@ -11,7 +11,7 @@ import {
 } from "@/components/json-table/lib/header-drag-model"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
 import { useHeaderController } from "@/components/json-table/use-header-controller"
-import { useJsonTablePrimitiveCellController } from "@/components/json-table/use-json-table-primitive-cell-controller"
+import { useJsonTablePrimitiveCommitController } from "@/components/json-table/use-json-table-primitive-control"
 import { useJsonTableStructuredCellController } from "@/components/json-table/use-json-table-structured-cell-controller"
 import { useSingleFileTableDocumentModel } from "@/components/json-table/use-single-file-table-document-model"
 
@@ -147,7 +147,7 @@ describe("json table primitive cell controller", () => {
     const onCellCommit = vi.fn()
     const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result } = renderHook(() =>
-      useJsonTablePrimitiveCellController({
+      useJsonTablePrimitiveCommitController({
         document,
         materializedFieldPath: "vendor",
         value: "ACME",
@@ -157,7 +157,7 @@ describe("json table primitive cell controller", () => {
       })
     )
 
-    act(() => result.current.commitPrimitiveValueChange("ACME"))
+    act(() => result.current.commitValidatedValue("ACME"))
 
     expect(onCellCommit).not.toHaveBeenCalled()
     expect(result.current.effectiveValue).toBe("ACME")
@@ -168,7 +168,7 @@ describe("json table primitive cell controller", () => {
     const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const commitValue = vi.spyOn(primitiveEditStore, "commitValue")
     const { result } = renderHook(() =>
-      useJsonTablePrimitiveCellController({
+      useJsonTablePrimitiveCommitController({
         document,
         materializedFieldPath: "vendor",
         value: "ACME",
@@ -178,7 +178,7 @@ describe("json table primitive cell controller", () => {
       })
     )
 
-    act(() => result.current.commitPrimitiveValueChange("Globex"))
+    act(() => result.current.commitValidatedValue("Globex"))
 
     expect(commitValue).toHaveBeenCalledTimes(1)
     expect(commitValue).toHaveBeenCalledWith("vendor", "Globex", "ACME")
@@ -190,14 +190,13 @@ describe("json table primitive cell controller", () => {
       visibleThrough: "primitivePendingValue",
     })
     expect(result.current.effectiveValue).toBe("Globex")
-    expect(result.current.committedTextValue).toBe("Globex")
   })
 
   it("commits when projected value is stale but document data differs", () => {
     const onCellCommit = vi.fn()
     const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result } = renderHook(() =>
-      useJsonTablePrimitiveCellController({
+      useJsonTablePrimitiveCommitController({
         document,
         materializedFieldPath: "vendor",
         value: "Globex",
@@ -207,7 +206,7 @@ describe("json table primitive cell controller", () => {
       })
     )
 
-    act(() => result.current.commitPrimitiveValueChange("Globex"))
+    act(() => result.current.commitValidatedValue("Globex"))
 
     expect(onCellCommit).toHaveBeenCalledWith({
       fieldPath: "vendor",
@@ -228,7 +227,7 @@ describe("json table primitive cell controller", () => {
     const onCellCommit = vi.fn()
     const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result } = renderHook(() =>
-      useJsonTablePrimitiveCellController({
+      useJsonTablePrimitiveCommitController({
         document: nestedDocument,
         materializedFieldPath: "lines.0.quantity",
         value: 1,
@@ -238,7 +237,7 @@ describe("json table primitive cell controller", () => {
       })
     )
 
-    act(() => result.current.commitPrimitiveValueChange(2))
+    act(() => result.current.commitValidatedValue(2))
 
     expect(onCellCommit).toHaveBeenCalledWith({
       fieldPath: "lines.0.quantity",
@@ -254,7 +253,7 @@ describe("json table primitive cell controller", () => {
     const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result, rerender } = renderHook(
       ({ currentDocument, currentValue }) =>
-        useJsonTablePrimitiveCellController({
+        useJsonTablePrimitiveCommitController({
           document: currentDocument,
           materializedFieldPath: "vendor",
           value: currentValue,
@@ -270,7 +269,7 @@ describe("json table primitive cell controller", () => {
       }
     )
 
-    act(() => result.current.commitPrimitiveValueChange("Globex"))
+    act(() => result.current.commitValidatedValue("Globex"))
     expect(result.current.effectiveValue).toBe("Globex")
 
     const nextDocument = {
@@ -292,7 +291,7 @@ describe("json table primitive cell controller", () => {
     const onCellCommit = vi.fn()
     const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result } = renderHook(() =>
-      useJsonTablePrimitiveCellController({
+      useJsonTablePrimitiveCommitController({
         document: {
           ...document,
           data: { ...document.data, vendor: null },
@@ -305,17 +304,17 @@ describe("json table primitive cell controller", () => {
       })
     )
 
-    act(() => result.current.commitPrimitiveValueChange(""))
+    act(() => result.current.commitValidatedValue(""))
 
     expect(onCellCommit).not.toHaveBeenCalled()
-    expect(result.current.committedTextValue).toBe("")
+    expect(result.current.effectiveValue).toBeNull()
   })
 
   it("does not commit when disabled", () => {
     const onCellCommit = vi.fn()
     const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result } = renderHook(() =>
-      useJsonTablePrimitiveCellController({
+      useJsonTablePrimitiveCommitController({
         document,
         materializedFieldPath: "vendor",
         value: "ACME",
@@ -325,7 +324,7 @@ describe("json table primitive cell controller", () => {
       })
     )
 
-    act(() => result.current.commitPrimitiveValueChange("Globex"))
+    act(() => result.current.commitValidatedValue("Globex"))
 
     expect(onCellCommit).not.toHaveBeenCalled()
   })
@@ -334,7 +333,7 @@ describe("json table primitive cell controller", () => {
     const onCellCommit = vi.fn()
     const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result } = renderHook(() =>
-      useJsonTablePrimitiveCellController({
+      useJsonTablePrimitiveCommitController({
         document,
         materializedFieldPath: undefined,
         value: "ACME",
@@ -344,7 +343,7 @@ describe("json table primitive cell controller", () => {
       })
     )
 
-    act(() => result.current.commitPrimitiveValueChange("Globex"))
+    act(() => result.current.commitValidatedValue("Globex"))
 
     expect(onCellCommit).not.toHaveBeenCalled()
   })
@@ -371,7 +370,6 @@ describe("json table structured cell controller", () => {
       visibleThrough: "projectedDocumentValue",
     })
     expect(result.current.effectiveValue).toBe("Globex")
-    expect(result.current.committedTextValue).toBe("Globex")
   })
 
   it("skips structured no-op commits", () => {
@@ -504,6 +502,60 @@ describe("single file table document model", () => {
     expect(result.current.projectionDocument).toBe(authoritativeDocument)
   })
 
+  it("resets primitive edits and projection for a new source document id", () => {
+    const onUpdateDocument = vi.fn(async () => undefined)
+    const { result, rerender } = renderHook(
+      ({ sourceDocument }) =>
+        useSingleFileTableDocumentModel({
+          sourceDocument,
+          onUpdateDocument,
+        }),
+      { initialProps: { sourceDocument: document } }
+    )
+    const nextDocument = {
+      ...document,
+      id: "doc_2",
+      data: { ...document.data, vendor: "Initech" },
+    }
+
+    act(() => {
+      result.current.primitiveEditStore.commitValue("vendor", "Globex", "ACME")
+    })
+    expect(result.current.primitiveEditStore.getSnapshot("vendor").status).toBe(
+      "pending"
+    )
+
+    rerender({ sourceDocument: nextDocument })
+
+    expect(result.current.projectionDocument).toBe(nextDocument)
+    expect(result.current.primitiveEditStore.getSnapshot("vendor")).toEqual({
+      status: "idle",
+      hasValue: false,
+      value: undefined,
+    })
+  })
+
+  it("exposes a no-op commit handler when document updates are unavailable", () => {
+    const { result } = renderHook(() =>
+      useSingleFileTableDocumentModel({
+        sourceDocument: document,
+      })
+    )
+    const originalProjectionDocument = result.current.projectionDocument
+
+    act(() => {
+      result.current.onCellCommit({
+        fieldPath: "total",
+        value: 12,
+        previousValue: 10,
+        visibleThrough: "projectedDocumentValue",
+      })
+    })
+
+    expect(result.current.canCommitDocument).toBe(false)
+    expect(result.current.projectionDocument).toBe(originalProjectionDocument)
+  })
+
   it("patches structured commits from the confirmed document data", () => {
     const onUpdateDocument = vi.fn(async () => undefined)
     const { result } = renderHook(() =>
@@ -524,6 +576,44 @@ describe("single file table document model", () => {
 
     expect(onUpdateDocument).toHaveBeenCalledWith({
       data: { ...document.data, total: 12 },
+    })
+  })
+
+  it("keeps optimistic document state when the update promise rejects", async () => {
+    const onUpdateDocument = vi.fn(async () => {
+      throw new Error("persistence failed")
+    })
+    const { result } = renderHook(() =>
+      useSingleFileTableDocumentModel({
+        sourceDocument: document,
+        onUpdateDocument,
+      })
+    )
+
+    await act(async () => {
+      result.current.onCellCommit({
+        fieldPath: "total",
+        value: 12,
+        previousValue: 10,
+        visibleThrough: "projectedDocumentValue",
+      })
+      await Promise.resolve()
+    })
+
+    act(() => {
+      result.current.onCellCommit({
+        fieldPath: "vendor",
+        value: "Globex",
+        previousValue: "ACME",
+        visibleThrough: "projectedDocumentValue",
+      })
+    })
+
+    expect(onUpdateDocument).toHaveBeenNthCalledWith(1, {
+      data: { ...document.data, total: 12 },
+    })
+    expect(onUpdateDocument).toHaveBeenNthCalledWith(2, {
+      data: { ...document.data, total: 12, vendor: "Globex" },
     })
   })
 })

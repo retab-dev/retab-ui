@@ -7,7 +7,7 @@ import { Folder } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
-import type { FileSystemGridViewController } from "./file-system-explorer-controllers"
+import type { FileSystemBrowserController } from "./file-system-browser-controller"
 import { FileSystemThumbnail } from "./file-system-preview"
 import type { FileSystemEntry } from "./file-system-types"
 import { useFileSystemRovingFocus } from "./use-file-system-roving-focus"
@@ -19,11 +19,12 @@ const GRID_PADDING = 12
 export function FileSystemGridView({
   controller,
 }: {
-  controller: FileSystemGridViewController
+  controller: FileSystemBrowserController
 }) {
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const [columnCount, setColumnCount] = React.useState(1)
-  const entries = controller.currentEntries
+  const { browser, fileActions } = controller
+  const entries = browser.entries
 
   React.useLayoutEffect(() => {
     const viewport = viewportRef.current
@@ -66,21 +67,21 @@ export function FileSystemGridView({
 
       return index === -1 ? -1 : Math.floor(index / columnCount)
     },
-    onSelect: controller.selectEntry,
+    onSelect: browser.commands.selectEntry,
     scrollToIndex: (index) => {
       if (index !== -1) virtualizer.scrollToIndex(index)
     },
-    selectedPath: controller.selectedPath,
+    selectedPath: browser.selection.selectedPath,
   })
   const openEntry = React.useCallback(
     (entry: FileSystemEntry) => {
       if (entry.kind === "folder") {
-        controller.navigateTo(entry.path)
+        browser.commands.navigateTo(entry.path)
       } else {
-        controller.openPreview(entry)
+        fileActions.openPreview(entry)
       }
     },
-    [controller]
+    [browser.commands, fileActions]
   )
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
@@ -100,8 +101,8 @@ export function FileSystemGridView({
       event.preventDefault()
       return
     }
-    if (event.key === "Enter" && controller.selectedEntry) {
-      openEntry(controller.selectedEntry)
+    if (event.key === "Enter" && browser.selection.selectedEntry) {
+      openEntry(browser.selection.selectedEntry)
       event.preventDefault()
       return
     }
@@ -166,11 +167,13 @@ export function FileSystemGridView({
 const FileSystemGridTile = React.forwardRef<
   HTMLButtonElement,
   {
-    controller: FileSystemGridViewController
+    controller: FileSystemBrowserController
     entry: FileSystemEntry
   }
 >(function FileSystemGridTile({ controller, entry }, ref) {
-  const isSelected = entry.path === controller.selectedPath
+  const { browser, fileActions } = controller
+  const selectedPath = browser.selection.selectedPath
+  const isSelected = entry.path === selectedPath
 
   return (
     <button
@@ -178,13 +181,13 @@ const FileSystemGridTile = React.forwardRef<
       type="button"
       role="option"
       aria-selected={isSelected}
-      tabIndex={isSelected || !controller.selectedPath ? 0 : -1}
-      onClick={() => controller.selectEntry(entry)}
+      tabIndex={isSelected || !selectedPath ? 0 : -1}
+      onClick={() => browser.commands.selectEntry(entry)}
       onDoubleClick={() => {
         if (entry.kind === "folder") {
-          controller.navigateTo(entry.path)
+          browser.commands.navigateTo(entry.path)
         } else {
-          controller.openPreview(entry)
+          fileActions.openPreview(entry)
         }
       }}
       className="group flex h-[124px] min-w-0 flex-col items-center gap-2 rounded-sm p-2 text-center outline-none hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
@@ -200,7 +203,7 @@ const FileSystemGridTile = React.forwardRef<
         ) : (
           <FileSystemThumbnail
             file={entry}
-            resolveFileSource={controller.resolveFileSource}
+            resolveFileSource={fileActions.resolveFileSource}
             className="w-14"
           />
         )}

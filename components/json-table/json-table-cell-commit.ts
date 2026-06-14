@@ -13,10 +13,6 @@ export type JsonTableCellCommit = {
 
 export type JsonTableCellCommitHandler = (commit: JsonTableCellCommit) => void
 
-export function jsonTableCommittedTextValue(value: unknown) {
-  return value !== null && value !== undefined ? String(value) : ""
-}
-
 export function isJsonTableNoOpCommit(
   previousValue: unknown,
   nextValue: unknown

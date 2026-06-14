@@ -4,122 +4,130 @@
 
 Not yet.
 
-The architecture is now pointed in the right direction:
+The architecture is close to the right shape, but not at the platonic ideal.
+The direction is correct:
 
-- `DataCell` does not import `components/json-table/*`.
-- json-table delegates enum, text, number, boolean, date, time, and date-time
-  primitives to `DataCell`.
-- the active primitive table path is
-  `JsonTablePrimitiveCell -> createJsonTableDataCellProps -> DataCell`.
-- `DataCell` owns the trompe-l'oeil display, activation, caret placement,
-  popup lifecycle, blur policy, and primitive browser controls.
-- json-table owns JSON projection, schema identity, active cell identity,
-  optimistic primitive edits, and document commits.
-- primitive controls receive a `DataCellPrimitiveSession`; they do not receive
-  raw `onCommit` or `onEditingEnd`.
-- public controlled state names are normalized at `createDataCellEditModel`;
-  controls see internal `draft` and `openState` channels.
-- public kind-specific commit handlers are normalized once into an internal
-  `DataCellCommitHandler`; the registry no longer casts `model.onCommit`.
+- `DataCell` is the primitive trompe-l'oeil.
+- json-table is the JSON/schema adapter.
+- primitive browser behavior belongs to `DataCell`.
+- JSON identity, table identity, optimistic table commits, and document patches
+  belong to json-table.
+- enum values now go through `DataCell` instead of a special table editor.
+- `DataCell` imports no `components/json-table/*`.
+- json-table calls one public primitive boundary:
+  `createJsonTableDataCellProps`.
+- hover does not mount controls.
+- activation is intentional and carries pointer or keyboard intent.
 
-The remaining imperfection is surface area, not philosophy:
+The remaining problem is not a missing feature. It is excess surface area.
+There are still enough nouns around primitive table editing that a reader has
+to reconstruct ownership from several modules. The ideal version should feel
+inevitable from the file names alone.
 
-- json-table still has several primitive-adjacent files whose responsibilities
-  are close enough that auditing the table side takes too long.
-- `DataCellControlRegistry` still creates the session and renders controls in
-  the same file. That is acceptable, but not crystalline.
-- the public `DataCellProps` union is precise at the edge, but the internal
-  commit boundary still needs runtime value-shape guards because one normalized
-  session accepts the primitive commit union.
+## Principle
 
-The target is not more abstraction. The target is fewer nouns.
+There are only two systems:
 
 ```txt
-json-table primitive adapter -> DataCell props
-DataCell active primitive -> browser control session
+DataCell   = primitive illusion and browser-control lifecycle
+json-table = JSON/schema projection and table commit lifecycle
 ```
 
-Everything else must justify its existence.
+There is no third primitive interaction system.
 
-## North Star
+If a rule would be true for a primitive cell outside a table, it belongs to
+`DataCell`.
 
-`DataCell` is the primitive illusion.
+If a rule needs JSON path, schema metadata, enum identity, row identity,
+virtualization, optimistic document state, or patch emission, it belongs to
+json-table.
 
-json-table is a JSON adapter.
-
-There is no third system.
-
-```txt
-json-table:
-  reads JSON and schema
-  decides whether a field is primitive
-  projects JSON/schema into DataCell props
-  tracks which primitive cell is active
-  commits DataCell values back into JSON
-
-DataCell:
-  displays an inert cell
-  activates from pointer and keyboard
-  mounts exactly one browser control when active
-  owns draft/open/caret/popup/blur semantics
-  emits primitive commits
-  ends editing once
-```
-
-If a rule needs JSON path, schema identity, nullable enum identity, virtual row
-identity, or document patching, it belongs to json-table.
-
-If a rule would be expected from the same primitive outside a table, it belongs
-to `DataCell`.
-
-## Target Flow
+## Ideal Flow
 
 ```mermaid
 flowchart TD
-  Document["JSON document"]
-  Schema["JSON schema"]
-  Field["field metadata"]
-  Adapter["json-table primitive adapter"]
+  Json["JSON value"]
+  Schema["Field metadata"]
+  Adapter["createJsonTableDataCellProps"]
   Props["DataCell props"]
   Display["DataCell display"]
-  EditModel["DataCell edit model"]
+  Activation["DataCell activation source"]
   Session["DataCell primitive session"]
-  Control["browser control"]
-  Commit["primitive commit"]
-  Patch["JSON patch"]
+  Control["Native primitive control"]
+  Commit["DataCell commit value"]
+  Normalize["jsonTableCommitValue / formatValueForCommit"]
+  Pending["primitive edit store"]
+  Patch["onCellCommit JSON patch"]
 
-  Document --> Field
-  Schema --> Field
-  Field --> Adapter
-  Document --> Adapter
+  Json --> Adapter
+  Schema --> Adapter
   Adapter --> Props
   Props --> Display
-  Props --> EditModel
-  EditModel --> Session
+  Props --> Activation
+  Activation --> Session
   Session --> Control
   Control --> Commit
-  Commit --> Adapter
-  Adapter --> Patch
-  Patch --> Document
+  Commit --> Normalize
+  Normalize --> Pending
+  Pending --> Patch
 ```
 
 Forbidden arrows:
 
 ```mermaid
 flowchart TD
-  DataCell["DataCell"] --> TableInternals["components/json-table/*"]
-  Table["json-table"] --> DataCellInternals["DataCell activation/session/control internals"]
-  Controls["primitive controls"] --> PublicProps["DataCellProps"]
-  Table --> Handles["imperative primitive handles"]
-  Session["DataCellPrimitiveSession"] --> Json["JSON paths / schema / sentinels"]
-  Session --> ControlledState["draft/open state storage"]
+  DataCell["DataCell internals"] --> Table["components/json-table/*"]
+  TableShell["json-table shell"] --> Caret["caret placement"]
+  TableShell --> Select["select popup timing"]
+  TableShell --> Picker["date picker lifecycle"]
+  Session["DataCell session"] --> Json["JSON/schema/path"]
+  Control["primitive controls"] --> PublicProps["DataCellProps"]
+  Registry["control registry"] --> Policy["activation or commit policy"]
 ```
 
-## Pure Contracts
+## Ownership
 
-### Public DataCell Contract
+### DataCell Owns
 
-The public contract is declarative props in, primitive events out.
+- inert display rendering.
+- hover affordance without mounting controls.
+- activation from pointer, keyboard, and programmatic focus.
+- pointer caret placement for text.
+- first-key text editing.
+- checkbox first-click toggle semantics.
+- select open, close, keyboard navigation, option commit, and popup dismissal.
+- date/time picker open, close, display identity, and commit semantics.
+- dirty draft protection while active.
+- blur, Enter, Escape, cancel, and editing-end lifecycle.
+- exactly-once primitive session finish.
+- primitive accessibility roles and focus behavior.
+
+### json-table Owns
+
+- field path and cell identity.
+- whether the field is primitive or structured.
+- schema kind to `DataCell` kind projection.
+- JSON value to primitive value projection.
+- enum option construction.
+- nullable enum sentinel mapping.
+- object enum identity preservation.
+- table class names needed for cell fit.
+- active primitive cell identity.
+- active-cell replacement across rows.
+- optimistic primitive pending values.
+- normalization before document commit.
+- JSON patch emission.
+- virtualization cleanup.
+
+### No One Else Owns Primitive Editing
+
+There must be no adapter, enum editor, shell handoff, wrapper component, or
+imperative handle that owns part of primitive editing between those two
+systems.
+
+## Public Contract
+
+`DataCell` takes declarative primitive props and emits primitive events.
 
 ```ts
 type DataCellProps = {
@@ -137,28 +145,28 @@ type DataCellProps = {
 }
 ```
 
-Kind-specific props are allowed only when they describe primitive behavior:
+Kind-specific props may describe primitive behavior only:
 
-- text, number, integer: placeholder, optional controlled draft.
-- select: options, placeholder, formatter, optional controlled open.
-- date, time, date-time: timezone, picker icon, formatter, optional controlled
-  draft and open.
-- boolean: checked value and commit.
+- text, number, integer: value, placeholder, optional draft control.
+- select: options, placeholder, formatter, optional open control.
+- date, time, date-time: formatting, picker affordance, optional open control.
+- boolean: value and commit.
 
 The public contract must never expose:
 
 - JSON paths.
 - schemas.
-- table row identity.
-- activation requests.
-- imperative handles.
-- mode aliases.
-- table-specific sentinel values.
-- virtualization details.
+- row IDs.
+- table active-cell objects.
+- nullable enum sentinel details.
+- virtualizer state.
+- imperative editor handles.
+- compatibility mode aliases.
 
-### Internal DataCell Contract
+## Internal DataCell Contract
 
-The internal control contract is smaller than the public prop contract.
+Primitive controls receive one shell, one optional controlled-state object, and
+one session.
 
 ```ts
 type DataCellPrimitiveControlProps = {
@@ -166,11 +174,7 @@ type DataCellPrimitiveControlProps = {
   state?: DataCellPrimitiveState
   session: DataCellPrimitiveSession
 }
-```
 
-The only allowed internal state channels are:
-
-```ts
 type DataCellPrimitiveState = {
   draft?: {
     value?: string
@@ -183,13 +187,22 @@ type DataCellPrimitiveState = {
 }
 ```
 
-Controls should never see public names like `draftValue`,
-`onDraftValueChange`, `open`, or `onOpenChange`. Those names are edge
-ergonomics, not internal architecture.
+Primitive controls must not receive:
 
-### Primitive Session Contract
+- `DataCellProps`.
+- raw `onCommit`.
+- raw `onEditingEnd`.
+- JSON names.
+- schema names.
+- table names.
+- public controlled prop names such as `draftValue`, `onDraftValueChange`,
+  `open`, or `onOpenChange`.
 
-The session owns lifecycle only.
+Public ergonomics are normalized once at the edit-model edge.
+
+## Session Contract
+
+The session owns lifecycle, not value storage.
 
 ```ts
 type DataCellPrimitiveSession = {
@@ -210,232 +223,204 @@ type DataCellPrimitiveSession = {
 
 The session must not own:
 
-- draft value storage.
-- select open state.
-- date picker open state.
+- text draft state.
+- popup open state.
 - display formatting.
 - JSON conversion.
-- active cell identity.
+- active table identity.
+- table commit dispatch.
 
-Lifecycle and browser state are adjacent, not identical.
+## json-table Primitive Contract
 
-### json-table Primitive Contract
-
-json-table has one primitive adapter surface:
+json-table has one projection function:
 
 ```ts
-type JsonTablePrimitiveAdapterInput = {
-  jsonValue: unknown
-  fieldMetadata: FieldMetadata
-  isActive: boolean
-  isEditable: boolean
-}
-
-type JsonTablePrimitiveAdapterOutput = {
-  dataCellProps: DataCellProps
-  commitJsonValue(value: DataCellCommitValue, meta: DataCellValueMeta): void
-}
+createJsonTableDataCellProps(input): DataCellProps
 ```
 
-The adapter owns:
+The input can include JSON value, field metadata, active state, editable state,
+and table callbacks. The output is direct `DataCellProps`.
 
-- JSON value to primitive value.
-- primitive kind selection.
-- enum option construction.
-- nullable enum display and commit identity.
-- primitive commit value to JSON value.
-- table class names for cell fit.
-- active identity wiring.
+There should be no intermediate exported model:
 
-The adapter must not own:
+```txt
+createJsonTableDataCellModel
+JsonTableDataCellModel
+JsonTableSelectDataCellModel
+JsonTableBooleanDataCellModel
+JsonTableNumberDataCellModel
+JsonTableTextDataCellModel
+jsonTableDataCellPropsForModel
+```
 
-- select opening.
-- popup dismissal.
-- checkbox toggling mechanics.
-- text caret placement.
-- date input formatting while active.
-- blur commit rules.
-- first-key editing.
+Those names describe an adapter layer that does not deserve independent life.
+The table projects straight into `DataCell` props.
 
-## Target Module Map
+Required adapter names:
+
+```txt
+createJsonTableDataCellProps
+jsonTableDataCellCommitHandler
+jsonTableDataCellJsonCommitHandler
+toJsonValue
+```
+
+Required primitive-control names:
+
+```txt
+effectiveValue
+commitValue
+setActive
+commitValidatedValue
+```
+
+Forbidden local control aliases:
+
+```txt
+primitiveEffectiveValue
+commitPrimitiveValue
+commitPrimitiveValueChange
+setPrimitiveActive
+```
+
+The table active-cell store may still use `setPrimitiveActiveCell`; that names
+table identity, not the local DataCell control surface.
+
+## Module Map
 
 ```mermaid
 flowchart TD
   subgraph DataCell["registry/new-york-v4/ui"]
-    Types["data-cell-types.ts"]
     Public["data-cell.tsx"]
-    DisplayModel["data-cell-display-model.ts"]
+    Types["data-cell-types.ts"]
+    Display["data-cell-display-model.ts / data-cell-display.tsx"]
     EditModel["data-cell-edit-model.ts"]
     Activation["data-cell-activation.ts"]
-    Session["data-cell-session.ts"]
     Actions["data-cell-control-actions.ts"]
-    Props["data-cell-control-props.ts"]
-    Registry["data-cell-control-registry.tsx"]
     Contract["data-cell-control-contract.ts"]
-    Controls["text / number / boolean / select / picker controls"]
+    Props["data-cell-control-props.ts"]
+    Control["data-cell-control.tsx"]
+    Session["data-cell-session.ts"]
+    Registry["data-cell-control-registry.tsx"]
+    NativeControls["text / number / boolean / select / picker controls"]
   end
 
   subgraph JsonTable["components/json-table"]
-    CellModel["json-table-cell-model.ts"]
+    EditableCell["editable-json-table-cell.tsx"]
+    CellHook["use-json-table-editable-cell-model.ts"]
+    PrimitiveControl["use-json-table-primitive-control.ts"]
     PrimitiveCell["json-table-primitive-cell.tsx"]
+    StructuredActiveCell["json-table-structured-active-cell.tsx"]
     Adapter["json-table-data-cell-model.ts"]
-    Active["primitive active cell store"]
-    EditStore["primitive pending edit store"]
-    Commit["json-table commit boundary"]
+    ActiveStore["json-table-primitive-active-cell-store.ts"]
+    EditStore["json-table-primitive-edit-store.ts"]
+    Commit["json-table-cell-commit.ts"]
   end
 
-  Types --> Public
-  Public --> DisplayModel
-  Public --> EditModel
+  Public --> Types
+  Public --> Display
   Public --> Activation
+  Public --> EditModel
+  Activation --> Actions
   EditModel --> Props
   EditModel --> Contract
-  Activation --> Actions
-  Props --> Registry
-  Contract --> Controls
-  Session --> Registry
-  Registry --> Controls
+  Control --> Props
+  Control --> Session
+  Control --> Registry
+  Registry --> NativeControls
+  Contract --> NativeControls
 
-  CellModel --> PrimitiveCell
+  EditableCell --> CellHook
+  EditableCell --> PrimitiveCell
+  EditableCell --> StructuredActiveCell
+  EditableCell --> Adapter
+  CellHook --> PrimitiveControl
   PrimitiveCell --> Adapter
-  PrimitiveCell --> Active
-  PrimitiveCell --> EditStore
   Adapter --> Public
-  Adapter --> Commit
+  PrimitiveControl --> ActiveStore
+  PrimitiveControl --> EditStore
+  PrimitiveControl --> Commit
 ```
 
-The dependency law:
+Dependency law:
 
 ```txt
-json-table may import public DataCell and DataCell public types
-DataCell may import no json-table code
-primitive controls may import internal DataCell contracts only
+json-table may import DataCell public entrypoints.
+DataCell may import no json-table code.
+primitive controls may import internal DataCell contracts only.
+the control registry may only map kind -> control component.
 ```
 
-## Remaining Blueprint
+## Current Shape To Preserve
 
-### 1. Compress json-table primitive files
+Keep these hard-won simplifications:
 
-Goal: one easy-to-audit table boundary.
+- no `json-table-display-cell.tsx`.
+- no `json-table-data-cell.tsx` wrapper.
+- no `json-table-primitive-active-cell-replacement.ts`.
+- no `use-json-table-primitive-cell-controller.ts`.
+- no table-specific enum editor.
+- no `JsonTablePrimitiveControl` type alias. The hook return shape is the
+  contract.
+- no `JsonTableEditableCellModel` or local disabled/primitive/structured/display
+  cell-model union aliases.
+- no `json-table-cell-model.ts`. `useJsonTableEditableCellModel` owns the
+  disabled, primitive, structured-active, and display render model directly.
+- no `JsonTablePrimitiveCellProps` or `JsonTableStructuredActiveCellProps`
+  aliases. Component props are inline at the component boundary and inferred
+  directly where child props are stored.
+- `useJsonTableEditableCellModel` is the editable-cell model boundary.
+- `json-table-data-cell-model.ts` branches directly from schema primitive kind
+  to `DataCellProps`.
+- `json-table-data-cell-model.ts` uses short local names for adapter-local
+  ideas: `SharedDataCellProps`, `CommitJsonValue`, `JsonCommitValue`, and
+  `TextDataCellKind`.
+- `use-elevated-virtual-row.ts` accepts one table-owned boolean:
+  `isElevated`. It does not know about input focus, select popup state, or
+  picker popup state.
+- select keeps nullable enum sentinel mapping inside json-table.
+- date/time/date-time picker props are emitted only for picker cells.
+- text cells do not receive picker-only props.
 
-Keep:
+## Remaining Simplification Target
+
+The next improvement is to make the json-table primitive side read as one
+sentence:
 
 ```txt
-json-table-primitive-cell.tsx
-  renders the primitive cell
-
-json-table-data-cell-model.ts
-  converts JSON/schema/table state into DataCell props
-
-json-table-primitive-active-cell-store.ts
-  owns active primitive identity
-
-json-table-primitive-edit-store.ts
-  owns optimistic primitive values
+cell field -> primitive control -> cell model -> DataCell props -> JSON commit
 ```
 
-Merge or delete any helper that only forwards data between those modules
-without changing ownership. The table side should read like a single sentence:
+Every table primitive module must justify itself:
 
-```txt
-cell model chooses primitive -> primitive cell builds DataCell props ->
-DataCell commits primitive value -> adapter writes JSON patch
-```
+- `use-json-table-editable-cell-model.ts` composes hooks.
+- `use-json-table-editable-cell-model.ts` chooses disabled, primitive,
+  structured-active, or display rendering.
+- `use-json-table-primitive-control.ts` owns effective value, commit, and active
+  identity switching.
+- `json-table-data-cell-model.ts` owns JSON/schema to `DataCellProps`.
+- `json-table-primitive-active-cell-store.ts` owns active-cell replacement.
+- `json-table-primitive-edit-store.ts` owns optimistic primitive values.
 
-### 2. Keep `DataCellControlRegistry` on probation
+If a module only renames data, delete it.
 
-Current split:
+If a type is only needed by one file, keep it local.
 
-```txt
-data-cell-control-actions.ts
-  display event + control state -> edit / command / none
-
-data-cell-control-props.ts
-  edit model -> internal control props
-
-data-cell-control-registry.tsx
-  create session and render selected control
-```
-
-This is acceptable now. It becomes ideal only if the registry remains tiny.
-
-Allowed in the registry:
-
-- create one `DataCellPrimitiveSession`.
-- select the control by kind.
-- pass already-built control props.
-
-Forbidden in the registry:
-
-- public prop normalization.
-- action policy.
-- JSON conversion.
-- kind-specific behavior beyond choosing the control.
-- `as` casts around `onCommit`.
-
-If the registry grows again, split rendering into `data-cell-control.tsx` and
-make `data-cell-control-registry.tsx` a pure map.
-
-### 3. Keep commit normalization at the edit-model edge
-
-The right compromise is:
-
-```txt
-public typed props -> createDataCellEditModel -> internal commit handler
-```
-
-The internal session is intentionally not generic. A generic session would
-spread type plumbing into every control while adding no runtime behavior.
-
-The edit-model edge must therefore keep the narrow runtime guards:
-
-- text accepts `string | null`.
-- number and integer accept `number | null`.
-- boolean accepts `boolean`.
-- select accepts `string | null`.
-- date, time, and date-time accept `string | null`.
-
-That is the only place where the primitive commit union may be narrowed.
-
-### 4. Preserve trompe-l'oeil activation
-
-Inactive `DataCell` is display only.
-
-Hover should never mount a browser control. Hover can show affordance, but
-mounting on hover would make accidental pointer movement mutate focus,
-composition, popup state, and virtualized cell work.
-
-The first intentional activation must carry intent:
-
-- pointer activation gives text controls a caret coordinate.
-- printable keyboard activation gives text controls first-key intent.
-- checkbox activation toggles once.
-- select activation opens once and does not close during the same gesture.
-- picker activation opens once with display and active value identity aligned.
-
-### 5. Delete compatibility vocabulary
-
-No legacy aliases.
-
-No table-specific enum editor.
-
-No old primitive handoff module.
-
-No wrapper component unless it owns a real behavior.
-
-No prop name that means the same concept as another prop name.
+If a public export exists only to make another table file compile, prefer
+inference or direct call-site types.
 
 ## Interaction Invariants
 
-These are the behaviors the architecture must make obvious:
+The architecture is only valid if these behaviors fall out naturally:
 
 - inactive cell renders display only.
-- hover does not mount a browser control.
+- hover never mounts a browser control.
 - first text click activates and places the caret at the clicked grapheme.
-- first printable text key edits without replacing the whole value unless the
-  key policy explicitly selects replacement.
+- first printable text key edits according to explicit first-key policy.
+- typing after pointer activation inserts at the caret, not by replacing the
+  whole value.
 - dirty text blur commits once.
-- unchanged text blur ends once without a commit.
+- unchanged text blur ends once without commit.
 - Enter commits once.
 - Escape cancels once.
 - parent value echoes do not overwrite an active dirty draft.
@@ -444,10 +429,10 @@ These are the behaviors the architecture must make obvious:
 - select first click opens the popup.
 - select opening click does not immediately close the popup.
 - select option click commits once.
-- nullable enum commits the JSON value represented by the option, not just the
-  label.
-- date first click opens the picker and shows the same value identity as the
-  display state.
+- nullable enum commits JSON `null`, not the sentinel label.
+- object enum commits the original enum object identity.
+- unknown enum values remain selectable/displayable without corrupting JSON.
+- date display text and active picker value represent the same JSON identity.
 - picker outside click follows the primitive end rule once.
 - switching from dirty text to another primitive commits old text and preserves
   the new primitive's pointer intent.
@@ -457,29 +442,45 @@ These are the behaviors the architecture must make obvious:
 
 ## Architecture Guards
 
-Tests should reject:
+Tests must reject:
 
 - `registry/new-york-v4/ui/data-cell*` importing `components/json-table/*`.
-- `components/json-table/*` importing `data-cell-activation`,
-  `data-cell-session`, `data-cell-control-*`, or primitive control files.
 - primitive controls importing `DataCellProps`.
+- primitive controls importing json-table modules.
 - primitive controls extending broad native React prop bags.
-- internal control props containing `draftValue`, `onDraftValueChange`, `open`,
-  or `onOpenChange`.
 - primitive controls receiving raw `onCommit` or `onEditingEnd`.
-- the registry casting `model.onCommit`.
-- session types becoming generic again.
-- text control containing local pointer blur timers.
-- json-table primitive render files containing select, picker, caret, or blur
-  mechanics.
+- internal control props containing public names:
+  `draftValue`, `onDraftValueChange`, `open`, `onOpenChange`.
+- `data-cell-control-registry.tsx` creating sessions or normalizing props.
+- `data-cell-control-registry.tsx` casting commit handlers.
+- generic `DataCellPrimitiveSession`.
+- json-table shell files containing select, picker, caret, or blur mechanics.
+- `json-table-data-cell-model.ts` exporting an intermediate model type.
+- `use-json-table-primitive-control.ts` defining `JsonTablePrimitiveControl`.
+- `json-table-cell-model.ts` returning as a separate single-use model module.
+- `use-json-table-editable-cell-model.ts` defining `JsonTableEditableCellModel`
+  or local variant aliases such as `PrimitiveJsonTableCellModel`.
+- `JsonTablePrimitiveCellProps` or `JsonTableStructuredActiveCellProps`
+  aliases returning in primitive render files or the cell model.
+- `use-elevated-virtual-row.ts` accepting fake primitive lifecycle state such
+  as `isInputFocused` or `isSelectOpen`.
+- `json-table-data-cell-model.ts` keeping overqualified local adapter names
+  such as `JsonTableDataCellSharedProps`,
+  `JsonTableDataCellCommitHandler`, `JsonTableTextDataCellKind`, or
+  `JsonTableDataCellJsonCommitValue`.
 
-Focused tests should also prove:
+Tests must prove:
 
-- `createDataCellEditModel` accepts correct commit values for each primitive
-  kind.
-- `createDataCellEditModel` rejects wrong-kind commit drift before public
-  callbacks run.
-- enum/select commits preserve JSON identity through the table adapter.
+- each schema primitive projects to the exact `DataCell` kind.
+- enum options preserve original JSON identity.
+- nullable enum sentinel commits JSON `null`.
+- date/time commits normalize back to JSON values.
+- structured fallback values project through text without a special editor.
+- wrong-kind DataCell commits are rejected before public callbacks.
+- select activation opens once and does not close during the same gesture.
+- text pointer activation preserves caret position through the first character.
+- table primitive pending values survive parent document echoes while active.
+- stale edit endings cannot clear a newer active primitive cell.
 
 ## Verification Gates
 
@@ -487,42 +488,60 @@ The blueprint is implemented only when these pass:
 
 ```bash
 pnpm exec vitest --run tests/json-table-architecture.test.ts --reporter=dot
-pnpm exec vitest --run tests/data-cell-edit-model.test.ts --reporter=dot
-pnpm exec vitest --run tests/data-cell-control-lifecycle.test.tsx tests/data-cell-select-activation.test.tsx tests/data-cell-select-state.test.tsx tests/data-cell.test.tsx tests/json-table-data-cell-model.test.ts --reporter=dot
-pnpm exec vitest run $(rg --files tests | rg 'json-table.*\.test\.(ts|tsx)$|data-cell.*\.test\.(ts|tsx)$') --reporter=dot
-pnpm exec tsc --noEmit --pretty false --skipLibCheck --incremental false
+pnpm exec vitest --run tests/json-table-data-cell-model.test.ts --reporter=dot
+pnpm exec vitest --run tests/data-cell-edit-model.test.ts tests/data-cell-control-lifecycle.test.tsx tests/data-cell-select-activation.test.tsx tests/data-cell-select-state.test.tsx tests/data-cell.test.tsx --reporter=dot
+pnpm test:json-table -- --reporter=dot
 node scripts/build-registry-items.mjs data-cell
-pnpm verify:data-cell-registry
 pnpm verify:data-cell
+pnpm verify:data-cell-registry
+pnpm exec tsc --noEmit --pretty false --skipLibCheck --incremental false
 ```
 
-Current evidence from this worktree:
+Current worktree evidence:
 
-- `pnpm exec vitest --run tests/data-cell-edit-model.test.ts tests/json-table-architecture.test.ts --reporter=dot`
-  passes: 2 files, 33 tests.
-- `pnpm exec vitest --run tests/data-cell-edit-model.test.ts tests/data-cell-control-lifecycle.test.tsx tests/data-cell-select-activation.test.tsx tests/data-cell-select-state.test.tsx tests/data-cell.test.tsx tests/json-table-data-cell-model.test.ts --reporter=dot`
-  passes: 6 files, 87 tests.
-- `pnpm test:json-table -- --reporter=dot` passes: 20 files, 276 tests.
+- `pnpm exec vitest --run tests/json-table-architecture.test.ts tests/json-table-data-cell-model.test.ts --reporter=dot`
+  passes: 2 files, 43 tests.
+- `pnpm exec vitest --run tests/data-cell-edit-model.test.ts tests/data-cell-control-lifecycle.test.tsx tests/data-cell-select-activation.test.tsx tests/data-cell-select-state.test.tsx tests/data-cell.test.tsx --reporter=dot`
+  passes: 5 files, 76 tests.
+- `pnpm test:json-table -- --reporter=dot` passes: 23 files, 297 tests.
+- `node scripts/build-registry-items.mjs data-cell` has passed.
+- `pnpm verify:data-cell` has passed against
+  `http://localhost:3100/docs/components/data-cell`.
 - `pnpm exec tsc --noEmit --pretty false --skipLibCheck --incremental false`
-  passes.
-- `node scripts/build-registry-items.mjs data-cell` passes.
-- `pnpm verify:data-cell-registry` passes and proves
-  `public/r/data-cell.json` is deterministic across scoped builds.
-- `pnpm verify:data-cell` passes against
-  `http://localhost:3100/docs/components/data-cell` for 8 demo rows.
+  has no DataCell/json-table errors after this pass. It is still not a clean
+  repo-wide signal because unrelated file-system worktree changes fail at
+  `registry/new-york-v4/ui/file-system-controls.tsx`: `selection` is missing
+  from `FileSystemBrowserState`.
+- `pnpm verify:data-cell-registry` is currently blocked before DataCell
+  determinism by an unrelated `file-system` registry preflight missing-file
+  error.
 
 ## Definition Of Done
 
-The component reaches the intended shape when a new reader can answer every
-question from one boundary:
+The ideal has been reached only when a new reader can answer each question from
+one file boundary:
 
 - "Why did this primitive display this value?" -> `DataCell`.
 - "Why did this JSON value become this primitive value?" ->
   `json-table-data-cell-model.ts`.
-- "Why did this commit become this patch?" -> json-table commit boundary.
+- "Why did this primitive value become this JSON commit?" ->
+  `json-table-data-cell-model.ts` plus the JSON commit boundary.
 - "Why did this click edit, command, or do nothing?" ->
   `data-cell-control-actions.ts`.
 - "Why did this control receive these props?" -> `data-cell-control-props.ts`.
-- "Why did editing end exactly once?" -> `DataCellPrimitiveSession`.
+- "Why did editing end exactly once?" -> `data-cell-session.ts`.
+- "Why is this table cell active?" ->
+  `json-table-primitive-active-cell-store.ts`.
+- "Why does this cell show a pending value?" ->
+  `json-table-primitive-edit-store.ts`.
 
-If a question needs two boundaries, the design is still too bloated.
+If the answer needs two ownership systems for one primitive behavior, the
+architecture is still bloated.
+
+If a name must explain that it is "primitive", "cell", "data", and "table" all
+at once, it probably belongs at a boundary. Inside a boundary, shorter names
+should be enough.
+
+The platonic version is not the version with the most tests or the most
+helpers. It is the version where the tests feel unsurprising because the
+ownership is too clear to accidentally violate.

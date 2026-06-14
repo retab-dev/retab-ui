@@ -54,6 +54,7 @@ import {
   SegmentSidebarDemo,
   SegmentSidebarSplitDemo,
 } from "@/components/segment-sidebar-demo"
+import { SuperfastTextpretextDemo } from "@/components/superfast-textpretext-demo"
 import { TextViewerDemo } from "@/components/text-viewer-demo"
 import {
   ClassificationViewerDemo,
@@ -401,6 +402,7 @@ export const mdxComponents = {
   FileThumbnailFormatsDemo,
   FileSystemDemo,
   TextViewerDemo,
+  SuperfastTextpretextDemo,
   MarkdownViewerDemo,
   HtmlViewerDemo,
   CodeViewerDemo,

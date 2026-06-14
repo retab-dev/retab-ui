@@ -3,7 +3,7 @@
 import * as React from "react"
 import type { FileTree as PierreFileTreeModel } from "@pierre/trees"
 
-import type { FileSystemPierreSelectionController } from "./file-system-explorer-controllers"
+import type { FileSystemPierreSelectionController } from "./file-system-pierre-adapter"
 import {
   pierrePathToFileSystemEntry,
   type FileSystemPierreInput,
@@ -87,7 +87,7 @@ export function useSyncFileSystemPierreSelection({
   }, [input, model, selection.selectedPath])
 }
 
-export function scrollSelectedFileSystemPathIntoView({
+export function scrollCurrentFileSystemEntryIntoView({
   input,
   model,
   selectedPath,

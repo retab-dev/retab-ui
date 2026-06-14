@@ -1,6 +1,6 @@
 import type { FileTreeRowDecoration } from "@pierre/trees"
 
-import type { FileSystemPierreDecorationState } from "./file-system-explorer-controllers"
+import type { FileSystemPierreDecorationState } from "./file-system-pierre-adapter"
 import { entryKindLabel } from "./file-system-query"
 import type { FileSystemEntry } from "./file-system-types"
 import { formatFileSystemSize } from "./file-system-utils"

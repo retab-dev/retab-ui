@@ -549,6 +549,27 @@ describe("viewer primitives", () => {
     ).toContain("lucide-panel-left")
   })
 
+  it("uses a caller-provided sidebar id for trigger aria-controls", async () => {
+    render(
+      <ViewerRoot>
+        <ViewerSidebarTrigger data-testid="trigger" />
+        <ViewerBody>
+          <ViewerSidebar id="pages-sidebar" data-testid="sidebar">
+            Pages
+          </ViewerSidebar>
+          <ViewerSurface>Document</ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("trigger").getAttribute("aria-controls")).toBe(
+        "pages-sidebar"
+      )
+    })
+    expect(screen.getByTestId("sidebar").id).toBe("pages-sidebar")
+  })
+
   it("lets custom trigger children override the default icon", async () => {
     render(
       <ViewerRoot>
@@ -583,13 +604,115 @@ describe("viewer primitives", () => {
     const trigger = screen.getByTestId("trigger")
 
     expect(trigger.getAttribute("aria-disabled")).toBe("true")
-    expect(trigger.getAttribute("aria-controls")).toMatch(/viewer-sidebar$/)
+    expect((trigger as HTMLButtonElement).disabled).toBe(false)
+    expect(trigger.getAttribute("aria-controls")).toBeNull()
+    expect(trigger.getAttribute("aria-expanded")).toBeNull()
     expect(
       screen.getByTestId("trigger").querySelector("svg")?.getAttribute("class")
     ).toContain("lucide-panel-left")
     fireEvent.click(trigger)
     expect(onClick).not.toHaveBeenCalled()
-    expect(trigger.getAttribute("aria-expanded")).toBe("false")
+  })
+
+  it("reports non-collapsible sidebars as open and non-toggleable", async () => {
+    function Probe() {
+      const sidebar = useViewerSidebar()
+      return (
+        <div data-testid="sidebar-state">
+          {sidebar.open ? "open" : "closed"}:{sidebar.state}:
+          {sidebar.canToggleSidebar ? "toggleable" : "fixed"}
+        </div>
+      )
+    }
+
+    render(
+      <ViewerRoot>
+        <ViewerHeader>
+          <ViewerSidebarTrigger data-testid="trigger" />
+        </ViewerHeader>
+        <Probe />
+        <ViewerBody>
+          <ViewerSidebar collapsible="none" data-testid="sidebar">
+            Sidebar
+          </ViewerSidebar>
+          <ViewerSurface>Surface</ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("sidebar-state").textContent).toBe(
+        "open:expanded:fixed"
+      )
+    })
+    expect(
+      screen.getByTestId("sidebar").getAttribute("data-viewer-sidebar-open")
+    ).toBe("true")
+    expect(screen.getByTestId("trigger").getAttribute("aria-disabled")).toBe(
+      "true"
+    )
+    expect((screen.getByTestId("trigger") as HTMLButtonElement).disabled).toBe(
+      false
+    )
+  })
+
+  it("enforces collapsed sidebar accessibility props over caller props", () => {
+    render(
+      <ViewerRoot>
+        <ViewerBody>
+          <ViewerSidebar
+            aria-hidden={false}
+            inert={false}
+            data-testid="sidebar"
+          >
+            Sidebar
+          </ViewerSidebar>
+          <ViewerSurface>Surface</ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
+    )
+
+    const sidebar = screen.getByTestId("sidebar")
+
+    expect(sidebar.getAttribute("data-viewer-sidebar-state")).toBe("collapsed")
+    expect(sidebar.getAttribute("aria-hidden")).toBe("true")
+    expect(sidebar.hasAttribute("inert")).toBe(true)
+  })
+
+  it("uses the sidebar width prop as the collapse width token", async () => {
+    render(
+      <ViewerRoot data-testid="root">
+        <ViewerBody>
+          <ViewerSidebar
+            width="14rem"
+            className="w-36"
+            style={{ width: "4rem", backgroundColor: "red" }}
+            data-testid="sidebar"
+          >
+            Sidebar
+          </ViewerSidebar>
+          <ViewerSurface>Surface</ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
+    )
+
+    await waitFor(() => {
+      expect(
+        screen
+          .getByTestId("root")
+          .style.getPropertyValue("--viewer-sidebar-width")
+      ).toBe("14rem")
+    })
+
+    const sidebar = screen.getByTestId("sidebar")
+
+    expect(sidebar.style.getPropertyValue("--viewer-sidebar-width")).toBe(
+      "14rem"
+    )
+    expect(sidebar.style.width).toBe("")
+    expect(sidebar.style.backgroundColor).toBe("red")
+    expect(sidebar.className).toContain("w-(--viewer-sidebar-width)")
+    expect(sidebar.className).not.toContain("w-36")
   })
 
   it("activates a conditional trigger when a sidebar later registers", async () => {
@@ -1215,7 +1338,13 @@ describe("viewer primitives", () => {
 
   it("throws when the trigger is rendered outside ViewerRoot", () => {
     expect(() => render(<ViewerSidebarTrigger />)).toThrow(
-      "useViewerSidebar must be used within a ViewerRoot."
+      "ViewerSidebarTrigger must be used within a ViewerRoot."
+    )
+  })
+
+  it("throws when the sidebar is rendered outside ViewerRoot", () => {
+    expect(() => render(<ViewerSidebar />)).toThrow(
+      "ViewerSidebar must be used within a ViewerRoot."
     )
   })
 })

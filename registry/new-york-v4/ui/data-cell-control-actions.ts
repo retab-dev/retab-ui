@@ -10,12 +10,80 @@ import {
   type DataCellControlAction,
   type DataCellControlKeyActionArgs,
   type DataCellControlPointerActionArgs,
+  type DataCellControlState,
 } from "@/registry/new-york-v4/ui/data-cell-control-contract"
 import { getDataCellTextPointerActivationSource } from "@/registry/new-york-v4/ui/data-cell-text-activation"
-import type { DataCellKind } from "@/registry/new-york-v4/ui/data-cell-types"
+import type {
+  DataCellKind,
+  DataCellProps,
+} from "@/registry/new-york-v4/ui/data-cell-types"
 
 const dataCellOpenKeys = new Set(["Enter", "F2", " "])
 const dataCellNumberKeyPattern = /^[0-9.+-]$/
+
+export function createDataCellControlState(
+  props: DataCellProps,
+  { disabled }: { disabled: boolean }
+): DataCellControlState {
+  if (props.kind === "text") {
+    return {
+      kind: props.kind,
+      value: props.value,
+      disabled,
+    }
+  }
+  if (props.kind === "number") {
+    return {
+      kind: props.kind,
+      value: props.value,
+      disabled,
+    }
+  }
+  if (props.kind === "integer") {
+    return {
+      kind: props.kind,
+      value: props.value,
+      disabled,
+    }
+  }
+  if (props.kind === "boolean") {
+    return {
+      kind: props.kind,
+      value: props.value,
+      disabled,
+      commitBoolean: props.onCommit,
+    }
+  }
+  if (props.kind === "select") {
+    return {
+      kind: props.kind,
+      value: props.value,
+      disabled,
+    }
+  }
+  if (props.kind === "date") {
+    return {
+      kind: props.kind,
+      value: props.value,
+      disabled,
+    }
+  }
+  if (props.kind === "time") {
+    return {
+      kind: props.kind,
+      value: props.value,
+      disabled,
+    }
+  }
+  if (props.kind === "date-time") {
+    return {
+      kind: props.kind,
+      value: props.value,
+      disabled,
+    }
+  }
+  return unsupportedDataCellControlState(props)
+}
 
 export function getDataCellPointerControlAction(
   args: DataCellControlPointerActionArgs
@@ -37,7 +105,10 @@ export function getDataCellPointerControlAction(
   if (controlState.kind === "boolean") {
     return commandDataCellControlAction(
       () =>
-        commitDataCellBooleanToggle(controlState.value, controlState.onCommit),
+        commitDataCellBooleanToggle(
+          controlState.value,
+          controlState.commitBoolean
+        ),
       { shouldPreventDefault: true }
     )
   }
@@ -67,7 +138,10 @@ export function getDataCellClickControlAction(
   if (controlState.kind === "boolean") {
     return commandDataCellControlAction(
       () =>
-        commitDataCellBooleanToggle(controlState.value, controlState.onCommit),
+        commitDataCellBooleanToggle(
+          controlState.value,
+          controlState.commitBoolean
+        ),
       { shouldPreventDefault: false }
     )
   }
@@ -87,7 +161,7 @@ export function getDataCellKeyControlAction(
       () =>
         commitDataCellBooleanToggle(
           booleanState.value,
-          booleanState.onCommit
+          booleanState.commitBoolean
         ),
       { shouldPreventDefault: true }
     )
@@ -142,4 +216,8 @@ function createDefaultClickEditAction<Kind extends DataCellKind>({
     createDataCellPointerActivationSource({ clientX, clientY, detail, event }),
     { shouldPreventDefault: false }
   )
+}
+
+function unsupportedDataCellControlState(_props: never): never {
+  throw new Error("Unsupported DataCell kind")
 }

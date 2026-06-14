@@ -5,16 +5,22 @@ import * as React from "react"
 import type { Source } from "@/lib/document-source"
 import {
   AnchoredDocumentProvider,
-  type AnchoredDocumentTarget,
-  type AnchoredItem,
   useAnchoredDocument,
   useAnchoredFieldLink,
+  type AnchoredDocumentTarget,
+  type AnchoredItem,
 } from "@/components/ui/anchored-document-viewer"
 import {
   SourceFieldList,
   type SourceField,
 } from "@/components/ui/source-field-list"
 import { SourceIndicator } from "@/components/ui/source-indicator"
+import {
+  ViewerBody,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "@/components/ui/viewer"
 import { xlsxAnchorToTarget } from "@/components/ui/xlsx-source"
 import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
 import xlsxSample from "@/components/viewers/sample-data/xlsx-sources.json"
@@ -83,23 +89,36 @@ function XlsxSourcesContent({
       : null
 
   return (
-    <div className="flex h-full min-h-[680px] bg-background">
-      <div className="relative min-w-0 flex-1">
-        <XlsxViewer
-          ref={viewerRef}
-          source={{
-            kind: "url",
-            url: XLSX_URL,
-            fileName: "nvidia-financials-fy2024.xlsx",
-          }}
-          bare
-          className="h-full"
-          activeCell={activeCell}
-        />
-        <SourceIndicator path={link.activePath} found={!!activeItem?.anchor} />
-      </div>
-      <SourceFieldList fields={FIELDS} link={link} />
-    </div>
+    <ViewerRoot bare className="h-full min-h-[680px] bg-background">
+      <ViewerBody>
+        <ViewerSurface className="relative">
+          <XlsxViewer
+            ref={viewerRef}
+            source={{
+              kind: "url",
+              url: XLSX_URL,
+              fileName: "nvidia-financials-fy2024.xlsx",
+            }}
+            bare
+            className="h-full"
+            activeCell={activeCell}
+          />
+          <SourceIndicator
+            path={link.activePath}
+            found={!!activeItem?.anchor}
+          />
+        </ViewerSurface>
+        <ViewerSidebar
+          aria-label="Source fields"
+          side="right"
+          collapsible="none"
+          width="360px"
+          className="border-l"
+        >
+          <SourceFieldList fields={FIELDS} link={link} />
+        </ViewerSidebar>
+      </ViewerBody>
+    </ViewerRoot>
   )
 }
 

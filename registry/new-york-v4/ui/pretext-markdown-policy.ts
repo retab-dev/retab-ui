@@ -145,7 +145,33 @@ export type PretextComponent = {
 const URL_CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F]/
 const URL_SCHEME_PATTERN = /^([A-Za-z][A-Za-z0-9+.-]*):/
 const ALLOWED_LINK_PROTOCOLS = new Set(["http", "https", "mailto"])
+export type PretextMarkdownSvgSanitizer = {
+  sanitize: (
+    source: string,
+    options: typeof PRETEXT_MARKDOWN_SVG_SANITIZE_OPTIONS
+  ) => string
+}
 
+export const PRETEXT_MARKDOWN_SVG_SANITIZE_OPTIONS = {
+  ADD_ATTR: [
+    "aria-label",
+    "aria-labelledby",
+    "data-source",
+    "data-testid",
+    "role",
+  ],
+  FORBID_TAGS: [
+    "audio",
+    "canvas",
+    "embed",
+    "foreignObject",
+    "iframe",
+    "object",
+    "script",
+    "video",
+  ],
+  USE_PROFILES: { svg: true, svgFilters: true },
+} as const
 export const PRETEXT_MARKDOWN_KATEX_OPTIONS = {
   maxExpand: 1000,
   maxSize: 10,
@@ -186,6 +212,7 @@ export function createPretextMarkdownRemarkPlugins(
     remarkDirective,
     remarkPretextHeadingIds(headingIds),
     remarkPretextCodeMeta,
+    remarkPretextStripRawInternalMetadata,
     remarkPretextComponentMarkdown,
     remarkSmartypants,
     remarkRestorePretextComponentMarkdownFallbacks,
@@ -242,6 +269,17 @@ export function sanitizePretextMarkdownMediaUrl(value: string) {
   if (!safeUrl) return ""
   if (isPretextMarkdownSvgResourceUrl(safeUrl)) return ""
   return safeUrl
+}
+
+export function sanitizePretextMarkdownSvg(
+  svg: string,
+  sanitizer: PretextMarkdownSvgSanitizer
+) {
+  const sanitized = sanitizer
+    .sanitize(svg, PRETEXT_MARKDOWN_SVG_SANITIZE_OPTIONS)
+    .trim()
+
+  return /^<svg(?:\s|>)/i.test(sanitized) ? sanitized : ""
 }
 
 function decodePretextMarkdownUrl(value: string) {
@@ -783,6 +821,22 @@ function remarkPretextCodeMeta() {
       }
     })
   }
+}
+
+function remarkPretextStripRawInternalMetadata() {
+  return function transform(tree: unknown) {
+    visit(tree, "html", (node: any) => {
+      if (typeof node.value !== "string") return
+      node.value = stripPretextInternalRawHtmlAttributes(node.value)
+    })
+  }
+}
+
+function stripPretextInternalRawHtmlAttributes(value: string) {
+  return value.replace(
+    /\s+(?:data-pretext-[\w:-]+|datapretext[\w:-]+)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?/gi,
+    ""
+  )
 }
 
 function remarkPretextGithubAlerts() {

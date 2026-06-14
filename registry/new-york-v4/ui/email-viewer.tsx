@@ -419,7 +419,7 @@ function getSidebarSections(root: MimePartNode): {
 } {
   const attachmentNodes: MimePartNode[] = []
 
-  walkMimeNodes(root, (node) => {
+  walkCurrentMessageNodes(root, (node) => {
     if (node.isMultipart) return
     if (node.isInlineResource) return
     if (node.isAttachment || node.isMessage) {
@@ -436,7 +436,7 @@ function getSidebarSections(root: MimePartNode): {
 function getBodyNode(root: MimePartNode) {
   const candidates: MimePartNode[] = []
 
-  walkMimeNodes(root, (node) => {
+  walkCurrentMessageNodes(root, (node) => {
     if (!node.isRenderable) return
     if (node.isInlineResource || node.isAttachment || node.isMessage) return
     candidates.push(node)
@@ -602,6 +602,19 @@ function walkMimeNodes(
 ) {
   visit(node)
   for (const child of node.children) walkMimeNodes(child, visit)
+}
+
+function walkCurrentMessageNodes(
+  root: MimePartNode,
+  visit: (node: MimePartNode) => void
+) {
+  function walk(node: MimePartNode) {
+    visit(node)
+    if (node !== root && node.isMessage) return
+    for (const child of node.children) walk(child)
+  }
+
+  walk(root)
 }
 
 function pathsEqual(left: MimePartPath, right: MimePartPath) {

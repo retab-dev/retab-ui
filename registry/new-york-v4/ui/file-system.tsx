@@ -3,16 +3,16 @@
 import { cn } from "@/lib/utils"
 
 import {
-  FileSystemOpenPreviewDialog,
-  useFileSystemOpenPreviewDialog,
+  FileSystemOpenPreview,
+  useFileSystemOpenPreview,
 } from "./file-system-open-preview-dialog"
 import {
-  FileSystemExplorer,
+  FileSystemBrowser,
   FileSystemHeader,
-  FileSystemSelectedFile,
-  useFileSystemExplorer,
+  FileSystemPreview,
+  useFileSystemBrowser,
   useFileSystemHeader,
-  useFileSystemSelectedFile,
+  useFileSystemPreview,
 } from "./file-system-parts"
 import { FileSystemProvider, useFileSystem } from "./file-system-provider"
 import type { FileSystemProps } from "./file-system-types"
@@ -25,16 +25,16 @@ import {
 } from "./viewer"
 
 export {
-  FileSystemOpenPreviewDialog,
+  FileSystemOpenPreview,
   FileSystemProvider,
-  FileSystemExplorer,
+  FileSystemBrowser,
   FileSystemHeader,
-  FileSystemSelectedFile,
+  FileSystemPreview,
   useFileSystem,
-  useFileSystemExplorer,
+  useFileSystemBrowser,
   useFileSystemHeader,
-  useFileSystemOpenPreviewDialog,
-  useFileSystemSelectedFile,
+  useFileSystemOpenPreview,
+  useFileSystemPreview,
 }
 
 export type {
@@ -50,9 +50,9 @@ export type {
 } from "./file-system-types"
 export type { FileSystemProviderProps } from "./file-system-provider"
 export type {
-  FileSystemExplorerState,
+  FileSystemBrowserPartState,
   FileSystemHeaderState,
-  FileSystemSelectedFileState,
+  FileSystemPreviewState,
 } from "./file-system-parts"
 
 export function FileSystem({ className, ...providerProps }: FileSystemProps) {
@@ -77,13 +77,13 @@ export function FileSystem({ className, ...providerProps }: FileSystemProps) {
               width="min(22rem, 85vw)"
               className="flex min-w-0 flex-col border-r"
             >
-              <FileSystemExplorer />
+              <FileSystemBrowser />
             </ViewerSidebar>
             <ViewerSurface className="bg-background">
-              <FileSystemSelectedFile />
+              <FileSystemPreview />
             </ViewerSurface>
           </ViewerBody>
-          <FileSystemOpenPreviewDialog />
+          <FileSystemOpenPreview />
         </ViewerRoot>
       </div>
     </FileSystemProvider>

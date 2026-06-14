@@ -1358,6 +1358,7 @@ describe("HtmlDocViewer", () => {
     expect(
       container.querySelector('[data-slot="file-viewer"]')?.className
     ).toContain("h-full")
+    expect(screen.queryByRole("link", { name: "Download" })).toBeNull()
     expect(iframe.getAttribute("srcdoc")).toBe("<article>direct</article>")
     expect(iframe.getAttribute("title")).toBe("direct.html")
   })

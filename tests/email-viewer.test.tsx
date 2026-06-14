@@ -478,5 +478,63 @@ describe("EmailViewer", () => {
       )
     })
     expect(screen.getByText("Forwarded note")).toBeTruthy()
+    const viewerRoots = container.querySelectorAll('[data-slot="viewer-root"]')
+    expect(viewerRoots).toHaveLength(2)
+    expect(viewerRoots[1]?.className).not.toContain("rounded-xl")
+    expect(viewerRoots[1]?.className).not.toContain("border")
+  })
+
+  it("renders recursive message viewers only along the selected MIME chain", async () => {
+    const root: MimePart = {
+      id: "root",
+      mimeType: "multipart/mixed",
+      children: [
+        htmlPart("html", "<p>Outer body</p>", "message.html"),
+        {
+          id: "level-1",
+          mimeType: "message/rfc822",
+          disposition: "attachment",
+          fileName: "level-1.eml",
+          headers: [{ name: "Subject", value: "Level 1" }],
+          children: [
+            htmlPart("level-1-html", "<p>Level 1 body</p>"),
+            {
+              id: "level-2",
+              mimeType: "message/rfc822",
+              disposition: "attachment",
+              fileName: "level-2.eml",
+              headers: [{ name: "Subject", value: "Level 2" }],
+              children: [htmlPart("level-2-html", "<p>Level 2 body</p>")],
+            },
+          ],
+        },
+      ],
+    }
+
+    const { container } = render(
+      <EmailViewer message={message(root)} className="h-[720px]" />
+    )
+
+    await waitFor(() => {
+      expect(
+        container.querySelectorAll('[data-slot="viewer-root"]')
+      ).toHaveLength(1)
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: /level-1\.eml/i }))
+    await waitFor(() => {
+      expect(
+        container.querySelectorAll('[data-slot="viewer-root"]')
+      ).toHaveLength(2)
+    })
+    expect(screen.queryByText("Level 2")).toBeNull()
+
+    fireEvent.click(screen.getByRole("button", { name: /level-2\.eml/i }))
+    await waitFor(() => {
+      expect(
+        container.querySelectorAll('[data-slot="viewer-root"]')
+      ).toHaveLength(3)
+    })
+    expect(screen.getByText("Level 2")).toBeTruthy()
   })
 })

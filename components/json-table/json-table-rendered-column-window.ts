@@ -1,6 +1,6 @@
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
 
-type JsonTableRenderedColumnItem = {
+export type JsonTableRenderedColumnItem = {
   index: number
 }
 

@@ -10,7 +10,7 @@ import {
   classifyFileSystemPierreResetTransition,
   createFileSystemPierreResetIdentity,
 } from "./file-system-pierre-reset-identity"
-import { scrollSelectedFileSystemPathIntoView } from "./file-system-pierre-selection"
+import { scrollCurrentFileSystemEntryIntoView } from "./file-system-pierre-selection"
 
 const useIsoLayoutEffect =
   typeof window === "undefined" ? React.useEffect : React.useLayoutEffect
@@ -69,7 +69,7 @@ export function useResetFileSystemPierreModel({
       initialExpandedPaths: plan.initialExpandedPaths,
       preparedInput: plan.transition.next.input.preparedInput,
     })
-    scrollSelectedFileSystemPathIntoView({
+    scrollCurrentFileSystemEntryIntoView({
       input: plan.transition.next.input,
       model,
       selectedPath,

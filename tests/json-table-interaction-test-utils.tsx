@@ -212,7 +212,13 @@ export function createTestCellCommitBridge({
       value
     )
     currentDocumentData = nextData
-    if (usesPrimitiveEditStore) primitiveEditStore.recordDocumentEcho(nextData)
+    if (usesPrimitiveEditStore) {
+      primitiveEditStore.recordDocumentEcho({
+        data: nextData,
+        fieldPath: materializedFieldPath,
+        value,
+      })
+    }
     onUpdateDocument({ data: nextData })
   }
 

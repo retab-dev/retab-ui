@@ -5,18 +5,24 @@ import * as React from "react"
 import type { Source } from "@/lib/document-source"
 import {
   AnchoredDocumentProvider,
-  type AnchoredDocumentTarget,
-  type AnchoredItem,
   useAnchoredDocument,
   useAnchoredFieldLink,
+  type AnchoredDocumentTarget,
+  type AnchoredItem,
 } from "@/components/ui/anchored-document-viewer"
-import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
 import {
   SourceFieldList,
   type SourceField,
 } from "@/components/ui/source-field-list"
 import { SourceIndicator } from "@/components/ui/source-indicator"
 import { textAnchorToTarget } from "@/components/ui/text-source"
+import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
+import {
+  ViewerBody,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "@/components/ui/viewer"
 import textSample from "@/components/viewers/sample-data/text-sources.json"
 
 const TEXT_URL = "/samples/extraction-run.log"
@@ -81,24 +87,37 @@ function TextSourcesContent({
       : null
 
   return (
-    <div className="flex h-full min-h-[680px] bg-background">
-      <div className="relative min-w-0 flex-1">
-        <TextViewer
-          ref={viewerRef}
-          source={{
-            kind: "url",
-            url: TEXT_URL,
-            fileName: "extraction-run.log",
-          }}
-          bare
-          className="h-full"
-          highlight={highlight}
-          mode="text"
-        />
-        <SourceIndicator path={link.activePath} found={!!activeItem?.anchor} />
-      </div>
-      <SourceFieldList fields={FIELDS} link={link} />
-    </div>
+    <ViewerRoot bare className="h-full min-h-[680px] bg-background">
+      <ViewerBody>
+        <ViewerSurface className="relative">
+          <TextViewer
+            ref={viewerRef}
+            source={{
+              kind: "url",
+              url: TEXT_URL,
+              fileName: "extraction-run.log",
+            }}
+            bare
+            className="h-full"
+            highlight={highlight}
+            mode="text"
+          />
+          <SourceIndicator
+            path={link.activePath}
+            found={!!activeItem?.anchor}
+          />
+        </ViewerSurface>
+        <ViewerSidebar
+          aria-label="Source fields"
+          side="right"
+          collapsible="none"
+          width="360px"
+          className="border-l"
+        >
+          <SourceFieldList fields={FIELDS} link={link} />
+        </ViewerSidebar>
+      </ViewerBody>
+    </ViewerRoot>
   )
 }
 

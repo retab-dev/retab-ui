@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "fslight-block",
   "title": "File System Light",
-  "description": "A purified composition experiment: Pierre file tree in a ViewerSidebar, selected source rendered by FileViewer in a ViewerSurface.",
+  "description": "A purified composition experiment: file tree in a ViewerSidebar, selected source rendered by FileViewer in a ViewerSurface.",
   "dependencies": [
     "@pierre/trees"
   ],

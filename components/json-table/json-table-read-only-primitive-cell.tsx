@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils"
 import type { DataCellKind } from "@/components/ui/data-cell"
-import { jsonTableDataCellClass } from "@/components/json-table/json-table-data-cell"
+import { jsonTableDataCellClass } from "@/components/json-table/json-table-data-cell-classes"
 import { DataCellBooleanIndicator } from "@/registry/new-york-v4/ui/data-cell-boolean-control"
 import { dataCellCheckboxDisplayClass } from "@/registry/new-york-v4/ui/data-cell-classes"
 

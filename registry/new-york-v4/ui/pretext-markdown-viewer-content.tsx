@@ -95,6 +95,11 @@ export function PretextMarkdownViewerContent({
   const pendingScrollAnchorRef =
     React.useRef<PretextMarkdownScrollAnchor | null>(null)
   const pendingViewModeSourceLineRef = React.useRef<number | null>(null)
+  const lastHighlightScrollRef = React.useRef<{
+    document: ReturnType<typeof createPretextMarkdownDocument>
+    end: number
+    start: number
+  } | null>(null)
   const resolvedHashRef = React.useRef<string | null>(null)
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const fontEpoch = useTextViewerFontEpoch()
@@ -255,6 +260,11 @@ export function PretextMarkdownViewerContent({
     },
     [document.chunks, frame.chunks, sourceLineHeight, viewMode]
   )
+  const scrollLineRangeRef = React.useRef(scrollLineRange)
+
+  React.useLayoutEffect(() => {
+    scrollLineRangeRef.current = scrollLineRange
+  }, [scrollLineRange])
 
   const scrollToChunkFrame = React.useCallback(
     (chunkIndex: number, options?: ScrollToOptions) => {
@@ -382,8 +392,28 @@ export function PretextMarkdownViewerContent({
   )
 
   React.useEffect(() => {
-    scrollLineRange(highlightRange)
-  }, [highlightRange, scrollLineRange])
+    if (!highlightRange) {
+      lastHighlightScrollRef.current = null
+      return
+    }
+
+    const last = lastHighlightScrollRef.current
+    if (
+      last &&
+      last.document === document &&
+      last.start === highlightRange.start &&
+      last.end === highlightRange.end
+    ) {
+      return
+    }
+
+    lastHighlightScrollRef.current = {
+      document,
+      end: highlightRange.end,
+      start: highlightRange.start,
+    }
+    scrollLineRangeRef.current(highlightRange)
+  }, [document, highlightRange])
 
   React.useLayoutEffect(() => {
     const sourceLine = pendingViewModeSourceLineRef.current

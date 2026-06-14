@@ -22,6 +22,7 @@ export function ResourceDocShell({
   actions,
   className,
   bare,
+  showHeader = !bare,
   children,
 }: {
   resource: ViewerResource
@@ -29,6 +30,7 @@ export function ResourceDocShell({
   actions?: React.ReactNode
   className?: string
   bare?: boolean
+  showHeader?: boolean
   children: React.ReactNode
 }) {
   const fileName = resource.fileName
@@ -42,26 +44,28 @@ export function ResourceDocShell({
         className
       )}
     >
-      <div className="flex h-10 min-w-0 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
-        <span
-          className="min-w-0 flex-1 truncate px-1 text-xs font-medium"
-          title={fileName}
-        >
-          {fileName}
-        </span>
-        {meta ? (
-          <span className="max-w-[45%] min-w-0 flex-shrink truncate text-xs text-muted-foreground tabular-nums">
-            {meta}
+      {showHeader ? (
+        <div className="flex h-10 min-w-0 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
+          <span
+            className="min-w-0 flex-1 truncate px-1 text-xs font-medium"
+            title={fileName}
+          >
+            {fileName}
           </span>
-        ) : null}
-        <div className="ml-auto flex shrink-0 items-center gap-1">
-          {actions}
-          {actions ? (
-            <Separator orientation="vertical" className="mx-1 h-4" />
+          {meta ? (
+            <span className="max-w-[45%] min-w-0 flex-shrink truncate text-xs text-muted-foreground tabular-nums">
+              {meta}
+            </span>
           ) : null}
-          <ViewerDownloadButton action={resource.originalDownload} />
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            {actions}
+            {actions ? (
+              <Separator orientation="vertical" className="mx-1 h-4" />
+            ) : null}
+            <ViewerDownloadButton action={resource.originalDownload} />
+          </div>
         </div>
-      </div>
+      ) : null}
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
     </div>
   )

@@ -33,10 +33,12 @@ import {
   readPretextHeadingId,
   sanitizePretextMarkdownImageUrl,
   sanitizePretextMarkdownMediaUrl,
+  sanitizePretextMarkdownSvg,
   sanitizePretextMarkdownUrl,
   type AlertKind,
   type CalloutKind,
   type PretextComponent,
+  type PretextMarkdownSvgSanitizer,
 } from "./pretext-markdown-policy"
 
 export function PretextMarkdownChunkRenderer({
@@ -204,60 +206,66 @@ const markdownComponents = {
       </div>
     )
   },
-  h1: ({ className, children, node: _node, ...props }) => (
+  h1: ({ className, children, node, ...props }) => (
     <PretextMarkdownHeading
       className={className}
       level={1}
+      node={node}
       textClassName="mt-0 mb-5 text-3xl font-semibold tracking-normal text-foreground"
       {...props}
     >
       {children}
     </PretextMarkdownHeading>
   ),
-  h2: ({ className, children, node: _node, ...props }) => (
+  h2: ({ className, children, node, ...props }) => (
     <PretextMarkdownHeading
       className={className}
       level={2}
+      node={node}
       textClassName="mt-9 mb-4 text-2xl font-semibold tracking-normal text-foreground first:mt-0"
       {...props}
     >
       {children}
     </PretextMarkdownHeading>
   ),
-  h3: ({ className, children, node: _node, ...props }) => (
+  h3: ({ className, children, node, ...props }) => (
     <PretextMarkdownHeading
       className={className}
       level={3}
+      node={node}
       textClassName="mt-7 mb-3 text-xl font-semibold tracking-normal text-foreground first:mt-0"
       {...props}
     >
       {children}
     </PretextMarkdownHeading>
   ),
-  h4: ({ className, children, node: _node, ...props }) => (
+  h4: ({ className, children, node, ...props }) => (
     <PretextMarkdownHeading
       className={className}
       level={4}
+      node={node}
       textClassName="mt-6 mb-2 text-lg font-semibold tracking-normal text-foreground first:mt-0"
       {...props}
     >
       {children}
     </PretextMarkdownHeading>
   ),
-  h5: ({ className, children, node: _node, ...props }) => (
+  h5: ({ className, children, node, ...props }) => (
     <PretextMarkdownHeading
       className={className}
       level={5}
+      node={node}
       textClassName="mt-5 mb-2 text-base font-semibold tracking-normal text-foreground first:mt-0"
       {...props}
     >
       {children}
     </PretextMarkdownHeading>
   ),
-  h6: ({ className, children, node: _node, ...props }) => (
+  h6: ({ className, children, node, ...props }) => (
     <PretextMarkdownHeading
       className={className}
       level={6}
+      node={node}
       textClassName="mt-5 mb-2 text-sm font-semibold tracking-normal text-muted-foreground first:mt-0"
       {...props}
     >
@@ -651,21 +659,24 @@ function PretextMarkdownHeading({
   children,
   className,
   level,
+  node: _node,
   textClassName,
   ...props
 }: React.HTMLAttributes<HTMLHeadingElement> & {
   level: 1 | 2 | 3 | 4 | 5 | 6
+  node: unknown
   textClassName: string
 }) {
   const id = readPretextHeadingId(props)
   const HeadingTag = `h${level}` as const
   const headingText = extractReactText(children).trim() || "heading"
+  const headingProps = omitPretextInternalReactProps(props)
 
   return (
     <div className="group flex min-w-0 items-baseline gap-1.5">
       <HeadingTag
         className={cn(textClassName, "min-w-0", className)}
-        {...props}
+        {...headingProps}
         id={id}
       >
         {children}
@@ -680,6 +691,17 @@ function PretextMarkdownHeading({
       ) : null}
     </div>
   )
+}
+
+function omitPretextInternalReactProps<
+  Props extends Record<string, unknown>,
+>(props: Props) {
+  const safeProps: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(props)) {
+    if (/^dataPretext/.test(key) || /^data-pretext-/.test(key)) continue
+    safeProps[key] = value
+  }
+  return safeProps as Props
 }
 
 function createPretextMarkdownHeadingUrl(id: string) {
@@ -1872,13 +1894,58 @@ async function renderMermaidDiagram(
       theme: "default",
     })
     const result = await mermaid.render(id, source)
-    return { status: "ready", svg: result.svg }
+    const svg = await sanitizePretextMarkdownMermaidSvg(result.svg)
+    if (!svg) {
+      return { status: "failed", message: "Mermaid produced invalid SVG." }
+    }
+    return { status: "ready", svg }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Invalid diagram"
-    return message.includes("Cannot find") || message.includes("module")
+    return isRecoverablePretextMarkdownMermaidError(message)
       ? renderBasicMermaidDiagram(source)
       : { status: "failed", message }
   }
+}
+
+function isRecoverablePretextMarkdownMermaidError(message: string) {
+  return (
+    message.includes("Cannot find") ||
+    message.includes("module") ||
+    message.includes("getBBox") ||
+    message.includes("getComputedTextLength")
+  )
+}
+
+async function sanitizePretextMarkdownMermaidSvg(svg: string) {
+  const domPurifyModule = await import("dompurify")
+  const defaultExport = domPurifyModule.default as unknown
+  const moduleExport = domPurifyModule as unknown
+  const sanitizer = isPretextMarkdownSvgSanitizer(defaultExport)
+    ? defaultExport
+    : typeof defaultExport === "function"
+      ? (defaultExport as (windowObject: Window) => PretextMarkdownSvgSanitizer)(
+          window
+        )
+      : isPretextMarkdownSvgSanitizer(moduleExport)
+        ? moduleExport
+        : null
+
+  if (!sanitizer?.sanitize) {
+    throw new Error("DOMPurify sanitize unavailable")
+  }
+
+  return sanitizePretextMarkdownSvg(svg, sanitizer)
+}
+
+function isPretextMarkdownSvgSanitizer(
+  value: unknown
+): value is PretextMarkdownSvgSanitizer {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "sanitize" in value &&
+    typeof value.sanitize === "function"
+  )
 }
 
 function renderBasicMermaidDiagram(

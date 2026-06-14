@@ -23,13 +23,16 @@ export type JsonTableShellHandlers = Pick<
 >
 
 export function disabledJsonTableCellShellProps({
+  ariaColumnIndex,
   cellWidth,
   materializedFieldPath,
 }: {
+  ariaColumnIndex: number
   cellWidth: number
   materializedFieldPath: string | undefined
 }): EditableTableCellShellProps {
   return {
+    "aria-colindex": ariaColumnIndex,
     "data-field-path": materializedFieldPath,
     className: "relative cursor-not-allowed bg-muted/60 p-0",
     style: getCellWidthStyle(cellWidth),
@@ -37,6 +40,7 @@ export function disabledJsonTableCellShellProps({
 }
 
 export function editableJsonTableCellShellProps({
+  ariaColumnIndex,
   cellWidth,
   isCellEditing,
   isJsonEditable,
@@ -44,6 +48,7 @@ export function editableJsonTableCellShellProps({
   materializedFieldPath,
   shellHandlers,
 }: {
+  ariaColumnIndex: number
   cellWidth: number
   isCellEditing: boolean
   isJsonEditable: boolean
@@ -52,6 +57,7 @@ export function editableJsonTableCellShellProps({
   shellHandlers: JsonTableShellHandlers
 }): EditableTableCellShellProps {
   return {
+    "aria-colindex": ariaColumnIndex,
     "data-active": isCellEditing || undefined,
     "data-field-path": materializedFieldPath,
     "data-json-table-editable-cell": "true",

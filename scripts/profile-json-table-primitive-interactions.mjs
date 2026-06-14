@@ -156,6 +156,8 @@ function printStyleExperimentSummary(report) {
           `elapsed=${formatMs(scenario.elapsedMs)}`,
           `style=${formatMs(scenario.browserCost?.style?.durationMs)}`,
           `layout=${formatMs(scenario.browserCost?.layout?.durationMs)}`,
+          `owner=${scenario.styleAttributionHint ?? "unknown"}`,
+          `surface=header:${scenario.mountedSurface?.after?.headerCells ?? "n/a"}/body:${scenario.mountedSurface?.after?.editableCells ?? "n/a"}/popup:${scenario.mountedSurface?.after?.popupNodes ?? "n/a"}`,
           `renders=${renderedComponentCount(scenario, "EditableJsonTableCell")}`,
           `commits=${scenario.profiler?.reactCommits?.count ?? 0}`,
           `rect=${scenario.rectProbe?.count ?? 0}`,
@@ -217,6 +219,9 @@ function scenarioRepeatedMetrics(scenario) {
     rectReads: scenario.rectProbe?.count,
     documentPatches: scenario.profiler?.markCounts?.["document-patch-start"],
     domNodeDelta: scenario.metricsDelta?.Nodes,
+    mountedEditableCells: scenario.mountedSurface?.after?.editableCells,
+    mountedHeaderCells: scenario.mountedSurface?.after?.headerCells,
+    mountedPopupNodes: scenario.mountedSurface?.after?.popupNodes,
   }
 }
 
@@ -504,6 +509,26 @@ function topEntries(record, limit = 24) {
     .map(([name, count]) => ({ name, count }))
 }
 
+function mountedSurfaceDelta(before, after) {
+  return Object.fromEntries(
+    Object.keys(after).map((key) => [key, after[key] - (before[key] ?? 0)])
+  )
+}
+
+function styleAttributionHint(summary) {
+  if (summary.browserCost?.dominantCost !== "style") return "not-style-bound"
+  const after = summary.mountedSurface?.after ?? {}
+  const delta = summary.mountedSurface?.delta ?? {}
+
+  if ((delta.popupNodes ?? 0) > 0) return "popup-mount"
+  if ((after.popupNodes ?? 0) > 0) return "popup-open-surface"
+  if ((after.headerCells ?? 0) > (after.editableRows ?? 0) * 2) {
+    return "eager-header-surface"
+  }
+  if ((after.editableCells ?? 0) > 0) return "editable-body-surface"
+  return "global-document-surface"
+}
+
 async function installPage(send) {
   await evaluate(
     send,
@@ -633,7 +658,9 @@ async function editableCellPoint(send, fieldPath) {
       if (!cell) throw new Error("Missing cell: ${fieldPath}");
       cell.scrollIntoView({ block: "nearest", inline: "center" });
       await new Promise((resolve) => requestAnimationFrame(resolve));
-      const rect = cell.getBoundingClientRect();
+      const mountedCell = document.querySelector('[data-field-path="${fieldPath}"]');
+      if (!mountedCell) throw new Error("Missing cell after scroll: ${fieldPath}");
+      const rect = mountedCell.getBoundingClientRect();
       return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     })()`
   )
@@ -769,18 +796,42 @@ async function clickOutsideTable(send) {
   })
 }
 
-async function setFocusedInputValue(send, value) {
-  await evaluate(
-    send,
-    `(() => {
-      const input = document.activeElement;
+async function setFocusedInputValue(send, value, fieldPath) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const result = await evaluate(
+      send,
+      `(() => {
+      const activeElement = document.activeElement;
+      const input = activeElement instanceof HTMLInputElement
+        ? activeElement
+        : document.querySelector('input[data-mode="edit"]');
       if (!(input instanceof HTMLInputElement)) {
-        throw new Error("No focused input");
+        return { ok: false };
       }
+      input.focus({ preventScroll: true });
       const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
       valueSetter.call(input, ${JSON.stringify(value)});
       input.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: ${JSON.stringify(value)} }));
+      return { ok: true };
     })()`
+    )
+    if (result?.ok) return
+    if (!fieldPath) break
+
+    await focusEditableCell(send, fieldPath)
+    await pressEnter(send)
+    await waitInPage(
+      send,
+      `document.querySelector('input[data-mode="edit"]') instanceof HTMLInputElement`,
+      1_000
+    ).catch(() => undefined)
+    await sleep(100)
+  }
+
+  throw new Error(
+    fieldPath
+      ? `No focused input for ${fieldPath}`
+      : "No focused input"
   )
 }
 
@@ -794,7 +845,8 @@ async function focusEditableCell(send, fieldPath) {
     `(() => {
       const cell = document.querySelector('[data-field-path="${fieldPath}"]');
       if (!(cell instanceof HTMLElement)) throw new Error("Missing cell: ${fieldPath}");
-      cell.focus({ preventScroll: true });
+      const surface = cell.querySelector('[data-slot="data-cell"]');
+      (surface instanceof HTMLElement ? surface : cell).focus({ preventScroll: true });
     })()`
   )
 }
@@ -876,8 +928,59 @@ async function scrollJsonTableToTop(send) {
   )
 }
 
-async function summarizeScenario(send, beforeMetrics, startedAt, wait) {
+async function mountedSurfaceSnapshot(send) {
+  return evaluate(
+    send,
+    `(() => {
+      const headerTable = document.querySelector('[data-slot="table"]');
+      const bodyScroller = document.querySelector('[data-slot="json-table-scroll"]');
+      const bodyTable = bodyScroller?.querySelector('[data-slot="table"]');
+      const popupSelectors = [
+        '[data-slot="data-cell-select-popup"]',
+        '[data-slot="data-cell-picker-popup"]',
+        '[data-slot="calendar"]',
+        '[data-slot="select-popup"]',
+        '[data-slot="select-positioner"]',
+        '[data-slot="select-list"]'
+      ];
+      const popups = popupSelectors.flatMap((selector) =>
+        [...document.querySelectorAll(selector)]
+      );
+      const popupNodeSet = new Set();
+      for (const popup of popups) {
+        popupNodeSet.add(popup);
+        for (const node of popup.querySelectorAll("*")) popupNodeSet.add(node);
+      }
+
+      return {
+        headerRows: headerTable?.querySelectorAll("thead tr").length ?? 0,
+        headerCells: headerTable?.querySelectorAll("thead th:not([data-json-table-header-spacer='true'])").length ?? 0,
+        headerSpacers: headerTable?.querySelectorAll("thead th[data-json-table-header-spacer='true']").length ?? 0,
+        bodyRows: bodyTable?.querySelectorAll("tbody tr").length ?? 0,
+        bodyCells: bodyTable?.querySelectorAll("tbody td").length ?? 0,
+        editableRows: bodyTable?.querySelectorAll("tbody tr:has([data-json-table-editable-cell='true'])").length ?? 0,
+        editableCells: bodyTable?.querySelectorAll("[data-json-table-editable-cell='true']").length ?? 0,
+        activeEditableCells: bodyTable?.querySelectorAll("[data-json-table-editable-cell='true'][data-active='true']").length ?? 0,
+        dataCellSurfaces: bodyTable?.querySelectorAll('[data-slot="data-cell"]').length ?? 0,
+        selectPopups: document.querySelectorAll('[data-slot="data-cell-select-popup"]').length,
+        pickerPopups: document.querySelectorAll('[data-slot="data-cell-picker-popup"]').length,
+        calendars: document.querySelectorAll('[data-slot="calendar"]').length,
+        popupNodes: popupNodeSet.size,
+        documentNodes: document.querySelectorAll("*").length
+      };
+    })()`
+  )
+}
+
+async function summarizeScenario(
+  send,
+  beforeMetrics,
+  mountedSurfaceBefore,
+  startedAt,
+  wait
+) {
   const afterMetrics = performanceMetrics(await send("Performance.getMetrics"))
+  const mountedSurfaceAfter = await mountedSurfaceSnapshot(send)
   const summary = await evaluate(
     send,
     `(() => {
@@ -929,6 +1032,11 @@ async function summarizeScenario(send, beforeMetrics, startedAt, wait) {
       };
     })()`
   )
+  summary.mountedSurface = {
+    before: mountedSurfaceBefore,
+    after: mountedSurfaceAfter,
+    delta: mountedSurfaceDelta(mountedSurfaceBefore, mountedSurfaceAfter),
+  }
   summary.wait = wait
   summary.elapsedMs = await evaluate(
     send,
@@ -939,6 +1047,7 @@ async function summarizeScenario(send, beforeMetrics, startedAt, wait) {
     summary.metricsDelta,
     summary.profiler.reactCommits.totalActualDurationMs
   )
+  summary.styleAttributionHint = styleAttributionHint(summary)
   return summary
 }
 
@@ -946,10 +1055,17 @@ async function runScenario(send, name, action, waitExpression) {
   console.error(`Running scenario: ${name}`)
   await resetProfiler(send)
   const beforeMetrics = performanceMetrics(await send("Performance.getMetrics"))
+  const mountedSurfaceBefore = await mountedSurfaceSnapshot(send)
   const startedAt = await evaluate(send, "performance.now()")
   await action()
   const wait = await waitInPage(send, waitExpression, 5_000)
-  const summary = await summarizeScenario(send, beforeMetrics, startedAt, wait)
+  const summary = await summarizeScenario(
+    send,
+    beforeMetrics,
+    mountedSurfaceBefore,
+    startedAt,
+    wait
+  )
   await restoreRectProbe(send)
   console.error(`Finished scenario: ${name}`)
   return { name, ...summary }
@@ -1075,7 +1191,7 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
             `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
             3_000
           )
-          await setFocusedInputValue(send, "profile cancelled text")
+          await setFocusedInputValue(send, "profile cancelled text", textFieldPath)
           await pressEscape(send)
         },
         `document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
@@ -1089,7 +1205,7 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
       `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
       3_000
     )
-    await setFocusedInputValue(send, "profile text commit")
+    await setFocusedInputValue(send, "profile text commit", textFieldPath)
     scenarios.push(
       await runScenario(
         send,
@@ -1113,7 +1229,7 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
             `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "number"`,
             3_000
           )
-          await setFocusedInputValue(send, "1001.25")
+          await setFocusedInputValue(send, "1001.25", numberFieldPath)
           await clickOutsideTable(send)
         },
         `(window.__jsonTableProfiler?.events ?? []).some((event) => event.type === "mark" && event.name === "document-patch-start") && document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
@@ -1125,28 +1241,28 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
         send,
         "rapid-text-commits",
         async () => {
-          const firstPoint = await editableCellPoint(send, textFieldPath)
-          await clickPoint(send, firstPoint)
+          await focusEditableCell(send, textFieldPath)
+          await pressEnter(send)
           await waitInPage(
             send,
             `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
             3_000
           )
-          await setFocusedInputValue(send, "profile rapid text one")
+          await setFocusedInputValue(send, "profile rapid text one", textFieldPath)
           await pressEnter(send)
           await waitInPage(
             send,
             `document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`,
             3_000
           )
-          const secondPoint = await editableCellPoint(send, textFieldPath)
-          await clickPoint(send, secondPoint)
+          await focusEditableCell(send, textFieldPath)
+          await pressEnter(send)
           await waitInPage(
             send,
             `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
             3_000
           )
-          await setFocusedInputValue(send, "profile rapid text two")
+          await setFocusedInputValue(send, "profile rapid text two", textFieldPath)
           await pressEnter(send)
         },
         `((window.__jsonTableProfiler?.events ?? []).filter((event) => event.type === "mark" && event.name === "document-patch-start").length === 2) && document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
@@ -1160,7 +1276,7 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
       `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "number"`,
       3_000
     )
-    await setFocusedInputValue(send, "999.5")
+    await setFocusedInputValue(send, "999.5", numberFieldPath)
     scenarios.push(
       await runScenario(
         send,
@@ -1301,14 +1417,14 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
     await sleep(200)
     await scrollJsonTableToTop(send)
     await sleep(200)
-    const dirtyTextPoint = await editableCellPoint(send, textFieldPath)
-    await clickPoint(send, dirtyTextPoint)
+    await focusEditableCell(send, textFieldPath)
+    await pressEnter(send)
     await waitInPage(
       send,
       `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
       3_000
     )
-    await setFocusedInputValue(send, "profile dirty switch text")
+    await setFocusedInputValue(send, "profile dirty switch text", textFieldPath)
     const switchNumberPoint = await mountedEditableCellPoint(
       send,
       numberFieldPath
@@ -1342,14 +1458,14 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
         send,
         "post-churn-text-commit",
         async () => {
-          const point = await editableCellPoint(send, textFieldPath)
-          await clickPoint(send, point)
+          await focusEditableCell(send, textFieldPath)
+          await pressEnter(send)
           await waitInPage(
             send,
             `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
             3_000
           )
-          await setFocusedInputValue(send, "profile post churn text")
+          await setFocusedInputValue(send, "profile post churn text", textFieldPath)
           await pressEnter(send)
         },
         `document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
@@ -1408,7 +1524,7 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
               `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
               3_000
             )
-            await setFocusedInputValue(send, "profile far text commit")
+            await setFocusedInputValue(send, "profile far text commit", farTextFieldPath)
             await pressEnter(send)
           },
           `document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`

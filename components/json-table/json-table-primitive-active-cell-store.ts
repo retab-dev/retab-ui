@@ -1,4 +1,5 @@
 import * as React from "react"
+import { flushSync } from "react-dom"
 
 import type {
   JsonTableCellId,
@@ -50,4 +51,22 @@ export function useJsonTablePrimitiveActiveCell({
     },
     () => null
   )
+}
+
+export function replaceJsonTablePrimitiveActiveCell({
+  nextActiveCell,
+  setPrimitiveActiveCell,
+  store,
+}: {
+  nextActiveCell: JsonTablePrimitiveActiveCell
+  setPrimitiveActiveCell: SetJsonTablePrimitiveActiveCell
+  store: JsonTablePrimitiveActiveCellStore
+}) {
+  const activeCell = store.getSnapshot()
+  if (activeCell && activeCell.cellId !== nextActiveCell.cellId) {
+    // Same-event switching must let the previous primitive control close or
+    // commit before the next primitive control receives active state.
+    flushSync(() => setPrimitiveActiveCell(null))
+  }
+  setPrimitiveActiveCell(nextActiveCell)
 }

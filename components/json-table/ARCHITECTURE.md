@@ -147,7 +147,7 @@ owner keeps a committed value visible until the parent echo is reconciled.
 primitive control
   -> active control commitValue
   -> EditableJsonTableCell formatValueForCommit
-  -> useJsonTablePrimitiveCellController
+  -> useJsonTablePrimitiveCommitController
   -> JsonTablePrimitiveEditStore
   -> JsonTableCellCommit(visibleThrough: "primitivePendingValue")
   -> useSingleFileTableDocumentModel

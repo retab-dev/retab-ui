@@ -2,58 +2,60 @@
 
 import * as React from "react"
 
-import { FileSystemColumnsView } from "./file-system-columns-view"
+import type {
+  FileSystemHeaderState,
+  FileSystemPreviewState as FileSystemPreviewDomainState,
+} from "./file-system-browser-state"
+import { createFileSystemHeaderState } from "./file-system-browser-state"
 import {
-  createFileSystemHeaderController,
-  createFileSystemPreviewController,
-  type FileSystemHeaderController,
-  type FileSystemPreviewController,
-} from "./file-system-controller"
+  createFileSystemBrowserController,
+  type FileSystemBrowserController,
+} from "./file-system-browser-controller"
+import { FileSystemColumnsView } from "./file-system-columns-view"
 import {
   FileSystemCommandBar,
   FileSystemStatusBar,
   FileSystemToolbar,
 } from "./file-system-controls"
-import {
-  createFileSystemExplorerPart,
-  type FileSystemExplorerPart,
-} from "./file-system-explorer-controllers"
 import { FileSystemGridView } from "./file-system-grid-view"
 import { FileSystemListView } from "./file-system-list-view"
-import { FileSystemPreview } from "./file-system-preview"
+import { FileSystemPreviewPanel } from "./file-system-preview"
 import { useFileSystem } from "./file-system-provider"
 import type { FileSystemProps } from "./file-system-types"
 
-export type FileSystemHeaderState = FileSystemHeaderController & {
-  title: string
-}
+export type FileSystemBrowserPartState = FileSystemBrowserController
 
-export type FileSystemExplorerState = FileSystemExplorerPart
+export type { FileSystemHeaderState } from "./file-system-browser-state"
 
-export type FileSystemSelectedFileState = FileSystemPreviewController & {
+export type FileSystemPreviewState = FileSystemPreviewDomainState & {
   renderFileActions?: FileSystemProps["renderFileActions"]
   renderMetadata?: FileSystemProps["renderMetadata"]
 }
 
 export function useFileSystemHeader(): FileSystemHeaderState {
   const state = useFileSystem()
-  return {
-    ...createFileSystemHeaderController(state),
+
+  return createFileSystemHeaderState({
+    browser: state.browser,
     title: state.title,
-  }
+  })
 }
 
-export function useFileSystemExplorer(): FileSystemExplorerState {
+export function useFileSystemBrowser(): FileSystemBrowserPartState {
   const state = useFileSystem()
 
-  return createFileSystemExplorerPart(state)
+  return createFileSystemBrowserController({
+    browser: state.browser,
+    openPreview: state.openPreview.open,
+    resolveFileSource: state.preview.resolveSource,
+  })
 }
 
-export function useFileSystemSelectedFile(): FileSystemSelectedFileState {
+export function useFileSystemPreview(): FileSystemPreviewState {
   const state = useFileSystem()
 
   return {
-    ...createFileSystemPreviewController(state),
+    ...state.preview,
     renderFileActions: state.renderers.renderFileActions,
     renderMetadata: state.renderers.renderMetadata,
   }
@@ -61,49 +63,49 @@ export function useFileSystemSelectedFile(): FileSystemSelectedFileState {
 
 export function FileSystemHeader() {
   const header = useFileSystemHeader()
-  const { title, ...commandController } = header
 
   return (
     <>
       <FileSystemToolbar {...header} />
-      <FileSystemCommandBar controller={commandController} />
+      <FileSystemCommandBar controller={header} />
     </>
   )
 }
 
-export function FileSystemExplorer() {
-  const explorer = useFileSystemExplorer()
+export function FileSystemBrowser() {
+  const controller = useFileSystemBrowser()
+  const { view } = controller.browser
 
   return (
     <div className="flex size-full min-h-0 flex-col">
       <div className="min-h-0 flex-1">
-        {explorer.view === "list" ? (
-          <FileSystemListView controller={explorer.list} />
-        ) : explorer.view === "grid" ? (
-          <FileSystemGridView controller={explorer.grid} />
+        {view === "list" ? (
+          <FileSystemListView controller={controller} />
+        ) : view === "grid" ? (
+          <FileSystemGridView controller={controller} />
         ) : (
-          <FileSystemColumnsView controller={explorer.columns} />
+          <FileSystemColumnsView controller={controller} />
         )}
       </div>
-      <FileSystemStatusBar state={explorer.status} />
+      <FileSystemStatusBar browser={controller.browser} />
     </div>
   )
 }
 
-export function FileSystemSelectedFile() {
+export function FileSystemPreview() {
   const {
+    entry,
     renderFileActions,
     renderMetadata,
-    resolveFileSource,
-    selectedEntry,
-  } = useFileSystemSelectedFile()
+    resolveSource,
+  } = useFileSystemPreview()
 
   return (
-    <FileSystemPreview
-      entry={selectedEntry}
+    <FileSystemPreviewPanel
+      entry={entry}
       renderFileActions={renderFileActions}
       renderMetadata={renderMetadata}
-      resolveFileSource={resolveFileSource}
+      resolveFileSource={resolveSource}
       className="size-full border-l-0"
     />
   )

@@ -134,6 +134,7 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
   if (!materializedFieldPath || !fieldMetadata) {
     return (
       <TableCell
+        aria-colindex={props.ariaColumnIndex}
         data-field-path={materializedFieldPath}
         data-slot="json-table-read-only-cell"
         className="relative cursor-not-allowed bg-muted/60 p-0"
@@ -153,6 +154,7 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
 
   return (
     <TableCell
+      aria-colindex={props.ariaColumnIndex}
       data-field-path={materializedFieldPath}
       data-slot="json-table-read-only-cell"
       className="relative m-0 border-t-0 border-r border-b border-l-0 p-0 select-none"

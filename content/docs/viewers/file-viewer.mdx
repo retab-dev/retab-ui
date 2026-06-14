@@ -21,9 +21,10 @@ rendering for **text, code, JSON, Markdown, and HTML**.
 npx shadcn@latest add @retab/file-viewer
 ```
 
-This pulls in the format-specific viewers it delegates to, plus `marked` for
-Markdown tokenization, custom fixed-line virtualization for the Code Viewer, and
-`@chenglou/pretext` for the wrapped Text and Markdown surfaces.
+This pulls in the format-specific viewers it delegates to, plus the Pretext
+Markdown Viewer for Markdown documents, custom fixed-line virtualization for
+the Code Viewer, and `@chenglou/pretext` for the wrapped Text and Markdown
+surfaces.
 
 ## Usage
 
@@ -64,7 +65,7 @@ internal `ViewerRoot` is framed.
 | Presentation | `pptx`                                                                          | PPTX Viewer         |
 | Tabular      | `csv`, `tsv`                                                                    | CSV Viewer          |
 | Image        | `png`, `jpg`, `jpeg`, `gif`, `webp`, `avif`, `svg`, `bmp`, `ico`, `tif`, `tiff` | Image Viewer        |
-| Markdown     | `md`, `markdown`, `text/markdown`                                               | Pretext Text Viewer |
+| Markdown     | `md`, `markdown`, `text/markdown`                                               | Pretext Markdown Viewer |
 | HTML         | `html`, `htm`                                                                   | sandboxed iframe    |
 | Text         | `txt`, `text`                                                                   | Pretext Text Viewer |
 | Code & logs  | `log`, `json`, `xml`, `yaml`, `mdx`, `ts`, `py`, `go`, …                        | Code Viewer         |
@@ -79,11 +80,11 @@ Anything unrecognized falls back to a download card.
   Code Viewer with line numbers. Prose text renders
   through the Pretext Text Viewer with natural wrapping and custom
   variable-height virtualization.
-- **Markdown and prose share the fast path.** Markdown is tokenized with
-  `marked`, projected into Text Viewer blocks, laid out with Pretext, and
-  rendered through the same custom virtualization engine as prose. Tables mount
-  only visible body rows. Raw HTML is displayed as inert text/code fallback.
-  Links open in a new tab with `rel="noopener noreferrer"`.
+- **Markdown has a dedicated continuous document path.** Markdown URL, Blob,
+  inline text, and MIME-only sources route to `PretextMarkdownViewer`, which
+  keeps Pretext-informed virtual chunks as an internal layout strategy while
+  React/GFM owns the visible document rendering. The Text Viewer remains for
+  prose text that is not Markdown.
 - **Safe HTML.** Standalone `.html` files render inside a `<iframe sandbox>` with
   no script execution and no same-origin access, so untrusted documents preview
   without running code or reaching the app.

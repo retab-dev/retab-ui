@@ -9,6 +9,10 @@ type RegistryFile = {
   type?: string
 }
 
+type InstalledRegistryFile = RegistryFile & {
+  itemName: string
+}
+
 type RegistryItem = {
   dependencies?: string[]
   files: RegistryFile[]
@@ -59,6 +63,13 @@ const textViewerFiles = [
 ]
 const pretextMarkdownDocsPath =
   "content/docs/viewers/pretext-markdown-viewer.mdx"
+const viewerDocsPaths = [
+  "content/docs/viewers/index.mdx",
+  "content/docs/viewers/file-viewer.mdx",
+  "content/docs/viewers/text-viewer.mdx",
+  "content/docs/viewers/markdown-viewer.mdx",
+  pretextMarkdownDocsPath,
+]
 
 function read(path: string) {
   return readFileSync(join(repoRoot, path), "utf8")
@@ -98,7 +109,51 @@ function relativeImportSpecifiers(source: string) {
   return imports
 }
 
+function moduleImportSpecifiers(source: string) {
+  const imports: string[] = []
+  const importExportPattern =
+    /(?:^|\n)\s*(?:import|export)(?:\s+type)?\s+(?:[\s\S]*?\s+from\s+)?["']([^"']+)["']/g
+  const dynamicImportPattern = /\bimport\(\s*["']([^"']+)["']\s*\)/g
+
+  for (const match of source.matchAll(importExportPattern)) {
+    imports.push(match[1]!)
+  }
+  for (const match of source.matchAll(dynamicImportPattern)) {
+    imports.push(match[1]!)
+  }
+
+  return imports
+}
+
+function registryInstallFilesFor(
+  item: RegistryItem,
+  itemsByName: Map<string, RegistryItem>,
+  visited = new Set<string>()
+): InstalledRegistryFile[] {
+  if (visited.has(item.name)) return []
+  visited.add(item.name)
+
+  return [
+    ...item.files.map((file) => ({ ...file, itemName: item.name })),
+    ...(item.registryDependencies ?? []).flatMap((dependencyName) => {
+      const dependency = itemsByName.get(dependencyName)
+      return dependency
+        ? registryInstallFilesFor(dependency, itemsByName, visited)
+        : []
+    }),
+  ]
+}
+
 function registryInstallTargetsFor(
+  item: RegistryItem,
+  itemsByName: Map<string, RegistryItem>
+): string[] {
+  return registryInstallFilesFor(item, itemsByName).map(
+    (file) => file.target ?? file.path
+  )
+}
+
+function registryInstallDependenciesFor(
   item: RegistryItem,
   itemsByName: Map<string, RegistryItem>,
   visited = new Set<string>()
@@ -107,11 +162,11 @@ function registryInstallTargetsFor(
   visited.add(item.name)
 
   return [
-    ...item.files.map((file) => file.target ?? file.path),
+    ...(item.dependencies ?? []),
     ...(item.registryDependencies ?? []).flatMap((dependencyName) => {
       const dependency = itemsByName.get(dependencyName)
       return dependency
-        ? registryInstallTargetsFor(dependency, itemsByName, visited)
+        ? registryInstallDependenciesFor(dependency, itemsByName, visited)
         : []
     }),
   ]
@@ -142,6 +197,75 @@ function resolveInstalledRegistryImport({
   ]
 
   return candidates.find((candidate) => installedTargets.has(candidate)) ?? null
+}
+
+function resolveInstalledRegistryAliasImport({
+  installedTargets,
+  specifier,
+}: {
+  installedTargets: Set<string>
+  specifier: string
+}) {
+  const basePath = installedTargetForAliasSpecifier(specifier)
+  if (!basePath) return null
+  return resolveInstalledRegistryTarget({ basePath, installedTargets })
+}
+
+function resolveInstalledRegistryTarget({
+  basePath,
+  installedTargets,
+}: {
+  basePath: string
+  installedTargets: Set<string>
+}) {
+  const candidates = [
+    `${basePath}.tsx`,
+    `${basePath}.ts`,
+    `${basePath}.jsx`,
+    `${basePath}.js`,
+    `${basePath}/index.tsx`,
+    `${basePath}/index.ts`,
+    `${basePath}/index.jsx`,
+    `${basePath}/index.js`,
+    basePath,
+  ]
+
+  return candidates.find((candidate) => installedTargets.has(candidate)) ?? null
+}
+
+function installedTargetForAliasSpecifier(specifier: string) {
+  const withoutQuery = specifier.split("?")[0]!
+  if (withoutQuery.startsWith("@/components/ui/")) {
+    return `@ui/${withoutQuery.slice("@/components/ui/".length)}`
+  }
+  if (withoutQuery.startsWith("@/registry/new-york-v4/ui/")) {
+    return `@ui/${withoutQuery.slice("@/registry/new-york-v4/ui/".length)}`
+  }
+  if (withoutQuery.startsWith("@/lib/")) {
+    return `@lib/${withoutQuery.slice("@/lib/".length)}`
+  }
+  if (withoutQuery.startsWith("@/registry/new-york-v4/lib/")) {
+    return `@lib/${withoutQuery.slice("@/registry/new-york-v4/lib/".length)}`
+  }
+  return null
+}
+
+function packageNameForSpecifier(specifier: string) {
+  if (specifier.startsWith(".") || specifier.startsWith("@/")) return null
+  if (specifier.startsWith("node:")) return null
+  if (specifier.startsWith("@")) {
+    const [scope, name] = specifier.split("/")
+    return scope && name ? `${scope}/${name}` : specifier
+  }
+  return specifier.split("/")[0] ?? null
+}
+
+function packageNameForDependency(dependency: string) {
+  if (dependency.startsWith("@")) {
+    const match = dependency.match(/^(@[^/]+\/[^@]+)(?:@.+)?$/)
+    return match?.[1] ?? dependency
+  }
+  return dependency.replace(/@.+$/, "")
 }
 
 describe("Pretext Markdown architecture", () => {
@@ -184,6 +308,7 @@ describe("Pretext Markdown architecture", () => {
     ])
     expect(artifact.dependencies ?? []).toEqual([
       "@chenglou/pretext",
+      "dompurify@3.4.9",
       "katex",
       "lucide-react",
       "marked@18.0.5",
@@ -199,6 +324,7 @@ describe("Pretext Markdown architecture", () => {
       "remark-gfm",
       "remark-math",
       "remark-smartypants",
+      "unified",
       "unist-util-visit",
     ])
     expect(artifact.files.map((file) => file.path).sort()).toEqual(
@@ -216,22 +342,30 @@ describe("Pretext Markdown architecture", () => {
     }
   })
 
-  it("ships an installable registry artifact with a complete relative import closure", () => {
+  it("ships an installable registry artifact with a complete import closure", () => {
     const registry = readRegistry()
     const itemsByName = new Map(
       registry.items.map((registryItem) => [registryItem.name, registryItem])
     )
     const artifact = readPretextMarkdownRegistryArtifact()
+    const installedFiles = registryInstallFilesFor(artifact, itemsByName)
     const installedTargets = new Set(
-      registryInstallTargetsFor(artifact, itemsByName)
+      installedFiles.map((file) => file.target ?? file.path)
+    )
+    const installedPackages = new Set(
+      registryInstallDependenciesFor(artifact, itemsByName).map(
+        packageNameForDependency
+      )
     )
     const missingImports: string[] = []
+    const missingPackages: string[] = []
 
-    for (const file of artifact.files) {
+    for (const file of installedFiles) {
       expect(file.target, `${file.path} registry target`).toBeTruthy()
-      expect(file.content, `${file.path} registry content`).toBeTruthy()
+      const content = file.content ?? read(file.path)
+      expect(content, `${file.path} registry content`).toBeTruthy()
 
-      for (const specifier of relativeImportSpecifiers(file.content ?? "")) {
+      for (const specifier of relativeImportSpecifiers(content)) {
         const resolved = resolveInstalledRegistryImport({
           importerTarget: file.target!,
           installedTargets,
@@ -242,9 +376,39 @@ describe("Pretext Markdown architecture", () => {
           `${file.target} imports ${specifier}, but no installed registry file resolves it`
         )
       }
+
+      for (const specifier of moduleImportSpecifiers(content)) {
+        if (specifier.startsWith(".")) continue
+
+        if (specifier.startsWith("@/")) {
+          const resolved = resolveInstalledRegistryAliasImport({
+            installedTargets,
+            specifier,
+          })
+          if (resolved) continue
+          missingImports.push(
+            `${file.target} imports ${specifier}, but no installed registry file resolves it`
+          )
+          continue
+        }
+
+        const packageName = packageNameForSpecifier(specifier)
+        if (
+          !packageName ||
+          packageName === "react" ||
+          packageName === "react-dom"
+        ) {
+          continue
+        }
+        if (installedPackages.has(packageName)) continue
+        missingPackages.push(
+          `${file.target} imports ${specifier}, but ${packageName} is not declared by the installed registry tree`
+        )
+      }
     }
 
     expect(missingImports).toEqual([])
+    expect(missingPackages).toEqual([])
   })
 
   it("keeps virtual chunks from becoming visible page chrome", () => {
@@ -337,6 +501,48 @@ describe("Pretext Markdown architecture", () => {
     expect(docs).toContain(
       "File Viewer routes Markdown URL, Blob, inline text, and MIME-only sources"
     )
+  })
+
+  it("keeps public viewer docs aligned with Pretext Markdown routing", () => {
+    const docs = Object.fromEntries(
+      viewerDocsPaths.map((path) => [path, read(path)])
+    )
+
+    expect(docs["content/docs/viewers/index.mdx"]).toContain(
+      "[Pretext Markdown Viewer](/docs/viewers/pretext-markdown-viewer)"
+    )
+    expect(docs["content/docs/viewers/file-viewer.mdx"]).toContain(
+      "| Markdown     | `md`, `markdown`, `text/markdown`"
+    )
+    expect(docs["content/docs/viewers/file-viewer.mdx"]).toContain(
+      "Pretext Markdown Viewer"
+    )
+    expect(docs["content/docs/viewers/file-viewer.mdx"]).toContain(
+      "Markdown URL, Blob,\n  inline text, and MIME-only sources route to `PretextMarkdownViewer`"
+    )
+    expect(docs["content/docs/viewers/text-viewer.mdx"]).toContain(
+      "Markdown files and inline Markdown sources use\n[`PretextMarkdownViewer`]"
+    )
+    expect(docs["content/docs/viewers/markdown-viewer.mdx"]).toContain(
+      "[Pretext Markdown Viewer](/docs/viewers/pretext-markdown-viewer)"
+    )
+
+    for (const [path, content] of Object.entries(docs)) {
+      expect(
+        content.includes("routes Markdown documents to `TextViewer`"),
+        `${path} still claims Markdown routes to TextViewer`
+      ).toBe(false)
+      expect(
+        content.includes('mode="markdown"'),
+        `${path} still documents TextViewer mode="markdown" routing`
+      ).toBe(false)
+      expect(
+        /\|\s*Markdown\s*\|[^\n|]*\|[^\n|]*\|\s*Pretext Text Viewer\s*\|/.test(
+          content
+        ),
+        `${path} still lists Markdown as Pretext Text Viewer`
+      ).toBe(false)
+    }
   })
 })
 

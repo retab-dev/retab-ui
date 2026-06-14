@@ -5,10 +5,10 @@ import * as React from "react"
 import type { Source } from "@/lib/document-source"
 import {
   AnchoredDocumentProvider,
-  type AnchoredDocumentTarget,
-  type AnchoredItem,
   useAnchoredDocument,
   useAnchoredFieldLink,
+  type AnchoredDocumentTarget,
+  type AnchoredItem,
 } from "@/components/ui/anchored-document-viewer"
 import { csvAnchorToTarget } from "@/components/ui/csv-source"
 import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
@@ -17,6 +17,12 @@ import {
   type SourceField,
 } from "@/components/ui/source-field-list"
 import { SourceIndicator } from "@/components/ui/source-indicator"
+import {
+  ViewerBody,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "@/components/ui/viewer"
 import csvSample from "@/components/viewers/sample-data/csv-sources.json"
 
 const CSV_TEXT = `region,quarter,revenue,customers,nrr
@@ -86,23 +92,33 @@ function CsvSourcesContent({
       : null
 
   return (
-    <div className="flex h-full min-h-[680px] bg-background">
-      <div className="relative min-w-0 flex-1">
-        <CsvViewer
-          ref={viewerRef}
-          source={{ kind: "text", text: CSV_TEXT, fileName: "sales.csv" }}
-          fillHeight
-          className="h-full rounded-none border-0"
-          activeCell={activeCell}
-        />
-        <SourceIndicator
-          path={link.activePath}
-          found={!!activeItem?.anchor}
-          className="top-2"
-        />
-      </div>
-      <SourceFieldList fields={FIELDS} link={link} />
-    </div>
+    <ViewerRoot bare className="h-full min-h-[680px] bg-background">
+      <ViewerBody>
+        <ViewerSurface className="relative">
+          <CsvViewer
+            ref={viewerRef}
+            source={{ kind: "text", text: CSV_TEXT, fileName: "sales.csv" }}
+            fillHeight
+            className="h-full rounded-none border-0"
+            activeCell={activeCell}
+          />
+          <SourceIndicator
+            path={link.activePath}
+            found={!!activeItem?.anchor}
+            className="top-2"
+          />
+        </ViewerSurface>
+        <ViewerSidebar
+          aria-label="Source fields"
+          side="right"
+          collapsible="none"
+          width="360px"
+          className="border-l"
+        >
+          <SourceFieldList fields={FIELDS} link={link} />
+        </ViewerSidebar>
+      </ViewerBody>
+    </ViewerRoot>
   )
 }
 

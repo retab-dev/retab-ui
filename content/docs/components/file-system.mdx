@@ -32,11 +32,11 @@ Open the full-page demo at [/view/blocks/file-system](/view/blocks/file-system).
 
 ```tsx
 import {
-  FileSystemExplorer,
+  FileSystemBrowser,
   FileSystemHeader,
-  FileSystemOpenPreviewDialog,
+  FileSystemOpenPreview,
   FileSystemProvider,
-  FileSystemSelectedFile,
+  FileSystemPreview,
   type FileSystemItem,
 } from "@/components/ui/file-system"
 import {
@@ -70,33 +70,33 @@ export function Documents() {
         </ViewerHeader>
         <ViewerBody>
           <ViewerSidebar aria-label="Files">
-            <FileSystemExplorer />
+            <FileSystemBrowser />
           </ViewerSidebar>
           <ViewerSurface>
-            <FileSystemSelectedFile />
+            <FileSystemPreview />
           </ViewerSurface>
         </ViewerBody>
-        <FileSystemOpenPreviewDialog />
+        <FileSystemOpenPreview />
       </ViewerRoot>
     </FileSystemProvider>
   )
 }
 ```
 
-The file-system composition has four product surfaces:
+The file-system composition has three product surfaces:
 
-| Surface                 | Owns                                                               | Does not own                  |
-| ----------------------- | ------------------------------------------------------------------ | ----------------------------- |
-| `FileSystemBrowser`     | folder navigation, query, sort, view mode, lazy loading, selection | document rendering            |
-| `FileSystemPreview`     | selected-file preview, source resolution, file actions, metadata   | browser navigation            |
-| `FileSystemOpenPreview` | double-click and keyboard-open modal fallback                      | selected preview state        |
-| `FileSystemPierreList`  | Pierre tree input, virtualization, row events, expansion lifecycle | file-system source resolution |
+| Surface                 | Owns                                                               | Does not own           |
+| ----------------------- | ------------------------------------------------------------------ | ---------------------- |
+| `FileSystemBrowser`     | folder navigation, query, sort, view mode, lazy loading, selection | document rendering     |
+| `FileSystemPreview`     | selected-entry preview, source resolution, file actions, metadata  | browser navigation     |
+| `FileSystemOpenPreview` | double-click and keyboard-open modal lifecycle                     | selected preview state |
 
 The provider owns the file-system domain state. The viewer primitives own
-layout. `FileSystemSelectedFile` resolves the selected file to a `ViewerSource`
-and renders it with `FileViewer`. `FileSystemOpenPreviewDialog` is the built-in
-fallback open behavior: double-click or keyboard-open a file to show it in a
-modal when `onFileOpen` is not supplied.
+layout. `FileSystemPreview` resolves the selected entry to a `ViewerSource`
+and renders files with `FileViewer`. `FileSystemOpenPreview` owns the explicit
+open lifecycle: double-click or keyboard-open a file to show it in a modal.
+`onFileOpen` observes that lifecycle; omit `FileSystemOpenPreview` when another
+shell owns file opening.
 
 ## Usage
 
@@ -116,17 +116,17 @@ export function EasyDocuments() {
 - Accepts a flat manifest and infers missing parent folders.
 - Shares selection, preview, search, and sort state across list, grid, and
   columns views.
-- Renders the list view with Pierre Trees for virtualized tree navigation,
-  keyboard behavior, and icon handling.
+- Renders the list view with virtualized tree navigation, keyboard behavior,
+  and icon handling.
 - Uses `FileThumbnail` for compact previews and `FileViewer` for the selected
   file preview.
 - Supports controlled `view`, `selectedPath`, and `query` state.
 - Supports lazy folders through `loadChildren`.
 - Resolves file sources on demand through `resolveSource`.
 - Keeps explorer views as browsers only. The selected document preview belongs
-  to `FileSystemSelectedFile`.
-- Uses the built-in modal only as local fallback open behavior. Pass
-  `onFileOpen` when app routing or another shell owns file opening.
+  to `FileSystemPreview`.
+- Uses `FileSystemOpenPreview` for built-in modal opening. Pass `onFileOpen`
+  when app routing or analytics needs to observe file opening.
 
 ## Source Resolution
 
@@ -152,28 +152,71 @@ item refresh.
 
 ## API Reference
 
-### FileSystem
+### Manifest Input
 
-| Prop                  | Type                                              | Default | Required |
-| --------------------- | ------------------------------------------------- | ------- | -------- |
-| `items`               | `FileSystemItem[]`                                | `-`     | Yes      |
-| `title`               | `string`                                          | `Files` | No       |
-| `className`           | `string`                                          | `-`     | No       |
-| `defaultPath`         | `string`                                          | `""`    | No       |
-| `defaultView`         | `"list" \| "grid" \| "columns"`                   | `list`  | No       |
-| `view`                | `"list" \| "grid" \| "columns"`                   | `-`     | No       |
-| `onViewChange`        | `(view) => void`                                  | `-`     | No       |
-| `defaultQuery`        | `Partial<FileSystemQueryState>`                   | `-`     | No       |
-| `query`               | `Partial<FileSystemQueryState>`                   | `-`     | No       |
-| `onQueryChange`       | `(query) => void`                                 | `-`     | No       |
-| `selectedPath`        | `string \| null`                                  | `-`     | No       |
-| `defaultSelectedPath` | `string \| null`                                  | `null`  | No       |
-| `onSelectionChange`   | `(item) => void`                                  | `-`     | No       |
-| `loadChildren`        | `(args) => Promise<FileSystemLoadChildrenResult>` | `-`     | No       |
-| `resolveSource`       | `(args) => Promise<ViewerSource \| null>`         | `-`     | No       |
-| `onFileOpen`          | `(file, source) => void`                          | `-`     | No       |
-| `renderFileActions`   | `(file) => React.ReactNode`                       | `-`     | No       |
-| `renderMetadata`      | `(item) => React.ReactNode`                       | `-`     | No       |
+These props define the file-system product and its outer chrome.
+
+| Prop        | Type               | Default | Required |
+| ----------- | ------------------ | ------- | -------- |
+| `items`     | `FileSystemItem[]` | `-`     | Yes      |
+| `title`     | `string`           | `Files` | No       |
+| `className` | `string`           | `-`     | No       |
+
+### Browser State
+
+These props control where the browser is, which view it uses, and how visible
+entries are filtered and sorted.
+
+| Prop            | Type                            | Default | Required |
+| --------------- | ------------------------------- | ------- | -------- |
+| `defaultPath`   | `string`                        | `""`    | No       |
+| `path`          | `string`                        | `-`     | No       |
+| `onPathChange`  | `(path) => void`                | `-`     | No       |
+| `defaultView`   | `"list" \| "grid" \| "columns"` | `list`  | No       |
+| `view`          | `"list" \| "grid" \| "columns"` | `-`     | No       |
+| `onViewChange`  | `(view) => void`                | `-`     | No       |
+| `defaultQuery`  | `Partial<FileSystemQueryState>` | `-`     | No       |
+| `query`         | `Partial<FileSystemQueryState>` | `-`     | No       |
+| `onQueryChange` | `(query) => void`               | `-`     | No       |
+
+### Selection Control
+
+Selection is browser state. The selected entry feeds `FileSystemPreview`, but
+preview does not own selection.
+
+| Prop                  | Type             | Default | Required |
+| --------------------- | ---------------- | ------- | -------- |
+| `selectedPath`        | `string \| null` | `-`     | No       |
+| `defaultSelectedPath` | `string \| null` | `null`  | No       |
+| `onSelectionChange`   | `(item) => void` | `-`     | No       |
+
+### Loading And Source Resolution
+
+Folder loading extends the manifest. Source resolution turns a file entry into
+a `ViewerSource` only when a preview needs it.
+
+| Prop            | Type                                              | Default | Required |
+| --------------- | ------------------------------------------------- | ------- | -------- |
+| `loadChildren`  | `(args) => Promise<FileSystemLoadChildrenResult>` | `-`     | No       |
+| `resolveSource` | `(args) => Promise<ViewerSource \| null>`         | `-`     | No       |
+
+### Open Events
+
+`FileSystemOpenPreview` owns the explicit open lifecycle. `onFileOpen` observes
+successful file opens after source resolution.
+
+| Prop         | Type                     | Default | Required |
+| ------------ | ------------------------ | ------- | -------- |
+| `onFileOpen` | `(file, source) => void` | `-`     | No       |
+
+### Render Extensions
+
+These extension points decorate previews. They do not change browser state.
+
+| Prop                | Type                        | Default | Required |
+| ------------------- | --------------------------- | ------- | -------- |
+| `renderFileActions` | `(file) => React.ReactNode` | `-`     | No       |
+| `renderMetadata`    | `(item) => React.ReactNode` | `-`     | No       |
 
 ## Source
 

@@ -31,7 +31,9 @@ test("file system preserves selection and supports keyboard navigation across vi
   ).toHaveAttribute("aria-selected", "true")
 
   await fileSystem.getByRole("tab", { name: "Columns view" }).click()
-  await fileSystem.getByRole("listbox", { name: "research/" }).press("ArrowDown")
+  await fileSystem
+    .getByRole("listbox", { name: "research/" })
+    .press("ArrowDown")
   await expect(
     fileSystem.getByRole("option", { name: /attention\.pdf/i })
   ).toHaveAttribute("aria-selected", "true")
@@ -46,6 +48,10 @@ test("file system demo round-trips controlled state through the URL", async ({
 
   await fileSystem.getByRole("treeitem", { name: /research/i }).dblclick()
   await fileSystem.getByRole("treeitem", { name: /attention\.pdf/i }).click()
+  await expectUrlParams(page, {
+    path: "research/",
+    selectedPath: "research/attention.pdf",
+  })
   await fileSystem.getByRole("tab", { name: "Grid view" }).click()
   await fileSystem
     .getByRole("searchbox", { name: "Search files" })
@@ -79,6 +85,26 @@ test("file system demo round-trips controlled state through the URL", async ({
   await expect(
     fileSystem.getByRole("treeitem", { name: /attention\.pdf/i })
   ).toHaveAttribute("aria-selected", "true")
+})
+
+test("file system viewer sidebar toggles from the header", async ({ page }) => {
+  await page.goto(DEMO_PATH)
+
+  const fileSystem = page.locator('[data-slot="file-system"]').first()
+  const trigger = fileSystem.getByRole("button", { name: "Toggle sidebar" })
+  const sidebar = fileSystem.getByRole("complementary", { name: "Files" })
+
+  await expect(fileSystem).toBeVisible()
+  await expect(sidebar).toBeVisible()
+  await expect(trigger).toHaveAttribute("aria-expanded", "true")
+
+  await trigger.click()
+  await expect(trigger).toHaveAttribute("aria-expanded", "false")
+  await expect(sidebar).toHaveAttribute("aria-hidden", "true")
+
+  await trigger.click()
+  await expect(trigger).toHaveAttribute("aria-expanded", "true")
+  await expect(sidebar).not.toHaveAttribute("aria-hidden", "true")
 })
 
 test("file system demo falls back from invalid URL state", async ({ page }) => {

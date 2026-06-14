@@ -26,7 +26,11 @@ describe("json table primitive edit store", () => {
 
     store.commitValue("vendor", "Globex", "Acme")
     store.commitValue("vendor", "Initech", "Acme")
-    store.recordDocumentEcho(firstEcho)
+    store.recordDocumentEcho({
+      data: firstEcho,
+      fieldPath: "vendor",
+      value: "Globex",
+    })
 
     expect(store.reconcileDocumentData(firstEcho)).toEqual({
       isPrimitiveDocumentEcho: true,
@@ -39,7 +43,11 @@ describe("json table primitive edit store", () => {
       value: "Initech",
     })
 
-    store.recordDocumentEcho(secondEcho)
+    store.recordDocumentEcho({
+      data: secondEcho,
+      fieldPath: "vendor",
+      value: "Initech",
+    })
     expect(store.reconcileDocumentData(secondEcho)).toEqual({
       isPrimitiveDocumentEcho: true,
       confirmedFieldPaths: ["vendor"],
@@ -58,7 +66,11 @@ describe("json table primitive edit store", () => {
     const clonedEcho = { ...recordedEcho }
 
     store.commitValue("vendor", "Globex", "Acme")
-    store.recordDocumentEcho(recordedEcho)
+    store.recordDocumentEcho({
+      data: recordedEcho,
+      fieldPath: "vendor",
+      value: "Globex",
+    })
 
     expect(store.reconcileDocumentData(clonedEcho)).toEqual({
       isPrimitiveDocumentEcho: true,
@@ -79,7 +91,11 @@ describe("json table primitive edit store", () => {
     const clonedEcho = { ...recordedEcho }
 
     firstStore.commitValue("vendor", "Globex", "Acme")
-    firstStore.recordDocumentEcho(recordedEcho)
+    firstStore.recordDocumentEcho({
+      data: recordedEcho,
+      fieldPath: "vendor",
+      value: "Globex",
+    })
     secondStore.commitValue("vendor", "Globex", "Acme")
 
     expect(secondStore.reconcileDocumentData(clonedEcho)).toEqual({
@@ -99,7 +115,11 @@ describe("json table primitive edit store", () => {
     const echo = { vendor: "Globex" }
 
     store.commitValue("vendor", "Globex", "Acme")
-    store.recordDocumentEcho(echo)
+    store.recordDocumentEcho({
+      data: echo,
+      fieldPath: "vendor",
+      value: "Globex",
+    })
     store.reconcileDocumentData(echo)
     store.reconcileProjectedValue("vendor", "Globex")
 
@@ -125,6 +145,58 @@ describe("json table primitive edit store", () => {
       value: undefined,
       documentValue: "Server",
       previousValue: "Globex",
+    })
+  })
+
+  it("rejects cloned primitive echoes with unrelated sibling changes", () => {
+    const store = createJsonTablePrimitiveEditStore()
+    const recordedEcho = {
+      vendor: "Globex",
+      total: 12,
+      owner: { id: "owner_1" },
+    }
+    const unrelatedServerUpdate = {
+      ...recordedEcho,
+      total: 13,
+    }
+
+    store.commitValue("vendor", "Globex", "Acme")
+    store.recordDocumentEcho({
+      data: recordedEcho,
+      fieldPath: "vendor",
+      value: "Globex",
+    })
+
+    expect(store.reconcileDocumentData(unrelatedServerUpdate)).toEqual({
+      isPrimitiveDocumentEcho: false,
+      confirmedFieldPaths: ["vendor"],
+      staleFieldPaths: [],
+    })
+  })
+
+  it("rejects cloned nested echoes with unrelated ancestor sibling changes", () => {
+    const store = createJsonTablePrimitiveEditStore()
+    const untouchedTransaction = { vendor: "Initech", total: 20 }
+    const recordedEcho = {
+      transactions: [{ vendor: "Globex", total: 12 }, untouchedTransaction],
+      status: "draft",
+    }
+    const unrelatedServerUpdate = {
+      ...recordedEcho,
+      transactions: [{ vendor: "Globex", total: 13 }, untouchedTransaction],
+    }
+
+    store.commitValue("transactions.0.vendor", "Globex", "Acme")
+    store.recordDocumentEcho({
+      data: recordedEcho,
+      fieldPath: "transactions.0.vendor",
+      value: "Globex",
+    })
+
+    expect(store.reconcileDocumentData(unrelatedServerUpdate)).toEqual({
+      isPrimitiveDocumentEcho: false,
+      confirmedFieldPaths: ["transactions.0.vendor"],
+      staleFieldPaths: [],
     })
   })
 

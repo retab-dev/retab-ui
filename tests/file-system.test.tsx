@@ -11,13 +11,14 @@ import {
 } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import type { ViewerSource } from "@/lib/viewer-source"
 import {
   FileSystem,
-  FileSystemExplorer,
+  FileSystemBrowser,
   FileSystemHeader,
-  FileSystemOpenPreviewDialog,
+  FileSystemOpenPreview,
+  FileSystemPreview,
   FileSystemProvider,
-  FileSystemSelectedFile,
   useFileSystem,
 } from "@/registry/new-york-v4/ui/file-system"
 import type {
@@ -255,7 +256,7 @@ describe("FileSystem", () => {
     expect(body?.children[0]).toBe(sidebar)
     expect(body?.children[1]).toBe(surface)
     expect(sidebar?.getAttribute("aria-label")).toBe("Files")
-    expect(sidebar?.style.getPropertyValue("--viewer-sidebar-width")).toBe(
+    expect(root?.style.getPropertyValue("--viewer-sidebar-width")).toBe(
       "min(22rem, 85vw)"
     )
     expect(sidebar?.className.split(/\s+/)).not.toContain("flex-1")
@@ -272,10 +273,10 @@ describe("FileSystem", () => {
           </ViewerHeader>
           <ViewerBody>
             <ViewerSidebar>
-              <FileSystemExplorer />
+              <FileSystemBrowser />
             </ViewerSidebar>
             <ViewerSurface>
-              <FileSystemSelectedFile />
+              <FileSystemPreview />
             </ViewerSurface>
           </ViewerBody>
         </ViewerRoot>
@@ -301,13 +302,13 @@ describe("FileSystem", () => {
           </ViewerHeader>
           <ViewerBody>
             <ViewerSidebar>
-              <FileSystemExplorer />
+              <FileSystemBrowser />
             </ViewerSidebar>
             <ViewerSurface>
-              <FileSystemSelectedFile />
+              <FileSystemPreview />
             </ViewerSurface>
           </ViewerBody>
-          <FileSystemOpenPreviewDialog />
+          <FileSystemOpenPreview />
         </ViewerRoot>
       </FileSystemProvider>
     )
@@ -328,13 +329,13 @@ describe("FileSystem", () => {
           </ViewerHeader>
           <ViewerBody>
             <ViewerSidebar>
-              <FileSystemExplorer />
+              <FileSystemBrowser />
             </ViewerSidebar>
             <ViewerSurface>
-              <FileSystemSelectedFile />
+              <FileSystemPreview />
             </ViewerSurface>
           </ViewerBody>
-          <FileSystemOpenPreviewDialog />
+          <FileSystemOpenPreview />
         </ViewerRoot>
       </FileSystemProvider>
     )
@@ -445,7 +446,7 @@ describe("FileSystem", () => {
     })
   })
 
-  it("opens files through onFileOpen instead of the built-in dialog", async () => {
+  it("emits onFileOpen without suppressing the built-in dialog", async () => {
     const onFileOpen = vi.fn()
 
     render(
@@ -464,7 +465,201 @@ describe("FileSystem", () => {
         expect.objectContaining({ fileName: "report.pdf" })
       )
     })
-    expect(screen.queryByRole("dialog")).toBeNull()
+    const dialog = await screen.findByRole("dialog")
+    expect(dialog.textContent).toContain("viewer:report.pdf")
+  })
+
+  it("shows resolving state while opening a lazily resolved file", async () => {
+    const source = createDeferred<ViewerSource | null>()
+    const delayedItems: FileSystemItem[] = [
+      {
+        kind: "file",
+        path: "reports/delayed.pdf",
+        mimeType: "application/pdf",
+      },
+    ]
+
+    render(
+      <FileSystem
+        defaultPath="reports/"
+        items={delayedItems}
+        resolveSource={() => source.promise}
+      />
+    )
+
+    fireEvent.doubleClick(await findFileTreeItem(/delayed.pdf/i))
+
+    const dialog = await screen.findByRole("dialog")
+    expect(dialog.textContent).toContain("Opening preview")
+
+    await act(async () => {
+      source.resolve({
+        kind: "url",
+        url: "/delayed.pdf",
+        fileName: "delayed.pdf",
+        mimeType: "application/pdf",
+      })
+    })
+
+    await waitFor(() => {
+      expect(dialog.textContent).toContain("viewer:delayed.pdf")
+    })
+  })
+
+  it("shows unavailable state when opened file source resolves to null", async () => {
+    const onFileOpen = vi.fn()
+    const missingItems: FileSystemItem[] = [
+      {
+        kind: "file",
+        path: "reports/missing.pdf",
+        mimeType: "application/pdf",
+      },
+    ]
+
+    render(
+      <FileSystem
+        defaultPath="reports/"
+        items={missingItems}
+        onFileOpen={onFileOpen}
+        resolveSource={() => Promise.resolve(null)}
+      />
+    )
+
+    fireEvent.doubleClick(await findFileTreeItem(/missing.pdf/i))
+
+    const dialog = await screen.findByRole("dialog")
+    await waitFor(() => {
+      expect(dialog.textContent).toContain("Preview unavailable")
+    })
+    expect(onFileOpen).toHaveBeenCalledWith(
+      expect.objectContaining({ path: "reports/missing.pdf" }),
+      null
+    )
+  })
+
+  it("shows failed state when opened file source rejects", async () => {
+    const failedItems: FileSystemItem[] = [
+      {
+        kind: "file",
+        path: "reports/broken.pdf",
+        mimeType: "application/pdf",
+      },
+    ]
+
+    render(
+      <FileSystem
+        defaultPath="reports/"
+        items={failedItems}
+        resolveSource={() => Promise.reject(new Error("source exploded"))}
+      />
+    )
+
+    fireEvent.doubleClick(await findFileTreeItem(/broken.pdf/i))
+
+    const dialog = await screen.findByRole("dialog")
+    await waitFor(() => {
+      expect(dialog.textContent).toContain("source exploded")
+    })
+  })
+
+  it("ignores stale open-preview source results", async () => {
+    const first = createDeferred<ViewerSource | null>()
+    const second = createDeferred<ViewerSource | null>()
+    const lazyItems: FileSystemItem[] = [
+      {
+        kind: "file",
+        path: "reports/a.pdf",
+        mimeType: "application/pdf",
+      },
+      {
+        kind: "file",
+        path: "reports/b.pdf",
+        mimeType: "application/pdf",
+      },
+    ]
+    const resolveSource = vi
+      .fn()
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+
+    render(
+      <FileSystem
+        defaultPath="reports/"
+        items={lazyItems}
+        resolveSource={resolveSource}
+      />
+    )
+
+    fireEvent.doubleClick(await findFileTreeItem(/a.pdf/i))
+    fireEvent.doubleClick(await findFileTreeItem(/b.pdf/i))
+
+    await act(async () => {
+      first.resolve({
+        kind: "url",
+        url: "/a.pdf",
+        fileName: "a.pdf",
+        mimeType: "application/pdf",
+      })
+      second.resolve({
+        kind: "url",
+        url: "/b.pdf",
+        fileName: "b.pdf",
+        mimeType: "application/pdf",
+      })
+    })
+
+    const dialog = await screen.findByRole("dialog")
+    await waitFor(() => {
+      expect(dialog.textContent).toContain("viewer:b.pdf")
+    })
+    expect(dialog.textContent).not.toContain("viewer:a.pdf")
+  })
+
+  it("aborts pending open-preview resolution when closed", async () => {
+    const source = createDeferred<ViewerSource | null>()
+    let capturedSignal: AbortSignal | null = null
+    const delayedItems: FileSystemItem[] = [
+      {
+        kind: "file",
+        path: "reports/slow.pdf",
+        mimeType: "application/pdf",
+      },
+    ]
+
+    render(
+      <FileSystemProvider
+        defaultPath="reports/"
+        items={delayedItems}
+        resolveSource={({ signal }) => {
+          capturedSignal = signal
+          return source.promise
+        }}
+      >
+        <ViewerRoot>
+          <ViewerBody>
+            <ViewerSidebar>
+              <FileSystemBrowser />
+            </ViewerSidebar>
+            <ViewerSurface>
+              <FileSystemPreview />
+            </ViewerSurface>
+          </ViewerBody>
+          <FileSystemOpenPreview />
+        </ViewerRoot>
+      </FileSystemProvider>
+    )
+
+    fireEvent.doubleClick(await findFileTreeItem(/slow.pdf/i))
+    expect(await screen.findByRole("dialog")).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: "Close" }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull()
+    })
+    const signal = capturedSignal as AbortSignal | null
+    if (!signal) throw new Error("Expected preview source signal.")
+    expect(signal.aborted).toBe(true)
   })
 
   it("supports controlled query state", async () => {
@@ -542,11 +737,7 @@ describe("FileSystem", () => {
 
   it("opens the selected grid file from the keyboard", async () => {
     render(
-      <FileSystem
-        defaultPath="reports/"
-        defaultView="grid"
-        items={items}
-      />
+      <FileSystem defaultPath="reports/" defaultView="grid" items={items} />
     )
 
     const listbox = screen.getByRole("listbox", { name: "Files" })
@@ -713,13 +904,13 @@ describe("FileSystem", () => {
 
   it("does not re-emit same-path selection after Pierre model reset", async () => {
     function LoadLazyFolderButton() {
-      const { loading } = useFileSystem()
+      const { browser } = useFileSystem()
 
       return (
         <button
           type="button"
           onClick={() => {
-            void loading.ensureChildren("lazy/")
+            void browser.commands.ensureChildren("lazy/")
           }}
         >
           Load lazy
@@ -743,7 +934,7 @@ describe("FileSystem", () => {
         onSelectionChange={onSelectionChange}
       >
         <ViewerRoot>
-          <FileSystemExplorer />
+          <FileSystemBrowser />
           <LoadLazyFolderButton />
         </ViewerRoot>
       </FileSystemProvider>

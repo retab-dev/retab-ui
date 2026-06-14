@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest"
 import {
   createPretextMarkdownDocument,
   createPretextMarkdownHeadingSlug,
+  findPretextMarkdownBlockForOffset,
+  findPretextMarkdownChunkForOffset,
   isHostilePretextMarkdownChunk,
+  pretextMarkdownBlockIntersectsOffsetRange,
+  pretextMarkdownChunkIntersectsOffsetRange,
 } from "@/registry/new-york-v4/ui/pretext-markdown-document-model"
 import {
   estimatePretextMarkdownBlockHeight,
@@ -219,6 +223,69 @@ describe("pretext markdown document model", () => {
       sourceStartOffset: source.indexOf("\n\n# Title") + 1,
       sourceEndOffset: source.length,
     })
+  })
+
+  it("looks up and intersects blocks and chunks by character offset ranges", () => {
+    const source = ["# Title", "", "First paragraph.", "", "Second paragraph."].join(
+      "\n"
+    )
+    const document = createPretextMarkdownDocument(source)
+    const firstParagraphOffset = source.indexOf("First")
+    const secondParagraphOffset = source.indexOf("Second")
+    const firstParagraph = document.blocks.find(
+      (block) => block.markdown.trim() === "First paragraph."
+    )
+    const secondParagraph = document.blocks.find(
+      (block) => block.markdown.trim() === "Second paragraph."
+    )
+    const chunk = document.chunks[0]!
+
+    expect(findPretextMarkdownChunkForOffset(document.chunks, 0)).toBe(chunk)
+    expect(
+      findPretextMarkdownBlockForOffset(document.blocks, firstParagraphOffset)
+    ).toBe(firstParagraph)
+    expect(
+      findPretextMarkdownBlockForOffset(
+        document.blocks,
+        firstParagraph!.sourceEndOffset
+      )
+    ).not.toBe(firstParagraph)
+    expect(
+      findPretextMarkdownBlockForOffset(document.blocks, source.length)
+    ).toBeUndefined()
+    expect(
+      pretextMarkdownBlockIntersectsOffsetRange({
+        block: firstParagraph!,
+        range: {
+          end: firstParagraphOffset + "First".length,
+          start: firstParagraphOffset,
+        },
+      })
+    ).toBe(true)
+    expect(
+      pretextMarkdownBlockIntersectsOffsetRange({
+        block: firstParagraph!,
+        range: {
+          end: secondParagraphOffset + "Second".length,
+          start: secondParagraphOffset,
+        },
+      })
+    ).toBe(false)
+    expect(
+      pretextMarkdownBlockIntersectsOffsetRange({
+        block: secondParagraph!,
+        range: {
+          end: secondParagraphOffset,
+          start: secondParagraphOffset + "Second".length,
+        },
+      })
+    ).toBe(true)
+    expect(
+      pretextMarkdownChunkIntersectsOffsetRange({
+        chunk,
+        range: { end: source.length, start: source.length - 4 },
+      })
+    ).toBe(true)
   })
 
   it("keeps document-wide reference definitions for virtual chunk rendering", () => {

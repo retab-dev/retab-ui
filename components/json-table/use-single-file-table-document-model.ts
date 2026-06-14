@@ -114,6 +114,19 @@ function projectionDocumentForRender({
     : projectionDocument
 }
 
+function emitOptimisticDocumentPatch({
+  data,
+  updateDocument,
+}: {
+  data: JsonTableDocumentData
+  updateDocument: (patch: SingleFileTableDocumentPatch) => Promise<void>
+}) {
+  void updateDocument({ data }).catch(() => {
+    // Persistence errors belong to the onUpdateDocument owner. This model keeps
+    // local optimistic state until a later source document confirms or replaces it.
+  })
+}
+
 export function useSingleFileTableDocumentModel({
   onUpdateDocument,
   sourceDocument,
@@ -132,6 +145,13 @@ export function useSingleFileTableDocumentModel({
   const documentStateRef = React.useRef(createDocumentState(sourceDocument))
   const onUpdateDocumentRef = React.useRef(onUpdateDocument)
 
+  // Transition table:
+  // - new source id: reset projection, confirmed data, and primitive edits
+  // - same-id primitive echo: update confirmed data without replacing projection
+  // - same-id external data: update confirmed data and replace projection
+  // - primitive commit: patch from confirmed data and record a primitive echo
+  // - structured commit: patch from confirmed data; structured local state owns render state
+  // - missing updater: expose a no-op commit handler
   React.useLayoutEffect(() => {
     onUpdateDocumentRef.current = onUpdateDocument
   }, [onUpdateDocument])
@@ -182,9 +202,13 @@ export function useSingleFileTableDocumentModel({
       })
       documentStateRef.current = nextDocumentState
       if (visibleThrough === "primitivePendingValue") {
-        primitiveEditStoreRef.current.recordDocumentEcho(nextData)
+        primitiveEditStoreRef.current.recordDocumentEcho({
+          data: nextData,
+          fieldPath,
+          value,
+        })
       }
-      updateDocument({ data: nextData })
+      emitOptimisticDocumentPatch({ data: nextData, updateDocument })
       markJsonTableProfile("document-patch-end", { fieldPath })
     },
     []

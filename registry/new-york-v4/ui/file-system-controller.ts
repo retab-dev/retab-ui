@@ -2,6 +2,10 @@
 
 import * as React from "react"
 
+import type {
+  FileSystemBrowserState,
+  FileSystemPreviewState,
+} from "./file-system-browser-state"
 import {
   useFileSystemIndexState,
   type FileSystemIndexState,
@@ -39,66 +43,20 @@ import {
 } from "./file-system-view-controller"
 
 export type FileSystemDomainState = {
+  browser: FileSystemBrowserState
+  preview: FileSystemPreviewState
+}
+
+export type FileSystemStateSlices = {
   query: FileSystemQueryController
   view: FileSystemViewController
   source: FileSystemSourceController
   index: FileSystemIndexState
   loading: FileSystemLoadingController
-  selection: FileSystemSelectionController
-  navigation: FileSystemNavigationController
-}
-
-export type FileSystemStateSlices = FileSystemDomainState & {
   pathHistory: FileSystemPathHistoryController
   loadedItems: FileSystemLoadedItemsState
-}
-
-export type FileSystemHeaderController = Pick<
-  FileSystemNavigationController,
-  "canGoBack" | "canGoForward" | "currentPath" | "goBack" | "goForward"
-> &
-  Pick<FileSystemQueryController, "query" | "setSearch" | "setSortKey"> &
-  Pick<FileSystemViewController, "setView" | "view">
-
-export type FileSystemPreviewController = Pick<
-  FileSystemSelectionController,
-  "selectedEntry"
-> &
-  Pick<FileSystemSourceController, "resolveFileSource">
-
-export function createFileSystemHeaderController({
-  navigation,
-  query,
-  view,
-}: Pick<
-  FileSystemDomainState,
-  "navigation" | "query" | "view"
->): FileSystemHeaderController {
-  return {
-    canGoBack: navigation.canGoBack,
-    canGoForward: navigation.canGoForward,
-    currentPath: navigation.currentPath,
-    goBack: navigation.goBack,
-    goForward: navigation.goForward,
-    query: query.query,
-    setSearch: query.setSearch,
-    setSortKey: query.setSortKey,
-    setView: view.setView,
-    view: view.view,
-  }
-}
-
-export function createFileSystemPreviewController({
-  selection,
-  source,
-}: Pick<
-  FileSystemDomainState,
-  "selection" | "source"
->): FileSystemPreviewController {
-  return {
-    resolveFileSource: source.resolveFileSource,
-    selectedEntry: selection.selectedEntry,
-  }
+  selection: FileSystemSelectionController
+  navigation: FileSystemNavigationController
 }
 
 export function useFileSystemStateSlices({

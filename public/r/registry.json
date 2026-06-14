@@ -364,6 +364,11 @@
           "target": "@ui/data-cell-classes.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/data-cell-control.tsx",
+          "type": "registry:ui",
+          "target": "@ui/data-cell-control.tsx"
+        },
+        {
           "path": "registry/new-york-v4/ui/data-cell-control-actions.ts",
           "type": "registry:ui",
           "target": "@ui/data-cell-control-actions.ts"
@@ -377,11 +382,6 @@
           "path": "registry/new-york-v4/ui/data-cell-control-props.ts",
           "type": "registry:ui",
           "target": "@ui/data-cell-control-props.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/data-cell-control-state.ts",
-          "type": "registry:ui",
-          "target": "@ui/data-cell-control-state.ts"
         },
         {
           "path": "registry/new-york-v4/ui/data-cell-control-registry.tsx",
@@ -1881,9 +1881,19 @@
           "target": "@ui/file-system-parts.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/file-system-explorer-controllers.ts",
+          "path": "registry/new-york-v4/ui/file-system-browser-state.ts",
           "type": "registry:ui",
-          "target": "@ui/file-system-explorer-controllers.ts"
+          "target": "@ui/file-system-browser-state.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-browser-controller.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-browser-controller.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-open-preview-state.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-open-preview-state.ts"
         },
         {
           "path": "registry/new-york-v4/ui/file-system-open-preview-dialog.tsx",
@@ -1909,6 +1919,11 @@
           "path": "registry/new-york-v4/ui/file-system-pierre-input.ts",
           "type": "registry:ui",
           "target": "@ui/file-system-pierre-input.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-pierre-adapter.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-pierre-adapter.ts"
         },
         {
           "path": "registry/new-york-v4/ui/file-system-pierre-model.ts",
@@ -2046,6 +2061,11 @@
           "target": "@ui/file-system-list-view.tsx"
         },
         {
+          "path": "registry/new-york-v4/ui/file-system-list-model.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-list-model.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/file-system-grid-view.tsx",
           "type": "registry:ui",
           "target": "@ui/file-system-grid-view.tsx"
@@ -2066,7 +2086,7 @@
       "name": "file-system-light",
       "type": "registry:ui",
       "title": "File System Light",
-      "description": "A minimal composition of Pierre's file tree in a ViewerSidebar with FileViewer in the ViewerSurface.",
+      "description": "A minimal file tree in a ViewerSidebar with FileViewer in the ViewerSurface.",
       "dependencies": ["@pierre/trees"],
       "registryDependencies": ["utils", "file-viewer"],
       "files": [
@@ -2074,6 +2094,11 @@
           "path": "registry/new-york-v4/ui/file-system-light.tsx",
           "type": "registry:ui",
           "target": "@ui/file-system-light.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-light-tree.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-system-light-tree.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/viewer.tsx",
@@ -3203,7 +3228,7 @@
       "name": "fslight-block",
       "type": "registry:block",
       "title": "File System Light",
-      "description": "A purified composition experiment: Pierre file tree in a ViewerSidebar, selected source rendered by FileViewer in a ViewerSurface.",
+      "description": "A purified composition experiment: file tree in a ViewerSidebar, selected source rendered by FileViewer in a ViewerSurface.",
       "dependencies": ["@pierre/trees"],
       "registryDependencies": ["file-system-light"],
       "files": [
@@ -3609,6 +3634,16 @@
           "target": "@lib/viewer-resource.ts"
         },
         {
+          "path": "registry/new-york-v4/lib/viewer-download.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-download.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-errors.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-errors.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/use-is-client.ts",
           "type": "registry:ui",
           "target": "@ui/use-is-client.ts"
@@ -3641,6 +3676,7 @@
       "description": "A continuous Markdown viewer forked from the Chenglou Pretext text viewer, with block virtualization and no visible page model.",
       "dependencies": [
         "@chenglou/pretext",
+        "dompurify@3.4.9",
         "katex",
         "lucide-react",
         "marked@18.0.5",
@@ -3656,6 +3692,7 @@
         "remark-gfm",
         "remark-math",
         "remark-smartypants",
+        "unified",
         "unist-util-visit"
       ],
       "registryDependencies": ["text-viewer", "button"],

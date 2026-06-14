@@ -2105,7 +2105,7 @@ describe("PdfViewer", () => {
     render(
       <ViewerRoot className="h-[420px]">
         <ViewerBody>
-          <ViewerSidebar className="w-36">
+          <ViewerSidebar width="9rem">
             <PdfViewerThumbnails resource={resource} />
           </ViewerSidebar>
           <ViewerSurface>

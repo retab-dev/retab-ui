@@ -21,7 +21,7 @@ export type FileSystemSourceResolver = (
   signal: AbortSignal
 ) => Promise<ViewerSource | null>
 
-export function FileSystemPreview({
+export function FileSystemPreviewPanel({
   entry,
   className,
   renderFileActions,
@@ -38,12 +38,12 @@ export function FileSystemPreview({
   const sourceState = useResolvedFileSystemSource(file, resolveFileSource)
 
   return (
-    <aside
+    <div
+      data-slot="file-system-preview-panel"
       className={cn(
         "flex min-h-0 min-w-0 flex-col border-l bg-muted/20",
         className
       )}
-      aria-label={entry ? `${entry.name} preview` : "File preview"}
     >
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex min-h-0 flex-1 items-center justify-center bg-background">
@@ -118,7 +118,7 @@ export function FileSystemPreview({
           </div>
         ) : null}
       </div>
-    </aside>
+    </div>
   )
 }
 

@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { FileTree as PierreFileTree, useFileTree } from "@pierre/trees/react"
 
 import { cn } from "@/lib/utils"
 import type { ViewerSource } from "@/lib/viewer-source"
@@ -13,6 +12,8 @@ import {
   ViewerSidebar,
   ViewerRoot,
 } from "@/components/ui/viewer"
+
+import { FileSystemLightTree } from "./file-system-light-tree"
 
 export type FileSystemLightFile = {
   path: string
@@ -68,6 +69,10 @@ export function FileSystemLight({
     selectedPathProp ?? internalSelectedPath
   )
   const selectedFile = selectedPath ? filesByPath.get(selectedPath) : undefined
+  const selectedTreePaths = React.useMemo(
+    () => (selectedPath && filesByPath.has(selectedPath) ? [selectedPath] : []),
+    [filesByPath, selectedPath]
+  )
 
   React.useEffect(() => {
     onSelectedPathChangeRef.current = onSelectedPathChange
@@ -76,46 +81,6 @@ export function FileSystemLight({
   React.useEffect(() => {
     isSelectionControlledRef.current = isSelectionControlled
   }, [isSelectionControlled])
-
-  const { model } = useFileTree({
-    flattenEmptyDirectories: false,
-    icons: { colored: false, set: "complete" },
-    initialExpansion: "open",
-    initialSelectedPaths:
-      selectedPath && filesByPath.has(selectedPath) ? [selectedPath] : [],
-    itemHeight: 32,
-    onSelectionChange: (selectedPaths) => {
-      const nextPath = selectedPaths.at(-1) ?? null
-
-      if (!isSelectionControlledRef.current) {
-        setInternalSelectedPath(nextPath)
-      }
-      onSelectedPathChangeRef.current?.(nextPath)
-    },
-    overscan: 12,
-    paths,
-    search: false,
-    stickyFolders: false,
-  })
-
-  React.useEffect(() => {
-    model.resetPaths(paths)
-  }, [model, paths])
-
-  React.useEffect(() => {
-    const selectedPathSet = new Set(
-      selectedPath && filesByPath.has(selectedPath) ? [selectedPath] : []
-    )
-
-    for (const path of model.getSelectedPaths()) {
-      if (!selectedPathSet.has(path)) model.getItem(path)?.deselect()
-    }
-    for (const path of selectedPathSet) {
-      if (!model.getSelectedPaths().includes(path)) {
-        model.getItem(path)?.select()
-      }
-    }
-  }, [filesByPath, model, selectedPath])
 
   return (
     <ViewerRoot
@@ -146,10 +111,19 @@ export function FileSystemLight({
           width="20rem"
           className="flex min-h-0 flex-col border-r"
         >
-          <PierreFileTree
+          <FileSystemLightTree
             aria-label={title}
             className="block min-h-0 flex-1"
-            model={model}
+            onSelectedPathsChange={(selectedPaths) => {
+              const nextPath = selectedPaths.at(-1) ?? null
+
+              if (!isSelectionControlledRef.current) {
+                setInternalSelectedPath(nextPath)
+              }
+              onSelectedPathChangeRef.current?.(nextPath)
+            }}
+            paths={paths}
+            selectedPaths={selectedTreePaths}
             style={
               {
                 "--trees-bg-override": "transparent",

@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest"
 import {
   createPretextMarkdownSanitizeSchema,
   PRETEXT_MARKDOWN_KATEX_OPTIONS,
+  PRETEXT_MARKDOWN_SVG_SANITIZE_OPTIONS,
   sanitizePretextMarkdownImageUrl,
   sanitizePretextMarkdownMediaUrl,
+  sanitizePretextMarkdownSvg,
   sanitizePretextMarkdownUrl,
 } from "@/registry/new-york-v4/ui/pretext-markdown-policy"
 
@@ -108,6 +110,30 @@ describe("Pretext Markdown policy", () => {
     expect(sanitizePretextMarkdownMediaUrl("blob:https://retab.com/id")).toBe(
       ""
     )
+  })
+
+  it("normalizes Mermaid SVG through the viewer sanitizer contract", () => {
+    const calls: Array<unknown> = []
+    const sanitizer = {
+      sanitize: (source: string, options: unknown) => {
+        calls.push(options)
+        expect(source).toContain("<script")
+        return '<svg role="img"><text>Safe</text></svg>'
+      },
+    }
+
+    expect(sanitizePretextMarkdownSvg("<svg><script /></svg>", sanitizer)).toBe(
+      '<svg role="img"><text>Safe</text></svg>'
+    )
+    expect(calls).toEqual([PRETEXT_MARKDOWN_SVG_SANITIZE_OPTIONS])
+  })
+
+  it("rejects sanitized Mermaid output that is no longer an SVG", () => {
+    expect(
+      sanitizePretextMarkdownSvg("<svg></svg>", {
+        sanitize: () => "<span>not svg</span>",
+      })
+    ).toBe("")
   })
 
   it("keeps KaTeX rendering locked to untrusted bounded input", () => {

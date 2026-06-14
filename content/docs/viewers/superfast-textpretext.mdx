@@ -1,0 +1,28 @@
+---
+title: Superfast Textpretext
+description: An experimental native-chunk text viewer that renders large prose through measured virtual chunks.
+---
+
+Superfast Textpretext is a separate Text Viewer experiment. It keeps the same
+bounded text resource path, toolbar, download/copy controls, and source-line
+scroll API, but replaces per-line rendering with native prose chunks.
+
+<SuperfastTextpretextDemo />
+
+## Why This Exists
+
+The existing Text Viewer already wraps prose and virtualizes source-oriented
+blocks. This path tests the faster Markdown-viewer idea on plain text: build a
+cheap chunk model, estimate chunk heights with Pretext, mount only visible
+chunks, and feed real measured heights back into the virtual frame.
+
+## Contract
+
+- Text sources still use `maxBytes`, `maxLines`, URL, Blob, and inline text
+  behavior from the Text Viewer.
+- `highlight` and `scrollToLineRange` remain 1-based inclusive source-line
+  APIs.
+- Virtualization is chunk based, not line based.
+- Measurements preserve the current scroll anchor instead of pushing the
+  viewport up and down.
+- The old `TextViewer` remains unchanged while this path is evaluated.

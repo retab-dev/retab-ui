@@ -26,20 +26,9 @@ import type {
   JsonTableJsonEditMode,
   JsonTableSchemaEditMode,
 } from "@/components/json-table/json-table-edit-modes"
-import type {
-  JsonTableActivationIntent,
-  JsonTablePrimitiveActiveCell,
-  JsonTableStructuredEditSession,
-} from "@/components/json-table/json-table-edit-session"
-import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
-import { createJsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
 import type { JsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import { recordJsonTableRender } from "@/components/json-table/json-table-profiler"
-import {
-  jsonTableFullRenderedColumnWindow,
-  jsonTableVirtualRenderedColumnWindow,
-  type JsonTableRenderedColumnWindow,
-} from "@/components/json-table/json-table-rendered-column-window"
+import type { JsonTableRenderedColumnWindow } from "@/components/json-table/json-table-rendered-column-window"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import { buildHeaderGridRows } from "@/components/json-table/lib/header-nodes"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
@@ -48,6 +37,8 @@ import {
   useReadOnlyJsonRowPatcher,
   type ReadOnlyJsonRowPatchState,
 } from "@/components/json-table/read-only-json-row-patcher"
+import { useJsonTableEditSessionCoordinator } from "@/components/json-table/use-json-table-edit-session-coordinator"
+import { useJsonTableRenderedColumnWindow } from "@/components/json-table/use-json-table-rendered-column-window"
 
 import { SingleFileFormRow } from "./single-file-form-row"
 import {
@@ -90,7 +81,7 @@ interface SingleFileVirtualizedTableProps {
 const SingleFileTableHeader = React.memo(
   ({
     headerNodes,
-    columnWidth,
+    renderedColumnWindow,
     schema,
     setSchema,
     isPublished,
@@ -101,7 +92,7 @@ const SingleFileTableHeader = React.memo(
     schemaEditMode,
   }: {
     headerNodes: JsonTableHeaderNode[]
-    columnWidth: ColumnWidth
+    renderedColumnWindow: JsonTableRenderedColumnWindow
     schema: JSONSchema7
     setSchema: (schema: JSONSchema7) => void
     isPublished: boolean
@@ -118,22 +109,70 @@ const SingleFileTableHeader = React.memo(
       () => buildHeaderGridRows(headerNodes),
       [headerNodes]
     )
+    const renderedColumnIndexSet = React.useMemo(
+      () => new Set(renderedColumnWindow.projectedCellIndexes),
+      [renderedColumnWindow.projectedCellIndexes]
+    )
+    const renderedColumnWidthByProjectedIndex = React.useMemo(() => {
+      return new Map(
+        renderedColumnWindow.projectedCellIndexes.map(
+          (projectedIndex, index) => [
+            projectedIndex,
+            renderedColumnWindow.columns[index]?.widthPx ?? 0,
+          ]
+        )
+      )
+    }, [
+      renderedColumnWindow.columns,
+      renderedColumnWindow.projectedCellIndexes,
+    ])
 
     return (
       <TableHeader className="sticky top-0 z-10 bg-muted/30">
         {headerRows.map((cells, rowIdx) => (
           <TableRow
             key={rowIdx}
+            aria-rowindex={rowIdx + 1}
             className="flex w-max min-w-full border-b bg-muted/30"
           >
+            {renderedColumnWindow.leftPadWidthPx > 0 && (
+              <th
+                aria-hidden="true"
+                data-json-table-header-spacer="true"
+                className="shrink-0 border-r bg-muted/30 text-xs text-foreground"
+                role="presentation"
+                style={{
+                  width: `${renderedColumnWindow.leftPadWidthPx}px`,
+                  minWidth: `${renderedColumnWindow.leftPadWidthPx}px`,
+                }}
+              />
+            )}
             {cells.map((cell, cellIdx) => {
-              const width = cell.leafCount * getColumnWidthPx(columnWidth)
+              const leafStart = cells
+                .slice(0, cellIdx)
+                .reduce((sum, item) => sum + item.leafCount, 0)
+              const renderedLeafIndexes = Array.from(
+                { length: cell.leafCount },
+                (_, index) => leafStart + index
+              ).filter((index) => renderedColumnIndexSet.has(index))
+              const renderedLeafCount = renderedLeafIndexes.length
+              if (renderedLeafCount === 0) return null
+
+              const width = renderedLeafIndexes.reduce(
+                (sum, index) =>
+                  sum + (renderedColumnWidthByProjectedIndex.get(index) ?? 0),
+                0
+              )
+              const ariaColumnIndex = (renderedLeafIndexes[0] ?? 0) + 1
 
               if (cell.isContinuation) {
                 return (
                   <th
                     key={cellIdx}
+                    aria-colindex={ariaColumnIndex}
+                    aria-hidden="true"
                     className="shrink-0 border-r bg-muted/30 text-xs text-foreground last:border-r-0"
+                    role="presentation"
                     style={{ width: `${width}px`, minWidth: `${width}px` }}
                   />
                 )
@@ -142,21 +181,22 @@ const SingleFileTableHeader = React.memo(
               return (
                 <TableHead
                   key={cellIdx}
+                  aria-colindex={ariaColumnIndex}
                   className="m-0 h-9 shrink-0 border-r bg-muted/30 p-0 text-foreground last:border-r-0"
                   style={{
                     width: `${width}px`,
                     minWidth: `${width}px`,
                   }}
-                  colSpan={cell.colSpan}
+                  colSpan={renderedLeafCount}
                 >
                   <JsonTableHeaderCell
                     node={cell.node}
-                    leafCount={cell.leafCount}
+                    leafCount={renderedLeafCount}
+                    cellWidthPx={width}
                     schema={schema}
                     setSchema={setSchema}
                     stopAt={stopAt}
                     setStopAt={setStopAt}
-                    columnWidth={columnWidth}
                     isPublished={isPublished}
                     draggedItemKeyRef={draggedItemKeyRef}
                     draggedItemParentPathRef={draggedItemParentPathRef}
@@ -165,6 +205,18 @@ const SingleFileTableHeader = React.memo(
                 </TableHead>
               )
             })}
+            {renderedColumnWindow.rightPadWidthPx > 0 && (
+              <th
+                aria-hidden="true"
+                data-json-table-header-spacer="true"
+                className="shrink-0 bg-muted/30 text-xs text-foreground"
+                role="presentation"
+                style={{
+                  width: `${renderedColumnWindow.rightPadWidthPx}px`,
+                  minWidth: `${renderedColumnWindow.rightPadWidthPx}px`,
+                }}
+              />
+            )}
           </TableRow>
         ))}
       </TableHeader>
@@ -201,15 +253,13 @@ export const SingleFileVirtualizedTable =
       const { rowHeight, columnWidth: storeColumnWidth } =
         useSheetOptionsStore()
       const columnWidth = propColumnWidth ?? storeColumnWidth
+      const schemaVisibleColumns = visibleColumns
 
-      const [structuredEditSession, setStructuredEditSession] =
-        React.useState<JsonTableStructuredEditSession | null>(null)
-      const primitiveActiveCellStoreRef = useRef(
-        createJsonTablePrimitiveActiveCellStore()
-      )
-      const structuredEditSessionIdRef = useRef(0)
+      const editSession = useJsonTableEditSessionCoordinator({
+        documentId: document.id,
+      })
 
-      const totalWidth = fixedGridColumnWidths(visibleColumns).reduce(
+      const totalWidth = fixedGridColumnWidths(schemaVisibleColumns).reduce(
         (total, widthPx) => total + widthPx,
         0
       )
@@ -231,9 +281,9 @@ export const SingleFileVirtualizedTable =
             isEnabled: !isJsonEditable,
             projectedRows,
             rowHeightPx,
-            visibleColumns,
+            visibleColumns: schemaVisibleColumns,
           }
-        }, [isJsonEditable, projectedRows, rowHeightPx, visibleColumns])
+        }, [isJsonEditable, projectedRows, rowHeightPx, schemaVisibleColumns])
       const rowPatcher = useReadOnlyJsonRowPatcher({
         rowWindowRef,
         getState: getReadOnlyRowPatchState,
@@ -243,92 +293,47 @@ export const SingleFileVirtualizedTable =
           isJsonEditable ? undefined : { handleViewport: rowPatcher.patch },
         [isJsonEditable, rowPatcher]
       )
-      const { columnItems, leftPad, rightPad, virtualRows, totalRowSize } =
-        useFixedGridVirtualization({
-          rowCount,
-          columnCount: visibleColumns.length,
-          rowSize: rowHeightPx,
-          columnSize: getColumnWidthPx(columnWidth),
-          rowOverscan: resolvedOverscan,
-          columnOverscan: editableColumnOverscan,
-          jumpRowOverscan: resolvedJumpOverscan,
-          jumpColumnOverscan: editableColumnOverscan,
-          minimumRenderedRows: 1,
-          rowScrollStrategy,
-          scrollRef,
-          virtualizeColumns: isJsonEditable,
-        })
-      const renderedColumnWindow =
-        React.useMemo<JsonTableRenderedColumnWindow>(() => {
-          if (!isJsonEditable) {
-            return jsonTableFullRenderedColumnWindow(visibleColumns)
-          }
-
-          return jsonTableVirtualRenderedColumnWindow({
-            columnItems,
-            leftPadWidthPx: leftPad,
-            rightPadWidthPx: rightPad,
-            schemaVisibleColumns: visibleColumns,
-          })
-        }, [columnItems, isJsonEditable, leftPad, rightPad, visibleColumns])
+      const {
+        columnItems: renderedBodyColumnItems,
+        leftPad: leftPadWidthPx,
+        rightPad: rightPadWidthPx,
+        virtualRows,
+        totalRowSize,
+      } = useFixedGridVirtualization({
+        rowCount,
+        columnCount: schemaVisibleColumns.length,
+        rowSize: rowHeightPx,
+        columnSize: getColumnWidthPx(columnWidth),
+        rowOverscan: resolvedOverscan,
+        columnOverscan: editableColumnOverscan,
+        jumpRowOverscan: resolvedJumpOverscan,
+        jumpColumnOverscan: editableColumnOverscan,
+        minimumRenderedRows: 1,
+        rowScrollStrategy,
+        scrollRef,
+        virtualizeColumns: isJsonEditable,
+      })
+      const renderedColumnWindow = useJsonTableRenderedColumnWindow({
+        isJsonEditable,
+        leftPadWidthPx,
+        renderedBodyColumnItems,
+        rightPadWidthPx,
+        schemaVisibleColumns,
+      })
 
       React.useLayoutEffect(() => {
         rowPatcher.invalidate()
       }, [rowPatcher, virtualRows, renderedColumnWindow, projectedRows])
       recordJsonTableRender("SingleFileVirtualizedTable", document.id, {
-        columnCount: visibleColumns.length,
+        columnCount: schemaVisibleColumns.length,
         primitiveActiveFieldPath:
-          primitiveActiveCellStoreRef.current.getSnapshot()?.fieldPath ?? null,
+          editSession.primitiveActiveCellStore.getSnapshot()?.fieldPath ?? null,
         structuredEditSessionFieldPath:
-          structuredEditSession?.fieldPath ?? null,
+          editSession.structuredEditSession?.fieldPath ?? null,
         isJsonEditable,
         rowCount,
         virtualRows: virtualRows.length,
       })
-      const setPrimitiveActiveCell = React.useCallback(
-        (activeCell: JsonTablePrimitiveActiveCell | null) => {
-          primitiveActiveCellStoreRef.current.setSnapshot(activeCell)
-          if (activeCell) setStructuredEditSession(null)
-        },
-        []
-      )
-      const setStructuredEditSessionOverlayOpen = React.useCallback(
-        (open: boolean) => {
-          setStructuredEditSession((currentSession) =>
-            currentSession && currentSession.isOverlayOpen !== open
-              ? { ...currentSession, isOverlayOpen: open }
-              : currentSession
-          )
-        },
-        []
-      )
-      const closeStructuredEditSession = React.useCallback(() => {
-        setStructuredEditSession(null)
-      }, [])
-      const startStructuredEditSession = React.useCallback(
-        (
-          projectedCell: ProjectedRow["cells"][number],
-          intent: JsonTableActivationIntent
-        ) => {
-          if (!projectedCell?.materializedFieldPath) return
-          const nextCellId = jsonTableCellId(
-            document.id,
-            projectedCell.materializedFieldPath
-          )
-          const nextSessionId = structuredEditSessionIdRef.current + 1
-          structuredEditSessionIdRef.current = nextSessionId
-          primitiveActiveCellStoreRef.current.setSnapshot(null)
-          setStructuredEditSession({
-            id: nextSessionId,
-            cellId: nextCellId,
-            docId: document.id,
-            fieldPath: projectedCell.materializedFieldPath,
-            intent,
-            isOverlayOpen: true,
-          })
-        },
-        [document.id]
-      )
 
       const handleBodyScroll = React.useCallback(
         (event: React.UIEvent<HTMLDivElement>) => {
@@ -352,13 +357,14 @@ export const SingleFileVirtualizedTable =
             className="w-full shrink-0 overflow-x-hidden bg-muted/30"
           >
             <table
+              aria-colcount={schemaVisibleColumns.length}
               data-slot="table"
               className="relative flex w-full flex-col rounded-none bg-muted/30"
               style={getFixedGridCanvasStyle({ minWidth: totalWidth })}
             >
               <SingleFileTableHeader
-                columnWidth={columnWidth}
                 headerNodes={headerNodes}
+                renderedColumnWindow={renderedColumnWindow}
                 schema={schema}
                 setSchema={setSchema}
                 isPublished={isPublished}
@@ -377,6 +383,8 @@ export const SingleFileVirtualizedTable =
             onScroll={handleBodyScroll}
           >
             <table
+              aria-colcount={schemaVisibleColumns.length}
+              aria-rowcount={rowCount}
               data-slot="table"
               className="relative flex w-full flex-col rounded-none bg-background"
               style={getFixedGridCanvasStyle({ minWidth: totalWidth })}
@@ -410,16 +418,24 @@ export const SingleFileVirtualizedTable =
                       renderedColumnWindow={renderedColumnWindow}
                       rowHeightPx={rowHeightPx}
                       primitiveActiveCellStore={
-                        primitiveActiveCellStoreRef.current
+                        editSession.primitiveActiveCellStore
                       }
                       primitiveEditStore={primitiveEditStore}
-                      setPrimitiveActiveCell={setPrimitiveActiveCell}
-                      structuredEditSession={structuredEditSession}
-                      startStructuredEditSession={startStructuredEditSession}
-                      setStructuredEditSessionOverlayOpen={
-                        setStructuredEditSessionOverlayOpen
+                      setPrimitiveActiveCell={
+                        editSession.setPrimitiveActiveCell
                       }
-                      closeStructuredEditSession={closeStructuredEditSession}
+                      structuredEditSession={
+                        editSession.structuredEditSession
+                      }
+                      startStructuredEditSession={
+                        editSession.startStructuredEditSession
+                      }
+                      setStructuredEditSessionOverlayOpen={
+                        editSession.setStructuredEditSessionOverlayOpen
+                      }
+                      closeStructuredEditSession={
+                        editSession.closeStructuredEditSession
+                      }
                       onCellHoverStart={onCellHoverStart}
                       onCellHoverEnd={onCellHoverEnd}
                       onCellCommit={onCellCommit}

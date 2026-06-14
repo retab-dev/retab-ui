@@ -39,8 +39,9 @@ type ViewerSidebarRegistration = {
   width: string
 }
 
-type ViewerSidebarInternalContextValue = {
-  publicSidebar: ViewerSidebarContextValue
+type ViewerSidebarRegistrationContextValue = {
+  hasSidebar: boolean
+  sidebarState: ViewerSidebarContextValue
   registerSidebar: (registration: ViewerSidebarRegistration) => () => void
   rootId: string
   sidebarSide: ViewerSidebarSide
@@ -51,10 +52,10 @@ const VIEWER_SIDEBAR_INLINE_BREAKPOINT = 768
 const VIEWER_SIDEBAR_MODE_HYSTERESIS = 16
 const VIEWER_SIDEBAR_WIDTH = "10rem"
 
-const ViewerSidebarContext =
+const ViewerSidebarStateContext =
   React.createContext<ViewerSidebarContextValue | null>(null)
-const ViewerSidebarInternalContext =
-  React.createContext<ViewerSidebarInternalContextValue | null>(null)
+const ViewerSidebarRegistrationContext =
+  React.createContext<ViewerSidebarRegistrationContextValue | null>(null)
 
 function resolveSidebarMode({
   requestedMode,
@@ -113,7 +114,7 @@ function isAriaDisabled(value: unknown): boolean {
 }
 
 export function useViewerSidebar(): ViewerSidebarContextValue {
-  const context = React.useContext(ViewerSidebarContext)
+  const context = React.useContext(ViewerSidebarStateContext)
   if (!context) {
     throw new Error("useViewerSidebar must be used within a ViewerRoot.")
   }
@@ -121,17 +122,15 @@ export function useViewerSidebar(): ViewerSidebarContextValue {
 }
 
 export function useOptionalViewerSidebar(): ViewerSidebarContextValue | null {
-  return React.useContext(ViewerSidebarContext)
+  return React.useContext(ViewerSidebarStateContext)
 }
 
-function useOptionalViewerSidebarInternal(): ViewerSidebarInternalContextValue | null {
-  return React.useContext(ViewerSidebarInternalContext)
-}
-
-function useViewerSidebarInternal(): ViewerSidebarInternalContextValue {
-  const context = React.useContext(ViewerSidebarInternalContext)
+function useViewerSidebarRegistrationContext(
+  consumer: string
+): ViewerSidebarRegistrationContextValue {
+  const context = React.useContext(ViewerSidebarRegistrationContext)
   if (!context) {
-    throw new Error("useViewerSidebar must be used within a ViewerRoot.")
+    throw new Error(`${consumer} must be used within a ViewerRoot.`)
   }
   return context
 }
@@ -270,9 +269,11 @@ export function ViewerRoot({
     setOpen((currentOpen) => !currentOpen)
   }, [setOpen])
 
-  const state: ViewerSidebarState = open ? "expanded" : "collapsed"
+  const hasSidebar = registeredSidebar !== null
+  const effectiveOpen = registeredSidebar?.collapsible === "none" ? true : open
+  const state: ViewerSidebarState = effectiveOpen ? "expanded" : "collapsed"
   const canToggleSidebar =
-    registeredSidebar !== null && registeredSidebar.collapsible !== "none"
+    hasSidebar && registeredSidebar.collapsible !== "none"
   const sidebarId = registeredSidebar?.id ?? fallbackSidebarId
   const sidebarSide = registeredSidebar?.side ?? "left"
   const sidebarWidth = registeredSidebar?.width ?? VIEWER_SIDEBAR_WIDTH
@@ -343,10 +344,10 @@ export function ViewerRoot({
     setOpen,
   ])
 
-  const sidebarContext = React.useMemo<ViewerSidebarContextValue>(
+  const sidebarStateContext = React.useMemo<ViewerSidebarContextValue>(
     () => ({
       state,
-      open,
+      open: effectiveOpen,
       setOpen,
       toggleSidebar,
       canToggleSidebar,
@@ -355,7 +356,7 @@ export function ViewerRoot({
     }),
     [
       state,
-      open,
+      effectiveOpen,
       setOpen,
       toggleSidebar,
       canToggleSidebar,
@@ -364,17 +365,19 @@ export function ViewerRoot({
     ]
   )
 
-  const sidebarInternalContext =
-    React.useMemo<ViewerSidebarInternalContextValue>(
+  const sidebarRegistrationContext =
+    React.useMemo<ViewerSidebarRegistrationContextValue>(
       () => ({
-        publicSidebar: sidebarContext,
+        hasSidebar,
+        sidebarState: sidebarStateContext,
         registerSidebar,
         rootId,
         sidebarSide,
         setLastTriggerElement,
       }),
       [
-        sidebarContext,
+        hasSidebar,
+        sidebarStateContext,
         registerSidebar,
         rootId,
         sidebarSide,
@@ -383,15 +386,14 @@ export function ViewerRoot({
     )
 
   return (
-    <ViewerSidebarContext.Provider value={sidebarContext}>
-      <ViewerSidebarInternalContext.Provider value={sidebarInternalContext}>
+    <ViewerSidebarStateContext.Provider value={sidebarStateContext}>
+      <ViewerSidebarRegistrationContext.Provider
+        value={sidebarRegistrationContext}
+      >
         <div
           ref={rootRef}
           data-slot="viewer-root"
           data-viewer-root-id={rootId}
-          data-viewer-sidebar-mode={resolvedSidebarMode}
-          data-viewer-sidebar-open={open ? "true" : "false"}
-          data-viewer-sidebar-state={state}
           className={cn(
             "relative flex min-h-0 flex-col overflow-hidden",
             bare ? "h-full bg-muted/20" : "rounded-xl border bg-muted/30",
@@ -399,14 +401,14 @@ export function ViewerRoot({
           )}
           style={
             {
-              "--viewer-sidebar-width": sidebarWidth,
               ...style,
+              "--viewer-sidebar-width": sidebarWidth,
             } as React.CSSProperties
           }
           {...props}
         />
-      </ViewerSidebarInternalContext.Provider>
-    </ViewerSidebarContext.Provider>
+      </ViewerSidebarRegistrationContext.Provider>
+    </ViewerSidebarStateContext.Provider>
   )
 }
 
@@ -427,15 +429,9 @@ export function ViewerBody({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const sidebar = useOptionalViewerSidebar()
   return (
     <div
       data-slot="viewer-body"
-      data-viewer-sidebar-mode={sidebar?.mode}
-      data-viewer-sidebar-open={
-        sidebar ? (sidebar.open ? "true" : "false") : undefined
-      }
-      data-viewer-sidebar-state={sidebar?.state}
       className={cn("relative flex min-h-0 flex-1 overflow-hidden", className)}
       {...props}
     />
@@ -454,19 +450,24 @@ export function ViewerSidebar({
   collapsible: collapsibleProp,
   width = VIEWER_SIDEBAR_WIDTH,
   style,
+  id: idProp,
   ...props
 }: ViewerSidebarProps) {
-  const sidebar = useOptionalViewerSidebarInternal()
-  const publicSidebar = sidebar?.publicSidebar
+  const registrationContext =
+    useViewerSidebarRegistrationContext("ViewerSidebar")
+  const { registerSidebar, sidebarState } = registrationContext
   const reactId = React.useId()
   const instanceId = `${reactId}-viewer-sidebar-instance`
-  const sidebarId = `${reactId}-viewer-sidebar`
+  const generatedSidebarId = `${reactId}-viewer-sidebar`
+  const sidebarId = idProp ?? generatedSidebarId
   const sidebarRef = React.useRef<HTMLElement | null>(null)
-  const collapsible = collapsibleProp ?? (sidebar ? "offcanvas" : "none")
-  const open = collapsible === "none" ? true : (publicSidebar?.open ?? true)
+  const collapsible = collapsibleProp ?? "offcanvas"
+  const open = collapsible === "none" ? true : sidebarState.open
   const state: ViewerSidebarState = open ? "expanded" : "collapsed"
-  const mode = publicSidebar?.mode ?? "inline"
+  const mode = sidebarState.mode
   const isCollapsed = collapsible !== "none" && !open
+  const styleWithoutWidth: React.CSSProperties = { ...style }
+  delete styleWithoutWidth.width
 
   React.useEffect(() => {
     if (
@@ -498,11 +499,11 @@ export function ViewerSidebar({
   useIsoLayoutEffect(() => {
     const element = sidebarRef.current
 
-    if (!sidebar || !element) {
+    if (!element) {
       return
     }
 
-    return sidebar.registerSidebar({
+    return registerSidebar({
       collapsible,
       element,
       id: sidebarId,
@@ -510,7 +511,7 @@ export function ViewerSidebar({
       side,
       width,
     })
-  }, [collapsible, instanceId, side, sidebar, sidebarId, width])
+  }, [collapsible, instanceId, registerSidebar, side, sidebarId, width])
 
   const hiddenProps = isCollapsed
     ? ({
@@ -530,7 +531,7 @@ export function ViewerSidebar({
       data-viewer-sidebar-open={open ? "true" : "false"}
       data-viewer-sidebar-state={state}
       className={cn(
-        "z-30 min-h-0 w-(--viewer-sidebar-width) flex-shrink-0 overflow-hidden bg-background",
+        "z-30 min-h-0 flex-shrink-0 overflow-hidden bg-background",
         "transition-none data-[viewer-sidebar-transitions=ready]:transition-[translate,margin-left,margin-right,border-color] data-[viewer-sidebar-transitions=ready]:duration-200 data-[viewer-sidebar-transitions=ready]:ease-out",
         collapsible === "none" &&
           "relative translate-x-0 shadow-none data-[side=right]:order-last",
@@ -568,16 +569,17 @@ export function ViewerSidebar({
           !open &&
           side === "right" &&
           "pointer-events-none translate-x-full border-transparent",
-        className
+        className,
+        "w-(--viewer-sidebar-width)"
       )}
       style={
         {
+          ...styleWithoutWidth,
           "--viewer-sidebar-width": width,
-          ...style,
         } as React.CSSProperties
       }
-      {...hiddenProps}
       {...props}
+      {...hiddenProps}
     />
   )
 }
@@ -606,13 +608,18 @@ export function ViewerSidebarTrigger({
   size = "icon",
   variant = "ghost",
   "aria-label": ariaLabel = "Toggle sidebar",
+  "aria-disabled": ariaDisabled,
   ...props
 }: ViewerSidebarTriggerProps) {
-  const { publicSidebar, rootId, sidebarSide, setLastTriggerElement } =
-    useViewerSidebarInternal()
+  const {
+    hasSidebar,
+    sidebarState,
+    rootId,
+    sidebarSide,
+    setLastTriggerElement,
+  } = useViewerSidebarRegistrationContext("ViewerSidebarTrigger")
   const { canToggleSidebar, open, sidebarId, state, toggleSidebar } =
-    publicSidebar
-  const ariaDisabled = props["aria-disabled"]
+    sidebarState
   const isDisabled = Boolean(
     disabled || loading || isAriaDisabled(ariaDisabled) || !canToggleSidebar
   )
@@ -620,9 +627,9 @@ export function ViewerSidebarTrigger({
 
   return (
     <Button
-      aria-controls={sidebarId}
+      aria-controls={hasSidebar ? sidebarId : undefined}
       aria-disabled={isDisabled ? true : ariaDisabled}
-      aria-expanded={open}
+      aria-expanded={hasSidebar ? open : undefined}
       aria-label={ariaLabel}
       className={cn("size-8", className)}
       data-side={sidebarSide}

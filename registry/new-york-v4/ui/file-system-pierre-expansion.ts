@@ -3,7 +3,7 @@
 import * as React from "react"
 import type { FileTree as PierreFileTreeModel } from "@pierre/trees"
 
-import type { FileSystemPierreLoadingController } from "./file-system-explorer-controllers"
+import type { FileSystemPierreLoadingController } from "./file-system-pierre-adapter"
 import {
   rememberFileSystemPierreExpansionSnapshot,
   resolveFileSystemPierreExpansionAfterReset,

@@ -466,8 +466,28 @@ async function expectNoPickerPortal() {
   expect(document.querySelector('[role="dialog"]')).toBeNull()
 }
 
+function mountedHeaderCells(container: HTMLElement) {
+  return [
+    ...container.querySelectorAll<HTMLTableCellElement>(
+      'thead th:not([data-json-table-header-spacer="true"])'
+    ),
+  ]
+}
+
+function headerTable(container: HTMLElement) {
+  const table = container.querySelector("thead")?.closest("table")
+  if (!table) throw new Error("Missing JSON table header table")
+  return table
+}
+
+function bodyTable(container: HTMLElement) {
+  const table = viewport(container).querySelector("table")
+  if (!table) throw new Error("Missing JSON table body table")
+  return table
+}
+
 describe("json table virtualization stress hardening", () => {
-  it("mounts the editable body column window for the current horizontal viewport", async () => {
+  it("mounts editable header and body column windows for the current horizontal viewport", async () => {
     const restoreAnimationFrame = installSynchronousAnimationFrame()
     const view = renderStressTable({
       rowCount: 4,
@@ -485,8 +505,28 @@ describe("json table virtualization stress hardening", () => {
       await waitFor(() =>
         expect(queryCell(view.container, "lines.0.far_note")).toBeNull()
       )
+      expect(headerTable(view.container).getAttribute("aria-colcount")).toBe(
+        String(wideVisiblePaths.length)
+      )
+      expect(bodyTable(view.container).getAttribute("aria-rowcount")).toBe("4")
+      expect(bodyTable(view.container).getAttribute("aria-colcount")).toBe(
+        String(wideVisiblePaths.length)
+      )
+      expect(row(view.container, 0).getAttribute("aria-rowindex")).toBe("1")
       expect(queryCell(view.container, "lines.0.name")).toBeTruthy()
       expect(queryCell(view.container, "lines.0.amount")).toBeTruthy()
+      expect(
+        cell(view.container, "lines.0.name").getAttribute("aria-colindex")
+      ).toBe("1")
+      expect(
+        cell(view.container, "lines.0.amount").getAttribute("aria-colindex")
+      ).toBe("2")
+      expect(
+        view.container.querySelector('thead th[aria-colindex="1"]')
+      ).toBeTruthy()
+      expect(mountedHeaderCells(view.container).length).toBeLessThan(
+        wideVisiblePaths.length
+      )
 
       await scrollToColumn(view.container, 10)
 
@@ -494,11 +534,36 @@ describe("json table virtualization stress hardening", () => {
       expect(queryCell(view.container, "lines.0.far_status")).toBeTruthy()
       expect(queryCell(view.container, "lines.0.far_date")).toBeTruthy()
       expect(queryCell(view.container, "lines.0.name")).toBeNull()
+      expect(row(view.container, 0).getAttribute("aria-rowindex")).toBe("1")
       expect(
-        view.container.querySelector<HTMLElement>(
-          '[data-slot="json-table-column-spacer"]'
-        )?.style.width
-      ).not.toBe("0px")
+        cell(view.container, "lines.0.far_note").getAttribute("aria-colindex")
+      ).toBe("13")
+      expect(
+        cell(view.container, "lines.0.far_status").getAttribute(
+          "aria-colindex"
+        )
+      ).toBe("14")
+      expect(
+        cell(view.container, "lines.0.far_date").getAttribute("aria-colindex")
+      ).toBe("15")
+      expect(
+        view.container.querySelector('thead th[aria-colindex="13"]')
+      ).toBeTruthy()
+      expect(mountedHeaderCells(view.container).length).toBeLessThan(
+        wideVisiblePaths.length
+      )
+      const headerSpacer = view.container.querySelector<HTMLElement>(
+        '[data-json-table-header-spacer="true"]'
+      )
+      expect(headerSpacer?.style.width).not.toBe("0px")
+      expect(headerSpacer?.getAttribute("aria-hidden")).toBe("true")
+      expect(headerSpacer?.getAttribute("role")).toBe("presentation")
+      const bodySpacer = view.container.querySelector<HTMLElement>(
+        '[data-slot="json-table-column-spacer"]'
+      )
+      expect(bodySpacer?.style.width).not.toBe("0px")
+      expect(bodySpacer?.getAttribute("aria-hidden")).toBe("true")
+      expect(bodySpacer?.getAttribute("role")).toBe("presentation")
     } finally {
       restoreAnimationFrame()
     }

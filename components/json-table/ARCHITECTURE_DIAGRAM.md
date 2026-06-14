@@ -42,7 +42,7 @@ flowchart TD
 
   subgraph Commit["Commit pipeline"]
     Normalize["formatValueForCommit"]
-    PrimitiveController["useJsonTablePrimitiveCellController"]
+    PrimitiveController["useJsonTablePrimitiveCommitController"]
     StructuredController["useJsonTableStructuredCellController"]
     CellCommit["JsonTableCellCommit"]
     Patch["onUpdateDocument"]

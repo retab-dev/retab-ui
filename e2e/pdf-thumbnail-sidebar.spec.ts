@@ -28,6 +28,28 @@ test("PDF thumbnail sidebar co-scrolls with the document and thumbnail clicks", 
   await expectCurrentThumbnail(page, thumbnailRail, CLICKED_PAGE)
 })
 
+test("PDF thumbnail sidebar toggles from the viewer header", async ({
+  page,
+}) => {
+  await page.goto(DEMO_PATH)
+
+  const viewer = page.locator('[data-slot="pdf-viewer"]')
+  const trigger = viewer.getByRole("button", { name: "Toggle sidebar" })
+  const sidebar = viewer.locator('[data-slot="viewer-sidebar"]')
+
+  await expect(viewer).toBeVisible()
+  await expect(sidebar).toHaveAttribute("aria-label", "PDF pages")
+  await expect(trigger).toHaveAttribute("aria-expanded", "true")
+
+  await trigger.click()
+  await expect(trigger).toHaveAttribute("aria-expanded", "false")
+  await expect(sidebar).toHaveAttribute("aria-hidden", "true")
+
+  await trigger.click()
+  await expect(trigger).toHaveAttribute("aria-expanded", "true")
+  await expect(sidebar).not.toHaveAttribute("aria-hidden", "true")
+})
+
 async function scrollDocumentToPage(
   page: Page,
   documentViewport: Locator,

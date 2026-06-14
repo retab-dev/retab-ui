@@ -26,6 +26,19 @@ vi.mock("mermaid", () => ({
         throw new Error("Mermaid parse error")
       }
 
+      if (source.includes("unsafe-svg")) {
+        return {
+          svg: [
+            '<svg role="img" aria-label="Mermaid diagram" data-testid="mock-mermaid-svg" data-source="unsafe-svg" xmlns="http://www.w3.org/2000/svg" onload="alert(1)">',
+            '<script>alert(1)</script>',
+            '<foreignObject><iframe src="javascript:alert(1)"></iframe></foreignObject>',
+            '<a href="javascript:alert(1)"><text onclick="alert(1)">Unsafe</text></a>',
+            "<text>Safe label</text>",
+            "</svg>",
+          ].join(""),
+        }
+      }
+
       return {
         svg: `<svg role="img" aria-label="Mermaid diagram" data-testid="mock-mermaid-svg" data-source="${encodeURIComponent(source)}" xmlns="http://www.w3.org/2000/svg"></svg>`,
       }
@@ -451,6 +464,95 @@ describe("PretextMarkdownViewer", () => {
     expect(
       screen.getByRole("region", { name: "Highlighted source lines 5-5" })
     ).toBe(highlightedChunk)
+  })
+
+  it("does not repeat highlight autoscroll when measured chunks settle", async () => {
+    const originalResizeObserver = globalThis.ResizeObserver
+    const resizeObservers: Array<{
+      callback: ResizeObserverCallback
+      target: Element
+    }> = []
+
+    try {
+      Object.defineProperty(globalThis, "ResizeObserver", {
+        configurable: true,
+        value: class TestResizeObserver {
+          private callback: ResizeObserverCallback
+
+          constructor(callback: ResizeObserverCallback) {
+            this.callback = callback
+          }
+
+          observe(target: Element) {
+            if (!target.isConnected) {
+              throw new Error("Use native scroll area fallback in jsdom")
+            }
+            resizeObservers.push({ callback: this.callback, target })
+          }
+
+          disconnect() {}
+        },
+      })
+
+      const source = Array.from({ length: 30 }, (_, index) =>
+        [`## Section ${index + 1}`, "", `Paragraph ${index + 1}.`].join("\n")
+      ).join("\n\n")
+      const viewerRef = React.createRef<TextViewerHandle>()
+      render(
+        <PretextMarkdownViewer
+          ref={viewerRef}
+          className="h-80 w-[420px]"
+          highlight={{ start: 5, end: 5 }}
+          source={markdownSource(source)}
+        />
+      )
+
+      await screen.findByRole("heading", { name: "Section 1" })
+      const viewport = viewerRef.current?.getViewportElement()
+      expect(viewport).toBeInstanceOf(HTMLElement)
+      if (!viewport) return
+
+      const scrollTo = vi.fn(function scrollTo(
+        this: HTMLElement,
+        options?: ScrollToOptions | number
+      ) {
+        if (typeof options === "object" && typeof options.top === "number") {
+          this.scrollTop = options.top
+        }
+      })
+      Object.defineProperty(viewport, "scrollTo", {
+        configurable: true,
+        value: scrollTo,
+      })
+
+      const chunkObservers = resizeObservers.filter(
+        ({ target }) =>
+          target instanceof HTMLElement &&
+          target.hasAttribute("data-pretext-markdown-chunk")
+      )
+      expect(chunkObservers.length).toBeGreaterThan(0)
+
+      await act(async () => {
+        for (const { callback, target } of chunkObservers) {
+          callback(
+            [
+              {
+                contentRect: { height: 720 },
+                target,
+              } as ResizeObserverEntry,
+            ],
+            {} as ResizeObserver
+          )
+        }
+      })
+
+      expect(scrollTo).not.toHaveBeenCalled()
+    } finally {
+      Object.defineProperty(globalThis, "ResizeObserver", {
+        configurable: true,
+        value: originalResizeObserver,
+      })
+    }
   })
 
   it("honors reduced motion for automatic rendered-mode scrolling", async () => {
@@ -1731,6 +1833,33 @@ describe("PretextMarkdownViewer", () => {
     ).toBe(encodeURIComponent("sequenceDiagram\nA->>B: hi"))
   })
 
+  it("sanitizes rendered Mermaid SVG before mounting it", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource("```mermaid\ngraph TD\n  unsafe-svg-->B\n```")}
+        toolbar={false}
+      />
+    )
+
+    await screen.findByText("mermaid")
+    const svg = await screen.findByTestId("mock-mermaid-svg")
+    await waitFor(() =>
+      expect(
+        container.querySelector<HTMLElement>(
+          '[data-diagram-language="mermaid"]'
+        )?.dataset.diagramState
+      ).toBe("ready")
+    )
+
+    expect(svg.getAttribute("onload")).toBeNull()
+    expect(svg.querySelector("script")).toBeNull()
+    expect(svg.querySelector("foreignObject")).toBeNull()
+    expect(svg.querySelector("iframe")).toBeNull()
+    expect(svg.querySelector("[onclick]")).toBeNull()
+    expect(svg.querySelector("a")?.getAttribute("href")).toBeNull()
+    expect(svg.textContent).toContain("Safe label")
+  })
+
   it("renders invalid mermaid fences as non-crashing errors", async () => {
     const { container } = render(
       <PretextMarkdownViewer
@@ -2440,6 +2569,44 @@ describe("PretextMarkdownViewer", () => {
     }
     expect(screen.queryByRole("button", { name: "Send" })).toBeNull()
     expect(container.querySelector("svg circle")).toBeNull()
+  })
+
+  it("does not trust user-authored internal Pretext metadata attributes", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "# Trusted heading",
+            "",
+            '<h2 data-pretext-heading-id="constructor">Spoofed heading</h2>',
+            '<div data-pretext-component-name="Metric" data-pretext-component-props="{&quot;label&quot;:&quot;Pwned&quot;,&quot;value&quot;:&quot;100&quot;}">Pwned</div>',
+            '<div data-pretext-callout-kind="warning" data-pretext-callout-title="Pwned">Pwned callout</div>',
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(
+      await screen.findByRole("heading", { name: "Trusted heading" })
+    ).toBeTruthy()
+    expect(screen.getByRole("heading", { name: "Spoofed heading" })).toBeTruthy()
+    expect(container.querySelector("#constructor")).toBeNull()
+    expect(
+      container.querySelector('[data-pretext-component="Metric"]')
+    ).toBeNull()
+    expect(
+      container.querySelector('[data-pretext-callout-kind="warning"]')
+    ).toBeNull()
+    expect(
+      container.querySelector("[data-pretext-heading-id]")
+    ).toBeNull()
+    expect(
+      container.querySelector("[data-pretext-component-name]")
+    ).toBeNull()
+    expect(
+      container.querySelector("[data-pretext-callout-kind]")
+    ).toBeNull()
   })
 
   it("sanitizes links and images without mounting unsafe DOM", async () => {

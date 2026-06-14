@@ -2,7 +2,6 @@ import * as React from "react"
 
 import {
   isJsonTableNoOpCommit,
-  jsonTableCommittedTextValue,
   type JsonTableCellCommitHandler,
 } from "@/components/json-table/json-table-cell-commit"
 import { markJsonTableProfile } from "@/components/json-table/json-table-profiler"
@@ -33,7 +32,6 @@ export function useJsonTableStructuredCellController({
   const effectiveValue = activeStructuredPendingValue
     ? activeStructuredPendingValue.value
     : value
-  const committedTextValue = jsonTableCommittedTextValue(effectiveValue)
 
   React.useEffect(() => {
     if (
@@ -80,7 +78,6 @@ export function useJsonTableStructuredCellController({
 
   return {
     effectiveValue,
-    committedTextValue,
     commitStructuredValueChange,
   }
 }

@@ -30,6 +30,14 @@ type PrimitiveEditEntry = {
   listeners: Set<() => void>
 }
 
+type PrimitiveDocumentEchoSignature = {
+  data: JsonTableDocumentData
+  fieldPath: string
+  value: unknown
+}
+
+export type JsonTablePrimitiveDocumentEcho = PrimitiveDocumentEchoSignature
+
 export type JsonTablePrimitiveEditReconciliation = {
   isPrimitiveDocumentEcho: boolean
   confirmedFieldPaths: string[]
@@ -46,7 +54,7 @@ const unresolvedPrimitiveEditBaseValue = Symbol(
   "unresolvedPrimitiveEditBaseValue"
 )
 
-const maxPrimitiveDocumentEchoKeys = 32
+const maxPrimitiveDocumentEchoSignatures = 32
 
 export type JsonTablePrimitiveEditStore = ReturnType<
   typeof createJsonTablePrimitiveEditStore
@@ -54,8 +62,11 @@ export type JsonTablePrimitiveEditStore = ReturnType<
 
 export function createJsonTablePrimitiveEditStore() {
   const entries = new Map<string, PrimitiveEditEntry>()
-  const primitiveDocumentEchoes = new WeakSet<JsonTableDocumentData>()
-  const primitiveDocumentEchoKeys = new Set<string>()
+  let primitiveDocumentEchoes = new WeakMap<
+    JsonTableDocumentData,
+    PrimitiveDocumentEchoSignature[]
+  >()
+  let primitiveDocumentEchoSignatures: PrimitiveDocumentEchoSignature[] = []
 
   function entryForPath(fieldPath: string) {
     let entry = entries.get(fieldPath)
@@ -87,22 +98,138 @@ export function createJsonTablePrimitiveEditStore() {
     return entry.supersededValues.some((item) => Object.is(item, value))
   }
 
-  function documentEchoKey(data: JsonTableDocumentData) {
-    try {
-      return JSON.stringify(data)
-    } catch {
-      return undefined
+  function childValue(node: unknown, segment: string) {
+    if (node === null || typeof node !== "object") return undefined
+    if (Array.isArray(node) && /^\d+$/.test(segment)) {
+      return node[Number(segment)]
     }
+    if (!Object.prototype.hasOwnProperty.call(node, segment)) return undefined
+    return (node as Record<string, unknown>)[segment]
   }
 
-  function recordDocumentEchoKey(key: string) {
-    primitiveDocumentEchoKeys.delete(key)
-    primitiveDocumentEchoKeys.add(key)
+  function enumerableKeys(node: unknown) {
+    return node !== null && typeof node === "object" ? Object.keys(node) : []
+  }
 
-    if (primitiveDocumentEchoKeys.size <= maxPrimitiveDocumentEchoKeys) return
+  function haveSameUneditedSiblings({
+    candidateNode,
+    recordedNode,
+    segments,
+    segmentIndex,
+  }: {
+    candidateNode: unknown
+    recordedNode: unknown
+    segments: string[]
+    segmentIndex: number
+  }): boolean {
+    if (segmentIndex >= segments.length) return true
+    if (
+      recordedNode === null ||
+      candidateNode === null ||
+      typeof recordedNode !== "object" ||
+      typeof candidateNode !== "object" ||
+      Array.isArray(recordedNode) !== Array.isArray(candidateNode)
+    ) {
+      return false
+    }
 
-    const oldestKey = primitiveDocumentEchoKeys.values().next().value
-    if (oldestKey !== undefined) primitiveDocumentEchoKeys.delete(oldestKey)
+    if (
+      Array.isArray(recordedNode) &&
+      Array.isArray(candidateNode) &&
+      recordedNode.length !== candidateNode.length
+    ) {
+      return false
+    }
+
+    const editedSegment = segments[segmentIndex]
+    const recordedSiblingKeys = enumerableKeys(recordedNode).filter(
+      (key) => key !== editedSegment
+    )
+    const candidateSiblingKeys = enumerableKeys(candidateNode).filter(
+      (key) => key !== editedSegment
+    )
+
+    if (recordedSiblingKeys.length !== candidateSiblingKeys.length) {
+      return false
+    }
+
+    const recordedSiblingKeySet = new Set(recordedSiblingKeys)
+    for (const key of candidateSiblingKeys) {
+      if (!recordedSiblingKeySet.has(key)) return false
+      if (
+        !Object.is(
+          childValue(recordedNode, key),
+          childValue(candidateNode, key)
+        )
+      ) {
+        return false
+      }
+    }
+
+    return haveSameUneditedSiblings({
+      candidateNode: childValue(candidateNode, editedSegment),
+      recordedNode: childValue(recordedNode, editedSegment),
+      segments,
+      segmentIndex: segmentIndex + 1,
+    })
+  }
+
+  function matchesPrimitiveDocumentEchoSignature(
+    data: JsonTableDocumentData,
+    signature: PrimitiveDocumentEchoSignature
+  ) {
+    if (
+      !Object.is(getValueAtPath(data, signature.fieldPath), signature.value)
+    ) {
+      return false
+    }
+
+    const segments = signature.fieldPath ? signature.fieldPath.split(".") : []
+    return haveSameUneditedSiblings({
+      candidateNode: data,
+      recordedNode: signature.data,
+      segments,
+      segmentIndex: 0,
+    })
+  }
+
+  function recordPrimitiveDocumentEchoSignature(
+    signature: PrimitiveDocumentEchoSignature
+  ) {
+    const signaturesForData = primitiveDocumentEchoes.get(signature.data) ?? []
+    signaturesForData.push(signature)
+    primitiveDocumentEchoes.set(signature.data, signaturesForData)
+
+    primitiveDocumentEchoSignatures.push(signature)
+    if (
+      primitiveDocumentEchoSignatures.length <=
+      maxPrimitiveDocumentEchoSignatures
+    ) {
+      return
+    }
+
+    primitiveDocumentEchoSignatures = primitiveDocumentEchoSignatures.slice(
+      -maxPrimitiveDocumentEchoSignatures
+    )
+  }
+
+  function consumePrimitiveDocumentEcho(data: JsonTableDocumentData) {
+    const identityEchoSignatures = primitiveDocumentEchoes.get(data)
+    if (identityEchoSignatures) {
+      primitiveDocumentEchoes.delete(data)
+      primitiveDocumentEchoSignatures = primitiveDocumentEchoSignatures.filter(
+        (signature) => !identityEchoSignatures.includes(signature)
+      )
+      return true
+    }
+
+    const signatureIndex = primitiveDocumentEchoSignatures.findIndex(
+      (signature) => matchesPrimitiveDocumentEchoSignature(data, signature)
+    )
+    if (signatureIndex === -1) return false
+
+    primitiveDocumentEchoSignatures.splice(signatureIndex, 1)
+    return true
   }
 
   return {
@@ -130,21 +257,13 @@ export function createJsonTablePrimitiveEditStore() {
       entry.snapshot = { status: "pending", hasValue: true, value }
       notify(entry)
     },
-    recordDocumentEcho(data: JsonTableDocumentData) {
-      primitiveDocumentEchoes.add(data)
-      const key = documentEchoKey(data)
-      if (key !== undefined) recordDocumentEchoKey(key)
+    recordDocumentEcho(signature: JsonTablePrimitiveDocumentEcho) {
+      recordPrimitiveDocumentEchoSignature(signature)
     },
     reconcileDocumentData(
       data: JsonTableDocumentData
     ): JsonTablePrimitiveEditReconciliation {
-      const dataEchoKey = documentEchoKey(data)
-      const isRecordedPrimitiveEcho =
-        primitiveDocumentEchoes.has(data) ||
-        (dataEchoKey !== undefined &&
-          primitiveDocumentEchoKeys.has(dataEchoKey))
-      if (dataEchoKey !== undefined)
-        primitiveDocumentEchoKeys.delete(dataEchoKey)
+      const isRecordedPrimitiveEcho = consumePrimitiveDocumentEcho(data)
 
       const reconciliation: JsonTablePrimitiveEditReconciliation = {
         isPrimitiveDocumentEcho: isRecordedPrimitiveEcho,
@@ -211,6 +330,8 @@ export function createJsonTablePrimitiveEditStore() {
       notify(entry)
     },
     reset() {
+      primitiveDocumentEchoes = new WeakMap()
+      primitiveDocumentEchoSignatures = []
       for (const entry of entries.values()) {
         clearEntry(entry)
         notify(entry)

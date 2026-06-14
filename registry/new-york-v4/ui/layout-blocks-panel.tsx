@@ -49,7 +49,7 @@ export function LayoutBlocksPanel({
   })
 
   return (
-    <aside
+    <div
       data-slot="layout-blocks-panel"
       className={cn("flex min-h-0 flex-col bg-background", className)}
     >
@@ -104,7 +104,7 @@ export function LayoutBlocksPanel({
           </div>
         )}
       </ScrollArea>
-    </aside>
+    </div>
   )
 }
 

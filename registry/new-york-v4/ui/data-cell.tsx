@@ -7,14 +7,14 @@ import {
   useDataCellActivationClickTail,
   type DataCellActivationSource,
 } from "@/registry/new-york-v4/ui/data-cell-activation"
+import { DataCellControl } from "@/registry/new-york-v4/ui/data-cell-control"
 import {
+  createDataCellControlState,
   getDataCellClickControlAction,
   getDataCellKeyControlAction,
   getDataCellPointerControlAction,
 } from "@/registry/new-york-v4/ui/data-cell-control-actions"
 import type { DataCellControlAction } from "@/registry/new-york-v4/ui/data-cell-control-contract"
-import { DataCellControl } from "@/registry/new-york-v4/ui/data-cell-control-registry"
-import { createDataCellControlState } from "@/registry/new-york-v4/ui/data-cell-control-state"
 import { DataCellDisplay } from "@/registry/new-york-v4/ui/data-cell-display"
 import { createDataCellDisplayProps } from "@/registry/new-york-v4/ui/data-cell-display-model"
 import { createDataCellEditModel } from "@/registry/new-york-v4/ui/data-cell-edit-model"
@@ -42,6 +42,8 @@ function storeDataCellActivationSource(
   >,
   source: DataCellActivationSource
 ) {
+  // Activation source must be visible to the first active control render so
+  // pointer caret placement and opening-event dismissal see the original event.
   flushSync(() => {
     sourceRef.current = source
     setSource(source)

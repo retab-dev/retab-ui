@@ -7,9 +7,9 @@ import { useForm } from "react-hook-form"
 import { extractionSourcesToSourceMap } from "@/lib/document-source"
 import {
   AnchoredDocumentProvider,
-  type AnchoredItem,
   useAnchoredDocument,
   useAnchoredFieldLink,
+  type AnchoredItem,
 } from "@/components/ui/anchored-document-viewer"
 import {
   sourceToPdfAnchor,
@@ -19,6 +19,12 @@ import {
 import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { SourceIndicator } from "@/components/ui/source-indicator"
+import {
+  ViewerBody,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "@/components/ui/viewer"
 import { JsonForm } from "@/components/json-form/json-form"
 import sourcesSample from "@/components/viewers/sample-data/json-form-sources.json"
 
@@ -76,39 +82,50 @@ function JsonFormSourcesContent({
   const form = useForm<Record<string, unknown>>({ defaultValues: extraction })
 
   return (
-    <div className="flex h-full min-h-[680px] bg-background">
-      <div className="relative min-w-0 flex-1">
-        <PdfViewer
-          ref={viewerRef}
-          source={{
-            kind: "url",
-            url: PDF_URL,
-            fileName: "jane-doe-bank-statement-5-pages.pdf",
-          }}
-          bare
-          className="h-full"
-          renderPageOverlay={renderPageOverlay}
-        />
-        <SourceIndicator path={link.activePath} found={!!activeItem?.anchor} />
-      </div>
-      <aside className="flex w-[420px] flex-shrink-0 flex-col border-l">
-        <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">
-          <h2 className="text-sm font-medium">Extracted data</h2>
-          <span className="ml-auto text-xs text-muted-foreground">
-            Hover a field to see its source
-          </span>
-        </div>
-        <ScrollArea className="min-h-0 flex-1">
-          <div className="p-4">
-            <JsonForm
-              form={form}
-              schema={schema}
-              anchorLink={link}
-              defaultOpenPaths={defaultOpenPaths}
-            />
+    <ViewerRoot bare className="h-full min-h-[680px] bg-background">
+      <ViewerBody>
+        <ViewerSurface className="relative">
+          <PdfViewer
+            ref={viewerRef}
+            source={{
+              kind: "url",
+              url: PDF_URL,
+              fileName: "jane-doe-bank-statement-5-pages.pdf",
+            }}
+            bare
+            className="h-full"
+            renderPageOverlay={renderPageOverlay}
+          />
+          <SourceIndicator
+            path={link.activePath}
+            found={!!activeItem?.anchor}
+          />
+        </ViewerSurface>
+        <ViewerSidebar
+          aria-label="Extracted data sources"
+          side="right"
+          collapsible="none"
+          width="420px"
+          className="border-l"
+        >
+          <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">
+            <h2 className="text-sm font-medium">Extracted data</h2>
+            <span className="ml-auto text-xs text-muted-foreground">
+              Hover a field to see its source
+            </span>
           </div>
-        </ScrollArea>
-      </aside>
-    </div>
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="p-4">
+              <JsonForm
+                form={form}
+                schema={schema}
+                anchorLink={link}
+                defaultOpenPaths={defaultOpenPaths}
+              />
+            </div>
+          </ScrollArea>
+        </ViewerSidebar>
+      </ViewerBody>
+    </ViewerRoot>
   )
 }

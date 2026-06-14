@@ -1,16 +1,14 @@
 import type * as React from "react"
 
 import {
-  type DataCellKind,
   type DataCellProps,
-  type DataCellSelectOption,
   type DataCellValueMeta,
 } from "@/components/ui/data-cell"
 import { jsonTableCommitValue } from "@/components/json-table/json-table-commit-value"
 import {
   jsonTableDataCellClass,
   jsonTableSelectDataCellClass,
-} from "@/components/json-table/json-table-data-cell"
+} from "@/components/json-table/json-table-data-cell-classes"
 import {
   jsonTableBooleanDataCellValue,
   jsonTableJsonText,
@@ -26,66 +24,9 @@ import {
 } from "@/components/json-table/json-table-select-options"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 
-type JsonTableTextDataCellKind = "text" | "date" | "time" | "date-time"
+type TextDataCellKind = "text" | "date" | "time" | "date-time"
 
-type JsonTableFormatValue<Kind extends DataCellKind, Value> = (
-  value: Value | undefined,
-  meta: { kind: Kind }
-) => React.ReactNode
-
-type JsonTableTextFormatValue = JsonTableFormatValue<
-  JsonTableTextDataCellKind,
-  string | null
->
-
-type JsonTableDataCellBaseModel<
-  Kind extends DataCellKind,
-  Value,
-  CommitValue,
-> = {
-  className: string
-  kind: Kind
-  value: Value
-  commitValue: (commitValue: CommitValue) => unknown
-}
-
-type JsonTableTextDataCellModelFor<Kind extends JsonTableTextDataCellKind> =
-  JsonTableDataCellBaseModel<Kind, string | null, string | null> & {
-    formatValue?: JsonTableTextFormatValue
-    showPickerIcon?: boolean
-  }
-
-export type JsonTableTextDataCellModel = {
-  [Kind in JsonTableTextDataCellKind]: JsonTableTextDataCellModelFor<Kind>
-}[JsonTableTextDataCellKind]
-
-export type JsonTableNumberDataCellModel =
-  | JsonTableDataCellBaseModel<"number", string | number | null, number | null>
-  | JsonTableDataCellBaseModel<"integer", string | number | null, number | null>
-
-export type JsonTableBooleanDataCellModel = JsonTableDataCellBaseModel<
-  "boolean",
-  boolean | null,
-  boolean
->
-
-export type JsonTableSelectDataCellModel = JsonTableDataCellBaseModel<
-  "select",
-  string | null,
-  string | null
-> & {
-  formatValue?: JsonTableFormatValue<"select", string | null>
-  placeholder: string
-  selectOptions: DataCellSelectOption[]
-}
-
-export type JsonTableDataCellModel =
-  | JsonTableTextDataCellModel
-  | JsonTableNumberDataCellModel
-  | JsonTableBooleanDataCellModel
-  | JsonTableSelectDataCellModel
-
-export type JsonTableDataCellSharedProps = {
+type SharedDataCellProps = {
   active?: boolean
   autoFocus?: boolean
   editable: boolean
@@ -94,38 +35,9 @@ export type JsonTableDataCellSharedProps = {
   onKeyDown?: React.KeyboardEventHandler<HTMLElement>
 }
 
-export type JsonTableDataCellCommitHandler = (
-  value: unknown,
-  meta: DataCellValueMeta
-) => void
+type CommitJsonValue = (value: unknown, meta: DataCellValueMeta) => void
 
-export function createJsonTableDataCellModel({
-  fieldMetadata,
-  value: jsonValue,
-}: {
-  fieldMetadata: FieldMetadata
-  value: unknown
-}): JsonTableDataCellModel {
-  const primitiveKind = jsonTablePrimitiveKind(fieldMetadata)
-
-  if (primitiveKind === "select") {
-    return selectDataCellModel(fieldMetadata, jsonValue)
-  }
-
-  if (primitiveKind === "number" || primitiveKind === "integer") {
-    return numberDataCellModel(jsonValue, primitiveKind)
-  }
-
-  if (primitiveKind === "boolean") {
-    return booleanDataCellModel(fieldMetadata, jsonValue)
-  }
-
-  if (primitiveKind) {
-    return textDataCellModel(fieldMetadata, jsonValue, primitiveKind)
-  }
-
-  return fallbackTextDataCellModel(fieldMetadata, jsonValue)
-}
+type JsonCommitValue = string | number | boolean | null
 
 export function createJsonTableDataCellProps({
   active,
@@ -144,14 +56,13 @@ export function createJsonTableDataCellProps({
   fieldMetadata: FieldMetadata
   isEditable?: boolean
   onActiveChange?: (active: boolean) => void
-  onCommit?: JsonTableDataCellCommitHandler
+  onCommit?: CommitJsonValue
   onEditingEnd?: () => void
   onKeyDown?: React.KeyboardEventHandler<HTMLElement>
   onOpenChange?: (open: boolean) => void
   value: unknown
 }): DataCellProps {
-  const model = createJsonTableDataCellModel({ fieldMetadata, value })
-  const sharedProps: JsonTableDataCellSharedProps = {
+  const sharedProps: SharedDataCellProps = {
     editable: isEditable,
     active,
     autoFocus,
@@ -159,96 +70,95 @@ export function createJsonTableDataCellProps({
     onActiveChange,
     onKeyDown,
   }
-  return jsonTableDataCellPropsForModel({
-    model,
+
+  const primitiveKind = jsonTablePrimitiveKind(fieldMetadata)
+
+  if (primitiveKind === "select") {
+    return selectDataCellProps({
+      fieldMetadata,
+      jsonValue: value,
+      onCommit,
+      onOpenChange,
+      sharedProps,
+    })
+  }
+
+  if (primitiveKind === "number" || primitiveKind === "integer") {
+    return numberDataCellProps({
+      jsonValue: value,
+      kind: primitiveKind,
+      onCommit,
+      sharedProps,
+    })
+  }
+
+  if (primitiveKind === "boolean") {
+    return booleanDataCellProps({
+      fieldMetadata,
+      jsonValue: value,
+      onCommit,
+      sharedProps,
+    })
+  }
+
+  if (primitiveKind) {
+    return textDataCellProps({
+      fieldMetadata,
+      jsonValue: value,
+      kind: primitiveKind,
+      onCommit,
+      onOpenChange,
+      sharedProps,
+    })
+  }
+
+  return fallbackTextDataCellProps({
+    fieldMetadata,
+    jsonValue: value,
     onCommit,
-    onOpenChange,
     sharedProps,
   })
 }
 
-function jsonTableDataCellPropsForModel({
-  model,
+function jsonTableDataCellCommitHandler<CommitValue>(
+  toJsonValue: (dataCellValue: CommitValue) => unknown,
+  onCommit?: CommitJsonValue
+) {
+  return (dataCellValue: CommitValue, meta: DataCellValueMeta) => {
+    onCommit?.(toJsonValue(dataCellValue), meta)
+  }
+}
+
+function jsonTableDataCellJsonCommitHandler<CommitValue extends JsonCommitValue>(
+  fieldMetadata: FieldMetadata,
+  onCommit?: CommitJsonValue
+) {
+  return jsonTableDataCellCommitHandler(
+    (commitValue: CommitValue) =>
+      jsonTableCommitValue({ fieldMetadata, commitValue }),
+    onCommit
+  )
+}
+
+function selectDataCellProps({
+  fieldMetadata,
+  jsonValue,
   onCommit,
   onOpenChange,
   sharedProps,
 }: {
-  model: JsonTableDataCellModel
-  onCommit?: JsonTableDataCellCommitHandler
+  fieldMetadata: FieldMetadata
+  jsonValue: unknown
+  onCommit?: CommitJsonValue
   onOpenChange?: (open: boolean) => void
-  sharedProps: JsonTableDataCellSharedProps
+  sharedProps: SharedDataCellProps
 }): DataCellProps {
-  if (model.kind === "select") {
-    return {
-      ...sharedProps,
-      kind: model.kind,
-      value: model.value,
-      selectOptions: model.selectOptions,
-      placeholder: model.placeholder,
-      className: model.className,
-      formatValue: model.formatValue,
-      onOpenChange,
-      onCommit: (commitValue, meta) =>
-        onCommit?.(model.commitValue(commitValue), meta),
-    }
-  }
-
-  if (model.kind === "boolean") {
-    return {
-      ...sharedProps,
-      kind: model.kind,
-      value: model.value,
-      className: model.className,
-      onCommit: (commitValue, meta) =>
-        onCommit?.(model.commitValue(commitValue), meta),
-    }
-  }
-
-  if (model.kind === "number" || model.kind === "integer") {
-    return {
-      ...sharedProps,
-      kind: model.kind,
-      value: model.value,
-      className: model.className,
-      onCommit: (commitValue, meta) =>
-        onCommit?.(model.commitValue(commitValue), meta),
-    }
-  }
-
-  if (
-    model.kind === "date" ||
-    model.kind === "time" ||
-    model.kind === "date-time"
-  ) {
-    return {
-      ...sharedProps,
-      kind: model.kind,
-      value: model.value,
-      className: model.className,
-      formatValue: model.formatValue,
-      showPickerIcon: model.showPickerIcon,
-      onOpenChange,
-      onCommit: (commitValue, meta) =>
-        onCommit?.(model.commitValue(commitValue), meta),
-    }
-  }
-
   return {
     ...sharedProps,
-    kind: model.kind,
-    value: model.value,
-    className: model.className,
-    formatValue: model.formatValue,
-    onCommit: (commitValue, meta) =>
-      onCommit?.(model.commitValue(commitValue), meta),
-  }
-}
-
-function selectDataCellModel(
-  fieldMetadata: FieldMetadata,
-  jsonValue: unknown
-): JsonTableSelectDataCellModel {
-  return {
+    kind: "select",
+    value: jsonTableSelectValue({ fieldMetadata, jsonValue }),
+    selectOptions: jsonTableSelectOptions(fieldMetadata),
+    placeholder: "Select...",
     className: jsonTableSelectDataCellClass,
     formatValue:
       fieldMetadata.kind === "enum"
@@ -258,70 +168,117 @@ function selectDataCellModel(
               jsonValue,
             })
         : undefined,
-    kind: "select",
-    placeholder: "Select...",
-    selectOptions: jsonTableSelectOptions(fieldMetadata),
-    value: jsonTableSelectValue({ fieldMetadata, jsonValue }),
-    commitValue: (commitValue) =>
-      commitValue === null
-        ? null
-        : jsonTableCommitValue({ fieldMetadata, commitValue }),
+    onOpenChange,
+    onCommit: jsonTableDataCellCommitHandler(
+      (dataCellValue) =>
+        dataCellValue === null
+          ? null
+          : jsonTableCommitValue({ fieldMetadata, commitValue: dataCellValue }),
+      onCommit
+    ),
   }
 }
 
-function numberDataCellModel(
-  jsonValue: unknown,
+function numberDataCellProps({
+  jsonValue,
+  kind,
+  onCommit,
+  sharedProps,
+}: {
+  jsonValue: unknown
   kind: "number" | "integer"
-): JsonTableNumberDataCellModel {
+  onCommit?: CommitJsonValue
+  sharedProps: SharedDataCellProps
+}): DataCellProps {
   return {
-    className: jsonTableDataCellClass,
+    ...sharedProps,
     kind,
     value: jsonTableNumberDataCellValue(jsonValue),
-    commitValue: (commitValue) => commitValue,
+    className: jsonTableDataCellClass,
+    onCommit: jsonTableDataCellCommitHandler(
+      (dataCellValue) => dataCellValue,
+      onCommit
+    ),
   }
 }
 
-function booleanDataCellModel(
-  fieldMetadata: FieldMetadata,
+function booleanDataCellProps({
+  fieldMetadata,
+  jsonValue,
+  onCommit,
+  sharedProps,
+}: {
+  fieldMetadata: FieldMetadata
   jsonValue: unknown
-): JsonTableBooleanDataCellModel {
+  onCommit?: CommitJsonValue
+  sharedProps: SharedDataCellProps
+}): DataCellProps {
   return {
-    className: jsonTableDataCellClass,
+    ...sharedProps,
     kind: "boolean",
     value: jsonTableBooleanDataCellValue(jsonValue),
-    commitValue: (commitValue) =>
-      jsonTableCommitValue({ fieldMetadata, commitValue }),
+    className: jsonTableDataCellClass,
+    onCommit: jsonTableDataCellJsonCommitHandler(fieldMetadata, onCommit),
   }
 }
 
-function textDataCellModel(
-  fieldMetadata: FieldMetadata,
-  jsonValue: unknown,
-  kind: JsonTableTextDataCellKind
-): JsonTableTextDataCellModelFor<typeof kind> {
+function textDataCellProps({
+  fieldMetadata,
+  jsonValue,
+  kind,
+  onCommit,
+  onOpenChange,
+  sharedProps,
+}: {
+  fieldMetadata: FieldMetadata
+  jsonValue: unknown
+  kind: TextDataCellKind
+  onCommit?: CommitJsonValue
+  onOpenChange?: (open: boolean) => void
+  sharedProps: SharedDataCellProps
+}): DataCellProps {
+  if (kind === "text") {
+    return {
+      ...sharedProps,
+      kind,
+      value: jsonTableTextDataCellValue(jsonValue),
+      className: jsonTableDataCellClass,
+      onCommit: jsonTableDataCellJsonCommitHandler(fieldMetadata, onCommit),
+    }
+  }
+
   return {
+    ...sharedProps,
+    kind,
+    value: jsonTableTextDataCellValue(jsonValue),
     className: jsonTableDataCellClass,
     formatValue:
       fieldMetadata.kind === "date"
-        ? (dataCellValue) => jsonTableDateDisplayText(dataCellValue)
+        ? (dataCellValue: string | null | undefined) =>
+            jsonTableDateDisplayText(dataCellValue)
         : undefined,
-    kind,
     showPickerIcon: false,
-    value: jsonTableTextDataCellValue(jsonValue),
-    commitValue: (commitValue) =>
-      jsonTableCommitValue({ fieldMetadata, commitValue }),
+    onOpenChange,
+    onCommit: jsonTableDataCellJsonCommitHandler(fieldMetadata, onCommit),
   }
 }
 
-function fallbackTextDataCellModel(
-  fieldMetadata: FieldMetadata,
+function fallbackTextDataCellProps({
+  fieldMetadata,
+  jsonValue,
+  onCommit,
+  sharedProps,
+}: {
+  fieldMetadata: FieldMetadata
   jsonValue: unknown
-): JsonTableTextDataCellModelFor<"text"> {
+  onCommit?: CommitJsonValue
+  sharedProps: SharedDataCellProps
+}): DataCellProps {
   return {
-    className: jsonTableDataCellClass,
+    ...sharedProps,
     kind: "text",
     value: jsonTableJsonText(jsonValue),
-    commitValue: (commitValue) =>
-      jsonTableCommitValue({ fieldMetadata, commitValue }),
+    className: jsonTableDataCellClass,
+    onCommit: jsonTableDataCellJsonCommitHandler(fieldMetadata, onCommit),
   }
 }

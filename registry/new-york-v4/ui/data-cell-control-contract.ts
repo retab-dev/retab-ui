@@ -129,7 +129,9 @@ type DataCellControlStateForKind<Kind extends DataCellKind> = {
   kind: Kind
   value?: DataCellValueForKind<Kind>
   disabled: boolean
-} & (Kind extends "boolean" ? { onCommit?: DataCellBooleanCommitHandler } : {})
+} & (Kind extends "boolean"
+  ? { commitBoolean?: DataCellBooleanCommitHandler }
+  : {})
 
 export type DataCellControlStateByKind = {
   [Kind in DataCellKind]: DataCellControlStateForKind<Kind>

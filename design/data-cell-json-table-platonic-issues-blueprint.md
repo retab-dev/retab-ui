@@ -19,11 +19,9 @@ still prevent the component from being simple, fast, complete, and inevitable:
 
 - browser style recalculation remains the dominant user-visible cost
 - fresh performance verification still depends on fragile local dev-server state
-- header and body column rendering use different strategies
-- structured editing still needs a layout-effect state hop to open
-- primitive echo recognition still has a whole-document stringify fallback
 - the runtime table module owns too many state machines
-- accessibility proof is weaker than interaction proof
+- accessibility proof is stronger, but browser-level accessibility proof still
+  lags interaction proof
 - the proof suite is strong on React fanout but weaker on browser-level
   behavior, variance, and root-cause attribution
 - naming has improved, but some concepts still carry historical vocabulary
@@ -187,8 +185,15 @@ Observed shape:
 - React render budgets are strict and mostly localized to the active cell.
 - Row count reductions did not explain the slow path as strongly as generated
   column count and mounted editable surface.
-- Body column virtualization is the right direction, but it has not yet proven
-  that style time is below a final target.
+- Body column virtualization reduced body surface substantially.
+- Fresh profiler output now records mounted header/body/popup surface counts and
+  a coarse `styleAttributionHint`.
+- Editable header rendering now uses the same horizontal column window as the
+  body, reducing large-profile mounted header cells from `106` to roughly
+  `32-34` on the fresh profile route.
+- Current fresh proof still points to popup mount for `open-enum` and
+  `open-date`; non-popup style work now needs trace-backed attribution before
+  another structural cut.
 
 Why this is still the top issue:
 
@@ -230,6 +235,53 @@ Blueprint:
    - mounted header groups
    - popup nodes
 6. Tighten budgets only after repeated fresh profiles are stable.
+
+Implemented attribution cut:
+
+- `scripts/profile-json-table-primitive-interactions.mjs` records
+  `mountedSurface.before`, `mountedSurface.after`, and `mountedSurface.delta`.
+- The snapshot includes mounted header cells, body cells, editable cells, rows,
+  DataCell surfaces, popup nodes, calendars, and document node count.
+- The profiler emits `styleAttributionHint` with coarse buckets:
+  - `popup-mount`
+  - `popup-open-surface`
+  - `eager-header-surface`
+  - `editable-body-surface`
+  - `global-document-surface`
+  - `not-style-bound`
+- `scripts/verify-json-table-performance-budget.mjs` prints
+  `surface=header/body/popup` and `owner=...` in every summary line.
+
+Fresh proof from `pnpm verify:json-table-performance:fresh`:
+
+- `large/open-enum`: `surface=header:106/body:132/popup:15`,
+  `owner=popup-mount`, `style=97.6ms`.
+- `large/open-date`: `surface=header:106/body:132/popup:99`,
+  `owner=popup-mount`, `style=101.1ms`.
+- `large/switch-dirty-cell`: `surface=header:106/body:144/popup:0`,
+  `owner=eager-header-surface`, `style=97.3ms`.
+
+Implemented header-window cut:
+
+- `SingleFileTableHeader` receives `JsonTableRenderedColumnWindow`.
+- Editable headers render only the header cells whose leaf indexes intersect
+  the body column window.
+- Header spacer cells preserve the full scroll canvas.
+- Header cell widths use actual rendered column widths, not the global
+  `columnWidth` option.
+- `tests/json-table-virtualization-stress-hardening.test.tsx` asserts both
+  header and body windows mount fewer cells than the full visible schema.
+
+Fresh managed proof from
+`PROFILE_SERVER_MODE=managed PROFILE_DEV_SERVER_TIMEOUT_MS=90000 pnpm
+verify:json-table-performance:fresh`:
+
+- `large/open-enum`: `surface=header:32/body:143/popup:15`,
+  `owner=popup-mount`, `style=73.8ms`, `elapsed=119.6ms`.
+- `large/open-date`: `surface=header:32/body:143/popup:99`,
+  `owner=popup-mount`, `style=70.9ms`, `elapsed=135.9ms`.
+- `large/switch-dirty-cell`: `surface=header:32/body:143/popup:0`,
+  `owner=eager-header-surface`, `style=69.4ms`, `elapsed=118.9ms`.
 
 Completion criteria:
 
@@ -277,18 +329,21 @@ Implemented progress:
 - `JSON_TABLE_PROFILE_REPEAT=3` fresh verification now passes against the
   current route and confirms the large open/switch interactions stay below
   100ms style time at p90/worst on this machine.
+- Text setup in `scripts/profile-json-table-primitive-interactions.mjs` now
+  refinds or remounts the target edit input before injecting setup values, so
+  `switch-dirty-cell` and `post-churn-text-commit` are not dependent on fragile
+  focus surviving dev-server/HMR churn.
 
 Current weakness:
 
-- Fresh profiling still depends on the app compiling successfully.
+- Fresh profiling still depends on the app compiling the route successfully.
 - A stale Turbopack/dev-server process can return a 500 for code that no longer
-  matches the source tree.
+  matches the source tree; managed mode avoids stale listeners once the old
+  process is stopped.
 - Saved reports can pass after the implementation has drifted.
 - One fresh run is too noisy to define final latency budgets.
-- The latest fresh and repeated fresh runs pass, but the route is served by an
-  existing dev server. Managed-server mode is implemented, yet the canonical
-  command still needs proof across clean server lifecycles before budgets should
-  be tightened.
+- The latest managed fresh run passes, but repeated managed fresh proof should
+  still be run before budgets are tightened.
 
 Blueprint:
 
@@ -309,51 +364,71 @@ Completion criteria:
 - The command does not require manually nursing a stale dev server.
 - A performance failure includes enough context to reproduce or debug it.
 
-### P0. Header/body column strategy is asymmetric and unproven
+Fresh managed proof from
+`PROFILE_SERVER_MODE=managed PROFILE_DEV_SERVER_TIMEOUT_MS=90000 pnpm
+verify:json-table-performance:fresh`:
 
-Current state:
+- `default/open-enum`: `elapsed=95.9ms`, `style=50.3ms`,
+  `surface=header:16/body:104/popup:9`, `owner=popup-mount`.
+- `default/open-date`: `elapsed=121.7ms`, `style=53.5ms`,
+  `surface=header:16/body:104/popup:99`, `owner=popup-mount`.
+- `default/switch-dirty-cell`: `elapsed=93.8ms`, `style=51.0ms`,
+  `surface=header:16/body:104/popup:0`, `owner=editable-body-surface`.
+- `large/open-enum`: `elapsed=119.6ms`, `style=73.8ms`,
+  `surface=header:32/body:143/popup:15`, `owner=popup-mount`.
+- `large/open-date`: `elapsed=135.9ms`, `style=70.9ms`,
+  `surface=header:32/body:143/popup:99`, `owner=popup-mount`.
+- `large/switch-dirty-cell`: `elapsed=118.9ms`, `style=69.4ms`,
+  `surface=header:32/body:143/popup:0`, `owner=eager-header-surface`.
+
+### Closed. Header/body column strategy is shared and guarded
+
+Previous state:
 
 - Header renders every visible schema column.
 - Editable body renders a horizontal column window.
 - Body width is preserved with left/right spacer cells.
 - Header scroll is synchronized by copying body `scrollLeft`.
 
-Why this might be acceptable:
+Why this was not acceptable:
 
-- Header DOM is shallower than body DOM.
-- Header group virtualization is harder than body cell virtualization.
-- Eager header rendering keeps group spans and schema editing simpler.
+- Profiling showed mounted column surface was the main style-cost driver.
+- Header cells stayed in the mounted style surface even after body column
+  virtualization.
+- Header/body asymmetry created two coordinate systems.
+- Accessibility metadata for virtualized body cells was harder while the header
+  used a different strategy.
 
-Why this might not be acceptable:
+Current state:
 
-- Profiling indicates column count materially affects style cost.
-- Header cells may still be in the style invalidation set when a primitive
-  popup opens.
-- Header/body asymmetry creates two coordinate systems.
-- Accessibility metadata for virtualized body cells is harder when the header is
-  not virtualized the same way.
+- `SingleFileTableHeader` receives the same `JsonTableRenderedColumnWindow` as
+  the body rows.
+- Header cells mount only when their leaf indexes intersect the rendered column
+  window.
+- Header spacer cells preserve the full horizontal scroll canvas and are hidden
+  from the accessibility tree.
+- Header and body cells expose absolute 1-based column coordinates.
+- The split header/body tables both expose the real column count.
 
-Blueprint:
+Implemented proof:
 
-1. Measure eager-header/virtual-body cost.
-2. Add a prototype header window model if header cost is material:
-   - visible leaf range
-   - clipped group spans
-   - left/right group continuation rules
-   - schema-edit hit targets only for mounted header cells
-3. Test alignment at:
-   - scroll left
-   - middle horizontal scroll
-   - max horizontal scroll
-   - nested/grouped headers
-   - schema editing disabled/enabled
-4. If header stays eager, document the measurement that justifies it.
+- `tests/json-table-virtualization-stress-hardening.test.tsx` checks that
+  header and body mount fewer cells than the full visible schema.
+- The same test verifies left and far horizontal windows expose the expected
+  `aria-colindex` values.
+- The same test verifies spacer cells are `aria-hidden` and
+  `role="presentation"`.
+- `tests/json-table-architecture.test.ts` guards the shared rendered column
+  window, header spacers, table `aria-colcount`, body `aria-rowcount`, and row
+  `aria-rowindex` wiring.
+- Fresh profiling after the header-window cut reduced large-profile mounted
+  header cells from `106` to roughly `32`.
 
 Completion criteria:
 
-- Header eagerness is a measured decision.
-- If virtualized, group headers remain aligned and accessible.
-- If eager, header style cost is proven small enough to keep the simpler code.
+- Header and body share one rendered column window.
+- Virtualized header/body coordinates remain absolute and accessible.
+- Header style surface stays bounded in fresh profiling.
 
 ### P0. Horizontal column virtualization is implemented but not browser-proven enough
 
@@ -399,6 +474,8 @@ Completion criteria:
 
 ### P1. `SingleFileVirtualizedTable` owns too many responsibilities
 
+Status: partially implemented.
+
 Current responsibilities:
 
 - table shell layout
@@ -407,12 +484,18 @@ Current responsibilities:
 - row virtualization
 - column virtualization
 - read-only DOM row patching
-- primitive active store creation
-- structured edit session state
-- primitive/structured mutual exclusion
 - row callback creation
 - row key strategy
 - render profiling
+
+Extracted responsibilities:
+
+- `useJsonTableEditSessionCoordinator` owns primitive active store creation,
+  structured edit session state, structured session IDs, and
+  primitive/structured mutual exclusion.
+- `useJsonTableRenderedColumnWindow` owns editable/read-only rendered column
+  window strategy, translating fixed-grid virtualizer output into the
+  JSON-table `JsonTableRenderedColumnWindow` model.
 
 Why this is a problem:
 
@@ -447,6 +530,36 @@ Completion criteria:
   machine.
 - Edit-session rules have focused tests outside the full table harness.
 - Column-window rules have focused tests outside row rendering.
+
+Implemented cut:
+
+- `useJsonTableEditSessionCoordinator` is the edit-session owner.
+- `SingleFileVirtualizedTable` consumes one `editSession` API instead of owning
+  primitive and structured edit refs/state directly.
+- Architecture tests guard the ownership boundary and keep structured sessions
+  immediately open in the coordinator.
+- `tests/json-table-edit-session-coordinator.test.tsx` proves:
+  - primitive active state lives in a stable external store
+  - opening a structured session clears primitive active state
+  - activating a primitive cell clears structured session state
+  - overlay open state and close behavior stay local to the coordinator
+  - document-id changes reset primitive and structured edit state
+  - missing projected cells are ignored
+- `tests/json-table-rendered-column-window-hook.test.tsx` proves:
+  - read-only tables receive the full schema-visible column window
+  - editable tables receive the rendered body column window
+  - the hook preserves window identity while inputs are stable
+- `SingleFileVirtualizedTable` now uses local boundary names:
+  `schemaVisibleColumns`, `renderedBodyColumnItems`, `leftPadWidthPx`, and
+  `rightPadWidthPx`.
+- Architecture tests guard that the table consumes
+  `useJsonTableRenderedColumnWindow` instead of directly constructing full or
+  virtual rendered windows.
+- The JSON-table interaction suite passes with the extracted coordinator.
+
+Remaining work:
+
+- Keep scroll synchronization in the table unless it grows beyond one callback.
 
 ### P1. Rendered column window type lives at the wrong layer
 
@@ -515,9 +628,9 @@ Completion criteria:
 - Session presence has one obvious meaning.
 - No React render-phase warning returns.
 
-### P1. Primitive echo recognition still stringifies full document data
+### P1. Primitive echo recognition no longer stringifies full document data
 
-Current state:
+Previous state:
 
 - `JsonTablePrimitiveEditStore` records identity echoes in a `WeakSet`.
 - It also records bounded JSON string keys for cloned parent echoes.
@@ -537,28 +650,36 @@ Why this is still not platonic:
 - It is a broad fallback for a narrow problem: recognizing the echo of a commit.
 - It can become hot on large parent echoes.
 
-Blueprint:
+Implemented cut:
 
-1. Replace whole-document echo keys with narrow commit echo signatures:
-   - document id
-   - field path
-   - committed value signature
-   - monotonic commit sequence
-2. Reconcile primitive echoes per pending field path.
-3. Keep external authoritative changes detectable:
-   - same field changed to another value becomes stale
-   - unrelated field changes do not disturb pending primitive value
-4. Add tests for:
-   - cloned parent echo
-   - multiple rapid commits to one field
-   - same value committed in different fields
-   - unrelated same-id external document update
-   - large document data
-   - non-serializable values if they are allowed at the table boundary
+- `recordDocumentEcho()` now receives a narrow
+  `JsonTablePrimitiveDocumentEcho`:
+  - emitted document data identity
+  - edited field path
+  - committed value
+- Exact parent echoes are recognized by `WeakMap` identity.
+- Cloned parent echoes are recognized by a bounded signature list.
+- Cloned signatures compare the committed field value and the unedited siblings
+  along the edited path, so same-value external documents with unrelated
+  sibling changes are not hidden as primitive echoes.
+- `JSON.stringify(data)`, `documentEchoKey`, and `primitiveDocumentEchoKeys`
+  have been removed from the primitive edit store.
+
+Implemented proof:
+
+- `tests/json-table-primitive-edit-store.test.ts` covers rapid repeated
+  commits, cloned parent echoes, store isolation, stale authoritative changes,
+  and rejection of cloned echoes with unrelated top-level or nested sibling
+  changes.
+- `tests/json-table-architecture.test.ts` asserts primitive echo recognition is
+  narrow and non-serializing.
+- `pnpm test:json-table -- --reporter=dot` passes with 282 JSON-table tests.
+- `pnpm exec tsc --noEmit --pretty false` passes.
 
 Completion criteria:
 
-- Primitive echo cost scales with pending edit count.
+- Primitive echo cost scales with the bounded echo signature list and edited
+  path width, not full document serialization.
 - No full-document stringify is used for echo recognition.
 - Stale detection remains correct.
 
@@ -607,6 +728,27 @@ Blueprint:
 3. Decide promise failure behavior for `onUpdateDocument`.
 4. If failure is ignored, name that policy explicitly.
 
+Implemented cut:
+
+- `useSingleFileTableDocumentModel` now carries a compact transition table at
+  the document boundary:
+  - new source id resets projection, confirmed data, and primitive edits
+  - same-id primitive echoes update confirmed data without replacing projection
+  - same-id external updates replace projection
+  - primitive commits record primitive echoes before patch emission
+  - structured commits patch confirmed data while structured local state owns
+    visibility
+  - missing updater exposes a no-op commit handler
+- `emitOptimisticDocumentPatch()` names the persistence policy: the model emits
+  patches optimistically and does not roll back local document state when the
+  returned promise rejects.
+
+Implemented proof:
+
+- `tests/json-table-controller.test.tsx` covers primitive echo projection
+  retention, same-id external replacement, new-id reset, missing updater no-op,
+  structured patching from confirmed data, and rejected update promises.
+
 Completion criteria:
 
 - The document model can be understood from one transition table.
@@ -618,7 +760,7 @@ Completion criteria:
 Current state:
 
 - JSON table uses `flushSync` in
-  `json-table-primitive-active-cell-replacement.ts`.
+  `json-table-primitive-active-cell-store.ts`.
 - `DataCell` uses `flushSync` to store activation source before controlled
   active state changes.
 - Architecture tests guard allowed `flushSync` locations.
@@ -646,6 +788,18 @@ Blueprint:
    - no duplicate document patch
    - activation source reaches first control render
 3. Keep architecture tests forbidding new `flushSync` sites.
+
+Implemented cut:
+
+- `replaceJsonTablePrimitiveActiveCell()` names the same-event cell switching
+  race at the `flushSync` site.
+- `storeDataCellActivationSource()` names the first-active-render activation
+  source race at the `flushSync` site.
+- Architecture tests now assert:
+  - JSON-table has exactly one allowed `flushSync` owner:
+    `json-table-primitive-active-cell-store.ts`
+  - DataCell has exactly one allowed `flushSync` owner: `data-cell.tsx`
+  - both sites carry race-specific comments
 
 Completion criteria:
 
@@ -696,13 +850,19 @@ Current proof:
 - DataCell select uses combobox/listbox-style semantics.
 - Date picker uses dialog/calendar semantics.
 - Some table-ish DOM elements remain.
+- Virtualized header/body tables expose real `aria-colcount`.
+- Virtualized body rows expose absolute `aria-rowindex`.
+- Virtualized body cells expose absolute `aria-colindex`.
+- Header cells expose absolute `aria-colindex`.
+- Header and body spacer cells are hidden with `aria-hidden` and
+  `role="presentation"`.
 
 Remaining risks:
 
 - Rows are flex rows rather than native table layout.
 - Virtual rows are absolutely positioned.
-- Virtualized columns need a deliberate `aria-colindex`/`aria-colcount` story.
-- Spacer cells are `td` elements with presentation semantics.
+- The virtualized `aria-colindex`/`aria-colcount` story is implemented in DOM
+  tests but not inspected in a real browser accessibility tree.
 - Portaled popups must restore focus correctly.
 - Far-column keyboard access is not as proven as pointer access.
 
@@ -726,7 +886,35 @@ Blueprint:
    - `aria-colcount`
    - `aria-rowindex`
    - `aria-colindex`
-4. Inspect actual accessibility tree for spacer behavior.
+4. Inspect actual browser accessibility tree for spacer behavior and virtual
+   coordinates.
+
+Implemented cut:
+
+- Body tables expose `aria-rowcount` and `aria-colcount`.
+- Header tables expose `aria-colcount`.
+- Mounted rows expose absolute `aria-rowindex`.
+- Mounted editable/read-only cells expose absolute `aria-colindex`.
+- Header cells expose absolute `aria-colindex`.
+- Header and body spacer cells are removed from the accessibility tree.
+- Virtualization stress tests prove the left and far horizontal windows keep
+  correct absolute coordinates.
+- `DataCellPickerControl` sanitizes residual picker-only props before spreading
+  trigger button props, removing React DOM warnings for `showPickerIcon` and
+  `onOpenChange`.
+- `scripts/verify-json-table-accessibility.mjs` adds browser-level checks for:
+  - editable inactive table semantics
+  - open enum combobox/listbox accessibility-tree exposure
+  - open date dialog/calendar accessibility-tree exposure
+  - horizontally scrolled far-column coordinates
+  - far enum/date popup accessibility exposure
+- `verify:json-table-accessibility:fresh` runs that verifier against a managed
+  profile route.
+- The unrelated file-system compile blocker was repaired by restoring the
+  current `file-system-browser-state` model and aligning the status bar with
+  that state shape.
+- Managed browser accessibility verification now passes against
+  `/json-table-profile` and `/json-table-profile?variant=large`.
 
 Completion criteria:
 
@@ -743,21 +931,25 @@ Current profiler strengths:
   reads, DOM node deltas, layout duration, style duration, and script duration.
 - Asserts no table/row render for primitive-local interactions.
 - Includes default, large, style-experiment, and far-column scenarios.
+- Supports repeated runs and reports median, p90, and worst per scenario.
+- Captures mounted surface snapshots before and after each scenario.
+- Budget summaries print mounted header/body/popup counts and a coarse likely
+  owner for style-bound scenarios.
 
 Current profiler gaps:
 
 - No Chrome trace selector/style attribution.
-- No repeated-run percentile mode.
-- No mounted-surface summary.
-- No separation of header/body/popup/global invalidation.
+- No selector-level attribution inside Chrome style recalculation.
+- Header/body/popup/global attribution is coarse, not trace-backed.
 - Monkey-patching `getBoundingClientRect` is useful but intrusive.
-- Budget failure messages still require manual interpretation.
+- Budget failure messages now include a likely owner, but still lack a ranked
+  "largest changed metric" diff against baseline.
 
 Blueprint:
 
 1. Add trace mode.
-2. Add repeated-run mode.
-3. Add mounted-surface counters.
+2. Keep repeated-run mode.
+3. Keep mounted-surface counters.
 4. Add failure summaries:
    - largest changed metric
    - likely owner
@@ -765,6 +957,18 @@ Blueprint:
    - exact route/config
 5. Keep strict React fanout assertions; they catch a different class of
    regression than latency budgets.
+
+Implemented cut:
+
+- `JSON_TABLE_PROFILE_REPEAT` / `--repeat` produces repeated scenario summaries.
+- `mountedSurface` captures header cells, body cells, editable cells, rows,
+  DataCell surfaces, popup nodes, calendars, and total document nodes.
+- `styleAttributionHint` gives immediate coarse ownership in fresh budget
+  output.
+- Text setup refinds/remounts the intended edit input before injecting profile
+  values, so dirty-switch and post-churn setup does not fail solely because
+  focus drifted after an unrelated dev-server event.
+- Architecture tests guard repeatability and mounted-surface attribution.
 
 Completion criteria:
 
@@ -1190,8 +1394,7 @@ The component can be considered close to platonic only when all of this is true:
 - Same-event dirty-cell switching commits once and opens the next cell once.
 - Exactly one primitive active cell or one structured session exists at a time.
 - Primitive echo recognition does not stringify the whole document.
-- Header rendering is either virtualized or measured and documented as
-  intentionally eager.
+- Header rendering is virtualized with the editable body column window.
 - `SingleFileVirtualizedTable` composes models instead of owning every state
   machine directly.
 - Rendered column window vocabulary is canonical and lives outside the row file.

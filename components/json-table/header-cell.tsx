@@ -3,13 +3,11 @@ import dynamic from "next/dynamic"
 import type { JSONSchema7 } from "json-schema"
 import { ChevronDown, ChevronUp } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
 import { HeaderLabel } from "@/components/json-table/header-label"
 import type { JsonTableSchemaEditMode } from "@/components/json-table/json-table-edit-modes"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
-import { getColumnWidthPx } from "@/components/json-table/table-options-store"
-import type { ColumnWidth } from "@/components/json-table/table-options-store"
 import { useHeaderController } from "@/components/json-table/use-header-controller"
-import { Button } from "@/components/ui/button"
 
 const EditableHeaderSchemaMenu = dynamic(
   () =>
@@ -26,7 +24,7 @@ interface JsonTableHeaderCellProps {
   setSchema: (schema: JSONSchema7) => void
   stopAt: string[]
   setStopAt: (stopAt: string[]) => void
-  columnWidth: ColumnWidth
+  cellWidthPx: number
   isPublished: boolean
   draggedItemKeyRef: React.RefObject<string | null>
   draggedItemParentPathRef: React.RefObject<string | null>
@@ -41,7 +39,7 @@ export function JsonTableHeaderCell({
   setSchema,
   stopAt,
   setStopAt,
-  columnWidth,
+  cellWidthPx,
   isPublished,
   draggedItemKeyRef,
   draggedItemParentPathRef,
@@ -80,7 +78,7 @@ export function JsonTableHeaderCell({
         <HeaderLabel
           effectiveType={node.itemEffectiveType ?? node.effectiveType}
           label={node.label}
-          width={getColumnWidthPx(columnWidth) - 20}
+          width={cellWidthPx - 20}
         />
       </Button>
     )
@@ -90,10 +88,7 @@ export function JsonTableHeaderCell({
     <HeaderLabel
       effectiveType={node.effectiveType}
       label={node.label}
-      width={
-        getColumnWidthPx(columnWidth) * (node.isExpanded ? leafCount : 1) -
-        (node.canFold ? 44 : 20)
-      }
+      width={cellWidthPx - (node.canFold ? 44 : 20)}
     />
   )
   const canOpenSchemaMenu =

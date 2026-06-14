@@ -245,6 +245,10 @@ function assertScenarioBudget(profileName, scenarioName, scenario, budget) {
     domNodeDelta: scenario.metricsDelta?.Nodes ?? null,
     styleMs: scenario.browserCost?.style?.durationMs ?? null,
     layoutMs: scenario.browserCost?.layout?.durationMs ?? null,
+    mountedHeaderCells: scenario.mountedSurface?.after?.headerCells ?? null,
+    mountedEditableCells: scenario.mountedSurface?.after?.editableCells ?? null,
+    mountedPopupNodes: scenario.mountedSurface?.after?.popupNodes ?? null,
+    styleAttributionHint: scenario.styleAttributionHint ?? null,
   }
 }
 
@@ -258,6 +262,8 @@ function printSummary(summary) {
       `rect=${summary.rectReads}`,
       `patches=${summary.documentPatches}`,
       `nodes=${summary.domNodeDelta ?? "n/a"}`,
+      `surface=header:${summary.mountedHeaderCells ?? "n/a"}/body:${summary.mountedEditableCells ?? "n/a"}/popup:${summary.mountedPopupNodes ?? "n/a"}`,
+      `owner=${summary.styleAttributionHint ?? "n/a"}`,
       `style=${summary.styleMs === null ? "n/a" : `${formatNumber(summary.styleMs)}ms`}`,
       `layout=${
         summary.layoutMs === null

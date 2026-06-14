@@ -15,8 +15,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-import type { FileSystemHeaderController } from "./file-system-controller"
-import type { FileSystemStatusState } from "./file-system-explorer-controllers"
+import type {
+  FileSystemBrowserState,
+  FileSystemHeaderState,
+} from "./file-system-browser-state"
 import { pathName } from "./file-system-index"
 import { normalizeFileSystemSearch } from "./file-system-query"
 import type { FileSystemSortKey, FileSystemView } from "./file-system-types"
@@ -54,16 +56,16 @@ export function FileSystemToolbar({
   title,
   view,
 }: {
-  canGoBack: FileSystemHeaderController["canGoBack"]
-  canGoForward: FileSystemHeaderController["canGoForward"]
-  currentPath: FileSystemHeaderController["currentPath"]
-  goBack: FileSystemHeaderController["goBack"]
-  goForward: FileSystemHeaderController["goForward"]
-  query: FileSystemHeaderController["query"]
-  setSearch: FileSystemHeaderController["setSearch"]
-  setView: FileSystemHeaderController["setView"]
-  title: string
-  view: FileSystemHeaderController["view"]
+  canGoBack: FileSystemHeaderState["canGoBack"]
+  canGoForward: FileSystemHeaderState["canGoForward"]
+  currentPath: FileSystemHeaderState["currentPath"]
+  goBack: FileSystemHeaderState["goBack"]
+  goForward: FileSystemHeaderState["goForward"]
+  query: FileSystemHeaderState["query"]
+  setSearch: FileSystemHeaderState["setSearch"]
+  setView: FileSystemHeaderState["setView"]
+  title: FileSystemHeaderState["title"]
+  view: FileSystemHeaderState["view"]
 }) {
   const currentFolderName =
     currentPath === "" ? title : pathName(currentPath) || title
@@ -141,7 +143,7 @@ export function FileSystemToolbar({
 export function FileSystemCommandBar({
   controller,
 }: {
-  controller: FileSystemHeaderController
+  controller: FileSystemHeaderState
 }) {
   return (
     <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b px-2 py-1.5">
@@ -153,7 +155,7 @@ export function FileSystemCommandBar({
 export function FileSystemSortControls({
   controller,
 }: {
-  controller: FileSystemHeaderController
+  controller: FileSystemHeaderState
 }) {
   return (
     <>
@@ -187,12 +189,13 @@ export function FileSystemSortControls({
 }
 
 export function FileSystemStatusBar({
-  state,
+  browser,
 }: {
-  state: FileSystemStatusState
+  browser: FileSystemBrowserState
 }) {
-  const itemCount = state.currentEntries.length
-  const isSearching = normalizeFileSystemSearch(state.query.search).length > 0
+  const itemCount = browser.entries.length
+  const isSearching = normalizeFileSystemSearch(browser.query.search).length > 0
+  const selectedEntry = browser.selection.selectedEntry
 
   return (
     <div
@@ -209,10 +212,8 @@ export function FileSystemStatusBar({
             ? "item"
             : "items"}
       </span>
-      {state.selectedEntry ? (
-        <span className="min-w-0 truncate">
-          {state.selectedEntry.name} selected
-        </span>
+      {selectedEntry ? (
+        <span className="min-w-0 truncate">{selectedEntry.name} selected</span>
       ) : null}
     </div>
   )

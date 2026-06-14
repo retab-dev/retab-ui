@@ -172,3 +172,63 @@ close/commit flows that intentionally unmount or commit more UI:
 
 Those are not the original select-open complaint, but they should inform the
 next style-attribution pass.
+
+## Implemented Cut: Mounted Surface Attribution
+
+The profiler now records `mountedSurface.before`, `mountedSurface.after`, and
+`mountedSurface.delta` for every scenario. The surface snapshot counts mounted
+header cells, body cells, editable cells, editable rows, DataCell surfaces,
+popup nodes, calendars, and total document nodes. The budget verifier prints
+those counts as `surface=header/body/popup` and adds a coarse
+`styleAttributionHint`.
+
+Fresh profile from `pnpm verify:json-table-performance:fresh`:
+
+| Profile   | Scenario            | Elapsed | Style   | Surface                | Owner                   |
+| --------- | ------------------- | ------- | ------- | ---------------------- | ----------------------- |
+| `default` | `open-enum`         | 103.4ms | 52.9ms  | header:16/body:104/9   | `popup-mount`           |
+| `default` | `open-date`         | 234.7ms | 61.0ms  | header:16/body:104/99  | `popup-mount`           |
+| `default` | `switch-dirty-cell` | 172.8ms | 57.1ms  | header:16/body:104/0   | `editable-body-surface` |
+| `large`   | `open-enum`         | 263.2ms | 97.6ms  | header:106/body:132/15 | `popup-mount`           |
+| `large`   | `open-date`         | 428.9ms | 101.1ms | header:106/body:132/99 | `popup-mount`           |
+| `large`   | `switch-dirty-cell` | 147.0ms | 97.3ms  | header:106/body:144/0  | `eager-header-surface`  |
+
+This proves the next performance question more sharply:
+
+- Popup opening still mounts the dominant popup surface.
+- Non-popup large-profile style work is now suspiciously tied to the eager
+  header surface: 106 mounted header cells remain even when the editable body is
+  horizontally windowed.
+- Header virtualization or header containment should be evaluated before more
+  document-state work.
+
+## Implemented Cut: Editable Header Column Window
+
+Editable table headers now render against the same horizontal
+`JsonTableRenderedColumnWindow` as the body. Header rows keep full canvas
+alignment with left/right spacer cells, but non-spacer header cells are limited
+to the mounted body column window. Header cell widths now use the actual
+rendered column widths instead of the global column-width option, so stress
+tables with custom column widths stay aligned.
+
+Fresh profile from `pnpm verify:json-table-performance:fresh` after the cut:
+
+| Profile | Scenario            | Elapsed | Style  | Surface               | Owner                  |
+| ------- | ------------------- | ------- | ------ | --------------------- | ---------------------- |
+| `large` | `open-enum`         | 152.6ms | 80.8ms | header:32/body:143/15 | `popup-mount`          |
+| `large` | `open-date`         | 276.6ms | 83.2ms | header:32/body:143/99 | `popup-mount`          |
+| `large` | `switch-dirty-cell` | 166.9ms | 84.1ms | header:32/body:143/0  | `eager-header-surface` |
+| `large` | `commit-number`     | 92.6ms  | 41.1ms | header:32/body:143/0  | `eager-header-surface` |
+
+Compared with the immediately preceding attributed run:
+
+- mounted large-profile header cells dropped from `106` to about `32-34`
+- `large/open-enum` style dropped from `97.6ms` to `80.8ms`
+- `large/open-date` style dropped from `101.1ms` to `83.2ms`
+- `large/switch-dirty-cell` style dropped from `97.3ms` to `84.1ms`
+
+The owner hint still reports `eager-header-surface` for some non-popup large
+scenarios because the header remains a material part of the mounted surface.
+The next performance work should distinguish true header cost from body/global
+selector invalidation with trace-backed attribution before making another
+structural cut.

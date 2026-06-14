@@ -1,10 +1,10 @@
 import * as React from "react"
 
-import { DataCellDisplay } from "@/components/ui/data-cell"
+import { DataCell, DataCellDisplay } from "@/components/ui/data-cell"
 import { TableCell } from "@/components/ui/table"
 import { areEditableJsonTableCellPropsEqual } from "@/components/json-table/json-table-cell-memo"
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
-import { JsonTableDisplayCell } from "@/components/json-table/json-table-display-cell"
+import { createJsonTableDataCellProps } from "@/components/json-table/json-table-data-cell-model"
 import { JsonTablePrimitiveCell } from "@/components/json-table/json-table-primitive-cell"
 import { JsonTableStructuredActiveCell } from "@/components/json-table/json-table-structured-active-cell"
 import { useJsonTableEditableCellModel } from "@/components/json-table/use-json-table-editable-cell-model"
@@ -27,7 +27,7 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
       ) : cellModel.kind === "structured-active" ? (
         <JsonTableStructuredActiveCell {...cellModel.structuredActiveProps} />
       ) : (
-        <JsonTableDisplayCell {...cellModel.displayProps} />
+        <DataCell {...createJsonTableDataCellProps(cellModel.displayProps)} />
       )}
     </TableCell>
   )

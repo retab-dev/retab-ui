@@ -9,7 +9,7 @@ import type {
   FileSystemPierreNavigationController,
   FileSystemPierreQueryState,
   FileSystemPierreSelectionController,
-} from "./file-system-explorer-controllers"
+} from "./file-system-pierre-adapter"
 import {
   FILE_SYSTEM_PIERRE_ROW_CSS,
   fileSystemPierreRowDecoration,
@@ -97,6 +97,7 @@ export function useFileSystemPierreModel({
       expansion.runLazyFolderCommand(command)
     },
     overscan: 12,
+    paths: input.pierrePaths,
     preparedInput: input.preparedInput,
     renderRowDecoration: ({ item }) => {
       const { input } = getLatestSelectionState()

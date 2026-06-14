@@ -14,7 +14,7 @@ import type {
 export type FileSystemSelectionController = {
   invalidateChildSelectionRequest: () => void
   selectEntry: (entry: FileSystemEntry | null) => void
-  selectFirstChildAfterEnsure: (path: string) => Promise<void>
+  selectFirstChildAfterEnsure: (path: string) => Promise<FileSystemEntry | null>
   selectedEntry: FileSystemEntry | null
   selectedPath: string | null
 }
@@ -105,10 +105,11 @@ export function useFileSystemSelectionController({
       const entry = children[0] ?? null
       const state = selectionStateRef.current
 
-      if (childSelectionRequestRef.current !== requestId) return
-      if (state.selectedPath !== folderPath) return
-      if (state.currentPath !== requestedCurrentPath) return
+      if (childSelectionRequestRef.current !== requestId) return null
+      if (state.selectedPath !== folderPath) return null
+      if (state.currentPath !== requestedCurrentPath) return null
       if (entry) selectEntry(entry)
+      return entry
     },
     [ensureChildren, selectEntry]
   )

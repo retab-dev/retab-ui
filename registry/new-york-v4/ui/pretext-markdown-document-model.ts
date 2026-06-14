@@ -142,6 +142,11 @@ export interface PretextMarkdownLineRange {
   start: number
 }
 
+export interface PretextMarkdownOffsetRange {
+  end: number
+  start: number
+}
+
 export function createPretextMarkdownDocument(
   markdown: string
 ): PretextMarkdownDocument {
@@ -179,11 +184,92 @@ export function findPretextMarkdownChunkForLine(
   )
 }
 
+export function findPretextMarkdownChunkForOffset(
+  chunks: readonly PretextMarkdownChunk[],
+  sourceOffset: number
+) {
+  return chunks.find((chunk) =>
+    pretextMarkdownSourceOffsetsIntersect({
+      end: chunk.sourceEndOffset,
+      point: sourceOffset,
+      start: chunk.sourceStartOffset,
+    })
+  )
+}
+
+export function findPretextMarkdownBlockForOffset(
+  blocks: readonly PretextMarkdownBlock[],
+  sourceOffset: number
+) {
+  return blocks.find((block) =>
+    pretextMarkdownSourceOffsetsIntersect({
+      end: block.sourceEndOffset,
+      point: sourceOffset,
+      start: block.sourceStartOffset,
+    })
+  )
+}
+
+export function pretextMarkdownChunkIntersectsOffsetRange({
+  chunk,
+  range,
+}: {
+  chunk: PretextMarkdownChunk
+  range: PretextMarkdownOffsetRange | null
+}) {
+  return pretextMarkdownSourceRangeIntersectsOffsetRange({
+    range,
+    sourceEndOffset: chunk.sourceEndOffset,
+    sourceStartOffset: chunk.sourceStartOffset,
+  })
+}
+
+export function pretextMarkdownBlockIntersectsOffsetRange({
+  block,
+  range,
+}: {
+  block: PretextMarkdownBlock
+  range: PretextMarkdownOffsetRange | null
+}) {
+  return pretextMarkdownSourceRangeIntersectsOffsetRange({
+    range,
+    sourceEndOffset: block.sourceEndOffset,
+    sourceStartOffset: block.sourceStartOffset,
+  })
+}
+
 export function findPretextMarkdownHeadingById(
   document: PretextMarkdownDocument,
   headingId: string
 ) {
   return document.headings.find((heading) => heading.id === headingId)
+}
+
+function pretextMarkdownSourceRangeIntersectsOffsetRange({
+  range,
+  sourceEndOffset,
+  sourceStartOffset,
+}: {
+  range: PretextMarkdownOffsetRange | null
+  sourceEndOffset: number
+  sourceStartOffset: number
+}) {
+  if (!range) return false
+  const start = Math.max(0, Math.min(range.start, range.end))
+  const end = Math.max(0, Math.max(range.start, range.end))
+  return sourceStartOffset < end && sourceEndOffset > start
+}
+
+function pretextMarkdownSourceOffsetsIntersect({
+  end,
+  point,
+  start,
+}: {
+  end: number
+  point: number
+  start: number
+}) {
+  return point >= start && point < end
 }
 
 function createPretextMarkdownChunks(

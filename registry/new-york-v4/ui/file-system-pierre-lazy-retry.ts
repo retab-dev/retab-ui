@@ -7,7 +7,7 @@ import {
   type FileTree as PierreFileTreeModel,
 } from "@pierre/trees"
 
-import type { FileSystemPierreLoadingController } from "./file-system-explorer-controllers"
+import type { FileSystemPierreLoadingController } from "./file-system-pierre-adapter"
 import type { PierrePath } from "./file-system-pierre-input"
 import type { FileSystemEntry } from "./file-system-types"
 

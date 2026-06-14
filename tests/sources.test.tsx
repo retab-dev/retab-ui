@@ -1270,7 +1270,7 @@ describe("source UI components", () => {
   })
 
   it("SourceFieldList renders an empty state without interactive rows", () => {
-    render(
+    const { container } = render(
       <SourceFieldList
         title="No fields"
         className="custom-source-list"
@@ -1285,10 +1285,11 @@ describe("source UI components", () => {
 
     expect(screen.getByRole("heading", { name: "No fields" })).toBeTruthy()
     expect(screen.getByText("0 fields").textContent).toBe("0 fields")
+    expect(screen.getByText("No fields.")).toBeTruthy()
     expect(screen.queryAllByRole("button")).toHaveLength(0)
-    expect(screen.getByRole("complementary").className).toContain(
-      "custom-source-list"
-    )
+    expect(
+      container.querySelector('[data-slot="source-field-list"]')?.className
+    ).toContain("custom-source-list")
   })
 
   it("SourceFieldList handles dynamic field rows without keeping removed controls", () => {

@@ -12,7 +12,16 @@ import { useRefCallback } from "@/components/json-table/path-utils"
 import { useElevatedVirtualRow } from "@/components/json-table/use-elevated-virtual-row"
 import { useJsonTableStructuredCellController } from "@/components/json-table/use-json-table-structured-cell-controller"
 
-export type JsonTableStructuredActiveCellProps = {
+export function JsonTableStructuredActiveCell({
+  fieldMetadata,
+  materializedFieldPath,
+  schema,
+  structuredEditSession,
+  value,
+  closeStructuredEditSession,
+  onCellCommit,
+  setStructuredEditSessionOverlayOpen,
+}: {
   fieldMetadata: FieldMetadata
   materializedFieldPath: string
   schema: JsonTableCellProps["schema"]
@@ -23,18 +32,7 @@ export type JsonTableStructuredActiveCellProps = {
   closeStructuredEditSession: JsonTableCellProps["closeStructuredEditSession"]
   onCellCommit: JsonTableCellProps["onCellCommit"]
   setStructuredEditSessionOverlayOpen: JsonTableCellProps["setStructuredEditSessionOverlayOpen"]
-}
-
-export function JsonTableStructuredActiveCell({
-  fieldMetadata,
-  materializedFieldPath,
-  schema,
-  structuredEditSession,
-  value,
-  closeStructuredEditSession,
-  onCellCommit,
-  setStructuredEditSessionOverlayOpen,
-}: JsonTableStructuredActiveCellProps) {
+}) {
   recordJsonTableRender(
     "JsonTableStructuredActiveCell",
     materializedFieldPath,
@@ -68,8 +66,7 @@ export function JsonTableStructuredActiveCell({
 
   useElevatedVirtualRow({
     cellRootRef,
-    isInputFocused: true,
-    isSelectOpen: structuredEditSession.isOverlayOpen,
+    isElevated: true,
   })
 
   React.useEffect(() => {

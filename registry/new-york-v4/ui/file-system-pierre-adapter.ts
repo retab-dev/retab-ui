@@ -1,9 +1,6 @@
 "use client"
 
-import type {
-  FileSystemEntry,
-  FileSystemIndex,
-} from "./file-system-types"
+import type { FileSystemEntry, FileSystemIndex } from "./file-system-types"
 
 export type FileSystemPierreAdapterSource = {
   currentPath: string

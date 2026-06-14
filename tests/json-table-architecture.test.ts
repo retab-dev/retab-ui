@@ -8,7 +8,12 @@ const deletedRuntimeFiles = [
   "components/json-table/json-table-scalar-cell.tsx",
   "components/json-table/json-table-primitive-command.ts",
   "components/json-table/json-table-primitive-handoff.ts",
+  "components/json-table/json-table-primitive-active-cell-replacement.ts",
+  "components/json-table/json-table-cell-model.ts",
+  "components/json-table/json-table-data-cell.tsx",
+  "components/json-table/json-table-display-cell.tsx",
   "components/json-table/use-cell-controller.ts",
+  "components/json-table/use-json-table-primitive-cell-controller.ts",
 ]
 
 const runtimeRoots = ["components/json-table"]
@@ -19,11 +24,11 @@ const dataCellRuntimeFiles = [
   "registry/new-york-v4/ui/data-cell-boolean-control.tsx",
   "registry/new-york-v4/ui/data-cell-boolean-value.ts",
   "registry/new-york-v4/ui/data-cell-classes.ts",
+  "registry/new-york-v4/ui/data-cell-control.tsx",
   "registry/new-york-v4/ui/data-cell-control-actions.ts",
   "registry/new-york-v4/ui/data-cell-control-contract.ts",
   "registry/new-york-v4/ui/data-cell-control-props.ts",
   "registry/new-york-v4/ui/data-cell-control-registry.tsx",
-  "registry/new-york-v4/ui/data-cell-control-state.ts",
   "registry/new-york-v4/ui/data-cell-display.tsx",
   "registry/new-york-v4/ui/data-cell-display-model.ts",
   "registry/new-york-v4/ui/data-cell-edit-model.ts",
@@ -223,10 +228,6 @@ const jsonTableLineCountLimits = [
     maxLines: 220,
   },
   {
-    file: "components/json-table/use-json-table-primitive-cell-controller.ts",
-    maxLines: 160,
-  },
-  {
     file: "components/json-table/use-json-table-structured-cell-controller.ts",
     maxLines: 160,
   },
@@ -244,10 +245,6 @@ const jsonTableLineCountLimits = [
   },
   {
     file: "components/json-table/json-table-cell-shell.ts",
-    maxLines: 220,
-  },
-  {
-    file: "components/json-table/json-table-cell-model.ts",
     maxLines: 220,
   },
 ]
@@ -362,9 +359,9 @@ describe("json table and DataCell architecture", () => {
     }
   })
 
-  it("keeps primitive active-cell replacement as the only flushSync boundary", () => {
+  it("keeps primitive active-cell store as the only flushSync boundary", () => {
     const allowedFile =
-      "components/json-table/json-table-primitive-active-cell-replacement.ts"
+      "components/json-table/json-table-primitive-active-cell-store.ts"
     const jsonTableRuntimeFiles = runtimeRoots.flatMap((root) =>
       sourceFilesUnder(join(repoRoot, root)).filter(isJsonTableRuntimeFile)
     )
@@ -381,6 +378,27 @@ describe("json table and DataCell architecture", () => {
     expect(
       replacementContent.includes("replaceJsonTablePrimitiveActiveCell")
     ).toBe(true)
+    expect(
+      replacementContent.includes("Same-event switching must let the previous")
+    ).toBe(true)
+  })
+
+  it("keeps DataCell activation source as the only DataCell flushSync boundary", () => {
+    const allowedFile = "registry/new-york-v4/ui/data-cell.tsx"
+
+    for (const file of dataCellRuntimeFiles) {
+      const content = readFileSync(join(repoRoot, file), "utf8")
+      expect(
+        content.includes("flushSync"),
+        `${file} contains flushSync outside ${allowedFile}`
+      ).toBe(file === allowedFile)
+    }
+
+    const shellContent = readFileSync(join(repoRoot, allowedFile), "utf8")
+    expect(shellContent.includes("storeDataCellActivationSource")).toBe(true)
+    expect(shellContent.includes("Activation source must be visible")).toBe(
+      true
+    )
   })
 
   it("keeps the JSON-table verification command stable and documented", () => {
@@ -404,7 +422,7 @@ describe("json table and DataCell architecture", () => {
     ).toBe(false)
   })
 
-  it("keeps useJsonTableEditableCellModel as a composition hook", () => {
+  it("keeps useJsonTableEditableCellModel as the editable-cell model boundary", () => {
     const file = "components/json-table/use-json-table-editable-cell-model.ts"
     const content = readFileSync(join(repoRoot, file), "utf8")
 
@@ -413,11 +431,28 @@ describe("json table and DataCell architecture", () => {
         false
       )
     }
+    expect(content.includes("buildJsonTableEditableCellModel")).toBe(false)
+    expect(content.includes("json-table-cell-model")).toBe(false)
+    expect(content.includes("disabledJsonTableCellShellProps")).toBe(true)
+    expect(content.includes("editableJsonTableCellShellProps")).toBe(true)
+    expect(content.includes("type JsonTableEditableCellModel")).toBe(false)
+    for (const removedLocalModel of [
+      "DisabledJsonTableCellModel",
+      "PrimitiveJsonTableCellModel",
+      "StructuredActiveJsonTableCellModel",
+      "DisplayJsonTableCellModel",
+      "JsonTableEditableCellModel",
+    ]) {
+      expect(
+        content.includes(`type ${removedLocalModel}`),
+        `${file} keeps removed local model ${removedLocalModel}`
+      ).toBe(false)
+    }
   })
 
   it("keeps primitive and structured commit controllers separated", () => {
     const primitiveFile =
-      "components/json-table/use-json-table-primitive-cell-controller.ts"
+      "components/json-table/use-json-table-primitive-control.ts"
     const structuredFile =
       "components/json-table/use-json-table-structured-cell-controller.ts"
     const primitiveContent = readFileSync(join(repoRoot, primitiveFile), "utf8")
@@ -425,15 +460,30 @@ describe("json table and DataCell architecture", () => {
       join(repoRoot, structuredFile),
       "utf8"
     )
+    const primitiveCommitControllerContent = primitiveContent.slice(
+      primitiveContent.indexOf(
+        "export function useJsonTablePrimitiveCommitController"
+      ),
+      primitiveContent.indexOf("export function useJsonTablePrimitiveControl")
+    )
 
-    expect(primitiveContent.includes(`on${"Document"}DataChange`)).toBe(false)
-    expect(primitiveContent.includes("docId")).toBe(false)
-    expect(primitiveContent.includes("onCellCommit")).toBe(true)
-    expect(primitiveContent.includes("primitiveEditStore.commitValue")).toBe(
-      true
+    expect(primitiveCommitControllerContent).toContain(
+      "useJsonTablePrimitiveCommitController"
     )
     expect(
-      primitiveContent.includes('visibleThrough: "primitivePendingValue"')
+      primitiveCommitControllerContent.includes(`on${"Document"}DataChange`)
+    ).toBe(false)
+    expect(primitiveCommitControllerContent.includes("docId")).toBe(false)
+    expect(primitiveCommitControllerContent.includes("onCellCommit")).toBe(true)
+    expect(
+      primitiveCommitControllerContent.includes(
+        "primitiveEditStore.commitValue"
+      )
+    ).toBe(true)
+    expect(
+      primitiveCommitControllerContent.includes(
+        'visibleThrough: "primitivePendingValue"'
+      )
     ).toBe(true)
 
     expect(structuredContent.includes("JsonTablePrimitiveEditStore")).toBe(
@@ -509,6 +559,21 @@ describe("json table and DataCell architecture", () => {
     expect(documentModelContent.includes("recordDocumentEcho")).toBe(true)
   })
 
+  it("keeps primitive echo recognition narrow and non-serializing", () => {
+    const editStoreFile =
+      "components/json-table/json-table-primitive-edit-store.ts"
+    const editStoreContent = readFileSync(join(repoRoot, editStoreFile), "utf8")
+
+    expect(editStoreContent.includes("JsonTablePrimitiveDocumentEcho")).toBe(
+      true
+    )
+    expect(editStoreContent.includes("fieldPath")).toBe(true)
+    expect(editStoreContent.includes("value")).toBe(true)
+    expect(editStoreContent.includes("JSON.stringify")).toBe(false)
+    expect(editStoreContent.includes("documentEchoKey")).toBe(false)
+    expect(editStoreContent.includes("primitiveDocumentEchoKeys")).toBe(false)
+  })
+
   it("keeps the document lifecycle owned by useSingleFileTableDocumentModel", () => {
     const documentModelFile =
       "components/json-table/use-single-file-table-document-model.ts"
@@ -563,7 +628,7 @@ describe("json table and DataCell architecture", () => {
       },
       {
         name: "primitive controller reports commits only",
-        file: "components/json-table/use-json-table-primitive-cell-controller.ts",
+        file: "components/json-table/use-json-table-primitive-control.ts",
         required: ['visibleThrough: "primitivePendingValue"'],
       },
       {
@@ -678,16 +743,16 @@ describe("json table and DataCell architecture", () => {
         ],
       },
       {
-        file: "components/json-table/json-table-display-cell.tsx",
-        required: ["createJsonTableDataCellProps"],
+        file: "components/json-table/editable-json-table-cell.tsx",
+        required: ["createJsonTableDataCellProps", "<DataCell"],
         forbidden: [
-          "useJsonTablePrimitiveCellController",
+          "useJsonTablePrimitiveCommitController",
           "useJsonTableStructuredCellController",
           "onCellCommit",
         ],
       },
       {
-        file: "components/json-table/use-json-table-primitive-cell-controller.ts",
+        file: "components/json-table/use-json-table-primitive-control.ts",
         required: ["primitiveEditStore.commitValue", "onCellCommit"],
         forbidden: [
           "setValueAtMaterializedPath",
@@ -745,7 +810,7 @@ describe("json table and DataCell architecture", () => {
 
     for (const file of [
       commitFile,
-      "components/json-table/use-json-table-primitive-cell-controller.ts",
+      "components/json-table/use-json-table-primitive-control.ts",
       "components/json-table/use-json-table-structured-cell-controller.ts",
       "components/json-table/use-single-file-table-document-model.ts",
       "components/json-table/ARCHITECTURE.md",
@@ -767,6 +832,68 @@ describe("json table and DataCell architecture", () => {
         `${file} leaks old visibleThrough field name`
       ).toBe(false)
     }
+  })
+
+  it("keeps primitive adapter names local and exact", () => {
+    const primitiveControlFile =
+      "components/json-table/use-json-table-primitive-control.ts"
+    const dataCellModelFile =
+      "components/json-table/json-table-data-cell-model.ts"
+    const elevatedRowFile = "components/json-table/use-elevated-virtual-row.ts"
+    const primitiveControlContent = readFileSync(
+      join(repoRoot, primitiveControlFile),
+      "utf8"
+    )
+    const dataCellModelContent = readFileSync(
+      join(repoRoot, dataCellModelFile),
+      "utf8"
+    )
+    const elevatedRowContent = readFileSync(
+      join(repoRoot, elevatedRowFile),
+      "utf8"
+    )
+
+    expect(primitiveControlContent.includes("effectiveValue")).toBe(true)
+    expect(primitiveControlContent.includes("commitValidatedValue")).toBe(true)
+    expect(primitiveControlContent.includes("setActive")).toBe(true)
+    expect(
+      primitiveControlContent.includes("export type JsonTablePrimitiveControl")
+    ).toBe(false)
+    expect(
+      primitiveControlContent.includes("type JsonTablePrimitiveControl")
+    ).toBe(false)
+    for (const oldName of [
+      "primitiveEffectiveValue",
+      "commitPrimitiveValueChange",
+      "commitPrimitiveValue",
+    ]) {
+      expect(
+        primitiveControlContent.includes(oldName),
+        `${primitiveControlFile} leaks ${oldName}`
+      ).toBe(false)
+    }
+    expect(primitiveControlContent.includes("setPrimitiveActive:")).toBe(false)
+
+    expect(dataCellModelContent.includes("toJsonValue")).toBe(true)
+    expect(
+      dataCellModelContent.includes("function jsonTableDataCellCommitHandler")
+    ).toBe(true)
+    expect(
+      dataCellModelContent.includes(
+        "function jsonTableDataCellJsonCommitHandler"
+      )
+    ).toBe(true)
+    expect(dataCellModelContent.includes("model.commitValue")).toBe(false)
+    expect(dataCellModelContent.includes("commitValue: (commitValue")).toBe(
+      false
+    )
+    expect(
+      dataCellModelContent.includes("model.toJsonValue(commitValue)")
+    ).toBe(false)
+
+    expect(elevatedRowContent.includes("isElevated")).toBe(true)
+    expect(elevatedRowContent.includes("isInputFocused")).toBe(false)
+    expect(elevatedRowContent.includes("isSelectOpen")).toBe(false)
   })
 
   it("keeps JSON table test cell commits object-shaped", () => {
@@ -997,6 +1124,7 @@ describe("json table and DataCell architecture", () => {
     const typesFile = "registry/new-york-v4/ui/data-cell-types.ts"
     const registryFile =
       "registry/new-york-v4/ui/data-cell-control-registry.tsx"
+    const controlFile = "registry/new-york-v4/ui/data-cell-control.tsx"
     const actionsFile = "registry/new-york-v4/ui/data-cell-control-actions.ts"
     const propsFile = "registry/new-york-v4/ui/data-cell-control-props.ts"
     const publicBarrelFile = "components/ui/data-cell.tsx"
@@ -1043,12 +1171,7 @@ describe("json table and DataCell architecture", () => {
     )
     const typesContent = readFileSync(join(repoRoot, typesFile), "utf8")
     const registryContent = readFileSync(join(repoRoot, registryFile), "utf8")
-    const controlStateFile =
-      "registry/new-york-v4/ui/data-cell-control-state.ts"
-    const controlStateContent = readFileSync(
-      join(repoRoot, controlStateFile),
-      "utf8"
-    )
+    const controlContent = readFileSync(join(repoRoot, controlFile), "utf8")
     const editModelFile = "registry/new-york-v4/ui/data-cell-edit-model.ts"
     const editModelContent = readFileSync(join(repoRoot, editModelFile), "utf8")
     const sessionFile = "registry/new-york-v4/ui/data-cell-session.ts"
@@ -1080,8 +1203,13 @@ describe("json table and DataCell architecture", () => {
     expect(contractContent.includes(`on${"Picker"}OpenChange`)).toBe(false)
     expect(registryContent.includes("DataCellProps")).toBe(false)
     expect(registryContent.includes("DataCellPublicPropsByKind")).toBe(false)
-    expect(registryContent.includes("DataCellControlPropsByKind")).toBe(false)
-    expect(registryContent.includes("DataCellPrimitiveSession")).toBe(true)
+    expect(registryContent.includes("DataCellControlPropsByKind")).toBe(true)
+    expect(registryContent.includes("DataCellPrimitiveSession")).toBe(false)
+    expect(registryContent.includes("dataCellControlByKind")).toBe(true)
+    expect(controlContent.includes("DataCellControlPropsByKind")).toBe(false)
+    expect(controlContent.includes("useDataCellPrimitiveSession")).toBe(true)
+    expect(controlContent.includes("useDataCellEditModelSession")).toBe(true)
+    expect(controlContent.includes("dataCellControlByKind")).toBe(true)
     expect(registryContent.includes("getDataCellPointerControlAction")).toBe(
       false
     )
@@ -1092,13 +1220,16 @@ describe("json table and DataCell architecture", () => {
       registryContent.includes("getDataCellTextPointerActivationSource")
     ).toBe(false)
     expect(registryContent.includes("commitDataCellBooleanToggle")).toBe(false)
-    expect(registryContent.includes("dataCellTextControlProps")).toBe(true)
+    expect(registryContent.includes("dataCellTextControlProps")).toBe(false)
+    expect(controlContent.includes("dataCellTextControlProps")).toBe(true)
     expect(actionsContent.includes("getDataCellPointerControlAction")).toBe(
       true
     )
     expect(actionsContent.includes("getDataCellClickControlAction")).toBe(true)
     expect(actionsContent.includes("getDataCellKeyControlAction")).toBe(true)
+    expect(actionsContent.includes("createDataCellControlState")).toBe(true)
     expect(actionsContent.includes("commitDataCellBooleanToggle")).toBe(true)
+    expect(actionsContent.includes("DataCellProps")).toBe(true)
     expect(actionsContent.includes("DataCellTextControl")).toBe(false)
     expect(actionsContent.includes("DataCellPickerControl")).toBe(false)
     expect(actionsContent.includes("data-cell-text-control")).toBe(false)
@@ -1163,7 +1294,8 @@ describe("json table and DataCell architecture", () => {
     expect(
       registryContent.includes("export function DataCellControl(props")
     ).toBe(false)
-    expect(registryContent.includes("model: DataCellEditModel")).toBe(true)
+    expect(registryContent.includes("model: DataCellEditModel")).toBe(false)
+    expect(controlContent.includes("model: DataCellEditModel")).toBe(true)
     expect(displayContent.includes("DataCellProps")).toBe(false)
     expect(displayContent.includes("DataCellDisplayProps")).toBe(true)
     expect(displayContent.includes("data-cell-picker-control")).toBe(false)
@@ -1240,12 +1372,12 @@ describe("json table and DataCell architecture", () => {
     expect(editModelContent.includes("createDataCellEditModel")).toBe(true)
     expect(editModelContent.includes("createDataCellControlState")).toBe(false)
     expect(editModelContent.includes("DataCellControlState")).toBe(false)
-    expect(controlStateContent.includes("createDataCellControlState")).toBe(
-      true
-    )
-    expect(controlStateContent.includes("DataCellControlState")).toBe(true)
     expect(editModelContent.includes("controlState:")).toBe(false)
     expect(shellContent.includes("createDataCellControlState")).toBe(true)
+    expect(
+      shellContent.includes("data-cell-control-state"),
+      `${shellFile} imports deleted control-state adapter`
+    ).toBe(false)
     expect(shellContent.includes("editModel.controlState")).toBe(false)
     expect(editModelContent.includes("DataCellEditorProps")).toBe(true)
     expect(editModelContent.includes("DataCellNativePropsForKind")).toBe(false)
@@ -1256,10 +1388,12 @@ describe("json table and DataCell architecture", () => {
     expect(sessionContent.includes("DataCellPrimitiveSession<")).toBe(false)
     expect(sessionContent.includes("useDataCellPrimitiveSession<")).toBe(false)
     expect(sessionContent.includes("DataCellCommitValue")).toBe(true)
-    expect(registryContent.includes("useDataCellPrimitiveSession")).toBe(true)
-    expect(registryContent.includes("useDataCellEditModelSession")).toBe(true)
+    expect(registryContent.includes("useDataCellPrimitiveSession")).toBe(false)
+    expect(registryContent.includes("useDataCellEditModelSession")).toBe(false)
     expect(registryContent.includes("useDataCellPrimitiveSession<")).toBe(false)
+    expect(controlContent.includes("useDataCellPrimitiveSession<")).toBe(false)
     expect(registryContent.includes("model.onCommit as")).toBe(false)
+    expect(controlContent.includes("model.onCommit as")).toBe(false)
     expect(editModelContent.includes("dataCellCommitHandler")).toBe(true)
     expect(editModelContent.includes("isDataCellStringCommitValue")).toBe(true)
     expect(editModelContent.includes("isDataCellNumberCommitValue")).toBe(true)
@@ -1302,6 +1436,10 @@ describe("json table and DataCell architecture", () => {
       expect(
         registryContent.includes(internalPublicStateLeak),
         `${registryFile} leaks ${internalPublicStateLeak}`
+      ).toBe(false)
+      expect(
+        controlContent.includes(internalPublicStateLeak),
+        `${controlFile} leaks ${internalPublicStateLeak}`
       ).toBe(false)
       expect(
         propsContent.includes(internalPublicStateLeak),
@@ -1362,6 +1500,8 @@ describe("json table and DataCell architecture", () => {
     expect(editModelContent.includes("assignDataCellDataAttribute")).toBe(true)
     expect(registryContent.includes("model.nativeProps")).toBe(false)
     expect(registryContent.includes("model.editorProps")).toBe(false)
+    expect(controlContent.includes("model.nativeProps")).toBe(false)
+    expect(controlContent.includes("model.editorProps")).toBe(false)
     expect(propsContent.includes("model.editorProps")).toBe(true)
     expect(registryContent.includes("renderDataCellControl(")).toBe(false)
     expect(registryContent.includes("const Control = adapter.Control")).toBe(
@@ -1416,8 +1556,13 @@ describe("json table and DataCell architecture", () => {
 
   it("keeps json-table DataCell adaptation pure and outside the renderer", () => {
     const modelFile = "components/json-table/json-table-data-cell-model.ts"
-    const displayFile = "components/json-table/json-table-display-cell.tsx"
+    const editableCellFile =
+      "components/json-table/editable-json-table-cell.tsx"
+    const deletedDisplayFile =
+      "components/json-table/json-table-display-cell.tsx"
     const primitiveFile = "components/json-table/json-table-primitive-cell.tsx"
+    const structuredActiveFile =
+      "components/json-table/json-table-structured-active-cell.tsx"
     const readOnlyDisplayFile =
       "components/json-table/json-table-read-only-primitive-cell.tsx"
     const primitiveKindFile =
@@ -1429,8 +1574,15 @@ describe("json table and DataCell architecture", () => {
       "components/json-table/json-table-select-options.ts"
     const commitValueFile = "components/json-table/json-table-commit-value.ts"
     const modelContent = readFileSync(join(repoRoot, modelFile), "utf8")
-    const displayContent = readFileSync(join(repoRoot, displayFile), "utf8")
+    const editableCellContent = readFileSync(
+      join(repoRoot, editableCellFile),
+      "utf8"
+    )
     const primitiveContent = readFileSync(join(repoRoot, primitiveFile), "utf8")
+    const structuredActiveContent = readFileSync(
+      join(repoRoot, structuredActiveFile),
+      "utf8"
+    )
     const readOnlyDisplayContent = readFileSync(
       join(repoRoot, readOnlyDisplayFile),
       "utf8"
@@ -1457,6 +1609,7 @@ describe("json table and DataCell architecture", () => {
     )
 
     expect(existsSync(join(repoRoot, modelFile)), modelFile).toBe(true)
+    expect(existsSync(join(repoRoot, deletedDisplayFile))).toBe(false)
     expect(
       existsSync(join(repoRoot, primitiveKindFile)),
       primitiveKindFile
@@ -1475,16 +1628,42 @@ describe("json table and DataCell architecture", () => {
     expect(existsSync(join(repoRoot, commitValueFile)), commitValueFile).toBe(
       true
     )
-    expect(modelContent.includes("createJsonTableDataCellModel")).toBe(true)
-    expect(modelContent.includes("JsonTableSelectDataCellModel")).toBe(true)
-    expect(modelContent.includes("JsonTableBooleanDataCellModel")).toBe(true)
-    expect(modelContent.includes("JsonTableNumberDataCellModel")).toBe(true)
-    expect(modelContent.includes("JsonTableTextDataCellModel")).toBe(true)
-    expect(modelContent.includes("selectDataCellModel")).toBe(true)
-    expect(modelContent.includes("numberDataCellModel")).toBe(true)
-    expect(modelContent.includes("booleanDataCellModel")).toBe(true)
-    expect(modelContent.includes("textDataCellModel")).toBe(true)
-    expect(modelContent.includes("fallbackTextDataCellModel")).toBe(true)
+    expect(modelContent.includes("createJsonTableDataCellModel")).toBe(false)
+    for (const internalType of [
+      "JsonTableSelectDataCellModel",
+      "JsonTableBooleanDataCellModel",
+      "JsonTableNumberDataCellModel",
+      "JsonTableTextDataCellModel",
+      "JsonTableDataCellModel",
+      "JsonTableDataCellSharedProps",
+      "JsonTableDataCellCommitHandler",
+      "JsonTableTextDataCellKind",
+      "JsonTableDataCellJsonCommitValue",
+    ]) {
+      expect(
+        modelContent.includes(`export type ${internalType}`),
+        `${modelFile} exports internal ${internalType}`
+      ).toBe(false)
+      expect(
+        modelContent.includes(`type ${internalType}`),
+        `${modelFile} keeps overqualified local ${internalType}`
+      ).toBe(false)
+    }
+    expect(primitiveContent.includes("JsonTablePrimitiveCellProps")).toBe(false)
+    expect(
+      structuredActiveContent.includes("JsonTableStructuredActiveCellProps")
+    ).toBe(false)
+    expect(modelContent.includes("selectDataCellProps")).toBe(true)
+    expect(modelContent.includes("numberDataCellProps")).toBe(true)
+    expect(modelContent.includes("booleanDataCellProps")).toBe(true)
+    expect(modelContent.includes("textDataCellProps")).toBe(true)
+    expect(modelContent.includes("fallbackTextDataCellProps")).toBe(true)
+    expect(modelContent.includes("selectDataCellModel")).toBe(false)
+    expect(modelContent.includes("numberDataCellModel")).toBe(false)
+    expect(modelContent.includes("booleanDataCellModel")).toBe(false)
+    expect(modelContent.includes("textDataCellModel")).toBe(false)
+    expect(modelContent.includes("fallbackTextDataCellModel")).toBe(false)
+    expect(modelContent.includes("jsonTableDataCellPropsForModel")).toBe(false)
     expect(primitiveKindContent.includes("jsonTablePrimitiveKind")).toBe(true)
     expect(displayValueContent.includes("jsonTableDisplayText")).toBe(true)
     expect(dataCellValueContent.includes("jsonTableDataCellValue")).toBe(true)
@@ -1507,27 +1686,31 @@ describe("json table and DataCell architecture", () => {
     expect(commitValueContent.includes("dateStringToFormat")).toBe(true)
     expect(commitValueContent.includes("jsonTableCommitValue")).toBe(true)
     expect(modelContent.includes("createJsonTableDataCellProps")).toBe(true)
-    expect(displayContent.includes("createJsonTableDataCellProps")).toBe(true)
+    expect(editableCellContent.includes("createJsonTableDataCellProps")).toBe(
+      true
+    )
     expect(primitiveContent.includes("createJsonTableDataCellProps")).toBe(true)
     expect(primitiveContent.includes("<DataCell {...dataCellProps} />")).toBe(
       true
     )
     expect(primitiveContent.includes("import { JsonTableDataCell")).toBe(false)
     expect(primitiveContent.includes("<JsonTableDataCell")).toBe(false)
-    expect(displayContent.match(/<DataCell\b/g)?.length ?? 0).toBe(1)
-    expect(displayContent.includes("export function JsonTableDataCell")).toBe(
-      false
-    )
+    expect(editableCellContent.includes("<JsonTableDisplayCell")).toBe(false)
+    expect(editableCellContent.includes("<DataCell")).toBe(true)
+    expect(
+      editableCellContent.includes("export function JsonTableDataCell")
+    ).toBe(false)
     for (const pattern of [
       "export function JsonTableDataCell",
+      "export function JsonTableDisplayCell",
       "function JsonTableSelectDataCell",
       "function JsonTableBooleanDataCell",
       "function JsonTableNumberDataCell",
       "function JsonTableTextDataCell",
     ]) {
       expect(
-        displayContent.includes(pattern),
-        `${displayFile} renders through wrapper ${pattern}`
+        editableCellContent.includes(pattern),
+        `${editableCellFile} renders through wrapper ${pattern}`
       ).toBe(false)
     }
 
@@ -1548,8 +1731,8 @@ describe("json table and DataCell architecture", () => {
       "selectOptions: []",
     ]) {
       expect(
-        displayContent.includes(pattern),
-        `${displayFile} contains ${pattern}`
+        editableCellContent.includes(pattern),
+        `${editableCellFile} contains ${pattern}`
       ).toBe(false)
     }
 
@@ -1691,21 +1874,44 @@ describe("json table and DataCell architecture", () => {
   it("keeps primitive table-to-row callback boundaries stable", () => {
     const tableFile = "components/json-table/single-file-virtualized-table.tsx"
     const rowFile = "components/json-table/single-file-form-row.tsx"
+    const editSessionFile =
+      "components/json-table/use-json-table-edit-session-coordinator.ts"
+    const cellShellFile = "components/json-table/json-table-cell-shell.ts"
+    const readOnlyCellFile = "components/json-table/read-only-json-table-cell.tsx"
+    const columnWindowHookFile =
+      "components/json-table/use-json-table-rendered-column-window.ts"
     const columnWindowFile =
       "components/json-table/json-table-rendered-column-window.ts"
     const tableContent = readFileSync(join(repoRoot, tableFile), "utf8")
     const rowContent = readFileSync(join(repoRoot, rowFile), "utf8")
+    const editSessionContent = readFileSync(
+      join(repoRoot, editSessionFile),
+      "utf8"
+    )
+    const cellShellContent = readFileSync(join(repoRoot, cellShellFile), "utf8")
+    const readOnlyCellContent = readFileSync(
+      join(repoRoot, readOnlyCellFile),
+      "utf8"
+    )
+    const columnWindowHookContent = readFileSync(
+      join(repoRoot, columnWindowHookFile),
+      "utf8"
+    )
     const columnWindowContent = readFileSync(
       join(repoRoot, columnWindowFile),
       "utf8"
     )
 
-    expect(tableContent.includes("primitiveActiveCellStoreRef")).toBe(true)
-    for (const callbackName of [
-      "setPrimitiveActiveCell",
-      "startStructuredEditSession",
-      "handleBodyScroll",
-    ]) {
+    expect(tableContent.includes("useJsonTableEditSessionCoordinator")).toBe(
+      true
+    )
+    expect(tableContent.includes("primitiveActiveCellStoreRef")).toBe(false)
+    expect(editSessionContent.includes("primitiveActiveCellStoreRef")).toBe(
+      true
+    )
+    expect(editSessionContent.includes("setPrimitiveActiveCell")).toBe(true)
+    expect(editSessionContent.includes("startStructuredEditSession")).toBe(true)
+    for (const callbackName of ["handleBodyScroll"]) {
       expect(
         tableContent.includes(`const ${callbackName} = React.useCallback`),
         `${tableFile} keeps ${callbackName} stable`
@@ -1720,13 +1926,73 @@ describe("json table and DataCell architecture", () => {
     expect(
       columnWindowContent.includes("jsonTableVirtualRenderedColumnWindow")
     ).toBe(true)
+    expect(tableContent.includes("useJsonTableRenderedColumnWindow")).toBe(
+      true
+    )
+    expect(
+      columnWindowHookContent.includes("jsonTableFullRenderedColumnWindow")
+    ).toBe(true)
+    expect(
+      columnWindowHookContent.includes("jsonTableVirtualRenderedColumnWindow")
+    ).toBe(true)
     expect(
       rowContent.includes("export type JsonTableRenderedColumnWindow")
     ).toBe(false)
     expect(rowContent.includes("jsonTableFullRenderedColumnWindow")).toBe(false)
-    expect(tableContent.includes("jsonTableVirtualRenderedColumnWindow")).toBe(
-      true
-    )
+    expect(
+      tableContent.includes("jsonTableFullRenderedColumnWindow")
+    ).toBe(false)
+    expect(
+      tableContent.includes("jsonTableVirtualRenderedColumnWindow")
+    ).toBe(false)
+    expect(tableContent.includes("schemaVisibleColumns")).toBe(true)
+    expect(tableContent.includes("renderedBodyColumnItems")).toBe(true)
+    expect(tableContent.includes("leftPadWidthPx")).toBe(true)
+    expect(tableContent.includes("rightPadWidthPx")).toBe(true)
+    expect(
+      tableContent.includes("columnItems: renderedBodyColumnItems")
+    ).toBe(true)
+    expect(
+      tableContent.includes("leftPad: leftPadWidthPx")
+    ).toBe(true)
+    expect(
+      tableContent.includes("rightPad: rightPadWidthPx")
+    ).toBe(true)
+    for (const ambiguousColumnWindowName of [
+      "const { columnItems",
+      " leftPad,",
+      " rightPad,",
+    ]) {
+      expect(
+        tableContent.includes(ambiguousColumnWindowName),
+        `${tableFile} contains ambiguous virtualizer boundary name ${ambiguousColumnWindowName}`
+      ).toBe(false)
+    }
+    expect(
+      columnWindowHookContent.includes("isJsonEditable")
+    ).toBe(true)
+    expect(
+      columnWindowHookContent.includes("renderedBodyColumnItems")
+    ).toBe(true)
+    expect(
+      columnWindowHookContent.includes("schemaVisibleColumns")
+    ).toBe(true)
+    expect(
+      tableContent.includes("renderedColumnWindow={renderedColumnWindow}")
+    ).toBe(true)
+    expect(tableContent.includes("data-json-table-header-spacer")).toBe(true)
+    expect(
+      tableContent.includes("renderedColumnWindow.projectedCellIndexes")
+    ).toBe(true)
+    expect(
+      tableContent.includes("aria-colcount={schemaVisibleColumns.length}")
+    ).toBe(true)
+    expect(tableContent.includes("aria-rowcount={rowCount}")).toBe(true)
+    expect(tableContent.includes('aria-hidden="true"')).toBe(true)
+    expect(rowContent.includes("aria-rowindex={rowIdx + 1}")).toBe(true)
+    expect(rowContent.includes("ariaColumnIndex:")).toBe(true)
+    expect(cellShellContent.includes('"aria-colindex"')).toBe(true)
+    expect(readOnlyCellContent.includes("aria-colindex")).toBe(true)
     for (const obsoleteColumnWindowProp of [
       "visibleColumnIndexes",
       "leftPadWidthPx?:",
@@ -1750,17 +2016,21 @@ describe("json table and DataCell architecture", () => {
   })
 
   it("creates structured edit sessions open without a layout-effect opener", () => {
-    const tableFile = "components/json-table/single-file-virtualized-table.tsx"
+    const editSessionFile =
+      "components/json-table/use-json-table-edit-session-coordinator.ts"
     const structuredCellFile =
       "components/json-table/json-table-structured-cell.tsx"
-    const tableContent = readFileSync(join(repoRoot, tableFile), "utf8")
+    const editSessionContent = readFileSync(
+      join(repoRoot, editSessionFile),
+      "utf8"
+    )
     const structuredCellContent = readFileSync(
       join(repoRoot, structuredCellFile),
       "utf8"
     )
 
-    expect(tableContent.includes("isOverlayOpen: true")).toBe(true)
-    expect(tableContent.includes("isOverlayOpen: false")).toBe(false)
+    expect(editSessionContent.includes("isOverlayOpen: true")).toBe(true)
+    expect(editSessionContent.includes("isOverlayOpen: false")).toBe(false)
     expect(
       structuredCellContent.includes(
         "setStructuredEditSessionOverlayOpen(true)"
@@ -1809,6 +2079,42 @@ describe("json table and DataCell architecture", () => {
       expect(
         content.includes(requiredToken),
         `${profilerFile} keeps ${requiredToken}`
+      ).toBe(true)
+    }
+  })
+
+  it("keeps primitive interaction profiling surface-attributed", () => {
+    const profilerFile = "scripts/profile-json-table-primitive-interactions.mjs"
+    const verifierFile = "scripts/verify-json-table-performance-budget.mjs"
+    const profilerContent = readFileSync(join(repoRoot, profilerFile), "utf8")
+    const verifierContent = readFileSync(join(repoRoot, verifierFile), "utf8")
+
+    for (const requiredToken of [
+      "mountedSurfaceSnapshot",
+      "mountedSurfaceDelta",
+      "mountedSurface",
+      "headerCells",
+      "editableCells",
+      "popupNodes",
+      "styleAttributionHint",
+    ]) {
+      expect(
+        profilerContent.includes(requiredToken),
+        `${profilerFile} keeps ${requiredToken}`
+      ).toBe(true)
+    }
+
+    for (const requiredToken of [
+      "mountedHeaderCells",
+      "mountedEditableCells",
+      "mountedPopupNodes",
+      "styleAttributionHint",
+      "surface=header",
+      "owner=",
+    ]) {
+      expect(
+        verifierContent.includes(requiredToken),
+        `${verifierFile} keeps ${requiredToken}`
       ).toBe(true)
     }
   })
