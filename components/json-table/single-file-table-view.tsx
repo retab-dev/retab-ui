@@ -1,39 +1,16 @@
 "use client"
 
-import React, { useMemo, useState } from "react"
 import type { JSONSchema7 } from "json-schema"
 
-import { buildFixedGridColumns } from "@/components/ui/fixed-grid-columns"
 import type { JsonTableCellHoverInfo } from "@/components/json-table/json-table-cell-types"
-import { jsonTableDisplayText } from "@/components/json-table/json-table-display-value"
 import type {
   JsonTableJsonEditMode,
   JsonTableSchemaEditMode,
 } from "@/components/json-table/json-table-edit-modes"
-import {
-  markJsonTableProfile,
-  recordJsonTableReactCommit,
-  recordJsonTableRender,
-} from "@/components/json-table/json-table-profiler"
-import {
-  createJsonTablePrimitiveEditStore,
-  type JsonTablePrimitiveEditStore,
-} from "@/components/json-table/json-table-primitive-edit-store"
-import {
-  projectDocumentRows,
-  type ProjectedCell,
-  type ProjectedRow,
-} from "@/components/json-table/lib/document-projection"
-import { flattenHeaderNodes } from "@/components/json-table/lib/header-nodes"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
-import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
-import { buildHeaderNodesFromSchema } from "@/components/json-table/lib/schema-header-nodes"
-import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
-import {
-  getColumnWidthPx,
-  useSheetOptionsStore,
-} from "@/components/json-table/table-options-store"
+import { SingleFileTableRuntime } from "@/components/json-table/single-file-table-runtime"
 import type { ColumnWidth } from "@/components/json-table/table-options-store"
+import { useSingleFileTableDocumentModel } from "@/components/json-table/use-single-file-table-document-model"
 
 export type {
   JsonTableJsonEditMode,
@@ -43,306 +20,26 @@ export type {
 interface SingleFileTableViewProps {
   document: TableDocument
   schema: JSONSchema7
-  setSchema?: (schema: JSONSchema7) => void // Optional setter to enable schema editing (descriptions)
+  setSchema?: (schema: JSONSchema7) => void
   columnWidth?: ColumnWidth
   onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
   jsonEditMode: JsonTableJsonEditMode
   schemaEditMode: JsonTableSchemaEditMode
   onCellHoverStart?: (info: JsonTableCellHoverInfo) => void
   onCellHoverEnd?: () => void
-  /** Rows to render beyond the viewport on each side (virtualization buffer). Default 12. */
   overscan?: number
-  /** Rows to render beyond the viewport after large scroll jumps. Defaults to overscan. */
   jumpOverscan?: number
 }
 
-type SingleFileTableProjectionViewProps = SingleFileTableViewProps & {
-  primitiveEditStore: JsonTablePrimitiveEditStore
-}
-
-function useStableOptionalCallback<Args extends unknown[], Result>(
-  callback: ((...args: Args) => Result) | undefined
-) {
-  const callbackRef = React.useRef(callback)
-
-  React.useLayoutEffect(() => {
-    callbackRef.current = callback
-  }, [callback])
-
-  return React.useCallback((...args: Args) => {
-    return callbackRef.current?.(...args)
-  }, [])
-}
-
-function shareProjectedRows(
-  previousRows: ProjectedRow[],
-  nextRows: ProjectedRow[]
-): ProjectedRow[] {
-  let didReuseAny = false
-  const sharedRows = nextRows.map((nextRow, index) => {
-    const previousRow = previousRows[index]
-    if (!previousRow) return nextRow
-
-    let rowChanged =
-      previousRow.rowIndex !== nextRow.rowIndex ||
-      previousRow.cells.length !== nextRow.cells.length
-
-    const nextCells = nextRow.cells.map((nextCell, cellIndex) => {
-      const previousCell = previousRow.cells[cellIndex]
-      if (canReuseProjectedCell(previousCell, nextCell)) {
-        didReuseAny = true
-        return previousCell
-      }
-      rowChanged = true
-      return nextCell
-    })
-
-    if (!rowChanged) {
-      didReuseAny = true
-      return previousRow
-    }
-
-    return { ...nextRow, cells: nextCells }
-  })
-
-  return didReuseAny ? sharedRows : nextRows
-}
-
-function canReuseProjectedCell(
-  previousCell: ProjectedCell | undefined,
-  nextCell: ProjectedCell | undefined
-) {
-  if (previousCell === nextCell) return true
-  if (!previousCell || !nextCell) return false
-
-  const previousDisplayValue =
-    "displayValue" in previousCell ? previousCell.displayValue : undefined
-  const nextDisplayValue =
-    "displayValue" in nextCell ? nextCell.displayValue : undefined
-
-  return (
-    previousCell.key === nextCell.key &&
-    Object.is(previousCell.value, nextCell.value) &&
-    Object.is(previousDisplayValue, nextDisplayValue) &&
-    previousCell.templateFieldPath === nextCell.templateFieldPath &&
-    previousCell.materializedFieldPath === nextCell.materializedFieldPath &&
-    previousCell.addArrayItemAtIndex === nextCell.addArrayItemAtIndex &&
-    sameArrayIndexes(previousCell.arrayIndexes, nextCell.arrayIndexes)
-  )
-}
-
-function sameArrayIndexes(previous: number[], next: number[]) {
-  if (previous.length !== next.length) return false
-  return previous.every((value, index) => value === next[index])
-}
-
-function areSingleFileTableProjectionViewPropsEqual(
-  previousProps: SingleFileTableProjectionViewProps,
-  nextProps: SingleFileTableProjectionViewProps
-) {
-  return (
-    previousProps.document === nextProps.document &&
-    previousProps.schema === nextProps.schema &&
-    previousProps.setSchema === nextProps.setSchema &&
-    previousProps.columnWidth === nextProps.columnWidth &&
-    previousProps.jsonEditMode === nextProps.jsonEditMode &&
-    previousProps.schemaEditMode === nextProps.schemaEditMode &&
-    previousProps.overscan === nextProps.overscan &&
-    previousProps.jumpOverscan === nextProps.jumpOverscan &&
-    previousProps.primitiveEditStore === nextProps.primitiveEditStore
-  )
-}
-
-const SingleFileTableProjectionView =
-  React.memo<SingleFileTableProjectionViewProps>(
-  ({
-    document,
-    schema,
-    setSchema,
-    columnWidth: propColumnWidth,
-    onUpdateDocument,
-    jsonEditMode,
-    schemaEditMode,
-    onCellHoverStart,
-    onCellHoverEnd,
-    overscan,
-    jumpOverscan,
-    primitiveEditStore,
-  }) => {
-    recordJsonTableRender("SingleFileTableView", document.id, {
-      columnWidth: propColumnWidth ?? null,
-      jsonEditMode,
-      schemaEditMode,
-      hasUpdate: Boolean(onUpdateDocument),
-      jumpOverscan: jumpOverscan ?? null,
-      overscan: overscan ?? null,
-    })
-
-    const { columnWidth: storeColumnWidth } = useSheetOptionsStore()
-    const columnWidth = propColumnWidth ?? storeColumnWidth
-
-    const [stopAt, setStopAt] = useState<string[]>([])
-    const isJsonEditable = jsonEditMode === "editable"
-    const projectedRowsCacheRef = React.useRef<ProjectedRow[]>([])
-
-    // Create refs for drag and drop across header cells.
-    const draggedItemKeyRef = React.useRef<string | null>(null)
-    const draggedItemParentPathRef = React.useRef<string | null>(null)
-
-    // Generate header nodes from schema
-    const [headerNodes] = useMemo(() => {
-      return buildHeaderNodesFromSchema(schema, stopAt)
-    }, [schema, stopAt])
-
-    const visibleKeys = useMemo(() => {
-      return flattenHeaderNodes(headerNodes).map((node) => node.key)
-    }, [headerNodes])
-
-    const visibleFieldMetadata = useMemo(() => {
-      return visibleKeys.map((key) => getFieldMetadata(schema, key))
-    }, [schema, visibleKeys])
-
-    const visibleColumns = useMemo(() => {
-      const widthPx = getColumnWidthPx(columnWidth)
-      return buildFixedGridColumns({
-        items: visibleKeys,
-        getKey: (key) => key,
-        getWidthPx: (key) => (key.endsWith("__delete") ? 50 : widthPx),
-        getMetadata: (_key, index) => visibleFieldMetadata[index],
-      }).map((column) => ({
-        ...column,
-        fieldMetadata: column.metadata,
-      }))
-    }, [columnWidth, visibleFieldMetadata, visibleKeys])
-
-    const projectedRows = useMemo(() => {
-      if (!document) return []
-      markJsonTableProfile("project-rows-start", {
-        visiblePaths: visibleKeys.length,
-        isJsonEditable,
-      })
-      const rows = projectDocumentRows({
-        document,
-        visiblePaths: visibleKeys,
-        includeArrayAddRows: isJsonEditable,
-      })
-      if (!isJsonEditable) {
-        for (const row of rows) {
-          for (
-            let columnIndex = 0;
-            columnIndex < row.cells.length;
-            columnIndex++
-          ) {
-            const cell = row.cells[columnIndex]
-            if (!cell) continue
-
-            const fieldMetadata = visibleFieldMetadata[columnIndex]
-            if (!fieldMetadata) continue
-
-            cell.displayValue = jsonTableDisplayText({
-              fieldMetadata,
-              jsonValue: cell.value,
-            })
-          }
-        }
-      }
-      const sharedRows = shareProjectedRows(projectedRowsCacheRef.current, rows)
-      projectedRowsCacheRef.current = sharedRows
-      markJsonTableProfile("project-rows-end", {
-        rowCount: sharedRows.length,
-      })
-      return sharedRows
-    }, [document, visibleFieldMetadata, visibleKeys, isJsonEditable])
-
-    const rowCount = Math.max(projectedRows.length, 1)
-
-    return (
-      <div className="relative flex h-full min-h-0 w-full flex-1 flex-col">
-        <div className="absolute inset-0 flex origin-top-left flex-col">
-          <React.Profiler id="JsonTable" onRender={recordJsonTableReactCommit}>
-            <SingleFileVirtualizedTable
-              headerNodes={headerNodes}
-              document={document}
-              schema={schema}
-              setSchema={setSchema ?? (() => {})}
-              isPublished={!setSchema}
-              stopAt={stopAt}
-              setStopAt={setStopAt}
-              draggedItemKeyRef={draggedItemKeyRef}
-              draggedItemParentPathRef={draggedItemParentPathRef}
-              jsonEditMode={jsonEditMode}
-              schemaEditMode={schemaEditMode}
-              projectedRows={projectedRows}
-              visibleColumns={visibleColumns}
-              rowCount={rowCount}
-              primitiveEditStore={primitiveEditStore}
-              onUpdateDocument={onUpdateDocument}
-              columnWidth={columnWidth}
-              onCellHoverStart={onCellHoverStart}
-              onCellHoverEnd={onCellHoverEnd}
-              overscan={overscan}
-              jumpOverscan={jumpOverscan}
-            />
-          </React.Profiler>
-        </div>
-      </div>
-    )
-  },
-  areSingleFileTableProjectionViewPropsEqual
-)
-SingleFileTableProjectionView.displayName = "SingleFileTableProjectionView"
-
 export function SingleFileTableView({
   document,
-  setSchema,
   onUpdateDocument,
-  onCellHoverStart,
-  onCellHoverEnd,
   ...props
 }: SingleFileTableViewProps) {
-  const primitiveEditStoreRef = React.useRef(createJsonTablePrimitiveEditStore())
-  const projectedDocumentRef = React.useRef(document)
-  const previousDocumentIdRef = React.useRef(document.id)
-  const stableUpdateDocument = useStableOptionalCallback<
-    [Record<string, unknown>],
-    Promise<void>
-  >(onUpdateDocument)
-  const stableSetSchema = useStableOptionalCallback<[JSONSchema7], void>(
-    setSchema
-  )
-  const stableCellHoverStart = useStableOptionalCallback<
-    [JsonTableCellHoverInfo],
-    void
-  >(onCellHoverStart)
-  const stableCellHoverEnd = useStableOptionalCallback<[], void>(
-    onCellHoverEnd
-  )
+  const documentModel = useSingleFileTableDocumentModel({
+    sourceDocument: document,
+    onUpdateDocument,
+  })
 
-  if (previousDocumentIdRef.current !== document.id) {
-    primitiveEditStoreRef.current.reset()
-    projectedDocumentRef.current = document
-    previousDocumentIdRef.current = document.id
-  } else if (projectedDocumentRef.current !== document) {
-    const reconciliation =
-      primitiveEditStoreRef.current.reconcileDocumentData(document.data)
-    if (!reconciliation.isPrimitiveDocumentEcho) {
-      projectedDocumentRef.current = document
-    }
-  }
-
-  return (
-    <SingleFileTableProjectionView
-      {...props}
-      document={projectedDocumentRef.current}
-      setSchema={setSchema ? stableSetSchema : undefined}
-      primitiveEditStore={primitiveEditStoreRef.current}
-      onUpdateDocument={
-        onUpdateDocument
-          ? (stableUpdateDocument as (patch: Record<string, unknown>) => Promise<void>)
-          : undefined
-      }
-      onCellHoverStart={onCellHoverStart ? stableCellHoverStart : undefined}
-      onCellHoverEnd={onCellHoverEnd ? stableCellHoverEnd : undefined}
-    />
-  )
+  return <SingleFileTableRuntime {...props} documentModel={documentModel} />
 }

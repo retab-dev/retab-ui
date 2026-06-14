@@ -3,7 +3,11 @@
 import * as React from "react"
 import { flushSync } from "react-dom"
 
-import { useDataCellActivationClickTail } from "@/registry/new-york-v4/ui/data-cell-activation"
+import {
+  createDataCellActivationSource,
+  useDataCellActivationClickTail,
+  type DataCellActivationSource,
+} from "@/registry/new-york-v4/ui/data-cell-activation"
 import type { DataCellControlAction } from "@/registry/new-york-v4/ui/data-cell-control-contract"
 import {
   DataCellControl,
@@ -15,13 +19,10 @@ import { createDataCellControlState } from "@/registry/new-york-v4/ui/data-cell-
 import { DataCellDisplay } from "@/registry/new-york-v4/ui/data-cell-display"
 import { createDataCellDisplayProps } from "@/registry/new-york-v4/ui/data-cell-display-model"
 import { createDataCellEditModel } from "@/registry/new-york-v4/ui/data-cell-edit-model"
-import type {
-  DataCellActivationSource,
-  DataCellProps,
-} from "@/registry/new-york-v4/ui/data-cell-types"
+import type { DataCellProps } from "@/registry/new-york-v4/ui/data-cell-types"
 
 export type {
-  DataCellActivationSource,
+  DataCellActivationRequest,
   DataCellCommitValue,
   DataCellDateTimeZone,
   DataCellEditorHandle,
@@ -36,22 +37,7 @@ export {
   formatDataCellDisplayValue,
   parseDataCellNumberInput,
 } from "@/registry/new-york-v4/ui/data-cell-format"
-export {
-  createDataCellKeyboardActivationSource,
-  createDataCellPointerActivationSource,
-  createDataCellShellActivationSource,
-  type DataCellActivationToken,
-} from "@/registry/new-york-v4/ui/data-cell-activation"
-export { DataCellBooleanControl } from "@/registry/new-york-v4/ui/data-cell-boolean-control"
-export {
-  canActivateDataCellFromKey,
-  DataCellControl,
-} from "@/registry/new-york-v4/ui/data-cell-control-registry"
 export { DataCellDisplay }
-export { DataCellNumberControl } from "@/registry/new-york-v4/ui/data-cell-number-control"
-export { DataCellPickerControl } from "@/registry/new-york-v4/ui/data-cell-picker-control"
-export { DataCellSelectControl } from "@/registry/new-york-v4/ui/data-cell-select-control"
-export { DataCellTextControl } from "@/registry/new-york-v4/ui/data-cell-text-control"
 
 function storeDataCellActivationSource(
   sourceRef: React.MutableRefObject<DataCellActivationSource | undefined>,
@@ -102,6 +88,10 @@ export function DataCell(props: DataCellProps) {
   const [uncontrolledActive, setUncontrolledActive] = React.useState(false)
   const [activationSource, setActivationSource] =
     React.useState<DataCellActivationSource>()
+  const requestedActivationSource = React.useMemo(
+    () => createDataCellActivationSource(props.activationRequest),
+    [props.activationRequest]
+  )
   const isControlledActive = active !== undefined
   const isExplicitMode = mode !== undefined
   const isActive =
@@ -230,7 +220,7 @@ export function DataCell(props: DataCellProps) {
     const editModel = createDataCellEditModel(props, {
       disabled,
       activationSource:
-        props.activationSource ??
+        requestedActivationSource ??
         activationSource ??
         activationSourceRef.current,
       autoFocus: props.autoFocus ?? canSelfActivate,

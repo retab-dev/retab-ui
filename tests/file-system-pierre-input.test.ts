@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest"
 
 import { buildFileSystemIndex } from "@/registry/new-york-v4/ui/file-system-index"
 import {
-  buildFileSystemPierreListInput,
-  fileSystemPathToPierrePath,
-  fileSystemPierrePathToEntry,
-} from "@/registry/new-york-v4/ui/file-system-pierre-list-adapter"
+  buildFileSystemPierreInput,
+  fromPierrePath,
+  toPierrePath,
+} from "@/registry/new-york-v4/ui/file-system-pierre-input"
 import type { FileSystemItem } from "@/registry/new-york-v4/ui/file-system-types"
 
 const items: FileSystemItem[] = [
@@ -14,12 +14,12 @@ const items: FileSystemItem[] = [
   { kind: "file", path: "invoices/2026/january.pdf" },
 ]
 
-describe("file-system Pierre list adapter", () => {
+describe("file-system Pierre input", () => {
   it("returns current-folder-relative Pierre paths", () => {
-    const input = buildFileSystemPierreListInput(
-      buildFileSystemIndex(items),
-      "invoices/"
-    )
+    const input = buildFileSystemPierreInput({
+      currentPath: "invoices/",
+      index: buildFileSystemIndex(items),
+    })
 
     expect(input.paths).toEqual([
       "2025/",
@@ -27,13 +27,14 @@ describe("file-system Pierre list adapter", () => {
       "2026/",
       "2026/january.pdf",
     ])
+    expect(input.preparedInput).toBeTruthy()
   })
 
   it("omits entries outside currentPath", () => {
-    const input = buildFileSystemPierreListInput(
-      buildFileSystemIndex(items),
-      "invoices/"
-    )
+    const input = buildFileSystemPierreInput({
+      currentPath: "invoices/",
+      index: buildFileSystemIndex(items),
+    })
 
     expect(input.paths).not.toContain("archive/")
     expect([...input.pathEntries.values()].map((entry) => entry.path)).toEqual([
@@ -45,20 +46,16 @@ describe("file-system Pierre list adapter", () => {
   })
 
   it("normalizes folder paths with trailing slash", () => {
-    expect(fileSystemPathToPierrePath("invoices/2026/", "invoices/")).toBe(
-      "2026/"
-    )
+    expect(toPierrePath("invoices/2026/", "invoices/")).toBe("2026/")
   })
 
   it("returns null for null or unknown Pierre paths", () => {
-    const input = buildFileSystemPierreListInput(
-      buildFileSystemIndex(items),
-      "invoices/"
-    )
+    const input = buildFileSystemPierreInput({
+      currentPath: "invoices/",
+      index: buildFileSystemIndex(items),
+    })
 
-    expect(fileSystemPierrePathToEntry(null, input.pathEntries)).toBeNull()
-    expect(
-      fileSystemPierrePathToEntry("missing.pdf", input.pathEntries)
-    ).toBeNull()
+    expect(fromPierrePath(null, input)).toBeNull()
+    expect(fromPierrePath("missing.pdf", input)).toBeNull()
   })
 })

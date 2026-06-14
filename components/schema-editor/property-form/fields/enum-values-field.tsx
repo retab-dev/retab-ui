@@ -11,6 +11,8 @@ import {
   parseEnumValueInput,
 } from "@/components/schema-editor/property-form/model/enum-values"
 
+import { useEnumValueIdentity } from "./enum-value-identity"
+
 export function EnumValuesField({
   values,
   resetKey,
@@ -23,6 +25,7 @@ export function EnumValuesField({
   onChange: (values: JSONSchema7Type[]) => void
 }) {
   const [nextValue, setNextValue] = React.useState("")
+  const valueIdentity = useEnumValueIdentity({ resetKey, values })
 
   React.useEffect(() => {
     setNextValue("")
@@ -31,15 +34,15 @@ export function EnumValuesField({
   const items = values.map((value, index) => {
     const inputValue = formatEnumValueInput(value)
     return {
-      id: `enum-value-${index}`,
+      id: valueIdentity.ids[index],
       inputLabel: `Option ${index + 1}: ${inputValue || "empty"}`,
       removeLabel: `Remove option ${inputValue}`,
       value: inputValue,
     }
   })
 
-  const indexFromId = (id: string) => Number(id.replace("enum-value-", ""))
-  const addRow = {
+  const indexFromId = (id: string) => valueIdentity.ids.indexOf(id)
+  const addInput = {
     inputLabel: "Add new value",
     placeholder: "Add new value",
     submitLabel: "Add",
@@ -59,6 +62,7 @@ export function EnumValuesField({
         items={items}
         onRemove={(id) => {
           const index = indexFromId(id)
+          valueIdentity.removeId(id)
           onChange(values.filter((_value, current) => current !== index))
         }}
         onReplace={(id, value) => {
@@ -69,8 +73,8 @@ export function EnumValuesField({
         }}
       />
       <SchemaChipAddRow
+        addInput={addInput}
         editable={!disabled}
-        row={addRow}
       />
     </div>
   )

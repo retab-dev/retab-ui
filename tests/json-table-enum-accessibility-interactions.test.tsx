@@ -39,16 +39,16 @@ function optionNames(view: {
 
 async function openEnumFromClick({
   fieldPath = "status",
-  onDocumentDataChange = vi.fn(),
+  onCellCommit = vi.fn(),
   onEditSessionChange = vi.fn(),
 }: {
   fieldPath?: string
-  onDocumentDataChange?: ReturnType<typeof vi.fn>
+  onCellCommit?: ReturnType<typeof vi.fn>
   onEditSessionChange?: (activeCell: JsonTableActiveCell | null) => void
 } = {}) {
   const view = renderInteractionRow({
     visiblePaths: [fieldPath],
-    onDocumentDataChange,
+    onCellCommit,
     onEditSessionChange,
   })
   const cell = await editableCell(view, fieldPath)
@@ -65,7 +65,7 @@ async function openEnumFromClick({
     expect(trigger.getAttribute("aria-expanded")).toBe("true")
   )
 
-  return { ...view, cell, trigger, onDocumentDataChange }
+  return { ...view, cell, trigger, onCellCommit }
 }
 
 async function chooseOption(option: HTMLElement) {
@@ -106,32 +106,32 @@ describe("json table enum accessibility interactions", () => {
 
   it("closes on Escape without committing and removes the active session", async () => {
     const sessions: Array<JsonTableActiveCell | null> = []
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = await openEnumFromClick({
-      onDocumentDataChange,
+      onCellCommit,
       onEditSessionChange: (editSession) => sessions.push(editSession),
     })
 
     fireEvent.keyDown(view.trigger, { key: "Escape" })
 
     await waitFor(() => expect(view.queryByRole("combobox")).toBeNull())
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
     expect(view.cell.getAttribute("data-active")).toBeNull()
     expect(latestSession(sessions)).toBeNull()
   })
 
   it("closes on outside pointer without committing and removes the active session", async () => {
     const sessions: Array<JsonTableActiveCell | null> = []
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = await openEnumFromClick({
-      onDocumentDataChange,
+      onCellCommit,
       onEditSessionChange: (editSession) => sessions.push(editSession),
     })
 
     fireEvent.pointerDown(document.body)
 
     await waitFor(() => expect(view.queryByRole("combobox")).toBeNull())
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
     expect(view.cell.getAttribute("data-active")).toBeNull()
     expect(latestSession(sessions)).toBeNull()
   })
@@ -157,22 +157,22 @@ describe("json table enum accessibility interactions", () => {
 
   it("commits a selected option exactly once and closes", async () => {
     const sessions: Array<JsonTableActiveCell | null> = []
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = await openEnumFromClick({
-      onDocumentDataChange,
+      onCellCommit,
       onEditSessionChange: (editSession) => sessions.push(editSession),
     })
 
     await chooseOption(view.getByRole("option", { name: "approved" }))
 
     await waitFor(() =>
-      expect(onDocumentDataChange).toHaveBeenCalledWith(
+      expect(onCellCommit).toHaveBeenCalledWith(
         interactionDocument.id,
         "status",
         "approved"
       )
     )
-    expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
+    expect(onCellCommit).toHaveBeenCalledTimes(1)
     await waitFor(() => expect(view.queryByRole("combobox")).toBeNull())
     expect(view.cell.getAttribute("data-active")).toBeNull()
     expect(latestSession(sessions)).toBeNull()
@@ -180,16 +180,16 @@ describe("json table enum accessibility interactions", () => {
 
   it("closes without committing when reselecting the current option", async () => {
     const sessions: Array<JsonTableActiveCell | null> = []
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = await openEnumFromClick({
-      onDocumentDataChange,
+      onCellCommit,
       onEditSessionChange: (editSession) => sessions.push(editSession),
     })
 
     await chooseOption(view.getByRole("option", { name: "draft" }))
 
     await waitFor(() => expect(view.queryByRole("combobox")).toBeNull())
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
     expect(view.cell.getAttribute("data-active")).toBeNull()
     expect(latestSession(sessions)).toBeNull()
   })

@@ -1,6 +1,10 @@
 "use client"
 
-import { measureLineStats, prepareWithSegments } from "@chenglou/pretext"
+import {
+  measureLineStats,
+  prepareWithSegments,
+  type PreparedTextWithSegments,
+} from "@chenglou/pretext"
 
 import type {
   PretextMarkdownBlock,
@@ -139,10 +143,13 @@ export function estimatePretextMarkdownChunkHeight({
   const fontFamily =
     chunk.kind === "frontmatter" ? CODE_FONT_FAMILY : BODY_FONT_FAMILY
   const font = `${Math.round(fontSize * fontScale)}px ${fontFamily}`
-  const prepared = prepareWithSegments(chunk.markdown || " ", font, {
+  const fallbackText = chunk.markdown || " "
+  const prepared = prepareWithSegmentsSafe(fallbackText, font, {
     whiteSpace: "pre-wrap",
   })
-  const stats = measureLineStats(prepared, textWidth / fontScale)
+  const stats = prepared
+    ? measureLineStatsSafe(prepared, textWidth / fontScale, fallbackText)
+    : estimatePretextMarkdownLineStats(fallbackText, textWidth / fontScale)
   const lineCount = Math.max(1, stats.lineCount)
   const syntaxAllowance = estimateMarkdownSyntaxAllowance(chunk)
   return Math.max(
@@ -200,10 +207,13 @@ export function estimatePretextMarkdownBlockHeight({
   const lineHeight = pretextMarkdownBlockLineHeight(block)
   const fontFamily = pretextMarkdownBlockFontFamily(block)
   const font = `${Math.round(fontSize * fontScale)}px ${fontFamily}`
-  const prepared = prepareWithSegments(block.markdown || " ", font, {
+  const fallbackText = block.markdown || " "
+  const prepared = prepareWithSegmentsSafe(fallbackText, font, {
     whiteSpace: "pre-wrap",
   })
-  const stats = measureLineStats(prepared, textWidth / fontScale)
+  const stats = prepared
+    ? measureLineStatsSafe(prepared, textWidth / fontScale, fallbackText)
+    : estimatePretextMarkdownLineStats(fallbackText, textWidth / fontScale)
   const lineCount = Math.max(1, stats.lineCount)
   return (
     lineCount * lineHeight * fontScale +
@@ -326,4 +336,42 @@ function estimatePretextMarkdownBlockSyntaxAllowance(
     default:
       return 0
   }
+}
+
+function prepareWithSegmentsSafe(
+  text: string,
+  font: string,
+  options?: Parameters<typeof prepareWithSegments>[2]
+) {
+  try {
+    return prepareWithSegments(text, font, options)
+  } catch {
+    return null
+  }
+}
+
+function measureLineStatsSafe(
+  prepared: PreparedTextWithSegments,
+  width: number,
+  fallbackText: string
+) {
+  try {
+    return measureLineStats(prepared, width)
+  } catch {
+    return estimatePretextMarkdownLineStats(fallbackText, width)
+  }
+}
+
+function estimatePretextMarkdownLineStats(text: string, width: number) {
+  const columns = Math.max(1, Math.floor(width / 8))
+  const lines = splitTextLines(text || " ")
+  const lineCount = lines.reduce(
+    (sum, line) => sum + Math.max(1, Math.ceil((line || " ").length / columns)),
+    0
+  )
+  const maxLineWidth = Math.min(
+    width,
+    Math.max(...lines.map((line) => (line || " ").length * 8), 1)
+  )
+  return { lineCount, maxLineWidth }
 }

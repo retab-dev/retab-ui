@@ -12,6 +12,7 @@ import type { JSONSchema7 } from "json-schema"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
+import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import { projectDocumentRows } from "@/components/json-table/lib/document-projection"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
@@ -19,11 +20,11 @@ import {
   getFieldMetadata,
   type FieldMetadata,
 } from "@/components/json-table/lib/schema-field-metadata"
-import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
 import { useSheetOptionsStore } from "@/components/json-table/table-options-store"
 import type { RowHeight } from "@/components/json-table/table-options-store"
 
+import { createTestCellCommitBridge } from "./json-table-interaction-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
 
 type StressLine = {
@@ -148,6 +149,9 @@ function StressTable({
       }),
     [tableDocument, visiblePaths]
   )
+  const primitiveEditStoreRef = React.useRef(
+    createJsonTablePrimitiveEditStore()
+  )
   const onUpdateDocument = React.useCallback(
     async (patch: Record<string, unknown>) => {
       onPatch(patch)
@@ -177,8 +181,12 @@ function StressTable({
       projectedRows={projectedRows}
       visibleColumns={visiblePaths.map(visibleColumn)}
       rowCount={projectedRows.length}
-      primitiveEditStore={createJsonTablePrimitiveEditStore()}
-      onUpdateDocument={onUpdateDocument}
+      primitiveEditStore={primitiveEditStoreRef.current}
+      {...createTestCellCommitBridge({
+        documentData: tableDocument.data,
+        onUpdateDocument,
+        primitiveEditStore: primitiveEditStoreRef.current,
+      })}
       columnWidth="xxl"
       overscan={overscan}
       jumpOverscan={jumpOverscan}

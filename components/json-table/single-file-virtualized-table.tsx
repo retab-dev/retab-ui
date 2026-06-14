@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { JsonTableHeaderCell } from "@/components/json-table/header-cell"
+import type { JsonTableCellCommitHandler } from "@/components/json-table/json-table-cell-commit"
 import type {
   JsonTableCellHoverInfo,
   VisibleColumn,
@@ -33,16 +34,8 @@ import type {
 } from "@/components/json-table/json-table-edit-session"
 import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
 import { createJsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
-import {
-  createJsonTablePrimitiveEditStore,
-  type JsonTablePrimitiveEditStore,
-} from "@/components/json-table/json-table-primitive-edit-store"
-import {
-  markJsonTableProfile,
-  recordJsonTableRender,
-} from "@/components/json-table/json-table-profiler"
-import { setValueAtMaterializedPath } from "@/components/json-table/lib/document-patches"
-import { getValueAtPath } from "@/components/json-table/lib/document-paths"
+import type { JsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
+import { recordJsonTableRender } from "@/components/json-table/json-table-profiler"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import { buildHeaderGridRows } from "@/components/json-table/lib/header-nodes"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
@@ -75,8 +68,8 @@ interface SingleFileVirtualizedTableProps {
   projectedRows: ProjectedRow[]
   visibleColumns: VisibleColumn[]
   rowCount: number
-  primitiveEditStore?: JsonTablePrimitiveEditStore
-  onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
+  primitiveEditStore: JsonTablePrimitiveEditStore
+  onCellCommit: JsonTableCellCommitHandler
   columnWidth?: ColumnWidth
   onCellHoverStart?: (info: JsonTableCellHoverInfo) => void
   onCellHoverEnd?: () => void
@@ -190,7 +183,7 @@ export const SingleFileVirtualizedTable =
       visibleColumns,
       rowCount,
       primitiveEditStore,
-      onUpdateDocument,
+      onCellCommit,
       columnWidth: propColumnWidth,
       onCellHoverStart,
       onCellHoverEnd,
@@ -206,24 +199,8 @@ export const SingleFileVirtualizedTable =
       const primitiveActiveCellStoreRef = useRef(
         createJsonTablePrimitiveActiveCellStore()
       )
-      const fallbackPrimitiveEditStoreRef = useRef(
-        createJsonTablePrimitiveEditStore()
-      )
-      const tablePrimitiveEditStore =
-        primitiveEditStore ?? fallbackPrimitiveEditStoreRef.current
       const primitiveEditorHandleRef = useRef<DataCellEditorHandle | null>(null)
       const structuredEditSessionIdRef = useRef(0)
-      const documentDataRef = useRef(document.data)
-      const onUpdateDocumentRef = useRef(onUpdateDocument)
-
-      React.useLayoutEffect(() => {
-        onUpdateDocumentRef.current = onUpdateDocument
-      }, [onUpdateDocument])
-
-      React.useEffect(() => {
-        documentDataRef.current = document.data
-        tablePrimitiveEditStore.reconcileDocumentData(document.data)
-      }, [document.data, tablePrimitiveEditStore])
 
       const totalWidth = fixedGridColumnWidths(visibleColumns).reduce(
         (total, widthPx) => total + widthPx,
@@ -300,41 +277,6 @@ export const SingleFileVirtualizedTable =
       const closeStructuredEditSession = React.useCallback(() => {
         setStructuredEditSession(null)
       }, [])
-      const patchDocumentData = React.useCallback(
-        (materializedFieldPath: string, value: unknown) => {
-          const updateDocument = onUpdateDocumentRef.current
-          if (!updateDocument) return
-
-          markJsonTableProfile("document-patch-start", {
-            fieldPath: materializedFieldPath,
-          })
-          const baseData = documentDataRef.current
-          const previousValue = getValueAtPath(baseData, materializedFieldPath)
-          const nextData = setValueAtMaterializedPath(
-            baseData,
-            materializedFieldPath,
-            value
-          )
-          documentDataRef.current = nextData
-          tablePrimitiveEditStore.commitValue(
-            materializedFieldPath,
-            value,
-            previousValue
-          )
-          tablePrimitiveEditStore.recordDocumentEcho(nextData)
-          updateDocument({ data: nextData })
-          markJsonTableProfile("document-patch-end", {
-            fieldPath: materializedFieldPath,
-          })
-        },
-        [tablePrimitiveEditStore]
-      )
-      const handleDocumentDataChange = React.useCallback(
-        (_docId: string, materializedFieldPath: string, value: unknown) => {
-          patchDocumentData(materializedFieldPath, value)
-        },
-        [patchDocumentData]
-      )
       const startStructuredEditSession = React.useCallback(
         (
           projectedCell: ProjectedRow["cells"][number],
@@ -442,7 +384,7 @@ export const SingleFileVirtualizedTable =
                       primitiveActiveCellStore={
                         primitiveActiveCellStoreRef.current
                       }
-                      primitiveEditStore={tablePrimitiveEditStore}
+                      primitiveEditStore={primitiveEditStore}
                       setPrimitiveActiveCell={setPrimitiveActiveCell}
                       primitiveEditorHandleRef={primitiveEditorHandleRef}
                       structuredEditSession={structuredEditSession}
@@ -453,7 +395,7 @@ export const SingleFileVirtualizedTable =
                       closeStructuredEditSession={closeStructuredEditSession}
                       onCellHoverStart={onCellHoverStart}
                       onCellHoverEnd={onCellHoverEnd}
-                      onDocumentDataChange={handleDocumentDataChange}
+                      onCellCommit={onCellCommit}
                       isJsonEditable={isJsonEditable}
                     />
                   )

@@ -44,7 +44,6 @@ import { MarkdownViewerDemo } from "@/components/markdown-viewer-demo"
 import { MermaidDiagram } from "@/components/mermaid-diagram"
 import { PdfViewerDemo } from "@/components/pdf-viewer-demo"
 import { PptxViewerDemo } from "@/components/pptx-viewer-demo"
-import { PretextMarkdownViewerDemo } from "@/components/pretext-markdown-viewer-demo"
 import { PropertyFormDemo } from "@/components/property-form-demo"
 import { RetabSchemaBuilderDemo } from "@/components/retab-schema-builder-demo"
 import {
@@ -403,7 +402,6 @@ export const mdxComponents = {
   FileSystemDemo,
   TextViewerDemo,
   MarkdownViewerDemo,
-  PretextMarkdownViewerDemo,
   HtmlViewerDemo,
   CodeViewerDemo,
   Link: ({ className, ...props }: React.ComponentProps<typeof Link>) => (

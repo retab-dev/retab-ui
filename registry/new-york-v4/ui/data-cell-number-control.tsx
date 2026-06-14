@@ -1,9 +1,7 @@
 "use client"
 
-import {
-  DataCellInputControl,
-  type DataCellNumberControlProps,
-} from "@/registry/new-york-v4/ui/data-cell-text-control"
+import type { DataCellNumberControlProps } from "@/registry/new-york-v4/ui/data-cell-control-contract"
+import { DataCellInputControl } from "@/registry/new-york-v4/ui/data-cell-text-control"
 
 const dataCellNumberKeyPattern = /^[0-9.+-]$/
 

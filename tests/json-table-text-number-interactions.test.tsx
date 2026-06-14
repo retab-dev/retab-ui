@@ -5,10 +5,11 @@ import { cleanup, fireEvent, render, waitFor } from "@testing-library/react"
 import type { JSONSchema7 } from "json-schema"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
+import type { JsonTableCellCommit } from "@/components/json-table/json-table-cell-commit"
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
 import type {
-  JsonTableActiveCell,
   JsonTableActivationIntent,
+  JsonTableActiveCell,
   JsonTablePrimitiveActiveCell,
   JsonTableStructuredEditSession,
 } from "@/components/json-table/json-table-edit-session"
@@ -46,6 +47,12 @@ const tableDocument: TableDocument = {
   },
 }
 
+type TestCellCommit = (
+  docId: string,
+  materializedFieldPath: string,
+  value: unknown
+) => void
+
 function visibleColumn(key: string): VisibleColumn {
   return {
     key,
@@ -68,7 +75,7 @@ function findEditableCell(
 }
 
 function SingleFileFormRowHarness({
-  onDocumentDataChange,
+  onCellCommit,
   onEditSessionChange,
   ...props
 }: Omit<
@@ -77,20 +84,20 @@ function SingleFileFormRowHarness({
   | "primitiveEditStore"
   | "setPrimitiveActiveCell"
   | "structuredEditSession"
-  | "startStructuredEditSession"
-  | "setStructuredEditSessionOverlayOpen"
-  | "closeStructuredEditSession"
-  | "onDocumentDataChange"
-> & {
-  onDocumentDataChange?: React.ComponentProps<
-    typeof SingleFileFormRow
-  >["onDocumentDataChange"]
+	  | "startStructuredEditSession"
+	  | "setStructuredEditSessionOverlayOpen"
+	  | "closeStructuredEditSession"
+	  | "onCellCommit"
+	> & {
+  onCellCommit?: TestCellCommit
   onEditSessionChange?: (activeCell: JsonTableActiveCell | null) => void
 }) {
   const primitiveActiveCellStoreRef = React.useRef(
     createJsonTablePrimitiveActiveCellStore()
   )
-  const primitiveEditStoreRef = React.useRef(createJsonTablePrimitiveEditStore())
+  const primitiveEditStoreRef = React.useRef(
+    createJsonTablePrimitiveEditStore()
+  )
   const [structuredEditSession, setStructuredEditSessionState] =
     React.useState<JsonTableStructuredEditSession | null>(null)
   const sessionIdRef = React.useRef(0)
@@ -142,6 +149,16 @@ function SingleFileFormRowHarness({
     setStructuredEditSessionState(null)
     onEditSessionChange?.(primitiveActiveCellStoreRef.current.getSnapshot())
   }, [onEditSessionChange])
+  const handleCellCommit = React.useCallback(
+    (commit: JsonTableCellCommit) => {
+      ;(onCellCommit ?? vi.fn())(
+        props.document.id,
+        commit.fieldPath,
+        commit.value
+      )
+    },
+    [onCellCommit, props.document.id]
+  )
 
   return (
     <SingleFileFormRow
@@ -153,20 +170,18 @@ function SingleFileFormRowHarness({
       startStructuredEditSession={startStructuredEditSession}
       setStructuredEditSessionOverlayOpen={setStructuredEditSessionOverlayOpen}
       closeStructuredEditSession={closeStructuredEditSession}
-      onDocumentDataChange={onDocumentDataChange ?? vi.fn()}
+      onCellCommit={handleCellCommit}
     />
   )
 }
 
 function renderInteractionRow({
   visiblePaths,
-  onDocumentDataChange = vi.fn(),
+  onCellCommit = vi.fn(),
   onEditSessionChange,
 }: {
   visiblePaths: string[]
-  onDocumentDataChange?: React.ComponentProps<
-    typeof SingleFileFormRow
-  >["onDocumentDataChange"]
+  onCellCommit?: TestCellCommit
   onEditSessionChange?: (activeCell: JsonTableActiveCell | null) => void
 }) {
   const rows = projectDocumentRows({
@@ -186,7 +201,7 @@ function renderInteractionRow({
           rowIdx={0}
           rowTopPx={0}
           rowHeightPx={32}
-          onDocumentDataChange={onDocumentDataChange}
+          onCellCommit={onCellCommit}
           onEditSessionChange={onEditSessionChange}
           isJsonEditable
         />
@@ -246,7 +261,7 @@ describe("json table text and number interactions", () => {
     const onBlurChange = vi.fn()
     const blurView = renderInteractionRow({
       visiblePaths: ["vendor"],
-      onDocumentDataChange: onBlurChange,
+      onCellCommit: onBlurChange,
     })
     await activateCell(blurView, "vendor")
     fireEvent.change(blurView.getByRole("textbox"), {
@@ -259,7 +274,7 @@ describe("json table text and number interactions", () => {
     const onEnterChange = vi.fn()
     const enterView = renderInteractionRow({
       visiblePaths: ["vendor"],
-      onDocumentDataChange: onEnterChange,
+      onCellCommit: onEnterChange,
     })
     await activateCell(enterView, "vendor")
     fireEvent.change(enterView.getByRole("textbox"), {
@@ -272,7 +287,7 @@ describe("json table text and number interactions", () => {
     const onEscapeChange = vi.fn()
     const escapeView = renderInteractionRow({
       visiblePaths: ["vendor"],
-      onDocumentDataChange: onEscapeChange,
+      onCellCommit: onEscapeChange,
     })
     await activateCell(escapeView, "vendor")
     fireEvent.change(escapeView.getByRole("textbox"), {
@@ -283,23 +298,23 @@ describe("json table text and number interactions", () => {
   })
 
   it("does not save unchanged text values", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["vendor"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     await activateCell(view, "vendor")
     fireEvent.blur(view.getByRole("textbox"))
 
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("commits empty text and number cells as null", async () => {
     const onTextChange = vi.fn()
     const textView = renderInteractionRow({
       visiblePaths: ["note"],
-      onDocumentDataChange: onTextChange,
+      onCellCommit: onTextChange,
     })
     await activateCell(textView, "note")
     fireEvent.change(textView.getByRole("textbox"), { target: { value: "" } })
@@ -310,7 +325,7 @@ describe("json table text and number interactions", () => {
     const onNumberChange = vi.fn()
     const numberView = renderInteractionRow({
       visiblePaths: ["amount"],
-      onDocumentDataChange: onNumberChange,
+      onCellCommit: onNumberChange,
     })
     await activateCell(numberView, "amount")
     fireEvent.change(numberView.getByRole("spinbutton"), {
@@ -324,7 +339,7 @@ describe("json table text and number interactions", () => {
     const onValidNumberChange = vi.fn()
     const numberView = renderInteractionRow({
       visiblePaths: ["amount"],
-      onDocumentDataChange: onValidNumberChange,
+      onCellCommit: onValidNumberChange,
     })
     await activateCell(numberView, "amount")
     fireEvent.change(numberView.getByRole("spinbutton"), {
@@ -337,7 +352,7 @@ describe("json table text and number interactions", () => {
     const onInvalidIntegerChange = vi.fn()
     const integerView = renderInteractionRow({
       visiblePaths: ["count"],
-      onDocumentDataChange: onInvalidIntegerChange,
+      onCellCommit: onInvalidIntegerChange,
     })
     await activateCell(integerView, "count")
     fireEvent.change(integerView.getByRole("spinbutton"), {

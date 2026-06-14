@@ -142,10 +142,10 @@ async function openPicker(view: RenderedView, fieldPath: string) {
 
 describe("json table browser sequence hardening", () => {
   it("keeps a text editor open through the complete browser click sequence that started it", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["vendor"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     browserClick(await editableCell(view, "vendor"))
@@ -153,7 +153,7 @@ describe("json table browser sequence hardening", () => {
     const input = textInput(view)
     expect(document.activeElement).toBe(input)
     expect(input.value).toBe("ACME")
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("keeps a collapsed text caret when the mounted input receives the activation click tail", async () => {
@@ -193,10 +193,10 @@ describe("json table browser sequence hardening", () => {
   })
 
   it("preserves a dirty text draft through rapid same-cell clicks and commits once on blur", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["vendor"],
-      onDocumentDataChange,
+      onCellCommit,
     })
     const cell = await editableCell(view, "vendor")
 
@@ -207,12 +207,12 @@ describe("json table browser sequence hardening", () => {
     browserClick(cell)
 
     expect(textInput(view).value).toBe("BrowserCo")
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
 
     fireEvent.blur(textInput(view))
 
-    expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
-    expect(onDocumentDataChange).toHaveBeenCalledWith(
+    expect(onCellCommit).toHaveBeenCalledTimes(1)
+    expect(onCellCommit).toHaveBeenCalledWith(
       "doc_1",
       "vendor",
       "BrowserCo"
@@ -220,11 +220,11 @@ describe("json table browser sequence hardening", () => {
   })
 
   it("keeps double-click on a scalar cell from duplicating sessions or commits", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const sessions: Array<string | null> = []
     const view = renderInteractionRow({
       visiblePaths: ["amount"],
-      onDocumentDataChange,
+      onCellCommit,
       onEditSessionChange: (session) =>
         sessions.push(session?.fieldPath ?? null),
     })
@@ -236,17 +236,17 @@ describe("json table browser sequence hardening", () => {
 
     expect(numberInput(view).value).toBe("12.5")
     expect(sessions).toEqual(["amount"])
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it.each(["Enter", "F2"] as const)(
     "keeps keyboard %s activation stable when the next event is a cell click",
     async (key) => {
-      const onDocumentDataChange = vi.fn()
+      const onCellCommit = vi.fn()
       const sessions: Array<string | null> = []
       const view = renderInteractionRow({
         visiblePaths: ["vendor"],
-        onDocumentDataChange,
+        onCellCommit,
         onEditSessionChange: (session) =>
           sessions.push(session?.fieldPath ?? null),
       })
@@ -258,15 +258,15 @@ describe("json table browser sequence hardening", () => {
 
       expect(textInput(view).value).toBe("ACME")
       expect(sessions).toEqual(["vendor"])
-      expect(onDocumentDataChange).not.toHaveBeenCalled()
+      expect(onCellCommit).not.toHaveBeenCalled()
     }
   )
 
   it("does not let an outside pointer between pointerdown and click leave a stale scalar session", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["vendor"],
-      onDocumentDataChange,
+      onCellCommit,
     })
     const cell = await editableCell(view, "vendor")
 
@@ -277,26 +277,26 @@ describe("json table browser sequence hardening", () => {
     finishBrowserClick(cell)
 
     expect(textInput(view).value).toBe("ACME")
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("toggles a boolean cell exactly once for a complete browser click sequence", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["is_paid"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     browserClick(await editableCell(view, "is_paid"))
 
     await waitFor(() =>
-      expect(onDocumentDataChange).toHaveBeenCalledWith(
+      expect(onCellCommit).toHaveBeenCalledWith(
         "doc_1",
         "is_paid",
         true
       )
     )
-    expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
+    expect(onCellCommit).toHaveBeenCalledTimes(1)
     expect(findReadonlyCell(view.container, "is_paid").dataset.active).toBe(
       undefined
     )
@@ -304,10 +304,10 @@ describe("json table browser sequence hardening", () => {
   })
 
   it("keeps enum dropdowns open through a complete browser activation click", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["status"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     browserClick(await editableDataCell(view, "status"))
@@ -317,28 +317,28 @@ describe("json table browser sequence hardening", () => {
       expect(trigger.getAttribute("aria-expanded")).toBe("true")
     )
     expect(await view.findByRole("option", { name: "approved" })).toBeTruthy()
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("keeps enum dropdowns open after the follow-up events from the activation click", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["status"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     const { trigger } = await openEnum(view, "status")
 
     expect(trigger.getAttribute("aria-expanded")).toBe("true")
     expect(await view.findByRole("option", { name: "approved" })).toBeTruthy()
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("keeps click-opened enum dropdowns open after the activation sequence settles", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["status"],
-      onDocumentDataChange,
+      onCellCommit,
     })
     const cell = await editableDataCell(view, "status")
 
@@ -348,35 +348,35 @@ describe("json table browser sequence hardening", () => {
 
     expect(trigger.getAttribute("aria-expanded")).toBe("true")
     expect(await view.findByRole("option", { name: "approved" })).toBeTruthy()
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("commits an enum option once from a complete browser option click sequence", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["status"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     await openEnum(view, "status")
     await chooseOption(view, "approved")
 
     await waitFor(() =>
-      expect(onDocumentDataChange).toHaveBeenCalledWith(
+      expect(onCellCommit).toHaveBeenCalledWith(
         "doc_1",
         "status",
         "approved"
       )
     )
-    expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
+    expect(onCellCommit).toHaveBeenCalledTimes(1)
     await waitFor(() => expect(view.queryByRole("combobox")).toBeNull())
   })
 
   it("does not open an enum dropdown when the pointerdown is abandoned outside the cell", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["status"],
-      onDocumentDataChange,
+      onCellCommit,
     })
     const cell = await editableCell(view, "status")
 
@@ -385,42 +385,42 @@ describe("json table browser sequence hardening", () => {
     finishBrowserClick(document.body)
 
     await waitFor(() => expect(view.queryByRole("combobox")).toBeNull())
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("opens picker overlays through a complete browser activation click", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["shipped_at"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     browserClick(await editableCell(view, "shipped_at"))
 
     await view.findByRole("dialog")
     expect(pickerPopup()).toBeTruthy()
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("keeps picker overlays open after the follow-up events from the activation click", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["shipped_at"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     const { trigger } = await openPicker(view, "shipped_at")
 
     expect(trigger.getAttribute("aria-expanded")).toBe("true")
     expect(pickerPopup()).toBeTruthy()
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("closes picker overlays cleanly when outside pointerdown lands before the original click completes", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["shipped_at"],
-      onDocumentDataChange,
+      onCellCommit,
     })
     const cell = await editableCell(view, "shipped_at")
 
@@ -432,6 +432,6 @@ describe("json table browser sequence hardening", () => {
 
     await waitFor(() => expect(view.queryByRole("dialog")).toBeNull())
     expect(pickerPopup()).toBeNull()
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 })

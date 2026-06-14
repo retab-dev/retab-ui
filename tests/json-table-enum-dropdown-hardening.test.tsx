@@ -48,25 +48,25 @@ const enumDocument: TableDocument = {
 function renderEnumRow({
   document = enumDocument,
   visiblePaths,
-  onDocumentDataChange = vi.fn(),
+  onCellCommit = vi.fn(),
   onEditSessionChange,
 }: {
   document?: TableDocument
   visiblePaths: string[]
-  onDocumentDataChange?: Parameters<
+  onCellCommit?: Parameters<
     typeof renderInteractionRow
-  >[0]["onDocumentDataChange"]
+  >[0]["onCellCommit"]
   onEditSessionChange?: Parameters<
     typeof renderInteractionRow
   >[0]["onEditSessionChange"]
 }) {
   return {
-    onDocumentDataChange,
+    onCellCommit,
     ...renderInteractionRow({
       document,
       schema: enumSchema,
       visiblePaths,
-      onDocumentDataChange,
+      onCellCommit,
       onEditSessionChange,
     }),
   }
@@ -158,79 +158,79 @@ describe("json table enum dropdown hardening", () => {
   })
 
   it("commits a changed option and closes the dropdown session", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderEnumRow({
       visiblePaths: ["status"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     await openEnumCell(view, "status")
     await selectOption(view, "paid")
 
     await waitFor(() =>
-      expect(onDocumentDataChange).toHaveBeenCalledWith(
+      expect(onCellCommit).toHaveBeenCalledWith(
         enumDocument.id,
         "status",
         "paid"
       )
     )
-    expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
+    expect(onCellCommit).toHaveBeenCalledTimes(1)
     await expectDropdownClosed(view)
   })
 
   it("closes on Escape without committing a document change", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderEnumRow({
       visiblePaths: ["status"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     const { trigger } = await openEnumCell(view, "status")
     fireEvent.keyDown(trigger, { key: "Escape" })
 
     await expectDropdownClosed(view)
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("closes on outside pointer interaction without committing a document change", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderEnumRow({
       visiblePaths: ["status"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     await openEnumCell(view, "status")
     pointerDown(document.body)
 
     await expectDropdownClosed(view)
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("closes without changing the document when selecting the current value", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderEnumRow({
       visiblePaths: ["status"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     await openEnumCell(view, "status")
     await selectOption(view, "draft")
 
     await expectDropdownClosed(view)
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("commits number, sentinel-like string, and null enum values with JSON identity intact", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderEnumRow({
       visiblePaths: ["numeric_status", "sentinel_status", "nullable_status"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     await openEnumCell(view, "numeric_status")
     await selectOption(view, "2")
     await waitFor(() =>
-      expect(onDocumentDataChange).toHaveBeenCalledWith(
+      expect(onCellCommit).toHaveBeenCalledWith(
         enumDocument.id,
         "numeric_status",
         2
@@ -240,7 +240,7 @@ describe("json table enum dropdown hardening", () => {
     await openEnumCell(view, "sentinel_status")
     await selectOption(view, "option:1")
     await waitFor(() =>
-      expect(onDocumentDataChange).toHaveBeenCalledWith(
+      expect(onCellCommit).toHaveBeenCalledWith(
         enumDocument.id,
         "sentinel_status",
         "option:1"
@@ -250,14 +250,14 @@ describe("json table enum dropdown hardening", () => {
     await openEnumCell(view, "nullable_status")
     await selectOption(view, /no selection/i)
     await waitFor(() =>
-      expect(onDocumentDataChange).toHaveBeenCalledWith(
+      expect(onCellCommit).toHaveBeenCalledWith(
         enumDocument.id,
         "nullable_status",
         null
       )
     )
 
-    expect(onDocumentDataChange.mock.calls).toEqual([
+    expect(onCellCommit.mock.calls).toEqual([
       [enumDocument.id, "numeric_status", 2],
       [enumDocument.id, "sentinel_status", "option:1"],
       [enumDocument.id, "nullable_status", null],
@@ -266,10 +266,10 @@ describe("json table enum dropdown hardening", () => {
   })
 
   it("survives repeated open and close cycles before committing once", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderEnumRow({
       visiblePaths: ["status"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     let active = await openEnumCell(view, "status")
@@ -291,22 +291,22 @@ describe("json table enum dropdown hardening", () => {
     await selectOption(view, "void")
 
     await waitFor(() =>
-      expect(onDocumentDataChange).toHaveBeenCalledWith(
+      expect(onCellCommit).toHaveBeenCalledWith(
         enumDocument.id,
         "status",
         "void"
       )
     )
-    expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
+    expect(onCellCommit).toHaveBeenCalledTimes(1)
     await expectDropdownClosed(view)
   })
 
   it("switches directly from one enum cell to another without committing the first cell", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const sessions: Array<string | null> = []
     const view = renderEnumRow({
       visiblePaths: ["status", "payment_type"],
-      onDocumentDataChange,
+      onCellCommit,
       onEditSessionChange: (session) =>
         sessions.push(session?.fieldPath ?? null),
     })
@@ -327,7 +327,7 @@ describe("json table enum dropdown hardening", () => {
     ).toBeNull()
     expect(secondCell.getAttribute("data-active")).toBe("true")
     expect(await view.findByRole("option", { name: "CREDIT" })).toBeTruthy()
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
     expect(sessions).toContain("status")
     expect(sessions).toContain("payment_type")
   })

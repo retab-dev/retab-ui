@@ -72,21 +72,19 @@ export function FileSystemBlock() {
   )
 
   return (
-    <div className="h-full min-h-[680px] bg-background p-4">
-      <FileSystem
-        className="mx-auto h-full max-w-7xl"
-        items={items}
-        onPathChange={(path) => replaceState({ path, selectedPath: null })}
-        onQueryChange={(query) => replaceState({ query })}
-        onSelectionChange={(entry) =>
-          replaceState({ selectedPath: entry?.path ?? null })
-        }
-        onViewChange={(view) => replaceState({ view })}
-        path={state.path}
-        query={state.query}
-        selectedPath={state.selectedPath}
-        view={state.view}
-      />
-    </div>
+    <FileSystem
+      className="h-full min-h-[680px]"
+      items={items}
+      onPathChange={(path) => replaceState({ path, selectedPath: null })}
+      onQueryChange={(query) => replaceState({ query })}
+      onSelectionChange={(entry) =>
+        replaceState({ selectedPath: entry?.path ?? null })
+      }
+      onViewChange={(view) => replaceState({ view })}
+      path={state.path}
+      query={state.query}
+      selectedPath={state.selectedPath}
+      view={state.view}
+    />
   )
 }

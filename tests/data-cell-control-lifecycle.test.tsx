@@ -2,11 +2,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import {
-  createDataCellPointerActivationSource,
-  DataCell,
-  type DataCellEditorHandle,
-} from "@/components/ui/data-cell"
+import { DataCell, type DataCellEditorHandle } from "@/components/ui/data-cell"
 
 afterEach(() => {
   cleanup()
@@ -60,11 +56,12 @@ describe("DataCell direct control lifecycle", () => {
         kind="text"
         mode="edit"
         value="abcdefghij"
-        activationSource={createDataCellPointerActivationSource({
+        activationRequest={{
+          kind: "pointer",
           clientX: 60,
           clientY: 8,
           detail: 1,
-        })}
+        }}
       />
     )
 
@@ -93,11 +90,12 @@ describe("DataCell direct control lifecycle", () => {
         kind="text"
         mode="edit"
         value="USD"
-        activationSource={createDataCellPointerActivationSource({
+        activationRequest={{
+          kind: "pointer",
           clientX: 10,
           clientY: 8,
           detail: 1,
-        })}
+        }}
       />
     )
 
@@ -408,11 +406,12 @@ describe("DataCell direct control lifecycle", () => {
           mode="edit"
           value="2026-06-12"
           autoFocus
-          activationSource={createDataCellPointerActivationSource({
+          activationRequest={{
+            kind: "pointer",
             clientX: 24,
             clientY: 12,
             detail: 1,
-          })}
+          }}
         />
         <button type="button">Outside</button>
       </div>

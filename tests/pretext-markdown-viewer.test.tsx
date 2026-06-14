@@ -2,18 +2,36 @@
 
 import * as React from "react"
 import {
+  act,
   cleanup,
   fireEvent,
   render,
   screen,
   waitFor,
 } from "@testing-library/react"
+import { hydrateRoot } from "react-dom/client"
+import { renderToString } from "react-dom/server"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   PretextMarkdownViewer,
   type TextViewerHandle,
 } from "@/components/ui/pretext-markdown-viewer"
+
+vi.mock("mermaid", () => ({
+  default: {
+    initialize: vi.fn(),
+    render: vi.fn(async (_id: string, source: string) => {
+      if (source.includes("not-a-diagram")) {
+        throw new Error("Mermaid parse error")
+      }
+
+      return {
+        svg: `<svg role="img" aria-label="Mermaid diagram" data-testid="mock-mermaid-svg" data-source="${encodeURIComponent(source)}" xmlns="http://www.w3.org/2000/svg"></svg>`,
+      }
+    }),
+  },
+}))
 
 function markdownSource(text: string, fileName = "notes.md") {
   return {
@@ -119,6 +137,39 @@ afterEach(() => {
 })
 
 describe("PretextMarkdownViewer", () => {
+  it("hydrates inline server markup into rendered Markdown content", async () => {
+    const source = markdownSource("# Hydrated\n\n> [!NOTE]\n> Ready.")
+    const serverHtml = renderToString(
+      <PretextMarkdownViewer source={source} toolbar={false} />
+    )
+    expect(serverHtml).toContain('data-slot="pretext-markdown-virtual-canvas"')
+    expect(serverHtml).not.toContain('data-slot="text-body-skeleton"')
+
+    const container = document.createElement("div")
+    container.innerHTML = serverHtml
+    document.body.appendChild(container)
+
+    const root = hydrateRoot(
+      container,
+      <PretextMarkdownViewer source={source} toolbar={false} />
+    )
+
+    try {
+      expect(
+        await screen.findByRole("heading", { name: "Hydrated" })
+      ).toBeTruthy()
+      expect(screen.getByRole("note", { name: "Note" })).toBeTruthy()
+      expect(
+        container.querySelector('[data-slot="text-body-skeleton"]')
+      ).toBeNull()
+    } finally {
+      await act(async () => {
+        root.unmount()
+      })
+      container.remove()
+    }
+  })
+
   it("renders markdown as a continuous Pretext virtual document", async () => {
     const { container } = render(
       <PretextMarkdownViewer
@@ -435,13 +486,66 @@ describe("PretextMarkdownViewer", () => {
       />
     )
 
-    expect(await screen.findByText(/Important:/)).toBeTruthy()
+    expect(await screen.findByText("Important")).toBeTruthy()
     expect(screen.getByText("carefully")).toBeTruthy()
     expect(screen.getByRole("note", { name: "Important" })).toBeTruthy()
     expect(container.textContent).not.toContain("[!IMPORTANT]")
+    expect(container.textContent).not.toContain("Important:")
     expect(
       container.querySelector('[data-pretext-alert-kind="important"]')
     ).toBeTruthy()
+    expect(container.querySelector("[data-pretext-alert-title]")).toBeTruthy()
+    expect(container.querySelector("[data-pretext-alert-body]")).toBeTruthy()
+    expect(container.querySelector(".lucide-badge-alert")).toBeTruthy()
+  })
+
+  it("renders every GitHub alert variant with separated titles and bodies", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "> [!NOTE]",
+            "> Read this.",
+            "",
+            "> [!TIP]",
+            "> Try this.",
+            "",
+            "> [!IMPORTANT]",
+            "> Remember this.",
+            "",
+            "> [!WARNING]",
+            "> Watch this.",
+            "",
+            "> [!CAUTION]",
+            "> Stop here.",
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    for (const name of ["Note", "Tip", "Important", "Warning", "Caution"]) {
+      expect(await screen.findByRole("note", { name })).toBeTruthy()
+    }
+
+    expect(
+      Array.from(container.querySelectorAll("[data-pretext-alert-kind]")).map(
+        (node) => node.getAttribute("data-pretext-alert-kind")
+      )
+    ).toEqual(["note", "tip", "important", "warning", "caution"])
+    expect(
+      container.querySelectorAll("[data-pretext-alert-title]")
+    ).toHaveLength(5)
+    expect(
+      container.querySelectorAll("[data-pretext-alert-body]")
+    ).toHaveLength(5)
+    expect(container.textContent).not.toContain("[!NOTE]")
+    expect(container.textContent).not.toContain("[!TIP]")
+    expect(container.querySelector(".lucide-info")).toBeTruthy()
+    expect(container.querySelector(".lucide-lightbulb")).toBeTruthy()
+    expect(container.querySelector(".lucide-badge-alert")).toBeTruthy()
+    expect(container.querySelector(".lucide-triangle-alert")).toBeTruthy()
+    expect(container.querySelector(".lucide-circle-alert")).toBeTruthy()
   })
 
   it("renders directive callouts with normalized titles and aliases", async () => {
@@ -480,29 +584,35 @@ describe("PretextMarkdownViewer", () => {
     render(
       <PretextMarkdownViewer
         source={markdownSource(
-          'Use "quotes" -> arrows :sparkles: and `literal -> :sparkles:`.'
+          'Use "quotes" -- dash ... -> arrows 1/2 :sparkles: and `literal "quotes" -- ... -> 1/2 :sparkles:`.'
         )}
         toolbar={false}
       />
     )
 
     expect(await screen.findByText(/“quotes”/)).toBeTruthy()
-    expect(screen.getByText(/→ arrows ✨/)).toBeTruthy()
-    expect(screen.getByText("literal -> :sparkles:")).toBeTruthy()
+    expect(screen.getByText(/— dash … → arrows ½ ✨/)).toBeTruthy()
+    expect(
+      screen.getByText('literal "quotes" -- ... -> 1/2 :sparkles:')
+    ).toBeTruthy()
   })
 
   it("renders common GitHub emoji shortcodes while keeping code literal", async () => {
     render(
       <PretextMarkdownViewer
         source={markdownSource(
-          "Ship :rocket: fixes :bug: docs :memo: and `literal :rocket: :bug:`."
+          "Ship :rocket: fixes :bug: docs :memo: atom :atom_symbol: and `literal :rocket: :bug: :atom_symbol:`."
         )}
         toolbar={false}
       />
     )
 
-    expect(await screen.findByText(/Ship 🚀 fixes 🐛 docs 📝/)).toBeTruthy()
-    expect(screen.getByText("literal :rocket: :bug:")).toBeTruthy()
+    expect(
+      await screen.findByText(/Ship 🚀 fixes 🐛 docs 📝 atom ⚛️/)
+    ).toBeTruthy()
+    expect(
+      screen.getByText("literal :rocket: :bug: :atom_symbol:")
+    ).toBeTruthy()
   })
 
   it("renders GFM inline semantics for breaks, strike, and autolinks", async () => {
@@ -919,6 +1029,95 @@ describe("PretextMarkdownViewer", () => {
     expect(container.textContent).not.toContain("::image")
   })
 
+  it("renders restricted Video components through the safe media surface", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            '<Video src="/demo.mp4" label="Demo video" title="Product demo" />',
+            "",
+            '::video{src="/directive-demo.webm" label="Directive video" title="Directive demo"}',
+            "",
+            '<Video src="javascript:alert(1)" label="Blocked video" />',
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(
+      await screen.findByRole("group", { name: "Demo video" })
+    ).toBeTruthy()
+    const videos = Array.from(container.querySelectorAll("video"))
+    expect(videos).toHaveLength(2)
+    expect(videos[0]?.getAttribute("src")).toBe("/demo.mp4")
+    expect(videos[0]?.hasAttribute("controls")).toBe(true)
+    expect(videos[0]?.getAttribute("preload")).toBe("metadata")
+    expect(videos[0]?.getAttribute("title")).toBe("Product demo")
+    expect(screen.getByText("Product demo")).toBeTruthy()
+    expect(videos[1]?.getAttribute("src")).toBe("/directive-demo.webm")
+    expect(screen.getByText("Directive demo")).toBeTruthy()
+    expect(videos[0]?.closest('[data-pretext-component="Video"]')).toBeTruthy()
+    expect(
+      screen
+        .getByRole("group", { name: "Video blocked: Blocked video" })
+        .getAttribute("data-pretext-video-state")
+    ).toBe("blocked")
+    expect(container.textContent).not.toContain("<Video")
+    expect(container.textContent).not.toContain("::video")
+
+    fireEvent.error(videos[0]!)
+
+    expect(
+      await screen.findByRole("group", {
+        name: "Video failed to load: Demo video",
+      })
+    ).toBeTruthy()
+  })
+
+  it("renders restricted Diagram components through the Mermaid surface", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            '<Diagram type="mermaid" title="Component flow" source="graph TD; A-->B" />',
+            "",
+            '::diagram{type="mermaid" title="Directive flow" source="graph LR; Start-->Done"}',
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(
+      await screen.findByRole("group", { name: "Component flow" })
+    ).toBeTruthy()
+    expect(screen.getByRole("group", { name: "Directive flow" })).toBeTruthy()
+    const diagrams = Array.from(
+      container.querySelectorAll<HTMLElement>(
+        '[data-diagram-language="mermaid"]'
+      )
+    )
+    expect(diagrams).toHaveLength(2)
+    expect(diagrams[0]?.getAttribute("data-pretext-component")).toBe("Diagram")
+    await waitFor(() => {
+      expect(diagrams[0]?.dataset.diagramState).toBe("ready")
+      expect(diagrams[1]?.dataset.diagramState).toBe("ready")
+    })
+    expect(screen.getByText("Component flow")).toBeTruthy()
+    expect(screen.getByText("Directive flow")).toBeTruthy()
+    expect(container.textContent).not.toContain("<Diagram")
+    expect(container.textContent).not.toContain("::diagram")
+
+    fireEvent.click(screen.getAllByLabelText("Copy diagram source")[0]!)
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        ["graph TD", "A-->B"].join("\n")
+      )
+    })
+  })
+
   it("keeps unsafe component markdown inert", async () => {
     const { container } = render(
       <PretextMarkdownViewer
@@ -933,6 +1132,12 @@ describe("PretextMarkdownViewer", () => {
             '<Badge label="Invalid" tone="purple" />',
             "",
             '<Image src="/chart.png" alt="Unsafe chart" onClick="steal" />',
+            "",
+            '<Video src="/demo.mp4" label="Unsafe video" onClick="steal" />',
+            "",
+            '<Diagram type="mermaid" source="graph TD; A-->B" onClick="steal" />',
+            "",
+            '<Diagram type="plantuml" source="@startuml" />',
             "",
             '<Callout kind="warning" onClick="steal">',
             "",
@@ -967,6 +1172,10 @@ describe("PretextMarkdownViewer", () => {
             ':badge[Invalid directive]{tone="purple"}',
             "",
             '::image{src="/chart.png" alt="Unsafe directive chart" onClick="steal"}',
+            "",
+            '::video{src="/demo.mp4" label="Unsafe directive video" onClick="steal"}',
+            "",
+            '::diagram{type="mermaid" source="graph TD; A-->B" onClick="steal"}',
           ].join("\n")
         )}
         toolbar={false}
@@ -991,6 +1200,19 @@ describe("PretextMarkdownViewer", () => {
       )
     ).toBeTruthy()
     expect(
+      screen.getByText(
+        '<Video src="/demo.mp4" label="Unsafe video" onClick="steal" />'
+      )
+    ).toBeTruthy()
+    expect(
+      screen.getByText(
+        '<Diagram type="mermaid" source="graph TD; A-->B" onClick="steal" />'
+      )
+    ).toBeTruthy()
+    expect(container.textContent).toContain(
+      '<Diagram type="plantuml" source="@startuml" />'
+    )
+    expect(
       screen.getByText('<Callout kind="warning" onClick="steal">')
     ).toBeTruthy()
     expect(
@@ -1009,6 +1231,12 @@ describe("PretextMarkdownViewer", () => {
     expect(container.textContent).toContain("Invalid directive")
     expect(container.textContent).toContain(
       '::image{src="/chart.png" alt="Unsafe directive chart" onClick="steal"}'
+    )
+    expect(container.textContent).toContain(
+      '::video{src="/demo.mp4" label="Unsafe directive video" onClick="steal"}'
+    )
+    expect(container.textContent).toContain(
+      '::diagram{type="mermaid" source="graph TD; A-->B" onClick="steal"}'
     )
     expect(container.querySelector("[data-pretext-component]")).toBeNull()
   })
@@ -1029,6 +1257,7 @@ describe("PretextMarkdownViewer", () => {
 
     expect(diagram).toBeTruthy()
     await waitFor(() => expect(diagram?.dataset.diagramState).toBe("ready"))
+    expect(await screen.findByTestId("mock-mermaid-svg")).toBeTruthy()
     expect(screen.getByRole("img", { name: "Mermaid diagram" })).toBeTruthy()
     expect(diagram?.querySelector("svg")).toBeTruthy()
   })
@@ -1051,10 +1280,32 @@ describe("PretextMarkdownViewer", () => {
     await waitFor(() => expect(diagram?.dataset.diagramState).toBe("ready"))
   })
 
-  it("renders unsupported mermaid fences as non-crashing errors", async () => {
+  it("renders sequence diagrams through Mermaid instead of the graph-only fallback", async () => {
     const { container } = render(
       <PretextMarkdownViewer
         source={markdownSource("```mermaid\nsequenceDiagram\nA->>B: hi\n```")}
+        toolbar={false}
+      />
+    )
+
+    await screen.findByText("mermaid")
+    expect(screen.getByRole("group", { name: "Mermaid diagram" })).toBeTruthy()
+    const diagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+
+    await waitFor(() => expect(diagram?.dataset.diagramState).toBe("ready"))
+    expect(
+      (await screen.findByTestId("mock-mermaid-svg")).getAttribute(
+        "data-source"
+      )
+    ).toBe(encodeURIComponent("sequenceDiagram\nA->>B: hi"))
+  })
+
+  it("renders invalid mermaid fences as non-crashing errors", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource("```mermaid\nnot-a-diagram\n```")}
         toolbar={false}
       />
     )
@@ -1067,7 +1318,7 @@ describe("PretextMarkdownViewer", () => {
     )
 
     await waitFor(() => expect(diagram?.dataset.diagramState).toBe("failed"))
-    expect(diagram?.textContent).toContain("Unsupported Mermaid diagram")
+    expect(diagram?.textContent).toContain("Mermaid parse error")
   })
 
   it("renders inline and block math through KaTeX", async () => {
@@ -1208,6 +1459,39 @@ describe("PretextMarkdownViewer", () => {
     })
   })
 
+  it("renders code block title and caption metadata without changing copied source", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            '```ts title="src/viewer.ts" caption="Viewer entry point"',
+            "export const viewer = 'markdown'",
+            "```",
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByText("src/viewer.ts")).toBeTruthy()
+    expect(screen.getByText("Viewer entry point")).toBeTruthy()
+    expect(
+      screen.getByRole("group", { name: "src/viewer.ts code block" })
+    ).toBeTruthy()
+    expect(
+      container.querySelector('[data-pretext-code-title="src/viewer.ts"]')
+    ).toBeTruthy()
+    expect(container.querySelector("[data-pretext-code-caption]")).toBeTruthy()
+
+    fireEvent.click(screen.getByLabelText("Copy code block"))
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        "export const viewer = 'markdown'"
+      )
+    })
+  })
+
   it("renders table cell inline Markdown and copies rendered cells as TSV", async () => {
     const { container } = render(
       <PretextMarkdownViewer
@@ -1215,7 +1499,7 @@ describe("PretextMarkdownViewer", () => {
           [
             "| Name | Link | Count |",
             "| :--- | :---: | ---: |",
-            "| **Bold** `code` ~~old~~ | [Site](https://example.com) :check: | 42 |",
+            "| **Bold** `code` ~~old~~ | [Site](https://example.com) :white_check_mark: | 42 |",
           ].join("\n")
         )}
         toolbar={false}
@@ -1252,13 +1536,13 @@ describe("PretextMarkdownViewer", () => {
     expect(container.querySelector("td code")?.textContent).toBe("code")
     expect(container.querySelector("td del")?.textContent).toBe("old")
     expect(screen.getByRole("link", { name: /Site/ })).toBeTruthy()
-    expect(screen.getByText(/✓/)).toBeTruthy()
+    expect(screen.getByText(/✅/)).toBeTruthy()
 
     fireEvent.click(screen.getByLabelText("Copy table"))
 
     await waitFor(() => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-        ["Name\tLink\tCount", "Bold code old\tSite ✓\t42"].join("\n")
+        ["Name\tLink\tCount", "Bold code old\tSite ✅\t42"].join("\n")
       )
     })
   })

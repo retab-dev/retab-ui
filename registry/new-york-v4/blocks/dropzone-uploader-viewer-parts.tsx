@@ -18,6 +18,7 @@ import {
   ViewerHeader,
   ViewerRoot,
   ViewerSidebar,
+  ViewerSidebarTrigger,
   ViewerSurface,
 } from "@/components/ui/viewer"
 
@@ -137,6 +138,7 @@ export function UploadableFileViewerRoot({
   return (
     <ViewerRoot
       bare
+      defaultSidebarOpen
       className={cn(
         "min-h-[30rem] rounded-lg border bg-background text-foreground transition-colors",
         dropzone.isDragging && "border-foreground/40 bg-accent/35",
@@ -153,15 +155,18 @@ export function UploadableFileViewerHeader() {
 
   return (
     <ViewerHeader className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-      <div className="min-w-0">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <Eye className="size-4 text-muted-foreground" aria-hidden />
-          Uploader + viewer
-        </div>
-        <div className="mt-1 truncate text-xs text-muted-foreground">
-          {selectedFile
-            ? selectedFile.file.name
-            : "One upload surface that becomes the viewer."}
+      <div className="flex min-w-0 items-center gap-2">
+        <ViewerSidebarTrigger />
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Eye className="size-4 text-muted-foreground" aria-hidden />
+            Uploader + viewer
+          </div>
+          <div className="mt-1 truncate text-xs text-muted-foreground">
+            {selectedFile
+              ? selectedFile.file.name
+              : "One upload surface that becomes the viewer."}
+          </div>
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -193,7 +198,10 @@ export function UploadableFileViewerSummary() {
   const { dropzone, selectedFile } = useUploadableFileViewerSummary()
 
   return (
-    <ViewerSidebar className="border-b bg-muted/20 p-4 md:border-r md:border-b-0">
+    <ViewerSidebar
+      width="16rem"
+      className="border-b bg-muted/20 p-4 md:border-r md:border-b-0"
+    >
       {selectedFile ? (
         <UploadableFileViewerFileCard fileItem={selectedFile} />
       ) : (

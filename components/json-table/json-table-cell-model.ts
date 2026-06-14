@@ -74,6 +74,7 @@ export function buildJsonTableEditableCellModel({
     cellWidth: cellField.cellWidth,
     isCellEditing: cellField.isCellEditing,
     isJsonEditable: cellField.isJsonEditable,
+    isPrimitiveCell: cellField.isPrimitiveCell,
     materializedFieldPath: cellField.materializedFieldPath,
     shellHandlers,
   })
@@ -82,7 +83,6 @@ export function buildJsonTableEditableCellModel({
     return {
       kind: "primitive",
       primitiveProps: {
-        activationSource: primitiveControl.activationSource,
         effectiveValue: primitiveControl.primitiveEffectiveValue,
         fieldMetadata: cellField.fieldMetadata,
         isActive: cellField.isPrimitiveActive,
@@ -104,11 +104,9 @@ export function buildJsonTableEditableCellModel({
       shellRef,
       structuredActiveProps: {
         closeStructuredEditSession: props.closeStructuredEditSession,
-        docId: props.docId,
-        document: props.document,
         fieldMetadata: cellField.fieldMetadata,
         materializedFieldPath: cellField.materializedFieldPath,
-        onDocumentDataChange: props.onDocumentDataChange,
+        onCellCommit: props.onCellCommit,
         schema: props.schema,
         setStructuredEditSessionOverlayOpen:
           props.setStructuredEditSessionOverlayOpen,

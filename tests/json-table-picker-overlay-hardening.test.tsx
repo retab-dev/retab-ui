@@ -12,16 +12,17 @@ import type { JSONSchema7 } from "json-schema"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
+import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
 import {
   getFieldMetadata,
   type FieldMetadata,
 } from "@/components/json-table/lib/schema-field-metadata"
-import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
 
 import {
+  createTestCellCommitBridge,
   findEditableCell,
   findReadonlyCell,
   interactionDocument,
@@ -167,17 +168,17 @@ describe("json table picker overlay hardening", () => {
   ])(
     "closes %s picker overlays on outside click without committing",
     async (_, fieldPath) => {
-      const onDocumentDataChange = vi.fn()
+      const onCellCommit = vi.fn()
       const view = renderInteractionRow({
         visiblePaths: [fieldPath],
-        onDocumentDataChange,
+        onCellCommit,
       })
 
       await openPicker(view, fieldPath)
       outsidePointerDown()
 
       await expectPopupClosed(view)
-      expect(onDocumentDataChange).not.toHaveBeenCalled()
+      expect(onCellCommit).not.toHaveBeenCalled()
     }
   )
 
@@ -188,25 +189,25 @@ describe("json table picker overlay hardening", () => {
   ])(
     "closes %s picker overlays on Escape without committing",
     async (_, fieldPath) => {
-      const onDocumentDataChange = vi.fn()
+      const onCellCommit = vi.fn()
       const view = renderInteractionRow({
         visiblePaths: [fieldPath],
-        onDocumentDataChange,
+        onCellCommit,
       })
 
       await openPicker(view, fieldPath)
       fireEvent.keyDown(document, { key: "Escape" })
 
       await expectPopupClosed(view)
-      expect(onDocumentDataChange).not.toHaveBeenCalled()
+      expect(onCellCommit).not.toHaveBeenCalled()
     }
   )
 
   it("commits date selections and closes the picker session", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["shipped_at"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     await openPicker(view, "shipped_at")
@@ -214,7 +215,7 @@ describe("json table picker overlay hardening", () => {
     fireEvent.click(button)
 
     await waitFor(() =>
-      expect(onDocumentDataChange).toHaveBeenCalledWith(
+      expect(onCellCommit).toHaveBeenCalledWith(
         "doc_1",
         "shipped_at",
         isoDate
@@ -224,10 +225,10 @@ describe("json table picker overlay hardening", () => {
   })
 
   it("commits date-time date selections and keeps the picker open", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["reviewed_at"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     const trigger = await openPicker(view, "reviewed_at")
@@ -235,7 +236,7 @@ describe("json table picker overlay hardening", () => {
     fireEvent.click(button)
 
     await waitFor(() =>
-      expect(onDocumentDataChange).toHaveBeenCalledWith(
+      expect(onCellCommit).toHaveBeenCalledWith(
         "doc_1",
         "reviewed_at",
         `${isoDate}T09:30`
@@ -246,16 +247,16 @@ describe("json table picker overlay hardening", () => {
   })
 
   it("commits pure time changes and keeps the picker open", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["shipped_time"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     const trigger = await openPicker(view, "shipped_time")
     fireEvent.change(timeInput(), { target: { value: "10:45" } })
 
-    expect(onDocumentDataChange).toHaveBeenCalledWith(
+    expect(onCellCommit).toHaveBeenCalledWith(
       "doc_1",
       "shipped_time",
       "10:45:00"
@@ -265,16 +266,16 @@ describe("json table picker overlay hardening", () => {
   })
 
   it("commits date-time time changes and keeps the picker open", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["reviewed_at"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     const trigger = await openPicker(view, "reviewed_at")
     fireEvent.change(timeInput(), { target: { value: "10:45" } })
 
-    expect(onDocumentDataChange).toHaveBeenCalledWith(
+    expect(onCellCommit).toHaveBeenCalledWith(
       "doc_1",
       "reviewed_at",
       "2024-01-02T10:45"
@@ -284,16 +285,16 @@ describe("json table picker overlay hardening", () => {
   })
 
   it("commits cleared time values as null and keeps the picker open", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["shipped_time"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     const trigger = await openPicker(view, "shipped_time")
     fireEvent.change(timeInput(), { target: { value: "" } })
 
-    expect(onDocumentDataChange).toHaveBeenCalledWith(
+    expect(onCellCommit).toHaveBeenCalledWith(
       "doc_1",
       "shipped_time",
       null
@@ -303,10 +304,10 @@ describe("json table picker overlay hardening", () => {
   })
 
   it("cleans the previous picker overlay when switching picker cells", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["shipped_at", "shipped_time", "reviewed_at"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     await openPicker(view, "shipped_at")
@@ -321,29 +322,29 @@ describe("json table picker overlay hardening", () => {
     expect(
       pickerTrigger(view, "reviewed_at").getAttribute("aria-expanded")
     ).toBe("true")
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("removes the picker overlay when the row unmounts", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["shipped_at"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     await openPicker(view, "shipped_at")
     view.unmount()
 
     expect(pickerPopup()).toBeNull()
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("keeps read-only picker cells inert", () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["shipped_at", "shipped_time", "reviewed_at"],
       isJsonEditable: false,
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     for (const fieldPath of ["shipped_at", "shipped_time", "reviewed_at"]) {
@@ -356,14 +357,14 @@ describe("json table picker overlay hardening", () => {
     }
 
     expect(pickerPopup()).toBeNull()
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("survives repeated open and close cycles without stale popups", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["shipped_at"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     for (let cycle = 0; cycle < 3; cycle += 1) {
@@ -377,7 +378,7 @@ describe("json table picker overlay hardening", () => {
       expect(pickerPopups()).toHaveLength(0)
     }
 
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("focuses the picker trigger while the overlay is open", async () => {
@@ -447,6 +448,8 @@ function renderVirtualPickerTable({
   visiblePaths: string[]
   overscan?: number
 }) {
+  const primitiveEditStore = createJsonTablePrimitiveEditStore()
+
   return render(
     <SingleFileVirtualizedTable
       headerNodes={visiblePaths.map(headerNode)}
@@ -468,7 +471,12 @@ function renderVirtualPickerTable({
       rowCount={
         projectedRowsFor({ document: tableDocument, visiblePaths }).length
       }
-      onUpdateDocument={vi.fn(async () => undefined)}
+      primitiveEditStore={primitiveEditStore}
+      {...createTestCellCommitBridge({
+        documentData: tableDocument.data,
+        onUpdateDocument: vi.fn(async () => undefined),
+        primitiveEditStore,
+      })}
       columnWidth="xxl"
       overscan={overscan}
       jumpOverscan={overscan}

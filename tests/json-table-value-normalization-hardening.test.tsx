@@ -5,14 +5,15 @@ import { cleanup, fireEvent, render, waitFor } from "@testing-library/react"
 import type { JSONSchema7 } from "json-schema"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
+import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import { projectDocumentRows } from "@/components/json-table/lib/document-projection"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
-import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
 
 import {
+  createTestCellCommitBridge,
   findEditableCell,
   getRequiredInteractionFieldMetadata,
   interactionVisibleColumn,
@@ -74,22 +75,22 @@ function normalizationDocument(
 function renderNormalizationRow({
   document = normalizationDocument(),
   visiblePaths,
-  onDocumentDataChange = vi.fn(),
+  onCellCommit = vi.fn(),
 }: {
   document?: TableDocument
   visiblePaths: string[]
-  onDocumentDataChange?: Parameters<
+  onCellCommit?: Parameters<
     typeof renderInteractionRow
-  >[0]["onDocumentDataChange"]
+  >[0]["onCellCommit"]
 }) {
   return {
     document,
-    onDocumentDataChange,
+    onCellCommit,
     ...renderInteractionRow({
       document,
       schema: normalizationSchema,
       visiblePaths,
-      onDocumentDataChange,
+      onCellCommit,
     }),
   }
 }
@@ -136,6 +137,7 @@ function renderVirtualTable({
     visiblePaths,
     includeArrayAddRows: false,
   })
+  const primitiveEditStore = createJsonTablePrimitiveEditStore()
 
   return {
     document,
@@ -158,8 +160,12 @@ function renderVirtualTable({
           interactionVisibleColumn(path, normalizationSchema)
         )}
         rowCount={projectedRows.length}
-      primitiveEditStore={createJsonTablePrimitiveEditStore()}
-        onUpdateDocument={onUpdateDocument}
+        primitiveEditStore={primitiveEditStore}
+        {...createTestCellCommitBridge({
+          documentData: document.data,
+          onUpdateDocument,
+          primitiveEditStore,
+        })}
         columnWidth="xxl"
         overscan={4}
         jumpOverscan={4}
@@ -257,13 +263,13 @@ describe("json table value normalization hardening", () => {
       fireEvent.blur(input)
 
       await waitFor(() =>
-        expect(view.onDocumentDataChange).toHaveBeenCalledWith(
+        expect(view.onCellCommit).toHaveBeenCalledWith(
           view.document.id,
           fieldPath,
           expectedValue
         )
       )
-      expect(view.onDocumentDataChange).toHaveBeenCalledTimes(1)
+      expect(view.onCellCommit).toHaveBeenCalledTimes(1)
     }
   )
 
@@ -284,13 +290,13 @@ describe("json table value normalization hardening", () => {
       fireEvent.blur(input)
 
       await waitFor(() =>
-        expect(view.onDocumentDataChange).toHaveBeenCalledWith(
+        expect(view.onCellCommit).toHaveBeenCalledWith(
           view.document.id,
           fieldPath,
           null
         )
       )
-      expect(view.onDocumentDataChange).toHaveBeenCalledTimes(1)
+      expect(view.onCellCommit).toHaveBeenCalledTimes(1)
     }
   )
 
@@ -307,7 +313,7 @@ describe("json table value normalization hardening", () => {
 
       fireEvent.blur(input)
 
-      expect(view.onDocumentDataChange).not.toHaveBeenCalled()
+      expect(view.onCellCommit).not.toHaveBeenCalled()
       cleanup()
     }
   })
@@ -321,13 +327,13 @@ describe("json table value normalization hardening", () => {
     fireEvent.blur(input)
 
     await waitFor(() =>
-      expect(view.onDocumentDataChange).toHaveBeenCalledWith(
+      expect(view.onCellCommit).toHaveBeenCalledWith(
         view.document.id,
         "vendor",
         null
       )
     )
-    expect(view.onDocumentDataChange).toHaveBeenCalledTimes(1)
+    expect(view.onCellCommit).toHaveBeenCalledTimes(1)
   })
 
   it("renders non-string enum values and nullable enum null without stringifying their selection identity", async () => {
@@ -345,7 +351,7 @@ describe("json table value normalization hardening", () => {
       await view.findByRole("option", { name: /no selection/i })
     ).toBeTruthy()
 
-    expect(view.onDocumentDataChange).not.toHaveBeenCalled()
+    expect(view.onCellCommit).not.toHaveBeenCalled()
   })
 
   it("uses structural equality for object-valued enum preselection but exposes duplicate object labels", async () => {
@@ -359,7 +365,7 @@ describe("json table value normalization hardening", () => {
     expect(options).toHaveLength(2)
     expect(trigger.textContent).toContain("[object Object]")
     expect(trigger.getAttribute("aria-activedescendant")).toBe(options[0]?.id)
-    expect(view.onDocumentDataChange).not.toHaveBeenCalled()
+    expect(view.onCellCommit).not.toHaveBeenCalled()
   })
 
   it("keeps malformed date and date-time values editable without display drift", async () => {
@@ -370,7 +376,7 @@ describe("json table value normalization hardening", () => {
 
     const dateTrigger = await openPickerCell(dateView, "shipped_at")
     expect(dateTrigger.textContent).toContain("2024-99-99")
-    expect(dateView.onDocumentDataChange).not.toHaveBeenCalled()
+    expect(dateView.onCellCommit).not.toHaveBeenCalled()
     cleanup()
 
     const dateTimeView = renderNormalizationRow({
@@ -378,7 +384,7 @@ describe("json table value normalization hardening", () => {
     })
     const dateTimeTrigger = await openPickerCell(dateTimeView, "reviewed_at")
     expect(dateTimeTrigger.textContent).toContain("not-a-date-time")
-    expect(dateTimeView.onDocumentDataChange).not.toHaveBeenCalled()
+    expect(dateTimeView.onCellCommit).not.toHaveBeenCalled()
   })
 
   it("normalizes malformed time through the time input without preserving the malformed seed", async () => {
@@ -391,13 +397,13 @@ describe("json table value normalization hardening", () => {
     fireEvent.change(input, { target: { value: "09:30" } })
 
     await waitFor(() =>
-      expect(view.onDocumentDataChange).toHaveBeenCalledWith(
+      expect(view.onCellCommit).toHaveBeenCalledWith(
         view.document.id,
         "shipped_time",
         "09:30:00"
       )
     )
-    expect(view.onDocumentDataChange).toHaveBeenCalledTimes(1)
+    expect(view.onCellCommit).toHaveBeenCalledTimes(1)
   })
 
   it("does not commit unchanged normalized number, text, or malformed date display values", async () => {
@@ -416,7 +422,7 @@ describe("json table value normalization hardening", () => {
     await activateCell(view, "shipped_at")
     pointerDown(document.body)
 
-    expect(view.onDocumentDataChange).not.toHaveBeenCalled()
+    expect(view.onCellCommit).not.toHaveBeenCalled()
   })
 
   it("commits a dirty draft before switching cells and composes the next commit against pending document data", async () => {

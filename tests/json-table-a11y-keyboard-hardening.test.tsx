@@ -199,16 +199,16 @@ describe("json table a11y and keyboard hardening", () => {
   })
 
   it("toggles booleans from Space and only focuses the checkbox from Enter or F2", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const spaceView = renderInteractionRow({
       visiblePaths: ["is_paid"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     await keyboardActivateCell(spaceView, "is_paid", " ")
 
     await waitFor(() =>
-      expect(onDocumentDataChange).toHaveBeenCalledWith(
+      expect(onCellCommit).toHaveBeenCalledWith(
         interactionDocument.id,
         "is_paid",
         true
@@ -224,23 +224,23 @@ describe("json table a11y and keyboard hardening", () => {
       cleanup()
       const view = renderInteractionRow({
         visiblePaths: ["is_paid"],
-        onDocumentDataChange,
+        onCellCommit,
       })
 
       await keyboardActivateCell(view, "is_paid", key)
 
       const checkbox = await view.findByRole("checkbox")
       expect(document.activeElement).toBe(checkbox)
-      expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
+      expect(onCellCommit).toHaveBeenCalledTimes(1)
     }
   })
 
   it("closes a focused boolean checkbox on Escape without committing", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const sessions: Array<JsonTableActiveCell | null> = []
     const view = renderInteractionRow({
       visiblePaths: ["is_paid"],
-      onDocumentDataChange,
+      onCellCommit,
       onEditSessionChange: (session) => sessions.push(session),
     })
     const cell = await keyboardActivateCell(view, "is_paid", "Enter")
@@ -253,7 +253,7 @@ describe("json table a11y and keyboard hardening", () => {
         view.container.querySelector('[data-mode="edit"] [role="checkbox"]')
       ).toBeNull()
     )
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
     expect(latestSession(sessions)).toBeNull()
     expect(document.activeElement).toBe(cell)
   })
@@ -320,11 +320,11 @@ describe("json table a11y and keyboard hardening", () => {
   })
 
   it("closes enum on Escape without committing and returns focus to the table cell", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const sessions: Array<JsonTableActiveCell | null> = []
     const view = renderInteractionRow({
       visiblePaths: ["status"],
-      onDocumentDataChange,
+      onCellCommit,
       onEditSessionChange: (session) => sessions.push(session),
     })
     const { cell, trigger } = await openEnum(view)
@@ -332,23 +332,23 @@ describe("json table a11y and keyboard hardening", () => {
     keyDown(trigger, "Escape")
 
     await waitFor(() => expect(view.queryByRole("combobox")).toBeNull())
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
     expect(latestSession(sessions)).toBeNull()
     expect(document.activeElement).toBe(cell)
   })
 
   it("cleans up enum focus after committing a selected option", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["status"],
-      onDocumentDataChange,
+      onCellCommit,
     })
     const { cell } = await openEnum(view)
 
     await chooseOption(view.getByRole("option", { name: "approved" }))
 
     await waitFor(() =>
-      expect(onDocumentDataChange).toHaveBeenCalledWith(
+      expect(onCellCommit).toHaveBeenCalledWith(
         interactionDocument.id,
         "status",
         "approved"
@@ -371,11 +371,11 @@ describe("json table a11y and keyboard hardening", () => {
   })
 
   it("closes picker on Escape without committing and returns focus to the table cell", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const sessions: Array<JsonTableActiveCell | null> = []
     const view = renderInteractionRow({
       visiblePaths: ["shipped_at"],
-      onDocumentDataChange,
+      onCellCommit,
       onEditSessionChange: (session) => sessions.push(session),
     })
     const { cell } = await openPicker(view)
@@ -383,17 +383,17 @@ describe("json table a11y and keyboard hardening", () => {
     keyDown(document, "Escape")
 
     await waitFor(() => expect(pickerPopup()).toBeNull())
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
     expect(latestSession(sessions)).toBeNull()
     expect(document.activeElement).toBe(cell)
   })
 
   it("keeps read-only cells keyboard inert across scalar, boolean, enum, and picker kinds", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["vendor", "is_paid", "status", "shipped_at"],
       isJsonEditable: false,
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     for (const fieldPath of ["vendor", "is_paid", "status", "shipped_at"]) {
@@ -409,14 +409,14 @@ describe("json table a11y and keyboard hardening", () => {
     expect(view.container.querySelector('button[role="checkbox"]')).toBeNull()
     expect(view.queryByRole("combobox")).toBeNull()
     expect(pickerPopup()).toBeNull()
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("returns focus to the table cell after text commit from Enter", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["vendor"],
-      onDocumentDataChange,
+      onCellCommit,
     })
     const cell = await editableCell(view, "vendor")
     pointerActivateCell(cell)
@@ -425,7 +425,7 @@ describe("json table a11y and keyboard hardening", () => {
     fireEvent.change(input, { target: { value: "Focus Co" } })
     keyDown(input, "Enter")
 
-    expect(onDocumentDataChange).toHaveBeenCalledWith(
+    expect(onCellCommit).toHaveBeenCalledWith(
       interactionDocument.id,
       "vendor",
       "Focus Co"

@@ -1831,9 +1831,19 @@
           "target": "@ui/file-system-index.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/file-system-pierre-list-adapter.ts",
+          "path": "registry/new-york-v4/ui/file-system-pierre-input.ts",
           "type": "registry:ui",
-          "target": "@ui/file-system-pierre-list-adapter.ts"
+          "target": "@ui/file-system-pierre-input.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-pierre-model.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-pierre-model.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-pierre-decoration.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-pierre-decoration.ts"
         },
         {
           "path": "registry/new-york-v4/ui/file-system-query.ts",
@@ -1894,6 +1904,26 @@
           "path": "registry/new-york-v4/ui/file-system-utils.ts",
           "type": "registry:ui",
           "target": "@ui/file-system-utils.ts"
+        }
+      ]
+    },
+    {
+      "name": "file-system-light",
+      "type": "registry:ui",
+      "title": "File System Light",
+      "description": "A minimal composition of Pierre's file tree in a ViewerSidebar with FileViewer in the ViewerSurface.",
+      "dependencies": ["@pierre/trees"],
+      "registryDependencies": ["utils", "file-viewer"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/file-system-light.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-system-light.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer.tsx"
         }
       ]
     },
@@ -3012,6 +3042,22 @@
       "categories": ["primitives"]
     },
     {
+      "name": "fslight-block",
+      "type": "registry:block",
+      "title": "File System Light",
+      "description": "A purified composition experiment: Pierre file tree in a ViewerSidebar, selected source rendered by FileViewer in a ViewerSurface.",
+      "dependencies": ["@pierre/trees"],
+      "registryDependencies": ["file-system-light"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/fslight-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/fslight-block.tsx"
+        }
+      ],
+      "categories": ["file-system"]
+    },
+    {
       "name": "primitive-cards-block",
       "type": "registry:block",
       "title": "Primitive Run Cards",
@@ -3415,6 +3461,7 @@
         "katex",
         "lucide-react",
         "marked@18.0.5",
+        "mermaid",
         "react-markdown",
         "rehype-katex",
         "rehype-pretty-code",
@@ -3422,8 +3469,10 @@
         "rehype-sanitize",
         "remark-breaks",
         "remark-directive",
+        "remark-gemoji",
         "remark-gfm",
         "remark-math",
+        "remark-smartypants",
         "unist-util-visit"
       ],
       "registryDependencies": ["text-viewer", "button"],

@@ -1,327 +1,349 @@
 # Schema Property Form Absolute Platonic Blueprint
 
-## Objective
+## Verdict
 
-Close the gap between the verified practical ideal and the literal ideal:
+Not yet.
 
-- simplicity
-- speed
-- everything needed
-- nothing more
-- perfect modularization
-- high-entropy code
-- perfectly consistent variable names
-- Flaubertian precision
+The component is close enough that the remaining imperfections are architectural
+rather than behavioral. The user-facing shape is strong: object fields look like
+schema-builder rows, enum chips share the compact visual primitive, drag grips
+exist, description caret placement is fixed, and the focused verification matrix
+passes.
 
-The previous final-gap blueprint is complete. This blueprint is narrower and
-more demanding: it targets the few places where the code is correct but still
-requires a small explanation.
+The remaining gap is the kind that matters only when the code is read slowly:
+some names and module boundaries still explain the implementation instead of
+making it feel inevitable.
 
-## Current State
+## Current Truth
 
-The property form is excellent.
+These pieces are already in the right direction:
 
-- `TypeField` is a pure renderer over `PropertyTypeFieldModel`.
-- Property type menu construction is separated from object-template injection.
-- `PropertyFormViewModel.fields.schemaDetails` is the single top-level detail
-  field.
-- Recursive detail names are exact:
-  `schemaDetails`, `rowSchemaDetails`, and `itemSchemaDetails`.
-- `editable` and `disabled` are mostly separated by layer.
-- `SchemaChipList` is item-model driven and shared.
-- Object row identity is isolated in `object-property-row-identity.ts`.
-- Architecture tests protect the main API shapes and deleted names.
-- Typecheck, focused tests, lint, and e2e verification pass.
+- `SchemaChipList` renders existing chips only.
+- `SchemaChipAddRow` renders chip creation only.
+- `ObjectPropertiesField` receives a completed object-properties field model.
+- `useObjectPropertiesModel` owns object row identity, add-row state, row
+  validation, row schema mutation, and nested row detail construction.
+- `PropertySchemaDetailsField` is the recursive schema-details component.
+- `renderPropertySchemaDetails` removes the old broad render callback.
+- Architecture tests protect the deleted legacy files, primitive split, object
+  field model shape, recursive names, and several forbidden old seams.
 
-The remaining non-ideal surfaces:
+The system is excellent. It is not yet Flaubertian.
 
-- `PropertyObjectPropertiesFieldModel` still carries raw schema-domain inputs:
-  `schemaNode`, `schemaContext`, `access`, and `onChange`.
-- `ObjectPropertiesField` is both a model adapter and a renderer.
-- Recursive object-row details are rendered through a callback:
-  `renderSchemaDetails`.
-- `SchemaChipList` owns both chip-list rendering and optional add-row rendering.
-- Some model names still describe implementation shape instead of inevitable
-  ownership boundaries.
+## Remaining Non-Ideal Surfaces
 
-These are not bugs. They are the last visible seams.
+### 1. `PropertySchemaDetailsModel` Is Not One Kind Of Thing
 
-## Non-Negotiable Invariants
+`PropertySchemaDetailsModel` currently contains mostly ready-to-render field
+models:
 
-- No compatibility aliases, fallback APIs, or dual old/new surfaces.
-- No schema mutation in JSX.
-- No raw schema-domain inputs in pure renderers.
-- No optional-feature imports from primitives.
-- No render-prop escape hatch unless there is no clearer recursive ownership
-  boundary.
-- No list identity based on indexes.
-- No model factory receives `disabled` unless it builds a native-control field.
-- No one-file abstraction unless the name and boundary remove real local
-  complexity.
-- No test weakening.
-- No visual regression of object rows, enum chips, grips, type menus, or
-  description caret placement.
+- `type?: PropertyTypeFieldModel`
+- `enumValues?: PropertyEnumValuesFieldModel`
+- `arrayItems?: PropertyArrayItemsFieldModel`
 
-## Target Shape
+But `objectProperties` is different:
 
-### 1. Make Object Properties A Complete View Model
+- `objectProperties?: PropertyObjectPropertiesSourceModel`
 
-`PropertyObjectPropertiesFieldModel` should no longer be a schema-domain
-construction packet.
+That means the type named `PropertySchemaDetailsModel` is partly a field model
+and partly an adapter input. The code works, but the name is carrying a small
+lie.
 
-Current shape:
+Target:
+
+- Rename the current mixed structure to a name that admits what it is, such as
+  `PropertySchemaDetailsPlan`.
+- Introduce `PropertySchemaDetailsFieldModel` only if it can be made genuinely
+  complete without violating React hook rules.
+- Keep recursive object-property state inside a component or hook boundary,
+  because each object branch owns local add-row state and row identity.
+
+Preferred shape:
 
 ```ts
-interface PropertyObjectPropertiesFieldModel {
-  schemaNode: ExtendedJSONSchema7
-  schemaContext: PropertyFormSchemaContext
-  mode: PropertyFormMode
-  access: PropertySchemaDetailAccess
-  editable: boolean
-  onChange: (schemaNode: ExtendedJSONSchema7) => void
-}
-```
-
-Target shape:
-
-```ts
-interface PropertyObjectPropertiesFieldModel {
-  addRow: ObjectPropertyAddRowModel
-  editable: boolean
-  rows: ObjectPropertyRowModel[]
+interface PropertySchemaDetailsPlan {
+  type?: PropertyTypeFieldModel
+  enumValues?: PropertyEnumValuesFieldModel
+  objectProperties?: PropertyObjectPropertiesPlan
+  arrayItems?: PropertyArrayItemsPlan
 }
 ```
 
 Rules:
 
-- Schema reads, schema writes, row IDs, row validation, and row detail creation
-  belong in the object-properties model hook.
-- `ObjectPropertiesField` receives `details: PropertyObjectPropertiesFieldModel`
-  and renders only.
-- The renderer must not call `useObjectPropertiesModel`.
-- The renderer must not receive `schemaNode`, `schemaContext`, `access`,
-  `mode`, or `onChange`.
-
-Expected ownership:
-
-- `createPropertySchemaDetails` decides whether object properties should exist.
-- A hook or model builder near the recursive details renderer creates the object
-  properties view model.
-- `ObjectPropertiesField` renders object property rows and the add-row control.
+- Do not pretend a recursive, stateful object branch is a static view model.
+- Do not materialize a full recursive tree in one hook if that creates hook
+  order hazards.
+- Let the name describe the truth: a plan is pure schema-derived structure; a
+  field model is complete render input.
 
 Exit criteria:
 
-- `interfaceProperties(PropertyObjectPropertiesFieldModel)` returns
-  `["addRow", "editable", "rows"]`.
-- `ObjectPropertiesField` imports no schema edit helpers and no model hook.
-- `rg -n "schemaNode|schemaContext|access|mode|onChange" components/schema-editor/property-form/fields/object-properties-field.tsx`
-  has no hits except native event prop names if unavoidable.
+- No type named `PropertySchemaDetailsModel` remains unless it is fully a view
+  model.
+- Object-properties adapter input is named `PropertyObjectPropertiesPlan`, not
+  `SourceModel`.
+- `PropertySchemaDetailsField` reads as a plan resolver plus a pure details
+  content component.
 
-### 2. Remove The Recursive Render Callback
+### 2. Central Form Types Import Field-Local Object Models
 
-`renderSchemaDetails` is the last broad escape hatch.
+`property-form/types.ts` imports:
 
-Current shape:
-
-```tsx
-<ObjectPropertiesField
-  details={objectProperties}
-  renderSchemaDetails={(schemaDetails) => (
-    <PropertySchemaDetailsField details={schemaDetails} />
-  )}
-/>
+```ts
+ObjectPropertyAddRowModel
+ObjectPropertyRowModel
 ```
+
+from `fields/object-properties-model.ts`.
+
+That inverts ownership. The central type file should not depend on a field-side
+model hook module. The hook should consume shared contracts, not define the
+contracts that central form state imports.
+
+Target:
+
+- Extract object-property contracts into a small ownership-neutral module:
+  `fields/object-properties-types.ts` or
+  `property-form/model/object-properties-view.ts`.
+- Keep implementation hooks in `object-properties-model.ts`.
+- Keep renderers in `object-properties-field.tsx` and
+  `object-property-row.tsx`.
+
+Rules:
+
+- Shared contracts may import `PropertyTypeFieldModel` and
+  `PropertySchemaDetailsPlan`.
+- Shared contracts must not import React hooks, schema edit helpers, or UI
+  components.
+- `property-form/types.ts` must not import from a file whose primary export is a
+  hook or JSX renderer.
+
+Exit criteria:
+
+- `property-form/types.ts` imports object-property contracts from a pure type
+  module.
+- `object-properties-model.ts` exports behavior, not central contracts.
+- Architecture tests fail if `property-form/types.ts` imports from
+  `fields/object-properties-model`.
+
+### 3. The Details Component Is Still Both Resolver And Renderer
+
+`PropertySchemaDetailsField` currently:
+
+- renders type details
+- renders enum details
+- resolves object-properties plan into an object-properties field model
+- renders array item recursion
+
+That is acceptable, but the ideal shape separates the stateful branch resolver
+from the stateless content renderer.
 
 Target:
 
 ```tsx
-<ObjectPropertiesField details={objectProperties} />
-```
-
-Rules:
-
-- Object property row rendering should know that `row.rowSchemaDetails` is
-  rendered by the schema-details renderer, not by an arbitrary callback.
-- Avoid a direct import cycle. If needed, extract the recursive renderer into a
-  tiny private helper module with one responsibility:
-  `renderPropertySchemaDetails`.
-- Do not generalize this into an app-wide slot or render-prop system.
-
-Acceptable target:
-
-```tsx
-export function PropertySchemaDetailsField({ details }: Props) {
+export function PropertySchemaDetailsField({ plan }: Props) {
+  const details = usePropertySchemaDetailsFieldModel(plan)
   return <PropertySchemaDetailsContent details={details} />
 }
-
-function PropertySchemaDetailsContent({ details }: Props) {
-  ...
-}
 ```
 
-or:
+If a fully complete recursive field model is not hook-safe, use the narrower
+split:
 
 ```tsx
-export function renderPropertySchemaDetails(details: PropertySchemaDetailsModel) {
-  return <PropertySchemaDetailsField details={details} />
+export function PropertySchemaDetailsField({ plan }: Props) {
+  return <PropertySchemaDetailsContent plan={plan} />
+}
+
+function PropertyObjectPropertiesPlanField({ plan }: Props) {
+  const details = useObjectPropertiesModel(plan)
+  return <ObjectPropertiesField details={details} />
 }
 ```
 
 Decision rule:
 
-- Prefer a component if JSX remains clearer.
-- Prefer a function only if it removes an import cycle without creating a public
-  renderer API.
+- Prefer the second shape if it keeps recursive hook ownership obvious.
+- Prefer the first shape only if the hook count is stable and the resulting
+  model is genuinely complete.
 
 Exit criteria:
 
-- No `renderSchemaDetails` prop remains.
-- No `renderPropertyDetails` compatibility name appears.
-- Object row JSX renders `row.rowSchemaDetails` through the single recursive
-  schema-details renderer.
+- The public recursive component receives `plan`, not `details`.
+- Any stateful object branch resolver is named as a resolver, not as a pure
+  renderer.
+- The pure content function has no hook calls.
 
-### 3. Split `SchemaChipList` And `SchemaChipAddRow`
+### 4. Add-Row Primitives Are Split By Visual Variant, Not By Contract
 
-`SchemaChipList` is generic and correct, but it still owns two concepts:
+There are two add-row primitives:
 
-- displaying and editing existing chips
-- displaying the add-row input
+- `SchemaAddRow`
+- `SchemaChipAddRow`
 
-The absolute shape separates them.
+They share a core concept:
+
+- input label
+- placeholder
+- value
+- change handler
+- submit label
+- submit handler
+- disabled/editable gate
+- empty-value prevention
+
+They differ in:
+
+- error rendering
+- width and spacing
+- focus-after-submit behavior
+- chip-specific compactness
+
+This is not duplication large enough to be harmful, but it is enough to ask
+whether the primitive contract should be unified.
 
 Target:
 
-```tsx
-<SchemaChipList
-  editable={editable}
-  items={items}
-  onRemove={onRemove}
-  onReplace={onReplace}
-/>
-{addRow && <SchemaChipAddRow editable={editable} row={addRow} />}
-```
+- Extract a shared `SchemaAddInputModel` only if it reduces both call sites
+  without adding variant ceremony.
+- Keep visual components separate if a unified component requires mode props
+  such as `variant="chip" | "object"` and optional bags.
 
-Target interfaces:
+Preferred contract:
 
 ```ts
-export interface SchemaChipListProps {
-  editable: boolean
-  items: SchemaChipItem[]
-  onRemove: (id: string) => void
-  onReplace: (id: string, value: string) => void
-}
-
-export interface SchemaChipAddRowProps {
-  editable: boolean
-  row: SchemaChipAddRowModel
+interface SchemaAddInputModel {
+  error?: string | null
+  focusAfterSubmit?: boolean
+  inputLabel: string
+  placeholder: string
+  submitLabel: string
+  value: string
+  onChange: (value: string) => void
+  onSubmit: () => void
 }
 ```
 
 Rules:
 
-- `SchemaChipList` never knows about submitting new values.
-- `SchemaChipAddRow` never knows about existing chips.
-- Keep the compact chip contract unchanged:
-  `bg-muted`, `px-1`, `shadow-none`.
-- Keep add-row focus-after-submit behavior in the add-row component, not in enum
-  adapters.
+- Share the model before sharing the JSX.
+- Do not make `SchemaAddRow` understand chips.
+- Do not make `SchemaChipAddRow` understand object properties.
+- If unification makes either component harder to read, stop at shared types.
 
 Exit criteria:
 
-- `SchemaChipListProps` keys are
-  `["editable", "items", "onRemove", "onReplace"]`.
-- `SchemaChipAddRowProps` keys are `["editable", "row"]`.
-- Property-form enum values and document enum values share both primitives where
-  applicable.
-- E2E chip visual assertions still pass.
+- Add-row model naming is identical across enum chips and object properties.
+- There is no duplicated local concept named `row`, `addRow`, and `model` for
+  the same input packet in adjacent modules.
+- Architecture tests protect either the deliberate split or the unified
+  contract.
 
-### 4. Tighten Field Model Names
+### 5. Enum Value Identity Is Still Positional In Property Form
 
-The current names are good. Absolute precision asks whether each name describes
-what the thing is, not where it happens to be used.
+Document enum entries have stable IDs. Property-form enum values use generated
+IDs based on array index:
 
-Keep:
+```ts
+id: `enum-value-${index}`
+```
 
-- `PropertyTypeFieldModel`
+This is fine for a simple array editor, but the ideal code makes the tradeoff
+explicit.
+
+Target:
+
+- Keep positional IDs if enum values are not reorderable and React state does
+  not attach per-chip identity.
+- Add an architecture comment or test that documents why this differs from
+  document enum entries.
+- If enum chips ever gain reorder, focus restore, or per-chip local state,
+  introduce stable enum item identity at the model layer.
+
+Exit criteria:
+
+- The property-form enum path either has stable IDs or has a clear invariant
+  test proving positional IDs are safe.
+- No future feature can accidentally add reorder on top of index identity
+  without failing a test.
+
+### 6. Naming Still Has A Few Transitional Words
+
+Names that deserve one final pass:
+
+- `PropertyObjectPropertiesSourceModel`
 - `PropertySchemaDetailsModel`
-- `PropertyObjectPropertiesFieldModel`
-- `ObjectPropertyRowModel`
-- `ObjectPropertyRowIdentity`
-
-Review:
-
-- `PropertySchemaDetailAccess`
-- `PropertyFormSchemaContext`
-- `PropertyDraftOperation`
+- `rowSchemaDetails`
+- `itemSchemaDetails`
+- `renderPropertySchemaDetails`
+- `details` props on components that receive a plan
+- `row` props on add-row primitives
 
 Target vocabulary:
 
-- `access`: whether a detail kind is available in this recursive context.
-- `context`: stable schema environment, not mutable state.
-- `operation`: reducer event, not UI command.
-- `command`: external app-level side effect, such as create definition or
-  install template.
+- `plan`: pure schema-derived structure that may require stateful resolution.
+- `details`: complete render input.
+- `field`: UI component or UI model for one form field.
+- `row`: an existing list item, not an add input.
+- `addInput` or `addField`: the input packet for creating a new item.
+- `renderer`: a tiny cycle-breaker only when a component import would cycle.
 
 Rules:
 
-- Rename only if the new name removes ambiguity everywhere.
-- Do not chase prettier nouns.
-- If a name is already exact after review, freeze it with architecture tests.
+- Rename only when the new name removes a layer lie.
+- Make hard cutovers. No compatibility aliases.
+- Freeze final names with AST-based architecture tests.
 
 Exit criteria:
 
-- Architecture tests explicitly preserve final names.
-- No scope uses two names for the same concept.
-- No name contains a layer lie, such as a domain object pretending to be a pure
-  view model.
+- The same concept has the same name across object properties, enum chips, and
+  recursive schema details.
+- No prop named `details` receives a plan.
+- No prop named `row` receives an add-input model.
 
-### 5. Make Architecture Tests Prove The Absolute Shape
+## Implementation Plan
 
-The existing tests already protect many boundaries. Extend them to prove the
-last three exact shapes.
+1. Rename mixed recursive detail types.
+   - `PropertySchemaDetailsModel` becomes `PropertySchemaDetailsPlan`.
+   - `PropertyObjectPropertiesSourceModel` becomes
+     `PropertyObjectPropertiesPlan`.
+   - `PropertyArrayItemsFieldModel` becomes `PropertyArrayItemsPlan` if it only
+     wraps child plans.
 
-Add positive-shape tests for:
+2. Extract object-properties contracts.
+   - Move `ObjectPropertyRowModel`, `ObjectPropertyAddRowModel`, and related
+     field model interfaces out of `object-properties-model.ts`.
+   - Update `property-form/types.ts`, tests, and renderers to import from the
+     pure contract module.
 
-- `PropertyObjectPropertiesFieldModel`
-- `ObjectPropertiesField` prop surface
-- absence of `renderSchemaDetails`
-- `SchemaChipListProps`
-- `SchemaChipAddRowProps`
-- final detail/access/context naming
+3. Split recursive details resolution from rendering.
+   - Keep `PropertySchemaDetailsField` as the recursive public component.
+   - Add a private content component with no hooks.
+   - Keep object-properties resolution in a small branch component or hook whose
+     name says it resolves a plan.
 
-Keep smell guards for:
+4. Normalize add-row contracts.
+   - Decide whether `SchemaAddRow` and `SchemaChipAddRow` share only a model or
+     a deeper primitive.
+   - Rename add-row props from `row` to `addInput` or `addField` if the current
+     name remains misleading.
+   - Preserve the current compact enum chip visuals: `bg-muted`, `px-1`,
+     `shadow-none`.
 
-- `rowDetails`
-- `itemDetails`
-- `schemaNodeDetails`
-- `renderPropertyDetails`
-- old chip add-row props inside `SchemaChipList`
-- schema-domain construction inside pure renderers
+5. Document enum identity.
+   - Either introduce stable property-form enum IDs or write an invariant test
+     that positional IDs are safe because there is no reorder or per-chip local
+     state.
 
-Rules:
+6. Upgrade architecture tests.
+   - Assert final interface names and prop names.
+   - Assert `property-form/types.ts` has no dependency on hook/renderer files.
+   - Assert no transitional names remain.
+   - Assert recursive plans and render details do not collapse into one mixed
+     type again.
 
-- Split forbidden strings inside tests so audit commands do not flag the test
-  file itself.
-- Prefer AST-based interface and prop assertions over broad string searches
-  when the shape is concrete.
-
-Exit criteria:
-
-- A wrong prop name fails a shape test.
-- A resurrected old name fails a smell guard.
-- A raw schema-domain prop in a pure renderer fails a boundary test.
-
-## Implementation Order
-
-1. Extract object-properties model creation above `ObjectPropertiesField`.
-2. Convert `PropertyObjectPropertiesFieldModel` into `{ addRow, editable, rows }`.
-3. Make `ObjectPropertiesField` a pure renderer.
-4. Remove the `renderSchemaDetails` prop and route recursion through one
-   schema-details renderer.
-5. Split `SchemaChipAddRow` out of `SchemaChipList`.
-6. Review and freeze final naming.
-7. Upgrade architecture tests to prove the absolute shape.
-8. Run the verification matrix.
+7. Run verification.
 
 ## Verification Matrix
 
@@ -330,35 +352,44 @@ Run:
 ```bash
 pnpm typecheck
 pnpm vitest run tests/schema-builder-architecture.test.ts tests/schema-editor-context.test.tsx tests/property-form.test.tsx tests/schema-editor-render.test.tsx tests/schema-property-reorder.test.ts tests/schema-document-view-model.test.ts
-pnpm eslint components/schema-editor/primitives/schema-chip-list.tsx components/schema-editor/property-form/fields/enum-values-field.tsx components/schema-editor/property-form/fields/object-properties-field.tsx components/schema-editor/property-form/fields/object-properties-model.ts components/schema-editor/property-form/fields/object-property-row.tsx components/schema-editor/property-form/fields/object-property-row-identity.ts components/schema-editor/property-form/fields/property-schema-details-field.tsx components/schema-editor/property-form/model/property-schema-details.ts components/schema-editor/property-form/property-form-controller.ts components/schema-editor/property-form/property-form-shell.tsx components/schema-editor/property-form/types.ts tests/schema-builder-architecture.test.ts tests/property-form.test.tsx tests/schema-property-reorder.test.ts e2e/schema-property-form.spec.ts
+pnpm eslint components/schema-editor/primitives/schema-add-row.tsx components/schema-editor/primitives/schema-chip-list.tsx components/schema-editor/primitives/schema-chip-add-row.tsx components/schema-editor/property-form/fields/enum-values-field.tsx components/schema-editor/property-form/fields/object-properties-field.tsx components/schema-editor/property-form/fields/object-properties-model.ts components/schema-editor/property-form/fields/object-property-row.tsx components/schema-editor/property-form/fields/object-property-row-identity.ts components/schema-editor/property-form/fields/property-schema-details-field.tsx components/schema-editor/property-form/fields/property-schema-details-renderer.tsx components/schema-editor/property-form/model/property-schema-details.ts components/schema-editor/property-form/property-form-controller.ts components/schema-editor/property-form/property-form-shell.tsx components/schema-editor/property-form/types.ts tests/schema-builder-architecture.test.ts tests/property-form.test.tsx tests/schema-property-reorder.test.ts e2e/schema-property-form.spec.ts
 pnpm test:e2e -- e2e/schema-property-form.spec.ts
 ```
 
 Audit:
 
 ```bash
+rg -n "PropertySchemaDetailsModel|PropertyObjectPropertiesSourceModel|PropertyArrayItemsFieldModel" components/schema-editor/property-form tests/schema-builder-architecture.test.ts -S
+rg -n "from .*/fields/object-properties-model" components/schema-editor/property-form/types.ts tests/schema-builder-architecture.test.ts -S
 rg -n "renderSchemaDetails|renderPropertyDetails|rowDetails|itemDetails|schemaNodeDetails" components/schema-editor/property-form tests/schema-builder-architecture.test.ts -S
-rg -n "schemaNode|schemaContext|access|mode|onChange" components/schema-editor/property-form/fields/object-properties-field.tsx -S
-rg -n "addRow\\?:|SchemaChipAddRow" components/schema-editor/primitives/schema-chip-list.tsx -S
+rg -n "row=\\{addRow\\}|row: SchemaChipAddRowModel" components/schema-editor -S
 ```
 
 Expected audit result:
 
-- no recursive render callback
-- no old detail names
-- no schema-domain construction props in `ObjectPropertiesField`
-- no add-row API inside `SchemaChipListProps`
+- no mixed `Model` names for recursive plans
+- no central type import from object-properties hook modules
+- no old recursive render callback names
+- no add-input packet named `row`
+
+## Non-Goals
+
+- Do not redesign the visuals.
+- Do not add schema features.
+- Do not change schema mutation semantics.
+- Do not introduce compatibility shims.
+- Do not combine chip and object add rows through a variant prop unless the
+  result is simpler at every call site.
+- Do not kill or restart unrelated local processes.
 
 ## Completion Standard
 
-The absolute ideal is reached when this sentence is true without explanation:
+The ideal is reached when this sentence is literally true:
 
-> The controller and model hooks own schema-domain construction; every field
-> component renders a complete view model; recursive schema details render
-> through one exact renderer; schema primitives each own one generic UI concept;
-> names reveal layer and responsibility immediately; architecture tests protect
-> those boundaries as positive API shapes.
+> Pure schema code creates recursive plans; stateful branch adapters resolve
+> plans into complete field models; renderers render only complete field models;
+> primitives each own one visible interaction; shared contracts live in neutral
+> modules; names reveal whether a value is a plan, field, row, or add input; and
+> architecture tests make those boundaries hard to regress.
 
-If `ObjectPropertiesField` still receives schema-domain inputs, if object-row
-details still require a render callback, or if `SchemaChipList` still owns the
-add-row control, the system remains excellent but not absolute.
+Until then, the component is excellent, but not perfect.

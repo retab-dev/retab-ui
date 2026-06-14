@@ -5,7 +5,7 @@ import { AlertCircle } from "lucide-react"
 import { DescriptionField } from "@/components/schema-editor/property-form/fields/description-field"
 import { NameField } from "@/components/schema-editor/property-form/fields/name-field"
 import { NullableField } from "@/components/schema-editor/property-form/fields/nullable-field"
-import { PropertySchemaDetailsField } from "@/components/schema-editor/property-form/fields/property-schema-details-field"
+import { PropertySchemaPlanField } from "@/components/schema-editor/property-form/fields/property-schema-plan-field"
 import { TypeField } from "@/components/schema-editor/property-form/fields/type-field"
 import { PropertyFormFooter } from "@/components/schema-editor/property-form/property-form-footer"
 import type { PropertyFormViewModel } from "@/components/schema-editor/property-form/types"
@@ -50,8 +50,8 @@ export function PropertyFormShell({
             )}
           </div>
 
-          {fields.schemaDetails && (
-            <PropertySchemaDetailsField details={fields.schemaDetails} />
+          {fields.schemaPlan && (
+            <PropertySchemaPlanField plan={fields.schemaPlan} />
           )}
         </div>
         <div className="space-y-4 p-4">

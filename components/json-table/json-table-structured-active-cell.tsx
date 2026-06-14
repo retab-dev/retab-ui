@@ -9,12 +9,10 @@ import { JsonTableStructuredCell } from "@/components/json-table/json-table-stru
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import { formatValueForCommit } from "@/components/json-table/lib/value-normalization"
 import { useRefCallback } from "@/components/json-table/path-utils"
-import { useCellController } from "@/components/json-table/use-cell-controller"
 import { useElevatedVirtualRow } from "@/components/json-table/use-elevated-virtual-row"
+import { useJsonTableStructuredCellController } from "@/components/json-table/use-json-table-structured-cell-controller"
 
 export type JsonTableStructuredActiveCellProps = {
-  docId: string
-  document: JsonTableCellProps["document"]
   fieldMetadata: FieldMetadata
   materializedFieldPath: string
   schema: JsonTableCellProps["schema"]
@@ -23,20 +21,18 @@ export type JsonTableStructuredActiveCellProps = {
   >
   value: unknown
   closeStructuredEditSession: JsonTableCellProps["closeStructuredEditSession"]
-  onDocumentDataChange: JsonTableCellProps["onDocumentDataChange"]
+  onCellCommit: JsonTableCellProps["onCellCommit"]
   setStructuredEditSessionOverlayOpen: JsonTableCellProps["setStructuredEditSessionOverlayOpen"]
 }
 
 export function JsonTableStructuredActiveCell({
-  docId,
-  document,
   fieldMetadata,
   materializedFieldPath,
   schema,
   structuredEditSession,
   value,
   closeStructuredEditSession,
-  onDocumentDataChange,
+  onCellCommit,
   setStructuredEditSessionOverlayOpen,
 }: JsonTableStructuredActiveCellProps) {
   recordJsonTableRender(
@@ -50,14 +46,13 @@ export function JsonTableStructuredActiveCell({
     }
   )
 
-  const { effectiveValue, commitValueChange } = useCellController({
-    document,
-    docId,
-    materializedFieldPath,
-    value,
-    isEditable: true,
-    onDocumentDataChange,
-  })
+  const { effectiveValue, commitStructuredValueChange } =
+    useJsonTableStructuredCellController({
+      materializedFieldPath,
+      value,
+      isEditable: true,
+      onCellCommit,
+    })
 
   const cellRootRef = React.useRef<HTMLDivElement>(null)
   recordJsonTableRender(
@@ -85,7 +80,9 @@ export function JsonTableStructuredActiveCell({
   }, [fieldMetadata.kind, materializedFieldPath])
 
   const commitValue = useRefCallback((newValue: unknown) => {
-    commitValueChange(formatValueForCommit(newValue, fieldMetadata.rawSchema))
+    commitStructuredValueChange(
+      formatValueForCommit(newValue, fieldMetadata.rawSchema)
+    )
   })
 
   return (

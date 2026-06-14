@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, waitFor } from "@testing-library/react"
 import type { JSONSchema7 } from "json-schema"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
+import type { JsonTableCellCommit } from "@/components/json-table/json-table-cell-commit"
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
 import type {
   JsonTableActivationIntent,
@@ -66,6 +67,12 @@ const tableDocument: TableDocument = {
   },
 }
 
+type TestCellCommit = (
+  docId: string,
+  materializedFieldPath: string,
+  value: unknown
+) => void
+
 function visibleColumn(key: string): VisibleColumn {
   const fieldMetadata = getFieldMetadata(schema, key)
   if (!fieldMetadata) throw new Error(`Missing field metadata for ${key}`)
@@ -78,7 +85,7 @@ function visibleColumn(key: string): VisibleColumn {
 }
 
 function SingleFileFormRowHarness({
-  onDocumentDataChange,
+  onCellCommit,
   ...props
 }: Omit<
   React.ComponentProps<typeof SingleFileFormRow>,
@@ -86,19 +93,19 @@ function SingleFileFormRowHarness({
   | "primitiveEditStore"
   | "setPrimitiveActiveCell"
   | "structuredEditSession"
-  | "startStructuredEditSession"
-  | "setStructuredEditSessionOverlayOpen"
-  | "closeStructuredEditSession"
-  | "onDocumentDataChange"
-> & {
-  onDocumentDataChange?: React.ComponentProps<
-    typeof SingleFileFormRow
-  >["onDocumentDataChange"]
+	  | "startStructuredEditSession"
+	  | "setStructuredEditSessionOverlayOpen"
+	  | "closeStructuredEditSession"
+	  | "onCellCommit"
+	> & {
+  onCellCommit?: TestCellCommit
 }) {
   const primitiveActiveCellStoreRef = React.useRef(
     createJsonTablePrimitiveActiveCellStore()
   )
-  const primitiveEditStoreRef = React.useRef(createJsonTablePrimitiveEditStore())
+  const primitiveEditStoreRef = React.useRef(
+    createJsonTablePrimitiveEditStore()
+  )
   const [structuredEditSession, setStructuredEditSession] =
     React.useState<JsonTableStructuredEditSession | null>(null)
   const sessionIdRef = React.useRef(0)
@@ -143,6 +150,16 @@ function SingleFileFormRowHarness({
   const closeStructuredEditSession = React.useCallback(() => {
     setStructuredEditSession(null)
   }, [])
+  const handleCellCommit = React.useCallback(
+    (commit: JsonTableCellCommit) => {
+      ;(onCellCommit ?? vi.fn())(
+        props.document.id,
+        commit.fieldPath,
+        commit.value
+      )
+    },
+    [onCellCommit, props.document.id]
+  )
 
   return (
     <SingleFileFormRow
@@ -154,7 +171,7 @@ function SingleFileFormRowHarness({
       startStructuredEditSession={startStructuredEditSession}
       setStructuredEditSessionOverlayOpen={setStructuredEditSessionOverlayOpen}
       closeStructuredEditSession={closeStructuredEditSession}
-      onDocumentDataChange={onDocumentDataChange ?? vi.fn()}
+      onCellCommit={handleCellCommit}
     />
   )
 }
@@ -163,14 +180,12 @@ function renderJsonTableField({
   doc = tableDocument,
   fieldPath,
   isJsonEditable = true,
-  onDocumentDataChange = vi.fn(),
+  onCellCommit = vi.fn(),
 }: {
   doc?: TableDocument
   fieldPath: string
   isJsonEditable?: boolean
-  onDocumentDataChange?: React.ComponentProps<
-    typeof SingleFileFormRow
-  >["onDocumentDataChange"]
+  onCellCommit?: TestCellCommit
 }) {
   const rows = projectDocumentRows({
     document: doc,
@@ -189,7 +204,7 @@ function renderJsonTableField({
           rowIdx={0}
           rowTopPx={0}
           rowHeightPx={32}
-          onDocumentDataChange={onDocumentDataChange}
+          onCellCommit={onCellCommit}
           isJsonEditable={isJsonEditable}
         />
       </tbody>
@@ -209,7 +224,7 @@ function renderJsonTableField({
     )
   }
 
-  return { ...view, findCell, onDocumentDataChange }
+  return { ...view, findCell, onCellCommit }
 }
 
 async function activateEnumCell(fieldPath: string) {
@@ -291,31 +306,31 @@ function mockElementRect() {
 
 describe("json table boolean interactions", () => {
   it("toggles once and closes on the first boolean click", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderJsonTableField({
       fieldPath: "is_paid",
-      onDocumentDataChange,
+      onCellCommit,
     })
     const cell = await view.findCell()
 
     fireEvent.pointerDown(cell, { button: 0 })
 
     await waitFor(() =>
-      expect(onDocumentDataChange).toHaveBeenCalledWith(
+      expect(onCellCommit).toHaveBeenCalledWith(
         tableDocument.id,
         "is_paid",
         true
       )
     )
-    expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
+    expect(onCellCommit).toHaveBeenCalledTimes(1)
     await waitFor(() => expect(cell.getAttribute("data-active")).toBeNull())
   })
 
   it("toggles a boolean from Space keyboard activation", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderJsonTableField({
       fieldPath: "is_paid",
-      onDocumentDataChange,
+      onCellCommit,
     })
     const cell = await view.findCell()
 
@@ -323,22 +338,22 @@ describe("json table boolean interactions", () => {
     fireEvent.keyDown(cell, { key: " " })
 
     await waitFor(() =>
-      expect(onDocumentDataChange).toHaveBeenCalledWith(
+      expect(onCellCommit).toHaveBeenCalledWith(
         tableDocument.id,
         "is_paid",
         true
       )
     )
-    expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
+    expect(onCellCommit).toHaveBeenCalledTimes(1)
     await waitFor(() => expect(cell.getAttribute("data-active")).toBeNull())
   })
 
   it("does not auto-toggle booleans from Enter or F2 activation", async () => {
     for (const key of ["Enter", "F2"]) {
-      const onDocumentDataChange = vi.fn()
+      const onCellCommit = vi.fn()
       const view = renderJsonTableField({
         fieldPath: "is_paid",
-        onDocumentDataChange,
+        onCellCommit,
       })
       const cell = await view.findCell()
 
@@ -346,28 +361,28 @@ describe("json table boolean interactions", () => {
       fireEvent.keyDown(cell, { key })
 
       await waitFor(() => expect(cell.getAttribute("data-active")).toBe("true"))
-      expect(onDocumentDataChange).not.toHaveBeenCalled()
+      expect(onCellCommit).not.toHaveBeenCalled()
 
       fireEvent.click(view.getByRole("checkbox"))
 
       await waitFor(() =>
-        expect(onDocumentDataChange).toHaveBeenCalledWith(
+        expect(onCellCommit).toHaveBeenCalledWith(
           tableDocument.id,
           "is_paid",
           true
         )
       )
-      expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
+      expect(onCellCommit).toHaveBeenCalledTimes(1)
       cleanup()
     }
   })
 
   it("leaves read-only booleans inert", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderJsonTableField({
       fieldPath: "is_paid",
       isJsonEditable: false,
-      onDocumentDataChange,
+      onCellCommit,
     })
     const cell = await view.findCell()
 
@@ -375,7 +390,7 @@ describe("json table boolean interactions", () => {
     fireEvent.keyDown(cell, { key: " " })
     fireEvent.click(view.getByRole("checkbox"))
 
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
     expect(view.queryByRole("button")).toBeNull()
     expect(cell.getAttribute("data-active")).toBeNull()
   })
@@ -411,7 +426,7 @@ describe("json table enum interactions", () => {
     fireEvent.keyDown(view.trigger, { key: "Enter" })
 
     await waitFor(() =>
-      expect(view.onDocumentDataChange).toHaveBeenCalledWith(
+      expect(view.onCellCommit).toHaveBeenCalledWith(
         tableDocument.id,
         "status",
         "paid"
@@ -425,7 +440,7 @@ describe("json table enum interactions", () => {
     fireEvent.keyDown(view.trigger, { key: "Escape" })
 
     await waitFor(() =>
-      expect(view.onDocumentDataChange).not.toHaveBeenCalled()
+      expect(view.onCellCommit).not.toHaveBeenCalled()
     )
     await waitFor(() => expect(view.queryByRole("combobox")).toBeNull())
   })
@@ -436,7 +451,7 @@ describe("json table enum interactions", () => {
     fireEvent.pointerDown(globalThis.document.body)
 
     await waitFor(() =>
-      expect(view.onDocumentDataChange).not.toHaveBeenCalled()
+      expect(view.onCellCommit).not.toHaveBeenCalled()
     )
     await waitFor(() => expect(view.queryByRole("combobox")).toBeNull())
   })
@@ -447,7 +462,7 @@ describe("json table enum interactions", () => {
     await chooseOption(view, "2")
 
     await waitFor(() =>
-      expect(view.onDocumentDataChange).toHaveBeenCalledWith(
+      expect(view.onCellCommit).toHaveBeenCalledWith(
         tableDocument.id,
         "rating",
         2
@@ -461,7 +476,7 @@ describe("json table enum interactions", () => {
     await chooseOption(view, /no selection/i)
 
     await waitFor(() =>
-      expect(view.onDocumentDataChange).toHaveBeenCalledWith(
+      expect(view.onCellCommit).toHaveBeenCalledWith(
         tableDocument.id,
         "nullable_status",
         null
@@ -475,7 +490,7 @@ describe("json table enum interactions", () => {
     await chooseOption(view, "draft")
 
     await waitFor(() => expect(view.queryByRole("combobox")).toBeNull())
-    expect(view.onDocumentDataChange).not.toHaveBeenCalled()
+    expect(view.onCellCommit).not.toHaveBeenCalled()
   })
 
   it("keeps sentinel-like enum strings distinct from internal select values", async () => {
@@ -484,7 +499,7 @@ describe("json table enum interactions", () => {
     await chooseOption(view, "option:1")
 
     await waitFor(() =>
-      expect(view.onDocumentDataChange).toHaveBeenCalledWith(
+      expect(view.onCellCommit).toHaveBeenCalledWith(
         tableDocument.id,
         "sentinel_status",
         "option:1"

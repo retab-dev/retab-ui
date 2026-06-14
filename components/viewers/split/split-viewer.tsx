@@ -12,6 +12,7 @@ import {
   ViewerHeader,
   ViewerRoot,
   ViewerSidebar,
+  ViewerSidebarTrigger,
   ViewerSurface,
 } from "@/components/ui/viewer"
 import { type SplitView } from "@/components/viewers/lib/split-types"
@@ -38,7 +39,11 @@ export function SplitViewer({
 }: SplitViewerProps) {
   return (
     <SplitViewerProvider result={result} isProcessing={isProcessing}>
-      <ViewerRoot bare className="h-full flex-1 bg-background">
+      <ViewerRoot
+        bare
+        defaultSidebarOpen
+        className="h-full flex-1 bg-background"
+      >
         <SplitViewerHeader />
         <SplitViewerBody>{children}</SplitViewerBody>
       </ViewerRoot>
@@ -174,6 +179,7 @@ export function SplitViewerHeader() {
     <ViewerHeader className="flex flex-col">
       <div className="flex min-h-10 items-center justify-between gap-3 px-3 py-2">
         <div className="flex items-center gap-2 text-sm font-medium">
+          {hasOutput ? <ViewerSidebarTrigger className="-ml-1" /> : null}
           <Scissors className="size-4 text-muted-foreground" />
           <span>{title}</span>
         </div>
@@ -193,7 +199,7 @@ function SplitViewerBody({ children }: { children?: ReactNode }) {
   return (
     <ViewerBody>
       {hasOutput && pageCount > 0 ? (
-        <ViewerSidebar className="w-16 border-r bg-background">
+        <ViewerSidebar width="4rem" className="border-r bg-background">
           <SplitViewerPageRail />
         </ViewerSidebar>
       ) : null}

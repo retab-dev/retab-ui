@@ -17,7 +17,9 @@ import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
 import {
   ViewerBody,
   ViewerHeader,
+  ViewerRoot,
   ViewerSidebar,
+  ViewerSidebarTrigger,
   ViewerSurface,
 } from "@/components/ui/viewer"
 
@@ -67,7 +69,9 @@ export function SegmentedDocumentViewer({
   }, [])
 
   return (
-    <div
+    <ViewerRoot
+      bare
+      defaultSidebarOpen
       data-slot="segmented-document-viewer"
       className={cn(
         "flex min-h-0 flex-col overflow-hidden rounded-xl border bg-card",
@@ -91,9 +95,10 @@ export function SegmentedDocumentViewer({
         )
         const header = (
           <ViewerHeader>
-            {title ? (
-              <div className="px-3 pt-2 text-sm font-medium">{title}</div>
-            ) : null}
+            <div className="flex items-center gap-2 px-2 pt-2 text-sm font-medium">
+              <ViewerSidebarTrigger />
+              {title ? <span className="min-w-0 truncate">{title}</span> : null}
+            </div>
             <div className="px-3 py-2">{legend}</div>
             <div className="px-3 pb-2">
               <PageTimeline
@@ -107,7 +112,7 @@ export function SegmentedDocumentViewer({
           </ViewerHeader>
         )
         const sidebar = (
-          <ViewerSidebar className="w-64 overflow-auto border-r">
+          <ViewerSidebar width="16rem" className="overflow-auto border-r">
             <SegmentSidebar
               segments={segments}
               interaction={interaction}
@@ -153,6 +158,6 @@ export function SegmentedDocumentViewer({
           </>
         )
       })()}
-    </div>
+    </ViewerRoot>
   )
 }

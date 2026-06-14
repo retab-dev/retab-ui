@@ -5,51 +5,11 @@ import { ChevronDown } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { dataCellPickerTriggerClass } from "@/registry/new-york-v4/ui/data-cell-classes"
+import type { DataCellSelectControlProps } from "@/registry/new-york-v4/ui/data-cell-control-contract"
 import { useDataCellSelectActivation } from "@/registry/new-york-v4/ui/data-cell-select-activation"
 import { useDataCellSelectKeyboard } from "@/registry/new-york-v4/ui/data-cell-select-keyboard"
 import { DataCellSelectPopup } from "@/registry/new-york-v4/ui/data-cell-select-popup"
 import { useDataCellSelectState } from "@/registry/new-york-v4/ui/data-cell-select-state"
-import type {
-  DataCellActivationSource,
-  DataCellEditorHandle,
-  DataCellSelectOption,
-  DataCellValueMeta,
-} from "@/registry/new-york-v4/ui/data-cell-types"
-
-type DataCellSelectFormatValue = (
-  value: string | null | undefined,
-  meta: { kind: "select" }
-) => React.ReactNode
-
-type DataCellSelectNativeProps = Omit<
-  React.ButtonHTMLAttributes<HTMLButtonElement>,
-  | "children"
-  | "className"
-  | "defaultValue"
-  | "disabled"
-  | "name"
-  | "onChange"
-  | "type"
-  | "value"
->
-
-export type DataCellSelectControlProps = DataCellSelectNativeProps & {
-  kind: "select"
-  value?: string | null
-  disabled?: boolean
-  name?: string
-  placeholder?: string
-  className?: string
-  formatValue?: DataCellSelectFormatValue
-  autoFocus?: boolean
-  activationSource?: DataCellActivationSource
-  open?: boolean
-  options: DataCellSelectOption[]
-  onCommit?: (value: string | null, meta: DataCellValueMeta) => void
-  onEditingEnd?: () => void
-  onOpenChange?: (open: boolean) => void
-  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
-}
 
 export function DataCellSelectControl({
   kind,

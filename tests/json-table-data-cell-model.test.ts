@@ -1,7 +1,10 @@
-import { describe, expect, it } from "vitest"
 import type { JSONSchema7 } from "json-schema"
+import { describe, expect, it } from "vitest"
 
-import { createJsonTableDataCellModel } from "@/components/json-table/json-table-data-cell-model"
+import {
+  createJsonTableDataCellModel,
+  createJsonTableDataCellProps,
+} from "@/components/json-table/json-table-data-cell-model"
 import { jsonTableDisplayText } from "@/components/json-table/json-table-display-value"
 import type {
   FieldKind,
@@ -36,6 +39,92 @@ function fieldMetadata({
 }
 
 describe("json table DataCell model", () => {
+  it("projects exact DataCell props for each primitive kind", () => {
+    const observedKinds = [
+      createJsonTableDataCellProps({
+        fieldMetadata: fieldMetadata({ kind: "string" }),
+        mode: "display",
+        value: "ACME",
+      }).kind,
+      createJsonTableDataCellProps({
+        fieldMetadata: fieldMetadata({ kind: "number" }),
+        mode: "display",
+        value: 12.5,
+      }).kind,
+      createJsonTableDataCellProps({
+        fieldMetadata: fieldMetadata({ kind: "integer" }),
+        mode: "display",
+        value: 12,
+      }).kind,
+      createJsonTableDataCellProps({
+        fieldMetadata: fieldMetadata({ kind: "boolean" }),
+        mode: "display",
+        value: true,
+      }).kind,
+      createJsonTableDataCellProps({
+        fieldMetadata: fieldMetadata({ kind: "date" }),
+        mode: "display",
+        value: "2025-07-18",
+      }).kind,
+      createJsonTableDataCellProps({
+        fieldMetadata: fieldMetadata({ kind: "time" }),
+        mode: "display",
+        value: "09:30:00",
+      }).kind,
+      createJsonTableDataCellProps({
+        fieldMetadata: fieldMetadata({ kind: "date-time" }),
+        mode: "display",
+        value: "2025-07-18T09:30:00Z",
+      }).kind,
+      createJsonTableDataCellProps({
+        fieldMetadata: fieldMetadata({
+          enumValues: ["draft"],
+          kind: "enum",
+        }),
+        mode: "display",
+        value: "draft",
+      }).kind,
+    ]
+
+    expect(observedKinds).toEqual([
+      "text",
+      "number",
+      "integer",
+      "boolean",
+      "date",
+      "time",
+      "date-time",
+      "select",
+    ])
+  })
+
+  it("keeps JSON commit reconstruction inside DataCell props projection", () => {
+    const approved = { code: "approved" }
+    const rejected = { code: "rejected" }
+    const committedValues: unknown[] = []
+    const props = createJsonTableDataCellProps({
+      fieldMetadata: fieldMetadata({
+        enumValues: [approved, rejected],
+        kind: "enum",
+      }),
+      mode: "edit",
+      value: approved,
+      onCommit: (value) => committedValues.push(value),
+    })
+
+    expect(props.kind).toBe("select")
+    if (props.kind !== "select") throw new Error("Expected select props")
+
+    props.onCommit?.("option:1", {
+      kind: "select",
+      rawValue: "option:1",
+      isEmpty: false,
+      isValid: true,
+    })
+
+    expect(committedValues).toEqual([rejected])
+  })
+
   it("maps primitive enum values to select options and commits the original JSON value", () => {
     const metadata = fieldMetadata({
       enumValues: ["draft", "approved"],
@@ -88,11 +177,9 @@ describe("json table DataCell model", () => {
 
     expect(model.kind).toBe("select")
     if (model.kind !== "select") throw new Error("Expected select model")
-    expect(model.selectOptions.map((option) => option.disabled ?? false)).toEqual([
-      false,
-      true,
-      false,
-    ])
+    expect(
+      model.selectOptions.map((option) => option.disabled ?? false)
+    ).toEqual([false, true, false])
   })
 
   it("maps nullable enum null through a table-local select sentinel", () => {

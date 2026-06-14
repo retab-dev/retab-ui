@@ -7,6 +7,7 @@ import type {
   JsonTableActivationIntent,
   JsonTableStructuredEditSession,
 } from "@/components/json-table/json-table-edit-session"
+import type { JsonTableCellCommitHandler } from "@/components/json-table/json-table-cell-commit"
 import type { JsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
 import type { JsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import type { ProjectedCell } from "@/components/json-table/lib/document-projection"
@@ -30,7 +31,7 @@ export interface JsonTableCellProps {
   document: TableDocument
   docId: string
   primitiveActiveCellStore: JsonTablePrimitiveActiveCellStore
-  primitiveEditStore?: JsonTablePrimitiveEditStore
+  primitiveEditStore: JsonTablePrimitiveEditStore
   setPrimitiveActiveCell: (
     activeCell: ReturnType<JsonTablePrimitiveActiveCellStore["getSnapshot"]>
   ) => void
@@ -42,11 +43,7 @@ export interface JsonTableCellProps {
   ) => void
   setStructuredEditSessionOverlayOpen: (open: boolean) => void
   closeStructuredEditSession: () => void
-  onDocumentDataChange: (
-    docId: string,
-    materializedFieldPath: string,
-    value: unknown
-  ) => void
+  onCellCommit: JsonTableCellCommitHandler
   onCellHoverStart?: (info: JsonTableCellHoverInfo) => void
   onCellHoverEnd?: () => void
   isJsonEditable: boolean

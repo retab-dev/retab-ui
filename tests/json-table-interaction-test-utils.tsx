@@ -3,16 +3,19 @@ import { render } from "@testing-library/react"
 import type { JSONSchema7 } from "json-schema"
 import { vi } from "vitest"
 
+import type { JsonTableCellCommit } from "@/components/json-table/json-table-cell-commit"
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
 import type {
-  JsonTableActiveCell,
   JsonTableActivationIntent,
+  JsonTableActiveCell,
   JsonTablePrimitiveActiveCell,
   JsonTableStructuredEditSession,
 } from "@/components/json-table/json-table-edit-session"
 import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
 import { createJsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
 import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
+import type { JsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
+import { setValueAtMaterializedPath } from "@/components/json-table/lib/document-patches"
 import type {
   ProjectedCell,
   ProjectedRow,
@@ -22,6 +25,12 @@ import type { TableDocument } from "@/components/json-table/lib/projects-types"
 import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import { SingleFileFormRow } from "@/components/json-table/single-file-form-row"
+
+type TestCellCommit = (
+  docId: string,
+  materializedFieldPath: string,
+  value: unknown
+) => void
 
 export const interactionSchema: JSONSchema7 = {
   type: "object",
@@ -138,8 +147,45 @@ export function projectedRowsFor({
   })
 }
 
+export function createTestCellCommitBridge({
+  documentData,
+  onUpdateDocument = vi.fn(async () => undefined),
+  primitiveEditStore,
+}: {
+  documentData: Record<string, unknown>
+  onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
+  primitiveEditStore: JsonTablePrimitiveEditStore
+}) {
+  let currentDocumentData = documentData
+
+  function persistFieldValue(
+    materializedFieldPath: string,
+    value: unknown,
+    usesPrimitiveEditStore: boolean
+  ) {
+    const nextData = setValueAtMaterializedPath(
+      currentDocumentData,
+      materializedFieldPath,
+      value
+    )
+    currentDocumentData = nextData
+    if (usesPrimitiveEditStore) primitiveEditStore.recordDocumentEcho(nextData)
+    onUpdateDocument({ data: nextData })
+  }
+
+  return {
+    onCellCommit: (commit: JsonTableCellCommit) => {
+      persistFieldValue(
+        commit.fieldPath,
+        commit.value,
+        commit.visibility === "primitivePendingValue"
+      )
+    },
+  }
+}
+
 function SingleFileFormRowHarness({
-  onDocumentDataChange,
+  onCellCommit,
   onEditSessionChange,
   ...props
 }: Omit<
@@ -151,17 +197,17 @@ function SingleFileFormRowHarness({
   | "startStructuredEditSession"
   | "setStructuredEditSessionOverlayOpen"
   | "closeStructuredEditSession"
-  | "onDocumentDataChange"
+  | "onCellCommit"
 > & {
-  onDocumentDataChange?: React.ComponentProps<
-    typeof SingleFileFormRow
-  >["onDocumentDataChange"]
+  onCellCommit?: TestCellCommit
   onEditSessionChange?: (activeCell: JsonTableActiveCell | null) => void
 }) {
   const primitiveActiveCellStoreRef = React.useRef(
     createJsonTablePrimitiveActiveCellStore()
   )
-  const primitiveEditStoreRef = React.useRef(createJsonTablePrimitiveEditStore())
+  const primitiveEditStoreRef = React.useRef(
+    createJsonTablePrimitiveEditStore()
+  )
   const [structuredEditSession, setStructuredEditSessionState] =
     React.useState<JsonTableStructuredEditSession | null>(null)
   const sessionIdRef = React.useRef(0)
@@ -213,6 +259,16 @@ function SingleFileFormRowHarness({
     setStructuredEditSessionState(null)
     onEditSessionChange?.(primitiveActiveCellStoreRef.current.getSnapshot())
   }, [onEditSessionChange])
+  const handleCellCommit = React.useCallback(
+    (commit: JsonTableCellCommit) => {
+      ;(onCellCommit ?? vi.fn())(
+        props.document.id,
+        commit.fieldPath,
+        commit.value
+      )
+    },
+    [onCellCommit, props.document.id]
+  )
 
   return (
     <SingleFileFormRow
@@ -224,7 +280,7 @@ function SingleFileFormRowHarness({
       startStructuredEditSession={startStructuredEditSession}
       setStructuredEditSessionOverlayOpen={setStructuredEditSessionOverlayOpen}
       closeStructuredEditSession={closeStructuredEditSession}
-      onDocumentDataChange={onDocumentDataChange ?? vi.fn()}
+      onCellCommit={handleCellCommit}
     />
   )
 }
@@ -235,7 +291,7 @@ export function renderInteractionRow({
   visiblePaths,
   rowIndex = 0,
   isJsonEditable = true,
-  onDocumentDataChange = vi.fn(),
+  onCellCommit = vi.fn(),
   onEditSessionChange,
 }: {
   document?: TableDocument
@@ -243,9 +299,7 @@ export function renderInteractionRow({
   visiblePaths: string[]
   rowIndex?: number
   isJsonEditable?: boolean
-  onDocumentDataChange?: React.ComponentProps<
-    typeof SingleFileFormRow
-  >["onDocumentDataChange"]
+  onCellCommit?: TestCellCommit
   onEditSessionChange?: (activeCell: JsonTableActiveCell | null) => void
 }) {
   const rows = projectedRowsFor({ document, visiblePaths })
@@ -265,7 +319,7 @@ export function renderInteractionRow({
           rowIdx={rowIndex}
           rowTopPx={0}
           rowHeightPx={32}
-          onDocumentDataChange={onDocumentDataChange}
+          onCellCommit={onCellCommit}
           onEditSessionChange={onEditSessionChange}
           isJsonEditable={isJsonEditable}
         />

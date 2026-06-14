@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-import type { ObjectPropertyRowModel } from "./object-properties-model"
+import type { ObjectPropertyRowModel } from "@/components/schema-editor/property-form/model/object-properties-view"
 
 export type ObjectPropertyReorderDirection = "down" | "up"
 

@@ -22,7 +22,7 @@ export const PretextMarkdownViewer = React.forwardRef<
     <PlainTextViewerFrame
       props={props}
       forwardedRef={ref}
-      clientFallbackPolicy="always"
+      clientFallbackPolicy="non-inline-source"
       Fallback={TextViewerFallback}
       Content={PretextMarkdownViewerContent}
     />

@@ -4,14 +4,16 @@ import { act, renderHook } from "@testing-library/react"
 import type { JSONSchema7 } from "json-schema"
 import { beforeAll, describe, expect, it, vi } from "vitest"
 
+import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import {
   buildHeaderDropSchema,
   getHeaderDropSide,
 } from "@/components/json-table/lib/header-drag-model"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
-import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
-import { useCellController } from "@/components/json-table/use-cell-controller"
 import { useHeaderController } from "@/components/json-table/use-header-controller"
+import { useJsonTablePrimitiveCellController } from "@/components/json-table/use-json-table-primitive-cell-controller"
+import { useJsonTableStructuredCellController } from "@/components/json-table/use-json-table-structured-cell-controller"
+import { useSingleFileTableDocumentModel } from "@/components/json-table/use-single-file-table-document-model"
 
 import { installJsonTableDom } from "./json-table-test-dom"
 
@@ -140,79 +142,82 @@ const paymentBankNameNode: JsonTableHeaderNode = {
   parentPath: "payment",
 }
 
-describe("json table cell controller", () => {
+describe("json table primitive cell controller", () => {
   it("skips no-op commits", () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result } = renderHook(() =>
-      useCellController({
+      useJsonTablePrimitiveCellController({
         document,
-        docId: document.id,
         materializedFieldPath: "vendor",
         value: "ACME",
         isEditable: true,
-        onDocumentDataChange,
+        onCellCommit,
         primitiveEditStore,
       })
     )
 
-    act(() => result.current.commitValueChange("ACME"))
+    act(() => result.current.commitPrimitiveValueChange("ACME"))
 
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
     expect(result.current.effectiveValue).toBe("ACME")
   })
 
-  it("commits changed values through local edit state", () => {
-    const onDocumentDataChange = vi.fn()
+  it("emits one primitive commit after one local edit-store write", () => {
+    const onCellCommit = vi.fn()
     const primitiveEditStore = createJsonTablePrimitiveEditStore()
+    const commitValue = vi.spyOn(primitiveEditStore, "commitValue")
     const { result } = renderHook(() =>
-      useCellController({
+      useJsonTablePrimitiveCellController({
         document,
-        docId: document.id,
         materializedFieldPath: "vendor",
         value: "ACME",
         isEditable: true,
-        onDocumentDataChange,
+        onCellCommit,
         primitiveEditStore,
       })
     )
 
-    act(() => result.current.commitValueChange("Globex"))
+    act(() => result.current.commitPrimitiveValueChange("Globex"))
 
-    expect(onDocumentDataChange).toHaveBeenCalledWith(
-      document.id,
-      "vendor",
-      "Globex"
-    )
+    expect(commitValue).toHaveBeenCalledTimes(1)
+    expect(commitValue).toHaveBeenCalledWith("vendor", "Globex", "ACME")
+    expect(onCellCommit).toHaveBeenCalledTimes(1)
+    expect(onCellCommit).toHaveBeenCalledWith({
+      fieldPath: "vendor",
+      value: "Globex",
+      previousValue: "ACME",
+      visibility: "primitivePendingValue",
+    })
     expect(result.current.effectiveValue).toBe("Globex")
     expect(result.current.committedTextValue).toBe("Globex")
   })
 
   it("commits when projected value is stale but document data differs", () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result } = renderHook(() =>
-      useCellController({
+      useJsonTablePrimitiveCellController({
         document,
-        docId: document.id,
         materializedFieldPath: "vendor",
         value: "Globex",
         isEditable: true,
-        onDocumentDataChange,
+        onCellCommit,
         primitiveEditStore,
       })
     )
 
-    act(() => result.current.commitValueChange("Globex"))
+    act(() => result.current.commitPrimitiveValueChange("Globex"))
 
-    expect(onDocumentDataChange).toHaveBeenCalledWith(
-      document.id,
-      "vendor",
-      "Globex"
-    )
+    expect(onCellCommit).toHaveBeenCalledWith({
+      fieldPath: "vendor",
+      value: "Globex",
+      previousValue: "ACME",
+      visibility: "primitivePendingValue",
+    })
   })
 
-  it("commits nested array values without replacing sibling data", () => {
+  it("commits nested array values as primitive commits", () => {
     const nestedDocument = {
       ...document,
       data: {
@@ -220,42 +225,41 @@ describe("json table cell controller", () => {
         lines: [{ name: "old", quantity: 1 }],
       },
     }
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result } = renderHook(() =>
-      useCellController({
+      useJsonTablePrimitiveCellController({
         document: nestedDocument,
-        docId: nestedDocument.id,
         materializedFieldPath: "lines.0.quantity",
         value: 1,
         isEditable: true,
-        onDocumentDataChange,
+        onCellCommit,
         primitiveEditStore,
       })
     )
 
-    act(() => result.current.commitValueChange(2))
+    act(() => result.current.commitPrimitiveValueChange(2))
 
-    expect(onDocumentDataChange).toHaveBeenCalledWith(
-      nestedDocument.id,
-      "lines.0.quantity",
-      2
-    )
+    expect(onCellCommit).toHaveBeenCalledWith({
+      fieldPath: "lines.0.quantity",
+      value: 2,
+      previousValue: 1,
+      visibility: "primitivePendingValue",
+    })
     expect(result.current.effectiveValue).toBe(2)
   })
 
   it("clears local edit state when authoritative field data changes", () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result, rerender } = renderHook(
       ({ currentDocument, currentValue }) =>
-        useCellController({
+        useJsonTablePrimitiveCellController({
           document: currentDocument,
-          docId: currentDocument.id,
           materializedFieldPath: "vendor",
           value: currentValue,
           isEditable: true,
-          onDocumentDataChange,
+          onCellCommit,
           primitiveEditStore,
         }),
       {
@@ -266,7 +270,7 @@ describe("json table cell controller", () => {
       }
     )
 
-    act(() => result.current.commitValueChange("Globex"))
+    act(() => result.current.commitPrimitiveValueChange("Globex"))
     expect(result.current.effectiveValue).toBe("Globex")
 
     const nextDocument = {
@@ -285,67 +289,221 @@ describe("json table cell controller", () => {
   })
 
   it("treats null and empty strings as equivalent no-op commits", () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result } = renderHook(() =>
-      useCellController({
+      useJsonTablePrimitiveCellController({
         document: {
           ...document,
           data: { ...document.data, vendor: null },
         },
-        docId: document.id,
         materializedFieldPath: "vendor",
         value: null,
         isEditable: true,
-        onDocumentDataChange,
+        onCellCommit,
         primitiveEditStore,
       })
     )
 
-    act(() => result.current.commitValueChange(""))
+    act(() => result.current.commitPrimitiveValueChange(""))
 
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
     expect(result.current.committedTextValue).toBe("")
   })
 
   it("does not commit when disabled", () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result } = renderHook(() =>
-      useCellController({
+      useJsonTablePrimitiveCellController({
         document,
-        docId: document.id,
         materializedFieldPath: "vendor",
         value: "ACME",
         isEditable: false,
-        onDocumentDataChange,
+        onCellCommit,
         primitiveEditStore,
       })
     )
 
-    act(() => result.current.commitValueChange("Globex"))
+    act(() => result.current.commitPrimitiveValueChange("Globex"))
 
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("does not commit when the projected cell has no materialized path", () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result } = renderHook(() =>
-      useCellController({
+      useJsonTablePrimitiveCellController({
         document,
-        docId: document.id,
         materializedFieldPath: undefined,
         value: "ACME",
         isEditable: true,
-        onDocumentDataChange,
+        onCellCommit,
         primitiveEditStore,
       })
     )
 
-    act(() => result.current.commitValueChange("Globex"))
+    act(() => result.current.commitPrimitiveValueChange("Globex"))
 
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
+  })
+})
+
+describe("json table structured cell controller", () => {
+  it("commits changed values to document data without primitive lifecycle", () => {
+    const onCellCommit = vi.fn()
+    const { result } = renderHook(() =>
+      useJsonTableStructuredCellController({
+        materializedFieldPath: "vendor",
+        value: "ACME",
+        isEditable: true,
+        onCellCommit,
+      })
+    )
+
+    act(() => result.current.commitStructuredValueChange("Globex"))
+
+    expect(onCellCommit).toHaveBeenCalledWith({
+      fieldPath: "vendor",
+      value: "Globex",
+      previousValue: "ACME",
+      visibility: "projectedDocumentValue",
+    })
+    expect(result.current.effectiveValue).toBe("Globex")
+    expect(result.current.committedTextValue).toBe("Globex")
+  })
+
+  it("skips structured no-op commits", () => {
+    const onCellCommit = vi.fn()
+    const { result } = renderHook(() =>
+      useJsonTableStructuredCellController({
+        materializedFieldPath: "vendor",
+        value: "ACME",
+        isEditable: true,
+        onCellCommit,
+      })
+    )
+
+    act(() => result.current.commitStructuredValueChange("ACME"))
+
+    expect(onCellCommit).not.toHaveBeenCalled()
+  })
+
+  it("does not commit structured values when disabled or pathless", () => {
+    const onCellCommit = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ materializedFieldPath, isEditable }) =>
+        useJsonTableStructuredCellController({
+          materializedFieldPath,
+          value: "ACME",
+          isEditable,
+          onCellCommit,
+        }),
+      {
+        initialProps: {
+          materializedFieldPath: "vendor" as string | undefined,
+          isEditable: false,
+        },
+      }
+    )
+
+    act(() => result.current.commitStructuredValueChange("Globex"))
+    rerender({ materializedFieldPath: undefined, isEditable: true })
+    act(() => result.current.commitStructuredValueChange("Initech"))
+
+    expect(onCellCommit).not.toHaveBeenCalled()
+  })
+})
+
+describe("single file table document model", () => {
+  it("keeps primitive pending values visible through the edit store until parent echo", () => {
+    const onUpdateDocument = vi.fn(async () => undefined)
+    const { result, rerender } = renderHook(
+      ({ sourceDocument }) =>
+        useSingleFileTableDocumentModel({
+          sourceDocument,
+          onUpdateDocument,
+        }),
+      { initialProps: { sourceDocument: document } }
+    )
+
+    const originalProjectionDocument = result.current.projectionDocument
+
+    act(() => {
+      result.current.primitiveEditStore.commitValue("vendor", "Globex", "ACME")
+      result.current.onCellCommit({
+        fieldPath: "vendor",
+        value: "Globex",
+        previousValue: "ACME",
+        visibility: "primitivePendingValue",
+      })
+    })
+
+    expect(result.current.primitiveEditStore.getSnapshot("vendor")).toEqual({
+      status: "pending",
+      hasValue: true,
+      value: "Globex",
+    })
+    expect(onUpdateDocument).toHaveBeenCalledWith({
+      data: { ...document.data, vendor: "Globex" },
+    })
+
+    rerender({
+      sourceDocument: {
+        ...document,
+        data: { ...document.data, vendor: "Globex" },
+      },
+    })
+
+    expect(result.current.projectionDocument).toBe(originalProjectionDocument)
+    expect(result.current.primitiveEditStore.getSnapshot("vendor")).toEqual({
+      status: "confirmed",
+      hasValue: true,
+      value: "Globex",
+    })
+  })
+
+  it("replaces the projection document for authoritative same-id parent data", () => {
+    const { result, rerender } = renderHook(
+      ({ sourceDocument }) =>
+        useSingleFileTableDocumentModel({
+          sourceDocument,
+          onUpdateDocument: vi.fn(async () => undefined),
+        }),
+      { initialProps: { sourceDocument: document } }
+    )
+    const authoritativeDocument = {
+      ...document,
+      data: { ...document.data, vendor: "Initech" },
+    }
+
+    rerender({ sourceDocument: authoritativeDocument })
+
+    expect(result.current.projectionDocument).toBe(authoritativeDocument)
+  })
+
+  it("patches structured commits from the confirmed document data", () => {
+    const onUpdateDocument = vi.fn(async () => undefined)
+    const { result } = renderHook(() =>
+      useSingleFileTableDocumentModel({
+        sourceDocument: document,
+        onUpdateDocument,
+      })
+    )
+
+    act(() => {
+      result.current.onCellCommit({
+        fieldPath: "total",
+        value: 12,
+        previousValue: 10,
+        visibility: "projectedDocumentValue",
+      })
+    })
+
+    expect(onUpdateDocument).toHaveBeenCalledWith({
+      data: { ...document.data, total: 12 },
+    })
   })
 })
 

@@ -3,9 +3,11 @@
 import * as React from "react"
 
 export function useIsClient(): boolean {
-  return React.useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false
-  )
+  const [isClient, setIsClient] = React.useState(false)
+
+  React.useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  return isClient
 }

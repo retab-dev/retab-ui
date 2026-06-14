@@ -5,29 +5,23 @@ import { PlusIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-
-export interface SchemaChipAddRowModel {
-  focusAfterSubmit?: boolean
-  inputLabel: string
-  placeholder: string
-  submitLabel: string
-  value: string
-  onChange: (value: string) => void
-  onSubmit: () => void
-}
+import type { SchemaAddInputModel } from "@/components/schema-editor/primitives/schema-add-input-model"
 
 export interface SchemaChipAddRowProps {
+  addInput: SchemaAddInputModel
   editable: boolean
-  row: SchemaChipAddRowModel
 }
 
-export function SchemaChipAddRow({ editable, row }: SchemaChipAddRowProps) {
+export function SchemaChipAddRow({
+  addInput,
+  editable,
+}: SchemaChipAddRowProps) {
   const addInputRef = React.useRef<HTMLInputElement>(null)
 
   const submitAddRow = () => {
-    if (!row.value.trim()) return
-    row.onSubmit()
-    if (row.focusAfterSubmit) {
+    if (!addInput.value.trim()) return
+    addInput.onSubmit()
+    if (addInput.focusAfterSubmit) {
       addInputRef.current?.focus()
     }
   }
@@ -35,12 +29,12 @@ export function SchemaChipAddRow({ editable, row }: SchemaChipAddRowProps) {
   return (
     <div className="flex items-center gap-2">
       <Input
-        aria-label={row.inputLabel}
+        aria-label={addInput.inputLabel}
         ref={addInputRef}
         disabled={!editable}
-        placeholder={row.placeholder}
-        value={row.value}
-        onChange={(event) => row.onChange(event.target.value)}
+        placeholder={addInput.placeholder}
+        value={addInput.value}
+        onChange={(event) => addInput.onChange(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
             event.preventDefault()
@@ -51,14 +45,14 @@ export function SchemaChipAddRow({ editable, row }: SchemaChipAddRowProps) {
         className="w-40"
       />
       <Button
-        disabled={!editable || !row.value.trim()}
+        disabled={!editable || !addInput.value.trim()}
         type="button"
         variant="outline"
         size="sm"
         onClick={submitAddRow}
       >
         <PlusIcon className="mr-1 h-4 w-4" />
-        {row.submitLabel}
+        {addInput.submitLabel}
       </Button>
     </div>
   )

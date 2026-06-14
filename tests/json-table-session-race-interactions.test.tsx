@@ -13,6 +13,7 @@ import type { JSONSchema7 } from "json-schema"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
+import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import { projectDocumentRows } from "@/components/json-table/lib/document-projection"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
@@ -20,9 +21,9 @@ import {
   getFieldMetadata,
   type FieldMetadata,
 } from "@/components/json-table/lib/schema-field-metadata"
-import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
 
+import { createTestCellCommitBridge } from "./json-table-interaction-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
 
 beforeAll(() => installJsonTableDom())
@@ -115,6 +116,7 @@ function renderVirtualTable({
     visiblePaths,
     includeArrayAddRows: false,
   })
+  const primitiveEditStore = createJsonTablePrimitiveEditStore()
   const table = (
     <SingleFileVirtualizedTable
       headerNodes={visiblePaths.map(headerNode)}
@@ -131,8 +133,12 @@ function renderVirtualTable({
       projectedRows={projectedRows}
       visibleColumns={visiblePaths.map(visibleColumn)}
       rowCount={projectedRows.length}
-      primitiveEditStore={createJsonTablePrimitiveEditStore()}
-      onUpdateDocument={onUpdateDocument}
+      primitiveEditStore={primitiveEditStore}
+      {...createTestCellCommitBridge({
+        documentData: tableDocument.data,
+        onUpdateDocument,
+        primitiveEditStore,
+      })}
       columnWidth="xxl"
       overscan={overscan}
       jumpOverscan={overscan}
@@ -358,6 +364,7 @@ describe("json table session and overlay race interactions", () => {
     expect(await view.findByRole("option", { name: "paid" })).toBeTruthy()
 
     await act(async () => {
+      const primitiveEditStore = createJsonTablePrimitiveEditStore()
       await Promise.resolve()
       view.rerender(
         <React.StrictMode>
@@ -380,8 +387,12 @@ describe("json table session and overlay race interactions", () => {
             })}
             visibleColumns={["status"].map(visibleColumn)}
             rowCount={1}
-      primitiveEditStore={createJsonTablePrimitiveEditStore()}
-            onUpdateDocument={vi.fn()}
+            primitiveEditStore={primitiveEditStore}
+            {...createTestCellCommitBridge({
+              documentData: baseDocument.data,
+              onUpdateDocument: vi.fn(),
+              primitiveEditStore,
+            })}
             columnWidth="xxl"
           />
         </React.StrictMode>

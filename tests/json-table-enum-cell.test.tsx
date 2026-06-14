@@ -3,8 +3,6 @@
 import { cleanup, fireEvent } from "@testing-library/react"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
-import { createDataCellShellActivationSource } from "@/registry/new-york-v4/ui/data-cell-activation"
-
 import type { JsonTableCellHarnessProps } from "./json-table-cell-test-utils"
 import {
   baseField,
@@ -150,7 +148,6 @@ describe("json table enum cell", () => {
         fieldPath: "status",
         isOverlayOpen: false,
       }),
-      activationSource: createDataCellShellActivationSource(),
       onOpenChange,
     })
 

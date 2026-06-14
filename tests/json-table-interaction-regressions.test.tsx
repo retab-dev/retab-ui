@@ -130,11 +130,11 @@ describe("json table interaction regressions", () => {
   })
 
   it("does not let read-only cells start editing from keyboard shortcuts", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["vendor", "is_paid", "shipped_at"],
       isJsonEditable: false,
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     for (const fieldPath of ["vendor", "is_paid", "shipped_at"]) {
@@ -152,6 +152,6 @@ describe("json table interaction regressions", () => {
       view.container.querySelector('[data-slot="data-cell"][data-mode="edit"]')
     ).toBeNull()
     expect(pickerPopup()).toBeNull()
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 })

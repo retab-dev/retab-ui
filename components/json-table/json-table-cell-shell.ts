@@ -41,12 +41,14 @@ export function editableJsonTableCellShellProps({
   cellWidth,
   isCellEditing,
   isJsonEditable,
+  isPrimitiveCell,
   materializedFieldPath,
   shellHandlers,
 }: {
   cellWidth: number
   isCellEditing: boolean
   isJsonEditable: boolean
+  isPrimitiveCell: boolean
   materializedFieldPath: string
   shellHandlers: JsonTableShellHandlers
 }): EditableTableCellShellProps {
@@ -55,7 +57,7 @@ export function editableJsonTableCellShellProps({
     "data-field-path": materializedFieldPath,
     "data-json-table-editable-cell": "true",
     ...shellHandlers,
-    tabIndex: isJsonEditable ? 0 : undefined,
+    tabIndex: isJsonEditable && !isPrimitiveCell ? 0 : undefined,
     className: [
       "relative m-0 border-t-0 border-r border-b border-l-0 p-0 select-none",
       interactiveCellOverlayClass,

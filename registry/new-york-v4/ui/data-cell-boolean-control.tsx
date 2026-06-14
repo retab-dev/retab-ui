@@ -8,45 +8,7 @@ import {
   dataCellBooleanDisplayClass,
   dataCellCheckboxDisplayClass,
 } from "@/registry/new-york-v4/ui/data-cell-classes"
-import type {
-  DataCellEditorHandle,
-  DataCellValueMeta,
-} from "@/registry/new-york-v4/ui/data-cell-types"
-
-type DataCellBooleanRootProps = Omit<
-  React.HTMLAttributes<HTMLDivElement>,
-  | "children"
-  | "className"
-  | "defaultValue"
-  | "id"
-  | "onBlur"
-  | "onChange"
-  | "onClick"
-  | "onDoubleClick"
-  | "onFocus"
-  | "onKeyDown"
->
-
-export type DataCellBooleanControlProps = DataCellBooleanRootProps & {
-  kind: "boolean"
-  value?: boolean | null
-  disabled?: boolean
-  name?: string
-  className?: string
-  autoFocus?: boolean
-  id?: string
-  "aria-label"?: string
-  "aria-describedby"?: string
-  "aria-invalid"?: boolean | "false" | "true" | "grammar" | "spelling"
-  onCommit?: (value: boolean, meta: DataCellValueMeta) => void
-  onEditingEnd?: () => void
-  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
-  onFocus?: React.FocusEventHandler<HTMLButtonElement>
-  onBlur?: React.FocusEventHandler<HTMLButtonElement>
-  onKeyDown?: React.KeyboardEventHandler<HTMLButtonElement>
-  onClick?: React.MouseEventHandler<HTMLButtonElement>
-  onDoubleClick?: React.MouseEventHandler<HTMLButtonElement>
-}
+import type { DataCellBooleanControlProps } from "@/registry/new-york-v4/ui/data-cell-control-contract"
 
 export function commitDataCellBooleanToggle(
   value: DataCellBooleanControlProps["value"],

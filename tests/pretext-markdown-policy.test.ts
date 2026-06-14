@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   createPretextMarkdownSanitizeSchema,
   sanitizePretextMarkdownImageUrl,
+  sanitizePretextMarkdownMediaUrl,
   sanitizePretextMarkdownUrl,
 } from "@/registry/new-york-v4/ui/pretext-markdown-policy"
 
@@ -73,5 +74,15 @@ describe("Pretext Markdown policy", () => {
     expect(sanitizePretextMarkdownImageUrl("mailto:hello@retab.com")).toBe("")
     expect(sanitizePretextMarkdownImageUrl("javascript%3Aalert(1)")).toBe("")
     expect(sanitizePretextMarkdownImageUrl("//example.com/image.png")).toBe("")
+  })
+
+  it("uses the same safe destination policy for media components", () => {
+    expect(sanitizePretextMarkdownMediaUrl("/demo.mp4")).toBe("/demo.mp4")
+    expect(sanitizePretextMarkdownMediaUrl("https://retab.com/demo.webm")).toBe(
+      "https://retab.com/demo.webm"
+    )
+    expect(sanitizePretextMarkdownMediaUrl("mailto:hello@retab.com")).toBe("")
+    expect(sanitizePretextMarkdownMediaUrl("javascript:alert(1)")).toBe("")
+    expect(sanitizePretextMarkdownMediaUrl("//example.com/demo.mp4")).toBe("")
   })
 })

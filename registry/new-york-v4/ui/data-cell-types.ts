@@ -1,6 +1,6 @@
 import type * as React from "react"
 
-import type { DataCellActivationSource } from "@/registry/new-york-v4/ui/data-cell-activation"
+import type { DataCellActivationRequest } from "@/registry/new-york-v4/ui/data-cell-activation"
 
 export type DataCellKindModel = {
   text: {
@@ -48,7 +48,7 @@ export type DataCellValue = DataCellValueForKind<DataCellKind> | undefined
 export type DataCellCommitValue = DataCellCommitValueForKind<DataCellKind>
 export type DataCellDateTimeZone = "local" | "preserve" | "utc"
 
-export type { DataCellActivationSource }
+export type { DataCellActivationRequest }
 
 export type DataCellValueMeta = {
   kind: DataCellKind
@@ -87,7 +87,7 @@ type DataCellBaseProps<Kind extends DataCellKind> = DataCellNativeProps & {
   active?: boolean
   disabled?: boolean
   name?: string
-  activationSource?: DataCellActivationSource
+  activationRequest?: DataCellActivationRequest
   autoFocus?: boolean
   onEditingEnd?: () => void
   onActiveChange?: (active: boolean) => void

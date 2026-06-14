@@ -7,9 +7,9 @@ import { useForm } from "react-hook-form"
 import type { Source } from "@/lib/document-source"
 import {
   AnchoredDocumentProvider,
-  type AnchoredItem,
   useAnchoredDocument,
   useAnchoredFieldLink,
+  type AnchoredItem,
 } from "@/components/ui/anchored-document-viewer"
 import {
   sourceToPdfAnchor,
@@ -26,8 +26,10 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { SourceIndicator } from "@/components/ui/source-indicator"
 import {
   ViewerBody,
+  ViewerHeader,
   ViewerRoot,
   ViewerSidebar,
+  ViewerSidebarTrigger,
   ViewerSurface,
 } from "@/components/ui/viewer"
 import { JsonForm } from "@/components/json-form/json-form"
@@ -106,7 +108,18 @@ function ExtractViewerContent({
   const form = useForm<Record<string, unknown>>({ defaultValues })
 
   return (
-    <ViewerRoot bare className="h-full min-h-[680px] bg-background">
+    <ViewerRoot
+      bare
+      defaultSidebarOpen
+      className="h-full min-h-[680px] bg-background"
+    >
+      <ViewerHeader className="flex min-h-10 items-center gap-2 px-2">
+        <ViewerSidebarTrigger side="right" />
+        <h2 className="min-w-0 truncate text-sm font-medium">Extracted data</h2>
+        <span className="ml-auto text-xs text-muted-foreground">
+          {FIELDS.length} fields
+        </span>
+      </ViewerHeader>
       <ViewerBody>
         <ViewerSurface className="relative">
           <PdfViewerProvider source={PDF_SOURCE}>
@@ -117,15 +130,16 @@ function ExtractViewerContent({
               renderPageOverlay={renderPageOverlay}
             />
           </PdfViewerProvider>
-          <SourceIndicator path={link.activePath} found={!!activeItem?.anchor} />
+          <SourceIndicator
+            path={link.activePath}
+            found={!!activeItem?.anchor}
+          />
         </ViewerSurface>
-        <ViewerSidebar className="flex w-[240px] flex-shrink-0 flex-col border-l md:w-[240px]">
-          <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">
-            <h2 className="text-sm font-medium">Extracted data</h2>
-            <span className="ml-auto text-xs text-muted-foreground">
-              {FIELDS.length} fields
-            </span>
-          </div>
+        <ViewerSidebar
+          side="right"
+          width="240px"
+          className="flex flex-shrink-0 flex-col border-l"
+        >
           <ScrollArea className="min-h-0 flex-1">
             <div className="p-4">
               <JsonForm form={form} schema={schema} anchorLink={link} />

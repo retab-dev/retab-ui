@@ -6,7 +6,7 @@ import { getEffectiveType } from "@/components/schema-editor/draft/draft-node-ed
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import { createPropertyTypeFieldWithObjectTemplates } from "@/components/schema-editor/property-form/fields/property-object-template-type-field"
 import { resolvePropertyCapabilities } from "@/components/schema-editor/property-form/model/property-capabilities"
-import { createPropertySchemaDetails } from "@/components/schema-editor/property-form/model/property-schema-details"
+import { createPropertySchemaPlan } from "@/components/schema-editor/property-form/model/property-schema-plan"
 import { normalizeValidationForCapabilities } from "@/components/schema-editor/property-form/model/property-validation"
 import { propertyDraftReducer } from "@/components/schema-editor/property-form/reducer"
 import { usePropertyFormSubmit } from "@/components/schema-editor/property-form/property-form-submit"
@@ -81,7 +81,7 @@ export function usePropertyFormController({
     capabilities,
   })
   const effectiveType = getEffectiveType(propertyDraft.schemaNode)
-  const schemaDetailsContext = React.useMemo(
+  const schemaPlanContext = React.useMemo(
     () => ({
       ...schemaContext,
       resetKey: [
@@ -133,9 +133,9 @@ export function usePropertyFormController({
     [commitPropertyDraft]
   )
 
-  const schemaDetails = createPropertySchemaDetails({
+  const schemaPlan = createPropertySchemaPlan({
     schemaNode: propertyDraft.schemaNode,
-    schemaContext: schemaDetailsContext,
+    schemaContext: schemaPlanContext,
     mode: capabilities.mode,
     access: {
       arrayItems: capabilities.canEditArrayItems,
@@ -154,10 +154,7 @@ export function usePropertyFormController({
         schemaNode,
       }),
   })
-  const hasSchemaDetails =
-    schemaDetails.enumValues ||
-    schemaDetails.objectProperties ||
-    schemaDetails.arrayItems
+  const hasSchemaPlan = schemaPlan.items.length > 0
   const { description } = propertyDraft.schemaNode
 
   return {
@@ -202,7 +199,7 @@ export function usePropertyFormController({
             description,
           }),
       },
-      schemaDetails: hasSchemaDetails ? schemaDetails : undefined,
+      schemaPlan: hasSchemaPlan ? schemaPlan : undefined,
     },
     footer: {
       canDelete: capabilities.canDelete,

@@ -5,17 +5,11 @@ import { AlertCircle, PlusIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import type { SchemaAddInputModel } from "@/components/schema-editor/primitives/schema-add-input-model"
 
-interface SchemaAddRowProps {
+interface SchemaAddRowProps extends SchemaAddInputModel {
   className?: string
   disabled: boolean
-  error?: string | null
-  inputLabel: string
-  placeholder: string
-  submitLabel: string
-  value: string
-  onChange: (value: string) => void
-  onSubmit: () => void
 }
 
 export function SchemaAddRow({

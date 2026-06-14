@@ -46,13 +46,11 @@ const unresolvedPrimitiveEditBaseValue = Symbol(
 )
 
 const primitiveDocumentEchoes = new WeakSet<Record<string, unknown>>()
+const primitiveDocumentEchoKeys = new Set<string>()
 
 export type JsonTablePrimitiveEditStore = ReturnType<
   typeof createJsonTablePrimitiveEditStore
 >
-
-export const fallbackJsonTablePrimitiveEditStore =
-  createJsonTablePrimitiveEditStore()
 
 export function createJsonTablePrimitiveEditStore() {
   const entries = new Map<string, PrimitiveEditEntry>()
@@ -87,6 +85,14 @@ export function createJsonTablePrimitiveEditStore() {
     return entry.supersededValues.some((item) => Object.is(item, value))
   }
 
+  function documentEchoKey(data: Record<string, unknown>) {
+    try {
+      return JSON.stringify(data)
+    } catch {
+      return undefined
+    }
+  }
+
   return {
     getSnapshot(fieldPath: string | undefined): JsonTablePrimitiveEditSnapshot {
       if (!fieldPath) return idlePrimitiveEditSnapshot
@@ -114,12 +120,20 @@ export function createJsonTablePrimitiveEditStore() {
     },
     recordDocumentEcho(data: Record<string, unknown>) {
       primitiveDocumentEchoes.add(data)
+      const key = documentEchoKey(data)
+      if (key !== undefined) primitiveDocumentEchoKeys.add(key)
     },
     reconcileDocumentData(
       data: Record<string, unknown>
     ): JsonTablePrimitiveEditReconciliation {
+      const dataEchoKey = documentEchoKey(data)
+      const isRecordedPrimitiveEcho =
+        primitiveDocumentEchoes.has(data) ||
+        (dataEchoKey !== undefined && primitiveDocumentEchoKeys.has(dataEchoKey))
+      if (dataEchoKey !== undefined) primitiveDocumentEchoKeys.delete(dataEchoKey)
+
       const reconciliation: JsonTablePrimitiveEditReconciliation = {
-        isPrimitiveDocumentEcho: primitiveDocumentEchoes.has(data),
+        isPrimitiveDocumentEcho: isRecordedPrimitiveEcho,
         confirmedFieldPaths: [],
         staleFieldPaths: [],
       }
@@ -204,21 +218,16 @@ export function useJsonTablePrimitiveEditSnapshot({
   store,
 }: {
   fieldPath: string | undefined
-  store: JsonTablePrimitiveEditStore | undefined
+  store: JsonTablePrimitiveEditStore
 }) {
-  const editStore = store ?? fallbackJsonTablePrimitiveEditStore
-
   React.useSyncExternalStore(
     React.useCallback(
-      (listener) => editStore.subscribe(fieldPath, listener),
-      [fieldPath, editStore]
+      (listener) => store.subscribe(fieldPath, listener),
+      [fieldPath, store]
     ),
-    React.useCallback(
-      () => editStore.getVersion(fieldPath),
-      [fieldPath, editStore]
-    ),
+    React.useCallback(() => store.getVersion(fieldPath), [fieldPath, store]),
     () => 0
   )
 
-  return editStore.getSnapshot(fieldPath)
+  return store.getSnapshot(fieldPath)
 }

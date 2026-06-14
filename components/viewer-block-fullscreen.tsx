@@ -26,6 +26,7 @@ import { EditViewerBlock } from "@/registry/new-york-v4/blocks/edit-viewer-block
 import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block"
 import { ExtractionViewerBlock } from "@/registry/new-york-v4/blocks/extraction-viewer-block"
 import { FileSystemBlock } from "@/registry/new-york-v4/blocks/file-system-block"
+import { FsLightBlock } from "@/registry/new-york-v4/blocks/fslight-block"
 import { ImageSourcesBlock } from "@/registry/new-york-v4/blocks/image-sources-block"
 import { LegendVariantsBlock } from "@/registry/new-york-v4/blocks/legend-variants-block"
 import { OcrBlock } from "@/registry/new-york-v4/blocks/ocr-block"
@@ -68,6 +69,7 @@ const blockComponents = {
   "dropzone-pinboard": PinboardDropSurface,
   "dropzone-disabled": DisabledDropzone,
   "file-system": FileSystemBlock,
+  fslight: FsLightBlock,
   "primitive-cards": PrimitiveCardsBlock,
   "legend-variants": LegendVariantsBlock,
   "pdf-thumbnails": PdfThumbnailsBlock,

@@ -75,10 +75,10 @@ describe("json table date and time picker interactions", () => {
   })
 
   it("closes date pickers on outside click and Escape without committing", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["shipped_at"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     await activatePickerCell(view, "shipped_at")
@@ -91,7 +91,7 @@ describe("json table date and time picker interactions", () => {
     await waitFor(() => {
       expect(pickerPopup()).toBeNull()
     })
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
 
     await activatePickerCell(view, "shipped_at")
     expect(await view.findByRole("dialog")).toBeTruthy()
@@ -101,14 +101,14 @@ describe("json table date and time picker interactions", () => {
     await waitFor(() => {
       expect(pickerPopup()).toBeNull()
     })
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("commits date selections and closes the session", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["shipped_at"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     await activatePickerCell(view, "shipped_at")
@@ -116,7 +116,7 @@ describe("json table date and time picker interactions", () => {
     fireEvent.click(dayButton("1/15/2024"))
 
     await waitFor(() => {
-      expect(onDocumentDataChange).toHaveBeenCalledWith(
+      expect(onCellCommit).toHaveBeenCalledWith(
         "doc_1",
         "shipped_at",
         "2024-01-15"
@@ -126,10 +126,10 @@ describe("json table date and time picker interactions", () => {
   })
 
   it("commits time changes and keeps the picker open", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["shipped_time"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     await activatePickerCell(view, "shipped_time")
@@ -139,7 +139,7 @@ describe("json table date and time picker interactions", () => {
       target: { value: "10:45" },
     })
 
-    expect(onDocumentDataChange).toHaveBeenCalledWith(
+    expect(onCellCommit).toHaveBeenCalledWith(
       "doc_1",
       "shipped_time",
       "10:45:00"
@@ -149,10 +149,10 @@ describe("json table date and time picker interactions", () => {
   })
 
   it("commits date-time date selections and keeps the picker open", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["reviewed_at"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     await activatePickerCell(view, "reviewed_at")
@@ -160,7 +160,7 @@ describe("json table date and time picker interactions", () => {
     fireEvent.click(dayButton("1/15/2024"))
 
     await waitFor(() => {
-      expect(onDocumentDataChange).toHaveBeenCalledWith(
+      expect(onCellCommit).toHaveBeenCalledWith(
         "doc_1",
         "reviewed_at",
         "2024-01-15T09:30"
@@ -171,10 +171,10 @@ describe("json table date and time picker interactions", () => {
   })
 
   it("commits cleared time edits as null and keeps the picker open", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["shipped_time"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     await activatePickerCell(view, "shipped_time")
@@ -184,7 +184,7 @@ describe("json table date and time picker interactions", () => {
       target: { value: "" },
     })
 
-    expect(onDocumentDataChange).toHaveBeenCalledWith(
+    expect(onCellCommit).toHaveBeenCalledWith(
       "doc_1",
       "shipped_time",
       null
@@ -194,11 +194,11 @@ describe("json table date and time picker interactions", () => {
   })
 
   it("keeps read-only date cells inert", () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["shipped_at"],
       isJsonEditable: false,
-      onDocumentDataChange,
+      onCellCommit,
     })
     const cell = findReadonlyCell(view.container, "shipped_at")
 
@@ -206,6 +206,6 @@ describe("json table date and time picker interactions", () => {
 
     expect(cell.getAttribute("data-json-table-editable-cell")).toBeNull()
     expect(pickerPopup()).toBeNull()
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 })

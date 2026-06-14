@@ -78,11 +78,11 @@ async function activateCell(
 async function activateEnumCell({
   document = edgeDocument(),
   fieldPath,
-  onDocumentDataChange = vi.fn(),
+  onCellCommit = vi.fn(),
 }: {
   document?: TableDocument
   fieldPath: string
-  onDocumentDataChange?: (
+  onCellCommit?: (
     docId: string,
     fieldPath: string,
     value: unknown
@@ -92,7 +92,7 @@ async function activateEnumCell({
     document,
     schema: edgeSchema,
     visiblePaths: [fieldPath],
-    onDocumentDataChange,
+    onCellCommit,
   })
 
   const cell = await editableCell(view, fieldPath)
@@ -108,7 +108,7 @@ async function activateEnumCell({
     expect(trigger.getAttribute("aria-expanded")).toBe("true")
   )
 
-  return { ...view, document, trigger, onDocumentDataChange }
+  return { ...view, document, trigger, onCellCommit }
 }
 
 async function chooseOption(
@@ -151,13 +151,13 @@ describe("json table value edge interactions", () => {
       await chooseOption(view, optionName)
 
       await waitFor(() =>
-        expect(view.onDocumentDataChange).toHaveBeenCalledWith(
+        expect(view.onCellCommit).toHaveBeenCalledWith(
           "doc_1",
           fieldPath,
           expectedValue
         )
       )
-      expect(view.onDocumentDataChange).toHaveBeenCalledTimes(1)
+      expect(view.onCellCommit).toHaveBeenCalledTimes(1)
     }
   )
 
@@ -188,13 +188,13 @@ describe("json table value edge interactions", () => {
       await chooseOption(view, optionName)
 
       await waitFor(() =>
-        expect(view.onDocumentDataChange).toHaveBeenCalledWith(
+        expect(view.onCellCommit).toHaveBeenCalledWith(
           "doc_1",
           "sentinel_status",
           expectedValue
         )
       )
-      expect(view.onDocumentDataChange).toHaveBeenCalledTimes(1)
+      expect(view.onCellCommit).toHaveBeenCalledTimes(1)
     }
   )
 
@@ -214,13 +214,13 @@ describe("json table value edge interactions", () => {
     await chooseOption(view, /no selection/i)
 
     await waitFor(() =>
-      expect(view.onDocumentDataChange).toHaveBeenCalledWith(
+      expect(view.onCellCommit).toHaveBeenCalledWith(
         "doc_1",
         "sentinel_status",
         null
       )
     )
-    expect(view.onDocumentDataChange).toHaveBeenCalledTimes(1)
+    expect(view.onCellCommit).toHaveBeenCalledTimes(1)
   })
 
   it("filters empty string enum members from the dropdown", async () => {
@@ -238,22 +238,22 @@ describe("json table value edge interactions", () => {
     await chooseOption(view, /no selection/i)
 
     await waitFor(() =>
-      expect(view.onDocumentDataChange).toHaveBeenCalledWith(
+      expect(view.onCellCommit).toHaveBeenCalledWith(
         "doc_1",
         "nullable_status",
         null
       )
     )
-    expect(view.onDocumentDataChange).toHaveBeenCalledTimes(1)
+    expect(view.onCellCommit).toHaveBeenCalledTimes(1)
   })
 
   it("commits empty text blur as null exactly once", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       document: edgeDocument(),
       schema: edgeSchema,
       visiblePaths: ["note"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     await activateCell(view, "note")
@@ -264,9 +264,9 @@ describe("json table value edge interactions", () => {
     fireEvent.blur(input)
 
     await waitFor(() =>
-      expect(onDocumentDataChange).toHaveBeenCalledWith("doc_1", "note", null)
+      expect(onCellCommit).toHaveBeenCalledWith("doc_1", "note", null)
     )
-    expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
+    expect(onCellCommit).toHaveBeenCalledTimes(1)
   })
 
   it.each([
@@ -275,12 +275,12 @@ describe("json table value edge interactions", () => {
   ])(
     "commits $label integer drafts as the current null behavior",
     async ({ draftValue, expectedValue }) => {
-      const onDocumentDataChange = vi.fn()
+      const onCellCommit = vi.fn()
       const view = renderInteractionRow({
         document: edgeDocument(),
         schema: edgeSchema,
         visiblePaths: ["count"],
-        onDocumentDataChange,
+        onCellCommit,
       })
 
       await activateCell(view, "count")
@@ -290,13 +290,13 @@ describe("json table value edge interactions", () => {
       fireEvent.blur(input)
 
       await waitFor(() =>
-        expect(onDocumentDataChange).toHaveBeenCalledWith(
+        expect(onCellCommit).toHaveBeenCalledWith(
           "doc_1",
           "count",
           expectedValue
         )
       )
-      expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
+      expect(onCellCommit).toHaveBeenCalledTimes(1)
     }
   )
 
@@ -321,25 +321,25 @@ describe("json table value edge interactions", () => {
   ])(
     "does not double-toggle booleans from $activation activation",
     async ({ interact }) => {
-      const onDocumentDataChange = vi.fn()
+      const onCellCommit = vi.fn()
       const view = renderInteractionRow({
         document: edgeDocument(),
         schema: edgeSchema,
         visiblePaths: ["is_paid"],
-        onDocumentDataChange,
+        onCellCommit,
       })
       const cell = await editableCell(view, "is_paid")
 
       await interact(cell)
 
       await waitFor(() =>
-        expect(onDocumentDataChange).toHaveBeenCalledWith(
+        expect(onCellCommit).toHaveBeenCalledWith(
           "doc_1",
           "is_paid",
           true
         )
       )
-      expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
+      expect(onCellCommit).toHaveBeenCalledTimes(1)
     }
   )
 })

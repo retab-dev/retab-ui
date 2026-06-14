@@ -35,6 +35,18 @@ const deletedFiles = [
     "components/schema-editor/property-form/fields/property-type",
     "menu-model.ts",
   ].join("-"),
+  [
+    "components/schema-editor/property-form/fields/property-schema",
+    "details-field.tsx",
+  ].join("-"),
+  [
+    "components/schema-editor/property-form/model/property-schema",
+    "details.ts",
+  ].join("-"),
+  [
+    "components/schema-editor/property-form/fields/object-property-row",
+    "details.ts",
+  ].join("-"),
 ]
 
 const executableFilesToCheck = [
@@ -81,16 +93,24 @@ const executableFilesToCheck = [
   "components/schema-editor/property-form/fields/object-properties-reorder-focus.ts",
   "components/schema-editor/property-form/fields/object-property-row.tsx",
   "components/schema-editor/property-form/fields/array-items-field.tsx",
+  "components/schema-editor/property-form/fields/enum-value-identity.ts",
   "components/schema-editor/property-form/fields/enum-values-field.tsx",
-  "components/schema-editor/property-form/fields/property-schema-details-field.tsx",
-  "components/schema-editor/property-form/model/property-schema-details.ts",
+  "components/schema-editor/property-form/model/property-schema-plan.ts",
   "components/schema-editor/property-form/model/object-property-edits.ts",
+  "components/schema-editor/property-form/model/object-property-selectors.ts",
   "components/schema-editor/property-form/fields/property-type-field-model.ts",
   "components/schema-editor/property-form/fields/property-object-template-type-field.tsx",
   "components/schema-editor/property-form/fields/object-properties-drag.ts",
-  "components/schema-editor/property-form/fields/object-property-row-details.ts",
+  "components/schema-editor/property-form/fields/object-property-add-input.ts",
+  "components/schema-editor/property-form/fields/object-properties-operations.ts",
+  "components/schema-editor/property-form/fields/object-properties-plan-field.tsx",
+  "components/schema-editor/property-form/fields/object-properties-rows.ts",
+  "components/schema-editor/property-form/fields/object-properties-state.ts",
+  "components/schema-editor/property-form/fields/object-property-row-schema-plan.ts",
   "components/schema-editor/property-form/fields/object-property-row-identity.ts",
-  "components/schema-editor/property-form/fields/property-schema-details-renderer.tsx",
+  "components/schema-editor/property-form/fields/property-schema-plan-field.tsx",
+  "components/schema-editor/property-form/model/object-properties-view.ts",
+  "components/schema-editor/primitives/schema-add-input-model.ts",
   "components/schema-editor/primitives/schema-row-reorder-actions.tsx",
   "components/schema-editor/primitives/schema-row-drag.ts",
   "components/schema-editor/schema-type-menu-sections.tsx",
@@ -579,7 +599,7 @@ describe("schema builder architecture", () => {
       "draftPropertyIdsByName",
       "localPropertyNamesKeyRef",
       "createObjectPropertySchema",
-      "listObjectPropertyNames",
+      "getObjectPropertyNames",
       "renameObjectProperty",
       "removeObjectProperty",
       "replaceObjectProperty",
@@ -601,10 +621,38 @@ describe("schema builder architecture", () => {
       ),
       "utf8"
     )
+    const selectorsContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/model/object-property-selectors.ts"
+      ),
+      "utf8"
+    )
     const modelContent = readFileSync(
       join(
         repoRoot,
         "components/schema-editor/property-form/fields/object-properties-model.ts"
+      ),
+      "utf8"
+    )
+    const operationsContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/object-properties-operations.ts"
+      ),
+      "utf8"
+    )
+    const rowsContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/object-properties-rows.ts"
+      ),
+      "utf8"
+    )
+    const objectPropertiesViewContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/model/object-properties-view.ts"
       ),
       "utf8"
     )
@@ -654,17 +702,24 @@ describe("schema builder architecture", () => {
     expect(orderContent.includes("export function moveOrderedItem")).toBe(true)
     expect(editsContent.includes("moveOrderedItem")).toBe(true)
     expect(
-      modelContent.includes("reorder: ObjectPropertyRowReorderModel")
+      objectPropertiesViewContent.includes("reorder: ObjectPropertyRowReorderModel")
     ).toBe(true)
-    expect(modelContent.includes("ObjectPropertyRowReorderModel")).toBe(true)
-    expect(modelContent.includes("ObjectPropertyRowOrderModel")).toBe(false)
-    expect(modelContent.includes("moveOrderedItem")).toBe(true)
-    expect(modelContent.includes("move: (targetIndex: number)")).toBe(true)
-    expect(modelContent.includes("moveTo: (targetIndex: number)")).toBe(false)
+    expect(objectPropertiesViewContent.includes("ObjectPropertyRowReorderModel"))
+      .toBe(true)
+    expect(objectPropertiesViewContent.includes("ObjectPropertyRowOrderModel"))
+      .toBe(false)
+    expect(modelContent.includes("moveOrderedItem")).toBe(false)
+    expect(operationsContent.includes("moveOrderedItem")).toBe(true)
+    expect(
+      objectPropertiesViewContent.includes("move: (targetIndex: number)")
+    ).toBe(true)
+    expect(objectPropertiesViewContent.includes("moveTo: (targetIndex: number)"))
+      .toBe(false)
     expect(dragContent.includes("sourceRow?.reorder.move")).toBe(true)
     expect(dragContent.includes("sourceRow?.order.moveTo")).toBe(false)
     expect(dragContent.includes("useObjectPropertiesRowDrag")).toBe(true)
     expect(dragContent.includes("moveObjectProperty")).toBe(false)
+    expect(operationsContent.includes("moveObjectProperty")).toBe(true)
     expect(rowContent.includes("row.reorder.moveUp")).toBe(true)
     expect(rowContent.includes("row.reorder.moveDown")).toBe(true)
     expect(rowContent.includes("export function ObjectPropertyRows")).toBe(
@@ -672,12 +727,27 @@ describe("schema builder architecture", () => {
     )
     expect(rowContent.includes("useObjectPropertiesRowDrag")).toBe(true)
     expect(
-      modelContent.includes("rowSchemaDetails: PropertySchemaDetailsModel")
+      objectPropertiesViewContent.includes("schemaPlan: PropertySchemaPlan")
     ).toBe(true)
-    expect(rowContent.includes("renderPropertySchemaDetails(row.rowSchemaDetails)"))
-      .toBe(true)
+    expect(rowContent.includes("renderPlan(row.schemaPlan)")).toBe(true)
+    expect(rowContent.includes("property-schema-plan-field")).toBe(false)
+    expect(viewContent.includes("renderPlan")).toBe(true)
     expect(rowContent.includes("row." + "row" + "Details")).toBe(false)
     expect(modelContent.includes("row" + "Details")).toBe(false)
+    expect(rowContent.includes("row." + "rowSchema" + "Details")).toBe(false)
+    expect(modelContent.includes("rowSchema" + "Details")).toBe(false)
+    expect(rowsContent.includes("createObjectPropertyRowSchemaPlan")).toBe(true)
+    expect(modelContent.includes("createObjectPropertyRowSchemaPlan")).toBe(
+      false
+    )
+    expect(modelContent.includes("propertyNames.flatMap")).toBe(false)
+    expect(rowsContent.includes("propertyNames.flatMap")).toBe(true)
+    expect(selectorsContent.includes("getObjectPropertyNames")).toBe(true)
+    expect(selectorsContent.includes("isSchemaNode")).toBe(true)
+    expect(editsContent.includes("function listObjectPropertyNames")).toBe(false)
+    expect(editsContent.includes("function isSchemaNode")).toBe(false)
+    expect(editsContent.includes("object-property-selectors")).toBe(true)
+    expect(rowsContent.includes("object-property-edits")).toBe(false)
     expect(rowContent.includes("row." + "details")).toBe(false)
     expect(rowContent.includes("data-schema-row-order-row-id")).toBe(false)
     expect(viewContent.includes("useLayoutEffect")).toBe(false)
@@ -806,23 +876,41 @@ describe("schema builder architecture", () => {
     )
   })
 
-  it("keeps property schema details split by concrete field model", () => {
+  it("keeps property schema details split by recursive plan ownership", () => {
     const legacyDetailsName = ["schema", "NodeDetails"].join("")
     const legacyItemDetailsName = ["item", "Details"].join("")
+    const legacyDetailsModelName = ["PropertySchema", "DetailsModel"].join("")
+    const legacyObjectPropertiesSourceName = [
+      "PropertyObjectProperties",
+      "SourceModel",
+    ].join("")
+    const legacyArrayItemsModelName = [
+      "PropertyArrayItems",
+      "FieldModel",
+    ].join("")
     const files = [
       "components/schema-editor/property-form/types.ts",
       "components/schema-editor/property-form/property-form-controller.ts",
       "components/schema-editor/property-form/property-form-shell.tsx",
-      "components/schema-editor/property-form/fields/property-schema-details-field.tsx",
-      "components/schema-editor/property-form/model/property-schema-details.ts",
+      "components/schema-editor/property-form/fields/property-schema-plan-field.tsx",
+      "components/schema-editor/property-form/model/property-schema-plan.ts",
     ]
 
     for (const file of files) {
       const content = readFileSync(join(repoRoot, file), "utf8")
       expect(content.includes(legacyDetailsName), file).toBe(false)
       expect(content.includes(legacyItemDetailsName), file).toBe(false)
+      expect(content.includes(legacyDetailsModelName), file).toBe(false)
+      expect(content.includes(legacyObjectPropertiesSourceName), file).toBe(
+        false
+      )
+      expect(content.includes(legacyArrayItemsModelName), file).toBe(false)
     }
 
+    const typesContent = readFileSync(
+      join(repoRoot, "components/schema-editor/property-form/types.ts"),
+      "utf8"
+    )
     const shellContent = readFileSync(
       join(
         repoRoot,
@@ -830,10 +918,17 @@ describe("schema builder architecture", () => {
       ),
       "utf8"
     )
-    const detailsFieldContent = readFileSync(
+    const objectPropertiesPlanFieldContent = readFileSync(
       join(
         repoRoot,
-        "components/schema-editor/property-form/fields/property-schema-details-field.tsx"
+        "components/schema-editor/property-form/fields/object-properties-plan-field.tsx"
+      ),
+      "utf8"
+    )
+    const planFieldContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/property-schema-plan-field.tsx"
       ),
       "utf8"
     )
@@ -844,6 +939,13 @@ describe("schema builder architecture", () => {
       ),
       "utf8"
     )
+    const objectPropertiesViewContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/model/object-properties-view.ts"
+      ),
+      "utf8"
+    )
 
     expect(
       interfaceTypeLiteralPropertyProperties({
@@ -851,23 +953,136 @@ describe("schema builder architecture", () => {
         interfaceName: "PropertyFormViewModel",
         propertyName: "fields",
       })
-    ).toEqual(["name", "type", "nullable", "description", "schemaDetails"])
+    ).toEqual([
+      "name",
+      "type",
+      "nullable",
+      "description",
+      "schemaPlan",
+    ])
     expect(
       interfaceProperties({
         file: "components/schema-editor/property-form/types.ts",
-        interfaceName: "PropertyArrayItemsFieldModel",
+        interfaceName: "PropertySchemaPlan",
       })
-    ).toEqual(["itemSchemaDetails"])
-    expect(shellContent.includes("PropertySchemaDetailsField")).toBe(true)
-    expect(shellContent.includes("fields.schemaDetails")).toBe(true)
-    expect(shellContent.includes("const schemaDetails = {")).toBe(false)
-    expect(shellContent.includes("SchemaNode" + "Field")).toBe(false)
-    expect(detailsFieldContent.includes("createPropertySchemaDetails")).toBe(
+    ).toEqual(["details"])
+    expect(
+      interfaceProperties({
+        file: "components/schema-editor/property-form/types.ts",
+        interfaceName: "PropertyTypeDetailPlan",
+      })
+    ).toEqual(["kind", "field"])
+    expect(
+      interfaceProperties({
+        file: "components/schema-editor/property-form/types.ts",
+        interfaceName: "PropertyEnumDetailPlan",
+      })
+    ).toEqual(["kind", "field"])
+    expect(
+      interfaceProperties({
+        file: "components/schema-editor/property-form/types.ts",
+        interfaceName: "PropertyObjectPropertiesDetailPlan",
+      })
+    ).toEqual(["kind", "plan"])
+    expect(
+      interfaceProperties({
+        file: "components/schema-editor/property-form/types.ts",
+        interfaceName: "PropertyArrayItemsDetailPlan",
+      })
+    ).toEqual(["kind", "itemPlan"])
+    expect(
+      interfaceProperties({
+        file: "components/schema-editor/property-form/types.ts",
+        interfaceName: "PropertyObjectPropertiesPlan",
+      })
+    ).toEqual([
+      "schemaNode",
+      "schemaContext",
+      "mode",
+      "access",
+      "editable",
+      "onChange",
+    ])
+    expect(typesContent.includes("PropertyArrayItemsPlan")).toBe(false)
+    expect(typesContent.includes("type?: Property" + "TypeFieldModel")).toBe(
       false
     )
     expect(
-      objectPropertiesModelContent.includes("createObjectPropertyRowDetails")
+      typesContent.includes("enumValues?: Property" + "EnumValuesFieldModel")
+    ).toBe(false)
+    expect(
+      typesContent.includes(
+        "objectProperties?: Property" + "ObjectPropertiesPlan"
+      )
+    ).toBe(false)
+    expect(typesContent.includes("arrayItems?: Property" + "ArrayItemsPlan"))
+      .toBe(false)
+    expect(typesContent.includes("fields/object-properties-model")).toBe(false)
+    expect(shellContent.includes("PropertySchemaPlanField")).toBe(true)
+    expect(shellContent.includes("PropertySchema" + "DetailsField")).toBe(false)
+    expect(shellContent.includes("fields.schemaPlan")).toBe(true)
+    expect(shellContent.includes("const schema" + "Details = {")).toBe(false)
+    expect(shellContent.includes("SchemaNode" + "Field")).toBe(false)
+    expect(
+      functionFirstParameterTypeProperties({
+        file: "components/schema-editor/property-form/fields/property-schema-plan-field.tsx",
+        functionName: "PropertySchemaPlanField",
+      })
+    ).toEqual(["plan"])
+    expect(planFieldContent.includes("plan.details.map")).toBe(true)
+    expect(planFieldContent.includes("switch (detail.kind)")).toBe(true)
+    expect(planFieldContent.includes('case "type"')).toBe(true)
+    expect(planFieldContent.includes('case "enumValues"')).toBe(true)
+    expect(planFieldContent.includes('case "objectProperties"')).toBe(true)
+    expect(planFieldContent.includes('case "arrayItems"')).toBe(true)
+    expect(planFieldContent.includes("createPropertySchemaPlan"))
+      .toBe(false)
+    expect(planFieldContent.includes("PropertySchema" + "DetailsField")).toBe(
+      false
+    )
+    expect(
+      objectPropertiesPlanFieldContent.includes("useObjectPropertiesModel(plan)")
     ).toBe(true)
+    expect(
+      objectPropertiesModelContent.includes("createObjectPropertyRowSchemaPlan")
+    ).toBe(false)
+    expect(objectPropertiesViewContent.includes("useObjectPropertiesModel"))
+      .toBe(false)
+    expect(objectPropertiesViewContent.includes("createObjectPropertySchema"))
+      .toBe(false)
+  })
+
+  it("keeps property-form enum chips on stable local identity", () => {
+    const content = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/enum-values-field.tsx"
+      ),
+      "utf8"
+    )
+    const identityContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/enum-value-identity.ts"
+      ),
+      "utf8"
+    )
+
+    expect(content.includes("useEnumValueIdentity")).toBe(true)
+    expect(content.includes("id: `enum-value-${" + "index}`")).toBe(false)
+    expect(content.includes("valueIdentity.ids[index]")).toBe(true)
+    expect(content.includes("valueIdentity.removeId(id)")).toBe(true)
+    expect(identityContent.includes("React.useRef")).toBe(true)
+    expect(identityContent.includes("resetKeyRef")).toBe(true)
+    for (const forbidden of [
+      "SchemaRowReorderActions",
+      "useObjectPropertiesRowDrag",
+      "useObjectPropertyReorderFocus",
+      "useObjectPropertyRowIdentity",
+      "focusAfterSubmit",
+    ]) {
+      expect(content.includes(forbidden), forbidden).toBe(false)
+    }
   })
 
   it("keeps property schema detail access single-sourced", () => {
@@ -876,9 +1091,9 @@ describe("schema builder architecture", () => {
       "PropertySchema" + "DetailsCapabilities"
     const files = [
       "components/schema-editor/property-form/types.ts",
-      "components/schema-editor/property-form/model/property-schema-details.ts",
+      "components/schema-editor/property-form/model/property-schema-plan.ts",
       "components/schema-editor/property-form/fields/object-properties-field.tsx",
-      "components/schema-editor/property-form/fields/property-schema-details-field.tsx",
+      "components/schema-editor/property-form/fields/property-schema-plan-field.tsx",
       "components/schema-editor/property-form/fields/object-properties-model.ts",
     ]
 
@@ -893,8 +1108,8 @@ describe("schema builder architecture", () => {
       "utf8"
     )
 
-    expect(typeContent.includes("PropertySchemaDetailAccess")).toBe(true)
-    expect(typeContent.includes("access: PropertySchemaDetailAccess")).toBe(
+    expect(typeContent.includes("PropertySchemaPlanAccess")).toBe(true)
+    expect(typeContent.includes("access: PropertySchemaPlanAccess")).toBe(
       true
     )
   })
@@ -997,7 +1212,7 @@ describe("schema builder architecture", () => {
         file: "components/schema-editor/primitives/schema-chip-add-row.tsx",
         interfaceName: "SchemaChipAddRowProps",
       })
-    ).toEqual(["editable", "row"])
+    ).toEqual(["addInput", "editable"])
 
     const chipContent = readFileSync(
       join(repoRoot, "components/schema-editor/primitives/schema-chip-list.tsx"),
@@ -1015,7 +1230,7 @@ describe("schema builder architecture", () => {
       expect(chipContent.includes(forbidden), forbidden).toBe(false)
     }
     expect(chipContent.includes("export interface SchemaChipItem")).toBe(true)
-    expect(chipContent.includes("addRow?:")).toBe(false)
+    expect(chipContent.includes("add" + "Row?:")).toBe(false)
     expect(chipContent.includes("SchemaChipAddRow")).toBe(false)
 
     const chipAddRowContent = readFileSync(
@@ -1026,8 +1241,12 @@ describe("schema builder architecture", () => {
       "utf8"
     )
 
-    expect(chipAddRowContent.includes("export interface SchemaChipAddRowModel"))
+    expect(chipAddRowContent.includes("SchemaChipAdd" + "RowModel"))
+      .toBe(false)
+    expect(chipAddRowContent.includes("addInput: SchemaAddInputModel"))
       .toBe(true)
+    expect(chipAddRowContent.includes("row: SchemaChipAdd" + "RowModel"))
+      .toBe(false)
   })
 
   it("keeps imported schema document ids deterministic across hydration", () => {
@@ -1050,14 +1269,14 @@ describe("schema builder architecture", () => {
         file: "components/schema-editor/property-form/fields/object-properties-field.tsx",
         functionName: "ObjectPropertiesField",
       })
-    ).toEqual(["details"])
+    ).toEqual(["details", "renderPlan"])
 
     expect(
       interfaceProperties({
-        file: "components/schema-editor/property-form/types.ts",
+        file: "components/schema-editor/property-form/model/object-properties-view.ts",
         interfaceName: "PropertyObjectPropertiesFieldModel",
       })
-    ).toEqual(["addRow", "editable", "rows"])
+    ).toEqual(["addInput", "editable", "rows"])
 
     const fieldContent = readFileSync(
       join(
@@ -1066,10 +1285,10 @@ describe("schema builder architecture", () => {
       ),
       "utf8"
     )
-    const detailsFieldContent = readFileSync(
+    const objectPropertiesPlanFieldContent = readFileSync(
       join(
         repoRoot,
-        "components/schema-editor/property-form/fields/property-schema-details-field.tsx"
+        "components/schema-editor/property-form/fields/object-properties-plan-field.tsx"
       ),
       "utf8"
     )
@@ -1087,23 +1306,34 @@ describe("schema builder architecture", () => {
       ),
       "utf8"
     )
+    const rowsContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/object-properties-rows.ts"
+      ),
+      "utf8"
+    )
 
     expect(fieldContent.includes("capabilities")).toBe(false)
     expect(fieldContent.includes("schemaNode")).toBe(false)
     expect(fieldContent.includes("schemaContext")).toBe(false)
     expect(fieldContent.includes("access")).toBe(false)
-    expect(fieldContent.includes("mode")).toBe(false)
+    expect(/\bmode\b/.test(fieldContent)).toBe(false)
     expect(fieldContent.includes("useObjectPropertiesModel")).toBe(false)
     expect(fieldContent.includes("row.typeField")).toBe(false)
-    expect(detailsFieldContent.includes("useObjectPropertiesModel")).toBe(true)
+    expect(objectPropertiesPlanFieldContent.includes("useObjectPropertiesModel"))
+      .toBe(true)
     expect(rowContent.includes("TypeField field={row.typeField}")).toBe(true)
     expect(
-      modelContent.includes("typeField: createPropertyTypeFieldWithObjectTemplates")
+      rowsContent.includes("typeField: createPropertyTypeFieldWithObjectTemplates")
     ).toBe(true)
-    expect(modelContent.includes("editable: editable && access.type")).toBe(true)
-    expect(modelContent.includes("disabled: !editable || !access.type")).toBe(
+    expect(rowsContent.includes("editable: plan.editable && plan.access.type"))
+      .toBe(true)
+    expect(rowsContent.includes("disabled: !editable || !access.type")).toBe(
       false
     )
+    expect(modelContent.includes("createPropertyTypeFieldWithObjectTemplates"))
+      .toBe(false)
   })
 
   it("keeps object row identity in a named model helper", () => {
@@ -1111,6 +1341,13 @@ describe("schema builder architecture", () => {
       join(
         repoRoot,
         "components/schema-editor/property-form/fields/object-properties-model.ts"
+      ),
+      "utf8"
+    )
+    const stateContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/object-properties-state.ts"
       ),
       "utf8"
     )
@@ -1129,7 +1366,8 @@ describe("schema builder architecture", () => {
       "utf8"
     )
 
-    expect(modelContent.includes("useObjectPropertyRowIdentity")).toBe(true)
+    expect(modelContent.includes("useObjectPropertyRowIdentity")).toBe(false)
+    expect(stateContent.includes("useObjectPropertyRowIdentity")).toBe(true)
     expect(modelContent.includes("createRowIdsByName")).toBe(false)
     expect(modelContent.includes("getPropertyNamesKey")).toBe(false)
     expect(identityContent.includes("createRowIdsByName")).toBe(true)
@@ -1140,7 +1378,7 @@ describe("schema builder architecture", () => {
     expect(rowContent.includes("useObjectPropertyRowIdentity")).toBe(false)
   })
 
-  it("keeps object row recursive details behind one named helper", () => {
+  it("keeps object row recursive plans behind one named helper", () => {
     const modelContent = readFileSync(
       join(
         repoRoot,
@@ -1148,10 +1386,10 @@ describe("schema builder architecture", () => {
       ),
       "utf8"
     )
-    const rowSchemaDetailsContent = readFileSync(
+    const rowSchemaPlanContent = readFileSync(
       join(
         repoRoot,
-        "components/schema-editor/property-form/fields/object-property-row-details.ts"
+        "components/schema-editor/property-form/fields/object-property-row-schema-plan.ts"
       ),
       "utf8"
     )
@@ -1162,22 +1400,35 @@ describe("schema builder architecture", () => {
       ),
       "utf8"
     )
-    const rendererContent = readFileSync(
+    const planFieldContent = readFileSync(
       join(
         repoRoot,
-        "components/schema-editor/property-form/fields/property-schema-details-renderer.tsx"
+        "components/schema-editor/property-form/fields/property-schema-plan-field.tsx"
       ),
       "utf8"
     )
 
-    expect(modelContent.includes("createPropertySchemaDetails")).toBe(false)
-    expect(modelContent.includes("createObjectPropertyRowDetails")).toBe(true)
-    expect(rowSchemaDetailsContent.includes("createPropertySchemaDetails")).toBe(
-      true
-    )
-    expect(rowContent.includes("renderPropertySchemaDetails")).toBe(true)
+    expect(modelContent.includes("createPropertySchemaPlan")).toBe(false)
+    expect(modelContent.includes("createObjectPropertyRowSchemaPlan")).toBe(false)
+    expect(rowSchemaPlanContent.includes("createPropertySchemaPlan"))
+      .toBe(true)
+    expect(rowContent.includes("PropertySchemaPlanField")).toBe(false)
+    expect(rowContent.includes("renderPlan(row.schemaPlan)")).toBe(true)
+    expect(rowContent.includes("renderPropertySchema" + "Plan")).toBe(false)
+    expect(rowContent.includes("renderPropertySchema" + "Details")).toBe(false)
     expect(rowContent.includes("render" + "SchemaDetails")).toBe(false)
-    expect(rendererContent.includes("PropertySchemaDetailsField")).toBe(true)
+    expect(planFieldContent.includes("PropertySchemaPlanField")).toBe(true)
+    expect(
+      existsSync(
+        join(
+          repoRoot,
+          [
+            "components/schema-editor/property-form/fields/property-schema",
+            "plan-renderer.tsx",
+          ].join("-")
+        )
+      )
+    ).toBe(false)
   })
 
   it("keeps property form validation and submit lifecycle outside the controller", () => {

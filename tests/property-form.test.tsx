@@ -5,6 +5,7 @@ import {
   cleanup,
   fireEvent,
   render,
+  renderHook,
   screen,
   waitFor,
 } from "@testing-library/react"
@@ -19,6 +20,8 @@ import {
 } from "vitest"
 
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
+import { useEnumValueIdentity } from "@/components/schema-editor/property-form/fields/enum-value-identity"
+import { EnumValuesField } from "@/components/schema-editor/property-form/fields/enum-values-field"
 import { useObjectPropertiesModel } from "@/components/schema-editor/property-form/fields/object-properties-model"
 import {
   formatEnumValueInput,
@@ -137,6 +140,72 @@ describe("property form models", () => {
     expect(parseEnumValueInput("null")).toBeNull()
     expect(parseEnumValueInput('{"code":"paid"}')).toEqual({ code: "paid" })
     expect(formatEnumValueInput({ code: "paid" })).toBe('{"code":"paid"}')
+  })
+
+  it("preserves enum identity across replace, remove, and add until reset", () => {
+    const { result, rerender } = renderHook(
+      ({ resetKey, values }: { resetKey: string; values: string[] }) =>
+        useEnumValueIdentity({ resetKey, values }),
+      {
+        initialProps: {
+          resetKey: "schema-a",
+          values: ["USD", "EUR"],
+        },
+      }
+    )
+
+    const [usdId, eurId] = result.current.ids
+
+    rerender({ resetKey: "schema-a", values: ["CAD", "EUR"] })
+    expect(result.current.ids).toEqual([usdId, eurId])
+
+    act(() => {
+      result.current.removeId(usdId)
+    })
+    rerender({ resetKey: "schema-a", values: ["EUR"] })
+    expect(result.current.ids).toEqual([eurId])
+
+    rerender({ resetKey: "schema-a", values: ["EUR", "GBP"] })
+    expect(result.current.ids[0]).toBe(eurId)
+    expect(result.current.ids[1]).not.toBe(usdId)
+    expect(result.current.ids[1]).not.toBe(eurId)
+
+    rerender({ resetKey: "schema-b", values: ["EUR", "GBP"] })
+    expect(result.current.ids).toEqual(["enum-value-0", "enum-value-1"])
+  })
+
+  it("emits only schema enum values from enum field changes", () => {
+    const onChange = vi.fn()
+    const view = render(
+      <EnumValuesField
+        values={["USD"]}
+        resetKey="schema-a"
+        disabled={false}
+        onChange={onChange}
+      />
+    )
+
+    fireEvent.change(screen.getByLabelText("Option 1: USD"), {
+      target: { value: "CAD" },
+    })
+    expect(onChange).toHaveBeenLastCalledWith(["CAD"])
+
+    fireEvent.change(screen.getByLabelText("Add new value"), {
+      target: { value: "EUR" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Add" }))
+    expect(onChange).toHaveBeenLastCalledWith(["USD", "EUR"])
+
+    view.rerender(
+      <EnumValuesField
+        values={["USD"]}
+        resetKey="schema-a"
+        disabled={false}
+        onChange={onChange}
+      />
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Remove option USD" }))
+    expect(onChange).toHaveBeenLastCalledWith([])
   })
 
   it("keeps object property order and required flags during edits", () => {
@@ -329,10 +398,10 @@ describe("property form models", () => {
     )
 
     act(() => {
-      model?.addRow.onChange("zip")
+      model?.addInput.onChange("zip")
     })
     act(() => {
-      model?.addRow.onSubmit()
+      model?.addInput.onSubmit()
     })
     view.rerender(<Harness node={schemaNode} />)
 
@@ -341,10 +410,10 @@ describe("property form models", () => {
       ["city", "draft-property-1"],
       ["zip", "draft-property-2"],
     ])
-    expect(model?.addRow.value).toBe("")
+    expect(model?.addInput.value).toBe("")
 
     act(() => {
-      model?.addRow.onChange("country")
+      model?.addInput.onChange("country")
     })
     act(() => {
       model?.rows[2]?.reorder.move(0)
@@ -361,7 +430,7 @@ describe("property form models", () => {
       "road",
       "city",
     ])
-    expect(model?.addRow.value).toBe("country")
+    expect(model?.addInput.value).toBe("country")
   })
 
   it("clears pending object property input after external schema resets", () => {
@@ -409,9 +478,9 @@ describe("property form models", () => {
     )
 
     act(() => {
-      model?.addRow.onChange("zip")
+      model?.addInput.onChange("zip")
     })
-    expect(model?.addRow.value).toBe("zip")
+    expect(model?.addInput.value).toBe("zip")
 
     view.rerender(
       <Harness
@@ -425,7 +494,7 @@ describe("property form models", () => {
       />
     )
 
-    expect(model?.addRow.value).toBe("")
+    expect(model?.addInput.value).toBe("")
   })
 })
 

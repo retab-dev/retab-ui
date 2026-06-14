@@ -398,6 +398,19 @@ export const VIEWER_BLOCKS = [
     categories: ["file-system"],
   },
   {
+    id: "fslight",
+    registryName: "fslight-block",
+    title: "File System Light",
+    description:
+      "A purified composition experiment: Pierre's file tree in a ViewerSidebar, with the selected source rendered by FileViewer in the ViewerSurface.",
+    command: getRegistryAddCommand("fslight-block"),
+    docsHref: "/docs/components/file-system",
+    viewHref: "/view/blocks/fslight",
+    previewHeightClassName: "h-[680px]",
+    featured: true,
+    categories: ["file-system"],
+  },
+  {
     id: "primitive-cards",
     registryName: "primitive-cards-block",
     title: "Primitive Run Cards",

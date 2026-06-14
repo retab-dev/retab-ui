@@ -50,6 +50,7 @@ import { EditViewerBlock } from "@/registry/new-york-v4/blocks/edit-viewer-block
 import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block"
 import { ExtractionViewerBlock } from "@/registry/new-york-v4/blocks/extraction-viewer-block"
 import { FileSystemBlock } from "@/registry/new-york-v4/blocks/file-system-block"
+import { FsLightBlock } from "@/registry/new-york-v4/blocks/fslight-block"
 import { ImageSourcesBlock } from "@/registry/new-york-v4/blocks/image-sources-block"
 import { LegendVariantsBlock } from "@/registry/new-york-v4/blocks/legend-variants-block"
 import { OcrBlock } from "@/registry/new-york-v4/blocks/ocr-block"
@@ -114,6 +115,7 @@ const blockComponents = {
   "dropzone-pinboard": PinboardDropSurface,
   "dropzone-disabled": DisabledDropzone,
   "file-system": FileSystemBlock,
+  fslight: FsLightBlock,
   "primitive-cards": PrimitiveCardsBlock,
   "legend-variants": () => <LegendVariantsBlock columns={3} />,
   "pdf-thumbnails": PdfThumbnailsBlock,
@@ -299,6 +301,9 @@ function ViewerBlockPreview({ block }: { block: ViewerBlock }) {
   const isDesktopViewport = useMediaQuery("(min-width: 768px)")
   const previewHeightClassName =
     block.previewHeightClassName ?? BLOCK_VIEWPORT_HEIGHT_CLASS
+  const isPreviewFrameless = block.categories.some(
+    (category) => category === "dropzone" || category === "file-system"
+  )
 
   function setBlockView(nextView: BlockView) {
     if (nextView === "code") {
@@ -424,14 +429,13 @@ function ViewerBlockPreview({ block }: { block: ViewerBlock }) {
         </div>
 
         <div className={view === "preview" ? "block" : "hidden"}>
-          <div
-            className={cn(
-              "relative box-content hidden overflow-hidden rounded-xl border bg-muted/30 md:block",
-              previewHeightClassName
-            )}
-          >
-            <div className="absolute inset-0 right-4 bg-[radial-gradient(var(--border)_1px,transparent_1px)] bg-[size:20px_20px]" />
-            <div className="relative z-10 h-full min-w-0 overflow-hidden rounded-xl bg-background">
+          {isPreviewFrameless ? (
+            <div
+              className={cn(
+                "hidden min-w-0 overflow-hidden bg-background md:block",
+                previewHeightClassName
+              )}
+            >
               <BlockPreviewSurface
                 Preview={Preview}
                 isMounted={isMounted}
@@ -439,15 +443,43 @@ function ViewerBlockPreview({ block }: { block: ViewerBlock }) {
                 shouldRenderPreview={isDesktopViewport && shouldMountPreview}
               />
             </div>
-          </div>
-          <div className="overflow-hidden rounded-xl border bg-background md:hidden">
-            <BlockPreviewSurface
-              Preview={Preview}
-              isMounted={isMounted}
-              previewKey={previewKey}
-              shouldRenderPreview={!isDesktopViewport && shouldMountPreview}
-            />
-          </div>
+          ) : (
+            <div
+              className={cn(
+                "relative box-content hidden overflow-hidden rounded-xl border bg-muted/30 md:block",
+                previewHeightClassName
+              )}
+            >
+              <div className="absolute inset-0 right-4 bg-[radial-gradient(var(--border)_1px,transparent_1px)] bg-[size:20px_20px]" />
+              <div className="relative z-10 h-full min-w-0 overflow-hidden rounded-xl bg-background">
+                <BlockPreviewSurface
+                  Preview={Preview}
+                  isMounted={isMounted}
+                  previewKey={previewKey}
+                  shouldRenderPreview={isDesktopViewport && shouldMountPreview}
+                />
+              </div>
+            </div>
+          )}
+          {isPreviewFrameless ? (
+            <div className="overflow-hidden bg-background md:hidden">
+              <BlockPreviewSurface
+                Preview={Preview}
+                isMounted={isMounted}
+                previewKey={previewKey}
+                shouldRenderPreview={!isDesktopViewport && shouldMountPreview}
+              />
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border bg-background md:hidden">
+              <BlockPreviewSurface
+                Preview={Preview}
+                isMounted={isMounted}
+                previewKey={previewKey}
+                shouldRenderPreview={!isDesktopViewport && shouldMountPreview}
+              />
+            </div>
+          )}
         </div>
 
         {view === "code" ? (

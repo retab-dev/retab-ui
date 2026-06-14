@@ -10,15 +10,16 @@ leaking virtual chunks as visible pages.
 1. Full Mermaid / diagram syntax beyond the current graph/flowchart surface.
 2. Broader directive semantics beyond current callouts and restricted component directives.
 3. Broader MDX/component markdown beyond the restricted `Metric`, `Badge`,
-   `Image`, `Callout`, `Accordion`, and `Tabs` / `Tab` subset.
+   `Image`, `Video`, `Diagram`, `Callout`, `Accordion`, and `Tabs` / `Tab`
+   subset.
 4. Footnote polish beyond current labelled GFM references, labelled backrefs, and bidirectional fragment targets.
 5. Math / KaTeX polish beyond initial inline and block rendering.
-6. Syntax highlighting polish beyond initial `rehype-pretty-code` rendering.
+6. Syntax highlighting polish beyond initial `rehype-pretty-code` rendering and title/caption metadata.
 7. Code block copy polish beyond the initial copy button.
 8. Raw HTML sanitizer schema polish beyond the current safe static HTML and inline `kbd`/`sub`/`sup` rendering.
-9. Full GitHub alert visual styling; currently normalized into quoted prose only.
-10. Full GitHub gemoji shortcode parity beyond the current curated docs-style vocabulary.
-11. More complete typography rules.
+9. Broader GitHub alert visual polish beyond the current labelled title/body surface with variant icons.
+10. Emoji presentation/accessibility polish beyond upstream GitHub gemoji text replacement.
+11. Typography presentation polish beyond upstream SmartyPants text replacement.
 12. Heading visual polish beyond the current h1-h6 renderer coverage.
 13. Nested list/callout/table visual polish audit.
 14. Table polish parity with the old markdown viewer.
@@ -57,8 +58,8 @@ leaking virtual chunks as visible pages.
 41. Nested ordered-list numbering audit beyond current ordered-list start-value preservation.
 42. Tight vs loose list spacing parity.
 43. Nested blockquote styling beyond a single rail.
-44. Blockquote alert title/body separation, not just textual prefix normalization.
-45. Alert variants for `note`, `tip`, `important`, `warning`, and `caution`.
+44. Broader blockquote alert body composition polish beyond the current title/body split.
+45. Broader alert variant polish beyond current `note`, `tip`, `important`, `warning`, and `caution` surfaces.
 46. Thematic break visual polish.
 47. Autolink literal polish beyond initial GFM link rendering.
 48. Strikethrough visual polish beyond initial renderer coverage.
@@ -81,7 +82,7 @@ leaking virtual chunks as visible pages.
 62. Mermaid loading/error states that do not shift layout.
 63. Mermaid source copy.
 64. Diagram security policy.
-65. Code block language header polish.
+65. Broader code block language header polish beyond current normalized language and title/caption metadata.
 66. Code block line virtualization for large fences.
 67. Code block horizontal scrolling behavior.
 68. Code block line wrapping policy.
@@ -98,7 +99,7 @@ leaking virtual chunks as visible pages.
 79. KaTeX CSS and sanitization policy.
 80. Safe image sizing from source metadata before decode, not only decoded natural dimensions.
 81. Broader image alt-text presentation beyond current blocked/loading/ready/failed/retry states.
-82. Video/component placeholder policy.
+82. Broader video/component placeholder policy beyond current restricted video blocked/failed states.
 83. Custom component block measurement before render.
 84. Unknown component fallback UI.
 
@@ -131,7 +132,7 @@ leaking virtual chunks as visible pages.
 105. Broader code block accessibility beyond current labelled code block/source regions, including line-level navigation if line numbers are added.
 106. Broader diagram accessibility beyond current labelled Mermaid group/image/source fallback, including richer descriptions for full Mermaid output.
 107. Broader footnote accessibility beyond current labelled refs/backrefs and labelled collected footnotes section.
-108. Broader callout accessibility beyond current labelled `note` regions for GitHub alerts and directive callouts.
+108. Broader callout accessibility beyond current labelled `note` regions for GitHub alerts and directive callouts, including screen-reader verification of separated alert titles and bodies.
 109. Link target/rel policy tests.
 110. Color contrast audit for prose, tables, code, alerts, and diagrams.
 111. Screen reader behavior for virtualized offscreen content.
@@ -297,8 +298,8 @@ leaking virtual chunks as visible pages.
 250. Initial components beyond the current restricted `Tabs` / `Tab`.
 251. Initial components beyond the current restricted `Accordion`.
 252. Initial components beyond the current restricted `Image`.
-253. Initial components: `Video`.
-254. Initial components: `Diagram`.
+253. Initial components beyond the current restricted `Video`.
+254. Initial components beyond the current restricted `Diagram`.
 255. Unknown component visual design.
 
 ## Missing Security Work

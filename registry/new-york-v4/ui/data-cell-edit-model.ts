@@ -1,7 +1,7 @@
 import type * as React from "react"
 
+import type { DataCellActivationSource } from "@/registry/new-york-v4/ui/data-cell-activation"
 import type {
-  DataCellActivationSource,
   DataCellDateTimeZone,
   DataCellEditorHandle,
   DataCellKind,
@@ -200,7 +200,7 @@ function dataCellEditShellState(
   return {
     disabled: shellState.disabled,
     autoFocus: shellState.autoFocus ?? props.autoFocus,
-    activationSource: shellState.activationSource ?? props.activationSource,
+    activationSource: shellState.activationSource,
     onEditingEnd: shellState.onEditingEnd ?? props.onEditingEnd,
     onEditorHandleChange:
       shellState.onEditorHandleChange ?? props.onEditorHandleChange,

@@ -11,6 +11,7 @@ import {
 import type { JSONSchema7 } from "json-schema"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
+import type { JsonTableCellCommit } from "@/components/json-table/json-table-cell-commit"
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
 import type {
   JsonTableActivationIntent,
@@ -32,8 +33,10 @@ import {
   type FieldMetadata,
 } from "@/components/json-table/lib/schema-field-metadata"
 import { SingleFileFormRow } from "@/components/json-table/single-file-form-row"
+import { SingleFileTableView } from "@/components/json-table/single-file-table-view"
 import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
 
+import { createTestCellCommitBridge } from "./json-table-interaction-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
 
 beforeAll(() => installJsonTableDom())
@@ -78,6 +81,12 @@ const document: TableDocument = {
     shipped_at: "2024-01-02",
   },
 }
+
+type TestCellCommit = (
+  docId: string,
+  materializedFieldPath: string,
+  value: unknown
+) => void
 
 function requireFieldMetadata(key: string): FieldMetadata {
   const fieldMetadata = getFieldMetadata(schema, key)
@@ -139,7 +148,7 @@ function rowByIndex(container: HTMLElement, index: number) {
 }
 
 function SingleFileFormRowHarness({
-  onDocumentDataChange,
+  onCellCommit,
   ...props
 }: Omit<
   React.ComponentProps<typeof SingleFileFormRow>,
@@ -150,16 +159,16 @@ function SingleFileFormRowHarness({
   | "startStructuredEditSession"
   | "setStructuredEditSessionOverlayOpen"
   | "closeStructuredEditSession"
-  | "onDocumentDataChange"
+  | "onCellCommit"
 > & {
-  onDocumentDataChange?: React.ComponentProps<
-    typeof SingleFileFormRow
-  >["onDocumentDataChange"]
+  onCellCommit?: TestCellCommit
 }) {
   const primitiveActiveCellStoreRef = React.useRef(
     createJsonTablePrimitiveActiveCellStore()
   )
-  const primitiveEditStoreRef = React.useRef(createJsonTablePrimitiveEditStore())
+  const primitiveEditStoreRef = React.useRef(
+    createJsonTablePrimitiveEditStore()
+  )
   const [structuredEditSession, setStructuredEditSession] =
     React.useState<JsonTableStructuredEditSession | null>(null)
   const sessionIdRef = React.useRef(0)
@@ -204,6 +213,16 @@ function SingleFileFormRowHarness({
   const closeStructuredEditSession = React.useCallback(() => {
     setStructuredEditSession(null)
   }, [])
+  const handleCellCommit = React.useCallback(
+    (commit: JsonTableCellCommit) => {
+      ;(onCellCommit ?? vi.fn())(
+        props.document.id,
+        commit.fieldPath,
+        commit.value
+      )
+    },
+    [onCellCommit, props.document.id]
+  )
 
   return (
     <SingleFileFormRow
@@ -215,20 +234,18 @@ function SingleFileFormRowHarness({
       startStructuredEditSession={startStructuredEditSession}
       setStructuredEditSessionOverlayOpen={setStructuredEditSessionOverlayOpen}
       closeStructuredEditSession={closeStructuredEditSession}
-      onDocumentDataChange={onDocumentDataChange ?? vi.fn()}
+      onCellCommit={handleCellCommit}
     />
   )
 }
 
 function renderRow({
   isJsonEditable = true,
-  onDocumentDataChange = vi.fn(),
+  onCellCommit = vi.fn(),
   visiblePaths,
 }: {
   isJsonEditable?: boolean
-  onDocumentDataChange?: React.ComponentProps<
-    typeof SingleFileFormRow
-  >["onDocumentDataChange"]
+  onCellCommit?: TestCellCommit
   visiblePaths: string[]
 }) {
   const rows = projectDocumentRows({
@@ -248,7 +265,7 @@ function renderRow({
           rowIdx={0}
           rowTopPx={0}
           rowHeightPx={32}
-          onDocumentDataChange={onDocumentDataChange}
+          onCellCommit={onCellCommit}
           isJsonEditable={isJsonEditable}
         />
       </tbody>
@@ -274,6 +291,7 @@ function renderVirtualTable({
     visiblePaths,
     includeArrayAddRows: false,
   })
+  const primitiveEditStore = createJsonTablePrimitiveEditStore()
 
   return render(
     <SingleFileVirtualizedTable
@@ -291,8 +309,12 @@ function renderVirtualTable({
       projectedRows={projectedRows}
       visibleColumns={visiblePaths.map(visibleColumn)}
       rowCount={projectedRows.length}
-      primitiveEditStore={createJsonTablePrimitiveEditStore()}
-      onUpdateDocument={onUpdateDocument}
+      primitiveEditStore={primitiveEditStore}
+      {...createTestCellCommitBridge({
+        documentData: tableDocument.data,
+        onUpdateDocument,
+        primitiveEditStore,
+      })}
       columnWidth="xxl"
       overscan={overscan}
       jumpOverscan={overscan}
@@ -318,6 +340,9 @@ function StatefulVirtualTableHarness({
         includeArrayAddRows: false,
       }),
     [tableDocument, visiblePaths]
+  )
+  const primitiveEditStoreRef = React.useRef(
+    createJsonTablePrimitiveEditStore()
   )
   const onUpdateDocument = React.useCallback(
     async (patch: Record<string, unknown>) => {
@@ -346,8 +371,12 @@ function StatefulVirtualTableHarness({
       projectedRows={projectedRows}
       visibleColumns={visiblePaths.map(visibleColumn)}
       rowCount={projectedRows.length}
-      primitiveEditStore={createJsonTablePrimitiveEditStore()}
-      onUpdateDocument={onUpdateDocument}
+      primitiveEditStore={primitiveEditStoreRef.current}
+      {...createTestCellCommitBridge({
+        documentData: tableDocument.data,
+        onUpdateDocument,
+        primitiveEditStore: primitiveEditStoreRef.current,
+      })}
       columnWidth="xxl"
     />
   )
@@ -933,10 +962,10 @@ describe("json table edit-session interactions", () => {
   })
 
   it("ignores IME process keydown without starting or committing an edit", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderRow({
       visiblePaths: ["vendor"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     await waitFor(() => expect(editableCells(view.container)).toHaveLength(1))
@@ -948,7 +977,7 @@ describe("json table edit-session interactions", () => {
     fireEvent.compositionEnd(cell)
 
     expect(view.queryByRole("textbox")).toBeNull()
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("composes rapid commits against the latest pending document data", async () => {
@@ -987,6 +1016,68 @@ describe("json table edit-session interactions", () => {
     expect(onUpdateDocument.mock.calls[1][0]).toEqual({
       data: { ...document.data, vendor: "Globex", amount: 24 },
     })
+  })
+
+  it("reconciles parent primitive echoes outside the render phase", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+
+    function Harness() {
+      const [currentDocument, setCurrentDocument] = React.useState(document)
+      const updateDocument = React.useCallback(
+        async (patch: Record<string, unknown>) => {
+          if (patch.data && typeof patch.data === "object") {
+            setCurrentDocument((current) => ({
+              ...current,
+              data: patch.data as Record<string, unknown>,
+            }))
+          }
+        },
+        []
+      )
+
+      return (
+        <SingleFileTableView
+          document={currentDocument}
+          schema={schema}
+          onUpdateDocument={updateDocument}
+          jsonEditMode="editable"
+          schemaEditMode="readOnly"
+        />
+      )
+    }
+
+    const view = render(
+      <div style={{ height: 240, width: 480 }}>
+        <Harness />
+      </div>
+    )
+
+    await waitFor(() =>
+      expect(cellByFieldPath(view.container, "vendor")).toBeTruthy()
+    )
+
+    fireEvent.pointerDown(cellByFieldPath(view.container, "vendor"), {
+      button: 0,
+    })
+    const input = view.getByRole("textbox")
+    fireEvent.change(input, { target: { value: "Globex" } })
+    fireEvent.blur(input)
+
+    await waitFor(() =>
+      expect(cellByFieldPath(view.container, "vendor").textContent).toContain(
+        "Globex"
+      )
+    )
+
+    expect(
+      consoleError.mock.calls.some((call) =>
+        call.some((value) =>
+          String(value).includes(
+            "Cannot update a component (`EditableJsonTableCellContent`) while rendering a different component (`SingleFileTableView`)"
+          )
+        )
+      )
+    ).toBe(false)
   })
 
   it("elevates the active virtual row while an overlay is mounted", async () => {

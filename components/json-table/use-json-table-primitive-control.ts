@@ -1,21 +1,16 @@
 import * as React from "react"
 
-import type { DataCellActivationSource } from "@/components/ui/data-cell"
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
 import type { JsonTablePrimitiveCellProps } from "@/components/json-table/json-table-primitive-cell"
 import { finishPreviousPrimitiveEditor } from "@/components/json-table/json-table-primitive-handoff"
 import { formatValueForCommit } from "@/components/json-table/lib/value-normalization"
 import { useRefCallback } from "@/components/json-table/path-utils"
-import { useCellController } from "@/components/json-table/use-cell-controller"
 import type { JsonTableCellField } from "@/components/json-table/use-json-table-cell-field"
+import { useJsonTablePrimitiveCellController } from "@/components/json-table/use-json-table-primitive-cell-controller"
 
 export type JsonTablePrimitiveControl = {
-  activationSource: DataCellActivationSource | undefined
   commitPrimitiveValue: (value: unknown) => void
   primitiveEffectiveValue: unknown
-  setActivationSource: React.Dispatch<
-    React.SetStateAction<DataCellActivationSource | undefined>
-  >
   setPrimitiveActive: (active: boolean) => void
   setPrimitiveEditorHandle: JsonTablePrimitiveCellProps["onEditorHandleChange"]
 }
@@ -27,22 +22,21 @@ export function useJsonTablePrimitiveControl({
   props: JsonTableCellProps
   cellField: JsonTableCellField
 }): JsonTablePrimitiveControl {
-  const [activationSource, setActivationSource] =
-    React.useState<DataCellActivationSource>()
-  const { commitValueChange, effectiveValue: primitiveEffectiveValue } =
-    useCellController({
-      document: props.document,
-      docId: props.docId,
-      materializedFieldPath: cellField.materializedFieldPath,
-      value: cellField.cellValue,
-      isEditable: cellField.isJsonEditable && cellField.isPrimitiveCell,
-      onDocumentDataChange: props.onDocumentDataChange,
-      primitiveEditStore: props.primitiveEditStore,
-    })
+  const {
+    commitPrimitiveValueChange,
+    effectiveValue: primitiveEffectiveValue,
+  } = useJsonTablePrimitiveCellController({
+    document: props.document,
+    materializedFieldPath: cellField.materializedFieldPath,
+    value: cellField.cellValue,
+    isEditable: cellField.isJsonEditable && cellField.isPrimitiveCell,
+    onCellCommit: props.onCellCommit,
+    primitiveEditStore: props.primitiveEditStore,
+  })
 
   const commitPrimitiveValue = useRefCallback((nextValue: unknown) => {
     if (!cellField.fieldMetadata) return
-    commitValueChange(
+    commitPrimitiveValueChange(
       formatValueForCommit(nextValue, cellField.fieldMetadata.rawSchema)
     )
   })
@@ -84,10 +78,6 @@ export function useJsonTablePrimitiveControl({
     ]
   )
 
-  React.useEffect(() => {
-    if (!cellField.isPrimitiveActive) setActivationSource(undefined)
-  }, [cellField.isPrimitiveActive])
-
   const setPrimitiveEditorHandle = React.useCallback<
     JsonTablePrimitiveCellProps["onEditorHandleChange"]
   >(
@@ -99,10 +89,8 @@ export function useJsonTablePrimitiveControl({
   )
 
   return {
-    activationSource,
     commitPrimitiveValue,
     primitiveEffectiveValue,
-    setActivationSource,
     setPrimitiveActive,
     setPrimitiveEditorHandle,
   }

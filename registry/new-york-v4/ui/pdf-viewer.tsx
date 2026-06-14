@@ -140,9 +140,11 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
 
 export function PdfViewerHeader({
   className,
+  leading,
   toolbar = true,
 }: {
   className?: string
+  leading?: React.ReactNode
   toolbar?: boolean
 }) {
   const { currentPage, headerControls, resource } = usePdfViewerHeader()
@@ -152,6 +154,7 @@ export function PdfViewerHeader({
     <ViewerHeader
       className={cn("flex min-h-10 items-center gap-3 px-2 py-1", className)}
     >
+      {leading}
       <div className="min-w-0 truncate px-1 text-sm font-medium">{label}</div>
       {toolbar && headerControls ? (
         <PdfViewerControls {...headerControls} />

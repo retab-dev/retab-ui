@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ViewerSidebarTrigger } from "@/components/ui/viewer"
 
 import type { FileSystemController } from "./file-system-controller"
 import { pathName } from "./file-system-index"
@@ -25,7 +26,7 @@ import {
   getFileSystemCategoryLabel,
   normalizeFileSystemSearch,
 } from "./file-system-query"
-import type { FileSystemView } from "./file-system-types"
+import type { FileSystemSortKey, FileSystemView } from "./file-system-types"
 
 const VIEW_OPTIONS: Array<{
   icon: React.ComponentType<{ className?: string }>
@@ -36,6 +37,16 @@ const VIEW_OPTIONS: Array<{
   { icon: Grid3X3, label: "Grid", value: "grid" },
   { icon: Columns3, label: "Columns", value: "columns" },
   { icon: Image, label: "Gallery", value: "gallery" },
+]
+
+const SORT_OPTIONS: Array<{
+  label: string
+  value: FileSystemSortKey
+}> = [
+  { label: "Name", value: "name" },
+  { label: "Type", value: "kind" },
+  { label: "Size", value: "size" },
+  { label: "Modified", value: "updatedAt" },
 ]
 
 export function FileSystemToolbar({
@@ -53,6 +64,7 @@ export function FileSystemToolbar({
   return (
     <div className="flex h-12 shrink-0 items-center gap-2 border-b bg-muted/35 px-2">
       <div className="flex min-w-0 flex-1 items-center gap-1">
+        <ViewerSidebarTrigger />
         <Button
           aria-label="Back"
           disabled={!controller.canGoBack}
@@ -128,8 +140,6 @@ export function FileSystemFilterBar({
 }) {
   const hasFilters = fileSystemHasFilters(controller)
 
-  if (!controller.categories.length) return null
-
   return (
     <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b px-2 py-1.5">
       <Filter className="size-3.5 shrink-0 text-muted-foreground" />
@@ -168,6 +178,32 @@ export function FileSystemFilterBar({
             )}
           >
             {dateModifiedFilterLabel(preset)}
+          </button>
+        )
+      })}
+      <div className="mx-1 h-4 w-px shrink-0 bg-border" aria-hidden />
+      {SORT_OPTIONS.map((option) => {
+        const isActive = controller.query.sort.key === option.value
+
+        return (
+          <button
+            key={option.value}
+            type="button"
+            aria-label={option.label}
+            onClick={() => controller.setSortKey(option.value)}
+            className={cn(
+              "flex h-6 shrink-0 items-center gap-1 rounded-md border px-2 text-xs outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring",
+              isActive
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-input bg-background text-muted-foreground"
+            )}
+          >
+            <span>{option.label}</span>
+            {isActive ? (
+              <span aria-hidden>
+                {controller.query.sort.direction === "asc" ? "↑" : "↓"}
+              </span>
+            ) : null}
           </button>
         )
       })}

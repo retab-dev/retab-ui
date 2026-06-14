@@ -1,8 +1,11 @@
 import type * as React from "react"
 
 import {
+  type DataCellEditorHandle,
   type DataCellKind,
+  type DataCellProps,
   type DataCellSelectOption,
+  type DataCellValueMeta,
 } from "@/components/ui/data-cell"
 import { jsonTableCommitValue } from "@/components/json-table/json-table-commit-value"
 import {
@@ -83,6 +86,22 @@ export type JsonTableDataCellModel =
   | JsonTableBooleanDataCellModel
   | JsonTableSelectDataCellModel
 
+export type JsonTableDataCellSharedProps = {
+  active?: boolean
+  autoFocus?: boolean
+  editable: boolean
+  mode: "display" | "edit"
+  onActiveChange?: (active: boolean) => void
+  onEditingEnd?: () => void
+  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
+  onKeyDown?: React.KeyboardEventHandler<HTMLElement>
+}
+
+export type JsonTableDataCellCommitHandler = (
+  value: unknown,
+  meta: DataCellValueMeta
+) => void
+
 export function createJsonTableDataCellModel({
   fieldMetadata,
   value: jsonValue,
@@ -109,6 +128,129 @@ export function createJsonTableDataCellModel({
   }
 
   return fallbackTextDataCellModel(fieldMetadata, jsonValue)
+}
+
+export function createJsonTableDataCellProps({
+  active,
+  autoFocus,
+  fieldMetadata,
+  isEditable = false,
+  mode,
+  onActiveChange,
+  onCommit,
+  onEditingEnd,
+  onEditorHandleChange,
+  onKeyDown,
+  onOpenChange,
+  value,
+}: {
+  active?: boolean
+  autoFocus?: boolean
+  fieldMetadata: FieldMetadata
+  isEditable?: boolean
+  mode: "display" | "edit"
+  onActiveChange?: (active: boolean) => void
+  onCommit?: JsonTableDataCellCommitHandler
+  onEditingEnd?: () => void
+  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
+  onKeyDown?: React.KeyboardEventHandler<HTMLElement>
+  onOpenChange?: (open: boolean) => void
+  value: unknown
+}): DataCellProps {
+  const model = createJsonTableDataCellModel({ fieldMetadata, value })
+  const sharedProps: JsonTableDataCellSharedProps = {
+    mode,
+    editable: isEditable,
+    active,
+    autoFocus,
+    onEditingEnd,
+    onActiveChange,
+    onEditorHandleChange,
+    onKeyDown,
+  }
+  return jsonTableDataCellPropsForModel({
+    model,
+    onCommit,
+    onOpenChange,
+    sharedProps,
+  })
+}
+
+function jsonTableDataCellPropsForModel({
+  model,
+  onCommit,
+  onOpenChange,
+  sharedProps,
+}: {
+  model: JsonTableDataCellModel
+  onCommit?: JsonTableDataCellCommitHandler
+  onOpenChange?: (open: boolean) => void
+  sharedProps: JsonTableDataCellSharedProps
+}): DataCellProps {
+  if (model.kind === "select") {
+    return {
+      ...sharedProps,
+      kind: model.kind,
+      value: model.value,
+      selectOptions: model.selectOptions,
+      placeholder: model.placeholder,
+      className: model.className,
+      formatValue: model.formatValue,
+      onOpenChange,
+      onCommit: (commitValue, meta) =>
+        onCommit?.(model.commitValue(commitValue), meta),
+    }
+  }
+
+  if (model.kind === "boolean") {
+    return {
+      ...sharedProps,
+      kind: model.kind,
+      value: model.value,
+      className: model.className,
+      onCommit: (commitValue, meta) =>
+        onCommit?.(model.commitValue(commitValue), meta),
+    }
+  }
+
+  if (model.kind === "number" || model.kind === "integer") {
+    return {
+      ...sharedProps,
+      kind: model.kind,
+      value: model.value,
+      className: model.className,
+      onCommit: (commitValue, meta) =>
+        onCommit?.(model.commitValue(commitValue), meta),
+    }
+  }
+
+  if (
+    model.kind === "date" ||
+    model.kind === "time" ||
+    model.kind === "date-time"
+  ) {
+    return {
+      ...sharedProps,
+      kind: model.kind,
+      value: model.value,
+      className: model.className,
+      formatValue: model.formatValue,
+      showPickerIcon: model.showPickerIcon,
+      onOpenChange,
+      onCommit: (commitValue, meta) =>
+        onCommit?.(model.commitValue(commitValue), meta),
+    }
+  }
+
+  return {
+    ...sharedProps,
+    kind: model.kind,
+    value: model.value,
+    className: model.className,
+    formatValue: model.formatValue,
+    onCommit: (commitValue, meta) =>
+      onCommit?.(model.commitValue(commitValue), meta),
+  }
 }
 
 function selectDataCellModel(

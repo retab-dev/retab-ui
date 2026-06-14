@@ -7,6 +7,10 @@ flowchart TD
   User["User pointer / keyboard input"]
 
   subgraph Projection["Projection layer"]
+    SourceDocument["sourceDocument<br/>parent prop"]
+    DocumentModel["useSingleFileTableDocumentModel"]
+    ProjectionDocument["projectionDocument<br/>row source"]
+    PrimitiveEditStore["JsonTablePrimitiveEditStore<br/>pending / confirmed / stale"]
     ProjectRows["projectDocumentRows"]
     ProjectedCell["ProjectedCell<br/>docId + fieldPath + value"]
   end
@@ -39,11 +43,15 @@ flowchart TD
 
   subgraph Commit["Commit pipeline"]
     Normalize["formatValueForCommit"]
-    Controller["useCellController"]
-    Patch["onDocumentDataChange"]
+    PrimitiveController["useJsonTablePrimitiveCellController"]
+    StructuredController["useJsonTableStructuredCellController"]
+    CellCommit["JsonTableCellCommit"]
+    Patch["onUpdateDocument"]
   end
 
   User --> Cell
+  SourceDocument --> DocumentModel --> ProjectionDocument --> ProjectRows
+  DocumentModel --> PrimitiveEditStore
   ProjectRows --> ProjectedCell --> Row
   VirtualTable --> ProjectRows
   VirtualTable --> PrimitiveActive
@@ -67,8 +75,9 @@ flowchart TD
   Boolean --> Normalize
   Select --> Normalize
   Picker --> Normalize
-  StructuredCell --> Normalize
-  Normalize --> Controller --> Patch
+  Normalize --> PrimitiveController --> CellCommit
+  StructuredCell --> StructuredController --> CellCommit
+  CellCommit --> DocumentModel --> Patch
 ```
 
 ## Primitive Handoff

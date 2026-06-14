@@ -9,8 +9,10 @@ import rehypeSanitize, {
 } from "rehype-sanitize"
 import remarkBreaks from "remark-breaks"
 import remarkDirective from "remark-directive"
+import remarkGemoji from "remark-gemoji"
 import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
+import remarkSmartypants from "remark-smartypants"
 import type { PluggableList } from "unified"
 import { visit } from "unist-util-visit"
 
@@ -86,6 +88,14 @@ export const PRETEXT_COMPONENT_REGISTRY = {
       title: {},
     },
   },
+  Diagram: {
+    directiveName: "diagram",
+    props: {
+      source: {},
+      title: {},
+      type: { values: ["mermaid"] },
+    },
+  },
   Metric: {
     directiveName: "metric",
     props: {
@@ -105,6 +115,14 @@ export const PRETEXT_COMPONENT_REGISTRY = {
       label: {},
     },
   },
+  Video: {
+    directiveName: "video",
+    props: {
+      label: {},
+      src: {},
+      title: {},
+    },
+  },
 } as const satisfies Record<string, PretextComponentRegistryEntry>
 
 export type PretextComponentKind = keyof typeof PRETEXT_COMPONENT_REGISTRY
@@ -119,36 +137,6 @@ export type PretextComponent = {
   props: PretextComponentProps
 }
 
-const EMOJI_SHORTCODES: Record<string, string> = {
-  ":+1:": "👍",
-  ":-1:": "👎",
-  ":book:": "📖",
-  ":books:": "📚",
-  ":boom:": "💥",
-  ":bug:": "🐛",
-  ":bulb:": "💡",
-  ":check:": "✓",
-  ":construction:": "🚧",
-  ":eyes:": "👀",
-  ":fire:": "🔥",
-  ":gear:": "⚙",
-  ":heart:": "❤️",
-  ":key:": "🔑",
-  ":link:": "🔗",
-  ":lock:": "🔒",
-  ":mag:": "🔍",
-  ":memo:": "📝",
-  ":package:": "📦",
-  ":pushpin:": "📌",
-  ":rocket:": "🚀",
-  ":sparkles:": "✨",
-  ":tada:": "🎉",
-  ":warning:": "⚠",
-  ":white_check_mark:": "✅",
-  ":x:": "✕",
-  ":zap:": "⚡",
-}
-
 const URL_CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F]/
 const URL_SCHEME_PATTERN = /^([A-Za-z][A-Za-z0-9+.-]*):/
 const ALLOWED_LINK_PROTOCOLS = new Set(["http", "https", "mailto"])
@@ -156,6 +144,7 @@ const ALLOWED_LINK_PROTOCOLS = new Set(["http", "https", "mailto"])
 export const PRETEXT_MARKDOWN_REHYPE_PLUGINS: PluggableList = [
   rehypeRaw,
   rehypePretextMarkdownInputPolicy,
+  rehypePretextMarkdownCodeMeta,
   [rehypeSanitize, createPretextMarkdownSanitizeSchema()],
   rehypeKatex,
   [
@@ -170,17 +159,28 @@ export const PRETEXT_MARKDOWN_REHYPE_PLUGINS: PluggableList = [
   ],
 ]
 
+export const PRETEXT_MARKDOWN_SYNC_REHYPE_PLUGINS: PluggableList = [
+  rehypeRaw,
+  rehypePretextMarkdownInputPolicy,
+  rehypePretextMarkdownCodeMeta,
+  [rehypeSanitize, createPretextMarkdownSanitizeSchema()],
+  rehypeKatex,
+]
+
 export function createPretextMarkdownRemarkPlugins(
   headingIds: readonly string[]
 ): PluggableList {
   return [
     remarkDirective,
     remarkPretextHeadingIds(headingIds),
+    remarkPretextCodeMeta,
+    remarkSmartypants,
     remarkPretextComponentMarkdown,
     remarkPretextDirectiveCallouts,
     remarkPretextComponentDirectives,
     remarkPretextGithubAlerts,
     remarkPretextProseTransforms,
+    remarkGemoji,
     remarkGfm,
     remarkBreaks,
     remarkMath,
@@ -223,6 +223,10 @@ export function sanitizePretextMarkdownImageUrl(value: string) {
   return safeUrl
 }
 
+export function sanitizePretextMarkdownMediaUrl(value: string) {
+  return sanitizePretextMarkdownImageUrl(value)
+}
+
 function decodePretextMarkdownUrl(value: string) {
   try {
     return decodeURIComponent(value)
@@ -238,6 +242,19 @@ function getPretextMarkdownUrlScheme(value: string) {
 function rehypePretextMarkdownInputPolicy() {
   return function transform(tree: unknown) {
     removeUnsafePretextMarkdownInputs(tree)
+  }
+}
+
+function rehypePretextMarkdownCodeMeta() {
+  return function transform(tree: unknown) {
+    visit(tree as any, "element", (node: any) => {
+      if (node.tagName !== "code") return
+      if (typeof node.data?.meta !== "string") return
+      node.properties = {
+        ...node.properties,
+        metastring: node.data.meta,
+      }
+    })
   }
 }
 
@@ -362,6 +379,7 @@ export function createPretextMarkdownSanitizeSchema(): RehypeSanitizeOptions {
         "dataPretextComponentProps",
         "dataPretextHeadingId",
       ],
+      code: [...(defaultSchema.attributes?.code ?? []), "metastring"],
       div: [
         ...(defaultSchema.attributes?.div ?? []),
         "dataPretextCalloutKind",
@@ -414,14 +432,12 @@ function normalizePretextCalloutKind(value: unknown): CalloutKind | null {
 }
 
 function parsePretextComponentMarkdown(value: string): PretextComponent | null {
-  const source = value.trim()
-  const componentMatch = /^<([A-Z][A-Za-z0-9]*)\s*([^<>]*)\/>$/.exec(source)
+  const componentMatch = parsePretextComponentTag(value, "selfClosing")
   if (!componentMatch) return null
 
-  const name = componentMatch[1]
+  const { attributes, name } = componentMatch
   if (!isPretextComponentKind(name)) return null
 
-  const attributes = componentMatch[2] ?? ""
   const rawProps = parsePretextComponentAttributeString(attributes)
   if (!rawProps) return null
   const props = parsePretextComponentProps(name, rawProps)
@@ -436,14 +452,12 @@ function parsePretextComponentMarkdown(value: string): PretextComponent | null {
 function parsePretextComponentOpeningMarkdown(
   value: string
 ): PretextComponent | null {
-  const source = value.trim()
-  const componentMatch = /^<([A-Z][A-Za-z0-9]*)\s*([^<>/]*?)>$/.exec(source)
+  const componentMatch = parsePretextComponentTag(value, "opening")
   if (!componentMatch) return null
 
-  const name = componentMatch[1]
+  const { attributes, name } = componentMatch
   if (!isPretextComponentKind(name)) return null
 
-  const attributes = componentMatch[2] ?? ""
   const rawProps = parsePretextComponentAttributeString(attributes)
   if (!rawProps) return null
   const props = parsePretextComponentProps(name, rawProps)
@@ -457,6 +471,52 @@ function parsePretextComponentOpeningMarkdown(
 
 function readPretextComponentClosingMarkdown(value: string) {
   return /^<\/([A-Z][A-Za-z0-9]*)\s*>$/.exec(value.trim())?.[1] ?? null
+}
+
+function parsePretextComponentTag(
+  value: string,
+  mode: "opening" | "selfClosing"
+) {
+  const source = value.trim()
+  const nameMatch = /^<([A-Z][A-Za-z0-9]*)/.exec(source)
+  if (!nameMatch) return null
+
+  let quote: '"' | "'" | null = null
+  for (let index = nameMatch[0].length; index < source.length; index += 1) {
+    const char = source[index]
+
+    if (quote) {
+      if (char === quote) quote = null
+      continue
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char
+      continue
+    }
+
+    if (char === "<") return null
+
+    if (mode === "selfClosing" && char === "/" && source[index + 1] === ">") {
+      if (source.slice(index + 2).trim() !== "") return null
+      return {
+        attributes: source.slice(nameMatch[0].length, index),
+        name: nameMatch[1]!,
+      }
+    }
+
+    if (mode === "opening" && char === ">") {
+      const attributes = source.slice(nameMatch[0].length, index)
+      if (attributes.trim().endsWith("/")) return null
+      if (source.slice(index + 1).trim() !== "") return null
+      return {
+        attributes,
+        name: nameMatch[1]!,
+      }
+    }
+  }
+
+  return null
 }
 
 function parsePretextComponentAttributeString(attributes: string) {
@@ -609,6 +669,21 @@ function remarkPretextHeadingIds(headingIds: readonly string[]) {
   }
 }
 
+function remarkPretextCodeMeta() {
+  return function transform(tree: unknown) {
+    visit(tree, "code", (node: any) => {
+      if (typeof node.meta !== "string" || !node.meta.trim()) return
+      node.data = {
+        ...node.data,
+        hProperties: {
+          ...node.data?.hProperties,
+          metastring: node.meta,
+        },
+      }
+    })
+  }
+}
+
 function remarkPretextGithubAlerts() {
   return function transform(tree: unknown) {
     visit(tree, "blockquote", (node: any) => {
@@ -680,7 +755,9 @@ function remarkPretextComponentDirectives() {
             node.type = "text"
             node.value = serializePretextDirectiveFallback(node)
             node.children = []
-            delete node.data
+            node.data = {
+              pretextSkipProseTransforms: true,
+            }
           }
           return
         }
@@ -839,6 +916,7 @@ function isPretextMdxLikeHtml(value: string) {
 function remarkPretextProseTransforms() {
   return function transform(tree: unknown) {
     visit(tree, "text", (node: any) => {
+      if (node.data?.pretextSkipProseTransforms) return
       if (typeof node.value === "string") {
         node.value = transformMarkdownProseText(node.value)
       }
@@ -847,24 +925,11 @@ function remarkPretextProseTransforms() {
 }
 
 function transformMarkdownProseText(text: string) {
-  let next = text
+  return text
     .replace(/<->/g, "↔")
     .replace(/(?<!<)->/g, "→")
     .replace(/<-+/g, "←")
-    .replace(/\.\.\./g, "…")
-    .replace(/---/g, "—")
-    .replace(/--/g, "–")
     .replace(/\b1\/2\b/g, "½")
     .replace(/\b1\/4\b/g, "¼")
     .replace(/\b3\/4\b/g, "¾")
-
-  next = next.replace(/(^|[\s([{])"([^"]+)"/g, "$1“$2”")
-  next = next.replace(/(^|[\s([{])'([^']+)'/g, "$1‘$2’")
-  next = next.replace(/(\w)'(\w)/g, "$1’$2")
-
-  for (const [shortcode, emoji] of Object.entries(EMOJI_SHORTCODES)) {
-    next = next.replaceAll(shortcode, emoji)
-  }
-
-  return next
 }

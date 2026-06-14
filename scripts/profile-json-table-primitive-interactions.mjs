@@ -18,6 +18,11 @@ const enumFieldPath = "transactions.0.transaction_type"
 const dateFieldPath = "transactions.0.date"
 const textFieldPath = "transactions.0.description"
 const numberFieldPath = "transactions.0.amount.amount"
+
+// These budgets guard the overlay mount path against structural regressions.
+// They are intentionally coarse: React render counts are strict elsewhere, while
+// browser layout/style durations vary by machine and should diagnose before they
+// fail a run.
 const maxDateOpenNodeDelta = Number(process.env.DATE_OPEN_NODE_BUDGET ?? 240)
 const maxDateOpenLayoutDurationMs = Number(
   process.env.DATE_OPEN_LAYOUT_MS_BUDGET ?? 80
@@ -196,6 +201,45 @@ function metricDelta(before, after) {
   return Object.fromEntries(
     Object.keys(after).map((key) => [key, after[key] - before[key]])
   )
+}
+
+function browserCostSummary(metricsDelta, reactDurationMs) {
+  const durationEntries = [
+    {
+      name: "react",
+      durationMs: reactDurationMs,
+    },
+    {
+      name: "style",
+      durationMs: metricsDelta.RecalcStyleDurationMs,
+      count: metricsDelta.RecalcStyleCount,
+    },
+    {
+      name: "layout",
+      durationMs: metricsDelta.LayoutDurationMs,
+      count: metricsDelta.LayoutCount,
+    },
+    {
+      name: "script",
+      durationMs: metricsDelta.ScriptDurationMs,
+    },
+  ].sort((a, b) => b.durationMs - a.durationMs)
+
+  return {
+    dominantCost: durationEntries[0]?.name ?? "unknown",
+    domNodeDelta: metricsDelta.Nodes,
+    reactDurationMs,
+    style: {
+      count: metricsDelta.RecalcStyleCount,
+      durationMs: metricsDelta.RecalcStyleDurationMs,
+    },
+    layout: {
+      count: metricsDelta.LayoutCount,
+      durationMs: metricsDelta.LayoutDurationMs,
+    },
+    scriptDurationMs: metricsDelta.ScriptDurationMs,
+    taskDurationMs: metricsDelta.TaskDurationMs,
+  }
 }
 
 function topEntries(record, limit = 24) {
@@ -563,6 +607,10 @@ async function summarizeScenario(send, beforeMetrics, startedAt, wait) {
     `performance.now() - ${JSON.stringify(startedAt)}`
   )
   summary.metricsDelta = metricDelta(beforeMetrics, afterMetrics)
+  summary.browserCost = browserCostSummary(
+    summary.metricsDelta,
+    summary.profiler.reactCommits.totalActualDurationMs
+  )
   return summary
 }
 

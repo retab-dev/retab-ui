@@ -55,7 +55,7 @@ const compoundViewerDocContracts = [
   },
   {
     file: "content/docs/components/file-system.mdx",
-    provider: "FileSystemViewerProvider",
+    provider: "FileSystemProvider",
     easyApi: "FileSystem",
   },
   {
@@ -240,7 +240,7 @@ function exportedFunctions(content: string): string[] {
 }
 
 describe("viewer architecture", () => {
-  it("keeps generic viewer primitives at the five spatial parts", () => {
+  it("keeps generic viewer primitives to spatial parts and sidebar control", () => {
     const content = fileContent("registry/new-york-v4/ui/viewer.tsx")
 
     expect(exportedFunctions(content).sort()).toEqual(
@@ -249,7 +249,10 @@ describe("viewer architecture", () => {
         "ViewerHeader",
         "ViewerRoot",
         "ViewerSidebar",
+        "ViewerSidebarTrigger",
         "ViewerSurface",
+        "useOptionalViewerSidebar",
+        "useViewerSidebar",
       ].sort()
     )
     expect(content).not.toContain("ViewerShell")
@@ -323,7 +326,7 @@ describe("viewer architecture", () => {
     ]
     const forbiddenFileViewerPatterns = [
       /\bEmailViewerProvider\b/,
-      /\bFileSystemViewerProvider\b/,
+      /\bFileSystemProvider\b/,
       /\bSplitViewerProvider\b/,
       /\bUploadableFileViewerProvider\b/,
       /\bAnchoredDocumentProvider\b/,
@@ -443,10 +446,10 @@ describe("viewer architecture", () => {
           "<ViewerRoot",
           "<EmailViewerHeader",
           "<ViewerBody",
-          "<ViewerSidebar",
-          "<EmailViewerPartsList",
           "<ViewerSurface",
           "<EmailViewerSelectedPart",
+          "<ViewerSidebar",
+          "<EmailViewerPartsList",
         ],
       },
       {
@@ -461,14 +464,15 @@ describe("viewer architecture", () => {
       {
         file: "registry/new-york-v4/ui/file-system.tsx",
         symbols: [
-          "<FileSystemViewerProvider",
+          "<FileSystemProvider",
           "<ViewerRoot",
-          "<FileSystemViewerHeader",
+          "<ViewerHeader",
+          "<FileSystemHeader",
           "<ViewerBody",
           "<ViewerSidebar",
-          "<FileSystemViewerTree",
+          "<FileSystemExplorer",
           "<ViewerSurface",
-          "<FileSystemViewerSelectedFile",
+          "<FileSystemSelectedFile",
         ],
       },
       {
@@ -654,19 +658,44 @@ describe("viewer architecture", () => {
     )
   })
 
-  it("keeps file-system viewer named parts on narrow hooks", () => {
+  it("keeps file-system domain parts on narrow hooks", () => {
     const content = fileContent("registry/new-york-v4/ui/file-system.tsx")
 
     expect(content).toContain("./file-system-controls")
     expect(content).not.toContain("./file-system-chrome")
-    expect(content).toContain("export function useFileSystemViewerHeader")
-    expect(content).toContain("export function useFileSystemViewerTree")
-    expect(content).toContain("export function useFileSystemViewerSelectedFile")
+    expect(content).toContain("export function useFileSystemHeader")
+    expect(content).toContain("export function useFileSystemExplorer")
+    expect(content).toContain("export function useFileSystemSelectedFile")
+    expect(content).toContain("export function FileSystemHeader")
+    expect(content).toContain("export function FileSystemExplorer")
+    expect(content).toContain("export function FileSystemSelectedFile")
     expect(content).toContain(
-      "const { controller, title } = useFileSystemViewerHeader()"
+      "const { controller, title } = useFileSystemHeader()"
     )
-    expect(content).toContain("useFileSystemViewerTree()")
-    expect(content).toContain("useFileSystemViewerSelectedFile()")
+    expect(content).toContain("useFileSystemExplorer()")
+    expect(content).toContain("useFileSystemSelectedFile()")
+  })
+
+  it("keeps file-system Pierre ownership outside the React list view", () => {
+    const listView = fileContent(
+      "registry/new-york-v4/ui/file-system-list-view.tsx"
+    )
+    const model = fileContent(
+      "registry/new-york-v4/ui/file-system-pierre-model.ts"
+    )
+    const input = fileContent(
+      "registry/new-york-v4/ui/file-system-pierre-input.ts"
+    )
+    const decoration = fileContent(
+      "registry/new-york-v4/ui/file-system-pierre-decoration.ts"
+    )
+
+    expect(listView).toContain("useFileSystemPierreModel")
+    expect(listView).not.toContain("new PierreFileTreeModel")
+    expect(listView).not.toContain("SortHeader")
+    expect(model).toContain("useFileTree")
+    expect(input).toContain("preparePresortedFileTreeInput")
+    expect(decoration).toContain("fileSystemPierreRowDecoration")
   })
 
   it("keeps workflow viewer named parts on narrow hooks", () => {

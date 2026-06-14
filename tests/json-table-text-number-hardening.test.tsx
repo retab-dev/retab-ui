@@ -4,14 +4,15 @@ import * as React from "react"
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
+import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import { projectDocumentRows } from "@/components/json-table/lib/document-projection"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
-import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
 
 import {
+  createTestCellCommitBridge,
   findEditableCell,
   findReadonlyCell,
   getRequiredInteractionFieldMetadata,
@@ -101,6 +102,7 @@ function renderVirtualTable({
     visiblePaths,
     includeArrayAddRows: false,
   })
+  const primitiveEditStore = createJsonTablePrimitiveEditStore()
 
   return render(
     <SingleFileVirtualizedTable
@@ -120,8 +122,12 @@ function renderVirtualTable({
         interactionVisibleColumn(path, interactionSchema)
       )}
       rowCount={projectedRows.length}
-      primitiveEditStore={createJsonTablePrimitiveEditStore()}
-      onUpdateDocument={onUpdateDocument}
+      primitiveEditStore={primitiveEditStore}
+      {...createTestCellCommitBridge({
+        documentData: tableDocument.data,
+        onUpdateDocument,
+        primitiveEditStore,
+      })}
       columnWidth="xxl"
       overscan={4}
       jumpOverscan={4}
@@ -228,10 +234,10 @@ describe("json table text and number hardening", () => {
   })
 
   it("guards type-to-edit while IME composition is active", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["vendor"],
-      onDocumentDataChange,
+      onCellCommit,
     })
     const cell = await editableCell(view, "vendor")
 
@@ -239,7 +245,7 @@ describe("json table text and number hardening", () => {
     fireEvent.keyDown(cell, { key: "a", isComposing: true })
 
     expect(view.queryByRole("textbox")).toBeNull()
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("saves text edits on blur and Enter, then cancels them on Escape", async () => {
@@ -248,10 +254,10 @@ describe("json table text and number hardening", () => {
       ["Enter", "EnterCo"],
       ["Escape", "EscapeCo"],
     ] as const) {
-      const onDocumentDataChange = vi.fn()
+      const onCellCommit = vi.fn()
       const view = renderInteractionRow({
         visiblePaths: ["vendor"],
-        onDocumentDataChange,
+        onCellCommit,
       })
 
       await activateCell(view, "vendor")
@@ -264,14 +270,14 @@ describe("json table text and number hardening", () => {
       }
 
       if (key === "Escape") {
-        expect(onDocumentDataChange).not.toHaveBeenCalled()
+        expect(onCellCommit).not.toHaveBeenCalled()
       } else {
-        expect(onDocumentDataChange).toHaveBeenCalledWith(
+        expect(onCellCommit).toHaveBeenCalledWith(
           "doc_1",
           "vendor",
           value
         )
-        expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
+        expect(onCellCommit).toHaveBeenCalledTimes(1)
       }
       cleanup()
     }
@@ -283,10 +289,10 @@ describe("json table text and number hardening", () => {
       ["Enter", "46.5", 46.5],
       ["Escape", "47.75", 47.75],
     ] as const) {
-      const onDocumentDataChange = vi.fn()
+      const onCellCommit = vi.fn()
       const view = renderInteractionRow({
         visiblePaths: ["amount"],
-        onDocumentDataChange,
+        onCellCommit,
       })
 
       await activateCell(view, "amount")
@@ -299,24 +305,24 @@ describe("json table text and number hardening", () => {
       }
 
       if (key === "Escape") {
-        expect(onDocumentDataChange).not.toHaveBeenCalled()
+        expect(onCellCommit).not.toHaveBeenCalled()
       } else {
-        expect(onDocumentDataChange).toHaveBeenCalledWith(
+        expect(onCellCommit).toHaveBeenCalledWith(
           "doc_1",
           "amount",
           committedValue
         )
-        expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
+        expect(onCellCommit).toHaveBeenCalledTimes(1)
       }
       cleanup()
     }
   })
 
   it("does not save unchanged equivalent text or numeric drafts", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["vendor", "amount", "count"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     await activateCell(view, "vendor")
@@ -330,15 +336,15 @@ describe("json table text and number hardening", () => {
     await activateCell(view, "count")
     fireEvent.blur(view.getByRole("spinbutton"))
 
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("commits empty nullable and non-nullable text fields as null", async () => {
     for (const fieldPath of ["vendor", "note"]) {
-      const onDocumentDataChange = vi.fn()
+      const onCellCommit = vi.fn()
       const view = renderInteractionRow({
         visiblePaths: [fieldPath],
-        onDocumentDataChange,
+        onCellCommit,
       })
 
       await activateCell(view, fieldPath)
@@ -346,22 +352,22 @@ describe("json table text and number hardening", () => {
       fireEvent.change(input, { target: { value: "" } })
       fireEvent.blur(input)
 
-      expect(onDocumentDataChange).toHaveBeenCalledWith(
+      expect(onCellCommit).toHaveBeenCalledWith(
         "doc_1",
         fieldPath,
         null
       )
-      expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
+      expect(onCellCommit).toHaveBeenCalledTimes(1)
       cleanup()
     }
   })
 
   it("commits empty non-nullable number and integer fields as null", async () => {
     for (const fieldPath of ["amount", "count"]) {
-      const onDocumentDataChange = vi.fn()
+      const onCellCommit = vi.fn()
       const view = renderInteractionRow({
         visiblePaths: [fieldPath],
-        onDocumentDataChange,
+        onCellCommit,
       })
 
       await activateCell(view, fieldPath)
@@ -369,12 +375,12 @@ describe("json table text and number hardening", () => {
       fireEvent.change(input, { target: { value: "" } })
       fireEvent.blur(input)
 
-      expect(onDocumentDataChange).toHaveBeenCalledWith(
+      expect(onCellCommit).toHaveBeenCalledWith(
         "doc_1",
         fieldPath,
         null
       )
-      expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
+      expect(onCellCommit).toHaveBeenCalledTimes(1)
       cleanup()
     }
   })
@@ -383,7 +389,7 @@ describe("json table text and number hardening", () => {
     const invalidNumberChange = vi.fn()
     const numberView = renderInteractionRow({
       visiblePaths: ["amount"],
-      onDocumentDataChange: invalidNumberChange,
+      onCellCommit: invalidNumberChange,
     })
     await activateCell(numberView, "amount")
     const numberInput = numberView.getByRole("spinbutton")
@@ -396,7 +402,7 @@ describe("json table text and number hardening", () => {
     const invalidIntegerChange = vi.fn()
     const integerView = renderInteractionRow({
       visiblePaths: ["count"],
-      onDocumentDataChange: invalidIntegerChange,
+      onCellCommit: invalidIntegerChange,
     })
     await activateCell(integerView, "count")
     const integerInput = integerView.getByRole("spinbutton")
@@ -503,11 +509,11 @@ describe("json table text and number hardening", () => {
   })
 
   it("keeps read-only text and number cells inert for pointer and keyboard activation", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["vendor", "amount", "count"],
       isJsonEditable: false,
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     for (const fieldPath of ["vendor", "amount", "count"]) {
@@ -520,14 +526,14 @@ describe("json table text and number hardening", () => {
 
     expect(view.queryByRole("textbox")).toBeNull()
     expect(view.queryByRole("spinbutton")).toBeNull()
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 
   it("keeps right-click and auxiliary pointer activation inert", async () => {
-    const onDocumentDataChange = vi.fn()
+    const onCellCommit = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["vendor", "amount"],
-      onDocumentDataChange,
+      onCellCommit,
     })
 
     fireEvent.pointerDown(await editableCell(view, "vendor"), { button: 2 })
@@ -535,6 +541,6 @@ describe("json table text and number hardening", () => {
 
     expect(view.queryByRole("textbox")).toBeNull()
     expect(view.queryByRole("spinbutton")).toBeNull()
-    expect(onDocumentDataChange).not.toHaveBeenCalled()
+    expect(onCellCommit).not.toHaveBeenCalled()
   })
 })

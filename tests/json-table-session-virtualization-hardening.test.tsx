@@ -12,6 +12,7 @@ import type { JSONSchema7 } from "json-schema"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
+import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import type { JsonTableProfilerState } from "@/components/json-table/json-table-profiler"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import { projectDocumentRows } from "@/components/json-table/lib/document-projection"
@@ -21,9 +22,9 @@ import {
   getFieldMetadata,
   type FieldMetadata,
 } from "@/components/json-table/lib/schema-field-metadata"
-import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
 
+import { createTestCellCommitBridge } from "./json-table-interaction-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
 
 beforeAll(() => {
@@ -144,6 +145,7 @@ function renderVirtualTable({
     visiblePaths,
     includeArrayAddRows: false,
   })
+  const primitiveEditStore = createJsonTablePrimitiveEditStore()
 
   return render(
     <SingleFileVirtualizedTable
@@ -161,8 +163,12 @@ function renderVirtualTable({
       projectedRows={projectedRows}
       visibleColumns={visiblePaths.map(visibleColumn)}
       rowCount={projectedRows.length}
-      primitiveEditStore={createJsonTablePrimitiveEditStore()}
-      onUpdateDocument={onUpdateDocument}
+      primitiveEditStore={primitiveEditStore}
+      {...createTestCellCommitBridge({
+        documentData: tableDocument.data,
+        onUpdateDocument,
+        primitiveEditStore,
+      })}
       columnWidth="xxl"
       overscan={overscan}
       jumpOverscan={jumpOverscan}
@@ -188,6 +194,9 @@ function StatefulVirtualTable({
         includeArrayAddRows: false,
       }),
     [tableDocument, visiblePaths]
+  )
+  const primitiveEditStoreRef = React.useRef(
+    createJsonTablePrimitiveEditStore()
   )
   const onUpdateDocument = React.useCallback(
     async (patch: Record<string, unknown>) => {
@@ -216,8 +225,12 @@ function StatefulVirtualTable({
       projectedRows={projectedRows}
       visibleColumns={visiblePaths.map(visibleColumn)}
       rowCount={projectedRows.length}
-      primitiveEditStore={createJsonTablePrimitiveEditStore()}
-      onUpdateDocument={onUpdateDocument}
+      primitiveEditStore={primitiveEditStoreRef.current}
+      {...createTestCellCommitBridge({
+        documentData: tableDocument.data,
+        onUpdateDocument,
+        primitiveEditStore: primitiveEditStoreRef.current,
+      })}
       columnWidth="xxl"
       overscan={4}
       jumpOverscan={4}

@@ -1,20 +1,172 @@
 import type * as React from "react"
 
-import type { DataCellBooleanControlProps } from "@/registry/new-york-v4/ui/data-cell-boolean-control"
+import type { DataCellActivationSource } from "@/registry/new-york-v4/ui/data-cell-activation"
 import type { DataCellControlState } from "@/registry/new-york-v4/ui/data-cell-control-state"
 import type { DataCellEditModelByKind } from "@/registry/new-york-v4/ui/data-cell-edit-model"
-import type { DataCellPickerControlProps } from "@/registry/new-york-v4/ui/data-cell-picker-control"
-import type { DataCellSelectControlProps } from "@/registry/new-york-v4/ui/data-cell-select-control"
 import type {
-  DataCellNumberControlProps,
-  DataCellTextControlProps,
-} from "@/registry/new-york-v4/ui/data-cell-text-control"
-import type {
-  DataCellActivationSource,
+  DataCellDateTimeZone,
+  DataCellEditorHandle,
   DataCellKind,
+  DataCellSelectOption,
+  DataCellValueMeta,
 } from "@/registry/new-york-v4/ui/data-cell-types"
 
 export type { DataCellControlState }
+
+type DataCellInputNativeProps = Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  | "children"
+  | "className"
+  | "defaultValue"
+  | "disabled"
+  | "name"
+  | "onChange"
+  | "placeholder"
+  | "type"
+  | "value"
+>
+
+type DataCellInputControlBaseProps<
+  Kind extends DataCellKind,
+  Value,
+> = DataCellInputNativeProps & {
+  kind: Kind
+  value?: Value
+  disabled?: boolean
+  name?: string
+  placeholder?: string
+  className?: string
+  draftValue?: string
+  autoFocus?: boolean
+  activationSource?: DataCellActivationSource
+  onDraftValueChange?: (value: string, meta: DataCellValueMeta) => void
+  onEditingEnd?: () => void
+  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
+}
+
+export type DataCellTextControlProps = DataCellInputControlBaseProps<
+  "text",
+  string | null
+> & {
+  onCommit?: (value: string | null, meta: DataCellValueMeta) => void
+}
+
+export type DataCellNumberControlProps = DataCellInputControlBaseProps<
+  "number" | "integer",
+  number | string | null
+> & {
+  onCommit?: (value: number | null, meta: DataCellValueMeta) => void
+}
+
+export type DataCellInputControlProps =
+  | DataCellTextControlProps
+  | DataCellNumberControlProps
+
+type DataCellBooleanRootProps = Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  | "children"
+  | "className"
+  | "defaultValue"
+  | "id"
+  | "onBlur"
+  | "onChange"
+  | "onClick"
+  | "onDoubleClick"
+  | "onFocus"
+  | "onKeyDown"
+>
+
+export type DataCellBooleanControlProps = DataCellBooleanRootProps & {
+  kind: "boolean"
+  value?: boolean | null
+  disabled?: boolean
+  name?: string
+  className?: string
+  autoFocus?: boolean
+  id?: string
+  "aria-label"?: string
+  "aria-describedby"?: string
+  "aria-invalid"?: boolean | "false" | "true" | "grammar" | "spelling"
+  onCommit?: (value: boolean, meta: DataCellValueMeta) => void
+  onEditingEnd?: () => void
+  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
+  onFocus?: React.FocusEventHandler<HTMLButtonElement>
+  onBlur?: React.FocusEventHandler<HTMLButtonElement>
+  onKeyDown?: React.KeyboardEventHandler<HTMLButtonElement>
+  onClick?: React.MouseEventHandler<HTMLButtonElement>
+  onDoubleClick?: React.MouseEventHandler<HTMLButtonElement>
+}
+
+type DataCellSelectNativeProps = Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  | "children"
+  | "className"
+  | "defaultValue"
+  | "disabled"
+  | "name"
+  | "onChange"
+  | "type"
+  | "value"
+>
+
+export type DataCellSelectFormatValue = (
+  value: string | null | undefined,
+  meta: { kind: "select" }
+) => React.ReactNode
+
+export type DataCellSelectControlProps = DataCellSelectNativeProps & {
+  kind: "select"
+  value?: string | null
+  disabled?: boolean
+  name?: string
+  placeholder?: string
+  className?: string
+  formatValue?: DataCellSelectFormatValue
+  autoFocus?: boolean
+  activationSource?: DataCellActivationSource
+  open?: boolean
+  options: DataCellSelectOption[]
+  onCommit?: (value: string | null, meta: DataCellValueMeta) => void
+  onEditingEnd?: () => void
+  onOpenChange?: (open: boolean) => void
+  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
+}
+
+type DataCellPickerNativeProps = Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  | "children"
+  | "className"
+  | "defaultValue"
+  | "disabled"
+  | "name"
+  | "onChange"
+  | "type"
+  | "value"
+>
+
+export type DataCellPickerControlProps = DataCellPickerNativeProps & {
+  kind: "date" | "time" | "date-time"
+  value?: string | null
+  disabled?: boolean
+  name?: string
+  placeholder?: string
+  dateTimeZone?: DataCellDateTimeZone
+  showPickerIcon?: boolean
+  className?: string
+  formatValue?: (
+    value: string | null | undefined,
+    meta: { kind: "date" | "time" | "date-time" }
+  ) => React.ReactNode
+  draftValue?: string
+  autoFocus?: boolean
+  activationSource?: DataCellActivationSource
+  open?: boolean
+  onDraftValueChange?: (value: string, meta: DataCellValueMeta) => void
+  onCommit?: (value: string | null, meta: DataCellValueMeta) => void
+  onOpenChange?: (open: boolean) => void
+  onEditingEnd?: () => void
+  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
+}
 
 export type DataCellControlPropsByKind = {
   text: DataCellTextControlProps

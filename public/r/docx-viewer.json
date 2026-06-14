@@ -109,7 +109,7 @@
     },
     {
       "path": "registry/new-york-v4/ui/use-is-client.ts",
-      "content": "\"use client\"\n\nimport * as React from \"react\"\n\nexport function useIsClient(): boolean {\n  return React.useSyncExternalStore(\n    () => () => {},\n    () => true,\n    () => false\n  )\n}\n",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\n\nexport function useIsClient(): boolean {\n  const [isClient, setIsClient] = React.useState(false)\n\n  React.useEffect(() => {\n    setIsClient(true)\n  }, [])\n\n  return isClient\n}\n",
       "type": "registry:ui",
       "target": "@ui/use-is-client.ts"
     }

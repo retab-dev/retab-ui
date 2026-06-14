@@ -32,7 +32,6 @@ export function useJsonTableEditableCellModel(
   const shellHandlers = useJsonTableShellHandlers({
     props,
     cellField,
-    primitiveControl,
   })
 
   return buildJsonTableEditableCellModel({

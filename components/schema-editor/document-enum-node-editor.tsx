@@ -47,7 +47,7 @@ export function DocumentEnumNodeEditor({
       updateEnumValue(current, nodeId, id, { value: newValue })
     )
   }
-  const addRow = {
+  const addInput = {
     focusAfterSubmit: true,
     inputLabel: "New choice",
     placeholder: "New choice",
@@ -76,8 +76,8 @@ export function DocumentEnumNodeEditor({
         />
         {editable && (
           <SchemaChipAddRow
+            addInput={addInput}
             editable={editable}
-            row={addRow}
           />
         )}
       </div>

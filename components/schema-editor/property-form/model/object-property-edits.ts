@@ -1,18 +1,7 @@
-import type { JSONSchema7Definition } from "json-schema"
-
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import { moveOrderedItem } from "@/components/schema-editor/primitives/schema-order"
+import { getObjectPropertyNames } from "@/components/schema-editor/property-form/model/object-property-selectors"
 import { formatTitle } from "@/components/schema-editor/schema-title"
-
-export function isSchemaNode(
-  value: JSONSchema7Definition | undefined
-): value is ExtendedJSONSchema7 {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
-
-export function listObjectPropertyNames(schemaNode: ExtendedJSONSchema7) {
-  return Object.keys(schemaNode.properties || {})
-}
 
 export function createObjectPropertySchema(
   propertyName: string
@@ -38,7 +27,7 @@ export function replaceObjectProperty({
       ...(schemaNode.properties || {}),
       [propertyName]: propertySchema,
     },
-    required: listObjectPropertyNames(schemaNode).includes(propertyName)
+    required: getObjectPropertyNames(schemaNode).includes(propertyName)
       ? schemaNode.required
       : [...(schemaNode.required || []), propertyName],
   }
@@ -54,7 +43,7 @@ export function renameObjectProperty({
   newName: string
 }): ExtendedJSONSchema7 {
   if (!newName || oldName === newName) return schemaNode
-  if (listObjectPropertyNames(schemaNode).includes(newName)) return schemaNode
+  if (getObjectPropertyNames(schemaNode).includes(newName)) return schemaNode
 
   const properties = schemaNode.properties || {}
   const nextProperties: NonNullable<ExtendedJSONSchema7["properties"]> = {}

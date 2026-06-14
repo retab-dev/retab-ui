@@ -11,6 +11,7 @@ import {
   type DataCellDismissCause,
 } from "@/registry/new-york-v4/ui/data-cell-activation"
 import { dataCellPickerTriggerClass } from "@/registry/new-york-v4/ui/data-cell-classes"
+import type { DataCellPickerControlProps } from "@/registry/new-york-v4/ui/data-cell-control-contract"
 import {
   dateFromPickerValue,
   formatDataCellDisplayValue,
@@ -23,49 +24,7 @@ import {
 } from "@/registry/new-york-v4/ui/data-cell-format"
 import { DataCellPickerIcon } from "@/registry/new-york-v4/ui/data-cell-picker-icon"
 import { getDataCellPickerPopupStyleFromAnchor } from "@/registry/new-york-v4/ui/data-cell-picker-position"
-import type {
-  DataCellActivationSource,
-  DataCellDateTimeZone,
-  DataCellEditorHandle,
-  DataCellValue,
-  DataCellValueMeta,
-} from "@/registry/new-york-v4/ui/data-cell-types"
-
-type DataCellPickerNativeProps = Omit<
-  React.ButtonHTMLAttributes<HTMLButtonElement>,
-  | "children"
-  | "className"
-  | "defaultValue"
-  | "disabled"
-  | "name"
-  | "onChange"
-  | "type"
-  | "value"
->
-
-export type DataCellPickerControlProps = DataCellPickerNativeProps & {
-  kind: "date" | "time" | "date-time"
-  value?: string | null
-  disabled?: boolean
-  name?: string
-  placeholder?: string
-  dateTimeZone?: DataCellDateTimeZone
-  showPickerIcon?: boolean
-  className?: string
-  formatValue?: (
-    value: string | null | undefined,
-    meta: { kind: "date" | "time" | "date-time" }
-  ) => React.ReactNode
-  draftValue?: string
-  autoFocus?: boolean
-  activationSource?: DataCellActivationSource
-  open?: boolean
-  onDraftValueChange?: (value: string, meta: DataCellValueMeta) => void
-  onCommit?: (value: string | null, meta: DataCellValueMeta) => void
-  onOpenChange?: (open: boolean) => void
-  onEditingEnd?: () => void
-  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
-}
+import type { DataCellValue } from "@/registry/new-york-v4/ui/data-cell-types"
 
 function dataCellOutsidePointerDismissCause(
   event: PointerEvent

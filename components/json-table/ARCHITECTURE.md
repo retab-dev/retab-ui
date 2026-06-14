@@ -130,11 +130,57 @@ overlay state, and structured popover state are separate concepts.
 primitive control
   -> active control commitValue
   -> EditableJsonTableCell formatValueForCommit
-  -> useCellController
-  -> onDocumentDataChange
+  -> useJsonTablePrimitiveCellController
+  -> JsonTablePrimitiveEditStore
+  -> JsonTableCellCommit(visibility: "primitivePendingValue")
+  -> useSingleFileTableDocumentModel
+  -> onUpdateDocument
 ```
 
-No active control writes to the document directly.
+Structured object and array editors use their own document-data controller:
+
+```txt
+structured editor
+  -> formatValueForCommit
+  -> useJsonTableStructuredCellController
+  -> JsonTableCellCommit(visibility: "projectedDocumentValue")
+  -> useSingleFileTableDocumentModel
+  -> onUpdateDocument
+```
+
+No active control writes to the document directly, and structured commits do not
+enter primitive pending/confirmed/stale lifecycle.
+
+## Document Lifecycle
+
+`SingleFileTableView` is only the public adapter. `useSingleFileTableDocumentModel`
+owns the document state machine:
+
+- `sourceDocument` is the latest parent prop.
+- `projectionDocument` is the document used to project rows.
+- `confirmedDocumentDataRef` is the latest data used to build outgoing patches.
+- `JsonTablePrimitiveEditStore` owns primitive `pending`, `confirmed`, and
+  `stale` cell snapshots.
+
+The rules are exact:
+
+- A new document id resets the primitive edit store and immediately projects the
+  new source document.
+- A same-id parent echo confirms primitive edit-store state and does not replace
+  the projection document.
+- A same-id external parent change replaces the projection document.
+- Every cell commit crosses the same `JsonTableCellCommit` boundary. Primitive
+  cells mark `visibility: "primitivePendingValue"`; structured cells mark
+  `visibility: "projectedDocumentValue"`.
+
+Visible values resolve in one priority order:
+
+| Priority | Source | Owner | Meaning |
+| --- | --- | --- | --- |
+| 1 | Primitive pending value | `JsonTablePrimitiveEditStore` | Scalar edit committed locally before the parent echo confirms it. |
+| 2 | Structured local value | `useJsonTableStructuredCellController` | Object/array editor commit shown locally until the projected document catches up. |
+| 3 | Projected document value | `useSingleFileTableDocumentModel` | Last document identity chosen for row projection. |
+| 4 | Source document value | parent props | Authoritative input before any local projection state exists. |
 
 ## Performance Contract
 

@@ -4,8 +4,16 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
-import { createDataCellPointerActivationSource } from "@/registry/new-york-v4/ui/data-cell-activation"
+import {
+  createDataCellPointerActivationSource,
+  type DataCellActivationSource,
+} from "@/registry/new-york-v4/ui/data-cell-activation"
 import { dataCellDisplayClass } from "@/registry/new-york-v4/ui/data-cell-classes"
+import type {
+  DataCellInputControlProps,
+  DataCellNumberControlProps,
+  DataCellTextControlProps,
+} from "@/registry/new-york-v4/ui/data-cell-control-contract"
 import {
   formatDataCellEditValue,
   getDataCellValueMeta,
@@ -16,61 +24,10 @@ import {
   getDataCellTextSelectionOffset,
 } from "@/registry/new-york-v4/ui/data-cell-text-hit-test"
 import type {
-  DataCellActivationSource,
-  DataCellEditorHandle,
   DataCellKind,
   DataCellValue,
   DataCellValueMeta,
 } from "@/registry/new-york-v4/ui/data-cell-types"
-
-type DataCellInputNativeProps = Omit<
-  React.InputHTMLAttributes<HTMLInputElement>,
-  | "children"
-  | "className"
-  | "defaultValue"
-  | "disabled"
-  | "name"
-  | "onChange"
-  | "placeholder"
-  | "type"
-  | "value"
->
-
-type DataCellInputControlBaseProps<
-  Kind extends DataCellKind,
-  Value,
-> = DataCellInputNativeProps & {
-  kind: Kind
-  value?: Value
-  disabled?: boolean
-  name?: string
-  placeholder?: string
-  className?: string
-  draftValue?: string
-  autoFocus?: boolean
-  activationSource?: DataCellActivationSource
-  onDraftValueChange?: (value: string, meta: DataCellValueMeta) => void
-  onEditingEnd?: () => void
-  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
-}
-
-export type DataCellTextControlProps = DataCellInputControlBaseProps<
-  "text",
-  string | null
-> & {
-  onCommit?: (value: string | null, meta: DataCellValueMeta) => void
-}
-
-export type DataCellNumberControlProps = DataCellInputControlBaseProps<
-  "number" | "integer",
-  number | string | null
-> & {
-  onCommit?: (value: number | null, meta: DataCellValueMeta) => void
-}
-
-export type DataCellInputControlProps =
-  | DataCellTextControlProps
-  | DataCellNumberControlProps
 
 export function getDataCellTextPointerActivationSource({
   clientX,

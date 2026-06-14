@@ -12,11 +12,11 @@ import {
 import { cn } from "@/lib/utils"
 import {
   AnchoredDocumentProvider,
+  useAnchoredDocument,
+  useAnchoredFieldLink,
   type AnchoredDocumentTarget,
   type AnchoredItem,
   type DocumentAnchor,
-  useAnchoredDocument,
-  useAnchoredFieldLink,
 } from "@/components/ui/anchored-document-viewer"
 import { CodeViewer, type CodeViewerHandle } from "@/components/ui/code-viewer"
 import { csvAnchorToTarget } from "@/components/ui/csv-source"
@@ -44,13 +44,15 @@ import {
 } from "@/components/ui/pdf-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { SourceIndicator } from "@/components/ui/source-indicator"
+import { textAnchorToTarget } from "@/components/ui/text-source"
 import {
   ViewerBody,
+  ViewerHeader,
   ViewerRoot,
   ViewerSidebar,
+  ViewerSidebarTrigger,
   ViewerSurface,
 } from "@/components/ui/viewer"
-import { textAnchorToTarget } from "@/components/ui/text-source"
 import { xlsxAnchorToTarget } from "@/components/ui/xlsx-source"
 import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
 import { JsonForm } from "@/components/json-form/json-form"
@@ -222,13 +224,26 @@ function ExtractionShell({
   const { activeItem } = useAnchoredDocument()
 
   return (
-    <ViewerRoot bare className="h-full bg-background">
+    <ViewerRoot bare defaultSidebarOpen className="h-full bg-background">
+      <ViewerHeader className="flex min-h-10 items-center gap-2 px-2">
+        <ViewerSidebarTrigger side="right" />
+        <h2 className="min-w-0 truncate text-sm font-medium">
+          Extraction results
+        </h2>
+      </ViewerHeader>
       <ViewerBody>
         <ViewerSurface className="relative">
-        {children}
-        <SourceIndicator path={link.activePath} found={!!activeItem?.anchor} />
+          {children}
+          <SourceIndicator
+            path={link.activePath}
+            found={!!activeItem?.anchor}
+          />
         </ViewerSurface>
-        <ViewerSidebar className="flex w-[420px] flex-shrink-0 flex-col border-l md:w-[420px]">
+        <ViewerSidebar
+          side="right"
+          width="420px"
+          className="flex flex-shrink-0 flex-col border-l"
+        >
           <ExtractionForm extraction={extraction} link={link} />
         </ViewerSidebar>
       </ViewerBody>

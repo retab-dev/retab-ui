@@ -44,6 +44,7 @@ import {
   ViewerHeader,
   ViewerRoot,
   ViewerSidebar,
+  ViewerSidebarTrigger,
   ViewerSurface,
 } from "./viewer"
 
@@ -202,15 +203,19 @@ export function EmailViewer({
       onSelectedPathChange={onSelectedPathChange}
     >
       <div data-slot="email-viewer" className={cn("min-h-0", className)}>
-        <ViewerRoot bare={bare} className="h-full">
+        <ViewerRoot bare={bare} defaultSidebarOpen className="h-full">
           <EmailViewerHeader />
           <ViewerBody className="flex-col md:flex-row">
-            <ViewerSidebar className="border-t md:border-t-0">
-              <EmailViewerPartsList />
-            </ViewerSidebar>
             <ViewerSurface className="min-h-[26rem] md:min-h-0">
               <EmailViewerSelectedPart />
             </ViewerSurface>
+            <ViewerSidebar
+              side="right"
+              width="19rem"
+              className="border-t md:border-t-0 md:border-l"
+            >
+              <EmailViewerPartsList />
+            </ViewerSidebar>
           </ViewerBody>
         </ViewerRoot>
       </div>
@@ -307,6 +312,7 @@ function MimeMessageHeader({ message }: { message: EmailViewerMessage }) {
           <h2 className="min-w-0 flex-1 truncate text-sm font-medium">
             {subject}
           </h2>
+          <ViewerSidebarTrigger side="right" className="-mr-1" />
         </div>
         <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1 pl-6 text-xs text-muted-foreground">
           {message.from ? (

@@ -79,6 +79,8 @@ document renderer before adding local code.
 Use a local research folder outside the shipped source tree. These repos are
 not vendored product code; they are reference implementations that we can grep,
 run, compare, and translate into this viewer's smaller security model.
+If a clone already exists, use it as-is unless the feature explicitly depends
+on newer upstream behavior.
 
 ```bash
 mkdir -p tmp/markdown-upstreams
@@ -139,18 +141,35 @@ Existing Retab references to compare before implementing:
 | Copy controls          | [`registry/new-york-v4/ui/markdown-document-copy.tsx`](/Users/sachaichbiah/Local/retab-ui/registry/new-york-v4/ui/markdown-document-copy.tsx)           |
 | Diagram rendering      | [`registry/new-york-v4/ui/markdown-document-diagram.tsx`](/Users/sachaichbiah/Local/retab-ui/registry/new-york-v4/ui/markdown-document-diagram.tsx)     |
 
-Local clone status: the upstream repositories above are expected to exist in
-`tmp/markdown-upstreams`. They are deliberately outside the registry/component
-source tree, but implementation work should treat them as the first reference.
-Before adding a feature, grep the matching clone, read its tests, and copy the
-smallest proven behavior into our model or use the package directly when that is
-cleaner.
+Current package behavior to preserve:
+
+| Package              | Used today in Retab | Upstream repo                                                                           | Rule                                                                  |
+| -------------------- | ------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `react-markdown`     | Yes                 | [remarkjs/react-markdown](https://github.com/remarkjs/react-markdown)                   | Keep its component override contract as the rendered chunk boundary.  |
+| `remark-gfm`         | Yes                 | [remarkjs/remark-gfm](https://github.com/remarkjs/remark-gfm)                           | Treat upstream GFM behavior and tests as the compatibility baseline.  |
+| `rehype-raw`         | Yes                 | [rehypejs/rehype-raw](https://github.com/rehypejs/rehype-raw)                           | Keep raw HTML parsing behind the viewer sanitizer.                    |
+| `rehype-sanitize`    | Yes                 | [rehypejs/rehype-sanitize](https://github.com/rehypejs/rehype-sanitize)                 | Narrow the upstream schema instead of creating a parallel sanitizer.  |
+| `rehype-slug`        | Yes                 | [rehypejs/rehype-slug](https://github.com/rehypejs/rehype-slug)                         | Use one slug algorithm for the model and rendered DOM.                |
+| `rehype-pretty-code` | Yes                 | [rehype-pretty/rehype-pretty-code](https://github.com/rehype-pretty/rehype-pretty-code) | Reuse tokenization and metadata behavior, do not write a highlighter. |
+
+Local clone target: the upstream repositories above live in
+`tmp/markdown-upstreams` in this workspace. They are deliberately outside the
+registry/component source tree and must not be vendored into shipped source, but
+implementation work should treat them as the first reference. Before adding a
+feature, grep the matching clone, read its tests, and copy the smallest proven
+behavior into our model or use the package directly when that is cleaner.
 
 Implementation rule: start from the upstream source and tests for the feature
 being implemented, then keep only the minimal behavior that belongs in our
 viewer. This should make the custom component simpler than accumulating local
 remark tricks, because each feature starts from a proven parser or renderer and
 is narrowed deliberately.
+
+Hard rule: a Pretext Markdown feature is not considered ready until it has an
+identified upstream basis in the table below, an existing Retab comparison when
+one exists, and a local regression test that captures the behavior we are
+taking. The implementation may call the upstream package directly or translate a
+small algorithm, but it should not start from a blank local regex/parser.
 
 Implementation basis by feature:
 

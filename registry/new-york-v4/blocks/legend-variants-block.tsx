@@ -182,7 +182,9 @@ function Cell({
         >
           <ViewerRoot bare className="h-full">
             <ViewerBody>
-              <ViewerSidebar className="w-12">{ribbon}</ViewerSidebar>
+              <ViewerSidebar collapsible="none" className="w-12">
+                {ribbon}
+              </ViewerSidebar>
               <ViewerSurface className="relative">
                 {preset.slot === "top" ? legend : null}
                 <div className="relative flex min-h-0 flex-1">

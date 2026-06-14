@@ -12,12 +12,12 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
   FileSystem,
-  FileSystemViewerHeader,
-  FileSystemViewerOpenDialog,
-  FileSystemViewerProvider,
-  FileSystemViewerSelectedFile,
-  FileSystemViewerTree,
-  useFileSystemViewer,
+  FileSystemExplorer,
+  FileSystemHeader,
+  FileSystemOpenDialog,
+  FileSystemProvider,
+  FileSystemSelectedFile,
+  useFileSystem,
 } from "@/registry/new-york-v4/ui/file-system"
 import type {
   FileSystemItem,
@@ -25,6 +25,7 @@ import type {
 } from "@/registry/new-york-v4/ui/file-system-types"
 import {
   ViewerBody,
+  ViewerHeader,
   ViewerRoot,
   ViewerSidebar,
   ViewerSurface,
@@ -169,6 +170,21 @@ async function expandFileTreeItem(name: RegExp | string) {
   return item
 }
 
+async function collapseFileTreeItem(name: RegExp | string) {
+  const item = await findFileTreeItem(name)
+
+  if (item.getAttribute("aria-expanded") === "true") {
+    fireEvent.click(item)
+  }
+
+  await waitFor(() => {
+    expect(queryFileTreeItem(name)?.getAttribute("aria-expanded")).not.toBe(
+      "true"
+    )
+  })
+  return item
+}
+
 describe("FileSystem", () => {
   it("builds the easy file-system viewer from the explicit viewer primitive tree", () => {
     render(<FileSystem items={items} />)
@@ -195,19 +211,21 @@ describe("FileSystem", () => {
 
   it("composes file-system provider parts directly", async () => {
     render(
-      <FileSystemViewerProvider items={items}>
+      <FileSystemProvider items={items}>
         <ViewerRoot>
-          <FileSystemViewerHeader />
+          <ViewerHeader>
+            <FileSystemHeader />
+          </ViewerHeader>
           <ViewerBody>
             <ViewerSidebar>
-              <FileSystemViewerTree />
+              <FileSystemExplorer />
             </ViewerSidebar>
             <ViewerSurface>
-              <FileSystemViewerSelectedFile />
+              <FileSystemSelectedFile />
             </ViewerSurface>
           </ViewerBody>
         </ViewerRoot>
-      </FileSystemViewerProvider>
+      </FileSystemProvider>
     )
 
     fireEvent.doubleClick(await findFileTreeItem(/reports/i))
@@ -222,20 +240,22 @@ describe("FileSystem", () => {
 
   it("opens files from composed provider parts with the exported dialog", async () => {
     render(
-      <FileSystemViewerProvider defaultPath="reports/" items={items}>
+      <FileSystemProvider defaultPath="reports/" items={items}>
         <ViewerRoot data-viewer="file-system" bare>
-          <FileSystemViewerHeader />
+          <ViewerHeader>
+            <FileSystemHeader />
+          </ViewerHeader>
           <ViewerBody>
             <ViewerSidebar>
-              <FileSystemViewerTree />
+              <FileSystemExplorer />
             </ViewerSidebar>
             <ViewerSurface>
-              <FileSystemViewerSelectedFile />
+              <FileSystemSelectedFile />
             </ViewerSurface>
           </ViewerBody>
-          <FileSystemViewerOpenDialog />
+          <FileSystemOpenDialog />
         </ViewerRoot>
-      </FileSystemViewerProvider>
+      </FileSystemProvider>
     )
 
     fireEvent.doubleClick(await findFileTreeItem(/report.pdf/i))
@@ -541,9 +561,9 @@ describe("FileSystem", () => {
     expect(queryFileTreeItem(/report.pdf/i)).toBeTruthy()
   })
 
-  it("does not re-emit same-path selection after Pierre model recreation", async () => {
+  it("does not re-emit same-path selection after Pierre model reset", async () => {
     function LoadLazyFolderButton() {
-      const { controller } = useFileSystemViewer()
+      const { controller } = useFileSystem()
 
       return (
         <button
@@ -566,17 +586,17 @@ describe("FileSystem", () => {
     ]
 
     render(
-      <FileSystemViewerProvider
+      <FileSystemProvider
         defaultSelectedPath="report.pdf"
         items={lazyItems}
         loadChildren={loadChildren}
         onSelectionChange={onSelectionChange}
       >
         <ViewerRoot>
-          <FileSystemViewerTree />
+          <FileSystemExplorer />
           <LoadLazyFolderButton />
         </ViewerRoot>
-      </FileSystemViewerProvider>
+      </FileSystemProvider>
     )
 
     expect(await findFileTreeItem(/report.pdf/i)).toBeTruthy()
@@ -622,6 +642,40 @@ describe("FileSystem", () => {
       )
     })
     expect(queryFileTreeItem(/report.pdf/i)).toBeTruthy()
+  })
+
+  it("keeps collapsed list folders collapsed after sorting", async () => {
+    const sortableItems: FileSystemItem[] = [
+      {
+        kind: "file",
+        path: "reports/report.pdf",
+        mimeType: "application/pdf",
+        size: 300,
+      },
+      {
+        kind: "file",
+        path: "archive/archive.txt",
+        mimeType: "text/plain",
+        size: 100,
+      },
+    ]
+
+    render(<FileSystem items={sortableItems} />)
+
+    await expandFileTreeItem(/reports/i)
+    expect(await findFileTreeItem(/report.pdf/i)).toBeTruthy()
+
+    await collapseFileTreeItem(/reports/i)
+    expect(queryFileTreeItem(/report.pdf/i)).toBeUndefined()
+
+    fireEvent.click(screen.getByRole("button", { name: "Size" }))
+
+    await waitFor(() => {
+      expect(
+        queryFileTreeItem(/reports/i)?.getAttribute("aria-expanded")
+      ).not.toBe("true")
+    })
+    expect(queryFileTreeItem(/report.pdf/i)).toBeUndefined()
   })
 
   it("selects the first lazy child from columns keyboard navigation", async () => {

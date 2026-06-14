@@ -7,10 +7,6 @@ import type {
   SchemaTypeMenuTrailingContent,
   SchemaTypeMenuValue,
 } from "@/components/schema-editor/primitives/schema-type-menu"
-import type {
-  ObjectPropertyAddRowModel,
-  ObjectPropertyRowModel,
-} from "@/components/schema-editor/property-form/fields/object-properties-model"
 
 export type PropertyFormMode = "descriptionOnly" | "readOnly" | "editable"
 
@@ -107,37 +103,50 @@ export interface PropertyEnumValuesFieldModel {
   onChange: (values: JSONSchema7Type[]) => void
 }
 
-export interface PropertySchemaDetailAccess {
+export interface PropertySchemaPlanAccess {
   arrayItems: boolean
   enumValues: boolean
   objectProperties: boolean
   type: boolean
 }
 
-export interface PropertyObjectPropertiesSourceModel {
+export interface PropertyObjectPropertiesPlan {
   schemaNode: ExtendedJSONSchema7
   schemaContext: PropertyFormSchemaContext
   mode: PropertyFormMode
-  access: PropertySchemaDetailAccess
+  access: PropertySchemaPlanAccess
   editable: boolean
   onChange: (schemaNode: ExtendedJSONSchema7) => void
 }
 
-export interface PropertyObjectPropertiesFieldModel {
-  addRow: ObjectPropertyAddRowModel
-  editable: boolean
-  rows: ObjectPropertyRowModel[]
+export interface PropertySchemaPlan {
+  items: PropertySchemaPlanItem[]
 }
 
-export interface PropertyArrayItemsFieldModel {
-  itemSchemaDetails: PropertySchemaDetailsModel
+export type PropertySchemaPlanItem =
+  | PropertyTypePlanItem
+  | PropertyEnumPlanItem
+  | PropertyObjectPropertiesPlanItem
+  | PropertyArrayItemsPlanItem
+
+export interface PropertyTypePlanItem {
+  kind: "type"
+  field: PropertyTypeFieldModel
 }
 
-export interface PropertySchemaDetailsModel {
-  type?: PropertyTypeFieldModel
-  enumValues?: PropertyEnumValuesFieldModel
-  objectProperties?: PropertyObjectPropertiesSourceModel
-  arrayItems?: PropertyArrayItemsFieldModel
+export interface PropertyEnumPlanItem {
+  kind: "enumValues"
+  field: PropertyEnumValuesFieldModel
+}
+
+export interface PropertyObjectPropertiesPlanItem {
+  kind: "objectProperties"
+  plan: PropertyObjectPropertiesPlan
+}
+
+export interface PropertyArrayItemsPlanItem {
+  kind: "arrayItems"
+  itemSchemaPlan: PropertySchemaPlan
 }
 
 export interface PropertyFormViewModel {
@@ -161,7 +170,7 @@ export interface PropertyFormViewModel {
       disabled: boolean
       onChange: (description: string) => void
     }
-    schemaDetails?: PropertySchemaDetailsModel
+    schemaPlan?: PropertySchemaPlan
   }
   footer: PropertyFormFooterModel
   events: {

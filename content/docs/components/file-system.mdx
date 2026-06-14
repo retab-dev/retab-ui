@@ -31,14 +31,15 @@ Open the full-page demo at [/view/blocks/file-system](/view/blocks/file-system).
 
 ```tsx
 import {
-  FileSystemViewerHeader,
-  FileSystemViewerProvider,
-  FileSystemViewerSelectedFile,
-  FileSystemViewerTree,
+  FileSystemHeader,
+  FileSystemProvider,
+  FileSystemSelectedFile,
+  FileSystemExplorer,
   type FileSystemItem,
 } from "@/components/ui/file-system"
 import {
   ViewerBody,
+  ViewerHeader,
   ViewerRoot,
   ViewerSidebar,
   ViewerSurface,
@@ -60,25 +61,27 @@ const items: FileSystemItem[] = [
 
 export function Documents() {
   return (
-    <FileSystemViewerProvider items={items} title="Workspace">
+    <FileSystemProvider items={items} title="Workspace">
       <ViewerRoot>
-        <FileSystemViewerHeader />
+        <ViewerHeader>
+          <FileSystemHeader />
+        </ViewerHeader>
         <ViewerBody>
           <ViewerSidebar>
-            <FileSystemViewerTree />
+            <FileSystemExplorer />
           </ViewerSidebar>
           <ViewerSurface>
-            <FileSystemViewerSelectedFile />
+            <FileSystemSelectedFile />
           </ViewerSurface>
         </ViewerBody>
       </ViewerRoot>
-    </FileSystemViewerProvider>
+    </FileSystemProvider>
   )
 }
 ```
 
 The provider owns path, query, view, selection, lazy loading, and source
-resolution. The viewer primitives own layout. `FileSystemViewerSelectedFile`
+resolution. The viewer primitives own layout. `FileSystemSelectedFile`
 resolves the selected file to a `ViewerSource` and renders it with `FileViewer`.
 
 ## Usage

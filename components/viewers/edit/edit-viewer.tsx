@@ -5,8 +5,8 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import {
   AnchoredDocumentProvider,
-  type AnchoredItem,
   useAnchoredDocument,
+  type AnchoredItem,
 } from "@/components/ui/anchored-document-viewer"
 import { usePdfAnchoredTarget } from "@/components/ui/pdf-anchor-target"
 import type { PageOverlayProps } from "@/components/ui/pdf-viewer"
@@ -15,6 +15,7 @@ import {
   ViewerHeader,
   ViewerRoot,
   ViewerSidebar,
+  ViewerSidebarTrigger,
   ViewerSurface,
 } from "@/components/ui/viewer"
 
@@ -159,6 +160,7 @@ function EditViewerContent({
     <ViewerRoot
       bare
       data-edit-viewer-root
+      defaultSidebarOpen
       className={cn("h-full w-full flex-1 bg-background", className)}
     >
       {status.state === "detecting" || status.state === "filling" ? (
@@ -171,14 +173,19 @@ function EditViewerContent({
         <>
           {controller.availableModes.length > 0 ? (
             <ViewerHeader className="bg-background">
-              <EditViewerToolbar
-                modes={controller.availableModes}
-                mode={controller.activeMode}
-                onModeChange={controller.changeMode}
-                filledCount={controller.filledCount}
-                fieldCount={controller.fields.length}
-                status={controller.activeStatus}
-              />
+              <div className="flex min-w-0 items-center gap-2 px-2">
+                {controller.resolvedOptions.fieldPanel ? (
+                  <ViewerSidebarTrigger side="right" />
+                ) : null}
+                <EditViewerToolbar
+                  modes={controller.availableModes}
+                  mode={controller.activeMode}
+                  onModeChange={controller.changeMode}
+                  filledCount={controller.filledCount}
+                  fieldCount={controller.fields.length}
+                  status={controller.activeStatus}
+                />
+              </div>
             </ViewerHeader>
           ) : null}
 
@@ -195,7 +202,11 @@ function EditViewerContent({
             </ViewerSurface>
 
             {controller.resolvedOptions.fieldPanel ? (
-              <ViewerSidebar className="max-h-[42%] min-h-[220px] border-t bg-background md:max-h-none md:w-[320px] md:max-w-[50%] md:border-t-0 md:border-l">
+              <ViewerSidebar
+                side="right"
+                width="320px"
+                className="max-h-[42%] min-h-[220px] border-t bg-background md:max-h-none md:max-w-[50%] md:border-t-0 md:border-l"
+              >
                 <EditViewerFieldPanel
                   fields={controller.fields}
                   filledCount={controller.filledCount}

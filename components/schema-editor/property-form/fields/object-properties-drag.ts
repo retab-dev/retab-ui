@@ -9,7 +9,7 @@ import {
   updateSchemaRowDragTarget,
 } from "@/components/schema-editor/primitives/schema-row-drag"
 
-import type { ObjectPropertyRowModel } from "./object-properties-model"
+import type { ObjectPropertyRowModel } from "@/components/schema-editor/property-form/model/object-properties-view"
 
 export function useObjectPropertiesRowDrag({
   rows,

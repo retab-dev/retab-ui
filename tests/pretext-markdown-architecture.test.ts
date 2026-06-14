@@ -3,7 +3,10 @@ import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 
 type RegistryFile = {
+  content?: string
   path: string
+  target?: string
+  type?: string
 }
 
 type RegistryItem = {
@@ -54,6 +57,8 @@ const textViewerFiles = [
   "components/ui/text-viewer-scale.ts",
   "components/ui/text-viewer-chrome.tsx",
 ]
+const pretextMarkdownDocsPath =
+  "content/docs/viewers/pretext-markdown-viewer.mdx"
 
 function read(path: string) {
   return readFileSync(join(repoRoot, path), "utf8")
@@ -61,6 +66,14 @@ function read(path: string) {
 
 function readRegistry() {
   return JSON.parse(read("registry.json")) as Registry
+}
+
+function readPretextMarkdownRegistryArtifact() {
+  return JSON.parse(
+    read("public/r/pretext-markdown-viewer.json")
+  ) as RegistryItem & {
+    type: string
+  }
 }
 
 function importSpecifiers(source: string) {
@@ -96,6 +109,49 @@ describe("Pretext Markdown architecture", () => {
     expect(item?.files.map((file) => file.path).sort()).toEqual(
       [...pretextMarkdownFiles].sort()
     )
+  })
+
+  it("ships a synchronized registry artifact for installation", () => {
+    const artifact = readPretextMarkdownRegistryArtifact()
+
+    expect(artifact.name).toBe("pretext-markdown-viewer")
+    expect(artifact.type).toBe("registry:ui")
+    expect(artifact.registryDependencies ?? []).toEqual([
+      "text-viewer",
+      "button",
+    ])
+    expect(artifact.dependencies ?? []).toEqual([
+      "@chenglou/pretext",
+      "katex",
+      "lucide-react",
+      "marked@18.0.5",
+      "mermaid",
+      "react-markdown",
+      "rehype-katex",
+      "rehype-pretty-code",
+      "rehype-raw",
+      "rehype-sanitize",
+      "remark-breaks",
+      "remark-directive",
+      "remark-gemoji",
+      "remark-gfm",
+      "remark-math",
+      "remark-smartypants",
+      "unist-util-visit",
+    ])
+    expect(artifact.files.map((file) => file.path).sort()).toEqual(
+      [...pretextMarkdownFiles].sort()
+    )
+
+    for (const file of artifact.files) {
+      expect(file.type, `${file.path} registry type`).toBe("registry:ui")
+      expect(file.target, `${file.path} registry target`).toMatch(
+        /^@ui\/pretext-markdown-/
+      )
+      expect(file.content, `${file.path} registry content`).toBe(
+        read(file.path)
+      )
+    }
   })
 
   it("keeps virtual chunks from becoming visible page chrome", () => {
@@ -169,6 +225,25 @@ describe("Pretext Markdown architecture", () => {
         ).toBe(false)
       }
     }
+  })
+
+  it("documents the Pretext Markdown migration contract", () => {
+    const docs = read(pretextMarkdownDocsPath)
+
+    expect(docs).toContain("## Feature Matrix")
+    expect(docs).toContain("## Unsupported Syntax")
+    expect(docs).toContain("## Migration Plan")
+    expect(docs).toContain("## Replacement Checklist")
+    expect(docs).toMatch(
+      /\|\s*Capability\s*\|\s*Markdown Viewer\s*\|\s*Text Viewer Markdown mode\s*\|\s*Pretext Markdown Viewer\s*\|/
+    )
+    expect(docs).toContain(
+      "No visible page labels, page frames, page gaps, or page delimiters"
+    )
+    expect(docs).toContain("Registry artifact install/import smoke tests pass")
+    expect(docs).toContain(
+      "File Viewer routes Markdown URL, Blob, inline text, and MIME-only sources"
+    )
   })
 })
 

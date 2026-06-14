@@ -7,16 +7,20 @@ import {
 import {
   commitDataCellBooleanToggle,
   DataCellBooleanControl,
-  type DataCellBooleanControlProps,
 } from "@/registry/new-york-v4/ui/data-cell-boolean-control"
 import {
   commandDataCellControlAction,
   editDataCellControlAction,
   noneDataCellControlAction,
+  type DataCellBooleanControlProps,
   type DataCellControlAction,
   type DataCellControlAdapter,
   type DataCellControlKeyActionArgs,
   type DataCellControlPointerActionArgs,
+  type DataCellNumberControlProps,
+  type DataCellPickerControlProps,
+  type DataCellSelectControlProps,
+  type DataCellTextControlProps,
 } from "@/registry/new-york-v4/ui/data-cell-control-contract"
 import type {
   DataCellEditModel,
@@ -26,19 +30,11 @@ import {
   canActivateDataCellNumberFromKey,
   DataCellNumberControl,
 } from "@/registry/new-york-v4/ui/data-cell-number-control"
-import {
-  DataCellPickerControl,
-  type DataCellPickerControlProps,
-} from "@/registry/new-york-v4/ui/data-cell-picker-control"
-import {
-  DataCellSelectControl,
-  type DataCellSelectControlProps,
-} from "@/registry/new-york-v4/ui/data-cell-select-control"
+import { DataCellPickerControl } from "@/registry/new-york-v4/ui/data-cell-picker-control"
+import { DataCellSelectControl } from "@/registry/new-york-v4/ui/data-cell-select-control"
 import {
   DataCellTextControl,
   getDataCellTextPointerActivationSource,
-  type DataCellNumberControlProps,
-  type DataCellTextControlProps,
 } from "@/registry/new-york-v4/ui/data-cell-text-control"
 import type { DataCellKind } from "@/registry/new-york-v4/ui/data-cell-types"
 
@@ -150,19 +146,6 @@ const timeControlAdapter: DataCellControlAdapter<"time"> =
   createPickerControlAdapter()
 const dateTimeControlAdapter: DataCellControlAdapter<"date-time"> =
   createPickerControlAdapter()
-
-const dataCellControlAdapterByKind = {
-  text: textControlAdapter,
-  number: numberControlAdapter,
-  integer: integerControlAdapter,
-  boolean: booleanControlAdapter,
-  select: selectControlAdapter,
-  date: dateControlAdapter,
-  time: timeControlAdapter,
-  "date-time": dateTimeControlAdapter,
-} satisfies {
-  [Kind in DataCellKind]: DataCellControlAdapter<Kind>
-}
 
 export function DataCellControl({ model }: { model: DataCellEditModel }) {
   if (model.kind === "text") {
@@ -310,13 +293,6 @@ function dataCellKeyActionWithAdapter<Kind extends DataCellKind>(
     return noneDataCellControlAction()
   }
   return adapter.activateKey(args)
-}
-
-export function canActivateDataCellFromKey(
-  kind: DataCellKind,
-  key: string
-): boolean {
-  return dataCellControlAdapterByKind[kind].canActivateFromKey(key)
 }
 
 function dataCellTextControlProps(

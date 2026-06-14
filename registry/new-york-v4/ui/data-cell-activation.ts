@@ -31,6 +31,24 @@ export type DataCellActivationSource =
       release: DataCellShellActivationRelease
     }
 
+export type DataCellActivationRequest =
+  | {
+      kind: "pointer"
+      clientX: number
+      clientY: number
+      detail: number
+      event?: Event
+      selectionOffset?: number
+    }
+  | {
+      kind: "keyboard"
+      key: string
+    }
+  | {
+      kind: "shell"
+      event?: Event
+    }
+
 export type DataCellDismissCause =
   | {
       kind: "outside-pointer"
@@ -106,6 +124,22 @@ export function createDataCellShellActivationSource(
     }),
     release: event?.type === "click" ? "microtask" : "click-tail",
   }
+}
+
+export function createDataCellActivationSource(
+  request: DataCellActivationRequest | undefined
+): DataCellActivationSource | undefined {
+  if (!request) return undefined
+  if (request.kind === "pointer") {
+    return {
+      ...createDataCellPointerActivationSource(request),
+      selectionOffset: request.selectionOffset,
+    }
+  }
+  if (request.kind === "keyboard") {
+    return createDataCellKeyboardActivationSource(request.key)
+  }
+  return createDataCellShellActivationSource(request.event)
 }
 
 export function createDataCellActivationToken(

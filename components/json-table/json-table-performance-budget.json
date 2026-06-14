@@ -1,0 +1,30 @@
+{
+  "profiles": {
+    "default": {
+      "open-enum": {
+        "maxElapsedMs": 700,
+        "maxEditableCellRenders": 6,
+        "maxReactCommits": 4,
+        "maxRectReads": 1,
+        "forbiddenRenderedComponents": [
+          "SingleFileTableView",
+          "SingleFileVirtualizedTable",
+          "SingleFileFormRow"
+        ]
+      }
+    },
+    "large": {
+      "open-enum": {
+        "maxElapsedMs": 900,
+        "maxEditableCellRenders": 6,
+        "maxReactCommits": 4,
+        "maxRectReads": 1,
+        "forbiddenRenderedComponents": [
+          "SingleFileTableView",
+          "SingleFileVirtualizedTable",
+          "SingleFileFormRow"
+        ]
+      }
+    }
+  }
+}

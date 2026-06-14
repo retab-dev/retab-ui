@@ -1,12 +1,12 @@
 "use client"
 
 import React from "react"
-import dynamic from "next/dynamic"
 import type { JSONSchema7 } from "json-schema"
 
 import type { DataCellEditorHandle } from "@/components/ui/data-cell"
 import { getFixedGridRowStyle } from "@/components/ui/fixed-grid-row-style"
 import { TableRow } from "@/components/ui/table"
+import type { JsonTableCellCommitHandler } from "@/components/json-table/json-table-cell-commit"
 import type {
   JsonTableCellProps,
   VisibleColumn,
@@ -17,17 +17,8 @@ import type { JsonTablePrimitiveEditStore } from "@/components/json-table/json-t
 import { recordJsonTableRender } from "@/components/json-table/json-table-profiler"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
+import { EditableJsonTableCell } from "@/components/json-table/editable-json-table-cell"
 import { ReadOnlyJsonTableCell } from "@/components/json-table/read-only-json-table-cell"
-
-const EditableJsonTableCell = dynamic(
-  () =>
-    import("@/components/json-table/editable-json-table-cell").then(
-      (module) => ({
-        default: module.EditableJsonTableCell,
-      })
-    ),
-  { ssr: false }
-)
 
 interface SingleFileFormRowProps {
   document: TableDocument
@@ -39,7 +30,7 @@ interface SingleFileFormRowProps {
   rowTopPx: number
   rowHeightPx: number
   primitiveActiveCellStore: JsonTablePrimitiveActiveCellStore
-  primitiveEditStore?: JsonTablePrimitiveEditStore
+  primitiveEditStore: JsonTablePrimitiveEditStore
   setPrimitiveActiveCell?: JsonTableCellProps["setPrimitiveActiveCell"]
   primitiveEditorHandleRef?: React.RefObject<DataCellEditorHandle | null>
   structuredEditSession?: JsonTableStructuredEditSession | null
@@ -48,7 +39,7 @@ interface SingleFileFormRowProps {
   closeStructuredEditSession?: JsonTableCellProps["closeStructuredEditSession"]
   onCellHoverStart?: JsonTableCellProps["onCellHoverStart"]
   onCellHoverEnd?: JsonTableCellProps["onCellHoverEnd"]
-  onDocumentDataChange: JsonTableCellProps["onDocumentDataChange"]
+  onCellCommit: JsonTableCellCommitHandler
   isJsonEditable: boolean
 }
 
@@ -99,7 +90,7 @@ function areSingleFileFormRowPropsEqual(
     prev.closeStructuredEditSession !== next.closeStructuredEditSession ||
     prev.onCellHoverStart !== next.onCellHoverStart ||
     prev.onCellHoverEnd !== next.onCellHoverEnd ||
-    prev.onDocumentDataChange !== next.onDocumentDataChange ||
+    prev.onCellCommit !== next.onCellCommit ||
     prev.isJsonEditable !== next.isJsonEditable
   ) {
     return false
@@ -127,7 +118,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     closeStructuredEditSession = () => {},
     onCellHoverStart,
     onCellHoverEnd,
-    onDocumentDataChange,
+    onCellCommit,
     isJsonEditable,
   }) => {
     const documentId = document.id
@@ -142,15 +133,6 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
       rowIdx,
       rowTopPx,
     })
-
-    // Stable callback identity so projected-cell memoization holds across the
-    // parent's per-scroll re-renders.
-    const handleDataChange = React.useCallback(
-      (docId: string, materializedFieldPath: string, value: unknown) => {
-        onDocumentDataChange(docId, materializedFieldPath, value)
-      },
-      [onDocumentDataChange]
-    )
 
     // Render a single sub-row (one of the document's `rowCount` rows). Which
     // rows are mounted is decided by the row virtualizer in the parent.
@@ -193,7 +175,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
             startStructuredEditSession,
             setStructuredEditSessionOverlayOpen,
             closeStructuredEditSession,
-            onDocumentDataChange: handleDataChange,
+            onCellCommit,
             isJsonEditable,
             onCellHoverStart,
             onCellHoverEnd,

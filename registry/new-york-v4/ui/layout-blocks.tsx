@@ -5,8 +5,8 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import {
   AnchoredDocumentProvider,
-  type AnchoredItem,
   useAnchoredDocument,
+  type AnchoredItem,
 } from "@/components/ui/anchored-document-viewer"
 import {
   usePdfAnchoredOverlay,
@@ -23,6 +23,7 @@ import {
   ViewerHeader,
   ViewerRoot,
   ViewerSidebar,
+  ViewerSidebarTrigger,
   ViewerSurface,
 } from "@/components/ui/viewer"
 
@@ -156,13 +157,17 @@ function DocumentAiLayoutBlocksContent({
       data-layout-blocks=""
       className={cn("bg-background", heightClassName, className)}
       bare
+      defaultSidebarOpen
     >
       <ViewerHeader>
         <div className="flex items-center justify-between gap-3 p-3">
-          <div className="min-w-0">
-            <div className="truncate text-sm font-medium">OCR</div>
-            <div className="text-xs text-muted-foreground">
-              {visibleItems.length} blocks
+          <div className="flex min-w-0 items-center gap-2">
+            <ViewerSidebarTrigger side="right" className="-ml-1" />
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium">OCR</div>
+              <div className="text-xs text-muted-foreground">
+                {visibleItems.length} blocks
+              </div>
             </div>
           </div>
           <label className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
@@ -195,7 +200,11 @@ function DocumentAiLayoutBlocksContent({
             </div>
           )}
         </ViewerSurface>
-        <ViewerSidebar className="flex min-h-0 w-[320px] shrink-0 flex-col border-l bg-background md:w-[320px]">
+        <ViewerSidebar
+          side="right"
+          width="320px"
+          className="flex min-h-0 shrink-0 flex-col border-l bg-background"
+        >
           <LayoutBlocksPanel
             activeItemId={activeItemId}
             className="min-h-0 flex-1"
