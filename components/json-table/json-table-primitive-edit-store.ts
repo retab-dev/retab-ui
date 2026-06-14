@@ -1,6 +1,7 @@
 import * as React from "react"
 
 import { getValueAtPath } from "@/components/json-table/lib/document-paths"
+import type { JsonTableDocumentData } from "@/components/json-table/lib/projects-types"
 
 export type JsonTablePrimitiveEditSnapshot =
   | {
@@ -45,8 +46,7 @@ const unresolvedPrimitiveEditBaseValue = Symbol(
   "unresolvedPrimitiveEditBaseValue"
 )
 
-const primitiveDocumentEchoes = new WeakSet<Record<string, unknown>>()
-const primitiveDocumentEchoKeys = new Set<string>()
+const maxPrimitiveDocumentEchoKeys = 32
 
 export type JsonTablePrimitiveEditStore = ReturnType<
   typeof createJsonTablePrimitiveEditStore
@@ -54,6 +54,8 @@ export type JsonTablePrimitiveEditStore = ReturnType<
 
 export function createJsonTablePrimitiveEditStore() {
   const entries = new Map<string, PrimitiveEditEntry>()
+  const primitiveDocumentEchoes = new WeakSet<JsonTableDocumentData>()
+  const primitiveDocumentEchoKeys = new Set<string>()
 
   function entryForPath(fieldPath: string) {
     let entry = entries.get(fieldPath)
@@ -85,12 +87,22 @@ export function createJsonTablePrimitiveEditStore() {
     return entry.supersededValues.some((item) => Object.is(item, value))
   }
 
-  function documentEchoKey(data: Record<string, unknown>) {
+  function documentEchoKey(data: JsonTableDocumentData) {
     try {
       return JSON.stringify(data)
     } catch {
       return undefined
     }
+  }
+
+  function recordDocumentEchoKey(key: string) {
+    primitiveDocumentEchoKeys.delete(key)
+    primitiveDocumentEchoKeys.add(key)
+
+    if (primitiveDocumentEchoKeys.size <= maxPrimitiveDocumentEchoKeys) return
+
+    const oldestKey = primitiveDocumentEchoKeys.values().next().value
+    if (oldestKey !== undefined) primitiveDocumentEchoKeys.delete(oldestKey)
   }
 
   return {
@@ -118,19 +130,21 @@ export function createJsonTablePrimitiveEditStore() {
       entry.snapshot = { status: "pending", hasValue: true, value }
       notify(entry)
     },
-    recordDocumentEcho(data: Record<string, unknown>) {
+    recordDocumentEcho(data: JsonTableDocumentData) {
       primitiveDocumentEchoes.add(data)
       const key = documentEchoKey(data)
-      if (key !== undefined) primitiveDocumentEchoKeys.add(key)
+      if (key !== undefined) recordDocumentEchoKey(key)
     },
     reconcileDocumentData(
-      data: Record<string, unknown>
+      data: JsonTableDocumentData
     ): JsonTablePrimitiveEditReconciliation {
       const dataEchoKey = documentEchoKey(data)
       const isRecordedPrimitiveEcho =
         primitiveDocumentEchoes.has(data) ||
-        (dataEchoKey !== undefined && primitiveDocumentEchoKeys.has(dataEchoKey))
-      if (dataEchoKey !== undefined) primitiveDocumentEchoKeys.delete(dataEchoKey)
+        (dataEchoKey !== undefined &&
+          primitiveDocumentEchoKeys.has(dataEchoKey))
+      if (dataEchoKey !== undefined)
+        primitiveDocumentEchoKeys.delete(dataEchoKey)
 
       const reconciliation: JsonTablePrimitiveEditReconciliation = {
         isPrimitiveDocumentEcho: isRecordedPrimitiveEcho,

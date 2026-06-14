@@ -25,8 +25,7 @@ flowchart TD
 
   subgraph Primitive["Primitive DataCell path"]
     PrimitiveAdapter["JsonTablePrimitiveCell"]
-    JsonDataCell["JsonTableDataCell"]
-    EditorHandle["DataCellEditorHandle"]
+    PropsAdapter["createJsonTableDataCellProps"]
     DataCell["DataCell"]
     Display["DataCellDisplay"]
     Text["DataCellTextControl"]
@@ -58,9 +57,8 @@ flowchart TD
   VirtualTable --> StructuredSession
   VirtualTable --> Row --> Cell
 
-  Cell -->|primitive display/edit| PrimitiveAdapter --> JsonDataCell --> DataCell
-  DataCell -. "finish / cancel handle" .-> EditorHandle
-  EditorHandle -. "cross-cell handoff" .-> VirtualTable
+  Cell -->|primitive display/edit| PrimitiveAdapter --> PropsAdapter --> DataCell
+  DataCell -. "active change" .-> VirtualTable
   DataCell -->|inactive| Display
   DataCell -->|text| Text
   DataCell -->|number/integer| Number
@@ -80,7 +78,7 @@ flowchart TD
   CellCommit --> DocumentModel --> Patch
 ```
 
-## Primitive Handoff
+## Primitive Activation
 
 ```mermaid
 sequenceDiagram
@@ -92,9 +90,9 @@ sequenceDiagram
   participant Commit as Commit pipeline
 
   U->>Next: pointerdown / keydown
-  Next->>Old: DataCellEditorHandle.finish()
-  Old->>Commit: commit through DataCell's own rules
-  Next->>Table: set primitive active identity
+  Next->>Table: replace primitive active identity
+  Table->>Old: active=false
+  Old->>Commit: finish through DataCell's own rules
   Table->>New: active=true
   New->>New: focus, place caret, own draft/overlay
 ```

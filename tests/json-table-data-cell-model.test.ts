@@ -43,37 +43,30 @@ describe("json table DataCell model", () => {
     const observedKinds = [
       createJsonTableDataCellProps({
         fieldMetadata: fieldMetadata({ kind: "string" }),
-        mode: "display",
         value: "ACME",
       }).kind,
       createJsonTableDataCellProps({
         fieldMetadata: fieldMetadata({ kind: "number" }),
-        mode: "display",
         value: 12.5,
       }).kind,
       createJsonTableDataCellProps({
         fieldMetadata: fieldMetadata({ kind: "integer" }),
-        mode: "display",
         value: 12,
       }).kind,
       createJsonTableDataCellProps({
         fieldMetadata: fieldMetadata({ kind: "boolean" }),
-        mode: "display",
         value: true,
       }).kind,
       createJsonTableDataCellProps({
         fieldMetadata: fieldMetadata({ kind: "date" }),
-        mode: "display",
         value: "2025-07-18",
       }).kind,
       createJsonTableDataCellProps({
         fieldMetadata: fieldMetadata({ kind: "time" }),
-        mode: "display",
         value: "09:30:00",
       }).kind,
       createJsonTableDataCellProps({
         fieldMetadata: fieldMetadata({ kind: "date-time" }),
-        mode: "display",
         value: "2025-07-18T09:30:00Z",
       }).kind,
       createJsonTableDataCellProps({
@@ -81,7 +74,6 @@ describe("json table DataCell model", () => {
           enumValues: ["draft"],
           kind: "enum",
         }),
-        mode: "display",
         value: "draft",
       }).kind,
     ]
@@ -107,7 +99,6 @@ describe("json table DataCell model", () => {
         enumValues: [approved, rejected],
         kind: "enum",
       }),
-      mode: "edit",
       value: approved,
       onCommit: (value) => committedValues.push(value),
     })

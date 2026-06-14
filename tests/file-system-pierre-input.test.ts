@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest"
 import { buildFileSystemIndex } from "@/registry/new-york-v4/ui/file-system-index"
 import {
   buildFileSystemPierreInput,
-  fromPierrePath,
-  toPierrePath,
+  fileSystemPathToPierrePath,
+  pierrePathToFileSystemEntry,
 } from "@/registry/new-york-v4/ui/file-system-pierre-input"
 import type { FileSystemItem } from "@/registry/new-york-v4/ui/file-system-types"
 
@@ -21,7 +21,7 @@ describe("file-system Pierre input", () => {
       index: buildFileSystemIndex(items),
     })
 
-    expect(input.paths).toEqual([
+    expect(input.pierrePaths).toEqual([
       "2025/",
       "2025/december.csv",
       "2026/",
@@ -36,8 +36,10 @@ describe("file-system Pierre input", () => {
       index: buildFileSystemIndex(items),
     })
 
-    expect(input.paths).not.toContain("archive/")
-    expect([...input.pathEntries.values()].map((entry) => entry.path)).toEqual([
+    expect(input.pierrePaths).not.toContain("archive/")
+    expect(
+      [...input.entriesByPierrePath.values()].map((entry) => entry.path)
+    ).toEqual([
       "invoices/2025/",
       "invoices/2025/december.csv",
       "invoices/2026/",
@@ -46,7 +48,9 @@ describe("file-system Pierre input", () => {
   })
 
   it("normalizes folder paths with trailing slash", () => {
-    expect(toPierrePath("invoices/2026/", "invoices/")).toBe("2026/")
+    expect(fileSystemPathToPierrePath("invoices/2026/", "invoices/")).toBe(
+      "2026/"
+    )
   })
 
   it("returns null for null or unknown Pierre paths", () => {
@@ -55,7 +59,7 @@ describe("file-system Pierre input", () => {
       index: buildFileSystemIndex(items),
     })
 
-    expect(fromPierrePath(null, input)).toBeNull()
-    expect(fromPierrePath("missing.pdf", input)).toBeNull()
+    expect(pierrePathToFileSystemEntry(null, input)).toBeNull()
+    expect(pierrePathToFileSystemEntry("missing.pdf", input)).toBeNull()
   })
 })

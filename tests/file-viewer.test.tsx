@@ -106,6 +106,21 @@ function blobFileSource(
   }
 }
 
+function markdownBlobSource(
+  text: string,
+  fileName = "blob-note.md",
+  mimeType = "text/markdown",
+  identityKey = `blob:${fileName}`
+) {
+  return {
+    kind: "blob" as const,
+    blob: new Blob([text], { type: mimeType }),
+    fileName,
+    mimeType,
+    identityKey,
+  }
+}
+
 function textSubscription(url: string) {
   const controller = new AbortController()
   const resource = createViewerResource(urlSource(url))
@@ -277,6 +292,25 @@ describe("FileViewer detection helpers", () => {
     )
     expect(source).not.toContain("<DocxViewer")
     expect(source).not.toContain("source={descriptor.source}")
+  })
+
+  it("routes Blob text sources before the unsupported fallback", () => {
+    const source = readFileSync(
+      "registry/new-york-v4/ui/file-viewer.tsx",
+      "utf8"
+    )
+    const blobBranch = source.slice(
+      source.indexOf("if (!directLoadUrl) {"),
+      source.indexOf("  switch (category) {")
+    )
+    const textRouteIndex = blobBranch.indexOf(
+      'category === "text" && descriptor.source.kind === "blob"'
+    )
+    const unsupportedIndex = blobBranch.indexOf("<UnsupportedCard")
+
+    expect(textRouteIndex).toBeGreaterThan(-1)
+    expect(unsupportedIndex).toBeGreaterThan(-1)
+    expect(textRouteIndex).toBeLessThan(unsupportedIndex)
   })
 
   it("keeps route-owned document adapters resource-first", () => {
@@ -599,7 +633,7 @@ describe("FileViewer text rendering", () => {
   })
 
   it("routes prose text files through the wrapped Text Viewer without line numbers", async () => {
-    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null)
+    mockPretextCanvasMeasurement()
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.resolve(response("first note\nsecond note\n")))
@@ -646,6 +680,30 @@ describe("FileViewer text rendering", () => {
     expect(container.querySelector('[data-slot="code-viewer"]')).toBeNull()
     expect(container.querySelector(".fv-markdown")).toBeNull()
     expect(container.querySelector("iframe")).toBeNull()
+  })
+
+  it("routes extensionless Markdown MIME URL sources through the Pretext Markdown Viewer", async () => {
+    mockPretextCanvasMeasurement()
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response("# MIME Markdown\n\nBody copy\n")))
+    )
+
+    const { container } = render(
+      <FileViewer
+        source={urlSource("/download?id=release", "download", "text/markdown")}
+      />
+    )
+
+    expect(
+      await screen.findByRole("heading", { name: "MIME Markdown" })
+    ).toBeTruthy()
+    expect(screen.getByText("Body copy")).toBeTruthy()
+    expect(
+      container.querySelector('[data-slot="pretext-markdown-virtual-canvas"]')
+    ).toBeTruthy()
+    expect(container.querySelector('[data-slot="code-viewer"]')).toBeNull()
+    expect(container.querySelector(".fv-markdown")).toBeNull()
   })
 
   it("routes MDX files through the standalone Code Viewer", async () => {
@@ -907,6 +965,51 @@ describe("FileViewer text rendering", () => {
     expect(document.querySelector('[data-slot="code-viewer"]')).toBeNull()
     expect(document.querySelector(".fv-markdown")).toBeNull()
     expect(screen.getByRole("button", { name: "Download" })).toBeTruthy()
+  })
+
+  it("renders inline MIME-only markdown text sources through the resource route", async () => {
+    mockPretextCanvasMeasurement()
+    await act(async () => {
+      render(
+        <FileViewer
+          source={{
+            kind: "text",
+            text: "# Inline MIME note\n\nBody copy",
+            fileName: "download",
+            mimeType: "text/markdown",
+          }}
+        />
+      )
+    })
+
+    expect(
+      await screen.findByRole("heading", { name: "Inline MIME note" })
+    ).toBeTruthy()
+    expect(screen.getByText("Body copy")).toBeTruthy()
+    expect(
+      document.querySelector('[data-slot="pretext-markdown-virtual-canvas"]')
+    ).toBeTruthy()
+    expect(document.querySelector('[data-slot="code-viewer"]')).toBeNull()
+    expect(document.querySelector(".fv-markdown")).toBeNull()
+  })
+
+  it("renders Blob markdown sources through the resource route", async () => {
+    mockPretextCanvasMeasurement()
+    render(
+      <FileViewer
+        source={markdownBlobSource("# Blob Markdown\n\nBody copy\n")}
+      />
+    )
+
+    expect(
+      await screen.findByRole("heading", { name: "Blob Markdown" })
+    ).toBeTruthy()
+    expect(screen.getByText("Body copy")).toBeTruthy()
+    expect(
+      document.querySelector('[data-slot="pretext-markdown-virtual-canvas"]')
+    ).toBeTruthy()
+    expect(document.querySelector('[data-slot="code-viewer"]')).toBeNull()
+    expect(document.querySelector(".fv-markdown")).toBeNull()
   })
 
   it("renders inline CSV text sources through the resource route", async () => {

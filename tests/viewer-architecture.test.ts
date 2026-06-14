@@ -128,7 +128,7 @@ const canonicalViewerNames = new Set([
   "code-viewer",
   "csv-viewer",
   "pdf-viewer",
-  "pdf-thumbnail-sidebar",
+  "pdf-viewer-thumbnails",
   "pdf-thumbnails-block",
   "docx-viewer",
   "email-viewer",
@@ -175,12 +175,28 @@ function textFilesUnder(path: string, extensions: string[]): string[] {
   })
 }
 
+function publicDocFiles(): string[] {
+  return publicDocsRoots.flatMap((root) =>
+    textFilesUnder(join(repoRoot, root), [".md", ".mdx"])
+  )
+}
+
+function viewerSidebarTags(content: string): string[] {
+  return Array.from(
+    content.matchAll(/<ViewerSidebar\b(?:[^"'>]|"[^"]*"|'[^']*')*>/g)
+  ).map((match) => match[0])
+}
+
 function viewerRegistryItems(registry: Registry): RegistryItem[] {
   return registry.items.filter((item) => canonicalViewerNames.has(item.name))
 }
 
 function fileContent(file: string): string {
   return readFileSync(join(repoRoot, file), "utf8")
+}
+
+function compactWhitespace(content: string): string {
+  return content.replace(/\s+/g, " ")
 }
 
 function importSpecifiers(content: string): string[] {
@@ -258,6 +274,32 @@ describe("viewer architecture", () => {
     expect(content).not.toContain("ViewerShell")
     expect(content).not.toContain("ViewerPanel")
     expect(content).not.toContain("ViewerRail")
+    expect(content).not.toContain("ViewerDocumentSurface")
+    expect(content).not.toContain("ViewerInspectorSidebar")
+    expect(content).not.toContain("ViewerNavigationSidebar")
+    expect(content).not.toContain("ViewerSidebarPurpose")
+    expect(content).not.toContain("ViewerSurfaceRole")
+    expect(content).not.toContain("viewerPurpose")
+    expect(content).not.toContain("viewerRole")
+    expect(content).not.toContain("data-viewer-purpose")
+    expect(content).not.toContain("data-viewer-role")
+    expect(content).not.toContain('"outline"')
+    expect(content).not.toContain("ViewerSidebarTriggerProps = ButtonProps &")
+    expect(content).not.toMatch(/ViewerSidebarTrigger[^\n]*side=/)
+  })
+
+  it("keeps public viewer sidebar hooks on the public context", () => {
+    const content = fileContent("registry/new-york-v4/ui/viewer.tsx")
+
+    expect(content).toContain("const ViewerSidebarContext =")
+    expect(content).toContain("const ViewerSidebarInternalContext =")
+    expect(content).not.toContain("toPublicViewerSidebarContext")
+    expect(content).toMatch(
+      /export function useViewerSidebar\(\): ViewerSidebarContextValue \{[\s\S]*?React\.useContext\(ViewerSidebarContext\)[\s\S]*?return context[\s\S]*?\}/
+    )
+    expect(content).toMatch(
+      /function useViewerSidebarInternal\(\): ViewerSidebarInternalContextValue \{[\s\S]*?React\.useContext\(ViewerSidebarInternalContext\)/
+    )
   })
 
   it("keeps public source adapters off stale compatibility names", () => {
@@ -363,6 +405,44 @@ describe("viewer architecture", () => {
         expect(pattern.test(content), `${file} contains ${pattern}`).toBe(false)
       }
     }
+  })
+
+  it("keeps FileViewer registry installs wired to Pretext Markdown", () => {
+    const registry = readJson<Registry>("registry.json")
+    const fileViewerItem = registry.items.find(
+      (item) => item.name === "file-viewer"
+    )
+    const publicFileViewerItem = readJson<RegistryItem>(
+      "public/r/file-viewer.json"
+    )
+    const fileViewerSource = fileContent(
+      "registry/new-york-v4/ui/file-viewer.tsx"
+    )
+    const publicFileViewerSource =
+      publicFileViewerItem.files.find(
+        (file) => file.path === "registry/new-york-v4/ui/file-viewer.tsx"
+      )?.content ?? ""
+
+    expect(fileViewerItem).toBeTruthy()
+    expect(fileViewerItem?.registryDependencies ?? []).toContain(
+      "pretext-markdown-viewer"
+    )
+    expect(fileViewerItem?.registryDependencies ?? []).not.toContain(
+      "markdown-document-viewer"
+    )
+    expect(publicFileViewerItem.registryDependencies ?? []).toContain(
+      "pretext-markdown-viewer"
+    )
+    expect(publicFileViewerItem.registryDependencies ?? []).not.toContain(
+      "markdown-document-viewer"
+    )
+    expect(fileViewerSource).toContain(
+      'import("@/components/ui/pretext-markdown-viewer")'
+    )
+    expect(publicFileViewerSource).toContain(
+      'import("@/components/ui/pretext-markdown-viewer")'
+    )
+    expect(publicFileViewerSource).not.toContain("markdown-document-viewer")
   })
 
   it("keeps dropzone examples away from file viewer internals", () => {
@@ -607,15 +687,31 @@ describe("viewer architecture", () => {
     )
   })
 
+  it("keeps email parts on ViewerSidebar without a nested shadcn sidebar", () => {
+    const content = fileContent("registry/new-york-v4/ui/email-viewer.tsx")
+
+    expect(importSpecifiers(content)).not.toContain("./sidebar")
+    expect(content).not.toContain("EmbeddedSidebarProvider")
+    expect(content).not.toMatch(/<Sidebar(?:\s|>)/)
+    expect(content).not.toMatch(/<Sidebar[A-Z]/)
+    expect(content).toContain('aria-label="Email parts"')
+    expect(content).not.toContain("viewerPurpose")
+    expect(content).toContain('data-slot="mime-part-sidebar"')
+  })
+
   it("keeps PDF viewer named parts on narrow hooks", () => {
     const viewer = fileContent("registry/new-york-v4/ui/pdf-viewer.tsx")
     const context = fileContent(
       "registry/new-york-v4/ui/pdf-viewer-context.tsx"
     )
     const thumbnails = fileContent(
-      "registry/new-york-v4/ui/pdf-thumbnail-sidebar.tsx"
+      "registry/new-york-v4/ui/pdf-viewer-thumbnails.tsx"
     )
 
+    expect(thumbnails).not.toContain("PdfThumbnailSidebar")
+    expect(readJson<Registry>("registry.json").items).not.toContainEqual(
+      expect.objectContaining({ name: "pdf-thumbnail-sidebar" })
+    )
     expect(context).toContain("export function usePdfViewerHeader")
     expect(context).toContain("export function usePdfViewerPages")
     expect(context).toContain("export function usePdfViewerThumbnails")
@@ -659,26 +755,99 @@ describe("viewer architecture", () => {
   })
 
   it("keeps file-system domain parts on narrow hooks", () => {
-    const content = fileContent("registry/new-york-v4/ui/file-system.tsx")
-
-    expect(content).toContain("./file-system-controls")
-    expect(content).not.toContain("./file-system-chrome")
-    expect(content).toContain("export function useFileSystemHeader")
-    expect(content).toContain("export function useFileSystemExplorer")
-    expect(content).toContain("export function useFileSystemSelectedFile")
-    expect(content).toContain("export function FileSystemHeader")
-    expect(content).toContain("export function FileSystemExplorer")
-    expect(content).toContain("export function FileSystemSelectedFile")
-    expect(content).toContain(
-      "const { controller, title } = useFileSystemHeader()"
+    const easyApi = fileContent("registry/new-york-v4/ui/file-system.tsx")
+    const provider = fileContent(
+      "registry/new-york-v4/ui/file-system-provider.tsx"
     )
-    expect(content).toContain("useFileSystemExplorer()")
-    expect(content).toContain("useFileSystemSelectedFile()")
+    const parts = fileContent("registry/new-york-v4/ui/file-system-parts.tsx")
+    const explorerControllers = fileContent(
+      "registry/new-york-v4/ui/file-system-explorer-controllers.ts"
+    )
+    const dialog = fileContent(
+      "registry/new-york-v4/ui/file-system-open-preview-dialog.tsx"
+    )
+    const controller = fileContent(
+      "registry/new-york-v4/ui/file-system-controller.ts"
+    )
+
+    expect(easyApi).toContain("./file-system-provider")
+    expect(easyApi).toContain("./file-system-parts")
+    expect(easyApi).toContain("./file-system-open-preview-dialog")
+    expect(easyApi).not.toContain("React.useState")
+    expect(easyApi).not.toContain("React.useCallback")
+    expect(easyApi).not.toContain("./file-system-controls")
+    expect(easyApi).not.toContain("./file-system-chrome")
+    expect(provider).toContain("export function useFileSystem")
+    expect(provider).not.toContain("controller:")
+    expect(provider).not.toContain("openFilePreviewState")
+    expect(controller).toContain("export type FileSystemDomainState")
+    expect(provider).toContain("export type FileSystemCompositionState")
+    expect(controller).toContain("index: FileSystemIndexState")
+    expect(controller).toContain("loading: FileSystemLoadingController")
+    expect(controller).toContain("navigation: FileSystemNavigationController")
+    expect(provider).toContain("openPreview: FileSystemOpenPreviewController")
+    expect(controller).toContain("query: FileSystemQueryController")
+    expect(controller).toContain("selection: FileSystemSelectionController")
+    expect(controller).toContain("source: FileSystemSourceController")
+    expect(controller).toContain("view: FileSystemViewController")
+    expect(provider).toContain("closePreview")
+    expect(provider).toContain("useFileSystemStateSlices")
+    expect(parts).toContain("./file-system-controls")
+    expect(parts).toContain("export function useFileSystemHeader")
+    expect(parts).toContain("export function useFileSystemExplorer")
+    expect(parts).toContain("export function useFileSystemSelectedFile")
+    expect(parts).toContain("export function FileSystemHeader")
+    expect(parts).toContain("export function FileSystemExplorer")
+    expect(parts).toContain("export function FileSystemSelectedFile")
+    expect(parts).toContain("createFileSystemHeaderController")
+    expect(parts).toContain("createFileSystemExplorerPart")
+    expect(parts).toContain("createFileSystemPreviewController")
+    expect(parts).toContain(
+      "export type FileSystemExplorerState = FileSystemExplorerPart"
+    )
+    expect(parts).toContain("const header = useFileSystemHeader()")
+    expect(parts).toContain("useFileSystemExplorer()")
+    expect(parts).toContain("useFileSystemSelectedFile()")
+    expect(parts).toContain("const explorer = useFileSystemExplorer()")
+    expect(parts).not.toContain("const { navigation, query, title, view }")
+    expect(parts).not.toContain("const { renderers, selection, source }")
+    expect(parts).not.toContain("explorerController")
+    expect(parts).not.toContain("const { explorer } = useFileSystemExplorer()")
+    expect(controller).not.toContain("FileSystemExplorerController")
+    expect(explorerControllers).toContain("FileSystemListViewController")
+    expect(explorerControllers).toContain("FileSystemGridViewController")
+    expect(explorerControllers).toContain("FileSystemColumnsViewController")
+    expect(explorerControllers).toContain("FileSystemStatusState")
+    expect(explorerControllers).toContain("FileSystemPierreLoadingController")
+    expect(explorerControllers).toContain("FileSystemPierreSelectionController")
+    expect(dialog).toContain("export function useFileSystemOpenPreviewDialog")
+    expect(dialog).toContain("export function FileSystemOpenPreviewDialog")
+  })
+
+  it("keeps file-system easy API on invariant browser plus preview grammar", () => {
+    const content = fileContent("registry/new-york-v4/ui/file-system.tsx")
+    const sidebarTag = content.match(/<ViewerSidebar[\s\S]*?>/)?.[0] ?? ""
+    const surfaceTag = content.match(/<ViewerSurface[\s\S]*?>/)?.[0] ?? ""
+
+    expect(content).not.toContain("const isGallery")
+    expect(sidebarTag).toContain('aria-label="Files"')
+    expect(sidebarTag).toContain('width="min(22rem, 85vw)"')
+    expect(sidebarTag).not.toContain('width="58%"')
+    expect(content).not.toContain("{isGallery ? null : (")
+    expect(surfaceTag).not.toMatch(/\bhidden\b/)
+    expect(surfaceTag).not.toContain("w-[42%]")
+    expect(content).not.toContain('width="58%"')
   })
 
   it("keeps file-system Pierre ownership outside the React list view", () => {
     const listView = fileContent(
       "registry/new-york-v4/ui/file-system-list-view.tsx"
+    )
+    const gridView = fileContent(
+      "registry/new-york-v4/ui/file-system-grid-view.tsx"
+    )
+    const columnsView = fileContent(
+      "registry/new-york-v4/ui/file-system-columns-view.tsx"
     )
     const model = fileContent(
       "registry/new-york-v4/ui/file-system-pierre-model.ts"
@@ -689,13 +858,74 @@ describe("viewer architecture", () => {
     const decoration = fileContent(
       "registry/new-york-v4/ui/file-system-pierre-decoration.ts"
     )
+    const expansion = fileContent(
+      "registry/new-york-v4/ui/file-system-pierre-expansion.ts"
+    )
+    const resetIdentity = fileContent(
+      "registry/new-york-v4/ui/file-system-pierre-reset-identity.ts"
+    )
+    const resetPlan = fileContent(
+      "registry/new-york-v4/ui/file-system-pierre-reset-plan.ts"
+    )
+    const snapshot = fileContent(
+      "registry/new-york-v4/ui/file-system-pierre-expansion-snapshot.ts"
+    )
+    const lazyRetry = fileContent(
+      "registry/new-york-v4/ui/file-system-pierre-lazy-retry.ts"
+    )
+    const pierreFiles = [
+      "registry/new-york-v4/ui/file-system-pierre-decoration.ts",
+      "registry/new-york-v4/ui/file-system-pierre-expansion.ts",
+      "registry/new-york-v4/ui/file-system-pierre-lazy-retry.ts",
+      "registry/new-york-v4/ui/file-system-pierre-model.ts",
+      "registry/new-york-v4/ui/file-system-pierre-reset.ts",
+      "registry/new-york-v4/ui/file-system-pierre-reset-identity.ts",
+      "registry/new-york-v4/ui/file-system-pierre-selection.ts",
+    ]
 
     expect(listView).toContain("useFileSystemPierreModel")
+    expect(listView).toContain("FileSystemListViewController")
+    expect(listView).not.toContain("FileSystemExplorerController")
     expect(listView).not.toContain("new PierreFileTreeModel")
     expect(listView).not.toContain("SortHeader")
+    expect(gridView).toContain("FileSystemGridViewController")
+    expect(gridView).not.toContain("FileSystemExplorerController")
+    expect(gridView).not.toContain("file-system-pierre")
+    expect(columnsView).toContain("FileSystemColumnsViewController")
+    expect(columnsView).not.toContain("FileSystemExplorerController")
+    expect(columnsView).not.toContain("file-system-pierre")
     expect(model).toContain("useFileTree")
+    expect(model).not.toContain("FileSystemExplorerController")
+    expect(model).not.toContain("./file-system-controller")
+    expect(model).toContain("selection.selectedPath")
+    expect(model).toContain("currentLoading.folderErrors")
     expect(input).toContain("preparePresortedFileTreeInput")
+    expect(input).toContain("entriesByPierrePath")
+    expect(input).toContain("pierrePaths")
+    expect(input).not.toContain("pathEntries")
+    expect(input).not.toContain("revision")
+    expect(input).not.toContain("toPierrePath")
+    expect(input).not.toContain("fromPierrePath")
     expect(decoration).toContain("fileSystemPierreRowDecoration")
+    expect(decoration).toContain("transport detail stays local")
+    expect(expansion).toContain("useFileSystemPierreLazyRetryExpansion")
+    expect(expansion).toContain("rememberFileSystemPierreExpansionSnapshot")
+    expect(resetIdentity).toContain("classifyFileSystemPierreResetTransition")
+    expect(resetPlan).toContain("createFileSystemPierreResetPlan")
+    expect(resetPlan).toContain("resolveFileSystemPierreInitialExpansion")
+    expect(snapshot).toContain("filterFileSystemPierreExpandedPaths")
+    expect(lazyRetry).toContain("createFileSystemPierreLazyFolderCommand")
+    expect(lazyRetry).toContain("retry-and-expand")
+    for (const file of pierreFiles) {
+      const content = fileContent(file)
+      expect(
+        content,
+        `${file} imports broad explorer controller`
+      ).not.toContain("FileSystemExplorerController")
+      expect(content, `${file} imports file-system-controller`).not.toContain(
+        "./file-system-controller"
+      )
+    }
   })
 
   it("keeps workflow viewer named parts on narrow hooks", () => {
@@ -725,7 +955,9 @@ describe("viewer architecture", () => {
   })
 
   it("keeps workflow registry blocks on visible viewer composition", () => {
-    const parse = fileContent("registry/new-york-v4/blocks/parse-viewer-block.tsx")
+    const parse = fileContent(
+      "registry/new-york-v4/blocks/parse-viewer-block.tsx"
+    )
     const partition = fileContent(
       "registry/new-york-v4/blocks/partition-viewer-block.tsx"
     )
@@ -765,14 +997,134 @@ describe("viewer architecture", () => {
       /\brenderDocument\b/,
     ]
 
-    for (const file of publicDocsRoots.flatMap((root) =>
-      textFilesUnder(join(repoRoot, root), [".md", ".mdx"])
-    )) {
+    for (const file of publicDocFiles()) {
       const content = fileContent(file)
       for (const pattern of forbiddenPatterns) {
         expect(pattern.test(content), `${file} contains ${pattern}`).toBe(false)
       }
     }
+  })
+
+  it("keeps public ViewerSidebar examples labeled by domain", () => {
+    const unlabeledSidebars: string[] = []
+
+    for (const file of publicDocFiles()) {
+      for (const tag of viewerSidebarTags(fileContent(file))) {
+        if (/\baria-label=/.test(tag)) continue
+        unlabeledSidebars.push(`${file}: ${tag.replace(/\s+/g, " ")}`)
+      }
+    }
+
+    expect(unlabeledSidebars).toEqual([])
+  })
+
+  it("documents intentional sidebar composition boundaries", () => {
+    const sidebarDoc = fileContent("content/docs/components/sidebar.mdx")
+    const compactSidebarDoc = compactWhitespace(sidebarDoc)
+    const segmentSidebarDoc = fileContent(
+      "content/docs/components/segment-sidebar.mdx"
+    )
+    const compactSegmentSidebarDoc = compactWhitespace(segmentSidebarDoc)
+    const sidebarListDoc = fileContent(
+      "content/docs/components/sidebar-list.mdx"
+    )
+    const attachmentSidebarDoc = fileContent(
+      "content/docs/components/attachment-sidebar.mdx"
+    )
+    const sidebarDesign = fileContent(
+      "design/sidebar-domain-composition-design.md"
+    )
+    const compactSidebarDesign = compactWhitespace(sidebarDesign)
+    const segmentSidebar = fileContent(
+      "registry/new-york-v4/ui/segment-sidebar.tsx"
+    )
+    const segmentedDocumentViewer = fileContent(
+      "registry/new-york-v4/ui/segmented-document-viewer.tsx"
+    )
+
+    expect(sidebarDoc).toContain(
+      "`ViewerSidebar` owns a spatial rail inside `ViewerBody`"
+    )
+    expect(sidebarDoc).toContain(
+      "Viewer primitives do not encode domain purpose."
+    )
+    expect(sidebarDoc).not.toContain("semantic wrapper")
+    expect(sidebarDoc).not.toContain("data-viewer-purpose")
+    expect(sidebarDoc).not.toContain("data-viewer-role")
+    expect(compactSidebarDoc).toContain(
+      "`SidebarList*` owns providerless grouped-row grammar"
+    )
+    expect(sidebarDoc).not.toContain('`SegmentSidebar` is the "list" surface')
+    expect(sidebarListDoc).toContain(
+      "`SidebarList*` primitives provide sidebar row grammar without"
+    )
+    expect(attachmentSidebarDoc).toContain(
+      "`AttachmentSidebar` renders selectable file attachments"
+    )
+    expect(compactSegmentSidebarDoc).toMatch(
+      /`SegmentSidebar` owns only the segment-row model and interaction semantics/
+    )
+    expect(segmentSidebarDoc).toContain(
+      "`SegmentSidebar` uses providerless `SidebarList*` primitives"
+    )
+
+    expect(segmentSidebar).not.toContain("EmbeddedSidebarProvider")
+    expect(segmentSidebar).toContain("<SidebarListRoot")
+    expectInOrder(
+      segmentedDocumentViewer,
+      "registry/new-york-v4/ui/segmented-document-viewer.tsx",
+      ["<ViewerSidebar", "<SegmentSidebar"]
+    )
+
+    expect(compactSidebarDesign).toContain(
+      "`SegmentSidebar` inside `ViewerSidebar` is therefore a nested composition"
+    )
+    expect(compactSidebarDesign).toContain(
+      "render a complete `PdfViewer bare` inside `ViewerSurface`"
+    )
+    expect(sidebarDesign).toContain(
+      "MIME parts are currently email-owned rail content"
+    )
+    expect(sidebarDesign).not.toContain(
+      "Make `EmailViewer` consume `AttachmentSidebar`"
+    )
+    expect(sidebarDesign).not.toContain(
+      "`ViewerShell` as the shared compound viewer frame"
+    )
+    expect(sidebarDesign).not.toContain("`FileViewer slots`")
+  })
+
+  it("documents nested ViewerRoot and bare mode boundaries", () => {
+    const emailViewerDoc = fileContent("content/docs/viewers/email-viewer.mdx")
+    const fileViewerDoc = fileContent("content/docs/viewers/file-viewer.mdx")
+    const compactFileViewerDoc = compactWhitespace(fileViewerDoc)
+
+    expect(emailViewerDoc).toContain(
+      "Nested `ViewerRoot` is correct only for a complete nested viewer."
+    )
+    expect(emailViewerDoc).toContain("`message/rfc822`")
+    expect(emailViewerDoc).toContain(
+      "A `ViewerSidebarTrigger` always targets the nearest `ViewerRoot`"
+    )
+    expect(emailViewerDoc).toContain(
+      "<EmailViewer message={nestedMessage} bare"
+    )
+    expect(emailViewerDoc).toContain(
+      "<FileViewer source={attachment.source} bare"
+    )
+    expect(emailViewerDoc).toContain(
+      "Do not nest `ViewerRoot` just to add another toolbar or border"
+    )
+
+    expect(fileViewerDoc).toContain(
+      "`ViewerRoot bare` removes the spatial frame."
+    )
+    expect(compactFileViewerDoc).toContain(
+      "`FileViewer bare` removes the file-renderer chrome."
+    )
+    expect(compactFileViewerDoc).toContain(
+      "`DomainViewer bare` chooses whether the domain viewer's internal `ViewerRoot` is framed."
+    )
   })
 
   it("keeps public anchored docs free of removed source-link vocabulary", () => {
@@ -812,7 +1164,8 @@ describe("viewer architecture", () => {
           "<ViewerRoot",
           "<ViewerBody",
           "<ViewerSurface",
-          "<PdfViewer",
+          "<PdfViewerProvider",
+          "<PdfViewerPages",
           "<ViewerSidebar",
           "<LayoutBlocksPanel",
         ],
@@ -904,6 +1257,58 @@ describe("viewer architecture", () => {
     }
 
     expect(missingModules).toEqual([])
+  })
+
+  it("keeps sidebar primitive dependency topology exact", () => {
+    const registry = readJson<Registry>("registry.json")
+    const itemByName = new Map(registry.items.map((item) => [item.name, item]))
+    const sidebar = itemByName.get("sidebar")
+    const sidebarRow = itemByName.get("sidebar-row")
+    const sidebarList = itemByName.get("sidebar-list")
+    const segmentSidebar = itemByName.get("segment-sidebar")
+    const attachmentSidebar = itemByName.get("attachment-sidebar")
+    const sidebarSource = fileContent("registry/new-york-v4/ui/sidebar.tsx")
+    const sidebarListSource = fileContent(
+      "registry/new-york-v4/ui/sidebar-list.tsx"
+    )
+    const attachmentSidebarSource = fileContent(
+      "registry/new-york-v4/ui/attachment-sidebar.tsx"
+    )
+    const segmentSidebarSource = fileContent(
+      "registry/new-york-v4/ui/segment-sidebar.tsx"
+    )
+
+    expect(sidebarRow?.files.map((file) => file.path)).toEqual([
+      "registry/new-york-v4/ui/sidebar-row.ts",
+    ])
+    expect(sidebar?.registryDependencies ?? []).toContain("sidebar-row")
+    expect(sidebar?.dependencies ?? []).not.toContain(
+      "class-variance-authority@^0.7.1"
+    )
+    expect(sidebarSource).toContain('from "./sidebar-row"')
+    expect(sidebarSource).not.toContain("EmbeddedSidebarProvider")
+    expect(sidebarSource).not.toContain("scope?:")
+    expect(sidebarSource).not.toContain("data-sidebar-scope")
+
+    expect(sidebarList?.registryDependencies ?? []).toContain("sidebar-row")
+    expect(sidebarList?.registryDependencies ?? []).not.toContain("sidebar")
+    expect(sidebarListSource).toContain('from "./sidebar-row"')
+    expect(sidebarListSource).not.toContain('from "./sidebar"')
+
+    expect(segmentSidebar?.registryDependencies ?? []).toContain("sidebar-list")
+    expect(segmentSidebar?.registryDependencies ?? []).not.toContain("sidebar")
+    expect(segmentSidebarSource).toContain('from "./sidebar-list"')
+    expect(segmentSidebarSource).not.toContain("EmbeddedSidebarProvider")
+
+    expect(attachmentSidebar?.registryDependencies ?? []).toContain(
+      "sidebar-list"
+    )
+    expect(attachmentSidebar?.registryDependencies ?? []).not.toContain(
+      "sidebar"
+    )
+    expect(attachmentSidebarSource).toContain('from "./sidebar-list"')
+    expect(attachmentSidebarSource).not.toContain("providerClassName")
+    expect(attachmentSidebarSource).not.toContain("EmbeddedSidebarProvider")
   })
 
   it("keeps public/r viewer metadata and payloads aligned with registry.json", () => {

@@ -11,7 +11,10 @@ import {
 import type { JSONSchema7 } from "json-schema"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
-import type { JsonTableCellCommit } from "@/components/json-table/json-table-cell-commit"
+import type {
+  JsonTableCellCommit,
+  JsonTableCellCommitHandler,
+} from "@/components/json-table/json-table-cell-commit"
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
 import type {
   JsonTableActivationIntent,
@@ -21,6 +24,7 @@ import type {
 import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
 import { createJsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
 import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
+import { jsonTableFullRenderedColumnWindow } from "@/components/json-table/json-table-rendered-column-window"
 import type {
   ProjectedCell,
   ProjectedRow,
@@ -36,7 +40,11 @@ import { SingleFileFormRow } from "@/components/json-table/single-file-form-row"
 import { SingleFileTableView } from "@/components/json-table/single-file-table-view"
 import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
 
-import { createTestCellCommitBridge } from "./json-table-interaction-test-utils"
+import {
+  activatePrimitiveCell,
+  createTestCellCommitBridge,
+  primitiveEventTarget,
+} from "./json-table-interaction-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
 
 beforeAll(() => installJsonTableDom())
@@ -81,12 +89,6 @@ const document: TableDocument = {
     shipped_at: "2024-01-02",
   },
 }
-
-type TestCellCommit = (
-  docId: string,
-  materializedFieldPath: string,
-  value: unknown
-) => void
 
 function requireFieldMetadata(key: string): FieldMetadata {
   const fieldMetadata = getFieldMetadata(schema, key)
@@ -149,9 +151,11 @@ function rowByIndex(container: HTMLElement, index: number) {
 
 function SingleFileFormRowHarness({
   onCellCommit,
+  visibleColumns,
   ...props
 }: Omit<
   React.ComponentProps<typeof SingleFileFormRow>,
+  | "renderedColumnWindow"
   | "primitiveActiveCellStore"
   | "primitiveEditStore"
   | "setPrimitiveActiveCell"
@@ -161,7 +165,8 @@ function SingleFileFormRowHarness({
   | "closeStructuredEditSession"
   | "onCellCommit"
 > & {
-  onCellCommit?: TestCellCommit
+  visibleColumns: VisibleColumn[]
+  onCellCommit?: JsonTableCellCommitHandler
 }) {
   const primitiveActiveCellStoreRef = React.useRef(
     createJsonTablePrimitiveActiveCellStore()
@@ -195,7 +200,7 @@ function SingleFileFormRowHarness({
         docId: props.document.id,
         fieldPath: projectedCell.materializedFieldPath,
         intent,
-        isOverlayOpen: false,
+        isOverlayOpen: true,
       })
     },
     [props.document.id]
@@ -215,18 +220,15 @@ function SingleFileFormRowHarness({
   }, [])
   const handleCellCommit = React.useCallback(
     (commit: JsonTableCellCommit) => {
-      ;(onCellCommit ?? vi.fn())(
-        props.document.id,
-        commit.fieldPath,
-        commit.value
-      )
+      onCellCommit?.(commit)
     },
-    [onCellCommit, props.document.id]
+    [onCellCommit]
   )
 
   return (
     <SingleFileFormRow
       {...props}
+      renderedColumnWindow={jsonTableFullRenderedColumnWindow(visibleColumns)}
       primitiveActiveCellStore={primitiveActiveCellStoreRef.current}
       primitiveEditStore={primitiveEditStoreRef.current}
       setPrimitiveActiveCell={setNextPrimitiveActiveCell}
@@ -245,7 +247,7 @@ function renderRow({
   visiblePaths,
 }: {
   isJsonEditable?: boolean
-  onCellCommit?: TestCellCommit
+  onCellCommit?: JsonTableCellCommitHandler
   visiblePaths: string[]
 }) {
   const rows = projectDocumentRows({
@@ -451,6 +453,30 @@ function dayButton(day: string) {
   return button
 }
 
+function activateCell(
+  view: {
+    container: HTMLElement
+  },
+  fieldPath: string
+) {
+  const cell = cellByFieldPath(view.container, fieldPath)
+  activatePrimitiveCell(cell)
+  return cell
+}
+
+async function activateCellControl(
+  view: {
+    container: HTMLElement
+    findByRole: (role: string) => Promise<HTMLElement>
+  },
+  fieldPath: string,
+  role: string
+) {
+  const cell = activateCell(view, fieldPath)
+  await view.findByRole(role)
+  return cell
+}
+
 describe("json table edit-session interactions", () => {
   it("commits a dirty text draft before switching cells", async () => {
     const onUpdateDocument = vi.fn<
@@ -464,9 +490,7 @@ describe("json table edit-session interactions", () => {
 
     await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
 
-    fireEvent.pointerDown(cellByFieldPath(view.container, "vendor"), {
-      button: 0,
-    })
+    activateCell(view, "vendor")
     const vendorInput = view.getByRole("textbox") as HTMLInputElement
     fireEvent.change(vendorInput, { target: { value: "Globex" } })
 
@@ -474,9 +498,7 @@ describe("json table edit-session interactions", () => {
       view.container.querySelectorAll('[data-active="true"]')
     ).toHaveLength(1)
 
-    fireEvent.pointerDown(cellByFieldPath(view.container, "amount"), {
-      button: 0,
-    })
+    await activateCellControl(view, "amount", "spinbutton")
 
     const amountInput = view.getByRole("spinbutton") as HTMLInputElement
     expect(amountInput.value).toBe("12")
@@ -504,15 +526,11 @@ describe("json table edit-session interactions", () => {
 
     await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
 
-    fireEvent.pointerDown(cellByFieldPath(view.container, "amount"), {
-      button: 0,
-    })
+    activateCell(view, "amount")
     const amountInput = view.getByRole("spinbutton") as HTMLInputElement
     fireEvent.change(amountInput, { target: { value: "15.5" } })
 
-    fireEvent.pointerDown(cellByFieldPath(view.container, "vendor"), {
-      button: 0,
-    })
+    await activateCellControl(view, "vendor", "textbox")
 
     expect(view.getByRole("textbox")).toBeTruthy()
     expect(onUpdateDocument).toHaveBeenCalledWith({
@@ -533,15 +551,11 @@ describe("json table edit-session interactions", () => {
 
     await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
 
-    fireEvent.pointerDown(cellByFieldPath(view.container, "count"), {
-      button: 0,
-    })
+    await activateCellControl(view, "count", "spinbutton")
     fireEvent.change(view.getByRole("spinbutton"), {
       target: { value: "3.5" },
     })
-    fireEvent.pointerDown(cellByFieldPath(view.container, "vendor"), {
-      button: 0,
-    })
+    await activateCellControl(view, "vendor", "textbox")
 
     expect(view.getByRole("textbox")).toBeTruthy()
     expect(onUpdateDocument).toHaveBeenCalledWith({
@@ -562,15 +576,11 @@ describe("json table edit-session interactions", () => {
 
     await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
 
-    fireEvent.pointerDown(cellByFieldPath(view.container, "note"), {
-      button: 0,
-    })
+    activateCell(view, "note")
     fireEvent.change(view.getByRole("textbox"), {
       target: { value: "" },
     })
-    fireEvent.pointerDown(cellByFieldPath(view.container, "amount"), {
-      button: 0,
-    })
+    activateCell(view, "amount")
 
     expect(view.getByRole("spinbutton")).toBeTruthy()
     expect(onUpdateDocument).toHaveBeenCalledWith({
@@ -591,18 +601,12 @@ describe("json table edit-session interactions", () => {
 
     await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
 
-    fireEvent.pointerDown(cellByFieldPath(view.container, "vendor"), {
-      button: 0,
-    })
+    await activateCellControl(view, "vendor", "textbox")
     fireEvent.change(view.getByRole("textbox"), {
       target: { value: "Globex" },
     })
-    fireEvent.pointerDown(cellByFieldPath(view.container, "amount"), {
-      button: 0,
-    })
-    fireEvent.pointerDown(cellByFieldPath(view.container, "vendor"), {
-      button: 0,
-    })
+    await activateCellControl(view, "amount", "spinbutton")
+    await activateCellControl(view, "vendor", "textbox")
 
     expect(view.getByRole("textbox")).toHaveProperty("value", "Globex")
     expect(onUpdateDocument).toHaveBeenCalledTimes(1)
@@ -618,9 +622,7 @@ describe("json table edit-session interactions", () => {
 
     await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
 
-    fireEvent.pointerDown(cellByFieldPath(view.container, "vendor"), {
-      button: 0,
-    })
+    await activateCellControl(view, "vendor", "textbox")
     fireEvent.change(view.getByRole("textbox"), {
       target: { value: "ServerCo" },
     })
@@ -633,12 +635,8 @@ describe("json table edit-session interactions", () => {
       )
     )
 
-    fireEvent.pointerDown(cellByFieldPath(view.container, "amount"), {
-      button: 0,
-    })
-    fireEvent.pointerDown(cellByFieldPath(view.container, "vendor"), {
-      button: 0,
-    })
+    await activateCellControl(view, "amount", "spinbutton")
+    await activateCellControl(view, "vendor", "textbox")
 
     expect(view.getByRole("textbox")).toHaveProperty("value", "ServerCo")
     expect(onPatch).toHaveBeenCalledTimes(1)
@@ -656,12 +654,8 @@ describe("json table edit-session interactions", () => {
 
     await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
 
-    fireEvent.pointerDown(cellByFieldPath(view.container, "vendor"), {
-      button: 0,
-    })
-    fireEvent.pointerDown(cellByFieldPath(view.container, "amount"), {
-      button: 0,
-    })
+    activateCell(view, "vendor")
+    activateCell(view, "amount")
 
     expect(view.getByRole("spinbutton")).toHaveProperty("value", "12")
     expect(onUpdateDocument).not.toHaveBeenCalled()
@@ -678,8 +672,12 @@ describe("json table edit-session interactions", () => {
     )
 
     const vendorCell = cellByFieldPath(textView.container, "vendor")
-    vendorCell.focus()
-    fireEvent.keyDown(vendorCell, { key: "Z" })
+    const vendorTarget = primitiveEventTarget(vendorCell)
+    if (!(vendorTarget instanceof HTMLElement)) {
+      throw new Error("Expected primitive event target")
+    }
+    vendorTarget.focus()
+    fireEvent.keyDown(vendorTarget, { key: "Z" })
     expect(textView.getByRole("textbox")).toHaveProperty("value", "Z")
 
     cleanup()
@@ -693,8 +691,12 @@ describe("json table edit-session interactions", () => {
     )
 
     const amountCell = cellByFieldPath(numberView.container, "amount")
-    amountCell.focus()
-    fireEvent.keyDown(amountCell, { key: "8" })
+    const amountTarget = primitiveEventTarget(amountCell)
+    if (!(amountTarget instanceof HTMLElement)) {
+      throw new Error("Expected primitive event target")
+    }
+    amountTarget.focus()
+    fireEvent.keyDown(amountTarget, { key: "8" })
     expect(numberView.getByRole("spinbutton")).toHaveProperty("value", "8")
   })
 
@@ -721,9 +723,10 @@ describe("json table edit-session interactions", () => {
       "shipped_at",
     ]) {
       const cell = cellByFieldPath(view.container, fieldPath)
-      fireEvent.pointerDown(cell, { button: 0 })
-      fireEvent.keyDown(cell, { key: "Enter" })
-      fireEvent.keyDown(cell, { key: " " })
+      const target = primitiveEventTarget(cell)
+      fireEvent.pointerDown(target, { button: 0 })
+      fireEvent.keyDown(target, { key: "Enter" })
+      fireEvent.keyDown(target, { key: " " })
     }
 
     expect(editableCells(view.container)).toHaveLength(0)
@@ -746,9 +749,7 @@ describe("json table edit-session interactions", () => {
 
     await waitFor(() => expect(editableCells(view.container)).toHaveLength(1))
 
-    fireEvent.pointerDown(cellByFieldPath(view.container, "vendor"), {
-      button: 0,
-    })
+    activateCell(view, "vendor")
     fireEvent.change(view.getByRole("textbox"), {
       target: { value: "EscapeCo" },
     })
@@ -762,7 +763,7 @@ describe("json table edit-session interactions", () => {
     )
   })
 
-  it("composes a dirty draft commit with an immediate boolean toggle", async () => {
+  it("composes a dirty draft commit with a later boolean toggle", async () => {
     const onUpdateDocument = vi.fn<
       (patch: Record<string, unknown>) => Promise<void>
     >(async () => undefined)
@@ -774,15 +775,14 @@ describe("json table edit-session interactions", () => {
 
     await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
 
-    fireEvent.pointerDown(cellByFieldPath(view.container, "vendor"), {
-      button: 0,
-    })
+    activateCell(view, "vendor")
     fireEvent.change(view.getByRole("textbox"), {
       target: { value: "Globex" },
     })
-    fireEvent.pointerDown(cellByFieldPath(view.container, "is_paid"), {
-      button: 0,
-    })
+    fireEvent.blur(view.getByRole("textbox"))
+    await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(1))
+
+    activateCell(view, "is_paid")
 
     await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(2))
     expect(onUpdateDocument).toHaveBeenNthCalledWith(1, {
@@ -810,18 +810,19 @@ describe("json table edit-session interactions", () => {
 
     await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
 
-    fireEvent.pointerDown(cellByFieldPath(view.container, "vendor"), {
-      button: 0,
-    })
+    activateCell(view, "vendor")
     fireEvent.change(view.getByRole("textbox"), {
       target: { value: "Globex" },
     })
-    fireEvent.click(cellByFieldPath(view.container, "status"), {
-      button: 0,
-      clientX: 0,
-      clientY: 0,
-      detail: 1,
-    })
+    fireEvent.click(
+      primitiveEventTarget(cellByFieldPath(view.container, "status")),
+      {
+        button: 0,
+        clientX: 0,
+        clientY: 0,
+        detail: 1,
+      }
+    )
     await chooseOption(view, "paid")
 
     await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(2))
@@ -856,7 +857,12 @@ describe("json table edit-session interactions", () => {
     )
 
     const cell = cellByFieldPath(view.container, "lines.0.transaction_type")
-    fireEvent.click(cell, { button: 0, clientX: 0, clientY: 0, detail: 1 })
+    fireEvent.click(primitiveEventTarget(cell), {
+      button: 0,
+      clientX: 0,
+      clientY: 0,
+      detail: 1,
+    })
 
     const trigger = await view.findByRole("combobox")
     await waitFor(() =>
@@ -884,18 +890,11 @@ describe("json table edit-session interactions", () => {
 
     await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
 
-    fireEvent.pointerDown(cellByFieldPath(view.container, "vendor"), {
-      button: 0,
-    })
+    activateCell(view, "vendor")
     fireEvent.change(view.getByRole("textbox"), {
       target: { value: "Globex" },
     })
-    fireEvent.pointerDown(cellByFieldPath(view.container, "shipped_at"), {
-      button: 0,
-      clientX: 0,
-      clientY: 0,
-      detail: 1,
-    })
+    activateCell(view, "shipped_at")
     expect(await view.findByRole("dialog")).toBeTruthy()
 
     fireEvent.click(dayButton("1/15/2024"))
@@ -919,15 +918,11 @@ describe("json table edit-session interactions", () => {
 
     await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
 
-    fireEvent.pointerDown(cellByFieldPath(view.container, "shipped_at"), {
-      button: 0,
-    })
+    activateCell(view, "shipped_at")
 
     expect(await view.findByRole("dialog")).toBeTruthy()
 
-    fireEvent.pointerDown(cellByFieldPath(view.container, "vendor"), {
-      button: 0,
-    })
+    activateCell(view, "vendor")
 
     await waitFor(() => expect(view.queryByRole("dialog")).toBeNull())
     expect(view.getByRole("textbox")).toBeTruthy()
@@ -939,9 +934,12 @@ describe("json table edit-session interactions", () => {
       expect(editableCells(editableView.container)).toHaveLength(2)
     )
     expect(
-      editableCells(editableView.container).map((cell) =>
-        cell.getAttribute("tabindex")
-      )
+      editableCells(editableView.container).map((cell) => {
+        const target = primitiveEventTarget(cell)
+        return target instanceof HTMLElement
+          ? target.getAttribute("tabindex")
+          : null
+      })
     ).toEqual(["0", "0"])
 
     cleanup()
@@ -971,10 +969,11 @@ describe("json table edit-session interactions", () => {
     await waitFor(() => expect(editableCells(view.container)).toHaveLength(1))
 
     const cell = cellByFieldPath(view.container, "vendor")
-    cell.focus()
-    fireEvent.compositionStart(cell)
-    fireEvent.keyDown(cell, { key: "Process", isComposing: true })
-    fireEvent.compositionEnd(cell)
+    const target = primitiveEventTarget(cell) as HTMLElement
+    target.focus()
+    fireEvent.compositionStart(target)
+    fireEvent.keyDown(target, { key: "Process", isComposing: true })
+    fireEvent.compositionEnd(target)
 
     expect(view.queryByRole("textbox")).toBeNull()
     expect(onCellCommit).not.toHaveBeenCalled()
@@ -992,18 +991,14 @@ describe("json table edit-session interactions", () => {
 
     await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
 
-    fireEvent.pointerDown(cellByFieldPath(view.container, "vendor"), {
-      button: 0,
-    })
+    activateCell(view, "vendor")
     const vendorInput = view.getByRole("textbox")
     fireEvent.change(vendorInput, { target: { value: "Globex" } })
     fireEvent.blur(vendorInput)
 
     await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(1))
 
-    fireEvent.pointerDown(cellByFieldPath(view.container, "amount"), {
-      button: 0,
-    })
+    activateCell(view, "amount")
     const amountInput = view.getByRole("spinbutton")
     fireEvent.change(amountInput, { target: { value: "24" } })
     fireEvent.blur(amountInput)
@@ -1056,9 +1051,7 @@ describe("json table edit-session interactions", () => {
       expect(cellByFieldPath(view.container, "vendor")).toBeTruthy()
     )
 
-    fireEvent.pointerDown(cellByFieldPath(view.container, "vendor"), {
-      button: 0,
-    })
+    activateCell(view, "vendor")
     const input = view.getByRole("textbox")
     fireEvent.change(input, { target: { value: "Globex" } })
     fireEvent.blur(input)
@@ -1100,10 +1093,7 @@ describe("json table edit-session interactions", () => {
       expect(cellByFieldPath(view.container, "lines.0.shipped_at")).toBeTruthy()
     )
 
-    fireEvent.pointerDown(
-      cellByFieldPath(view.container, "lines.0.shipped_at"),
-      { button: 0 }
-    )
+    activateCell(view, "lines.0.shipped_at")
 
     expect(await view.findByRole("dialog")).toBeTruthy()
     await waitFor(() =>
@@ -1135,10 +1125,7 @@ describe("json table edit-session interactions", () => {
         ).toBeTruthy()
       )
 
-      fireEvent.pointerDown(
-        cellByFieldPath(view.container, "lines.0.shipped_at"),
-        { button: 0 }
-      )
+      activateCell(view, "lines.0.shipped_at")
       expect(await view.findByRole("dialog")).toBeTruthy()
 
       const viewport = view.container.querySelector<HTMLElement>(

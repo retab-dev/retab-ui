@@ -31,24 +31,6 @@ export type DataCellActivationSource =
       release: DataCellShellActivationRelease
     }
 
-export type DataCellActivationRequest =
-  | {
-      kind: "pointer"
-      clientX: number
-      clientY: number
-      detail: number
-      event?: Event
-      selectionOffset?: number
-    }
-  | {
-      kind: "keyboard"
-      key: string
-    }
-  | {
-      kind: "shell"
-      event?: Event
-    }
-
 export type DataCellDismissCause =
   | {
       kind: "outside-pointer"
@@ -126,22 +108,6 @@ export function createDataCellShellActivationSource(
   }
 }
 
-export function createDataCellActivationSource(
-  request: DataCellActivationRequest | undefined
-): DataCellActivationSource | undefined {
-  if (!request) return undefined
-  if (request.kind === "pointer") {
-    return {
-      ...createDataCellPointerActivationSource(request),
-      selectionOffset: request.selectionOffset,
-    }
-  }
-  if (request.kind === "keyboard") {
-    return createDataCellKeyboardActivationSource(request.key)
-  }
-  return createDataCellShellActivationSource(request.event)
-}
-
 export function createDataCellActivationToken(
   openingEvent?: Event,
   {
@@ -180,8 +146,10 @@ export function useDataCellOpeningContext(
   activationSource: DataCellActivationSource | undefined,
   {
     enabled,
+    releaseAfterMicrotask = false,
   }: {
     enabled: boolean
+    releaseAfterMicrotask?: boolean
   }
 ): DataCellOpeningContext {
   const openingSourceRef = React.useRef<DataCellActivationSource | undefined>(
@@ -206,11 +174,11 @@ export function useDataCellOpeningContext(
       activationSource,
       {
         releaseAfterMicrotask:
-          activationSource.kind === "pointer" ||
+          releaseAfterMicrotask ||
           shouldReleaseDataCellOpeningAfterMicrotask(activationSource),
       }
     )
-  }, [activationSource, enabled, release])
+  }, [activationSource, enabled, release, releaseAfterMicrotask])
 
   React.useEffect(() => release, [release])
 

@@ -4,17 +4,16 @@ import * as React from "react"
 import { flushSync } from "react-dom"
 
 import {
-  createDataCellActivationSource,
   useDataCellActivationClickTail,
   type DataCellActivationSource,
 } from "@/registry/new-york-v4/ui/data-cell-activation"
-import type { DataCellControlAction } from "@/registry/new-york-v4/ui/data-cell-control-contract"
 import {
-  DataCellControl,
   getDataCellClickControlAction,
   getDataCellKeyControlAction,
   getDataCellPointerControlAction,
-} from "@/registry/new-york-v4/ui/data-cell-control-registry"
+} from "@/registry/new-york-v4/ui/data-cell-control-actions"
+import type { DataCellControlAction } from "@/registry/new-york-v4/ui/data-cell-control-contract"
+import { DataCellControl } from "@/registry/new-york-v4/ui/data-cell-control-registry"
 import { createDataCellControlState } from "@/registry/new-york-v4/ui/data-cell-control-state"
 import { DataCellDisplay } from "@/registry/new-york-v4/ui/data-cell-display"
 import { createDataCellDisplayProps } from "@/registry/new-york-v4/ui/data-cell-display-model"
@@ -22,12 +21,9 @@ import { createDataCellEditModel } from "@/registry/new-york-v4/ui/data-cell-edi
 import type { DataCellProps } from "@/registry/new-york-v4/ui/data-cell-types"
 
 export type {
-  DataCellActivationRequest,
   DataCellCommitValue,
   DataCellDateTimeZone,
-  DataCellEditorHandle,
   DataCellKind,
-  DataCellMode,
   DataCellProps,
   DataCellSelectOption,
   DataCellValue,
@@ -70,7 +66,6 @@ function hasDataCellKeyboardModifier(event: React.KeyboardEvent<HTMLElement>) {
 
 export function DataCell(props: DataCellProps) {
   const {
-    mode,
     active,
     editable = false,
     disabled = false,
@@ -88,16 +83,9 @@ export function DataCell(props: DataCellProps) {
   const [uncontrolledActive, setUncontrolledActive] = React.useState(false)
   const [activationSource, setActivationSource] =
     React.useState<DataCellActivationSource>()
-  const requestedActivationSource = React.useMemo(
-    () => createDataCellActivationSource(props.activationRequest),
-    [props.activationRequest]
-  )
   const isControlledActive = active !== undefined
-  const isExplicitMode = mode !== undefined
-  const isActive =
-    active ?? (isExplicitMode ? mode === "edit" : uncontrolledActive)
-  const canSelfActivate =
-    editable && !disabled && (!isExplicitMode || isControlledActive)
+  const isActive = active ?? uncontrolledActive
+  const canSelfActivate = editable && !disabled
 
   const setActive = React.useCallback(
     (nextActive: boolean) => {
@@ -170,6 +158,7 @@ export function DataCell(props: DataCellProps) {
     (event: React.MouseEvent<HTMLElement>) => {
       onClick?.(event)
       if (activationClickTail.consume()) {
+        event.preventDefault()
         event.stopPropagation()
         return
       }
@@ -219,13 +208,9 @@ export function DataCell(props: DataCellProps) {
   if (isActive) {
     const editModel = createDataCellEditModel(props, {
       disabled,
-      activationSource:
-        requestedActivationSource ??
-        activationSource ??
-        activationSourceRef.current,
+      activationSource: activationSource ?? activationSourceRef.current,
       autoFocus: props.autoFocus ?? canSelfActivate,
       onEditingEnd: endEditing,
-      onEditorHandleChange: props.onEditorHandleChange,
     })
     return <DataCellControl model={editModel} />
   }

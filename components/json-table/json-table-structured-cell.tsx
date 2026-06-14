@@ -1,4 +1,3 @@
-import * as React from "react"
 import type { JSONSchema7, JSONSchema7Definition } from "json-schema"
 
 import {
@@ -98,10 +97,6 @@ export function JsonTableStructuredCell({
 }) {
   const fieldSchema = fieldMetadata.rawSchema
   const isArray = fieldMetadata.kind === "array"
-
-  React.useLayoutEffect(() => {
-    setStructuredEditSessionOverlayOpen(true)
-  }, [structuredEditSession.id, setStructuredEditSessionOverlayOpen])
 
   return (
     <Popover

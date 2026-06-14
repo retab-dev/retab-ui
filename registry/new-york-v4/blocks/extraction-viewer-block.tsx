@@ -18,7 +18,6 @@ import {
   type AnchoredItem,
   type DocumentAnchor,
 } from "@/components/ui/anchored-document-viewer"
-import { CodeViewer, type CodeViewerHandle } from "@/components/ui/code-viewer"
 import { csvAnchorToTarget } from "@/components/ui/csv-source"
 import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
 import { docxAnchorToTarget } from "@/components/ui/docx-source"
@@ -45,13 +44,14 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { SourceIndicator } from "@/components/ui/source-indicator"
 import { textAnchorToTarget } from "@/components/ui/text-source"
+import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
 import {
   ViewerBody,
-  ViewerHeader,
-  ViewerRoot,
-  ViewerSidebar,
-  ViewerSidebarTrigger,
   ViewerSurface,
+  ViewerHeader,
+  ViewerSidebar,
+  ViewerRoot,
+  ViewerSidebarTrigger,
 } from "@/components/ui/viewer"
 import { xlsxAnchorToTarget } from "@/components/ui/xlsx-source"
 import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
@@ -226,7 +226,7 @@ function ExtractionShell({
   return (
     <ViewerRoot bare defaultSidebarOpen className="h-full bg-background">
       <ViewerHeader className="flex min-h-10 items-center gap-2 px-2">
-        <ViewerSidebarTrigger side="right" />
+        <ViewerSidebarTrigger />
         <h2 className="min-w-0 truncate text-sm font-medium">
           Extraction results
         </h2>
@@ -240,6 +240,7 @@ function ExtractionShell({
           />
         </ViewerSurface>
         <ViewerSidebar
+          aria-label="Extraction fields"
           side="right"
           width="420px"
           className="flex flex-shrink-0 flex-col border-l"
@@ -346,7 +347,7 @@ function useImageAnchoredOverlay() {
 }
 
 function useTextAnchoredTarget(
-  viewerRef: React.RefObject<CodeViewerHandle | null>
+  viewerRef: React.RefObject<TextViewerHandle | null>
 ): AnchoredDocumentTarget {
   return React.useMemo(
     () => ({
@@ -530,7 +531,7 @@ function ImageTabContent({
 }
 
 function TextTab() {
-  const viewerRef = React.useRef<CodeViewerHandle>(null)
+  const viewerRef = React.useRef<TextViewerHandle>(null)
   const target = useTextAnchoredTarget(viewerRef)
 
   return (
@@ -543,13 +544,13 @@ function TextTab() {
 function TextTabContent({
   viewerRef,
 }: {
-  viewerRef: React.RefObject<CodeViewerHandle | null>
+  viewerRef: React.RefObject<TextViewerHandle | null>
 }) {
   const highlight = useActiveTextHighlight()
 
   return (
     <ExtractionShell extraction={TEXT_EXTRACTION}>
-      <CodeViewer
+      <TextViewer
         ref={viewerRef}
         source={{
           kind: "url",
@@ -559,6 +560,7 @@ function TextTabContent({
         bare
         className="h-full"
         highlight={highlight}
+        mode="text"
       />
     </ExtractionShell>
   )

@@ -8,6 +8,7 @@ import type { JsonTableActiveCell } from "@/components/json-table/json-table-edi
 import {
   findEditableCell,
   interactionDocument,
+  primitivePendingCellCommit,
   renderInteractionRow,
 } from "./json-table-interaction-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
@@ -43,7 +44,7 @@ function keyDown(target: HTMLElement | Document, key: string, init = {}) {
 }
 
 function pointerActivateCell(cell: HTMLElement) {
-  fireEvent.pointerDown(cell, {
+  fireEvent.pointerDown(dataCellSurface(cell) ?? cell, {
     button: 0,
     clientX: 0,
     clientY: 0,
@@ -53,24 +54,45 @@ function pointerActivateCell(cell: HTMLElement) {
   })
 }
 
+function dataCellSurface(cell: HTMLElement) {
+  return cell.querySelector<HTMLElement>('[data-slot="data-cell"]')
+}
+
+async function editableDataCell(view: RenderedView, fieldPath: string) {
+  const cell = await editableCell(view, fieldPath)
+  const surface = dataCellSurface(cell)
+  if (!surface) throw new Error(`Expected DataCell surface for ${fieldPath}`)
+  return { cell, surface }
+}
+
+async function expectFocusReturnedToDataCell(
+  view: RenderedView,
+  fieldPath: string
+) {
+  await waitFor(async () => {
+    const { surface } = await editableDataCell(view, fieldPath)
+    expect(document.activeElement).toBe(surface)
+  })
+}
+
 async function keyboardActivateCell(
   view: RenderedView,
   fieldPath: string,
   key: string
 ) {
-  const cell = await editableCell(view, fieldPath)
-  cell.focus()
-  keyDown(cell, key)
-  return cell
+  const { cell, surface } = await editableDataCell(view, fieldPath)
+  surface.focus()
+  keyDown(surface, key)
+  return { cell, surface }
 }
 
 async function openEnum(view: RenderedView, fieldPath = "status") {
-  const cell = await keyboardActivateCell(view, fieldPath, "Enter")
+  const { cell, surface } = await keyboardActivateCell(view, fieldPath, "Enter")
   const trigger = await view.findByRole("combobox")
   await waitFor(() =>
     expect(trigger.getAttribute("aria-expanded")).toBe("true")
   )
-  return { cell, trigger }
+  return { cell, surface, trigger }
 }
 
 async function chooseOption(option: HTMLElement) {
@@ -99,10 +121,14 @@ function pickerTrigger(view: RenderedView, fieldPath: string) {
 }
 
 async function openPicker(view: RenderedView, fieldPath = "shipped_at") {
-  const cell = await keyboardActivateCell(view, fieldPath, "Enter")
+  const { cell, surface } = await keyboardActivateCell(
+    view,
+    fieldPath,
+    "Enter"
+  )
   const trigger = pickerTrigger(view, fieldPath)
   const popup = await view.findByRole("dialog")
-  return { cell, trigger, popup }
+  return { cell, surface, trigger, popup }
 }
 
 function pickerPopup() {
@@ -135,7 +161,9 @@ describe("json table a11y and keyboard hardening", () => {
       "shipped_at",
     ]) {
       expect(
-        (await editableCell(editableView, fieldPath)).getAttribute("tabindex")
+        (
+          await editableDataCell(editableView, fieldPath)
+        ).surface.getAttribute("tabindex")
       ).toBe("0")
     }
 
@@ -190,9 +218,9 @@ describe("json table a11y and keyboard hardening", () => {
     cleanup()
 
     const spaceView = renderInteractionRow({ visiblePaths: ["amount"] })
-    const cell = await editableCell(spaceView, "amount")
-    cell.focus()
-    keyDown(cell, " ")
+    const { cell, surface } = await editableDataCell(spaceView, "amount")
+    surface.focus()
+    keyDown(surface, " ")
 
     expect(spaceView.queryByRole("spinbutton")).toBeNull()
     expect(cell.getAttribute("data-active")).toBeNull()
@@ -209,9 +237,11 @@ describe("json table a11y and keyboard hardening", () => {
 
     await waitFor(() =>
       expect(onCellCommit).toHaveBeenCalledWith(
-        interactionDocument.id,
-        "is_paid",
-        true
+        primitivePendingCellCommit({
+          fieldPath: "is_paid",
+          value: true,
+          previousValue: false,
+        })
       )
     )
     await waitFor(() =>
@@ -243,7 +273,7 @@ describe("json table a11y and keyboard hardening", () => {
       onCellCommit,
       onEditSessionChange: (session) => sessions.push(session),
     })
-    const cell = await keyboardActivateCell(view, "is_paid", "Enter")
+    await keyboardActivateCell(view, "is_paid", "Enter")
     const checkbox = await view.findByRole("checkbox")
 
     keyDown(checkbox, "Escape")
@@ -255,20 +285,20 @@ describe("json table a11y and keyboard hardening", () => {
     )
     expect(onCellCommit).not.toHaveBeenCalled()
     expect(latestSession(sessions)).toBeNull()
-    expect(document.activeElement).toBe(cell)
+    await expectFocusReturnedToDataCell(view, "is_paid")
   })
 
   it("ignores platform shortcuts and navigation keys before editing starts", async () => {
     const view = renderInteractionRow({ visiblePaths: ["vendor"] })
-    const cell = await editableCell(view, "vendor")
+    const { cell, surface } = await editableDataCell(view, "vendor")
 
-    cell.focus()
+    surface.focus()
     for (const key of ["ArrowLeft", "ArrowRight", "Home", "End", "Tab"]) {
-      keyDown(cell, key)
+      keyDown(surface, key)
     }
-    keyDown(cell, "a", { metaKey: true })
-    keyDown(cell, "a", { ctrlKey: true })
-    keyDown(cell, "a", { altKey: true })
+    keyDown(surface, "a", { metaKey: true })
+    keyDown(surface, "a", { ctrlKey: true })
+    keyDown(surface, "a", { altKey: true })
 
     expect(view.queryByRole("textbox")).toBeNull()
     expect(cell.getAttribute("data-active")).toBeNull()
@@ -276,17 +306,23 @@ describe("json table a11y and keyboard hardening", () => {
 
   it("allows AltGraph printable input while keeping ordinary Ctrl+Alt shortcuts inert", async () => {
     const shortcutView = renderInteractionRow({ visiblePaths: ["vendor"] })
-    const shortcutCell = await editableCell(shortcutView, "vendor")
-    shortcutCell.focus()
-    keyDown(shortcutCell, "e", { ctrlKey: true, altKey: true })
+    const { surface: shortcutSurface } = await editableDataCell(
+      shortcutView,
+      "vendor"
+    )
+    shortcutSurface.focus()
+    keyDown(shortcutSurface, "e", { ctrlKey: true, altKey: true })
     expect(shortcutView.queryByRole("textbox")).toBeNull()
 
     cleanup()
 
     const altGraphView = renderInteractionRow({ visiblePaths: ["vendor"] })
-    const altGraphCell = await editableCell(altGraphView, "vendor")
-    altGraphCell.focus()
-    keyDown(altGraphCell, "€", {
+    const { surface: altGraphSurface } = await editableDataCell(
+      altGraphView,
+      "vendor"
+    )
+    altGraphSurface.focus()
+    keyDown(altGraphSurface, "€", {
       ctrlKey: true,
       altKey: true,
       getModifierState: (modifier: string) => modifier === "AltGraph",
@@ -297,10 +333,10 @@ describe("json table a11y and keyboard hardening", () => {
 
   it("ignores type-to-edit while IME composition is active", async () => {
     const view = renderInteractionRow({ visiblePaths: ["vendor"] })
-    const cell = await editableCell(view, "vendor")
+    const { cell, surface } = await editableDataCell(view, "vendor")
 
-    cell.focus()
-    keyDown(cell, "あ", { isComposing: true })
+    surface.focus()
+    keyDown(surface, "あ", { isComposing: true })
 
     expect(view.queryByRole("textbox")).toBeNull()
     expect(cell.getAttribute("data-active")).toBeNull()
@@ -327,14 +363,14 @@ describe("json table a11y and keyboard hardening", () => {
       onCellCommit,
       onEditSessionChange: (session) => sessions.push(session),
     })
-    const { cell, trigger } = await openEnum(view)
+    const { trigger } = await openEnum(view)
 
     keyDown(trigger, "Escape")
 
     await waitFor(() => expect(view.queryByRole("combobox")).toBeNull())
     expect(onCellCommit).not.toHaveBeenCalled()
     expect(latestSession(sessions)).toBeNull()
-    expect(document.activeElement).toBe(cell)
+    await expectFocusReturnedToDataCell(view, "status")
   })
 
   it("cleans up enum focus after committing a selected option", async () => {
@@ -343,19 +379,21 @@ describe("json table a11y and keyboard hardening", () => {
       visiblePaths: ["status"],
       onCellCommit,
     })
-    const { cell } = await openEnum(view)
+    await openEnum(view)
 
     await chooseOption(view.getByRole("option", { name: "approved" }))
 
     await waitFor(() =>
       expect(onCellCommit).toHaveBeenCalledWith(
-        interactionDocument.id,
-        "status",
-        "approved"
+        primitivePendingCellCommit({
+          fieldPath: "status",
+          value: "approved",
+          previousValue: "draft",
+        })
       )
     )
     await waitFor(() => expect(view.queryByRole("combobox")).toBeNull())
-    expect(document.activeElement).toBe(cell)
+    await expectFocusReturnedToDataCell(view, "status")
   })
 
   it("exposes picker button semantics, open state, and dialog aria-controls linkage", async () => {
@@ -378,14 +416,14 @@ describe("json table a11y and keyboard hardening", () => {
       onCellCommit,
       onEditSessionChange: (session) => sessions.push(session),
     })
-    const { cell } = await openPicker(view)
+    await openPicker(view)
 
     keyDown(document, "Escape")
 
     await waitFor(() => expect(pickerPopup()).toBeNull())
     expect(onCellCommit).not.toHaveBeenCalled()
     expect(latestSession(sessions)).toBeNull()
-    expect(document.activeElement).toBe(cell)
+    await expectFocusReturnedToDataCell(view, "shipped_at")
   })
 
   it("keeps read-only cells keyboard inert across scalar, boolean, enum, and picker kinds", async () => {
@@ -418,7 +456,7 @@ describe("json table a11y and keyboard hardening", () => {
       visiblePaths: ["vendor"],
       onCellCommit,
     })
-    const cell = await editableCell(view, "vendor")
+    const { cell } = await editableDataCell(view, "vendor")
     pointerActivateCell(cell)
     const input = view.getByRole("textbox")
 
@@ -426,11 +464,13 @@ describe("json table a11y and keyboard hardening", () => {
     keyDown(input, "Enter")
 
     expect(onCellCommit).toHaveBeenCalledWith(
-      interactionDocument.id,
-      "vendor",
-      "Focus Co"
+      primitivePendingCellCommit({
+        fieldPath: "vendor",
+        value: "Focus Co",
+        previousValue: "ACME",
+      })
     )
     await waitFor(() => expect(view.queryByRole("textbox")).toBeNull())
-    expect(document.activeElement).toBe(cell)
+    await expectFocusReturnedToDataCell(view, "vendor")
   })
 })

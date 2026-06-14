@@ -61,15 +61,11 @@ export function DataCellPickerControl({
   showPickerIcon = true,
   className,
   formatValue,
-  draftValue,
   autoFocus,
   activationSource,
-  open: controlledOpen,
-  onDraftValueChange,
-  onCommit,
-  onOpenChange,
-  onEditingEnd,
-  onEditorHandleChange,
+  session,
+  draft,
+  openState,
   onFocus,
   onBlur,
   onKeyDown,
@@ -90,8 +86,9 @@ export function DataCellPickerControl({
   const [popupStyle, setPopupStyle] =
     React.useState<React.CSSProperties | null>(null)
   const popupId = React.useId()
+  const controlledOpen = openState?.value
   const open = controlledOpen ?? uncontrolledOpen
-  const pickerValue = draftValue ?? uncontrolledDraftValue
+  const pickerValue = draft?.value ?? uncontrolledDraftValue
   const selectedDate = dateFromPickerValue(kind, pickerValue)
   const timeValue = timeFromPickerValue(kind, pickerValue)
   const content =
@@ -105,21 +102,21 @@ export function DataCellPickerControl({
         setPopupStyle(null)
       }
       if (controlledOpen === undefined) setUncontrolledOpen(open)
-      onOpenChange?.(open)
+      openState?.onChange?.(open)
     },
-    [controlledOpen, onOpenChange]
+    [controlledOpen, openState]
   )
 
   React.useEffect(() => {
-    if (draftValue !== undefined) return
+    if (draft?.value !== undefined) return
     setUncontrolledDraftValue(formatDataCellEditValue(kind, value))
-  }, [draftValue, kind, value])
+  }, [draft?.value, kind, value])
 
   const closePopup = React.useCallback(() => {
     openingContext.release()
     setOpen(false)
-    onEditingEnd?.()
-  }, [onEditingEnd, openingContext, setOpen])
+    session.end()
+  }, [openingContext, session, setOpen])
 
   const measurePopupStyle = React.useCallback(() => {
     const trigger = triggerRef.current
@@ -140,14 +137,6 @@ export function DataCellPickerControl({
     setPopupStyle(popupStyleRef.current)
     setOpen(true)
   }, [measurePopupStyle, setOpen])
-
-  React.useLayoutEffect(() => {
-    onEditorHandleChange?.({
-      finish: closePopup,
-      cancel: closePopup,
-    })
-    return () => onEditorHandleChange?.(null)
-  }, [closePopup, onEditorHandleChange])
 
   React.useLayoutEffect(() => {
     if (!autoFocus) return
@@ -202,9 +191,9 @@ export function DataCellPickerControl({
   }, [closePopup, open, openingContext])
 
   const updatePickerValue = (nextValue: string, commit = false) => {
-    if (draftValue === undefined) setUncontrolledDraftValue(nextValue)
+    if (draft?.value === undefined) setUncontrolledDraftValue(nextValue)
     const meta = getDataCellValueMeta({ kind, value: nextValue })
-    onDraftValueChange?.(nextValue, meta)
+    draft?.onChange?.(nextValue, meta)
     if (commit) {
       const commitValue = parseDataCellInputValue({
         kind,
@@ -212,7 +201,10 @@ export function DataCellPickerControl({
         dateTimeZone,
         previousValue: value as DataCellValue,
       }) as string | null
-      onCommit?.(commitValue, meta)
+      session.commit(commitValue, meta, {
+        endEditing: false,
+        markFinished: false,
+      })
     }
   }
 

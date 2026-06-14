@@ -20,7 +20,7 @@ export const CodeViewer = React.forwardRef<CodeViewerHandle, CodeViewerProps>(
       <PlainTextViewerFrame
         props={props}
         forwardedRef={ref}
-        clientFallbackPolicy="non-inline-source"
+        clientFallbackPolicy="always"
         Fallback={CodeViewerFallback}
         Content={CodeViewerContent}
       />

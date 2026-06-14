@@ -7,7 +7,6 @@ import {
   type DataCellActivationSource,
   type DataCellDismissCause,
 } from "@/registry/new-york-v4/ui/data-cell-activation"
-import type { DataCellEditorHandle } from "@/registry/new-york-v4/ui/data-cell-types"
 
 export function useDataCellSelectActivation({
   activationSource,
@@ -16,7 +15,6 @@ export function useDataCellSelectActivation({
   openEditor,
   closeEditor,
   keepOpen,
-  onEditorHandleChange,
 }: {
   activationSource?: DataCellActivationSource
   autoFocus?: boolean
@@ -24,7 +22,6 @@ export function useDataCellSelectActivation({
   openEditor: () => void
   closeEditor: () => void
   keepOpen: () => void
-  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
 }) {
   const openingContext = useDataCellOpeningContext(activationSource, {
     enabled: Boolean(autoFocus),
@@ -55,14 +52,6 @@ export function useDataCellSelectActivation({
   const openActivatedEditor = React.useCallback(() => {
     openEditor()
   }, [openEditor])
-
-  React.useLayoutEffect(() => {
-    onEditorHandleChange?.({
-      finish: closeActivatedEditor,
-      cancel: closeActivatedEditor,
-    })
-    return () => onEditorHandleChange?.(null)
-  }, [closeActivatedEditor, onEditorHandleChange])
 
   React.useLayoutEffect(() => {
     if (!autoFocus) return

@@ -78,8 +78,8 @@ describe("DataCell", () => {
       <div>
         <DataCell kind="text" value="Vendor" />
         <DataCell kind="boolean" value={true} />
-        <DataCell kind="text" mode="edit" value="Editable" />
-        <DataCell kind="date" mode="edit" value="2026-06-12" />
+        <DataCell kind="text" active value="Editable" />
+        <DataCell kind="date" active value="2026-06-12" />
       </div>
     )
 
@@ -108,7 +108,7 @@ describe("DataCell", () => {
         />
         <DataCell
           kind="text"
-          mode="edit"
+          active
           value="Editable"
           className="border border-input shadow-sm"
         />
@@ -142,7 +142,7 @@ describe("DataCell", () => {
     expect(screen.getByText("No date")).toBeTruthy()
 
     unmount()
-    render(<DataCell kind="text" mode="edit" value="" placeholder="No memo" />)
+    render(<DataCell kind="text" active value="" placeholder="No memo" />)
 
     expect((screen.getByRole("textbox") as HTMLInputElement).placeholder).toBe(
       "No memo"
@@ -169,7 +169,7 @@ describe("DataCell", () => {
     render(
       <DataCell
         kind="date"
-        mode="edit"
+        active
         value="2026-06-12"
         draftValue="2026-06-13"
         formatValue={formatValue}
@@ -198,9 +198,7 @@ describe("DataCell", () => {
 
   it("commits number edits from native number inputs", () => {
     const onCommit = vi.fn()
-    render(
-      <DataCell kind="number" mode="edit" value="1.5" onCommit={onCommit} />
-    )
+    render(<DataCell kind="number" active value="1.5" onCommit={onCommit} />)
 
     const input = screen.getByRole("spinbutton") as HTMLInputElement
     expect(input.type).toBe("number")
@@ -218,7 +216,7 @@ describe("DataCell", () => {
     const onNumberCommit = vi.fn()
     const onTextCommit = vi.fn()
     const { unmount } = render(
-      <DataCell kind="number" mode="edit" value="5" onCommit={onNumberCommit} />
+      <DataCell kind="number" active value="5" onCommit={onNumberCommit} />
     )
 
     const numberInput = screen.getByRole("spinbutton") as HTMLInputElement
@@ -236,9 +234,7 @@ describe("DataCell", () => {
     )
 
     unmount()
-    render(
-      <DataCell kind="text" mode="edit" value="memo" onCommit={onTextCommit} />
-    )
+    render(<DataCell kind="text" active value="memo" onCommit={onTextCommit} />)
 
     const textInput = screen.getByRole("textbox") as HTMLInputElement
     fireEvent.change(textInput, { target: { value: "" } })
@@ -257,7 +253,7 @@ describe("DataCell", () => {
 
   it("trims number parser input without losing raw edit metadata", () => {
     const onCommit = vi.fn()
-    render(<DataCell kind="number" mode="edit" value="1" onCommit={onCommit} />)
+    render(<DataCell kind="number" active value="1" onCommit={onCommit} />)
 
     const input = screen.getByRole("spinbutton") as HTMLInputElement
     fireEvent.change(input, { target: { value: "2.5" } })
@@ -300,7 +296,7 @@ describe("DataCell", () => {
     render(
       <DataCell
         kind="text"
-        mode="edit"
+        active
         value="old"
         onCommit={onCommit}
         onKeyDown={onKeyDown}
@@ -328,9 +324,7 @@ describe("DataCell", () => {
 
   it("commits boolean edits", () => {
     const onCommit = vi.fn()
-    render(
-      <DataCell kind="boolean" mode="edit" value={false} onCommit={onCommit} />
-    )
+    render(<DataCell kind="boolean" active value={false} onCommit={onCommit} />)
 
     fireEvent.click(screen.getByRole("checkbox"))
 
@@ -346,7 +340,7 @@ describe("DataCell", () => {
     render(
       <DataCell
         kind="boolean"
-        mode="edit"
+        active
         value={false}
         disabled
         onCommit={onCommit}
@@ -365,7 +359,7 @@ describe("DataCell", () => {
     render(
       <DataCell
         kind="boolean"
-        mode="edit"
+        active
         value={true}
         id="approved"
         aria-label="Approved"
@@ -385,7 +379,7 @@ describe("DataCell", () => {
   })
 
   it("keeps forced display cells inert on hover", () => {
-    render(<DataCell kind="number" value={42} mode="display" editable />)
+    render(<DataCell kind="number" value={42} editable />)
 
     fireEvent.mouseEnter(screen.getByText("42"))
 
@@ -404,7 +398,7 @@ describe("DataCell", () => {
   })
 
   it("renders edit controls only when mode is explicit", () => {
-    render(<DataCell kind="text" value="Vendor" mode="edit" />)
+    render(<DataCell kind="text" value="Vendor" active />)
 
     const input = screen.getByRole("textbox") as HTMLInputElement
     expect(input.value).toBe("Vendor")
@@ -457,13 +451,13 @@ describe("DataCell", () => {
   })
 
   it("focuses the real control when edit controls autofocus", () => {
-    render(<DataCell kind="text" value="Vendor" mode="edit" autoFocus />)
+    render(<DataCell kind="text" value="Vendor" active autoFocus />)
 
     expect(document.activeElement).toBe(screen.getByRole("textbox"))
   })
 
   it("keeps explicit text controls mounted while the input remains focused", () => {
-    render(<DataCell kind="text" value="Vendor" mode="edit" />)
+    render(<DataCell kind="text" value="Vendor" active />)
 
     const input = screen.getByRole("textbox") as HTMLInputElement
     fireEvent.focus(input)
@@ -473,7 +467,7 @@ describe("DataCell", () => {
   })
 
   it("keeps explicit picker controls mounted while the trigger remains focused", () => {
-    render(<DataCell kind="date" value="2026-06-12" mode="edit" />)
+    render(<DataCell kind="date" value="2026-06-12" active />)
 
     const trigger = getPickerTrigger()
     fireEvent.focus(trigger)
@@ -511,7 +505,7 @@ describe("DataCell", () => {
     render(
       <DataCell
         kind="text"
-        mode="edit"
+        active
         value="committed"
         draftValue="draft"
         id="name-cell"
@@ -541,9 +535,7 @@ describe("DataCell", () => {
   })
 
   it("resyncs uncontrolled drafts when the committed value changes", () => {
-    const { rerender } = render(
-      <DataCell kind="text" mode="edit" value="first" />
-    )
+    const { rerender } = render(<DataCell kind="text" active value="first" />)
 
     expect(inputValue("textbox")).toBe("first")
 
@@ -552,21 +544,19 @@ describe("DataCell", () => {
     })
     expect(inputValue("textbox")).toBe("local draft")
 
-    rerender(<DataCell kind="text" mode="edit" value="second" />)
+    rerender(<DataCell kind="text" active value="second" />)
 
     expect(inputValue("textbox")).toBe("second")
   })
 
   it("does not overwrite controlled drafts when the committed value changes", () => {
     const { rerender } = render(
-      <DataCell kind="text" mode="edit" value="first" draftValue="draft" />
+      <DataCell kind="text" active value="first" draftValue="draft" />
     )
 
     expect(inputValue("textbox")).toBe("draft")
 
-    rerender(
-      <DataCell kind="text" mode="edit" value="second" draftValue="draft" />
-    )
+    rerender(<DataCell kind="text" active value="second" draftValue="draft" />)
 
     expect(inputValue("textbox")).toBe("draft")
   })
@@ -575,7 +565,7 @@ describe("DataCell", () => {
     const { rerender } = render(
       <DataCell
         kind="date-time"
-        mode="edit"
+        active
         value="2026-06-12T13:25:37Z"
         draftValue="2026-06-13T08:15:30"
       />
@@ -586,7 +576,7 @@ describe("DataCell", () => {
     rerender(
       <DataCell
         kind="date-time"
-        mode="edit"
+        active
         value="2026-06-14T10:20:30Z"
         draftValue="2026-06-13T08:15:30"
       />
@@ -601,7 +591,7 @@ describe("DataCell", () => {
     render(
       <DataCell
         kind="integer"
-        mode="edit"
+        active
         value="1"
         onDraftValueChange={onDraftValueChange}
         onCommit={onCommit}
@@ -627,7 +617,7 @@ describe("DataCell", () => {
     render(
       <DataCell
         kind="number"
-        mode="edit"
+        active
         value="1"
         onDraftValueChange={onDraftValueChange}
       />
@@ -651,7 +641,7 @@ describe("DataCell", () => {
     render(
       <DataCell
         kind="date-time"
-        mode="edit"
+        active
         value="2026-06-12T13:25:37Z"
         dateTimeZone="preserve"
         onCommit={onCommit}
@@ -675,7 +665,7 @@ describe("DataCell", () => {
     render(
       <DataCell
         kind="date-time"
-        mode="edit"
+        active
         value="2026-06-12T13:25:37+02:00"
         dateTimeZone="preserve"
         onCommit={onCommit}
@@ -698,7 +688,7 @@ describe("DataCell", () => {
     render(
       <DataCell
         kind="date-time"
-        mode="edit"
+        active
         value="2026-06-12T13:25:37+02:00"
         dateTimeZone="utc"
         onCommit={onCommit}
@@ -719,12 +709,7 @@ describe("DataCell", () => {
   it("commits date picker day selections and closes the date picker", () => {
     const onCommit = vi.fn()
     render(
-      <DataCell
-        kind="date"
-        mode="edit"
-        value="2026-06-12"
-        onCommit={onCommit}
-      />
+      <DataCell kind="date" active value="2026-06-12" onCommit={onCommit} />
     )
 
     fireEvent.click(getPickerTrigger())
@@ -748,7 +733,7 @@ describe("DataCell", () => {
   })
 
   it("exposes picker popup state to assistive technology", () => {
-    render(<DataCell kind="date" mode="edit" value="2026-06-12" />)
+    render(<DataCell kind="date" active value="2026-06-12" />)
 
     const trigger = getPickerTrigger()
     expect(trigger.getAttribute("aria-haspopup")).toBe("dialog")
@@ -767,7 +752,7 @@ describe("DataCell", () => {
   })
 
   it("opens picker popups immediately when auto-focused", () => {
-    render(<DataCell kind="date" mode="edit" value="2026-06-12" autoFocus />)
+    render(<DataCell kind="date" active value="2026-06-12" autoFocus />)
 
     const trigger = getPickerTrigger()
     const popup = document.querySelector<HTMLElement>(
@@ -782,12 +767,7 @@ describe("DataCell", () => {
   it("toggles picker popups from the trigger without committing", () => {
     const onCommit = vi.fn()
     render(
-      <DataCell
-        kind="date"
-        mode="edit"
-        value="2026-06-12"
-        onCommit={onCommit}
-      />
+      <DataCell kind="date" active value="2026-06-12" onCommit={onCommit} />
     )
 
     const trigger = getPickerTrigger()
@@ -809,7 +789,7 @@ describe("DataCell", () => {
     const { rerender } = render(
       <DataCell
         kind="date"
-        mode="edit"
+        active
         value="2026-06-12"
         open={false}
         onOpenChange={onOpenChange}
@@ -827,7 +807,7 @@ describe("DataCell", () => {
     rerender(
       <DataCell
         kind="date"
-        mode="edit"
+        active
         value="2026-06-12"
         open
         onOpenChange={onOpenChange}
@@ -843,7 +823,7 @@ describe("DataCell", () => {
   it("closes picker popups on outside pointer down and Escape", () => {
     const { unmount } = render(
       <div>
-        <DataCell kind="date" mode="edit" value="2026-06-12" />
+        <DataCell kind="date" active value="2026-06-12" />
         <button type="button">Outside</button>
       </div>
     )
@@ -859,7 +839,7 @@ describe("DataCell", () => {
     ).toBeNull()
 
     unmount()
-    render(<DataCell kind="date" mode="edit" value="2026-06-12" />)
+    render(<DataCell kind="date" active value="2026-06-12" />)
 
     fireEvent.click(getPickerTrigger())
     expect(
@@ -876,12 +856,7 @@ describe("DataCell", () => {
     const onTimeCommit = vi.fn()
     const onDateTimeCommit = vi.fn()
     const { unmount } = render(
-      <DataCell
-        kind="time"
-        mode="edit"
-        value="13:25:37"
-        onCommit={onTimeCommit}
-      />
+      <DataCell kind="time" active value="13:25:37" onCommit={onTimeCommit} />
     )
 
     fireEvent.click(getPickerTrigger())
@@ -898,7 +873,7 @@ describe("DataCell", () => {
     render(
       <DataCell
         kind="date-time"
-        mode="edit"
+        active
         value="2026-06-12T13:25:37Z"
         onCommit={onDateTimeCommit}
       />
@@ -925,7 +900,7 @@ describe("DataCell", () => {
     render(
       <DataCell
         kind="date-time"
-        mode="edit"
+        active
         value="2026-06-12T13:25:37Z"
         dateTimeZone="preserve"
         onCommit={onCommit}
@@ -954,7 +929,7 @@ describe("DataCell", () => {
     render(
       <DataCell
         kind="date-time"
-        mode="edit"
+        active
         value="2026-06-12T13:25:37.123Z"
         dateTimeZone="preserve"
         onCommit={onCommit}
@@ -984,7 +959,7 @@ describe("DataCell", () => {
     render(
       <DataCell
         kind="date-time"
-        mode="edit"
+        active
         value="2026-06-12T13:25:37.123+02:00"
         dateTimeZone="preserve"
         onCommit={onCommit}
@@ -1009,12 +984,7 @@ describe("DataCell", () => {
     const onTimeCommit = vi.fn()
     const onDateCommit = vi.fn()
     const { unmount } = render(
-      <DataCell
-        kind="time"
-        mode="edit"
-        value="13:25:37"
-        onCommit={onTimeCommit}
-      />
+      <DataCell kind="time" active value="13:25:37" onCommit={onTimeCommit} />
     )
 
     fireEvent.click(screen.getByRole("button"))
@@ -1029,12 +999,7 @@ describe("DataCell", () => {
 
     unmount()
     render(
-      <DataCell
-        kind="date"
-        mode="edit"
-        value="2026-06-12"
-        onCommit={onDateCommit}
-      />
+      <DataCell kind="date" active value="2026-06-12" onCommit={onDateCommit} />
     )
 
     const dateTrigger = getPickerTrigger()
@@ -1045,7 +1010,7 @@ describe("DataCell", () => {
   })
 
   it("preserves fractional seconds in time picker edit values", () => {
-    render(<DataCell kind="time" mode="edit" value="13:25:37.123" />)
+    render(<DataCell kind="time" active value="13:25:37.123" />)
 
     fireEvent.click(getPickerTrigger())
 
@@ -1054,14 +1019,14 @@ describe("DataCell", () => {
 
   it("mounts date and time picker triggers in edit mode", () => {
     const { unmount } = render(
-      <DataCell kind="date" mode="edit" value="2026-06-12" />
+      <DataCell kind="date" active value="2026-06-12" />
     )
 
     expect(screen.getByRole("button").textContent).toContain("12/06/2026")
     expect(screen.queryByDisplayValue("2026-06-12")).toBeNull()
 
     unmount()
-    render(<DataCell kind="time" mode="edit" value="13:25:37" />)
+    render(<DataCell kind="time" active value="13:25:37" />)
 
     fireEvent.click(screen.getByRole("button"))
 

@@ -8,6 +8,8 @@ import type { JsonTableActiveCell } from "@/components/json-table/json-table-edi
 import {
   findEditableCell,
   interactionDocument,
+  primitiveEventTarget,
+  primitivePendingCellCommit,
   renderInteractionRow,
 } from "./json-table-interaction-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
@@ -53,7 +55,7 @@ async function openEnumFromClick({
   })
   const cell = await editableCell(view, fieldPath)
 
-  fireEvent.click(cell, {
+  fireEvent.click(primitiveEventTarget(cell), {
     button: 0,
     clientX: 0,
     clientY: 0,
@@ -142,9 +144,10 @@ describe("json table enum accessibility interactions", () => {
       const view = renderInteractionRow({ visiblePaths: ["status"] })
       const cell = await editableCell(view)
       const focusSpy = vi.spyOn(HTMLElement.prototype, "focus")
+      const surface = primitiveEventTarget(cell) as HTMLElement
 
-      cell.focus()
-      fireEvent.keyDown(cell, { key })
+      surface.focus()
+      fireEvent.keyDown(surface, { key })
 
       const trigger = await view.findByRole("combobox")
       await waitFor(() =>
@@ -167,9 +170,11 @@ describe("json table enum accessibility interactions", () => {
 
     await waitFor(() =>
       expect(onCellCommit).toHaveBeenCalledWith(
-        interactionDocument.id,
-        "status",
-        "approved"
+        primitivePendingCellCommit({
+          fieldPath: "status",
+          value: "approved",
+          previousValue: "draft",
+        })
       )
     )
     expect(onCellCommit).toHaveBeenCalledTimes(1)

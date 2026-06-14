@@ -60,10 +60,34 @@ export function PretextMarkdownChunkRenderer({
     return (
       <section
         aria-label={`${language.toUpperCase()} frontmatter`}
-        className="rounded-md border bg-muted/40 p-4 font-mono text-[13px] leading-6 text-muted-foreground"
+        className="overflow-hidden rounded-md border bg-muted/35 text-sm text-muted-foreground"
         data-pretext-markdown-frontmatter={language}
       >
-        <pre className="m-0 whitespace-pre-wrap">
+        <div className="flex min-h-9 items-center border-b bg-muted/55 px-3">
+          <span className="text-xs font-medium tracking-normal uppercase">
+            {language} frontmatter
+          </span>
+        </div>
+        {chunk.frontmatterEntries?.length ? (
+          <dl
+            aria-label={`${language.toUpperCase()} frontmatter metadata`}
+            className="grid gap-x-4 gap-y-2 px-4 py-3 sm:grid-cols-[max-content_minmax(0,1fr)]"
+            data-pretext-markdown-frontmatter-metadata=""
+          >
+            {chunk.frontmatterEntries.map((entry) => (
+              <React.Fragment key={entry.key}>
+                <dt className="font-medium text-foreground">{entry.key}</dt>
+                <dd
+                  className="min-w-0 [overflow-wrap:anywhere]"
+                  data-frontmatter-value-kind={entry.valueKind}
+                >
+                  {entry.value}
+                </dd>
+              </React.Fragment>
+            ))}
+          </dl>
+        ) : null}
+        <pre className="m-0 border-t bg-background/55 p-4 font-mono text-[13px] leading-6 whitespace-pre-wrap">
           <code>{chunk.markdown}</code>
         </pre>
       </section>
@@ -110,6 +134,12 @@ function createPretextMarkdownRenderSource({
 
 const PRETEXT_MARKDOWN_WRAP_CLASS_NAME =
   "min-w-0 [overflow-wrap:anywhere] [word-break:normal]"
+const PRETEXT_MARKDOWN_CODE_SOURCE_CLASS_NAME =
+  "max-w-full overflow-x-auto p-4 text-sm leading-6 [overflow-wrap:normal] [&_code]:inline-block [&_code]:min-w-max"
+const PRETEXT_MARKDOWN_CODE_LINE_NUMBERS_CLASS_NAME =
+  "[counter-reset:line] [&>[data-line]::before]:mr-6 [&>[data-line]::before]:inline-block [&>[data-line]::before]:w-5 [&>[data-line]::before]:select-none [&>[data-line]::before]:text-right [&>[data-line]::before]:text-muted-foreground/70 [&>[data-line]::before]:[counter-increment:line] [&>[data-line]::before]:content-[counter(line)] [&[data-line-numbers-max-digits='2']>[data-line]::before]:w-7 [&[data-line-numbers-max-digits='3']>[data-line]::before]:w-9 [&[data-line-numbers-max-digits='4']>[data-line]::before]:w-11"
+const PRETEXT_MARKDOWN_CODE_HIGHLIGHT_CLASS_NAME =
+  "[&>[data-highlighted-line]]:bg-muted-foreground/10 [&_[data-highlighted-chars]]:rounded [&_[data-highlighted-chars]]:bg-muted-foreground/15 [&_[data-highlighted-chars]]:px-0.5"
 const PRETEXT_MARKDOWN_CODE_LANGUAGE_ALIASES: Record<string, string> = {
   "mermaid-js": "mermaid",
   mmd: "mermaid",
@@ -128,6 +158,10 @@ type PretextMarkdownTabsContextValue = {
 
 const PretextMarkdownTabsContext =
   React.createContext<PretextMarkdownTabsContextValue | null>(null)
+
+const PretextMarkdownCodeBlockContext = React.createContext<{
+  language: string | null
+} | null>(null)
 
 const markdownComponents = {
   figure: ({ className, children, node, ...props }) => {
@@ -267,11 +301,11 @@ const markdownComponents = {
           footnoteBackref && "ml-1 text-muted-foreground no-underline",
           className
         )}
+        {...props}
         href={safeHref}
         rel={external ? "noopener noreferrer" : undefined}
         target={external ? "_blank" : undefined}
         title={linkTitle}
-        {...props}
         {...(ariaLabel ? { "aria-label": ariaLabel } : {})}
       >
         {children}
@@ -298,7 +332,7 @@ const markdownComponents = {
     return (
       <blockquote
         className={cn(
-          "my-5 border-l-4 border-border pl-4 text-muted-foreground",
+          "my-5 border-l-4 border-border pl-4 text-muted-foreground [&>ol]:my-2 [&>p]:my-2 [&>p:first-child]:mt-0 [&>p:last-child]:mb-0 [&>ul]:my-2 [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:border-muted-foreground/30 [&_blockquote]:pl-3",
           PRETEXT_MARKDOWN_WRAP_CLASS_NAME,
           className
         )}
@@ -311,6 +345,12 @@ const markdownComponents = {
   br: ({ node: _node, ...props }) => <br {...props} />,
   del: ({ className, node: _node, ...props }) => (
     <del className={cn("text-muted-foreground", className)} {...props} />
+  ),
+  ins: ({ className, node: _node, ...props }) => (
+    <ins
+      className={cn("underline decoration-border underline-offset-2", className)}
+      {...props}
+    />
   ),
   details: ({ className, node: _node, ...props }) => (
     <details
@@ -362,25 +402,64 @@ const markdownComponents = {
       {...props}
     />
   ),
-  ul: ({ className, node: _node, ...props }) => (
-    <ul className={cn("my-4 ml-6 list-disc space-y-1", className)} {...props} />
+  q: ({ className, node: _node, ...props }) => (
+    <q className={cn("italic text-foreground", className)} {...props} />
   ),
-  ol: ({ className, node: _node, ...props }) => (
-    <ol
-      className={cn("my-4 ml-6 list-decimal space-y-1", className)}
-      {...props}
-    />
-  ),
-  li: ({ className, node: _node, ...props }) => (
-    <li
+  samp: ({ className, node: _node, ...props }) => (
+    <samp
       className={cn(
-        "pl-1 leading-7",
+        "rounded bg-muted px-1 py-0.5 font-mono text-[0.9em]",
         PRETEXT_MARKDOWN_WRAP_CLASS_NAME,
         className
       )}
       {...props}
     />
   ),
+  var: ({ className, node: _node, ...props }) => (
+    <var
+      className={cn("font-medium italic text-foreground", className)}
+      {...props}
+    />
+  ),
+  ul: ({ className, node: _node, ...props }) => (
+    <ul
+      className={cn(
+        "my-4 ml-6 list-disc space-y-1 marker:text-muted-foreground [&_ul]:my-1 [&_ul]:list-[circle] [&_ul_ul]:list-[square]",
+        className
+      )}
+      {...props}
+    />
+  ),
+  ol: ({ className, node: _node, ...props }) => (
+    <ol
+      className={cn(
+        "my-4 ml-6 list-decimal space-y-1 marker:text-muted-foreground [&_ol]:my-1 [&_ol]:list-[lower-alpha] [&_ol_ol]:list-[lower-roman]",
+        className
+      )}
+      {...props}
+    />
+  ),
+  li: ({ children, className, node, ...props }) => {
+    const taskListItem =
+      isPretextTaskListItem(children) ||
+      isPretextTaskListItemNode(node) ||
+      /\btask-list-item\b/.test(className ?? "")
+
+    return (
+      <li
+        className={cn(
+          "pl-1 leading-7 [&>ol]:mt-1 [&>p]:my-1 [&>p:first-child]:mt-0 [&>p:last-child]:mb-0 [&>ul]:mt-1",
+          taskListItem && "list-none pl-0",
+          PRETEXT_MARKDOWN_WRAP_CLASS_NAME,
+          className
+        )}
+        data-pretext-task-list-item={taskListItem ? "" : undefined}
+        {...props}
+      >
+        {children}
+      </li>
+    )
+  },
   input: ({ className, checked, node: _node, type, ...props }) => {
     if (type !== "checkbox") {
       return <input className={className} type={type} {...props} />
@@ -456,10 +535,9 @@ const markdownComponents = {
       return (
         <pre
           aria-label="mermaid code source"
-          className={cn(
-            "overflow-x-auto p-4 text-sm leading-6 [overflow-wrap:normal]",
-            className
-          )}
+          className={cn(PRETEXT_MARKDOWN_CODE_SOURCE_CLASS_NAME, className)}
+          data-pretext-code-source=""
+          role="region"
           tabIndex={0}
           {...props}
         >
@@ -471,10 +549,9 @@ const markdownComponents = {
     return (
       <pre
         aria-label={`${language ? `${language} ` : ""}code source`}
-        className={cn(
-          "overflow-x-auto p-4 text-sm leading-6 [overflow-wrap:normal]",
-          className
-        )}
+        className={cn(PRETEXT_MARKDOWN_CODE_SOURCE_CLASS_NAME, className)}
+        data-pretext-code-source=""
+        role="region"
         tabIndex={0}
         {...props}
       >
@@ -482,18 +559,52 @@ const markdownComponents = {
       </pre>
     )
   },
-  code: ({ className, children, node: _node, ...props }) => (
-    <code
-      className={cn(
-        "rounded bg-muted px-1 py-0.5 font-mono text-[0.9em]",
-        PRETEXT_MARKDOWN_WRAP_CLASS_NAME,
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </code>
-  ),
+  code: ({ className, children, node: _node, ...props }) => {
+    const codeProps = props as typeof props & {
+      "data-line-numbers"?: unknown
+    }
+    const lineNumbers = codeProps["data-line-numbers"] != null
+    return (
+      <code
+        className={cn(
+          "rounded bg-muted px-1 py-0.5 font-mono text-[0.9em]",
+          PRETEXT_MARKDOWN_WRAP_CLASS_NAME,
+          PRETEXT_MARKDOWN_CODE_HIGHLIGHT_CLASS_NAME,
+          lineNumbers && PRETEXT_MARKDOWN_CODE_LINE_NUMBERS_CLASS_NAME,
+          className
+        )}
+        {...props}
+      >
+        {children}
+      </code>
+    )
+  },
+  span: ({ className, children, node: _node, ...props }) => {
+    const spanProps = props as typeof props & {
+      "data-line"?: unknown
+    }
+    const codeBlockContext = React.useContext(PretextMarkdownCodeBlockContext)
+    const diffLineKind =
+      codeBlockContext?.language === "diff" && spanProps["data-line"] != null
+        ? readPretextMarkdownDiffLineKind(extractReactText(children))
+        : null
+
+    return (
+      <span
+        {...props}
+        className={cn(
+          diffLineKind === "add" &&
+            "block -mx-4 border-l-2 border-emerald-500 bg-emerald-500/10 px-4",
+          diffLineKind === "remove" &&
+            "block -mx-4 border-l-2 border-red-500 bg-red-500/10 px-4",
+          className
+        )}
+        data-pretext-code-diff-line={diffLineKind ?? undefined}
+      >
+        {children}
+      </span>
+    )
+  },
   section: ({ className, node: _node, ...props }) => {
     const footnoteSection = isPretextFootnoteSection(props)
     return (
@@ -520,7 +631,11 @@ const markdownComponents = {
     />
   ),
   hr: ({ className, node: _node, ...props }) => (
-    <hr className={cn("my-8 border-border", className)} {...props} />
+    <hr
+      className={cn("my-10 border-0 border-t border-border/80", className)}
+      data-pretext-thematic-break=""
+      {...props}
+    />
   ),
   img: ({ className, alt, node: _node, src, ...props }) => (
     <PretextMarkdownImage
@@ -704,6 +819,35 @@ function PretextMarkdownTable({
     updateCopyText()
   })
 
+  const scrollTableRegion = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      let nextScrollLeft: number | null = null
+      const element = event.currentTarget
+      const step = Math.max(48, element.clientWidth * 0.25)
+
+      switch (event.key) {
+        case "ArrowLeft":
+          nextScrollLeft = element.scrollLeft - step
+          break
+        case "ArrowRight":
+          nextScrollLeft = element.scrollLeft + step
+          break
+        case "End":
+          nextScrollLeft = element.scrollWidth - element.clientWidth
+          break
+        case "Home":
+          nextScrollLeft = 0
+          break
+        default:
+          return
+      }
+
+      event.preventDefault()
+      element.scrollLeft = Math.max(0, nextScrollLeft)
+    },
+    []
+  )
+
   return (
     <div
       aria-label="Markdown table"
@@ -711,6 +855,7 @@ function PretextMarkdownTable({
       role="region"
       tabIndex={0}
       onFocusCapture={updateCopyText}
+      onKeyDown={scrollTableRegion}
       onMouseEnter={updateCopyText}
     >
       <PretextMarkdownCopyButton
@@ -748,7 +893,7 @@ function PretextMarkdownComponent({
               PRETEXT_MARKDOWN_WRAP_CLASS_NAME
             )}
           >
-            {component.props.title || "Details"}
+            {readPretextComponentStringProp(component.props.title) ?? "Details"}
           </summary>
           <div className="border-t px-4 py-3 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
             {children}
@@ -756,13 +901,18 @@ function PretextMarkdownComponent({
         </details>
       )
     case "Badge": {
-      const label = component.props.label ?? component.props.value ?? "Badge"
+      const label =
+        readPretextComponentDisplayProp(component.props.label) ??
+        readPretextComponentDisplayProp(component.props.value) ??
+        "Badge"
       return (
         <span
           className={cn(
             "my-3 inline-flex max-w-full items-center rounded-md border px-2 py-1 text-sm font-medium",
             PRETEXT_MARKDOWN_WRAP_CLASS_NAME,
-            componentToneClassName(component.props.tone)
+            componentToneClassName(
+              readPretextComponentStringProp(component.props.tone)
+            )
           )}
           data-pretext-component="Badge"
         >
@@ -776,7 +926,9 @@ function PretextMarkdownComponent({
         <PretextMarkdownCallout
           callout={{
             kind,
-            title: component.props.title || CALLOUT_LABELS[kind],
+            title:
+              readPretextComponentStringProp(component.props.title) ??
+              CALLOUT_LABELS[kind],
           }}
           className={undefined}
           componentName="Callout"
@@ -788,10 +940,14 @@ function PretextMarkdownComponent({
     case "Image":
       return (
         <PretextMarkdownImage
-          alt={component.props.alt ?? component.props.label ?? ""}
+          alt={
+            readPretextComponentStringProp(component.props.alt) ??
+            readPretextComponentStringProp(component.props.label) ??
+            ""
+          }
           componentName="Image"
-          src={component.props.src ?? ""}
-          title={component.props.title}
+          src={readPretextComponentStringProp(component.props.src) ?? ""}
+          title={readPretextComponentStringProp(component.props.title)}
         />
       )
     case "Diagram":
@@ -800,9 +956,9 @@ function PretextMarkdownComponent({
           className={undefined}
           componentName="Diagram"
           source={normalizePretextMarkdownDiagramSource(
-            component.props.source ?? ""
+            readPretextComponentStringProp(component.props.source) ?? ""
           )}
-          title={component.props.title}
+          title={readPretextComponentStringProp(component.props.title)}
         />
       )
     case "Metric":
@@ -817,7 +973,7 @@ function PretextMarkdownComponent({
               PRETEXT_MARKDOWN_WRAP_CLASS_NAME
             )}
           >
-            {component.props.label ?? "Metric"}
+            {readPretextComponentDisplayProp(component.props.label) ?? "Metric"}
           </span>
           <span
             className={cn(
@@ -825,31 +981,58 @@ function PretextMarkdownComponent({
               PRETEXT_MARKDOWN_WRAP_CLASS_NAME
             )}
           >
-            {component.props.value ?? "-"}
+            {readPretextComponentDisplayProp(component.props.value) ?? "-"}
           </span>
         </div>
       )
     case "Tab":
       return (
-        <PretextMarkdownTab title={component.props.title || "Tab"}>
+        <PretextMarkdownTab
+          title={readPretextComponentStringProp(component.props.title) ?? "Tab"}
+        >
           {children}
         </PretextMarkdownTab>
       )
     case "Tabs":
       return (
-        <PretextMarkdownTabs label={component.props.label || "Tabs"}>
+        <PretextMarkdownTabs
+          label={
+            readPretextComponentStringProp(component.props.label) ?? "Tabs"
+          }
+        >
           {children}
         </PretextMarkdownTabs>
       )
     case "Video":
       return (
         <PretextMarkdownVideo
-          label={component.props.label}
-          src={component.props.src ?? ""}
-          title={component.props.title}
+          controls={readPretextComponentBooleanProp(
+            component.props.controls,
+            true
+          )}
+          label={readPretextComponentStringProp(component.props.label)}
+          loop={readPretextComponentBooleanProp(component.props.loop, false)}
+          muted={readPretextComponentBooleanProp(component.props.muted, false)}
+          src={readPretextComponentStringProp(component.props.src) ?? ""}
+          title={readPretextComponentStringProp(component.props.title)}
         />
       )
   }
+}
+
+function readPretextComponentStringProp(value: unknown) {
+  return typeof value === "string" ? value : undefined
+}
+
+function readPretextComponentDisplayProp(value: unknown) {
+  return typeof value === "string" ||
+    (typeof value === "number" && Number.isFinite(value))
+    ? String(value)
+    : undefined
+}
+
+function readPretextComponentBooleanProp(value: unknown, fallback: boolean) {
+  return typeof value === "boolean" ? value : fallback
 }
 
 function PretextMarkdownCodeBlock({
@@ -867,6 +1050,7 @@ function PretextMarkdownCodeBlock({
   const caption = readPretextMarkdownCodeFigureCaption(node)
   const text = readPretextMarkdownCodeFigureSource(node).replace(/\n$/, "")
   const renderedPre = findPretextMarkdownRenderedPre(children)
+  const figureRef = React.useRef<HTMLElement | null>(null)
 
   if (language === "mermaid") {
     return (
@@ -891,6 +1075,7 @@ function PretextMarkdownCodeBlock({
       )}
       data-pretext-code-language={language ?? undefined}
       data-pretext-code-title={title ?? undefined}
+      ref={figureRef}
       role="group"
       {...props}
     >
@@ -912,10 +1097,19 @@ function PretextMarkdownCodeBlock({
           className="ml-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
           text={text}
         />
+        <PretextMarkdownCopyButton
+          ariaLabel="Copy selected code or block"
+          className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+          text={() =>
+            readPretextMarkdownSelectedText(figureRef.current) ?? text
+          }
+        />
       </div>
-      {renderedPre ?? (
-        <PretextMarkdownCodeSourceFallback language={language} text={text} />
-      )}
+      <PretextMarkdownCodeBlockContext.Provider value={{ language }}>
+        {renderedPre ?? (
+          <PretextMarkdownCodeSourceFallback language={language} text={text} />
+        )}
+      </PretextMarkdownCodeBlockContext.Provider>
       {caption ? (
         <figcaption
           className={cn(
@@ -941,7 +1135,9 @@ function PretextMarkdownCodeSourceFallback({
   return (
     <pre
       aria-label={`${language ? `${language} ` : ""}code source`}
-      className="overflow-x-auto p-4 text-sm leading-6 [overflow-wrap:normal]"
+      className={PRETEXT_MARKDOWN_CODE_SOURCE_CLASS_NAME}
+      data-pretext-code-source=""
+      role="region"
       tabIndex={0}
     >
       <code>{text}</code>
@@ -958,6 +1154,7 @@ function PretextMarkdownTabs({
 }) {
   const [tabs, setTabs] = React.useState<PretextMarkdownTabRegistration[]>([])
   const [selectedId, setSelectedId] = React.useState<string | null>(null)
+  const tabButtonRefs = React.useRef(new Map<string, HTMLButtonElement>())
 
   const registerTab = React.useCallback(
     (tab: PretextMarkdownTabRegistration) => {
@@ -975,13 +1172,72 @@ function PretextMarkdownTabs({
     []
   )
 
+  React.useEffect(() => {
+    if (!tabs.length) {
+      setSelectedId(null)
+      return
+    }
+
+    if (selectedId === null || tabs.some((tab) => tab.id === selectedId)) {
+      return
+    }
+
+    setSelectedId(tabs[0].id)
+  }, [selectedId, tabs])
+
+  const activeTabId = selectedId ?? tabs[0]?.id ?? null
+
+  const selectTab = React.useCallback((id: string) => {
+    setSelectedId(id)
+  }, [])
+
+  const selectAndFocusTab = React.useCallback((id: string) => {
+    setSelectedId(id)
+    tabButtonRefs.current.get(id)?.focus()
+  }, [])
+
+  const handleTabListKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!tabs.length) return
+
+      const activeIndex = Math.max(
+        0,
+        tabs.findIndex((tab) => tab.id === activeTabId)
+      )
+      let nextIndex: number | null = null
+
+      switch (event.key) {
+        case "ArrowDown":
+        case "ArrowRight":
+          nextIndex = (activeIndex + 1) % tabs.length
+          break
+        case "ArrowLeft":
+        case "ArrowUp":
+          nextIndex = (activeIndex - 1 + tabs.length) % tabs.length
+          break
+        case "End":
+          nextIndex = tabs.length - 1
+          break
+        case "Home":
+          nextIndex = 0
+          break
+        default:
+          return
+      }
+
+      event.preventDefault()
+      selectAndFocusTab(tabs[nextIndex].id)
+    },
+    [activeTabId, selectAndFocusTab, tabs]
+  )
+
   const contextValue = React.useMemo<PretextMarkdownTabsContextValue>(
     () => ({
-      selectedId,
+      selectedId: activeTabId,
       registerTab,
-      selectTab: setSelectedId,
+      selectTab,
     }),
-    [registerTab, selectedId]
+    [activeTabId, registerTab, selectTab]
   )
 
   return (
@@ -996,10 +1252,11 @@ function PretextMarkdownTabs({
           <div
             aria-label={label}
             className="flex flex-wrap gap-1 border-b bg-muted/30 p-1"
+            onKeyDown={handleTabListKeyDown}
             role="tablist"
           >
             {tabs.map((tab) => {
-              const selected = tab.id === selectedId
+              const selected = tab.id === activeTabId
               return (
                 <button
                   key={tab.id}
@@ -1013,7 +1270,15 @@ function PretextMarkdownTabs({
                       : "text-muted-foreground hover:bg-background/70 hover:text-foreground"
                   )}
                   id={`${tab.id}-tab`}
+                  ref={(node) => {
+                    if (node) {
+                      tabButtonRefs.current.set(tab.id, node)
+                    } else {
+                      tabButtonRefs.current.delete(tab.id)
+                    }
+                  }}
                   role="tab"
+                  tabIndex={selected ? 0 : -1}
                   type="button"
                   onClick={() => setSelectedId(tab.id)}
                 >
@@ -1154,7 +1419,7 @@ function PretextMarkdownDiagram({
     <figure
       aria-label={title || "Mermaid diagram"}
       className={cn(
-        "my-5 min-h-40 overflow-hidden rounded-md border bg-muted/30",
+        "group my-5 min-h-40 overflow-hidden rounded-md border bg-muted/30",
         className
       )}
       data-diagram-language="mermaid"
@@ -1168,7 +1433,7 @@ function PretextMarkdownDiagram({
         </span>
         <PretextMarkdownCopyButton
           ariaLabel="Copy diagram source"
-          className="ml-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+          className="ml-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
           text={source}
         />
       </div>
@@ -1207,7 +1472,7 @@ function PretextMarkdownCopyButton({
   ariaLabel: string
   className?: string
   idleIcon?: React.ReactNode
-  text: string
+  text: string | (() => string)
 }) {
   const [status, setStatus] = React.useState<"copied" | "failed" | "idle">(
     "idle"
@@ -1223,6 +1488,7 @@ function PretextMarkdownCopyButton({
 
   const copyText = () => {
     if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
+    const resolvedText = typeof text === "function" ? text() : text
 
     const resetStatus = () => {
       timeoutRef.current = window.setTimeout(() => {
@@ -1232,7 +1498,7 @@ function PretextMarkdownCopyButton({
     }
 
     try {
-      const result = navigator.clipboard?.writeText(text)
+      const result = navigator.clipboard?.writeText(resolvedText)
       void Promise.resolve(result)
         .then(() => {
           setStatus("copied")
@@ -1276,6 +1542,37 @@ function PretextMarkdownCopyButton({
   )
 }
 
+function readPretextMarkdownSelectedText(root: HTMLElement | null) {
+  if (!root || typeof window === "undefined") return null
+  const selection = window.getSelection()
+  if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+    return null
+  }
+
+  const selectedText = selection.toString().replace(/\n$/, "")
+  if (!selectedText) return null
+
+  for (let index = 0; index < selection.rangeCount; index += 1) {
+    const range = selection.getRangeAt(index)
+    if (rangeIntersectsElement(range, root)) return selectedText
+  }
+
+  return null
+}
+
+function rangeIntersectsElement(range: Range, element: HTMLElement) {
+  try {
+    return range.intersectsNode(element)
+  } catch {
+    const container = range.commonAncestorContainer
+    return element.contains(
+      container.nodeType === Node.ELEMENT_NODE
+        ? (container as Element)
+        : container.parentElement
+    )
+  }
+}
+
 function PretextMarkdownImage({
   alt,
   className,
@@ -1296,6 +1593,10 @@ function PretextMarkdownImage({
   const [retryVersion, setRetryVersion] = React.useState(0)
   const label = alt || safeSrc || "Markdown image"
   const caption = title || null
+  const reactId = React.useId()
+  const captionId = caption
+    ? `pretext-markdown-image-caption-${reactId.replace(/:/g, "")}`
+    : undefined
 
   React.useEffect(() => {
     setState({ height: null, status: "loading", width: null })
@@ -1351,6 +1652,7 @@ function PretextMarkdownImage({
           key={`${safeSrc}:${retryVersion}`}
           {...props}
           alt={alt ?? ""}
+          aria-describedby={captionId}
           className={cn(
             "block max-h-[70vh] max-w-full bg-card object-contain",
             state.status === "loading" && "min-h-32 opacity-0"
@@ -1372,7 +1674,11 @@ function PretextMarkdownImage({
         />
       </span>
       {caption ? (
-        <span className="block border-t bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+        <span
+          className="block border-t bg-muted/30 px-3 py-2 text-sm text-muted-foreground"
+          data-pretext-image-caption=""
+          id={captionId}
+        >
           {caption}
         </span>
       ) : null}
@@ -1441,19 +1747,28 @@ function PretextMarkdownImagePlaceholder({
 }
 
 function PretextMarkdownVideo({
+  controls,
   label,
+  loop,
+  muted,
   src,
   title,
 }: {
+  controls: boolean
   label: string | undefined
+  loop: boolean
+  muted: boolean
   src: string
   title: string | undefined
 }) {
   const safeSrc = sanitizePretextMarkdownMediaUrl(src)
   const [state, setState] = React.useState<"failed" | "ready">("ready")
+  const previousSafeSrcRef = React.useRef(safeSrc)
   const videoLabel = label || title || safeSrc || "Markdown video"
 
   React.useEffect(() => {
+    if (previousSafeSrcRef.current === safeSrc) return
+    previousSafeSrcRef.current = safeSrc
     setState("ready")
   }, [safeSrc])
 
@@ -1478,7 +1793,9 @@ function PretextMarkdownVideo({
       <video
         aria-label={videoLabel}
         className="block max-h-[70vh] w-full bg-card"
-        controls
+        controls={controls}
+        loop={loop}
+        muted={muted}
         preload="metadata"
         src={safeSrc}
         title={title}
@@ -1710,6 +2027,35 @@ function isPretextFootnoteBackrefHref(href: string) {
   return /^#(?:user-content-)?fnref-[^#]+$/i.test(href)
 }
 
+function isPretextTaskListItem(children: React.ReactNode) {
+  return React.Children.toArray(children).some((child) => {
+    if (!React.isValidElement<{ children?: React.ReactNode; type?: unknown }>(
+      child
+    ))
+      return false
+
+    if (child.type === "input" && child.props.type === "checkbox") return true
+    if (child.type !== "p") return false
+
+    return React.Children.toArray(child.props.children).some(
+      (paragraphChild) =>
+        React.isValidElement<{ type?: unknown }>(paragraphChild) &&
+        paragraphChild.type === "input" &&
+        paragraphChild.props.type === "checkbox"
+    )
+  })
+}
+
+function isPretextTaskListItemNode(node: unknown) {
+  const properties =
+    node && typeof node === "object" && "properties" in node
+      ? (node.properties as Record<string, unknown>)
+      : null
+  const className = properties?.className
+
+  return Array.isArray(className) && className.includes("task-list-item")
+}
+
 function extractReactText(node: React.ReactNode): string {
   if (typeof node === "string" || typeof node === "number") return String(node)
   if (Array.isArray(node)) return node.map(extractReactText).join("")
@@ -1717,6 +2063,16 @@ function extractReactText(node: React.ReactNode): string {
     return extractReactText(node.props.children)
   }
   return ""
+}
+
+function readPretextMarkdownDiffLineKind(text: string) {
+  const trimmedStart = text.trimStart()
+  if (trimmedStart.startsWith("+++") || trimmedStart.startsWith("---")) {
+    return null
+  }
+  if (trimmedStart.startsWith("+")) return "add"
+  if (trimmedStart.startsWith("-")) return "remove"
+  return null
 }
 
 function isPretextMarkdownCodeFigure(node: unknown) {

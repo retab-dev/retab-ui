@@ -12,7 +12,7 @@ turns cell commits into parent document patches.
 That is the right direction. The remaining gap is sharper:
 
 - the state model is correct, but still takes effort to prove
-- the commit visibility field is now semantic, but still needs to stay defended
+- the commit visibleThrough field is now semantic, but still needs to stay defended
 - test spies still use old document-change vocabulary
 - architecture tests prove absence of the old split, but not the whole state
   algebra
@@ -87,7 +87,7 @@ read like data, not ceremony.
 The final `JsonTableCellCommit` includes:
 
 ```ts
-visibility: "projectedDocumentValue" | "primitivePendingValue"
+visibleThrough: "projectedDocumentValue" | "primitivePendingValue"
 ```
 
 This is the chosen state word: it names which local owner keeps the committed
@@ -95,7 +95,7 @@ value visible before the parent document echo is reconciled.
 
 ### Target
 
-Keep `visibility` as the one commit lifecycle field.
+Keep `visibleThrough` as the one commit lifecycle field.
 
 Candidate shape:
 
@@ -104,10 +104,10 @@ type JsonTableCellCommit = {
   fieldPath: string
   value: unknown
   previousValue: unknown
-  visibility: JsonTableCommitVisibility
+  visibleThrough: JsonTableCommitVisibleThrough
 }
 
-type JsonTableCommitVisibility =
+type JsonTableCommitVisibleThrough =
   | "primitivePendingValue"
   | "projectedDocumentValue"
 ```
@@ -140,7 +140,7 @@ The naming should keep this sentence exact:
 
 ### Problem
 
-Value visibility is split across three places:
+Value visibleThrough is split across three places:
 
 - primitive controller asks the edit store for a pending/confirmed/stale value
 - structured controller keeps a local structured commit
@@ -430,7 +430,7 @@ pnpm verify:json-table-performance
 
 This blueprint is complete only when all of these are true:
 
-- `JsonTableCellCommit` has one semantic field for local visibility/echo policy.
+- `JsonTableCellCommit` has one semantic field for local visibleThrough/echo policy.
 - No runtime or JSON table test helper uses old two-path vocabulary.
 - The document model reads as named state transitions.
 - Architecture docs define the visible-value priority order.

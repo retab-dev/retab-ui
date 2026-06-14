@@ -20,6 +20,7 @@ import {
 import {
   getPretextMarkdownFrameScrollAnchor,
   getPretextMarkdownScrollTopForLineRange,
+  getPretextMarkdownSourceLineForScrollTop,
   getPretextMarkdownVisibleChunkFrames,
   markdownChunkIntersectsLineRange,
   resolvePretextMarkdownScrollAnchor,
@@ -93,6 +94,7 @@ export function PretextMarkdownViewerContent({
   )
   const pendingScrollAnchorRef =
     React.useRef<PretextMarkdownScrollAnchor | null>(null)
+  const pendingViewModeSourceLineRef = React.useRef<number | null>(null)
   const resolvedHashRef = React.useRef<string | null>(null)
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const fontEpoch = useTextViewerFontEpoch()
@@ -108,6 +110,7 @@ export function PretextMarkdownViewerContent({
     () => createPretextMarkdownDocument(text),
     [text]
   )
+  const isEmptyDocument = text.trim().length === 0
   const sourceLines = React.useMemo(() => splitTextLines(text), [text])
   const sourceLineHeight = SOURCE_LINE_HEIGHT * fontScale
   const frame = React.useMemo(() => {
@@ -229,11 +232,12 @@ export function PretextMarkdownViewerContent({
       if (!scrollElement || !range) return
 
       if (viewMode === "source") {
-        scrollElement.scrollTo({
-          behavior: "smooth",
-          top: Math.max(0, (range.start - 1) * sourceLineHeight),
-          ...options,
-        })
+        scrollElement.scrollTo(
+          createPretextMarkdownScrollOptions({
+            options,
+            top: Math.max(0, (range.start - 1) * sourceLineHeight),
+          })
+        )
         return
       }
 
@@ -245,11 +249,9 @@ export function PretextMarkdownViewerContent({
       })
       if (targetTop == null) return
 
-      scrollElement.scrollTo({
-        behavior: "smooth",
-        top: targetTop,
-        ...options,
-      })
+      scrollElement.scrollTo(
+        createPretextMarkdownScrollOptions({ options, top: targetTop })
+      )
     },
     [document.chunks, frame.chunks, sourceLineHeight, viewMode]
   )
@@ -260,14 +262,57 @@ export function PretextMarkdownViewerContent({
       const targetFrame = frame.chunks[chunkIndex]
       if (!scrollElement || !targetFrame) return false
 
-      scrollElement.scrollTo({
-        behavior: "smooth",
-        top: Math.max(0, targetFrame.top),
-        ...options,
-      })
+      scrollElement.scrollTo(
+        createPretextMarkdownScrollOptions({
+          options,
+          top: Math.max(0, targetFrame.top),
+        })
+      )
       return true
     },
     [frame.chunks]
+  )
+
+  const sourceLineAtScrollTop = React.useCallback(
+    (nextScrollTop: number) => {
+      if (viewMode === "source") {
+        return Math.max(
+          1,
+          Math.min(
+            document.sourceLineCount,
+            Math.floor(nextScrollTop / sourceLineHeight) + 1
+          )
+        )
+      }
+
+      return getPretextMarkdownSourceLineForScrollTop({
+        chunks: document.chunks,
+        frames: frame.chunks,
+        scrollTop: nextScrollTop,
+      })
+    },
+    [
+      document.chunks,
+      document.sourceLineCount,
+      frame.chunks,
+      sourceLineHeight,
+      viewMode,
+    ]
+  )
+
+  const switchViewMode = React.useCallback(
+    (nextMode: PretextMarkdownViewMode) => {
+      if (nextMode === viewMode) return
+
+      const scrollElement = viewportRef.current
+      if (scrollElement) {
+        pendingViewModeSourceLineRef.current = sourceLineAtScrollTop(
+          scrollElement.scrollTop
+        )
+      }
+      setViewMode(nextMode)
+    },
+    [sourceLineAtScrollTop, viewMode]
   )
 
   const resolveFragmentHref = React.useCallback(
@@ -306,7 +351,7 @@ export function PretextMarkdownViewerContent({
       event.preventDefault()
       resolvedHashRef.current = href
       if (window.location.hash !== href) {
-        window.history.replaceState(null, "", href)
+        window.history.pushState(null, "", href)
       }
     },
     [resolveFragmentHref]
@@ -340,6 +385,20 @@ export function PretextMarkdownViewerContent({
     scrollLineRange(highlightRange)
   }, [highlightRange, scrollLineRange])
 
+  React.useLayoutEffect(() => {
+    const sourceLine = pendingViewModeSourceLineRef.current
+    if (sourceLine == null) return
+
+    pendingViewModeSourceLineRef.current = null
+    scrollLineRange(
+      normalizeTextLineRange(
+        { end: sourceLine, start: sourceLine },
+        document.sourceLineCount
+      ),
+      { behavior: "auto" }
+    )
+  }, [document.sourceLineCount, scrollLineRange, viewMode])
+
   React.useEffect(() => {
     resolvedHashRef.current = null
   }, [document])
@@ -349,14 +408,16 @@ export function PretextMarkdownViewerContent({
   }, [resolveCurrentHash])
 
   React.useEffect(() => {
-    const handleHashChange = () => {
+    const handleFragmentNavigation = () => {
       resolvedHashRef.current = null
       resolveCurrentHash({ behavior: "auto" })
     }
 
-    window.addEventListener("hashchange", handleHashChange)
+    window.addEventListener("hashchange", handleFragmentNavigation)
+    window.addEventListener("popstate", handleFragmentNavigation)
     return () => {
-      window.removeEventListener("hashchange", handleHashChange)
+      window.removeEventListener("hashchange", handleFragmentNavigation)
+      window.removeEventListener("popstate", handleFragmentNavigation)
     }
   }, [resolveCurrentHash])
 
@@ -370,11 +431,7 @@ export function PretextMarkdownViewerContent({
             <PretextMarkdownViewModeControl
               mode={viewMode}
               wordCount={document.wordCount}
-              onModeChange={(nextMode) => {
-                setViewMode(nextMode)
-                setScrollTop(0)
-                viewportRef.current?.scrollTo({ behavior: "auto", top: 0 })
-              }}
+              onModeChange={switchViewMode}
             />
           }
           copyLabel="Copy Markdown"
@@ -413,36 +470,56 @@ export function PretextMarkdownViewerContent({
             data-projection="react-gfm-pretext-markdown"
             data-slot="pretext-markdown-virtual-canvas"
             style={{
-              height: frame.totalHeight,
+              height: isEmptyDocument
+                ? Math.max(frame.totalHeight, viewportHeight)
+                : frame.totalHeight,
               minWidth: viewportWidth,
             }}
           >
-            {visibleFrames.map((chunkFrame) => {
-              const chunk = document.chunks[chunkFrame.index]
-              if (!chunk) return null
-              return (
-                <PretextMarkdownChunk
-                  key={chunk.index}
-                  frame={chunkFrame}
-                  highlighted={markdownChunkIntersectsLineRange({
-                    chunk,
-                    range: highlightRange,
-                  })}
-                  onMeasuredHeight={recordMeasuredHeight}
-                >
-                  <PretextMarkdownChunkRenderer
-                    chunk={chunk}
-                    referenceDefinitionsMarkdown={
-                      document.referenceDefinitionsMarkdown
-                    }
-                  />
-                </PretextMarkdownChunk>
-              )
-            })}
+            {isEmptyDocument ? (
+              <PretextMarkdownEmptyState />
+            ) : (
+              visibleFrames.map((chunkFrame) => {
+                const chunk = document.chunks[chunkFrame.index]
+                if (!chunk) return null
+                return (
+                  <PretextMarkdownChunk
+                    key={chunk.index}
+                    frame={chunkFrame}
+                    highlightRange={highlightRange}
+                    highlighted={markdownChunkIntersectsLineRange({
+                      chunk,
+                      range: highlightRange,
+                    })}
+                    onMeasuredHeight={recordMeasuredHeight}
+                  >
+                    <PretextMarkdownChunkRenderer
+                      chunk={chunk}
+                      referenceDefinitionsMarkdown={
+                        document.referenceDefinitionsMarkdown
+                      }
+                    />
+                  </PretextMarkdownChunk>
+                )
+              })
+            )}
           </div>
         )}
       </ScrollArea>
     </TextViewerFrame>
+  )
+}
+
+function PretextMarkdownEmptyState() {
+  return (
+    <div
+      aria-label="Empty Markdown document"
+      className="absolute inset-x-4 top-0 flex min-h-40 items-center justify-center px-12 text-sm text-muted-foreground"
+      data-slot="pretext-markdown-empty-state"
+      role="status"
+    >
+      Empty Markdown document
+    </div>
   )
 }
 
@@ -517,8 +594,10 @@ function PretextMarkdownSourceCanvas({
 
   return (
     <div
+      aria-label="Markdown source"
       className="relative min-w-0 overflow-x-auto bg-background font-mono text-foreground"
       data-slot="pretext-markdown-source-canvas"
+      role="region"
       style={{
         fontSize,
         height: lineCount * lineHeight,
@@ -526,6 +605,7 @@ function PretextMarkdownSourceCanvas({
         minWidth: viewportWidth,
         tabSize: 2,
       }}
+      tabIndex={0}
     >
       <div
         aria-hidden="true"
@@ -554,10 +634,15 @@ function PretextMarkdownSourceCanvas({
               transform: `translateY(${lineIndex * lineHeight}px)`,
             }}
           >
-            <span className="sticky left-0 border-r bg-muted/35 pr-3 text-right text-muted-foreground select-none">
+            <span
+              aria-hidden="true"
+              className="sticky left-0 border-r bg-muted/35 pr-3 text-right text-muted-foreground select-none"
+            >
               {lineNumber}
             </span>
-            <span className="px-4">{line || " "}</span>
+            <span className="px-4" data-source-line-content="">
+              {line || " "}
+            </span>
           </div>
         )
       })}
@@ -568,11 +653,13 @@ function PretextMarkdownSourceCanvas({
 function PretextMarkdownChunk({
   children,
   frame,
+  highlightRange,
   highlighted,
   onMeasuredHeight,
 }: {
   children: React.ReactNode
   frame: PretextMarkdownChunkFrame
+  highlightRange: ReturnType<typeof normalizeTextLineRange>
   highlighted: boolean
   onMeasuredHeight: (chunkIndex: number, height: number) => void
 }) {
@@ -626,10 +713,23 @@ function PretextMarkdownChunk({
         highlighted ? "bg-primary/10 ring-1 ring-primary/25" : "",
       ].join(" ")}
       id={chunkId}
+      aria-label={
+        highlighted && highlightRange
+          ? `Highlighted source lines ${highlightRange.start}-${highlightRange.end}`
+          : undefined
+      }
       data-pretext-markdown-chunk=""
+      data-pretext-markdown-highlighted={highlighted ? "" : undefined}
       data-pretext-markdown-hostile={frame.isHostile ? "" : undefined}
+      data-source-highlight-end={
+        highlighted && highlightRange ? highlightRange.end : undefined
+      }
+      data-source-highlight-start={
+        highlighted && highlightRange ? highlightRange.start : undefined
+      }
       data-source-end-line={frame.sourceEndLine}
       data-source-start-line={frame.sourceStartLine}
+      role={highlighted ? "region" : undefined}
       style={{
         minHeight: frame.estimatedHeight,
         transform: `translateY(${frame.top}px)`,
@@ -653,6 +753,30 @@ function decodeMarkdownFragmentHref(href: string) {
   } catch {
     return href.slice(1)
   }
+}
+
+function createPretextMarkdownScrollOptions({
+  options,
+  top,
+}: {
+  options?: ScrollToOptions
+  top: number
+}): ScrollToOptions {
+  const behavior = options?.behavior ?? "smooth"
+  return {
+    ...options,
+    behavior:
+      behavior === "smooth" && prefersReducedMotion() ? "auto" : behavior,
+    top,
+  }
+}
+
+function prefersReducedMotion() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  )
 }
 
 function useTextViewerFontEpoch() {

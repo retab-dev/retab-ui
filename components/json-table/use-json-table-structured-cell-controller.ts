@@ -8,7 +8,7 @@ import {
 import { markJsonTableProfile } from "@/components/json-table/json-table-profiler"
 import { useRefCallback } from "@/components/json-table/path-utils"
 
-type StructuredLocalCommit = {
+type StructuredPendingValue = {
   fieldPath: string
   value: unknown
 }
@@ -24,19 +24,26 @@ export function useJsonTableStructuredCellController({
   isEditable: boolean | undefined
   onCellCommit: JsonTableCellCommitHandler
 }) {
-  const [localCommit, setLocalCommit] =
-    React.useState<StructuredLocalCommit | null>(null)
-  const activeLocalCommit =
-    localCommit?.fieldPath === materializedFieldPath ? localCommit : null
-  const effectiveValue = activeLocalCommit ? activeLocalCommit.value : value
+  const [structuredPendingValue, setStructuredPendingValue] =
+    React.useState<StructuredPendingValue | null>(null)
+  const activeStructuredPendingValue =
+    structuredPendingValue?.fieldPath === materializedFieldPath
+      ? structuredPendingValue
+      : null
+  const effectiveValue = activeStructuredPendingValue
+    ? activeStructuredPendingValue.value
+    : value
   const committedTextValue = jsonTableCommittedTextValue(effectiveValue)
 
   React.useEffect(() => {
-    if (!activeLocalCommit || !Object.is(activeLocalCommit.value, value)) {
+    if (
+      !activeStructuredPendingValue ||
+      !Object.is(activeStructuredPendingValue.value, value)
+    ) {
       return
     }
-    setLocalCommit(null)
-  }, [activeLocalCommit, value])
+    setStructuredPendingValue(null)
+  }, [activeStructuredPendingValue, value])
 
   const commitStructuredValueChange = useRefCallback(function (
     validatedValue: unknown
@@ -47,7 +54,10 @@ export function useJsonTableStructuredCellController({
     markJsonTableProfile("cell-commit-local-start", {
       fieldPath: materializedFieldPath,
     })
-    setLocalCommit({ fieldPath: materializedFieldPath, value: validatedValue })
+    setStructuredPendingValue({
+      fieldPath: materializedFieldPath,
+      value: validatedValue,
+    })
     markJsonTableProfile("cell-commit-local-end", {
       fieldPath: materializedFieldPath,
     })
@@ -60,7 +70,7 @@ export function useJsonTableStructuredCellController({
         fieldPath: materializedFieldPath,
         value: validatedValue,
         previousValue: effectiveValue,
-        visibility: "projectedDocumentValue",
+        visibleThrough: "projectedDocumentValue",
       })
       markJsonTableProfile("cell-commit-transition-end", {
         fieldPath: materializedFieldPath,

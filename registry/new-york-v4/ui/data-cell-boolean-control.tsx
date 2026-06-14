@@ -8,20 +8,11 @@ import {
   dataCellBooleanDisplayClass,
   dataCellCheckboxDisplayClass,
 } from "@/registry/new-york-v4/ui/data-cell-classes"
+import {
+  dataCellBooleanValueMeta,
+  nextDataCellBooleanValue,
+} from "@/registry/new-york-v4/ui/data-cell-boolean-value"
 import type { DataCellBooleanControlProps } from "@/registry/new-york-v4/ui/data-cell-control-contract"
-
-export function commitDataCellBooleanToggle(
-  value: DataCellBooleanControlProps["value"],
-  onCommit: DataCellBooleanControlProps["onCommit"]
-) {
-  const nextValue = !Boolean(value)
-  onCommit?.(nextValue, {
-    kind: "boolean",
-    rawValue: String(nextValue),
-    isEmpty: false,
-    isValid: true,
-  })
-}
 
 export function DataCellBooleanIndicator({ checked }: { checked: boolean }) {
   return (
@@ -48,9 +39,7 @@ export function DataCellBooleanControl({
   name,
   className,
   autoFocus,
-  onCommit,
-  onEditingEnd,
-  onEditorHandleChange,
+  session,
   onFocus,
   onBlur,
   onKeyDown,
@@ -66,14 +55,6 @@ export function DataCellBooleanControl({
     "aria-invalid": ariaInvalid,
     ...rootProps
   } = props
-
-  React.useLayoutEffect(() => {
-    onEditorHandleChange?.({
-      finish: () => onEditingEnd?.(),
-      cancel: () => onEditingEnd?.(),
-    })
-    return () => onEditorHandleChange?.(null)
-  }, [onEditingEnd, onEditorHandleChange])
 
   return (
     <div
@@ -106,18 +87,22 @@ export function DataCellBooleanControl({
         onClick={(event) => {
           event.stopPropagation()
           if (disabled) return
-          commitDataCellBooleanToggle(value, onCommit)
+          const nextValue = nextDataCellBooleanValue(value)
+          session.commit(nextValue, dataCellBooleanValueMeta(nextValue), {
+            endEditing: false,
+            markFinished: false,
+          })
           onClick?.(event)
         }}
         onFocus={onFocus}
         onBlur={(event) => {
-          onEditingEnd?.()
+          session.end()
           onBlur?.(event)
         }}
         onKeyDown={(event) => {
           onKeyDown?.(event)
           if (event.defaultPrevented || event.key !== "Escape") return
-          onEditingEnd?.()
+          session.end()
           event.currentTarget.blur()
           event.preventDefault()
         }}

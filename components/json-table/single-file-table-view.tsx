@@ -10,7 +10,10 @@ import type {
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
 import { SingleFileTableRuntime } from "@/components/json-table/single-file-table-runtime"
 import type { ColumnWidth } from "@/components/json-table/table-options-store"
-import { useSingleFileTableDocumentModel } from "@/components/json-table/use-single-file-table-document-model"
+import {
+  type SingleFileTableDocumentPatch,
+  useSingleFileTableDocumentModel,
+} from "@/components/json-table/use-single-file-table-document-model"
 
 export type {
   JsonTableJsonEditMode,
@@ -22,7 +25,7 @@ interface SingleFileTableViewProps {
   schema: JSONSchema7
   setSchema?: (schema: JSONSchema7) => void
   columnWidth?: ColumnWidth
-  onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
+  onUpdateDocument?: (patch: SingleFileTableDocumentPatch) => Promise<void>
   jsonEditMode: JsonTableJsonEditMode
   schemaEditMode: JsonTableSchemaEditMode
   onCellHoverStart?: (info: JsonTableCellHoverInfo) => void

@@ -7,9 +7,9 @@ import { Folder } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
-import type { FileSystemController } from "./file-system-controller"
+import type { FileSystemGridViewController } from "./file-system-explorer-controllers"
 import { FileSystemThumbnail } from "./file-system-preview"
-import type { FileSystemEntry, FileSystemFileEntry } from "./file-system-types"
+import type { FileSystemEntry } from "./file-system-types"
 import { useFileSystemRovingFocus } from "./use-file-system-roving-focus"
 
 const TILE_MIN_WIDTH = 124
@@ -18,10 +18,8 @@ const GRID_PADDING = 12
 
 export function FileSystemGridView({
   controller,
-  onOpenFile,
 }: {
-  controller: FileSystemController
-  onOpenFile: (file: FileSystemFileEntry) => void
+  controller: FileSystemGridViewController
 }) {
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const [columnCount, setColumnCount] = React.useState(1)
@@ -79,10 +77,10 @@ export function FileSystemGridView({
       if (entry.kind === "folder") {
         controller.navigateTo(entry.path)
       } else {
-        onOpenFile(entry)
+        controller.openPreview(entry)
       }
     },
-    [controller, onOpenFile]
+    [controller]
   )
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
@@ -152,7 +150,6 @@ export function FileSystemGridView({
                   key={entry.path}
                   controller={controller}
                   entry={entry}
-                  onOpenFile={onOpenFile}
                   ref={(element) => {
                     rovingFocus.registerEntryRef(entry.path, element)
                   }}
@@ -169,11 +166,10 @@ export function FileSystemGridView({
 const FileSystemGridTile = React.forwardRef<
   HTMLButtonElement,
   {
-    controller: FileSystemController
+    controller: FileSystemGridViewController
     entry: FileSystemEntry
-    onOpenFile: (file: FileSystemFileEntry) => void
   }
->(function FileSystemGridTile({ controller, entry, onOpenFile }, ref) {
+>(function FileSystemGridTile({ controller, entry }, ref) {
   const isSelected = entry.path === controller.selectedPath
 
   return (
@@ -188,19 +184,19 @@ const FileSystemGridTile = React.forwardRef<
         if (entry.kind === "folder") {
           controller.navigateTo(entry.path)
         } else {
-          onOpenFile(entry)
+          controller.openPreview(entry)
         }
       }}
-      className="group flex h-[124px] min-w-0 flex-col items-center gap-2 rounded-md p-2 text-center outline-none hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
+      className="group flex h-[124px] min-w-0 flex-col items-center gap-2 rounded-sm p-2 text-center outline-none hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
     >
       <span
         className={cn(
-          "flex size-16 shrink-0 items-center justify-center rounded-md",
+          "flex size-16 shrink-0 items-center justify-center rounded-sm",
           isSelected && "bg-accent"
         )}
       >
         {entry.kind === "folder" ? (
-          <Folder className="size-11 text-sky-500" aria-hidden />
+          <Folder className="size-11 text-muted-foreground" aria-hidden />
         ) : (
           <FileSystemThumbnail
             file={entry}

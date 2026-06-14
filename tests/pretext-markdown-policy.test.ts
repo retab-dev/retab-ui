@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   createPretextMarkdownSanitizeSchema,
+  PRETEXT_MARKDOWN_KATEX_OPTIONS,
   sanitizePretextMarkdownImageUrl,
   sanitizePretextMarkdownMediaUrl,
   sanitizePretextMarkdownUrl,
@@ -16,10 +17,14 @@ describe("Pretext Markdown policy", () => {
     expect(schema.tagNames).toContain("dd")
     expect(schema.tagNames).toContain("dl")
     expect(schema.tagNames).toContain("dt")
+    expect(schema.tagNames).toContain("ins")
     expect(schema.tagNames).toContain("kbd")
     expect(schema.tagNames).toContain("mark")
+    expect(schema.tagNames).toContain("q")
+    expect(schema.tagNames).toContain("samp")
     expect(schema.tagNames).toContain("sub")
     expect(schema.tagNames).toContain("sup")
+    expect(schema.tagNames).toContain("var")
     expect(schema.tagNames).not.toContain("script")
     expect(schema.tagNames).not.toContain("style")
     expect(schema.tagNames).not.toContain("iframe")
@@ -27,6 +32,7 @@ describe("Pretext Markdown policy", () => {
     expect(schema.tagNames).not.toContain("embed")
     expect(schema.tagNames).not.toContain("form")
     expect(schema.tagNames).not.toContain("svg")
+    expect(schema.clobberPrefix).toBe("user-content-")
     expect(schema.attributes?.["*"]).not.toContain("style")
     expect(schema.attributes?.["*"]).not.toContain("onClick")
     expect(schema.attributes?.["*"]).not.toContain("onclick")
@@ -74,6 +80,17 @@ describe("Pretext Markdown policy", () => {
     expect(sanitizePretextMarkdownImageUrl("mailto:hello@retab.com")).toBe("")
     expect(sanitizePretextMarkdownImageUrl("javascript%3Aalert(1)")).toBe("")
     expect(sanitizePretextMarkdownImageUrl("//example.com/image.png")).toBe("")
+    expect(sanitizePretextMarkdownImageUrl("/icons/logo.svg")).toBe("")
+    expect(
+      sanitizePretextMarkdownImageUrl("https://retab.com/icons/logo.svg?raw=1")
+    ).toBe("")
+    expect(sanitizePretextMarkdownImageUrl("/icons/logo.svgz")).toBe("")
+    expect(sanitizePretextMarkdownImageUrl("data:image/png;base64,AAAA")).toBe(
+      ""
+    )
+    expect(sanitizePretextMarkdownImageUrl("blob:https://retab.com/id")).toBe(
+      ""
+    )
   })
 
   it("uses the same safe destination policy for media components", () => {
@@ -84,5 +101,21 @@ describe("Pretext Markdown policy", () => {
     expect(sanitizePretextMarkdownMediaUrl("mailto:hello@retab.com")).toBe("")
     expect(sanitizePretextMarkdownMediaUrl("javascript:alert(1)")).toBe("")
     expect(sanitizePretextMarkdownMediaUrl("//example.com/demo.mp4")).toBe("")
+    expect(sanitizePretextMarkdownMediaUrl("/demo.svg")).toBe("")
+    expect(sanitizePretextMarkdownMediaUrl("data:video/mp4;base64,AAAA")).toBe(
+      ""
+    )
+    expect(sanitizePretextMarkdownMediaUrl("blob:https://retab.com/id")).toBe(
+      ""
+    )
+  })
+
+  it("keeps KaTeX rendering locked to untrusted bounded input", () => {
+    expect(PRETEXT_MARKDOWN_KATEX_OPTIONS).toEqual({
+      maxExpand: 1000,
+      maxSize: 10,
+      strict: "ignore",
+      trust: false,
+    })
   })
 })

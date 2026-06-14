@@ -67,7 +67,11 @@ rich Markdown component styling.
 
 Before implementing another custom Markdown feature from scratch, clone the
 libraries that already solve the hard parts and use their implementation and
-test suites as the basis for our own narrowed version.
+test suites as the basis for our own narrowed version. "React/GFM" means the
+real upstream stack we already rely on: `react-markdown`, `remark-gfm`, and the
+rehype packages around raw HTML, sanitization, slugs, code highlighting, and
+math. Do not invent local parsing tricks when a focused upstream library
+already has source code and tests for the behavior.
 
 This is the default implementation workflow for the Pretext Markdown viewer.
 Start by reading the relevant upstream package and the existing Retab viewer
@@ -82,6 +86,21 @@ run, compare, and translate into this viewer's smaller security model.
 If a clone already exists, use it as-is unless the feature explicitly depends
 on newer upstream behavior.
 
+Clone/update protocol:
+
+1. Keep clones under `tmp/markdown-upstreams`.
+2. If a repo is missing, clone it from the exact link in the table below.
+3. If a repo already exists and the behavior is version-sensitive, update it
+   with `git -C tmp/markdown-upstreams/<repo> pull --ff-only`.
+4. Before writing local code, run `rg` inside the clone for the syntax,
+   transformer, sanitizer, or renderer behavior being implemented.
+5. Read the upstream tests for that behavior and add the smallest equivalent
+   Retab regression test.
+6. Use the package directly when the package boundary fits our security,
+   dependency, and bundle constraints; otherwise translate only the narrow
+   algorithm we need.
+7. Preserve upstream license notices when copying non-trivial code.
+
 ```bash
 mkdir -p tmp/markdown-upstreams
 cd tmp/markdown-upstreams
@@ -89,12 +108,18 @@ cd tmp/markdown-upstreams
 git clone https://github.com/chenglou/pretext.git
 git clone https://github.com/remarkjs/react-markdown.git
 git clone https://github.com/remarkjs/remark-gfm.git
+git clone https://github.com/micromark/micromark.git
+git clone https://github.com/micromark/micromark-extension-gfm.git
+git clone https://github.com/syntax-tree/mdast-util-gfm.git
 git clone https://github.com/remarkjs/remark-frontmatter.git
+git clone https://github.com/syntax-tree/mdast-util-frontmatter.git
 git clone https://github.com/remarkjs/remark-directive.git
+git clone https://github.com/syntax-tree/mdast-util-directive.git
 git clone https://github.com/remarkjs/remark-math.git
 git clone https://github.com/remarkjs/remark-rehype.git
 git clone https://github.com/rehypejs/rehype-raw.git
 git clone https://github.com/rehypejs/rehype-sanitize.git
+git clone https://github.com/syntax-tree/hast-util-sanitize.git
 git clone https://github.com/rehypejs/rehype-slug.git
 git clone https://github.com/rehype-pretty/rehype-pretty-code.git
 git clone https://github.com/shikijs/shiki.git
@@ -114,12 +139,18 @@ Local reference inventory:
 | Pretext geometry         | `tmp/markdown-upstreams/pretext`                        | [chenglou/pretext](https://github.com/chenglou/pretext)                                                   |
 | React Markdown rendering | `tmp/markdown-upstreams/react-markdown`                 | [remarkjs/react-markdown](https://github.com/remarkjs/react-markdown)                                     |
 | GFM                      | `tmp/markdown-upstreams/remark-gfm`                     | [remarkjs/remark-gfm](https://github.com/remarkjs/remark-gfm)                                             |
+| Markdown tokenizer       | `tmp/markdown-upstreams/micromark`                      | [micromark/micromark](https://github.com/micromark/micromark)                                             |
+| GFM tokenizer            | `tmp/markdown-upstreams/micromark-extension-gfm`        | [micromark/micromark-extension-gfm](https://github.com/micromark/micromark-extension-gfm)                 |
+| GFM AST utilities        | `tmp/markdown-upstreams/mdast-util-gfm`                 | [syntax-tree/mdast-util-gfm](https://github.com/syntax-tree/mdast-util-gfm)                               |
 | Frontmatter              | `tmp/markdown-upstreams/remark-frontmatter`             | [remarkjs/remark-frontmatter](https://github.com/remarkjs/remark-frontmatter)                             |
+| Frontmatter AST utility  | `tmp/markdown-upstreams/mdast-util-frontmatter`         | [syntax-tree/mdast-util-frontmatter](https://github.com/syntax-tree/mdast-util-frontmatter)               |
 | Directives               | `tmp/markdown-upstreams/remark-directive`               | [remarkjs/remark-directive](https://github.com/remarkjs/remark-directive)                                 |
+| Directive AST utility    | `tmp/markdown-upstreams/mdast-util-directive`           | [syntax-tree/mdast-util-directive](https://github.com/syntax-tree/mdast-util-directive)                   |
 | Math syntax              | `tmp/markdown-upstreams/remark-math`                    | [remarkjs/remark-math](https://github.com/remarkjs/remark-math)                                           |
 | Markdown to HAST         | `tmp/markdown-upstreams/remark-rehype`                  | [remarkjs/remark-rehype](https://github.com/remarkjs/remark-rehype)                                       |
 | Raw HTML parsing         | `tmp/markdown-upstreams/rehype-raw`                     | [rehypejs/rehype-raw](https://github.com/rehypejs/rehype-raw)                                             |
 | Sanitization             | `tmp/markdown-upstreams/rehype-sanitize`                | [rehypejs/rehype-sanitize](https://github.com/rehypejs/rehype-sanitize)                                   |
+| Sanitizer schema utility | `tmp/markdown-upstreams/hast-util-sanitize`             | [syntax-tree/hast-util-sanitize](https://github.com/syntax-tree/hast-util-sanitize)                       |
 | Heading slugs            | `tmp/markdown-upstreams/rehype-slug`                    | [rehypejs/rehype-slug](https://github.com/rehypejs/rehype-slug)                                           |
 | Code highlighting        | `tmp/markdown-upstreams/rehype-pretty-code`             | [rehype-pretty/rehype-pretty-code](https://github.com/rehype-pretty/rehype-pretty-code)                   |
 | Tokenization themes      | `tmp/markdown-upstreams/shiki`                          | [shikijs/shiki](https://github.com/shikijs/shiki)                                                         |
@@ -187,6 +218,14 @@ Implementation basis by feature:
 | Heading anchors            | `tmp/markdown-upstreams/rehype-slug`                         | [rehypejs/rehype-slug](https://github.com/rehypejs/rehype-slug)                                                                                    | One shared slug algorithm for model IDs and DOM IDs.                    |
 | Code highlighting          | `tmp/markdown-upstreams/rehype-pretty-code`, `shiki`         | [rehype-pretty/rehype-pretty-code](https://github.com/rehype-pretty/rehype-pretty-code), [shikijs/shiki](https://github.com/shikijs/shiki)         | Tokenized code blocks without a local highlighter.                      |
 | Emoji and typography       | `tmp/markdown-upstreams/remark-gemoji`, `remark-smartypants` | [remarkjs/remark-gemoji](https://github.com/remarkjs/remark-gemoji), [silvenon/remark-smartypants](https://github.com/silvenon/remark-smartypants) | Docs polish transforms backed by upstream behavior and tests.           |
+
+When the top-level remark/rehype package is only a thin wrapper, go one level
+down before implementing. The useful logic is often in `micromark-*`,
+`mdast-util-*`, or `hast-util-*` packages. For GFM, compare
+`remark-gfm`, `micromark-extension-gfm`, and `mdast-util-gfm` together before
+changing table, task-list, autolink, strikethrough, or footnote behavior. For
+sanitization, compare `rehype-sanitize` and `hast-util-sanitize` together
+before changing the schema.
 
 Study these repos by responsibility:
 

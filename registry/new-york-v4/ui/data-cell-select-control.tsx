@@ -21,12 +21,9 @@ export function DataCellSelectControl({
   formatValue,
   autoFocus,
   activationSource,
-  open,
+  session,
+  openState,
   options,
-  onCommit,
-  onEditingEnd,
-  onOpenChange,
-  onEditorHandleChange,
   onFocus,
   onBlur,
   onKeyDown,
@@ -41,11 +38,9 @@ export function DataCellSelectControl({
     value,
     placeholder,
     formatValue,
-    open,
+    openState,
     selectOptions: options,
-    onCommit,
-    onEditingEnd,
-    onOpenChange,
+    session,
   })
   const openEditor = React.useCallback(() => {
     select.openEditor(triggerRef.current)
@@ -57,7 +52,6 @@ export function DataCellSelectControl({
     openEditor,
     closeEditor: select.closeEditor,
     keepOpen: select.keepOpen,
-    onEditorHandleChange,
   })
   const {
     shouldCancelDismiss,

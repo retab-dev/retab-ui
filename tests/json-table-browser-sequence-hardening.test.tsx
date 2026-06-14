@@ -6,6 +6,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 import {
   findEditableCell,
   findReadonlyCell,
+  primitivePendingCellCommit,
   renderInteractionRow,
 } from "./json-table-interaction-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
@@ -44,16 +45,29 @@ function browserMouseEventInit(detail = 1) {
   }
 }
 
+function primitiveEventTarget(target: Element | Document | Window) {
+  if (!(target instanceof HTMLElement)) return target
+  if (!target.matches('[data-json-table-editable-cell="true"]')) return target
+  return (
+    target.matches('[data-slot="input-control"], [data-slot="data-cell"]')
+      ? target
+      : (target.querySelector<HTMLElement>(
+          '[data-slot="input-control"], [data-slot="data-cell"]'
+        ) ?? target)
+  )
+}
+
 function browserClick(target: Element | Document | Window, detail = 1) {
-  fireEvent.pointerDown(target, browserPointerEventInit(detail))
-  fireEvent.mouseDown(target, browserMouseEventInit(detail))
-  fireEvent.pointerUp(target, browserPointerEventInit(detail))
-  fireEvent.mouseUp(target, browserMouseEventInit(detail))
-  fireEvent.click(target, browserMouseEventInit(detail))
+  const eventTarget = primitiveEventTarget(target)
+  fireEvent.pointerDown(eventTarget, browserPointerEventInit(detail))
+  fireEvent.mouseDown(eventTarget, browserMouseEventInit(detail))
+  fireEvent.pointerUp(eventTarget, browserPointerEventInit(detail))
+  fireEvent.mouseUp(eventTarget, browserMouseEventInit(detail))
+  fireEvent.click(eventTarget, browserMouseEventInit(detail))
 }
 
 function pointerActivate(target: Element | Document | Window, detail = 1) {
-  fireEvent.pointerDown(target, browserPointerEventInit(detail))
+  fireEvent.pointerDown(primitiveEventTarget(target), browserPointerEventInit(detail))
 }
 
 function finishBrowserClick(target: Element | Document | Window, detail = 1) {
@@ -213,9 +227,11 @@ describe("json table browser sequence hardening", () => {
 
     expect(onCellCommit).toHaveBeenCalledTimes(1)
     expect(onCellCommit).toHaveBeenCalledWith(
-      "doc_1",
-      "vendor",
-      "BrowserCo"
+      primitivePendingCellCommit({
+        fieldPath: "vendor",
+        previousValue: "ACME",
+        value: "BrowserCo",
+      })
     )
   })
 
@@ -270,7 +286,7 @@ describe("json table browser sequence hardening", () => {
     })
     const cell = await editableCell(view, "vendor")
 
-    fireEvent.pointerDown(cell, browserPointerEventInit())
+    fireEvent.pointerDown(primitiveEventTarget(cell), browserPointerEventInit())
     expect(textInput(view).value).toBe("ACME")
 
     outsidePointerDown()
@@ -291,9 +307,11 @@ describe("json table browser sequence hardening", () => {
 
     await waitFor(() =>
       expect(onCellCommit).toHaveBeenCalledWith(
-        "doc_1",
-        "is_paid",
-        true
+        primitivePendingCellCommit({
+          fieldPath: "is_paid",
+          previousValue: false,
+          value: true,
+        })
       )
     )
     expect(onCellCommit).toHaveBeenCalledTimes(1)
@@ -363,9 +381,11 @@ describe("json table browser sequence hardening", () => {
 
     await waitFor(() =>
       expect(onCellCommit).toHaveBeenCalledWith(
-        "doc_1",
-        "status",
-        "approved"
+        primitivePendingCellCommit({
+          fieldPath: "status",
+          previousValue: "draft",
+          value: "approved",
+        })
       )
     )
     expect(onCellCommit).toHaveBeenCalledTimes(1)
@@ -380,7 +400,7 @@ describe("json table browser sequence hardening", () => {
     })
     const cell = await editableCell(view, "status")
 
-    fireEvent.pointerDown(cell, browserPointerEventInit())
+    fireEvent.pointerDown(primitiveEventTarget(cell), browserPointerEventInit())
     outsidePointerDown()
     finishBrowserClick(document.body)
 
@@ -424,7 +444,7 @@ describe("json table browser sequence hardening", () => {
     })
     const cell = await editableCell(view, "shipped_at")
 
-    fireEvent.pointerDown(cell, browserPointerEventInit())
+    fireEvent.pointerDown(primitiveEventTarget(cell), browserPointerEventInit())
     expect(await view.findByRole("dialog")).toBeTruthy()
 
     outsidePointerDown()

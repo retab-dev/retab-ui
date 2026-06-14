@@ -71,7 +71,7 @@ export function useJsonTablePrimitiveCellController({
         fieldPath: materializedFieldPath,
         value: validatedValue,
         previousValue,
-        visibility: "primitivePendingValue",
+        visibleThrough: "primitivePendingValue",
       })
       markJsonTableProfile("cell-commit-transition-end", {
         fieldPath: materializedFieldPath,

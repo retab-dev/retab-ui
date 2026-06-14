@@ -271,7 +271,7 @@ They are a PDF domain composition:
     <PdfViewerHeader />
     <ViewerBody>
       <ViewerSidebar>
-        <PdfThumbnailSidebar />
+        <PdfViewerThumbnails />
       </ViewerSidebar>
       <ViewerSurface>
         <PdfViewer />
@@ -285,7 +285,7 @@ Rules:
 
 - `PdfViewer` renders pages;
 - `PdfViewerProvider` owns page and zoom state;
-- `PdfThumbnailSidebar` reads PDF page state and changes the current page;
+- `PdfViewerThumbnails` reads PDF page state and changes the current page;
 - no `thumbnails`, `sidebar`, or `renderThumbnail` props on `PdfViewer`.
 
 ### Split Viewer

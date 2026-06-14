@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  DEFAULT_FILE_SYSTEM_DEMO_QUERY,
-  FILE_SYSTEM_DEMO_ITEMS,
-  LARGE_FILE_SYSTEM_DEMO_ITEMS,
   collectFileSystemDemoFolderPaths,
   collectFileSystemDemoItemPaths,
+  DEFAULT_FILE_SYSTEM_DEMO_QUERY,
+  FILE_SYSTEM_DEMO_ITEMS,
   formatFileSystemDemoState,
+  LARGE_FILE_SYSTEM_DEMO_ITEMS,
   parseFileSystemDemoState,
   type FileSystemDemoState,
 } from "@/registry/new-york-v4/blocks/file-system-demo-state"
@@ -25,7 +25,7 @@ describe("file-system demo state", () => {
   it("falls back from invalid URL state", () => {
     const state = parseFileSystemDemoState(
       new URLSearchParams(
-        "path=missing/&selectedPath=missing.pdf&view=missing&filters.updatedAfter=never&sort.key=missing&sort.direction=sideways"
+        "path=missing/&selectedPath=missing.pdf&view=missing&sort.key=missing&sort.direction=sideways"
       ),
       { fallbackState, folderPaths, itemPaths }
     )
@@ -36,7 +36,7 @@ describe("file-system demo state", () => {
   it("parses valid URL state", () => {
     const state = parseFileSystemDemoState(
       new URLSearchParams(
-        "path=research/&search= attention &selectedPath=research/attention.pdf&view=grid&filters.categories=pdf&sort.key=kind&sort.direction=desc"
+        "path=research/&search= attention &selectedPath=research/attention.pdf&view=grid&sort.key=kind&sort.direction=desc"
       ),
       { fallbackState, folderPaths, itemPaths }
     )
@@ -44,7 +44,6 @@ describe("file-system demo state", () => {
     expect(state).toEqual({
       path: "research/",
       query: {
-        filters: { categories: ["pdf"], updatedAfter: null },
         search: "attention",
         sort: { direction: "desc", key: "kind" },
       },
@@ -58,7 +57,6 @@ describe("file-system demo state", () => {
       {
         path: "research/",
         query: {
-          filters: { categories: ["pdf"], updatedAfter: "last30" },
           search: "attention",
           sort: { direction: "desc", key: "kind" },
         },
@@ -74,8 +72,6 @@ describe("file-system demo state", () => {
       "search",
       "selectedPath",
       "view",
-      "filters.categories",
-      "filters.updatedAfter",
       "sort.key",
       "sort.direction",
     ])
@@ -88,8 +84,6 @@ describe("file-system demo state", () => {
   it("generates the large manifest once at module scope", () => {
     expect(LARGE_FILE_SYSTEM_DEMO_ITEMS).toHaveLength(5_001)
     expect(LARGE_FILE_SYSTEM_DEMO_ITEMS[1]?.path).toBe("large/file-0000.pdf")
-    expect(LARGE_FILE_SYSTEM_DEMO_ITEMS[5000]?.path).toBe(
-      "large/file-4999.pdf"
-    )
+    expect(LARGE_FILE_SYSTEM_DEMO_ITEMS[5000]?.path).toBe("large/file-4999.pdf")
   })
 })

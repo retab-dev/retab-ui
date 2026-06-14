@@ -261,6 +261,18 @@ function FileViewerRoute({
         />
       )
     }
+    if (category === "markdown" && descriptor.source.kind === "blob") {
+      return (
+        <PretextMarkdownViewer
+          source={resource.descriptor.source}
+          className={className}
+          bare={bare}
+        />
+      )
+    }
+    if (category === "text" && descriptor.source.kind === "blob") {
+      return renderTextViewer({ descriptor, resource, className, bare })
+    }
     return (
       <UnsupportedCard resource={resource} className={className} bare={bare} />
     )

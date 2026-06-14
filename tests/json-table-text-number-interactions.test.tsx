@@ -5,7 +5,10 @@ import { cleanup, fireEvent, render, waitFor } from "@testing-library/react"
 import type { JSONSchema7 } from "json-schema"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
-import type { JsonTableCellCommit } from "@/components/json-table/json-table-cell-commit"
+import type {
+  JsonTableCellCommit,
+  JsonTableCellCommitHandler,
+} from "@/components/json-table/json-table-cell-commit"
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
 import type {
   JsonTableActivationIntent,
@@ -16,6 +19,7 @@ import type {
 import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
 import { createJsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
 import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
+import { jsonTableFullRenderedColumnWindow } from "@/components/json-table/json-table-rendered-column-window"
 import type { ProjectedCell } from "@/components/json-table/lib/document-projection"
 import { projectDocumentRows } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
@@ -47,12 +51,6 @@ const tableDocument: TableDocument = {
   },
 }
 
-type TestCellCommit = (
-  docId: string,
-  materializedFieldPath: string,
-  value: unknown
-) => void
-
 function visibleColumn(key: string): VisibleColumn {
   return {
     key,
@@ -74,22 +72,33 @@ function findEditableCell(
   return cell
 }
 
+function primitiveEventTarget(cell: HTMLElement) {
+  return (
+    cell.querySelector<HTMLElement>(
+      '[data-slot="input-control"], [data-slot="data-cell"]'
+    ) ?? cell
+  )
+}
+
 function SingleFileFormRowHarness({
   onCellCommit,
   onEditSessionChange,
+  visibleColumns,
   ...props
 }: Omit<
   React.ComponentProps<typeof SingleFileFormRow>,
+  | "renderedColumnWindow"
   | "primitiveActiveCellStore"
   | "primitiveEditStore"
   | "setPrimitiveActiveCell"
   | "structuredEditSession"
-	  | "startStructuredEditSession"
-	  | "setStructuredEditSessionOverlayOpen"
-	  | "closeStructuredEditSession"
-	  | "onCellCommit"
-	> & {
-  onCellCommit?: TestCellCommit
+  | "startStructuredEditSession"
+  | "setStructuredEditSessionOverlayOpen"
+  | "closeStructuredEditSession"
+  | "onCellCommit"
+> & {
+  visibleColumns: VisibleColumn[]
+  onCellCommit?: JsonTableCellCommitHandler
   onEditSessionChange?: (activeCell: JsonTableActiveCell | null) => void
 }) {
   const primitiveActiveCellStoreRef = React.useRef(
@@ -124,7 +133,7 @@ function SingleFileFormRowHarness({
         docId: props.document.id,
         fieldPath: projectedCell.materializedFieldPath,
         intent,
-        isOverlayOpen: false,
+        isOverlayOpen: true,
       }
       primitiveActiveCellStoreRef.current.setSnapshot(null)
       setStructuredEditSessionState(nextSession)
@@ -151,18 +160,15 @@ function SingleFileFormRowHarness({
   }, [onEditSessionChange])
   const handleCellCommit = React.useCallback(
     (commit: JsonTableCellCommit) => {
-      ;(onCellCommit ?? vi.fn())(
-        props.document.id,
-        commit.fieldPath,
-        commit.value
-      )
+      onCellCommit?.(commit)
     },
-    [onCellCommit, props.document.id]
+    [onCellCommit]
   )
 
   return (
     <SingleFileFormRow
       {...props}
+      renderedColumnWindow={jsonTableFullRenderedColumnWindow(visibleColumns)}
       primitiveActiveCellStore={primitiveActiveCellStoreRef.current}
       primitiveEditStore={primitiveEditStoreRef.current}
       setPrimitiveActiveCell={setPrimitiveActiveCell}
@@ -181,7 +187,7 @@ function renderInteractionRow({
   onEditSessionChange,
 }: {
   visiblePaths: string[]
-  onCellCommit?: TestCellCommit
+  onCellCommit?: JsonTableCellCommitHandler
   onEditSessionChange?: (activeCell: JsonTableActiveCell | null) => void
 }) {
   const rows = projectDocumentRows({
@@ -224,7 +230,7 @@ async function activateCell(
   fieldPath: string
 ) {
   const cell = await editableCell(view, fieldPath)
-  fireEvent.pointerDown(cell, {
+  fireEvent.pointerDown(primitiveEventTarget(cell), {
     button: 0,
     clientX: 0,
     clientY: 0,
@@ -245,7 +251,7 @@ describe("json table text and number interactions", () => {
     fireEvent.pointerEnter(cell)
     expect(view.queryByRole("textbox")).toBeNull()
 
-    fireEvent.pointerDown(cell, {
+    fireEvent.pointerDown(primitiveEventTarget(cell), {
       button: 0,
       clientX: 0,
       clientY: 0,
@@ -268,7 +274,12 @@ describe("json table text and number interactions", () => {
       target: { value: "Globex" },
     })
     fireEvent.blur(blurView.getByRole("textbox"))
-    expect(onBlurChange).toHaveBeenCalledWith("doc_1", "vendor", "Globex")
+    expect(onBlurChange).toHaveBeenCalledWith({
+      fieldPath: "vendor",
+      value: "Globex",
+      previousValue: "ACME",
+      visibleThrough: "primitivePendingValue",
+    })
     cleanup()
 
     const onEnterChange = vi.fn()
@@ -281,7 +292,12 @@ describe("json table text and number interactions", () => {
       target: { value: "Initech" },
     })
     fireEvent.keyDown(enterView.getByRole("textbox"), { key: "Enter" })
-    expect(onEnterChange).toHaveBeenCalledWith("doc_1", "vendor", "Initech")
+    expect(onEnterChange).toHaveBeenCalledWith({
+      fieldPath: "vendor",
+      value: "Initech",
+      previousValue: "ACME",
+      visibleThrough: "primitivePendingValue",
+    })
     cleanup()
 
     const onEscapeChange = vi.fn()
@@ -319,7 +335,12 @@ describe("json table text and number interactions", () => {
     await activateCell(textView, "note")
     fireEvent.change(textView.getByRole("textbox"), { target: { value: "" } })
     fireEvent.blur(textView.getByRole("textbox"))
-    expect(onTextChange).toHaveBeenCalledWith("doc_1", "note", null)
+    expect(onTextChange).toHaveBeenCalledWith({
+      fieldPath: "note",
+      value: null,
+      previousValue: "memo",
+      visibleThrough: "primitivePendingValue",
+    })
     cleanup()
 
     const onNumberChange = vi.fn()
@@ -332,7 +353,12 @@ describe("json table text and number interactions", () => {
       target: { value: "" },
     })
     fireEvent.blur(numberView.getByRole("spinbutton"))
-    expect(onNumberChange).toHaveBeenCalledWith("doc_1", "amount", null)
+    expect(onNumberChange).toHaveBeenCalledWith({
+      fieldPath: "amount",
+      value: null,
+      previousValue: 12.5,
+      visibleThrough: "primitivePendingValue",
+    })
   })
 
   it("saves valid numbers and commits invalid integer drafts as null", async () => {
@@ -346,7 +372,12 @@ describe("json table text and number interactions", () => {
       target: { value: "45.75" },
     })
     fireEvent.blur(numberView.getByRole("spinbutton"))
-    expect(onValidNumberChange).toHaveBeenCalledWith("doc_1", "amount", 45.75)
+    expect(onValidNumberChange).toHaveBeenCalledWith({
+      fieldPath: "amount",
+      value: 45.75,
+      previousValue: 12.5,
+      visibleThrough: "primitivePendingValue",
+    })
     cleanup()
 
     const onInvalidIntegerChange = vi.fn()
@@ -359,21 +390,26 @@ describe("json table text and number interactions", () => {
       target: { value: "3.5" },
     })
     fireEvent.blur(integerView.getByRole("spinbutton"))
-    expect(onInvalidIntegerChange).toHaveBeenCalledWith("doc_1", "count", null)
+    expect(onInvalidIntegerChange).toHaveBeenCalledWith({
+      fieldPath: "count",
+      value: null,
+      previousValue: 3,
+      visibleThrough: "primitivePendingValue",
+    })
   })
 
   it("seeds text and number drafts from type-to-edit keyboard input", async () => {
     const textView = renderInteractionRow({ visiblePaths: ["vendor"] })
     const textCell = await editableCell(textView, "vendor")
-    textCell.focus()
-    fireEvent.keyDown(textCell, { key: "Z" })
+    primitiveEventTarget(textCell).focus()
+    fireEvent.keyDown(primitiveEventTarget(textCell), { key: "Z" })
     expect(textView.getByRole("textbox")).toHaveProperty("value", "Z")
     cleanup()
 
     const numberView = renderInteractionRow({ visiblePaths: ["amount"] })
     const numberCell = await editableCell(numberView, "amount")
-    numberCell.focus()
-    fireEvent.keyDown(numberCell, { key: "7" })
+    primitiveEventTarget(numberCell).focus()
+    fireEvent.keyDown(primitiveEventTarget(numberCell), { key: "7" })
     expect(numberView.getByRole("spinbutton")).toHaveProperty("value", "7")
   })
 
@@ -384,8 +420,14 @@ describe("json table text and number interactions", () => {
       onEditSessionChange: (session) => sessions.push(session),
     })
 
-    fireEvent.pointerDown(await editableCell(view, "vendor"), { button: 2 })
-    fireEvent.pointerDown(await editableCell(view, "amount"), { button: 2 })
+    fireEvent.pointerDown(
+      primitiveEventTarget(await editableCell(view, "vendor")),
+      { button: 2 }
+    )
+    fireEvent.pointerDown(
+      primitiveEventTarget(await editableCell(view, "amount")),
+      { button: 2 }
+    )
 
     expect(view.queryByRole("textbox")).toBeNull()
     expect(view.queryByRole("spinbutton")).toBeNull()
@@ -404,7 +446,7 @@ describe("json table text and number interactions", () => {
     fireEvent.change(view.getByRole("textbox"), {
       target: { value: "draft vendor" },
     })
-    fireEvent.pointerDown(cell, {
+    fireEvent.pointerDown(primitiveEventTarget(cell), {
       button: 0,
       clientX: 0,
       clientY: 0,

@@ -1,0 +1,43 @@
+---
+title: Sidebar List
+description: Providerless grouped-row primitives for embedded domain sidebars and viewer rail content.
+---
+
+`SidebarList*` primitives provide sidebar row grammar without
+`SidebarProvider`. Use them when a component needs grouped rows, active states,
+disabled states, and sidebar tokens, but does not own app navigation,
+persistence, mobile sheet projection, or global shortcuts.
+
+`SegmentSidebar` and `AttachmentSidebar` use this layer internally.
+
+## Usage
+
+```tsx
+<SidebarListRoot width="18rem">
+  <SidebarListHeader>Attachments</SidebarListHeader>
+  <SidebarListContent>
+    <SidebarListGroup>
+      <SidebarListGroupLabel>Files</SidebarListGroupLabel>
+      <SidebarListGroupContent>
+        <SidebarListMenu>
+          <SidebarListMenuItem>
+            <SidebarListButton isActive>contract.pdf</SidebarListButton>
+          </SidebarListMenuItem>
+        </SidebarListMenu>
+      </SidebarListGroupContent>
+    </SidebarListGroup>
+  </SidebarListContent>
+</SidebarListRoot>
+```
+
+Use `SidebarList*` inside `ViewerSidebar` only as content grammar. The enclosing
+`ViewerSidebar` still owns placement, width, collapse behavior, and the
+accessible rail label.
+
+## Do Not Use For
+
+- app navigation;
+- mobile sidebar sheets;
+- global sidebar shortcuts;
+- PDF thumbnail virtualization;
+- viewer spatial placement.

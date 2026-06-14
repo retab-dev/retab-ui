@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { DataCell, type DataCellEditorHandle } from "@/components/ui/data-cell"
+import { DataCell } from "@/components/ui/data-cell"
 
 afterEach(() => {
   cleanup()
@@ -23,6 +23,12 @@ function getPickerPopup(): HTMLElement | null {
   )
 }
 
+function getDataCellSurface(): HTMLElement {
+  const surface = document.querySelector<HTMLElement>('[data-slot="data-cell"]')
+  expect(surface).toBeTruthy()
+  return surface as HTMLElement
+}
+
 function expectPickerOpen() {
   expect(getPickerPopup()).toBeTruthy()
   expect(getPickerTrigger().getAttribute("aria-expanded")).toBe("true")
@@ -30,7 +36,12 @@ function expectPickerOpen() {
 
 function expectPickerClosed() {
   expect(getPickerPopup()).toBeNull()
-  expect(getPickerTrigger().getAttribute("aria-expanded")).toBe("false")
+  const trigger = document.querySelector<HTMLButtonElement>(
+    'button[data-slot="data-cell"]'
+  )
+  if (trigger) {
+    expect(trigger.getAttribute("aria-expanded")).toBe("false")
+  }
 }
 
 function dateDaySelector(date: Date) {
@@ -51,19 +62,14 @@ describe("DataCell direct control lifecycle", () => {
       toJSON: () => ({}),
     } as DOMRect)
 
-    render(
-      <DataCell
-        kind="text"
-        mode="edit"
-        value="abcdefghij"
-        activationRequest={{
-          kind: "pointer",
-          clientX: 60,
-          clientY: 8,
-          detail: 1,
-        }}
-      />
-    )
+    render(<DataCell kind="text" editable value="abcdefghij" />)
+
+    fireEvent.pointerDown(getDataCellSurface(), {
+      button: 0,
+      clientX: 60,
+      clientY: 8,
+      detail: 1,
+    })
 
     const input = screen.getByRole("textbox") as HTMLInputElement
 
@@ -85,19 +91,14 @@ describe("DataCell direct control lifecycle", () => {
       toJSON: () => ({}),
     } as DOMRect)
 
-    render(
-      <DataCell
-        kind="text"
-        mode="edit"
-        value="USD"
-        activationRequest={{
-          kind: "pointer",
-          clientX: 10,
-          clientY: 8,
-          detail: 1,
-        }}
-      />
-    )
+    render(<DataCell kind="text" editable value="USD" />)
+
+    fireEvent.pointerDown(getDataCellSurface(), {
+      button: 0,
+      clientX: 10,
+      clientY: 8,
+      detail: 1,
+    })
 
     const input = screen.getByRole("textbox") as HTMLInputElement
     expect(input.selectionStart).toBe(1)
@@ -112,16 +113,74 @@ describe("DataCell direct control lifecycle", () => {
     expect(input.selectionEnd).toBe(1)
   })
 
+  it("ignores unchanged blur from the pointer opening sequence", () => {
+    const onCommit = vi.fn()
+    const onEditingEnd = vi.fn()
+    render(
+      <DataCell
+        kind="text"
+        editable
+        value="USD"
+        onCommit={onCommit}
+        onEditingEnd={onEditingEnd}
+      />
+    )
+
+    fireEvent.pointerDown(getDataCellSurface(), {
+      button: 0,
+      clientX: 10,
+      clientY: 8,
+      detail: 1,
+    })
+
+    const input = screen.getByRole("textbox") as HTMLInputElement
+    fireEvent.blur(input)
+
+    expect(onCommit).not.toHaveBeenCalled()
+    expect(onEditingEnd).not.toHaveBeenCalled()
+  })
+
+  it("commits dirty blur even during the pointer opening sequence", () => {
+    const onCommit = vi.fn()
+    const onEditingEnd = vi.fn()
+    render(
+      <DataCell
+        kind="text"
+        editable
+        value="USD"
+        onCommit={onCommit}
+        onEditingEnd={onEditingEnd}
+      />
+    )
+
+    fireEvent.pointerDown(getDataCellSurface(), {
+      button: 0,
+      clientX: 10,
+      clientY: 8,
+      detail: 1,
+    })
+
+    const input = screen.getByRole("textbox") as HTMLInputElement
+    fireEvent.change(input, { target: { value: "USDe" } })
+    fireEvent.blur(input)
+
+    expect(onCommit).toHaveBeenCalledWith(
+      "USDe",
+      expect.objectContaining({
+        kind: "text",
+        rawValue: "USDe",
+        isEmpty: false,
+        isValid: true,
+      })
+    )
+    expect(onEditingEnd).toHaveBeenCalledTimes(1)
+  })
+
   it("commits empty number and integer controls as valid null values", () => {
     const onNumberCommit = vi.fn()
     const onIntegerCommit = vi.fn()
     const { unmount } = render(
-      <DataCell
-        kind="number"
-        mode="edit"
-        value={12.5}
-        onCommit={onNumberCommit}
-      />
+      <DataCell kind="number" active value={12.5} onCommit={onNumberCommit} />
     )
 
     const numberInput = screen.getByRole("spinbutton") as HTMLInputElement
@@ -140,12 +199,7 @@ describe("DataCell direct control lifecycle", () => {
 
     unmount()
     render(
-      <DataCell
-        kind="integer"
-        mode="edit"
-        value={12}
-        onCommit={onIntegerCommit}
-      />
+      <DataCell kind="integer" active value={12} onCommit={onIntegerCommit} />
     )
 
     const integerInput = screen.getByRole("spinbutton") as HTMLInputElement
@@ -169,7 +223,7 @@ describe("DataCell direct control lifecycle", () => {
     render(
       <DataCell
         kind="integer"
-        mode="edit"
+        active
         value={1}
         onDraftValueChange={onDraftValueChange}
         onCommit={onCommit}
@@ -206,7 +260,7 @@ describe("DataCell direct control lifecycle", () => {
     render(
       <DataCell
         kind="number"
-        mode="edit"
+        active
         value={1}
         onDraftValueChange={onDraftValueChange}
         onCommit={onCommit}
@@ -243,7 +297,7 @@ describe("DataCell direct control lifecycle", () => {
 
   it("commits text controls on Enter and cancels them on Escape", () => {
     const onCommit = vi.fn()
-    render(<DataCell kind="text" mode="edit" value="old" onCommit={onCommit} />)
+    render(<DataCell kind="text" active value="old" onCommit={onCommit} />)
 
     const input = screen.getByRole("textbox") as HTMLInputElement
     input.focus()
@@ -272,7 +326,7 @@ describe("DataCell direct control lifecycle", () => {
 
   it("commits number controls on Enter and cancels them on Escape", () => {
     const onCommit = vi.fn()
-    render(<DataCell kind="number" mode="edit" value={1} onCommit={onCommit} />)
+    render(<DataCell kind="number" active value={1} onCommit={onCommit} />)
 
     const input = screen.getByRole("spinbutton") as HTMLInputElement
     input.focus()
@@ -299,29 +353,22 @@ describe("DataCell direct control lifecycle", () => {
     expect(onCommit).not.toHaveBeenCalled()
   })
 
-  it("exposes editor handles that finish or cancel text edits exactly once", () => {
+  it("commits text blur exactly once when a follow-up blur fires", () => {
     const onCommit = vi.fn()
     const onEditingEnd = vi.fn()
-    const onEditorHandleChange = vi.fn()
     render(
       <DataCell
         kind="text"
-        mode="edit"
+        active
         value="old"
         onCommit={onCommit}
         onEditingEnd={onEditingEnd}
-        onEditorHandleChange={onEditorHandleChange}
       />
     )
 
     const input = screen.getByRole("textbox") as HTMLInputElement
-    const handle = onEditorHandleChange.mock.calls.at(-1)?.[0] as
-      | DataCellEditorHandle
-      | undefined
-    expect(handle).toBeTruthy()
-
     fireEvent.change(input, { target: { value: "finished" } })
-    handle?.finish()
+    fireEvent.blur(input)
     fireEvent.blur(input)
 
     expect(onCommit).toHaveBeenCalledTimes(1)
@@ -336,56 +383,37 @@ describe("DataCell direct control lifecycle", () => {
     expect(onEditingEnd).toHaveBeenCalledTimes(1)
   })
 
-  it("exposes editor handles that cancel number edits without committing", () => {
+  it("cancels number edits on Escape without committing when blur follows", () => {
     const onCommit = vi.fn()
     const onEditingEnd = vi.fn()
-    const onEditorHandleChange = vi.fn()
     render(
       <DataCell
         kind="number"
-        mode="edit"
+        active
         value={1}
         onCommit={onCommit}
         onEditingEnd={onEditingEnd}
-        onEditorHandleChange={onEditorHandleChange}
       />
     )
 
     const input = screen.getByRole("spinbutton") as HTMLInputElement
-    const handle = onEditorHandleChange.mock.calls.at(-1)?.[0] as
-      | DataCellEditorHandle
-      | undefined
-    expect(handle).toBeTruthy()
-
     fireEvent.change(input, { target: { value: "3.25" } })
-    handle?.cancel()
+    fireEvent.keyDown(input, { key: "Escape" })
     fireEvent.blur(input)
 
     expect(onCommit).not.toHaveBeenCalled()
     expect(onEditingEnd).toHaveBeenCalledTimes(1)
   })
 
-  it("finishes invalid integer drafts through the editor handle with invalid metadata", () => {
+  it("commits invalid integer drafts on Enter with invalid metadata", () => {
     const onCommit = vi.fn()
-    const onEditorHandleChange = vi.fn()
     render(
-      <DataCell
-        kind="integer"
-        mode="edit"
-        value={1}
-        onCommit={onCommit}
-        onEditorHandleChange={onEditorHandleChange}
-      />
+      <DataCell kind="integer" active value={1} onCommit={onCommit} />
     )
 
     const input = screen.getByRole("spinbutton") as HTMLInputElement
-    const handle = onEditorHandleChange.mock.calls.at(-1)?.[0] as
-      | DataCellEditorHandle
-      | undefined
-    expect(handle).toBeTruthy()
-
     fireEvent.change(input, { target: { value: "1.5" } })
-    handle?.finish()
+    fireEvent.keyDown(input, { key: "Enter" })
 
     expect(onCommit).toHaveBeenCalledWith(
       null,
@@ -401,21 +429,17 @@ describe("DataCell direct control lifecycle", () => {
   it("opens date pickers from autofocus and activation, then closes on outside pointer and Escape", () => {
     const { unmount } = render(
       <div>
-        <DataCell
-          kind="date"
-          mode="edit"
-          value="2026-06-12"
-          autoFocus
-          activationRequest={{
-            kind: "pointer",
-            clientX: 24,
-            clientY: 12,
-            detail: 1,
-          }}
-        />
+        <DataCell kind="date" editable value="2026-06-12" autoFocus />
         <button type="button">Outside</button>
       </div>
     )
+
+    fireEvent.pointerDown(getDataCellSurface(), {
+      button: 0,
+      clientX: 24,
+      clientY: 12,
+      detail: 1,
+    })
 
     const trigger = getPickerTrigger()
     expectPickerOpen()
@@ -427,7 +451,7 @@ describe("DataCell direct control lifecycle", () => {
     expectPickerClosed()
 
     unmount()
-    render(<DataCell kind="date" mode="edit" value="2026-06-12" />)
+    render(<DataCell kind="date" active value="2026-06-12" />)
 
     fireEvent.click(getPickerTrigger())
     expectPickerOpen()
@@ -439,12 +463,7 @@ describe("DataCell direct control lifecycle", () => {
   it("commits a selected date picker day and closes date controls", () => {
     const onCommit = vi.fn()
     render(
-      <DataCell
-        kind="date"
-        mode="edit"
-        value="2026-06-12"
-        onCommit={onCommit}
-      />
+      <DataCell kind="date" active value="2026-06-12" onCommit={onCommit} />
     )
 
     fireEvent.click(getPickerTrigger())
@@ -472,7 +491,7 @@ describe("DataCell direct control lifecycle", () => {
     render(
       <DataCell
         kind="boolean"
-        mode="edit"
+        active
         value={false}
         onCommit={onCommit}
         onKeyDown={onKeyDown}

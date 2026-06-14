@@ -55,7 +55,6 @@ describe("file-system index", () => {
   it("search keeps matching files and ancestors visible", () => {
     const index = buildFileSystemIndex(items)
     const visible = deriveVisibleIndex(index, "", {
-      filters: { categories: [], updatedAfter: null },
       search: "january",
       sort: DEFAULT_FILE_SYSTEM_SORT,
     })
@@ -71,21 +70,7 @@ describe("file-system index", () => {
     ).toBe("pdf")
   })
 
-  it("filters by detected file category", () => {
-    const index = buildFileSystemIndex(items)
-    const visible = deriveVisibleIndex(index, "", {
-      filters: { categories: ["csv"], updatedAfter: null },
-      search: "",
-      sort: DEFAULT_FILE_SYSTEM_SORT,
-    })
-
-    expect(
-      visible.children.get("invoices/2025/")?.map((entry) => entry.path)
-    ).toEqual(["invoices/2025/december.csv"])
-    expect(visible.children.get("invoices/2026/")).toBeUndefined()
-  })
-
-  it("indexes and filters a large object-store manifest", () => {
+  it("indexes and searches a large object-store manifest", () => {
     const largeItems: FileSystemItem[] = Array.from(
       { length: 5_000 },
       (_, index) => ({
@@ -98,7 +83,6 @@ describe("file-system index", () => {
 
     const index = buildFileSystemIndex(largeItems)
     const visible = deriveVisibleIndex(index, "workspace/", {
-      filters: { categories: [], updatedAfter: null },
       search: "document-4999",
       sort: DEFAULT_FILE_SYSTEM_SORT,
     })

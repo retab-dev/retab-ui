@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs"
-import { join } from "node:path"
+import { join, posix as pathPosix } from "node:path"
 import { describe, expect, it } from "vitest"
 
 type RegistryFile = {
@@ -82,6 +82,68 @@ function importSpecifiers(source: string) {
   ).map((match) => match[1]!)
 }
 
+function relativeImportSpecifiers(source: string) {
+  const imports: string[] = []
+  const importExportPattern =
+    /(?:^|\n)\s*(?:import|export)\s+(?:[\s\S]*?\s+from\s+)?["'](\.{1,2}\/[^"']+)["']/g
+  const dynamicImportPattern = /\bimport\(\s*["'](\.{1,2}\/[^"']+)["']\s*\)/g
+
+  for (const match of source.matchAll(importExportPattern)) {
+    imports.push(match[1]!)
+  }
+  for (const match of source.matchAll(dynamicImportPattern)) {
+    imports.push(match[1]!)
+  }
+
+  return imports
+}
+
+function registryInstallTargetsFor(
+  item: RegistryItem,
+  itemsByName: Map<string, RegistryItem>,
+  visited = new Set<string>()
+): string[] {
+  if (visited.has(item.name)) return []
+  visited.add(item.name)
+
+  return [
+    ...item.files.map((file) => file.target ?? file.path),
+    ...(item.registryDependencies ?? []).flatMap((dependencyName) => {
+      const dependency = itemsByName.get(dependencyName)
+      return dependency
+        ? registryInstallTargetsFor(dependency, itemsByName, visited)
+        : []
+    }),
+  ]
+}
+
+function resolveInstalledRegistryImport({
+  importerTarget,
+  installedTargets,
+  specifier,
+}: {
+  importerTarget: string
+  installedTargets: Set<string>
+  specifier: string
+}) {
+  const basePath = pathPosix.normalize(
+    pathPosix.join(pathPosix.dirname(importerTarget), specifier.split("?")[0]!)
+  )
+  const candidates = [
+    `${basePath}.tsx`,
+    `${basePath}.ts`,
+    `${basePath}.jsx`,
+    `${basePath}.js`,
+    `${basePath}/index.tsx`,
+    `${basePath}/index.ts`,
+    `${basePath}/index.jsx`,
+    `${basePath}/index.js`,
+    basePath,
+  ]
+
+  return candidates.find((candidate) => installedTargets.has(candidate)) ?? null
+}
+
 describe("Pretext Markdown architecture", () => {
   it("keeps the implementation independent from old Markdown Document modules", () => {
     for (const file of pretextMarkdownFiles) {
@@ -152,6 +214,37 @@ describe("Pretext Markdown architecture", () => {
         read(file.path)
       )
     }
+  })
+
+  it("ships an installable registry artifact with a complete relative import closure", () => {
+    const registry = readRegistry()
+    const itemsByName = new Map(
+      registry.items.map((registryItem) => [registryItem.name, registryItem])
+    )
+    const artifact = readPretextMarkdownRegistryArtifact()
+    const installedTargets = new Set(
+      registryInstallTargetsFor(artifact, itemsByName)
+    )
+    const missingImports: string[] = []
+
+    for (const file of artifact.files) {
+      expect(file.target, `${file.path} registry target`).toBeTruthy()
+      expect(file.content, `${file.path} registry content`).toBeTruthy()
+
+      for (const specifier of relativeImportSpecifiers(file.content ?? "")) {
+        const resolved = resolveInstalledRegistryImport({
+          importerTarget: file.target!,
+          installedTargets,
+          specifier,
+        })
+        if (resolved) continue
+        missingImports.push(
+          `${file.target} imports ${specifier}, but no installed registry file resolves it`
+        )
+      }
+    }
+
+    expect(missingImports).toEqual([])
   })
 
   it("keeps virtual chunks from becoming visible page chrome", () => {

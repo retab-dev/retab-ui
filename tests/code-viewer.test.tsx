@@ -24,11 +24,13 @@ import {
   type CodeViewerHandle,
 } from "@/registry/new-york-v4/ui/code-viewer"
 import { scrollTopForLineRange } from "@/registry/new-york-v4/ui/code-viewer-layout"
+import { createCodeProjector } from "@/registry/new-york-v4/ui/code-viewer-projector"
 import {
   CODE_VIEWER_BASE_LINE_PX,
   CODE_VIEWER_INITIAL_VIEWPORT_HEIGHT,
   CODE_VIEWER_OVERSCAN,
 } from "@/registry/new-york-v4/ui/code-viewer-scale"
+import { createCodeSyntax } from "@/registry/new-york-v4/ui/code-viewer-syntax"
 import {
   isLineInRange,
   normalizeTextLineRange,
@@ -278,6 +280,340 @@ describe("code-viewer-layout", () => {
         viewportHeight: 100,
       })
     ).toBe(0)
+  })
+})
+
+describe("code-viewer-syntax", () => {
+  it("detects JSON from the file name and returns stable cached tokens", () => {
+    const resource = createViewerResource(
+      textSource('{"name":"retab"}', "app.json")
+    )
+    const syntax = createCodeSyntax(resource)
+    const firstTokens = syntax.getLineTokens('{"name":"retab"}')
+    const secondTokens = syntax.getLineTokens('{"name":"retab"}')
+
+    expect(syntax.identity).toBe("json:v1")
+    expect(firstTokens).toBe(secondTokens)
+    expect(firstTokens).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "property", text: '"name"' }),
+        expect.objectContaining({ kind: "string", text: '"retab"' }),
+      ])
+    )
+  })
+
+  it("creates a fresh token cache for each syntax instance", () => {
+    const resource = createViewerResource(
+      textSource('{"name":"retab"}', "app.json")
+    )
+    const firstSyntax = createCodeSyntax(resource)
+    const secondSyntax = createCodeSyntax(resource)
+
+    expect(firstSyntax.getLineTokens('{"name":"retab"}')).not.toBe(
+      secondSyntax.getLineTokens('{"name":"retab"}')
+    )
+  })
+
+  it("skips plain, empty, and over-limit lines", () => {
+    const plainResource = createViewerResource(textSource("plain", "notes.txt"))
+    const jsonResource = createViewerResource(textSource("{}", "app.json"))
+    const plainSyntax = createCodeSyntax(plainResource)
+    const jsonSyntax = createCodeSyntax(jsonResource)
+
+    expect(plainSyntax.identity).toBe("plain")
+    expect(plainSyntax.getLineTokens("plain")).toBeNull()
+    expect(jsonSyntax.getLineTokens("")).toBeNull()
+    expect(jsonSyntax.getLineTokens("x".repeat(2001))).toBeNull()
+  })
+})
+
+describe("code-viewer-projector", () => {
+  function createProjectionElements() {
+    const rowHost = document.createElement("pre")
+    const viewport = document.createElement("div")
+
+    Object.defineProperty(viewport, "clientHeight", {
+      configurable: true,
+      value: 20,
+    })
+
+    return { rowHost, viewport }
+  }
+
+  function project({
+    contentIdentity = "content",
+    gutterWidth = "4ch",
+    highlightRange = null,
+    lineHeight = 20,
+    layoutIdentity = `${lineHeight}\u0000${gutterWidth}`,
+    rowHost,
+    syntax = {
+      identity: "plain",
+      getLineTokens: () => null,
+    },
+    textLines,
+    viewport,
+  }: {
+    contentIdentity?: string
+    gutterWidth?: string
+    highlightRange?: ReturnType<typeof normalizeTextLineRange>
+    layoutIdentity?: string
+    lineHeight?: number
+    rowHost: HTMLPreElement
+    syntax?: {
+      identity: string
+      getLineTokens(
+        line: string
+      ): readonly { kind: string; text: string }[] | null
+    }
+    textLines: string[]
+    viewport: HTMLDivElement
+  }) {
+    const projector = createCodeProjector()
+    projector.project({
+      contentIdentity,
+      gutterWidth,
+      highlightRange,
+      layoutIdentity,
+      lineHeight,
+      rowHost,
+      syntax,
+      syntaxIdentity: syntax.identity,
+      textLines,
+      viewport,
+    })
+    return projector
+  }
+
+  function projectAgain({
+    contentIdentity = "content",
+    gutterWidth = "4ch",
+    highlightRange = null,
+    layoutIdentity = "20\u00004ch",
+    lineHeight = 20,
+    projector,
+    rowHost,
+    syntax = {
+      identity: "plain",
+      getLineTokens: () => null,
+    },
+    textLines,
+    viewport,
+  }: {
+    contentIdentity?: string
+    gutterWidth?: string
+    highlightRange?: ReturnType<typeof normalizeTextLineRange>
+    layoutIdentity?: string
+    lineHeight?: number
+    projector: ReturnType<typeof createCodeProjector>
+    rowHost: HTMLPreElement
+    syntax?: {
+      identity: string
+      getLineTokens(
+        line: string
+      ): readonly { kind: string; text: string }[] | null
+    }
+    textLines: string[]
+    viewport: HTMLDivElement
+  }) {
+    projector.project({
+      contentIdentity,
+      gutterWidth,
+      highlightRange,
+      layoutIdentity,
+      lineHeight,
+      rowHost,
+      syntax,
+      syntaxIdentity: syntax.identity,
+      textLines,
+      viewport,
+    })
+  }
+
+  it("creates only the visible virtual rows and does not duplicate repeated projection", () => {
+    const { rowHost, viewport } = createProjectionElements()
+    const textLines = Array.from(
+      { length: 100 },
+      (_, index) => `line ${index + 1}`
+    )
+    const projector = project({ rowHost, textLines, viewport })
+    const firstRows = Array.from(rowHost.children)
+
+    projectAgain({ projector, rowHost, textLines, viewport })
+
+    expect(firstRows).toHaveLength(49)
+    expect(Array.from(rowHost.children)).toEqual(firstRows)
+  })
+
+  it("removes rows that leave the visible range", () => {
+    const { rowHost, viewport } = createProjectionElements()
+    const textLines = Array.from(
+      { length: 100 },
+      (_, index) => `line ${index + 1}`
+    )
+    const projector = project({ rowHost, textLines, viewport })
+
+    viewport.scrollTop = 80 * 20
+    projectAgain({ projector, rowHost, textLines, viewport })
+
+    expect(rowHost.querySelector('[data-line-number="1"]')).toBeNull()
+    expect(rowHost.querySelector('[data-line-number="80"]')).toBeTruthy()
+  })
+
+  it("resets rows when content identity changes", () => {
+    const { rowHost, viewport } = createProjectionElements()
+    const projector = project({
+      contentIdentity: "long",
+      rowHost,
+      textLines: Array.from({ length: 80 }, (_, index) => `old ${index + 1}`),
+      viewport,
+    })
+
+    projectAgain({
+      contentIdentity: "short",
+      projector,
+      rowHost,
+      textLines: ["new"],
+      viewport,
+    })
+
+    expect(rowHost.querySelectorAll("[data-line-number]")).toHaveLength(1)
+    expect(rowHost.textContent).toContain("new")
+    expect(rowHost.textContent).not.toContain("old")
+  })
+
+  it("patches token spans through the syntax boundary", () => {
+    const { rowHost, viewport } = createProjectionElements()
+
+    project({
+      rowHost,
+      syntax: {
+        identity: "json:v1",
+        getLineTokens: () => [{ kind: "string", text: '"value"' }],
+      },
+      textLines: ['"value"'],
+      viewport,
+    })
+
+    expect(rowHost.querySelector(".cv-token-string")?.textContent).toBe(
+      '"value"'
+    )
+  })
+
+  it("marks line number gutters as presentational and non-copy content", () => {
+    const { rowHost, viewport } = createProjectionElements()
+
+    project({
+      rowHost,
+      textLines: ["copy me"],
+      viewport,
+    })
+
+    const gutter = rowHost.querySelector("[data-code-gutter]")
+    expect(gutter?.getAttribute("aria-hidden")).toBe("true")
+    expect(gutter?.className).toContain("select-none")
+  })
+
+  it("does no stable-projection DOM rewrites", () => {
+    const { rowHost, viewport } = createProjectionElements()
+    const textLines = ["stable"]
+    const projector = project({ rowHost, textLines, viewport })
+    const replaceChildren = vi.spyOn(Element.prototype, "replaceChildren")
+    const insertBefore = vi.spyOn(Node.prototype, "insertBefore")
+    const textContent = vi.spyOn(Node.prototype, "textContent", "set")
+
+    projectAgain({ projector, rowHost, textLines, viewport })
+
+    expect(replaceChildren).not.toHaveBeenCalled()
+    expect(insertBefore).not.toHaveBeenCalled()
+    expect(textContent).not.toHaveBeenCalled()
+  })
+
+  it("does not rebuild token content for highlight or layout changes", () => {
+    const { rowHost, viewport } = createProjectionElements()
+    const textLines = ['"value"']
+    const syntax = {
+      identity: "json:v1",
+      getLineTokens: () => [{ kind: "string", text: '"value"' }],
+    }
+    const projector = project({ rowHost, syntax, textLines, viewport })
+    const token = rowHost.querySelector(".cv-token-string")
+    const replaceChildren = vi.spyOn(Element.prototype, "replaceChildren")
+
+    projectAgain({
+      highlightRange: normalizeTextLineRange({ start: 1, end: 1 }, 1),
+      projector,
+      rowHost,
+      syntax,
+      textLines,
+      viewport,
+    })
+    projectAgain({
+      gutterWidth: "5ch",
+      layoutIdentity: "24\u00005ch",
+      lineHeight: 24,
+      projector,
+      rowHost,
+      syntax,
+      textLines,
+      viewport,
+    })
+
+    expect(rowHost.querySelector(".cv-token-string")).toBe(token)
+    expect(replaceChildren).not.toHaveBeenCalled()
+  })
+
+  it("rebuilds token content when syntax identity changes", () => {
+    const { rowHost, viewport } = createProjectionElements()
+    const textLines = ['"value"']
+    const projector = project({
+      rowHost,
+      syntax: {
+        identity: "plain",
+        getLineTokens: () => null,
+      },
+      textLines,
+      viewport,
+    })
+    const replaceChildren = vi.spyOn(Element.prototype, "replaceChildren")
+
+    projectAgain({
+      projector,
+      rowHost,
+      syntax: {
+        identity: "json:v1",
+        getLineTokens: () => [{ kind: "string", text: '"value"' }],
+      },
+      textLines,
+      viewport,
+    })
+
+    expect(replaceChildren).toHaveBeenCalledTimes(1)
+    expect(rowHost.querySelector(".cv-token-string")?.textContent).toBe(
+      '"value"'
+    )
+  })
+
+  it("clears rows once when content identity changes", () => {
+    const { rowHost, viewport } = createProjectionElements()
+    const projector = project({
+      contentIdentity: "first",
+      rowHost,
+      textLines: ["first"],
+      viewport,
+    })
+    const replaceChildren = vi.spyOn(Element.prototype, "replaceChildren")
+
+    projectAgain({
+      contentIdentity: "second",
+      projector,
+      rowHost,
+      textLines: ["second"],
+      viewport,
+    })
+
+    expect(replaceChildren).toHaveBeenCalledTimes(1)
+    expect(rowHost.textContent).toContain("second")
   })
 })
 
@@ -766,6 +1102,28 @@ describe("text-viewer-resource", () => {
       kind: "partial_content",
       status: 206,
     } satisfies Partial<ResourceError>)
+  })
+
+  it("accepts complete partial-content URL responses for full text reads", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          response("full", {
+            status: 206,
+            headers: { "content-range": "bytes 0-3/4" },
+          })
+        )
+      )
+    )
+
+    await expect(
+      readResourceAfterSuspense({
+        content: textResource("/complete-partial.txt").content,
+        retryVersion: 0,
+        bounds: resolvedTextViewerBounds(),
+      })
+    ).resolves.toBe("full")
   })
 
   it("rejects partial-content URL responses for full byte reads", async () => {
@@ -1393,6 +1751,41 @@ describe("CodeViewer", () => {
     expect(line?.querySelector(".cv-token-string")?.textContent).toBe(
       '"viewer"'
     )
+  })
+
+  it("installs syntax styles once for every code viewer instance", () => {
+    render(
+      <>
+        <CodeViewer source={textSource('{"one":1}', "one.json")} />
+        <CodeViewer source={textSource('{"two":2}', "two.json")} />
+      </>
+    )
+
+    expect(
+      document.head.querySelectorAll("#retab-code-viewer-syntax-style")
+    ).toHaveLength(1)
+  })
+
+  it("renders TypeScript as plain fixed-line code without syntax tokens", () => {
+    const { container } = render(
+      <CodeViewer source={textSource("const value = true", "sample.ts")} />
+    )
+
+    expect(screen.getByText("const value = true")).toBeTruthy()
+    expect(
+      container.querySelector(
+        ".cv-token-string,.cv-token-property,.cv-token-keyword,.cv-token-number,.cv-token-punctuation"
+      )
+    ).toBeNull()
+  })
+
+  it("keeps toolbar controls accessible by name", () => {
+    render(<CodeViewer source={textSource("alpha")} />)
+
+    expect(screen.getByLabelText("Zoom out")).toBeTruthy()
+    expect(screen.getByLabelText("Zoom in")).toBeTruthy()
+    expect(screen.getByLabelText("Reset zoom")).toBeTruthy()
+    expect(screen.getByLabelText("Download")).toBeTruthy()
   })
 
   it("renders empty text as a single blank line", () => {
@@ -2424,6 +2817,63 @@ describe("CodeViewer", () => {
 })
 
 describe("code-viewer implementation boundaries", () => {
+  it("keeps terminal code viewer responsibilities in exact modules", () => {
+    const contentSource = readRegistryFile(
+      "registry/new-york-v4/ui/code-viewer-content.tsx"
+    )
+    const syntaxSource = readRegistryFile(
+      "registry/new-york-v4/ui/code-viewer-syntax.ts"
+    )
+    const projectorSource = readRegistryFile(
+      "registry/new-york-v4/ui/code-viewer-projector.ts"
+    )
+    const viewportSource = readRegistryFile(
+      "registry/new-york-v4/ui/code-viewer-viewport.tsx"
+    )
+    const syntaxStyleSource = readRegistryFile(
+      "registry/new-york-v4/ui/code-viewer-syntax-style.tsx"
+    )
+    const schedulerSource = readRegistryFile(
+      "registry/new-york-v4/ui/code-viewer-projection-scheduler.ts"
+    )
+
+    expect(contentSource).not.toContain("Prism")
+    expect(contentSource).not.toContain("document.createElement")
+    expect(contentSource).not.toContain("replaceChildren")
+    expect(contentSource).not.toContain("ResizeObserver")
+    expect(contentSource).not.toContain("<style")
+    expect(contentSource).not.toContain("CODE_VIEWER_SYNTAX_STYLE")
+    expect(contentSource).toContain("createCodeSyntax")
+    expect(contentSource).toContain("createCodeProjector")
+    expect(contentSource).toContain("CodeViewerViewport")
+    expect(contentSource).toContain("useCodeProjectionScheduler")
+    expect(contentSource).toContain("useCodeViewerSyntaxStyle")
+
+    expect(syntaxSource).toContain("Prism")
+    expect(syntaxSource).toContain("createCodeSyntax")
+    expect(syntaxSource).toContain("kind:")
+
+    expect(projectorSource).toContain("createCodeProjector")
+    expect(projectorSource).toContain("document.createElement")
+    expect(projectorSource).toContain("contentIdentity")
+    expect(projectorSource).toContain("layoutIdentity")
+    expect(projectorSource).toContain("syncVisibleRowOrder")
+    expect(projectorSource).not.toContain("visibleRows")
+    expect(projectorSource).not.toContain("reset(")
+    expect(projectorSource).not.toContain("React")
+
+    expect(viewportSource).toContain("<pre")
+    expect(viewportSource).toContain("ref={rowHostRef}")
+    expect(viewportSource).not.toContain("createCodeSyntax")
+    expect(viewportSource).not.toContain("createCodeProjector")
+
+    expect(syntaxStyleSource).toContain("retab-code-viewer-syntax-style")
+    expect(syntaxStyleSource).toContain("document.head.append")
+
+    expect(schedulerSource).toContain("requestAnimationFrame")
+    expect(schedulerSource).toContain("ResizeObserver")
+  })
+
   it("keeps resource cache keys private to the resource module", () => {
     const viewerModuleSource = readRegistryFile(
       "registry/new-york-v4/ui/code-viewer.tsx"

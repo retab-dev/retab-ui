@@ -187,7 +187,7 @@ describe("json table primitive cell controller", () => {
       fieldPath: "vendor",
       value: "Globex",
       previousValue: "ACME",
-      visibility: "primitivePendingValue",
+      visibleThrough: "primitivePendingValue",
     })
     expect(result.current.effectiveValue).toBe("Globex")
     expect(result.current.committedTextValue).toBe("Globex")
@@ -213,7 +213,7 @@ describe("json table primitive cell controller", () => {
       fieldPath: "vendor",
       value: "Globex",
       previousValue: "ACME",
-      visibility: "primitivePendingValue",
+      visibleThrough: "primitivePendingValue",
     })
   })
 
@@ -244,7 +244,7 @@ describe("json table primitive cell controller", () => {
       fieldPath: "lines.0.quantity",
       value: 2,
       previousValue: 1,
-      visibility: "primitivePendingValue",
+      visibleThrough: "primitivePendingValue",
     })
     expect(result.current.effectiveValue).toBe(2)
   })
@@ -368,7 +368,7 @@ describe("json table structured cell controller", () => {
       fieldPath: "vendor",
       value: "Globex",
       previousValue: "ACME",
-      visibility: "projectedDocumentValue",
+      visibleThrough: "projectedDocumentValue",
     })
     expect(result.current.effectiveValue).toBe("Globex")
     expect(result.current.committedTextValue).toBe("Globex")
@@ -386,6 +386,27 @@ describe("json table structured cell controller", () => {
     )
 
     act(() => result.current.commitStructuredValueChange("ACME"))
+
+    expect(onCellCommit).not.toHaveBeenCalled()
+  })
+
+  it("skips structured no-op commits when object keys are reordered", () => {
+    const onCellCommit = vi.fn()
+    const { result } = renderHook(() =>
+      useJsonTableStructuredCellController({
+        materializedFieldPath: "payment",
+        value: { amount: 12, currency: "EUR" },
+        isEditable: true,
+        onCellCommit,
+      })
+    )
+
+    act(() =>
+      result.current.commitStructuredValueChange({
+        currency: "EUR",
+        amount: 12,
+      })
+    )
 
     expect(onCellCommit).not.toHaveBeenCalled()
   })
@@ -436,7 +457,7 @@ describe("single file table document model", () => {
         fieldPath: "vendor",
         value: "Globex",
         previousValue: "ACME",
-        visibility: "primitivePendingValue",
+        visibleThrough: "primitivePendingValue",
       })
     })
 
@@ -497,7 +518,7 @@ describe("single file table document model", () => {
         fieldPath: "total",
         value: 12,
         previousValue: 10,
-        visibility: "projectedDocumentValue",
+        visibleThrough: "projectedDocumentValue",
       })
     })
 

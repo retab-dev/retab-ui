@@ -4,7 +4,6 @@ import { compareEntryNames } from "./file-system-index"
 import type {
   FileSystemEntry,
   FileSystemFileEntry,
-  FileSystemFilterState,
   FileSystemIndex,
   FileSystemQueryState,
   FileSystemSortState,
@@ -16,7 +15,6 @@ export const DEFAULT_FILE_SYSTEM_SORT: FileSystemSortState = {
 }
 
 export const DEFAULT_FILE_SYSTEM_QUERY: FileSystemQueryState = {
-  filters: { categories: [], updatedAfter: null },
   search: "",
   sort: DEFAULT_FILE_SYSTEM_SORT,
 }
@@ -25,10 +23,6 @@ export function createFileSystemQueryState(
   query: Partial<FileSystemQueryState> | undefined
 ): FileSystemQueryState {
   return {
-    filters: {
-      categories: query?.filters?.categories ?? [],
-      updatedAfter: query?.filters?.updatedAfter ?? null,
-    },
     search: query?.search ?? "",
     sort: {
       direction: query?.sort?.direction ?? DEFAULT_FILE_SYSTEM_SORT.direction,
@@ -83,20 +77,6 @@ export function fileMatchesQuery(
     return false
   }
 
-  if (
-    query.filters.categories.length &&
-    !query.filters.categories.includes(getFileSystemCategory(file))
-  ) {
-    return false
-  }
-
-  const cutoff = dateModifiedCutoff(query.filters.updatedAfter)
-  if (cutoff) {
-    const fileTime = Date.parse(file.updatedAt ?? file.createdAt ?? "")
-
-    if (Number.isNaN(fileTime) || fileTime < cutoff.getTime()) return false
-  }
-
   return true
 }
 
@@ -106,11 +86,8 @@ export function deriveVisibleIndex(
   query: FileSystemQueryState
 ): FileSystemIndex {
   const search = normalizeFileSystemSearch(query.search)
-  const hasCategoryFilter = query.filters.categories.length > 0
-  const hasDateFilter = query.filters.updatedAfter !== null
 
-  if (!search && !hasCategoryFilter && !hasDateFilter)
-    return sortFileSystemIndex(index, query.sort)
+  if (!search) return sortFileSystemIndex(index, query.sort)
 
   const visiblePaths = new Set<string>()
   const markVisible = (path: string) => {
@@ -137,19 +114,16 @@ export function deriveVisibleIndex(
     markVisible(file.parentPath)
   }
 
-  if (!hasCategoryFilter) {
-    for (const [path, folder] of index.folders) {
-      if (currentPath && !path.startsWith(currentPath)) continue
-      if (
-        search &&
-        !path.toLowerCase().includes(search) &&
-        !folder.name.toLowerCase().includes(search)
-      ) {
-        continue
-      }
-      visiblePaths.add(path)
-      markVisible(folder.parentPath)
+  for (const [path, folder] of index.folders) {
+    if (currentPath && !path.startsWith(currentPath)) continue
+    if (
+      !path.toLowerCase().includes(search) &&
+      !folder.name.toLowerCase().includes(search)
+    ) {
+      continue
     }
+    visiblePaths.add(path)
+    markVisible(folder.parentPath)
   }
 
   const children = new Map<string, FileSystemEntry[]>()
@@ -215,20 +189,6 @@ export function compareEntries(
   return sort.direction === "asc" ? result : -result
 }
 
-export function collectFileSystemCategories(index: FileSystemIndex) {
-  const categories = new Set<string>()
-
-  for (const file of index.files.values()) {
-    categories.add(getFileSystemCategory(file))
-  }
-
-  return [...categories].sort((left, right) =>
-    getFileSystemCategoryLabel(left).localeCompare(
-      getFileSystemCategoryLabel(right)
-    )
-  )
-}
-
 export function entryKindLabel(entry: FileSystemEntry) {
   return entry.kind === "folder"
     ? "Folder"
@@ -242,26 +202,4 @@ function entrySize(entry: FileSystemEntry) {
 function entryTime(entry: FileSystemEntry) {
   const time = Date.parse(entry.updatedAt ?? entry.createdAt ?? "")
   return Number.isNaN(time) ? Number.NEGATIVE_INFINITY : time
-}
-
-export function fileSystemFilterIsEmpty(filters: FileSystemFilterState) {
-  return filters.categories.length === 0 && filters.updatedAfter === null
-}
-
-export function dateModifiedCutoff(
-  preset: FileSystemFilterState["updatedAfter"]
-) {
-  if (!preset) return null
-
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - (preset === "last7" ? 7 : 30))
-  return cutoff
-}
-
-export function dateModifiedFilterLabel(
-  preset: FileSystemFilterState["updatedAfter"]
-) {
-  if (preset === "last7") return "Modified 7d"
-  if (preset === "last30") return "Modified 30d"
-  return "Modified"
 }

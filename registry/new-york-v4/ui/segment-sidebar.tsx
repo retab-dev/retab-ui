@@ -17,15 +17,15 @@ import {
 import { cn } from "@/lib/utils"
 
 import {
-  EmbeddedSidebarProvider,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "./sidebar"
+  SidebarListButton,
+  SidebarListContent,
+  SidebarListGroup,
+  SidebarListGroupContent,
+  SidebarListGroupLabel,
+  SidebarListMenu,
+  SidebarListMenuItem,
+  SidebarListRoot,
+} from "./sidebar-list"
 
 export interface SegmentSidebarProps {
   segments: Segment[]
@@ -84,15 +84,15 @@ export function SegmentSidebar({
       onMouseLeave={() => scopedInteraction?.clearPreview()}
       className={cn("flex min-h-0 flex-col", className)}
     >
-      <EmbeddedSidebarProvider>
-        <SidebarContent className="gap-0">
-          <SidebarGroup className="min-h-0 flex-1 p-2">
-            <SidebarGroupLabel className="px-1">
+      <SidebarListRoot className="w-full bg-transparent">
+        <SidebarListContent className="gap-0">
+          <SidebarListGroup className="min-h-0 flex-1 p-2">
+            <SidebarListGroupLabel className="px-1">
               {visible.length} {unitLabel}
               {visible.length === 1 ? "" : "s"}
-            </SidebarGroupLabel>
-            <SidebarGroupContent className="min-h-0 flex-1">
-              <SidebarMenu className="gap-0.5">
+            </SidebarListGroupLabel>
+            <SidebarListGroupContent className="min-h-0 flex-1">
+              <SidebarListMenu className="gap-0.5">
                 {visible.map((segment, segmentPosition) => (
                   <SegmentSidebarItem
                     key={`${segment.id}-${segmentPosition}`}
@@ -102,11 +102,11 @@ export function SegmentSidebar({
                     onSelect={onSelect}
                   />
                 ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-      </EmbeddedSidebarProvider>
+              </SidebarListMenu>
+            </SidebarListGroupContent>
+          </SidebarListGroup>
+        </SidebarListContent>
+      </SidebarListRoot>
     </div>
   )
 }
@@ -132,8 +132,8 @@ function SegmentSidebarItem({
   const pageCount = segmentPageCount(segment.pages)
 
   return (
-    <SidebarMenuItem>
-      <SidebarMenuButton
+    <SidebarListMenuItem>
+      <SidebarListButton
         {...dataProps}
         {...eventHandlers}
         aria-current={state.isCurrent ? "page" : undefined}
@@ -171,8 +171,8 @@ function SegmentSidebarItem({
             <ConfidenceBar value={segment.confidence} />
           ) : null}
         </span>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+      </SidebarListButton>
+    </SidebarListMenuItem>
   )
 }
 

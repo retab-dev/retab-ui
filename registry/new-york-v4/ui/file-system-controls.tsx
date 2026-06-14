@@ -5,28 +5,22 @@ import {
   ArrowLeft,
   ArrowRight,
   Columns3,
-  Filter,
   Grid3X3,
-  Image,
   List,
   Search,
-  X,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ViewerSidebarTrigger } from "@/components/ui/viewer"
 
-import type { FileSystemController } from "./file-system-controller"
+import type { FileSystemHeaderController } from "./file-system-controller"
+import type { FileSystemStatusState } from "./file-system-explorer-controllers"
 import { pathName } from "./file-system-index"
-import {
-  dateModifiedFilterLabel,
-  getFileSystemCategoryLabel,
-  normalizeFileSystemSearch,
-} from "./file-system-query"
+import { normalizeFileSystemSearch } from "./file-system-query"
 import type { FileSystemSortKey, FileSystemView } from "./file-system-types"
+import { ViewerSidebarTrigger } from "./viewer"
 
 const VIEW_OPTIONS: Array<{
   icon: React.ComponentType<{ className?: string }>
@@ -36,7 +30,6 @@ const VIEW_OPTIONS: Array<{
   { icon: List, label: "List", value: "list" },
   { icon: Grid3X3, label: "Grid", value: "grid" },
   { icon: Columns3, label: "Columns", value: "columns" },
-  { icon: Image, label: "Gallery", value: "gallery" },
 ]
 
 const SORT_OPTIONS: Array<{
@@ -50,16 +43,30 @@ const SORT_OPTIONS: Array<{
 ]
 
 export function FileSystemToolbar({
-  controller,
+  canGoBack,
+  canGoForward,
+  currentPath,
+  goBack,
+  goForward,
+  query,
+  setSearch,
+  setView,
   title,
+  view,
 }: {
-  controller: FileSystemController
+  canGoBack: FileSystemHeaderController["canGoBack"]
+  canGoForward: FileSystemHeaderController["canGoForward"]
+  currentPath: FileSystemHeaderController["currentPath"]
+  goBack: FileSystemHeaderController["goBack"]
+  goForward: FileSystemHeaderController["goForward"]
+  query: FileSystemHeaderController["query"]
+  setSearch: FileSystemHeaderController["setSearch"]
+  setView: FileSystemHeaderController["setView"]
   title: string
+  view: FileSystemHeaderController["view"]
 }) {
   const currentFolderName =
-    controller.currentPath === ""
-      ? title
-      : pathName(controller.currentPath) || title
+    currentPath === "" ? title : pathName(currentPath) || title
 
   return (
     <div className="flex h-12 shrink-0 items-center gap-2 border-b bg-muted/35 px-2">
@@ -67,8 +74,8 @@ export function FileSystemToolbar({
         <ViewerSidebarTrigger />
         <Button
           aria-label="Back"
-          disabled={!controller.canGoBack}
-          onClick={controller.goBack}
+          disabled={!canGoBack}
+          onClick={goBack}
           size="icon-sm"
           variant="ghost"
         >
@@ -76,8 +83,8 @@ export function FileSystemToolbar({
         </Button>
         <Button
           aria-label="Forward"
-          disabled={!controller.canGoForward}
-          onClick={controller.goForward}
+          disabled={!canGoForward}
+          onClick={goForward}
           size="icon-sm"
           variant="ghost"
         >
@@ -88,15 +95,13 @@ export function FileSystemToolbar({
             {currentFolderName}
           </div>
           <div className="truncate text-xs text-muted-foreground">
-            {controller.currentPath || "/"}
+            {currentPath || "/"}
           </div>
         </div>
       </div>
       <Tabs
-        value={controller.view}
-        onValueChange={(nextView) =>
-          controller.setView(nextView as FileSystemView)
-        }
+        value={view}
+        onValueChange={(nextView) => setView(nextView as FileSystemView)}
         className="hidden gap-0 md:flex"
       >
         <TabsList className="h-8 p-0.5">
@@ -122,66 +127,36 @@ export function FileSystemToolbar({
           aria-label="Search files"
           className="[&_input]:pl-7"
           nativeInput
-          onChange={(event) => controller.setSearch(event.target.value)}
+          onChange={(event) => setSearch(event.target.value)}
           placeholder="Search"
           size="sm"
           type="search"
-          value={controller.query.search}
+          value={query.search}
         />
       </div>
     </div>
   )
 }
 
-export function FileSystemFilterBar({
+export function FileSystemCommandBar({
   controller,
 }: {
-  controller: FileSystemController
+  controller: FileSystemHeaderController
 }) {
-  const hasFilters = fileSystemHasFilters(controller)
-
   return (
     <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b px-2 py-1.5">
-      <Filter className="size-3.5 shrink-0 text-muted-foreground" />
-      {controller.categories.map((category) => {
-        const isActive = controller.query.filters.categories.includes(category)
+      <FileSystemSortControls controller={controller} />
+    </div>
+  )
+}
 
-        return (
-          <button
-            key={category}
-            type="button"
-            onClick={() => controller.toggleCategory(category)}
-            className={cn(
-              "h-6 shrink-0 rounded-md border px-2 text-xs outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring",
-              isActive
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-input bg-background text-muted-foreground"
-            )}
-          >
-            {getFileSystemCategoryLabel(category)}
-          </button>
-        )
-      })}
-      {(["last7", "last30"] as const).map((preset) => {
-        const isActive = controller.query.filters.updatedAfter === preset
-
-        return (
-          <button
-            key={preset}
-            type="button"
-            onClick={() => controller.setModifiedAfter(preset)}
-            className={cn(
-              "h-6 shrink-0 rounded-md border px-2 text-xs outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring",
-              isActive
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-input bg-background text-muted-foreground"
-            )}
-          >
-            {dateModifiedFilterLabel(preset)}
-          </button>
-        )
-      })}
-      <div className="mx-1 h-4 w-px shrink-0 bg-border" aria-hidden />
+export function FileSystemSortControls({
+  controller,
+}: {
+  controller: FileSystemHeaderController
+}) {
+  return (
+    <>
       {SORT_OPTIONS.map((option) => {
         const isActive = controller.query.sort.key === option.value
 
@@ -192,7 +167,7 @@ export function FileSystemFilterBar({
             aria-label={option.label}
             onClick={() => controller.setSortKey(option.value)}
             className={cn(
-              "flex h-6 shrink-0 items-center gap-1 rounded-md border px-2 text-xs outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring",
+              "flex h-6 shrink-0 items-center gap-1 rounded-sm border px-2 text-xs outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring",
               isActive
                 ? "border-primary bg-primary text-primary-foreground"
                 : "border-input bg-background text-muted-foreground"
@@ -207,25 +182,17 @@ export function FileSystemFilterBar({
           </button>
         )
       })}
-      {hasFilters ? (
-        <Button size="xs" variant="ghost" onClick={controller.clearFilters}>
-          <X className="size-3" aria-hidden />
-          Clear
-        </Button>
-      ) : null}
-    </div>
+    </>
   )
 }
 
 export function FileSystemStatusBar({
-  controller,
+  state,
 }: {
-  controller: FileSystemController
+  state: FileSystemStatusState
 }) {
-  const itemCount = controller.currentEntries.length
-  const isSearching =
-    normalizeFileSystemSearch(controller.query.search).length > 0
-  const hasFilters = fileSystemHasFilters(controller)
+  const itemCount = state.currentEntries.length
+  const isSearching = normalizeFileSystemSearch(state.query.search).length > 0
 
   return (
     <div
@@ -234,7 +201,7 @@ export function FileSystemStatusBar({
     >
       <span>
         {itemCount}{" "}
-        {isSearching || hasFilters
+        {isSearching
           ? itemCount === 1
             ? "result"
             : "results"
@@ -242,18 +209,11 @@ export function FileSystemStatusBar({
             ? "item"
             : "items"}
       </span>
-      {controller.selectedEntry ? (
+      {state.selectedEntry ? (
         <span className="min-w-0 truncate">
-          {controller.selectedEntry.name} selected
+          {state.selectedEntry.name} selected
         </span>
       ) : null}
     </div>
-  )
-}
-
-function fileSystemHasFilters(controller: FileSystemController) {
-  return (
-    controller.query.filters.categories.length > 0 ||
-    controller.query.filters.updatedAfter !== null
   )
 }

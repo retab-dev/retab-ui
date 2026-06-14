@@ -163,6 +163,24 @@ describe("toViewerErrorInfo", () => {
     })
   })
 
+  it("labels text render failures as render failures", () => {
+    const info = toViewerErrorInfo(
+      new ViewerFormatError({
+        format: "text",
+        kind: "render_failed",
+        message: "render failed",
+      }),
+      { sourceKind: "text" }
+    )
+
+    expect(info).toMatchObject({
+      domain: "format",
+      format: "text",
+      kind: "render_failed",
+      userMessage: "Couldn't render this text file.",
+    })
+  })
+
   it("treats unknown DOCX Blob failures as retryable read errors", () => {
     const info = toViewerErrorInfo(new Error("blob read failed"), {
       format: "docx",

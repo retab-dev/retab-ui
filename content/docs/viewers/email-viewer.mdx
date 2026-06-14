@@ -6,7 +6,7 @@ description: Render recursive MIME messages with headers, CID inline resources, 
 The Email Viewer is a recursive MIME viewer built on the shared viewer stack.
 It treats email as a tree of MIME parts, renders selected leaf parts through
 `FileViewer`, rewrites `cid:` URLs from `multipart/related` resources, and shows
-body candidates and attachments in an embedded sidebar.
+body candidates and attachments in one labeled `ViewerSidebar`.
 
 <EmailViewerDemo />
 
@@ -23,7 +23,7 @@ npx shadcn@latest add @retab/email-viewer
   <ViewerRoot>
     <EmailViewerHeader />
     <ViewerBody>
-      <ViewerSidebar>
+      <ViewerSidebar aria-label="Email parts">
         <EmailViewerPartsList />
       </ViewerSidebar>
       <ViewerSurface>
@@ -37,6 +37,37 @@ npx shadcn@latest add @retab/email-viewer
 The visible sidebar is a product projection: body candidates first, then
 attachments. The raw MIME recursion stays inside the provider and selected part
 projection.
+
+## Nested ViewerRoot
+
+Nested `ViewerRoot` is correct only for a complete nested viewer. A recursive
+`message/rfc822` part is a complete email viewer, so it should render the
+domain viewer again in bare mode:
+
+```tsx
+<EmailViewer message={nestedMessage} bare className="h-full" />
+```
+
+A `ViewerSidebarTrigger` always targets the nearest `ViewerRoot`, so the nested
+message owns its own trigger, sidebar state, and sidebar label.
+
+Attachments are file leaves, not nested compound viewers. Render them through
+`FileViewer bare` inside the current surface:
+
+```tsx
+<FileViewer source={attachment.source} bare className="h-full" />
+```
+
+Do not nest `ViewerRoot` just to add another toolbar or border:
+
+```tsx
+// Avoid: this creates another spatial viewer without another domain viewer.
+<ViewerSurface>
+  <ViewerRoot bare>
+    <FileViewer source={attachment.source} bare />
+  </ViewerRoot>
+</ViewerSurface>
+```
 
 ## Usage
 

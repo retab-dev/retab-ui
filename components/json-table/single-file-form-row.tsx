@@ -3,28 +3,25 @@
 import React from "react"
 import type { JSONSchema7 } from "json-schema"
 
-import type { DataCellEditorHandle } from "@/components/ui/data-cell"
 import { getFixedGridRowStyle } from "@/components/ui/fixed-grid-row-style"
 import { TableRow } from "@/components/ui/table"
+import { EditableJsonTableCell } from "@/components/json-table/editable-json-table-cell"
 import type { JsonTableCellCommitHandler } from "@/components/json-table/json-table-cell-commit"
-import type {
-  JsonTableCellProps,
-  VisibleColumn,
-} from "@/components/json-table/json-table-cell-types"
+import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
 import type { JsonTableStructuredEditSession } from "@/components/json-table/json-table-edit-session"
 import type { JsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
 import type { JsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import { recordJsonTableRender } from "@/components/json-table/json-table-profiler"
+import type { JsonTableRenderedColumnWindow } from "@/components/json-table/json-table-rendered-column-window"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
-import { EditableJsonTableCell } from "@/components/json-table/editable-json-table-cell"
 import { ReadOnlyJsonTableCell } from "@/components/json-table/read-only-json-table-cell"
 
 interface SingleFileFormRowProps {
   document: TableDocument
   schema: JSONSchema7
   projectedRow?: ProjectedRow
-  visibleColumns: VisibleColumn[]
+  renderedColumnWindow: JsonTableRenderedColumnWindow
   /** Which sub-row of the document this renders (set by the row virtualizer). */
   rowIdx: number
   rowTopPx: number
@@ -32,7 +29,6 @@ interface SingleFileFormRowProps {
   primitiveActiveCellStore: JsonTablePrimitiveActiveCellStore
   primitiveEditStore: JsonTablePrimitiveEditStore
   setPrimitiveActiveCell?: JsonTableCellProps["setPrimitiveActiveCell"]
-  primitiveEditorHandleRef?: React.RefObject<DataCellEditorHandle | null>
   structuredEditSession?: JsonTableStructuredEditSession | null
   startStructuredEditSession?: JsonTableCellProps["startStructuredEditSession"]
   setStructuredEditSessionOverlayOpen?: JsonTableCellProps["setStructuredEditSessionOverlayOpen"]
@@ -76,14 +72,13 @@ function areSingleFileFormRowPropsEqual(
     prev.document.id !== next.document.id ||
     prev.schema !== next.schema ||
     prev.projectedRow !== next.projectedRow ||
-    prev.visibleColumns !== next.visibleColumns ||
+    prev.renderedColumnWindow !== next.renderedColumnWindow ||
     prev.rowIdx !== next.rowIdx ||
     prev.rowTopPx !== next.rowTopPx ||
     prev.rowHeightPx !== next.rowHeightPx ||
     prev.primitiveActiveCellStore !== next.primitiveActiveCellStore ||
     prev.primitiveEditStore !== next.primitiveEditStore ||
     prev.setPrimitiveActiveCell !== next.setPrimitiveActiveCell ||
-    prev.primitiveEditorHandleRef !== next.primitiveEditorHandleRef ||
     prev.startStructuredEditSession !== next.startStructuredEditSession ||
     prev.setStructuredEditSessionOverlayOpen !==
       next.setStructuredEditSessionOverlayOpen ||
@@ -104,14 +99,13 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     document,
     schema,
     projectedRow,
-    visibleColumns,
+    renderedColumnWindow,
     rowIdx,
     rowTopPx,
     rowHeightPx,
     primitiveActiveCellStore,
     primitiveEditStore,
     setPrimitiveActiveCell = () => {},
-    primitiveEditorHandleRef,
     structuredEditSession = null,
     startStructuredEditSession = () => {},
     setStructuredEditSessionOverlayOpen = () => {},
@@ -122,8 +116,6 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     isJsonEditable,
   }) => {
     const documentId = document.id
-    const fallbackPrimitiveEditorHandleRef =
-      React.useRef<DataCellEditorHandle | null>(null)
     recordJsonTableRender("SingleFileFormRow", String(rowIdx), {
       cellCount: projectedRow?.cells.length ?? 0,
       primitiveActiveFieldPath:
@@ -157,8 +149,14 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
         style={rowStyle}
       >
         {/* Data cells */}
-        {visibleColumns.map((column, colIdx) => {
-          const projectedCell = projectedRow?.cells[colIdx]
+        <ColumnSpacer widthPx={renderedColumnWindow.leftPadWidthPx} />
+        {renderedColumnWindow.columns.map((column, colIdx) => {
+          const projectedCellIndex =
+            renderedColumnWindow.projectedCellIndexes[colIdx]
+          const projectedCell =
+            projectedCellIndex === undefined
+              ? undefined
+              : projectedRow?.cells[projectedCellIndex]
 
           const cellProps = {
             column,
@@ -169,8 +167,6 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
             primitiveActiveCellStore,
             primitiveEditStore,
             setPrimitiveActiveCell,
-            primitiveEditorHandleRef:
-              primitiveEditorHandleRef ?? fallbackPrimitiveEditorHandleRef,
             structuredEditSession,
             startStructuredEditSession,
             setStructuredEditSessionOverlayOpen,
@@ -187,9 +183,24 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
             <ReadOnlyJsonTableCell key={column.key} {...cellProps} />
           )
         })}
+        <ColumnSpacer widthPx={renderedColumnWindow.rightPadWidthPx} />
       </TableRow>
     )
   },
   areSingleFileFormRowPropsEqual
 )
 SingleFileFormRow.displayName = "SingleFileFormRow"
+
+function ColumnSpacer({ widthPx }: { widthPx: number }) {
+  if (!Number.isFinite(widthPx) || widthPx <= 0) return null
+
+  return (
+    <td
+      aria-hidden="true"
+      data-slot="json-table-column-spacer"
+      className="shrink-0 border-0 p-0"
+      role="presentation"
+      style={{ width: widthPx, minWidth: widthPx }}
+    />
+  )
+}

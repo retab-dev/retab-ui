@@ -14,14 +14,14 @@ import {
 } from "./pdf-thumbnail-layout"
 import { PdfThumbnailRail } from "./pdf-thumbnail-rail"
 import { useOptionalPdfViewerThumbnails } from "./pdf-viewer-context"
+import { useIsClient } from "./use-is-client"
 import { usePdfThumbnailDocument } from "./use-pdf-thumbnail-document"
 import { usePdfThumbnailPageMetrics } from "./use-pdf-thumbnail-page-metrics"
 import { usePdfThumbnailWindow } from "./use-pdf-thumbnail-window"
 import { useThumbnailRailFollow } from "./use-thumbnail-rail-follow"
-import { useIsClient } from "./use-is-client"
 import { ViewerErrorBoundary } from "./viewer-error"
 
-export interface PdfThumbnailSidebarProps {
+export interface PdfViewerThumbnailsProps {
   /** Same resource object passed to PdfResourceViewer. */
   resource?: ViewerResource
   /** 1-based current page; its thumbnail is highlighted. */
@@ -33,11 +33,7 @@ export interface PdfThumbnailSidebarProps {
   className?: string
 }
 
-export function PdfThumbnailSidebar(props: PdfThumbnailSidebarProps) {
-  return <PdfViewerThumbnails {...props} />
-}
-
-export function PdfViewerThumbnails(props: PdfThumbnailSidebarProps) {
+export function PdfViewerThumbnails(props: PdfViewerThumbnailsProps) {
   const thumbnails = useOptionalPdfViewerThumbnails()
   const resource = props.resource ?? thumbnails?.resource
   const currentPage = props.currentPage ?? thumbnails?.currentPage
@@ -51,7 +47,7 @@ export function PdfViewerThumbnails(props: PdfThumbnailSidebarProps) {
   }
 
   if (!isClient) {
-    return <SidebarFallback className={props.className} />
+    return <ThumbnailsFallback className={props.className} />
   }
 
   return (
@@ -64,8 +60,8 @@ export function PdfViewerThumbnails(props: PdfThumbnailSidebarProps) {
       sourceKind={resource.sourceKind}
       variant="inline"
     >
-      <React.Suspense fallback={<SidebarFallback />}>
-        <PdfThumbnailSidebarInner
+      <React.Suspense fallback={<ThumbnailsFallback />}>
+        <PdfViewerThumbnailsInner
           {...props}
           resource={resource}
           currentPage={currentPage}
@@ -77,13 +73,13 @@ export function PdfViewerThumbnails(props: PdfThumbnailSidebarProps) {
   )
 }
 
-function PdfThumbnailSidebarInner({
+function PdfViewerThumbnailsInner({
   resource,
   currentPage,
   onSelectPage,
   width = 120,
   className,
-}: Omit<PdfThumbnailSidebarProps, "resource"> & { resource: ViewerResource }) {
+}: Omit<PdfViewerThumbnailsProps, "resource"> & { resource: ViewerResource }) {
   const doc = usePdfThumbnailDocument(resource)
   const pageMetrics = usePdfThumbnailPageMetrics(doc, doc)
   const { metricByPageNumber, pageCount, requestPageMetrics } = pageMetrics
@@ -165,7 +161,7 @@ function getRequestedThumbnailMetricPages({
   return pageNumbers
 }
 
-function SidebarFallback({ className }: { className?: string }) {
+function ThumbnailsFallback({ className }: { className?: string }) {
   return (
     <div
       className={cn(

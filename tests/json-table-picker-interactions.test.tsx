@@ -6,6 +6,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 import {
   findEditableCell,
   findReadonlyCell,
+  primitivePendingCellCommit,
   renderInteractionRow,
 } from "./json-table-interaction-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
@@ -44,11 +45,19 @@ function dayButton(day: string) {
   return button
 }
 
+function primitiveEventTarget(cell: HTMLElement) {
+  return (
+    cell.querySelector<HTMLElement>(
+      '[data-slot="input-control"], [data-slot="data-cell"]'
+    ) ?? cell
+  )
+}
+
 async function activatePickerCell(
   view: { container: HTMLElement },
   fieldPath: string
 ) {
-  fireEvent.pointerDown(await editableCell(view, fieldPath), {
+  fireEvent.pointerDown(primitiveEventTarget(await editableCell(view, fieldPath)), {
     button: 0,
     clientX: 0,
     clientY: 0,
@@ -117,9 +126,11 @@ describe("json table date and time picker interactions", () => {
 
     await waitFor(() => {
       expect(onCellCommit).toHaveBeenCalledWith(
-        "doc_1",
-        "shipped_at",
-        "2024-01-15"
+        primitivePendingCellCommit({
+          fieldPath: "shipped_at",
+          previousValue: "2024-01-02",
+          value: "2024-01-15",
+        })
       )
     })
     expect(pickerPopup()).toBeNull()
@@ -140,9 +151,11 @@ describe("json table date and time picker interactions", () => {
     })
 
     expect(onCellCommit).toHaveBeenCalledWith(
-      "doc_1",
-      "shipped_time",
-      "10:45:00"
+      primitivePendingCellCommit({
+        fieldPath: "shipped_time",
+        previousValue: "09:30:00",
+        value: "10:45:00",
+      })
     )
     expect(pickerPopup()).toBeTruthy()
     expect(pickerTrigger().getAttribute("aria-expanded")).toBe("true")
@@ -161,9 +174,11 @@ describe("json table date and time picker interactions", () => {
 
     await waitFor(() => {
       expect(onCellCommit).toHaveBeenCalledWith(
-        "doc_1",
-        "reviewed_at",
-        "2024-01-15T09:30"
+        primitivePendingCellCommit({
+          fieldPath: "reviewed_at",
+          previousValue: "2024-01-02T09:30:00Z",
+          value: "2024-01-15T09:30",
+        })
       )
     })
     expect(pickerPopup()).toBeTruthy()
@@ -185,9 +200,11 @@ describe("json table date and time picker interactions", () => {
     })
 
     expect(onCellCommit).toHaveBeenCalledWith(
-      "doc_1",
-      "shipped_time",
-      null
+      primitivePendingCellCommit({
+        fieldPath: "shipped_time",
+        previousValue: "09:30:00",
+        value: null,
+      })
     )
     expect(pickerPopup()).toBeTruthy()
     expect(pickerTrigger().getAttribute("aria-expanded")).toBe("true")
@@ -202,7 +219,7 @@ describe("json table date and time picker interactions", () => {
     })
     const cell = findReadonlyCell(view.container, "shipped_at")
 
-    fireEvent.pointerDown(cell, { button: 0 })
+    fireEvent.pointerDown(primitiveEventTarget(cell), { button: 0 })
 
     expect(cell.getAttribute("data-json-table-editable-cell")).toBeNull()
     expect(pickerPopup()).toBeNull()

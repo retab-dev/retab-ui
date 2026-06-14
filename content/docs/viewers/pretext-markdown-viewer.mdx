@@ -66,6 +66,7 @@ remain stable while the Pretext path iterates toward feature completeness.
 - **Markdown-first routing** - sources are parsed as Markdown even when the file extension is generic text.
 - **Source-line addressing** - `highlight` and `scrollToLineRange` keep using 1-based inclusive source-line ranges.
 - **Stable heading anchors** - heading DOM IDs and virtual fragment navigation come from the same model-owned slug registry.
+- **Reduced motion** - automatic viewer scrolls honor `prefers-reduced-motion` while explicit `behavior` options are preserved.
 - **Restricted component markdown** - whitelisted components and component directives render through a schema-owned registry with quoted string props, enum validation, and Markdown children only where the component explicitly allows them.
 - **Safe output** - unsupported Markdown should degrade to inert text or code output rather than executable DOM.
 - **Separate implementation** - this component lives apart from `MarkdownDocumentViewer` and can make hard cutovers without compatibility shims.
@@ -73,54 +74,58 @@ remain stable while the Pretext path iterates toward feature completeness.
 ## Implemented So Far
 
 - Headings `h1` through `h6`, paragraphs, emphasis, inline code, lists, task markers, blockquotes, rules, tables, images, and fenced code render through React Markdown/GFM.
+- Thematic breaks render as native `hr` separators with a stable `data-pretext-thematic-break` marker and document-level spacing.
 - Virtual chunks are projected as continuous document content, without visible page shells, page labels, or inter-page gutters.
-- The toolbar includes a Rendered/Text toggle; Text mode is a virtualized raw Markdown source view with line numbers and source-line scrolling.
+- Blank Markdown renders an explicit empty document state in the continuous canvas instead of a silent blank surface.
+- The toolbar includes a Rendered/Text toggle; Text mode is a virtualized raw Markdown source view with line numbers, source-line scrolling, source-line anchored mode switching, and a labelled keyboard-focusable source region for horizontal overflow.
 - Source parsing, Pretext height estimation, and visible-window math are split across `pretext-markdown-parser`, `pretext-markdown-document-model`, `pretext-markdown-layout`, and `pretext-markdown-virtualizer`.
 - Parser adapter coverage locks the current `marked` boundary for normalized tokens, unterminated code fences, malformed tables, malformed HTML, malformed links, and unterminated frontmatter.
-- The document model keeps semantic top-level Markdown block records with stable block IDs, source-line ranges, hostility flags, heading links, and owning virtual chunk indexes.
+- The document model keeps semantic top-level Markdown block records with stable block IDs, source-line ranges, document-character offsets, hostility flags, heading links, and owning virtual chunk indexes.
 - The document model exports the single heading slug algorithm used for model IDs, DOM IDs, reserved-name protection, Unicode normalization, and duplicate suffixing.
 - Layout estimates are derived from those block records, with separate line metrics and allowances for prose, headings, code, HTML, tables, rules, lists, frontmatter, and hostile blocks.
-- The private virtualizer owns pixel-overscanned visible chunk projection, source-line scroll offset lookup with intra-chunk line positioning, and scroll-anchor capture/restore across measured height updates.
+- The private virtualizer owns pixel-overscanned visible chunk projection, source-line scroll offset lookup with intra-chunk line positioning, rendered chunk source-highlight markers, and scroll-anchor capture/restore across measured height updates.
 - Architecture tests keep the Pretext Markdown registry item and source imports independent from the old `markdown-document-viewer` modules.
 - GitHub blockquote alert markers such as `> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]`, and `> [!CAUTION]` render as labelled alert surfaces with separated title/body regions, variant icons, and marker-free prose.
 - Directive callouts such as `:::warning{title="Careful"}` render as callout surfaces.
 - Component directives such as `::metric{label="Accuracy" value="98%"}`, `:badge[Stable]{tone="success"}`, `::image{src="/chart.png" alt="Chart"}`, `::video{src="/demo.mp4" label="Demo"}`, `::diagram{type="mermaid" source="graph TD; A-->B"}`, `:::accordion{title="More"}`, and nested `::::tabs` / `:::tab` blocks render through the same restricted component policy as component markdown.
 - GitHub alerts and directive callouts render as labelled `note` regions; GitHub alerts use their alert title as the accessible region name, and code blocks and Mermaid diagrams expose accessible labels for the generated block and source fallback.
-- YAML and TOML frontmatter are first-class frontmatter chunks instead of being rewritten into fenced code blocks.
-- Heading IDs support duplicate suffixes, reserve DOM-clobbering names, decode common HTML entities before slugging, expose copy-link affordances, and local `#fragment` links, direct hash loads, and hash changes scroll through the virtual document model.
-- Links and images use a dedicated safe URL policy; protocol-relative URLs, control-character tricks, encoded unsafe schemes, and non-HTTP image schemes are rejected.
+- Regular blockquotes keep semantic `blockquote` markup and support nested blockquotes plus contained list rhythm without becoming alert surfaces.
+- YAML and TOML frontmatter are first-class frontmatter chunks with a top-level scalar metadata summary plus a raw source-fidelity block instead of being rewritten into fenced code blocks.
+- Heading IDs support duplicate suffixes, reserve DOM-clobbering names, decode common HTML entities before slugging, expose copy-link affordances, and local `#fragment` links, direct hash loads, hash changes, and back/forward fragment navigation scroll through the virtual document model.
+- Links and images use a dedicated safe URL policy; protocol-relative URLs, control-character tricks, encoded unsafe schemes, non-HTTP image schemes, `data:` / `blob:` resources, and SVG/SVGZ image resources are rejected.
 - Absolute HTTP(S) links open with `noopener noreferrer` and show an aria-hidden external-link cue; fragments, relative links, root-relative links, and email links stay in the current browsing context, and safe link titles are preserved as native tooltips.
 - Long prose tokens, links, table cells, inline code, definition-list terms, and restricted component labels use explicit overflow wrapping so pathological unbroken text does not widen the continuous viewer surface.
-- Safe raw HTML is parsed through `rehype-raw` and narrowed by local policy before `rehype-sanitize`; `details`, `summary`, `figure`, `figcaption`, `caption`, `dl`, `dt`, `dd`, `mark`, `kbd`, `sub`, and `sup` render through styled components, while unsafe tags, active raw inputs, SVG/script/style surfaces, and unsafe attributes are removed before React rendering.
+- Safe raw HTML is parsed through `rehype-raw` and narrowed by local policy before `rehype-sanitize`; `details`, `summary`, `figure`, `figcaption`, `caption`, `dl`, `dt`, `dd`, `mark`, `kbd`, `q`, `ins`, `var`, `samp`, `sub`, and `sup` render through styled components, while unsafe tags, active raw inputs, SVG/script/style surfaces, and unsafe attributes are removed before React rendering. User-authored raw HTML `id` and `name` attributes are prefixed with `user-content-` so they cannot clobber page globals, while model-owned heading IDs keep the viewer's stable slug contract.
 - Markdown HTML comments are retained in the source model and Text mode but do not render or reserve visible layout height.
 - Markdown language policy, URL policy, alert/callout transforms, restricted component parsing, prose transforms, and the sanitizer schema live in the dedicated `pretext-markdown-policy` module.
 - Upstream SmartyPants typography transforms, upstream GitHub gemoji shortcode transforms, and Retab-specific arrow/fraction transforms apply to normal prose text while inline code stays literal.
-- GFM autolink literals, strikethrough, soft line breaks, ordered-list start values, and non-editable task-list checkboxes render through explicit Pretext Markdown components.
+- GFM autolink literals, strikethrough, soft line breaks, ordered-list start values, and non-editable task-list checkboxes render through explicit Pretext Markdown components; task-list items drop normal list markers and expose a stable task-list item marker.
+- Loose list items, multi-paragraph list items, and nested ordered/unordered lists keep semantic list markup while using tighter nested-list rhythm.
 - Reference links and reference images resolve from document-wide definitions even when the definition lives outside the currently rendered virtual chunk.
-- Restricted component markdown supports `<Metric label="Accuracy" value="98%" />`, `<Badge label="Stable" tone="success" />`, `<Image src="/chart.png" alt="Chart" />`, `<Video src="/demo.mp4" label="Demo" />`, `<Diagram type="mermaid" source="graph TD; A-->B" />`, paired `<Callout kind="warning" title="Review">...</Callout>` blocks, and paired `<Accordion title="More details">...</Accordion>` blocks with safe Markdown children; restricted component directives additionally support nested `Tabs` / `Tab` blocks with safe Markdown panels. The component registry owns allowed names, allowed props, and enum values such as `Badge.tone`.
-- Unknown JSX-like syntax, expression props, event handlers, component-specific unknown props, and invalid enum values render as inert source-like text or `mdx` code.
-- Mermaid fenced blocks and restricted `Diagram` components render through the Mermaid package inside the viewer diagram surface, including common aliases such as `mmd`; parse/render failures stay contained in a non-crashing error/source state.
-- Inline and block math render through `remark-math` and KaTeX.
+- Restricted component markdown supports `<Metric label="Accuracy" value={98} />`, `<Badge label="Stable" tone="success" />`, `<Image src="/chart.png" alt="Chart" />`, `<Video src="/demo.mp4" label="Demo" controls={false} muted />`, `<Diagram type="mermaid" source="graph TD; A-->B" />`, paired `<Callout kind="warning" title="Review">...</Callout>` blocks, and paired `<Accordion title="More details">...</Accordion>` blocks with safe Markdown children; restricted component directives additionally support nested `Tabs` / `Tab` blocks with safe Markdown panels. Tabs expose ARIA tab roles, selected-panel state, roving focus, Arrow key navigation, and Home/End navigation. The component registry owns allowed names, allowed props, typed string/number/boolean literal props, and enum values such as `Badge.tone`.
+- Unknown JSX-like syntax, non-literal expression props, spread props, event handlers, component-specific unknown props, invalid enum values, import/export statements, and remote or namespaced components render as inert source-like text or `mdx` code.
+- Mermaid fenced blocks and restricted `Diagram` components render through the Mermaid package inside the viewer diagram surface, including common aliases such as `mmd`; parse/render failures stay contained in a non-crashing error/source state, and rendered diagrams expose source copy controls.
+- Inline and block math render through `remark-math` and KaTeX with untrusted input, bounded expansion, and bounded user-defined sizes.
 - GFM footnotes render with labelled references, labelled backrefs, bidirectional fragment targets, and a labelled footnotes section.
-- Fenced code blocks show normalized language headers, `title="..."` / `caption="..."` metadata, copy controls with copied/failed states, and `rehype-pretty-code` syntax highlighting.
-- GFM tables render inline cell Markdown, preserve left/center/right alignment with tabular numeric styling for right-aligned cells, support safe raw HTML captions, use a keyboard-focusable horizontal scroll region, patch deterministic header/cell associations, and include a copy action that writes rendered cells as TSV.
-- Images render through a safe Markdown image surface with blocked, loading, ready, failed, and retry states, optional title captions, lazy loading, and decoded aspect-ratio stabilization; restricted videos render through the same safe media URL policy with controls, metadata preload, captions, and blocked/failed states.
+- Fenced code blocks show normalized language headers, `title="..."` / `caption="..."` metadata, opt-in Pretty Code `showLineNumbers` / `showLineNumbers{n}` line numbers, highlighted lines/chars, diff add/remove line styling, full-block and selected-code copy controls with copied/failed states, a labelled keyboard-focusable horizontal source region, and `rehype-pretty-code` syntax highlighting.
+- GFM tables render inline cell Markdown, preserve left/center/right alignment with tabular numeric styling for right-aligned cells, support safe raw HTML captions, use a keyboard-focusable horizontal scroll region with Arrow/Home/End controls, patch deterministic header/cell associations, and include a copy action that writes rendered cells as TSV.
+- Images render through a safe Markdown image surface with blocked, loading, ready, failed, and retry states, title captions associated through `aria-describedby`, lazy loading, max-width containment, decoded aspect-ratio stabilization, and SVG/data/blob resource blocking; restricted videos render through the same safe media URL policy with controls, metadata preload, captions, and blocked/failed states.
 - The toolbar includes copy and download actions for the full raw Markdown source, including inline text, URL fallback, URL download metadata, Blob download metadata, and local Blob object URLs.
 - Oversized code, table, paragraph, list, and HTML payloads are flagged as hostile chunks, isolated from neighboring prose, and given cheap deterministic layout estimates.
 - URL, Blob, and inline text sources load through the existing bounded text resource layer.
-- File Viewer routes Markdown files and inline Markdown sources through `PretextMarkdownViewer`.
-- The registry item is separate: `pretext-markdown-viewer`.
+- File Viewer routes Markdown URL sources, Blob sources, inline text sources, and MIME-only Markdown sources through `PretextMarkdownViewer`.
+- The registry item is separate: `pretext-markdown-viewer`, and its generated artifact has an import-closure smoke test against transitive registry dependencies.
 
 ## Not Complete Yet
 
 The missing work is tracked in the repository file
 `design/pretext-markdown-viewer-missing-inventory.md`. The largest gaps are
 arbitrary MDX execution, broader GitHub alert visual/a11y verification,
-directive semantics beyond callouts, broader frontmatter metadata policy, full
+directive semantics beyond callouts, nested frontmatter metadata policy, full
 accessibility verification, syntax highlighting polish, raw HTML schema polish,
 hostile-block inner virtualization, source-mode search/selection polish, image
-retry/dimension metadata polish, and broader integration rollout beyond File
-Viewer routing.
+retry/dimension metadata polish, full CLI registry install verification, and
+broader integration rollout beyond File Viewer routing.
 
 ## Feature Matrix
 
@@ -131,8 +136,8 @@ Viewer routing.
 | Markdown renderer   | React Markdown document renderer        | Viewer-owned Markdown subset   | React Markdown/GFM for visible chunks                                                         |
 | Geometry strategy   | Page estimates and measured page shells | Pretext line/block estimates   | Pretext-informed block estimates plus measured chunk heights                                  |
 | Tables              | GFM table rendering                     | Basic Markdown table path      | GFM tables with inline cell Markdown, accessibility patching, horizontal scroll, and TSV copy |
-| Code blocks         | Rendered code blocks                    | Source-like fallback path      | `rehype-pretty-code`, copy controls, normalized labels, title, and caption metadata           |
-| Frontmatter         | Rewritten for rendering                 | Source text behavior           | First-class YAML/TOML chunks                                                                  |
+| Code blocks         | Rendered code blocks                    | Source-like fallback path      | `rehype-pretty-code`, full-block and selected-code copy controls, normalized labels, title, caption, line numbers, highlights, and diff line styling |
+| Frontmatter         | Rewritten for rendering                 | Source text behavior           | First-class YAML/TOML chunks with scalar metadata summary                                     |
 | GitHub alerts       | Not first-class                         | Not first-class                | `> [!NOTE]` style alert surfaces                                                              |
 | Component markdown  | Not first-class                         | Not first-class                | Restricted component registry only                                                            |
 | Raw HTML            | Sanitized document renderer path        | Inert/source-oriented fallback | Narrow sanitized static HTML policy                                                           |
@@ -142,10 +147,12 @@ Viewer routing.
 ## Unsupported Syntax
 
 The Pretext Markdown Viewer intentionally does not execute arbitrary MDX. JSX-like
-component syntax is restricted to the whitelisted component registry, quoted
-serializable props, and safe Markdown children where the component allows them.
-Unknown components, expression props, event handlers, invalid enum values, and
-unsafe directive props render as inert source-like text or code.
+component syntax is restricted to the whitelisted component registry,
+serializable string/number/boolean literal props, and safe Markdown children
+where the component allows them. Unknown components, non-literal expression
+props, spread props, event handlers, invalid enum values, import/export
+statements, remote or namespaced components, and unsafe directive props render
+as inert source-like text or code.
 
 Mermaid rendering uses the Mermaid package with strict security settings inside
 the viewer diagram surface. Invalid diagrams or browser rendering failures stay
@@ -177,7 +184,7 @@ installation, and source-line/fragment navigation across realistic files.
 - No visible page labels, page frames, page gaps, or page delimiters in rendered Markdown.
 - Bounded mounted content for large Markdown files, with pixel overscan and measured-height correction.
 - Stable scroll anchors across measurement updates, width changes, zoom changes, and font readiness.
-- Source-line highlighting and `scrollToLineRange` work in rendered and Text modes.
+- Source-line highlighting and `scrollToLineRange` work in rendered and Text modes; rendered chunks that intersect the highlighted range expose stable highlight data attributes and an accessible region label.
 - Heading IDs, hash loads, hash changes, and local fragment clicks use the same model-owned slug registry.
 - GFM tables, task lists, autolinks, strikethrough, footnotes, math, safe raw HTML, code blocks, alerts, images, and restricted components have focused regression coverage.
 - Unsafe links, images, HTML, directives, and component props are blocked or rendered inert.

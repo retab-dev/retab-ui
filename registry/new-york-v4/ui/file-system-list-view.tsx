@@ -3,62 +3,60 @@
 import * as React from "react"
 import { FileTree as PierreFileTree } from "@pierre/trees/react"
 
-import type { FileSystemController } from "./file-system-controller"
+import type { FileSystemListViewController } from "./file-system-explorer-controllers"
+import { useFileSystemPierreDecorationVersion } from "./file-system-pierre-decoration-version"
 import {
   buildFileSystemPierreInput,
-  fromPierrePath,
+  pierrePathToFileSystemEntry,
 } from "./file-system-pierre-input"
 import { useFileSystemPierreModel } from "./file-system-pierre-model"
-import type { FileSystemFileEntry } from "./file-system-types"
 
 export function FileSystemListView({
   controller,
-  onOpenFile,
 }: {
-  controller: FileSystemController
-  onOpenFile: (file: FileSystemFileEntry) => void
+  controller: FileSystemListViewController
 }) {
-  const decorationRevision = React.useMemo(
-    () =>
-      [
-        [...controller.loadingFolders].sort().join("|"),
-        [...controller.folderErrors]
-          .sort(([left], [right]) => left.localeCompare(right))
-          .map(([path, error]) => `${path}:${error}`)
-          .join("|"),
-      ].join("::"),
-    [controller.folderErrors, controller.loadingFolders]
-  )
+  const decorationVersion = useFileSystemPierreDecorationVersion({
+    folderErrors: controller.decoration.folderErrors,
+    loadingFolders: controller.decoration.loadingFolders,
+  })
   const input = React.useMemo(
     () =>
       buildFileSystemPierreInput({
-        currentPath: controller.currentPath,
+        currentPath: controller.navigation.currentPath,
         index: controller.index,
-        revision: decorationRevision,
       }),
-    [controller.currentPath, controller.index, decorationRevision]
+    [controller.index, controller.navigation.currentPath]
   )
-  const { model } = useFileSystemPierreModel({ controller, input })
+  const { model } = useFileSystemPierreModel({
+    decoration: controller.decoration,
+    decorationVersion,
+    input,
+    loading: controller.loading,
+    navigation: controller.navigation,
+    query: controller.query,
+    selection: controller.selection,
+  })
 
   const openPierrePath = React.useCallback(
     (path: string | null) => {
-      const entry = fromPierrePath(path, input)
+      const entry = pierrePathToFileSystemEntry(path, input)
 
       if (!entry) {
         return
       }
 
       if (entry.kind === "folder") {
-        if (controller.folderErrors.has(entry.path)) {
-          void controller.ensureChildren(entry.path, { retry: true })
+        if (controller.loading.folderErrors.has(entry.path)) {
+          void controller.loading.ensureChildren(entry.path, { retry: true })
         }
-        controller.navigateTo(entry.path)
+        controller.navigation.navigateTo(entry.path)
         return
       }
 
-      onOpenFile(entry)
+      controller.openPreview(entry)
     },
-    [controller, input, onOpenFile]
+    [controller, input]
   )
 
   const handleDoubleClick = React.useCallback(
@@ -82,7 +80,7 @@ export function FileSystemListView({
     [model, openPierrePath]
   )
 
-  if (!input.paths.length) {
+  if (!input.pierrePaths.length) {
     return <FileSystemEmptyRows label="This folder is empty" />
   }
 

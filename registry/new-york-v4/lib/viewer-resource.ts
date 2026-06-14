@@ -713,13 +713,22 @@ function isContentLengthOverLimit(
 }
 
 function validateFullContentResponse(response: Response) {
-  if (response.status === 206) {
-    throw new ResourceError({
-      kind: "partial_content",
-      message: "Full response returned partial content.",
-      status: response.status,
-    })
+  if (response.status !== 206) return
+
+  const contentRange = parseContentRange(response.headers.get("content-range"))
+  if (
+    contentRange?.total != null &&
+    contentRange.start === 0 &&
+    contentRange.end === contentRange.total - 1
+  ) {
+    return
   }
+
+  throw new ResourceError({
+    kind: "partial_content",
+    message: "Full response returned partial content.",
+    status: response.status,
+  })
 }
 
 async function readResponseStreamChunk(

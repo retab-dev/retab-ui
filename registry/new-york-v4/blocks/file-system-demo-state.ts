@@ -5,7 +5,6 @@ import type {
 } from "@/components/ui/file-system"
 
 export const DEFAULT_FILE_SYSTEM_DEMO_QUERY: FileSystemQueryState = {
-  filters: { categories: [], updatedAfter: null },
   search: "",
   sort: { direction: "asc", key: "name" },
 }
@@ -157,14 +156,13 @@ export type FileSystemDemoState = {
   view: FileSystemView
 }
 
-const VIEWS: FileSystemView[] = ["list", "grid", "columns", "gallery"]
+const VIEWS: FileSystemView[] = ["list", "grid", "columns"]
 const SORT_KEYS: FileSystemQueryState["sort"]["key"][] = [
   "name",
   "kind",
   "size",
   "updatedAt",
 ]
-const CATEGORIES = new Set(["csv", "docx", "markdown", "pdf", "text", "xlsx"])
 
 export function collectFileSystemDemoItemPaths(
   items: readonly FileSystemItem[]
@@ -233,22 +231,10 @@ export function formatFileSystemDemoState(
 
   if (state.path !== fallbackState.path) searchParams.set("path", state.path)
   if (search !== fallbackState.query.search) searchParams.set("search", search)
-  if (
-    state.selectedPath &&
-    state.selectedPath !== fallbackState.selectedPath
-  ) {
+  if (state.selectedPath && state.selectedPath !== fallbackState.selectedPath) {
     searchParams.set("selectedPath", state.selectedPath)
   }
   if (state.view !== fallbackState.view) searchParams.set("view", state.view)
-  if (state.query.filters.categories.length) {
-    searchParams.set(
-      "filters.categories",
-      state.query.filters.categories.join(",")
-    )
-  }
-  if (state.query.filters.updatedAfter) {
-    searchParams.set("filters.updatedAfter", state.query.filters.updatedAfter)
-  }
   if (state.query.sort.key !== fallbackState.query.sort.key) {
     searchParams.set("sort.key", state.query.sort.key)
   }
@@ -264,10 +250,6 @@ function parseQuery(
   fallbackQuery: FileSystemQueryState
 ): FileSystemQueryState {
   return {
-    filters: {
-      categories: parseCategories(searchParams.get("filters.categories")),
-      updatedAfter: parseUpdatedAfter(searchParams.get("filters.updatedAfter")),
-    },
     search: (searchParams.get("search") ?? fallbackQuery.search).trim(),
     sort: {
       direction: parseSortDirection(
@@ -302,21 +284,6 @@ function parseView(value: string | null, fallbackView: FileSystemView) {
   return VIEWS.includes(value as FileSystemView)
     ? (value as FileSystemView)
     : fallbackView
-}
-
-function parseCategories(value: string | null) {
-  if (!value) return []
-
-  return value
-    .split(",")
-    .filter((category) => CATEGORIES.has(category))
-    .sort()
-}
-
-function parseUpdatedAfter(
-  value: string | null
-): FileSystemQueryState["filters"]["updatedAfter"] {
-  return value === "last7" || value === "last30" ? value : null
 }
 
 function parseSortKey(

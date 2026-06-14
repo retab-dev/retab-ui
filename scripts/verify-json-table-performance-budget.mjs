@@ -32,60 +32,240 @@ function renderedComponentCount(scenario, componentName) {
   )
 }
 
-function assertOpenEnumBudget(profileName, scenario, budget) {
-  if (!scenario) fail(`${profileName}: missing open-enum scenario`)
-  if (!scenario.wait?.ok) fail(`${profileName}: open-enum did not complete`)
-  if (!scenario.popupMounted) fail(`${profileName}: open-enum did not mount popup`)
+function renderedEditableCellPaths(scenario) {
+  return (scenario.profiler?.renders?.byInstance ?? [])
+    .map((entry) => entry.name)
+    .filter((name) => name.startsWith("EditableJsonTableCell:"))
+    .map((name) => ({
+      fieldPath: name.slice("EditableJsonTableCell:".length),
+      count: scenario.profiler.renders.byInstance.find(
+        (entry) => entry.name === name
+      )?.count,
+    }))
+}
 
-  const elapsedMs = scenario.elapsedMs ?? Number.POSITIVE_INFINITY
-  if (elapsedMs > budget.maxElapsedMs) {
+function markCount(scenario, markName) {
+  return scenario.profiler?.markCounts?.[markName] ?? 0
+}
+
+function assertMax(profileName, scenarioName, label, value, maxValue) {
+  if (maxValue === undefined) return
+  if (value > maxValue) {
     fail(
-      `${profileName}: open-enum elapsed ${elapsedMs.toFixed(
-        1
-      )}ms exceeds ${budget.maxElapsedMs}ms`
+      `${profileName}: ${scenarioName} ${label} ${formatNumber(
+        value
+      )} exceeds ${formatNumber(maxValue)}`
     )
   }
+}
+
+function assertBoolean(profileName, scenarioName, label, value, expected) {
+  if (expected === undefined) return
+  if (Boolean(value) !== expected) {
+    fail(`${profileName}: ${scenarioName} expected ${label}=${expected}`)
+  }
+}
+
+function formatNumber(value) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1)
+}
+
+function scenarioBudgetCategory(budget, categoryName) {
+  return budget[categoryName] && typeof budget[categoryName] === "object"
+    ? budget[categoryName]
+    : {}
+}
+
+function scenarioFlatBudget(budget) {
+  const { diagnostic, hard, latency, ...flatBudget } = budget
+  return flatBudget
+}
+
+function normalizedScenarioBudget(budget) {
+  return {
+    ...scenarioFlatBudget(budget),
+    ...scenarioBudgetCategory(budget, "latency"),
+    ...scenarioBudgetCategory(budget, "hard"),
+    ...scenarioBudgetCategory(budget, "diagnostic"),
+  }
+}
+
+function assertScenarioBudget(profileName, scenarioName, scenario, budget) {
+  if (!scenario) fail(`${profileName}: missing ${scenarioName} scenario`)
+  if (!scenario.wait?.ok)
+    fail(`${profileName}: ${scenarioName} did not complete`)
+  const normalizedBudget = normalizedScenarioBudget(budget)
+
+  const elapsedMs = scenario.elapsedMs ?? Number.POSITIVE_INFINITY
+  assertMax(
+    profileName,
+    scenarioName,
+    "elapsed ms",
+    elapsedMs,
+    normalizedBudget.maxElapsedMs
+  )
 
   const editableCellRenders = renderedComponentCount(
     scenario,
     "EditableJsonTableCell"
   )
-  if (editableCellRenders > budget.maxEditableCellRenders) {
-    fail(
-      `${profileName}: open-enum rendered EditableJsonTableCell ${editableCellRenders} times, budget ${budget.maxEditableCellRenders}`
-    )
-  }
+  assertMax(
+    profileName,
+    scenarioName,
+    "EditableJsonTableCell renders",
+    editableCellRenders,
+    normalizedBudget.maxEditableCellRenders
+  )
 
   const reactCommits = scenario.profiler?.reactCommits?.count ?? 0
-  if (reactCommits > budget.maxReactCommits) {
-    fail(
-      `${profileName}: open-enum used ${reactCommits} React commits, budget ${budget.maxReactCommits}`
-    )
-  }
+  assertMax(
+    profileName,
+    scenarioName,
+    "React commits",
+    reactCommits,
+    normalizedBudget.maxReactCommits
+  )
 
   const rectReads = scenario.rectProbe?.count ?? 0
-  if (rectReads > budget.maxRectReads) {
-    fail(
-      `${profileName}: open-enum used ${rectReads} rect reads, budget ${budget.maxRectReads}`
-    )
-  }
+  assertMax(
+    profileName,
+    scenarioName,
+    "rect reads",
+    rectReads,
+    normalizedBudget.maxRectReads
+  )
 
-  for (const componentName of budget.forbiddenRenderedComponents ?? []) {
+  for (const componentName of normalizedBudget.forbiddenRenderedComponents ??
+    []) {
     const count = renderedComponentCount(scenario, componentName)
     if (count > 0) {
       fail(
-        `${profileName}: open-enum rendered ${componentName} ${count} time(s)`
+        `${profileName}: ${scenarioName} rendered ${componentName} ${count} time(s)`
       )
     }
   }
+
+  for (const [componentName, maxCount] of Object.entries(
+    normalizedBudget.maxRenderedComponentCounts ?? {}
+  )) {
+    assertMax(
+      profileName,
+      scenarioName,
+      `${componentName} renders`,
+      renderedComponentCount(scenario, componentName),
+      maxCount
+    )
+  }
+
+  const allowedEditableCellRenderFieldPaths =
+    normalizedBudget.allowedEditableCellRenderFieldPaths
+  if (allowedEditableCellRenderFieldPaths) {
+    const unexpected = renderedEditableCellPaths(scenario).filter(
+      (entry) => !allowedEditableCellRenderFieldPaths.includes(entry.fieldPath)
+    )
+    if (unexpected.length > 0) {
+      fail(
+        `${profileName}: ${scenarioName} rendered sibling editable cell(s): ${unexpected
+          .map((entry) => `${entry.fieldPath}=${entry.count}`)
+          .join(", ")}`
+      )
+    }
+  }
+
+  assertBoolean(
+    profileName,
+    scenarioName,
+    "popupMounted",
+    scenario.popupMounted,
+    normalizedBudget.expectPopupMounted
+  )
+  assertBoolean(
+    profileName,
+    scenarioName,
+    "pickerPopupMounted",
+    scenario.pickerPopupMounted,
+    normalizedBudget.expectPickerPopupMounted
+  )
+  assertBoolean(
+    profileName,
+    scenarioName,
+    "calendarMounted",
+    scenario.calendarMounted,
+    normalizedBudget.expectCalendarMounted
+  )
+
+  const documentPatchStarts = markCount(scenario, "document-patch-start")
+  const documentPatchEnds = markCount(scenario, "document-patch-end")
+  if (normalizedBudget.documentPatchCount !== undefined) {
+    if (
+      documentPatchStarts !== normalizedBudget.documentPatchCount ||
+      documentPatchEnds !== normalizedBudget.documentPatchCount
+    ) {
+      fail(
+        `${profileName}: ${scenarioName} expected ${normalizedBudget.documentPatchCount} document patch(es), got start=${documentPatchStarts}, end=${documentPatchEnds}`
+      )
+    }
+  }
+
+  assertMax(
+    profileName,
+    scenarioName,
+    "DOM node delta",
+    scenario.metricsDelta?.Nodes ?? 0,
+    normalizedBudget.maxDomNodeDelta
+  )
+  assertMax(
+    profileName,
+    scenarioName,
+    "layout ms",
+    scenario.browserCost?.layout?.durationMs ?? 0,
+    normalizedBudget.maxLayoutDurationMs
+  )
+  assertMax(
+    profileName,
+    scenarioName,
+    "style ms",
+    scenario.browserCost?.style?.durationMs ?? 0,
+    normalizedBudget.maxStyleDurationMs
+  )
+  assertMax(
+    profileName,
+    scenarioName,
+    "script ms",
+    scenario.browserCost?.scriptDurationMs ?? 0,
+    normalizedBudget.maxScriptDurationMs
+  )
 
   return {
     elapsedMs,
     editableCellRenders,
     reactCommits,
     rectReads,
+    documentPatches: documentPatchStarts,
+    domNodeDelta: scenario.metricsDelta?.Nodes ?? null,
     styleMs: scenario.browserCost?.style?.durationMs ?? null,
+    layoutMs: scenario.browserCost?.layout?.durationMs ?? null,
   }
+}
+
+function printSummary(summary) {
+  console.log(
+    [
+      `${summary.profile}/${summary.scenario}`,
+      `elapsed=${formatNumber(summary.elapsedMs)}ms`,
+      `renders=${summary.editableCellRenders}`,
+      `commits=${summary.reactCommits}`,
+      `rect=${summary.rectReads}`,
+      `patches=${summary.documentPatches}`,
+      `nodes=${summary.domNodeDelta ?? "n/a"}`,
+      `style=${summary.styleMs === null ? "n/a" : `${formatNumber(summary.styleMs)}ms`}`,
+      `layout=${
+        summary.layoutMs === null
+          ? "n/a"
+          : `${formatNumber(summary.layoutMs)}ms`
+      }`,
+    ].join("  ")
+  )
 }
 
 async function main() {
@@ -104,20 +284,24 @@ async function main() {
     const profile = profiles.find((item) => item.name === profileName)
     if (!profile) fail(`Missing performance profile: ${profileName}`)
 
-    if (profileBudget["open-enum"]) {
+    for (const [scenarioName, scenarioBudget] of Object.entries(
+      profileBudget
+    )) {
       summaries.push({
         profile: profileName,
-        scenario: "open-enum",
-        ...assertOpenEnumBudget(
+        scenario: scenarioName,
+        ...assertScenarioBudget(
           profileName,
-          scenarioByName(profile, "open-enum"),
-          profileBudget["open-enum"]
+          scenarioName,
+          scenarioByName(profile, scenarioName),
+          scenarioBudget
         ),
       })
     }
   }
 
-  console.log(JSON.stringify({ ok: true, summaries }, null, 2))
+  for (const summary of summaries) printSummary(summary)
+  console.log(`ok ${summaries.length} json-table performance scenario(s)`)
 }
 
 main().catch((error) => {

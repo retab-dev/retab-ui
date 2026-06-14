@@ -12,11 +12,11 @@ import { usePdfAnchoredTarget } from "@/components/ui/pdf-anchor-target"
 import type { PageOverlayProps } from "@/components/ui/pdf-viewer"
 import {
   ViewerBody,
-  ViewerHeader,
-  ViewerRoot,
-  ViewerSidebar,
-  ViewerSidebarTrigger,
   ViewerSurface,
+  ViewerHeader,
+  ViewerSidebar,
+  ViewerRoot,
+  ViewerSidebarTrigger,
 } from "@/components/ui/viewer"
 
 import { EditViewerDocumentPane } from "./edit-viewer-document-pane"
@@ -175,7 +175,7 @@ function EditViewerContent({
             <ViewerHeader className="bg-background">
               <div className="flex min-w-0 items-center gap-2 px-2">
                 {controller.resolvedOptions.fieldPanel ? (
-                  <ViewerSidebarTrigger side="right" />
+                  <ViewerSidebarTrigger />
                 ) : null}
                 <EditViewerToolbar
                   modes={controller.availableModes}
@@ -203,6 +203,7 @@ function EditViewerContent({
 
             {controller.resolvedOptions.fieldPanel ? (
               <ViewerSidebar
+                aria-label="Document fields"
                 side="right"
                 width="320px"
                 className="max-h-[42%] min-h-[220px] border-t bg-background md:max-h-none md:max-w-[50%] md:border-t-0 md:border-l"

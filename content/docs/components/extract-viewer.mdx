@@ -22,7 +22,7 @@ Extraction is not a special PDF viewer. It is a domain composition:
       <ViewerSurface>
         <PdfViewer renderPageOverlay={renderPageOverlay} />
       </ViewerSurface>
-      <ViewerSidebar>
+      <ViewerSidebar aria-label="Extracted fields">
         <JsonForm anchorLink={link} />
       </ViewerSidebar>
     </ViewerBody>
@@ -32,13 +32,13 @@ Extraction is not a special PDF viewer. It is a domain composition:
 
 The pieces stay separate:
 
-| Piece                      | Role                                                                 |
-| -------------------------- | -------------------------------------------------------------------- |
-| `document-source`          | Retab source response types and flattening helpers.                  |
-| `AnchoredDocumentProvider` | preview, selected, active item state, and target navigation.         |
-| `JsonForm`                 | field renderer that reports field paths through `anchorLink`.        |
+| Piece                      | Role                                                                  |
+| -------------------------- | --------------------------------------------------------------------- |
+| `document-source`          | Retab source response types and flattening helpers.                   |
+| `AnchoredDocumentProvider` | preview, selected, active item state, and target navigation.          |
+| `JsonForm`                 | field renderer that reports field paths through `anchorLink`.         |
 | `pdf-anchor-target`        | PDF adapter: source-to-anchor projection, scroll target, and overlay. |
-| `PdfViewer`                | leaf viewer that renders the PDF source.                             |
+| `PdfViewer`                | leaf viewer that renders the PDF source.                              |
 
 <MermaidDiagram
   chart={`
@@ -110,8 +110,8 @@ import * as React from "react"
 import { extractionSourcesToSourceMap } from "@/lib/document-source"
 import {
   AnchoredDocumentProvider,
-  type AnchoredItem,
   useAnchoredFieldLink,
+  type AnchoredItem,
 } from "@/components/ui/anchored-document-viewer"
 import {
   sourceToPdfAnchor,
@@ -176,14 +176,14 @@ native scroll and overlay APIs.
 
 ### `document-source`
 
-| Export                         | Description                                                                                                                                |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `Source`                       | `{ content, anchor }` — a value's provenance.                                                                                              |
-| `SourceAnchor`                 | Discriminated union on `kind`: `pdf_bbox`, `image_bbox`, `csv_cell`, `spreadsheet_cell`, `docx_text_span`, `docx_table_cell`, `text_span`. |
-| `ExtractionSourcesResponse`    | The `/v1/extractions/{id}/sources` shape.                                                                                                  |
-| `extractionSourcesToSourceMap` | Flatten the nested sources tree into a dotted-path lookup.                                                                                 |
-| `SourceLocation` / `SourceArea` | A normalized page region (`page` + percent box).                                                                                          |
-| `sourceLocationKey`            | Stable key for dedupe.                                                                                                                     |
+| Export                          | Description                                                                                                                                |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Source`                        | `{ content, anchor }` — a value's provenance.                                                                                              |
+| `SourceAnchor`                  | Discriminated union on `kind`: `pdf_bbox`, `image_bbox`, `csv_cell`, `spreadsheet_cell`, `docx_text_span`, `docx_table_cell`, `text_span`. |
+| `ExtractionSourcesResponse`     | The `/v1/extractions/{id}/sources` shape.                                                                                                  |
+| `extractionSourcesToSourceMap`  | Flatten the nested sources tree into a dotted-path lookup.                                                                                 |
+| `SourceLocation` / `SourceArea` | A normalized page region (`page` + percent box).                                                                                           |
+| `sourceLocationKey`             | Stable key for dedupe.                                                                                                                     |
 
 ### `anchored-document-viewer`
 
@@ -191,16 +191,16 @@ native scroll and overlay APIs.
 | -------------------------- | --------------------------------------------------------------------------- |
 | `AnchoredDocumentProvider` | Owns item-anchor preview, selection, activation, and target navigation.     |
 | `AnchoredItem`             | `{ id, anchor, disabled? }`; use the field path as `id` for extraction UI.  |
-| `FieldAnchorLink`          | Link shape accepted by `JsonForm`'s `anchorLink` prop.                     |
+| `FieldAnchorLink`          | Link shape accepted by `JsonForm`'s `anchorLink` prop.                      |
 | `useAnchoredFieldLink`     | Returns a `FieldAnchorLink` from the active anchored-document provider.     |
 | `useAnchoredDocument`      | Low-level access to active item, preview, select, activate, and clear APIs. |
 
 ### `pdf-anchor-target`
 
-| Export                  | Description                                                                         |
-| ----------------------- | ----------------------------------------------------------------------------------- |
-| `sourceToPdfAnchor`     | Converts a Retab PDF source into the shared PDF document anchor.                    |
-| `usePdfAnchoredTarget`  | Creates an `AnchoredDocumentTarget` over a `PdfViewer` ref.                         |
+| Export                  | Description                                                                        |
+| ----------------------- | ---------------------------------------------------------------------------------- |
+| `sourceToPdfAnchor`     | Converts a Retab PDF source into the shared PDF document anchor.                   |
+| `usePdfAnchoredTarget`  | Creates an `AnchoredDocumentTarget` over a `PdfViewer` ref.                        |
 | `usePdfAnchoredOverlay` | Creates a `renderPageOverlay` callback for active or interactive anchored regions. |
 
 The [Extract Viewer](/blocks#extract), [Extraction Viewer](/blocks#extraction-viewer),

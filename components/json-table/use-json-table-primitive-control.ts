@@ -1,8 +1,7 @@
 import * as React from "react"
 
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
-import type { JsonTablePrimitiveCellProps } from "@/components/json-table/json-table-primitive-cell"
-import { finishPreviousPrimitiveEditor } from "@/components/json-table/json-table-primitive-handoff"
+import { replaceJsonTablePrimitiveActiveCell } from "@/components/json-table/json-table-primitive-active-cell-replacement"
 import { formatValueForCommit } from "@/components/json-table/lib/value-normalization"
 import { useRefCallback } from "@/components/json-table/path-utils"
 import type { JsonTableCellField } from "@/components/json-table/use-json-table-cell-field"
@@ -12,7 +11,6 @@ export type JsonTablePrimitiveControl = {
   commitPrimitiveValue: (value: unknown) => void
   primitiveEffectiveValue: unknown
   setPrimitiveActive: (active: boolean) => void
-  setPrimitiveEditorHandle: JsonTablePrimitiveCellProps["onEditorHandleChange"]
 }
 
 export function useJsonTablePrimitiveControl({
@@ -51,47 +49,38 @@ export function useJsonTablePrimitiveControl({
         return
       }
       if (nextActive) {
-        finishPreviousPrimitiveEditor({
-          currentCellId: cellField.cellId,
-          primitiveActiveCell: props.primitiveActiveCellStore.getSnapshot(),
-          primitiveEditorHandleRef: props.primitiveEditorHandleRef,
+        replaceJsonTablePrimitiveActiveCell({
+          store: props.primitiveActiveCellStore,
           setPrimitiveActiveCell: props.setPrimitiveActiveCell,
-        })
-        props.setPrimitiveActiveCell({
-          cellId: cellField.cellId,
-          docId: props.docId,
-          fieldPath: cellField.materializedFieldPath,
+          nextActiveCell: {
+            cellId: cellField.cellId,
+            docId: props.docId,
+            fieldPath: cellField.materializedFieldPath,
+          },
         })
         return
       }
-      if (cellField.isPrimitiveActive) props.setPrimitiveActiveCell(null)
+      if (
+        props.primitiveActiveCellStore.getSnapshot() ===
+        cellField.primitiveActiveCell
+      ) {
+        props.setPrimitiveActiveCell(null)
+      }
     },
     [
       cellField.cellId,
-      cellField.isPrimitiveActive,
       cellField.isPrimitiveCell,
       cellField.materializedFieldPath,
+      cellField.primitiveActiveCell,
       props.docId,
       props.primitiveActiveCellStore,
-      props.primitiveEditorHandleRef,
       props.setPrimitiveActiveCell,
     ]
-  )
-
-  const setPrimitiveEditorHandle = React.useCallback<
-    JsonTablePrimitiveCellProps["onEditorHandleChange"]
-  >(
-    (handle) => {
-      if (!cellField.isPrimitiveActive) return
-      props.primitiveEditorHandleRef.current = handle
-    },
-    [cellField.isPrimitiveActive, props.primitiveEditorHandleRef]
   )
 
   return {
     commitPrimitiveValue,
     primitiveEffectiveValue,
     setPrimitiveActive,
-    setPrimitiveEditorHandle,
   }
 }

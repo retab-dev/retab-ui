@@ -52,6 +52,48 @@ describe("json table primitive edit store", () => {
     })
   })
 
+  it("recognizes cloned parent echoes recorded by this store", () => {
+    const store = createJsonTablePrimitiveEditStore()
+    const recordedEcho = { vendor: "Globex", total: 12 }
+    const clonedEcho = { ...recordedEcho }
+
+    store.commitValue("vendor", "Globex", "Acme")
+    store.recordDocumentEcho(recordedEcho)
+
+    expect(store.reconcileDocumentData(clonedEcho)).toEqual({
+      isPrimitiveDocumentEcho: true,
+      confirmedFieldPaths: ["vendor"],
+      staleFieldPaths: [],
+    })
+    expect(store.getSnapshot("vendor")).toEqual({
+      status: "confirmed",
+      hasValue: true,
+      value: "Globex",
+    })
+  })
+
+  it("keeps cloned echo recognition isolated between stores", () => {
+    const firstStore = createJsonTablePrimitiveEditStore()
+    const secondStore = createJsonTablePrimitiveEditStore()
+    const recordedEcho = { vendor: "Globex" }
+    const clonedEcho = { ...recordedEcho }
+
+    firstStore.commitValue("vendor", "Globex", "Acme")
+    firstStore.recordDocumentEcho(recordedEcho)
+    secondStore.commitValue("vendor", "Globex", "Acme")
+
+    expect(secondStore.reconcileDocumentData(clonedEcho)).toEqual({
+      isPrimitiveDocumentEcho: false,
+      confirmedFieldPaths: ["vendor"],
+      staleFieldPaths: [],
+    })
+    expect(firstStore.reconcileDocumentData(clonedEcho)).toEqual({
+      isPrimitiveDocumentEcho: true,
+      confirmedFieldPaths: ["vendor"],
+      staleFieldPaths: [],
+    })
+  })
+
   it("clears confirmed edits when projected data catches up", () => {
     const store = createJsonTablePrimitiveEditStore()
     const echo = { vendor: "Globex" }

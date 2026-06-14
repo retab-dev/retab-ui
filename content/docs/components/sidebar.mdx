@@ -1,72 +1,81 @@
 ---
-title: Segment Sidebar
-description: A navigable list of document segments with page ranges and confidence, driven by shared preview and current-page state.
+title: Sidebar
+description: App-shell sidebar primitives for persistent navigation, menus, rails, and responsive mobile projection.
 ---
 
-`SegmentSidebar` is the "list" surface over a page-segmented result (partition
-chunks or split subdocuments). Each row shows a color swatch, label, page
-ranges, page count, and — when present — a confidence bar.
+`SidebarProvider` and `Sidebar` are the app-shell sidebar system. Use them for
+application navigation: persistent open state, mobile sheet projection, the
+global sidebar shortcut, rails, grouped menus, menu buttons, actions, badges,
+and skeleton rows.
 
-Hovering is a temporary preview. When nothing is hovered, `currentPage` derives
-the highlighted segment. Clicking fires `onSelect` so the host can scroll the
-document to the segment's first page; it does not persist category selection.
-Wire it to the same `useSegmentInteraction` object as a
-[legend](/docs/components/legend) for a coordinated layout.
+They are not viewer layout primitives and they are not domain sidebars.
 
-<SegmentSidebarDemo />
+## Architecture Boundary
 
-## In a split viewer
+Use the exact primitive for the ownership layer:
 
-Mounted as the left rail of a [split viewer](/docs/components/split-viewer), the
-sidebar shares preview and current-page state with the legend and page timeline.
-Hover a row to dim the others everywhere; click to scroll the document to that
-subdocument's first page.
+- `SidebarProvider` and `Sidebar` own app navigation.
+- `ViewerSidebar` owns a spatial rail inside `ViewerBody`.
+- `SidebarList*` owns providerless grouped-row grammar inside domain
+  components, modals, cards, and viewer rails.
+- `SegmentSidebar` owns segment row state and segment interaction semantics.
+- `AttachmentSidebar` owns file attachment rows.
 
-<SegmentSidebarSplitDemo />
-
-## Installation
-
-```bash
-npx shadcn@latest add @retab/segment-sidebar
-```
+Do not mount `SidebarProvider` inside `ViewerSidebar` just to get grouped rows.
+Use `SidebarList*` for that shape.
 
 ## Usage
 
-Reduce a partition or split result to `Segment[]` with `toSegments`, then render
-the sidebar against your own interaction state:
-
 ```tsx
-import { toSegments } from "@/lib/segments"
-import { SegmentSidebar } from "@/components/ui/segment-sidebar"
-import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
-
-// partition: [{ key, pages }]   split: [{ name, pages }]
-const segments = toSegments(result.output)
-
-export function Example() {
-  const interaction = useSegmentInteraction()
-  return (
-    <SegmentSidebar
-      segments={segments}
-      interaction={interaction}
-      onSelect={(segment) => scrollToPage(segment.pages[0])}
-      unitLabel="subdocument"
-    />
-  )
-}
+<SidebarProvider>
+  <Sidebar>
+    <SidebarHeader />
+    <SidebarContent>
+      <SidebarGroup>
+        <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton isActive>Documents</SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    </SidebarContent>
+  </Sidebar>
+  <SidebarInset>{children}</SidebarInset>
+</SidebarProvider>
 ```
 
-For caller-owned preview state, build the same `interaction` object with
-`useControlledSegmentInteraction`; do not pass selection props to the sidebar.
+## Viewer Rails
 
-## Props
+Viewer rails use viewer primitives instead:
 
-| Prop          | Type                         | Description                                                             |
-| ------------- | ---------------------------- | ----------------------------------------------------------------------- |
-| `segments`    | `Segment[]`                  | Labels + pages + colors (use `toSegments`).                             |
-| `interaction` | `SegmentInteraction`         | Shared transient preview state.                                        |
-| `onSelect`    | `(segment: Segment) => void` | Fired when a segment is clicked, after transient preview is cleared.    |
-| `currentPage` | `number \| null`             | 1-based current page; owning segments highlight when no preview exists. |
-| `unitLabel`   | `string`                     | Row noun, e.g. `"chunk"` or `"subdocument"`. Defaults to `"segment"`.   |
-| `showUnused`  | `boolean`                    | Show segments with zero pages too. Defaults to `true`.                  |
-| `className`   | `string`                     | Container class.                                                        |
+```tsx
+<ViewerRoot>
+  <ViewerHeader />
+  <ViewerBody>
+    <ViewerSidebar aria-label="Pages">
+      <PageRail />
+    </ViewerSidebar>
+    <ViewerSurface>
+      <Document />
+    </ViewerSurface>
+  </ViewerBody>
+</ViewerRoot>
+```
+
+The app sidebar and viewer sidebar systems share visual tokens, but they do not
+share ownership.
+
+## Structural Attributes
+
+Viewer primitives expose stable structural attributes:
+
+- `data-slot` identifies the structural primitive for tests and local styling.
+- `data-viewer-sidebar-*` identifies sidebar open state, mode, and transition
+  readiness.
+
+Viewer primitives do not encode domain purpose. Put that meaning in the named
+domain part (`SplitViewerPageRail`, `EmailViewerPartsList`) and in accessible
+labels (`aria-label="PDF pages"`, `aria-label="Email parts"`).

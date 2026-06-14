@@ -1,9 +1,10 @@
 import type { MaterializedFieldPath } from "@/components/json-table/lib/document-paths"
+import type { JsonTableDocumentData } from "@/components/json-table/lib/projects-types"
 
 export { materializeFieldPath } from "@/components/json-table/lib/document-paths"
 
 export interface DocumentPatch {
-  data: Record<string, unknown>
+  data: JsonTableDocumentData
 }
 
 const unsafeDocumentPathSegments = new Set([
@@ -24,10 +25,10 @@ export function setValueAtMaterializedPath(
   root: unknown,
   materializedFieldPath: MaterializedFieldPath,
   value: unknown | ((previousValue: unknown) => unknown)
-): Record<string, unknown> {
+): JsonTableDocumentData {
   const segments = materializedFieldPath ? materializedFieldPath.split(".") : []
   assertSafeDocumentPath(segments)
-  return setValueAtSegments(root, segments, value) as Record<string, unknown>
+  return setValueAtSegments(root, segments, value) as JsonTableDocumentData
 }
 
 function setValueAtSegments(

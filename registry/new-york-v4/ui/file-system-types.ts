@@ -2,7 +2,7 @@ import type * as React from "react"
 
 import type { ViewerSource } from "@/lib/viewer-source"
 
-export type FileSystemView = "list" | "grid" | "columns" | "gallery"
+export type FileSystemView = "list" | "grid" | "columns"
 
 export type FileSystemFolderItem = {
   kind: "folder"
@@ -29,7 +29,6 @@ export type FileSystemFileItem = {
   source?: ViewerSource
   previewSource?: ViewerSource
   previewImageUrl?: string | null
-  previewAspectRatio?: number
   metadata?: Record<string, string>
 }
 
@@ -58,14 +57,8 @@ export type FileSystemSortState = {
   key: FileSystemSortKey
 }
 
-export type FileSystemFilterState = {
-  categories: string[]
-  updatedAfter: "last7" | "last30" | null
-}
-
 export type FileSystemQueryState = {
   search: string
-  filters: FileSystemFilterState
   sort: FileSystemSortState
 }
 

@@ -2,8 +2,9 @@ import type * as React from "react"
 
 import type { DataCellActivationSource } from "@/registry/new-york-v4/ui/data-cell-activation"
 import type {
+  DataCellCommitHandler,
+  DataCellCommitValue,
   DataCellDateTimeZone,
-  DataCellEditorHandle,
   DataCellKind,
   DataCellProps,
   DataCellPropsForKind,
@@ -21,7 +22,6 @@ type DataCellEditShellState = {
   autoFocus?: boolean
   activationSource?: DataCellActivationSource
   onEditingEnd?: () => void
-  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
 }
 
 type DataCellResolvedShellState = Required<
@@ -52,19 +52,24 @@ export type DataCellEditorProps = React.AriaAttributes &
   > &
   DataCellEditorEventProps
 
-type DataCellTextCommitHandler = NonNullable<
-  DataCellPropsForKind<"text">["onCommit"]
->
-type DataCellBooleanCommitHandler = NonNullable<
-  DataCellPropsForKind<"boolean">["onCommit"]
->
-type DataCellSelectCommitHandler = NonNullable<
-  DataCellPropsForKind<"select">["onCommit"]
->
-
 type DataCellDraftHandler<Kind extends DataCellDraftKind> = NonNullable<
   DataCellPropsForKind<Kind>["onDraftValueChange"]
 >
+
+type DataCellTypedCommitHandler<Value extends DataCellCommitValue> = (
+  value: Value,
+  meta: DataCellValueMeta
+) => void
+
+type DataCellDraftEditState<Kind extends DataCellDraftKind> = {
+  value?: string
+  onChange?: DataCellDraftHandler<Kind>
+}
+
+type DataCellOpenEditState = {
+  value?: boolean
+  onChange?: (open: boolean) => void
+}
 
 type DataCellFormatValue<Kind extends DataCellFormatKind> = NonNullable<
   DataCellPropsForKind<Kind>["formatValue"]
@@ -98,40 +103,32 @@ type DataCellEditModelBase<Kind extends DataCellKind> = {
   autoFocus?: boolean
   activationSource?: DataCellActivationSource
   onEditingEnd?: () => void
-  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
+  onCommit?: DataCellCommitHandler
   editorProps: DataCellEditorProps
 }
 
 export type DataCellTextEditModel = DataCellEditModelBase<"text"> & {
   placeholder?: string
-  draftValue?: string
-  onDraftValueChange?: DataCellDraftHandler<"text">
-  onCommit?: DataCellTextCommitHandler
+  draft?: DataCellDraftEditState<"text">
 }
 
 type DataCellNumericEditModel<Kind extends "number" | "integer"> =
   DataCellEditModelBase<Kind> & {
     placeholder?: string
-    draftValue?: string
-    onDraftValueChange?: DataCellDraftHandler<Kind>
-    onCommit?: NonNullable<DataCellPropsForKind<Kind>["onCommit"]>
+    draft?: DataCellDraftEditState<Kind>
   }
 
 export type DataCellNumberEditModel = DataCellNumericEditModel<"number">
 
 export type DataCellIntegerEditModel = DataCellNumericEditModel<"integer">
 
-export type DataCellBooleanEditModel = DataCellEditModelBase<"boolean"> & {
-  onCommit?: DataCellBooleanCommitHandler
-}
+export type DataCellBooleanEditModel = DataCellEditModelBase<"boolean">
 
 export type DataCellSelectEditModel = DataCellEditModelBase<"select"> & {
   placeholder?: string
   formatValue?: DataCellFormatValue<"select">
-  open?: boolean
+  openState?: DataCellOpenEditState
   options: DataCellSelectOption[]
-  onOpenChange?: (open: boolean) => void
-  onCommit?: DataCellSelectCommitHandler
 }
 
 type DataCellPickerEditModelForKind<Kind extends DataCellPickerKind> =
@@ -140,11 +137,8 @@ type DataCellPickerEditModelForKind<Kind extends DataCellPickerKind> =
     dateTimeZone?: DataCellDateTimeZone
     showPickerIcon?: boolean
     formatValue?: DataCellPickerFormatValue
-    draftValue?: string
-    open?: boolean
-    onDraftValueChange?: DataCellDraftHandler<Kind>
-    onOpenChange?: (open: boolean) => void
-    onCommit?: NonNullable<DataCellPropsForKind<Kind>["onCommit"]>
+    draft?: DataCellDraftEditState<Kind>
+    openState?: DataCellOpenEditState
   }
 
 export type DataCellDateEditModel = DataCellPickerEditModelForKind<"date">
@@ -193,6 +187,37 @@ function unsupportedDataCellProps(_props: never): never {
   throw new Error("Unsupported DataCell kind")
 }
 
+function dataCellCommitHandler<Value extends DataCellCommitValue>(
+  onCommit: DataCellTypedCommitHandler<Value> | undefined,
+  isValue: (value: DataCellCommitValue) => value is Value
+): DataCellCommitHandler | undefined {
+  if (!onCommit) return undefined
+  return (value, meta) => {
+    if (!isValue(value)) {
+      throw new Error(`Invalid ${meta.kind} commit value`)
+    }
+    onCommit(value, meta)
+  }
+}
+
+function isDataCellStringCommitValue(
+  value: DataCellCommitValue
+): value is string | null {
+  return typeof value === "string" || value === null
+}
+
+function isDataCellNumberCommitValue(
+  value: DataCellCommitValue
+): value is number | null {
+  return typeof value === "number" || value === null
+}
+
+function isDataCellBooleanCommitValue(
+  value: DataCellCommitValue
+): value is boolean {
+  return typeof value === "boolean"
+}
+
 function dataCellEditShellState(
   props: DataCellProps,
   shellState: DataCellEditShellState
@@ -202,8 +227,6 @@ function dataCellEditShellState(
     autoFocus: shellState.autoFocus ?? props.autoFocus,
     activationSource: shellState.activationSource,
     onEditingEnd: shellState.onEditingEnd ?? props.onEditingEnd,
-    onEditorHandleChange:
-      shellState.onEditorHandleChange ?? props.onEditorHandleChange,
   }
 }
 
@@ -288,13 +311,17 @@ function createDataCellTextEditModel(
     name: props.name,
     placeholder: props.placeholder,
     className: props.className,
-    draftValue: props.draftValue,
+    draft: {
+      value: props.draftValue,
+      onChange: props.onDraftValueChange,
+    },
     autoFocus: editState.autoFocus,
     activationSource: editState.activationSource,
-    onDraftValueChange: props.onDraftValueChange,
-    onCommit: props.onCommit,
+    onCommit: dataCellCommitHandler(
+      props.onCommit,
+      isDataCellStringCommitValue
+    ),
     onEditingEnd: editState.onEditingEnd,
-    onEditorHandleChange: editState.onEditorHandleChange,
     editorProps: dataCellEditorProps(props),
   }
 }
@@ -311,13 +338,17 @@ function createDataCellNumberEditModel(
     name: props.name,
     placeholder: props.placeholder,
     className: props.className,
-    draftValue: props.draftValue,
+    draft: {
+      value: props.draftValue,
+      onChange: props.onDraftValueChange,
+    },
     autoFocus: editState.autoFocus,
     activationSource: editState.activationSource,
-    onDraftValueChange: props.onDraftValueChange,
-    onCommit: props.onCommit,
+    onCommit: dataCellCommitHandler(
+      props.onCommit,
+      isDataCellNumberCommitValue
+    ),
     onEditingEnd: editState.onEditingEnd,
-    onEditorHandleChange: editState.onEditorHandleChange,
     editorProps: dataCellEditorProps(props),
   }
 }
@@ -334,13 +365,17 @@ function createDataCellIntegerEditModel(
     name: props.name,
     placeholder: props.placeholder,
     className: props.className,
-    draftValue: props.draftValue,
+    draft: {
+      value: props.draftValue,
+      onChange: props.onDraftValueChange,
+    },
     autoFocus: editState.autoFocus,
     activationSource: editState.activationSource,
-    onDraftValueChange: props.onDraftValueChange,
-    onCommit: props.onCommit,
+    onCommit: dataCellCommitHandler(
+      props.onCommit,
+      isDataCellNumberCommitValue
+    ),
     onEditingEnd: editState.onEditingEnd,
-    onEditorHandleChange: editState.onEditorHandleChange,
     editorProps: dataCellEditorProps(props),
   }
 }
@@ -358,9 +393,11 @@ function createDataCellBooleanEditModel(
     className: props.className,
     autoFocus: editState.autoFocus,
     activationSource: editState.activationSource,
-    onCommit: props.onCommit,
+    onCommit: dataCellCommitHandler(
+      props.onCommit,
+      isDataCellBooleanCommitValue
+    ),
     onEditingEnd: editState.onEditingEnd,
-    onEditorHandleChange: editState.onEditorHandleChange,
     editorProps: dataCellEditorProps(props),
   }
 }
@@ -380,12 +417,16 @@ function createDataCellSelectEditModel(
     formatValue: props.formatValue,
     autoFocus: editState.autoFocus,
     activationSource: editState.activationSource,
-    open: props.open,
+    openState: {
+      value: props.open,
+      onChange: props.onOpenChange,
+    },
     options: props.selectOptions,
-    onOpenChange: props.onOpenChange,
-    onCommit: props.onCommit,
+    onCommit: dataCellCommitHandler(
+      props.onCommit,
+      isDataCellStringCommitValue
+    ),
     onEditingEnd: editState.onEditingEnd,
-    onEditorHandleChange: editState.onEditorHandleChange,
     editorProps: dataCellEditorProps(props),
   }
 }
@@ -407,15 +448,21 @@ function createDataCellDateEditModel(
     formatValue: props.formatValue
       ? (value) => props.formatValue?.(value, { kind: "date" })
       : undefined,
-    draftValue: props.draftValue,
+    draft: {
+      value: props.draftValue,
+      onChange: props.onDraftValueChange,
+    },
     autoFocus: editState.autoFocus,
     activationSource: editState.activationSource,
-    open: props.open,
-    onDraftValueChange: props.onDraftValueChange,
-    onCommit: props.onCommit,
-    onOpenChange: props.onOpenChange,
+    openState: {
+      value: props.open,
+      onChange: props.onOpenChange,
+    },
+    onCommit: dataCellCommitHandler(
+      props.onCommit,
+      isDataCellStringCommitValue
+    ),
     onEditingEnd: editState.onEditingEnd,
-    onEditorHandleChange: editState.onEditorHandleChange,
     editorProps: dataCellEditorProps(props),
   }
 }
@@ -437,15 +484,21 @@ function createDataCellTimeEditModel(
     formatValue: props.formatValue
       ? (value) => props.formatValue?.(value, { kind: "time" })
       : undefined,
-    draftValue: props.draftValue,
+    draft: {
+      value: props.draftValue,
+      onChange: props.onDraftValueChange,
+    },
     autoFocus: editState.autoFocus,
     activationSource: editState.activationSource,
-    open: props.open,
-    onDraftValueChange: props.onDraftValueChange,
-    onCommit: props.onCommit,
-    onOpenChange: props.onOpenChange,
+    openState: {
+      value: props.open,
+      onChange: props.onOpenChange,
+    },
+    onCommit: dataCellCommitHandler(
+      props.onCommit,
+      isDataCellStringCommitValue
+    ),
     onEditingEnd: editState.onEditingEnd,
-    onEditorHandleChange: editState.onEditorHandleChange,
     editorProps: dataCellEditorProps(props),
   }
 }
@@ -467,15 +520,21 @@ function createDataCellDateTimeEditModel(
     formatValue: props.formatValue
       ? (value) => props.formatValue?.(value, { kind: "date-time" })
       : undefined,
-    draftValue: props.draftValue,
+    draft: {
+      value: props.draftValue,
+      onChange: props.onDraftValueChange,
+    },
     autoFocus: editState.autoFocus,
     activationSource: editState.activationSource,
-    open: props.open,
-    onDraftValueChange: props.onDraftValueChange,
-    onCommit: props.onCommit,
-    onOpenChange: props.onOpenChange,
+    openState: {
+      value: props.open,
+      onChange: props.onOpenChange,
+    },
+    onCommit: dataCellCommitHandler(
+      props.onCommit,
+      isDataCellStringCommitValue
+    ),
     onEditingEnd: editState.onEditingEnd,
-    onEditorHandleChange: editState.onEditorHandleChange,
     editorProps: dataCellEditorProps(props),
   }
 }

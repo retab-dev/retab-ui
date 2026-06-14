@@ -2,7 +2,8 @@ import { render } from "@testing-library/react"
 import type { JSONSchema7 } from "json-schema"
 import { vi } from "vitest"
 
-import { JsonTableDataCell } from "@/components/json-table/json-table-display-cell"
+import { DataCell, type DataCellValueMeta } from "@/components/ui/data-cell"
+import { createJsonTableDataCellProps } from "@/components/json-table/json-table-data-cell-model"
 import type { JsonTableStructuredEditSession } from "@/components/json-table/json-table-edit-session"
 import { JsonTableStructuredCell } from "@/components/json-table/json-table-structured-cell"
 import type {
@@ -46,36 +47,36 @@ export function renderDataCell(
   overrides: JsonTableCellHarnessProps = {}
 ) {
   const fieldMetadata = overrides.fieldMetadata ?? baseField(kind)
-  return render(
-    <JsonTableDataCell
-      fieldMetadata={fieldMetadata}
-      value={overrides.effectiveValue ?? overrides.value ?? "value"}
-      mode="edit"
-      active
-      isEditable
-      autoFocus
-      onOpenChange={overrides.onOpenChange ?? vi.fn()}
-      onEditingEnd={overrides.onEditingEnd ?? vi.fn()}
-      onCommit={(value, meta) => overrides.commitValue?.(value, meta)}
-    />
-  )
+  const dataCellProps = createJsonTableDataCellProps({
+    active: true,
+    autoFocus: true,
+    fieldMetadata,
+    isEditable: true,
+    onCommit: (value: unknown, meta: DataCellValueMeta) =>
+      overrides.commitValue?.(value, meta),
+    onEditingEnd: overrides.onEditingEnd ?? vi.fn(),
+    onOpenChange: overrides.onOpenChange ?? vi.fn(),
+    value: overrides.effectiveValue ?? overrides.value ?? "value",
+  })
+
+  return render(<DataCell {...dataCellProps} />)
 }
 
 export function renderEnumCell(overrides: JsonTableCellHarnessProps = {}) {
   const fieldMetadata = overrides.fieldMetadata ?? baseField("enum")
-  return render(
-    <JsonTableDataCell
-      fieldMetadata={fieldMetadata}
-      value={overrides.effectiveValue ?? overrides.value ?? "value"}
-      mode="edit"
-      active
-      isEditable={true}
-      autoFocus
-      onOpenChange={overrides.onOpenChange ?? vi.fn()}
-      onEditingEnd={overrides.onEditingEnd ?? vi.fn()}
-      onCommit={(value, meta) => overrides.commitValue?.(value, meta)}
-    />
-  )
+  const dataCellProps = createJsonTableDataCellProps({
+    active: true,
+    autoFocus: true,
+    fieldMetadata,
+    isEditable: true,
+    onCommit: (value: unknown, meta: DataCellValueMeta) =>
+      overrides.commitValue?.(value, meta),
+    onEditingEnd: overrides.onEditingEnd ?? vi.fn(),
+    onOpenChange: overrides.onOpenChange ?? vi.fn(),
+    value: overrides.effectiveValue ?? overrides.value ?? "value",
+  })
+
+  return render(<DataCell {...dataCellProps} />)
 }
 
 export function renderStructuredCell(

@@ -39,6 +39,7 @@ export const CALLOUT_LABELS = {
 export type CalloutKind = keyof typeof CALLOUT_LABELS
 
 type PretextComponentPropSchema = {
+  type?: "boolean" | "display" | "number" | "string"
   values?: readonly string[]
 }
 
@@ -100,7 +101,7 @@ export const PRETEXT_COMPONENT_REGISTRY = {
     directiveName: "metric",
     props: {
       label: {},
-      value: {},
+      value: { type: "display" },
     },
   },
   Tab: {
@@ -118,7 +119,10 @@ export const PRETEXT_COMPONENT_REGISTRY = {
   Video: {
     directiveName: "video",
     props: {
+      controls: { type: "boolean" },
       label: {},
+      loop: { type: "boolean" },
+      muted: { type: "boolean" },
       src: {},
       title: {},
     },
@@ -129,8 +133,9 @@ export type PretextComponentKind = keyof typeof PRETEXT_COMPONENT_REGISTRY
 type PretextComponentPropName = {
   [Kind in PretextComponentKind]: keyof (typeof PRETEXT_COMPONENT_REGISTRY)[Kind]["props"]
 }[PretextComponentKind]
+export type PretextComponentPropValue = boolean | number | string
 export type PretextComponentProps = Partial<
-  Record<PretextComponentPropName, string>
+  Record<PretextComponentPropName, PretextComponentPropValue>
 >
 export type PretextComponent = {
   name: PretextComponentKind
@@ -141,12 +146,19 @@ const URL_CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F]/
 const URL_SCHEME_PATTERN = /^([A-Za-z][A-Za-z0-9+.-]*):/
 const ALLOWED_LINK_PROTOCOLS = new Set(["http", "https", "mailto"])
 
+export const PRETEXT_MARKDOWN_KATEX_OPTIONS = {
+  maxExpand: 1000,
+  maxSize: 10,
+  strict: "ignore",
+  trust: false,
+} as const
+
 export const PRETEXT_MARKDOWN_REHYPE_PLUGINS: PluggableList = [
   rehypeRaw,
   rehypePretextMarkdownInputPolicy,
   rehypePretextMarkdownCodeMeta,
   [rehypeSanitize, createPretextMarkdownSanitizeSchema()],
-  rehypeKatex,
+  [rehypeKatex, PRETEXT_MARKDOWN_KATEX_OPTIONS],
   [
     rehypePrettyCode,
     {
@@ -164,7 +176,7 @@ export const PRETEXT_MARKDOWN_SYNC_REHYPE_PLUGINS: PluggableList = [
   rehypePretextMarkdownInputPolicy,
   rehypePretextMarkdownCodeMeta,
   [rehypeSanitize, createPretextMarkdownSanitizeSchema()],
-  rehypeKatex,
+  [rehypeKatex, PRETEXT_MARKDOWN_KATEX_OPTIONS],
 ]
 
 export function createPretextMarkdownRemarkPlugins(
@@ -174,8 +186,9 @@ export function createPretextMarkdownRemarkPlugins(
     remarkDirective,
     remarkPretextHeadingIds(headingIds),
     remarkPretextCodeMeta,
-    remarkSmartypants,
     remarkPretextComponentMarkdown,
+    remarkSmartypants,
+    remarkRestorePretextComponentMarkdownFallbacks,
     remarkPretextDirectiveCallouts,
     remarkPretextComponentDirectives,
     remarkPretextGithubAlerts,
@@ -220,11 +233,15 @@ export function sanitizePretextMarkdownImageUrl(value: string) {
   if (!safeUrl || safeUrl.startsWith("mailto:") || safeUrl.startsWith("#")) {
     return ""
   }
+  if (isPretextMarkdownSvgResourceUrl(safeUrl)) return ""
   return safeUrl
 }
 
 export function sanitizePretextMarkdownMediaUrl(value: string) {
-  return sanitizePretextMarkdownImageUrl(value)
+  const safeUrl = sanitizePretextMarkdownImageUrl(value)
+  if (!safeUrl) return ""
+  if (isPretextMarkdownSvgResourceUrl(safeUrl)) return ""
+  return safeUrl
 }
 
 function decodePretextMarkdownUrl(value: string) {
@@ -237,6 +254,18 @@ function decodePretextMarkdownUrl(value: string) {
 
 function getPretextMarkdownUrlScheme(value: string) {
   return URL_SCHEME_PATTERN.exec(value)?.[1]?.toLowerCase() ?? null
+}
+
+function isPretextMarkdownSvgResourceUrl(value: string) {
+  const decoded = decodePretextMarkdownUrl(value).trim()
+
+  try {
+    const url = new URL(decoded, "https://retab.local")
+    return /\.(?:svg|svgz)$/i.test(url.pathname)
+  } catch {
+    const pathname = decoded.split(/[?#]/, 1)[0] ?? decoded
+    return /\.(?:svg|svgz)$/i.test(pathname)
+  }
 }
 
 function rehypePretextMarkdownInputPolicy() {
@@ -362,6 +391,7 @@ export function readPretextComponent(node: unknown): PretextComponent | null {
 export function createPretextMarkdownSanitizeSchema(): RehypeSanitizeOptions {
   return {
     ...defaultSchema,
+    clobberPrefix: "user-content-",
     attributes: {
       ...defaultSchema.attributes,
       "*": [
@@ -520,8 +550,9 @@ function parsePretextComponentTag(
 }
 
 function parsePretextComponentAttributeString(attributes: string) {
-  const rawProps: Record<string, string> = {}
-  const propPattern = /\s*([A-Za-z][A-Za-z0-9_]*)=(?:"([^"]*)"|'([^']*)')/gy
+  const rawProps: Record<string, PretextComponentPropValue> = {}
+  const propPattern =
+    /\s*([A-Za-z][A-Za-z0-9_]*)(?:=(?:"([^"]*)"|'([^']*)'|\{([^{}]*)\}))?/gy
   let index = 0
 
   while (index < attributes.length) {
@@ -534,11 +565,46 @@ function parsePretextComponentAttributeString(attributes: string) {
     const propName = propMatch[1]
     if (!isSafePretextComponentPropName(propName)) return null
 
-    rawProps[propName] = propMatch[2] ?? propMatch[3] ?? ""
+    const parsedValue = parsePretextComponentAttributeValue({
+      doubleQuoted: propMatch[2],
+      singleQuoted: propMatch[3],
+      expression: propMatch[4],
+      isBare:
+        propMatch[2] == null && propMatch[3] == null && propMatch[4] == null,
+    })
+    if (parsedValue == null) return null
+
+    rawProps[propName] = parsedValue
     index = propPattern.lastIndex
   }
 
   return rawProps
+}
+
+function parsePretextComponentAttributeValue({
+  doubleQuoted,
+  expression,
+  isBare,
+  singleQuoted,
+}: {
+  doubleQuoted: string | undefined
+  expression: string | undefined
+  isBare: boolean
+  singleQuoted: string | undefined
+}): PretextComponentPropValue | null {
+  if (doubleQuoted != null) return doubleQuoted
+  if (singleQuoted != null) return singleQuoted
+  if (isBare) return true
+  if (expression == null) return null
+
+  const literal = expression.trim()
+  if (literal === "true") return true
+  if (literal === "false") return false
+  if (/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(literal)) {
+    const value = Number(literal)
+    return Number.isFinite(value) ? value : null
+  }
+  return null
 }
 
 function parsePretextDirectiveComponent(node: any): PretextComponent | null {
@@ -596,11 +662,17 @@ function parsePretextComponentAttributes(
   attributes: Record<string, unknown> | null | undefined
 ): PretextComponentProps | null {
   const props: PretextComponentProps = {}
-  const parsedProps = props as Record<string, string>
+  const parsedProps = props as Record<string, PretextComponentPropValue>
 
   for (const [propName, propValue] of Object.entries(attributes ?? {})) {
     if (!isSafePretextComponentPropName(propName)) return null
-    if (typeof propValue !== "string") return null
+    if (
+      typeof propValue !== "string" &&
+      typeof propValue !== "number" &&
+      typeof propValue !== "boolean"
+    ) {
+      return null
+    }
     parsedProps[propName] = propValue
   }
 
@@ -613,7 +685,7 @@ function parsePretextComponentProps(
 ): PretextComponentProps | null {
   const definition = PRETEXT_COMPONENT_REGISTRY[name]
   const parsed: PretextComponentProps = {}
-  const parsedProps = parsed as Record<string, string>
+  const parsedProps = parsed as Record<string, PretextComponentPropValue>
 
   for (const [propName, propValue] of Object.entries(props)) {
     if (!isSafePretextComponentPropName(propName)) return null
@@ -621,14 +693,43 @@ function parsePretextComponentProps(
       definition.props as Record<string, PretextComponentPropSchema>
     )[propName]
     if (!propDefinition) return null
-    if (typeof propValue !== "string") return null
-    if (propDefinition.values && !propDefinition.values.includes(propValue)) {
-      return null
-    }
-    parsedProps[propName] = propValue
+    const parsedValue = parsePretextComponentPropValue(
+      propDefinition,
+      propValue
+    )
+    if (parsedValue == null) return null
+    parsedProps[propName] = parsedValue
   }
 
   return parsed
+}
+
+function parsePretextComponentPropValue(
+  propDefinition: PretextComponentPropSchema,
+  propValue: unknown
+): PretextComponentPropValue | null {
+  switch (propDefinition.type ?? "string") {
+    case "boolean":
+      if (typeof propValue === "boolean") return propValue
+      if (propValue === "true") return true
+      if (propValue === "false") return false
+      return null
+    case "display":
+      return typeof propValue === "string" ||
+        (typeof propValue === "number" && Number.isFinite(propValue))
+        ? propValue
+        : null
+    case "number":
+      return typeof propValue === "number" && Number.isFinite(propValue)
+        ? propValue
+        : null
+    case "string":
+      if (typeof propValue !== "string") return null
+      if (propDefinition.values && !propDefinition.values.includes(propValue)) {
+        return null
+      }
+      return propValue
+  }
 }
 
 function isPretextComponentKind(name: string): name is PretextComponentKind {
@@ -898,10 +999,23 @@ function createPretextComponentMarkdownNode(
 }
 
 function createPretextComponentMarkdownFallbackNode(value: string) {
+  const fallbackValue = value.trim()
   return {
     type: "code",
     lang: "mdx",
-    value: value.trim(),
+    value: fallbackValue,
+    data: {
+      pretextComponentFallbackValue: fallbackValue,
+    },
+  }
+}
+
+function remarkRestorePretextComponentMarkdownFallbacks() {
+  return function transform(tree: unknown) {
+    visit(tree, "code", (node: any) => {
+      if (typeof node.data?.pretextComponentFallbackValue !== "string") return
+      node.value = node.data.pretextComponentFallbackValue
+    })
   }
 }
 

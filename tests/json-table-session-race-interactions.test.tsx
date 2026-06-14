@@ -23,7 +23,10 @@ import {
 } from "@/components/json-table/lib/schema-field-metadata"
 import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
 
-import { createTestCellCommitBridge } from "./json-table-interaction-test-utils"
+import {
+  createTestCellCommitBridge,
+  primitiveEventTarget,
+} from "./json-table-interaction-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
 
 beforeAll(() => installJsonTableDom())
@@ -213,7 +216,7 @@ function scrollViewport(container: HTMLElement) {
 
 async function activateCell(view: RenderResult, fieldPath: string) {
   const cell = cellByFieldPath(view.container, fieldPath)
-  fireEvent.pointerDown(cell, {
+  fireEvent.pointerDown(primitiveEventTarget(cell), {
     button: 0,
     clientX: 0,
     clientY: 0,
@@ -224,7 +227,7 @@ async function activateCell(view: RenderResult, fieldPath: string) {
 
 async function activateEnumCell(view: RenderResult, fieldPath: string) {
   const cell = cellByFieldPath(view.container, fieldPath)
-  fireEvent.click(cell, {
+  fireEvent.click(primitiveEventTarget(cell), {
     button: 0,
     clientX: 0,
     clientY: 0,
@@ -271,14 +274,14 @@ describe("json table session and overlay race interactions", () => {
     await waitForEditableCells(view.container, 1)
     const statusCell = cellByFieldPath(view.container, "status")
 
-    fireEvent.click(statusCell, {
+    fireEvent.click(primitiveEventTarget(statusCell), {
       button: 0,
       clientX: 0,
       clientY: 0,
       detail: 1,
     })
     expect(await view.findByRole("option", { name: "paid" })).toBeTruthy()
-    fireEvent.click(statusCell, {
+    fireEvent.click(primitiveEventTarget(statusCell), {
       button: 0,
       clientX: 0,
       clientY: 0,

@@ -5,7 +5,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import {
-  createDataCellPointerActivationSource,
+  useDataCellOpeningContext,
   type DataCellActivationSource,
 } from "@/registry/new-york-v4/ui/data-cell-activation"
 import { dataCellDisplayClass } from "@/registry/new-york-v4/ui/data-cell-classes"
@@ -20,7 +20,6 @@ import {
   parseDataCellInputValue,
 } from "@/registry/new-york-v4/ui/data-cell-format"
 import {
-  getDataCellDisplayTextSelectionOffset,
   getDataCellTextSelectionOffset,
 } from "@/registry/new-york-v4/ui/data-cell-text-hit-test"
 import type {
@@ -28,40 +27,6 @@ import type {
   DataCellValue,
   DataCellValueMeta,
 } from "@/registry/new-york-v4/ui/data-cell-types"
-
-export function getDataCellTextPointerActivationSource({
-  clientX,
-  clientY,
-  detail,
-  displayElement,
-  event,
-  value,
-}: {
-  clientX: number
-  clientY: number
-  detail: number
-  displayElement: HTMLElement | null
-  event?: Event
-  value: DataCellTextControlProps["value"]
-}): Extract<DataCellActivationSource, { kind: "pointer" }> {
-  const activationSource = createDataCellPointerActivationSource({
-    clientX,
-    clientY,
-    detail,
-    event,
-  })
-  const textElement = displayElement?.querySelector<HTMLElement>(
-    '[data-slot="data-cell-value"]'
-  )
-  if (!textElement) return activationSource
-  activationSource.selectionOffset = getDataCellDisplayTextSelectionOffset({
-    clientX,
-    clientY,
-    textElement,
-    value: value === null || value === undefined ? "" : String(value),
-  })
-  return activationSource
-}
 
 export function DataCellTextControl(props: DataCellTextControlProps) {
   return <DataCellInputControl {...props} />
@@ -120,13 +85,10 @@ export function DataCellInputControl({
   name,
   placeholder,
   className,
-  draftValue,
+  draft,
   autoFocus,
   activationSource,
-  onDraftValueChange,
-  onCommit,
-  onEditingEnd,
-  onEditorHandleChange,
+  session,
   onFocus,
   onBlur,
   onKeyDown,
@@ -145,11 +107,18 @@ export function DataCellInputControl({
   const inputRef = React.useRef<HTMLInputElement>(null)
   const initialInputValueRef = React.useRef(initialInputValue)
   const lastInputValueRef = React.useRef(initialInputValue)
-  const didFinishEditingRef = React.useRef(false)
-  const inputValue = draftValue ?? uncontrolledDraftValue
+  const inputValue = draft?.value ?? uncontrolledDraftValue
+  const openingContext = useDataCellOpeningContext(activationSource, {
+    enabled: activationSource?.kind === "pointer",
+    releaseAfterMicrotask: true,
+  })
+  const isDirty = React.useCallback(
+    () => lastInputValueRef.current !== initialInputValueRef.current,
+    []
+  )
 
   React.useEffect(() => {
-    if (draftValue !== undefined) return
+    if (draft?.value !== undefined) return
     setUncontrolledDraftValue(
       initialInputValueForActivation({
         activationSource,
@@ -157,7 +126,7 @@ export function DataCellInputControl({
         value,
       })
     )
-  }, [activationSource, draftValue, kind, value])
+  }, [activationSource, draft?.value, kind, value])
 
   React.useEffect(() => {
     lastInputValueRef.current = inputValue
@@ -181,51 +150,34 @@ export function DataCellInputControl({
         onlyIfChanged?: boolean
       } = {}
     ) => {
-      if (didFinishEditingRef.current) return
       const rawValue = input?.value ?? lastInputValueRef.current
-      if (onlyIfChanged && rawValue === initialInputValueRef.current) return
-      if (markFinished) didFinishEditingRef.current = true
       const commitValue = parseDataCellInputValue({
         kind,
         value: rawValue,
         dateTimeZone: "local",
         previousValue: value,
       }) as string | number | null
-      ;(
-        onCommit as
-          | ((value: string | number | null, meta: DataCellValueMeta) => void)
-          | undefined
-      )?.(
+      session.commit(
         commitValue,
         getDataCellValueMeta({
           kind,
           value: rawValue,
           isBadInput: input?.validity.badInput ?? false,
-        })
+        }),
+        {
+          endEditing,
+          markFinished,
+          shouldCommit: onlyIfChanged ? isDirty : undefined,
+        }
       )
-      if (endEditing) onEditingEnd?.()
     },
-    [kind, onCommit, onEditingEnd, value]
+    [isDirty, kind, session, value]
   )
   const commitCurrentInputValueRef = React.useRef(commitCurrentInputValue)
 
   React.useEffect(() => {
     commitCurrentInputValueRef.current = commitCurrentInputValue
   }, [commitCurrentInputValue])
-
-  const cancelCurrentInputValue = React.useCallback(() => {
-    if (didFinishEditingRef.current) return
-    didFinishEditingRef.current = true
-    onEditingEnd?.()
-  }, [onEditingEnd])
-
-  React.useLayoutEffect(() => {
-    onEditorHandleChange?.({
-      finish: () => commitCurrentInputValue(inputRef.current),
-      cancel: cancelCurrentInputValue,
-    })
-    return () => onEditorHandleChange?.(null)
-  }, [cancelCurrentInputValue, commitCurrentInputValue, onEditorHandleChange])
 
   React.useEffect(
     () => () => {
@@ -280,8 +232,8 @@ export function DataCellInputControl({
       onChange={(event) => {
         const nextValue = event.currentTarget.value
         lastInputValueRef.current = nextValue
-        if (draftValue === undefined) setUncontrolledDraftValue(nextValue)
-        onDraftValueChange?.(
+        if (draft?.value === undefined) setUncontrolledDraftValue(nextValue)
+        draft?.onChange?.(
           nextValue,
           getDataCellValueMeta({
             kind,
@@ -292,6 +244,14 @@ export function DataCellInputControl({
       }}
       onFocus={onFocus}
       onBlur={(event) => {
+        const rawValue = event.currentTarget.value
+        if (
+          openingContext.shouldCancelDismiss({ kind: "focus-out" }) &&
+          rawValue === initialInputValueRef.current
+        ) {
+          onBlur?.(event)
+          return
+        }
         commitCurrentInputValue(event.currentTarget)
         onBlur?.(event)
       }}
@@ -305,7 +265,7 @@ export function DataCellInputControl({
           return
         }
         if (event.key === "Escape") {
-          cancelCurrentInputValue()
+          session.cancel()
           event.currentTarget.blur()
           event.preventDefault()
           return

@@ -10,7 +10,7 @@ import {
   useAnchoredDocument,
   useAnchoredFieldLink,
 } from "@/components/ui/anchored-document-viewer"
-import { CodeViewer, type CodeViewerHandle } from "@/components/ui/code-viewer"
+import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
 import {
   SourceFieldList,
   type SourceField,
@@ -51,7 +51,7 @@ const ITEMS: AnchoredItem[] = FIELDS.map((field) => {
  * target adapter.
  */
 export function TextSourcesBlock() {
-  const viewerRef = React.useRef<CodeViewerHandle>(null)
+  const viewerRef = React.useRef<TextViewerHandle>(null)
   const target = useTextAnchoredTarget(viewerRef)
 
   return (
@@ -68,7 +68,7 @@ export function TextSourcesBlock() {
 function TextSourcesContent({
   viewerRef,
 }: {
-  viewerRef: React.RefObject<CodeViewerHandle | null>
+  viewerRef: React.RefObject<TextViewerHandle | null>
 }) {
   const link = useAnchoredFieldLink()
   const { activeAnchor, activeItem } = useAnchoredDocument()
@@ -83,7 +83,7 @@ function TextSourcesContent({
   return (
     <div className="flex h-full min-h-[680px] bg-background">
       <div className="relative min-w-0 flex-1">
-        <CodeViewer
+        <TextViewer
           ref={viewerRef}
           source={{
             kind: "url",
@@ -93,6 +93,7 @@ function TextSourcesContent({
           bare
           className="h-full"
           highlight={highlight}
+          mode="text"
         />
         <SourceIndicator path={link.activePath} found={!!activeItem?.anchor} />
       </div>
@@ -102,7 +103,7 @@ function TextSourcesContent({
 }
 
 function useTextAnchoredTarget(
-  viewerRef: React.RefObject<CodeViewerHandle | null>
+  viewerRef: React.RefObject<TextViewerHandle | null>
 ): AnchoredDocumentTarget {
   return React.useMemo(
     () => ({

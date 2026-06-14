@@ -47,6 +47,7 @@ tsconfig.tsbuildinfo
 .playwright-mcp/
 playwright-report/
 test-results/
+tmp/json-table-primitive-interactions-profile.fresh.json
 shadcn-workspace
 .codex-artifacts
 .claude/

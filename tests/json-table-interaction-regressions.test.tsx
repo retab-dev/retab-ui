@@ -5,6 +5,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
 import {
   findEditableCell,
+  primitiveEventTarget,
   renderInteractionRow,
 } from "./json-table-interaction-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
@@ -38,7 +39,7 @@ async function activateCell(
   fieldPath: string
 ) {
   const cell = await editableCell(view, fieldPath)
-  fireEvent.pointerDown(cell, {
+  fireEvent.pointerDown(primitiveEventTarget(cell), {
     button: 0,
     clientX: 0,
     clientY: 0,
@@ -51,11 +52,12 @@ describe("json table interaction regressions", () => {
   it("does not start type-to-edit from platform shortcuts", async () => {
     const view = renderInteractionRow({ visiblePaths: ["vendor"] })
     const cell = await editableCell(view, "vendor")
+    const surface = primitiveEventTarget(cell) as HTMLElement
 
-    cell.focus()
-    fireEvent.keyDown(cell, { key: "c", metaKey: true })
-    fireEvent.keyDown(cell, { key: "c", ctrlKey: true })
-    fireEvent.keyDown(cell, { key: "e", altKey: true })
+    surface.focus()
+    fireEvent.keyDown(surface, { key: "c", metaKey: true })
+    fireEvent.keyDown(surface, { key: "c", ctrlKey: true })
+    fireEvent.keyDown(surface, { key: "e", altKey: true })
 
     expect(view.queryByRole("textbox")).toBeNull()
   })
@@ -63,9 +65,10 @@ describe("json table interaction regressions", () => {
   it("still starts type-to-edit from AltGraph character input", async () => {
     const view = renderInteractionRow({ visiblePaths: ["vendor"] })
     const cell = await editableCell(view, "vendor")
+    const surface = primitiveEventTarget(cell) as HTMLElement
 
-    cell.focus()
-    fireEvent.keyDown(cell, {
+    surface.focus()
+    fireEvent.keyDown(surface, {
       key: "€",
       ctrlKey: true,
       altKey: true,
@@ -78,9 +81,10 @@ describe("json table interaction regressions", () => {
   it("does not start type-to-edit while IME composition is active", async () => {
     const view = renderInteractionRow({ visiblePaths: ["vendor"] })
     const cell = await editableCell(view, "vendor")
+    const surface = primitiveEventTarget(cell) as HTMLElement
 
-    cell.focus()
-    fireEvent.keyDown(cell, {
+    surface.focus()
+    fireEvent.keyDown(surface, {
       key: "a",
       isComposing: true,
     })
@@ -92,9 +96,10 @@ describe("json table interaction regressions", () => {
     for (const key of ["Enter", "F2"]) {
       const view = renderInteractionRow({ visiblePaths: ["is_paid"] })
       const cell = await editableCell(view, "is_paid")
+      const surface = primitiveEventTarget(cell) as HTMLElement
 
-      cell.focus()
-      fireEvent.keyDown(cell, { key })
+      surface.focus()
+      fireEvent.keyDown(surface, { key })
 
       const checkbox = await view.findByRole("checkbox")
       expect(document.activeElement).toBe(checkbox)
@@ -105,9 +110,10 @@ describe("json table interaction regressions", () => {
   it("lets keyboard-opened pickers close from the first trigger click", async () => {
     const view = renderInteractionRow({ visiblePaths: ["shipped_at"] })
     const cell = await editableCell(view, "shipped_at")
+    const surface = primitiveEventTarget(cell) as HTMLElement
 
-    cell.focus()
-    fireEvent.keyDown(cell, { key: "Enter" })
+    surface.focus()
+    fireEvent.keyDown(surface, { key: "Enter" })
 
     const trigger = pickerTrigger()
     expect(await view.findByRole("dialog")).toBeTruthy()

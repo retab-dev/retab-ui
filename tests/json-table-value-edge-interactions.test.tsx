@@ -4,10 +4,13 @@ import { cleanup, fireEvent, waitFor } from "@testing-library/react"
 import type { JSONSchema7 } from "json-schema"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
+import type { JsonTableCellCommitHandler } from "@/components/json-table/json-table-cell-commit"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
 
 import {
   findEditableCell,
+  primitiveEventTarget,
+  primitivePendingCellCommit,
   renderInteractionRow,
 } from "./json-table-interaction-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
@@ -66,7 +69,19 @@ async function activateCell(
   fieldPath: string
 ) {
   const cell = await editableCell(view, fieldPath)
-  fireEvent.pointerDown(cell, {
+  fireEvent.pointerDown(primitiveEventTarget(cell), {
+    button: 0,
+    clientX: 0,
+    clientY: 0,
+    detail: 1,
+  })
+  fireEvent.pointerUp(primitiveEventTarget(cell), {
+    button: 0,
+    clientX: 0,
+    clientY: 0,
+    detail: 1,
+  })
+  fireEvent.click(primitiveEventTarget(cell), {
     button: 0,
     clientX: 0,
     clientY: 0,
@@ -82,11 +97,7 @@ async function activateEnumCell({
 }: {
   document?: TableDocument
   fieldPath: string
-  onCellCommit?: (
-    docId: string,
-    fieldPath: string,
-    value: unknown
-  ) => void
+  onCellCommit?: JsonTableCellCommitHandler
 }) {
   const view = renderInteractionRow({
     document,
@@ -95,13 +106,7 @@ async function activateEnumCell({
     onCellCommit,
   })
 
-  const cell = await editableCell(view, fieldPath)
-  fireEvent.click(cell, {
-    button: 0,
-    clientX: 0,
-    clientY: 0,
-    detail: 1,
-  })
+  await activateCell(view, fieldPath)
 
   const trigger = await view.findByRole("combobox")
   await waitFor(() =>
@@ -152,9 +157,11 @@ describe("json table value edge interactions", () => {
 
       await waitFor(() =>
         expect(view.onCellCommit).toHaveBeenCalledWith(
-          "doc_1",
-          fieldPath,
-          expectedValue
+          primitivePendingCellCommit({
+            fieldPath,
+            previousValue: edgeDocument().data[fieldPath],
+            value: expectedValue,
+          })
         )
       )
       expect(view.onCellCommit).toHaveBeenCalledTimes(1)
@@ -189,9 +196,11 @@ describe("json table value edge interactions", () => {
 
       await waitFor(() =>
         expect(view.onCellCommit).toHaveBeenCalledWith(
-          "doc_1",
-          "sentinel_status",
-          expectedValue
+          primitivePendingCellCommit({
+            fieldPath: "sentinel_status",
+            previousValue: currentValue,
+            value: expectedValue,
+          })
         )
       )
       expect(view.onCellCommit).toHaveBeenCalledTimes(1)
@@ -215,9 +224,11 @@ describe("json table value edge interactions", () => {
 
     await waitFor(() =>
       expect(view.onCellCommit).toHaveBeenCalledWith(
-        "doc_1",
-        "sentinel_status",
-        null
+        primitivePendingCellCommit({
+          fieldPath: "sentinel_status",
+          previousValue: "__null__",
+          value: null,
+        })
       )
     )
     expect(view.onCellCommit).toHaveBeenCalledTimes(1)
@@ -239,9 +250,11 @@ describe("json table value edge interactions", () => {
 
     await waitFor(() =>
       expect(view.onCellCommit).toHaveBeenCalledWith(
-        "doc_1",
-        "nullable_status",
-        null
+        primitivePendingCellCommit({
+          fieldPath: "nullable_status",
+          previousValue: "selected",
+          value: null,
+        })
       )
     )
     expect(view.onCellCommit).toHaveBeenCalledTimes(1)
@@ -264,7 +277,13 @@ describe("json table value edge interactions", () => {
     fireEvent.blur(input)
 
     await waitFor(() =>
-      expect(onCellCommit).toHaveBeenCalledWith("doc_1", "note", null)
+      expect(onCellCommit).toHaveBeenCalledWith(
+        primitivePendingCellCommit({
+          fieldPath: "note",
+          previousValue: "memo",
+          value: null,
+        })
+      )
     )
     expect(onCellCommit).toHaveBeenCalledTimes(1)
   })
@@ -291,9 +310,11 @@ describe("json table value edge interactions", () => {
 
       await waitFor(() =>
         expect(onCellCommit).toHaveBeenCalledWith(
-          "doc_1",
-          "count",
-          expectedValue
+          primitivePendingCellCommit({
+            fieldPath: "count",
+            previousValue: 3,
+            value: expectedValue,
+          })
         )
       )
       expect(onCellCommit).toHaveBeenCalledTimes(1)
@@ -304,18 +325,27 @@ describe("json table value edge interactions", () => {
     {
       activation: "pointer",
       interact: async (cell: HTMLElement) => {
-        fireEvent.pointerDown(cell, { button: 0, detail: 1 })
-        fireEvent.pointerUp(cell, { button: 0, detail: 1 })
-        fireEvent.click(cell)
+        fireEvent.pointerDown(primitiveEventTarget(cell), {
+          button: 0,
+          detail: 1,
+        })
+        fireEvent.pointerUp(primitiveEventTarget(cell), {
+          button: 0,
+          detail: 1,
+        })
+        fireEvent.click(primitiveEventTarget(cell))
       },
     },
     {
       activation: "Space",
       interact: async (cell: HTMLElement) => {
-        cell.focus()
-        fireEvent.keyDown(cell, { key: " " })
-        fireEvent.keyUp(cell, { key: " " })
-        fireEvent.click(cell)
+        const target = primitiveEventTarget(cell)
+        if (!(target instanceof HTMLElement)) {
+          throw new Error("Expected primitive event target")
+        }
+        target.focus()
+        fireEvent.keyDown(target, { key: " " })
+        fireEvent.keyUp(target, { key: " " })
       },
     },
   ])(
@@ -334,9 +364,11 @@ describe("json table value edge interactions", () => {
 
       await waitFor(() =>
         expect(onCellCommit).toHaveBeenCalledWith(
-          "doc_1",
-          "is_paid",
-          true
+          primitivePendingCellCommit({
+            fieldPath: "is_paid",
+            previousValue: false,
+            value: true,
+          })
         )
       )
       expect(onCellCommit).toHaveBeenCalledTimes(1)

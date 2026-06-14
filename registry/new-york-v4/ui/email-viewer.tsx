@@ -28,18 +28,6 @@ import { formatFileSize } from "./file-size-format"
 import { FileThumbnail } from "./file-thumbnail"
 import { FileViewer } from "./file-viewer"
 import {
-  EmbeddedSidebarProvider,
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "./sidebar"
-import {
   ViewerBody,
   ViewerHeader,
   ViewerRoot,
@@ -210,6 +198,7 @@ export function EmailViewer({
               <EmailViewerSelectedPart />
             </ViewerSurface>
             <ViewerSidebar
+              aria-label="Email parts"
               side="right"
               width="19rem"
               className="border-t md:border-t-0 md:border-l"
@@ -312,7 +301,7 @@ function MimeMessageHeader({ message }: { message: EmailViewerMessage }) {
           <h2 className="min-w-0 flex-1 truncate text-sm font-medium">
             {subject}
           </h2>
-          <ViewerSidebarTrigger side="right" className="-mr-1" />
+          <ViewerSidebarTrigger className="-mr-1" />
         </div>
         <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1 pl-6 text-xs text-muted-foreground">
           {message.from ? (
@@ -346,68 +335,81 @@ function MimePartSidebar({
   const partCount = bodyNodes.length + attachmentNodes.length
 
   return (
-    <EmbeddedSidebarProvider
-      width="19rem"
-      className="h-72 bg-transparent md:h-full md:w-(--sidebar-width)"
+    <div
+      data-slot="mime-part-sidebar"
+      className={cn(
+        "flex h-full min-h-0 flex-col bg-background text-foreground",
+        className
+      )}
     >
-      <Sidebar
-        side="left"
-        collapsible="none"
-        data-slot="mime-part-sidebar"
-        className={cn(
-          "h-full w-full border-sidebar-border bg-background md:border-r",
-          className
-        )}
+      <div className="flex-shrink-0 border-b px-3 py-2">
+        <div className="flex h-6 items-center gap-2 text-xs font-medium">
+          <Paperclip className="size-3.5 text-muted-foreground" />
+          <span>
+            {partCount} item{partCount === 1 ? "" : "s"}
+          </span>
+        </div>
+      </div>
+      <div className="min-h-0 flex-1 space-y-2 overflow-auto p-2">
+        <MimePartSidebarSection title="Body">
+          <ul className="flex flex-col gap-1">
+            {bodyNodes.map((node) => (
+              <MimePartSidebarItem
+                key={node.path.join("/")}
+                label="Body"
+                node={node}
+                selectedPath={selectedPath}
+                onSelectNode={onSelectNode}
+              />
+            ))}
+          </ul>
+        </MimePartSidebarSection>
+        <MimePartSidebarSection title="Attachments">
+          {attachmentNodes.length === 0 ? (
+            <p className="px-2 py-3 text-xs text-muted-foreground">
+              No attachments.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-1">
+              {attachmentNodes.map((node) => (
+                <MimePartSidebarItem
+                  key={node.path.join("/")}
+                  node={node}
+                  selectedPath={selectedPath}
+                  onSelectNode={onSelectNode}
+                />
+              ))}
+            </ul>
+          )}
+        </MimePartSidebarSection>
+      </div>
+    </div>
+  )
+}
+
+function MimePartSidebarSection({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
+  const titleId = React.useId()
+
+  return (
+    <section
+      aria-labelledby={titleId}
+      data-slot="mime-part-sidebar-section"
+      className="min-w-0"
+    >
+      <h3
+        id={titleId}
+        className="flex h-8 shrink-0 items-center px-2 text-xs font-medium text-muted-foreground"
       >
-        <SidebarHeader className="border-b px-3 py-2">
-          <div className="flex h-6 items-center gap-2 text-xs font-medium text-sidebar-foreground">
-            <Paperclip className="size-3.5 text-sidebar-accent-foreground" />
-            <span>
-              {partCount} item{partCount === 1 ? "" : "s"}
-            </span>
-          </div>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Body</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-1">
-                {bodyNodes.map((node) => (
-                  <MimePartSidebarItem
-                    key={node.path.join("/")}
-                    label="Body"
-                    node={node}
-                    selectedPath={selectedPath}
-                    onSelectNode={onSelectNode}
-                  />
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-          <SidebarGroup className="min-h-0 flex-1">
-            <SidebarGroupLabel>Attachments</SidebarGroupLabel>
-            <SidebarGroupContent>
-              {attachmentNodes.length === 0 ? (
-                <p className="px-2 py-3 text-xs text-sidebar-foreground/70">
-                  No attachments.
-                </p>
-              ) : (
-                <SidebarMenu className="gap-1">
-                  {attachmentNodes.map((node) => (
-                    <MimePartSidebarItem
-                      key={node.path.join("/")}
-                      node={node}
-                      selectedPath={selectedPath}
-                      onSelectNode={onSelectNode}
-                    />
-                  ))}
-                </SidebarMenu>
-              )}
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-      </Sidebar>
-    </EmbeddedSidebarProvider>
+        {title}
+      </h3>
+      {children}
+    </section>
   )
 }
 
@@ -469,36 +471,50 @@ function MimePartSidebarItem({
   const title = label ?? mimePartLabel(node.part)
 
   return (
-    <>
-      <SidebarMenuItem>
-        <SidebarMenuButton
-          aria-current={isSelected ? "page" : undefined}
-          aria-label={`${title} ${meta}`}
-          className="h-auto items-center gap-3 rounded-lg border border-transparent p-2 data-[active=true]:border-sidebar-border"
-          isActive={isSelected}
-          onClick={() => onSelectNode(node)}
-        >
-          {canRenderThumbnail && node.part.source ? (
-            <FileThumbnail
-              source={node.part.source}
-              presentation="decorative"
-              className="size-12 flex-shrink-0"
-              previewAspectRatio={1}
-            />
-          ) : (
-            <span className="flex size-12 flex-shrink-0 items-center justify-center rounded-md text-sidebar-accent-foreground">
-              <PartIcon node={node} className="size-4" />
-            </span>
-          )}
-          <span className="flex min-w-0 flex-1 flex-col gap-1">
-            <span className="truncate text-sm font-medium">{title}</span>
-            <span className="truncate text-xs text-sidebar-foreground/70">
-              {meta}
-            </span>
+    <li data-slot="mime-part-sidebar-item">
+      <button
+        type="button"
+        aria-current={isSelected ? "page" : undefined}
+        aria-label={`${title} ${meta}`}
+        data-selected={isSelected ? "true" : "false"}
+        className={cn(
+          "flex h-auto w-full items-center gap-3 overflow-hidden rounded-lg border p-2 text-left text-sm outline-hidden transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring active:bg-accent",
+          isSelected
+            ? "border-border bg-accent text-accent-foreground"
+            : "border-transparent"
+        )}
+        onClick={() => onSelectNode(node)}
+      >
+        {canRenderThumbnail && node.part.source ? (
+          <FileThumbnail
+            source={node.part.source}
+            presentation="decorative"
+            className="size-12 flex-shrink-0"
+            previewAspectRatio={1}
+          />
+        ) : (
+          <span
+            className={cn(
+              "flex size-12 flex-shrink-0 items-center justify-center rounded-md bg-muted/60",
+              isSelected ? "text-accent-foreground" : "text-muted-foreground"
+            )}
+          >
+            <PartIcon node={node} className="size-4" />
           </span>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-    </>
+        )}
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="truncate text-sm font-medium">{title}</span>
+          <span
+            className={cn(
+              "truncate text-xs",
+              isSelected ? "text-accent-foreground/80" : "text-muted-foreground"
+            )}
+          >
+            {meta}
+          </span>
+        </span>
+      </button>
+    </li>
   )
 }
 

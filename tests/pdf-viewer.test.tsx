@@ -24,7 +24,6 @@ import {
   getPdfThumbnailLayoutItem,
   PDF_THUMBNAIL_LABEL_AND_GAP_HEIGHT,
 } from "@/registry/new-york-v4/ui/pdf-thumbnail-layout"
-import { PdfThumbnailSidebar } from "@/registry/new-york-v4/ui/pdf-thumbnail-sidebar"
 import {
   PdfHighlight,
   PdfResourceViewer,
@@ -34,6 +33,7 @@ import {
   PdfViewerProvider,
   type PdfViewerHandle,
 } from "@/registry/new-york-v4/ui/pdf-viewer"
+import { PdfViewerThumbnails } from "@/registry/new-york-v4/ui/pdf-viewer-thumbnails"
 import {
   PDF_THUMBNAIL_PAGE_METRIC_CONCURRENCY,
   usePdfThumbnailPageMetrics,
@@ -2106,7 +2106,7 @@ describe("PdfViewer", () => {
       <ViewerRoot className="h-[420px]">
         <ViewerBody>
           <ViewerSidebar className="w-36">
-            <PdfThumbnailSidebar resource={resource} />
+            <PdfViewerThumbnails resource={resource} />
           </ViewerSidebar>
           <ViewerSurface>
             <PdfResourceViewer resource={resource} />
@@ -2118,7 +2118,7 @@ describe("PdfViewer", () => {
     await findByTextContent("Page 1 of 2")
     await waitFor(() =>
       expect(
-        document.querySelector('[data-slot="pdf-thumbnail-sidebar"]')
+        document.querySelector('[data-slot="pdf-viewer-thumbnails"]')
       ).toBeTruthy()
     )
     expect(document.querySelector('[data-slot="viewer-sidebar"]')).toBeTruthy()
@@ -2131,7 +2131,7 @@ describe("PdfViewer", () => {
 
     await act(async () => {
       render(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-sidebar-retry.pdf")}
         />
       )
@@ -2168,7 +2168,7 @@ describe("PdfViewer", () => {
 
     await act(async () => {
       render(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-page-retry.pdf")}
         />
       )
@@ -2247,7 +2247,7 @@ describe("PdfViewer", () => {
 
     await act(async () => {
       render(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/sidebar-retained.pdf")}
         />
       )
@@ -2281,7 +2281,7 @@ describe("PdfViewer", () => {
     let view!: ReturnType<typeof render>
     await act(async () => {
       view = render(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/sidebar-switch-first.pdf")}
         />
       )
@@ -2290,7 +2290,7 @@ describe("PdfViewer", () => {
 
     await act(async () => {
       view.rerender(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/sidebar-switch-second.pdf")}
         />
       )
@@ -2333,7 +2333,7 @@ describe("PdfViewer", () => {
     pdfjsMock.docs.set("/thumbnail-select.pdf", doc)
 
     const view = render(
-      <PdfThumbnailSidebar
+      <PdfViewerThumbnails
         resource={pdfUrlResource("/thumbnail-select.pdf")}
         currentPage={2}
         onSelectPage={onSelectPage}
@@ -2351,7 +2351,7 @@ describe("PdfViewer", () => {
     expect(onSelectPage).toHaveBeenCalledWith(3)
 
     view.rerender(
-      <PdfThumbnailSidebar
+      <PdfViewerThumbnails
         resource={pdfUrlResource("/thumbnail-select.pdf")}
         currentPage={3}
         onSelectPage={onSelectPage}
@@ -2377,7 +2377,7 @@ describe("PdfViewer", () => {
     )
 
     render(
-      <PdfThumbnailSidebar
+      <PdfViewerThumbnails
         resource={pdfUrlResource("/thumbnail-keyboard.pdf")}
         currentPage={2}
         onSelectPage={onSelectPage}
@@ -2407,7 +2407,7 @@ describe("PdfViewer", () => {
     try {
       await act(async () => {
         render(
-          <PdfThumbnailSidebar
+          <PdfViewerThumbnails
             resource={pdfUrlResource("/thumbnail-follow.pdf")}
             currentPage={50}
             width={50}
@@ -2431,7 +2431,7 @@ describe("PdfViewer", () => {
 
     try {
       const view = render(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-pointer-follow.pdf")}
           currentPage={1}
           width={50}
@@ -2440,12 +2440,12 @@ describe("PdfViewer", () => {
       await screen.findByText("1")
 
       fireEvent.pointerEnter(
-        document.querySelector('[data-slot="pdf-thumbnail-sidebar"]')!
+        document.querySelector('[data-slot="pdf-viewer-thumbnails"]')!
       )
       scrollTo.mockClear()
 
       view.rerender(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-pointer-follow.pdf")}
           currentPage={50}
           width={50}
@@ -2472,7 +2472,7 @@ describe("PdfViewer", () => {
 
     try {
       const view = render(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-pointer-resume-follow.pdf")}
           currentPage={1}
           width={50}
@@ -2480,14 +2480,14 @@ describe("PdfViewer", () => {
       )
       await screen.findByText("1")
       const rail = document.querySelector(
-        '[data-slot="pdf-thumbnail-sidebar"]'
+        '[data-slot="pdf-viewer-thumbnails"]'
       )!
 
       fireEvent.pointerEnter(rail)
       scrollTo.mockClear()
 
       view.rerender(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-pointer-resume-follow.pdf")}
           currentPage={50}
           width={50}
@@ -2517,7 +2517,7 @@ describe("PdfViewer", () => {
 
     try {
       const view = render(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-activate-resume-follow.pdf")}
           currentPage={1}
           width={50}
@@ -2526,7 +2526,7 @@ describe("PdfViewer", () => {
       )
       await screen.findByText("2")
       const rail = document.querySelector(
-        '[data-slot="pdf-thumbnail-sidebar"]'
+        '[data-slot="pdf-viewer-thumbnails"]'
       )!
 
       fireEvent.pointerEnter(rail)
@@ -2535,7 +2535,7 @@ describe("PdfViewer", () => {
       scrollTo.mockClear()
 
       view.rerender(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-activate-resume-follow.pdf")}
           currentPage={50}
           width={50}
@@ -2560,7 +2560,7 @@ describe("PdfViewer", () => {
 
     try {
       const view = render(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-user-scroll-follow.pdf")}
           currentPage={1}
           width={50}
@@ -2570,12 +2570,12 @@ describe("PdfViewer", () => {
 
       now.mockReturnValue(1300)
       fireEvent.scroll(
-        document.querySelector('[data-slot="pdf-thumbnail-sidebar"]')!
+        document.querySelector('[data-slot="pdf-viewer-thumbnails"]')!
       )
       scrollTo.mockClear()
 
       view.rerender(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-user-scroll-follow.pdf")}
           currentPage={50}
           width={50}
@@ -2602,7 +2602,7 @@ describe("PdfViewer", () => {
 
     await act(async () => {
       render(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-virtualized.pdf")}
           width={50}
         />
@@ -2624,7 +2624,7 @@ describe("PdfViewer", () => {
     let view!: ReturnType<typeof render>
     await act(async () => {
       view = render(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-cancel.pdf")}
         />
       )
@@ -2644,7 +2644,7 @@ describe("PdfViewer", () => {
     let view!: ReturnType<typeof render>
     await act(async () => {
       view = render(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-width-cancel.pdf")}
           width={50}
         />
@@ -2655,7 +2655,7 @@ describe("PdfViewer", () => {
     const firstTask = pdfjsMock.renderTasks[0]
 
     view.rerender(
-      <PdfThumbnailSidebar
+      <PdfViewerThumbnails
         resource={pdfUrlResource("/thumbnail-width-cancel.pdf")}
         width={80}
       />
@@ -2672,7 +2672,7 @@ describe("PdfViewer", () => {
 
     await act(async () => {
       render(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-no-observer.pdf")}
           width={50}
         />
@@ -2706,7 +2706,7 @@ describe("PdfViewer", () => {
 
     await act(async () => {
       render(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-no-observer-window.pdf")}
         />
       )
@@ -2729,7 +2729,7 @@ describe("PdfViewer", () => {
     let view!: ReturnType<typeof render>
     await act(async () => {
       view = render(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-virtual-unmount.pdf")}
           width={50}
         />
@@ -2754,7 +2754,7 @@ describe("PdfViewer", () => {
 
     await act(async () => {
       render(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-rotated.pdf")}
           width={50}
         />
@@ -2774,7 +2774,7 @@ describe("PdfViewer", () => {
 
     await act(async () => {
       render(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-tiny-canvas.pdf")}
           width={0.25}
         />
@@ -2811,7 +2811,7 @@ describe("PdfViewer", () => {
 
     await act(async () => {
       render(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-render-failed.pdf")}
         />
       )
@@ -2836,7 +2836,7 @@ describe("PdfViewer", () => {
 
     await act(async () => {
       render(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-render-throws.pdf")}
         />
       )
@@ -2855,7 +2855,7 @@ describe("PdfViewer", () => {
 
     await act(async () => {
       render(
-        <PdfThumbnailSidebar
+        <PdfViewerThumbnails
           resource={pdfUrlResource("/thumbnail-no-context.pdf")}
         />
       )

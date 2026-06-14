@@ -7,11 +7,10 @@ import { createDataCellShellActivationSource } from "@/registry/new-york-v4/ui/d
 import { useDataCellSelectActivation } from "@/registry/new-york-v4/ui/data-cell-select-activation"
 
 describe("DataCell select activation", () => {
-  it("opens on autofocus and exposes the editor handle", () => {
+  it("opens on autofocus", () => {
     const trigger = document.createElement("button")
     const openEditor = vi.fn()
     const closeEditor = vi.fn()
-    const onEditorHandleChange = vi.fn()
 
     renderHook(() =>
       useDataCellSelectActivation({
@@ -20,15 +19,10 @@ describe("DataCell select activation", () => {
         openEditor,
         closeEditor,
         keepOpen: vi.fn(),
-        onEditorHandleChange,
       })
     )
 
     expect(openEditor).toHaveBeenCalledTimes(1)
-    expect(onEditorHandleChange).toHaveBeenCalledWith({
-      finish: expect.any(Function),
-      cancel: expect.any(Function),
-    })
   })
 
   it("keeps the popup open during the activation event tail", () => {

@@ -4,7 +4,12 @@ import { act, renderHook } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import { useDataCellSelectState } from "@/registry/new-york-v4/ui/data-cell-select-state"
-import type { DataCellSelectOption } from "@/registry/new-york-v4/ui/data-cell-types"
+import type { DataCellPrimitiveSession } from "@/registry/new-york-v4/ui/data-cell-session"
+import type {
+  DataCellCommitValue,
+  DataCellSelectOption,
+  DataCellValueMeta,
+} from "@/registry/new-york-v4/ui/data-cell-types"
 
 const options: DataCellSelectOption[] = [
   { value: "a", label: "A", disabled: true },
@@ -24,6 +29,37 @@ function anchorElement() {
   return anchor
 }
 
+function createTestSelectSession({
+  onCommit = vi.fn(),
+  onEditingEnd = vi.fn(),
+}: {
+  onCommit?: (value: DataCellCommitValue, meta: DataCellValueMeta) => void
+  onEditingEnd?: () => void
+} = {}): DataCellPrimitiveSession {
+  let didFinish = false
+  return {
+    commit(value, meta) {
+      if (didFinish) return
+      didFinish = true
+      onCommit(value, meta)
+      onEditingEnd()
+    },
+    cancel() {
+      if (didFinish) return
+      didFinish = true
+      onEditingEnd()
+    },
+    end() {
+      if (didFinish) return
+      didFinish = true
+      onEditingEnd()
+    },
+    reset() {
+      didFinish = false
+    },
+  }
+}
+
 describe("DataCell select state", () => {
   it("opens from an anchor and activates the selected option", () => {
     const { result } = renderHook(() =>
@@ -31,6 +67,7 @@ describe("DataCell select state", () => {
         popupId: "select",
         value: "b",
         selectOptions: options,
+        session: createTestSelectSession(),
       })
     )
 
@@ -50,8 +87,7 @@ describe("DataCell select state", () => {
         popupId: "select",
         value: "b",
         selectOptions: options,
-        onCommit,
-        onEditingEnd,
+        session: createTestSelectSession({ onCommit, onEditingEnd }),
       })
     )
 
@@ -78,8 +114,7 @@ describe("DataCell select state", () => {
         popupId: "select",
         value: "b",
         selectOptions: options,
-        onCommit,
-        onEditingEnd,
+        session: createTestSelectSession({ onCommit, onEditingEnd }),
       })
     )
 

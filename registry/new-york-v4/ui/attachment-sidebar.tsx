@@ -10,18 +10,17 @@ import type { ViewerSource } from "@/lib/viewer-source"
 import { formatFileSize } from "./file-size-format"
 import { FileThumbnail } from "./file-thumbnail"
 import {
-  EmbeddedSidebarProvider,
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarSeparator,
-} from "./sidebar"
+  SidebarListButton,
+  SidebarListContent,
+  SidebarListGroup,
+  SidebarListGroupContent,
+  SidebarListGroupLabel,
+  SidebarListHeader,
+  SidebarListMenu,
+  SidebarListMenuItem,
+  SidebarListRoot,
+  SidebarListSeparator,
+} from "./sidebar-list"
 
 export interface AttachmentSidebarItem {
   id: string
@@ -42,12 +41,11 @@ export interface AttachmentSidebarProps {
   side?: "left" | "right"
   width?: string
   className?: string
-  providerClassName?: string
 }
 
 /**
- * File attachment navigator built from the shared Sidebar primitives. It owns
- * attachment/file row semantics, while callers own the selected id and any
+ * File attachment navigator built from providerless SidebarList primitives. It
+ * owns attachment/file row semantics, while callers own the selected id and any
  * domain-specific rows they pass as children.
  */
 export function AttachmentSidebar({
@@ -60,54 +58,50 @@ export function AttachmentSidebar({
   side = "right",
   width = "18rem",
   className,
-  providerClassName,
 }: AttachmentSidebarProps) {
   return (
-    <EmbeddedSidebarProvider className={providerClassName} width={width}>
-      <Sidebar
-        side={side}
-        collapsible="none"
-        data-slot="attachment-sidebar"
-        className={cn(
-          "h-full w-full border-sidebar-border bg-sidebar",
-          side === "right" ? "md:border-l" : "md:border-r",
-          className
-        )}
-      >
-        <SidebarHeader className="border-b px-3 py-2">
-          {header ?? <DefaultAttachmentSidebarHeader count={items.length} />}
-        </SidebarHeader>
-        <SidebarContent>
-          {children ? (
-            <>
-              {children}
-              <SidebarSeparator />
-            </>
-          ) : null}
-          <SidebarGroup className="min-h-0 flex-1">
-            <SidebarGroupLabel>Attachments</SidebarGroupLabel>
-            <SidebarGroupContent>
-              {items.length === 0 ? (
-                <p className="px-2 py-3 text-xs text-sidebar-foreground/70">
-                  {emptyLabel}
-                </p>
-              ) : (
-                <SidebarMenu className="gap-2">
-                  {items.map((item) => (
-                    <AttachmentSidebarMenuItem
-                      key={item.id}
-                      item={item}
-                      isSelected={selectedId === item.id}
-                      onSelect={onSelect}
-                    />
-                  ))}
-                </SidebarMenu>
-              )}
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-      </Sidebar>
-    </EmbeddedSidebarProvider>
+    <SidebarListRoot
+      width={width}
+      data-slot="attachment-sidebar"
+      className={cn(
+        "border-sidebar-border bg-sidebar",
+        side === "right" ? "md:border-l" : "md:border-r",
+        className
+      )}
+    >
+      <SidebarListHeader className="border-b px-3 py-2">
+        {header ?? <DefaultAttachmentSidebarHeader count={items.length} />}
+      </SidebarListHeader>
+      <SidebarListContent>
+        {children ? (
+          <>
+            {children}
+            <SidebarListSeparator />
+          </>
+        ) : null}
+        <SidebarListGroup className="min-h-0 flex-1">
+          <SidebarListGroupLabel>Attachments</SidebarListGroupLabel>
+          <SidebarListGroupContent>
+            {items.length === 0 ? (
+              <p className="px-2 py-3 text-xs text-sidebar-foreground/70">
+                {emptyLabel}
+              </p>
+            ) : (
+              <SidebarListMenu className="gap-2">
+                {items.map((item) => (
+                  <AttachmentSidebarMenuItem
+                    key={item.id}
+                    item={item}
+                    isSelected={selectedId === item.id}
+                    onSelect={onSelect}
+                  />
+                ))}
+              </SidebarListMenu>
+            )}
+          </SidebarListGroupContent>
+        </SidebarListGroup>
+      </SidebarListContent>
+    </SidebarListRoot>
   )
 }
 
@@ -140,8 +134,8 @@ function AttachmentSidebarMenuItem({
       : (resource.mimeType ?? resource.descriptor.category))
 
   return (
-    <SidebarMenuItem>
-      <SidebarMenuButton
+    <SidebarListMenuItem>
+      <SidebarListButton
         aria-current={isSelected ? "page" : undefined}
         aria-label={`${label} ${meta}`}
         className="h-auto items-start gap-2 rounded-lg border border-transparent p-2 data-[active=true]:border-sidebar-border"
@@ -161,7 +155,7 @@ function AttachmentSidebarMenuItem({
             {meta}
           </span>
         </span>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+      </SidebarListButton>
+    </SidebarListMenuItem>
   )
 }

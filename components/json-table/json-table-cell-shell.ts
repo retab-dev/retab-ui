@@ -15,7 +15,6 @@ export type EditableTableCellShellProps =
 
 export type JsonTableShellHandlers = Pick<
   EditableTableCellShellProps,
-  | "onClick"
   | "onKeyDown"
   | "onPointerDown"
   | "onPointerEnter"

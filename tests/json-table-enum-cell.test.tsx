@@ -139,7 +139,7 @@ describe("json table enum cell", () => {
     expect(view.getAllByText("__null__")).toHaveLength(2)
   })
 
-  it("does not close from trigger blur while the table is opening the dropdown", () => {
+  it("ends editing from trigger blur after primitive-owned activation", () => {
     const onEditingEnd = vi.fn()
     const onOpenChange = vi.fn()
     const view = renderEnumCellForTest({
@@ -157,8 +157,8 @@ describe("json table enum cell", () => {
     if (!trigger) throw new Error("Missing enum trigger")
     fireEvent.blur(trigger)
 
-    expect(onEditingEnd).not.toHaveBeenCalled()
-    expect(onOpenChange).toHaveBeenCalledWith(true)
+    expect(onEditingEnd).toHaveBeenCalledTimes(1)
+    expect(onOpenChange.mock.calls).toEqual([[true], [false]])
   })
 
   it("distinguishes nullable null from a literal sentinel-like string option", () => {

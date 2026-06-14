@@ -16,9 +16,10 @@ The right hierarchy is:
 
 ```txt
 Sidebar primitives
+  -> SidebarList primitives
   -> SegmentSidebar
   -> AttachmentSidebar
-  -> PdfThumbnailSidebar
+  -> PdfViewerThumbnails
 ```
 
 These are siblings, not aliases for one another.
@@ -27,8 +28,9 @@ These are siblings, not aliases for one another.
 menu rows, active state styling, disabled state styling, focus behavior, and
 sidebar tokens.
 
-Domain sidebars own domain models. They may compose `Sidebar` primitives, but
-they should not push domain-specific props or behavior into `Sidebar`.
+Domain sidebars own domain models. They may compose `SidebarList` primitives
+for grouped rows, but they should not push domain-specific props or behavior
+into `Sidebar`.
 
 ## Design Principles
 
@@ -76,7 +78,7 @@ model.
 - empty attachment state;
 - optional caller-provided domain groups before the attachment list.
 
-`PdfThumbnailSidebar` owns:
+`PdfViewerThumbnails` owns:
 
 - PDF document loading for thumbnails;
 - page-size measurement;
@@ -86,19 +88,19 @@ model.
 
 ### 3. Reuse Structure Only Where It Fits
 
-Domain sidebars should use `Sidebar` primitives structurally when their UI is a
-normal grouped row list.
+Domain sidebars should use providerless `SidebarList` primitives structurally
+when their UI is a normal grouped row list.
 
 That means:
 
-- `SegmentSidebar` should use `SidebarContent`, `SidebarGroup`, `SidebarMenu`,
-  and `SidebarMenuButton`;
-- `AttachmentSidebar` should use `SidebarHeader`, `SidebarContent`,
-  `SidebarGroup`, `SidebarMenu`, and `SidebarMenuButton`;
-- `PdfThumbnailSidebar` should not force its virtualized rail into
-  `SidebarMenuButton`.
+- `SegmentSidebar` should use `SidebarListContent`, `SidebarListGroup`,
+  `SidebarListMenu`, and `SidebarListButton`;
+- `AttachmentSidebar` should use `SidebarListHeader`, `SidebarListContent`,
+  `SidebarListGroup`, `SidebarListMenu`, and `SidebarListButton`;
+- `PdfViewerThumbnails` should not force its virtualized rail into
+  `SidebarListButton`.
 
-`PdfThumbnailSidebar` should still align visually with the sidebar system by
+`PdfViewerThumbnails` should still align visually with the sidebar system by
 using sidebar tokens for background, border, foreground, and inactive rings.
 Its behavior remains PDF-specific.
 
@@ -127,35 +129,35 @@ The primitive API should stay free of domain terms. If an option cannot be
 explained without mentioning files, pages, segments, PDFs, emails, runs, or
 schemas, it does not belong on `Sidebar`.
 
-### Embedded Sidebar Layer
+### Sidebar List Layer
 
-The current `SidebarProvider` carries app-shell assumptions: persistence,
-viewport-level behavior, mobile sheet behavior, and global shortcut semantics.
-Embedded viewer sidebars need the menu primitives but not necessarily the app
-shell.
+`SidebarProvider` can carry app-shell assumptions: persistence, viewport-level
+behavior, mobile sheet behavior, and global shortcut semantics. Domain viewer
+sidebars need grouped row grammar, but not the app shell.
 
-Add a documented embedded pattern, preferably as a small wrapper:
+The implemented providerless pattern is:
 
 ```tsx
-<EmbeddedSidebarProvider width="18rem">
-  <Sidebar side="right" collapsible="none">
-    ...
-  </Sidebar>
-</EmbeddedSidebarProvider>
+<SidebarListRoot width="18rem">
+  <SidebarListContent>
+    <SidebarListGroup>...</SidebarListGroup>
+  </SidebarListContent>
+</SidebarListRoot>
 ```
 
-`EmbeddedSidebarProvider` should provide the same context that menu primitives
-need, but with embedded defaults:
+`SidebarList` primitives provide the row and group grammar directly:
 
 - no cookie persistence;
 - no global keyboard shortcut;
-- no fixed viewport positioning;
-- no app-wide mobile sheet by default;
+- no app-wide mobile sheet ownership;
 - width scoped to the containing viewer;
-- collapse, if added later, scoped to the containing viewer.
+- no `SidebarProvider` dependency.
 
-If adding a new exported wrapper feels too heavy, document the current local
-`SidebarProvider` pattern for embedded sidebars and make the defaults explicit.
+When a domain sidebar is mounted inside `ViewerSidebar`, the ownership boundary
+is deliberate: `ViewerSidebar` owns viewer placement, width, collapse, and the
+rail's accessible label; the domain sidebar owns its row model and row
+interactions. `SegmentSidebar` inside `ViewerSidebar` is therefore a nested
+composition, not two independent sidebars competing for layout.
 
 ### Domain Sidebar Layer
 
@@ -186,7 +188,6 @@ interface AttachmentSidebarProps {
   side?: "left" | "right"
   width?: string
   className?: string
-  providerClassName?: string
 }
 ```
 
@@ -212,13 +213,13 @@ Rules:
 
 - keep segment interaction state outside `Sidebar`;
 - keep page range and confidence formatting inside `SegmentSidebar`;
-- use `SidebarMenuButton` for row active/focus behavior;
+- use `SidebarListButton` for row active/focus behavior;
 - expose segment callbacks, not generic sidebar callbacks;
 - do not make `Sidebar` understand page ownership or confidence.
 
-#### `PdfThumbnailSidebar`
+#### `PdfViewerThumbnails`
 
-`PdfThumbnailSidebar` should remain domain-specific and should not become a
+`PdfViewerThumbnails` should remain domain-specific and should not become a
 `SidebarMenu` list.
 
 Rules:
@@ -231,22 +232,19 @@ Rules:
 
 ## Compound Viewer Composition
 
-Compound viewers orchestrate multiple sources and sidebars. They should not
-reimplement generic file rendering or generic attachment rows.
+Compound viewers orchestrate multiple sources and sidebars. They should keep
+viewer placement on `ViewerSidebar` and keep domain row meaning in the viewer or
+domain sidebar that owns the model.
 
-For email:
+For email, MIME parts are currently email-owned rail content:
 
 ```tsx
-<EmailViewer>
+<ViewerSidebar aria-label="Email parts">
+  <EmailViewerPartsList />
+</ViewerSidebar>
+<ViewerSurface>
   <FileViewer source={selectedSource} />
-  <AttachmentSidebar
-    items={nonInlineAttachments}
-    selectedId={selectedAttachmentId}
-    onSelect={selectAttachment}
-  >
-    <EmailBodySidebarGroup />
-  </AttachmentSidebar>
-</EmailViewer>
+</ViewerSurface>
 ```
 
 `EmailViewer` owns:
@@ -259,12 +257,13 @@ For email:
 
 `EmailViewer` does not own:
 
-- attachment row layout;
 - thumbnail rendering;
 - file preview routing;
 - HTML iframe isolation.
 
-This makes email a composition test rather than a one-off viewer.
+This makes email a composition test rather than a one-off viewer. If a second
+viewer needs the same file-attachment row contract, `AttachmentSidebar` is the
+reusable sibling to reach for; it is not a hidden dependency of `EmailViewer`.
 
 ## Accessibility Requirements
 
@@ -289,34 +288,24 @@ Implemented API:
 accessible as an attachment command instead of a flattened dump of thumbnail
 internals.
 
-## Viewer Shell Implication
+## Viewer Surface Implication
 
-The sidebar work also exposes a broader viewer-shell gap.
+The sidebar work also exposes a broader viewer-composition boundary.
 
-`FileViewer` is a strong single-source router, but compound viewers need a
-format-neutral shell around the selected source. The long-term viewer stack
-should be:
+`ViewerRoot`, `ViewerHeader`, `ViewerBody`, `ViewerSidebar`, and
+`ViewerSurface` are the shared spatial primitives. Leaf viewers such as
+`PdfViewer` stay complete renderers, and compound viewers choose one of two
+explicit shapes:
 
-```txt
-ViewerSource / ViewerResource
-  -> concrete renderers
-  -> FileViewer router
-  -> ViewerShell
-  -> compound domain viewers
-```
+- compose PDF internals with `PdfViewerProvider`, `PdfViewerHeader`,
+  `PdfViewerThumbnails`, and `PdfViewerPages` when they need to own PDF chrome;
+- render a complete `PdfViewer bare` inside `ViewerSurface` when the PDF
+  is just the document pane controlled through a ref and callbacks.
 
-`ViewerShell` should eventually own:
-
-- outer border, background, radius, and overflow;
-- header slot;
-- toolbar slot;
-- left and right rail slots;
-- top and bottom document-column slots;
-- overlay slot;
-- loading and error placement conventions.
-
-Until that exists, compound viewers can locally compose `FileViewer` and domain
-sidebars, but new viewer-specific shells should be treated as temporary.
+The second shape appears in demos and workflow viewers by design. The
+surrounding `ViewerRoot` owns workflow chrome and sidebars; the nested
+`PdfViewer bare` owns PDF loading, rendering, toolbar behavior, error handling,
+and its imperative handle without adding another visible viewer frame.
 
 ## Migration Plan
 
@@ -324,16 +313,18 @@ sidebars, but new viewer-specific shells should be treated as temporary.
 
 - Keep `Sidebar` primitive-only.
 - Implement `AttachmentSidebar`.
-- Make `EmailViewer` consume `AttachmentSidebar`.
+- Keep email MIME parts on `ViewerSidebar` unless a shared attachment navigator
+  is needed by multiple viewers.
 - Make `SegmentSidebar` consume sidebar primitives internally.
-- Align `PdfThumbnailSidebar` visually with sidebar tokens without changing its
+- Align `PdfViewerThumbnails` visually with sidebar tokens without changing its
   virtualization model.
 
-### Phase 2: Clarify Embedded Sidebar Usage
+### Phase 2: Clarify Providerless Sidebar Lists
 
-- Add `EmbeddedSidebarProvider`, or document the embedded provider pattern.
-- Remove hidden app-shell assumptions from embedded viewer sidebars.
-- Ensure embedded sidebars work in cards, modals, split panes, and registry
+- Keep `SidebarListRoot` as the container-scoped root for domain sidebars that
+  reuse grouped row primitives.
+- Keep app-shell assumptions out of viewer domain sidebars.
+- Ensure providerless sidebars work in cards, modals, split panes, and registry
   demos.
 
 ### Phase 3: Fix Thumbnail Semantics
@@ -342,35 +333,39 @@ sidebars, but new viewer-specific shells should be treated as temporary.
 - Ensure thumbnail internals do not leak into attachment row accessible names.
 - Add regression tests for CSV/XLSX thumbnails inside attachment rows.
 
-### Phase 4: Introduce `ViewerShell`
+### Phase 4: Keep Viewer Primitives Explicit
 
-- Extract shared viewer chrome conventions into `ViewerShell`.
-- Let compound viewers provide side rails without knowing the selected file
-  format.
+- Keep shared viewer chrome on `ViewerRoot`, `ViewerHeader`, `ViewerBody`,
+  `ViewerSidebar`, and `ViewerSurface`.
+- Let compound viewers provide side rails through `ViewerSidebar` and document
+  panes through `ViewerSurface`.
 - Keep `FileViewer` as a router, not a domain orchestrator.
 
 ## Implementation Status
 
 The implemented system now includes:
 
-- `EmbeddedSidebarProvider` for container-scoped domain sidebars.
+- `SidebarList` primitives for providerless domain sidebars.
 - `AttachmentSidebar` as a reusable file attachment navigator.
-- `SegmentSidebar` composed from embedded sidebar primitives.
-- `PdfThumbnailSidebar` visually aligned through sidebar tokens while keeping
+- `SegmentSidebar` composed from providerless sidebar list primitives.
+- `PdfViewerThumbnails` visually aligned through sidebar tokens while keeping
   its virtualized page rail.
 - `FileThumbnail presentation="decorative"` for thumbnail-in-row semantics.
-- `ViewerShell` as the shared compound viewer frame.
-- `FileViewer slots` routed to slot-native viewers and wrapped in
-  `ViewerShell` for non-slot-native routes.
-- `EmailViewer` composed from `ViewerShell`, `FileViewer`, and
-  `AttachmentSidebar`.
+- `ViewerRoot`, `ViewerBody`, `ViewerSidebar`, and `ViewerSurface` as the
+  shared compound viewer frame.
+- `EmailViewer` composed from viewer primitives, `FileViewer`, and email-owned
+  part navigation.
+- Workflow demos that render a complete `PdfViewer bare` inside
+  `ViewerSurface` when the PDF is the document pane rather than the workflow
+  shell.
 
 ## Non-Goals
 
 - Do not fold `SegmentSidebar` into `Sidebar`.
 - Do not fold `AttachmentSidebar` into `Sidebar`.
 - Do not make `Sidebar` aware of PDFs, files, emails, schemas, or segments.
-- Do not force `PdfThumbnailSidebar` into menu row primitives.
+- Do not force `PdfViewerThumbnails` into menu row primitives.
+- Do not introduce slot-object viewer shells for sidebar composition.
 - Do not create compatibility adapters for older sidebar APIs.
 - Do not add domain variants to `Sidebar` when a domain component is the right
   owner.
@@ -380,7 +375,7 @@ The implemented system now includes:
 Adopt a strict primitive/domain split.
 
 `Sidebar` remains the visual and interaction primitive. `SegmentSidebar`,
-`AttachmentSidebar`, and `PdfThumbnailSidebar` remain domain sidebars with their
+`AttachmentSidebar`, and `PdfViewerThumbnails` remain domain sidebars with their
 own models. They share primitive structure only where it improves clarity and
 behavior. They share visual tokens everywhere they need to feel like part of the
 same system.

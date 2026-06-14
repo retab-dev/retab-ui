@@ -101,10 +101,10 @@ async function expectCurrentThumbnail(
       async () =>
         page.evaluate((targetPageNumber) => {
           const rail = document.querySelector<HTMLElement>(
-            '[data-slot="pdf-thumbnail-sidebar"]'
+            '[data-slot="pdf-viewer-thumbnails"]'
           )
           const thumbnail = document.querySelector<HTMLElement>(
-            `[data-slot="pdf-thumbnail-sidebar"] [data-page-number="${targetPageNumber}"]`
+            `[data-slot="pdf-viewer-thumbnails"] [data-page-number="${targetPageNumber}"]`
           )
 
           if (!rail || !thumbnail) return false

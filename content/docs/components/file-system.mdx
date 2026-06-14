@@ -1,15 +1,16 @@
 ---
 title: File System
-description: A document workspace over a flat object-store manifest with list, grid, columns, gallery, thumbnails, lazy folders, and FileViewer previews.
+description: A document workspace over a flat object-store manifest with list, grid, columns, thumbnails, lazy folders, and FileViewer previews.
 component: true
 ---
 
 File System turns an object-store manifest into a navigable document workspace.
 It accepts flat file and folder records, infers folder chains, and presents the
-same source set through list, grid, columns, and gallery views.
+same source set through list, grid, and columns views.
 
-Use it when users need to browse generated documents, uploaded files, extraction
-artifacts, or case workspaces without leaving the document viewer surface.
+Use it when users need to browse generated documents, uploaded files,
+extraction artifacts, or case workspaces with a file browser sidebar and a
+selected-file viewer surface.
 
 ## Installation
 
@@ -31,18 +32,19 @@ Open the full-page demo at [/view/blocks/file-system](/view/blocks/file-system).
 
 ```tsx
 import {
+  FileSystemExplorer,
   FileSystemHeader,
+  FileSystemOpenPreviewDialog,
   FileSystemProvider,
   FileSystemSelectedFile,
-  FileSystemExplorer,
   type FileSystemItem,
 } from "@/components/ui/file-system"
 import {
   ViewerBody,
-  ViewerHeader,
-  ViewerRoot,
-  ViewerSidebar,
   ViewerSurface,
+  ViewerHeader,
+  ViewerSidebar,
+  ViewerRoot,
 } from "@/components/ui/viewer"
 
 const items: FileSystemItem[] = [
@@ -67,22 +69,34 @@ export function Documents() {
           <FileSystemHeader />
         </ViewerHeader>
         <ViewerBody>
-          <ViewerSidebar>
+          <ViewerSidebar aria-label="Files">
             <FileSystemExplorer />
           </ViewerSidebar>
           <ViewerSurface>
             <FileSystemSelectedFile />
           </ViewerSurface>
         </ViewerBody>
+        <FileSystemOpenPreviewDialog />
       </ViewerRoot>
     </FileSystemProvider>
   )
 }
 ```
 
-The provider owns path, query, view, selection, lazy loading, and source
-resolution. The viewer primitives own layout. `FileSystemSelectedFile`
-resolves the selected file to a `ViewerSource` and renders it with `FileViewer`.
+The file-system composition has four product surfaces:
+
+| Surface                 | Owns                                                               | Does not own                  |
+| ----------------------- | ------------------------------------------------------------------ | ----------------------------- |
+| `FileSystemBrowser`     | folder navigation, query, sort, view mode, lazy loading, selection | document rendering            |
+| `FileSystemPreview`     | selected-file preview, source resolution, file actions, metadata   | browser navigation            |
+| `FileSystemOpenPreview` | double-click and keyboard-open modal fallback                      | selected preview state        |
+| `FileSystemPierreList`  | Pierre tree input, virtualization, row events, expansion lifecycle | file-system source resolution |
+
+The provider owns the file-system domain state. The viewer primitives own
+layout. `FileSystemSelectedFile` resolves the selected file to a `ViewerSource`
+and renders it with `FileViewer`. `FileSystemOpenPreviewDialog` is the built-in
+fallback open behavior: double-click or keyboard-open a file to show it in a
+modal when `onFileOpen` is not supplied.
 
 ## Usage
 
@@ -100,8 +114,8 @@ export function EasyDocuments() {
 ## Useful Behaviors
 
 - Accepts a flat manifest and infers missing parent folders.
-- Shares selection, preview, search, filters, and sort state across list, grid,
-  columns, and gallery views.
+- Shares selection, preview, search, and sort state across list, grid, and
+  columns views.
 - Renders the list view with Pierre Trees for virtualized tree navigation,
   keyboard behavior, and icon handling.
 - Uses `FileThumbnail` for compact previews and `FileViewer` for the selected
@@ -109,6 +123,32 @@ export function EasyDocuments() {
 - Supports controlled `view`, `selectedPath`, and `query` state.
 - Supports lazy folders through `loadChildren`.
 - Resolves file sources on demand through `resolveSource`.
+- Keeps explorer views as browsers only. The selected document preview belongs
+  to `FileSystemSelectedFile`.
+- Uses the built-in modal only as local fallback open behavior. Pass
+  `onFileOpen` when app routing or another shell owns file opening.
+
+## Source Resolution
+
+`FileSystem` resolves previews lazily. If a file already has a `source`, that
+source is used directly. Otherwise `resolveSource` is called when the file is
+selected or opened.
+
+Resolved sources are cached by file path for the lifetime of the current
+`items` identity. When you replace `items`, the cache is cleared before the next
+preview resolution, so same-path files can point to updated sources after an
+item refresh.
+
+## Boundary Rules
+
+- Use `FileSystem` for the canonical browser-plus-preview layout.
+- Use `FileSystemProvider` and named parts when you need a custom viewer layout.
+- Do not put file-system state into viewer primitives.
+- Do not use `FileViewer` as a file browser; it renders one resolved source.
+- Do not use `file-system-light` when folder, query, lazy loading, selected
+  preview, or named-part composition is needed.
+- `file-system-light` is a separate lightweight flat-file convenience
+  component, not the canonical file-system architecture.
 
 ## API Reference
 
@@ -120,8 +160,8 @@ export function EasyDocuments() {
 | `title`               | `string`                                          | `Files` | No       |
 | `className`           | `string`                                          | `-`     | No       |
 | `defaultPath`         | `string`                                          | `""`    | No       |
-| `defaultView`         | `"list" \| "grid" \| "columns" \| "gallery"`      | `list`  | No       |
-| `view`                | `"list" \| "grid" \| "columns" \| "gallery"`      | `-`     | No       |
+| `defaultView`         | `"list" \| "grid" \| "columns"`                   | `list`  | No       |
+| `view`                | `"list" \| "grid" \| "columns"`                   | `-`     | No       |
 | `onViewChange`        | `(view) => void`                                  | `-`     | No       |
 | `defaultQuery`        | `Partial<FileSystemQueryState>`                   | `-`     | No       |
 | `query`               | `Partial<FileSystemQueryState>`                   | `-`     | No       |

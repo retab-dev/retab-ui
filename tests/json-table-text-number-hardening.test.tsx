@@ -19,6 +19,8 @@ import {
   interactionDocument,
   interactionSchema,
   interactionVisibleColumn,
+  primitiveEventTarget,
+  primitivePendingCellCommit,
   renderInteractionRow,
 } from "./json-table-interaction-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
@@ -39,12 +41,21 @@ async function editableCell(
 }
 
 function pointerActivateCell(cell: HTMLElement) {
-  fireEvent.pointerDown(cell, {
+  fireEvent.pointerDown(primitiveEventTarget(cell), {
     button: 0,
     clientX: 0,
     clientY: 0,
     detail: 1,
   })
+}
+
+function keyDownCell(cell: HTMLElement, key: string) {
+  const target = primitiveEventTarget(cell)
+  if (!(target instanceof HTMLElement)) {
+    throw new Error("Expected primitive event target")
+  }
+  target.focus()
+  fireEvent.keyDown(target, { key })
 }
 
 async function activateCell(
@@ -171,22 +182,19 @@ describe("json table text and number hardening", () => {
   it("seeds text and numeric type-to-edit from supported keyboard characters", async () => {
     const textView = renderInteractionRow({ visiblePaths: ["vendor"] })
     const textCell = await editableCell(textView, "vendor")
-    textCell.focus()
-    fireEvent.keyDown(textCell, { key: "G" })
+    keyDownCell(textCell, "G")
     expect(textView.getByRole("textbox")).toHaveProperty("value", "G")
     cleanup()
 
     const numberView = renderInteractionRow({ visiblePaths: ["amount"] })
     const numberCell = await editableCell(numberView, "amount")
-    numberCell.focus()
-    fireEvent.keyDown(numberCell, { key: "7" })
+    keyDownCell(numberCell, "7")
     expect(numberView.getByRole("spinbutton")).toHaveProperty("value", "7")
     cleanup()
 
     const integerView = renderInteractionRow({ visiblePaths: ["count"] })
     const integerCell = await editableCell(integerView, "count")
-    integerCell.focus()
-    fireEvent.keyDown(integerCell, { key: "8" })
+    keyDownCell(integerCell, "8")
     expect(integerView.getByRole("spinbutton")).toHaveProperty("value", "8")
   })
 
@@ -194,9 +202,7 @@ describe("json table text and number hardening", () => {
     for (const key of ["Enter", "F2"]) {
       const view = renderInteractionRow({ visiblePaths: ["vendor"] })
       const cell = await editableCell(view, "vendor")
-      cell.focus()
-
-      fireEvent.keyDown(cell, { key })
+      keyDownCell(cell, key)
 
       expect(view.getByRole("textbox")).toHaveProperty("value", "ACME")
       cleanup()
@@ -207,8 +213,7 @@ describe("json table text and number hardening", () => {
     const view = renderInteractionRow({ visiblePaths: ["vendor"] })
     const cell = await editableCell(view, "vendor")
 
-    cell.focus()
-    fireEvent.keyDown(cell, { key: " " })
+    keyDownCell(cell, " ")
 
     expect(view.getByRole("textbox")).toHaveProperty("value", " ")
   })
@@ -273,9 +278,11 @@ describe("json table text and number hardening", () => {
         expect(onCellCommit).not.toHaveBeenCalled()
       } else {
         expect(onCellCommit).toHaveBeenCalledWith(
-          "doc_1",
-          "vendor",
-          value
+          primitivePendingCellCommit({
+            fieldPath: "vendor",
+            value,
+            previousValue: "ACME",
+          })
         )
         expect(onCellCommit).toHaveBeenCalledTimes(1)
       }
@@ -308,9 +315,11 @@ describe("json table text and number hardening", () => {
         expect(onCellCommit).not.toHaveBeenCalled()
       } else {
         expect(onCellCommit).toHaveBeenCalledWith(
-          "doc_1",
-          "amount",
-          committedValue
+          primitivePendingCellCommit({
+            fieldPath: "amount",
+            value: committedValue,
+            previousValue: 12.5,
+          })
         )
         expect(onCellCommit).toHaveBeenCalledTimes(1)
       }
@@ -353,9 +362,11 @@ describe("json table text and number hardening", () => {
       fireEvent.blur(input)
 
       expect(onCellCommit).toHaveBeenCalledWith(
-        "doc_1",
-        fieldPath,
-        null
+        primitivePendingCellCommit({
+          fieldPath,
+          value: null,
+          previousValue: interactionDocument.data[fieldPath],
+        })
       )
       expect(onCellCommit).toHaveBeenCalledTimes(1)
       cleanup()
@@ -376,9 +387,11 @@ describe("json table text and number hardening", () => {
       fireEvent.blur(input)
 
       expect(onCellCommit).toHaveBeenCalledWith(
-        "doc_1",
-        fieldPath,
-        null
+        primitivePendingCellCommit({
+          fieldPath,
+          value: null,
+          previousValue: interactionDocument.data[fieldPath],
+        })
       )
       expect(onCellCommit).toHaveBeenCalledTimes(1)
       cleanup()
@@ -396,7 +409,13 @@ describe("json table text and number hardening", () => {
     fireEvent.change(numberInput, { target: { value: "-" } })
     expect(inputValue(numberInput)).toBe("")
     fireEvent.blur(numberInput)
-    expect(invalidNumberChange).toHaveBeenCalledWith("doc_1", "amount", null)
+    expect(invalidNumberChange).toHaveBeenCalledWith(
+      primitivePendingCellCommit({
+        fieldPath: "amount",
+        value: null,
+        previousValue: 12.5,
+      })
+    )
     cleanup()
 
     const invalidIntegerChange = vi.fn()
@@ -409,7 +428,13 @@ describe("json table text and number hardening", () => {
     fireEvent.change(integerInput, { target: { value: "3.5" } })
     expect(inputValue(integerInput)).toBe("3.5")
     fireEvent.blur(integerInput)
-    expect(invalidIntegerChange).toHaveBeenCalledWith("doc_1", "count", null)
+    expect(invalidIntegerChange).toHaveBeenCalledWith(
+      primitivePendingCellCommit({
+        fieldPath: "count",
+        value: null,
+        previousValue: 3,
+      })
+    )
   })
 
   it("does not reset a dirty draft when the active cell is clicked again", async () => {

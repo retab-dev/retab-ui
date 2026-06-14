@@ -24,7 +24,12 @@ import {
 } from "@/components/json-table/lib/schema-field-metadata"
 import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
 
-import { createTestCellCommitBridge } from "./json-table-interaction-test-utils"
+import {
+  activatePrimitiveCell,
+  clickPrimitiveCell,
+  createTestCellCommitBridge,
+  primitiveEventTarget,
+} from "./json-table-interaction-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
 
 beforeAll(() => {
@@ -320,25 +325,28 @@ function scrollViewport(container: HTMLElement) {
   return viewport
 }
 
-function pointerDownCell(container: HTMLElement, fieldPath: string) {
+function activateCell(container: HTMLElement, fieldPath: string) {
   const cell = cellByFieldPath(container, fieldPath)
-  fireEvent.pointerDown(cell, {
-    button: 0,
-    clientX: 0,
-    clientY: 0,
-    detail: 1,
-  })
+  activatePrimitiveCell(cell)
+  return cell
+}
+
+async function activateCellControl(
+  view: {
+    container: HTMLElement
+    findByRole: (role: string) => Promise<HTMLElement>
+  },
+  fieldPath: string,
+  role: string
+) {
+  const cell = activateCell(view.container, fieldPath)
+  await view.findByRole(role)
   return cell
 }
 
 function clickCell(container: HTMLElement, fieldPath: string) {
   const cell = cellByFieldPath(container, fieldPath)
-  fireEvent.click(cell, {
-    button: 0,
-    clientX: 0,
-    clientY: 0,
-    detail: 1,
-  })
+  clickPrimitiveCell(cell)
   return cell
 }
 
@@ -384,21 +392,21 @@ describe("json table session and virtualization hardening", () => {
 
     await waitFor(() => expect(editableCells(view.container)).toHaveLength(3))
 
-    pointerDownCell(view.container, "vendor")
+    await activateCellControl(view, "vendor", "textbox")
     expect(view.getByRole("textbox")).toHaveProperty("value", "ACME")
     expect(activeCells(view.container)).toHaveLength(1)
     expect(cellByFieldPath(view.container, "vendor").dataset.active).toBe(
       "true"
     )
 
-    pointerDownCell(view.container, "amount")
+    await activateCellControl(view, "amount", "spinbutton")
     expect(view.getByRole("spinbutton")).toHaveProperty("value", "12")
     expect(activeCells(view.container)).toHaveLength(1)
     expect(cellByFieldPath(view.container, "amount").dataset.active).toBe(
       "true"
     )
 
-    pointerDownCell(view.container, "vendor")
+    await activateCellControl(view, "vendor", "textbox")
     expect(view.getByRole("textbox")).toHaveProperty("value", "ACME")
     expect(activeCells(view.container)).toHaveLength(1)
     expect(cellByFieldPath(view.container, "vendor").dataset.active).toBe(
@@ -464,7 +472,7 @@ describe("json table session and virtualization hardening", () => {
 
     await waitForField(view.container, "lines.0.name")
 
-    pointerDownCell(view.container, "lines.0.name")
+    await activateCellControl(view, "lines.0.name", "textbox")
     const input = view.getByRole("textbox")
 
     await waitFor(() =>
@@ -473,6 +481,7 @@ describe("json table session and virtualization hardening", () => {
     expect(rowByIndex(view.container, 1).style.zIndex).toBe("")
     expect(activeCells(view.container)).toHaveLength(1)
 
+    input.focus()
     fireEvent.blur(input)
 
     await waitFor(() =>
@@ -503,7 +512,7 @@ describe("json table session and virtualization hardening", () => {
       cellByFieldPath(view.container, "lines.1.status").dataset.active
     ).toBe(undefined)
 
-    pointerDownCell(view.container, "lines.1.name")
+    await activateCellControl(view, "lines.1.name", "textbox")
 
     expect(view.getByRole("textbox")).toHaveProperty("value", "line 1")
     await waitFor(() =>
@@ -528,7 +537,7 @@ describe("json table session and virtualization hardening", () => {
     try {
       await waitForField(view.container, "lines.0.name")
 
-      pointerDownCell(view.container, "lines.0.name")
+      await activateCellControl(view, "lines.0.name", "textbox")
       expect(view.getByRole("textbox")).toHaveProperty("value", "line 0")
       await waitFor(() =>
         expect(rowByIndex(view.container, 0).style.zIndex).toBe("20")
@@ -569,14 +578,14 @@ describe("json table session and virtualization hardening", () => {
 
     await waitForField(view.container, "lines.0.name")
 
-    pointerDownCell(view.container, "lines.0.name")
+    await activateCellControl(view, "lines.0.name", "textbox")
     const firstInput = view.getByRole("textbox")
     fireEvent.change(firstInput, { target: { value: "alpha" } })
     fireEvent.blur(firstInput)
 
     await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(1))
 
-    pointerDownCell(view.container, "lines.1.amount")
+    await activateCellControl(view, "lines.1.amount", "spinbutton")
     const secondInput = view.getByRole("spinbutton")
     fireEvent.change(secondInput, { target: { value: "99" } })
     fireEvent.blur(secondInput)
@@ -651,12 +660,12 @@ describe("json table session and virtualization hardening", () => {
 
     await waitForField(view.container, "lines.0.name")
 
-    pointerDownCell(view.container, "lines.0.name")
+    await activateCellControl(view, "lines.0.name", "textbox")
     fireEvent.change(view.getByRole("textbox"), {
       target: { value: "pending zero" },
     })
-    pointerDownCell(view.container, "lines.1.amount")
-    pointerDownCell(view.container, "lines.0.name")
+    await activateCellControl(view, "lines.1.amount", "spinbutton")
+    await activateCellControl(view, "lines.0.name", "textbox")
 
     expect(view.getByRole("textbox")).toHaveProperty("value", "pending zero")
     expect(activeCells(view.container)).toHaveLength(1)
@@ -673,7 +682,7 @@ describe("json table session and virtualization hardening", () => {
 
     await waitForField(view.container, "lines.0.name")
 
-    pointerDownCell(view.container, "lines.0.name")
+    await activateCellControl(view, "lines.0.name", "textbox")
     const input = view.getByRole("textbox")
     fireEvent.change(input, { target: { value: "server zero" } })
     fireEvent.blur(input)
@@ -685,8 +694,8 @@ describe("json table session and virtualization hardening", () => {
       ).toContain("server zero")
     )
 
-    pointerDownCell(view.container, "lines.1.amount")
-    pointerDownCell(view.container, "lines.0.name")
+    await activateCellControl(view, "lines.1.amount", "spinbutton")
+    await activateCellControl(view, "lines.0.name", "textbox")
 
     expect(view.getByRole("textbox")).toHaveProperty("value", "server zero")
     expect(onPatch).toHaveBeenCalledTimes(1)
@@ -703,6 +712,11 @@ describe("json table session and virtualization hardening", () => {
     expect(
       editableCells(editableView.container).map((cell) =>
         cell.getAttribute("tabindex")
+      )
+    ).toEqual([null, null, null, null, null])
+    expect(
+      editableCells(editableView.container).map((cell) =>
+        (primitiveEventTarget(cell) as HTMLElement).getAttribute("tabindex")
       )
     ).toEqual(["0", "0", "0", "0", "0"])
 
@@ -743,9 +757,10 @@ describe("json table session and virtualization hardening", () => {
       const view = renderVirtualTable({ visiblePaths: ["vendor"] })
       await waitForField(view.container, "vendor")
       const cell = cellByFieldPath(view.container, "vendor")
+      const surface = primitiveEventTarget(cell) as HTMLElement
 
-      cell.focus()
-      fireEvent.keyDown(cell, keyboardEvent)
+      surface.focus()
+      fireEvent.keyDown(surface, keyboardEvent)
 
       expect(view.queryByRole("textbox")).toBeNull()
       expect(activeCells(view.container)).toHaveLength(0)
@@ -756,9 +771,10 @@ describe("json table session and virtualization hardening", () => {
       const view = renderVirtualTable({ visiblePaths: ["vendor"] })
       await waitForField(view.container, "vendor")
       const cell = cellByFieldPath(view.container, "vendor")
+      const surface = primitiveEventTarget(cell) as HTMLElement
 
-      cell.focus()
-      fireEvent.keyDown(cell, { key })
+      surface.focus()
+      fireEvent.keyDown(surface, { key })
 
       expect(view.getByRole("textbox")).toBeTruthy()
       expect(activeCells(view.container)).toHaveLength(1)
@@ -768,8 +784,9 @@ describe("json table session and virtualization hardening", () => {
     const booleanView = renderVirtualTable({ visiblePaths: ["is_paid"] })
     await waitForField(booleanView.container, "is_paid")
     const booleanCell = cellByFieldPath(booleanView.container, "is_paid")
-    booleanCell.focus()
-    fireEvent.keyDown(booleanCell, { key: " " })
+    const booleanSurface = primitiveEventTarget(booleanCell) as HTMLElement
+    booleanSurface.focus()
+    fireEvent.keyDown(booleanSurface, { key: " " })
     await waitFor(() =>
       expect(activeCells(booleanView.container)).toHaveLength(0)
     )
@@ -787,7 +804,7 @@ describe("json table session and virtualization hardening", () => {
     await waitForField(view.container, "lines.5.name")
     clearProfilerEvents()
 
-    pointerDownCell(view.container, "lines.0.name")
+    await activateCellControl(view, "lines.0.name", "textbox")
     expect(view.getByRole("textbox")).toHaveProperty("value", "line 0")
 
     expect(activeCells(view.container)).toHaveLength(1)

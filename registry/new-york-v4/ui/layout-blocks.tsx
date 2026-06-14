@@ -8,10 +8,7 @@ import {
   useAnchoredDocument,
   type AnchoredItem,
 } from "@/components/ui/anchored-document-viewer"
-import {
-  usePdfAnchoredOverlay,
-  usePdfAnchoredTarget,
-} from "@/components/ui/pdf-anchor-target"
+import { usePdfAnchoredTarget } from "@/components/ui/pdf-anchor-target"
 import {
   PdfViewerPages,
   PdfViewerProvider,
@@ -20,11 +17,11 @@ import {
 } from "@/components/ui/pdf-viewer"
 import {
   ViewerBody,
-  ViewerHeader,
-  ViewerRoot,
-  ViewerSidebar,
-  ViewerSidebarTrigger,
   ViewerSurface,
+  ViewerHeader,
+  ViewerSidebar,
+  ViewerRoot,
+  ViewerSidebarTrigger,
 } from "@/components/ui/viewer"
 
 import {
@@ -36,8 +33,10 @@ import { getScrollTarget } from "./layout-blocks-geometry"
 import { createLayoutItemIndex } from "./layout-blocks-index"
 import { LayoutBlocksPanel } from "./layout-blocks-panel"
 import type { LayoutItem } from "./layout-blocks-types"
+import { LayoutOverlayLayer } from "./layout-overlay-layer"
 
 const LOW_CONFIDENCE_THRESHOLD = 0.9
+const INSPECTED_LEVELS = ["block"] as const
 
 export function DocumentAiLayoutBlocks({
   className,
@@ -100,7 +99,6 @@ export function DocumentAiLayoutBlocks({
   return (
     <AnchoredDocumentProvider items={anchoredItems} target={target}>
       <DocumentAiLayoutBlocksContent
-        anchoredItems={anchoredItems}
         className={className}
         heightClassName={heightClassName}
         index={index}
@@ -115,7 +113,6 @@ export function DocumentAiLayoutBlocks({
 }
 
 function DocumentAiLayoutBlocksContent({
-  anchoredItems,
   className,
   heightClassName,
   index,
@@ -125,7 +122,6 @@ function DocumentAiLayoutBlocksContent({
   viewerRef,
   visibleItems,
 }: {
-  anchoredItems: readonly AnchoredItem[]
   className?: string
   heightClassName: string
   index: ReturnType<typeof createLayoutItemIndex>
@@ -138,19 +134,41 @@ function DocumentAiLayoutBlocksContent({
   const {
     activeItemId,
     activateItem,
+    clearPreview,
     clearSelection,
     previewItem,
     selectedItemId,
   } = useAnchoredDocument()
-  const renderPageOverlay = usePdfAnchoredOverlay({
-    getItemLabel: (item) => {
-      const layoutItem = index.itemsById.get(item.id)
-      const text = layoutItem?.text.replace(/\s+/g, " ").trim()
-      return text ? `OCR block: ${text}` : `OCR block ${item.id}`
+  const renderPageOverlay = React.useCallback(
+    ({ pageNumber, rotation }: { pageNumber: number; rotation: number }) => {
+      const page = index.pagesByNumber.get(pageNumber)
+      if (!page) return null
+
+      return (
+        <LayoutOverlayLayer
+          interactive
+          activeItemId={activeItemId}
+          items={visibleItems.filter((item) => item.pageNumber === pageNumber)}
+          page={page}
+          rotation={rotation}
+          selectedItemId={selectedItemId}
+          visibleLevels={INSPECTED_LEVELS}
+          onItemClick={(item) => activateItem(item.id)}
+          onItemPointerEnter={(item) => previewItem(item.id)}
+          onItemPointerLeave={clearPreview}
+        />
+      )
     },
-    items: anchoredItems,
-    mode: "interactive",
-  })
+    [
+      activateItem,
+      activeItemId,
+      clearPreview,
+      index.pagesByNumber,
+      previewItem,
+      selectedItemId,
+      visibleItems,
+    ]
+  )
 
   return (
     <ViewerRoot
@@ -162,7 +180,7 @@ function DocumentAiLayoutBlocksContent({
       <ViewerHeader>
         <div className="flex items-center justify-between gap-3 p-3">
           <div className="flex min-w-0 items-center gap-2">
-            <ViewerSidebarTrigger side="right" className="-ml-1" />
+            <ViewerSidebarTrigger className="-ml-1" />
             <div className="min-w-0">
               <div className="truncate text-sm font-medium">OCR</div>
               <div className="text-xs text-muted-foreground">
@@ -201,6 +219,7 @@ function DocumentAiLayoutBlocksContent({
           )}
         </ViewerSurface>
         <ViewerSidebar
+          aria-label="OCR blocks"
           side="right"
           width="320px"
           className="flex min-h-0 shrink-0 flex-col border-l bg-background"
@@ -277,3 +296,4 @@ export { documentAiToLayoutDocument } from "./layout-blocks-document-ai"
 export { documentAiToPdfBlob } from "./layout-blocks-document-ai-pdf"
 export { createLayoutItemIndex } from "./layout-blocks-index"
 export { LayoutBlocksPanel } from "./layout-blocks-panel"
+export { LayoutOverlayLayer } from "./layout-overlay-layer"

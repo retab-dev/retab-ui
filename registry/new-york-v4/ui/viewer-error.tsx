@@ -86,6 +86,7 @@ export interface ViewerErrorBoundaryProps extends ViewerErrorContext {
   className?: string
   bare?: boolean
   variant?: "card" | "document" | "inline"
+  mapError?: (error: unknown) => unknown
   onRetry?: (error: unknown) => void
   onCaughtError?: (error: unknown, errorInfo: React.ErrorInfo) => void
 }
@@ -118,9 +119,13 @@ export class ViewerErrorBoundary extends React.Component<
 
   render() {
     if (this.state.error != null) {
+      const error = this.props.mapError
+        ? this.props.mapError(this.state.error)
+        : this.state.error
+
       return (
         <ViewerErrorState
-          error={this.state.error}
+          error={error}
           format={this.props.format}
           sourceKind={this.props.sourceKind}
           canDownload={this.props.canDownload}

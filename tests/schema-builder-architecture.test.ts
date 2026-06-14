@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
-import { join, relative } from "node:path"
+import { dirname, join, normalize, relative } from "node:path"
 import ts from "typescript"
 import { describe, expect, it } from "vitest"
 
@@ -146,6 +146,111 @@ function sourceFilesUnder(path: string): string[] {
     if (!/\.(ts|tsx)$/.test(entry)) return []
     return [relative(repoRoot, fullPath)]
   })
+}
+
+interface ImportGraph {
+  imports: Map<string, string[]>
+}
+
+function createImportGraph(root: string): ImportGraph {
+  const files = sourceFilesUnder(join(repoRoot, root))
+  const importableFiles = new Map<string, string>()
+
+  for (const file of files) {
+    importableFiles.set(file.replace(/\.(ts|tsx)$/, ""), file)
+  }
+
+  const imports = new Map<string, string[]>()
+
+  for (const file of files) {
+    const content = readFileSync(join(repoRoot, file), "utf8")
+    const sourceFile = ts.createSourceFile(
+      file,
+      content,
+      ts.ScriptTarget.Latest,
+      true,
+      file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS
+    )
+    const fileImports: string[] = []
+
+    ts.forEachChild(sourceFile, function visit(node: ts.Node) {
+      if (
+        ts.isImportDeclaration(node) &&
+        ts.isStringLiteral(node.moduleSpecifier)
+      ) {
+        const importedFile = resolveLocalImport({
+          fromFile: file,
+          importPath: node.moduleSpecifier.text,
+          importableFiles,
+        })
+        if (importedFile) fileImports.push(importedFile)
+      }
+      ts.forEachChild(node, visit)
+    })
+
+    imports.set(file, fileImports)
+  }
+
+  return { imports }
+}
+
+function resolveLocalImport({
+  fromFile,
+  importPath,
+  importableFiles,
+}: {
+  fromFile: string
+  importPath: string
+  importableFiles: Map<string, string>
+}) {
+  if (importPath.startsWith("@/")) {
+    return importableFiles.get(importPath.slice(2))
+  }
+
+  if (!importPath.startsWith(".")) return undefined
+
+  return importableFiles.get(normalize(join(dirname(fromFile), importPath)))
+}
+
+function expectImport(graph: ImportGraph, fromFile: string, toFile: string) {
+  expect(graph.imports.get(fromFile) ?? []).toContain(toFile)
+}
+
+function expectNoImport(graph: ImportGraph, fromFile: string, toFile: string) {
+  expect(graph.imports.get(fromFile) ?? []).not.toContain(toFile)
+}
+
+function findImportGraphCycle(graph: ImportGraph) {
+  const visiting = new Set<string>()
+  const visited = new Set<string>()
+  const path: string[] = []
+
+  function visit(file: string): string[] | null {
+    if (visiting.has(file)) {
+      return [...path.slice(path.indexOf(file)), file]
+    }
+    if (visited.has(file)) return null
+
+    visiting.add(file)
+    path.push(file)
+
+    for (const importedFile of graph.imports.get(file) ?? []) {
+      const cycle = visit(importedFile)
+      if (cycle) return cycle
+    }
+
+    path.pop()
+    visiting.delete(file)
+    visited.add(file)
+    return null
+  }
+
+  for (const file of graph.imports.keys()) {
+    const cycle = visit(file)
+    if (cycle) return cycle
+  }
+
+  return null
 }
 
 function functionFirstParameterTypeProperties({
@@ -609,6 +714,37 @@ describe("schema builder architecture", () => {
     expect(content.includes("useObjectPropertiesModel")).toBe(false)
   })
 
+  it("keeps property form import boundaries structural", () => {
+    const graph = createImportGraph("components/schema-editor/property-form")
+
+    expect(findImportGraphCycle(graph)).toBeNull()
+    expectNoImport(
+      graph,
+      "components/schema-editor/property-form/fields/object-properties-state.ts",
+      "components/schema-editor/property-form/model/object-property-edits.ts"
+    )
+    expectNoImport(
+      graph,
+      "components/schema-editor/property-form/fields/object-properties-rows.ts",
+      "components/schema-editor/property-form/model/object-property-edits.ts"
+    )
+    expectNoImport(
+      graph,
+      "components/schema-editor/property-form/fields/object-property-row.tsx",
+      "components/schema-editor/property-form/fields/property-schema-plan-field.tsx"
+    )
+    expectImport(
+      graph,
+      "components/schema-editor/property-form/fields/object-properties-operations.ts",
+      "components/schema-editor/property-form/model/object-property-edits.ts"
+    )
+    expectImport(
+      graph,
+      "components/schema-editor/property-form/model/object-property-edits.ts",
+      "components/schema-editor/property-form/model/object-property-selectors.ts"
+    )
+  })
+
   it("keeps object property order explicit and centralized", () => {
     const orderContent = readFileSync(
       join(repoRoot, "components/schema-editor/primitives/schema-order.ts"),
@@ -965,31 +1101,31 @@ describe("schema builder architecture", () => {
         file: "components/schema-editor/property-form/types.ts",
         interfaceName: "PropertySchemaPlan",
       })
-    ).toEqual(["details"])
+    ).toEqual(["items"])
     expect(
       interfaceProperties({
         file: "components/schema-editor/property-form/types.ts",
-        interfaceName: "PropertyTypeDetailPlan",
+        interfaceName: "PropertyTypePlanItem",
       })
     ).toEqual(["kind", "field"])
     expect(
       interfaceProperties({
         file: "components/schema-editor/property-form/types.ts",
-        interfaceName: "PropertyEnumDetailPlan",
+        interfaceName: "PropertyEnumPlanItem",
       })
     ).toEqual(["kind", "field"])
     expect(
       interfaceProperties({
         file: "components/schema-editor/property-form/types.ts",
-        interfaceName: "PropertyObjectPropertiesDetailPlan",
+        interfaceName: "PropertyObjectPropertiesPlanItem",
       })
     ).toEqual(["kind", "plan"])
     expect(
       interfaceProperties({
         file: "components/schema-editor/property-form/types.ts",
-        interfaceName: "PropertyArrayItemsDetailPlan",
+        interfaceName: "PropertyArrayItemsPlanItem",
       })
-    ).toEqual(["kind", "itemPlan"])
+    ).toEqual(["kind", "itemSchemaPlan"])
     expect(
       interfaceProperties({
         file: "components/schema-editor/property-form/types.ts",
@@ -1003,7 +1139,9 @@ describe("schema builder architecture", () => {
       "editable",
       "onChange",
     ])
-    expect(typesContent.includes("PropertyArrayItemsPlan")).toBe(false)
+    expect(typesContent.includes("interface PropertyArrayItemsPlan {")).toBe(
+      false
+    )
     expect(typesContent.includes("type?: Property" + "TypeFieldModel")).toBe(
       false
     )
@@ -1029,8 +1167,8 @@ describe("schema builder architecture", () => {
         functionName: "PropertySchemaPlanField",
       })
     ).toEqual(["plan"])
-    expect(planFieldContent.includes("plan.details.map")).toBe(true)
-    expect(planFieldContent.includes("switch (detail.kind)")).toBe(true)
+    expect(planFieldContent.includes("plan.items.map")).toBe(true)
+    expect(planFieldContent.includes("switch (item.kind)")).toBe(true)
     expect(planFieldContent.includes('case "type"')).toBe(true)
     expect(planFieldContent.includes('case "enumValues"')).toBe(true)
     expect(planFieldContent.includes('case "objectProperties"')).toBe(true)
@@ -1269,7 +1407,7 @@ describe("schema builder architecture", () => {
         file: "components/schema-editor/property-form/fields/object-properties-field.tsx",
         functionName: "ObjectPropertiesField",
       })
-    ).toEqual(["details", "renderPlan"])
+    ).toEqual(["model", "renderPlan"])
 
     expect(
       interfaceProperties({

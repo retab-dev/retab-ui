@@ -6,24 +6,289 @@
         "maxEditableCellRenders": 6,
         "maxReactCommits": 4,
         "maxRectReads": 1,
+        "maxDomNodeDelta": 220,
+        "expectPopupMounted": true,
+        "documentPatchCount": 0,
+        "allowedEditableCellRenderFieldPaths": [
+          "transactions.0.transaction_type"
+        ],
         "forbiddenRenderedComponents": [
           "SingleFileTableView",
           "SingleFileVirtualizedTable",
           "SingleFileFormRow"
         ]
+      },
+      "focus-text": {
+        "maxElapsedMs": 700,
+        "maxEditableCellRenders": 6,
+        "maxReactCommits": 4,
+        "maxRectReads": 2,
+        "documentPatchCount": 0,
+        "allowedEditableCellRenderFieldPaths": ["transactions.0.description"],
+        "forbiddenRenderedComponents": [
+          "SingleFileTableView",
+          "SingleFileVirtualizedTable",
+          "SingleFileFormRow"
+        ]
+      },
+      "type-first-character": {
+        "maxElapsedMs": 500,
+        "maxEditableCellRenders": 4,
+        "maxReactCommits": 3,
+        "maxRectReads": 0,
+        "documentPatchCount": 0,
+        "allowedEditableCellRenderFieldPaths": ["transactions.0.description"],
+        "forbiddenRenderedComponents": [
+          "SingleFileTableView",
+          "SingleFileVirtualizedTable",
+          "SingleFileFormRow"
+        ]
+      },
+      "commit-text": {
+        "maxElapsedMs": 700,
+        "maxEditableCellRenders": 4,
+        "maxReactCommits": 4,
+        "maxRectReads": 0,
+        "documentPatchCount": 1,
+        "allowedEditableCellRenderFieldPaths": ["transactions.0.description"],
+        "forbiddenRenderedComponents": [
+          "SingleFileTableView",
+          "SingleFileVirtualizedTable",
+          "SingleFileFormRow"
+        ]
+      },
+      "commit-number": {
+        "maxElapsedMs": 700,
+        "maxEditableCellRenders": 4,
+        "maxReactCommits": 4,
+        "maxRectReads": 0,
+        "documentPatchCount": 1,
+        "allowedEditableCellRenderFieldPaths": ["transactions.0.amount.amount"],
+        "forbiddenRenderedComponents": [
+          "SingleFileTableView",
+          "SingleFileVirtualizedTable",
+          "SingleFileFormRow"
+        ]
+      },
+      "toggle-boolean": {
+        "maxElapsedMs": 700,
+        "maxEditableCellRenders": 4,
+        "maxReactCommits": 4,
+        "maxRectReads": 1,
+        "documentPatchCount": 1,
+        "allowedEditableCellRenderFieldPaths": ["transactions.0.is_reconciled"],
+        "forbiddenRenderedComponents": [
+          "SingleFileTableView",
+          "SingleFileVirtualizedTable",
+          "SingleFileFormRow"
+        ]
+      },
+      "open-date": {
+        "maxElapsedMs": 900,
+        "maxEditableCellRenders": 6,
+        "maxReactCommits": 4,
+        "maxRectReads": 2,
+        "maxDomNodeDelta": 260,
+        "maxLayoutDurationMs": 80,
+        "expectPickerPopupMounted": true,
+        "expectCalendarMounted": true,
+        "documentPatchCount": 0,
+        "allowedEditableCellRenderFieldPaths": ["transactions.0.date"],
+        "forbiddenRenderedComponents": [
+          "SingleFileTableView",
+          "SingleFileVirtualizedTable",
+          "SingleFileFormRow"
+        ]
+      },
+      "scroll-idle": {
+        "maxElapsedMs": 900,
+        "maxEditableCellRenders": 320,
+        "maxReactCommits": 8,
+        "maxRectReads": 2,
+        "documentPatchCount": 0,
+        "maxRenderedComponentCounts": {
+          "SingleFileTableView": 0,
+          "SingleFileVirtualizedTable": 4,
+          "SingleFileFormRow": 80
+        }
+      },
+      "scroll-with-overlay": {
+        "maxElapsedMs": 1000,
+        "maxEditableCellRenders": 320,
+        "maxReactCommits": 8,
+        "maxRectReads": 2,
+        "documentPatchCount": 0,
+        "maxRenderedComponentCounts": {
+          "SingleFileTableView": 0,
+          "SingleFileVirtualizedTable": 4,
+          "SingleFileFormRow": 80
+        }
+      },
+      "switch-dirty-cell": {
+        "maxElapsedMs": 900,
+        "maxEditableCellRenders": 8,
+        "maxReactCommits": 6,
+        "maxRectReads": 2,
+        "documentPatchCount": 1,
+        "allowedEditableCellRenderFieldPaths": [
+          "transactions.0.description",
+          "transactions.0.amount.amount"
+        ],
+        "maxRenderedComponentCounts": {
+          "SingleFileTableView": 0,
+          "SingleFileVirtualizedTable": 4,
+          "SingleFileFormRow": 0
+        }
       }
     },
     "large": {
       "open-enum": {
-        "maxElapsedMs": 900,
+        "maxElapsedMs": 650,
         "maxEditableCellRenders": 6,
         "maxReactCommits": 4,
         "maxRectReads": 1,
+        "maxDomNodeDelta": 260,
+        "maxStyleDurationMs": 280,
+        "expectPopupMounted": true,
+        "documentPatchCount": 0,
+        "allowedEditableCellRenderFieldPaths": [
+          "transactions.0.transaction_type"
+        ],
         "forbiddenRenderedComponents": [
           "SingleFileTableView",
           "SingleFileVirtualizedTable",
           "SingleFileFormRow"
         ]
+      },
+      "focus-text": {
+        "maxElapsedMs": 550,
+        "maxEditableCellRenders": 6,
+        "maxReactCommits": 4,
+        "maxRectReads": 2,
+        "maxStyleDurationMs": 180,
+        "documentPatchCount": 0,
+        "allowedEditableCellRenderFieldPaths": ["transactions.0.description"],
+        "maxRenderedComponentCounts": {
+          "SingleFileTableView": 0,
+          "SingleFileVirtualizedTable": 4,
+          "SingleFileFormRow": 0
+        }
+      },
+      "type-first-character": {
+        "maxElapsedMs": 700,
+        "maxEditableCellRenders": 4,
+        "maxReactCommits": 3,
+        "maxRectReads": 0,
+        "documentPatchCount": 0,
+        "allowedEditableCellRenderFieldPaths": ["transactions.0.description"],
+        "forbiddenRenderedComponents": [
+          "SingleFileTableView",
+          "SingleFileVirtualizedTable",
+          "SingleFileFormRow"
+        ]
+      },
+      "commit-text": {
+        "maxElapsedMs": 550,
+        "maxEditableCellRenders": 4,
+        "maxReactCommits": 4,
+        "maxRectReads": 0,
+        "maxStyleDurationMs": 180,
+        "documentPatchCount": 1,
+        "allowedEditableCellRenderFieldPaths": ["transactions.0.description"],
+        "forbiddenRenderedComponents": [
+          "SingleFileTableView",
+          "SingleFileVirtualizedTable",
+          "SingleFileFormRow"
+        ]
+      },
+      "commit-number": {
+        "maxElapsedMs": 550,
+        "maxEditableCellRenders": 4,
+        "maxReactCommits": 4,
+        "maxRectReads": 0,
+        "maxStyleDurationMs": 180,
+        "documentPatchCount": 1,
+        "allowedEditableCellRenderFieldPaths": ["transactions.0.amount.amount"],
+        "forbiddenRenderedComponents": [
+          "SingleFileTableView",
+          "SingleFileVirtualizedTable",
+          "SingleFileFormRow"
+        ]
+      },
+      "toggle-boolean": {
+        "maxElapsedMs": 650,
+        "maxEditableCellRenders": 4,
+        "maxReactCommits": 4,
+        "maxRectReads": 1,
+        "maxStyleDurationMs": 180,
+        "documentPatchCount": 1,
+        "allowedEditableCellRenderFieldPaths": ["transactions.0.is_reconciled"],
+        "forbiddenRenderedComponents": [
+          "SingleFileTableView",
+          "SingleFileVirtualizedTable",
+          "SingleFileFormRow"
+        ]
+      },
+      "open-date": {
+        "maxElapsedMs": 750,
+        "maxEditableCellRenders": 6,
+        "maxReactCommits": 4,
+        "maxRectReads": 2,
+        "maxDomNodeDelta": 300,
+        "maxLayoutDurationMs": 100,
+        "maxStyleDurationMs": 300,
+        "expectPickerPopupMounted": true,
+        "expectCalendarMounted": true,
+        "documentPatchCount": 0,
+        "allowedEditableCellRenderFieldPaths": ["transactions.0.date"],
+        "forbiddenRenderedComponents": [
+          "SingleFileTableView",
+          "SingleFileVirtualizedTable",
+          "SingleFileFormRow"
+        ]
+      },
+      "scroll-idle": {
+        "maxElapsedMs": 700,
+        "maxEditableCellRenders": 520,
+        "maxReactCommits": 10,
+        "maxRectReads": 2,
+        "maxStyleDurationMs": 220,
+        "documentPatchCount": 0,
+        "maxRenderedComponentCounts": {
+          "SingleFileTableView": 0,
+          "SingleFileVirtualizedTable": 5,
+          "SingleFileFormRow": 120
+        }
+      },
+      "scroll-with-overlay": {
+        "maxElapsedMs": 700,
+        "maxEditableCellRenders": 520,
+        "maxReactCommits": 10,
+        "maxRectReads": 2,
+        "maxStyleDurationMs": 220,
+        "documentPatchCount": 0,
+        "maxRenderedComponentCounts": {
+          "SingleFileTableView": 0,
+          "SingleFileVirtualizedTable": 5,
+          "SingleFileFormRow": 120
+        }
+      },
+      "switch-dirty-cell": {
+        "maxElapsedMs": 650,
+        "maxEditableCellRenders": 8,
+        "maxReactCommits": 6,
+        "maxRectReads": 2,
+        "maxStyleDurationMs": 280,
+        "documentPatchCount": 1,
+        "allowedEditableCellRenderFieldPaths": [
+          "transactions.0.description",
+          "transactions.0.amount.amount"
+        ],
+        "maxRenderedComponentCounts": {
+          "SingleFileTableView": 0,
+          "SingleFileVirtualizedTable": 4,
+          "SingleFileFormRow": 0
+        }
       }
     }
   }

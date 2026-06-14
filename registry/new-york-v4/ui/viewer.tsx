@@ -18,22 +18,43 @@ export type ViewerRootProps = React.ComponentProps<"div"> & {
 export type ViewerSidebarMode = "inline" | "overlay"
 export type ViewerSidebarRequestedMode = "auto" | ViewerSidebarMode
 export type ViewerSidebarState = "expanded" | "collapsed"
-
 export type ViewerSidebarContextValue = {
   state: ViewerSidebarState
   open: boolean
   setOpen: (value: boolean | ((open: boolean) => boolean)) => void
   toggleSidebar: () => void
+  canToggleSidebar: boolean
   mode: ViewerSidebarMode
-  requestedMode: ViewerSidebarRequestedMode
   sidebarId: string
 }
 
+type ViewerSidebarSide = "left" | "right"
+type ViewerSidebarCollapsible = "offcanvas" | "none"
+type ViewerSidebarRegistration = {
+  collapsible: ViewerSidebarCollapsible
+  element: HTMLElement
+  id: string
+  instanceId: string
+  side: ViewerSidebarSide
+  width: string
+}
+
+type ViewerSidebarInternalContextValue = {
+  publicSidebar: ViewerSidebarContextValue
+  registerSidebar: (registration: ViewerSidebarRegistration) => () => void
+  rootId: string
+  sidebarSide: ViewerSidebarSide
+  setLastTriggerElement: (element: HTMLElement | null) => void
+}
+
 const VIEWER_SIDEBAR_INLINE_BREAKPOINT = 768
+const VIEWER_SIDEBAR_MODE_HYSTERESIS = 16
 const VIEWER_SIDEBAR_WIDTH = "10rem"
 
 const ViewerSidebarContext =
   React.createContext<ViewerSidebarContextValue | null>(null)
+const ViewerSidebarInternalContext =
+  React.createContext<ViewerSidebarInternalContextValue | null>(null)
 
 function resolveSidebarMode({
   requestedMode,
@@ -47,6 +68,35 @@ function resolveSidebarMode({
   if (requestedMode !== "auto") return requestedMode
   if (width === null) return "overlay"
   return width >= inlineBreakpoint ? "inline" : "overlay"
+}
+
+function resolveMeasuredSidebarMode({
+  currentMode,
+  hasMeasured,
+  inlineBreakpoint,
+  requestedMode,
+  width,
+}: {
+  currentMode: ViewerSidebarMode
+  hasMeasured: boolean
+  inlineBreakpoint: number
+  requestedMode: ViewerSidebarRequestedMode
+  width: number
+}): ViewerSidebarMode {
+  if (requestedMode !== "auto") return requestedMode
+  if (!hasMeasured) {
+    return width >= inlineBreakpoint ? "inline" : "overlay"
+  }
+
+  if (currentMode === "inline") {
+    return width < inlineBreakpoint - VIEWER_SIDEBAR_MODE_HYSTERESIS
+      ? "overlay"
+      : "inline"
+  }
+
+  return width > inlineBreakpoint + VIEWER_SIDEBAR_MODE_HYSTERESIS
+    ? "inline"
+    : "overlay"
 }
 
 function useIsoLayoutEffect(
@@ -74,6 +124,18 @@ export function useOptionalViewerSidebar(): ViewerSidebarContextValue | null {
   return React.useContext(ViewerSidebarContext)
 }
 
+function useOptionalViewerSidebarInternal(): ViewerSidebarInternalContextValue | null {
+  return React.useContext(ViewerSidebarInternalContext)
+}
+
+function useViewerSidebarInternal(): ViewerSidebarInternalContextValue {
+  const context = React.useContext(ViewerSidebarInternalContext)
+  if (!context) {
+    throw new Error("useViewerSidebar must be used within a ViewerRoot.")
+  }
+  return context
+}
+
 export function ViewerRoot({
   bare = false,
   className,
@@ -87,11 +149,19 @@ export function ViewerRoot({
 }: ViewerRootProps) {
   const rootRef = React.useRef<HTMLDivElement | null>(null)
   const reactId = React.useId()
-  const sidebarId = `${reactId}-viewer-sidebar`
+  const rootId = `${reactId}-viewer-root`
+  const fallbackSidebarId = `${reactId}-viewer-sidebar`
   const isControlled = sidebarOpenProp !== undefined
   const [internalOpen, setInternalOpen] = React.useState(defaultSidebarOpen)
   const open = sidebarOpenProp ?? internalOpen
   const openRef = React.useRef(open)
+  const hasMeasuredSidebarWidthRef = React.useRef(false)
+  const lastTriggerElementRef = React.useRef<HTMLElement | null>(null)
+  const registeredSidebarRef = React.useRef<ViewerSidebarRegistration | null>(
+    null
+  )
+  const [registeredSidebar, setRegisteredSidebar] =
+    React.useState<ViewerSidebarRegistration | null>(null)
   const [resolvedSidebarMode, setResolvedSidebarMode] =
     React.useState<ViewerSidebarMode>(() =>
       resolveSidebarMode({
@@ -126,14 +196,18 @@ export function ViewerRoot({
       const nextWidth = element.getBoundingClientRect().width
       if (nextWidth === 0) return
 
-      const nextMode = resolveSidebarMode({
-        requestedMode: sidebarMode,
-        width: nextWidth,
-        inlineBreakpoint: sidebarInlineBreakpoint,
+      setResolvedSidebarMode((currentMode) => {
+        const nextMode = resolveMeasuredSidebarMode({
+          currentMode,
+          hasMeasured: hasMeasuredSidebarWidthRef.current,
+          requestedMode: sidebarMode,
+          width: nextWidth,
+          inlineBreakpoint: sidebarInlineBreakpoint,
+        })
+
+        hasMeasuredSidebarWidthRef.current = true
+        return currentMode === nextMode ? currentMode : nextMode
       })
-      setResolvedSidebarMode((currentMode) =>
-        currentMode === nextMode ? currentMode : nextMode
-      )
     }
 
     updateMode()
@@ -149,6 +223,10 @@ export function ViewerRoot({
       const previousOpen = isControlled ? open : openRef.current
       const nextOpen = typeof value === "function" ? value(previousOpen) : value
 
+      if (nextOpen === previousOpen) {
+        return
+      }
+
       if (!isControlled) {
         openRef.current = nextOpen
         setInternalOpen(nextOpen)
@@ -158,19 +236,121 @@ export function ViewerRoot({
     [isControlled, onSidebarOpenChange, open]
   )
 
+  const registerSidebar = React.useCallback(
+    (registration: ViewerSidebarRegistration) => {
+      const currentRegistration = registeredSidebarRef.current
+
+      if (
+        currentRegistration &&
+        currentRegistration.instanceId !== registration.instanceId
+      ) {
+        throw new Error(
+          "ViewerRoot supports one primary ViewerSidebar. Use a nested ViewerRoot for a complete nested viewer, or put secondary content inside ViewerSurface."
+        )
+      }
+
+      registeredSidebarRef.current = registration
+      setRegisteredSidebar(registration)
+
+      return () => {
+        if (
+          registeredSidebarRef.current?.instanceId !== registration.instanceId
+        ) {
+          return
+        }
+
+        registeredSidebarRef.current = null
+        setRegisteredSidebar(null)
+      }
+    },
+    []
+  )
+
   const toggleSidebar = React.useCallback(() => {
     setOpen((currentOpen) => !currentOpen)
   }, [setOpen])
 
   const state: ViewerSidebarState = open ? "expanded" : "collapsed"
+  const canToggleSidebar =
+    registeredSidebar !== null && registeredSidebar.collapsible !== "none"
+  const sidebarId = registeredSidebar?.id ?? fallbackSidebarId
+  const sidebarSide = registeredSidebar?.side ?? "left"
+  const sidebarWidth = registeredSidebar?.width ?? VIEWER_SIDEBAR_WIDTH
+  const setLastTriggerElement = React.useCallback(
+    (element: HTMLElement | null) => {
+      lastTriggerElementRef.current = element
+    },
+    []
+  )
+
+  React.useEffect(() => {
+    if (
+      !open ||
+      !canToggleSidebar ||
+      resolvedSidebarMode !== "overlay" ||
+      typeof document === "undefined"
+    ) {
+      return
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false)
+        const triggerElement =
+          lastTriggerElementRef.current?.isConnected === true
+            ? lastTriggerElementRef.current
+            : rootRef.current?.querySelector<HTMLElement>(
+                "[data-viewer-sidebar-trigger]"
+              )
+        triggerElement?.focus()
+      }
+    }
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target
+
+      if (
+        target instanceof Node &&
+        registeredSidebar?.element.contains(target)
+      ) {
+        return
+      }
+
+      if (target instanceof Element) {
+        const triggerElement = target.closest<HTMLElement>(
+          "[data-viewer-sidebar-trigger]"
+        )
+        if (triggerElement?.dataset.viewerRootId === rootId) {
+          return
+        }
+      }
+
+      setOpen(false)
+    }
+
+    document.addEventListener("keydown", handleKeyDown)
+    document.addEventListener("pointerdown", handlePointerDown)
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown)
+      document.removeEventListener("pointerdown", handlePointerDown)
+    }
+  }, [
+    canToggleSidebar,
+    open,
+    registeredSidebar,
+    resolvedSidebarMode,
+    rootId,
+    setOpen,
+  ])
+
   const sidebarContext = React.useMemo<ViewerSidebarContextValue>(
     () => ({
       state,
       open,
       setOpen,
       toggleSidebar,
+      canToggleSidebar,
       mode: resolvedSidebarMode,
-      requestedMode: sidebarMode,
       sidebarId,
     }),
     [
@@ -178,33 +358,54 @@ export function ViewerRoot({
       open,
       setOpen,
       toggleSidebar,
+      canToggleSidebar,
       resolvedSidebarMode,
-      sidebarMode,
       sidebarId,
     ]
   )
 
+  const sidebarInternalContext =
+    React.useMemo<ViewerSidebarInternalContextValue>(
+      () => ({
+        publicSidebar: sidebarContext,
+        registerSidebar,
+        rootId,
+        sidebarSide,
+        setLastTriggerElement,
+      }),
+      [
+        sidebarContext,
+        registerSidebar,
+        rootId,
+        sidebarSide,
+        setLastTriggerElement,
+      ]
+    )
+
   return (
     <ViewerSidebarContext.Provider value={sidebarContext}>
-      <div
-        ref={rootRef}
-        data-slot="viewer-root"
-        data-viewer-sidebar-mode={resolvedSidebarMode}
-        data-viewer-sidebar-open={open ? "true" : "false"}
-        data-viewer-sidebar-state={state}
-        className={cn(
-          "relative flex min-h-0 flex-col overflow-hidden",
-          bare ? "h-full bg-muted/20" : "rounded-xl border bg-muted/30",
-          className
-        )}
-        style={
-          {
-            "--viewer-sidebar-width": VIEWER_SIDEBAR_WIDTH,
-            ...style,
-          } as React.CSSProperties
-        }
-        {...props}
-      />
+      <ViewerSidebarInternalContext.Provider value={sidebarInternalContext}>
+        <div
+          ref={rootRef}
+          data-slot="viewer-root"
+          data-viewer-root-id={rootId}
+          data-viewer-sidebar-mode={resolvedSidebarMode}
+          data-viewer-sidebar-open={open ? "true" : "false"}
+          data-viewer-sidebar-state={state}
+          className={cn(
+            "relative flex min-h-0 flex-col overflow-hidden",
+            bare ? "h-full bg-muted/20" : "rounded-xl border bg-muted/30",
+            className
+          )}
+          style={
+            {
+              "--viewer-sidebar-width": sidebarWidth,
+              ...style,
+            } as React.CSSProperties
+          }
+          {...props}
+        />
+      </ViewerSidebarInternalContext.Provider>
     </ViewerSidebarContext.Provider>
   )
 }
@@ -242,8 +443,8 @@ export function ViewerBody({
 }
 
 export type ViewerSidebarProps = React.ComponentProps<"aside"> & {
-  side?: "left" | "right"
-  collapsible?: "offcanvas" | "none"
+  side?: ViewerSidebarSide
+  collapsible?: ViewerSidebarCollapsible
   width?: string
 }
 
@@ -255,12 +456,16 @@ export function ViewerSidebar({
   style,
   ...props
 }: ViewerSidebarProps) {
-  const sidebar = useOptionalViewerSidebar()
+  const sidebar = useOptionalViewerSidebarInternal()
+  const publicSidebar = sidebar?.publicSidebar
+  const reactId = React.useId()
+  const instanceId = `${reactId}-viewer-sidebar-instance`
+  const sidebarId = `${reactId}-viewer-sidebar`
   const sidebarRef = React.useRef<HTMLElement | null>(null)
   const collapsible = collapsibleProp ?? (sidebar ? "offcanvas" : "none")
-  const open = collapsible === "none" ? true : (sidebar?.open ?? true)
+  const open = collapsible === "none" ? true : (publicSidebar?.open ?? true)
   const state: ViewerSidebarState = open ? "expanded" : "collapsed"
-  const mode = sidebar?.mode ?? "inline"
+  const mode = publicSidebar?.mode ?? "inline"
   const isCollapsed = collapsible !== "none" && !open
 
   React.useEffect(() => {
@@ -290,6 +495,23 @@ export function ViewerSidebar({
     }
   }, [])
 
+  useIsoLayoutEffect(() => {
+    const element = sidebarRef.current
+
+    if (!sidebar || !element) {
+      return
+    }
+
+    return sidebar.registerSidebar({
+      collapsible,
+      element,
+      id: sidebarId,
+      instanceId,
+      side,
+      width,
+    })
+  }, [collapsible, instanceId, side, sidebar, sidebarId, width])
+
   const hiddenProps = isCollapsed
     ? ({
         "aria-hidden": true,
@@ -300,11 +522,10 @@ export function ViewerSidebar({
   return (
     <aside
       ref={sidebarRef}
-      id={sidebar?.sidebarId}
+      id={sidebarId}
       data-slot="viewer-sidebar"
       data-collapsible={collapsible}
       data-side={side}
-      data-state={state}
       data-viewer-sidebar-mode={mode}
       data-viewer-sidebar-open={open ? "true" : "false"}
       data-viewer-sidebar-state={state}
@@ -361,10 +582,9 @@ export function ViewerSidebar({
   )
 }
 
-export function ViewerSurface({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
+export type ViewerSurfaceProps = React.ComponentProps<"div">
+
+export function ViewerSurface({ className, ...props }: ViewerSurfaceProps) {
   return (
     <div
       data-slot="viewer-surface"
@@ -374,28 +594,29 @@ export function ViewerSurface({
   )
 }
 
-export type ViewerSidebarTriggerProps = ButtonProps & {
-  side?: "left" | "right"
-}
+export type ViewerSidebarTriggerProps = ButtonProps
 
 export function ViewerSidebarTrigger({
-  side = "left",
   className,
   disabled,
   loading,
   onClick,
+  onPointerDown,
   children,
   size = "icon",
   variant = "ghost",
   "aria-label": ariaLabel = "Toggle sidebar",
   ...props
 }: ViewerSidebarTriggerProps) {
-  const { open, sidebarId, state, toggleSidebar } = useViewerSidebar()
+  const { publicSidebar, rootId, sidebarSide, setLastTriggerElement } =
+    useViewerSidebarInternal()
+  const { canToggleSidebar, open, sidebarId, state, toggleSidebar } =
+    publicSidebar
   const ariaDisabled = props["aria-disabled"]
   const isDisabled = Boolean(
-    disabled || loading || isAriaDisabled(ariaDisabled)
+    disabled || loading || isAriaDisabled(ariaDisabled) || !canToggleSidebar
   )
-  const Icon = side === "right" ? PanelRight : PanelLeft
+  const Icon = sidebarSide === "right" ? PanelRight : PanelLeft
 
   return (
     <Button
@@ -404,13 +625,15 @@ export function ViewerSidebarTrigger({
       aria-expanded={open}
       aria-label={ariaLabel}
       className={cn("size-8", className)}
-      data-side={side}
+      data-side={sidebarSide}
       data-slot="viewer-sidebar-trigger"
       data-state={state}
+      data-viewer-root-id={rootId}
       data-viewer-sidebar-trigger=""
       disabled={disabled}
       loading={loading}
       onClick={(event) => {
+        setLastTriggerElement(event.currentTarget)
         if (isDisabled) {
           event.preventDefault()
           return
@@ -420,6 +643,10 @@ export function ViewerSidebarTrigger({
         if (!event.defaultPrevented) {
           toggleSidebar()
         }
+      }}
+      onPointerDown={(event) => {
+        setLastTriggerElement(event.currentTarget)
+        onPointerDown?.(event)
       }}
       size={size}
       variant={variant}

@@ -310,8 +310,13 @@ Ideal composition:
 ```tsx
 <SplitViewerProvider result={result}>
   <ViewerRoot>
+    <SplitViewerHeader />
     <ViewerBody>
+      <ViewerSidebar>
+        <SplitViewerPageRail />
+      </ViewerSidebar>
       <ViewerSurface>
+        <SplitViewerLegend />
         <SplitViewerDocument>
           <PdfViewer source={source} />
         </SplitViewerDocument>
@@ -321,19 +326,25 @@ Ideal composition:
 </SplitViewerProvider>
 ```
 
-If the split viewer needs a visible legend, it should be explicit:
+This hierarchy is part of the contract:
+
+- `SplitViewerHeader` spans the viewer title row above the body.
+- `ViewerSidebar` is body-scoped, so the page rail starts below the header.
+- `SplitViewerLegend` lives in `ViewerSurface` above the document, so the rail
+  dominates the legend and document body rather than the header.
+
+The same structure can be assembled manually from named parts:
 
 ```tsx
 <SplitViewerProvider result={result}>
   <ViewerRoot>
-    <ViewerHeader>
-      <SplitViewerLegend />
-    </ViewerHeader>
+    <SplitViewerHeader />
     <ViewerBody>
       <ViewerSidebar>
         <SplitViewerPageRail />
       </ViewerSidebar>
       <ViewerSurface>
+        <SplitViewerLegend />
         <SplitViewerDocument />
       </ViewerSurface>
     </ViewerBody>
@@ -527,6 +538,8 @@ The architecture is correct when tests prove:
 - email sidebar shows a product projection, not the raw MIME tree;
 - PDF thumbnails are explicit children, not `slots.left`;
 - split legends and page rails are explicit children, not slot payloads;
+- split legends render in `ViewerSurface`, while split page rails render in the
+  body-scoped `ViewerSidebar`;
 - `ViewerShell` is absent from public docs and implementation.
 
 ## Final Shape
@@ -547,4 +560,3 @@ And one canonical tree:
   </ViewerBody>
 </ViewerRoot>
 ```
-

@@ -901,7 +901,7 @@ function ScalarControl({
       <DataCell
         {...controlProps}
         kind={kind}
-        mode="edit"
+        active
         value={dataCellNumberValue(field.value)}
         draftValue={field.value == null ? "" : String(field.value)}
         className={compactJsonFormDataCellClass}
@@ -940,7 +940,7 @@ function ScalarControl({
       <DataCell
         {...controlProps}
         kind={dataCellKind}
-        mode="edit"
+        active
         value={field.value == null ? null : value}
         dateTimeZone={schema.format === "date-time" ? "preserve" : undefined}
         draftValue={
@@ -995,7 +995,7 @@ function ScalarControl({
     <DataCell
       {...controlProps}
       kind="text"
-      mode="edit"
+      active
       value={field.value == null ? null : value}
       draftValue={value}
       className={compactJsonFormDataCellClass}
@@ -2086,7 +2086,6 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
               <DataCell
                 {...cellProps}
                 kind="text"
-                mode="display"
                 value={dataCellTextValue(value)}
                 formatValue={() => displayText}
                 placeholder=""
@@ -2101,7 +2100,7 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
               <DataCell
                 {...cellProps}
                 kind={dataCellKind}
-                mode={isScalarEditing ? "edit" : "display"}
+                active={isScalarEditing}
                 editable={isScalarEditing}
                 value={dataCellNumberValue(value)}
                 formatValue={() => displayText}
@@ -2124,7 +2123,7 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
               <DataCell
                 {...cellProps}
                 kind="boolean"
-                mode={isScalarEditing ? "edit" : "display"}
+                active={isScalarEditing}
                 editable={isScalarEditing}
                 value={Boolean(value)}
                 role={!isScalarEditing ? "button" : undefined}
@@ -2145,7 +2144,7 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
               <DataCell
                 {...cellProps}
                 kind={dataCellKind}
-                mode={isScalarEditing ? "edit" : "display"}
+                active={isScalarEditing}
                 editable={isScalarEditing}
                 value={dataCellTextValue(value)}
                 formatValue={() => displayText}

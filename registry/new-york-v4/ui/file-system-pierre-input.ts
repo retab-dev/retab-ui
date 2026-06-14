@@ -6,45 +6,44 @@ import {
 import { normalizeFolderPath } from "./file-system-index"
 import type { FileSystemEntry, FileSystemIndex } from "./file-system-types"
 
+export type FileSystemPath = string
+export type PierrePath = string
+
 export type FileSystemPierreInput = {
-  pathEntries: Map<string, FileSystemEntry>
-  paths: string[]
+  entriesByPierrePath: Map<PierrePath, FileSystemEntry>
+  pierrePaths: PierrePath[]
   preparedInput: FileTreePreparedInput
-  revision: string
 }
 
 export function buildFileSystemPierreInput({
   currentPath,
   index,
-  revision = "",
 }: {
-  currentPath: string
+  currentPath: FileSystemPath
   index: FileSystemIndex
-  revision?: string
 }): FileSystemPierreInput {
-  const pathEntries = new Map<string, FileSystemEntry>()
-  const paths: string[] = []
+  const entriesByPierrePath = new Map<PierrePath, FileSystemEntry>()
+  const pierrePaths: PierrePath[] = []
 
   walk(currentPath)
 
   return {
-    pathEntries,
-    paths,
-    preparedInput: preparePresortedFileTreeInput(paths),
-    revision,
+    entriesByPierrePath,
+    pierrePaths,
+    preparedInput: preparePresortedFileTreeInput(pierrePaths),
   }
 
-  function walk(directoryPath: string) {
+  function walk(directoryPath: FileSystemPath) {
     const entries = index.children.get(directoryPath) ?? []
     for (const entry of entries) {
-      const pierrePath = toPierrePath(entry.path, currentPath)
+      const pierrePath = fileSystemPathToPierrePath(entry.path, currentPath)
 
       if (!pierrePath) {
         continue
       }
 
-      pathEntries.set(pierrePath, entry)
-      paths.push(pierrePath)
+      entriesByPierrePath.set(pierrePath, entry)
+      pierrePaths.push(pierrePath)
 
       if (entry.kind === "folder") {
         walk(entry.path)
@@ -53,7 +52,10 @@ export function buildFileSystemPierreInput({
   }
 }
 
-export function toPierrePath(path: string, currentPath: string): string | null {
+export function fileSystemPathToPierrePath(
+  path: FileSystemPath,
+  currentPath: FileSystemPath
+): PierrePath | null {
   const normalizedCurrentPath = normalizeFolderPath(currentPath)
   const normalizedPath = path.endsWith("/") ? normalizeFolderPath(path) : path
 
@@ -74,8 +76,8 @@ export function toPierrePath(path: string, currentPath: string): string | null {
   return normalizedPath.slice(normalizedCurrentPath.length)
 }
 
-export function fromPierrePath(
-  path: string | null | undefined,
+export function pierrePathToFileSystemEntry(
+  path: PierrePath | null | undefined,
   input: FileSystemPierreInput
 ): FileSystemEntry | null {
   if (!path) {
@@ -83,9 +85,11 @@ export function fromPierrePath(
   }
 
   return (
-    input.pathEntries.get(path) ??
-    input.pathEntries.get(`${path}/`) ??
-    (path.endsWith("/") ? input.pathEntries.get(path.slice(0, -1)) : null) ??
+    input.entriesByPierrePath.get(path) ??
+    input.entriesByPierrePath.get(`${path}/`) ??
+    (path.endsWith("/")
+      ? input.entriesByPierrePath.get(path.slice(0, -1))
+      : null) ??
     null
   )
 }

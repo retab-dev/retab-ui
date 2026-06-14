@@ -2,16 +2,6 @@ import type * as React from "react"
 
 import type { JsonTableActivationIntent } from "@/components/json-table/json-table-edit-session"
 
-const dataCellEventTargetSelector =
-  '[data-slot="data-cell"], [data-slot="input-control"]'
-
-export function isJsonTableDataCellEventTarget(target: EventTarget | null) {
-  return (
-    target instanceof Element &&
-    Boolean(target.closest(dataCellEventTargetSelector))
-  )
-}
-
 export function structuredPointerActivationIntent(
   event: React.PointerEvent<HTMLElement>
 ): JsonTableActivationIntent {

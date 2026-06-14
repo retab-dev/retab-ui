@@ -5,6 +5,7 @@ import type { PretextMarkdownChunkFrame } from "@/registry/new-york-v4/ui/pretex
 import {
   getPretextMarkdownFrameScrollAnchor,
   getPretextMarkdownScrollTopForLineRange,
+  getPretextMarkdownSourceLineForScrollTop,
   getPretextMarkdownVisibleChunkFrames,
   markdownChunkIntersectsLineRange,
   resolvePretextMarkdownScrollAnchor,
@@ -207,6 +208,51 @@ describe("Pretext Markdown virtualizer", () => {
     ).toBe(600)
   })
 
+  it("looks up source lines from rendered scroll offsets", () => {
+    const chunks = [
+      chunk({ index: 0, sourceEndLine: 10, sourceStartLine: 1 }),
+      chunk({ index: 1, sourceEndLine: 30, sourceStartLine: 11 }),
+    ]
+    const frames = [
+      frame({
+        height: 100,
+        index: 0,
+        sourceEndLine: 10,
+        sourceStartLine: 1,
+        top: 0,
+      }),
+      frame({
+        height: 400,
+        index: 1,
+        sourceEndLine: 30,
+        sourceStartLine: 11,
+        top: 100,
+      }),
+    ]
+
+    expect(
+      getPretextMarkdownSourceLineForScrollTop({
+        chunks,
+        frames,
+        scrollTop: 0,
+      })
+    ).toBe(1)
+    expect(
+      getPretextMarkdownSourceLineForScrollTop({
+        chunks,
+        frames,
+        scrollTop: 300,
+      })
+    ).toBe(21)
+    expect(
+      getPretextMarkdownSourceLineForScrollTop({
+        chunks,
+        frames,
+        scrollTop: 900,
+      })
+    ).toBe(30)
+  })
+
   it("detects line-range intersections without React state", () => {
     expect(
       markdownChunkIntersectsLineRange({
@@ -267,7 +313,9 @@ function chunk({
     isHostile: false,
     kind: "markdown",
     markdown: "",
+    sourceEndOffset: sourceEndLine,
     sourceEndLine,
+    sourceStartOffset: sourceStartLine,
     sourceStartLine,
   }
 }

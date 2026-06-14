@@ -3,6 +3,13 @@
 import * as React from "react"
 
 import {
+  isResourceError,
+  isViewerFormatError,
+  isViewerStateError,
+  isViewerUnsupportedError,
+  ViewerFormatError,
+} from "@/lib/viewer-errors"
+import {
   createViewerResource,
   type ViewerContentIdentity,
   type ViewerResource,
@@ -98,6 +105,7 @@ export function PlainTextViewerFrame<
         props.toolbar === false ? null : plainTextViewerDownloadAction(resource)
       }
       format="text"
+      mapError={plainTextViewerBoundaryError}
       resetKey={resetKey}
       sourceKind={resource.sourceKind}
       onRetry={() =>
@@ -130,6 +138,24 @@ export function PlainTextViewerFrame<
 
 function plainTextViewerDownloadAction(resource: ViewerResource) {
   return resource.originalDownload
+}
+
+function plainTextViewerBoundaryError(error: unknown) {
+  if (
+    isResourceError(error) ||
+    isViewerFormatError(error) ||
+    isViewerStateError(error) ||
+    isViewerUnsupportedError(error)
+  ) {
+    return error
+  }
+
+  return new ViewerFormatError({
+    format: "text",
+    kind: "render_failed",
+    message: "Failed to render text.",
+    cause: error,
+  })
 }
 
 function plainTextViewerResetKey(

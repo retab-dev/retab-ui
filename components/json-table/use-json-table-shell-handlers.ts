@@ -7,13 +7,11 @@ import {
   structuredKeyboardActivationIntent,
   structuredPointerActivationIntent,
 } from "@/components/json-table/json-table-primitive-activation"
-import { finishPreviousPrimitiveEditor } from "@/components/json-table/json-table-primitive-handoff"
 import { markJsonTableProfile } from "@/components/json-table/json-table-profiler"
 import { useRefCallback } from "@/components/json-table/path-utils"
 import type { JsonTableCellField } from "@/components/json-table/use-json-table-cell-field"
 
 type ShellKeyEvent = React.KeyboardEvent<HTMLTableCellElement>
-type ShellMouseEvent = React.MouseEvent<HTMLTableCellElement>
 type ShellPointerEvent = React.PointerEvent<HTMLTableCellElement>
 
 export function useJsonTableShellHandlers({
@@ -27,9 +25,7 @@ export function useJsonTableShellHandlers({
     docId,
     onCellHoverEnd,
     onCellHoverStart,
-    primitiveEditorHandleRef,
     projectedCell,
-    setPrimitiveActiveCell,
     startStructuredEditSession,
   } = props
   const {
@@ -40,15 +36,6 @@ export function useJsonTableShellHandlers({
     isStructuredActive,
     materializedFieldPath,
   } = cellField
-
-  const finishPreviousPrimitive = useRefCallback(() => {
-    finishPreviousPrimitiveEditor({
-      currentCellId: cellId,
-      primitiveActiveCell: props.primitiveActiveCellStore.getSnapshot(),
-      primitiveEditorHandleRef,
-      setPrimitiveActiveCell,
-    })
-  })
 
   const shellPointerEnter = useRefCallback((event: ShellPointerEvent) => {
     if (!materializedFieldPath || !isJsonEditable) return
@@ -78,15 +65,12 @@ export function useJsonTableShellHandlers({
       return
     }
 
-    finishPreviousPrimitive()
     if (isStructuredActive) return
     startStructuredEditSession(
       projectedCell,
       structuredPointerActivationIntent(event)
     )
   })
-
-  const shellClick = useRefCallback((_event: ShellMouseEvent) => {})
 
   const shellKeyDown = useRefCallback((event: ShellKeyEvent) => {
     if (
@@ -97,8 +81,6 @@ export function useJsonTableShellHandlers({
     ) {
       return
     }
-
-    finishPreviousPrimitive()
 
     if (isPrimitiveCell) {
       return
@@ -120,7 +102,6 @@ export function useJsonTableShellHandlers({
   })
 
   return {
-    onClick: shellClick,
     onKeyDown: shellKeyDown,
     onPointerDown: shellPointerDown,
     onPointerEnter: shellPointerEnter,

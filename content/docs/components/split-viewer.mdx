@@ -33,10 +33,11 @@ export function Example() {
       <ViewerRoot>
         <SplitViewerHeader />
         <ViewerBody>
-          <ViewerSidebar>
+          <ViewerSidebar aria-label="Split pages">
             <SplitViewerPageRail />
           </ViewerSidebar>
           <ViewerSurface>
+            <SplitViewerLegend />
             <SplitViewerDocument>
               <SplitDocument />
             </SplitViewerDocument>
@@ -48,9 +49,13 @@ export function Example() {
 }
 ```
 
-`SplitViewerHeader` owns the result summary and legend. `SplitViewerPageRail`
-owns page navigation. `SplitViewerDocument` only frames the selected document
-child; it does not receive hidden layout slots.
+`SplitViewerHeader` owns the full-width viewer title row.
+`ViewerSidebar` is body-scoped, so the page rail starts below the
+header. `SplitViewerLegend` lives inside `ViewerSurface` above the
+document, which lets the rail dominate the legend and document body without
+taking over the header.
+`SplitViewerDocument` only frames the selected document child; it does not
+receive hidden layout slots.
 
 ## Usage
 

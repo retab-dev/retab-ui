@@ -90,7 +90,6 @@ export function buildJsonTableEditableCellModel({
         onActiveChange: primitiveControl.setPrimitiveActive,
         onCommit: primitiveControl.commitPrimitiveValue,
         onEditingEnd: () => primitiveControl.setPrimitiveActive(false),
-        onEditorHandleChange: primitiveControl.setPrimitiveEditorHandle,
       },
       shellProps,
       shellRef,

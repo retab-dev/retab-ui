@@ -3,7 +3,6 @@
 import React, { useRef } from "react"
 import type { JSONSchema7 } from "json-schema"
 
-import type { DataCellEditorHandle } from "@/components/ui/data-cell"
 import { fixedGridColumnWidths } from "@/components/ui/fixed-grid-columns"
 import {
   getFixedGridCanvasStyle,
@@ -36,6 +35,11 @@ import { jsonTableCellId } from "@/components/json-table/json-table-edit-session
 import { createJsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
 import type { JsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import { recordJsonTableRender } from "@/components/json-table/json-table-profiler"
+import {
+  jsonTableFullRenderedColumnWindow,
+  jsonTableVirtualRenderedColumnWindow,
+  type JsonTableRenderedColumnWindow,
+} from "@/components/json-table/json-table-rendered-column-window"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import { buildHeaderGridRows } from "@/components/json-table/lib/header-nodes"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
@@ -52,6 +56,10 @@ import {
   useSheetOptionsStore,
   type ColumnWidth,
 } from "./table-options-store"
+
+const defaultEditableRowOverscan = 0
+const defaultReadOnlyRowOverscan = 12
+const editableColumnOverscan = 2
 
 interface SingleFileVirtualizedTableProps {
   headerNodes: JsonTableHeaderNode[]
@@ -73,9 +81,9 @@ interface SingleFileVirtualizedTableProps {
   columnWidth?: ColumnWidth
   onCellHoverStart?: (info: JsonTableCellHoverInfo) => void
   onCellHoverEnd?: () => void
-  /** Rows to render beyond the viewport on each side (virtualization buffer). Default 12. */
+  /** Rows to render beyond the viewport on each side. Editable defaults to 0; read-only defaults to 12. */
   overscan?: number
-  /** Rows to render beyond the viewport after large scroll jumps. Defaults to overscan. */
+  /** Rows to render beyond the viewport after large scroll jumps. Defaults to the resolved overscan. */
   jumpOverscan?: number
 }
 
@@ -187,8 +195,8 @@ export const SingleFileVirtualizedTable =
       columnWidth: propColumnWidth,
       onCellHoverStart,
       onCellHoverEnd,
-      overscan = 12,
-      jumpOverscan = overscan,
+      overscan,
+      jumpOverscan,
     }) => {
       const { rowHeight, columnWidth: storeColumnWidth } =
         useSheetOptionsStore()
@@ -199,7 +207,6 @@ export const SingleFileVirtualizedTable =
       const primitiveActiveCellStoreRef = useRef(
         createJsonTablePrimitiveActiveCellStore()
       )
-      const primitiveEditorHandleRef = useRef<DataCellEditorHandle | null>(null)
       const structuredEditSessionIdRef = useRef(0)
 
       const totalWidth = fixedGridColumnWidths(visibleColumns).reduce(
@@ -209,6 +216,12 @@ export const SingleFileVirtualizedTable =
 
       const rowHeightPx = getRowHeightPx(rowHeight)
       const isJsonEditable = jsonEditMode === "editable"
+      const resolvedOverscan =
+        overscan ??
+        (isJsonEditable
+          ? defaultEditableRowOverscan
+          : defaultReadOnlyRowOverscan)
+      const resolvedJumpOverscan = jumpOverscan ?? resolvedOverscan
       const scrollRef = useRef<HTMLDivElement>(null)
       const headerScrollRef = useRef<HTMLDivElement>(null)
       const rowWindowRef = useRef<HTMLTableSectionElement>(null)
@@ -230,23 +243,38 @@ export const SingleFileVirtualizedTable =
           isJsonEditable ? undefined : { handleViewport: rowPatcher.patch },
         [isJsonEditable, rowPatcher]
       )
-      const { virtualRows, totalRowSize } = useFixedGridVirtualization({
-        rowCount,
-        columnCount: 0,
-        rowSize: rowHeightPx,
-        columnSize: 1,
-        rowOverscan: overscan,
-        columnOverscan: 0,
-        jumpRowOverscan: jumpOverscan,
-        jumpColumnOverscan: 0,
-        minimumRenderedRows: 1,
-        rowScrollStrategy,
-        scrollRef,
-        virtualizeColumns: false,
-      })
+      const { columnItems, leftPad, rightPad, virtualRows, totalRowSize } =
+        useFixedGridVirtualization({
+          rowCount,
+          columnCount: visibleColumns.length,
+          rowSize: rowHeightPx,
+          columnSize: getColumnWidthPx(columnWidth),
+          rowOverscan: resolvedOverscan,
+          columnOverscan: editableColumnOverscan,
+          jumpRowOverscan: resolvedJumpOverscan,
+          jumpColumnOverscan: editableColumnOverscan,
+          minimumRenderedRows: 1,
+          rowScrollStrategy,
+          scrollRef,
+          virtualizeColumns: isJsonEditable,
+        })
+      const renderedColumnWindow =
+        React.useMemo<JsonTableRenderedColumnWindow>(() => {
+          if (!isJsonEditable) {
+            return jsonTableFullRenderedColumnWindow(visibleColumns)
+          }
+
+          return jsonTableVirtualRenderedColumnWindow({
+            columnItems,
+            leftPadWidthPx: leftPad,
+            rightPadWidthPx: rightPad,
+            schemaVisibleColumns: visibleColumns,
+          })
+        }, [columnItems, isJsonEditable, leftPad, rightPad, visibleColumns])
+
       React.useLayoutEffect(() => {
         rowPatcher.invalidate()
-      }, [rowPatcher, virtualRows, visibleColumns, projectedRows])
+      }, [rowPatcher, virtualRows, renderedColumnWindow, projectedRows])
       recordJsonTableRender("SingleFileVirtualizedTable", document.id, {
         columnCount: visibleColumns.length,
         primitiveActiveFieldPath:
@@ -296,7 +324,7 @@ export const SingleFileVirtualizedTable =
             docId: document.id,
             fieldPath: projectedCell.materializedFieldPath,
             intent,
-            isOverlayOpen: false,
+            isOverlayOpen: true,
           })
         },
         [document.id]
@@ -379,14 +407,13 @@ export const SingleFileVirtualizedTable =
                       document={document}
                       projectedRow={projectedRow}
                       schema={schema}
-                      visibleColumns={visibleColumns}
+                      renderedColumnWindow={renderedColumnWindow}
                       rowHeightPx={rowHeightPx}
                       primitiveActiveCellStore={
                         primitiveActiveCellStoreRef.current
                       }
                       primitiveEditStore={primitiveEditStore}
                       setPrimitiveActiveCell={setPrimitiveActiveCell}
-                      primitiveEditorHandleRef={primitiveEditorHandleRef}
                       structuredEditSession={structuredEditSession}
                       startStructuredEditSession={startStructuredEditSession}
                       setStructuredEditSessionOverlayOpen={

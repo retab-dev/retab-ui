@@ -1,7 +1,6 @@
 import type * as React from "react"
 
 import {
-  type DataCellEditorHandle,
   type DataCellKind,
   type DataCellProps,
   type DataCellSelectOption,
@@ -90,10 +89,8 @@ export type JsonTableDataCellSharedProps = {
   active?: boolean
   autoFocus?: boolean
   editable: boolean
-  mode: "display" | "edit"
   onActiveChange?: (active: boolean) => void
   onEditingEnd?: () => void
-  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
   onKeyDown?: React.KeyboardEventHandler<HTMLElement>
 }
 
@@ -135,11 +132,9 @@ export function createJsonTableDataCellProps({
   autoFocus,
   fieldMetadata,
   isEditable = false,
-  mode,
   onActiveChange,
   onCommit,
   onEditingEnd,
-  onEditorHandleChange,
   onKeyDown,
   onOpenChange,
   value,
@@ -148,24 +143,20 @@ export function createJsonTableDataCellProps({
   autoFocus?: boolean
   fieldMetadata: FieldMetadata
   isEditable?: boolean
-  mode: "display" | "edit"
   onActiveChange?: (active: boolean) => void
   onCommit?: JsonTableDataCellCommitHandler
   onEditingEnd?: () => void
-  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
   onKeyDown?: React.KeyboardEventHandler<HTMLElement>
   onOpenChange?: (open: boolean) => void
   value: unknown
 }): DataCellProps {
   const model = createJsonTableDataCellModel({ fieldMetadata, value })
   const sharedProps: JsonTableDataCellSharedProps = {
-    mode,
     editable: isEditable,
     active,
     autoFocus,
     onEditingEnd,
     onActiveChange,
-    onEditorHandleChange,
     onKeyDown,
   }
   return jsonTableDataCellPropsForModel({

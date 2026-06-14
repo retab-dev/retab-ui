@@ -36,6 +36,12 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar"
+import {
+  SidebarListButton,
+  SidebarListMenu,
+  SidebarListMenuItem,
+  SidebarListRoot,
+} from "@/components/ui/sidebar-list"
 
 type CookieSetOptions = {
   expires: number
@@ -984,6 +990,30 @@ describe("Sidebar desktop and mobile rendering", () => {
 })
 
 describe("Sidebar compound components", () => {
+  it("renders providerless SidebarList rows outside SidebarProvider", () => {
+    render(
+      <SidebarListRoot>
+        <SidebarListMenu>
+          <SidebarListMenuItem>
+            <SidebarListButton isActive>Inbox</SidebarListButton>
+          </SidebarListMenuItem>
+          <SidebarListMenuItem>
+            <SidebarListButton asChild>
+              <a href="/reports">Reports</a>
+            </SidebarListButton>
+          </SidebarListMenuItem>
+        </SidebarListMenu>
+      </SidebarListRoot>
+    )
+
+    const inbox = screen.getByRole("button", { name: "Inbox" })
+    const reports = screen.getByRole("link", { name: "Reports" })
+
+    expect(inbox.getAttribute("type")).toBe("button")
+    expect(inbox.getAttribute("data-active")).toBe("true")
+    expect(reports.getAttribute("href")).toBe("/reports")
+  })
+
   it("renders expected slots for the standard sidebar layout", () => {
     const { container } = renderSidebar(
       <Sidebar>

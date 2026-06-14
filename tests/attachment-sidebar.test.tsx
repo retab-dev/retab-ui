@@ -54,6 +54,8 @@ describe("AttachmentSidebar", () => {
 
     const sidebar = container.querySelector('[data-slot="attachment-sidebar"]')
     expect(sidebar).toBeTruthy()
+    expect(container.querySelector('[data-slot="sidebar-wrapper"]')).toBeNull()
+    expect(sidebar?.getAttribute("data-sidebar-list")).toBe("")
 
     const button = screen.getByRole("button", { name: /brief\.txt.*1\.5 KB/i })
     expect(button.getAttribute("aria-current")).toBe("page")

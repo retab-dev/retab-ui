@@ -182,7 +182,11 @@ function Cell({
         >
           <ViewerRoot bare className="h-full">
             <ViewerBody>
-              <ViewerSidebar collapsible="none" className="w-12">
+              <ViewerSidebar
+                aria-label="Legend"
+                collapsible="none"
+                className="w-12"
+              >
                 {ribbon}
               </ViewerSidebar>
               <ViewerSurface className="relative">

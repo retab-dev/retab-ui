@@ -162,11 +162,11 @@ export function UploadableFileViewerHeader() {
             <Eye className="size-4 text-muted-foreground" aria-hidden />
             Uploader + viewer
           </div>
-          <div className="mt-1 truncate text-xs text-muted-foreground">
-            {selectedFile
-              ? selectedFile.file.name
-              : "One upload surface that becomes the viewer."}
-          </div>
+          {selectedFile ? (
+            <div className="mt-1 truncate text-xs text-muted-foreground">
+              {selectedFile.file.name}
+            </div>
+          ) : null}
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -199,6 +199,7 @@ export function UploadableFileViewerSummary() {
 
   return (
     <ViewerSidebar
+      aria-label="Selected file"
       width="16rem"
       className="border-b bg-muted/20 p-4 md:border-r md:border-b-0"
     >
@@ -230,7 +231,7 @@ export function UploadableFileViewerContent({
   const { dropzone, viewerSource } = useUploadableFileViewerContent()
 
   return (
-    <ViewerSurface className="min-h-[24rem] bg-muted/10 p-3">
+    <ViewerSurface className="min-h-[24rem]">
       {viewerSource ? (
         renderViewer ? (
           renderViewer(viewerSource)

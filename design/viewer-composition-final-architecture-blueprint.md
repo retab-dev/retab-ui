@@ -153,7 +153,7 @@ Examples:
 
 - `MimePartSidebar`
 - `AttachmentSidebar`
-- `PdfThumbnailSidebar`
+- `PdfViewerThumbnails`
 - `SegmentSidebar`
 - `SegmentPageRail`
 - file-system preview/navigation panes
@@ -166,7 +166,7 @@ Rules:
 - Do not push domain concepts into `Sidebar`.
 - Do not make `SegmentSidebar` handle attachments.
 - Do not make `AttachmentSidebar` handle recursive MIME.
-- Do not make `PdfThumbnailSidebar` pretend to be a normal menu list.
+- Do not make `PdfViewerThumbnails` pretend to be a normal menu list.
 - Do not expose raw recursive trees just because the data model is recursive.
 
 The visual sidebar should be a product projection, not necessarily the raw
@@ -303,7 +303,7 @@ rail. It should stay at the file-system layer.
 
 ### PDF Thumbnail Sidebar
 
-`PdfThumbnailSidebar` is PDF-internal navigation.
+`PdfViewerThumbnails` is PDF-internal navigation.
 
 It owns:
 

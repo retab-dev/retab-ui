@@ -78,7 +78,11 @@ const segments = toSegments([
   { name: "Unused", pages: [] },
 ])
 
-function PartitionScrollSpy({ onScroll }: { onScroll: (page: number) => void }) {
+function PartitionScrollSpy({
+  onScroll,
+}: {
+  onScroll: (page: number) => void
+}) {
   const document = usePartitionViewerDocument()
 
   React.useEffect(() => {
@@ -778,6 +782,18 @@ describe("SegmentLegend", () => {
 })
 
 describe("SegmentSidebar", () => {
+  it("uses providerless sidebar list markup", () => {
+    const { container } = render(<SegmentSidebar segments={segments} />)
+
+    expect(container.querySelector('[data-slot="sidebar-wrapper"]')).toBeNull()
+    expect(
+      container.querySelector('[data-slot="sidebar-list-root"]')
+    ).toBeTruthy()
+    expect(
+      container.querySelectorAll('[data-slot="sidebar-list-button"]').length
+    ).toBe(segments.length)
+  })
+
   it("previews current page and lets hover preview another row", () => {
     function Harness() {
       const interaction = useSegmentInteraction()
@@ -1602,7 +1618,9 @@ describe("partition segment composition", () => {
         }}
       >
         <PartitionViewerHeader />
-        <PartitionScrollSpy onScroll={(page) => scrolledPages.push(`${page}`)} />
+        <PartitionScrollSpy
+          onScroll={(page) => scrolledPages.push(`${page}`)}
+        />
       </PartitionViewerProvider>
     )
 
@@ -1824,12 +1842,18 @@ describe("split segment composition", () => {
     )
     expect(root?.children[0]?.getAttribute("data-slot")).toBe("viewer-header")
     expect(root?.children[1]?.getAttribute("data-slot")).toBe("viewer-body")
-    const body = root?.querySelector<HTMLElement>('[data-slot="viewer-body"]')
+    const body = root?.querySelector<HTMLElement>(
+      ':scope > [data-slot="viewer-body"]'
+    )
     expect(
       body?.querySelector(':scope > [data-slot="viewer-sidebar"]')
     ).toBeTruthy()
+    const surface = body?.querySelector<HTMLElement>(
+      ':scope > [data-slot="viewer-surface"]'
+    )
+    expect(surface).toBeTruthy()
     expect(
-      body?.querySelector(':scope > [data-slot="viewer-surface"]')
+      surface?.querySelector(':scope > [data-slot="segment-legend"]')
     ).toBeTruthy()
   })
 

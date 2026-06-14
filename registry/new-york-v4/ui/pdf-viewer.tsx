@@ -52,7 +52,7 @@ export {
   usePdfViewerThumbnails,
   type PdfDocumentSource,
 } from "./pdf-viewer-context"
-export { PdfViewerThumbnails } from "./pdf-thumbnail-sidebar"
+export { PdfViewerThumbnails } from "./pdf-viewer-thumbnails"
 
 export interface PdfHighlightProps extends React.ComponentProps<"div"> {
   /** Normalized box, each field a percentage [0, 100] of the page. */

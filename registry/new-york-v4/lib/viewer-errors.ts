@@ -386,6 +386,7 @@ function formatErrorUserMessage(
     return "Couldn't load this image."
   }
   if (format === "text") {
+    if (kind === "render_failed") return "Couldn't render this text file."
     if (kind === "bounds") {
       const boundsError = error as {
         reason?: unknown

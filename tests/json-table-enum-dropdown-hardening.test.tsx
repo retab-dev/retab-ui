@@ -8,6 +8,7 @@ import type { TableDocument } from "@/components/json-table/lib/projects-types"
 
 import {
   findEditableCell,
+  primitivePendingCellCommit,
   renderInteractionRow,
 } from "./json-table-interaction-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
@@ -73,7 +74,7 @@ function renderEnumRow({
 }
 
 function pointerDown(target: Element | Document | Window) {
-  fireEvent.pointerDown(target, {
+  fireEvent.pointerDown(primitiveEventTarget(target), {
     button: 0,
     buttons: 1,
     clientX: 24,
@@ -85,12 +86,24 @@ function pointerDown(target: Element | Document | Window) {
 }
 
 function clickCell(target: Element | Document | Window) {
-  fireEvent.click(target, {
+  fireEvent.click(primitiveEventTarget(target), {
     button: 0,
     clientX: 24,
     clientY: 12,
     detail: 1,
   })
+}
+
+function primitiveEventTarget(target: Element | Document | Window) {
+  if (!(target instanceof HTMLElement)) return target
+  if (!target.matches('[data-json-table-editable-cell="true"]')) return target
+  return (
+    target.matches('[data-slot="input-control"], [data-slot="data-cell"]')
+      ? target
+      : (target.querySelector<HTMLElement>(
+          '[data-slot="input-control"], [data-slot="data-cell"]'
+        ) ?? target)
+  )
 }
 
 async function openEnumCell(
@@ -169,9 +182,11 @@ describe("json table enum dropdown hardening", () => {
 
     await waitFor(() =>
       expect(onCellCommit).toHaveBeenCalledWith(
-        enumDocument.id,
-        "status",
-        "paid"
+        primitivePendingCellCommit({
+          fieldPath: "status",
+          previousValue: "draft",
+          value: "paid",
+        })
       )
     )
     expect(onCellCommit).toHaveBeenCalledTimes(1)
@@ -231,9 +246,11 @@ describe("json table enum dropdown hardening", () => {
     await selectOption(view, "2")
     await waitFor(() =>
       expect(onCellCommit).toHaveBeenCalledWith(
-        enumDocument.id,
-        "numeric_status",
-        2
+        primitivePendingCellCommit({
+          fieldPath: "numeric_status",
+          previousValue: 1,
+          value: 2,
+        })
       )
     )
 
@@ -241,9 +258,11 @@ describe("json table enum dropdown hardening", () => {
     await selectOption(view, "option:1")
     await waitFor(() =>
       expect(onCellCommit).toHaveBeenCalledWith(
-        enumDocument.id,
-        "sentinel_status",
-        "option:1"
+        primitivePendingCellCommit({
+          fieldPath: "sentinel_status",
+          previousValue: "__json_table_null__",
+          value: "option:1",
+        })
       )
     )
 
@@ -251,16 +270,36 @@ describe("json table enum dropdown hardening", () => {
     await selectOption(view, /no selection/i)
     await waitFor(() =>
       expect(onCellCommit).toHaveBeenCalledWith(
-        enumDocument.id,
-        "nullable_status",
-        null
+        primitivePendingCellCommit({
+          fieldPath: "nullable_status",
+          previousValue: "paid",
+          value: null,
+        })
       )
     )
 
     expect(onCellCommit.mock.calls).toEqual([
-      [enumDocument.id, "numeric_status", 2],
-      [enumDocument.id, "sentinel_status", "option:1"],
-      [enumDocument.id, "nullable_status", null],
+      [
+        primitivePendingCellCommit({
+          fieldPath: "numeric_status",
+          previousValue: 1,
+          value: 2,
+        }),
+      ],
+      [
+        primitivePendingCellCommit({
+          fieldPath: "sentinel_status",
+          previousValue: "__json_table_null__",
+          value: "option:1",
+        }),
+      ],
+      [
+        primitivePendingCellCommit({
+          fieldPath: "nullable_status",
+          previousValue: "paid",
+          value: null,
+        }),
+      ],
     ])
     await expectDropdownClosed(view)
   })
@@ -292,9 +331,11 @@ describe("json table enum dropdown hardening", () => {
 
     await waitFor(() =>
       expect(onCellCommit).toHaveBeenCalledWith(
-        enumDocument.id,
-        "status",
-        "void"
+        primitivePendingCellCommit({
+          fieldPath: "status",
+          previousValue: "draft",
+          value: "void",
+        })
       )
     )
     expect(onCellCommit).toHaveBeenCalledTimes(1)

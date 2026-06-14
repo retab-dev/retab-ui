@@ -26,11 +26,11 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { SourceIndicator } from "@/components/ui/source-indicator"
 import {
   ViewerBody,
-  ViewerHeader,
-  ViewerRoot,
-  ViewerSidebar,
-  ViewerSidebarTrigger,
   ViewerSurface,
+  ViewerHeader,
+  ViewerSidebar,
+  ViewerRoot,
+  ViewerSidebarTrigger,
 } from "@/components/ui/viewer"
 import { JsonForm } from "@/components/json-form/json-form"
 import extractSample from "@/components/viewers/sample-data/extract.json"
@@ -114,7 +114,7 @@ function ExtractViewerContent({
       className="h-full min-h-[680px] bg-background"
     >
       <ViewerHeader className="flex min-h-10 items-center gap-2 px-2">
-        <ViewerSidebarTrigger side="right" />
+        <ViewerSidebarTrigger />
         <h2 className="min-w-0 truncate text-sm font-medium">Extracted data</h2>
         <span className="ml-auto text-xs text-muted-foreground">
           {FIELDS.length} fields
@@ -136,6 +136,7 @@ function ExtractViewerContent({
           />
         </ViewerSurface>
         <ViewerSidebar
+          aria-label="Extracted fields"
           side="right"
           width="240px"
           className="flex flex-shrink-0 flex-col border-l"

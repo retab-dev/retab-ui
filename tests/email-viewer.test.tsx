@@ -7,6 +7,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -213,6 +214,15 @@ describe("EmailViewer", () => {
     expect(
       container.querySelector('[data-slot="mime-part-sidebar"]')
     ).toBeTruthy()
+    const emailPartsSidebar = screen.getByRole("complementary", {
+      name: "Email parts",
+    })
+    const emailParts = within(emailPartsSidebar)
+    expect(emailPartsSidebar.getAttribute("data-slot")).toBe("viewer-sidebar")
+    expect(
+      emailPartsSidebar.querySelector('[data-slot="mime-part-sidebar"]')
+    ).toBeTruthy()
+    expect(emailPartsSidebar.querySelector("[data-sidebar]")).toBeNull()
     expect(
       container.querySelectorAll('[data-slot="viewer-root"]')
     ).toHaveLength(1)
@@ -233,6 +243,12 @@ describe("EmailViewer", () => {
     ).toBeNull()
     expect(
       screen.getByRole("button", { name: /Body text\/html · 2\.1 KB/i })
+    ).toBeTruthy()
+    expect(
+      emailParts.getByRole("heading", { level: 3, name: "Body" })
+    ).toBeTruthy()
+    expect(
+      emailParts.getByRole("heading", { level: 3, name: "Attachments" })
     ).toBeTruthy()
     expect(screen.getAllByText("Body")).toHaveLength(2)
     expect(screen.getByText("Attachments")).toBeTruthy()

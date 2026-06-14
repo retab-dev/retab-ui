@@ -1,7 +1,5 @@
 import type * as React from "react"
 
-import type { DataCellActivationRequest } from "@/registry/new-york-v4/ui/data-cell-activation"
-
 export type DataCellKindModel = {
   text: {
     value: string | null
@@ -39,7 +37,6 @@ export type DataCellKindModel = {
 
 export type DataCellKind = keyof DataCellKindModel
 
-export type DataCellMode = "display" | "edit"
 export type DataCellValueForKind<Kind extends DataCellKind> =
   DataCellKindModel[Kind]["value"]
 export type DataCellCommitValueForKind<Kind extends DataCellKind> =
@@ -47,8 +44,6 @@ export type DataCellCommitValueForKind<Kind extends DataCellKind> =
 export type DataCellValue = DataCellValueForKind<DataCellKind> | undefined
 export type DataCellCommitValue = DataCellCommitValueForKind<DataCellKind>
 export type DataCellDateTimeZone = "local" | "preserve" | "utc"
-
-export type { DataCellActivationRequest }
 
 export type DataCellValueMeta = {
   kind: DataCellKind
@@ -69,11 +64,6 @@ export type DataCellCommitHandler = (
   meta: DataCellValueMeta
 ) => void
 
-export type DataCellEditorHandle = {
-  finish: () => void
-  cancel: () => void
-}
-
 type DataCellNativeProps = Omit<
   React.HTMLAttributes<HTMLElement>,
   "children" | "defaultValue" | "onChange"
@@ -82,16 +72,13 @@ type DataCellNativeProps = Omit<
 type DataCellBaseProps<Kind extends DataCellKind> = DataCellNativeProps & {
   kind: Kind
   value?: DataCellValueForKind<Kind>
-  mode?: DataCellMode
   editable?: boolean
   active?: boolean
   disabled?: boolean
   name?: string
-  activationRequest?: DataCellActivationRequest
   autoFocus?: boolean
   onEditingEnd?: () => void
   onActiveChange?: (active: boolean) => void
-  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
 }
 
 type DataCellPlaceholderProps = {

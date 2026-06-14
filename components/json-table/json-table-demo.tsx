@@ -30,6 +30,14 @@ const data = sampleData as Record<string, unknown>
 const schema = sampleSchema as unknown as JSONSchema7
 export type JsonTableDemoProfileVariant = "default" | "large"
 
+export type JsonTableDemoProfileOptions = {
+  extraColumnCount?: number
+  jumpOverscan?: number
+  overscan?: number
+  rowCount?: number
+  variant: JsonTableDemoProfileVariant
+}
+
 const demoSchema = {
   ...schema,
   properties: {
@@ -40,16 +48,15 @@ const demoSchema = {
         ...((schema.properties?.transactions as Record<string, unknown>)
           ?.items as Record<string, unknown>),
         properties: {
-          ...(((schema.properties?.transactions as Record<string, unknown>)
-            ?.items as Record<string, unknown>)?.properties as Record<
-            string,
-            unknown
-          >),
           is_reconciled: {
             type: "boolean",
             title: "Reconciled",
             description: "Whether this transaction has been reviewed.",
           },
+          ...((
+            (schema.properties?.transactions as Record<string, unknown>)
+              ?.items as Record<string, unknown>
+          )?.properties as Record<string, unknown>),
         },
       },
     },
@@ -71,18 +78,71 @@ const largeReviewStatusValues = [
   null,
 ]
 
-const largeTransactionExtraProperties = Object.fromEntries(
-  Array.from({ length: 18 }, (_, index) => [
-    `profile_extra_${String(index).padStart(2, "0")}`,
-    {
-      type: index % 3 === 0 ? "number" : index % 3 === 1 ? "string" : "boolean",
-      title: `Profile Extra ${index}`,
-    },
-  ])
-)
+const maxLargeTransactionExtraColumnCount = 18
 
-function createDemoSchema(profileVariant: JsonTableDemoProfileVariant) {
-  if (profileVariant === "default") return demoSchema
+function largeTransactionExtraProperties(extraColumnCount: number) {
+  return Object.fromEntries(
+    Array.from({ length: extraColumnCount }, (_, index) => [
+      `profile_extra_${String(index).padStart(2, "0")}`,
+      {
+        type:
+          index % 3 === 0 ? "number" : index % 3 === 1 ? "string" : "boolean",
+        title: `Profile Extra ${index}`,
+      },
+    ])
+  )
+}
+
+function largeTransactionExtraValues({
+  extraColumnCount,
+  index,
+}: {
+  extraColumnCount: number
+  index: number
+}) {
+  return Object.fromEntries(
+    Array.from({ length: extraColumnCount }, (_, extraIndex) => {
+      const key = `profile_extra_${String(extraIndex).padStart(2, "0")}`
+      if ((index + extraIndex) % 13 === 0) return [key, undefined]
+      if (extraIndex % 3 === 0) return [key, index * (extraIndex + 1)]
+      if (extraIndex % 3 === 1) {
+        return [key, `extra-${extraIndex}-${index}-${"x".repeat(index % 12)}`]
+      }
+      return [key, (index + extraIndex) % 2 === 0]
+    })
+  )
+}
+
+function normalizedExtraColumnCount({
+  extraColumnCount,
+  variant,
+}: Pick<JsonTableDemoProfileOptions, "extraColumnCount" | "variant">) {
+  if (variant === "default") return 0
+  if (extraColumnCount === undefined) return maxLargeTransactionExtraColumnCount
+  if (!Number.isFinite(extraColumnCount))
+    return maxLargeTransactionExtraColumnCount
+  return Math.max(
+    0,
+    Math.min(maxLargeTransactionExtraColumnCount, Math.floor(extraColumnCount))
+  )
+}
+
+function normalizedRowCount({
+  rowCount,
+  sampleRowCount,
+  variant,
+}: Pick<JsonTableDemoProfileOptions, "rowCount" | "variant"> & {
+  sampleRowCount: number
+}) {
+  if (rowCount !== undefined && Number.isFinite(rowCount)) {
+    return Math.max(1, Math.floor(rowCount))
+  }
+  return variant === "large" ? 720 : sampleRowCount
+}
+
+function createDemoSchema(profileOptions: JsonTableDemoProfileOptions) {
+  if (profileOptions.variant === "default") return demoSchema
+  const extraColumnCount = normalizedExtraColumnCount(profileOptions)
 
   const transactions = demoSchema.properties?.transactions as
     | Record<string, unknown>
@@ -169,7 +229,22 @@ function createDemoSchema(profileVariant: JsonTableDemoProfileVariant) {
                 },
               },
             },
-            ...largeTransactionExtraProperties,
+            ...largeTransactionExtraProperties(extraColumnCount),
+            profile_far_note: {
+              type: "string",
+              title: "Profile Far Note",
+            },
+            profile_far_status: {
+              type: "string",
+              enum: ["new", "reviewed", "archived", "legacy_disabled_status"],
+              "x-disabled-enum-values": ["legacy_disabled_status"],
+              title: "Profile Far Status",
+            },
+            profile_far_date: {
+              type: "string",
+              format: "date",
+              title: "Profile Far Date",
+            },
           },
         },
       },
@@ -177,9 +252,9 @@ function createDemoSchema(profileVariant: JsonTableDemoProfileVariant) {
   } as JSONSchema7
 }
 
-function createDemoDocument(profileVariant: JsonTableDemoProfileVariant) {
+function createDemoDocument(profileOptions: JsonTableDemoProfileOptions) {
   const transactions = Array.isArray(data.transactions)
-    ? demoTransactions(profileVariant)
+    ? demoTransactions(profileOptions)
     : data.transactions
 
   return {
@@ -191,11 +266,15 @@ function createDemoDocument(profileVariant: JsonTableDemoProfileVariant) {
   } satisfies TableDocument
 }
 
-function demoTransactions(profileVariant: JsonTableDemoProfileVariant) {
+function demoTransactions(profileOptions: JsonTableDemoProfileOptions) {
   const sampleTransactions = Array.isArray(data.transactions)
     ? data.transactions
     : []
-  const rowCount = profileVariant === "large" ? 720 : sampleTransactions.length
+  const rowCount = normalizedRowCount({
+    ...profileOptions,
+    sampleRowCount: sampleTransactions.length,
+  })
+  const extraColumnCount = normalizedExtraColumnCount(profileOptions)
 
   return Array.from({ length: rowCount }, (_, index) => {
     const source = sampleTransactions[index % sampleTransactions.length]
@@ -204,7 +283,7 @@ function demoTransactions(profileVariant: JsonTableDemoProfileVariant) {
         ? (source as Record<string, unknown>)
         : {}
 
-    if (profileVariant === "default") {
+    if (profileOptions.variant === "default") {
       return { ...base, is_reconciled: index % 3 === 0 }
     }
 
@@ -215,15 +294,17 @@ function demoTransactions(profileVariant: JsonTableDemoProfileVariant) {
       description: `${String(base.description ?? "Transaction")} / profile row ${index} / ${"long-description ".repeat(index % 5)}`,
       is_reconciled: index % 3 === 0,
       merchant_category:
-        index % 11 === 0 ? undefined : index % 2 === 0 ? "office_supplies" : "travel_and_lodging",
+        index % 11 === 0
+          ? undefined
+          : index % 2 === 0
+            ? "office_supplies"
+            : "travel_and_lodging",
       review:
         index % 7 === 0
           ? undefined
           : {
               status:
-                index % 9 === 0
-                  ? null
-                  : largeReviewStatusValues[index % 3],
+                index % 9 === 0 ? null : largeReviewStatusValues[index % 3],
               priority: (index % 4) + 1,
               nested:
                 index % 5 === 0
@@ -246,31 +327,49 @@ function demoTransactions(profileVariant: JsonTableDemoProfileVariant) {
               sparse_note:
                 index % 10 === 0 ? null : `Sparse note for row ${index}`,
             },
-      ...Object.fromEntries(
-        Array.from({ length: 18 }, (_, extraIndex) => {
-          const key = `profile_extra_${String(extraIndex).padStart(2, "0")}`
-          if ((index + extraIndex) % 13 === 0) return [key, undefined]
-          if (extraIndex % 3 === 0) return [key, index * (extraIndex + 1)]
-          if (extraIndex % 3 === 1) {
-            return [key, `extra-${extraIndex}-${index}-${"x".repeat(index % 12)}`]
-          }
-          return [key, (index + extraIndex) % 2 === 0]
-        })
-      ),
+      ...largeTransactionExtraValues({ extraColumnCount, index }),
+      profile_far_note: `far profile note ${index}`,
+      profile_far_status:
+        index % 5 === 0 ? "archived" : index % 2 === 0 ? "reviewed" : "new",
+      profile_far_date: `2025-08-${String((index % 28) + 1).padStart(2, "0")}`,
     }
   })
 }
 
 export function JsonTableDemo({
+  profileExtraColumnCount,
+  profileJumpOverscan,
+  profileOverscan,
+  profileRowCount,
   profileVariant = "default",
 }: {
+  profileExtraColumnCount?: number
+  profileJumpOverscan?: number
+  profileOverscan?: number
+  profileRowCount?: number
   profileVariant?: JsonTableDemoProfileVariant
 }) {
+  const profileOptions = React.useMemo<JsonTableDemoProfileOptions>(
+    () => ({
+      extraColumnCount: profileExtraColumnCount,
+      jumpOverscan: profileJumpOverscan,
+      overscan: profileOverscan,
+      rowCount: profileRowCount,
+      variant: profileVariant,
+    }),
+    [
+      profileExtraColumnCount,
+      profileJumpOverscan,
+      profileOverscan,
+      profileRowCount,
+      profileVariant,
+    ]
+  )
   const [document, setDocument] = React.useState<TableDocument>(() =>
-    createDemoDocument(profileVariant)
+    createDemoDocument(profileOptions)
   )
   const [currentSchema, setSchema] = React.useState<JSONSchema7>(() =>
-    createDemoSchema(profileVariant)
+    createDemoSchema(profileOptions)
   )
   const [jsonEditMode, setJsonEditMode] =
     React.useState<JsonTableJsonEditMode>("readOnly")
@@ -323,6 +422,8 @@ export function JsonTableDemo({
           jsonEditMode={jsonEditMode}
           schemaEditMode={schemaEditMode}
           onUpdateDocument={updateDocument}
+          overscan={profileOptions.overscan}
+          jumpOverscan={profileOptions.jumpOverscan}
         />
       </div>
     </div>

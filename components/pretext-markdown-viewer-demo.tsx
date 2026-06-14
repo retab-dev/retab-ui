@@ -1,19 +1,10 @@
 "use client"
 
+import * as React from "react"
+
 import { PretextMarkdownViewer } from "@/components/ui/pretext-markdown-viewer"
 
 const PRETEXT_MARKDOWN_VIEWER_DEMO_TEXT = [
-  "---",
-  "title: Pretext Markdown Viewer Comprehensive Demo",
-  "version: 2026.06",
-  "owner: Viewer Systems",
-  "tags:",
-  "  - markdown",
-  "  - virtualization",
-  "  - diagrams",
-  "  - rich-documents",
-  "---",
-  "",
   "# Pretext Markdown Viewer",
   "",
   "The Pretext Markdown Viewer is a continuous Markdown reading surface for very large, mixed-format documents. This demo intentionally packs in prose, tables, code, math, alerts, diagrams, media, raw HTML, component markdown, directive syntax, source highlights, footnotes, and lots of sections so the page behaves like a real long report.",
@@ -73,17 +64,17 @@ const PRETEXT_MARKDOWN_VIEWER_DEMO_TEXT = [
   "",
   "## Code Blocks",
   "",
-  "```ts title=\"pretext-markdown-viewer.tsx\" caption=\"A small typed source object passed into the viewer.\"",
-  "import { PretextMarkdownViewer } from \"@/components/ui/pretext-markdown-viewer\"",
+  '```ts title="pretext-markdown-viewer.tsx" caption="A small typed source object passed into the viewer."',
+  'import { PretextMarkdownViewer } from "@/components/ui/pretext-markdown-viewer"',
   "",
   "export function MarkdownReport({ text }: { text: string }) {",
   "  return (",
   "    <PretextMarkdownViewer",
   "      source={{",
-  "        kind: \"text\",",
+  '        kind: "text",',
   "        text,",
-  "        fileName: \"report.md\",",
-  "        mimeType: \"text/markdown\",",
+  '        fileName: "report.md",',
+  '        mimeType: "text/markdown",',
   "      }}",
   "      highlight={{ start: 42, end: 48 }}",
   "    />",
@@ -91,7 +82,7 @@ const PRETEXT_MARKDOWN_VIEWER_DEMO_TEXT = [
   "}",
   "```",
   "",
-  "```python title=\"score_pipeline.py\" caption=\"Syntax highlighting should stay readable in long reports.\"",
+  '```python title="score_pipeline.py" caption="Syntax highlighting should stay readable in long reports."',
   "from dataclasses import dataclass",
   "",
   "@dataclass(frozen=True)",
@@ -102,22 +93,33 @@ const PRETEXT_MARKDOWN_VIEWER_DEMO_TEXT = [
   "def summarize(scores: list[Score]) -> dict[str, float]:",
   "    return {score.label: round(score.value, 3) for score in scores}",
   "",
-  "print(summarize([Score(\"precision\", 0.982), Score(\"recall\", 0.967)]))",
+  'print(summarize([Score("precision", 0.982), Score("recall", 0.967)]))',
   "```",
   "",
-  "```json title=\"viewer-resource.json\"",
+  '```json title="viewer-resource.json"',
   "{",
-  "  \"kind\": \"url\",",
-  "  \"url\": \"/samples/release-notes.md\",",
-  "  \"fileName\": \"release-notes.md\",",
-  "  \"mimeType\": \"text/markdown\"",
+  '  "kind": "url",',
+  '  "url": "/samples/release-notes.md",',
+  '  "fileName": "release-notes.md",',
+  '  "mimeType": "text/markdown"',
   "}",
   "```",
   "",
-  "```diff title=\"review.patch\"",
+  '```diff title="review.patch"',
   "- render one page at a time",
   "+ render one continuous virtual document",
   "+ measure visible chunks and preserve scroll anchors",
+  "```",
+  "",
+  '```yaml title="frontmatter-example.yaml" caption="Frontmatter-shaped metadata shown as code in this demo."',
+  "title: Pretext Markdown Viewer Comprehensive Demo",
+  "version: 2026.06",
+  "owner: Viewer Systems",
+  "tags:",
+  "  - markdown",
+  "  - virtualization",
+  "  - diagrams",
+  "  - rich-documents",
   "```",
   "",
   "## Diagrams",
@@ -142,7 +144,7 @@ const PRETEXT_MARKDOWN_VIEWER_DEMO_TEXT = [
   "  Viewer-->>User: stable rendered window",
   "```",
   "",
-  "<Diagram type=\"mermaid\" title=\"Component diagram\" source=\"graph TD; Source[Source]-->Policy[Policy]; Policy-->Renderer[Renderer]; Renderer-->Document[Document]\" />",
+  '<Diagram type="mermaid" title="Component diagram" source="graph TD; Source[Source]-->Policy[Policy]; Policy-->Renderer[Renderer]; Renderer-->Document[Document]" />',
   "",
   "## Math",
   "",
@@ -154,23 +156,23 @@ const PRETEXT_MARKDOWN_VIEWER_DEMO_TEXT = [
   "",
   "## Components And Directives",
   "",
-  "<Metric label=\"Parse accuracy\" value=\"99.2%\" />",
-  "<Metric label=\"Mounted chunks\" value=\"small window\" />",
-  "<Badge label=\"Stable\" tone=\"success\" /> <Badge label=\"Watch\" tone=\"warning\" /> <Badge label=\"Policy\" tone=\"info\" />",
+  '<Metric label="Parse accuracy" value="99.2%" />',
+  '<Metric label="Mounted chunks" value="small window" />',
+  '<Badge label="Stable" tone="success" /> <Badge label="Watch" tone="warning" /> <Badge label="Policy" tone="info" />',
   "",
-  "<Callout kind=\"warning\" title=\"Review generated reports\">",
+  '<Callout kind="warning" title="Review generated reports">',
   "Component Markdown can contain **safe Markdown children**, lists, `inline code`, and links to [local sections](#code-blocks).",
   "</Callout>",
   "",
-  ":::tip{title=\"Directive callout\"}",
+  ':::tip{title="Directive callout"}',
   "Directive callouts use the same safe callout surface as component Markdown.",
   ":::",
   "",
-  "::metric{label=\"Directive metric\" value=\"42 ms\"}",
-  ":badge[Directive badge]{tone=\"success\"}",
-  "::diagram{type=\"mermaid\" title=\"Directive diagram\" source=\"graph LR; A[Directive]-->B[Component]; B-->C[Rendered]\"}",
+  '::metric{label="Directive metric" value="42 ms"}',
+  ':badge[Directive badge]{tone="success"}',
+  '::diagram{type="mermaid" title="Directive diagram" source="graph LR; A[Directive]-->B[Component]; B-->C[Rendered]"}',
   "",
-  "<Accordion title=\"Expandable audit notes\">",
+  '<Accordion title="Expandable audit notes">',
   "",
   "- Accordion content preserves Markdown children.",
   "- It can include `inline code`, **formatting**, and references.[^accordion]",
@@ -180,23 +182,23 @@ const PRETEXT_MARKDOWN_VIEWER_DEMO_TEXT = [
   "",
   "[^accordion]: This footnote originates inside a component-adjacent part of the sample.",
   "",
-  "::::tabs{label=\"Viewer states\"}",
-  ":::tab{title=\"Rendered\"}",
+  '::::tabs{label="Viewer states"}',
+  ':::tab{title="Rendered"}',
   "Rendered mode shows polished Markdown semantics.",
   ":::",
-  ":::tab{title=\"Text\"}",
+  ':::tab{title="Text"}',
   "Text mode keeps source line numbers and raw Markdown characters.",
   ":::",
-  ":::tab{title=\"Policy\"}",
+  ':::tab{title="Policy"}',
   "Unsafe component props and unsupported component names render inertly.",
   ":::",
   "::::",
   "",
   "## Media",
   "",
-  "![Dashboard preview](/samples/dashboard-preview.svg \"Safe SVG image rendered through the image surface\")",
+  '![Dashboard preview](/samples/dashboard-preview.svg "Safe SVG image rendered through the image surface")',
   "",
-  "::image{src=\"/samples/attention-page-1.png\" alt=\"Attention sample page\" title=\"PNG image loaded from public samples\"}",
+  '::image{src="/samples/attention-page-1.png" alt="Attention sample page" title="PNG image loaded from public samples"}',
   "",
   "## Raw HTML Policy",
   "",
@@ -225,48 +227,53 @@ const PRETEXT_MARKDOWN_VIEWER_DEMO_TEXT = [
   "",
   "---",
   "",
-  ...Array.from(
-    { length: 36 },
-    (_, index) => {
-      const section = index + 1
-      return [
-        `## Long Report Section ${section}`,
-        "",
-        `This section gives the demo enough length to behave like a multi-page report while staying in one continuous scroll surface. It includes paragraph ${section} with repeated semantic variety, a local anchor target, and enough text for wrapping and measured-height correction.`,
-        "",
-        `- Section ${section} checklist item A with **bold context** and :sparkles:.`,
-        `- Section ${section} checklist item B with \`inline_${section}\` code and a long-token guard: retab_pretext_markdown_viewer_section_${section}_unbroken_identifier_for_wrapping_verification.`,
-        `- Section ${section} checklist item C with a nested ordered list:`,
-        "  1. Capture scroll anchor.",
-        "  2. Recompute layout.",
-        "  3. Restore viewport position.",
-        "",
-        `| Metric | Value |`,
-        `| --- | ---: |`,
-        `| Section | ${section} |`,
-        `| Estimated chunks | ${section * 3} |`,
-        `| Mounted window | visible only |`,
-        "",
-        "> [!NOTE]",
-        `> Repeated section ${section} keeps alert rendering common across the long document.`,
-      ].join("\n")
-    }
-  ),
+  ...Array.from({ length: 36 }, (_, index) => {
+    const section = index + 1
+    return [
+      `## Long Report Section ${section}`,
+      "",
+      `This section gives the demo enough length to behave like a multi-page report while staying in one continuous scroll surface. It includes paragraph ${section} with repeated semantic variety, a local anchor target, and enough text for wrapping and measured-height correction.`,
+      "",
+      `- Section ${section} checklist item A with **bold context** and :sparkles:.`,
+      `- Section ${section} checklist item B with \`inline_${section}\` code and a long-token guard: retab_pretext_markdown_viewer_section_${section}_unbroken_identifier_for_wrapping_verification.`,
+      `- Section ${section} checklist item C with a nested ordered list:`,
+      "  1. Capture scroll anchor.",
+      "  2. Recompute layout.",
+      "  3. Restore viewport position.",
+      "",
+      `| Metric | Value |`,
+      `| --- | ---: |`,
+      `| Section | ${section} |`,
+      `| Estimated chunks | ${section * 3} |`,
+      `| Mounted window | visible only |`,
+      "",
+      "> [!NOTE]",
+      `> Repeated section ${section} keeps alert rendering common across the long document.`,
+    ].join("\n")
+  }),
 ].join("\n")
 
 export function PretextMarkdownViewerDemo() {
+  const [isMounted, setIsMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
   return (
     <div className="not-prose my-6 h-[620px] min-h-0">
-      <PretextMarkdownViewer
-        source={{
-          kind: "text",
-          text: PRETEXT_MARKDOWN_VIEWER_DEMO_TEXT,
-          fileName: "pretext-release-notes.md",
-          mimeType: "text/markdown",
-        }}
-        className="h-full"
-        highlight={{ start: 7, end: 7 }}
-      />
+      {isMounted ? (
+        <PretextMarkdownViewer
+          source={{
+            kind: "text",
+            text: PRETEXT_MARKDOWN_VIEWER_DEMO_TEXT,
+            fileName: "pretext-release-notes.md",
+            mimeType: "text/markdown",
+          }}
+          className="h-full"
+          highlight={{ start: 7, end: 7 }}
+        />
+      ) : null}
     </div>
   )
 }

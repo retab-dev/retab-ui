@@ -24,7 +24,10 @@ import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-
 import { useSheetOptionsStore } from "@/components/json-table/table-options-store"
 import type { RowHeight } from "@/components/json-table/table-options-store"
 
-import { createTestCellCommitBridge } from "./json-table-interaction-test-utils"
+import {
+  createTestCellCommitBridge,
+  primitiveEventTarget,
+} from "./json-table-interaction-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
 
 type StressLine = {
@@ -32,6 +35,17 @@ type StressLine = {
   amount: number
   status: "draft" | "paid" | "void"
   shipped_at: string
+  reference: string
+  category: "travel" | "office" | "meals"
+  owner: string
+  memo: string
+  approved: boolean
+  posted_at: string
+  audit_code: string
+  batch: string
+  far_note: string
+  far_status: "new" | "reviewed" | "archived"
+  far_date: string
 }
 
 const stressSchema: JSONSchema7 = {
@@ -46,6 +60,23 @@ const stressSchema: JSONSchema7 = {
           amount: { type: "number" },
           status: { type: "string", enum: ["draft", "paid", "void"] },
           shipped_at: { type: "string", format: "date" },
+          reference: { type: "string" },
+          category: {
+            type: "string",
+            enum: ["travel", "office", "meals"],
+          },
+          owner: { type: "string" },
+          memo: { type: "string" },
+          approved: { type: "boolean" },
+          posted_at: { type: "string", format: "date" },
+          audit_code: { type: "string" },
+          batch: { type: "string" },
+          far_note: { type: "string" },
+          far_status: {
+            type: "string",
+            enum: ["new", "reviewed", "archived"],
+          },
+          far_date: { type: "string", format: "date" },
         },
       },
     },
@@ -73,16 +104,30 @@ function linesDocument(rowCount = 64): TableDocument {
   return {
     id: "doc_lines",
     data: {
-      lines: Array.from(
-        { length: rowCount },
-        (_, index): StressLine => ({
-          name: `line ${index}`,
-          amount: index + 1,
-          status: "draft",
-          shipped_at: "2024-01-02",
-        })
+      lines: Array.from({ length: rowCount }, (_, index) =>
+        expectedStressLine(index)
       ),
     },
+  }
+}
+
+function expectedStressLine(index: number): StressLine {
+  return {
+    name: `line ${index}`,
+    amount: index + 1,
+    status: "draft",
+    shipped_at: "2024-01-02",
+    reference: `ref-${index}`,
+    category: index % 2 === 0 ? "office" : "travel",
+    owner: `owner-${index % 5}`,
+    memo: `memo ${index}`,
+    approved: index % 3 === 0,
+    posted_at: "2024-01-03",
+    audit_code: `audit-${index}`,
+    batch: `batch-${index % 4}`,
+    far_note: `far note ${index}`,
+    far_status: "new",
+    far_date: "2024-01-04",
   }
 }
 
@@ -265,6 +310,13 @@ function setViewportHeight(container: HTMLElement, height: number) {
   })
 }
 
+function setViewportWidth(container: HTMLElement, width: number) {
+  Object.defineProperty(viewport(container), "clientWidth", {
+    configurable: true,
+    value: width,
+  })
+}
+
 async function scrollToRow(
   container: HTMLElement,
   rowIndex: number,
@@ -278,6 +330,26 @@ async function scrollToRow(
     const scrollTop = rowIndex * rowHeightPx
     element.scrollTop = scrollTop
     fireEvent.scroll(element, { target: { scrollTop } })
+    element.dispatchEvent(new window.Event("scroll"))
+  })
+  await act(async () => {
+    await Promise.resolve()
+  })
+}
+
+async function scrollToColumn(
+  container: HTMLElement,
+  columnIndex: number,
+  columnWidthPx = 160
+) {
+  await act(async () => {
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+  })
+  await act(async () => {
+    const element = viewport(container)
+    const scrollLeft = columnIndex * columnWidthPx
+    element.scrollLeft = scrollLeft
+    fireEvent.scroll(element, { target: { scrollLeft } })
     element.dispatchEvent(new window.Event("scroll"))
   })
   await act(async () => {
@@ -311,7 +383,7 @@ async function waitForCell(container: HTMLElement, fieldPath: string) {
 
 function pointerDownCell(container: HTMLElement, fieldPath: string) {
   const element = cell(container, fieldPath)
-  fireEvent.pointerDown(element, {
+  fireEvent.pointerDown(primitiveEventTarget(element), {
     button: 0,
     buttons: 1,
     clientX: 16,
@@ -325,7 +397,7 @@ function pointerDownCell(container: HTMLElement, fieldPath: string) {
 
 function clickCell(container: HTMLElement, fieldPath: string) {
   const element = cell(container, fieldPath)
-  fireEvent.click(element, {
+  fireEvent.click(primitiveEventTarget(element), {
     button: 0,
     clientX: 16,
     clientY: 16,
@@ -367,14 +439,27 @@ function expectOnlyLineChanged({
   expect(lines[rowIndex]?.[field]).toBe(value)
   for (const [index, line] of lines.entries()) {
     if (index === rowIndex) continue
-    expect(line).toEqual({
-      name: `line ${index}`,
-      amount: index + 1,
-      status: "draft",
-      shipped_at: "2024-01-02",
-    })
+    expect(line).toEqual(expectedStressLine(index))
   }
 }
+
+const wideVisiblePaths = [
+  "lines.*.name",
+  "lines.*.amount",
+  "lines.*.status",
+  "lines.*.shipped_at",
+  "lines.*.reference",
+  "lines.*.category",
+  "lines.*.owner",
+  "lines.*.memo",
+  "lines.*.approved",
+  "lines.*.posted_at",
+  "lines.*.audit_code",
+  "lines.*.batch",
+  "lines.*.far_note",
+  "lines.*.far_status",
+  "lines.*.far_date",
+]
 
 async function expectNoPickerPortal() {
   await waitFor(() => expect(pickerPopup()).toBeNull())
@@ -382,6 +467,129 @@ async function expectNoPickerPortal() {
 }
 
 describe("json table virtualization stress hardening", () => {
+  it("mounts the editable body column window for the current horizontal viewport", async () => {
+    const restoreAnimationFrame = installSynchronousAnimationFrame()
+    const view = renderStressTable({
+      rowCount: 4,
+      visiblePaths: wideVisiblePaths,
+      overscan: 1,
+      jumpOverscan: 1,
+    })
+
+    try {
+      await waitForCell(view.container, "lines.0.name")
+      setViewportHeight(view.container, 64)
+      setViewportWidth(view.container, 320)
+      await scrollToColumn(view.container, 0)
+
+      await waitFor(() =>
+        expect(queryCell(view.container, "lines.0.far_note")).toBeNull()
+      )
+      expect(queryCell(view.container, "lines.0.name")).toBeTruthy()
+      expect(queryCell(view.container, "lines.0.amount")).toBeTruthy()
+
+      await scrollToColumn(view.container, 10)
+
+      await waitForCell(view.container, "lines.0.far_note")
+      expect(queryCell(view.container, "lines.0.far_status")).toBeTruthy()
+      expect(queryCell(view.container, "lines.0.far_date")).toBeTruthy()
+      expect(queryCell(view.container, "lines.0.name")).toBeNull()
+      expect(
+        view.container.querySelector<HTMLElement>(
+          '[data-slot="json-table-column-spacer"]'
+        )?.style.width
+      ).not.toBe("0px")
+    } finally {
+      restoreAnimationFrame()
+    }
+  })
+
+  it("edits far text, enum, and date cells after horizontal column virtualization", async () => {
+    const restoreAnimationFrame = installSynchronousAnimationFrame()
+    const onPatch = vi.fn()
+    const view = renderStressTable({
+      rowCount: 4,
+      visiblePaths: wideVisiblePaths,
+      onPatch,
+      overscan: 1,
+      jumpOverscan: 1,
+    })
+
+    try {
+      await waitForCell(view.container, "lines.0.name")
+      setViewportHeight(view.container, 64)
+      setViewportWidth(view.container, 320)
+      await scrollToColumn(view.container, 10)
+      await waitForCell(view.container, "lines.0.far_note")
+
+      pointerDownCell(view.container, "lines.0.far_note")
+      fireEvent.change(view.getByRole("textbox"), {
+        target: { value: "edited far note" },
+      })
+      fireEvent.keyDown(view.getByRole("textbox"), { key: "Enter" })
+
+      await waitFor(() => expect(onPatch).toHaveBeenCalledTimes(1))
+      expectOnlyLineChanged({
+        patch: onPatch.mock.calls[0][0],
+        rowIndex: 0,
+        field: "far_note",
+        value: "edited far note",
+      })
+
+      clickCell(view.container, "lines.0.far_status")
+      expect(await view.findByRole("option", { name: "reviewed" })).toBeTruthy()
+
+      pointerDownCell(view.container, "lines.0.far_date")
+      expect(await view.findByRole("dialog")).toBeTruthy()
+      expect(pickerPopup()).toBeTruthy()
+    } finally {
+      restoreAnimationFrame()
+    }
+  })
+
+  it("preserves pending far-column primitive data across horizontal unmounts", async () => {
+    const restoreAnimationFrame = installSynchronousAnimationFrame()
+    const onPatch = vi.fn()
+    const view = renderStressTable({
+      rowCount: 4,
+      visiblePaths: wideVisiblePaths,
+      applyPatches: false,
+      onPatch,
+      overscan: 1,
+      jumpOverscan: 1,
+    })
+
+    try {
+      await waitForCell(view.container, "lines.0.name")
+      setViewportHeight(view.container, 64)
+      setViewportWidth(view.container, 320)
+      await scrollToColumn(view.container, 10)
+      await waitForCell(view.container, "lines.0.far_note")
+
+      pointerDownCell(view.container, "lines.0.far_note")
+      fireEvent.change(view.getByRole("textbox"), {
+        target: { value: "pending far note" },
+      })
+
+      await scrollToColumn(view.container, 0)
+      await waitFor(() =>
+        expect(queryCell(view.container, "lines.0.far_note")).toBeNull()
+      )
+      await waitFor(() => expect(onPatch).toHaveBeenCalledTimes(1))
+
+      await scrollToColumn(view.container, 10)
+      await waitForCell(view.container, "lines.0.far_note")
+      pointerDownCell(view.container, "lines.0.far_note")
+
+      expect(view.getByRole("textbox")).toHaveProperty(
+        "value",
+        "pending far note"
+      )
+    } finally {
+      restoreAnimationFrame()
+    }
+  })
+
   it.each([
     ["small", 24],
     ["medium", 32],

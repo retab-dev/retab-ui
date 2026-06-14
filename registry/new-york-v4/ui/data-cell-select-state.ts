@@ -7,6 +7,8 @@ import {
   getDataCellSelectPopupPosition,
   type DataCellSelectPopupPosition,
 } from "@/registry/new-york-v4/ui/data-cell-select-popup-position"
+import type { DataCellPrimitiveSession } from "@/registry/new-york-v4/ui/data-cell-session"
+import type { DataCellOpenControl } from "@/registry/new-york-v4/ui/data-cell-control-contract"
 import type {
   DataCellSelectOption,
   DataCellValueMeta,
@@ -39,21 +41,17 @@ export function useDataCellSelectState({
   value,
   placeholder = "Select...",
   formatValue,
-  open: controlledOpen,
+  openState,
   selectOptions,
-  onCommit,
-  onEditingEnd,
-  onOpenChange,
+  session,
 }: {
   popupId: string
   value?: string | null
   placeholder?: string
   formatValue?: DataCellSelectFormatValue
-  open?: boolean
+  openState?: DataCellOpenControl
   selectOptions: DataCellSelectOption[]
-  onCommit?: (value: string | null, meta: DataCellValueMeta) => void
-  onEditingEnd?: () => void
-  onOpenChange?: (open: boolean) => void
+  session: DataCellPrimitiveSession
 }): DataCellSelectState {
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false)
   const [activeOptionIndex, setActiveOptionIndex] = React.useState(-1)
@@ -63,8 +61,8 @@ export function useDataCellSelectState({
   const [popupPosition, setPopupPosition] =
     React.useState<DataCellSelectPopupPosition | null>(null)
   const lastCommittedValueRef = React.useRef<string | null>(null)
-  const didFinishEditingRef = React.useRef(false)
 
+  const controlledOpen = openState?.value
   const open = controlledOpen ?? uncontrolledOpen
   const selectedValue = value ?? null
   const selectedOption = selectOptions.find((option) => option.value === value)
@@ -86,26 +84,20 @@ export function useDataCellSelectState({
         setPopupPosition(null)
       }
       if (controlledOpen === undefined) setUncontrolledOpen(nextOpen)
-      onOpenChange?.(nextOpen)
+      openState?.onChange?.(nextOpen)
     },
-    [controlledOpen, onOpenChange]
+    [controlledOpen, openState]
   )
 
   const keepOpen = React.useCallback(() => {
     if (controlledOpen === undefined) setUncontrolledOpen(true)
-    onOpenChange?.(true)
-  }, [controlledOpen, onOpenChange])
-
-  const finishEditing = React.useCallback(() => {
-    if (didFinishEditingRef.current) return
-    didFinishEditingRef.current = true
-    onEditingEnd?.()
-  }, [onEditingEnd])
+    openState?.onChange?.(true)
+  }, [controlledOpen, openState])
 
   const closeEditor = React.useCallback(() => {
     setOpen(false)
-    finishEditing()
-  }, [finishEditing, setOpen])
+    session.end()
+  }, [session, setOpen])
 
   const openEditor = React.useCallback(
     (trigger: HTMLElement | null) => {
@@ -127,10 +119,10 @@ export function useDataCellSelectState({
         })
       )
       lastCommittedValueRef.current = null
-      didFinishEditingRef.current = false
+      session.reset()
       setOpen(true)
     },
-    [selectOptions, selectedValue, setOpen]
+    [selectOptions, selectedValue, session, setOpen]
   )
 
   const commitValue = React.useCallback(
@@ -142,10 +134,9 @@ export function useDataCellSelectState({
       if (lastCommittedValueRef.current === nextValue) return
       lastCommittedValueRef.current = nextValue
       setOpen(false)
-      onCommit?.(nextValue, selectValueMeta(nextValue))
-      finishEditing()
+      session.commit(nextValue, selectValueMeta(nextValue))
     },
-    [closeEditor, finishEditing, onCommit, selectedValue, setOpen]
+    [closeEditor, selectedValue, session, setOpen]
   )
 
   return {

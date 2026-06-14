@@ -174,6 +174,34 @@ describe("property form models", () => {
     expect(result.current.ids).toEqual(["enum-value-0", "enum-value-1"])
   })
 
+  it("preserves distinct local enum identities for duplicate values", () => {
+    const { result, rerender } = renderHook(
+      ({ values }: { values: string[] }) =>
+        useEnumValueIdentity({ resetKey: "schema-a", values }),
+      {
+        initialProps: {
+          values: ["USD", "USD", "EUR"],
+        },
+      }
+    )
+
+    const [firstUsdId, secondUsdId, eurId] = result.current.ids
+    expect(new Set(result.current.ids).size).toBe(3)
+
+    act(() => {
+      result.current.removeId(secondUsdId)
+    })
+    rerender({ values: ["USD", "EUR"] })
+    expect(result.current.ids).toEqual([firstUsdId, eurId])
+
+    rerender({ values: ["USD", "EUR", "USD"] })
+    expect(result.current.ids[0]).toBe(firstUsdId)
+    expect(result.current.ids[1]).toBe(eurId)
+    expect(result.current.ids[2]).not.toBe(firstUsdId)
+    expect(result.current.ids[2]).not.toBe(secondUsdId)
+    expect(result.current.ids[2]).not.toBe(eurId)
+  })
+
   it("emits only schema enum values from enum field changes", () => {
     const onChange = vi.fn()
     const view = render(

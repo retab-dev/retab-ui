@@ -5,6 +5,12 @@ import type {
   JsonTableStructuredEditSession,
 } from "@/components/json-table/json-table-edit-session"
 
+function jsonTableFocusReturnTarget(shell: HTMLTableCellElement | null) {
+  return (
+    shell?.querySelector<HTMLElement>('[data-slot="data-cell"]') ?? shell
+  )
+}
+
 export function useJsonTableFocusReturn({
   shellRef,
   isCellEditing,
@@ -25,7 +31,9 @@ export function useJsonTableFocusReturn({
       !primitiveActiveCell &&
       !structuredEditSession
     ) {
-      shellRef.current?.focus({ preventScroll: true })
+      jsonTableFocusReturnTarget(shellRef.current)?.focus({
+        preventScroll: true,
+      })
     }
     wasEditingRef.current = isCellEditing
   }, [isCellEditing, primitiveActiveCell, shellRef, structuredEditSession])

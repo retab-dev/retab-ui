@@ -28,6 +28,8 @@ import {
   interactionDocument,
   interactionSchema,
   interactionVisibleColumn,
+  primitiveEventTarget,
+  primitivePendingCellCommit,
   projectedRowsFor,
   renderInteractionRow,
 } from "./json-table-interaction-test-utils"
@@ -91,7 +93,7 @@ function selectableDay() {
 }
 
 async function activatePickerCell(view: RenderedView, fieldPath: string) {
-  fireEvent.pointerDown(await editableCell(view, fieldPath), {
+  fireEvent.pointerDown(primitiveEventTarget(await editableCell(view, fieldPath)), {
     button: 0,
     clientX: 0,
     clientY: 0,
@@ -216,9 +218,11 @@ describe("json table picker overlay hardening", () => {
 
     await waitFor(() =>
       expect(onCellCommit).toHaveBeenCalledWith(
-        "doc_1",
-        "shipped_at",
-        isoDate
+        primitivePendingCellCommit({
+          fieldPath: "shipped_at",
+          value: isoDate,
+          previousValue: "2024-01-02",
+        })
       )
     )
     await expectPopupClosed(view)
@@ -237,9 +241,11 @@ describe("json table picker overlay hardening", () => {
 
     await waitFor(() =>
       expect(onCellCommit).toHaveBeenCalledWith(
-        "doc_1",
-        "reviewed_at",
-        `${isoDate}T09:30`
+        primitivePendingCellCommit({
+          fieldPath: "reviewed_at",
+          value: `${isoDate}T09:30`,
+          previousValue: "2024-01-02T09:30:00Z",
+        })
       )
     )
     expect(pickerPopup()).toBeTruthy()
@@ -257,9 +263,11 @@ describe("json table picker overlay hardening", () => {
     fireEvent.change(timeInput(), { target: { value: "10:45" } })
 
     expect(onCellCommit).toHaveBeenCalledWith(
-      "doc_1",
-      "shipped_time",
-      "10:45:00"
+      primitivePendingCellCommit({
+        fieldPath: "shipped_time",
+        value: "10:45:00",
+        previousValue: "09:30:00",
+      })
     )
     expect(pickerPopup()).toBeTruthy()
     expectOpenAriaLink(trigger)
@@ -276,9 +284,11 @@ describe("json table picker overlay hardening", () => {
     fireEvent.change(timeInput(), { target: { value: "10:45" } })
 
     expect(onCellCommit).toHaveBeenCalledWith(
-      "doc_1",
-      "reviewed_at",
-      "2024-01-02T10:45"
+      primitivePendingCellCommit({
+        fieldPath: "reviewed_at",
+        value: "2024-01-02T10:45",
+        previousValue: "2024-01-02T09:30:00Z",
+      })
     )
     expect(pickerPopup()).toBeTruthy()
     expectOpenAriaLink(trigger)
@@ -295,9 +305,11 @@ describe("json table picker overlay hardening", () => {
     fireEvent.change(timeInput(), { target: { value: "" } })
 
     expect(onCellCommit).toHaveBeenCalledWith(
-      "doc_1",
-      "shipped_time",
-      null
+      primitivePendingCellCommit({
+        fieldPath: "shipped_time",
+        value: null,
+        previousValue: "09:30:00",
+      })
     )
     expect(pickerPopup()).toBeTruthy()
     expectOpenAriaLink(trigger)
@@ -542,7 +554,9 @@ describe("json table virtualized picker overlay cleanup", () => {
       )
 
       fireEvent.pointerDown(
-        virtualCellByFieldPath(view.container, "lines.0.shipped_at"),
+        primitiveEventTarget(
+          virtualCellByFieldPath(view.container, "lines.0.shipped_at")
+        ),
         {
           button: 0,
           clientX: 0,

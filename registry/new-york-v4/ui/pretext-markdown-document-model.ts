@@ -71,6 +71,7 @@ export type PretextMarkdownBlockKind =
 
 export interface PretextMarkdownDocument {
   blocks: PretextMarkdownBlock[]
+  frontmatter?: PretextMarkdownFrontmatter
   headings: PretextMarkdownHeading[]
   chunks: PretextMarkdownChunk[]
   referenceDefinitionsMarkdown: string
@@ -83,12 +84,30 @@ export interface PretextMarkdownHeading {
   blockId: string
   id: string
   chunkIndex: number
+  sourceOffset: number
   sourceLine: number
   text: string
 }
 
+export interface PretextMarkdownFrontmatter {
+  entries: PretextMarkdownFrontmatterEntry[]
+  language: PretextMarkdownFrontmatterLanguage
+  markdown: string
+  sourceEndOffset: number
+  sourceEndLine: number
+  sourceStartOffset: number
+  sourceStartLine: number
+}
+
+export interface PretextMarkdownFrontmatterEntry {
+  key: string
+  value: string
+  valueKind: "boolean" | "number" | "string"
+}
+
 export interface PretextMarkdownBlock {
   chunkIndex: number
+  frontmatterEntries?: PretextMarkdownFrontmatterEntry[]
   headingId?: string
   id: string
   index: number
@@ -97,19 +116,24 @@ export interface PretextMarkdownBlock {
   kind: PretextMarkdownBlockKind
   listStart?: number
   markdown: string
+  sourceEndOffset: number
   sourceEndLine: number
+  sourceStartOffset: number
   sourceStartLine: number
 }
 
 export interface PretextMarkdownChunk {
   blockIds: string[]
+  frontmatterEntries?: PretextMarkdownFrontmatterEntry[]
   frontmatterLanguage?: PretextMarkdownFrontmatterLanguage
   headingIds: string[]
   index: number
   isHostile: boolean
   kind: PretextMarkdownChunkKind
   markdown: string
+  sourceEndOffset: number
   sourceEndLine: number
+  sourceStartOffset: number
   sourceStartLine: number
 }
 
@@ -126,11 +150,16 @@ export function createPretextMarkdownDocument(
     markdown,
     sourceLineCount
   )
+  const frontmatter =
+    chunks[0]?.kind === "frontmatter"
+      ? createPretextMarkdownFrontmatter(chunks[0])
+      : undefined
   const referenceDefinitionsMarkdown =
     collectPretextMarkdownReferenceDefinitions(markdown)
 
   return {
     blocks,
+    ...(frontmatter ? { frontmatter } : {}),
     headings,
     chunks,
     referenceDefinitionsMarkdown,
@@ -166,31 +195,48 @@ function createPretextMarkdownChunks(
   const chunks: PretextMarkdownChunk[] = []
   const headings: PretextMarkdownHeading[] = []
   const headingIds: HeadingIdRegistry = new Map()
+  const sourceLineOffsets = createSourceLineOffsets(markdown)
   const frontmatter = extractFrontmatter(markdown)
   const body = frontmatter ? frontmatter.body : markdown
   const bodyStartLine = frontmatter ? frontmatter.endLine + 1 : 1
 
   if (frontmatter) {
     const chunkIndex = chunks.length
+    const sourceStartOffset = getSourceLineStartOffset(sourceLineOffsets, 1)
+    const sourceEndOffset = getSourceLineEndOffset(
+      sourceLineOffsets,
+      frontmatter.endLine,
+      markdown.length
+    )
+    const frontmatterEntries = parsePretextMarkdownFrontmatterEntries({
+      language: frontmatter.language,
+      markdown: frontmatter.text,
+    })
     const block = createPretextMarkdownBlock({
       blockIds,
       blocks,
       chunkIndex,
+      frontmatterEntries,
       isHostile: false,
       kind: "frontmatter",
       markdown: frontmatter.text,
+      sourceEndOffset,
       sourceEndLine: frontmatter.endLine,
+      sourceStartOffset,
       sourceStartLine: 1,
     })
     chunks.push({
       blockIds: [block.id],
+      frontmatterEntries,
       headingIds: [],
       index: chunkIndex,
       frontmatterLanguage: frontmatter.language,
       isHostile: false,
       kind: "frontmatter",
       markdown: frontmatter.text,
+      sourceEndOffset,
       sourceEndLine: frontmatter.endLine,
+      sourceStartOffset,
       sourceStartLine: 1,
     })
   }
@@ -201,8 +247,10 @@ function createPretextMarkdownChunks(
     headingIds,
     headings,
     markdown: body,
+    sourceLineOffsets,
     sourceEndLine: sourceLineCount,
     sourceStartLine: bodyStartLine,
+    textLength: markdown.length,
     startIndex: chunks.length,
   })
   chunks.push(...bodyChunks)
@@ -215,7 +263,9 @@ function createPretextMarkdownChunks(
       isHostile: false,
       kind: "markdown",
       markdown,
+      sourceEndOffset: markdown.length,
       sourceEndLine: sourceLineCount,
+      sourceStartOffset: 0,
       sourceStartLine: 1,
     })
   }
@@ -229,8 +279,10 @@ function createMarkdownBodyChunks({
   headingIds,
   headings,
   markdown,
+  sourceLineOffsets,
   sourceEndLine,
   sourceStartLine,
+  textLength,
   startIndex,
 }: {
   blockIds: BlockIdRegistry
@@ -238,8 +290,10 @@ function createMarkdownBodyChunks({
   headingIds: HeadingIdRegistry
   headings: PretextMarkdownHeading[]
   markdown: string
+  sourceLineOffsets: SourceLineOffsets
   sourceEndLine: number
   sourceStartLine: number
+  textLength: number
   startIndex: number
 }) {
   const chunks: PretextMarkdownChunk[] = []
@@ -248,8 +302,13 @@ function createMarkdownBodyChunks({
   try {
     const tokens = parsePretextMarkdownTokens(markdown)
     let cursorLine = sourceStartLine
+    let cursorOffset = getSourceLineStartOffset(
+      sourceLineOffsets,
+      sourceStartLine
+    )
     let chunkBlockIds: string[] = []
     let chunkStartLine = sourceStartLine
+    let chunkStartOffset = cursorOffset
     let chunkHeadingIds: string[] = []
     let chunkIsHostile = false
     let chunkRaw = ""
@@ -261,17 +320,27 @@ function createMarkdownBodyChunks({
         chunkLineCount = 0
         chunkIsHostile = false
         chunkStartLine = endLine + 1
+        chunkStartOffset = getSourceLineStartOffset(
+          sourceLineOffsets,
+          chunkStartLine
+        )
         return
       }
       const chunkIndex = startIndex + chunks.length
+      const chunkMarkdown = chunkRaw.replace(/\n+$/g, "")
       chunks.push({
         blockIds: chunkBlockIds,
         headingIds: chunkHeadingIds,
         index: chunkIndex,
         isHostile: chunkIsHostile,
         kind: "markdown",
-        markdown: chunkRaw.replace(/\n+$/g, ""),
+        markdown: chunkMarkdown,
+        sourceEndOffset: Math.min(
+          textLength,
+          chunkStartOffset + chunkMarkdown.length
+        ),
         sourceEndLine: Math.max(chunkStartLine, endLine),
+        sourceStartOffset: chunkStartOffset,
         sourceStartLine: chunkStartLine,
       })
       chunkRaw = ""
@@ -280,6 +349,10 @@ function createMarkdownBodyChunks({
       chunkBlockIds = []
       chunkHeadingIds = []
       chunkStartLine = endLine + 1
+      chunkStartOffset = getSourceLineStartOffset(
+        sourceLineOffsets,
+        chunkStartLine
+      )
     }
 
     for (const token of tokens) {
@@ -287,11 +360,14 @@ function createMarkdownBodyChunks({
       const tokenLineCount = countLineBreaks(raw)
       const tokenLineBreaks = countLineSeparators(raw)
       const tokenStartLine = cursorLine
+      const tokenStartOffset = cursorOffset
+      const tokenEndOffset = Math.min(textLength, tokenStartOffset + raw.length)
       const tokenEndLine = Math.min(
         sourceEndLine,
         Math.max(tokenStartLine, cursorLine + Math.max(0, tokenLineCount - 1))
       )
       cursorLine += tokenLineBreaks
+      cursorOffset = tokenEndOffset
 
       if (token.kind === "space") {
         chunkRaw += raw
@@ -312,6 +388,7 @@ function createMarkdownBodyChunks({
       if (shouldStartNewChunk || wouldExceedMax || tokenIsHostile) {
         flushChunk(Math.max(chunkStartLine, tokenStartLine - 1))
         chunkStartLine = tokenStartLine
+        chunkStartOffset = tokenStartOffset
       }
 
       const chunkIndex = startIndex + chunks.length
@@ -323,7 +400,9 @@ function createMarkdownBodyChunks({
         isHostile: tokenIsHostile,
         kind: blockKind,
         markdown: raw,
+        sourceEndOffset: tokenEndOffset,
         sourceEndLine: tokenEndLine,
+        sourceStartOffset: tokenStartOffset,
         sourceStartLine: tokenStartLine,
       })
       chunkBlockIds.push(block.id)
@@ -337,6 +416,7 @@ function createMarkdownBodyChunks({
           blockId: block.id,
           id,
           chunkIndex,
+          sourceOffset: tokenStartOffset,
           sourceLine: tokenStartLine,
           text,
         })
@@ -365,7 +445,12 @@ function createMarkdownBodyChunks({
       isHostile: isHostilePretextMarkdownChunk(markdown),
       kind: "unknown",
       markdown,
+      sourceEndOffset: textLength,
       sourceEndLine,
+      sourceStartOffset: getSourceLineStartOffset(
+        sourceLineOffsets,
+        sourceStartLine
+      ),
       sourceStartLine,
     })
     chunks.push({
@@ -375,7 +460,9 @@ function createMarkdownBodyChunks({
       isHostile: block.isHostile,
       kind: "markdown",
       markdown,
+      sourceEndOffset: block.sourceEndOffset,
       sourceEndLine,
+      sourceStartOffset: block.sourceStartOffset,
       sourceStartLine,
     })
   }
@@ -448,33 +535,196 @@ function createPretextMarkdownBlock({
   blockIds,
   blocks,
   chunkIndex,
+  frontmatterEntries,
   isHostile,
   kind,
   markdown,
+  sourceEndOffset,
   sourceEndLine,
+  sourceStartOffset,
   sourceStartLine,
 }: {
   blockIds: BlockIdRegistry
   blocks: PretextMarkdownBlock[]
   chunkIndex: number
+  frontmatterEntries?: PretextMarkdownFrontmatterEntry[]
   isHostile: boolean
   kind: PretextMarkdownBlockKind
   markdown: string
+  sourceEndOffset: number
   sourceEndLine: number
+  sourceStartOffset: number
   sourceStartLine: number
 }) {
   const block: PretextMarkdownBlock = {
     chunkIndex,
+    frontmatterEntries,
     id: createMarkdownBlockId({ blockIds, kind, sourceStartLine }),
     index: blocks.length,
     isHostile,
     kind,
     markdown,
+    sourceEndOffset,
     sourceEndLine,
+    sourceStartOffset,
     sourceStartLine,
   }
   blocks.push(block)
   return block
+}
+
+function createPretextMarkdownFrontmatter(
+  chunk: PretextMarkdownChunk
+): PretextMarkdownFrontmatter | undefined {
+  if (!chunk.frontmatterLanguage) return undefined
+  return {
+    entries: chunk.frontmatterEntries ?? [],
+    language: chunk.frontmatterLanguage,
+    markdown: chunk.markdown,
+    sourceEndOffset: chunk.sourceEndOffset,
+    sourceEndLine: chunk.sourceEndLine,
+    sourceStartOffset: chunk.sourceStartOffset,
+    sourceStartLine: chunk.sourceStartLine,
+  }
+}
+
+interface SourceLineOffsets {
+  ends: number[]
+  starts: number[]
+}
+
+function createSourceLineOffsets(text: string): SourceLineOffsets {
+  const starts: number[] = []
+  const ends: number[] = []
+  const lineSeparatorPattern = /\r\n|[\n\r\u2028\u2029]/g
+  let lineStart = 0
+  let match: RegExpExecArray | null
+
+  while ((match = lineSeparatorPattern.exec(text))) {
+    starts.push(lineStart)
+    ends.push(match.index)
+    lineStart = match.index + match[0].length
+  }
+
+  starts.push(lineStart)
+  ends.push(text.length)
+  return { ends, starts }
+}
+
+function getSourceLineStartOffset(offsets: SourceLineOffsets, line: number) {
+  return (
+    offsets.starts[Math.max(0, line - 1)] ??
+    offsets.ends[offsets.ends.length - 1] ??
+    0
+  )
+}
+
+function getSourceLineEndOffset(
+  offsets: SourceLineOffsets,
+  line: number,
+  textLength: number
+) {
+  return offsets.ends[Math.max(0, line - 1)] ?? textLength
+}
+
+function parsePretextMarkdownFrontmatterEntries({
+  language,
+  markdown,
+}: {
+  language: PretextMarkdownFrontmatterLanguage
+  markdown: string
+}): PretextMarkdownFrontmatterEntry[] {
+  const entries: PretextMarkdownFrontmatterEntry[] = []
+  let isTopLevelToml = true
+
+  for (const line of markdown.split(/\r?\n/)) {
+    if (language === "toml" && /^\s*\[/.test(line)) {
+      isTopLevelToml = false
+      continue
+    }
+
+    if (language === "toml" && !isTopLevelToml) continue
+
+    const entry =
+      language === "toml"
+        ? parsePretextMarkdownTomlFrontmatterEntry(line)
+        : parsePretextMarkdownYamlFrontmatterEntry(line)
+    if (entry) entries.push(entry)
+  }
+
+  return entries
+}
+
+function parsePretextMarkdownYamlFrontmatterEntry(
+  line: string
+): PretextMarkdownFrontmatterEntry | null {
+  const trimmed = line.trim()
+  if (!trimmed || trimmed.startsWith("#")) return null
+
+  const match = /^([A-Za-z_][\w.-]*)\s*:\s*(.*?)\s*$/.exec(trimmed)
+  if (!match) return null
+  const value = parsePretextMarkdownFrontmatterScalar(match[2]!)
+  if (!value) return null
+
+  return {
+    key: match[1]!,
+    ...value,
+  }
+}
+
+function parsePretextMarkdownTomlFrontmatterEntry(
+  line: string
+): PretextMarkdownFrontmatterEntry | null {
+  const trimmed = line.trim()
+  if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith("[")) {
+    return null
+  }
+
+  const match = /^([A-Za-z_][\w.-]*)\s*=\s*(.*?)\s*$/.exec(trimmed)
+  if (!match) return null
+  const value = parsePretextMarkdownFrontmatterScalar(match[2]!)
+  if (!value) return null
+
+  return {
+    key: match[1]!,
+    ...value,
+  }
+}
+
+function parsePretextMarkdownFrontmatterScalar(
+  rawValue: string
+): Pick<PretextMarkdownFrontmatterEntry, "value" | "valueKind"> | null {
+  const value = rawValue.trim()
+  if (!value || /^[{[>|]/.test(value)) return null
+
+  const quoted = /^"([^"]*)"$/.exec(value) ?? /^'([^']*)'$/.exec(value)
+  if (quoted) {
+    return {
+      value: quoted[1]!,
+      valueKind: "string",
+    }
+  }
+
+  if (/^(?:true|false)$/i.test(value)) {
+    return {
+      value: value.toLowerCase(),
+      valueKind: "boolean",
+    }
+  }
+
+  if (/^-?\d+(?:\.\d+)?$/.test(value)) {
+    return {
+      value,
+      valueKind: "number",
+    }
+  }
+
+  if (/[:#]/.test(value)) return null
+
+  return {
+    value,
+    valueKind: "string",
+  }
 }
 
 function createMarkdownBlockId({

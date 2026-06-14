@@ -272,15 +272,15 @@ describe("code viewer resource bug hunt", () => {
     expect(html).not.toContain("server-only")
   })
 
-  it("server-renders inline text without falling back to a skeleton", () => {
+  it("server-renders inline text as a non-fetching skeleton", () => {
     const html = renderToString(
       <CodeViewer source={textSource("server inline\nsecond line")} />
     )
 
-    expect(html).toContain("2 lines")
-    expect(html).toContain("server inline")
-    expect(html).toContain("second line")
-    expect(html).not.toContain('data-slot="code-body-skeleton"')
+    expect(html).toContain('data-slot="code-viewer"')
+    expect(html).toContain('data-slot="code-body-skeleton"')
+    expect(html).not.toContain("server inline")
+    expect(html).not.toContain("second line")
   })
 
   it("scrolls a newly highlighted virtual line into view", async () => {

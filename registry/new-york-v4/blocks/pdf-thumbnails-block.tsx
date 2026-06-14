@@ -24,11 +24,10 @@ const PDF_SOURCE = {
 }
 
 /**
- * PDF viewer with a page-thumbnail sidebar.
+ * PDF viewer with page thumbnails in a navigation rail.
  *
- * The thumbnail rail is explicit viewer structure: a ViewerSidebar beside the
- * PDF rendering surface. The viewer reports the visible page so the active
- * thumbnail highlights, and clicking a thumbnail scrolls the document.
+ * ViewerSidebar owns placement. PdfViewerThumbnails owns PDF page
+ * thumbnail behavior, active-page highlighting, and click-to-jump navigation.
  */
 export function PdfThumbnailsBlock() {
   return (
@@ -37,7 +36,11 @@ export function PdfThumbnailsBlock() {
         <ViewerRoot bare defaultSidebarOpen className="h-full">
           <PdfViewerHeader leading={<ViewerSidebarTrigger />} />
           <ViewerBody>
-            <ViewerSidebar width="9rem" className="border-r">
+            <ViewerSidebar
+              aria-label="PDF pages"
+              width="9rem"
+              className="border-r"
+            >
               <PdfViewerThumbnails />
             </ViewerSidebar>
             <ViewerSurface>

@@ -1,0 +1,52 @@
+---
+title: Attachment Sidebar
+description: A providerless file attachment navigator built from SidebarList primitives and FileThumbnail.
+---
+
+`AttachmentSidebar` renders selectable file attachments. It owns attachment row
+semantics: file name, size or type, disabled state, selected state, decorative
+thumbnail presentation, and empty state.
+
+It does not own viewer placement. Put it inside `ViewerSidebar`,
+a modal, or another container that owns layout.
+
+## Usage
+
+```tsx
+<AttachmentSidebar
+  items={[
+    {
+      id: "contract",
+      source: {
+        kind: "url",
+        url: "/contract.pdf",
+        fileName: "contract.pdf",
+      },
+      size: 812_000,
+    },
+  ]}
+  selectedId={selectedId}
+  onSelect={setSelectedId}
+/>
+```
+
+To add domain-specific groups before the attachment list, pass children:
+
+```tsx
+<AttachmentSidebar items={attachments}>
+  <SidebarListGroup>
+    <SidebarListGroupLabel>Message</SidebarListGroupLabel>
+    <SidebarListGroupContent>
+      <SidebarListMenu>
+        <SidebarListMenuItem>
+          <SidebarListButton>Body</SidebarListButton>
+        </SidebarListMenuItem>
+      </SidebarListMenu>
+    </SidebarListGroupContent>
+  </SidebarListGroup>
+</AttachmentSidebar>
+```
+
+The thumbnail inside each row uses `FileThumbnail presentation="decorative"` so
+the button's accessible name remains the attachment command, not a flattened
+dump of thumbnail internals.

@@ -19,6 +19,20 @@ document + schema
 
 Anything outside that line must justify itself.
 
+## State Glossary
+
+- `sourceDocument` is the latest document received from parent props.
+- `projectionDocument` is the document identity used to project visible rows.
+- `confirmedDocumentData` is the authoritative data base used for outgoing
+  document patches.
+- A parent echo is a same-document-id source update caused by a table commit.
+- A primitive pending value is a scalar value owned by
+  `JsonTablePrimitiveEditStore` until the parent echo confirms it.
+- A structured pending value is an object or array value owned by
+  `useJsonTableStructuredCellController` until projection catches up.
+- `JsonTableCellCommit.visibleThrough` names which local owner keeps a committed
+  value visible before the parent echo is reconciled.
+
 ## Ownership
 
 ### JSON Table
@@ -126,13 +140,16 @@ overlay state, and structured popover state are separate concepts.
 
 ## Commit Path
 
+`visibleThrough` is the final commit-lifecycle field name. It names which local
+owner keeps a committed value visible until the parent echo is reconciled.
+
 ```txt
 primitive control
   -> active control commitValue
   -> EditableJsonTableCell formatValueForCommit
   -> useJsonTablePrimitiveCellController
   -> JsonTablePrimitiveEditStore
-  -> JsonTableCellCommit(visibility: "primitivePendingValue")
+  -> JsonTableCellCommit(visibleThrough: "primitivePendingValue")
   -> useSingleFileTableDocumentModel
   -> onUpdateDocument
 ```
@@ -143,7 +160,7 @@ Structured object and array editors use their own document-data controller:
 structured editor
   -> formatValueForCommit
   -> useJsonTableStructuredCellController
-  -> JsonTableCellCommit(visibility: "projectedDocumentValue")
+  -> JsonTableCellCommit(visibleThrough: "projectedDocumentValue")
   -> useSingleFileTableDocumentModel
   -> onUpdateDocument
 ```
@@ -158,7 +175,7 @@ owns the document state machine:
 
 - `sourceDocument` is the latest parent prop.
 - `projectionDocument` is the document used to project rows.
-- `confirmedDocumentDataRef` is the latest data used to build outgoing patches.
+- `confirmedDocumentData` is the latest data used to build outgoing patches.
 - `JsonTablePrimitiveEditStore` owns primitive `pending`, `confirmed`, and
   `stale` cell snapshots.
 
@@ -170,17 +187,30 @@ The rules are exact:
   the projection document.
 - A same-id external parent change replaces the projection document.
 - Every cell commit crosses the same `JsonTableCellCommit` boundary. Primitive
-  cells mark `visibility: "primitivePendingValue"`; structured cells mark
-  `visibility: "projectedDocumentValue"`.
+  cells mark `visibleThrough: "primitivePendingValue"`; structured cells mark
+  `visibleThrough: "projectedDocumentValue"`.
+
+The document model is the only place where these concerns are allowed to meet:
+
+- source-document identity and parent echoes
+- `projectionDocument` selection for row projection
+- `confirmedDocumentData` for outgoing patches
+- primitive echo recording and reconciliation
+- `onUpdateDocument` patch emission
+
+Every other JSON-table module receives the result of that state machine. The
+runtime, virtualized table, rows, cells, and primitive/structured controllers may
+carry `onCellCommit`, but they do not patch document data, reconcile source
+documents, or record primitive echoes.
 
 Visible values resolve in one priority order:
 
-| Priority | Source | Owner | Meaning |
-| --- | --- | --- | --- |
-| 1 | Primitive pending value | `JsonTablePrimitiveEditStore` | Scalar edit committed locally before the parent echo confirms it. |
-| 2 | Structured local value | `useJsonTableStructuredCellController` | Object/array editor commit shown locally until the projected document catches up. |
-| 3 | Projected document value | `useSingleFileTableDocumentModel` | Last document identity chosen for row projection. |
-| 4 | Source document value | parent props | Authoritative input before any local projection state exists. |
+| Priority | Source                   | Owner                                  | Meaning                                                                           |
+| -------- | ------------------------ | -------------------------------------- | --------------------------------------------------------------------------------- |
+| 1        | Primitive pending value  | `JsonTablePrimitiveEditStore`          | Scalar edit committed locally before the parent echo confirms it.                 |
+| 2        | Structured pending value | `useJsonTableStructuredCellController` | Object/array editor commit shown locally until the projected document catches up. |
+| 3        | Projected document value | `useSingleFileTableDocumentModel`      | Last document identity chosen for row projection.                                 |
+| 4        | Source document value    | parent props                           | Authoritative input before any local projection state exists.                     |
 
 ## Performance Contract
 
@@ -200,8 +230,56 @@ The protected measurements are:
 - scroll with no active control
 - scroll with one active overlay
 
+The refreshed profile shows that large-table select and picker opens are no
+longer dominated by React rendering. They render the active editable cell only,
+but browser style recalculation still scales with the large virtualized table
+surface. The budget records that cost honestly: it protects against structural
+regressions such as sibling-cell rerenders, extra document patches, unbounded
+rect reads, or unexpected overlay mounts, while keeping the remaining style
+duration visible for future CSS/DOM invalidation work.
+
 ## Regression Guards
 
 `tests/json-table-row-render.test.tsx` protects the user-facing interaction
 contract. `tests/json-table-architecture.test.ts` protects the hard-cutover
 architecture by rejecting legacy names and deleted compatibility files.
+
+## Verification Contract
+
+Architecture-only changes should at minimum run:
+
+```sh
+pnpm test tests/json-table-architecture.test.ts
+```
+
+Before declaring the JSON table runtime complete, run the focused ownership
+tests, the broad JSON-table interaction suite, and the performance verifiers:
+
+```sh
+pnpm test tests/json-table-architecture.test.ts tests/json-table-controller.test.tsx tests/json-table-primitive-edit-store.test.ts tests/json-table-row-render.test.tsx
+pnpm test:json-table
+pnpm verify:json-table-performance
+pnpm verify:json-table-performance:fresh
+pnpm typecheck
+```
+
+The saved performance verifier reads the checked-in profile fixture and guards
+React work, DOM reads, document patches, and measured interaction budgets. It
+accepts flat scenario budgets and explicit `hard`, `latency`, and `diagnostic`
+budget sections so structural invariants can stay separate from style/layout
+diagnostics. It is not a universal latency guarantee. The fresh verifier writes
+`tmp/json-table-primitive-interactions-profile.fresh.json` by default, verifies
+that fresh artifact against the same budgets, and must fail with setup
+instructions that make a missing local server/page explicit.
+
+For style-invalidation work, run the profiler with
+`JSON_TABLE_STYLE_EXPERIMENTS=1` or `--style-experiments`. This adds large-table
+row-count, extra-column-count, and overscan variants and prints a compact
+`open-enum`, `open-date`, and `switch-dirty-cell` style-cost table. Those
+experiment profiles are diagnostic; the normal verifier still gates the stable
+`default` and `large` profiles.
+
+Editable tables default to zero row overscan because profiling showed mounted
+row surface contributes directly to select/picker style recalculation. Read-only
+tables keep a larger default overscan because they use row patching for scroll
+continuity and do not mount primitive editors.

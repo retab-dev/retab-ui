@@ -69,7 +69,7 @@ export function PdfThumbnailRail({
   return (
     <nav
       ref={viewportRef}
-      data-slot="pdf-thumbnail-sidebar"
+      data-slot="pdf-viewer-thumbnails"
       aria-label="PDF pages"
       tabIndex={0}
       onKeyDown={handleKeyDown}

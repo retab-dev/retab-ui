@@ -30,8 +30,8 @@ test("file system preserves selection and supports keyboard navigation across vi
     })
   ).toHaveAttribute("aria-selected", "true")
 
-  await fileSystem.getByRole("tab", { name: "Gallery view" }).click()
-  await fileSystem.getByRole("listbox", { name: "Files" }).press("ArrowRight")
+  await fileSystem.getByRole("tab", { name: "Columns view" }).click()
+  await fileSystem.getByRole("listbox", { name: "research/" }).press("ArrowDown")
   await expect(
     fileSystem.getByRole("option", { name: /attention\.pdf/i })
   ).toHaveAttribute("aria-selected", "true")
@@ -56,17 +56,8 @@ test("file system demo round-trips controlled state through the URL", async ({
     selectedPath: "research/attention.pdf",
     view: "grid",
   })
-  await fileSystem.getByRole("button", { name: "PDF" }).click()
-  await expectUrlParams(page, {
-    "filters.categories": "pdf",
-    path: "research/",
-    search: "attention",
-    selectedPath: "research/attention.pdf",
-    view: "grid",
-  })
   await fileSystem.getByRole("tab", { name: "List view" }).click()
   await expectUrlParams(page, {
-    "filters.categories": "pdf",
     path: "research/",
     search: "attention",
     selectedPath: "research/attention.pdf",
@@ -76,7 +67,6 @@ test("file system demo round-trips controlled state through the URL", async ({
   await fileSystem.getByRole("button", { name: /Type/ }).click()
 
   await expectUrlParams(page, {
-    "filters.categories": "pdf",
     path: "research/",
     search: "attention",
     selectedPath: "research/attention.pdf",

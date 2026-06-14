@@ -118,6 +118,42 @@ export function getPretextMarkdownScrollTopForLineRange({
   )
 }
 
+export function getPretextMarkdownSourceLineForScrollTop({
+  chunks,
+  frames,
+  scrollTop,
+}: {
+  chunks: readonly Pick<
+    PretextMarkdownChunk,
+    "index" | "sourceEndLine" | "sourceStartLine"
+  >[]
+  frames: readonly PretextMarkdownChunkFrame[]
+  scrollTop: number
+}) {
+  if (!frames.length) return 1
+
+  const frameIndex = Math.min(
+    firstChunkWithBottomAfter(frames, scrollTop),
+    frames.length - 1
+  )
+  const frame = frames[frameIndex]
+  if (!frame) return 1
+
+  const chunk = chunks.find((item) => item.index === frame.index)
+  if (!chunk) return frame.sourceStartLine
+
+  const lineCount = Math.max(1, chunk.sourceEndLine - chunk.sourceStartLine + 1)
+  const offsetRatio =
+    frame.height <= 0
+      ? 0
+      : Math.max(0, Math.min(1, (scrollTop - frame.top) / frame.height))
+  const lineOffset = Math.min(
+    lineCount - 1,
+    Math.floor(offsetRatio * lineCount)
+  )
+  return chunk.sourceStartLine + lineOffset
+}
+
 export function markdownChunkIntersectsLineRange({
   chunk,
   range,

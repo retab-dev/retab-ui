@@ -354,14 +354,29 @@
           "target": "@ui/data-cell-boolean-control.tsx"
         },
         {
+          "path": "registry/new-york-v4/ui/data-cell-boolean-value.ts",
+          "type": "registry:ui",
+          "target": "@ui/data-cell-boolean-value.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/data-cell-classes.ts",
           "type": "registry:ui",
           "target": "@ui/data-cell-classes.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/data-cell-control-actions.ts",
+          "type": "registry:ui",
+          "target": "@ui/data-cell-control-actions.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/data-cell-control-contract.ts",
           "type": "registry:ui",
           "target": "@ui/data-cell-control-contract.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/data-cell-control-props.ts",
+          "type": "registry:ui",
+          "target": "@ui/data-cell-control-props.ts"
         },
         {
           "path": "registry/new-york-v4/ui/data-cell-control-state.ts",
@@ -454,9 +469,19 @@
           "target": "@ui/data-cell-select-state.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/data-cell-session.ts",
+          "type": "registry:ui",
+          "target": "@ui/data-cell-session.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/data-cell-text-control.tsx",
           "type": "registry:ui",
           "target": "@ui/data-cell-text-control.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/data-cell-text-activation.ts",
+          "type": "registry:ui",
+          "target": "@ui/data-cell-text-activation.ts"
         },
         {
           "path": "registry/new-york-v4/ui/data-cell-text-hit-test.ts",
@@ -655,20 +680,31 @@
       ]
     },
     {
+      "name": "sidebar-row",
+      "type": "registry:ui",
+      "title": "Sidebar Row",
+      "description": "Shared sidebar row button styling variants used by app and providerless sidebar primitives.",
+      "dependencies": ["class-variance-authority@^0.7.1"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/sidebar-row.ts",
+          "type": "registry:ui",
+          "target": "@ui/sidebar-row.ts"
+        }
+      ]
+    },
+    {
       "name": "sidebar",
       "type": "registry:ui",
       "title": "Sidebar",
       "description": "A responsive application sidebar with menu, rail, and provider primitives.",
-      "dependencies": [
-        "@base-ui/react@^1.4.1",
-        "class-variance-authority@^0.7.1",
-        "lucide-react"
-      ],
+      "dependencies": ["@base-ui/react@^1.4.1", "lucide-react"],
       "registryDependencies": [
         "button",
         "input",
         "scroll-area",
         "separator",
+        "sidebar-row",
         "skeleton",
         "use-mobile",
         "utils"
@@ -678,6 +714,21 @@
           "path": "registry/new-york-v4/ui/sidebar.tsx",
           "type": "registry:ui",
           "target": "@ui/sidebar.tsx"
+        }
+      ]
+    },
+    {
+      "name": "sidebar-list",
+      "type": "registry:ui",
+      "title": "Sidebar List",
+      "description": "Providerless sidebar list primitives for embedded viewer and domain sidebars.",
+      "dependencies": ["@base-ui/react@^1.4.1"],
+      "registryDependencies": ["separator", "sidebar-row", "utils"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/sidebar-list.tsx",
+          "type": "registry:ui",
+          "target": "@ui/sidebar-list.tsx"
         }
       ]
     },
@@ -1072,9 +1123,9 @@
           "target": "@ui/pdf-viewer-states.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/pdf-thumbnail-sidebar.tsx",
+          "path": "registry/new-york-v4/ui/pdf-viewer-thumbnails.tsx",
           "type": "registry:ui",
-          "target": "@ui/pdf-thumbnail-sidebar.tsx"
+          "target": "@ui/pdf-viewer-thumbnails.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/pdf-thumbnail-layout.ts",
@@ -1323,8 +1374,7 @@
         "pdf-anchor-target",
         "pdf-viewer",
         "scroll-area",
-        "utils",
-        "viewer"
+        "utils"
       ],
       "files": [
         {
@@ -1356,6 +1406,11 @@
           "path": "registry/new-york-v4/ui/layout-blocks-index.ts",
           "type": "registry:ui",
           "target": "@ui/layout-blocks-index.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/layout-overlay-layer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/layout-overlay-layer.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/layout-blocks-panel.tsx",
@@ -1791,7 +1846,7 @@
       "name": "file-system",
       "type": "registry:ui",
       "title": "File System",
-      "description": "A document workspace over a flat object-store manifest with list, grid, columns, gallery, lazy folders, generated thumbnails, and FileViewer previews.",
+      "description": "A document workspace over a flat object-store manifest with list, grid, columns, lazy folders, generated thumbnails, and FileViewer previews.",
       "dependencies": [
         "lucide-react",
         "@pierre/trees",
@@ -1814,6 +1869,26 @@
           "path": "registry/new-york-v4/ui/file-system.tsx",
           "type": "registry:ui",
           "target": "@ui/file-system.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-provider.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-system-provider.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-parts.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-system-parts.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-explorer-controllers.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-explorer-controllers.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-open-preview-dialog.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-system-open-preview-dialog.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/viewer.tsx",
@@ -1841,14 +1916,99 @@
           "target": "@ui/file-system-pierre-model.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/file-system-pierre-reset.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-pierre-reset.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-pierre-reset-identity.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-pierre-reset-identity.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-pierre-reset-plan.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-pierre-reset-plan.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-pierre-expansion.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-pierre-expansion.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-pierre-expansion-snapshot.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-pierre-expansion-snapshot.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-pierre-lazy-retry.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-pierre-lazy-retry.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-pierre-order.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-pierre-order.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-pierre-selection.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-pierre-selection.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/file-system-pierre-decoration.ts",
           "type": "registry:ui",
           "target": "@ui/file-system-pierre-decoration.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/file-system-pierre-decoration-version.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-pierre-decoration-version.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/file-system-query.ts",
           "type": "registry:ui",
           "target": "@ui/file-system-query.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-query-controller.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-query-controller.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-view-controller.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-view-controller.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-source-controller.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-source-controller.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-index-state.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-index-state.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-path-history.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-path-history.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-loading-controller.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-loading-controller.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-selection-controller.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-selection-controller.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-navigation-controller.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-navigation-controller.ts"
         },
         {
           "path": "registry/new-york-v4/ui/file-system-controller.ts",
@@ -1894,11 +2054,6 @@
           "path": "registry/new-york-v4/ui/file-system-columns-view.tsx",
           "type": "registry:ui",
           "target": "@ui/file-system-columns-view.tsx"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-gallery-view.tsx",
-          "type": "registry:ui",
-          "target": "@ui/file-system-gallery-view.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/file-system-utils.ts",
@@ -2014,7 +2169,12 @@
       "type": "registry:ui",
       "title": "Segment Sidebar",
       "description": "Selectable list of segments with page ranges and confidence bars.",
-      "registryDependencies": ["segments", "segment-interaction", "utils"],
+      "registryDependencies": [
+        "segments",
+        "segment-interaction",
+        "sidebar-list",
+        "utils"
+      ],
       "files": [
         {
           "path": "registry/new-york-v4/ui/segment-sidebar.tsx",
@@ -2091,11 +2251,11 @@
       "name": "attachment-sidebar",
       "type": "registry:ui",
       "title": "Attachment Sidebar",
-      "description": "File attachment navigator built from Sidebar primitives and FileThumbnail.",
+      "description": "File attachment navigator built from SidebarList primitives and FileThumbnail.",
       "dependencies": ["lucide-react"],
       "registryDependencies": [
         "utils",
-        "sidebar",
+        "sidebar-list",
         "file-size-format",
         "file-thumbnail"
       ],
@@ -2115,7 +2275,6 @@
       "dependencies": ["lucide-react"],
       "registryDependencies": [
         "utils",
-        "sidebar",
         "file-size-format",
         "file-thumbnail",
         "file-viewer"
@@ -2706,8 +2865,7 @@
         "document-source",
         "scroll-area",
         "utils",
-        "source-indicator",
-        "viewer"
+        "source-indicator"
       ],
       "files": [
         {
@@ -2738,7 +2896,7 @@
         "pdf-viewer",
         "image-viewer",
         "image-source",
-        "code-viewer",
+        "text-viewer",
         "text-source",
         "csv-viewer",
         "csv-source",
@@ -2821,16 +2979,16 @@
       "categories": ["primitives"]
     },
     {
-      "name": "pdf-thumbnail-sidebar",
+      "name": "pdf-viewer-thumbnails",
       "type": "registry:ui",
-      "title": "PDF Thumbnail Sidebar",
-      "description": "A page-thumbnail sidebar for explicit PdfViewer composition: lazy pdfjs thumbnails, active-page highlight, click-to-jump. Reuses the viewer’s cached document.",
+      "title": "PDF Viewer Thumbnails",
+      "description": "PDF-owned page thumbnail navigation for explicit PdfViewer composition: lazy pdfjs thumbnails, active-page highlight, and click-to-jump.",
       "registryDependencies": ["pdf-viewer", "utils", "spinner"],
       "files": [
         {
-          "path": "registry/new-york-v4/ui/pdf-thumbnail-sidebar.tsx",
+          "path": "registry/new-york-v4/ui/pdf-viewer-thumbnails.tsx",
           "type": "registry:ui",
-          "target": "@ui/pdf-thumbnail-sidebar.tsx"
+          "target": "@ui/pdf-viewer-thumbnails.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/pdf-thumbnail-layout.ts",
@@ -3020,7 +3178,7 @@
       "name": "file-system-block",
       "type": "registry:block",
       "title": "File System",
-      "description": "A document workspace over a flat object-store manifest with list, grid, columns, gallery, generated thumbnails, and persistent file previews.",
+      "description": "A document workspace over a flat object-store manifest with list, grid, columns, generated thumbnails, and persistent file previews.",
       "dependencies": [
         "lucide-react",
         "@pierre/trees",
@@ -3117,9 +3275,9 @@
       "name": "pdf-thumbnails-block",
       "type": "registry:block",
       "title": "PDF Thumbnails",
-      "description": "A PDF viewer with a toggleable page-thumbnail sidebar in the left rail slot.",
+      "description": "A PDF viewer with toggleable page thumbnails in a viewer navigation rail.",
       "dependencies": ["lucide-react"],
-      "registryDependencies": ["pdf-viewer", "pdf-thumbnail-sidebar", "button"],
+      "registryDependencies": ["pdf-viewer", "pdf-viewer-thumbnails", "button"],
       "files": [
         {
           "path": "registry/new-york-v4/blocks/pdf-thumbnails-block.tsx",
@@ -3127,9 +3285,9 @@
           "target": "@components/blocks/pdf-thumbnails-block.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/pdf-thumbnail-sidebar.tsx",
+          "path": "registry/new-york-v4/ui/pdf-viewer-thumbnails.tsx",
           "type": "registry:ui",
-          "target": "@ui/pdf-thumbnail-sidebar.tsx"
+          "target": "@ui/pdf-viewer-thumbnails.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/pdf-thumbnail-layout.ts",
@@ -3250,6 +3408,16 @@
           "target": "@ui/code-viewer-content.tsx"
         },
         {
+          "path": "registry/new-york-v4/ui/code-viewer-projector.ts",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-projector.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/code-viewer-projection-scheduler.ts",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-projection-scheduler.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/code-viewer-layout.ts",
           "type": "registry:ui",
           "target": "@ui/code-viewer-layout.ts"
@@ -3265,9 +3433,24 @@
           "target": "@ui/code-viewer-types.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/code-viewer-syntax.ts",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-syntax.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/code-viewer-syntax-style.tsx",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-syntax-style.tsx"
+        },
+        {
           "path": "registry/new-york-v4/ui/code-viewer-virtualization.ts",
           "type": "registry:ui",
           "target": "@ui/code-viewer-virtualization.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/code-viewer-viewport.tsx",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-viewport.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/viewer-download.tsx",
@@ -3713,7 +3896,7 @@
       "title": "Text Sources",
       "description": "Values extracted from a log file linked to the lines they came from — hover to highlight a line range.",
       "registryDependencies": [
-        "code-viewer",
+        "text-viewer",
         "text-source",
         "document-source",
         "source-field-list",
@@ -3886,8 +4069,7 @@
         "dropzone",
         "file-viewer",
         "file-size-format",
-        "file-thumbnail",
-        "viewer"
+        "file-thumbnail"
       ],
       "files": [
         {

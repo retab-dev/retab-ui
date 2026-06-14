@@ -5,7 +5,10 @@ import { cleanup, fireEvent, render, waitFor } from "@testing-library/react"
 import type { JSONSchema7 } from "json-schema"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
-import type { JsonTableCellCommit } from "@/components/json-table/json-table-cell-commit"
+import type {
+  JsonTableCellCommit,
+  JsonTableCellCommitHandler,
+} from "@/components/json-table/json-table-cell-commit"
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
 import type {
   JsonTableActivationIntent,
@@ -15,6 +18,7 @@ import type {
 import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
 import { createJsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
 import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
+import { jsonTableFullRenderedColumnWindow } from "@/components/json-table/json-table-rendered-column-window"
 import type { ProjectedCell } from "@/components/json-table/lib/document-projection"
 import { projectDocumentRows } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
@@ -67,12 +71,6 @@ const tableDocument: TableDocument = {
   },
 }
 
-type TestCellCommit = (
-  docId: string,
-  materializedFieldPath: string,
-  value: unknown
-) => void
-
 function visibleColumn(key: string): VisibleColumn {
   const fieldMetadata = getFieldMetadata(schema, key)
   if (!fieldMetadata) throw new Error(`Missing field metadata for ${key}`)
@@ -86,19 +84,22 @@ function visibleColumn(key: string): VisibleColumn {
 
 function SingleFileFormRowHarness({
   onCellCommit,
+  visibleColumns,
   ...props
 }: Omit<
   React.ComponentProps<typeof SingleFileFormRow>,
+  | "renderedColumnWindow"
   | "primitiveActiveCellStore"
   | "primitiveEditStore"
   | "setPrimitiveActiveCell"
   | "structuredEditSession"
-	  | "startStructuredEditSession"
-	  | "setStructuredEditSessionOverlayOpen"
-	  | "closeStructuredEditSession"
-	  | "onCellCommit"
-	> & {
-  onCellCommit?: TestCellCommit
+  | "startStructuredEditSession"
+  | "setStructuredEditSessionOverlayOpen"
+  | "closeStructuredEditSession"
+  | "onCellCommit"
+> & {
+  visibleColumns: VisibleColumn[]
+  onCellCommit?: JsonTableCellCommitHandler
 }) {
   const primitiveActiveCellStoreRef = React.useRef(
     createJsonTablePrimitiveActiveCellStore()
@@ -132,7 +133,7 @@ function SingleFileFormRowHarness({
         docId: props.document.id,
         fieldPath: projectedCell.materializedFieldPath,
         intent,
-        isOverlayOpen: false,
+        isOverlayOpen: true,
       })
     },
     [props.document.id]
@@ -152,18 +153,15 @@ function SingleFileFormRowHarness({
   }, [])
   const handleCellCommit = React.useCallback(
     (commit: JsonTableCellCommit) => {
-      ;(onCellCommit ?? vi.fn())(
-        props.document.id,
-        commit.fieldPath,
-        commit.value
-      )
+      onCellCommit?.(commit)
     },
-    [onCellCommit, props.document.id]
+    [onCellCommit]
   )
 
   return (
     <SingleFileFormRow
       {...props}
+      renderedColumnWindow={jsonTableFullRenderedColumnWindow(visibleColumns)}
       primitiveActiveCellStore={primitiveActiveCellStoreRef.current}
       primitiveEditStore={primitiveEditStoreRef.current}
       setPrimitiveActiveCell={setNextPrimitiveActiveCell}
@@ -185,7 +183,7 @@ function renderJsonTableField({
   doc?: TableDocument
   fieldPath: string
   isJsonEditable?: boolean
-  onCellCommit?: TestCellCommit
+  onCellCommit?: JsonTableCellCommitHandler
 }) {
   const rows = projectDocumentRows({
     document: doc,
@@ -227,11 +225,24 @@ function renderJsonTableField({
   return { ...view, findCell, onCellCommit }
 }
 
+function primitiveEventTarget(cell: HTMLElement) {
+  return (
+    cell.querySelector<HTMLElement>(
+      '[data-slot="input-control"], [data-slot="data-cell"]'
+    ) ?? cell
+  )
+}
+
 async function activateEnumCell(fieldPath: string) {
   const view = renderJsonTableField({ fieldPath })
   const cell = await view.findCell()
 
-  fireEvent.click(cell, { button: 0, clientX: 0, clientY: 0, detail: 1 })
+  fireEvent.click(primitiveEventTarget(cell), {
+    button: 0,
+    clientX: 0,
+    clientY: 0,
+    detail: 1,
+  })
 
   const trigger = await view.findByRole("combobox")
   await waitFor(() =>
@@ -245,19 +256,24 @@ async function clickEnumCell(fieldPath: string) {
   const view = renderJsonTableField({ fieldPath })
   const cell = await view.findCell()
 
-  fireEvent.pointerDown(cell, {
+  fireEvent.pointerDown(primitiveEventTarget(cell), {
     button: 0,
     clientX: 0,
     clientY: 0,
     detail: 1,
   })
-  fireEvent.pointerUp(cell, {
+  fireEvent.pointerUp(primitiveEventTarget(cell), {
     button: 0,
     clientX: 0,
     clientY: 0,
     detail: 1,
   })
-  fireEvent.click(cell, { button: 0, clientX: 0, clientY: 0, detail: 1 })
+  fireEvent.click(primitiveEventTarget(cell), {
+    button: 0,
+    clientX: 0,
+    clientY: 0,
+    detail: 1,
+  })
 
   const trigger = await view.findByRole("combobox")
   await waitFor(() =>
@@ -313,14 +329,15 @@ describe("json table boolean interactions", () => {
     })
     const cell = await view.findCell()
 
-    fireEvent.pointerDown(cell, { button: 0 })
+    fireEvent.pointerDown(primitiveEventTarget(cell), { button: 0 })
 
     await waitFor(() =>
-      expect(onCellCommit).toHaveBeenCalledWith(
-        tableDocument.id,
-        "is_paid",
-        true
-      )
+      expect(onCellCommit).toHaveBeenCalledWith({
+        fieldPath: "is_paid",
+        value: true,
+        previousValue: false,
+        visibleThrough: "primitivePendingValue",
+      })
     )
     expect(onCellCommit).toHaveBeenCalledTimes(1)
     await waitFor(() => expect(cell.getAttribute("data-active")).toBeNull())
@@ -334,15 +351,16 @@ describe("json table boolean interactions", () => {
     })
     const cell = await view.findCell()
 
-    cell.focus()
-    fireEvent.keyDown(cell, { key: " " })
+    primitiveEventTarget(cell).focus()
+    fireEvent.keyDown(primitiveEventTarget(cell), { key: " " })
 
     await waitFor(() =>
-      expect(onCellCommit).toHaveBeenCalledWith(
-        tableDocument.id,
-        "is_paid",
-        true
-      )
+      expect(onCellCommit).toHaveBeenCalledWith({
+        fieldPath: "is_paid",
+        value: true,
+        previousValue: false,
+        visibleThrough: "primitivePendingValue",
+      })
     )
     expect(onCellCommit).toHaveBeenCalledTimes(1)
     await waitFor(() => expect(cell.getAttribute("data-active")).toBeNull())
@@ -357,8 +375,8 @@ describe("json table boolean interactions", () => {
       })
       const cell = await view.findCell()
 
-      cell.focus()
-      fireEvent.keyDown(cell, { key })
+      primitiveEventTarget(cell).focus()
+      fireEvent.keyDown(primitiveEventTarget(cell), { key })
 
       await waitFor(() => expect(cell.getAttribute("data-active")).toBe("true"))
       expect(onCellCommit).not.toHaveBeenCalled()
@@ -366,11 +384,12 @@ describe("json table boolean interactions", () => {
       fireEvent.click(view.getByRole("checkbox"))
 
       await waitFor(() =>
-        expect(onCellCommit).toHaveBeenCalledWith(
-          tableDocument.id,
-          "is_paid",
-          true
-        )
+        expect(onCellCommit).toHaveBeenCalledWith({
+          fieldPath: "is_paid",
+          value: true,
+          previousValue: false,
+          visibleThrough: "primitivePendingValue",
+        })
       )
       expect(onCellCommit).toHaveBeenCalledTimes(1)
       cleanup()
@@ -386,8 +405,8 @@ describe("json table boolean interactions", () => {
     })
     const cell = await view.findCell()
 
-    fireEvent.pointerDown(cell, { button: 0 })
-    fireEvent.keyDown(cell, { key: " " })
+    fireEvent.pointerDown(primitiveEventTarget(cell), { button: 0 })
+    fireEvent.keyDown(primitiveEventTarget(cell), { key: " " })
     fireEvent.click(view.getByRole("checkbox"))
 
     expect(onCellCommit).not.toHaveBeenCalled()
@@ -426,11 +445,12 @@ describe("json table enum interactions", () => {
     fireEvent.keyDown(view.trigger, { key: "Enter" })
 
     await waitFor(() =>
-      expect(view.onCellCommit).toHaveBeenCalledWith(
-        tableDocument.id,
-        "status",
-        "paid"
-      )
+      expect(view.onCellCommit).toHaveBeenCalledWith({
+        fieldPath: "status",
+        value: "paid",
+        previousValue: "draft",
+        visibleThrough: "primitivePendingValue",
+      })
     )
   })
 
@@ -439,9 +459,7 @@ describe("json table enum interactions", () => {
 
     fireEvent.keyDown(view.trigger, { key: "Escape" })
 
-    await waitFor(() =>
-      expect(view.onCellCommit).not.toHaveBeenCalled()
-    )
+    await waitFor(() => expect(view.onCellCommit).not.toHaveBeenCalled())
     await waitFor(() => expect(view.queryByRole("combobox")).toBeNull())
   })
 
@@ -450,9 +468,7 @@ describe("json table enum interactions", () => {
 
     fireEvent.pointerDown(globalThis.document.body)
 
-    await waitFor(() =>
-      expect(view.onCellCommit).not.toHaveBeenCalled()
-    )
+    await waitFor(() => expect(view.onCellCommit).not.toHaveBeenCalled())
     await waitFor(() => expect(view.queryByRole("combobox")).toBeNull())
   })
 
@@ -462,11 +478,12 @@ describe("json table enum interactions", () => {
     await chooseOption(view, "2")
 
     await waitFor(() =>
-      expect(view.onCellCommit).toHaveBeenCalledWith(
-        tableDocument.id,
-        "rating",
-        2
-      )
+      expect(view.onCellCommit).toHaveBeenCalledWith({
+        fieldPath: "rating",
+        value: 2,
+        previousValue: 1,
+        visibleThrough: "primitivePendingValue",
+      })
     )
   })
 
@@ -476,11 +493,12 @@ describe("json table enum interactions", () => {
     await chooseOption(view, /no selection/i)
 
     await waitFor(() =>
-      expect(view.onCellCommit).toHaveBeenCalledWith(
-        tableDocument.id,
-        "nullable_status",
-        null
-      )
+      expect(view.onCellCommit).toHaveBeenCalledWith({
+        fieldPath: "nullable_status",
+        value: null,
+        previousValue: "paid",
+        visibleThrough: "primitivePendingValue",
+      })
     )
   })
 
@@ -499,11 +517,12 @@ describe("json table enum interactions", () => {
     await chooseOption(view, "option:1")
 
     await waitFor(() =>
-      expect(view.onCellCommit).toHaveBeenCalledWith(
-        tableDocument.id,
-        "sentinel_status",
-        "option:1"
-      )
+      expect(view.onCellCommit).toHaveBeenCalledWith({
+        fieldPath: "sentinel_status",
+        value: "option:1",
+        previousValue: "__json_table_null__",
+        visibleThrough: "primitivePendingValue",
+      })
     )
   })
 })

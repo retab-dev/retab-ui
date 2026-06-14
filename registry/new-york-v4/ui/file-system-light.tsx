@@ -8,10 +8,10 @@ import type { ViewerSource } from "@/lib/viewer-source"
 import { FileViewer } from "@/components/ui/file-viewer"
 import {
   ViewerBody,
-  ViewerHeader,
-  ViewerRoot,
-  ViewerSidebar,
   ViewerSurface,
+  ViewerHeader,
+  ViewerSidebar,
+  ViewerRoot,
 } from "@/components/ui/viewer"
 
 export type FileSystemLightFile = {
@@ -79,7 +79,7 @@ export function FileSystemLight({
 
   const { model } = useFileTree({
     flattenEmptyDirectories: false,
-    icons: "complete",
+    icons: { colored: false, set: "complete" },
     initialExpansion: "open",
     initialSelectedPaths:
       selectedPath && filesByPath.has(selectedPath) ? [selectedPath] : [],
@@ -122,7 +122,7 @@ export function FileSystemLight({
       bare
       data-viewer="file-system-light"
       className={cn(
-        "h-[640px] overflow-hidden rounded-lg border bg-background text-foreground",
+        "h-[640px] overflow-hidden rounded-md border bg-background text-foreground",
         className
       )}
     >
@@ -141,6 +141,7 @@ export function FileSystemLight({
       </ViewerHeader>
       <ViewerBody>
         <ViewerSidebar
+          aria-label={title}
           collapsible="none"
           width="20rem"
           className="flex min-h-0 flex-col border-r"
@@ -158,6 +159,8 @@ export function FileSystemLight({
                 "--trees-focus-ring-color-override": "var(--ring)",
                 "--trees-focus-ring-width-override": "2px",
                 "--trees-item-padding-x-override": "0.75rem",
+                "--trees-border-radius-override": "0.375rem",
+                "--trees-file-icon-color": "var(--muted-foreground)",
                 "--trees-selected-bg-override": "var(--primary)",
                 "--trees-selected-fg-override": "var(--primary-foreground)",
               } as React.CSSProperties

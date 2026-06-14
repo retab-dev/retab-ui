@@ -10,7 +10,12 @@ import {
 } from "@/components/json-table/json-table-primitive-edit-store"
 import { markJsonTableProfile } from "@/components/json-table/json-table-profiler"
 import { setValueAtMaterializedPath } from "@/components/json-table/lib/document-patches"
-import type { TableDocument } from "@/components/json-table/lib/projects-types"
+import type {
+  JsonTableDocumentData,
+  TableDocument,
+} from "@/components/json-table/lib/projects-types"
+
+export type SingleFileTableDocumentPatch = { data: JsonTableDocumentData }
 
 export type SingleFileTableDocumentModel = {
   projectionDocument: TableDocument
@@ -19,18 +24,92 @@ export type SingleFileTableDocumentModel = {
   primitiveEditStore: JsonTablePrimitiveEditStore
 }
 
+type SingleFileTableDocumentState = {
+  sourceDocumentId: string
+  reconciledSourceDocument: TableDocument
+  confirmedDocumentData: JsonTableDocumentData
+}
+
+type SingleFileTableSourceReconciliation = {
+  nextDocumentState: SingleFileTableDocumentState
+  shouldReplaceProjectionDocument: boolean
+}
+
 function ignoreCellCommit() {}
 
+function createDocumentState(
+  sourceDocument: TableDocument
+): SingleFileTableDocumentState {
+  return {
+    sourceDocumentId: sourceDocument.id,
+    reconciledSourceDocument: sourceDocument,
+    confirmedDocumentData: sourceDocument.data,
+  }
+}
+
+function isNewSourceDocument(
+  documentState: SingleFileTableDocumentState,
+  sourceDocument: TableDocument
+) {
+  return documentState.sourceDocumentId !== sourceDocument.id
+}
+
+function reconcileDocumentStateForSourceDocument({
+  documentState,
+  isPrimitiveDocumentEcho,
+  sourceDocument,
+}: {
+  documentState: SingleFileTableDocumentState
+  isPrimitiveDocumentEcho: boolean
+  sourceDocument: TableDocument
+}): SingleFileTableSourceReconciliation {
+  return {
+    nextDocumentState: {
+      ...documentState,
+      reconciledSourceDocument: sourceDocument,
+      confirmedDocumentData: sourceDocument.data,
+    },
+    shouldReplaceProjectionDocument: !isPrimitiveDocumentEcho,
+  }
+}
+
+function commitCellValueToDocumentState({
+  documentState,
+  fieldPath,
+  value,
+}: {
+  documentState: SingleFileTableDocumentState
+  fieldPath: string
+  value: unknown
+}): {
+  nextDocumentState: SingleFileTableDocumentState
+  nextData: JsonTableDocumentData
+} {
+  const nextData = setValueAtMaterializedPath(
+    documentState.confirmedDocumentData,
+    fieldPath,
+    value
+  )
+
+  return {
+    nextDocumentState: {
+      ...documentState,
+      confirmedDocumentData: nextData,
+    },
+    nextData,
+  }
+}
+
 function projectionDocumentForRender({
+  documentState,
   projectionDocument,
   sourceDocument,
-  previousSourceDocumentId,
 }: {
+  documentState: SingleFileTableDocumentState
   projectionDocument: TableDocument
   sourceDocument: TableDocument
-  previousSourceDocumentId: string
 }) {
-  return previousSourceDocumentId !== sourceDocument.id
+  return isNewSourceDocument(documentState, sourceDocument)
     ? sourceDocument
     : projectionDocument
 }
@@ -39,28 +118,27 @@ export function useSingleFileTableDocumentModel({
   onUpdateDocument,
   sourceDocument,
 }: {
-  onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
+  onUpdateDocument?: (patch: SingleFileTableDocumentPatch) => Promise<void>
   sourceDocument: TableDocument
 }): SingleFileTableDocumentModel {
   const primitiveEditStoreRef = React.useRef(
     createJsonTablePrimitiveEditStore()
   )
+  // Projection is reactive because row projection must rerender when the visible
+  // document identity changes. Confirmed data stays in a ref because commits
+  // need the latest patch base without making every parent echo rerender first.
   const [projectionDocument, setProjectionDocument] =
     React.useState(sourceDocument)
-  const previousSourceDocumentIdRef = React.useRef(sourceDocument.id)
-  const reconciledSourceDocumentRef = React.useRef(sourceDocument)
-  const confirmedDocumentDataRef = React.useRef(sourceDocument.data)
-  const updateDocumentRef = React.useRef(onUpdateDocument)
+  const documentStateRef = React.useRef(createDocumentState(sourceDocument))
+  const onUpdateDocumentRef = React.useRef(onUpdateDocument)
 
   React.useLayoutEffect(() => {
-    updateDocumentRef.current = onUpdateDocument
+    onUpdateDocumentRef.current = onUpdateDocument
   }, [onUpdateDocument])
 
   const resetForSourceDocument = React.useCallback(
     (nextSourceDocument: TableDocument) => {
-      previousSourceDocumentIdRef.current = nextSourceDocument.id
-      reconciledSourceDocumentRef.current = nextSourceDocument
-      confirmedDocumentDataRef.current = nextSourceDocument.data
+      documentStateRef.current = createDocumentState(nextSourceDocument)
       primitiveEditStoreRef.current.reset()
       setProjectionDocument(nextSourceDocument)
     },
@@ -69,15 +147,22 @@ export function useSingleFileTableDocumentModel({
 
   const reconcileSourceDocument = React.useCallback(
     (nextSourceDocument: TableDocument) => {
-      if (reconciledSourceDocumentRef.current === nextSourceDocument) return
-      reconciledSourceDocumentRef.current = nextSourceDocument
-      confirmedDocumentDataRef.current = nextSourceDocument.data
+      const documentState = documentStateRef.current
+      if (documentState.reconciledSourceDocument === nextSourceDocument) return
 
       const reconciliation =
         primitiveEditStoreRef.current.reconcileDocumentData(
           nextSourceDocument.data
         )
-      if (!reconciliation.isPrimitiveDocumentEcho) {
+      const { nextDocumentState, shouldReplaceProjectionDocument } =
+        reconcileDocumentStateForSourceDocument({
+          documentState,
+          isPrimitiveDocumentEcho: reconciliation.isPrimitiveDocumentEcho,
+          sourceDocument: nextSourceDocument,
+        })
+
+      documentStateRef.current = nextDocumentState
+      if (shouldReplaceProjectionDocument) {
         setProjectionDocument(nextSourceDocument)
       }
     },
@@ -85,18 +170,18 @@ export function useSingleFileTableDocumentModel({
   )
 
   const commitCellValue = React.useCallback(
-    ({ fieldPath, value, visibility }: JsonTableCellCommit) => {
-      const updateDocument = updateDocumentRef.current
+    ({ fieldPath, value, visibleThrough }: JsonTableCellCommit) => {
+      const updateDocument = onUpdateDocumentRef.current
       if (!updateDocument) return
 
       markJsonTableProfile("document-patch-start", { fieldPath })
-      const nextData = setValueAtMaterializedPath(
-        confirmedDocumentDataRef.current,
+      const { nextDocumentState, nextData } = commitCellValueToDocumentState({
+        documentState: documentStateRef.current,
         fieldPath,
-        value
-      )
-      confirmedDocumentDataRef.current = nextData
-      if (visibility === "primitivePendingValue") {
+        value,
+      })
+      documentStateRef.current = nextDocumentState
+      if (visibleThrough === "primitivePendingValue") {
         primitiveEditStoreRef.current.recordDocumentEcho(nextData)
       }
       updateDocument({ data: nextData })
@@ -106,7 +191,7 @@ export function useSingleFileTableDocumentModel({
   )
 
   React.useLayoutEffect(() => {
-    if (previousSourceDocumentIdRef.current !== sourceDocument.id) {
+    if (isNewSourceDocument(documentStateRef.current, sourceDocument)) {
       resetForSourceDocument(sourceDocument)
       return
     }
@@ -115,9 +200,9 @@ export function useSingleFileTableDocumentModel({
   }, [reconcileSourceDocument, resetForSourceDocument, sourceDocument])
 
   const currentProjectionDocument = projectionDocumentForRender({
+    documentState: documentStateRef.current,
     projectionDocument,
     sourceDocument,
-    previousSourceDocumentId: previousSourceDocumentIdRef.current,
   })
   const canCommitDocument = Boolean(onUpdateDocument)
   const onCellCommit = commitCellValue

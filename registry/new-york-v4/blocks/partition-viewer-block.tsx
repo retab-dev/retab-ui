@@ -2,7 +2,12 @@
 
 import * as React from "react"
 
-import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
+import {
+  PdfViewerHeader,
+  PdfViewerPages,
+  PdfViewerProvider,
+  type PdfViewerHandle,
+} from "@/components/ui/pdf-viewer"
 import { ViewerBody, ViewerRoot, ViewerSurface } from "@/components/ui/viewer"
 import type { PartitionResult } from "@/components/viewers/lib/partition-types"
 import {
@@ -38,14 +43,23 @@ export function PartitionViewerBlock() {
   return (
     <div className="flex h-full min-h-[680px] flex-col bg-background">
       <PartitionViewerProvider result={PARTITION_RESULT}>
-        <ViewerRoot bare className="h-full flex-1 bg-background">
-          <PartitionViewerHeader />
-          <ViewerBody>
-            <ViewerSurface>
-              <PartitionSourceDocument />
-            </ViewerSurface>
-          </ViewerBody>
-        </ViewerRoot>
+        <PdfViewerProvider
+          source={{
+            kind: "url",
+            url: PDF_URL,
+            fileName: "an-image-is-worth-16x16-words.pdf",
+          }}
+        >
+          <ViewerRoot bare className="h-full flex-1 bg-background">
+            <PdfViewerHeader />
+            <PartitionViewerHeader />
+            <ViewerBody>
+              <ViewerSurface>
+                <PartitionSourceDocument />
+              </ViewerSurface>
+            </ViewerBody>
+          </ViewerRoot>
+        </PdfViewerProvider>
       </PartitionViewerProvider>
     </div>
   )
@@ -61,13 +75,8 @@ function PartitionSourceDocument() {
   }, [document.scrollRequest])
 
   return (
-    <PdfViewer
+    <PdfViewerPages
       ref={viewerRef}
-      source={{
-        kind: "url",
-        url: PDF_URL,
-        fileName: "an-image-is-worth-16x16-words.pdf",
-      }}
       bare
       onVisiblePageChange={document.onCurrentPageChange}
       onScrollProgressChange={document.onScrollProgressChange}

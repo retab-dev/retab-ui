@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import * as React from "react"
+import type * as PierreTreesReact from "@pierre/trees/react"
 import {
   act,
   cleanup,
@@ -14,7 +15,7 @@ import {
   FileSystem,
   FileSystemExplorer,
   FileSystemHeader,
-  FileSystemOpenDialog,
+  FileSystemOpenPreviewDialog,
   FileSystemProvider,
   FileSystemSelectedFile,
   useFileSystem,
@@ -30,6 +31,37 @@ import {
   ViewerSidebar,
   ViewerSurface,
 } from "@/registry/new-york-v4/ui/viewer"
+
+const pierreModelSpies = vi.hoisted(() => ({
+  models: new WeakSet<object>(),
+  scrollToPath: vi.fn(),
+}))
+
+vi.mock("@pierre/trees/react", async (importOriginal) => {
+  const actual = await importOriginal<typeof PierreTreesReact>()
+
+  return {
+    ...actual,
+    useFileTree: (options: Parameters<typeof actual.useFileTree>[0]) => {
+      const result = actual.useFileTree(options)
+
+      if (!pierreModelSpies.models.has(result.model)) {
+        pierreModelSpies.models.add(result.model)
+
+        const scrollToPath = result.model.scrollToPath.bind(result.model)
+
+        vi.spyOn(result.model, "scrollToPath").mockImplementation(
+          (path, options) => {
+            pierreModelSpies.scrollToPath(path, options)
+            return scrollToPath(path, options)
+          }
+        )
+      }
+
+      return result
+    },
+  }
+})
 
 vi.mock("@/components/ui/file-viewer", () => ({
   FileViewer: ({ source }: { source: { fileName?: string } }) => (
@@ -80,7 +112,6 @@ const items: FileSystemItem[] = [
   },
 ]
 const defaultQuery: FileSystemQueryState = {
-  filters: { categories: [], updatedAfter: null },
   search: "",
   sort: { direction: "asc", key: "name" },
 }
@@ -106,6 +137,18 @@ function fileTreeShadowRoot() {
   }
 
   return host.shadowRoot
+}
+
+function fileTreeHost() {
+  const host = document.querySelector<HTMLElement>(
+    "[data-slot='file-system-pierre-tree']"
+  )
+
+  if (!host) {
+    throw new Error("Pierre file tree host was not mounted")
+  }
+
+  return host
 }
 
 function queryFileTreeItem(name: RegExp | string) {
@@ -201,12 +244,23 @@ describe("FileSystem", () => {
     expect(root?.children[1]?.getAttribute("data-slot")).toBe("viewer-body")
 
     const body = root?.querySelector<HTMLElement>('[data-slot="viewer-body"]')
-    expect(
-      body?.querySelector(':scope > [data-slot="viewer-sidebar"]')
-    ).toBeTruthy()
-    expect(
-      body?.querySelector(':scope > [data-slot="viewer-surface"]')
-    ).toBeTruthy()
+    const sidebar = body?.querySelector<HTMLElement>(
+      ':scope > [data-slot="viewer-sidebar"]'
+    )
+    const surface = body?.querySelector<HTMLElement>(
+      ':scope > [data-slot="viewer-surface"]'
+    )
+    expect(sidebar).toBeTruthy()
+    expect(surface).toBeTruthy()
+    expect(body?.children[0]).toBe(sidebar)
+    expect(body?.children[1]).toBe(surface)
+    expect(sidebar?.getAttribute("aria-label")).toBe("Files")
+    expect(sidebar?.style.getPropertyValue("--viewer-sidebar-width")).toBe(
+      "min(22rem, 85vw)"
+    )
+    expect(sidebar?.className.split(/\s+/)).not.toContain("flex-1")
+    expect(surface?.className.split(/\s+/)).toContain("flex-1")
+    expect(surface?.className.split(/\s+/)).not.toContain("hidden")
   })
 
   it("composes file-system provider parts directly", async () => {
@@ -253,7 +307,7 @@ describe("FileSystem", () => {
               <FileSystemSelectedFile />
             </ViewerSurface>
           </ViewerBody>
-          <FileSystemOpenDialog />
+          <FileSystemOpenPreviewDialog />
         </ViewerRoot>
       </FileSystemProvider>
     )
@@ -262,9 +316,37 @@ describe("FileSystem", () => {
 
     const dialog = await screen.findByRole("dialog")
     expect(dialog.textContent).toContain("report.pdf")
-    expect(screen.getByTestId("file-viewer").textContent).toBe(
-      "viewer:report.pdf"
+    expect(dialog.textContent).toContain("viewer:report.pdf")
+  })
+
+  it("opens the selected list file from the keyboard", async () => {
+    render(
+      <FileSystemProvider defaultPath="reports/" items={items}>
+        <ViewerRoot data-viewer="file-system" bare>
+          <ViewerHeader>
+            <FileSystemHeader />
+          </ViewerHeader>
+          <ViewerBody>
+            <ViewerSidebar>
+              <FileSystemExplorer />
+            </ViewerSidebar>
+            <ViewerSurface>
+              <FileSystemSelectedFile />
+            </ViewerSurface>
+          </ViewerBody>
+          <FileSystemOpenPreviewDialog />
+        </ViewerRoot>
+      </FileSystemProvider>
     )
+
+    fireEvent.click(await findFileTreeItem(/report.pdf/i))
+    fireEvent.keyDown(fileTreeHost(), { key: "Enter" })
+
+    const dialog = await screen.findByRole("dialog")
+    expect(dialog.textContent).toContain("report.pdf")
+    expect(
+      dialog.querySelector("[data-testid='file-viewer']")?.textContent
+    ).toBe("viewer:report.pdf")
   })
 
   it("renders inferred folders and previews the selected file", async () => {
@@ -278,48 +360,6 @@ describe("FileSystem", () => {
         "viewer:report.pdf"
       )
     })
-  })
-
-  it("filters by file category", async () => {
-    render(
-      <FileSystem defaultPath="reports/" defaultView="grid" items={items} />
-    )
-
-    fireEvent.click(screen.getByRole("button", { name: "CSV" }))
-
-    expect(
-      await screen.findByRole("option", { name: /table.csv/i })
-    ).toBeTruthy()
-    expect(screen.queryByRole("option", { name: /report.pdf/i })).toBeNull()
-  })
-
-  it("filters by modified date preset", async () => {
-    const recentIso = new Date().toISOString()
-    const datedItems: FileSystemItem[] = [
-      {
-        kind: "file",
-        path: "dated/recent.txt",
-        mimeType: "text/plain",
-        updatedAt: recentIso,
-      },
-      {
-        kind: "file",
-        path: "dated/old.txt",
-        mimeType: "text/plain",
-        updatedAt: "2020-01-01T00:00:00Z",
-      },
-    ]
-
-    render(
-      <FileSystem defaultPath="dated/" defaultView="grid" items={datedItems} />
-    )
-
-    fireEvent.click(screen.getByRole("button", { name: "Modified 30d" }))
-
-    expect(
-      await screen.findByRole("option", { name: /recent.txt/i })
-    ).toBeTruthy()
-    expect(screen.queryByRole("option", { name: /old.txt/i })).toBeNull()
   })
 
   it("sorts the list by size in both directions", async () => {
@@ -500,6 +540,25 @@ describe("FileSystem", () => {
     ).toBe("true")
   })
 
+  it("opens the selected grid file from the keyboard", async () => {
+    render(
+      <FileSystem
+        defaultPath="reports/"
+        defaultView="grid"
+        items={items}
+      />
+    )
+
+    const listbox = screen.getByRole("listbox", { name: "Files" })
+
+    fireEvent.keyDown(listbox, { key: "ArrowRight" })
+    fireEvent.keyDown(listbox, { key: "Enter" })
+
+    const dialog = await screen.findByRole("dialog")
+    expect(dialog.textContent).toContain("report.pdf")
+    expect(dialog.textContent).toContain("viewer:report.pdf")
+  })
+
   it("loads lazy folders and retries failed folder loads", async () => {
     const loadChildren = vi
       .fn()
@@ -536,6 +595,51 @@ describe("FileSystem", () => {
     expect(await findFileTreeItem(/loaded.txt/i)).toBeTruthy()
   })
 
+  it("expands retried folders by Pierre path after nested currentPath loads", async () => {
+    const loadChildren = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("first failure"))
+      .mockResolvedValueOnce({
+        items: [
+          {
+            kind: "file",
+            path: "projects/lazy/loaded.txt",
+            mimeType: "text/plain",
+          },
+        ],
+      })
+    const nestedItems: FileSystemItem[] = [
+      { kind: "folder", path: "projects/lazy/", hasChildren: true },
+      { kind: "file", path: "projects/other.txt", mimeType: "text/plain" },
+    ]
+
+    render(
+      <FileSystem
+        defaultPath="projects/"
+        items={nestedItems}
+        loadChildren={loadChildren}
+      />
+    )
+
+    fireEvent.click(await findFileTreeItem(/lazy/i))
+    await waitFor(() => {
+      expect(fileTreeShadowRoot().textContent ?? "").toContain("first failure")
+    })
+    await waitFor(() => {
+      expect(queryFileTreeItem(/lazy/i)?.getAttribute("aria-expanded")).toBe(
+        "true"
+      )
+    })
+
+    fireEvent.click(await findFileTreeItem(/other.txt/i))
+    fireEvent.click(await findFileTreeItem(/lazy/i))
+
+    expect(await findFileTreeItem(/loaded.txt/i)).toBeTruthy()
+    expect(loadChildren).toHaveBeenLastCalledWith(
+      expect.objectContaining({ path: "projects/lazy/" })
+    )
+  })
+
   it("preserves list expansion across folder decoration changes", async () => {
     const loadChildren = vi.fn().mockRejectedValue(new Error("load failed"))
     const lazyItems: FileSystemItem[] = [
@@ -561,15 +665,61 @@ describe("FileSystem", () => {
     expect(queryFileTreeItem(/report.pdf/i)).toBeTruthy()
   })
 
+  it("scopes list expansion snapshots by currentPath", async () => {
+    const scopedItems: FileSystemItem[] = [
+      { kind: "file", path: "reports/report.pdf", mimeType: "application/pdf" },
+      {
+        kind: "file",
+        path: "archive/reports/archive-report.pdf",
+        mimeType: "application/pdf",
+      },
+      { kind: "file", path: "archive/summary.txt", mimeType: "text/plain" },
+    ]
+
+    render(<FileSystem items={scopedItems} />)
+
+    await expandFileTreeItem(/^reports$/i)
+    expect(await findFileTreeItem(/report.pdf/i)).toBeTruthy()
+
+    fireEvent.doubleClick(await findFileTreeItem(/^archive$/i))
+    expect(await findFileTreeItem(/summary.txt/i)).toBeTruthy()
+
+    await waitFor(() => {
+      expect(
+        queryFileTreeItem(/^reports$/i)?.getAttribute("aria-expanded")
+      ).not.toBe("true")
+    })
+    expect(queryFileTreeItem(/archive-report.pdf/i)).toBeUndefined()
+
+    await expandFileTreeItem(/^reports$/i)
+    expect(await findFileTreeItem(/archive-report.pdf/i)).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: "Back" }))
+    await waitFor(() => {
+      expect(
+        queryFileTreeItem(/^reports$/i)?.getAttribute("aria-expanded")
+      ).toBe("true")
+    })
+    expect(queryFileTreeItem(/report.pdf/i)).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: "Forward" }))
+    await waitFor(() => {
+      expect(
+        queryFileTreeItem(/^reports$/i)?.getAttribute("aria-expanded")
+      ).toBe("true")
+    })
+    expect(queryFileTreeItem(/archive-report.pdf/i)).toBeTruthy()
+  })
+
   it("does not re-emit same-path selection after Pierre model reset", async () => {
     function LoadLazyFolderButton() {
-      const { controller } = useFileSystem()
+      const { loading } = useFileSystem()
 
       return (
         <button
           type="button"
           onClick={() => {
-            void controller.ensureChildren("lazy/")
+            void loading.ensureChildren("lazy/")
           }}
         >
           Load lazy
@@ -615,6 +765,39 @@ describe("FileSystem", () => {
     })
   })
 
+  it("scrolls the selected list item after Pierre model reset", async () => {
+    const sortableItems: FileSystemItem[] = [
+      {
+        kind: "file",
+        path: "report.pdf",
+        mimeType: "application/pdf",
+        size: 300,
+      },
+      {
+        kind: "file",
+        path: "table.csv",
+        mimeType: "text/csv",
+        size: 100,
+      },
+    ]
+
+    render(
+      <FileSystem defaultSelectedPath="report.pdf" items={sortableItems} />
+    )
+
+    expect(await findFileTreeItem(/report.pdf/i)).toBeTruthy()
+    pierreModelSpies.scrollToPath.mockClear()
+
+    fireEvent.click(screen.getByRole("button", { name: "Size" }))
+
+    await waitFor(() => {
+      expect(pierreModelSpies.scrollToPath).toHaveBeenCalledWith(
+        "report.pdf",
+        undefined
+      )
+    })
+  })
+
   it("restores list expansion after clearing search", async () => {
     const searchableItems: FileSystemItem[] = [
       { kind: "file", path: "reports/report.pdf", mimeType: "application/pdf" },
@@ -642,6 +825,46 @@ describe("FileSystem", () => {
       )
     })
     expect(queryFileTreeItem(/report.pdf/i)).toBeTruthy()
+  })
+
+  it("does not let query expansion snapshots overwrite normal expansion", async () => {
+    const searchableItems: FileSystemItem[] = [
+      { kind: "file", path: "reports/report.pdf", mimeType: "application/pdf" },
+      { kind: "file", path: "archive/archive.txt", mimeType: "text/plain" },
+    ]
+
+    render(<FileSystem items={searchableItems} />)
+
+    await expandFileTreeItem(/^reports$/i)
+    expect(await findFileTreeItem(/report.pdf/i)).toBeTruthy()
+    expect(queryFileTreeItem(/archive.txt/i)).toBeUndefined()
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search files" }), {
+      target: { value: "archive" },
+    })
+    expect(await findFileTreeItem(/archive.txt/i)).toBeTruthy()
+    expect(queryFileTreeItem(/report.pdf/i)).toBeUndefined()
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search files" }), {
+      target: { value: "report" },
+    })
+    expect(await findFileTreeItem(/report.pdf/i)).toBeTruthy()
+    expect(queryFileTreeItem(/archive.txt/i)).toBeUndefined()
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search files" }), {
+      target: { value: "" },
+    })
+
+    await waitFor(() => {
+      expect(
+        queryFileTreeItem(/^reports$/i)?.getAttribute("aria-expanded")
+      ).toBe("true")
+    })
+    expect(queryFileTreeItem(/report.pdf/i)).toBeTruthy()
+    expect(
+      queryFileTreeItem(/^archive$/i)?.getAttribute("aria-expanded")
+    ).not.toBe("true")
+    expect(queryFileTreeItem(/archive.txt/i)).toBeUndefined()
   })
 
   it("keeps collapsed list folders collapsed after sorting", async () => {
@@ -839,5 +1062,78 @@ describe("FileSystem", () => {
       expect(fileTreeShadowRoot().textContent ?? "").toContain("load failed")
     })
     expect(loadChildren).toHaveBeenCalled()
+  })
+
+  it("keeps large list DOM bounded through Pierre virtualization", async () => {
+    const largeItems: FileSystemItem[] = Array.from(
+      { length: 1000 },
+      (_, index) => ({
+        kind: "file",
+        path: `files/file-${String(index).padStart(4, "0")}.txt`,
+        mimeType: "text/plain",
+      })
+    )
+
+    render(<FileSystem defaultPath="files/" items={largeItems} />)
+
+    expect(await findFileTreeItem(/file-0000.txt/i)).toBeTruthy()
+    expect(
+      fileTreeShadowRoot().querySelectorAll("[role='treeitem']").length
+    ).toBeLessThan(120)
+  })
+
+  it("clears resolved source cache when same-path items change", async () => {
+    function SourceSwapFileSystem() {
+      const [version, setVersion] = React.useState(1)
+      const versionedItems = React.useMemo<FileSystemItem[]>(
+        () => [
+          {
+            kind: "file",
+            path: "report.pdf",
+            mimeType: "application/pdf",
+            metadata: { version: String(version) },
+          },
+        ],
+        [version]
+      )
+      const resolveSource = React.useCallback(
+        async () => ({
+          kind: "url" as const,
+          url: `/report-v${version}.pdf`,
+          fileName: `report-v${version}.pdf`,
+          mimeType: "application/pdf",
+        }),
+        [version]
+      )
+
+      return (
+        <>
+          <button type="button" onClick={() => setVersion(2)}>
+            Swap source
+          </button>
+          <FileSystem
+            defaultSelectedPath="report.pdf"
+            items={versionedItems}
+            resolveSource={resolveSource}
+          />
+        </>
+      )
+    }
+
+    render(<SourceSwapFileSystem />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId("file-viewer").textContent).toBe(
+        "viewer:report-v1.pdf"
+      )
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "Swap source" }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId("file-viewer").textContent).toBe(
+        "viewer:report-v2.pdf"
+      )
+    })
   })
 })

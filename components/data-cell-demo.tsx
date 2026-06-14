@@ -78,7 +78,7 @@ function DemoDataCell({
     return (
       <DataCell
         kind={kind}
-        mode={editable ? "edit" : "display"}
+        active={editable}
         value={numberCellValue(value)}
         draftValue={draftValue}
         onDraftValueChange={onDraftValueChange}
@@ -91,7 +91,7 @@ function DemoDataCell({
     return (
       <DataCell
         kind="boolean"
-        mode={editable ? "edit" : "display"}
+        active={editable}
         value={booleanCellValue(value)}
         onCommit={onCommit}
       />
@@ -101,7 +101,7 @@ function DemoDataCell({
   return (
     <DataCell
       kind={kind}
-      mode={editable ? "edit" : "display"}
+      active={editable}
       value={textCellValue(value)}
       draftValue={draftValue}
       onDraftValueChange={onDraftValueChange}

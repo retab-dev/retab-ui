@@ -7,20 +7,18 @@ import { ChevronRight, Folder } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
-import type { FileSystemController } from "./file-system-controller"
+import type { FileSystemColumnsViewController } from "./file-system-explorer-controllers"
 import { folderHasChildren, pathParent } from "./file-system-index"
 import { FileSystemThumbnail } from "./file-system-preview"
-import type { FileSystemEntry, FileSystemFileEntry } from "./file-system-types"
+import type { FileSystemEntry } from "./file-system-types"
 import { useFileSystemRovingFocus } from "./use-file-system-roving-focus"
 
 const COLUMN_ROW_HEIGHT = 32
 
 export function FileSystemColumnsView({
   controller,
-  onOpenFile,
 }: {
-  controller: FileSystemController
-  onOpenFile: (file: FileSystemFileEntry) => void
+  controller: FileSystemColumnsViewController
 }) {
   const columnPaths = React.useMemo(() => {
     const paths = [controller.currentPath]
@@ -60,7 +58,6 @@ export function FileSystemColumnsView({
             key={path || "(root)"}
             controller={controller}
             isLast={index === columnPaths.length - 1}
-            onOpenFile={onOpenFile}
             path={path}
           />
         ))}
@@ -72,12 +69,10 @@ export function FileSystemColumnsView({
 function FileSystemColumn({
   controller,
   isLast,
-  onOpenFile,
   path,
 }: {
-  controller: FileSystemController
+  controller: FileSystemColumnsViewController
   isLast: boolean
-  onOpenFile: (file: FileSystemFileEntry) => void
   path: string
 }) {
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
@@ -122,10 +117,10 @@ function FileSystemColumn({
       if (entry.kind === "folder") {
         controller.navigateTo(entry.path)
       } else {
-        onOpenFile(entry)
+        controller.openPreview(entry)
       }
     },
-    [controller, onOpenFile]
+    [controller]
   )
   const selectParent = React.useCallback(() => {
     const selectedEntry = controller.selectedEntry
@@ -193,7 +188,6 @@ function FileSystemColumn({
                 key={entry.path}
                 controller={controller}
                 entry={entry}
-                onOpenFile={onOpenFile}
                 ref={(element) => {
                   rovingFocus.registerEntryRef(entry.path, element)
                 }}
@@ -214,12 +208,11 @@ function FileSystemColumn({
 const FileSystemColumnRow = React.forwardRef<
   HTMLButtonElement,
   {
-    controller: FileSystemController
+    controller: FileSystemColumnsViewController
     entry: FileSystemEntry
-    onOpenFile: (file: FileSystemFileEntry) => void
     style: React.CSSProperties
   }
->(function FileSystemColumnRow({ controller, entry, onOpenFile, style }, ref) {
+>(function FileSystemColumnRow({ controller, entry, style }, ref) {
   const isSelected = entry.path === controller.selectedPath
   const isOnTrail =
     entry.kind === "folder" &&
@@ -241,11 +234,11 @@ const FileSystemColumnRow = React.forwardRef<
         if (entry.kind === "folder") {
           controller.navigateTo(entry.path)
         } else {
-          onOpenFile(entry)
+          controller.openPreview(entry)
         }
       }}
       className={cn(
-        "absolute inset-x-0 flex h-8 shrink-0 items-center gap-2 rounded-md px-2 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "absolute inset-x-0 flex h-8 shrink-0 items-center gap-2 rounded-sm px-2 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring",
         isSelected
           ? "bg-primary text-primary-foreground"
           : isOnTrail
@@ -255,7 +248,7 @@ const FileSystemColumnRow = React.forwardRef<
       style={style}
     >
       {entry.kind === "folder" ? (
-        <Folder className="size-4 shrink-0 text-sky-500" aria-hidden />
+        <Folder className="size-4 shrink-0 text-muted-foreground" aria-hidden />
       ) : (
         <FileSystemThumbnail
           file={entry}

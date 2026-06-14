@@ -17,10 +17,7 @@ import {
   PPTX_SLIDE_PADDING,
   PptxSlideScroller,
 } from "./pptx-viewer-slide"
-import {
-  evictPptxSource,
-  subscribePptxSourceLoadTiming,
-} from "./pptx-viewer-source"
+import { evictPptxSource } from "./pptx-viewer-source"
 import { PptxToolbar } from "./pptx-viewer-toolbar"
 import type { PptxViewerProps } from "./pptx-viewer-types"
 import { usePptxViewportWidth } from "./pptx-viewer-viewport"
@@ -52,20 +49,6 @@ export function PptxViewer(props: PptxViewerProps) {
 export function PptxResourceViewer(props: PptxResourceViewerProps) {
   const isClient = useIsClient()
   const resource = props.resource
-  const onSourceLoadTiming = props.onSourceLoadTiming
-  const hasSourceLoadTiming = Boolean(onSourceLoadTiming)
-  const onSourceLoadTimingRef = React.useRef(onSourceLoadTiming)
-
-  React.useEffect(() => {
-    onSourceLoadTimingRef.current = onSourceLoadTiming
-  }, [onSourceLoadTiming])
-
-  React.useEffect(() => {
-    if (!hasSourceLoadTiming) return
-    return subscribePptxSourceLoadTiming(resource.content, (timing) => {
-      onSourceLoadTimingRef.current?.(timing)
-    })
-  }, [resource.content, hasSourceLoadTiming])
 
   if (!isClient) {
     return (
@@ -121,12 +104,13 @@ function PptxViewerContent({
   toolbar = true,
   renderSlideOverlay,
   onSlideRenderTiming,
+  onSourceLoadTiming,
   onVisibleSlideChange,
   onScrollProgressChange,
   bare = false,
   eager = true,
 }: Omit<PptxViewerProps, "source"> & { resource: ViewerResource }) {
-  const source = useRetainedPptxSource(resource.content)
+  const source = useRetainedPptxSource(resource.content, onSourceLoadTiming)
   const downloadAction = React.useMemo(
     () => resource.originalDownload,
     [resource]

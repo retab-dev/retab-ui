@@ -16,11 +16,11 @@ import { SegmentSidebar } from "@/components/ui/segment-sidebar"
 import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
 import {
   ViewerBody,
-  ViewerHeader,
-  ViewerRoot,
-  ViewerSidebar,
-  ViewerSidebarTrigger,
   ViewerSurface,
+  ViewerHeader,
+  ViewerSidebar,
+  ViewerRoot,
+  ViewerSidebarTrigger,
 } from "@/components/ui/viewer"
 
 export interface SegmentedDocumentViewerProps {
@@ -112,7 +112,11 @@ export function SegmentedDocumentViewer({
           </ViewerHeader>
         )
         const sidebar = (
-          <ViewerSidebar width="16rem" className="overflow-auto border-r">
+          <ViewerSidebar
+            aria-label="Segments"
+            width="16rem"
+            className="overflow-auto border-r"
+          >
             <SegmentSidebar
               segments={segments}
               interaction={interaction}

@@ -1,9 +1,14 @@
 import type { FileTreeRowDecoration } from "@pierre/trees"
 
-import type { FileSystemController } from "./file-system-controller"
+import type { FileSystemPierreDecorationState } from "./file-system-explorer-controllers"
 import { entryKindLabel } from "./file-system-query"
 import type { FileSystemEntry } from "./file-system-types"
 import { formatFileSystemSize } from "./file-system-utils"
+
+type FileSystemPierreRowMeta = {
+  detailLabel: string
+  kindLabel: string
+}
 
 export const FILE_SYSTEM_PIERRE_ROW_CSS = `
   :host {
@@ -11,16 +16,20 @@ export const FILE_SYSTEM_PIERRE_ROW_CSS = `
     --trees-selected-fg: hsl(var(--accent-foreground));
     --trees-hover-bg: hsl(var(--muted) / 0.55);
     --trees-focus-ring: hsl(var(--ring));
-    --trees-radius: calc(var(--radius) - 2px);
+    --trees-radius: 0.375rem;
     --trees-fg: hsl(var(--foreground));
     --trees-fg-muted: hsl(var(--muted-foreground));
-    --trees-icon-color: hsl(var(--muted-foreground));
+    --trees-file-icon-color: hsl(var(--muted-foreground));
     font: inherit;
   }
 
   [data-item] {
-    border-radius: calc(var(--radius) - 2px);
+    border-radius: var(--trees-radius);
     color: var(--trees-fg);
+  }
+
+  [data-item][data-item-selected='true'] [data-item-section='icon'] {
+    color: var(--trees-selected-fg);
   }
 
   [data-item-section='label'] {
@@ -55,30 +64,45 @@ export const FILE_SYSTEM_PIERRE_ROW_CSS = `
 
 export function fileSystemPierreRowDecoration(
   entry: FileSystemEntry,
-  controller: FileSystemController
+  decoration: FileSystemPierreDecorationState
 ): FileTreeRowDecoration {
+  const meta = fileSystemPierreRowMeta(entry, decoration)
+
+  // Pierre exposes a single decoration text plus title; CSS reads title as
+  // the left metadata column so this transport detail stays local.
+  return {
+    text: meta.detailLabel,
+    title: meta.kindLabel,
+  }
+}
+
+function fileSystemPierreRowMeta(
+  entry: FileSystemEntry,
+  decoration: FileSystemPierreDecorationState
+): FileSystemPierreRowMeta {
   if (entry.kind === "folder") {
-    if (controller.loadingFolders.has(entry.path)) {
-      return { text: "Loading", title: "Folder" }
+    if (decoration.loadingFolders.has(entry.path)) {
+      return { detailLabel: "Loading", kindLabel: "Folder" }
     }
 
-    const error = controller.folderErrors.get(entry.path)
+    const error = decoration.folderErrors.get(entry.path)
 
     if (error) {
-      return { text: error, title: "Folder" }
+      return { detailLabel: error, kindLabel: "Folder" }
     }
 
-    const childCount = controller.index.children.get(entry.path)?.length
+    const childCount = decoration.index.children.get(entry.path)?.length
 
     return {
-      text: childCount === undefined ? "" : pluralizeItemCount(childCount),
-      title: "Folder",
+      detailLabel:
+        childCount === undefined ? "" : pluralizeItemCount(childCount),
+      kindLabel: "Folder",
     }
   }
 
   return {
-    text: formatFileSystemSize(entry.size),
-    title: entryKindLabel(entry),
+    detailLabel: formatFileSystemSize(entry.size),
+    kindLabel: entryKindLabel(entry),
   }
 }
 

@@ -13,6 +13,10 @@ export type JsonTablePrimitiveActiveCellStore = {
   subscribe: (listener: PrimitiveActiveCellListener) => () => void
 }
 
+export type SetJsonTablePrimitiveActiveCell = (
+  activeCell: JsonTablePrimitiveActiveCell | null
+) => void
+
 export function createJsonTablePrimitiveActiveCellStore(): JsonTablePrimitiveActiveCellStore {
   let activeCell: JsonTablePrimitiveActiveCell | null = null
   const listeners = new Set<PrimitiveActiveCellListener>()
@@ -47,4 +51,3 @@ export function useJsonTablePrimitiveActiveCell({
     () => null
   )
 }
-

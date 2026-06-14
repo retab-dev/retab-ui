@@ -33,7 +33,7 @@ your bundler (Vite, webpack, or Turbopack) — there is no runtime CDN call.
   <ViewerRoot>
     <PdfViewerHeader />
     <ViewerBody>
-      <ViewerSidebar>
+      <ViewerSidebar aria-label="PDF pages">
         <PdfViewerThumbnails />
       </ViewerSidebar>
       <ViewerSurface>
@@ -46,11 +46,15 @@ your bundler (Vite, webpack, or Turbopack) — there is no runtime CDN call.
 
 The hierarchy is visible in JSX: viewer primitives own layout, the PDF provider
 owns shared PDF state, and `PdfViewerPages` renders the document pages.
+The thumbnail rail is explicit composition, not part of the default `PdfViewer`
+easy API.
 
 ## Usage
 
-`PdfViewer` is the easy API. It is the preassembled version of the composition
-above.
+`PdfViewer` is the easy API. It is the preassembled PDF viewer with
+`PdfViewerHeader`, `ViewerBody`, `ViewerSurface`, and
+`PdfViewerPages`. Compose `PdfViewerThumbnails` inside
+`ViewerSidebar` when a thumbnail rail is needed.
 
 ```tsx
 import { PdfViewer } from "@/components/ui/pdf-viewer"
@@ -76,7 +80,7 @@ You can compose workflow chrome around the PDF surface with the same primitives:
   <ViewerRoot>
     <WorkflowHeader />
     <ViewerBody>
-      <ViewerSidebar>
+      <ViewerSidebar aria-label="Workflow pages">
         <PageRibbon />
       </ViewerSidebar>
       <ViewerSurface>

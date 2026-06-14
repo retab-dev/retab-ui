@@ -3,7 +3,6 @@
 import * as React from "react"
 import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
-import { cva, type VariantProps } from "class-variance-authority"
 import { PanelLeft } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -21,6 +20,11 @@ import {
 } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipPopup, TooltipTrigger } from "@/components/ui/tooltip"
+
+import {
+  sidebarRowButtonVariants,
+  type SidebarRowButtonVariantProps,
+} from "./sidebar-row"
 
 const SIDEBAR_COOKIE_NAME: string = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE: number = 60 * 60 * 24 * 7
@@ -119,28 +123,6 @@ function getSidebarRender(
   }
 }
 
-const sidebarMenuButtonVariants = cva(
-  "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-lg p-2 text-left text-sm ring-sidebar-ring outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pe-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground [&>span:last-child]:truncate [&>svg]:shrink-0 [&>svg:not([class*='size-'])]:size-4",
-  {
-    defaultVariants: {
-      size: "default",
-      variant: "default",
-    },
-    variants: {
-      size: {
-        default: "h-8 text-sm",
-        lg: "h-12 text-sm group-data-[collapsible=icon]:p-0!",
-        sm: "h-7 text-xs",
-      },
-      variant: {
-        default: "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-        outline:
-          "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
-      },
-    },
-  }
-)
-
 export type SidebarContextProps = {
   state: "expanded" | "collapsed"
   open: boolean
@@ -169,7 +151,6 @@ export function SidebarProvider({
   onOpenChange: setOpenProp,
   persist = true,
   keyboardShortcut = SIDEBAR_KEYBOARD_SHORTCUT,
-  scope = "app",
   className,
   style,
   children,
@@ -180,7 +161,6 @@ export function SidebarProvider({
   onOpenChange?: (open: boolean) => void
   persist?: boolean
   keyboardShortcut?: string | false
-  scope?: "app" | "container"
 }): React.ReactElement {
   const isMobile = useMediaQuery("max-md")
   const [openMobile, setOpenMobile] = React.useState(false)
@@ -272,7 +252,6 @@ export function SidebarProvider({
           "group/sidebar-wrapper flex min-h-svh w-full has-data-[variant=inset]:bg-sidebar",
           className
         )}
-        data-sidebar-scope={scope}
         data-slot="sidebar-wrapper"
         style={
           {
@@ -286,37 +265,6 @@ export function SidebarProvider({
         {children}
       </div>
     </SidebarContext.Provider>
-  )
-}
-
-export function EmbeddedSidebarProvider({
-  width = SIDEBAR_WIDTH,
-  className,
-  style,
-  ...props
-}: Omit<
-  React.ComponentProps<typeof SidebarProvider>,
-  "keyboardShortcut" | "persist" | "scope"
-> & {
-  width?: string
-}): React.ReactElement {
-  return (
-    <SidebarProvider
-      className={cn(
-        "h-full min-h-0! w-full flex-shrink-0 bg-transparent",
-        className
-      )}
-      keyboardShortcut={false}
-      persist={false}
-      scope="container"
-      style={
-        {
-          "--sidebar-width": width,
-          ...style,
-        } as React.CSSProperties
-      }
-      {...props}
-    />
   )
 }
 
@@ -732,7 +680,7 @@ export function SidebarMenuButton({
   isActive?: boolean
   tooltip?: string | React.ComponentProps<typeof TooltipPopup>
   asChild?: boolean
-} & VariantProps<typeof sidebarMenuButtonVariants>): React.ReactElement {
+} & SidebarRowButtonVariantProps): React.ReactElement {
   const { isMobile, state } = useSidebar()
   const renderValue =
     render ??
@@ -743,7 +691,7 @@ export function SidebarMenuButton({
 
   const defaultProps = {
     children: asChild && React.isValidElement(children) ? undefined : children,
-    className: cn(sidebarMenuButtonVariants({ size, variant }), className),
+    className: cn(sidebarRowButtonVariants({ size, variant }), className),
     "data-active": isActive,
     "data-sidebar": "menu-button",
     "data-size": size,

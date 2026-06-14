@@ -9,11 +9,11 @@ import { type PdfViewerHandle } from "@/components/ui/pdf-viewer"
 import { SegmentLegend } from "@/components/ui/segment-legend"
 import {
   ViewerBody,
-  ViewerHeader,
-  ViewerRoot,
-  ViewerSidebar,
-  ViewerSidebarTrigger,
   ViewerSurface,
+  ViewerHeader,
+  ViewerSidebar,
+  ViewerRoot,
+  ViewerSidebarTrigger,
 } from "@/components/ui/viewer"
 import { type SplitView } from "@/components/viewers/lib/split-types"
 
@@ -179,7 +179,9 @@ export function SplitViewerHeader() {
     <ViewerHeader className="flex flex-col">
       <div className="flex min-h-10 items-center justify-between gap-3 px-3 py-2">
         <div className="flex items-center gap-2 text-sm font-medium">
-          {hasOutput ? <ViewerSidebarTrigger className="-ml-1" /> : null}
+          {hasOutput && pageCount > 0 ? (
+            <ViewerSidebarTrigger className="-ml-1" />
+          ) : null}
           <Scissors className="size-4 text-muted-foreground" />
           <span>{title}</span>
         </div>
@@ -189,24 +191,34 @@ export function SplitViewerHeader() {
           </div>
         ) : null}
       </div>
-      <SplitViewerLegend className="border-t px-3 py-2" />
     </ViewerHeader>
   )
 }
 
 function SplitViewerBody({ children }: { children?: ReactNode }) {
-  const { hasOutput, pageCount } = useSplitViewerBody()
   return (
     <ViewerBody>
-      {hasOutput && pageCount > 0 ? (
-        <ViewerSidebar width="4rem" className="border-r bg-background">
-          <SplitViewerPageRail />
-        </ViewerSidebar>
-      ) : null}
+      <SplitViewerSidebar />
       <ViewerSurface>
+        <SplitViewerLegend className="border-b px-3 py-2" />
         <SplitViewerDocument>{children}</SplitViewerDocument>
       </ViewerSurface>
     </ViewerBody>
+  )
+}
+
+function SplitViewerSidebar() {
+  const { hasOutput, pageCount } = useSplitViewerBody()
+  if (!hasOutput || pageCount <= 0) return null
+
+  return (
+    <ViewerSidebar
+      aria-label="Split pages"
+      width="4rem"
+      className="border-r bg-background"
+    >
+      <SplitViewerPageRail />
+    </ViewerSidebar>
   )
 }
 

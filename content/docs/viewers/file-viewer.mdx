@@ -44,6 +44,16 @@ have a URL, the URL is used for display and its basename is used for downloads;
 pass `source.mimeType` when the extension is missing or ambiguous, or `as` to
 force a category.
 
+## Composition Boundaries
+
+`FileViewer` is a file router and renderer. Do not use it to own workflow
+layout: use `ViewerRoot`, `ViewerBody`, `ViewerSidebar`, and `ViewerSurface`
+when a workflow needs sidebars or composed panes.
+
+`ViewerRoot bare` removes the spatial frame. `FileViewer bare` removes the
+file-renderer chrome. `DomainViewer bare` chooses whether the domain viewer's
+internal `ViewerRoot` is framed.
+
 ## Supported types
 
 | Category     | Extensions                                                                      | Rendered by         |

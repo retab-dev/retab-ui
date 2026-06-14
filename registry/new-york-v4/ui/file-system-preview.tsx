@@ -98,7 +98,7 @@ export function FileSystemPreview({
                   className="w-12 shrink-0"
                 />
               ) : (
-                <div className="flex size-12 shrink-0 items-center justify-center rounded-md bg-muted text-lg">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-sm bg-muted text-lg">
                   {folderInitial(entry.name)}
                 </div>
               )}
@@ -141,7 +141,7 @@ export function FileSystemThumbnail({
     return (
       <FileThumbnail
         file={{ name: file.name, type: file.mimeType ?? "" }}
-        previewAspectRatio={file.previewAspectRatio}
+        previewAspectRatio={1}
         previewImageUrl={file.previewImageUrl}
         className={className}
       />
@@ -152,7 +152,7 @@ export function FileSystemThumbnail({
     return (
       <FileThumbnail
         source={source}
-        previewAspectRatio={file.previewAspectRatio}
+        previewAspectRatio={1}
         className={className}
       />
     )
@@ -161,7 +161,7 @@ export function FileSystemThumbnail({
   return (
     <FileThumbnail
       file={{ name: file.name, type: file.mimeType ?? "" }}
-      previewAspectRatio={file.previewAspectRatio}
+      previewAspectRatio={1}
       className={className}
       state={sourceState.status === "loading" ? "loading" : undefined}
     />

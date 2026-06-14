@@ -17,6 +17,8 @@ import {
   findEditableCell,
   getRequiredInteractionFieldMetadata,
   interactionVisibleColumn,
+  primitiveEventTarget,
+  primitivePendingCellCommit,
   renderInteractionRow,
 } from "./json-table-interaction-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
@@ -184,7 +186,7 @@ async function editableCell(
 }
 
 function pointerDown(target: Element | Document | Window) {
-  fireEvent.pointerDown(target, {
+  fireEvent.pointerDown(primitiveEventTarget(target), {
     button: 0,
     buttons: 1,
     clientX: 18,
@@ -209,7 +211,7 @@ async function openEnumCell(
   fieldPath: string
 ) {
   const cell = await editableCell(view, fieldPath)
-  fireEvent.click(cell, {
+  fireEvent.click(primitiveEventTarget(cell), {
     button: 0,
     clientX: 18,
     clientY: 12,
@@ -226,7 +228,7 @@ async function openPickerCell(
   view: ReturnType<typeof renderNormalizationRow>,
   fieldPath: string
 ) {
-  fireEvent.pointerDown(await editableCell(view, fieldPath), {
+  fireEvent.pointerDown(primitiveEventTarget(await editableCell(view, fieldPath)), {
     button: 0,
     clientX: 0,
     clientY: 0,
@@ -264,9 +266,11 @@ describe("json table value normalization hardening", () => {
 
       await waitFor(() =>
         expect(view.onCellCommit).toHaveBeenCalledWith(
-          view.document.id,
-          fieldPath,
-          expectedValue
+          primitivePendingCellCommit({
+            fieldPath,
+            value: expectedValue,
+            previousValue: view.document.data[fieldPath],
+          })
         )
       )
       expect(view.onCellCommit).toHaveBeenCalledTimes(1)
@@ -291,9 +295,11 @@ describe("json table value normalization hardening", () => {
 
       await waitFor(() =>
         expect(view.onCellCommit).toHaveBeenCalledWith(
-          view.document.id,
-          fieldPath,
-          null
+          primitivePendingCellCommit({
+            fieldPath,
+            value: null,
+            previousValue: view.document.data[fieldPath],
+          })
         )
       )
       expect(view.onCellCommit).toHaveBeenCalledTimes(1)
@@ -328,9 +334,11 @@ describe("json table value normalization hardening", () => {
 
     await waitFor(() =>
       expect(view.onCellCommit).toHaveBeenCalledWith(
-        view.document.id,
-        "vendor",
-        null
+        primitivePendingCellCommit({
+          fieldPath: "vendor",
+          value: null,
+          previousValue: "ACME",
+        })
       )
     )
     expect(view.onCellCommit).toHaveBeenCalledTimes(1)
@@ -398,9 +406,11 @@ describe("json table value normalization hardening", () => {
 
     await waitFor(() =>
       expect(view.onCellCommit).toHaveBeenCalledWith(
-        view.document.id,
-        "shipped_time",
-        "09:30:00"
+        primitivePendingCellCommit({
+          fieldPath: "shipped_time",
+          value: "09:30:00",
+          previousValue: "25:99",
+        })
       )
     )
     expect(view.onCellCommit).toHaveBeenCalledTimes(1)

@@ -5,7 +5,10 @@ import { cleanup, fireEvent, render, waitFor } from "@testing-library/react"
 import type { JSONSchema7 } from "json-schema"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
-import type { JsonTableCellCommit } from "@/components/json-table/json-table-cell-commit"
+import type {
+  JsonTableCellCommit,
+  JsonTableCellCommitHandler,
+} from "@/components/json-table/json-table-cell-commit"
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
 import type {
   JsonTableActivationIntent,
@@ -15,12 +18,14 @@ import type {
 import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
 import { createJsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
 import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
+import { jsonTableFullRenderedColumnWindow } from "@/components/json-table/json-table-rendered-column-window"
 import type { ProjectedCell } from "@/components/json-table/lib/document-projection"
 import { projectDocumentRows } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
 import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import { SingleFileFormRow } from "@/components/json-table/single-file-form-row"
 
+import { primitiveEventTarget } from "./json-table-interaction-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
 
 beforeAll(() => installJsonTableDom())
@@ -69,12 +74,6 @@ const document: TableDocument = {
   },
 }
 
-type TestCellCommit = (
-  docId: string,
-  materializedFieldPath: string,
-  value: unknown
-) => void
-
 function visibleColumn(key: string): VisibleColumn {
   return {
     key,
@@ -85,9 +84,11 @@ function visibleColumn(key: string): VisibleColumn {
 
 function SingleFileFormRowHarness({
   onCellCommit,
+  visibleColumns,
   ...props
 }: Omit<
   React.ComponentProps<typeof SingleFileFormRow>,
+  | "renderedColumnWindow"
   | "primitiveActiveCellStore"
   | "primitiveEditStore"
   | "setPrimitiveActiveCell"
@@ -97,7 +98,8 @@ function SingleFileFormRowHarness({
   | "closeStructuredEditSession"
   | "onCellCommit"
 > & {
-  onCellCommit?: TestCellCommit
+  visibleColumns: VisibleColumn[]
+  onCellCommit?: JsonTableCellCommitHandler
 }) {
   const primitiveActiveCellStoreRef = React.useRef(
     createJsonTablePrimitiveActiveCellStore()
@@ -131,7 +133,7 @@ function SingleFileFormRowHarness({
         docId: props.document.id,
         fieldPath: projectedCell.materializedFieldPath,
         intent,
-        isOverlayOpen: false,
+        isOverlayOpen: true,
       })
     },
     [props.document.id]
@@ -151,18 +153,15 @@ function SingleFileFormRowHarness({
   }, [])
   const handleCellCommit = React.useCallback(
     (commit: JsonTableCellCommit) => {
-      ;(onCellCommit ?? vi.fn())(
-        props.document.id,
-        commit.fieldPath,
-        commit.value
-      )
+      onCellCommit?.(commit)
     },
-    [onCellCommit, props.document.id]
+    [onCellCommit]
   )
 
   return (
     <SingleFileFormRow
       {...props}
+      renderedColumnWindow={jsonTableFullRenderedColumnWindow(visibleColumns)}
       primitiveActiveCellStore={primitiveActiveCellStoreRef.current}
       primitiveEditStore={primitiveEditStoreRef.current}
       setPrimitiveActiveCell={setNextPrimitiveActiveCell}
@@ -317,7 +316,7 @@ describe("json table row rendering", () => {
     fireEvent.pointerEnter(cell)
     expect(view.queryByRole("textbox")).toBeNull()
 
-    fireEvent.pointerDown(cell, { button: 0 })
+    fireEvent.pointerDown(primitiveEventTarget(cell), { button: 0 })
 
     const input = view.getByRole("textbox")
     expect(globalThis.document.activeElement).toBe(input)
@@ -325,11 +324,12 @@ describe("json table row rendering", () => {
     fireEvent.change(input, { target: { value: "Globex" } })
     fireEvent.blur(input)
 
-    expect(onCellCommit).toHaveBeenCalledWith(
-      document.id,
-      "vendor",
-      "Globex"
-    )
+    expect(onCellCommit).toHaveBeenCalledWith({
+      fieldPath: "vendor",
+      value: "Globex",
+      previousValue: "ACME",
+      visibleThrough: "primitivePendingValue",
+    })
   })
 
   it("toggles boolean cells on the first click", async () => {
@@ -369,13 +369,14 @@ describe("json table row rendering", () => {
       return editableCell
     })
 
-    fireEvent.pointerDown(cell, { button: 0 })
+    fireEvent.pointerDown(primitiveEventTarget(cell), { button: 0 })
 
-    expect(onCellCommit).toHaveBeenCalledWith(
-      document.id,
-      "is_paid",
-      true
-    )
+    expect(onCellCommit).toHaveBeenCalledWith({
+      fieldPath: "is_paid",
+      value: true,
+      previousValue: false,
+      visibleThrough: "primitivePendingValue",
+    })
   })
 
   it("starts text edit sessions from a typeable key", async () => {
@@ -414,8 +415,9 @@ describe("json table row rendering", () => {
       return editableCell
     })
 
-    cell.focus()
-    fireEvent.keyDown(cell, { key: "Z" })
+    const surface = primitiveEventTarget(cell) as HTMLElement
+    surface.focus()
+    fireEvent.keyDown(surface, { key: "Z" })
 
     const input = view.getByRole("textbox")
     expect((input as HTMLInputElement).value).toBe("Z")
@@ -457,7 +459,7 @@ describe("json table row rendering", () => {
       return editableCell
     })
 
-    fireEvent.click(cell, {
+    fireEvent.click(primitiveEventTarget(cell), {
       button: 0,
       clientX: 0,
       clientY: 0,
@@ -505,7 +507,7 @@ describe("json table row rendering", () => {
       return editableCell
     })
 
-    fireEvent.pointerDown(cell, { button: 0 })
+    fireEvent.pointerDown(primitiveEventTarget(cell), { button: 0 })
 
     expect(await view.findByRole("dialog")).toBeTruthy()
   })

@@ -1,0 +1,356 @@
+import {
+  CODE_VIEWER_BLOCK_PADDING,
+  CODE_VIEWER_INITIAL_VIEWPORT_HEIGHT,
+  CODE_VIEWER_OVERSCAN,
+} from "./code-viewer-scale"
+import type { CodeSyntax, CodeTokenLeaf } from "./code-viewer-syntax"
+import {
+  getCodeVirtualLines,
+  getCodeVirtualTotalSize,
+  type CodeVirtualLine,
+} from "./code-viewer-virtualization"
+import { isLineInRange, type NormalizedTextLineRange } from "./line-ranges"
+
+export type CodeProjectionIdentity = {
+  contentIdentity: string
+  layoutIdentity: string
+  syntaxIdentity: string
+}
+
+export type CodeProjectionInput = CodeProjectionIdentity & {
+  rowHost: HTMLPreElement
+  viewport: HTMLDivElement
+  textLines: readonly string[]
+  lineHeight: number
+  gutterWidth: string
+  highlightRange: NormalizedTextLineRange | null
+  syntax: CodeSyntax
+}
+
+export type CodeProjector = {
+  project(input: CodeProjectionInput): void
+  destroy(): void
+}
+
+type CodeRowCache = {
+  contentIdentity: string
+  contentSpan: HTMLSpanElement
+  gutterSpan: HTMLSpanElement
+  layoutIdentity: string
+  row: HTMLDivElement
+}
+
+type VisibleRange = {
+  end: number
+  start: number
+}
+
+const CODE_TOKEN_CLASS: Record<string, string> = {
+  boolean: "cv-token-keyword",
+  keyword: "cv-token-keyword",
+  null: "cv-token-keyword",
+  number: "cv-token-number",
+  operator: "cv-token-punctuation",
+  property: "cv-token-property",
+  punctuation: "cv-token-punctuation",
+  string: "cv-token-string",
+}
+
+export function createCodeProjector(): CodeProjector {
+  let identity: CodeProjectionIdentity | null = null
+  let rowHost: HTMLPreElement | null = null
+  let rows: Array<CodeRowCache | undefined> = []
+  let visibleRange: VisibleRange | null = null
+
+  return {
+    project(input) {
+      if (rowHost !== input.rowHost) {
+        rowHost = input.rowHost
+        clearRows()
+      }
+
+      const nextIdentity = codeProjectionIdentity(input)
+      if (
+        !identity ||
+        identity.contentIdentity !== nextIdentity.contentIdentity
+      ) {
+        identity = nextIdentity
+        clearRows()
+      } else {
+        identity = nextIdentity
+      }
+
+      setStyleValue(
+        input.rowHost.style,
+        "height",
+        `${getCodeVirtualTotalSize({
+          lineCount: input.textLines.length,
+          lineHeight: input.lineHeight,
+        })}px`
+      )
+
+      const visibleLines = getCodeVirtualLines({
+        lineCount: input.textLines.length,
+        lineHeight: input.lineHeight,
+        overscan: CODE_VIEWER_OVERSCAN,
+        paddingStart: CODE_VIEWER_BLOCK_PADDING,
+        scrollTop: input.viewport.scrollTop,
+        viewportHeight:
+          input.viewport.clientHeight || CODE_VIEWER_INITIAL_VIEWPORT_HEIGHT,
+      })
+      const nextVisibleRange = codeVisibleRange(visibleLines)
+
+      removeRowsOutsideVisibleRange(nextVisibleRange)
+
+      syncVisibleRowOrder({
+        input,
+        visibleLines,
+      })
+      visibleRange = nextVisibleRange
+    },
+    destroy() {
+      clearRows()
+      rowHost = null
+      identity = null
+    },
+  }
+
+  function syncVisibleRowOrder({
+    input,
+    visibleLines,
+  }: {
+    input: CodeProjectionInput
+    visibleLines: readonly CodeVirtualLine[]
+  }) {
+    let cursor = input.rowHost.firstChild
+
+    for (const visibleLine of visibleLines) {
+      const row = prepareCodeRow({
+        input,
+        visibleLine,
+      })
+      if (row !== cursor) {
+        input.rowHost.insertBefore(row, cursor)
+      }
+      cursor = row.nextSibling
+    }
+
+    while (cursor) {
+      const nextCursor = cursor.nextSibling
+      cursor.parentNode?.removeChild(cursor)
+      cursor = nextCursor
+    }
+  }
+
+  function clearRows() {
+    rowHost?.replaceChildren()
+    rows = []
+    visibleRange = null
+  }
+
+  function removeRowsOutsideVisibleRange(nextVisibleRange: VisibleRange) {
+    if (!visibleRange) return
+
+    removeCodeRowRange(visibleRange.start, nextVisibleRange.start)
+    removeCodeRowRange(nextVisibleRange.end, visibleRange.end)
+  }
+
+  function removeCodeRowRange(start: number, end: number) {
+    for (
+      let index = Math.max(0, start);
+      index < Math.max(start, end);
+      index++
+    ) {
+      const row = rows[index]
+      if (!row) continue
+      row.row.remove()
+      rows[index] = undefined
+    }
+  }
+
+  function prepareCodeRow({
+    input,
+    visibleLine,
+  }: {
+    input: CodeProjectionInput
+    visibleLine: CodeVirtualLine
+  }): HTMLDivElement {
+    const lineNumber = visibleLine.index + 1
+    const text = input.textLines[visibleLine.index] ?? ""
+    const isHighlighted = isLineInRange(lineNumber, input.highlightRange)
+    const layoutIdentity = [
+      lineNumber,
+      input.layoutIdentity,
+      isHighlighted ? "highlighted" : "",
+    ].join("\u0000")
+    const contentIdentity = [text, input.syntaxIdentity].join("\u0000")
+
+    let row = rows[visibleLine.index]
+    if (!row) {
+      row = createCodeRow()
+      rows[visibleLine.index] = row
+    }
+
+    setStyleValue(row.row.style, "height", `${visibleLine.size}px`)
+    setStyleValue(
+      row.row.style,
+      "transform",
+      `translateY(${visibleLine.start}px)`
+    )
+
+    if (row.layoutIdentity !== layoutIdentity) {
+      row.layoutIdentity = layoutIdentity
+      patchCodeRowLayout({
+        gutterWidth: input.gutterWidth,
+        isHighlighted,
+        lineNumber,
+        row,
+      })
+    }
+
+    if (row.contentIdentity !== contentIdentity) {
+      row.contentIdentity = contentIdentity
+      patchCodeRowContent({
+        row,
+        syntax: input.syntax,
+        text,
+      })
+    }
+
+    return row.row
+  }
+}
+
+function codeProjectionIdentity({
+  contentIdentity,
+  layoutIdentity,
+  syntaxIdentity,
+}: CodeProjectionIdentity): CodeProjectionIdentity {
+  return {
+    contentIdentity,
+    layoutIdentity,
+    syntaxIdentity,
+  }
+}
+
+function codeVisibleRange(
+  visibleLines: readonly CodeVirtualLine[]
+): VisibleRange {
+  const start = visibleLines[0]?.index ?? 0
+  const end = visibleLines.length
+    ? visibleLines[visibleLines.length - 1]!.index + 1
+    : start
+  return { end, start }
+}
+
+function createCodeRow(): CodeRowCache {
+  const row = document.createElement("div")
+  const gutterSpan = document.createElement("span")
+  const contentSpan = document.createElement("span")
+
+  row.className = codeRowClassName(false)
+  row.style.position = "absolute"
+  row.style.top = "0"
+  row.style.left = "0"
+
+  gutterSpan.className =
+    "sticky left-0 z-10 flex-shrink-0 border-r bg-muted/30 px-2 pr-3 text-right text-muted-foreground/60 select-none"
+  gutterSpan.dataset.codeGutter = ""
+  gutterSpan.setAttribute("aria-hidden", "true")
+  contentSpan.className = "whitespace-pre px-2"
+
+  row.append(gutterSpan, contentSpan)
+
+  return {
+    contentIdentity: "",
+    contentSpan,
+    gutterSpan,
+    layoutIdentity: "",
+    row,
+  }
+}
+
+function patchCodeRowLayout({
+  gutterWidth,
+  isHighlighted,
+  lineNumber,
+  row,
+}: {
+  gutterWidth: string
+  isHighlighted: boolean
+  lineNumber: number
+  row: CodeRowCache
+}) {
+  row.row.dataset.lineNumber = String(lineNumber)
+  row.row.className = codeRowClassName(isHighlighted)
+  setStyleValue(row.gutterSpan.style, "width", gutterWidth)
+  setTextContent(row.gutterSpan, String(lineNumber))
+}
+
+function patchCodeRowContent({
+  row,
+  syntax,
+  text,
+}: {
+  row: CodeRowCache
+  syntax: CodeSyntax
+  text: string
+}) {
+  patchCodeContent(row.contentSpan, syntax.getLineTokens(text), text)
+}
+
+function patchCodeContent(
+  contentSpan: HTMLSpanElement,
+  leaves: readonly CodeTokenLeaf[] | null,
+  text: string
+) {
+  if (text === "") {
+    contentSpan.replaceChildren()
+    contentSpan.textContent = " "
+    return
+  }
+  if (!leaves) {
+    setTextContent(contentSpan, text)
+    return
+  }
+
+  contentSpan.replaceChildren()
+  const fragment = document.createDocumentFragment()
+  for (const leaf of leaves) {
+    const className = CODE_TOKEN_CLASS[leaf.kind]
+    if (!className) {
+      fragment.append(document.createTextNode(leaf.text))
+      continue
+    }
+    const span = document.createElement("span")
+    span.className = className
+    span.textContent = leaf.text
+    fragment.append(span)
+  }
+  contentSpan.append(fragment)
+}
+
+function codeRowClassName(isHighlighted: boolean) {
+  return [
+    "absolute top-0 left-0 flex min-w-full",
+    isHighlighted ? "bg-primary/12 ring-1 ring-primary/30 ring-inset" : "",
+  ]
+    .filter(Boolean)
+    .join(" ")
+}
+
+function setStyleValue(
+  style: CSSStyleDeclaration,
+  propertyName: string,
+  value: string
+) {
+  if (style.getPropertyValue(propertyName) !== value) {
+    style.setProperty(propertyName, value)
+  }
+}
+
+function setTextContent(element: HTMLElement, text: string) {
+  if (element.textContent !== text) {
+    element.textContent = text
+  }
+}
