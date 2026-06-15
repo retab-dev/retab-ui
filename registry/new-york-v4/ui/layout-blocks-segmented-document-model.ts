@@ -9,7 +9,7 @@ import {
   type SegmentedDocumentModel,
 } from "./segmented-document-model"
 
-export function layoutItemsToSegmentedDocumentModel({
+export function createOcrSegmentedDocumentModel({
   document,
   items,
 }: {

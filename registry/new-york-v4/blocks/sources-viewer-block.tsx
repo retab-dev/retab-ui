@@ -35,10 +35,7 @@ import {
   type SourceFieldLink,
 } from "@/components/ui/source-field-link"
 import { SourceIndicator } from "@/components/ui/source-indicator"
-import {
-  sourceFieldsToSegmentedDocumentModel,
-  sourceMapToSegmentedDocumentModel,
-} from "@/components/ui/source-segmented-document-model"
+import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
 import {
   useSegmentedImageSourceOverlay,
   useSegmentedImageViewerHandle,
@@ -126,7 +123,7 @@ const PDF_EVIDENCE = sourceMapToEvidenceModel({
   schema: jsonFormSample.schema as JSONSchema7,
   values: jsonFormSample.extraction as Record<string, unknown>,
 })
-const PDF_SEGMENTED_DOCUMENT = sourceMapToSegmentedDocumentModel({
+const PDF_SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel({
   labels: Object.fromEntries(
     PDF_EVIDENCE.evidenceItems.map((item) => [item.id, item.payload.label])
   ),
@@ -142,27 +139,27 @@ const PDF_EXTRACTION: SourceExtraction = {
 }
 const IMAGE_FIELDS = imageSample as FlatField[]
 const IMAGE_EXTRACTION = flatSourceExtraction(IMAGE_FIELDS)
-const IMAGE_SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(
+const IMAGE_SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel(
   fieldsToSegmentedFields(IMAGE_FIELDS)
 )
 const TEXT_FIELDS = textSample as FlatField[]
 const TEXT_EXTRACTION = flatSourceExtraction(TEXT_FIELDS)
-const TEXT_SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(
+const TEXT_SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel(
   fieldsToSegmentedFields(TEXT_FIELDS)
 )
 const CSV_FIELDS = csvSample as FlatField[]
 const CSV_EXTRACTION = flatSourceExtraction(CSV_FIELDS)
-const CSV_SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(
+const CSV_SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel(
   fieldsToSegmentedFields(CSV_FIELDS)
 )
 const XLSX_FIELDS = xlsxSample as FlatField[]
 const XLSX_EXTRACTION = flatSourceExtraction(XLSX_FIELDS)
-const XLSX_SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(
+const XLSX_SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel(
   fieldsToSegmentedFields(XLSX_FIELDS)
 )
 const DOCX_FIELDS = docxSample as FlatField[]
 const DOCX_EXTRACTION = flatSourceExtraction(DOCX_FIELDS)
-const DOCX_SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(
+const DOCX_SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel(
   fieldsToSegmentedFields(DOCX_FIELDS)
 )
 

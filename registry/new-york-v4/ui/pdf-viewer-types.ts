@@ -1,3 +1,5 @@
+import type { ViewerResource } from "@/lib/viewer-resource"
+
 export interface PageOverlayProps {
   pageNumber: number
   /** Rendered page size in CSS pixels (post-scale, post-rotation). */
@@ -27,4 +29,15 @@ export interface PdfViewerHandle {
 export type PdfPageSize = {
   width: number
   height: number
+}
+
+export type PdfDocumentViewportControls = {
+  currentPage: number
+  downloadAction: ViewerResource["originalDownload"]
+  onFitWidth: () => void
+  onRotate: () => void
+  onZoomIn: () => void
+  onZoomOut: () => void
+  pageCount: number
+  scale: number
 }

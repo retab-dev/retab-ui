@@ -1,5 +1,6 @@
 "use client"
 
+import type { Options as ReactMarkdownOptions } from "react-markdown"
 import rehypeKatex from "rehype-katex"
 import rehypePrettyCode from "rehype-pretty-code"
 import rehypeRaw from "rehype-raw"
@@ -13,7 +14,6 @@ import remarkGemoji from "remark-gemoji"
 import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
 import remarkSmartypants from "remark-smartypants"
-import type { PluggableList } from "unified"
 import { visit } from "unist-util-visit"
 
 export const ALERT_LABELS = {
@@ -47,6 +47,7 @@ type PretextComponentRegistryEntry = {
   directiveName: string
   props: Record<string, PretextComponentPropSchema>
 }
+type MarkdownPluginList = NonNullable<ReactMarkdownOptions["remarkPlugins"]>
 
 export const PRETEXT_COMPONENT_REGISTRY = {
   Accordion: {
@@ -197,7 +198,7 @@ export const PRETEXT_MARKDOWN_KATEX_OPTIONS = {
   trust: false,
 } as const
 
-export const PRETEXT_MARKDOWN_REHYPE_PLUGINS: PluggableList = [
+export const PRETEXT_MARKDOWN_REHYPE_PLUGINS: MarkdownPluginList = [
   rehypeRaw,
   rehypePretextMarkdownInputPolicy,
   rehypePretextMarkdownCodeMeta,
@@ -215,7 +216,7 @@ export const PRETEXT_MARKDOWN_REHYPE_PLUGINS: PluggableList = [
   ],
 ]
 
-export const PRETEXT_MARKDOWN_SYNC_REHYPE_PLUGINS: PluggableList = [
+export const PRETEXT_MARKDOWN_SYNC_REHYPE_PLUGINS: MarkdownPluginList = [
   rehypeRaw,
   rehypePretextMarkdownInputPolicy,
   rehypePretextMarkdownCodeMeta,
@@ -225,7 +226,7 @@ export const PRETEXT_MARKDOWN_SYNC_REHYPE_PLUGINS: PluggableList = [
 
 export function createPretextMarkdownRemarkPlugins(
   headingIds: readonly string[]
-): PluggableList {
+): MarkdownPluginList {
   return [
     remarkDirective,
     remarkPretextHeadingIds(headingIds),

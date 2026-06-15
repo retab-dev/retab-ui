@@ -35,7 +35,8 @@ export function PinboardDropSurface({ className }: DropzoneExampleProps) {
           </div>
         </div>
         <button
-          {...dropzone.getButtonProps({
+          {...dropzone.getTriggerProps({
+            native: true,
             className:
               "inline-flex h-8 cursor-pointer items-center rounded-md border bg-background px-3 text-xs font-medium outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring/24",
           })}

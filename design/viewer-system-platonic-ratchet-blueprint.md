@@ -398,8 +398,8 @@ layout bbox
 The current segmented source helpers are the right direction:
 
 ```ts
-sourceFieldsToSegmentedDocumentModel()
-sourceMapToSegmentedDocumentModel()
+createSourcesSegmentedDocumentModel()
+createSourcesSegmentedDocumentModel()
 useSegmentedSourceFieldLink()
 useSegmentedPdfViewerHandle()
 useSegmentedImageViewerHandle()

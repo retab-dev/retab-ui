@@ -90,7 +90,6 @@ const executableFilesToCheck = [
   "components/schema-editor/property-form/property-form-shell.tsx",
   "components/schema-editor/property-form/fields/type-field.tsx",
   "components/schema-editor/property-form/fields/object-properties-field.tsx",
-  "components/schema-editor/property-form/fields/object-properties-reorder-focus.ts",
   "components/schema-editor/property-form/fields/object-property-row.tsx",
   "components/schema-editor/property-form/fields/array-items-field.tsx",
   "components/schema-editor/property-form/fields/enum-value-identity.ts",
@@ -111,7 +110,6 @@ const executableFilesToCheck = [
   "components/schema-editor/property-form/fields/property-schema-plan-field.tsx",
   "components/schema-editor/property-form/model/object-properties-view.ts",
   "components/schema-editor/primitives/schema-add-input-model.ts",
-  "components/schema-editor/primitives/schema-row-reorder-actions.tsx",
   "components/schema-editor/primitives/schema-row-drag.ts",
   "components/schema-editor/schema-type-menu-sections.tsx",
   "components/schema-editor/object-template-type-section.tsx",
@@ -813,24 +811,10 @@ describe("schema builder architecture", () => {
       ),
       "utf8"
     )
-    const focusContent = readFileSync(
-      join(
-        repoRoot,
-        "components/schema-editor/property-form/fields/object-properties-reorder-focus.ts"
-      ),
-      "utf8"
-    )
     const actionsContent = readFileSync(
       join(
         repoRoot,
         "components/schema-editor/primitives/schema-row-actions.tsx"
-      ),
-      "utf8"
-    )
-    const reorderActionsContent = readFileSync(
-      join(
-        repoRoot,
-        "components/schema-editor/primitives/schema-row-reorder-actions.tsx"
       ),
       "utf8"
     )
@@ -856,8 +840,7 @@ describe("schema builder architecture", () => {
     expect(dragContent.includes("useObjectPropertiesRowDrag")).toBe(true)
     expect(dragContent.includes("moveObjectProperty")).toBe(false)
     expect(operationsContent.includes("moveObjectProperty")).toBe(true)
-    expect(rowContent.includes("row.reorder.moveUp")).toBe(true)
-    expect(rowContent.includes("row.reorder.moveDown")).toBe(true)
+    expect(rowContent.includes("SchemaRowReorderActions")).toBe(false)
     expect(rowContent.includes("export function ObjectPropertyRows")).toBe(
       true
     )
@@ -909,10 +892,6 @@ describe("schema builder architecture", () => {
     ).toBe(false)
     expect(actionsContent.includes("reorder?:")).toBe(false)
     expect(actionsContent.includes("moveUpLabel")).toBe(false)
-    expect(reorderActionsContent.includes("SchemaRowReorderActions")).toBe(true)
-    expect(focusContent.includes("aria-label")).toBe(false)
-    expect(focusContent.includes("data-schema-row-reorder-row-id")).toBe(true)
-    expect(focusContent.includes("data-schema-row-order-row-id")).toBe(false)
   })
 
   it("keeps property type field model-driven", () => {

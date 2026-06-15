@@ -42,7 +42,8 @@ export function SpreadsheetImportCard({ className }: DropzoneExampleProps) {
           </div>
         </div>
         <button
-          {...dropzone.getButtonProps({
+          {...dropzone.getTriggerProps({
+            native: true,
             className:
               "inline-flex h-8 shrink-0 cursor-pointer items-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/24",
           })}

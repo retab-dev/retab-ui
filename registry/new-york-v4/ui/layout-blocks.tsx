@@ -30,7 +30,7 @@ import {
 import { documentAiToPdfBlob } from "./layout-blocks-document-ai-pdf"
 import { createLayoutBlocksViewerModel } from "./layout-blocks-model"
 import { LayoutBlocksPanel } from "./layout-blocks-panel"
-import { layoutItemsToSegmentedDocumentModel } from "./layout-blocks-segmented-document-model"
+import { createOcrSegmentedDocumentModel } from "./layout-blocks-segmented-document-model"
 import { LayoutOverlayLayer } from "./layout-overlay-layer"
 
 const LOW_CONFIDENCE_THRESHOLD = 0.9
@@ -63,7 +63,7 @@ export function DocumentAiLayoutBlocks({
   )
   const segmentedDocumentModel = React.useMemo(
     () =>
-      layoutItemsToSegmentedDocumentModel({
+      createOcrSegmentedDocumentModel({
         document: layoutDocument,
         items: model.visibleItems,
       }),

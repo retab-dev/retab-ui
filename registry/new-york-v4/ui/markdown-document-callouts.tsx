@@ -1,8 +1,9 @@
 "use client"
 
 import * as React from "react"
-import type { Node } from "unist"
 import { visit } from "unist-util-visit"
+
+type MarkdownAstNode = Parameters<typeof visit>[0]
 
 export type MarkdownCalloutKind =
   | "caution"
@@ -17,7 +18,7 @@ export function remarkMarkdownCallouts() {
   return (tree: unknown) => {
     transformGithubAlertBlockquotes(tree)
     visit(
-      tree as Node,
+      tree as MarkdownAstNode,
       ["containerDirective", "leafDirective"],
       (visitedNode) => {
         const node = visitedNode as {
@@ -45,7 +46,7 @@ export function remarkMarkdownCallouts() {
 }
 
 function transformGithubAlertBlockquotes(tree: unknown) {
-  visit(tree as Node, "blockquote", (visitedNode) => {
+  visit(tree as MarkdownAstNode, "blockquote", (visitedNode) => {
     const node = visitedNode as {
       children?: Array<{
         children?: Array<{ type?: string; value?: string }>

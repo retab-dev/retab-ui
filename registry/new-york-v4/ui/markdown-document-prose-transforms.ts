@@ -1,5 +1,6 @@
-import type { Node } from "unist"
 import { visit } from "unist-util-visit"
+
+type MarkdownAstNode = Parameters<typeof visit>[0]
 
 const EMOJI_SHORTCODES: Record<string, string> = {
   "+1": "👍",
@@ -27,7 +28,7 @@ const SKIPPED_TEXT_PARENTS = new Set([
 
 export function remarkMarkdownProseTransforms() {
   return (tree: unknown) => {
-    visit(tree as Node, "text", (visitedNode, _index, parent) => {
+    visit(tree as MarkdownAstNode, "text", (visitedNode, _index, parent) => {
       const parentType = (parent as { type?: unknown } | undefined)?.type
       if (SKIPPED_TEXT_PARENTS.has(String(parentType))) return
       const node = visitedNode as { value?: string }

@@ -2011,6 +2011,121 @@ describe("PdfViewer", () => {
     expect(document.querySelector("[data-slot='pdf-viewer-rail']")).toBeNull()
   })
 
+  it("updates a detached header on zoom without remounting thumbnails", async () => {
+    pdfjsMock.docs.set(
+      "/detached-header-performance.pdf",
+      makeDoc([
+        [100, 200],
+        [100, 200],
+      ])
+    )
+    const counts = {
+      thumbnailMounts: 0,
+    }
+
+    function CountingThumbnails() {
+      React.useEffect(() => {
+        counts.thumbnailMounts += 1
+      }, [])
+      return <PdfViewerThumbnails thumbnailWidth={64} />
+    }
+
+    render(
+      <PdfViewerProvider
+        source={pdfUrlSource("/detached-header-performance.pdf")}
+      >
+        <ViewerRoot defaultOpen>
+          <PdfViewerHeader />
+          <ViewerBody>
+            <ViewerSidebar aria-label="PDF pages">
+              <CountingThumbnails />
+            </ViewerSidebar>
+            <ViewerSurface>
+              <PdfViewerPages bare className="h-full" defaultScale={1} />
+            </ViewerSurface>
+          </ViewerBody>
+        </ViewerRoot>
+      </PdfViewerProvider>
+    )
+
+    await findByTextContent("Page 1 of 2")
+    await screen.findByRole("button", { name: "Page 1" })
+    const initialThumbnailMounts = counts.thumbnailMounts
+    const initialDocumentLoads = pdfjsMock.getDocument.mock.calls.length
+
+    fireEvent.click(screen.getByLabelText("Zoom in"))
+
+    expect(await screen.findByText("120%")).toBeTruthy()
+    expect(counts.thumbnailMounts).toBe(initialThumbnailMounts)
+    expect(pdfjsMock.getDocument).toHaveBeenCalledTimes(initialDocumentLoads)
+  })
+
+  it("updates current page on scroll without remounting thumbnails or reloading the document", async () => {
+    pdfjsMock.docs.set(
+      "/scroll-composed-performance.pdf",
+      makeDoc([
+        [100, 200],
+        [100, 200],
+        [100, 200],
+      ])
+    )
+    const counts = {
+      thumbnailMounts: 0,
+    }
+
+    function CountingThumbnails() {
+      React.useEffect(() => {
+        counts.thumbnailMounts += 1
+      }, [])
+      return <PdfViewerThumbnails thumbnailWidth={64} />
+    }
+
+    render(
+      <PdfViewerProvider
+        source={pdfUrlSource("/scroll-composed-performance.pdf")}
+      >
+        <ViewerRoot defaultOpen>
+          <PdfViewerHeader />
+          <ViewerBody>
+            <ViewerSidebar aria-label="PDF pages">
+              <CountingThumbnails />
+            </ViewerSidebar>
+            <ViewerSurface>
+              <PdfViewerPages bare className="h-full" />
+            </ViewerSurface>
+          </ViewerBody>
+        </ViewerRoot>
+      </PdfViewerProvider>
+    )
+
+    await findByTextContent("Page 1 of 3")
+    await screen.findByRole("button", { name: "Page 1" })
+    const initialThumbnailMounts = counts.thumbnailMounts
+    const initialDocumentLoads = pdfjsMock.getDocument.mock.calls.length
+
+    const viewport = document.querySelector<HTMLElement>(
+      "[data-slot='scroll-area-viewport']"
+    )
+    expect(viewport).toBeTruthy()
+    Object.defineProperty(viewport, "scrollTop", {
+      configurable: true,
+      value: 950,
+      writable: true,
+    })
+    viewport!.getBoundingClientRect = () => ({ top: 0, height: 500 }) as DOMRect
+
+    fireEvent.scroll(viewport!)
+
+    expect(await findByTextContent("Page 2 of 3")).toBeTruthy()
+    await waitFor(() =>
+      expect(screen.getByRole("button", { current: "page" }).textContent).toBe(
+        "2"
+      )
+    )
+    expect(counts.thumbnailMounts).toBe(initialThumbnailMounts)
+    expect(pdfjsMock.getDocument).toHaveBeenCalledTimes(initialDocumentLoads)
+  })
+
   it("renders page overlays with current geometry and rotation", async () => {
     pdfjsMock.docs.set("/overlay.pdf", makeDoc([[100, 200]]))
 

@@ -4,7 +4,6 @@ import type { JSONSchema7 } from "json-schema"
 import { useForm } from "react-hook-form"
 
 import type { Source } from "@/lib/document-source"
-import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
 import {
   PdfViewerPages,
   PdfViewerProvider,
@@ -15,8 +14,9 @@ import {
   SegmentedDocumentProvider,
   useSegmentedDocumentViewport,
 } from "@/components/ui/segmented-document-provider"
+import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
 import { SourceIndicator } from "@/components/ui/source-indicator"
-import { sourceFieldsToSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
+import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
 import {
   useSegmentedPdfSourceOverlay,
   useSegmentedPdfViewerHandle,
@@ -70,7 +70,7 @@ const SOURCE_FIELDS = FIELDS.map((field) => ({
   label: field.label,
   source: field.source,
 }))
-const SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(SOURCE_FIELDS)
+const SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel(SOURCE_FIELDS)
 
 /**
  * Extract viewer block — extracted fields beside the source document, linked by

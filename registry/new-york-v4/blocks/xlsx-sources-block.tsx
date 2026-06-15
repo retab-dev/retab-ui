@@ -10,7 +10,7 @@ import {
   type SourceField,
 } from "@/components/ui/source-field-list"
 import { SourceIndicator } from "@/components/ui/source-indicator"
-import { sourceFieldsToSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
+import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
 import {
   ViewerBody,
   ViewerRoot,
@@ -36,7 +36,7 @@ const FIELDS = (xlsxSample as XlsxField[]).map((field) => ({
       : undefined,
 }))
 const FIELD_BY_KEY = new Map(FIELDS.map((field) => [field.key, field]))
-const SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(
+const SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel(
   FIELDS.map((field) => ({
     id: field.key,
     label: field.label,

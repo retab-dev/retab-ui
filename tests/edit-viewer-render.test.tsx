@@ -19,6 +19,8 @@ import {
 import type { EditViewerField } from "@/components/viewers/edit/edit-viewer-types"
 
 const viewerMocks = vi.hoisted(() => ({
+  pdfViewerMounts: vi.fn(),
+  pdfViewerRenders: vi.fn(),
   scrollToPageArea: vi.fn(),
 }))
 
@@ -40,6 +42,10 @@ vi.mock("@/components/ui/pdf-viewer", () => ({
       getViewportElement: () => HTMLDivElement | null
     }>
   ) {
+    viewerMocks.pdfViewerRenders(props.source.url)
+    React.useEffect(() => {
+      viewerMocks.pdfViewerMounts(props.source.url)
+    }, [props.source.url])
     React.useImperativeHandle(ref, () => ({
       scrollToPage: vi.fn(),
       scrollToPageArea: viewerMocks.scrollToPageArea,
@@ -71,6 +77,8 @@ vi.mock("@/components/ui/file-viewer", () => ({
 
 afterEach(() => {
   cleanup()
+  viewerMocks.pdfViewerMounts.mockClear()
+  viewerMocks.pdfViewerRenders.mockClear()
   viewerMocks.scrollToPageArea.mockClear()
 })
 
@@ -240,6 +248,88 @@ describe("EditViewer", () => {
     fireEvent.click(screen.getByRole("button", { name: "No location" }))
     expect(screen.getByText("memo")).toBeTruthy()
     expect(screen.queryByText("name")).toBeNull()
+  })
+
+  it("keeps the document renderer mounted across hover and search churn", () => {
+    render(<EditViewer result={{ fields }} sourceDocument={sourceDocument} />)
+
+    expect(viewerMocks.pdfViewerMounts).toHaveBeenCalledTimes(1)
+    const initialDocumentRenders =
+      viewerMocks.pdfViewerRenders.mock.calls.length
+
+    fireEvent.mouseEnter(screen.getByLabelText("name, text, Ada Lovelace"))
+    expect(viewerMocks.pdfViewerRenders.mock.calls.length).toBeGreaterThan(
+      initialDocumentRenders
+    )
+    expect(viewerMocks.pdfViewerMounts).toHaveBeenCalledTimes(1)
+
+    fireEvent.change(screen.getByLabelText("Search form fields"), {
+      target: { value: "wire" },
+    })
+
+    expect(screen.getByText("send_wire")).toBeTruthy()
+    expect(screen.queryByText("name")).toBeNull()
+    expect(viewerMocks.pdfViewerMounts).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps composed document and field panel mounted across field-panel churn", () => {
+    const counts = {
+      documentMounts: 0,
+      fieldsMounts: 0,
+    }
+
+    function CountingDocument() {
+      React.useEffect(() => {
+        counts.documentMounts += 1
+      }, [])
+      return <EditViewerDocument />
+    }
+
+    function CountingFields() {
+      React.useEffect(() => {
+        counts.fieldsMounts += 1
+      }, [])
+      return <EditViewerFields />
+    }
+
+    render(
+      <EditViewerProvider result={{ fields }} sourceDocument={sourceDocument}>
+        <ViewerRoot defaultOpen>
+          <EditViewerHeader />
+          <ViewerBody>
+            <ViewerSurface>
+              <CountingDocument />
+            </ViewerSurface>
+            <ViewerSidebar aria-label="Document fields" side="right">
+              <CountingFields />
+            </ViewerSidebar>
+          </ViewerBody>
+        </ViewerRoot>
+      </EditViewerProvider>
+    )
+
+    const fieldsSidebar = screen.getByLabelText("Document fields")
+    expect(counts.documentMounts).toBe(1)
+    expect(counts.fieldsMounts).toBe(1)
+    expect(viewerMocks.pdfViewerMounts).toHaveBeenCalledTimes(1)
+
+    fireEvent.change(screen.getByLabelText("Search form fields"), {
+      target: { value: "wire" },
+    })
+    expect(screen.getByText("send_wire")).toBeTruthy()
+    expect(screen.queryByText("name")).toBeNull()
+
+    fireEvent.mouseEnter(screen.getByText("send_wire").closest("button")!)
+    fireEvent.change(screen.getByLabelText("Search form fields"), {
+      target: { value: "" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Empty" }))
+    expect(screen.getByText("memo")).toBeTruthy()
+
+    expect(screen.getByLabelText("Document fields")).toBe(fieldsSidebar)
+    expect(counts.documentMounts).toBe(1)
+    expect(counts.fieldsMounts).toBe(1)
+    expect(viewerMocks.pdfViewerMounts).toHaveBeenCalledTimes(1)
   })
 
   it("exposes the expected accessibility contract", () => {

@@ -1,8 +1,9 @@
 "use client"
 
 import * as React from "react"
-import type { Node } from "unist"
 import { visit } from "unist-util-visit"
+
+type MarkdownAstNode = Parameters<typeof visit>[0]
 
 type MarkdownComponentName =
   | "accordion"
@@ -93,7 +94,7 @@ const HTML_ELEMENT_NAMES = new Set([
 export function remarkMarkdownComponents() {
   return (tree: unknown) => {
     visit(
-      tree as Node,
+      tree as MarkdownAstNode,
       ["containerDirective", "leafDirective", "textDirective"],
       (visitedNode) => {
         const node = visitedNode as {
@@ -117,7 +118,7 @@ export function remarkMarkdownComponents() {
 
 export function rehypeMarkdownComponents() {
   return (tree: unknown) => {
-    visit(tree as Node, "element", (visitedNode) => {
+    visit(tree as MarkdownAstNode, "element", (visitedNode) => {
       const node = visitedNode as {
         properties?: Record<string, unknown>
         tagName?: string
@@ -187,8 +188,10 @@ export function MarkdownComponent({
           data-component-name={name}
           data-source-line={sourceLine}
         >
-          <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {componentText(props, "label") || componentText(props, "title") || name}
+          <div className="mb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            {componentText(props, "label") ||
+              componentText(props, "title") ||
+              name}
           </div>
           <div className="[&>:first-child]:mt-0 [&>:last-child]:mb-0">
             {children}

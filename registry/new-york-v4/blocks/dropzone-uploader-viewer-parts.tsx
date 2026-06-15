@@ -64,8 +64,7 @@ type FileIntakeViewerActions = {
   clearFile: () => void
   getRootDropProps: UseDropzoneReturn["getRootProps"]
   getFileInputProps: UseDropzoneReturn["getInputProps"]
-  getUploadButtonProps: UseDropzoneReturn["getButtonProps"]
-  getReplaceButtonProps: UseDropzoneReturn["getButtonProps"]
+  getUploadButtonProps: UseDropzoneReturn["getTriggerProps"]
   getEmptySurfaceProps: UseDropzoneReturn["getTriggerProps"]
 }
 
@@ -83,7 +82,6 @@ type FileIntakeViewerDropTargetState = {
 type FileIntakeViewerHeaderState = {
   canClear: boolean
   clearFile: FileIntakeViewerActions["clearFile"]
-  getReplaceButtonProps: FileIntakeViewerActions["getReplaceButtonProps"]
   getUploadButtonProps: FileIntakeViewerActions["getUploadButtonProps"]
   selectedFileSummary: FileIntakeSummary | null
 }
@@ -126,7 +124,6 @@ function useFileIntakeViewerHeader(): FileIntakeViewerHeaderState {
   return {
     canClear: model.canClear,
     clearFile: actions.clearFile,
-    getReplaceButtonProps: actions.getReplaceButtonProps,
     getUploadButtonProps: actions.getUploadButtonProps,
     selectedFileSummary: model.selectedFileSummary,
   }
@@ -190,13 +187,12 @@ export function FileIntakeViewerProvider({
       clearFile: dropzone.clearFiles,
       getRootDropProps: dropzone.getRootProps,
       getFileInputProps: dropzone.getInputProps,
-      getUploadButtonProps: dropzone.getButtonProps,
-      getReplaceButtonProps: dropzone.getButtonProps,
+      getUploadButtonProps: (props) =>
+        dropzone.getTriggerProps({ ...props, native: true }),
       getEmptySurfaceProps: dropzone.getTriggerProps,
     }),
     [
       dropzone.clearFiles,
-      dropzone.getButtonProps,
       dropzone.getInputProps,
       dropzone.getRootProps,
       dropzone.getTriggerProps,
@@ -262,13 +258,8 @@ export function FileIntakeViewerRoot({
 }
 
 export function FileIntakeViewerHeader() {
-  const {
-    canClear,
-    clearFile,
-    getReplaceButtonProps,
-    getUploadButtonProps,
-    selectedFileSummary,
-  } = useFileIntakeViewerHeader()
+  const { canClear, clearFile, getUploadButtonProps, selectedFileSummary } =
+    useFileIntakeViewerHeader()
 
   return (
     <ViewerHeader className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
@@ -298,9 +289,7 @@ export function FileIntakeViewerHeader() {
           </button>
         ) : null}
         <button
-          {...(selectedFileSummary
-            ? getReplaceButtonProps
-            : getUploadButtonProps)({
+          {...getUploadButtonProps({
             "aria-label": selectedFileSummary
               ? `Replace ${selectedFileSummary.fileName}`
               : "Upload file",

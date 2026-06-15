@@ -18,9 +18,23 @@ export type SegmentedSourceField = {
   source?: Source | null
 }
 
-export function sourceFieldsToSegmentedDocumentModel(
-  fields: readonly SegmentedSourceField[]
+export type SourcesSegmentedDocumentInput =
+  | readonly SegmentedSourceField[]
+  | {
+      labels?: Record<string, string>
+      sourceMap: SourceMap
+    }
+
+export function createSourcesSegmentedDocumentModel(
+  input: SourcesSegmentedDocumentInput
 ): SegmentedDocumentModel {
+  const fields = isSegmentedSourceFieldList(input)
+    ? input
+    : Object.entries(input.sourceMap).map(([id, source]) => ({
+        id,
+        label: input.labels?.[id] ?? (id || "Value"),
+        source,
+      }))
   const colors = buildColorMap(fields.map((field) => field.label))
   const segments: DocumentSegment[] = []
   const anchors: SegmentAnchor[] = []
@@ -53,20 +67,10 @@ export function sourceFieldsToSegmentedDocumentModel(
   })
 }
 
-export function sourceMapToSegmentedDocumentModel({
-  labels,
-  sourceMap,
-}: {
-  labels?: Record<string, string>
-  sourceMap: SourceMap
-}): SegmentedDocumentModel {
-  return sourceFieldsToSegmentedDocumentModel(
-    Object.entries(sourceMap).map(([id, source]) => ({
-      id,
-      label: labels?.[id] ?? (id || "Value"),
-      source,
-    }))
-  )
+function isSegmentedSourceFieldList(
+  input: SourcesSegmentedDocumentInput
+): input is readonly SegmentedSourceField[] {
+  return Array.isArray(input)
 }
 
 export function sourceToSegmentAnchor(

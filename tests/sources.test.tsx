@@ -21,8 +21,7 @@ import {
 } from "@/components/ui/segmented-document-provider"
 import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
 import {
-  sourceFieldsToSegmentedDocumentModel,
-  sourceMapToSegmentedDocumentModel,
+  createSourcesSegmentedDocumentModel,
   sourceToSegmentAnchor,
 } from "@/components/ui/source-segmented-document-model"
 import { useSegmentedPdfSourceOverlay } from "@/components/ui/source-segmented-document-overlays"
@@ -636,7 +635,7 @@ describe("source evidence projection", () => {
   })
 
   it("projects page-local sources to segmented document segments and anchors", () => {
-    const model = sourceFieldsToSegmentedDocumentModel([
+    const model = createSourcesSegmentedDocumentModel([
       {
         id: "invoice.total",
         label: "Total",
@@ -715,7 +714,7 @@ describe("source evidence projection", () => {
       )
     ).toBeNull()
 
-    const model = sourceMapToSegmentedDocumentModel({
+    const model = createSourcesSegmentedDocumentModel({
       labels: { "": "Root value" },
       sourceMap: {
         "": pdfSource,
@@ -734,7 +733,7 @@ describe("source evidence projection", () => {
     const sourceMap = extractionSourcesToSourceMap(
       jsonFormSourcesSample.sources
     )
-    const model = sourceMapToSegmentedDocumentModel({
+    const model = createSourcesSegmentedDocumentModel({
       sourceMap,
     })
 
@@ -795,7 +794,7 @@ describe("source evidence projection", () => {
   })
 
   it("keeps segmented hover active while navigating to the source", async () => {
-    const model = sourceFieldsToSegmentedDocumentModel([
+    const model = createSourcesSegmentedDocumentModel([
       {
         id: "logo",
         label: "Logo",

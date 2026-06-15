@@ -23,28 +23,7 @@ npx shadcn@latest add @retab/dropzone
 
 ## Example
 
-<DropzoneDemo />
-
-```tsx
-import { useDropzone } from "@/components/ui/dropzone"
-
-export function FileIntakeTarget() {
-  const dropzone = useDropzone({
-    accept: "application/pdf,image/*,.docx,.xlsx,.csv",
-    maxFiles: 3,
-    onIntake(intake) {
-      console.log(intake.acceptedFiles, intake.fileRejections)
-    },
-  })
-
-  return (
-    <div {...dropzone.getRootProps(dropzone.getTriggerProps())}>
-      <input {...dropzone.getInputProps()} />
-      Drop or browse files
-    </div>
-  )
-}
-```
+<ComponentPreview name="dropzone-demo" />
 
 ## Mental Model
 
@@ -55,61 +34,21 @@ into React state and prop getters.
 - `lastIntake` is the latest file-intake attempt.
 - `onFilesChange` reports selected-file state changes.
 - `onIntake` reports accepted and rejected files from one attempt.
-- `getButtonProps` is for real `<button>` elements.
-- `getTriggerProps` is for anything else that opens the file dialog.
+- `getTriggerProps` makes any element open the file dialog; pass `native` when
+  that element is a real `<button>`.
 
 ## Trigger Patterns
 
-Use `getButtonProps` when the trigger is a real button. Use `getTriggerProps`
-for custom trigger elements, validation-only targets, disabled states, and
-parent-owned queues.
+`getTriggerProps` is the one opener. By default it polyfills button semantics
+onto any element — `role`, focusability, and Enter/Space activation. Pass
+`native: true` when the trigger is a real `<button>` so the platform owns those
+and the getter only supplies the `disabled` attribute and `type="button"`.
 
-<DropzoneTriggerExamples />
-
-### Native Button Trigger
-
-```tsx
-export function ToolbarAttachment() {
-  const dropzone = useDropzone()
-
-  return (
-    <div {...dropzone.getRootProps()}>
-      <input {...dropzone.getInputProps()} />
-      <button {...dropzone.getButtonProps()}>Add files</button>
-    </div>
-  )
-}
-```
-
-### Validation Only
-
-```tsx
-import * as React from "react"
-
-import { useDropzone, type DropzoneIntake } from "@/components/ui/dropzone"
-
-export function PdfValidationTarget() {
-  const [lastIntake, setLastIntake] = React.useState<DropzoneIntake>({
-    acceptedFiles: [],
-    fileRejections: [],
-  })
-  const dropzone = useDropzone({
-    accept: "application/pdf,.pdf",
-    files: [],
-    maxSize: 100 * 1024,
-    onFilesChange: () => {},
-    onIntake: setLastIntake,
-  })
-
-  return (
-    <div {...dropzone.getRootProps(dropzone.getTriggerProps())}>
-      <input {...dropzone.getInputProps()} />
-      Accepted: {lastIntake.acceptedFiles.length}
-      Rejected: {lastIntake.fileRejections.length}
-    </div>
-  )
-}
-```
+<ComponentPreview name="dropzone-non-button-trigger" />
+<ComponentPreview name="dropzone-native-button-queue" />
+<ComponentPreview name="dropzone-controlled-queue" />
+<ComponentPreview name="dropzone-validation-only" />
+<ComponentPreview name="dropzone-disabled-dropzone" />
 
 ## File Compositions
 
@@ -117,7 +56,11 @@ Dropzone stays headless even when the visual surface is rich. These examples
 compose it with `FileThumbnail` and `FileViewer` for selected file previews and
 document intake flows.
 
-<DropzoneFileExamples />
+<ComponentPreview name="dropzone-custom-thumbnail-grid" />
+<ComponentPreview name="dropzone-file-viewer-example" />
+<ComponentPreview name="dropzone-avatar-image-slot" />
+<ComponentPreview name="dropzone-spreadsheet-import-card" />
+<ComponentPreview name="dropzone-media-transcript-queue" />
 
 The file-intake viewer keeps browser acquisition separate from viewer chrome:
 
@@ -144,7 +87,11 @@ Custom products usually need file intake inside a domain-specific state shape:
 comparison slots, required packet checklists, routed intake lanes, timelines, or
 pinboards. Dropzone owns intake; the surrounding component owns the workflow.
 
-<DropzoneWorkflowExamples />
+<ComponentPreview name="dropzone-evidence-timeline" />
+<ComponentPreview name="dropzone-comparison-pair-upload" />
+<ComponentPreview name="dropzone-intake-router" />
+<ComponentPreview name="dropzone-required-packet-slots" />
+<ComponentPreview name="dropzone-pinboard-drop-surface" />
 
 ## Behavior
 
@@ -180,20 +127,18 @@ pinboards. Dropzone owns intake; the surrounding component owns the workflow.
 
 | Field             | Type                                                        |
 | ----------------- | ----------------------------------------------------------- |
-| `files`           | `DropzoneFileItem[]`                                        |
-| `lastIntake`      | `DropzoneIntake`                                            |
-| `isDragging`      | `boolean`                                                   |
-| `isFocused`       | `boolean`                                                   |
-| `isDisabled`      | `boolean`                                                   |
-| `clearFiles`      | `() => void`                                                |
-| `resetIntake`     | `() => void`                                                |
-| `reset`           | `() => void`                                                |
-| `openFileDialog`  | `() => void`                                                |
-| `removeFile`      | `(fileId: string) => void`                                  |
-| `getRootProps`    | `(props?) => React.HTMLAttributes<HTMLElement>`             |
-| `getInputProps`   | `(props?) => React.InputHTMLAttributes<HTMLInputElement>`   |
-| `getTriggerProps` | `(props?) => React.HTMLAttributes<HTMLElement>`             |
-| `getButtonProps`  | `(props?) => React.ButtonHTMLAttributes<HTMLButtonElement>` |
+| `files`           | `DropzoneFileItem[]`                                      |
+| `lastIntake`      | `DropzoneIntake`                                          |
+| `isDragging`      | `boolean`                                                |
+| `isDisabled`      | `boolean`                                                |
+| `clearFiles`      | `() => void`                                              |
+| `resetIntake`     | `() => void`                                              |
+| `reset`           | `() => void`                                              |
+| `openFileDialog`  | `() => void`                                              |
+| `removeFile`      | `(fileId: string) => void`                               |
+| `getRootProps`    | `(props?) => React.HTMLAttributes<HTMLElement>`          |
+| `getInputProps`   | `(props?) => React.InputHTMLAttributes<HTMLInputElement>` |
+| `getTriggerProps` | `(props? & { native?: boolean }) => props`               |
 
 The package also exports the public types `DropzoneFileItem`,
 `DropzoneIntake`, `DropzoneFileRejection`, `UseDropzoneProps`, and

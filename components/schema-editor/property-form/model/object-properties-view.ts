@@ -40,13 +40,5 @@ export interface ObjectPropertyDescriptionFieldModel {
 }
 
 export interface ObjectPropertyRowReorderModel {
-  canMoveDown: boolean
-  canMoveUp: boolean
   move: (targetIndex: number) => void
-  moveDown: () => void
-  moveUp: () => void
-  moveDownLabel: string
-  moveUpLabel: string
-  position: number
-  rowCount: number
 }

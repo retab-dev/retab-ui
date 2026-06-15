@@ -38,6 +38,37 @@ export type ViewerToolbarRotate = {
   isDisabled?: boolean
 }
 
+export type ViewerToolbarState = {
+  position?: ViewerToolbarPosition | null
+  zoom?: ViewerToolbarZoom | null
+  rotate?: ViewerToolbarRotate | null
+  downloads?: ViewerDownloadAction[]
+  extra?: React.ReactNode
+}
+
+type ViewerToolbarRegistration = (state: ViewerToolbarState | null) => void
+
+const ViewerToolbarRegistrationContext =
+  React.createContext<ViewerToolbarRegistration | null>(null)
+
+export function ViewerToolbarRegistrationProvider({
+  children,
+  onToolbarStateChange,
+}: {
+  children: React.ReactNode
+  onToolbarStateChange: ViewerToolbarRegistration
+}) {
+  return (
+    <ViewerToolbarRegistrationContext.Provider value={onToolbarStateChange}>
+      {children}
+    </ViewerToolbarRegistrationContext.Provider>
+  )
+}
+
+export function useViewerToolbarRegistration(): ViewerToolbarRegistration | null {
+  return React.useContext(ViewerToolbarRegistrationContext)
+}
+
 export type ViewerToolbarProps = Omit<React.ComponentProps<"div">, "title"> & {
   title?: React.ReactNode
   subtitle?: React.ReactNode

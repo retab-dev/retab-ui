@@ -36,10 +36,11 @@ type DropzoneInputGetterProps = React.ComponentPropsWithRef<"input"> &
   Partial<DropzoneDataAttributes>
 
 type DropzoneTriggerGetterProps<T extends HTMLElement> =
-  React.HTMLAttributes<T> & Partial<DropzoneDataAttributes>
-
-type DropzoneButtonGetterProps = React.ComponentPropsWithRef<"button"> &
-  Partial<DropzoneDataAttributes>
+  React.HTMLAttributes<T> &
+    Partial<DropzoneDataAttributes> & {
+      /** The trigger is a real `<button>`; suppress the ARIA-button polyfill. */
+      native?: boolean
+    }
 
 export type UseDropzoneProps = {
   accept?: string
@@ -57,7 +58,6 @@ export type UseDropzoneReturn = {
   files: DropzoneFileItem[]
   lastIntake: DropzoneIntake
   isDragging: boolean
-  isFocused: boolean
   isDisabled: boolean
   clearFiles: () => void
   openFileDialog: () => void
@@ -71,9 +71,6 @@ export type UseDropzoneReturn = {
   getTriggerProps: <T extends HTMLElement>(
     props?: DropzoneTriggerGetterProps<T>
   ) => DropzoneTriggerGetterProps<T>
-  getButtonProps: (
-    props?: DropzoneButtonGetterProps
-  ) => DropzoneButtonGetterProps
 }
 
 const EMPTY_INTAKE: DropzoneIntake = {
@@ -104,7 +101,6 @@ export function useDropzone({
   const [lastIntake, setLastIntake] =
     React.useState<DropzoneIntake>(EMPTY_INTAKE)
   const [isDragging, setIsDragging] = React.useState(false)
-  const [isFocused, setIsFocused] = React.useState(false)
   const currentFiles = files ?? uncontrolledFiles
   const filesRef = React.useRef(currentFiles)
 
@@ -146,7 +142,6 @@ export function useDropzone({
   const reset = React.useCallback(() => {
     if (disabled) return
     resetDragState()
-    setIsFocused(false)
     resetIntake()
     commitFileTransition(() => [])
   }, [commitFileTransition, disabled, resetDragState, resetIntake])
@@ -211,10 +206,7 @@ export function useDropzone({
   }, [disabled])
 
   React.useEffect(() => {
-    if (disabled) {
-      resetDragState()
-      setIsFocused(false)
-    }
+    if (disabled) resetDragState()
   }, [disabled, resetDragState])
 
   const getRootProps = React.useCallback(
@@ -275,60 +267,39 @@ export function useDropzone({
   )
 
   const getTriggerProps = React.useCallback(
-    <T extends HTMLElement>(
-      props: DropzoneTriggerGetterProps<T> = {}
-    ): DropzoneTriggerGetterProps<T> => ({
+    <T extends HTMLElement>({
+      native = false,
+      ...props
+    }: DropzoneTriggerGetterProps<T> = {}): DropzoneTriggerGetterProps<T> => ({
       ...props,
-      "aria-disabled": disabled || props["aria-disabled"] || undefined,
-      "data-focused": isFocused ? "" : undefined,
       "data-slot": props["data-slot"] ?? "dropzone-trigger",
-      role: props.role ?? "button",
-      tabIndex: disabled ? -1 : (props.tabIndex ?? 0),
-      onBlur: composeEventHandlers(props.onBlur, () => {
-        setIsFocused(false)
-      }),
       onClick: composeEventHandlers(props.onClick, () => {
         openFileDialog()
       }),
-      onFocus: composeEventHandlers(props.onFocus, () => {
-        if (!disabled) setIsFocused(true)
-      }),
-      onKeyDown: composeEventHandlers(props.onKeyDown, (event) => {
-        if (disabled) return
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault()
-          openFileDialog()
-        }
-      }),
+      ...(native
+        ? // Native button: the platform owns role, focus, and keyboard
+          // activation; only the disabled attribute and button type are ours.
+          { disabled, type: "button" as const }
+        : // Anything else: polyfill button semantics onto the element.
+          {
+            role: props.role ?? "button",
+            tabIndex: disabled ? -1 : (props.tabIndex ?? 0),
+            "aria-disabled": disabled || props["aria-disabled"] || undefined,
+            onKeyDown: composeEventHandlers(props.onKeyDown, (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault()
+                openFileDialog()
+              }
+            }),
+          }),
     }),
-    [disabled, isFocused, openFileDialog]
-  )
-
-  const getButtonProps = React.useCallback(
-    (props: DropzoneButtonGetterProps = {}): DropzoneButtonGetterProps => ({
-      ...props,
-      disabled,
-      "data-focused": isFocused ? "" : undefined,
-      "data-slot": props["data-slot"] ?? "dropzone-trigger",
-      type: props.type ?? "button",
-      onBlur: composeEventHandlers(props.onBlur, () => {
-        setIsFocused(false)
-      }),
-      onClick: composeEventHandlers(props.onClick, () => {
-        openFileDialog()
-      }),
-      onFocus: composeEventHandlers(props.onFocus, () => {
-        if (!disabled) setIsFocused(true)
-      }),
-    }),
-    [disabled, isFocused, openFileDialog]
+    [disabled, openFileDialog]
   )
 
   return {
     files: currentFiles,
     lastIntake,
     isDragging,
-    isFocused,
     isDisabled: disabled,
     clearFiles,
     openFileDialog,
@@ -338,7 +309,6 @@ export function useDropzone({
     getRootProps,
     getInputProps,
     getTriggerProps,
-    getButtonProps,
   }
 }
 

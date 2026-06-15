@@ -716,8 +716,8 @@ describe("Dropzone primitive", () => {
         <div {...dropzone.getRootProps()}>
           <input data-testid="file-input" {...dropzone.getInputProps()} />
           <div {...dropzone.getTriggerProps()}>custom trigger</div>
-          <button {...dropzone.getButtonProps({ type: "submit" })}>
-            submit trigger
+          <button {...dropzone.getTriggerProps({ native: true })}>
+            native trigger
           </button>
         </div>
       )
@@ -727,7 +727,7 @@ describe("Dropzone primitive", () => {
     const root = container.querySelector('[data-slot="dropzone"]')
     const input = screen.getByTestId("file-input") as HTMLInputElement
     const customTrigger = screen.getByText("custom trigger")
-    const buttonTrigger = screen.getByRole("button", { name: "submit trigger" })
+    const buttonTrigger = screen.getByRole("button", { name: "native trigger" })
 
     expect(root?.getAttribute("aria-disabled")).toBe("true")
     expect(input.accept).toBe(".pdf")
@@ -735,7 +735,8 @@ describe("Dropzone primitive", () => {
     expect(input.multiple).toBe(false)
     expect(customTrigger.getAttribute("aria-disabled")).toBe("true")
     expect(customTrigger.getAttribute("tabindex")).toBe("-1")
-    expect(buttonTrigger.getAttribute("type")).toBe("submit")
+    // A file-dialog trigger is always type="button" — never a form submit.
+    expect(buttonTrigger.getAttribute("type")).toBe("button")
     expect((buttonTrigger as HTMLButtonElement).disabled).toBe(true)
   })
 
@@ -776,7 +777,9 @@ describe("Dropzone primitive", () => {
         <div {...dropzone.getRootProps()}>
           <input {...dropzone.getInputProps()} />
           <div {...dropzone.getTriggerProps()}>non-button</div>
-          <button {...dropzone.getButtonProps()}>native button</button>
+          <button {...dropzone.getTriggerProps({ native: true })}>
+            native button
+          </button>
         </div>
       )
     }
@@ -787,6 +790,7 @@ describe("Dropzone primitive", () => {
 
     expect(nonButton.getAttribute("role")).toBe("button")
     expect(button.getAttribute("role")).toBeNull()
+    expect(button.getAttribute("type")).toBe("button")
 
     fireEvent.keyDown(nonButton, { key: "Enter" })
     fireEvent.click(button)
@@ -794,9 +798,16 @@ describe("Dropzone primitive", () => {
 
     fireEvent.keyDown(nonButton, { key: " " })
     expect(clickSpy).toHaveBeenCalledTimes(3)
+
+    // The native button carries no keyboard polyfill — the platform owns
+    // Space/Enter activation, so the getter must not add its own handler that
+    // would double-fire the dialog. A keydown here changes nothing.
+    fireEvent.keyDown(button, { key: " " })
+    fireEvent.keyDown(button, { key: "Enter" })
+    expect(clickSpy).toHaveBeenCalledTimes(3)
   })
 
-  it("tracks focus state for custom and native triggers", () => {
+  it("delegates focus to the platform and emits no focus-state attribute", () => {
     function Probe() {
       const dropzone = useDropzone()
       return (
@@ -805,10 +816,14 @@ describe("Dropzone primitive", () => {
           <div {...dropzone.getTriggerProps({ "data-testid": "custom" })}>
             custom trigger
           </div>
-          <button {...dropzone.getButtonProps({ "data-testid": "native" })}>
+          <button
+            {...dropzone.getTriggerProps({
+              "data-testid": "native",
+              native: true,
+            })}
+          >
             native trigger
           </button>
-          state:{dropzone.isFocused ? "focused" : "blurred"}
         </div>
       )
     }
@@ -817,24 +832,11 @@ describe("Dropzone primitive", () => {
     const customTrigger = screen.getByTestId("custom")
     const nativeTrigger = screen.getByTestId("native")
 
-    expect(customTrigger.hasAttribute("data-focused")).toBe(false)
-    expect(nativeTrigger.hasAttribute("data-focused")).toBe(false)
-    expect(document.body.textContent).toContain("state:blurred")
-
     fireEvent.focus(customTrigger)
-    expect(customTrigger.hasAttribute("data-focused")).toBe(true)
-    expect(nativeTrigger.hasAttribute("data-focused")).toBe(true)
-    expect(document.body.textContent).toContain("state:focused")
+    fireEvent.focus(nativeTrigger)
 
-    fireEvent.blur(customTrigger)
     expect(customTrigger.hasAttribute("data-focused")).toBe(false)
     expect(nativeTrigger.hasAttribute("data-focused")).toBe(false)
-    expect(document.body.textContent).toContain("state:blurred")
-
-    fireEvent.focus(nativeTrigger)
-    expect(customTrigger.hasAttribute("data-focused")).toBe(true)
-    expect(nativeTrigger.hasAttribute("data-focused")).toBe(true)
-    expect(document.body.textContent).toContain("state:focused")
   })
 
   it("blocks file dialog and intake while disabled", () => {
@@ -851,7 +853,9 @@ describe("Dropzone primitive", () => {
       return (
         <div {...dropzone.getRootProps()}>
           <input {...dropzone.getInputProps()} />
-          <button {...dropzone.getButtonProps()}>native button</button>
+          <button {...dropzone.getTriggerProps({ native: true })}>
+            native button
+          </button>
           files:{dropzone.files.length}
         </div>
       )
@@ -1247,6 +1251,11 @@ describe("Dropzone registry split", () => {
     expect(dropzoneSource).not.toContain(
       "export type DropzoneButtonGetterProps"
     )
+    // The trigger is one getter: getButtonProps and the focus-state field are
+    // gone for good. Guard the deletion so it cannot quietly return.
+    expect(dropzoneSource).not.toContain("getButtonProps")
+    expect(dropzoneSource).not.toContain("isFocused")
+    expect(dropzoneSource).not.toContain("data-focused")
     expect(dropzoneSource).not.toContain("export function DropzoneRoot")
     expect(dropzoneSource).not.toContain("DropzoneContext")
     expect(dropzoneCoreSource).not.toContain("message:")
@@ -1276,12 +1285,9 @@ describe("Dropzone registry split", () => {
       "`lastIntake` is the latest file-intake attempt."
     )
     expect(dropzoneDocsSource).toContain(
-      "`getButtonProps` is for real `<button>` elements."
+      "`getTriggerProps` makes any element open the file dialog"
     )
-    expect(dropzoneDocsSource).toContain(
-      "`getTriggerProps` is for anything else that opens the file dialog."
-    )
-    expect(dropzoneDocsSource).toContain("export function FileIntakeTarget")
+    expect(dropzoneDocsSource).not.toContain("getButtonProps")
     expect(dropzoneDocsSource).not.toContain("export function UploadTarget")
     expect(fileUploaderSource).toContain(
       "This file type is not supported here."

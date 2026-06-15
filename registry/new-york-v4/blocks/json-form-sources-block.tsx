@@ -4,7 +4,6 @@ import type { JSONSchema7 } from "json-schema"
 import { useForm } from "react-hook-form"
 
 import { extractionSourcesToSourceMap } from "@/lib/document-source"
-import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
 import { PdfViewer } from "@/components/ui/pdf-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -12,8 +11,9 @@ import {
   useSegmentedDocumentViewport,
 } from "@/components/ui/segmented-document-provider"
 import { sourceMapToEvidenceModel } from "@/components/ui/source-evidence"
+import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
 import { SourceIndicator } from "@/components/ui/source-indicator"
-import { sourceMapToSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
+import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
 import {
   useSegmentedPdfSourceOverlay,
   useSegmentedPdfViewerHandle,
@@ -40,7 +40,7 @@ const EVIDENCE = sourceMapToEvidenceModel({
   values: extraction,
   schema,
 })
-const SEGMENTED_DOCUMENT = sourceMapToSegmentedDocumentModel({
+const SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel({
   labels: Object.fromEntries(
     EVIDENCE.evidenceItems.map((item) => [item.id, item.payload.label])
   ),

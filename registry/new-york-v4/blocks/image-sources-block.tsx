@@ -1,18 +1,18 @@
 "use client"
 
 import type { Source } from "@/lib/document-source"
-import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
 import { ImageViewer } from "@/components/ui/image-viewer"
 import {
   SegmentedDocumentProvider,
   useSegmentedDocumentViewport,
 } from "@/components/ui/segmented-document-provider"
+import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
 import {
   SourceFieldList,
   type SourceField,
 } from "@/components/ui/source-field-list"
 import { SourceIndicator } from "@/components/ui/source-indicator"
-import { sourceFieldsToSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
+import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
 import {
   useSegmentedImageSourceOverlay,
   useSegmentedImageViewerHandle,
@@ -31,7 +31,7 @@ type ImageField = SourceField & { source: Source }
 
 // Real values read off the scanned page with normalized image_bbox anchors.
 const FIELDS = imageSample as ImageField[]
-const SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(
+const SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel(
   FIELDS.map((field) => ({
     id: field.key,
     label: field.label,

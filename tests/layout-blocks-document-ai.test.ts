@@ -1,7 +1,7 @@
 import documentAiOutput from "@/sample/documentai-output.json"
 import { describe, expect, it } from "vitest"
 
-import { layoutItemsToSegmentedDocumentModel } from "@/components/ui/layout-blocks-segmented-document-model"
+import { createOcrSegmentedDocumentModel } from "@/components/ui/layout-blocks-segmented-document-model"
 import {
   documentAiToLayoutDocument,
   type DocumentAiDocument,
@@ -248,7 +248,7 @@ describe("layout blocks evidence projection", () => {
       levels: ["block"],
       threshold: 0.9,
     })
-    const model = layoutItemsToSegmentedDocumentModel({
+    const model = createOcrSegmentedDocumentModel({
       document: layoutDocument,
       items: visibleItems,
     })

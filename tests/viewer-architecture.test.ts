@@ -179,11 +179,11 @@ function compactWhitespace(content: string): string {
   return content.replace(/\s+/g, " ")
 }
 
-function importSpecifiers(content: string): string[] {
+function moduleSpecifiers(content: string): string[] {
   const imports: string[] = []
   const importExportPattern =
-    /(?:^|\n)\s*(?:import|export)\s+(?:[\s\S]*?\s+from\s+)?["'](\.{1,2}\/[^"']+)["']/g
-  const dynamicImportPattern = /\bimport\(\s*["'](\.{1,2}\/[^"']+)["']\s*\)/g
+    /(?:^|\n)\s*(?:import|export)\s+(?:[\s\S]*?\s+from\s+)?["']([^"']+)["']/g
+  const dynamicImportPattern = /\bimport\(\s*["']([^"']+)["']\s*\)/g
 
   for (const match of content.matchAll(importExportPattern)) {
     imports.push(match[1])
@@ -193,6 +193,12 @@ function importSpecifiers(content: string): string[] {
   }
 
   return imports
+}
+
+function importSpecifiers(content: string): string[] {
+  return moduleSpecifiers(content).filter((specifier) =>
+    specifier.startsWith(".")
+  )
 }
 
 function resolveRelativeImport(
@@ -310,9 +316,63 @@ function expectJsxTagsInOrder(file: string, expectedTags: string[]) {
 }
 
 function exportedFunctions(content: string): string[] {
-  return Array.from(content.matchAll(/\bexport function ([A-Za-z0-9_]+)/g)).map(
-    (match) => match[1]
+  const sourceFile = ts.createSourceFile(
+    "source.tsx",
+    content,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX
   )
+  const functions: string[] = []
+
+  function visit(node: ts.Node) {
+    if (
+      ts.isFunctionDeclaration(node) &&
+      node.name &&
+      node.modifiers?.some(
+        (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword
+      )
+    ) {
+      functions.push(node.name.text)
+    }
+    ts.forEachChild(node, visit)
+  }
+
+  visit(sourceFile)
+  return functions
+}
+
+function namedReExports(
+  content: string,
+  moduleSpecifier: string,
+  options: { typeOnly?: boolean } = {}
+): string[] {
+  const sourceFile = ts.createSourceFile(
+    "source.tsx",
+    content,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX
+  )
+  const names: string[] = []
+
+  for (const statement of sourceFile.statements) {
+    if (!ts.isExportDeclaration(statement)) continue
+    if (!statement.exportClause) continue
+    if (!ts.isNamedExports(statement.exportClause)) continue
+    if (!statement.moduleSpecifier) continue
+    if (!ts.isStringLiteral(statement.moduleSpecifier)) continue
+    if (statement.moduleSpecifier.text !== moduleSpecifier) continue
+
+    for (const specifier of statement.exportClause.elements) {
+      const isTypeOnly = statement.isTypeOnly || specifier.isTypeOnly
+      if (options.typeOnly === true && !isTypeOnly) continue
+      if (options.typeOnly === false && isTypeOnly) continue
+      names.push(specifier.name.text)
+    }
+  }
+
+  return names
 }
 
 describe("viewer architecture", () => {
@@ -327,11 +387,6 @@ describe("viewer architecture", () => {
         file: "components/viewers/page-markdown/page-markdown-viewer.tsx",
         contextHook: "usePageMarkdownViewerContext",
         contextType: "PageMarkdownViewerContextValue",
-      },
-      {
-        file: "components/viewers/edit/edit-viewer-provider.tsx",
-        contextHook: "useEditViewerContext",
-        contextType: "EditViewerContextValue",
       },
       {
         file: "components/viewers/split/split-viewer.tsx",
@@ -402,7 +457,9 @@ describe("viewer architecture", () => {
     for (const file of [
       "registry/new-york-v4/ui/email-viewer.tsx",
       "components/viewers/page-markdown/page-markdown-viewer.tsx",
+      "components/viewers/edit/edit-viewer.tsx",
       "components/viewers/edit/edit-viewer-provider.tsx",
+      "components/viewers/edit/edit-viewer-store.tsx",
       "components/viewers/parse/parse-viewer.tsx",
       "components/viewers/split/split-viewer.tsx",
       "components/viewers/partition/partition-viewer.tsx",
@@ -488,28 +545,34 @@ describe("viewer architecture", () => {
     const editEntrypoint = fileContent(
       "components/viewers/edit/edit-viewer.tsx"
     )
-    const editProviderExports =
-      editEntrypoint.match(
-        /export \{[\s\S]*?\} from "\.\/edit-viewer-provider"/
-      )?.[0] ?? ""
-    expect(editProviderExports).toContain("useEditViewerDocument")
-    expect(editProviderExports).toContain("useEditViewerFields")
-    expect(editProviderExports).not.toContain("useEditViewer,")
-    expect(editProviderExports).not.toContain("useEditViewerHeader")
-    expect(editProviderExports).not.toContain("useEditViewerLayout")
-    expect(editProviderExports).not.toContain("useEditViewerBusy")
-    expect(editProviderExports).not.toContain("useEditViewerEmpty")
-    expect(editProviderExports).not.toContain("useEditViewerSelection")
+    expect(
+      namedReExports(editEntrypoint, "./edit-viewer-provider", {
+        typeOnly: false,
+      })
+    ).toEqual(["EditViewerProvider"])
+    expect(
+      namedReExports(editEntrypoint, "./edit-viewer-provider", {
+        typeOnly: true,
+      })
+    ).toEqual(["EditViewerProviderProps"])
 
     const pdfEntrypoint = fileContent("registry/new-york-v4/ui/pdf-viewer.tsx")
-    const pdfExportBlock =
-      pdfEntrypoint.match(
-        /export \{[\s\S]*?\} from "\.\/pdf-viewer-context"/
-      )?.[0] ?? ""
-    expect(pdfExportBlock).toContain("usePdfViewerThumbnails")
-    expect(pdfExportBlock).not.toContain("usePdfViewer,")
-    expect(pdfExportBlock).not.toContain("usePdfViewerHeader")
-    expect(pdfExportBlock).not.toContain("usePdfViewerPages")
+    const pdfContextExports = namedReExports(
+      pdfEntrypoint,
+      "./pdf-viewer-context",
+      { typeOnly: false }
+    )
+    expect(pdfContextExports).toEqual(
+      expect.arrayContaining([
+        "PdfViewerHeader",
+        "PdfViewerPages",
+        "PdfViewerProvider",
+        "usePdfViewerThumbnails",
+      ])
+    )
+    expect(pdfContextExports).not.toContain("usePdfViewer")
+    expect(pdfContextExports).not.toContain("usePdfViewerHeader")
+    expect(pdfContextExports).not.toContain("usePdfViewerPages")
 
     const email = fileContent("registry/new-york-v4/ui/email-viewer.tsx")
     expect(
@@ -812,7 +875,7 @@ describe("viewer architecture", () => {
       "components/ui/csv-viewer-toolbar.tsx",
     ]
     const migratedSourceFiles = [
-      "registry/new-york-v4/ui/pdf-viewer.tsx",
+      "registry/new-york-v4/ui/pdf-viewer-content.tsx",
       "registry/new-york-v4/ui/docx-viewer-content.tsx",
       "registry/new-york-v4/ui/image-viewer-content.tsx",
       "registry/new-york-v4/ui/pptx-viewer.tsx",
@@ -972,9 +1035,9 @@ describe("viewer architecture", () => {
       )
     }
 
-    expect(fileContent("registry/new-york-v4/ui/pdf-viewer.tsx")).toContain(
-      "download?: boolean"
-    )
+    expect(
+      fileContent("registry/new-york-v4/ui/pdf-viewer-content.tsx")
+    ).toContain("download?: boolean")
     for (const file of leafPropFiles) {
       const content = fileContent(file)
       expect(content, `${file} exposes a leaf download control`).toContain(
@@ -996,7 +1059,7 @@ describe("viewer architecture", () => {
     }
 
     for (const file of [
-      "registry/new-york-v4/ui/pdf-viewer.tsx",
+      "registry/new-york-v4/ui/pdf-viewer-content.tsx",
       "registry/new-york-v4/ui/docx-viewer.tsx",
       "registry/new-york-v4/ui/image-viewer.tsx",
       "registry/new-york-v4/ui/pptx-viewer.tsx",
@@ -1086,6 +1149,8 @@ describe("viewer architecture", () => {
     expect(content).toContain("model: SplitViewerModel")
     expect(content).toContain("viewport: SegmentViewportController")
     expect(content).toContain("segments: DocumentSegment[]")
+    expect(content).not.toContain("SegmentedViewer")
+    expect(content).not.toContain("useDomainSegmentedViewport")
     expect(content).not.toContain("useSegmentViewportController")
     expect(content).not.toContain("ReturnType<typeof toSegments>")
     expect(content).not.toContain("controller:")
@@ -1349,7 +1414,9 @@ describe("viewer architecture", () => {
     expect(content).toContain("getRootDropProps")
     expect(content).toContain("getFileInputProps")
     expect(content).toContain("getUploadButtonProps")
-    expect(content).toContain("getReplaceButtonProps")
+    // Upload and replace are one native-button trigger; the redundant second
+    // getter is collapsed away. Guard the collapse so it cannot return.
+    expect(content).not.toContain("getReplaceButtonProps")
     expect(content).toContain("getEmptySurfaceProps")
     expect(content).toContain("export function FileIntakeViewerDropTarget")
     expect(content).toContain("export function FileIntakeViewerRoot")
@@ -1436,13 +1503,24 @@ describe("viewer architecture", () => {
 
   it("keeps PDF viewer named parts on narrow hooks", () => {
     const viewer = fileContent("registry/new-york-v4/ui/pdf-viewer.tsx")
+    const content = fileContent(
+      "registry/new-york-v4/ui/pdf-viewer-content.tsx"
+    )
     const context = fileContent(
       "registry/new-york-v4/ui/pdf-viewer-context.tsx"
     )
+    const viewport = fileContent(
+      "registry/new-york-v4/ui/pdf-viewer-viewport.tsx"
+    )
+    const types = fileContent("registry/new-york-v4/ui/pdf-viewer-types.ts")
     const thumbnails = fileContent(
       "registry/new-york-v4/ui/pdf-viewer-thumbnails.tsx"
     )
     const registry = readJson<Registry>("registry.json")
+    const resourceContentProps =
+      content.match(
+        /export type PdfResourceContentProps = [\s\S]*?\n\}/
+      )?.[0] ?? ""
 
     expect(thumbnails).not.toContain("PdfThumbnailSidebar")
     expect(registry.items).not.toContainEqual(
@@ -1459,34 +1537,88 @@ describe("viewer architecture", () => {
     )
     expect(context).toContain("usePdfViewerThumbnails")
     expect(context).toContain("PdfViewerProvider")
+    expect(context).toContain("PdfViewerHeader")
+    expect(context).toContain("PdfViewerPages")
     expect(context).not.toMatch(/\bexport function usePdfViewerHeader\(/)
     expect(context).not.toMatch(/\bexport function usePdfViewerPages\(/)
     expect(context).not.toContain(
       "export function useOptionalPdfViewerHeaderControls"
     )
-    expect(context).toContain("export function usePdfViewerHeaderState")
-    expect(context).toContain("export function usePdfViewerPagesState")
-    expect(context).toContain("export function usePdfViewerHeaderControlSetter")
+    expect(context).toContain("viewportControls")
+    expect(context).toContain("PdfDocumentViewportRegistrationProvider")
+    expect(context).toContain("handleViewportControlsChange")
+    expect(context).not.toContain("setViewportControls")
+    expect(content).toContain("function usePdfDocumentResourceLifecycle")
+    expect(content).toContain("function usePdfDocumentViewportControls")
+    expect(content).toContain("function PdfDocumentPagesLayer")
+    expect(content).toContain("<PdfDocumentPagesLayer")
+    expect(content).toContain("usePdfDocumentViewportRegistration")
+    expect(content).not.toContain("setViewportControls")
+    expect(resourceContentProps).not.toContain("ViewportControls")
+    expect(viewport).toContain("onViewportControlsChange")
+    expect(viewport).not.toContain("export const")
+    expect(context).not.toContain("PdfViewerHeaderControls")
+    expect(context).not.toContain("headerControls")
+    expect(context).not.toContain("setHeaderControls")
+    expect(content).not.toContain("headerControls")
+    expect(content).not.toContain("setHeaderControls")
+    expect(viewer).toContain("PdfDocumentViewportControls")
+    for (const forbiddenExport of [
+      "export type PdfViewerHeaderState",
+      "export type PdfViewerPagesState",
+      "export type PdfViewerHeaderControlSetter",
+      "export type PdfViewerHeaderControls",
+      "export function usePdfViewerHeaderState",
+      "export function usePdfViewerPagesState",
+      "export function usePdfViewerHeaderControlSetter",
+    ]) {
+      expect(context).not.toContain(forbiddenExport)
+      expect(viewer).not.toContain(forbiddenExport)
+    }
+    expect(types).toContain("export type PdfDocumentViewportControls")
+    expect(types).not.toContain("PdfViewerHeaderControls")
     expect(context).toContain("function usePdfViewerContext")
     expect(context).toContain("const PdfViewerContext")
     expect(context).not.toContain("export const PdfViewerContext")
     expect(context).not.toContain("export type PdfViewerContextValue")
     expect(context).not.toContain("useInternalPdfViewer")
-    const viewerContextExports =
-      viewer.match(/export \{[\s\S]*?\} from "\.\/pdf-viewer-context"/)?.[0] ??
-      ""
-    expect(viewerContextExports).toContain("usePdfViewerThumbnails")
-    expect(viewerContextExports).not.toContain("usePdfViewer,")
+    const viewerContextExports = namedReExports(
+      viewer,
+      "./pdf-viewer-context",
+      {
+        typeOnly: false,
+      }
+    )
+    expect(viewerContextExports).toEqual(
+      expect.arrayContaining([
+        "PdfViewerHeader",
+        "PdfViewerPages",
+        "PdfViewerProvider",
+        "usePdfViewerThumbnails",
+      ])
+    )
+    expect(viewerContextExports).not.toContain("usePdfViewer")
     expect(viewerContextExports).not.toContain("usePdfViewerHeader")
     expect(viewerContextExports).not.toContain("usePdfViewerPages")
-    expect(viewerContextExports).not.toContain("useInternal")
+    expect(
+      viewerContextExports.some((name) => name.startsWith("useInternal"))
+    ).toBe(false)
     expect(context).not.toContain("export * from")
-    expect(viewer).toContain("usePdfViewerHeaderState")
-    expect(viewer).toContain("usePdfViewerPagesState")
-    expect(viewer).toContain("usePdfViewerHeaderControlSetter")
     expect(viewer).not.toContain("PdfViewerContext")
     expect(viewer).not.toContain("useInternalPdfViewer")
     expect(viewer).not.toContain("pdf-viewer-internal-context")
+    expect(
+      registry.items.find((item) => item.name === "pdf-viewer")?.files
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: "registry/new-york-v4/ui/pdf-viewer-content.tsx",
+        }),
+        expect.objectContaining({
+          path: "registry/new-york-v4/ui/pdf-viewer-viewport.tsx",
+        }),
+      ])
+    )
     expect(thumbnails).toContain("const thumbnails = usePdfViewerThumbnails()")
     expect(thumbnails).toContain("export interface PdfThumbnailRailProps")
     expect(thumbnails).toContain("export function PdfThumbnailRail")
@@ -2029,6 +2161,8 @@ describe("viewer architecture", () => {
     expect(partition).toContain("createPartitionViewerModel")
     expect(partition).toContain("SegmentedDocumentProvider")
     expect(partition).toContain("useSegmentedDocumentViewport")
+    expect(partition).not.toContain("SegmentedViewer")
+    expect(partition).not.toContain("useDomainSegmentedViewport")
     expect(partition).not.toContain("useSegmentViewportController")
     expect(partition).toContain("viewport: SegmentViewportController")
     expect(partition).not.toContain("scrollRequest")
@@ -2206,6 +2340,7 @@ describe("viewer architecture", () => {
     const publicEntryFiles = [
       "registry/new-york-v4/ui/pdf-viewer.tsx",
       "registry/new-york-v4/ui/pdf-viewer-context.tsx",
+      "components/viewers/edit/edit-viewer.tsx",
       "components/viewers/edit/edit-viewer-provider.tsx",
     ]
     const exampleAndDocFiles = [
@@ -2244,10 +2379,34 @@ describe("viewer architecture", () => {
     }
 
     for (const file of exampleAndDocFiles) {
+      const content = fileContent(file)
+      const imports = moduleSpecifiers(content)
+      expect(imports, `${file} imports an internal viewer context`).not.toEqual(
+        expect.arrayContaining([expect.stringMatching(/internal-context/)])
+      )
+      expect(imports, `${file} imports the edit store directly`).not.toEqual(
+        expect.arrayContaining([expect.stringMatching(/edit-viewer-store/)])
+      )
       expect(
-        fileContent(file),
-        `${file} imports an internal viewer context`
-      ).not.toContain("internal-context")
+        imports,
+        `${file} imports the PDF viewport registration module`
+      ).not.toEqual(
+        expect.arrayContaining([expect.stringMatching(/pdf-viewer-viewport/)])
+      )
+      expect(content, `${file} teaches the edit store hook`).not.toContain(
+        "useEditStore"
+      )
+      expect(content, `${file} teaches the edit store provider`).not.toContain(
+        "EditStoreProvider"
+      )
+      expect(
+        content,
+        `${file} teaches the PDF viewport registration provider`
+      ).not.toContain("PdfDocumentViewportRegistrationProvider")
+      expect(
+        content,
+        `${file} teaches the PDF viewport registration hook`
+      ).not.toContain("usePdfDocumentViewportRegistration")
     }
   })
 
@@ -2568,6 +2727,15 @@ describe("viewer architecture", () => {
 
     expect(segmentedProvider).not.toContain("document-source")
     expect(segmentedProvider).not.toContain("source-evidence")
+    expect(segmentedProvider).not.toMatch(
+      /\b(?:partitionMode|splitMode|ocrMode|sourceMode|emailMode|workflowMode)\b/
+    )
+    expect(segmentedModel).not.toMatch(
+      /\b(?:partitionMode|splitMode|ocrMode|sourceMode|emailMode|workflowMode)\b/
+    )
+    expect(segmentedItemLink).not.toMatch(
+      /\b(?:partitionMode|splitMode|ocrMode|sourceMode|emailMode|workflowMode)\b/
+    )
     expect(segmentedProvider).not.toContain(
       "export type SegmentedDocumentContextValue"
     )
@@ -2601,16 +2769,19 @@ describe("viewer architecture", () => {
     expect(sourceSegmentedModel).toContain("@/lib/document-source")
     expect(sourceSegmentedModel).toContain("createSegmentedDocumentModel")
     expect(sourceSegmentedModel).toContain(
+      "export function createSourcesSegmentedDocumentModel"
+    )
+    expect(sourceSegmentedModel).not.toContain(
       "export function sourceFieldsToSegmentedDocumentModel"
     )
-    expect(sourceSegmentedModel).toContain(
+    expect(sourceSegmentedModel).not.toContain(
       "export function sourceMapToSegmentedDocumentModel"
     )
     expect(sourceSegmentedModel).toContain(
       "export function sourceToSegmentAnchor"
     )
     expect(layoutSegmentedModel).toContain(
-      "export function layoutItemsToSegmentedDocumentModel"
+      "export function createOcrSegmentedDocumentModel"
     )
     expect(layoutSegmentedModel).toContain("createSegmentedDocumentModel")
     expect(layoutSegmentedModel).toContain("layout-blocks-types")
@@ -2622,7 +2793,7 @@ describe("viewer architecture", () => {
     expect(layoutPanel).toContain("item.payload")
     expect(layoutPanel).not.toContain("metadata")
     expect(layoutBlocks).toContain("createLayoutBlocksViewerModel")
-    expect(layoutBlocks).toContain("layoutItemsToSegmentedDocumentModel")
+    expect(layoutBlocks).toContain("createOcrSegmentedDocumentModel")
     expect(layoutBlocks).toContain("SegmentedDocumentProvider")
     expect(layoutBlocks).toContain("useSegmentedItemLink")
     expect(layoutBlocks).toContain("useSegmentedDocumentViewport")
@@ -2700,17 +2871,16 @@ describe("viewer architecture", () => {
       )
     }
 
-    expect(jsonFormSources).toContain("sourceMapToSegmentedDocumentModel")
+    expect(jsonFormSources).toContain("createSourcesSegmentedDocumentModel")
     expect(jsonFormSources).toContain("useSegmentedPdfSourceOverlay")
     expect(jsonFormSources).not.toContain("usePdfAnchoredTarget")
     expect(jsonFormSources).not.toContain("usePdfAnchoredOverlay")
-    expect(imageSources).toContain("sourceFieldsToSegmentedDocumentModel")
+    expect(imageSources).toContain("createSourcesSegmentedDocumentModel")
     expect(imageSources).toContain("useSegmentedImageSourceOverlay")
-    expect(extractSources).toContain("sourceFieldsToSegmentedDocumentModel")
+    expect(extractSources).toContain("createSourcesSegmentedDocumentModel")
     expect(extractSources).toContain("PdfViewerPages")
     expect(extractSources).toContain("useSegmentedPdfSourceOverlay")
-    expect(sourcesViewer).toContain("sourceMapToSegmentedDocumentModel")
-    expect(sourcesViewer).toContain("sourceFieldsToSegmentedDocumentModel")
+    expect(sourcesViewer).toContain("createSourcesSegmentedDocumentModel")
     expect(sourcesViewer).toContain("function SourcesShell")
     expect(sourcesViewer).toContain("SegmentedDocumentProvider")
     expect(sourcesViewer).toContain("useSegmentedSourceFieldLink")
@@ -2960,9 +3130,8 @@ describe("viewer architecture", () => {
         ],
       },
       {
-        file: "components/viewers/edit/edit-viewer.tsx",
+        file: "components/viewers/edit/edit-viewer-anatomy.tsx",
         symbols: [
-          "<EditViewerProvider",
           "<ViewerRoot",
           "<EditViewerHeader",
           "<ViewerBody",
@@ -2984,6 +3153,10 @@ describe("viewer architecture", () => {
     const provider = fileContent(
       "components/viewers/edit/edit-viewer-provider.tsx"
     )
+    const anatomy = fileContent(
+      "components/viewers/edit/edit-viewer-anatomy.tsx"
+    )
+    const store = fileContent("components/viewers/edit/edit-viewer-store.tsx")
     const editRegistry = fileContent("public/r/edit-viewer-block.json")
     const editRegistryEasyApi = publicRegistryFileContent(
       "edit-viewer-block",
@@ -3017,8 +3190,19 @@ describe("viewer architecture", () => {
     expect(easyApi).toContain("EditViewerHeader")
     expect(easyApi).toContain("EditViewerDocument")
     expect(easyApi).toContain("EditViewerFields")
-    expect(easyApi).toContain("<ViewerRoot")
-    expect(easyApi).toContain("<ViewerSidebar")
+    expect(
+      namedReExports(easyApi, "./edit-viewer-provider", { typeOnly: false })
+    ).toEqual(["EditViewerProvider"])
+    expect(
+      namedReExports(easyApi, "./edit-viewer-provider", { typeOnly: true })
+    ).toEqual(["EditViewerProviderProps"])
+    expect(easyApi).toContain('from "./edit-viewer-anatomy"')
+    expect(easyApi).toContain('from "./edit-viewer-provider"')
+    expect(easyApi).not.toContain("EditViewerRoot")
+    expect(easyApi).not.toContain("<ViewerRoot")
+    expect(easyApi).not.toContain("<ViewerSidebar")
+    expect(easyApi).not.toContain("EditStore")
+    expect(easyApi).not.toContain("useEditStore")
     expect(easyApi).not.toContain("useAnchoredDocument")
     expect(easyApi).not.toContain("AnchoredDocumentProvider")
     expect(easyApi).not.toContain("useEditViewerController")
@@ -3031,6 +3215,12 @@ describe("viewer architecture", () => {
     expect(easyApi).not.toContain("useInternalEditViewer")
     expect(easyApi).not.toContain("useEditViewerContext")
     expect(easyApi).not.toContain("EditViewerContext")
+    expect(easyApi).not.toContain("useEditViewerFrameState")
+    expect(easyApi).not.toContain("useEditViewerChromeState")
+    expect(easyApi).not.toContain("useEditViewerDocument")
+    expect(easyApi).not.toContain("useEditViewerFields")
+    expect(easyApi).not.toContain("EditViewerDocumentState")
+    expect(easyApi).not.toContain("EditViewerFieldsPartState")
 
     expect(provider).toContain("SegmentedDocumentProvider")
     expect(provider).toContain("useSegmentedItemLink")
@@ -3044,11 +3234,18 @@ describe("viewer architecture", () => {
     expect(provider).toContain("useEditViewerSelectionBridge")
     expect(provider).toContain("useEditViewerPageOverlay")
     expect(provider).not.toContain("editAnchorItemToAnchoredItem")
-    expect(provider).toContain("const EditViewerContext")
-    expect(provider).toContain("function useEditViewerContext")
+    expect(provider).toContain("EditStoreProvider")
+    expect(provider).not.toContain("useEditStore")
+    expect(provider).not.toContain("const EditViewerContext")
+    expect(provider).not.toContain("function useEditViewerContext")
     expect(provider).not.toContain("export const EditViewerContext")
     expect(provider).not.toContain("export function useEditViewer(")
     expect(provider).not.toContain("export type EditViewerState")
+    expect(provider).not.toContain("export type EditViewerChromeState")
+    expect(provider).not.toContain("export function useEditViewerFrameState")
+    expect(provider).not.toContain("export function useEditViewerChromeState")
+    expect(provider).not.toContain("useEditViewerFrameState")
+    expect(provider).not.toContain("useEditViewerChromeState")
     expect(provider).not.toContain(
       "export function useEditViewerLayout(): EditViewerLayoutState"
     )
@@ -3061,21 +3258,70 @@ describe("viewer architecture", () => {
     expect(provider).not.toContain("export function useEditViewerHeader")
     expect(provider).not.toContain("useInternalEditViewer")
     expect(provider).not.toContain("export type EditViewerContextValue")
+    expect(provider).not.toContain("export function useEditViewerDocument")
+    expect(provider).not.toContain("export function useEditViewerFields")
+    expect(provider).not.toContain("export type EditViewerDocumentState")
+    expect(provider).not.toContain("export type EditViewerFieldsPartState")
+    expect(provider).not.toContain("<ViewerRoot")
+    expect(provider).not.toContain("<ViewerSidebar")
+    expect(provider).not.toContain("<ViewerSurface")
+    expect(store).toContain("const EditStoreContext")
+    expect(store).toContain("export function useEditStore")
+    expect(store).not.toContain("EditViewerContext")
+    expect(store).not.toContain("EditViewerContextValue")
+    expect(store).not.toContain("useEditViewerContext")
+    expect(anatomy).toContain("<ViewerRoot")
+    expect(anatomy).toContain("<EditViewerHeader")
+    expect(anatomy).toContain("<ViewerBody")
+    expect(anatomy).toContain("<ViewerSurface")
+    expect(anatomy).toContain("<EditViewerDocument")
+    expect(anatomy).toContain("<ViewerSidebar")
+    expect(anatomy).toContain("<EditViewerFields")
+    expect(anatomy).toContain("useEditStore")
+    expect(anatomy).toContain("EditViewerHeaderView")
+    expect(anatomy).toContain("EditViewerDocumentView")
+    expect(anatomy).toContain("EditViewerFieldsView")
+    expect(anatomy).not.toContain("export function EditViewerRoot")
+    expect(anatomy).not.toContain("export function EditViewerBusyOverlay")
+    expect(anatomy).not.toContain("export function EditViewerEmptyState")
+    expect(anatomy).not.toContain("useEditViewerContext")
+    expect(anatomy).not.toContain("useEditViewerFrameState")
+    expect(anatomy).not.toContain("useEditViewerChromeState")
     expect(editRegistry).not.toContain("edit-viewer-internal-context.tsx")
+    expect(editRegistry).toContain("edit-viewer-anatomy.tsx")
+    expect(editRegistry).toContain("edit-viewer-store.tsx")
     expect(editRegistry).not.toContain("useInternalEditViewer")
     expect(editRegistry).not.toContain("export function useEditViewer(")
     expect(editRegistry).not.toContain("export type EditViewerState")
+    expect(editRegistry).not.toContain("export type EditViewerChromeState")
+    expect(editRegistry).not.toContain(
+      "export function useEditViewerFrameState"
+    )
+    expect(editRegistry).not.toContain(
+      "export function useEditViewerChromeState"
+    )
+    expect(editRegistry).not.toContain("useEditViewerFrameState")
+    expect(editRegistry).not.toContain("useEditViewerChromeState")
     expect(editRegistry).not.toContain(
       "export function useEditViewerLayout(): EditViewerLayoutState"
     )
     expect(editRegistry).not.toContain("export type EditViewerContextValue")
+    expect(editRegistry).not.toContain("export function useEditViewerDocument")
+    expect(editRegistry).not.toContain("export function useEditViewerFields")
+    expect(editRegistry).not.toContain("export type EditViewerFieldsPartState")
     expect(editRegistryEasyApi).not.toContain("const edit = useEditViewer()")
+    expect(editRegistryEasyApi).toContain('from "./edit-viewer-anatomy"')
+    expect(editRegistryEasyApi).not.toContain("EditStore")
+    expect(editRegistryEasyApi).not.toContain("useEditStore")
     expect(editRegistryEasyApi).not.toContain("useInternalEditViewer")
+    expect(editRegistryEasyApi).not.toContain("useEditViewerFrameState")
+    expect(editRegistryEasyApi).not.toContain("useEditViewerChromeState")
+    expect(editRegistryEasyApi).not.toContain("useEditViewerDocument")
+    expect(editRegistryEasyApi).not.toContain("useEditViewerFields")
+    expect(editRegistryEasyApi).not.toContain("EditViewerDocumentState")
+    expect(editRegistryEasyApi).not.toContain("EditViewerFieldsPartState")
     expect(provider).not.toContain("function resolveEditViewerDocumentTarget")
     expect(provider).not.toContain("function createEditViewerFieldMap")
-    expect(provider).not.toContain("ViewerRoot")
-    expect(provider).not.toContain("ViewerSidebar")
-    expect(provider).not.toContain("ViewerSurface")
 
     expect(model).toContain("createEditViewerFieldProjection")
     expect(model).toContain("createEditViewerSegmentedDocumentModel")
@@ -3110,11 +3356,14 @@ describe("viewer architecture", () => {
     expect(header).toContain("ViewerSidebarTrigger")
     expect(header).not.toContain("EditViewerContext")
     expect(header).not.toContain("useEditViewerContext")
+    expect(header).not.toContain("useEditViewerChromeState")
     expect(document).toContain("EditViewerDocumentPane")
     expect(document).not.toContain("ViewerRoot")
     expect(document).not.toContain("ViewerSidebar")
+    expect(document).not.toContain("useEditViewerDocument")
     expect(fields).toContain("EditViewerFieldPanel")
     expect(fields).not.toContain("ViewerSidebar")
+    expect(fields).not.toContain("useEditViewerFields")
     expect(fieldPanel).not.toContain("ViewerSidebar")
     expect(fieldPanel).not.toContain("useEditViewer")
     expect(
@@ -3151,7 +3400,7 @@ describe("viewer architecture", () => {
       const content = fileContent(file)
       expect(content).toContain('aria-label="Source fields"')
       expect(content).toContain("useSegmentedSourceFieldLink")
-      expect(content).toContain("sourceFieldsToSegmentedDocumentModel")
+      expect(content).toContain("createSourcesSegmentedDocumentModel")
       expect(content).not.toContain("AnchoredDocumentProvider")
       expect(content).not.toContain("useAnchoredDocument")
       expect(content).not.toContain("useAnchoredSourceFieldLink")

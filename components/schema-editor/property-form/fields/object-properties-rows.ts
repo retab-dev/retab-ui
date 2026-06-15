@@ -80,8 +80,6 @@ export function createObjectPropertyRows({
           },
         },
         reorder: {
-          canMoveDown: plan.editable && index < state.propertyNames.length - 1,
-          canMoveUp: plan.editable && index > 0,
           move: (targetIndex: number) => {
             operations.moveProperty({
               propertyName: name,
@@ -89,28 +87,6 @@ export function createObjectPropertyRows({
               targetIndex,
             })
           },
-          moveDown: () => {
-            if (index < state.propertyNames.length - 1) {
-              operations.moveProperty({
-                propertyName: name,
-                sourceIndex: index,
-                targetIndex: index + 1,
-              })
-            }
-          },
-          moveUp: () => {
-            if (index > 0) {
-              operations.moveProperty({
-                propertyName: name,
-                sourceIndex: index,
-                targetIndex: index - 1,
-              })
-            }
-          },
-          moveDownLabel: `Move field ${name} down`,
-          moveUpLabel: `Move field ${name} up`,
-          position: index + 1,
-          rowCount: state.propertyNames.length,
         },
         typeField: createPropertyTypeFieldWithObjectTemplates({
           schemaNode: propertySchema,

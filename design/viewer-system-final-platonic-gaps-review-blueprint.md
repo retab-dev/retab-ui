@@ -225,10 +225,10 @@ type SegmentedDocumentModel = {
 Domain adapters produce models:
 
 ```ts
-sourceMapToSegmentedDocumentModel(...)
-sourceFieldsToSegmentedDocumentModel(...)
+createSourcesSegmentedDocumentModel(...)
+createSourcesSegmentedDocumentModel(...)
 editResultToSegmentedDocumentModel(...)
-layoutItemsToSegmentedDocumentModel(...)
+createOcrSegmentedDocumentModel(...)
 ```
 
 Domain UI consumes narrow links:

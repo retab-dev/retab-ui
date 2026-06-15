@@ -54,7 +54,8 @@ function ComparisonSlot({ label }: { label: string }) {
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="text-sm font-medium">{label}</div>
         <button
-          {...dropzone.getButtonProps({
+          {...dropzone.getTriggerProps({
+            native: true,
             className:
               "inline-flex h-7 cursor-pointer items-center rounded-md border bg-background px-2 text-xs font-medium outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring/24",
           })}

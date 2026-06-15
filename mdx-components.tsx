@@ -19,6 +19,7 @@ import { CodeBlockCommand } from "@/components/code-block-command"
 import { CodeCollapsibleWrapper } from "@/components/code-collapsible-wrapper"
 import { CodeTabs } from "@/components/code-tabs"
 import { CodeViewerDemo } from "@/components/code-viewer-demo"
+import { ComponentPreview } from "@/components/component-preview"
 import { ComponentSource } from "@/components/component-source"
 import { CopyButton } from "@/components/copy-button"
 import {
@@ -28,12 +29,6 @@ import {
 import { DataCellDemo } from "@/components/data-cell-demo"
 import { DocsMdxCodeBlock } from "@/components/docs-code-block"
 import { DocxViewerDemo } from "@/components/docx-viewer-demo"
-import { DropzoneDemo } from "@/components/dropzone-demo"
-import {
-  DropzoneFileExamples,
-  DropzoneTriggerExamples,
-  DropzoneWorkflowExamples,
-} from "@/components/dropzone-examples-demo"
 import { EmailViewerDemo } from "@/components/email-viewer-demo"
 import { FileThumbnailDemo } from "@/components/file-thumbnail-demo"
 import { FileThumbnailFormatsDemo } from "@/components/file-thumbnail-formats-demo"
@@ -67,6 +62,66 @@ import {
   SplitViewerDemo,
 } from "@/components/viewers/viewers-demo"
 import { XlsxViewerDemo } from "@/components/xlsx-viewer-demo"
+
+// Demo previews render bare bordered surfaces with no margin of their own. In
+// shadcn's docs every preview goes through a single `ComponentPreview` whose
+// wrapper carries `mt-6`, which is what separates the first example from the
+// intro text above it. We mirror that here by wrapping every `*Demo` so it gets
+// the same vertical rhythm as a paragraph (`mt-6`), with `first:mt-0` as a
+// safety for the rare case a demo opens a section.
+function withDocsPreviewSpacing<P extends object>(
+  Component: React.ComponentType<P>
+) {
+  const Wrapped = (props: P) => (
+    <div className="mt-6 first:mt-0">
+      <Component {...props} />
+    </div>
+  )
+  Wrapped.displayName = `DocsPreview(${
+    Component.displayName ?? Component.name ?? "Demo"
+  })`
+  return Wrapped
+}
+
+const demoComponents = {
+  RetabSchemaBuilderDemo,
+  PropertyFormDemo,
+  CsvViewerDemo,
+  CsvViewerStreamingDemo,
+  DataCellDemo,
+  PdfViewerDemo,
+  DocxViewerDemo,
+  EmailViewerDemo,
+  ImageViewerDemo,
+  PptxViewerDemo,
+  XlsxViewerDemo,
+  FileViewerDemo,
+  JsonFormDemo,
+  JsonTableDemo,
+  ParseViewerDemo,
+  LargeParseViewerDemo,
+  ClassificationViewerDemo,
+  PartitionViewerDemo,
+  SplitViewerDemo,
+  SegmentSidebarDemo,
+  SegmentSidebarSplitDemo,
+  SegmentLegendDemo,
+  SegmentLegendSplitDemo,
+  ViewerSidebarDemo,
+  FileThumbnailDemo,
+  FileThumbnailFormatsDemo,
+  TextViewerDemo,
+  MarkdownViewerDemo,
+  HtmlViewerDemo,
+  CodeViewerDemo,
+}
+
+const spacedDemoComponents = Object.fromEntries(
+  Object.entries(demoComponents).map(([name, Component]) => [
+    name,
+    withDocsPreviewSpacing(Component as React.ComponentType),
+  ])
+)
 
 export const mdxComponents = {
   h1: ({ className, ...props }: React.ComponentProps<"h1">) => (
@@ -368,41 +423,9 @@ export const mdxComponents = {
   CodeCollapsibleWrapper,
   DocsMdxCodeBlock,
   ComponentSource,
+  ComponentPreview,
   MermaidDiagram,
-  RetabSchemaBuilderDemo,
-  PropertyFormDemo,
-  CsvViewerDemo,
-  CsvViewerStreamingDemo,
-  DataCellDemo,
-  PdfViewerDemo,
-  DocxViewerDemo,
-  DropzoneDemo,
-  DropzoneTriggerExamples,
-  DropzoneFileExamples,
-  DropzoneWorkflowExamples,
-  EmailViewerDemo,
-  ImageViewerDemo,
-  PptxViewerDemo,
-  XlsxViewerDemo,
-  FileViewerDemo,
-  JsonFormDemo,
-  JsonTableDemo,
-  ParseViewerDemo,
-  LargeParseViewerDemo,
-  ClassificationViewerDemo,
-  PartitionViewerDemo,
-  SplitViewerDemo,
-  SegmentSidebarDemo,
-  SegmentSidebarSplitDemo,
-  SegmentLegendDemo,
-  SegmentLegendSplitDemo,
-  ViewerSidebarDemo,
-  FileThumbnailDemo,
-  FileThumbnailFormatsDemo,
-  TextViewerDemo,
-  MarkdownViewerDemo,
-  HtmlViewerDemo,
-  CodeViewerDemo,
+  ...spacedDemoComponents,
   Link: ({ className, ...props }: React.ComponentProps<typeof Link>) => (
     <Link
       className={cn("font-medium underline underline-offset-4", className)}
