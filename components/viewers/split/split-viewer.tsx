@@ -83,6 +83,13 @@ export type SplitViewerModel = {
   segments: DocumentSegment[]
 }
 
+export type SplitViewerState = {
+  hasOutput: boolean
+  isProcessing: boolean
+  pageCount: number
+  segmentCount: number
+}
+
 export type SplitViewerHeaderState = {
   hasOutput: boolean
   isProcessing: boolean
@@ -117,7 +124,7 @@ const SplitViewerContext = React.createContext<SplitViewerContextValue | null>(
   null
 )
 
-export function useSplitViewer() {
+function useSplitViewerContext(): SplitViewerContextValue {
   const context = React.useContext(SplitViewerContext)
   if (!context) {
     throw new Error("useSplitViewer must be used within SplitViewerProvider.")
@@ -125,17 +132,27 @@ export function useSplitViewer() {
   return context
 }
 
+export function useSplitViewer(): SplitViewerState {
+  const { model } = useSplitViewerContext()
+  return {
+    hasOutput: model.hasOutput,
+    isProcessing: model.isProcessing,
+    pageCount: model.pageCount,
+    segmentCount: model.segments.length,
+  }
+}
+
 export function useSplitViewerHeader(): SplitViewerHeaderState {
-  return useSplitViewer().model
+  return useSplitViewerContext().model
 }
 
 function useSplitViewerSidebar(): SplitViewerSidebarState {
-  const { hasOutput, pageCount } = useSplitViewer().model
+  const { hasOutput, pageCount } = useSplitViewerContext().model
   return { hasOutput, pageCount }
 }
 
 export function useSplitViewerPageRail(): SplitViewerPageRailState {
-  const { model, viewport } = useSplitViewer()
+  const { model, viewport } = useSplitViewerContext()
   return {
     hasOutput: model.hasOutput,
     pageCount: model.pageCount,
@@ -145,17 +162,17 @@ export function useSplitViewerPageRail(): SplitViewerPageRailState {
 }
 
 export function useSplitViewerLegend(): SplitViewerLegendState {
-  const { model, viewport } = useSplitViewer()
+  const { model, viewport } = useSplitViewerContext()
   return { hasOutput: model.hasOutput, segments: model.segments, viewport }
 }
 
 export function useSplitViewerDocument(): SplitViewerDocumentState {
-  const { hasOutput, isProcessing } = useSplitViewer().model
+  const { hasOutput, isProcessing } = useSplitViewerContext().model
   return { hasOutput, isProcessing }
 }
 
 export function useSplitViewerDocumentControls(): SplitDocumentHandlers {
-  return useSplitViewer().viewport.documentHandlers
+  return useSplitViewerContext().viewport.documentHandlers
 }
 
 export function createSplitViewerModel({

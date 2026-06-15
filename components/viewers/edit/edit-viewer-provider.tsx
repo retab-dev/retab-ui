@@ -45,10 +45,13 @@ export type EditViewerState = {
   status: EditViewerStatus
   result: EditViewerResult
   fields: readonly EditViewerField[]
-  fieldByKey: ReadonlyMap<string, EditViewerField>
-  fieldsByPage: ReadonlyMap<number, readonly EditViewerField[]>
   filledCount: number
   hasOutput: boolean
+}
+
+type EditViewerProviderState = EditViewerState & {
+  fieldByKey: ReadonlyMap<string, EditViewerField>
+  fieldsByPage: ReadonlyMap<number, readonly EditViewerField[]>
 }
 
 export type EditViewerModeState = {
@@ -101,11 +104,27 @@ export type EditViewerHeaderState = {
   hasFieldPanel: boolean
 }
 
+export type EditViewerLayoutState = {
+  hasFieldPanel: boolean
+  hasOutput: boolean
+}
+
+export type EditViewerBusyState = {
+  status: Extract<
+    EditViewerStatus,
+    { state: "detecting" } | { state: "filling" }
+  > | null
+}
+
+export type EditViewerEmptyStatusState = {
+  hasOutput: boolean
+}
+
 export type EditViewerFieldsPartState = EditViewerFieldsState &
   EditViewerSelectionState
 
-export type EditViewerContextValue = {
-  state: EditViewerState
+type EditViewerContextValue = {
+  state: EditViewerProviderState
   mode: EditViewerModeState
   fields: EditViewerFieldsState
   selection: EditViewerSelectionState
@@ -117,7 +136,7 @@ const EditViewerContext = React.createContext<EditViewerContextValue | null>(
   null
 )
 
-export function useEditViewer(): EditViewerContextValue {
+function useEditViewerContext(): EditViewerContextValue {
   const context = React.useContext(EditViewerContext)
   if (!context) {
     throw new Error("useEditViewer must be used within EditViewerProvider.")
@@ -125,8 +144,47 @@ export function useEditViewer(): EditViewerContextValue {
   return context
 }
 
+export function useEditViewer(): EditViewerState {
+  const edit = useEditViewerContext()
+
+  return {
+    status: edit.state.status,
+    result: edit.state.result,
+    fields: edit.state.fields,
+    filledCount: edit.state.filledCount,
+    hasOutput: edit.state.hasOutput,
+  }
+}
+
+export function useEditViewerLayout(): EditViewerLayoutState {
+  const edit = useEditViewerContext()
+
+  return {
+    hasFieldPanel: edit.options.fieldPanel,
+    hasOutput: edit.state.hasOutput,
+  }
+}
+
+export function useEditViewerBusy(): EditViewerBusyState {
+  const edit = useEditViewerContext()
+  const status = edit.state.status
+
+  return {
+    status:
+      status.state === "detecting" || status.state === "filling"
+        ? status
+        : null,
+  }
+}
+
+export function useEditViewerEmpty(): EditViewerEmptyStatusState {
+  return {
+    hasOutput: useEditViewerContext().state.hasOutput,
+  }
+}
+
 export function useEditViewerHeader(): EditViewerHeaderState {
-  const edit = useEditViewer()
+  const edit = useEditViewerContext()
 
   return {
     mode: edit.mode.mode,
@@ -140,11 +198,11 @@ export function useEditViewerHeader(): EditViewerHeaderState {
 }
 
 export function useEditViewerDocument(): EditViewerDocumentState {
-  return useEditViewer().document
+  return useEditViewerContext().document
 }
 
 export function useEditViewerFields(): EditViewerFieldsPartState {
-  const edit = useEditViewer()
+  const edit = useEditViewerContext()
   return {
     ...edit.fields,
     ...edit.selection,
@@ -152,7 +210,7 @@ export function useEditViewerFields(): EditViewerFieldsPartState {
 }
 
 export function useEditViewerSelection(): EditViewerSelectionState {
-  return useEditViewer().selection
+  return useEditViewerContext().selection
 }
 
 export function EditViewerProvider({
@@ -357,7 +415,7 @@ function EditViewerResolvedProvider({
     previewField: selection.previewField,
     selectField: selection.selectField,
   })
-  const state = React.useMemo<EditViewerState>(
+  const state = React.useMemo<EditViewerProviderState>(
     () => ({
       status,
       result: editResult,

@@ -23,6 +23,7 @@ import {
   PageMarkdownViewer,
   PageMarkdownViewerContent,
   PageMarkdownViewerProvider,
+  usePageMarkdownViewer,
   usePageMarkdownViewerDocument,
 } from "@/components/viewers/page-markdown/page-markdown-viewer"
 
@@ -127,6 +128,20 @@ function DocumentScrollSpy({
     document.setDocumentHandle({ scrollToPage: onScroll })
     return () => document.setDocumentHandle(null)
   }, [document, onScroll])
+
+  return null
+}
+
+function PageMarkdownViewerStateProbe({
+  onProbe,
+}: {
+  onProbe: (state: ReturnType<typeof usePageMarkdownViewer>) => void
+}) {
+  const state = usePageMarkdownViewer()
+
+  React.useEffect(() => {
+    onProbe(state)
+  }, [onProbe, state])
 
   return null
 }
@@ -249,6 +264,31 @@ afterEach(() => {
 })
 
 describe("PageMarkdownViewer", () => {
+  it("exposes narrow public viewer state", () => {
+    const onProbe = vi.fn()
+
+    render(
+      <PageMarkdownViewerProvider pages={PAGES} fileName="contract.md">
+        <PageMarkdownViewerStateProbe onProbe={onProbe} />
+      </PageMarkdownViewerProvider>
+    )
+
+    expect(onProbe).toHaveBeenCalled()
+    const state = onProbe.mock.calls.at(-1)?.[0]
+    expect(state).toMatchObject({
+      currentPage: 1,
+      fileName: "contract.md",
+      hasPages: true,
+      isProcessing: false,
+      mode: "rendered",
+      pageCount: 2,
+      text: PAGES.join("\n\n"),
+    })
+    expect(state).not.toHaveProperty("markdownPaneRef")
+    expect(state).not.toHaveProperty("document")
+    expect(state).not.toHaveProperty("setMarkdownContainerWidth")
+  })
+
   it("forwards scroll options through the markdown pane handle", () => {
     const ref = React.createRef<PageMarkdownPaneHandle>()
     const onVisiblePageChange = vi.fn()

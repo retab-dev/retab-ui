@@ -5,6 +5,7 @@ import {
   cleanup,
   fireEvent,
   render,
+  renderHook,
   screen,
   waitFor,
 } from "@testing-library/react"
@@ -31,6 +32,7 @@ import {
   PdfViewerHeader,
   PdfViewerPages,
   PdfViewerProvider,
+  usePdfViewer,
   type PdfViewerHandle,
 } from "@/registry/new-york-v4/ui/pdf-viewer"
 import {
@@ -2284,6 +2286,29 @@ describe("PdfViewer", () => {
     expect(() => render(<PdfViewerThumbnails />)).toThrow(
       "usePdfViewer must be used within PdfViewerProvider."
     )
+  })
+
+  it("exposes PDF public state without provider internals", () => {
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <PdfViewerProvider
+        source={pdfUrlSource("/public-state.pdf", "public-state.pdf")}
+      >
+        {children}
+      </PdfViewerProvider>
+    )
+
+    const { result } = renderHook(() => usePdfViewer(), { wrapper })
+
+    expect(Object.keys(result.current).sort()).toEqual(
+      ["currentPage", "pageCount", "resource"].sort()
+    )
+    expect(result.current.currentPage).toBeNull()
+    expect(result.current.pageCount).toBeNull()
+    expect(result.current.resource.fileName).toBe("public-state.pdf")
+    expect(result.current).not.toHaveProperty("setCurrentPage")
+    expect(result.current).not.toHaveProperty("setHeaderControls")
+    expect(result.current).not.toHaveProperty("setViewerHandle")
+    expect(result.current).not.toHaveProperty("viewerHandle")
   })
 
   it("adapts provider state into the thumbnail rail", async () => {

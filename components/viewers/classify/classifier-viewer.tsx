@@ -21,6 +21,27 @@ type ClassifierViewerContextValue = {
   result: ClassifyResult | null
 }
 
+export type ClassifierViewerState = {
+  category: string | null
+  hasOutput: boolean
+  isProcessing: boolean
+}
+
+export type ClassifierViewerHeaderState = {
+  category: string | null
+  reasoning: string | null
+}
+
+export type ClassifierViewerEmptyStatusState = {
+  emptyDescription: string
+  emptyTitle: string
+  isProcessing: boolean
+}
+
+export type ClassifierViewerDocumentState = {
+  hasOutput: boolean
+}
+
 const ClassifierViewerContext =
   React.createContext<ClassifierViewerContextValue | null>(null)
 
@@ -40,7 +61,7 @@ export interface ClassifierViewerProps {
   document?: React.ReactNode
 }
 
-export function useClassifierViewer() {
+function useClassifierViewerContext(): ClassifierViewerContextValue {
   const context = React.useContext(ClassifierViewerContext)
   if (!context) {
     throw new Error(
@@ -50,12 +71,37 @@ export function useClassifierViewer() {
   return context
 }
 
-export function useClassifierViewerHeader() {
-  const { category, reasoning } = useClassifierViewer()
+export function useClassifierViewer(): ClassifierViewerState {
+  const { category, isProcessing } = useClassifierViewerContext()
+  return {
+    category,
+    hasOutput: category !== null,
+    isProcessing,
+  }
+}
+
+export function useClassifierViewerHeader(): ClassifierViewerHeaderState {
+  const { category, reasoning } = useClassifierViewerContext()
 
   return {
     category,
     reasoning,
+  }
+}
+
+export function useClassifierViewerEmpty(): ClassifierViewerEmptyStatusState {
+  const { emptyDescription, emptyTitle, isProcessing } =
+    useClassifierViewerContext()
+  return {
+    emptyDescription,
+    emptyTitle,
+    isProcessing,
+  }
+}
+
+export function useClassifierViewerDocument(): ClassifierViewerDocumentState {
+  return {
+    hasOutput: useClassifierViewerContext().category !== null,
   }
 }
 
@@ -123,7 +169,8 @@ export function ClassifierViewerHeader({ className }: { className?: string }) {
 }
 
 export function ClassifierViewerEmptyState() {
-  const { emptyDescription, emptyTitle, isProcessing } = useClassifierViewer()
+  const { emptyDescription, emptyTitle, isProcessing } =
+    useClassifierViewerEmpty()
 
   return (
     <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 bg-background px-8 text-muted-foreground">
@@ -154,9 +201,9 @@ export function ClassifierViewerDocument({
 }: {
   document?: React.ReactNode
 }) {
-  const { category } = useClassifierViewer()
+  const { hasOutput } = useClassifierViewerDocument()
 
-  if (!category) return <ClassifierViewerEmptyState />
+  if (!hasOutput) return <ClassifierViewerEmptyState />
 
   return document ? (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">{document}</div>

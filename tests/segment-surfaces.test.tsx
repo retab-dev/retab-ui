@@ -48,11 +48,16 @@ import {
   useSegmentInteraction,
 } from "@/components/ui/use-segment-interaction"
 import { useSegmentViewportController } from "@/components/ui/use-segment-viewport-controller"
-import { ClassifierViewer } from "@/components/viewers/classify/classifier-viewer"
+import {
+  ClassifierViewer,
+  ClassifierViewerProvider,
+  useClassifierViewer,
+} from "@/components/viewers/classify/classifier-viewer"
 import {
   PartitionViewer,
   PartitionViewerHeader,
   PartitionViewerProvider,
+  usePartitionViewer,
   usePartitionViewerDocumentControls,
 } from "@/components/viewers/partition/partition-viewer"
 import {
@@ -62,6 +67,8 @@ import {
 import {
   createSplitViewerModel,
   SplitViewer,
+  SplitViewerProvider,
+  useSplitViewer,
   useSplitViewerDocumentControls,
 } from "@/components/viewers/split/split-viewer"
 
@@ -1644,6 +1651,33 @@ describe("partition segment composition", () => {
     })
   })
 
+  it("exposes partition public state without provider internals", () => {
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <PartitionViewerProvider
+        result={{
+          output: [{ key: "Invoices", pages: [1, 3] }],
+          consensus: { choices: [], likelihoods: null },
+          usage: null,
+        }}
+        isProcessing
+      >
+        {children}
+      </PartitionViewerProvider>
+    )
+
+    const { result } = renderHook(() => usePartitionViewer(), { wrapper })
+
+    expect(result.current).toEqual({
+      hasOutput: true,
+      isProcessing: true,
+      legendSegmentCount: 1,
+      pageCount: 3,
+      ribbonRowCount: 1,
+    })
+    expect(result.current).not.toHaveProperty("model")
+    expect(result.current).not.toHaveProperty("viewport")
+  })
+
   it("jumps to the earliest normalized page when a partition legend key is selected", async () => {
     const scrolledPages: string[] = []
 
@@ -1689,6 +1723,27 @@ describe("partition segment composition", () => {
 })
 
 describe("classifier viewer composition", () => {
+  it("exposes classifier public state without provider internals", () => {
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <ClassifierViewerProvider
+        result={{ category: "Loan Application", reasoning: "Matches form." }}
+        isProcessing
+      >
+        {children}
+      </ClassifierViewerProvider>
+    )
+
+    const { result } = renderHook(() => useClassifierViewer(), { wrapper })
+
+    expect(result.current).toEqual({
+      category: "Loan Application",
+      hasOutput: true,
+      isProcessing: true,
+    })
+    expect(result.current).not.toHaveProperty("reasoning")
+    expect(result.current).not.toHaveProperty("result")
+  })
+
   it("renders an explicit classifier document node in the viewer surface", () => {
     render(
       <ClassifierViewer
@@ -1981,6 +2036,33 @@ describe("split segment composition", () => {
         index: 1,
       },
     ])
+  })
+
+  it("exposes split public state without provider internals", () => {
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <SplitViewerProvider
+        result={{
+          output: [
+            { name: "Invoices", pages: [1, 5] },
+            { name: "Receipts", pages: [3] },
+          ],
+        }}
+        isProcessing
+      >
+        {children}
+      </SplitViewerProvider>
+    )
+
+    const { result } = renderHook(() => useSplitViewer(), { wrapper })
+
+    expect(result.current).toEqual({
+      hasOutput: true,
+      isProcessing: true,
+      pageCount: 5,
+      segmentCount: 2,
+    })
+    expect(result.current).not.toHaveProperty("model")
+    expect(result.current).not.toHaveProperty("viewport")
   })
 
   it("gives the rendered document pane the full flex width", () => {

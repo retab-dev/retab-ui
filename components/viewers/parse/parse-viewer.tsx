@@ -4,13 +4,14 @@ import * as React from "react"
 
 import { ViewerBody, ViewerRoot, ViewerSurface } from "@/components/ui/viewer"
 import { type ParseResponse } from "@/components/viewers/lib/parse-types"
+import { type PageMarkdownDocumentState } from "@/components/viewers/page-markdown/page-markdown-types"
 import {
   PageMarkdownViewerContent,
   PageMarkdownViewerProvider,
   usePageMarkdownViewerContent,
   usePageMarkdownViewerDocument,
+  type PageMarkdownViewerContentState,
 } from "@/components/viewers/page-markdown/page-markdown-viewer"
-import { type PageMarkdownDocumentState } from "@/components/viewers/page-markdown/page-markdown-types"
 
 type ParseViewerContextValue = {
   isProcessing: boolean
@@ -36,7 +37,14 @@ export interface ParseViewerProps {
 
 export type ParseDocumentState = PageMarkdownDocumentState
 
-export function useParseViewer() {
+export type ParseViewerState = {
+  isProcessing: boolean
+  result: ParseResponse | null
+  hasOutput: boolean
+  pageCount: number
+}
+
+function useParseViewerContext(): ParseViewerContextValue {
   const context = React.useContext(ParseViewerContext)
   if (!context) {
     throw new Error("useParseViewer must be used within ParseViewerProvider.")
@@ -44,11 +52,23 @@ export function useParseViewer() {
   return context
 }
 
+export function useParseViewer(): ParseViewerState {
+  const { isProcessing, result } = useParseViewerContext()
+  const pageCount = result?.output?.pages?.length ?? 0
+
+  return {
+    isProcessing,
+    result,
+    hasOutput: pageCount > 0 || Boolean(result?.output?.text),
+    pageCount,
+  }
+}
+
 export function useParseViewerDocument(): ParseDocumentState {
   return usePageMarkdownViewerDocument()
 }
 
-export function useParseViewerMarkdown() {
+export function useParseViewerMarkdown(): PageMarkdownViewerContentState {
   return usePageMarkdownViewerContent()
 }
 

@@ -33,6 +33,39 @@ type PartitionViewerContextValue = {
   viewport: SegmentViewportController
 }
 
+export type PartitionViewerState = {
+  hasOutput: boolean
+  isProcessing: boolean
+  legendSegmentCount: number
+  pageCount: number
+  ribbonRowCount: number
+}
+
+export type PartitionViewerHeaderState = {
+  currentPage: SegmentViewportController["model"]["currentPage"]
+  interaction: SegmentViewportController["interaction"]
+  legendSegments: PartitionViewerModel["legendSegments"]
+  navigation: SegmentViewportController["navigation"]
+  pageCount: number
+}
+
+export type PartitionViewerRibbonState = {
+  currentPage: SegmentViewportController["model"]["currentPage"]
+  interaction: SegmentViewportController["interaction"]
+  navigation: SegmentViewportController["navigation"]
+  pageCount: number
+  rows: PartitionViewerModel["ribbonRows"]
+  scrollProgress: SegmentViewportController["model"]["scrollProgress"]
+}
+
+export type PartitionViewerDocumentState = {
+  hasOutput: boolean
+}
+
+export type PartitionViewerEmptyStatusState = {
+  isProcessing: boolean
+}
+
 const PartitionViewerContext =
   React.createContext<PartitionViewerContextValue | null>(null)
 
@@ -48,7 +81,7 @@ export interface PartitionViewerProps {
   document?: React.ReactNode
 }
 
-export function usePartitionViewer() {
+function usePartitionViewerContext(): PartitionViewerContextValue {
   const context = React.useContext(PartitionViewerContext)
   if (!context) {
     throw new Error(
@@ -58,8 +91,19 @@ export function usePartitionViewer() {
   return context
 }
 
-export function usePartitionViewerHeader() {
-  const { model, viewport } = usePartitionViewer()
+export function usePartitionViewer(): PartitionViewerState {
+  const { isProcessing, model } = usePartitionViewerContext()
+  return {
+    hasOutput: model.hasOutput,
+    isProcessing,
+    legendSegmentCount: model.legendSegments.length,
+    pageCount: model.pageCount,
+    ribbonRowCount: model.ribbonRows.length,
+  }
+}
+
+export function usePartitionViewerHeader(): PartitionViewerHeaderState {
+  const { model, viewport } = usePartitionViewerContext()
 
   return {
     currentPage: viewport.model.currentPage,
@@ -70,8 +114,8 @@ export function usePartitionViewerHeader() {
   }
 }
 
-export function usePartitionViewerRibbon() {
-  const { model, viewport } = usePartitionViewer()
+export function usePartitionViewerRibbon(): PartitionViewerRibbonState {
+  const { model, viewport } = usePartitionViewerContext()
 
   return {
     currentPage: viewport.model.currentPage,
@@ -84,11 +128,23 @@ export function usePartitionViewerRibbon() {
 }
 
 export function usePartitionViewerDocumentControls(): PartitionDocumentControls {
-  return usePartitionViewer().viewport.documentHandlers
+  return usePartitionViewerContext().viewport.documentHandlers
 }
 
 export function usePartitionViewerModel(): PartitionViewerModel {
-  return usePartitionViewer().model
+  return usePartitionViewerContext().model
+}
+
+export function usePartitionViewerDocument(): PartitionViewerDocumentState {
+  return {
+    hasOutput: usePartitionViewerContext().model.hasOutput,
+  }
+}
+
+export function usePartitionViewerEmpty(): PartitionViewerEmptyStatusState {
+  return {
+    isProcessing: usePartitionViewerContext().isProcessing,
+  }
 }
 
 export function PartitionViewerProvider({
@@ -214,9 +270,9 @@ export function PartitionViewerDocument({
 }: {
   document?: React.ReactNode
 }) {
-  const { model } = usePartitionViewer()
+  const { hasOutput } = usePartitionViewerDocument()
 
-  if (!model.hasOutput) return <PartitionViewerEmptyState />
+  if (!hasOutput) return <PartitionViewerEmptyState />
 
   return document ? (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">{document}</div>
@@ -230,7 +286,7 @@ export function PartitionViewerDocument({
 }
 
 export function PartitionViewerEmptyState() {
-  const { isProcessing } = usePartitionViewer()
+  const { isProcessing } = usePartitionViewerEmpty()
 
   return (
     <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 bg-background px-8 text-muted-foreground">

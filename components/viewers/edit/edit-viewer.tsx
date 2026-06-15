@@ -13,7 +13,12 @@ import {
 import { EditViewerDocument } from "./edit-viewer-document"
 import { EditViewerFields } from "./edit-viewer-fields"
 import { EditViewerHeader } from "./edit-viewer-header"
-import { EditViewerProvider, useEditViewer } from "./edit-viewer-provider"
+import {
+  EditViewerProvider,
+  useEditViewerBusy,
+  useEditViewerEmpty,
+  useEditViewerLayout,
+} from "./edit-viewer-provider"
 import {
   EditViewerBusyOverlay as EditViewerBusyOverlayContent,
   EmptyEditViewerState,
@@ -23,17 +28,22 @@ import type { EditViewerProps } from "./edit-viewer-types"
 export {
   EditViewerProvider,
   useEditViewer,
+  useEditViewerBusy,
   useEditViewerDocument,
+  useEditViewerEmpty,
   useEditViewerFields,
   useEditViewerHeader,
+  useEditViewerLayout,
   useEditViewerSelection,
 } from "./edit-viewer-provider"
 export type {
-  EditViewerContextValue,
+  EditViewerBusyState,
   EditViewerDocumentState,
+  EditViewerEmptyStatusState,
   EditViewerFieldsPartState,
   EditViewerFieldsState,
   EditViewerHeaderState,
+  EditViewerLayoutState,
   EditViewerModeState,
   EditViewerProviderProps,
   EditViewerSelectionState,
@@ -69,7 +79,7 @@ export function EditViewer({ className, ...providerProps }: EditViewerProps) {
 }
 
 function EditViewerRoot({ className }: { className?: string }) {
-  const edit = useEditViewer()
+  const layout = useEditViewerLayout()
 
   return (
     <ViewerRoot
@@ -81,7 +91,7 @@ function EditViewerRoot({ className }: { className?: string }) {
       <EditViewerBusyOverlay />
       <EditViewerEmptyState />
 
-      {edit.state.hasOutput ? (
+      {layout.hasOutput ? (
         <>
           <EditViewerHeader />
           <ViewerBody className="flex-col md:flex-row">
@@ -89,7 +99,7 @@ function EditViewerRoot({ className }: { className?: string }) {
               <EditViewerDocument className="h-full" />
             </ViewerSurface>
 
-            {edit.options.fieldPanel ? (
+            {layout.hasFieldPanel ? (
               <ViewerSidebar
                 aria-label="Document fields"
                 side="right"
@@ -107,16 +117,15 @@ function EditViewerRoot({ className }: { className?: string }) {
 }
 
 export function EditViewerBusyOverlay() {
-  const { state } = useEditViewer()
+  const busy = useEditViewerBusy()
 
-  return state.status.state === "detecting" ||
-    state.status.state === "filling" ? (
-    <EditViewerBusyOverlayContent status={state.status} />
+  return busy.status ? (
+    <EditViewerBusyOverlayContent status={busy.status} />
   ) : null
 }
 
 export function EditViewerEmptyState() {
-  const { state } = useEditViewer()
+  const empty = useEditViewerEmpty()
 
-  return state.hasOutput ? null : <EmptyEditViewerState />
+  return empty.hasOutput ? null : <EmptyEditViewerState />
 }

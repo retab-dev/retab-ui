@@ -23,6 +23,12 @@ export type PdfViewerHeaderControls = {
   scale: number
 }
 
+export type PdfViewerState = {
+  currentPage: number | null
+  pageCount: number | null
+  resource: ViewerResource
+}
+
 export type PdfViewerHeaderState = {
   currentPage: number | null
   headerControls: PdfViewerHeaderControls | null
@@ -41,6 +47,10 @@ export type PdfViewerThumbnailsState = {
   resource: ViewerResource
 }
 
+export type PdfViewerHeaderControlSetter = (
+  controls: PdfViewerHeaderControls | null
+) => void
+
 export interface PdfViewerProviderProps {
   source: PdfDocumentSource
   children: React.ReactNode
@@ -58,7 +68,7 @@ type PdfViewerContextValue = {
 
 const PdfViewerContext = React.createContext<PdfViewerContextValue | null>(null)
 
-export function usePdfViewer() {
+function usePdfViewerContext(): PdfViewerContextValue {
   const context = React.useContext(PdfViewerContext)
   if (!context) {
     throw new Error("usePdfViewer must be used within PdfViewerProvider.")
@@ -66,22 +76,31 @@ export function usePdfViewer() {
   return context
 }
 
-export function useOptionalPdfViewer() {
+function useOptionalPdfViewerContext() {
   return React.useContext(PdfViewerContext)
 }
 
+export function usePdfViewer(): PdfViewerState {
+  const { currentPage, headerControls, resource } = usePdfViewerContext()
+  return {
+    currentPage,
+    pageCount: headerControls?.pageCount ?? null,
+    resource,
+  }
+}
+
 export function usePdfViewerHeader(): PdfViewerHeaderState {
-  const { currentPage, headerControls, resource } = usePdfViewer()
+  const { currentPage, headerControls, resource } = usePdfViewerContext()
   return { currentPage, headerControls, resource }
 }
 
 export function usePdfViewerPages(): PdfViewerPagesState {
-  const { resource, setCurrentPage, setViewerHandle } = usePdfViewer()
+  const { resource, setCurrentPage, setViewerHandle } = usePdfViewerContext()
   return { resource, setCurrentPage, setViewerHandle }
 }
 
 export function usePdfViewerThumbnails(): PdfViewerThumbnailsState {
-  const { currentPage, resource, viewerHandle } = usePdfViewer()
+  const { currentPage, resource, viewerHandle } = usePdfViewerContext()
   const onSelectPage = React.useCallback(
     (page: number) => viewerHandle?.scrollToPage(page),
     [viewerHandle]
@@ -94,8 +113,8 @@ export function usePdfViewerThumbnails(): PdfViewerThumbnailsState {
   }
 }
 
-export function useOptionalPdfViewerHeaderControls() {
-  return React.useContext(PdfViewerContext)?.setHeaderControls ?? null
+export function useOptionalPdfViewerHeaderControls(): PdfViewerHeaderControlSetter | null {
+  return useOptionalPdfViewerContext()?.setHeaderControls ?? null
 }
 
 export function PdfViewerProvider({
