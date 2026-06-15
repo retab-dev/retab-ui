@@ -20,16 +20,13 @@ import {
   deriveEmailHeaderModel,
   deriveEmailInlineResourceScope,
   deriveEmailSidebarModel,
-  EmailHeader,
   EmailViewer,
-  EmailViewerFrame,
+  EmailViewerHeader,
   EmailViewerProvider,
   findMimeNodeByPath,
   getDefaultMimeSelectionPath,
   getInlineResourceScope,
   inlineResourceKeyToString,
-  useEmailSelection,
-  useEmailViewer,
 } from "@/registry/new-york-v4/ui/email-viewer"
 import type {
   EmailViewerMessage,
@@ -613,43 +610,9 @@ describe("EmailViewer MIME model", () => {
 })
 
 describe("EmailViewer", () => {
-  it("keeps the public viewer hook narrower than the private context", () => {
-    function HookProbe() {
-      const viewer = useEmailViewer()
-      const selection = useEmailSelection()
-
-      return (
-        <div
-          data-testid="email-hook-probe"
-          data-has-model={"model" in viewer ? "true" : "false"}
-          data-has-select-part={"selectPart" in viewer ? "true" : "false"}
-          data-selected-node-id={selection.selectedNode.part.id}
-          data-select-part-type={typeof selection.selectPart}
-        />
-      )
-    }
-
-    render(
-      <EmailViewerProvider message={message(htmlPart("html", "Hello"))}>
-        <HookProbe />
-      </EmailViewerProvider>
-    )
-
-    expect(screen.getByTestId("email-hook-probe")).toMatchObject({
-      dataset: {
-        hasModel: "false",
-        hasSelectPart: "false",
-        selectedNodeId: "html",
-        selectPartType: "function",
-      },
-    })
-  })
-
-  it("exports the preassembled frame used by the easy API", () => {
+  it("renders the easy API through viewer anatomy", () => {
     const { container } = render(
-      <EmailViewerProvider message={message(htmlPart("html", "Hello"))}>
-        <EmailViewerFrame />
-      </EmailViewerProvider>
+      <EmailViewer message={message(htmlPart("html", "Hello"))} />
     )
 
     expect(container.querySelector('[data-slot="email-viewer"]')).toBeTruthy()
@@ -661,7 +624,9 @@ describe("EmailViewer", () => {
   it("lets composed headers replace the default trailing sidebar trigger", () => {
     const { container } = render(
       <EmailViewerProvider message={message(htmlPart("html", "Hello"))}>
-        <EmailHeader trailing={<button type="button">Custom action</button>} />
+        <EmailViewerHeader
+          trailing={<button type="button">Custom action</button>}
+        />
       </EmailViewerProvider>
     )
 

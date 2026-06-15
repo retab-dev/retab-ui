@@ -97,7 +97,7 @@ export const VIEWER_BLOCKS = [
     registryName: "sources-viewer-block",
     title: "Sources Viewer",
     description:
-      "Every source-backed format in one viewer — PDF, image, text, CSV, Excel, and Word — each shown as a JSON form beside its source document, linked by anchored items. Tabs switch the file format; hovering a form field highlights where its value came from. One AnchoredDocumentProvider drives every viewer; only the target adapter differs per tab.",
+      "Every source-backed format in one viewer — PDF, image, text, CSV, Excel, and Word — each shown as a JSON form beside its source document. Tabs switch the file format; segmented source interaction drives hover, selection, and source navigation.",
     command: getRegistryAddCommand("sources-viewer-block"),
     docsHref: "/blocks/sources-viewer",
     viewHref: "/view/blocks/sources-viewer",

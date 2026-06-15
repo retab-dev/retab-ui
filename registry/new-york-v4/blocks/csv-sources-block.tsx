@@ -3,19 +3,16 @@
 import * as React from "react"
 
 import type { Source } from "@/lib/document-source"
-import {
-  AnchoredDocumentProvider,
-  useAnchoredDocument,
-  type AnchoredDocumentTarget,
-} from "@/components/ui/anchored-document-viewer"
+import { sourceToCsvCell, useCsvSourceTarget } from "@/components/ui/csv-source"
 import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
-import { useAnchoredSourceFieldLink } from "@/components/ui/source-field-link"
-import { sourceFieldsToEvidenceModel } from "@/components/ui/source-evidence"
+import { SegmentedDocumentProvider } from "@/components/ui/segmented-document-provider"
+import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
 import {
   SourceFieldList,
   type SourceField,
 } from "@/components/ui/source-field-list"
 import { SourceIndicator } from "@/components/ui/source-indicator"
+import { sourceFieldsToSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
 import {
   ViewerBody,
   ViewerRoot,
@@ -41,25 +38,28 @@ const FIELDS = (csvSample as CsvField[]).map((field) => ({
       ? `Cell ${field.source.anchor.coordinate ?? field.source.anchor.column}`
       : undefined,
 }))
-const EVIDENCE = sourceFieldsToEvidenceModel(FIELDS)
+const FIELD_BY_KEY = new Map(FIELDS.map((field) => [field.key, field]))
+const SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(
+  FIELDS.map((field) => ({
+    id: field.key,
+    label: field.label,
+    source: field.source,
+  }))
+)
 
 /**
  * CSV sources block — extracted values linked to the spreadsheet cells they came
- * from. Hovering a field highlights its cell and scrolls to it. Same
- * anchored-document abstraction, with the CSV viewer's cell target adapter.
+ * from. Hovering a field highlights its cell and scrolls to it. Segmented
+ * source interaction owns preview/selection while the CSV source adapter owns
+ * cell navigation.
  */
 export function CsvSourcesBlock() {
   const viewerRef = React.useRef<CsvViewerHandle>(null)
-  const target = useCsvAnchoredTarget(viewerRef)
 
   return (
-    <AnchoredDocumentProvider
-      items={EVIDENCE.anchoredItems}
-      target={target}
-      initialItemId={FIELDS[0]?.key}
-    >
+    <SegmentedDocumentProvider model={SEGMENTED_DOCUMENT}>
       <CsvSourcesContent viewerRef={viewerRef} />
-    </AnchoredDocumentProvider>
+    </SegmentedDocumentProvider>
   )
 }
 
@@ -68,15 +68,19 @@ function CsvSourcesContent({
 }: {
   viewerRef: React.RefObject<CsvViewerHandle | null>
 }) {
-  const link = useAnchoredSourceFieldLink()
-  const { activeAnchor, activeItem } = useAnchoredDocument()
-  const activeCell =
-    activeAnchor?.kind === "csv-cell"
-      ? {
-          rowIndex: activeAnchor.rowIndex,
-          columnIndex: activeAnchor.columnIndex,
-        }
-      : null
+  const target = useCsvSourceTarget(viewerRef)
+  const segmentedLink = useSegmentedSourceFieldLink({
+    initialPath: FIELDS[0]?.key,
+  })
+  const link = useTargetedSourceFieldLink({
+    fieldByKey: FIELD_BY_KEY,
+    link: segmentedLink,
+    target,
+  })
+  const activeSource = link.activePath
+    ? FIELD_BY_KEY.get(link.activePath)?.source
+    : undefined
+  const activeCell = sourceToCsvCell(activeSource)
 
   return (
     <ViewerRoot bare className="h-full min-h-[680px] bg-background">
@@ -91,7 +95,7 @@ function CsvSourcesContent({
           />
           <SourceIndicator
             path={link.activePath}
-            found={!!activeItem?.anchor}
+            found={!!activeSource}
             className="top-2"
           />
         </ViewerSurface>
@@ -109,22 +113,43 @@ function CsvSourcesContent({
   )
 }
 
-function useCsvAnchoredTarget(
-  viewerRef: React.RefObject<CsvViewerHandle | null>
-): AnchoredDocumentTarget {
+function useTargetedSourceFieldLink({
+  fieldByKey,
+  link,
+  target,
+}: {
+  fieldByKey: ReadonlyMap<string, CsvField>
+  link: ReturnType<typeof useSegmentedSourceFieldLink>
+  target: ReturnType<typeof useCsvSourceTarget>
+}) {
+  const scrollToField = React.useCallback(
+    (path: string, behavior: ScrollBehavior) => {
+      const source = fieldByKey.get(path)?.source
+      if (source) target.scrollTo?.(source, { behavior })
+    },
+    [fieldByKey, target]
+  )
+  const onFieldHover = React.useCallback(
+    (path: string | null) => {
+      link.onFieldHover(path)
+      if (path) scrollToField(path, "auto")
+    },
+    [link, scrollToField]
+  )
+  const selectField = React.useCallback(
+    (path: string) => {
+      link.selectField?.(path)
+      scrollToField(path, "smooth")
+    },
+    [link, scrollToField]
+  )
+
   return React.useMemo(
     () => ({
-      scrollToAnchor: (anchor, options) => {
-        if (anchor.kind !== "csv-cell") return
-        viewerRef.current?.scrollToCell(
-          {
-            rowIndex: anchor.rowIndex,
-            columnIndex: anchor.columnIndex,
-          },
-          options
-        )
-      },
+      ...link,
+      onFieldHover,
+      selectField,
     }),
-    [viewerRef]
+    [link, onFieldHover, selectField]
   )
 }

@@ -18,27 +18,19 @@ npx shadcn@latest add @retab/email-viewer
 
 ## Viewer composition
 
-`EmailViewerFrame` is the preassembled named-part composition used by the
-easy API:
-
-```tsx
-<EmailViewerProvider message={message}>
-  <EmailViewerFrame />
-</EmailViewerProvider>
-```
-
-It expands to the same public parts you can compose directly:
+`EmailViewer` is the easy API. It expands to the same public parts you can
+compose directly:
 
 ```tsx
 <EmailViewerProvider message={message}>
   <ViewerRoot defaultOpen sidebarSide="right">
-    <EmailHeader />
+    <EmailViewerHeader />
     <ViewerBody className="flex-col md:flex-row">
       <ViewerSurface>
-        <EmailContent />
+        <EmailViewerContent />
       </ViewerSurface>
       <ViewerSidebar aria-label="Email parts">
-        <EmailPartsSidebar />
+        <EmailViewerPartsSidebar />
       </ViewerSidebar>
     </ViewerBody>
   </ViewerRoot>
@@ -48,8 +40,9 @@ It expands to the same public parts you can compose directly:
 The visible sidebar is a product projection: body candidates first, then
 attachments. The raw MIME recursion, message scope, header model, sidebar
 model, and content model are derived by the provider before the parts render.
-`EmailHeader` includes a `ViewerSidebarTrigger` by default; pass `trailing` to
-place a different header action or `null` when the trigger lives elsewhere.
+`EmailViewerHeader` includes a `ViewerSidebarTrigger` by default; pass
+`trailing` to place a different header action or `null` when the trigger lives
+elsewhere.
 
 ## Nested ViewerRoot
 

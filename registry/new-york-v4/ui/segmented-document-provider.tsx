@@ -8,7 +8,7 @@ import {
   type SegmentedDocumentViewport,
 } from "./use-segment-viewport-controller"
 
-export type SegmentedDocumentContextValue = {
+type SegmentedDocumentContextValue = {
   model: SegmentedDocumentModel
   viewport: SegmentedDocumentViewport
 }
@@ -36,20 +36,18 @@ export function SegmentedDocumentProvider({
   )
 }
 
-export function useSegmentedDocument(): SegmentedDocumentContextValue {
+function useSegmentedDocumentContext(): SegmentedDocumentContextValue {
   const context = React.useContext(SegmentedDocumentContext)
   if (!context) {
-    throw new Error(
-      "useSegmentedDocument must be used within SegmentedDocumentProvider."
-    )
+    throw new Error("SegmentedDocumentProvider context is missing.")
   }
   return context
 }
 
 export function useSegmentedDocumentViewport(): SegmentedDocumentViewport {
-  return useSegmentedDocument().viewport
+  return useSegmentedDocumentContext().viewport
 }
 
 export function useSegmentedDocumentModel(): SegmentedDocumentModel {
-  return useSegmentedDocument().model
+  return useSegmentedDocumentContext().model
 }

@@ -5,7 +5,6 @@ import {
   cleanup,
   fireEvent,
   render,
-  renderHook,
   screen,
   waitFor,
 } from "@testing-library/react"
@@ -32,7 +31,6 @@ import {
   PdfViewerHeader,
   PdfViewerPages,
   PdfViewerProvider,
-  usePdfViewer,
   type PdfViewerHandle,
 } from "@/registry/new-york-v4/ui/pdf-viewer"
 import {
@@ -303,6 +301,21 @@ class TestMetricErrorBoundary extends React.Component<
 }
 
 describe("PdfViewer", () => {
+  it("lets PdfViewerHeader children replace the default toolbar content", () => {
+    render(
+      <PdfViewerProvider
+        source={pdfUrlSource("/custom-header.pdf", "default-label.pdf")}
+      >
+        <PdfViewerHeader>
+          <span>Custom PDF header</span>
+        </PdfViewerHeader>
+      </PdfViewerProvider>
+    )
+
+    expect(screen.getByText("Custom PDF header")).toBeTruthy()
+    expect(screen.queryByText("default-label.pdf")).toBeNull()
+  })
+
   it("builds page-size-aware thumbnail layout with deterministic fallbacks", () => {
     const layout = buildPdfThumbnailLayout({
       pageCount: 3,
@@ -2286,29 +2299,6 @@ describe("PdfViewer", () => {
     expect(() => render(<PdfViewerThumbnails />)).toThrow(
       "usePdfViewer must be used within PdfViewerProvider."
     )
-  })
-
-  it("exposes PDF public state without provider internals", () => {
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <PdfViewerProvider
-        source={pdfUrlSource("/public-state.pdf", "public-state.pdf")}
-      >
-        {children}
-      </PdfViewerProvider>
-    )
-
-    const { result } = renderHook(() => usePdfViewer(), { wrapper })
-
-    expect(Object.keys(result.current).sort()).toEqual(
-      ["currentPage", "pageCount", "resource"].sort()
-    )
-    expect(result.current.currentPage).toBeNull()
-    expect(result.current.pageCount).toBeNull()
-    expect(result.current.resource.fileName).toBe("public-state.pdf")
-    expect(result.current).not.toHaveProperty("setCurrentPage")
-    expect(result.current).not.toHaveProperty("setHeaderControls")
-    expect(result.current).not.toHaveProperty("setViewerHandle")
-    expect(result.current).not.toHaveProperty("viewerHandle")
   })
 
   it("adapts provider state into the thumbnail rail", async () => {

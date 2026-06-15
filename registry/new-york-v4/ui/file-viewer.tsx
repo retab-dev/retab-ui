@@ -3,11 +3,11 @@
 import * as React from "react"
 import { FileText } from "lucide-react"
 
+import { cn } from "@/lib/utils"
 import {
   createViewerResource,
   type ViewerResource,
 } from "@/lib/viewer-resource"
-import { cn } from "@/lib/utils"
 import { useIsClient } from "@/components/ui/use-is-client"
 import {
   ViewerBody,
@@ -49,19 +49,21 @@ export type FileViewerContentProps = Pick<
   showLeafDownload?: boolean
 }
 
-export type FileViewerHeaderProps = React.ComponentProps<typeof ViewerHeader> & {
+export type FileViewerHeaderProps = React.ComponentProps<
+  typeof ViewerHeader
+> & {
   actions?: React.ReactNode
   showCategory?: boolean
 }
 
-export type FileViewerState = {
+type FileViewerState = {
   descriptor: FileDescriptor
   resource: ViewerResource
 }
 
-export type FileViewerHeaderState = FileViewerState
+type FileViewerHeaderState = FileViewerState
 
-export type FileViewerContentState = FileViewerState & {
+type FileViewerContentState = FileViewerState & {
   descriptorKey: string
   descriptorSignal: AbortSignal
   isClient: boolean
@@ -166,7 +168,7 @@ function useFileViewerContext() {
   return context
 }
 
-export function useFileViewer(): FileViewerState {
+function useFileViewer(): FileViewerState {
   const { descriptor, resource } = useFileViewerContext()
   return React.useMemo(
     () => ({
@@ -177,11 +179,11 @@ export function useFileViewer(): FileViewerState {
   )
 }
 
-export function useFileViewerHeader(): FileViewerHeaderState {
+function useFileViewerHeader(): FileViewerHeaderState {
   return useFileViewer()
 }
 
-export function useFileViewerContent(): FileViewerContentState {
+function useFileViewerContent(): FileViewerContentState {
   const {
     descriptor,
     descriptorKey,

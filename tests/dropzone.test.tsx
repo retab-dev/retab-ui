@@ -7,7 +7,6 @@ import {
   createEvent,
   fireEvent,
   render,
-  renderHook,
   screen,
   within,
 } from "@testing-library/react"
@@ -21,7 +20,6 @@ import {
   FileIntakeViewerProvider,
   FileIntakeViewerRoot,
   FileIntakeViewerSidebar,
-  useFileIntakeViewer,
   useFileIntakeViewerSurface,
   type FileIntakeViewerProviderProps,
 } from "@/registry/new-york-v4/blocks/dropzone-uploader-viewer-parts"
@@ -1004,38 +1002,6 @@ describe("DropzoneBlock", () => {
 
     expect(within(viewerSection).getByText("No file selected")).toBeTruthy()
     expect(screen.queryByTestId("viewer")).toBeNull()
-  })
-
-  it("exposes file-intake public state without provider internals", () => {
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <FileIntakeViewerProvider
-        defaultFiles={[
-          {
-            id: "selected-file-id",
-            file: file("selected.txt", "text/plain", "hello"),
-          },
-        ]}
-      >
-        {children}
-      </FileIntakeViewerProvider>
-    )
-
-    const { result } = renderHook(() => useFileIntakeViewer(), { wrapper })
-
-    expect(result.current).toEqual({
-      canClear: true,
-      hasFile: true,
-      isDragging: false,
-      rejection: null,
-      selectedFile: {
-        fileName: "selected.txt",
-        fileSizeLabel: "5 B",
-        fileTypeLabel: "text/plain",
-      },
-    })
-    expect(result.current).not.toHaveProperty("actions")
-    expect(result.current).not.toHaveProperty("model")
-    expect(result.current).not.toHaveProperty("viewerSource")
   })
 
   it("keeps the file-intake viewer controlled by the files prop", () => {

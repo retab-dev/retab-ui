@@ -5,7 +5,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { ViewerHeader, ViewerSidebarTrigger } from "@/components/ui/viewer"
 
-import { useEditViewerHeader } from "./edit-viewer-provider"
+import { useInternalEditViewerHeader } from "./edit-viewer-internal-context"
 import { EditViewerToolbar } from "./edit-viewer-toolbar"
 
 export type EditViewerHeaderProps = React.ComponentProps<
@@ -19,7 +19,7 @@ export function EditViewerHeader({
   className,
   ...props
 }: EditViewerHeaderProps) {
-  const header = useEditViewerHeader()
+  const header = useInternalEditViewerHeader()
 
   if (header.modes.length === 0) return null
 

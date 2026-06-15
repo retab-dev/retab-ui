@@ -9,7 +9,11 @@ The data structure should stay centered on edit fields, documents, modes, and an
 The ideal direction is:
 
 ```tsx
-<EditViewerProvider result={result} sourceDocument={source} filledDocument={filled}>
+<EditViewerProvider
+  result={result}
+  sourceDocument={source}
+  filledDocument={filled}
+>
   <ViewerRoot>
     <EditViewerHeader />
     <ViewerBody>
@@ -67,16 +71,16 @@ The edit viewer is a domain viewer. It should compose the generic viewer primiti
 
 Today the responsibilities are mostly correct, but they are packed into too few modules:
 
-| Current module | Current responsibility | Judgment |
-| --- | --- | --- |
-| `edit-viewer-types.ts` | Domain input/output types | Good |
-| `edit-viewer-model.ts` | Normalization, mode derivation, filtering, grouping | Good |
-| `use-edit-viewer-controller.ts` | Derived state, mode state, field UI state, refs | Good ingredients, too broad |
-| `edit-viewer.tsx` | Provider, layout, header, document, sidebar, controlled selection sync | Too much |
-| `edit-viewer-document-pane.tsx` | Document rendering by mode | Good, should become public part |
-| `edit-viewer-field-panel.tsx` | Field panel content | Good, but should receive derived field groups |
-| `edit-viewer-overlays.tsx` | PDF field overlays | Good |
-| `edit-viewer-toolbar.tsx` | Mode toolbar and status summary | Good |
+| Current module                  | Current responsibility                                                 | Judgment                                      |
+| ------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------- |
+| `edit-viewer-types.ts`          | Domain input/output types                                              | Good                                          |
+| `edit-viewer-model.ts`          | Normalization, mode derivation, filtering, grouping                    | Good                                          |
+| `use-edit-viewer-controller.ts` | Derived state, mode state, field UI state, refs                        | Good ingredients, too broad                   |
+| `edit-viewer.tsx`               | Provider, layout, header, document, sidebar, controlled selection sync | Too much                                      |
+| `edit-viewer-document-pane.tsx` | Document rendering by mode                                             | Good, should become public part               |
+| `edit-viewer-field-panel.tsx`   | Field panel content                                                    | Good, but should receive derived field groups |
+| `edit-viewer-overlays.tsx`      | PDF field overlays                                                     | Good                                          |
+| `edit-viewer-toolbar.tsx`       | Mode toolbar and status summary                                        | Good                                          |
 
 The core problem is not bad code. The problem is that the top-level component is the only composition boundary.
 
@@ -227,11 +231,11 @@ The fallback order should stay `filled`, then `preview`, then `source`, because 
 
 Mode availability should be precise:
 
-| Mode | Available when |
-| --- | --- |
-| `source` | `sourceDocument` exists |
+| Mode      | Available when                                                                                               |
+| --------- | ------------------------------------------------------------------------------------------------------------ |
+| `source`  | `sourceDocument` exists                                                                                      |
 | `preview` | source exists, source is PDF-previewable, preview option is enabled, at least one valid located field exists |
-| `filled` | `filledDocument` exists and filled output option is enabled |
+| `filled`  | `filledDocument` exists and filled output option is enabled                                                  |
 
 `fieldPanel` should not affect mode availability. It only affects whether the field sidebar appears.
 
@@ -350,7 +354,8 @@ Then `EditViewerDocument` can be nearly declarative:
 ```tsx
 const { target } = useEditViewerDocument()
 
-if (target.kind === "error") return <EditViewerErrorState message={target.message} />
+if (target.kind === "error")
+  return <EditViewerErrorState message={target.message} />
 if (target.kind === "empty") return <NoDocumentState message={target.message} />
 if (target.kind === "preview") return <EditViewerPdfDocument target={target} />
 return <EditViewerFileDocument target={target} />
@@ -467,11 +472,8 @@ The public API should be named exports, not namespace dot syntax:
 
 ```ts
 export function EditViewerProvider(props: EditViewerProviderProps)
-export function useEditViewer(): EditViewerContextValue
-export function useEditViewerHeader(): EditViewerHeaderState
 export function useEditViewerDocument(): EditViewerDocumentState
 export function useEditViewerFields(): EditViewerFieldsState
-export function useEditViewerSelection(): EditViewerSelectionState
 
 export function EditViewer(props: EditViewerProps)
 export function EditViewerHeader(props: EditViewerHeaderProps)
@@ -479,6 +481,10 @@ export function EditViewerDocument(props: EditViewerDocumentProps)
 export function EditViewerFields(props: EditViewerFieldsProps)
 export function EditViewerToolbar(props: EditViewerToolbarProps)
 ```
+
+Header, layout, busy, empty, and selection wiring are implementation selectors,
+not public component-library hooks. They should stay private or live behind an
+explicitly internal module when files must remain split.
 
 The provider props should include the same domain props as `EditViewer`, except `className`:
 
@@ -510,7 +516,11 @@ export function EditViewer(props: EditViewerProps) {
           <ViewerSurface>
             <EditViewerDocument />
           </ViewerSurface>
-          <ViewerSidebar aria-label="Document fields" side="right" width="320px">
+          <ViewerSidebar
+            aria-label="Document fields"
+            side="right"
+            width="320px"
+          >
             <EditViewerFields />
           </ViewerSidebar>
         </ViewerBody>
@@ -866,16 +876,16 @@ These are clear, useful, and small.
 
 Use tighter internal names:
 
-| Current | Ideal | Reason |
-| --- | --- | --- |
-| `availableModes` | `modes` | Shorter, no loss of meaning inside mode state |
-| `activeMode` | `mode` | Mode is selected mode, not hover state |
-| `changeMode` | `setMode` | Setter vocabulary |
-| `effectiveFieldKey` | `activeFieldKey` | Aligns with anchored active item |
-| `selectedFieldKey` | `selectedFieldKey` | Keep |
-| `previewItem` | `previewField` | Domain language |
-| `activateItem` | `selectField` | Domain language |
-| `resolvedOptions` | `options` inside context | Already resolved |
+| Current             | Ideal                    | Reason                                        |
+| ------------------- | ------------------------ | --------------------------------------------- |
+| `availableModes`    | `modes`                  | Shorter, no loss of meaning inside mode state |
+| `activeMode`        | `mode`                   | Mode is selected mode, not hover state        |
+| `changeMode`        | `setMode`                | Setter vocabulary                             |
+| `effectiveFieldKey` | `activeFieldKey`         | Aligns with anchored active item              |
+| `selectedFieldKey`  | `selectedFieldKey`       | Keep                                          |
+| `previewItem`       | `previewField`           | Domain language                               |
+| `activateItem`      | `selectField`            | Domain language                               |
+| `resolvedOptions`   | `options` inside context | Already resolved                              |
 
 Do not rename public props like `onModeChange`; those are idiomatic React event prop names.
 
@@ -929,9 +939,7 @@ This is acceptable provider nesting:
 
 ```tsx
 <EditViewerProvider>
-  <ViewerRoot>
-    ...
-  </ViewerRoot>
+  <ViewerRoot>...</ViewerRoot>
 </EditViewerProvider>
 ```
 
@@ -946,9 +954,7 @@ The only nesting that should be visible in user code is:
 
 ```tsx
 <EditViewerProvider>
-  <ViewerRoot>
-    ...
-  </ViewerRoot>
+  <ViewerRoot>...</ViewerRoot>
 </EditViewerProvider>
 ```
 
@@ -956,9 +962,7 @@ There should not be:
 
 ```tsx
 <ViewerRoot>
-  <EditViewerProvider>
-    ...
-  </EditViewerProvider>
+  <EditViewerProvider>...</EditViewerProvider>
 </ViewerRoot>
 ```
 

@@ -41,6 +41,7 @@ import * as React from "react"
 import { PdfViewer } from "@/components/ui/pdf-viewer"
 import { ViewerBody, ViewerRoot, ViewerSurface } from "@/components/ui/viewer"
 import {
+  ParseViewerHeader,
   ParseViewerMarkdown,
   ParseViewerProvider,
   useParseViewerDocument,
@@ -50,6 +51,7 @@ export function Example({ result }) {
   return (
     <ParseViewerProvider result={result}>
       <ViewerRoot>
+        <ParseViewerHeader />
         <ViewerBody>
           <ViewerSurface>
             <SourceDocument />

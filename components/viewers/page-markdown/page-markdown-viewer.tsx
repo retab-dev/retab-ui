@@ -2,7 +2,12 @@
 
 import * as React from "react"
 
-import { ViewerBody, ViewerRoot, ViewerSurface } from "@/components/ui/viewer"
+import {
+  ViewerBody,
+  ViewerHeader,
+  ViewerRoot,
+  ViewerSurface,
+} from "@/components/ui/viewer"
 import { PageMarkdownEmptyState } from "@/components/viewers/page-markdown/page-markdown-empty-state"
 import { PAGE_MARKDOWN_PAGE_WIDTH } from "@/components/viewers/page-markdown/page-markdown-layout"
 import { joinMarkdownPages } from "@/components/viewers/page-markdown/page-markdown-model"
@@ -44,21 +49,7 @@ type PageMarkdownViewerContextValue = {
   onMarkdownVisiblePageChange: (pageNumber: number) => void
 }
 
-export type PageMarkdownViewerState = {
-  currentPage: number
-  fileName: string
-  hasPages: boolean
-  isProcessing: boolean
-  mode: PageMarkdownViewMode
-  pageCount: number
-  scale: number
-  text: string
-}
-
-export type PageMarkdownViewerContentState = {
-  currentPage: number
-  fileName: string
-  fitWidth: () => void
+type PageMarkdownViewerContentState = {
   hasPages: boolean
   isMarkdownScaleReady: boolean
   isProcessing: boolean
@@ -70,12 +61,10 @@ export type PageMarkdownViewerContentState = {
   resetKey?: string
   scale: number
   setMarkdownContainerWidth: (width: number | null) => void
-  setMode: (mode: PageMarkdownViewMode) => void
-  setViewerScale: (scale: number | null) => void
   text: string
 }
 
-export type PageMarkdownViewerToolbarState = {
+type PageMarkdownViewerHeaderState = {
   currentPage: number
   fileName: string
   fitWidth: () => void
@@ -100,35 +89,8 @@ function usePageMarkdownViewerContext(): PageMarkdownViewerContextValue {
   return context
 }
 
-export function usePageMarkdownViewer(): PageMarkdownViewerState {
+function usePageMarkdownViewerContent(): PageMarkdownViewerContentState {
   const {
-    currentPage,
-    fileName,
-    hasPages,
-    isProcessing,
-    mode,
-    pages,
-    scale,
-    text,
-  } = usePageMarkdownViewerContext()
-
-  return {
-    currentPage,
-    fileName,
-    hasPages,
-    isProcessing,
-    mode,
-    pageCount: pages.length,
-    scale,
-    text,
-  }
-}
-
-export function usePageMarkdownViewerContent(): PageMarkdownViewerContentState {
-  const {
-    currentPage,
-    fileName,
-    fitWidth,
     hasPages,
     isMarkdownScaleReady,
     isProcessing,
@@ -140,15 +102,10 @@ export function usePageMarkdownViewerContent(): PageMarkdownViewerContentState {
     resetKey,
     scale,
     setMarkdownContainerWidth,
-    setMode,
-    setViewerScale,
     text,
   } = usePageMarkdownViewerContext()
 
   return {
-    currentPage,
-    fileName,
-    fitWidth,
     hasPages,
     isMarkdownScaleReady,
     isProcessing,
@@ -160,8 +117,6 @@ export function usePageMarkdownViewerContent(): PageMarkdownViewerContentState {
     resetKey,
     scale,
     setMarkdownContainerWidth,
-    setMode,
-    setViewerScale,
     text,
   }
 }
@@ -170,7 +125,7 @@ export function usePageMarkdownViewerDocument(): PageMarkdownDocumentState {
   return usePageMarkdownViewerContext().document
 }
 
-export function usePageMarkdownViewerToolbar(): PageMarkdownViewerToolbarState {
+function usePageMarkdownViewerHeader(): PageMarkdownViewerHeaderState {
   const {
     currentPage,
     fileName,
@@ -336,9 +291,6 @@ export function PageMarkdownViewerProvider({
 
 export function PageMarkdownViewerContent() {
   const {
-    currentPage,
-    fileName,
-    fitWidth,
     hasPages,
     isMarkdownScaleReady,
     isProcessing,
@@ -350,8 +302,6 @@ export function PageMarkdownViewerContent() {
     resetKey,
     scale,
     setMarkdownContainerWidth,
-    setMode,
-    setViewerScale,
     text,
   } = usePageMarkdownViewerContent()
 
@@ -372,19 +322,18 @@ export function PageMarkdownViewerContent() {
       mode={mode}
       scale={scale}
       isScaleReady={isMarkdownScaleReady}
-      currentPage={currentPage}
-      fileName={fileName}
       resetKey={resetKey}
-      onModeChange={setMode}
-      onZoom={(factor) => setViewerScale(zoomPageScale(scale, factor))}
-      onFitWidth={fitWidth}
       onContainerWidthChange={setMarkdownContainerWidth}
       onVisiblePageChange={onMarkdownVisiblePageChange}
     />
   )
 }
 
-export function PageMarkdownViewerToolbar() {
+export function PageMarkdownViewerHeader({
+  className,
+}: {
+  className?: string
+}) {
   const {
     currentPage,
     fileName,
@@ -395,20 +344,23 @@ export function PageMarkdownViewerToolbar() {
     setMode,
     setViewerScale,
     text,
-  } = usePageMarkdownViewerToolbar()
+  } = usePageMarkdownViewerHeader()
 
   return (
-    <PageMarkdownToolbar
-      currentPage={Math.min(currentPage, pageCount)}
-      pageCount={pageCount}
-      mode={mode}
-      scale={scale}
-      text={text}
-      fileName={fileName}
-      onModeChange={setMode}
-      onZoom={(factor) => setViewerScale(zoomPageScale(scale, factor))}
-      onFitWidth={fitWidth}
-    />
+    <ViewerHeader className={className}>
+      <PageMarkdownToolbar
+        className="border-b-0"
+        currentPage={Math.min(currentPage, pageCount)}
+        pageCount={pageCount}
+        mode={mode}
+        scale={scale}
+        text={text}
+        fileName={fileName}
+        onModeChange={setMode}
+        onZoom={(factor) => setViewerScale(zoomPageScale(scale, factor))}
+        onFitWidth={fitWidth}
+      />
+    </ViewerHeader>
   )
 }
 
@@ -416,6 +368,7 @@ export function PageMarkdownViewer(props: PageMarkdownViewerProps) {
   return (
     <PageMarkdownViewerProvider {...props}>
       <ViewerRoot bare className="h-full flex-1 bg-background">
+        <PageMarkdownViewerHeader />
         <ViewerBody>
           <ViewerSurface>
             <PageMarkdownViewerContent />

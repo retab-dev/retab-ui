@@ -2,6 +2,12 @@ import type {
   DocumentAnchor,
   PdfAreaAnchor,
 } from "@/components/ui/document-anchor"
+import {
+  createSegmentedDocumentModel,
+  type DocumentSegment,
+  type SegmentAnchor,
+  type SegmentedDocumentModel,
+} from "@/components/ui/segmented-document-model"
 import type { BBox } from "@/components/viewers/lib/edit-types"
 
 import type {
@@ -37,11 +43,6 @@ export type EditViewerDocumentTarget =
   | { kind: "source"; document: EditViewerDocumentSource; showOverlay: false }
   | { kind: "preview"; document: EditViewerDocumentSource; showOverlay: true }
   | { kind: "filled"; document: EditViewerDocumentSource; showOverlay: false }
-
-export type EditViewerAnchorItem = {
-  id: string
-  anchor: DocumentAnchor | null
-}
 
 const DEFAULT_OPTIONS: Required<EditViewerOptions> = {
   fieldPanel: true,
@@ -314,7 +315,6 @@ export type EditViewerFieldProjection = {
   fields: readonly EditViewerField[]
   fieldByKey: ReadonlyMap<string, EditViewerField>
   fieldsByPage: ReadonlyMap<number, readonly EditViewerField[]>
-  anchorItems: readonly EditViewerAnchorItem[]
   locatedFields: readonly EditViewerField[]
   unlocatedFields: readonly EditViewerField[]
   visibleFields: readonly EditViewerField[]
@@ -338,7 +338,6 @@ export function createEditViewerFieldProjection({
     fields,
     fieldByKey: createEditViewerFieldMap(fields),
     fieldsByPage: groupLocatedEditViewerFieldsByPage(fields),
-    anchorItems: createEditViewerAnchorItems(fields),
     locatedFields: fields.filter((field) => Boolean(field.target)),
     unlocatedFields: fields.filter((field) => !field.target),
     visibleFields,
@@ -359,13 +358,57 @@ export function createEditViewerFieldMap(fields: readonly EditViewerField[]) {
   return fieldByKey
 }
 
-export function createEditViewerAnchorItems(
+export function createEditViewerSegmentedDocumentModel(
   fields: readonly EditViewerField[]
-): EditViewerAnchorItem[] {
-  return fields.map((field) => ({
-    id: field.key,
-    anchor: field.target,
-  }))
+): SegmentedDocumentModel {
+  const segments: DocumentSegment[] = []
+  const anchors: SegmentAnchor[] = []
+
+  fields.forEach((field, index) => {
+    const pdfAnchor = getEditViewerPdfAreaAnchor(field)
+    const segment: DocumentSegment = {
+      id: editViewerSegmentId(field.key, index),
+      label: field.description || field.key,
+      pages: pdfAnchor ? [pdfAnchor.pageNumber] : [],
+      color: field.type === "checkbox" ? "var(--chart-2)" : "var(--chart-1)",
+      index,
+      sourceId: field.key,
+    }
+
+    if (pdfAnchor) {
+      anchors.push(editViewerPdfAnchorToSegmentAnchor(pdfAnchor, segment.id))
+    }
+
+    segments.push(segment)
+  })
+
+  return createSegmentedDocumentModel({ anchors, segments })
+}
+
+function editViewerSegmentId(fieldKey: string, index: number) {
+  return `edit:${fieldKey || "field"}:${index}`
+}
+
+function editViewerPdfAnchorToSegmentAnchor(
+  anchor: PdfAreaAnchor,
+  segmentId: string
+): SegmentAnchor {
+  return {
+    id: `${segmentId}:anchor`,
+    segmentId,
+    pageNumber: anchor.pageNumber,
+    bounds: {
+      x: pdfPercentToUnit(anchor.left),
+      y: pdfPercentToUnit(anchor.top),
+      width: pdfPercentToUnit(anchor.width),
+      height: pdfPercentToUnit(anchor.height),
+    },
+  }
+}
+
+function pdfPercentToUnit(value: number) {
+  if (!Number.isFinite(value)) return 0
+  return value > 1 ? value / 100 : value
 }
 
 export function groupEditViewerFieldsByPage(

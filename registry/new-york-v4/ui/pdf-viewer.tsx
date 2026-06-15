@@ -13,15 +13,13 @@ import { cn } from "@/lib/utils"
 import type { ViewerResource } from "@/lib/viewer-resource"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
+import { PdfViewerProvider, type PdfDocumentSource } from "./pdf-viewer-context"
 import {
-  PdfViewerProvider,
-  useOptionalPdfViewerHeaderControls,
-  usePdfViewer,
-  usePdfViewerHeader,
-  usePdfViewerPages,
-  type PdfDocumentSource,
+  useInternalPdfViewerHeader,
+  useInternalPdfViewerHeaderControls,
+  useInternalPdfViewerPages,
   type PdfViewerHeaderControls,
-} from "./pdf-viewer-context"
+} from "./pdf-viewer-internal-context"
 import { createPdfPageLayout, getPdfPageLayout } from "./pdf-viewer-layout"
 import { PdfPage } from "./pdf-viewer-page"
 import { usePdfPageSizes } from "./pdf-viewer-page-sizes"
@@ -46,9 +44,6 @@ export type {
 } from "./pdf-viewer-types"
 export {
   PdfViewerProvider,
-  usePdfViewer,
-  usePdfViewerHeader,
-  usePdfViewerPages,
   usePdfViewerThumbnails,
   type PdfDocumentSource,
 } from "./pdf-viewer-context"
@@ -158,14 +153,23 @@ export function PdfViewerHeader({
   download?: boolean
   toolbar?: boolean
 }) {
-  const { currentPage, headerControls, resource } = usePdfViewerHeader()
+  const { currentPage, headerControls, resource } = useInternalPdfViewerHeader()
   const label = resource.fileName || "PDF"
+
+  if (children !== undefined) {
+    return (
+      <ViewerHeader
+        className={cn("flex min-h-10 items-center gap-3 px-2 py-1", className)}
+      >
+        {children}
+      </ViewerHeader>
+    )
+  }
 
   return (
     <ViewerHeader
       className={cn("flex min-h-10 items-center gap-3 px-2 py-1", className)}
     >
-      {children}
       {toolbar && headerControls ? (
         <ViewerToolbar
           className="h-auto flex-1 border-b-0 bg-transparent px-0"
@@ -203,7 +207,8 @@ export const PdfViewerPages = React.forwardRef<
   PdfViewerHandle,
   Omit<PdfViewerProps, "source">
 >(function PdfViewerPages(props, ref) {
-  const { resource, setCurrentPage, setViewerHandle } = usePdfViewerPages()
+  const { resource, setCurrentPage, setViewerHandle } =
+    useInternalPdfViewerPages()
   const { onVisiblePageChange } = props
   const handleVisiblePageChange = React.useCallback(
     (page: number) => {
@@ -293,7 +298,7 @@ function PdfViewerInner({
   forwardedRef?: React.ForwardedRef<PdfViewerHandle>
   resource: ViewerResource
 }) {
-  const setHeaderControls = useOptionalPdfViewerHeaderControls()
+  const setHeaderControls = useInternalPdfViewerHeaderControls()
   const content = resource.content
   const document = readPdfDocumentResource(content)
   React.useEffect(() => {

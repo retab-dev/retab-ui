@@ -13,6 +13,7 @@ import { PAGE_MARKDOWN_COMPACT_ACTIONS_WIDTH } from "@/components/viewers/page-m
 import { type PageMarkdownViewMode } from "@/components/viewers/page-markdown/page-markdown-types"
 
 export function PageMarkdownToolbar({
+  className,
   currentPage,
   pageCount,
   mode,
@@ -23,6 +24,7 @@ export function PageMarkdownToolbar({
   onZoom,
   onFitWidth,
 }: {
+  className?: string
   currentPage: number
   pageCount: number
   mode: PageMarkdownViewMode
@@ -40,6 +42,7 @@ export function PageMarkdownToolbar({
   return (
     <div ref={toolbarRef} className="shrink-0">
       <ViewerToolbar
+        className={className}
         title={
           <div className="flex min-w-0 items-center">
             <ModeTabs mode={mode} onChange={onModeChange} />

@@ -1086,6 +1086,11 @@
           "target": "@ui/pdf-viewer-context.tsx"
         },
         {
+          "path": "registry/new-york-v4/ui/pdf-viewer-internal-context.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-viewer-internal-context.tsx"
+        },
+        {
           "path": "registry/new-york-v4/ui/viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/viewer.tsx"
@@ -2803,7 +2808,8 @@
         "pdf-viewer",
         "file-viewer",
         "scroll-area",
-        "tabs"
+        "tabs",
+        "segmented-document"
       ],
       "files": [
         {
@@ -2835,6 +2841,11 @@
           "path": "components/viewers/edit/edit-viewer-provider.tsx",
           "type": "registry:component",
           "target": "@components/viewers/edit/edit-viewer-provider.tsx"
+        },
+        {
+          "path": "components/viewers/edit/edit-viewer-internal-context.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/edit/edit-viewer-internal-context.tsx"
         },
         {
           "path": "components/viewers/edit/edit-viewer-document.tsx",
@@ -2923,7 +2934,7 @@
       "name": "sources-viewer-block",
       "type": "registry:block",
       "title": "Sources Viewer",
-      "description": "Every source-backed format in one viewer — PDF/image bbox sources use segmented-document anchors; text, CSV, Excel, and Word use their format-specific anchored target adapters.",
+      "description": "Every source-backed format in one viewer — PDF/image bbox sources use segmented-document anchors; text, CSV, Excel, and Word use segmented source links with format-specific target adapters.",
       "dependencies": [
         "react-hook-form",
         "json-schema",
@@ -2948,8 +2959,7 @@
         "source-segmented-document",
         "source-field-link",
         "source-indicator",
-        "utils",
-        "anchored-document-viewer"
+        "utils"
       ],
       "files": [
         {
@@ -3370,11 +3380,8 @@
       "name": "source-field-link",
       "type": "registry:ui",
       "title": "Source field link",
-      "description": "A field-path adapter over either anchored-document items or segmented-document anchors.",
-      "registryDependencies": [
-        "anchored-document-viewer",
-        "segmented-document"
-      ],
+      "description": "A field-path adapter over segmented-document anchors.",
+      "registryDependencies": ["segmented-document"],
       "files": [
         {
           "path": "registry/new-york-v4/ui/source-field-link.ts",
@@ -4068,11 +4075,11 @@
         "text-viewer",
         "text-source",
         "document-source",
+        "segmented-document",
+        "source-segmented-document",
         "source-field-list",
-        "source-evidence",
         "source-field-link",
-        "source-indicator",
-        "anchored-document-viewer"
+        "source-indicator"
       ],
       "files": [
         {
@@ -4097,11 +4104,11 @@
         "docx-viewer",
         "docx-source",
         "document-source",
+        "segmented-document",
+        "source-segmented-document",
         "source-field-list",
-        "source-evidence",
         "source-field-link",
-        "source-indicator",
-        "anchored-document-viewer"
+        "source-indicator"
       ],
       "files": [
         {
@@ -4126,11 +4133,11 @@
         "csv-viewer",
         "csv-source",
         "document-source",
+        "segmented-document",
+        "source-segmented-document",
         "source-field-list",
-        "source-evidence",
         "source-field-link",
-        "source-indicator",
-        "anchored-document-viewer"
+        "source-indicator"
       ],
       "files": [
         {
@@ -4155,11 +4162,11 @@
         "xlsx-viewer",
         "xlsx-source",
         "document-source",
+        "segmented-document",
+        "source-segmented-document",
         "source-field-list",
-        "source-evidence",
         "source-field-link",
-        "source-indicator",
-        "anchored-document-viewer"
+        "source-indicator"
       ],
       "files": [
         {

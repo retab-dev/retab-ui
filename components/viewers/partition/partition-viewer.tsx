@@ -33,15 +33,7 @@ type PartitionViewerContextValue = {
   viewport: SegmentViewportController
 }
 
-export type PartitionViewerState = {
-  hasOutput: boolean
-  isProcessing: boolean
-  legendSegmentCount: number
-  pageCount: number
-  ribbonRowCount: number
-}
-
-export type PartitionViewerHeaderState = {
+type PartitionViewerHeaderState = {
   currentPage: SegmentViewportController["model"]["currentPage"]
   interaction: SegmentViewportController["interaction"]
   legendSegments: PartitionViewerModel["legendSegments"]
@@ -49,7 +41,7 @@ export type PartitionViewerHeaderState = {
   pageCount: number
 }
 
-export type PartitionViewerRibbonState = {
+type PartitionViewerRibbonState = {
   currentPage: SegmentViewportController["model"]["currentPage"]
   interaction: SegmentViewportController["interaction"]
   navigation: SegmentViewportController["navigation"]
@@ -58,11 +50,11 @@ export type PartitionViewerRibbonState = {
   scrollProgress: SegmentViewportController["model"]["scrollProgress"]
 }
 
-export type PartitionViewerDocumentState = {
+type PartitionViewerDocumentState = {
   hasOutput: boolean
 }
 
-export type PartitionViewerEmptyStatusState = {
+type PartitionViewerEmptyStatusState = {
   isProcessing: boolean
 }
 
@@ -91,18 +83,7 @@ function usePartitionViewerContext(): PartitionViewerContextValue {
   return context
 }
 
-export function usePartitionViewer(): PartitionViewerState {
-  const { isProcessing, model } = usePartitionViewerContext()
-  return {
-    hasOutput: model.hasOutput,
-    isProcessing,
-    legendSegmentCount: model.legendSegments.length,
-    pageCount: model.pageCount,
-    ribbonRowCount: model.ribbonRows.length,
-  }
-}
-
-export function usePartitionViewerHeader(): PartitionViewerHeaderState {
+function usePartitionViewerHeader(): PartitionViewerHeaderState {
   const { model, viewport } = usePartitionViewerContext()
 
   return {
@@ -114,7 +95,7 @@ export function usePartitionViewerHeader(): PartitionViewerHeaderState {
   }
 }
 
-export function usePartitionViewerRibbon(): PartitionViewerRibbonState {
+function usePartitionViewerRibbon(): PartitionViewerRibbonState {
   const { model, viewport } = usePartitionViewerContext()
 
   return {
@@ -131,17 +112,13 @@ export function usePartitionViewerDocumentControls(): PartitionDocumentControls 
   return usePartitionViewerContext().viewport.documentHandlers
 }
 
-export function usePartitionViewerModel(): PartitionViewerModel {
-  return usePartitionViewerContext().model
-}
-
-export function usePartitionViewerDocument(): PartitionViewerDocumentState {
+function usePartitionViewerDocument(): PartitionViewerDocumentState {
   return {
     hasOutput: usePartitionViewerContext().model.hasOutput,
   }
 }
 
-export function usePartitionViewerEmpty(): PartitionViewerEmptyStatusState {
+function usePartitionViewerEmpty(): PartitionViewerEmptyStatusState {
   return {
     isProcessing: usePartitionViewerContext().isProcessing,
   }

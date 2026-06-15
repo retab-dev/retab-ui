@@ -38,7 +38,7 @@ export interface FileIntakeViewerProviderProps {
   children: React.ReactNode
 }
 
-export type FileIntakeViewerModel = {
+type FileIntakeViewerModel = {
   canClear: boolean
   hasFile: boolean
   isDragging: boolean
@@ -48,7 +48,7 @@ export type FileIntakeViewerModel = {
   viewerSource: BlobViewerSource | null
 }
 
-export type FileIntakeSummary = {
+type FileIntakeSummary = {
   file: File
   fileName: string
   fileSizeLabel: string
@@ -60,21 +60,7 @@ export type FileIntakeViewerRejection = {
   description: string
 }
 
-export type FileIntakeViewerSelectedFileState = {
-  fileName: string
-  fileSizeLabel: string
-  fileTypeLabel: string
-}
-
-export type FileIntakeViewerState = {
-  canClear: boolean
-  hasFile: boolean
-  isDragging: boolean
-  rejection: FileIntakeViewerRejection | null
-  selectedFile: FileIntakeViewerSelectedFileState | null
-}
-
-export type FileIntakeViewerActions = {
+type FileIntakeViewerActions = {
   clearFile: () => void
   getRootDropProps: UseDropzoneReturn["getRootProps"]
   getFileInputProps: UseDropzoneReturn["getInputProps"]
@@ -88,13 +74,13 @@ type FileIntakeViewerContextValue = {
   model: FileIntakeViewerModel
 }
 
-export type FileIntakeViewerDropTargetState = {
+type FileIntakeViewerDropTargetState = {
   getFileInputProps: FileIntakeViewerActions["getFileInputProps"]
   getRootDropProps: FileIntakeViewerActions["getRootDropProps"]
   isDragging: boolean
 }
 
-export type FileIntakeViewerHeaderState = {
+type FileIntakeViewerHeaderState = {
   canClear: boolean
   clearFile: FileIntakeViewerActions["clearFile"]
   getReplaceButtonProps: FileIntakeViewerActions["getReplaceButtonProps"]
@@ -102,13 +88,13 @@ export type FileIntakeViewerHeaderState = {
   selectedFileSummary: FileIntakeSummary | null
 }
 
-export type FileIntakeViewerSidebarState = {
+type FileIntakeViewerSidebarState = {
   getUploadButtonProps: FileIntakeViewerActions["getUploadButtonProps"]
   selectedFileSummary: FileIntakeSummary | null
 }
 
 export type FileIntakeViewerSurfaceState = {
-  getEmptySurfaceProps: FileIntakeViewerActions["getEmptySurfaceProps"]
+  getEmptySurfaceProps: UseDropzoneReturn["getTriggerProps"]
   rejection: FileIntakeViewerRejection | null
   viewerSource: BlobViewerSource | null
 }
@@ -126,24 +112,7 @@ function useFileIntakeViewerContext(): FileIntakeViewerContextValue {
   return context
 }
 
-export function useFileIntakeViewer(): FileIntakeViewerState {
-  const { model } = useFileIntakeViewerContext()
-  return {
-    canClear: model.canClear,
-    hasFile: model.hasFile,
-    isDragging: model.isDragging,
-    rejection: model.rejection,
-    selectedFile: model.selectedFileSummary
-      ? {
-          fileName: model.selectedFileSummary.fileName,
-          fileSizeLabel: model.selectedFileSummary.fileSizeLabel,
-          fileTypeLabel: model.selectedFileSummary.fileTypeLabel,
-        }
-      : null,
-  }
-}
-
-export function useFileIntakeViewerDropTarget(): FileIntakeViewerDropTargetState {
+function useFileIntakeViewerDropTarget(): FileIntakeViewerDropTargetState {
   const { actions, model } = useFileIntakeViewerContext()
   return {
     getFileInputProps: actions.getFileInputProps,
@@ -152,7 +121,7 @@ export function useFileIntakeViewerDropTarget(): FileIntakeViewerDropTargetState
   }
 }
 
-export function useFileIntakeViewerHeader(): FileIntakeViewerHeaderState {
+function useFileIntakeViewerHeader(): FileIntakeViewerHeaderState {
   const { actions, model } = useFileIntakeViewerContext()
   return {
     canClear: model.canClear,
@@ -163,7 +132,7 @@ export function useFileIntakeViewerHeader(): FileIntakeViewerHeaderState {
   }
 }
 
-export function useFileIntakeViewerSidebar(): FileIntakeViewerSidebarState {
+function useFileIntakeViewerSidebar(): FileIntakeViewerSidebarState {
   const { actions, model } = useFileIntakeViewerContext()
   return {
     getUploadButtonProps: actions.getUploadButtonProps,

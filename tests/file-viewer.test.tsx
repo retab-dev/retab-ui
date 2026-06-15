@@ -396,9 +396,6 @@ describe("FileViewer detection helpers", () => {
         "FileViewerContent",
         "FileViewerHeader",
         "FileViewerProvider",
-        "useFileViewer",
-        "useFileViewerContent",
-        "useFileViewerHeader",
       ].sort()
     )
   })

@@ -3,24 +3,24 @@
 import * as React from "react"
 
 import type { Source } from "@/lib/document-source"
-import {
-  AnchoredDocumentProvider,
-  useAnchoredDocument,
-  type AnchoredDocumentTarget,
-} from "@/components/ui/anchored-document-viewer"
-import { useAnchoredSourceFieldLink } from "@/components/ui/source-field-link"
-import { sourceFieldsToEvidenceModel } from "@/components/ui/source-evidence"
+import { SegmentedDocumentProvider } from "@/components/ui/segmented-document-provider"
+import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
 import {
   SourceFieldList,
   type SourceField,
 } from "@/components/ui/source-field-list"
 import { SourceIndicator } from "@/components/ui/source-indicator"
+import { sourceFieldsToSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
 import {
   ViewerBody,
   ViewerRoot,
   ViewerSidebar,
   ViewerSurface,
 } from "@/components/ui/viewer"
+import {
+  sourceToXlsxCell,
+  useXlsxSourceTarget,
+} from "@/components/ui/xlsx-source"
 import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
 import xlsxSample from "@/components/viewers/sample-data/xlsx-sources.json"
 
@@ -35,26 +35,28 @@ const FIELDS = (xlsxSample as XlsxField[]).map((field) => ({
       ? `${field.source.anchor.sheet_name ?? `Sheet ${field.source.anchor.sheet_index + 1}`} · ${field.source.anchor.coordinate ?? ""}`
       : undefined,
 }))
-const EVIDENCE = sourceFieldsToEvidenceModel(FIELDS)
+const FIELD_BY_KEY = new Map(FIELDS.map((field) => [field.key, field]))
+const SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(
+  FIELDS.map((field) => ({
+    id: field.key,
+    label: field.label,
+    source: field.source,
+  }))
+)
 
 /**
  * Excel sources block — extracted values linked to the spreadsheet cells they
  * came from, across sheets. Hovering a field switches to its sheet, highlights
- * the cell, and scrolls to it. Same anchored-document abstraction, with the xlsx
- * viewer's sheet-aware cell target adapter.
+ * the cell, and scrolls to it. Segmented source interaction owns
+ * preview/selection while the XLSX source adapter owns sheet-aware navigation.
  */
 export function XlsxSourcesBlock() {
   const viewerRef = React.useRef<XlsxViewerHandle>(null)
-  const target = useXlsxAnchoredTarget(viewerRef)
 
   return (
-    <AnchoredDocumentProvider
-      items={EVIDENCE.anchoredItems}
-      target={target}
-      initialItemId={FIELDS[0]?.key}
-    >
+    <SegmentedDocumentProvider model={SEGMENTED_DOCUMENT}>
       <XlsxSourcesContent viewerRef={viewerRef} />
-    </AnchoredDocumentProvider>
+    </SegmentedDocumentProvider>
   )
 }
 
@@ -63,16 +65,19 @@ function XlsxSourcesContent({
 }: {
   viewerRef: React.RefObject<XlsxViewerHandle | null>
 }) {
-  const link = useAnchoredSourceFieldLink()
-  const { activeAnchor, activeItem } = useAnchoredDocument()
-  const activeCell =
-    activeAnchor?.kind === "xlsx-cell"
-      ? {
-          sheet: activeAnchor.sheetIndex,
-          row: activeAnchor.rowIndex,
-          col: activeAnchor.columnIndex,
-        }
-      : null
+  const target = useXlsxSourceTarget(viewerRef)
+  const segmentedLink = useSegmentedSourceFieldLink({
+    initialPath: FIELDS[0]?.key,
+  })
+  const link = useTargetedSourceFieldLink({
+    fieldByKey: FIELD_BY_KEY,
+    link: segmentedLink,
+    target,
+  })
+  const activeSource = link.activePath
+    ? FIELD_BY_KEY.get(link.activePath)?.source
+    : undefined
+  const activeCell = sourceToXlsxCell(activeSource)
 
   return (
     <ViewerRoot bare className="h-full min-h-[680px] bg-background">
@@ -89,10 +94,7 @@ function XlsxSourcesContent({
             className="h-full"
             activeCell={activeCell}
           />
-          <SourceIndicator
-            path={link.activePath}
-            found={!!activeItem?.anchor}
-          />
+          <SourceIndicator path={link.activePath} found={!!activeSource} />
         </ViewerSurface>
         <ViewerSidebar
           aria-label="Source fields"
@@ -108,21 +110,43 @@ function XlsxSourcesContent({
   )
 }
 
-function useXlsxAnchoredTarget(
-  viewerRef: React.RefObject<XlsxViewerHandle | null>
-): AnchoredDocumentTarget {
+function useTargetedSourceFieldLink({
+  fieldByKey,
+  link,
+  target,
+}: {
+  fieldByKey: ReadonlyMap<string, XlsxField>
+  link: ReturnType<typeof useSegmentedSourceFieldLink>
+  target: ReturnType<typeof useXlsxSourceTarget>
+}) {
+  const scrollToField = React.useCallback(
+    (path: string, behavior: ScrollBehavior) => {
+      const source = fieldByKey.get(path)?.source
+      if (source) target.scrollTo?.(source, { behavior })
+    },
+    [fieldByKey, target]
+  )
+  const onFieldHover = React.useCallback(
+    (path: string | null) => {
+      link.onFieldHover(path)
+      if (path) scrollToField(path, "auto")
+    },
+    [link, scrollToField]
+  )
+  const selectField = React.useCallback(
+    (path: string) => {
+      link.selectField?.(path)
+      scrollToField(path, "smooth")
+    },
+    [link, scrollToField]
+  )
+
   return React.useMemo(
     () => ({
-      scrollToAnchor: (anchor, options) => {
-        if (anchor.kind !== "xlsx-cell") return
-        viewerRef.current?.scrollToCell(
-          anchor.sheetIndex,
-          anchor.rowIndex,
-          anchor.columnIndex,
-          options
-        )
-      },
+      ...link,
+      onFieldHover,
+      selectField,
     }),
-    [viewerRef]
+    [link, onFieldHover, selectField]
   )
 }

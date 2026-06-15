@@ -14,11 +14,11 @@ import { EditViewerDocument } from "./edit-viewer-document"
 import { EditViewerFields } from "./edit-viewer-fields"
 import { EditViewerHeader } from "./edit-viewer-header"
 import {
-  EditViewerProvider,
-  useEditViewerBusy,
-  useEditViewerEmpty,
-  useEditViewerLayout,
-} from "./edit-viewer-provider"
+  useInternalEditViewerBusy,
+  useInternalEditViewerEmpty,
+  useInternalEditViewerLayout,
+} from "./edit-viewer-internal-context"
+import { EditViewerProvider } from "./edit-viewer-provider"
 import {
   EditViewerBusyOverlay as EditViewerBusyOverlayContent,
   EmptyEditViewerState,
@@ -27,27 +27,13 @@ import type { EditViewerProps } from "./edit-viewer-types"
 
 export {
   EditViewerProvider,
-  useEditViewer,
-  useEditViewerBusy,
   useEditViewerDocument,
-  useEditViewerEmpty,
   useEditViewerFields,
-  useEditViewerHeader,
-  useEditViewerLayout,
-  useEditViewerSelection,
 } from "./edit-viewer-provider"
 export type {
-  EditViewerBusyState,
   EditViewerDocumentState,
-  EditViewerEmptyStatusState,
   EditViewerFieldsPartState,
-  EditViewerFieldsState,
-  EditViewerHeaderState,
-  EditViewerLayoutState,
-  EditViewerModeState,
   EditViewerProviderProps,
-  EditViewerSelectionState,
-  EditViewerState,
 } from "./edit-viewer-provider"
 export type { EditViewerDocumentTarget } from "./edit-viewer-model"
 export { EditViewerDocument } from "./edit-viewer-document"
@@ -79,7 +65,7 @@ export function EditViewer({ className, ...providerProps }: EditViewerProps) {
 }
 
 function EditViewerRoot({ className }: { className?: string }) {
-  const layout = useEditViewerLayout()
+  const layout = useInternalEditViewerLayout()
 
   return (
     <ViewerRoot
@@ -117,7 +103,7 @@ function EditViewerRoot({ className }: { className?: string }) {
 }
 
 export function EditViewerBusyOverlay() {
-  const busy = useEditViewerBusy()
+  const busy = useInternalEditViewerBusy()
 
   return busy.status ? (
     <EditViewerBusyOverlayContent status={busy.status} />
@@ -125,7 +111,7 @@ export function EditViewerBusyOverlay() {
 }
 
 export function EditViewerEmptyState() {
-  const empty = useEditViewerEmpty()
+  const empty = useInternalEditViewerEmpty()
 
   return empty.hasOutput ? null : <EmptyEditViewerState />
 }

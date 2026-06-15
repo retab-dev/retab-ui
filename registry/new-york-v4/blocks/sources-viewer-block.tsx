@@ -10,20 +10,13 @@ import {
   type SourceMap,
 } from "@/lib/document-source"
 import { cn } from "@/lib/utils"
-import {
-  AnchoredDocumentProvider,
-  useAnchoredDocument,
-  type AnchoredDocumentTarget,
-  type AnchoredItem,
-} from "@/components/ui/anchored-document-viewer"
+import { sourceToCsvCell, useCsvSourceTarget } from "@/components/ui/csv-source"
 import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
-import { DocxViewer, type DocxViewerHandle } from "@/components/ui/docx-viewer"
 import {
-  useAnchoredSourceFieldLink,
-  useSegmentedSourceFieldLink,
-  type SourceFieldLink,
-  type SegmentedSourceFieldLink,
-} from "@/components/ui/source-field-link"
+  sourceToDocxHighlight,
+  useDocxSourceTarget,
+} from "@/components/ui/docx-source"
+import { DocxViewer, type DocxViewerHandle } from "@/components/ui/docx-viewer"
 import { ImageViewer } from "@/components/ui/image-viewer"
 import {
   PdfViewerHeader,
@@ -35,10 +28,12 @@ import {
   SegmentedDocumentProvider,
   useSegmentedDocumentViewport,
 } from "@/components/ui/segmented-document-provider"
+import { sourceMapToEvidenceModel } from "@/components/ui/source-evidence"
 import {
-  sourceFieldsToEvidenceModel,
-  sourceMapToEvidenceModel,
-} from "@/components/ui/source-evidence"
+  useSegmentedSourceFieldLink,
+  type SegmentedSourceFieldLink,
+  type SourceFieldLink,
+} from "@/components/ui/source-field-link"
 import { SourceIndicator } from "@/components/ui/source-indicator"
 import {
   sourceFieldsToSegmentedDocumentModel,
@@ -50,6 +45,10 @@ import {
   useSegmentedPdfSourceOverlay,
   useSegmentedPdfViewerHandle,
 } from "@/components/ui/source-segmented-document-overlays"
+import {
+  sourceToTextHighlight,
+  useTextSourceTarget,
+} from "@/components/ui/text-source"
 import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
 import {
   ViewerBody,
@@ -59,6 +58,10 @@ import {
   ViewerSidebarTrigger,
   ViewerSurface,
 } from "@/components/ui/viewer"
+import {
+  sourceToXlsxCell,
+  useXlsxSourceTarget,
+} from "@/components/ui/xlsx-source"
 import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
 import { JsonForm } from "@/components/json-form/json-form"
 import csvSample from "@/components/viewers/sample-data/csv-sources.json"
@@ -88,7 +91,6 @@ APAC,Q2,560000,24,1.11`
 type FlatField = { key: string; label: string; value: string; source: Source }
 
 type SourceExtraction = {
-  items: AnchoredItem[]
   schema: JSONSchema7
   sources: SourceMap
   values: Record<string, unknown>
@@ -101,10 +103,8 @@ function flatSourceExtraction(fields: FlatField[]): SourceExtraction {
   const sources = Object.fromEntries(
     fields.map((field) => [field.key, field.source])
   )
-  const evidence = sourceFieldsToEvidenceModel(fields)
 
   return {
-    items: evidence.anchoredItems,
     schema: {
       type: "object",
       properties: Object.fromEntries(
@@ -137,7 +137,6 @@ const PDF_INITIAL_SOURCE_PATH =
   PDF_EVIDENCE.evidenceItems.find((item) => item.anchor.status === "resolved")
     ?.id ?? null
 const PDF_EXTRACTION: SourceExtraction = {
-  items: PDF_EVIDENCE.anchoredItems,
   schema: jsonFormSample.schema as JSONSchema7,
   sources: PDF_SOURCE_MAP,
   values: jsonFormSample.extraction as Record<string, unknown>,
@@ -145,65 +144,40 @@ const PDF_EXTRACTION: SourceExtraction = {
 const IMAGE_FIELDS = imageSample as FlatField[]
 const IMAGE_EXTRACTION = flatSourceExtraction(IMAGE_FIELDS)
 const IMAGE_SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(
-  IMAGE_FIELDS.map((field) => ({
+  fieldsToSegmentedFields(IMAGE_FIELDS)
+)
+const TEXT_FIELDS = textSample as FlatField[]
+const TEXT_EXTRACTION = flatSourceExtraction(TEXT_FIELDS)
+const TEXT_SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(
+  fieldsToSegmentedFields(TEXT_FIELDS)
+)
+const CSV_FIELDS = csvSample as FlatField[]
+const CSV_EXTRACTION = flatSourceExtraction(CSV_FIELDS)
+const CSV_SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(
+  fieldsToSegmentedFields(CSV_FIELDS)
+)
+const XLSX_FIELDS = xlsxSample as FlatField[]
+const XLSX_EXTRACTION = flatSourceExtraction(XLSX_FIELDS)
+const XLSX_SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(
+  fieldsToSegmentedFields(XLSX_FIELDS)
+)
+const DOCX_FIELDS = docxSample as FlatField[]
+const DOCX_EXTRACTION = flatSourceExtraction(DOCX_FIELDS)
+const DOCX_SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(
+  fieldsToSegmentedFields(DOCX_FIELDS)
+)
+
+function fieldsToSegmentedFields(fields: readonly FlatField[]) {
+  return fields.map((field) => ({
     id: field.key,
     label: field.label,
     source: field.source,
   }))
-)
-const TEXT_EXTRACTION = flatSourceExtraction(textSample as FlatField[])
-const CSV_EXTRACTION = flatSourceExtraction(csvSample as FlatField[])
-const XLSX_EXTRACTION = flatSourceExtraction(xlsxSample as FlatField[])
-const DOCX_EXTRACTION = flatSourceExtraction(docxSample as FlatField[])
+}
 
 // ── Shared layout: viewer + json-form source panel ────────────────────────────
 
-/**
- * The source shell every tab shares: the source document on the left, the
- * extracted values rendered as a JSON form on the right. Hovering or clicking a
- * form field reports its path to the anchored provider, which scrolls and
- * highlights through the active document target.
- */
 function SourcesShell({
-  extraction,
-  children,
-}: {
-  extraction: SourceExtraction
-  children: React.ReactNode
-}) {
-  const link = useAnchoredSourceFieldLink()
-  const { activeItem } = useAnchoredDocument()
-
-  return (
-    <ViewerRoot bare defaultOpen className="h-full bg-background">
-      <ViewerHeader className="flex min-h-10 items-center gap-2 px-2">
-        <ViewerSidebarTrigger />
-        <h2 className="min-w-0 truncate text-sm font-medium">
-          Source-linked results
-        </h2>
-      </ViewerHeader>
-      <ViewerBody>
-        <ViewerSurface className="relative">
-          {children}
-          <SourceIndicator
-            path={link.activePath}
-            found={!!activeItem?.anchor}
-          />
-        </ViewerSurface>
-        <ViewerSidebar
-          aria-label="Source-linked fields"
-          side="right"
-          width="420px"
-          className="flex flex-shrink-0 flex-col border-l"
-        >
-          <SourcesForm extraction={extraction} link={link} />
-        </ViewerSidebar>
-      </ViewerBody>
-    </ViewerRoot>
-  )
-}
-
-function SegmentedSourcesShell({
   children,
   extraction,
   link,
@@ -223,7 +197,10 @@ function SegmentedSourcesShell({
       <ViewerBody>
         <ViewerSurface className="relative">
           {children}
-          <SourceIndicator path={link.activePath} found={!!link.activeAnchor} />
+          <SourceIndicator
+            path={link.activePath}
+            found={!!link.activeSegment}
+          />
         </ViewerSurface>
         <ViewerSidebar
           aria-label="Source-linked fields"
@@ -268,113 +245,57 @@ function SourcesForm({
   )
 }
 
-function useTextAnchoredTarget(
-  viewerRef: React.RefObject<TextViewerHandle | null>
-): AnchoredDocumentTarget {
+type SourceTarget = {
+  scrollTo?: (source: Source, options: { behavior: ScrollBehavior }) => void
+}
+
+function useSourceTargetedSegmentedFieldLink({
+  initialPath,
+  sources,
+  target,
+}: {
+  initialPath?: string | null
+  sources: SourceMap
+  target: SourceTarget
+}): SegmentedSourceFieldLink {
+  const link = useSegmentedSourceFieldLink({ initialPath })
+  const scrollToPath = React.useCallback(
+    (path: string, behavior: ScrollBehavior) => {
+      const source = sources[path]
+      if (source) target.scrollTo?.(source, { behavior })
+    },
+    [sources, target]
+  )
+  const onFieldHover = React.useCallback(
+    (path: string | null) => {
+      link.onFieldHover(path)
+      if (path) scrollToPath(path, "auto")
+    },
+    [link, scrollToPath]
+  )
+  const selectField = React.useCallback(
+    (path: string) => {
+      link.selectField?.(path)
+      scrollToPath(path, "smooth")
+    },
+    [link, scrollToPath]
+  )
+
   return React.useMemo(
     () => ({
-      scrollToAnchor: (anchor, options) => {
-        if (anchor.kind !== "text-range") return
-        viewerRef.current?.scrollToLineRange(
-          {
-            start: anchor.startLine,
-            end: anchor.endLine,
-          },
-          options
-        )
-      },
+      ...link,
+      onFieldHover,
+      selectField,
     }),
-    [viewerRef]
+    [link, onFieldHover, selectField]
   )
 }
 
-function useActiveTextHighlight() {
-  const { activeAnchor } = useAnchoredDocument()
-  return activeAnchor?.kind === "text-range"
-    ? {
-        start: activeAnchor.startLine,
-        end: activeAnchor.endLine,
-      }
-    : null
-}
-
-function useCsvAnchoredTarget(
-  viewerRef: React.RefObject<CsvViewerHandle | null>
-): AnchoredDocumentTarget {
-  return React.useMemo(
-    () => ({
-      scrollToAnchor: (anchor, options) => {
-        if (anchor.kind !== "csv-cell") return
-        viewerRef.current?.scrollToCell(
-          {
-            rowIndex: anchor.rowIndex,
-            columnIndex: anchor.columnIndex,
-          },
-          options
-        )
-      },
-    }),
-    [viewerRef]
-  )
-}
-
-function useActiveCsvCell() {
-  const { activeAnchor } = useAnchoredDocument()
-  return activeAnchor?.kind === "csv-cell"
-    ? {
-        rowIndex: activeAnchor.rowIndex,
-        columnIndex: activeAnchor.columnIndex,
-      }
-    : null
-}
-
-function useXlsxAnchoredTarget(
-  viewerRef: React.RefObject<XlsxViewerHandle | null>
-): AnchoredDocumentTarget {
-  return React.useMemo(
-    () => ({
-      scrollToAnchor: (anchor, options) => {
-        if (anchor.kind !== "xlsx-cell") return
-        viewerRef.current?.scrollToCell(
-          anchor.sheetIndex,
-          anchor.rowIndex,
-          anchor.columnIndex,
-          options
-        )
-      },
-    }),
-    [viewerRef]
-  )
-}
-
-function useActiveXlsxCell() {
-  const { activeAnchor } = useAnchoredDocument()
-  return activeAnchor?.kind === "xlsx-cell"
-    ? {
-        sheet: activeAnchor.sheetIndex,
-        row: activeAnchor.rowIndex,
-        col: activeAnchor.columnIndex,
-      }
-    : null
-}
-
-function useDocxAnchoredTarget(
-  viewerRef: React.RefObject<DocxViewerHandle | null>
-): AnchoredDocumentTarget {
-  return React.useMemo(
-    () => ({
-      scrollToAnchor: (anchor, options) => {
-        if (anchor.kind !== "docx-target") return
-        viewerRef.current?.scrollToTarget(anchor.target, options)
-      },
-    }),
-    [viewerRef]
-  )
-}
-
-function useActiveDocxHighlight() {
-  const { activeAnchor } = useAnchoredDocument()
-  return activeAnchor?.kind === "docx-target" ? activeAnchor.target : null
+function sourceForPath(
+  sources: SourceMap,
+  path: string | null
+): Source | undefined {
+  return path ? sources[path] : undefined
 }
 
 // ── Per-format tabs ───────────────────────────────────────────────────────────
@@ -388,13 +309,15 @@ function PdfTab() {
 }
 
 function PdfTabContent() {
-  const link = useSegmentedSourceFieldLink({ initialPath: PDF_INITIAL_SOURCE_PATH })
+  const link = useSegmentedSourceFieldLink({
+    initialPath: PDF_INITIAL_SOURCE_PATH,
+  })
   const { documentHandlers } = useSegmentedDocumentViewport()
   const renderPageOverlay = useSegmentedPdfSourceOverlay(link)
   const setPdfViewerHandle = useSegmentedPdfViewerHandle()
 
   return (
-    <SegmentedSourcesShell extraction={PDF_EXTRACTION} link={link}>
+    <SourcesShell extraction={PDF_EXTRACTION} link={link}>
       <PdfViewerProvider
         source={{
           kind: "url",
@@ -414,7 +337,7 @@ function PdfTabContent() {
           />
         </div>
       </PdfViewerProvider>
-    </SegmentedSourcesShell>
+    </SourcesShell>
   )
 }
 
@@ -427,13 +350,15 @@ function ImageTab() {
 }
 
 function ImageTabContent() {
-  const link = useSegmentedSourceFieldLink({ initialPath: IMAGE_FIELDS[0]?.key })
+  const link = useSegmentedSourceFieldLink({
+    initialPath: IMAGE_FIELDS[0]?.key,
+  })
   const { documentHandlers } = useSegmentedDocumentViewport()
   const renderFrameOverlay = useSegmentedImageSourceOverlay(link)
   const setImageViewerHandle = useSegmentedImageViewerHandle()
 
   return (
-    <SegmentedSourcesShell extraction={IMAGE_EXTRACTION} link={link}>
+    <SourcesShell extraction={IMAGE_EXTRACTION} link={link}>
       <ImageViewer
         ref={setImageViewerHandle}
         source={{
@@ -447,30 +372,32 @@ function ImageTabContent() {
         onVisibleFrameChange={documentHandlers.onCurrentPageChange}
         renderFrameOverlay={renderFrameOverlay}
       />
-    </SegmentedSourcesShell>
+    </SourcesShell>
   )
 }
 
 function TextTab() {
-  const viewerRef = React.useRef<TextViewerHandle>(null)
-  const target = useTextAnchoredTarget(viewerRef)
-
   return (
-    <AnchoredDocumentProvider items={TEXT_EXTRACTION.items} target={target}>
-      <TextTabContent viewerRef={viewerRef} />
-    </AnchoredDocumentProvider>
+    <SegmentedDocumentProvider model={TEXT_SEGMENTED_DOCUMENT}>
+      <TextTabContent />
+    </SegmentedDocumentProvider>
   )
 }
 
-function TextTabContent({
-  viewerRef,
-}: {
-  viewerRef: React.RefObject<TextViewerHandle | null>
-}) {
-  const highlight = useActiveTextHighlight()
+function TextTabContent() {
+  const viewerRef = React.useRef<TextViewerHandle>(null)
+  const target = useTextSourceTarget(viewerRef)
+  const link = useSourceTargetedSegmentedFieldLink({
+    initialPath: TEXT_FIELDS[0]?.key,
+    sources: TEXT_EXTRACTION.sources,
+    target,
+  })
+  const highlight = sourceToTextHighlight(
+    sourceForPath(TEXT_EXTRACTION.sources, link.activePath)
+  )
 
   return (
-    <SourcesShell extraction={TEXT_EXTRACTION}>
+    <SourcesShell extraction={TEXT_EXTRACTION} link={link}>
       <TextViewer
         ref={viewerRef}
         source={{
@@ -488,25 +415,27 @@ function TextTabContent({
 }
 
 function CsvTab() {
-  const viewerRef = React.useRef<CsvViewerHandle>(null)
-  const target = useCsvAnchoredTarget(viewerRef)
-
   return (
-    <AnchoredDocumentProvider items={CSV_EXTRACTION.items} target={target}>
-      <CsvTabContent viewerRef={viewerRef} />
-    </AnchoredDocumentProvider>
+    <SegmentedDocumentProvider model={CSV_SEGMENTED_DOCUMENT}>
+      <CsvTabContent />
+    </SegmentedDocumentProvider>
   )
 }
 
-function CsvTabContent({
-  viewerRef,
-}: {
-  viewerRef: React.RefObject<CsvViewerHandle | null>
-}) {
-  const activeCell = useActiveCsvCell()
+function CsvTabContent() {
+  const viewerRef = React.useRef<CsvViewerHandle>(null)
+  const target = useCsvSourceTarget(viewerRef)
+  const link = useSourceTargetedSegmentedFieldLink({
+    initialPath: CSV_FIELDS[0]?.key,
+    sources: CSV_EXTRACTION.sources,
+    target,
+  })
+  const activeCell = sourceToCsvCell(
+    sourceForPath(CSV_EXTRACTION.sources, link.activePath)
+  )
 
   return (
-    <SourcesShell extraction={CSV_EXTRACTION}>
+    <SourcesShell extraction={CSV_EXTRACTION} link={link}>
       <CsvViewer
         ref={viewerRef}
         source={{ kind: "text", text: CSV_TEXT, fileName: "sales.csv" }}
@@ -519,25 +448,27 @@ function CsvTabContent({
 }
 
 function ExcelTab() {
-  const viewerRef = React.useRef<XlsxViewerHandle>(null)
-  const target = useXlsxAnchoredTarget(viewerRef)
-
   return (
-    <AnchoredDocumentProvider items={XLSX_EXTRACTION.items} target={target}>
-      <ExcelTabContent viewerRef={viewerRef} />
-    </AnchoredDocumentProvider>
+    <SegmentedDocumentProvider model={XLSX_SEGMENTED_DOCUMENT}>
+      <ExcelTabContent />
+    </SegmentedDocumentProvider>
   )
 }
 
-function ExcelTabContent({
-  viewerRef,
-}: {
-  viewerRef: React.RefObject<XlsxViewerHandle | null>
-}) {
-  const activeCell = useActiveXlsxCell()
+function ExcelTabContent() {
+  const viewerRef = React.useRef<XlsxViewerHandle>(null)
+  const target = useXlsxSourceTarget(viewerRef)
+  const link = useSourceTargetedSegmentedFieldLink({
+    initialPath: XLSX_FIELDS[0]?.key,
+    sources: XLSX_EXTRACTION.sources,
+    target,
+  })
+  const activeCell = sourceToXlsxCell(
+    sourceForPath(XLSX_EXTRACTION.sources, link.activePath)
+  )
 
   return (
-    <SourcesShell extraction={XLSX_EXTRACTION}>
+    <SourcesShell extraction={XLSX_EXTRACTION} link={link}>
       <XlsxViewer
         ref={viewerRef}
         source={{
@@ -554,25 +485,27 @@ function ExcelTabContent({
 }
 
 function DocxTab() {
-  const viewerRef = React.useRef<DocxViewerHandle>(null)
-  const target = useDocxAnchoredTarget(viewerRef)
-
   return (
-    <AnchoredDocumentProvider items={DOCX_EXTRACTION.items} target={target}>
-      <DocxTabContent viewerRef={viewerRef} />
-    </AnchoredDocumentProvider>
+    <SegmentedDocumentProvider model={DOCX_SEGMENTED_DOCUMENT}>
+      <DocxTabContent />
+    </SegmentedDocumentProvider>
   )
 }
 
-function DocxTabContent({
-  viewerRef,
-}: {
-  viewerRef: React.RefObject<DocxViewerHandle | null>
-}) {
-  const highlight = useActiveDocxHighlight()
+function DocxTabContent() {
+  const viewerRef = React.useRef<DocxViewerHandle>(null)
+  const target = useDocxSourceTarget(viewerRef)
+  const link = useSourceTargetedSegmentedFieldLink({
+    initialPath: DOCX_FIELDS[0]?.key,
+    sources: DOCX_EXTRACTION.sources,
+    target,
+  })
+  const highlight = sourceToDocxHighlight(
+    sourceForPath(DOCX_EXTRACTION.sources, link.activePath)
+  )
 
   return (
-    <SourcesShell extraction={DOCX_EXTRACTION}>
+    <SourcesShell extraction={DOCX_EXTRACTION} link={link}>
       <DocxViewer
         ref={viewerRef}
         source={{
@@ -603,8 +536,8 @@ type TabId = (typeof TABS)[number]["id"]
  * Sources viewer — every source-backed format in one component. A tab bar switches
  * the file format (PDF, image, text, CSV, Excel, Word); each tab is the same
  * source shell: the source document beside a JSON form of its extracted values,
- * linked by their sources. The same anchored-document provider drives every
- * viewer; only the viewer + its target adapter differ per tab.
+ * linked by their sources. Segmented source interaction drives every tab; only
+ * the viewer and its source target adapter differ per format.
  *
  * Tabs mount lazily on first visit and stay mounted (hidden) afterwards, so each
  * format's viewer keeps its scroll position and avoids re-fetching its document.

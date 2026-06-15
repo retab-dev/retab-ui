@@ -3,7 +3,10 @@
 import * as React from "react"
 
 import type { DocumentSegment, SegmentAnchor } from "./segmented-document-model"
-import { useSegmentedDocument } from "./segmented-document-provider"
+import {
+  useSegmentedDocumentModel,
+  useSegmentedDocumentViewport,
+} from "./segmented-document-provider"
 
 export type SegmentedItemNavigationOptions = {
   behavior?: ScrollBehavior
@@ -34,7 +37,8 @@ const EMPTY_SEGMENT_ANCHORS: readonly SegmentAnchor[] = []
 export function useSegmentedItemLink(
   options: SegmentedItemLinkOptions = {}
 ): SegmentedItemLink {
-  const { model, viewport } = useSegmentedDocument()
+  const model = useSegmentedDocumentModel()
+  const viewport = useSegmentedDocumentViewport()
   const [selectedItemId, setSelectedItemId] = React.useState<string | null>(
     null
   )
@@ -98,10 +102,7 @@ export function useSegmentedItemLink(
   const clearPreview = viewport.interaction.clearPreview
 
   const navigateSegment = React.useCallback(
-    (
-      segment: DocumentSegment,
-      options?: SegmentedItemNavigationOptions
-    ) => {
+    (segment: DocumentSegment, options?: SegmentedItemNavigationOptions) => {
       const anchor = anchorsBySegmentId.get(segment.id)?.[0]
       if (anchor) {
         viewport.navigation.scrollToAnchor(anchor, options)

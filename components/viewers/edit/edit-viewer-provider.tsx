@@ -2,27 +2,30 @@
 
 import * as React from "react"
 
-import {
-  AnchoredDocumentProvider,
-  useAnchoredDocument,
-  type AnchoredItem,
-} from "@/components/ui/anchored-document-viewer"
-import { usePdfAnchoredTarget } from "@/components/ui/pdf-anchor-target"
 import type {
   PageOverlayProps,
   PdfViewerHandle,
 } from "@/components/ui/pdf-viewer"
+import { SegmentedDocumentProvider } from "@/components/ui/segmented-document-provider"
+import { useSegmentedItemLink } from "@/components/ui/segmented-item-link"
 
 import {
+  EditViewerContext,
+  type EditViewerDocumentState,
+  type EditViewerFieldsState,
+  type EditViewerModeState,
+  type EditViewerProviderState,
+  type EditViewerSelectionState,
+} from "./edit-viewer-internal-context"
+import {
   createEditViewerFieldProjection,
+  createEditViewerSegmentedDocumentModel,
   deriveEditViewerModes,
   normalizeEditViewerResult,
   resolveEditViewerDocumentTarget,
   resolveEditViewerMode,
   resolveEditViewerOptions,
-  type EditViewerAnchorItem,
   type EditViewerDocumentTarget,
-  type EditViewerFieldGroup,
   type EditViewerFieldProjection,
   type EditViewerFilter,
 } from "./edit-viewer-model"
@@ -41,177 +44,14 @@ export type EditViewerProviderProps = Omit<EditViewerProps, "className"> & {
   children: React.ReactNode
 }
 
-export type EditViewerState = {
-  status: EditViewerStatus
-  result: EditViewerResult
-  fields: readonly EditViewerField[]
-  filledCount: number
-  hasOutput: boolean
-}
-
-type EditViewerProviderState = EditViewerState & {
-  fieldByKey: ReadonlyMap<string, EditViewerField>
-  fieldsByPage: ReadonlyMap<number, readonly EditViewerField[]>
-}
-
-export type EditViewerModeState = {
-  mode: EditViewerMode | null
-  modes: readonly EditViewerMode[]
-  setMode: (mode: EditViewerMode) => void
-}
-
-export type EditViewerFieldsState = {
-  fields: readonly EditViewerField[]
-  visibleFields: readonly EditViewerField[]
-  fieldGroups: readonly EditViewerFieldGroup[]
-  locatedFields: readonly EditViewerField[]
-  unlocatedFields: readonly EditViewerField[]
-  filledCount: number
-  fieldCount: number
-  visibleFieldCount: number
-  query: string
-  setQuery: (query: string) => void
-  filter: EditViewerFilter
-  setFilter: (filter: EditViewerFilter) => void
-  canSearch: boolean
-  canFilter: boolean
-}
-
-export type EditViewerSelectionState = {
-  selectedFieldKey: string | null
-  activeFieldKey: string | null
-  selectField: (fieldKey: string) => void
-  clearFieldSelection: () => void
-  previewField: (fieldKey: string | null) => void
-}
-
-export type EditViewerDocumentState = {
-  target: EditViewerDocumentTarget
-  mode: EditViewerMode | null
-  sourceDocument: EditViewerDocumentSource | null
-  filledDocument: EditViewerDocumentSource | null
-  viewerRef: React.RefObject<PdfViewerHandle | null>
-  renderPageOverlay: (props: PageOverlayProps) => React.ReactNode
-}
-
-export type EditViewerHeaderState = {
-  mode: EditViewerMode | null
-  modes: readonly EditViewerMode[]
-  setMode: (mode: EditViewerMode) => void
-  filledCount: number
-  fieldCount: number
-  status: Exclude<EditViewerStatus, { state: "idle" }> | null
-  hasFieldPanel: boolean
-}
-
-export type EditViewerLayoutState = {
-  hasFieldPanel: boolean
-  hasOutput: boolean
-}
-
-export type EditViewerBusyState = {
-  status: Extract<
-    EditViewerStatus,
-    { state: "detecting" } | { state: "filling" }
-  > | null
-}
-
-export type EditViewerEmptyStatusState = {
-  hasOutput: boolean
-}
-
-export type EditViewerFieldsPartState = EditViewerFieldsState &
-  EditViewerSelectionState
-
-type EditViewerContextValue = {
-  state: EditViewerProviderState
-  mode: EditViewerModeState
-  fields: EditViewerFieldsState
-  selection: EditViewerSelectionState
-  document: EditViewerDocumentState
-  options: Required<EditViewerOptions>
-}
-
-const EditViewerContext = React.createContext<EditViewerContextValue | null>(
-  null
-)
-
-function useEditViewerContext(): EditViewerContextValue {
-  const context = React.useContext(EditViewerContext)
-  if (!context) {
-    throw new Error("useEditViewer must be used within EditViewerProvider.")
-  }
-  return context
-}
-
-export function useEditViewer(): EditViewerState {
-  const edit = useEditViewerContext()
-
-  return {
-    status: edit.state.status,
-    result: edit.state.result,
-    fields: edit.state.fields,
-    filledCount: edit.state.filledCount,
-    hasOutput: edit.state.hasOutput,
-  }
-}
-
-export function useEditViewerLayout(): EditViewerLayoutState {
-  const edit = useEditViewerContext()
-
-  return {
-    hasFieldPanel: edit.options.fieldPanel,
-    hasOutput: edit.state.hasOutput,
-  }
-}
-
-export function useEditViewerBusy(): EditViewerBusyState {
-  const edit = useEditViewerContext()
-  const status = edit.state.status
-
-  return {
-    status:
-      status.state === "detecting" || status.state === "filling"
-        ? status
-        : null,
-  }
-}
-
-export function useEditViewerEmpty(): EditViewerEmptyStatusState {
-  return {
-    hasOutput: useEditViewerContext().state.hasOutput,
-  }
-}
-
-export function useEditViewerHeader(): EditViewerHeaderState {
-  const edit = useEditViewerContext()
-
-  return {
-    mode: edit.mode.mode,
-    modes: edit.mode.modes,
-    setMode: edit.mode.setMode,
-    filledCount: edit.state.filledCount,
-    fieldCount: edit.state.fields.length,
-    status: edit.state.status.state === "idle" ? null : edit.state.status,
-    hasFieldPanel: edit.options.fieldPanel,
-  }
-}
-
-export function useEditViewerDocument(): EditViewerDocumentState {
-  return useEditViewerContext().document
-}
-
-export function useEditViewerFields(): EditViewerFieldsPartState {
-  const edit = useEditViewerContext()
-  return {
-    ...edit.fields,
-    ...edit.selection,
-  }
-}
-
-export function useEditViewerSelection(): EditViewerSelectionState {
-  return useEditViewerContext().selection
-}
+export {
+  useEditViewerDocument,
+  useEditViewerFields,
+} from "./edit-viewer-internal-context"
+export type {
+  EditViewerDocumentState,
+  EditViewerFieldsPartState,
+} from "./edit-viewer-internal-context"
 
 export function EditViewerProvider({
   result,
@@ -226,7 +66,6 @@ export function EditViewerProvider({
   children,
 }: EditViewerProviderProps) {
   const viewerRef = React.useRef<PdfViewerHandle>(null)
-  const target = usePdfAnchoredTarget(viewerRef)
   const resolvedOptions = React.useMemo(
     () => resolveEditViewerOptions(options),
     [options]
@@ -264,17 +103,13 @@ export function EditViewerProvider({
       }),
     [filledDocument, modeState.mode, sourceDocument, status]
   )
-  const anchoredItems = React.useMemo(
-    () => fieldProjection.anchorItems.map(editAnchorItemToAnchoredItem),
-    [fieldProjection.anchorItems]
+  const segmentedDocument = React.useMemo(
+    () => createEditViewerSegmentedDocumentModel(fieldProjection.fields),
+    [fieldProjection.fields]
   )
 
   return (
-    <AnchoredDocumentProvider
-      items={anchoredItems}
-      target={target}
-      initialItemId={selectedFieldKey}
-    >
+    <SegmentedDocumentProvider model={segmentedDocument}>
       <EditViewerResolvedProvider
         documentTarget={documentTarget}
         editResult={editResult}
@@ -294,7 +129,7 @@ export function EditViewerProvider({
       >
         {children}
       </EditViewerResolvedProvider>
-    </AnchoredDocumentProvider>
+    </SegmentedDocumentProvider>
   )
 }
 
@@ -494,7 +329,7 @@ function EditViewerResolvedProvider({
       viewerRef,
     ]
   )
-  const value = React.useMemo<EditViewerContextValue>(
+  const value = React.useMemo(
     () => ({
       state,
       mode: modeState,
@@ -524,12 +359,11 @@ function useEditViewerSelectionBridge({
 }): EditViewerSelectionState {
   const {
     activeItemId,
-    activateItem,
-    clearSelection,
+    navigateItem,
     previewItem,
     selectItem,
     selectedItemId,
-  } = useAnchoredDocument()
+  } = useSegmentedItemLink({ initialItemId: selectedFieldKey })
 
   React.useEffect(() => {
     if (selectedFieldKey === undefined) return
@@ -544,21 +378,25 @@ function useEditViewerSelectionBridge({
   const selectField = React.useCallback(
     (fieldKey: string) => {
       if (!fieldByKey.has(fieldKey)) return
-      activateItem(fieldKey)
+      selectItem(fieldKey)
+      navigateItem(fieldKey, { behavior: "smooth" })
       onSelectedFieldKeyChange?.(fieldKey)
     },
-    [activateItem, fieldByKey, onSelectedFieldKeyChange]
+    [fieldByKey, navigateItem, onSelectedFieldKeyChange, selectItem]
   )
   const clearFieldSelection = React.useCallback(() => {
-    clearSelection()
+    selectItem(null)
     onSelectedFieldKeyChange?.(null)
-  }, [clearSelection, onSelectedFieldKeyChange])
+  }, [onSelectedFieldKeyChange, selectItem])
   const previewField = React.useCallback(
     (fieldKey: string | null) => {
       if (fieldKey && !fieldByKey.has(fieldKey)) return
       previewItem(fieldKey)
+      if (fieldKey) {
+        navigateItem(fieldKey, { behavior: "auto", clearPreview: false })
+      }
     },
-    [fieldByKey, previewItem]
+    [fieldByKey, navigateItem, previewItem]
   )
 
   return React.useMemo(
@@ -605,10 +443,4 @@ function useEditViewerPageOverlay({
     ),
     [activeFieldKey, fieldsByPage, mode, previewField, selectField]
   )
-}
-
-function editAnchorItemToAnchoredItem(
-  item: EditViewerAnchorItem
-): AnchoredItem {
-  return item
 }

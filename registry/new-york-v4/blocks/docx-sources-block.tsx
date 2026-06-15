@@ -4,18 +4,18 @@ import * as React from "react"
 
 import type { Source } from "@/lib/document-source"
 import {
-  AnchoredDocumentProvider,
-  useAnchoredDocument,
-  type AnchoredDocumentTarget,
-} from "@/components/ui/anchored-document-viewer"
+  sourceToDocxHighlight,
+  useDocxSourceTarget,
+} from "@/components/ui/docx-source"
 import { DocxViewer, type DocxViewerHandle } from "@/components/ui/docx-viewer"
-import { useAnchoredSourceFieldLink } from "@/components/ui/source-field-link"
-import { sourceFieldsToEvidenceModel } from "@/components/ui/source-evidence"
+import { SegmentedDocumentProvider } from "@/components/ui/segmented-document-provider"
+import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
 import {
   SourceFieldList,
   type SourceField,
 } from "@/components/ui/source-field-list"
 import { SourceIndicator } from "@/components/ui/source-indicator"
+import { sourceFieldsToSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
 import {
   ViewerBody,
   ViewerRoot,
@@ -41,26 +41,28 @@ const FIELDS = (docxSample as DocxField[]).map((field) => ({
   ...field,
   hint: hintFor(field.source),
 }))
-const EVIDENCE = sourceFieldsToEvidenceModel(FIELDS)
+const FIELD_BY_KEY = new Map(FIELDS.map((field) => [field.key, field]))
+const SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(
+  FIELDS.map((field) => ({
+    id: field.key,
+    label: field.label,
+    source: field.source,
+  }))
+)
 
 /**
  * DOCX sources block — values extracted from a Word document, linked to where
  * they came from. Hovering a field highlights its text in the document and
- * scrolls to it. Same anchored-document abstraction as the other formats, with
- * the docx viewer target adapter.
+ * scrolls to it. Segmented source interaction owns preview/selection while the
+ * DOCX source adapter owns rendered-document target navigation.
  */
 export function DocxSourcesBlock() {
   const viewerRef = React.useRef<DocxViewerHandle>(null)
-  const target = useDocxAnchoredTarget(viewerRef)
 
   return (
-    <AnchoredDocumentProvider
-      items={EVIDENCE.anchoredItems}
-      target={target}
-      initialItemId={FIELDS[0]?.key}
-    >
+    <SegmentedDocumentProvider model={SEGMENTED_DOCUMENT}>
       <DocxSourcesContent viewerRef={viewerRef} />
-    </AnchoredDocumentProvider>
+    </SegmentedDocumentProvider>
   )
 }
 
@@ -69,10 +71,19 @@ function DocxSourcesContent({
 }: {
   viewerRef: React.RefObject<DocxViewerHandle | null>
 }) {
-  const link = useAnchoredSourceFieldLink()
-  const { activeAnchor, activeItem } = useAnchoredDocument()
-  const highlight =
-    activeAnchor?.kind === "docx-target" ? activeAnchor.target : null
+  const target = useDocxSourceTarget(viewerRef)
+  const segmentedLink = useSegmentedSourceFieldLink({
+    initialPath: FIELDS[0]?.key,
+  })
+  const link = useTargetedSourceFieldLink({
+    fieldByKey: FIELD_BY_KEY,
+    link: segmentedLink,
+    target,
+  })
+  const activeSource = link.activePath
+    ? FIELD_BY_KEY.get(link.activePath)?.source
+    : undefined
+  const highlight = sourceToDocxHighlight(activeSource)
 
   return (
     <ViewerRoot bare className="h-full min-h-[680px] bg-background">
@@ -89,10 +100,7 @@ function DocxSourcesContent({
             className="h-full"
             highlight={highlight}
           />
-          <SourceIndicator
-            path={link.activePath}
-            found={!!activeItem?.anchor}
-          />
+          <SourceIndicator path={link.activePath} found={!!activeSource} />
         </ViewerSurface>
         <ViewerSidebar
           aria-label="Source fields"
@@ -108,16 +116,43 @@ function DocxSourcesContent({
   )
 }
 
-function useDocxAnchoredTarget(
-  viewerRef: React.RefObject<DocxViewerHandle | null>
-): AnchoredDocumentTarget {
+function useTargetedSourceFieldLink({
+  fieldByKey,
+  link,
+  target,
+}: {
+  fieldByKey: ReadonlyMap<string, DocxField>
+  link: ReturnType<typeof useSegmentedSourceFieldLink>
+  target: ReturnType<typeof useDocxSourceTarget>
+}) {
+  const scrollToField = React.useCallback(
+    (path: string, behavior: ScrollBehavior) => {
+      const source = fieldByKey.get(path)?.source
+      if (source) target.scrollTo?.(source, { behavior })
+    },
+    [fieldByKey, target]
+  )
+  const onFieldHover = React.useCallback(
+    (path: string | null) => {
+      link.onFieldHover(path)
+      if (path) scrollToField(path, "auto")
+    },
+    [link, scrollToField]
+  )
+  const selectField = React.useCallback(
+    (path: string) => {
+      link.selectField?.(path)
+      scrollToField(path, "smooth")
+    },
+    [link, scrollToField]
+  )
+
   return React.useMemo(
     () => ({
-      scrollToAnchor: (anchor, options) => {
-        if (anchor.kind !== "docx-target") return
-        viewerRef.current?.scrollToTarget(anchor.target, options)
-      },
+      ...link,
+      onFieldHover,
+      selectField,
     }),
-    [viewerRef]
+    [link, onFieldHover, selectField]
   )
 }

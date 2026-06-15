@@ -18,7 +18,6 @@ import {
 } from "@/components/viewers/page-markdown/page-markdown-measurements"
 import { PageMarkdownPageFrame } from "@/components/viewers/page-markdown/page-markdown-page-frame"
 import { usePageMarkdownScroll } from "@/components/viewers/page-markdown/page-markdown-scroll"
-import { PageMarkdownToolbar } from "@/components/viewers/page-markdown/page-markdown-toolbar"
 import { type PageMarkdownViewMode } from "@/components/viewers/page-markdown/page-markdown-types"
 
 export interface PageMarkdownPaneHandle {
@@ -33,12 +32,7 @@ export const PageMarkdownPane = React.forwardRef<
     mode: PageMarkdownViewMode
     scale: number
     isScaleReady: boolean
-    currentPage: number
-    fileName: string
     resetKey?: string
-    onModeChange: (mode: PageMarkdownViewMode) => void
-    onZoom: (factor: number) => void
-    onFitWidth: () => void
     onContainerWidthChange: (width: number | null) => void
     onVisiblePageChange: (pageNumber: number) => void
   }
@@ -49,12 +43,7 @@ export const PageMarkdownPane = React.forwardRef<
     mode,
     scale,
     isScaleReady,
-    currentPage,
-    fileName,
     resetKey,
-    onModeChange,
-    onZoom,
-    onFitWidth,
     onContainerWidthChange,
     onVisiblePageChange,
   },
@@ -268,7 +257,6 @@ export const PageMarkdownPane = React.forwardRef<
   if (!isScaleReady) {
     return (
       <div className="flex h-full min-h-0 min-w-0 flex-col bg-muted/20">
-        <div className="h-10 shrink-0 border-b bg-card" />
         <ScrollArea className="min-h-0 flex-1">
           <div ref={viewportWidthRef} className="h-full w-full min-w-0" />
         </ScrollArea>
@@ -278,17 +266,6 @@ export const PageMarkdownPane = React.forwardRef<
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col bg-muted/20">
-      <PageMarkdownToolbar
-        currentPage={Math.min(currentPage, pages.length)}
-        pageCount={pages.length}
-        mode={mode}
-        scale={scale}
-        text={text}
-        fileName={fileName}
-        onModeChange={onModeChange}
-        onZoom={onZoom}
-        onFitWidth={onFitWidth}
-      />
       <ScrollArea
         nativeScrollbar
         viewportRef={setViewportElement}

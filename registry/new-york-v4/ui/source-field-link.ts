@@ -2,8 +2,6 @@
 
 import * as React from "react"
 
-import type { AnchoredItemId } from "./anchored-document-viewer"
-import { useAnchoredItemLink } from "./anchored-document-viewer"
 import type { DocumentSegment, SegmentAnchor } from "./segmented-document-model"
 import { useSegmentedItemLink } from "./segmented-item-link"
 
@@ -22,22 +20,6 @@ export type SegmentedSourceFieldLink = SourceFieldLink & {
 
 export type SegmentedSourceFieldLinkOptions = {
   initialPath?: string | null
-}
-
-export function useAnchoredSourceFieldLink(): SourceFieldLink {
-  const { activateItem, activeItemId, previewItem } = useAnchoredItemLink()
-  return React.useMemo(
-    () => ({
-      activePath: activeItemId,
-      onFieldHover: (path: string | null) => {
-        previewItem(path as AnchoredItemId | null)
-      },
-      selectField: (path: string) => {
-        activateItem(path)
-      },
-    }),
-    [activateItem, activeItemId, previewItem]
-  )
 }
 
 export function useSegmentedSourceFieldLink(

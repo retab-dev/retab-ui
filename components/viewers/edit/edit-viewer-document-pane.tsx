@@ -9,6 +9,7 @@ import {
   type PageOverlayProps,
   type PdfViewerHandle,
 } from "@/components/ui/pdf-viewer"
+import { useSegmentedDocumentViewport } from "@/components/ui/segmented-document-provider"
 
 import {
   canPreviewEditViewerDocument,
@@ -59,7 +60,21 @@ function SourceDocumentRenderer({
   viewerRef: React.RefObject<PdfViewerHandle | null>
   showPreview: boolean
 }) {
+  const { documentHandlers } = useSegmentedDocumentViewport()
   const source = useDocumentViewerSource(document)
+  const setPdfViewerHandle = React.useCallback(
+    (handle: PdfViewerHandle | null) => {
+      viewerRef.current = handle
+      documentHandlers.setDocumentHandle(handle)
+    },
+    [documentHandlers, viewerRef]
+  )
+
+  React.useEffect(
+    () => () => documentHandlers.setDocumentHandle(null),
+    [documentHandlers]
+  )
+
   if (!source) {
     return <NoDocumentState message="Document preview is unavailable." />
   }
@@ -67,10 +82,12 @@ function SourceDocumentRenderer({
   if (canPreviewEditViewerDocument(document)) {
     return (
       <PdfViewer
-        ref={viewerRef}
+        ref={setPdfViewerHandle}
         source={source}
         bare
         className="h-full"
+        onScrollProgressChange={documentHandlers.onScrollProgressChange}
+        onVisiblePageChange={documentHandlers.onCurrentPageChange}
         renderPageOverlay={showPreview ? renderPageOverlay : undefined}
       />
     )

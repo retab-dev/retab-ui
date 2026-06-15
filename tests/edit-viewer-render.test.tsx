@@ -15,7 +15,6 @@ import {
   EditViewerFields,
   EditViewerHeader,
   EditViewerProvider,
-  useEditViewer,
 } from "@/components/viewers/edit/edit-viewer"
 import type { EditViewerField } from "@/components/viewers/edit/edit-viewer-types"
 
@@ -136,48 +135,7 @@ const filledTextDocument = {
   filename: "filled.txt",
 }
 
-function EditViewerStateProbe({
-  onProbe,
-}: {
-  onProbe: (state: ReturnType<typeof useEditViewer>) => void
-}) {
-  const state = useEditViewer()
-
-  React.useEffect(() => {
-    onProbe(state)
-  }, [onProbe, state])
-
-  return null
-}
-
 describe("EditViewer", () => {
-  it("exposes narrow public edit state", () => {
-    const onProbe = vi.fn()
-
-    render(
-      <EditViewerProvider result={{ fields }} sourceDocument={sourceDocument}>
-        <EditViewerStateProbe onProbe={onProbe} />
-      </EditViewerProvider>
-    )
-
-    expect(onProbe).toHaveBeenCalled()
-    const state = onProbe.mock.calls.at(-1)?.[0]
-    expect(state).toMatchObject({
-      filledCount: 2,
-      hasOutput: true,
-      result: { fields: expect.any(Array) },
-      status: { state: "idle" },
-    })
-    expect(state.fields).toHaveLength(3)
-    expect(state.result.fields).toHaveLength(3)
-    expect(state).not.toHaveProperty("document")
-    expect(state).not.toHaveProperty("options")
-    expect(state).not.toHaveProperty("mode")
-    expect(state).not.toHaveProperty("selection")
-    expect(state).not.toHaveProperty("fieldByKey")
-    expect(state).not.toHaveProperty("fieldsByPage")
-  })
-
   it("defaults to the actual filled document when it exists", () => {
     render(
       <EditViewer

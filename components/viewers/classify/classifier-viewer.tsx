@@ -21,24 +21,18 @@ type ClassifierViewerContextValue = {
   result: ClassifyResult | null
 }
 
-export type ClassifierViewerState = {
-  category: string | null
-  hasOutput: boolean
-  isProcessing: boolean
-}
-
-export type ClassifierViewerHeaderState = {
+type ClassifierViewerHeaderState = {
   category: string | null
   reasoning: string | null
 }
 
-export type ClassifierViewerEmptyStatusState = {
+type ClassifierViewerEmptyStatusState = {
   emptyDescription: string
   emptyTitle: string
   isProcessing: boolean
 }
 
-export type ClassifierViewerDocumentState = {
+type ClassifierViewerDocumentState = {
   hasOutput: boolean
 }
 
@@ -71,16 +65,7 @@ function useClassifierViewerContext(): ClassifierViewerContextValue {
   return context
 }
 
-export function useClassifierViewer(): ClassifierViewerState {
-  const { category, isProcessing } = useClassifierViewerContext()
-  return {
-    category,
-    hasOutput: category !== null,
-    isProcessing,
-  }
-}
-
-export function useClassifierViewerHeader(): ClassifierViewerHeaderState {
+function useClassifierViewerHeader(): ClassifierViewerHeaderState {
   const { category, reasoning } = useClassifierViewerContext()
 
   return {
@@ -89,7 +74,7 @@ export function useClassifierViewerHeader(): ClassifierViewerHeaderState {
   }
 }
 
-export function useClassifierViewerEmpty(): ClassifierViewerEmptyStatusState {
+function useClassifierViewerEmpty(): ClassifierViewerEmptyStatusState {
   const { emptyDescription, emptyTitle, isProcessing } =
     useClassifierViewerContext()
   return {
@@ -99,7 +84,7 @@ export function useClassifierViewerEmpty(): ClassifierViewerEmptyStatusState {
   }
 }
 
-export function useClassifierViewerDocument(): ClassifierViewerDocumentState {
+function useClassifierViewerDocument(): ClassifierViewerDocumentState {
   return {
     hasOutput: useClassifierViewerContext().category !== null,
   }

@@ -83,14 +83,7 @@ export type SplitViewerModel = {
   segments: DocumentSegment[]
 }
 
-export type SplitViewerState = {
-  hasOutput: boolean
-  isProcessing: boolean
-  pageCount: number
-  segmentCount: number
-}
-
-export type SplitViewerHeaderState = {
+type SplitViewerHeaderState = {
   hasOutput: boolean
   isProcessing: boolean
   pageCount: number
@@ -102,20 +95,20 @@ type SplitViewerSidebarState = {
   pageCount: number
 }
 
-export type SplitViewerPageRailState = {
+type SplitViewerPageRailState = {
   hasOutput: boolean
   pageCount: number
   segments: DocumentSegment[]
   viewport: SegmentViewportController
 }
 
-export type SplitViewerLegendState = {
+type SplitViewerLegendState = {
   hasOutput: boolean
   segments: DocumentSegment[]
   viewport: SegmentViewportController
 }
 
-export type SplitViewerDocumentState = {
+type SplitViewerDocumentState = {
   hasOutput: boolean
   isProcessing: boolean
 }
@@ -132,17 +125,7 @@ function useSplitViewerContext(): SplitViewerContextValue {
   return context
 }
 
-export function useSplitViewer(): SplitViewerState {
-  const { model } = useSplitViewerContext()
-  return {
-    hasOutput: model.hasOutput,
-    isProcessing: model.isProcessing,
-    pageCount: model.pageCount,
-    segmentCount: model.segments.length,
-  }
-}
-
-export function useSplitViewerHeader(): SplitViewerHeaderState {
+function useSplitViewerHeader(): SplitViewerHeaderState {
   return useSplitViewerContext().model
 }
 
@@ -151,7 +134,7 @@ function useSplitViewerSidebar(): SplitViewerSidebarState {
   return { hasOutput, pageCount }
 }
 
-export function useSplitViewerPageRail(): SplitViewerPageRailState {
+function useSplitViewerPageRail(): SplitViewerPageRailState {
   const { model, viewport } = useSplitViewerContext()
   return {
     hasOutput: model.hasOutput,
@@ -161,12 +144,12 @@ export function useSplitViewerPageRail(): SplitViewerPageRailState {
   }
 }
 
-export function useSplitViewerLegend(): SplitViewerLegendState {
+function useSplitViewerLegend(): SplitViewerLegendState {
   const { model, viewport } = useSplitViewerContext()
   return { hasOutput: model.hasOutput, segments: model.segments, viewport }
 }
 
-export function useSplitViewerDocument(): SplitViewerDocumentState {
+function useSplitViewerDocument(): SplitViewerDocumentState {
   const { hasOutput, isProcessing } = useSplitViewerContext().model
   return { hasOutput, isProcessing }
 }
@@ -192,7 +175,7 @@ export function createSplitViewerModel({
   }
 }
 
-export function createSplitSegmentedDocumentModel(
+function createSplitSegmentedDocumentModel(
   model: Pick<SplitViewerModel, "pageCount" | "segments">
 ): SegmentedDocumentModel {
   return createSegmentedDocumentModel({

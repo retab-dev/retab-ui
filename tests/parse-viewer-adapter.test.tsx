@@ -28,8 +28,8 @@ vi.mock("@/components/viewers/page-markdown/page-markdown-viewer", () => ({
       </div>
     )
   },
+  PageMarkdownViewerHeader: () => <div data-testid="markdown-header" />,
   PageMarkdownViewerContent: () => <div data-testid="markdown-content" />,
-  usePageMarkdownViewerContent: () => ({}),
   usePageMarkdownViewerDocument: () => ({}),
 }))
 

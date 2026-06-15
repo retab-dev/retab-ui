@@ -7,20 +7,10 @@ import { type ParseResponse } from "@/components/viewers/lib/parse-types"
 import { type PageMarkdownDocumentState } from "@/components/viewers/page-markdown/page-markdown-types"
 import {
   PageMarkdownViewerContent,
+  PageMarkdownViewerHeader,
   PageMarkdownViewerProvider,
-  usePageMarkdownViewerContent,
   usePageMarkdownViewerDocument,
-  type PageMarkdownViewerContentState,
 } from "@/components/viewers/page-markdown/page-markdown-viewer"
-
-type ParseViewerContextValue = {
-  isProcessing: boolean
-  result: ParseResponse | null
-}
-
-const ParseViewerContext = React.createContext<ParseViewerContextValue | null>(
-  null
-)
 
 export interface ParseViewerProviderProps {
   result: ParseResponse | null
@@ -37,39 +27,8 @@ export interface ParseViewerProps {
 
 export type ParseDocumentState = PageMarkdownDocumentState
 
-export type ParseViewerState = {
-  isProcessing: boolean
-  result: ParseResponse | null
-  hasOutput: boolean
-  pageCount: number
-}
-
-function useParseViewerContext(): ParseViewerContextValue {
-  const context = React.useContext(ParseViewerContext)
-  if (!context) {
-    throw new Error("useParseViewer must be used within ParseViewerProvider.")
-  }
-  return context
-}
-
-export function useParseViewer(): ParseViewerState {
-  const { isProcessing, result } = useParseViewerContext()
-  const pageCount = result?.output?.pages?.length ?? 0
-
-  return {
-    isProcessing,
-    result,
-    hasOutput: pageCount > 0 || Boolean(result?.output?.text),
-    pageCount,
-  }
-}
-
 export function useParseViewerDocument(): ParseDocumentState {
   return usePageMarkdownViewerDocument()
-}
-
-export function useParseViewerMarkdown(): PageMarkdownViewerContentState {
-  return usePageMarkdownViewerContent()
 }
 
 export function ParseViewerProvider({
@@ -81,30 +40,28 @@ export function ParseViewerProvider({
   const pages = result?.output?.pages ?? []
   const text = result?.output?.text ?? undefined
   const resetKey = result?.document?.id
-  const value = React.useMemo<ParseViewerContextValue>(
-    () => ({ isProcessing, result }),
-    [isProcessing, result]
-  )
 
   return (
-    <ParseViewerContext.Provider value={value}>
-      <PageMarkdownViewerProvider
-        pages={pages}
-        text={text}
-        isProcessing={isProcessing}
-        onVisiblePageChange={onVisiblePageChange}
-        resetKey={resetKey}
-        fileName="parse-output.md"
-        processingLabel="Parsing document..."
-      >
-        {children}
-      </PageMarkdownViewerProvider>
-    </ParseViewerContext.Provider>
+    <PageMarkdownViewerProvider
+      pages={pages}
+      text={text}
+      isProcessing={isProcessing}
+      onVisiblePageChange={onVisiblePageChange}
+      resetKey={resetKey}
+      fileName="parse-output.md"
+      processingLabel="Parsing document..."
+    >
+      {children}
+    </PageMarkdownViewerProvider>
   )
 }
 
 export function ParseViewerMarkdown() {
   return <PageMarkdownViewerContent />
+}
+
+export function ParseViewerHeader({ className }: { className?: string }) {
+  return <PageMarkdownViewerHeader className={className} />
 }
 
 export function ParseViewer({
@@ -119,6 +76,7 @@ export function ParseViewer({
       onVisiblePageChange={onVisiblePageChange}
     >
       <ViewerRoot bare className="h-full flex-1 bg-background">
+        <ParseViewerHeader />
         <ViewerBody>
           <ViewerSurface>
             <ParseViewerMarkdown />

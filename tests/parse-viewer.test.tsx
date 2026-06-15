@@ -17,9 +17,9 @@ import {
 } from "@/components/viewers/page-markdown/page-markdown-layout"
 import {
   ParseViewer,
+  ParseViewerHeader,
   ParseViewerMarkdown,
   ParseViewerProvider,
-  useParseViewer,
   useParseViewerDocument,
 } from "@/components/viewers/parse/parse-viewer"
 
@@ -53,6 +53,7 @@ function ParseViewerSyncHarness({
       onVisiblePageChange={onVisiblePageChange}
     >
       {children}
+      <ParseViewerHeader />
       <ParseViewerMarkdown />
     </ParseViewerProvider>
   )
@@ -89,20 +90,6 @@ function ParseDocumentStateProbe({
   }, [document, onProbe])
 
   return <div>Source document</div>
-}
-
-function ParseViewerStateProbe({
-  onProbe,
-}: {
-  onProbe: (state: ReturnType<typeof useParseViewer>) => void
-}) {
-  const state = useParseViewer()
-
-  React.useEffect(() => {
-    onProbe(state)
-  }, [onProbe, state])
-
-  return null
 }
 
 function ParseDocumentScrollSpy({
@@ -240,28 +227,6 @@ afterEach(() => {
 })
 
 describe("ParseViewer", () => {
-  it("exposes narrow public parse state", () => {
-    const onProbe = vi.fn()
-    const result = parseResult()
-
-    render(
-      <ParseViewerProvider result={result}>
-        <ParseViewerStateProbe onProbe={onProbe} />
-      </ParseViewerProvider>
-    )
-
-    expect(onProbe).toHaveBeenCalled()
-    const state = onProbe.mock.calls.at(-1)?.[0]
-    expect(state).toMatchObject({
-      isProcessing: false,
-      result,
-      hasOutput: true,
-      pageCount: 2,
-    })
-    expect(state).not.toHaveProperty("document")
-    expect(state).not.toHaveProperty("markdown")
-  })
-
   it("renders the empty parse state when no result is available", () => {
     render(<ParseViewer result={null} />)
 
