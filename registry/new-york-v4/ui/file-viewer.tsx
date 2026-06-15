@@ -9,7 +9,12 @@ import {
 } from "@/lib/viewer-resource"
 import { cn } from "@/lib/utils"
 import { useIsClient } from "@/components/ui/use-is-client"
-import { ViewerHeader } from "@/components/ui/viewer"
+import {
+  ViewerBody,
+  ViewerHeader,
+  ViewerRoot,
+  ViewerSurface,
+} from "@/components/ui/viewer"
 import { ViewerDownloadButton } from "@/components/ui/viewer-download"
 
 import {
@@ -25,8 +30,8 @@ import {
   type FileDescriptor,
   type FileViewerProps,
 } from "./file-viewer-core"
-import { CsvDocViewer } from "./file-viewer-csv-viewer"
-import { HtmlDocViewer } from "./file-viewer-html-viewer"
+import { CsvFileContent } from "./file-viewer-csv-viewer"
+import { HtmlFileContent } from "./file-viewer-html-viewer"
 
 export { type FileCategory, type FileViewerProps } from "./file-viewer-core"
 
@@ -37,11 +42,30 @@ export type FileViewerProviderProps = Pick<
   children: React.ReactNode
 }
 
-export type FileViewerContentProps = Pick<FileViewerProps, "bare" | "className">
+export type FileViewerContentProps = Pick<
+  FileViewerProps,
+  "bare" | "className"
+> & {
+  showLeafDownload?: boolean
+}
 
 export type FileViewerHeaderProps = React.ComponentProps<typeof ViewerHeader> & {
   actions?: React.ReactNode
   showCategory?: boolean
+}
+
+export type FileViewerState = {
+  descriptor: FileDescriptor
+  resource: ViewerResource
+}
+
+export type FileViewerHeaderState = FileViewerState
+
+export type FileViewerContentState = FileViewerState & {
+  descriptorKey: string
+  descriptorSignal: AbortSignal
+  isClient: boolean
+  isolateStyles: boolean
 }
 
 type FileViewerContextValue = {
@@ -57,29 +81,29 @@ const FileViewerContext = React.createContext<FileViewerContextValue | null>(
   null
 )
 
-const PdfResourceViewer = React.lazy(() =>
+const PdfResourceContent = React.lazy(() =>
   import("@/components/ui/pdf-viewer").then((m) => ({
-    default: m.PdfResourceViewer,
+    default: m.PdfResourceContent,
   }))
 )
-const DocxResourceViewer = React.lazy(() =>
+const DocxResourceContent = React.lazy(() =>
   import("@/components/ui/docx-viewer").then((m) => ({
-    default: m.DocxResourceViewer,
+    default: m.DocxResourceContent,
   }))
 )
-const ImageResourceViewer = React.lazy(() =>
+const ImageResourceContent = React.lazy(() =>
   import("@/components/ui/image-viewer").then((m) => ({
-    default: m.ImageResourceViewer,
+    default: m.ImageResourceContent,
   }))
 )
-const PptxResourceViewer = React.lazy(() =>
+const PptxResourceContent = React.lazy(() =>
   import("@/components/ui/pptx-viewer").then((m) => ({
-    default: m.PptxResourceViewer,
+    default: m.PptxResourceContent,
   }))
 )
-const XlsxResourceViewer = React.lazy(() =>
+const XlsxResourceContent = React.lazy(() =>
   import("@/components/ui/xlsx-viewer").then((m) => ({
-    default: m.XlsxResourceViewer,
+    default: m.XlsxResourceContent,
   }))
 )
 const ProseTextViewer = React.lazy(() =>
@@ -134,12 +158,57 @@ function useDescriptorSignal(descriptorKey: string): AbortSignal {
   return controller.signal
 }
 
-export function useFileViewer() {
+function useFileViewerContext() {
   const context = React.useContext(FileViewerContext)
   if (!context) {
     throw new Error("useFileViewer must be used within FileViewerProvider.")
   }
   return context
+}
+
+export function useFileViewer(): FileViewerState {
+  const { descriptor, resource } = useFileViewerContext()
+  return React.useMemo(
+    () => ({
+      descriptor,
+      resource,
+    }),
+    [descriptor, resource]
+  )
+}
+
+export function useFileViewerHeader(): FileViewerHeaderState {
+  return useFileViewer()
+}
+
+export function useFileViewerContent(): FileViewerContentState {
+  const {
+    descriptor,
+    descriptorKey,
+    descriptorSignal,
+    isClient,
+    isolateStyles,
+    resource,
+  } = useFileViewerContext()
+
+  return React.useMemo(
+    () => ({
+      descriptor,
+      descriptorKey,
+      descriptorSignal,
+      isClient,
+      isolateStyles,
+      resource,
+    }),
+    [
+      descriptor,
+      descriptorKey,
+      descriptorSignal,
+      isClient,
+      isolateStyles,
+      resource,
+    ]
+  )
 }
 
 export function FileViewerProvider({
@@ -185,6 +254,7 @@ export function FileViewerProvider({
 export function FileViewerContent({
   bare = false,
   className,
+  showLeafDownload = true,
 }: FileViewerContentProps) {
   const {
     descriptor,
@@ -193,7 +263,7 @@ export function FileViewerContent({
     isClient,
     isolateStyles,
     resource,
-  } = useFileViewer()
+  } = useFileViewerContent()
   const fallback = (
     <ViewerFallback resource={resource} className={className} bare={bare} />
   )
@@ -216,6 +286,7 @@ export function FileViewerContent({
           descriptorSignal={descriptorSignal}
           isolateStyles={isolateStyles}
           resource={resource}
+          showLeafDownload={showLeafDownload}
         />
       </React.Suspense>
     </FileErrorBoundary>
@@ -229,7 +300,7 @@ export function FileViewerHeader({
   showCategory = true,
   ...props
 }: FileViewerHeaderProps) {
-  const { descriptor, resource } = useFileViewer()
+  const { descriptor, resource } = useFileViewerHeader()
 
   return (
     <ViewerHeader
@@ -260,14 +331,33 @@ export function FileViewerHeader({
 
 export function FileViewer({
   as,
-  bare,
+  bare = false,
   className,
   isolateStyles,
   source,
 }: FileViewerProps) {
+  if (bare) {
+    return (
+      <FileViewerProvider as={as} isolateStyles={isolateStyles} source={source}>
+        <FileViewerContent bare className={className} />
+      </FileViewerProvider>
+    )
+  }
+
   return (
     <FileViewerProvider as={as} isolateStyles={isolateStyles} source={source}>
-      <FileViewerContent bare={bare} className={className} />
+      <ViewerRoot className={cn("h-full", className)}>
+        <FileViewerHeader />
+        <ViewerBody>
+          <ViewerSurface>
+            <FileViewerContent
+              bare
+              className="h-full"
+              showLeafDownload={false}
+            />
+          </ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
     </FileViewerProvider>
   )
 }
@@ -279,6 +369,7 @@ function FileViewerRoute({
   isolateStyles,
   descriptorSignal,
   resource,
+  showLeafDownload = true,
 }: FileViewerContentProps & {
   descriptor: FileDescriptor
   descriptorSignal: AbortSignal
@@ -290,7 +381,7 @@ function FileViewerRoute({
   if (descriptor.source.kind === "text") {
     if (category === "csv") {
       return (
-        <CsvDocViewer
+        <CsvFileContent
           resource={resource}
           className={className}
           bare={bare}
@@ -303,13 +394,14 @@ function FileViewerRoute({
         <PretextMarkdownViewer
           source={resource.descriptor.source}
           className={className}
+          download={showLeafDownload}
           bare={bare}
         />
       )
     }
     if (category === "html") {
       return (
-        <HtmlDocViewer
+        <HtmlFileContent
           resource={resource}
           className={className}
           bare={bare}
@@ -318,44 +410,58 @@ function FileViewerRoute({
       )
     }
     if (category === "text") {
-      return renderTextViewer({ descriptor, resource, className, bare })
+      return renderTextViewer({
+        descriptor,
+        resource,
+        className,
+        bare,
+        download: showLeafDownload,
+      })
     }
     return (
-      <UnsupportedCard resource={resource} className={className} bare={bare} />
+      <UnsupportedCard
+        resource={resource}
+        className={className}
+        bare={bare}
+        showDownload={showLeafDownload}
+      />
     )
   }
 
   if (!directLoadUrl) {
     if (category === "pdf" && descriptor.source.kind === "blob") {
       return (
-        <PdfResourceViewer
+        <PdfResourceContent
           resource={resource}
           className={className}
           bare={bare}
+          download={showLeafDownload}
         />
       )
     }
     if (category === "image" && descriptor.source.kind === "blob") {
       return (
-        <ImageResourceViewer
+        <ImageResourceContent
           resource={resource}
           className={className}
           bare={bare}
+          download={showLeafDownload}
         />
       )
     }
     if (category === "pptx" && descriptor.source.kind === "blob") {
       return (
-        <PptxResourceViewer
+        <PptxResourceContent
           resource={resource}
           className={className}
           bare={bare}
+          download={showLeafDownload}
         />
       )
     }
     if (category === "csv" && descriptor.source.kind === "blob") {
       return (
-        <CsvDocViewer
+        <CsvFileContent
           resource={resource}
           className={className}
           bare={bare}
@@ -365,7 +471,7 @@ function FileViewerRoute({
     }
     if (category === "html" && descriptor.source.kind === "blob") {
       return (
-        <HtmlDocViewer
+        <HtmlFileContent
           resource={resource}
           className={className}
           bare={bare}
@@ -375,19 +481,21 @@ function FileViewerRoute({
     }
     if (category === "docx" && descriptor.source.kind === "blob") {
       return (
-        <DocxResourceViewer
+        <DocxResourceContent
           resource={resource}
           className={className}
           bare={bare}
+          download={showLeafDownload}
         />
       )
     }
     if (category === "xlsx" && descriptor.source.kind === "blob") {
       return (
-        <XlsxResourceViewer
+        <XlsxResourceContent
           resource={resource}
           className={className}
           bare={bare}
+          download={showLeafDownload}
           isolateStyles={isolateStyles}
         />
       )
@@ -397,63 +505,80 @@ function FileViewerRoute({
         <PretextMarkdownViewer
           source={resource.descriptor.source}
           className={className}
+          download={showLeafDownload}
           bare={bare}
         />
       )
     }
     if (category === "text" && descriptor.source.kind === "blob") {
-      return renderTextViewer({ descriptor, resource, className, bare })
+      return renderTextViewer({
+        descriptor,
+        resource,
+        className,
+        bare,
+        download: showLeafDownload,
+      })
     }
     return (
-      <UnsupportedCard resource={resource} className={className} bare={bare} />
+      <UnsupportedCard
+        resource={resource}
+        className={className}
+        bare={bare}
+        showDownload={showLeafDownload}
+      />
     )
   }
 
   switch (category) {
     case "pdf":
       return (
-        <PdfResourceViewer
+        <PdfResourceContent
           resource={resource}
           className={className}
           bare={bare}
+          download={showLeafDownload}
         />
       )
     case "docx":
       return (
-        <DocxResourceViewer
+        <DocxResourceContent
           resource={resource}
           className={className}
           bare={bare}
+          download={showLeafDownload}
         />
       )
     case "image":
       return (
-        <ImageResourceViewer
+        <ImageResourceContent
           resource={resource}
           className={className}
           bare={bare}
+          download={showLeafDownload}
         />
       )
     case "pptx":
       return (
-        <PptxResourceViewer
+        <PptxResourceContent
           resource={resource}
           className={className}
           bare={bare}
+          download={showLeafDownload}
         />
       )
     case "xlsx":
       return (
-        <XlsxResourceViewer
+        <XlsxResourceContent
           resource={resource}
           className={className}
           bare={bare}
+          download={showLeafDownload}
           isolateStyles={isolateStyles}
         />
       )
     case "csv":
       return (
-        <CsvDocViewer
+        <CsvFileContent
           resource={resource}
           className={className}
           bare={bare}
@@ -465,12 +590,13 @@ function FileViewerRoute({
         <PretextMarkdownViewer
           source={resource.descriptor.source}
           className={className}
+          download={showLeafDownload}
           bare={bare}
         />
       )
     case "html":
       return (
-        <HtmlDocViewer
+        <HtmlFileContent
           resource={resource}
           className={className}
           bare={bare}
@@ -478,13 +604,20 @@ function FileViewerRoute({
         />
       )
     case "text":
-      return renderTextViewer({ descriptor, resource, className, bare })
+      return renderTextViewer({
+        descriptor,
+        resource,
+        className,
+        bare,
+        download: showLeafDownload,
+      })
     default:
       return (
         <UnsupportedCard
           resource={resource}
           className={className}
           bare={bare}
+          showDownload={showLeafDownload}
         />
       )
   }
@@ -495,11 +628,13 @@ function renderTextViewer({
   resource,
   className,
   bare,
+  download,
 }: {
   descriptor: FileDescriptor
   resource: ViewerResource
   className?: string
   bare: boolean
+  download?: boolean
 }) {
   const source = resource.descriptor.source
   if (isProseTextDescriptor(descriptor)) {
@@ -507,10 +642,18 @@ function renderTextViewer({
       <ProseTextViewer
         source={source}
         className={className}
+        download={download}
         bare={bare}
         mode="text"
       />
     )
   }
-  return <CodeTextViewer source={source} className={className} bare={bare} />
+  return (
+    <CodeTextViewer
+      source={source}
+      className={className}
+      download={download}
+      bare={bare}
+    />
+  )
 }

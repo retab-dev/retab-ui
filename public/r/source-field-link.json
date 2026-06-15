@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "source-field-link",
+  "title": "Source field link",
+  "description": "A field-path adapter over either anchored-document items or segmented-document anchors.",
+  "registryDependencies": [
+    "anchored-document-viewer",
+    "segmented-document"
+  ],
+  "files": [
+    {
+      "path": "registry/new-york-v4/ui/source-field-link.ts",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\n\nimport type { AnchoredItemId } from \"./anchored-document-viewer\"\nimport { useAnchoredItemLink } from \"./anchored-document-viewer\"\nimport type { DocumentSegment, SegmentAnchor } from \"./segmented-document-model\"\nimport { useSegmentedItemLink } from \"./segmented-item-link\"\n\nexport type SourceFieldLink = {\n  activePath: string | null\n  onFieldHover: (path: string | null) => void\n  selectField?: (path: string) => void\n}\n\nexport type SegmentedSourceFieldLink = SourceFieldLink & {\n  activeAnchor: SegmentAnchor | null\n  activeAnchors: readonly SegmentAnchor[]\n  activeSegment: DocumentSegment | null\n  selectedPath: string | null\n}\n\nexport type SegmentedSourceFieldLinkOptions = {\n  initialPath?: string | null\n}\n\nexport function useAnchoredSourceFieldLink(): SourceFieldLink {\n  const { activateItem, activeItemId, previewItem } = useAnchoredItemLink()\n  return React.useMemo(\n    () => ({\n      activePath: activeItemId,\n      onFieldHover: (path: string | null) => {\n        previewItem(path as AnchoredItemId | null)\n      },\n      selectField: (path: string) => {\n        activateItem(path)\n      },\n    }),\n    [activateItem, activeItemId, previewItem]\n  )\n}\n\nexport function useSegmentedSourceFieldLink(\n  options: SegmentedSourceFieldLinkOptions = {}\n): SegmentedSourceFieldLink {\n  const link = useSegmentedItemLink({ initialItemId: options.initialPath })\n\n  const onFieldHover = React.useCallback(\n    (path: string | null) => {\n      if (!path) {\n        link.previewItem(null)\n        return\n      }\n\n      link.previewItem(path)\n      link.navigateItem(path, { behavior: \"auto\", clearPreview: false })\n    },\n    [link]\n  )\n\n  const selectField = React.useCallback(\n    (path: string) => {\n      link.selectItem(path)\n      link.navigateItem(path, { behavior: \"smooth\", clearPreview: false })\n    },\n    [link]\n  )\n\n  return React.useMemo(\n    () => ({\n      activeAnchor: link.activeAnchor,\n      activeAnchors: link.activeAnchors,\n      activePath: link.activeItemId,\n      activeSegment: link.activeSegment,\n      onFieldHover,\n      selectField,\n      selectedPath: link.selectedItemId,\n    }),\n    [\n      link.activeAnchor,\n      link.activeAnchors,\n      link.activeItemId,\n      link.activeSegment,\n      link.selectedItemId,\n      onFieldHover,\n      selectField,\n    ]\n  )\n}\n",
+      "type": "registry:ui",
+      "target": "@ui/source-field-link.ts"
+    }
+  ],
+  "type": "registry:ui"
+}

@@ -97,14 +97,14 @@ function ParseDocumentScrollSpy({
   onScroll,
 }: {
   children?: React.ReactNode
-  onScroll: (pageNumber: number) => void
+  onScroll: (pageNumber: number, options?: ScrollToOptions) => void
 }) {
   const document = useParseViewerDocument()
 
-  React.useEffect(() => {
-    if (!document.scrollRequest) return
-    onScroll(document.scrollRequest.pageNumber)
-  }, [document.scrollRequest, onScroll])
+  React.useLayoutEffect(() => {
+    document.setDocumentHandle({ scrollToPage: onScroll })
+    return () => document.setDocumentHandle(null)
+  }, [document, onScroll])
 
   return <>{children}</>
 }
@@ -543,9 +543,7 @@ describe("ParseViewer document sync", () => {
   it("does not echo document-initiated page changes back through onVisiblePageChange", async () => {
     const onVisiblePageChange = vi.fn()
     render(
-      <ParseViewerSyncHarness
-        onVisiblePageChange={onVisiblePageChange}
-      >
+      <ParseViewerSyncHarness onVisiblePageChange={onVisiblePageChange}>
         <ReportParseDocumentPageButton
           label="Source document page 2"
           pageNumber={2}
@@ -626,9 +624,7 @@ describe("ParseViewer document sync", () => {
 
   it("clamps the page indicator when a shorter document replaces a longer one", async () => {
     const { rerender } = render(
-      <ParseViewerSyncHarness
-        result={parseResult({}, { id: "long" })}
-      >
+      <ParseViewerSyncHarness result={parseResult({}, { id: "long" })}>
         <ReportParseDocumentPageButton
           label="Source document page 2"
           pageNumber={2}
@@ -984,7 +980,7 @@ describe("page markdown sync edge cases", () => {
   it("clamps zero and negative reported pages to the first page", () => {
     expect(
       resolvePageMarkdownSyncReport({
-        state: { pageNumber: 2, pane: "document", version: 3 },
+        state: { pageNumber: 2, pane: "document" },
         pending: null,
         pane: "markdown",
         pageNumber: 0,
@@ -993,7 +989,7 @@ describe("page markdown sync edge cases", () => {
 
     expect(
       resolvePageMarkdownSyncReport({
-        state: { pageNumber: 2, pane: "document", version: 3 },
+        state: { pageNumber: 2, pane: "document" },
         pending: null,
         pane: "markdown",
         pageNumber: -10,
@@ -1026,14 +1022,16 @@ describe("page markdown sync edge cases", () => {
     expect(confirmed.state).toMatchObject({ pageNumber: 4, pane: "document" })
   })
 
-  it("monotonically increases the state version on every accepted change", () => {
+  it("keeps sync identity structural instead of exposing replay versions", () => {
     let transition = resolvePageMarkdownSyncReport({
       state: initialPageMarkdownSyncState(),
       pending: null,
       pane: "markdown",
       pageNumber: 2,
     })
-    const firstVersion = transition.state.version
+
+    expect(transition.state).toEqual({ pageNumber: 2, pane: "markdown" })
+    expect(transition.pending).toEqual({ pageNumber: 2, pane: "document" })
 
     transition = resolvePageMarkdownSyncReport({
       state: transition.state,
@@ -1042,7 +1040,9 @@ describe("page markdown sync edge cases", () => {
       pageNumber: 2,
     })
 
-    expect(transition.state.version).toBeGreaterThan(firstVersion)
+    expect(transition.state).toEqual({ pageNumber: 2, pane: "document" })
+    expect(transition.pending).toBeNull()
+    expect(transition.state).not.toHaveProperty("version")
   })
 })
 
@@ -1134,8 +1134,7 @@ describe("usePageMarkdownSync live clamping", () => {
 
   it("resets to the first page when the reset key changes", () => {
     const { result, rerender } = renderHook(
-      ({ resetKey }) =>
-        usePageMarkdownSync({ pageCount: 5, resetKey }),
+      ({ resetKey }) => usePageMarkdownSync({ pageCount: 5, resetKey }),
       { initialProps: { resetKey: "a" } }
     )
 
@@ -1244,7 +1243,6 @@ describe("page markdown fuzz invariants", () => {
       const random = makeRng(seed)
       let state: SyncState = initialPageMarkdownSyncState()
       let pending: Pending | null = null
-      let lastVersion = state.version
       const maxPage = 1 + Math.floor(random() * 8)
 
       for (let step = 0; step < 60; step += 1) {
@@ -1269,9 +1267,10 @@ describe("page markdown fuzz invariants", () => {
         })
 
         expect(transition.state.pageNumber).toBeGreaterThanOrEqual(1)
-        expect(transition.state.version).toBeGreaterThanOrEqual(lastVersion)
+        expect(transition.state).not.toHaveProperty("version")
         if (transition.pending) {
           expect(transition.pending.pageNumber).toBeGreaterThanOrEqual(1)
+          expect(transition.pending).not.toHaveProperty("version")
         }
         if (transition.confirmed) {
           expect(transition.pending).toBeNull()
@@ -1281,7 +1280,6 @@ describe("page markdown fuzz invariants", () => {
           expect(transition.scrollTarget).toEqual(transition.pending)
         }
 
-        lastVersion = transition.state.version
         state = transition.state
         pending = transition.pending
       }
@@ -1309,14 +1307,18 @@ describe("page markdown fuzz invariants", () => {
       const pageCount = 1 + Math.floor(random() * 30)
       const pages = Array.from(
         { length: pageCount },
-        (_, index) => `# Page ${index}\n${"word ".repeat(Math.floor(random() * 40))}`
+        (_, index) =>
+          `# Page ${index}\n${"word ".repeat(Math.floor(random() * 40))}`
       )
 
       const measuredHeightByPageNumber = new Map<number, number>()
       for (let index = 0; index < pageCount; index += 1) {
         const roll = random()
         if (roll < 0.5) {
-          measuredHeightByPageNumber.set(index + 1, 1 + Math.floor(random() * 1500))
+          measuredHeightByPageNumber.set(
+            index + 1,
+            1 + Math.floor(random() * 1500)
+          )
         } else if (roll < 0.55) {
           measuredHeightByPageNumber.set(index + 1, 0)
         } else if (roll < 0.6) {

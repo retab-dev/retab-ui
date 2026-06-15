@@ -40,7 +40,7 @@ export function PdfThumbnailItem({
           "overflow-hidden rounded-sm bg-white ring-2 transition-shadow",
           active ? "ring-primary" : "ring-sidebar-border"
         )}
-        style={{ width: item.imageWidth }}
+        style={{ width: item.imageWidth, height: item.imageHeight }}
       >
         <React.Suspense fallback={<PdfThumbnailSkeleton />}>
           <PdfThumbnailCanvas

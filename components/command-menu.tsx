@@ -2,8 +2,8 @@
 
 import * as React from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { ChevronRight, CornerDownLeft, Minus } from "lucide-react"
 import { useDocsSearch } from "fumadocs-core/search/client"
+import { ChevronRight, CornerDownLeft, Minus } from "lucide-react"
 
 import { type ColorPalette } from "@/lib/colors"
 import { trackEvent } from "@/lib/events"
@@ -11,6 +11,7 @@ import { showMcpDocs } from "@/lib/flags"
 import { getCurrentBase, getPagesFromFolder } from "@/lib/page-tree"
 import { type source } from "@/lib/source"
 import { cn } from "@/lib/utils"
+import { getViewerBlockHrefForRegistryName } from "@/lib/viewer-blocks"
 import { useConfig } from "@/hooks/use-config"
 import { useMutationObserver } from "@/hooks/use-mutation-observer"
 import { Button } from "@/components/ui/button"
@@ -294,7 +295,7 @@ export function CommandMenu({
             ]}
             onSelect={() => {
               runCommand(() =>
-                router.push(`/blocks/${block.categories[0]}#${block.name}`)
+                router.push(getViewerBlockHrefForRegistryName(block.name))
               )
             }}
           >

@@ -20,7 +20,7 @@ import {
   vi,
 } from "vitest"
 
-import type { FieldAnchorLink } from "@/components/ui/field-anchor-link"
+import type { SourceFieldLink } from "@/components/ui/source-field-link"
 import { JsonForm } from "@/components/json-form/json-form"
 
 const originalResizeObserver = globalThis.ResizeObserver
@@ -80,7 +80,7 @@ function renderJsonForm({
 }: {
   schema: JSONSchema7
   defaultValues?: FormValues
-  anchorLink?: FieldAnchorLink
+  anchorLink?: SourceFieldLink
   defaultOpenPaths?: readonly string[]
 }) {
   const submissions: FormValues[] = []

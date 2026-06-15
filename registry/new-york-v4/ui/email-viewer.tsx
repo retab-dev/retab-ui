@@ -106,6 +106,20 @@ type EmailViewerContextValue = {
   selectPart: (node: MimePartNode) => void
 }
 
+export type EmailViewerState = {
+  header: EmailHeaderModel
+  sidebar: EmailSidebarModel
+  content: EmailContentModel
+  selectedPath: MimePartPath
+  selectedNode: MimePartNode
+}
+
+export type EmailSelectionState = {
+  selectedPath: MimePartPath
+  selectedNode: MimePartNode
+  selectPart: (node: MimePartNode) => void
+}
+
 type EmailViewerProviderInternalProps = EmailViewerProviderProps & {
   nestedMessageDepth?: number
 }
@@ -114,13 +128,16 @@ type EmailViewerInternalProps = EmailViewerProps & {
   nestedMessageDepth?: number
 }
 
-type EmailViewerChromeProps = Pick<EmailViewerInternalProps, "bare" | "className">
+type EmailViewerFrameProps = Pick<
+  EmailViewerInternalProps,
+  "bare" | "className"
+>
 
 const EmailViewerContext = React.createContext<EmailViewerContextValue | null>(
   null
 )
 
-export function useEmailViewer() {
+function useEmailViewerContext() {
   const context = React.useContext(EmailViewerContext)
   if (!context) {
     throw new Error("useEmailViewer must be used within EmailViewerProvider.")
@@ -128,15 +145,29 @@ export function useEmailViewer() {
   return context
 }
 
+export function useEmailViewer(): EmailViewerState {
+  const { model } = useEmailViewerContext()
+  return React.useMemo(
+    () => ({
+      header: model.header,
+      sidebar: model.sidebar,
+      content: model.content,
+      selectedPath: model.selectedPath,
+      selectedNode: model.selectedNode,
+    }),
+    [model]
+  )
+}
+
 export function useEmailHeader(): EmailHeaderModel {
-  return useEmailViewer().model.header
+  return useEmailViewerContext().model.header
 }
 
 export function useEmailPartsSidebar(): {
   sidebar: EmailSidebarModel
   selectPart: (node: MimePartNode) => void
 } {
-  const { model, selectPart } = useEmailViewer()
+  const { model, selectPart } = useEmailViewerContext()
 
   return {
     sidebar: model.sidebar,
@@ -145,7 +176,19 @@ export function useEmailPartsSidebar(): {
 }
 
 export function useEmailContent(): EmailContentModel {
-  return useEmailViewer().model.content
+  return useEmailViewerContext().model.content
+}
+
+export function useEmailSelection(): EmailSelectionState {
+  const { model, selectPart } = useEmailViewerContext()
+  return React.useMemo(
+    () => ({
+      selectedPath: model.selectedPath,
+      selectedNode: model.selectedNode,
+      selectPart,
+    }),
+    [model.selectedNode, model.selectedPath, selectPart]
+  )
 }
 
 export function EmailViewerProvider(props: EmailViewerProviderProps) {
@@ -255,7 +298,7 @@ function EmailViewerInternal({
         onSelectedPathChange={onSelectedPathChange}
         maxNestedMessageDepth={maxNestedMessageDepth}
       >
-        <EmailViewerChrome bare={bare} className={className} />
+        <EmailViewerFrame bare={bare} className={className} />
       </EmailViewerProvider>
     )
   }
@@ -269,15 +312,23 @@ function EmailViewerInternal({
       maxNestedMessageDepth={maxNestedMessageDepth}
       nestedMessageDepth={nestedMessageDepth}
     >
-      <EmailViewerChrome bare={bare} className={className} />
+      <EmailViewerFrame bare={bare} className={className} />
     </EmailViewerProviderInternal>
   )
 }
 
-function EmailViewerChrome({ bare = false, className }: EmailViewerChromeProps) {
+export function EmailViewerFrame({
+  bare = false,
+  className,
+}: EmailViewerFrameProps) {
   return (
     <div data-slot="email-viewer" className={cn("min-h-0", className)}>
-      <ViewerRoot bare={bare} defaultOpen sidebarSide="right" className="h-full">
+      <ViewerRoot
+        bare={bare}
+        defaultOpen
+        sidebarSide="right"
+        className="h-full"
+      >
         <EmailHeader />
         <ViewerBody className="flex-col md:flex-row">
           <ViewerSurface className="min-h-[26rem] md:min-h-0">
@@ -296,8 +347,12 @@ function EmailViewerChrome({ bare = false, className }: EmailViewerChromeProps) 
   )
 }
 
-export function EmailHeader() {
-  return <MimeMessageHeader header={useEmailHeader()} />
+export function EmailHeader({
+  trailing = <ViewerSidebarTrigger className="-mr-1" />,
+}: {
+  trailing?: React.ReactNode
+}) {
+  return <MimeMessageHeader header={useEmailHeader()} trailing={trailing} />
 }
 
 export function EmailPartsSidebar() {
@@ -340,7 +395,13 @@ export function EmailContent() {
   )
 }
 
-function MimeMessageHeader({ header }: { header: EmailHeaderModel }) {
+function MimeMessageHeader({
+  header,
+  trailing,
+}: {
+  header: EmailHeaderModel
+  trailing?: React.ReactNode
+}) {
   const from = formatEmailAddresses(header.from)
   const to = formatEmailAddresses(header.to)
 
@@ -355,7 +416,7 @@ function MimeMessageHeader({ header }: { header: EmailHeaderModel }) {
           <h2 className="min-w-0 flex-1 truncate text-sm font-medium">
             {header.subject}
           </h2>
-          <ViewerSidebarTrigger className="-mr-1" />
+          {trailing}
         </div>
         <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1 pl-6 text-xs text-muted-foreground">
           {from ? <span className="min-w-0 truncate">From {from}</span> : null}
@@ -499,8 +560,9 @@ function SidebarItemThumbnail({ item }: { item: EmailSidebarItem }) {
       <FileThumbnail
         source={item.thumbnail.source}
         presentation="decorative"
-        className="size-12 flex-shrink-0"
-        previewAspectRatio={item.thumbnail.aspectRatio}
+        thumbnailShape="square"
+        thumbnailSize="md"
+        className="flex-shrink-0"
       />
     )
   }

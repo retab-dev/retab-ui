@@ -1,37 +1,10 @@
-import { type Metadata } from "next"
+import { redirect } from "next/navigation"
 
-import {
-  PageHeader,
-  PageHeaderDescription,
-  PageHeaderHeading,
-} from "@/components/page-header"
-import { ViewerBlocks } from "@/components/viewer-blocks"
+import { DEFAULT_VIEWER_BLOCK_TAB_ID } from "@/lib/viewer-blocks"
 
 export const dynamic = "force-static"
 export const revalidate = false
 
-export const metadata: Metadata = {
-  title: "Blocks",
-  description:
-    "Document-viewer blocks built from the shared segment primitives — split, partition, and classification, each with preview + source.",
-}
-
 export default function BlocksPage() {
-  return (
-    <div className="flex flex-1 flex-col">
-      <PageHeader>
-        <PageHeaderHeading className="max-w-4xl">Viewer blocks</PageHeaderHeading>
-        <PageHeaderDescription>
-          Document viewers composed from the shared file + sidebar + legend
-          primitives. Toggle Preview / Code, resize the viewport, or copy the
-          install command.
-        </PageHeaderDescription>
-      </PageHeader>
-      <div className="container-wrapper flex-1">
-        <div className="container py-8">
-          <ViewerBlocks />
-        </div>
-      </div>
-    </div>
-  )
+  redirect(`/blocks/${DEFAULT_VIEWER_BLOCK_TAB_ID}`)
 }

@@ -4,7 +4,6 @@ import ReactMarkdown, { type Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
 
 import {
-  buildColorMap,
   SEGMENT_PALETTE,
   segmentsPageCount,
   toSegments,
@@ -139,18 +138,6 @@ export function PrimitiveCardsBlock() {
 
 function ClassificationCard() {
   const { file, thumbnail, result } = CLASSIFICATION
-  // A classification is a single category over the whole document, so it reduces
-  // to one segment — a colored chip + label in the legend, the same legend the
-  // split and partition cards use, with the reasoning as a muted caption.
-  const segments: Segment[] = [
-    {
-      id: "classification",
-      label: result.category,
-      pages: [1],
-      color: buildColorMap([result.category]).get(result.category) ?? "#4E79A7",
-      index: 0,
-    },
-  ]
 
   return (
     <RunCard
@@ -158,12 +145,16 @@ function ClassificationCard() {
       status="completed"
       media={<FillThumbnail src={thumbnail} fileName={file.name} />}
     >
-      <SegmentLegend
-        variant="plain"
-        density="compact"
-        segments={segments}
-        caption={result.reasoning ? <span>{result.reasoning}</span> : undefined}
-      />
+      <div className="space-y-2 p-3">
+        <div className="inline-flex min-h-7 max-w-full items-center rounded-md border bg-background px-2.5 text-sm font-medium">
+          <span className="truncate">{result.category}</span>
+        </div>
+        {result.reasoning ? (
+          <p className="line-clamp-3 text-xs text-muted-foreground">
+            {result.reasoning}
+          </p>
+        ) : null}
+      </div>
     </RunCard>
   )
 }
@@ -193,8 +184,7 @@ function SplitCard() {
 /**
  * A mini split viewer: the document's first page with a vertical, color-keyed
  * page rail beside it — each subdocument is a colored block spanning its page
- * range. The same split sidebar the full SegmentedDocumentViewer uses, shrunk
- * to fit the card's media frame.
+ * range, shrunk to fit the card's media frame.
  */
 function SplitMiniViewer({
   file,

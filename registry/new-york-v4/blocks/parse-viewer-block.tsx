@@ -65,9 +65,13 @@ function ParseSourceDocument() {
   const viewerRef = React.useRef<PdfViewerHandle | null>(null)
 
   React.useEffect(() => {
-    if (!document.scrollRequest) return
-    viewerRef.current?.scrollToPage(document.scrollRequest.pageNumber)
-  }, [document.scrollRequest])
+    document.setDocumentHandle({
+      scrollToPage: (pageNumber, options) => {
+        viewerRef.current?.scrollToPage(pageNumber, options)
+      },
+    })
+    return () => document.setDocumentHandle(null)
+  }, [document])
 
   return (
     <PdfViewer

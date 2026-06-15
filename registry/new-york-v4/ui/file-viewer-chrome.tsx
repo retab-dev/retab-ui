@@ -6,7 +6,6 @@ import { Maximize, Minus, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { ViewerResource } from "@/lib/viewer-resource"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ViewerDownloadButton } from "@/components/ui/viewer-download"
 import { ViewerErrorState } from "@/components/ui/viewer-error"
@@ -15,61 +14,6 @@ import type { FileDescriptor } from "./file-viewer-core"
 
 const TEXT_SKELETON_FONT = 12.5
 const TEXT_SKELETON_LINE_HEIGHT = 20
-
-export function ResourceDocShell({
-  resource,
-  meta,
-  actions,
-  className,
-  bare,
-  showHeader = !bare,
-  children,
-}: {
-  resource: ViewerResource
-  meta?: string
-  actions?: React.ReactNode
-  className?: string
-  bare?: boolean
-  showHeader?: boolean
-  children: React.ReactNode
-}) {
-  const fileName = resource.fileName
-
-  return (
-    <div
-      data-slot="file-viewer"
-      className={cn(
-        "flex min-h-0 flex-col overflow-hidden",
-        bare ? "h-full bg-card" : "rounded-xl border bg-muted/30",
-        className
-      )}
-    >
-      {showHeader ? (
-        <div className="flex h-10 min-w-0 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
-          <span
-            className="min-w-0 flex-1 truncate px-1 text-xs font-medium"
-            title={fileName}
-          >
-            {fileName}
-          </span>
-          {meta ? (
-            <span className="max-w-[45%] min-w-0 flex-shrink truncate text-xs text-muted-foreground tabular-nums">
-              {meta}
-            </span>
-          ) : null}
-          <div className="ml-auto flex shrink-0 items-center gap-1">
-            {actions}
-            {actions ? (
-              <Separator orientation="vertical" className="mx-1 h-4" />
-            ) : null}
-            <ViewerDownloadButton action={resource.originalDownload} />
-          </div>
-        </div>
-      ) : null}
-      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
-    </div>
-  )
-}
 
 function IconButton({
   label,
@@ -131,36 +75,18 @@ export function ZoomActions({
   )
 }
 
-export function ZoomActionsSkeleton() {
-  const inert = { disabled: true, tabIndex: -1, "aria-hidden": true } as const
-  return (
-    <>
-      <IconButton label="Zoom out" {...inert}>
-        <Minus />
-      </IconButton>
-      <span className="w-12 text-center text-xs text-muted-foreground tabular-nums">
-        100%
-      </span>
-      <IconButton label="Zoom in" {...inert}>
-        <Plus />
-      </IconButton>
-      <IconButton label="Actual size" {...inert}>
-        <Maximize />
-      </IconButton>
-    </>
-  )
-}
-
 export function UnsupportedCard({
   resource,
   className,
   bare,
   message = "No preview for",
+  showDownload = true,
 }: {
   resource: ViewerResource
   className?: string
   bare?: boolean
   message?: string
+  showDownload?: boolean
 }) {
   return (
     <div
@@ -177,13 +103,15 @@ export function UnsupportedCard({
           {resource.fileName}.
         </span>
       </p>
-      <ViewerDownloadButton
-        action={resource.originalDownload}
-        variant="outline"
-        size="sm"
-        className=""
-        showLabel
-      />
+      {showDownload ? (
+        <ViewerDownloadButton
+          action={resource.originalDownload}
+          variant="outline"
+          size="sm"
+          className=""
+          showLabel
+        />
+      ) : null}
     </div>
   )
 }
@@ -208,11 +136,13 @@ export function ViewerFallback({
       category === "csv")
   ) {
     return (
-      <ResourceDocShell
-        resource={resource}
-        className={className}
-        bare={bare}
-        actions={<ZoomActionsSkeleton />}
+      <div
+        data-slot="file-viewer-content-fallback"
+        className={cn(
+          "flex min-h-0 flex-1 flex-col overflow-hidden bg-card",
+          bare ? "h-full" : "min-h-64",
+          className
+        )}
       >
         {category === "csv" ? (
           <TableBodySkeleton />
@@ -223,7 +153,7 @@ export function ViewerFallback({
             <Skeleton className="size-full rounded-md" />
           </div>
         )}
-      </ResourceDocShell>
+      </div>
     )
   }
 
@@ -233,29 +163,13 @@ export function ViewerFallback({
 
   return (
     <div
-      data-slot="file-viewer"
+      data-slot="file-viewer-content-fallback"
       className={cn(
         "flex min-h-0 flex-col overflow-hidden",
-        bare ? "h-full bg-muted/20" : "rounded-xl border bg-muted/30",
+        bare ? "h-full bg-muted/20" : "min-h-64 bg-muted/20",
         className
       )}
     >
-      {!bare ? (
-        <div className="flex h-10 min-w-0 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
-          <span className="min-w-0 flex-1 px-1">
-            <Skeleton className="inline-block h-3 w-16 align-middle" />
-          </span>
-          <div className="ml-auto flex shrink-0 items-center gap-1">
-            {category !== "unsupported" ? (
-              <>
-                <ZoomActionsSkeleton />
-                <Separator orientation="vertical" className="mx-1 h-4" />
-              </>
-            ) : null}
-            <ViewerDownloadButton action={resource.originalDownload} />
-          </div>
-        </div>
-      ) : null}
       {tabular ? (
         <TableBodySkeleton />
       ) : (

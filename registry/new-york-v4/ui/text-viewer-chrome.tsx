@@ -1,17 +1,20 @@
 "use client"
 
 import * as React from "react"
-import { Check, Copy } from "lucide-react"
+import { AlertCircle, Check, Copy } from "lucide-react"
 
 import { type ViewerDownloadAction } from "@/lib/viewer-download"
 
 import { Skeleton } from "./skeleton"
 import { TextCodeViewerFrame } from "./text-code-viewer-chrome"
+import type { ViewerDownloadErrorHandler } from "./viewer-download"
 import {
   ViewerToolbar,
   ViewerToolbarButton,
   ViewerToolbarSkeleton,
 } from "./viewer-toolbar"
+
+export type ViewerClipboardCopyStatus = "copied" | "failed" | "idle"
 
 export function TextViewerFrame({
   className,
@@ -38,15 +41,19 @@ export function TextViewerFrame({
 export function TextViewerFallback({
   className,
   toolbar = true,
+  download = true,
   bare,
 }: {
   className?: string
   toolbar?: boolean
+  download?: boolean
   bare?: boolean
 }) {
   return (
     <TextViewerFrame className={className} bare={bare}>
-      {toolbar ? <ViewerToolbarSkeleton title zoom download /> : null}
+      {toolbar ? (
+        <ViewerToolbarSkeleton title zoom download={download} />
+      ) : null}
       <div
         className="min-h-0 flex-1 space-y-3 overflow-hidden p-5"
         data-slot="text-body-skeleton"
@@ -69,7 +76,9 @@ export function TextViewerToolbar({
   copyText,
   copyLabel = "Copy text",
   downloadAction,
+  extra,
   leading,
+  onDownloadError,
   onZoomOut,
   onZoomIn,
   onResetZoom,
@@ -78,12 +87,19 @@ export function TextViewerToolbar({
   fontScale: number
   copyText?: string
   copyLabel?: string
-  downloadAction: ViewerDownloadAction
+  downloadAction?: ViewerDownloadAction | null
+  extra?: React.ReactNode
   leading?: React.ReactNode
+  onDownloadError?: ViewerDownloadErrorHandler
   onZoomOut: () => void
   onZoomIn: () => void
   onResetZoom: () => void
 }) {
+  const copyControl =
+    copyText == null ? null : (
+      <TextViewerCopyControl label={copyLabel} text={copyText} />
+    )
+
   return (
     <ViewerToolbar
       title={leading ?? `${wordCount} word${wordCount === 1 ? "" : "s"}`}
@@ -94,10 +110,14 @@ export function TextViewerToolbar({
         onFit: onResetZoom,
         fitLabel: "Reset zoom",
       }}
-      downloads={[downloadAction]}
+      downloads={downloadAction ? [downloadAction] : undefined}
+      onDownloadError={onDownloadError}
       extra={
-        copyText == null ? null : (
-          <TextViewerCopyControl label={copyLabel} text={copyText} />
+        extra == null && copyControl == null ? null : (
+          <span className="flex min-w-0 items-center gap-1">
+            {extra}
+            {copyControl}
+          </span>
         )
       }
     />
@@ -111,40 +131,98 @@ function TextViewerCopyControl({
   label: string
   text: string
 }) {
-  const [isCopied, setIsCopied] = React.useState(false)
-  const timeoutRef = React.useRef<number | null>(null)
-
-  React.useEffect(
-    () => () => {
-      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
-    },
-    []
-  )
+  const { copy, status } = useViewerClipboardCopy()
 
   const copyText = () => {
-    if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
-
-    try {
-      const result = navigator.clipboard?.writeText(text)
-      void Promise.resolve(result).then(() => {
-        setIsCopied(true)
-        timeoutRef.current = window.setTimeout(() => {
-          timeoutRef.current = null
-          setIsCopied(false)
-        }, 1200)
-      })
-    } catch {
-      setIsCopied(false)
-    }
+    copy(text)
   }
 
+  const buttonLabel =
+    status === "copied" ? "Copied" : status === "failed" ? "Copy failed" : label
+
   return (
-    <ViewerToolbarButton
-      label={isCopied ? "Copied" : label}
-      onClick={copyText}
-      type="button"
-    >
-      {isCopied ? <Check /> : <Copy />}
+    <ViewerToolbarButton label={buttonLabel} onClick={copyText} type="button">
+      {status === "copied" ? (
+        <Check />
+      ) : status === "failed" ? (
+        <AlertCircle />
+      ) : (
+        <Copy />
+      )}
     </ViewerToolbarButton>
   )
+}
+
+export function useViewerClipboardCopy({
+  resetDelay = 1200,
+}: {
+  resetDelay?: number
+} = {}) {
+  const [status, setStatus] = React.useState<ViewerClipboardCopyStatus>("idle")
+  const timeoutRef = React.useRef<number | null>(null)
+  const isMountedRef = React.useRef(true)
+  const copyAttemptRef = React.useRef(0)
+
+  React.useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+      clearViewerClipboardCopyReset(timeoutRef)
+    }
+  }, [])
+
+  const scheduleReset = React.useCallback(() => {
+    clearViewerClipboardCopyReset(timeoutRef)
+    timeoutRef.current = window.setTimeout(() => {
+      timeoutRef.current = null
+      if (isMountedRef.current) setStatus("idle")
+    }, resetDelay)
+  }, [resetDelay])
+
+  const copy = React.useCallback(
+    (text: string) => {
+      clearViewerClipboardCopyReset(timeoutRef)
+      const copyAttempt = copyAttemptRef.current + 1
+      copyAttemptRef.current = copyAttempt
+      const isCurrentAttempt = () =>
+        isMountedRef.current && copyAttemptRef.current === copyAttempt
+
+      try {
+        const clipboard = navigator.clipboard
+        const writeText = clipboard?.writeText
+        if (typeof writeText !== "function") {
+          setStatus("failed")
+          scheduleReset()
+          return
+        }
+
+        void Promise.resolve(writeText.call(clipboard, text)).then(
+          () => {
+            if (!isCurrentAttempt()) return
+            setStatus("copied")
+            scheduleReset()
+          },
+          () => {
+            if (!isCurrentAttempt()) return
+            setStatus("failed")
+            scheduleReset()
+          }
+        )
+      } catch {
+        setStatus("failed")
+        scheduleReset()
+      }
+    },
+    [scheduleReset]
+  )
+
+  return { copy, status }
+}
+
+function clearViewerClipboardCopyReset(
+  timeoutRef: React.MutableRefObject<number | null>
+) {
+  if (timeoutRef.current === null) return
+  window.clearTimeout(timeoutRef.current)
+  timeoutRef.current = null
 }

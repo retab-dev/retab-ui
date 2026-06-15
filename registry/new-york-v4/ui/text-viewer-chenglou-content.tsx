@@ -83,6 +83,7 @@ export function ChenglouTextViewerContent({
   resource,
   className,
   toolbar = true,
+  download = true,
   highlight,
   bare = false,
   maxBytes,
@@ -119,10 +120,7 @@ export function ChenglouTextViewerContent({
       }),
     [forcedMode, resource.content.mimeType, resource.fileName]
   )
-  const downloadAction = React.useMemo(
-    () => resource.originalDownload,
-    [resource]
-  )
+  const downloadAction = download ? resource.originalDownload : null
   const [fontScale, setFontScale] = React.useState(1)
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const canvasRef = React.useRef<HTMLDivElement | null>(null)

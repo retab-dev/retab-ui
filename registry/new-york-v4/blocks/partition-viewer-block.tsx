@@ -10,6 +10,7 @@ import type { PartitionResult } from "@/components/viewers/lib/partition-types"
 import {
   PartitionViewerHeader,
   PartitionViewerProvider,
+  PartitionViewerRibbon,
   usePartitionViewerDocumentControls,
 } from "@/components/viewers/partition/partition-viewer"
 
@@ -52,6 +53,7 @@ export function PartitionViewerBlock() {
             <PartitionViewerHeader />
             <ViewerBody>
               <ViewerSurface>
+                <PartitionViewerRibbon />
                 <PartitionSourceDocument />
               </ViewerSurface>
             </ViewerBody>

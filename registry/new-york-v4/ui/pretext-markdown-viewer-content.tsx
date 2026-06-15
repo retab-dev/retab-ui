@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { AlertCircle, ChevronDown, ChevronUp, Search, X } from "lucide-react"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
 
@@ -36,6 +37,7 @@ import {
 } from "./text-viewer-resource"
 import { clampTextViewerScale } from "./text-viewer-scale"
 import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types"
+import type { ViewerDownloadErrorHandler } from "./viewer-download"
 
 const VIEWER_HORIZONTAL_PADDING = 16
 const DEFAULT_VIEWPORT_HEIGHT = 600
@@ -45,6 +47,7 @@ const OVERSCAN_PX = 640
 const SOURCE_FONT_SIZE = 13
 const SOURCE_LINE_HEIGHT = 22
 const SOURCE_OVERSCAN_LINES = 24
+const MAX_SEARCH_MATCHES = 10_000
 
 type PretextMarkdownViewMode = "rendered" | "source"
 
@@ -53,10 +56,19 @@ type ViewportSize = {
   width: number
 }
 
+type PretextMarkdownSearchMatch = {
+  endLine: number
+  endOffset: number
+  index: number
+  startLine: number
+  startOffset: number
+}
+
 export function PretextMarkdownViewerContent({
   resource,
   className,
   toolbar = true,
+  download = true,
   highlight,
   bare = false,
   maxBytes,
@@ -81,13 +93,13 @@ export function PretextMarkdownViewerContent({
       }),
     [bounds, resource.content, retryVersion]
   )
-  const downloadAction = React.useMemo(
-    () => resource.originalDownload,
-    [resource]
-  )
+  const downloadAction = download ? resource.originalDownload : null
   const [fontScale, setFontScale] = React.useState(1)
   const [viewMode, setViewMode] =
     React.useState<PretextMarkdownViewMode>("rendered")
+  const [searchQuery, setSearchQuery] = React.useState("")
+  const [activeSearchMatchIndex, setActiveSearchMatchIndex] = React.useState(0)
+  const [downloadError, setDownloadError] = React.useState("")
   const [scrollTop, setScrollTop] = React.useState(0)
   const [measuredHeights, setMeasuredHeights] = React.useState(
     () => new Map<number, number>()
@@ -138,6 +150,37 @@ export function PretextMarkdownViewerContent({
         document.sourceLineCount
       ),
     [document.sourceLineCount, highlightEnd, highlightStart]
+  )
+  const searchMatches = React.useMemo(
+    () => buildPretextMarkdownSearchMatches(text, searchQuery),
+    [searchQuery, text]
+  )
+  const activeSearchMatch =
+    searchMatches.length === 0
+      ? null
+      : searchMatches[
+          Math.min(activeSearchMatchIndex, searchMatches.length - 1)
+        ]
+  const activeSearchRange = React.useMemo(
+    () =>
+      activeSearchMatch
+        ? normalizeTextLineRange(
+            {
+              end: activeSearchMatch.endLine,
+              start: activeSearchMatch.startLine,
+            },
+            document.sourceLineCount
+          )
+        : null,
+    [activeSearchMatch, document.sourceLineCount]
+  )
+  const visibleHighlightRange = activeSearchRange ?? highlightRange
+  const handleDownloadError = React.useCallback<ViewerDownloadErrorHandler>(
+    (error) => {
+      if (error.kind === "aborted") return
+      setDownloadError(error.message || "Could not download Markdown.")
+    },
+    []
   )
   const visibleFrames = React.useMemo(
     () =>
@@ -377,6 +420,23 @@ export function PretextMarkdownViewerContent({
     setFontScale(1)
   }
 
+  const goToSearchMatch = React.useCallback(
+    (direction: 1 | -1) => {
+      setActiveSearchMatchIndex((current) => {
+        if (searchMatches.length === 0) return 0
+        return (
+          (current + direction + searchMatches.length) % searchMatches.length
+        )
+      })
+    },
+    [searchMatches.length]
+  )
+
+  const clearSearch = React.useCallback(() => {
+    setSearchQuery("")
+    setActiveSearchMatchIndex(0)
+  }, [])
+
   React.useImperativeHandle(
     forwardedRef ?? null,
     () => ({
@@ -415,6 +475,23 @@ export function PretextMarkdownViewerContent({
     scrollLineRangeRef.current(highlightRange)
   }, [document, highlightRange])
 
+  React.useEffect(() => {
+    setActiveSearchMatchIndex(0)
+  }, [searchQuery])
+
+  React.useEffect(() => {
+    setActiveSearchMatchIndex((current) =>
+      searchMatches.length === 0
+        ? 0
+        : Math.min(current, searchMatches.length - 1)
+    )
+  }, [searchMatches.length])
+
+  React.useEffect(() => {
+    if (!activeSearchRange) return
+    scrollLineRangeRef.current(activeSearchRange, { behavior: "auto" })
+  }, [activeSearchRange])
+
   React.useLayoutEffect(() => {
     const sourceLine = pendingViewModeSourceLineRef.current
     if (sourceLine == null) return
@@ -432,6 +509,10 @@ export function PretextMarkdownViewerContent({
   React.useEffect(() => {
     resolvedHashRef.current = null
   }, [document])
+
+  React.useEffect(() => {
+    setDownloadError("")
+  }, [downloadAction])
 
   React.useEffect(() => {
     resolveCurrentHash({ behavior: "auto" })
@@ -467,6 +548,23 @@ export function PretextMarkdownViewerContent({
           copyLabel="Copy Markdown"
           copyText={document.text}
           downloadAction={downloadAction}
+          onDownloadError={handleDownloadError}
+          extra={
+            <span className="flex min-w-0 items-center gap-2">
+              <PretextMarkdownDownloadError message={downloadError} />
+              <PretextMarkdownSearchControl
+                activeMatchIndex={
+                  activeSearchMatch ? activeSearchMatch.index : 0
+                }
+                matchCount={searchMatches.length}
+                query={searchQuery}
+                onClear={clearSearch}
+                onNext={() => goToSearchMatch(1)}
+                onPrevious={() => goToSearchMatch(-1)}
+                onQueryChange={setSearchQuery}
+              />
+            </span>
+          }
           onZoomOut={() => zoom(1 / 1.2)}
           onZoomIn={() => zoom(1.2)}
           onResetZoom={resetZoom}
@@ -488,7 +586,7 @@ export function PretextMarkdownViewerContent({
         {viewMode === "source" ? (
           <PretextMarkdownSourceCanvas
             fontScale={fontScale}
-            highlightRange={highlightRange}
+            highlightRange={visibleHighlightRange}
             lines={sourceLines}
             scrollTop={scrollTop}
             viewportHeight={viewportHeight}
@@ -516,10 +614,10 @@ export function PretextMarkdownViewerContent({
                   <PretextMarkdownChunk
                     key={chunk.index}
                     frame={chunkFrame}
-                    highlightRange={highlightRange}
+                    highlightRange={visibleHighlightRange}
                     highlighted={markdownChunkIntersectsLineRange({
                       chunk,
-                      range: highlightRange,
+                      range: visibleHighlightRange,
                     })}
                     onMeasuredHeight={recordMeasuredHeight}
                   >
@@ -593,6 +691,133 @@ function PretextMarkdownViewModeControl({
         ))}
       </span>
     </span>
+  )
+}
+
+function PretextMarkdownDownloadError({ message }: { message: string }) {
+  if (!message) return null
+
+  return (
+    <span
+      aria-live="polite"
+      className="hidden min-w-0 items-center gap-1 rounded-md border border-destructive/25 bg-destructive/10 px-2 py-1 text-xs text-destructive sm:inline-flex"
+      data-slot="pretext-markdown-download-error"
+      role="status"
+    >
+      <AlertCircle className="size-3.5 flex-shrink-0" aria-hidden="true" />
+      <span className="truncate">{message}</span>
+    </span>
+  )
+}
+
+function PretextMarkdownSearchControl({
+  activeMatchIndex,
+  matchCount,
+  query,
+  onClear,
+  onNext,
+  onPrevious,
+  onQueryChange,
+}: {
+  activeMatchIndex: number
+  matchCount: number
+  query: string
+  onClear: () => void
+  onNext: () => void
+  onPrevious: () => void
+  onQueryChange: (query: string) => void
+}) {
+  const searchId = React.useId()
+  const statusId = React.useId()
+  const hasQuery = query.trim().length > 0
+  const hasMatches = matchCount > 0
+  const status = !hasQuery
+    ? "No search"
+    : hasMatches
+      ? `${Math.min(activeMatchIndex + 1, matchCount)} / ${matchCount}`
+      : "No matches"
+
+  return (
+    <form
+      role="search"
+      className="flex min-w-0 items-center gap-1"
+      data-slot="pretext-markdown-search"
+      onSubmit={(event) => {
+        event.preventDefault()
+        onNext()
+      }}
+    >
+      <label className="sr-only" htmlFor={searchId}>
+        Search Markdown
+      </label>
+      <span className="relative block w-36 min-w-0 sm:w-44">
+        <Search
+          aria-hidden="true"
+          className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground"
+        />
+        <input
+          id={searchId}
+          aria-describedby={statusId}
+          aria-label="Search Markdown"
+          className="h-7 w-full rounded-md border bg-background pr-7 pl-7 text-xs transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          data-slot="pretext-markdown-search-input"
+          placeholder="Search"
+          type="search"
+          value={query}
+          onChange={(event) => onQueryChange(event.currentTarget.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault()
+              onClear()
+              return
+            }
+            if (event.key !== "Enter") return
+
+            event.preventDefault()
+            if (event.shiftKey) onPrevious()
+            else onNext()
+          }}
+        />
+        {hasQuery ? (
+          <button
+            aria-label="Clear Markdown search"
+            className="absolute top-1/2 right-1 inline-flex size-5 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            type="button"
+            onClick={onClear}
+          >
+            <X aria-hidden="true" className="size-3.5" />
+          </button>
+        ) : null}
+      </span>
+      <span
+        id={statusId}
+        aria-live="polite"
+        className="hidden w-12 text-center text-xs text-muted-foreground tabular-nums sm:inline"
+        data-slot="pretext-markdown-search-status"
+      >
+        {hasQuery ? status : ""}
+      </span>
+      <button
+        aria-label="Previous Markdown search match"
+        className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+        disabled={!hasMatches}
+        title="Previous Markdown search match"
+        type="button"
+        onClick={onPrevious}
+      >
+        <ChevronUp aria-hidden="true" className="size-4" />
+      </button>
+      <button
+        aria-label="Next Markdown search match"
+        className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+        disabled={!hasMatches}
+        title="Next Markdown search match"
+        type="button"
+        onClick={onNext}
+      >
+        <ChevronDown aria-hidden="true" className="size-4" />
+      </button>
+    </form>
   )
 }
 
@@ -681,6 +906,64 @@ function PretextMarkdownSourceCanvas({
       })}
     </div>
   )
+}
+
+function buildPretextMarkdownSearchMatches(
+  text: string,
+  query: string
+): PretextMarkdownSearchMatch[] {
+  const normalizedQuery = query.trim()
+  if (!normalizedQuery) return []
+
+  const lineStarts = getPretextMarkdownLineStarts(text)
+  const lowerText = text.toLowerCase()
+  const lowerQuery = normalizedQuery.toLowerCase()
+  const matches: PretextMarkdownSearchMatch[] = []
+  let offset = 0
+
+  while (matches.length < MAX_SEARCH_MATCHES) {
+    const startOffset = lowerText.indexOf(lowerQuery, offset)
+    if (startOffset === -1) break
+
+    const endOffset = startOffset + lowerQuery.length
+    matches.push({
+      endLine: getPretextMarkdownLineNumberForOffset(
+        lineStarts,
+        Math.max(startOffset, endOffset - 1)
+      ),
+      endOffset,
+      index: matches.length,
+      startLine: getPretextMarkdownLineNumberForOffset(lineStarts, startOffset),
+      startOffset,
+    })
+    offset = endOffset
+  }
+
+  return matches
+}
+
+function getPretextMarkdownLineStarts(text: string) {
+  const lineStarts = [0]
+  for (let index = 0; index < text.length; index += 1) {
+    if (text[index] === "\n") lineStarts.push(index + 1)
+  }
+  return lineStarts
+}
+
+function getPretextMarkdownLineNumberForOffset(
+  lineStarts: readonly number[],
+  offset: number
+) {
+  let low = 0
+  let high = lineStarts.length - 1
+
+  while (low <= high) {
+    const middle = Math.floor((low + high) / 2)
+    if (lineStarts[middle]! <= offset) low = middle + 1
+    else high = middle - 1
+  }
+
+  return Math.max(1, high + 1)
 }
 
 function PretextMarkdownChunk({

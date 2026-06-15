@@ -6,12 +6,12 @@ import { useVirtualizer } from "@tanstack/react-virtual"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
-export type AnchoredItemListItem = {
+export type InteractiveItemListItem = {
   id: string
   disabled?: boolean
 }
 
-export type AnchoredItemListRenderState = {
+export type InteractiveItemListRenderState = {
   isActive: boolean
   isDisabled: boolean
   isSelected: boolean
@@ -20,7 +20,7 @@ export type AnchoredItemListRenderState = {
 const DEFAULT_ESTIMATE_SIZE = 72
 const ROW_PADDING = 12
 
-type AnchoredItemListVirtualRow = {
+type InteractiveItemListVirtualRow = {
   index: number
   key: React.Key
   start: number
@@ -34,7 +34,7 @@ function requestFrame(callback: () => void) {
   setTimeout(callback, 0)
 }
 
-export function AnchoredItemList<Item extends AnchoredItemListItem>({
+export function InteractiveItemList<Item extends InteractiveItemListItem>({
   activeItemId,
   "aria-label": ariaLabel,
   className,
@@ -62,7 +62,7 @@ export function AnchoredItemList<Item extends AnchoredItemListItem>({
   onVisibleItemChange?: (item: Item) => void
   renderItem: (
     item: Item,
-    state: AnchoredItemListRenderState
+    state: InteractiveItemListRenderState
   ) => React.ReactNode
   selectedItemId?: string | null
 }) {
@@ -76,7 +76,7 @@ export function AnchoredItemList<Item extends AnchoredItemListItem>({
     getScrollElement: () => viewportRef.current,
     overscan: 8,
   })
-  const virtualRows: AnchoredItemListVirtualRow[] =
+  const virtualRows: InteractiveItemListVirtualRow[] =
     virtualizer.getVirtualItems().length > 0
       ? virtualizer.getVirtualItems()
       : items.map((item, index) => ({

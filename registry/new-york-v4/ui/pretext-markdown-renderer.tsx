@@ -13,7 +13,6 @@ import {
   Link,
   RefreshCcw,
   TriangleAlert,
-  type LucideIcon,
 } from "lucide-react"
 import Markdown, { MarkdownHooks, type Components } from "react-markdown"
 
@@ -30,6 +29,7 @@ import {
   readPretextAlertKind,
   readPretextCallout,
   readPretextComponent,
+  readPretextComponentFallback,
   readPretextHeadingId,
   sanitizePretextMarkdownImageUrl,
   sanitizePretextMarkdownMediaUrl,
@@ -38,8 +38,10 @@ import {
   type AlertKind,
   type CalloutKind,
   type PretextComponent,
+  type PretextComponentFallback,
   type PretextMarkdownSvgSanitizer,
 } from "./pretext-markdown-policy"
+import { useViewerClipboardCopy } from "./text-viewer-chrome"
 
 export function PretextMarkdownChunkRenderer({
   chunk,
@@ -246,8 +248,23 @@ const PRETEXT_MARKDOWN_CODE_LINE_NUMBERS_CLASS_NAME =
 const PRETEXT_MARKDOWN_CODE_HIGHLIGHT_CLASS_NAME =
   "[&>[data-highlighted-line]]:bg-muted-foreground/10 [&_[data-highlighted-chars]]:rounded [&_[data-highlighted-chars]]:bg-muted-foreground/15 [&_[data-highlighted-chars]]:px-0.5"
 const PRETEXT_MARKDOWN_CODE_LANGUAGE_ALIASES: Record<string, string> = {
+  cjs: "js",
+  javascript: "js",
+  javascriptreact: "jsx",
+  js: "js",
+  jsonc: "json",
   "mermaid-js": "mermaid",
+  mjs: "js",
   mmd: "mermaid",
+  py: "python",
+  sh: "shell",
+  "shell-session": "shell",
+  shellscript: "shell",
+  ts: "ts",
+  tsx: "tsx",
+  typescript: "ts",
+  typescriptreact: "tsx",
+  zsh: "shell",
 }
 const PRETEXT_MARKDOWN_HOSTILE_PREVIEW_HEAD_LINES = 36
 const PRETEXT_MARKDOWN_HOSTILE_PREVIEW_TAIL_LINES = 12
@@ -293,6 +310,16 @@ const markdownComponents = {
         <PretextMarkdownCallout callout={callout} className={className}>
           {children}
         </PretextMarkdownCallout>
+      )
+    }
+
+    const fallback = readPretextComponentFallback(node)
+    if (fallback) {
+      return (
+        <PretextMarkdownComponentFallback
+          className={className}
+          fallback={fallback}
+        />
       )
     }
 
@@ -393,28 +420,35 @@ const markdownComponents = {
       return <span>{children}</span>
     }
 
-    const external = isPretextMarkdownExternalLink(safeHref)
+    const linkKind = getPretextMarkdownLinkKind(safeHref)
+    const external = linkKind === "external"
     const linkTitle = normalizePretextMarkdownLinkTitle(title)
+    const linkText = extractReactText(children).trim()
+    const linkForm = getPretextMarkdownLinkForm(safeHref, linkText)
     const footnoteRef =
       isPretextFootnoteRef(props) || isPretextFootnoteRefHref(safeHref)
     const footnoteBackref =
       isPretextFootnoteBackref(props) || isPretextFootnoteBackrefHref(safeHref)
-    const footnoteText = extractReactText(children).trim()
     const ariaLabel = footnoteRef
-      ? `Footnote ${footnoteText || "reference"}`
+      ? `Footnote ${linkText || "reference"}`
       : footnoteBackref
-        ? `Back to footnote reference${footnoteText ? ` ${footnoteText}` : ""}`
+        ? `Back to footnote reference${linkText ? ` ${linkText}` : ""}`
         : undefined
     return (
       <a
         className={cn(
-          "font-medium underline underline-offset-4",
+          "font-medium underline decoration-muted-foreground/45 underline-offset-4 transition-colors visited:text-muted-foreground hover:decoration-current",
           PRETEXT_MARKDOWN_WRAP_CLASS_NAME,
+          linkKind === "fragment" &&
+            "decoration-muted-foreground/70 decoration-dotted",
+          linkForm !== "inline" && "font-mono text-[0.95em]",
           footnoteRef && "ml-0.5 rounded px-1 text-[0.72em] leading-none",
           footnoteBackref && "ml-1 text-muted-foreground no-underline",
           className
         )}
         {...props}
+        data-pretext-link-form={linkForm}
+        data-pretext-link-kind={linkKind}
         href={safeHref}
         rel={external ? "noopener noreferrer" : undefined}
         target={external ? "_blank" : undefined}
@@ -455,9 +489,18 @@ const markdownComponents = {
       </blockquote>
     )
   },
-  br: ({ node: _node, ...props }) => <br {...props} />,
+  br: ({ node: _node, ...props }) => (
+    <br {...props} data-pretext-line-break="soft" />
+  ),
   del: ({ className, node: _node, ...props }) => (
-    <del className={cn("text-muted-foreground", className)} {...props} />
+    <del
+      className={cn(
+        "text-muted-foreground decoration-muted-foreground/70 decoration-2",
+        className
+      )}
+      {...props}
+      data-pretext-strikethrough=""
+    />
   ),
   ins: ({ className, node: _node, ...props }) => (
     <ins
@@ -466,6 +509,7 @@ const markdownComponents = {
         className
       )}
       {...props}
+      data-pretext-raw-inline=""
     />
   ),
   details: ({ className, node: _node, ...props }) => (
@@ -507,6 +551,7 @@ const markdownComponents = {
     <mark
       className={cn("rounded bg-yellow-200/70 px-1 text-foreground", className)}
       {...props}
+      data-pretext-raw-inline=""
     />
   ),
   kbd: ({ className, node: _node, ...props }) => (
@@ -516,10 +561,15 @@ const markdownComponents = {
         className
       )}
       {...props}
+      data-pretext-raw-inline=""
     />
   ),
   q: ({ className, node: _node, ...props }) => (
-    <q className={cn("text-foreground italic", className)} {...props} />
+    <q
+      className={cn("text-foreground italic", className)}
+      {...props}
+      data-pretext-raw-inline=""
+    />
   ),
   samp: ({ className, node: _node, ...props }) => (
     <samp
@@ -529,12 +579,14 @@ const markdownComponents = {
         className
       )}
       {...props}
+      data-pretext-raw-inline=""
     />
   ),
   var: ({ className, node: _node, ...props }) => (
     <var
       className={cn("font-medium text-foreground italic", className)}
       {...props}
+      data-pretext-raw-inline=""
     />
   ),
   ul: ({ className, node: _node, ...props }) => (
@@ -588,9 +640,10 @@ const markdownComponents = {
         aria-readonly="true"
         checked={checked}
         className={cn(
-          "mr-2 size-3.5 rounded border-border align-[-0.15em] disabled:cursor-default disabled:opacity-100",
+          "mr-2 size-3.5 rounded border-border align-[-0.15em] accent-primary disabled:cursor-default disabled:opacity-100",
           className
         )}
+        data-pretext-task-checkbox={checked ? "checked" : "unchecked"}
         disabled
         readOnly
         type="checkbox"
@@ -695,32 +748,7 @@ const markdownComponents = {
       </code>
     )
   },
-  span: ({ className, children, node: _node, ...props }) => {
-    const spanProps = props as typeof props & {
-      "data-line"?: unknown
-    }
-    const codeBlockContext = React.useContext(PretextMarkdownCodeBlockContext)
-    const diffLineKind =
-      codeBlockContext?.language === "diff" && spanProps["data-line"] != null
-        ? readPretextMarkdownDiffLineKind(extractReactText(children))
-        : null
-
-    return (
-      <span
-        {...props}
-        className={cn(
-          diffLineKind === "add" &&
-            "-mx-4 block border-l-2 border-emerald-500 bg-emerald-500/10 px-4",
-          diffLineKind === "remove" &&
-            "-mx-4 block border-l-2 border-red-500 bg-red-500/10 px-4",
-          className
-        )}
-        data-pretext-code-diff-line={diffLineKind ?? undefined}
-      >
-        {children}
-      </span>
-    )
-  },
+  span: PretextMarkdownSpan,
   section: ({ className, node: _node, ...props }) => {
     const footnoteSection = isPretextFootnoteSection(props)
     return (
@@ -738,12 +766,14 @@ const markdownComponents = {
     <sub
       className={cn("align-sub text-[0.72em] leading-none", className)}
       {...props}
+      data-pretext-raw-inline=""
     />
   ),
   sup: ({ className, node: _node, ...props }) => (
     <sup
       className={cn("align-super text-[0.72em] leading-none", className)}
       {...props}
+      data-pretext-raw-inline=""
     />
   ),
   hr: ({ className, node: _node, ...props }) => (
@@ -862,7 +892,6 @@ function PretextMarkdownAlert({
 }) {
   const titleId = React.useId()
   const title = ALERT_LABELS[kind].replace(/:$/, "")
-  const Icon = alertIcon(kind)
 
   return (
     <aside
@@ -884,7 +913,7 @@ function PretextMarkdownAlert({
         data-pretext-alert-title=""
         id={titleId}
       >
-        <Icon aria-hidden="true" className="size-4 shrink-0" />
+        {alertIcon(kind)}
         <span>{title}</span>
       </div>
       <div
@@ -897,8 +926,71 @@ function PretextMarkdownAlert({
   )
 }
 
+function PretextMarkdownSpan({
+  className,
+  children,
+  node: _node,
+  ...props
+}: React.HTMLAttributes<HTMLSpanElement> & { node?: unknown }) {
+  const spanProps = props as typeof props & {
+    "data-line"?: unknown
+  }
+  const codeBlockContext = React.useContext(PretextMarkdownCodeBlockContext)
+  const diffLineKind =
+    codeBlockContext?.language === "diff" && spanProps["data-line"] != null
+      ? readPretextMarkdownDiffLineKind(extractReactText(children))
+      : null
+
+  return (
+    <span
+      {...props}
+      className={cn(
+        diffLineKind === "add" &&
+          "-mx-4 block border-l-2 border-emerald-500 bg-emerald-500/10 px-4",
+        diffLineKind === "remove" &&
+          "-mx-4 block border-l-2 border-red-500 bg-red-500/10 px-4",
+        className
+      )}
+      data-pretext-code-diff-line={diffLineKind ?? undefined}
+    >
+      {children}
+    </span>
+  )
+}
+
 function isPretextMarkdownExternalLink(href: string) {
   return /^https?:/i.test(href)
+}
+
+function getPretextMarkdownLinkKind(href: string) {
+  if (isPretextMarkdownExternalLink(href)) {
+    return "external"
+  }
+  if (href.startsWith("#")) {
+    return "fragment"
+  }
+  if (/^mailto:/i.test(href)) {
+    return "email"
+  }
+  if (href.startsWith("/")) {
+    return "root"
+  }
+  return "relative"
+}
+
+function getPretextMarkdownLinkForm(href: string, text: string) {
+  if (/^mailto:/i.test(href) && href.slice("mailto:".length) === text) {
+    return "email-autolink"
+  }
+
+  if (
+    isPretextMarkdownExternalLink(href) &&
+    (href === text || href.replace(/^https?:\/\//i, "") === text)
+  ) {
+    return "autolink"
+  }
+
+  return "inline"
 }
 
 function normalizePretextMarkdownLinkTitle(title: unknown) {
@@ -1148,6 +1240,38 @@ function PretextMarkdownComponent({
         />
       )
   }
+}
+
+function PretextMarkdownComponentFallback({
+  className,
+  fallback,
+}: {
+  className: string | undefined
+  fallback: PretextComponentFallback
+}) {
+  return (
+    <aside
+      aria-label={`Unsupported Markdown component: ${fallback.componentName}`}
+      className={cn(
+        "my-5 overflow-hidden rounded-md border border-dashed bg-muted/20 text-sm",
+        className
+      )}
+      data-pretext-component-fallback=""
+      data-pretext-component-fallback-name={fallback.componentName}
+      data-pretext-component-fallback-reason={fallback.reason}
+      role="note"
+    >
+      <div className="border-b bg-muted/45 px-4 py-3">
+        <p className="font-medium text-foreground">
+          Unsupported Markdown component
+        </p>
+        <p className="mt-1 text-muted-foreground">{fallback.reason}</p>
+      </div>
+      <pre className="m-0 overflow-x-auto p-4 font-mono text-xs leading-5 whitespace-pre text-muted-foreground">
+        <code>{fallback.source}</code>
+      </pre>
+    </aside>
+  )
 }
 
 function readPretextComponentStringProp(value: unknown) {
@@ -1516,6 +1640,13 @@ function PretextMarkdownDiagram({
     () => renderBasicMermaidDiagram(source),
     [source]
   )
+  const bodyHeight = React.useMemo(
+    () => estimatePretextMarkdownDiagramBodyHeight(source),
+    [source]
+  )
+  const diagramStyle = {
+    "--pretext-diagram-body-height": `${bodyHeight}px`,
+  } as React.CSSProperties
   const [state, setState] = React.useState<
     | { status: "failed"; message: string }
     | { status: "ready"; svg: string }
@@ -1553,9 +1684,11 @@ function PretextMarkdownDiagram({
         className
       )}
       data-diagram-language="mermaid"
+      data-diagram-reserved-height={bodyHeight}
       data-diagram-state={state.status}
       data-pretext-component={componentName}
       role="group"
+      style={diagramStyle}
     >
       <div className="flex h-9 items-center border-b bg-muted/60 px-3">
         <span className="text-xs font-medium text-muted-foreground">
@@ -1569,13 +1702,15 @@ function PretextMarkdownDiagram({
       </div>
       {state.status === "ready" ? (
         <div
-          className="overflow-x-auto p-4"
+          className="h-(--pretext-diagram-body-height) overflow-auto p-4"
+          data-pretext-diagram-body=""
           dangerouslySetInnerHTML={{ __html: state.svg }}
         />
       ) : (
         <pre
           aria-label="Mermaid diagram source"
-          className="overflow-x-auto p-4 font-mono text-[0.82em] leading-relaxed text-muted-foreground"
+          className="h-(--pretext-diagram-body-height) overflow-auto p-4 font-mono text-[0.82em] leading-relaxed text-muted-foreground"
+          data-pretext-diagram-body=""
           tabIndex={0}
         >
           {state.status === "failed" ? state.message : source}
@@ -1583,6 +1718,38 @@ function PretextMarkdownDiagram({
       )}
     </figure>
   )
+}
+
+function estimatePretextMarkdownDiagramBodyHeight(source: string) {
+  const lines = source
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("%%"))
+  const header = lines[0]?.match(/^(?:graph|flowchart)\s+(TD|TB|BT|LR|RL)$/i)
+
+  if (header) {
+    const labels = new Set<string>()
+    for (const line of lines.slice(1)) {
+      const edge = line.match(/^(.+?)\s*(?:-->|---|==>|-.->)\s*(.+?)$/)
+      if (!edge) continue
+      labels.add(parseMermaidNode(edge[1]!).id)
+      labels.add(parseMermaidNode(edge[2]!).id)
+    }
+
+    const direction = header[1]!.toUpperCase()
+    if (direction === "LR" || direction === "RL") return 160
+
+    const nodeCount = Math.max(2, labels.size)
+    return clampPretextMarkdownDiagramBodyHeight(
+      nodeCount * 42 + Math.max(0, nodeCount - 1) * 56 + 48
+    )
+  }
+
+  return clampPretextMarkdownDiagramBodyHeight(lines.length * 28 + 96)
+}
+
+function clampPretextMarkdownDiagramBodyHeight(height: number) {
+  return Math.min(520, Math.max(160, Math.ceil(height)))
 }
 
 function normalizePretextMarkdownDiagramSource(source: string) {
@@ -1604,44 +1771,11 @@ function PretextMarkdownCopyButton({
   idleIcon?: React.ReactNode
   text: string | (() => string)
 }) {
-  const [status, setStatus] = React.useState<"copied" | "failed" | "idle">(
-    "idle"
-  )
-  const timeoutRef = React.useRef<number | null>(null)
-
-  React.useEffect(
-    () => () => {
-      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
-    },
-    []
-  )
+  const { copy, status } = useViewerClipboardCopy()
 
   const copyText = () => {
-    if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
     const resolvedText = typeof text === "function" ? text() : text
-
-    const resetStatus = () => {
-      timeoutRef.current = window.setTimeout(() => {
-        timeoutRef.current = null
-        setStatus("idle")
-      }, 1200)
-    }
-
-    try {
-      const result = navigator.clipboard?.writeText(resolvedText)
-      void Promise.resolve(result)
-        .then(() => {
-          setStatus("copied")
-          resetStatus()
-        })
-        .catch(() => {
-          setStatus("failed")
-          resetStatus()
-        })
-    } catch {
-      setStatus("failed")
-      resetStatus()
-    }
+    copy(resolvedText)
   }
 
   const label =
@@ -2445,17 +2579,17 @@ function alertTitleClassName(kind: AlertKind) {
   }
 }
 
-function alertIcon(kind: AlertKind): LucideIcon {
+function alertIcon(kind: AlertKind) {
   switch (kind) {
     case "caution":
-      return CircleAlert
+      return <CircleAlert aria-hidden="true" className="size-4 shrink-0" />
     case "important":
-      return BadgeAlert
+      return <BadgeAlert aria-hidden="true" className="size-4 shrink-0" />
     case "note":
-      return Info
+      return <Info aria-hidden="true" className="size-4 shrink-0" />
     case "tip":
-      return Lightbulb
+      return <Lightbulb aria-hidden="true" className="size-4 shrink-0" />
     case "warning":
-      return TriangleAlert
+      return <TriangleAlert aria-hidden="true" className="size-4 shrink-0" />
   }
 }

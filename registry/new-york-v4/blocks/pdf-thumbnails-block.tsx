@@ -12,7 +12,6 @@ import {
   ViewerBody,
   ViewerRoot,
   ViewerSidebar,
-  ViewerSidebarTrigger,
   ViewerSurface,
 } from "@/components/ui/viewer"
 
@@ -34,12 +33,11 @@ export function PdfThumbnailsBlock() {
     <div className="h-full min-h-[680px] bg-background">
       <PdfViewerProvider source={PDF_SOURCE}>
         <ViewerRoot bare defaultOpen className="h-full">
-          <PdfViewerHeader>
-            <ViewerSidebarTrigger />
-          </PdfViewerHeader>
+          <PdfViewerHeader />
           <ViewerBody>
             <ViewerSidebar
               aria-label="PDF pages"
+              collapsible="none"
               width="4.5rem"
               className="border-r"
             >

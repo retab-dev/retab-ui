@@ -4,18 +4,17 @@ description: Renders a Retab classification result — the predicted category an
 ---
 
 The classification viewer renders the output of a Retab **classification**.
-A classification is a single category over the whole document, so it reduces to
-one segment — shown as a swatch + label in the **legend** over the source
-**file**. It's the same file + legend system the split and partition viewers
-use, with a single segment rather than bespoke chrome.
+A classification is a single category over the whole document, so it renders as
+plain result chrome over an optional source document. It does not manufacture a
+fake document segment just to reuse split or partition visuals.
 
 <ClassificationViewerDemo />
 
 ## Viewer Composition
 
-Compose the classification surface from `ClassifierViewerProvider`,
-`ClassifierViewerHeader`, and a visible document surface. The provider owns the
-category and reasoning state; the document remains an explicit child, typically
+Compose the classification surface from `ClassifierViewerProvider`, the shared
+viewer layout primitives, and the named classifier parts. The provider owns the
+category and reasoning state; the document remains an explicit node, typically
 a [`PdfViewer`](/docs/viewers/pdf-viewer) rendered `bare`.
 
 ```tsx
@@ -24,7 +23,7 @@ a [`PdfViewer`](/docs/viewers/pdf-viewer) rendered `bare`.
     <ClassifierViewerHeader />
     <ViewerBody>
       <ViewerSurface>
-        <SourceDocument />
+        <ClassifierViewerDocument document={<SourceDocument />} />
       </ViewerSurface>
     </ViewerBody>
   </ViewerRoot>
@@ -33,6 +32,11 @@ a [`PdfViewer`](/docs/viewers/pdf-viewer) rendered `bare`.
 
 ## Usage
 
-Use `<ClassifierViewer result={result} />` when you only need the classification
-header and default empty document surface. Use the provider parts when a source
-document should be visible.
+`ClassifierViewer` is the easy API. It preassembles the same provider and named
+parts; pass the source document explicitly through `document`.
+
+```tsx
+export function Example() {
+  return <ClassifierViewer result={result} document={<SourceDocument />} />
+}
+```

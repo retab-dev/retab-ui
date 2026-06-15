@@ -1,8 +1,13 @@
+import type {
+  DocumentAnchor,
+  PdfAreaAnchor,
+} from "@/components/ui/document-anchor"
 import type { BBox } from "@/components/viewers/lib/edit-types"
 
 import type {
   EditViewerDocumentSource,
   EditViewerField,
+  EditViewerFieldTargetStatus,
   EditViewerInputField,
   EditViewerInputResult,
   EditViewerMode,
@@ -33,18 +38,9 @@ export type EditViewerDocumentTarget =
   | { kind: "preview"; document: EditViewerDocumentSource; showOverlay: true }
   | { kind: "filled"; document: EditViewerDocumentSource; showOverlay: false }
 
-export type EditViewerPdfAreaAnchor = {
-  kind: "pdf-area"
-  pageNumber: number
-  left: number
-  top: number
-  width: number
-  height: number
-}
-
 export type EditViewerAnchorItem = {
   id: string
-  anchor: EditViewerPdfAreaAnchor | null
+  anchor: DocumentAnchor | null
 }
 
 const DEFAULT_OPTIONS: Required<EditViewerOptions> = {
@@ -80,14 +76,62 @@ function normalizeEditViewerField(
   index: number
 ): EditViewerField {
   const key = field.key || `field_${index}`
+  const location = normalizeEditViewerFieldLocation(field)
   return {
     key,
     description: field.description || key || `Field ${index + 1}`,
     type: field.type === "checkbox" ? "checkbox" : "text",
     value: normalizeFieldValue(field.value),
-    bbox: field.bbox ? normalizeBBox(field.bbox) : undefined,
+    target: location.target,
+    targetStatus: location.targetStatus,
+    bbox: location.bbox,
     combing: field.combing,
     maxLength: normalizeMaxLength(field),
+  }
+}
+
+function normalizeEditViewerFieldLocation(field: EditViewerInputField): {
+  bbox?: BBox
+  target: DocumentAnchor | null
+  targetStatus: EditViewerFieldTargetStatus
+} {
+  if (field.target !== undefined) {
+    return {
+      target: field.target,
+      targetStatus: field.target ? { state: "resolved" } : { state: "missing" },
+    }
+  }
+
+  if (!field.bbox) {
+    return { target: null, targetStatus: { state: "missing" } }
+  }
+
+  const bbox = normalizeBBox(field.bbox)
+  if (!bbox) {
+    return {
+      target: null,
+      targetStatus: { state: "invalid", reason: "Invalid field bbox" },
+    }
+  }
+
+  return {
+    bbox,
+    target: editFieldTargetFromBBox(bbox),
+    targetStatus: { state: "resolved" },
+  }
+}
+
+export function editFieldTargetFromBBox(
+  bbox: BBox | null | undefined
+): DocumentAnchor | null {
+  if (!bbox) return null
+  return {
+    kind: "pdf-area",
+    pageNumber: bbox.page,
+    left: bbox.left * 100,
+    top: bbox.top * 100,
+    width: bbox.width * 100,
+    height: bbox.height * 100,
   }
 }
 
@@ -175,7 +219,9 @@ export function displayEditFieldValue(field: EditViewerField): string {
 }
 
 export function deriveEditViewerModes(input: EditViewerModeInput) {
-  const hasLocatedFields = input.fields.some((field) => Boolean(field.bbox))
+  const hasPreviewTargets = input.fields.some((field) =>
+    Boolean(getEditViewerPdfAreaAnchor(field))
+  )
   const hasSource = Boolean(input.sourceDocument)
   const filledOutputAvailable = Boolean(input.filledDocument)
   const modes: EditViewerMode[] = []
@@ -187,7 +233,7 @@ export function deriveEditViewerModes(input: EditViewerModeInput) {
   if (
     input.options.preview &&
     hasSource &&
-    hasLocatedFields &&
+    hasPreviewTargets &&
     input.sourceDocument &&
     canPreviewEditViewerDocument(input.sourceDocument)
   ) {
@@ -247,7 +293,7 @@ export function filterEditViewerFields({
     if (resolvedFilter === "checkbox" && field.type !== "checkbox") {
       return false
     }
-    if (resolvedFilter === "no_location" && field.bbox) return false
+    if (resolvedFilter === "no_location" && field.target) return false
     if (!normalizedQuery) return true
     return (
       field.key.toLowerCase().includes(normalizedQuery) ||
@@ -293,8 +339,8 @@ export function createEditViewerFieldProjection({
     fieldByKey: createEditViewerFieldMap(fields),
     fieldsByPage: groupLocatedEditViewerFieldsByPage(fields),
     anchorItems: createEditViewerAnchorItems(fields),
-    locatedFields: fields.filter((field) => Boolean(field.bbox)),
-    unlocatedFields: fields.filter((field) => !field.bbox),
+    locatedFields: fields.filter((field) => Boolean(field.target)),
+    unlocatedFields: fields.filter((field) => !field.target),
     visibleFields,
     fieldGroups: groupEditViewerFieldsByPage(visibleFields),
     fieldCount: fields.length,
@@ -318,16 +364,7 @@ export function createEditViewerAnchorItems(
 ): EditViewerAnchorItem[] {
   return fields.map((field) => ({
     id: field.key,
-    anchor: field.bbox
-      ? {
-          kind: "pdf-area",
-          pageNumber: field.bbox.page,
-          left: field.bbox.left * 100,
-          top: field.bbox.top * 100,
-          width: field.bbox.width * 100,
-          height: field.bbox.height * 100,
-        }
-      : null,
+    anchor: field.target,
   }))
 }
 
@@ -338,7 +375,7 @@ export function groupEditViewerFieldsByPage(
   const unlocatedFields: EditViewerField[] = []
 
   for (const field of fields) {
-    if (!field.bbox) {
+    if (!field.target) {
       unlocatedFields.push(field)
     }
   }
@@ -370,13 +407,20 @@ export function groupLocatedEditViewerFieldsByPage(
   const pageGroups = new Map<number, EditViewerField[]>()
 
   for (const field of fields) {
-    if (!field.bbox) continue
-    const pageFields = pageGroups.get(field.bbox.page) ?? []
+    const anchor = getEditViewerPdfAreaAnchor(field)
+    if (!anchor) continue
+    const pageFields = pageGroups.get(anchor.pageNumber) ?? []
     pageFields.push(field)
-    pageGroups.set(field.bbox.page, pageFields)
+    pageGroups.set(anchor.pageNumber, pageFields)
   }
 
   return pageGroups
+}
+
+export function getEditViewerPdfAreaAnchor(
+  field: EditViewerField
+): PdfAreaAnchor | null {
+  return field.target?.kind === "pdf-area" ? field.target : null
 }
 
 export function resolveEditViewerDocumentTarget({

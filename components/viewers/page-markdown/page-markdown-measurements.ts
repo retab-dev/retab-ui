@@ -134,10 +134,13 @@ export function usePageMarkdownScrollAnchor({
     const pageLayout = getPageMarkdownPageLayout(layout, anchor.pageNumber)
     if (!pageLayout) return
 
-    currentViewportElement.scrollTop = Math.max(
+    const nextScrollTop = Math.max(
       0,
       pageLayout.offsetTop + anchor.offsetWithinPage
     )
+    if (Math.abs(currentViewportElement.scrollTop - nextScrollTop) > 0.5) {
+      currentViewportElement.scrollTop = nextScrollTop
+    }
     onRestore?.()
   }, [layout, onRestore])
 

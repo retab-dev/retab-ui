@@ -715,6 +715,20 @@ describe("FileThumbnail", () => {
     )
   })
 
+  it("applies named thumbnail size and shape tokens", () => {
+    const { container } = render(
+      <FileThumbnail file={file} thumbnailShape="square" thumbnailSize="xl" />
+    )
+
+    const root = container.querySelector<HTMLElement>(
+      '[data-slot="file-thumbnail"]'
+    )
+    expect(root?.dataset.thumbnailShape).toBe("square")
+    expect(root?.dataset.thumbnailSize).toBe("xl")
+    expect(root?.className).toContain("w-20")
+    expect(root?.style.aspectRatio).toBe("1 / 1")
+  })
+
   it("renders fallback when image loading fails", () => {
     const onPreviewError = vi.fn()
     const { container } = render(

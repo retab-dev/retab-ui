@@ -81,6 +81,15 @@ const fields: EditViewerField[] = [
     type: "text",
     value: "Ada Lovelace",
     bbox: { page: 1, left: 0.1, top: 0.2, width: 0.3, height: 0.04 },
+    target: {
+      kind: "pdf-area",
+      pageNumber: 1,
+      left: 10,
+      top: 20,
+      width: 30,
+      height: 4,
+    },
+    targetStatus: { state: "resolved" },
   },
   {
     key: "send_wire",
@@ -88,12 +97,23 @@ const fields: EditViewerField[] = [
     type: "checkbox",
     value: "checked",
     bbox: { page: 1, left: 0.2, top: 0.4, width: 0.05, height: 0.04 },
+    target: {
+      kind: "pdf-area",
+      pageNumber: 1,
+      left: 20,
+      top: 40,
+      width: 5,
+      height: 4,
+    },
+    targetStatus: { state: "resolved" },
   },
   {
     key: "memo",
     description: "Internal memo",
     type: "text",
     value: "",
+    target: null,
+    targetStatus: { state: "missing" },
   },
 ]
 

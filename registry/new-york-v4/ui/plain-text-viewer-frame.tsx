@@ -52,12 +52,14 @@ export interface PlainTextViewerFramePublicProps extends TextViewerBounds {
   source: TextResourceSource
   className?: string
   toolbar?: boolean
+  download?: boolean
   bare?: boolean
 }
 
 export interface PlainTextViewerFallbackProps {
   className?: string
   toolbar?: boolean
+  download?: boolean
   bare?: boolean
 }
 
@@ -92,6 +94,7 @@ export function PlainTextViewerFrame<
       <Fallback
         className={props.className}
         toolbar={props.toolbar}
+        download={props.download}
         bare={props.bare}
       />
     )
@@ -102,7 +105,9 @@ export function PlainTextViewerFrame<
       bare={props.bare}
       className={props.className}
       download={
-        props.toolbar === false ? null : plainTextViewerDownloadAction(resource)
+        props.toolbar === false || props.download === false
+          ? null
+          : plainTextViewerDownloadAction(resource)
       }
       format="text"
       mapError={plainTextViewerBoundaryError}
@@ -121,6 +126,7 @@ export function PlainTextViewerFrame<
           <Fallback
             className={props.className}
             toolbar={props.toolbar}
+            download={props.download}
             bare={props.bare}
           />
         }

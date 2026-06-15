@@ -180,8 +180,9 @@ function FileUploaderFileTile({
       <div className="relative">
         <FileThumbnail
           file={item.file}
-          previewAspectRatio={1}
-          className="size-16 shrink-0 bg-background shadow-sm ring-1 ring-black/5"
+          thumbnailShape="square"
+          thumbnailSize="lg"
+          className="shrink-0 bg-background shadow-sm ring-1 ring-black/5"
         />
         <button
           type="button"

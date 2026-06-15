@@ -20,11 +20,16 @@ import {
   deriveEmailHeaderModel,
   deriveEmailInlineResourceScope,
   deriveEmailSidebarModel,
+  EmailHeader,
   EmailViewer,
+  EmailViewerFrame,
+  EmailViewerProvider,
   findMimeNodeByPath,
   getDefaultMimeSelectionPath,
   getInlineResourceScope,
   inlineResourceKeyToString,
+  useEmailSelection,
+  useEmailViewer,
 } from "@/registry/new-york-v4/ui/email-viewer"
 import type {
   EmailViewerMessage,
@@ -608,6 +613,64 @@ describe("EmailViewer MIME model", () => {
 })
 
 describe("EmailViewer", () => {
+  it("keeps the public viewer hook narrower than the private context", () => {
+    function HookProbe() {
+      const viewer = useEmailViewer()
+      const selection = useEmailSelection()
+
+      return (
+        <div
+          data-testid="email-hook-probe"
+          data-has-model={"model" in viewer ? "true" : "false"}
+          data-has-select-part={"selectPart" in viewer ? "true" : "false"}
+          data-selected-node-id={selection.selectedNode.part.id}
+          data-select-part-type={typeof selection.selectPart}
+        />
+      )
+    }
+
+    render(
+      <EmailViewerProvider message={message(htmlPart("html", "Hello"))}>
+        <HookProbe />
+      </EmailViewerProvider>
+    )
+
+    expect(screen.getByTestId("email-hook-probe")).toMatchObject({
+      dataset: {
+        hasModel: "false",
+        hasSelectPart: "false",
+        selectedNodeId: "html",
+        selectPartType: "function",
+      },
+    })
+  })
+
+  it("exports the preassembled frame used by the easy API", () => {
+    const { container } = render(
+      <EmailViewerProvider message={message(htmlPart("html", "Hello"))}>
+        <EmailViewerFrame />
+      </EmailViewerProvider>
+    )
+
+    expect(container.querySelector('[data-slot="email-viewer"]')).toBeTruthy()
+    expect(container.querySelector('[data-slot="viewer-root"]')).toBeTruthy()
+    expect(container.querySelector('[data-slot="viewer-sidebar"]')).toBeTruthy()
+    expect(screen.getByText("0 attachments")).toBeTruthy()
+  })
+
+  it("lets composed headers replace the default trailing sidebar trigger", () => {
+    const { container } = render(
+      <EmailViewerProvider message={message(htmlPart("html", "Hello"))}>
+        <EmailHeader trailing={<button type="button">Custom action</button>} />
+      </EmailViewerProvider>
+    )
+
+    expect(screen.getByRole("button", { name: "Custom action" })).toBeTruthy()
+    expect(
+      container.querySelector('[data-slot="viewer-sidebar-trigger"]')
+    ).toBeNull()
+  })
+
   it("treats controlled null selection as a default body selection", async () => {
     const root: MimePart = {
       id: "root",

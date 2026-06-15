@@ -8,12 +8,10 @@ import {
   scopeSegmentInteraction,
   type SegmentInteraction,
 } from "@/lib/segment-interaction"
-import {
-  segmentDisplayLabel,
-  segmentPageCount,
-  type Segment,
-} from "@/lib/segments"
+import { segmentDisplayLabel, segmentPageCount } from "@/lib/segments"
 import { cn } from "@/lib/utils"
+
+import type { DocumentSegment } from "./segmented-document-model"
 
 /** How the legend attaches to the document surface. */
 export type SegmentLegendVariant = "bar" | "floating" | "plain"
@@ -22,7 +20,7 @@ export type SegmentLegendSide = "top" | "bottom" | "left" | "right"
 export type SegmentLegendDensity = "comfortable" | "compact"
 
 export interface SegmentLegendProps {
-  segments: Segment[]
+  segments: DocumentSegment[]
   /**
    * How the legend attaches to the document surface:
    * - `bar` — flush, full-width, bordered on its docking side (default).
@@ -40,7 +38,7 @@ export interface SegmentLegendProps {
   /** Shared preview state. */
   interaction?: SegmentInteraction
   /** Fired when a segment surface is clicked, after transient preview is cleared. */
-  onSelect?: (segment: Segment) => void
+  onSelect?: (segment: DocumentSegment) => void
   /** 1-based current page; owning segments receive current-page styling. */
   currentPage?: number | null
   /** Lay entries out on a grid of N columns instead of wrapping inline (horizontal only). */

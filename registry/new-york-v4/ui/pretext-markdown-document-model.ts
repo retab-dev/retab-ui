@@ -103,7 +103,7 @@ export interface PretextMarkdownFrontmatter {
 export interface PretextMarkdownFrontmatterEntry {
   key: string
   value: string
-  valueKind: "boolean" | "number" | "string"
+  valueKind: "boolean" | "list" | "number" | "string"
 }
 
 export interface PretextMarkdownBlock {
@@ -735,20 +735,39 @@ function parsePretextMarkdownFrontmatterEntries({
   markdown: string
 }): PretextMarkdownFrontmatterEntry[] {
   const entries: PretextMarkdownFrontmatterEntry[] = []
-  let isTopLevelToml = true
+  let tomlSection: string | null = null
+  const lines = markdown.split(/\r?\n/)
 
-  for (const line of markdown.split(/\r?\n/)) {
-    if (language === "toml" && /^\s*\[/.test(line)) {
-      isTopLevelToml = false
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]!
+    if (language === "toml") {
+      const section = /^\s*\[([A-Za-z_][\w.-]*)\]\s*$/.exec(line)
+      if (section) {
+        tomlSection = section[1]!
+        continue
+      }
+    }
+
+    if (language === "yaml") {
+      const entry = parsePretextMarkdownYamlFrontmatterEntry(line)
+      if (entry) {
+        entries.push(entry)
+        continue
+      }
+
+      const listEntry = parsePretextMarkdownYamlFrontmatterListEntry(
+        line,
+        lines,
+        index
+      )
+      if (listEntry) {
+        entries.push(listEntry.entry)
+        index = listEntry.endIndex
+      }
       continue
     }
 
-    if (language === "toml" && !isTopLevelToml) continue
-
-    const entry =
-      language === "toml"
-        ? parsePretextMarkdownTomlFrontmatterEntry(line)
-        : parsePretextMarkdownYamlFrontmatterEntry(line)
+    const entry = parsePretextMarkdownTomlFrontmatterEntry(line, tomlSection)
     if (entry) entries.push(entry)
   }
 
@@ -772,8 +791,41 @@ function parsePretextMarkdownYamlFrontmatterEntry(
   }
 }
 
+function parsePretextMarkdownYamlFrontmatterListEntry(
+  line: string,
+  lines: readonly string[],
+  startIndex: number
+): { endIndex: number; entry: PretextMarkdownFrontmatterEntry } | null {
+  const match = /^([A-Za-z_][\w.-]*)\s*:\s*$/.exec(line.trim())
+  if (!match) return null
+
+  const values: string[] = []
+  let endIndex = startIndex
+  for (let index = startIndex + 1; index < lines.length; index += 1) {
+    const itemMatch = /^\s+-\s*(.*?)\s*$/.exec(lines[index]!)
+    if (!itemMatch) break
+
+    const value = parsePretextMarkdownFrontmatterScalar(itemMatch[1]!)
+    if (!value || value.valueKind === "list") return null
+    values.push(value.value)
+    endIndex = index
+  }
+
+  if (!values.length) return null
+
+  return {
+    endIndex,
+    entry: {
+      key: match[1]!,
+      value: values.join(", "),
+      valueKind: "list",
+    },
+  }
+}
+
 function parsePretextMarkdownTomlFrontmatterEntry(
-  line: string
+  line: string,
+  section: string | null
 ): PretextMarkdownFrontmatterEntry | null {
   const trimmed = line.trim()
   if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith("[")) {
@@ -786,7 +838,7 @@ function parsePretextMarkdownTomlFrontmatterEntry(
   if (!value) return null
 
   return {
-    key: match[1]!,
+    key: section ? `${section}.${match[1]!}` : match[1]!,
     ...value,
   }
 }
@@ -795,8 +847,43 @@ function parsePretextMarkdownFrontmatterScalar(
   rawValue: string
 ): Pick<PretextMarkdownFrontmatterEntry, "value" | "valueKind"> | null {
   const value = rawValue.trim()
-  if (!value || /^[{[>|]/.test(value)) return null
+  if (!value) return null
 
+  const list = parsePretextMarkdownFrontmatterInlineList(value)
+  if (list) {
+    return {
+      value: list.join(", "),
+      valueKind: "list",
+    }
+  }
+
+  if (/^[{[>|]/.test(value)) return null
+
+  return parsePretextMarkdownFrontmatterScalarAtom(value)
+}
+
+function parsePretextMarkdownFrontmatterInlineList(
+  value: string
+): string[] | null {
+  if (!value.startsWith("[") || !value.endsWith("]")) return null
+
+  const inner = value.slice(1, -1).trim()
+  if (!inner) return null
+
+  const values: string[] = []
+  for (const item of inner.split(",")) {
+    const scalar = parsePretextMarkdownFrontmatterScalarAtom(item.trim())
+    if (!scalar || scalar.valueKind === "list") return null
+    values.push(scalar.value)
+  }
+  return values
+}
+
+function parsePretextMarkdownFrontmatterScalarAtom(
+  rawValue: string
+): Pick<PretextMarkdownFrontmatterEntry, "value" | "valueKind"> | null {
+  const value = rawValue.trim()
+  if (!value || /^[{[>|]/.test(value)) return null
   const quoted = /^"([^"]*)"$/.exec(value) ?? /^'([^']*)'$/.exec(value)
   if (quoted) {
     return {

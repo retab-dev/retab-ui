@@ -24,10 +24,11 @@ import { SpreadsheetImportCard } from "@/registry/new-york-v4/blocks/dropzone-sp
 import { ValidationOnly } from "@/registry/new-york-v4/blocks/dropzone-validation-only"
 import { EditViewerBlock } from "@/registry/new-york-v4/blocks/edit-viewer-block"
 import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block"
-import { ExtractionViewerBlock } from "@/registry/new-york-v4/blocks/extraction-viewer-block"
+import { SourcesViewerBlock } from "@/registry/new-york-v4/blocks/sources-viewer-block"
 import { FileSystemBlock } from "@/registry/new-york-v4/blocks/file-system-block"
 import { FsLightBlock } from "@/registry/new-york-v4/blocks/fslight-block"
 import { ImageSourcesBlock } from "@/registry/new-york-v4/blocks/image-sources-block"
+import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-sources-block"
 import { OcrBlock } from "@/registry/new-york-v4/blocks/ocr-block"
 import { ParseViewerBlock } from "@/registry/new-york-v4/blocks/parse-viewer-block"
 import { PartitionViewerBlock } from "@/registry/new-york-v4/blocks/partition-viewer-block"
@@ -43,13 +44,14 @@ const blockComponents = {
   partition: PartitionViewerBlock,
   parse: ParseViewerBlock,
   edit: EditViewerBlock,
-  "extraction-viewer": ExtractionViewerBlock,
+  "sources-viewer": SourcesViewerBlock,
   extract: ExtractViewerBlock,
   "image-sources": ImageSourcesBlock,
   "text-sources": TextSourcesBlock,
   "csv-sources": CsvSourcesBlock,
   "xlsx-sources": XlsxSourcesBlock,
   "docx-sources": DocxSourcesBlock,
+  "json-form-sources": JsonFormSourcesBlock,
   dropzone: DropzoneBlock,
   "dropzone-file-uploader": DefaultFileUploaderExample,
   "dropzone-file-viewer": DropzoneFileViewerExample,

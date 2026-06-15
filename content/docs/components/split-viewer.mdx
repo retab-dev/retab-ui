@@ -9,13 +9,11 @@ Renders a Retab split result: named subdocuments, each owning a set of pages.
 
 ## Viewer Composition
 
-Compose split results from the split provider and named split parts. The
-document child is the only required extension point: it renders the source
+Compose split results from the split provider, the shared viewer layout
+primitives, and the named split parts that encode split behavior. The
+`document` prop is the only required extension point: it renders the source
 document and connects document page events back to split navigation with
 `useSplitViewerDocumentControls`.
-`SplitViewerRoot` is the split-flavored wrapper around the shared `<ViewerRoot>`
-primitive. The underlying layout primitive remains `<ViewerRoot`, while the
-split provider owns segment state.
 
 ```tsx
 function SplitDocument() {
@@ -35,20 +33,18 @@ function SplitDocument() {
 export function Example() {
   return (
     <SplitViewerProvider result={result}>
-      <SplitViewerRoot>
+      <ViewerRoot bare defaultOpen>
         <SplitViewerHeader />
-        <SplitViewerBody>
+        <ViewerBody>
           <SplitViewerSidebar>
             <SplitViewerPageRail />
           </SplitViewerSidebar>
-          <SplitViewerSurface>
+          <ViewerSurface>
             <SplitViewerLegend />
-            <SplitViewerDocument>
-              <SplitDocument />
-            </SplitViewerDocument>
-          </SplitViewerSurface>
-        </SplitViewerBody>
-      </SplitViewerRoot>
+            <SplitViewerDocument document={<SplitDocument />} />
+          </ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
     </SplitViewerProvider>
   )
 }
@@ -56,24 +52,20 @@ export function Example() {
 
 `SplitViewerHeader` owns the full-width viewer title row.
 `SplitViewerSidebar` is body-scoped, so the page rail starts below the
-header. `SplitViewerLegend` lives inside `SplitViewerSurface` above the
-document, which lets the rail dominate the legend and document body without
-taking over the header.
-`SplitViewerDocument` only frames the selected document child; it does not
+header. `SplitViewerLegend` lives inside `ViewerSurface` above the document,
+which lets the rail dominate the legend and document body without taking over
+the header.
+`SplitViewerDocument` only frames the selected document node; it does not
 receive hidden layout slots.
 
 ## Usage
 
 `SplitViewer` is the easy API for a split result. It preassembles the same
-provider and named parts; the source document remains an explicit child, and
+provider and named parts; the source document remains an explicit prop, and
 document coordination comes from `useSplitViewerDocumentControls`.
 
 ```tsx
 export function EasyExample() {
-  return (
-    <SplitViewer result={result}>
-      <SplitDocument />
-    </SplitViewer>
-  )
+  return <SplitViewer result={result} document={<SplitDocument />} />
 }
 ```

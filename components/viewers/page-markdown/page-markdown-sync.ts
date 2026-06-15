@@ -7,13 +7,11 @@ export type PageMarkdownSyncPane = "markdown" | "document"
 export interface PageMarkdownSyncState {
   pageNumber: number
   pane: PageMarkdownSyncPane
-  version: number
 }
 
 export interface PendingPageMarkdownScroll {
   pageNumber: number
   pane: PageMarkdownSyncPane
-  version: number
 }
 
 export interface PageMarkdownSyncTransition {
@@ -24,7 +22,7 @@ export interface PageMarkdownSyncTransition {
 }
 
 export function initialPageMarkdownSyncState(): PageMarkdownSyncState {
-  return { pageNumber: 1, pane: "markdown", version: 0 }
+  return { pageNumber: 1, pane: "markdown" }
 }
 
 export function resolvePageMarkdownSyncReport({
@@ -51,7 +49,6 @@ export function resolvePageMarkdownSyncReport({
       state: {
         pageNumber: nextPageNumber,
         pane,
-        version: state.version + 1,
       },
     }
   }
@@ -82,7 +79,6 @@ export function resolvePageMarkdownSyncReport({
       state: {
         pageNumber: nextPageNumber,
         pane,
-        version: state.version + 1,
       },
     }
   }
@@ -92,12 +88,10 @@ export function resolvePageMarkdownSyncReport({
   const nextState = {
     pageNumber: nextPageNumber,
     pane,
-    version: state.version + 1,
   }
   const nextPending = {
     pageNumber: nextPageNumber,
     pane: targetPane,
-    version: nextState.version,
   }
 
   return {
@@ -138,7 +132,6 @@ export function usePageMarkdownSync({
         : {
             ...currentState,
             pageNumber: nextPageNumber,
-            version: currentState.version + 1,
           }
     const currentPending = pendingRef.current
 

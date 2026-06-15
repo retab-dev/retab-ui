@@ -43,7 +43,7 @@ export function CodeViewerToolbar({
 }: {
   lineCount: number
   fontScale: number
-  downloadAction: ViewerDownloadAction
+  downloadAction?: ViewerDownloadAction | null
   onZoomOut: () => void
   onZoomIn: () => void
   onResetZoom: () => void
@@ -58,7 +58,7 @@ export function CodeViewerToolbar({
         onFit: onResetZoom,
         fitLabel: "Reset zoom",
       }}
-      downloads={[downloadAction]}
+      downloads={downloadAction ? [downloadAction] : undefined}
     />
   )
 }
@@ -66,15 +66,17 @@ export function CodeViewerToolbar({
 export function CodeViewerFallback({
   className,
   toolbar = true,
+  download = true,
   bare,
 }: {
   className?: string
   toolbar?: boolean
+  download?: boolean
   bare?: boolean
 }) {
   return (
     <CodeViewerFrame className={className} bare={bare}>
-      {toolbar ? <ViewerToolbarSkeleton title zoom /> : null}
+      {toolbar ? <ViewerToolbarSkeleton title zoom download={download} /> : null}
       <div
         className="min-h-0 flex-1 space-y-2 overflow-hidden p-4"
         data-slot="code-body-skeleton"

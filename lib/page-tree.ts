@@ -3,6 +3,16 @@ import type { source } from "@/lib/source"
 export type PageTreeNode = (typeof source.pageTree)["children"][number]
 export type PageTreeFolder = Extract<PageTreeNode, { type: "folder" }>
 export type PageTreePage = Extract<PageTreeNode, { type: "page" }>
+export type PageTreeFolderChild = PageTreeFolder["children"][number]
+export type PageTreeSeparator = Extract<
+  PageTreeFolderChild,
+  { type: "separator" }
+>
+export type PageTreeSidebarGroup = {
+  id: string
+  name: PageTreeFolder["name"]
+  pages: PageTreePage[]
+}
 
 // Recursively find all pages in a folder tree.
 export function getAllPagesFromFolder(folder: PageTreeFolder): PageTreePage[] {
@@ -61,6 +71,53 @@ export function getPagesFromFolder(
   return directPages.filter(
     (page) => !directPages.some((other) => other.url.startsWith(`${page.url}/`))
   )
+}
+
+export function getSidebarGroupsFromFolder(
+  folder: PageTreeFolder,
+  currentBase: string
+): PageTreeSidebarGroup[] {
+  if (folder.$id !== "components" && folder.name !== "Components") {
+    return [
+      {
+        id: folder.$id ?? String(folder.name),
+        name: folder.name,
+        pages: getPagesFromFolder(folder, currentBase),
+      },
+    ]
+  }
+
+  const groups: PageTreeSidebarGroup[] = [
+    {
+      id: folder.$id ?? String(folder.name),
+      name: folder.name,
+      pages: [],
+    },
+  ]
+
+  for (const child of folder.children) {
+    if (child.type === "separator") {
+      groups.push({
+        id: child.$id ?? `${folder.$id ?? "components"}-${groups.length}`,
+        name: child.name ?? folder.name,
+        pages: [],
+      })
+      continue
+    }
+
+    if (child.type === "page" && !child.url.endsWith("/components")) {
+      groups[groups.length - 1]?.pages.push(child)
+      continue
+    }
+
+    if (child.type === "folder") {
+      groups[groups.length - 1]?.pages.push(
+        ...getPagesFromFolder(child, currentBase)
+      )
+    }
+  }
+
+  return groups.filter((group) => group.pages.length > 0)
 }
 
 export function getNestedPagesFromFolder(

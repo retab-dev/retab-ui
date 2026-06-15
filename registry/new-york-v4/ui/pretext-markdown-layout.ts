@@ -22,6 +22,7 @@ const BODY_LINE_HEIGHT = 24
 const CODE_LINE_HEIGHT = 21
 const BLOCK_GAP = 8
 const MIN_CHUNK_HEIGHT = 120
+const COMPONENT_FALLBACK_MIN_HEIGHT = 112
 const BODY_FONT_FAMILY =
   'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
 const CODE_FONT_FAMILY =
@@ -203,6 +204,25 @@ export function estimatePretextMarkdownBlockHeight({
     })
   }
 
+  if (isPretextMarkdownComponentLikeBlock(block)) {
+    return estimatePretextMarkdownComponentFallbackBlockHeight({
+      block,
+      fontScale,
+      textWidth,
+    })
+  }
+
+  if (isPretextMarkdownMermaidCodeBlock(block)) {
+    return (
+      (36 +
+        estimatePretextMarkdownDiagramBodyHeight(
+          extractPretextMarkdownFenceBody(block.markdown)
+        ) +
+        40) *
+      fontScale
+    )
+  }
+
   const fontSize = pretextMarkdownBlockFontSize(block)
   const lineHeight = pretextMarkdownBlockLineHeight(block)
   const fontFamily = pretextMarkdownBlockFontFamily(block)
@@ -274,6 +294,92 @@ function estimateHostilePretextMarkdownBlockHeight({
   )
 }
 
+function isPretextMarkdownMermaidCodeBlock(block: PretextMarkdownBlock) {
+  if (block.kind !== "code") return false
+  const openingFence = splitTextLines(block.markdown)[0] ?? ""
+  const language = openingFence
+    .replace(/^`{3,}|^~{3,}/, "")
+    .trim()
+    .split(/\s+/)[0]
+    ?.toLowerCase()
+  return (
+    language === "mermaid" || language === "mmd" || language === "mermaid-js"
+  )
+}
+
+function extractPretextMarkdownFenceBody(markdown: string) {
+  const lines = splitTextLines(markdown)
+  if (lines.length <= 2) return ""
+  return lines.slice(1, -1).join("\n")
+}
+
+function estimatePretextMarkdownDiagramBodyHeight(source: string) {
+  const lines = source
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("%%"))
+  const header = lines[0]?.match(/^(?:graph|flowchart)\s+(TD|TB|BT|LR|RL)$/i)
+
+  if (header) {
+    const nodeIds = new Set<string>()
+    for (const line of lines.slice(1)) {
+      const edge = line.match(/^(.+?)\s*(?:-->|---|==>|-.->)\s*(.+?)$/)
+      if (!edge) continue
+      nodeIds.add(parsePretextMarkdownMermaidNodeId(edge[1]!))
+      nodeIds.add(parsePretextMarkdownMermaidNodeId(edge[2]!))
+    }
+
+    const direction = header[1]!.toUpperCase()
+    if (direction === "LR" || direction === "RL") return 160
+
+    const nodeCount = Math.max(2, nodeIds.size)
+    return clampPretextMarkdownDiagramBodyHeight(
+      nodeCount * 42 + Math.max(0, nodeCount - 1) * 56 + 48
+    )
+  }
+
+  return clampPretextMarkdownDiagramBodyHeight(lines.length * 28 + 96)
+}
+
+function parsePretextMarkdownMermaidNodeId(value: string) {
+  const trimmed = value.trim()
+  const match =
+    trimmed.match(/^([A-Za-z0-9_-]+)\s*\[".+"]$/) ??
+    trimmed.match(/^([A-Za-z0-9_-]+)\s*\[.+]$/) ??
+    trimmed.match(/^([A-Za-z0-9_-]+)\s*\(.+\)$/)
+  if (match) return match[1]!
+
+  return trimmed.replace(/[^A-Za-z0-9_-].*$/, "") || trimmed
+}
+
+function clampPretextMarkdownDiagramBodyHeight(height: number) {
+  return Math.min(520, Math.max(160, Math.ceil(height)))
+}
+
+function estimatePretextMarkdownComponentFallbackBlockHeight({
+  block,
+  fontScale,
+  textWidth,
+}: {
+  block: PretextMarkdownBlock
+  fontScale: number
+  textWidth: number
+}) {
+  const font = `${Math.round(13 * fontScale)}px ${CODE_FONT_FAMILY}`
+  const prepared = prepareWithSegmentsSafe(block.markdown || " ", font, {
+    whiteSpace: "pre-wrap",
+  })
+  const stats = prepared
+    ? measureLineStatsSafe(prepared, textWidth / fontScale, block.markdown)
+    : estimatePretextMarkdownLineStats(block.markdown, textWidth / fontScale)
+  const sourceLineCount = Math.max(1, stats.lineCount)
+
+  return Math.max(
+    COMPONENT_FALLBACK_MIN_HEIGHT * fontScale,
+    64 * fontScale + sourceLineCount * CODE_LINE_HEIGHT * fontScale
+  )
+}
+
 function estimateMarkdownSyntaxAllowance(chunk: PretextMarkdownChunk) {
   if (chunk.kind === "frontmatter") return 0
   let allowance = 0
@@ -308,6 +414,13 @@ function isPretextMarkdownCodeLikeBlock(block: PretextMarkdownBlock) {
     block.kind === "code" ||
     block.kind === "frontmatter" ||
     block.kind === "html"
+  )
+}
+
+function isPretextMarkdownComponentLikeBlock(block: PretextMarkdownBlock) {
+  return (
+    block.kind === "html" &&
+    /^<\/?[A-Z][A-Za-z0-9.]*(?:\s|\/?>)/.test(block.markdown.trim())
   )
 }
 

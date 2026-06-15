@@ -24,19 +24,9 @@ type ViewerBlockConfig = {
   featured?: boolean
   /** Category tabs this block appears under. */
   categories: ViewerBlockCategoryId[]
+  /** Hide examples that are already composed inside another component block. */
+  isStandaloneTab?: boolean
 }
-
-/** The filter tabs shown above the blocks (shadcn-style). */
-export const VIEWER_BLOCK_CATEGORIES = [
-  { id: "featured", label: "Featured" },
-  { id: "primitives", label: "Primitives" },
-  { id: "dropzone", label: "Dropzone" },
-  { id: "file-system", label: "File System" },
-  { id: "run-cards", label: "Run Cards" },
-] as const
-
-export type ViewerBlockCategoryTabId =
-  (typeof VIEWER_BLOCK_CATEGORIES)[number]["id"]
 
 function getRegistryAddCommand(name: string) {
   return `pnpm dlx shadcn@latest add @retab/${name}`
@@ -103,14 +93,14 @@ export const VIEWER_BLOCKS = [
     categories: ["primitives"],
   },
   {
-    id: "extraction-viewer",
-    registryName: "extraction-viewer-block",
-    title: "Extraction Viewer",
+    id: "sources-viewer",
+    registryName: "sources-viewer-block",
+    title: "Sources Viewer",
     description:
-      "Every extraction format in one viewer — PDF, image, text, CSV, Excel, and Word — each shown as a JSON form beside its source document, linked by anchored items. Tabs switch the file format; hovering a form field highlights where its value came from. One AnchoredDocumentProvider drives every viewer; only the target adapter differs per tab.",
-    command: getRegistryAddCommand("extraction-viewer-block"),
-    docsHref: "/docs/components/extract-viewer",
-    viewHref: "/view/blocks/extraction-viewer",
+      "Every source-backed format in one viewer — PDF, image, text, CSV, Excel, and Word — each shown as a JSON form beside its source document, linked by anchored items. Tabs switch the file format; hovering a form field highlights where its value came from. One AnchoredDocumentProvider drives every viewer; only the target adapter differs per tab.",
+    command: getRegistryAddCommand("sources-viewer-block"),
+    docsHref: "/blocks/sources-viewer",
+    viewHref: "/view/blocks/sources-viewer",
     featured: true,
     previewHeightClassName: "h-[724px]",
     categories: ["primitives"],
@@ -122,9 +112,10 @@ export const VIEWER_BLOCKS = [
     description:
       "Extracted fields beside the source PDF, linked by their sources — hover or select a field to highlight where its value came from and scroll the page to it. Built on the document-source model and the PDF viewer's scrollToPageArea handle.",
     command: getRegistryAddCommand("extract-viewer-block"),
-    docsHref: "/docs/components/extract-viewer",
+    docsHref: "/blocks/sources-viewer",
     viewHref: "/view/blocks/extract",
     categories: [],
+    isStandaloneTab: false,
   },
   {
     id: "image-sources",
@@ -133,9 +124,10 @@ export const VIEWER_BLOCKS = [
     description:
       "Extracted fields linked to a scanned page image — hover a field to highlight its image_bbox region. The source-link abstraction over the image viewer.",
     command: getRegistryAddCommand("image-sources-block"),
-    docsHref: "/docs/components/extract-viewer",
+    docsHref: "/blocks/sources-viewer",
     viewHref: "/view/blocks/image-sources",
     categories: [],
+    isStandaloneTab: false,
   },
   {
     id: "text-sources",
@@ -144,9 +136,10 @@ export const VIEWER_BLOCKS = [
     description:
       "Values extracted from a log file linked to the lines they came from — hover a field to highlight its line range. The source-link abstraction over a line-based text viewer.",
     command: getRegistryAddCommand("text-sources-block"),
-    docsHref: "/docs/components/extract-viewer",
+    docsHref: "/blocks/sources-viewer",
     viewHref: "/view/blocks/text-sources",
     categories: [],
+    isStandaloneTab: false,
   },
   {
     id: "csv-sources",
@@ -155,9 +148,10 @@ export const VIEWER_BLOCKS = [
     description:
       "Extracted values linked to spreadsheet cells — hover a field to highlight its cell and scroll to it. The source-link abstraction over the CSV viewer's cell handle.",
     command: getRegistryAddCommand("csv-sources-block"),
-    docsHref: "/docs/components/extract-viewer",
+    docsHref: "/blocks/sources-viewer",
     viewHref: "/view/blocks/csv-sources",
     categories: [],
+    isStandaloneTab: false,
   },
   {
     id: "xlsx-sources",
@@ -166,9 +160,10 @@ export const VIEWER_BLOCKS = [
     description:
       "Extracted values linked to spreadsheet cells across sheets — hover a field to switch to its sheet, highlight the cell, and scroll to it. The source-link abstraction over the xlsx viewer.",
     command: getRegistryAddCommand("xlsx-sources-block"),
-    docsHref: "/docs/components/extract-viewer",
+    docsHref: "/blocks/sources-viewer",
     viewHref: "/view/blocks/xlsx-sources",
     categories: [],
+    isStandaloneTab: false,
   },
   {
     id: "docx-sources",
@@ -177,9 +172,23 @@ export const VIEWER_BLOCKS = [
     description:
       "Extracted values linked back into a Word document — hover a field to highlight its text and scroll to it. The source-link abstraction over the docx viewer, locating text spans by content match and table cells by index.",
     command: getRegistryAddCommand("docx-sources-block"),
-    docsHref: "/docs/components/extract-viewer",
+    docsHref: "/blocks/sources-viewer",
     viewHref: "/view/blocks/docx-sources",
     categories: [],
+    isStandaloneTab: false,
+  },
+  {
+    id: "json-form-sources",
+    registryName: "json-form-sources-block",
+    title: "JSON Form Sources",
+    description:
+      "Extraction rendered as a JSON form beside the source PDF — hover a form field to highlight where its value came from through segmented-document state.",
+    command: getRegistryAddCommand("json-form-sources-block"),
+    docsHref: "/blocks/sources-viewer",
+    viewHref: "/view/blocks/json-form-sources",
+    previewHeightClassName: "h-[680px]",
+    categories: ["primitives"],
+    isStandaloneTab: false,
   },
   {
     id: "dropzone",
@@ -193,6 +202,7 @@ export const VIEWER_BLOCKS = [
     previewHeightClassName: "h-[760px]",
     featured: true,
     categories: [],
+    isStandaloneTab: false,
   },
   {
     id: "dropzone-file-uploader",
@@ -205,6 +215,7 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/dropzone-file-uploader",
     previewHeightClassName: "h-[440px]",
     categories: ["dropzone"],
+    isStandaloneTab: false,
   },
   {
     id: "dropzone-file-viewer",
@@ -217,6 +228,7 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/dropzone-file-viewer",
     previewHeightClassName: "h-[560px]",
     categories: ["dropzone"],
+    isStandaloneTab: false,
   },
   {
     id: "dropzone-non-button-trigger",
@@ -229,6 +241,7 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/dropzone-non-button-trigger",
     previewHeightClassName: "h-[260px]",
     categories: ["dropzone"],
+    isStandaloneTab: false,
   },
   {
     id: "dropzone-native-button-queue",
@@ -241,6 +254,7 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/dropzone-native-button-queue",
     previewHeightClassName: "h-[260px]",
     categories: ["dropzone"],
+    isStandaloneTab: false,
   },
   {
     id: "dropzone-controlled-queue",
@@ -253,6 +267,7 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/dropzone-controlled-queue",
     previewHeightClassName: "h-[260px]",
     categories: ["dropzone"],
+    isStandaloneTab: false,
   },
   {
     id: "dropzone-validation-only",
@@ -265,6 +280,7 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/dropzone-validation-only",
     previewHeightClassName: "h-[260px]",
     categories: ["dropzone"],
+    isStandaloneTab: false,
   },
   {
     id: "dropzone-custom-thumbnail-grid",
@@ -277,6 +293,7 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/dropzone-custom-thumbnail-grid",
     previewHeightClassName: "h-[360px]",
     categories: ["dropzone"],
+    isStandaloneTab: false,
   },
   {
     id: "dropzone-media-transcript-queue",
@@ -289,6 +306,7 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/dropzone-media-transcript-queue",
     previewHeightClassName: "h-[360px]",
     categories: ["dropzone"],
+    isStandaloneTab: false,
   },
   {
     id: "dropzone-avatar-image-slot",
@@ -301,6 +319,7 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/dropzone-avatar-image-slot",
     previewHeightClassName: "h-[360px]",
     categories: ["dropzone"],
+    isStandaloneTab: false,
   },
   {
     id: "dropzone-spreadsheet-import",
@@ -312,6 +331,7 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/dropzone-spreadsheet-import",
     previewHeightClassName: "h-[360px]",
     categories: ["dropzone"],
+    isStandaloneTab: false,
   },
   {
     id: "dropzone-evidence-timeline",
@@ -324,6 +344,7 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/dropzone-evidence-timeline",
     previewHeightClassName: "h-[380px]",
     categories: ["dropzone"],
+    isStandaloneTab: false,
   },
   {
     id: "dropzone-comparison-pair",
@@ -336,6 +357,7 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/dropzone-comparison-pair",
     previewHeightClassName: "h-[340px]",
     categories: ["dropzone"],
+    isStandaloneTab: false,
   },
   {
     id: "dropzone-intake-router",
@@ -348,6 +370,7 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/dropzone-intake-router",
     previewHeightClassName: "h-[420px]",
     categories: ["dropzone"],
+    isStandaloneTab: false,
   },
   {
     id: "dropzone-required-packet",
@@ -359,6 +382,7 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/dropzone-required-packet",
     previewHeightClassName: "h-[360px]",
     categories: ["dropzone"],
+    isStandaloneTab: false,
   },
   {
     id: "dropzone-pinboard",
@@ -370,6 +394,7 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/dropzone-pinboard",
     previewHeightClassName: "h-[420px]",
     categories: ["dropzone"],
+    isStandaloneTab: false,
   },
   {
     id: "dropzone-disabled",
@@ -381,6 +406,7 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/dropzone-disabled",
     previewHeightClassName: "h-[260px]",
     categories: ["dropzone"],
+    isStandaloneTab: false,
   },
   {
     id: "file-system",
@@ -437,8 +463,35 @@ export const VIEWER_BLOCKS = [
 export type ViewerBlockId = (typeof VIEWER_BLOCKS)[number]["id"]
 export type ViewerBlockMetadata = ViewerBlockConfig & { id: ViewerBlockId }
 
+function isStandaloneViewerBlockTab(block: ViewerBlockConfig) {
+  return block.isStandaloneTab !== false
+}
+
+export const VIEWER_BLOCK_TABS = VIEWER_BLOCKS.filter(
+  (block): block is (typeof VIEWER_BLOCKS)[number] =>
+    isStandaloneViewerBlockTab(block)
+)
+
+export const DEFAULT_VIEWER_BLOCK_TAB_ID = VIEWER_BLOCK_TABS[0]!.id
+
 export function getViewerBlock(
   blockId: string
 ): ViewerBlockMetadata | undefined {
   return VIEWER_BLOCKS.find((block) => block.id === blockId)
+}
+
+export function getViewerBlockTab(
+  blockId: string
+): ViewerBlockMetadata | undefined {
+  return VIEWER_BLOCK_TABS.find((block) => block.id === blockId)
+}
+
+export function getViewerBlockHrefForRegistryName(registryName: string) {
+  const block = VIEWER_BLOCKS.find((item) => item.registryName === registryName)
+  if (!block) return "/blocks"
+  const metadata: ViewerBlockConfig = block
+  if (metadata.isStandaloneTab === false) {
+    return metadata.docsHref
+  }
+  return `/blocks/${block.id}`
 }

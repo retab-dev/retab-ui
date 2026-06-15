@@ -11,9 +11,9 @@ import {
 } from "@/components/ui/pdf-viewer"
 import {
   SegmentedDocumentProvider,
-  useSegmentedDocumentModel,
   useSegmentedDocumentViewport,
 } from "@/components/ui/segmented-document-provider"
+import { useSegmentedItemLink } from "@/components/ui/segmented-item-link"
 import {
   ViewerBody,
   ViewerHeader,
@@ -99,77 +99,16 @@ function DocumentAiLayoutBlocksContent({
   pdfSource: ReturnType<typeof useDocumentAiPdfSource>
   setLowConfidenceOnly: React.Dispatch<React.SetStateAction<boolean>>
 }) {
-  const segmentedDocumentModel = useSegmentedDocumentModel()
   const segmentedViewport = useSegmentedDocumentViewport()
-  const [selectedItemId, setSelectedItemId] = React.useState<string | null>(
-    null
-  )
-  const segmentByItemId = React.useMemo(
-    () =>
-      new Map(
-        segmentedDocumentModel.segments.map((segment) => [
-          segment.sourceId ?? segment.id,
-          segment,
-        ])
-      ),
-    [segmentedDocumentModel.segments]
-  )
-  const anchorBySegmentId = React.useMemo(
-    () =>
-      new Map(
-        (segmentedDocumentModel.anchors ?? []).map((anchor) => [
-          anchor.segmentId,
-          anchor,
-        ])
-      ),
-    [segmentedDocumentModel.anchors]
-  )
-  const previewItemId =
-    segmentedDocumentModel.segments.find(
-      (segment) =>
-        segment.id === segmentedViewport.model.previewSegmentId &&
-        segment.sourceId
-    )?.sourceId ?? null
-  const activeItemId = previewItemId ?? selectedItemId
-  const clearPreview = segmentedViewport.interaction.clearPreview
-  const previewItem = React.useCallback(
-    (itemId: string | null) => {
-      if (!itemId) {
-        segmentedViewport.interaction.clearPreview()
-        return
-      }
-
-      const segment = segmentByItemId.get(itemId)
-      if (!segment) return
-
-      segmentedViewport.interaction.previewSegment(segment.id)
-    },
-    [segmentByItemId, segmentedViewport.interaction]
-  )
-  const navigateItem = React.useCallback(
-    (
-      itemId: string,
-      options?: { behavior?: ScrollBehavior; clearPreview?: boolean }
-    ) => {
-      const segment = segmentByItemId.get(itemId)
-      if (!segment) return
-
-      const anchor = anchorBySegmentId.get(segment.id)
-      if (anchor) {
-        segmentedViewport.navigation.scrollToAnchor(anchor, options)
-        return
-      }
-
-      segmentedViewport.navigation.scrollToSegmentStart(segment, options)
-    },
-    [anchorBySegmentId, segmentByItemId, segmentedViewport.navigation]
-  )
-
-  React.useEffect(() => {
-    if (selectedItemId && !segmentByItemId.has(selectedItemId)) {
-      setSelectedItemId(null)
-    }
-  }, [segmentByItemId, selectedItemId])
+  const itemLink = useSegmentedItemLink()
+  const {
+    activeItemId,
+    clearPreview,
+    navigateItem,
+    previewItem,
+    selectItem,
+    selectedItemId,
+  } = itemLink
 
   const renderPageOverlay = React.useCallback(
     ({ pageNumber, rotation }: { pageNumber: number; rotation: number }) => {
@@ -188,8 +127,7 @@ function DocumentAiLayoutBlocksContent({
           selectedItemId={selectedItemId}
           visibleLevels={INSPECTED_LEVELS}
           onItemClick={(item) => {
-            setSelectedItemId(item.id)
-            clearPreview()
+            selectItem(item.id)
             navigateItem(item.id, { behavior: "smooth", clearPreview: false })
           }}
           onItemPointerEnter={(item) => previewItem(item.id)}
@@ -204,6 +142,7 @@ function DocumentAiLayoutBlocksContent({
       model.visibleItems,
       navigateItem,
       previewItem,
+      selectItem,
       selectedItemId,
     ]
   )
@@ -226,9 +165,9 @@ function DocumentAiLayoutBlocksContent({
         <div className="flex items-center justify-between gap-3 p-3">
           <div className="flex min-w-0 items-center gap-2">
             <ViewerSidebarTrigger className="-ml-1" />
-            <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-2">
               <div className="truncate text-sm font-medium">OCR</div>
-              <div className="text-xs text-muted-foreground">
+              <div className="shrink-0 text-xs text-muted-foreground">
                 {model.visibleItems.length} blocks
               </div>
             </div>
@@ -292,11 +231,7 @@ function DocumentAiLayoutBlocksContent({
               })
             }}
             onSelectedItemIdChange={(itemId) => {
-              if (itemId) {
-                setSelectedItemId(itemId)
-                return
-              }
-              setSelectedItemId(null)
+              selectItem(itemId)
             }}
           />
         </ViewerSidebar>

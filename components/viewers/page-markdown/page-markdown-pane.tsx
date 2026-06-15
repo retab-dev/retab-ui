@@ -7,6 +7,8 @@ import { useElementWidth } from "@/hooks/use-element-width"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   createPageMarkdownLayout,
+  createPageMeasurementKey,
+  findPageMarkdownPageByOffset,
   getPageMarkdownPageLayout,
   getPageMarkdownVisiblePageNumbers,
 } from "@/components/viewers/page-markdown/page-markdown-layout"
@@ -20,7 +22,7 @@ import { PageMarkdownToolbar } from "@/components/viewers/page-markdown/page-mar
 import { type PageMarkdownViewMode } from "@/components/viewers/page-markdown/page-markdown-types"
 
 export interface PageMarkdownPaneHandle {
-  scrollToPage: (pageNumber: number) => void
+  scrollToPage: (pageNumber: number, options?: ScrollToOptions) => void
 }
 
 export const PageMarkdownPane = React.forwardRef<
@@ -70,6 +72,17 @@ export const PageMarkdownPane = React.forwardRef<
     () => `${resetKey ?? ""}\u0000${pages.join("\u0000")}`,
     [pages, resetKey]
   )
+  const pageRenderKeys = React.useMemo(
+    () =>
+      pages.map((markdown) =>
+        createPageMeasurementKey({
+          markdown,
+          mode,
+          scale,
+        })
+      ),
+    [mode, pages, scale]
+  )
   const { measuredHeightByPageNumber, setPageHeight } =
     usePageMarkdownMeasurements({ mode, pages, scale })
   const layout = React.useMemo(
@@ -105,11 +118,26 @@ export const PageMarkdownPane = React.forwardRef<
     onRestore: () => projectPagesRef.current(),
     viewportElement,
   })
+  const captureScrollAnchorBeforePageResize = React.useCallback(
+    (pageNumber: number) => {
+      const viewportElement = getViewportElement()
+      if (!viewportElement) return
+
+      const anchorPageNumber = findPageMarkdownPageByOffset(
+        layout,
+        viewportElement.scrollTop
+      )
+      if (pageNumber < anchorPageNumber) captureScrollAnchor()
+    },
+    [captureScrollAnchor, getViewportElement, layout]
+  )
   const handlePageSize = React.useCallback(
     (pageNumber: number, height: number) => {
-      setPageHeight(pageNumber, height, captureScrollAnchor)
+      setPageHeight(pageNumber, height, () =>
+        captureScrollAnchorBeforePageResize(pageNumber)
+      )
     },
-    [captureScrollAnchor, setPageHeight]
+    [captureScrollAnchorBeforePageResize, setPageHeight]
   )
 
   const projectPages = React.useCallback(() => {
@@ -120,6 +148,7 @@ export const PageMarkdownPane = React.forwardRef<
       layout,
       mode,
       onSize: handlePageSize,
+      pageRenderKeys,
       pages,
       resetKey: pagesSignature,
       scale,
@@ -131,6 +160,7 @@ export const PageMarkdownPane = React.forwardRef<
     layout,
     mode,
     pages,
+    pageRenderKeys,
     pagesSignature,
     scale,
   ])
@@ -150,8 +180,8 @@ export const PageMarkdownPane = React.forwardRef<
   React.useImperativeHandle(
     ref ?? null,
     () => ({
-      scrollToPage: (pageNumber) => {
-        scrollToPage(pageNumber)
+      scrollToPage: (pageNumber, options) => {
+        scrollToPage(pageNumber, options)
         measureScroll()
         projectPages()
       },
@@ -260,6 +290,7 @@ export const PageMarkdownPane = React.forwardRef<
         onFitWidth={onFitWidth}
       />
       <ScrollArea
+        nativeScrollbar
         viewportRef={setViewportElement}
         viewportProps={{
           "aria-label": "Markdown pages",
@@ -301,6 +332,7 @@ function projectPageMarkdownPages({
   layout,
   mode,
   onSize,
+  pageRenderKeys,
   pages,
   resetKey,
   scale,
@@ -311,6 +343,7 @@ function projectPageMarkdownPages({
   layout: ReturnType<typeof createPageMarkdownLayout>
   mode: PageMarkdownViewMode
   onSize: (pageNumber: number, height: number) => void
+  pageRenderKeys: readonly string[]
   pages: readonly string[]
   resetKey: unknown
   scale: number
@@ -342,6 +375,7 @@ function projectPageMarkdownPages({
   for (const pageNumber of visiblePageNumbers) {
     const pageLayout = getPageMarkdownPageLayout(layout, pageNumber)
     const markdown = pages[pageNumber - 1]
+    const pageRenderKey = pageRenderKeys[pageNumber - 1]
     if (!pageLayout || markdown == null) continue
 
     const projectedSlot =
@@ -353,6 +387,7 @@ function projectPageMarkdownPages({
       onSize,
       pageLayout,
       pageNumber,
+      pageRenderKey,
       projectedSlot,
       scale,
     })
@@ -388,6 +423,7 @@ function renderPageMarkdownProjectedSlot({
   onSize,
   pageLayout,
   pageNumber,
+  pageRenderKey,
   projectedSlot,
   scale,
 }: {
@@ -396,6 +432,7 @@ function renderPageMarkdownProjectedSlot({
   onSize: (pageNumber: number, height: number) => void
   pageLayout: NonNullable<ReturnType<typeof getPageMarkdownPageLayout>>
   pageNumber: number
+  pageRenderKey?: string
   projectedSlot: PageMarkdownProjectedSlot
   scale: number
 }) {
@@ -405,7 +442,7 @@ function renderPageMarkdownProjectedSlot({
     scale,
     pageLayout.height,
     pageLayout.width,
-    markdown,
+    pageRenderKey ?? markdown,
   ].join("\u0000")
   if (projectedSlot.renderKey === renderKey) return
 
@@ -430,14 +467,18 @@ function getPageMarkdownViewportHeight(viewportElement: HTMLElement | null) {
   )
 }
 
-function disposePageMarkdownProjectionCache(cache: PageMarkdownProjectionCache) {
+function disposePageMarkdownProjectionCache(
+  cache: PageMarkdownProjectionCache
+) {
   for (const projectedSlot of cache.slots.values()) {
     disposePageMarkdownProjectedSlot(projectedSlot)
   }
   cache.slots.clear()
 }
 
-function disposePageMarkdownProjectedSlot(projectedSlot: PageMarkdownProjectedSlot) {
+function disposePageMarkdownProjectedSlot(
+  projectedSlot: PageMarkdownProjectedSlot
+) {
   deferPageMarkdownRootUnmount(projectedSlot.root)
   projectedSlot.slot.remove()
 }

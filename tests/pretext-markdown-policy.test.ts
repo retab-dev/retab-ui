@@ -52,6 +52,7 @@ describe("Pretext Markdown policy", () => {
     )
     expect(sanitizePretextMarkdownUrl("#heading")).toBe("#heading")
     expect(sanitizePretextMarkdownUrl("/docs/viewers")).toBe("/docs/viewers")
+    expect(sanitizePretextMarkdownUrl("/docs/résumé")).toBe("/docs/résumé")
     expect(sanitizePretextMarkdownUrl("docs/viewers")).toBe("docs/viewers")
   })
 
@@ -64,8 +65,15 @@ describe("Pretext Markdown policy", () => {
       "javascript%3Aalert(1)",
       "%6a%61vascript:alert(1)",
       "java\u0000script:alert(1)",
+      "javascript%EF%BC%9Aalert(1)",
+      "javascript：alert(1)",
       "data:text/html,<script>alert(1)</script>",
       "vbscript:msgbox(1)",
+      "https:\\\\example.com\\docs",
+      "https:%5C%5Cexample.com%5Cdocs",
+      "https：//example.com",
+      "https:／／example.com",
+      "https∕∕example.com",
     ]
 
     for (const url of blockedUrls) {
@@ -81,6 +89,9 @@ describe("Pretext Markdown policy", () => {
     expect(sanitizePretextMarkdownImageUrl("#image")).toBe("")
     expect(sanitizePretextMarkdownImageUrl("mailto:hello@retab.com")).toBe("")
     expect(sanitizePretextMarkdownImageUrl("javascript%3Aalert(1)")).toBe("")
+    expect(sanitizePretextMarkdownImageUrl("https:／／example.com/x.png")).toBe(
+      ""
+    )
     expect(sanitizePretextMarkdownImageUrl("//example.com/image.png")).toBe("")
     expect(sanitizePretextMarkdownImageUrl("/icons/logo.svg")).toBe("")
     expect(
@@ -102,6 +113,9 @@ describe("Pretext Markdown policy", () => {
     )
     expect(sanitizePretextMarkdownMediaUrl("mailto:hello@retab.com")).toBe("")
     expect(sanitizePretextMarkdownMediaUrl("javascript:alert(1)")).toBe("")
+    expect(sanitizePretextMarkdownMediaUrl("https：//retab.com/demo.mp4")).toBe(
+      ""
+    )
     expect(sanitizePretextMarkdownMediaUrl("//example.com/demo.mp4")).toBe("")
     expect(sanitizePretextMarkdownMediaUrl("/demo.svg")).toBe("")
     expect(sanitizePretextMarkdownMediaUrl("data:video/mp4;base64,AAAA")).toBe(

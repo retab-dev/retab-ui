@@ -17,7 +17,7 @@ import {
 import { usePageMarkdownSync } from "@/components/viewers/page-markdown/page-markdown-sync"
 import { PageMarkdownToolbar } from "@/components/viewers/page-markdown/page-markdown-toolbar"
 import {
-  type PageMarkdownDocumentScrollRequest,
+  type PageMarkdownDocumentHandle,
   type PageMarkdownDocumentState,
   type PageMarkdownViewerProps,
   type PageMarkdownViewMode,
@@ -135,8 +135,9 @@ export function PageMarkdownViewerProvider({
     number | null
   >(null)
   const markdownPaneRef = React.useRef<PageMarkdownPaneHandle | null>(null)
-  const [documentScrollRequest, setDocumentScrollRequest] =
-    React.useState<PageMarkdownDocumentScrollRequest | null>(null)
+  const documentHandleRef = React.useRef<PageMarkdownDocumentHandle | null>(
+    null
+  )
   const pagePaneResetKey = hasPages ? `pages:${resetKey ?? ""}` : "empty"
   const { currentPage, reportDocumentPage, reportMarkdownPage } =
     usePageMarkdownSync({
@@ -147,7 +148,6 @@ export function PageMarkdownViewerProvider({
 
   React.useEffect(() => {
     setMode("rendered")
-    setDocumentScrollRequest(null)
   }, [resetKey])
 
   const handleDocumentPageChange = React.useCallback(
@@ -177,13 +177,17 @@ export function PageMarkdownViewerProvider({
     (pageNumber: number) => {
       const target = reportMarkdownPage(pageNumber)
       if (target?.pane === "document") {
-        setDocumentScrollRequest({
-          pageNumber: target.pageNumber,
-          version: target.version,
-        })
+        documentHandleRef.current?.scrollToPage(target.pageNumber)
       }
     },
     [reportMarkdownPage]
+  )
+
+  const setDocumentHandle = React.useCallback(
+    (handle: PageMarkdownDocumentHandle | null) => {
+      documentHandleRef.current = handle
+    },
+    []
   )
 
   const { fitWidth, scale, setViewerScale } = usePageMarkdownScale({
@@ -197,12 +201,12 @@ export function PageMarkdownViewerProvider({
     () => ({
       onCurrentPageChange: handleDocumentPageChange,
       onScrollProgressChange: handleDocumentScrollProgressChange,
-      scrollRequest: documentScrollRequest,
+      setDocumentHandle,
     }),
     [
-      documentScrollRequest,
       handleDocumentPageChange,
       handleDocumentScrollProgressChange,
+      setDocumentHandle,
     ]
   )
 

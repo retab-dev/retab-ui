@@ -24,7 +24,9 @@ npx shadcn@latest add @retab/file-thumbnail
 import { FileThumbnail } from "@/components/ui/file-thumbnail"
 
 export function PdfThumbnail({ file }: { file: File }) {
-  return <FileThumbnail file={file} previewAspectRatio={1} />
+  return (
+    <FileThumbnail file={file} thumbnailShape="square" thumbnailSize="md" />
+  )
 }
 
 export function UrlThumbnail() {
@@ -36,7 +38,8 @@ export function UrlThumbnail() {
         fileName: "contract.pdf",
         mimeType: "application/pdf",
       }}
-      previewAspectRatio={1}
+      thumbnailShape="square"
+      thumbnailSize="md"
     />
   )
 }
@@ -89,6 +92,8 @@ in charge of the preview lifecycle.
 | `as`                 | `FileCategory`                               | auto-detect  | No       |
 | `className`          | `string`                                     | `-`          | No       |
 | `previewAspectRatio` | `number`                                     | `3 / 4`      | No       |
+| `thumbnailShape`     | `"document" \| "square"`                     | `document`   | No       |
+| `thumbnailSize`      | `"xs" \| "sm" \| "md" \| "lg" \| "xl"`       | `-`          | No       |
 | `previewClassName`   | `string`                                     | `-`          | No       |
 | `previewContent`     | `React.ReactNode`                            | `-`          | No       |
 | `previewImageUrl`    | `string \| null`                             | `-`          | No       |

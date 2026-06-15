@@ -68,8 +68,9 @@ export function MediaTranscriptQueue({ className }: DropzoneExampleProps) {
               >
                 <FileThumbnail
                   file={item.file}
-                  previewAspectRatio={1}
-                  className="size-10 shrink-0"
+                  thumbnailShape="square"
+                  thumbnailSize="sm"
+                  className="shrink-0"
                 />
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{item.file.name}</div>

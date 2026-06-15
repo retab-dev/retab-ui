@@ -2,15 +2,11 @@
 
 import * as React from "react"
 
+import { cn } from "@/lib/utils"
 import type { ViewerResource } from "@/lib/viewer-resource"
 
 import { isAbortError } from "./viewer-abortable-request"
-import {
-  ResourceDocShell,
-  useZoom,
-  ViewerFallback,
-  ZoomActions,
-} from "./file-viewer-chrome"
+import { useZoom, ViewerFallback, ZoomActions } from "./file-viewer-chrome"
 import { loadTextResource } from "./file-viewer-text-resource"
 
 type HtmlLoadState =
@@ -18,7 +14,7 @@ type HtmlLoadState =
   | { status: "loaded"; key: unknown; html: string }
   | { status: "error"; key: unknown; error: unknown }
 
-export function HtmlDocViewer({
+export function HtmlFileContent({
   resource,
   className,
   bare,
@@ -31,7 +27,7 @@ export function HtmlDocViewer({
 }) {
   if (resource.content.payload.kind === "text") {
     return (
-      <HtmlDocViewerContent
+      <HtmlFileContentFrame
         key={resource.content.key}
         resource={resource}
         html={resource.content.payload.text}
@@ -41,7 +37,7 @@ export function HtmlDocViewer({
     )
   }
   return (
-    <HtmlDocViewerResource
+    <HtmlFileResource
       resource={resource}
       className={className}
       bare={bare}
@@ -50,7 +46,7 @@ export function HtmlDocViewer({
   )
 }
 
-function HtmlDocViewerResource({
+function HtmlFileResource({
   resource,
   className,
   bare,
@@ -119,7 +115,7 @@ function HtmlDocViewerResource({
 
   const { html } = state
   return (
-    <HtmlDocViewerContent
+    <HtmlFileContentFrame
       key={contentKey}
       resource={resource}
       html={html}
@@ -129,7 +125,7 @@ function HtmlDocViewerResource({
   )
 }
 
-function HtmlDocViewerContent({
+function HtmlFileContentFrame({
   resource,
   html,
   className,
@@ -143,14 +139,33 @@ function HtmlDocViewerContent({
   const fileName = resource.fileName
   const { scale, zoom, reset } = useZoom()
   return (
-    <ResourceDocShell
-      resource={resource}
-      className={className}
-      bare={bare}
-      actions={<ZoomActions scale={scale} zoom={zoom} reset={reset} />}
+    <div
+      data-slot="html-file-viewer-content"
+      className={cn(
+        "flex min-h-0 flex-1 flex-col overflow-hidden bg-card",
+        bare ? "h-full" : "min-h-64",
+        className
+      )}
     >
+      <HtmlContentToolbar scale={scale} zoom={zoom} reset={reset} />
       <SandboxedDoc html={html} title={fileName} scale={scale} />
-    </ResourceDocShell>
+    </div>
+  )
+}
+
+function HtmlContentToolbar({
+  scale,
+  zoom,
+  reset,
+}: {
+  scale: number
+  zoom: (factor: number) => void
+  reset: () => void
+}) {
+  return (
+    <div className="flex h-10 shrink-0 items-center justify-end gap-1 border-b bg-card px-2">
+      <ZoomActions scale={scale} zoom={zoom} reset={reset} />
+    </div>
   )
 }
 

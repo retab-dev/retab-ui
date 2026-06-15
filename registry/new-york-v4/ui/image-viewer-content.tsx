@@ -40,6 +40,7 @@ export function ImageViewerContent({
   className,
   scale: controlledScale,
   defaultScale,
+  download = true,
   onScaleChange,
   toolbar = true,
   renderFrameOverlay,
@@ -133,7 +134,7 @@ export function ImageViewerContent({
             isDisabled: scaleControlsDisabled,
           }}
           rotate={{ onRotate: rotateClockwise }}
-          downloads={[resource.originalDownload]}
+          downloads={download ? [resource.originalDownload] : []}
         />
       ) : null}
 

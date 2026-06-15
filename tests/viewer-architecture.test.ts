@@ -55,11 +55,6 @@ const compoundViewerDocContracts = [
     easyApi: "SplitViewer",
   },
   {
-    file: "content/docs/components/file-system.mdx",
-    provider: "FileSystemProvider",
-    easyApi: "FileSystem",
-  },
-  {
     file: "content/docs/viewers/parse-viewer.mdx",
     provider: "ParseViewerProvider",
     easyApi: "ParseViewer",
@@ -78,12 +73,8 @@ const compoundViewerDocContracts = [
 
 const anchoredDocumentDocContracts = [
   {
-    file: "content/docs/components/extract-viewer.mdx",
-    required: ["AnchoredDocumentProvider", "FieldAnchorLink"],
-  },
-  {
     file: "content/docs/components/json-form.mdx",
-    required: ["FieldAnchorLink"],
+    required: ["SourceFieldLink"],
   },
 ]
 
@@ -391,6 +382,10 @@ describe("viewer architecture", () => {
     expect(rootProps).toMatch(/\bmode\??:/)
     expect(rootProps).toMatch(/\bsidebarSide\??:/)
     expect(rootProps).toMatch(/\bsidebarCollapsible\??:/)
+    expect(content).toContain('mode = "auto"')
+    expect(content).toContain(
+      'type ViewerSidebarCollapsible = "offcanvas" | "none"'
+    )
     expect(rootProps).not.toMatch(/\bsidebarOpen\??:/)
     expect(rootProps).not.toMatch(/\bdefaultSidebarOpen\??:/)
     expect(rootProps).not.toMatch(/\bonSidebarOpenChange\??:/)
@@ -564,7 +559,6 @@ describe("viewer architecture", () => {
       /\bFileIntakeViewerProvider\b/,
       /\bAnchoredDocumentProvider\b/,
       /\bViewerSidebar\b/,
-      /\bViewerBody\b/,
       /\banchoredItems\??:/,
       /\bsourceMap\??:/,
       /\brenderDocument\??:/,
@@ -577,6 +571,10 @@ describe("viewer architecture", () => {
         expect(pattern.test(content), `${file} contains ${pattern}`).toBe(false)
       }
     }
+    const fileViewer = fileContent("registry/new-york-v4/ui/file-viewer.tsx")
+    expect(fileViewer).toContain("<ViewerRoot")
+    expect(fileViewer).toContain("<ViewerBody")
+    expect(fileViewer).toContain("<ViewerSurface")
 
     const pdfTypeFiles = [
       "registry/new-york-v4/ui/pdf-viewer.tsx",
@@ -716,6 +714,17 @@ describe("viewer architecture", () => {
     expect(fileViewerSource).toContain("export function FileViewerContent")
     expect(fileViewerSource).toContain("export function FileViewerHeader")
     expect(fileViewerSource).toContain("export function useFileViewer")
+    expect(fileViewerSource).toContain("export function useFileViewerHeader")
+    expect(fileViewerSource).toContain("export function useFileViewerContent")
+    expect(fileViewerSource).toContain("function useFileViewerContext")
+    expect(fileViewerSource).toContain("} = useFileViewerContent()")
+    expect(fileViewerSource).toContain(
+      "const { descriptor, resource } = useFileViewerHeader()"
+    )
+    expect(fileViewerSource).toContain("CsvFileContent")
+    expect(fileViewerSource).toContain("HtmlFileContent")
+    expect(fileViewerSource).not.toContain("CsvDocViewer")
+    expect(fileViewerSource).not.toContain("HtmlDocViewer")
     expect(fileViewerSource).toContain("<FileViewerProvider")
     expect(fileViewerSource).toContain("<FileViewerContent")
     expect(publicFileViewerSource).toContain(
@@ -729,7 +738,76 @@ describe("viewer architecture", () => {
     )
     expect(publicFileViewerSource).toContain("export function FileViewerHeader")
     expect(publicFileViewerSource).toContain("export function useFileViewer")
+    expect(publicFileViewerSource).toContain(
+      "export function useFileViewerHeader"
+    )
+    expect(publicFileViewerSource).toContain(
+      "export function useFileViewerContent"
+    )
     expect(publicFileViewerSource).not.toContain("markdown-document-viewer")
+  })
+
+  it("keeps FileViewer leaf download ownership explicit", () => {
+    const fileViewerSource = fileContent(
+      "registry/new-york-v4/ui/file-viewer.tsx"
+    )
+    const leafPropFiles = [
+      "registry/new-york-v4/ui/docx-viewer-types.ts",
+      "registry/new-york-v4/ui/image-viewer-types.ts",
+      "registry/new-york-v4/ui/pptx-viewer-types.ts",
+      "registry/new-york-v4/ui/xlsx-viewer-types.ts",
+    ]
+
+    expect(fileViewerSource).toContain("showLeafDownload={false}")
+    for (const route of [
+      "PdfResourceContent",
+      "ImageResourceContent",
+      "PptxResourceContent",
+      "DocxResourceContent",
+      "XlsxResourceContent",
+    ]) {
+      expect(fileViewerSource, `${route} receives showLeafDownload`).toMatch(
+        new RegExp(
+          `<${route}\\b(?:(?!/>)[\\s\\S])*\\bdownload=\\{showLeafDownload\\}`
+        )
+      )
+    }
+
+    expect(fileContent("registry/new-york-v4/ui/pdf-viewer.tsx")).toContain(
+      "download?: boolean"
+    )
+    for (const file of leafPropFiles) {
+      const content = fileContent(file)
+      expect(content, `${file} exposes a leaf download control`).toContain(
+        "download?: boolean"
+      )
+    }
+
+    for (const file of [
+      "registry/new-york-v4/ui/pdf-viewer.tsx",
+      "registry/new-york-v4/ui/docx-viewer-content.tsx",
+      "registry/new-york-v4/ui/image-viewer-content.tsx",
+      "registry/new-york-v4/ui/pptx-viewer.tsx",
+      "registry/new-york-v4/ui/xlsx-viewer-session.tsx",
+    ]) {
+      const content = fileContent(file)
+      expect(content, `${file} defaults leaf download on`).toContain(
+        "download = true"
+      )
+    }
+
+    for (const file of [
+      "registry/new-york-v4/ui/pdf-viewer.tsx",
+      "registry/new-york-v4/ui/docx-viewer.tsx",
+      "registry/new-york-v4/ui/image-viewer.tsx",
+      "registry/new-york-v4/ui/pptx-viewer.tsx",
+      "registry/new-york-v4/ui/xlsx-viewer.tsx",
+    ]) {
+      const content = fileContent(file)
+      expect(content, `${file} suppresses error-boundary download`).toContain(
+        "props.download === false ? null : resource.originalDownload"
+      )
+    }
   })
 
   it("keeps dropzone examples away from file viewer internals", () => {
@@ -791,7 +869,9 @@ describe("viewer architecture", () => {
     const segmentPageRailItem = itemsByName.get("segment-page-rail")
 
     expect(content).not.toContain("renderDocument")
-    expect(content).toContain("children?: ReactNode")
+    expect(content).not.toContain("children?: ReactNode")
+    expect(content).toContain("document?: ReactNode")
+    expect(content).toContain("<SplitViewerDocument document={document} />")
     expect(content).toContain("export type SplitViewerModel")
     expect(content).toContain("export function createSplitViewerModel")
     expect(content).toContain(
@@ -807,14 +887,14 @@ describe("viewer architecture", () => {
     expect(content).not.toContain("controller:")
     expect(content).not.toContain("setViewerHandle")
     expect(content).toContain("useSplitViewerDocumentControls")
-    expect(content).toContain("export function SplitViewerRoot")
     expect(content).toContain("export function useSplitViewerHeader")
     expect(content).toContain("export function useSplitViewerPageRail")
     expect(content).toContain("export function useSplitViewerLegend")
     expect(content).toContain("export function useSplitViewerDocument")
-    expect(content).toContain("export function SplitViewerBody")
+    expect(content).not.toContain("export function SplitViewerRoot")
+    expect(content).not.toContain("export function SplitViewerBody")
+    expect(content).not.toContain("export function SplitViewerSurface")
     expect(content).toContain("export function SplitViewerSidebar")
-    expect(content).toContain("export function SplitViewerSurface")
     expect(content).toContain("export function SplitViewerPageRail")
     expect(content).toContain("export function SplitViewerLegend")
     expect(content).toContain("export function SplitViewerDocument")
@@ -851,6 +931,27 @@ describe("viewer architecture", () => {
     )
   })
 
+  it("keeps segment primitives typed as semantic document segments", () => {
+    for (const file of [
+      "registry/new-york-v4/ui/segment-legend.tsx",
+      "registry/new-york-v4/ui/segment-sidebar.tsx",
+      "registry/new-york-v4/ui/segment-page-rail.tsx",
+      "registry/new-york-v4/ui/page-ribbon.tsx",
+    ]) {
+      const content = fileContent(file)
+      expect(content, `${file} imports DocumentSegment`).toContain(
+        "DocumentSegment"
+      )
+      expect(content, `${file} does not expose Segment[] props`).not.toContain(
+        "segments: Segment[]"
+      )
+      expect(
+        content,
+        `${file} does not expose Segment callbacks`
+      ).not.toContain("(segment: Segment)")
+    }
+  })
+
   it("keeps compound easy APIs as preassembled named-part composition", () => {
     const easyApis = [
       {
@@ -868,6 +969,7 @@ describe("viewer architecture", () => {
         file: "registry/new-york-v4/ui/email-viewer.tsx",
         symbols: [
           "<EmailViewerProvider",
+          "<EmailViewerFrame",
           "<ViewerRoot",
           "<EmailHeader",
           "<ViewerBody",
@@ -881,11 +983,11 @@ describe("viewer architecture", () => {
         file: "components/viewers/split/split-viewer.tsx",
         symbols: [
           "<SplitViewerProvider",
-          "<SplitViewerRoot",
+          "<ViewerRoot",
           "<SplitViewerHeader",
-          "<SplitViewerBody",
+          "<ViewerBody",
           "<SplitViewerSidebar",
-          "<SplitViewerSurface",
+          "<ViewerSurface",
           "<SplitViewerLegend",
           "<SplitViewerDocument",
         ],
@@ -908,6 +1010,7 @@ describe("viewer architecture", () => {
         file: "registry/new-york-v4/blocks/dropzone-uploader-viewer.tsx",
         symbols: [
           "<FileIntakeViewerProvider",
+          "<FileIntakeViewerDropTarget",
           "<FileIntakeViewerRoot",
           "<FileIntakeViewerHeader",
           "<ViewerBody",
@@ -943,6 +1046,7 @@ describe("viewer architecture", () => {
           "<PartitionViewerHeader",
           "<ViewerBody",
           "<ViewerSurface",
+          "<PartitionViewerRibbon",
           "<PartitionViewerDocument",
         ],
       },
@@ -954,7 +1058,7 @@ describe("viewer architecture", () => {
           "<ClassifierViewerHeader",
           "<ViewerBody",
           "<ViewerSurface",
-          "<ClassifierViewerDocumentState",
+          "<ClassifierViewerDocument",
         ],
       },
     ]
@@ -979,8 +1083,10 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/blocks/dropzone-uploader-viewer.tsx"
     )
 
+    expect(parts).toContain("FileIntakeViewerDropTarget")
     expect(parts).toContain("FileIntakeViewerRoot")
     expect(wrapper).toContain("FileIntakeViewerRoot")
+    expect(wrapper).toContain("FileIntakeViewerDropTarget")
     expect(wrapper).toContain("export function FileIntakeViewer")
     expect(wrapper).not.toContain("DropzoneUploaderViewer")
     expect(parts).not.toContain("UploadableFileViewer")
@@ -997,14 +1103,12 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/blocks/dropzone-uploader-viewer-parts.tsx"
     )
 
-    expect(wrapper).toContain(
-      "renderViewer?: (source: BlobViewerSource) => React.ReactNode"
-    )
-    expect(wrapper).toContain(
-      "<FileIntakeViewerSurface renderViewer={renderViewer} />"
-    )
+    expect(wrapper).not.toContain("renderViewer")
+    expect(wrapper).toContain("<FileIntakeViewerDropTarget>")
+    expect(wrapper).toContain("<FileIntakeViewerSurface />")
     expect(wrapper).not.toContain("DropzoneUploaderViewer")
     expect(parts).toContain("<FileViewer")
+    expect(parts).not.toContain("renderViewer")
   })
 
   it("keeps file-intake viewer named parts on narrow hooks", () => {
@@ -1012,7 +1116,7 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/blocks/dropzone-uploader-viewer-parts.tsx"
     )
 
-    expect(content).toContain("export function useFileIntakeViewerRoot")
+    expect(content).toContain("export function useFileIntakeViewerDropTarget")
     expect(content).toContain("export function useFileIntakeViewerHeader")
     expect(content).toContain("export function useFileIntakeViewerSidebar")
     expect(content).toContain("export function useFileIntakeViewerSurface")
@@ -1029,6 +1133,9 @@ describe("viewer architecture", () => {
     expect(content).toContain("getUploadButtonProps")
     expect(content).toContain("getReplaceButtonProps")
     expect(content).toContain("getEmptySurfaceProps")
+    expect(content).toContain("export function FileIntakeViewerDropTarget")
+    expect(content).toContain("export function FileIntakeViewerRoot")
+    expect(content).toContain("group-data-[dragging]/file-intake-drop")
     expect(content).not.toContain("dropzone: UseDropzoneReturn")
     expect(content).not.toContain("getRootProps: UseDropzoneReturn")
     expect(content).not.toContain("getInputProps: UseDropzoneReturn")
@@ -1052,8 +1159,20 @@ describe("viewer architecture", () => {
     expect(content).toContain("export function useEmailHeader")
     expect(content).toContain("export function useEmailPartsSidebar")
     expect(content).toContain("export function useEmailContent")
+    expect(content).toContain("export function useEmailSelection")
+    expect(content).toContain("export type EmailViewerState")
+    expect(content).toContain("export type EmailSelectionState")
+    expect(content).toContain("function useEmailViewerContext()")
+    expect(content).toContain(
+      "export function useEmailViewer(): EmailViewerState"
+    )
+    expect(content).toContain("export function EmailViewerFrame")
+    expect(content).not.toContain("EmailViewerChrome")
     expect(content).toContain("model: EmailViewerModel")
     expect(content).toContain("selectPart: (node: MimePartNode) => void")
+    expect(content).not.toContain(
+      "export function useEmailViewer() {\n  const context"
+    )
     expect(content).not.toContain("MimeDisplayPart")
     expect(content).not.toContain("display:")
     expect(content).not.toContain("setSelectedNode")
@@ -1124,11 +1243,15 @@ describe("viewer architecture", () => {
     expect(thumbnails).toContain("export interface PdfThumbnailRailProps")
     expect(thumbnails).toContain("export function PdfThumbnailRail")
     expect(thumbnails).toContain("thumbnailWidth?: number")
+    expect(thumbnails).toContain("thumbnailShape?: PdfThumbnailShape")
     const viewerThumbnailsProps =
       thumbnails.match(
         /export interface PdfViewerThumbnailsProps \{[\s\S]*?\n\}/
       )?.[0] ?? ""
     expect(viewerThumbnailsProps).toContain("thumbnailWidth?: number")
+    expect(viewerThumbnailsProps).toContain(
+      "thumbnailShape?: PdfThumbnailShape"
+    )
     expect(viewerThumbnailsProps).toContain("className?: string")
     expect(viewerThumbnailsProps).not.toContain("resource")
     expect(viewerThumbnailsProps).not.toContain("currentPage")
@@ -1532,6 +1655,9 @@ describe("viewer architecture", () => {
     const pageMarkdown = fileContent(
       "components/viewers/page-markdown/page-markdown-viewer.tsx"
     )
+    const pageMarkdownSync = fileContent(
+      "components/viewers/page-markdown/page-markdown-sync.ts"
+    )
     const parse = fileContent("components/viewers/parse/parse-viewer.tsx")
     const partition = fileContent(
       "components/viewers/partition/partition-viewer.tsx"
@@ -1550,13 +1676,27 @@ describe("viewer architecture", () => {
       "export function usePageMarkdownViewerDocument"
     )
     expect(pageMarkdown).toContain("export function PageMarkdownViewerToolbar")
+    expect(pageMarkdown).not.toContain("SegmentedDocumentProvider")
+    expect(pageMarkdown).not.toContain("useSegmented")
+    expect(pageMarkdown).not.toContain("segmented-document")
+    expect(pageMarkdownSync).not.toContain("version:")
+    expect(pageMarkdownSync).not.toContain("version: number")
     expect(parse).toContain("export function useParseViewerDocument")
     expect(parse).toContain("export function useParseViewerMarkdown")
+    expect(parse).not.toContain("SegmentedDocumentProvider")
+    expect(parse).not.toContain("useSegmented")
+    expect(parse).not.toContain("segmented-document")
+    expect(parse).toContain("PageMarkdownViewerProvider")
     expect(partition).toContain("export function usePartitionViewerHeader")
+    expect(partition).toContain("export function usePartitionViewerRibbon")
     expect(partition).toContain(
       "export function usePartitionViewerDocumentControls"
     )
     expect(partition).toContain("export function usePartitionViewerModel")
+    expect(partition).toContain("document?: React.ReactNode")
+    expect(partition).toContain(
+      "<PartitionViewerDocument document={document} />"
+    )
     expect(partition).toContain("createPartitionViewerModel")
     expect(partition).toContain("SegmentedDocumentProvider")
     expect(partition).toContain("useSegmentedDocumentViewport")
@@ -1584,6 +1724,54 @@ describe("viewer architecture", () => {
     expect(partitionModel).toContain("viewportSegments: DocumentSegment[]")
     expect(partitionModel).toContain("export type PartitionRibbonRow")
     expect(classifier).toContain("export function useClassifierViewerHeader")
+    expect(classifier).toContain("document?: React.ReactNode")
+    expect(classifier).toContain(
+      "<ClassifierViewerDocument document={document} />"
+    )
+    expect(classifier).toContain("export function ClassifierViewerDocument")
+    expect(classifier).not.toContain("ClassifierViewerDocumentState")
+    expect(classifier).not.toContain("SegmentLegend")
+    expect(classifier).not.toContain("useSegmentInteraction")
+    expect(classifier).not.toContain("buildColorMap")
+    expect(classifier).not.toContain("requestDocumentStart")
+    expect(classifier).not.toContain("onSelectDocumentStart")
+  })
+
+  it("keeps common FileThumbnail usages on shape and size tokens", () => {
+    const squareTokenFiles = [
+      "content/docs/components/file-thumbnail.mdx",
+      "components/file-thumbnail-demo.tsx",
+      "components/file-thumbnail-formats-demo.tsx",
+      "registry/new-york-v4/blocks/dropzone-media-transcript-queue.tsx",
+      "registry/new-york-v4/blocks/dropzone-intake-router.tsx",
+      "registry/new-york-v4/blocks/dropzone-required-packet-slots.tsx",
+      "registry/new-york-v4/blocks/dropzone-evidence-timeline.tsx",
+      "registry/new-york-v4/blocks/dropzone-comparison-pair-upload.tsx",
+    ]
+    const sizedWorkflowFiles = [
+      "registry/new-york-v4/blocks/dropzone-media-transcript-queue.tsx",
+      "registry/new-york-v4/blocks/dropzone-intake-router.tsx",
+      "registry/new-york-v4/blocks/dropzone-required-packet-slots.tsx",
+      "registry/new-york-v4/blocks/dropzone-evidence-timeline.tsx",
+      "registry/new-york-v4/blocks/dropzone-comparison-pair-upload.tsx",
+    ]
+    const attachmentSidebar = fileContent(
+      "registry/new-york-v4/ui/attachment-sidebar.tsx"
+    )
+
+    for (const file of squareTokenFiles) {
+      const content = fileContent(file)
+      expect(content, file).toContain('thumbnailShape="square"')
+      expect(content, file).not.toContain("previewAspectRatio={1}")
+    }
+
+    for (const file of sizedWorkflowFiles) {
+      expect(fileContent(file), file).toContain("thumbnailSize=")
+    }
+
+    expect(attachmentSidebar).toContain('thumbnailShape="document"')
+    expect(attachmentSidebar).toContain('thumbnailSize="md"')
+    expect(attachmentSidebar).not.toContain("previewAspectRatio={3 / 4}")
   })
 
   it("keeps workflow registry blocks on visible viewer composition", () => {
@@ -1605,6 +1793,7 @@ describe("viewer architecture", () => {
         "<PartitionViewerHeader",
         "<ViewerBody",
         "<ViewerSurface",
+        "<PartitionViewerRibbon",
         "<PartitionSourceDocument",
       ]
     )
@@ -1661,8 +1850,8 @@ describe("viewer architecture", () => {
         label: 'aria-label="Extracted fields"',
       },
       {
-        file: "registry/new-york-v4/blocks/extraction-viewer-block.tsx",
-        label: 'aria-label="Extraction fields"',
+        file: "registry/new-york-v4/blocks/sources-viewer-block.tsx",
+        label: 'aria-label="Source-linked fields"',
       },
       {
         file: "registry/new-york-v4/ui/layout-blocks.tsx",
@@ -1745,18 +1934,17 @@ describe("viewer architecture", () => {
     const segmentSidebar = fileContent(
       "registry/new-york-v4/ui/segment-sidebar.tsx"
     )
+    const registrySource = fileContent("registry.json")
 
-    expect(sidebarDoc).toContain(
-      "`ViewerSidebar` owns a spatial rail inside `ViewerBody`"
-    )
-    expect(sidebarDoc).toContain(
-      "Viewer primitives do not encode domain purpose."
-    )
-    expect(sidebarDoc).toContain(
-      "Root ids, trigger markers, and transition readiness attributes are internal"
-    )
     expect(compactSidebarDoc).toContain(
-      "`ViewerSidebarTrigger` is natively disabled when no toggleable sidebar has registered."
+      "`ViewerSidebar` owns placement, width, collapse state, and the accessible rail label."
+    )
+    expect(sidebarDoc).toContain(
+      "Put domain meaning in the named rail component and accessible label"
+    )
+    expect(sidebarDoc).toContain('data-slot="viewer-root"')
+    expect(compactSidebarDoc).toContain(
+      "`ViewerSidebarTrigger` is disabled until a `ViewerSidebar` registers with the nearest `ViewerRoot`."
     )
     expect(sidebarDoc).not.toContain("semantic wrapper")
     expect(sidebarDoc).not.toContain("data-viewer-purpose")
@@ -1780,10 +1968,8 @@ describe("viewer architecture", () => {
 
     expect(segmentSidebar).not.toContain("EmbeddedSidebarProvider")
     expect(segmentSidebar).toContain("<SidebarListRoot")
-    expectJsxTagsInOrder(
-      "registry/new-york-v4/ui/segmented-document-viewer.tsx",
-      ["<ViewerSidebar", "<SegmentSidebar"]
-    )
+    expect(registrySource).not.toContain('"name": "segmented-document-viewer"')
+    expect(registrySource).not.toContain("segmented-document-viewer.tsx")
 
     expect(compactSidebarDesign).toContain(
       "`SegmentSidebar` inside `ViewerSidebar` is therefore a nested composition"
@@ -1870,20 +2056,22 @@ describe("viewer architecture", () => {
     expect(provider).not.toContain("layout-blocks-model")
     expect(provider).not.toContain("EvidenceItem")
     expect(provider).not.toContain("AnchorResolution")
-    expect(provider).not.toContain("FieldAnchorLink")
-    expect(provider).not.toContain("useAnchoredFieldLink")
+    expect(provider).not.toContain("SourceFieldLink")
+    expect(provider).not.toContain("useAnchoredSourceFieldLink")
     expect(provider).not.toContain("activePath")
     expect(provider).not.toContain("onFieldHover")
   })
 
-  it("keeps field anchor vocabulary in its adapter module", () => {
-    const fieldAnchorLink = fileContent(
-      "registry/new-york-v4/ui/field-anchor-link.ts"
+  it("keeps source field link vocabulary in its adapter module", () => {
+    const sourceFieldLink = fileContent(
+      "registry/new-york-v4/ui/source-field-link.ts"
     )
 
-    expect(fieldAnchorLink).toContain("export type FieldAnchorLink")
-    expect(fieldAnchorLink).toContain("export function useAnchoredFieldLink")
-    expect(fieldAnchorLink).toContain("useAnchoredItemLink")
+    expect(sourceFieldLink).toContain("export type SourceFieldLink")
+    expect(sourceFieldLink).toContain(
+      "export function useAnchoredSourceFieldLink"
+    )
+    expect(sourceFieldLink).toContain("useAnchoredItemLink")
   })
 
   it("keeps source anchor conversion pure and source evidence adapter-free", () => {
@@ -1937,6 +2125,9 @@ describe("viewer architecture", () => {
     const segmentedModel = fileContent(
       "registry/new-york-v4/ui/segmented-document-model.ts"
     )
+    const segmentedItemLink = fileContent(
+      "registry/new-york-v4/ui/segmented-item-link.ts"
+    )
     const sourceSegmentedModel = fileContent(
       "registry/new-york-v4/ui/source-segmented-document-model.ts"
     )
@@ -1956,6 +2147,19 @@ describe("viewer architecture", () => {
     expect(segmentedProvider).not.toContain("document-source")
     expect(segmentedProvider).not.toContain("source-evidence")
     expect(segmentedModel).not.toContain("document-source")
+    expect(segmentedModel).toContain(
+      "Viewport/navigation projection used for page ownership and jumps."
+    )
+    expect(segmentedModel).toContain(
+      "domain vote/output semantics stay outside"
+    )
+    expect(segmentedItemLink).toContain("export function useSegmentedItemLink")
+    expect(segmentedItemLink).toContain("activeAnchors")
+    expect(segmentedItemLink).toContain("anchorsBySegmentId")
+    expect(segmentedItemLink).toContain("scrollToAnchor(anchor, options)")
+    expect(segmentedItemLink).toContain(
+      "scrollToSegmentStart(segment, options)"
+    )
     expect(sourceSegmentedModel).toContain("@/lib/document-source")
     expect(sourceSegmentedModel).toContain("createSegmentedDocumentModel")
     expect(sourceSegmentedModel).toContain(
@@ -1972,20 +2176,21 @@ describe("viewer architecture", () => {
     )
     expect(layoutSegmentedModel).toContain("createSegmentedDocumentModel")
     expect(layoutSegmentedModel).toContain("layout-blocks-types")
-    expect(sourceFieldList).toContain("AnchoredItemList")
+    expect(sourceFieldList).toContain("InteractiveItemList")
     expect(sourceFieldList).toContain("sourceFieldToEvidenceItem")
     expect(sourceFieldList).toContain("item.payload")
-    expect(layoutPanel).toContain("AnchoredItemList")
+    expect(layoutPanel).toContain("InteractiveItemList")
     expect(layoutPanel).toContain("LayoutEvidenceItem")
     expect(layoutPanel).toContain("item.payload")
     expect(layoutPanel).not.toContain("metadata")
     expect(layoutBlocks).toContain("createLayoutBlocksViewerModel")
     expect(layoutBlocks).toContain("layoutItemsToSegmentedDocumentModel")
     expect(layoutBlocks).toContain("SegmentedDocumentProvider")
-    expect(layoutBlocks).toContain("useSegmentedDocumentModel")
+    expect(layoutBlocks).toContain("useSegmentedItemLink")
     expect(layoutBlocks).toContain("useSegmentedDocumentViewport")
     expect(layoutBlocks).toContain("setDocumentHandle(handle)")
-    expect(layoutBlocks).toContain("scrollToAnchor(anchor)")
+    expect(layoutBlocks).not.toContain("useSegmentedDocumentModel")
+    expect(layoutBlocks).not.toContain("anchorsBySegmentId")
     expect(layoutBlocks).toContain("onScrollProgressChange")
     expect(layoutBlocks).toContain("onVisiblePageChange")
     expect(layoutBlocks).not.toContain("AnchoredDocumentProvider")
@@ -1996,8 +2201,8 @@ describe("viewer architecture", () => {
   })
 
   it("keeps bbox source blocks on segmented document mechanics", () => {
-    const fieldAnchorLink = fileContent(
-      "registry/new-york-v4/ui/field-anchor-link.ts"
+    const sourceFieldLink = fileContent(
+      "registry/new-york-v4/ui/source-field-link.ts"
     )
     const jsonFormSources = fileContent(
       "registry/new-york-v4/blocks/json-form-sources-block.tsx"
@@ -2008,14 +2213,23 @@ describe("viewer architecture", () => {
     const extractSources = fileContent(
       "registry/new-york-v4/blocks/extract-viewer-block.tsx"
     )
-    const extractionViewer = fileContent(
-      "registry/new-york-v4/blocks/extraction-viewer-block.tsx"
+    const sourcesViewer = fileContent(
+      "registry/new-york-v4/blocks/sources-viewer-block.tsx"
+    )
+    const sourceSegmentedOverlays = fileContent(
+      "registry/new-york-v4/ui/source-segmented-document-overlays.tsx"
     )
 
-    expect(fieldAnchorLink).toContain("export function useSegmentedFieldLink")
-    expect(fieldAnchorLink).toContain("useSegmentedDocument")
-    expect(fieldAnchorLink).toContain("scrollToAnchor(anchor, options)")
-    expect(fieldAnchorLink).toContain("scrollToSegmentStart(segment, options)")
+    expect(sourceFieldLink).toContain(
+      "export function useSegmentedSourceFieldLink"
+    )
+    expect(sourceFieldLink).toContain("useSegmentedItemLink")
+    expect(sourceFieldLink).toContain("activeAnchors")
+    expect(sourceFieldLink).not.toContain("anchorsBySegmentId")
+    expect(sourceFieldLink).not.toContain("scrollToAnchor(anchor, options)")
+    expect(sourceFieldLink).not.toContain(
+      "scrollToSegmentStart(segment, options)"
+    )
 
     for (const [file, content] of [
       ["json-form-sources-block", jsonFormSources],
@@ -2026,10 +2240,10 @@ describe("viewer architecture", () => {
         "SegmentedDocumentProvider"
       )
       expect(content, `${file} uses segmented field link`).toContain(
-        "useSegmentedFieldLink"
+        "useSegmentedSourceFieldLink"
       )
-      expect(content, `${file} registers document handle`).toContain(
-        "setDocumentHandle"
+      expect(content, `${file} uses shared source overlay helpers`).toContain(
+        "source-segmented-document-overlays"
       )
       expect(content, `${file} tracks current page`).toContain(
         "onCurrentPageChange"
@@ -2049,22 +2263,29 @@ describe("viewer architecture", () => {
     }
 
     expect(jsonFormSources).toContain("sourceMapToSegmentedDocumentModel")
-    expect(jsonFormSources).toContain("PdfHighlight")
+    expect(jsonFormSources).toContain("useSegmentedPdfSourceOverlay")
     expect(jsonFormSources).not.toContain("usePdfAnchoredTarget")
     expect(jsonFormSources).not.toContain("usePdfAnchoredOverlay")
     expect(imageSources).toContain("sourceFieldsToSegmentedDocumentModel")
-    expect(imageSources).toContain("scrollToFrameArea")
+    expect(imageSources).toContain("useSegmentedImageSourceOverlay")
     expect(extractSources).toContain("sourceFieldsToSegmentedDocumentModel")
     expect(extractSources).toContain("PdfViewerPages")
-    expect(extractSources).toContain("PdfHighlight")
-    expect(extractionViewer).toContain("sourceMapToSegmentedDocumentModel")
-    expect(extractionViewer).toContain("sourceFieldsToSegmentedDocumentModel")
-    expect(extractionViewer).toContain("SegmentedExtractionShell")
-    expect(extractionViewer).toContain("SegmentedDocumentProvider")
-    expect(extractionViewer).toContain("useSegmentedFieldLink")
-    expect(extractionViewer).toContain("setDocumentHandle")
-    expect(extractionViewer).toContain("AnchoredDocumentProvider")
-    expect(extractionViewer).not.toContain("pdf-anchor-target")
+    expect(extractSources).toContain("useSegmentedPdfSourceOverlay")
+    expect(sourcesViewer).toContain("sourceMapToSegmentedDocumentModel")
+    expect(sourcesViewer).toContain("sourceFieldsToSegmentedDocumentModel")
+    expect(sourcesViewer).toContain("SegmentedSourcesShell")
+    expect(sourcesViewer).toContain("SegmentedDocumentProvider")
+    expect(sourcesViewer).toContain("useSegmentedSourceFieldLink")
+    expect(sourcesViewer).toContain("useSegmentedPdfSourceOverlay")
+    expect(sourcesViewer).toContain("useSegmentedImageSourceOverlay")
+    expect(sourcesViewer).toContain("AnchoredDocumentProvider")
+    expect(sourcesViewer).not.toContain("pdf-anchor-target")
+    expect(sourceSegmentedOverlays).toContain("setDocumentHandle")
+    expect(sourceSegmentedOverlays).toContain("useSegmentedPdfViewerHandle")
+    expect(sourceSegmentedOverlays).toContain("useSegmentedImageViewerHandle")
+    expect(sourceSegmentedOverlays).toContain("activeAnchorsForPage")
+    expect(sourceSegmentedOverlays).toContain("PdfHighlight")
+    expect(sourceSegmentedOverlays).toContain("scrollToFrameArea")
   })
 
   it("keeps source blocks from rebuilding document anchors inline", () => {
@@ -2074,7 +2295,7 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/blocks/xlsx-sources-block.tsx",
       "registry/new-york-v4/blocks/docx-sources-block.tsx",
       "registry/new-york-v4/blocks/json-form-sources-block.tsx",
-      "registry/new-york-v4/blocks/extraction-viewer-block.tsx",
+      "registry/new-york-v4/blocks/sources-viewer-block.tsx",
     ]
     const forbidden = [
       "sourceToPdfAnchor",
@@ -2117,9 +2338,9 @@ describe("viewer architecture", () => {
         path: "registry/new-york-v4/ui/anchored-evidence.ts",
       }),
     ])
-    expect(itemsByName.get("anchored-item-list")?.files).toEqual([
+    expect(itemsByName.get("interactive-item-list")?.files).toEqual([
       expect.objectContaining({
-        path: "registry/new-york-v4/ui/anchored-item-list.tsx",
+        path: "registry/new-york-v4/ui/interactive-item-list.tsx",
       }),
     ])
     expect(itemsByName.get("source-evidence")?.files).toEqual([
@@ -2141,6 +2362,9 @@ describe("viewer architecture", () => {
           path: "registry/new-york-v4/ui/segmented-document-provider.tsx",
         }),
         expect.objectContaining({
+          path: "registry/new-york-v4/ui/segmented-item-link.ts",
+        }),
+        expect.objectContaining({
           path: "registry/new-york-v4/ui/use-segment-viewport-controller.ts",
         }),
       ])
@@ -2149,17 +2373,23 @@ describe("viewer architecture", () => {
       expect.objectContaining({
         path: "registry/new-york-v4/ui/source-segmented-document-model.ts",
       }),
+      expect.objectContaining({
+        path: "registry/new-york-v4/ui/source-segmented-document-overlays.tsx",
+      }),
     ])
     expect(itemsByName.get("layout-blocks-segmented-document")?.files).toEqual([
       expect.objectContaining({
         path: "registry/new-york-v4/ui/layout-blocks-segmented-document-model.ts",
       }),
     ])
-    expect(itemsByName.get("field-anchor-link")?.files).toEqual([
+    expect(itemsByName.get("source-field-link")?.files).toEqual([
       expect.objectContaining({
-        path: "registry/new-york-v4/ui/field-anchor-link.ts",
+        path: "registry/new-york-v4/ui/source-field-link.ts",
       }),
     ])
+    expect(itemsByName.get("source-field-link")?.registryDependencies).toEqual(
+      expect.arrayContaining(["anchored-document-viewer", "segmented-document"])
+    )
     expect(itemsByName.get("layout-blocks")?.files).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -2172,8 +2402,8 @@ describe("viewer architecture", () => {
     )
     expect(itemsByName.get("source-field-list")?.registryDependencies).toEqual(
       expect.arrayContaining([
-        "anchored-item-list",
-        "field-anchor-link",
+        "interactive-item-list",
+        "source-field-link",
         "source-evidence",
       ])
     )
@@ -2189,7 +2419,7 @@ describe("viewer architecture", () => {
     expect(itemsByName.get("layout-blocks")?.registryDependencies).toEqual(
       expect.arrayContaining([
         "anchored-evidence",
-        "anchored-item-list",
+        "interactive-item-list",
         "segmented-document",
       ])
     )
@@ -2234,7 +2464,7 @@ describe("viewer architecture", () => {
       expect.arrayContaining(["anchored-document-viewer", "pdf-anchor-target"])
     )
     expect(
-      itemsByName.get("extraction-viewer-block")?.registryDependencies
+      itemsByName.get("sources-viewer-block")?.registryDependencies
     ).toEqual(
       expect.arrayContaining([
         "anchored-document-viewer",
@@ -2243,7 +2473,7 @@ describe("viewer architecture", () => {
       ])
     )
     expect(
-      itemsByName.get("extraction-viewer-block")?.registryDependencies
+      itemsByName.get("sources-viewer-block")?.registryDependencies
     ).not.toEqual(expect.arrayContaining(["pdf-anchor-target"]))
   })
 
@@ -2307,12 +2537,18 @@ describe("viewer architecture", () => {
       "components/viewers/edit/edit-viewer-document.tsx"
     )
     const fields = fileContent("components/viewers/edit/edit-viewer-fields.tsx")
+    const overlays = fileContent(
+      "components/viewers/edit/edit-viewer-overlays.tsx"
+    )
     const fieldPanel = fileContent(
       "components/viewers/edit/edit-viewer-field-panel.tsx"
     )
     const model = fileContent("components/viewers/edit/edit-viewer-model.ts")
     const types = fileContent("components/viewers/edit/edit-viewer-types.ts")
-    const docs = fileContent("content/docs/components/edit-viewer.mdx")
+    const editDocsPath = "content/docs/components/edit-viewer.mdx"
+    const docs = existsSync(join(repoRoot, editDocsPath))
+      ? fileContent(editDocsPath)
+      : null
     const editFiles = readdirSync(join(repoRoot, "components/viewers/edit"))
       .filter((file) => file.endsWith(".ts") || file.endsWith(".tsx"))
       .map((file) => ({
@@ -2348,16 +2584,26 @@ describe("viewer architecture", () => {
 
     expect(model).toContain("createEditViewerFieldProjection")
     expect(model).toContain("createEditViewerAnchorItems")
+    expect(model).toContain("editFieldTargetFromBBox")
+    expect(model).toContain("normalizeEditViewerFieldLocation")
+    expect(model).toContain("getEditViewerPdfAreaAnchor")
+    expect(model).toContain('targetStatus: { state: "invalid"')
     expect(model).toContain("resolveEditViewerDocumentTarget")
     expect(model).not.toContain('from "react"')
     expect(model).not.toContain("anchored-document-viewer")
     expect(types).toContain("EditViewerDocumentSource")
+    expect(types).toContain("target: DocumentAnchor | null")
+    expect(types).toContain("EditViewerFieldTargetStatus")
     expect(types).not.toContain("interface EditViewerDocument ")
-    expect(docs.indexOf("## Composition")).toBeLessThan(
-      docs.indexOf("## Easy API")
-    )
-    expect(docs).not.toContain("EditViewerRoot")
-    expect(docs).toContain("EditViewerFields` is content-only")
+    expect(overlays).toContain("getEditViewerPdfAreaAnchor")
+    expect(overlays).not.toContain("field.bbox")
+    if (docs) {
+      expect(docs.indexOf("## Composition")).toBeLessThan(
+        docs.indexOf("## Easy API")
+      )
+      expect(docs).not.toContain("EditViewerRoot")
+      expect(docs).toContain("EditViewerFields` is content-only")
+    }
     expect(
       editFiles
         .filter(({ content }) => content.includes("useAnchoredDocument"))

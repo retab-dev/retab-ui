@@ -2,14 +2,10 @@
 
 import * as React from "react"
 
-import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
-import { ViewerBody, ViewerRoot, ViewerSurface } from "@/components/ui/viewer"
+import { PdfViewer } from "@/components/ui/pdf-viewer"
 import { EmailViewerDemo } from "@/components/email-viewer-demo"
 import { TextViewerDemo } from "@/components/text-viewer-demo"
-import {
-  ClassifierViewerHeader,
-  ClassifierViewerProvider,
-} from "@/components/viewers/classify/classifier-viewer"
+import { ClassifierViewer } from "@/components/viewers/classify/classifier-viewer"
 import { EditViewer } from "@/components/viewers/edit/edit-viewer"
 import type { FormField } from "@/components/viewers/lib/edit-types"
 import type { ParseResponse } from "@/components/viewers/lib/parse-types"
@@ -17,8 +13,7 @@ import type { PartitionResult } from "@/components/viewers/lib/partition-types"
 import type { SplitView } from "@/components/viewers/lib/split-types"
 import { ParseViewer } from "@/components/viewers/parse/parse-viewer"
 import {
-  PartitionViewerHeader,
-  PartitionViewerProvider,
+  PartitionViewer,
   usePartitionViewerDocumentControls,
 } from "@/components/viewers/partition/partition-viewer"
 import editSample from "@/components/viewers/sample-data/edit.json"
@@ -106,54 +101,38 @@ export function PartitionViewerDemo() {
       className="not-prose flex flex-col overflow-hidden rounded-xl border"
       style={{ height: 640 }}
     >
-      <PartitionViewerProvider result={partitionResult}>
-        <ViewerRoot bare className="h-full flex-1 bg-background">
-          <PartitionViewerHeader />
-          <ViewerBody>
-            <ViewerSurface>
-              <PartitionDemoDocument />
-            </ViewerSurface>
-          </ViewerBody>
-        </ViewerRoot>
-      </PartitionViewerProvider>
+      <PartitionViewer
+        result={partitionResult}
+        document={<PartitionDemoDocument />}
+      />
     </div>
   )
 }
 
 export function ClassificationViewerDemo() {
-  const viewerRef = React.useRef<PdfViewerHandle | null>(null)
-
   return (
     <div
       className="not-prose flex flex-col overflow-hidden rounded-xl border"
       style={{ height: 520 }}
     >
-      <ClassifierViewerProvider
+      <ClassifierViewer
         result={{
           category: "Loan Application",
           reasoning:
             "The document is a Uniform Residential Loan Application (Form 1003): it collects borrower, employment, and property details for a mortgage request, which matches the Loan Application category.",
         }}
-        onSelectDocumentStart={() => viewerRef.current?.scrollToPage(1)}
-      >
-        <ViewerRoot bare className="h-full flex-1 bg-background">
-          <ClassifierViewerHeader />
-          <ViewerBody>
-            <ViewerSurface>
-              <PdfViewer
-                ref={viewerRef}
-                source={{
-                  kind: "url",
-                  url: "/samples/loan-application.pdf",
-                  fileName: "loan-application.pdf",
-                }}
-                bare
-                className="h-full"
-              />
-            </ViewerSurface>
-          </ViewerBody>
-        </ViewerRoot>
-      </ClassifierViewerProvider>
+        document={
+          <PdfViewer
+            source={{
+              kind: "url",
+              url: "/samples/loan-application.pdf",
+              fileName: "loan-application.pdf",
+            }}
+            bare
+            className="h-full"
+          />
+        }
+      />
     </div>
   )
 }
@@ -183,9 +162,10 @@ export function SplitViewerDemo() {
       className="not-prose flex flex-col overflow-hidden rounded-xl border"
       style={{ height: 640 }}
     >
-      <SplitViewer result={splitResult}>
-        <SplitViewerDemoDocument />
-      </SplitViewer>
+      <SplitViewer
+        result={splitResult}
+        document={<SplitViewerDemoDocument />}
+      />
     </div>
   )
 }

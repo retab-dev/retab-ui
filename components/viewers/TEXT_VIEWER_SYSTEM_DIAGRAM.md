@@ -34,7 +34,7 @@ flowchart TD
     Consumer["Application component"]
     Props["TextViewerProps\nsource: url | blob | text\nclassName?: string\ntoolbar?: boolean = true\nhighlight?: { start, end } | null\nbare?: boolean\nmaxBytes?: number = 1_000_000\nmaxLines?: number = 10_000"]
     RefAPI["TextViewerHandle\nscrollToLineRange(range, options?)\ngetViewportElement()"]
-    SourceLinkConsumer["Source-linked viewers\nTextSourcesBlock, ExtractionViewerBlock,\nJsonForm/source field hovers"]
+    SourceLinkConsumer["Source-linked viewers\nTextSourcesBlock, SourcesViewerBlock,\nJsonForm/source field hovers"]
   end
 
   Consumer --> Props

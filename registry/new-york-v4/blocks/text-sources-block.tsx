@@ -8,7 +8,7 @@ import {
   useAnchoredDocument,
   type AnchoredDocumentTarget,
 } from "@/components/ui/anchored-document-viewer"
-import { useAnchoredFieldLink } from "@/components/ui/field-anchor-link"
+import { useAnchoredSourceFieldLink } from "@/components/ui/source-field-link"
 import { sourceFieldsToEvidenceModel } from "@/components/ui/source-evidence"
 import {
   SourceFieldList,
@@ -63,7 +63,7 @@ function TextSourcesContent({
 }: {
   viewerRef: React.RefObject<TextViewerHandle | null>
 }) {
-  const link = useAnchoredFieldLink()
+  const link = useAnchoredSourceFieldLink()
   const { activeAnchor, activeItem } = useAnchoredDocument()
   const highlight =
     activeAnchor?.kind === "text-range"

@@ -3,10 +3,11 @@
 import * as React from "react"
 
 import { type SegmentInteraction } from "@/lib/segment-interaction"
-import { normalizePageCount, type Segment } from "@/lib/segments"
+import { normalizePageCount } from "@/lib/segments"
 import { cn } from "@/lib/utils"
 
 import { PageRibbon } from "./page-ribbon"
+import type { DocumentSegment } from "./segmented-document-model"
 
 export type SegmentPageRailApi = {
   setViewportElement: (element: HTMLElement | null) => void
@@ -17,14 +18,14 @@ export type SegmentPageRailApi = {
 }
 
 export interface SegmentPageRailProps {
-  segments: Segment[]
+  segments: DocumentSegment[]
   pageCount: number
   currentPage?: number | null
   scrollProgress?: number | null
   interaction?: SegmentInteraction
   railApi: SegmentPageRailApi
   onSelectPage?: (page: number) => void
-  onSelect?: (segment: Segment) => void
+  onSelect?: (segment: DocumentSegment) => void
   showTicks?: boolean
   className?: string
 }

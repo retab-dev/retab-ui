@@ -3,9 +3,7 @@
 import * as React from "react"
 import { Loader2, Tags } from "lucide-react"
 
-import { buildColorMap, type Segment } from "@/lib/segments"
-import { SegmentLegend } from "@/components/ui/segment-legend"
-import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
+import { cn } from "@/lib/utils"
 import {
   ViewerBody,
   ViewerHeader,
@@ -21,8 +19,6 @@ type ClassifierViewerContextValue = {
   isProcessing: boolean
   reasoning: string | null
   result: ClassifyResult | null
-  segments: Segment[]
-  requestDocumentStart: () => void
 }
 
 const ClassifierViewerContext =
@@ -33,7 +29,6 @@ export interface ClassifierViewerProviderProps {
   isProcessing?: boolean
   emptyTitle?: string
   emptyDescription?: string
-  onSelectDocumentStart?: () => void
   children: React.ReactNode
 }
 
@@ -42,6 +37,7 @@ export interface ClassifierViewerProps {
   isProcessing?: boolean
   emptyTitle?: string
   emptyDescription?: string
+  document?: React.ReactNode
 }
 
 export function useClassifierViewer() {
@@ -55,14 +51,11 @@ export function useClassifierViewer() {
 }
 
 export function useClassifierViewerHeader() {
-  const { category, reasoning, requestDocumentStart, segments } =
-    useClassifierViewer()
+  const { category, reasoning } = useClassifierViewer()
 
   return {
     category,
     reasoning,
-    requestDocumentStart,
-    segments,
   }
 }
 
@@ -71,27 +64,10 @@ export function ClassifierViewerProvider({
   isProcessing = false,
   emptyTitle = "Run classify to see output",
   emptyDescription = "Provide input, define categories, and click Run Classify",
-  onSelectDocumentStart,
   children,
 }: ClassifierViewerProviderProps) {
   const category = result?.category ?? null
   const reasoning = result?.reasoning?.trim() || null
-  const segments = React.useMemo<Segment[]>(() => {
-    if (!category) return []
-    const colors = buildColorMap([category])
-    return [
-      {
-        id: "classification",
-        label: category,
-        pages: [1],
-        color: colors.get(category) ?? "#4E79A7",
-        index: 0,
-      },
-    ]
-  }, [category])
-  const requestDocumentStart = React.useCallback(() => {
-    onSelectDocumentStart?.()
-  }, [onSelectDocumentStart])
   const value = React.useMemo<ClassifierViewerContextValue>(
     () => ({
       category,
@@ -99,20 +75,9 @@ export function ClassifierViewerProvider({
       emptyTitle,
       isProcessing,
       reasoning,
-      requestDocumentStart,
       result,
-      segments,
     }),
-    [
-      category,
-      emptyDescription,
-      emptyTitle,
-      isProcessing,
-      reasoning,
-      requestDocumentStart,
-      result,
-      segments,
-    ]
+    [category, emptyDescription, emptyTitle, isProcessing, reasoning, result]
   )
 
   return (
@@ -123,24 +88,36 @@ export function ClassifierViewerProvider({
 }
 
 export function ClassifierViewerHeader({ className }: { className?: string }) {
-  const interaction = useSegmentInteraction()
-  const { category, reasoning, requestDocumentStart, segments } =
-    useClassifierViewerHeader()
+  const { category, reasoning } = useClassifierViewerHeader()
 
   if (!category) return null
 
+  const categoryNode = (
+    <span className="inline-flex min-h-7 min-w-0 items-center rounded-md border bg-background px-2.5 text-sm font-medium text-foreground">
+      <span className="truncate">{category}</span>
+    </span>
+  )
+
   return (
-    <ViewerHeader className={className ?? "bg-background"}>
-      <SegmentLegend
-        variant="plain"
-        segments={segments}
-        interaction={interaction}
-        onSelect={requestDocumentStart}
-        className="px-3 py-2"
-        caption={
-          reasoning ? <span title={reasoning}>{reasoning}</span> : undefined
-        }
-      />
+    <ViewerHeader
+      className={cn(
+        "flex min-h-10 items-center gap-3 bg-background px-3 py-2",
+        className
+      )}
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <Tags className="size-4 shrink-0 text-muted-foreground" />
+        <span className="shrink-0 text-sm font-medium">Classification</span>
+        <span className="min-w-0">{categoryNode}</span>
+      </div>
+      {reasoning ? (
+        <span
+          className="max-w-[50%] min-w-0 truncate text-xs text-muted-foreground"
+          title={reasoning}
+        >
+          {reasoning}
+        </span>
+      ) : null}
     </ViewerHeader>
   )
 }
@@ -149,7 +126,7 @@ export function ClassifierViewerEmptyState() {
   const { emptyDescription, emptyTitle, isProcessing } = useClassifierViewer()
 
   return (
-    <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 bg-muted px-8 text-muted-foreground">
+    <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 bg-background px-8 text-muted-foreground">
       {isProcessing ? (
         <>
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -172,12 +149,18 @@ export function ClassifierViewerEmptyState() {
   )
 }
 
-export function ClassifierViewerDocumentState() {
+export function ClassifierViewerDocument({
+  document,
+}: {
+  document?: React.ReactNode
+}) {
   const { category } = useClassifierViewer()
 
   if (!category) return <ClassifierViewerEmptyState />
 
-  return (
+  return document ? (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">{document}</div>
+  ) : (
     <div className="flex h-full flex-1 items-center justify-center">
       <span className="text-sm text-muted-foreground">
         No document available
@@ -191,6 +174,7 @@ export function ClassifierViewer({
   isProcessing = false,
   emptyTitle,
   emptyDescription,
+  document,
 }: ClassifierViewerProps) {
   return (
     <ClassifierViewerProvider
@@ -203,7 +187,7 @@ export function ClassifierViewer({
         <ClassifierViewerHeader />
         <ViewerBody>
           <ViewerSurface>
-            <ClassifierViewerDocumentState />
+            <ClassifierViewerDocument document={document} />
           </ViewerSurface>
         </ViewerBody>
       </ViewerRoot>

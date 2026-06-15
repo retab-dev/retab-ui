@@ -43,12 +43,12 @@ import {
   SegmentedDocumentProvider,
   useSegmentedDocument,
 } from "@/components/ui/segmented-document-provider"
-import { SegmentedDocumentViewer } from "@/components/ui/segmented-document-viewer"
 import {
   useControlledSegmentInteraction,
   useSegmentInteraction,
 } from "@/components/ui/use-segment-interaction"
 import { useSegmentViewportController } from "@/components/ui/use-segment-viewport-controller"
+import { ClassifierViewer } from "@/components/viewers/classify/classifier-viewer"
 import {
   PartitionViewer,
   PartitionViewerHeader,
@@ -1535,65 +1535,6 @@ describe("PageRibbon", () => {
   })
 })
 
-describe("SegmentedDocumentViewer", () => {
-  it("does not mark segment buttons as persistent pressed selections", () => {
-    render(<SegmentedDocumentViewer segments={segments} />)
-
-    const sidebarIntro = screen.getByRole("button", { name: /Intro.*2 pages/ })
-    fireEvent.click(sidebarIntro)
-
-    const introButtons = screen.getAllByRole("button", { name: /Intro/ })
-    expect(
-      introButtons.some((button) => button.hasAttribute("aria-pressed"))
-    ).toBe(false)
-  })
-
-  it("passes title, unit label, and pageCount through composed surfaces", () => {
-    render(
-      <SegmentedDocumentViewer
-        segments={segments.slice(0, 1)}
-        pageCount={4}
-        title="Partition preview"
-        unitLabel="chunk"
-      />
-    )
-
-    expect(screen.getByText("Partition preview")).toBeTruthy()
-    expect(screen.getByText("1 chunk")).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Page 4" })).toBeTruthy()
-  })
-
-  it("jumps to the earliest normalized page for unsorted segment pages", () => {
-    const scrolledPages: string[] = []
-    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView
-    HTMLElement.prototype.scrollIntoView = function () {
-      scrolledPages.push(this.getAttribute("data-page") ?? "")
-    }
-
-    try {
-      render(
-        <SegmentedDocumentViewer
-          src="/document.pdf"
-          segments={[
-            segment({
-              id: "manual",
-              index: 0,
-              label: "Manual",
-              pages: [5, 1],
-            }),
-          ]}
-        />
-      )
-
-      fireEvent.click(screen.getByRole("button", { name: /Manual.*2 pages/ }))
-
-      expect(scrolledPages).toEqual(["1"])
-    } finally {
-      HTMLElement.prototype.scrollIntoView = originalScrollIntoView
-    }
-  })
-})
-
 describe("partition segment composition", () => {
   it("groups partition legend keys by display label while preserving ribbon chunks", () => {
     render(
@@ -1612,6 +1553,27 @@ describe("partition segment composition", () => {
     expect(screen.getAllByRole("button", { name: "Contract" })).toHaveLength(1)
     expect(screen.getByLabelText("Contract pages 1 to 1")).toBeTruthy()
     expect(screen.getByLabelText("Contract pages 2 to 2")).toBeTruthy()
+  })
+
+  it("renders an explicit partition document node in the viewer surface", () => {
+    render(
+      <PartitionViewer
+        result={{
+          output: [{ key: "Contract", pages: [1] }],
+          consensus: { choices: [], likelihoods: null },
+          usage: null,
+        }}
+        document={<div data-testid="partition-document-pane" />}
+      />
+    )
+
+    const wrapperClassName =
+      screen.getByTestId("partition-document-pane").parentElement?.className ??
+      ""
+
+    expect(wrapperClassName).toContain("min-w-0")
+    expect(wrapperClassName).toContain("flex-1")
+    expect(screen.queryByText("No document available")).toBeNull()
   })
 
   it("derives a pure partition viewer model from output and votes", () => {
@@ -1723,6 +1685,25 @@ describe("partition segment composition", () => {
     expect(
       screen.getByLabelText("Invoices pages 5 to 5").getAttribute("style")
     ).toContain("left: 80%; width: 20%")
+  })
+})
+
+describe("classifier viewer composition", () => {
+  it("renders an explicit classifier document node in the viewer surface", () => {
+    render(
+      <ClassifierViewer
+        result={{ category: "Loan Application", reasoning: "Matches form." }}
+        document={<div data-testid="classifier-document-pane" />}
+      />
+    )
+
+    const wrapperClassName =
+      screen.getByTestId("classifier-document-pane").parentElement?.className ??
+      ""
+
+    expect(wrapperClassName).toContain("min-w-0")
+    expect(wrapperClassName).toContain("flex-1")
+    expect(screen.queryByText("No document available")).toBeNull()
   })
 })
 
@@ -2004,9 +1985,10 @@ describe("split segment composition", () => {
 
   it("gives the rendered document pane the full flex width", () => {
     render(
-      <SplitViewer result={{ output: [{ name: "Invoices", pages: [1] }] }}>
-        <div data-testid="split-document-pane" />
-      </SplitViewer>
+      <SplitViewer
+        result={{ output: [{ name: "Invoices", pages: [1] }] }}
+        document={<div data-testid="split-document-pane" />}
+      />
     )
 
     const wrapperClassName =
@@ -2028,15 +2010,13 @@ describe("split segment composition", () => {
     expect(
       body?.querySelector(':scope > [data-slot="viewer-sidebar"]')
     ).toBeTruthy()
-    expect(
-      body
-        ?.querySelector<HTMLElement>(':scope > [data-slot="viewer-sidebar"]')
-        ?.getAttribute("data-viewer-sidebar-mode")
-    ).toBe("inline")
-    expect(
-      body?.querySelector<HTMLElement>(':scope > [data-slot="viewer-sidebar"]')
-        ?.className
-    ).not.toContain("bg-background")
+    const sidebar = body?.querySelector<HTMLElement>(
+      ':scope > [data-slot="viewer-sidebar"]'
+    )
+
+    expect(sidebar?.getAttribute("data-viewer-sidebar-mode")).toBe("inline")
+    expect(sidebar?.className).not.toContain("bg-background")
+    expect(sidebar?.className).not.toContain("absolute")
     const surface = body?.querySelector<HTMLElement>(
       ':scope > [data-slot="viewer-surface"]'
     )
@@ -2063,9 +2043,10 @@ describe("split segment composition", () => {
     }
 
     render(
-      <SplitViewer result={{ output: [{ name: "Invoices", pages: [5] }] }}>
-        <DocumentWithHandle />
-      </SplitViewer>
+      <SplitViewer
+        result={{ output: [{ name: "Invoices", pages: [5] }] }}
+        document={<DocumentWithHandle />}
+      />
     )
 
     fireEvent.click(screen.getByRole("button", { name: "Invoices" }))
@@ -2102,9 +2083,8 @@ describe("split segment composition", () => {
             { name: "Results", pages: [7, 8, 9] },
           ],
         }}
-      >
-        <DocumentHarness />
-      </SplitViewer>
+        document={<DocumentHarness />}
+      />
     )
 
     fireEvent.click(screen.getByRole("button", { name: "Results" }))

@@ -3,9 +3,13 @@
 import * as React from "react"
 
 import { meanConfidence, toSegments } from "@/lib/segments"
+import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer"
 import { SegmentSidebar } from "@/components/ui/segment-sidebar"
-import { SegmentedDocumentViewer } from "@/components/ui/segmented-document-viewer"
 import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
+import {
+  SplitViewer,
+  useSplitViewerDocumentControls,
+} from "@/components/viewers/split/split-viewer"
 
 // A split-style result (named subdocuments) with per-page likelihoods — the
 // same model also covers partition chunks; only the label differs.
@@ -61,16 +65,37 @@ const splitOutput = [
 ]
 
 export function SegmentSidebarSplitDemo() {
-  const segments = React.useMemo(() => toSegments(splitOutput), [])
   return (
-    <div className="not-prose my-6" style={{ height: 640 }}>
-      <SegmentedDocumentViewer
-        segments={segments}
-        src="/samples/an-image-is-worth-16x16-words.pdf"
-        unitLabel="subdocument"
-        title="an-image-is-worth-16x16-words.pdf · 6 subdocuments"
-        className="h-full"
+    <div
+      className="not-prose relative my-6 h-[640px] w-full overflow-hidden rounded-lg border bg-background"
+      data-demo="segment-sidebar-split"
+    >
+      <SplitViewer
+        result={{ output: splitOutput }}
+        document={<SegmentSidebarSplitDocument />}
       />
     </div>
+  )
+}
+
+function SegmentSidebarSplitDocument() {
+  const controls = useSplitViewerDocumentControls()
+
+  return (
+    <PdfViewerProvider
+      source={{
+        kind: "url",
+        url: "/samples/an-image-is-worth-16x16-words.pdf",
+        fileName: "an-image-is-worth-16x16-words.pdf",
+      }}
+    >
+      <PdfViewerPages
+        ref={controls.setDocumentHandle}
+        bare
+        className="h-full"
+        onScrollProgressChange={controls.onScrollProgressChange}
+        onVisiblePageChange={controls.onCurrentPageChange}
+      />
+    </PdfViewerProvider>
   )
 }

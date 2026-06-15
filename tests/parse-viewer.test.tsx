@@ -99,10 +99,10 @@ function ParseDocumentScrollSpy({
 }) {
   const document = useParseViewerDocument()
 
-  React.useEffect(() => {
-    if (!document.scrollRequest) return
-    onScroll(document.scrollRequest.pageNumber)
-  }, [document.scrollRequest, onScroll])
+  React.useLayoutEffect(() => {
+    document.setDocumentHandle({ scrollToPage: onScroll })
+    return () => document.setDocumentHandle(null)
+  }, [document, onScroll])
 
   return <>{children}</>
 }

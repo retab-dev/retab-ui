@@ -36,17 +36,17 @@ export type {
   PptxSlideOverlayProps,
 } from "./pptx-viewer-core"
 
-export type PptxResourceViewerProps = Omit<PptxViewerProps, "source"> & {
+export type PptxResourceContentProps = Omit<PptxViewerProps, "source"> & {
   resource: ViewerResource
 }
 
 export function PptxViewer(props: PptxViewerProps) {
   const { source, ...resourceProps } = props
   const resource = React.useMemo(() => createViewerResource(source), [source])
-  return <PptxResourceViewer {...resourceProps} resource={resource} />
+  return <PptxResourceContent {...resourceProps} resource={resource} />
 }
 
-export function PptxResourceViewer(props: PptxResourceViewerProps) {
+export function PptxResourceContent(props: PptxResourceContentProps) {
   const isClient = useIsClient()
   const resource = props.resource
 
@@ -64,7 +64,7 @@ export function PptxResourceViewer(props: PptxResourceViewerProps) {
     <ViewerErrorBoundary
       className={props.className}
       bare={props.bare}
-      download={resource.originalDownload}
+      download={props.download === false ? null : resource.originalDownload}
       format="pptx"
       resetKey={getPptxResetKey({
         resourceKey: resource.keys.resource,
@@ -100,6 +100,7 @@ function PptxViewerContent({
   className,
   scale: controlledScale,
   defaultScale,
+  download = true,
   onScaleChange,
   toolbar = true,
   renderSlideOverlay,
@@ -111,10 +112,7 @@ function PptxViewerContent({
   eager = true,
 }: Omit<PptxViewerProps, "source"> & { resource: ViewerResource }) {
   const source = useRetainedPptxSource(resource.content, onSourceLoadTiming)
-  const downloadAction = React.useMemo(
-    () => resource.originalDownload,
-    [resource]
-  )
+  const downloadAction = download ? resource.originalDownload : null
 
   const [rotation, setRotation] = React.useState(0)
   const scrollActivity = React.useMemo(() => createPptxScrollActivity(), [])
@@ -177,7 +175,7 @@ function PptxViewerContent({
           rotate={{
             onRotate: () => setRotation((value) => (value + 90) % 360),
           }}
-          downloads={[downloadAction]}
+          downloads={downloadAction ? [downloadAction] : []}
         />
       ) : null}
 

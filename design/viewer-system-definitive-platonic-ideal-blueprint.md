@@ -321,8 +321,10 @@ type ViewerRootProps = {
   open?: boolean
   defaultOpen?: boolean
   onOpenChange?: (open: boolean) => void
+  mode?: "auto" | "inline" | "overlay"
+  inlineBreakpoint?: number
   sidebarSide?: "left" | "right"
-  sidebarCollapsible?: "offcanvas" | "icon" | "none"
+  sidebarCollapsible?: "offcanvas" | "none"
 }
 ```
 
@@ -1229,7 +1231,7 @@ Composed API:
       <PartitionViewerHeader trailing={<ViewerSidebarTrigger />} />
       <ViewerBody>
         <ViewerSurface>
-          <PartitionRibbon />
+          <PartitionViewerRibbon />
           <PartitionDocument />
         </ViewerSurface>
       </ViewerBody>
@@ -1323,8 +1325,9 @@ depending on the UI intent.
 
 This does not mean every extraction target belongs in
 `SegmentedDocumentModel`. Page and image bboxes fit naturally. Text ranges,
-CSV cells, XLSX cells, and DOCX targets need a deliberate typed anchor model
-before they are folded in.
+CSV cells, XLSX cells, and DOCX targets stay on `DocumentAnchor` for now.
+They should not be folded into `SegmentAnchor` until the segmented handle can
+express non-page navigation without turning vague.
 
 The ideal rule is:
 
@@ -1339,7 +1342,7 @@ Do not pollute `SegmentAnchor` with vague fields such as:
 metadata?: Record<string, unknown>
 ```
 
-If non-bbox targets converge later, they should do it through a typed union:
+If non-bbox targets converge later, they must do it through a typed union:
 
 ```ts
 type SegmentAnchor =
@@ -1350,8 +1353,9 @@ type SegmentAnchor =
   | DocxTargetSegmentAnchor
 ```
 
-until then, keeping non-bbox anchored flows separate is cleaner than making the
-segmented primitive vague.
+Until then, keeping non-bbox anchored flows separate is cleaner than making the
+segmented primitive vague. The implementation should keep
+`sourceToSegmentAnchor` null for text, CSV, XLSX, and DOCX sources.
 
 ## Upload And Dropzone
 
@@ -1538,26 +1542,23 @@ Good:
   root.
 - `ViewerRoot` rejects multiple primary sidebars, which keeps the spatial
   grammar understandable.
+- `ViewerRoot` defaults to `mode="auto"` and resolves inline/overlay from the
+  measured root width.
+- `sidebarCollapsible` is deliberately only `"offcanvas" | "none"`; no icon
+  rail belongs in the primitive until there is real product evidence.
+- `bare` on `ViewerRoot` removes frame and background styling. Product
+  compositions that need a background must opt in with `className`.
 
 Bad:
 
-- `ViewerRoot` has more responsive sidebar policy than the blueprint currently
-  names: `mode`, `inlineBreakpoint`, and measured inline/overlay switching.
-  That may be correct, but it needs to be accepted explicitly or compressed.
-- `ViewerRoot` still defaults `mode` to `"inline"` even though most product
-  compositions want resilient behavior across widths.
-- `ViewerRoot` supports `sidebarCollapsible: "offcanvas" | "none"` but the
-  blueprint vocabulary still mentions an `"icon"` shape as a possible final
-  primitive. Either implement the icon rail or delete it from the desired API.
-- `bare` on `ViewerRoot` currently still applies `bg-muted/20`. That means
-  "bare" is not perfectly "parent owns all frame/background".
+- None in the spatial primitive contract. Remaining risk is visual tuning in
+  domain compositions that now inherit `mode="auto"`.
 
 Change:
 
-- Decide whether `mode="auto"` is the default platonic behavior.
-- Decide whether icon collapse belongs in `ViewerRoot`; if not, remove it from
-  all docs.
-- Make `bare` mean no frame and no opinionated background.
+- Keep `mode="auto"` as the default.
+- Keep icon collapse out of `ViewerRoot`.
+- Keep `bare` as no frame and no opinionated background.
 
 ### Generic Toolbar
 
@@ -1607,6 +1608,8 @@ FileViewerProvider
 FileViewerHeader
 FileViewerContent
 useFileViewer
+useFileViewerHeader
+useFileViewerContent
 FileViewerRoute
 ```
 
@@ -1621,37 +1624,31 @@ Good:
 - `FileViewerProvider` owns one source and one resolved render state.
 - `FileViewerContent` routes to format renderers.
 - `FileViewerHeader` exists as a named part.
-- The easy API and composed API now mostly share the same provider.
+- The easy API and composed API share the same provider.
+- The easy API now renders complete file chrome when `bare` is false.
+- `useFileViewer` exposes only the public file state, while
+  `useFileViewerHeader` and `useFileViewerContent` expose narrow part-specific
+  slices.
 
 Bad:
 
-- The easy `FileViewer` currently renders only `FileViewerContent`; it does not
-  render `FileViewerHeader` plus `ViewerRoot` as the blueprint describes. That
-  makes `FileViewer` ambiguous: sometimes it is the whole file viewer, sometimes
-  it is content.
 - `FileViewerContentProps` only accepts `bare` and `className`; content-level
   control is narrow, but not yet a complete named-parts API.
-- `useFileViewer` exposes the whole context, not narrow header/content slices.
-- Lazy route names such as `PdfResourceViewer`, `ImageResourceViewer`, and
-  `XlsxResourceViewer` sound like complete viewers while they are actually
-  resource/content renderers.
+- Lazy route names now use `*ResourceContent`, which makes the resource-first
+  content boundary explicit.
 
 Change:
 
-- Decide whether `<FileViewer source />` is complete chrome or content-only.
-  The final architecture says complete chrome.
-- If complete, make the nested form explicit through `bare`, or add a clearly
-  named `FileViewerContentOnly` path.
-- Rename resource renderers toward content names if they are public.
+- Keep `<FileViewer source />` as the complete file viewer.
+- Keep `<FileViewer source bare />` as the nested/content form.
+- Keep resource-first renderers on `*ResourceContent` names.
 
 ### ResourceDocShell
 
 Components:
 
 ```txt
-ResourceDocShell
 ZoomActions
-ZoomActionsSkeleton
 ViewerFallback
 UnsupportedCard
 ```
@@ -1659,27 +1656,24 @@ UnsupportedCard
 Current judgment:
 
 ```txt
-replace
+removed
 ```
 
 Good:
 
-- It solved a real problem for CSV, HTML, text, and fallback states: shared
-  header, actions, zoom skeleton, and download.
+- Its useful behavior was folded into the file-viewer named-parts grammar.
+- CSV, HTML, and fallback states no longer carry a private file header.
 
 Bad:
 
-- It is a private second chrome contract parallel to `FileViewerHeader` and
-  `FileViewerContent`.
-- It has its own header DOM instead of using `ViewerHeader`.
-- It makes CSV/HTML/text feel different from PDF, DOCX, image, and PPTX.
-- It spreads the meaning of `bare` into file chrome internals.
+- `ZoomActions` still lives in `file-viewer-chrome.tsx`; that is acceptable as
+  action chrome, but it should not grow into another shell.
 
 Change:
 
-- Move its useful pieces into `FileViewerHeader`, `FileViewerContent`, and
-  leaf-specific content parts.
-- Delete `ResourceDocShell` as a public or semi-public pattern.
+- Keep `ResourceDocShell` deleted.
+- Keep file identity, download, and outer frame in `FileViewerHeader` /
+  `ViewerRoot`, not in leaf renderers.
 
 ### PDF Viewer
 
@@ -1690,7 +1684,7 @@ PdfViewer
 PdfViewerProvider
 PdfViewerHeader
 PdfViewerPages
-PdfResourceViewer
+PdfResourceContent
 PdfViewerThumbnails
 PdfThumbnailRail
 PdfHighlight
@@ -1700,7 +1694,7 @@ PdfViewerContext hooks
 Current judgment:
 
 ```txt
-keep, rename one boundary
+keep, boundary renamed
 ```
 
 Good:
@@ -1713,16 +1707,14 @@ Good:
 
 Bad:
 
-- `PdfResourceViewer` sounds like a complete viewer. It is really a resource
-  page renderer.
-- `PdfViewerPages` delegates back through `PdfResourceViewer`, which makes the
-  public/composed boundary harder to read.
+- `PdfViewerPages` delegates back through `PdfResourceContent`; the name is now
+  accurate, but the call path still deserves a second look later.
 - `PdfViewer` owns a `ViewerRoot`, which is correct for the easy API, but users
   need very clear guidance that `PdfViewerPages` is the content part.
 
 Change:
 
-- Rename `PdfResourceViewer` to something content-shaped if it remains public.
+- Keep `PdfResourceContent` as the resource-first content boundary.
 - Keep `PdfViewer`, `PdfViewerProvider`, `PdfViewerHeader`,
   `PdfViewerPages`, and `PdfViewerThumbnails`.
 
@@ -1754,11 +1746,11 @@ Good:
 - It virtualizes.
 - It follows the active page without stealing pointer/user scroll.
 - It owns thumbnail-specific metrics instead of polluting PDF pages.
+- It has an explicit `thumbnailShape: "page" | "square"` contract, so square
+  thumbnails are a named rail mode rather than caller CSS.
 
 Bad:
 
-- Square thumbnail behavior is still a prop/style convention, not a strongly
-  named variant everywhere.
 - The rail and segmented page rail have similar "follow current item" behavior
   implemented separately.
 
@@ -1782,8 +1774,8 @@ TextViewer
 CodeViewer
 PretextMarkdownViewer
 MarkdownDocumentViewer
-HtmlDocViewer
-CsvDocViewer
+HtmlFileContent
+CsvFileContent
 ```
 
 Current judgment:
@@ -1798,13 +1790,12 @@ Good:
 - Heavy formats have dedicated resource/cache/worker modules.
 - CSV, XLSX, text, code, image, DOCX, PDF, and PPTX are separated enough for
   performance work.
+- CSV and HTML file-route adapters are named `CsvFileContent` and
+  `HtmlFileContent`, so content-only adapters no longer use `*DocViewer`.
 
 Bad:
 
-- Naming is uneven: some are `*Viewer`, some are `*ResourceViewer`, some are
-  `*DocViewer`, some are `*Content`.
-- Some leaf viewers include chrome; some rely on `ResourceDocShell`; some are
-  true content renderers.
+- Some leaf viewers include chrome; some are true content renderers.
 - Markdown has multiple families: pretext markdown, markdown document viewer,
   page markdown viewer. That may be necessary, but the names do not reveal the
   product distinction sharply enough.
@@ -1841,17 +1832,21 @@ Good:
   renderers.
 - It is useful in email, upload, and source sidebars without pulling in
   `FileViewer`.
+- `FileThumbnail` and `FileThumbnailFrame` expose named
+  `thumbnailShape` / `thumbnailSize` tokens for common sidebar geometry while
+  preserving `className`, `style`, and `previewAspectRatio` for unusual cases.
 
 Bad:
 
-- Thumbnail presentation rules are spread across consumers: email sidebar,
-  file intake sidebar, PDF rail, source sidebars.
-- Square thumbnail sizing is not a universal consumer contract.
+- Some older consumers still use raw `previewAspectRatio` and dimension classes
+  directly.
+- PDF rail remains intentionally separate because page-rail virtualization has
+  different sizing inputs.
 
 Change:
 
 - Keep `FileThumbnail` independent.
-- Standardize consumer thumbnail sizing tokens or variants.
+- Prefer `thumbnailShape` and `thumbnailSize` in viewer-system sidebars.
 
 ### Segmented Document Mechanics
 
@@ -1884,21 +1879,19 @@ Good:
 - The provider owns hover, preview, current page, scroll progress, document
   handle registration, and navigation.
 - Split, partition, OCR, and bbox source examples can share mechanics.
+- `SegmentedDocumentModel.segments` is documented as the
+  viewport/navigation projection.
+- `SegmentRow` is documented as generic display grouping only, with
+  vote/output semantics kept outside the generic model.
 
 Bad:
 
-- `SegmentedDocumentProvider` currently drives viewport ownership from
-  `model.segments`; that is clean only if `model.segments` is explicitly the
-  viewport/navigation projection.
-- `rows?: SegmentRow[]` is risky. It is safe for generic segment rows, but it
-  can easily become a tunnel for partition-specific vote semantics.
 - `SegmentLegend`, `SegmentPageRail`, `SegmentSidebar`, and `PageRibbon` still
   use older `Segment` language rather than consistently saying
   `DocumentSegment`.
 
 Change:
 
-- Document that `model.segments` means viewport/navigation segments.
 - Keep partition vote/output detail outside the generic provider.
 - Rename exported segment primitives only if the current names start causing
   real ambiguity.
@@ -1914,7 +1907,7 @@ SegmentedDocumentViewer
 Current judgment:
 
 ```txt
-delete or demote to demo/block
+removed from the UI registry
 ```
 
 Good:
@@ -1923,7 +1916,7 @@ Good:
 
 Bad:
 
-- It is exactly the shape the final architecture rejects: a generic visual
+- It was exactly the shape the final architecture rejects: a generic visual
   segmented viewer.
 - It owns its own `currentPage`, `useSegmentInteraction`, and DOM
   `querySelector` scroll path instead of using `SegmentedDocumentProvider` and a
@@ -1933,7 +1926,7 @@ Bad:
 
 Change:
 
-- Remove it from the core UI registry or reframe it as a demo-only block.
+- Keep it out of the core UI registry.
 - Do not let it become the recommended primitive.
 
 ### Email Viewer
@@ -1943,6 +1936,7 @@ Components:
 ```txt
 EmailViewer
 EmailViewerProvider
+EmailViewerFrame
 EmailHeader
 EmailPartsSidebar
 EmailContent
@@ -1965,6 +1959,7 @@ Good:
 
 - MIME recursion is preserved in the input and model.
 - The easy API uses a full-width header plus body/surface/sidebar hierarchy.
+- `EmailViewerFrame` exports the same named-part composition the easy API uses.
 - The sidebar is sectioned into body/attachments instead of raw MIME noise by
   default.
 - Attachments render through `FileViewer bare`.
@@ -1972,20 +1967,15 @@ Good:
 
 Bad:
 
-- `EmailViewerChrome` is private. The easy API is transparent enough in code,
-  but not exported as the composed example.
 - `useEmailViewer` exposes the full context even though narrow hooks exist.
 - Nested messages recursively create nested `ViewerRoot`s. That may be right,
   but it is visually and conceptually heavy.
-- `EmailHeader` does not accept a `trailing` prop; it hardcodes
-  `ViewerSidebarTrigger`.
 
 Change:
 
-- Export the same named composition the easy API uses, or make the easy API
-  visibly assemble exported parts only.
-- Prefer `EmailHeader` with a trailing slot over a hardcoded trigger if callers
-  need control.
+- Keep `EmailViewerFrame` as the exported preassembled named-part composition.
+- Keep `EmailHeader` configurable through `trailing`; the default trigger is a
+  convenience, not a fixed header contract.
 - Decide whether nested messages should be nested full viewers or nested email
   content.
 
@@ -1996,11 +1986,8 @@ Components:
 ```txt
 SplitViewer
 SplitViewerProvider
-SplitViewerRoot
 SplitViewerHeader
-SplitViewerBody
 SplitViewerSidebar
-SplitViewerSurface
 SplitViewerPageRail
 SplitViewerLegend
 SplitViewerDocument
@@ -2010,7 +1997,7 @@ SplitViewerEmptyState
 Current judgment:
 
 ```txt
-keep, compress wrapper parts
+keep, with semantic parts only
 ```
 
 Good:
@@ -2019,23 +2006,27 @@ Good:
 - Split has narrow hooks for header, rail, legend, and document.
 - Page rail and legend share the same viewport mechanics.
 - It no longer owns a custom scroll replay protocol.
+- `SplitViewerRoot`, `SplitViewerBody`, and `SplitViewerSurface` have been
+  removed; the easy API composes `ViewerRoot`, `ViewerBody`, and
+  `ViewerSurface` directly.
+- `SplitViewerSidebar` remains because it owns split-specific rail visibility
+  and default rail content.
+- `SplitViewer` and `SplitViewerDocument` use an explicit `document` prop for
+  caller-owned source rendering.
 
 Bad:
 
-- `SplitViewerRoot`, `SplitViewerBody`, `SplitViewerSidebar`, and
-  `SplitViewerSurface` mostly re-export generic spatial primitives with light
-  defaults. That can be convenient, but it creates a parallel spatial grammar.
-- `SplitViewerDocument` receives arbitrary `children`, so the source rendering
-  contract is not explicit in the component boundary.
-- Empty state uses `bg-muted`, which can fight the root/surface background
-  grammar.
+- None in the split composition boundary. Remaining quality work is visual and
+  document-source integration in examples.
 
 Change:
 
 - Keep semantic parts: header, page rail, legend, document, empty state.
-- Delete or minimize wrapper aliases for `ViewerRoot`, `ViewerBody`,
-  `ViewerSidebar`, and `ViewerSurface` unless they encode real split behavior.
-- Make selected source/document rendering explicit.
+- Do not reintroduce pure spatial aliases for `ViewerRoot`, `ViewerBody`, or
+  `ViewerSurface`.
+- Keep empty states background-neutral unless a domain component explicitly
+  needs a filled state surface.
+- Keep selected source/document rendering explicit through `document`.
 
 ### Partition Viewer
 
@@ -2062,24 +2053,23 @@ Good:
 - `PartitionViewerModel` correctly separates `viewportSegments`,
   `legendSegments`, and `ribbonRows`.
 - The stale `scrollRequest.version` protocol is gone from partition.
+- `PartitionViewer` and `PartitionViewerDocument` accept an explicit
+  `document` node for caller-owned source rendering.
+- `PartitionViewerRibbon` is an independently composed named part inside the
+  surface, not hidden in the header.
 
 Bad:
 
-- The easy API does not yet render a real document; `PartitionViewerDocument`
-  says "No document available" when output exists.
 - `createPartitionSegmentedDocumentModel` passes `ribbonRows` into generic
   `rows`, which is acceptable only if those rows remain generic. Partition
   votes are already domain-specific.
-- Header owns both legend and ribbon. That may be right visually, but it means
-  the ribbon is currently header chrome rather than an independently composed
-  body/header part.
 
 Change:
 
-- Connect partition to an actual document source/handle.
+- Keep selected source/document rendering explicit through `document`.
 - Keep vote/output semantics in partition model, not generic
   `SegmentedDocumentModel`.
-- Decide whether ribbon is a domain header part or its own named part.
+- Keep ribbon as its own named part.
 
 ### OCR / Layout Blocks
 
@@ -2106,18 +2096,21 @@ Good:
 - Layout items become semantic segments plus anchors.
 - PDF pages register the segmented document handle.
 - Overlay, panel, and document navigation are synchronized.
+- `useSegmentedItemLink` owns selected item, preview item, active segment,
+  active anchors, and anchor/segment-start navigation for both OCR/layout and
+  source-field adapters.
 
 Bad:
 
-- `DocumentAiLayoutBlocksContent` still owns local selected item state and
-  repeats segment/anchor lookup logic that also exists in `useSegmentedFieldLink`.
 - Overlay generation filters visible items per page inside the render callback.
 - Header, filter controls, document, sidebar, and provider wiring live in one
   large component.
 
 Change:
 
-- Extract a generic `useSegmentedItemLink` / `useSegmentedSourceLink` shape.
+- Keep `useSegmentedItemLink` generic: item ids, selected/preview state,
+  active anchors, and navigation only. Do not add source, OCR, or visual
+  concepts to it.
 - Move per-page overlay projection out of the render callback if profiling
   shows pressure.
 - Split visible parts if this becomes a public composed API.
@@ -2131,18 +2124,19 @@ SourceFieldList
 SourceIndicator
 SourceEvidence
 SourceAnchor
-FieldAnchorLink
-useAnchoredFieldLink
-useSegmentedFieldLink
+SourceFieldLink
+useAnchoredSourceFieldLink
+useSegmentedItemLink
+useSegmentedSourceFieldLink
 source-segmented-document-model
-AnchoredItemList
+InteractiveItemList
 AnchoredDocumentProvider
 ```
 
 Current judgment:
 
 ```txt
-rename and split
+renamed; provider convergence still open
 ```
 
 Good:
@@ -2151,25 +2145,26 @@ Good:
 - Non-bbox source examples still have a working anchored path.
 - `source-segmented-document-model` refuses to fake CSV/XLSX/DOCX/text targets
   as page anchors.
+- Source field linking now uses the neutral `SourceFieldLink` name.
+- `SourceFieldList` now renders through the neutral `InteractiveItemList`
+  primitive, so segmented source consumers no longer depend on an
+  anchored registry item.
+- `useSegmentedSourceFieldLink` exposes all active anchors for the active
+  segment while keeping `activeAnchor` as the primary navigation target.
+- `useSegmentedSourceFieldLink` is now a source-name adapter over
+  `useSegmentedItemLink`; it no longer owns segment/anchor lookup itself.
+- PDF and image segmented source overlays render every active page-local
+  anchor for the selected field.
 
 Bad:
 
-- `FieldAnchorLink` is now a misleading name because it can be backed by
-  either anchored-document or segmented-document mechanics.
-- `SourceFieldList` still renders through `AnchoredItemList`, even when the
-  link is segmented.
-- `useSegmentedFieldLink` only maps one anchor per segment id. That is enough
-  for current examples, but not enough for multiple anchors per field.
 - `AnchoredDocumentProvider` and `SegmentedDocumentProvider` now overlap for
   bbox cases, so readers must learn two interaction systems.
 
 Change:
 
-- Rename `FieldAnchorLink` to a neutral link name such as `SourceFieldLink`.
-- Split anchored and segmented field-list implementations if the shared list
-  keeps leaking old terms.
-- Decide whether non-bbox targets deserve typed `SegmentAnchor` variants or a
-  separate non-segmented provider.
+- Keep non-bbox targets on the typed `DocumentAnchor` path until a non-page
+  segmented handle exists.
 
 ### Extraction Blocks
 
@@ -2198,17 +2193,19 @@ Good:
 - Text/CSV/XLSX/DOCX examples do not lie by pretending non-page targets are
   page bboxes.
 - The mixed extraction viewer exposes the real current split.
+- PDF/image segmented overlays and document-handle bridges now live in
+  `source-segmented-document-overlays`.
 
 Bad:
 
-- PDF/image overlay helpers are duplicated across blocks.
 - Mixed extraction has two interaction systems: segmented for PDF/image,
   anchored for text/CSV/XLSX/DOCX.
 - The same `SourceFieldList` component has to straddle both systems.
 
 Change:
 
-- Extract shared segmented PDF/image source overlay helpers.
+- Keep shared segmented PDF/image source overlay helpers in
+  `source-segmented-document-overlays`.
 - Make an explicit decision on typed non-bbox anchors before touching text,
   CSV, XLSX, or DOCX convergence.
 
@@ -2271,7 +2268,7 @@ PageMarkdownPane
 Current judgment:
 
 ```txt
-keep, but isolate old scroll protocol
+keep, with handle-based document sync
 ```
 
 Good:
@@ -2280,10 +2277,11 @@ Good:
 - Parse is a thin domain wrapper over page markdown.
 - Markdown/page rendering is decomposed into model, pane, scale, scroll, sync,
   toolbar, and content.
+- Page markdown document sync uses a registered document handle instead of a
+  `scrollRequest.version` replay protocol.
 
 Bad:
 
-- Page markdown still uses a `scrollRequest.version` protocol.
 - It has its own current-page sync engine separate from
   `SegmentedDocumentProvider`.
 - `ParseViewer` has no header, which may be fine for embedded use but makes it
@@ -2292,8 +2290,7 @@ Bad:
 Change:
 
 - Keep page markdown separate unless it needs segment/anchor behavior.
-- If it needs document-handle navigation, replace `scrollRequest.version` with
-  a registered handle pattern.
+- Keep its document sync handle narrow: `scrollToPage` only.
 
 ### Classifier Viewer
 
@@ -2303,34 +2300,34 @@ Components:
 ClassifierViewer
 ClassifierViewerProvider
 ClassifierViewerHeader
-ClassifierViewerDocumentState
+ClassifierViewerDocument
 ClassifierViewerEmptyState
 ```
 
 Current judgment:
 
 ```txt
-too thin to be final
+plain result viewer
 ```
 
 Good:
 
 - It is simple.
 - It uses `ViewerRoot`, `ViewerHeader`, `ViewerBody`, and `ViewerSurface`.
+- It no longer creates a fake `Segment[]` or local segment interaction state
+  just to render one category.
+- `ClassifierViewer` and `ClassifierViewerDocument` accept an explicit
+  `document` node for caller-owned source rendering.
 
 Bad:
 
-- It creates a local `Segment[]` and `useSegmentInteraction` just for one
-  classification segment, instead of using segmented-document mechanics or
-  avoiding segment primitives entirely.
-- It does not render a document when classified.
-- `requestDocumentStart` is an imperative escape hatch, not a viewer handle.
+- None in the classifier composition boundary.
 
 Change:
 
-- Either make classify a real segmented-document consumer when it highlights a
-  document, or make it a non-document result card and stop using segment
-  primitives.
+- Keep classify off segmented-document mechanics until it has real page spans
+  or anchors.
+- Keep selected source/document rendering explicit through `document`.
 
 ### Upload / Dropzone Viewer
 
@@ -2341,6 +2338,7 @@ useDropzone
 FileUploader
 FileIntakeViewer
 FileIntakeViewerProvider
+FileIntakeViewerDropTarget
 FileIntakeViewerRoot
 FileIntakeViewerHeader
 FileIntakeViewerSidebar
@@ -2357,20 +2355,21 @@ Good:
 
 - Dropzone is acquisition, not file rendering.
 - `FileIntakeViewerProvider` converts selected files to `ViewerSource`.
+- `FileIntakeViewerDropTarget` owns the drop root and hidden input.
+- `FileIntakeViewerRoot` owns only viewer frame/chrome.
 - The composed viewer uses `ViewerRoot`, `ViewerSidebar`, and `FileViewer bare`.
 
 Bad:
 
-- `FileIntakeViewerSurface` accepts `renderViewer`, which is a slot-like escape
-  hatch. It is useful, but it weakens the named-parts philosophy.
-- `FileIntakeViewerRoot` wraps the whole viewer in a drop root, so acquisition
-  hit area and viewer frame are coupled.
 - It is single-file only by design, while the naming `FileIntakeViewer` could
   imply a queue.
 
 Change:
 
-- Prefer named parts and source access over `renderViewer`.
+- Keep custom rendering on composed parts via `useFileIntakeViewerSurface`
+  rather than a `renderViewer` callback on the easy API.
+- Keep browser acquisition in `FileIntakeViewerDropTarget`, not
+  `FileIntakeViewerRoot`.
 - Make single-file vs queue explicit in names.
 
 ### File-System Viewer
@@ -2410,29 +2409,33 @@ These are the patterns I would actively remove.
 
 ```txt
 1. Private second chrome systems
-   ResourceDocShell is the main offender.
+   ResourceDocShell has been removed. Do not recreate it under another name.
 
 2. Names that lie about completeness
-   PdfResourceViewer and other ResourceViewer names sound complete when they
-   are content/resource renderers.
+   The public `*ResourceViewer` names have been cut over to
+   `*ResourceContent`. Do not reintroduce `*ResourceViewer` for content-only
+   renderers.
 
 3. Generic visual mega-viewers
-   SegmentedDocumentViewer should not be the primitive.
+   SegmentedDocumentViewer has been removed from the UI registry. Do not
+   recreate it as the primitive.
 
 4. Old scroll replay protocols
-   scrollRequest.version remains in page markdown and should not spread.
+   Removed from page markdown; do not reintroduce effect-replayed scroll
+   request state.
 
 5. Two evidence interaction engines for the same visual problem
    AnchoredDocumentProvider and SegmentedDocumentProvider overlap for bbox
    evidence.
 
 6. Slot/render callback escape hatches
-   renderViewer is acceptable as an escape hatch but not as the main
-   composition grammar.
+   FileIntakeViewer no longer exposes renderViewer on the easy API. Custom
+   rendering should come from provider + named parts + narrow hooks.
 
 7. Wrapper aliases for generic spatial primitives
-   SplitViewerRoot/Body/Sidebar/Surface are useful only if they encode real
-   split behavior.
+   SplitViewerRoot, SplitViewerBody, and SplitViewerSurface have been removed.
+   SplitViewerSidebar remains because it encodes split behavior: hide when no
+   output exists and provide the page rail by default.
 
 8. Broad hooks next to narrow hooks
    useEmailViewer, useSplitViewer, and useEditViewer are fine internally, but
@@ -2452,17 +2455,12 @@ These are the patterns I would actively remove.
 Order matters. The cleanest sequence is:
 
 ```txt
-1. Delete or demote SegmentedDocumentViewer.
-2. Replace ResourceDocShell with FileViewer named parts.
-3. Decide the exact FileViewer easy API: complete chrome or content-only.
-4. Rename misleading resource/content viewer boundaries.
-5. Extract duplicated segmented PDF/image source overlay helpers.
-6. Rename FieldAnchorLink and decide anchored vs segmented source list APIs.
-7. Decide whether edit fields and non-bbox sources join typed SegmentAnchor.
-8. Replace page-markdown scrollRequest.version only if page markdown needs the
-   shared handle pattern.
-9. Compress SplitViewer spatial wrapper aliases.
-10. Revisit classifier: real segmented document consumer or plain result card.
+1. Rename misleading resource/content viewer boundaries.
+2. Decide anchored vs segmented source list APIs.
+3. Keep edit fields and non-bbox sources out of `SegmentAnchor` unless a typed
+   non-page segmented handle is designed.
+4. Compress SplitViewer spatial wrapper aliases.
+5. Revisit classifier: real segmented document consumer or plain result card.
 ```
 
 ## Styling Rules
@@ -2608,10 +2606,6 @@ The design has failed if any of these appear:
 ```
 
 ```txt
-scrollRequest.version
-```
-
-```txt
 Provider that owns both layout and selected domain item
 ```
 
@@ -2624,9 +2618,6 @@ One component that is sometimes a complete viewer and sometimes content-only
 Even with the correct architecture, the system is not perfect until these are
 gone:
 
-- legacy naming where `FieldAnchorLink` now means both anchored and segmented
-  behavior;
-- duplicated PDF/image bbox overlay helpers across examples;
 - non-bbox extraction targets split between older anchored mechanics and the
   segmented model;
 - any domain easy API that still has private layout wrappers unavailable to

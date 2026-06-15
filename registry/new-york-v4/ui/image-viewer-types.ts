@@ -46,6 +46,8 @@ export interface ImageViewerProps {
   /** Called by zoom controls. `null` means return to fit-width mode. */
   onScaleChange?: (scale: number | null) => void
   toolbar?: boolean
+  /** Show download actions in this viewer's toolbar/error state. */
+  download?: boolean
   /** Render absolutely-positioned overlays (e.g. bbox citations) on each frame. */
   renderFrameOverlay?: (props: ImageFrameOverlayProps) => React.ReactNode
   /** Fired with the 1-based frame nearest the top of the viewport as you scroll. */

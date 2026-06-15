@@ -45,6 +45,7 @@ export interface PartitionViewerProviderProps {
 export interface PartitionViewerProps {
   result: PartitionResult | null
   isProcessing?: boolean
+  document?: React.ReactNode
 }
 
 export function usePartitionViewer() {
@@ -64,6 +65,17 @@ export function usePartitionViewerHeader() {
     currentPage: viewport.model.currentPage,
     interaction: viewport.interaction,
     legendSegments: model.legendSegments,
+    navigation: viewport.navigation,
+    pageCount: model.pageCount,
+  }
+}
+
+export function usePartitionViewerRibbon() {
+  const { model, viewport } = usePartitionViewer()
+
+  return {
+    currentPage: viewport.model.currentPage,
+    interaction: viewport.interaction,
     navigation: viewport.navigation,
     pageCount: model.pageCount,
     rows: model.ribbonRows,
@@ -129,21 +141,35 @@ function PartitionViewerContextProvider({
   )
 }
 
-export function PartitionViewerHeader({ className }: { className?: string }) {
-  const {
-    currentPage,
-    interaction,
-    legendSegments,
-    navigation,
-    pageCount,
-    rows,
-    scrollProgress,
-  } = usePartitionViewerHeader()
+export function PartitionViewerHeader({
+  className,
+  trailing,
+}: {
+  className?: string
+  trailing?: React.ReactNode
+}) {
+  const { currentPage, interaction, legendSegments, navigation, pageCount } =
+    usePartitionViewerHeader()
 
   if (legendSegments.length === 0) return null
 
   return (
     <ViewerHeader className={className ?? "space-y-2 bg-background px-3 py-2"}>
+      <div className="flex min-h-8 items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Key className="size-4 text-muted-foreground" />
+          <span>
+            {legendSegments.length} partition
+            {legendSegments.length === 1 ? "" : "s"}
+          </span>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            {pageCount} page{pageCount === 1 ? "" : "s"}
+          </span>
+          {trailing}
+        </div>
+      </div>
       <SegmentLegend
         variant="plain"
         segments={legendSegments}
@@ -152,6 +178,24 @@ export function PartitionViewerHeader({ className }: { className?: string }) {
         onSelect={navigation.scrollToSegmentStart}
         columns={4}
       />
+    </ViewerHeader>
+  )
+}
+
+export function PartitionViewerRibbon({ className }: { className?: string }) {
+  const {
+    currentPage,
+    interaction,
+    navigation,
+    pageCount,
+    rows,
+    scrollProgress,
+  } = usePartitionViewerRibbon()
+
+  if (rows.length === 0) return null
+
+  return (
+    <div className={className ?? "border-b bg-background px-3 py-2"}>
       <PageRibbon
         orientation="horizontal"
         rows={rows}
@@ -161,16 +205,22 @@ export function PartitionViewerHeader({ className }: { className?: string }) {
         interaction={interaction}
         onSelectPage={navigation.scrollToPage}
       />
-    </ViewerHeader>
+    </div>
   )
 }
 
-export function PartitionViewerDocument() {
+export function PartitionViewerDocument({
+  document,
+}: {
+  document?: React.ReactNode
+}) {
   const { model } = usePartitionViewer()
 
   if (!model.hasOutput) return <PartitionViewerEmptyState />
 
-  return (
+  return document ? (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">{document}</div>
+  ) : (
     <div className="flex h-full flex-1 items-center justify-center">
       <span className="text-sm text-muted-foreground">
         No document available
@@ -183,7 +233,7 @@ export function PartitionViewerEmptyState() {
   const { isProcessing } = usePartitionViewer()
 
   return (
-    <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 bg-muted px-8 text-muted-foreground">
+    <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 bg-background px-8 text-muted-foreground">
       {isProcessing ? (
         <>
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -210,6 +260,7 @@ export function PartitionViewerEmptyState() {
 export function PartitionViewer({
   result,
   isProcessing = false,
+  document,
 }: PartitionViewerProps) {
   return (
     <PartitionViewerProvider result={result} isProcessing={isProcessing}>
@@ -217,7 +268,8 @@ export function PartitionViewer({
         <PartitionViewerHeader />
         <ViewerBody>
           <ViewerSurface>
-            <PartitionViewerDocument />
+            <PartitionViewerRibbon />
+            <PartitionViewerDocument document={document} />
           </ViewerSurface>
         </ViewerBody>
       </ViewerRoot>

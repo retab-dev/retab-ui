@@ -19,23 +19,16 @@ import {
 import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
 import { DocxViewer, type DocxViewerHandle } from "@/components/ui/docx-viewer"
 import {
-  useAnchoredFieldLink,
-  useSegmentedFieldLink,
-  type FieldAnchorLink,
-  type SegmentedFieldAnchorLink,
-} from "@/components/ui/field-anchor-link"
-import { rotateImageArea } from "@/components/ui/image-source"
+  useAnchoredSourceFieldLink,
+  useSegmentedSourceFieldLink,
+  type SourceFieldLink,
+  type SegmentedSourceFieldLink,
+} from "@/components/ui/source-field-link"
+import { ImageViewer } from "@/components/ui/image-viewer"
 import {
-  ImageViewer,
-  type ImageViewerHandle,
-} from "@/components/ui/image-viewer"
-import type { ImageFrameOverlayProps } from "@/components/ui/image-viewer-types"
-import {
-  PdfHighlight,
+  PdfViewerHeader,
   PdfViewerPages,
   PdfViewerProvider,
-  type PageOverlayProps,
-  type PdfViewerHandle,
 } from "@/components/ui/pdf-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -51,6 +44,12 @@ import {
   sourceFieldsToSegmentedDocumentModel,
   sourceMapToSegmentedDocumentModel,
 } from "@/components/ui/source-segmented-document-model"
+import {
+  useSegmentedImageSourceOverlay,
+  useSegmentedImageViewerHandle,
+  useSegmentedPdfSourceOverlay,
+  useSegmentedPdfViewerHandle,
+} from "@/components/ui/source-segmented-document-overlays"
 import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
 import {
   ViewerBody,
@@ -88,7 +87,7 @@ APAC,Q2,560000,24,1.11`
 // A flat extraction sample: each field is a scalar with the source it came from.
 type FlatField = { key: string; label: string; value: string; source: Source }
 
-type Extraction = {
+type SourceExtraction = {
   items: AnchoredItem[]
   schema: JSONSchema7
   sources: SourceMap
@@ -98,7 +97,7 @@ type Extraction = {
 // Build a JSON form's inputs from a flat field array. The schema property names
 // match the source-map keys, which become anchored item ids for json-form hover
 // and click interactions.
-function flatExtraction(fields: FlatField[]): Extraction {
+function flatSourceExtraction(fields: FlatField[]): SourceExtraction {
   const sources = Object.fromEntries(
     fields.map((field) => [field.key, field.source])
   )
@@ -137,14 +136,14 @@ const PDF_SEGMENTED_DOCUMENT = sourceMapToSegmentedDocumentModel({
 const PDF_INITIAL_SOURCE_PATH =
   PDF_EVIDENCE.evidenceItems.find((item) => item.anchor.status === "resolved")
     ?.id ?? null
-const PDF_EXTRACTION: Extraction = {
+const PDF_EXTRACTION: SourceExtraction = {
   items: PDF_EVIDENCE.anchoredItems,
   schema: jsonFormSample.schema as JSONSchema7,
   sources: PDF_SOURCE_MAP,
   values: jsonFormSample.extraction as Record<string, unknown>,
 }
 const IMAGE_FIELDS = imageSample as FlatField[]
-const IMAGE_EXTRACTION = flatExtraction(IMAGE_FIELDS)
+const IMAGE_EXTRACTION = flatSourceExtraction(IMAGE_FIELDS)
 const IMAGE_SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(
   IMAGE_FIELDS.map((field) => ({
     id: field.key,
@@ -152,27 +151,27 @@ const IMAGE_SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(
     source: field.source,
   }))
 )
-const TEXT_EXTRACTION = flatExtraction(textSample as FlatField[])
-const CSV_EXTRACTION = flatExtraction(csvSample as FlatField[])
-const XLSX_EXTRACTION = flatExtraction(xlsxSample as FlatField[])
-const DOCX_EXTRACTION = flatExtraction(docxSample as FlatField[])
+const TEXT_EXTRACTION = flatSourceExtraction(textSample as FlatField[])
+const CSV_EXTRACTION = flatSourceExtraction(csvSample as FlatField[])
+const XLSX_EXTRACTION = flatSourceExtraction(xlsxSample as FlatField[])
+const DOCX_EXTRACTION = flatSourceExtraction(docxSample as FlatField[])
 
-// ── Shared layout: viewer + json-form extraction panel ────────────────────────
+// ── Shared layout: viewer + json-form source panel ────────────────────────────
 
 /**
- * The extraction shell every tab shares: the source document on the left, the
- * extraction rendered as a JSON form on the right. Hovering or clicking a form
- * field reports its path to the anchored provider, which scrolls and highlights
- * through the active document target.
+ * The source shell every tab shares: the source document on the left, the
+ * extracted values rendered as a JSON form on the right. Hovering or clicking a
+ * form field reports its path to the anchored provider, which scrolls and
+ * highlights through the active document target.
  */
-function ExtractionShell({
+function SourcesShell({
   extraction,
   children,
 }: {
-  extraction: Extraction
+  extraction: SourceExtraction
   children: React.ReactNode
 }) {
-  const link = useAnchoredFieldLink()
+  const link = useAnchoredSourceFieldLink()
   const { activeItem } = useAnchoredDocument()
 
   return (
@@ -180,7 +179,7 @@ function ExtractionShell({
       <ViewerHeader className="flex min-h-10 items-center gap-2 px-2">
         <ViewerSidebarTrigger />
         <h2 className="min-w-0 truncate text-sm font-medium">
-          Extraction results
+          Source-linked results
         </h2>
       </ViewerHeader>
       <ViewerBody>
@@ -192,33 +191,33 @@ function ExtractionShell({
           />
         </ViewerSurface>
         <ViewerSidebar
-          aria-label="Extraction fields"
+          aria-label="Source-linked fields"
           side="right"
           width="420px"
           className="flex flex-shrink-0 flex-col border-l"
         >
-          <ExtractionForm extraction={extraction} link={link} />
+          <SourcesForm extraction={extraction} link={link} />
         </ViewerSidebar>
       </ViewerBody>
     </ViewerRoot>
   )
 }
 
-function SegmentedExtractionShell({
+function SegmentedSourcesShell({
   children,
   extraction,
   link,
 }: {
   children: React.ReactNode
-  extraction: Extraction
-  link: SegmentedFieldAnchorLink
+  extraction: SourceExtraction
+  link: SegmentedSourceFieldLink
 }) {
   return (
     <ViewerRoot bare defaultOpen className="h-full bg-background">
       <ViewerHeader className="flex min-h-10 items-center gap-2 px-2">
         <ViewerSidebarTrigger />
         <h2 className="min-w-0 truncate text-sm font-medium">
-          Extraction results
+          Source-linked results
         </h2>
       </ViewerHeader>
       <ViewerBody>
@@ -227,24 +226,24 @@ function SegmentedExtractionShell({
           <SourceIndicator path={link.activePath} found={!!link.activeAnchor} />
         </ViewerSurface>
         <ViewerSidebar
-          aria-label="Extraction fields"
+          aria-label="Source-linked fields"
           side="right"
           width="420px"
           className="flex flex-shrink-0 flex-col border-l"
         >
-          <ExtractionForm extraction={extraction} link={link} />
+          <SourcesForm extraction={extraction} link={link} />
         </ViewerSidebar>
       </ViewerBody>
     </ViewerRoot>
   )
 }
 
-function ExtractionForm({
+function SourcesForm({
   extraction,
   link,
 }: {
-  extraction: Extraction
-  link: FieldAnchorLink
+  extraction: SourceExtraction
+  link: SourceFieldLink
 }) {
   const form = useForm<Record<string, unknown>>({
     defaultValues: extraction.values,
@@ -255,7 +254,7 @@ function ExtractionForm({
   return (
     <>
       <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">
-        <h2 className="text-sm font-medium">Extracted data</h2>
+        <h2 className="text-sm font-medium">Source-linked data</h2>
         <span className="ml-auto text-xs text-muted-foreground">
           Hover a field to see its source
         </span>
@@ -266,62 +265,6 @@ function ExtractionForm({
         </div>
       </ScrollArea>
     </>
-  )
-}
-
-const ACTIVE_ANCHOR_CLASS =
-  "pointer-events-none absolute z-10 rounded-[2px] border border-primary/70 bg-primary/12 shadow-[0_4px_16px_rgb(0_0_0_/_8%)]"
-
-function useSegmentedPdfSourceOverlay(link: SegmentedFieldAnchorLink) {
-  return React.useCallback(
-    ({ pageNumber }: PageOverlayProps) => {
-      const anchor = link.activeAnchor
-      if (!anchor?.bounds || anchor.pageNumber !== pageNumber) return null
-
-      return (
-        <PdfHighlight
-          area={{
-            left: anchor.bounds.x * 100,
-            top: anchor.bounds.y * 100,
-            width: anchor.bounds.width * 100,
-            height: anchor.bounds.height * 100,
-          }}
-        />
-      )
-    },
-    [link.activeAnchor]
-  )
-}
-
-function useSegmentedImageSourceOverlay(link: SegmentedFieldAnchorLink) {
-  return React.useCallback(
-    ({ frameNumber, rotation }: ImageFrameOverlayProps) => {
-      const anchor = link.activeAnchor
-      if (!anchor?.bounds || anchor.pageNumber !== frameNumber) return null
-
-      const renderedArea = rotateImageArea(
-        {
-          left: anchor.bounds.x * 100,
-          top: anchor.bounds.y * 100,
-          width: anchor.bounds.width * 100,
-          height: anchor.bounds.height * 100,
-        },
-        rotation
-      )
-
-      return (
-        <div
-          className={ACTIVE_ANCHOR_CLASS}
-          style={{
-            left: `${renderedArea.left}%`,
-            top: `${renderedArea.top}%`,
-            width: `${renderedArea.width}%`,
-            height: `${renderedArea.height}%`,
-          }}
-        />
-      )
-    },
-    [link.activeAnchor]
   )
 }
 
@@ -445,18 +388,13 @@ function PdfTab() {
 }
 
 function PdfTabContent() {
-  const link = useSegmentedFieldLink({ initialPath: PDF_INITIAL_SOURCE_PATH })
-  const segmentedViewport = useSegmentedDocumentViewport()
+  const link = useSegmentedSourceFieldLink({ initialPath: PDF_INITIAL_SOURCE_PATH })
+  const { documentHandlers } = useSegmentedDocumentViewport()
   const renderPageOverlay = useSegmentedPdfSourceOverlay(link)
-  const setPdfViewerHandle = React.useCallback(
-    (handle: PdfViewerHandle | null) => {
-      segmentedViewport.documentHandlers.setDocumentHandle(handle)
-    },
-    [segmentedViewport.documentHandlers]
-  )
+  const setPdfViewerHandle = useSegmentedPdfViewerHandle()
 
   return (
-    <SegmentedExtractionShell extraction={PDF_EXTRACTION} link={link}>
+    <SegmentedSourcesShell extraction={PDF_EXTRACTION} link={link}>
       <PdfViewerProvider
         source={{
           kind: "url",
@@ -464,20 +402,19 @@ function PdfTabContent() {
           fileName: "jane-doe-bank-statement-5-pages.pdf",
         }}
       >
-        <PdfViewerPages
-          ref={setPdfViewerHandle}
-          bare
-          className="h-full"
-          onScrollProgressChange={
-            segmentedViewport.documentHandlers.onScrollProgressChange
-          }
-          onVisiblePageChange={
-            segmentedViewport.documentHandlers.onCurrentPageChange
-          }
-          renderPageOverlay={renderPageOverlay}
-        />
+        <div className="flex h-full min-h-0 flex-col">
+          <PdfViewerHeader />
+          <PdfViewerPages
+            ref={setPdfViewerHandle}
+            bare
+            className="min-h-0 flex-1"
+            onScrollProgressChange={documentHandlers.onScrollProgressChange}
+            onVisiblePageChange={documentHandlers.onCurrentPageChange}
+            renderPageOverlay={renderPageOverlay}
+          />
+        </div>
       </PdfViewerProvider>
-    </SegmentedExtractionShell>
+    </SegmentedSourcesShell>
   )
 }
 
@@ -490,39 +427,13 @@ function ImageTab() {
 }
 
 function ImageTabContent() {
-  const link = useSegmentedFieldLink({ initialPath: IMAGE_FIELDS[0]?.key })
-  const segmentedViewport = useSegmentedDocumentViewport()
+  const link = useSegmentedSourceFieldLink({ initialPath: IMAGE_FIELDS[0]?.key })
+  const { documentHandlers } = useSegmentedDocumentViewport()
   const renderFrameOverlay = useSegmentedImageSourceOverlay(link)
-  const setImageViewerHandle = React.useCallback(
-    (handle: ImageViewerHandle | null) => {
-      segmentedViewport.documentHandlers.setDocumentHandle(
-        handle
-          ? {
-              getViewportElement: handle.getViewportElement,
-              scrollToPage: (pageNumber, options) => {
-                handle.scrollToFrameArea(pageNumber, { top: 0 }, options)
-              },
-              scrollToPageArea: (target, options) => {
-                handle.scrollToFrameArea(
-                  target.pageNumber,
-                  {
-                    left: target.left,
-                    top: target.top,
-                    width: target.width,
-                    height: target.height,
-                  },
-                  options
-                )
-              },
-            }
-          : null
-      )
-    },
-    [segmentedViewport.documentHandlers]
-  )
+  const setImageViewerHandle = useSegmentedImageViewerHandle()
 
   return (
-    <SegmentedExtractionShell extraction={IMAGE_EXTRACTION} link={link}>
+    <SegmentedSourcesShell extraction={IMAGE_EXTRACTION} link={link}>
       <ImageViewer
         ref={setImageViewerHandle}
         source={{
@@ -532,15 +443,11 @@ function ImageTabContent() {
         }}
         bare
         className="h-full"
-        onScrollProgressChange={
-          segmentedViewport.documentHandlers.onScrollProgressChange
-        }
-        onVisibleFrameChange={
-          segmentedViewport.documentHandlers.onCurrentPageChange
-        }
+        onScrollProgressChange={documentHandlers.onScrollProgressChange}
+        onVisibleFrameChange={documentHandlers.onCurrentPageChange}
         renderFrameOverlay={renderFrameOverlay}
       />
-    </SegmentedExtractionShell>
+    </SegmentedSourcesShell>
   )
 }
 
@@ -563,7 +470,7 @@ function TextTabContent({
   const highlight = useActiveTextHighlight()
 
   return (
-    <ExtractionShell extraction={TEXT_EXTRACTION}>
+    <SourcesShell extraction={TEXT_EXTRACTION}>
       <TextViewer
         ref={viewerRef}
         source={{
@@ -576,7 +483,7 @@ function TextTabContent({
         highlight={highlight}
         mode="text"
       />
-    </ExtractionShell>
+    </SourcesShell>
   )
 }
 
@@ -599,7 +506,7 @@ function CsvTabContent({
   const activeCell = useActiveCsvCell()
 
   return (
-    <ExtractionShell extraction={CSV_EXTRACTION}>
+    <SourcesShell extraction={CSV_EXTRACTION}>
       <CsvViewer
         ref={viewerRef}
         source={{ kind: "text", text: CSV_TEXT, fileName: "sales.csv" }}
@@ -607,7 +514,7 @@ function CsvTabContent({
         className="h-full rounded-none border-0"
         activeCell={activeCell}
       />
-    </ExtractionShell>
+    </SourcesShell>
   )
 }
 
@@ -630,7 +537,7 @@ function ExcelTabContent({
   const activeCell = useActiveXlsxCell()
 
   return (
-    <ExtractionShell extraction={XLSX_EXTRACTION}>
+    <SourcesShell extraction={XLSX_EXTRACTION}>
       <XlsxViewer
         ref={viewerRef}
         source={{
@@ -642,7 +549,7 @@ function ExcelTabContent({
         className="h-full"
         activeCell={activeCell}
       />
-    </ExtractionShell>
+    </SourcesShell>
   )
 }
 
@@ -665,7 +572,7 @@ function DocxTabContent({
   const highlight = useActiveDocxHighlight()
 
   return (
-    <ExtractionShell extraction={DOCX_EXTRACTION}>
+    <SourcesShell extraction={DOCX_EXTRACTION}>
       <DocxViewer
         ref={viewerRef}
         source={{
@@ -677,7 +584,7 @@ function DocxTabContent({
         className="h-full"
         highlight={highlight}
       />
-    </ExtractionShell>
+    </SourcesShell>
   )
 }
 
@@ -693,16 +600,16 @@ const TABS = [
 type TabId = (typeof TABS)[number]["id"]
 
 /**
- * Extraction viewer — every source format in one component. A tab bar switches
+ * Sources viewer — every source-backed format in one component. A tab bar switches
  * the file format (PDF, image, text, CSV, Excel, Word); each tab is the same
- * extraction shell: the source document beside a JSON form of its extracted
- * values, linked by their sources. The same anchored-document provider drives
- * every viewer; only the viewer + its target adapter differ per tab.
+ * source shell: the source document beside a JSON form of its extracted values,
+ * linked by their sources. The same anchored-document provider drives every
+ * viewer; only the viewer + its target adapter differ per tab.
  *
  * Tabs mount lazily on first visit and stay mounted (hidden) afterwards, so each
  * format's viewer keeps its scroll position and avoids re-fetching its document.
  */
-export function ExtractionViewerBlock() {
+export function SourcesViewerBlock() {
   const [active, setActive] = React.useState<TabId>("pdf")
   const [mounted, setMounted] = React.useState<Set<TabId>>(
     () => new Set(["pdf"])
@@ -722,7 +629,7 @@ export function ExtractionViewerBlock() {
     <div className="flex h-full min-h-[680px] flex-col bg-background">
       <div
         role="tablist"
-        aria-label="Extraction format"
+        aria-label="Source format"
         className="flex h-11 flex-shrink-0 items-center gap-1 border-b px-2"
       >
         {TABS.map((tab) => {

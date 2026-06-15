@@ -12,10 +12,10 @@ import {
   formatPageRanges,
   segmentDisplayLabel,
   segmentPageCount,
-  type Segment,
 } from "@/lib/segments"
 import { cn } from "@/lib/utils"
 
+import type { DocumentSegment } from "./segmented-document-model"
 import {
   SidebarListButton,
   SidebarListContent,
@@ -28,11 +28,11 @@ import {
 } from "./sidebar-list"
 
 export interface SegmentSidebarProps {
-  segments: Segment[]
+  segments: DocumentSegment[]
   /** Shared preview state. */
   interaction?: SegmentInteraction
   /** Fired when a segment surface is clicked, after transient preview is cleared. */
-  onSelect?: (segment: Segment) => void
+  onSelect?: (segment: DocumentSegment) => void
   /** 1-based current page; owning segments receive current-page state. */
   currentPage?: number | null
   /** Noun for a row, e.g. "chunk" (partition) or "subdocument" (split). */
@@ -117,10 +117,10 @@ function SegmentSidebarItem({
   interactionState,
   onSelect,
 }: {
-  segment: Segment
+  segment: DocumentSegment
   interaction: SegmentInteraction | undefined
   interactionState: ReturnType<typeof getSegmentInteractionState>
-  onSelect: ((segment: Segment) => void) | undefined
+  onSelect: ((segment: DocumentSegment) => void) | undefined
 }) {
   const { state, eventHandlers, dataProps } = getSegmentSurfaceProps({
     segment,

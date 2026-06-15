@@ -140,7 +140,7 @@ export function ViewerRoot({
   defaultOpen = false,
   open: openProp,
   onOpenChange,
-  mode = "inline",
+  mode = "auto",
   inlineBreakpoint = VIEWER_SIDEBAR_INLINE_BREAKPOINT,
   sidebarSide = "left",
   sidebarCollapsible = "offcanvas",
@@ -400,7 +400,7 @@ export function ViewerRoot({
           data-viewer-root-id={rootId}
           className={cn(
             "relative flex min-h-0 flex-col overflow-hidden",
-            bare ? "h-full bg-muted/20" : "rounded-xl border bg-muted/30",
+            bare ? "h-full" : "rounded-xl border bg-muted/30",
             className
           )}
           style={

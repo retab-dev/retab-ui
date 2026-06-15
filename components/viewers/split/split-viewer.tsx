@@ -40,31 +40,33 @@ export interface SplitDocumentHandlers {
 export interface SplitViewerProps {
   result: SplitView | null
   isProcessing?: boolean
-  children?: ReactNode
+  document?: ReactNode
 }
 
-export type SplitViewerRootProps = React.ComponentProps<typeof ViewerRoot>
-export type SplitViewerBodyProps = React.ComponentProps<typeof ViewerBody>
 export type SplitViewerSidebarProps = React.ComponentProps<typeof ViewerSidebar>
-export type SplitViewerSurfaceProps = React.ComponentProps<typeof ViewerSurface>
 
 export function SplitViewer({
   result,
   isProcessing = false,
-  children,
+  document,
 }: SplitViewerProps) {
   return (
     <SplitViewerProvider result={result} isProcessing={isProcessing}>
-      <SplitViewerRoot>
+      <ViewerRoot
+        bare
+        defaultOpen
+        mode="inline"
+        className="h-full flex-1 bg-background"
+      >
         <SplitViewerHeader />
-        <SplitViewerBody>
+        <ViewerBody>
           <SplitViewerSidebar />
-          <SplitViewerSurface>
+          <ViewerSurface>
             <SplitViewerLegend className="border-b px-3 py-2" />
-            <SplitViewerDocument>{children}</SplitViewerDocument>
-          </SplitViewerSurface>
-        </SplitViewerBody>
-      </SplitViewerRoot>
+            <SplitViewerDocument document={document} />
+          </ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
     </SplitViewerProvider>
   )
 }
@@ -88,7 +90,7 @@ export type SplitViewerHeaderState = {
   segments: DocumentSegment[]
 }
 
-type SplitViewerBodyState = {
+type SplitViewerSidebarState = {
   hasOutput: boolean
   pageCount: number
 }
@@ -127,7 +129,7 @@ export function useSplitViewerHeader(): SplitViewerHeaderState {
   return useSplitViewer().model
 }
 
-function useSplitViewerBody(): SplitViewerBodyState {
+function useSplitViewerSidebar(): SplitViewerSidebarState {
   const { hasOutput, pageCount } = useSplitViewer().model
   return { hasOutput, pageCount }
 }
@@ -233,22 +235,6 @@ function SplitViewerContextProvider({
   )
 }
 
-export function SplitViewerRoot({
-  bare = true,
-  className,
-  defaultOpen = true,
-  ...props
-}: SplitViewerRootProps) {
-  return (
-    <ViewerRoot
-      bare={bare}
-      defaultOpen={defaultOpen}
-      className={cn("h-full flex-1 bg-background", className)}
-      {...props}
-    />
-  )
-}
-
 export function SplitViewerHeader() {
   const { hasOutput, isProcessing, pageCount, segments } =
     useSplitViewerHeader()
@@ -278,10 +264,6 @@ export function SplitViewerHeader() {
   )
 }
 
-export function SplitViewerBody({ className, ...props }: SplitViewerBodyProps) {
-  return <ViewerBody className={className} {...props} />
-}
-
 export function SplitViewerSidebar({
   children,
   className,
@@ -289,7 +271,7 @@ export function SplitViewerSidebar({
   "aria-label": ariaLabel = "Split pages",
   ...props
 }: SplitViewerSidebarProps) {
-  const { hasOutput, pageCount } = useSplitViewerBody()
+  const { hasOutput, pageCount } = useSplitViewerSidebar()
   if (!hasOutput || pageCount <= 0) return null
 
   return (
@@ -302,13 +284,6 @@ export function SplitViewerSidebar({
       {children ?? <SplitViewerPageRail />}
     </ViewerSidebar>
   )
-}
-
-export function SplitViewerSurface({
-  className,
-  ...props
-}: SplitViewerSurfaceProps) {
-  return <ViewerSurface className={className} {...props} />
 }
 
 export function SplitViewerPageRail() {
@@ -347,15 +322,15 @@ export function SplitViewerLegend({ className }: { className?: string }) {
   )
 }
 
-export function SplitViewerDocument({ children }: { children?: ReactNode }) {
+export function SplitViewerDocument({ document }: { document?: ReactNode }) {
   const { hasOutput, isProcessing } = useSplitViewerDocument()
 
   if (!hasOutput) {
     return <SplitViewerEmptyState isProcessing={isProcessing} />
   }
 
-  return children ? (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
+  return document ? (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">{document}</div>
   ) : (
     <div className="flex h-full flex-1 items-center justify-center">
       <span className="text-sm text-muted-foreground">
@@ -371,7 +346,7 @@ export function SplitViewerEmptyState({
   isProcessing: boolean
 }) {
   return (
-    <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 bg-muted px-8 text-muted-foreground">
+    <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 bg-background px-8 text-muted-foreground">
       {isProcessing ? (
         <>
           <Loader2 className="h-12 w-12 animate-spin text-warning-foreground" />

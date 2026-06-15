@@ -2,25 +2,19 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Code, FileCode, Loader2, Terminal } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import {
-  VIEWER_BLOCK_CATEGORIES,
+  VIEWER_BLOCK_TABS,
   VIEWER_BLOCKS,
-  type ViewerBlockCategoryTabId,
   type ViewerBlockId,
   type ViewerBlockMetadata,
 } from "@/lib/viewer-blocks"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { useMounted } from "@/hooks/use-mounted"
 import { Button } from "@/components/ui/button"
-import {
-  NavigationMenu,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-} from "@/components/ui/navigation-menu"
 import {
   CodeHeaderCopyButton,
   CopyButtonIcon,
@@ -48,10 +42,11 @@ import { SpreadsheetImportCard } from "@/registry/new-york-v4/blocks/dropzone-sp
 import { ValidationOnly } from "@/registry/new-york-v4/blocks/dropzone-validation-only"
 import { EditViewerBlock } from "@/registry/new-york-v4/blocks/edit-viewer-block"
 import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block"
-import { ExtractionViewerBlock } from "@/registry/new-york-v4/blocks/extraction-viewer-block"
+import { SourcesViewerBlock } from "@/registry/new-york-v4/blocks/sources-viewer-block"
 import { FileSystemBlock } from "@/registry/new-york-v4/blocks/file-system-block"
 import { FsLightBlock } from "@/registry/new-york-v4/blocks/fslight-block"
 import { ImageSourcesBlock } from "@/registry/new-york-v4/blocks/image-sources-block"
+import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-sources-block"
 import { OcrBlock } from "@/registry/new-york-v4/blocks/ocr-block"
 import { ParseViewerBlock } from "@/registry/new-york-v4/blocks/parse-viewer-block"
 import { PartitionViewerBlock } from "@/registry/new-york-v4/blocks/partition-viewer-block"
@@ -81,7 +76,6 @@ type BlockView = "preview" | "code"
 
 const BLOCK_VIEWPORT_HEIGHT_CLASS = "h-[680px]"
 const BLOCK_PREVIEW_LAZY_ROOT_MARGIN = "900px 0px"
-const BLOCK_CATEGORY_HASH_PREFIX = "category-"
 
 const blockComponents = {
   ocr: OcrBlock,
@@ -89,13 +83,14 @@ const blockComponents = {
   partition: PartitionViewerBlock,
   parse: ParseViewerBlock,
   edit: EditViewerBlock,
-  "extraction-viewer": ExtractionViewerBlock,
+  "sources-viewer": SourcesViewerBlock,
   extract: ExtractViewerBlock,
   "image-sources": ImageSourcesBlock,
   "text-sources": TextSourcesBlock,
   "csv-sources": CsvSourcesBlock,
   "xlsx-sources": XlsxSourcesBlock,
   "docx-sources": DocxSourcesBlock,
+  "json-form-sources": JsonFormSourcesBlock,
   dropzone: DropzoneBlock,
   "dropzone-file-uploader": DefaultFileUploaderExample,
   "dropzone-file-viewer": DropzoneFileViewerExample,
@@ -124,110 +119,56 @@ const viewerBlocks: ViewerBlock[] = VIEWER_BLOCKS.map((block) => ({
   component: blockComponents[block.id],
 }))
 
-// Some tabs lead with two viewers sharing a single 50/50 row instead of
-// stacking full-width; the rest stay full-width below it. Keyed by tab.
-const PAIRED_BLOCK_IDS: Partial<
-  Record<ViewerBlockCategoryTabId, ViewerBlockId[]>
-> = {
-  featured: ["split", "pdf-thumbnails"],
-  primitives: ["split", "partition"],
+const viewerBlockTabs: ViewerBlock[] = VIEWER_BLOCK_TABS.map((block) => ({
+  ...block,
+  component: blockComponents[block.id],
+}))
+
+export function ViewerBlocks({ blockId }: { blockId: ViewerBlockId }) {
+  const activeBlock = viewerBlocks.find((block) => block.id === blockId)
+
+  if (!activeBlock) {
+    return null
+  }
+
+  return <ViewerBlockPreview key={activeBlock.id} block={activeBlock} />
 }
 
-export function ViewerBlocks() {
-  const [activeCategory, setActiveCategory] = useBlockCategoryState()
-
-  const visibleBlocks = viewerBlocks.filter((block) =>
-    activeCategory === "featured"
-      ? block.featured
-      : block.categories.includes(activeCategory)
+export function ViewerBlockTabs() {
+  const pathname = usePathname()
+  const activeBlock = viewerBlockTabs.find(
+    (block) => pathname === getBlockHref(block.id)
   )
-
-  const renderBlock = (block: ViewerBlock) => (
-    <ViewerBlockPreview key={block.id} block={block} />
-  )
-
-  // Lead with this tab's paired viewers in a shared 50/50 row (in the configured
-  // order), then stack the remaining blocks full-width beneath it.
-  const pairedIds = PAIRED_BLOCK_IDS[activeCategory] ?? []
-  const pairedBlocks = pairedIds
-    .map((id) => visibleBlocks.find((block) => block.id === id))
-    .filter((block): block is ViewerBlock => Boolean(block))
-  const showPaired = pairedBlocks.length === 2
-  const stackedBlocks = showPaired
-    ? visibleBlocks.filter((block) => !pairedIds.includes(block.id))
-    : visibleBlocks
 
   return (
-    <section className="space-y-8">
-      <BlockCategoryNavigation
-        active={activeCategory}
-        onSelect={setActiveCategory}
-      />
-      {visibleBlocks.length ? (
-        <div className="space-y-12">
-          {showPaired ? (
-            <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
-              {pairedBlocks.map(renderBlock)}
-            </div>
-          ) : null}
-          {stackedBlocks.map(renderBlock)}
-        </div>
-      ) : (
-        <div className="rounded-xl border border-dashed py-24 text-center text-sm text-muted-foreground">
-          No blocks in this category yet.
-        </div>
-      )}
-    </section>
-  )
-}
-
-function BlockCategoryNavigation({
-  active,
-  onSelect,
-}: {
-  active: ViewerBlockCategoryTabId
-  onSelect: (category: ViewerBlockCategoryTabId) => void
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pb-3">
-      <NavigationMenu
+    <div className="flex flex-wrap items-start gap-x-6 gap-y-3 pb-3">
+      <nav
         aria-label="Block categories"
-        className="max-w-none flex-none justify-start"
-        viewport={false}
+        className="w-full max-w-none min-w-0 flex-1 justify-start"
       >
-        <NavigationMenuList
-          className="flex flex-wrap items-center justify-start gap-0"
-          style={{ columnGap: "2rem", rowGap: "0.25rem" }}
-        >
-          {VIEWER_BLOCK_CATEGORIES.map((category) => {
-            const isActive = active === category.id
+        <ul className="grid w-full list-none grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] items-start gap-x-8 gap-y-2">
+          {viewerBlockTabs.map((block) => {
+            const isActive = activeBlock?.id === block.id
             return (
-              <NavigationMenuItem key={category.id}>
-                <NavigationMenuLink
-                  active={isActive}
-                  asChild
+              <li key={block.id}>
+                <Link
+                  href={getBlockHref(block.id)}
+                  aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex-row gap-0 rounded-none bg-transparent p-0 text-base font-medium tracking-tight transition-colors",
-                    "hover:bg-transparent focus:bg-transparent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 focus-visible:outline-none",
-                    "data-[active=true]:bg-transparent data-[active=true]:hover:bg-transparent data-[active=true]:focus:bg-transparent",
+                    "block rounded-none bg-transparent p-0 text-left text-base font-medium tracking-tight transition-colors",
+                    "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 focus-visible:outline-none",
                     isActive
                       ? "text-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <Link
-                    href={getBlockCategoryHref(category.id)}
-                    onClick={() => onSelect(category.id)}
-                    aria-current={isActive ? "page" : undefined}
-                  >
-                    {category.label}
-                  </Link>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
+                  {block.title}
+                </Link>
+              </li>
             )
           })}
-        </NavigationMenuList>
-      </NavigationMenu>
+        </ul>
+      </nav>
       <Button
         variant="secondary"
         size="sm"
@@ -240,42 +181,8 @@ function BlockCategoryNavigation({
   )
 }
 
-function useBlockCategoryState() {
-  const [activeCategory, setActiveCategory] =
-    React.useState<ViewerBlockCategoryTabId>("featured")
-
-  React.useEffect(() => {
-    function syncActiveCategory() {
-      setActiveCategory(getBlockCategoryFromLocation())
-    }
-
-    syncActiveCategory()
-    window.addEventListener("hashchange", syncActiveCategory)
-    window.addEventListener("popstate", syncActiveCategory)
-    return () => {
-      window.removeEventListener("hashchange", syncActiveCategory)
-      window.removeEventListener("popstate", syncActiveCategory)
-    }
-  }, [])
-
-  return [activeCategory, setActiveCategory] as const
-}
-
-function getBlockCategoryFromLocation(): ViewerBlockCategoryTabId {
-  const hash = window.location.hash.slice(1)
-  if (!hash.startsWith(BLOCK_CATEGORY_HASH_PREFIX)) return "featured"
-  return getViewerBlockCategoryTabId(
-    hash.slice(BLOCK_CATEGORY_HASH_PREFIX.length)
-  )
-}
-
-function getViewerBlockCategoryTabId(value: string): ViewerBlockCategoryTabId {
-  const category = VIEWER_BLOCK_CATEGORIES.find(({ id }) => id === value)
-  return category?.id ?? "featured"
-}
-
-function getBlockCategoryHref(category: ViewerBlockCategoryTabId) {
-  return `/blocks#${BLOCK_CATEGORY_HASH_PREFIX}${category}`
+function getBlockHref(blockId: ViewerBlockId) {
+  return `/blocks/${blockId}`
 }
 
 function ViewerBlockPreview({ block }: { block: ViewerBlock }) {
@@ -320,7 +227,7 @@ function ViewerBlockPreview({ block }: { block: ViewerBlock }) {
   }, [isCommandCopied])
 
   React.useEffect(() => {
-    if (codeRequestKey === 0 || codeSamplesState.status !== "idle") return
+    if (codeRequestKey === 0) return
 
     const controller = new AbortController()
 
@@ -390,7 +297,7 @@ function ViewerBlockPreview({ block }: { block: ViewerBlock }) {
           <BlockViewToggle view={view} onViewChange={setBlockView} />
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <a
-              href={`#${block.id}`}
+              href={getBlockHref(block.id)}
               className="min-w-0 truncate text-sm font-medium underline-offset-2 hover:underline"
             >
               {block.title}

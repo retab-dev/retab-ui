@@ -100,6 +100,8 @@ export interface PdfViewerProps {
   /** Called when toolbar controls request a scale change. `null` means fit width. */
   onScaleChange?: (scale: number | null) => void
   toolbar?: boolean
+  /** Show download actions in this viewer's toolbar/error state. */
+  download?: boolean
   /** Render absolutely-positioned overlays (e.g. bbox citations) on each page. */
   renderPageOverlay?: (props: PageOverlayProps) => React.ReactNode
   /** Fired with the 1-based page nearest the top of the viewport as you scroll. */
@@ -110,7 +112,7 @@ export interface PdfViewerProps {
   bare?: boolean
 }
 
-export type PdfResourceViewerProps = Omit<PdfViewerProps, "source"> & {
+export type PdfResourceContentProps = Omit<PdfViewerProps, "source"> & {
   resource: ViewerResource
 }
 
@@ -121,18 +123,20 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
       className,
       bare = false,
       toolbar = true,
+      download = true,
       ...pagesProps
     } = props
     return (
       <PdfViewerProvider source={source}>
         <ViewerRoot bare={bare} className={cn("h-full", className)}>
-          <PdfViewerHeader toolbar={toolbar} />
+          <PdfViewerHeader download={download} toolbar={toolbar} />
           <ViewerBody>
             <ViewerSurface>
               <PdfViewerPages
                 {...pagesProps}
                 bare
                 className="h-full"
+                download={download}
                 ref={ref}
               />
             </ViewerSurface>
@@ -146,10 +150,12 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
 export function PdfViewerHeader({
   children,
   className,
+  download = true,
   toolbar = true,
 }: {
   children?: React.ReactNode
   className?: string
+  download?: boolean
   toolbar?: boolean
 }) {
   const { currentPage, headerControls, resource } = usePdfViewerHeader()
@@ -176,7 +182,7 @@ export function PdfViewerHeader({
             onFit: headerControls.onFitWidth,
           }}
           rotate={{ onRotate: headerControls.onRotate }}
-          downloads={[headerControls.downloadAction]}
+          downloads={download ? [headerControls.downloadAction] : []}
         />
       ) : (
         <ViewerToolbar
@@ -198,12 +204,13 @@ export const PdfViewerPages = React.forwardRef<
   Omit<PdfViewerProps, "source">
 >(function PdfViewerPages(props, ref) {
   const { resource, setCurrentPage, setViewerHandle } = usePdfViewerPages()
+  const { onVisiblePageChange } = props
   const handleVisiblePageChange = React.useCallback(
     (page: number) => {
       setCurrentPage(page)
-      props.onVisiblePageChange?.(page)
+      onVisiblePageChange?.(page)
     },
-    [props.onVisiblePageChange, setCurrentPage]
+    [onVisiblePageChange, setCurrentPage]
   )
   const handleRef = React.useCallback(
     (handle: PdfViewerHandle | null) => {
@@ -218,7 +225,7 @@ export const PdfViewerPages = React.forwardRef<
   )
 
   return (
-    <PdfResourceViewer
+    <PdfResourceContent
       {...props}
       ref={handleRef}
       resource={resource}
@@ -228,10 +235,10 @@ export const PdfViewerPages = React.forwardRef<
   )
 })
 
-export const PdfResourceViewer = React.forwardRef<
+export const PdfResourceContent = React.forwardRef<
   PdfViewerHandle,
-  PdfResourceViewerProps
->(function PdfResourceViewer(props, ref) {
+  PdfResourceContentProps
+>(function PdfResourceContent(props, ref) {
   const resource = props.resource
   const isClient = useIsClient()
 
@@ -248,7 +255,7 @@ export const PdfResourceViewer = React.forwardRef<
   return (
     <ViewerErrorBoundary
       className={props.className}
-      download={resource.originalDownload}
+      download={props.download === false ? null : resource.originalDownload}
       format="pdf"
       onRetry={() => clearPdfDocumentResource(resource.content)}
       resetKey={resource.keys.resource}
@@ -276,6 +283,7 @@ function PdfViewerInner({
   defaultScale,
   onScaleChange,
   toolbar = true,
+  download = true,
   renderPageOverlay,
   onVisiblePageChange,
   onScrollProgressChange,
@@ -440,7 +448,7 @@ function PdfViewerInner({
             onFit: fitWidth,
           }}
           rotate={{ onRotate: handleRotate }}
-          downloads={[resource.originalDownload]}
+          downloads={download ? [resource.originalDownload] : []}
         />
       ) : null}
 

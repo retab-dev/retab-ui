@@ -26,7 +26,7 @@ import {
 } from "@/registry/new-york-v4/ui/pdf-thumbnail-layout"
 import {
   PdfHighlight,
-  PdfResourceViewer,
+  PdfResourceContent,
   PdfViewer,
   PdfViewerHeader,
   PdfViewerPages,
@@ -331,6 +331,33 @@ describe("PdfViewer", () => {
       pageNumber: 3,
       pageIndex: 2,
       top: 89 + 150 + PDF_THUMBNAIL_LABEL_AND_GAP_HEIGHT,
+    })
+  })
+
+  it("builds square thumbnail layout as an explicit shape", () => {
+    const layout = buildPdfThumbnailLayout({
+      pageCount: 3,
+      width: 50,
+      shape: "square",
+      metricByPageNumber: new Map([
+        [2, { pageNumber: 2, width: 100, height: 300 }],
+      ]),
+    })
+
+    expect(layout.shape).toBe("square")
+    expect(layout.estimatedImageHeight).toBe(50)
+    expect(layout.estimatedItemHeight).toBe(
+      50 + PDF_THUMBNAIL_LABEL_AND_GAP_HEIGHT
+    )
+    expect(layout.totalHeight).toBe(
+      3 * (50 + PDF_THUMBNAIL_LABEL_AND_GAP_HEIGHT)
+    )
+    expect(getPdfThumbnailLayoutItem(layout, 2)).toMatchObject({
+      pageNumber: 2,
+      imageWidth: 50,
+      imageHeight: 50,
+      height: 50 + PDF_THUMBNAIL_LABEL_AND_GAP_HEIGHT,
+      top: 50 + PDF_THUMBNAIL_LABEL_AND_GAP_HEIGHT,
     })
   })
 
@@ -2235,7 +2262,7 @@ describe("PdfViewer", () => {
             <PdfThumbnailRail resource={resource} />
           </ViewerSidebar>
           <ViewerSurface>
-            <PdfResourceViewer resource={resource} />
+            <PdfResourceContent resource={resource} />
           </ViewerSurface>
         </ViewerBody>
       </ViewerRoot>

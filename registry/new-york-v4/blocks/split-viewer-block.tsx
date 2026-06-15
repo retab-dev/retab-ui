@@ -23,15 +23,16 @@ const SPLIT_RESULT: SplitView = {
 
 /**
  * Split viewer block — the file + sidebar + legend system over a split result.
- * `SplitViewer` owns the legend and page rail; the document child reads page
+ * `SplitViewer` owns the legend and page rail; the document prop reads page
  * and scroll controls from the split provider.
  */
 export function SplitViewerBlock() {
   return (
     <div className="flex h-full min-h-[680px] flex-col bg-background">
-      <SplitViewer result={SPLIT_RESULT}>
-        <SplitViewerPdfDocument />
-      </SplitViewer>
+      <SplitViewer
+        result={SPLIT_RESULT}
+        document={<SplitViewerPdfDocument />}
+      />
     </div>
   )
 }

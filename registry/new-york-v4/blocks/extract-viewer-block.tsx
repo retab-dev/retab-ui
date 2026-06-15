@@ -1,21 +1,14 @@
 "use client"
 
-import * as React from "react"
 import type { JSONSchema7 } from "json-schema"
 import { useForm } from "react-hook-form"
 
 import type { Source } from "@/lib/document-source"
+import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
 import {
-  useSegmentedFieldLink,
-  type SegmentedFieldAnchorLink,
-} from "@/components/ui/field-anchor-link"
-import {
-  PdfHighlight,
   PdfViewerPages,
   PdfViewerProvider,
-  type PageOverlayProps,
   type PdfDocumentSource,
-  type PdfViewerHandle,
 } from "@/components/ui/pdf-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -24,6 +17,10 @@ import {
 } from "@/components/ui/segmented-document-provider"
 import { SourceIndicator } from "@/components/ui/source-indicator"
 import { sourceFieldsToSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
+import {
+  useSegmentedPdfSourceOverlay,
+  useSegmentedPdfViewerHandle,
+} from "@/components/ui/source-segmented-document-overlays"
 import {
   ViewerBody,
   ViewerHeader,
@@ -93,15 +90,10 @@ export function ExtractViewerBlock() {
 }
 
 function ExtractViewerContent() {
-  const link = useSegmentedFieldLink({ initialPath: FIELDS[0]?.key })
-  const segmentedViewport = useSegmentedDocumentViewport()
+  const link = useSegmentedSourceFieldLink({ initialPath: FIELDS[0]?.key })
+  const setPdfViewerHandle = useSegmentedPdfViewerHandle()
   const renderPageOverlay = useSegmentedPdfSourceOverlay(link)
-  const setPdfViewerHandle = React.useCallback(
-    (handle: PdfViewerHandle | null) => {
-      segmentedViewport.documentHandlers.setDocumentHandle(handle)
-    },
-    [segmentedViewport.documentHandlers]
-  )
+  const { documentHandlers } = useSegmentedDocumentViewport()
   const form = useForm<Record<string, unknown>>({ defaultValues })
 
   return (
@@ -120,12 +112,8 @@ function ExtractViewerContent() {
               ref={setPdfViewerHandle}
               bare
               className="h-full"
-              onScrollProgressChange={
-                segmentedViewport.documentHandlers.onScrollProgressChange
-              }
-              onVisiblePageChange={
-                segmentedViewport.documentHandlers.onCurrentPageChange
-              }
+              onScrollProgressChange={documentHandlers.onScrollProgressChange}
+              onVisiblePageChange={documentHandlers.onCurrentPageChange}
               renderPageOverlay={renderPageOverlay}
             />
           </PdfViewerProvider>
@@ -145,26 +133,5 @@ function ExtractViewerContent() {
         </ViewerSidebar>
       </ViewerBody>
     </ViewerRoot>
-  )
-}
-
-function useSegmentedPdfSourceOverlay(link: SegmentedFieldAnchorLink) {
-  return React.useCallback(
-    ({ pageNumber }: PageOverlayProps) => {
-      const anchor = link.activeAnchor
-      if (!anchor?.bounds || anchor.pageNumber !== pageNumber) return null
-
-      return (
-        <PdfHighlight
-          area={{
-            left: anchor.bounds.x * 100,
-            top: anchor.bounds.y * 100,
-            width: anchor.bounds.width * 100,
-            height: anchor.bounds.height * 100,
-          }}
-        />
-      )
-    },
-    [link.activeAnchor]
   )
 }

@@ -28,9 +28,13 @@ import {
 import { DataCellDemo } from "@/components/data-cell-demo"
 import { DocsMdxCodeBlock } from "@/components/docs-code-block"
 import { DocxViewerDemo } from "@/components/docx-viewer-demo"
-import { DropzoneDemo, FileUploaderDemo } from "@/components/dropzone-demo"
+import { DropzoneDemo } from "@/components/dropzone-demo"
+import {
+  DropzoneFileExamples,
+  DropzoneTriggerExamples,
+  DropzoneWorkflowExamples,
+} from "@/components/dropzone-examples-demo"
 import { EmailViewerDemo } from "@/components/email-viewer-demo"
-import { FileSystemDemo } from "@/components/file-system-demo"
 import { FileThumbnailDemo } from "@/components/file-thumbnail-demo"
 import { FileThumbnailFormatsDemo } from "@/components/file-thumbnail-formats-demo"
 import { FileViewerDemo } from "@/components/file-viewer-demo"
@@ -39,7 +43,6 @@ import { getIconForLanguageExtension } from "@/components/icons"
 import { ImageViewerDemo } from "@/components/image-viewer-demo"
 import { JsonFormDemo } from "@/components/json-form-demo"
 import { JsonTableDemo } from "@/components/json-table/json-table-demo"
-import { DocumentAiLayoutBlocksDemo } from "@/components/layout-blocks-document-ai-demo"
 import { MarkdownViewerDemo } from "@/components/markdown-viewer-demo"
 import { MermaidDiagram } from "@/components/mermaid-diagram"
 import { PdfViewerDemo } from "@/components/pdf-viewer-demo"
@@ -54,13 +57,10 @@ import {
   SegmentSidebarDemo,
   SegmentSidebarSplitDemo,
 } from "@/components/segment-sidebar-demo"
-import { SuperfastTextpretextDemo } from "@/components/superfast-textpretext-demo"
+import { ViewerSidebarDemo } from "@/components/sidebar-demo"
 import { TextViewerDemo } from "@/components/text-viewer-demo"
 import {
   ClassificationViewerDemo,
-  EditViewerDemo,
-  ExtractViewerDemo,
-  JsonFormSourcesDemo,
   LargeParseViewerDemo,
   ParseViewerDemo,
   PartitionViewerDemo,
@@ -377,7 +377,9 @@ export const mdxComponents = {
   PdfViewerDemo,
   DocxViewerDemo,
   DropzoneDemo,
-  FileUploaderDemo,
+  DropzoneTriggerExamples,
+  DropzoneFileExamples,
+  DropzoneWorkflowExamples,
   EmailViewerDemo,
   ImageViewerDemo,
   PptxViewerDemo,
@@ -385,24 +387,19 @@ export const mdxComponents = {
   FileViewerDemo,
   JsonFormDemo,
   JsonTableDemo,
-  DocumentAiLayoutBlocksDemo,
   ParseViewerDemo,
   LargeParseViewerDemo,
-  ExtractViewerDemo,
-  JsonFormSourcesDemo,
   ClassificationViewerDemo,
   PartitionViewerDemo,
   SplitViewerDemo,
-  EditViewerDemo,
   SegmentSidebarDemo,
   SegmentSidebarSplitDemo,
   SegmentLegendDemo,
   SegmentLegendSplitDemo,
+  ViewerSidebarDemo,
   FileThumbnailDemo,
   FileThumbnailFormatsDemo,
-  FileSystemDemo,
   TextViewerDemo,
-  SuperfastTextpretextDemo,
   MarkdownViewerDemo,
   HtmlViewerDemo,
   CodeViewerDemo,

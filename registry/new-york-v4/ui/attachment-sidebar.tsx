@@ -146,8 +146,9 @@ function AttachmentSidebarMenuItem({
         <FileThumbnail
           source={item.source}
           presentation="decorative"
-          className="h-16 w-12 flex-shrink-0"
-          previewAspectRatio={3 / 4}
+          thumbnailShape="document"
+          thumbnailSize="md"
+          className="flex-shrink-0"
         />
         <span className="flex min-w-0 flex-1 flex-col gap-1 pt-0.5">
           <span className="truncate text-sm font-medium">{label}</span>

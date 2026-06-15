@@ -3,12 +3,11 @@ export type PageMarkdownViewMode = "rendered" | "text"
 export interface PageMarkdownDocumentState {
   onCurrentPageChange: (pageNumber: number) => void
   onScrollProgressChange?: (progress: number) => void
-  scrollRequest: PageMarkdownDocumentScrollRequest | null
+  setDocumentHandle: (handle: PageMarkdownDocumentHandle | null) => void
 }
 
-export interface PageMarkdownDocumentScrollRequest {
-  pageNumber: number
-  version: number
+export interface PageMarkdownDocumentHandle {
+  scrollToPage: (pageNumber: number, options?: ScrollToOptions) => void
 }
 
 export interface PageMarkdownViewerProps {

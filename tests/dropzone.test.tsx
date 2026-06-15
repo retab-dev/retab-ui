@@ -15,6 +15,16 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { DropzoneBlock } from "@/registry/new-york-v4/blocks/dropzone-block"
 import { FileIntakeViewer } from "@/registry/new-york-v4/blocks/dropzone-uploader-viewer"
 import {
+  FileIntakeViewerDropTarget,
+  FileIntakeViewerHeader,
+  FileIntakeViewerProvider,
+  FileIntakeViewerRoot,
+  FileIntakeViewerSidebar,
+  useFileIntakeViewerSurface,
+  type FileIntakeViewerProviderProps,
+} from "@/registry/new-york-v4/blocks/dropzone-uploader-viewer-parts"
+import type { BlobViewerSource } from "@/registry/new-york-v4/lib/viewer-source"
+import {
   matchesDropzoneAccept,
   parseDropzoneAccept,
   useDropzone,
@@ -24,6 +34,7 @@ import {
 } from "@/registry/new-york-v4/ui/dropzone"
 import { formatFileSize } from "@/registry/new-york-v4/ui/file-size-format"
 import { FileUploader } from "@/registry/new-york-v4/ui/file-uploader"
+import { ViewerBody, ViewerSurface } from "@/registry/new-york-v4/ui/viewer"
 
 afterEach(() => {
   cleanup()
@@ -62,6 +73,55 @@ function emptyFileDragData() {
       types: [],
     },
   }
+}
+
+function FileIntakeViewerWithCustomSurface({
+  className,
+  renderViewer,
+  ...providerProps
+}: Omit<FileIntakeViewerProviderProps, "children"> & {
+  className?: string
+  renderViewer: (source: BlobViewerSource) => React.ReactNode
+}) {
+  return (
+    <FileIntakeViewerProvider {...providerProps}>
+      <FileIntakeViewerDropTarget>
+        <FileIntakeViewerRoot className={className}>
+          <FileIntakeViewerHeader />
+          <ViewerBody className="flex-col md:flex-row">
+            <FileIntakeViewerSidebar />
+            <CustomFileIntakeSurface renderViewer={renderViewer} />
+          </ViewerBody>
+        </FileIntakeViewerRoot>
+      </FileIntakeViewerDropTarget>
+    </FileIntakeViewerProvider>
+  )
+}
+
+function CustomFileIntakeSurface({
+  renderViewer,
+}: {
+  renderViewer: (source: BlobViewerSource) => React.ReactNode
+}) {
+  const { getEmptySurfaceProps, rejection, viewerSource } =
+    useFileIntakeViewerSurface()
+
+  return (
+    <ViewerSurface className="min-h-[24rem]">
+      {viewerSource ? (
+        renderViewer(viewerSource)
+      ) : (
+        <div
+          {...getEmptySurfaceProps({
+            "aria-label": "Upload file",
+            className: "grid h-full min-h-[26rem] place-items-center",
+          })}
+        >
+          {rejection ? rejection.description : "Upload file"}
+        </div>
+      )}
+    </ViewerSurface>
+  )
 }
 
 describe("Dropzone primitive", () => {
@@ -868,7 +928,7 @@ describe("DropzoneBlock", () => {
     }> = []
 
     render(
-      <FileIntakeViewer
+      <FileIntakeViewerWithCustomSurface
         renderViewer={(source) => {
           viewerSources.push(source)
           return <div data-testid="viewer">{source.fileName}</div>
@@ -889,6 +949,9 @@ describe("DropzoneBlock", () => {
     const root = viewerSection.querySelector<HTMLElement>(
       '[data-slot="viewer-root"]'
     )
+    expect(viewerSection.getAttribute("data-slot")).toBe("dropzone")
+    expect(viewerSection.hasAttribute("data-dragging")).toBe(false)
+    expect(root?.hasAttribute("data-dragging")).toBe(false)
     expect(root?.children[0]?.getAttribute("data-slot")).toBe("viewer-header")
     expect(root?.children[1]?.getAttribute("data-slot")).toBe("viewer-body")
     const body = root?.querySelector<HTMLElement>('[data-slot="viewer-body"]')
@@ -919,7 +982,9 @@ describe("DropzoneBlock", () => {
     const sidebarThumbnail = body?.querySelector<HTMLElement>(
       ':scope > [data-slot="viewer-sidebar"] [data-slot="file-thumbnail"]'
     )
-    expect(sidebarThumbnail?.className).toContain("size-20")
+    expect(sidebarThumbnail?.dataset.thumbnailSize).toBe("xl")
+    expect(sidebarThumbnail?.dataset.thumbnailShape).toBe("square")
+    expect(sidebarThumbnail?.className).toContain("w-20")
     expect(sidebarThumbnail?.style.aspectRatio).toBe("1 / 1")
     expect(screen.getByTestId("viewer").textContent).toBe("preview.txt")
     expect(viewerSources.at(-1)).toEqual(
@@ -949,7 +1014,7 @@ describe("DropzoneBlock", () => {
       ])
 
       return (
-        <FileIntakeViewer
+        <FileIntakeViewerWithCustomSurface
           files={files}
           onFilesChange={(nextFiles) => {
             changes.push(nextFiles)
@@ -1000,7 +1065,7 @@ describe("DropzoneBlock", () => {
 
   it("keeps the file-intake viewer disabled state conservative", () => {
     render(
-      <FileIntakeViewer
+      <FileIntakeViewerWithCustomSurface
         disabled
         defaultFiles={[
           {
@@ -1193,11 +1258,9 @@ describe("Dropzone registry split", () => {
     expect(dropzoneUploaderViewerSource).toContain("FileIntakeViewerRoot")
     expect(dropzoneUploaderViewerSource).not.toContain("FileIntakeViewerFrame")
     expect(dropzoneUploaderViewerSource).toContain("FileIntakeViewerSurface")
+    expect(dropzoneUploaderViewerSource).not.toContain("renderViewer")
     expect(dropzoneUploaderViewerSource).toContain(
-      "renderViewer?: (source: BlobViewerSource) => React.ReactNode"
-    )
-    expect(dropzoneUploaderViewerSource).toContain(
-      "<FileIntakeViewerSurface renderViewer={renderViewer} />"
+      "<FileIntakeViewerSurface />"
     )
     expect(dropzoneUploaderViewerSource).not.toContain("DropzoneUploaderViewer")
     expect(dropzoneUploaderViewerSource).not.toContain("UploadableFileViewer")

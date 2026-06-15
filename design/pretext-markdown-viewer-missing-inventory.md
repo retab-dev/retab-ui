@@ -25,7 +25,9 @@ leaking virtual chunks as visible pages.
 14. Table polish parity with the old markdown viewer.
 15. Table copy polish beyond current rendered-cell TSV copy.
 16. Broader image polish beyond the current blocked/loading/ready/failed/retry surface with associated captions, lazy loading, max-width containment, decoded aspect-ratio stabilization, and resource blocking.
-17. Component-specific stable block heights for rich blocks beyond current top-level prose/code/table/frontmatter estimates.
+17. Component-specific stable block heights for rich blocks beyond current
+    top-level prose/code/table/frontmatter estimates and Mermaid source-derived
+    reserved body heights.
 18. Browser regression coverage beyond the current dedicated rich-demo smoke
     checks for desktop, narrow mobile, dark mode, fragment navigation, source
     highlights, link policy, footnotes, and async Mermaid/image scroll
@@ -35,7 +37,7 @@ leaking virtual chunks as visible pages.
 21. Published Retab registry endpoint verification beyond the current local
     registry artifact import-closure test and local shadcn CLI install smoke.
 22. Accessibility audit for generated block roles/labels.
-23. Source-mode polish beyond the current virtualized raw Markdown toggle, source-line scrolling, anchored mode switching, and labelled keyboard-focusable source region.
+23. Source-mode polish beyond the current virtualized raw Markdown toggle, source-line scrolling, anchored mode switching, labelled keyboard-focusable source region, and source-backed viewer search.
 24. Broader browser-level fragment navigation coverage beyond the current route
     smoke for direct hash loads, local fragment clicks, and browser
     back/forward restoration.
@@ -56,7 +58,9 @@ leaking virtual chunks as visible pages.
 36. Broader strategy for splitting very large Markdown blocks after the current hostile chunk isolation and bounded source-preview fallback, especially huge paragraphs, huge lists, and huge tables.
 37. Broader policy for hostile or pathological Markdown payloads beyond the current oversized code/table/paragraph/list/HTML chunk flags and bounded source-preview fallback, including links and deeply nested structures.
 38. A deterministic fallback renderer for unsupported block types.
-39. A common copy/download abstraction for full source, block source, tables, and code blocks.
+39. A common download abstraction beyond the current shared clipboard copy
+    status hook with stale-attempt protection for full source, block source,
+    tables, code blocks, headings, and diagrams.
 40. Cutover cleanup once old Markdown routing no longer has product callers.
 
 ## Missing Markdown Semantics
@@ -67,15 +71,28 @@ leaking virtual chunks as visible pages.
 44. Broader blockquote alert body composition polish beyond the current title/body split.
 45. Broader alert variant polish beyond current `note`, `tip`, `important`, `warning`, and `caution` surfaces.
 46. Browser-level thematic break visual polish beyond current native separator marker and document spacing.
-47. Autolink literal polish beyond initial GFM link rendering.
-48. Strikethrough visual polish beyond initial renderer coverage.
-49. Escaped Markdown character fidelity.
-50. Hard break vs soft break polish beyond initial `remark-breaks` coverage.
+47. Broader autolink literal polish beyond current stable link-form markers
+    and literal monospace styling for `www.` / HTTP(S) autolinks.
+48. Broader strikethrough visual polish beyond current stable marker and muted
+    decoration styling.
+49. Broader escaped Markdown character fidelity beyond current literal-prose
+    coverage for escaped emphasis, link, heading, code, and backslash control
+    punctuation.
+50. Hard break vs soft break polish beyond current `remark-breaks` coverage
+    and stable soft-break render markers.
 51. Reference link/image polish beyond current document-wide definition resolution across virtual chunks.
-52. Markdown definition-list syntax decision beyond current safe raw HTML `dl`/`dt`/`dd` rendering.
-53. Browser-level task-list checkbox visual styling polish beyond current marker removal, rendered item marker, and disabled/read-only accessibility semantics.
-54. Nested and complex frontmatter metadata policy beyond the current top-level YAML/TOML scalar summary.
-55. Broader malformed/frontmatter source fidelity tests beyond current YAML/TOML chunk coverage.
+52. Broader Markdown definition-list syntax polish beyond current safe raw
+    HTML `dl`/`dt`/`dd` rendering and conservative `Term` plus
+    `: description` shorthand support.
+53. Browser-level task-list checkbox visual styling polish beyond current
+    marker removal, rendered item marker, checkbox state marker, checked-state
+    accent styling, and disabled/read-only accessibility semantics.
+54. Broader nested and complex frontmatter metadata policy beyond current
+    top-level scalar summaries, simple YAML/TOML list and inline-array
+    summaries, and dotted TOML section scalar summaries.
+55. Broader malformed/frontmatter source fidelity tests beyond current
+    YAML/TOML chunk coverage, complex-value raw-source-only regressions, and
+    model/viewer recovery for unterminated and empty frontmatter fences.
 56. Broader HTML entity decoding policy beyond current entity-aware heading text and anchor IDs.
 57. Broader Unicode heading slug edge cases beyond current accent normalization coverage.
 58. Broader duplicate heading collision tests beyond the current rendered/model ID parity coverage.
@@ -84,8 +101,10 @@ leaking virtual chunks as visible pages.
 
 ## Missing Rich Block Work
 
-61. Full Mermaid rendering with deterministic pre-layout dimensions.
-62. Mermaid loading/error states that do not shift layout.
+61. Full Mermaid rendering polish beyond current source-derived deterministic
+    pre-layout body dimensions.
+62. Broader Mermaid loading/error-state polish beyond current shared reserved
+    scroll box for loading/error/ready states.
 63. Broader Mermaid source-copy polish beyond the current full-source copy control.
 64. Broader diagram security policy beyond the current strict Mermaid config and SVG sanitization boundary.
 65. Broader code block language header polish beyond current normalized language, title/caption metadata, and opt-in Pretty Code line-number metadata.
@@ -109,13 +128,13 @@ leaking virtual chunks as visible pages.
 81. Broader image alt-text presentation beyond current blocked/loading/ready/failed/retry states and failed-image alt text.
 82. Broader video/component placeholder policy beyond current restricted video blocked/failed states.
 83. Custom component block measurement before render.
-84. Unknown component fallback UI.
+84. Broader unknown component fallback UI beyond the current inert diagnostic surface with source preview.
 
 ## Missing Interaction Work
 
 85. Rendered/Text toggle browser and product-flow verification beyond the current component tests.
-86. Source-mode selection, search, and horizontal-scroll polish beyond the current labelled keyboard-focusable raw-line virtualizer.
-87. Search/find integration.
+86. Source-mode selection and horizontal-scroll polish beyond the current labelled keyboard-focusable raw-line virtualizer and source-backed viewer search.
+87. Browser find integration beyond the current source-backed viewer search.
 88. Broader source highlight integration beyond current source-mode line highlights, rendered chunk-level highlight regions/data attributes, and rendered/source route smoke.
 89. Browser-level visual scroll-to-source-line verification across variable-height blocks beyond current intra-chunk virtualizer offsets and rendered-mode component coverage.
 90. Browser-level scroll anchor preservation on resize, zoom, font load, and content updates beyond current pure anchor capture/restore coverage.
@@ -123,10 +142,12 @@ leaking virtual chunks as visible pages.
 92. Fit-to-width behavior decision.
 93. Keyboard navigation polish beyond current links, code copy buttons, footnotes, and restricted `Tabs` Arrow/Home/End controls.
 94. Selection/copy behavior across virtualized blocks.
-95. Browser find behavior with virtualized content.
-96. Copy all Markdown polish beyond the current raw-source toolbar action.
-97. Download error-state UI polish beyond the current inline, URL, and Blob
-    source download regressions.
+95. Native browser find behavior with virtualized offscreen content beyond the current source-backed viewer search.
+96. Copy all Markdown polish beyond the current raw-source toolbar action with
+    shared copied/failed status handling and stale-attempt protection.
+97. Download error-state UI polish beyond the current inline generated
+    Markdown payload failure status and inline, URL, and Blob source download
+    regressions.
 98. Broader hash fragment navigation coverage beyond the current component
     tests and route smoke for initial hash loads, local clicks, and
     back/forward restoration.
@@ -138,7 +159,8 @@ leaking virtual chunks as visible pages.
 
 101. Heading semantics for all heading levels.
 102. Proper list semantics for nested lists, not only `role="listitem"` rows.
-103. Browser/screen-reader verification for task-list checkbox semantics beyond current disabled/read-only DOM contract.
+103. Browser/screen-reader verification for task-list checkbox semantics beyond
+     current disabled/read-only DOM contract and checked/unchecked state marker.
 104. Broader table accessibility beyond the current deterministic header/cell associations for rendered rows.
 105. Broader code block accessibility beyond current labelled code block/source regions and keyboard-focusable horizontal source region, including line-level navigation if line numbers are added.
 106. Broader diagram accessibility beyond current labelled Mermaid group/image/source fallback, including richer descriptions for full Mermaid output.
@@ -216,7 +238,8 @@ leaking virtual chunks as visible pages.
 154. Broader parser error recovery tests for malformed tables beyond the current paragraph fallback fixture.
 155. Broader parser error recovery tests for malformed HTML beyond the current inert token fixture.
 156. Broader parser error recovery tests for malformed links and images beyond the current malformed-link fixture.
-157. Broader parser error recovery tests for malformed frontmatter beyond the current unterminated-frontmatter fixture.
+157. Broader parser error recovery tests for malformed frontmatter beyond the
+     current unterminated-frontmatter and empty-fence model/viewer fixtures.
 158. Block source extraction for every parsed block, not only line ranges.
 159. Byte offset mapping beyond current document-character offsets and offset lookup/intersection helpers for blocks, chunks, headings, and frontmatter.
 160. Inline source span mapping for links, emphasis, code spans, footnote refs, and task markers.
@@ -241,14 +264,19 @@ leaking virtual chunks as visible pages.
 176. Punctuation spacing around inline code.
 177. Punctuation spacing around links.
 178. Collapsible whitespace rules across inline fragments.
-179. Hard line break rendering inside rich inline flow.
-180. Soft line break rendering policy.
-181. Inline HTML fallback styling.
-182. Inline autolink styling.
-183. Inline email autolink styling.
+179. Hard line break rendering inside rich inline flow beyond current soft-break
+     marker coverage.
+180. Broader soft line break rendering policy beyond current `remark-breaks`
+     behavior and stable soft-break render markers.
+181. Broader inline HTML fallback styling beyond the current styled safe inline
+     tags and raw-inline fallback markers.
+182. Broader inline autolink styling beyond current stable link-form markers
+     and literal monospace styling for `www.` / HTTP(S) autolinks.
+183. Broader inline email autolink styling beyond current email link kind,
+     stable link-form marker, and literal monospace styling.
 184. Link title tooltip polish beyond current safe native `title` preservation.
-185. Link visited-state policy.
-186. Internal hash link styling.
+185. Broader link visited-state polish beyond current restrained visited color policy.
+186. Broader internal hash link styling beyond current fragment link kind and dotted underline treatment.
 187. External link icon polish beyond the current aria-hidden external-link cue.
 188. Bidirectional text behavior in rich inline flow.
 189. Mixed CJK/Latin wrapping audit.
@@ -273,7 +301,9 @@ leaking virtual chunks as visible pages.
 205. Browser-level blockquote plus list nesting beyond current semantic nested-list rendering.
 206. Blockquote plus table nesting.
 207. Blockquote plus code nesting.
-208. Broader code fence language alias policy beyond current lowercasing and Mermaid `mmd`/`mermaid-js` aliases.
+208. Broader code fence language alias policy beyond current lowercasing and
+     common aliases for TypeScript, JavaScript, shell, JSONC, Python, and
+     Mermaid fences.
 209. Code fence title/meta parsing decision.
 210. Broader code fence diff highlighting polish beyond current `diff` fence add/remove line styling.
 211. Broader code fence line-number polish beyond current opt-in Pretty Code `showLineNumbers` / `showLineNumbers{n}` support.
@@ -300,14 +330,15 @@ leaking virtual chunks as visible pages.
 229. Broader boolean prop parsing beyond current whitelisted `Video` media flags and directive boolean-string normalization.
 230. Broader numeric prop parsing beyond current safe display-number support for `Metric.value`.
 231. Broader enum prop validation beyond the current component-owned enum checks.
-232. Unknown prop rejection diagnostics beyond current schema-owned rejection and inert fallback.
+232. Unknown prop rejection diagnostics beyond current schema-owned rejection and inert diagnostic fallback.
 233. Broader event handler prop rejection coverage beyond current component markdown/directive tests.
 234. Broader expression prop rejection coverage beyond current inert `mdx` fallback tests for non-literal expressions and spreads.
 235. Broader import/export rejection diagnostics beyond the current inert prose/source rendering.
 236. Broader remote component rejection diagnostics beyond current inert namespaced component fallback.
 237. Broader component child Markdown parsing beyond current safe paired `Callout`/`Accordion` blocks and directive-based `Tabs` / `Tab` blocks.
 238. Component child source mapping.
-239. Component fallback heights.
+239. Broader component fallback heights beyond the current JSX-like diagnostic
+     fallback pre-layout estimate.
 240. Component measured growth policy.
 241. Component error boundaries.
 242. Broader component accessibility contract beyond current labelled components and restricted `Tabs` roles, roving focus, Arrow key navigation, and Home/End navigation.
@@ -323,13 +354,17 @@ leaking virtual chunks as visible pages.
 252. Initial components beyond the current restricted `Image`.
 253. Initial components beyond the current restricted `Video`.
 254. Initial components beyond the current restricted `Diagram`.
-255. Unknown component visual design.
+255. Unknown component visual design beyond the current inert diagnostic source-preview surface.
 
 ## Missing Security Work
 
 256. Threat model document for Markdown rendering.
-257. Broader URL sanitizer fuzz tests beyond the current supported-protocol, control-character, encoded-scheme, SVG resource, data/blob resource, and image-policy unit matrix.
-258. Unicode URL confusable policy decision.
+257. Broader URL sanitizer fuzz tests beyond the current supported-protocol,
+     control-character, encoded-scheme, Unicode delimiter-confusable,
+     backslash-normalization, SVG resource, data/blob resource, and
+     image-policy unit matrix.
+258. Broader Unicode URL confusable policy beyond the current delimiter
+     confusable rejection for colon, slash, and backslash-like characters.
 259. URL sanitizer parity decision between Pretext Markdown Viewer and Markdown Document Viewer.
 260. Broader image URL extension/type policy beyond current SVG/SVGZ resource blocking.
 261. Link `target`/`rel` same-origin routing policy review beyond the current
@@ -339,8 +374,8 @@ leaking virtual chunks as visible pages.
 264. Broader SVG sanitization coverage beyond the current SVG script/style mounting tests.
 265. CSS injection policy.
 266. Broader DOM clobbering fuzz tests beyond the current raw HTML `id`/`name`
-     prefix regression, raw internal `data-pretext-*` metadata stripping, and
-     heading reserved-name tests.
+     prefix regression, raw internal `data-pretext-*` metadata stripping
+     including component fallback metadata, and heading reserved-name tests.
 267. Heading ID collision safety review beyond the current duplicate, reserved-name, and exported-slug tests.
 268. Component prop injection tests.
 269. Clipboard content sanitization policy.

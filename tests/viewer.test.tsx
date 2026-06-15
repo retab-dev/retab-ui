@@ -68,13 +68,81 @@ describe("viewer primitives", () => {
       container
         .querySelector('[data-slot="viewer-sidebar"]')
         ?.getAttribute("data-viewer-sidebar-mode")
-    ).toBe("inline")
+    ).toBe("overlay")
     expect(
       container.querySelector('[data-slot="viewer-surface"]')?.textContent
     ).toBe("Surface")
   })
 
-  it("uses framed chrome by default and removes it in bare mode", () => {
+  it("defaults the sidebar mode to responsive auto", async () => {
+    const originalResizeObserver = globalThis.ResizeObserver
+    const originalWindowResizeObserver = window.ResizeObserver
+    const originalGetBoundingClientRect =
+      HTMLElement.prototype.getBoundingClientRect
+    const callbacks: ResizeObserverCallback[] = []
+    let width = 1024
+
+    class MockResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        callbacks.push(callback)
+      }
+      observe() {}
+      disconnect() {}
+    }
+
+    globalThis.ResizeObserver =
+      MockResizeObserver as unknown as typeof ResizeObserver
+    window.ResizeObserver =
+      MockResizeObserver as unknown as typeof ResizeObserver
+    HTMLElement.prototype.getBoundingClientRect = function () {
+      return {
+        bottom: 0,
+        height: 0,
+        left: 0,
+        right: width,
+        toJSON: () => ({}),
+        top: 0,
+        width,
+        x: 0,
+        y: 0,
+      }
+    }
+
+    function ModeProbe() {
+      const sidebar = useViewerSidebar()
+      return <div data-testid="mode">{sidebar.mode}</div>
+    }
+
+    try {
+      render(
+        <ViewerRoot>
+          <ModeProbe />
+          <ViewerBody>
+            <ViewerSidebar>Sidebar</ViewerSidebar>
+            <ViewerSurface>Surface</ViewerSurface>
+          </ViewerBody>
+        </ViewerRoot>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId("mode").textContent).toBe("inline")
+      })
+
+      width = 320
+      act(() => {
+        callbacks.forEach((callback) => callback([], {} as ResizeObserver))
+      })
+
+      expect(screen.getByTestId("mode").textContent).toBe("overlay")
+    } finally {
+      globalThis.ResizeObserver = originalResizeObserver
+      window.ResizeObserver = originalWindowResizeObserver
+      HTMLElement.prototype.getBoundingClientRect =
+        originalGetBoundingClientRect
+    }
+  })
+
+  it("uses framed chrome by default and removes all frame styling in bare mode", () => {
     const { rerender } = render(
       <ViewerRoot data-testid="root">
         <ViewerBody>
@@ -97,7 +165,7 @@ describe("viewer primitives", () => {
 
     expect(screen.getByTestId("root").className).not.toContain("rounded-xl")
     expect(screen.getByTestId("root").className).not.toContain("border")
-    expect(screen.getByTestId("root").className).toContain("bg-muted/20")
+    expect(screen.getByTestId("root").className).not.toContain("bg-muted")
   })
 
   it("does not bake domain semantics into the primitive sidebar or surface", () => {
@@ -597,9 +665,9 @@ describe("viewer primitives", () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByTestId("sidebar").getAttribute("data-collapsible")).toBe(
-        "none"
-      )
+      expect(
+        screen.getByTestId("sidebar").getAttribute("data-collapsible")
+      ).toBe("none")
     })
     expect(screen.getByTestId("sidebar").getAttribute("aria-hidden")).toBeNull()
     expect(screen.getByTestId("trigger").getAttribute("aria-disabled")).toBe(

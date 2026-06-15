@@ -13,8 +13,7 @@ React state; your application decides whether, when, and how those files are
 uploaded.
 
 It does not render icons, thumbnails, copy, grids, cards, progress rows, or
-upload transport. Use [File Uploader](/docs/components/file-uploader) for the
-default Retab visual upload area.
+upload transport.
 
 ## Installation
 
@@ -59,7 +58,15 @@ into React state and prop getters.
 - `getButtonProps` is for real `<button>` elements.
 - `getTriggerProps` is for anything else that opens the file dialog.
 
-## Native Button Trigger
+## Trigger Patterns
+
+Use `getButtonProps` when the trigger is a real button. Use `getTriggerProps`
+for custom trigger elements, validation-only targets, disabled states, and
+parent-owned queues.
+
+<DropzoneTriggerExamples />
+
+### Native Button Trigger
 
 ```tsx
 export function ToolbarAttachment() {
@@ -74,7 +81,7 @@ export function ToolbarAttachment() {
 }
 ```
 
-## Validation Only
+### Validation Only
 
 ```tsx
 import * as React from "react"
@@ -103,6 +110,41 @@ export function PdfValidationTarget() {
   )
 }
 ```
+
+## File Compositions
+
+Dropzone stays headless even when the visual surface is rich. These examples
+compose it with `FileThumbnail` and `FileViewer` for selected file previews and
+document intake flows.
+
+<DropzoneFileExamples />
+
+The file-intake viewer keeps browser acquisition separate from viewer chrome:
+
+```tsx
+<FileIntakeViewerProvider>
+  <FileIntakeViewerDropTarget>
+    <FileIntakeViewerRoot>
+      <FileIntakeViewerHeader />
+      <ViewerBody>
+        <FileIntakeViewerSidebar />
+        <FileIntakeViewerSurface />
+      </ViewerBody>
+    </FileIntakeViewerRoot>
+  </FileIntakeViewerDropTarget>
+</FileIntakeViewerProvider>
+```
+
+`FileIntakeViewerDropTarget` owns the drop root and hidden file input.
+`FileIntakeViewerRoot` owns only the viewer frame.
+
+## Workflow Surfaces
+
+Custom products usually need file intake inside a domain-specific state shape:
+comparison slots, required packet checklists, routed intake lanes, timelines, or
+pinboards. Dropzone owns intake; the surrounding component owns the workflow.
+
+<DropzoneWorkflowExamples />
 
 ## Behavior
 

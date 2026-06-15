@@ -6,12 +6,16 @@ import type { ThumbnailAnchor } from "@/components/file-thumbnail/types"
 
 import type {
   FileThumbnailFrameProps,
+  FileThumbnailShape,
+  FileThumbnailSize,
   FileThumbnailState,
   ThumbnailFile,
 } from "./file-thumbnail-frame-types"
 
 export type {
   FileThumbnailFrameProps,
+  FileThumbnailShape,
+  FileThumbnailSize,
   FileThumbnailState,
   ThumbnailFile,
 } from "./file-thumbnail-frame-types"

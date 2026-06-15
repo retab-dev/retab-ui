@@ -34,7 +34,7 @@ export type {
 export type { FrameDescriptor, FrameSource }
 export { getImageSource, resetImageSourceCacheForTests }
 
-export type ImageResourceViewerProps = Omit<ImageViewerProps, "source"> & {
+export type ImageResourceContentProps = Omit<ImageViewerProps, "source"> & {
   resource: ViewerResource
 }
 
@@ -45,14 +45,14 @@ export const ImageViewer = React.forwardRef<
   const { source, ...resourceProps } = props
   const resource = React.useMemo(() => createViewerResource(source), [source])
   return (
-    <ImageResourceViewer {...resourceProps} ref={ref} resource={resource} />
+    <ImageResourceContent {...resourceProps} ref={ref} resource={resource} />
   )
 })
 
-export const ImageResourceViewer = React.forwardRef<
+export const ImageResourceContent = React.forwardRef<
   ImageViewerHandle,
-  ImageResourceViewerProps
->(function ImageResourceViewer(props, ref) {
+  ImageResourceContentProps
+>(function ImageResourceContent(props, ref) {
   const isClient = useIsClient()
   const resource = props.resource
   if (!isClient) {
@@ -69,7 +69,7 @@ export const ImageResourceViewer = React.forwardRef<
   return (
     <ViewerErrorBoundary
       className={props.className}
-      download={resource.originalDownload}
+      download={props.download === false ? null : resource.originalDownload}
       format="image"
       resetKey={resource.keys.resource}
       sourceKind={resource.sourceKind}

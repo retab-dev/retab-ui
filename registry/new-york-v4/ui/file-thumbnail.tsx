@@ -12,6 +12,8 @@ import {
 import type {
   FileThumbnailFrameProps,
   FileThumbnailProps,
+  FileThumbnailShape,
+  FileThumbnailSize,
   FileThumbnailSource,
   FileThumbnailState,
   ThumbnailFile,
@@ -26,6 +28,8 @@ export {
 export type {
   FileThumbnailFrameProps,
   FileThumbnailProps,
+  FileThumbnailShape,
+  FileThumbnailSize,
   FileThumbnailSource,
   FileThumbnailState,
   ThumbnailFile,

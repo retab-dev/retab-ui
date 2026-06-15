@@ -8,7 +8,10 @@ import type { ViewerDownloadAction } from "@/lib/viewer-download"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ViewerDownloadControl } from "@/components/ui/viewer-download"
+import {
+  ViewerDownloadControl,
+  type ViewerDownloadErrorHandler,
+} from "@/components/ui/viewer-download"
 
 export type ViewerToolbarPosition =
   | {
@@ -42,6 +45,7 @@ export type ViewerToolbarProps = Omit<React.ComponentProps<"div">, "title"> & {
   zoom?: ViewerToolbarZoom | null
   rotate?: ViewerToolbarRotate | null
   downloads?: ViewerDownloadAction[]
+  onDownloadError?: ViewerDownloadErrorHandler
   loading?: boolean
   size?: "default" | "sm"
   extra?: React.ReactNode
@@ -70,6 +74,7 @@ export function ViewerToolbar({
   zoom,
   rotate,
   downloads,
+  onDownloadError,
   loading = false,
   size = "default",
   extra,
@@ -134,7 +139,10 @@ export function ViewerToolbar({
           {rotate ? <ViewerToolbarRotateControl rotate={rotate} /> : null}
           {(zoom || rotate) && hasDownloads ? <ViewerToolbarSeparator /> : null}
           {hasDownloads ? (
-            <ViewerDownloadControl actions={downloads ?? []} />
+            <ViewerDownloadControl
+              actions={downloads ?? []}
+              onError={onDownloadError}
+            />
           ) : null}
           {(zoom || rotate || hasDownloads) && extra ? (
             <ViewerToolbarSeparator />

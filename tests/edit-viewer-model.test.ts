@@ -4,6 +4,7 @@ import {
   createEditViewerFieldProjection,
   deriveEditViewerModes,
   displayEditFieldValue,
+  editFieldTargetFromBBox,
   filterEditViewerFields,
   groupEditViewerFieldsByPage,
   groupLocatedEditViewerFieldsByPage,
@@ -45,6 +46,28 @@ const locatedField: EditViewerField = {
     width: 0.3,
     height: 0.04,
   },
+  target: {
+    kind: "pdf-area",
+    pageNumber: 2,
+    left: 10,
+    top: 20,
+    width: 30,
+    height: 4,
+  },
+  targetStatus: { state: "resolved" },
+}
+
+function moveLocatedFieldToPage(
+  field: EditViewerField,
+  page: number
+): EditViewerField {
+  const bbox = { ...field.bbox!, page }
+  return {
+    ...field,
+    bbox,
+    target: editFieldTargetFromBBox(bbox),
+    targetStatus: { state: "resolved" },
+  }
 }
 
 const defaultOptions = resolveEditViewerOptions(undefined)
@@ -213,12 +236,30 @@ describe("edit viewer model", () => {
     }).fields
 
     expect(fields[0]?.bbox).toBeUndefined()
+    expect(fields[0]?.target).toBeNull()
+    expect(fields[0]?.targetStatus).toMatchObject({ state: "invalid" })
     expect(fields[1]?.bbox).toBeUndefined()
+    expect(fields[1]?.target).toBeNull()
+    expect(fields[1]?.targetStatus).toMatchObject({ state: "invalid" })
     expect(fields[2]?.bbox?.page).toBe(1)
     expect(fields[2]?.bbox?.left).toBe(0.9)
     expect(fields[2]?.bbox?.top).toBe(0.9)
     expect(fields[2]?.bbox?.width).toBeCloseTo(0.1)
     expect(fields[2]?.bbox?.height).toBeCloseTo(0.1)
+    const clampedTarget = fields[2]?.target
+    expect(clampedTarget).toMatchObject({
+      kind: "pdf-area",
+      pageNumber: 1,
+      left: 90,
+      top: 90,
+    })
+    expect(clampedTarget?.kind).toBe("pdf-area")
+    if (clampedTarget?.kind !== "pdf-area") {
+      throw new Error("Expected clamped edit field target to be a PDF area")
+    }
+    expect(clampedTarget.width).toBeCloseTo(10)
+    expect(clampedTarget.height).toBeCloseTo(10)
+    expect(fields[2]?.targetStatus).toEqual({ state: "resolved" })
     expect(
       filterEditViewerFields({ fields, filter: "no_location" }).map(
         (field) => field.key
@@ -229,9 +270,28 @@ describe("edit viewer model", () => {
   it("filters by query, fill state, and field type", () => {
     const fields: EditViewerField[] = [
       locatedField,
-      { key: "send_wire", type: "checkbox", value: "checked" },
-      { key: "memo", description: "Internal memo", type: "text", value: "" },
-      { key: "floating", type: "text", value: "unlocated" },
+      {
+        key: "send_wire",
+        type: "checkbox",
+        value: "checked",
+        target: null,
+        targetStatus: { state: "missing" },
+      },
+      {
+        key: "memo",
+        description: "Internal memo",
+        type: "text",
+        value: "",
+        target: null,
+        targetStatus: { state: "missing" },
+      },
+      {
+        key: "floating",
+        type: "text",
+        value: "unlocated",
+        target: null,
+        targetStatus: { state: "missing" },
+      },
     ]
 
     expect(
@@ -271,11 +331,16 @@ describe("edit viewer model", () => {
     const groups = groupEditViewerFieldsByPage([
       locatedField,
       {
-        ...locatedField,
+        ...moveLocatedFieldToPage(locatedField, 1),
         key: "city",
-        bbox: { ...locatedField.bbox!, page: 1 },
       },
-      { key: "notes", type: "text", value: "N/A" },
+      {
+        key: "notes",
+        type: "text",
+        value: "N/A",
+        target: null,
+        targetStatus: { state: "missing" },
+      },
     ])
 
     expect(groups.map((group) => group.label)).toEqual([
@@ -290,11 +355,16 @@ describe("edit viewer model", () => {
     const fields: EditViewerField[] = [
       locatedField,
       {
-        ...locatedField,
+        ...moveLocatedFieldToPage(locatedField, 1),
         key: "city",
-        bbox: { ...locatedField.bbox!, page: 1 },
       },
-      { key: "notes", type: "text", value: "N/A" },
+      {
+        key: "notes",
+        type: "text",
+        value: "N/A",
+        target: null,
+        targetStatus: { state: "missing" },
+      },
     ]
     const fieldsByPage = groupLocatedEditViewerFieldsByPage(fields)
 
@@ -309,12 +379,17 @@ describe("edit viewer model", () => {
     const fields: EditViewerField[] = [
       locatedField,
       {
-        ...locatedField,
+        ...moveLocatedFieldToPage(locatedField, 3),
         key: "name",
         value: "Duplicate",
-        bbox: { ...locatedField.bbox!, page: 3 },
       },
-      { key: "notes", type: "text", value: "" },
+      {
+        key: "notes",
+        type: "text",
+        value: "",
+        target: null,
+        targetStatus: { state: "missing" },
+      },
     ]
     const projection = createEditViewerFieldProjection({
       fields,

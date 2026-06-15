@@ -121,6 +121,16 @@ function captureAnchorClicks() {
   return clicks
 }
 
+function createDeferred<T>() {
+  let reject!: (reason?: unknown) => void
+  let resolve!: (value: T | PromiseLike<T>) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, reject, resolve }
+}
+
 beforeEach(() => {
   Object.defineProperty(HTMLElement.prototype, "scrollTo", {
     configurable: true,
@@ -297,6 +307,55 @@ describe("PretextMarkdownViewer", () => {
     await waitFor(() => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(source)
     })
+  })
+
+  it("shows full Markdown source copy failures from the toolbar", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {},
+    })
+
+    render(<PretextMarkdownViewer source={markdownSource("# Release Notes")} />)
+
+    expect(
+      await screen.findByRole("heading", { name: "Release Notes" })
+    ).toBeTruthy()
+    fireEvent.click(screen.getByLabelText("Copy Markdown"))
+
+    expect(await screen.findByLabelText("Copy failed")).toBeTruthy()
+  })
+
+  it("ignores stale full Markdown source copy failures", async () => {
+    const writes: Array<ReturnType<typeof createDeferred<void>>> = []
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: vi.fn(() => {
+          const write = createDeferred<void>()
+          writes.push(write)
+          return write.promise
+        }),
+      },
+    })
+
+    render(<PretextMarkdownViewer source={markdownSource("# Release Notes")} />)
+
+    expect(
+      await screen.findByRole("heading", { name: "Release Notes" })
+    ).toBeTruthy()
+    fireEvent.click(screen.getByLabelText("Copy Markdown"))
+    fireEvent.click(screen.getByLabelText("Copy Markdown"))
+
+    await act(async () => {
+      writes[1]?.resolve()
+    })
+    expect(await screen.findByLabelText("Copied")).toBeTruthy()
+
+    await act(async () => {
+      writes[0]?.reject(new Error("late denied"))
+    })
+    expect(screen.getByLabelText("Copied")).toBeTruthy()
+    expect(screen.queryByLabelText("Copy failed")).toBeNull()
   })
 
   it("toggles between rendered Markdown and source-faithful text", async () => {
@@ -621,6 +680,52 @@ describe("PretextMarkdownViewer", () => {
     )
   })
 
+  it("shows and resets generated Markdown download failures", async () => {
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: vi.fn(() => {
+        throw new Error("object URLs blocked")
+      }),
+    })
+    const { rerender } = render(
+      <PretextMarkdownViewer
+        source={markdownSource("# Release Notes", "release.md")}
+      />
+    )
+
+    expect(
+      await screen.findByRole("heading", { name: "Release Notes" })
+    ).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+
+    expect(
+      await screen.findByText("Could not start this download.")
+    ).toBeTruthy()
+    expect(
+      document.querySelector('[data-slot="pretext-markdown-download-error"]')
+    ).toBeTruthy()
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response("# Remote")))
+    )
+    rerender(
+      <PretextMarkdownViewer
+        source={markdownUrlSource({
+          url: "/docs/reset-download-error.md",
+          fileName: "remote.md",
+          downloadUrl: "/download/reset-download-error.md",
+        })}
+      />
+    )
+
+    expect(await screen.findByRole("heading", { name: "Remote" })).toBeTruthy()
+    expect(
+      document.querySelector('[data-slot="pretext-markdown-download-error"]')
+    ).toBeNull()
+    expect(screen.getByRole("link", { name: "Download" })).toBeTruthy()
+  })
+
   it("updates URL download metadata without reloading the same Markdown", async () => {
     const createObjectURL = vi.mocked(URL.createObjectURL)
     const fetchMock = vi.fn(() => Promise.resolve(new Response("# Remote")))
@@ -935,13 +1040,34 @@ describe("PretextMarkdownViewer", () => {
     ).toBeTruthy()
   })
 
+  it("preserves escaped Markdown control characters as literal prose", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          String.raw`Escaped \*stars\*, \[label\]\(/docs/example\), \# heading, \`code\`, and \\ slash.`
+        )}
+        toolbar={false}
+      />
+    )
+
+    const paragraph = await screen.findByText(
+      "Escaped *stars*, [label](/docs/example), # heading, `code`, and \\ slash."
+    )
+    expect(paragraph).toBeTruthy()
+    expect(container.querySelector("p em")).toBeNull()
+    expect(container.querySelector("p strong")).toBeNull()
+    expect(container.querySelector("p a")).toBeNull()
+    expect(container.querySelector("p code")).toBeNull()
+    expect(container.querySelector("h1")).toBeNull()
+  })
+
   it("renders GFM inline semantics for breaks, strike, and autolinks", async () => {
     const { container } = render(
       <PretextMarkdownViewer
         source={markdownSource(
           [
             "First line",
-            "Second line with ~~removed~~ text and www.retab.com.",
+            "Second line with ~~removed~~ text and www.retab.com plus hello@retab.com.",
           ].join("\n")
         )}
         toolbar={false}
@@ -949,11 +1075,29 @@ describe("PretextMarkdownViewer", () => {
     )
 
     expect(await screen.findByText(/First line/)).toBeTruthy()
-    expect(container.querySelector("p br")).toBeTruthy()
-    expect(container.querySelector("del")?.textContent).toBe("removed")
-    expect(
-      screen.getByRole("link", { name: "www.retab.com" }).getAttribute("href")
-    ).toBe("http://www.retab.com")
+    const lineBreak = container.querySelector("p br")
+    expect(lineBreak).toBeTruthy()
+    expect(lineBreak?.getAttribute("data-pretext-line-break")).toBe("soft")
+    const strikethrough = container.querySelector("del")
+    expect(strikethrough?.textContent).toBe("removed")
+    expect(strikethrough?.getAttribute("data-pretext-strikethrough")).toBe("")
+    expect(strikethrough?.className).toContain("decoration-muted-foreground/70")
+    expect(strikethrough?.className).toContain("decoration-2")
+    const webAutolink = screen.getByRole("link", { name: "www.retab.com" })
+    const emailAutolink = screen.getByRole("link", {
+      name: "hello@retab.com",
+    })
+
+    expect(webAutolink.getAttribute("href")).toBe("http://www.retab.com")
+    expect(webAutolink.getAttribute("data-pretext-link-kind")).toBe("external")
+    expect(webAutolink.getAttribute("data-pretext-link-form")).toBe("autolink")
+    expect(webAutolink.className).toContain("font-mono")
+    expect(emailAutolink.getAttribute("href")).toBe("mailto:hello@retab.com")
+    expect(emailAutolink.getAttribute("data-pretext-link-kind")).toBe("email")
+    expect(emailAutolink.getAttribute("data-pretext-link-form")).toBe(
+      "email-autolink"
+    )
+    expect(emailAutolink.className).toContain("font-mono")
   })
 
   it("applies link target and rel invariants", async () => {
@@ -981,10 +1125,21 @@ describe("PretextMarkdownViewer", () => {
     for (const link of [fragment, root, relative, email]) {
       expect(link.getAttribute("target")).toBeNull()
       expect(link.getAttribute("rel")).toBeNull()
+      expect(link.className).toContain("visited:text-muted-foreground")
     }
+    expect(fragment.getAttribute("data-pretext-link-kind")).toBe("fragment")
+    expect(fragment.className).toContain("decoration-dotted")
+    expect(root.getAttribute("data-pretext-link-kind")).toBe("root")
+    expect(relative.getAttribute("data-pretext-link-kind")).toBe("relative")
+    expect(email.getAttribute("data-pretext-link-kind")).toBe("email")
+    expect(external.getAttribute("data-pretext-link-kind")).toBe("external")
+    expect(fragment.getAttribute("data-pretext-link-form")).toBe("inline")
+    expect(email.getAttribute("data-pretext-link-form")).toBe("inline")
+    expect(external.getAttribute("data-pretext-link-form")).toBe("inline")
     expect(external.getAttribute("target")).toBe("_blank")
     expect(external.getAttribute("rel")).toBe("noopener noreferrer")
     expect(external.getAttribute("title")).toBe("External docs")
+    expect(external.className).toContain("visited:text-muted-foreground")
     expect(external.textContent).toBe("External")
     expect(external.querySelector(".lucide-external-link")).toBeTruthy()
     expect(
@@ -1105,10 +1260,14 @@ describe("PretextMarkdownViewer", () => {
     expect(completed.hasAttribute("readonly")).toBe(true)
     expect(completed.getAttribute("aria-readonly")).toBe("true")
     expect((completed as HTMLInputElement).disabled).toBe(true)
+    expect(completed.getAttribute("data-pretext-task-checkbox")).toBe("checked")
+    expect(completed.className).toContain("accent-primary")
     expect((pending as HTMLInputElement).checked).toBe(false)
     expect(pending.hasAttribute("readonly")).toBe(true)
     expect(pending.getAttribute("aria-readonly")).toBe("true")
     expect((pending as HTMLInputElement).disabled).toBe(true)
+    expect(pending.getAttribute("data-pretext-task-checkbox")).toBe("unchecked")
+    expect(pending.className).toContain("accent-primary")
 
     const items = Array.from(
       container.querySelectorAll("[data-pretext-task-list-item]")
@@ -1716,10 +1875,94 @@ describe("PretextMarkdownViewer", () => {
     expect(
       screen.getByText('<Accordion title="Unsafe" onClick="steal">')
     ).toBeTruthy()
-    expect(
-      screen.getByText('<Tabs label="Unsafe" onClick="steal">')
-    ).toBeTruthy()
     expect(container.textContent).toContain("::metric")
+    const fallbacks = Array.from(
+      container.querySelectorAll<HTMLElement>(
+        "[data-pretext-component-fallback]"
+      )
+    )
+    expect(fallbacks.length).toBeGreaterThanOrEqual(10)
+    expect(
+      fallbacks.some(
+        (fallback) =>
+          fallback.getAttribute("data-pretext-component-fallback-name") ===
+            "Danger" &&
+          fallback.getAttribute("data-pretext-component-fallback-reason") ===
+            "Unsupported component"
+      )
+    ).toBe(true)
+    expect(
+      fallbacks.some(
+        (fallback) =>
+          fallback.getAttribute("data-pretext-component-fallback-name") ===
+            "Metric" &&
+          fallback.getAttribute("data-pretext-component-fallback-reason") ===
+            "Component props must be literal values"
+      )
+    ).toBe(true)
+    expect(
+      fallbacks.some(
+        (fallback) =>
+          fallback.getAttribute("data-pretext-component-fallback-name") ===
+            "Image" &&
+          fallback.getAttribute("data-pretext-component-fallback-reason") ===
+            "Event handler props are not supported"
+      )
+    ).toBe(true)
+    expect(
+      fallbacks.some(
+        (fallback) =>
+          fallback.getAttribute("data-pretext-component-fallback-name") ===
+            "Tabs" &&
+          fallback.getAttribute("data-pretext-component-fallback-reason") ===
+            "Event handler props are not supported" &&
+          fallback.textContent?.includes(
+            '<Tabs label="Unsafe" onClick="steal">'
+          )
+      )
+    ).toBe(true)
+    expect(container.querySelector("[data-pretext-component]")).toBeNull()
+  })
+
+  it("keeps unsafe component directives inert", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            '::metric{label="Unsafe" onClick="steal"}',
+            "",
+            ':::accordion{title="Unsafe" onClick="steal"}',
+            "Unsafe directive.",
+            ":::",
+            "",
+            ':::tabs{label="Unsafe" onClick="steal"}',
+            ':::tab{title="Unsafe"}',
+            "Unsafe tab directive.",
+            ":::",
+            ":::",
+            "",
+            ':badge[Invalid directive]{tone="purple"}',
+            "",
+            '::image{src="/chart.png" alt="Unsafe directive chart" onClick="steal"}',
+            "",
+            '::video{src="/demo.mp4" label="Unsafe directive video" onClick="steal"}',
+            "",
+            '::diagram{type="mermaid" source="graph TD; A-->B" onClick="steal"}',
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(
+      await screen.findByText('::metric{label="Unsafe" onClick="steal"}')
+    ).toBeTruthy()
+    const fallbacks = Array.from(
+      container.querySelectorAll<HTMLElement>(
+        "[data-pretext-component-fallback]"
+      )
+    )
+    expect(fallbacks.length).toBeGreaterThanOrEqual(6)
     expect(container.textContent).toContain(
       '::accordion{title="Unsafe" onClick="steal"}'
     )
@@ -1736,6 +1979,13 @@ describe("PretextMarkdownViewer", () => {
     expect(container.textContent).toContain(
       '::diagram{type="mermaid" source="graph TD; A-->B" onClick="steal"}'
     )
+    expect(
+      fallbacks.every(
+        (fallback) =>
+          fallback.getAttribute("data-pretext-component-fallback-reason") ===
+          "Unsupported component directive props"
+      )
+    ).toBe(true)
     expect(container.querySelector("[data-pretext-component]")).toBeNull()
   })
 
@@ -1761,6 +2011,17 @@ describe("PretextMarkdownViewer", () => {
     expect(screen.getByText(/export const metadata/)).toBeTruthy()
     expect(container.textContent).toContain("<Remote.Widget")
     expect(container.textContent).toContain("<Metric.Remote")
+    expect(
+      Array.from(
+        container.querySelectorAll<HTMLElement>(
+          "[data-pretext-component-fallback]"
+        )
+      ).every(
+        (fallback) =>
+          fallback.getAttribute("data-pretext-component-fallback-reason") ===
+          "Remote or namespaced components are not supported"
+      )
+    ).toBe(true)
     expect(container.querySelector("[data-pretext-component]")).toBeNull()
   })
 
@@ -1842,6 +2103,65 @@ describe("PretextMarkdownViewer", () => {
         "data-source"
       )
     ).toBe(encodeURIComponent("sequenceDiagram\nA->>B: hi"))
+  })
+
+  it("keeps diagram loading and ready states inside stable reserved height", async () => {
+    const { container, rerender } = render(
+      <PretextMarkdownViewer
+        source={markdownSource("```mermaid\ngraph TD\n  A-->B\n  B-->C\n```")}
+        toolbar={false}
+      />
+    )
+
+    await screen.findByText("mermaid")
+    const graphDiagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+
+    expect(graphDiagram?.getAttribute("data-diagram-reserved-height")).toBe(
+      "286"
+    )
+    expect(
+      graphDiagram
+        ?.querySelector("[data-pretext-diagram-body]")
+        ?.className.includes("h-(--pretext-diagram-body-height)")
+    ).toBe(true)
+
+    rerender(
+      <PretextMarkdownViewer
+        source={markdownSource("```mermaid\nsequenceDiagram\nA->>B: hi\n```")}
+        toolbar={false}
+      />
+    )
+
+    await waitFor(() =>
+      expect(
+        container.querySelector('[data-diagram-language="mermaid"]')
+      ).toBeTruthy()
+    )
+    const sequenceDiagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+    expect(sequenceDiagram?.getAttribute("data-diagram-reserved-height")).toBe(
+      "160"
+    )
+    const pendingBody = sequenceDiagram?.querySelector(
+      "[data-pretext-diagram-body]"
+    )
+    expect(pendingBody?.className).toContain(
+      "h-(--pretext-diagram-body-height)"
+    )
+
+    await waitFor(() =>
+      expect(sequenceDiagram?.dataset.diagramState).toBe("ready")
+    )
+    const readyBody = sequenceDiagram?.querySelector(
+      "[data-pretext-diagram-body]"
+    )
+    expect(sequenceDiagram?.getAttribute("data-diagram-reserved-height")).toBe(
+      "160"
+    )
+    expect(readyBody?.className).toContain("h-(--pretext-diagram-body-height)")
   })
 
   it("sanitizes rendered Mermaid SVG before mounting it", async () => {
@@ -2111,6 +2431,53 @@ describe("PretextMarkdownViewer", () => {
     await waitFor(() => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
         "<Component />"
+      )
+    })
+  })
+
+  it("normalizes common code fence language aliases", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```TypeScript",
+            "const typed = true",
+            "```",
+            "",
+            "```javascript",
+            "const dynamic = true",
+            "```",
+            "",
+            "```shell-session",
+            "$ pnpm test",
+            "```",
+            "",
+            "```jsonc",
+            '{ "comments": false }',
+            "```",
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(
+      await screen.findByRole("group", { name: "ts code block" })
+    ).toBeTruthy()
+    expect(screen.getByRole("group", { name: "js code block" })).toBeTruthy()
+    expect(screen.getByRole("group", { name: "shell code block" })).toBeTruthy()
+    expect(screen.getByRole("group", { name: "json code block" })).toBeTruthy()
+    expect(
+      Array.from(
+        container.querySelectorAll("[data-pretext-code-language]")
+      ).map((node) => node.getAttribute("data-pretext-code-language"))
+    ).toEqual(["ts", "js", "shell", "json"])
+
+    fireEvent.click(screen.getAllByLabelText("Copy code block")[0]!)
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        "const typed = true"
       )
     })
   })
@@ -2391,7 +2758,11 @@ describe("PretextMarkdownViewer", () => {
     expect(cells[2]?.className).toContain("tabular-nums")
     expect(container.querySelector("td strong")?.textContent).toBe("Bold")
     expect(container.querySelector("td code")?.textContent).toBe("code")
-    expect(container.querySelector("td del")?.textContent).toBe("old")
+    const tableStrikethrough = container.querySelector("td del")
+    expect(tableStrikethrough?.textContent).toBe("old")
+    expect(tableStrikethrough?.getAttribute("data-pretext-strikethrough")).toBe(
+      ""
+    )
     expect(screen.getByRole("link", { name: /Site/ })).toBeTruthy()
     expect(screen.getByText(/✅/)).toBeTruthy()
 
@@ -2561,13 +2932,54 @@ describe("PretextMarkdownViewer", () => {
     )
   })
 
+  it("renders conservative Markdown definition-list shorthand", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "API",
+            ": Application **programming** interface.",
+            "",
+            "CLI",
+            ": Command line.",
+            ": Tooling surface.",
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByText("API")).toBeTruthy()
+    expect(screen.getByText("CLI")).toBeTruthy()
+    expect(screen.getByText("programming")).toBeTruthy()
+    expect(screen.getByText("programming").tagName).toBe("STRONG")
+    expect(screen.getByText("Command line.")).toBeTruthy()
+    expect(screen.getByText("Tooling surface.")).toBeTruthy()
+
+    const definitionLists = container.querySelectorAll(
+      "[data-pretext-definition-list]"
+    )
+    expect(definitionLists).toHaveLength(2)
+    expect(
+      container.querySelectorAll("[data-pretext-definition-term]")
+    ).toHaveLength(2)
+    expect(
+      container.querySelectorAll("[data-pretext-definition-description]")
+    ).toHaveLength(3)
+    expect(container.querySelector("dl")?.className).toContain("space-y-2")
+    expect(container.querySelector("dt")?.className).toContain("font-semibold")
+    expect(container.querySelector("dd")?.className).toContain(
+      "text-muted-foreground"
+    )
+  })
+
   it("renders safe inline raw HTML elements with styled components", async () => {
     const { container } = render(
       <PretextMarkdownViewer
         source={markdownSource(
           [
             'Press <kbd onclick="bad()">⌘K</kbd> for H<sub>2</sub>O and x<sup>2</sup>.',
-            '<q cite="javascript:alert(1)" class="raw">quoted</q> <ins cite="https://example.com/change">added</ins> <var>value</var> <samp>output</samp>',
+            '<q cite="javascript:alert(1)" class="raw">quoted</q> <ins cite="https://example.com/change">added</ins> <mark>marked</mark> <var>value</var> <samp>output</samp>',
           ].join("\n")
         )}
         toolbar={false}
@@ -2578,23 +2990,48 @@ describe("PretextMarkdownViewer", () => {
     expect(container.querySelector("kbd")?.textContent).toBe("⌘K")
     expect(container.querySelector("kbd")?.getAttribute("onclick")).toBeNull()
     expect(container.querySelector("kbd")?.className).toContain("font-mono")
+    expect(
+      container.querySelector("kbd")?.getAttribute("data-pretext-raw-inline")
+    ).toBe("")
     expect(container.querySelector("sub")?.textContent).toBe("2")
     expect(container.querySelector("sub")?.className).toContain("align-sub")
+    expect(
+      container.querySelector("sub")?.getAttribute("data-pretext-raw-inline")
+    ).toBe("")
     expect(container.querySelector("sup")?.textContent).toBe("2")
     expect(container.querySelector("sup")?.className).toContain("align-super")
+    expect(
+      container.querySelector("sup")?.getAttribute("data-pretext-raw-inline")
+    ).toBe("")
     expect(container.querySelector("q")?.textContent).toBe("quoted")
     expect(container.querySelector("q")?.className).toContain("italic")
     expect(container.querySelector("q")?.className).not.toContain("raw")
     expect(container.querySelector("q")?.getAttribute("cite")).toBeNull()
+    expect(
+      container.querySelector("q")?.getAttribute("data-pretext-raw-inline")
+    ).toBe("")
     expect(container.querySelector("ins")?.textContent).toBe("added")
     expect(container.querySelector("ins")?.getAttribute("cite")).toBe(
       "https://example.com/change"
     )
     expect(container.querySelector("ins")?.className).toContain("underline")
+    expect(
+      container.querySelector("ins")?.getAttribute("data-pretext-raw-inline")
+    ).toBe("")
+    expect(container.querySelector("mark")?.textContent).toBe("marked")
+    expect(
+      container.querySelector("mark")?.getAttribute("data-pretext-raw-inline")
+    ).toBe("")
     expect(container.querySelector("var")?.textContent).toBe("value")
     expect(container.querySelector("var")?.className).toContain("italic")
+    expect(
+      container.querySelector("var")?.getAttribute("data-pretext-raw-inline")
+    ).toBe("")
     expect(container.querySelector("samp")?.textContent).toBe("output")
     expect(container.querySelector("samp")?.className).toContain("font-mono")
+    expect(
+      container.querySelector("samp")?.getAttribute("data-pretext-raw-inline")
+    ).toBe("")
   })
 
   it("preserves Markdown comments as source-only content", async () => {
@@ -2664,6 +3101,7 @@ describe("PretextMarkdownViewer", () => {
             "",
             '<h2 data-pretext-heading-id="constructor">Spoofed heading</h2>',
             '<div data-pretext-component-name="Metric" data-pretext-component-props="{&quot;label&quot;:&quot;Pwned&quot;,&quot;value&quot;:&quot;100&quot;}">Pwned</div>',
+            '<div data-pretext-component-fallback-name="Danger" data-pretext-component-fallback-reason="Unsupported component" data-pretext-component-fallback-source="<Danger />">Pwned fallback</div>',
             '<div data-pretext-callout-kind="warning" data-pretext-callout-title="Pwned">Pwned callout</div>',
           ].join("\n")
         )}
@@ -2684,8 +3122,14 @@ describe("PretextMarkdownViewer", () => {
     expect(
       container.querySelector('[data-pretext-callout-kind="warning"]')
     ).toBeNull()
+    expect(
+      container.querySelector("[data-pretext-component-fallback]")
+    ).toBeNull()
     expect(container.querySelector("[data-pretext-heading-id]")).toBeNull()
     expect(container.querySelector("[data-pretext-component-name]")).toBeNull()
+    expect(
+      container.querySelector("[data-pretext-component-fallback-name]")
+    ).toBeNull()
     expect(container.querySelector("[data-pretext-callout-kind]")).toBeNull()
   })
 
@@ -2751,9 +3195,11 @@ describe("PretextMarkdownViewer", () => {
     expect(external.getAttribute("target")).toBe("_blank")
     expect(external.getAttribute("rel")).toBe("noopener noreferrer")
     expect(external.getAttribute("title")).toBe("External docs")
+    expect(external.getAttribute("data-pretext-link-kind")).toBe("external")
     expect(internal.getAttribute("href")).toBe("/docs")
     expect(internal.getAttribute("target")).toBeNull()
     expect(internal.getAttribute("rel")).toBeNull()
+    expect(internal.getAttribute("data-pretext-link-kind")).toBe("root")
     expect(screen.getByText("Unsafe").closest("a")).toBeNull()
   })
 
@@ -2854,6 +3300,7 @@ describe("PretextMarkdownViewer", () => {
             "title: Release Notes",
             "draft: false",
             "priority: 2",
+            "aliases: [stable, public]",
             "tags:",
             "  - ignored",
             "---",
@@ -2879,8 +3326,15 @@ describe("PretextMarkdownViewer", () => {
       "[data-pretext-markdown-frontmatter-metadata]"
     )
     expect(metadata).toBeTruthy()
-    expect(metadata?.textContent).not.toContain("tags")
+    expect(metadata?.textContent).toContain("tags")
+    expect(metadata?.textContent).toContain("ignored")
+    const yamlLists = Array.from(
+      metadata?.querySelectorAll("dd[data-frontmatter-value-kind='list']") ?? []
+    ).map((node) => node.textContent)
+    expect(yamlLists).toContain("stable, public")
+    expect(yamlLists).toContain("ignored")
     expect(frontmatter?.textContent).toContain("title: Release Notes")
+    expect(frontmatter?.textContent).toContain("aliases: [stable, public]")
     expect(frontmatter?.textContent).toContain("tags:")
     expect(container.textContent).not.toContain("```yaml")
   })
@@ -2894,6 +3348,7 @@ describe("PretextMarkdownViewer", () => {
             'title = "Release Notes"',
             "draft = false",
             "priority = 2",
+            'tags = ["docs", "launch"]',
             "[nested]",
             'ignored = "yes"',
             "+++",
@@ -2912,18 +3367,88 @@ describe("PretextMarkdownViewer", () => {
     expect(frontmatter?.textContent).toContain('title = "Release Notes"')
     expect(frontmatter?.textContent).toContain("draft = false")
     expect(frontmatter?.textContent).toContain("priority = 2")
+    expect(frontmatter?.textContent).toContain('tags = ["docs", "launch"]')
     expect(frontmatter?.textContent).toContain("[nested]")
     const metadata = frontmatter?.querySelector(
       "[data-pretext-markdown-frontmatter-metadata]"
     )
     expect(metadata).toBeTruthy()
-    expect(metadata?.textContent).not.toContain("ignored")
-    expect(metadata?.textContent).not.toContain("yes")
+    expect(metadata?.textContent).toContain("nested.ignored")
+    expect(metadata?.textContent).toContain("yes")
+    expect(
+      metadata?.querySelector("dd[data-frontmatter-value-kind='list']")
+        ?.textContent
+    ).toBe("docs, launch")
     expect(frontmatter?.textContent).toContain("Release Notes")
     expect(frontmatter?.textContent).toContain("false")
     expect(frontmatter?.textContent).toContain("2")
     expect(frontmatter).toBeTruthy()
     expect(container.textContent).not.toContain("```toml")
+  })
+
+  it("keeps complex frontmatter values in raw source without summarizing them", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "---",
+            "title: Release Notes",
+            "owner: { name: Ada }",
+            "matrix: [{ os: linux }]",
+            "---",
+            "",
+            "# Body",
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    await screen.findByRole("heading", { name: "Body" })
+    const frontmatter = container.querySelector(
+      "[data-pretext-markdown-frontmatter]"
+    )
+    const metadata = frontmatter?.querySelector(
+      "[data-pretext-markdown-frontmatter-metadata]"
+    )
+    expect(metadata?.textContent).toContain("title")
+    expect(metadata?.textContent).not.toContain("owner")
+    expect(metadata?.textContent).not.toContain("matrix")
+    expect(frontmatter?.textContent).toContain("owner: { name: Ada }")
+    expect(frontmatter?.textContent).toContain("matrix: [{ os: linux }]")
+  })
+
+  it("keeps malformed frontmatter fences as ordinary Markdown", async () => {
+    const { container, rerender } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(["---", "title: Draft", "# Body"].join("\n"))}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByRole("heading", { name: "Body" })).toBeTruthy()
+    expect(
+      container.querySelector("[data-pretext-thematic-break]")
+    ).toBeTruthy()
+    expect(screen.getByText("title: Draft")).toBeTruthy()
+    expect(
+      container.querySelector("[data-pretext-markdown-frontmatter]")
+    ).toBeNull()
+
+    rerender(
+      <PretextMarkdownViewer
+        source={markdownSource(["---", "---", "# Body"].join("\n"))}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByRole("heading", { name: "Body" })).toBeTruthy()
+    expect(
+      container.querySelectorAll("[data-pretext-thematic-break]")
+    ).toHaveLength(2)
+    expect(
+      container.querySelector("[data-pretext-markdown-frontmatter]")
+    ).toBeNull()
   })
 
   it("uses the same stable ids for rendered and modeled headings", async () => {

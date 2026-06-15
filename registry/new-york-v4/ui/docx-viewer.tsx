@@ -11,14 +11,14 @@ import { ViewerErrorBoundary } from "@/components/ui/viewer-error"
 import { DocxViewerFallback } from "./docx-viewer-chrome"
 import { DocxViewerContent } from "./docx-viewer-content"
 import type {
-  DocxResourceViewerProps,
+  DocxResourceContentProps,
   DocxViewerHandle,
   DocxViewerProps,
 } from "./docx-viewer-types"
 
 export type {
   DocxDocumentSource,
-  DocxResourceViewerProps,
+  DocxResourceContentProps,
   DocxTarget,
   DocxViewerHandle,
   DocxViewerProps,
@@ -29,15 +29,15 @@ export const DocxViewer = React.forwardRef<DocxViewerHandle, DocxViewerProps>(
     const { source, ...resourceProps } = props
     const resource = React.useMemo(() => createViewerResource(source), [source])
     return (
-      <DocxResourceViewer {...resourceProps} ref={ref} resource={resource} />
+      <DocxResourceContent {...resourceProps} ref={ref} resource={resource} />
     )
   }
 )
 
-export const DocxResourceViewer = React.forwardRef<
+export const DocxResourceContent = React.forwardRef<
   DocxViewerHandle,
-  DocxResourceViewerProps
->(function DocxResourceViewer(props, ref) {
+  DocxResourceContentProps
+>(function DocxResourceContent(props, ref) {
   const isClient = useIsClient()
   const resource = props.resource
   if (!isClient) {
@@ -53,7 +53,7 @@ export const DocxResourceViewer = React.forwardRef<
     <ViewerErrorBoundary
       bare={props.bare}
       className={props.className}
-      download={resource.originalDownload}
+      download={props.download === false ? null : resource.originalDownload}
       format="docx"
       onRetry={(error) => {
         if (isResourceError(error) || !isViewerFormatError(error)) {

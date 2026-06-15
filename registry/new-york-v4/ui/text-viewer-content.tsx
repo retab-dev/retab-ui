@@ -61,6 +61,7 @@ export function TextViewerContent({
   resource,
   className,
   toolbar = true,
+  download = true,
   highlight,
   bare = false,
   maxBytes,
@@ -95,10 +96,7 @@ export function TextViewerContent({
       }),
     [forcedMode, resource.content.mimeType, resource.fileName]
   )
-  const downloadAction = React.useMemo(
-    () => resource.originalDownload,
-    [resource]
-  )
+  const downloadAction = download ? resource.originalDownload : null
 
   const [fontScale, setFontScale] = React.useState(1)
   const viewportRef = React.useRef<HTMLDivElement | null>(null)

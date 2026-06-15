@@ -2,11 +2,11 @@
 
 import * as React from "react"
 
-import type { BlobViewerSource } from "@/lib/viewer-source"
 import type { DropzoneFileItem, DropzoneIntake } from "@/components/ui/dropzone"
 import { ViewerBody } from "@/components/ui/viewer"
 
 import {
+  FileIntakeViewerDropTarget,
   FileIntakeViewerHeader,
   FileIntakeViewerProvider,
   FileIntakeViewerRoot,
@@ -23,7 +23,6 @@ export type FileIntakeViewerProps = {
   maxSize?: number
   onFilesChange?: (files: DropzoneFileItem[]) => void
   onIntake?: (intake: DropzoneIntake) => void
-  renderViewer?: (source: BlobViewerSource) => React.ReactNode
 }
 
 export function FileIntakeViewer({
@@ -35,7 +34,6 @@ export function FileIntakeViewer({
   maxSize,
   onFilesChange,
   onIntake,
-  renderViewer,
 }: FileIntakeViewerProps) {
   return (
     <FileIntakeViewerProvider
@@ -47,13 +45,15 @@ export function FileIntakeViewer({
       onFilesChange={onFilesChange}
       onIntake={onIntake}
     >
-      <FileIntakeViewerRoot className={className}>
-        <FileIntakeViewerHeader />
-        <ViewerBody className="flex-col md:flex-row">
-          <FileIntakeViewerSidebar />
-          <FileIntakeViewerSurface renderViewer={renderViewer} />
-        </ViewerBody>
-      </FileIntakeViewerRoot>
+      <FileIntakeViewerDropTarget>
+        <FileIntakeViewerRoot className={className}>
+          <FileIntakeViewerHeader />
+          <ViewerBody className="flex-col md:flex-row">
+            <FileIntakeViewerSidebar />
+            <FileIntakeViewerSurface />
+          </ViewerBody>
+        </FileIntakeViewerRoot>
+      </FileIntakeViewerDropTarget>
     </FileIntakeViewerProvider>
   )
 }

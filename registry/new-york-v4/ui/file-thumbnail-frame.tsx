@@ -8,13 +8,33 @@ import { getFileThumbnailExtension } from "./file-thumbnail-extension"
 import { FileThumbnailFallback } from "./file-thumbnail-fallback"
 import type {
   FileThumbnailFrameProps,
+  FileThumbnailShape,
+  FileThumbnailSize,
   FileThumbnailState,
 } from "./file-thumbnail-frame-types"
 import { FileThumbnailImage } from "./file-thumbnail-image"
 import { FileThumbnailShimmer } from "./file-thumbnail-shimmer"
 
 export { FileThumbnailShimmer }
-export type { FileThumbnailFrameProps, FileThumbnailState }
+export type {
+  FileThumbnailFrameProps,
+  FileThumbnailShape,
+  FileThumbnailSize,
+  FileThumbnailState,
+}
+
+const FILE_THUMBNAIL_SIZE_CLASS_NAME: Record<FileThumbnailSize, string> = {
+  xs: "w-9",
+  sm: "w-10",
+  md: "w-12",
+  lg: "w-16",
+  xl: "w-20",
+}
+
+const FILE_THUMBNAIL_SHAPE_ASPECT_RATIO: Record<FileThumbnailShape, string> = {
+  document: "3 / 4",
+  square: "1 / 1",
+}
 
 /**
  * The dependency-free thumbnail frame: loading shimmer, image fade-in,
@@ -27,12 +47,16 @@ export function FileThumbnailFrame({
   previewClassName,
   previewContent,
   previewImageUrl,
+  thumbnailShape,
+  thumbnailSize,
   onPreviewError,
   state,
   style,
   ...props
 }: FileThumbnailFrameProps) {
   const extension = getFileThumbnailExtension(file)
+  const resolvedShape =
+    thumbnailShape ?? (previewAspectRatio === 1 ? "square" : "document")
   const hasRenderableContent = hasRenderablePreviewContent(previewContent)
   const resolvedState = resolveFileThumbnailState({
     explicitState: state,
@@ -43,13 +67,22 @@ export function FileThumbnailFrame({
     <div
       {...props}
       data-slot="file-thumbnail"
+      data-thumbnail-shape={resolvedShape}
+      data-thumbnail-size={thumbnailSize}
       className={cn(
         "relative overflow-hidden rounded-md border bg-muted text-muted-foreground",
+        thumbnailSize
+          ? FILE_THUMBNAIL_SIZE_CLASS_NAME[thumbnailSize]
+          : undefined,
         className
       )}
       style={{
         ...style,
-        aspectRatio: style?.aspectRatio ?? String(previewAspectRatio ?? 3 / 4),
+        aspectRatio:
+          style?.aspectRatio ??
+          (previewAspectRatio
+            ? formatFileThumbnailAspectRatio(previewAspectRatio)
+            : FILE_THUMBNAIL_SHAPE_ASPECT_RATIO[resolvedShape]),
       }}
     >
       {resolvedState === "loading" ? (
@@ -74,6 +107,10 @@ export function FileThumbnailFrame({
       )}
     </div>
   )
+}
+
+function formatFileThumbnailAspectRatio(value: number) {
+  return value === 1 ? "1 / 1" : String(value)
 }
 
 export function resolveFileThumbnailState({

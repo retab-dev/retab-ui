@@ -74,7 +74,7 @@ type FileIntakeViewerContextValue = {
   model: FileIntakeViewerModel
 }
 
-export type FileIntakeViewerRootState = {
+export type FileIntakeViewerDropTargetState = {
   getFileInputProps: FileIntakeViewerActions["getFileInputProps"]
   getRootDropProps: FileIntakeViewerActions["getRootDropProps"]
   isDragging: boolean
@@ -112,7 +112,7 @@ export function useFileIntakeViewer() {
   return context
 }
 
-export function useFileIntakeViewerRoot(): FileIntakeViewerRootState {
+export function useFileIntakeViewerDropTarget(): FileIntakeViewerDropTargetState {
   const { actions, model } = useFileIntakeViewer()
   return {
     getFileInputProps: actions.getFileInputProps,
@@ -217,6 +217,28 @@ export function FileIntakeViewerProvider({
   )
 }
 
+export function FileIntakeViewerDropTarget({
+  children,
+  className,
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
+  const { getFileInputProps, getRootDropProps } =
+    useFileIntakeViewerDropTarget()
+
+  return (
+    <section
+      {...getRootDropProps({
+        className: cn("group/file-intake-drop contents", className),
+      })}
+    >
+      <input {...getFileInputProps({ className: "hidden" })} />
+      {children}
+    </section>
+  )
+}
+
 export function FileIntakeViewerRoot({
   children,
   className,
@@ -224,24 +246,18 @@ export function FileIntakeViewerRoot({
   children: React.ReactNode
   className?: string
 }) {
-  const { getFileInputProps, getRootDropProps, isDragging } =
-    useFileIntakeViewerRoot()
-
   return (
-    <section {...getRootDropProps({ className: "contents" })}>
-      <input {...getFileInputProps({ className: "hidden" })} />
-      <ViewerRoot
-        bare
-        defaultOpen
-        className={cn(
-          "min-h-[30rem] rounded-lg border bg-background text-foreground transition-colors",
-          isDragging && "border-foreground/40 bg-accent/35",
-          className
-        )}
-      >
-        {children}
-      </ViewerRoot>
-    </section>
+    <ViewerRoot
+      bare
+      defaultOpen
+      className={cn(
+        "min-h-[30rem] rounded-lg border bg-background text-foreground transition-colors",
+        "group-data-[dragging]/file-intake-drop:border-foreground/40 group-data-[dragging]/file-intake-drop:bg-accent/35",
+        className
+      )}
+    >
+      {children}
+    </ViewerRoot>
   )
 }
 
@@ -331,26 +347,14 @@ export function FileIntakeViewerSidebar() {
   )
 }
 
-export function FileIntakeViewerSurface({
-  renderViewer,
-}: {
-  renderViewer?: (source: BlobViewerSource) => React.ReactNode
-}) {
+export function FileIntakeViewerSurface() {
   const { getEmptySurfaceProps, rejection, viewerSource } =
     useFileIntakeViewerSurface()
 
   return (
     <ViewerSurface className="min-h-[24rem]">
       {viewerSource ? (
-        renderViewer ? (
-          renderViewer(viewerSource)
-        ) : (
-          <FileViewer
-            source={viewerSource}
-            bare
-            className="size-full min-h-0"
-          />
-        )
+        <FileViewer source={viewerSource} bare className="size-full min-h-0" />
       ) : (
         <FileIntakeViewerEmptyState
           getEmptySurfaceProps={getEmptySurfaceProps}
@@ -370,8 +374,9 @@ function FileIntakeViewerFileCard({
     <div className="space-y-3">
       <FileThumbnail
         file={fileSummary.file}
-        previewAspectRatio={1}
-        className="size-20 bg-background shadow-sm"
+        thumbnailShape="square"
+        thumbnailSize="xl"
+        className="bg-background shadow-sm"
       />
       <div className="min-w-0">
         <div className="line-clamp-3 text-sm leading-snug font-medium break-words">

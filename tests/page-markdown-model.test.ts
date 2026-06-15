@@ -184,14 +184,14 @@ describe("page markdown model", () => {
 
   it("records same-page reports from a different pane without scheduling scroll work", () => {
     const transition = resolvePageMarkdownSyncReport({
-      state: { pageNumber: 1, pane: "document", version: 0 },
+      state: { pageNumber: 1, pane: "document" },
       pending: null,
       pane: "markdown",
       pageNumber: 1,
     })
 
     expect(transition).toMatchObject({
-      state: { pageNumber: 1, pane: "markdown", version: 1 },
+      state: { pageNumber: 1, pane: "markdown" },
       pending: null,
       scrollTarget: null,
       confirmed: false,
@@ -200,7 +200,7 @@ describe("page markdown model", () => {
 
   it("normalizes non-finite reported pages to the first page", () => {
     const transition = resolvePageMarkdownSyncReport({
-      state: { pageNumber: 2, pane: "document", version: 0 },
+      state: { pageNumber: 2, pane: "document" },
       pending: null,
       pane: "markdown",
       pageNumber: Number.NaN,

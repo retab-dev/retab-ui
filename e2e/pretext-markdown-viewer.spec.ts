@@ -206,6 +206,44 @@ test("pretext markdown docs demo exposes source highlights in rendered and text 
   expect(consoleErrors).toEqual([])
 })
 
+test("pretext markdown docs demo searches offscreen rendered and source content", async ({
+  page,
+}) => {
+  const consoleErrors = collectConsoleErrors(page)
+
+  await page.goto(PRETEXT_MARKDOWN_VIEW_PATH)
+
+  const viewer = page.locator('[data-slot="text-viewer"]').first()
+  const viewport = viewer.locator('[data-slot="scroll-area-viewport"]').first()
+  const search = viewer.getByLabel("Search Markdown")
+  const searchStatus = viewer.locator(
+    '[data-slot="pretext-markdown-search-status"]'
+  )
+
+  await search.fill("Release Readiness Matrix")
+  await expect(searchStatus).toHaveText("1 / 1")
+  await expect(
+    viewer.getByRole("heading", { name: "Release Readiness Matrix" })
+  ).toBeVisible()
+  await expect
+    .poll(() => viewport.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(300)
+  await expect(viewer.getByText("Page 1 of")).toHaveCount(0)
+
+  await viewer.getByRole("button", { name: "Text", exact: true }).click()
+  await expect(
+    viewer.getByRole("region", { name: "Markdown source" })
+  ).toBeVisible()
+
+  await search.fill("Directive metric")
+  await expect(searchStatus).toHaveText("1 / 1")
+  await expect(viewer.locator('[data-source-line="171"]')).toBeVisible()
+  await expect
+    .poll(() => viewport.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(2_000)
+  expect(consoleErrors).toEqual([])
+})
+
 test("pretext markdown docs demo keeps scroll stable as rich blocks settle", async ({
   page,
 }) => {

@@ -3,6 +3,8 @@ export const PDF_THUMBNAIL_INITIAL_VIEWPORT_HEIGHT = 680
 export const PDF_THUMBNAIL_DEFAULT_ASPECT = 4 / 3
 export const PDF_THUMBNAIL_LABEL_AND_GAP_HEIGHT = 22
 
+export type PdfThumbnailShape = "page" | "square"
+
 export interface PdfThumbnailPageMetric {
   pageNumber: number
   width: number
@@ -21,6 +23,7 @@ export interface PdfThumbnailLayoutItem {
 export interface PdfThumbnailLayout {
   pageCount: number
   width: number
+  shape: PdfThumbnailShape
   estimatedImageHeight: number
   estimatedItemHeight: number
   labelAndGapHeight: number
@@ -39,11 +42,13 @@ export function buildPdfThumbnailLayout({
   width,
   metricByPageNumber,
   labelAndGapHeight = PDF_THUMBNAIL_LABEL_AND_GAP_HEIGHT,
+  shape = "page",
 }: {
   pageCount: number
   width: number
   metricByPageNumber?: ReadonlyMap<number, PdfThumbnailPageMetric>
   labelAndGapHeight?: number
+  shape?: PdfThumbnailShape
 }): PdfThumbnailLayout {
   const safePageCount = normalizePageCount(pageCount)
   const safeWidth = normalizeWidth(width)
@@ -52,12 +57,14 @@ export function buildPdfThumbnailLayout({
   const estimatedImageHeight = getThumbnailImageHeight({
     width: safeWidth,
     metric: safeMetricByPageNumber.get(1),
+    shape,
   })
   const estimatedItemHeight =
     Math.ceil(estimatedImageHeight) + safeLabelAndGapHeight
   const prefixHeightDeltas = buildPrefixHeightDeltas({
     pageCount: safePageCount,
     width: safeWidth,
+    shape,
     estimatedItemHeight,
     metricByPageNumber: safeMetricByPageNumber,
     labelAndGapHeight: safeLabelAndGapHeight,
@@ -69,6 +76,7 @@ export function buildPdfThumbnailLayout({
   return {
     pageCount: safePageCount,
     width: safeWidth,
+    shape,
     estimatedImageHeight,
     estimatedItemHeight,
     labelAndGapHeight: safeLabelAndGapHeight,
@@ -89,6 +97,7 @@ export function getPdfThumbnailLayoutItem(
   const imageHeight = getThumbnailImageHeight({
     width: layout.width,
     metric,
+    shape: layout.shape,
   })
   const height = Math.ceil(imageHeight) + layout.labelAndGapHeight
 
@@ -173,10 +182,14 @@ export function normalizeThumbnailPage(
 function getThumbnailImageHeight({
   width,
   metric,
+  shape,
 }: {
   width: number
   metric: PdfThumbnailPageMetric | undefined
+  shape: PdfThumbnailShape
 }) {
+  if (shape === "square") return width
+
   if (
     metric &&
     Number.isFinite(metric.width) &&
@@ -193,12 +206,14 @@ function getThumbnailImageHeight({
 function buildPrefixHeightDeltas({
   pageCount,
   width,
+  shape,
   estimatedItemHeight,
   metricByPageNumber,
   labelAndGapHeight,
 }: {
   pageCount: number
   width: number
+  shape: PdfThumbnailShape
   estimatedItemHeight: number
   metricByPageNumber: ReadonlyMap<number, PdfThumbnailPageMetric>
   labelAndGapHeight: number
@@ -212,7 +227,8 @@ function buildPrefixHeightDeltas({
     if (normalizeThumbnailPage(pageNumber, pageCount) == null) continue
 
     const measuredItemHeight =
-      Math.ceil(getThumbnailImageHeight({ width, metric })) + labelAndGapHeight
+      Math.ceil(getThumbnailImageHeight({ width, metric, shape })) +
+      labelAndGapHeight
     const delta = measuredItemHeight - estimatedItemHeight
     if (delta === 0) continue
 

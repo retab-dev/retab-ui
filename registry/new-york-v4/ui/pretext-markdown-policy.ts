@@ -142,8 +142,17 @@ export type PretextComponent = {
   props: PretextComponentProps
 }
 
+export type PretextComponentFallback = {
+  componentName: string
+  reason: string
+  source: string
+}
+
 const URL_CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F]/
 const URL_SCHEME_PATTERN = /^([A-Za-z][A-Za-z0-9+.-]*):/
+const URL_BACKSLASH_PATTERN = /[\\\uFE68\uFF3C\u2216]/
+const URL_CONFUSABLE_DELIMITER_PATTERN =
+  /[\u02D0\u0589\u05C3\u0703\u0704\u16EC\u1803\u1809\u205A\u2236\uA789\uFE13\uFE55\uFF1A\u2044\u2215\u2571\u27CB\u29F8\uFF0F]/
 const ALLOWED_LINK_PROTOCOLS = new Set(["http", "https", "mailto"])
 export type PretextMarkdownSvgSanitizer = {
   sanitize: (
@@ -214,6 +223,7 @@ export function createPretextMarkdownRemarkPlugins(
     remarkPretextCodeMeta,
     remarkPretextStripRawInternalMetadata,
     remarkPretextComponentMarkdown,
+    remarkPretextDefinitionLists,
     remarkSmartypants,
     remarkRestorePretextComponentMarkdownFallbacks,
     remarkPretextDirectiveCallouts,
@@ -231,9 +241,13 @@ export function sanitizePretextMarkdownUrl(value: string) {
   const trimmed = value.trim()
   if (!trimmed) return ""
   if (URL_CONTROL_CHARACTER_PATTERN.test(trimmed)) return ""
+  if (URL_BACKSLASH_PATTERN.test(trimmed)) return ""
+  if (URL_CONFUSABLE_DELIMITER_PATTERN.test(trimmed)) return ""
 
   const decoded = decodePretextMarkdownUrl(trimmed).trim()
   if (!decoded || URL_CONTROL_CHARACTER_PATTERN.test(decoded)) return ""
+  if (URL_BACKSLASH_PATTERN.test(decoded)) return ""
+  if (URL_CONFUSABLE_DELIMITER_PATTERN.test(decoded)) return ""
 
   const decodedScheme = getPretextMarkdownUrlScheme(decoded)
   const rawScheme = getPretextMarkdownUrlScheme(trimmed)
@@ -426,6 +440,40 @@ export function readPretextComponent(node: unknown): PretextComponent | null {
   }
 }
 
+export function readPretextComponentFallback(
+  node: unknown
+): PretextComponentFallback | null {
+  const properties =
+    node && typeof node === "object" && "properties" in node
+      ? (node.properties as Record<string, unknown>)
+      : null
+  if (!properties) return null
+
+  const source =
+    properties.dataPretextComponentFallbackSource ??
+    properties["data-pretext-component-fallback-source"]
+  if (typeof source !== "string" || !source.trim()) return null
+
+  const componentName =
+    properties.dataPretextComponentFallbackName ??
+    properties["data-pretext-component-fallback-name"]
+  const reason =
+    properties.dataPretextComponentFallbackReason ??
+    properties["data-pretext-component-fallback-reason"]
+
+  return {
+    componentName:
+      typeof componentName === "string" && componentName.trim()
+        ? componentName
+        : "Component",
+    reason:
+      typeof reason === "string" && reason.trim()
+        ? reason
+        : "Unsupported component syntax",
+    source,
+  }
+}
+
 export function createPretextMarkdownSanitizeSchema(): RehypeSanitizeOptions {
   return {
     ...defaultSchema,
@@ -445,6 +493,12 @@ export function createPretextMarkdownSanitizeSchema(): RehypeSanitizeOptions {
         "dataPretextCalloutTitle",
         "dataPretextComponentName",
         "dataPretextComponentProps",
+        "dataPretextComponentFallbackName",
+        "dataPretextComponentFallbackReason",
+        "dataPretextComponentFallbackSource",
+        "dataPretextDefinitionList",
+        "dataPretextDefinitionDescription",
+        "dataPretextDefinitionTerm",
         "dataPretextHeadingId",
       ],
       code: [...(defaultSchema.attributes?.code ?? []), "metastring"],
@@ -454,6 +508,9 @@ export function createPretextMarkdownSanitizeSchema(): RehypeSanitizeOptions {
         "dataPretextCalloutTitle",
         "dataPretextComponentName",
         "dataPretextComponentProps",
+        "dataPretextComponentFallbackName",
+        "dataPretextComponentFallbackReason",
+        "dataPretextComponentFallbackSource",
       ],
       mark: ["title"],
     },
@@ -839,6 +896,165 @@ function stripPretextInternalRawHtmlAttributes(value: string) {
   )
 }
 
+function remarkPretextDefinitionLists() {
+  return function transform(tree: any) {
+    if (!Array.isArray(tree?.children)) return
+
+    tree.children = tree.children.map((node: any) => {
+      if (node?.type !== "paragraph") return node
+      return createPretextDefinitionListNode(node) ?? node
+    })
+  }
+}
+
+function createPretextDefinitionListNode(node: any) {
+  const children = Array.isArray(node.children) ? node.children : []
+  const firstChild = children[0]
+  if (firstChild?.type !== "text" || typeof firstChild.value !== "string") {
+    return null
+  }
+
+  const match = /^([^\n:][^\n]*)\n:[ \t]*/.exec(firstChild.value)
+  const term = match?.[1]?.trim()
+  if (!match || !term) return null
+
+  if (children.length === 1) {
+    const descriptions = parsePlainPretextDefinitionDescriptions(
+      firstChild.value
+    )
+    if (descriptions?.term === term) {
+      return createPretextDefinitionListHastNode({
+        descriptions: descriptions.descriptions.map((description) => [
+          { type: "text", value: description },
+        ]),
+        position: node.position,
+        term,
+      })
+    }
+  }
+
+  const descriptionChildren = clonePretextInlineChildrenAfterTextOffset(
+    children,
+    match[0].length
+  )
+  if (!hasPretextDefinitionDescriptionContent(descriptionChildren)) return null
+
+  return createPretextDefinitionListHastNode({
+    descriptions: [descriptionChildren],
+    position: node.position,
+    term,
+  })
+}
+
+function parsePlainPretextDefinitionDescriptions(value: string) {
+  const lines = value.split("\n")
+  const term = lines[0]?.trim()
+  if (!term || term.startsWith(":") || lines.length < 2) return null
+
+  const descriptions: string[] = []
+  for (const line of lines.slice(1)) {
+    const match = /^:[ \t]*(.*)$/.exec(line)
+    if (!match) return null
+    const description = match[1]?.trim()
+    if (!description) return null
+    descriptions.push(description)
+  }
+
+  return { descriptions, term }
+}
+
+function clonePretextInlineChildrenAfterTextOffset(
+  children: readonly any[],
+  offset: number
+) {
+  const clonedChildren: any[] = []
+  let remainingOffset = offset
+
+  for (const child of children) {
+    if (child.type === "text" && typeof child.value === "string") {
+      if (remainingOffset >= child.value.length) {
+        remainingOffset -= child.value.length
+        continue
+      }
+
+      clonedChildren.push({
+        ...child,
+        value: child.value.slice(remainingOffset),
+      })
+      remainingOffset = 0
+      continue
+    }
+
+    if (remainingOffset > 0) return []
+    clonedChildren.push(clonePretextMarkdownAstNode(child))
+  }
+
+  return clonedChildren
+}
+
+function clonePretextMarkdownAstNode<T>(node: T): T {
+  if (!node || typeof node !== "object") return node
+  if (Array.isArray(node)) {
+    return node.map((item) => clonePretextMarkdownAstNode(item)) as T
+  }
+
+  const cloned: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(node)) {
+    cloned[key] = clonePretextMarkdownAstNode(value)
+  }
+  return cloned as T
+}
+
+function hasPretextDefinitionDescriptionContent(children: readonly any[]) {
+  return children.some((child) => {
+    if (child.type === "text") return Boolean(String(child.value ?? "").trim())
+    return true
+  })
+}
+
+function createPretextDefinitionListHastNode({
+  descriptions,
+  position,
+  term,
+}: {
+  descriptions: readonly (readonly any[])[]
+  position: unknown
+  term: string
+}) {
+  return {
+    type: "pretextDefinitionList",
+    data: {
+      hName: "dl",
+      hProperties: {
+        dataPretextDefinitionList: "",
+      },
+    },
+    children: [
+      {
+        type: "pretextDefinitionTerm",
+        data: {
+          hName: "dt",
+          hProperties: {
+            dataPretextDefinitionTerm: "",
+          },
+        },
+        children: [{ type: "text", value: term }],
+      },
+      ...descriptions.map((children) => ({
+        type: "pretextDefinitionDescription",
+        data: {
+          hName: "dd",
+          hProperties: {
+            dataPretextDefinitionDescription: "",
+          },
+        },
+        children,
+      })),
+    ],
+    position,
+  }
+}
+
 function remarkPretextGithubAlerts() {
   return function transform(tree: unknown) {
     visit(tree, "blockquote", (node: any) => {
@@ -907,12 +1123,20 @@ function remarkPretextComponentDirectives() {
         const component = parsePretextDirectiveComponent(node)
         if (!component) {
           if (isPretextDirectiveComponentName(node.name)) {
-            node.type = "text"
-            node.value = serializePretextDirectiveFallback(node)
-            node.children = []
+            const fallback = createPretextComponentFallbackData({
+              componentName:
+                normalizePretextDirectiveComponentName(node.name) ??
+                "Component",
+              reason: "Unsupported component directive props",
+              source: serializePretextDirectiveFallback(node),
+            })
+            node.type = "pretextComponentFallbackDirective"
             node.data = {
-              pretextSkipProseTransforms: true,
+              ...node.data,
+              hName: "div",
+              hProperties: fallback,
             }
+            node.children = []
           }
           return
         }
@@ -1053,24 +1277,72 @@ function createPretextComponentMarkdownNode(
 }
 
 function createPretextComponentMarkdownFallbackNode(value: string) {
-  const fallbackValue = value.trim()
+  const fallback = describePretextComponentMarkdownFallback(value)
   return {
-    type: "code",
-    lang: "mdx",
-    value: fallbackValue,
+    type: "pretextComponentFallback",
     data: {
-      pretextComponentFallbackValue: fallbackValue,
+      hName: "div",
+      hProperties: createPretextComponentFallbackData(fallback),
     },
+    children: [],
   }
 }
 
-function remarkRestorePretextComponentMarkdownFallbacks() {
-  return function transform(tree: unknown) {
-    visit(tree, "code", (node: any) => {
-      if (typeof node.data?.pretextComponentFallbackValue !== "string") return
-      node.value = node.data.pretextComponentFallbackValue
-    })
+function describePretextComponentMarkdownFallback(
+  value: string
+): PretextComponentFallback {
+  const source = value.trim()
+  const componentName = readPretextComponentTagName(source) ?? "Component"
+  return {
+    componentName,
+    reason: getPretextComponentFallbackReason(source, componentName),
+    source,
   }
+}
+
+function createPretextComponentFallbackData(
+  fallback: PretextComponentFallback
+) {
+  return {
+    dataPretextComponentFallbackName: fallback.componentName,
+    dataPretextComponentFallbackReason: fallback.reason,
+    dataPretextComponentFallbackSource: fallback.source,
+  }
+}
+
+function readPretextComponentTagName(value: string) {
+  return /^<\/?([A-Z][A-Za-z0-9.]*)/.exec(value.trim())?.[1] ?? null
+}
+
+function getPretextComponentFallbackReason(
+  source: string,
+  componentName: string
+) {
+  if (componentName.includes(".")) {
+    return "Remote or namespaced components are not supported"
+  }
+
+  if (!isPretextComponentKind(componentName)) {
+    return "Unsupported component"
+  }
+
+  if (/\s\w+=\{[^{}]*(?:\(|\)|\w)[^{}]*\}/.test(source)) {
+    return "Component props must be literal values"
+  }
+
+  if (/\s\{\s*\.\.\./.test(source) || /\{\s*\.\.\./.test(source)) {
+    return "Spread props are not supported"
+  }
+
+  if (/\son[A-Za-z0-9_]*\s*=/.test(source)) {
+    return "Event handler props are not supported"
+  }
+
+  return "Unsupported component props"
+}
+
+function remarkRestorePretextComponentMarkdownFallbacks() {
+  return function transform(_tree: unknown) {}
 }
 
 function isPretextMdxLikeHtml(value: string) {

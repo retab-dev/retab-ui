@@ -37,7 +37,7 @@ export function GeneratedFileThumbnail({
   source,
   as,
   className,
-  previewAspectRatio = 3 / 4,
+  previewAspectRatio,
   anchor,
   retryKey,
   onError,

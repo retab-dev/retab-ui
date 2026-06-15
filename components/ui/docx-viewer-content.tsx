@@ -22,7 +22,7 @@ import {
   type DocxRenderIndex,
 } from "./docx-viewer-targets"
 import type {
-  DocxResourceViewerProps,
+  DocxResourceContentProps,
   DocxViewerHandle,
 } from "./docx-viewer-types"
 import { ViewerToolbar, ViewerToolbarSkeleton } from "./viewer-toolbar"
@@ -31,6 +31,7 @@ export function DocxViewerContent({
   bare = false,
   className,
   defaultScale,
+  download = true,
   forwardedRef,
   highlight,
   onScaleChange,
@@ -39,7 +40,7 @@ export function DocxViewerContent({
   resource,
   scale: controlledScale,
   toolbar = true,
-}: Omit<DocxResourceViewerProps, "source"> & {
+}: DocxResourceContentProps & {
   forwardedRef?: React.ForwardedRef<DocxViewerHandle>
 }) {
   const buffer = React.use(
@@ -213,11 +214,13 @@ export function DocxViewerContent({
               onFit: fitWidth,
             }}
             downloads={
-              resource.originalDownload ? [resource.originalDownload] : []
+              download && resource.originalDownload
+                ? [resource.originalDownload]
+                : []
             }
           />
         ) : (
-          <ViewerToolbarSkeleton position zoom download />
+          <ViewerToolbarSkeleton position zoom download={download} />
         )
       ) : null}
       <DocxViewerBody>

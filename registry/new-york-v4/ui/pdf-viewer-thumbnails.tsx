@@ -11,6 +11,7 @@ import {
   buildPdfThumbnailLayout,
   PDF_THUMBNAIL_INITIAL_VIEWPORT_HEIGHT,
   PDF_THUMBNAIL_OVERSCAN,
+  type PdfThumbnailShape,
 } from "./pdf-thumbnail-layout"
 import { PdfThumbnailRailViewport } from "./pdf-thumbnail-rail"
 import { usePdfViewerThumbnails } from "./pdf-viewer-context"
@@ -24,11 +25,13 @@ import { ViewerErrorBoundary } from "./viewer-error"
 export interface PdfViewerThumbnailsProps {
   /** Thumbnail image width in CSS pixels. The sidebar shell owns rail width. */
   thumbnailWidth?: number
+  /** Preserve page aspect or crop each page preview into a square frame. */
+  thumbnailShape?: PdfThumbnailShape
   className?: string
 }
 
 export interface PdfThumbnailRailProps {
-  /** Same resource object passed to PdfResourceViewer. */
+  /** Same resource object passed to PdfResourceContent. */
   resource: ViewerResource
   /** 1-based current page; its thumbnail is highlighted. */
   currentPage?: number | null
@@ -36,11 +39,14 @@ export interface PdfThumbnailRailProps {
   onSelectPage?: (page: number) => void
   /** Thumbnail image width in CSS pixels. The sidebar shell owns rail width. */
   thumbnailWidth?: number
+  /** Preserve page aspect or crop each page preview into a square frame. */
+  thumbnailShape?: PdfThumbnailShape
   className?: string
 }
 
 export function PdfViewerThumbnails({
   className,
+  thumbnailShape,
   thumbnailWidth,
 }: PdfViewerThumbnailsProps) {
   const thumbnails = usePdfViewerThumbnails()
@@ -51,6 +57,7 @@ export function PdfViewerThumbnails({
       currentPage={thumbnails.currentPage}
       onSelectPage={thumbnails.onSelectPage}
       resource={thumbnails.resource}
+      thumbnailShape={thumbnailShape}
       thumbnailWidth={thumbnailWidth}
     />
   )
@@ -61,6 +68,7 @@ export function PdfThumbnailRail({
   currentPage,
   onSelectPage,
   resource,
+  thumbnailShape,
   thumbnailWidth,
 }: PdfThumbnailRailProps) {
   const isClient = useIsClient()
@@ -84,6 +92,7 @@ export function PdfThumbnailRail({
           currentPage={currentPage}
           onSelectPage={onSelectPage}
           resource={resource}
+          thumbnailShape={thumbnailShape}
           thumbnailWidth={thumbnailWidth}
           className="h-full"
         />
@@ -96,6 +105,7 @@ function PdfThumbnailRailInner({
   resource,
   currentPage,
   onSelectPage,
+  thumbnailShape = "page",
   thumbnailWidth = 120,
   className,
 }: PdfThumbnailRailProps) {
@@ -109,9 +119,10 @@ function PdfThumbnailRailInner({
       buildPdfThumbnailLayout({
         pageCount,
         width: thumbnailWidth,
+        shape: thumbnailShape,
         metricByPageNumber,
       }),
-    [metricByPageNumber, pageCount, thumbnailWidth]
+    [metricByPageNumber, pageCount, thumbnailShape, thumbnailWidth]
   )
   const thumbnailWindow = usePdfThumbnailWindow({
     layout,

@@ -24,6 +24,7 @@ export function XlsxViewerSession({
   resource,
   className,
   toolbar = true,
+  download = true,
   defaultSheetIndex = 0,
   onSheetChange,
   fallbackSheetTabs = false,
@@ -71,6 +72,7 @@ export function XlsxViewerSession({
     content,
     sheets,
   })
+  const toolbarDownloadActions = download ? downloadActions : []
 
   return (
     <XlsxViewerFrame className={className} bare={bare}>
@@ -92,7 +94,7 @@ export function XlsxViewerSession({
             onFit: resetZoom,
             fitLabel: "Actual size",
           }}
-          downloads={downloadActions}
+          downloads={toolbarDownloadActions}
         />
       ) : null}
 

@@ -24,7 +24,7 @@ the mounted page DOM bounded while scrolling, switching modes, and zooming.
 Pair it with a source document by composing `ParseViewerProvider`,
 `ParseViewerMarkdown`, and a document component that uses
 `useParseViewerDocument`. The standard side-by-side parse layout is available in
-the [Parse Viewer block](/blocks#parse).
+the [Parse Viewer block](/blocks/parse).
 
 ## Viewer Composition
 
@@ -68,9 +68,13 @@ function SourceDocument() {
   const viewerRef = React.useRef(null)
 
   React.useEffect(() => {
-    if (!document.scrollRequest) return
-    viewerRef.current?.scrollToPage(document.scrollRequest.pageNumber)
-  }, [document.scrollRequest])
+    document.setDocumentHandle({
+      scrollToPage: (pageNumber, options) => {
+        viewerRef.current?.scrollToPage(pageNumber, options)
+      },
+    })
+    return () => document.setDocumentHandle(null)
+  }, [document])
 
   return (
     <PdfViewer

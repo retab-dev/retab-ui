@@ -30,7 +30,7 @@ export function FileThumbnailDemo() {
           <FileThumbnail
             file={{ name: "invoice.pdf", type: "application/pdf" }}
             previewImageUrl={pagePreview}
-            previewAspectRatio={1}
+            thumbnailShape="square"
             className="w-full bg-white shadow-sm ring-1 ring-black/5"
             previewClassName="object-top"
           />
@@ -42,21 +42,21 @@ export function FileThumbnailDemo() {
               type: "application/vnd.openxmlformats",
             }}
             state="loading"
-            previewAspectRatio={1}
+            thumbnailShape="square"
             className="w-full"
           />
         </Cell>
         <Cell label="Fallback" hint="no preview">
           <FileThumbnail
             file={{ name: "data.xlsx", type: "application/vnd.ms-excel" }}
-            previewAspectRatio={1}
+            thumbnailShape="square"
             className="w-full"
           />
         </Cell>
         <Cell label="Custom content" hint="previewContent">
           <FileThumbnail
             file={{ name: "photo.png", type: "image/png" }}
-            previewAspectRatio={1}
+            thumbnailShape="square"
             className="w-full shadow-sm ring-1 ring-black/5"
             previewContent={
               <div className="flex size-full items-center justify-center bg-gradient-to-br from-sky-400 to-indigo-500 text-xs font-medium text-white">

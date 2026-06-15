@@ -8,7 +8,6 @@ import {
   type DropzoneFileItem,
 } from "@/registry/new-york-v4/ui/dropzone"
 import { formatFileSize } from "@/registry/new-york-v4/ui/file-size-format"
-import { FileUploader } from "@/registry/new-york-v4/ui/file-uploader"
 
 export function DropzoneDemo() {
   const [files, setFiles] = React.useState<DropzoneFileItem[]>([])
@@ -59,17 +58,6 @@ export function DropzoneDemo() {
           )}
         </div>
       </div>
-    </div>
-  )
-}
-
-export function FileUploaderDemo() {
-  return (
-    <div className="not-prose rounded-xl border bg-card p-4 shadow-sm sm:p-6">
-      <FileUploader
-        accept="application/pdf,image/*,.docx,.xlsx,.csv"
-        description="PDF, DOCX, XLSX, CSV, PNG, or JPG"
-      />
     </div>
   )
 }

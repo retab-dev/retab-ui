@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { showMcpDocs } from "@/lib/flags"
-import { getCurrentBase, getPagesFromFolder } from "@/lib/page-tree"
+import { getCurrentBase, getSidebarGroupsFromFolder } from "@/lib/page-tree"
 import type { source } from "@/lib/source"
 import { cn } from "@/lib/utils"
 import {
@@ -86,30 +86,35 @@ export function DocsSidebar({
             return null
           }
 
-          const pages =
+          const groups =
             item.type === "folder"
-              ? getPagesFromFolder(item, currentBase).filter((page) => {
-                  if (!showMcpDocs && page.url.includes("/mcp")) {
-                    return false
-                  }
+              ? getSidebarGroupsFromFolder(item, currentBase)
+                  .map((group) => ({
+                    ...group,
+                    pages: group.pages.filter((page) => {
+                      if (!showMcpDocs && page.url.includes("/mcp")) {
+                        return false
+                      }
 
-                  return !EXCLUDED_PAGES.includes(page.url)
-                })
+                      return !EXCLUDED_PAGES.includes(page.url)
+                    }),
+                  }))
+                  .filter((group) => group.pages.length > 0)
               : []
 
-          if (pages.length === 0) {
+          if (groups.length === 0) {
             return null
           }
 
-          return (
-            <SidebarGroup key={item.$id}>
+          return groups.map((group) => (
+            <SidebarGroup key={group.id}>
               <SidebarGroupLabel className="font-medium text-muted-foreground">
-                {item.name}
+                {group.name}
               </SidebarGroupLabel>
               <SidebarGroupContent>
-                {item.type === "folder" && (
+                {item.type === "folder" ? (
                   <SidebarMenu className="gap-0.5">
-                    {pages.map((page) => {
+                    {group.pages.map((page) => {
                       return (
                         <SidebarMenuItem key={page.url} className="relative">
                           <SidebarMenuButton
@@ -128,10 +133,10 @@ export function DocsSidebar({
                       )
                     })}
                   </SidebarMenu>
-                )}
+                ) : null}
               </SidebarGroupContent>
             </SidebarGroup>
-          )
+          ))
         })}
         <div className="sticky -bottom-1 z-10 h-16 shrink-0 bg-linear-to-t from-background via-background/80 to-background/50 blur-xs" />
       </SidebarContent>

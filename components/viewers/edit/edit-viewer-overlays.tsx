@@ -4,7 +4,11 @@ import { cn } from "@/lib/utils"
 import type { PageOverlayProps } from "@/components/ui/pdf-viewer"
 
 import { EDIT_FIELD_ACCENTS } from "./edit-viewer-field-style"
-import { displayEditFieldValue, isEditFieldFilled } from "./edit-viewer-model"
+import {
+  displayEditFieldValue,
+  getEditViewerPdfAreaAnchor,
+  isEditFieldFilled,
+} from "./edit-viewer-model"
 import type { EditViewerField, EditViewerMode } from "./edit-viewer-types"
 
 export function EditFieldOverlayLayer({
@@ -53,7 +57,8 @@ function EditFieldOverlayButton({
   onFieldHover: (key: string | null) => void
   onFieldSelect: (key: string) => void
 }) {
-  if (!field.bbox) return null
+  const anchor = getEditViewerPdfAreaAnchor(field)
+  if (!anchor) return null
 
   const accent = EDIT_FIELD_ACCENTS[field.type]
   const filled = isEditFieldFilled(field)
@@ -74,10 +79,10 @@ function EditFieldOverlayButton({
         active ? "z-10 border-2 shadow-sm" : "border-dashed"
       )}
       style={{
-        left: `${field.bbox.left * 100}%`,
-        top: `${field.bbox.top * 100}%`,
-        width: `${field.bbox.width * 100}%`,
-        height: `${field.bbox.height * 100}%`,
+        left: `${anchor.left}%`,
+        top: `${anchor.top}%`,
+        width: `${anchor.width}%`,
+        height: `${anchor.height}%`,
         borderColor: accent.line,
         backgroundColor: active ? accent.tint : "transparent",
         boxShadow: active

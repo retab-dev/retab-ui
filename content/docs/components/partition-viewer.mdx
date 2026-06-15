@@ -9,9 +9,9 @@ Renders a Retab partition result: keyed chunks, each owning a set of pages.
 
 ## Viewer Composition
 
-Compose the partition surface from `PartitionViewerProvider`,
-`PartitionViewerHeader`, and a visible source document surface. Source documents
-register their document handle and page callbacks with
+Compose the partition surface from `PartitionViewerProvider`, the shared viewer
+layout primitives, and the named partition parts. Source documents register
+their document handle and page callbacks with
 `usePartitionViewerDocumentControls`.
 
 ```tsx
@@ -34,7 +34,8 @@ function SourceDocument() {
     <PartitionViewerHeader />
     <ViewerBody>
       <ViewerSurface>
-        <SourceDocument />
+        <PartitionViewerRibbon />
+        <PartitionViewerDocument document={<SourceDocument />} />
       </ViewerSurface>
     </ViewerBody>
   </ViewerRoot>
@@ -43,6 +44,11 @@ function SourceDocument() {
 
 ## Usage
 
-Use `<PartitionViewer result={result} />` when you only need the partition
-header and default empty document surface. Use the provider parts when a source
-document should be visible.
+`PartitionViewer` is the easy API. It preassembles the same provider and named
+parts; pass the source document explicitly through `document`.
+
+```tsx
+export function Example() {
+  return <PartitionViewer result={result} document={<SourceDocument />} />
+}
+```

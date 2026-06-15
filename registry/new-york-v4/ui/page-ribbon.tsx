@@ -12,15 +12,16 @@ import {
   buildPageRuns,
   normalizePageCount,
   segmentDisplayLabel,
-  type Segment,
 } from "@/lib/segments"
 import { cn } from "@/lib/utils"
+
+import type { DocumentSegment } from "./segmented-document-model"
 
 /** One lane of the ribbon: segments positioned by their page ranges. */
 export interface RibbonRow {
   id: string
   label?: string
-  segments: Segment[]
+  segments: DocumentSegment[]
 }
 
 export interface PageRibbonProps {
@@ -37,7 +38,7 @@ export interface PageRibbonProps {
   /** Click a segment → jump the document to its first page. */
   onSelectPage?: (page: number) => void
   /** Fired when a segment surface is clicked. */
-  onSelect?: (segment: Segment) => void
+  onSelect?: (segment: DocumentSegment) => void
   showTicks?: boolean
   /** Thickness of each row: column width (vertical) or row height (horizontal), px. */
   rowThickness?: number

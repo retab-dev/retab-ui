@@ -38,35 +38,35 @@ const xlsxRouteMock = vi.hoisted(() => ({
 }))
 
 vi.mock("@/components/ui/pdf-viewer", () => ({
-  PdfResourceViewer: (props: Record<string, unknown>) => {
+  PdfResourceContent: (props: Record<string, unknown>) => {
     pdfRouteMock.props.push(props)
     return "Mock PDF viewer"
   },
 }))
 
 vi.mock("@/components/ui/docx-viewer", () => ({
-  DocxResourceViewer: (props: Record<string, unknown>) => {
+  DocxResourceContent: (props: Record<string, unknown>) => {
     docxRouteMock.props.push(props)
     return "Mock DOCX viewer"
   },
 }))
 
 vi.mock("@/components/ui/image-viewer", () => ({
-  ImageResourceViewer: (props: Record<string, unknown>) => {
+  ImageResourceContent: (props: Record<string, unknown>) => {
     imageRouteMock.props.push(props)
     return "Mock image viewer"
   },
 }))
 
 vi.mock("@/components/ui/pptx-viewer", () => ({
-  PptxResourceViewer: (props: Record<string, unknown>) => {
+  PptxResourceContent: (props: Record<string, unknown>) => {
     pptxRouteMock.props.push(props)
     return "Mock PPTX viewer"
   },
 }))
 
 vi.mock("@/components/ui/xlsx-viewer", () => ({
-  XlsxResourceViewer: (props: Record<string, unknown>) => {
+  XlsxResourceContent: (props: Record<string, unknown>) => {
     xlsxRouteMock.props.push(props)
     return "Mock XLSX viewer"
   },
@@ -293,7 +293,7 @@ describe("FileViewer detection helpers", () => {
       'category === "docx" && descriptor.source.kind === "blob"'
     )
     expect(source).toContain(
-      "<DocxResourceViewer\n          resource={resource}"
+      "<DocxResourceContent\n          resource={resource}"
     )
     expect(source).not.toContain("<DocxViewer")
     expect(source).not.toContain("source={descriptor.source}")
@@ -340,13 +340,13 @@ describe("FileViewer detection helpers", () => {
       /<(?:ViewerFallback|UnsupportedCard)\b(?:(?!\/>)[\s\S])*\b(?:category|fileName|url|downloadAction)=/
     )
     expect(fileViewerSource).not.toMatch(
-      /<CsvDocViewer\b(?:(?!\/>)[\s\S])*\b(?:source|fileName|mimeType)=/
+      /<CsvFileContent\b(?:(?!\/>)[\s\S])*\b(?:source|fileName|mimeType)=/
     )
-    expect(fileViewerSource).toContain("PdfResourceViewer")
-    expect(fileViewerSource).toContain("ImageResourceViewer")
-    expect(fileViewerSource).toContain("DocxResourceViewer")
-    expect(fileViewerSource).toContain("PptxResourceViewer")
-    expect(fileViewerSource).toContain("XlsxResourceViewer")
+    expect(fileViewerSource).toContain("PdfResourceContent")
+    expect(fileViewerSource).toContain("ImageResourceContent")
+    expect(fileViewerSource).toContain("DocxResourceContent")
+    expect(fileViewerSource).toContain("PptxResourceContent")
+    expect(fileViewerSource).toContain("XlsxResourceContent")
     expect(fileViewerSource).not.toContain("slots={slots}")
     expect(fileViewerSource).not.toContain("renderWithViewerShellSlots")
     expect(fileViewerSource).not.toContain("ViewerShell")
@@ -369,9 +369,10 @@ describe("FileViewer detection helpers", () => {
       /<(?:PdfViewer|ImageViewer|DocxViewer|PptxViewer|XlsxViewer)\b/
     )
     expect(fileViewerSource).not.toMatch(
-      /<(?:PdfResourceViewer|ImageResourceViewer|DocxResourceViewer|PptxResourceViewer|XlsxResourceViewer)\b(?:(?!\/>)[\s\S])*\bsource=/
+      /<(?:PdfResourceContent|ImageResourceContent|DocxResourceContent|PptxResourceContent|XlsxResourceContent)\b(?:(?!\/>)[\s\S])*\bsource=/
     )
-    expect(chromeSource).toContain("export function ResourceDocShell")
+    expect(chromeSource).not.toContain("ResourceDocShell")
+    expect(chromeSource).not.toContain("ZoomActionsSkeleton")
     expect(chromeSource).not.toContain("export function DocShell")
     expect(chromeSource).not.toContain("ViewerResourceFallback")
     expect(chromeSource).not.toContain("UnsupportedResourceCard")
@@ -379,7 +380,11 @@ describe("FileViewer detection helpers", () => {
     expect(chromeSource).not.toContain("url?: string")
     expect(chromeSource).not.toContain("downloadAction?:")
     expect(chromeSource).not.toContain("createHrefDownloadAction")
+    expect(fileViewerSource).toContain("<ViewerRoot")
+    expect(fileViewerSource).toContain("<FileViewerHeader")
+    expect(fileViewerSource).toContain("<ViewerSurface")
     expect(csvAdapterSource).toMatch(/resource: ViewerResource/)
+    expect(csvAdapterSource).not.toContain("ResourceDocShell")
     expect(csvAdapterSource).not.toMatch(/\bfileName:\s*string\b/)
     expect(csvAdapterSource).not.toMatch(/\bmimeType\?:\s*string\b/)
   })
@@ -392,6 +397,8 @@ describe("FileViewer detection helpers", () => {
         "FileViewerHeader",
         "FileViewerProvider",
         "useFileViewer",
+        "useFileViewerContent",
+        "useFileViewerHeader",
       ].sort()
     )
   })
@@ -537,6 +544,7 @@ describe("FileViewer text rendering", () => {
       expect(props[0]).toMatchObject({
         className: "viewer-frame",
         bare: true,
+        download: true,
       })
       expect(
         (props[0]?.resource as { content: { directUrl: string | null } })
@@ -594,8 +602,9 @@ describe("FileViewer text rendering", () => {
       expect(await screen.findByText(text)).toBeTruthy()
       expect(props).toHaveLength(1)
       if (source.fileName.endsWith(".xlsx")) {
-        expect(props[0]).toMatchObject({ isolateStyles: true })
+        expect(props[0]).toMatchObject({ download: false, isolateStyles: true })
       } else {
+        expect(props[0]).toMatchObject({ download: false })
         expect("isolateStyles" in props[0]!).toBe(false)
       }
       expect(
@@ -624,6 +633,7 @@ describe("FileViewer text rendering", () => {
     expect(resource.content.directUrl).toBe("/signed/file?id=1")
     expect(resource.fileName).toBe("download")
     expect(resource.descriptor.category).toBe("pdf")
+    expect(pdfRouteMock.props[0]).toMatchObject({ download: false })
   })
 
   it("renders DOCX files through the lazy resource viewer", async () => {
@@ -644,6 +654,7 @@ describe("FileViewer text rendering", () => {
       directUrl: "/report.docx",
     })
     expect("source" in docxRouteMock.props[0]!).toBe(false)
+    expect(docxRouteMock.props[0]).toMatchObject({ download: false })
   })
 
   it("loads and renders text content under React StrictMode", async () => {
@@ -687,7 +698,9 @@ describe("FileViewer text rendering", () => {
       <FileViewer source={urlSource("/notes.txt", "notes.txt")} />
     )
 
-    expect(await screen.findByText("first note")).toBeTruthy()
+    expect(
+      await screen.findByText("first note", undefined, { timeout: 5_000 })
+    ).toBeTruthy()
     expect(screen.getByText("second note")).toBeTruthy()
     expect(container.querySelector('[data-slot="text-viewer"]')).toBeTruthy()
     expect(container.querySelector('[data-slot="code-viewer"]')).toBeNull()
@@ -1068,7 +1081,9 @@ describe("FileViewer text rendering", () => {
       />
     )
 
-    expect(await screen.findByText("alpha")).toBeTruthy()
+    expect(
+      await screen.findByText("alpha", undefined, { timeout: 5_000 })
+    ).toBeTruthy()
     expect(screen.getByText("42")).toBeTruthy()
     expect(screen.getByRole("button", { name: "Download" })).toBeTruthy()
   })

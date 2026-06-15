@@ -1396,7 +1396,7 @@
       "dependencies": ["@tanstack/react-virtual@^3.13.12"],
       "registryDependencies": [
         "anchored-evidence",
-        "anchored-item-list",
+        "interactive-item-list",
         "pdf-viewer",
         "scroll-area",
         "segmented-document",
@@ -2177,28 +2177,6 @@
       ]
     },
     {
-      "name": "segmented-document-viewer",
-      "type": "registry:ui",
-      "title": "Segmented Document Viewer",
-      "description": "Composes SegmentSidebar + SegmentLegend + PageTimeline + an optional PDF document with per-segment color overlays. The shared engine behind partition and split viewers.",
-      "registryDependencies": [
-        "segments",
-        "utils",
-        "segment-legend",
-        "segment-sidebar",
-        "use-segment-interaction",
-        "page-timeline",
-        "pdf-viewer"
-      ],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/segmented-document-viewer.tsx",
-          "type": "registry:ui",
-          "target": "@ui/segmented-document-viewer.tsx"
-        }
-      ]
-    },
-    {
       "name": "page-ribbon",
       "type": "registry:ui",
       "title": "Page Ribbon",
@@ -2251,6 +2229,11 @@
           "path": "registry/new-york-v4/ui/segmented-document-provider.tsx",
           "type": "registry:ui",
           "target": "@ui/segmented-document-provider.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/segmented-item-link.ts",
+          "type": "registry:ui",
+          "target": "@ui/segmented-item-link.ts"
         },
         {
           "path": "registry/new-york-v4/ui/use-segment-viewport-controller.ts",
@@ -2918,7 +2901,7 @@
         "segmented-document",
         "source-segmented-document",
         "utils",
-        "field-anchor-link",
+        "source-field-link",
         "source-indicator"
       ],
       "files": [
@@ -2937,10 +2920,10 @@
       "dependencies": ["react-hook-form"]
     },
     {
-      "name": "extraction-viewer-block",
+      "name": "sources-viewer-block",
       "type": "registry:block",
-      "title": "Extraction Viewer",
-      "description": "Every extraction format in one viewer — PDF/image bbox sources use segmented-document anchors; text, CSV, Excel, and Word use their format-specific anchored target adapters.",
+      "title": "Sources Viewer",
+      "description": "Every source-backed format in one viewer — PDF/image bbox sources use segmented-document anchors; text, CSV, Excel, and Word use their format-specific anchored target adapters.",
       "dependencies": [
         "react-hook-form",
         "json-schema",
@@ -2963,16 +2946,16 @@
         "segmented-document",
         "source-evidence",
         "source-segmented-document",
-        "field-anchor-link",
+        "source-field-link",
         "source-indicator",
         "utils",
         "anchored-document-viewer"
       ],
       "files": [
         {
-          "path": "registry/new-york-v4/blocks/extraction-viewer-block.tsx",
+          "path": "registry/new-york-v4/blocks/sources-viewer-block.tsx",
           "type": "registry:component",
-          "target": "@components/blocks/extraction-viewer-block.tsx"
+          "target": "@components/blocks/sources-viewer-block.tsx"
         },
         {
           "path": "components/viewers/sample-data/json-form-sources.json",
@@ -3020,7 +3003,7 @@
         "segmented-document",
         "source-evidence",
         "source-segmented-document",
-        "field-anchor-link",
+        "source-field-link",
         "source-indicator"
       ],
       "files": [
@@ -3368,10 +3351,10 @@
       "name": "source-field-list",
       "type": "registry:ui",
       "title": "Source field list",
-      "description": "A field list that drives anchored-document state: hover previews a field anchor in the viewer, click selects it.",
+      "description": "A field list that drives source-field interaction: hover previews the field location in the viewer, click selects it.",
       "registryDependencies": [
-        "anchored-item-list",
-        "field-anchor-link",
+        "interactive-item-list",
+        "source-field-link",
         "source-evidence",
         "utils"
       ],
@@ -3384,16 +3367,19 @@
       ]
     },
     {
-      "name": "field-anchor-link",
+      "name": "source-field-link",
       "type": "registry:ui",
-      "title": "Field anchor link",
-      "description": "A field-path adapter over the generic anchored-document item link.",
-      "registryDependencies": ["anchored-document-viewer"],
+      "title": "Source field link",
+      "description": "A field-path adapter over either anchored-document items or segmented-document anchors.",
+      "registryDependencies": [
+        "anchored-document-viewer",
+        "segmented-document"
+      ],
       "files": [
         {
-          "path": "registry/new-york-v4/ui/field-anchor-link.ts",
+          "path": "registry/new-york-v4/ui/source-field-link.ts",
           "type": "registry:ui",
-          "target": "@ui/field-anchor-link.ts"
+          "target": "@ui/source-field-link.ts"
         }
       ]
     },
@@ -3425,17 +3411,17 @@
       ]
     },
     {
-      "name": "anchored-item-list",
+      "name": "interactive-item-list",
       "type": "registry:ui",
-      "title": "Anchored item list",
-      "description": "A virtualized listbox interaction primitive for anchored evidence rows.",
+      "title": "Interactive item list",
+      "description": "A virtualized listbox interaction primitive for preview, selection, keyboard navigation, and visible-item reporting.",
       "dependencies": ["@tanstack/react-virtual@^3.13.12"],
       "registryDependencies": ["scroll-area", "utils"],
       "files": [
         {
-          "path": "registry/new-york-v4/ui/anchored-item-list.tsx",
+          "path": "registry/new-york-v4/ui/interactive-item-list.tsx",
           "type": "registry:ui",
-          "target": "@ui/anchored-item-list.tsx"
+          "target": "@ui/interactive-item-list.tsx"
         }
       ]
     },
@@ -3461,13 +3447,25 @@
       "name": "source-segmented-document",
       "type": "registry:ui",
       "title": "Source segmented document",
-      "description": "Projection helpers that convert PDF/image bbox document sources into segmented-document segments and anchors.",
-      "registryDependencies": ["document-source", "segmented-document"],
+      "description": "Projection helpers and overlays that convert PDF/image bbox document sources into segmented-document segments, anchors, and active source highlights.",
+      "registryDependencies": [
+        "document-source",
+        "source-field-link",
+        "image-source",
+        "image-viewer",
+        "pdf-viewer",
+        "segmented-document"
+      ],
       "files": [
         {
           "path": "registry/new-york-v4/ui/source-segmented-document-model.ts",
           "type": "registry:ui",
           "target": "@ui/source-segmented-document-model.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/source-segmented-document-overlays.tsx",
+          "type": "registry:ui",
+          "target": "@ui/source-segmented-document-overlays.tsx"
         }
       ]
     },
@@ -4044,7 +4042,7 @@
         "segmented-document",
         "source-segmented-document",
         "source-field-list",
-        "field-anchor-link",
+        "source-field-link",
         "source-indicator"
       ],
       "files": [
@@ -4072,7 +4070,7 @@
         "document-source",
         "source-field-list",
         "source-evidence",
-        "field-anchor-link",
+        "source-field-link",
         "source-indicator",
         "anchored-document-viewer"
       ],
@@ -4101,7 +4099,7 @@
         "document-source",
         "source-field-list",
         "source-evidence",
-        "field-anchor-link",
+        "source-field-link",
         "source-indicator",
         "anchored-document-viewer"
       ],
@@ -4130,7 +4128,7 @@
         "document-source",
         "source-field-list",
         "source-evidence",
-        "field-anchor-link",
+        "source-field-link",
         "source-indicator",
         "anchored-document-viewer"
       ],
@@ -4159,7 +4157,7 @@
         "document-source",
         "source-field-list",
         "source-evidence",
-        "field-anchor-link",
+        "source-field-link",
         "source-indicator",
         "anchored-document-viewer"
       ],

@@ -66,8 +66,9 @@ function ComparisonSlot({ label }: { label: string }) {
         <div className="flex min-w-0 items-center gap-3 rounded-md border bg-background p-2">
           <FileThumbnail
             file={selectedFile.file}
-            previewAspectRatio={1}
-            className="size-12 shrink-0"
+            thumbnailShape="square"
+            thumbnailSize="md"
+            className="shrink-0"
           />
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium">

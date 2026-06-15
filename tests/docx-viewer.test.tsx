@@ -19,7 +19,7 @@ import {
   createViewerResource,
 } from "@/registry/new-york-v4/lib/viewer-resource"
 import {
-  DocxResourceViewer,
+  DocxResourceContent,
   DocxViewer,
   type DocxViewerHandle,
 } from "@/registry/new-york-v4/ui/docx-viewer"
@@ -706,10 +706,10 @@ describe("DocxViewer", () => {
     })
   })
 
-  it("renders a pre-created resource through DocxResourceViewer", async () => {
+  it("renders a pre-created resource through DocxResourceContent", async () => {
     const resource = createViewerResource(docxUrlSource("/resource.docx"))
 
-    await renderDocx(<DocxResourceViewer resource={resource} />)
+    await renderDocx(<DocxResourceContent resource={resource} />)
 
     await waitForRenderedDocx()
     expect(fetch).toHaveBeenCalledWith("/resource.docx", {
@@ -720,7 +720,7 @@ describe("DocxViewer", () => {
     ).toBe("/resource.docx")
   })
 
-  it("recovers DocxResourceViewer when its resource prop changes after a load error", async () => {
+  it("recovers DocxResourceContent when its resource prop changes after a load error", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined)
     vi.mocked(fetch).mockImplementation((url) =>
       Promise.resolve(
@@ -735,12 +735,12 @@ describe("DocxViewer", () => {
     const broken = createViewerResource(docxUrlSource("/resource-broken.docx"))
     const fixed = createViewerResource(docxUrlSource("/resource-fixed.docx"))
 
-    const view = await renderDocx(<DocxResourceViewer resource={broken} />)
+    const view = await renderDocx(<DocxResourceContent resource={broken} />)
 
     expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy()
 
     await act(async () => {
-      view.rerender(<DocxResourceViewer resource={fixed} />)
+      view.rerender(<DocxResourceContent resource={fixed} />)
     })
 
     expect(await screen.findByText("Page 1 of 2")).toBeTruthy()

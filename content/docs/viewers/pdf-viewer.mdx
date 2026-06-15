@@ -59,11 +59,13 @@ For non-provider compositions, use the controlled rail directly:
   currentPage={currentPage}
   onSelectPage={scrollToPage}
   thumbnailWidth={120}
+  thumbnailShape="page"
 />
 ```
 
 `thumbnailWidth` controls the thumbnail image width. `ViewerSidebar width`
-controls the sidebar shell.
+controls the sidebar shell. `thumbnailShape` preserves page aspect with
+`"page"` or crops each preview into a square frame with `"square"`.
 
 ## Usage
 

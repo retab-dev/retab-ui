@@ -10,6 +10,8 @@ export interface XlsxViewerProps {
   source: XlsxDocumentSource
   className?: string
   toolbar?: boolean
+  /** Show download actions in this viewer's toolbar/error state. */
+  download?: boolean
   /** Sheet shown first. Defaults to 0. */
   defaultSheetIndex?: number
   /** Fired with the active sheet index on tab switch and imperative sheet changes. */
@@ -27,7 +29,7 @@ export interface XlsxViewerProps {
   isolateStyles?: boolean
 }
 
-export type XlsxResourceViewerProps = Omit<XlsxViewerProps, "source"> & {
+export type XlsxResourceContentProps = Omit<XlsxViewerProps, "source"> & {
   resource: ViewerResource
 }
 

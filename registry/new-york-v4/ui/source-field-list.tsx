@@ -4,9 +4,9 @@ import * as React from "react"
 
 import type { Source } from "@/lib/document-source"
 import { cn } from "@/lib/utils"
-import type { FieldAnchorLink } from "@/components/ui/field-anchor-link"
+import type { SourceFieldLink } from "@/components/ui/source-field-link"
 
-import { AnchoredItemList } from "./anchored-item-list"
+import { InteractiveItemList } from "./interactive-item-list"
 import {
   sourceFieldToEvidenceItem,
   type SourceEvidenceField,
@@ -14,7 +14,7 @@ import {
 } from "./source-evidence"
 
 export interface SourceField extends Omit<SourceEvidenceField, "source"> {
-  /** Join key — must match the anchored item id for this field. */
+  /** Join key used by the source field link for hover, selection, and navigation. */
   key: string
   label: string
   value: React.ReactNode
@@ -24,8 +24,8 @@ export interface SourceField extends Omit<SourceEvidenceField, "source"> {
 }
 
 /**
- * A simple field list that drives anchored document state: hovering a field
- * previews its anchor in the viewer, clicking selects it.
+ * A simple field list that drives source-field interaction: hovering previews
+ * the field location in the viewer, clicking selects it.
  */
 export function SourceFieldList({
   fields,
@@ -34,7 +34,7 @@ export function SourceFieldList({
   className,
 }: {
   fields: SourceField[]
-  link: FieldAnchorLink
+  link: SourceFieldLink
   title?: string
   className?: string
 }) {
@@ -58,7 +58,7 @@ export function SourceFieldList({
           {fields.length} fields
         </span>
       </div>
-      <AnchoredItemList
+      <InteractiveItemList
         aria-label={title}
         activeItemId={link.activePath}
         emptyLabel="No fields."

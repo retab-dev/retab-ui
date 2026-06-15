@@ -1,96 +1,113 @@
 ---
 title: Sidebar
-description: App-shell sidebar primitives for persistent navigation, menus, rails, and responsive mobile projection.
+description: Viewer sidebar primitives for document rails, segment lists, attachment lists, and source-linked workflow panels.
 ---
 
-`SidebarProvider` and `Sidebar` are the app-shell sidebar system. Use them for
-application navigation: persistent open state, mobile sheet projection, the
-global sidebar shortcut, rails, grouped menus, menu buttons, actions, badges,
-and skeleton rows.
+The Retab sidebar is the rail inside a document viewer. It belongs to the
+viewer layout system: `ViewerRoot`, `ViewerBody`, `ViewerSidebar`, and
+`ViewerSurface`.
 
-They are not viewer layout primitives and they are not domain sidebars.
+Use it for document-adjacent panels: page sections, attachments, source fields,
+thumbnails, and other workflow rails that sit beside a viewer surface. Do not
+use the app-shell `SidebarProvider` pattern for these rails.
 
-## Architecture Boundary
+## Viewer Sidebar Example
 
-Use the exact primitive for the ownership layer:
+This is the shape used across the viewers: `ViewerSidebar` owns placement,
+width, collapse state, and the accessible rail label. The domain component
+inside the rail owns the row model and interaction. Here, `SegmentSidebar` owns
+section rows while `FileViewer bare` owns the document surface.
 
-- `SidebarProvider` and `Sidebar` own app navigation.
-- `ViewerSidebar` owns a spatial rail inside `ViewerBody`.
-- `SidebarList*` owns providerless grouped-row grammar inside domain
-  components, modals, cards, and viewer rails.
-- `SegmentSidebar` owns segment row state and segment interaction semantics.
-- `AttachmentSidebar` owns file attachment rows.
+<ViewerSidebarDemo />
 
-Do not mount `SidebarProvider` inside `ViewerSidebar` just to get grouped rows.
-Use `SidebarList*` for that shape.
-
-## Usage
+## Composition
 
 ```tsx
-<SidebarProvider>
-  <Sidebar>
-    <SidebarHeader />
-    <SidebarContent>
-      <SidebarGroup>
-        <SidebarGroupLabel>Workspace</SidebarGroupLabel>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton isActive>Documents</SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
-    </SidebarContent>
-  </Sidebar>
-  <SidebarInset>{children}</SidebarInset>
-</SidebarProvider>
-```
-
-## Viewer Rails
-
-Viewer rails use viewer primitives instead:
-
-```tsx
-<ViewerRoot>
-  <ViewerHeader />
+<ViewerRoot defaultOpen mode="auto">
+  <ViewerHeader>
+    <ViewerSidebarTrigger />
+  </ViewerHeader>
   <ViewerBody>
-    <ViewerSidebar aria-label="Pages">
-      <PageRail />
+    <ViewerSidebar aria-label="Document sections" width="18rem">
+      <SegmentSidebar
+        segments={segments}
+        interaction={interaction}
+        currentPage={currentPage}
+        onSelect={(segment) => scrollToPage(segment.pages[0])}
+      />
     </ViewerSidebar>
     <ViewerSurface>
-      <Document />
+      <FileViewer source={source} bare />
     </ViewerSurface>
   </ViewerBody>
 </ViewerRoot>
 ```
 
-The app sidebar and viewer sidebar systems share visual tokens, but they do not
-share ownership.
+## Ownership Boundary
+
+- `ViewerRoot` owns sidebar state, mode resolution, trigger wiring, and the
+  single-primary-sidebar contract.
+- `ViewerSidebar` owns spatial placement, width, side, collapse behavior, and
+  the rail's accessible label.
+- `ViewerSurface` owns the main document/workflow surface beside the rail.
+- `SidebarList*` owns providerless grouped-row grammar inside a rail.
+- `SegmentSidebar` owns segment row state, preview interaction, current-page
+  highlighting, and select callbacks.
+- `AttachmentSidebar` owns file attachment rows, thumbnails, selected state,
+  disabled rows, and empty state.
+
+Do not mount `SidebarProvider` inside a viewer. That provider is for app-shell
+navigation: persistence, global shortcuts, mobile sheet projection, and
+workspace menus. Viewer rails use `ViewerSidebar` for placement and
+`SidebarList*` for row grammar.
+
+## Domain Rails
+
+Use a named domain sidebar when the rows have semantics:
+
+- `SegmentSidebar` for split and partition segments. It coordinates with
+  legends and page timelines through `useSegmentInteraction`.
+- `AttachmentSidebar` for files attached to an email, message, or workflow. It
+  renders `FileThumbnail` rows and lets the caller own selected attachment id.
+- source-field sidebars in extraction workflows should use the same
+  `ViewerSidebar` placement contract and a domain row model, not an app
+  navigation menu.
+
+Use raw `SidebarList*` primitives only when you are creating a new domain rail
+and need grouped rows without app-sidebar behavior.
+
+## Sidebar Modes
+
+`ViewerRoot mode="auto"` starts in overlay mode until the viewer has a measured
+width, then resolves to inline or overlay. Use fixed modes only when a workflow
+requires it:
+
+```tsx
+<ViewerRoot defaultOpen mode="inline" sidebarSide="right">
+  <ViewerBody>
+    <ViewerSurface />
+    <ViewerSidebar aria-label="Attachments" width="20rem">
+      <AttachmentSidebar items={attachments} selectedId={selectedId} />
+    </ViewerSidebar>
+  </ViewerBody>
+</ViewerRoot>
+```
+
+`ViewerSidebarTrigger` is disabled until a `ViewerSidebar` registers with the
+nearest `ViewerRoot`. In overlay mode, Escape closes the sidebar and focus
+returns to the trigger.
 
 ## Structural Attributes
 
-Viewer primitives expose stable structural attributes:
+Viewer sidebar primitives expose stable attributes for local styling and tests:
 
-- `data-slot` identifies the structural primitive for tests and local styling.
-- `data-viewer-sidebar-mode`, `data-viewer-sidebar-open`, and
-  `data-viewer-sidebar-state` identify the public sidebar state for local
-  styling.
-- `data-collapsible` and `data-side` identify the sidebar's structural
-  placement behavior.
+- `data-slot="viewer-root"`, `viewer-body`, `viewer-sidebar`,
+  `viewer-surface`, and `viewer-sidebar-trigger`;
+- `data-viewer-sidebar-mode="inline" | "overlay"`;
+- `data-viewer-sidebar-open="true" | "false"`;
+- `data-viewer-sidebar-state="expanded" | "collapsed"`;
+- `data-collapsible` and `data-side`.
 
-Viewer primitives do not encode domain purpose. Put that meaning in the named
-domain part (`SplitViewerPageRail`, `EmailPartsSidebar`) and in accessible
-labels (`aria-label="PDF pages"`, `aria-label="Email parts"`).
-
-Root ids, trigger markers, and transition readiness attributes are internal
-coordination details, not public styling hooks.
-
-`ViewerSidebarTrigger` is natively disabled when no toggleable sidebar has
-registered. It omits `aria-controls` and `aria-expanded` until a
-`ViewerSidebar` is available, then becomes interactive without replacing the
-trigger.
-
-With `mode="auto"`, the viewer starts in overlay mode until the root has
-a nonzero measured width. The first measurement resolves inline or overlay, and
-zero-width measurements are ignored.
+Put domain meaning in the named rail component and accessible label:
+`aria-label="Document sections"`, `aria-label="Email attachments"`, or
+`aria-label="Source fields"`.

@@ -393,7 +393,7 @@ describe("anchored document viewer", () => {
       fileContent("components/viewers/edit/edit-viewer-provider.tsx")
     ).toContain("AnchoredDocumentProvider")
     expect(
-      fileContent("registry/new-york-v4/blocks/extraction-viewer-block.tsx")
+      fileContent("registry/new-york-v4/blocks/sources-viewer-block.tsx")
     ).toContain("AnchoredDocumentProvider")
   })
 
@@ -402,7 +402,7 @@ describe("anchored document viewer", () => {
       fileContent("registry/new-york-v4/ui/anchored-document-viewer.tsx")
     ).not.toMatch(new RegExp(`SourceMap|useAnchored${"Source"}Link`))
     expect(
-      fileContent("registry/new-york-v4/blocks/extraction-viewer-block.tsx")
+      fileContent("registry/new-york-v4/blocks/sources-viewer-block.tsx")
     ).not.toMatch(new RegExp(`use${"Source"}Link|Use${"Source"}LinkResult`))
   })
 

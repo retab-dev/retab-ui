@@ -20,9 +20,9 @@ flowchart TD
 
   subgraph EntryPoints["Runtime entry points"]
     ImageViewer["ImageViewer(props, ref)\nsource: URL or Blob\ncreates ViewerResource with useMemo"]
-    ImageResourceViewer["ImageResourceViewer(resource, ref)\nresource-first entry for FileViewer\nSSR/client gate with useSyncExternalStore"]
-    FileViewer["FileViewer route\nresolves file category image\nlazy loads ImageResourceViewer\npasses resource, className, bare"]
-    Blocks["ImageSourcesBlock and ExtractionViewerBlock ImageTab\nfield list + useSourceLink + ImageViewer ref"]
+    ImageResourceContent["ImageResourceContent(resource, ref)\nresource-first entry for FileViewer\nSSR/client gate with useSyncExternalStore"]
+    FileViewer["FileViewer route\nresolves file category image\nlazy loads ImageResourceContent\npasses resource, className, bare"]
+    Blocks["ImageSourcesBlock and SourcesViewerBlock ImageTab\nfield list + useSourceLink + ImageViewer ref"]
     Scrollbench["scrollbench and verifier surfaces\nexercise viewport handle and skeleton behavior"]
   end
 
@@ -142,10 +142,10 @@ flowchart TD
   Registry --> Docs
   Docs --> Demo
   Shims --> ImageViewer
-  Shims --> ImageResourceViewer
+  Shims --> ImageResourceContent
   SourceShim --> SourceLink
   Demo --> ImageViewer
-  FileViewer --> ImageResourceViewer
+  FileViewer --> ImageResourceContent
   Blocks --> ImageViewer
   Blocks --> SourceLink
   Scrollbench --> ImageViewer
@@ -158,8 +158,8 @@ flowchart TD
   Interning --> Download
   Content --> FetchRead
   Content --> BlobRead
-  ImageViewer --> ImageResourceViewer
-  ImageResourceViewer --> IsClient
+  ImageViewer --> ImageResourceContent
+  ImageResourceContent --> IsClient
   IsClient -- "server or pre-hydration" --> Fallback
   IsClient -- "client" --> ErrorBoundary
   ErrorBoundary --> Suspense
@@ -276,7 +276,7 @@ flowchart TD
 sequenceDiagram
   autonumber
   participant App as App or FileViewer
-  participant IV as ImageViewer or ImageResourceViewer
+  participant IV as ImageViewer or ImageResourceContent
   participant VR as ViewerResource
   participant EB as ViewerErrorBoundary and Suspense
   participant IVC as ImageViewerContent
@@ -441,7 +441,7 @@ flowchart LR
 
 | Area               | Files                                                                                                       | Responsibility                                                                                                                             |
 | ------------------ | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Public viewer API  | `registry/new-york-v4/ui/image-viewer.tsx`, `image-viewer-types.ts`                                         | `ImageViewer`, `ImageResourceViewer`, public props, handle, test helpers, client/Suspense/error boundary entry.                            |
+| Public viewer API  | `registry/new-york-v4/ui/image-viewer.tsx`, `image-viewer-types.ts`                                         | `ImageViewer`, `ImageResourceContent`, public props, handle, test helpers, client/Suspense/error boundary entry.                            |
 | Content shell      | `registry/new-york-v4/ui/image-viewer-content.tsx`                                                          | Loads `FrameSource`, retains source lease, renders toolbar, header, aside, scroll area, frames, and source cache helpers.                  |
 | Hooks              | `registry/new-york-v4/ui/image-viewer-hooks.ts`                                                             | Fit-width scale, controlled/uncontrolled zoom, rotation reset, visible frame detection, scroll progress, imperative handle.                |
 | Frame rendering    | `registry/new-york-v4/ui/image-viewer-frame.tsx`                                                            | Lazy frame observation, skeleton/canvas switch, DPR canvas sizing, acquire/draw/release lifecycle, overlay mount.                          |
@@ -453,7 +453,7 @@ flowchart LR
 | TIFF worker        | `registry/new-york-v4/ui/image-viewer.worker.ts`                                                            | UTIF metadata parse, serialized decode queue, cancellation set, RGBA conversion, ImageBitmap transfer.                                     |
 | Resource infra     | `registry/new-york-v4/lib/viewer-source.ts`, `viewer-resource.ts`, `viewer-download.ts`, `viewer-errors.ts` | Source descriptors, stable keys, interned resources, readers, download actions, shared error shapes.                                       |
 | Source adapter     | `registry/new-york-v4/ui/image-source.tsx`                                                                  | Converts source anchors to frame/area, rotates highlight geometry, bridges `useSourceLink` to the image viewer handle.                     |
-| Integration blocks | `registry/new-york-v4/blocks/image-sources-block.tsx`, `extraction-viewer-block.tsx`                        | Real field/source UI demonstrating hover/click source linking into image overlays and scrolling.                                           |
+| Integration blocks | `registry/new-york-v4/blocks/image-sources-block.tsx`, `sources-viewer-block.tsx`                        | Real field/source UI demonstrating hover/click source linking into image overlays and scrolling.                                           |
 | Re-export shims    | `components/ui/image-viewer*.tsx`, `components/ui/image-source.tsx`, `lib/image-*.ts`                       | Local import surface that points at the registry implementation.                                                                           |
 | Docs and demo      | `content/docs/viewers/image-viewer.mdx`, `components/image-viewer-demo.tsx`                                 | User-facing install, usage, performance explanation, prop table, and TIFF sample.                                                          |
 | Tests              | `tests/image-viewer*.test.tsx`, `tests/sources.test.tsx`, `tests/file-viewer.test.tsx`                      | Lifecycle, cache, worker, rendering, geometry, integration, and routing coverage.                                                          |

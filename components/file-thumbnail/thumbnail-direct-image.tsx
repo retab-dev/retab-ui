@@ -1,10 +1,11 @@
 "use client"
 
-import type * as React from "react"
-
 import type { ViewerResource } from "@/lib/viewer-resource"
 import type { ViewerDescriptor } from "@/lib/viewer-source"
-import { FileThumbnailFrame } from "@/components/ui/file-thumbnail-frame"
+import {
+  FileThumbnailFrame,
+  type FileThumbnailFrameProps,
+} from "@/components/ui/file-thumbnail-frame"
 
 import { isTiffDescriptor } from "./descriptor"
 import {
@@ -43,12 +44,12 @@ export function DirectImageThumbnail({
   descriptor: ViewerDescriptor
   resource: ViewerResource
   directUrl: string
-  previewAspectRatio: number
+  previewAspectRatio?: number
   className?: string
   anchor: ThumbnailAnchor
   renderKey: string
   errorState: ThumbnailErrorState | null
-  thumbnailProps?: Omit<React.ComponentPropsWithoutRef<"div">, "children">
+  thumbnailProps?: Omit<FileThumbnailFrameProps, "file" | "onError">
   onError?: (error: unknown, errorState: ThumbnailErrorState) => void
 }) {
   const failedDirectImage =

@@ -66,8 +66,9 @@ function PacketSlot({ label }: { label: string }) {
         <div className="text-center">
           <FileThumbnail
             file={selectedFile.file}
-            previewAspectRatio={1}
-            className="mx-auto size-16 bg-background"
+            thumbnailShape="square"
+            thumbnailSize="lg"
+            className="mx-auto bg-background"
           />
           <div className="mt-2 line-clamp-2 text-xs font-medium break-words">
             {selectedFile.file.name}

@@ -9,7 +9,7 @@ import { ViewerErrorBoundary } from "@/components/ui/viewer-error"
 import { XlsxViewerFallback } from "./xlsx-viewer-chrome"
 import { XlsxViewerSession } from "./xlsx-viewer-session"
 import type {
-  XlsxResourceViewerProps,
+  XlsxResourceContentProps,
   XlsxViewerHandle,
   XlsxViewerProps,
 } from "./xlsx-viewer-types"
@@ -17,7 +17,7 @@ import type {
 export type {
   XlsxCellRef,
   XlsxDocumentSource,
-  XlsxResourceViewerProps,
+  XlsxResourceContentProps,
   XlsxViewerHandle,
   XlsxViewerProps,
 } from "./xlsx-viewer-types"
@@ -27,15 +27,15 @@ export const XlsxViewer = React.forwardRef<XlsxViewerHandle, XlsxViewerProps>(
     const { source, ...resourceProps } = props
     const resource = React.useMemo(() => createViewerResource(source), [source])
     return (
-      <XlsxResourceViewer {...resourceProps} ref={ref} resource={resource} />
+      <XlsxResourceContent {...resourceProps} ref={ref} resource={resource} />
     )
   }
 )
 
-export const XlsxResourceViewer = React.forwardRef<
+export const XlsxResourceContent = React.forwardRef<
   XlsxViewerHandle,
-  XlsxResourceViewerProps
->(function XlsxResourceViewer(props, ref) {
+  XlsxResourceContentProps
+>(function XlsxResourceContent(props, ref) {
   const isClient = useIsClient()
   const resource = props.resource
   if (!isClient) {
@@ -51,7 +51,7 @@ export const XlsxResourceViewer = React.forwardRef<
   return (
     <ViewerErrorBoundary
       className={props.className}
-      download={resource.originalDownload}
+      download={props.download === false ? null : resource.originalDownload}
       format="xlsx"
       resetKey={resource.keys.resource}
       sourceKind={resource.sourceKind}

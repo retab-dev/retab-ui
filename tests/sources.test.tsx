@@ -11,11 +11,16 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { Source, SourceAnchor, SourceMap } from "@/lib/document-source"
-import { useSegmentedFieldLink } from "@/components/ui/field-anchor-link"
+import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
+import {
+  createSegmentedDocumentModel,
+  type SegmentedDocumentModel,
+} from "@/components/ui/segmented-document-model"
 import {
   SegmentedDocumentProvider,
   useSegmentedDocumentViewport,
 } from "@/components/ui/segmented-document-provider"
+import { useSegmentedPdfSourceOverlay } from "@/components/ui/source-segmented-document-overlays"
 import {
   sourceFieldsToSegmentedDocumentModel,
   sourceMapToSegmentedDocumentModel,
@@ -186,15 +191,36 @@ function SegmentedFieldLinkProbe({
 }: {
   initialPath: string | null
 }) {
-  const link = useSegmentedFieldLink({ initialPath })
+  const link = useSegmentedSourceFieldLink({ initialPath })
 
   return (
     <output
       data-testid="segmented-link-probe"
       data-active-anchor={link.activeAnchor ? "true" : "false"}
+      data-active-anchor-count={link.activeAnchors.length}
     >
       {link.activePath ?? "none"}
     </output>
+  )
+}
+
+function SegmentedPdfOverlayProbe({ initialPath }: { initialPath: string }) {
+  const link = useSegmentedSourceFieldLink({ initialPath })
+  const renderOverlay = useSegmentedPdfSourceOverlay(link)
+
+  return (
+    <div
+      data-testid="segmented-pdf-overlay-probe"
+      data-active-anchor-count={link.activeAnchors.length}
+    >
+      {renderOverlay({
+        pageNumber: 2,
+        width: 600,
+        height: 800,
+        scale: 1,
+        rotation: 0,
+      })}
+    </div>
   )
 }
 
@@ -212,7 +238,7 @@ function SegmentedFieldLinkNavigationProbe({
     options?: ScrollToOptions
   ) => void
 }) {
-  const link = useSegmentedFieldLink()
+  const link = useSegmentedSourceFieldLink()
   const viewport = useSegmentedDocumentViewport()
 
   React.useEffect(() => {
@@ -236,6 +262,7 @@ function SegmentedFieldLinkNavigationProbe({
       <output
         data-testid="segmented-navigation-probe"
         data-active-anchor={link.activeAnchor ? "true" : "false"}
+        data-active-anchor-count={link.activeAnchors.length}
       >
         {link.activePath ?? "none"}
       </output>
@@ -705,7 +732,15 @@ describe("source evidence projection", () => {
   })
 
   it("keeps invalid and non-page-local source anchors out of segmented anchors", () => {
-    expect(sourceToSegmentAnchor(csvSource, "csv")).toBeNull()
+    for (const [label, nonPageSource] of [
+      ["csv", csvSource],
+      ["xlsx", xlsxSource],
+      ["text", textSource],
+      ["docx-text", docxTextSource],
+      ["docx-cell", docxCellSource],
+    ] as const) {
+      expect(sourceToSegmentAnchor(nonPageSource, label)).toBeNull()
+    }
     expect(
       sourceToSegmentAnchor(
         source({
@@ -753,6 +788,49 @@ describe("source evidence projection", () => {
       const probe = screen.getByTestId("segmented-link-probe")
       expect(probe.textContent).toBe("statement_date")
       expect(probe.getAttribute("data-active-anchor")).toBe("true")
+      expect(probe.getAttribute("data-active-anchor-count")).toBe("1")
+    })
+  })
+
+  it("keeps every segmented source anchor active for one selected field", async () => {
+    const model: SegmentedDocumentModel = createSegmentedDocumentModel({
+      pageCount: 2,
+      segments: [
+        {
+          id: "amount",
+          sourceId: "invoice.amount",
+          label: "Amount",
+          pages: [2],
+          color: "#4E79A7",
+          index: 0,
+        },
+      ],
+      anchors: [
+        {
+          id: "amount-label",
+          segmentId: "amount",
+          pageNumber: 2,
+          bounds: { x: 0.1, y: 0.2, width: 0.3, height: 0.04 },
+        },
+        {
+          id: "amount-value",
+          segmentId: "amount",
+          pageNumber: 2,
+          bounds: { x: 0.55, y: 0.2, width: 0.2, height: 0.04 },
+        },
+      ],
+    })
+
+    render(
+      <SegmentedDocumentProvider model={model}>
+        <SegmentedPdfOverlayProbe initialPath="invoice.amount" />
+      </SegmentedDocumentProvider>
+    )
+
+    await waitFor(() => {
+      const probe = screen.getByTestId("segmented-pdf-overlay-probe")
+      expect(probe.getAttribute("data-active-anchor-count")).toBe("2")
+      expect(screen.getAllByTestId("pdf-highlight")).toHaveLength(2)
     })
   })
 
@@ -1762,8 +1840,8 @@ describe("source UI components", () => {
     const { container, rerender } = render(
       <SourceIndicator path={null} found={false} emptyHint="Pick a field" />
     )
-    expect(container.firstElementChild?.className).toContain("top-3")
-    expect(container.firstElementChild?.className).not.toContain("top-12")
+    expect(container.firstElementChild?.className).toContain("top-12")
+    expect(container.firstElementChild?.className).not.toContain("top-3")
     expect(screen.getByText("Pick a field").textContent).toBe("Pick a field")
 
     rerender(<SourceIndicator path="owner.name" found label="Field source" />)

@@ -28,7 +28,7 @@ flowchart TB
 
   subgraph "DOCX viewer public API"
     DocxViewer["DocxViewer\nsource -> ViewerResource"]
-    DocxResourceViewer["DocxResourceViewer\npre-created ViewerResource"]
+    DocxResourceContent["DocxResourceContent\npre-created ViewerResource"]
     DocxViewerInner["DocxViewerInner\nSuspense body"]
     DocxHandle["DocxViewerHandle\nscrollToTarget()\ngetViewportElement()"]
     DocxProps["DocxViewerProps\nsource, scale/defaultScale,\ntoolbar, highlight, callbacks,\nbare, slots"]
@@ -146,7 +146,7 @@ flowchart TB
   UiDocxViewer --> DocxViewerFile
   UiDocxSource --> DocxSourceFile
   DocxViewerFile --> DocxViewer
-  DocxViewerFile --> DocxResourceViewer
+  DocxViewerFile --> DocxResourceContent
   DocxViewerFile --> DocxViewerInner
   DocxViewerFile --> DocxHandle
   DocxViewerFile --> DocxProps
@@ -164,9 +164,9 @@ flowchart TB
   ResourceContent --> UrlRead
   ResourceContent --> BlobRead
   ViewerResource --> DownloadActions
-  ViewerResource --> DocxResourceViewer
+  ViewerResource --> DocxResourceContent
 
-  DocxResourceViewer --> UseIsClient
+  DocxResourceContent --> UseIsClient
   UseIsClient --> Fallback
   UseIsClient --> ErrorBoundary
   ErrorBoundary --> Suspense
@@ -252,7 +252,7 @@ sequenceDiagram
   participant C as Consumer
   participant V as DocxViewer
   participant R as createViewerResource
-  participant RV as DocxResourceViewer
+  participant RV as DocxResourceContent
   participant EB as ViewerErrorBoundary
   participant S as React Suspense
   participant I as DocxViewerInner
@@ -426,7 +426,7 @@ flowchart LR
 ## Important Contracts
 
 - `DocxViewer` accepts only URL and Blob sources through `DocxDocumentSource`; the shared resource layer supports text too, but DOCX rendering is byte-oriented.
-- `DocxViewer` creates a resource internally. `DocxResourceViewer` accepts a pre-created `ViewerResource`, which is useful when a parent already resolved the file descriptor or shares resource state with another viewer surface.
+- `DocxViewer` creates a resource internally. `DocxResourceContent` accepts a pre-created `ViewerResource`, which is useful when a parent already resolved the file descriptor or shares resource state with another viewer surface.
 - `resource.keys.load` is the byte identity. Metadata-only presentation changes can update names or download information without re-reading the same bytes.
 - `resource.keys.resource` is the boundary reset identity. Changing it resets `ViewerErrorBoundary` state.
 - URL resources fetch `source.url`; downloads use `source.downloadUrl ?? source.url`.

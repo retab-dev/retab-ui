@@ -4,7 +4,7 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-import { AnchoredItemList } from "./anchored-item-list"
+import { InteractiveItemList } from "./interactive-item-list"
 import {
   layoutLevelLabel,
   type LayoutEvidenceItem,
@@ -38,7 +38,7 @@ export function LayoutBlocksPanel({
       data-slot="layout-blocks-panel"
       className={cn("flex min-h-0 flex-col bg-background", className)}
     >
-      <AnchoredItemList
+      <InteractiveItemList
         aria-label="OCR blocks"
         activeItemId={activeItemId}
         emptyLabel={emptyLabel}

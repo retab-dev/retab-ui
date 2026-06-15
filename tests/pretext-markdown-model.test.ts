@@ -63,6 +63,8 @@ describe("pretext markdown document model", () => {
         'title = "Release Notes"',
         "draft = false",
         "priority = 2",
+        "[nested]",
+        'ignored = "yes"',
         "+++",
         "",
         "# Body",
@@ -75,11 +77,13 @@ describe("pretext markdown document model", () => {
         { key: "title", value: "Release Notes", valueKind: "string" },
         { key: "draft", value: "false", valueKind: "boolean" },
         { key: "priority", value: "2", valueKind: "number" },
+        { key: "nested.ignored", value: "yes", valueKind: "string" },
       ],
       frontmatterLanguage: "toml",
       kind: "frontmatter",
-      markdown: 'title = "Release Notes"\ndraft = false\npriority = 2',
-      sourceEndLine: 5,
+      markdown:
+        'title = "Release Notes"\ndraft = false\npriority = 2\n[nested]\nignored = "yes"',
+      sourceEndLine: 7,
       sourceStartLine: 1,
     })
     expect(document.frontmatter).toMatchObject({
@@ -87,33 +91,137 @@ describe("pretext markdown document model", () => {
         { key: "title", value: "Release Notes", valueKind: "string" },
         { key: "draft", value: "false", valueKind: "boolean" },
         { key: "priority", value: "2", valueKind: "number" },
+        { key: "nested.ignored", value: "yes", valueKind: "string" },
       ],
       language: "toml",
-      sourceEndLine: 5,
+      sourceEndLine: 7,
       sourceStartLine: 1,
     })
     expect(document.headings[0]).toMatchObject({
-      blockId: "block-7-heading",
-      sourceLine: 7,
+      blockId: "block-9-heading",
+      sourceLine: 9,
       text: "Body",
     })
     expect(document.chunks[1]).toMatchObject({
       kind: "markdown",
-      sourceStartLine: 6,
+      sourceStartLine: 8,
     })
     expect(document.blocks[0]).toMatchObject({
       chunkIndex: 0,
       id: "block-1-frontmatter",
       kind: "frontmatter",
-      sourceEndLine: 5,
+      sourceEndLine: 7,
       sourceStartLine: 1,
     })
     expect(document.blocks[1]).toMatchObject({
       chunkIndex: 1,
       headingId: "body",
-      id: "block-7-heading",
+      id: "block-9-heading",
       kind: "heading",
-      sourceStartLine: 7,
+      sourceStartLine: 9,
+    })
+  })
+
+  it("summarizes simple YAML frontmatter lists", () => {
+    const document = createPretextMarkdownDocument(
+      [
+        "---",
+        "title: Release Notes",
+        "aliases: [stable, public]",
+        "tags:",
+        "  - docs",
+        "  - launch",
+        "---",
+        "",
+        "# Body",
+      ].join("\n")
+    )
+
+    expect(document.frontmatter?.entries).toEqual([
+      { key: "title", value: "Release Notes", valueKind: "string" },
+      { key: "aliases", value: "stable, public", valueKind: "list" },
+      { key: "tags", value: "docs, launch", valueKind: "list" },
+    ])
+    expect(document.chunks[0]?.frontmatterEntries).toEqual(
+      document.frontmatter?.entries
+    )
+  })
+
+  it("summarizes simple TOML frontmatter arrays", () => {
+    const document = createPretextMarkdownDocument(
+      [
+        "+++",
+        'title = "Release Notes"',
+        'tags = ["docs", "launch"]',
+        "+++",
+        "",
+        "# Body",
+      ].join("\n")
+    )
+
+    expect(document.frontmatter?.entries).toEqual([
+      { key: "title", value: "Release Notes", valueKind: "string" },
+      { key: "tags", value: "docs, launch", valueKind: "list" },
+    ])
+  })
+
+  it("keeps complex frontmatter values raw without summarizing them", () => {
+    const document = createPretextMarkdownDocument(
+      [
+        "---",
+        "title: Release Notes",
+        "owner: { name: Ada }",
+        "matrix: [{ os: linux }]",
+        "---",
+        "",
+        "# Body",
+      ].join("\n")
+    )
+
+    expect(document.frontmatter?.entries).toEqual([
+      { key: "title", value: "Release Notes", valueKind: "string" },
+    ])
+    expect(document.frontmatter?.markdown).toContain("owner: { name: Ada }")
+    expect(document.frontmatter?.markdown).toContain("matrix: [{ os: linux }]")
+  })
+
+  it("keeps malformed frontmatter fences as ordinary Markdown", () => {
+    const unterminated = createPretextMarkdownDocument(
+      ["---", "title: Draft", "# Body"].join("\n")
+    )
+    const empty = createPretextMarkdownDocument(
+      ["---", "---", "# Body"].join("\n")
+    )
+
+    expect(unterminated.frontmatter).toBeUndefined()
+    expect(unterminated.chunks).toHaveLength(1)
+    expect(unterminated.chunks[0]).toMatchObject({
+      kind: "markdown",
+      markdown: "---\ntitle: Draft\n# Body",
+      sourceEndLine: 3,
+      sourceStartLine: 1,
+    })
+    expect(unterminated.blocks.map((block) => block.kind)).toEqual([
+      "thematicBreak",
+      "paragraph",
+      "heading",
+    ])
+    expect(unterminated.headings[0]).toMatchObject({
+      id: "body",
+      sourceLine: 3,
+      text: "Body",
+    })
+
+    expect(empty.frontmatter).toBeUndefined()
+    expect(empty.blocks.map((block) => block.kind)).toEqual([
+      "thematicBreak",
+      "thematicBreak",
+      "heading",
+    ])
+    expect(empty.headings[0]).toMatchObject({
+      id: "body",
+      sourceLine: 3,
+      text: "Body",
     })
   })
 
@@ -456,6 +564,63 @@ describe("pretext markdown document model", () => {
       textWidth: 360,
     })
     expect(codeEstimate).toBeLessThan(paragraphEstimate)
+  })
+
+  it("reserves stable height for component fallback blocks", () => {
+    const document = createPretextMarkdownDocument(
+      [
+        '<Danger onClick="steal" value="x" />',
+        "",
+        "<div>Plain raw HTML</div>",
+      ].join("\n")
+    )
+    const componentBlock = document.blocks.find((block) =>
+      block.markdown.includes("<Danger")
+    )
+    const htmlBlock = document.blocks.find((block) =>
+      block.markdown.includes("<div>")
+    )
+
+    expect(componentBlock).toBeTruthy()
+    expect(htmlBlock).toBeTruthy()
+    expect(componentBlock?.kind).toBe("html")
+    expect(htmlBlock?.kind).toBe("html")
+
+    const componentEstimate = estimatePretextMarkdownBlockHeight({
+      block: componentBlock!,
+      fontScale: 1,
+      textWidth: 360,
+    })
+    const htmlEstimate = estimatePretextMarkdownBlockHeight({
+      block: htmlBlock!,
+      fontScale: 1,
+      textWidth: 360,
+    })
+
+    expect(componentEstimate).toBeGreaterThanOrEqual(112)
+    expect(componentEstimate).toBeGreaterThan(htmlEstimate)
+  })
+
+  it("reserves diagram-aware height for Mermaid code blocks", () => {
+    const document = createPretextMarkdownDocument(
+      ["```mermaid", "graph TD", "  A-->B", "  B-->C", "```"].join("\n")
+    )
+    const frame = layoutPretextMarkdownDocument({
+      contentWidth: 640,
+      document,
+      fontScale: 1,
+    })
+    const codeBlock = document.blocks.find((block) => block.kind === "code")
+
+    expect(codeBlock).toBeTruthy()
+    const estimate = estimatePretextMarkdownBlockHeight({
+      block: codeBlock!,
+      fontScale: 1,
+      textWidth: 360,
+    })
+
+    expect(estimate).toBeGreaterThan(340)
+    expect(frame.chunks[0]?.estimatedHeight).toBeGreaterThan(340)
   })
 
   it("uses hostile chunk metadata in stable layout frames", () => {

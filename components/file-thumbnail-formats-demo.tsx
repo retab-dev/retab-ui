@@ -121,7 +121,7 @@ export function FileThumbnailFormatsGrid({
               mimeType: sample.mimeType,
             }}
             as={sample.as}
-            previewAspectRatio={1}
+            thumbnailShape="square"
           />
         </div>
       ))}
@@ -147,7 +147,7 @@ import { FileThumbnail } from "@/components/ui/file-thumbnail"
 
 // FileThumbnail renders the first unit — page 1, first sheet, first slide,
 // first TIFF frame, or the head of a text/markdown/html/csv file. Pass
-// previewAspectRatio={1} for uniform square tiles.
+// thumbnailShape="square" keeps every preview tile uniform.
 //
 export function ImageThumbnail() {
   return (
@@ -158,7 +158,7 @@ export function ImageThumbnail() {
         fileName: "page.png",
         mimeType: "image/png",
       }}
-      previewAspectRatio={1}
+      thumbnailShape="square"
     />
   )
 }
@@ -172,7 +172,7 @@ export function PdfThumbnail() {
         fileName: "an-image-is-worth-16x16-words.pdf",
         mimeType: "application/pdf",
       }}
-      previewAspectRatio={1}
+      thumbnailShape="square"
     />
   )
 }
@@ -187,7 +187,7 @@ export function DocxThumbnail() {
         mimeType:
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       }}
-      previewAspectRatio={1}
+      thumbnailShape="square"
     />
   )
 }
@@ -202,7 +202,7 @@ export function XlsxThumbnail() {
         mimeType:
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       }}
-      previewAspectRatio={1}
+      thumbnailShape="square"
     />
   )
 }
@@ -213,7 +213,7 @@ export function ExternalThumbnail({ url }: { url: string }) {
   return (
     <FileThumbnail
       file={{ name: "contract.pdf", type: "application/pdf" }}
-      previewAspectRatio={1}
+      thumbnailShape="square"
       previewImageUrl={url}
     />
   )

@@ -12,7 +12,7 @@ flowchart TB
   %% External surfaces
   subgraph Surfaces["Consumer Surfaces"]
     Direct["Direct usage<br/>PptxViewer(source, props)"]
-    ResourceUsage["Resource usage<br/>PptxResourceViewer(resource, props)"]
+    ResourceUsage["Resource usage<br/>PptxResourceContent(resource, props)"]
     FileViewer["FileViewer<br/>category route"]
     Demo["components/pptx-viewer-demo.tsx<br/>sample deck + overlay example"]
     Docs["content/docs/viewers/pptx-viewer.mdx<br/>install, props, behavior"]
@@ -25,7 +25,7 @@ flowchart TB
   %% Registry/package surface
   subgraph Package["Published Component Boundary"]
     Wrapper["components/ui/pptx-viewer.tsx<br/>export * from registry implementation"]
-    Main["registry/new-york-v4/ui/pptx-viewer.tsx<br/>PptxViewer + PptxResourceViewer + content shell"]
+    Main["registry/new-york-v4/ui/pptx-viewer.tsx<br/>PptxViewer + PptxResourceContent + content shell"]
     RegistryDeps["Registry deps<br/>lucide-react, pptxviewjs@1.1.9, jszip, chart.js<br/>button, scroll-area, separator, skeleton, utils"]
   end
 

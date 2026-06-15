@@ -4,7 +4,7 @@ import * as React from "react"
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { AnchoredItemList } from "@/registry/new-york-v4/ui/anchored-item-list"
+import { InteractiveItemList } from "@/registry/new-york-v4/ui/interactive-item-list"
 
 afterEach(() => {
   cleanup()
@@ -41,7 +41,7 @@ function renderList({
 
   render(
     <div style={{ height: 320 }}>
-      <AnchoredItemList
+      <InteractiveItemList
         aria-label="Evidence"
         activeItemId={activeItemId}
         items={items}
@@ -76,11 +76,11 @@ function rowToken(name: string) {
   return Number(screen.getByTestId(`row-token-${name}`).textContent)
 }
 
-describe("AnchoredItemList", () => {
+describe("InteractiveItemList", () => {
   it("renders deterministic rows in zero-measure environments", () => {
     render(
       <div style={{ height: 0 }}>
-        <AnchoredItemList
+        <InteractiveItemList
           aria-label="Evidence"
           estimateSize={50}
           items={ITEMS}
@@ -129,7 +129,7 @@ describe("AnchoredItemList", () => {
     const onVisibleItemChange = vi.fn()
     render(
       <div style={{ height: 120 }}>
-        <AnchoredItemList
+        <InteractiveItemList
           aria-label="Evidence"
           estimateSize={50}
           items={[
@@ -222,7 +222,7 @@ describe("AnchoredItemList", () => {
 
   it("renders an empty state without options", () => {
     render(
-      <AnchoredItemList
+      <InteractiveItemList
         aria-label="Evidence"
         emptyLabel="No evidence."
         items={[]}
@@ -249,7 +249,7 @@ describe("AnchoredItemList", () => {
     }
 
     const { rerender } = render(
-      <AnchoredItemList
+      <InteractiveItemList
         aria-label="Evidence"
         items={ITEMS}
         renderItem={(item) => <StatefulRow item={item} />}
@@ -261,7 +261,7 @@ describe("AnchoredItemList", () => {
     const charlieToken = rowToken("charlie")
 
     rerender(
-      <AnchoredItemList
+      <InteractiveItemList
         aria-label="Evidence"
         items={[ITEMS[1]!, ITEMS[0]!, ITEMS[2]!]}
         renderItem={(item) => <StatefulRow item={item} />}
@@ -276,7 +276,7 @@ describe("AnchoredItemList", () => {
     expect(option(/alpha/i).getAttribute("aria-selected")).toBe("false")
 
     rerender(
-      <AnchoredItemList
+      <InteractiveItemList
         aria-label="Evidence"
         items={[ITEMS[0]!, ITEMS[2]!]}
         renderItem={(item) => <StatefulRow item={item} />}

@@ -1,3 +1,4 @@
+import type { DocumentAnchor } from "@/components/ui/document-anchor"
 import type { BBox } from "@/components/viewers/lib/edit-types"
 
 export type EditViewerMode = "source" | "preview" | "filled"
@@ -7,6 +8,11 @@ export type EditViewerStatus =
   | { state: "detecting"; message?: string }
   | { state: "filling"; message?: string }
   | { state: "error"; message: string }
+
+export type EditViewerFieldTargetStatus =
+  | { state: "resolved" }
+  | { state: "missing" }
+  | { state: "invalid"; reason: string }
 
 export interface EditViewerOptions {
   fieldPanel?: boolean
@@ -21,6 +27,8 @@ export interface EditViewerField {
   description?: string
   type: "text" | "checkbox"
   value?: string | boolean | null
+  target: DocumentAnchor | null
+  targetStatus: EditViewerFieldTargetStatus
   bbox?: BBox
   combing?: boolean
   maxLength?: number
@@ -36,6 +44,7 @@ export interface EditViewerInputField {
   description?: string
   type?: "text" | "checkbox"
   value?: string | boolean | null
+  target?: DocumentAnchor | null
   bbox?: BBox
   combing?: boolean
   maxLength?: number

@@ -19,12 +19,14 @@ export interface DocxViewerProps {
   defaultScale?: number
   onScaleChange?: (scale: number | null) => void
   toolbar?: boolean
+  /** Show download actions in this viewer's toolbar/error state. */
+  download?: boolean
   highlight?: DocxTarget | null
   onVisiblePageChange?: (page: number) => void
   onScrollProgressChange?: (progress: number) => void
   bare?: boolean
 }
 
-export type DocxResourceViewerProps = Omit<DocxViewerProps, "source"> & {
+export type DocxResourceContentProps = Omit<DocxViewerProps, "source"> & {
   resource: ViewerResource
 }

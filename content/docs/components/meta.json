@@ -2,22 +2,23 @@
   "title": "Components",
   "pages": [
     "index",
+    "---Components---",
     "data-cell",
     "json-form",
     "dropzone",
-    "file-uploader",
     "json-table",
     "schema-builder",
     "property-form",
-    "file-system",
-    "extract-viewer",
-    "layout-blocks",
-    "edit-viewer",
+    "file-thumbnail",
+    "---Viewer---",
+    "classification-viewer",
+    "partition-viewer",
+    "split-viewer",
+    "---Sidebar---",
     "sidebar",
     "sidebar-list",
     "segment-sidebar",
     "attachment-sidebar",
-    "legend",
-    "file-thumbnail"
+    "legend"
   ]
 }
