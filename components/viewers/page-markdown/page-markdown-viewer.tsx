@@ -29,24 +29,9 @@ import {
 } from "@/components/viewers/page-markdown/page-markdown-types"
 
 type PageMarkdownViewerContextValue = {
-  currentPage: number
+  content: PageMarkdownViewerContentState
   document: PageMarkdownDocumentState
-  fileName: string
-  hasPages: boolean
-  isMarkdownScaleReady: boolean
-  isProcessing: boolean
-  markdownPaneRef: React.RefObject<PageMarkdownPaneHandle | null>
-  mode: PageMarkdownViewMode
-  pages: string[]
-  processingLabel: string
-  resetKey?: string
-  scale: number
-  setMarkdownContainerWidth: (width: number | null) => void
-  setMode: (mode: PageMarkdownViewMode) => void
-  setViewerScale: (scale: number | null) => void
-  text: string
-  fitWidth: () => void
-  onMarkdownVisiblePageChange: (pageNumber: number) => void
+  header: PageMarkdownViewerHeaderState
 }
 
 type PageMarkdownViewerContentState = {
@@ -90,35 +75,7 @@ function usePageMarkdownViewerContext(): PageMarkdownViewerContextValue {
 }
 
 function usePageMarkdownViewerContent(): PageMarkdownViewerContentState {
-  const {
-    hasPages,
-    isMarkdownScaleReady,
-    isProcessing,
-    markdownPaneRef,
-    mode,
-    onMarkdownVisiblePageChange,
-    pages,
-    processingLabel,
-    resetKey,
-    scale,
-    setMarkdownContainerWidth,
-    text,
-  } = usePageMarkdownViewerContext()
-
-  return {
-    hasPages,
-    isMarkdownScaleReady,
-    isProcessing,
-    markdownPaneRef,
-    mode,
-    onMarkdownVisiblePageChange,
-    pages,
-    processingLabel,
-    resetKey,
-    scale,
-    setMarkdownContainerWidth,
-    text,
-  }
+  return usePageMarkdownViewerContext().content
 }
 
 export function usePageMarkdownViewerDocument(): PageMarkdownDocumentState {
@@ -126,29 +83,7 @@ export function usePageMarkdownViewerDocument(): PageMarkdownDocumentState {
 }
 
 function usePageMarkdownViewerHeader(): PageMarkdownViewerHeaderState {
-  const {
-    currentPage,
-    fileName,
-    fitWidth,
-    mode,
-    pages,
-    scale,
-    setMode,
-    setViewerScale,
-    text,
-  } = usePageMarkdownViewerContext()
-
-  return {
-    currentPage,
-    fileName,
-    fitWidth,
-    mode,
-    pageCount: pages.length,
-    scale,
-    setMode,
-    setViewerScale,
-    text,
-  }
+  return usePageMarkdownViewerContext().header
 }
 
 export function PageMarkdownViewerProvider({
@@ -242,12 +177,8 @@ export function PageMarkdownViewerProvider({
     ]
   )
 
-  const value = React.useMemo<PageMarkdownViewerContextValue>(
+  const content = React.useMemo<PageMarkdownViewerContentState>(
     () => ({
-      currentPage,
-      document,
-      fileName,
-      fitWidth,
       hasPages,
       isMarkdownScaleReady,
       isProcessing,
@@ -259,27 +190,56 @@ export function PageMarkdownViewerProvider({
       resetKey,
       scale,
       setMarkdownContainerWidth,
+      text,
+    }),
+    [
+      handleMarkdownPageChange,
+      hasPages,
+      isMarkdownScaleReady,
+      isProcessing,
+      markdownPaneRef,
+      mode,
+      pages,
+      processingLabel,
+      resetKey,
+      scale,
+      setMarkdownContainerWidth,
+      text,
+    ]
+  )
+
+  const header = React.useMemo<PageMarkdownViewerHeaderState>(
+    () => ({
+      currentPage,
+      fileName,
+      fitWidth,
+      mode,
+      pageCount: pages.length,
+      scale,
       setMode,
       setViewerScale,
       text,
     }),
     [
       currentPage,
-      document,
       fileName,
       fitWidth,
-      handleMarkdownPageChange,
-      hasPages,
-      isMarkdownScaleReady,
-      isProcessing,
       mode,
-      pages,
-      processingLabel,
-      resetKey,
+      pages.length,
       scale,
+      setMode,
       setViewerScale,
       text,
     ]
+  )
+
+  const value = React.useMemo<PageMarkdownViewerContextValue>(
+    () => ({
+      content,
+      document,
+      header,
+    }),
+    [content, document, header]
   )
 
   return (

@@ -15,15 +15,11 @@ export function EditViewerToolbar({
   modes,
   mode,
   onModeChange,
-  filledCount,
-  fieldCount,
   status,
 }: {
   modes: readonly EditViewerMode[]
   mode: EditViewerMode | null
   onModeChange: (mode: EditViewerMode) => void
-  filledCount: number
-  fieldCount: number
   status: Exclude<EditViewerStatus, { state: "idle" }> | null
 }) {
   if (modes.length === 0) return null
@@ -55,11 +51,6 @@ export function EditViewerToolbar({
         </div>
       )}
       {status ? <EditViewerStatusBadge status={status} /> : null}
-      <span className="ml-auto text-xs text-muted-foreground tabular-nums">
-        <span className="text-success-foreground">{filledCount}</span>
-        {" / "}
-        {fieldCount} filled
-      </span>
     </div>
   )
 }

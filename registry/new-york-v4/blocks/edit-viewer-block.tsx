@@ -13,7 +13,7 @@ const EDIT_FIELDS = editSample as FormField[]
 /**
  * Edit viewer block — detected fields beside the source document, linked by
  * their bbox. `EditViewer` owns edit-specific modes, field visuals, search,
- * filters, and page grouping while the anchored-document layer owns hover,
+ * filters, and page grouping while segmented-document owns hover,
  * selection, and scroll-to-field behavior.
  */
 export function EditViewerBlock() {

@@ -1086,11 +1086,6 @@
           "target": "@ui/pdf-viewer-context.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/pdf-viewer-internal-context.tsx",
-          "type": "registry:ui",
-          "target": "@ui/pdf-viewer-internal-context.tsx"
-        },
-        {
           "path": "registry/new-york-v4/ui/viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/viewer.tsx"
@@ -1400,7 +1395,7 @@
       "description": "A layout inspection component for OCR output: normalize Google Document AI blocks, lines, and tokens, then review them over the source image with virtualized rows, confidence filtering, and precise overlays.",
       "dependencies": ["@tanstack/react-virtual@^3.13.12"],
       "registryDependencies": [
-        "anchored-evidence",
+        "document-evidence",
         "interactive-item-list",
         "pdf-viewer",
         "scroll-area",
@@ -1883,6 +1878,7 @@
       "dependencies": ["lucide-react", "@tanstack/react-virtual"],
       "registryDependencies": [
         "utils",
+        "breadcrumb",
         "button",
         "dialog",
         "file-size-format",
@@ -2047,7 +2043,7 @@
       "title": "File System Light",
       "description": "A minimal file tree in a ViewerSidebar with FileViewer in the ViewerSurface.",
       "dependencies": ["@pierre/trees"],
-      "registryDependencies": ["utils", "file-viewer"],
+      "registryDependencies": ["utils", "breadcrumb", "file-viewer"],
       "files": [
         {
           "path": "registry/new-york-v4/ui/file-system-light.tsx",
@@ -2843,11 +2839,6 @@
           "target": "@components/viewers/edit/edit-viewer-provider.tsx"
         },
         {
-          "path": "components/viewers/edit/edit-viewer-internal-context.tsx",
-          "type": "registry:component",
-          "target": "@components/viewers/edit/edit-viewer-internal-context.tsx"
-        },
-        {
           "path": "components/viewers/edit/edit-viewer-document.tsx",
           "type": "registry:component",
           "target": "@components/viewers/edit/edit-viewer-document.tsx"
@@ -3394,7 +3385,7 @@
       "name": "document-anchor",
       "type": "registry:ui",
       "title": "Document anchor",
-      "description": "Pure document location types used by anchored document interaction, evidence projection, and viewer target adapters.",
+      "description": "Pure document location types used by evidence projection and viewer target adapters.",
       "files": [
         {
           "path": "registry/new-york-v4/ui/document-anchor.ts",
@@ -3404,16 +3395,16 @@
       ]
     },
     {
-      "name": "anchored-evidence",
+      "name": "document-evidence",
       "type": "registry:ui",
-      "title": "Anchored evidence",
-      "description": "Projection types for semantic evidence rows that can resolve to anchored document items.",
-      "registryDependencies": ["anchored-document-viewer", "document-anchor"],
+      "title": "Document evidence",
+      "description": "Pure projection types for semantic evidence rows that can resolve to document anchors.",
+      "registryDependencies": ["document-anchor"],
       "files": [
         {
-          "path": "registry/new-york-v4/ui/anchored-evidence.ts",
+          "path": "registry/new-york-v4/ui/document-evidence.ts",
           "type": "registry:ui",
-          "target": "@ui/anchored-evidence.ts"
+          "target": "@ui/document-evidence.ts"
         }
       ]
     },
@@ -3436,9 +3427,9 @@
       "name": "source-evidence",
       "type": "registry:ui",
       "title": "Source evidence",
-      "description": "Projection helpers that convert document sources, source maps, and source fields into anchored evidence items.",
+      "description": "Projection helpers that convert document sources, source maps, and source fields into evidence rows with resolved document anchors.",
       "registryDependencies": [
-        "anchored-evidence",
+        "document-evidence",
         "document-source",
         "source-anchor"
       ],
@@ -3494,7 +3485,7 @@
       "name": "source-anchor",
       "type": "registry:ui",
       "title": "Source anchor",
-      "description": "Pure conversion from document-source anchors to anchored-document viewer anchors.",
+      "description": "Pure conversion from document-source anchors to document viewer anchors.",
       "registryDependencies": ["document-anchor", "document-source"],
       "files": [
         {
@@ -4193,39 +4184,6 @@
           "path": "registry/new-york-v4/ui/source-indicator.tsx",
           "type": "registry:ui",
           "target": "@ui/source-indicator.tsx"
-        }
-      ]
-    },
-    {
-      "name": "anchored-document-viewer",
-      "type": "registry:ui",
-      "title": "Anchored Document Viewer",
-      "description": "Shared hover, selection, active-anchor, and target navigation state for document experiences where semantic items point into a rendered document.",
-      "registryDependencies": ["document-anchor"],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/anchored-document-viewer.tsx",
-          "type": "registry:ui",
-          "target": "@ui/anchored-document-viewer.tsx"
-        }
-      ]
-    },
-    {
-      "name": "pdf-anchor-target",
-      "type": "registry:ui",
-      "title": "PDF anchor target",
-      "description": "Bridges anchored-document pdf-area anchors to PdfViewer scrolling and page overlays without making PdfViewer own anchored item state.",
-      "registryDependencies": [
-        "anchored-document-viewer",
-        "document-anchor",
-        "pdf-viewer",
-        "pdf-source"
-      ],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/pdf-anchor-target.tsx",
-          "type": "registry:ui",
-          "target": "@ui/pdf-anchor-target.tsx"
         }
       ]
     },

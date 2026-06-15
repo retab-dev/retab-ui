@@ -5,7 +5,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { ViewerHeader, ViewerSidebarTrigger } from "@/components/ui/viewer"
 
-import { useInternalEditViewerHeader } from "./edit-viewer-internal-context"
+import { useEditViewerChromeState } from "./edit-viewer-provider"
 import { EditViewerToolbar } from "./edit-viewer-toolbar"
 
 export type EditViewerHeaderProps = React.ComponentProps<
@@ -19,23 +19,21 @@ export function EditViewerHeader({
   className,
   ...props
 }: EditViewerHeaderProps) {
-  const header = useInternalEditViewerHeader()
+  const edit = useEditViewerChromeState()
 
-  if (header.modes.length === 0) return null
+  if (edit.modes.length === 0) return null
 
   return (
     <ViewerHeader className={cn("bg-background", className)} {...props}>
       <div className="flex min-w-0 items-center gap-2 px-2">
-        {showSidebarTrigger && header.hasFieldPanel ? (
+        {showSidebarTrigger && edit.hasFieldPanel ? (
           <ViewerSidebarTrigger />
         ) : null}
         <EditViewerToolbar
-          modes={header.modes}
-          mode={header.mode}
-          onModeChange={header.setMode}
-          filledCount={header.filledCount}
-          fieldCount={header.fieldCount}
-          status={header.status}
+          modes={edit.modes}
+          mode={edit.mode}
+          onModeChange={edit.setMode}
+          status={edit.status}
         />
       </div>
     </ViewerHeader>

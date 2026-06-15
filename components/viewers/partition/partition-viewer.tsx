@@ -38,7 +38,6 @@ type PartitionViewerHeaderState = {
   interaction: SegmentViewportController["interaction"]
   legendSegments: PartitionViewerModel["legendSegments"]
   navigation: SegmentViewportController["navigation"]
-  pageCount: number
 }
 
 type PartitionViewerRibbonState = {
@@ -91,7 +90,6 @@ function usePartitionViewerHeader(): PartitionViewerHeaderState {
     interaction: viewport.interaction,
     legendSegments: model.legendSegments,
     navigation: viewport.navigation,
-    pageCount: model.pageCount,
   }
 }
 
@@ -181,28 +179,13 @@ export function PartitionViewerHeader({
   className?: string
   trailing?: React.ReactNode
 }) {
-  const { currentPage, interaction, legendSegments, navigation, pageCount } =
+  const { currentPage, interaction, legendSegments, navigation } =
     usePartitionViewerHeader()
 
   if (legendSegments.length === 0) return null
 
   return (
     <ViewerHeader className={className ?? "space-y-2 bg-background px-3 py-2"}>
-      <div className="flex min-h-8 items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <Key className="size-4 text-muted-foreground" />
-          <span>
-            {legendSegments.length} partition
-            {legendSegments.length === 1 ? "" : "s"}
-          </span>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <span className="text-xs text-muted-foreground">
-            {pageCount} page{pageCount === 1 ? "" : "s"}
-          </span>
-          {trailing}
-        </div>
-      </div>
       <SegmentLegend
         variant="plain"
         segments={legendSegments}
@@ -211,6 +194,7 @@ export function PartitionViewerHeader({
         onSelect={navigation.scrollToSegmentStart}
         columns={4}
       />
+      {trailing}
     </ViewerHeader>
   )
 }

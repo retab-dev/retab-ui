@@ -191,6 +191,19 @@ describe("EditViewer", () => {
     expect(screen.getByRole("tab", { name: "Source view" })).toBeTruthy()
   })
 
+  it("omits the filled summary from the header toolbar", () => {
+    render(
+      <EditViewer
+        result={{ fields }}
+        sourceDocument={sourceDocument}
+        mode="preview"
+        options={{ fieldPanel: false }}
+      />
+    )
+
+    expect(screen.queryByText(/2\s*\/\s*3 filled/)).toBeNull()
+  })
+
   it("treats null controlled mode as best available display mode", () => {
     const onModeChange = vi.fn()
 

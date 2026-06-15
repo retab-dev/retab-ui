@@ -140,6 +140,23 @@ describe("Pretext Markdown policy", () => {
       '<svg role="img"><text>Safe</text></svg>'
     )
     expect(calls).toEqual([PRETEXT_MARKDOWN_SVG_SANITIZE_OPTIONS])
+    expect(PRETEXT_MARKDOWN_SVG_SANITIZE_OPTIONS.FORBID_TAGS).toEqual(
+      expect.arrayContaining([
+        "a",
+        "animate",
+        "foreignObject",
+        "image",
+        "script",
+        "style",
+        "use",
+      ])
+    )
+    expect(PRETEXT_MARKDOWN_SVG_SANITIZE_OPTIONS.FORBID_ATTR).toEqual(
+      expect.arrayContaining(["href", "style", "xlink:href"])
+    )
+    expect(PRETEXT_MARKDOWN_SVG_SANITIZE_OPTIONS.SANITIZE_NAMED_PROPS).toBe(
+      true
+    )
   })
 
   it("rejects sanitized Mermaid output that is no longer an SVG", () => {

@@ -4,13 +4,12 @@ import type { JSONSchema7 } from "json-schema"
 import type { Source, SourceMap } from "@/lib/document-source"
 
 import {
-  evidenceItemsToAnchoredItems,
   invalidEvidenceAnchor,
   missingEvidenceAnchor,
   resolvedEvidenceAnchor,
   type AnchorResolution,
   type EvidenceItem,
-} from "./anchored-evidence"
+} from "./document-evidence"
 import { sourceToDocumentAnchor as sourceToResolvedDocumentAnchor } from "./source-anchor"
 
 export type SourceEvidencePayload = {
@@ -31,7 +30,6 @@ export type SourceEvidenceField = {
 }
 
 export type SourceEvidenceModel = {
-  anchoredItems: ReturnType<typeof evidenceItemsToAnchoredItems>
   evidenceItems: SourceEvidenceItem[]
 }
 
@@ -66,7 +64,6 @@ export function sourceFieldsToEvidenceModel(
 ): SourceEvidenceModel {
   const evidenceItems = fields.map(sourceFieldToEvidenceItem)
   return {
-    anchoredItems: evidenceItemsToAnchoredItems(evidenceItems),
     evidenceItems,
   }
 }
@@ -78,7 +75,6 @@ export function sourceMapToEvidenceModel(input: {
 }): SourceEvidenceModel {
   const evidenceItems = sourceMapToEvidenceItems(input)
   return {
-    anchoredItems: evidenceItemsToAnchoredItems(evidenceItems),
     evidenceItems,
   }
 }

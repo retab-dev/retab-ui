@@ -1,4 +1,3 @@
-import type { AnchoredItem } from "./anchored-document-viewer"
 import type { DocumentAnchor } from "./document-anchor"
 
 export type AnchorResolution =
@@ -27,18 +26,4 @@ export function missingEvidenceAnchor(): AnchorResolution {
 
 export function invalidEvidenceAnchor(reason: string): AnchorResolution {
   return { status: "invalid", reason }
-}
-
-export function evidenceToAnchoredItem(item: EvidenceAnchor): AnchoredItem {
-  return {
-    id: item.id,
-    anchor: item.anchor.status === "resolved" ? item.anchor.anchor : null,
-    disabled: item.anchor.status === "invalid",
-  }
-}
-
-export function evidenceItemsToAnchoredItems(
-  items: readonly EvidenceAnchor[]
-): AnchoredItem[] {
-  return items.map(evidenceToAnchoredItem)
 }

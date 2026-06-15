@@ -4,13 +4,20 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import type { ViewerSource } from "@/lib/viewer-source"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import { FileViewer } from "@/components/ui/file-viewer"
 import {
   ViewerBody,
-  ViewerSurface,
   ViewerHeader,
-  ViewerSidebar,
   ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
 } from "@/components/ui/viewer"
 
 import { FileSystemLightTree } from "./file-system-light-tree"
@@ -73,6 +80,10 @@ export function FileSystemLight({
     () => (selectedPath && filesByPath.has(selectedPath) ? [selectedPath] : []),
     [filesByPath, selectedPath]
   )
+  const selectedPathSegments = React.useMemo(
+    () => getFileSystemLightPathSegments(selectedPath),
+    [selectedPath]
+  )
 
   React.useEffect(() => {
     onSelectedPathChangeRef.current = onSelectedPathChange
@@ -93,12 +104,30 @@ export function FileSystemLight({
     >
       <ViewerHeader>
         <div className="flex h-12 min-w-0 items-center justify-between gap-3 px-3">
-          <div className="min-w-0">
-            <div className="truncate text-sm font-semibold">{title}</div>
-            <div className="truncate text-xs text-muted-foreground">
-              {selectedPath ?? "/"}
-            </div>
-          </div>
+          <Breadcrumb className="min-w-0">
+            <BreadcrumbList className="min-w-0 flex-nowrap gap-1 overflow-hidden text-sm sm:gap-1.5">
+              {selectedPathSegments.map((segment, index) => {
+                const isLast = index === selectedPathSegments.length - 1
+
+                return (
+                  <React.Fragment key={`${segment}-${index}`}>
+                    <BreadcrumbItem
+                      className={cn("min-w-0", !isLast && "shrink-0")}
+                    >
+                      {isLast ? (
+                        <BreadcrumbPage className="truncate">
+                          {segment}
+                        </BreadcrumbPage>
+                      ) : (
+                        <span className="text-muted-foreground">{segment}</span>
+                      )}
+                    </BreadcrumbItem>
+                    {!isLast ? <BreadcrumbSeparator /> : null}
+                  </React.Fragment>
+                )
+              })}
+            </BreadcrumbList>
+          </Breadcrumb>
           <div className="shrink-0 text-xs text-muted-foreground">
             {paths.length} files
           </div>
@@ -165,4 +194,8 @@ function normalizeFileSystemLightPath(path: string) {
 
 function normalizeOptionalFileSystemLightPath(path: string | null | undefined) {
   return path ? normalizeFileSystemLightPath(path) : null
+}
+
+function getFileSystemLightPathSegments(path: string | null) {
+  return path ? path.split("/").filter(Boolean) : ["/"]
 }

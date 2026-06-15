@@ -71,13 +71,6 @@ const compoundViewerDocContracts = [
   },
 ]
 
-const anchoredDocumentDocContracts = [
-  {
-    file: "content/docs/components/json-form.mdx",
-    required: ["SourceFieldLink"],
-  },
-]
-
 const sourceAdapterFiles = [
   "registry/new-york-v4/ui/pdf-source.tsx",
   "registry/new-york-v4/ui/docx-source.tsx",
@@ -104,18 +97,6 @@ const staleSourceAdapterNames = [
   ["docxSource", "ToTarget"],
 ].map((parts) => parts.join(""))
 
-const removedSourceLinkDocNames = [
-  ["use", "Source", "Link"],
-  ["Use", "Source", "Link", "Result"],
-  ["Field", "Source", "Link"],
-  ["source", "Link"],
-  ["render", "Pdf", "Source", "Overlay"],
-  ["use", "Pdf", "Source", "Target"],
-  ["hover", "Path"],
-  ["pinned", "Path"],
-  ["set", "Sources", "Field", "Path"],
-].map((parts) => parts.join(""))
-
 const canonicalViewerNames = new Set([
   "code-viewer",
   "csv-viewer",
@@ -128,8 +109,6 @@ const canonicalViewerNames = new Set([
   "pptx-viewer",
   "xlsx-viewer",
   "file-viewer",
-  "file-system",
-  "file-system-block",
   "split-viewer-block",
   "dropzone-block",
   "text-viewer",
@@ -350,7 +329,7 @@ describe("viewer architecture", () => {
         contextType: "PageMarkdownViewerContextValue",
       },
       {
-        file: "components/viewers/edit/edit-viewer-internal-context.tsx",
+        file: "components/viewers/edit/edit-viewer-provider.tsx",
         contextHook: "useEditViewerContext",
         contextType: "EditViewerContextValue",
       },
@@ -375,7 +354,7 @@ describe("viewer architecture", () => {
         contextType: "FileIntakeViewerContextValue",
       },
       {
-        file: "registry/new-york-v4/ui/pdf-viewer-internal-context.tsx",
+        file: "registry/new-york-v4/ui/pdf-viewer-context.tsx",
         contextHook: "usePdfViewerContext",
         contextType: "PdfViewerContextValue",
       },
@@ -424,14 +403,12 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/ui/email-viewer.tsx",
       "components/viewers/page-markdown/page-markdown-viewer.tsx",
       "components/viewers/edit/edit-viewer-provider.tsx",
-      "components/viewers/edit/edit-viewer-internal-context.tsx",
       "components/viewers/parse/parse-viewer.tsx",
       "components/viewers/split/split-viewer.tsx",
       "components/viewers/partition/partition-viewer.tsx",
       "components/viewers/classify/classifier-viewer.tsx",
       "registry/new-york-v4/blocks/dropzone-uploader-viewer-parts.tsx",
       "registry/new-york-v4/ui/pdf-viewer-context.tsx",
-      "registry/new-york-v4/ui/pdf-viewer-internal-context.tsx",
     ]) {
       const content = fileContent(file)
 
@@ -443,6 +420,34 @@ describe("viewer architecture", () => {
       for (const stateType of broadStateTypes) {
         expect(content, `${file} does not export ${stateType}`).not.toContain(
           `export type ${stateType}`
+        )
+      }
+    }
+  })
+
+  it("keeps raw React context objects private outside shadcn primitives", () => {
+    const allowedContextTypeExports = new Set([
+      "registry/new-york-v4/ui/viewer.tsx",
+    ])
+    const allowedContextConstExports = new Set([
+      "registry/new-york-v4/ui/sidebar.tsx",
+    ])
+
+    for (const file of architectureSourceFiles()) {
+      if (file.includes("/file-system")) continue
+
+      const content = fileContent(file)
+
+      if (!allowedContextConstExports.has(file)) {
+        expect(
+          content,
+          `${file} exports a raw React context object`
+        ).not.toMatch(/\bexport const [A-Za-z0-9_]*Context\b/)
+      }
+
+      if (!allowedContextTypeExports.has(file)) {
+        expect(content, `${file} exports a full context type`).not.toMatch(
+          /\bexport (?:type|interface) [A-Za-z0-9_]*ContextValue\b/
         )
       }
     }
@@ -1026,27 +1031,22 @@ describe("viewer architecture", () => {
     }
   })
 
-  it("keeps anchored document core free of source-map and leaf viewer imports", () => {
-    const content = fileContent(
-      "registry/new-york-v4/ui/anchored-document-viewer.tsx"
-    )
-    const forbiddenPatterns = [
-      /SourceMap/,
-      /document-source/,
-      /pdf-viewer/,
-      /image-viewer/,
-      /text-viewer/,
-      /csv-viewer/,
-      /xlsx-viewer/,
-      /docx-viewer/,
-      /JsonForm/,
-    ]
+  it("keeps the removed anchored provider out of the registry", () => {
+    const registry = readJson<Registry>("registry.json")
+    const itemNames = registry.items.map((item) => item.name)
 
-    for (const pattern of forbiddenPatterns) {
-      expect(pattern.test(content), `${pattern} leaks into anchored core`).toBe(
-        false
+    expect(itemNames).not.toContain("anchored-document-viewer")
+    expect(itemNames).not.toContain("pdf-anchor-target")
+    expect(
+      existsSync(
+        join(repoRoot, "registry/new-york-v4/ui/anchored-document-viewer.tsx")
       )
-    }
+    ).toBe(false)
+    expect(
+      existsSync(
+        join(repoRoot, "registry/new-york-v4/ui/pdf-anchor-target.tsx")
+      )
+    ).toBe(false)
   })
 
   it("keeps split viewer document composition explicit", () => {
@@ -1439,55 +1439,39 @@ describe("viewer architecture", () => {
     const context = fileContent(
       "registry/new-york-v4/ui/pdf-viewer-context.tsx"
     )
-    const internalContext = fileContent(
-      "registry/new-york-v4/ui/pdf-viewer-internal-context.tsx"
-    )
     const thumbnails = fileContent(
       "registry/new-york-v4/ui/pdf-viewer-thumbnails.tsx"
     )
+    const registry = readJson<Registry>("registry.json")
 
     expect(thumbnails).not.toContain("PdfThumbnailSidebar")
-    expect(readJson<Registry>("registry.json").items).not.toContainEqual(
+    expect(registry.items).not.toContainEqual(
       expect.objectContaining({ name: "pdf-thumbnail-sidebar" })
+    )
+    expect(registry.items).not.toContainEqual(
+      expect.objectContaining({
+        files: expect.arrayContaining([
+          expect.objectContaining({
+            path: "registry/new-york-v4/ui/pdf-viewer-internal-context.tsx",
+          }),
+        ]),
+      })
     )
     expect(context).toContain("usePdfViewerThumbnails")
     expect(context).toContain("PdfViewerProvider")
-    expect(context).not.toContain("export function usePdfViewerHeader")
-    expect(context).not.toContain("export function usePdfViewerPages")
+    expect(context).not.toMatch(/\bexport function usePdfViewerHeader\(/)
+    expect(context).not.toMatch(/\bexport function usePdfViewerPages\(/)
     expect(context).not.toContain(
       "export function useOptionalPdfViewerHeaderControls"
     )
-    expect(context).not.toContain("function usePdfViewerContext")
-    expect(context).not.toContain("PdfViewerHeaderState")
-    expect(context).not.toContain("PdfViewerPagesState")
-    expect(internalContext).toContain(
-      "function usePdfViewerContext(): PdfViewerContextValue"
-    )
-    expect(internalContext).toContain("@internal")
-    expect(internalContext).not.toContain("export function usePdfViewerHeader")
-    expect(internalContext).not.toContain("export function usePdfViewerPages")
-    expect(internalContext).toContain(
-      "export function useInternalPdfViewerHeader"
-    )
-    expect(internalContext).toContain(
-      "export function useInternalPdfViewerPages"
-    )
-    expect(internalContext).toContain(
-      "export function useInternalPdfViewerHeaderControls"
-    )
-    expect(internalContext).not.toContain("export type PdfViewerState")
-    expect(internalContext).not.toContain("export type PdfViewerHeaderState")
-    expect(internalContext).not.toContain("export type PdfViewerPagesState")
-    expect(internalContext).not.toMatch(
-      /\bexport function useOptionalPdfViewer\(/
-    )
-    expect(internalContext).not.toContain("export type PdfViewerContextValue")
-    expect(internalContext).not.toContain(
-      "export function usePdfViewer(): PdfViewerContextValue"
-    )
-    expect(internalContext).not.toContain(
-      "export function useOptionalPdfViewerThumbnails"
-    )
+    expect(context).toContain("export function usePdfViewerHeaderState")
+    expect(context).toContain("export function usePdfViewerPagesState")
+    expect(context).toContain("export function usePdfViewerHeaderControlSetter")
+    expect(context).toContain("function usePdfViewerContext")
+    expect(context).toContain("const PdfViewerContext")
+    expect(context).not.toContain("export const PdfViewerContext")
+    expect(context).not.toContain("export type PdfViewerContextValue")
+    expect(context).not.toContain("useInternalPdfViewer")
     const viewerContextExports =
       viewer.match(/export \{[\s\S]*?\} from "\.\/pdf-viewer-context"/)?.[0] ??
       ""
@@ -1497,13 +1481,12 @@ describe("viewer architecture", () => {
     expect(viewerContextExports).not.toContain("usePdfViewerPages")
     expect(viewerContextExports).not.toContain("useInternal")
     expect(context).not.toContain("export * from")
-    expect(viewer).toContain(
-      "const { currentPage, headerControls, resource } = useInternalPdfViewerHeader()"
-    )
-    expect(viewer).toContain("useInternalPdfViewerPages()")
-    expect(viewer).toContain(
-      "const setHeaderControls = useInternalPdfViewerHeaderControls()"
-    )
+    expect(viewer).toContain("usePdfViewerHeaderState")
+    expect(viewer).toContain("usePdfViewerPagesState")
+    expect(viewer).toContain("usePdfViewerHeaderControlSetter")
+    expect(viewer).not.toContain("PdfViewerContext")
+    expect(viewer).not.toContain("useInternalPdfViewer")
+    expect(viewer).not.toContain("pdf-viewer-internal-context")
     expect(thumbnails).toContain("const thumbnails = usePdfViewerThumbnails()")
     expect(thumbnails).toContain("export interface PdfThumbnailRailProps")
     expect(thumbnails).toContain("export function PdfThumbnailRail")
@@ -1961,6 +1944,9 @@ describe("viewer architecture", () => {
     expect(pageMarkdown).not.toContain(
       "export type PageMarkdownViewerHeaderState"
     )
+    expect(pageMarkdown).toContain("content: PageMarkdownViewerContentState")
+    expect(pageMarkdown).toContain("document: PageMarkdownDocumentState")
+    expect(pageMarkdown).toContain("header: PageMarkdownViewerHeaderState")
     expect(pageMarkdown).toContain("export function PageMarkdownViewerHeader")
     expect(pageMarkdown).toContain("} = usePageMarkdownViewerHeader()")
     expect(compactWhitespace(pageMarkdown)).toContain(
@@ -2216,11 +2202,7 @@ describe("viewer architecture", () => {
     }
   })
 
-  it("keeps internal selector modules out of examples and docs", () => {
-    const internalModules = [
-      "components/viewers/edit/edit-viewer-internal-context.tsx",
-      "registry/new-york-v4/ui/pdf-viewer-internal-context.tsx",
-    ]
+  it("keeps internal selector modules out of shipped viewer APIs", () => {
     const publicEntryFiles = [
       "registry/new-york-v4/ui/pdf-viewer.tsx",
       "registry/new-york-v4/ui/pdf-viewer-context.tsx",
@@ -2230,18 +2212,31 @@ describe("viewer architecture", () => {
       ...publicDocFiles(),
       ...sourceFilesUnder(join(repoRoot, "registry/new-york-v4/blocks")),
     ]
+    const registryText = fileContent("registry.json")
 
-    for (const file of internalModules) {
-      expect(fileContent(file), `${file} is marked internal`).toContain(
-        "@internal"
+    expect(registryText).not.toContain("internal-context")
+    expect(
+      existsSync(
+        join(
+          repoRoot,
+          "components/viewers/edit/edit-viewer-internal-context.tsx"
+        )
       )
-    }
+    ).toBe(false)
+    expect(
+      existsSync(
+        join(
+          repoRoot,
+          "registry/new-york-v4/ui/pdf-viewer-internal-context.tsx"
+        )
+      )
+    ).toBe(false)
 
     for (const file of publicEntryFiles) {
       expect(
         fileContent(file),
-        `${file} does not re-export internal selectors`
-      ).not.toMatch(/export\s+\{[^}]*useInternal/)
+        `${file} does not export internal selectors`
+      ).not.toContain("useInternal")
       expect(
         fileContent(file),
         `${file} does not wildcard-export internal modules`
@@ -2460,44 +2455,29 @@ describe("viewer architecture", () => {
     )
   })
 
-  it("keeps public anchored docs free of removed source-link vocabulary", () => {
-    for (const { file, required } of anchoredDocumentDocContracts) {
-      const content = fileContent(file)
-      for (const symbol of removedSourceLinkDocNames) {
-        expect(content.includes(symbol), `${file} contains ${symbol}`).toBe(
-          false
-        )
-      }
-      for (const symbol of required) {
-        expect(content, `${file} contains ${symbol}`).toContain(symbol)
-      }
-    }
-  })
-
-  it("keeps anchored evidence out of the provider primitive", () => {
-    const provider = fileContent(
-      "registry/new-york-v4/ui/anchored-document-viewer.tsx"
-    )
+  it("keeps evidence and document-anchor pure after removing anchored provider", () => {
     const documentAnchor = fileContent(
       "registry/new-york-v4/ui/document-anchor.ts"
     )
+    const documentEvidence = fileContent(
+      "registry/new-york-v4/ui/document-evidence.ts"
+    )
+    const registry = readJson<Registry>("registry.json")
+    const itemNames = registry.items.map((item) => item.name)
 
-    expect(provider).toContain("export type AnchoredItemLink")
-    expect(provider).toContain("export function useAnchoredItemLink")
-    expect(provider).toContain("./document-anchor")
-    expect(provider).not.toContain("export type DocumentAnchor")
+    expect(itemNames).toContain("document-evidence")
+    expect(itemNames).not.toContain("anchored-evidence")
+    expect(itemNames).not.toContain("anchored-document-viewer")
+    expect(itemNames).not.toContain("pdf-anchor-target")
     expect(documentAnchor).toContain("export type DocumentAnchor")
     expect(documentAnchor).not.toContain('"use client"')
     expect(documentAnchor).not.toContain('from "react"')
-    expect(provider).not.toContain("anchored-evidence")
-    expect(provider).not.toContain("source-evidence")
-    expect(provider).not.toContain("layout-blocks-model")
-    expect(provider).not.toContain("EvidenceItem")
-    expect(provider).not.toContain("AnchorResolution")
-    expect(provider).not.toContain("SourceFieldLink")
-    expect(provider).not.toContain("useAnchoredSourceFieldLink")
-    expect(provider).not.toContain("activePath")
-    expect(provider).not.toContain("onFieldHover")
+    expect(documentEvidence).toContain("./document-anchor")
+    expect(documentEvidence).toContain("EvidenceItem<Payload>")
+    expect(documentEvidence).not.toContain("anchored-document-viewer")
+    expect(documentEvidence).not.toContain("AnchoredItem")
+    expect(documentEvidence).not.toContain("evidenceToAnchoredItem")
+    expect(documentEvidence).not.toContain("evidenceItemsToAnchoredItems")
   })
 
   it("keeps source field link vocabulary in its adapter module", () => {
@@ -2520,8 +2500,8 @@ describe("viewer architecture", () => {
     const sourceEvidence = fileContent(
       "registry/new-york-v4/ui/source-evidence.ts"
     )
-    const anchoredEvidence = fileContent(
-      "registry/new-york-v4/ui/anchored-evidence.ts"
+    const documentEvidence = fileContent(
+      "registry/new-york-v4/ui/document-evidence.ts"
     )
 
     expect(sourceAnchor).not.toContain('"use client"')
@@ -2537,12 +2517,13 @@ describe("viewer architecture", () => {
     expect(sourceAnchor).not.toContain("xlsx-source")
     expect(sourceAnchor).not.toContain("docx-source")
     expect(sourceEvidence).toContain("./source-anchor")
+    expect(sourceEvidence).toContain("./document-evidence")
     expect(sourceEvidence).toContain("SourceEvidencePayload")
     expect(sourceEvidence).toContain("payload:")
-    expect(anchoredEvidence).toContain("EvidenceItem<Payload>")
-    expect(anchoredEvidence).not.toContain("metadata?:")
-    expect(anchoredEvidence).not.toContain("label:")
-    expect(anchoredEvidence).not.toContain("confidence")
+    expect(documentEvidence).toContain("EvidenceItem<Payload>")
+    expect(documentEvidence).not.toContain("metadata?:")
+    expect(documentEvidence).not.toContain("label:")
+    expect(documentEvidence).not.toContain("confidence")
     for (const forbidden of [
       "pdf-anchor-target",
       "pdf-source",
@@ -2769,8 +2750,14 @@ describe("viewer architecture", () => {
 
     for (const file of evidenceSourceBlocks) {
       const content = fileContent(file)
-      expect(content, `${file} uses source evidence projection`).toContain(
-        "source-evidence"
+      expect(content, `${file} uses segmented source projection`).toContain(
+        "source-segmented-document-model"
+      )
+      expect(content, `${file} uses segmented field link`).toContain(
+        "useSegmentedSourceFieldLink"
+      )
+      expect(content, `${file} uses segmented provider`).toContain(
+        "SegmentedDocumentProvider"
       )
     }
 
@@ -2788,13 +2775,13 @@ describe("viewer architecture", () => {
     }
   })
 
-  it("registers anchored evidence files as installable registry artifacts", () => {
+  it("registers document evidence files as installable registry artifacts", () => {
     const registry = readJson<Registry>("registry.json")
     const itemsByName = new Map(registry.items.map((item) => [item.name, item]))
 
-    expect(itemsByName.get("anchored-evidence")?.files).toEqual([
+    expect(itemsByName.get("document-evidence")?.files).toEqual([
       expect.objectContaining({
-        path: "registry/new-york-v4/ui/anchored-evidence.ts",
+        path: "registry/new-york-v4/ui/document-evidence.ts",
       }),
     ])
     expect(itemsByName.get("interactive-item-list")?.files).toEqual([
@@ -2872,7 +2859,7 @@ describe("viewer architecture", () => {
       ])
     )
     expect(itemsByName.get("source-evidence")?.registryDependencies).toEqual(
-      expect.arrayContaining(["anchored-evidence", "source-anchor"])
+      expect.arrayContaining(["document-evidence", "source-anchor"])
     )
     expect(
       itemsByName.get("source-segmented-document")?.registryDependencies
@@ -2882,7 +2869,7 @@ describe("viewer architecture", () => {
     ).toEqual(expect.arrayContaining(["layout-blocks", "segmented-document"]))
     expect(itemsByName.get("layout-blocks")?.registryDependencies).toEqual(
       expect.arrayContaining([
-        "anchored-evidence",
+        "document-evidence",
         "interactive-item-list",
         "segmented-document",
       ])
@@ -2942,7 +2929,7 @@ describe("viewer architecture", () => {
     )
   })
 
-  it("keeps anchored examples on provider, body, sidebar, surface grammar", () => {
+  it("keeps source examples on provider, body, sidebar, surface grammar", () => {
     const examples = [
       {
         file: "registry/new-york-v4/blocks/extract-viewer-block.tsx",
@@ -2997,9 +2984,6 @@ describe("viewer architecture", () => {
     const provider = fileContent(
       "components/viewers/edit/edit-viewer-provider.tsx"
     )
-    const internalContext = fileContent(
-      "components/viewers/edit/edit-viewer-internal-context.tsx"
-    )
     const editRegistry = fileContent("public/r/edit-viewer-block.json")
     const editRegistryEasyApi = publicRegistryFileContent(
       "edit-viewer-block",
@@ -3041,17 +3025,12 @@ describe("viewer architecture", () => {
     expect(easyApi).not.toContain("EditViewerContent")
     expect(easyApi).not.toContain("export function EditViewerRoot")
     expect(easyApi).not.toContain("const edit = useEditViewer()")
-    expect(easyApi).not.toContain("edit.state.hasOutput")
-    expect(easyApi).not.toContain("edit.options.fieldPanel")
     expect(easyApi).not.toContain("useEditViewerLayout")
-    expect(easyApi).not.toContain("useEditViewerBusy")
-    expect(easyApi).not.toContain("useEditViewerEmpty")
-    expect(easyApi).toContain("useInternalEditViewerLayout")
-    expect(easyApi).toContain("useInternalEditViewerBusy")
-    expect(easyApi).toContain("useInternalEditViewerEmpty")
-    expect(easyApi).toContain("const layout = useInternalEditViewerLayout()")
-    expect(easyApi).toContain("const busy = useInternalEditViewerBusy()")
-    expect(easyApi).toContain("const empty = useInternalEditViewerEmpty()")
+    expect(easyApi).not.toContain("useEditViewerBusy(")
+    expect(easyApi).not.toContain("useEditViewerEmpty(")
+    expect(easyApi).not.toContain("useInternalEditViewer")
+    expect(easyApi).not.toContain("useEditViewerContext")
+    expect(easyApi).not.toContain("EditViewerContext")
 
     expect(provider).toContain("SegmentedDocumentProvider")
     expect(provider).toContain("useSegmentedItemLink")
@@ -3065,13 +3044,9 @@ describe("viewer architecture", () => {
     expect(provider).toContain("useEditViewerSelectionBridge")
     expect(provider).toContain("useEditViewerPageOverlay")
     expect(provider).not.toContain("editAnchorItemToAnchoredItem")
-    expect(provider).not.toContain(
-      "function useEditViewerContext(): EditViewerContextValue"
-    )
-    expect(internalContext).toContain(
-      "function useEditViewerContext(): EditViewerContextValue"
-    )
-    expect(internalContext).not.toContain("export function useEditViewer(")
+    expect(provider).toContain("const EditViewerContext")
+    expect(provider).toContain("function useEditViewerContext")
+    expect(provider).not.toContain("export const EditViewerContext")
     expect(provider).not.toContain("export function useEditViewer(")
     expect(provider).not.toContain("export type EditViewerState")
     expect(provider).not.toContain(
@@ -3084,34 +3059,18 @@ describe("viewer architecture", () => {
       "export function useEditViewerEmpty(): EditViewerEmptyStatusState"
     )
     expect(provider).not.toContain("export function useEditViewerHeader")
-    expect(internalContext).toContain(
-      "export function useInternalEditViewerLayout"
-    )
-    expect(internalContext).toContain(
-      "export function useInternalEditViewerBusy"
-    )
-    expect(internalContext).toContain(
-      "export function useInternalEditViewerEmpty"
-    )
-    expect(internalContext).toContain(
-      "export function useInternalEditViewerHeader"
-    )
+    expect(provider).not.toContain("useInternalEditViewer")
     expect(provider).not.toContain("export type EditViewerContextValue")
-    expect(editRegistry).toContain("edit-viewer-internal-context.tsx")
-    expect(editRegistry).toContain(
-      "function useEditViewerContext(): EditViewerContextValue"
-    )
+    expect(editRegistry).not.toContain("edit-viewer-internal-context.tsx")
+    expect(editRegistry).not.toContain("useInternalEditViewer")
     expect(editRegistry).not.toContain("export function useEditViewer(")
     expect(editRegistry).not.toContain("export type EditViewerState")
     expect(editRegistry).not.toContain(
       "export function useEditViewerLayout(): EditViewerLayoutState"
     )
-    expect(editRegistry).toContain(
-      "export function useInternalEditViewerLayout"
-    )
     expect(editRegistry).not.toContain("export type EditViewerContextValue")
     expect(editRegistryEasyApi).not.toContain("const edit = useEditViewer()")
-    expect(editRegistryEasyApi).not.toContain("edit.options.fieldPanel")
+    expect(editRegistryEasyApi).not.toContain("useInternalEditViewer")
     expect(provider).not.toContain("function resolveEditViewerDocumentTarget")
     expect(provider).not.toContain("function createEditViewerFieldMap")
     expect(provider).not.toContain("ViewerRoot")
@@ -3149,6 +3108,8 @@ describe("viewer architecture", () => {
 
     expect(header).toContain("ViewerHeader")
     expect(header).toContain("ViewerSidebarTrigger")
+    expect(header).not.toContain("EditViewerContext")
+    expect(header).not.toContain("useEditViewerContext")
     expect(document).toContain("EditViewerDocumentPane")
     expect(document).not.toContain("ViewerRoot")
     expect(document).not.toContain("ViewerSidebar")

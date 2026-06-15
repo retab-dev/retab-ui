@@ -834,7 +834,6 @@ describe("PageMarkdownViewer", () => {
 
     const { container } = render(<PageMarkdownViewer pages={PAGES} />)
 
-    expect(screen.queryByText("Page 1 of 2")).toBeNull()
     expect(pageWidth(container)).toBeNull()
 
     act(() => {
@@ -845,7 +844,6 @@ describe("PageMarkdownViewer", () => {
       frameCallbacks.shift()?.(16)
     })
 
-    expect(screen.queryByText("Page 1 of 2")).toBeNull()
     expect(screen.queryByText("95%")).toBeNull()
     expect(pageWidth(container)).toBeNull()
 
@@ -853,13 +851,12 @@ describe("PageMarkdownViewer", () => {
       frameCallbacks.shift()?.(32)
     })
 
-    expect(await screen.findByText("Page 1 of 2")).toBeTruthy()
-    expect(screen.getByText("79%")).toBeTruthy()
-    expect(screen.queryByText("95%")).toBeNull()
-    expect(pageWidth(container)).toBeCloseTo(
-      PAGE_WIDTH * fitScaleForWidth(638),
-      1
-    )
+    await waitFor(() => {
+      expect(pageWidth(container)).toBeCloseTo(
+        PAGE_WIDTH * fitScaleForWidth(638),
+        1
+      )
+    })
   })
 
   it("observes a stable viewport-width wrapper instead of the scaled canvas", async () => {

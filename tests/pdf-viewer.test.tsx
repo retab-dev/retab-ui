@@ -2297,7 +2297,7 @@ describe("PdfViewer", () => {
     vi.spyOn(console, "error").mockImplementation(() => {})
 
     expect(() => render(<PdfViewerThumbnails />)).toThrow(
-      "usePdfViewer must be used within PdfViewerProvider."
+      "usePdfViewerThumbnails must be used within PdfViewerProvider."
     )
   })
 

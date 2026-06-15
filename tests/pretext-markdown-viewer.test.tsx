@@ -29,11 +29,15 @@ vi.mock("mermaid", () => ({
       if (source.includes("unsafe-svg")) {
         return {
           svg: [
-            '<svg role="img" aria-label="Mermaid diagram" data-testid="mock-mermaid-svg" data-source="unsafe-svg" xmlns="http://www.w3.org/2000/svg" onload="alert(1)">',
+            '<svg id="location" role="img" aria-label="Mermaid diagram" data-testid="mock-mermaid-svg" data-source="unsafe-svg" xmlns="http://www.w3.org/2000/svg" onload="alert(1)" style="background:url(javascript:alert(1))">',
+            "<style>.unsafe{fill:url(javascript:alert(1))}</style>",
             "<script>alert(1)</script>",
             '<foreignObject><iframe src="javascript:alert(1)"></iframe></foreignObject>',
             '<a href="javascript:alert(1)"><text onclick="alert(1)">Unsafe</text></a>',
-            "<text>Safe label</text>",
+            '<image href="https://example.com/tracker.png" />',
+            '<use href="https://example.com/sprite.svg#icon" />',
+            '<animate attributeName="x" from="0" to="1" />',
+            '<g id="forms"><text id="constructor" name="images">Safe label</text></g>',
             "</svg>",
           ].join(""),
         }
@@ -2065,6 +2069,90 @@ describe("PretextMarkdownViewer", () => {
     expect(screen.getByLabelText("Copied")).toBeTruthy()
   })
 
+  it("copies sanitized Mermaid SVG only from ready diagram surfaces", async () => {
+    const { rerender } = render(
+      <PretextMarkdownViewer
+        source={markdownSource("```mermaid\ngraph TD\n  unsafe-svg-->B\n```")}
+        toolbar={false}
+      />
+    )
+
+    await screen.findByTestId("mock-mermaid-svg")
+    fireEvent.click(await screen.findByLabelText("Copy diagram SVG"))
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        expect.stringContaining('<svg role="img"')
+      )
+    })
+    const copiedSvg = vi
+      .mocked(navigator.clipboard.writeText)
+      .mock.calls.at(-1)?.[0]
+    expect(copiedSvg).toContain("Safe label")
+    expect(copiedSvg).not.toContain("onload")
+    expect(copiedSvg).not.toContain("script")
+    expect(copiedSvg).not.toContain("style")
+    expect(copiedSvg).not.toContain("foreignObject")
+    expect(copiedSvg).not.toContain("<image")
+    expect(copiedSvg).not.toContain("<use")
+    expect(copiedSvg).not.toContain("<animate")
+    expect(copiedSvg).not.toContain("javascript:")
+
+    rerender(
+      <PretextMarkdownViewer
+        source={markdownSource("```mermaid\nnot-a-diagram\n```")}
+        toolbar={false}
+      />
+    )
+
+    await screen.findByText("Mermaid parse error")
+    expect(screen.queryByLabelText("Copy diagram SVG")).toBeNull()
+  })
+
+  it("describes Mermaid diagrams with source-derived accessible summaries", async () => {
+    const { container, rerender } = render(
+      <PretextMarkdownViewer
+        source={markdownSource("```mermaid\ngraph LR\n  Start-->Done\n```")}
+        toolbar={false}
+      />
+    )
+
+    await screen.findByText("mermaid")
+    const graph = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+    const graphDescription = container.querySelector<HTMLElement>(
+      "[data-pretext-diagram-description]"
+    )
+
+    expect(graphDescription?.textContent).toBe(
+      "Mermaid graph diagram flowing left to right, with 2 nodes and 1 edge."
+    )
+    expect(graph?.getAttribute("aria-describedby")).toBe(graphDescription?.id)
+
+    rerender(
+      <PretextMarkdownViewer
+        source={markdownSource("```mermaid\nsequenceDiagram\nA->>B: hi\n```")}
+        toolbar={false}
+      />
+    )
+
+    await screen.findByText("mermaid")
+    const sequence = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+    const sequenceDescription = container.querySelector<HTMLElement>(
+      "[data-pretext-diagram-description]"
+    )
+
+    expect(sequenceDescription?.textContent).toBe(
+      "Mermaid sequence diagram with 2 participants and 1 message."
+    )
+    expect(sequence?.getAttribute("aria-describedby")).toBe(
+      sequenceDescription?.id
+    )
+  })
+
   it("normalizes Mermaid fence aliases before choosing the render surface", async () => {
     const { container } = render(
       <PretextMarkdownViewer
@@ -2103,6 +2191,109 @@ describe("PretextMarkdownViewer", () => {
         "data-source"
       )
     ).toBe(encodeURIComponent("sequenceDiagram\nA->>B: hi"))
+  })
+
+  it("keeps Mermaid-only diagrams in loading state before async render settles", async () => {
+    const mermaid = (await import("mermaid")).default
+    const renderResult = createDeferred<{ diagramType: string; svg: string }>()
+    vi.mocked(mermaid.render).mockReturnValueOnce(renderResult.promise)
+
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource("```mermaid\nsequenceDiagram\nA->>B: hi\n```")}
+        toolbar={false}
+      />
+    )
+
+    await screen.findByText("mermaid")
+    const diagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+
+    expect(diagram?.dataset.diagramState).toBe("loading")
+    expect(screen.getByLabelText("Mermaid diagram source").textContent).toBe(
+      "sequenceDiagram\nA->>B: hi"
+    )
+    expect(container.textContent).not.toContain("Unsupported Mermaid diagram")
+
+    renderResult.resolve({
+      diagramType: "sequence",
+      svg: '<svg role="img" aria-label="Mermaid diagram" data-testid="mock-mermaid-svg" xmlns="http://www.w3.org/2000/svg"></svg>',
+    })
+
+    await waitFor(() => expect(diagram?.dataset.diagramState).toBe("ready"))
+  })
+
+  it("initializes Mermaid with the strict viewer security policy", async () => {
+    const mermaid = (await import("mermaid")).default
+
+    render(
+      <PretextMarkdownViewer
+        source={markdownSource("```mermaid\ngraph TD\n  A-->B\n```")}
+        toolbar={false}
+      />
+    )
+
+    await screen.findByTestId("mock-mermaid-svg")
+    expect(mermaid.initialize).toHaveBeenCalledWith(
+      expect.objectContaining({
+        flowchart: expect.objectContaining({
+          htmlLabels: false,
+          useMaxWidth: true,
+        }),
+        securityLevel: "strict",
+        sequence: expect.objectContaining({
+          useMaxWidth: true,
+        }),
+        startOnLoad: false,
+        suppressErrorRendering: true,
+      })
+    )
+  })
+
+  it("keeps oversized Mermaid diagrams bounded without calling Mermaid", async () => {
+    const mermaid = (await import("mermaid")).default
+    vi.mocked(mermaid.initialize).mockClear()
+    vi.mocked(mermaid.render).mockClear()
+    const oversizedSource = [
+      "graph TD",
+      ...Array.from(
+        { length: 170 },
+        (_, index) => `  A${index}-->A${index + 1}`
+      ),
+    ].join("\n")
+
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(`\`\`\`mermaid\n${oversizedSource}\n\`\`\``)}
+        toolbar={false}
+      />
+    )
+
+    expect(
+      await screen.findByText(/too many lines to render safely/)
+    ).toBeTruthy()
+    const diagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+    expect(diagram?.dataset.diagramState).toBe("failed")
+    expect(screen.getByRole("alert").textContent).toContain(
+      "too many lines to render safely"
+    )
+    expect(screen.getByLabelText("Mermaid diagram source").textContent).toBe(
+      oversizedSource
+    )
+    expect(screen.queryByLabelText("Copy diagram SVG")).toBeNull()
+    expect(mermaid.initialize).not.toHaveBeenCalled()
+    expect(mermaid.render).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByLabelText("Copy diagram source"))
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        oversizedSource
+      )
+    })
   })
 
   it("keeps diagram loading and ready states inside stable reserved height", async () => {
@@ -2183,11 +2374,22 @@ describe("PretextMarkdownViewer", () => {
     )
 
     expect(svg.getAttribute("onload")).toBeNull()
+    expect(svg.getAttribute("style")).toBeNull()
+    expect(svg.querySelector("style")).toBeNull()
     expect(svg.querySelector("script")).toBeNull()
     expect(svg.querySelector("foreignObject")).toBeNull()
     expect(svg.querySelector("iframe")).toBeNull()
     expect(svg.querySelector("[onclick]")).toBeNull()
-    expect(svg.querySelector("a")?.getAttribute("href")).toBeNull()
+    expect(svg.querySelector("a")).toBeNull()
+    expect(svg.querySelector("image")).toBeNull()
+    expect(svg.querySelector("use")).toBeNull()
+    expect(svg.querySelector("animate")).toBeNull()
+    expect(svg.id).toBe("user-content-location")
+    expect(svg.querySelector("#forms")).toBeNull()
+    expect(svg.querySelector("#constructor")).toBeNull()
+    expect(svg.querySelector("[name='images']")).toBeNull()
+    expect(svg.querySelector("#user-content-forms")).toBeTruthy()
+    expect(svg.querySelector("#user-content-constructor")).toBeTruthy()
     expect(svg.textContent).toContain("Safe label")
   })
 
@@ -2208,6 +2410,13 @@ describe("PretextMarkdownViewer", () => {
 
     await waitFor(() => expect(diagram?.dataset.diagramState).toBe("failed"))
     expect(diagram?.textContent).toContain("Mermaid parse error")
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Mermaid parse error"
+    )
+    expect(screen.getByLabelText("Mermaid diagram source").textContent).toBe(
+      "not-a-diagram"
+    )
+    expect(screen.queryByLabelText("Copy diagram SVG")).toBeNull()
   })
 
   it("renders inline and block math through KaTeX", async () => {

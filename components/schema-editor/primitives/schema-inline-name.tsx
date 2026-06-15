@@ -35,7 +35,7 @@ export function SchemaInlineName({
         ariaLabel={ariaLabel}
         editable={canEditName}
         value={value}
-        className="m-0 h-6 w-40 rounded-sm border-none bg-transparent px-1 text-sm font-medium text-foreground shadow-none outline-none focus-visible:ring-0"
+        className="m-0 h-6 w-36 rounded-sm border-none bg-transparent px-1 text-sm font-medium text-foreground shadow-none outline-none focus-visible:ring-0"
         readOnlyClassName="mr-1 truncate text-sm font-medium whitespace-nowrap text-foreground"
         validate={validate}
         onCommit={(nextValue) => {

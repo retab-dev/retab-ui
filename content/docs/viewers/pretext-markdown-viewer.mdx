@@ -106,7 +106,7 @@ remain stable while the Pretext path iterates toward feature completeness.
 - Reference links and reference images resolve from document-wide definitions even when the definition lives outside the currently rendered virtual chunk.
 - Restricted component markdown supports `<Metric label="Accuracy" value={98} />`, `<Badge label="Stable" tone="success" />`, `<Image src="/chart.png" alt="Chart" />`, `<Video src="/demo.mp4" label="Demo" controls={false} muted />`, `<Diagram type="mermaid" source="graph TD; A-->B" />`, paired `<Callout kind="warning" title="Review">...</Callout>` blocks, and paired `<Accordion title="More details">...</Accordion>` blocks with safe Markdown children; restricted component directives additionally support nested `Tabs` / `Tab` blocks with safe Markdown panels. Tabs expose ARIA tab roles, selected-panel state, roving focus, Arrow key navigation, and Home/End navigation. The component registry owns allowed names, allowed props, typed string/number/boolean literal props, and enum values such as `Badge.tone`.
 - Unknown JSX-like syntax, non-literal expression props, spread props, event handlers, component-specific unknown props, invalid enum values, and remote or namespaced components render as inert diagnostic component fallbacks with source previews. Import/export statements remain inert source-like text.
-- Mermaid fenced blocks and restricted `Diagram` components render through the Mermaid package inside the viewer diagram surface, including common aliases such as `mmd`; diagram bodies reserve deterministic source-derived height before Mermaid resolves, loading/error/ready states stay inside the same scrollable box, rendered SVG is sanitized before mounting, parse/render failures stay contained in a non-crashing error/source state, and rendered diagrams expose source copy controls.
+- Mermaid fenced blocks and restricted `Diagram` components render through the Mermaid package inside the viewer diagram surface, including common aliases such as `mmd`; diagram bodies reserve deterministic source-derived height before Mermaid resolves, graph and sequence diagrams expose source-derived accessible summaries, Mermaid-only diagrams show source-backed loading state instead of a transient unsupported error, loading/error/ready states stay inside the same scrollable box, failed diagrams keep the error and original source visible together, oversized diagram sources are refused before Mermaid runs and remain copyable, rendered SVG is sanitized before mounting with style/link/resource/animation SVG surfaces denied, parse/render failures stay contained in a non-crashing error/source state, and ready diagrams expose source and sanitized-SVG copy controls.
 - Inline and block math render through `remark-math` and KaTeX with untrusted input, bounded expansion, and bounded user-defined sizes.
 - GFM footnotes render with labelled references, labelled backrefs, bidirectional fragment targets, a labelled footnotes section, and document-wide definition resolution across virtual chunks.
 - Fenced code blocks show normalized language headers with common aliases for TypeScript, JavaScript, shell, JSONC, Python, and Mermaid fences, `title="..."` / `caption="..."` metadata, opt-in Pretty Code `showLineNumbers` / `showLineNumbers{n}` line numbers, highlighted lines/chars, diff add/remove line styling, full-block and selected-code copy controls with copied/failed states, a labelled keyboard-focusable horizontal source region, and `rehype-pretty-code` syntax highlighting.
@@ -158,8 +158,11 @@ props, spread props, event handlers, invalid enum values, remote or namespaced
 components, and unsafe directive props render as inert diagnostic fallbacks with
 source previews. Import/export statements render as inert source-like text.
 
-Mermaid rendering uses the Mermaid package with strict security settings inside
-the viewer diagram surface, then sanitizes the produced SVG before mounting it.
+Mermaid rendering uses the Mermaid package with strict security settings,
+disabled flowchart HTML labels, and bounded width behavior inside the viewer
+diagram surface, then sanitizes the produced SVG before mounting it. The SVG
+mount boundary denies active tags, embedded resources, SVG links, animation, and
+style surfaces, and prefixes SVG `id` / `name` values before mounting.
 Invalid diagrams or browser rendering failures stay contained in a non-crashing
 error/source surface while pre-layout dimension estimation remains open.
 

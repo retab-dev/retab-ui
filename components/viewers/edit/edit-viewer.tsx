@@ -1,7 +1,5 @@
 "use client"
 
-import * as React from "react"
-
 import { cn } from "@/lib/utils"
 import {
   ViewerBody,
@@ -14,11 +12,9 @@ import { EditViewerDocument } from "./edit-viewer-document"
 import { EditViewerFields } from "./edit-viewer-fields"
 import { EditViewerHeader } from "./edit-viewer-header"
 import {
-  useInternalEditViewerBusy,
-  useInternalEditViewerEmpty,
-  useInternalEditViewerLayout,
-} from "./edit-viewer-internal-context"
-import { EditViewerProvider } from "./edit-viewer-provider"
+  EditViewerProvider,
+  useEditViewerFrameState,
+} from "./edit-viewer-provider"
 import {
   EditViewerBusyOverlay as EditViewerBusyOverlayContent,
   EmptyEditViewerState,
@@ -65,7 +61,7 @@ export function EditViewer({ className, ...providerProps }: EditViewerProps) {
 }
 
 function EditViewerRoot({ className }: { className?: string }) {
-  const layout = useInternalEditViewerLayout()
+  const { hasFieldPanel, hasOutput } = useEditViewerFrameState()
 
   return (
     <ViewerRoot
@@ -77,7 +73,7 @@ function EditViewerRoot({ className }: { className?: string }) {
       <EditViewerBusyOverlay />
       <EditViewerEmptyState />
 
-      {layout.hasOutput ? (
+      {hasOutput ? (
         <>
           <EditViewerHeader />
           <ViewerBody className="flex-col md:flex-row">
@@ -85,7 +81,7 @@ function EditViewerRoot({ className }: { className?: string }) {
               <EditViewerDocument className="h-full" />
             </ViewerSurface>
 
-            {layout.hasFieldPanel ? (
+            {hasFieldPanel ? (
               <ViewerSidebar
                 aria-label="Document fields"
                 side="right"
@@ -103,15 +99,15 @@ function EditViewerRoot({ className }: { className?: string }) {
 }
 
 export function EditViewerBusyOverlay() {
-  const busy = useInternalEditViewerBusy()
+  const { busyStatus } = useEditViewerFrameState()
 
-  return busy.status ? (
-    <EditViewerBusyOverlayContent status={busy.status} />
+  return busyStatus ? (
+    <EditViewerBusyOverlayContent status={busyStatus} />
   ) : null
 }
 
 export function EditViewerEmptyState() {
-  const empty = useInternalEditViewerEmpty()
+  const { hasOutput } = useEditViewerFrameState()
 
-  return empty.hasOutput ? null : <EmptyEditViewerState />
+  return hasOutput ? null : <EmptyEditViewerState />
 }

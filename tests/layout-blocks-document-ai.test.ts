@@ -181,7 +181,7 @@ describe("layout blocks evidence projection", () => {
     items: layoutItems,
   }
 
-  it("projects visible OCR items to evidence rows and provider items", () => {
+  it("projects visible OCR items to evidence rows", () => {
     const model = createLayoutBlocksViewerModel({
       document: layoutDocument,
       levels: ["block"],
@@ -240,33 +240,6 @@ describe("layout blocks evidence projection", () => {
         },
         anchor: { status: "missing" },
       },
-    ])
-    expect(model.anchoredItems).toEqual([
-      {
-        id: "block-1",
-        anchor: {
-          kind: "pdf-area",
-          pageNumber: 1,
-          left: 10,
-          top: 10,
-          width: 30,
-          height: 20,
-        },
-        disabled: false,
-      },
-      {
-        id: "block-2",
-        anchor: {
-          kind: "pdf-area",
-          pageNumber: 1,
-          left: 1,
-          top: 1,
-          width: 3,
-          height: 2,
-        },
-        disabled: false,
-      },
-      { id: "missing-page", anchor: null, disabled: false },
     ])
   })
 
@@ -334,11 +307,6 @@ describe("layout blocks evidence projection", () => {
       "missing-page",
     ])
     expect(model.evidenceItems.map((item) => item.id)).toEqual([
-      "block-2",
-      "line-1",
-      "missing-page",
-    ])
-    expect(model.anchoredItems.map((item) => item.id)).toEqual([
       "block-2",
       "line-1",
       "missing-page",

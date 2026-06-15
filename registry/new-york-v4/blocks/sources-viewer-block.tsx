@@ -97,8 +97,7 @@ type SourceExtraction = {
 }
 
 // Build a JSON form's inputs from a flat field array. The schema property names
-// match the source-map keys, which become anchored item ids for json-form hover
-// and click interactions.
+// match the source-map keys used for json-form hover and click interactions.
 function flatSourceExtraction(fields: FlatField[]): SourceExtraction {
   const sources = Object.fromEntries(
     fields.map((field) => [field.key, field.source])

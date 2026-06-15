@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "document-anchor",
   "title": "Document anchor",
-  "description": "Pure document location types used by anchored document interaction, evidence projection, and viewer target adapters.",
+  "description": "Pure document location types used by evidence projection and viewer target adapters.",
   "files": [
     {
       "path": "registry/new-york-v4/ui/document-anchor.ts",

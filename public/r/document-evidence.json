@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "document-evidence",
+  "title": "Document evidence",
+  "description": "Pure projection types for semantic evidence rows that can resolve to document anchors.",
+  "registryDependencies": [
+    "document-anchor"
+  ],
+  "files": [
+    {
+      "path": "registry/new-york-v4/ui/document-evidence.ts",
+      "content": "import type { DocumentAnchor } from \"./document-anchor\"\n\nexport type AnchorResolution =\n  | { status: \"resolved\"; anchor: DocumentAnchor }\n  | { status: \"missing\" }\n  | { status: \"invalid\"; reason: string }\n\nexport type EvidenceAnchor = {\n  id: string\n  anchor: AnchorResolution\n}\n\nexport type EvidenceItem<Payload> = EvidenceAnchor & {\n  payload: Payload\n}\n\nexport function resolvedEvidenceAnchor(\n  anchor: DocumentAnchor\n): AnchorResolution {\n  return { status: \"resolved\", anchor }\n}\n\nexport function missingEvidenceAnchor(): AnchorResolution {\n  return { status: \"missing\" }\n}\n\nexport function invalidEvidenceAnchor(reason: string): AnchorResolution {\n  return { status: \"invalid\", reason }\n}\n",
+      "type": "registry:ui",
+      "target": "@ui/document-evidence.ts"
+    }
+  ],
+  "type": "registry:ui"
+}

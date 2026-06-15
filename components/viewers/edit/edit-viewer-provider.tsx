@@ -10,14 +10,6 @@ import { SegmentedDocumentProvider } from "@/components/ui/segmented-document-pr
 import { useSegmentedItemLink } from "@/components/ui/segmented-item-link"
 
 import {
-  EditViewerContext,
-  type EditViewerDocumentState,
-  type EditViewerFieldsState,
-  type EditViewerModeState,
-  type EditViewerProviderState,
-  type EditViewerSelectionState,
-} from "./edit-viewer-internal-context"
-import {
   createEditViewerFieldProjection,
   createEditViewerSegmentedDocumentModel,
   deriveEditViewerModes,
@@ -26,6 +18,7 @@ import {
   resolveEditViewerMode,
   resolveEditViewerOptions,
   type EditViewerDocumentTarget,
+  type EditViewerFieldGroup,
   type EditViewerFieldProjection,
   type EditViewerFilter,
 } from "./edit-viewer-model"
@@ -44,14 +37,132 @@ export type EditViewerProviderProps = Omit<EditViewerProps, "className"> & {
   children: React.ReactNode
 }
 
-export {
-  useEditViewerDocument,
-  useEditViewerFields,
-} from "./edit-viewer-internal-context"
-export type {
-  EditViewerDocumentState,
-  EditViewerFieldsPartState,
-} from "./edit-viewer-internal-context"
+export type EditViewerProviderState = {
+  status: EditViewerStatus
+  result: EditViewerResult
+  fields: readonly EditViewerField[]
+  filledCount: number
+  hasOutput: boolean
+  fieldByKey: ReadonlyMap<string, EditViewerField>
+  fieldsByPage: ReadonlyMap<number, readonly EditViewerField[]>
+}
+
+export type EditViewerModeState = {
+  mode: EditViewerMode | null
+  modes: readonly EditViewerMode[]
+  setMode: (mode: EditViewerMode) => void
+}
+
+export type EditViewerFieldsState = {
+  fields: readonly EditViewerField[]
+  visibleFields: readonly EditViewerField[]
+  fieldGroups: readonly EditViewerFieldGroup[]
+  locatedFields: readonly EditViewerField[]
+  unlocatedFields: readonly EditViewerField[]
+  filledCount: number
+  fieldCount: number
+  visibleFieldCount: number
+  query: string
+  setQuery: (query: string) => void
+  filter: EditViewerFilter
+  setFilter: (filter: EditViewerFilter) => void
+  canSearch: boolean
+  canFilter: boolean
+}
+
+export type EditViewerSelectionState = {
+  selectedFieldKey: string | null
+  activeFieldKey: string | null
+  selectField: (fieldKey: string) => void
+  clearFieldSelection: () => void
+  previewField: (fieldKey: string | null) => void
+}
+
+export type EditViewerDocumentState = {
+  target: EditViewerDocumentTarget
+  mode: EditViewerMode | null
+  sourceDocument: EditViewerDocumentSource | null
+  filledDocument: EditViewerDocumentSource | null
+  viewerRef: React.RefObject<PdfViewerHandle | null>
+  renderPageOverlay: (props: PageOverlayProps) => React.ReactNode
+}
+
+export type EditViewerFieldsPartState = EditViewerFieldsState &
+  EditViewerSelectionState
+
+type EditViewerContextValue = {
+  state: EditViewerProviderState
+  mode: EditViewerModeState
+  fields: EditViewerFieldsState
+  selection: EditViewerSelectionState
+  document: EditViewerDocumentState
+  options: Required<EditViewerOptions>
+}
+
+type EditViewerFrameState = {
+  hasFieldPanel: boolean
+  hasOutput: boolean
+  busyStatus: Extract<
+    EditViewerStatus,
+    { state: "detecting" } | { state: "filling" }
+  > | null
+}
+
+export type EditViewerChromeState = {
+  hasFieldPanel: boolean
+  mode: EditViewerMode | null
+  modes: readonly EditViewerMode[]
+  setMode: (mode: EditViewerMode) => void
+  status: Exclude<EditViewerStatus, { state: "idle" }> | null
+}
+
+const EditViewerContext = React.createContext<EditViewerContextValue | null>(
+  null
+)
+
+function useEditViewerContext(): EditViewerContextValue {
+  const context = React.useContext(EditViewerContext)
+  if (!context) {
+    throw new Error("EditViewer parts must be used within EditViewerProvider.")
+  }
+  return context
+}
+
+export function useEditViewerDocument(): EditViewerDocumentState {
+  return useEditViewerContext().document
+}
+
+export function useEditViewerFields(): EditViewerFieldsPartState {
+  const edit = useEditViewerContext()
+  return {
+    ...edit.fields,
+    ...edit.selection,
+  }
+}
+
+export function useEditViewerFrameState(): EditViewerFrameState {
+  const edit = useEditViewerContext()
+  const status = edit.state.status
+  return {
+    busyStatus:
+      status.state === "detecting" || status.state === "filling"
+        ? status
+        : null,
+    hasFieldPanel: edit.options.fieldPanel,
+    hasOutput: edit.state.hasOutput,
+  }
+}
+
+export function useEditViewerChromeState(): EditViewerChromeState {
+  const edit = useEditViewerContext()
+  return {
+    hasFieldPanel: edit.options.fieldPanel,
+    mode: edit.mode.mode,
+    modes: edit.mode.modes,
+    setMode: edit.mode.setMode,
+    status: edit.state.status.state === "idle" ? null : edit.state.status,
+  }
+}
 
 export function EditViewerProvider({
   result,

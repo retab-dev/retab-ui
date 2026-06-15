@@ -11,7 +11,6 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { Source, SourceAnchor, SourceMap } from "@/lib/document-source"
-import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
 import {
   createSegmentedDocumentModel,
   type SegmentedDocumentModel,
@@ -20,12 +19,13 @@ import {
   SegmentedDocumentProvider,
   useSegmentedDocumentViewport,
 } from "@/components/ui/segmented-document-provider"
-import { useSegmentedPdfSourceOverlay } from "@/components/ui/source-segmented-document-overlays"
+import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
 import {
   sourceFieldsToSegmentedDocumentModel,
   sourceMapToSegmentedDocumentModel,
   sourceToSegmentAnchor,
 } from "@/components/ui/source-segmented-document-model"
+import { useSegmentedPdfSourceOverlay } from "@/components/ui/source-segmented-document-overlays"
 import csvSample from "@/components/viewers/sample-data/csv-sources.json"
 import docxSample from "@/components/viewers/sample-data/docx-sources.json"
 import imageSample from "@/components/viewers/sample-data/image-sources.json"
@@ -36,7 +36,6 @@ import {
   extractionSourcesToSourceMap,
   sourceLocationKey,
 } from "@/registry/new-york-v4/lib/document-source"
-import { evidenceToAnchoredItem } from "@/registry/new-york-v4/ui/anchored-evidence"
 import {
   columnLetterToIndex,
   csvAnchorToTarget,
@@ -551,7 +550,7 @@ describe("source evidence projection", () => {
     })
   })
 
-  it("keeps missing and invalid anchors distinct before provider projection", () => {
+  it("keeps missing and invalid evidence anchors distinct", () => {
     const missing = sourceToEvidenceAnchor(null)
     const invalid = sourceToEvidenceAnchor(
       source({ kind: "csv_cell", row: -1, column: "A" })
@@ -562,29 +561,9 @@ describe("source evidence projection", () => {
       status: "invalid",
       reason: "Unsupported or invalid csv_cell",
     })
-    expect(
-      evidenceToAnchoredItem({
-        id: "missing",
-        anchor: missing,
-      })
-    ).toEqual({
-      id: "missing",
-      anchor: null,
-      disabled: false,
-    })
-    expect(
-      evidenceToAnchoredItem({
-        id: "invalid",
-        anchor: invalid,
-      })
-    ).toEqual({
-      id: "invalid",
-      anchor: null,
-      disabled: true,
-    })
   })
 
-  it("projects source fields to evidence rows and provider items", () => {
+  it("projects source fields to evidence rows", () => {
     const model = sourceFieldsToEvidenceModel([
       {
         key: "invoice.total",
@@ -622,21 +601,6 @@ describe("source evidence projection", () => {
         anchor: { status: "missing" },
       },
     ])
-    expect(model.anchoredItems).toEqual([
-      {
-        id: "invoice.total",
-        anchor: {
-          kind: "pdf-area",
-          pageNumber: 3,
-          left: 10,
-          top: 20,
-          width: 30,
-          height: 40,
-        },
-        disabled: false,
-      },
-      { id: "approver", anchor: null, disabled: false },
-    ])
   })
 
   it("projects source maps with dotted and indexed paths without changing ids", () => {
@@ -666,10 +630,6 @@ describe("source evidence projection", () => {
       1200,
     ])
     expect(model.evidenceItems.map((item) => item.payload.label)).toEqual([
-      "owner.name",
-      "line_items.0.amount",
-    ])
-    expect(model.anchoredItems.map((item) => item.id)).toEqual([
       "owner.name",
       "line_items.0.amount",
     ])

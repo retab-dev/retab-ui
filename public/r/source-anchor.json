@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "source-anchor",
   "title": "Source anchor",
-  "description": "Pure conversion from document-source anchors to anchored-document viewer anchors.",
+  "description": "Pure conversion from document-source anchors to document viewer anchors.",
   "registryDependencies": [
     "document-anchor",
     "document-source"

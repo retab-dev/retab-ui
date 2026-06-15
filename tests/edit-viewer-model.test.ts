@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   createEditViewerFieldProjection,
+  createEditViewerSegmentedDocumentModel,
   deriveEditViewerModes,
   displayEditFieldValue,
   editFieldTargetFromBBox,
@@ -375,7 +376,7 @@ describe("edit viewer model", () => {
     ).not.toContain("notes")
   })
 
-  it("creates one field projection with stable first-key lookup and anchors", () => {
+  it("creates one field projection with stable first-key lookup", () => {
     const fields: EditViewerField[] = [
       locatedField,
       {
@@ -412,20 +413,22 @@ describe("edit viewer model", () => {
     expect(projection.unlocatedFields.map((field) => field.key)).toEqual([
       "notes",
     ])
-    expect(projection.anchorItems[0]).toEqual({
-      id: "name",
-      anchor: {
-        kind: "pdf-area",
-        pageNumber: 2,
-        left: 10,
-        top: 20,
-        width: 30,
-        height: 4,
-      },
+    const segmentedDocument = createEditViewerSegmentedDocumentModel(fields)
+    expect(segmentedDocument.segments[0]).toMatchObject({
+      id: "edit:name:0",
+      pages: [2],
+      sourceId: "name",
     })
-    expect(projection.anchorItems[2]).toEqual({
-      id: "notes",
-      anchor: null,
+    expect(segmentedDocument.anchors?.[0]).toEqual({
+      id: "edit:name:0:anchor",
+      segmentId: "edit:name:0",
+      pageNumber: 2,
+      bounds: { x: 0.1, y: 0.2, width: 0.3, height: 0.04 },
+    })
+    expect(segmentedDocument.segments[2]).toMatchObject({
+      id: "edit:notes:2",
+      pages: [],
+      sourceId: "notes",
     })
   })
 

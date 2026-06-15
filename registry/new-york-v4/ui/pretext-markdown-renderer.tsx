@@ -266,6 +266,21 @@ const PRETEXT_MARKDOWN_CODE_LANGUAGE_ALIASES: Record<string, string> = {
   typescriptreact: "tsx",
   zsh: "shell",
 }
+const PRETEXT_MARKDOWN_MERMAID_CONFIG = {
+  flowchart: {
+    htmlLabels: false,
+    useMaxWidth: true,
+  },
+  securityLevel: "strict",
+  sequence: {
+    useMaxWidth: true,
+  },
+  startOnLoad: false,
+  suppressErrorRendering: true,
+  theme: "default",
+} as const
+const PRETEXT_MARKDOWN_MERMAID_MAX_LINES = 160
+const PRETEXT_MARKDOWN_MERMAID_MAX_SOURCE_LENGTH = 12_000
 const PRETEXT_MARKDOWN_HOSTILE_PREVIEW_HEAD_LINES = 36
 const PRETEXT_MARKDOWN_HOSTILE_PREVIEW_TAIL_LINES = 12
 
@@ -1636,12 +1651,20 @@ function PretextMarkdownDiagram({
   source: string
   title?: string
 }) {
-  const immediateState = React.useMemo(
-    () => renderBasicMermaidDiagram(source),
+  const limitMessage = React.useMemo(
+    () => readPretextMarkdownDiagramLimitMessage(source),
     [source]
+  )
+  const immediateState = React.useMemo(
+    () => createInitialPretextMarkdownDiagramState({ limitMessage, source }),
+    [limitMessage, source]
   )
   const bodyHeight = React.useMemo(
     () => estimatePretextMarkdownDiagramBodyHeight(source),
+    [source]
+  )
+  const description = React.useMemo(
+    () => describePretextMarkdownDiagram(source),
     [source]
   )
   const diagramStyle = {
@@ -1649,16 +1672,21 @@ function PretextMarkdownDiagram({
   } as React.CSSProperties
   const [state, setState] = React.useState<
     | { status: "failed"; message: string }
+    | { status: "loading" }
     | { status: "ready"; svg: string }
-    | { status: "unavailable" }
   >(immediateState)
   const diagramId = React.useId().replace(/:/g, "")
+  const descriptionId = description
+    ? `pretext-markdown-diagram-description-${diagramId}`
+    : undefined
 
   React.useLayoutEffect(() => {
     setState(immediateState)
   }, [immediateState])
 
   React.useEffect(() => {
+    if (limitMessage) return
+
     let isMounted = true
     void renderMermaidDiagram(source, `pretext-markdown-diagram-${diagramId}`)
       .then((result) => {
@@ -1674,10 +1702,11 @@ function PretextMarkdownDiagram({
     return () => {
       isMounted = false
     }
-  }, [diagramId, source])
+  }, [diagramId, limitMessage, source])
 
   return (
     <figure
+      aria-describedby={descriptionId}
       aria-label={title || "Mermaid diagram"}
       className={cn(
         "group my-5 min-h-40 overflow-hidden rounded-md border bg-muted/30",
@@ -1690,7 +1719,7 @@ function PretextMarkdownDiagram({
       role="group"
       style={diagramStyle}
     >
-      <div className="flex h-9 items-center border-b bg-muted/60 px-3">
+      <div className="flex h-9 items-center gap-1 border-b bg-muted/60 px-3">
         <span className="text-xs font-medium text-muted-foreground">
           {title || "mermaid"}
         </span>
@@ -1699,7 +1728,23 @@ function PretextMarkdownDiagram({
           className="ml-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
           text={source}
         />
+        {state.status === "ready" ? (
+          <PretextMarkdownCopyButton
+            ariaLabel="Copy diagram SVG"
+            className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+            text={state.svg}
+          />
+        ) : null}
       </div>
+      {description ? (
+        <p
+          className="sr-only"
+          data-pretext-diagram-description=""
+          id={descriptionId}
+        >
+          {description}
+        </p>
+      ) : null}
       {state.status === "ready" ? (
         <div
           className="h-(--pretext-diagram-body-height) overflow-auto p-4"
@@ -1707,17 +1752,49 @@ function PretextMarkdownDiagram({
           dangerouslySetInnerHTML={{ __html: state.svg }}
         />
       ) : (
-        <pre
-          aria-label="Mermaid diagram source"
-          className="h-(--pretext-diagram-body-height) overflow-auto p-4 font-mono text-[0.82em] leading-relaxed text-muted-foreground"
+        <div
+          className="h-(--pretext-diagram-body-height) overflow-auto p-4"
           data-pretext-diagram-body=""
-          tabIndex={0}
         >
-          {state.status === "failed" ? state.message : source}
-        </pre>
+          {state.status === "failed" ? (
+            <p
+              className="mb-3 rounded border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              data-pretext-diagram-error=""
+              role="alert"
+            >
+              {state.message}
+            </p>
+          ) : null}
+          <pre
+            aria-label="Mermaid diagram source"
+            className="m-0 overflow-x-auto font-mono text-[0.82em] leading-relaxed text-muted-foreground"
+            tabIndex={0}
+          >
+            {source}
+          </pre>
+        </div>
       )}
     </figure>
   )
+}
+
+function createInitialPretextMarkdownDiagramState({
+  limitMessage,
+  source,
+}: {
+  limitMessage: string | null
+  source: string
+}):
+  | { status: "failed"; message: string }
+  | { status: "loading" }
+  | {
+      status: "ready"
+      svg: string
+    } {
+  if (limitMessage) return { status: "failed", message: limitMessage }
+
+  const basicState = renderBasicMermaidDiagram(source)
+  return basicState.status === "ready" ? basicState : { status: "loading" }
 }
 
 function estimatePretextMarkdownDiagramBodyHeight(source: string) {
@@ -1746,6 +1823,96 @@ function estimatePretextMarkdownDiagramBodyHeight(source: string) {
   }
 
   return clampPretextMarkdownDiagramBodyHeight(lines.length * 28 + 96)
+}
+
+function describePretextMarkdownDiagram(source: string) {
+  const lines = source
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("%%"))
+  const graphHeader = lines[0]?.match(
+    /^(?:graph|flowchart)\s+(TD|TB|BT|LR|RL)$/i
+  )
+
+  if (graphHeader) {
+    const labels = new Set<string>()
+    let edgeCount = 0
+    for (const line of lines.slice(1)) {
+      const edge = line.match(/^(.+?)\s*(?:-->|---|==>|-.->)\s*(.+?)$/)
+      if (!edge) continue
+      labels.add(parseMermaidNode(edge[1]!).label)
+      labels.add(parseMermaidNode(edge[2]!).label)
+      edgeCount += 1
+    }
+
+    if (edgeCount > 0) {
+      return `Mermaid graph diagram flowing ${describePretextMarkdownGraphDirection(
+        graphHeader[1]!
+      )}, with ${labels.size} ${pluralize("node", labels.size)} and ${edgeCount} ${pluralize("edge", edgeCount)}.`
+    }
+  }
+
+  if (/^sequenceDiagram$/i.test(lines[0] ?? "")) {
+    const participants = new Set<string>()
+    let messageCount = 0
+    for (const line of lines.slice(1)) {
+      const declaration = line.match(
+        /^(?:actor|participant)\s+([A-Za-z0-9_.-]+)(?:\s+as\s+(.+))?$/i
+      )
+      if (declaration) {
+        participants.add((declaration[2] ?? declaration[1]!).trim())
+        continue
+      }
+
+      const message = line.match(/^(.+?)\s*-{1,2}>>?\s*(.+?)(?::|$)/)
+      if (!message) continue
+      participants.add(message[1]!.trim())
+      participants.add(message[2]!.trim())
+      messageCount += 1
+    }
+
+    return `Mermaid sequence diagram with ${participants.size} ${pluralize(
+      "participant",
+      participants.size
+    )} and ${messageCount} ${pluralize("message", messageCount)}.`
+  }
+
+  return `Mermaid diagram source with ${lines.length} ${pluralize(
+    "line",
+    lines.length
+  )}.`
+}
+
+function describePretextMarkdownGraphDirection(direction: string) {
+  switch (direction.toUpperCase()) {
+    case "BT":
+      return "bottom to top"
+    case "LR":
+      return "left to right"
+    case "RL":
+      return "right to left"
+    case "TB":
+    case "TD":
+    default:
+      return "top down"
+  }
+}
+
+function pluralize(word: string, count: number) {
+  return count === 1 ? word : `${word}s`
+}
+
+function readPretextMarkdownDiagramLimitMessage(source: string) {
+  if (source.length > PRETEXT_MARKDOWN_MERMAID_MAX_SOURCE_LENGTH) {
+    return "Mermaid diagram too large to render safely. Copy the source and render it in a dedicated diagram tool."
+  }
+
+  const lineCount = source.split(/\r?\n/).length
+  if (lineCount > PRETEXT_MARKDOWN_MERMAID_MAX_LINES) {
+    return "Mermaid diagram has too many lines to render safely. Copy the source and render it in a dedicated diagram tool."
+  }
+
+  return null
 }
 
 function clampPretextMarkdownDiagramBodyHeight(height: number) {
@@ -2129,12 +2296,7 @@ async function renderMermaidDiagram(
     const mermaid = mermaidModule.default
     if (!mermaid?.render) return renderBasicMermaidDiagram(source)
 
-    mermaid.initialize?.({
-      securityLevel: "strict",
-      startOnLoad: false,
-      suppressErrorRendering: true,
-      theme: "default",
-    })
+    mermaid.initialize?.(PRETEXT_MARKDOWN_MERMAID_CONFIG)
     const result = await mermaid.render(id, source)
     const svg = await sanitizePretextMarkdownMermaidSvg(result.svg)
     if (!svg) {

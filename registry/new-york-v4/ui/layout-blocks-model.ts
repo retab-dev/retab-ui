@@ -1,9 +1,8 @@
 import {
-  evidenceItemsToAnchoredItems,
   missingEvidenceAnchor,
   resolvedEvidenceAnchor,
   type EvidenceItem,
-} from "./anchored-evidence"
+} from "./document-evidence"
 import { getScrollTarget } from "./layout-blocks-geometry"
 import {
   createLayoutItemIndex as createLayoutItemIndexForItems,
@@ -33,7 +32,6 @@ export type LayoutBlocksFilter = {
 }
 
 export type LayoutBlocksViewerModel = {
-  anchoredItems: ReturnType<typeof evidenceItemsToAnchoredItems>
   evidenceItems: LayoutEvidenceItem[]
   index: LayoutItemIndex
   visibleItems: LayoutItem[]
@@ -93,7 +91,6 @@ export function layoutItemsToEvidenceModel(
     layoutItemToEvidenceItem(item, index)
   )
   return {
-    anchoredItems: evidenceItemsToAnchoredItems(evidenceItems),
     evidenceItems,
   }
 }

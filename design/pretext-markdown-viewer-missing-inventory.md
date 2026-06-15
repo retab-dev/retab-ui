@@ -102,11 +102,18 @@ leaking virtual chunks as visible pages.
 ## Missing Rich Block Work
 
 61. Full Mermaid rendering polish beyond current source-derived deterministic
-    pre-layout body dimensions.
+    pre-layout body dimensions and oversized-source render guard.
 62. Broader Mermaid loading/error-state polish beyond current shared reserved
-    scroll box for loading/error/ready states.
-63. Broader Mermaid source-copy polish beyond the current full-source copy control.
-64. Broader diagram security policy beyond the current strict Mermaid config and SVG sanitization boundary.
+    scroll box for loading/error/ready states, Mermaid-only source-backed
+    loading state, and failed-state source preview for parse errors and
+    oversized-source refusal.
+63. Broader Mermaid source-copy polish beyond the current full-source copy,
+    copyable oversized-source fallback, and ready-state sanitized SVG copy
+    controls.
+64. Broader diagram security policy beyond the current strict Mermaid config,
+    disabled flowchart HTML labels, bounded width behavior, oversized-source
+    render guard, and SVG sanitization boundary denying style/link/resource
+    and animation surfaces plus SVG `id` / `name` prefixing.
 65. Broader code block language header polish beyond current normalized language, title/caption metadata, and opt-in Pretty Code line-number metadata.
 66. Code block line virtualization for large fences.
 67. Browser-level code block horizontal scrolling verification beyond the current labelled keyboard-focusable source region and max-content code body.
@@ -163,7 +170,8 @@ leaking virtual chunks as visible pages.
      current disabled/read-only DOM contract and checked/unchecked state marker.
 104. Broader table accessibility beyond the current deterministic header/cell associations for rendered rows.
 105. Broader code block accessibility beyond current labelled code block/source regions and keyboard-focusable horizontal source region, including line-level navigation if line numbers are added.
-106. Broader diagram accessibility beyond current labelled Mermaid group/image/source fallback, including richer descriptions for full Mermaid output.
+106. Broader diagram accessibility beyond current labelled Mermaid
+     group/image/source fallback and source-derived graph/sequence summaries.
 107. Broader footnote accessibility beyond current labelled refs/backrefs,
      labelled collected footnotes section, document-wide definition resolution,
      and route-level ref/backref smoke.
@@ -371,15 +379,19 @@ leaking virtual chunks as visible pages.
      invariant tests and route smoke.
 262. Raw HTML whitelist review beyond the current safe static HTML policy.
 263. Broader active raw HTML denylist coverage beyond the current iframe/object/embed/form/input/button/style/link/meta tests.
-264. Broader SVG sanitization coverage beyond the current SVG script/style mounting tests.
+264. Broader SVG sanitization coverage beyond the current SVG script/style,
+     link/resource, animation, and attribute-denylist mounting tests.
 265. CSS injection policy.
 266. Broader DOM clobbering fuzz tests beyond the current raw HTML `id`/`name`
      prefix regression, raw internal `data-pretext-*` metadata stripping
-     including component fallback metadata, and heading reserved-name tests.
+     including component fallback metadata, heading reserved-name tests, and
+     Mermaid SVG `id` / `name` prefix regression.
 267. Heading ID collision safety review beyond the current duplicate, reserved-name, and exported-slug tests.
 268. Component prop injection tests.
 269. Clipboard content sanitization policy.
-270. Mermaid security-level verification if Mermaid is added.
+270. Broader Mermaid security verification beyond the current strict
+     initialization invariant, oversized-source guard, and sanitized SVG
+     mounting coverage.
 271. Broader KaTeX security fuzzing beyond the current untrusted-input,
      bounded-expansion, bounded-size, and unsafe-command regression coverage.
 272. Fuzz tests with random HTML/Markdown mixes.

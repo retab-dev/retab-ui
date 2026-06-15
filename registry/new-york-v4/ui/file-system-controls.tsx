@@ -11,6 +11,13 @@ import {
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { TabsPrimitive } from "@/components/ui/tabs"
@@ -19,7 +26,6 @@ import type {
   FileSystemBrowserState,
   FileSystemHeaderState,
 } from "./file-system-browser-state"
-import { pathName } from "./file-system-index"
 import { normalizeFileSystemSearch } from "./file-system-query"
 import type { FileSystemSortKey, FileSystemView } from "./file-system-types"
 import { ViewerSidebarTrigger } from "./viewer"
@@ -67,8 +73,10 @@ export function FileSystemToolbar({
   title: FileSystemHeaderState["title"]
   view: FileSystemHeaderState["view"]
 }) {
-  const currentFolderName =
-    currentPath === "" ? title : pathName(currentPath) || title
+  const currentPathSegments = React.useMemo(
+    () => getFileSystemBreadcrumbSegments(currentPath, title),
+    [currentPath, title]
+  )
 
   return (
     <div className="flex h-12 shrink-0 items-center gap-2 border-b bg-muted/35 px-2">
@@ -92,14 +100,30 @@ export function FileSystemToolbar({
         >
           <ArrowRight className="size-4" aria-hidden />
         </Button>
-        <div className="min-w-0 px-1">
-          <div className="truncate text-sm font-semibold">
-            {currentFolderName}
-          </div>
-          <div className="truncate text-xs text-muted-foreground">
-            {currentPath || "/"}
-          </div>
-        </div>
+        <Breadcrumb className="min-w-0 px-1">
+          <BreadcrumbList className="min-w-0 flex-nowrap gap-1 overflow-hidden text-sm sm:gap-1.5">
+            {currentPathSegments.map((segment, index) => {
+              const isLast = index === currentPathSegments.length - 1
+
+              return (
+                <React.Fragment key={`${segment}-${index}`}>
+                  <BreadcrumbItem
+                    className={cn("min-w-0", !isLast && "shrink-0")}
+                  >
+                    {isLast ? (
+                      <BreadcrumbPage className="truncate">
+                        {segment}
+                      </BreadcrumbPage>
+                    ) : (
+                      <span className="text-muted-foreground">{segment}</span>
+                    )}
+                  </BreadcrumbItem>
+                  {!isLast ? <BreadcrumbSeparator /> : null}
+                </React.Fragment>
+              )
+            })}
+          </BreadcrumbList>
+        </Breadcrumb>
       </div>
       <FileSystemViewTabs view={view} setView={setView} />
       <div className="relative w-52 min-w-0 max-sm:w-36">
@@ -120,6 +144,12 @@ export function FileSystemToolbar({
       </div>
     </div>
   )
+}
+
+function getFileSystemBreadcrumbSegments(currentPath: string, title: string) {
+  const segments = currentPath.split("/").filter(Boolean)
+
+  return segments.length > 0 ? segments : [title]
 }
 
 function FileSystemViewTabs({
