@@ -215,7 +215,7 @@ export function ClassifierViewer({
       emptyTitle={emptyTitle}
       emptyDescription={emptyDescription}
     >
-      <ViewerRoot bare className="h-full flex-1 bg-background">
+      <ViewerRoot className="h-full flex-1 bg-background">
         <ClassifierViewerHeader />
         <ViewerBody>
           <ViewerSurface>

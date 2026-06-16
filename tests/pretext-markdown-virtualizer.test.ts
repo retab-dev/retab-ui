@@ -92,7 +92,7 @@ describe("Pretext Markdown virtualizer", () => {
       scrollTop: 265,
     })
 
-    expect(anchor).toEqual({ chunkIndex: 2, offsetWithinChunk: 25 })
+    expect(anchor).toEqual({ chunkIndex: 2, offsetWithinChunkPx: 25 })
 
     const measuredFrames = [
       frame({
@@ -129,7 +129,7 @@ describe("Pretext Markdown virtualizer", () => {
   })
 
   it("clamps restored anchors that exceed a measured chunk height", () => {
-    const anchor = { chunkIndex: 1, offsetWithinChunk: 500 }
+    const anchor = { chunkIndex: 1, offsetWithinChunkPx: 500 }
     const frames = [
       frame({
         height: 120,

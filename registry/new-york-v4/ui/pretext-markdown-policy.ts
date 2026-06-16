@@ -4,10 +4,7 @@ import type { Options as ReactMarkdownOptions } from "react-markdown"
 import rehypeKatex from "rehype-katex"
 import rehypePrettyCode from "rehype-pretty-code"
 import rehypeRaw from "rehype-raw"
-import rehypeSanitize, {
-  defaultSchema,
-  type Options as RehypeSanitizeOptions,
-} from "rehype-sanitize"
+import rehypeSanitize from "rehype-sanitize"
 import remarkBreaks from "remark-breaks"
 import remarkDirective from "remark-directive"
 import remarkGemoji from "remark-gemoji"
@@ -16,188 +13,25 @@ import remarkMath from "remark-math"
 import remarkSmartypants from "remark-smartypants"
 import { visit } from "unist-util-visit"
 
-export const ALERT_LABELS = {
-  caution: "Caution:",
-  important: "Important:",
-  note: "Note:",
-  tip: "Tip:",
-  warning: "Warning:",
-} as const
+import {
+  ALERT_LABELS,
+  CALLOUT_LABELS,
+  isPretextComponentKind,
+  normalizePretextCalloutKind,
+  parsePretextComponentProps,
+  remarkPretextComponentDirectives,
+  remarkPretextComponentMarkdown,
+  type AlertKind,
+  type CalloutKind,
+  type PretextComponent,
+  type PretextComponentFallback,
+} from "./pretext-markdown-components"
+import {
+  createPretextMarkdownSanitizeSchema,
+  PRETEXT_MARKDOWN_KATEX_OPTIONS,
+} from "./pretext-markdown-sanitize"
 
-export type AlertKind = keyof typeof ALERT_LABELS
-
-export const CALLOUT_LABELS = {
-  caution: "Caution",
-  danger: "Danger",
-  important: "Important",
-  info: "Info",
-  note: "Note",
-  tip: "Tip",
-  warning: "Warning",
-} as const
-
-export type CalloutKind = keyof typeof CALLOUT_LABELS
-
-type PretextComponentPropSchema = {
-  type?: "boolean" | "display" | "number" | "string"
-  values?: readonly string[]
-}
-
-type PretextComponentRegistryEntry = {
-  directiveName: string
-  props: Record<string, PretextComponentPropSchema>
-}
 type MarkdownPluginList = NonNullable<ReactMarkdownOptions["remarkPlugins"]>
-
-export const PRETEXT_COMPONENT_REGISTRY = {
-  Accordion: {
-    directiveName: "accordion",
-    props: {
-      title: {},
-    },
-  },
-  Badge: {
-    directiveName: "badge",
-    props: {
-      label: {},
-      tone: { values: ["danger", "info", "success", "warning"] },
-      value: {},
-    },
-  },
-  Callout: {
-    directiveName: "callout",
-    props: {
-      kind: {
-        values: [
-          "caution",
-          "danger",
-          "important",
-          "info",
-          "note",
-          "tip",
-          "warning",
-        ],
-      },
-      title: {},
-    },
-  },
-  Image: {
-    directiveName: "image",
-    props: {
-      alt: {},
-      label: {},
-      src: {},
-      title: {},
-    },
-  },
-  Diagram: {
-    directiveName: "diagram",
-    props: {
-      caption: {},
-      source: {},
-      title: {},
-      type: { values: ["mermaid"] },
-    },
-  },
-  Metric: {
-    directiveName: "metric",
-    props: {
-      label: {},
-      value: { type: "display" },
-    },
-  },
-  Tab: {
-    directiveName: "tab",
-    props: {
-      title: {},
-    },
-  },
-  Tabs: {
-    directiveName: "tabs",
-    props: {
-      label: {},
-    },
-  },
-  Video: {
-    directiveName: "video",
-    props: {
-      controls: { type: "boolean" },
-      label: {},
-      loop: { type: "boolean" },
-      muted: { type: "boolean" },
-      src: {},
-      title: {},
-    },
-  },
-} as const satisfies Record<string, PretextComponentRegistryEntry>
-
-export type PretextComponentKind = keyof typeof PRETEXT_COMPONENT_REGISTRY
-type PretextComponentPropName = {
-  [Kind in PretextComponentKind]: keyof (typeof PRETEXT_COMPONENT_REGISTRY)[Kind]["props"]
-}[PretextComponentKind]
-export type PretextComponentPropValue = boolean | number | string
-export type PretextComponentProps = Partial<
-  Record<PretextComponentPropName, PretextComponentPropValue>
->
-export type PretextComponent = {
-  name: PretextComponentKind
-  props: PretextComponentProps
-}
-
-export type PretextComponentFallback = {
-  componentName: string
-  reason: string
-  source: string
-}
-
-const URL_CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F]/
-const URL_SCHEME_PATTERN = /^([A-Za-z][A-Za-z0-9+.-]*):/
-const URL_BACKSLASH_PATTERN = /[\\\uFE68\uFF3C\u2216]/
-const URL_CONFUSABLE_DELIMITER_PATTERN =
-  /[\u02D0\u0589\u05C3\u0703\u0704\u16EC\u1803\u1809\u205A\u2236\uA789\uFE13\uFE55\uFF1A\u2044\u2215\u2571\u27CB\u29F8\uFF0F]/
-const ALLOWED_LINK_PROTOCOLS = new Set(["http", "https", "mailto"])
-export type PretextMarkdownSvgSanitizer = {
-  sanitize: (
-    source: string,
-    options: typeof PRETEXT_MARKDOWN_SVG_SANITIZE_OPTIONS
-  ) => string
-}
-
-export const PRETEXT_MARKDOWN_SVG_SANITIZE_OPTIONS = {
-  ADD_ATTR: [
-    "aria-label",
-    "aria-labelledby",
-    "data-source",
-    "data-testid",
-    "role",
-  ],
-  FORBID_TAGS: [
-    "a",
-    "animate",
-    "audio",
-    "canvas",
-    "embed",
-    "foreignObject",
-    "iframe",
-    "image",
-    "link",
-    "object",
-    "set",
-    "script",
-    "style",
-    "use",
-    "video",
-  ],
-  FORBID_ATTR: ["href", "style", "xlink:href"],
-  SANITIZE_NAMED_PROPS: true,
-  USE_PROFILES: { svg: true, svgFilters: true },
-} as const
-export const PRETEXT_MARKDOWN_KATEX_OPTIONS = {
-  maxExpand: 1000,
-  maxSize: 10,
-  strict: "ignore",
-  trust: false,
-} as const
 
 export const PRETEXT_MARKDOWN_REHYPE_PLUGINS: MarkdownPluginList = [
   rehypeRaw,
@@ -236,7 +70,6 @@ export function createPretextMarkdownRemarkPlugins(
     remarkPretextComponentMarkdown,
     remarkPretextDefinitionLists,
     remarkSmartypants,
-    remarkRestorePretextComponentMarkdownFallbacks,
     remarkPretextDirectiveCallouts,
     remarkPretextComponentDirectives,
     remarkPretextGithubAlerts,
@@ -246,89 +79,6 @@ export function createPretextMarkdownRemarkPlugins(
     remarkBreaks,
     remarkMath,
   ]
-}
-
-export function sanitizePretextMarkdownUrl(value: string) {
-  const trimmed = value.trim()
-  if (!trimmed) return ""
-  if (URL_CONTROL_CHARACTER_PATTERN.test(trimmed)) return ""
-  if (URL_BACKSLASH_PATTERN.test(trimmed)) return ""
-  if (URL_CONFUSABLE_DELIMITER_PATTERN.test(trimmed)) return ""
-
-  const decoded = decodePretextMarkdownUrl(trimmed).trim()
-  if (!decoded || URL_CONTROL_CHARACTER_PATTERN.test(decoded)) return ""
-  if (URL_BACKSLASH_PATTERN.test(decoded)) return ""
-  if (URL_CONFUSABLE_DELIMITER_PATTERN.test(decoded)) return ""
-
-  const decodedScheme = getPretextMarkdownUrlScheme(decoded)
-  const rawScheme = getPretextMarkdownUrlScheme(trimmed)
-  if (decodedScheme && decodedScheme !== rawScheme) return ""
-  if (decodedScheme && !ALLOWED_LINK_PROTOCOLS.has(decodedScheme)) return ""
-
-  if (trimmed.startsWith("#")) return trimmed
-  if (trimmed.startsWith("/")) return trimmed.startsWith("//") ? "" : trimmed
-
-  try {
-    const url = new URL(trimmed, "https://retab.local")
-    if (ALLOWED_LINK_PROTOCOLS.has(url.protocol.slice(0, -1))) {
-      return trimmed
-    }
-  } catch {
-    return ""
-  }
-
-  return ""
-}
-
-export function sanitizePretextMarkdownImageUrl(value: string) {
-  const safeUrl = sanitizePretextMarkdownUrl(value)
-  if (!safeUrl || safeUrl.startsWith("mailto:") || safeUrl.startsWith("#")) {
-    return ""
-  }
-  if (isPretextMarkdownSvgResourceUrl(safeUrl)) return ""
-  return safeUrl
-}
-
-export function sanitizePretextMarkdownMediaUrl(value: string) {
-  const safeUrl = sanitizePretextMarkdownImageUrl(value)
-  if (!safeUrl) return ""
-  if (isPretextMarkdownSvgResourceUrl(safeUrl)) return ""
-  return safeUrl
-}
-
-export function sanitizePretextMarkdownSvg(
-  svg: string,
-  sanitizer: PretextMarkdownSvgSanitizer
-) {
-  const sanitized = sanitizer
-    .sanitize(svg, PRETEXT_MARKDOWN_SVG_SANITIZE_OPTIONS)
-    .trim()
-
-  return /^<svg(?:\s|>)/i.test(sanitized) ? sanitized : ""
-}
-
-function decodePretextMarkdownUrl(value: string) {
-  try {
-    return decodeURIComponent(value)
-  } catch {
-    return value
-  }
-}
-
-function getPretextMarkdownUrlScheme(value: string) {
-  return URL_SCHEME_PATTERN.exec(value)?.[1]?.toLowerCase() ?? null
-}
-
-function isPretextMarkdownSvgResourceUrl(value: string) {
-  const decoded = decodePretextMarkdownUrl(value).trim()
-
-  try {
-    const url = new URL(decoded, "https://retab.local")
-    return /\.(?:svg|svgz)$/i.test(url.pathname)
-  } catch {
-    const pathname = decoded.split(/[?#]/, 1)[0] ?? decoded
-    return /\.(?:svg|svgz)$/i.test(pathname)
-  }
 }
 
 function rehypePretextMarkdownInputPolicy() {
@@ -379,17 +129,31 @@ function isUnsafePretextMarkdownInput(node: unknown) {
   )
 }
 
+// A hast element's `properties` bag, or null for non-element nodes.
+function getNodeProperties(node: unknown): Record<string, unknown> | null {
+  return node && typeof node === "object" && "properties" in node
+    ? (node.properties as Record<string, unknown>)
+    : null
+}
+
+// hast lowercases data attributes to camelCase; read either spelling.
+function readDataProp(properties: Record<string, unknown>, attribute: string) {
+  const camelCase = attribute.replace(/-([a-z])/g, (_, letter: string) =>
+    letter.toUpperCase()
+  )
+  return properties[camelCase] ?? properties[attribute]
+}
+
 export function readPretextHeadingId(props: Record<string, unknown>) {
-  const id = props.dataPretextHeadingId ?? props["data-pretext-heading-id"]
+  const id = readDataProp(props, "data-pretext-heading-id")
   return typeof id === "string" ? id : undefined
 }
 
 export function readPretextAlertKind(node: unknown): AlertKind | null {
-  const properties =
-    node && typeof node === "object" && "properties" in node
-      ? (node.properties as Record<string, unknown>)
-      : null
-  const value = properties?.dataPretextAlertKind
+  const properties = getNodeProperties(node)
+  const value = properties
+    ? readDataProp(properties, "data-pretext-alert-kind")
+    : null
   return typeof value === "string" && value in ALERT_LABELS
     ? (value as AlertKind)
     : null
@@ -398,20 +162,15 @@ export function readPretextAlertKind(node: unknown): AlertKind | null {
 export function readPretextCallout(
   node: unknown
 ): { kind: CalloutKind; title: string } | null {
-  const properties =
-    node && typeof node === "object" && "properties" in node
-      ? (node.properties as Record<string, unknown>)
-      : null
+  const properties = getNodeProperties(node)
   if (!properties) return null
 
   const kind = normalizePretextCalloutKind(
-    properties.dataPretextCalloutKind ?? properties["data-pretext-callout-kind"]
+    readDataProp(properties, "data-pretext-callout-kind")
   )
   if (!kind) return null
 
-  const title =
-    properties.dataPretextCalloutTitle ??
-    properties["data-pretext-callout-title"]
+  const title = readDataProp(properties, "data-pretext-callout-title")
   return {
     kind,
     title:
@@ -420,22 +179,18 @@ export function readPretextCallout(
 }
 
 export function readPretextComponent(node: unknown): PretextComponent | null {
-  const properties =
-    node && typeof node === "object" && "properties" in node
-      ? (node.properties as Record<string, unknown>)
-      : null
+  const properties = getNodeProperties(node)
   if (!properties) return null
 
-  const name =
-    properties.dataPretextComponentName ??
-    properties["data-pretext-component-name"]
+  const name = readDataProp(properties, "data-pretext-component-name")
   if (typeof name !== "string" || !isPretextComponentKind(name)) {
     return null
   }
 
-  const serializedProps =
-    properties.dataPretextComponentProps ??
-    properties["data-pretext-component-props"]
+  const serializedProps = readDataProp(
+    properties,
+    "data-pretext-component-props"
+  )
   if (typeof serializedProps !== "string") return null
 
   try {
@@ -454,23 +209,23 @@ export function readPretextComponent(node: unknown): PretextComponent | null {
 export function readPretextComponentFallback(
   node: unknown
 ): PretextComponentFallback | null {
-  const properties =
-    node && typeof node === "object" && "properties" in node
-      ? (node.properties as Record<string, unknown>)
-      : null
+  const properties = getNodeProperties(node)
   if (!properties) return null
 
-  const source =
-    properties.dataPretextComponentFallbackSource ??
-    properties["data-pretext-component-fallback-source"]
+  const source = readDataProp(
+    properties,
+    "data-pretext-component-fallback-source"
+  )
   if (typeof source !== "string" || !source.trim()) return null
 
-  const componentName =
-    properties.dataPretextComponentFallbackName ??
-    properties["data-pretext-component-fallback-name"]
-  const reason =
-    properties.dataPretextComponentFallbackReason ??
-    properties["data-pretext-component-fallback-reason"]
+  const componentName = readDataProp(
+    properties,
+    "data-pretext-component-fallback-name"
+  )
+  const reason = readDataProp(
+    properties,
+    "data-pretext-component-fallback-reason"
+  )
 
   return {
     componentName:
@@ -483,383 +238,6 @@ export function readPretextComponentFallback(
         : "Unsupported component syntax",
     source,
   }
-}
-
-export function createPretextMarkdownSanitizeSchema(): RehypeSanitizeOptions {
-  return {
-    ...defaultSchema,
-    clobberPrefix: "user-content-",
-    attributes: {
-      ...defaultSchema.attributes,
-      "*": [
-        ...(defaultSchema.attributes?.["*"] ?? []),
-        "ariaDescribedBy",
-        "ariaHidden",
-        "ariaLabel",
-        "ariaLabelledBy",
-        "dataFootnoteBackref",
-        "dataFootnoteRef",
-        "dataPretextAlertKind",
-        "dataPretextCalloutKind",
-        "dataPretextCalloutTitle",
-        "dataPretextComponentName",
-        "dataPretextComponentProps",
-        "dataPretextComponentFallbackName",
-        "dataPretextComponentFallbackReason",
-        "dataPretextComponentFallbackSource",
-        "dataPretextDefinitionList",
-        "dataPretextDefinitionDescription",
-        "dataPretextDefinitionTerm",
-        "dataPretextHeadingId",
-      ],
-      abbr: ["title"],
-      code: [...(defaultSchema.attributes?.code ?? []), "metastring"],
-      dfn: ["title"],
-      div: [
-        ...(defaultSchema.attributes?.div ?? []),
-        "dataPretextCalloutKind",
-        "dataPretextCalloutTitle",
-        "dataPretextComponentName",
-        "dataPretextComponentProps",
-        "dataPretextComponentFallbackName",
-        "dataPretextComponentFallbackReason",
-        "dataPretextComponentFallbackSource",
-      ],
-      mark: ["title"],
-      time: ["dateTime", "title"],
-    },
-    tagNames: [
-      ...(defaultSchema.tagNames ?? []),
-      "abbr",
-      "caption",
-      "cite",
-      "details",
-      "dd",
-      "dfn",
-      "dl",
-      "dt",
-      "figcaption",
-      "figure",
-      "kbd",
-      "mark",
-      "small",
-      "sub",
-      "summary",
-      "sup",
-      "time",
-    ],
-  }
-}
-
-function normalizePretextCalloutKind(value: unknown): CalloutKind | null {
-  switch (String(value ?? "").toLowerCase()) {
-    case "caution":
-      return "caution"
-    case "danger":
-    case "error":
-    case "failure":
-      return "danger"
-    case "important":
-      return "important"
-    case "info":
-      return "info"
-    case "note":
-      return "note"
-    case "success":
-    case "tip":
-      return "tip"
-    case "warning":
-      return "warning"
-    default:
-      return null
-  }
-}
-
-function parsePretextComponentMarkdown(value: string): PretextComponent | null {
-  const componentMatch = parsePretextComponentTag(value, "selfClosing")
-  if (!componentMatch) return null
-
-  const { attributes, name } = componentMatch
-  if (!isPretextComponentKind(name)) return null
-
-  const rawProps = parsePretextComponentAttributeString(attributes)
-  if (!rawProps) return null
-  const props = parsePretextComponentProps(name, rawProps)
-  if (!props) return null
-
-  return {
-    name,
-    props,
-  }
-}
-
-function parsePretextComponentOpeningMarkdown(
-  value: string
-): PretextComponent | null {
-  const componentMatch = parsePretextComponentTag(value, "opening")
-  if (!componentMatch) return null
-
-  const { attributes, name } = componentMatch
-  if (!isPretextComponentKind(name)) return null
-
-  const rawProps = parsePretextComponentAttributeString(attributes)
-  if (!rawProps) return null
-  const props = parsePretextComponentProps(name, rawProps)
-  if (!props) return null
-
-  return {
-    name,
-    props,
-  }
-}
-
-function readPretextComponentClosingMarkdown(value: string) {
-  return /^<\/([A-Z][A-Za-z0-9]*)\s*>$/.exec(value.trim())?.[1] ?? null
-}
-
-function parsePretextComponentTag(
-  value: string,
-  mode: "opening" | "selfClosing"
-) {
-  const source = value.trim()
-  const nameMatch = /^<([A-Z][A-Za-z0-9]*)/.exec(source)
-  if (!nameMatch) return null
-
-  let quote: '"' | "'" | null = null
-  for (let index = nameMatch[0].length; index < source.length; index += 1) {
-    const char = source[index]
-
-    if (quote) {
-      if (char === quote) quote = null
-      continue
-    }
-
-    if (char === '"' || char === "'") {
-      quote = char
-      continue
-    }
-
-    if (char === "<") return null
-
-    if (mode === "selfClosing" && char === "/" && source[index + 1] === ">") {
-      if (source.slice(index + 2).trim() !== "") return null
-      return {
-        attributes: source.slice(nameMatch[0].length, index),
-        name: nameMatch[1]!,
-      }
-    }
-
-    if (mode === "opening" && char === ">") {
-      const attributes = source.slice(nameMatch[0].length, index)
-      if (attributes.trim().endsWith("/")) return null
-      if (source.slice(index + 1).trim() !== "") return null
-      return {
-        attributes,
-        name: nameMatch[1]!,
-      }
-    }
-  }
-
-  return null
-}
-
-function parsePretextComponentAttributeString(attributes: string) {
-  const rawProps: Record<string, PretextComponentPropValue> = {}
-  const propPattern =
-    /\s*([A-Za-z][A-Za-z0-9_]*)(?:=(?:"([^"]*)"|'([^']*)'|\{([^{}]*)\}))?/gy
-  let index = 0
-
-  while (index < attributes.length) {
-    if (attributes.slice(index).trim() === "") break
-
-    propPattern.lastIndex = index
-    const propMatch = propPattern.exec(attributes)
-    if (!propMatch) return null
-
-    const propName = propMatch[1]
-    if (!isSafePretextComponentPropName(propName)) return null
-
-    const parsedValue = parsePretextComponentAttributeValue({
-      doubleQuoted: propMatch[2],
-      singleQuoted: propMatch[3],
-      expression: propMatch[4],
-      isBare:
-        propMatch[2] == null && propMatch[3] == null && propMatch[4] == null,
-    })
-    if (parsedValue == null) return null
-
-    rawProps[propName] = parsedValue
-    index = propPattern.lastIndex
-  }
-
-  return rawProps
-}
-
-function parsePretextComponentAttributeValue({
-  doubleQuoted,
-  expression,
-  isBare,
-  singleQuoted,
-}: {
-  doubleQuoted: string | undefined
-  expression: string | undefined
-  isBare: boolean
-  singleQuoted: string | undefined
-}): PretextComponentPropValue | null {
-  if (doubleQuoted != null) return doubleQuoted
-  if (singleQuoted != null) return singleQuoted
-  if (isBare) return true
-  if (expression == null) return null
-
-  const literal = expression.trim()
-  if (literal === "true") return true
-  if (literal === "false") return false
-  if (/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(literal)) {
-    const value = Number(literal)
-    return Number.isFinite(value) ? value : null
-  }
-  return null
-}
-
-function parsePretextDirectiveComponent(node: any): PretextComponent | null {
-  const name = normalizePretextDirectiveComponentName(node.name)
-  if (!name) return null
-
-  const props = parsePretextComponentAttributes(node.attributes)
-  if (!props) return null
-
-  if (node.type === "textDirective") {
-    const label = extractPretextDirectiveText(node)
-    if (label) props.label ??= label
-  }
-
-  const validatedProps = parsePretextComponentProps(name, props)
-  if (!validatedProps) return null
-
-  return { name, props: validatedProps }
-}
-
-function extractPretextDirectiveText(node: any) {
-  if (typeof node.value === "string" && node.value.trim()) {
-    return node.value.trim()
-  }
-
-  const children = Array.isArray(node.children) ? node.children : []
-  const text = children
-    .map((child: { value?: unknown }) =>
-      typeof child.value === "string" ? child.value : ""
-    )
-    .join("")
-    .trim()
-  return text || null
-}
-
-function normalizePretextDirectiveComponentName(
-  name: unknown
-): PretextComponentKind | null {
-  const normalized = String(name ?? "").toLowerCase()
-  for (const [componentName, definition] of Object.entries(
-    PRETEXT_COMPONENT_REGISTRY
-  )) {
-    if (definition.directiveName === normalized) {
-      return componentName as PretextComponentKind
-    }
-  }
-  return null
-}
-
-function isPretextDirectiveComponentName(name: unknown) {
-  return normalizePretextDirectiveComponentName(name) != null
-}
-
-function parsePretextComponentAttributes(
-  attributes: Record<string, unknown> | null | undefined
-): PretextComponentProps | null {
-  const props: PretextComponentProps = {}
-  const parsedProps = props as Record<string, PretextComponentPropValue>
-
-  for (const [propName, propValue] of Object.entries(attributes ?? {})) {
-    if (!isSafePretextComponentPropName(propName)) return null
-    if (
-      typeof propValue !== "string" &&
-      typeof propValue !== "number" &&
-      typeof propValue !== "boolean"
-    ) {
-      return null
-    }
-    parsedProps[propName] = propValue
-  }
-
-  return props
-}
-
-function parsePretextComponentProps(
-  name: PretextComponentKind,
-  props: Record<string, unknown>
-): PretextComponentProps | null {
-  const definition = PRETEXT_COMPONENT_REGISTRY[name]
-  const parsed: PretextComponentProps = {}
-  const parsedProps = parsed as Record<string, PretextComponentPropValue>
-
-  for (const [propName, propValue] of Object.entries(props)) {
-    if (!isSafePretextComponentPropName(propName)) return null
-    const propDefinition = (
-      definition.props as Record<string, PretextComponentPropSchema>
-    )[propName]
-    if (!propDefinition) return null
-    const parsedValue = parsePretextComponentPropValue(
-      propDefinition,
-      propValue
-    )
-    if (parsedValue == null) return null
-    parsedProps[propName] = parsedValue
-  }
-
-  return parsed
-}
-
-function parsePretextComponentPropValue(
-  propDefinition: PretextComponentPropSchema,
-  propValue: unknown
-): PretextComponentPropValue | null {
-  switch (propDefinition.type ?? "string") {
-    case "boolean":
-      if (typeof propValue === "boolean") return propValue
-      if (propValue === "true") return true
-      if (propValue === "false") return false
-      return null
-    case "display":
-      return typeof propValue === "string" ||
-        (typeof propValue === "number" && Number.isFinite(propValue))
-        ? propValue
-        : null
-    case "number":
-      return typeof propValue === "number" && Number.isFinite(propValue)
-        ? propValue
-        : null
-    case "string":
-      if (typeof propValue !== "string") return null
-      if (propDefinition.values && !propDefinition.values.includes(propValue)) {
-        return null
-      }
-      return propValue
-  }
-}
-
-function isPretextComponentKind(name: string): name is PretextComponentKind {
-  return name in PRETEXT_COMPONENT_REGISTRY
-}
-
-function isSafePretextComponentPropName(propName: string) {
-  if (/^on/i.test(propName)) return false
-
-  return ![
-    "children",
-    "component",
-    "dangerouslySetInnerHTML",
-    "render",
-    "style",
-  ].includes(propName)
 }
 
 function remarkPretextHeadingIds(headingIds: readonly string[]) {
@@ -1130,246 +508,6 @@ function remarkPretextDirectiveCallouts() {
       }
     })
   }
-}
-
-function remarkPretextComponentDirectives() {
-  return function transform(tree: unknown) {
-    visit(
-      tree as any,
-      ["containerDirective", "leafDirective", "textDirective"],
-      (node: any) => {
-        const keepsChildren = node.type === "containerDirective"
-        const component = parsePretextDirectiveComponent(node)
-        if (!component) {
-          if (isPretextDirectiveComponentName(node.name)) {
-            const fallback = createPretextComponentFallbackData({
-              componentName:
-                normalizePretextDirectiveComponentName(node.name) ??
-                "Component",
-              reason: "Unsupported component directive props",
-              source: serializePretextDirectiveFallback(node),
-            })
-            node.type = "pretextComponentFallbackDirective"
-            node.data = {
-              ...node.data,
-              hName: "div",
-              hProperties: fallback,
-            }
-            node.children = []
-          }
-          return
-        }
-
-        node.type = "pretextComponentDirective"
-        node.data = {
-          ...node.data,
-          hName: "div",
-          hProperties: {
-            ...node.data?.hProperties,
-            dataPretextComponentName: component.name,
-            dataPretextComponentProps: JSON.stringify(component.props),
-          },
-        }
-        if (!keepsChildren) {
-          node.children = []
-        }
-        delete node.value
-      }
-    )
-  }
-}
-
-function serializePretextDirectiveFallback(node: any) {
-  const prefix =
-    node.type === "textDirective"
-      ? ":"
-      : node.type === "containerDirective"
-        ? ":::"
-        : "::"
-  const text = extractPretextDirectiveText(node)
-  const label = text ? `[${text}]` : ""
-  return `${prefix}${node.name ?? ""}${label}${serializePretextDirectiveAttributes(
-    node.attributes
-  )}`
-}
-
-function serializePretextDirectiveAttributes(
-  attributes: Record<string, unknown> | null | undefined
-) {
-  const entries = Object.entries(attributes ?? {})
-    .filter((entry): entry is [string, string] => typeof entry[1] === "string")
-    .map(([name, value]) => `${name}="${value.replace(/"/g, '\\"')}"`)
-
-  return entries.length ? `{${entries.join(" ")}}` : ""
-}
-
-function remarkPretextComponentMarkdown() {
-  return function transform(tree: any) {
-    transformPretextComponentMarkdownChildren(tree)
-  }
-}
-
-function transformPretextComponentMarkdownChildren(parent: any) {
-  const children = Array.isArray(parent?.children) ? parent.children : null
-  if (!children) return
-
-  for (let index = 0; index < children.length; index += 1) {
-    const node = children[index]
-
-    if (node?.type === "html" && typeof node.value === "string") {
-      const component = parsePretextComponentMarkdown(node.value)
-      if (component) {
-        children[index] = createPretextComponentMarkdownNode(component, [])
-        continue
-      }
-
-      const opening = parsePretextComponentOpeningMarkdown(node.value)
-      if (opening) {
-        const closingIndex = findPretextComponentClosingIndex(
-          children,
-          index + 1,
-          opening.name
-        )
-        if (closingIndex !== -1) {
-          const componentChildren = children.slice(index + 1, closingIndex)
-          const componentNode = createPretextComponentMarkdownNode(
-            opening,
-            componentChildren
-          )
-          children.splice(index, closingIndex - index + 1, componentNode)
-          transformPretextComponentMarkdownChildren(componentNode)
-          continue
-        }
-      }
-
-      if (isPretextMdxLikeHtml(node.value)) {
-        children[index] = createPretextComponentMarkdownFallbackNode(node.value)
-        continue
-      }
-    }
-
-    transformPretextComponentMarkdownChildren(node)
-  }
-}
-
-function findPretextComponentClosingIndex(
-  siblings: any[],
-  startIndex: number,
-  name: PretextComponentKind
-) {
-  let depth = 0
-
-  for (let index = startIndex; index < siblings.length; index += 1) {
-    const sibling = siblings[index]
-    if (sibling?.type !== "html" || typeof sibling.value !== "string") continue
-
-    const opening = parsePretextComponentOpeningMarkdown(sibling.value)
-    if (opening?.name === name) {
-      depth += 1
-      continue
-    }
-
-    if (readPretextComponentClosingMarkdown(sibling.value) === name) {
-      if (depth === 0) return index
-      depth -= 1
-    }
-  }
-
-  return -1
-}
-
-function createPretextComponentMarkdownNode(
-  component: PretextComponent,
-  children: any[]
-) {
-  return {
-    type: "pretextComponent",
-    data: {
-      hName: "div",
-      hProperties: {
-        dataPretextComponentName: component.name,
-        dataPretextComponentProps: JSON.stringify(component.props),
-      },
-    },
-    children,
-  }
-}
-
-function createPretextComponentMarkdownFallbackNode(value: string) {
-  const fallback = describePretextComponentMarkdownFallback(value)
-  return {
-    type: "pretextComponentFallback",
-    data: {
-      hName: "div",
-      hProperties: createPretextComponentFallbackData(fallback),
-    },
-    children: [],
-  }
-}
-
-function describePretextComponentMarkdownFallback(
-  value: string
-): PretextComponentFallback {
-  const source = value.trim()
-  const componentName = readPretextComponentTagName(source) ?? "Component"
-  return {
-    componentName,
-    reason: getPretextComponentFallbackReason(source, componentName),
-    source,
-  }
-}
-
-function createPretextComponentFallbackData(
-  fallback: PretextComponentFallback
-) {
-  return {
-    dataPretextComponentFallbackName: fallback.componentName,
-    dataPretextComponentFallbackReason: fallback.reason,
-    dataPretextComponentFallbackSource: fallback.source,
-  }
-}
-
-function readPretextComponentTagName(value: string) {
-  return /^<\/?([A-Z][A-Za-z0-9.]*)/.exec(value.trim())?.[1] ?? null
-}
-
-function getPretextComponentFallbackReason(
-  source: string,
-  componentName: string
-) {
-  if (componentName.includes(".")) {
-    return "Remote or namespaced components are not supported"
-  }
-
-  if (!isPretextComponentKind(componentName)) {
-    return "Unsupported component"
-  }
-
-  if (/\s\w+=\{[^{}]*(?:\(|\)|\w)[^{}]*\}/.test(source)) {
-    return "Component props must be literal values"
-  }
-
-  if (/\s\{\s*\.\.\./.test(source) || /\{\s*\.\.\./.test(source)) {
-    return "Spread props are not supported"
-  }
-
-  if (/\son[A-Za-z0-9_]*\s*=/.test(source)) {
-    return "Event handler props are not supported"
-  }
-
-  return "Unsupported component props"
-}
-
-function remarkRestorePretextComponentMarkdownFallbacks() {
-  return function transform(_tree: unknown) {}
-}
-
-function isPretextMdxLikeHtml(value: string) {
-  const trimmed = value.trim()
-  return (
-    /^<\/?[A-Z][A-Za-z0-9.]*(?:\s|\/?>)/.test(trimmed) ||
-    /\s\w+=\{/.test(trimmed)
-  )
 }
 
 function remarkPretextProseTransforms() {

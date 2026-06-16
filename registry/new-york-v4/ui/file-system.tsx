@@ -95,7 +95,6 @@ function FileSystemRoot({ className }: { className?: string }) {
     <div data-slot="file-system">
       <ViewerRoot
         data-viewer="file-system"
-        bare
         defaultOpen
         className={cn(
           "h-[640px] rounded-md border bg-background text-foreground",

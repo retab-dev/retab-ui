@@ -9,7 +9,7 @@ flowchart TD
   %% Public entry points and distribution
   %% ---------------------------------------------------------------------------
   subgraph Distribution["Distribution and public entry points"]
-    Docs["content/docs/viewers/text-viewer.mdx\nDocs examples, feature list, props, ref API"]
+    Docs["content/docs/components/file-viewer/text-viewer.mdx\nDocs examples, feature list, props, ref API"]
     Demo["components/text-viewer-demo.tsx\nDocs demo using /samples/server.log"]
     RegistryItem["public/r/text-viewer.json\nshadcn registry item\nmetadata, dependencies, source file payloads"]
     ComponentExports["components/ui/text-viewer*.ts\nThin app exports from registry/new-york-v4/ui"]

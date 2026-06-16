@@ -1,6 +1,7 @@
 ---
 title: Segment Sidebar
 description: A navigable list of document segments with page ranges and confidence, driven by shared preview and current-page state.
+component: true
 ---
 
 `SegmentSidebar` is the "list" surface over a page-segmented result (partition
@@ -11,7 +12,7 @@ Hovering is a temporary preview. When nothing is hovered, `currentPage` derives
 the highlighted segment. Clicking fires `onSelect` so the host can scroll the
 document to the segment's first page; it does not persist category selection.
 Wire it to the same `useSegmentInteraction` object as a
-[legend](/docs/components/legend) for a coordinated layout.
+[legend](/docs/components/file-viewer/segment-legend) for a coordinated layout.
 
 <ComponentPreview name="segment-sidebar-demo" />
 
@@ -26,10 +27,11 @@ subdocument's first page.
 
 ## Architecture Boundary
 
-`ViewerSidebar` owns viewer placement, width, collapse state, and the accessible
-label for the rail. `SegmentSidebar` owns only the segment-row model and
-interaction semantics. Nesting `SegmentSidebar` inside `ViewerSidebar` is the
-intended composition when segments are the viewer's rail content.
+`FileViewerSidebar` owns file-viewer placement, width, collapse state, and the
+accessible label for the rail. `SegmentSidebar` owns only the segment-row model
+and interaction semantics. Nesting `SegmentSidebar` inside
+`FileViewerSidebar` is the intended composition when segments are the file
+navigation content.
 
 Internally, `SegmentSidebar` uses providerless `SidebarList*` primitives. That
 keeps the row grammar aligned with the sidebar system without mounting an app
@@ -71,7 +73,7 @@ export function Example() {
 For caller-owned preview state, build the same `interaction` object with
 `useControlledSegmentInteraction`; do not pass selection props to the sidebar.
 
-## Props
+## API Reference
 
 | Prop          | Type                         | Description                                                             |
 | ------------- | ---------------------------- | ----------------------------------------------------------------------- |
@@ -82,3 +84,7 @@ For caller-owned preview state, build the same `interaction` object with
 | `unitLabel`   | `string`                     | Row noun, e.g. `"chunk"` or `"subdocument"`. Defaults to `"segment"`.   |
 | `showUnused`  | `boolean`                    | Show segments with zero pages too. Defaults to `true`.                  |
 | `className`   | `string`                     | Container class.                                                        |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/segment-sidebar.tsx" />

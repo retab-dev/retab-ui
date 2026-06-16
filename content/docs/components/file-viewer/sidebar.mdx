@@ -1,11 +1,12 @@
 ---
 title: Sidebar
-description: Viewer sidebar primitives for document rails, segment lists, attachment lists, and source-linked workflow panels.
+description: The File Viewer sidebar slot for thumbnails, attachments, segments, and source-linked navigation panels.
+component: true
 ---
 
-The Retab sidebar is the rail inside a document viewer. It belongs to the
-viewer layout system: `ViewerRoot`, `ViewerBody`, `ViewerSidebar`, and
-`ViewerSurface`.
+`FileViewerSidebar` is the optional rail inside `FileViewerBody`. It belongs to
+the File Viewer frame: `FileViewer`, `FileViewerHeader`, `FileViewerBody`,
+`FileViewerSidebar`, and `FileViewerSurface`.
 
 Use it for document-adjacent panels: page sections, attachments, source fields,
 thumbnails, and other workflow rails that sit beside a viewer surface. Do not
@@ -13,10 +14,11 @@ use the app-shell `SidebarProvider` pattern for these rails.
 
 ## Viewer Sidebar Example
 
-This is the shape used across the viewers: `ViewerSidebar` owns placement,
-width, collapse state, and the accessible rail label. The domain component
-inside the rail owns the row model and interaction. Here, `SegmentSidebar` owns
-section rows while `FileViewer bare` owns the document surface.
+This is the shape used across file-backed viewers: `FileViewerSidebar` owns
+placement, width, collapse state, and the accessible rail label. The navigation
+component inside the rail owns the row model and interaction. Here,
+`SegmentSidebar` owns section rows while `FileViewerDocument` owns the document
+surface.
 
 <ComponentPreview name="viewer-sidebar-demo" />
 
@@ -48,21 +50,21 @@ section rows while `FileViewer bare` owns the document surface.
 
 ## Ownership Boundary
 
-- `ViewerRoot` owns sidebar state, mode resolution, trigger wiring, and the
+- `FileViewer` owns sidebar state, mode resolution, trigger wiring, and the
   single-primary-sidebar contract.
-- `ViewerSidebar` owns spatial placement, width, side, collapse behavior, and
-  the rail's accessible label.
-- `ViewerSurface` owns the main document/workflow surface beside the rail.
+- `FileViewerSidebar` owns spatial placement, width, side, collapse behavior,
+  and the rail's accessible label.
+- `FileViewerSurface` owns the main file surface beside the rail.
 - `SidebarList*` owns providerless grouped-row grammar inside a rail.
 - `SegmentSidebar` owns segment row state, preview interaction, current-page
   highlighting, and select callbacks.
 - `AttachmentSidebar` owns file attachment rows, thumbnails, selected state,
   disabled rows, and empty state.
 
-Do not mount `SidebarProvider` inside a viewer. That provider is for app-shell
-navigation: persistence, global shortcuts, mobile sheet projection, and
-workspace menus. Viewer rails use `ViewerSidebar` for placement and
-`SidebarList*` for row grammar.
+Do not mount `SidebarProvider` inside File Viewer. That provider is for
+app-shell navigation: persistence, global shortcuts, mobile sheet projection,
+and workspace menus. File Viewer rails use `FileViewerSidebar` for placement
+and `SidebarList*` for row grammar.
 
 ## Domain Rails
 
@@ -73,7 +75,7 @@ Use a named domain sidebar when the rows have semantics:
 - `AttachmentSidebar` for files attached to an email, message, or workflow. It
   renders `FileThumbnail` rows and lets the caller own selected attachment id.
 - source-field sidebars in extraction workflows should use the same
-  `ViewerSidebar` placement contract and a domain row model, not an app
+  `FileViewerSidebar` placement contract and a domain row model, not an app
   navigation menu.
 
 Use raw `SidebarList*` primitives only when you are creating a new domain rail
@@ -81,31 +83,33 @@ and need grouped rows without app-sidebar behavior.
 
 ## Sidebar Modes
 
-`ViewerRoot mode="auto"` starts in overlay mode until the viewer has a measured
+`FileViewer mode="auto"` starts in overlay mode until the viewer has a measured
 width, then resolves to inline or overlay. Use fixed modes only when a workflow
 requires it:
 
 ```tsx
-<ViewerRoot defaultOpen mode="inline" sidebarSide="right">
-  <ViewerBody>
-    <ViewerSurface />
-    <ViewerSidebar aria-label="Attachments" width="20rem">
+<FileViewer source={source} defaultOpen mode="inline" sidebarSide="right">
+  <FileViewerBody>
+    <FileViewerSurface />
+    <FileViewerSidebar aria-label="Attachments" width="20rem">
       <AttachmentSidebar items={attachments} selectedId={selectedId} />
-    </ViewerSidebar>
-  </ViewerBody>
-</ViewerRoot>
+    </FileViewerSidebar>
+  </FileViewerBody>
+</FileViewer>
 ```
 
-`ViewerSidebarTrigger` is disabled until a `ViewerSidebar` registers with the
-nearest `ViewerRoot`. In overlay mode, Escape closes the sidebar and focus
-returns to the trigger.
+`FileViewerSidebarTrigger` is disabled until a `FileViewerSidebar` registers
+with the nearest `FileViewer`. In overlay mode, Escape closes the sidebar and
+focus returns to the trigger.
 
 ## Structural Attributes
 
-Viewer sidebar primitives expose stable attributes for local styling and tests:
+File Viewer sidebar primitives expose stable attributes for local styling and
+tests:
 
-- `data-slot="viewer-root"`, `viewer-body`, `viewer-sidebar`,
-  `viewer-surface`, and `viewer-sidebar-trigger`;
+- `data-slot="file-viewer-header"`, `file-viewer-body`,
+  `file-viewer-sidebar`, `file-viewer-surface`, and
+  `file-viewer-sidebar-trigger`;
 - `data-viewer-sidebar-mode="inline" | "overlay"`;
 - `data-viewer-sidebar-open="true" | "false"`;
 - `data-viewer-sidebar-state="expanded" | "collapsed"`;
@@ -114,3 +118,7 @@ Viewer sidebar primitives expose stable attributes for local styling and tests:
 Put domain meaning in the named rail component and accessible label:
 `aria-label="Document sections"`, `aria-label="Email attachments"`, or
 `aria-label="Source fields"`.
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/sidebar.tsx" />

@@ -114,10 +114,7 @@ type EmailViewerInternalProps = EmailViewerProps & {
   nestedMessageDepth?: number
 }
 
-type EmailViewerLayoutProps = Pick<
-  EmailViewerInternalProps,
-  "bare" | "className"
->
+type EmailViewerLayoutProps = Pick<EmailViewerInternalProps, "className">
 
 const EmailViewerContext = React.createContext<EmailViewerContextValue | null>(
   null
@@ -247,7 +244,6 @@ function EmailViewerInternal({
   maxNestedMessageDepth,
   nestedMessageDepth = 0,
   className,
-  bare = false,
 }: EmailViewerInternalProps) {
   if (nestedMessageDepth === 0) {
     return (
@@ -258,7 +254,7 @@ function EmailViewerInternal({
         onSelectedPathChange={onSelectedPathChange}
         maxNestedMessageDepth={maxNestedMessageDepth}
       >
-        <EmailViewerLayout bare={bare} className={className} />
+        <EmailViewerLayout className={className} />
       </EmailViewerProvider>
     )
   }
@@ -272,23 +268,15 @@ function EmailViewerInternal({
       maxNestedMessageDepth={maxNestedMessageDepth}
       nestedMessageDepth={nestedMessageDepth}
     >
-      <EmailViewerLayout bare={bare} className={className} />
+      <EmailViewerLayout className={className} />
     </EmailViewerProviderInternal>
   )
 }
 
-function EmailViewerLayout({
-  bare = false,
-  className,
-}: EmailViewerLayoutProps) {
+function EmailViewerLayout({ className }: EmailViewerLayoutProps) {
   return (
     <div data-slot="email-viewer" className={cn("min-h-0", className)}>
-      <ViewerRoot
-        bare={bare}
-        defaultOpen
-        sidebarSide="right"
-        className="h-full"
-      >
+      <ViewerRoot defaultOpen sidebarSide="right" className="h-full">
         <EmailViewerHeader />
         <ViewerBody className="flex-col md:flex-row">
           <ViewerSurface className="min-h-[26rem] md:min-h-0">
@@ -332,7 +320,6 @@ export function EmailViewerContent() {
   if (content.kind === "nested-message") {
     return (
       <EmailViewerInternal
-        bare
         className="h-full"
         message={content.message}
         maxNestedMessageDepth={content.maxNestedMessageDepth}

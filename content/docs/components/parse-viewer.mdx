@@ -1,6 +1,7 @@
 ---
 title: Parse Viewer
 description: Renders page-by-page markdown while preserving the original document structure.
+component: true
 ---
 
 When a document is converted to markdown page by page, it should usually be
@@ -12,14 +13,14 @@ The parse viewer is made for that shape of output. It renders each markdown page
 as its own document page, with a **Rendered/Text** toggle, page position, zoom
 controls, copy, and download actions. Below is the raw renderer on its own.
 
-<ParseViewerDemo />
+<ComponentPreview name="parse-viewer-demo" />
 
 ## Large Document
 
 This fixture renders 1,000 markdown pages. It exists to prove the viewer keeps
 the mounted page DOM bounded while scrolling, switching modes, and zooming.
 
-<LargeParseViewerDemo />
+<ComponentPreview name="large-parse-viewer-demo" />
 
 Pair it with a source document by composing `ParseViewerProvider`,
 `ParseViewerMarkdown`, and a document component that uses
@@ -38,6 +39,7 @@ as the user scrolls.
 
 ```tsx
 import * as React from "react"
+
 import { PdfViewer } from "@/components/ui/pdf-viewer"
 import { ViewerBody, ViewerRoot, ViewerSurface } from "@/components/ui/viewer"
 import {
@@ -95,10 +97,10 @@ function SourceDocument() {
 
 Use `<ParseViewer result={result} />` to show the parsed markdown full-width.
 
-## Props
+## API Reference
 
-| Prop                  | Type                           | Description                                                                                                                                    |
-| --------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `result`              | `ParseResponse \| null`        | The parsed document output; `output.pages` is an array of per-page markdown.                                                                   |
-| `isProcessing`        | `boolean`                      | Show the parsing state while a result is pending.                                                                                              |
-| `onVisiblePageChange` | `(pageNumber: number) => void` | Fired with the 1-based page nearest the top of the markdown viewport as it scrolls.                                                            |
+| Prop                  | Type                           | Description                                                                         |
+| --------------------- | ------------------------------ | ----------------------------------------------------------------------------------- |
+| `result`              | `ParseResponse \| null`        | The parsed document output; `output.pages` is an array of per-page markdown.        |
+| `isProcessing`        | `boolean`                      | Show the parsing state while a result is pending.                                   |
+| `onVisiblePageChange` | `(pageNumber: number) => void` | Fired with the 1-based page nearest the top of the markdown viewport as it scrolls. |

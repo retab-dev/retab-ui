@@ -86,7 +86,7 @@ function JsonFormSourcesContent({
   const form = useForm<Record<string, unknown>>({ defaultValues: extraction })
 
   return (
-    <ViewerRoot bare className="h-full min-h-[680px] bg-background">
+    <ViewerRoot className="h-full min-h-[680px] bg-background">
       <ViewerBody>
         <ViewerSurface className="relative">
           <FileViewer

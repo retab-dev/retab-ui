@@ -1,6 +1,7 @@
 ---
 title: Segment Legend
 description: A compact color key for page-segmented document results, with bar, floating, and rail variants.
+component: true
 ---
 
 `SegmentLegend` is the "key" surface over a page-segmented result (partition
@@ -12,7 +13,7 @@ Hovering is a temporary preview. When nothing is hovered, `currentPage` derives
 the highlighted segment. Clicking a segment only asks the host to navigate; it
 does not persist category selection. Wire the legend to the same
 `useSegmentInteraction` object as a
-[segment sidebar](/docs/components/segment-sidebar) for a coordinated layout.
+[segment sidebar](/docs/components/file-viewer/segment-sidebar) for a coordinated layout.
 
 <ComponentPreview name="segment-legend-variants" />
 
@@ -63,7 +64,7 @@ controls which edge it docks to.
 For caller-owned preview state, build the same `interaction` object with
 `useControlledSegmentInteraction`; do not pass selection props to the legend.
 
-## Props
+## API Reference
 
 | Prop                 | Type                                     | Description                                                                  |
 | -------------------- | ---------------------------------------- | ---------------------------------------------------------------------------- |
@@ -82,3 +83,7 @@ For caller-owned preview state, build the same `interaction` object with
 | `onShowUnusedChange` | `(showUnused: boolean) => void`          | Fired when the show-unused toggle changes.                                   |
 | `caption`            | `ReactNode`                              | A muted caption rendered under the entries.                                  |
 | `className`          | `string`                                 | Container class.                                                             |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/segment-legend.tsx" />

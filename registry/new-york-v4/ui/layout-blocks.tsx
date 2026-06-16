@@ -215,7 +215,6 @@ function OcrLayoutBlocksContent({
     <ViewerRoot
       data-layout-blocks=""
       className={cn("bg-background", heightClassName, className)}
-      bare
       defaultOpen
       sidebarSide="right"
     >

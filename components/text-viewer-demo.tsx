@@ -9,7 +9,7 @@ import {
 
 export function TextViewerDemo() {
   return (
-    <div className="not-prose my-6 h-[620px] min-h-0">
+    <div className="h-[620px] min-h-0">
       <TextViewer
         source={{
           kind: "text",

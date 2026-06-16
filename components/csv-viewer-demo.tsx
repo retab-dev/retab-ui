@@ -55,7 +55,7 @@ function buildCsv(rows: number): string {
 export function CsvViewerDemo() {
   const csv = React.useMemo(() => buildCsv(5000), [])
   return (
-    <div className="not-prose my-6">
+    <div>
       <CsvViewer
         source={{ kind: "text", text: csv, fileName: "people.csv" }}
         height={420}
@@ -73,7 +73,7 @@ export function CsvViewerStreamingDemo() {
     []
   )
   return (
-    <div className="not-prose my-6">
+    <div>
       <CsvViewer
         source={{
           kind: "blob",

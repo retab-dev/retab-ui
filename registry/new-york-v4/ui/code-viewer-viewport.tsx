@@ -11,6 +11,7 @@ const CODE_VIEWER_DEFAULT_VIEWPORT_WIDTH = 800
 export function CodeViewerViewport({
   contentIdentity,
   fontScale,
+  gutterWidth,
   lineCount,
   lineHeight,
   rowHostRef,
@@ -18,6 +19,7 @@ export function CodeViewerViewport({
 }: {
   contentIdentity: string
   fontScale: number
+  gutterWidth: string
   lineCount: number
   lineHeight: number
   rowHostRef: React.RefObject<HTMLPreElement | null>
@@ -36,7 +38,7 @@ export function CodeViewerViewport({
       viewportRef={viewportRef}
     >
       <div
-        className="relative w-max min-w-full bg-background font-mono"
+        className="relative flex w-max min-h-full min-w-full bg-background font-mono"
         style={{
           fontSize,
           height: totalHeight,
@@ -44,10 +46,19 @@ export function CodeViewerViewport({
           minWidth: CODE_VIEWER_DEFAULT_VIEWPORT_WIDTH,
         }}
       >
+        {/* Full-height gutter rail: keeps the line-number column and its divider
+            running to the bottom of the viewport even when the content is
+            shorter than the visible area. Sits behind the per-row gutters. */}
+        <div
+          aria-hidden
+          data-code-gutter-rail=""
+          className="pointer-events-none absolute inset-y-0 left-0 z-0 border-r"
+          style={{ width: gutterWidth }}
+        />
         <pre
           key={contentIdentity}
           ref={rowHostRef}
-          className="relative w-full"
+          className="relative z-10 w-full"
           suppressHydrationWarning
           style={{
             fontSize,

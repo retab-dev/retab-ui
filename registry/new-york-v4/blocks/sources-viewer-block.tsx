@@ -500,7 +500,7 @@ function CsvTabContent() {
       <FileResourceCsvViewer
         ref={viewerRef}
         fillHeight
-        className="h-full rounded-none border-0"
+        className="h-full"
         controls={false}
         activeCell={activeCell}
       />

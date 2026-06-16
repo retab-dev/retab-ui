@@ -23,6 +23,7 @@ const CODE_LINE_HEIGHT = 21
 const BLOCK_GAP = 8
 const MIN_CHUNK_HEIGHT = 120
 const COMPONENT_FALLBACK_MIN_HEIGHT = 112
+const APPROX_CHAR_WIDTH_PX = 8
 const BODY_FONT_FAMILY =
   'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
 const CODE_FONT_FAMILY =
@@ -144,14 +145,11 @@ export function estimatePretextMarkdownChunkHeight({
   const fontFamily =
     chunk.kind === "frontmatter" ? CODE_FONT_FAMILY : BODY_FONT_FAMILY
   const font = `${Math.round(fontSize * fontScale)}px ${fontFamily}`
-  const fallbackText = chunk.markdown || " "
-  const prepared = prepareWithSegmentsSafe(fallbackText, font, {
-    whiteSpace: "pre-wrap",
-  })
-  const stats = prepared
-    ? measureLineStatsSafe(prepared, textWidth / fontScale, fallbackText)
-    : estimatePretextMarkdownLineStats(fallbackText, textWidth / fontScale)
-  const lineCount = Math.max(1, stats.lineCount)
+  const lineCount = measureWrappedLineCount(
+    chunk.markdown,
+    font,
+    textWidth / fontScale
+  )
   const syntaxAllowance = estimateMarkdownSyntaxAllowance(chunk)
   return Math.max(
     MIN_CHUNK_HEIGHT,
@@ -227,14 +225,11 @@ export function estimatePretextMarkdownBlockHeight({
   const lineHeight = pretextMarkdownBlockLineHeight(block)
   const fontFamily = pretextMarkdownBlockFontFamily(block)
   const font = `${Math.round(fontSize * fontScale)}px ${fontFamily}`
-  const fallbackText = block.markdown || " "
-  const prepared = prepareWithSegmentsSafe(fallbackText, font, {
-    whiteSpace: "pre-wrap",
-  })
-  const stats = prepared
-    ? measureLineStatsSafe(prepared, textWidth / fontScale, fallbackText)
-    : estimatePretextMarkdownLineStats(fallbackText, textWidth / fontScale)
-  const lineCount = Math.max(1, stats.lineCount)
+  const lineCount = measureWrappedLineCount(
+    block.markdown,
+    font,
+    textWidth / fontScale
+  )
   return (
     lineCount * lineHeight * fontScale +
     estimatePretextMarkdownBlockSyntaxAllowance(block, fontScale)
@@ -250,14 +245,10 @@ function estimateHostilePretextMarkdownChunkHeight({
   fontScale: number
   textWidth: number
 }) {
-  const lines = splitTextLines(chunk.markdown || " ")
-  const longestLineLength = lines.reduce(
-    (maxLength, line) => Math.max(maxLength, line.length),
-    1
-  )
-  const estimatedWrappedLines = Math.max(
-    lines.length,
-    Math.ceil((longestLineLength * 8 * fontScale) / Math.max(1, textWidth))
+  const estimatedWrappedLines = estimateWrappedLineCount(
+    chunk.markdown,
+    fontScale,
+    textWidth
   )
   const syntaxAllowance = estimateMarkdownSyntaxAllowance(chunk)
 
@@ -278,14 +269,10 @@ function estimateHostilePretextMarkdownBlockHeight({
   fontScale: number
   textWidth: number
 }) {
-  const lines = splitTextLines(block.markdown || " ")
-  const longestLineLength = lines.reduce(
-    (maxLength, line) => Math.max(maxLength, line.length),
-    1
-  )
-  const estimatedWrappedLines = Math.max(
-    lines.length,
-    Math.ceil((longestLineLength * 8 * fontScale) / Math.max(1, textWidth))
+  const estimatedWrappedLines = estimateWrappedLineCount(
+    block.markdown,
+    fontScale,
+    textWidth
   )
 
   return (
@@ -366,17 +353,15 @@ function estimatePretextMarkdownComponentFallbackBlockHeight({
   textWidth: number
 }) {
   const font = `${Math.round(13 * fontScale)}px ${CODE_FONT_FAMILY}`
-  const prepared = prepareWithSegmentsSafe(block.markdown || " ", font, {
-    whiteSpace: "pre-wrap",
-  })
-  const stats = prepared
-    ? measureLineStatsSafe(prepared, textWidth / fontScale, block.markdown)
-    : estimatePretextMarkdownLineStats(block.markdown, textWidth / fontScale)
-  const sourceLineCount = Math.max(1, stats.lineCount)
+  const lineCount = measureWrappedLineCount(
+    block.markdown,
+    font,
+    textWidth / fontScale
+  )
 
   return Math.max(
     COMPONENT_FALLBACK_MIN_HEIGHT * fontScale,
-    64 * fontScale + sourceLineCount * CODE_LINE_HEIGHT * fontScale
+    64 * fontScale + lineCount * CODE_LINE_HEIGHT * fontScale
   )
 }
 
@@ -475,16 +460,50 @@ function measureLineStatsSafe(
   }
 }
 
+// Browser-layout line count for one text run: prepare + measure via Pretext,
+// falling back to a character-width estimate when measurement is unavailable.
+function measureWrappedLineCount(
+  text: string,
+  font: string,
+  measureWidth: number
+) {
+  const safeText = text || " "
+  const prepared = prepareWithSegmentsSafe(safeText, font, {
+    whiteSpace: "pre-wrap",
+  })
+  const stats = prepared
+    ? measureLineStatsSafe(prepared, measureWidth, safeText)
+    : estimatePretextMarkdownLineStats(safeText, measureWidth)
+  return Math.max(1, stats.lineCount)
+}
+
+// Conservative wrapped-line estimate for hostile blocks/chunks, where the
+// longest line drives an unmeasured width-based wrap count.
+function estimateWrappedLineCount(
+  text: string,
+  fontScale: number,
+  textWidth: number
+) {
+  const lines = splitTextLines(text || " ")
+  const longestLineLength = lines.reduce(
+    (maxLength, line) => Math.max(maxLength, line.length),
+    1
+  )
+  return Math.max(
+    lines.length,
+    Math.ceil(
+      (longestLineLength * APPROX_CHAR_WIDTH_PX * fontScale) /
+        Math.max(1, textWidth)
+    )
+  )
+}
+
 function estimatePretextMarkdownLineStats(text: string, width: number) {
-  const columns = Math.max(1, Math.floor(width / 8))
+  const columns = Math.max(1, Math.floor(width / APPROX_CHAR_WIDTH_PX))
   const lines = splitTextLines(text || " ")
   const lineCount = lines.reduce(
     (sum, line) => sum + Math.max(1, Math.ceil((line || " ").length / columns)),
     0
   )
-  const maxLineWidth = Math.min(
-    width,
-    Math.max(...lines.map((line) => (line || " ").length * 8), 1)
-  )
-  return { lineCount, maxLineWidth }
+  return { lineCount }
 }

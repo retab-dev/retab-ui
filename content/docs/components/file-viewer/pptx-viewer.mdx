@@ -1,6 +1,7 @@
 ---
 title: PPTX Viewer
 description: A canvas-backed PowerPoint viewer with zoom, rotate, fit-to-width, download, and a per-slide overlay slot — rendered entirely client-side, no server conversion.
+component: true
 ---
 
 The PPTX Viewer renders a PowerPoint deck as continuous slides: each slide is
@@ -18,7 +19,7 @@ The deck loads with React's `use()` and Suspense, slides render lazily via an
 `IntersectionObserver` (only slides near the viewport hit the canvas), and
 renders are serialized so they never race.
 
-<PptxViewerDemo />
+<ComponentPreview name="pptx-viewer-demo" />
 
 ## Installation
 
@@ -96,24 +97,28 @@ normalized boxes map with simple percentages:
 `pptxviewjs` covers the common deck — text, shapes, tables, images, and charts —
 but it is not a pixel-perfect PowerPoint clone. Exotic SmartArt, transitions, and
 embedded media may render approximately or be omitted. For pixel-exact output,
-convert to PDF server-side and use the [PDF Viewer](/docs/viewers/pdf-viewer).
+convert to PDF server-side and use the [PDF Viewer](/docs/components/file-viewer/pdf-viewer).
 
-## Props
+## API Reference
 
 The PPTX overlay field is `slideNumber`, a 1-based slide index.
 
-| Prop                     | Type                                  | Description                                                                                                                          |
-| ------------------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `source`                 | `UrlViewerSource \| BlobViewerSource` | Canonical presentation source.                                                                                                       |
-| `scale`                  | `number`                              | Controlled scale; omit to let the viewer own fit-width and zoom state.                                                               |
-| `defaultScale`           | `number`                              | Initial uncontrolled scale; omit to start in fit-width mode.                                                                         |
-| `onScaleChange`          | `(scale: number \| null) => void`     | Called by zoom controls in controlled mode. `null` means fit width.                                                                  |
-| `controls`                | `boolean`                             | Show the zoom/rotate/download controls. Defaults to `true`.                                                                           |
-| `renderSlideOverlay`     | `(props) => ReactNode`                | Per-slide overlay; receives `{ slideNumber, width, height, scale, rotation }`.                                                       |
-| `onVisibleSlideChange`   | `(slide: number) => void`             | Fires with the slide nearest the top of the viewport on scroll.                                                                      |
-| `onScrollProgressChange` | `(progress: number) => void`          | Fires with scroll progress in `[0, 1]`.                                                                                              |
-| `header`                 | `ReactNode`                           | Full-width strip below the controls (e.g. a legend).                                                                                  |
-| `aside`                  | `ReactNode`                           | Left rail alongside the scrolling slides (e.g. a thumbnail rail).                                                                    |
+| Prop                     | Type                                  | Description                                                                                                                                           |
+| ------------------------ | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `source`                 | `UrlViewerSource \| BlobViewerSource` | Canonical presentation source.                                                                                                                        |
+| `scale`                  | `number`                              | Controlled scale; omit to let the viewer own fit-width and zoom state.                                                                                |
+| `defaultScale`           | `number`                              | Initial uncontrolled scale; omit to start in fit-width mode.                                                                                          |
+| `onScaleChange`          | `(scale: number \| null) => void`     | Called by zoom controls in controlled mode. `null` means fit width.                                                                                   |
+| `controls`               | `boolean`                             | Show the zoom/rotate/download controls. Defaults to `true`.                                                                                           |
+| `renderSlideOverlay`     | `(props) => ReactNode`                | Per-slide overlay; receives `{ slideNumber, width, height, scale, rotation }`.                                                                        |
+| `onVisibleSlideChange`   | `(slide: number) => void`             | Fires with the slide nearest the top of the viewport on scroll.                                                                                       |
+| `onScrollProgressChange` | `(progress: number) => void`          | Fires with scroll progress in `[0, 1]`.                                                                                                               |
+| `header`                 | `ReactNode`                           | Full-width strip below the controls (e.g. a legend).                                                                                                  |
+| `aside`                  | `ReactNode`                           | Left rail alongside the scrolling slides (e.g. a thumbnail rail).                                                                                     |
 | `eager`                  | `boolean`                             | Render slides the moment they near the viewport, even mid-scroll. Pass `false` to defer uncached renders until scrolling settles. Defaults to `true`. |
-| `bare`                   | `boolean`                             | Drop the outer border/background so the viewer fills its container.                                                                  |
-| `className`              | `string`                              | Optional class on the viewer root element.                                                                                           |
+| `bare`                   | `boolean`                             | Drop the outer border/background so the viewer fills its container.                                                                                   |
+| `className`              | `string`                              | Optional class on the viewer root element.                                                                                                            |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/pptx-viewer.tsx" />

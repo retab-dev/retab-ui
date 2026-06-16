@@ -24,10 +24,6 @@ const TOP_LEVEL_SECTIONS = [
     name: "Components",
     href: "/docs/components",
   },
-  {
-    name: "Viewers",
-    href: "/docs/viewers",
-  },
 ]
 const EXCLUDED_SECTIONS: string[] = []
 const EXCLUDED_PAGES = ["/docs"]
@@ -108,7 +104,15 @@ export function DocsSidebar({
 
           return groups.map((group) => (
             <SidebarGroup key={group.id}>
-              <SidebarGroupLabel className="font-medium text-muted-foreground">
+              <SidebarGroupLabel
+                className={cn(
+                  "font-medium text-muted-foreground",
+                  group.url &&
+                    "transition-colors hover:text-foreground data-[active=true]:text-foreground"
+                )}
+                data-active={group.url ? pathname === group.url : undefined}
+                render={group.url ? <Link href={group.url} /> : undefined}
+              >
                 {group.name}
               </SidebarGroupLabel>
               <SidebarGroupContent>

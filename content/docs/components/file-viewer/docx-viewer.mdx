@@ -1,12 +1,13 @@
 ---
 title: DOCX Viewer
 description: A docx-preview-backed Word viewer with paginated rendering, zoom, fit-to-width, and download.
+component: true
 ---
 
 The DOCX Viewer renders a Word document with
 [docx-preview](https://github.com/VolodymyrBaydalka/docxjs) directly — faithful,
 paginated pages (page size, margins, headers and footers), continuous scroll,
-zoom, fit-to-width, and download. It mirrors the [PDF Viewer](/docs/viewers/pdf-viewer)
+zoom, fit-to-width, and download. It mirrors the [PDF Viewer](/docs/components/file-viewer/pdf-viewer)
 so the two are drop-in siblings.
 
 It is built without manual page bookkeeping: the document blob loads through
@@ -14,7 +15,7 @@ React's `use()` with Suspense, docx-preview lays out the pages once, and
 off-screen pages are skipped by the browser via CSS `content-visibility` — so a
 long document only lays out and paints the pages near the viewport.
 
-<DocxViewerDemo />
+<ComponentPreview name="docx-viewer-demo" />
 
 ## Installation
 
@@ -50,17 +51,21 @@ pages outside the viewport while keeping the scrollbar stable. Zoom is applied
 with CSS `zoom` on the laid-out pages, so changing scale never re-parses the
 document.
 
-## Props
+## API Reference
 
 | Prop                     | Type                                  | Description                                                                                                                                                                                                                     |
 | ------------------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `source`                 | `UrlViewerSource \| BlobViewerSource` | Canonical DOCX source. URL sources load through fetch; Blob sources load directly from the Blob.                                                                                                                                |
 | `scale`                  | `number`                              | Optional fixed zoom; omit to fit page width to the container.                                                                                                                                                                   |
-| `controls`                | `boolean`                             | Show the zoom/download controls. Defaults to `true`.                                                                                                                                                                             |
+| `controls`               | `boolean`                             | Show the zoom/download controls. Defaults to `true`.                                                                                                                                                                            |
 | `highlight`              | `DocxTarget \| null`                  | A resolved target to highlight — a text span (located by content match) or a table cell (by index) — tinted via the CSS Custom Highlight API. Derive it from a source with the `docx-source` adapter's `sourceToDocxHighlight`. |
 | `onVisiblePageChange`    | `(page: number) => void`              | Fired with the 1-based page nearest the top of the viewport.                                                                                                                                                                    |
 | `onScrollProgressChange` | `(progress: number) => void`          | Fired with scroll progress in `[0, 1]`.                                                                                                                                                                                         |
-| `header`                 | `ReactNode`                           | Strip rendered directly below the controls.                                                                                                                                                                                      |
+| `header`                 | `ReactNode`                           | Strip rendered directly below the controls.                                                                                                                                                                                     |
 | `aside`                  | `ReactNode`                           | Left rail rendered alongside the scrolling pages.                                                                                                                                                                               |
 | `bare`                   | `boolean`                             | Drop the outer border/background so the viewer fills its container.                                                                                                                                                             |
-| `className`              | `string`                              | Optional class on the viewer root element.                                                                                                                                                                                       |
+| `className`              | `string`                              | Optional class on the viewer root element.                                                                                                                                                                                      |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/docx-viewer.tsx" />

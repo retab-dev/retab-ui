@@ -4,7 +4,10 @@ import * as React from "react"
 
 import type { Source } from "@/lib/document-source"
 import { sourceToCsvCell, useCsvSourceTarget } from "@/components/ui/csv-source"
-import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
+import {
+  CsvViewerDocument,
+  type CsvViewerHandle,
+} from "@/components/ui/csv-viewer"
 import {
   FileViewer,
   FileViewerBody,
@@ -103,11 +106,11 @@ function CsvSourcesContent({
       </FileViewerHeader>
       <FileViewerBody>
         <FileViewerSurface className="relative">
-          <CsvViewer
+          <CsvViewerDocument
             ref={viewerRef}
             source={CSV_SOURCE}
             fillHeight
-            className="h-full rounded-none border-0"
+            className="h-full"
             controls={false}
             activeCell={activeCell}
           />

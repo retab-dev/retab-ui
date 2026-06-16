@@ -1,9 +1,10 @@
 ---
 title: XLSX Viewer
 description: A virtualized spreadsheet viewer with sheet tabs, zoom, and download — parses .xlsx entirely client-side and renders only the visible cells.
+component: true
 ---
 
-The XLSX Viewer renders an Excel workbook the way the [PDF Viewer](/docs/viewers/pdf-viewer)
+The XLSX Viewer renders an Excel workbook the way the [PDF Viewer](/docs/components/file-viewer/pdf-viewer)
 renders a document: a familiar controls row above the content. It parses the
 `.xlsx` (an Office Open XML zip) entirely in the browser with
 [SheetJS](https://sheetjs.com) — via the patched, zero-dependency
@@ -22,7 +23,7 @@ sheet into a sparse compact form (non-empty cell indexes, one text blob, and
 typed arrays) and hands that back — so even a 60k-row workbook never freezes the
 UI thread. Cells are then read synchronously off that compact form.
 
-<XlsxViewerDemo />
+<ComponentPreview name="xlsx-viewer-demo" />
 
 ## Installation
 
@@ -71,16 +72,16 @@ and date serials as dates). Cell **styling** — fills, fonts, borders, conditio
 formatting — and **charts** are not rendered; this is a data viewer, not a
 pixel-exact Excel clone. Merged cells show their value in the top-left cell.
 
-## Props
+## API Reference
 
 | Prop                | Type                                                  | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | ------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `source`            | `UrlViewerSource \| BlobViewerSource`                 | Canonical spreadsheet source. URL sources load through fetch; Blob sources load directly from the Blob.                                                                                                                                                                                                                                                                                                                                                             |
-| `controls`           | `boolean`                                             | Show the zoom/download controls. Defaults to `true`.                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `controls`          | `boolean`                                             | Show the zoom/download controls. Defaults to `true`.                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `defaultSheetIndex` | `number`                                              | Sheet shown first. Defaults to `0`.                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `onSheetChange`     | `(index: number) => void`                             | Fires with the active sheet index on tab switch and imperative sheet changes.                                                                                                                                                                                                                                                                                                                                                                                       |
 | `activeCell`        | `{ sheet: number; row: number; col: number } \| null` | A cell to highlight (0-based row + column on `sheet`).                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `header`            | `ReactNode`                                           | Full-width strip below the controls (e.g. a legend).                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `header`            | `ReactNode`                                           | Full-width strip below the controls (e.g. a legend).                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `aside`             | `ReactNode`                                           | Left rail alongside the grid.                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `bare`              | `boolean`                                             | Drop the outer border/background so the viewer fills its container.                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `isolateStyles`     | `boolean`                                             | Render the scrolling grid inside a shadow root so the host page's CSS — especially `:has()` selectors, whose invalidation Blink doesn't scope by `contain` — can't reach it. On `:has()`-heavy pages this collapses per-scroll style recalc and keeps scrolling at refresh rate. The page's author CSS is copied in so utilities resolve and theme variables inherit through the boundary. Defaults to `false`. When on, host CSS can't style the grid's internals. |
@@ -100,3 +101,7 @@ ref.current?.scrollToCell(0, 4, 2, { behavior: "auto" })
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `scrollToCell`         | Scrolls to public compatibility coordinates `(sheet, row, col)`, all 0-based. Calls made before workbook metadata loads are replayed after load if the target is in bounds. |
 | `getViewportElement()` | Returns the scrolling grid viewport after load, or `null` before the viewport is mounted.                                                                                   |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/xlsx-viewer.tsx" />

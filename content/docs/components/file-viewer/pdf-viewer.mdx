@@ -1,6 +1,7 @@
 ---
 title: PDF Viewer
 description: A pdfjs-backed PDF viewer with explicit viewer composition, zoom, rotate, fit-to-width, download, and per-page overlays.
+component: true
 ---
 
 The PDF Viewer renders a document with [pdf.js](https://mozilla.github.io/pdf.js/)
@@ -15,7 +16,7 @@ in-flight render). Only pages near the viewport hold a live canvas — the rest
 stay as sized placeholders (tracked by an `IntersectionObserver`) so a long PDF
 doesn't rasterize every page at once, while scroll height stays correct.
 
-<PdfViewerDemo />
+<ComponentPreview name="pdf-viewer-demo" />
 
 ## Installation
 
@@ -178,7 +179,7 @@ vertical position (`top`, a percentage `[0, 100]`) into view, and
 full `{ left, top, width, height }` geometry; imperative area scrolling only
 needs the vertical target.
 
-## Props
+## API Reference
 
 | Prop                     | Type                                     | Description                                                                  |
 | ------------------------ | ---------------------------------------- | ---------------------------------------------------------------------------- |
@@ -192,3 +193,7 @@ needs the vertical target.
 | `onScrollProgressChange` | `(progress: number) => void`             | Fired with scroll progress in `[0, 1]`.                                      |
 | `bare`                   | `boolean`                                | Drop the outer border/background so the viewer fills its container.          |
 | `className`              | `string`                                 | Optional class on the viewer root element.                                   |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/pdf-viewer.tsx" />

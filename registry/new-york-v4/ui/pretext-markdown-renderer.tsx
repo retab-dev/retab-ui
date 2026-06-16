@@ -23,6 +23,12 @@ import type { PretextMarkdownChunk } from "./pretext-markdown-document-model"
 import {
   ALERT_LABELS,
   CALLOUT_LABELS,
+  type AlertKind,
+  type CalloutKind,
+  type PretextComponent,
+  type PretextComponentFallback,
+} from "./pretext-markdown-components"
+import {
   createPretextMarkdownRemarkPlugins,
   PRETEXT_MARKDOWN_REHYPE_PLUGINS,
   PRETEXT_MARKDOWN_SYNC_REHYPE_PLUGINS,
@@ -31,17 +37,26 @@ import {
   readPretextComponent,
   readPretextComponentFallback,
   readPretextHeadingId,
+} from "./pretext-markdown-policy"
+import {
+  sanitizePretextMarkdownSvg,
+  type PretextMarkdownSvgSanitizer,
+} from "./pretext-markdown-sanitize"
+import {
   sanitizePretextMarkdownImageUrl,
   sanitizePretextMarkdownMediaUrl,
-  sanitizePretextMarkdownSvg,
   sanitizePretextMarkdownUrl,
-  type AlertKind,
-  type CalloutKind,
-  type PretextComponent,
-  type PretextComponentFallback,
-  type PretextMarkdownSvgSanitizer,
-} from "./pretext-markdown-policy"
+} from "./pretext-markdown-url-policy"
 import { useViewerClipboardCopy } from "./text-viewer-chrome"
+import {
+  PretextMarkdownCopyButton,
+  readPretextMarkdownSelectedText,
+  scrollPretextMarkdownHorizontalRegion,
+} from "./pretext-markdown-controls"
+import {
+  normalizePretextMarkdownDiagramSource,
+  PretextMarkdownDiagram,
+} from "./pretext-markdown-mermaid"
 
 export function PretextMarkdownChunkRenderer({
   chunk,
@@ -253,51 +268,26 @@ const PRETEXT_MARKDOWN_CODE_LANGUAGE_ALIASES: Record<string, string> = {
   cjs: "js",
   console: "shell",
   docker: "dockerfile",
-  dockerfile: "dockerfile",
   htm: "html",
-  html: "html",
   javascript: "js",
   javascriptreact: "jsx",
-  js: "js",
   jsonc: "json",
-  jsx: "jsx",
   "mermaid-js": "mermaid",
   md: "markdown",
-  markdown: "markdown",
   mjs: "js",
   mmd: "mermaid",
   patch: "diff",
   py: "python",
-  python: "python",
   rb: "ruby",
-  ruby: "ruby",
   sh: "shell",
   "shell-session": "shell",
   shellscript: "shell",
   terminal: "shell",
-  ts: "ts",
-  tsx: "tsx",
   typescript: "ts",
   typescriptreact: "tsx",
   yml: "yaml",
-  yaml: "yaml",
   zsh: "shell",
 }
-const PRETEXT_MARKDOWN_MERMAID_CONFIG = {
-  flowchart: {
-    htmlLabels: false,
-    useMaxWidth: true,
-  },
-  securityLevel: "strict",
-  sequence: {
-    useMaxWidth: true,
-  },
-  startOnLoad: false,
-  suppressErrorRendering: true,
-  theme: "default",
-} as const
-const PRETEXT_MARKDOWN_MERMAID_MAX_LINES = 160
-const PRETEXT_MARKDOWN_MERMAID_MAX_SOURCE_LENGTH = 12_000
 const PRETEXT_MARKDOWN_HOSTILE_PREVIEW_HEAD_LINES = 36
 const PRETEXT_MARKDOWN_HOSTILE_PREVIEW_TAIL_LINES = 12
 
@@ -739,12 +729,12 @@ const markdownComponents = {
     <tr className={cn("border-b last:border-b-0", className)} {...props} />
   ),
   th: ({ align, className, node: _node, style, ...props }) => {
-    const resolvedAlign = resolveTableCellAlignment({ align, style })
+    const resolvedAlign = resolvePretextMarkdownTableCellAlignment({ align, style })
     return (
       <th
         className={cn(
           "px-3 py-2 align-top font-semibold",
-          tableCellAlignmentClassName(resolvedAlign),
+          pretextMarkdownTableCellAlignmentClassName(resolvedAlign),
           PRETEXT_MARKDOWN_WRAP_CLASS_NAME,
           className
         )}
@@ -754,12 +744,12 @@ const markdownComponents = {
     )
   },
   td: ({ align, className, node: _node, style, ...props }) => {
-    const resolvedAlign = resolveTableCellAlignment({ align, style })
+    const resolvedAlign = resolvePretextMarkdownTableCellAlignment({ align, style })
     return (
       <td
         className={cn(
           "px-3 py-2 align-top",
-          tableCellAlignmentClassName(resolvedAlign),
+          pretextMarkdownTableCellAlignmentClassName(resolvedAlign),
           PRETEXT_MARKDOWN_WRAP_CLASS_NAME,
           className
         )}
@@ -769,7 +759,7 @@ const markdownComponents = {
     )
   },
   pre: ({ className, children, node: _node, ...props }) => {
-    const language = codeLanguage(children)
+    const language = readPretextMarkdownCodeElementLanguage(children)
     if (language === "mermaid") {
       return (
         <pre
@@ -968,7 +958,7 @@ function PretextMarkdownAlert({
       aria-labelledby={titleId}
       className={cn(
         "my-5 rounded-md border px-4 py-3",
-        alertClassName(kind),
+        ALERT_STYLES[kind].container,
         className
       )}
       data-pretext-alert-kind={kind}
@@ -978,12 +968,12 @@ function PretextMarkdownAlert({
       <div
         className={cn(
           "mb-2 flex items-center gap-2 font-semibold",
-          alertTitleClassName(kind)
+          ALERT_STYLES[kind].title
         )}
         data-pretext-alert-title=""
         id={titleId}
       >
-        {alertIcon(kind)}
+        {ALERT_STYLES[kind].icon}
         <span>{title}</span>
       </div>
       <div
@@ -1059,34 +1049,6 @@ function isPretextMarkdownMathInlineClassName(className: string | undefined) {
   return /\bkatex\b/.test(className ?? "")
 }
 
-function scrollPretextMarkdownHorizontalRegion(
-  event: React.KeyboardEvent<HTMLElement>
-) {
-  let nextScrollLeft: number | null = null
-  const element = event.currentTarget
-  const step = Math.max(48, element.clientWidth * 0.25)
-
-  switch (event.key) {
-    case "ArrowLeft":
-      nextScrollLeft = element.scrollLeft - step
-      break
-    case "ArrowRight":
-      nextScrollLeft = element.scrollLeft + step
-      break
-    case "End":
-      nextScrollLeft = element.scrollWidth - element.clientWidth
-      break
-    case "Home":
-      nextScrollLeft = 0
-      break
-    default:
-      return
-  }
-
-  event.preventDefault()
-  element.scrollLeft = Math.max(0, nextScrollLeft)
-}
-
 function isPretextMarkdownExternalLink(href: string) {
   return /^https?:/i.test(href)
 }
@@ -1128,7 +1090,7 @@ function normalizePretextMarkdownLinkTitle(title: unknown) {
 
 type PretextTableCellAlignment = "center" | "left" | "right" | undefined
 
-function resolveTableCellAlignment({
+function resolvePretextMarkdownTableCellAlignment({
   align,
   style,
 }: {
@@ -1143,7 +1105,7 @@ function resolveTableCellAlignment({
     : undefined
 }
 
-function tableCellAlignmentClassName(align: PretextTableCellAlignment) {
+function pretextMarkdownTableCellAlignmentClassName(align: PretextTableCellAlignment) {
   switch (align) {
     case "center":
       return "text-center"
@@ -1769,782 +1731,6 @@ function componentToneClassName(tone: string | undefined) {
   }
 }
 
-function PretextMarkdownDiagram({
-  caption,
-  className,
-  componentName,
-  source,
-  title,
-}: {
-  caption?: string
-  className: string | undefined
-  componentName?: string
-  source: string
-  title?: string
-}) {
-  const limitMessage = React.useMemo(
-    () => readPretextMarkdownDiagramLimitMessage(source),
-    [source]
-  )
-  const immediateState = React.useMemo(
-    () => createInitialPretextMarkdownDiagramState({ limitMessage, source }),
-    [limitMessage, source]
-  )
-  const bodyHeight = React.useMemo(
-    () => estimatePretextMarkdownDiagramBodyHeight(source),
-    [source]
-  )
-  const description = React.useMemo(
-    () => describePretextMarkdownDiagram(source),
-    [source]
-  )
-  const diagramStyle = {
-    "--pretext-diagram-body-height": `${bodyHeight}px`,
-  } as React.CSSProperties
-  const [state, setState] = React.useState<
-    | { status: "failed"; message: string }
-    | { status: "loading" }
-    | { status: "ready"; svg: string }
-  >(immediateState)
-  const diagramId = React.useId().replace(/:/g, "")
-  const descriptionId = description
-    ? `pretext-markdown-diagram-description-${diagramId}`
-    : undefined
-  const captionId = caption
-    ? `pretext-markdown-diagram-caption-${diagramId}`
-    : undefined
-  const describedBy =
-    [descriptionId, captionId].filter(Boolean).join(" ") || undefined
-
-  React.useLayoutEffect(() => {
-    setState(immediateState)
-  }, [immediateState])
-
-  React.useEffect(() => {
-    if (limitMessage) return
-
-    let isMounted = true
-    void renderMermaidDiagram(source, `pretext-markdown-diagram-${diagramId}`)
-      .then((result) => {
-        if (isMounted) setState(result)
-      })
-      .catch((error: unknown) => {
-        if (!isMounted) return
-        setState({
-          status: "failed",
-          message: error instanceof Error ? error.message : "Invalid diagram",
-        })
-      })
-    return () => {
-      isMounted = false
-    }
-  }, [diagramId, limitMessage, source])
-
-  return (
-    <figure
-      aria-describedby={describedBy}
-      aria-label={title || "Mermaid diagram"}
-      className={cn(
-        "group my-5 min-h-40 overflow-hidden rounded-md border bg-muted/30",
-        className
-      )}
-      data-diagram-language="mermaid"
-      data-diagram-reserved-height={bodyHeight}
-      data-diagram-state={state.status}
-      data-pretext-component={componentName}
-      role="group"
-      style={diagramStyle}
-    >
-      <div className="flex h-9 items-center gap-1 border-b bg-muted/60 px-3">
-        <span className="text-xs font-medium text-muted-foreground">
-          {title || "mermaid"}
-        </span>
-        <PretextMarkdownCopyButton
-          ariaLabel="Copy diagram source"
-          className="ml-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
-          text={source}
-        />
-        {state.status === "ready" ? (
-          <PretextMarkdownCopyButton
-            ariaLabel="Copy diagram SVG"
-            className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
-            text={state.svg}
-          />
-        ) : null}
-      </div>
-      {description ? (
-        <p
-          className="sr-only"
-          data-pretext-diagram-description=""
-          id={descriptionId}
-        >
-          {description}
-        </p>
-      ) : null}
-      {state.status === "ready" ? (
-        <div
-          aria-label="Mermaid diagram body"
-          className="h-(--pretext-diagram-body-height) overflow-auto p-4"
-          data-pretext-diagram-body=""
-          dangerouslySetInnerHTML={{ __html: state.svg }}
-          role="region"
-          tabIndex={0}
-          onKeyDown={scrollPretextMarkdownHorizontalRegion}
-        />
-      ) : (
-        <div
-          aria-label="Mermaid diagram body"
-          className="h-(--pretext-diagram-body-height) overflow-auto p-4"
-          data-pretext-diagram-body=""
-          role="region"
-          tabIndex={0}
-          onKeyDown={scrollPretextMarkdownHorizontalRegion}
-        >
-          {state.status === "failed" ? (
-            <p
-              className="mb-3 rounded border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-              data-pretext-diagram-error=""
-              role="alert"
-            >
-              {state.message}
-            </p>
-          ) : null}
-          <pre
-            aria-label="Mermaid diagram source"
-            className="m-0 overflow-x-auto font-mono text-[0.82em] leading-relaxed text-muted-foreground"
-            tabIndex={0}
-          >
-            {source}
-          </pre>
-        </div>
-      )}
-      {caption ? (
-        <figcaption
-          className="border-t bg-muted/30 px-3 py-2 text-sm text-muted-foreground"
-          data-pretext-diagram-caption=""
-          id={captionId}
-        >
-          {caption}
-        </figcaption>
-      ) : null}
-    </figure>
-  )
-}
-
-function createInitialPretextMarkdownDiagramState({
-  limitMessage,
-  source,
-}: {
-  limitMessage: string | null
-  source: string
-}):
-  | { status: "failed"; message: string }
-  | { status: "loading" }
-  | {
-      status: "ready"
-      svg: string
-    } {
-  if (limitMessage) return { status: "failed", message: limitMessage }
-
-  const basicState = renderBasicMermaidDiagram(source)
-  return basicState.status === "ready" ? basicState : { status: "loading" }
-}
-
-function estimatePretextMarkdownDiagramBodyHeight(source: string) {
-  const lines = readPretextMarkdownDiagramContentLines(source)
-  const header = lines[0]?.match(/^(?:graph|flowchart)\s+(TD|TB|BT|LR|RL)$/i)
-
-  if (header) {
-    const labels = new Set<string>()
-    for (const line of lines.slice(1)) {
-      const edge = line.match(/^(.+?)\s*(?:-->|---|==>|-.->)\s*(.+?)$/)
-      if (!edge) continue
-      labels.add(parseMermaidNode(edge[1]!).id)
-      labels.add(parseMermaidNode(edge[2]!).id)
-    }
-
-    const direction = header[1]!.toUpperCase()
-    if (direction === "LR" || direction === "RL") return 160
-
-    const nodeCount = Math.max(2, labels.size)
-    return clampPretextMarkdownDiagramBodyHeight(
-      nodeCount * 42 + Math.max(0, nodeCount - 1) * 56 + 48
-    )
-  }
-
-  const stateSummary = readPretextMarkdownStateDiagramSummary(lines)
-  if (stateSummary) {
-    return clampPretextMarkdownDiagramBodyHeight(
-      stateSummary.stateCount * 44 + stateSummary.transitionCount * 18 + 96
-    )
-  }
-
-  const classSummary = readPretextMarkdownClassDiagramSummary(lines)
-  if (classSummary) {
-    return clampPretextMarkdownDiagramBodyHeight(
-      classSummary.classCount * 52 + classSummary.relationCount * 20 + 96
-    )
-  }
-
-  const erSummary = readPretextMarkdownErDiagramSummary(lines)
-  if (erSummary) {
-    return clampPretextMarkdownDiagramBodyHeight(
-      erSummary.entityCount * 52 + erSummary.relationshipCount * 20 + 96
-    )
-  }
-
-  const journeySummary = readPretextMarkdownJourneyDiagramSummary(lines)
-  if (journeySummary) {
-    return clampPretextMarkdownDiagramBodyHeight(
-      journeySummary.sectionCount * 36 + journeySummary.taskCount * 34 + 96
-    )
-  }
-
-  const ganttSummary = readPretextMarkdownGanttDiagramSummary(lines)
-  if (ganttSummary) {
-    return clampPretextMarkdownDiagramBodyHeight(
-      ganttSummary.sectionCount * 32 + ganttSummary.taskCount * 36 + 128
-    )
-  }
-
-  const gitGraphSummary = readPretextMarkdownGitGraphDiagramSummary(lines)
-  if (gitGraphSummary) {
-    return clampPretextMarkdownDiagramBodyHeight(
-      gitGraphSummary.commitCount * 34 +
-        (gitGraphSummary.branchCount + gitGraphSummary.mergeCount) * 24 +
-        96
-    )
-  }
-
-  const timelineSummary = readPretextMarkdownTimelineDiagramSummary(lines)
-  if (timelineSummary) {
-    return clampPretextMarkdownDiagramBodyHeight(
-      timelineSummary.sectionCount * 34 + timelineSummary.eventCount * 30 + 112
-    )
-  }
-
-  const mindMapSummary = readPretextMarkdownMindMapDiagramSummary(lines)
-  if (mindMapSummary) {
-    return clampPretextMarkdownDiagramBodyHeight(
-      mindMapSummary.nodeCount * 34 + 96
-    )
-  }
-
-  const pieSummary = readPretextMarkdownPieDiagramSummary(lines)
-  if (pieSummary) {
-    return clampPretextMarkdownDiagramBodyHeight(
-      pieSummary.sliceCount * 32 + 128
-    )
-  }
-
-  return clampPretextMarkdownDiagramBodyHeight(lines.length * 28 + 96)
-}
-
-function describePretextMarkdownDiagram(source: string) {
-  const lines = readPretextMarkdownDiagramContentLines(source)
-  const graphHeader = lines[0]?.match(
-    /^(?:graph|flowchart)\s+(TD|TB|BT|LR|RL)$/i
-  )
-
-  if (graphHeader) {
-    const labels = new Set<string>()
-    let edgeCount = 0
-    for (const line of lines.slice(1)) {
-      const edge = line.match(/^(.+?)\s*(?:-->|---|==>|-.->)\s*(.+?)$/)
-      if (!edge) continue
-      labels.add(parseMermaidNode(edge[1]!).label)
-      labels.add(parseMermaidNode(edge[2]!).label)
-      edgeCount += 1
-    }
-
-    if (edgeCount > 0) {
-      return `Mermaid graph diagram flowing ${describePretextMarkdownGraphDirection(
-        graphHeader[1]!
-      )}, with ${labels.size} ${pluralize("node", labels.size)} and ${edgeCount} ${pluralize("edge", edgeCount)}.`
-    }
-  }
-
-  if (/^sequenceDiagram$/i.test(lines[0] ?? "")) {
-    const participants = new Set<string>()
-    let messageCount = 0
-    for (const line of lines.slice(1)) {
-      const declaration = line.match(
-        /^(?:actor|participant)\s+([A-Za-z0-9_.-]+)(?:\s+as\s+(.+))?$/i
-      )
-      if (declaration) {
-        participants.add((declaration[2] ?? declaration[1]!).trim())
-        continue
-      }
-
-      const message = line.match(/^(.+?)\s*-{1,2}>>?\s*(.+?)(?::|$)/)
-      if (!message) continue
-      participants.add(message[1]!.trim())
-      participants.add(message[2]!.trim())
-      messageCount += 1
-    }
-
-    return `Mermaid sequence diagram with ${participants.size} ${pluralize(
-      "participant",
-      participants.size
-    )} and ${messageCount} ${pluralize("message", messageCount)}.`
-  }
-
-  const stateSummary = readPretextMarkdownStateDiagramSummary(lines)
-  if (stateSummary) {
-    return `Mermaid state diagram with ${stateSummary.stateCount} ${pluralize(
-      "state",
-      stateSummary.stateCount
-    )} and ${stateSummary.transitionCount} ${pluralize(
-      "transition",
-      stateSummary.transitionCount
-    )}.`
-  }
-
-  const classSummary = readPretextMarkdownClassDiagramSummary(lines)
-  if (classSummary) {
-    const classLabel = classSummary.classCount === 1 ? "class" : "classes"
-    return `Mermaid class diagram with ${classSummary.classCount} ${classLabel} and ${classSummary.relationCount} ${pluralize(
-      "relationship",
-      classSummary.relationCount
-    )}.`
-  }
-
-  const erSummary = readPretextMarkdownErDiagramSummary(lines)
-  if (erSummary) {
-    return `Mermaid entity relationship diagram with ${erSummary.entityCount} ${pluralize(
-      "entity",
-      erSummary.entityCount
-    )} and ${erSummary.relationshipCount} ${pluralize(
-      "relationship",
-      erSummary.relationshipCount
-    )}.`
-  }
-
-  const journeySummary = readPretextMarkdownJourneyDiagramSummary(lines)
-  if (journeySummary) {
-    return `Mermaid journey diagram with ${journeySummary.sectionCount} ${pluralize(
-      "section",
-      journeySummary.sectionCount
-    )} and ${journeySummary.taskCount} ${pluralize(
-      "task",
-      journeySummary.taskCount
-    )}.`
-  }
-
-  const ganttSummary = readPretextMarkdownGanttDiagramSummary(lines)
-  if (ganttSummary) {
-    return `Mermaid Gantt chart with ${ganttSummary.sectionCount} ${pluralize(
-      "section",
-      ganttSummary.sectionCount
-    )} and ${ganttSummary.taskCount} ${pluralize(
-      "task",
-      ganttSummary.taskCount
-    )}.`
-  }
-
-  const gitGraphSummary = readPretextMarkdownGitGraphDiagramSummary(lines)
-  if (gitGraphSummary) {
-    return `Mermaid Git graph with ${gitGraphSummary.branchCount} ${pluralize(
-      "branch",
-      gitGraphSummary.branchCount
-    )}, ${gitGraphSummary.commitCount} ${pluralize(
-      "commit",
-      gitGraphSummary.commitCount
-    )}, and ${gitGraphSummary.mergeCount} ${pluralize(
-      "merge",
-      gitGraphSummary.mergeCount
-    )}.`
-  }
-
-  const timelineSummary = readPretextMarkdownTimelineDiagramSummary(lines)
-  if (timelineSummary) {
-    return `Mermaid timeline with ${timelineSummary.sectionCount} ${pluralize(
-      "section",
-      timelineSummary.sectionCount
-    )} and ${timelineSummary.eventCount} ${pluralize(
-      "event",
-      timelineSummary.eventCount
-    )}.`
-  }
-
-  const mindMapSummary = readPretextMarkdownMindMapDiagramSummary(lines)
-  if (mindMapSummary) {
-    return `Mermaid mind map with ${mindMapSummary.nodeCount} ${pluralize(
-      "node",
-      mindMapSummary.nodeCount
-    )}.`
-  }
-
-  const pieSummary = readPretextMarkdownPieDiagramSummary(lines)
-  if (pieSummary) {
-    return `Mermaid pie chart with ${pieSummary.sliceCount} ${pluralize(
-      "slice",
-      pieSummary.sliceCount
-    )} and total value ${pieSummary.totalValue}.`
-  }
-
-  return `Mermaid diagram source with ${lines.length} ${pluralize(
-    "line",
-    lines.length
-  )}.`
-}
-
-function readPretextMarkdownDiagramContentLines(source: string) {
-  const rawLines = source.split(/\r?\n/).map((line) => line.trim())
-  let startIndex = rawLines.findIndex(Boolean)
-  if (startIndex < 0) return []
-
-  if (rawLines[startIndex] === "---") {
-    const frontmatterEndIndex = rawLines.findIndex(
-      (line, index) => index > startIndex && line === "---"
-    )
-    if (frontmatterEndIndex > startIndex) {
-      startIndex = frontmatterEndIndex + 1
-    }
-  }
-
-  return rawLines
-    .slice(startIndex)
-    .filter((line) => line && !line.startsWith("%%"))
-}
-
-function readPretextMarkdownStateDiagramSummary(lines: readonly string[]) {
-  if (!/^stateDiagram(?:-v2)?$/i.test(lines[0] ?? "")) return null
-
-  const states = new Set<string>()
-  let transitionCount = 0
-
-  for (const line of lines.slice(1)) {
-    const transition = line.match(/^(.+?)\s*-->\s*(.+?)(?::|$)/)
-    if (transition) {
-      addPretextMarkdownStateDiagramNode(states, transition[1]!)
-      addPretextMarkdownStateDiagramNode(states, transition[2]!)
-      transitionCount += 1
-      continue
-    }
-
-    const declaration =
-      line.match(/^state\s+"[^"]+"\s+as\s+([A-Za-z0-9_.-]+)/i) ??
-      line.match(/^state\s+([A-Za-z0-9_.-]+)/i)
-    if (declaration) addPretextMarkdownStateDiagramNode(states, declaration[1]!)
-  }
-
-  return {
-    stateCount: states.size,
-    transitionCount,
-  }
-}
-
-function addPretextMarkdownStateDiagramNode(
-  states: Set<string>,
-  value: string
-) {
-  const state = normalizePretextMarkdownStateDiagramNode(value)
-  if (state && state !== "[*]") states.add(state)
-}
-
-function readPretextMarkdownClassDiagramSummary(lines: readonly string[]) {
-  if (!/^classDiagram(?:-v2)?$/i.test(lines[0] ?? "")) return null
-
-  const classes = new Set<string>()
-  let relationCount = 0
-
-  for (const line of lines.slice(1)) {
-    const declaration =
-      line.match(/^class\s+([A-Za-z0-9_.-]+)/i) ??
-      line.match(/^([A-Za-z0-9_.-]+)\s*:/)
-    if (declaration) classes.add(declaration[1]!)
-
-    const relation = line.match(
-      /^([A-Za-z0-9_.-]+)\s+(?:<\|--|\*--|o--|-->|<--|\.\.>|<\.\.|--|\.\.)\s+([A-Za-z0-9_.-]+)/
-    )
-    if (relation) {
-      classes.add(relation[1]!)
-      classes.add(relation[2]!)
-      relationCount += 1
-    }
-  }
-
-  return {
-    classCount: classes.size,
-    relationCount,
-  }
-}
-
-function readPretextMarkdownErDiagramSummary(lines: readonly string[]) {
-  if (!/^erDiagram$/i.test(lines[0] ?? "")) return null
-
-  const entities = new Set<string>()
-  let relationshipCount = 0
-
-  for (const line of lines.slice(1)) {
-    const relationship = line.match(
-      /^([A-Za-z0-9_.-]+)\s+[|o}{]+--[|o}{]+\s+([A-Za-z0-9_.-]+)(?:\s*:|$)/
-    )
-    if (relationship) {
-      entities.add(relationship[1]!)
-      entities.add(relationship[2]!)
-      relationshipCount += 1
-      continue
-    }
-
-    const declaration = line.match(/^([A-Za-z0-9_.-]+)\s+\{$/)
-    if (declaration) entities.add(declaration[1]!)
-  }
-
-  return {
-    entityCount: entities.size,
-    relationshipCount,
-  }
-}
-
-function readPretextMarkdownPieDiagramSummary(lines: readonly string[]) {
-  if (!/^pie(?:\s+(?:showData|title\s+.+))?$/i.test(lines[0] ?? "")) {
-    return null
-  }
-
-  let sliceCount = 0
-  let totalValue = 0
-
-  for (const line of lines.slice(1)) {
-    if (/^title\s+/i.test(line)) continue
-
-    const slice = line.match(/^"[^"]+"\s*:\s*(-?\d+(?:\.\d+)?)$/)
-    if (!slice) continue
-    sliceCount += 1
-    totalValue += Number(slice[1])
-  }
-
-  return {
-    sliceCount,
-    totalValue: Number.isInteger(totalValue)
-      ? String(totalValue)
-      : String(Number(totalValue.toFixed(3))),
-  }
-}
-
-function readPretextMarkdownJourneyDiagramSummary(lines: readonly string[]) {
-  if (!/^journey$/i.test(lines[0] ?? "")) return null
-
-  let sectionCount = 0
-  let taskCount = 0
-
-  for (const line of lines.slice(1)) {
-    if (/^title\s+/i.test(line)) continue
-    if (/^section\s+/i.test(line)) {
-      sectionCount += 1
-      continue
-    }
-    if (/^.+:\s*-?\d+(?:\s*:|$)/.test(line)) taskCount += 1
-  }
-
-  return {
-    sectionCount,
-    taskCount,
-  }
-}
-
-function readPretextMarkdownGanttDiagramSummary(lines: readonly string[]) {
-  if (!/^gantt$/i.test(lines[0] ?? "")) return null
-
-  let sectionCount = 0
-  let taskCount = 0
-
-  for (const line of lines.slice(1)) {
-    if (
-      /^(?:dateFormat|axisFormat|excludes|inclusiveEndDates|tickInterval|title|todayMarker|weekday)\b/i.test(
-        line
-      )
-    ) {
-      continue
-    }
-    if (/^section\s+/i.test(line)) {
-      sectionCount += 1
-      continue
-    }
-    if (/^[^:]+:\s*\S+/.test(line)) taskCount += 1
-  }
-
-  return {
-    sectionCount,
-    taskCount,
-  }
-}
-
-function readPretextMarkdownGitGraphDiagramSummary(lines: readonly string[]) {
-  if (!/^gitGraph(?:\s+\w+)?$/i.test(lines[0] ?? "")) return null
-
-  let branchCount = 0
-  let commitCount = 0
-  let mergeCount = 0
-
-  for (const line of lines.slice(1)) {
-    if (/^branch\s+/i.test(line)) branchCount += 1
-    if (/^commit\b/i.test(line)) commitCount += 1
-    if (/^merge\s+/i.test(line)) mergeCount += 1
-  }
-
-  return {
-    branchCount,
-    commitCount,
-    mergeCount,
-  }
-}
-
-function readPretextMarkdownTimelineDiagramSummary(lines: readonly string[]) {
-  if (!/^timeline$/i.test(lines[0] ?? "")) return null
-
-  let sectionCount = 0
-  let eventCount = 0
-
-  for (const line of lines.slice(1)) {
-    if (/^title\s+/i.test(line)) continue
-    if (/^section\s+/i.test(line)) {
-      sectionCount += 1
-      continue
-    }
-    eventCount += 1
-  }
-
-  return {
-    sectionCount,
-    eventCount,
-  }
-}
-
-function readPretextMarkdownMindMapDiagramSummary(lines: readonly string[]) {
-  if (!/^mindmap$/i.test(lines[0] ?? "")) return null
-
-  return {
-    nodeCount: lines.slice(1).length,
-  }
-}
-
-function describePretextMarkdownGraphDirection(direction: string) {
-  switch (direction.toUpperCase()) {
-    case "BT":
-      return "bottom to top"
-    case "LR":
-      return "left to right"
-    case "RL":
-      return "right to left"
-    case "TB":
-    case "TD":
-    default:
-      return "top down"
-  }
-}
-
-function pluralize(word: string, count: number) {
-  if (count !== 1 && /[^aeiou]y$/i.test(word)) {
-    return `${word.slice(0, -1)}ies`
-  }
-
-  return count === 1 ? word : `${word}s`
-}
-
-function readPretextMarkdownDiagramLimitMessage(source: string) {
-  if (source.length > PRETEXT_MARKDOWN_MERMAID_MAX_SOURCE_LENGTH) {
-    return "Mermaid diagram too large to render safely. Copy the source and render it in a dedicated diagram tool."
-  }
-
-  const lineCount = source.split(/\r?\n/).length
-  if (lineCount > PRETEXT_MARKDOWN_MERMAID_MAX_LINES) {
-    return "Mermaid diagram has too many lines to render safely. Copy the source and render it in a dedicated diagram tool."
-  }
-
-  return null
-}
-
-function clampPretextMarkdownDiagramBodyHeight(height: number) {
-  return Math.min(520, Math.max(160, Math.ceil(height)))
-}
-
-function normalizePretextMarkdownDiagramSource(source: string) {
-  return source
-    .split(";")
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .join("\n")
-}
-
-function PretextMarkdownCopyButton({
-  ariaLabel,
-  className,
-  idleIcon,
-  text,
-}: {
-  ariaLabel: string
-  className?: string
-  idleIcon?: React.ReactNode
-  text: string | (() => string)
-}) {
-  const { copy, status } = useViewerClipboardCopy()
-
-  const copyText = () => {
-    const resolvedText = typeof text === "function" ? text() : text
-    copy(resolvedText)
-  }
-
-  const label =
-    status === "copied"
-      ? "Copied"
-      : status === "failed"
-        ? "Copy failed"
-        : ariaLabel
-
-  return (
-    <Button
-      aria-label={label}
-      className={className}
-      size="icon-sm"
-      title={label}
-      type="button"
-      variant="ghost"
-      onClick={copyText}
-    >
-      {status === "copied" ? (
-        <Check />
-      ) : status === "failed" ? (
-        <AlertCircle />
-      ) : (
-        (idleIcon ?? <Copy />)
-      )}
-    </Button>
-  )
-}
-
-function readPretextMarkdownSelectedText(root: HTMLElement | null) {
-  if (!root || typeof window === "undefined") return null
-  const selection = window.getSelection()
-  if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
-    return null
-  }
-
-  const selectedText = selection.toString().replace(/\n$/, "")
-  if (!selectedText) return null
-
-  for (let index = 0; index < selection.rangeCount; index += 1) {
-    const range = selection.getRangeAt(index)
-    if (rangeIntersectsElement(range, root)) return selectedText
-  }
-
-  return null
-}
-
-function rangeIntersectsElement(range: Range, element: HTMLElement) {
-  try {
-    return range.intersectsNode(element)
-  } catch {
-    const container = range.commonAncestorContainer
-    return element.contains(
-      container.nodeType === Node.ELEMENT_NODE
-        ? (container as Element)
-        : container.parentElement
-    )
-  }
-}
-
 function PretextMarkdownImage({
   alt,
   className,
@@ -2826,368 +2012,6 @@ function calloutClassName(kind: CalloutKind) {
   }
 }
 
-async function renderMermaidDiagram(
-  source: string,
-  id: string
-): Promise<
-  { status: "failed"; message: string } | { status: "ready"; svg: string }
-> {
-  try {
-    const mermaidModule = await import("mermaid")
-    const mermaid = mermaidModule.default
-    if (!mermaid?.render) return renderBasicMermaidDiagram(source)
-
-    mermaid.initialize?.(PRETEXT_MARKDOWN_MERMAID_CONFIG)
-    const result = await mermaid.render(id, source)
-    const svg = await sanitizePretextMarkdownMermaidSvg(result.svg)
-    if (!svg) {
-      return { status: "failed", message: "Mermaid produced invalid SVG." }
-    }
-    return { status: "ready", svg }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Invalid diagram"
-    return isRecoverablePretextMarkdownMermaidError(message)
-      ? renderBasicMermaidDiagram(source)
-      : { status: "failed", message }
-  }
-}
-
-function isRecoverablePretextMarkdownMermaidError(message: string) {
-  return (
-    message.includes("Cannot find") ||
-    message.includes("module") ||
-    message.includes("getBBox") ||
-    message.includes("getComputedTextLength")
-  )
-}
-
-async function sanitizePretextMarkdownMermaidSvg(svg: string) {
-  const domPurifyModule = await import("dompurify")
-  const defaultExport = domPurifyModule.default as unknown
-  const moduleExport = domPurifyModule as unknown
-  const sanitizer = isPretextMarkdownSvgSanitizer(defaultExport)
-    ? defaultExport
-    : typeof defaultExport === "function"
-      ? (
-          defaultExport as (windowObject: Window) => PretextMarkdownSvgSanitizer
-        )(window)
-      : isPretextMarkdownSvgSanitizer(moduleExport)
-        ? moduleExport
-        : null
-
-  if (!sanitizer?.sanitize) {
-    throw new Error("DOMPurify sanitize unavailable")
-  }
-
-  return sanitizePretextMarkdownSvg(svg, sanitizer)
-}
-
-function isPretextMarkdownSvgSanitizer(
-  value: unknown
-): value is PretextMarkdownSvgSanitizer {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "sanitize" in value &&
-    typeof value.sanitize === "function"
-  )
-}
-
-function renderBasicMermaidDiagram(
-  source: string
-): { status: "failed"; message: string } | { status: "ready"; svg: string } {
-  const lines = readPretextMarkdownDiagramContentLines(source)
-  const header = lines[0]?.match(/^(?:graph|flowchart)\s+(TD|TB|BT|LR|RL)$/i)
-  if (!header) {
-    const sequence = renderBasicMermaidSequenceDiagram(lines)
-    if (sequence) return sequence
-
-    const state = renderBasicMermaidStateDiagram(lines)
-    if (state) return state
-
-    return {
-      status: "failed",
-      message:
-        "Unsupported Mermaid diagram. Only graph/flowchart, sequence, and state diagrams are rendered by the fallback.",
-    }
-  }
-
-  const direction = header[1]!.toUpperCase()
-  const edges: Array<{ from: string; to: string }> = []
-  const labels = new Map<string, string>()
-
-  for (const line of lines.slice(1)) {
-    const edge = line.match(/^(.+?)\s*(?:-->|---|==>|-.->)\s*(.+?)$/)
-    if (!edge) continue
-    const from = parseMermaidNode(edge[1]!)
-    const to = parseMermaidNode(edge[2]!)
-    labels.set(from.id, from.label)
-    labels.set(to.id, to.label)
-    edges.push({ from: from.id, to: to.id })
-  }
-
-  if (edges.length === 0) {
-    return {
-      status: "failed",
-      message: "Unsupported Mermaid diagram. Add at least one graph edge.",
-    }
-  }
-
-  const nodeIds = Array.from(labels.keys())
-  const isHorizontal = direction === "LR" || direction === "RL"
-  const nodeWidth = 132
-  const nodeHeight = 42
-  const gap = 56
-  const width = isHorizontal
-    ? nodeIds.length * nodeWidth + Math.max(0, nodeIds.length - 1) * gap + 48
-    : 420
-  const height = isHorizontal
-    ? 132
-    : nodeIds.length * nodeHeight + Math.max(0, nodeIds.length - 1) * gap + 48
-  const positions = new Map(
-    nodeIds.map((nodeId, index) => {
-      const orderedIndex =
-        direction === "RL" || direction === "BT"
-          ? nodeIds.length - index - 1
-          : index
-      return [
-        nodeId,
-        {
-          x: isHorizontal
-            ? 24 + orderedIndex * (nodeWidth + gap)
-            : (width - nodeWidth) / 2,
-          y: isHorizontal
-            ? (height - nodeHeight) / 2
-            : 24 + orderedIndex * (nodeHeight + gap),
-        },
-      ] as const
-    })
-  )
-
-  const edgeSvg = edges
-    .map((edge) => {
-      const from = positions.get(edge.from)!
-      const to = positions.get(edge.to)!
-      const x1 = isHorizontal ? from.x + nodeWidth : from.x + nodeWidth / 2
-      const y1 = isHorizontal ? from.y + nodeHeight / 2 : from.y + nodeHeight
-      const x2 = isHorizontal ? to.x : to.x + nodeWidth / 2
-      const y2 = isHorizontal ? to.y + nodeHeight / 2 : to.y
-      return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)" opacity="0.65" />`
-    })
-    .join("")
-  const nodeSvg = nodeIds
-    .map((nodeId) => {
-      const position = positions.get(nodeId)!
-      return `<g><rect x="${position.x}" y="${position.y}" width="${nodeWidth}" height="${nodeHeight}" rx="8" fill="var(--card)" stroke="currentColor" opacity="0.9" /><text x="${position.x + nodeWidth / 2}" y="${position.y + 26}" text-anchor="middle" font-size="13" fill="currentColor">${escapeSvg(labels.get(nodeId) ?? nodeId)}</text></g>`
-    })
-    .join("")
-
-  return {
-    status: "ready",
-    svg: `<svg role="img" aria-label="Mermaid diagram" data-pretext-basic-mermaid="graph" viewBox="0 0 ${width} ${height}" width="100%" height="${height}" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="currentColor" opacity="0.65"/></marker></defs>${edgeSvg}${nodeSvg}</svg>`,
-  }
-}
-
-function renderBasicMermaidSequenceDiagram(
-  lines: readonly string[]
-): { status: "ready"; svg: string } | null {
-  if (!/^sequenceDiagram$/i.test(lines[0] ?? "")) return null
-
-  const participantLabels = new Map<string, string>()
-  const messages: Array<{ from: string; label: string; to: string }> = []
-  const ensureParticipant = (id: string, label = id) => {
-    const trimmedId = id.trim()
-    if (!trimmedId) return
-    if (!participantLabels.has(trimmedId)) {
-      participantLabels.set(trimmedId, label.trim() || trimmedId)
-    }
-  }
-
-  for (const line of lines.slice(1)) {
-    const declaration = line.match(
-      /^(?:actor|participant)\s+([A-Za-z0-9_.-]+)(?:\s+as\s+(.+))?$/i
-    )
-    if (declaration) {
-      ensureParticipant(declaration[1]!, declaration[2] ?? declaration[1]!)
-      continue
-    }
-
-    const message = line.match(
-      /^(.+?)\s*(?:-{1,2}(?:>>?|x|\))|->>?)\s*(.+?)(?::\s*(.*))?$/
-    )
-    if (!message) continue
-    const from = message[1]!.trim()
-    const to = message[2]!.trim()
-    ensureParticipant(from)
-    ensureParticipant(to)
-    messages.push({ from, label: message[3]?.trim() ?? "", to })
-  }
-
-  if (participantLabels.size === 0 || messages.length === 0) return null
-
-  const participantIds = Array.from(participantLabels.keys())
-  const laneWidth = 156
-  const top = 20
-  const headerHeight = 38
-  const messageGap = 54
-  const width = Math.max(360, participantIds.length * laneWidth + 48)
-  const height = Math.max(
-    150,
-    top + headerHeight + messages.length * messageGap + 42
-  )
-  const positions = new Map(
-    participantIds.map((id, index) => [
-      id,
-      24 + laneWidth / 2 + index * laneWidth,
-    ])
-  )
-
-  const participantSvg = participantIds
-    .map((id) => {
-      const x = positions.get(id)!
-      const label = participantLabels.get(id) ?? id
-      return [
-        `<rect x="${x - 56}" y="${top}" width="112" height="${headerHeight}" rx="8" fill="var(--card)" stroke="currentColor" opacity="0.9" />`,
-        `<text x="${x}" y="${top + 24}" text-anchor="middle" font-size="13" fill="currentColor">${escapeSvg(label)}</text>`,
-        `<line x1="${x}" y1="${top + headerHeight}" x2="${x}" y2="${height - 20}" stroke="currentColor" stroke-width="1" stroke-dasharray="4 4" opacity="0.35" />`,
-      ].join("")
-    })
-    .join("")
-
-  const messageSvg = messages
-    .map((message, index) => {
-      const y = top + headerHeight + 34 + index * messageGap
-      const fromX = positions.get(message.from)!
-      const toX = positions.get(message.to)!
-      const labelX = (fromX + toX) / 2
-      const label = message.label
-        ? `<text x="${labelX}" y="${y - 8}" text-anchor="middle" font-size="12" fill="currentColor">${escapeSvg(message.label)}</text>`
-        : ""
-      return `${label}<line x1="${fromX}" y1="${y}" x2="${toX}" y2="${y}" stroke="currentColor" stroke-width="1.5" marker-end="url(#sequence-arrow)" opacity="0.7" />`
-    })
-    .join("")
-
-  return {
-    status: "ready",
-    svg: `<svg role="img" aria-label="Mermaid diagram" data-pretext-basic-mermaid="sequence" viewBox="0 0 ${width} ${height}" width="100%" height="${height}" xmlns="http://www.w3.org/2000/svg"><defs><marker id="sequence-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="currentColor" opacity="0.7"/></marker></defs>${participantSvg}${messageSvg}</svg>`,
-  }
-}
-
-function renderBasicMermaidStateDiagram(
-  lines: readonly string[]
-): { status: "ready"; svg: string } | null {
-  if (!/^stateDiagram(?:-v2)?$/i.test(lines[0] ?? "")) return null
-
-  const labels = new Map<string, string>()
-  const transitions: Array<{ from: string; label: string; to: string }> = []
-  const ensureState = (id: string, label = id) => {
-    const state = normalizePretextMarkdownStateDiagramNode(id)
-    if (!state) return
-    if (!labels.has(state)) labels.set(state, label.trim() || state)
-  }
-
-  for (const line of lines.slice(1)) {
-    const declaration = line.match(/^state\s+"([^"]+)"\s+as\s+(.+)$/i)
-    if (declaration) {
-      ensureState(declaration[2]!, declaration[1]!)
-      continue
-    }
-
-    const namedDeclaration = line.match(/^state\s+([A-Za-z0-9_.-]+)/i)
-    if (namedDeclaration) {
-      ensureState(namedDeclaration[1]!)
-      continue
-    }
-
-    const transition = line.match(/^(.+?)\s*-->\s*(.+?)(?::\s*(.*))?$/)
-    if (!transition) continue
-
-    const from = normalizePretextMarkdownStateDiagramNode(transition[1]!)
-    const to = normalizePretextMarkdownStateDiagramNode(transition[2]!)
-    if (from) ensureState(from)
-    if (to) ensureState(to)
-    if (from && to) {
-      transitions.push({ from, label: transition[3]?.trim() ?? "", to })
-    }
-  }
-
-  if (labels.size === 0 || transitions.length === 0) return null
-
-  const stateIds = Array.from(labels.keys())
-  const nodeWidth = 156
-  const nodeHeight = 42
-  const gap = 58
-  const width = 420
-  const height =
-    stateIds.length * nodeHeight + Math.max(0, stateIds.length - 1) * gap + 48
-  const positions = new Map(
-    stateIds.map((stateId, index) => [
-      stateId,
-      {
-        x: (width - nodeWidth) / 2,
-        y: 24 + index * (nodeHeight + gap),
-      },
-    ])
-  )
-
-  const transitionSvg = transitions
-    .map((transition) => {
-      const from = positions.get(transition.from)!
-      const to = positions.get(transition.to)!
-      const x1 = from.x + nodeWidth / 2
-      const y1 = from.y + nodeHeight
-      const x2 = to.x + nodeWidth / 2
-      const y2 = to.y
-      const label = transition.label
-        ? `<text x="${(x1 + x2) / 2}" y="${(y1 + y2) / 2 - 8}" text-anchor="middle" font-size="12" fill="currentColor">${escapeSvg(transition.label)}</text>`
-        : ""
-      return `${label}<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="currentColor" stroke-width="1.5" marker-end="url(#state-arrow)" opacity="0.65" />`
-    })
-    .join("")
-  const stateSvg = stateIds
-    .map((stateId) => {
-      const position = positions.get(stateId)!
-      const label = labels.get(stateId) ?? stateId
-      return `<g><rect x="${position.x}" y="${position.y}" width="${nodeWidth}" height="${nodeHeight}" rx="8" fill="var(--card)" stroke="currentColor" opacity="0.9" /><text x="${position.x + nodeWidth / 2}" y="${position.y + 26}" text-anchor="middle" font-size="13" fill="currentColor">${escapeSvg(label)}</text></g>`
-    })
-    .join("")
-
-  return {
-    status: "ready",
-    svg: `<svg role="img" aria-label="Mermaid diagram" data-pretext-basic-mermaid="state" viewBox="0 0 ${width} ${height}" width="100%" height="${height}" xmlns="http://www.w3.org/2000/svg"><defs><marker id="state-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="currentColor" opacity="0.65"/></marker></defs>${transitionSvg}${stateSvg}</svg>`,
-  }
-}
-
-function normalizePretextMarkdownStateDiagramNode(value: string) {
-  const state = value
-    .trim()
-    .replace(/\s*<<.+>>\s*$/, "")
-    .replace(/\s*\{?\s*$/, "")
-  return state && state !== "[*]" ? state : ""
-}
-
-function parseMermaidNode(value: string) {
-  const trimmed = value.trim()
-  const match =
-    trimmed.match(/^([A-Za-z0-9_-]+)\s*\["(.+)"\]$/) ??
-    trimmed.match(/^([A-Za-z0-9_-]+)\s*\[(.+)\]$/) ??
-    trimmed.match(/^([A-Za-z0-9_-]+)\s*\((.+)\)$/)
-  if (match) {
-    return { id: match[1]!, label: match[2]!.trim() }
-  }
-
-  const id = trimmed.replace(/[^A-Za-z0-9_-].*$/, "")
-  return { id: id || trimmed, label: id || trimmed }
-}
-
-function escapeSvg(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-}
-
 function serializePretextMarkdownTable(table: HTMLTableElement) {
   return Array.from(table.rows)
     .map((row) =>
@@ -3287,11 +2111,11 @@ function readPretextMarkdownCodeFigureLanguage(node: unknown) {
   if (preLanguage) return normalizePretextMarkdownCodeLanguage(preLanguage)
 
   const code = readPretextMarkdownHastElement(pre?.children?.[0])
-  const codeLanguage = readPretextMarkdownHastStringProperty(
+  const readPretextMarkdownCodeElementLanguage = readPretextMarkdownHastStringProperty(
     code,
     "data-language"
   )
-  if (codeLanguage) return normalizePretextMarkdownCodeLanguage(codeLanguage)
+  if (readPretextMarkdownCodeElementLanguage) return normalizePretextMarkdownCodeLanguage(readPretextMarkdownCodeElementLanguage)
 
   return normalizePretextMarkdownCodeLanguage(
     readPretextMarkdownHastClassLanguage(code)
@@ -3406,14 +2230,14 @@ function extractPretextMarkdownHastText(node: unknown): string {
   return typed.children.map(extractPretextMarkdownHastText).join("")
 }
 
-function codeLanguage(node: React.ReactNode): string | null {
+function readPretextMarkdownCodeElementLanguage(node: React.ReactNode): string | null {
   if (
     !React.isValidElement<{
       className?: string
       "data-language"?: string
     }>(node)
   ) {
-    if (Array.isArray(node)) return node.map(codeLanguage).find(Boolean) ?? null
+    if (Array.isArray(node)) return node.map(readPretextMarkdownCodeElementLanguage).find(Boolean) ?? null
     return null
   }
 
@@ -3433,47 +2257,38 @@ function normalizePretextMarkdownCodeLanguage(value: string | undefined) {
   return PRETEXT_MARKDOWN_CODE_LANGUAGE_ALIASES[language] ?? language
 }
 
-function alertClassName(kind: AlertKind) {
-  switch (kind) {
-    case "caution":
-      return "border-red-200 bg-red-50/70 dark:border-red-500/40 dark:bg-red-950/20"
-    case "important":
-      return "border-violet-200 bg-violet-50/70 dark:border-violet-500/40 dark:bg-violet-950/20"
-    case "note":
-      return "border-sky-200 bg-sky-50/70 dark:border-sky-500/40 dark:bg-sky-950/20"
-    case "tip":
-      return "border-emerald-200 bg-emerald-50/70 dark:border-emerald-500/40 dark:bg-emerald-950/20"
-    case "warning":
-      return "border-amber-200 bg-amber-50/70 dark:border-amber-500/40 dark:bg-amber-950/20"
-  }
-}
-
-function alertTitleClassName(kind: AlertKind) {
-  switch (kind) {
-    case "caution":
-      return "text-red-700 dark:text-red-300"
-    case "important":
-      return "text-violet-700 dark:text-violet-300"
-    case "note":
-      return "text-sky-700 dark:text-sky-300"
-    case "tip":
-      return "text-emerald-700 dark:text-emerald-300"
-    case "warning":
-      return "text-amber-700 dark:text-amber-300"
-  }
-}
-
-function alertIcon(kind: AlertKind) {
-  switch (kind) {
-    case "caution":
-      return <CircleAlert aria-hidden="true" className="size-4 shrink-0" />
-    case "important":
-      return <BadgeAlert aria-hidden="true" className="size-4 shrink-0" />
-    case "note":
-      return <Info aria-hidden="true" className="size-4 shrink-0" />
-    case "tip":
-      return <Lightbulb aria-hidden="true" className="size-4 shrink-0" />
-    case "warning":
-      return <TriangleAlert aria-hidden="true" className="size-4 shrink-0" />
-  }
+const ALERT_STYLES: Record<
+  AlertKind,
+  { container: string; icon: React.ReactNode; title: string }
+> = {
+  caution: {
+    container:
+      "border-red-200 bg-red-50/70 dark:border-red-500/40 dark:bg-red-950/20",
+    icon: <CircleAlert aria-hidden="true" className="size-4 shrink-0" />,
+    title: "text-red-700 dark:text-red-300",
+  },
+  important: {
+    container:
+      "border-violet-200 bg-violet-50/70 dark:border-violet-500/40 dark:bg-violet-950/20",
+    icon: <BadgeAlert aria-hidden="true" className="size-4 shrink-0" />,
+    title: "text-violet-700 dark:text-violet-300",
+  },
+  note: {
+    container:
+      "border-sky-200 bg-sky-50/70 dark:border-sky-500/40 dark:bg-sky-950/20",
+    icon: <Info aria-hidden="true" className="size-4 shrink-0" />,
+    title: "text-sky-700 dark:text-sky-300",
+  },
+  tip: {
+    container:
+      "border-emerald-200 bg-emerald-50/70 dark:border-emerald-500/40 dark:bg-emerald-950/20",
+    icon: <Lightbulb aria-hidden="true" className="size-4 shrink-0" />,
+    title: "text-emerald-700 dark:text-emerald-300",
+  },
+  warning: {
+    container:
+      "border-amber-200 bg-amber-50/70 dark:border-amber-500/40 dark:bg-amber-950/20",
+    icon: <TriangleAlert aria-hidden="true" className="size-4 shrink-0" />,
+    title: "text-amber-700 dark:text-amber-300",
+  },
 }

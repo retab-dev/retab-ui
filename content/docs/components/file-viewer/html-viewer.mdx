@@ -1,6 +1,7 @@
 ---
 title: HTML Viewer
 description: A sandboxed HTML document viewer for previewing standalone HTML files without executing scripts or exposing app origin access.
+component: true
 ---
 
 The HTML Viewer renders standalone `.html` and `.htm` documents through the
@@ -8,7 +9,7 @@ File Viewer. HTML is loaded as a bounded text resource, then mounted inside a
 sandboxed iframe so untrusted documents can be previewed without running
 scripts or reaching the host app.
 
-<HtmlViewerDemo />
+<ComponentPreview name="html-viewer-demo" />
 
 ## Installation
 
@@ -65,7 +66,7 @@ type:
 - **Viewer chrome** — zoom, retry, and download actions use the same shell as other File Viewer document routes.
 - **Explicit routing** — `.html`, `.htm`, and `text/html` sources route to the HTML viewer; `as="html"` can force the route.
 
-## Props
+## API Reference
 
 The HTML route is exposed through `FileViewer`.
 
@@ -75,3 +76,7 @@ The HTML route is exposed through `FileViewer`.
 | `as`        | `FileCategory` | Pass `"html"` to force HTML rendering when detection is ambiguous.                                |
 | `bare`      | `boolean`      | Drop the outer border/background so the viewer fills its container.                               |
 | `className` | `string`       | Optional class on the viewer root element.                                                        |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer-html-viewer.tsx" />

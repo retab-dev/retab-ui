@@ -30,18 +30,14 @@ const initialSchema: ExtendedJSONSchema7 = {
 }
 
 export function RetabSchemaBuilderDemo({
-  showJsonTab = true,
+  showJsonTab = false,
 }: {
   /** Hide the Schema/JSON toggle and render the editor on its own. */
   showJsonTab?: boolean
 }) {
   const [schema, setSchema] = React.useState<ExtendedJSONSchema7>(initialSchema)
 
-  const editor = (
-    <div className="rounded-xl border bg-card p-3 shadow-sm">
-      <SchemaBuilder value={schema} onValueChange={setSchema} />
-    </div>
-  )
+  const editor = <SchemaBuilder value={schema} onValueChange={setSchema} />
 
   if (!showJsonTab) {
     return <div className="not-prose w-full">{editor}</div>

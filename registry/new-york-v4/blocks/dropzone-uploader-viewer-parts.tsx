@@ -240,7 +240,6 @@ export function FileIntakeViewerRoot({
 }) {
   return (
     <ViewerRoot
-      bare
       defaultOpen
       mode="inline"
       className={cn(

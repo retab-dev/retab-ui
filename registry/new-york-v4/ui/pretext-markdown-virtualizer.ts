@@ -8,7 +8,7 @@ import type { PretextMarkdownChunkFrame } from "./pretext-markdown-layout"
 
 export interface PretextMarkdownScrollAnchor {
   chunkIndex: number
-  offsetWithinChunk: number
+  offsetWithinChunkPx: number
 }
 
 export function getPretextMarkdownVisibleChunkFrames({
@@ -49,7 +49,7 @@ export function getPretextMarkdownFrameScrollAnchor({
 
   return {
     chunkIndex: chunk.index,
-    offsetWithinChunk: Math.max(0, scrollTop - chunk.top),
+    offsetWithinChunkPx: Math.max(0, scrollTop - chunk.top),
   }
 }
 
@@ -66,7 +66,7 @@ export function resolvePretextMarkdownScrollAnchor({
   return Math.max(
     0,
     frame.top +
-      Math.min(anchor.offsetWithinChunk, Math.max(0, frame.height - 1))
+      Math.min(anchor.offsetWithinChunkPx, Math.max(0, frame.height - 1))
   )
 }
 
@@ -132,11 +132,11 @@ export function getPretextMarkdownSourceLineForScrollTop({
 }) {
   if (!frames.length) return 1
 
-  const frameIndex = Math.min(
+  const chunkIndex = Math.min(
     firstChunkWithBottomAfter(frames, scrollTop),
     frames.length - 1
   )
-  const frame = frames[frameIndex]
+  const frame = frames[chunkIndex]
   if (!frame) return 1
 
   const chunk = chunks.find((item) => item.index === frame.index)

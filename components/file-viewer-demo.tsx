@@ -197,7 +197,7 @@ export function FileViewerDemo() {
   const activeFile = getActiveFile(DOCS_DEMO_FILES, active)
 
   return (
-    <div className="not-prose my-6 flex flex-col gap-3">
+    <div className="flex flex-col gap-3">
       <FileTabs
         activeFileKey={active}
         idPrefix={idPrefix}

@@ -1,8 +1,8 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { mdxComponents } from "@/mdx-components"
-import { ChevronLeft, ChevronRight } from "lucide-react"
 import { findNeighbour } from "fumadocs-core/page-tree"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
 import { source } from "@/lib/source"
 import { absoluteUrl } from "@/lib/utils"
@@ -15,7 +15,8 @@ export const revalidate = false
 export const dynamic = "force-static"
 export const dynamicParams = false
 
-const PRETEXT_MARKDOWN_VIEWER_DOC_URL = "/docs/viewers/pretext-markdown-viewer"
+const PRETEXT_MARKDOWN_VIEWER_DOC_URL =
+  "/docs/components/file-viewer/pretext-markdown-viewer"
 
 export function generateStaticParams() {
   return source.generateParams()

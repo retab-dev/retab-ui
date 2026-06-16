@@ -3,22 +3,39 @@ import path from "node:path"
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { CodeViewerDemo } from "@/components/code-viewer-demo"
+import {
+  CsvViewerDemo,
+  CsvViewerStreamingDemo,
+} from "@/components/csv-viewer-demo"
 import { DataCellDemo } from "@/components/data-cell-demo"
 import { DocsViewCodeBlock } from "@/components/docs-code-block"
+import { DocxViewerDemo } from "@/components/docx-viewer-demo"
 import { DropzoneDemo } from "@/components/dropzone-demo"
+import { EmailViewerDemo } from "@/components/email-viewer-demo"
 import { FileThumbnailDemo } from "@/components/file-thumbnail-demo"
+import { FileThumbnailFormatsDemo } from "@/components/file-thumbnail-formats-demo"
+import { FileViewerDemo } from "@/components/file-viewer-demo"
+import { HtmlViewerDemo } from "@/components/html-viewer-demo"
+import { ImageViewerDemo } from "@/components/image-viewer-demo"
 import { JsonFormDemo } from "@/components/json-form-demo"
 import { JsonTableDemo } from "@/components/json-table/json-table-demo"
+import { MarkdownViewerDemo } from "@/components/markdown-viewer-demo"
+import {
+  LargeParseViewerDemo,
+  ParseViewerDemo,
+} from "@/components/parse-viewer-demo"
+import { PdfViewerDemo } from "@/components/pdf-viewer-demo"
+import { PptxViewerDemo } from "@/components/pptx-viewer-demo"
+import { PretextMarkdownViewerDemo } from "@/components/pretext-markdown-viewer-demo"
 import { PropertyFormDemo } from "@/components/property-form-demo"
 import { RetabSchemaBuilderDemo } from "@/components/retab-schema-builder-demo"
 import { ViewerSidebarDemo } from "@/components/sidebar-demo"
+import { TextViewerDemo } from "@/components/text-viewer-demo"
+import { XlsxViewerDemo } from "@/components/xlsx-viewer-demo"
+import { AttachmentSidebarExample } from "@/registry/new-york-v4/blocks/attachment-sidebar-demo"
 import { ClassificationViewerExample } from "@/registry/new-york-v4/blocks/classification-viewer-demo"
-import { PartitionViewerExample } from "@/registry/new-york-v4/blocks/partition-viewer-demo"
-import { SegmentLegendSplit } from "@/registry/new-york-v4/blocks/segment-legend-split"
-import { SegmentLegendVariants } from "@/registry/new-york-v4/blocks/segment-legend-variants"
-import { SegmentSidebarExample } from "@/registry/new-york-v4/blocks/segment-sidebar-demo"
-import { SegmentSidebarSplit } from "@/registry/new-york-v4/blocks/segment-sidebar-split"
-import { SplitViewerExample } from "@/registry/new-york-v4/blocks/split-viewer-demo"
+import { CodeViewerSyntaxDemo } from "@/registry/new-york-v4/blocks/code-viewer-syntax-demo"
 import { AvatarImageSlot } from "@/registry/new-york-v4/blocks/dropzone-avatar-image-slot"
 import { ComparisonPairUpload } from "@/registry/new-york-v4/blocks/dropzone-comparison-pair-upload"
 import { ControlledQueue } from "@/registry/new-york-v4/blocks/dropzone-controlled-queue"
@@ -30,13 +47,21 @@ import { IntakeRouter } from "@/registry/new-york-v4/blocks/dropzone-intake-rout
 import { MediaTranscriptQueue } from "@/registry/new-york-v4/blocks/dropzone-media-transcript-queue"
 import { NativeButtonQueue } from "@/registry/new-york-v4/blocks/dropzone-native-button-queue"
 import { NonButtonTrigger } from "@/registry/new-york-v4/blocks/dropzone-non-button-trigger"
-import { SchemaBuilderDefinitions } from "@/registry/new-york-v4/blocks/schema-builder-definitions"
-import { SchemaBuilderReadOnly } from "@/registry/new-york-v4/blocks/schema-builder-read-only"
 import { PinboardDropSurface } from "@/registry/new-york-v4/blocks/dropzone-pinboard-drop-surface"
 import { RequiredPacketSlots } from "@/registry/new-york-v4/blocks/dropzone-required-packet-slots"
 import { SpreadsheetImportCard } from "@/registry/new-york-v4/blocks/dropzone-spreadsheet-import-card"
 import { UploadProgressQueue } from "@/registry/new-york-v4/blocks/dropzone-upload-progress-queue"
 import { ValidationOnly } from "@/registry/new-york-v4/blocks/dropzone-validation-only"
+import { FileViewerHeaderExample } from "@/registry/new-york-v4/blocks/file-viewer-header-demo"
+import { PartitionViewerExample } from "@/registry/new-york-v4/blocks/partition-viewer-demo"
+import { SchemaBuilderDefinitions } from "@/registry/new-york-v4/blocks/schema-builder-definitions"
+import { SchemaBuilderReadOnly } from "@/registry/new-york-v4/blocks/schema-builder-read-only"
+import { SegmentLegendSplit } from "@/registry/new-york-v4/blocks/segment-legend-split"
+import { SegmentLegendVariants } from "@/registry/new-york-v4/blocks/segment-legend-variants"
+import { SegmentSidebarExample } from "@/registry/new-york-v4/blocks/segment-sidebar-demo"
+import { SegmentSidebarSplit } from "@/registry/new-york-v4/blocks/segment-sidebar-split"
+import { SidebarListExample } from "@/registry/new-york-v4/blocks/sidebar-list-demo"
+import { SplitViewerExample } from "@/registry/new-york-v4/blocks/split-viewer-demo"
 
 /**
  * The shadcn-style example shape: a live component preview in a bordered card
@@ -144,9 +169,73 @@ const REGISTRY = {
     component: DataCellDemo,
     src: "components/data-cell-demo.tsx",
   },
+  "file-viewer-demo": {
+    component: FileViewerDemo,
+    src: "components/file-viewer-demo.tsx",
+  },
+  "pdf-viewer-demo": {
+    component: PdfViewerDemo,
+    src: "components/pdf-viewer-demo.tsx",
+  },
+  "docx-viewer-demo": {
+    component: DocxViewerDemo,
+    src: "components/docx-viewer-demo.tsx",
+  },
+  "image-viewer-demo": {
+    component: ImageViewerDemo,
+    src: "components/image-viewer-demo.tsx",
+  },
+  "pptx-viewer-demo": {
+    component: PptxViewerDemo,
+    src: "components/pptx-viewer-demo.tsx",
+  },
+  "xlsx-viewer-demo": {
+    component: XlsxViewerDemo,
+    src: "components/xlsx-viewer-demo.tsx",
+  },
+  "csv-viewer-demo": {
+    component: CsvViewerDemo,
+    src: "components/csv-viewer-demo.tsx",
+  },
+  "csv-viewer-streaming-demo": {
+    component: CsvViewerStreamingDemo,
+    src: "components/csv-viewer-demo.tsx",
+  },
+  "code-viewer-demo": {
+    component: CodeViewerDemo,
+    src: "components/code-viewer-demo.tsx",
+  },
+  "code-viewer-syntax-demo": {
+    component: CodeViewerSyntaxDemo,
+    src: "registry/new-york-v4/blocks/code-viewer-syntax-demo.tsx",
+  },
+  "text-viewer-demo": {
+    component: TextViewerDemo,
+    src: "components/text-viewer-demo.tsx",
+  },
+  "markdown-viewer-demo": {
+    component: MarkdownViewerDemo,
+    src: "components/markdown-viewer-demo.tsx",
+  },
+  "pretext-markdown-viewer-demo": {
+    component: PretextMarkdownViewerDemo,
+    src: "components/pretext-markdown-viewer-demo.tsx",
+  },
+  "html-viewer-demo": {
+    component: HtmlViewerDemo,
+    src: "components/html-viewer-demo.tsx",
+  },
+  "email-viewer-demo": {
+    component: EmailViewerDemo,
+    src: "components/email-viewer-demo.tsx",
+  },
   "file-thumbnail-demo": {
     component: FileThumbnailDemo,
     src: "components/file-thumbnail-demo.tsx",
+  },
+  "file-thumbnail-formats-demo": {
+    component: FileThumbnailFormatsDemo,
+    src: "components/file-thumbnail-formats-demo.tsx",
   },
   "json-form-demo": {
     component: JsonFormDemo,
@@ -160,6 +249,18 @@ const REGISTRY = {
     component: ViewerSidebarDemo,
     src: "components/sidebar-demo.tsx",
   },
+  "attachment-sidebar-demo": {
+    component: AttachmentSidebarExample,
+    src: "registry/new-york-v4/blocks/attachment-sidebar-demo.tsx",
+  },
+  "file-viewer-header-demo": {
+    component: FileViewerHeaderExample,
+    src: "registry/new-york-v4/blocks/file-viewer-header-demo.tsx",
+  },
+  "sidebar-list-demo": {
+    component: SidebarListExample,
+    src: "registry/new-york-v4/blocks/sidebar-list-demo.tsx",
+  },
   "partition-viewer-demo": {
     component: PartitionViewerExample,
     src: "registry/new-york-v4/blocks/partition-viewer-demo.tsx",
@@ -171,6 +272,14 @@ const REGISTRY = {
   "split-viewer-demo": {
     component: SplitViewerExample,
     src: "registry/new-york-v4/blocks/split-viewer-demo.tsx",
+  },
+  "parse-viewer-demo": {
+    component: ParseViewerDemo,
+    src: "components/parse-viewer-demo.tsx",
+  },
+  "large-parse-viewer-demo": {
+    component: LargeParseViewerDemo,
+    src: "components/parse-viewer-demo.tsx",
   },
   "segment-legend-variants": {
     component: SegmentLegendVariants,

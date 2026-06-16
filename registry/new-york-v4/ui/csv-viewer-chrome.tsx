@@ -14,11 +14,13 @@ export const CSV_VIEWER_BASE_FONT_SIZE = 13
 
 export function CsvViewerFrame({
   className,
+  frame,
   fillHeight,
   zoom,
   children,
 }: {
   className?: string
+  frame: boolean
   fillHeight: boolean
   zoom: number
   children: React.ReactNode
@@ -27,7 +29,8 @@ export function CsvViewerFrame({
     <div
       data-slot="csv-viewer"
       className={cn(
-        "flex flex-col overflow-hidden rounded-xl border bg-card",
+        "flex flex-col overflow-hidden bg-card",
+        frame && "rounded-xl border",
         fillHeight && "h-full min-h-0 flex-1",
         className
       )}

@@ -44,7 +44,6 @@ export function ViewerSidebarDemo() {
       data-demo="viewer-sidebar"
     >
       <ViewerRoot
-        bare
         defaultOpen
         mode="inline"
         sidebarCollapsible="offcanvas"

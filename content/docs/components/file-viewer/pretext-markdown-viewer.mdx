@@ -1,12 +1,15 @@
 ---
 title: Pretext Markdown Viewer
 description: An experimental Pretext-based Markdown viewer with continuous virtual rendering and a separate implementation path from the existing Markdown Viewer.
+component: true
 ---
 
 The Pretext Markdown Viewer is the new Markdown experiment built from the
 Chenglou/Pretext text viewer path. It renders Markdown as a single continuous
 document surface, keeps chunking internal to virtualization, and lets
 React/GFM own the visible Markdown semantics.
+
+<ComponentPreview name="pretext-markdown-viewer-demo" />
 
 ## Installation
 
@@ -106,7 +109,7 @@ remain stable while the Pretext path iterates toward feature completeness.
 - Reference links and reference images resolve from document-wide definitions even when the definition lives outside the currently rendered virtual chunk.
 - Restricted component markdown supports `<Metric label="Accuracy" value={98} />`, `<Badge label="Stable" tone="success" />`, `<Image src="/chart.png" alt="Chart" />`, `<Video src="/demo.mp4" label="Demo" controls={false} muted />`, `<Diagram type="mermaid" source="graph TD; A-->B" caption="Flow" />`, paired `<Callout kind="warning" title="Review">...</Callout>` blocks, and paired `<Accordion title="More details">...</Accordion>` blocks with safe Markdown children; restricted component directives additionally support nested `Tabs` / `Tab` blocks with safe Markdown panels. Tabs expose ARIA tab roles, selected-panel state, roving focus, Arrow key navigation, and Home/End navigation. The component registry owns allowed names, allowed props, typed string/number/boolean literal props, and enum values such as `Badge.tone`.
 - Unknown JSX-like syntax, non-literal expression props, spread props, event handlers, component-specific unknown props, invalid enum values, and remote or namespaced components render as inert diagnostic component fallbacks with source previews. Import/export statements remain inert source-like text.
-- Mermaid fenced blocks and restricted `Diagram` components render through the Mermaid package inside the viewer diagram surface, including common aliases such as `mmd`; Mermaid fence and component titles/captions render in the diagram header/caption, diagram bodies reserve deterministic source-derived height before Mermaid resolves, graph, flowchart, sequence, and state diagrams have built-in fallback SVG rendering for recoverable Mermaid layout/package failures, graph, sequence, state, class, ER, journey, Gantt, Git graph, timeline, mind map, and pie diagrams expose Mermaid-frontmatter-aware source-derived accessible summaries, Mermaid-only diagrams show source-backed loading state instead of a transient unsupported error, loading/error/ready states stay inside the same labelled keyboard-scrollable body region, failed diagrams keep the error and original source visible together, oversized diagram sources are refused before Mermaid runs and remain copyable, rendered SVG is sanitized before mounting with style/link/resource/animation SVG surfaces denied, parse/render failures stay contained in a non-crashing error/source state, and ready diagrams expose source and sanitized-SVG copy controls.
+- Mermaid fenced blocks and restricted `Diagram` components render through the Mermaid package inside the viewer diagram surface, including common aliases such as `mmd`; Mermaid fence and component titles/captions render in the diagram header/caption, diagram bodies reserve deterministic source-derived height before Mermaid resolves, graph, flowchart, sequence, state, class, ER, journey, Gantt, Git graph, timeline, mind map, quadrant, requirement, XY chart, Sankey, C4, and pie diagrams have built-in fallback SVG rendering for recoverable Mermaid layout/package failures and expose Mermaid-frontmatter-aware source-derived accessible summaries, Mermaid-only diagrams show source-backed loading state instead of a transient unsupported error, loading/error/ready states stay inside the same labelled keyboard-scrollable body region, failed diagrams keep the error and original source visible together, oversized diagram sources are refused before Mermaid runs and remain copyable, rendered SVG is sanitized before mounting with style/link/resource/animation SVG surfaces denied, parse/render failures stay contained in a non-crashing error/source state, and ready diagrams expose source and sanitized-SVG copy controls.
 - Inline and block math render through `remark-math` and KaTeX with untrusted input, bounded expansion, bounded user-defined sizes, stable inline/block markers, and labelled keyboard-scrollable block math regions for wide equations.
 - GFM footnotes render with labelled references, labelled backrefs, bidirectional fragment targets, a labelled footnotes section, and document-wide definition resolution across virtual chunks.
 - Fenced code blocks show normalized language headers with common aliases for TypeScript, JavaScript, shell/terminal sessions, JSONC, YAML, Markdown, diff/patches, Dockerfile, Ruby, Python, and Mermaid fences, `title="..."` / `caption="..."` metadata, opt-in Pretty Code `showLineNumbers` / `showLineNumbers{n}` line numbers with accessible line labels, highlighted lines/chars, diff add/remove line styling, full-block and selected-code copy controls with copied/failed states, a labelled keyboard-focusable horizontal source region, and `rehype-pretty-code` syntax highlighting.
@@ -160,7 +163,7 @@ source previews. Import/export statements render as inert source-like text.
 
 Mermaid rendering uses the Mermaid package with strict security settings,
 disabled flowchart HTML labels, bounded width behavior, and built-in
-graph/flowchart/sequence/state fallback SVG rendering inside the viewer diagram
+graph/flowchart/sequence/state/class/ER/journey/Gantt/Git graph/timeline/mind map/quadrant/requirement/XY chart/Sankey/C4/pie fallback SVG rendering inside the viewer diagram
 surface, then sanitizes the produced SVG before mounting it. The SVG mount
 boundary denies active tags, embedded resources, SVG links, animation, and style
 surfaces, and prefixes SVG `id` / `name` values before mounting.
@@ -201,7 +204,7 @@ realistic files.
 - Registry artifact install/import smoke tests pass for `pretext-markdown-viewer`.
 - File Viewer routes Markdown URL, Blob, inline text, and MIME-only sources to this viewer.
 
-## Props
+## API Reference
 
 | Prop        | Type                    | Description                                                                |
 | ----------- | ----------------------- | -------------------------------------------------------------------------- |

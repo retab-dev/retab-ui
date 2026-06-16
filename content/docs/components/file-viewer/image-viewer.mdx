@@ -1,6 +1,7 @@
 ---
 title: Image Viewer
 description: A performant image viewer with native off-thread decode, zoom, rotate, fit-to-width, download, and a per-frame overlay slot — including efficient multi-page TIFF scans.
+component: true
 ---
 
 The Image Viewer renders images the way the browser is fastest at: every frame is
@@ -28,7 +29,7 @@ The no-effect lifecycle uses React 19 callback-ref cleanup semantics. Use this
 viewer in React 19 apps, or port the observer/canvas cleanup paths to effects
 before installing it in a React 18 app.
 
-<ImageViewerDemo />
+<ComponentPreview name="image-viewer-demo" />
 
 ## Installation
 
@@ -97,7 +98,7 @@ normalized boxes map with simple percentages.
   decode — so a 48-page scan holds flat memory across a full scroll instead of
   accumulating every page's pixels.
 
-## Props
+## API Reference
 
 The Image Viewer uses frame vocabulary throughout: a single image has one frame,
 and a multi-page TIFF has one frame per TIFF page.
@@ -106,11 +107,15 @@ and a multi-page TIFF has one frame per TIFF page.
 | ------------------------ | ------------------------------------- | ------------------------------------------------------------------------------ |
 | `source`                 | `UrlViewerSource \| BlobViewerSource` | Canonical image source. PNG/JPEG/WebP/GIF/AVIF/BMP/ICO or TIFF.                |
 | `scale`                  | `number`                              | Optional fixed scale; omit to fit frame width to the container.                |
-| `controls`                | `boolean`                             | Show the zoom/rotate/download controls. Defaults to `true`.                     |
+| `controls`               | `boolean`                             | Show the zoom/rotate/download controls. Defaults to `true`.                    |
 | `renderFrameOverlay`     | `(props) => ReactNode`                | Per-frame overlay; receives `{ frameNumber, width, height, scale, rotation }`. |
 | `onVisibleFrameChange`   | `(frame: number) => void`             | Fires with the frame nearest the top of the viewport on scroll.                |
 | `onScrollProgressChange` | `(progress: number) => void`          | Fires with scroll progress in `[0, 1]`.                                        |
-| `header`                 | `ReactNode`                           | Full-width strip below the controls (e.g. a legend).                            |
+| `header`                 | `ReactNode`                           | Full-width strip below the controls (e.g. a legend).                           |
 | `aside`                  | `ReactNode`                           | Left rail alongside the scrolling frames (e.g. a page ribbon).                 |
 | `bare`                   | `boolean`                             | Drop the outer border/background so the viewer fills its container.            |
 | `className`              | `string`                              | Optional class on the viewer root element.                                     |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/image-viewer.tsx" />

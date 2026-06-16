@@ -11,6 +11,12 @@ export type PageTreeSeparator = Extract<
 export type PageTreeSidebarGroup = {
   id: string
   name: PageTreeFolder["name"]
+  /**
+   * Optional link target for the group label itself. Set when a nested folder
+   * exposes an index page whose title matches the group separator, so the label
+   * doubles as a link instead of repeating the name as a child entry.
+   */
+  url?: string
   pages: PageTreePage[]
 }
 
@@ -60,17 +66,15 @@ export function getPagesFromFolder(
     )
   }
 
-  // For other folders, return direct page children, excluding the folder's own
-  // index page (the section root). That page is already linked from the
-  // top-level Sections list, so listing it here would duplicate the group label.
+  // For other folders, return direct page children. Nested component categories
+  // such as File Viewer need their index page listed beside their anatomy and
+  // renderer pages.
   const directPages = folder.children.filter(
     (child): child is PageTreePage =>
       child.type === "page" && !child.url.endsWith("/components")
   )
 
-  return directPages.filter(
-    (page) => !directPages.some((other) => other.url.startsWith(`${page.url}/`))
-  )
+  return directPages
 }
 
 export function getSidebarGroupsFromFolder(
@@ -111,8 +115,20 @@ export function getSidebarGroupsFromFolder(
     }
 
     if (child.type === "folder") {
-      groups[groups.length - 1]?.pages.push(
-        ...getPagesFromFolder(child, currentBase)
+      const currentGroup = groups[groups.length - 1]
+      const folderPages = getPagesFromFolder(child, currentBase)
+      // When the nested folder's index page shares the current separator's
+      // name (e.g. the "File Viewer" separator + the file-viewer folder index),
+      // promote it to the group label's link rather than listing it again as
+      // the first child — otherwise "File Viewer" appears twice in a row.
+      const indexPage = currentGroup
+        ? folderPages.find((page) => page.name === currentGroup.name)
+        : undefined
+      if (currentGroup && indexPage) {
+        currentGroup.url = indexPage.url
+      }
+      currentGroup?.pages.push(
+        ...folderPages.filter((page) => page !== indexPage)
       )
     }
   }

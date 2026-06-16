@@ -8,20 +8,21 @@ import {
   PdfViewerProvider,
 } from "@/components/ui/pdf-viewer"
 import { EmailViewerDemo } from "@/components/email-viewer-demo"
+import {
+  LargeParseViewerDemo,
+  ParseViewerDemo,
+} from "@/components/parse-viewer-demo"
 import { TextViewerDemo } from "@/components/text-viewer-demo"
 import { ClassifierViewer } from "@/components/viewers/classify/classifier-viewer"
 import { EditViewer } from "@/components/viewers/edit/edit-viewer"
 import type { FormField } from "@/components/viewers/lib/edit-types"
-import type { ParseResponse } from "@/components/viewers/lib/parse-types"
 import type { PartitionResult } from "@/components/viewers/lib/partition-types"
 import type { SplitView } from "@/components/viewers/lib/split-types"
-import { ParseViewer } from "@/components/viewers/parse/parse-viewer"
 import {
   PartitionViewer,
   usePartitionViewerDocumentControls,
 } from "@/components/viewers/partition/partition-viewer"
 import editSample from "@/components/viewers/sample-data/edit.json"
-import parseSample from "@/components/viewers/sample-data/parse.json"
 import partitionSample from "@/components/viewers/sample-data/partition.json"
 import splitSample from "@/components/viewers/sample-data/split.json"
 import {
@@ -64,41 +65,6 @@ const splitResult: SplitView = {
   usage: null,
 }
 
-/** Parse result: the bank-statement sample as per-page markdown (transactions reconstructed as a table). */
-const parseResult: ParseResponse = {
-  output: parseSample.output as ParseResponse["output"],
-  usage: parseSample.usage as ParseResponse["usage"],
-}
-
-const multiPageParsePageCount = 36
-const multiPageParsePages = Array.from(
-  { length: multiPageParsePageCount },
-  (_, index) => createParseDemoPage(index + 1, multiPageParsePageCount)
-)
-
-const multiPageParseResult: ParseResponse = {
-  output: {
-    pages: multiPageParsePages,
-    text: multiPageParsePages.join("\n\n"),
-  },
-  usage: { credits: 4 },
-}
-
-const largeParsePageCount = 1000
-const largeParsePages = Array.from(
-  { length: largeParsePageCount },
-  (_, index) => createParseDemoPage(index + 1, largeParsePageCount)
-)
-
-const largeParseResult: ParseResponse = {
-  document: { id: "large-parse-demo" },
-  output: {
-    pages: largeParsePages,
-    text: largeParsePages.join("\n\n"),
-  },
-  usage: { credits: 100 },
-}
-
 /**
  * Real edit result: a Fidelity "Bank Wire Authorization" form filled from a
  * saved template (29 detected fields across 3 pages, normalized bbox anchors).
@@ -112,7 +78,7 @@ const editFields = editSample as FormField[]
 export function PartitionViewerDemo() {
   return (
     <div
-      className="not-prose flex flex-col overflow-hidden rounded-xl border"
+      className="flex flex-col overflow-hidden rounded-xl border"
       style={{ height: 640 }}
     >
       <PartitionViewer
@@ -127,7 +93,7 @@ export function PartitionViewerDemo() {
 export function ClassificationViewerDemo() {
   return (
     <div
-      className="not-prose flex flex-col overflow-hidden rounded-xl border"
+      className="flex flex-col overflow-hidden rounded-xl border"
       style={{ height: 520 }}
     >
       <ClassifierViewer
@@ -171,7 +137,7 @@ function PartitionDemoDocument() {
 export function SplitViewerDemo() {
   return (
     <div
-      className="not-prose flex flex-col overflow-hidden rounded-xl border"
+      className="flex flex-col overflow-hidden rounded-xl border"
       style={{ height: 640 }}
     >
       <SplitViewer
@@ -199,37 +165,12 @@ function SplitViewerDemoDocument() {
   )
 }
 
-export function ParseViewerDemo() {
-  // The raw parse renderer on its own — extracted markdown (Rendered/Text), no
-  // source document. The side-by-side composition lives on /blocks (Primitives).
-  return (
-    <div
-      className="not-prose flex flex-col overflow-hidden rounded-xl border"
-      style={{ height: 680 }}
-    >
-      <ParseViewer result={multiPageParseResult} />
-    </div>
-  )
-}
-
-export function LargeParseViewerDemo() {
-  return (
-    <div
-      data-slot="large-parse-viewer-demo"
-      className="not-prose flex flex-col overflow-hidden rounded-xl border"
-      style={{ height: 680 }}
-    >
-      <ParseViewer result={largeParseResult} />
-    </div>
-  )
-}
-
 export function ExtractViewerDemo() {
   // Extracted fields linked to their sources in the PDF — hover/select a field
   // to highlight where its value came from and scroll the page to it.
   return (
     <div
-      className="not-prose flex flex-col overflow-hidden rounded-xl border"
+      className="flex flex-col overflow-hidden rounded-xl border"
       style={{ height: 680 }}
     >
       <ExtractViewerBlock />
@@ -242,7 +183,7 @@ export function JsonFormSourcesDemo() {
   // to highlight where its value came from.
   return (
     <div
-      className="not-prose flex flex-col overflow-hidden rounded-xl border"
+      className="flex flex-col overflow-hidden rounded-xl border"
       style={{ height: 680 }}
     >
       <JsonFormSourcesBlock />
@@ -256,7 +197,7 @@ export function EditViewerDemo() {
   // overlay distinct from the generated filled document.
   return (
     <div
-      className="not-prose flex flex-col overflow-hidden rounded-xl border"
+      className="flex flex-col overflow-hidden rounded-xl border"
       style={{ height: 680 }}
     >
       <EditViewer
@@ -310,81 +251,4 @@ export function ViewersDemo() {
       </section>
     </div>
   )
-}
-
-function createParseDemoPage(pageNumber: number, pageCount: number) {
-  const invoiceNumber = String(2400 + pageNumber).padStart(5, "0")
-  const subtotal = 1200 + pageNumber * 47
-  const tax = Math.round(subtotal * 0.0825)
-  const total = subtotal + tax
-  const status =
-    pageNumber % 5 === 0
-      ? "Needs review"
-      : pageNumber % 3 === 0
-        ? "Exception noted"
-        : "Matched"
-  const rows = Array.from({ length: 8 }, (_, rowIndex) => {
-    const quantity = 1 + ((pageNumber + rowIndex) % 4)
-    const unitPrice = 42 + pageNumber + rowIndex * 9
-    const amount = quantity * unitPrice
-    return `| SKU-${pageNumber}-${rowIndex + 1} | Service line ${rowIndex + 1} | ${quantity} | $${unitPrice.toFixed(2)} | $${amount.toFixed(2)} |`
-  })
-
-  return [
-    `# Parsed Invoice ${invoiceNumber}`,
-    "",
-    `Page ${pageNumber} of ${pageCount} · Batch RET-${String(9000 + pageNumber)} · ${status}`,
-    "",
-    "## Header Fields",
-    "",
-    "| Field | Extracted value | Confidence |",
-    "| --- | --- | ---: |",
-    `| Vendor | Northwind Field Operations ${pageNumber % 7 || 7} | ${formatConfidence(0.94, pageNumber)} |`,
-    `| Invoice date | 2026-06-${String((pageNumber % 27) + 1).padStart(2, "0")} | ${formatConfidence(0.91, pageNumber)} |`,
-    `| Due date | 2026-07-${String((pageNumber % 24) + 1).padStart(2, "0")} | ${formatConfidence(0.89, pageNumber)} |`,
-    `| Purchase order | PO-${String(70000 + pageNumber * 13)} | ${formatConfidence(0.96, pageNumber)} |`,
-    "",
-    "## Line Items",
-    "",
-    "| Code | Description | Qty | Unit price | Amount |",
-    "| --- | --- | ---: | ---: | ---: |",
-    ...rows,
-    "",
-    "## Totals",
-    "",
-    "| Description | Amount |",
-    "| --- | ---: |",
-    `| Subtotal | $${subtotal.toFixed(2)} |`,
-    `| Tax | $${tax.toFixed(2)} |`,
-    `| Total | $${total.toFixed(2)} |`,
-    "",
-    "## Notes",
-    "",
-    pageNumber % 4 === 0
-      ? "> The parser preserved a wrapped approval note and marked the continuation as page-local context."
-      : "All required fields were found on this page. The original line breaks were normalized for readability.",
-    "",
-    "- [x] Header detected",
-    "- [x] Totals reconciled",
-    pageNumber % 5 === 0
-      ? "- [ ] Human review requested for address block"
-      : "- [x] No manual review requested",
-    "",
-    "```json",
-    JSON.stringify(
-      {
-        page: pageNumber,
-        invoice_number: invoiceNumber,
-        status,
-        total,
-      },
-      null,
-      2
-    ),
-    "```",
-  ].join("\n")
-}
-
-function formatConfidence(base: number, pageNumber: number) {
-  return `${Math.min(0.99, base + (pageNumber % 5) * 0.007).toFixed(3)}`
 }

@@ -47,7 +47,7 @@ type FileViewerRootOptions = Pick<
   | "sidebarSide"
 >
 
-export type FileViewerFrameProps = FileViewerCoreProps &
+export type FileViewerRootProps = FileViewerCoreProps &
   FileViewerRootOptions & {
     bare?: false
     children?: React.ReactNode
@@ -58,7 +58,7 @@ export type FileViewerStandaloneProps = FileViewerCoreProps & {
   children?: never
 }
 
-export type FileViewerProps = FileViewerFrameProps | FileViewerStandaloneProps
+export type FileViewerProps = FileViewerRootProps | FileViewerStandaloneProps
 
 export type FileViewerHeaderProps = React.ComponentProps<typeof ViewerHeader>
 

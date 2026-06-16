@@ -1114,7 +1114,7 @@ describe("PretextMarkdownViewer", () => {
         source={markdownSource(
           [
             "[Fragment](#release-notes)",
-            "[Root](/docs/viewers)",
+            "[Root](/docs/components/file-viewer)",
             "[Relative](docs/viewers)",
             "[Email](mailto:hello@retab.com)",
             '[External](https://example.com "External docs")',
@@ -2197,6 +2197,257 @@ describe("PretextMarkdownViewer", () => {
     expect(screen.getByRole("img", { name: "Mermaid diagram" })).toBeTruthy()
   })
 
+  it("renders class diagrams through the built-in fallback when Mermaid layout fails", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```mermaid",
+            "%% force-basic-fallback",
+            "classDiagram",
+            "Animal <|-- Duck: inherits",
+            "class Animal",
+            "Duck : +quack()",
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    const diagram = await screen.findByRole("group", {
+      name: "Mermaid diagram",
+    })
+    await waitFor(() => {
+      expect(diagram.getAttribute("data-diagram-state")).toBe("ready")
+    })
+
+    const svg = container.querySelector<SVGSVGElement>(
+      'svg[data-pretext-basic-mermaid="class"]'
+    )
+    expect(svg).toBeTruthy()
+    expect(screen.queryByTestId("mock-mermaid-svg")).toBeNull()
+    expect(svg?.textContent).toContain("Animal")
+    expect(svg?.textContent).toContain("Duck")
+    expect(svg?.textContent).toContain("inherits")
+    expect(screen.getByRole("img", { name: "Mermaid diagram" })).toBeTruthy()
+  })
+
+  it("renders ER diagrams through the built-in fallback when Mermaid layout fails", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```mermaid",
+            "%% force-basic-fallback",
+            "erDiagram",
+            "CUSTOMER ||--o{ ORDER : places",
+            "ORDER ||--|{ LINE_ITEM : contains",
+            "CUSTOMER {",
+            "  string name",
+            "}",
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    const diagram = await screen.findByRole("group", {
+      name: "Mermaid diagram",
+    })
+    await waitFor(() => {
+      expect(diagram.getAttribute("data-diagram-state")).toBe("ready")
+    })
+
+    const svg = container.querySelector<SVGSVGElement>(
+      'svg[data-pretext-basic-mermaid="er"]'
+    )
+    expect(svg).toBeTruthy()
+    expect(screen.queryByTestId("mock-mermaid-svg")).toBeNull()
+    expect(svg?.textContent).toContain("CUSTOMER")
+    expect(svg?.textContent).toContain("ORDER")
+    expect(svg?.textContent).toContain("LINE_ITEM")
+    expect(svg?.textContent).toContain("places")
+    expect(svg?.textContent).toContain("contains")
+    expect(screen.getByRole("img", { name: "Mermaid diagram" })).toBeTruthy()
+  })
+
+  it("renders pie diagrams through the built-in fallback when Mermaid layout fails", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```mermaid",
+            "%% force-basic-fallback",
+            "pie showData",
+            '  "Search" : 45',
+            '  "Direct" : 35',
+            '  "Referral" : 20',
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    const diagram = await screen.findByRole("group", {
+      name: "Mermaid diagram",
+    })
+    await waitFor(() => {
+      expect(diagram.getAttribute("data-diagram-state")).toBe("ready")
+    })
+
+    const svg = container.querySelector<SVGSVGElement>(
+      'svg[data-pretext-basic-mermaid="pie"]'
+    )
+    expect(svg).toBeTruthy()
+    expect(screen.queryByTestId("mock-mermaid-svg")).toBeNull()
+    expect(svg?.querySelectorAll("path")).toHaveLength(3)
+    expect(svg?.textContent).toContain("Search")
+    expect(svg?.textContent).toContain("Direct")
+    expect(svg?.textContent).toContain("Referral")
+    expect(svg?.textContent).toContain("45 (45%)")
+    expect(screen.getByRole("img", { name: "Mermaid diagram" })).toBeTruthy()
+  })
+
+  it.each([
+    {
+      expectedText: ["Build", "Compile", "QA"],
+      kind: "journey",
+      source: [
+        "journey",
+        "title Release",
+        "section Build",
+        "Compile: 5: CI",
+        "Test: 4: QA",
+      ],
+    },
+    {
+      expectedText: ["Design", "Spec", "Build"],
+      kind: "gantt",
+      source: [
+        "gantt",
+        "dateFormat  YYYY-MM-DD",
+        "section Design",
+        "Spec :done, spec, 2026-01-01, 3d",
+        "Build :active, build, after spec, 5d",
+      ],
+    },
+    {
+      expectedText: ["main", "feature", "merge feature"],
+      kind: "gitGraph",
+      source: [
+        "gitGraph",
+        "commit",
+        "branch feature",
+        "checkout feature",
+        "commit",
+        "checkout main",
+        "merge feature",
+      ],
+    },
+    {
+      expectedText: ["Alpha", "2024 : Parser", "2025 : Renderer"],
+      kind: "timeline",
+      source: ["timeline", "section Alpha", "2024 : Parser", "2025 : Renderer"],
+    },
+    {
+      expectedText: ["Viewer", "Diagrams", "Math"],
+      kind: "mindmap",
+      source: ["mindmap", "root((Viewer))", "Diagrams", "Math"],
+    },
+    {
+      expectedText: ["Reach", "Retention", "Enterprise", "Self-serve"],
+      kind: "quadrantChart",
+      source: [
+        "quadrantChart",
+        "x-axis Low Reach --> High Reach",
+        "y-axis Low Retention --> High Retention",
+        "quadrant-1 Expand",
+        "quadrant-3 Rework",
+        "Enterprise: [0.78, 0.82]",
+        "Self-serve: [0.34, 0.48]",
+      ],
+    },
+    {
+      expectedText: ["simulation", "The system shall export data", "satisfies"],
+      kind: "requirementDiagram",
+      source: [
+        "requirementDiagram",
+        "requirement export_req {",
+        "text: The system shall export data",
+        "}",
+        "element exporter {",
+        "type: simulation",
+        "}",
+        "exporter - satisfies -> export_req",
+      ],
+    },
+    {
+      expectedText: ["Jan", "Feb", "Mar", "30", "0"],
+      kind: "xychart",
+      source: [
+        "xychart-beta",
+        "x-axis [Jan, Feb, Mar]",
+        "y-axis Value 0 --> 30",
+        "bar [10, 20, 30]",
+        "line [8, 18, 24]",
+      ],
+    },
+    {
+      expectedText: ["Marketing", "Sales", "Revenue"],
+      kind: "sankey",
+      source: [
+        "sankey-beta",
+        "Marketing,Sales,12",
+        "Sales,Revenue,8",
+        "Support,Revenue,4",
+      ],
+    },
+    {
+      expectedText: ["Customer", "Analytics platform", "Uses"],
+      kind: "c4",
+      source: [
+        "C4Context",
+        'Person(customer, "Customer", "Reviews metrics")',
+        'System(platform, "Analytics platform", "Serves dashboards")',
+        'Rel(customer, platform, "Uses")',
+      ],
+    },
+  ])(
+    "renders $kind diagrams through the built-in fallback when Mermaid layout fails",
+    async ({ expectedText, kind, source }) => {
+      const { container } = render(
+        <PretextMarkdownViewer
+          source={markdownSource(
+            ["```mermaid", "%% force-basic-fallback", ...source, "```"].join(
+              "\n"
+            )
+          )}
+          controls={false}
+        />
+      )
+
+      const diagram = await screen.findByRole("group", {
+        name: "Mermaid diagram",
+      })
+      await waitFor(() => {
+        expect(diagram.getAttribute("data-diagram-state")).toBe("ready")
+      })
+
+      const svg = container.querySelector<SVGSVGElement>(
+        `svg[data-pretext-basic-mermaid="${kind}"]`
+      )
+      expect(svg).toBeTruthy()
+      expect(screen.queryByTestId("mock-mermaid-svg")).toBeNull()
+      for (const text of expectedText) {
+        expect(svg?.textContent).toContain(text)
+      }
+      expect(screen.getByRole("img", { name: "Mermaid diagram" })).toBeTruthy()
+    }
+  )
+
   it("copies sanitized Mermaid SVG only from ready diagram surfaces", async () => {
     const { rerender } = render(
       <PretextMarkdownViewer
@@ -2611,6 +2862,192 @@ describe("PretextMarkdownViewer", () => {
     expect(mindMapDiagram?.getAttribute("data-diagram-reserved-height")).toBe(
       "232"
     )
+
+    rerender(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```mermaid",
+            "quadrantChart",
+            "x-axis Low Reach --> High Reach",
+            "y-axis Low Retention --> High Retention",
+            "quadrant-1 Expand",
+            "quadrant-3 Rework",
+            "Enterprise: [0.78, 0.82]",
+            "Self-serve: [0.34, 0.48]",
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    await waitFor(() => {
+      expect(
+        container.querySelector<HTMLElement>(
+          "[data-pretext-diagram-description]"
+        )?.textContent
+      ).toBe("Mermaid quadrant chart with 2 points.")
+    })
+    const quadrantDiagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+    const quadrantDescription = container.querySelector<HTMLElement>(
+      "[data-pretext-diagram-description]"
+    )
+    expect(quadrantDiagram?.getAttribute("aria-describedby")).toBe(
+      quadrantDescription?.id
+    )
+    expect(quadrantDiagram?.getAttribute("data-diagram-reserved-height")).toBe(
+      "296"
+    )
+
+    rerender(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```mermaid",
+            "requirementDiagram",
+            "requirement export_req {",
+            "text: The system shall export data",
+            "}",
+            "element exporter {",
+            "type: simulation",
+            "}",
+            "exporter - satisfies -> export_req",
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    await waitFor(() => {
+      expect(
+        container.querySelector<HTMLElement>(
+          "[data-pretext-diagram-description]"
+        )?.textContent
+      ).toBe(
+        "Mermaid requirement diagram with 1 requirement, 1 element, and 1 relationship."
+      )
+    })
+    const requirementDiagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+    const requirementDescription = container.querySelector<HTMLElement>(
+      "[data-pretext-diagram-description]"
+    )
+    expect(requirementDiagram?.getAttribute("aria-describedby")).toBe(
+      requirementDescription?.id
+    )
+    expect(
+      requirementDiagram?.getAttribute("data-diagram-reserved-height")
+    ).toBe("230")
+
+    rerender(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```mermaid",
+            "xychart-beta",
+            "x-axis [Jan, Feb, Mar]",
+            "y-axis Value 0 --> 30",
+            "bar [10, 20, 30]",
+            "line [8, 18, 24]",
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    await waitFor(() => {
+      expect(
+        container.querySelector<HTMLElement>(
+          "[data-pretext-diagram-description]"
+        )?.textContent
+      ).toBe("Mermaid XY chart with 2 series and 6 values.")
+    })
+    const xyChartDiagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+    const xyChartDescription = container.querySelector<HTMLElement>(
+      "[data-pretext-diagram-description]"
+    )
+    expect(xyChartDiagram?.getAttribute("aria-describedby")).toBe(
+      xyChartDescription?.id
+    )
+    expect(xyChartDiagram?.getAttribute("data-diagram-reserved-height")).toBe(
+      "334"
+    )
+
+    rerender(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```mermaid",
+            "sankey-beta",
+            "Marketing,Sales,12",
+            "Sales,Revenue,8",
+            "Support,Revenue,4",
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    await waitFor(() => {
+      expect(
+        container.querySelector<HTMLElement>(
+          "[data-pretext-diagram-description]"
+        )?.textContent
+      ).toBe("Mermaid Sankey diagram with 4 nodes and 3 flows.")
+    })
+    const sankeyDiagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+    const sankeyDescription = container.querySelector<HTMLElement>(
+      "[data-pretext-diagram-description]"
+    )
+    expect(sankeyDiagram?.getAttribute("aria-describedby")).toBe(
+      sankeyDescription?.id
+    )
+    expect(sankeyDiagram?.getAttribute("data-diagram-reserved-height")).toBe(
+      "310"
+    )
+
+    rerender(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```mermaid",
+            "C4Context",
+            'Person(customer, "Customer", "Reviews metrics")',
+            'System(platform, "Analytics platform", "Serves dashboards")',
+            'Rel(customer, platform, "Uses")',
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    await waitFor(() => {
+      expect(
+        container.querySelector<HTMLElement>(
+          "[data-pretext-diagram-description]"
+        )?.textContent
+      ).toBe("Mermaid C4 diagram with 2 nodes and 1 relationship.")
+    })
+    const c4Diagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+    const c4Description = container.querySelector<HTMLElement>(
+      "[data-pretext-diagram-description]"
+    )
+    expect(c4Diagram?.getAttribute("aria-describedby")).toBe(c4Description?.id)
+    expect(c4Diagram?.getAttribute("data-diagram-reserved-height")).toBe("236")
 
     rerender(
       <PretextMarkdownViewer
@@ -4369,7 +4806,7 @@ describe("PretextMarkdownViewer", () => {
   })
 
   it("copies a stable heading link without changing the heading name", async () => {
-    window.history.replaceState(null, "", "/docs/viewers/pretext?tab=rendered")
+    window.history.replaceState(null, "", "/docs/components/file-viewer/pretext?tab=rendered")
 
     render(
       <PretextMarkdownViewer
@@ -4390,7 +4827,7 @@ describe("PretextMarkdownViewer", () => {
 
     await waitFor(() => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-        "http://localhost:3000/docs/viewers/pretext?tab=rendered#release-notes"
+        "http://localhost:3000/docs/components/file-viewer/pretext?tab=rendered#release-notes"
       )
     })
   })
@@ -4556,7 +4993,7 @@ describe("PretextMarkdownViewer", () => {
   })
 
   it("resolves back and forward fragment navigation through popstate", async () => {
-    window.history.replaceState(null, "", "/docs/viewers/pretext")
+    window.history.replaceState(null, "", "/docs/components/file-viewer/pretext")
     const sections = Array.from(
       { length: 40 },
       (_, index) => `## Filler ${index + 1}\n\nParagraph ${index + 1}.`

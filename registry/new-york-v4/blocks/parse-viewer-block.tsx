@@ -44,7 +44,7 @@ export function ParseViewerBlock() {
   return (
     <div className="flex h-full min-h-[680px] flex-col bg-background">
       <ParseViewerProvider result={PARSE_RESULT}>
-        <ViewerRoot bare className="h-full flex-1 bg-background">
+        <ViewerRoot className="h-full flex-1 bg-background">
           <ViewerBody>
             <ResizablePanelGroup
               orientation="horizontal"

@@ -1,14 +1,15 @@
 ---
 title: Email Viewer
 description: Render recursive MIME messages with headers, CID inline resources, nested messages, and file leaves powered by File Viewer.
+component: true
 ---
 
-The Email Viewer is a recursive MIME viewer built on the shared viewer stack.
+The Email Viewer is a recursive MIME viewer in the File Viewer family.
 It treats email as a tree of MIME parts, renders selected leaf parts through
 `FileViewer`, rewrites `cid:` URLs from `multipart/related` resources, and shows
-body candidates and attachments in one labeled `ViewerSidebar`.
+body candidates and attachments in one labeled sidebar rail.
 
-<EmailViewerDemo />
+<ComponentPreview name="email-viewer-demo" />
 
 ## Installation
 
@@ -48,10 +49,10 @@ elsewhere.
 
 Nested `ViewerRoot` is correct only for a complete nested viewer. A recursive
 `message/rfc822` part is a complete email viewer, so it should render the
-domain viewer again in bare mode:
+domain viewer again:
 
 ```tsx
-<EmailViewer message={nestedMessage} bare className="h-full" />
+<EmailViewer message={nestedMessage} className="h-full" />
 ```
 
 A `ViewerSidebarTrigger` always targets the nearest `ViewerRoot`, so the nested
@@ -69,7 +70,7 @@ Do not nest `ViewerRoot` just to add another controls row or border:
 ```tsx
 // Avoid: this creates another spatial viewer without another domain viewer.
 <ViewerSurface>
-  <ViewerRoot bare>
+  <ViewerRoot>
     <FileViewer source={attachment.source} bare />
   </ViewerRoot>
 </ViewerSurface>
@@ -170,7 +171,7 @@ export function Example() {
 - `onSelectedPathChange` receives normalized MIME paths, including derived
   suffixes for duplicate sibling ids.
 
-## Props
+## API Reference
 
 | Prop                    | Type                 | Description                                      |
 | ----------------------- | -------------------- | ------------------------------------------------ |
@@ -181,3 +182,7 @@ export function Example() {
 | `maxNestedMessageDepth` | `number`             | Maximum nested `message/*` preview depth.        |
 | `className`             | `string`             | Optional class on the email viewer root element. |
 | `bare`                  | `boolean`            | Removes the outer border/background style.       |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/email-viewer.tsx" />

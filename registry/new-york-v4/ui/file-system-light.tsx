@@ -95,7 +95,6 @@ export function FileSystemLight({
 
   return (
     <ViewerRoot
-      bare
       data-viewer="file-system-light"
       className={cn(
         "h-[640px] overflow-hidden rounded-md border bg-background text-foreground",

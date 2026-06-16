@@ -21,7 +21,7 @@ const MARKDOWN_VIEWER_DEMO_TEXT = [
   "",
   "[^demo]: Footnote backrefs stay keyboard reachable.",
   "",
-  ":::tip{title=\"Workflow\"}",
+  ':::tip{title="Workflow"}',
   "Use directive callouts for generated reports and docs.",
   ":::",
   "",
@@ -63,7 +63,7 @@ const MARKDOWN_VIEWER_DEMO_TEXT = [
 
 export function MarkdownViewerDemo() {
   return (
-    <div className="not-prose my-6 h-[620px] min-h-0">
+    <div className="h-[620px] min-h-0">
       <MarkdownDocumentViewer
         source={{
           kind: "text",

@@ -5,6 +5,7 @@ import {
   getCurrentBase,
   getNestedPagesFromFolder,
   getPagesFromFolder,
+  getSidebarGroupsFromFolder,
   type PageTreeFolder,
   type PageTreePage,
 } from "@/lib/page-tree"
@@ -79,7 +80,7 @@ describe("getCurrentBase", () => {
   it("defaults to radix for non-component and bare paths", () => {
     expect(getCurrentBase("/docs")).toBe("radix")
     expect(getCurrentBase("/docs/components")).toBe("radix")
-    expect(getCurrentBase("/docs/viewers/pdf")).toBe("radix")
+    expect(getCurrentBase("/docs/components/file-viewer/pdf")).toBe("radix")
     expect(getCurrentBase("")).toBe("radix")
   })
 
@@ -178,19 +179,21 @@ describe("getPagesFromFolder (generic folder)", () => {
       $id: "viewers",
       name: "Viewers",
       children: [
-        page("/docs/viewers/pdf"),
-        page("/docs/viewers/image"),
-        folder({ children: [page("/docs/viewers/nested/deep")] }),
+        page("/docs/components/file-viewer/pdf"),
+        page("/docs/components/file-viewer/image"),
+        folder({
+          children: [page("/docs/components/file-viewer/nested/deep")],
+        }),
       ],
     })
 
     expect(getPagesFromFolder(viewers, "radix").map((p) => p.url)).toEqual([
-      "/docs/viewers/pdf",
-      "/docs/viewers/image",
+      "/docs/components/file-viewer/pdf",
+      "/docs/components/file-viewer/image",
     ])
   })
 
-  it("removes a direct page that is the parent of another direct page", () => {
+  it("keeps a direct index page beside its child pages", () => {
     const section = folder({
       $id: "api",
       children: [
@@ -201,6 +204,7 @@ describe("getPagesFromFolder (generic folder)", () => {
     })
 
     expect(getPagesFromFolder(section, "radix").map((p) => p.url)).toEqual([
+      "/docs/api",
       "/docs/api/auth",
       "/docs/api/users",
     ])
@@ -274,5 +278,66 @@ describe("getNestedPagesFromFolder", () => {
 
   it("returns an empty list when no nested folder matches", () => {
     expect(getNestedPagesFromFolder(root, "does-not-exist")).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// getSidebarGroupsFromFolder
+// ---------------------------------------------------------------------------
+
+// Cast through PageTreePage so the fixture's children array accepts it; the
+// production code only reads `type` / `name`, both present at runtime.
+function separator(name: string): PageTreePage {
+  return { type: "separator", name } as unknown as PageTreePage
+}
+
+describe("getSidebarGroupsFromFolder", () => {
+  it("promotes a nested folder's index page to the group label link instead of duplicating its name", () => {
+    const components = folder({
+      $id: "components",
+      name: "Components",
+      children: [
+        separator("File Viewer"),
+        folder({
+          name: "File Viewer",
+          children: [
+            page("/docs/components/file-viewer", "File Viewer"),
+            page("/docs/components/file-viewer/anatomy", "Anatomy"),
+            page("/docs/components/file-viewer/pdf-viewer", "PDF Viewer"),
+          ],
+        }),
+      ],
+    })
+
+    const groups = getSidebarGroupsFromFolder(components, "radix")
+    const fileViewer = groups.find((g) => g.name === "File Viewer")
+
+    expect(fileViewer?.url).toBe("/docs/components/file-viewer")
+    // The index page is no longer repeated as the first child entry.
+    expect(fileViewer?.pages.map((p) => p.name)).toEqual([
+      "Anatomy",
+      "PDF Viewer",
+    ])
+  })
+
+  it("leaves a separator group untouched when no nested index page shares its name", () => {
+    const components = folder({
+      $id: "components",
+      name: "Components",
+      children: [
+        separator("Result Viewers"),
+        page("/docs/components/classification-viewer", "Classification Viewer"),
+        page("/docs/components/partition-viewer", "Partition Viewer"),
+      ],
+    })
+
+    const groups = getSidebarGroupsFromFolder(components, "radix")
+    const resultViewers = groups.find((g) => g.name === "Result Viewers")
+
+    expect(resultViewers?.url).toBeUndefined()
+    expect(resultViewers?.pages.map((p) => p.name)).toEqual([
+      "Classification Viewer",
+      "Partition Viewer",
+    ])
   })
 })

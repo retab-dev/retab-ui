@@ -97,24 +97,21 @@ export function PretextMarkdownViewerContent({
   const [fontScale, setFontScale] = React.useState(1)
   const [viewMode, setViewMode] =
     React.useState<PretextMarkdownViewMode>("rendered")
-  const [searchQuery, setSearchQuery] = React.useState("")
-  const [activeSearchMatchIndex, setActiveSearchMatchIndex] = React.useState(0)
   const [downloadError, setDownloadError] = React.useState("")
   const [scrollTop, setScrollTop] = React.useState(0)
   const [measuredHeights, setMeasuredHeights] = React.useState(
     () => new Map<number, number>()
   )
-  const pendingScrollAnchorRef =
-    React.useRef<PretextMarkdownScrollAnchor | null>(null)
   const pendingViewModeSourceLineRef = React.useRef<number | null>(null)
   const lastHighlightScrollRef = React.useRef<{
     document: ReturnType<typeof createPretextMarkdownDocument>
     end: number
     start: number
   } | null>(null)
-  const resolvedHashRef = React.useRef<string | null>(null)
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
-  const fontEpoch = useTextViewerFontEpoch()
+  // Bumped when web fonts finish loading; consumed in the layout memo's deps so
+  // chunk heights are re-measured against the real font metrics, not fallbacks.
+  const layoutFontEpoch = useTextViewerFontEpoch()
   const [contentWidth, setContentWidth] = React.useState(INITIAL_CONTENT_WIDTH)
   const [viewportSize, setViewportSize] = React.useState<ViewportSize>({
     height: 0,
@@ -131,14 +128,17 @@ export function PretextMarkdownViewerContent({
   const sourceLines = React.useMemo(() => splitTextLines(text), [text])
   const sourceLineHeight = SOURCE_LINE_HEIGHT * fontScale
   const frame = React.useMemo(() => {
-    void fontEpoch
+    // `layoutFontEpoch` carries no value into the layout call, but reading it
+    // here makes a font-load tick force a relayout/remeasure (text metrics
+    // change once web fonts arrive).
+    void layoutFontEpoch
     return layoutPretextMarkdownDocument({
       contentWidth,
       document,
       fontScale,
       measuredHeights,
     })
-  }, [contentWidth, document, fontEpoch, fontScale, measuredHeights])
+  }, [contentWidth, document, fontScale, layoutFontEpoch, measuredHeights])
   const highlightStart = highlight?.start
   const highlightEnd = highlight?.end
   const highlightRange = React.useMemo(
@@ -151,29 +151,15 @@ export function PretextMarkdownViewerContent({
       ),
     [document.sourceLineCount, highlightEnd, highlightStart]
   )
-  const searchMatches = React.useMemo(
-    () => buildPretextMarkdownSearchMatches(text, searchQuery),
-    [searchQuery, text]
-  )
-  const activeSearchMatch =
-    searchMatches.length === 0
-      ? null
-      : searchMatches[
-          Math.min(activeSearchMatchIndex, searchMatches.length - 1)
-        ]
-  const activeSearchRange = React.useMemo(
-    () =>
-      activeSearchMatch
-        ? normalizeTextLineRange(
-            {
-              end: activeSearchMatch.endLine,
-              start: activeSearchMatch.startLine,
-            },
-            document.sourceLineCount
-          )
-        : null,
-    [activeSearchMatch, document.sourceLineCount]
-  )
+  const {
+    activeSearchMatch,
+    activeSearchRange,
+    clearSearch,
+    goToSearchMatch,
+    searchMatches,
+    searchQuery,
+    setSearchQuery,
+  } = useMarkdownSearch({ document, text })
   const visibleHighlightRange = activeSearchRange ?? highlightRange
   const handleDownloadError = React.useCallback<ViewerDownloadErrorHandler>(
     (error) => {
@@ -193,12 +179,11 @@ export function PretextMarkdownViewerContent({
     [frame.chunks, scrollTop, viewportHeight]
   )
 
-  const captureScrollAnchor = React.useCallback(() => {
-    pendingScrollAnchorRef.current = getPretextMarkdownFrameScrollAnchor({
-      frames: frame.chunks,
-      scrollTop: viewportRef.current?.scrollTop ?? scrollTop,
-    })
-  }, [frame.chunks, scrollTop])
+  const { capture: captureScrollAnchor } = useScrollAnchor({
+    frames: frame.chunks,
+    scrollTop,
+    viewportRef,
+  })
 
   React.useLayoutEffect(() => {
     setMeasuredHeights(new Map())
@@ -242,19 +227,6 @@ export function PretextMarkdownViewerContent({
     })
   }, [captureScrollAnchor, viewportWidth])
 
-  React.useLayoutEffect(() => {
-    const anchor = pendingScrollAnchorRef.current
-    const scrollElement = viewportRef.current
-    if (!anchor || !scrollElement) return
-
-    pendingScrollAnchorRef.current = null
-    const nextScrollTop = resolvePretextMarkdownScrollAnchor({
-      anchor,
-      frames: frame.chunks,
-    })
-    if (nextScrollTop != null) scrollElement.scrollTop = nextScrollTop
-  }, [frame.chunks])
-
   const recordMeasuredHeight = React.useCallback(
     (chunkIndex: number, height: number) => {
       if (!Number.isFinite(height) || height <= 0) return
@@ -271,7 +243,7 @@ export function PretextMarkdownViewerContent({
     [captureScrollAnchor]
   )
 
-  const scrollLineRange = React.useCallback(
+  const scrollToLineRange = React.useCallback(
     (
       range: ReturnType<typeof normalizeTextLineRange>,
       options?: ScrollToOptions
@@ -283,7 +255,7 @@ export function PretextMarkdownViewerContent({
         scrollElement.scrollTo(
           createPretextMarkdownScrollOptions({
             options,
-            top: Math.max(0, (range.start - 1) * sourceLineHeight),
+            top: sourceLineToScrollTop(range.start, sourceLineHeight),
           })
         )
         return
@@ -303,13 +275,13 @@ export function PretextMarkdownViewerContent({
     },
     [document.chunks, frame.chunks, sourceLineHeight, viewMode]
   )
-  const scrollLineRangeRef = React.useRef(scrollLineRange)
+  const scrollToLineRangeRef = React.useRef(scrollToLineRange)
 
   React.useLayoutEffect(() => {
-    scrollLineRangeRef.current = scrollLineRange
-  }, [scrollLineRange])
+    scrollToLineRangeRef.current = scrollToLineRange
+  }, [scrollToLineRange])
 
-  const scrollToChunkFrame = React.useCallback(
+  const scrollToChunk = React.useCallback(
     (chunkIndex: number, options?: ScrollToOptions) => {
       const scrollElement = viewportRef.current
       const targetFrame = frame.chunks[chunkIndex]
@@ -329,12 +301,10 @@ export function PretextMarkdownViewerContent({
   const sourceLineAtScrollTop = React.useCallback(
     (nextScrollTop: number) => {
       if (viewMode === "source") {
-        return Math.max(
-          1,
-          Math.min(
-            document.sourceLineCount,
-            Math.floor(nextScrollTop / sourceLineHeight) + 1
-          )
+        return scrollTopToSourceLine(
+          nextScrollTop,
+          sourceLineHeight,
+          document.sourceLineCount
         )
       }
 
@@ -368,47 +338,10 @@ export function PretextMarkdownViewerContent({
     [sourceLineAtScrollTop, viewMode]
   )
 
-  const resolveFragmentHref = React.useCallback(
-    (href: string, options?: ScrollToOptions) => {
-      if (href.length <= 1) return false
-
-      const headingId = decodeMarkdownFragmentHref(href)
-      const heading = findPretextMarkdownHeadingById(document, headingId)
-      if (!heading) return false
-
-      return scrollToChunkFrame(heading.chunkIndex, options)
-    },
-    [document, scrollToChunkFrame]
-  )
-
-  const resolveCurrentHash = React.useCallback(
-    (options?: ScrollToOptions) => {
-      const href = window.location.hash
-      if (!href || href.length <= 1) return false
-      if (resolvedHashRef.current === href) return true
-      if (!resolveFragmentHref(href, options)) return false
-
-      resolvedHashRef.current = href
-      return true
-    },
-    [resolveFragmentHref]
-  )
-
-  const handleFragmentClick = React.useCallback(
-    (event: React.MouseEvent) => {
-      const href = localFragmentHrefFromEventTarget(event.target)
-      if (!href) return
-
-      if (!resolveFragmentHref(href)) return
-
-      event.preventDefault()
-      resolvedHashRef.current = href
-      if (window.location.hash !== href) {
-        window.history.pushState(null, "", href)
-      }
-    },
-    [resolveFragmentHref]
-  )
+  const { handleFragmentClick } = useFragmentNav({
+    document,
+    scrollToChunk,
+  })
 
   const zoom = (factor: number) => {
     captureScrollAnchor()
@@ -420,35 +353,18 @@ export function PretextMarkdownViewerContent({
     setFontScale(1)
   }
 
-  const goToSearchMatch = React.useCallback(
-    (direction: 1 | -1) => {
-      setActiveSearchMatchIndex((current) => {
-        if (searchMatches.length === 0) return 0
-        return (
-          (current + direction + searchMatches.length) % searchMatches.length
-        )
-      })
-    },
-    [searchMatches.length]
-  )
-
-  const clearSearch = React.useCallback(() => {
-    setSearchQuery("")
-    setActiveSearchMatchIndex(0)
-  }, [])
-
   React.useImperativeHandle(
     forwardedRef ?? null,
     () => ({
       getViewportElement: () => viewportRef.current,
       scrollToLineRange: (range, options) => {
-        scrollLineRange(
+        scrollToLineRange(
           normalizeTextLineRange(range, document.sourceLineCount),
           options
         )
       },
     }),
-    [document.sourceLineCount, scrollLineRange]
+    [document.sourceLineCount, scrollToLineRange]
   )
 
   React.useEffect(() => {
@@ -472,24 +388,12 @@ export function PretextMarkdownViewerContent({
       end: highlightRange.end,
       start: highlightRange.start,
     }
-    scrollLineRangeRef.current(highlightRange)
+    scrollToLineRangeRef.current(highlightRange)
   }, [document, highlightRange])
 
   React.useEffect(() => {
-    setActiveSearchMatchIndex(0)
-  }, [searchQuery])
-
-  React.useEffect(() => {
-    setActiveSearchMatchIndex((current) =>
-      searchMatches.length === 0
-        ? 0
-        : Math.min(current, searchMatches.length - 1)
-    )
-  }, [searchMatches.length])
-
-  React.useEffect(() => {
     if (!activeSearchRange) return
-    scrollLineRangeRef.current(activeSearchRange, { behavior: "auto" })
+    scrollToLineRangeRef.current(activeSearchRange, { behavior: "auto" })
   }, [activeSearchRange])
 
   React.useLayoutEffect(() => {
@@ -497,40 +401,18 @@ export function PretextMarkdownViewerContent({
     if (sourceLine == null) return
 
     pendingViewModeSourceLineRef.current = null
-    scrollLineRange(
+    scrollToLineRange(
       normalizeTextLineRange(
         { end: sourceLine, start: sourceLine },
         document.sourceLineCount
       ),
       { behavior: "auto" }
     )
-  }, [document.sourceLineCount, scrollLineRange, viewMode])
-
-  React.useEffect(() => {
-    resolvedHashRef.current = null
-  }, [document])
+  }, [document.sourceLineCount, scrollToLineRange, viewMode])
 
   React.useEffect(() => {
     setDownloadError("")
   }, [downloadAction])
-
-  React.useEffect(() => {
-    resolveCurrentHash({ behavior: "auto" })
-  }, [resolveCurrentHash])
-
-  React.useEffect(() => {
-    const handleFragmentNavigation = () => {
-      resolvedHashRef.current = null
-      resolveCurrentHash({ behavior: "auto" })
-    }
-
-    window.addEventListener("hashchange", handleFragmentNavigation)
-    window.addEventListener("popstate", handleFragmentNavigation)
-    return () => {
-      window.removeEventListener("hashchange", handleFragmentNavigation)
-      window.removeEventListener("popstate", handleFragmentNavigation)
-    }
-  }, [resolveCurrentHash])
 
   return (
     <TextViewerFrame className={className} bare={bare}>
@@ -614,7 +496,7 @@ export function PretextMarkdownViewerContent({
                   <PretextMarkdownChunk
                     key={chunk.index}
                     frame={chunkFrame}
-                    highlightRange={visibleHighlightRange}
+                    activeRange={visibleHighlightRange}
                     highlighted={markdownChunkIntersectsLineRange({
                       chunk,
                       range: visibleHighlightRange,
@@ -889,7 +771,7 @@ function PretextMarkdownSourceCanvas({
             style={{
               gridTemplateColumns: `${gutterWidth}px max-content`,
               height: lineHeight,
-              transform: `translateY(${lineIndex * lineHeight}px)`,
+              transform: `translateY(${sourceLineToScrollTop(lineNumber, lineHeight)}px)`,
             }}
           >
             <span
@@ -905,6 +787,211 @@ function PretextMarkdownSourceCanvas({
         )
       })}
     </div>
+  )
+}
+
+// Owns the in-document search concern: the match list, which match is active,
+// and next/previous navigation. The render-time `Math.min` clamp below means we
+// never need an effect to clamp `activeIndex` when the query or match count
+// changes — resetting to 0 on a new query is the only state correction needed.
+function useMarkdownSearch({
+  document,
+  text,
+}: {
+  document: ReturnType<typeof createPretextMarkdownDocument>
+  text: string
+}) {
+  const [searchQuery, setSearchQuery] = React.useState("")
+  const [activeIndex, setActiveIndex] = React.useState(0)
+
+  const searchMatches = React.useMemo(
+    () => buildPretextMarkdownSearchMatches(text, searchQuery),
+    [searchQuery, text]
+  )
+
+  const activeSearchMatch =
+    searchMatches.length === 0
+      ? null
+      : searchMatches[Math.min(activeIndex, searchMatches.length - 1)]
+
+  const activeSearchRange = React.useMemo(
+    () =>
+      activeSearchMatch
+        ? normalizeTextLineRange(
+            {
+              end: activeSearchMatch.endLine,
+              start: activeSearchMatch.startLine,
+            },
+            document.sourceLineCount
+          )
+        : null,
+    [activeSearchMatch, document.sourceLineCount]
+  )
+
+  React.useEffect(() => {
+    setActiveIndex(0)
+  }, [searchQuery])
+
+  const goToSearchMatch = React.useCallback(
+    (direction: 1 | -1) => {
+      setActiveIndex((current) => {
+        if (searchMatches.length === 0) return 0
+        return (
+          (current + direction + searchMatches.length) % searchMatches.length
+        )
+      })
+    },
+    [searchMatches.length]
+  )
+
+  const clearSearch = React.useCallback(() => {
+    setSearchQuery("")
+    setActiveIndex(0)
+  }, [])
+
+  return {
+    activeSearchMatch,
+    activeSearchRange,
+    clearSearch,
+    goToSearchMatch,
+    searchMatches,
+    searchQuery,
+    setSearchQuery,
+  }
+}
+
+// Owns hash-fragment routing: resolving the current location hash to a heading
+// chunk, and reacting to hashchange/popstate plus in-document anchor clicks.
+function useFragmentNav({
+  document,
+  scrollToChunk,
+}: {
+  document: ReturnType<typeof createPretextMarkdownDocument>
+  scrollToChunk: (chunkIndex: number, options?: ScrollToOptions) => boolean
+}) {
+  const resolvedHashRef = React.useRef<string | null>(null)
+
+  const resolveFragmentHref = React.useCallback(
+    (href: string, options?: ScrollToOptions) => {
+      if (href.length <= 1) return false
+
+      const headingId = decodeMarkdownFragmentHref(href)
+      const heading = findPretextMarkdownHeadingById(document, headingId)
+      if (!heading) return false
+
+      return scrollToChunk(heading.chunkIndex, options)
+    },
+    [document, scrollToChunk]
+  )
+
+  const resolveCurrentHash = React.useCallback(
+    (options?: ScrollToOptions) => {
+      const href = window.location.hash
+      if (!href || href.length <= 1) return false
+      if (resolvedHashRef.current === href) return true
+      if (!resolveFragmentHref(href, options)) return false
+
+      resolvedHashRef.current = href
+      return true
+    },
+    [resolveFragmentHref]
+  )
+
+  const handleFragmentClick = React.useCallback(
+    (event: React.MouseEvent) => {
+      const href = localFragmentHrefFromEventTarget(event.target)
+      if (!href) return
+
+      if (!resolveFragmentHref(href)) return
+
+      event.preventDefault()
+      resolvedHashRef.current = href
+      if (window.location.hash !== href) {
+        window.history.pushState(null, "", href)
+      }
+    },
+    [resolveFragmentHref]
+  )
+
+  React.useEffect(() => {
+    resolvedHashRef.current = null
+  }, [document])
+
+  React.useEffect(() => {
+    resolveCurrentHash({ behavior: "auto" })
+  }, [resolveCurrentHash])
+
+  React.useEffect(() => {
+    const handleFragmentNavigation = () => {
+      resolvedHashRef.current = null
+      resolveCurrentHash({ behavior: "auto" })
+    }
+
+    window.addEventListener("hashchange", handleFragmentNavigation)
+    window.addEventListener("popstate", handleFragmentNavigation)
+    return () => {
+      window.removeEventListener("hashchange", handleFragmentNavigation)
+      window.removeEventListener("popstate", handleFragmentNavigation)
+    }
+  }, [resolveCurrentHash])
+
+  return { handleFragmentClick }
+}
+
+// Owns scroll-anchor capture/restore across layout-changing updates (width,
+// zoom, measured chunk heights). `capture()` snapshots the current anchor; the
+// layout effect restores it once the new frame layout is available.
+function useScrollAnchor({
+  frames,
+  scrollTop,
+  viewportRef,
+}: {
+  frames: readonly PretextMarkdownChunkFrame[]
+  scrollTop: number
+  viewportRef: React.RefObject<HTMLDivElement | null>
+}) {
+  const pendingScrollAnchorRef =
+    React.useRef<PretextMarkdownScrollAnchor | null>(null)
+
+  const capture = React.useCallback(() => {
+    pendingScrollAnchorRef.current = getPretextMarkdownFrameScrollAnchor({
+      frames,
+      scrollTop: viewportRef.current?.scrollTop ?? scrollTop,
+    })
+  }, [frames, scrollTop, viewportRef])
+
+  React.useLayoutEffect(() => {
+    const anchor = pendingScrollAnchorRef.current
+    const scrollElement = viewportRef.current
+    if (!anchor || !scrollElement) return
+
+    pendingScrollAnchorRef.current = null
+    const nextScrollTop = resolvePretextMarkdownScrollAnchor({
+      anchor,
+      frames,
+    })
+    if (nextScrollTop != null) scrollElement.scrollTop = nextScrollTop
+  }, [frames, viewportRef])
+
+  return { capture }
+}
+
+// Source-mode (raw text) view positions every line on a fixed grid of
+// `sourceLineHeight` px. These two conversions between a 1-based source line and
+// the canvas scrollTop are used by both the source-mode scroll and cursor logic;
+// keep them in one place so the offset/`+1` conventions can never drift apart.
+function sourceLineToScrollTop(line: number, sourceLineHeight: number) {
+  return Math.max(0, (line - 1) * sourceLineHeight)
+}
+
+function scrollTopToSourceLine(
+  scrollTop: number,
+  sourceLineHeight: number,
+  sourceLineCount: number
+) {
+  return Math.max(
+    1,
+    Math.min(sourceLineCount, Math.floor(scrollTop / sourceLineHeight) + 1)
   )
 }
 
@@ -969,13 +1056,15 @@ function getPretextMarkdownLineNumberForOffset(
 function PretextMarkdownChunk({
   children,
   frame,
-  highlightRange,
+  activeRange,
   highlighted,
   onMeasuredHeight,
 }: {
   children: React.ReactNode
   frame: PretextMarkdownChunkFrame
-  highlightRange: ReturnType<typeof normalizeTextLineRange>
+  // The currently-active source range, which may originate from either an
+  // external highlight prop or the active search match.
+  activeRange: ReturnType<typeof normalizeTextLineRange>
   highlighted: boolean
   onMeasuredHeight: (chunkIndex: number, height: number) => void
 }) {
@@ -1030,18 +1119,18 @@ function PretextMarkdownChunk({
       ].join(" ")}
       id={chunkId}
       aria-label={
-        highlighted && highlightRange
-          ? `Highlighted source lines ${highlightRange.start}-${highlightRange.end}`
+        highlighted && activeRange
+          ? `Highlighted source lines ${activeRange.start}-${activeRange.end}`
           : undefined
       }
       data-pretext-markdown-chunk=""
       data-pretext-markdown-highlighted={highlighted ? "" : undefined}
       data-pretext-markdown-hostile={frame.isHostile ? "" : undefined}
       data-source-highlight-end={
-        highlighted && highlightRange ? highlightRange.end : undefined
+        highlighted && activeRange ? activeRange.end : undefined
       }
       data-source-highlight-start={
-        highlighted && highlightRange ? highlightRange.start : undefined
+        highlighted && activeRange ? activeRange.start : undefined
       }
       data-source-end-line={frame.sourceEndLine}
       data-source-start-line={frame.sourceStartLine}

@@ -45,17 +45,6 @@ type VisibleRange = {
   start: number
 }
 
-const CODE_TOKEN_CLASS: Record<string, string> = {
-  boolean: "cv-token-keyword",
-  keyword: "cv-token-keyword",
-  null: "cv-token-keyword",
-  number: "cv-token-number",
-  operator: "cv-token-punctuation",
-  property: "cv-token-property",
-  punctuation: "cv-token-punctuation",
-  string: "cv-token-string",
-}
-
 export function createCodeProjector(): CodeProjector {
   let identity: CodeProjectionIdentity | null = null
   let rowHost: HTMLPreElement | null = null
@@ -317,13 +306,12 @@ function patchCodeContent(
   contentSpan.replaceChildren()
   const fragment = document.createDocumentFragment()
   for (const leaf of leaves) {
-    const className = CODE_TOKEN_CLASS[leaf.kind]
-    if (!className) {
+    if (!leaf.kind) {
       fragment.append(document.createTextNode(leaf.text))
       continue
     }
     const span = document.createElement("span")
-    span.className = className
+    span.className = "cv-token-" + leaf.kind
     span.textContent = leaf.text
     fragment.append(span)
   }

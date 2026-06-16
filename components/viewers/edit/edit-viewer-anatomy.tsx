@@ -62,7 +62,6 @@ function EditViewerRoot({ className }: { className?: string }) {
 
   return (
     <ViewerRoot
-      bare
       data-edit-viewer-root
       defaultOpen
       className={cn("h-full w-full flex-1 bg-background", className)}

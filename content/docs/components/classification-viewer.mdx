@@ -1,6 +1,7 @@
 ---
 title: Classification Viewer
 description: Renders a Retab classification result — the predicted category and reasoning over the document.
+component: true
 ---
 
 The classification viewer renders the output of a Retab **classification**.
@@ -15,7 +16,7 @@ fake document segment just to reuse split or partition visuals.
 Compose the classification surface from `ClassifierViewerProvider`, the shared
 viewer layout primitives, and the named classifier parts. The provider owns the
 category and reasoning state; the document remains an explicit node, typically
-a [`PdfViewer`](/docs/viewers/pdf-viewer) rendered `bare`.
+a [`PdfViewer`](/docs/components/file-viewer/pdf-viewer) rendered `bare`.
 
 ```tsx
 <ClassifierViewerProvider result={result}>

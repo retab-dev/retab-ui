@@ -1,19 +1,25 @@
 ---
 title: File Viewer
 description: One viewer for everything — detects the file type and renders the right component, from PDFs and spreadsheets to images, code, Markdown, and HTML.
+component: true
 ---
 
 The File Viewer is a single entry point for previewing any file. It detects the
 type from the file name (then the MIME type) and **lazy-loads only the matching
 viewer**, so the heavy parser for a format you never open is never downloaded.
 
-It composes the rest of the family — the [PDF](/docs/viewers/pdf-viewer),
-[DOCX](/docs/viewers/docx-viewer), [Image](/docs/viewers/image-viewer),
-[PPTX](/docs/viewers/pptx-viewer), [XLSX](/docs/viewers/xlsx-viewer), and
-[CSV](/docs/viewers/csv-viewer) viewers — and adds inline, client-side
-rendering for **text, code, JSON, Markdown, and HTML**.
+It is the flagship document component. The format renderers are not peers of
+File Viewer; they are routes inside it:
+[PDF](/docs/components/file-viewer/pdf-viewer),
+[DOCX](/docs/components/file-viewer/docx-viewer),
+[Image](/docs/components/file-viewer/image-viewer),
+[PPTX](/docs/components/file-viewer/pptx-viewer),
+[XLSX](/docs/components/file-viewer/xlsx-viewer), and
+[CSV](/docs/components/file-viewer/csv-viewer). File Viewer also owns inline,
+client-side rendering for **text, code, JSON,
+[Markdown](/docs/components/file-viewer/pretext-markdown-viewer), and HTML**.
 
-<FileViewerDemo />
+<ComponentPreview name="file-viewer-demo" />
 
 ## Installation
 
@@ -21,10 +27,10 @@ rendering for **text, code, JSON, Markdown, and HTML**.
 npx shadcn@latest add @retab/file-viewer
 ```
 
-This pulls in the format-specific viewers it delegates to, plus the Pretext
-Markdown Viewer for Markdown documents, custom fixed-line virtualization for
-the Code Viewer, and `@chenglou/pretext` for the wrapped Text and Markdown
-surfaces.
+This pulls in the format-specific viewers it delegates to, plus the
+[Pretext Markdown Viewer](/docs/components/file-viewer/pretext-markdown-viewer)
+for Markdown documents, custom fixed-line virtualization for the Code Viewer,
+and `@chenglou/pretext` for the wrapped Text and Markdown surfaces.
 
 ## Usage
 
@@ -48,8 +54,8 @@ force a category.
 ## Composition Boundaries
 
 `FileViewer` is a file router and file-scoped composition root. Do not use it to
-own workflow semantics, but do use its named anatomy when a file-backed surface
-needs sidebars or composed panes.
+own workflow semantics. Do use its named anatomy when a file-backed surface
+needs sidebars, composed panes, or file-scoped navigation.
 
 Use the file viewer parts when a workflow needs one file header above domain
 chrome:
@@ -74,6 +80,9 @@ chrome:
 `FileViewerTitle` answers what file this is, `FileViewerMeta` renders passive
 facts, and `FileViewerControls` renders operational controls registered by the
 active file renderer. `FileViewerDocument` is the routed file renderer.
+
+See [Anatomy](/docs/components/file-viewer/anatomy) for the compound API and
+[Sidebar](/docs/components/file-viewer/sidebar) for file-scoped navigation.
 
 Use the easy shell for the common case:
 
@@ -123,6 +132,11 @@ already owns the surrounding surface:
 
 Anything unrecognized falls back to a download card.
 
+The [Email Viewer](/docs/components/file-viewer/email-viewer) also belongs to
+the File Viewer category, but it is a compound MIME viewer rather than a routed
+`FileViewerDocument` renderer: its body and attachment leaves render through
+File Viewer primitives.
+
 ## How it performs
 
 - **Code-split delegation.** Each format-specific viewer is a `React.lazy`
@@ -140,7 +154,7 @@ Anything unrecognized falls back to a download card.
   no script execution and no same-origin access, so untrusted documents preview
   without running code or reaching the app.
 
-## Props
+## API Reference
 
 | Prop        | Type           | Description                                                                                       |
 | ----------- | -------------- | ------------------------------------------------------------------------------------------------- |
@@ -151,3 +165,7 @@ Anything unrecognized falls back to a download card.
 
 The `detectCategory(fileName, mimeType?)` helper is also exported if you need to
 branch on the resolved category yourself.
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer.tsx" />

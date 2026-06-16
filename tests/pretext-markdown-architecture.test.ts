@@ -41,6 +41,11 @@ const pretextMarkdownFiles = [
   "registry/new-york-v4/ui/pretext-markdown-table-accessibility.ts",
   "registry/new-york-v4/ui/pretext-markdown-virtualizer.ts",
   "registry/new-york-v4/ui/pretext-markdown-renderer.tsx",
+  "registry/new-york-v4/ui/pretext-markdown-controls.tsx",
+  "registry/new-york-v4/ui/pretext-markdown-mermaid.tsx",
+  "registry/new-york-v4/ui/pretext-markdown-url-policy.ts",
+  "registry/new-york-v4/ui/pretext-markdown-sanitize.ts",
+  "registry/new-york-v4/ui/pretext-markdown-components.ts",
 ]
 const textViewerFiles = [
   "registry/new-york-v4/ui/text-viewer.tsx",
@@ -68,12 +73,12 @@ const textViewerFiles = [
   "components/ui/text-viewer-chrome.tsx",
 ]
 const pretextMarkdownDocsPath =
-  "content/docs/viewers/pretext-markdown-viewer.mdx"
+  "content/docs/components/file-viewer/pretext-markdown-viewer.mdx"
 const viewerDocsPaths = [
-  "content/docs/viewers/index.mdx",
-  "content/docs/viewers/file-viewer.mdx",
-  "content/docs/viewers/text-viewer.mdx",
-  "content/docs/viewers/markdown-viewer.mdx",
+  "content/docs/components/index.mdx",
+  "content/docs/components/file-viewer/index.mdx",
+  "content/docs/components/file-viewer/text-viewer.mdx",
+  "content/docs/components/file-viewer/markdown-viewer.mdx",
   pretextMarkdownDocsPath,
 ]
 
@@ -774,23 +779,27 @@ describe("Pretext Markdown architecture", () => {
       viewerDocsPaths.map((path) => [path, read(path)])
     )
 
-    expect(docs["content/docs/viewers/index.mdx"]).toContain(
-      "[Pretext Markdown Viewer](/docs/viewers/pretext-markdown-viewer)"
+    expect(docs["content/docs/components/file-viewer/index.mdx"]).toContain(
+      "[Pretext Markdown Viewer](/docs/components/file-viewer/pretext-markdown-viewer)"
     )
-    expect(docs["content/docs/viewers/file-viewer.mdx"]).toContain(
+    expect(docs["content/docs/components/file-viewer/index.mdx"]).toContain(
       "| Markdown     | `md`, `markdown`, `text/markdown`"
     )
-    expect(docs["content/docs/viewers/file-viewer.mdx"]).toContain(
+    expect(docs["content/docs/components/file-viewer/index.mdx"]).toContain(
       "Pretext Markdown Viewer"
     )
-    expect(docs["content/docs/viewers/file-viewer.mdx"]).toContain(
+    expect(docs["content/docs/components/file-viewer/index.mdx"]).toContain(
       "Markdown URL, Blob,\n  inline text, and MIME-only sources route to `PretextMarkdownViewer`"
     )
-    expect(docs["content/docs/viewers/text-viewer.mdx"]).toContain(
+    expect(
+      docs["content/docs/components/file-viewer/text-viewer.mdx"]
+    ).toContain(
       "Markdown files and inline Markdown sources use\n[`PretextMarkdownViewer`]"
     )
-    expect(docs["content/docs/viewers/markdown-viewer.mdx"]).toContain(
-      "[Pretext Markdown Viewer](/docs/viewers/pretext-markdown-viewer)"
+    expect(
+      docs["content/docs/components/file-viewer/markdown-viewer.mdx"]
+    ).toContain(
+      "[Pretext Markdown Viewer](/docs/components/file-viewer/pretext-markdown-viewer)"
     )
 
     for (const [path, content] of Object.entries(docs)) {

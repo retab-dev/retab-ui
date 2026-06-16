@@ -396,7 +396,7 @@ async function expectRawHtmlLinkPolicy(viewer: Locator) {
   await expect(external).toHaveAttribute("href", "https://example.com/raw")
   await expect(external).toHaveAttribute("target", "_blank")
   await expect(external).toHaveAttribute("rel", "noopener noreferrer")
-  await expect(internal).toHaveAttribute("href", "/docs/viewers")
+  await expect(internal).toHaveAttribute("href", "/docs/components/file-viewer")
   await expect(internal).not.toHaveAttribute("target", /.+/)
   await expect(internal).not.toHaveAttribute("rel", /.+/)
 }

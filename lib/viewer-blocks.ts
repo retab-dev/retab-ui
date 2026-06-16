@@ -76,7 +76,7 @@ export const VIEWER_BLOCKS = [
     description:
       "A parsed document the standard way — the source PDF beside its extracted markdown, synced by page, with a Rendered/Text toggle. Parsed markdown of the bank-statement sample.",
     command: getRegistryAddCommand("parse-viewer-block"),
-    docsHref: "/docs/viewers/parse-viewer",
+    docsHref: "/docs/components/parse-viewer",
     viewHref: "/view/blocks/parse",
     featured: true,
     categories: ["primitives"],
@@ -453,7 +453,7 @@ export const VIEWER_BLOCKS = [
     description:
       "A PDF viewer with a toggleable page-thumbnail sidebar in the aside slot. Thumbnails render lazily as they scroll into view, highlight the current page, and jump on click.",
     command: getRegistryAddCommand("pdf-thumbnails-block"),
-    docsHref: "/docs/viewers/pdf-viewer",
+    docsHref: "/docs/components/file-viewer/pdf-viewer",
     viewHref: "/view/blocks/pdf-thumbnails",
     featured: true,
     categories: [],

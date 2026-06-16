@@ -7,10 +7,8 @@ leaking virtual chunks as visible pages.
 
 ## Missing Features
 
-1. Full Mermaid / diagram syntax beyond the current graph/flowchart/sequence/state
-   fallback surface and Mermaid-frontmatter-aware source-derived
-   graph/sequence/state/class/ER/journey/Gantt/Git graph/timeline/mind
-   map/pie summaries.
+1. Full Mermaid / diagram syntax beyond the current graph/flowchart/sequence/state/class/ER/journey/Gantt/Git graph/timeline/mind map/quadrant/requirement/XY chart/Sankey/C4/pie
+   fallback surface and Mermaid-frontmatter-aware source-derived summaries.
 2. Broader directive semantics beyond current callouts and restricted component directives.
 3. Broader MDX/component markdown beyond the restricted `Metric`, `Badge`,
    `Image`, `Video`, `Diagram`, `Callout`, `Accordion`, and `Tabs` / `Tab`
@@ -112,10 +110,8 @@ leaking virtual chunks as visible pages.
 
 61. Full Mermaid rendering polish beyond current source-derived deterministic
     pre-layout body dimensions, fenced/component title/caption surface,
-    recoverable graph/flowchart/sequence/state fallback rendering, and
-    Mermaid-frontmatter-aware
-    graph/sequence/state/class/ER/journey/Gantt/Git graph/timeline/mind
-    map/pie summaries plus oversized-source render guard.
+    recoverable graph/flowchart/sequence/state/class/ER/journey/Gantt/Git graph/timeline/mind map/quadrant/requirement/XY chart/Sankey/C4/pie fallback rendering, Mermaid-frontmatter-aware
+    source-derived summaries, and oversized-source render guard.
 62. Broader Mermaid loading/error-state polish beyond current shared reserved
     scroll box for loading/error/ready states, Mermaid-only source-backed
     loading state, labelled keyboard-scrollable diagram body region, and
@@ -194,7 +190,7 @@ leaking virtual chunks as visible pages.
      group/image/body/source fallback, keyboard-scrollable body region, and
      Mermaid-frontmatter-aware source-derived
      graph/sequence/state/class/ER/journey/Gantt/Git graph/timeline/mind
-     map/pie summaries.
+     map/quadrant/requirement/XY chart/Sankey/C4/pie summaries.
 107. Broader footnote accessibility beyond current labelled refs/backrefs,
      labelled collected footnotes section, document-wide definition resolution,
      and route-level ref/backref smoke.

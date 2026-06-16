@@ -178,16 +178,6 @@ export function createPretextMarkdownDocument(
   }
 }
 
-export function findPretextMarkdownChunkForLine(
-  chunks: readonly PretextMarkdownChunk[],
-  sourceLine: number
-) {
-  return chunks.find(
-    (chunk) =>
-      chunk.sourceStartLine <= sourceLine && chunk.sourceEndLine >= sourceLine
-  )
-}
-
 export function findPretextMarkdownChunkForOffset(
   chunks: readonly PretextMarkdownChunk[],
   sourceOffset: number
@@ -389,6 +379,14 @@ function createMarkdownBodyChunks({
   const chunks: PretextMarkdownChunk[] = []
   if (!markdown.trim()) return chunks
 
+  const accumulator = new ChunkAccumulator({
+    chunks,
+    sourceLineOffsets,
+    startIndex,
+    startLine: sourceStartLine,
+    textLength,
+  })
+
   try {
     const tokens = parsePretextMarkdownTokens(markdown)
     let cursorLine = sourceStartLine
@@ -396,58 +394,10 @@ function createMarkdownBodyChunks({
       sourceLineOffsets,
       sourceStartLine
     )
-    let chunkBlockIds: string[] = []
-    let chunkStartLine = sourceStartLine
-    let chunkStartOffset = cursorOffset
-    let chunkHeadingIds: string[] = []
-    let chunkIsHostile = false
-    let chunkRaw = ""
-    let chunkLineCount = 0
-
-    const flushChunk = (endLine: number) => {
-      if (!chunkRaw.trim()) {
-        chunkRaw = ""
-        chunkLineCount = 0
-        chunkIsHostile = false
-        chunkStartLine = endLine + 1
-        chunkStartOffset = getSourceLineStartOffset(
-          sourceLineOffsets,
-          chunkStartLine
-        )
-        return
-      }
-      const chunkIndex = startIndex + chunks.length
-      const chunkMarkdown = chunkRaw.replace(/\n+$/g, "")
-      chunks.push({
-        blockIds: chunkBlockIds,
-        headingIds: chunkHeadingIds,
-        index: chunkIndex,
-        isHostile: chunkIsHostile,
-        kind: "markdown",
-        markdown: chunkMarkdown,
-        sourceEndOffset: Math.min(
-          textLength,
-          chunkStartOffset + chunkMarkdown.length
-        ),
-        sourceEndLine: Math.max(chunkStartLine, endLine),
-        sourceStartOffset: chunkStartOffset,
-        sourceStartLine: chunkStartLine,
-      })
-      chunkRaw = ""
-      chunkLineCount = 0
-      chunkIsHostile = false
-      chunkBlockIds = []
-      chunkHeadingIds = []
-      chunkStartLine = endLine + 1
-      chunkStartOffset = getSourceLineStartOffset(
-        sourceLineOffsets,
-        chunkStartLine
-      )
-    }
 
     for (const token of tokens) {
       const raw = token.raw ?? ""
-      const tokenLineCount = countLineBreaks(raw)
+      const tokenLineCount = countLines(raw)
       const tokenLineBreaks = countLineSeparators(raw)
       const tokenStartLine = cursorLine
       const tokenStartOffset = cursorOffset
@@ -460,25 +410,25 @@ function createMarkdownBodyChunks({
       cursorOffset = tokenEndOffset
 
       if (token.kind === "space") {
-        chunkRaw += raw
-        chunkLineCount += tokenLineBreaks
+        accumulator.addSpace(raw, tokenLineBreaks)
         continue
       }
 
       const tokenIsHostile = isHostilePretextMarkdownToken(token, raw)
       const shouldStartNewChunk =
-        chunkRaw.trim().length > 0 &&
+        accumulator.hasContent() &&
         isChunkLeadToken(token) &&
-        chunkLineCount >= MARKDOWN_CHUNK_TARGET_SOURCE_LINES
+        accumulator.lineCount >= MARKDOWN_CHUNK_TARGET_SOURCE_LINES
       const wouldExceedMax =
-        chunkRaw.trim().length > 0 &&
-        chunkLineCount + Math.max(1, tokenLineCount) >
+        accumulator.hasContent() &&
+        accumulator.lineCount + Math.max(1, tokenLineCount) >
           MARKDOWN_CHUNK_MAX_SOURCE_LINES
 
       if (shouldStartNewChunk || wouldExceedMax || tokenIsHostile) {
-        flushChunk(Math.max(chunkStartLine, tokenStartLine - 1))
-        chunkStartLine = tokenStartLine
-        chunkStartOffset = tokenStartOffset
+        accumulator.flush(
+          Math.max(accumulator.startLine, tokenStartLine - 1)
+        )
+        accumulator.startAt(tokenStartLine, tokenStartOffset)
       }
 
       const chunkIndex = startIndex + chunks.length
@@ -495,13 +445,13 @@ function createMarkdownBodyChunks({
         sourceStartOffset: tokenStartOffset,
         sourceStartLine: tokenStartLine,
       })
-      chunkBlockIds.push(block.id)
+      accumulator.addBlockId(block.id)
 
       if (token.kind === "heading") {
         const text = normalizeHeadingText(token.text)
         const id = createMarkdownHeadingId(text, headingIds)
         block.headingId = id
-        chunkHeadingIds.push(id)
+        accumulator.addHeadingId(id)
         headings.push({
           blockId: block.id,
           id,
@@ -516,16 +466,17 @@ function createMarkdownBodyChunks({
         block.listStart = token.listStart
       }
 
-      chunkRaw += raw
-      chunkLineCount += Math.max(1, tokenLineCount)
-      chunkIsHostile = chunkIsHostile || tokenIsHostile
-      if (tokenIsHostile || chunkLineCount >= MARKDOWN_CHUNK_MAX_SOURCE_LINES) {
-        flushChunk(tokenEndLine)
+      accumulator.addToken(raw, Math.max(1, tokenLineCount), tokenIsHostile)
+      if (
+        tokenIsHostile ||
+        accumulator.lineCount >= MARKDOWN_CHUNK_MAX_SOURCE_LINES
+      ) {
+        accumulator.flush(tokenEndLine)
       }
     }
 
-    if (chunkRaw.trim()) {
-      flushChunk(sourceEndLine)
+    if (accumulator.hasContent()) {
+      accumulator.flush(sourceEndLine)
     }
   } catch {
     const block = createPretextMarkdownBlock({
@@ -558,6 +509,129 @@ function createMarkdownBodyChunks({
   }
 
   return chunks
+}
+
+/**
+ * Accumulates raw markdown, block/heading ids, line counts, and the hostile
+ * flag for the chunk currently being built, then emits a fully-formed
+ * PretextMarkdownChunk on flush. Encapsulates what was previously a set of
+ * mutually-mutating free `let` bindings in createMarkdownBodyChunks.
+ */
+class ChunkAccumulator {
+  private readonly chunks: PretextMarkdownChunk[]
+  private readonly sourceLineOffsets: SourceLineOffsets
+  private readonly startIndex: number
+  private readonly textLength: number
+
+  private raw = ""
+  private blockIds: string[] = []
+  private headingIds: string[] = []
+  private isHostile = false
+
+  /** Number of source lines spanned by the in-progress chunk. */
+  lineCount = 0
+  /** First source line of the in-progress chunk (1-based). */
+  startLine: number
+  /** Source offset of the first character of the in-progress chunk. */
+  startOffset: number
+
+  constructor({
+    chunks,
+    sourceLineOffsets,
+    startIndex,
+    startLine,
+    textLength,
+  }: {
+    chunks: PretextMarkdownChunk[]
+    sourceLineOffsets: SourceLineOffsets
+    startIndex: number
+    startLine: number
+    textLength: number
+  }) {
+    this.chunks = chunks
+    this.sourceLineOffsets = sourceLineOffsets
+    this.startIndex = startIndex
+    this.textLength = textLength
+    this.startLine = startLine
+    this.startOffset = getSourceLineStartOffset(sourceLineOffsets, startLine)
+  }
+
+  /** True when the chunk has any non-whitespace content. */
+  hasContent() {
+    return this.raw.trim().length > 0
+  }
+
+  /** Append whitespace-only ("space") token content without block tracking. */
+  addSpace(raw: string, lineBreaks: number) {
+    this.raw += raw
+    this.lineCount += lineBreaks
+  }
+
+  /** Append a content token's raw text, line count, and hostile flag. */
+  addToken(raw: string, lineCount: number, tokenIsHostile: boolean) {
+    this.raw += raw
+    this.lineCount += lineCount
+    this.isHostile = this.isHostile || tokenIsHostile
+  }
+
+  addBlockId(id: string) {
+    this.blockIds.push(id)
+  }
+
+  addHeadingId(id: string) {
+    this.headingIds.push(id)
+  }
+
+  /** Override the start position of the in-progress chunk. */
+  startAt(startLine: number, startOffset: number) {
+    this.startLine = startLine
+    this.startOffset = startOffset
+  }
+
+  /**
+   * Emit the in-progress chunk (when it has content) and reset accumulator
+   * state to begin the next chunk after `endLine`. Whitespace-only chunks are
+   * dropped but still advance the start position, matching the original
+   * flushChunk closure exactly.
+   */
+  flush(endLine: number) {
+    if (!this.hasContent()) {
+      this.resetTo(endLine)
+      return
+    }
+    const chunkIndex = this.startIndex + this.chunks.length
+    const chunkMarkdown = this.raw.replace(/\n+$/g, "")
+    this.chunks.push({
+      blockIds: this.blockIds,
+      headingIds: this.headingIds,
+      index: chunkIndex,
+      isHostile: this.isHostile,
+      kind: "markdown",
+      markdown: chunkMarkdown,
+      sourceEndOffset: Math.min(
+        this.textLength,
+        this.startOffset + chunkMarkdown.length
+      ),
+      sourceEndLine: Math.max(this.startLine, endLine),
+      sourceStartOffset: this.startOffset,
+      sourceStartLine: this.startLine,
+    })
+    this.blockIds = []
+    this.headingIds = []
+    this.resetTo(endLine)
+  }
+
+  /** Reset accumulation state and advance the start position past `endLine`. */
+  private resetTo(endLine: number) {
+    this.raw = ""
+    this.lineCount = 0
+    this.isHostile = false
+    this.startLine = endLine + 1
+    this.startOffset = getSourceLineStartOffset(
+      this.sourceLineOffsets,
+      this.startLine
+    )
+  }
 }
 
 function extractFrontmatter(markdown: string) {
@@ -618,14 +692,14 @@ function collectPretextMarkdownFootnoteDefinitions(markdown: string) {
     .join("\n")
 }
 
-function countLineBreaks(text: string) {
+function countLines(text: string) {
   if (!text) return 1
   return text.split(/\r\n|[\n\r\u2028\u2029]/).length
 }
 
 function countLineSeparators(text: string) {
   if (!text) return 0
-  return Math.max(0, countLineBreaks(text) - 1)
+  return Math.max(0, countLines(text) - 1)
 }
 
 type HeadingIdRegistry = Map<string, number>
@@ -1038,7 +1112,7 @@ function isHostilePretextMarkdownToken(
   token: PretextMarkdownToken,
   raw: string
 ) {
-  const lineCount = countLineBreaks(raw)
+  const lineCount = countLines(raw)
 
   switch (token.kind) {
     case "code":

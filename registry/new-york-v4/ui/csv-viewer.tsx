@@ -44,6 +44,9 @@ export type CsvResourceContentProps = Omit<CsvViewerProps, "source"> & {
   resource?: ViewerResource | null
   source?: CsvViewerSource
 }
+type CsvResourceContentInternalProps = CsvResourceContentProps & {
+  frame?: boolean
+}
 
 export type CsvViewerProviderProps = {
   children: React.ReactNode
@@ -64,6 +67,7 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
     return (
       <CsvResourceContent
         {...props}
+        frame
         ref={ref}
         resource={resource}
         source={source}
@@ -95,17 +99,46 @@ function useCsvViewerResource(): ViewerResource {
   return resource
 }
 
+export const CsvViewerDocument = React.forwardRef<
+  CsvViewerHandle,
+  CsvViewerProps
+>(function CsvViewerDocument({ source, ...props }, ref) {
+  const resource = React.useMemo<ViewerResource | null>(
+    () =>
+      source && isCsvDocumentSource(source)
+        ? createViewerResource(source)
+        : null,
+    [source]
+  )
+  return (
+    <CsvResourceContent
+      {...props}
+      frame={false}
+      ref={ref}
+      resource={resource}
+      source={source}
+    />
+  )
+})
+
 export const CsvViewerGrid = React.forwardRef<
   CsvViewerHandle,
   CsvViewerGridProps
 >(function CsvViewerGrid(props, ref) {
   const resource = useCsvViewerResource()
-  return <CsvResourceContent {...props} ref={ref} resource={resource} />
+  return (
+    <CsvResourceContent
+      {...props}
+      frame={false}
+      ref={ref}
+      resource={resource}
+    />
+  )
 })
 
 export const CsvResourceContent = React.forwardRef<
   CsvViewerHandle,
-  CsvResourceContentProps
+  CsvResourceContentInternalProps
 >(function CsvResourceContent(
   {
     source,
@@ -115,6 +148,7 @@ export const CsvResourceContent = React.forwardRef<
     controls = true,
     height = 480,
     fillHeight = false,
+    frame = true,
     activeCell,
     isolateStyles = false,
   },
@@ -207,7 +241,12 @@ export const CsvResourceContent = React.forwardRef<
   })
 
   return (
-    <CsvViewerFrame className={className} fillHeight={fillHeight} zoom={zoom}>
+    <CsvViewerFrame
+      className={className}
+      fillHeight={fillHeight}
+      frame={frame}
+      zoom={zoom}
+    >
       <CsvViewerHeader
         controls={controls}
         rowCount={sourceRows.length}

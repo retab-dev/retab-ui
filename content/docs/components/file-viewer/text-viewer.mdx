@@ -1,6 +1,7 @@
 ---
 title: Text Viewer
 description: A Pretext-powered wrapped text viewer with variable-height virtualization, prose chrome, source-line highlights, zoom, retry, and download.
+component: true
 ---
 
 The Text Viewer is for prose text that is not Markdown. It uses Pretext to
@@ -8,7 +9,7 @@ predict wrapped line heights without measuring DOM nodes, then renders a custom
 variable-height virtual window so long documents stay responsive while text
 wraps naturally inside the viewport.
 
-<TextViewerDemo />
+<ComponentPreview name="text-viewer-demo" />
 
 ## Installation
 
@@ -60,7 +61,7 @@ URL and Blob sources use the same bounded text resource path as the Code Viewer:
 
 Markdown is no longer a Text Viewer rendering mode in File Viewer routing.
 Markdown files and inline Markdown sources use
-[`PretextMarkdownViewer`](/docs/viewers/pretext-markdown-viewer), which owns the
+[`PretextMarkdownViewer`](/docs/components/file-viewer/pretext-markdown-viewer), which owns the
 React/GFM document semantics, Rendered/Text toggle, safe raw HTML policy,
 alerts, diagrams, frontmatter, tables, footnotes, and restricted component
 markdown.
@@ -76,13 +77,13 @@ Plain prose text does not show a code-style line-number gutter. Logs, JSON, and
 source-like files remain Code Viewer responsibilities and keep their line
 numbers, monospaced layout, syntax support, and line-oriented scrolling.
 
-## Props
+## API Reference
 
 | Prop        | Type                    | Description                                                                |
 | ----------- | ----------------------- | -------------------------------------------------------------------------- |
 | `source`    | `TextDocumentSource`    | Required source descriptor. Supports URL, Blob, and inline text resources. |
 | `className` | `string`                | Optional class on the viewer container.                                    |
-| `controls`   | `boolean`               | Show word count, zoom controls, and download action. Defaults to `true`.   |
+| `controls`  | `boolean`               | Show word count, zoom controls, and download action. Defaults to `true`.   |
 | `highlight` | `TextLineRange \| null` | 1-based inclusive source-line range to highlight.                          |
 | `bare`      | `boolean`               | Drop the outer border/background so the viewer fills its container.        |
 | `maxBytes`  | `number`                | Maximum text payload size accepted by the viewer.                          |
@@ -110,3 +111,7 @@ export function Example() {
 
 `scrollToLineRange(range, options?)` scrolls any normalized source-line range
 into view, even when that line is outside the currently mounted virtual window.
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/text-viewer.tsx" />

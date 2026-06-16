@@ -216,6 +216,7 @@ export function CodeViewerContent({
       <CodeViewerViewport
         contentIdentity={contentIdentity}
         fontScale={fontScale}
+        gutterWidth={gutterWidth}
         lineCount={textLines.length}
         lineHeight={lineHeight}
         rowHostRef={rowHostRef}

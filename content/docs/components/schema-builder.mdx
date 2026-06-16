@@ -1,6 +1,7 @@
 ---
 title: Schema Builder
 description: Build the JSON Schema that drives a Retab extraction — the same editor used in the Retab dashboard.
+component: true
 ---
 
 The Schema Builder is the JSON Schema editor from the Retab dashboard: recursive
@@ -53,8 +54,7 @@ reference one `address` definition.
 
 <ComponentPreview name="schema-builder-definitions" />
 
-## Props
-
+## API Reference
 | Prop | Type | Description |
 | --- | --- | --- |
 | `value` | `ExtendedJSONSchema7` | The schema state. |
@@ -131,3 +131,7 @@ export function Example() {
 | `onDelete`              | `() => void`                                            | Optional. Shows the Delete Property action.                                                                    |
 | `submitLabel`           | `string`                                                | Submit button label. Defaults to `"Save Changes"`.                                                             |
 | `mode`                  | `"editable" \| "readOnly" \| "descriptionOnly"`         | Defaults to `"editable"`.                                                                                      |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/schema-builder.tsx" />

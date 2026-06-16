@@ -102,7 +102,7 @@ function ExtractViewerContent() {
   const form = useForm<Record<string, unknown>>({ defaultValues })
 
   return (
-    <ViewerRoot bare defaultOpen className="h-full min-h-[680px] bg-background">
+    <ViewerRoot defaultOpen className="h-full min-h-[680px] bg-background">
       <ViewerHeader className="flex min-h-10 items-center gap-2 px-2">
         <ViewerSidebarTrigger />
         <h2 className="min-w-0 truncate text-sm font-medium">Extracted data</h2>

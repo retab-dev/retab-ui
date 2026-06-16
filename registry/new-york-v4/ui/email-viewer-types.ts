@@ -208,12 +208,11 @@ export type EmailViewerProps = {
   onSelectedPathChange?: (path: MimePartPath, node: MimePartNode) => void
   maxNestedMessageDepth?: number
   className?: string
-  bare?: boolean
 }
 
 export type EmailViewerProviderProps = Omit<
   EmailViewerProps,
-  "className" | "bare"
+  "className"
 > & {
   children: ReactNode
 }

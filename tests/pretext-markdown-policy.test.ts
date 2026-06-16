@@ -4,11 +4,13 @@ import {
   createPretextMarkdownSanitizeSchema,
   PRETEXT_MARKDOWN_KATEX_OPTIONS,
   PRETEXT_MARKDOWN_SVG_SANITIZE_OPTIONS,
+  sanitizePretextMarkdownSvg,
+} from "@/registry/new-york-v4/ui/pretext-markdown-sanitize"
+import {
   sanitizePretextMarkdownImageUrl,
   sanitizePretextMarkdownMediaUrl,
-  sanitizePretextMarkdownSvg,
   sanitizePretextMarkdownUrl,
-} from "@/registry/new-york-v4/ui/pretext-markdown-policy"
+} from "@/registry/new-york-v4/ui/pretext-markdown-url-policy"
 
 describe("Pretext Markdown policy", () => {
   it("keeps the raw HTML sanitizer surface narrow", () => {
@@ -59,7 +61,9 @@ describe("Pretext Markdown policy", () => {
       "mailto:hello@retab.com"
     )
     expect(sanitizePretextMarkdownUrl("#heading")).toBe("#heading")
-    expect(sanitizePretextMarkdownUrl("/docs/viewers")).toBe("/docs/viewers")
+    expect(sanitizePretextMarkdownUrl("/docs/components/file-viewer")).toBe(
+      "/docs/components/file-viewer"
+    )
     expect(sanitizePretextMarkdownUrl("/docs/résumé")).toBe("/docs/résumé")
     expect(sanitizePretextMarkdownUrl("docs/viewers")).toBe("docs/viewers")
   })

@@ -11,7 +11,7 @@ const sampleBox = { slide: 1, left: 0.0, top: 0.0, width: 1.0, height: 0.187 }
 
 export function PptxViewerDemo() {
   return (
-    <div className="not-prose my-6 h-[600px]">
+    <div className="h-[600px]">
       <PptxViewer
         source={{
           kind: "url",

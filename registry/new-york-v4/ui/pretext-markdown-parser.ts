@@ -31,7 +31,7 @@ export const markedPretextMarkdownParser: PretextMarkdownParser = {
   parse(markdown) {
     return marked
       .lexer(markdown, { gfm: true })
-      .map((token) => normalizeMarkedToken(token))
+      .map((token) => normalizePretextMarkdownToken(token))
   },
 }
 
@@ -39,27 +39,27 @@ export function parsePretextMarkdownTokens(markdown: string) {
   return markedPretextMarkdownParser.parse(markdown)
 }
 
-function normalizeMarkedToken(token: Token): PretextMarkdownToken {
+function normalizePretextMarkdownToken(token: Token): PretextMarkdownToken {
   return {
-    isOrderedList: readMarkedListOrdered(token),
-    kind: normalizeMarkedTokenKind(token),
-    listStart: readMarkedListStart(token),
+    isOrderedList: readPretextMarkdownListOrdered(token),
+    kind: normalizePretextMarkdownTokenKind(token),
+    listStart: readPretextMarkdownListStart(token),
     raw: token.raw ?? "",
     text: "text" in token && typeof token.text === "string" ? token.text : "",
   }
 }
 
-function readMarkedListOrdered(token: Token) {
+function readPretextMarkdownListOrdered(token: Token) {
   return token.type === "list" ? token.ordered : undefined
 }
 
-function readMarkedListStart(token: Token) {
+function readPretextMarkdownListStart(token: Token) {
   return token.type === "list" && token.ordered && token.start !== ""
     ? Number(token.start)
     : undefined
 }
 
-function normalizeMarkedTokenKind(token: Token): PretextMarkdownTokenKind {
+function normalizePretextMarkdownTokenKind(token: Token): PretextMarkdownTokenKind {
   if (isMarkdownFootnoteDefinition(token.raw ?? "")) return "definition"
 
   switch (token.type) {

@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils"
 import { Button, type ButtonProps } from "@/components/ui/button"
 
 export type ViewerRootProps = React.ComponentProps<"div"> & {
-  bare?: boolean
   defaultOpen?: boolean
   open?: boolean
   onOpenChange?: (open: boolean) => void
@@ -28,6 +27,7 @@ export type ViewerSidebarContextValue = {
   canToggleSidebar: boolean
   mode: ViewerSidebarMode
 }
+export type ViewerFrameProps = React.ComponentProps<"div">
 
 type ViewerSidebarSide = "left" | "right"
 type ViewerSidebarCollapsible = "offcanvas" | "none"
@@ -134,7 +134,6 @@ function useViewerSidebarRegistrationContext(
 }
 
 export function ViewerRoot({
-  bare = false,
   className,
   style,
   defaultOpen = false,
@@ -400,7 +399,6 @@ export function ViewerRoot({
           data-viewer-root-id={rootId}
           className={cn(
             "relative flex min-h-0 flex-col overflow-hidden",
-            bare ? "h-full" : "rounded-xl border bg-muted/30",
             className
           )}
           style={
@@ -413,6 +411,22 @@ export function ViewerRoot({
         />
       </ViewerSidebarRegistrationContext.Provider>
     </ViewerSidebarStateContext.Provider>
+  )
+}
+
+export function ViewerFrame({
+  className,
+  ...props
+}: ViewerFrameProps) {
+  return (
+    <div
+      data-slot="viewer-frame"
+      className={cn(
+        "relative min-h-0 overflow-hidden rounded-xl border bg-background",
+        className
+      )}
+      {...props}
+    />
   )
 }
 

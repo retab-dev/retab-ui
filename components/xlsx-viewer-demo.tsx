@@ -6,7 +6,7 @@ import { XlsxViewer } from "@/components/ui/xlsx-viewer"
 
 export function XlsxViewerDemo() {
   return (
-    <div className="not-prose my-6 h-[600px]">
+    <div className="h-[600px]">
       <XlsxViewer
         source={{
           kind: "url",
