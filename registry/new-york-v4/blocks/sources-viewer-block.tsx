@@ -26,17 +26,17 @@ import {
   type DocxViewerHandle,
 } from "@/components/ui/docx-viewer"
 import {
-  FileViewer,
   FileViewerBody,
   FileViewerControls,
   FileViewerHeader,
   FileViewerMeta,
-  FileViewerSidebar,
-  FileViewerSidebarTrigger,
   FileViewerSurface,
   FileViewerTitle,
-  useFileViewerResource,
 } from "@/components/ui/file-viewer"
+import {
+  FileViewerProvider,
+  useFileViewerResource,
+} from "@/components/ui/file-viewer-internal"
 import {
   ImageViewerFrames,
   ImageViewerProvider,
@@ -71,6 +71,11 @@ import {
   TextViewerProvider,
   type TextViewerHandle,
 } from "@/components/ui/text-viewer"
+import {
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSidebarTrigger,
+} from "@/components/ui/viewer"
 import {
   sourceToXlsxCell,
   useXlsxSourceTarget,
@@ -144,7 +149,7 @@ type SourceExtraction = {
 }
 
 type SourceLinkedViewerSource = React.ComponentProps<
-  typeof FileViewer
+  typeof FileViewerProvider
 >["source"]
 
 // Build a JSON form's inputs from a flat field array. The schema property names
@@ -230,7 +235,7 @@ function fieldsToSegmentedFields(fields: readonly FlatField[]) {
 function SourceLinkedFileHeader() {
   return (
     <FileViewerHeader>
-      <FileViewerSidebarTrigger className="-ml-1" />
+      <ViewerSidebarTrigger className="-ml-1" />
       <FileViewerTitle />
       <FileViewerMeta />
       <FileViewerControls />
@@ -250,31 +255,28 @@ function SourceLinkedViewer({
   source: SourceLinkedViewerSource
 }) {
   return (
-    <FileViewer
-      source={source}
-      bare
-      defaultOpen
-      className="h-full bg-background"
-    >
-      <SourceLinkedFileHeader />
-      <FileViewerBody>
-        <FileViewerSurface className="relative">
-          {children}
-          <SourceIndicator
-            path={link.activePath}
-            found={!!link.activeSegment}
-          />
-        </FileViewerSurface>
-        <FileViewerSidebar
-          aria-label="Source-linked fields"
-          side="right"
-          width="420px"
-          className="flex flex-shrink-0 flex-col border-l"
-        >
-          <SourcesForm extraction={extraction} link={link} />
-        </FileViewerSidebar>
-      </FileViewerBody>
-    </FileViewer>
+    <ViewerRoot bare defaultOpen className="h-full bg-background">
+      <FileViewerProvider source={source}>
+        <SourceLinkedFileHeader />
+        <FileViewerBody>
+          <FileViewerSurface className="relative">
+            {children}
+            <SourceIndicator
+              path={link.activePath}
+              found={!!link.activeSegment}
+            />
+          </FileViewerSurface>
+          <ViewerSidebar
+            aria-label="Source-linked fields"
+            side="right"
+            width="420px"
+            className="flex flex-shrink-0 flex-col border-l"
+          >
+            <SourcesForm extraction={extraction} link={link} />
+          </ViewerSidebar>
+        </FileViewerBody>
+      </FileViewerProvider>
+    </ViewerRoot>
   )
 }
 

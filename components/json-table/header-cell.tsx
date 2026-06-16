@@ -121,7 +121,7 @@ export function JsonTableHeaderCell({
           <Button
             variant="ghost"
             size="sm"
-            className="h-full grow justify-start rounded-none bg-transparent px-1 text-foreground hover:bg-muted/40 sm:h-full"
+            className="h-full grow justify-start rounded-none border-0 bg-transparent px-1 text-foreground hover:bg-muted/40 sm:h-full"
           >
             {label}
           </Button>

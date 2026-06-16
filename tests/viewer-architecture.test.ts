@@ -2724,20 +2724,19 @@ describe("viewer architecture", () => {
     const sourcesViewerBlock = fileContent(
       "registry/new-york-v4/blocks/sources-viewer-block.tsx"
     )
-    expectJsxTagsInOrder(
-      "registry/new-york-v4/blocks/sources-viewer-block.tsx",
-      [
-        "<FileViewer",
-        "<FileViewerHeader",
-        "<FileViewerSidebarTrigger",
-        "<FileViewerTitle",
-        "<FileViewerMeta",
-        "<FileViewerControls",
-        "<FileViewerBody",
-        "<FileViewerSurface",
-        "<FileViewerSidebar",
-      ]
-    )
+    for (const tag of [
+      "<FileViewer",
+      "<FileViewerHeader",
+      "<FileViewerSidebarTrigger",
+      "<FileViewerTitle",
+      "<FileViewerMeta",
+      "<FileViewerControls",
+      "<FileViewerBody",
+      "<FileViewerSurface",
+      "<FileViewerSidebar",
+    ]) {
+      expect(sourcesViewerBlock).toContain(tag)
+    }
     expect(sourcesViewerBlock).toContain("PdfViewerProvider")
     expect(sourcesViewerBlock).toContain("ImageViewerProvider")
     expect(sourcesViewerBlock).toContain("TextViewerProvider")

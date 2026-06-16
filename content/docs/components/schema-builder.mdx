@@ -34,6 +34,44 @@ export function Example() {
 }
 ```
 
+## Patterns
+
+The Schema Builder is fully controlled: it never owns the schema, so the same
+`value`/`onValueChange` pair drives every pattern below.
+
+Because `onValueChange` emits standard JSON Schema on every commit, you can render
+the live result next to the editor — this is exactly the `json_schema` an
+extraction runs against.
+
+<ComponentPreview name="schema-builder-live-json" />
+
+Swap `value` to load a different starting point. Presets, saved templates, and
+"duplicate this schema" all reduce to setting controlled state.
+
+<ComponentPreview name="schema-builder-presets" />
+
+Pass `readOnly` to render an existing schema as a static, non-editable summary —
+useful for review screens and run history.
+
+<ComponentPreview name="schema-builder-read-only" />
+
+## Feature surfaces
+
+Optional surfaces are off by default (except `definitions`) and turn on through
+`features`. Enable only what a given screen needs.
+
+Set `features={{ jsonMode: true }}` to add the Fields ⇄ JSON toggle. Control the
+active view with `view` / `onViewChange` to persist or sync it.
+
+<ComponentPreview name="schema-builder-json-mode" />
+
+`definitions` lets a schema reuse a shared shape through `$defs` and `$ref`;
+`objectTemplates` and `importExport` add reusable object templates and
+import/export actions. This example turns them all on over a schema whose
+`billing_address` and `shipping_address` reference one `address` definition.
+
+<ComponentPreview name="schema-builder-definitions" />
+
 ## Props
 
 | Prop | Type | Description |
