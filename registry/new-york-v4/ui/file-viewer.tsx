@@ -22,10 +22,7 @@ import {
   type FileDescriptor,
   type FileViewerProps as FileViewerCoreProps,
 } from "./file-viewer-core"
-import {
-  FileViewerDocument,
-  InternalFileViewerDocument,
-} from "./file-viewer-document"
+import { FileViewerDocument } from "./file-viewer-document"
 import {
   FileViewerProvider,
   useFileViewerContext,
@@ -39,19 +36,29 @@ export {
 } from "./file-viewer-document"
 export { useFileViewerResource } from "./file-viewer-internal"
 
-export type FileViewerProps = FileViewerCoreProps &
-  Pick<
-    ViewerRootProps,
-    | "defaultOpen"
-    | "inlineBreakpoint"
-    | "mode"
-    | "onOpenChange"
-    | "open"
-    | "sidebarCollapsible"
-    | "sidebarSide"
-  > & {
+type FileViewerRootOptions = Pick<
+  ViewerRootProps,
+  | "defaultOpen"
+  | "inlineBreakpoint"
+  | "mode"
+  | "onOpenChange"
+  | "open"
+  | "sidebarCollapsible"
+  | "sidebarSide"
+>
+
+export type FileViewerFrameProps = FileViewerCoreProps &
+  FileViewerRootOptions & {
+    bare?: false
     children?: React.ReactNode
   }
+
+export type FileViewerStandaloneProps = FileViewerCoreProps & {
+  bare: true
+  children?: never
+}
+
+export type FileViewerProps = FileViewerFrameProps | FileViewerStandaloneProps
 
 export type FileViewerHeaderProps = React.ComponentProps<typeof ViewerHeader>
 
@@ -167,10 +174,9 @@ export function FileViewerControls({
 }: FileViewerControlsProps) {
   const { resource, controlsState } = useFileViewerHeader()
   const registeredDownloads = controlsState?.downloads
+  const hasRegisteredDownloads = registeredDownloads !== undefined
   const downloads =
-    registeredDownloads !== undefined
-      ? registeredDownloads
-      : [resource.originalDownload]
+    hasRegisteredDownloads ? registeredDownloads : [resource.originalDownload]
 
   return (
     <ViewerControls
@@ -226,26 +232,40 @@ export function FileViewerSidebarTrigger({
   )
 }
 
-export function FileViewer({
-  as,
-  bare = false,
-  children,
-  className,
-  defaultOpen,
-  inlineBreakpoint,
-  isolateStyles,
-  mode,
-  onOpenChange,
-  open,
-  sidebarCollapsible,
-  sidebarSide,
-  source,
-}: FileViewerProps) {
+export function FileViewer(props: FileViewerProps) {
+  if (props.bare) {
+    const { as, className, isolateStyles, source } = props
+    return (
+      <FileViewerProvider
+        as={as}
+        documentChrome="standalone"
+        isolateStyles={isolateStyles}
+        source={source}
+      >
+        <FileViewerDocument className={className} />
+      </FileViewerProvider>
+    )
+  }
+
+  const {
+    as,
+    children,
+    className,
+    defaultOpen,
+    inlineBreakpoint,
+    isolateStyles,
+    mode,
+    onOpenChange,
+    open,
+    sidebarCollapsible,
+    sidebarSide,
+    source,
+  } = props
+
   if (children != null) {
     return (
       <FileViewerProvider as={as} isolateStyles={isolateStyles} source={source}>
         <ViewerRoot
-          bare={bare}
           className={cn("h-full", className)}
           defaultOpen={defaultOpen}
           inlineBreakpoint={inlineBreakpoint}
@@ -257,14 +277,6 @@ export function FileViewer({
         >
           {children}
         </ViewerRoot>
-      </FileViewerProvider>
-    )
-  }
-
-  if (bare) {
-    return (
-      <FileViewerProvider as={as} isolateStyles={isolateStyles} source={source}>
-        <FileViewerDocument bare className={className} />
       </FileViewerProvider>
     )
   }
@@ -286,12 +298,7 @@ export function FileViewer({
             <FileViewerHeader />
             <FileViewerBody>
               <FileViewerSurface>
-                <InternalFileViewerDocument
-                  bare
-                  className="h-full"
-                  leafControls={false}
-                  leafDownload={false}
-                />
+                <FileViewerDocument />
               </FileViewerSurface>
             </FileViewerBody>
           </>

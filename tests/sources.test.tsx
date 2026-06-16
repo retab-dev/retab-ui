@@ -52,14 +52,16 @@ import {
 } from "@/registry/new-york-v4/ui/docx-source"
 import type { DocxViewerHandle } from "@/registry/new-york-v4/ui/docx-viewer"
 import {
+  FileViewer,
   FileViewerBody,
   FileViewerControls,
   FileViewerHeader,
   FileViewerMeta,
+  FileViewerSidebar,
+  FileViewerSidebarTrigger,
   FileViewerSurface,
   FileViewerTitle,
 } from "@/registry/new-york-v4/ui/file-viewer"
-import { FileViewerProvider } from "@/registry/new-york-v4/ui/file-viewer-internal"
 import {
   imageAnchorToTarget,
   renderImageSourceOverlay,
@@ -87,11 +89,6 @@ import {
   useTextSourceTarget,
 } from "@/registry/new-york-v4/ui/text-source"
 import type { TextViewerHandle } from "@/registry/new-york-v4/ui/text-viewer"
-import {
-  ViewerRoot,
-  ViewerSidebar,
-  ViewerSidebarTrigger,
-} from "@/registry/new-york-v4/ui/viewer"
 import {
   sourceToXlsxCell,
   spreadsheetColumnToIndex,
@@ -287,35 +284,35 @@ function SegmentedFieldLinkNavigationProbe({
 
 function SourcesViewerSidebarProbe() {
   return (
-    <ViewerRoot bare defaultOpen mode="inline">
-      <FileViewerProvider
-        source={{
-          kind: "text",
-          text: "source document",
-          fileName: "source-document.txt",
-        }}
-      >
-        <FileViewerHeader>
-          <ViewerSidebarTrigger data-testid="source-sidebar-trigger" />
-          <FileViewerTitle />
-          <FileViewerMeta />
-          <FileViewerControls />
-        </FileViewerHeader>
-        <FileViewerBody>
-          <FileViewerSurface data-testid="source-document-surface">
-            Document
-          </FileViewerSurface>
-          <ViewerSidebar
-            aria-label="Source-linked fields"
-            data-testid="source-sidebar"
-            side="right"
-            width="420px"
-          >
-            Source-linked data
-          </ViewerSidebar>
-        </FileViewerBody>
-      </FileViewerProvider>
-    </ViewerRoot>
+    <FileViewer
+      source={{
+        kind: "text",
+        text: "source document",
+        fileName: "source-document.txt",
+      }}
+      defaultOpen
+      mode="inline"
+    >
+      <FileViewerHeader>
+        <FileViewerSidebarTrigger data-testid="source-sidebar-trigger" />
+        <FileViewerTitle />
+        <FileViewerMeta />
+        <FileViewerControls />
+      </FileViewerHeader>
+      <FileViewerBody>
+        <FileViewerSurface data-testid="source-document-surface">
+          Document
+        </FileViewerSurface>
+        <FileViewerSidebar
+          aria-label="Source-linked fields"
+          data-testid="source-sidebar"
+          side="right"
+          width="420px"
+        >
+          Source-linked data
+        </FileViewerSidebar>
+      </FileViewerBody>
+    </FileViewer>
   )
 }
 

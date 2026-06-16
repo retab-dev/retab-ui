@@ -97,7 +97,6 @@ function DocxSourcesContent({
   return (
     <FileViewer
       source={DOCX_SOURCE}
-      bare
       className="h-full min-h-[680px] bg-background"
     >
       <FileViewerHeader>

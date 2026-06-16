@@ -26,6 +26,10 @@ vi.mock("mermaid", () => ({
         throw new Error("Mermaid parse error")
       }
 
+      if (source.includes("force-basic-fallback")) {
+        throw new Error("getBBox is not a function")
+      }
+
       if (source.includes("unsafe-svg")) {
         return {
           svg: [
@@ -1741,9 +1745,9 @@ describe("PretextMarkdownViewer", () => {
       <PretextMarkdownViewer
         source={markdownSource(
           [
-            '<Diagram type="mermaid" title="Component flow" source="graph TD; A-->B" />',
+            '<Diagram type="mermaid" title="Component flow" caption="Component caption" source="graph TD; A-->B" />',
             "",
-            '::diagram{type="mermaid" title="Directive flow" source="graph LR; Start-->Done"}',
+            '::diagram{type="mermaid" title="Directive flow" caption="Directive caption" source="graph LR; Start-->Done"}',
           ].join("\n")
         )}
         controls={false}
@@ -1767,6 +1771,21 @@ describe("PretextMarkdownViewer", () => {
     })
     expect(screen.getByText("Component flow")).toBeTruthy()
     expect(screen.getByText("Directive flow")).toBeTruthy()
+    expect(screen.getByText("Component caption")).toBeTruthy()
+    expect(screen.getByText("Directive caption")).toBeTruthy()
+    const captions = Array.from(
+      container.querySelectorAll<HTMLElement>("[data-pretext-diagram-caption]")
+    )
+    expect(captions.map((caption) => caption.textContent)).toEqual([
+      "Component caption",
+      "Directive caption",
+    ])
+    expect(diagrams[0]?.getAttribute("aria-describedby")).toContain(
+      captions[0]?.id
+    )
+    expect(diagrams[1]?.getAttribute("aria-describedby")).toContain(
+      captions[1]?.id
+    )
     expect(container.textContent).not.toContain("<Diagram")
     expect(container.textContent).not.toContain("::diagram")
 
@@ -2050,6 +2069,40 @@ describe("PretextMarkdownViewer", () => {
     expect(diagram?.querySelector("svg")).toBeTruthy()
   })
 
+  it("renders Mermaid fence title and caption metadata", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            '```mermaid title="System flow" caption="Rendered architecture diagram"',
+            "graph LR",
+            "  Start-->Done",
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    expect(await screen.findByText("System flow")).toBeTruthy()
+    expect(screen.getByRole("group", { name: "System flow" })).toBeTruthy()
+    const diagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+    const description = container.querySelector<HTMLElement>(
+      "[data-pretext-diagram-description]"
+    )
+    const caption = container.querySelector<HTMLElement>(
+      "[data-pretext-diagram-caption]"
+    )
+
+    expect(caption?.tagName).toBe("FIGCAPTION")
+    expect(caption?.textContent).toBe("Rendered architecture diagram")
+    expect(diagram?.getAttribute("aria-describedby")).toBe(
+      `${description?.id} ${caption?.id}`
+    )
+  })
+
   it("copies Mermaid diagram source from rendered diagram surfaces", async () => {
     render(
       <PretextMarkdownViewer
@@ -2067,6 +2120,81 @@ describe("PretextMarkdownViewer", () => {
       )
     })
     expect(screen.getByLabelText("Copied")).toBeTruthy()
+  })
+
+  it("renders sequence diagrams through the built-in fallback when Mermaid layout fails", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```mermaid",
+            "%% force-basic-fallback",
+            "sequenceDiagram",
+            "participant U as User",
+            "participant A as App",
+            "U->>A: Request",
+            "A-->>U: Response",
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    const diagram = await screen.findByRole("group", {
+      name: "Mermaid diagram",
+    })
+    await waitFor(() => {
+      expect(diagram.getAttribute("data-diagram-state")).toBe("ready")
+    })
+
+    const svg = container.querySelector<SVGSVGElement>(
+      'svg[data-pretext-basic-mermaid="sequence"]'
+    )
+    expect(svg).toBeTruthy()
+    expect(screen.queryByTestId("mock-mermaid-svg")).toBeNull()
+    expect(svg?.textContent).toContain("User")
+    expect(svg?.textContent).toContain("App")
+    expect(svg?.textContent).toContain("Request")
+    expect(svg?.textContent).toContain("Response")
+    expect(screen.getByRole("img", { name: "Mermaid diagram" })).toBeTruthy()
+  })
+
+  it("renders state diagrams through the built-in fallback when Mermaid layout fails", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```mermaid",
+            "%% force-basic-fallback",
+            "stateDiagram-v2",
+            'state "In Review" as Review',
+            "Draft --> Review: Submit",
+            "Review --> Done",
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    const diagram = await screen.findByRole("group", {
+      name: "Mermaid diagram",
+    })
+    await waitFor(() => {
+      expect(diagram.getAttribute("data-diagram-state")).toBe("ready")
+    })
+
+    const svg = container.querySelector<SVGSVGElement>(
+      'svg[data-pretext-basic-mermaid="state"]'
+    )
+    expect(svg).toBeTruthy()
+    expect(screen.queryByTestId("mock-mermaid-svg")).toBeNull()
+    expect(svg?.textContent).toContain("Draft")
+    expect(svg?.textContent).toContain("In Review")
+    expect(svg?.textContent).toContain("Done")
+    expect(svg?.textContent).toContain("Submit")
+    expect(screen.getByRole("img", { name: "Mermaid diagram" })).toBeTruthy()
   })
 
   it("copies sanitized Mermaid SVG only from ready diagram surfaces", async () => {
@@ -2132,6 +2260,40 @@ describe("PretextMarkdownViewer", () => {
 
     rerender(
       <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```mermaid",
+            "---",
+            "title: Release graph",
+            "---",
+            "graph TD",
+            "  A-->B",
+            "  B-->C",
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    await waitFor(() => {
+      expect(
+        container.querySelector<HTMLElement>(
+          "[data-pretext-diagram-description]"
+        )?.textContent
+      ).toBe(
+        "Mermaid graph diagram flowing top down, with 3 nodes and 2 edges."
+      )
+    })
+    const graphWithFrontmatter = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+    expect(
+      graphWithFrontmatter?.getAttribute("data-diagram-reserved-height")
+    ).toBe("286")
+
+    rerender(
+      <PretextMarkdownViewer
         source={markdownSource("```mermaid\nsequenceDiagram\nA->>B: hi\n```")}
         controls={false}
       />
@@ -2151,6 +2313,338 @@ describe("PretextMarkdownViewer", () => {
     expect(sequence?.getAttribute("aria-describedby")).toBe(
       sequenceDescription?.id
     )
+
+    rerender(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```mermaid",
+            "stateDiagram-v2",
+            "  [*] --> Idle",
+            "  Idle --> Running: start",
+            "  Running --> Idle: stop",
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    await waitFor(() => {
+      expect(
+        container.querySelector<HTMLElement>(
+          "[data-pretext-diagram-description]"
+        )?.textContent
+      ).toBe("Mermaid state diagram with 2 states and 3 transitions.")
+    })
+    const state = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+    const stateDescription = container.querySelector<HTMLElement>(
+      "[data-pretext-diagram-description]"
+    )
+    expect(state?.getAttribute("aria-describedby")).toBe(stateDescription?.id)
+    expect(state?.getAttribute("data-diagram-reserved-height")).toBe("238")
+
+    rerender(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```mermaid",
+            "classDiagram",
+            "  Animal <|-- Duck",
+            "  class Animal",
+            "  Duck : +swim()",
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    await waitFor(() => {
+      expect(
+        container.querySelector<HTMLElement>(
+          "[data-pretext-diagram-description]"
+        )?.textContent
+      ).toBe("Mermaid class diagram with 2 classes and 1 relationship.")
+    })
+    const classDiagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+    const classDescription = container.querySelector<HTMLElement>(
+      "[data-pretext-diagram-description]"
+    )
+    expect(classDiagram?.getAttribute("aria-describedby")).toBe(
+      classDescription?.id
+    )
+    expect(classDiagram?.getAttribute("data-diagram-reserved-height")).toBe(
+      "220"
+    )
+
+    rerender(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```mermaid",
+            "erDiagram",
+            "  CUSTOMER ||--o{ ORDER : places",
+            "  ORDER ||--|{ LINE_ITEM : contains",
+            "  CUSTOMER {",
+            "    string id",
+            "  }",
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    await waitFor(() => {
+      expect(
+        container.querySelector<HTMLElement>(
+          "[data-pretext-diagram-description]"
+        )?.textContent
+      ).toBe(
+        "Mermaid entity relationship diagram with 3 entities and 2 relationships."
+      )
+    })
+    const erDiagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+    const erDescription = container.querySelector<HTMLElement>(
+      "[data-pretext-diagram-description]"
+    )
+    expect(erDiagram?.getAttribute("aria-describedby")).toBe(erDescription?.id)
+    expect(erDiagram?.getAttribute("data-diagram-reserved-height")).toBe("292")
+
+    rerender(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```mermaid",
+            "journey",
+            "  title Release",
+            "  section Build",
+            "    Compile: 5: CI",
+            "    Test: 4: QA",
+            "  section Operate",
+            "    Observe: 3: SRE",
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    await waitFor(() => {
+      expect(
+        container.querySelector<HTMLElement>(
+          "[data-pretext-diagram-description]"
+        )?.textContent
+      ).toBe("Mermaid journey diagram with 2 sections and 3 tasks.")
+    })
+    const journeyDiagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+    const journeyDescription = container.querySelector<HTMLElement>(
+      "[data-pretext-diagram-description]"
+    )
+    expect(journeyDiagram?.getAttribute("aria-describedby")).toBe(
+      journeyDescription?.id
+    )
+    expect(journeyDiagram?.getAttribute("data-diagram-reserved-height")).toBe(
+      "270"
+    )
+
+    rerender(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```mermaid",
+            "gantt",
+            "  title Release plan",
+            "  dateFormat  YYYY-MM-DD",
+            "  section Design",
+            "  Spec :done, spec, 2026-01-01, 3d",
+            "  Build :active, build, after spec, 5d",
+            "  section Launch",
+            "  Release :milestone, rel, 2026-01-12, 1d",
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    await waitFor(() => {
+      expect(
+        container.querySelector<HTMLElement>(
+          "[data-pretext-diagram-description]"
+        )?.textContent
+      ).toBe("Mermaid Gantt chart with 2 sections and 3 tasks.")
+    })
+    const ganttDiagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+    const ganttDescription = container.querySelector<HTMLElement>(
+      "[data-pretext-diagram-description]"
+    )
+    expect(ganttDiagram?.getAttribute("aria-describedby")).toBe(
+      ganttDescription?.id
+    )
+    expect(ganttDiagram?.getAttribute("data-diagram-reserved-height")).toBe(
+      "300"
+    )
+
+    rerender(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```mermaid",
+            "gitGraph",
+            "  commit",
+            "  branch feature",
+            "  checkout feature",
+            "  commit",
+            "  checkout main",
+            "  merge feature",
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    await waitFor(() => {
+      expect(
+        container.querySelector<HTMLElement>(
+          "[data-pretext-diagram-description]"
+        )?.textContent
+      ).toBe("Mermaid Git graph with 1 branch, 2 commits, and 1 merge.")
+    })
+    const gitGraphDiagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+    const gitGraphDescription = container.querySelector<HTMLElement>(
+      "[data-pretext-diagram-description]"
+    )
+    expect(gitGraphDiagram?.getAttribute("aria-describedby")).toBe(
+      gitGraphDescription?.id
+    )
+    expect(gitGraphDiagram?.getAttribute("data-diagram-reserved-height")).toBe(
+      "212"
+    )
+
+    rerender(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```mermaid",
+            "timeline",
+            "  title Markdown viewer",
+            "  section Alpha",
+            "    2024 : Parser",
+            "    2025 : Renderer : Registry",
+            "  section Beta",
+            "    2026 : Rollout",
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    await waitFor(() => {
+      expect(
+        container.querySelector<HTMLElement>(
+          "[data-pretext-diagram-description]"
+        )?.textContent
+      ).toBe("Mermaid timeline with 2 sections and 3 events.")
+    })
+    const timelineDiagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+    const timelineDescription = container.querySelector<HTMLElement>(
+      "[data-pretext-diagram-description]"
+    )
+    expect(timelineDiagram?.getAttribute("aria-describedby")).toBe(
+      timelineDescription?.id
+    )
+    expect(timelineDiagram?.getAttribute("data-diagram-reserved-height")).toBe(
+      "270"
+    )
+
+    rerender(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```mermaid",
+            "mindmap",
+            "  root((Viewer))",
+            "    Diagrams",
+            "      Mermaid",
+            "    Math",
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    await waitFor(() => {
+      expect(
+        container.querySelector<HTMLElement>(
+          "[data-pretext-diagram-description]"
+        )?.textContent
+      ).toBe("Mermaid mind map with 4 nodes.")
+    })
+    const mindMapDiagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+    const mindMapDescription = container.querySelector<HTMLElement>(
+      "[data-pretext-diagram-description]"
+    )
+    expect(mindMapDiagram?.getAttribute("aria-describedby")).toBe(
+      mindMapDescription?.id
+    )
+    expect(mindMapDiagram?.getAttribute("data-diagram-reserved-height")).toBe(
+      "232"
+    )
+
+    rerender(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "```mermaid",
+            "pie showData",
+            '  "Adopted" : 70',
+            '  "Trial" : 20',
+            '  "Churned" : 10',
+            "```",
+          ].join("\n")
+        )}
+        controls={false}
+      />
+    )
+
+    await waitFor(() => {
+      expect(
+        container.querySelector<HTMLElement>(
+          "[data-pretext-diagram-description]"
+        )?.textContent
+      ).toBe("Mermaid pie chart with 3 slices and total value 100.")
+    })
+    const pieDiagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+    const pieDescription = container.querySelector<HTMLElement>(
+      "[data-pretext-diagram-description]"
+    )
+    expect(pieDiagram?.getAttribute("aria-describedby")).toBe(
+      pieDescription?.id
+    )
+    expect(pieDiagram?.getAttribute("data-diagram-reserved-height")).toBe("224")
   })
 
   it("normalizes Mermaid fence aliases before choosing the render surface", async () => {
@@ -2197,10 +2691,11 @@ describe("PretextMarkdownViewer", () => {
     const mermaid = (await import("mermaid")).default
     const renderResult = createDeferred<{ diagramType: string; svg: string }>()
     vi.mocked(mermaid.render).mockReturnValueOnce(renderResult.promise)
+    const source = "stateDiagram-v2\n[*] --> Draft"
 
     const { container } = render(
       <PretextMarkdownViewer
-        source={markdownSource("```mermaid\nsequenceDiagram\nA->>B: hi\n```")}
+        source={markdownSource(`\`\`\`mermaid\n${source}\n\`\`\``)}
         controls={false}
       />
     )
@@ -2212,12 +2707,12 @@ describe("PretextMarkdownViewer", () => {
 
     expect(diagram?.dataset.diagramState).toBe("loading")
     expect(screen.getByLabelText("Mermaid diagram source").textContent).toBe(
-      "sequenceDiagram\nA->>B: hi"
+      source
     )
     expect(container.textContent).not.toContain("Unsupported Mermaid diagram")
 
     renderResult.resolve({
-      diagramType: "sequence",
+      diagramType: "state",
       svg: '<svg role="img" aria-label="Mermaid diagram" data-testid="mock-mermaid-svg" xmlns="http://www.w3.org/2000/svg"></svg>',
     })
 
@@ -2336,23 +2831,47 @@ describe("PretextMarkdownViewer", () => {
     expect(sequenceDiagram?.getAttribute("data-diagram-reserved-height")).toBe(
       "160"
     )
-    const pendingBody = sequenceDiagram?.querySelector(
+    const pendingBody = sequenceDiagram?.querySelector<HTMLElement>(
       "[data-pretext-diagram-body]"
     )
     expect(pendingBody?.className).toContain(
       "h-(--pretext-diagram-body-height)"
     )
+    expect(pendingBody?.getAttribute("aria-label")).toBe("Mermaid diagram body")
+    expect(pendingBody?.getAttribute("role")).toBe("region")
+    expect(pendingBody?.getAttribute("tabindex")).toBe("0")
 
     await waitFor(() =>
       expect(sequenceDiagram?.dataset.diagramState).toBe("ready")
     )
-    const readyBody = sequenceDiagram?.querySelector(
+    const readyBody = sequenceDiagram?.querySelector<HTMLElement>(
       "[data-pretext-diagram-body]"
     )
     expect(sequenceDiagram?.getAttribute("data-diagram-reserved-height")).toBe(
       "160"
     )
     expect(readyBody?.className).toContain("h-(--pretext-diagram-body-height)")
+    expect(readyBody?.getAttribute("aria-label")).toBe("Mermaid diagram body")
+    expect(readyBody?.getAttribute("role")).toBe("region")
+    expect(readyBody?.getAttribute("tabindex")).toBe("0")
+
+    Object.defineProperty(readyBody, "clientWidth", {
+      configurable: true,
+      value: 200,
+    })
+    Object.defineProperty(readyBody, "scrollWidth", {
+      configurable: true,
+      value: 900,
+    })
+
+    fireEvent.keyDown(readyBody!, { key: "ArrowRight" })
+    expect(readyBody?.scrollLeft).toBe(50)
+
+    fireEvent.keyDown(readyBody!, { key: "End" })
+    expect(readyBody?.scrollLeft).toBe(700)
+
+    fireEvent.keyDown(readyBody!, { key: "Home" })
+    expect(readyBody?.scrollLeft).toBe(0)
   })
 
   it("sanitizes rendered Mermaid SVG before mounting it", async () => {
@@ -2435,7 +2954,29 @@ describe("PretextMarkdownViewer", () => {
     expect(container.querySelectorAll(".katex").length).toBeGreaterThanOrEqual(
       2
     )
-    expect(container.querySelector(".katex-display")).toBeTruthy()
+    expect(container.querySelector("[data-pretext-math-inline]")).toBeTruthy()
+    const mathBlock = screen.getByRole("region", { name: "Math block" })
+    expect(mathBlock).toBeTruthy()
+    expect(mathBlock.getAttribute("data-pretext-math-block")).toBe("")
+    expect(mathBlock.className).toContain("overflow-x-auto")
+
+    Object.defineProperty(mathBlock, "clientWidth", {
+      configurable: true,
+      value: 200,
+    })
+    Object.defineProperty(mathBlock, "scrollWidth", {
+      configurable: true,
+      value: 900,
+    })
+
+    fireEvent.keyDown(mathBlock, { key: "ArrowRight" })
+    expect(mathBlock.scrollLeft).toBe(50)
+
+    fireEvent.keyDown(mathBlock, { key: "End" })
+    expect(mathBlock.scrollLeft).toBe(700)
+
+    fireEvent.keyDown(mathBlock, { key: "Home" })
+    expect(mathBlock.scrollLeft).toBe(0)
   })
 
   it("keeps unsafe KaTeX trust commands inert", async () => {
@@ -2664,6 +3205,34 @@ describe("PretextMarkdownViewer", () => {
             "```jsonc",
             '{ "comments": false }',
             "```",
+            "",
+            "```bash",
+            "pnpm test",
+            "```",
+            "",
+            "```terminal",
+            "$ pnpm lint",
+            "```",
+            "",
+            "```yml",
+            "name: ci",
+            "```",
+            "",
+            "```md",
+            "# Heading",
+            "```",
+            "",
+            "```patch",
+            "+added",
+            "```",
+            "",
+            "```docker",
+            "FROM node:22",
+            "```",
+            "",
+            "```rb",
+            "puts :ok",
+            "```",
           ].join("\n")
         )}
         controls={false}
@@ -2674,13 +3243,36 @@ describe("PretextMarkdownViewer", () => {
       await screen.findByRole("group", { name: "ts code block" })
     ).toBeTruthy()
     expect(screen.getByRole("group", { name: "js code block" })).toBeTruthy()
-    expect(screen.getByRole("group", { name: "shell code block" })).toBeTruthy()
     expect(screen.getByRole("group", { name: "json code block" })).toBeTruthy()
+    expect(
+      screen.getAllByRole("group", { name: "shell code block" })
+    ).toHaveLength(3)
+    expect(screen.getByRole("group", { name: "yaml code block" })).toBeTruthy()
+    expect(
+      screen.getByRole("group", { name: "markdown code block" })
+    ).toBeTruthy()
+    expect(screen.getByRole("group", { name: "diff code block" })).toBeTruthy()
+    expect(
+      screen.getByRole("group", { name: "dockerfile code block" })
+    ).toBeTruthy()
+    expect(screen.getByRole("group", { name: "ruby code block" })).toBeTruthy()
     expect(
       Array.from(
         container.querySelectorAll("[data-pretext-code-language]")
       ).map((node) => node.getAttribute("data-pretext-code-language"))
-    ).toEqual(["ts", "js", "shell", "json"])
+    ).toEqual([
+      "ts",
+      "js",
+      "shell",
+      "json",
+      "shell",
+      "shell",
+      "yaml",
+      "markdown",
+      "diff",
+      "dockerfile",
+      "ruby",
+    ])
 
     fireEvent.click(screen.getAllByLabelText("Copy code block")[0]!)
 
@@ -2794,6 +3386,15 @@ describe("PretextMarkdownViewer", () => {
     expect(code?.className).toContain("[counter-reset:line]")
     expect(code?.className).toContain("content-[counter(line)]")
     expect(lines).toHaveLength(2)
+    await waitFor(() => {
+      expect(code?.getAttribute("role")).toBe("list")
+      expect(code?.getAttribute("aria-label")).toBe("ts numbered code lines")
+      expect(lines[0]?.getAttribute("role")).toBe("listitem")
+      expect(lines[0]?.getAttribute("aria-label")).toBe("Line 5")
+      expect(lines[0]?.getAttribute("data-pretext-code-line-number")).toBe("5")
+      expect(lines[1]?.getAttribute("aria-label")).toBe("Line 6")
+      expect(lines[1]?.getAttribute("data-pretext-code-line-number")).toBe("6")
+    })
 
     fireEvent.click(screen.getByLabelText("Copy code block"))
 
@@ -2945,15 +3546,27 @@ describe("PretextMarkdownViewer", () => {
     expect(tableRegion).toBeTruthy()
     expect(tableRegion.getAttribute("tabindex")).toBe("0")
     expect(tableRegion.contains(table)).toBe(true)
+    expect(table.getAttribute("aria-rowcount")).toBe("2")
+    expect(table.getAttribute("aria-colcount")).toBe("3")
+    const rows = container.querySelectorAll<HTMLTableRowElement>("tr")
+    expect(rows[0]?.getAttribute("aria-rowindex")).toBe("1")
+    expect(rows[0]?.getAttribute("data-pretext-table-row-index")).toBe("1")
+    expect(rows[1]?.getAttribute("aria-rowindex")).toBe("2")
+    expect(rows[1]?.getAttribute("data-pretext-table-row-index")).toBe("2")
     const headers = container.querySelectorAll<HTMLTableCellElement>("th")
     const cells = container.querySelectorAll<HTMLTableCellElement>("td")
     expect(headers[0]?.id).toMatch(
       /^pretext-markdown-chunk-\d+-\d+-table-0-column-0$/
     )
     expect(headers[0]?.scope).toBe("col")
+    expect(headers[0]?.getAttribute("aria-colindex")).toBe("1")
+    expect(headers[0]?.getAttribute("data-pretext-table-column-index")).toBe(
+      "1"
+    )
     expect(headers[1]?.id).toMatch(
       /^pretext-markdown-chunk-\d+-\d+-table-0-column-1$/
     )
+    expect(headers[1]?.getAttribute("aria-colindex")).toBe("2")
     expect(headers[0]?.className).toContain("text-left")
     expect(headers[1]?.align).toBe("center")
     expect(headers[2]?.align).toBe("right")
@@ -2962,6 +3575,10 @@ describe("PretextMarkdownViewer", () => {
     expect(cells[0]?.headers).toBe(headers[0]?.id)
     expect(cells[1]?.headers).toBe(headers[1]?.id)
     expect(cells[2]?.headers).toBe(headers[2]?.id)
+    expect(cells[0]?.getAttribute("aria-colindex")).toBe("1")
+    expect(cells[0]?.getAttribute("data-pretext-table-column-index")).toBe("1")
+    expect(cells[1]?.getAttribute("aria-colindex")).toBe("2")
+    expect(cells[2]?.getAttribute("aria-colindex")).toBe("3")
     expect(cells[1]?.className).toContain("text-center")
     expect(cells[2]?.align).toBe("right")
     expect(cells[2]?.className).toContain("tabular-nums")
@@ -2975,13 +3592,29 @@ describe("PretextMarkdownViewer", () => {
     expect(screen.getByRole("link", { name: /Site/ })).toBeTruthy()
     expect(screen.getByText(/✅/)).toBeTruthy()
 
-    fireEvent.click(screen.getByLabelText("Copy table"))
+    const copyTableButton = screen.getByLabelText("Copy table")
+    fireEvent.click(copyTableButton)
 
     await waitFor(() => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
         ["Name\tLink\tCount", "Bold code old\tSite ✅\t42"].join("\n")
       )
     })
+
+    const selection = window.getSelection()
+    const range = document.createRange()
+    range.selectNodeContents(cells[0]!)
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+
+    fireEvent.click(copyTableButton)
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenLastCalledWith(
+        "Bold code old"
+      )
+    })
+    selection?.removeAllRanges()
   })
 
   it("supports keyboard horizontal scrolling in table regions", async () => {
@@ -3189,6 +3822,7 @@ describe("PretextMarkdownViewer", () => {
           [
             'Press <kbd onclick="bad()">⌘K</kbd> for H<sub>2</sub>O and x<sup>2</sup>.',
             '<q cite="javascript:alert(1)" class="raw">quoted</q> <ins cite="https://example.com/change">added</ins> <mark>marked</mark> <var>value</var> <samp>output</samp>',
+            '<abbr title="Application programming interface" onclick="bad()">API</abbr> <time datetime="2026-06-16" style="color:red">June 16</time> <cite class="raw">RFC 9110</cite> <dfn title="Hypertext Transfer Protocol">HTTP</dfn> <small onclick="bad()">fine print</small>',
           ].join("\n")
         )}
         controls={false}
@@ -3240,6 +3874,45 @@ describe("PretextMarkdownViewer", () => {
     expect(container.querySelector("samp")?.className).toContain("font-mono")
     expect(
       container.querySelector("samp")?.getAttribute("data-pretext-raw-inline")
+    ).toBe("")
+    expect(container.querySelector("abbr")?.textContent).toBe("API")
+    expect(container.querySelector("abbr")?.getAttribute("title")).toBe(
+      "Application programming interface"
+    )
+    expect(container.querySelector("abbr")?.getAttribute("onclick")).toBeNull()
+    expect(container.querySelector("abbr")?.className).toContain("cursor-help")
+    expect(
+      container.querySelector("abbr")?.getAttribute("data-pretext-raw-inline")
+    ).toBe("")
+    expect(container.querySelector("time")?.textContent).toBe("June 16")
+    expect(container.querySelector("time")?.getAttribute("datetime")).toBe(
+      "2026-06-16"
+    )
+    expect(container.querySelector("time")?.getAttribute("style")).toBeNull()
+    expect(
+      container.querySelector("time")?.getAttribute("data-pretext-raw-inline")
+    ).toBe("")
+    expect(container.querySelector("cite")?.textContent).toBe("RFC 9110")
+    expect(container.querySelector("cite")?.className).toContain("italic")
+    expect(container.querySelector("cite")?.className).not.toContain("raw")
+    expect(
+      container.querySelector("cite")?.getAttribute("data-pretext-raw-inline")
+    ).toBe("")
+    expect(container.querySelector("dfn")?.textContent).toBe("HTTP")
+    expect(container.querySelector("dfn")?.getAttribute("title")).toBe(
+      "Hypertext Transfer Protocol"
+    )
+    expect(container.querySelector("dfn")?.className).toContain("italic")
+    expect(
+      container.querySelector("dfn")?.getAttribute("data-pretext-raw-inline")
+    ).toBe("")
+    expect(container.querySelector("small")?.textContent).toBe("fine print")
+    expect(container.querySelector("small")?.getAttribute("onclick")).toBeNull()
+    expect(container.querySelector("small")?.className).toContain(
+      "text-muted-foreground"
+    )
+    expect(
+      container.querySelector("small")?.getAttribute("data-pretext-raw-inline")
     ).toBe("")
   })
 

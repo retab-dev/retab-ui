@@ -112,7 +112,7 @@ function ExtractViewerContent() {
       </ViewerHeader>
       <ViewerBody>
         <ViewerSurface className="relative">
-          <FileViewer source={PDF_SOURCE} bare className="h-full">
+          <FileViewer source={PDF_SOURCE} className="h-full">
             <PdfViewerProvider>
               <FileViewerBody>
                 <FileViewerSurface>

@@ -23,6 +23,10 @@ import {
   resolvedTextViewerBounds,
   splitTextLines,
 } from "./plain-text-resource"
+import {
+  useViewerControlsRegistration,
+  type ViewerControlsState,
+} from "./viewer-controls"
 
 type CodeReadingAnchor = {
   lineIndex: number
@@ -103,7 +107,16 @@ export function CodeViewerContent({
     [fontScale, lineHeight, textLines.length]
   )
 
-  const zoom = (factor: number) => commitFontScale(fontScale * factor)
+  const zoom = React.useCallback(
+    (factor: number) => commitFontScale(fontScale * factor),
+    [commitFontScale, fontScale]
+  )
+  const onZoomOut = React.useCallback(() => zoom(1 / 1.2), [zoom])
+  const onZoomIn = React.useCallback(() => zoom(1.2), [zoom])
+  const onResetZoom = React.useCallback(
+    () => commitFontScale(1),
+    [commitFontScale]
+  )
 
   React.useLayoutEffect(() => {
     const anchor = pendingScrollAnchorRef.current
@@ -179,6 +192,15 @@ export function CodeViewerContent({
 
   React.useEffect(() => () => projector.destroy(), [projector])
 
+  useCodeControlsRegistration({
+    downloadAction,
+    fontScale,
+    lineCount: textLines.length,
+    onResetZoom,
+    onZoomIn,
+    onZoomOut,
+  })
+
   return (
     <CodeViewerFrame className={className} bare={bare}>
       {controls ? (
@@ -186,9 +208,9 @@ export function CodeViewerContent({
           lineCount={textLines.length}
           fontScale={fontScale}
           downloadAction={downloadAction}
-          onZoomOut={() => zoom(1 / 1.2)}
-          onZoomIn={() => zoom(1.2)}
-          onResetZoom={() => commitFontScale(1)}
+          onZoomOut={onZoomOut}
+          onZoomIn={onZoomIn}
+          onResetZoom={onResetZoom}
         />
       ) : null}
       <CodeViewerViewport
@@ -201,6 +223,44 @@ export function CodeViewerContent({
       />
     </CodeViewerFrame>
   )
+}
+
+function useCodeControlsRegistration({
+  downloadAction,
+  fontScale,
+  lineCount,
+  onResetZoom,
+  onZoomIn,
+  onZoomOut,
+}: {
+  downloadAction: ViewerResource["originalDownload"] | null
+  fontScale: number
+  lineCount: number
+  onResetZoom: () => void
+  onZoomIn: () => void
+  onZoomOut: () => void
+}) {
+  const onControlsChange = useViewerControlsRegistration()
+  const controlsState = React.useMemo<ViewerControlsState>(
+    () => ({
+      title: `${lineCount} line${lineCount === 1 ? "" : "s"}`,
+      zoom: {
+        scale: fontScale,
+        onZoomOut,
+        onZoomIn,
+        onFit: onResetZoom,
+        fitLabel: "Reset zoom",
+      },
+      downloads: downloadAction ? [downloadAction] : [],
+    }),
+    [downloadAction, fontScale, lineCount, onResetZoom, onZoomIn, onZoomOut]
+  )
+
+  React.useEffect(() => {
+    if (!onControlsChange) return
+    onControlsChange(controlsState)
+    return () => onControlsChange(null)
+  }, [onControlsChange, controlsState])
 }
 
 function captureCodeReadingAnchor({

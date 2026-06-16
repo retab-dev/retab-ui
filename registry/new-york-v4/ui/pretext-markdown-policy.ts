@@ -93,6 +93,7 @@ export const PRETEXT_COMPONENT_REGISTRY = {
   Diagram: {
     directiveName: "diagram",
     props: {
+      caption: {},
       source: {},
       title: {},
       type: { values: ["mermaid"] },
@@ -511,7 +512,9 @@ export function createPretextMarkdownSanitizeSchema(): RehypeSanitizeOptions {
         "dataPretextDefinitionTerm",
         "dataPretextHeadingId",
       ],
+      abbr: ["title"],
       code: [...(defaultSchema.attributes?.code ?? []), "metastring"],
+      dfn: ["title"],
       div: [
         ...(defaultSchema.attributes?.div ?? []),
         "dataPretextCalloutKind",
@@ -523,21 +526,27 @@ export function createPretextMarkdownSanitizeSchema(): RehypeSanitizeOptions {
         "dataPretextComponentFallbackSource",
       ],
       mark: ["title"],
+      time: ["dateTime", "title"],
     },
     tagNames: [
       ...(defaultSchema.tagNames ?? []),
+      "abbr",
       "caption",
+      "cite",
       "details",
       "dd",
+      "dfn",
       "dl",
       "dt",
       "figcaption",
       "figure",
       "kbd",
       "mark",
+      "small",
       "sub",
       "summary",
       "sup",
+      "time",
     ],
   }
 }

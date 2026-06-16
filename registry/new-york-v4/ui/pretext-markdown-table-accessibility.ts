@@ -29,6 +29,34 @@ export function patchPretextMarkdownChunkTables({
     .querySelectorAll<HTMLTableElement>("table[data-pretext-markdown-table]")
     .forEach((table, tableIndex) => {
       const headers = Array.from(table.querySelectorAll("thead th"))
+      const rows = Array.from(table.rows)
+      const columnCount = Math.max(
+        0,
+        ...rows.map((row) =>
+          Array.from(row.cells).reduce(
+            (count, cell) => count + Math.max(1, cell.colSpan || 1),
+            0
+          )
+        )
+      )
+
+      table.setAttribute("aria-rowcount", String(rows.length))
+      table.setAttribute("aria-colcount", String(columnCount))
+
+      rows.forEach((row, rowIndex) => {
+        row.setAttribute("aria-rowindex", String(rowIndex + 1))
+        row.setAttribute("data-pretext-table-row-index", String(rowIndex + 1))
+
+        let columnIndex = 1
+        Array.from(row.cells).forEach((cell) => {
+          cell.setAttribute("aria-colindex", String(columnIndex))
+          cell.setAttribute(
+            "data-pretext-table-column-index",
+            String(columnIndex)
+          )
+          columnIndex += Math.max(1, cell.colSpan || 1)
+        })
+      })
 
       headers.forEach((header, columnIndex) => {
         header.id = pretextMarkdownTableHeaderId(

@@ -33,7 +33,7 @@ const PDF_SOURCE = {
 export function PdfThumbnailsBlock() {
   return (
     <div className="h-full min-h-[680px] bg-background">
-      <FileViewer source={PDF_SOURCE} bare defaultOpen className="h-full">
+      <FileViewer source={PDF_SOURCE} defaultOpen className="h-full">
         <PdfViewerProvider>
           <FileViewerHeader>
             <FileViewerSidebarTrigger className="-ml-1" />

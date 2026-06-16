@@ -5,7 +5,7 @@ description: Render a Retab split result — named subdocuments over the source 
 
 Renders a Retab split result: named subdocuments, each owning a set of pages.
 
-<SplitViewerDemo />
+<ComponentPreview name="split-viewer-demo" />
 
 ## Viewer Composition
 
@@ -33,7 +33,7 @@ function SplitDocument() {
 export function Example() {
   return (
     <SplitViewerProvider result={result}>
-      <FileViewer source={source} bare defaultOpen>
+      <FileViewer source={source} defaultOpen>
         <PdfViewerProvider>
           <FileViewerHeader>
             <FileViewerSidebarTrigger />

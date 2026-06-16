@@ -75,9 +75,36 @@ chrome:
 facts, and `FileViewerControls` renders operational controls registered by the
 active file renderer. `FileViewerDocument` is the routed file renderer.
 
-`FileViewer bare` removes the spatial frame when children are supplied. Without
-children, `FileViewer bare` renders only the routed file document for nested
-leaf previews.
+Use the easy shell for the common case:
+
+```tsx
+<FileViewer source={source} />
+```
+
+Use the composed shell when the file surface needs file-scoped sidebars or
+custom header composition:
+
+```tsx
+<FileViewer source={source}>
+  <FileViewerHeader>
+    <FileViewerTitle />
+    <FileViewerMeta />
+    <FileViewerControls />
+  </FileViewerHeader>
+  <FileViewerBody>
+    <FileViewerSurface>
+      <FileViewerDocument />
+    </FileViewerSurface>
+  </FileViewerBody>
+</FileViewer>
+```
+
+Use `FileViewer bare` only for standalone nested leaf previews where the parent
+already owns the surrounding surface:
+
+```tsx
+<FileViewer source={attachment.source} bare />
+```
 
 ## Supported types
 

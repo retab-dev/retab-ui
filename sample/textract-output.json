@@ -1,0 +1,1360 @@
+{
+  "DocumentMetadata": {
+    "Pages": 1
+  },
+  "DetectDocumentTextModelVersion": "1.0",
+  "Blocks": [
+    {
+      "BlockType": "PAGE",
+      "Id": "00000000-0037-4e6e-9e46-3be57fd00037",
+      "Page": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 1,
+          "Height": 1,
+          "Left": 0,
+          "Top": 0
+        },
+        "Polygon": [
+          {
+            "X": 0,
+            "Y": 0
+          },
+          {
+            "X": 1,
+            "Y": 0
+          },
+          {
+            "X": 1,
+            "Y": 1
+          },
+          {
+            "X": 0,
+            "Y": 1
+          }
+        ]
+      },
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "11111111-0001-4e6e-9e46-3be57fd00001",
+            "11111111-0004-4e6e-9e46-3be57fd00004",
+            "11111111-0007-4e6e-9e46-3be57fd00007",
+            "11111111-0011-4e6e-9e46-3be57fd00011",
+            "11111111-0017-4e6e-9e46-3be57fd00017",
+            "11111111-0022-4e6e-9e46-3be57fd00022",
+            "11111111-0026-4e6e-9e46-3be57fd00026",
+            "11111111-0029-4e6e-9e46-3be57fd00029",
+            "11111111-0033-4e6e-9e46-3be57fd00033"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "LINE",
+      "Id": "11111111-0001-4e6e-9e46-3be57fd00001",
+      "Page": 1,
+      "Text": "ACME CORPORATION",
+      "Confidence": 99.4,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.1888,
+          "Height": 0.026,
+          "Left": 0.092,
+          "Top": 0.06
+        },
+        "Polygon": [
+          {
+            "X": 0.092,
+            "Y": 0.06
+          },
+          {
+            "X": 0.2808,
+            "Y": 0.06
+          },
+          {
+            "X": 0.2808,
+            "Y": 0.086
+          },
+          {
+            "X": 0.092,
+            "Y": 0.086
+          }
+        ]
+      },
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "22222222-0002-4e6e-9e46-3be57fd00002",
+            "22222222-0003-4e6e-9e46-3be57fd00003"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0002-4e6e-9e46-3be57fd00002",
+      "Page": 1,
+      "Text": "ACME",
+      "TextType": "PRINTED",
+      "Confidence": 99.6,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.0472,
+          "Height": 0.026,
+          "Left": 0.092,
+          "Top": 0.06
+        },
+        "Polygon": [
+          {
+            "X": 0.092,
+            "Y": 0.06
+          },
+          {
+            "X": 0.1392,
+            "Y": 0.06
+          },
+          {
+            "X": 0.1392,
+            "Y": 0.086
+          },
+          {
+            "X": 0.092,
+            "Y": 0.086
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0003-4e6e-9e46-3be57fd00003",
+      "Page": 1,
+      "Text": "CORPORATION",
+      "TextType": "PRINTED",
+      "Confidence": 99.5,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.1298,
+          "Height": 0.026,
+          "Left": 0.151,
+          "Top": 0.06
+        },
+        "Polygon": [
+          {
+            "X": 0.151,
+            "Y": 0.06
+          },
+          {
+            "X": 0.2808,
+            "Y": 0.06
+          },
+          {
+            "X": 0.2808,
+            "Y": 0.086
+          },
+          {
+            "X": 0.151,
+            "Y": 0.086
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "LINE",
+      "Id": "11111111-0004-4e6e-9e46-3be57fd00004",
+      "Page": 1,
+      "Text": "Commercial Invoice",
+      "Confidence": 99.1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.2124,
+          "Height": 0.026,
+          "Left": 0.092,
+          "Top": 0.11
+        },
+        "Polygon": [
+          {
+            "X": 0.092,
+            "Y": 0.11
+          },
+          {
+            "X": 0.3044,
+            "Y": 0.11
+          },
+          {
+            "X": 0.3044,
+            "Y": 0.136
+          },
+          {
+            "X": 0.092,
+            "Y": 0.136
+          }
+        ]
+      },
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "22222222-0005-4e6e-9e46-3be57fd00005",
+            "22222222-0006-4e6e-9e46-3be57fd00006"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0005-4e6e-9e46-3be57fd00005",
+      "Page": 1,
+      "Text": "Commercial",
+      "TextType": "PRINTED",
+      "Confidence": 99.2,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.118,
+          "Height": 0.026,
+          "Left": 0.092,
+          "Top": 0.11
+        },
+        "Polygon": [
+          {
+            "X": 0.092,
+            "Y": 0.11
+          },
+          {
+            "X": 0.21,
+            "Y": 0.11
+          },
+          {
+            "X": 0.21,
+            "Y": 0.136
+          },
+          {
+            "X": 0.092,
+            "Y": 0.136
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0006-4e6e-9e46-3be57fd00006",
+      "Page": 1,
+      "Text": "Invoice",
+      "TextType": "PRINTED",
+      "Confidence": 99.3,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.0826,
+          "Height": 0.026,
+          "Left": 0.2218,
+          "Top": 0.11
+        },
+        "Polygon": [
+          {
+            "X": 0.2218,
+            "Y": 0.11
+          },
+          {
+            "X": 0.3044,
+            "Y": 0.11
+          },
+          {
+            "X": 0.3044,
+            "Y": 0.136
+          },
+          {
+            "X": 0.2218,
+            "Y": 0.136
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "LINE",
+      "Id": "11111111-0007-4e6e-9e46-3be57fd00007",
+      "Page": 1,
+      "Text": "Invoice Number: INV-2024-0042",
+      "Confidence": 98.7,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.3422,
+          "Height": 0.026,
+          "Left": 0.092,
+          "Top": 0.18
+        },
+        "Polygon": [
+          {
+            "X": 0.092,
+            "Y": 0.18
+          },
+          {
+            "X": 0.4342,
+            "Y": 0.18
+          },
+          {
+            "X": 0.4342,
+            "Y": 0.206
+          },
+          {
+            "X": 0.092,
+            "Y": 0.206
+          }
+        ]
+      },
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "22222222-0008-4e6e-9e46-3be57fd00008",
+            "22222222-0009-4e6e-9e46-3be57fd00009",
+            "22222222-0010-4e6e-9e46-3be57fd00010"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0008-4e6e-9e46-3be57fd00008",
+      "Page": 1,
+      "Text": "Invoice",
+      "TextType": "PRINTED",
+      "Confidence": 98.9,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.0826,
+          "Height": 0.026,
+          "Left": 0.092,
+          "Top": 0.18
+        },
+        "Polygon": [
+          {
+            "X": 0.092,
+            "Y": 0.18
+          },
+          {
+            "X": 0.1746,
+            "Y": 0.18
+          },
+          {
+            "X": 0.1746,
+            "Y": 0.206
+          },
+          {
+            "X": 0.092,
+            "Y": 0.206
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0009-4e6e-9e46-3be57fd00009",
+      "Page": 1,
+      "Text": "Number:",
+      "TextType": "PRINTED",
+      "Confidence": 98.9,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.0826,
+          "Height": 0.026,
+          "Left": 0.1864,
+          "Top": 0.18
+        },
+        "Polygon": [
+          {
+            "X": 0.1864,
+            "Y": 0.18
+          },
+          {
+            "X": 0.269,
+            "Y": 0.18
+          },
+          {
+            "X": 0.269,
+            "Y": 0.206
+          },
+          {
+            "X": 0.1864,
+            "Y": 0.206
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0010-4e6e-9e46-3be57fd00010",
+      "Page": 1,
+      "Text": "INV-2024-0042",
+      "TextType": "PRINTED",
+      "Confidence": 98.7,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.1534,
+          "Height": 0.026,
+          "Left": 0.2808,
+          "Top": 0.18
+        },
+        "Polygon": [
+          {
+            "X": 0.2808,
+            "Y": 0.18
+          },
+          {
+            "X": 0.4342,
+            "Y": 0.18
+          },
+          {
+            "X": 0.4342,
+            "Y": 0.206
+          },
+          {
+            "X": 0.2808,
+            "Y": 0.206
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "LINE",
+      "Id": "11111111-0011-4e6e-9e46-3be57fd00011",
+      "Page": 1,
+      "Text": "Issue Date: November 30, 2024",
+      "Confidence": 97.9,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.3422,
+          "Height": 0.026,
+          "Left": 0.092,
+          "Top": 0.22
+        },
+        "Polygon": [
+          {
+            "X": 0.092,
+            "Y": 0.22
+          },
+          {
+            "X": 0.4342,
+            "Y": 0.22
+          },
+          {
+            "X": 0.4342,
+            "Y": 0.246
+          },
+          {
+            "X": 0.092,
+            "Y": 0.246
+          }
+        ]
+      },
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "22222222-0012-4e6e-9e46-3be57fd00012",
+            "22222222-0013-4e6e-9e46-3be57fd00013",
+            "22222222-0014-4e6e-9e46-3be57fd00014",
+            "22222222-0015-4e6e-9e46-3be57fd00015",
+            "22222222-0016-4e6e-9e46-3be57fd00016"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0012-4e6e-9e46-3be57fd00012",
+      "Page": 1,
+      "Text": "Issue",
+      "TextType": "PRINTED",
+      "Confidence": 98.1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.059,
+          "Height": 0.026,
+          "Left": 0.092,
+          "Top": 0.22
+        },
+        "Polygon": [
+          {
+            "X": 0.092,
+            "Y": 0.22
+          },
+          {
+            "X": 0.151,
+            "Y": 0.22
+          },
+          {
+            "X": 0.151,
+            "Y": 0.246
+          },
+          {
+            "X": 0.092,
+            "Y": 0.246
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0013-4e6e-9e46-3be57fd00013",
+      "Page": 1,
+      "Text": "Date:",
+      "TextType": "PRINTED",
+      "Confidence": 98.1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.059,
+          "Height": 0.026,
+          "Left": 0.1628,
+          "Top": 0.22
+        },
+        "Polygon": [
+          {
+            "X": 0.1628,
+            "Y": 0.22
+          },
+          {
+            "X": 0.2218,
+            "Y": 0.22
+          },
+          {
+            "X": 0.2218,
+            "Y": 0.246
+          },
+          {
+            "X": 0.1628,
+            "Y": 0.246
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0014-4e6e-9e46-3be57fd00014",
+      "Page": 1,
+      "Text": "November",
+      "TextType": "PRINTED",
+      "Confidence": 98,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.0944,
+          "Height": 0.026,
+          "Left": 0.2336,
+          "Top": 0.22
+        },
+        "Polygon": [
+          {
+            "X": 0.2336,
+            "Y": 0.22
+          },
+          {
+            "X": 0.328,
+            "Y": 0.22
+          },
+          {
+            "X": 0.328,
+            "Y": 0.246
+          },
+          {
+            "X": 0.2336,
+            "Y": 0.246
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0015-4e6e-9e46-3be57fd00015",
+      "Page": 1,
+      "Text": "30,",
+      "TextType": "PRINTED",
+      "Confidence": 98.1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.0354,
+          "Height": 0.026,
+          "Left": 0.3398,
+          "Top": 0.22
+        },
+        "Polygon": [
+          {
+            "X": 0.3398,
+            "Y": 0.22
+          },
+          {
+            "X": 0.3752,
+            "Y": 0.22
+          },
+          {
+            "X": 0.3752,
+            "Y": 0.246
+          },
+          {
+            "X": 0.3398,
+            "Y": 0.246
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0016-4e6e-9e46-3be57fd00016",
+      "Page": 1,
+      "Text": "2024",
+      "TextType": "PRINTED",
+      "Confidence": 98.1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.0472,
+          "Height": 0.026,
+          "Left": 0.387,
+          "Top": 0.22
+        },
+        "Polygon": [
+          {
+            "X": 0.387,
+            "Y": 0.22
+          },
+          {
+            "X": 0.4342,
+            "Y": 0.22
+          },
+          {
+            "X": 0.4342,
+            "Y": 0.246
+          },
+          {
+            "X": 0.387,
+            "Y": 0.246
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "LINE",
+      "Id": "11111111-0017-4e6e-9e46-3be57fd00017",
+      "Page": 1,
+      "Text": "Bill To: Globex Inc.",
+      "Confidence": 88.5,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.236,
+          "Height": 0.026,
+          "Left": 0.092,
+          "Top": 0.28
+        },
+        "Polygon": [
+          {
+            "X": 0.092,
+            "Y": 0.28
+          },
+          {
+            "X": 0.328,
+            "Y": 0.28
+          },
+          {
+            "X": 0.328,
+            "Y": 0.306
+          },
+          {
+            "X": 0.092,
+            "Y": 0.306
+          }
+        ]
+      },
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "22222222-0018-4e6e-9e46-3be57fd00018",
+            "22222222-0019-4e6e-9e46-3be57fd00019",
+            "22222222-0020-4e6e-9e46-3be57fd00020",
+            "22222222-0021-4e6e-9e46-3be57fd00021"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0018-4e6e-9e46-3be57fd00018",
+      "Page": 1,
+      "Text": "Bill",
+      "TextType": "PRINTED",
+      "Confidence": 88.7,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.0472,
+          "Height": 0.026,
+          "Left": 0.092,
+          "Top": 0.28
+        },
+        "Polygon": [
+          {
+            "X": 0.092,
+            "Y": 0.28
+          },
+          {
+            "X": 0.1392,
+            "Y": 0.28
+          },
+          {
+            "X": 0.1392,
+            "Y": 0.306
+          },
+          {
+            "X": 0.092,
+            "Y": 0.306
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0019-4e6e-9e46-3be57fd00019",
+      "Page": 1,
+      "Text": "To:",
+      "TextType": "PRINTED",
+      "Confidence": 88.7,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.0354,
+          "Height": 0.026,
+          "Left": 0.151,
+          "Top": 0.28
+        },
+        "Polygon": [
+          {
+            "X": 0.151,
+            "Y": 0.28
+          },
+          {
+            "X": 0.1864,
+            "Y": 0.28
+          },
+          {
+            "X": 0.1864,
+            "Y": 0.306
+          },
+          {
+            "X": 0.151,
+            "Y": 0.306
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0020-4e6e-9e46-3be57fd00020",
+      "Page": 1,
+      "Text": "Globex",
+      "TextType": "PRINTED",
+      "Confidence": 88.7,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.0708,
+          "Height": 0.026,
+          "Left": 0.1982,
+          "Top": 0.28
+        },
+        "Polygon": [
+          {
+            "X": 0.1982,
+            "Y": 0.28
+          },
+          {
+            "X": 0.269,
+            "Y": 0.28
+          },
+          {
+            "X": 0.269,
+            "Y": 0.306
+          },
+          {
+            "X": 0.1982,
+            "Y": 0.306
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0021-4e6e-9e46-3be57fd00021",
+      "Page": 1,
+      "Text": "Inc.",
+      "TextType": "PRINTED",
+      "Confidence": 88.7,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.0472,
+          "Height": 0.026,
+          "Left": 0.2808,
+          "Top": 0.28
+        },
+        "Polygon": [
+          {
+            "X": 0.2808,
+            "Y": 0.28
+          },
+          {
+            "X": 0.328,
+            "Y": 0.28
+          },
+          {
+            "X": 0.328,
+            "Y": 0.306
+          },
+          {
+            "X": 0.2808,
+            "Y": 0.306
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "LINE",
+      "Id": "11111111-0022-4e6e-9e46-3be57fd00022",
+      "Page": 1,
+      "Text": "Description: Consulting services",
+      "Confidence": 84.2,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.3776,
+          "Height": 0.026,
+          "Left": 0.092,
+          "Top": 0.34
+        },
+        "Polygon": [
+          {
+            "X": 0.092,
+            "Y": 0.34
+          },
+          {
+            "X": 0.4696,
+            "Y": 0.34
+          },
+          {
+            "X": 0.4696,
+            "Y": 0.366
+          },
+          {
+            "X": 0.092,
+            "Y": 0.366
+          }
+        ]
+      },
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "22222222-0023-4e6e-9e46-3be57fd00023",
+            "22222222-0024-4e6e-9e46-3be57fd00024",
+            "22222222-0025-4e6e-9e46-3be57fd00025"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0023-4e6e-9e46-3be57fd00023",
+      "Page": 1,
+      "Text": "Description:",
+      "TextType": "PRINTED",
+      "Confidence": 84.3,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.1416,
+          "Height": 0.026,
+          "Left": 0.092,
+          "Top": 0.34
+        },
+        "Polygon": [
+          {
+            "X": 0.092,
+            "Y": 0.34
+          },
+          {
+            "X": 0.2336,
+            "Y": 0.34
+          },
+          {
+            "X": 0.2336,
+            "Y": 0.366
+          },
+          {
+            "X": 0.092,
+            "Y": 0.366
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0024-4e6e-9e46-3be57fd00024",
+      "Page": 1,
+      "Text": "Consulting",
+      "TextType": "PRINTED",
+      "Confidence": 84.3,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.118,
+          "Height": 0.026,
+          "Left": 0.2454,
+          "Top": 0.34
+        },
+        "Polygon": [
+          {
+            "X": 0.2454,
+            "Y": 0.34
+          },
+          {
+            "X": 0.3634,
+            "Y": 0.34
+          },
+          {
+            "X": 0.3634,
+            "Y": 0.366
+          },
+          {
+            "X": 0.2454,
+            "Y": 0.366
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0025-4e6e-9e46-3be57fd00025",
+      "Page": 1,
+      "Text": "services",
+      "TextType": "PRINTED",
+      "Confidence": 84.3,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.0944,
+          "Height": 0.026,
+          "Left": 0.3752,
+          "Top": 0.34
+        },
+        "Polygon": [
+          {
+            "X": 0.3752,
+            "Y": 0.34
+          },
+          {
+            "X": 0.4696,
+            "Y": 0.34
+          },
+          {
+            "X": 0.4696,
+            "Y": 0.366
+          },
+          {
+            "X": 0.3752,
+            "Y": 0.366
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "LINE",
+      "Id": "11111111-0026-4e6e-9e46-3be57fd00026",
+      "Page": 1,
+      "Text": "Subtotal: $1,200.00",
+      "Confidence": 99,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.2242,
+          "Height": 0.026,
+          "Left": 0.092,
+          "Top": 0.74
+        },
+        "Polygon": [
+          {
+            "X": 0.092,
+            "Y": 0.74
+          },
+          {
+            "X": 0.3162,
+            "Y": 0.74
+          },
+          {
+            "X": 0.3162,
+            "Y": 0.766
+          },
+          {
+            "X": 0.092,
+            "Y": 0.766
+          }
+        ]
+      },
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "22222222-0027-4e6e-9e46-3be57fd00027",
+            "22222222-0028-4e6e-9e46-3be57fd00028"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0027-4e6e-9e46-3be57fd00027",
+      "Page": 1,
+      "Text": "Subtotal:",
+      "TextType": "PRINTED",
+      "Confidence": 99.1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.1062,
+          "Height": 0.026,
+          "Left": 0.092,
+          "Top": 0.74
+        },
+        "Polygon": [
+          {
+            "X": 0.092,
+            "Y": 0.74
+          },
+          {
+            "X": 0.1982,
+            "Y": 0.74
+          },
+          {
+            "X": 0.1982,
+            "Y": 0.766
+          },
+          {
+            "X": 0.092,
+            "Y": 0.766
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0028-4e6e-9e46-3be57fd00028",
+      "Page": 1,
+      "Text": "$1,200.00",
+      "TextType": "PRINTED",
+      "Confidence": 99.1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.1062,
+          "Height": 0.026,
+          "Left": 0.21,
+          "Top": 0.74
+        },
+        "Polygon": [
+          {
+            "X": 0.21,
+            "Y": 0.74
+          },
+          {
+            "X": 0.3162,
+            "Y": 0.74
+          },
+          {
+            "X": 0.3162,
+            "Y": 0.766
+          },
+          {
+            "X": 0.21,
+            "Y": 0.766
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "LINE",
+      "Id": "11111111-0029-4e6e-9e46-3be57fd00029",
+      "Page": 1,
+      "Text": "Tax (10%): $120.00",
+      "Confidence": 96.4,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.2124,
+          "Height": 0.026,
+          "Left": 0.092,
+          "Top": 0.78
+        },
+        "Polygon": [
+          {
+            "X": 0.092,
+            "Y": 0.78
+          },
+          {
+            "X": 0.3044,
+            "Y": 0.78
+          },
+          {
+            "X": 0.3044,
+            "Y": 0.806
+          },
+          {
+            "X": 0.092,
+            "Y": 0.806
+          }
+        ]
+      },
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "22222222-0030-4e6e-9e46-3be57fd00030",
+            "22222222-0031-4e6e-9e46-3be57fd00031",
+            "22222222-0032-4e6e-9e46-3be57fd00032"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0030-4e6e-9e46-3be57fd00030",
+      "Page": 1,
+      "Text": "Tax",
+      "TextType": "PRINTED",
+      "Confidence": 96.6,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.0354,
+          "Height": 0.026,
+          "Left": 0.092,
+          "Top": 0.78
+        },
+        "Polygon": [
+          {
+            "X": 0.092,
+            "Y": 0.78
+          },
+          {
+            "X": 0.1274,
+            "Y": 0.78
+          },
+          {
+            "X": 0.1274,
+            "Y": 0.806
+          },
+          {
+            "X": 0.092,
+            "Y": 0.806
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0031-4e6e-9e46-3be57fd00031",
+      "Page": 1,
+      "Text": "(10%):",
+      "TextType": "PRINTED",
+      "Confidence": 96.6,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.0708,
+          "Height": 0.026,
+          "Left": 0.1392,
+          "Top": 0.78
+        },
+        "Polygon": [
+          {
+            "X": 0.1392,
+            "Y": 0.78
+          },
+          {
+            "X": 0.21,
+            "Y": 0.78
+          },
+          {
+            "X": 0.21,
+            "Y": 0.806
+          },
+          {
+            "X": 0.1392,
+            "Y": 0.806
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0032-4e6e-9e46-3be57fd00032",
+      "Page": 1,
+      "Text": "$120.00",
+      "TextType": "PRINTED",
+      "Confidence": 96.6,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.0826,
+          "Height": 0.026,
+          "Left": 0.2218,
+          "Top": 0.78
+        },
+        "Polygon": [
+          {
+            "X": 0.2218,
+            "Y": 0.78
+          },
+          {
+            "X": 0.3044,
+            "Y": 0.78
+          },
+          {
+            "X": 0.3044,
+            "Y": 0.806
+          },
+          {
+            "X": 0.2218,
+            "Y": 0.806
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "LINE",
+      "Id": "11111111-0033-4e6e-9e46-3be57fd00033",
+      "Page": 1,
+      "Text": "Total Due: $1,320.00",
+      "Confidence": 99.5,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.236,
+          "Height": 0.026,
+          "Left": 0.092,
+          "Top": 0.83
+        },
+        "Polygon": [
+          {
+            "X": 0.092,
+            "Y": 0.83
+          },
+          {
+            "X": 0.328,
+            "Y": 0.83
+          },
+          {
+            "X": 0.328,
+            "Y": 0.856
+          },
+          {
+            "X": 0.092,
+            "Y": 0.856
+          }
+        ]
+      },
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "22222222-0034-4e6e-9e46-3be57fd00034",
+            "22222222-0035-4e6e-9e46-3be57fd00035",
+            "22222222-0036-4e6e-9e46-3be57fd00036"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0034-4e6e-9e46-3be57fd00034",
+      "Page": 1,
+      "Text": "Total",
+      "TextType": "PRINTED",
+      "Confidence": 99.7,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.059,
+          "Height": 0.026,
+          "Left": 0.092,
+          "Top": 0.83
+        },
+        "Polygon": [
+          {
+            "X": 0.092,
+            "Y": 0.83
+          },
+          {
+            "X": 0.151,
+            "Y": 0.83
+          },
+          {
+            "X": 0.151,
+            "Y": 0.856
+          },
+          {
+            "X": 0.092,
+            "Y": 0.856
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0035-4e6e-9e46-3be57fd00035",
+      "Page": 1,
+      "Text": "Due:",
+      "TextType": "PRINTED",
+      "Confidence": 99.7,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.0472,
+          "Height": 0.026,
+          "Left": 0.1628,
+          "Top": 0.83
+        },
+        "Polygon": [
+          {
+            "X": 0.1628,
+            "Y": 0.83
+          },
+          {
+            "X": 0.21,
+            "Y": 0.83
+          },
+          {
+            "X": 0.21,
+            "Y": 0.856
+          },
+          {
+            "X": 0.1628,
+            "Y": 0.856
+          }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "22222222-0036-4e6e-9e46-3be57fd00036",
+      "Page": 1,
+      "Text": "$1,320.00",
+      "TextType": "PRINTED",
+      "Confidence": 99.6,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.1062,
+          "Height": 0.026,
+          "Left": 0.2218,
+          "Top": 0.83
+        },
+        "Polygon": [
+          {
+            "X": 0.2218,
+            "Y": 0.83
+          },
+          {
+            "X": 0.328,
+            "Y": 0.83
+          },
+          {
+            "X": 0.328,
+            "Y": 0.856
+          },
+          {
+            "X": 0.2218,
+            "Y": 0.856
+          }
+        ]
+      }
+    }
+  ]
+}

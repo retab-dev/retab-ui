@@ -1642,7 +1642,7 @@
       "name": "layout-blocks",
       "type": "registry:ui",
       "title": "Layout Blocks",
-      "description": "A layout inspection component for OCR output: normalize Google Document AI blocks, lines, and tokens, then review them over the source image with virtualized rows, confidence filtering, and precise overlays.",
+      "description": "A provider-agnostic layout inspection component for OCR output: normalize Google Document AI, AWS Textract, or Azure Document Intelligence into shared blocks, lines, and words, then review them over the source page with virtualized rows, confidence filtering, and precise overlays.",
       "dependencies": [
         "@tanstack/react-virtual@^3.13.12"
       ],
@@ -1675,6 +1675,21 @@
           "path": "registry/new-york-v4/ui/layout-blocks-document-ai-pdf.ts",
           "type": "registry:ui",
           "target": "@ui/layout-blocks-document-ai-pdf.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/layout-blocks-textract.ts",
+          "type": "registry:ui",
+          "target": "@ui/layout-blocks-textract.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/layout-blocks-azure.ts",
+          "type": "registry:ui",
+          "target": "@ui/layout-blocks-azure.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/layout-blocks-pdf.ts",
+          "type": "registry:ui",
+          "target": "@ui/layout-blocks-pdf.ts"
         },
         {
           "path": "registry/new-york-v4/ui/layout-blocks-geometry.ts",
@@ -2939,7 +2954,7 @@
       "name": "ocr-block",
       "type": "registry:block",
       "title": "OCR",
-      "description": "OCR review for a scanned document: source image, detected text blocks, confidence filtering, and matching polygon overlays from Google Document AI output.",
+      "description": "OCR review for a scanned document: source page, detected text blocks, confidence filtering, and matching polygon overlays. Switch between Google Document AI, AWS Textract, and Azure Document Intelligence output.",
       "registryDependencies": [
         "layout-blocks"
       ],
@@ -2953,6 +2968,16 @@
           "path": "sample/documentai-output.json",
           "type": "registry:file",
           "target": "sample/documentai-output.json"
+        },
+        {
+          "path": "sample/textract-output.json",
+          "type": "registry:file",
+          "target": "sample/textract-output.json"
+        },
+        {
+          "path": "sample/azure-output.json",
+          "type": "registry:file",
+          "target": "sample/azure-output.json"
         }
       ],
       "categories": [

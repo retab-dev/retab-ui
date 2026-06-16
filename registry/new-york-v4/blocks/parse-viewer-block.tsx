@@ -89,7 +89,6 @@ function ParseSourceDocument() {
         url: PDF_URL,
         fileName: "bank-statement.pdf",
       }}
-      bare
       className="h-full"
     >
       <PdfViewerProvider>

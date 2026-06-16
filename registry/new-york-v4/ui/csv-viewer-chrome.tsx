@@ -83,11 +83,13 @@ export function csvViewerStatusNode({
   resourceState,
   resource,
   rowCount,
+  showDownload,
   onRetry,
 }: {
   resourceState: CsvResourceState
   resource: ViewerResource | null
   rowCount: number
+  showDownload: boolean
   onRetry: () => void
 }): React.ReactNode {
   if (resourceState.status === "error") {
@@ -96,7 +98,7 @@ export function csvViewerStatusNode({
         error={resourceState.error}
         format="csv"
         sourceKind={resource?.sourceKind}
-        download={resource?.originalDownload}
+        download={showDownload ? resource?.originalDownload : null}
         variant="inline"
         onRetry={onRetry}
       />

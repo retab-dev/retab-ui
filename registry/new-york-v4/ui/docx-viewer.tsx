@@ -96,7 +96,11 @@ export const DocxResourceContent = React.forwardRef<
     <ViewerErrorBoundary
       bare={props.bare}
       className={props.className}
-      download={props.download === false ? null : resource.originalDownload}
+      download={
+        props.controls === false || props.download === false
+          ? null
+          : resource.originalDownload
+      }
       format="docx"
       onRetry={(error) => {
         if (isResourceError(error) || !isViewerFormatError(error)) {

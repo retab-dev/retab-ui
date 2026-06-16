@@ -91,7 +91,6 @@ function XlsxSourcesContent({
   return (
     <FileViewer
       source={XLSX_SOURCE}
-      bare
       className="h-full min-h-[680px] bg-background"
     >
       <FileViewerHeader>

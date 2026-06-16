@@ -204,7 +204,6 @@ function Cell({
                         url: PDF_URL,
                         fileName: "an-image-is-worth-16x16-words.pdf",
                       }}
-                      bare
                       className="h-full"
                     >
                       <PdfViewerProvider>

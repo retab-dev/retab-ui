@@ -14,11 +14,13 @@ export function CsvFileContent({
   resource,
   className,
   bare,
+  controls = false,
   isolateStyles,
 }: {
   resource: ViewerResource
   className?: string
   bare?: boolean
+  controls?: boolean
   isolateStyles?: boolean
 }) {
   const source = resource.descriptor.source
@@ -40,7 +42,7 @@ export function CsvFileContent({
         source={source}
         dialect={dialect}
         fillHeight
-        controls={false}
+        controls={controls}
         className="rounded-none border-0 bg-transparent"
         isolateStyles={isolateStyles}
       />

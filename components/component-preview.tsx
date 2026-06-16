@@ -3,8 +3,22 @@ import path from "node:path"
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { DataCellDemo } from "@/components/data-cell-demo"
 import { DocsViewCodeBlock } from "@/components/docs-code-block"
 import { DropzoneDemo } from "@/components/dropzone-demo"
+import { FileThumbnailDemo } from "@/components/file-thumbnail-demo"
+import { JsonFormDemo } from "@/components/json-form-demo"
+import { JsonTableDemo } from "@/components/json-table/json-table-demo"
+import { PropertyFormDemo } from "@/components/property-form-demo"
+import { RetabSchemaBuilderDemo } from "@/components/retab-schema-builder-demo"
+import { ViewerSidebarDemo } from "@/components/sidebar-demo"
+import { ClassificationViewerExample } from "@/registry/new-york-v4/blocks/classification-viewer-demo"
+import { PartitionViewerExample } from "@/registry/new-york-v4/blocks/partition-viewer-demo"
+import { SegmentLegendSplit } from "@/registry/new-york-v4/blocks/segment-legend-split"
+import { SegmentLegendVariants } from "@/registry/new-york-v4/blocks/segment-legend-variants"
+import { SegmentSidebarExample } from "@/registry/new-york-v4/blocks/segment-sidebar-demo"
+import { SegmentSidebarSplit } from "@/registry/new-york-v4/blocks/segment-sidebar-split"
+import { SplitViewerExample } from "@/registry/new-york-v4/blocks/split-viewer-demo"
 import { AvatarImageSlot } from "@/registry/new-york-v4/blocks/dropzone-avatar-image-slot"
 import { ComparisonPairUpload } from "@/registry/new-york-v4/blocks/dropzone-comparison-pair-upload"
 import { ControlledQueue } from "@/registry/new-york-v4/blocks/dropzone-controlled-queue"
@@ -17,9 +31,6 @@ import { MediaTranscriptQueue } from "@/registry/new-york-v4/blocks/dropzone-med
 import { NativeButtonQueue } from "@/registry/new-york-v4/blocks/dropzone-native-button-queue"
 import { NonButtonTrigger } from "@/registry/new-york-v4/blocks/dropzone-non-button-trigger"
 import { SchemaBuilderDefinitions } from "@/registry/new-york-v4/blocks/schema-builder-definitions"
-import { SchemaBuilderJsonMode } from "@/registry/new-york-v4/blocks/schema-builder-json-mode"
-import { SchemaBuilderLiveJson } from "@/registry/new-york-v4/blocks/schema-builder-live-json"
-import { SchemaBuilderPresets } from "@/registry/new-york-v4/blocks/schema-builder-presets"
 import { SchemaBuilderReadOnly } from "@/registry/new-york-v4/blocks/schema-builder-read-only"
 import { PinboardDropSurface } from "@/registry/new-york-v4/blocks/dropzone-pinboard-drop-surface"
 import { RequiredPacketSlots } from "@/registry/new-york-v4/blocks/dropzone-required-packet-slots"
@@ -113,25 +124,69 @@ const REGISTRY = {
     component: PinboardDropSurface,
     src: "registry/new-york-v4/blocks/dropzone-pinboard-drop-surface.tsx",
   },
-  "schema-builder-live-json": {
-    component: SchemaBuilderLiveJson,
-    src: "registry/new-york-v4/blocks/schema-builder-live-json.tsx",
-  },
-  "schema-builder-presets": {
-    component: SchemaBuilderPresets,
-    src: "registry/new-york-v4/blocks/schema-builder-presets.tsx",
-  },
   "schema-builder-read-only": {
     component: SchemaBuilderReadOnly,
     src: "registry/new-york-v4/blocks/schema-builder-read-only.tsx",
   },
-  "schema-builder-json-mode": {
-    component: SchemaBuilderJsonMode,
-    src: "registry/new-york-v4/blocks/schema-builder-json-mode.tsx",
-  },
   "schema-builder-definitions": {
     component: SchemaBuilderDefinitions,
     src: "registry/new-york-v4/blocks/schema-builder-definitions.tsx",
+  },
+  "schema-builder-demo": {
+    component: RetabSchemaBuilderDemo,
+    src: "components/retab-schema-builder-demo.tsx",
+  },
+  "property-form-demo": {
+    component: PropertyFormDemo,
+    src: "components/property-form-demo.tsx",
+  },
+  "data-cell-demo": {
+    component: DataCellDemo,
+    src: "components/data-cell-demo.tsx",
+  },
+  "file-thumbnail-demo": {
+    component: FileThumbnailDemo,
+    src: "components/file-thumbnail-demo.tsx",
+  },
+  "json-form-demo": {
+    component: JsonFormDemo,
+    src: "components/json-form-demo.tsx",
+  },
+  "json-table-demo": {
+    component: JsonTableDemo,
+    src: "components/json-table/json-table-demo.tsx",
+  },
+  "viewer-sidebar-demo": {
+    component: ViewerSidebarDemo,
+    src: "components/sidebar-demo.tsx",
+  },
+  "partition-viewer-demo": {
+    component: PartitionViewerExample,
+    src: "registry/new-york-v4/blocks/partition-viewer-demo.tsx",
+  },
+  "classification-viewer-demo": {
+    component: ClassificationViewerExample,
+    src: "registry/new-york-v4/blocks/classification-viewer-demo.tsx",
+  },
+  "split-viewer-demo": {
+    component: SplitViewerExample,
+    src: "registry/new-york-v4/blocks/split-viewer-demo.tsx",
+  },
+  "segment-legend-variants": {
+    component: SegmentLegendVariants,
+    src: "registry/new-york-v4/blocks/segment-legend-variants.tsx",
+  },
+  "segment-legend-split": {
+    component: SegmentLegendSplit,
+    src: "registry/new-york-v4/blocks/segment-legend-split.tsx",
+  },
+  "segment-sidebar-demo": {
+    component: SegmentSidebarExample,
+    src: "registry/new-york-v4/blocks/segment-sidebar-demo.tsx",
+  },
+  "segment-sidebar-split": {
+    component: SegmentSidebarSplit,
+    src: "registry/new-york-v4/blocks/segment-sidebar-split.tsx",
   },
 } satisfies Record<string, ComponentPreviewEntry>
 

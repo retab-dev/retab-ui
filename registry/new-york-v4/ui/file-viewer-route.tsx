@@ -4,7 +4,11 @@ import * as React from "react"
 
 import { type ViewerResource } from "@/lib/viewer-resource"
 
-import { isProseTextDescriptor, type FileDescriptor } from "./file-viewer-core"
+import {
+  isProseTextDescriptor,
+  type FileDescriptor,
+  type FileViewerDocumentChrome,
+} from "./file-viewer-core"
 import { CsvFileContent } from "./file-viewer-csv-viewer"
 import { UnsupportedCard } from "./file-viewer-fallback"
 import { HtmlFileContent } from "./file-viewer-html-viewer"
@@ -50,29 +54,50 @@ const CodeTextViewer = React.lazy(() =>
   }))
 )
 
+type FileViewerRouteChrome = {
+  exposeDownload: boolean
+  localFallbackDownload: boolean
+  localControls: boolean
+}
+
+type FileViewerRendererChrome = {
+  controls: boolean
+  download: boolean
+}
+
+type FileViewerLocalChrome = {
+  controls: boolean
+}
+
+type FileViewerFallbackChrome = {
+  showDownload: boolean
+}
+
 export type FileViewerRouteProps = {
   bare?: boolean
   className?: string
+  chrome: FileViewerDocumentChrome
   descriptor: FileDescriptor
   descriptorSignal: AbortSignal
   isolateStyles: boolean
-  leafControls: boolean
-  leafDownload: boolean
   resource: ViewerResource
 }
 
 export function FileViewerRoute({
   descriptor,
   className,
+  chrome,
   bare = false,
   isolateStyles,
   descriptorSignal,
   resource,
-  leafControls,
-  leafDownload,
 }: FileViewerRouteProps) {
   const { category } = descriptor
   const directLoadUrl = resource.content.directUrl ?? undefined
+  const routeChrome = fileViewerRouteChrome(chrome)
+  const rendererChrome = fileViewerRendererChrome(routeChrome)
+  const localChrome = fileViewerLocalChrome(routeChrome)
+  const fallbackChrome = fileViewerFallbackChrome(routeChrome)
 
   if (descriptor.source.kind === "text") {
     if (category === "csv") {
@@ -81,6 +106,7 @@ export function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
+          {...localChrome}
           isolateStyles={isolateStyles}
         />
       )
@@ -90,7 +116,7 @@ export function FileViewerRoute({
         <PretextMarkdownViewer
           source={resource.descriptor.source}
           className={className}
-          download={leafDownload}
+          {...rendererChrome}
           bare={bare}
         />
       )
@@ -101,6 +127,7 @@ export function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
+          {...localChrome}
           descriptorSignal={descriptorSignal}
         />
       )
@@ -111,7 +138,7 @@ export function FileViewerRoute({
         resource,
         className,
         bare,
-        download: leafDownload,
+        ...rendererChrome,
       })
     }
     return (
@@ -119,7 +146,7 @@ export function FileViewerRoute({
         resource={resource}
         className={className}
         bare={bare}
-        showDownload={leafDownload}
+        {...fallbackChrome}
       />
     )
   }
@@ -131,8 +158,7 @@ export function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
-          download={leafDownload}
-          controls={leafControls}
+          {...rendererChrome}
         />
       )
     }
@@ -142,8 +168,7 @@ export function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
-          download={leafDownload}
-          controls={leafControls}
+          {...rendererChrome}
         />
       )
     }
@@ -153,8 +178,7 @@ export function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
-          download={leafDownload}
-          controls={leafControls}
+          {...rendererChrome}
         />
       )
     }
@@ -164,6 +188,7 @@ export function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
+          {...localChrome}
           isolateStyles={isolateStyles}
         />
       )
@@ -174,6 +199,7 @@ export function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
+          {...localChrome}
           descriptorSignal={descriptorSignal}
         />
       )
@@ -184,8 +210,7 @@ export function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
-          download={leafDownload}
-          controls={leafControls}
+          {...rendererChrome}
         />
       )
     }
@@ -195,7 +220,7 @@ export function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
-          download={leafDownload}
+          {...rendererChrome}
           isolateStyles={isolateStyles}
         />
       )
@@ -205,7 +230,7 @@ export function FileViewerRoute({
         <PretextMarkdownViewer
           source={resource.descriptor.source}
           className={className}
-          download={leafDownload}
+          {...rendererChrome}
           bare={bare}
         />
       )
@@ -216,7 +241,7 @@ export function FileViewerRoute({
         resource,
         className,
         bare,
-        download: leafDownload,
+        ...rendererChrome,
       })
     }
     return (
@@ -224,7 +249,7 @@ export function FileViewerRoute({
         resource={resource}
         className={className}
         bare={bare}
-        showDownload={leafDownload}
+        {...fallbackChrome}
       />
     )
   }
@@ -236,7 +261,7 @@ export function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
-          download={leafDownload}
+          {...rendererChrome}
         />
       )
     case "docx":
@@ -245,7 +270,7 @@ export function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
-          download={leafDownload}
+          {...rendererChrome}
         />
       )
     case "image":
@@ -254,7 +279,7 @@ export function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
-          download={leafDownload}
+          {...rendererChrome}
         />
       )
     case "pptx":
@@ -263,7 +288,7 @@ export function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
-          download={leafDownload}
+          {...rendererChrome}
         />
       )
     case "xlsx":
@@ -272,7 +297,7 @@ export function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
-          download={leafDownload}
+          {...rendererChrome}
           isolateStyles={isolateStyles}
         />
       )
@@ -282,6 +307,7 @@ export function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
+          {...localChrome}
           isolateStyles={isolateStyles}
         />
       )
@@ -290,7 +316,7 @@ export function FileViewerRoute({
         <PretextMarkdownViewer
           source={resource.descriptor.source}
           className={className}
-          download={leafDownload}
+          {...rendererChrome}
           bare={bare}
         />
       )
@@ -300,6 +326,7 @@ export function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
+          {...localChrome}
           descriptorSignal={descriptorSignal}
         />
       )
@@ -309,7 +336,7 @@ export function FileViewerRoute({
         resource,
         className,
         bare,
-        download: leafDownload,
+        ...rendererChrome,
       })
     default:
       return (
@@ -317,9 +344,46 @@ export function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
-          showDownload={leafDownload}
+          {...fallbackChrome}
         />
       )
+  }
+}
+
+function fileViewerRouteChrome(
+  chrome: FileViewerDocumentChrome
+): FileViewerRouteChrome {
+  const standalone = chrome === "standalone"
+
+  return {
+    exposeDownload: true,
+    localFallbackDownload: standalone,
+    localControls: standalone,
+  }
+}
+
+function fileViewerRendererChrome(
+  chrome: FileViewerRouteChrome
+): FileViewerRendererChrome {
+  return {
+    controls: chrome.localControls,
+    download: chrome.exposeDownload,
+  }
+}
+
+function fileViewerLocalChrome(
+  chrome: FileViewerRouteChrome
+): FileViewerLocalChrome {
+  return {
+    controls: chrome.localControls,
+  }
+}
+
+function fileViewerFallbackChrome(
+  chrome: FileViewerRouteChrome
+): FileViewerFallbackChrome {
+  return {
+    showDownload: chrome.localFallbackDownload,
   }
 }
 
@@ -328,12 +392,14 @@ function renderTextViewer({
   resource,
   className,
   bare,
+  controls,
   download,
 }: {
   descriptor: FileDescriptor
   resource: ViewerResource
   className?: string
   bare: boolean
+  controls: boolean
   download?: boolean
 }) {
   const source = resource.descriptor.source
@@ -342,6 +408,7 @@ function renderTextViewer({
       <ProseTextViewer
         source={source}
         className={className}
+        controls={controls}
         download={download}
         bare={bare}
         mode="text"
@@ -352,6 +419,7 @@ function renderTextViewer({
     <CodeTextViewer
       source={source}
       className={className}
+      controls={controls}
       download={download}
       bare={bare}
     />

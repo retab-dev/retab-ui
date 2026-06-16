@@ -2,10 +2,10 @@
 
 ## Verdict
 
-`SourcesViewerBlock` has not reached the platonic ideal.
+`SourcesViewerBlock` has reached the north-star architecture described in this
+blueprint.
 
-It works, and the interaction model is strong, but the visual hierarchy exposes
-an architectural compromise:
+The original problem was a visual hierarchy compromise:
 
 ```txt
 Source format tabs
@@ -21,10 +21,10 @@ Source format tabs
     Source-linked data
 ```
 
-There are two visible header rows before the document body. The sidebar trigger
-controls the correct right panel, but it lives one level above the row where a
-user expects document-level controls to live. PDF can express the right shape;
-the other viewers mostly cannot.
+That compromise is removed. The component now has one visible file header row
+under the format tabs, and the source-data sidebar trigger lives in that row.
+PDF, image, text, CSV, XLSX, and DOCX all use the same provider/document
+grammar inside the shared source root.
 
 This blueprint is the north star and implementation plan to make the component
 feel inevitable.
@@ -60,6 +60,11 @@ Done:
 Verified:
 
 - `pnpm exec tsc --noEmit --pretty false` passes.
+- `pnpm vitest run tests/sources.test.tsx --reporter=dot` passes and covers:
+  - the source-data sidebar trigger mounted inside the file header row;
+  - the trigger controlling the right source-data sidebar through the same
+    `ViewerRoot`;
+  - JSON form hover/click driving `SourceIndicator` and source scrolling.
 - Focused viewer suites pass:
   `tests/file-viewer.test.tsx`, `tests/pdf-viewer.test.tsx`,
   `tests/image-viewer.test.tsx`, `tests/docx-viewer.test.tsx`,
@@ -67,18 +72,21 @@ Verified:
   and `tests/text-viewer-markdown.test.tsx`.
 - `tests/viewer-architecture.test.ts` sources-viewer assertions pass. The
   suite still has one unrelated pre-existing file-system sidebar-width failure.
-- The direct block route renders the intended static hierarchy in the browser:
-  tabs, then one file header row, then document surface plus source-linked data
-  panel.
+- `pnpm registry:build:items sources-viewer-block` passes and the generated
+  `public/r/sources-viewer-block.json` preserves the `ViewerRoot` +
+  `FileViewerProvider` grammar.
+- The hydrated docs preview at `/blocks/sources-viewer` verifies the browser
+  behavior:
+  - the source-data trigger is enabled;
+  - it points at the right `ViewerSidebar`;
+  - it reports `data-side="right"`;
+  - clicking it collapses the source-data sidebar;
+  - switching to the Image tab updates tab selection while keeping the trigger
+    live.
 
 Remaining work before the ideal is complete:
 
-- verify the source-data trigger in a hydrated block preview. The direct
-  `/view/blocks/sources-viewer` browser route currently presents static markup
-  in the in-app browser, so sidebar registration effects do not run there and
-  the trigger remains disabled in that route's static DOM.
-- add behavior coverage for the source-data trigger and every tab's source
-  hover path.
+- none for this blueprint.
 
 ## Platonic Ideal
 

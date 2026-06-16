@@ -95,7 +95,6 @@ function JsonFormSourcesContent({
               url: PDF_URL,
               fileName: "jane-doe-bank-statement-5-pages.pdf",
             }}
-            bare
             className="h-full"
           >
             <PdfViewerProvider>

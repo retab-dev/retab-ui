@@ -324,7 +324,7 @@ export function PartitionViewer({
 }: PartitionViewerProps) {
   return (
     <PartitionViewerProvider result={result} isProcessing={isProcessing}>
-      <FileViewer source={source} bare className="h-full flex-1 bg-background">
+      <FileViewer source={source} className="h-full flex-1 bg-background">
         <FileViewerHeader>
           <FileViewerTitle />
           <PartitionViewerHeaderMeta />

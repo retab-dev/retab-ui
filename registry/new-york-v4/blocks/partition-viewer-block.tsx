@@ -53,7 +53,6 @@ export function PartitionViewerBlock() {
       <PartitionViewerProvider result={PARTITION_RESULT}>
         <FileViewer
           source={source}
-          bare
           className="h-full flex-1 bg-background"
         >
           <PdfViewerProvider>

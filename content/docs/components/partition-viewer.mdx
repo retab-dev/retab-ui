@@ -5,7 +5,7 @@ description: Render a Retab partition result — keyed chunks over the source do
 
 Renders a Retab partition result: keyed chunks, each owning a set of pages.
 
-<PartitionViewerDemo />
+<ComponentPreview name="partition-viewer-demo" />
 
 ## Viewer Composition
 
@@ -32,7 +32,7 @@ function SourceDocument() {
 export function CompositionExample() {
   return (
     <PartitionViewerProvider result={result}>
-      <FileViewer source={source} bare>
+      <FileViewer source={source}>
         <PdfViewerProvider>
           <FileViewerHeader>
             <FileViewerTitle />

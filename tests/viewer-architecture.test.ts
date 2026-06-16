@@ -1197,7 +1197,7 @@ describe("viewer architecture", () => {
     expect(documentFileViewerSource).toContain(
       "export function FileViewerDocument"
     )
-    expect(documentFileViewerSource).toContain(
+    expect(documentFileViewerSource).not.toContain(
       "export function InternalFileViewerDocument"
     )
     expect(documentFileViewerSource).not.toContain("FileViewerDocumentRenderer")
@@ -1291,7 +1291,7 @@ describe("viewer architecture", () => {
     expect(publicDocumentFileViewerSource).toContain(
       "export function FileViewerDocument"
     )
-    expect(publicDocumentFileViewerSource).toContain(
+    expect(publicDocumentFileViewerSource).not.toContain(
       "export function InternalFileViewerDocument"
     )
     expect(publicDocumentFileViewerSource).not.toContain(
@@ -1317,25 +1317,79 @@ describe("viewer architecture", () => {
     )
   })
 
-  it("keeps FileViewer leaf download ownership explicit", () => {
+  it("keeps FileViewer document chrome ownership explicit", () => {
     const fileViewerSource = fileContent(
       "registry/new-york-v4/ui/file-viewer.tsx"
+    )
+    const documentFileViewerSource = fileContent(
+      "registry/new-york-v4/ui/file-viewer-document.tsx"
     )
     const routeFileViewerSource = fileContent(
       "registry/new-york-v4/ui/file-viewer-route.tsx"
     )
-    const leafPropFiles = [
+    const downloadPropFiles = [
       "registry/new-york-v4/ui/docx-viewer-types.ts",
       "registry/new-york-v4/ui/image-viewer-types.ts",
       "registry/new-york-v4/ui/pptx-viewer-types.ts",
       "registry/new-york-v4/ui/xlsx-viewer-types.ts",
     ]
 
-    expect(fileViewerSource).not.toContain("showLeafDownload")
-    expect(fileViewerSource).not.toContain("showLeafControls")
-    expect(fileViewerSource).not.toContain("leafDownload?:")
-    expect(fileViewerSource).not.toContain("leafControls?:")
-    expect(fileViewerSource).toContain("leafDownload={false}")
+    for (const source of [
+      fileViewerSource,
+      documentFileViewerSource,
+      routeFileViewerSource,
+    ]) {
+      expect(source).not.toContain("showLeafDownload")
+      expect(source).not.toContain("showLeafControls")
+      expect(source).not.toContain("leafDownload")
+      expect(source).not.toContain("leafControls")
+    }
+
+    expect(fileViewerSource).toContain('documentChrome="standalone"')
+    expect(fileViewerSource).toContain("<FileViewerDocument />")
+    expect(fileViewerSource).not.toContain("<FileViewerDocument bare")
+    expect(documentFileViewerSource).toContain(
+      "export type FileViewerDocumentProps = {"
+    )
+    expect(documentFileViewerSource).toContain("className?: string")
+    expect(documentFileViewerSource).not.toContain('"bare" | "className"')
+    expect(documentFileViewerSource).not.toContain(
+      "export function FileViewerDocument({ bare"
+    )
+    expect(documentFileViewerSource).toContain("documentChrome")
+    expect(fileContent("registry/new-york-v4/ui/file-viewer-internal.tsx")).toContain(
+      'documentChrome = "shell"'
+    )
+    expect(fileContent("registry/new-york-v4/ui/file-viewer-core.ts")).toContain(
+      'export type FileViewerDocumentChrome = "shell" | "standalone"'
+    )
+    expect(routeFileViewerSource).toContain("function fileViewerRouteChrome")
+    expect(routeFileViewerSource).toContain("function fileViewerRendererChrome")
+    expect(routeFileViewerSource).toContain("function fileViewerLocalChrome")
+    expect(routeFileViewerSource).toContain("function fileViewerFallbackChrome")
+    expect(routeFileViewerSource).toContain("exposeDownload")
+    expect(routeFileViewerSource).toContain("localFallbackDownload")
+    expect(routeFileViewerSource).toContain("localControls")
+    expect(routeFileViewerSource).not.toContain("rendererDownload")
+    expect(routeFileViewerSource).not.toContain("fallbackDownload")
+    expect(routeFileViewerSource).toContain("exposeDownload: true")
+
+    const expectEveryRouteOpeningContains = (
+      component: string,
+      value: string
+    ) => {
+      const openings = Array.from(
+        routeFileViewerSource.matchAll(
+          new RegExp(`<${component}\\b(?:(?!/>)[\\s\\S])*?/>`, "g")
+        )
+      )
+
+      expect(openings.length, `${component} route count`).toBeGreaterThan(0)
+      for (const opening of openings) {
+        expect(opening[0], `${component} receives ${value}`).toContain(value)
+      }
+    }
+
     for (const route of [
       "PdfResourceContent",
       "ImageResourceContent",
@@ -1343,19 +1397,35 @@ describe("viewer architecture", () => {
       "DocxResourceContent",
       "XlsxResourceContent",
     ]) {
-      expect(routeFileViewerSource, `${route} receives leafDownload`).toMatch(
-        new RegExp(
-          `<${route}\\b(?:(?!/>)[\\s\\S])*\\bdownload=\\{leafDownload\\}`
-        )
-      )
+      expectEveryRouteOpeningContains(route, "{...rendererChrome}")
+    }
+    for (const route of [
+      "CsvFileContent",
+      "HtmlFileContent",
+    ]) {
+      expectEveryRouteOpeningContains(route, "{...localChrome}")
+    }
+    expectEveryRouteOpeningContains(
+      "PretextMarkdownViewer",
+      "{...rendererChrome}"
+    )
+    expectEveryRouteOpeningContains(
+      "UnsupportedCard",
+      "{...fallbackChrome}"
+    )
+
+    for (const call of routeFileViewerSource.matchAll(
+      /return renderTextViewer\(\{(?:(?!\}\))[\s\S])*\}\)/g
+    )) {
+      expect(call[0]).toContain("...rendererChrome")
     }
 
     expect(
       fileContent("registry/new-york-v4/ui/pdf-viewer-content.tsx")
     ).toContain("download?: boolean")
-    for (const file of leafPropFiles) {
+    for (const file of downloadPropFiles) {
       const content = fileContent(file)
-      expect(content, `${file} exposes a leaf download control`).toContain(
+      expect(content, `${file} exposes a renderer download control`).toContain(
         "download?: boolean"
       )
     }
@@ -1368,7 +1438,7 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/ui/xlsx-viewer-session.tsx",
     ]) {
       const content = fileContent(file)
-      expect(content, `${file} defaults leaf download on`).toContain(
+      expect(content, `${file} defaults renderer download on`).toContain(
         "download = true"
       )
     }
@@ -1382,9 +1452,21 @@ describe("viewer architecture", () => {
     ]) {
       const content = fileContent(file)
       expect(content, `${file} suppresses error-boundary download`).toContain(
-        "props.download === false ? null : resource.originalDownload"
+        "props.controls === false || props.download === false"
       )
     }
+    expect(fileContent("registry/new-york-v4/ui/csv-viewer.tsx")).toContain(
+      "showDownload: controls"
+    )
+    expect(
+      fileContent("registry/new-york-v4/ui/csv-viewer-chrome.tsx")
+    ).toContain("download={showDownload ? resource?.originalDownload : null}")
+    expect(fileContent("components/ui/pptx-viewer.tsx")).toContain(
+      'export * from "@/registry/new-york-v4/ui/pptx-viewer"'
+    )
+    expect(fileContent("components/ui/csv-viewer-chrome.tsx")).toContain(
+      'export * from "@/registry/new-york-v4/ui/csv-viewer-chrome"'
+    )
   })
 
   it("keeps dropzone examples away from file viewer internals", () => {
@@ -2754,7 +2836,6 @@ describe("viewer architecture", () => {
     expect(sourcesViewerBlock).toContain("CsvViewerGrid")
     expect(sourcesViewerBlock).toContain("XlsxViewerWorkbook")
     expect(sourcesViewerBlock).toContain("DocxViewerDocument")
-    expect(sourcesViewerBlock).toContain("useFileViewerResource")
     expect(sourcesViewerBlock).not.toContain("FileViewerProvider")
     expect(sourcesViewerBlock).not.toContain("file-viewer-internal")
     expect(sourcesViewerBlock).not.toContain("ImageResourceContent")
@@ -2764,6 +2845,7 @@ describe("viewer architecture", () => {
     expect(sourcesViewerBlock).not.toContain("<ViewerSidebar")
     expect(sourcesViewerBlock).toMatch(/<FileViewer(?:\s|>)/)
     expect(sourcesViewerBlock).toContain("<FileViewerSidebar")
+    expect(sourcesViewerBlock).toContain("<FileViewerSidebarTrigger")
   })
 
   it("keeps public viewer docs free of removed shell and slot language", () => {
@@ -3113,11 +3195,16 @@ describe("viewer architecture", () => {
     )
 
     expect(fileViewerDoc).toContain(
-      "`FileViewer bare` removes the spatial frame when children are supplied."
+      "Use the easy shell for the common case:"
     )
-    expect(fileViewerDoc).toContain("Without")
     expect(fileViewerDoc).toContain(
-      "children, `FileViewer bare` renders only the routed file document"
+      "Use the composed shell when the file surface needs file-scoped sidebars"
+    )
+    expect(fileViewerDoc).toContain(
+      "Use `FileViewer bare` only for standalone nested leaf previews"
+    )
+    expect(fileViewerDoc).not.toContain(
+      "`FileViewer bare` removes the spatial frame when children are supplied."
     )
   })
 
@@ -3628,7 +3715,7 @@ describe("viewer architecture", () => {
         file: "registry/new-york-v4/ui/layout-blocks.tsx",
         symbols: [
           "<SegmentedDocumentProvider",
-          "<DocumentAiLayoutBlocksContent",
+          "<OcrLayoutBlocksContent",
           "<ViewerRoot",
           "<ViewerBody",
           "<ViewerSurface",

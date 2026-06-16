@@ -181,9 +181,10 @@ export const CsvResourceContent = React.forwardRef<
         resourceState,
         resource,
         rowCount: sourceRows.length,
+        showDownload: controls,
         onRetry: () => setRetryVersion((version) => version + 1),
       }),
-    [resource, resourceState, sourceRows.length]
+    [controls, resource, resourceState, sourceRows.length]
   )
   const zoomOut = React.useCallback(
     () => setZoom((value) => clampCsvViewerZoom(value / 1.2)),

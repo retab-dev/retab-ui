@@ -6,22 +6,26 @@ import { type ViewerResource } from "@/lib/viewer-resource"
 
 import {
   type FileDescriptor,
-  type FileViewerProps as FileViewerCoreProps,
+  type FileViewerDocumentChrome,
 } from "./file-viewer-core"
 import { FileErrorBoundary, ViewerFallback } from "./file-viewer-fallback"
 import { useFileViewerContext } from "./file-viewer-internal"
 import { FileViewerRoute } from "./file-viewer-route"
 import { type ViewerControlsState } from "./viewer-controls"
 
-export type FileViewerDocumentProps = Pick<
-  FileViewerCoreProps,
-  "bare" | "className"
->
+export type FileViewerDocumentProps = {
+  className?: string
+}
+
+type FileViewerDocumentContentProps = FileViewerDocumentProps & {
+  bare?: boolean
+}
 
 type FileViewerDocumentState = {
   descriptor: FileDescriptor
   descriptorKey: string
   descriptorSignal: AbortSignal
+  documentChrome: FileViewerDocumentChrome
   isClient: boolean
   isolateStyles: boolean
   resource: ViewerResource
@@ -33,6 +37,7 @@ function useFileViewerDocument(): FileViewerDocumentState {
     descriptor,
     descriptorKey,
     descriptorSignal,
+    documentChrome,
     isClient,
     isolateStyles,
     resource,
@@ -44,6 +49,7 @@ function useFileViewerDocument(): FileViewerDocumentState {
       descriptor,
       descriptorKey,
       descriptorSignal,
+      documentChrome,
       isClient,
       isolateStyles,
       resource,
@@ -53,6 +59,7 @@ function useFileViewerDocument(): FileViewerDocumentState {
       descriptor,
       descriptorKey,
       descriptorSignal,
+      documentChrome,
       isClient,
       isolateStyles,
       resource,
@@ -61,33 +68,19 @@ function useFileViewerDocument(): FileViewerDocumentState {
   )
 }
 
-export function FileViewerDocument({
-  bare = false,
-  className,
-}: FileViewerDocumentProps) {
-  return (
-    <InternalFileViewerDocument
-      bare={bare}
-      className={className}
-      leafControls
-      leafDownload
-    />
-  )
+export function FileViewerDocument({ className }: FileViewerDocumentProps) {
+  return <FileViewerDocumentContent bare className={className} />
 }
 
-export function InternalFileViewerDocument({
+function FileViewerDocumentContent({
   bare = false,
   className,
-  leafControls,
-  leafDownload,
-}: FileViewerDocumentProps & {
-  leafControls: boolean
-  leafDownload: boolean
-}) {
+}: FileViewerDocumentContentProps) {
   const {
     descriptor,
     descriptorKey,
     descriptorSignal,
+    documentChrome,
     isClient,
     isolateStyles,
     resource,
@@ -111,6 +104,7 @@ export function InternalFileViewerDocument({
       resource={resource}
       className={className}
       resetKey={descriptorKey}
+      showDownload={documentChrome === "standalone"}
     >
       <React.Suspense fallback={fallback}>
         <FileViewerRoute
@@ -120,8 +114,7 @@ export function InternalFileViewerDocument({
           descriptorSignal={descriptorSignal}
           isolateStyles={isolateStyles}
           resource={resource}
-          leafControls={leafControls}
-          leafDownload={leafDownload}
+          chrome={documentChrome}
         />
       </React.Suspense>
     </FileErrorBoundary>

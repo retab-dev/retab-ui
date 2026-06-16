@@ -228,6 +228,7 @@ export class FileErrorBoundary extends React.Component<
     resource: ViewerResource
     className?: string
     resetKey?: unknown
+    showDownload?: boolean
   },
   { error: unknown | null }
 > {
@@ -250,7 +251,11 @@ export class FileErrorBoundary extends React.Component<
           error={this.state.error}
           format="file"
           sourceKind={this.props.resource.sourceKind}
-          download={this.props.resource.originalDownload}
+          download={
+            this.props.showDownload === false
+              ? null
+              : this.props.resource.originalDownload
+          }
           className={this.props.className}
         />
       )

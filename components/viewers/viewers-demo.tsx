@@ -2,7 +2,11 @@
 
 import * as React from "react"
 
-import { PdfViewer } from "@/components/ui/pdf-viewer"
+import {
+  PdfViewer,
+  PdfViewerPages,
+  PdfViewerProvider,
+} from "@/components/ui/pdf-viewer"
 import { EmailViewerDemo } from "@/components/email-viewer-demo"
 import { TextViewerDemo } from "@/components/text-viewer-demo"
 import { ClassifierViewer } from "@/components/viewers/classify/classifier-viewer"
@@ -152,14 +156,15 @@ function PartitionDemoDocument() {
   const controls = usePartitionViewerDocumentControls()
 
   return (
-    <PdfViewer
-      ref={controls.setDocumentHandle}
-      source={partitionSource}
-      bare
-      onVisiblePageChange={controls.onCurrentPageChange}
-      onScrollProgressChange={controls.onScrollProgressChange}
-      className="h-full"
-    />
+    <PdfViewerProvider source={partitionSource}>
+      <PdfViewerPages
+        ref={controls.setDocumentHandle}
+        bare
+        onVisiblePageChange={controls.onCurrentPageChange}
+        onScrollProgressChange={controls.onScrollProgressChange}
+        className="h-full"
+      />
+    </PdfViewerProvider>
   )
 }
 
@@ -182,14 +187,15 @@ function SplitViewerDemoDocument() {
   const controls = useSplitViewerDocumentControls()
 
   return (
-    <PdfViewer
-      ref={controls.setDocumentHandle}
-      source={splitSource}
-      bare
-      onVisiblePageChange={controls.onCurrentPageChange}
-      onScrollProgressChange={controls.onScrollProgressChange}
-      className="h-full"
-    />
+    <PdfViewerProvider source={splitSource}>
+      <PdfViewerPages
+        ref={controls.setDocumentHandle}
+        bare
+        onVisiblePageChange={controls.onCurrentPageChange}
+        onScrollProgressChange={controls.onScrollProgressChange}
+        className="h-full"
+      />
+    </PdfViewerProvider>
   )
 }
 

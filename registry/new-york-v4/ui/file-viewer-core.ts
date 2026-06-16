@@ -9,12 +9,12 @@ import {
 } from "@/lib/viewer-source"
 
 export type { FileCategory, ViewerSource }
+export type FileViewerDocumentChrome = "shell" | "standalone"
 
 export interface FileViewerProps {
   source: ViewerSource
   as?: FileCategory
   className?: string
-  bare?: boolean
   isolateStyles?: boolean
 }
 

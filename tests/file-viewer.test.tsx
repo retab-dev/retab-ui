@@ -14,6 +14,7 @@ import {
   FileViewerDocument,
   FileViewerHeader,
   FileViewerMeta,
+  FileViewerSurface,
   FileViewerTitle,
 } from "@/registry/new-york-v4/ui/file-viewer"
 import {
@@ -451,14 +452,45 @@ describe("FileViewer detection helpers", () => {
     )
   })
 
-  it("routes composed FileViewer content through the same resource viewer", async () => {
+  it("renders default FileViewer through the public shell anatomy", async () => {
     const { container } = render(
-      <FileViewer
-        source={urlSource("/files/composed.pdf", "composed.pdf")}
-        bare
-      >
+      <FileViewer source={urlSource("/files/default.pdf", "default.pdf")} />
+    )
+
+    expect(container.querySelector('[data-slot="viewer-root"]')).toBeTruthy()
+    expect(
+      container.querySelector('[data-slot="file-viewer-header"]')
+    ).toBeTruthy()
+    expect(
+      container.querySelector('[data-slot="file-viewer-body"]')
+    ).toBeTruthy()
+    expect(
+      container.querySelector('[data-slot="file-viewer-surface"]')
+    ).toBeTruthy()
+    expect(
+      container.querySelectorAll('[data-slot="file-viewer-controls"]')
+    ).toHaveLength(1)
+    expect(screen.getByText("default.pdf")).toBeTruthy()
+    expect(screen.getByText("pdf")).toBeTruthy()
+    expect(screen.getByRole("link", { name: "Download" })).toBeTruthy()
+    expect(await screen.findByText("Mock PDF viewer")).toBeTruthy()
+    expect(pdfRouteMock.props).toHaveLength(1)
+    expect(pdfRouteMock.props[0]).toMatchObject({
+      bare: true,
+      controls: false,
+      download: true,
+    })
+  })
+
+  it("routes composed FileViewer content through the same shell document", async () => {
+    const { container } = render(
+      <FileViewer source={urlSource("/files/composed.pdf", "composed.pdf")}>
         <FileViewerHeader />
-        <FileViewerDocument bare className="composed-file" />
+        <FileViewerBody>
+          <FileViewerSurface>
+            <FileViewerDocument className="composed-file" />
+          </FileViewerSurface>
+        </FileViewerBody>
       </FileViewer>
     )
 
@@ -474,6 +506,8 @@ describe("FileViewer detection helpers", () => {
     expect(pdfRouteMock.props[0]).toMatchObject({
       bare: true,
       className: "composed-file",
+      controls: false,
+      download: true,
     })
     expect(
       (pdfRouteMock.props[0]?.resource as { fileName: string }).fileName
@@ -496,7 +530,7 @@ describe("FileViewer detection helpers", () => {
     }
 
     render(
-      <FileViewer source={urlSource("/files/report.pdf", "report.pdf")} bare>
+      <FileViewer source={urlSource("/files/report.pdf", "report.pdf")}>
         <FileViewerHeader>
           <FileViewerTitle />
           <FileViewerMeta />
@@ -529,7 +563,7 @@ describe("FileViewer detection helpers", () => {
     }
 
     render(
-      <FileViewer source={urlSource("/files/report.pdf", "report.pdf")} bare>
+      <FileViewer source={urlSource("/files/report.pdf", "report.pdf")}>
         <FileViewerHeader>
           <FileViewerTitle />
           <FileViewerMeta />
@@ -563,7 +597,7 @@ describe("FileViewer detection helpers", () => {
 
     function Harness({ showFirst }: { showFirst: boolean }) {
       return (
-        <FileViewer source={urlSource("/files/report.pdf", "report.pdf")} bare>
+        <FileViewer source={urlSource("/files/report.pdf", "report.pdf")}>
           <FileViewerHeader>
             <FileViewerTitle />
             <FileViewerControls />
@@ -606,12 +640,12 @@ describe("FileViewer detection helpers", () => {
       source: ReturnType<typeof urlSource>
     }) {
       return (
-        <FileViewer source={source} bare>
+        <FileViewer source={source}>
           <FileViewerHeader>
             <FileViewerTitle />
             <FileViewerControls />
           </FileViewerHeader>
-          <FileViewerDocument bare />
+          <FileViewerDocument />
           {register ? <RegisterControls /> : null}
         </FileViewer>
       )
@@ -747,6 +781,7 @@ describe("FileViewer text rendering", () => {
       expect(props[0]).toMatchObject({
         className: "viewer-frame",
         bare: true,
+        controls: true,
         download: true,
       })
       expect(
@@ -775,6 +810,7 @@ describe("FileViewer text rendering", () => {
     expect(pdfRouteMock.props.at(-1)).toMatchObject({
       bare: true,
       className: "viewer-frame",
+      controls: true,
       download: true,
     })
   })
@@ -827,9 +863,13 @@ describe("FileViewer text rendering", () => {
       expect(await screen.findByText(text)).toBeTruthy()
       expect(props).toHaveLength(1)
       if (source.fileName.endsWith(".xlsx")) {
-        expect(props[0]).toMatchObject({ download: false, isolateStyles: true })
+        expect(props[0]).toMatchObject({
+          controls: false,
+          download: true,
+          isolateStyles: true,
+        })
       } else {
-        expect(props[0]).toMatchObject({ download: false })
+        expect(props[0]).toMatchObject({ controls: false, download: true })
         expect("isolateStyles" in props[0]!).toBe(false)
       }
       expect(
@@ -858,7 +898,10 @@ describe("FileViewer text rendering", () => {
     expect(resource.content.directUrl).toBe("/signed/file?id=1")
     expect(resource.fileName).toBe("download")
     expect(resource.descriptor.category).toBe("pdf")
-    expect(pdfRouteMock.props[0]).toMatchObject({ download: false })
+    expect(pdfRouteMock.props[0]).toMatchObject({
+      controls: false,
+      download: true,
+    })
   })
 
   it("renders DOCX files through the lazy resource viewer", async () => {
@@ -879,7 +922,10 @@ describe("FileViewer text rendering", () => {
       directUrl: "/report.docx",
     })
     expect("source" in docxRouteMock.props[0]!).toBe(false)
-    expect(docxRouteMock.props[0]).toMatchObject({ download: false })
+    expect(docxRouteMock.props[0]).toMatchObject({
+      controls: false,
+      download: true,
+    })
   })
 
   it("loads and renders text content under React StrictMode", async () => {
@@ -894,7 +940,7 @@ describe("FileViewer text rendering", () => {
         )
       )
 
-      render(
+      const { container } = render(
         <React.StrictMode>
           <FileViewer source={urlSource("/strict.log", "strict.log")} />
         </React.StrictMode>
@@ -906,7 +952,8 @@ describe("FileViewer text rendering", () => {
         })
       ).toBeTruthy()
       expect(screen.getByText("second log line")).toBeTruthy()
-      expect(screen.getByText("3 lines")).toBeTruthy()
+      expect(container.querySelector('[data-line-number="3"]')).toBeTruthy()
+      expect(screen.queryByText("3 lines")).toBeNull()
     } finally {
       consoleError.mockRestore()
     }
@@ -1095,11 +1142,18 @@ describe("FileViewer text rendering", () => {
       vi.fn(() => Promise.resolve(response(text, { status: 200 })))
     )
 
-    render(<FileViewer source={urlSource(url, "mixed.log")} />)
+    const { container } = render(
+      <FileViewer source={urlSource(url, "mixed.log")} />
+    )
 
     expect(await screen.findByText("first line")).toBeTruthy()
     expect(screen.getByText("second line")).toBeTruthy()
-    expect(screen.getByText(expectedMeta)).toBeTruthy()
+    expect(
+      container.querySelector(
+        `[data-line-number="${Number.parseInt(expectedMeta, 10)}"]`
+      )
+    ).toBeTruthy()
+    expect(screen.queryByText(expectedMeta)).toBeNull()
   })
 
   it("keeps the download action in the code controls", async () => {
@@ -1317,6 +1371,20 @@ describe("FileViewer text rendering", () => {
     render(<FileViewer source={urlSource("/archive.zip", "archive.zip")} />)
 
     expect(screen.getByText(/No preview for/)).toBeTruthy()
+    expect(screen.getAllByRole("link", { name: "Download" })).toHaveLength(1)
+    expect(
+      screen.getByRole("link", { name: "Download" }).getAttribute("download")
+    ).toBe("archive.zip")
+  })
+
+  it("renders standalone unsupported fallback with its own download link", () => {
+    const { container } = render(
+      <FileViewer source={urlSource("/archive.zip", "archive.zip")} bare />
+    )
+
+    expect(screen.getByText(/No preview for/)).toBeTruthy()
+    expect(container.querySelector('[data-slot="file-viewer-header"]')).toBeNull()
+    expect(screen.getAllByRole("link", { name: "Download" })).toHaveLength(1)
     expect(
       screen.getByRole("link", { name: "Download" }).getAttribute("download")
     ).toBe("archive.zip")

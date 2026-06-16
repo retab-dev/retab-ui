@@ -12,6 +12,7 @@ import {
   descriptorResetKey,
   resolveFileDescriptor,
   type FileDescriptor,
+  type FileViewerDocumentChrome,
   type FileViewerProps as FileViewerCoreProps,
 } from "./file-viewer-core"
 import {
@@ -24,12 +25,14 @@ type FileViewerProviderProps = Pick<
   "as" | "isolateStyles" | "source"
 > & {
   children: React.ReactNode
+  documentChrome?: FileViewerDocumentChrome
 }
 
 type FileViewerContextValue = {
   descriptor: FileDescriptor
   descriptorKey: string
   descriptorSignal: AbortSignal
+  documentChrome: FileViewerDocumentChrome
   isClient: boolean
   isolateStyles: boolean
   resource: ViewerResource
@@ -100,6 +103,7 @@ export function useFileViewerResource(): ViewerResource {
 export function FileViewerProvider({
   as,
   children,
+  documentChrome = "shell",
   isolateStyles = false,
   source,
 }: FileViewerProviderProps) {
@@ -124,6 +128,7 @@ export function FileViewerProvider({
       descriptor,
       descriptorKey,
       descriptorSignal,
+      documentChrome,
       isClient,
       isolateStyles,
       resource,
@@ -134,6 +139,7 @@ export function FileViewerProvider({
       descriptor,
       descriptorKey,
       descriptorSignal,
+      documentChrome,
       handleControlsChange,
       isClient,
       isolateStyles,

@@ -1,0 +1,909 @@
+{
+  "status": "succeeded",
+  "createdDateTime": "2024-11-30T12:00:00Z",
+  "lastUpdatedDateTime": "2024-11-30T12:00:04Z",
+  "analyzeResult": {
+    "apiVersion": "2024-11-30",
+    "modelId": "prebuilt-layout",
+    "stringIndexType": "textElements",
+    "content": "ACME CORPORATION\nCommercial Invoice\nInvoice Number: INV-2024-0042\nIssue Date: November 30, 2024\nBill To: Globex Inc.\nDescription: Consulting services\nSubtotal: $1,200.00\nTax (10%): $120.00\nTotal Due: $1,320.00",
+    "pages": [
+      {
+        "pageNumber": 1,
+        "angle": 0,
+        "width": 8.5,
+        "height": 11,
+        "unit": "inch",
+        "words": [
+          {
+            "content": "ACME",
+            "polygon": [
+              0.6,
+              0.6,
+              1.24,
+              0.6,
+              1.24,
+              0.82,
+              0.6,
+              0.82
+            ],
+            "confidence": 0.94,
+            "span": {
+              "offset": 0,
+              "length": 4
+            }
+          },
+          {
+            "content": "CORPORATION",
+            "polygon": [
+              1.4,
+              0.6,
+              3.16,
+              0.6,
+              3.16,
+              0.82,
+              1.4,
+              0.82
+            ],
+            "confidence": 0.92,
+            "span": {
+              "offset": 5,
+              "length": 11
+            }
+          },
+          {
+            "content": "Commercial",
+            "polygon": [
+              0.6,
+              1.15,
+              2.2,
+              1.15,
+              2.2,
+              1.37,
+              0.6,
+              1.37
+            ],
+            "confidence": 0.91,
+            "span": {
+              "offset": 17,
+              "length": 10
+            }
+          },
+          {
+            "content": "Invoice",
+            "polygon": [
+              2.36,
+              1.15,
+              3.48,
+              1.15,
+              3.48,
+              1.37,
+              2.36,
+              1.37
+            ],
+            "confidence": 0.97,
+            "span": {
+              "offset": 28,
+              "length": 7
+            }
+          },
+          {
+            "content": "Invoice",
+            "polygon": [
+              0.6,
+              1.7,
+              1.72,
+              1.7,
+              1.72,
+              1.92,
+              0.6,
+              1.92
+            ],
+            "confidence": 0.97,
+            "span": {
+              "offset": 36,
+              "length": 7
+            }
+          },
+          {
+            "content": "Number:",
+            "polygon": [
+              1.88,
+              1.7,
+              3,
+              1.7,
+              3,
+              1.92,
+              1.88,
+              1.92
+            ],
+            "confidence": 0.97,
+            "span": {
+              "offset": 44,
+              "length": 7
+            }
+          },
+          {
+            "content": "INV-2024-0042",
+            "polygon": [
+              3.16,
+              1.7,
+              5.24,
+              1.7,
+              5.24,
+              1.92,
+              3.16,
+              1.92
+            ],
+            "confidence": 0.94,
+            "span": {
+              "offset": 52,
+              "length": 13
+            }
+          },
+          {
+            "content": "Issue",
+            "polygon": [
+              0.6,
+              2.25,
+              1.4,
+              2.25,
+              1.4,
+              2.47,
+              0.6,
+              2.47
+            ],
+            "confidence": 0.95,
+            "span": {
+              "offset": 66,
+              "length": 5
+            }
+          },
+          {
+            "content": "Date:",
+            "polygon": [
+              1.56,
+              2.25,
+              2.36,
+              2.25,
+              2.36,
+              2.47,
+              1.56,
+              2.47
+            ],
+            "confidence": 0.95,
+            "span": {
+              "offset": 72,
+              "length": 5
+            }
+          },
+          {
+            "content": "November",
+            "polygon": [
+              2.52,
+              2.25,
+              3.8,
+              2.25,
+              3.8,
+              2.47,
+              2.52,
+              2.47
+            ],
+            "confidence": 0.98,
+            "span": {
+              "offset": 78,
+              "length": 8
+            }
+          },
+          {
+            "content": "30,",
+            "polygon": [
+              3.96,
+              2.25,
+              4.44,
+              2.25,
+              4.44,
+              2.47,
+              3.96,
+              2.47
+            ],
+            "confidence": 0.93,
+            "span": {
+              "offset": 87,
+              "length": 3
+            }
+          },
+          {
+            "content": "2024",
+            "polygon": [
+              4.6,
+              2.25,
+              5.24,
+              2.25,
+              5.24,
+              2.47,
+              4.6,
+              2.47
+            ],
+            "confidence": 0.94,
+            "span": {
+              "offset": 91,
+              "length": 4
+            }
+          },
+          {
+            "content": "Bill",
+            "polygon": [
+              0.6,
+              2.8,
+              1.24,
+              2.8,
+              1.24,
+              3.02,
+              0.6,
+              3.02
+            ],
+            "confidence": 0.94,
+            "span": {
+              "offset": 96,
+              "length": 4
+            }
+          },
+          {
+            "content": "To:",
+            "polygon": [
+              1.4,
+              2.8,
+              1.88,
+              2.8,
+              1.88,
+              3.02,
+              1.4,
+              3.02
+            ],
+            "confidence": 0.93,
+            "span": {
+              "offset": 101,
+              "length": 3
+            }
+          },
+          {
+            "content": "Globex",
+            "polygon": [
+              2.04,
+              2.8,
+              3,
+              2.8,
+              3,
+              3.02,
+              2.04,
+              3.02
+            ],
+            "confidence": 0.96,
+            "span": {
+              "offset": 105,
+              "length": 6
+            }
+          },
+          {
+            "content": "Inc.",
+            "polygon": [
+              3.16,
+              2.8,
+              3.8,
+              2.8,
+              3.8,
+              3.02,
+              3.16,
+              3.02
+            ],
+            "confidence": 0.94,
+            "span": {
+              "offset": 112,
+              "length": 4
+            }
+          },
+          {
+            "content": "Description:",
+            "polygon": [
+              0.6,
+              3.35,
+              2.52,
+              3.35,
+              2.52,
+              3.57,
+              0.6,
+              3.57
+            ],
+            "confidence": 0.93,
+            "span": {
+              "offset": 117,
+              "length": 12
+            }
+          },
+          {
+            "content": "Consulting",
+            "polygon": [
+              2.68,
+              3.35,
+              4.28,
+              3.35,
+              4.28,
+              3.57,
+              2.68,
+              3.57
+            ],
+            "confidence": 0.91,
+            "span": {
+              "offset": 130,
+              "length": 10
+            }
+          },
+          {
+            "content": "services",
+            "polygon": [
+              4.44,
+              3.35,
+              5.72,
+              3.35,
+              5.72,
+              3.57,
+              4.44,
+              3.57
+            ],
+            "confidence": 0.98,
+            "span": {
+              "offset": 141,
+              "length": 8
+            }
+          },
+          {
+            "content": "Subtotal:",
+            "polygon": [
+              0.6,
+              8.1,
+              2.04,
+              8.1,
+              2.04,
+              8.32,
+              0.6,
+              8.32
+            ],
+            "confidence": 0.9,
+            "span": {
+              "offset": 150,
+              "length": 9
+            }
+          },
+          {
+            "content": "$1,200.00",
+            "polygon": [
+              2.2,
+              8.1,
+              3.64,
+              8.1,
+              3.64,
+              8.32,
+              2.2,
+              8.32
+            ],
+            "confidence": 0.9,
+            "span": {
+              "offset": 160,
+              "length": 9
+            }
+          },
+          {
+            "content": "Tax",
+            "polygon": [
+              0.6,
+              8.65,
+              1.08,
+              8.65,
+              1.08,
+              8.87,
+              0.6,
+              8.87
+            ],
+            "confidence": 0.93,
+            "span": {
+              "offset": 170,
+              "length": 3
+            }
+          },
+          {
+            "content": "(10%):",
+            "polygon": [
+              1.24,
+              8.65,
+              2.2,
+              8.65,
+              2.2,
+              8.87,
+              1.24,
+              8.87
+            ],
+            "confidence": 0.96,
+            "span": {
+              "offset": 174,
+              "length": 6
+            }
+          },
+          {
+            "content": "$120.00",
+            "polygon": [
+              2.36,
+              8.65,
+              3.48,
+              8.65,
+              3.48,
+              8.87,
+              2.36,
+              8.87
+            ],
+            "confidence": 0.97,
+            "span": {
+              "offset": 181,
+              "length": 7
+            }
+          },
+          {
+            "content": "Total",
+            "polygon": [
+              0.6,
+              9.2,
+              1.4,
+              9.2,
+              1.4,
+              9.42,
+              0.6,
+              9.42
+            ],
+            "confidence": 0.95,
+            "span": {
+              "offset": 189,
+              "length": 5
+            }
+          },
+          {
+            "content": "Due:",
+            "polygon": [
+              1.56,
+              9.2,
+              2.2,
+              9.2,
+              2.2,
+              9.42,
+              1.56,
+              9.42
+            ],
+            "confidence": 0.94,
+            "span": {
+              "offset": 195,
+              "length": 4
+            }
+          },
+          {
+            "content": "$1,320.00",
+            "polygon": [
+              2.36,
+              9.2,
+              3.8,
+              9.2,
+              3.8,
+              9.42,
+              2.36,
+              9.42
+            ],
+            "confidence": 0.9,
+            "span": {
+              "offset": 200,
+              "length": 9
+            }
+          }
+        ],
+        "lines": [
+          {
+            "content": "ACME CORPORATION",
+            "polygon": [
+              0.6,
+              0.6,
+              3.16,
+              0.6,
+              3.16,
+              0.82,
+              0.6,
+              0.82
+            ],
+            "spans": [
+              {
+                "offset": 0,
+                "length": 16
+              }
+            ]
+          },
+          {
+            "content": "Commercial Invoice",
+            "polygon": [
+              0.6,
+              1.15,
+              3.48,
+              1.15,
+              3.48,
+              1.37,
+              0.6,
+              1.37
+            ],
+            "spans": [
+              {
+                "offset": 17,
+                "length": 18
+              }
+            ]
+          },
+          {
+            "content": "Invoice Number: INV-2024-0042",
+            "polygon": [
+              0.6,
+              1.7,
+              5.24,
+              1.7,
+              5.24,
+              1.92,
+              0.6,
+              1.92
+            ],
+            "spans": [
+              {
+                "offset": 36,
+                "length": 29
+              }
+            ]
+          },
+          {
+            "content": "Issue Date: November 30, 2024",
+            "polygon": [
+              0.6,
+              2.25,
+              5.24,
+              2.25,
+              5.24,
+              2.47,
+              0.6,
+              2.47
+            ],
+            "spans": [
+              {
+                "offset": 66,
+                "length": 29
+              }
+            ]
+          },
+          {
+            "content": "Bill To: Globex Inc.",
+            "polygon": [
+              0.6,
+              2.8,
+              3.8,
+              2.8,
+              3.8,
+              3.02,
+              0.6,
+              3.02
+            ],
+            "spans": [
+              {
+                "offset": 96,
+                "length": 20
+              }
+            ]
+          },
+          {
+            "content": "Description: Consulting services",
+            "polygon": [
+              0.6,
+              3.35,
+              5.72,
+              3.35,
+              5.72,
+              3.57,
+              0.6,
+              3.57
+            ],
+            "spans": [
+              {
+                "offset": 117,
+                "length": 32
+              }
+            ]
+          },
+          {
+            "content": "Subtotal: $1,200.00",
+            "polygon": [
+              0.6,
+              8.1,
+              3.64,
+              8.1,
+              3.64,
+              8.32,
+              0.6,
+              8.32
+            ],
+            "spans": [
+              {
+                "offset": 150,
+                "length": 19
+              }
+            ]
+          },
+          {
+            "content": "Tax (10%): $120.00",
+            "polygon": [
+              0.6,
+              8.65,
+              3.48,
+              8.65,
+              3.48,
+              8.87,
+              0.6,
+              8.87
+            ],
+            "spans": [
+              {
+                "offset": 170,
+                "length": 18
+              }
+            ]
+          },
+          {
+            "content": "Total Due: $1,320.00",
+            "polygon": [
+              0.6,
+              9.2,
+              3.8,
+              9.2,
+              3.8,
+              9.42,
+              0.6,
+              9.42
+            ],
+            "spans": [
+              {
+                "offset": 189,
+                "length": 20
+              }
+            ]
+          }
+        ],
+        "spans": [
+          {
+            "offset": 0,
+            "length": 209
+          }
+        ]
+      }
+    ],
+    "paragraphs": [
+      {
+        "role": "title",
+        "content": "ACME CORPORATION",
+        "boundingRegions": [
+          {
+            "pageNumber": 1,
+            "polygon": [
+              0.6,
+              0.6,
+              3.16,
+              0.6,
+              3.16,
+              0.82,
+              0.6,
+              0.82
+            ]
+          }
+        ],
+        "spans": [
+          {
+            "offset": 0,
+            "length": 16
+          }
+        ]
+      },
+      {
+        "role": "sectionHeading",
+        "content": "Commercial Invoice",
+        "boundingRegions": [
+          {
+            "pageNumber": 1,
+            "polygon": [
+              0.6,
+              1.15,
+              3.48,
+              1.15,
+              3.48,
+              1.37,
+              0.6,
+              1.37
+            ]
+          }
+        ],
+        "spans": [
+          {
+            "offset": 17,
+            "length": 18
+          }
+        ]
+      },
+      {
+        "content": "Invoice Number: INV-2024-0042",
+        "boundingRegions": [
+          {
+            "pageNumber": 1,
+            "polygon": [
+              0.6,
+              1.7,
+              5.24,
+              1.7,
+              5.24,
+              1.92,
+              0.6,
+              1.92
+            ]
+          }
+        ],
+        "spans": [
+          {
+            "offset": 36,
+            "length": 29
+          }
+        ]
+      },
+      {
+        "content": "Issue Date: November 30, 2024",
+        "boundingRegions": [
+          {
+            "pageNumber": 1,
+            "polygon": [
+              0.6,
+              2.25,
+              5.24,
+              2.25,
+              5.24,
+              2.47,
+              0.6,
+              2.47
+            ]
+          }
+        ],
+        "spans": [
+          {
+            "offset": 66,
+            "length": 29
+          }
+        ]
+      },
+      {
+        "content": "Bill To: Globex Inc.",
+        "boundingRegions": [
+          {
+            "pageNumber": 1,
+            "polygon": [
+              0.6,
+              2.8,
+              3.8,
+              2.8,
+              3.8,
+              3.02,
+              0.6,
+              3.02
+            ]
+          }
+        ],
+        "spans": [
+          {
+            "offset": 96,
+            "length": 20
+          }
+        ]
+      },
+      {
+        "content": "Description: Consulting services",
+        "boundingRegions": [
+          {
+            "pageNumber": 1,
+            "polygon": [
+              0.6,
+              3.35,
+              5.72,
+              3.35,
+              5.72,
+              3.57,
+              0.6,
+              3.57
+            ]
+          }
+        ],
+        "spans": [
+          {
+            "offset": 117,
+            "length": 32
+          }
+        ]
+      },
+      {
+        "content": "Subtotal: $1,200.00",
+        "boundingRegions": [
+          {
+            "pageNumber": 1,
+            "polygon": [
+              0.6,
+              8.1,
+              3.64,
+              8.1,
+              3.64,
+              8.32,
+              0.6,
+              8.32
+            ]
+          }
+        ],
+        "spans": [
+          {
+            "offset": 150,
+            "length": 19
+          }
+        ]
+      },
+      {
+        "content": "Tax (10%): $120.00",
+        "boundingRegions": [
+          {
+            "pageNumber": 1,
+            "polygon": [
+              0.6,
+              8.65,
+              3.48,
+              8.65,
+              3.48,
+              8.87,
+              0.6,
+              8.87
+            ]
+          }
+        ],
+        "spans": [
+          {
+            "offset": 170,
+            "length": 18
+          }
+        ]
+      },
+      {
+        "content": "Total Due: $1,320.00",
+        "boundingRegions": [
+          {
+            "pageNumber": 1,
+            "polygon": [
+              0.6,
+              9.2,
+              3.8,
+              9.2,
+              3.8,
+              9.42,
+              0.6,
+              9.42
+            ]
+          }
+        ],
+        "spans": [
+          {
+            "offset": 189,
+            "length": 20
+          }
+        ]
+      }
+    ],
+    "styles": [],
+    "tables": []
+  }
+}
