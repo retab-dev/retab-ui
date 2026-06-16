@@ -409,8 +409,8 @@ export function JsonTableDemo({
     <div className="not-prose flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <ModeSwitch
-          label="JSON"
-          ariaLabel="JSON edit mode"
+          label="Data"
+          ariaLabel="Data edit mode"
           modes={jsonEditModes}
           value={jsonEditMode}
           onChange={setJsonEditMode}

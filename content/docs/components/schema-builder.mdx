@@ -49,3 +49,66 @@ export function Example() {
 Optional feature defaults are intentionally small: `definitions` is enabled,
 while `objectTemplates`, `jsonMode`, and `importExport` are disabled unless you
 turn them on.
+
+## Property Form
+
+When you click a field's edit action, the Schema Builder opens an **Edit
+Property** dialog. The body of that dialog is `PropertyForm` — name, data type,
+type-specific options (enum values, array item type, `$ref`), nullable controls,
+and description. It edits a local draft and emits a single validated commit
+through `onCommitPropertyDraft`.
+
+`PropertyForm` renders just the form (no dialog chrome), so the Schema Builder
+drops it into a `<DialogContent>` while you can reuse the same subcomponent in a
+popover or an inline panel.
+
+<PropertyFormDemo />
+
+### Using Property Form standalone
+
+`PropertyForm` does not own the parent schema. Pass the current property draft
+through `propertyDraft`, parent-local schema context through `schemaContext`, and
+persist changes in `onCommitPropertyDraft`.
+
+```tsx
+import { useState } from "react"
+
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
+import { PropertyForm } from "@/components/schema-editor/property-form/property-form"
+
+export function Example() {
+  const [property, setProperty] = useState<ExtendedJSONSchema7>({
+    type: "string",
+  })
+  const [name, setName] = useState("currency")
+  return (
+    <PropertyForm
+      propertyDraft={{ name, schemaNode: property }}
+      schemaContext={{
+        siblingNames: [],
+        originalName: name,
+        schemaDefinitions: {},
+      }}
+      submitLabel="Save"
+      onCommitPropertyDraft={(next) => {
+        setName(next.name)
+        setProperty(next.schemaNode)
+      }}
+      onCancel={() => {}}
+      onDelete={() => {}}
+    />
+  )
+}
+```
+
+### Property Form props
+
+| Prop                    | Type                                                    | Description                                                                                                    |
+| ----------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `propertyDraft`         | `{ name; schemaNode }`                                  | The property draft to edit.                                                                                    |
+| `schemaContext`         | `PropertyFormSchemaContext`                             | Parent-local validation names, original name, `$defs`, and optional command handler for definitions/templates. |
+| `onCommitPropertyDraft` | `(next: { name; schemaNode }) => void \| Promise<void>` | Called only after validation passes.                                                                           |
+| `onCancel`              | `() => void`                                            | Called on Cancel.                                                                                              |
+| `onDelete`              | `() => void`                                            | Optional. Shows the Delete Property action.                                                                    |
+| `submitLabel`           | `string`                                                | Submit button label. Defaults to `"Save Changes"`.                                                             |
+| `mode`                  | `"editable" \| "readOnly" \| "descriptionOnly"`         | Defaults to `"editable"`.                                                                                      |

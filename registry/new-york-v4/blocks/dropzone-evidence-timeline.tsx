@@ -51,16 +51,13 @@ export function EvidenceTimeline({ className }: DropzoneExampleProps) {
           Add evidence
         </button>
       </div>
-      <div className="mt-4 grid min-h-44 gap-3 rounded-md border border-dashed bg-muted/20 p-3 md:grid-cols-2">
+      <div className="mt-4 grid min-h-44 auto-rows-min content-start items-start gap-3 rounded-md border border-dashed bg-muted/20 p-3 md:grid-cols-2">
         {dropzone.files.length ? (
-          dropzone.files.map((item, index) => (
+          dropzone.files.map((item) => (
             <div
               key={item.id}
-              className="flex min-w-0 items-center gap-3 rounded-md border bg-background p-2"
+              className="flex h-16 min-w-0 items-center gap-3 rounded-md border bg-background p-2"
             >
-              <div className="grid size-7 shrink-0 place-items-center rounded-full bg-muted text-xs font-medium">
-                {index + 1}
-              </div>
               <FileThumbnail
                 file={item.file}
                 thumbnailShape="square"

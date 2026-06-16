@@ -121,7 +121,7 @@ export function JsonTableHeaderCell({
           <Button
             variant="ghost"
             size="sm"
-            className="h-full grow justify-start rounded-none bg-transparent px-1 text-foreground hover:bg-muted/40"
+            className="h-full grow justify-start rounded-none bg-transparent px-1 text-foreground hover:bg-muted/40 sm:h-full"
           >
             {label}
           </Button>
@@ -132,7 +132,7 @@ export function JsonTableHeaderCell({
         <Button
           variant="ghost"
           size="icon"
-          className={`h-full ${node.isArray ? "w-9" : "w-6"} rounded-none bg-transparent text-foreground hover:bg-muted/40`}
+          className={`h-full sm:h-full ${node.isArray ? "w-9 sm:w-9" : "w-6 sm:w-6"} rounded-none bg-transparent text-foreground hover:bg-muted/40`}
           onClick={toggleExpanded}
         >
           {stopAt.includes(node.key) ? (
