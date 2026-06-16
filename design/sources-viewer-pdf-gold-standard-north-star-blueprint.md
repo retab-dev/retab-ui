@@ -31,27 +31,52 @@ feel inevitable.
 
 ## Implementation Status
 
-The first architecture cut is in place:
+The north-star cut is now in place for `SourcesViewerBlock`.
 
-- `SourcesViewerBlock` no longer renders the old `Source-linked results` header.
+Done:
+
+- `SourcesViewerBlock` no longer renders the old `Source-linked results`
+  shell header.
 - The first row under the format tabs is the real `FileViewerHeader`.
-- The source-data sidebar trigger lives in that row.
-- `SourceLinkedViewer` owns the source-data root boundary with `ViewerRoot`.
-- File identity and header controls come from `FileViewerProvider`.
-- PDF uses the canonical provider/page composition inside that root.
-- Image, XLSX, and DOCX reuse the enclosing `FileViewerProvider` resource
-  through their resource-content leaves.
-- non-PDF renderers now register controls upward into `FileViewerControls`.
+- The source-data sidebar trigger lives in that file header row.
+- `SourceLinkedViewer` owns exactly one `ViewerRoot`, and that root owns the
+  right source-data `ViewerSidebar`.
+- `FileViewerProvider` supplies file identity, resource ownership, metadata,
+  and header control registration without adding another visible shell.
+- PDF uses `PdfViewerProvider` / `PdfViewerPages` inside the shared source
+  root.
+- Image uses `ImageViewerProvider` / `ImageViewerFrames`.
+- Text uses `TextViewerProvider` / `TextViewerDocument`.
+- CSV uses `CsvViewerProvider` / `CsvViewerGrid`.
+- XLSX uses `XlsxViewerProvider` / `XlsxViewerWorkbook`.
+- DOCX uses `DocxViewerProvider` / `DocxViewerDocument`.
+- Text and CSV no longer duplicate source ownership inside the sources viewer;
+  they consume the resource from the enclosing `FileViewerProvider`.
+- Format renderers register controls upward into `FileViewerControls` instead
+  of rendering private competing header rows.
+- The easy APIs remain intact and are backed by the same resource/content
+  parts, not by a separate product grammar.
+
+Verified:
+
+- `pnpm exec tsc --noEmit --pretty false` passes.
+- Focused viewer suites pass:
+  `tests/file-viewer.test.tsx`, `tests/pdf-viewer.test.tsx`,
+  `tests/image-viewer.test.tsx`, `tests/docx-viewer.test.tsx`,
+  `tests/csv-viewer.test.tsx`, `tests/xlsx-viewer-integration.test.tsx`,
+  and `tests/text-viewer-markdown.test.tsx`.
+- `tests/viewer-architecture.test.ts` sources-viewer assertions pass. The
+  suite still has one unrelated pre-existing file-system sidebar-width failure.
+- The direct block route renders the intended static hierarchy in the browser:
+  tabs, then one file header row, then document surface plus source-linked data
+  panel.
 
 Remaining work before the ideal is complete:
 
-- verify the source-data trigger in a hydrated block view and fix it if it
-  remains disabled;
-- extract first-class `TextViewerProvider` / `TextViewerDocument`;
-- extract first-class `CsvViewerProvider` / `CsvViewerGrid`;
-- finish public provider/document leaves for Image, XLSX, and DOCX instead of
-  relying on resource-content helpers;
-- remove all duplicate source ownership in Text and CSV tabs;
+- verify the source-data trigger in a hydrated block preview. The direct
+  `/view/blocks/sources-viewer` browser route currently presents static markup
+  in the in-app browser, so sidebar registration effects do not run there and
+  the trigger remains disabled in that route's static DOM.
 - add behavior coverage for the source-data trigger and every tab's source
   hover path.
 

@@ -16,6 +16,11 @@ import { IntakeRouter } from "@/registry/new-york-v4/blocks/dropzone-intake-rout
 import { MediaTranscriptQueue } from "@/registry/new-york-v4/blocks/dropzone-media-transcript-queue"
 import { NativeButtonQueue } from "@/registry/new-york-v4/blocks/dropzone-native-button-queue"
 import { NonButtonTrigger } from "@/registry/new-york-v4/blocks/dropzone-non-button-trigger"
+import { SchemaBuilderDefinitions } from "@/registry/new-york-v4/blocks/schema-builder-definitions"
+import { SchemaBuilderJsonMode } from "@/registry/new-york-v4/blocks/schema-builder-json-mode"
+import { SchemaBuilderLiveJson } from "@/registry/new-york-v4/blocks/schema-builder-live-json"
+import { SchemaBuilderPresets } from "@/registry/new-york-v4/blocks/schema-builder-presets"
+import { SchemaBuilderReadOnly } from "@/registry/new-york-v4/blocks/schema-builder-read-only"
 import { PinboardDropSurface } from "@/registry/new-york-v4/blocks/dropzone-pinboard-drop-surface"
 import { RequiredPacketSlots } from "@/registry/new-york-v4/blocks/dropzone-required-packet-slots"
 import { SpreadsheetImportCard } from "@/registry/new-york-v4/blocks/dropzone-spreadsheet-import-card"
@@ -107,6 +112,26 @@ const REGISTRY = {
   "dropzone-pinboard-drop-surface": {
     component: PinboardDropSurface,
     src: "registry/new-york-v4/blocks/dropzone-pinboard-drop-surface.tsx",
+  },
+  "schema-builder-live-json": {
+    component: SchemaBuilderLiveJson,
+    src: "registry/new-york-v4/blocks/schema-builder-live-json.tsx",
+  },
+  "schema-builder-presets": {
+    component: SchemaBuilderPresets,
+    src: "registry/new-york-v4/blocks/schema-builder-presets.tsx",
+  },
+  "schema-builder-read-only": {
+    component: SchemaBuilderReadOnly,
+    src: "registry/new-york-v4/blocks/schema-builder-read-only.tsx",
+  },
+  "schema-builder-json-mode": {
+    component: SchemaBuilderJsonMode,
+    src: "registry/new-york-v4/blocks/schema-builder-json-mode.tsx",
+  },
+  "schema-builder-definitions": {
+    component: SchemaBuilderDefinitions,
+    src: "registry/new-york-v4/blocks/schema-builder-definitions.tsx",
   },
 } satisfies Record<string, ComponentPreviewEntry>
 

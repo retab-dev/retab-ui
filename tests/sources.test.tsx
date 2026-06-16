@@ -8,6 +8,8 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react"
+import type { JSONSchema7 } from "json-schema"
+import { useForm } from "react-hook-form"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { Source, SourceAnchor, SourceMap } from "@/lib/document-source"
@@ -25,6 +27,7 @@ import {
   sourceToSegmentAnchor,
 } from "@/components/ui/source-segmented-document-model"
 import { useSegmentedPdfSourceOverlay } from "@/components/ui/source-segmented-document-overlays"
+import { JsonForm } from "@/components/json-form/json-form"
 import csvSample from "@/components/viewers/sample-data/csv-sources.json"
 import docxSample from "@/components/viewers/sample-data/docx-sources.json"
 import imageSample from "@/components/viewers/sample-data/image-sources.json"
@@ -48,6 +51,15 @@ import {
   useDocxSourceTarget,
 } from "@/registry/new-york-v4/ui/docx-source"
 import type { DocxViewerHandle } from "@/registry/new-york-v4/ui/docx-viewer"
+import {
+  FileViewerBody,
+  FileViewerControls,
+  FileViewerHeader,
+  FileViewerMeta,
+  FileViewerSurface,
+  FileViewerTitle,
+} from "@/registry/new-york-v4/ui/file-viewer"
+import { FileViewerProvider } from "@/registry/new-york-v4/ui/file-viewer-internal"
 import {
   imageAnchorToTarget,
   renderImageSourceOverlay,
@@ -75,6 +87,11 @@ import {
   useTextSourceTarget,
 } from "@/registry/new-york-v4/ui/text-source"
 import type { TextViewerHandle } from "@/registry/new-york-v4/ui/text-viewer"
+import {
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSidebarTrigger,
+} from "@/registry/new-york-v4/ui/viewer"
 import {
   sourceToXlsxCell,
   spreadsheetColumnToIndex,
@@ -264,6 +281,99 @@ function SegmentedFieldLinkNavigationProbe({
       >
         {link.activePath ?? "none"}
       </output>
+    </>
+  )
+}
+
+function SourcesViewerSidebarProbe() {
+  return (
+    <ViewerRoot bare defaultOpen mode="inline">
+      <FileViewerProvider
+        source={{
+          kind: "text",
+          text: "source document",
+          fileName: "source-document.txt",
+        }}
+      >
+        <FileViewerHeader>
+          <ViewerSidebarTrigger data-testid="source-sidebar-trigger" />
+          <FileViewerTitle />
+          <FileViewerMeta />
+          <FileViewerControls />
+        </FileViewerHeader>
+        <FileViewerBody>
+          <FileViewerSurface data-testid="source-document-surface">
+            Document
+          </FileViewerSurface>
+          <ViewerSidebar
+            aria-label="Source-linked fields"
+            data-testid="source-sidebar"
+            side="right"
+            width="420px"
+          >
+            Source-linked data
+          </ViewerSidebar>
+        </FileViewerBody>
+      </FileViewerProvider>
+    </ViewerRoot>
+  )
+}
+
+function SourceLinkedJsonFormProbe({
+  onScroll,
+}: {
+  onScroll: (source: Source, options: { behavior: ScrollBehavior }) => void
+}) {
+  const form = useForm<Record<string, unknown>>({
+    defaultValues: {
+      title: "An Image is Worth 16x16 Words",
+      missing: "No source",
+    },
+  })
+  const schema: JSONSchema7 = {
+    type: "object",
+    required: ["title"],
+    properties: {
+      title: { type: "string", title: "Title" },
+      missing: { type: "string", title: "Missing" },
+    },
+  }
+  const sources: SourceMap = React.useMemo(
+    () => ({
+      title: imageSource,
+    }),
+    []
+  )
+  const link = useSegmentedSourceFieldLink()
+  const scrollToPath = React.useCallback(
+    (path: string, behavior: ScrollBehavior) => {
+      const fieldSource = sources[path]
+      if (fieldSource) onScroll(fieldSource, { behavior })
+    },
+    [onScroll, sources]
+  )
+  const sourceLink = React.useMemo(
+    () => ({
+      ...link,
+      onFieldHover: (path: string | null) => {
+        link.onFieldHover(path)
+        if (path) scrollToPath(path, "auto")
+      },
+      selectField: (path: string) => {
+        link.selectField?.(path)
+        scrollToPath(path, "smooth")
+      },
+    }),
+    [link, scrollToPath]
+  )
+
+  return (
+    <>
+      <SourceIndicator
+        path={sourceLink.activePath}
+        found={!!sourceLink.activeSegment}
+      />
+      <JsonForm form={form} schema={schema} anchorLink={sourceLink} />
     </>
   )
 }
@@ -1643,6 +1753,84 @@ describe("source UI components", () => {
     { key: "missing", label: "Approver", value: "Morgan Lee" },
     { key: "", label: "Root value", value: "standalone" },
   ]
+
+  it("keeps the source-data sidebar trigger live inside the file header row", async () => {
+    render(<SourcesViewerSidebarProbe />)
+
+    const trigger = screen.getByTestId("source-sidebar-trigger")
+    const sidebar = screen.getByTestId("source-sidebar")
+
+    await waitFor(() => {
+      expect(trigger.hasAttribute("disabled")).toBe(false)
+      expect(trigger.getAttribute("aria-controls")).toBe(sidebar.id)
+      expect(trigger.getAttribute("aria-expanded")).toBe("true")
+      expect(trigger.getAttribute("data-side")).toBe("right")
+    })
+
+    expect(screen.getByTestId("source-document-surface").textContent).toContain(
+      "Document"
+    )
+    expect(sidebar.textContent).toContain("Source-linked data")
+
+    fireEvent.click(trigger)
+
+    expect(trigger.getAttribute("aria-expanded")).toBe("false")
+    expect(sidebar.getAttribute("aria-hidden")).toBe("true")
+    expect(sidebar.hasAttribute("inert")).toBe(true)
+
+    fireEvent.click(trigger)
+
+    expect(trigger.getAttribute("aria-expanded")).toBe("true")
+    expect(sidebar.hasAttribute("aria-hidden")).toBe(false)
+    expect(sidebar.hasAttribute("inert")).toBe(false)
+  })
+
+  it("drives source indicator and source scrolling from JSON form hover and click", async () => {
+    const onScroll = vi.fn()
+    const model = createSourcesSegmentedDocumentModel([
+      {
+        id: "title",
+        label: "Title",
+        source: imageSource,
+      },
+    ])
+
+    const { container } = render(
+      <SegmentedDocumentProvider model={model}>
+        <div className="relative">
+          <SourceLinkedJsonFormProbe onScroll={onScroll} />
+        </div>
+      </SegmentedDocumentProvider>
+    )
+
+    const titleInput = screen.getByDisplayValue("An Image is Worth 16x16 Words")
+    const titleField = titleInput.closest('div[class*="rounded-md"]')
+    expect(titleField).not.toBeNull()
+
+    fireEvent.mouseEnter(titleField!)
+
+    await waitFor(() => {
+      expect(screen.getByText("title").textContent).toBe("title")
+      expect(onScroll).toHaveBeenLastCalledWith(imageSource, {
+        behavior: "auto",
+      })
+    })
+
+    const activeShell = container.querySelector(".border-primary\\/40")
+    expect(activeShell?.textContent).toContain("Title")
+
+    fireEvent.click(titleField!)
+
+    expect(onScroll).toHaveBeenLastCalledWith(imageSource, {
+      behavior: "smooth",
+    })
+
+    fireEvent.mouseLeave(titleField!)
+
+    await waitFor(() => {
+      expect(screen.getByText("title").textContent).toBe("title")
+    })
+  })
 
   it("SourceFieldList renders fields and forwards hover, focus, blur, and click events", () => {
     const link = {

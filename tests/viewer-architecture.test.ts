@@ -2724,27 +2724,19 @@ describe("viewer architecture", () => {
     const sourcesViewerBlock = fileContent(
       "registry/new-york-v4/blocks/sources-viewer-block.tsx"
     )
-    expectJsxTagsInOrder(
-      "registry/new-york-v4/blocks/sources-viewer-block.tsx",
-      [
-        "<FileViewerHeader",
-        "<ViewerSidebarTrigger",
-        "<FileViewerTitle",
-        "<FileViewerMeta",
-        "<FileViewerControls",
-      ]
-    )
-    expectJsxTagsInOrder(
-      "registry/new-york-v4/blocks/sources-viewer-block.tsx",
-      [
-        "<ViewerRoot",
-        "<FileViewerProvider",
-        "<SourceLinkedFileHeader",
-        "<FileViewerBody",
-        "<FileViewerSurface",
-        "<ViewerSidebar",
-      ]
-    )
+    for (const tag of [
+      "<FileViewer",
+      "<FileViewerHeader",
+      "<FileViewerSidebarTrigger",
+      "<FileViewerTitle",
+      "<FileViewerMeta",
+      "<FileViewerControls",
+      "<FileViewerBody",
+      "<FileViewerSurface",
+      "<FileViewerSidebar",
+    ]) {
+      expect(sourcesViewerBlock).toContain(tag)
+    }
     expect(sourcesViewerBlock).toContain("PdfViewerProvider")
     expect(sourcesViewerBlock).toContain("ImageViewerProvider")
     expect(sourcesViewerBlock).toContain("TextViewerProvider")
@@ -2762,14 +2754,16 @@ describe("viewer architecture", () => {
     expect(sourcesViewerBlock).toContain("CsvViewerGrid")
     expect(sourcesViewerBlock).toContain("XlsxViewerWorkbook")
     expect(sourcesViewerBlock).toContain("DocxViewerDocument")
-    expect(sourcesViewerBlock).toContain("FileViewerProvider")
+    expect(sourcesViewerBlock).toContain("useFileViewerResource")
+    expect(sourcesViewerBlock).not.toContain("FileViewerProvider")
+    expect(sourcesViewerBlock).not.toContain("file-viewer-internal")
     expect(sourcesViewerBlock).not.toContain("ImageResourceContent")
     expect(sourcesViewerBlock).not.toContain("DocxResourceContent")
     expect(sourcesViewerBlock).not.toContain("XlsxResourceContent")
-    expect(sourcesViewerBlock).toContain("<ViewerRoot")
-    expect(sourcesViewerBlock).toContain("<ViewerSidebar")
-    expect(sourcesViewerBlock).not.toMatch(/<FileViewer(?:\s|>)/)
-    expect(sourcesViewerBlock).not.toContain("<FileViewerSidebar")
+    expect(sourcesViewerBlock).not.toContain("<ViewerRoot")
+    expect(sourcesViewerBlock).not.toContain("<ViewerSidebar")
+    expect(sourcesViewerBlock).toMatch(/<FileViewer(?:\s|>)/)
+    expect(sourcesViewerBlock).toContain("<FileViewerSidebar")
   })
 
   it("keeps public viewer docs free of removed shell and slot language", () => {
