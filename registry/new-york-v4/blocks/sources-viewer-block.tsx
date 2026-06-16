@@ -250,12 +250,20 @@ function SourceLinkedViewer({
   source: SourceLinkedViewerSource
 }) {
   return (
-    <FileViewer source={source} bare defaultOpen className="h-full bg-background">
+    <FileViewer
+      source={source}
+      bare
+      defaultOpen
+      className="h-full bg-background"
+    >
       <SourceLinkedFileHeader />
       <FileViewerBody>
         <FileViewerSurface className="relative">
           {children}
-          <SourceIndicator path={link.activePath} found={!!link.activeSegment} />
+          <SourceIndicator
+            path={link.activePath}
+            found={!!link.activeSegment}
+          />
         </FileViewerSurface>
         <FileViewerSidebar
           aria-label="Source-linked fields"
