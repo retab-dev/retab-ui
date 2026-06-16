@@ -8,9 +8,12 @@ import type { ViewerDownloadAction } from "@/lib/viewer-download"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ViewerDownloadControl } from "@/components/ui/viewer-download"
+import {
+  ViewerDownloadControl,
+  type ViewerDownloadErrorHandler,
+} from "@/components/ui/viewer-download"
 
-export type ViewerToolbarPosition =
+export type ViewerControlPosition =
   | {
       kind: "page" | "slide" | "frame"
       current: number
@@ -20,7 +23,7 @@ export type ViewerToolbarPosition =
       label: React.ReactNode
     }
 
-export type ViewerToolbarZoom = {
+export type ViewerZoomControl = {
   scale: number | null
   onZoomOut: () => void
   onZoomIn: () => void
@@ -30,55 +33,88 @@ export type ViewerToolbarZoom = {
   isDisabled?: boolean
 }
 
-export type ViewerToolbarRotate = {
+export type ViewerRotateControl = {
   onRotate: () => void
   isDisabled?: boolean
 }
 
-export type ViewerToolbarState = {
-  position?: ViewerToolbarPosition | null
-  zoom?: ViewerToolbarZoom | null
-  rotate?: ViewerToolbarRotate | null
+export type ViewerControlsState = {
+  title?: React.ReactNode
+  subtitle?: React.ReactNode
+  position?: ViewerControlPosition | null
+  zoom?: ViewerZoomControl | null
+  rotate?: ViewerRotateControl | null
   downloads?: ViewerDownloadAction[]
+  loading?: boolean
   extra?: React.ReactNode
 }
 
-type ViewerToolbarRegistration = (state: ViewerToolbarState | null) => void
+type ViewerControlsRegistration = (state: ViewerControlsState | null) => void
+type ViewerControlsRegistrar = (
+  registrationId: symbol,
+  state: ViewerControlsState | null
+) => void
 
-const ViewerToolbarRegistrationContext =
-  React.createContext<ViewerToolbarRegistration | null>(null)
+const ViewerControlsRegistrationContext =
+  React.createContext<ViewerControlsRegistrar | null>(null)
 
-export function ViewerToolbarRegistrationProvider({
+export function ViewerControlsRegistrationProvider({
   children,
-  onToolbarStateChange,
+  onControlsChange,
 }: {
   children: React.ReactNode
-  onToolbarStateChange: ViewerToolbarRegistration
+  onControlsChange: ViewerControlsRegistration
 }) {
+  const activeRegistrationRef = React.useRef<symbol | null>(null)
+  const registerControls = React.useCallback<ViewerControlsRegistrar>(
+    (registrationId, state) => {
+      if (state) {
+        activeRegistrationRef.current = registrationId
+        onControlsChange(state)
+        return
+      }
+
+      if (activeRegistrationRef.current !== registrationId) return
+      activeRegistrationRef.current = null
+      onControlsChange(null)
+    },
+    [onControlsChange]
+  )
+
   return (
-    <ViewerToolbarRegistrationContext.Provider value={onToolbarStateChange}>
+    <ViewerControlsRegistrationContext.Provider value={registerControls}>
       {children}
-    </ViewerToolbarRegistrationContext.Provider>
+    </ViewerControlsRegistrationContext.Provider>
   )
 }
 
-export function useViewerToolbarRegistration(): ViewerToolbarRegistration | null {
-  return React.useContext(ViewerToolbarRegistrationContext)
+export function useViewerControlsRegistration(): ViewerControlsRegistration | null {
+  const registerControls = React.useContext(ViewerControlsRegistrationContext)
+  const registrationId = React.useMemo(
+    () => Symbol("viewer-controls-registration"),
+    []
+  )
+
+  return React.useMemo(() => {
+    if (!registerControls) return null
+    return (state) => registerControls(registrationId, state)
+  }, [registerControls, registrationId])
 }
 
-export type ViewerToolbarProps = Omit<React.ComponentProps<"div">, "title"> & {
+export type ViewerControlsProps = Omit<React.ComponentProps<"div">, "title"> & {
   title?: React.ReactNode
   subtitle?: React.ReactNode
-  position?: ViewerToolbarPosition | null
-  zoom?: ViewerToolbarZoom | null
-  rotate?: ViewerToolbarRotate | null
+  position?: ViewerControlPosition | null
+  zoom?: ViewerZoomControl | null
+  rotate?: ViewerRotateControl | null
   downloads?: ViewerDownloadAction[]
+  onDownloadError?: ViewerDownloadErrorHandler
   loading?: boolean
   size?: "default" | "sm"
   extra?: React.ReactNode
 }
 
-export type ViewerToolbarSkeletonProps = Omit<
+export type ViewerControlsSkeletonProps = Omit<
   React.ComponentProps<"div">,
   "title"
 > & {
@@ -91,9 +127,9 @@ export type ViewerToolbarSkeletonProps = Omit<
   extra?: React.ReactNode
 }
 
-export const VIEWER_TOOLBAR_HEIGHT_PX = 40
+export const VIEWER_CONTROLS_HEIGHT_PX = 40
 
-export function ViewerToolbar({
+export function ViewerControls({
   className,
   title,
   subtitle,
@@ -101,19 +137,20 @@ export function ViewerToolbar({
   zoom,
   rotate,
   downloads,
+  onDownloadError,
   loading = false,
   size = "default",
   extra,
   ...props
-}: ViewerToolbarProps) {
+}: ViewerControlsProps) {
   const hasDownloads = Boolean(downloads?.length)
-  const hasActions = Boolean(zoom || rotate || hasDownloads || extra)
+  const hasControls = Boolean(zoom || rotate || hasDownloads || extra)
   const hasPlainTitle = typeof title === "string" || typeof title === "number"
   const hasMetadataGroup = loading || title != null || subtitle != null
 
   return (
     <div
-      data-slot="viewer-toolbar"
+      data-slot="viewer-controls"
       className={cn(
         "flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2",
         size === "sm" && "h-9 px-2",
@@ -146,29 +183,32 @@ export function ViewerToolbar({
           ) : null}
           {position ? (
             <span className="flex-shrink-0 px-1 text-xs text-muted-foreground tabular-nums">
-              {formatViewerToolbarPosition(position)}
+              {formatViewerControlPosition(position)}
             </span>
           ) : null}
         </div>
       ) : position ? (
         <span className="flex-shrink-0 px-1 text-xs text-muted-foreground tabular-nums">
-          {formatViewerToolbarPosition(position)}
+          {formatViewerControlPosition(position)}
         </span>
       ) : (
         <div className="min-w-0 flex-1" />
       )}
 
-      {hasActions ? (
+      {hasControls ? (
         <div className="ml-auto flex flex-shrink-0 items-center gap-1">
-          {zoom ? <ViewerToolbarZoomControls zoom={zoom} /> : null}
-          {zoom && rotate ? <ViewerToolbarSeparator /> : null}
-          {rotate ? <ViewerToolbarRotateControl rotate={rotate} /> : null}
-          {(zoom || rotate) && hasDownloads ? <ViewerToolbarSeparator /> : null}
+          {zoom ? <ViewerZoomControls zoom={zoom} /> : null}
+          {zoom && rotate ? <ViewerControlSeparator /> : null}
+          {rotate ? <ViewerRotateControlButton rotate={rotate} /> : null}
+          {(zoom || rotate) && hasDownloads ? <ViewerControlSeparator /> : null}
           {hasDownloads ? (
-            <ViewerDownloadControl actions={downloads ?? []} />
+            <ViewerDownloadControl
+              actions={downloads ?? []}
+              onError={onDownloadError}
+            />
           ) : null}
           {(zoom || rotate || hasDownloads) && extra ? (
-            <ViewerToolbarSeparator />
+            <ViewerControlSeparator />
           ) : null}
           {extra}
         </div>
@@ -177,7 +217,7 @@ export function ViewerToolbar({
   )
 }
 
-export function ViewerToolbarSkeleton({
+export function ViewerControlsSkeleton({
   className,
   title = false,
   subtitle = false,
@@ -187,12 +227,12 @@ export function ViewerToolbarSkeleton({
   download = false,
   extra,
   ...props
-}: ViewerToolbarSkeletonProps) {
-  const hasActions = zoom || rotate || download || Boolean(extra)
+}: ViewerControlsSkeletonProps) {
+  const hasControls = zoom || rotate || download || Boolean(extra)
 
   return (
     <div
-      data-slot="viewer-toolbar-skeleton"
+      data-slot="viewer-controls-skeleton"
       className={cn(
         "flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2",
         className
@@ -217,63 +257,63 @@ export function ViewerToolbarSkeleton({
         ) : null}
       </div>
 
-      {hasActions ? (
+      {hasControls ? (
         <div className="ml-auto flex flex-shrink-0 items-center gap-1">
           {zoom ? (
             <>
-              <ViewerToolbarButton
+              <ViewerControlButton
                 disabled
                 aria-hidden
                 tabIndex={-1}
                 label="Zoom out"
               >
                 <Minus />
-              </ViewerToolbarButton>
+              </ViewerControlButton>
               <span className="w-12 text-center">
                 <Skeleton className="inline-block h-3 w-8 align-middle" />
               </span>
-              <ViewerToolbarButton
+              <ViewerControlButton
                 disabled
                 aria-hidden
                 tabIndex={-1}
                 label="Zoom in"
               >
                 <Plus />
-              </ViewerToolbarButton>
-              <ViewerToolbarButton
+              </ViewerControlButton>
+              <ViewerControlButton
                 disabled
                 aria-hidden
                 tabIndex={-1}
                 label="Fit width"
               >
                 <Maximize />
-              </ViewerToolbarButton>
+              </ViewerControlButton>
             </>
           ) : null}
-          {zoom && rotate ? <ViewerToolbarSeparator /> : null}
+          {zoom && rotate ? <ViewerControlSeparator /> : null}
           {rotate ? (
-            <ViewerToolbarButton
+            <ViewerControlButton
               disabled
               aria-hidden
               tabIndex={-1}
               label="Rotate"
             >
               <RotateCw />
-            </ViewerToolbarButton>
+            </ViewerControlButton>
           ) : null}
-          {(zoom || rotate) && download ? <ViewerToolbarSeparator /> : null}
+          {(zoom || rotate) && download ? <ViewerControlSeparator /> : null}
           {download ? (
-            <ViewerToolbarButton
+            <ViewerControlButton
               disabled
               aria-hidden
               tabIndex={-1}
               label="Download"
             >
               <Download />
-            </ViewerToolbarButton>
+            </ViewerControlButton>
           ) : null}
           {(zoom || rotate || download) && extra ? (
-            <ViewerToolbarSeparator />
+            <ViewerControlSeparator />
           ) : null}
           {extra}
         </div>
@@ -282,7 +322,7 @@ export function ViewerToolbarSkeleton({
   )
 }
 
-export function ViewerToolbarButton({
+export function ViewerControlButton({
   label,
   children,
   className,
@@ -302,7 +342,7 @@ export function ViewerToolbarButton({
   )
 }
 
-export function formatViewerToolbarPosition(position: ViewerToolbarPosition) {
+export function formatViewerControlPosition(position: ViewerControlPosition) {
   if ("label" in position) return position.label
 
   const label =
@@ -321,18 +361,18 @@ export function formatViewerToolbarPosition(position: ViewerToolbarPosition) {
     : `${label} ${current} of ${position.total}`
 }
 
-function ViewerToolbarZoomControls({ zoom }: { zoom: ViewerToolbarZoom }) {
+function ViewerZoomControls({ zoom }: { zoom: ViewerZoomControl }) {
   const fitLabel = zoom.fitLabel ?? "Fit width"
 
   return (
     <>
-      <ViewerToolbarButton
+      <ViewerControlButton
         label="Zoom out"
         onClick={zoom.onZoomOut}
         disabled={zoom.isDisabled}
       >
         <Minus />
-      </ViewerToolbarButton>
+      </ViewerControlButton>
       {zoom.onReset ? (
         <button
           type="button"
@@ -348,42 +388,42 @@ function ViewerToolbarZoomControls({ zoom }: { zoom: ViewerToolbarZoom }) {
           {zoom.scale == null ? "Fit" : `${Math.round(zoom.scale * 100)}%`}
         </span>
       )}
-      <ViewerToolbarButton
+      <ViewerControlButton
         label="Zoom in"
         onClick={zoom.onZoomIn}
         disabled={zoom.isDisabled}
       >
         <Plus />
-      </ViewerToolbarButton>
+      </ViewerControlButton>
       {zoom.onFit ? (
-        <ViewerToolbarButton
+        <ViewerControlButton
           label={fitLabel}
           onClick={zoom.onFit}
           disabled={zoom.isDisabled}
         >
           <Maximize />
-        </ViewerToolbarButton>
+        </ViewerControlButton>
       ) : null}
     </>
   )
 }
 
-function ViewerToolbarRotateControl({
+function ViewerRotateControlButton({
   rotate,
 }: {
-  rotate: ViewerToolbarRotate
+  rotate: ViewerRotateControl
 }) {
   return (
-    <ViewerToolbarButton
+    <ViewerControlButton
       label="Rotate"
       onClick={rotate.onRotate}
       disabled={rotate.isDisabled}
     >
       <RotateCw />
-    </ViewerToolbarButton>
+    </ViewerControlButton>
   )
 }
 
-function ViewerToolbarSeparator() {
+function ViewerControlSeparator() {
   return <Separator orientation="vertical" className="mx-1 h-4" />
 }

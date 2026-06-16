@@ -2,7 +2,10 @@
 
 import * as React from "react"
 
-import { createViewerResource } from "@/lib/viewer-resource"
+import {
+  createViewerResource,
+  type ViewerResource,
+} from "@/lib/viewer-resource"
 import { useIsClient } from "@/components/ui/use-is-client"
 import { ViewerErrorBoundary } from "@/components/ui/viewer-error"
 
@@ -22,6 +25,13 @@ export type {
   XlsxViewerProps,
 } from "./xlsx-viewer-types"
 
+export type XlsxViewerProviderProps = {
+  children: React.ReactNode
+  resource: ViewerResource
+}
+
+export type XlsxViewerWorkbookProps = Omit<XlsxResourceContentProps, "resource">
+
 export const XlsxViewer = React.forwardRef<XlsxViewerHandle, XlsxViewerProps>(
   function XlsxViewer(props, ref) {
     const { source, ...resourceProps } = props
@@ -31,6 +41,39 @@ export const XlsxViewer = React.forwardRef<XlsxViewerHandle, XlsxViewerProps>(
     )
   }
 )
+
+const XlsxViewerResourceContext = React.createContext<ViewerResource | null>(
+  null
+)
+
+export function XlsxViewerProvider({
+  children,
+  resource,
+}: XlsxViewerProviderProps) {
+  return (
+    <XlsxViewerResourceContext.Provider value={resource}>
+      {children}
+    </XlsxViewerResourceContext.Provider>
+  )
+}
+
+function useXlsxViewerResource(): ViewerResource {
+  const resource = React.useContext(XlsxViewerResourceContext)
+  if (!resource) {
+    throw new Error(
+      "XlsxViewerWorkbook must be used within XlsxViewerProvider."
+    )
+  }
+  return resource
+}
+
+export const XlsxViewerWorkbook = React.forwardRef<
+  XlsxViewerHandle,
+  XlsxViewerWorkbookProps
+>(function XlsxViewerWorkbook(props, ref) {
+  const resource = useXlsxViewerResource()
+  return <XlsxResourceContent {...props} ref={ref} resource={resource} />
+})
 
 export const XlsxResourceContent = React.forwardRef<
   XlsxViewerHandle,
@@ -43,7 +86,7 @@ export const XlsxResourceContent = React.forwardRef<
       <XlsxViewerFallback
         className={props.className}
         fallbackSheetTabs={props.fallbackSheetTabs}
-        toolbar={props.toolbar}
+        controls={props.controls}
         bare={props.bare}
       />
     )
@@ -61,7 +104,7 @@ export const XlsxResourceContent = React.forwardRef<
           <XlsxViewerFallback
             className={props.className}
             fallbackSheetTabs={props.fallbackSheetTabs}
-            toolbar={props.toolbar}
+            controls={props.controls}
             bare={props.bare}
           />
         }

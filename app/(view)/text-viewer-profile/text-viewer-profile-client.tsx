@@ -35,7 +35,7 @@ export function TextViewerProfileClient({
       <section className="h-[calc(100vh-56px)]" data-profile-root={variant}>
         <Viewer
           bare
-          toolbar={false}
+          controls={false}
           mode="markdown"
           source={{
             kind: "text",

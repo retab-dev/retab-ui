@@ -5,9 +5,9 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
-  VIEWER_TOOLBAR_HEIGHT_PX,
-  ViewerToolbarSkeleton,
-} from "@/components/ui/viewer-toolbar"
+  VIEWER_CONTROLS_HEIGHT_PX,
+  ViewerControlsSkeleton,
+} from "@/components/ui/viewer-controls"
 import { XlsxGridSkeleton } from "@/components/ui/xlsx-grid"
 import { XLSX_SHEET_TABS_HEIGHT_PX } from "@/components/ui/xlsx-sheet-tabs"
 
@@ -37,11 +37,11 @@ export function XlsxViewerFrame({
 export function XlsxViewerBody({
   children,
   fallbackSheetTabs,
-  toolbar,
+  controls,
 }: {
   children: React.ReactNode
   fallbackSheetTabs: boolean
-  toolbar: boolean
+  controls: boolean
 }) {
   return (
     <div
@@ -54,7 +54,7 @@ export function XlsxViewerBody({
           ? {
               height: `calc(100% - ${
                 XLSX_SHEET_TABS_HEIGHT_PX +
-                (toolbar ? VIEWER_TOOLBAR_HEIGHT_PX : 0)
+                (controls ? VIEWER_CONTROLS_HEIGHT_PX : 0)
               }px)`,
             }
           : undefined
@@ -72,18 +72,18 @@ export function XlsxGridColumn({ children }: { children: React.ReactNode }) {
 export function XlsxViewerFallback({
   className,
   fallbackSheetTabs = false,
-  toolbar = true,
+  controls = true,
   bare = false,
 }: {
   className?: string
   fallbackSheetTabs?: boolean
-  toolbar?: boolean
+  controls?: boolean
   bare?: boolean
 }) {
   return (
     <XlsxViewerFrame className={className} bare={bare}>
-      {toolbar ? <ViewerToolbarSkeleton title subtitle zoom download /> : null}
-      <XlsxViewerBody toolbar={toolbar} fallbackSheetTabs={fallbackSheetTabs}>
+      {controls ? <ViewerControlsSkeleton title subtitle zoom download /> : null}
+      <XlsxViewerBody controls={controls} fallbackSheetTabs={fallbackSheetTabs}>
         <XlsxGridSkeleton />
       </XlsxViewerBody>
       {fallbackSheetTabs ? <XlsxSheetTabsSkeleton /> : null}

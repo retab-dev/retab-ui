@@ -530,11 +530,11 @@ describe("DocxViewer", () => {
     expect(docxMock.renderAsync).not.toHaveBeenCalled()
   })
 
-  it("does not render toolbar fallback chrome in toolbar-free server markup", () => {
+  it("does not render controls fallback chrome in controls-free server markup", () => {
     const html = renderToStaticMarkup(
       <DocxViewer
         source={docxUrlSource("/server-toolbarless.docx")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -747,7 +747,7 @@ describe("DocxViewer", () => {
     expect(fetch).toHaveBeenCalledTimes(2)
   })
 
-  it("does not show toolbar chrome when toolbar is disabled during loading or after render", async () => {
+  it("does not show controls chrome when controls is disabled during loading or after render", async () => {
     const pending = deferred<void>()
     docxMock.deferred = pending
     docxMock.renderAsync.mockImplementation(async (_buffer, host) => {
@@ -756,7 +756,7 @@ describe("DocxViewer", () => {
     })
 
     const view = await renderDocx(
-      <DocxViewer source={docxUrlSource("/no-toolbar.docx")} toolbar={false} />
+      <DocxViewer source={docxUrlSource("/no-controls.docx")} controls={false} />
     )
 
     expect(screen.queryByLabelText("Zoom in")).toBeNull()
@@ -851,7 +851,7 @@ describe("DocxViewer", () => {
     expect(host?.style.zoom).toBe("5")
   })
 
-  it("keeps toolbar zoom actions from overriding a controlled scale prop", async () => {
+  it("keeps controls zoom actions from overriding a controlled scale prop", async () => {
     await renderDocx(
       <DocxViewer source={docxUrlSource("/controlled-fixed.docx")} scale={1} />
     )
@@ -2953,7 +2953,7 @@ describe("DocxViewer edge cases", () => {
     await waitForRenderedDocx()
     expect(screen.getByText("100%")).toBeTruthy()
 
-    // NaN is a non-null fixed scale, so it must stay controlled — toolbar zoom
+    // NaN is a non-null fixed scale, so it must stay controlled — controls zoom
     // is inert.
     fireEvent.click(screen.getByLabelText("Zoom in"))
     expect(screen.getByText("100%")).toBeTruthy()

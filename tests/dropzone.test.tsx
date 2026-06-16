@@ -428,6 +428,61 @@ describe("Dropzone primitive", () => {
     expect(root!.textContent).toContain("first.pdf,second.pdf")
   })
 
+  it("keeps getter identities stable across file changes, reactive to config", () => {
+    const onFilesChange = () => {}
+    const seen: Array<{
+      getRootProps: unknown
+      getInputProps: unknown
+      getTriggerProps: unknown
+    }> = []
+
+    function Probe({
+      files,
+      disabled,
+    }: {
+      files: DropzoneFileItem[]
+      disabled?: boolean
+    }) {
+      const dropzone = useDropzone({ files, disabled, onFilesChange })
+      seen.push({
+        getRootProps: dropzone.getRootProps,
+        getInputProps: dropzone.getInputProps,
+        getTriggerProps: dropzone.getTriggerProps,
+      })
+      return <div {...dropzone.getRootProps()} />
+    }
+
+    const fileA = [{ id: "a", file: file("a.pdf", "application/pdf") }]
+    const fileB = [{ id: "b", file: file("b.pdf", "application/pdf") }]
+    const { rerender } = render(<Probe files={[]} />)
+    const initial = seen[seen.length - 1]
+
+    // A file-state change must NOT churn getter identity — the whole point of
+    // the single latest-items ref. (Before Option A, the `files` dep broke this.)
+    rerender(<Probe files={fileA} />)
+    rerender(<Probe files={fileB} />)
+    const afterFileChange = seen[seen.length - 1]
+    expect(Object.is(afterFileChange.getRootProps, initial.getRootProps)).toBe(
+      true
+    )
+    expect(
+      Object.is(afterFileChange.getInputProps, initial.getInputProps)
+    ).toBe(true)
+    expect(
+      Object.is(afterFileChange.getTriggerProps, initial.getTriggerProps)
+    ).toBe(true)
+
+    // A config change SHOULD produce new getters — their behavior changed.
+    rerender(<Probe files={fileB} disabled />)
+    const afterConfigChange = seen[seen.length - 1]
+    expect(
+      Object.is(afterConfigChange.getRootProps, initial.getRootProps)
+    ).toBe(false)
+    expect(
+      Object.is(afterConfigChange.getTriggerProps, initial.getTriggerProps)
+    ).toBe(false)
+  })
+
   it("commits file input changes and clears the input value for reselection", () => {
     function Probe() {
       const dropzone = useDropzone({ multiple: true })

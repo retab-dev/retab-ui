@@ -72,42 +72,58 @@ export type {
   FileSystemSelectionState,
 } from "./file-system-parts"
 
+const FILE_SYSTEM_SIDEBAR_WIDTH = "min(22rem, 85vw)"
+const FILE_SYSTEM_COLUMNS_SIDEBAR_WIDTH =
+  "min(clamp(32rem, 40vw, 40rem), 85vw)"
+
 export function FileSystem({ className, ...providerProps }: FileSystemProps) {
   return (
     <FileSystemProvider {...providerProps}>
-      <div data-slot="file-system">
-        <ViewerRoot
-          data-viewer="file-system"
-          bare
-          defaultOpen
-          className={cn(
-            "h-[640px] rounded-md border bg-background text-foreground",
-            className
-          )}
-        >
-          <ViewerHeader className="flex flex-col">
-            <FileSystemHeader />
-          </ViewerHeader>
-          <ViewerBody>
-            <ViewerSidebar
-              aria-label="Files"
-              width="min(22rem, 85vw)"
-              className="flex min-w-0 flex-col border-r"
-            >
-              <FileSystemBrowser />
-            </ViewerSidebar>
-            <ViewerSurface className="bg-background">
-              <FileSystemSelection>
-                {(selection) => (
-                  <FileSystemDefaultSelectionContent selection={selection} />
-                )}
-              </FileSystemSelection>
-            </ViewerSurface>
-          </ViewerBody>
-          <FileSystemOpenPreview />
-        </ViewerRoot>
-      </div>
+      <FileSystemRoot className={className} />
     </FileSystemProvider>
+  )
+}
+
+function FileSystemRoot({ className }: { className?: string }) {
+  const { browser } = useFileSystem()
+  const sidebarWidth =
+    browser.view === "columns"
+      ? FILE_SYSTEM_COLUMNS_SIDEBAR_WIDTH
+      : FILE_SYSTEM_SIDEBAR_WIDTH
+
+  return (
+    <div data-slot="file-system">
+      <ViewerRoot
+        data-viewer="file-system"
+        bare
+        defaultOpen
+        className={cn(
+          "h-[640px] rounded-md border bg-background text-foreground",
+          className
+        )}
+      >
+        <ViewerHeader className="flex flex-col">
+          <FileSystemHeader />
+        </ViewerHeader>
+        <ViewerBody>
+          <ViewerSidebar
+            aria-label="Files"
+            width={sidebarWidth}
+            className="flex min-w-0 flex-col border-r"
+          >
+            <FileSystemBrowser />
+          </ViewerSidebar>
+          <ViewerSurface className="bg-background">
+            <FileSystemSelection>
+              {(selection) => (
+                <FileSystemDefaultSelectionContent selection={selection} />
+              )}
+            </FileSystemSelection>
+          </ViewerSurface>
+        </ViewerBody>
+        <FileSystemOpenPreview />
+      </ViewerRoot>
+    </div>
   )
 }
 

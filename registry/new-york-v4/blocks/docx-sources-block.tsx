@@ -8,6 +8,16 @@ import {
   useDocxSourceTarget,
 } from "@/components/ui/docx-source"
 import { DocxViewer, type DocxViewerHandle } from "@/components/ui/docx-viewer"
+import {
+  FileViewer,
+  FileViewerBody,
+  FileViewerControls,
+  FileViewerHeader,
+  FileViewerMeta,
+  FileViewerSidebar,
+  FileViewerSurface,
+  FileViewerTitle,
+} from "@/components/ui/file-viewer"
 import { SegmentedDocumentProvider } from "@/components/ui/segmented-document-provider"
 import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
 import {
@@ -16,15 +26,14 @@ import {
 } from "@/components/ui/source-field-list"
 import { SourceIndicator } from "@/components/ui/source-indicator"
 import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
-import {
-  ViewerBody,
-  ViewerRoot,
-  ViewerSidebar,
-  ViewerSurface,
-} from "@/components/ui/viewer"
 import docxSample from "@/components/viewers/sample-data/docx-sources.json"
 
 const DOCX_URL = "/samples/quarterly-business-review.docx"
+const DOCX_SOURCE = {
+  kind: "url" as const,
+  url: DOCX_URL,
+  fileName: "quarterly-business-review.docx",
+}
 
 type DocxField = SourceField & { source: Source }
 
@@ -86,23 +95,29 @@ function DocxSourcesContent({
   const highlight = sourceToDocxHighlight(activeSource)
 
   return (
-    <ViewerRoot bare className="h-full min-h-[680px] bg-background">
-      <ViewerBody>
-        <ViewerSurface className="relative">
+    <FileViewer
+      source={DOCX_SOURCE}
+      bare
+      className="h-full min-h-[680px] bg-background"
+    >
+      <FileViewerHeader>
+        <FileViewerTitle />
+        <FileViewerMeta />
+        <FileViewerControls />
+      </FileViewerHeader>
+      <FileViewerBody>
+        <FileViewerSurface className="relative">
           <DocxViewer
             ref={viewerRef}
-            source={{
-              kind: "url",
-              url: DOCX_URL,
-              fileName: "quarterly-business-review.docx",
-            }}
+            source={DOCX_SOURCE}
             bare
             className="h-full"
+            controls={false}
             highlight={highlight}
           />
           <SourceIndicator path={link.activePath} found={!!activeSource} />
-        </ViewerSurface>
-        <ViewerSidebar
+        </FileViewerSurface>
+        <FileViewerSidebar
           aria-label="Source fields"
           side="right"
           collapsible="none"
@@ -110,9 +125,9 @@ function DocxSourcesContent({
           className="border-l"
         >
           <SourceFieldList fields={FIELDS} link={link} />
-        </ViewerSidebar>
-      </ViewerBody>
-    </ViewerRoot>
+        </FileViewerSidebar>
+      </FileViewerBody>
+    </FileViewer>
   )
 }
 

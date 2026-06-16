@@ -27,7 +27,7 @@ import {
   type ImageViewerProps,
 } from "@/components/ui/image-viewer-types"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { ViewerToolbar } from "@/components/ui/viewer-toolbar"
+import { ViewerControls } from "@/components/ui/viewer-controls"
 
 import {
   createImageFrameLayout,
@@ -42,7 +42,7 @@ export function ImageViewerContent({
   defaultScale,
   download = true,
   onScaleChange,
-  toolbar = true,
+  controls = true,
   renderFrameOverlay,
   onVisibleFrameChange,
   onScrollProgressChange,
@@ -117,8 +117,8 @@ export function ImageViewerContent({
       )}
       data-slot="image-viewer"
     >
-      {toolbar ? (
-        <ViewerToolbar
+      {controls ? (
+        <ViewerControls
           position={{ label: countLabel }}
           zoom={{
             scale,

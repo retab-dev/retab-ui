@@ -11,7 +11,7 @@ const MODE_LABELS: Record<EditViewerMode, string> = {
   filled: "Filled",
 }
 
-export function EditViewerToolbar({
+export function EditViewerControls({
   modes,
   mode,
   onModeChange,
@@ -25,7 +25,7 @@ export function EditViewerToolbar({
   if (modes.length === 0) return null
 
   return (
-    <div className="flex min-h-10 flex-wrap items-center gap-3 px-3 py-1.5">
+    <div className="flex h-full min-w-0 items-center gap-3">
       {modes.length > 1 && mode ? (
         <Tabs
           value={mode}

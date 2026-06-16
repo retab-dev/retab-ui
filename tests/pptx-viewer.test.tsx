@@ -2009,7 +2009,7 @@ describe("PptxViewer", () => {
     expect(createObjectURL).not.toHaveBeenCalled()
   })
 
-  it("supports bare layout, viewer chrome, and hidden toolbar", async () => {
+  it("supports bare layout, viewer chrome, and hidden controls", async () => {
     await renderPptx(
       <ViewerRoot bare>
         <ViewerHeader data-testid="pptx-header">header</ViewerHeader>
@@ -2019,7 +2019,7 @@ describe("PptxViewer", () => {
             <PptxViewer
               source={pptxUrlSource("/structured.pptx")}
               bare
-              toolbar={false}
+              controls={false}
             />
           </ViewerSurface>
         </ViewerBody>
@@ -2037,14 +2037,14 @@ describe("PptxViewer", () => {
     ).toBe(true)
   })
 
-  it("keeps the toolbar hidden while a toolbarless viewer is loading", async () => {
+  it("keeps the controls hidden while a toolbarless viewer is loading", async () => {
     const load = deferred<undefined>()
     pptxMock.loadFile.mockReturnValueOnce(load.promise)
 
     const view = await renderPptx(
       <PptxViewer
         source={pptxUrlSource("/toolbarless-loading.pptx")}
-        toolbar={false}
+        controls={false}
       />
     )
 

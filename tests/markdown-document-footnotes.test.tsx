@@ -31,7 +31,7 @@ describe("markdown footnotes", () => {
   it("renders accessible footnote references and backrefs", async () => {
     const { container } = render(
       <MarkdownDocumentViewer
-        toolbar={false}
+        controls={false}
         source={markdownSource("A note.[^a]\n\n[^a]: Footnote body.")}
       />
     )

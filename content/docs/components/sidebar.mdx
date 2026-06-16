@@ -23,24 +23,27 @@ section rows while `FileViewer bare` owns the document surface.
 ## Composition
 
 ```tsx
-<ViewerRoot defaultOpen mode="auto">
-  <ViewerHeader>
-    <ViewerSidebarTrigger />
-  </ViewerHeader>
-  <ViewerBody>
-    <ViewerSidebar aria-label="Document sections" width="18rem">
+<FileViewer source={source} defaultOpen mode="auto">
+  <FileViewerHeader>
+    <FileViewerSidebarTrigger />
+    <FileViewerTitle />
+    <FileViewerMeta />
+    <FileViewerControls />
+  </FileViewerHeader>
+  <FileViewerBody>
+    <FileViewerSidebar aria-label="Document sections" width="18rem">
       <SegmentSidebar
         segments={segments}
         interaction={interaction}
         currentPage={currentPage}
         onSelect={(segment) => scrollToPage(segment.pages[0])}
       />
-    </ViewerSidebar>
-    <ViewerSurface>
-      <FileViewer source={source} bare />
-    </ViewerSurface>
-  </ViewerBody>
-</ViewerRoot>
+    </FileViewerSidebar>
+    <FileViewerSurface>
+      <FileViewerDocument />
+    </FileViewerSurface>
+  </FileViewerBody>
+</FileViewer>
 ```
 
 ## Ownership Boundary

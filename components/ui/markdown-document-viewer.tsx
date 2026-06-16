@@ -42,7 +42,7 @@ import {
 } from "./text-viewer-resource"
 import { clampTextViewerScale } from "./text-viewer-scale"
 import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types"
-import { ViewerToolbar } from "./viewer-toolbar"
+import { ViewerControls } from "./viewer-controls"
 
 const MARKDOWN_VIEWER_OVERSCAN_PX = 900
 const MARKDOWN_VIEWER_DEFAULT_VIEWPORT_HEIGHT = 720
@@ -95,7 +95,7 @@ export const MarkdownDocumentViewer = React.forwardRef<
 function MarkdownDocumentViewerContent({
   resource,
   className,
-  toolbar = true,
+  controls = true,
   highlight,
   bare = false,
   maxBytes,
@@ -428,7 +428,7 @@ function MarkdownDocumentViewerContent({
 
   return (
     <TextViewerFrame className={className} bare={bare}>
-      {toolbar ? (
+      {controls ? (
         <MarkdownDocumentToolbar
           document={document}
           downloadAction={resource.originalDownload}
@@ -479,7 +479,7 @@ function MarkdownDocumentToolbar({
   onZoomOut: () => void
 }) {
   return (
-    <ViewerToolbar
+    <ViewerControls
       title={
         <Tabs
           value={mode}

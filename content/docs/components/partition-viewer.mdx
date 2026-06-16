@@ -19,27 +19,38 @@ function SourceDocument() {
   const controls = usePartitionViewerDocumentControls()
 
   return (
-    <PdfViewer
+    <PdfViewerPages
       ref={controls.setDocumentHandle}
-      source={source}
       bare
+      className="h-full"
       onVisiblePageChange={controls.onCurrentPageChange}
       onScrollProgressChange={controls.onScrollProgressChange}
     />
   )
 }
 
-;<PartitionViewerProvider result={result}>
-  <ViewerRoot>
-    <PartitionViewerHeader />
-    <ViewerBody>
-      <ViewerSurface>
-        <PartitionViewerRibbon />
-        <PartitionViewerDocument document={<SourceDocument />} />
-      </ViewerSurface>
-    </ViewerBody>
-  </ViewerRoot>
-</PartitionViewerProvider>
+export function CompositionExample() {
+  return (
+    <PartitionViewerProvider result={result}>
+      <FileViewer source={source} bare>
+        <PdfViewerProvider>
+          <FileViewerHeader>
+            <FileViewerTitle />
+            <PartitionViewerHeaderMeta />
+            <FileViewerControls />
+          </FileViewerHeader>
+          <FileViewerBody>
+            <FileViewerSurface>
+              <PartitionViewerLegend />
+              <PartitionViewerRibbon />
+              <PartitionViewerDocument document={<SourceDocument />} />
+            </FileViewerSurface>
+          </FileViewerBody>
+        </PdfViewerProvider>
+      </FileViewer>
+    </PartitionViewerProvider>
+  )
+}
 ```
 
 ## Usage
@@ -49,6 +60,12 @@ parts; pass the source document explicitly through `document`.
 
 ```tsx
 export function Example() {
-  return <PartitionViewer result={result} document={<SourceDocument />} />
+  return (
+    <PartitionViewer
+      source={source}
+      result={result}
+      document={<SourceDocument />}
+    />
+  )
 }
 ```

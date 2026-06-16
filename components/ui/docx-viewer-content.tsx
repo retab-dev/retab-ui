@@ -25,7 +25,7 @@ import type {
   DocxResourceContentProps,
   DocxViewerHandle,
 } from "./docx-viewer-types"
-import { ViewerToolbar, ViewerToolbarSkeleton } from "./viewer-toolbar"
+import { ViewerControls, ViewerControlsSkeleton } from "./viewer-controls"
 
 export function DocxViewerContent({
   bare = false,
@@ -39,7 +39,7 @@ export function DocxViewerContent({
   onVisiblePageChange,
   resource,
   scale: controlledScale,
-  toolbar = true,
+  controls = true,
 }: DocxResourceContentProps & {
   forwardedRef?: React.ForwardedRef<DocxViewerHandle>
 }) {
@@ -199,9 +199,9 @@ export function DocxViewerContent({
     <DocxViewerFrame bare={bare} className={className}>
       <style>{DOCX_SCOPED_STYLES}</style>
       <style>{`::highlight(${highlightName}){background-color:color-mix(in oklab, var(--primary) 22%, transparent);}`}</style>
-      {toolbar ? (
+      {controls ? (
         ready ? (
-          <ViewerToolbar
+          <ViewerControls
             position={{
               kind: "page",
               current: currentPage,
@@ -220,7 +220,7 @@ export function DocxViewerContent({
             }
           />
         ) : (
-          <ViewerToolbarSkeleton position zoom download={download} />
+          <ViewerControlsSkeleton position zoom download={download} />
         )
       ) : null}
       <DocxViewerBody>

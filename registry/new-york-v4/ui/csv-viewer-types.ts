@@ -19,7 +19,7 @@ export interface CsvViewerProps {
   source?: CsvViewerSource
   dialect?: CsvDialect
   className?: string
-  toolbar?: boolean
+  controls?: boolean
   height?: number
   fillHeight?: boolean
   activeCell?: CsvCellAddress | null

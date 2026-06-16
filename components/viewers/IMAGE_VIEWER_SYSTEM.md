@@ -39,7 +39,7 @@ flowchart TD
 
   subgraph ClientBoundary["Client, Suspense, and error boundary"]
     IsClient["useIsClient\nserver render returns fallback skeleton\nclient render enables Suspense content"]
-    Fallback["ImageViewerFallback\nsame shell data-slot=image-viewer\noptional toolbar skeleton\nframe skeleton from fallbackFrameSize and scale"]
+    Fallback["ImageViewerFallback\nsame shell data-slot=image-viewer\noptional controls skeleton\nframe skeleton from fallbackFrameSize and scale"]
     ErrorBoundary["ViewerErrorBoundary\nformat=image\nresetKey=resource.keys.resource\ndownload=resource.originalDownload\nsourceKind=resource.sourceKind"]
     Suspense["React.Suspense\nfallback=ImageViewerFallback"]
     ContentComponent["ImageViewerContent\nReact.use(getImageSource(resource.content))\nretains loaded source with callback-ref lease"]
@@ -93,8 +93,8 @@ flowchart TD
     VisibleFallback["visible frame fallback\nuses elementsFromPoint first\nthen frame bounding boxes if unavailable\noverlay spoofing ignored via closest data-slot=image-frame"]
     ImperativeHandle["useImageViewerHandle\nscrollToFrameArea(frameNumber, area, options)\nnormalizes top percent 0..100\nscrolls viewport to frame top + area top - 48px\ngetViewportElement returns viewport"]
     Shell["viewer shell\nflex column\nbare -> h-full bg-muted/20\nframed -> rounded-xl border bg-muted/30\ndata-slot=image-viewer"]
-    Toolbar["ImageViewerToolbar\ncount label\nzoom out, zoom in, fit width, rotate, download\ncontrolled scale disables zoom and fit buttons"]
-    Slots["slots\nheader full-width strip below toolbar\naside left rail beside scroll viewport"]
+    Controls["ImageViewerControls\ncount label\nzoom out, zoom in, fit width, rotate, download\ncontrolled scale disables zoom and fit buttons"]
+    Slots["slots\nheader full-width strip below controls\naside left rail beside scroll viewport"]
     ScrollAreaNode["ScrollArea viewport\nviewportRef=scrollViewportRef\nonScroll=handleScroll\nframe list centered with gap and padding"]
   end
 
@@ -131,7 +131,7 @@ flowchart TD
 
   subgraph Tests["Verified behavior"]
     TestsMain["tests/image-viewer.test.tsx\nresource interning, TIFF detection, source lifecycle, manager lifecycle, worker client, frame lifecycle, scale, interactions, error fallback, overlay geometry"]
-    TestsEdges["tests/image-viewer-edge-cases.test.tsx\nrotation math, bbox conversion, TIFF/native detection, BitmapCache, toolbar edges"]
+    TestsEdges["tests/image-viewer-edge-cases.test.tsx\nrotation math, bbox conversion, TIFF/native detection, BitmapCache, controls edges"]
     TestsProbes["tests/image-viewer-probes.test.tsx\nacquire/release accounting, eviction leak invariants, disposal, validation, overlay gating, source target, fit-width clamping, multi-frame failures, document swaps"]
     TestsSources["tests/sources.test.tsx\nsource adapters, image bridge to imperative target, useSourceLink hover/pin/async target behavior"]
     TestsFileViewer["tests/file-viewer.test.tsx\nFileViewer category detection and lazy resource routing"]
@@ -217,7 +217,7 @@ flowchart TD
   ScaleHook --> FitWidth
   ScaleHook --> Rotation
   FrameListWidth --> FitWidth
-  Shell --> Toolbar
+  Shell --> Controls
   Shell --> Slots
   Shell --> ScrollAreaNode
   ScrollAreaNode --> FrameMap
@@ -249,7 +249,7 @@ flowchart TD
   FieldList --> SourceOverlay
   FieldList --> ImageTarget
 
-  Toolbar --> DownloadControl
+  Controls --> DownloadControl
   Download --> DownloadControl
   ErrorBoundary --> ErrorFallback
   DecodeFailure --> ErrorBoundary
@@ -286,7 +286,7 @@ sequenceDiagram
   participant FS as FrameSource and BitmapCache
   participant Frame as ImageFrame
   participant Canvas as ImageFrameCanvas
-  participant UI as Toolbar, overlay, callbacks
+  participant UI as Controls, overlay, callbacks
 
   App->>IV: render with URL or Blob source
   IV->>VR: createViewerResource(source)
@@ -305,7 +305,7 @@ sequenceDiagram
   FSM-->>IVC: resolve shared FrameSource promise
   IVC->>FSM: retain(content, source) through callback ref
   FSM->>FSM: leaseCount += 1, state resolved, cancel dispose timer
-  IVC->>UI: render toolbar count label and controls
+  IVC->>UI: render controls count label and controls
   IVC->>Frame: map every descriptor to an ImageFrame
   Frame->>Frame: reserve CSS box from intrinsic size, scale, rotation
   Frame->>Frame: observe with IntersectionObserver rootMargin 150%
@@ -442,10 +442,10 @@ flowchart LR
 | Area               | Files                                                                                                       | Responsibility                                                                                                                             |
 | ------------------ | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | Public viewer API  | `registry/new-york-v4/ui/image-viewer.tsx`, `image-viewer-types.ts`                                         | `ImageViewer`, `ImageResourceContent`, public props, handle, test helpers, client/Suspense/error boundary entry.                            |
-| Content shell      | `registry/new-york-v4/ui/image-viewer-content.tsx`                                                          | Loads `FrameSource`, retains source lease, renders toolbar, header, aside, scroll area, frames, and source cache helpers.                  |
+| Content shell      | `registry/new-york-v4/ui/image-viewer-content.tsx`                                                          | Loads `FrameSource`, retains source lease, renders controls, header, aside, scroll area, frames, and source cache helpers.                  |
 | Hooks              | `registry/new-york-v4/ui/image-viewer-hooks.ts`                                                             | Fit-width scale, controlled/uncontrolled zoom, rotation reset, visible frame detection, scroll progress, imperative handle.                |
 | Frame rendering    | `registry/new-york-v4/ui/image-viewer-frame.tsx`                                                            | Lazy frame observation, skeleton/canvas switch, DPR canvas sizing, acquire/draw/release lifecycle, overlay mount.                          |
-| Toolbar/fallback   | `registry/new-york-v4/ui/image-viewer-chrome.tsx`                                                           | Toolbar controls, download control, skeleton toolbar, fallback frame sizing.                                                               |
+| Controls/fallback   | `registry/new-york-v4/ui/image-viewer-chrome.tsx`                                                           | Controls, download control, skeleton controls, fallback frame sizing.                                                               |
 | Geometry           | `registry/new-york-v4/lib/image-geometry.ts`                                                                | Quarter-turn normalization, rotated sizes, frame CSS size, bbox rotation, frame index/number conversion.                                   |
 | Frame source       | `registry/new-york-v4/lib/image-frame-source.ts`                                                            | FrameSource abstraction, BitmapCache, acquire/release/dispose semantics, native image source, TIFF/native detection helpers, image errors. |
 | Source cache       | `registry/new-york-v4/lib/image-source-cache.ts`                                                            | Shared load cache keyed by resource content, source lifetime leases, disposal timers, source route selection.                              |
@@ -470,7 +470,7 @@ flowchart LR
   forcing a new image load when the load key is unchanged.
 - Source leases keep a loaded `FrameSource` alive only while a mounted viewer
   claims it; released or never-claimed sources are disposed by timers.
-- Controlled `scale` disables toolbar zoom and fit-width changes; uncontrolled
+- Controlled `scale` disables controls zoom and fit-width changes; uncontrolled
   scale resets to fit-width when the source changes.
 - Rotation is always a normalized quarter turn, and overlay geometry uses the
   same rotation math as frame rendering.

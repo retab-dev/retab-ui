@@ -14,7 +14,7 @@ export type {
 export { EditViewerProvider } from "./edit-viewer-provider"
 export type { EditViewerProviderProps } from "./edit-viewer-provider"
 export type { EditViewerDocumentTarget } from "./edit-viewer-model"
-export { EditViewerToolbar } from "./edit-viewer-toolbar"
+export { EditViewerControls } from "./edit-viewer-controls"
 
 export type {
   EditViewerField,

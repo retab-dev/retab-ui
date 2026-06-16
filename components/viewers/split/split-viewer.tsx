@@ -6,6 +6,16 @@ import { Loader2, Scissors } from "lucide-react"
 
 import { segmentsPageCount, toSegments } from "@/lib/segments"
 import { cn } from "@/lib/utils"
+import type { ViewerSource } from "@/lib/viewer-source"
+import {
+  FileViewer,
+  FileViewerBody,
+  FileViewerControls,
+  FileViewerHeader,
+  FileViewerSidebarTrigger,
+  FileViewerSurface,
+  FileViewerTitle,
+} from "@/components/ui/file-viewer"
 import { SegmentLegend } from "@/components/ui/segment-legend"
 import { SegmentPageRail } from "@/components/ui/segment-page-rail"
 import {
@@ -22,12 +32,9 @@ import {
   type SegmentViewportController,
 } from "@/components/ui/use-segment-viewport-controller"
 import {
-  ViewerBody,
   ViewerHeader,
-  ViewerRoot,
   ViewerSidebar,
   ViewerSidebarTrigger,
-  ViewerSurface,
 } from "@/components/ui/viewer"
 import { type SplitView } from "@/components/viewers/lib/split-types"
 
@@ -39,6 +46,7 @@ export interface SplitDocumentHandlers {
 
 export interface SplitViewerProps {
   result: SplitView | null
+  source: ViewerSource
   isProcessing?: boolean
   document?: ReactNode
 }
@@ -47,26 +55,33 @@ export type SplitViewerSidebarProps = React.ComponentProps<typeof ViewerSidebar>
 
 export function SplitViewer({
   result,
+  source,
   isProcessing = false,
   document,
 }: SplitViewerProps) {
   return (
     <SplitViewerProvider result={result} isProcessing={isProcessing}>
-      <ViewerRoot
+      <FileViewer
+        source={source}
         bare
         defaultOpen
         mode="inline"
         className="h-full flex-1 bg-background"
       >
-        <SplitViewerHeader />
-        <ViewerBody>
+        <FileViewerHeader>
+          <FileViewerSidebarTrigger className="-ml-1" />
+          <FileViewerTitle />
+          <SplitViewerHeaderMeta />
+          <FileViewerControls />
+        </FileViewerHeader>
+        <FileViewerBody>
           <SplitViewerSidebar />
-          <ViewerSurface>
+          <FileViewerSurface>
             <SplitViewerLegend className="border-b px-3 py-2" />
             <SplitViewerDocument document={document} />
-          </ViewerSurface>
-        </ViewerBody>
-      </ViewerRoot>
+          </FileViewerSurface>
+        </FileViewerBody>
+      </FileViewer>
     </SplitViewerProvider>
   )
 }
@@ -261,6 +276,22 @@ export function SplitViewerHeader() {
         ) : null}
       </div>
     </ViewerHeader>
+  )
+}
+
+export function SplitViewerHeaderMeta({ className }: { className?: string }) {
+  const { hasOutput, isProcessing, pageCount, segments } =
+    useSplitViewerHeader()
+  const text = hasOutput
+    ? `${segments.length} segment${segments.length === 1 ? "" : "s"} · ${pageCount} page${pageCount === 1 ? "" : "s"}`
+    : isProcessing
+      ? "Splitting"
+      : "Split viewer"
+
+  return (
+    <span className={cn("shrink-0 text-xs text-muted-foreground", className)}>
+      {text}
+    </span>
   )
 }
 

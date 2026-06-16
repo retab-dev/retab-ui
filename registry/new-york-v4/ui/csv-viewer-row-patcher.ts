@@ -8,6 +8,7 @@ import {
   type FixedGridColumnItem,
   type FixedGridJumpViewportResult,
   type FixedGridViewport,
+  type FixedGridVirtualItem,
 } from "./fixed-grid-virtualization"
 
 export interface CsvRowPatchState {
@@ -21,6 +22,7 @@ export interface CsvRowPatchState {
 
 export interface CsvRowPatcher {
   patch: (viewport: FixedGridViewport) => FixedGridJumpViewportResult
+  resync: (virtualRows: FixedGridVirtualItem[]) => void
   invalidate: () => void
 }
 
@@ -58,6 +60,31 @@ export function useCsvRowPatcher({
   const invalidate = React.useCallback(() => {
     rowHandleCacheRef.current = null
   }, [])
+
+  // Re-assert the canonical (React-owned) row state onto every pooled row after
+  // a canonical commit. During active scroll the imperative patcher mutates
+  // each row's `hidden` attribute, transform, row number, and cell text
+  // directly. When React later commits a window, its reconciler only writes a
+  // DOM property whose value changed in React's *own* remembered vdom, so a
+  // reused slot whose canonical value is unchanged across the commit keeps
+  // whatever the patcher last wrote. That leaks two ways: a previously-hidden
+  // pool row that should now be visible stays `hidden` (a blank gap at the
+  // leading scroll edge), and a cyclic column (e.g. a repeating name) keeps a
+  // stale value from a different row even though its id and row number are
+  // correct. Re-running the canonical window through the same patch routine
+  // pushes the authoritative transform, visibility, and text back onto the DOM
+  // once scrolling settles. This runs only on canonical commits, not per frame.
+  const resync = React.useCallback(
+    (virtualRows: FixedGridVirtualItem[]) => {
+      const rowWindow = rowWindowRef.current
+      if (!rowWindow) return
+      const cache = readRowHandles(rowWindow)
+      rowHandleCacheRef.current = cache
+      if (cache.rows.length === 0) return
+      patchRows(cache.rows, virtualRows, getState())
+    },
+    [getState, rowWindowRef]
+  )
 
   const patch = React.useCallback(
     (viewport: FixedGridViewport): FixedGridJumpViewportResult => {
@@ -104,7 +131,10 @@ export function useCsvRowPatcher({
     [getState, rowWindowRef]
   )
 
-  return React.useMemo(() => ({ invalidate, patch }), [invalidate, patch])
+  return React.useMemo(
+    () => ({ invalidate, patch, resync }),
+    [invalidate, patch, resync]
+  )
 }
 
 function patchRows(

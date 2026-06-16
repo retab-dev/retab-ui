@@ -27,7 +27,7 @@ import {
 import { usePptxZoom } from "./pptx-viewer-zoom"
 import { useIsClient } from "./use-is-client"
 import { ViewerErrorBoundary } from "./viewer-error"
-import { ViewerToolbar } from "./viewer-toolbar"
+import { ViewerControls } from "./viewer-controls"
 
 export type { PptxDocumentSource, PptxViewerProps } from "./pptx-viewer-types"
 export type {
@@ -56,7 +56,7 @@ export function PptxResourceContent(props: PptxResourceContentProps) {
         className={props.className}
         bare={props.bare}
         fallbackSlideSize={props.fallbackSlideSize}
-        toolbar={props.toolbar}
+        controls={props.controls}
       />
     )
   }
@@ -81,7 +81,7 @@ export function PptxResourceContent(props: PptxResourceContentProps) {
             className={props.className}
             bare={props.bare}
             fallbackSlideSize={props.fallbackSlideSize}
-            toolbar={props.toolbar}
+            controls={props.controls}
           />
         }
       >
@@ -102,7 +102,7 @@ function PptxViewerContent({
   defaultScale,
   download = true,
   onScaleChange,
-  toolbar = true,
+  controls = true,
   renderSlideOverlay,
   onSlideRenderTiming,
   onSourceLoadTiming,
@@ -158,8 +158,8 @@ function PptxViewerContent({
       )}
       data-slot="pptx-viewer"
     >
-      {toolbar ? (
-        <ViewerToolbar
+      {controls ? (
+        <ViewerControls
           position={{
             kind: "slide",
             current: currentSlide,

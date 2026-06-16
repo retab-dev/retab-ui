@@ -27,7 +27,11 @@ import {
   type ImageViewerProps,
 } from "@/components/ui/image-viewer-types"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { ViewerToolbar } from "@/components/ui/viewer-toolbar"
+import {
+  useViewerControlsRegistration,
+  ViewerControls,
+  type ViewerControlsState,
+} from "@/components/ui/viewer-controls"
 
 import {
   createImageFrameLayout,
@@ -42,7 +46,7 @@ export function ImageViewerContent({
   defaultScale,
   download = true,
   onScaleChange,
-  toolbar = true,
+  controls = true,
   renderFrameOverlay,
   onVisibleFrameChange,
   onScrollProgressChange,
@@ -102,6 +106,31 @@ export function ImageViewerContent({
     frameSource.kind === "tiff"
       ? `Page ${Math.min(currentFrameNumber, frameCount)} of ${frameCount}`
       : `${frameCount} image${frameCount === 1 ? "" : "s"}`
+  const zoomOut = React.useCallback(
+    () =>
+      setViewerScale(clamp(scale / 1.2, MIN_VIEWER_SCALE, MAX_VIEWER_SCALE)),
+    [scale, setViewerScale]
+  )
+  const zoomIn = React.useCallback(
+    () =>
+      setViewerScale(clamp(scale * 1.2, MIN_VIEWER_SCALE, MAX_VIEWER_SCALE)),
+    [scale, setViewerScale]
+  )
+  const fitWidth = React.useCallback(
+    () => setViewerScale(null),
+    [setViewerScale]
+  )
+  useImageControlsRegistration({
+    countLabel,
+    download,
+    downloadAction: resource.originalDownload,
+    fitWidth,
+    rotateClockwise,
+    scale,
+    scaleControlsDisabled,
+    zoomIn,
+    zoomOut,
+  })
   const handleViewportScroll = React.useCallback(() => {
     handleScroll()
     measureVisibleFrames()
@@ -117,20 +146,14 @@ export function ImageViewerContent({
       )}
       data-slot="image-viewer"
     >
-      {toolbar ? (
-        <ViewerToolbar
+      {controls ? (
+        <ViewerControls
           position={{ label: countLabel }}
           zoom={{
             scale,
-            onZoomOut: () =>
-              setViewerScale(
-                clamp(scale / 1.2, MIN_VIEWER_SCALE, MAX_VIEWER_SCALE)
-              ),
-            onZoomIn: () =>
-              setViewerScale(
-                clamp(scale * 1.2, MIN_VIEWER_SCALE, MAX_VIEWER_SCALE)
-              ),
-            onFit: () => setViewerScale(null),
+            onZoomOut: zoomOut,
+            onZoomIn: zoomIn,
+            onFit: fitWidth,
             isDisabled: scaleControlsDisabled,
           }}
           rotate={{ onRotate: rotateClockwise }}
@@ -201,6 +224,61 @@ export function ImageViewerContent({
       </div>
     </div>
   )
+}
+
+function useImageControlsRegistration({
+  countLabel,
+  download,
+  downloadAction,
+  fitWidth,
+  rotateClockwise,
+  scale,
+  scaleControlsDisabled,
+  zoomIn,
+  zoomOut,
+}: {
+  countLabel: string
+  download: boolean
+  downloadAction: ViewerResource["originalDownload"]
+  fitWidth: () => void
+  rotateClockwise: () => void
+  scale: number
+  scaleControlsDisabled: boolean
+  zoomIn: () => void
+  zoomOut: () => void
+}) {
+  const onControlsChange = useViewerControlsRegistration()
+  const controlsState = React.useMemo<ViewerControlsState>(
+    () => ({
+      position: { label: countLabel },
+      zoom: {
+        scale,
+        onZoomOut: zoomOut,
+        onZoomIn: zoomIn,
+        onFit: fitWidth,
+        isDisabled: scaleControlsDisabled,
+      },
+      rotate: { onRotate: rotateClockwise },
+      downloads: download ? [downloadAction] : [],
+    }),
+    [
+      countLabel,
+      download,
+      downloadAction,
+      fitWidth,
+      rotateClockwise,
+      scale,
+      scaleControlsDisabled,
+      zoomIn,
+      zoomOut,
+    ]
+  )
+
+  React.useEffect(() => {
+    if (!onControlsChange) return
+    onControlsChange(controlsState)
+    return () => onControlsChange(null)
+  }, [onControlsChange, controlsState])
 }
 
 export function getImageSource(

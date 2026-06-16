@@ -378,7 +378,7 @@ function renderViewer({
             fileName: "big-911-report.pdf",
           }}
           className={viewerClassName}
-          toolbar={false}
+          controls={false}
           bare
         />
       )
@@ -392,7 +392,7 @@ function renderViewer({
             fileName: "scrollbench.csv",
           }}
           className={viewerClassName}
-          toolbar={false}
+          controls={false}
           fillHeight
           isolateStyles={false}
         />
@@ -426,7 +426,7 @@ function renderViewer({
             fileName: "nvidia-financials-fy2024.xlsx",
           }}
           className={viewerClassName}
-          toolbar={false}
+          controls={false}
           bare
           isolateStyles={false}
         />
@@ -442,7 +442,7 @@ function renderViewer({
             mimeType: "text/plain",
           }}
           className={viewerClassName}
-          toolbar={false}
+          controls={false}
           bare
           maxBytes={4_000_000}
           maxLines={40_000}
@@ -458,7 +458,7 @@ function renderViewer({
             fileName: "quarterly-business-review.docx",
           }}
           className={viewerClassName}
-          toolbar={false}
+          controls={false}
           bare
         />
       )
@@ -467,7 +467,7 @@ function renderViewer({
         <PptxViewer
           source={getScrollBenchPptxSource(pptxFile)}
           className={viewerClassName}
-          toolbar={false}
+          controls={false}
           bare
           eager
           onSourceLoadTiming={onPptxSourceLoadTiming}
@@ -485,7 +485,7 @@ function renderViewer({
           }}
           className={viewerClassName}
           scale={2}
-          toolbar={false}
+          controls={false}
           bare
         />
       )

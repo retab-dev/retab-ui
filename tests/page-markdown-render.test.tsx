@@ -288,7 +288,7 @@ describe("PageMarkdownViewer", () => {
     })
   })
 
-  it("renders the standard page toolbar and markdown actions", async () => {
+  it("renders the standard page controls and markdown actions", async () => {
     render(<PageMarkdownViewer pages={PAGES} />)
 
     expect(screen.getByText("Page 1 of 2")).toBeTruthy()
@@ -359,7 +359,7 @@ describe("PageMarkdownViewer", () => {
     }).not.toThrow()
   })
 
-  it("moves secondary actions into a menu when the toolbar is narrow", () => {
+  it("moves secondary actions into a menu when the controls is narrow", () => {
     Object.defineProperty(HTMLElement.prototype, "clientWidth", {
       configurable: true,
       get: () => 400,

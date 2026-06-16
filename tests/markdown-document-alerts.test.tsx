@@ -31,7 +31,7 @@ describe("markdown GitHub alerts", () => {
   it("renders GitHub blockquote alerts as callouts", async () => {
     const { container } = render(
       <MarkdownDocumentViewer
-        toolbar={false}
+        controls={false}
         source={markdownSource("> [!IMPORTANT]\n> Ship the fix.")}
       />
     )
@@ -47,7 +47,7 @@ describe("markdown GitHub alerts", () => {
   it("keeps ordinary blockquotes as blockquotes", async () => {
     const { container } = render(
       <MarkdownDocumentViewer
-        toolbar={false}
+        controls={false}
         source={markdownSource("> Ordinary quote.")}
       />
     )

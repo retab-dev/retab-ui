@@ -2,16 +2,16 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ViewerToolbarSkeleton } from "@/components/ui/viewer-toolbar"
+import { ViewerControlsSkeleton } from "@/components/ui/viewer-controls"
 
 export function PdfViewerFallback({
   className,
   bare = false,
-  toolbar = true,
+  controls = true,
 }: {
   className?: string
   bare?: boolean
-  toolbar?: boolean
+  controls?: boolean
 }) {
   return (
     <div
@@ -22,7 +22,7 @@ export function PdfViewerFallback({
       )}
       data-slot="pdf-viewer"
     >
-      {toolbar ? <ViewerToolbarSkeleton position zoom rotate download /> : null}
+      {controls ? <ViewerControlsSkeleton position zoom rotate download /> : null}
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="flex flex-col items-center p-4">
           <PageAspectSkeleton />

@@ -3,6 +3,16 @@
 import * as React from "react"
 import { Key, Loader2 } from "lucide-react"
 
+import { cn } from "@/lib/utils"
+import type { ViewerSource } from "@/lib/viewer-source"
+import {
+  FileViewer,
+  FileViewerBody,
+  FileViewerControls,
+  FileViewerHeader,
+  FileViewerSurface,
+  FileViewerTitle,
+} from "@/components/ui/file-viewer"
 import { PageRibbon } from "@/components/ui/page-ribbon"
 import { SegmentLegend } from "@/components/ui/segment-legend"
 import {
@@ -10,12 +20,7 @@ import {
   useSegmentedDocumentViewport,
 } from "@/components/ui/segmented-document-provider"
 import { type SegmentViewportController } from "@/components/ui/use-segment-viewport-controller"
-import {
-  ViewerBody,
-  ViewerHeader,
-  ViewerRoot,
-  ViewerSurface,
-} from "@/components/ui/viewer"
+import { ViewerHeader } from "@/components/ui/viewer"
 import type { PartitionResult } from "@/components/viewers/lib/partition-types"
 
 import {
@@ -68,6 +73,7 @@ export interface PartitionViewerProviderProps {
 
 export interface PartitionViewerProps {
   result: PartitionResult | null
+  source: ViewerSource
   isProcessing?: boolean
   document?: React.ReactNode
 }
@@ -199,6 +205,42 @@ export function PartitionViewerHeader({
   )
 }
 
+export function PartitionViewerHeaderMeta({
+  className,
+}: {
+  className?: string
+}) {
+  const { legendSegments } = usePartitionViewerHeader()
+
+  if (legendSegments.length === 0) return null
+
+  return (
+    <span className={cn("shrink-0 text-xs text-muted-foreground", className)}>
+      {legendSegments.length} segment
+      {legendSegments.length === 1 ? "" : "s"}
+    </span>
+  )
+}
+
+export function PartitionViewerLegend({ className }: { className?: string }) {
+  const { currentPage, interaction, legendSegments, navigation } =
+    usePartitionViewerHeader()
+
+  if (legendSegments.length === 0) return null
+
+  return (
+    <SegmentLegend
+      variant="plain"
+      segments={legendSegments}
+      currentPage={currentPage}
+      interaction={interaction}
+      onSelect={navigation.scrollToSegmentStart}
+      columns={4}
+      className={className}
+    />
+  )
+}
+
 export function PartitionViewerRibbon({ className }: { className?: string }) {
   const {
     currentPage,
@@ -276,20 +318,26 @@ export function PartitionViewerEmptyState() {
 
 export function PartitionViewer({
   result,
+  source,
   isProcessing = false,
   document,
 }: PartitionViewerProps) {
   return (
     <PartitionViewerProvider result={result} isProcessing={isProcessing}>
-      <ViewerRoot bare className="h-full flex-1 bg-background">
-        <PartitionViewerHeader />
-        <ViewerBody>
-          <ViewerSurface>
+      <FileViewer source={source} bare className="h-full flex-1 bg-background">
+        <FileViewerHeader>
+          <FileViewerTitle />
+          <PartitionViewerHeaderMeta />
+          <FileViewerControls />
+        </FileViewerHeader>
+        <FileViewerBody>
+          <FileViewerSurface>
+            <PartitionViewerLegend className="border-b px-3 py-2" />
             <PartitionViewerRibbon />
             <PartitionViewerDocument document={document} />
-          </ViewerSurface>
-        </ViewerBody>
-      </ViewerRoot>
+          </FileViewerSurface>
+        </FileViewerBody>
+      </FileViewer>
     </PartitionViewerProvider>
   )
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Eye, Upload, X } from "lucide-react"
+import { Upload, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { blobSource } from "@/lib/viewer-resource"
@@ -167,6 +167,7 @@ export function FileIntakeViewerProvider({
     onFilesChange,
     onIntake,
   })
+  const { clearFiles, getInputProps, getRootProps, getTriggerProps } = dropzone
   const model = React.useMemo<FileIntakeViewerModel>(
     () =>
       createFileIntakeViewerModel({
@@ -184,19 +185,14 @@ export function FileIntakeViewerProvider({
   )
   const actions = React.useMemo<FileIntakeViewerActions>(
     () => ({
-      clearFile: dropzone.clearFiles,
-      getRootDropProps: dropzone.getRootProps,
-      getFileInputProps: dropzone.getInputProps,
+      clearFile: clearFiles,
+      getRootDropProps: getRootProps,
+      getFileInputProps: getInputProps,
       getUploadButtonProps: (props) =>
-        dropzone.getTriggerProps({ ...props, native: true }),
-      getEmptySurfaceProps: dropzone.getTriggerProps,
+        getTriggerProps({ ...props, native: true }),
+      getEmptySurfaceProps: getTriggerProps,
     }),
-    [
-      dropzone.clearFiles,
-      dropzone.getInputProps,
-      dropzone.getRootProps,
-      dropzone.getTriggerProps,
-    ]
+    [clearFiles, getInputProps, getRootProps, getTriggerProps]
   )
   const value = React.useMemo<FileIntakeViewerContextValue>(
     () => ({
@@ -246,6 +242,7 @@ export function FileIntakeViewerRoot({
     <ViewerRoot
       bare
       defaultOpen
+      mode="inline"
       className={cn(
         "min-h-[30rem] rounded-lg border bg-background text-foreground transition-colors",
         "group-data-[dragging]/file-intake-drop:border-foreground/40 group-data-[dragging]/file-intake-drop:bg-accent/35",
@@ -266,10 +263,7 @@ export function FileIntakeViewerHeader() {
       <div className="flex min-w-0 items-center gap-2">
         <ViewerSidebarTrigger />
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <Eye className="size-4 text-muted-foreground" aria-hidden />
-            File preview
-          </div>
+          <div className="text-sm font-medium">File preview</div>
           {selectedFileSummary ? (
             <div className="mt-1 truncate text-xs text-muted-foreground">
               {selectedFileSummary.fileName}
@@ -312,8 +306,8 @@ export function FileIntakeViewerSidebar() {
   return (
     <ViewerSidebar
       aria-label="Selected file"
-      width="16rem"
-      className="border-b bg-background p-4 md:border-r md:border-b-0"
+      width="12rem"
+      className="border-b bg-background p-3 md:border-r md:border-b-0"
     >
       {selectedFileSummary ? (
         <FileIntakeViewerFileCard fileSummary={selectedFileSummary} />

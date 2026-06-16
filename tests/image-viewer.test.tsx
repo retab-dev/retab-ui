@@ -2791,7 +2791,7 @@ describe("ImageViewer interactions", () => {
     expect(download.getAttribute("download")).toBe("second-name.png")
   })
 
-  it("renders viewer chrome while allowing the toolbar to be hidden", async () => {
+  it("renders viewer chrome while allowing the controls to be hidden", async () => {
     stubImageLoading(bitmap(20, 20))
     stubObservableLayout({ isIntersecting: false })
 
@@ -2807,7 +2807,7 @@ describe("ImageViewer interactions", () => {
             <ViewerSurface>
               <ImageViewer
                 source={imageUrlSource("/slotted.png")}
-                toolbar={false}
+                controls={false}
                 bare
               />
             </ViewerSurface>
@@ -2834,7 +2834,7 @@ describe("ImageViewer interactions", () => {
     stubObservableLayout({ frameListWidth: 132, isIntersecting: false })
 
     await act(async () => {
-      render(<ImageViewer source={imageUrlSource("/toolbar-scale.png")} />)
+      render(<ImageViewer source={imageUrlSource("/controls-scale.png")} />)
     })
 
     expect(

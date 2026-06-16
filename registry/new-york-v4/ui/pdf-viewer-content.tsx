@@ -25,15 +25,17 @@ import { usePdfScroll } from "./pdf-viewer-scroll"
 import { PageSkeleton, PdfViewerFallback } from "./pdf-viewer-states"
 import type {
   PageOverlayProps,
-  PdfDocumentViewportControls,
   PdfPageSize,
   PdfViewerHandle,
 } from "./pdf-viewer-types"
-import { usePdfDocumentViewportRegistration } from "./pdf-viewer-viewport"
 import { usePdfPageVirtualization } from "./pdf-viewer-virtualization"
 import { useIsClient } from "./use-is-client"
+import {
+  useViewerControlsRegistration,
+  ViewerControls,
+  type ViewerControlsState,
+} from "./viewer-controls"
 import { ViewerErrorBoundary } from "./viewer-error"
-import { ViewerToolbar } from "./viewer-toolbar"
 
 export type PdfViewerContentProps = {
   className?: string
@@ -41,10 +43,10 @@ export type PdfViewerContentProps = {
   scale?: number
   /** Initial uncontrolled scale. Leave unset for fit-to-width. */
   defaultScale?: number
-  /** Called when toolbar controls request a scale change. `null` means fit width. */
+  /** Called when controls request a scale change. `null` means fit width. */
   onScaleChange?: (scale: number | null) => void
-  toolbar?: boolean
-  /** Show download actions in this viewer's toolbar/error state. */
+  controls?: boolean
+  /** Show download actions in this viewer's controls/error state. */
   download?: boolean
   /** Render absolutely-positioned overlays (e.g. bbox citations) on each page. */
   renderPageOverlay?: (props: PageOverlayProps) => React.ReactNode
@@ -76,7 +78,7 @@ export const PdfResourceContent = React.forwardRef<
       <PdfViewerFallback
         className={props.className}
         bare={props.bare}
-        toolbar={props.toolbar}
+        controls={props.controls}
       />
     )
   }
@@ -95,7 +97,7 @@ export const PdfResourceContent = React.forwardRef<
           <PdfViewerFallback
             className={props.className}
             bare={props.bare}
-            toolbar={props.toolbar}
+            controls={props.controls}
           />
         }
       >
@@ -111,7 +113,7 @@ function PdfViewerInner({
   scale: controlledScale,
   defaultScale,
   onScaleChange,
-  toolbar = true,
+  controls = true,
   download = true,
   renderPageOverlay,
   onVisiblePageChange,
@@ -172,9 +174,10 @@ function PdfViewerInner({
     onVisiblePageChange,
     onScrollProgressChange,
   })
-  usePdfDocumentViewportControls({
+  usePdfDocumentControlsRegistration({
     currentPage,
     document,
+    download,
     downloadAction: resource.originalDownload,
     fitWidth,
     resolvedScale,
@@ -222,8 +225,8 @@ function PdfViewerInner({
       )}
       data-slot="pdf-viewer"
     >
-      {toolbar ? (
-        <ViewerToolbar
+      {controls ? (
+        <ViewerControls
           position={{
             kind: "page",
             current: currentPage,
@@ -304,9 +307,10 @@ function usePdfDocumentRotation(document: PdfDocument) {
   return { rotation, rotateClockwise }
 }
 
-function usePdfDocumentViewportControls({
+function usePdfDocumentControlsRegistration({
   currentPage,
   document,
+  download,
   downloadAction,
   fitWidth,
   resolvedScale,
@@ -316,6 +320,7 @@ function usePdfDocumentViewportControls({
 }: {
   currentPage: number
   document: PdfDocument
+  download: boolean
   downloadAction: ViewerResource["originalDownload"]
   fitWidth: () => void
   resolvedScale: number
@@ -323,21 +328,27 @@ function usePdfDocumentViewportControls({
   zoomIn: () => void
   zoomOut: () => void
 }) {
-  const onViewportControlsChange = usePdfDocumentViewportRegistration()
-  const viewportControls = React.useMemo<PdfDocumentViewportControls>(
+  const onControlsChange = useViewerControlsRegistration()
+  const controlsState = React.useMemo<ViewerControlsState>(
     () => ({
-      currentPage,
-      downloadAction,
-      onFitWidth: fitWidth,
-      onRotate: rotateClockwise,
-      onZoomIn: zoomIn,
-      onZoomOut: zoomOut,
-      pageCount: document.numPages,
-      scale: resolvedScale,
+      position: {
+        kind: "page",
+        current: currentPage,
+        total: document.numPages,
+      },
+      zoom: {
+        scale: resolvedScale,
+        onZoomOut: zoomOut,
+        onZoomIn: zoomIn,
+        onFit: fitWidth,
+      },
+      rotate: { onRotate: rotateClockwise },
+      downloads: download ? [downloadAction] : [],
     }),
     [
       currentPage,
       document.numPages,
+      download,
       downloadAction,
       fitWidth,
       resolvedScale,
@@ -348,12 +359,10 @@ function usePdfDocumentViewportControls({
   )
 
   React.useEffect(() => {
-    if (!onViewportControlsChange) return
-    onViewportControlsChange(viewportControls)
-    return () => onViewportControlsChange(null)
-  }, [onViewportControlsChange, viewportControls])
-
-  return viewportControls
+    if (!onControlsChange) return
+    onControlsChange(controlsState)
+    return () => onControlsChange(null)
+  }, [onControlsChange, controlsState])
 }
 
 function PdfDocumentPagesLayer({

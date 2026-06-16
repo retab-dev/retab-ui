@@ -1,9 +1,22 @@
 "use client"
 
+import {
+  FileViewer,
+  FileViewerBody,
+  FileViewerControls,
+  FileViewerHeader,
+  FileViewerSidebarTrigger,
+  FileViewerSurface,
+  FileViewerTitle,
+} from "@/components/ui/file-viewer"
 import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer"
 import type { SplitView } from "@/components/viewers/lib/split-types"
 import {
-  SplitViewer,
+  SplitViewerDocument,
+  SplitViewerHeaderMeta,
+  SplitViewerLegend,
+  SplitViewerProvider,
+  SplitViewerSidebar,
   useSplitViewerDocumentControls,
 } from "@/components/viewers/split/split-viewer"
 
@@ -27,12 +40,38 @@ const SPLIT_RESULT: SplitView = {
  * and scroll controls from the split provider.
  */
 export function SplitViewerBlock() {
+  const source = {
+    kind: "url" as const,
+    url: PDF_URL,
+    fileName: "an-image-is-worth-16x16-words.pdf",
+  }
+
   return (
     <div className="flex h-full min-h-[680px] flex-col bg-background">
-      <SplitViewer
-        result={SPLIT_RESULT}
-        document={<SplitViewerPdfDocument />}
-      />
+      <SplitViewerProvider result={SPLIT_RESULT}>
+        <FileViewer
+          source={source}
+          bare
+          defaultOpen
+          className="h-full flex-1 bg-background"
+        >
+          <PdfViewerProvider>
+            <FileViewerHeader>
+              <FileViewerSidebarTrigger className="-ml-1" />
+              <FileViewerTitle />
+              <SplitViewerHeaderMeta />
+              <FileViewerControls />
+            </FileViewerHeader>
+            <FileViewerBody>
+              <SplitViewerSidebar />
+              <FileViewerSurface>
+                <SplitViewerLegend className="border-b px-3 py-2" />
+                <SplitViewerDocument document={<SplitViewerPdfDocument />} />
+              </FileViewerSurface>
+            </FileViewerBody>
+          </PdfViewerProvider>
+        </FileViewer>
+      </SplitViewerProvider>
     </div>
   )
 }
@@ -41,20 +80,12 @@ function SplitViewerPdfDocument() {
   const controls = useSplitViewerDocumentControls()
 
   return (
-    <PdfViewerProvider
-      source={{
-        kind: "url",
-        url: PDF_URL,
-        fileName: "an-image-is-worth-16x16-words.pdf",
-      }}
-    >
-      <PdfViewerPages
-        ref={controls.setDocumentHandle}
-        bare
-        onVisiblePageChange={controls.onCurrentPageChange}
-        onScrollProgressChange={controls.onScrollProgressChange}
-        className="h-full"
-      />
-    </PdfViewerProvider>
+    <PdfViewerPages
+      ref={controls.setDocumentHandle}
+      bare
+      onVisiblePageChange={controls.onCurrentPageChange}
+      onScrollProgressChange={controls.onScrollProgressChange}
+      className="h-full"
+    />
   )
 }

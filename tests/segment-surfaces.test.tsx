@@ -90,6 +90,12 @@ const segments = toSegments([
   { name: "Unused", pages: [] },
 ])
 
+const viewerSource = {
+  kind: "url" as const,
+  url: "/samples/source.pdf",
+  fileName: "source.pdf",
+}
+
 function PartitionScrollSpy({
   onScroll,
 }: {
@@ -1541,6 +1547,7 @@ describe("partition segment composition", () => {
   it("groups partition legend keys by display label while preserving ribbon chunks", () => {
     render(
       <PartitionViewer
+        source={viewerSource}
         result={{
           output: [
             { key: "Contract", pages: [1] },
@@ -1560,6 +1567,7 @@ describe("partition segment composition", () => {
   it("renders an explicit partition document node in the viewer surface", () => {
     render(
       <PartitionViewer
+        source={viewerSource}
         result={{
           output: [{ key: "Contract", pages: [1] }],
           consensus: { choices: [], likelihoods: null },
@@ -1674,6 +1682,7 @@ describe("partition segment composition", () => {
   it("uses the max page, not the final input page, for unsorted partition chunks", () => {
     render(
       <PartitionViewer
+        source={viewerSource}
         result={{
           output: [{ key: "Invoices", pages: [5, 1] }],
           consensus: { choices: [], likelihoods: null },
@@ -1994,6 +2003,7 @@ describe("split segment composition", () => {
   it("gives the rendered document pane the full flex width", () => {
     render(
       <SplitViewer
+        source={viewerSource}
         result={{ output: [{ name: "Invoices", pages: [1] }] }}
         document={<div data-testid="split-document-pane" />}
       />
@@ -2052,6 +2062,7 @@ describe("split segment composition", () => {
 
     render(
       <SplitViewer
+        source={viewerSource}
         result={{ output: [{ name: "Invoices", pages: [5] }] }}
         document={<DocumentWithHandle />}
       />
@@ -2085,6 +2096,7 @@ describe("split segment composition", () => {
 
     render(
       <SplitViewer
+        source={viewerSource}
         result={{
           output: [
             { name: "Title", pages: [1] },

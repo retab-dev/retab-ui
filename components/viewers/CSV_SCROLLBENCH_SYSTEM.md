@@ -39,9 +39,9 @@ flowchart TB
   end
 
   subgraph CsvViewerStack["CSV viewer stack"]
-    CsvViewer["CsvViewer<br/>Resource state, dialect, toolbar, zoom, export actions"]
+    CsvViewer["CsvViewer<br/>Resource state, dialect, controls, zoom, export actions"]
     CsvState["useCsvResourceState<br/>Parses text/blob/url/table sources<br/>Exposes columns and sourceRows"]
-    CsvToolbar["CsvViewerToolbar<br/>Zoom and download actions"]
+    CsvToolbar["CsvViewerControls<br/>Zoom and download actions"]
     CsvGrid["CsvGrid<br/>Sort state, row/column virtualization, active cell, row patch path"]
   end
 

@@ -1,6 +1,16 @@
 "use client"
 
 import type { Source } from "@/lib/document-source"
+import {
+  FileViewer,
+  FileViewerBody,
+  FileViewerControls,
+  FileViewerHeader,
+  FileViewerMeta,
+  FileViewerSidebar,
+  FileViewerSurface,
+  FileViewerTitle,
+} from "@/components/ui/file-viewer"
 import { ImageViewer } from "@/components/ui/image-viewer"
 import {
   SegmentedDocumentProvider,
@@ -17,15 +27,14 @@ import {
   useSegmentedImageSourceOverlay,
   useSegmentedImageViewerHandle,
 } from "@/components/ui/source-segmented-document-overlays"
-import {
-  ViewerBody,
-  ViewerRoot,
-  ViewerSidebar,
-  ViewerSurface,
-} from "@/components/ui/viewer"
 import imageSample from "@/components/viewers/sample-data/image-sources.json"
 
 const IMAGE_URL = "/samples/an-image-is-worth-16x16-words-page-1.png"
+const IMAGE_SOURCE = {
+  kind: "url" as const,
+  url: IMAGE_URL,
+  fileName: "an-image-is-worth-16x16-words-page-1.png",
+}
 
 type ImageField = SourceField & { source: Source }
 
@@ -59,25 +68,31 @@ function ImageSourcesContent() {
   const setImageViewerHandle = useSegmentedImageViewerHandle()
 
   return (
-    <ViewerRoot bare className="h-full min-h-[680px] bg-background">
-      <ViewerBody>
-        <ViewerSurface className="relative">
+    <FileViewer
+      source={IMAGE_SOURCE}
+      bare
+      className="h-full min-h-[680px] bg-background"
+    >
+      <FileViewerHeader>
+        <FileViewerTitle />
+        <FileViewerMeta />
+        <FileViewerControls />
+      </FileViewerHeader>
+      <FileViewerBody>
+        <FileViewerSurface className="relative">
           <ImageViewer
             ref={setImageViewerHandle}
-            source={{
-              kind: "url",
-              url: IMAGE_URL,
-              fileName: "an-image-is-worth-16x16-words-page-1.png",
-            }}
+            source={IMAGE_SOURCE}
             bare
             className="h-full"
+            controls={false}
             onScrollProgressChange={documentHandlers.onScrollProgressChange}
             onVisibleFrameChange={documentHandlers.onCurrentPageChange}
             renderFrameOverlay={renderFrameOverlay}
           />
           <SourceIndicator path={link.activePath} found={!!link.activeAnchor} />
-        </ViewerSurface>
-        <ViewerSidebar
+        </FileViewerSurface>
+        <FileViewerSidebar
           aria-label="Source fields"
           side="right"
           collapsible="none"
@@ -85,8 +100,8 @@ function ImageSourcesContent() {
           className="border-l"
         >
           <SourceFieldList fields={FIELDS} link={link} />
-        </ViewerSidebar>
-      </ViewerBody>
-    </ViewerRoot>
+        </FileViewerSidebar>
+      </FileViewerBody>
+    </FileViewer>
   )
 }

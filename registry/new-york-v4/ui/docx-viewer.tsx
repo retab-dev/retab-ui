@@ -4,7 +4,10 @@ import * as React from "react"
 
 import { clearDocxDocumentResource } from "@/lib/docx-document-resource"
 import { isResourceError, isViewerFormatError } from "@/lib/viewer-errors"
-import { createViewerResource } from "@/lib/viewer-resource"
+import {
+  createViewerResource,
+  type ViewerResource,
+} from "@/lib/viewer-resource"
 import { useIsClient } from "@/components/ui/use-is-client"
 import { ViewerErrorBoundary } from "@/components/ui/viewer-error"
 
@@ -24,6 +27,13 @@ export type {
   DocxViewerProps,
 } from "./docx-viewer-types"
 
+export type DocxViewerProviderProps = {
+  children: React.ReactNode
+  resource: ViewerResource
+}
+
+export type DocxViewerDocumentProps = Omit<DocxResourceContentProps, "resource">
+
 export const DocxViewer = React.forwardRef<DocxViewerHandle, DocxViewerProps>(
   function DocxViewer(props, ref) {
     const { source, ...resourceProps } = props
@@ -33,6 +43,39 @@ export const DocxViewer = React.forwardRef<DocxViewerHandle, DocxViewerProps>(
     )
   }
 )
+
+const DocxViewerResourceContext = React.createContext<ViewerResource | null>(
+  null
+)
+
+export function DocxViewerProvider({
+  children,
+  resource,
+}: DocxViewerProviderProps) {
+  return (
+    <DocxViewerResourceContext.Provider value={resource}>
+      {children}
+    </DocxViewerResourceContext.Provider>
+  )
+}
+
+function useDocxViewerResource(): ViewerResource {
+  const resource = React.useContext(DocxViewerResourceContext)
+  if (!resource) {
+    throw new Error(
+      "DocxViewerDocument must be used within DocxViewerProvider."
+    )
+  }
+  return resource
+}
+
+export const DocxViewerDocument = React.forwardRef<
+  DocxViewerHandle,
+  DocxViewerDocumentProps
+>(function DocxViewerDocument(props, ref) {
+  const resource = useDocxViewerResource()
+  return <DocxResourceContent {...props} ref={ref} resource={resource} />
+})
 
 export const DocxResourceContent = React.forwardRef<
   DocxViewerHandle,
@@ -45,7 +88,7 @@ export const DocxResourceContent = React.forwardRef<
       <DocxViewerFallback
         bare={props.bare}
         className={props.className}
-        toolbar={props.toolbar}
+        controls={props.controls}
       />
     )
   }
@@ -68,7 +111,7 @@ export const DocxResourceContent = React.forwardRef<
           <DocxViewerFallback
             bare={props.bare}
             className={props.className}
-            toolbar={props.toolbar}
+            controls={props.controls}
           />
         }
       >

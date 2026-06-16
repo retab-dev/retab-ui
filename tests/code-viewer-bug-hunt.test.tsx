@@ -289,7 +289,7 @@ describe("code viewer resource bug hunt", () => {
       <CodeViewer
         ref={viewerRef}
         source={textSource(manyLines(10_000))}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -309,7 +309,7 @@ describe("code viewer resource bug hunt", () => {
         <CodeViewer
           ref={viewerRef}
           source={textSource(manyLines(10_000))}
-          toolbar={false}
+          controls={false}
           highlight={{ start: 5000, end: 5000 }}
         />
       )

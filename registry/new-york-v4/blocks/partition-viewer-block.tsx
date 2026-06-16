@@ -1,14 +1,18 @@
 "use client"
 
 import {
-  PdfViewerHeader,
-  PdfViewerPages,
-  PdfViewerProvider,
-} from "@/components/ui/pdf-viewer"
-import { ViewerBody, ViewerRoot, ViewerSurface } from "@/components/ui/viewer"
+  FileViewer,
+  FileViewerBody,
+  FileViewerControls,
+  FileViewerHeader,
+  FileViewerSurface,
+  FileViewerTitle,
+} from "@/components/ui/file-viewer"
+import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer"
 import type { PartitionResult } from "@/components/viewers/lib/partition-types"
 import {
-  PartitionViewerHeader,
+  PartitionViewerHeaderMeta,
+  PartitionViewerLegend,
   PartitionViewerProvider,
   PartitionViewerRibbon,
   usePartitionViewerDocumentControls,
@@ -38,27 +42,35 @@ const PARTITION_RESULT: PartitionResult = {
  * visible JSX.
  */
 export function PartitionViewerBlock() {
+  const source = {
+    kind: "url" as const,
+    url: PDF_URL,
+    fileName: "an-image-is-worth-16x16-words.pdf",
+  }
+
   return (
     <div className="flex h-full min-h-[680px] flex-col bg-background">
       <PartitionViewerProvider result={PARTITION_RESULT}>
-        <PdfViewerProvider
-          source={{
-            kind: "url",
-            url: PDF_URL,
-            fileName: "an-image-is-worth-16x16-words.pdf",
-          }}
+        <FileViewer
+          source={source}
+          bare
+          className="h-full flex-1 bg-background"
         >
-          <ViewerRoot bare className="h-full flex-1 bg-background">
-            <PdfViewerHeader />
-            <PartitionViewerHeader />
-            <ViewerBody>
-              <ViewerSurface>
+          <PdfViewerProvider>
+            <FileViewerHeader>
+              <FileViewerTitle />
+              <PartitionViewerHeaderMeta />
+              <FileViewerControls />
+            </FileViewerHeader>
+            <FileViewerBody>
+              <FileViewerSurface>
+                <PartitionViewerLegend className="border-b px-3 py-2" />
                 <PartitionViewerRibbon />
                 <PartitionSourceDocument />
-              </ViewerSurface>
-            </ViewerBody>
-          </ViewerRoot>
-        </PdfViewerProvider>
+              </FileViewerSurface>
+            </FileViewerBody>
+          </PdfViewerProvider>
+        </FileViewer>
       </PartitionViewerProvider>
     </div>
   )

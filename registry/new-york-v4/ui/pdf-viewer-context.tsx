@@ -2,24 +2,18 @@
 
 import * as React from "react"
 
-import { cn } from "@/lib/utils"
 import {
   createViewerResource,
   type ViewerResource,
 } from "@/lib/viewer-resource"
 import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source"
 
+import { useOptionalFileViewerResource } from "./file-viewer-internal"
 import {
   PdfResourceContent,
   type PdfViewerContentProps,
 } from "./pdf-viewer-content"
-import type {
-  PdfDocumentViewportControls,
-  PdfViewerHandle,
-} from "./pdf-viewer-types"
-import { PdfDocumentViewportRegistrationProvider } from "./pdf-viewer-viewport"
-import { ViewerHeader } from "./viewer"
-import { ViewerToolbar } from "./viewer-toolbar"
+import type { PdfViewerHandle } from "./pdf-viewer-types"
 
 export type PdfDocumentSource = UrlViewerSource | BlobViewerSource
 
@@ -30,23 +24,16 @@ export type PdfViewerThumbnailsState = {
 }
 
 export interface PdfViewerProviderProps {
-  source: PdfDocumentSource
+  source?: PdfDocumentSource
   children: React.ReactNode
 }
 
 type PdfViewerContextValue = {
   currentPage: number | null
-  viewportControls: PdfDocumentViewportControls | null
   resource: ViewerResource
   setCurrentPage: (page: number | null) => void
   setViewerHandle: (handle: PdfViewerHandle | null) => void
   viewerHandle: PdfViewerHandle | null
-}
-
-type PdfDocumentHeaderState = {
-  currentPage: number | null
-  viewportControls: PdfDocumentViewportControls | null
-  resource: ViewerResource
 }
 
 type PdfDocumentPagesState = {
@@ -83,76 +70,9 @@ export function usePdfViewerThumbnails(): PdfViewerThumbnailsState {
   }
 }
 
-function usePdfDocumentHeaderState(): PdfDocumentHeaderState {
-  const { currentPage, viewportControls, resource } = usePdfViewerContext()
-  return { currentPage, viewportControls, resource }
-}
-
 function usePdfDocumentPagesState(): PdfDocumentPagesState {
   const { resource, setCurrentPage, setViewerHandle } = usePdfViewerContext()
   return { resource, setCurrentPage, setViewerHandle }
-}
-
-export function PdfViewerHeader({
-  children,
-  className,
-  download = true,
-  toolbar = true,
-}: {
-  children?: React.ReactNode
-  className?: string
-  download?: boolean
-  toolbar?: boolean
-}) {
-  const { currentPage, viewportControls, resource } =
-    usePdfDocumentHeaderState()
-  const label = resource.fileName || "PDF"
-
-  if (children !== undefined) {
-    return (
-      <ViewerHeader
-        className={cn("flex min-h-10 items-center gap-3 px-2 py-1", className)}
-      >
-        {children}
-      </ViewerHeader>
-    )
-  }
-
-  return (
-    <ViewerHeader
-      className={cn("flex min-h-10 items-center gap-3 px-2 py-1", className)}
-    >
-      {toolbar && viewportControls ? (
-        <ViewerToolbar
-          className="h-auto flex-1 border-b-0 bg-transparent px-0"
-          title={label}
-          position={{
-            kind: "page",
-            current: viewportControls.currentPage,
-            total: viewportControls.pageCount,
-          }}
-          zoom={{
-            scale: viewportControls.scale,
-            onZoomOut: viewportControls.onZoomOut,
-            onZoomIn: viewportControls.onZoomIn,
-            onFit: viewportControls.onFitWidth,
-          }}
-          rotate={{ onRotate: viewportControls.onRotate }}
-          downloads={download ? [viewportControls.downloadAction] : []}
-        />
-      ) : (
-        <ViewerToolbar
-          className="h-auto flex-1 border-b-0 bg-transparent px-0"
-          title={label}
-          position={
-            toolbar && currentPage
-              ? { kind: "page", current: currentPage }
-              : null
-          }
-        />
-      )}
-    </ViewerHeader>
-  )
 }
 
 export const PdfViewerPages = React.forwardRef<
@@ -186,7 +106,7 @@ export const PdfViewerPages = React.forwardRef<
       {...props}
       ref={handleRef}
       resource={resource}
-      toolbar={false}
+      controls={false}
       onVisiblePageChange={handleVisiblePageChange}
     />
   )
@@ -196,37 +116,31 @@ export function PdfViewerProvider({
   source,
   children,
 }: PdfViewerProviderProps) {
-  const resource = React.useMemo(() => createViewerResource(source), [source])
+  const fileViewerResource = useOptionalFileViewerResource()
+  const resource = React.useMemo(() => {
+    if (source) return createViewerResource(source)
+    if (fileViewerResource) return fileViewerResource
+    throw new Error(
+      "PdfViewerProvider requires a source or enclosing FileViewer."
+    )
+  }, [fileViewerResource, source])
   const [currentPage, setCurrentPage] = React.useState<number | null>(null)
-  const [viewportControls, updateViewportControls] =
-    React.useState<PdfDocumentViewportControls | null>(null)
   const [viewerHandle, setViewerHandle] =
     React.useState<PdfViewerHandle | null>(null)
-  const handleViewportControlsChange = React.useCallback(
-    (controls: PdfDocumentViewportControls | null) => {
-      updateViewportControls(controls)
-    },
-    []
-  )
   const value = React.useMemo<PdfViewerContextValue>(
     () => ({
       currentPage,
-      viewportControls,
       resource,
       setCurrentPage,
       setViewerHandle,
       viewerHandle,
     }),
-    [currentPage, resource, viewportControls, viewerHandle]
+    [currentPage, resource, viewerHandle]
   )
 
   return (
     <PdfViewerContext.Provider value={value}>
-      <PdfDocumentViewportRegistrationProvider
-        onViewportControlsChange={handleViewportControlsChange}
-      >
-        {children}
-      </PdfDocumentViewportRegistrationProvider>
+      {children}
     </PdfViewerContext.Provider>
   )
 }

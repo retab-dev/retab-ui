@@ -101,11 +101,11 @@ function xlsxCellByText(text: string) {
 }
 
 describe("XlsxViewer real grid integration", () => {
-  it("does not render toolbar fallback chrome in toolbar-free server markup", () => {
+  it("does not render controls fallback chrome in controls-free server markup", () => {
     const html = renderToStaticMarkup(
       <XlsxViewer
         source={workbookSource("server-toolbarless")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -122,7 +122,7 @@ describe("XlsxViewer real grid integration", () => {
         <XlsxViewer
           ref={viewerRef}
           source={workbookSource("real-grid")}
-          toolbar={false}
+          controls={false}
         />
       )
     })
@@ -170,7 +170,7 @@ describe("XlsxViewer real grid integration", () => {
       const rendered = render(
         <XlsxViewer
           source={source}
-          toolbar={false}
+          controls={false}
           activeCell={{ sheet: 0, row: 0, col: 1 }}
         />
       )
@@ -198,7 +198,7 @@ describe("XlsxViewer real grid integration", () => {
       rerender(
         <XlsxViewer
           source={source}
-          toolbar={false}
+          controls={false}
           activeCell={{ sheet: 0, row: 1, col: 0 }}
         />
       )
@@ -208,9 +208,9 @@ describe("XlsxViewer real grid integration", () => {
     expect(xlsxCellByText("A2").className).toContain("ring-primary")
   })
 
-  it("updates toolbar sheet metadata and zoom display after load", async () => {
+  it("updates controls sheet metadata and zoom display after load", async () => {
     await act(async () => {
-      render(<XlsxViewer source={workbookSource("toolbar")} />)
+      render(<XlsxViewer source={workbookSource("controls")} />)
     })
 
     await emitWorkbook(await waitForWorker(), [

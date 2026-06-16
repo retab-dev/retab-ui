@@ -615,7 +615,20 @@ function useFixedGridViewport(
         if (settleTimeout) window.clearTimeout(settleTimeout)
         settleTimeout = window.setTimeout(() => {
           settleTimeout = 0
-          commitViewport(next)
+          // Scrolling has quiesced: the imperative patcher kept the DOM in
+          // sync, but `next` is the snapshot from the last handled frame and
+          // can lag the true rest position. Re-read the live scroll metrics so
+          // the canonical React window matches where the grid actually came to
+          // rest, and clear the jump flags so the settled commit uses the full
+          // overscan instead of the zero jump-overscan.
+          commitViewport({
+            scrollTop: fixedViewportMetric(scrollElement.scrollTop),
+            scrollLeft: fixedViewportMetric(scrollElement.scrollLeft),
+            clientHeight: fixedViewportMetric(scrollElement.clientHeight),
+            clientWidth: fixedViewportMetric(scrollElement.clientWidth),
+            isJumpingRows: false,
+            isJumpingColumns: false,
+          })
         }, rowScrollStrategy.settleAfterMs ?? 80)
         return
       }

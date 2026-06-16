@@ -3,7 +3,11 @@
 import * as React from "react"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
-import { ViewerToolbar } from "@/components/ui/viewer-toolbar"
+import {
+  useViewerControlsRegistration,
+  ViewerControls,
+  type ViewerControlsState,
+} from "@/components/ui/viewer-controls"
 import { XlsxSheetTabs } from "@/components/ui/xlsx-sheet-tabs"
 
 import {
@@ -23,7 +27,7 @@ import type { XlsxViewerHandle, XlsxViewerProps } from "./xlsx-viewer-types"
 export function XlsxViewerSession({
   resource,
   className,
-  toolbar = true,
+  controls = true,
   download = true,
   defaultSheetIndex = 0,
   onSheetChange,
@@ -72,12 +76,21 @@ export function XlsxViewerSession({
     content,
     sheets,
   })
-  const toolbarDownloadActions = download ? downloadActions : []
+  const controlsDownloadActions = download ? downloadActions : []
+  useXlsxControlsRegistration({
+    activeSheet,
+    controlsDownloadActions,
+    isReady,
+    resetZoom,
+    scale,
+    zoomIn,
+    zoomOut,
+  })
 
   return (
     <XlsxViewerFrame className={className} bare={bare}>
-      {toolbar ? (
-        <ViewerToolbar
+      {controls ? (
+        <ViewerControls
           title={isReady ? (activeSheet?.name ?? "-") : null}
           subtitle={
             isReady && activeSheet
@@ -94,12 +107,12 @@ export function XlsxViewerSession({
             onFit: resetZoom,
             fitLabel: "Actual size",
           }}
-          downloads={toolbarDownloadActions}
+          downloads={controlsDownloadActions}
         />
       ) : null}
 
       <XlsxViewerBody
-        toolbar={toolbar}
+        controls={controls}
         fallbackSheetTabs={isReservingFallbackSheetTabs}
       >
         <XlsxGridColumn>
@@ -129,4 +142,59 @@ export function XlsxViewerSession({
       ) : null}
     </XlsxViewerFrame>
   )
+}
+
+function useXlsxControlsRegistration({
+  activeSheet,
+  controlsDownloadActions,
+  isReady,
+  resetZoom,
+  scale,
+  zoomIn,
+  zoomOut,
+}: {
+  activeSheet: { name: string; rowCount: number; columnCount: number } | null
+  controlsDownloadActions: ViewerControlsState["downloads"]
+  isReady: boolean
+  resetZoom: () => void
+  scale: number
+  zoomIn: () => void
+  zoomOut: () => void
+}) {
+  const onControlsChange = useViewerControlsRegistration()
+  const controlsState = React.useMemo<ViewerControlsState>(
+    () => ({
+      title: isReady ? (activeSheet?.name ?? "-") : null,
+      subtitle:
+        isReady && activeSheet
+          ? `${activeSheet.rowCount.toLocaleString()} x ${
+              activeSheet.columnCount
+            }`
+          : null,
+      loading: !isReady,
+      zoom: {
+        scale,
+        onZoomOut: zoomOut,
+        onZoomIn: zoomIn,
+        onFit: resetZoom,
+        fitLabel: "Actual size",
+      },
+      downloads: controlsDownloadActions,
+    }),
+    [
+      activeSheet,
+      controlsDownloadActions,
+      isReady,
+      resetZoom,
+      scale,
+      zoomIn,
+      zoomOut,
+    ]
+  )
+
+  React.useEffect(() => {
+    if (!onControlsChange) return
+    onControlsChange(controlsState)
+    return () => onControlsChange(null)
+  }, [onControlsChange, controlsState])
 }

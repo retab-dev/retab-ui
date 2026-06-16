@@ -4,20 +4,20 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ViewerToolbarSkeleton } from "@/components/ui/viewer-toolbar"
+import { ViewerControlsSkeleton } from "@/components/ui/viewer-controls"
 
 export function ImageViewerFallback({
   className,
   bare = false,
   fallbackFrameSize,
   scale,
-  toolbar = true,
+  controls = true,
 }: {
   className?: string
   bare?: boolean
   fallbackFrameSize?: { width: number; height: number }
   scale?: number
-  toolbar?: boolean
+  controls?: boolean
 }) {
   return (
     <div
@@ -28,7 +28,7 @@ export function ImageViewerFallback({
       )}
       data-slot="image-viewer"
     >
-      {toolbar ? <ViewerToolbarSkeleton position zoom rotate download /> : null}
+      {controls ? <ViewerControlsSkeleton position zoom rotate download /> : null}
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="flex flex-col items-center p-4">
           <ImageFrameSkeleton frameSize={fallbackFrameSize} scale={scale} />

@@ -9,10 +9,10 @@ import { Skeleton } from "./skeleton"
 import { TextCodeViewerFrame } from "./text-code-viewer-chrome"
 import type { ViewerDownloadErrorHandler } from "./viewer-download"
 import {
-  ViewerToolbar,
-  ViewerToolbarButton,
-  ViewerToolbarSkeleton,
-} from "./viewer-toolbar"
+  ViewerControls,
+  ViewerControlButton,
+  ViewerControlsSkeleton,
+} from "./viewer-controls"
 
 export type ViewerClipboardCopyStatus = "copied" | "failed" | "idle"
 
@@ -40,19 +40,19 @@ export function TextViewerFrame({
 
 export function TextViewerFallback({
   className,
-  toolbar = true,
+  controls = true,
   download = true,
   bare,
 }: {
   className?: string
-  toolbar?: boolean
+  controls?: boolean
   download?: boolean
   bare?: boolean
 }) {
   return (
     <TextViewerFrame className={className} bare={bare}>
-      {toolbar ? (
-        <ViewerToolbarSkeleton title zoom download={download} />
+      {controls ? (
+        <ViewerControlsSkeleton title zoom download={download} />
       ) : null}
       <div
         className="min-h-0 flex-1 space-y-3 overflow-hidden p-5"
@@ -70,7 +70,7 @@ export function TextViewerFallback({
   )
 }
 
-export function TextViewerToolbar({
+export function TextViewerControls({
   wordCount,
   fontScale,
   copyText,
@@ -101,7 +101,7 @@ export function TextViewerToolbar({
     )
 
   return (
-    <ViewerToolbar
+    <ViewerControls
       title={leading ?? `${wordCount} word${wordCount === 1 ? "" : "s"}`}
       zoom={{
         scale: fontScale,
@@ -141,7 +141,7 @@ function TextViewerCopyControl({
     status === "copied" ? "Copied" : status === "failed" ? "Copy failed" : label
 
   return (
-    <ViewerToolbarButton label={buttonLabel} onClick={copyText} type="button">
+    <ViewerControlButton label={buttonLabel} onClick={copyText} type="button">
       {status === "copied" ? (
         <Check />
       ) : status === "failed" ? (
@@ -149,7 +149,7 @@ function TextViewerCopyControl({
       ) : (
         <Copy />
       )}
-    </ViewerToolbarButton>
+    </ViewerControlButton>
   )
 }
 

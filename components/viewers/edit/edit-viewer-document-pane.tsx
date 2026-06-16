@@ -5,7 +5,8 @@ import * as React from "react"
 import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source"
 import { FileViewer } from "@/components/ui/file-viewer"
 import {
-  PdfViewer,
+  PdfViewerPages,
+  PdfViewerProvider,
   type PageOverlayProps,
   type PdfViewerHandle,
 } from "@/components/ui/pdf-viewer"
@@ -81,15 +82,18 @@ function SourceDocumentRenderer({
 
   if (canPreviewEditViewerDocument(document)) {
     return (
-      <PdfViewer
-        ref={setPdfViewerHandle}
-        source={source}
-        bare
-        className="h-full"
-        onScrollProgressChange={documentHandlers.onScrollProgressChange}
-        onVisiblePageChange={documentHandlers.onCurrentPageChange}
-        renderPageOverlay={showPreview ? renderPageOverlay : undefined}
-      />
+      <FileViewer source={source} bare className="h-full">
+        <PdfViewerProvider>
+          <PdfViewerPages
+            ref={setPdfViewerHandle}
+            bare
+            className="h-full"
+            onScrollProgressChange={documentHandlers.onScrollProgressChange}
+            onVisiblePageChange={documentHandlers.onCurrentPageChange}
+            renderPageOverlay={showPreview ? renderPageOverlay : undefined}
+          />
+        </PdfViewerProvider>
+      </FileViewer>
     )
   }
 

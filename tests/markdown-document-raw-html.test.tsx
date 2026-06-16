@@ -31,7 +31,7 @@ describe("markdown raw HTML policy", () => {
   it("keeps safe static HTML", async () => {
     const { container } = render(
       <MarkdownDocumentViewer
-        toolbar={false}
+        controls={false}
         source={markdownSource(
           "<details><summary>More</summary><kbd>⌘K</kbd></details>"
         )}
@@ -47,7 +47,7 @@ describe("markdown raw HTML policy", () => {
   it("removes active HTML and unsafe links", async () => {
     const { container } = render(
       <MarkdownDocumentViewer
-        toolbar={false}
+        controls={false}
         source={markdownSource(
           '<script>alert(1)</script><a href="javascript:alert(1)" onclick="alert(1)">bad</a>'
         )}

@@ -4,8 +4,13 @@ import * as React from "react"
 
 import { type SegmentInteraction } from "@/lib/segment-interaction"
 import { segmentsPageCount, toSegments, type Segment } from "@/lib/segments"
+import {
+  FileViewer,
+  FileViewerBody,
+  FileViewerSurface,
+} from "@/components/ui/file-viewer"
 import { PageRibbon } from "@/components/ui/page-ribbon"
-import { PdfViewer } from "@/components/ui/pdf-viewer"
+import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer"
 import {
   SegmentLegend,
   type SegmentLegendOrientation,
@@ -193,17 +198,27 @@ function Cell({
                 {preset.slot === "top" ? legend : null}
                 <div className="relative flex min-h-0 flex-1">
                   <div className="relative min-h-0 flex-1">
-                    <PdfViewer
+                    <FileViewer
                       source={{
                         kind: "url",
                         url: PDF_URL,
                         fileName: "an-image-is-worth-16x16-words.pdf",
                       }}
                       bare
-                      toolbar={false}
-                      onVisiblePageChange={setCurrentPage}
                       className="h-full"
-                    />
+                    >
+                      <PdfViewerProvider>
+                        <FileViewerBody>
+                          <FileViewerSurface>
+                            <PdfViewerPages
+                              bare
+                              onVisiblePageChange={setCurrentPage}
+                              className="h-full"
+                            />
+                          </FileViewerSurface>
+                        </FileViewerBody>
+                      </PdfViewerProvider>
+                    </FileViewer>
                     {preset.slot === "overlay" ? (
                       <div className="pointer-events-none absolute inset-x-3 top-3 z-10 [&>*]:pointer-events-auto">
                         {legend}

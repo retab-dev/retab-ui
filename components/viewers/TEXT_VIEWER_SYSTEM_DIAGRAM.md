@@ -32,7 +32,7 @@ flowchart TD
   %% ---------------------------------------------------------------------------
   subgraph ConsumerAPI["Consumer API"]
     Consumer["Application component"]
-    Props["TextViewerProps\nsource: url | blob | text\nclassName?: string\ntoolbar?: boolean = true\nhighlight?: { start, end } | null\nbare?: boolean\nmaxBytes?: number = 1_000_000\nmaxLines?: number = 10_000"]
+    Props["TextViewerProps\nsource: url | blob | text\nclassName?: string\ncontrols?: boolean = true\nhighlight?: { start, end } | null\nbare?: boolean\nmaxBytes?: number = 1_000_000\nmaxLines?: number = 10_000"]
     RefAPI["TextViewerHandle\nscrollToLineRange(range, options?)\ngetViewportElement()"]
     SourceLinkConsumer["Source-linked viewers\nTextSourcesBlock, SourcesViewerBlock,\nJsonForm/source field hovers"]
   end
@@ -73,7 +73,7 @@ flowchart TD
     ResetKey["textViewerResetKey(resource, bounds, retryVersion)\nresource.keys.resource + retryVersion + bounds"]
     ContentResetKey["textViewerContentResetKey(contentBaseKey, retryVersion)\nSuspense key; prevents stale text during pending URL load"]
     SSRFallbackDecision{"source.kind !== text\nand not client?"}
-    ErrorBoundary["ViewerErrorBoundary\nformat='text'\nsourceKind=resource.sourceKind\nresetKey=ResetKey\ndownload=null when toolbar=false"]
+    ErrorBoundary["ViewerErrorBoundary\nformat='text'\nsourceKind=resource.sourceKind\nresetKey=ResetKey\ndownload=null when controls=false"]
     Suspense["React.Suspense\nkey=ContentResetKey\nfallback=TextViewerFallback"]
     TextViewerInner["TextViewerInner\nloads text, virtualizes lines, renders chrome/body"]
   end
@@ -252,20 +252,20 @@ flowchart TD
   IsLineInRange --> TextLineNode
 
   %% ---------------------------------------------------------------------------
-  %% Frame, toolbar, loading, errors
+  %% Frame, controls, loading, errors
   %% ---------------------------------------------------------------------------
   subgraph Chrome["Chrome: registry/new-york-v4/ui/text-viewer-chrome.tsx"]
     Frame["TextViewerFrame\nflex column, overflow hidden\ndata-slot='text-viewer'\nbare -> h-full bg-muted/20\nnon-bare -> rounded border bg-muted/30"]
-    Toolbar["TextViewerToolbar\nleading line count\ntrailing zoom controls + divider + download"]
+    Controls["TextViewerControls\nleading line count\ntrailing zoom controls + divider + download"]
     ZoomControls["TextViewerZoomControls\nMinus, percentage, Plus, Maximize\nButton size icon-sm\naria-label/title\nfallback controls disabled and aria-hidden"]
-    FallbackChrome["TextViewerFallback\noptional toolbar skeleton\n12 body skeleton rows\nused for SSR non-text sources and Suspense pending"]
+    FallbackChrome["TextViewerFallback\noptional controls skeleton\n12 body skeleton rows\nused for SSR non-text sources and Suspense pending"]
     LegacyErrorState["TextViewerErrorState\nlocal retry/download layout\ncurrently superseded by generic ViewerErrorBoundary path"]
   end
 
   TextViewerInner --> Frame
-  Frame --> Toolbar
-  Toolbar --> ZoomControls
-  Toolbar --> DownloadControl
+  Frame --> Controls
+  Controls --> ZoomControls
+  Controls --> DownloadControl
   Suspense --> FallbackChrome
 
   subgraph ErrorHandling["Error handling: viewer-error.tsx + viewer-errors.ts"]
@@ -390,7 +390,7 @@ flowchart TD
   mounted.
 - `registry/new-york-v4/ui/text-viewer-ranges.ts` owns 1-based line range
   normalization and membership checks.
-- `registry/new-york-v4/ui/text-viewer-chrome.tsx` owns the frame, toolbar,
+- `registry/new-york-v4/ui/text-viewer-chrome.tsx` owns the frame, controls,
   zoom controls, skeleton fallback, and legacy local error state component.
 - `registry/new-york-v4/ui/text-source.tsx` adapts the shared source-link model
   to `TextViewer` by converting `text_span` anchors into line ranges.
@@ -444,15 +444,15 @@ flowchart TD
 13. Each virtual line is absolutely positioned inside a `pre`, receives a stable
     `data-line-number`, renders a gutter, preserves whitespace, and applies
     highlight classes when its line number is inside the normalized range.
-14. The toolbar shows line count, zoom controls, and the original download
-    action unless `toolbar={false}`.
+14. The controls row shows line count, zoom controls, and the original download
+    action unless `controls={false}`.
 15. Zoom changes `fontScale`, recomputes line height, asks the virtualizer to
     remeasure, and affects subsequent highlight and imperative scroll math.
 16. Highlight changes and `scrollToLineRange` both use metric-based scroll math,
     so the viewer can scroll to lines that are not currently mounted.
 17. Errors are normalized into viewer error info. URL load failures are generally
     retryable; text bounds errors are not. Useful downloads remain available in
-    error states when the toolbar has not been disabled.
+    error states when the controls has not been disabled.
 18. Retry clears the boundary error, increments `retryVersion` for the same
     content key, changes the text resource cache key, and forces a fresh read.
 19. Download actions resolve to href, blob, or text payloads. The UI aborts any

@@ -51,7 +51,7 @@ const modelHeadingId = (heading: string) =>
 
 describe("markdown heading anchor navigation", () => {
   it("renders a DOM id for plain headings that the fragment handler can resolve", async () => {
-    render(<MarkdownDocumentViewer source={markdownSource("# Hello World")} toolbar={false} />)
+    render(<MarkdownDocumentViewer source={markdownSource("# Hello World")} controls={false} />)
     const heading = await screen.findByRole("heading", { name: "Hello World" })
     expect(heading.id).toBe("hello-world")
     expect(modelHeadingId("# Hello World")).toBe(heading.id)
@@ -60,13 +60,13 @@ describe("markdown heading anchor navigation", () => {
   it("keeps heading DOM ids resolvable by fragment navigation (underscores)", async () => {
     // DOM id is `snake_case_thing` (github-slugger) but the fragment handler only
     // knows `snakecasething` (model), so a link to the real anchor cannot resolve.
-    render(<MarkdownDocumentViewer source={markdownSource("# snake_case_thing")} toolbar={false} />)
+    render(<MarkdownDocumentViewer source={markdownSource("# snake_case_thing")} controls={false} />)
     const heading = await screen.findByRole("heading", { name: "snake_case_thing" })
     expect(modelHeadingId("# snake_case_thing")).toBe(heading.id)
   })
 
   it("keeps heading DOM ids resolvable by fragment navigation (ampersand)", async () => {
-    render(<MarkdownDocumentViewer source={markdownSource("# Foo & Bar")} toolbar={false} />)
+    render(<MarkdownDocumentViewer source={markdownSource("# Foo & Bar")} controls={false} />)
     const heading = await screen.findByRole("heading", { name: "Foo & Bar" })
     expect(modelHeadingId("# Foo & Bar")).toBe(heading.id)
   })
@@ -82,7 +82,7 @@ describe("markdown heading anchor navigation", () => {
       <MarkdownDocumentViewer
         className="h-40 w-[420px]"
         source={markdownSource(text)}
-        toolbar={false}
+        controls={false}
       />
     )
     const link = await screen.findByRole("link", { name: "Jump" })

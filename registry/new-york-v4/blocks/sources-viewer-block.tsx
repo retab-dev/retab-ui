@@ -11,18 +11,38 @@ import {
 } from "@/lib/document-source"
 import { cn } from "@/lib/utils"
 import { sourceToCsvCell, useCsvSourceTarget } from "@/components/ui/csv-source"
-import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
+import {
+  CsvViewerGrid,
+  CsvViewerProvider,
+  type CsvViewerHandle,
+} from "@/components/ui/csv-viewer"
 import {
   sourceToDocxHighlight,
   useDocxSourceTarget,
 } from "@/components/ui/docx-source"
-import { DocxViewer, type DocxViewerHandle } from "@/components/ui/docx-viewer"
-import { ImageViewer } from "@/components/ui/image-viewer"
 import {
-  PdfViewerHeader,
-  PdfViewerPages,
-  PdfViewerProvider,
-} from "@/components/ui/pdf-viewer"
+  DocxViewerDocument,
+  DocxViewerProvider,
+  type DocxViewerHandle,
+} from "@/components/ui/docx-viewer"
+import {
+  FileViewerBody,
+  FileViewerControls,
+  FileViewerHeader,
+  FileViewerMeta,
+  FileViewerSurface,
+  FileViewerTitle,
+} from "@/components/ui/file-viewer"
+import {
+  FileViewerProvider,
+  useFileViewerResource,
+} from "@/components/ui/file-viewer-internal"
+import {
+  ImageViewerFrames,
+  ImageViewerProvider,
+  type ImageViewerHandle,
+} from "@/components/ui/image-viewer"
+import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   SegmentedDocumentProvider,
@@ -46,20 +66,25 @@ import {
   sourceToTextHighlight,
   useTextSourceTarget,
 } from "@/components/ui/text-source"
-import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
 import {
-  ViewerBody,
-  ViewerHeader,
+  TextViewerDocument,
+  TextViewerProvider,
+  type TextViewerHandle,
+} from "@/components/ui/text-viewer"
+import {
   ViewerRoot,
   ViewerSidebar,
   ViewerSidebarTrigger,
-  ViewerSurface,
 } from "@/components/ui/viewer"
 import {
   sourceToXlsxCell,
   useXlsxSourceTarget,
 } from "@/components/ui/xlsx-source"
-import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
+import {
+  XlsxViewerProvider,
+  XlsxViewerWorkbook,
+  type XlsxViewerHandle,
+} from "@/components/ui/xlsx-viewer"
 import { JsonForm } from "@/components/json-form/json-form"
 import csvSample from "@/components/viewers/sample-data/csv-sources.json"
 import docxSample from "@/components/viewers/sample-data/docx-sources.json"
@@ -71,6 +96,11 @@ import xlsxSample from "@/components/viewers/sample-data/xlsx-sources.json"
 // ── Sample sources, one per file format ───────────────────────────────────────
 
 const PDF_URL = "/samples/jane-doe-bank-statement-5-pages.pdf"
+const PDF_SOURCE = {
+  kind: "url" as const,
+  url: PDF_URL,
+  fileName: "jane-doe-bank-statement-5-pages.pdf",
+}
 const IMAGE_URL = "/samples/an-image-is-worth-16x16-words-page-1.png"
 const TEXT_URL = "/samples/extraction-run.log"
 const XLSX_URL = "/samples/nvidia-financials-fy2024.xlsx"
@@ -83,6 +113,31 @@ EMEA,Q1,820000,33,1.08
 EMEA,Q2,910000,39,1.15
 APAC,Q1,430000,18,1.04
 APAC,Q2,560000,24,1.11`
+const IMAGE_SOURCE = {
+  kind: "url" as const,
+  url: IMAGE_URL,
+  fileName: "an-image-is-worth-16x16-words-page-1.png",
+}
+const TEXT_SOURCE = {
+  kind: "url" as const,
+  url: TEXT_URL,
+  fileName: "extraction-run.log",
+}
+const CSV_SOURCE = {
+  kind: "text" as const,
+  text: CSV_TEXT,
+  fileName: "sales.csv",
+}
+const XLSX_SOURCE = {
+  kind: "url" as const,
+  url: XLSX_URL,
+  fileName: "nvidia-financials-fy2024.xlsx",
+}
+const DOCX_SOURCE = {
+  kind: "url" as const,
+  url: DOCX_URL,
+  fileName: "quarterly-business-review.docx",
+}
 
 // A flat extraction sample: each field is a scalar with the source it came from.
 type FlatField = { key: string; label: string; value: string; source: Source }
@@ -92,6 +147,10 @@ type SourceExtraction = {
   sources: SourceMap
   values: Record<string, unknown>
 }
+
+type SourceLinkedViewerSource = React.ComponentProps<
+  typeof FileViewerProvider
+>["source"]
 
 // Build a JSON form's inputs from a flat field array. The schema property names
 // match the source-map keys used for json-form hover and click interactions.
@@ -173,40 +232,50 @@ function fieldsToSegmentedFields(fields: readonly FlatField[]) {
 
 // ── Shared layout: viewer + json-form source panel ────────────────────────────
 
-function SourcesShell({
+function SourceLinkedFileHeader() {
+  return (
+    <FileViewerHeader>
+      <ViewerSidebarTrigger className="-ml-1" />
+      <FileViewerTitle />
+      <FileViewerMeta />
+      <FileViewerControls />
+    </FileViewerHeader>
+  )
+}
+
+function SourceLinkedViewer({
   children,
   extraction,
   link,
+  source,
 }: {
   children: React.ReactNode
   extraction: SourceExtraction
   link: SegmentedSourceFieldLink
+  source: SourceLinkedViewerSource
 }) {
   return (
     <ViewerRoot bare defaultOpen className="h-full bg-background">
-      <ViewerHeader className="flex min-h-10 items-center gap-2 px-2">
-        <ViewerSidebarTrigger />
-        <h2 className="min-w-0 truncate text-sm font-medium">
-          Source-linked results
-        </h2>
-      </ViewerHeader>
-      <ViewerBody>
-        <ViewerSurface className="relative">
-          {children}
-          <SourceIndicator
-            path={link.activePath}
-            found={!!link.activeSegment}
-          />
-        </ViewerSurface>
-        <ViewerSidebar
-          aria-label="Source-linked fields"
-          side="right"
-          width="420px"
-          className="flex flex-shrink-0 flex-col border-l"
-        >
-          <SourcesForm extraction={extraction} link={link} />
-        </ViewerSidebar>
-      </ViewerBody>
+      <FileViewerProvider source={source}>
+        <SourceLinkedFileHeader />
+        <FileViewerBody>
+          <FileViewerSurface className="relative">
+            {children}
+            <SourceIndicator
+              path={link.activePath}
+              found={!!link.activeSegment}
+            />
+          </FileViewerSurface>
+          <ViewerSidebar
+            aria-label="Source-linked fields"
+            side="right"
+            width="420px"
+            className="flex flex-shrink-0 flex-col border-l"
+          >
+            <SourcesForm extraction={extraction} link={link} />
+          </ViewerSidebar>
+        </FileViewerBody>
+      </FileViewerProvider>
     </ViewerRoot>
   )
 }
@@ -313,27 +382,22 @@ function PdfTabContent() {
   const setPdfViewerHandle = useSegmentedPdfViewerHandle()
 
   return (
-    <SourcesShell extraction={PDF_EXTRACTION} link={link}>
-      <PdfViewerProvider
-        source={{
-          kind: "url",
-          url: PDF_URL,
-          fileName: "jane-doe-bank-statement-5-pages.pdf",
-        }}
-      >
-        <div className="flex h-full min-h-0 flex-col">
-          <PdfViewerHeader />
-          <PdfViewerPages
-            ref={setPdfViewerHandle}
-            bare
-            className="min-h-0 flex-1"
-            onScrollProgressChange={documentHandlers.onScrollProgressChange}
-            onVisiblePageChange={documentHandlers.onCurrentPageChange}
-            renderPageOverlay={renderPageOverlay}
-          />
-        </div>
+    <SourceLinkedViewer
+      extraction={PDF_EXTRACTION}
+      link={link}
+      source={PDF_SOURCE}
+    >
+      <PdfViewerProvider>
+        <PdfViewerPages
+          ref={setPdfViewerHandle}
+          bare
+          className="h-full"
+          onScrollProgressChange={documentHandlers.onScrollProgressChange}
+          onVisiblePageChange={documentHandlers.onCurrentPageChange}
+          renderPageOverlay={renderPageOverlay}
+        />
       </PdfViewerProvider>
-    </SourcesShell>
+    </SourceLinkedViewer>
   )
 }
 
@@ -354,21 +418,21 @@ function ImageTabContent() {
   const setImageViewerHandle = useSegmentedImageViewerHandle()
 
   return (
-    <SourcesShell extraction={IMAGE_EXTRACTION} link={link}>
-      <ImageViewer
+    <SourceLinkedViewer
+      extraction={IMAGE_EXTRACTION}
+      link={link}
+      source={IMAGE_SOURCE}
+    >
+      <FileResourceImageViewer
         ref={setImageViewerHandle}
-        source={{
-          kind: "url",
-          url: IMAGE_URL,
-          fileName: "an-image-is-worth-16x16-words-page-1.png",
-        }}
         bare
         className="h-full"
+        controls={false}
         onScrollProgressChange={documentHandlers.onScrollProgressChange}
         onVisibleFrameChange={documentHandlers.onCurrentPageChange}
         renderFrameOverlay={renderFrameOverlay}
       />
-    </SourcesShell>
+    </SourceLinkedViewer>
   )
 }
 
@@ -393,20 +457,20 @@ function TextTabContent() {
   )
 
   return (
-    <SourcesShell extraction={TEXT_EXTRACTION} link={link}>
-      <TextViewer
+    <SourceLinkedViewer
+      extraction={TEXT_EXTRACTION}
+      link={link}
+      source={TEXT_SOURCE}
+    >
+      <FileResourceTextViewer
         ref={viewerRef}
-        source={{
-          kind: "url",
-          url: TEXT_URL,
-          fileName: "extraction-run.log",
-        }}
         bare
         className="h-full"
+        controls={false}
         highlight={highlight}
         mode="text"
       />
-    </SourcesShell>
+    </SourceLinkedViewer>
   )
 }
 
@@ -431,15 +495,19 @@ function CsvTabContent() {
   )
 
   return (
-    <SourcesShell extraction={CSV_EXTRACTION} link={link}>
-      <CsvViewer
+    <SourceLinkedViewer
+      extraction={CSV_EXTRACTION}
+      link={link}
+      source={CSV_SOURCE}
+    >
+      <FileResourceCsvViewer
         ref={viewerRef}
-        source={{ kind: "text", text: CSV_TEXT, fileName: "sales.csv" }}
         fillHeight
         className="h-full rounded-none border-0"
+        controls={false}
         activeCell={activeCell}
       />
-    </SourcesShell>
+    </SourceLinkedViewer>
   )
 }
 
@@ -464,19 +532,19 @@ function ExcelTabContent() {
   )
 
   return (
-    <SourcesShell extraction={XLSX_EXTRACTION} link={link}>
-      <XlsxViewer
+    <SourceLinkedViewer
+      extraction={XLSX_EXTRACTION}
+      link={link}
+      source={XLSX_SOURCE}
+    >
+      <FileResourceXlsxViewer
         ref={viewerRef}
-        source={{
-          kind: "url",
-          url: XLSX_URL,
-          fileName: "nvidia-financials-fy2024.xlsx",
-        }}
         bare
         className="h-full"
+        controls={false}
         activeCell={activeCell}
       />
-    </SourcesShell>
+    </SourceLinkedViewer>
   )
 }
 
@@ -501,21 +569,81 @@ function DocxTabContent() {
   )
 
   return (
-    <SourcesShell extraction={DOCX_EXTRACTION} link={link}>
-      <DocxViewer
+    <SourceLinkedViewer
+      extraction={DOCX_EXTRACTION}
+      link={link}
+      source={DOCX_SOURCE}
+    >
+      <FileResourceDocxViewer
         ref={viewerRef}
-        source={{
-          kind: "url",
-          url: DOCX_URL,
-          fileName: "quarterly-business-review.docx",
-        }}
         bare
         className="h-full"
+        controls={false}
         highlight={highlight}
       />
-    </SourcesShell>
+    </SourceLinkedViewer>
   )
 }
+
+const FileResourceImageViewer = React.forwardRef<
+  ImageViewerHandle,
+  React.ComponentProps<typeof ImageViewerFrames>
+>(function FileResourceImageViewer(props, ref) {
+  const resource = useFileViewerResource()
+  return (
+    <ImageViewerProvider resource={resource}>
+      <ImageViewerFrames {...props} ref={ref} />
+    </ImageViewerProvider>
+  )
+})
+
+const FileResourceTextViewer = React.forwardRef<
+  TextViewerHandle,
+  React.ComponentProps<typeof TextViewerDocument>
+>(function FileResourceTextViewer(props, ref) {
+  const resource = useFileViewerResource()
+  return (
+    <TextViewerProvider resource={resource}>
+      <TextViewerDocument {...props} ref={ref} />
+    </TextViewerProvider>
+  )
+})
+
+const FileResourceCsvViewer = React.forwardRef<
+  CsvViewerHandle,
+  React.ComponentProps<typeof CsvViewerGrid>
+>(function FileResourceCsvViewer(props, ref) {
+  const resource = useFileViewerResource()
+  return (
+    <CsvViewerProvider resource={resource}>
+      <CsvViewerGrid {...props} ref={ref} />
+    </CsvViewerProvider>
+  )
+})
+
+const FileResourceXlsxViewer = React.forwardRef<
+  XlsxViewerHandle,
+  React.ComponentProps<typeof XlsxViewerWorkbook>
+>(function FileResourceXlsxViewer(props, ref) {
+  const resource = useFileViewerResource()
+  return (
+    <XlsxViewerProvider resource={resource}>
+      <XlsxViewerWorkbook {...props} ref={ref} />
+    </XlsxViewerProvider>
+  )
+})
+
+const FileResourceDocxViewer = React.forwardRef<
+  DocxViewerHandle,
+  React.ComponentProps<typeof DocxViewerDocument>
+>(function FileResourceDocxViewer(props, ref) {
+  const resource = useFileViewerResource()
+  return (
+    <DocxViewerProvider resource={resource}>
+      <DocxViewerDocument {...props} ref={ref} />
+    </DocxViewerProvider>
+  )
+})
 
 const TABS = [
   { id: "pdf", label: "PDF", Tab: PdfTab },

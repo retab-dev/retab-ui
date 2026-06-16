@@ -4,18 +4,18 @@ import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
 
 import { DEFAULT_PPTX_SLIDE_SIZE } from "./pptx-viewer-core"
-import { ViewerToolbarSkeleton } from "./viewer-toolbar"
+import { ViewerControlsSkeleton } from "./viewer-controls"
 
 export function PptxViewerFallback({
   className,
   bare = false,
   fallbackSlideSize = DEFAULT_PPTX_SLIDE_SIZE,
-  toolbar = true,
+  controls = true,
 }: {
   className?: string
   bare?: boolean
   fallbackSlideSize?: { width: number; height: number }
-  toolbar?: boolean
+  controls?: boolean
 }) {
   return (
     <div
@@ -26,7 +26,7 @@ export function PptxViewerFallback({
       )}
       data-slot="pptx-viewer"
     >
-      {toolbar ? <ViewerToolbarSkeleton position zoom rotate download /> : null}
+      {controls ? <ViewerControlsSkeleton position zoom rotate download /> : null}
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="flex flex-col items-center p-4">
           <PptxSlideSkeleton slideSize={fallbackSlideSize} />

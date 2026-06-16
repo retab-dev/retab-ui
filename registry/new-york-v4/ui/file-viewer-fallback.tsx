@@ -1,11 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Minus, Plus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import type { ViewerResource } from "@/lib/viewer-resource"
-import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ViewerDownloadButton } from "@/components/ui/viewer-download"
 import { ViewerErrorState } from "@/components/ui/viewer-error"
@@ -14,66 +12,6 @@ import type { FileDescriptor } from "./file-viewer-core"
 
 const TEXT_SKELETON_FONT = 12.5
 const TEXT_SKELETON_LINE_HEIGHT = 20
-
-function IconButton({
-  label,
-  children,
-  ...props
-}: React.ComponentProps<typeof Button> & { label: string }) {
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      className="size-7"
-      aria-label={label}
-      title={label}
-      {...props}
-    >
-      {children}
-    </Button>
-  )
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value))
-}
-
-export function useZoom() {
-  const [scale, setScale] = React.useState(1)
-  const zoom = React.useCallback(
-    (factor: number) => setScale((s) => clamp(s * factor, 0.25, 5)),
-    []
-  )
-  const reset = React.useCallback(() => setScale(1), [])
-  return { scale, zoom, reset }
-}
-
-export function ZoomActions({
-  scale,
-  zoom,
-  reset,
-}: {
-  scale: number
-  zoom: (factor: number) => void
-  reset: () => void
-}) {
-  return (
-    <>
-      <IconButton label="Zoom out" onClick={() => zoom(1 / 1.2)}>
-        <Minus />
-      </IconButton>
-      <span className="w-12 text-center text-xs text-muted-foreground tabular-nums">
-        {Math.round(scale * 100)}%
-      </span>
-      <IconButton label="Zoom in" onClick={() => zoom(1.2)}>
-        <Plus />
-      </IconButton>
-      <IconButton label="Actual size" onClick={reset}>
-        <Maximize />
-      </IconButton>
-    </>
-  )
-}
 
 export function UnsupportedCard({
   resource,
@@ -137,7 +75,7 @@ export function ViewerFallback({
   ) {
     return (
       <div
-        data-slot="file-viewer-content-fallback"
+        data-slot="file-viewer-document-fallback"
         className={cn(
           "flex min-h-0 flex-1 flex-col overflow-hidden bg-card",
           bare ? "h-full" : "min-h-64",
@@ -163,7 +101,7 @@ export function ViewerFallback({
 
   return (
     <div
-      data-slot="file-viewer-content-fallback"
+      data-slot="file-viewer-document-fallback"
       className={cn(
         "flex min-h-0 flex-col overflow-hidden",
         bare ? "h-full bg-muted/20" : "min-h-64 bg-muted/20",

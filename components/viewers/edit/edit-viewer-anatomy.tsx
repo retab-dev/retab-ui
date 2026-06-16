@@ -43,11 +43,7 @@ type EditToolbarState = {
   status: Exclude<EditViewerStatus, { state: "idle" }> | null
 }
 
-export type EditViewerHeaderProps = React.ComponentProps<
-  typeof ViewerHeader
-> & {
-  showSidebarTrigger?: boolean
-}
+export type EditViewerHeaderProps = React.ComponentProps<typeof ViewerHeader>
 
 export type EditViewerDocumentProps = React.ComponentProps<"div">
 

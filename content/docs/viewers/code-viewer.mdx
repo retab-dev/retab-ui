@@ -53,7 +53,7 @@ Inline text is supported too:
 - **Stable line addressing** — `highlight` and `scrollToLineRange` use 1-based inclusive line ranges.
 - **Resource-based sources** — URL, Blob, and inline text sources share the same bounded loading path.
 - **Local error states** — failed URL loads can retry without tearing down the surrounding page.
-- **Zoom and download** — the toolbar exposes text scale controls and downloads from the source resource.
+- **Zoom and download** — the controls expose text scale controls and downloads from the source resource.
 
 ## Props
 
@@ -61,7 +61,7 @@ Inline text is supported too:
 | ----------- | ----------------------- | -------------------------------------------------------------------------- |
 | `source`    | `CodeDocumentSource`    | Required source descriptor. Supports URL, Blob, and inline text resources. |
 | `className` | `string`                | Optional class on the viewer container.                                    |
-| `toolbar`   | `boolean`               | Show line count, zoom controls, and download action. Defaults to `true`.   |
+| `controls`   | `boolean`               | Show line count, zoom controls, and download action. Defaults to `true`.   |
 | `highlight` | `CodeLineRange \| null` | 1-based inclusive line range to highlight.                                 |
 | `bare`      | `boolean`               | Drop the outer border/background so the viewer fills its container.        |
 | `maxBytes`  | `number`                | Maximum text payload size accepted by the viewer.                          |

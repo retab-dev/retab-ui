@@ -20,7 +20,7 @@ export type TextDocumentSource = UrlViewerSource | BlobViewerSource | TextSource
 export interface TextViewerProps extends TextViewerBounds {
   source: TextDocumentSource
   className?: string
-  toolbar?: boolean
+  controls?: boolean
   download?: boolean
   /** 1-based inclusive line range to highlight, or null. */
   highlight?: TextLineRange | null

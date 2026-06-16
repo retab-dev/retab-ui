@@ -96,33 +96,32 @@ export function useDropzone({
     () => parseDropzoneAccept(accept),
     [accept]
   )
-  const [uncontrolledFiles, setUncontrolledFiles] =
+  const [uncontrolledItems, setUncontrolledItems] =
     React.useState<DropzoneFileItem[]>(defaultFiles)
   const [lastIntake, setLastIntake] =
     React.useState<DropzoneIntake>(EMPTY_INTAKE)
   const [isDragging, setIsDragging] = React.useState(false)
-  const currentFiles = files ?? uncontrolledFiles
-  const filesRef = React.useRef(currentFiles)
+  const currentItems = files ?? uncontrolledItems
 
+  // itemsRef.current is the latest committed items. The effect mirrors the
+  // source of truth into it after every render; internal commits update it
+  // eagerly so consecutive same-tick intakes — and the pre-validation count in
+  // commitFiles — read the value they just produced. A controlled parent owns
+  // the truth: the eager write is optimistic and the effect reconciles it on
+  // the parent's next render.
+  const itemsRef = React.useRef(currentItems)
   React.useEffect(() => {
-    filesRef.current = currentFiles
-  }, [currentFiles])
+    itemsRef.current = currentItems
+  }, [currentItems])
 
   const commitFileTransition = React.useCallback(
-    (transition: (files: DropzoneFileItem[]) => DropzoneFileItem[]) => {
-      if (isControlled) {
-        const nextFiles = transition(files ?? [])
-        onFilesChange?.(nextFiles)
-        return nextFiles
-      }
-
-      const nextFiles = transition(filesRef.current)
-      filesRef.current = nextFiles
-      setUncontrolledFiles(() => nextFiles)
-      onFilesChange?.(nextFiles)
-      return nextFiles
+    (transition: (items: DropzoneFileItem[]) => DropzoneFileItem[]) => {
+      const nextItems = transition(itemsRef.current)
+      itemsRef.current = nextItems
+      if (!isControlled) setUncontrolledItems(nextItems)
+      onFilesChange?.(nextItems)
     },
-    [files, isControlled, onFilesChange]
+    [isControlled, onFilesChange]
   )
 
   const resetDragState = React.useCallback(() => {
@@ -149,8 +148,8 @@ export function useDropzone({
   const removeFile = React.useCallback(
     (fileId: string) => {
       if (disabled) return
-      commitFileTransition((previousFiles) =>
-        previousFiles.filter((item) => item.id !== fileId)
+      commitFileTransition((previousItems) =>
+        previousItems.filter((item) => item.id !== fileId)
       )
     },
     [commitFileTransition, disabled]
@@ -164,10 +163,10 @@ export function useDropzone({
         0,
         multiple ? undefined : 1
       )
-      const baseFiles = multiple ? filesRef.current : []
+      const baseItems = multiple ? itemsRef.current : []
       const intake = validateDropzoneFiles(incomingFiles, {
         accept: acceptRules,
-        currentCount: baseFiles.length,
+        currentCount: baseItems.length,
         maxFiles,
         maxSize,
       })
@@ -180,15 +179,13 @@ export function useDropzone({
         id: createDropzoneFileId(file),
         file,
       }))
-      const nextItems = commitFileTransition((previousFiles) =>
-        createNextDropzoneFiles({
+      commitFileTransition((previousItems) =>
+        createNextDropzoneItems({
           acceptedItems,
           multiple,
-          previousFiles,
+          previousItems,
         })
       )
-
-      return nextItems
     },
     [
       acceptRules,
@@ -297,7 +294,7 @@ export function useDropzone({
   )
 
   return {
-    files: currentFiles,
+    files: currentItems,
     lastIntake,
     isDragging,
     isDisabled: disabled,
@@ -312,16 +309,16 @@ export function useDropzone({
   }
 }
 
-function createNextDropzoneFiles({
+function createNextDropzoneItems({
   acceptedItems,
   multiple,
-  previousFiles,
+  previousItems,
 }: {
   acceptedItems: DropzoneFileItem[]
   multiple: boolean
-  previousFiles: DropzoneFileItem[]
+  previousItems: DropzoneFileItem[]
 }) {
-  return multiple ? [...previousFiles, ...acceptedItems] : acceptedItems
+  return multiple ? [...previousItems, ...acceptedItems] : acceptedItems
 }
 
 function createDropzoneFileId(file: File): string {

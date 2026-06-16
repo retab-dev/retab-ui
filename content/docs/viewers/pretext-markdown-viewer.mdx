@@ -62,7 +62,7 @@ remain stable while the Pretext path iterates toward feature completeness.
 - **Continuous rendering** - no page count, page frame, or page delimiter should be part of the Markdown user experience.
 - **React/GFM rendering** - visible chunks render through React Markdown with GFM instead of a hand-built Markdown DOM renderer.
 - **Pretext layout** - visible chunks start from block-aware, Pretext-informed height estimates, then measured heights feed back into the virtual frame.
-- **Rendered/Text toggle** - rendered Markdown and source-faithful raw Markdown share one viewer frame and one toolbar.
+- **Rendered/Text toggle** - rendered Markdown and source-faithful raw Markdown share one viewer frame and one controls.
 - **Markdown-first routing** - sources are parsed as Markdown even when the file extension is generic text.
 - **Source-line addressing** - `highlight` and `scrollToLineRange` keep using 1-based inclusive source-line ranges.
 - **Stable heading anchors** - heading DOM IDs and virtual fragment navigation come from the same model-owned slug registry.
@@ -77,8 +77,8 @@ remain stable while the Pretext path iterates toward feature completeness.
 - Thematic breaks render as native `hr` separators with a stable `data-pretext-thematic-break` marker and document-level spacing.
 - Virtual chunks are projected as continuous document content, without visible page shells, page labels, or inter-page gutters.
 - Blank Markdown renders an explicit empty document state in the continuous canvas instead of a silent blank surface.
-- The toolbar includes a Rendered/Text toggle; Text mode is a virtualized raw Markdown source view with line numbers, source-line scrolling, source-line anchored mode switching, and a labelled keyboard-focusable source region for horizontal overflow.
-- The toolbar includes source-backed search that finds offscreen Markdown matches, reports result position, jumps previous/next, and highlights the matching source-line range in Rendered and Text modes.
+- The controls include a Rendered/Text toggle; Text mode is a virtualized raw Markdown source view with line numbers, source-line scrolling, source-line anchored mode switching, and a labelled keyboard-focusable source region for horizontal overflow.
+- The controls include source-backed search that finds offscreen Markdown matches, reports result position, jumps previous/next, and highlights the matching source-line range in Rendered and Text modes.
 - Source parsing, Pretext height estimation, and visible-window math are split across `pretext-markdown-parser`, `pretext-markdown-document-model`, `pretext-markdown-layout`, and `pretext-markdown-virtualizer`.
 - Parser adapter coverage locks the current `marked` boundary for normalized tokens, unterminated code fences, malformed tables, malformed HTML, malformed links, and malformed frontmatter fences.
 - The document model keeps semantic top-level Markdown block records with stable block IDs, source-line ranges, document-character offsets, offset lookup/intersection helpers, hostility flags, heading links, and owning virtual chunk indexes.
@@ -112,7 +112,7 @@ remain stable while the Pretext path iterates toward feature completeness.
 - Fenced code blocks show normalized language headers with common aliases for TypeScript, JavaScript, shell, JSONC, Python, and Mermaid fences, `title="..."` / `caption="..."` metadata, opt-in Pretty Code `showLineNumbers` / `showLineNumbers{n}` line numbers, highlighted lines/chars, diff add/remove line styling, full-block and selected-code copy controls with copied/failed states, a labelled keyboard-focusable horizontal source region, and `rehype-pretty-code` syntax highlighting.
 - GFM tables render inline cell Markdown, preserve left/center/right alignment with tabular numeric styling for right-aligned cells, support safe raw HTML captions, use a keyboard-focusable horizontal scroll region with Arrow/Home/End controls, patch deterministic header/cell associations, and include a copy action that writes rendered cells as TSV.
 - Images render through a safe Markdown image surface with blocked, loading, ready, failed, and retry states, title captions associated through `aria-describedby`, lazy loading, max-width containment, decoded aspect-ratio stabilization, and SVG/data/blob resource blocking; restricted videos render through the same safe media URL policy with controls, metadata preload, captions, and blocked/failed states.
-- The toolbar includes copy and download actions for the full raw Markdown source, including shared copied/failed clipboard status handling across source, block, table, code, heading, and diagram copy controls, inline download failure status for generated Markdown payloads, plus inline text, URL fallback, URL download metadata, Blob download metadata, and local Blob object URLs.
+- The controls include copy and download actions for the full raw Markdown source, including shared copied/failed clipboard status handling across source, block, table, code, heading, and diagram copy controls, inline download failure status for generated Markdown payloads, plus inline text, URL fallback, URL download metadata, Blob download metadata, and local Blob object URLs.
 - Oversized code, table, paragraph, list, and HTML payloads are flagged as hostile chunks, isolated from neighboring prose, given cheap deterministic layout estimates, and rendered as bounded source previews with full-source copy instead of mounting the entire rich Markdown subtree.
 - URL, Blob, and inline text sources load through the existing bounded text resource layer.
 - File Viewer routes Markdown URL sources, Blob sources, inline text sources, and MIME-only Markdown sources through `PretextMarkdownViewer`.
@@ -206,7 +206,7 @@ realistic files.
 | ----------- | ----------------------- | -------------------------------------------------------------------------- |
 | `source`    | `TextDocumentSource`    | Required source descriptor. Supports URL, Blob, and inline text resources. |
 | `className` | `string`                | Optional class on the viewer container.                                    |
-| `toolbar`   | `boolean`               | Show word count, zoom controls, and download action. Defaults to `true`.   |
+| `controls`   | `boolean`               | Show word count, zoom controls, and download action. Defaults to `true`.   |
 | `highlight` | `TextLineRange \| null` | 1-based inclusive source-line range to highlight.                          |
 | `bare`      | `boolean`               | Drop the outer border/background so the viewer fills its container.        |
 | `maxBytes`  | `number`                | Maximum text payload size accepted by the viewer.                          |

@@ -5,7 +5,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
 
-import { ViewerToolbarSkeleton } from "./viewer-toolbar"
+import { ViewerControlsSkeleton } from "./viewer-controls"
 
 export function DocxViewerFrame({
   bare = false,
@@ -41,15 +41,15 @@ export function DocxViewerBody({ children }: { children: React.ReactNode }) {
 export function DocxViewerFallback({
   bare = false,
   className,
-  toolbar = true,
+  controls = true,
 }: {
   bare?: boolean
   className?: string
-  toolbar?: boolean
+  controls?: boolean
 }) {
   return (
     <DocxViewerFrame bare={bare} className={className}>
-      {toolbar ? <ViewerToolbarSkeleton position zoom download /> : null}
+      {controls ? <ViewerControlsSkeleton position zoom download /> : null}
       <DocxViewerBody>
         <div className="min-h-0 flex-1 overflow-auto">
           <div className="flex flex-col items-center p-4">

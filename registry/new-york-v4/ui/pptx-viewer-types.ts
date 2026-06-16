@@ -22,8 +22,8 @@ export interface PptxViewerProps {
   fallbackSlideSize?: { width: number; height: number }
   /** Called by zoom controls. `null` means return to fit-width mode. */
   onScaleChange?: (scale: number | null) => void
-  toolbar?: boolean
-  /** Show download actions in this viewer's toolbar/error state. */
+  controls?: boolean
+  /** Show download actions in this viewer's controls/error state. */
   download?: boolean
   /** Render absolutely-positioned overlays, such as bbox citations, on each slide. */
   renderSlideOverlay?: (props: PptxSlideOverlayProps) => React.ReactNode

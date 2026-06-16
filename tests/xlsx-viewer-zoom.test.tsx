@@ -145,7 +145,7 @@ describe("XlsxViewer multi-sheet tabs", () => {
             identityKey: "blob:xlsx-many",
             fileName: "many.xlsx",
           })}
-          toolbar={false}
+          controls={false}
           onSheetChange={onSheetChange}
         />
       )

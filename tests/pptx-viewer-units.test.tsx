@@ -414,7 +414,7 @@ describe("createPptxScrollActivity edge cases", () => {
 })
 
 describe("PptxViewerFallback", () => {
-  it("renders a toolbar skeleton and a default-aspect slide placeholder", () => {
+  it("renders a controls skeleton and a default-aspect slide placeholder", () => {
     render(<PptxViewerFallback />)
 
     const root = document.querySelector('[data-slot="pptx-viewer"]')
@@ -426,7 +426,7 @@ describe("PptxViewerFallback", () => {
     )
     expect(skeleton).toBeTruthy()
     expect(skeleton?.style.aspectRatio).toBe("960 / 720")
-    // Toolbar skeleton shows disabled, non-focusable icon placeholders.
+    // Controls skeleton shows disabled, non-focusable icon placeholders.
     expect(screen.queryByRole("button", { name: "Zoom in" })).toBeNull()
   })
 
@@ -440,12 +440,12 @@ describe("PptxViewerFallback", () => {
     expect(skeleton?.style.aspectRatio).toBe("1280 / 720")
   })
 
-  it("omits the toolbar skeleton when toolbar is disabled", () => {
-    render(<PptxViewerFallback toolbar={false} />)
+  it("omits the controls skeleton when controls is disabled", () => {
+    render(<PptxViewerFallback controls={false} />)
     expect(
       document.querySelector('[data-slot="pptx-slide-skeleton"]')
     ).toBeTruthy()
-    // The toolbar strip has a fixed h-10 height; without it there is no border-b bg-card strip.
+    // The controls strip has a fixed h-10 height; without it there is no border-b bg-card strip.
     expect(document.querySelector(".border-b.bg-card")).toBeNull()
   })
 

@@ -3,6 +3,16 @@
 import * as React from "react"
 
 import type { Source } from "@/lib/document-source"
+import {
+  FileViewer,
+  FileViewerBody,
+  FileViewerControls,
+  FileViewerHeader,
+  FileViewerMeta,
+  FileViewerSidebar,
+  FileViewerSurface,
+  FileViewerTitle,
+} from "@/components/ui/file-viewer"
 import { SegmentedDocumentProvider } from "@/components/ui/segmented-document-provider"
 import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
 import {
@@ -12,12 +22,6 @@ import {
 import { SourceIndicator } from "@/components/ui/source-indicator"
 import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
 import {
-  ViewerBody,
-  ViewerRoot,
-  ViewerSidebar,
-  ViewerSurface,
-} from "@/components/ui/viewer"
-import {
   sourceToXlsxCell,
   useXlsxSourceTarget,
 } from "@/components/ui/xlsx-source"
@@ -25,6 +29,11 @@ import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
 import xlsxSample from "@/components/viewers/sample-data/xlsx-sources.json"
 
 const XLSX_URL = "/samples/nvidia-financials-fy2024.xlsx"
+const XLSX_SOURCE = {
+  kind: "url" as const,
+  url: XLSX_URL,
+  fileName: "nvidia-financials-fy2024.xlsx",
+}
 
 type XlsxField = SourceField & { source: Source }
 
@@ -80,23 +89,29 @@ function XlsxSourcesContent({
   const activeCell = sourceToXlsxCell(activeSource)
 
   return (
-    <ViewerRoot bare className="h-full min-h-[680px] bg-background">
-      <ViewerBody>
-        <ViewerSurface className="relative">
+    <FileViewer
+      source={XLSX_SOURCE}
+      bare
+      className="h-full min-h-[680px] bg-background"
+    >
+      <FileViewerHeader>
+        <FileViewerTitle />
+        <FileViewerMeta />
+        <FileViewerControls />
+      </FileViewerHeader>
+      <FileViewerBody>
+        <FileViewerSurface className="relative">
           <XlsxViewer
             ref={viewerRef}
-            source={{
-              kind: "url",
-              url: XLSX_URL,
-              fileName: "nvidia-financials-fy2024.xlsx",
-            }}
+            source={XLSX_SOURCE}
             bare
             className="h-full"
+            controls={false}
             activeCell={activeCell}
           />
           <SourceIndicator path={link.activePath} found={!!activeSource} />
-        </ViewerSurface>
-        <ViewerSidebar
+        </FileViewerSurface>
+        <FileViewerSidebar
           aria-label="Source fields"
           side="right"
           collapsible="none"
@@ -104,9 +119,9 @@ function XlsxSourcesContent({
           className="border-l"
         >
           <SourceFieldList fields={FIELDS} link={link} />
-        </ViewerSidebar>
-      </ViewerBody>
-    </ViewerRoot>
+        </FileViewerSidebar>
+      </FileViewerBody>
+    </FileViewer>
   )
 }
 

@@ -5,7 +5,7 @@ import * as React from "react"
 import type { ViewerResource } from "@/lib/viewer-resource"
 
 import { ScrollArea } from "./scroll-area"
-import { TextViewerFrame, TextViewerToolbar } from "./text-viewer-chrome"
+import { TextViewerFrame, TextViewerControls } from "./text-viewer-chrome"
 import {
   createPreparedTextDocument,
   getCodeVisibleLineWindow,
@@ -82,7 +82,7 @@ type ViewportSize = {
 export function ChenglouTextViewerContent({
   resource,
   className,
-  toolbar = true,
+  controls = true,
   download = true,
   highlight,
   bare = false,
@@ -395,8 +395,8 @@ export function ChenglouTextViewerContent({
 
   return (
     <TextViewerFrame className={className} bare={bare}>
-      {toolbar ? (
-        <TextViewerToolbar
+      {controls ? (
+        <TextViewerControls
           wordCount={preparedDocument.wordCount}
           fontScale={fontScale}
           downloadAction={downloadAction}
@@ -876,17 +876,17 @@ function appendCodeBlockToolbar({
   frame: CodeTextBlockFrame
   row: HTMLDivElement
 }) {
-  const toolbar = document.createElement("div")
-  toolbar.className = "absolute z-10 flex items-center gap-1"
-  toolbar.style.left = `${16 + frame.contentLeft + Math.max(0, frame.width - 66)}px`
-  toolbar.style.top = "6px"
+  const controls = document.createElement("div")
+  controls.className = "absolute z-10 flex items-center gap-1"
+  controls.style.left = `${16 + frame.contentLeft + Math.max(0, frame.width - 66)}px`
+  controls.style.top = "6px"
 
   if (block.language) {
     const language = document.createElement("span")
     language.className =
       "rounded bg-background/90 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground shadow-sm"
     language.textContent = block.language
-    toolbar.append(language)
+    controls.append(language)
   }
 
   const copyButton = document.createElement("button")
@@ -907,8 +907,8 @@ function appendCodeBlockToolbar({
       }, 1200)
     })
   })
-  toolbar.append(copyButton)
-  row.append(toolbar)
+  controls.append(copyButton)
+  row.append(controls)
 }
 
 function appendCopyIcon(parent: HTMLElement) {

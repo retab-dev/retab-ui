@@ -57,7 +57,7 @@ flowchart TB
 
   subgraph "Client gate, loading, and errors"
     UseIsClient["useIsClient()\nSSR false, hydrated true"]
-    Fallback["DocxViewerFallback\nsame shell + toolbar skeleton\npage skeleton"]
+    Fallback["DocxViewerFallback\nsame shell + controls skeleton\npage skeleton"]
     Suspense["React Suspense\nfallback while bytes/library/render body suspend"]
     ErrorBoundary["ViewerErrorBoundary\nformat docx\nretry/download UI"]
     ViewerErrors["viewer-errors\nResourceError\nViewerFormatError\nretryability\nuser messages"]
@@ -84,7 +84,7 @@ flowchart TB
     ScrollArea["ScrollArea viewport"]
     ScrollMeasure["measureScroll()\nprogress = scrollTop / scrollable\ncurrent page at 20% marker"]
     ScrollCallbacks["onVisiblePageChange(page)\nonScrollProgressChange(progress)"]
-    Toolbar["toolbar\npage count\nzoom out/in\nfit width\ndownload"]
+    Controls["controls\npage count\nzoom out/in\nfit width\ndownload"]
   end
 
   subgraph "Source linking and target resolution"
@@ -200,8 +200,8 @@ flowchart TB
   CssZoom --> Host
   ScrollArea --> ScrollMeasure
   ScrollMeasure --> ScrollCallbacks
-  Toolbar --> ScaleState
-  Toolbar --> DownloadActions
+  Controls --> ScaleState
+  Controls --> DownloadActions
 
   SourceTypes --> SourceAdapter
   SourceAdapter --> UseDocxSourceTarget
@@ -301,7 +301,7 @@ sequenceDiagram
       I->>DOM: measure natural page sizes
       I->>DOM: data-page-number, content-visibility auto, contain-intrinsic-size
       I->>I: set numPages, pageWidth, ready true
-      I-->>C: visible document, toolbar page count and scale
+      I-->>C: visible document, controls page count and scale
     end
   end
 ```
@@ -442,13 +442,13 @@ flowchart LR
 - Every page gets `content-visibility: auto` and `contain-intrinsic-size` for browser-managed off-screen page skipping with stable scroll height.
 - Zoom is CSS `zoom` on the rendered host. It does not re-run `docx-preview`.
 - Uncontrolled scale starts as fit-to-width. Manual zoom stores `manualScale`; fit width clears `manualScale` back to `null`.
-- Controlled `scale` is normalized to `[0.25, 5]`; `NaN` becomes `1`. Toolbar zoom actions are inert while scale is controlled.
+- Controlled `scale` is normalized to `[0.25, 5]`; `NaN` becomes `1`. Controls zoom actions are inert while scale is controlled.
 - Fit width subtracts the container padding (`32px`) from the measured container width before dividing by page width.
 - Resize work and scroll work are coalesced with `requestAnimationFrame`.
 - Scroll progress is clamped to `[0, 1]`; a non-scrollable viewport reports `0`.
 - Current page is the last page whose top is above the marker at 20% of the scroll viewport height.
 - Header and aside slots are rendered in the fallback and the final viewer so loading does not remove surrounding UI.
-- The toolbar skeleton mirrors the final toolbar shape: page count and zoom percent are skeletons, controls are disabled placeholders.
+- The controls skeleton mirrors the final controls shape: page count and zoom percent are skeletons, controls are disabled placeholders.
 - Highlighting is an enhancement. If `CSS.highlights` or `Highlight` is unavailable or throws, the document still renders.
 - Text targets are case-sensitive and whitespace-normalized. The first match wins.
 - Text target resolution skips non-document text, style/script/template content, hidden nodes, aria-hidden nodes, and nodes hidden through display, visibility, or content-visibility.

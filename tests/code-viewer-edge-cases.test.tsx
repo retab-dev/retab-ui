@@ -116,7 +116,7 @@ async function readResourceAfterSuspense(
 }
 
 describe("line splitting and counting fidelity", () => {
-  it("keeps the toolbar count, splitTextLines, and rendered rows consistent for mixed newlines", () => {
+  it("keeps the controls count, splitTextLines, and rendered rows consistent for mixed newlines", () => {
     const text = "a\nb\r\nc\rd"
     const { container } = render(<CodeViewer source={textSource(text)} />)
 
@@ -215,7 +215,7 @@ describe("rendering fidelity", () => {
         source={textSource(
           Array.from({ length: 12 }, (_, i) => `line ${i + 1}`).join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -232,7 +232,7 @@ describe("gutter sizing", () => {
     const nine = render(
       <CodeViewer
         source={textSource(Array.from({ length: 9 }, () => "x").join("\n"))}
-        toolbar={false}
+        controls={false}
       />
     )
     // 1 digit + 1 spare char + horizontal gutter padding.
@@ -242,7 +242,7 @@ describe("gutter sizing", () => {
     const ten = render(
       <CodeViewer
         source={textSource(Array.from({ length: 10 }, () => "x").join("\n"))}
-        toolbar={false}
+        controls={false}
       />
     )
     // 2 digits + 1 spare char + horizontal gutter padding.

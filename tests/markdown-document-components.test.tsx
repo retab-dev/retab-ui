@@ -31,7 +31,7 @@ describe("markdown whitelisted components", () => {
   it("renders whitelisted raw component markdown inertly", async () => {
     const { container } = render(
       <MarkdownDocumentViewer
-        toolbar={false}
+        controls={false}
         source={markdownSource(
           '<Metric label="Accuracy" value="98%" onClick="alert(1)" />'
         )}
@@ -47,7 +47,7 @@ describe("markdown whitelisted components", () => {
   it("renders whitelisted directive components", async () => {
     const { container } = render(
       <MarkdownDocumentViewer
-        toolbar={false}
+        controls={false}
         source={markdownSource('::badge{label="Beta"}')}
       />
     )
@@ -59,7 +59,7 @@ describe("markdown whitelisted components", () => {
   it("renders unknown component markdown as an inert unsupported component", async () => {
     const { container } = render(
       <MarkdownDocumentViewer
-        toolbar={false}
+        controls={false}
         source={markdownSource("<ChartWidget>Revenue</ChartWidget>")}
       />
     )

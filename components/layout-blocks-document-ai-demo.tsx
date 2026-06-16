@@ -1,9 +1,25 @@
 "use client"
 
-import documentAiOutput from "@/sample/documentai-output.json"
+import * as React from "react"
 
-import { DocumentAiLayoutBlocks } from "@/components/ui/layout-blocks"
+import {
+  DocumentAiLayoutBlocks,
+  type DocumentAiDocument,
+} from "@/components/ui/layout-blocks"
 
 export function DocumentAiLayoutBlocksDemo() {
-  return <DocumentAiLayoutBlocks output={documentAiOutput} />
+  const [output, setOutput] = React.useState<DocumentAiDocument | null>(null)
+
+  React.useEffect(() => {
+    let active = true
+    void import("@/sample/documentai-output.json").then((module) => {
+      if (active) setOutput(module.default as DocumentAiDocument)
+    })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  if (!output) return null
+  return <DocumentAiLayoutBlocks output={output} />
 }

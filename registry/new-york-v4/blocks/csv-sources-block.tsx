@@ -5,6 +5,16 @@ import * as React from "react"
 import type { Source } from "@/lib/document-source"
 import { sourceToCsvCell, useCsvSourceTarget } from "@/components/ui/csv-source"
 import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
+import {
+  FileViewer,
+  FileViewerBody,
+  FileViewerControls,
+  FileViewerHeader,
+  FileViewerMeta,
+  FileViewerSidebar,
+  FileViewerSurface,
+  FileViewerTitle,
+} from "@/components/ui/file-viewer"
 import { SegmentedDocumentProvider } from "@/components/ui/segmented-document-provider"
 import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
 import {
@@ -13,12 +23,6 @@ import {
 } from "@/components/ui/source-field-list"
 import { SourceIndicator } from "@/components/ui/source-indicator"
 import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
-import {
-  ViewerBody,
-  ViewerRoot,
-  ViewerSidebar,
-  ViewerSurface,
-} from "@/components/ui/viewer"
 import csvSample from "@/components/viewers/sample-data/csv-sources.json"
 
 const CSV_TEXT = `region,quarter,revenue,customers,nrr
@@ -28,6 +32,11 @@ EMEA,Q1,820000,33,1.08
 EMEA,Q2,910000,39,1.15
 APAC,Q1,430000,18,1.04
 APAC,Q2,560000,24,1.11`
+const CSV_SOURCE = {
+  kind: "text" as const,
+  text: CSV_TEXT,
+  fileName: "sales.csv",
+}
 
 type CsvField = SourceField & { source: Source }
 
@@ -83,14 +92,24 @@ function CsvSourcesContent({
   const activeCell = sourceToCsvCell(activeSource)
 
   return (
-    <ViewerRoot bare className="h-full min-h-[680px] bg-background">
-      <ViewerBody>
-        <ViewerSurface className="relative">
+    <FileViewer
+      source={CSV_SOURCE}
+      bare
+      className="h-full min-h-[680px] bg-background"
+    >
+      <FileViewerHeader>
+        <FileViewerTitle />
+        <FileViewerMeta />
+        <FileViewerControls />
+      </FileViewerHeader>
+      <FileViewerBody>
+        <FileViewerSurface className="relative">
           <CsvViewer
             ref={viewerRef}
-            source={{ kind: "text", text: CSV_TEXT, fileName: "sales.csv" }}
+            source={CSV_SOURCE}
             fillHeight
             className="h-full rounded-none border-0"
+            controls={false}
             activeCell={activeCell}
           />
           <SourceIndicator
@@ -98,8 +117,8 @@ function CsvSourcesContent({
             found={!!activeSource}
             className="top-2"
           />
-        </ViewerSurface>
-        <ViewerSidebar
+        </FileViewerSurface>
+        <FileViewerSidebar
           aria-label="Source fields"
           side="right"
           collapsible="none"
@@ -107,9 +126,9 @@ function CsvSourcesContent({
           className="border-l"
         >
           <SourceFieldList fields={FIELDS} link={link} />
-        </ViewerSidebar>
-      </ViewerBody>
-    </ViewerRoot>
+        </FileViewerSidebar>
+      </FileViewerBody>
+    </FileViewer>
   )
 }
 

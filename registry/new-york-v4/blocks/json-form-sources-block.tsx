@@ -4,7 +4,12 @@ import type { JSONSchema7 } from "json-schema"
 import { useForm } from "react-hook-form"
 
 import { extractionSourcesToSourceMap } from "@/lib/document-source"
-import { PdfViewer } from "@/components/ui/pdf-viewer"
+import {
+  FileViewer,
+  FileViewerBody,
+  FileViewerSurface,
+} from "@/components/ui/file-viewer"
+import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   SegmentedDocumentProvider,
@@ -84,8 +89,7 @@ function JsonFormSourcesContent({
     <ViewerRoot bare className="h-full min-h-[680px] bg-background">
       <ViewerBody>
         <ViewerSurface className="relative">
-          <PdfViewer
-            ref={setPdfViewerHandle}
+          <FileViewer
             source={{
               kind: "url",
               url: PDF_URL,
@@ -93,10 +97,24 @@ function JsonFormSourcesContent({
             }}
             bare
             className="h-full"
-            onScrollProgressChange={documentHandlers.onScrollProgressChange}
-            onVisiblePageChange={documentHandlers.onCurrentPageChange}
-            renderPageOverlay={renderPageOverlay}
-          />
+          >
+            <PdfViewerProvider>
+              <FileViewerBody>
+                <FileViewerSurface>
+                  <PdfViewerPages
+                    ref={setPdfViewerHandle}
+                    bare
+                    className="h-full"
+                    onScrollProgressChange={
+                      documentHandlers.onScrollProgressChange
+                    }
+                    onVisiblePageChange={documentHandlers.onCurrentPageChange}
+                    renderPageOverlay={renderPageOverlay}
+                  />
+                </FileViewerSurface>
+              </FileViewerBody>
+            </PdfViewerProvider>
+          </FileViewer>
           <SourceIndicator path={link.activePath} found={!!link.activeAnchor} />
         </ViewerSurface>
         <ViewerSidebar

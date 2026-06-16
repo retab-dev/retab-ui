@@ -255,7 +255,7 @@ describe("Markdown/Text viewer contract", () => {
           "text/markdown"
         )}
         mode="markdown"
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -277,7 +277,7 @@ describe("Markdown/Text viewer contract", () => {
     const prose = render(
       <TextViewer
         source={textSource("alpha\nbeta", "notes.txt")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -291,7 +291,7 @@ describe("Markdown/Text viewer contract", () => {
     const code = render(
       <CodeViewer
         source={textSource("alpha\nbeta", "events.log")}
-        toolbar={false}
+        controls={false}
       />
     )
 

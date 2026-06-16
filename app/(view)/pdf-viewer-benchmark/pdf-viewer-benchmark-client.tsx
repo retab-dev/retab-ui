@@ -145,7 +145,7 @@ function readSnapshot(): PdfViewerBenchmarkSnapshot {
   )
   const currentPageText =
     document
-      .querySelector("[data-slot='pdf-viewer-toolbar']")
+      .querySelector("[data-slot='viewer-controls']")
       ?.textContent?.replace(/\s+/g, " ")
       .trim() ?? ""
 

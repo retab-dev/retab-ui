@@ -4,7 +4,7 @@ import * as React from "react"
 
 import { useElementWidth } from "@/hooks/use-element-width"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ViewerToolbar } from "@/components/ui/viewer-toolbar"
+import { ViewerControls } from "@/components/ui/viewer-controls"
 import {
   MarkdownActionButtons,
   MarkdownActionsMenu,
@@ -12,7 +12,7 @@ import {
 import { PAGE_MARKDOWN_COMPACT_ACTIONS_WIDTH } from "@/components/viewers/page-markdown/page-markdown-model"
 import { type PageMarkdownViewMode } from "@/components/viewers/page-markdown/page-markdown-types"
 
-export function PageMarkdownToolbar({
+export function PageMarkdownControls({
   className,
   currentPage,
   pageCount,
@@ -35,13 +35,14 @@ export function PageMarkdownToolbar({
   onZoom: (factor: number) => void
   onFitWidth: () => void
 }) {
-  const [toolbarRef, toolbarWidth] = useElementWidth()
+  const [controlsRef, controlsWidth] = useElementWidth()
   const isCompact =
-    toolbarWidth !== null && toolbarWidth < PAGE_MARKDOWN_COMPACT_ACTIONS_WIDTH
+    controlsWidth !== null &&
+    controlsWidth < PAGE_MARKDOWN_COMPACT_ACTIONS_WIDTH
 
   return (
-    <div ref={toolbarRef} className="shrink-0">
-      <ViewerToolbar
+    <div ref={controlsRef} className="shrink-0">
+      <ViewerControls
         className={className}
         title={
           <div className="flex min-w-0 items-center">

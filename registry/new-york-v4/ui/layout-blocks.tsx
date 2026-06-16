@@ -3,6 +3,7 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { FileViewer } from "@/components/ui/file-viewer"
 import {
   PdfViewerPages,
   PdfViewerProvider,
@@ -188,20 +189,22 @@ function DocumentAiLayoutBlocksContent({
       <ViewerBody>
         <ViewerSurface>
           {pdfSource.source ? (
-            <PdfViewerProvider source={pdfSource.source}>
-              <PdfViewerPages
-                ref={setPdfViewerHandle}
-                bare
-                className="h-full"
-                onScrollProgressChange={
-                  segmentedViewport.documentHandlers.onScrollProgressChange
-                }
-                onVisiblePageChange={
-                  segmentedViewport.documentHandlers.onCurrentPageChange
-                }
-                renderPageOverlay={renderPageOverlay}
-              />
-            </PdfViewerProvider>
+            <FileViewer source={pdfSource.source} bare className="h-full">
+              <PdfViewerProvider>
+                <PdfViewerPages
+                  ref={setPdfViewerHandle}
+                  bare
+                  className="h-full"
+                  onScrollProgressChange={
+                    segmentedViewport.documentHandlers.onScrollProgressChange
+                  }
+                  onVisiblePageChange={
+                    segmentedViewport.documentHandlers.onCurrentPageChange
+                  }
+                  renderPageOverlay={renderPageOverlay}
+                />
+              </PdfViewerProvider>
+            </FileViewer>
           ) : (
             <div className="grid h-full place-items-center bg-muted/20 p-6 text-sm text-muted-foreground">
               {pdfSource.error ?? "Preparing OCR pages..."}

@@ -613,7 +613,7 @@ function stubObservableLayout({
   )
 }
 
-describe("ImageViewer toolbar edges", () => {
+describe("ImageViewer controls edges", () => {
   it("returns to the original rotation after four rotate clicks", async () => {
     stubImageLoading(bitmap(100, 200))
     stubObservableLayout({ frameListWidth: 232 })
@@ -665,7 +665,7 @@ describe("ImageViewer toolbar edges", () => {
 
   it("caps fit-width at the zoom max so zooming in never shrinks the image", async () => {
     // A small image in a wide viewport would fit at >500% without a cap. The
-    // fit scale must share the toolbar's zoom ceiling, otherwise "Zoom in"
+    // fit scale must share the controls's zoom ceiling, otherwise "Zoom in"
     // clamps DOWN to 500% and paradoxically shrinks the image. Regression test.
     stubImageLoading(bitmap(100, 100))
     stubObservableLayout({ frameListWidth: 632 }) // uncapped fit = 600%

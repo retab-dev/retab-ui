@@ -7,7 +7,7 @@
 //   * YAML frontmatter is rewritten to a ```yaml fenced code block,
 //   * runs of blank lines collapse to a single blank line,
 //   * each block is trimEnd-ed.
-// So the Text tab does not show the document source — yet the toolbar's
+// So the Text tab does not show the document source — yet the controls's
 // "Copy markdown" button copies the verbatim `document.text`. A user switching to
 // "Text" to read/copy the raw source sees a reformatted document instead.
 

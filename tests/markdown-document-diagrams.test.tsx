@@ -35,7 +35,7 @@ describe("markdown diagrams", () => {
   it("renders mermaid fences as measured SVG diagram surfaces", async () => {
     const { container } = render(
       <MarkdownDocumentViewer
-        toolbar={false}
+        controls={false}
         source={markdownSource("```mermaid\ngraph TD\n  A-->B\n```")}
       />
     )
@@ -56,7 +56,7 @@ describe("markdown diagrams", () => {
   it("renders invalid mermaid fences as non-crashing errors", async () => {
     const { container } = render(
       <MarkdownDocumentViewer
-        toolbar={false}
+        controls={false}
         source={markdownSource("```mermaid\nsequenceDiagram\nA->>B: hi\n```")}
       />
     )

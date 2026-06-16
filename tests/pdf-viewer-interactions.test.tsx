@@ -309,7 +309,7 @@ describe("PdfViewer — rotation × fit-width interactions", () => {
     expect(await screen.findByText("400%")).toBeTruthy()
   })
 
-  it("clamps a non-finite controlled scale to the maximum in the toolbar", async () => {
+  it("clamps a non-finite controlled scale to the maximum in the controls", async () => {
     pdfjsMock.docs.set("/infinite-scale.pdf", makeDoc([[100, 200]]))
 
     await act(async () => {
@@ -451,7 +451,7 @@ describe("PdfViewer — scroll-driven page reporting", () => {
     expect(onVisiblePageChange).not.toHaveBeenCalled()
   })
 
-  it("re-reports page 1 after scrolling away and back, and the toolbar tracks it", async () => {
+  it("re-reports page 1 after scrolling away and back, and the controls tracks it", async () => {
     pdfjsMock.docs.set(
       "/scroll-back.pdf",
       makeDoc([

@@ -1,19 +1,21 @@
 "use client"
 
-import * as React from "react"
-
 import {
-  PdfViewerHeader,
+  FileViewer,
+  FileViewerBody,
+  FileViewerControls,
+  FileViewerHeader,
+  FileViewerMeta,
+  FileViewerSidebar,
+  FileViewerSidebarTrigger,
+  FileViewerSurface,
+  FileViewerTitle,
+} from "@/components/ui/file-viewer"
+import {
   PdfViewerPages,
   PdfViewerProvider,
   PdfViewerThumbnails,
 } from "@/components/ui/pdf-viewer"
-import {
-  ViewerBody,
-  ViewerRoot,
-  ViewerSidebar,
-  ViewerSurface,
-} from "@/components/ui/viewer"
 
 const PDF_URL = "/samples/nvidia-10k-fy2024.pdf"
 const PDF_SOURCE = {
@@ -31,24 +33,28 @@ const PDF_SOURCE = {
 export function PdfThumbnailsBlock() {
   return (
     <div className="h-full min-h-[680px] bg-background">
-      <PdfViewerProvider source={PDF_SOURCE}>
-        <ViewerRoot bare defaultOpen className="h-full">
-          <PdfViewerHeader />
-          <ViewerBody>
-            <ViewerSidebar
+      <FileViewer source={PDF_SOURCE} bare defaultOpen className="h-full">
+        <PdfViewerProvider>
+          <FileViewerHeader>
+            <FileViewerSidebarTrigger className="-ml-1" />
+            <FileViewerTitle />
+            <FileViewerMeta />
+            <FileViewerControls />
+          </FileViewerHeader>
+          <FileViewerBody>
+            <FileViewerSidebar
               aria-label="PDF pages"
-              collapsible="none"
               width="4.5rem"
               className="border-r"
             >
               <PdfViewerThumbnails thumbnailWidth={60} />
-            </ViewerSidebar>
-            <ViewerSurface>
+            </FileViewerSidebar>
+            <FileViewerSurface>
               <PdfViewerPages bare className="h-full" />
-            </ViewerSurface>
-          </ViewerBody>
-        </ViewerRoot>
-      </PdfViewerProvider>
+            </FileViewerSurface>
+          </FileViewerBody>
+        </PdfViewerProvider>
+      </FileViewer>
     </div>
   )
 }

@@ -44,7 +44,7 @@ afterEach(() => {
 })
 
 describe("markdown document initial scroll", () => {
-  it("keeps the continuous document below the toolbar after chunk measurement", async () => {
+  it("keeps the continuous document below the controls after chunk measurement", async () => {
     render(
       <div style={{ height: 620 }}>
         <MarkdownDocumentViewer

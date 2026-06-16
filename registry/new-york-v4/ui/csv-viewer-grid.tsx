@@ -241,8 +241,18 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
     })
 
     React.useLayoutEffect(() => {
-      rowPatcher.invalidate()
-    }, [rowPatcher, virtualRows, columnItems])
+      // After React commits the canonical row window, push that window's
+      // visibility, position, and text back onto the pooled DOM so any stale
+      // state left by the imperative scroll patcher (a `hidden` row React's
+      // reconciler never re-showed, or a cyclic-column cell it never rewrote)
+      // is cleared. Falls back to a plain cache invalidation when row
+      // virtualization is inactive.
+      if (shouldVirtualizeRows) {
+        rowPatcher.resync(virtualRows)
+      } else {
+        rowPatcher.invalidate()
+      }
+    }, [rowPatcher, virtualRows, columnItems, shouldVirtualizeRows])
 
     return (
       <div

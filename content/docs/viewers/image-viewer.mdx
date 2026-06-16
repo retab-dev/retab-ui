@@ -106,11 +106,11 @@ and a multi-page TIFF has one frame per TIFF page.
 | ------------------------ | ------------------------------------- | ------------------------------------------------------------------------------ |
 | `source`                 | `UrlViewerSource \| BlobViewerSource` | Canonical image source. PNG/JPEG/WebP/GIF/AVIF/BMP/ICO or TIFF.                |
 | `scale`                  | `number`                              | Optional fixed scale; omit to fit frame width to the container.                |
-| `toolbar`                | `boolean`                             | Show the zoom/rotate/download toolbar. Defaults to `true`.                     |
+| `controls`                | `boolean`                             | Show the zoom/rotate/download controls. Defaults to `true`.                     |
 | `renderFrameOverlay`     | `(props) => ReactNode`                | Per-frame overlay; receives `{ frameNumber, width, height, scale, rotation }`. |
 | `onVisibleFrameChange`   | `(frame: number) => void`             | Fires with the frame nearest the top of the viewport on scroll.                |
 | `onScrollProgressChange` | `(progress: number) => void`          | Fires with scroll progress in `[0, 1]`.                                        |
-| `header`                 | `ReactNode`                           | Full-width strip below the toolbar (e.g. a legend).                            |
+| `header`                 | `ReactNode`                           | Full-width strip below the controls (e.g. a legend).                            |
 | `aside`                  | `ReactNode`                           | Left rail alongside the scrolling frames (e.g. a page ribbon).                 |
 | `bare`                   | `boolean`                             | Drop the outer border/background so the viewer fills its container.            |
 | `className`              | `string`                              | Optional class on the viewer root element.                                     |

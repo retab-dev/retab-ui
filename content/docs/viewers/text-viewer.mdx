@@ -53,7 +53,7 @@ URL and Blob sources use the same bounded text resource path as the Code Viewer:
 - **Pretext layout** — line heights are predicted from text, font, width, and line-height without mounting rows for measurement.
 - **Custom virtualization** — variable-height source lines are windowed with local offset math, not TanStack Virtual.
 - **Stable source-line addressing** — `highlight` and `scrollToLineRange` still use 1-based inclusive source-line ranges.
-- **Prose chrome** — the toolbar shows word count, text scale controls, and downloads from the source resource.
+- **Prose chrome** — the controls shows word count, text scale controls, and downloads from the source resource.
 - **Markdown stays separate** — `.md`, `.markdown`, and `text/markdown` sources route through the dedicated Pretext Markdown Viewer, not through Text Viewer markdown mode.
 
 ## Markdown Boundary
@@ -82,7 +82,7 @@ numbers, monospaced layout, syntax support, and line-oriented scrolling.
 | ----------- | ----------------------- | -------------------------------------------------------------------------- |
 | `source`    | `TextDocumentSource`    | Required source descriptor. Supports URL, Blob, and inline text resources. |
 | `className` | `string`                | Optional class on the viewer container.                                    |
-| `toolbar`   | `boolean`               | Show word count, zoom controls, and download action. Defaults to `true`.   |
+| `controls`   | `boolean`               | Show word count, zoom controls, and download action. Defaults to `true`.   |
 | `highlight` | `TextLineRange \| null` | 1-based inclusive source-line range to highlight.                          |
 | `bare`      | `boolean`               | Drop the outer border/background so the viewer fills its container.        |
 | `maxBytes`  | `number`                | Maximum text payload size accepted by the viewer.                          |

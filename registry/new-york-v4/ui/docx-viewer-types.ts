@@ -18,8 +18,8 @@ export interface DocxViewerProps {
   scale?: number
   defaultScale?: number
   onScaleChange?: (scale: number | null) => void
-  toolbar?: boolean
-  /** Show download actions in this viewer's toolbar/error state. */
+  controls?: boolean
+  /** Show download actions in this viewer's controls/error state. */
   download?: boolean
   highlight?: DocxTarget | null
   onVisiblePageChange?: (page: number) => void

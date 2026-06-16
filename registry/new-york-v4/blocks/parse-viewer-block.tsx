@@ -2,7 +2,16 @@
 
 import * as React from "react"
 
-import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
+import {
+  FileViewer,
+  FileViewerBody,
+  FileViewerSurface,
+} from "@/components/ui/file-viewer"
+import {
+  PdfViewerPages,
+  PdfViewerProvider,
+  type PdfViewerHandle,
+} from "@/components/ui/pdf-viewer"
 import {
   ResizableHandle,
   ResizablePanel,
@@ -29,7 +38,7 @@ const PARSE_RESULT: ParseResponse = {
 /**
  * Parse viewer block — the source document beside its extracted markdown, kept
  * in sync by page. `ParseViewer` owns the markdown pane (Rendered/Text toggle,
- * page controls); the document surface here is the `PdfViewer`.
+ * page controls); the document surface here is FileViewer + PDF pages.
  */
 export function ParseViewerBlock() {
   return (
@@ -74,17 +83,28 @@ function ParseSourceDocument() {
   }, [document])
 
   return (
-    <PdfViewer
-      ref={viewerRef}
+    <FileViewer
       source={{
         kind: "url",
         url: PDF_URL,
         fileName: "bank-statement.pdf",
       }}
       bare
-      onVisiblePageChange={document.onCurrentPageChange}
-      onScrollProgressChange={document.onScrollProgressChange}
       className="h-full"
-    />
+    >
+      <PdfViewerProvider>
+        <FileViewerBody>
+          <FileViewerSurface>
+            <PdfViewerPages
+              ref={viewerRef}
+              bare
+              onVisiblePageChange={document.onCurrentPageChange}
+              onScrollProgressChange={document.onScrollProgressChange}
+              className="h-full"
+            />
+          </FileViewerSurface>
+        </FileViewerBody>
+      </PdfViewerProvider>
+    </FileViewer>
   )
 }

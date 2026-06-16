@@ -40,7 +40,7 @@ export function NonButtonTrigger({ className }: DropzoneExampleProps) {
           Non-button trigger
         </div>
         <div className="min-w-0 text-sm">
-          <div className="font-medium">Toolbar upload</div>
+          <div className="font-medium">Controls upload</div>
           <div className="truncate text-xs text-muted-foreground">
             {dropzone.files.length
               ? `${dropzone.files.length} attached`

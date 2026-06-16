@@ -10,7 +10,6 @@ import {
   VIEWER_BLOCK_TABS,
   VIEWER_BLOCKS,
   type ViewerBlockId,
-  type ViewerBlockMetadata,
 } from "@/lib/viewer-blocks"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { useMounted } from "@/hooks/use-mounted"
@@ -21,40 +20,10 @@ import {
   copyToClipboardWithMeta,
 } from "@/components/copy-button"
 import { HighlightedCodeBlock } from "@/components/highlighted-code-block"
-import { CsvSourcesBlock } from "@/registry/new-york-v4/blocks/csv-sources-block"
-import { DocxSourcesBlock } from "@/registry/new-york-v4/blocks/docx-sources-block"
-import { AvatarImageSlot } from "@/registry/new-york-v4/blocks/dropzone-avatar-image-slot"
-import { DropzoneBlock } from "@/registry/new-york-v4/blocks/dropzone-block"
-import { ComparisonPairUpload } from "@/registry/new-york-v4/blocks/dropzone-comparison-pair-upload"
-import { ControlledQueue } from "@/registry/new-york-v4/blocks/dropzone-controlled-queue"
-import { CustomThumbnailGrid } from "@/registry/new-york-v4/blocks/dropzone-custom-thumbnail-grid"
-import { DisabledDropzone } from "@/registry/new-york-v4/blocks/dropzone-disabled-dropzone"
-import { EvidenceTimeline } from "@/registry/new-york-v4/blocks/dropzone-evidence-timeline"
-import { DefaultFileUploaderExample } from "@/registry/new-york-v4/blocks/dropzone-file-uploader-example"
-import { DropzoneFileViewerExample } from "@/registry/new-york-v4/blocks/dropzone-file-viewer-example"
-import { IntakeRouter } from "@/registry/new-york-v4/blocks/dropzone-intake-router"
-import { MediaTranscriptQueue } from "@/registry/new-york-v4/blocks/dropzone-media-transcript-queue"
-import { NativeButtonQueue } from "@/registry/new-york-v4/blocks/dropzone-native-button-queue"
-import { NonButtonTrigger } from "@/registry/new-york-v4/blocks/dropzone-non-button-trigger"
-import { PinboardDropSurface } from "@/registry/new-york-v4/blocks/dropzone-pinboard-drop-surface"
-import { RequiredPacketSlots } from "@/registry/new-york-v4/blocks/dropzone-required-packet-slots"
-import { SpreadsheetImportCard } from "@/registry/new-york-v4/blocks/dropzone-spreadsheet-import-card"
-import { ValidationOnly } from "@/registry/new-york-v4/blocks/dropzone-validation-only"
-import { EditViewerBlock } from "@/registry/new-york-v4/blocks/edit-viewer-block"
-import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block"
-import { SourcesViewerBlock } from "@/registry/new-york-v4/blocks/sources-viewer-block"
-import { FileSystemBlock } from "@/registry/new-york-v4/blocks/file-system-block"
-import { FsLightBlock } from "@/registry/new-york-v4/blocks/fslight-block"
-import { ImageSourcesBlock } from "@/registry/new-york-v4/blocks/image-sources-block"
-import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-sources-block"
-import { OcrBlock } from "@/registry/new-york-v4/blocks/ocr-block"
-import { ParseViewerBlock } from "@/registry/new-york-v4/blocks/parse-viewer-block"
-import { PartitionViewerBlock } from "@/registry/new-york-v4/blocks/partition-viewer-block"
-import { PdfThumbnailsBlock } from "@/registry/new-york-v4/blocks/pdf-thumbnails-block"
-import { PrimitiveCardsBlock } from "@/registry/new-york-v4/blocks/primitive-cards-block"
-import { SplitViewerBlock } from "@/registry/new-york-v4/blocks/split-viewer-block"
-import { TextSourcesBlock } from "@/registry/new-york-v4/blocks/text-sources-block"
-import { XlsxSourcesBlock } from "@/registry/new-york-v4/blocks/xlsx-sources-block"
+import {
+  withViewerBlockComponent,
+  type ViewerBlockWithComponent,
+} from "@/components/viewer-block-component-registry"
 
 type BlockCodeSample = {
   sourcePath: string
@@ -70,59 +39,13 @@ type BlockCodeSamplesState =
   | { status: "ready"; codeSamples: BlockCodeSample[]; error?: undefined }
   | { status: "error"; codeSamples: BlockCodeSample[]; error: string }
 
-type ViewerBlock = ViewerBlockMetadata & { component: React.ComponentType }
-
 type BlockView = "preview" | "code"
 
 const BLOCK_VIEWPORT_HEIGHT_CLASS = "h-[680px]"
 const BLOCK_PREVIEW_LAZY_ROOT_MARGIN = "900px 0px"
 
-const blockComponents = {
-  ocr: OcrBlock,
-  split: SplitViewerBlock,
-  partition: PartitionViewerBlock,
-  parse: ParseViewerBlock,
-  edit: EditViewerBlock,
-  "sources-viewer": SourcesViewerBlock,
-  extract: ExtractViewerBlock,
-  "image-sources": ImageSourcesBlock,
-  "text-sources": TextSourcesBlock,
-  "csv-sources": CsvSourcesBlock,
-  "xlsx-sources": XlsxSourcesBlock,
-  "docx-sources": DocxSourcesBlock,
-  "json-form-sources": JsonFormSourcesBlock,
-  dropzone: DropzoneBlock,
-  "dropzone-file-uploader": DefaultFileUploaderExample,
-  "dropzone-file-viewer": DropzoneFileViewerExample,
-  "dropzone-non-button-trigger": NonButtonTrigger,
-  "dropzone-native-button-queue": NativeButtonQueue,
-  "dropzone-controlled-queue": ControlledQueue,
-  "dropzone-validation-only": ValidationOnly,
-  "dropzone-custom-thumbnail-grid": CustomThumbnailGrid,
-  "dropzone-media-transcript-queue": MediaTranscriptQueue,
-  "dropzone-avatar-image-slot": AvatarImageSlot,
-  "dropzone-spreadsheet-import": SpreadsheetImportCard,
-  "dropzone-evidence-timeline": EvidenceTimeline,
-  "dropzone-comparison-pair": ComparisonPairUpload,
-  "dropzone-intake-router": IntakeRouter,
-  "dropzone-required-packet": RequiredPacketSlots,
-  "dropzone-pinboard": PinboardDropSurface,
-  "dropzone-disabled": DisabledDropzone,
-  "file-system": FileSystemBlock,
-  fslight: FsLightBlock,
-  "primitive-cards": PrimitiveCardsBlock,
-  "pdf-thumbnails": PdfThumbnailsBlock,
-} satisfies Record<ViewerBlockId, React.ComponentType>
-
-const viewerBlocks: ViewerBlock[] = VIEWER_BLOCKS.map((block) => ({
-  ...block,
-  component: blockComponents[block.id],
-}))
-
-const viewerBlockTabs: ViewerBlock[] = VIEWER_BLOCK_TABS.map((block) => ({
-  ...block,
-  component: blockComponents[block.id],
-}))
+const viewerBlocks = VIEWER_BLOCKS.map(withViewerBlockComponent)
+const viewerBlockTabs = VIEWER_BLOCK_TABS.map(withViewerBlockComponent)
 
 export function ViewerBlocks({ blockId }: { blockId: ViewerBlockId }) {
   const activeBlock = viewerBlocks.find((block) => block.id === blockId)
@@ -185,7 +108,7 @@ function getBlockHref(blockId: ViewerBlockId) {
   return `/blocks/${blockId}`
 }
 
-function ViewerBlockPreview({ block }: { block: ViewerBlock }) {
+function ViewerBlockPreview({ block }: { block: ViewerBlockWithComponent }) {
   const [previewKey] = React.useState(0)
   const [view, setView] = React.useState<BlockView>("preview")
   const [codeRequestKey, setCodeRequestKey] = React.useState(0)

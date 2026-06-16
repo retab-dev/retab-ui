@@ -13,6 +13,8 @@ authority.
 Read these first:
 
 - [viewer-system-absolute-platonic-blueprint.md](./viewer-system-absolute-platonic-blueprint.md)
+- [pdf-header-subtraction-blueprint.md](./pdf-header-subtraction-blueprint.md)
+- [universal-file-viewer-header-blueprint.md](./universal-file-viewer-header-blueprint.md)
 - [viewer-system-platonic-ideal-verdict-blueprint.md](./viewer-system-platonic-ideal-verdict-blueprint.md)
 - [viewer-system-platonic-ideal-remaining-cut-blueprint.md](./viewer-system-platonic-ideal-remaining-cut-blueprint.md)
 - [pdf-viewer-viewport-registration-decision.md](./pdf-viewer-viewport-registration-decision.md)

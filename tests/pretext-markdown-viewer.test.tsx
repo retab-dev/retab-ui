@@ -171,7 +171,7 @@ describe("PretextMarkdownViewer", () => {
   it("hydrates inline server markup into rendered Markdown content", async () => {
     const source = markdownSource("# Hydrated\n\n> [!NOTE]\n> Ready.")
     const serverHtml = renderToString(
-      <PretextMarkdownViewer source={source} toolbar={false} />
+      <PretextMarkdownViewer source={source} controls={false} />
     )
     expect(serverHtml).toContain('data-slot="pretext-markdown-virtual-canvas"')
     expect(serverHtml).not.toContain('data-slot="text-body-skeleton"')
@@ -182,7 +182,7 @@ describe("PretextMarkdownViewer", () => {
 
     const root = hydrateRoot(
       container,
-      <PretextMarkdownViewer source={source} toolbar={false} />
+      <PretextMarkdownViewer source={source} controls={false} />
     )
 
     try {
@@ -241,7 +241,7 @@ describe("PretextMarkdownViewer", () => {
     render(
       <PretextMarkdownViewer
         source={markdownSource("# Parsed Heading", "notes.txt")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -254,7 +254,7 @@ describe("PretextMarkdownViewer", () => {
     const { container } = render(
       <PretextMarkdownViewer
         source={markdownSource(["Before", "", "---", "", "After"].join("\n"))}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -295,7 +295,7 @@ describe("PretextMarkdownViewer", () => {
     ).toBeNull()
   })
 
-  it("copies the full Markdown source from the toolbar", async () => {
+  it("copies the full Markdown source from the controls", async () => {
     const source = [
       "# Release Notes",
       "",
@@ -313,7 +313,7 @@ describe("PretextMarkdownViewer", () => {
     })
   })
 
-  it("shows full Markdown source copy failures from the toolbar", async () => {
+  it("shows full Markdown source copy failures from the controls", async () => {
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: {},
@@ -654,7 +654,7 @@ describe("PretextMarkdownViewer", () => {
     )
   })
 
-  it("downloads the full Markdown source from the toolbar", async () => {
+  it("downloads the full Markdown source from the controls", async () => {
     const source = [
       "# Release Notes",
       "",
@@ -865,7 +865,7 @@ describe("PretextMarkdownViewer", () => {
     const { container } = render(
       <PretextMarkdownViewer
         source={markdownSource("> [!IMPORTANT]\n> Ship **carefully**.")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -903,7 +903,7 @@ describe("PretextMarkdownViewer", () => {
             "> Stop here.",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -955,7 +955,7 @@ describe("PretextMarkdownViewer", () => {
             "> Back outside.",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -991,7 +991,7 @@ describe("PretextMarkdownViewer", () => {
             ":::",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1015,7 +1015,7 @@ describe("PretextMarkdownViewer", () => {
         source={markdownSource(
           'Use "quotes" -- dash ... -> arrows 1/2 :sparkles: and `literal "quotes" -- ... -> 1/2 :sparkles:`.'
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1032,7 +1032,7 @@ describe("PretextMarkdownViewer", () => {
         source={markdownSource(
           "Ship :rocket: fixes :bug: docs :memo: atom :atom_symbol: and `literal :rocket: :bug: :atom_symbol:`."
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1050,7 +1050,7 @@ describe("PretextMarkdownViewer", () => {
         source={markdownSource(
           String.raw`Escaped \*stars\*, \[label\]\(/docs/example\), \# heading, \`code\`, and \\ slash.`
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1074,7 +1074,7 @@ describe("PretextMarkdownViewer", () => {
             "Second line with ~~removed~~ text and www.retab.com plus hello@retab.com.",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1116,7 +1116,7 @@ describe("PretextMarkdownViewer", () => {
             '[External](https://example.com "External docs")',
           ].join("\n\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1171,7 +1171,7 @@ describe("PretextMarkdownViewer", () => {
             `<Badge label="${longToken}" />`,
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1211,7 +1211,7 @@ describe("PretextMarkdownViewer", () => {
             '[docs]: https://example.com/docs "Docs"',
           ].join("\n\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1236,7 +1236,7 @@ describe("PretextMarkdownViewer", () => {
             '[logo]: /logo.png "Logo title"',
           ].join("\n\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1251,7 +1251,7 @@ describe("PretextMarkdownViewer", () => {
     const { container } = render(
       <PretextMarkdownViewer
         source={markdownSource(["- [x] Done", "- [ ] Pending"].join("\n"))}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1297,7 +1297,7 @@ describe("PretextMarkdownViewer", () => {
             "8. Eighth",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1324,7 +1324,7 @@ describe("PretextMarkdownViewer", () => {
             "2. Next item",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1356,7 +1356,7 @@ describe("PretextMarkdownViewer", () => {
             '<Badge label="Stable" tone="success" />',
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1389,7 +1389,7 @@ describe("PretextMarkdownViewer", () => {
             '<Video src="/spread.mp4" label="Spread video" {...props} />',
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1431,7 +1431,7 @@ describe("PretextMarkdownViewer", () => {
             "</Callout>",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1460,7 +1460,7 @@ describe("PretextMarkdownViewer", () => {
             "</Accordion>",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1487,7 +1487,7 @@ describe("PretextMarkdownViewer", () => {
             ':badge[Stable]{tone="success"}',
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1514,7 +1514,7 @@ describe("PretextMarkdownViewer", () => {
             ":::",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1541,7 +1541,7 @@ describe("PretextMarkdownViewer", () => {
             "::::",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1584,7 +1584,7 @@ describe("PretextMarkdownViewer", () => {
             "::::",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1632,7 +1632,7 @@ describe("PretextMarkdownViewer", () => {
             '<Image src="data:image/png;base64,AAAA" alt="Data chart" />',
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1690,7 +1690,7 @@ describe("PretextMarkdownViewer", () => {
             '<Video src="blob:https://retab.com/video" label="Blocked Blob video" />',
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1746,7 +1746,7 @@ describe("PretextMarkdownViewer", () => {
             '::diagram{type="mermaid" title="Directive flow" source="graph LR; Start-->Done"}',
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1839,7 +1839,7 @@ describe("PretextMarkdownViewer", () => {
             '::diagram{type="mermaid" source="graph TD; A-->B" onClick="steal"}',
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1954,7 +1954,7 @@ describe("PretextMarkdownViewer", () => {
             '::diagram{type="mermaid" source="graph TD; A-->B" onClick="steal"}',
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2007,7 +2007,7 @@ describe("PretextMarkdownViewer", () => {
             '<Metric.Remote label="Unsafe" value={98} />',
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2033,7 +2033,7 @@ describe("PretextMarkdownViewer", () => {
     const { container } = render(
       <PretextMarkdownViewer
         source={markdownSource("```mermaid\ngraph TD\n  A-->B\n```")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2054,7 +2054,7 @@ describe("PretextMarkdownViewer", () => {
     render(
       <PretextMarkdownViewer
         source={markdownSource("```mermaid\ngraph TD\n  A-->B\n```")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2073,7 +2073,7 @@ describe("PretextMarkdownViewer", () => {
     const { rerender } = render(
       <PretextMarkdownViewer
         source={markdownSource("```mermaid\ngraph TD\n  unsafe-svg-->B\n```")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2101,7 +2101,7 @@ describe("PretextMarkdownViewer", () => {
     rerender(
       <PretextMarkdownViewer
         source={markdownSource("```mermaid\nnot-a-diagram\n```")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2113,7 +2113,7 @@ describe("PretextMarkdownViewer", () => {
     const { container, rerender } = render(
       <PretextMarkdownViewer
         source={markdownSource("```mermaid\ngraph LR\n  Start-->Done\n```")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2133,7 +2133,7 @@ describe("PretextMarkdownViewer", () => {
     rerender(
       <PretextMarkdownViewer
         source={markdownSource("```mermaid\nsequenceDiagram\nA->>B: hi\n```")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2157,7 +2157,7 @@ describe("PretextMarkdownViewer", () => {
     const { container } = render(
       <PretextMarkdownViewer
         source={markdownSource("```MMD\ngraph TD\n  A-->B\n```")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2175,7 +2175,7 @@ describe("PretextMarkdownViewer", () => {
     const { container } = render(
       <PretextMarkdownViewer
         source={markdownSource("```mermaid\nsequenceDiagram\nA->>B: hi\n```")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2201,7 +2201,7 @@ describe("PretextMarkdownViewer", () => {
     const { container } = render(
       <PretextMarkdownViewer
         source={markdownSource("```mermaid\nsequenceDiagram\nA->>B: hi\n```")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2230,7 +2230,7 @@ describe("PretextMarkdownViewer", () => {
     render(
       <PretextMarkdownViewer
         source={markdownSource("```mermaid\ngraph TD\n  A-->B\n```")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2266,7 +2266,7 @@ describe("PretextMarkdownViewer", () => {
     const { container } = render(
       <PretextMarkdownViewer
         source={markdownSource(`\`\`\`mermaid\n${oversizedSource}\n\`\`\``)}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2300,7 +2300,7 @@ describe("PretextMarkdownViewer", () => {
     const { container, rerender } = render(
       <PretextMarkdownViewer
         source={markdownSource("```mermaid\ngraph TD\n  A-->B\n  B-->C\n```")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2321,7 +2321,7 @@ describe("PretextMarkdownViewer", () => {
     rerender(
       <PretextMarkdownViewer
         source={markdownSource("```mermaid\nsequenceDiagram\nA->>B: hi\n```")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2359,7 +2359,7 @@ describe("PretextMarkdownViewer", () => {
     const { container } = render(
       <PretextMarkdownViewer
         source={markdownSource("```mermaid\ngraph TD\n  unsafe-svg-->B\n```")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2397,7 +2397,7 @@ describe("PretextMarkdownViewer", () => {
     const { container } = render(
       <PretextMarkdownViewer
         source={markdownSource("```mermaid\nnot-a-diagram\n```")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2427,7 +2427,7 @@ describe("PretextMarkdownViewer", () => {
             "\n"
           )
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2450,7 +2450,7 @@ describe("PretextMarkdownViewer", () => {
             "$$",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2469,7 +2469,7 @@ describe("PretextMarkdownViewer", () => {
     const { container } = render(
       <PretextMarkdownViewer
         source={markdownSource("A note.[^a]\n\n[^a]: Footnote body.")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2512,7 +2512,7 @@ describe("PretextMarkdownViewer", () => {
             "[^far]: Footnote body from the end of the document.",
           ].join("\n\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2536,7 +2536,7 @@ describe("PretextMarkdownViewer", () => {
     render(
       <PretextMarkdownViewer
         source={markdownSource("```ts\nconst answer = 42\n```")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2561,7 +2561,7 @@ describe("PretextMarkdownViewer", () => {
     const { container } = render(
       <PretextMarkdownViewer
         source={markdownSource(hostileSource)}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2600,7 +2600,7 @@ describe("PretextMarkdownViewer", () => {
       <PretextMarkdownViewer
         className="h-80 w-[360px]"
         source={markdownSource(["```ts", longCode, "```"].join("\n"))}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2626,7 +2626,7 @@ describe("PretextMarkdownViewer", () => {
     render(
       <PretextMarkdownViewer
         source={markdownSource("```TSX\n<Component />\n```")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2666,7 +2666,7 @@ describe("PretextMarkdownViewer", () => {
             "```",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2700,7 +2700,7 @@ describe("PretextMarkdownViewer", () => {
     render(
       <PretextMarkdownViewer
         source={markdownSource("```ts\nconst answer = 42\n```")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2717,7 +2717,7 @@ describe("PretextMarkdownViewer", () => {
     const { container } = render(
       <PretextMarkdownViewer
         source={markdownSource("```ts\nexport const viewer = 'markdown'\n```")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2746,7 +2746,7 @@ describe("PretextMarkdownViewer", () => {
             "```",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2780,7 +2780,7 @@ describe("PretextMarkdownViewer", () => {
             "```",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2815,7 +2815,7 @@ describe("PretextMarkdownViewer", () => {
             "```",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2853,7 +2853,7 @@ describe("PretextMarkdownViewer", () => {
             "```",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2890,7 +2890,7 @@ describe("PretextMarkdownViewer", () => {
       "```",
     ].join("\n")
     const { container } = render(
-      <PretextMarkdownViewer source={markdownSource(source)} toolbar={false} />
+      <PretextMarkdownViewer source={markdownSource(source)} controls={false} />
     )
 
     expect(await screen.findByText("diff")).toBeTruthy()
@@ -2935,7 +2935,7 @@ describe("PretextMarkdownViewer", () => {
             "| **Bold** `code` ~~old~~ | [Site](https://example.com) :white_check_mark: | 42 |",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2994,7 +2994,7 @@ describe("PretextMarkdownViewer", () => {
             "| Alpha | Beta | Gamma |",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3039,7 +3039,7 @@ describe("PretextMarkdownViewer", () => {
             "</table>",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3072,7 +3072,7 @@ describe("PretextMarkdownViewer", () => {
             "</details>",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3098,7 +3098,7 @@ describe("PretextMarkdownViewer", () => {
             "# location",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3126,7 +3126,7 @@ describe("PretextMarkdownViewer", () => {
             "</dl>",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3154,7 +3154,7 @@ describe("PretextMarkdownViewer", () => {
             ": Tooling surface.",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3191,7 +3191,7 @@ describe("PretextMarkdownViewer", () => {
             '<q cite="javascript:alert(1)" class="raw">quoted</q> <ins cite="https://example.com/change">added</ins> <mark>marked</mark> <var>value</var> <samp>output</samp>',
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3251,7 +3251,7 @@ describe("PretextMarkdownViewer", () => {
             "\n"
           )
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3277,7 +3277,7 @@ describe("PretextMarkdownViewer", () => {
             '<meta http-equiv="refresh" content="0;url=https://example.com" />',
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3314,7 +3314,7 @@ describe("PretextMarkdownViewer", () => {
             '<div data-pretext-callout-kind="warning" data-pretext-callout-title="Pwned">Pwned callout</div>',
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3362,7 +3362,7 @@ describe("PretextMarkdownViewer", () => {
             '<script data-testid="xss">alert("xss")</script>',
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3393,7 +3393,7 @@ describe("PretextMarkdownViewer", () => {
             '<a href="javascript:alert(1)" target="_blank">Unsafe</a>',
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3416,7 +3416,7 @@ describe("PretextMarkdownViewer", () => {
     const { container, rerender } = render(
       <PretextMarkdownViewer
         source={markdownSource('![Diagram](/diagram.png "System diagram")')}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3487,7 +3487,7 @@ describe("PretextMarkdownViewer", () => {
     rerender(
       <PretextMarkdownViewer
         source={markdownSource("![Updated](/updated.png)")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3517,7 +3517,7 @@ describe("PretextMarkdownViewer", () => {
             "# Body",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3565,7 +3565,7 @@ describe("PretextMarkdownViewer", () => {
             "# Body",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3609,7 +3609,7 @@ describe("PretextMarkdownViewer", () => {
             "# Body",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3631,7 +3631,7 @@ describe("PretextMarkdownViewer", () => {
     const { container, rerender } = render(
       <PretextMarkdownViewer
         source={markdownSource(["---", "title: Draft", "# Body"].join("\n"))}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3647,7 +3647,7 @@ describe("PretextMarkdownViewer", () => {
     rerender(
       <PretextMarkdownViewer
         source={markdownSource(["---", "---", "# Body"].join("\n"))}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3666,7 +3666,7 @@ describe("PretextMarkdownViewer", () => {
         source={markdownSource(
           ["# API_v2 & SDK", "", "# API_v2 & SDK"].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3685,7 +3685,7 @@ describe("PretextMarkdownViewer", () => {
         source={markdownSource(
           ["# Tom &amp; Jerry", "", "## AT&amp;T &copy;"].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3701,7 +3701,7 @@ describe("PretextMarkdownViewer", () => {
     render(
       <PretextMarkdownViewer
         source={markdownSource("# Release Notes")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3736,7 +3736,7 @@ describe("PretextMarkdownViewer", () => {
             "# location",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3753,7 +3753,7 @@ describe("PretextMarkdownViewer", () => {
     render(
       <PretextMarkdownViewer
         source={markdownSource(["##### Deep", "", "###### Small"].join("\n"))}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3788,7 +3788,7 @@ describe("PretextMarkdownViewer", () => {
             "Target section.",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3827,7 +3827,7 @@ describe("PretextMarkdownViewer", () => {
             "Target section.",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3862,7 +3862,7 @@ describe("PretextMarkdownViewer", () => {
             "Target section.",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -3907,7 +3907,7 @@ describe("PretextMarkdownViewer", () => {
             "Second target.",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 

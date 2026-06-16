@@ -3,7 +3,7 @@
 ## Question
 
 Can the viewer system converge toward a universal, type-agnostic `FileViewer`
-that knows how to render the right title, metadata, toolbar, and actions for any
+that knows how to render the right title, metadata, and controls for any
 file type, while still allowing domain viewers such as split, partition, OCR,
 sources, email, and edit to compose around it?
 
@@ -23,7 +23,7 @@ ViewerRoot
   layout, sidebar state, trigger context
 
 FileViewer
-  file type detection, file header, file toolbar, file rendering
+  file type detection, file header, file controls, file rendering
 
 SegmentedDocument / domain providers
   split, partition, OCR, extraction, source evidence, email MIME, edit fields
@@ -46,14 +46,14 @@ Many composed viewers currently produce stacked header chrome:
 
 This reads as two headers:
 
-1. a file/document toolbar;
+1. a file/document controls row;
 2. a domain header or legend.
 
 The desired hierarchy is:
 
 ```tsx
 <ViewerRoot>
-  <FileViewerHeader />
+  <FileHeader />
   <ViewerBody>
     <ViewerSidebar />
     <ViewerSurface />
@@ -64,10 +64,10 @@ The desired hierarchy is:
 The sidebar trigger should live inside the file header:
 
 ```tsx
-<FileViewerHeader>
+<FileHeader>
   <ViewerSidebarTrigger />
   ...
-</FileViewerHeader>
+</FileHeader>
 ```
 
 The legend, ribbon, page rail, MIME part list, field list, and source evidence
@@ -97,12 +97,12 @@ The analogous viewer pattern is:
 
 ```tsx
 <ViewerRoot>
-  <FileViewerHeader>
+  <FileHeader>
     <ViewerSidebarTrigger />
-    <FileViewerHeaderTitle />
-    <FileViewerHeaderMeta />
-    <FileViewerHeaderToolbar />
-  </FileViewerHeader>
+    <FileHeaderTitle />
+    <FileHeaderMeta />
+    <FileHeaderControls />
+  </FileHeader>
 
   <ViewerBody>
     <ViewerSidebar />
@@ -128,12 +128,12 @@ The universal file viewer should be decomposable:
 ```tsx
 <FileViewerProvider source={source}>
   <ViewerRoot>
-    <FileViewerHeader>
+    <FileHeader>
       <ViewerSidebarTrigger />
-      <FileViewerHeaderTitle />
-      <FileViewerHeaderMeta />
-      <FileViewerHeaderToolbar />
-    </FileViewerHeader>
+      <FileHeaderTitle />
+      <FileHeaderMeta />
+      <FileHeaderControls />
+    </FileHeader>
 
     <ViewerBody>
       <ViewerSurface>
@@ -156,7 +156,7 @@ The composed API is the important one for domain viewers.
 
 The vocabulary should stay small.
 
-### `FileViewerHeader`
+### `FileHeader`
 
 The single top chrome row for a file-backed viewer.
 
@@ -166,7 +166,7 @@ border, and overflow behavior.
 It should not know about split, partition, OCR, extraction, email, edit, or file
 system semantics.
 
-### `FileViewerHeaderTitle`
+### `FileHeaderTitle`
 
 The identity of the viewed file.
 
@@ -184,7 +184,7 @@ It answers:
 what am I looking at?
 ```
 
-### `FileViewerHeaderMeta`
+### `FileHeaderMeta`
 
 Passive facts about the file or the active file renderer.
 
@@ -203,9 +203,9 @@ It answers:
 what useful context describes it?
 ```
 
-### `FileViewerHeaderToolbar`
+### `FileHeaderControls`
 
-The type-specific viewer toolbar.
+The type-specific viewer controls.
 
 Examples:
 
@@ -255,7 +255,7 @@ It should not become `FileViewerSidebarTrigger`, `PdfSidebarTrigger`, or
 - file size / MIME metadata when available;
 - original download action;
 - type-specific renderer selection;
-- type-specific default toolbar;
+- type-specific default controls;
 - loading states;
 - error states;
 - unsupported file states.
@@ -295,10 +295,10 @@ Spreadsheet owns:
 - sheet count;
 - grid navigation if supported.
 
-The universal file header should consume a normalized toolbar model from the
+The universal file header should consume a normalized controls model from the
 active renderer. It should not hard-code PDF state into `FileViewer`.
 
-## Toolbar Registration Model
+## Controls Registration Model
 
 The PDF viewer already points toward the right shape with viewport registration.
 
@@ -312,25 +312,25 @@ FileViewerContent
   mounts the active renderer
 
 active renderer
-  registers toolbar controls upward
+  registers view controls upward
 
-FileViewerHeaderToolbar
+FileHeaderControls
   renders the registered controls
 ```
 
 Conceptually:
 
 ```ts
-type FileViewerToolbarState = {
-  position?: ViewerToolbarPosition | null
-  zoom?: ViewerToolbarZoom | null
-  rotate?: ViewerToolbarRotate | null
+type FileViewerControlsState = {
+  position?: ViewerControlPosition | null
+  zoom?: ViewerZoomControl | null
+  rotate?: ViewerRotateControl | null
   downloads?: ViewerDownloadAction[]
   extra?: React.ReactNode
 }
 ```
 
-This type should remain about generic toolbar capabilities, not file domains.
+This type should remain about generic controls capabilities, not file domains.
 
 Good:
 
@@ -363,12 +363,12 @@ Domain viewers should wrap file viewing, not replace it.
 <SplitViewerProvider result={result}>
   <FileViewerProvider source={source}>
     <ViewerRoot defaultOpen>
-      <FileViewerHeader>
+      <FileHeader>
         <ViewerSidebarTrigger />
-        <FileViewerHeaderTitle />
+        <FileHeaderTitle />
         <SplitViewerHeaderMeta />
-        <FileViewerHeaderToolbar />
-      </FileViewerHeader>
+        <FileHeaderControls />
+      </FileHeader>
 
       <ViewerBody>
         <ViewerSidebar>
@@ -398,7 +398,7 @@ FileViewer owns:
 
 - PDF rendering;
 - file title;
-- PDF page/zoom/download toolbar.
+- PDF page/zoom/download controls.
 
 ### Partition
 
@@ -406,12 +406,12 @@ FileViewer owns:
 <PartitionViewerProvider result={result}>
   <FileViewerProvider source={source}>
     <ViewerRoot>
-      <FileViewerHeader>
+      <FileHeader>
         <ViewerSidebarTrigger />
-        <FileViewerHeaderTitle />
+        <FileHeaderTitle />
         <PartitionViewerHeaderMeta />
-        <FileViewerHeaderToolbar />
-      </FileViewerHeader>
+        <FileHeaderControls />
+      </FileHeader>
 
       <ViewerBody>
         <ViewerSurface>
@@ -458,11 +458,11 @@ The email viewer should still use file viewer for selected MIME parts:
 
       <ViewerSurface>
         <FileViewerProvider source={selectedPartSource}>
-          <FileViewerHeader>
-            <FileViewerHeaderTitle />
-            <FileViewerHeaderMeta />
-            <FileViewerHeaderToolbar />
-          </FileViewerHeader>
+          <FileHeader>
+            <FileHeaderTitle />
+            <FileHeaderMeta />
+            <FileHeaderControls />
+          </FileHeader>
           <FileViewerContent />
         </FileViewerProvider>
       </ViewerSurface>
@@ -498,7 +498,7 @@ That would turn file rendering into a workflow blob.
 Do not add type-specific boolean props to generic headers:
 
 ```tsx
-<FileViewerHeader showPdfControls showSegmentCount showSidebarTrigger />
+<FileHeader showPdfControls showSegmentCount showSidebarTrigger />
 ```
 
 That is not shadcn-like.
@@ -523,7 +523,7 @@ The current primitives already allow:
 
 The current header APIs are not anatomical enough.
 
-`FileViewerHeader` and `PdfViewerHeader` accept `children`, but `children`
+`FileHeader` and `PdfViewerHeader` accept `children`, but `children`
 replace the whole default header.
 
 That means this is possible:
@@ -535,17 +535,17 @@ That means this is possible:
 </PdfViewerHeader>
 ```
 
-But it loses the default PDF toolbar unless the consumer rebuilds it manually.
+But it loses the default PDF controls unless the consumer rebuilds them manually.
 
 The missing piece is first-class header anatomy:
 
 ```tsx
-<FileViewerHeader>
+<FileHeader>
   <ViewerSidebarTrigger />
-  <FileViewerHeaderTitle />
-  <FileViewerHeaderMeta />
-  <FileViewerHeaderToolbar />
-</FileViewerHeader>
+  <FileHeaderTitle />
+  <FileHeaderMeta />
+  <FileHeaderControls />
+</FileHeader>
 ```
 
 ## Final API Direction
@@ -555,12 +555,12 @@ The clean target is:
 ```tsx
 <FileViewerProvider source={source}>
   <ViewerRoot defaultOpen>
-    <FileViewerHeader>
+    <FileHeader>
       <ViewerSidebarTrigger />
-      <FileViewerHeaderTitle />
-      <FileViewerHeaderMeta />
-      <FileViewerHeaderToolbar />
-    </FileViewerHeader>
+      <FileHeaderTitle />
+      <FileHeaderMeta />
+      <FileHeaderControls />
+    </FileHeader>
 
     <ViewerBody>
       <ViewerSidebar />
@@ -588,10 +588,10 @@ Use `FileViewerProvider` for file descriptor/resource/header state.
 
 Use `FileViewerContent` for the selected renderer.
 
-Use `FileViewerHeader` for the single top file chrome row.
+Use `FileHeader` for the single top file chrome row.
 
-Use `FileViewerHeaderTitle`, `FileViewerHeaderMeta`, and
-`FileViewerHeaderToolbar` only if the anatomy proves necessary.
+Use `FileHeaderTitle`, `FileHeaderMeta`, and `FileHeaderControls` only if the
+anatomy proves necessary.
 
 Avoid:
 
@@ -609,20 +609,20 @@ splitMode props
 
 1. Define the file header model.
 
-   It should include file identity, passive metadata, download actions, and an
-   optional registered toolbar state from the active renderer.
+   It should include file identity, passive metadata, download controls, and an
+   optional registered controls state from the active renderer.
 
-2. Split `FileViewerHeader` into anatomy.
+2. Split `FileHeader` into anatomy.
 
    Keep the default header easy to use, but allow reconstruction from named
    parts.
 
-3. Generalize toolbar registration.
+3. Generalize controls registration.
 
    Start from PDF viewport controls, but rename the transport away from PDF if
    it becomes shared.
 
-4. Make `FileViewerContent` register the active renderer toolbar.
+4. Make `FileViewerContent` register the active renderer controls.
 
    PDF registers page/zoom/rotate/download.
 
@@ -630,7 +630,7 @@ splitMode props
 
 5. Rebuild `FileViewer` easy API from provider + header + body + content.
 
-6. Recompose split and partition around `FileViewerHeader`.
+6. Recompose split and partition around `FileHeader`.
 
    Remove competing top `ViewerHeader` rows.
 
@@ -646,12 +646,12 @@ splitMode props
   inside it.
 - A partition viewer can render with one top file header and no stacked
   `PdfViewerHeader` + `PartitionViewerHeader`.
-- The file header can show file title, passive metadata, toolbar controls, and
-  file actions without custom rebuilding.
+- The file header can show file title, passive metadata, and file/view controls
+  without custom rebuilding.
 - `ViewerSidebarTrigger` remains a generic viewer primitive.
 - `FileViewer` does not import split, partition, OCR, sources, email, edit, or
   file-system modules.
-- Domain viewers do not need to rebuild PDF toolbar internals.
+- Domain viewers do not need to rebuild PDF controls internals.
 - Public docs teach anatomy composition, not boolean prop switches.
 - Architecture tests prevent domain props from entering `FileViewer`.
 
@@ -662,12 +662,12 @@ The design is good when this feels inevitable:
 ```tsx
 <FileViewerProvider source={source}>
   <ViewerRoot>
-    <FileViewerHeader>
+    <FileHeader>
       <ViewerSidebarTrigger />
-      <FileViewerHeaderTitle />
+      <FileHeaderTitle />
       <DomainHeaderMeta />
-      <FileViewerHeaderToolbar />
-    </FileViewerHeader>
+      <FileHeaderControls />
+    </FileHeader>
 
     <ViewerBody>
       <DomainSidebar />
@@ -695,4 +695,3 @@ And this feels obviously wrong:
 The first is composition.
 
 The second is a junk drawer.
-

@@ -58,7 +58,7 @@ afterEach(() => {
 describe("public TextViewer prose cutover", () => {
   it("publishes the prose viewer from components/ui/text-viewer with the text-viewer slot", async () => {
     const { container } = render(
-      <TextViewer source={textSource("A prose paragraph.")} toolbar={false} />
+      <TextViewer source={textSource("A prose paragraph.")} controls={false} />
     )
 
     const viewer = getPublicViewer(container)
@@ -68,7 +68,7 @@ describe("public TextViewer prose cutover", () => {
 
   it("renders source-line data without a visible line-number gutter", async () => {
     const { container } = render(
-      <TextViewer source={textSource("alpha\nbeta")} toolbar={false} />
+      <TextViewer source={textSource("alpha\nbeta")} controls={false} />
     )
 
     const firstLine = await findSourceLine(container, 1)
@@ -93,7 +93,7 @@ describe("public TextViewer prose cutover", () => {
       <TextViewer
         className="h-40 w-48"
         source={textSource(longWord)}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -111,7 +111,7 @@ describe("public TextViewer prose cutover", () => {
       <TextViewer
         source={textSource("alpha\nbeta\ngamma")}
         highlight={{ start: 2, end: 2 }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -141,7 +141,7 @@ describe("public TextViewer prose cutover", () => {
             "\n"
           )
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 

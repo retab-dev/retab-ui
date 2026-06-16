@@ -62,6 +62,13 @@ document intake flows.
 <ComponentPreview name="dropzone-spreadsheet-import-card" />
 <ComponentPreview name="dropzone-media-transcript-queue" />
 
+Intake is not upload. Once Dropzone admits a file into React state, your
+application owns the transport. This example keys per-file upload progress off
+the dropzone's file id and renders a progress bar; swap the simulated interval
+for `fetch` or `XMLHttpRequest` with an `onprogress` handler in real code.
+
+<ComponentPreview name="dropzone-upload-progress-queue" />
+
 The file-intake viewer keeps browser acquisition separate from viewer chrome:
 
 ```tsx

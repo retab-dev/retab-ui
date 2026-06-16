@@ -1185,7 +1185,7 @@ describe("TextViewer component behavior", () => {
 
   it("renders an empty document without crashing", async () => {
     const { container } = render(
-      <TextViewer source={textSource("")} toolbar={false} />
+      <TextViewer source={textSource("")} controls={false} />
     )
     expect(
       container.querySelector('[data-slot="text-viewer"]')
@@ -1194,7 +1194,7 @@ describe("TextViewer component behavior", () => {
 
   it("renders a whitespace-only document without crashing", () => {
     expect(() =>
-      render(<TextViewer source={textSource("   \n\t\n  ")} toolbar={false} />)
+      render(<TextViewer source={textSource("   \n\t\n  ")} controls={false} />)
     ).not.toThrow()
   })
 
@@ -1208,7 +1208,7 @@ describe("TextViewer component behavior", () => {
       render(
         <TextViewer
           source={markdownSource(["```", "code here", "```"].join("\n"))}
-          toolbar={false}
+          controls={false}
         />
       )
       const button = await screen.findByLabelText("Copy code block")
@@ -1225,7 +1225,7 @@ describe("TextViewer component behavior", () => {
       <TextViewer
         source={textSource("alpha\nbeta")}
         highlight={{ start: 50, end: 60 }}
-        toolbar={false}
+        controls={false}
       />
     )
     await waitFor(() => {
@@ -1243,7 +1243,7 @@ describe("TextViewer component behavior", () => {
       <TextViewer
         source={textSource("alpha\nbeta\ngamma")}
         highlight={{ start: 2, end: 999 }}
-        toolbar={false}
+        controls={false}
       />
     )
     const second = await waitFor(() => {
@@ -1266,7 +1266,7 @@ describe("TextViewer component behavior", () => {
         source={textSource(
           Array.from({ length: 200 }, (_, i) => `line ${i + 1}`).join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
     await screen.findByText("line 1")
@@ -1284,7 +1284,7 @@ describe("TextViewer component behavior", () => {
     render(
       <TextViewer
         source={markdownSource("### Small Heading")}
-        toolbar={false}
+        controls={false}
       />
     )
     const text = await screen.findByText("Small Heading")
@@ -1295,7 +1295,7 @@ describe("TextViewer component behavior", () => {
 
   it("renders a tab character line without throwing and addresses it", async () => {
     const { container } = render(
-      <TextViewer source={textSource("a\n\t\nb")} toolbar={false} />
+      <TextViewer source={textSource("a\n\t\nb")} controls={false} />
     )
     await waitFor(() => {
       expect(container.querySelector('[data-source-line="3"]')).toBeTruthy()
@@ -1309,7 +1309,7 @@ describe("TextViewer component behavior", () => {
       <TextViewer
         source={textSource("para one\n\npara three")}
         highlight={{ start: 3, end: 3 }}
-        toolbar={false}
+        controls={false}
       />
     )
     const target = await waitFor(() => {
@@ -1328,7 +1328,7 @@ describe("TextViewer component behavior", () => {
       <TextViewer
         source={markdownSource("Para one.\n\nPara three.")}
         highlight={{ start: 3, end: 3 }}
-        toolbar={false}
+        controls={false}
       />
     )
     const target = await waitFor(() => {

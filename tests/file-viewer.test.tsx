@@ -9,9 +9,12 @@ import { createViewerResource } from "@/lib/viewer-resource"
 import * as FileViewerModule from "@/registry/new-york-v4/ui/file-viewer"
 import {
   FileViewer,
-  FileViewerContent,
+  FileViewerBody,
+  FileViewerControls,
+  FileViewerDocument,
   FileViewerHeader,
-  FileViewerProvider,
+  FileViewerMeta,
+  FileViewerTitle,
 } from "@/registry/new-york-v4/ui/file-viewer"
 import {
   descriptorResetKey,
@@ -20,6 +23,7 @@ import {
   resolveFileDescriptor,
 } from "@/registry/new-york-v4/ui/file-viewer-core"
 import { createTextResourceCache } from "@/registry/new-york-v4/ui/file-viewer-text-resource"
+import { useViewerControlsRegistration } from "@/registry/new-york-v4/ui/viewer-controls"
 
 const docxRouteMock = vi.hoisted(() => ({
   props: [] as Array<Record<string, unknown>>,
@@ -285,7 +289,7 @@ describe("FileViewer detection helpers", () => {
 
   it("routes Blob DOCX sources through the canonical resource viewer", () => {
     const source = readFileSync(
-      "registry/new-york-v4/ui/file-viewer.tsx",
+      "registry/new-york-v4/ui/file-viewer-route.tsx",
       "utf8"
     )
 
@@ -301,7 +305,7 @@ describe("FileViewer detection helpers", () => {
 
   it("routes Blob text sources before the unsupported fallback", () => {
     const source = readFileSync(
-      "registry/new-york-v4/ui/file-viewer.tsx",
+      "registry/new-york-v4/ui/file-viewer-route.tsx",
       "utf8"
     )
     const blobBranch = source.slice(
@@ -323,8 +327,20 @@ describe("FileViewer detection helpers", () => {
       "registry/new-york-v4/ui/file-viewer.tsx",
       "utf8"
     )
-    const chromeSource = readFileSync(
-      "registry/new-york-v4/ui/file-viewer-chrome.tsx",
+    const documentSource = readFileSync(
+      "registry/new-york-v4/ui/file-viewer-document.tsx",
+      "utf8"
+    )
+    const routeSource = readFileSync(
+      "registry/new-york-v4/ui/file-viewer-route.tsx",
+      "utf8"
+    )
+    const fallbackSource = readFileSync(
+      "registry/new-york-v4/ui/file-viewer-fallback.tsx",
+      "utf8"
+    )
+    const zoomSource = readFileSync(
+      "registry/new-york-v4/ui/viewer-zoom.tsx",
       "utf8"
     )
     const csvAdapterSource = readFileSync(
@@ -332,91 +348,124 @@ describe("FileViewer detection helpers", () => {
       "utf8"
     )
 
-    expect(fileViewerSource).toContain("ViewerFallback")
-    expect(fileViewerSource).toContain("UnsupportedCard")
-    expect(fileViewerSource).not.toContain("ViewerResourceFallback")
-    expect(fileViewerSource).not.toContain("UnsupportedResourceCard")
-    expect(fileViewerSource).not.toMatch(
-      /<(?:ViewerFallback|UnsupportedCard)\b(?:(?!\/>)[\s\S])*\b(?:category|fileName|url|downloadAction)=/
+    expect(documentSource).toContain("ViewerFallback")
+    expect(routeSource).toContain("UnsupportedCard")
+    expect(documentSource).not.toContain("ViewerResourceFallback")
+    expect(routeSource).not.toContain("UnsupportedResourceCard")
+    expect(documentSource).not.toMatch(
+      /<ViewerFallback\b(?:(?!\/>)[\s\S])*\b(?:category|fileName|url|downloadAction)=/
     )
-    expect(fileViewerSource).not.toMatch(
+    expect(routeSource).not.toMatch(
+      /<UnsupportedCard\b(?:(?!\/>)[\s\S])*\b(?:category|fileName|url|downloadAction)=/
+    )
+    expect(routeSource).not.toMatch(
       /<CsvFileContent\b(?:(?!\/>)[\s\S])*\b(?:source|fileName|mimeType)=/
     )
-    expect(fileViewerSource).toContain("PdfResourceContent")
-    expect(fileViewerSource).toContain("ImageResourceContent")
-    expect(fileViewerSource).toContain("DocxResourceContent")
-    expect(fileViewerSource).toContain("PptxResourceContent")
-    expect(fileViewerSource).toContain("XlsxResourceContent")
+    expect(routeSource).toContain("PdfResourceContent")
+    expect(routeSource).toContain("ImageResourceContent")
+    expect(routeSource).toContain("DocxResourceContent")
+    expect(routeSource).toContain("PptxResourceContent")
+    expect(routeSource).toContain("XlsxResourceContent")
     expect(fileViewerSource).not.toContain("slots={slots}")
     expect(fileViewerSource).not.toContain("renderWithViewerShellSlots")
     expect(fileViewerSource).not.toContain("ViewerShell")
-    expect(fileViewerSource).toContain(
+    expect(routeSource).toContain(
       'import("@/components/ui/text-viewer-chenglou")'
     )
-    expect(fileViewerSource).toContain(
+    expect(routeSource).toContain(
       'import("@/components/ui/pretext-markdown-viewer")'
     )
-    expect(fileViewerSource).not.toContain(
+    expect(routeSource).not.toContain(
       'import("@/components/ui/markdown-document-viewer")'
     )
-    expect(fileViewerSource).toContain('import("@/components/ui/code-viewer")')
-    expect(fileViewerSource).not.toContain('mode="markdown"')
-    expect(fileViewerSource).toContain('mode="text"')
-    expect(fileViewerSource).not.toContain("MarkdownDocViewer")
-    expect(fileViewerSource).not.toContain("file-viewer-markdown-viewer")
-    expect(fileViewerSource).not.toContain("loadMarkdownHtml")
+    expect(routeSource).toContain('import("@/components/ui/code-viewer")')
+    expect(routeSource).not.toContain('mode="markdown"')
+    expect(routeSource).toContain('mode="text"')
+    expect(routeSource).not.toContain("MarkdownDocViewer")
+    expect(routeSource).not.toContain("file-viewer-markdown-viewer")
+    expect(routeSource).not.toContain("loadMarkdownHtml")
     expect(fileViewerSource).not.toMatch(
       /<(?:PdfViewer|ImageViewer|DocxViewer|PptxViewer|XlsxViewer)\b/
     )
     expect(fileViewerSource).not.toMatch(
       /<(?:PdfResourceContent|ImageResourceContent|DocxResourceContent|PptxResourceContent|XlsxResourceContent)\b(?:(?!\/>)[\s\S])*\bsource=/
     )
-    expect(chromeSource).not.toContain("ResourceDocShell")
-    expect(chromeSource).not.toContain("ZoomActionsSkeleton")
-    expect(chromeSource).not.toContain("export function DocShell")
-    expect(chromeSource).not.toContain("ViewerResourceFallback")
-    expect(chromeSource).not.toContain("UnsupportedResourceCard")
-    expect(chromeSource).not.toContain("fileName: string")
-    expect(chromeSource).not.toContain("url?: string")
-    expect(chromeSource).not.toContain("downloadAction?:")
-    expect(chromeSource).not.toContain("createHrefDownloadAction")
+    expect(fallbackSource).not.toContain("ResourceDocShell")
+    expect(fallbackSource).not.toContain("export function DocShell")
+    expect(fallbackSource).not.toContain("ViewerResourceFallback")
+    expect(fallbackSource).not.toContain("UnsupportedResourceCard")
+    expect(fallbackSource).not.toContain("fileName: string")
+    expect(fallbackSource).not.toContain("url?: string")
+    expect(fallbackSource).not.toContain("downloadAction?:")
+    expect(fallbackSource).not.toContain("createHrefDownloadAction")
+    expect(zoomSource).not.toContain("ZoomActionsSkeleton")
     expect(fileViewerSource).toContain("<ViewerRoot")
     expect(fileViewerSource).toContain("<FileViewerHeader")
-    expect(fileViewerSource).toContain("<ViewerSurface")
+    expect(fileViewerSource).toContain("<FileViewerSurface")
     expect(csvAdapterSource).toMatch(/resource: ViewerResource/)
     expect(csvAdapterSource).not.toContain("ResourceDocShell")
     expect(csvAdapterSource).not.toMatch(/\bfileName:\s*string\b/)
     expect(csvAdapterSource).not.toMatch(/\bmimeType\?:\s*string\b/)
   })
 
-  it("exports the easy API plus provider-backed named parts", () => {
-    expect(Object.keys(FileViewerModule).sort()).toEqual(
-      [
+  it("exports the easy API plus shadcn-style FileViewer named parts", () => {
+    const exports = Object.keys(FileViewerModule)
+
+    expect(exports).toEqual(
+      expect.arrayContaining([
         "FileViewer",
-        "FileViewerContent",
+        "FileViewerBody",
+        "FileViewerControls",
+        "FileViewerDocument",
         "FileViewerHeader",
-        "FileViewerProvider",
-      ].sort()
+        "FileViewerMeta",
+        "FileViewerSidebar",
+        "FileViewerSidebarTrigger",
+        "FileViewerSurface",
+        "FileViewerTitle",
+        "useFileViewerResource",
+      ])
+    )
+    expect(exports).not.toContain("FileHeader")
+    expect(exports).not.toContain("FileHeaderControls")
+    expect(exports).not.toContain("FileHeaderMeta")
+    expect(exports).not.toContain("FileHeaderTitle")
+    expect(exports).not.toContain("FileViewerDocumentRenderer")
+    expect(exports).not.toContain("FileViewerProvider")
+    expect(exports).not.toContain("InternalFileViewerDocument")
+    expect(exports).not.toContain("FileViewerRoute")
+    expect(exports).not.toContain("useOptionalFileViewerResource")
+  })
+
+  it("renders FileViewerBody as the file viewer body region", () => {
+    const { container } = render(<FileViewerBody />)
+
+    expect(
+      container.querySelector('[data-slot="file-viewer-body"]')
+    ).toBeTruthy()
+  })
+
+  it("requires FileViewerDocument to be rendered inside FileViewer", () => {
+    expect(() => render(<FileViewerDocument />)).toThrow(
+      "File viewer parts must be used within FileViewer."
     )
   })
 
-  it("requires FileViewerContent to be rendered inside FileViewerProvider", () => {
-    expect(() => render(<FileViewerContent />)).toThrow(
-      "useFileViewer must be used within FileViewerProvider."
-    )
-  })
-
-  it("routes composed FileViewerProvider content through the same resource viewer", async () => {
+  it("routes composed FileViewer content through the same resource viewer", async () => {
     const { container } = render(
-      <FileViewerProvider
+      <FileViewer
         source={urlSource("/files/composed.pdf", "composed.pdf")}
+        bare
       >
         <FileViewerHeader />
-        <FileViewerContent bare className="composed-file" />
-      </FileViewerProvider>
+        <FileViewerDocument bare className="composed-file" />
+      </FileViewer>
     )
 
-    expect(container.querySelector('[data-slot="viewer-header"]')).toBeTruthy()
+    expect(
+      container.querySelector('[data-slot="file-viewer-header"]')
+    ).toBeTruthy()
+    expect(container.querySelector('[data-slot="viewer-root"]')).toBeTruthy()
     expect(screen.getByText("composed.pdf")).toBeTruthy()
     expect(screen.getByText("pdf")).toBeTruthy()
     expect(screen.getByRole("link", { name: "Download" })).toBeTruthy()
@@ -429,6 +478,163 @@ describe("FileViewer detection helpers", () => {
     expect(
       (pdfRouteMock.props[0]?.resource as { fileName: string }).fileName
     ).toBe("composed.pdf")
+  })
+
+  it("renders registered file header controls without rebuilding the header", async () => {
+    function RegisterControls() {
+      const registerControls = useViewerControlsRegistration()
+
+      React.useEffect(() => {
+        registerControls?.({
+          position: { kind: "page", current: 2, total: 5 },
+          downloads: [],
+        })
+        return () => registerControls?.(null)
+      }, [registerControls])
+
+      return null
+    }
+
+    render(
+      <FileViewer source={urlSource("/files/report.pdf", "report.pdf")} bare>
+        <FileViewerHeader>
+          <FileViewerTitle />
+          <FileViewerMeta />
+          <FileViewerControls />
+        </FileViewerHeader>
+        <RegisterControls />
+      </FileViewer>
+    )
+
+    expect(screen.getByText("report.pdf")).toBeTruthy()
+    expect(screen.getByText("pdf")).toBeTruthy()
+    await waitFor(() => expect(screen.getByText("Page 2 of 5")).toBeTruthy())
+  })
+
+  it("does not duplicate renderer title or subtitle in FileViewerControls", async () => {
+    function RegisterControls() {
+      const registerControls = useViewerControlsRegistration()
+
+      React.useEffect(() => {
+        registerControls?.({
+          title: "Renderer title",
+          subtitle: "Renderer subtitle",
+          position: { kind: "page", current: 2, total: 5 },
+          downloads: [],
+        })
+        return () => registerControls?.(null)
+      }, [registerControls])
+
+      return null
+    }
+
+    render(
+      <FileViewer source={urlSource("/files/report.pdf", "report.pdf")} bare>
+        <FileViewerHeader>
+          <FileViewerTitle />
+          <FileViewerMeta />
+          <FileViewerControls />
+        </FileViewerHeader>
+        <RegisterControls />
+      </FileViewer>
+    )
+
+    await waitFor(() => expect(screen.getByText("Page 2 of 5")).toBeTruthy())
+    expect(screen.getByText("report.pdf")).toBeTruthy()
+    expect(screen.getByText("pdf")).toBeTruthy()
+    expect(screen.queryByText("Renderer title")).toBeNull()
+    expect(screen.queryByText("Renderer subtitle")).toBeNull()
+  })
+
+  it("ignores stale file header control cleanup from an inactive registration", async () => {
+    function RegisterControls({ current }: { current: number }) {
+      const registerControls = useViewerControlsRegistration()
+
+      React.useEffect(() => {
+        registerControls?.({
+          position: { kind: "page", current, total: 5 },
+          downloads: [],
+        })
+        return () => registerControls?.(null)
+      }, [current, registerControls])
+
+      return null
+    }
+
+    function Harness({ showFirst }: { showFirst: boolean }) {
+      return (
+        <FileViewer source={urlSource("/files/report.pdf", "report.pdf")} bare>
+          <FileViewerHeader>
+            <FileViewerTitle />
+            <FileViewerControls />
+          </FileViewerHeader>
+          {showFirst ? <RegisterControls current={1} /> : null}
+          <RegisterControls current={2} />
+        </FileViewer>
+      )
+    }
+
+    const { rerender } = render(<Harness showFirst />)
+
+    await waitFor(() => expect(screen.getByText("Page 2 of 5")).toBeTruthy())
+
+    rerender(<Harness showFirst={false} />)
+
+    await waitFor(() => expect(screen.getByText("Page 2 of 5")).toBeTruthy())
+  })
+
+  it("clears registered file header controls when the file descriptor changes", async () => {
+    function RegisterControls() {
+      const registerControls = useViewerControlsRegistration()
+
+      React.useEffect(() => {
+        registerControls?.({
+          position: { kind: "page", current: 2, total: 5 },
+          downloads: [],
+        })
+        return () => registerControls?.(null)
+      }, [registerControls])
+
+      return null
+    }
+
+    function Harness({
+      register,
+      source,
+    }: {
+      register: boolean
+      source: ReturnType<typeof urlSource>
+    }) {
+      return (
+        <FileViewer source={source} bare>
+          <FileViewerHeader>
+            <FileViewerTitle />
+            <FileViewerControls />
+          </FileViewerHeader>
+          <FileViewerDocument bare />
+          {register ? <RegisterControls /> : null}
+        </FileViewer>
+      )
+    }
+
+    const { rerender } = render(
+      <Harness register source={urlSource("/files/report.pdf", "report.pdf")} />
+    )
+
+    await waitFor(() => expect(screen.getByText("Page 2 of 5")).toBeTruthy())
+
+    rerender(
+      <Harness
+        register={false}
+        source={urlSource("/files/notes.txt", "notes.txt")}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByText("Page 2 of 5")).toBeNull()
+    })
+    expect(screen.getByText("notes.txt")).toBeTruthy()
+    expect(screen.getByRole("link", { name: "Download" })).toBeTruthy()
   })
 
   it("keeps abort subscriptions in the neutral async module", () => {
@@ -550,6 +756,28 @@ describe("FileViewer text rendering", () => {
       expect("source" in props[0]!).toBe(false)
     }
   )
+
+  it("renders bare FileViewer without children as only the routed document", async () => {
+    const { container } = render(
+      <FileViewer
+        source={urlSource("/files/report.pdf", "report.pdf")}
+        className="viewer-frame"
+        bare
+      />
+    )
+
+    expect(await screen.findByText("Mock PDF viewer")).toBeTruthy()
+    expect(container.querySelector('[data-slot="viewer-root"]')).toBeNull()
+    expect(
+      container.querySelector('[data-slot="file-viewer-header"]')
+    ).toBeNull()
+    expect(container.querySelector('[data-slot="file-viewer-body"]')).toBeNull()
+    expect(pdfRouteMock.props.at(-1)).toMatchObject({
+      bare: true,
+      className: "viewer-frame",
+      download: true,
+    })
+  })
 
   it.each([
     {
@@ -874,7 +1102,7 @@ describe("FileViewer text rendering", () => {
     expect(screen.getByText(expectedMeta)).toBeTruthy()
   })
 
-  it("keeps the download action in the code toolbar", async () => {
+  it("keeps the download action in the code controls", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
     try {
       vi.stubGlobal(

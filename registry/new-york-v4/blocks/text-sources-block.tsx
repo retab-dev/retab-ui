@@ -3,6 +3,16 @@
 import * as React from "react"
 
 import type { Source } from "@/lib/document-source"
+import {
+  FileViewer,
+  FileViewerBody,
+  FileViewerControls,
+  FileViewerHeader,
+  FileViewerMeta,
+  FileViewerSidebar,
+  FileViewerSurface,
+  FileViewerTitle,
+} from "@/components/ui/file-viewer"
 import { SegmentedDocumentProvider } from "@/components/ui/segmented-document-provider"
 import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
 import {
@@ -16,15 +26,14 @@ import {
   useTextSourceTarget,
 } from "@/components/ui/text-source"
 import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
-import {
-  ViewerBody,
-  ViewerRoot,
-  ViewerSidebar,
-  ViewerSurface,
-} from "@/components/ui/viewer"
 import textSample from "@/components/viewers/sample-data/text-sources.json"
 
 const TEXT_URL = "/samples/extraction-run.log"
+const TEXT_SOURCE = {
+  kind: "url" as const,
+  url: TEXT_URL,
+  fileName: "extraction-run.log",
+}
 
 type TextField = SourceField & { source: Source }
 
@@ -80,24 +89,30 @@ function TextSourcesContent({
   const highlight = sourceToTextHighlight(activeSource)
 
   return (
-    <ViewerRoot bare className="h-full min-h-[680px] bg-background">
-      <ViewerBody>
-        <ViewerSurface className="relative">
+    <FileViewer
+      source={TEXT_SOURCE}
+      bare
+      className="h-full min-h-[680px] bg-background"
+    >
+      <FileViewerHeader>
+        <FileViewerTitle />
+        <FileViewerMeta />
+        <FileViewerControls />
+      </FileViewerHeader>
+      <FileViewerBody>
+        <FileViewerSurface className="relative">
           <TextViewer
             ref={viewerRef}
-            source={{
-              kind: "url",
-              url: TEXT_URL,
-              fileName: "extraction-run.log",
-            }}
+            source={TEXT_SOURCE}
             bare
             className="h-full"
+            controls={false}
             highlight={highlight}
             mode="text"
           />
           <SourceIndicator path={link.activePath} found={!!activeSource} />
-        </ViewerSurface>
-        <ViewerSidebar
+        </FileViewerSurface>
+        <FileViewerSidebar
           aria-label="Source fields"
           side="right"
           collapsible="none"
@@ -105,9 +120,9 @@ function TextSourcesContent({
           className="border-l"
         >
           <SourceFieldList fields={FIELDS} link={link} />
-        </ViewerSidebar>
-      </ViewerBody>
-    </ViewerRoot>
+        </FileViewerSidebar>
+      </FileViewerBody>
+    </FileViewer>
   )
 }
 

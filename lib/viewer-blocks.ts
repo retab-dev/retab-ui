@@ -1,7 +1,7 @@
 // Metadata for the document-viewer blocks showcased on /blocks. Each block id
-// maps to a self-contained component (see components/viewer-blocks.tsx) and to a
-// registry item named `<id>-viewer-block` (see registry.json), whose source
-// files feed the Code view.
+// maps to a self-contained component (see components/viewer-block-component-registry.tsx)
+// and to a registry item named `<id>-viewer-block` (see registry.json), whose
+// source files feed the Code view.
 
 type ViewerBlockCategoryId =
   | "primitives"

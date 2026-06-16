@@ -9,8 +9,8 @@ export interface XlsxViewerProps {
   /** Canonical spreadsheet source. */
   source: XlsxDocumentSource
   className?: string
-  toolbar?: boolean
-  /** Show download actions in this viewer's toolbar/error state. */
+  controls?: boolean
+  /** Show download actions in this viewer's controls/error state. */
   download?: boolean
   /** Sheet shown first. Defaults to 0. */
   defaultSheetIndex?: number

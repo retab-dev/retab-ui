@@ -151,7 +151,7 @@ describe("CsvViewer", () => {
             '"Bob","she said ""hi"""',
           fileName: "quoted.csv",
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -173,7 +173,7 @@ describe("CsvViewer", () => {
           text: 'value\n""',
           fileName: "quoted-empty.csv",
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -190,7 +190,7 @@ describe("CsvViewer", () => {
           text: 'note,other\nab"cd,ef\nnext,row',
           fileName: "literal-quotes.csv",
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -210,7 +210,7 @@ describe("CsvViewer", () => {
           text: "\uFEFFname,age\nAlice,30",
           fileName: "bom.csv",
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -231,7 +231,7 @@ describe("CsvViewer", () => {
           fileName: "headerless.csv",
         }}
         dialect={{ delimiter: ",", hasHeader: false }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -252,7 +252,7 @@ describe("CsvViewer", () => {
           text: "a,b\n1\n2,3,4",
           fileName: "ragged.csv",
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -280,7 +280,7 @@ describe("CsvViewer", () => {
           fileName: "data.tsv",
         }}
         dialect={{ delimiter: "\t", hasHeader: true }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -298,7 +298,7 @@ describe("CsvViewer", () => {
           fileName: "escaped-tab.csv",
         }}
         dialect={{ delimiter: "\\t", hasHeader: true }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -315,7 +315,7 @@ describe("CsvViewer", () => {
           text: "a\tb\n1\t2",
           fileName: "inline.tsv",
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -333,7 +333,7 @@ describe("CsvViewer", () => {
           fileName: "comma-data.tsv",
         }}
         dialect={{ delimiter: ",", hasHeader: true }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -352,7 +352,7 @@ describe("CsvViewer", () => {
       <CsvViewer
         source={source}
         dialect={{ delimiter: "\t", hasHeader: true }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -363,7 +363,7 @@ describe("CsvViewer", () => {
       <CsvViewer
         source={source}
         dialect={{ delimiter: ",", hasHeader: true }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -381,7 +381,7 @@ describe("CsvViewer", () => {
       <CsvViewer
         source={source}
         dialect={{ delimiter: ",", hasHeader: true }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -394,7 +394,7 @@ describe("CsvViewer", () => {
       <CsvViewer
         source={source}
         dialect={{ delimiter: ",", hasHeader: false }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -442,7 +442,7 @@ describe("CsvViewer", () => {
     expect(createObjectURL).not.toHaveBeenCalled()
   })
 
-  it("uses singular toolbar counts for one row and one column", () => {
+  it("uses singular controls counts for one row and one column", () => {
     render(
       <CsvViewer
         source={{
@@ -472,7 +472,7 @@ describe("CsvViewer", () => {
             ],
           },
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -507,7 +507,7 @@ describe("CsvViewer", () => {
             rows,
           },
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -534,7 +534,7 @@ describe("CsvViewer", () => {
             rows: [columns.map((_, index) => `value-${index + 1}`)],
           },
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -559,7 +559,7 @@ describe("CsvViewer", () => {
     expect(screen.getByText("value-16")).toBeTruthy()
   })
 
-  it("omits toolbar controls when toolbar is disabled", () => {
+  it("omits controls when controls is disabled", () => {
     render(
       <CsvViewer
         source={{
@@ -567,7 +567,7 @@ describe("CsvViewer", () => {
           text: "a,b\n1,2",
           fileName: "data.csv",
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -590,7 +590,7 @@ describe("CsvViewer", () => {
           },
           fileName: "numbers.csv",
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -626,7 +626,7 @@ describe("CsvViewer", () => {
           fileName: "data.csv",
         }}
         activeCell={{ rowIndex: 0, columnIndex: 1 }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -665,7 +665,7 @@ describe("CsvViewer", () => {
           },
           fileName: "data.csv",
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -701,7 +701,7 @@ describe("CsvViewer", () => {
     })
   })
 
-  it("updates zoom labels and viewer scale from the toolbar", () => {
+  it("updates zoom labels and viewer scale from the controls", () => {
     const { container } = render(
       <CsvViewer
         source={{
@@ -773,7 +773,7 @@ describe("CsvViewer", () => {
           },
         }}
         height={320}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -792,7 +792,7 @@ describe("CsvViewer", () => {
           },
         }}
         fillHeight
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -811,7 +811,7 @@ describe("CsvViewer", () => {
           text: "a,b\n1,2",
           fileName: "first.csv",
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -825,7 +825,7 @@ describe("CsvViewer", () => {
           text: "left\tright\textra\nx\ty\tz",
           fileName: "second.tsv",
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -843,7 +843,7 @@ describe("CsvViewer", () => {
           text: "id,label\n2,two\n1,one",
           fileName: "data.csv",
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -858,7 +858,7 @@ describe("CsvViewer", () => {
           text: "id,label\nb,native-first\na,native-second",
           fileName: "data.csv",
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -881,7 +881,7 @@ describe("CsvViewer", () => {
           text: "name\nz\na",
           fileName: "first.csv",
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -897,7 +897,7 @@ describe("CsvViewer", () => {
           text: "name\nz\na",
           fileName: "second.csv",
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -919,7 +919,7 @@ describe("CsvViewer", () => {
             ],
           },
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -938,7 +938,7 @@ describe("CsvViewer", () => {
             ],
           },
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -967,7 +967,7 @@ describe("CsvViewer", () => {
             ],
           },
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -987,7 +987,7 @@ describe("CsvViewer", () => {
             ],
           },
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1015,7 +1015,7 @@ describe("CsvViewer", () => {
             ],
           },
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1034,7 +1034,7 @@ describe("CsvViewer", () => {
             ],
           },
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1063,7 +1063,7 @@ describe("CsvViewer", () => {
             ],
           },
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1083,7 +1083,7 @@ describe("CsvViewer", () => {
             ],
           },
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1108,13 +1108,13 @@ describe("CsvViewer", () => {
     }
     const source = { kind: "table" as const, table }
     const { container, rerender } = render(
-      <CsvViewer source={source} toolbar={false} />
+      <CsvViewer source={source} controls={false} />
     )
 
     fireEvent.click(screen.getByTitle("Sort by id"))
     expect(csvRows(container)[0]?.textContent).toContain("21one")
 
-    rerender(<CsvViewer source={source} toolbar={false} />)
+    rerender(<CsvViewer source={source} controls={false} />)
 
     expect(
       screen
@@ -1136,7 +1136,7 @@ describe("CsvViewer", () => {
     const { container, rerender } = render(
       <CsvViewer
         source={{ kind: "table", table, fileName: "data.csv" }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1146,7 +1146,7 @@ describe("CsvViewer", () => {
     rerender(
       <CsvViewer
         source={{ kind: "table", table, fileName: "data.csv" }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1167,7 +1167,7 @@ describe("CsvViewer", () => {
           text: "a,b\n1,2",
           fileName: "isolated.csv",
         }}
-        toolbar={false}
+        controls={false}
         isolateStyles
       />
     )
@@ -1234,7 +1234,7 @@ describe("CsvViewer URL source loading", () => {
     render(
       <CsvViewer
         source={{ kind: "url", url: "/data.tsv", fileName: "data.tsv" }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1253,7 +1253,7 @@ describe("CsvViewer URL source loading", () => {
     render(
       <CsvViewer
         source={{ kind: "url", url: "/utf8.csv", fileName: "utf8.csv" }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1648,7 +1648,7 @@ describe("CsvViewer URL source loading", () => {
           url: "/wide-late.csv",
           fileName: "wide-late.csv",
         }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1669,7 +1669,7 @@ describe("CsvViewer Blob source loading", () => {
     render(
       <CsvViewer
         source={csvBlobSource("a,b\n1,2", "csv:blob-test")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1681,7 +1681,7 @@ describe("CsvViewer Blob source loading", () => {
     const { container, rerender } = render(
       <CsvViewer
         source={csvBlobSource("id,label\n2,two\n1,one", "csv:same-blob-id")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1695,7 +1695,7 @@ describe("CsvViewer Blob source loading", () => {
           "id,label\nb,native-first\na,native-second",
           "csv:same-blob-id"
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1749,7 +1749,7 @@ describe("CsvViewer Blob source loading", () => {
     render(
       <CsvViewer
         source={csvBlobSource("ignored", "csv:worker-success")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1810,7 +1810,7 @@ describe("CsvViewer Blob source loading", () => {
     const { container } = render(
       <CsvViewer
         source={csvBlobSource("ignored", "csv:worker-widen")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1840,7 +1840,7 @@ describe("CsvViewer Blob source loading", () => {
     render(
       <CsvViewer
         source={csvBlobSource("a,b\nfallback,ok", "csv:worker-fallback")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1896,7 +1896,7 @@ describe("CsvViewer Blob source loading", () => {
     render(
       <CsvViewer
         source={csvBlobSource("a,b\n1,2", "csv:worker-error")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1929,7 +1929,7 @@ describe("CsvViewer Blob source loading", () => {
     render(
       <CsvViewer
         source={csvBlobSource("a,b\n1,2", "csv:worker-crash")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1974,7 +1974,7 @@ describe("CsvViewer Blob source loading", () => {
     const { rerender } = render(
       <CsvViewer
         source={csvBlobSource("old", "csv:old-worker")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1983,7 +1983,7 @@ describe("CsvViewer Blob source loading", () => {
     rerender(
       <CsvViewer
         source={csvBlobSource("new", "csv:new-worker")}
-        toolbar={false}
+        controls={false}
       />
     )
 

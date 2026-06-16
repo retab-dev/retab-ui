@@ -11,10 +11,12 @@ import type { FileSystemFileEntry } from "./file-system-types"
 export function FileSystemThumbnail({
   file,
   className,
+  presentation,
   resolveFileSource,
 }: {
   file: FileSystemFileEntry
   className?: string
+  presentation?: "document" | "decorative"
   resolveFileSource?: FileSystemSourceResolver
 }) {
   const sourceState = useFileSystemSelectionSourceTask(
@@ -27,6 +29,7 @@ export function FileSystemThumbnail({
     return (
       <FileThumbnail
         file={{ name: file.name, type: file.mimeType ?? "" }}
+        presentation={presentation}
         previewAspectRatio={1}
         previewImageUrl={file.previewImageUrl}
         className={className}
@@ -38,6 +41,7 @@ export function FileSystemThumbnail({
     return (
       <FileThumbnail
         source={source}
+        presentation={presentation}
         previewAspectRatio={1}
         className={className}
       />
@@ -47,6 +51,7 @@ export function FileSystemThumbnail({
   return (
     <FileThumbnail
       file={{ name: file.name, type: file.mimeType ?? "" }}
+      presentation={presentation}
       previewAspectRatio={1}
       className={className}
       state={sourceState.status === "loading" ? "loading" : undefined}

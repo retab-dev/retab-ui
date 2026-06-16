@@ -25,7 +25,12 @@ import type {
   DocxResourceContentProps,
   DocxViewerHandle,
 } from "./docx-viewer-types"
-import { ViewerToolbar, ViewerToolbarSkeleton } from "./viewer-toolbar"
+import {
+  useViewerControlsRegistration,
+  ViewerControls,
+  ViewerControlsSkeleton,
+  type ViewerControlsState,
+} from "./viewer-controls"
 
 export function DocxViewerContent({
   bare = false,
@@ -39,7 +44,7 @@ export function DocxViewerContent({
   onVisiblePageChange,
   resource,
   scale: controlledScale,
-  toolbar = true,
+  controls = true,
 }: DocxResourceContentProps & {
   forwardedRef?: React.ForwardedRef<DocxViewerHandle>
 }) {
@@ -171,6 +176,17 @@ export function DocxViewerContent({
     renderIndex,
     ready,
   })
+  useDocxControlsRegistration({
+    currentPage,
+    download,
+    downloadAction: resource.originalDownload,
+    fitWidth,
+    numPages,
+    ready,
+    scale,
+    zoomIn,
+    zoomOut,
+  })
 
   React.useImperativeHandle(
     forwardedRef ?? null,
@@ -199,9 +215,9 @@ export function DocxViewerContent({
     <DocxViewerFrame bare={bare} className={className}>
       <style>{DOCX_SCOPED_STYLES}</style>
       <style>{`::highlight(${highlightName}){background-color:color-mix(in oklab, var(--primary) 22%, transparent);}`}</style>
-      {toolbar ? (
+      {controls ? (
         ready ? (
-          <ViewerToolbar
+          <ViewerControls
             position={{
               kind: "page",
               current: currentPage,
@@ -220,7 +236,7 @@ export function DocxViewerContent({
             }
           />
         ) : (
-          <ViewerToolbarSkeleton position zoom download={download} />
+          <ViewerControlsSkeleton position zoom download={download} />
         )
       ) : null}
       <DocxViewerBody>
@@ -245,4 +261,66 @@ export function DocxViewerContent({
       </DocxViewerBody>
     </DocxViewerFrame>
   )
+}
+
+function useDocxControlsRegistration({
+  currentPage,
+  download,
+  downloadAction,
+  fitWidth,
+  numPages,
+  ready,
+  scale,
+  zoomIn,
+  zoomOut,
+}: {
+  currentPage: number
+  download: boolean
+  downloadAction: NonNullable<ViewerControlsState["downloads"]>[number]
+  fitWidth: () => void
+  numPages: number
+  ready: boolean
+  scale: number
+  zoomIn: () => void
+  zoomOut: () => void
+}) {
+  const onControlsChange = useViewerControlsRegistration()
+  const controlsState = React.useMemo<ViewerControlsState>(
+    () => ({
+      loading: !ready,
+      position: ready
+        ? {
+            kind: "page",
+            current: currentPage,
+            total: numPages,
+          }
+        : null,
+      zoom: ready
+        ? {
+            scale,
+            onZoomOut: zoomOut,
+            onZoomIn: zoomIn,
+            onFit: fitWidth,
+          }
+        : null,
+      downloads: download && downloadAction ? [downloadAction] : [],
+    }),
+    [
+      currentPage,
+      download,
+      downloadAction,
+      fitWidth,
+      numPages,
+      ready,
+      scale,
+      zoomIn,
+      zoomOut,
+    ]
+  )
+
+  React.useEffect(() => {
+    if (!onControlsChange) return
+    onControlsChange(controlsState)
+    return () => onControlsChange(null)
+  }, [onControlsChange, controlsState])
 }

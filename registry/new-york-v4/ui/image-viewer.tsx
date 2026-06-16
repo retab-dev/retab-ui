@@ -38,6 +38,13 @@ export type ImageResourceContentProps = Omit<ImageViewerProps, "source"> & {
   resource: ViewerResource
 }
 
+export type ImageViewerProviderProps = {
+  children: React.ReactNode
+  resource: ViewerResource
+}
+
+export type ImageViewerFramesProps = Omit<ImageResourceContentProps, "resource">
+
 export const ImageViewer = React.forwardRef<
   ImageViewerHandle,
   ImageViewerProps
@@ -62,7 +69,7 @@ export const ImageResourceContent = React.forwardRef<
         className={props.className}
         fallbackFrameSize={props.fallbackFrameSize}
         scale={props.scale ?? props.defaultScale}
-        toolbar={props.toolbar}
+        controls={props.controls}
       />
     )
   }
@@ -81,7 +88,7 @@ export const ImageResourceContent = React.forwardRef<
             className={props.className}
             fallbackFrameSize={props.fallbackFrameSize}
             scale={props.scale ?? props.defaultScale}
-            toolbar={props.toolbar}
+            controls={props.controls}
           />
         }
       >
@@ -89,6 +96,39 @@ export const ImageResourceContent = React.forwardRef<
       </React.Suspense>
     </ViewerErrorBoundary>
   )
+})
+
+const ImageViewerResourceContext = React.createContext<ViewerResource | null>(
+  null
+)
+
+export function ImageViewerProvider({
+  children,
+  resource,
+}: ImageViewerProviderProps) {
+  return (
+    <ImageViewerResourceContext.Provider value={resource}>
+      {children}
+    </ImageViewerResourceContext.Provider>
+  )
+}
+
+function useImageViewerResource(): ViewerResource {
+  const resource = React.useContext(ImageViewerResourceContext)
+  if (!resource) {
+    throw new Error(
+      "ImageViewerFrames must be used within ImageViewerProvider."
+    )
+  }
+  return resource
+}
+
+export const ImageViewerFrames = React.forwardRef<
+  ImageViewerHandle,
+  ImageViewerFramesProps
+>(function ImageViewerFrames(props, ref) {
+  const resource = useImageViewerResource()
+  return <ImageResourceContent {...props} ref={ref} resource={resource} />
 })
 
 export function looksLikeTiff(

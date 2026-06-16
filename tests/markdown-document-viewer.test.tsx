@@ -53,7 +53,7 @@ describe("MarkdownDocumentViewer", () => {
       <MarkdownDocumentViewer
         className="h-80 w-[520px]"
         source={markdownSource(rows.join("\n\n"))}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -83,7 +83,7 @@ describe("MarkdownDocumentViewer", () => {
             "| Beta | 2 |",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -109,7 +109,7 @@ describe("MarkdownDocumentViewer", () => {
     const { container } = render(
       <MarkdownDocumentViewer
         source={markdownSource("# Ready")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -127,7 +127,7 @@ describe("MarkdownDocumentViewer", () => {
         source={markdownSource(
           ["```ts", "const answer = 42", "```"].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -165,7 +165,7 @@ describe("MarkdownDocumentViewer", () => {
             "[^one]: Footnote body.",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -196,7 +196,7 @@ describe("MarkdownDocumentViewer", () => {
             '<img src="x" onerror="alert(1)" />',
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -216,7 +216,7 @@ describe("MarkdownDocumentViewer", () => {
             "\n"
           )
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -259,7 +259,7 @@ describe("MarkdownDocumentViewer", () => {
           )
         )}
         highlight={{ start: 84, end: 84 }}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -292,7 +292,7 @@ describe("MarkdownDocumentViewer", () => {
       <MarkdownDocumentViewer
         className="h-80 w-[620px]"
         source={markdownSource(markdown)}
-        toolbar={false}
+        controls={false}
       />
     )
 

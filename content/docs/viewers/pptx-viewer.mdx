@@ -108,11 +108,11 @@ The PPTX overlay field is `slideNumber`, a 1-based slide index.
 | `scale`                  | `number`                              | Controlled scale; omit to let the viewer own fit-width and zoom state.                                                               |
 | `defaultScale`           | `number`                              | Initial uncontrolled scale; omit to start in fit-width mode.                                                                         |
 | `onScaleChange`          | `(scale: number \| null) => void`     | Called by zoom controls in controlled mode. `null` means fit width.                                                                  |
-| `toolbar`                | `boolean`                             | Show the zoom/rotate/download toolbar. Defaults to `true`.                                                                           |
+| `controls`                | `boolean`                             | Show the zoom/rotate/download controls. Defaults to `true`.                                                                           |
 | `renderSlideOverlay`     | `(props) => ReactNode`                | Per-slide overlay; receives `{ slideNumber, width, height, scale, rotation }`.                                                       |
 | `onVisibleSlideChange`   | `(slide: number) => void`             | Fires with the slide nearest the top of the viewport on scroll.                                                                      |
 | `onScrollProgressChange` | `(progress: number) => void`          | Fires with scroll progress in `[0, 1]`.                                                                                              |
-| `header`                 | `ReactNode`                           | Full-width strip below the toolbar (e.g. a legend).                                                                                  |
+| `header`                 | `ReactNode`                           | Full-width strip below the controls (e.g. a legend).                                                                                  |
 | `aside`                  | `ReactNode`                           | Left rail alongside the scrolling slides (e.g. a thumbnail rail).                                                                    |
 | `eager`                  | `boolean`                             | Render slides the moment they near the viewport, even mid-scroll. Pass `false` to defer uncached renders until scrolling settles. Defaults to `true`. |
 | `bare`                   | `boolean`                             | Drop the outer border/background so the viewer fills its container.                                                                  |

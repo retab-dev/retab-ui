@@ -53,7 +53,7 @@ describe("VanillaChengTextViewer parity", () => {
           ].join("\n"),
           "notes.md"
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -79,7 +79,7 @@ describe("VanillaChengTextViewer parity", () => {
         source={textSource("# not a heading\nhighlight me", "notes.md")}
         highlight={{ start: 2, end: 2 }}
         mode="text"
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -98,7 +98,7 @@ describe("VanillaChengTextViewer parity", () => {
     expect(highlightedLine.className).toContain("bg-primary/12")
   })
 
-  it("keeps the shared toolbar and zoom behavior", async () => {
+  it("keeps the shared controls and zoom behavior", async () => {
     render(
       <VanillaChengTextViewer source={textSource("zoomable prose")} />
     )
@@ -121,7 +121,7 @@ describe("VanillaChengTextViewer parity", () => {
             "\n"
           )
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 

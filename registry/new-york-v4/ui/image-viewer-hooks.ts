@@ -19,7 +19,7 @@ const IMAGE_SCROLL_HEADROOM = 48
 const IMAGE_READING_MARKER_RATIO = 0.2
 const IMAGE_VIEWER_HORIZONTAL_PADDING = 32
 
-/** Bounds for the viewer's zoom range, shared by fit-width and the toolbar. */
+/** Bounds for the viewer's zoom range, shared by fit-width and the controls. */
 export const MIN_VIEWER_SCALE = 0.25
 export const MAX_VIEWER_SCALE = 5
 

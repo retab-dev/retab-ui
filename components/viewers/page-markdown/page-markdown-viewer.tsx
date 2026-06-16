@@ -20,7 +20,7 @@ import {
   zoomPageScale,
 } from "@/components/viewers/page-markdown/page-markdown-scale"
 import { usePageMarkdownSync } from "@/components/viewers/page-markdown/page-markdown-sync"
-import { PageMarkdownToolbar } from "@/components/viewers/page-markdown/page-markdown-toolbar"
+import { PageMarkdownControls } from "@/components/viewers/page-markdown/page-markdown-controls"
 import {
   type PageMarkdownDocumentHandle,
   type PageMarkdownDocumentState,
@@ -308,7 +308,7 @@ export function PageMarkdownViewerHeader({
 
   return (
     <ViewerHeader className={className}>
-      <PageMarkdownToolbar
+      <PageMarkdownControls
         className="border-b-0"
         currentPage={Math.min(currentPage, pageCount)}
         pageCount={pageCount}

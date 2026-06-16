@@ -28,7 +28,7 @@ import {
   type PretextMarkdownScrollAnchor,
 } from "./pretext-markdown-virtualizer"
 import { ScrollArea } from "./scroll-area"
-import { TextViewerFrame, TextViewerToolbar } from "./text-viewer-chrome"
+import { TextViewerFrame, TextViewerControls } from "./text-viewer-chrome"
 import { normalizeTextLineRange } from "./text-viewer-ranges"
 import {
   readTextResource,
@@ -67,7 +67,7 @@ type PretextMarkdownSearchMatch = {
 export function PretextMarkdownViewerContent({
   resource,
   className,
-  toolbar = true,
+  controls = true,
   download = true,
   highlight,
   bare = false,
@@ -534,8 +534,8 @@ export function PretextMarkdownViewerContent({
 
   return (
     <TextViewerFrame className={className} bare={bare}>
-      {toolbar ? (
-        <TextViewerToolbar
+      {controls ? (
+        <TextViewerControls
           wordCount={document.wordCount}
           fontScale={fontScale}
           leading={

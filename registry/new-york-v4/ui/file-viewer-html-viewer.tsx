@@ -5,9 +5,10 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import type { ViewerResource } from "@/lib/viewer-resource"
 
-import { isAbortError } from "./viewer-abortable-request"
-import { useZoom, ViewerFallback, ZoomActions } from "./file-viewer-chrome"
+import { ViewerFallback } from "./file-viewer-fallback"
 import { loadTextResource } from "./file-viewer-text-resource"
+import { isAbortError } from "./viewer-abortable-request"
+import { useZoom, ZoomActions } from "./viewer-zoom"
 
 type HtmlLoadState =
   | { status: "loading"; key: unknown }

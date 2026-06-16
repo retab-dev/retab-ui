@@ -1804,8 +1804,14 @@ describe("fixed grid virtualization math", () => {
       vi.advanceTimersByTime(80)
     })
 
-    expect(result.current.virtualRows[0]?.index).toBe(50)
-    expect(result.current.virtualRows.at(-1)?.index).toBe(82)
+    // When the handled scroll settles, the viewport re-reads the live scroll
+    // metrics and commits them as a non-jumping window, so the canonical React
+    // window uses the full row overscan (5) on both edges rather than the zero
+    // jump-overscan. visibleStart 50 expands to 45; the overscan-extended tail
+    // reaches 87. This keeps freshly-revealed leading-edge rows in the window
+    // so the imperative patcher never leaves a blank gap at rest.
+    expect(result.current.virtualRows[0]?.index).toBe(45)
+    expect(result.current.virtualRows.at(-1)?.index).toBe(87)
   })
 
   it("lets handled small row-scroll viewports use the same deferred React update path", () => {

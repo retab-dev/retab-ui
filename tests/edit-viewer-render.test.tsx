@@ -19,6 +19,11 @@ import {
 import type { EditViewerField } from "@/components/viewers/edit/edit-viewer-types"
 
 const viewerMocks = vi.hoisted(() => ({
+  currentFileViewerSource: null as {
+    kind: "url"
+    url: string
+    fileName?: string
+  } | null,
   pdfViewerMounts: vi.fn(),
   pdfViewerRenders: vi.fn(),
   scrollToPageArea: vi.fn(),
@@ -63,16 +68,61 @@ vi.mock("@/components/ui/pdf-viewer", () => ({
       </div>
     )
   }),
+  PdfViewerProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  PdfViewerPages: React.forwardRef(function PdfViewerPagesMock(
+    props: {
+      renderPageOverlay?: (props: {
+        pageNumber: number
+        width: number
+        height: number
+        scale: number
+        rotation: number
+      }) => React.ReactNode
+    },
+    ref: React.ForwardedRef<{
+      scrollToPage: (pageNumber: number, options?: ScrollToOptions) => void
+      scrollToPageArea: typeof viewerMocks.scrollToPageArea
+      getViewportElement: () => HTMLDivElement | null
+    }>
+  ) {
+    const source = viewerMocks.currentFileViewerSource
+    viewerMocks.pdfViewerRenders(source?.url)
+    React.useEffect(() => {
+      viewerMocks.pdfViewerMounts(source?.url)
+    }, [source?.url])
+    React.useImperativeHandle(ref, () => ({
+      scrollToPage: vi.fn(),
+      scrollToPageArea: viewerMocks.scrollToPageArea,
+      getViewportElement: () => null,
+    }))
+    return (
+      <div data-testid="pdf-viewer" data-src={source?.url}>
+        {props.renderPageOverlay?.({
+          pageNumber: 1,
+          width: 100,
+          height: 100,
+          scale: 1,
+          rotation: 0,
+        })}
+      </div>
+    )
+  }),
 }))
 
 vi.mock("@/components/ui/file-viewer", () => ({
   FileViewer: (props: {
     source: { kind: "url"; url: string; fileName?: string }
-  }) => (
-    <div data-testid="file-viewer" data-src={props.source.url}>
-      {props.source.fileName}
-    </div>
-  ),
+    children?: React.ReactNode
+  }) => {
+    viewerMocks.currentFileViewerSource = props.source
+    return (
+      <div data-testid="file-viewer" data-src={props.source.url}>
+        {props.children ?? props.source.fileName}
+      </div>
+    )
+  },
 }))
 
 afterEach(() => {
@@ -199,7 +249,7 @@ describe("EditViewer", () => {
     expect(screen.getByRole("tab", { name: "Source view" })).toBeTruthy()
   })
 
-  it("omits the filled summary from the header toolbar", () => {
+  it("omits the filled summary from the header controls", () => {
     render(
       <EditViewer
         result={{ fields }}

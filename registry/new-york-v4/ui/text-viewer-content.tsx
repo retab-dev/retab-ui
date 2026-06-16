@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 import type { ViewerResource } from "@/lib/viewer-resource"
 
 import { ScrollArea } from "./scroll-area"
-import { TextViewerFrame, TextViewerToolbar } from "./text-viewer-chrome"
+import { TextViewerControls, TextViewerFrame } from "./text-viewer-chrome"
 import {
   createPreparedTextDocument,
   getCodeVisibleLineWindow,
@@ -52,15 +52,25 @@ import {
   useTextVirtualViewport,
   type TextFrameScrollAnchor,
 } from "./text-viewer-virtualization"
+import {
+  useViewerControlsRegistration,
+  type ViewerControlsState,
+} from "./viewer-controls"
 
 const TEXT_VIEWER_HORIZONTAL_PADDING = 16
 const TEXT_VIEWER_INITIAL_TEXT_WIDTH = 768
 const TEXT_VIEWER_OVERSCAN_PX = 320
 
+type TextViewerContentProps = Omit<TextViewerProps, "source"> & {
+  resource: ViewerResource
+  retryVersion: number
+  forwardedRef?: React.ForwardedRef<TextViewerHandle>
+}
+
 export function TextViewerContent({
   resource,
   className,
-  toolbar = true,
+  controls = true,
   download = true,
   highlight,
   bare = false,
@@ -69,11 +79,7 @@ export function TextViewerContent({
   retryVersion,
   forwardedRef,
   mode: forcedMode,
-}: TextViewerProps & {
-  resource: ViewerResource
-  retryVersion: number
-  forwardedRef?: React.ForwardedRef<TextViewerHandle>
-}) {
+}: TextViewerContentProps) {
   const bounds = React.useMemo(
     () => resolvedTextViewerBounds({ maxBytes, maxLines }),
     [maxBytes, maxLines]
@@ -214,6 +220,16 @@ export function TextViewerContent({
     captureScrollAnchor()
     setFontScale(1)
   }
+  const zoomOut = React.useCallback(() => zoom(1 / 1.2), [zoom])
+  const zoomIn = React.useCallback(() => zoom(1.2), [zoom])
+  useTextControlsRegistration({
+    downloadAction,
+    fontScale,
+    onResetZoom: resetZoom,
+    onZoomIn: zoomIn,
+    onZoomOut: zoomOut,
+    wordCount: preparedDocument.wordCount,
+  })
 
   React.useImperativeHandle(
     forwardedRef ?? null,
@@ -261,13 +277,13 @@ export function TextViewerContent({
 
   return (
     <TextViewerFrame className={className} bare={bare}>
-      {toolbar ? (
-        <TextViewerToolbar
+      {controls ? (
+        <TextViewerControls
           wordCount={preparedDocument.wordCount}
           fontScale={fontScale}
           downloadAction={downloadAction}
-          onZoomOut={() => zoom(1 / 1.2)}
-          onZoomIn={() => zoom(1.2)}
+          onZoomOut={zoomOut}
+          onZoomIn={zoomIn}
           onResetZoom={resetZoom}
         />
       ) : null}
@@ -290,6 +306,44 @@ export function TextViewerContent({
       </ScrollArea>
     </TextViewerFrame>
   )
+}
+
+function useTextControlsRegistration({
+  downloadAction,
+  fontScale,
+  onResetZoom,
+  onZoomIn,
+  onZoomOut,
+  wordCount,
+}: {
+  downloadAction: ViewerResource["originalDownload"] | null
+  fontScale: number
+  onResetZoom: () => void
+  onZoomIn: () => void
+  onZoomOut: () => void
+  wordCount: number
+}) {
+  const onControlsChange = useViewerControlsRegistration()
+  const controlsState = React.useMemo<ViewerControlsState>(
+    () => ({
+      title: `${wordCount} word${wordCount === 1 ? "" : "s"}`,
+      zoom: {
+        scale: fontScale,
+        onZoomOut,
+        onZoomIn,
+        onFit: onResetZoom,
+        fitLabel: "Reset zoom",
+      },
+      downloads: downloadAction ? [downloadAction] : [],
+    }),
+    [downloadAction, fontScale, onResetZoom, onZoomIn, onZoomOut, wordCount]
+  )
+
+  React.useEffect(() => {
+    if (!onControlsChange) return
+    onControlsChange(controlsState)
+    return () => onControlsChange(null)
+  }, [onControlsChange, controlsState])
 }
 
 type TextVirtualCanvasProps = {

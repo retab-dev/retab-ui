@@ -33,6 +33,16 @@ import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-so
 const SPLIT_PDF_URL = "/samples/harris_2023_federal_state_returns.pdf"
 /** Real partition result: ViT paper partitioned by section (8 keyed chunks over 22 pages). */
 const PARTITION_PDF_URL = "/samples/an-image-is-worth-16x16-words.pdf"
+const splitSource = {
+  kind: "url" as const,
+  url: SPLIT_PDF_URL,
+  fileName: "harris_2023_federal_state_returns.pdf",
+}
+const partitionSource = {
+  kind: "url" as const,
+  url: PARTITION_PDF_URL,
+  fileName: "an-image-is-worth-16x16-words.pdf",
+}
 
 const partitionResult: PartitionResult = {
   output: partitionSample.output as PartitionResult["output"],
@@ -102,6 +112,7 @@ export function PartitionViewerDemo() {
       style={{ height: 640 }}
     >
       <PartitionViewer
+        source={partitionSource}
         result={partitionResult}
         document={<PartitionDemoDocument />}
       />
@@ -143,11 +154,7 @@ function PartitionDemoDocument() {
   return (
     <PdfViewer
       ref={controls.setDocumentHandle}
-      source={{
-        kind: "url",
-        url: PARTITION_PDF_URL,
-        fileName: "an-image-is-worth-16x16-words.pdf",
-      }}
+      source={partitionSource}
       bare
       onVisiblePageChange={controls.onCurrentPageChange}
       onScrollProgressChange={controls.onScrollProgressChange}
@@ -163,6 +170,7 @@ export function SplitViewerDemo() {
       style={{ height: 640 }}
     >
       <SplitViewer
+        source={splitSource}
         result={splitResult}
         document={<SplitViewerDemoDocument />}
       />
@@ -176,11 +184,7 @@ function SplitViewerDemoDocument() {
   return (
     <PdfViewer
       ref={controls.setDocumentHandle}
-      source={{
-        kind: "url",
-        url: SPLIT_PDF_URL,
-        fileName: "harris_2023_federal_state_returns.pdf",
-      }}
+      source={splitSource}
       bare
       onVisiblePageChange={controls.onCurrentPageChange}
       onScrollProgressChange={controls.onScrollProgressChange}

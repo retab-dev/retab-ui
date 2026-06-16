@@ -45,7 +45,7 @@ function renderTable(rows: string[][]) {
   return render(
     <CsvViewer
       source={{ kind: "table", table: { columns: ["v", "label"], rows } }}
-      toolbar={false}
+      controls={false}
     />
   )
 }

@@ -9,7 +9,7 @@ import { Button } from "./button"
 import { Skeleton } from "./skeleton"
 import { TextCodeViewerFrame } from "./text-code-viewer-chrome"
 import { ViewerDownloadControl } from "./viewer-download"
-import { ViewerToolbar, ViewerToolbarSkeleton } from "./viewer-toolbar"
+import { ViewerControls, ViewerControlsSkeleton } from "./viewer-controls"
 
 export function CodeViewerFrame({
   className,
@@ -33,7 +33,7 @@ export function CodeViewerFrame({
   )
 }
 
-export function CodeViewerToolbar({
+export function CodeViewerControls({
   lineCount,
   fontScale,
   downloadAction,
@@ -49,7 +49,7 @@ export function CodeViewerToolbar({
   onResetZoom: () => void
 }) {
   return (
-    <ViewerToolbar
+    <ViewerControls
       title={`${lineCount} line${lineCount === 1 ? "" : "s"}`}
       zoom={{
         scale: fontScale,
@@ -65,18 +65,18 @@ export function CodeViewerToolbar({
 
 export function CodeViewerFallback({
   className,
-  toolbar = true,
+  controls = true,
   download = true,
   bare,
 }: {
   className?: string
-  toolbar?: boolean
+  controls?: boolean
   download?: boolean
   bare?: boolean
 }) {
   return (
     <CodeViewerFrame className={className} bare={bare}>
-      {toolbar ? <ViewerToolbarSkeleton title zoom download={download} /> : null}
+      {controls ? <ViewerControlsSkeleton title zoom download={download} /> : null}
       <div
         className="min-h-0 flex-1 space-y-2 overflow-hidden p-4"
         data-slot="code-body-skeleton"

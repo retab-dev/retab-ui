@@ -64,10 +64,10 @@ flowchart TB
   %% Top-level viewer lifecycle
   subgraph ViewerLifecycle["PPTX Viewer Lifecycle"]
     ClientGate["useIsClient()<br/>useSyncExternalStore<br/>SSR=false, hydrated=true"]
-    Fallback["PptxViewerFallback<br/>toolbar skeleton + first slide skeleton<br/>uses fallbackSlideSize or 960x720"]
+    Fallback["PptxViewerFallback<br/>controls skeleton + first slide skeleton<br/>uses fallbackSlideSize or 960x720"]
     ErrorBoundary["ViewerErrorBoundary<br/>format=pptx sourceKind=resource.sourceKind<br/>download=originalDownload<br/>resetKey=resource + scale/defaultScale + eager"]
     Suspense["React.Suspense<br/>fallback=PptxViewerFallback"]
-    Content["PptxViewerContent<br/>source retention, toolbar, layout, scroller"]
+    Content["PptxViewerContent<br/>source retention, controls, layout, scroller"]
     Retry["Retry button path<br/>onRetry -> evictPptxSource(resource.content)<br/>clears source cache + load timing"]
   end
 
@@ -128,11 +128,11 @@ flowchart TB
     ViewportWidth["usePptxViewportWidth<br/>containerRef + ResizeObserver<br/>viewportWidth"]
     FitScale["getPptxFitScale(viewportWidth, baseWidth)<br/>(width - 32) / baseWidth<br/>clamp 0.1..5, fallback 1"]
     ZoomHook["usePptxZoom<br/>controlled scale or uncontrolled fit/manual<br/>normalize 0.25..5<br/>setViewerScale(null) = fit width"]
-    Rotation["rotation state<br/>toolbar increments +90 modulo 360"]
+    Rotation["rotation state<br/>controls increments +90 modulo 360"]
     VisibleHook["usePptxVisibleSlide<br/>scroll viewport ref<br/>progress = scrollTop / scrollable<br/>visible slide marker at 20% viewport height"]
     ScrollActivity["createPptxScrollActivity<br/>idle after 120ms<br/>only used to defer uncached renders when eager=false"]
-    Toolbar["PptxToolbar<br/>Slide current/count<br/>minus, percent, plus, fit, rotate, download"]
-    Layout["Viewer shell<br/>optional aside left rail<br/>optional header below toolbar<br/>PptxSlideScroller fills remaining space"]
+    Controls["PptxToolbar<br/>Slide current/count<br/>minus, percent, plus, fit, rotate, download"]
+    Layout["Viewer shell<br/>optional aside left rail<br/>optional header below controls<br/>PptxSlideScroller fills remaining space"]
     Scroller["PptxSlideScroller<br/>ScrollArea viewport<br/>renders one PptxSlideFrame per slide"]
     Frame["PptxSlideFrame<br/>IntersectionObserver root = scroll viewport<br/>rootMargin 150% 0px<br/>skeleton until near viewport"]
     SizeMath["Frame sizing<br/>slideSize = baseSize * zoomScale<br/>visibleSize = rotated slide size<br/>outer frame sized to visibleSize<br/>inner canvas container rotated around center"]
@@ -145,7 +145,7 @@ flowchart TB
   Content --> ViewportWidth --> FitScale --> ZoomHook
   Content --> VisibleHook
   Content --> ScrollActivity
-  Content --> Toolbar
+  Content --> Controls
   Content --> Layout --> Scroller --> Frame --> Canvas
   Content --> Rotation --> SizeMath
   ZoomHook --> SizeMath
@@ -154,10 +154,10 @@ flowchart TB
   Core --> SizeMath
   Frame --> Overlay
   Canvas --> SlideTiming
-  Toolbar -->|"zoom out/in"| ZoomHook
-  Toolbar -->|"fit width"| ZoomHook
-  Toolbar -->|"rotate"| Rotation
-  Toolbar -->|"download"| DownloadUI["ViewerDownloadControl"]
+  Controls -->|"zoom out/in"| ZoomHook
+  Controls -->|"fit width"| ZoomHook
+  Controls -->|"rotate"| Rotation
+  Controls -->|"download"| DownloadUI["ViewerDownloadControl"]
 
   %% Bitmap cache and render queue
   subgraph RenderQueueCache["Serialized Render Queue + Bitmap Cache"]
@@ -267,7 +267,7 @@ sequenceDiagram
   else resolved
     Hook->>RS: retain()
     Hook-->>PV: PptxSource
-    PV-->>C: toolbar, optional aside/header, slide scroller
+    PV-->>C: controls, optional aside/header, slide scroller
   end
 
   UI->>RS: hasBitmap(slideIndex, zoomScale * DPR)
@@ -418,7 +418,7 @@ flowchart TB
   ErrorCard --> Download["Download original file"]
 
   SlideState --> InlineSlideError["Inline slide message<br/>Could not render slide N"]
-  InlineSlideError --> ViewerContinues["Other slides and toolbar continue to work"]
+  InlineSlideError --> ViewerContinues["Other slides and controls continue to work"]
 ```
 
 ## File Map
@@ -446,7 +446,7 @@ flowchart TB
     O["pptx-viewer-viewport.ts<br/>ResizeObserver width"]
     P["pptx-viewer-visible-slide.ts<br/>current slide + progress"]
     Q["pptx-viewer-zoom.ts<br/>controlled/uncontrolled zoom"]
-    R["pptx-viewer-toolbar.tsx<br/>controls + download"]
+    R["pptx-viewer-controls.tsx<br/>controls + download"]
     S["pptx-viewer-slide.tsx<br/>scroller, frames, canvas, overlay"]
     T["pptx-viewer-test-utils.ts<br/>test cache/module reset"]
   end

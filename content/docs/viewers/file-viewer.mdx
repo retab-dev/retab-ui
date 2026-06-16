@@ -47,28 +47,52 @@ force a category.
 
 ## Composition Boundaries
 
-`FileViewer` is a file router and renderer. Do not use it to own workflow
-layout: use `ViewerRoot`, `ViewerBody`, `ViewerSidebar`, and `ViewerSurface`
-when a workflow needs sidebars or composed panes.
+`FileViewer` is a file router and file-scoped composition root. Do not use it to
+own workflow semantics, but do use its named anatomy when a file-backed surface
+needs sidebars or composed panes.
 
-`ViewerRoot bare` removes the spatial frame. `FileViewer bare` removes the
-file-renderer chrome. `DomainViewer bare` chooses whether the domain viewer's
-internal `ViewerRoot` is framed.
+Use the file viewer parts when a workflow needs one file header above domain
+chrome:
+
+```tsx
+<FileViewer source={source} defaultOpen>
+  <FileViewerHeader>
+    <FileViewerSidebarTrigger />
+    <FileViewerTitle />
+    <FileViewerMeta />
+    <FileViewerControls />
+  </FileViewerHeader>
+  <FileViewerBody>
+    <FileViewerSidebar aria-label="Document sections" />
+    <FileViewerSurface>
+      <FileViewerDocument />
+    </FileViewerSurface>
+  </FileViewerBody>
+</FileViewer>
+```
+
+`FileViewerTitle` answers what file this is, `FileViewerMeta` renders passive
+facts, and `FileViewerControls` renders operational controls registered by the
+active file renderer. `FileViewerDocument` is the routed file renderer.
+
+`FileViewer bare` removes the spatial frame when children are supplied. Without
+children, `FileViewer bare` renders only the routed file document for nested
+leaf previews.
 
 ## Supported types
 
-| Category     | Extensions                                                                      | Rendered by         |
-| ------------ | ------------------------------------------------------------------------------- | ------------------- |
-| PDF          | `pdf`                                                                           | PDF Viewer          |
-| Word         | `docx`                                                                          | DOCX Viewer         |
-| Spreadsheet  | `xlsx`, `xls`, `xlsm`                                                           | XLSX Viewer         |
-| Presentation | `pptx`                                                                          | PPTX Viewer         |
-| Tabular      | `csv`, `tsv`                                                                    | CSV Viewer          |
-| Image        | `png`, `jpg`, `jpeg`, `gif`, `webp`, `avif`, `svg`, `bmp`, `ico`, `tif`, `tiff` | Image Viewer        |
+| Category     | Extensions                                                                      | Rendered by             |
+| ------------ | ------------------------------------------------------------------------------- | ----------------------- |
+| PDF          | `pdf`                                                                           | PDF Viewer              |
+| Word         | `docx`                                                                          | DOCX Viewer             |
+| Spreadsheet  | `xlsx`, `xls`, `xlsm`                                                           | XLSX Viewer             |
+| Presentation | `pptx`                                                                          | PPTX Viewer             |
+| Tabular      | `csv`, `tsv`                                                                    | CSV Viewer              |
+| Image        | `png`, `jpg`, `jpeg`, `gif`, `webp`, `avif`, `svg`, `bmp`, `ico`, `tif`, `tiff` | Image Viewer            |
 | Markdown     | `md`, `markdown`, `text/markdown`                                               | Pretext Markdown Viewer |
-| HTML         | `html`, `htm`                                                                   | sandboxed iframe    |
-| Text         | `txt`, `text`                                                                   | Pretext Text Viewer |
-| Code & logs  | `log`, `json`, `xml`, `yaml`, `mdx`, `ts`, `py`, `go`, …                        | Code Viewer         |
+| HTML         | `html`, `htm`                                                                   | sandboxed iframe        |
+| Text         | `txt`, `text`                                                                   | Pretext Text Viewer     |
+| Code & logs  | `log`, `json`, `xml`, `yaml`, `mdx`, `ts`, `py`, `go`, …                        | Code Viewer             |
 
 Anything unrecognized falls back to a download card.
 

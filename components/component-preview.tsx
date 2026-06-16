@@ -19,6 +19,7 @@ import { NonButtonTrigger } from "@/registry/new-york-v4/blocks/dropzone-non-but
 import { PinboardDropSurface } from "@/registry/new-york-v4/blocks/dropzone-pinboard-drop-surface"
 import { RequiredPacketSlots } from "@/registry/new-york-v4/blocks/dropzone-required-packet-slots"
 import { SpreadsheetImportCard } from "@/registry/new-york-v4/blocks/dropzone-spreadsheet-import-card"
+import { UploadProgressQueue } from "@/registry/new-york-v4/blocks/dropzone-upload-progress-queue"
 import { ValidationOnly } from "@/registry/new-york-v4/blocks/dropzone-validation-only"
 
 /**
@@ -82,6 +83,10 @@ const REGISTRY = {
   "dropzone-media-transcript-queue": {
     component: MediaTranscriptQueue,
     src: "registry/new-york-v4/blocks/dropzone-media-transcript-queue.tsx",
+  },
+  "dropzone-upload-progress-queue": {
+    component: UploadProgressQueue,
+    src: "registry/new-york-v4/blocks/dropzone-upload-progress-queue.tsx",
   },
   "dropzone-evidence-timeline": {
     component: EvidenceTimeline,

@@ -153,7 +153,7 @@ describe("XlsxViewer imperative ref", () => {
             url: `/mounted-preload-${crypto.randomUUID()}.xlsx`,
             fileName: "mounted-preload.xlsx",
           }}
-          toolbar={false}
+          controls={false}
           onSheetChange={onSheetChange}
         />
       )
@@ -207,7 +207,7 @@ describe("XlsxViewer imperative ref", () => {
             identityKey: "blob:xlsx",
             fileName: "local.xlsx",
           })}
-          toolbar={false}
+          controls={false}
         />
       )
     })
@@ -354,7 +354,7 @@ describe("XlsxViewer imperative ref", () => {
             identityKey: "blob:xlsx-transfer-request",
             fileName: "transfer-request.xlsx",
           })}
-          toolbar={false}
+          controls={false}
         />
       )
     })
@@ -378,7 +378,7 @@ describe("XlsxViewer imperative ref", () => {
 
     let first!: ReturnType<typeof render>
     await act(async () => {
-      first = render(<XlsxViewer source={source} toolbar={false} />)
+      first = render(<XlsxViewer source={source} controls={false} />)
     })
     await emitWorkbook(await waitForWorker(), [
       {
@@ -395,7 +395,7 @@ describe("XlsxViewer imperative ref", () => {
     })
 
     await act(async () => {
-      render(<XlsxViewer source={source} toolbar={false} />)
+      render(<XlsxViewer source={source} controls={false} />)
       await Promise.resolve()
     })
 
@@ -416,7 +416,7 @@ describe("XlsxViewer imperative ref", () => {
             url,
             fileName: "first-name.xlsx",
           }}
-          toolbar={false}
+          controls={false}
         />
       )
       rerender = rendered.rerender
@@ -441,7 +441,7 @@ describe("XlsxViewer imperative ref", () => {
             url,
             fileName: "second-name.xlsx",
           }}
-          toolbar={false}
+          controls={false}
         />
       )
       await Promise.resolve()
@@ -472,7 +472,7 @@ describe("XlsxViewer imperative ref", () => {
     expect(screen.queryByRole("tablist")).toBeNull()
   })
 
-  it("does not render toolbar chrome while a toolbar-free workbook is pending on the client", async () => {
+  it("does not render controls chrome while a controls-free workbook is pending on the client", async () => {
     await act(async () => {
       render(
         <XlsxViewer
@@ -481,7 +481,7 @@ describe("XlsxViewer imperative ref", () => {
             url: uniqueXlsxUrl("pending-toolbarless"),
             fileName: "pending-toolbarless.xlsx",
           }}
-          toolbar={false}
+          controls={false}
         />
       )
     })
@@ -504,7 +504,7 @@ describe("XlsxViewer imperative ref", () => {
             url: uniqueXlsxUrl("tabs"),
             fileName: "tabs.xlsx",
           }}
-          toolbar={false}
+          controls={false}
           onSheetChange={onSheetChange}
         />
       )
@@ -557,7 +557,7 @@ describe("XlsxViewer imperative ref", () => {
             fileName: "default-clamp.xlsx",
           }}
           defaultSheetIndex={99}
-          toolbar={false}
+          controls={false}
           onSheetChange={onSheetChange}
         />
       )
@@ -595,7 +595,7 @@ describe("XlsxViewer imperative ref", () => {
             fileName: "nan-default.xlsx",
           }}
           defaultSheetIndex={Number.NaN}
-          toolbar={false}
+          controls={false}
         />
       )
     })
@@ -630,7 +630,7 @@ describe("XlsxViewer imperative ref", () => {
             fileName: "fraction-default.xlsx",
           }}
           defaultSheetIndex={0.5}
-          toolbar={false}
+          controls={false}
         />
       )
     })
@@ -667,7 +667,7 @@ describe("XlsxViewer imperative ref", () => {
             fileName: "unsafe-default.xlsx",
           }}
           defaultSheetIndex={Number.MAX_SAFE_INTEGER + 1}
-          toolbar={false}
+          controls={false}
         />
       )
     })
@@ -705,7 +705,7 @@ describe("XlsxViewer imperative ref", () => {
             url: uniqueXlsxUrl("latest-scroll"),
             fileName: "latest-scroll.xlsx",
           }}
-          toolbar={false}
+          controls={false}
           onSheetChange={onSheetChange}
         />
       )
@@ -754,7 +754,7 @@ describe("XlsxViewer imperative ref", () => {
             url: uniqueXlsxUrl("invalid-scroll"),
             fileName: "invalid-scroll.xlsx",
           }}
-          toolbar={false}
+          controls={false}
           onSheetChange={onSheetChange}
         />
       )
@@ -801,7 +801,7 @@ describe("XlsxViewer imperative ref", () => {
             url: uniqueXlsxUrl("stale-a"),
             fileName: "stale-a.xlsx",
           }}
-          toolbar={false}
+          controls={false}
         />
       )
       rerender = rendered.rerender
@@ -817,7 +817,7 @@ describe("XlsxViewer imperative ref", () => {
             url: uniqueXlsxUrl("stale-b"),
             fileName: "stale-b.xlsx",
           }}
-          toolbar={false}
+          controls={false}
         />
       )
     })

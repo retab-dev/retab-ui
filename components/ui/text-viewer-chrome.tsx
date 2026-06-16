@@ -8,10 +8,10 @@ import { type ViewerDownloadAction } from "@/lib/viewer-download"
 import { Skeleton } from "./skeleton"
 import { TextCodeViewerFrame } from "./text-code-viewer-chrome"
 import {
-  ViewerToolbar,
-  ViewerToolbarButton,
-  ViewerToolbarSkeleton,
-} from "./viewer-toolbar"
+  ViewerControls,
+  ViewerControlButton,
+  ViewerControlsSkeleton,
+} from "./viewer-controls"
 
 export function TextViewerFrame({
   className,
@@ -37,16 +37,16 @@ export function TextViewerFrame({
 
 export function TextViewerFallback({
   className,
-  toolbar = true,
+  controls = true,
   bare,
 }: {
   className?: string
-  toolbar?: boolean
+  controls?: boolean
   bare?: boolean
 }) {
   return (
     <TextViewerFrame className={className} bare={bare}>
-      {toolbar ? <ViewerToolbarSkeleton title zoom download /> : null}
+      {controls ? <ViewerControlsSkeleton title zoom download /> : null}
       <div
         className="min-h-0 flex-1 space-y-3 overflow-hidden p-5"
         data-slot="text-body-skeleton"
@@ -63,7 +63,7 @@ export function TextViewerFallback({
   )
 }
 
-export function TextViewerToolbar({
+export function TextViewerControls({
   wordCount,
   fontScale,
   copyText,
@@ -85,7 +85,7 @@ export function TextViewerToolbar({
   onResetZoom: () => void
 }) {
   return (
-    <ViewerToolbar
+    <ViewerControls
       title={leading ?? `${wordCount} word${wordCount === 1 ? "" : "s"}`}
       zoom={{
         scale: fontScale,
@@ -139,12 +139,12 @@ function TextViewerCopyControl({
   }
 
   return (
-    <ViewerToolbarButton
+    <ViewerControlButton
       label={isCopied ? "Copied" : label}
       onClick={copyText}
       type="button"
     >
       {isCopied ? <Check /> : <Copy />}
-    </ViewerToolbarButton>
+    </ViewerControlButton>
   )
 }

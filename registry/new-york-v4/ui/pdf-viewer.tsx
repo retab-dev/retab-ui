@@ -5,27 +5,32 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 import {
-  PdfViewerHeader,
+  FileViewer,
+  FileViewerBody,
+  FileViewerControls,
+  FileViewerHeader,
+  FileViewerMeta,
+  FileViewerSurface,
+  FileViewerTitle,
+} from "./file-viewer"
+import {
+  PdfResourceContent,
+  type PdfResourceContentProps,
+  type PdfViewerContentProps,
+} from "./pdf-viewer-content"
+import {
   PdfViewerPages,
   PdfViewerProvider,
   type PdfDocumentSource,
 } from "./pdf-viewer-context"
-import {
-  PdfResourceContent,
-  type PdfViewerContentProps,
-  type PdfResourceContentProps,
-} from "./pdf-viewer-content"
 import type { PdfViewerHandle } from "./pdf-viewer-types"
-import { ViewerBody, ViewerRoot, ViewerSurface } from "./viewer"
 
 export type {
   PageOverlayProps,
-  PdfDocumentViewportControls,
   PdfPageAreaTarget,
   PdfViewerHandle,
 } from "./pdf-viewer-types"
 export {
-  PdfViewerHeader,
   PdfViewerPages,
   PdfViewerProvider,
   usePdfViewerThumbnails,
@@ -84,16 +89,24 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
       source,
       className,
       bare = false,
-      toolbar = true,
+      controls = true,
       download = true,
       ...pagesProps
     } = props
     return (
-      <PdfViewerProvider source={source}>
-        <ViewerRoot bare={bare} className={cn("h-full", className)}>
-          <PdfViewerHeader download={download} toolbar={toolbar} />
-          <ViewerBody>
-            <ViewerSurface>
+      <FileViewer
+        source={source}
+        bare={bare}
+        className={cn("h-full", className)}
+      >
+        <PdfViewerProvider>
+          <FileViewerHeader>
+            <FileViewerTitle />
+            <FileViewerMeta />
+            {controls ? <FileViewerControls /> : null}
+          </FileViewerHeader>
+          <FileViewerBody>
+            <FileViewerSurface>
               <PdfViewerPages
                 {...pagesProps}
                 bare
@@ -101,10 +114,10 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
                 download={download}
                 ref={ref}
               />
-            </ViewerSurface>
-          </ViewerBody>
-        </ViewerRoot>
-      </PdfViewerProvider>
+            </FileViewerSurface>
+          </FileViewerBody>
+        </PdfViewerProvider>
+      </FileViewer>
     )
   }
 )

@@ -253,7 +253,7 @@ describe("ParseViewer", () => {
     expect(await screen.findByText("Invoice")).toBeTruthy()
   })
 
-  it("renders parsed pages with the markdown toolbar", async () => {
+  it("renders parsed pages with the markdown controls", async () => {
     render(<ParseViewer result={parseResult()} />)
 
     expect(screen.getByText("Page 1 of 2")).toBeTruthy()

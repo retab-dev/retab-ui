@@ -1,12 +1,12 @@
 "use client"
 
 import * as React from "react"
+import { createFileTreeIconResolver, getBuiltInSpriteSheet } from "@pierre/trees"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import {
   AlertCircle,
   ChevronDown,
   ChevronRight,
-  File,
   Folder,
 } from "lucide-react"
 
@@ -15,7 +15,8 @@ import { Button } from "@/components/ui/button"
 
 import type { FileSystemBrowserController } from "./file-system-browser-controller"
 import { entryKindLabel } from "./file-system-query"
-import type { FileSystemEntry } from "./file-system-types"
+import { FileSystemThumbnail } from "./file-system-thumbnail"
+import type { FileSystemEntry, FileSystemFileEntry } from "./file-system-types"
 import { formatFileSystemDate, formatFileSystemSize } from "./file-system-utils"
 
 type FileSystemListRow =
@@ -43,6 +44,11 @@ type FileSystemListRow =
 const LIST_ROW_HEIGHT = 34
 const LIST_COLUMNS =
   "grid-cols-[minmax(13rem,1fr)_minmax(7rem,9rem)_minmax(5rem,7rem)_minmax(8rem,11rem)]"
+const PIERRE_ICON_SPRITE_ROOT_ID = "file-system-pierre-icon-sprite-root"
+const PIERRE_FILE_ICON_RESOLVER = createFileTreeIconResolver({
+  colored: false,
+  set: "complete",
+})
 
 export function FileSystemListView({
   controller,
@@ -218,6 +224,7 @@ export function FileSystemListView({
       className="flex size-full min-h-0 flex-col bg-background"
       data-slot="file-system-list-view"
     >
+      <PierreFileIconSprite />
       <div
         className={cn(
           "grid h-9 shrink-0 items-center border-b bg-muted/35 px-3 text-xs font-medium text-muted-foreground",
@@ -361,8 +368,14 @@ function FileSystemListEntryRow({
             className="size-4 shrink-0 text-muted-foreground"
             aria-hidden
           />
+        ) : shouldUseFileSystemListThumbnail(entry) ? (
+          <FileSystemThumbnail
+            file={entry}
+            presentation="decorative"
+            className="size-5 shrink-0 rounded-[3px]"
+          />
         ) : (
-          <File className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <PierreFileIcon file={entry} className="size-4 shrink-0" />
         )}
         <span className="min-w-0 truncate">{entry.name}</span>
       </div>
@@ -377,6 +390,61 @@ function FileSystemListEntryRow({
       </div>
     </div>
   )
+}
+
+function PierreFileIconSprite() {
+  React.useEffect(() => {
+    if (document.getElementById(PIERRE_ICON_SPRITE_ROOT_ID)) return
+
+    const root = document.createElement("div")
+    root.id = PIERRE_ICON_SPRITE_ROOT_ID
+    root.hidden = true
+    root.innerHTML = getBuiltInSpriteSheet("complete")
+    document.body.appendChild(root)
+  }, [])
+
+  return null
+}
+
+function PierreFileIcon({
+  className,
+  file,
+}: {
+  className?: string
+  file: FileSystemFileEntry
+}) {
+  const icon = PIERRE_FILE_ICON_RESOLVER.resolveIcon(
+    "file-tree-icon-file",
+    file.name
+  )
+  const width = icon.width ?? 16
+  const height = icon.height ?? 16
+
+  return (
+    <svg
+      aria-hidden
+      className={cn("text-muted-foreground", className)}
+      data-icon-name={icon.remappedFrom ?? icon.name}
+      data-icon-token={icon.token}
+      fill="currentColor"
+      height={height}
+      viewBox={icon.viewBox ?? `0 0 ${width} ${height}`}
+      width={width}
+    >
+      <use href={`#${icon.name.replace(/^#/, "")}`} />
+    </svg>
+  )
+}
+
+function shouldUseFileSystemListThumbnail(file: FileSystemFileEntry) {
+  if (file.previewImageUrl || file.previewSource) return true
+
+  const mimeType = file.mimeType ?? file.source?.mimeType ?? ""
+  if (mimeType === "application/pdf" || mimeType.startsWith("image/")) {
+    return true
+  }
+
+  return /\.(avif|bmp|gif|jpe?g|pdf|png|svg|tiff?|webp)$/i.test(file.name)
 }
 
 function FileSystemListMessageRow({

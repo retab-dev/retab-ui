@@ -3,7 +3,7 @@
 import * as React from "react"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
-import { ViewerToolbar } from "@/components/ui/viewer-toolbar"
+import { ViewerControls } from "@/components/ui/viewer-controls"
 import { XlsxSheetTabs } from "@/components/ui/xlsx-sheet-tabs"
 
 import {
@@ -23,7 +23,7 @@ import type { XlsxViewerHandle, XlsxViewerProps } from "./xlsx-viewer-types"
 export function XlsxViewerSession({
   resource,
   className,
-  toolbar = true,
+  controls = true,
   download = true,
   defaultSheetIndex = 0,
   onSheetChange,
@@ -72,12 +72,12 @@ export function XlsxViewerSession({
     content,
     sheets,
   })
-  const toolbarDownloadActions = download ? downloadActions : []
+  const controlsDownloadActions = download ? downloadActions : []
 
   return (
     <XlsxViewerFrame className={className} bare={bare}>
-      {toolbar ? (
-        <ViewerToolbar
+      {controls ? (
+        <ViewerControls
           title={isReady ? (activeSheet?.name ?? "-") : null}
           subtitle={
             isReady && activeSheet
@@ -94,12 +94,12 @@ export function XlsxViewerSession({
             onFit: resetZoom,
             fitLabel: "Actual size",
           }}
-          downloads={toolbarDownloadActions}
+          downloads={controlsDownloadActions}
         />
       ) : null}
 
       <XlsxViewerBody
-        toolbar={toolbar}
+        controls={controls}
         fallbackSheetTabs={isReservingFallbackSheetTabs}
       >
         <XlsxGridColumn>

@@ -8,7 +8,7 @@ import type { ViewerResource } from "@/lib/viewer-resource"
 
 import type { CsvResourceState } from "./csv-viewer-state"
 import { ViewerErrorState } from "./viewer-error"
-import { ViewerToolbar } from "./viewer-toolbar"
+import { ViewerControls } from "./viewer-controls"
 
 export const CSV_VIEWER_BASE_FONT_SIZE = 13
 
@@ -39,7 +39,7 @@ export function CsvViewerFrame({
 }
 
 export function CsvViewerHeader({
-  toolbar,
+  controls,
   rowCount,
   columnCount,
   isLoading,
@@ -47,7 +47,7 @@ export function CsvViewerHeader({
   downloadActions,
   onZoomChange,
 }: {
-  toolbar: boolean
+  controls: boolean
   rowCount: number
   columnCount: number
   isLoading: boolean
@@ -58,8 +58,8 @@ export function CsvViewerHeader({
   const rowLabel = `${rowCount.toLocaleString()} row${rowCount === 1 ? "" : "s"}`
   const columnLabel = `${columnCount} column${columnCount === 1 ? "" : "s"}`
 
-  return toolbar ? (
-    <ViewerToolbar
+  return controls ? (
+    <ViewerControls
       title={isLoading ? `${rowLabel} loading` : rowLabel}
       subtitle={isLoading ? null : columnLabel}
       loading={isLoading}

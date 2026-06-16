@@ -5,6 +5,11 @@ import { useForm } from "react-hook-form"
 
 import type { Source } from "@/lib/document-source"
 import {
+  FileViewer,
+  FileViewerBody,
+  FileViewerSurface,
+} from "@/components/ui/file-viewer"
+import {
   PdfViewerPages,
   PdfViewerProvider,
   type PdfDocumentSource,
@@ -107,16 +112,24 @@ function ExtractViewerContent() {
       </ViewerHeader>
       <ViewerBody>
         <ViewerSurface className="relative">
-          <PdfViewerProvider source={PDF_SOURCE}>
-            <PdfViewerPages
-              ref={setPdfViewerHandle}
-              bare
-              className="h-full"
-              onScrollProgressChange={documentHandlers.onScrollProgressChange}
-              onVisiblePageChange={documentHandlers.onCurrentPageChange}
-              renderPageOverlay={renderPageOverlay}
-            />
-          </PdfViewerProvider>
+          <FileViewer source={PDF_SOURCE} bare className="h-full">
+            <PdfViewerProvider>
+              <FileViewerBody>
+                <FileViewerSurface>
+                  <PdfViewerPages
+                    ref={setPdfViewerHandle}
+                    bare
+                    className="h-full"
+                    onScrollProgressChange={
+                      documentHandlers.onScrollProgressChange
+                    }
+                    onVisiblePageChange={documentHandlers.onCurrentPageChange}
+                    renderPageOverlay={renderPageOverlay}
+                  />
+                </FileViewerSurface>
+              </FileViewerBody>
+            </PdfViewerProvider>
+          </FileViewer>
           <SourceIndicator path={link.activePath} found={!!link.activeAnchor} />
         </ViewerSurface>
         <ViewerSidebar

@@ -20,6 +20,15 @@ import {
   createViewerResource,
 } from "@/registry/new-york-v4/lib/viewer-resource"
 import {
+  FileViewer,
+  FileViewerBody,
+  FileViewerControls,
+  FileViewerHeader,
+  FileViewerSidebar,
+  FileViewerSurface,
+  FileViewerTitle,
+} from "@/registry/new-york-v4/ui/file-viewer"
+import {
   buildPdfThumbnailLayout,
   getPdfThumbnailLayoutItem,
   PDF_THUMBNAIL_LABEL_AND_GAP_HEIGHT,
@@ -28,7 +37,6 @@ import {
   PdfHighlight,
   PdfResourceContent,
   PdfViewer,
-  PdfViewerHeader,
   PdfViewerPages,
   PdfViewerProvider,
   type PdfViewerHandle,
@@ -301,15 +309,15 @@ class TestMetricErrorBoundary extends React.Component<
 }
 
 describe("PdfViewer", () => {
-  it("lets PdfViewerHeader children replace the default toolbar content", () => {
+  it("lets FileViewerHeader children replace default file header parts", () => {
+    const source = pdfUrlSource("/custom-header.pdf", "default-label.pdf")
+
     render(
-      <PdfViewerProvider
-        source={pdfUrlSource("/custom-header.pdf", "default-label.pdf")}
-      >
-        <PdfViewerHeader>
+      <FileViewer source={source}>
+        <FileViewerHeader>
           <span>Custom PDF header</span>
-        </PdfViewerHeader>
-      </PdfViewerProvider>
+        </FileViewerHeader>
+      </FileViewer>
     )
 
     expect(screen.getByText("Custom PDF header")).toBeTruthy()
@@ -653,10 +661,10 @@ describe("PdfViewer", () => {
     expect(secondLoadedMap.size).toBe(2)
   })
 
-  it("does not render toolbar chrome in the fallback when toolbar is false", async () => {
+  it("does not render controls chrome in the fallback when controls is false", async () => {
     await act(async () => {
       render(
-        <PdfViewer source={pdfUrlSource("/pending.pdf")} toolbar={false} />
+        <PdfViewer source={pdfUrlSource("/pending.pdf")} controls={false} />
       )
       await Promise.resolve()
     })
@@ -671,14 +679,14 @@ describe("PdfViewer", () => {
     })
   })
 
-  it("does not render toolbar chrome after a toolbar-free document loads", async () => {
-    pdfjsMock.docs.set("/loaded-no-toolbar.pdf", makeDoc([[100, 200]]))
+  it("does not render controls chrome after a controls-free document loads", async () => {
+    pdfjsMock.docs.set("/loaded-no-controls.pdf", makeDoc([[100, 200]]))
 
     await act(async () => {
       render(
         <PdfViewer
-          source={pdfUrlSource("/loaded-no-toolbar.pdf")}
-          toolbar={false}
+          source={pdfUrlSource("/loaded-no-controls.pdf")}
+          controls={false}
           defaultScale={1}
         />
       )
@@ -692,7 +700,7 @@ describe("PdfViewer", () => {
     expect(screen.queryByText("Page 1 of 1")).toBeNull()
   })
 
-  it("treats scale as controlled and reports toolbar scale requests", async () => {
+  it("treats scale as controlled and reports controls scale requests", async () => {
     pdfjsMock.docs.set("/controlled.pdf", makeDoc([[100, 200]]))
     const onScaleChange = vi.fn()
     let view!: ReturnType<typeof render>
@@ -744,7 +752,7 @@ describe("PdfViewer", () => {
     expect(screen.getByText("200%")).toBeTruthy()
   })
 
-  it("clamps fit-width scale in the rendered toolbar", async () => {
+  it("clamps fit-width scale in the rendered controls", async () => {
     pdfjsMock.docs.set("/fit-clamp.pdf", makeDoc([[100, 200]]))
 
     await act(async () => {
@@ -769,15 +777,23 @@ describe("PdfViewer", () => {
     expect(document.querySelectorAll('[data-slot="viewer-root"]')).toHaveLength(
       1
     )
-    expect(root?.children[0]?.getAttribute("data-slot")).toBe("viewer-header")
-    expect(root?.children[1]?.getAttribute("data-slot")).toBe("viewer-body")
+    expect(root?.children[0]?.getAttribute("data-slot")).toBe(
+      "file-viewer-header"
+    )
+    expect(root?.children[1]?.getAttribute("data-slot")).toBe(
+      "file-viewer-body"
+    )
 
-    const body = root?.querySelector<HTMLElement>('[data-slot="viewer-body"]')
+    const body = root?.querySelector<HTMLElement>(
+      '[data-slot="file-viewer-body"]'
+    )
     expect(
-      body?.querySelector(':scope > [data-slot="viewer-surface"]')
+      body?.querySelector(':scope > [data-slot="file-viewer-surface"]')
     ).toBeTruthy()
     expect(
-      root?.querySelector('[data-slot="viewer-header"] [aria-label="Zoom in"]')
+      root?.querySelector(
+        '[data-slot="file-viewer-header"] [aria-label="Zoom in"]'
+      )
     ).toBeTruthy()
   })
 
@@ -1303,7 +1319,7 @@ describe("PdfViewer", () => {
     expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "auto" })
   })
 
-  it("resets toolbar rotation when switching documents", async () => {
+  it("resets controls rotation when switching documents", async () => {
     pdfjsMock.docs.set("/rotation-reset-first.pdf", makeDoc([[100, 200]]))
     pdfjsMock.docs.set("/rotation-reset-second.pdf", makeDoc([[100, 200]]))
 
@@ -1986,21 +2002,26 @@ describe("PdfViewer", () => {
   })
 
   it("leaves sidebars to viewer composition instead of PDF slots", async () => {
+    const source = pdfUrlSource("/composed-sidebar.pdf")
+
     pdfjsMock.docs.set("/composed-sidebar.pdf", makeDoc([[100, 200]]))
 
     await act(async () => {
       render(
-        <PdfViewerProvider source={pdfUrlSource("/composed-sidebar.pdf")}>
-          <ViewerRoot>
-            <PdfViewerHeader />
-            <ViewerBody>
-              <ViewerSidebar>Composed sidebar</ViewerSidebar>
-              <ViewerSurface>
+        <FileViewer source={source}>
+          <PdfViewerProvider>
+            <FileViewerHeader>
+              <FileViewerTitle />
+              <FileViewerControls />
+            </FileViewerHeader>
+            <FileViewerBody>
+              <FileViewerSidebar>Composed sidebar</FileViewerSidebar>
+              <FileViewerSurface>
                 <PdfViewerPages bare className="h-full" />
-              </ViewerSurface>
-            </ViewerBody>
-          </ViewerRoot>
-        </PdfViewerProvider>
+              </FileViewerSurface>
+            </FileViewerBody>
+          </PdfViewerProvider>
+        </FileViewer>
       )
     })
     await findByTextContent("Page 1 of 1")
@@ -2012,6 +2033,8 @@ describe("PdfViewer", () => {
   })
 
   it("updates a detached header on zoom without remounting thumbnails", async () => {
+    const source = pdfUrlSource("/detached-header-performance.pdf")
+
     pdfjsMock.docs.set(
       "/detached-header-performance.pdf",
       makeDoc([
@@ -2031,21 +2054,22 @@ describe("PdfViewer", () => {
     }
 
     render(
-      <PdfViewerProvider
-        source={pdfUrlSource("/detached-header-performance.pdf")}
-      >
-        <ViewerRoot defaultOpen>
-          <PdfViewerHeader />
-          <ViewerBody>
-            <ViewerSidebar aria-label="PDF pages">
+      <FileViewer source={source} defaultOpen>
+        <PdfViewerProvider>
+          <FileViewerHeader>
+            <FileViewerTitle />
+            <FileViewerControls />
+          </FileViewerHeader>
+          <FileViewerBody>
+            <FileViewerSidebar aria-label="PDF pages">
               <CountingThumbnails />
-            </ViewerSidebar>
-            <ViewerSurface>
+            </FileViewerSidebar>
+            <FileViewerSurface>
               <PdfViewerPages bare className="h-full" defaultScale={1} />
-            </ViewerSurface>
-          </ViewerBody>
-        </ViewerRoot>
-      </PdfViewerProvider>
+            </FileViewerSurface>
+          </FileViewerBody>
+        </PdfViewerProvider>
+      </FileViewer>
     )
 
     await findByTextContent("Page 1 of 2")
@@ -2061,6 +2085,8 @@ describe("PdfViewer", () => {
   })
 
   it("updates current page on scroll without remounting thumbnails or reloading the document", async () => {
+    const source = pdfUrlSource("/scroll-composed-performance.pdf")
+
     pdfjsMock.docs.set(
       "/scroll-composed-performance.pdf",
       makeDoc([
@@ -2081,21 +2107,22 @@ describe("PdfViewer", () => {
     }
 
     render(
-      <PdfViewerProvider
-        source={pdfUrlSource("/scroll-composed-performance.pdf")}
-      >
-        <ViewerRoot defaultOpen>
-          <PdfViewerHeader />
-          <ViewerBody>
-            <ViewerSidebar aria-label="PDF pages">
+      <FileViewer source={source} defaultOpen>
+        <PdfViewerProvider>
+          <FileViewerHeader>
+            <FileViewerTitle />
+            <FileViewerControls />
+          </FileViewerHeader>
+          <FileViewerBody>
+            <FileViewerSidebar aria-label="PDF pages">
               <CountingThumbnails />
-            </ViewerSidebar>
-            <ViewerSurface>
+            </FileViewerSidebar>
+            <FileViewerSurface>
               <PdfViewerPages bare className="h-full" />
-            </ViewerSurface>
-          </ViewerBody>
-        </ViewerRoot>
-      </PdfViewerProvider>
+            </FileViewerSurface>
+          </FileViewerBody>
+        </PdfViewerProvider>
+      </FileViewer>
     )
 
     await findByTextContent("Page 1 of 3")
@@ -2173,7 +2200,7 @@ describe("PdfViewer", () => {
     )
   })
 
-  it("combines intrinsic page rotation with toolbar rotation while rendering", async () => {
+  it("combines intrinsic page rotation with controls rotation while rendering", async () => {
     const page = makePage(100, 200, 90)
     const doc = {
       numPages: 1,
@@ -2352,7 +2379,7 @@ describe("PdfViewer", () => {
     expect(secondTask.cancel).toHaveBeenCalledTimes(1)
   })
 
-  it("wires download metadata through the toolbar anchor", async () => {
+  it("wires download metadata through the controls anchor", async () => {
     pdfjsMock.docs.set("/signed-pdf", makeDoc([[100, 200]]))
 
     await act(async () => {
@@ -2414,6 +2441,18 @@ describe("PdfViewer", () => {
     expect(() => render(<PdfViewerThumbnails />)).toThrow(
       "usePdfViewerThumbnails must be used within PdfViewerProvider."
     )
+  })
+
+  it("requires PdfViewerProvider to receive a source or enclosing FileViewer", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+
+    expect(() =>
+      render(
+        <PdfViewerProvider>
+          <PdfViewerPages />
+        </PdfViewerProvider>
+      )
+    ).toThrow("PdfViewerProvider requires a source or enclosing FileViewer.")
   })
 
   it("adapts provider state into the thumbnail rail", async () => {

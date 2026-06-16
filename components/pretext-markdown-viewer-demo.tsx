@@ -22,7 +22,7 @@ const PRETEXT_MARKDOWN_VIEWER_DEMO_TEXT = [
   "> GitHub alerts render as labelled regions and remove the marker from visible prose.",
   "",
   "> [!TIP]",
-  "> Switch between Rendered and Text mode in the toolbar to compare the polished view with source-faithful Markdown.",
+  "> Switch between Rendered and Text mode in the controls to compare the polished view with source-faithful Markdown.",
   "",
   "> [!WARNING]",
   "> The document below includes deliberately long tables, code fences, and repeated chapters to exercise virtualization.",

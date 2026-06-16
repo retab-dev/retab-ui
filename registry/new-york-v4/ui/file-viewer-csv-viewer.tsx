@@ -40,7 +40,7 @@ export function CsvFileContent({
         source={source}
         dialect={dialect}
         fillHeight
-        toolbar={false}
+        controls={false}
         className="rounded-none border-0 bg-transparent"
         isolateStyles={isolateStyles}
       />

@@ -36,6 +36,7 @@ export interface PlainTextViewerFrameProps<
   TProps extends PlainTextViewerFramePublicProps,
 > {
   props: TProps
+  resource?: ViewerResource
   forwardedRef: React.ForwardedRef<THandle>
   clientFallbackPolicy: ClientFallbackPolicy
   Fallback: React.ComponentType<PlainTextViewerFallbackProps>
@@ -49,16 +50,16 @@ export interface PlainTextViewerFrameProps<
 }
 
 export interface PlainTextViewerFramePublicProps extends TextViewerBounds {
-  source: TextResourceSource
+  source?: TextResourceSource
   className?: string
-  toolbar?: boolean
+  controls?: boolean
   download?: boolean
   bare?: boolean
 }
 
 export interface PlainTextViewerFallbackProps {
   className?: string
-  toolbar?: boolean
+  controls?: boolean
   download?: boolean
   bare?: boolean
 }
@@ -68,6 +69,7 @@ export function PlainTextViewerFrame<
   TProps extends PlainTextViewerFramePublicProps,
 >({
   props,
+  resource: resourceProp,
   forwardedRef,
   clientFallbackPolicy,
   Fallback,
@@ -79,7 +81,14 @@ export function PlainTextViewerFrame<
   })
   const isClient = useIsClient()
   const { source } = props
-  const resource = React.useMemo(() => createViewerResource(source), [source])
+  const createdResource = React.useMemo(
+    () => (source ? createViewerResource(source) : null),
+    [source]
+  )
+  const resource = resourceProp ?? createdResource
+  if (!resource) {
+    throw new Error("PlainTextViewerFrame requires a source or resource.")
+  }
   const contentBaseKey = plainTextViewerContentBaseKey(resource.content, props)
   const retryVersion =
     retryState.contentKey === contentBaseKey ? retryState.version : 0
@@ -89,11 +98,14 @@ export function PlainTextViewerFrame<
     retryVersion
   )
 
-  if (!isClient && shouldRenderClientFallback(clientFallbackPolicy, source)) {
+  if (
+    !isClient &&
+    shouldRenderClientFallback(clientFallbackPolicy, resource.sourceKind)
+  ) {
     return (
       <Fallback
         className={props.className}
-        toolbar={props.toolbar}
+        controls={props.controls}
         download={props.download}
         bare={props.bare}
       />
@@ -105,7 +117,7 @@ export function PlainTextViewerFrame<
       bare={props.bare}
       className={props.className}
       download={
-        props.toolbar === false || props.download === false
+        props.controls === false || props.download === false
           ? null
           : plainTextViewerDownloadAction(resource)
       }
@@ -125,7 +137,7 @@ export function PlainTextViewerFrame<
         fallback={
           <Fallback
             className={props.className}
-            toolbar={props.toolbar}
+            controls={props.controls}
             download={props.download}
             bare={props.bare}
           />
@@ -208,7 +220,7 @@ function plainTextViewerBoundResetKeyPart(
 
 function shouldRenderClientFallback(
   policy: ClientFallbackPolicy,
-  source: TextResourceSource
+  sourceKind: TextResourceSource["kind"]
 ) {
-  return policy === "always" || source.kind !== "text"
+  return policy === "always" || sourceKind !== "text"
 }

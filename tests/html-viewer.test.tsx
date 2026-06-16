@@ -339,7 +339,7 @@ describe("HtmlFileContent", () => {
     expect(screen.getByRole("button", { name: "Download" })).toBeTruthy()
   })
 
-  it("downloads inline HTML text sources from the toolbar", async () => {
+  it("downloads inline HTML text sources from the controls", async () => {
     const click = vi
       .spyOn(HTMLAnchorElement.prototype, "click")
       .mockImplementation(() => {})
@@ -628,7 +628,7 @@ describe("HtmlFileContent", () => {
     expect(screen.queryByText(/No preview for/)).toBeNull()
   })
 
-  it("zooms the iframe with toolbar controls and resets to actual size", async () => {
+  it("zooms the iframe with controls and resets to actual size", async () => {
     const pending = deferred<Response>()
     vi.stubGlobal(
       "fetch",

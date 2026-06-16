@@ -59,7 +59,7 @@ describe("TextViewer Markdown mode", () => {
       <TextViewer
         className="h-80 w-[420px]"
         source={markdownSource(markdown)}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -94,7 +94,7 @@ describe("TextViewer Markdown mode", () => {
         source={markdownSource(
           ["| A | B |", "| --- | --- |", `| ${longCell} | short |`].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -114,7 +114,7 @@ describe("TextViewer Markdown mode", () => {
             "\n"
           )
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -133,7 +133,7 @@ describe("TextViewer Markdown mode", () => {
     const { container, rerender } = render(
       <TextViewer
         source={markdownSource("![Diagram](https://example.com/diagram.png)")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -151,7 +151,7 @@ describe("TextViewer Markdown mode", () => {
     rerender(
       <TextViewer
         source={markdownSource("![Unsafe](javascript:alert('xss'))")}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -174,7 +174,7 @@ describe("TextViewer Markdown mode", () => {
             "<svg><script>alert('xss')</script></svg>",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -209,7 +209,7 @@ describe("TextViewer Markdown mode", () => {
             ].join(" "),
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -258,7 +258,7 @@ describe("TextViewer Markdown mode", () => {
             "## Target Section",
           ].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -276,7 +276,7 @@ describe("TextViewer Markdown mode", () => {
         source={markdownSource(
           ["```ts", "const answer = 42", "```"].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -295,7 +295,7 @@ describe("TextViewer Markdown mode", () => {
         source={markdownSource(
           ["- first", "- second", "  continued"].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -317,7 +317,7 @@ describe("TextViewer Markdown mode", () => {
         source={markdownSource(
           ["| A | B |", "| --- | --- |", "| one | two |"].join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 

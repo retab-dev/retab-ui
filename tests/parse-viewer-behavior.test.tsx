@@ -712,7 +712,7 @@ describe("ParseViewer action freshness", () => {
   })
 })
 
-describe("ParseViewer compact toolbar", () => {
+describe("ParseViewer compact controls", () => {
   function withNarrowContainer() {
     Object.defineProperty(HTMLElement.prototype, "clientWidth", {
       configurable: true,
@@ -1205,7 +1205,7 @@ describe("ParseViewer text mode rendering", () => {
 })
 
 describe("ParseViewer two-pane layout", () => {
-  it("renders both the source document pane and the markdown toolbar", () => {
+  it("renders both the source document pane and the markdown controls", () => {
     render(
       <ParseViewerSyncHarness>
         <div data-testid="source-doc">Document body</div>
@@ -1381,7 +1381,7 @@ describe("ParseViewer copy status lifecycle", () => {
   it("resets the failed copy label to idle after the timeout", () => {
     vi.useFakeTimers()
     // Fake timers replace rAF too; restore the synchronous stub so the
-    // toolbar leaves its skeleton state.
+    // controls leaves its skeleton state.
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
       callback(0)
       return 1
@@ -1393,7 +1393,7 @@ describe("ParseViewer copy status lifecycle", () => {
     })
 
     render(<ParseViewer result={parseResult()} />)
-    // Flush React's scheduler so width measurement commits the real toolbar.
+    // Flush React's scheduler so width measurement commits the real controls.
     act(() => {
       vi.runOnlyPendingTimers()
     })

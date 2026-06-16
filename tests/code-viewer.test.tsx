@@ -1779,7 +1779,7 @@ describe("CodeViewer", () => {
     ).toBeNull()
   })
 
-  it("keeps toolbar controls accessible by name", () => {
+  it("keeps controls accessible by name", () => {
     render(<CodeViewer source={textSource("alpha")} />)
 
     expect(screen.getByLabelText("Zoom out")).toBeTruthy()
@@ -1849,7 +1849,7 @@ describe("CodeViewer", () => {
             (_, index) => `line ${index + 1}`
           ).join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -1857,7 +1857,7 @@ describe("CodeViewer", () => {
       container.querySelectorAll("[data-line-number]").length
     ).toBeGreaterThan(1)
 
-    rerender(<CodeViewer source={textSource("single")} toolbar={false} />)
+    rerender(<CodeViewer source={textSource("single")} controls={false} />)
 
     expect(screen.getByText("single")).toBeTruthy()
     expect(container.querySelectorAll("[data-line-number]")).toHaveLength(1)
@@ -1878,34 +1878,34 @@ describe("CodeViewer", () => {
     expect(screen.queryByText("old text")).toBeNull()
   })
 
-  it("hides toolbar chrome when toolbar is false", () => {
-    render(<CodeViewer source={textSource("alpha")} toolbar={false} />)
+  it("hides controls chrome when controls is false", () => {
+    render(<CodeViewer source={textSource("alpha")} controls={false} />)
 
     expect(screen.queryByText("1 line")).toBeNull()
     expect(screen.queryByLabelText("Zoom in")).toBeNull()
     expect(screen.queryByLabelText("Download")).toBeNull()
   })
 
-  it("hides fallback toolbar chrome when toolbar is false", () => {
+  it("hides fallback controls chrome when controls is false", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() => new Promise<Response>(() => {}))
     )
 
-    render(<CodeViewer source={urlSource("/pending.txt")} toolbar={false} />)
+    render(<CodeViewer source={urlSource("/pending.txt")} controls={false} />)
 
     expect(screen.queryByLabelText("Zoom in")).toBeNull()
     expect(screen.queryByLabelText("Download")).toBeNull()
   })
 
-  it("hides error-state download chrome when toolbar is false", async () => {
+  it("hides error-state download chrome when controls is false", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {})
 
     render(
       <CodeViewer
         source={textSource("one\ntwo")}
         maxLines={1}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2163,7 +2163,7 @@ describe("CodeViewer", () => {
             (_, index) => `line ${index + 1}`
           ).join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 
@@ -2189,7 +2189,7 @@ describe("CodeViewer", () => {
             (_, index) => `line ${index + 1}`
           ).join("\n")
         )}
-        toolbar={false}
+        controls={false}
       />
     )
 

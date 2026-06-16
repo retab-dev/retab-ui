@@ -35,7 +35,7 @@ describe("markdown prose transforms", () => {
   it("applies typography and emoji transforms in rendered prose", async () => {
     render(
       <MarkdownDocumentViewer
-        toolbar={false}
+        controls={false}
         source={markdownSource('"Ship" -- now... :sparkles: 1/2 -> done')}
       />
     )

@@ -11,6 +11,12 @@ import {
   useSplitViewerDocumentControls,
 } from "@/components/viewers/split/split-viewer"
 
+const splitSource = {
+  kind: "url" as const,
+  url: "/samples/an-image-is-worth-16x16-words.pdf",
+  fileName: "an-image-is-worth-16x16-words.pdf",
+}
+
 // A split-style result (named subdocuments) with per-page likelihoods — the
 // same model also covers partition chunks; only the label differs.
 const output = [
@@ -71,6 +77,7 @@ export function SegmentSidebarSplitDemo() {
       data-demo="segment-sidebar-split"
     >
       <SplitViewer
+        source={splitSource}
         result={{ output: splitOutput }}
         document={<SegmentSidebarSplitDocument />}
       />
@@ -83,11 +90,7 @@ function SegmentSidebarSplitDocument() {
 
   return (
     <PdfViewerProvider
-      source={{
-        kind: "url",
-        url: "/samples/an-image-is-worth-16x16-words.pdf",
-        fileName: "an-image-is-worth-16x16-words.pdf",
-      }}
+      source={splitSource}
     >
       <PdfViewerPages
         ref={controls.setDocumentHandle}

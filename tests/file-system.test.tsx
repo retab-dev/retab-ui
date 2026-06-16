@@ -245,6 +245,31 @@ describe("FileSystem", () => {
     expect(surface?.className.split(/\s+/)).not.toContain("hidden")
   })
 
+  it("gives columns view enough sidebar width for the file tree", () => {
+    render(<FileSystem defaultView="columns" items={items} />)
+
+    const root = document.querySelector<HTMLElement>(
+      '[data-slot="viewer-root"]'
+    )
+
+    expect(root?.style.getPropertyValue("--viewer-sidebar-width")).toBe(
+      "min(clamp(32rem, 40vw, 40rem), 85vw)"
+    )
+  })
+
+  it("uses thumbnails for previewable list files and Pierre icons for other files", async () => {
+    render(<FileSystem items={items} />)
+
+    await expandFileTreeItem(/reports/i)
+
+    const pdfRow = await findFileTreeItem(/report.pdf/i)
+    const csvRow = await findFileTreeItem(/table.csv/i)
+
+    expect(pdfRow.querySelector('[data-testid="file-thumbnail"]')).toBeTruthy()
+    expect(csvRow.querySelector('[data-testid="file-thumbnail"]')).toBeNull()
+    expect(csvRow.querySelector("svg[data-icon-token]")).toBeTruthy()
+  })
+
   it("composes file-system provider parts directly", async () => {
     render(
       <FileSystemProvider items={items}>

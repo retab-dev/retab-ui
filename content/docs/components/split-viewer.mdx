@@ -20,10 +20,10 @@ function SplitDocument() {
   const controls = useSplitViewerDocumentControls()
 
   return (
-    <PdfViewer
+    <PdfViewerPages
       ref={controls.setDocumentHandle}
-      source={source}
       bare
+      className="h-full"
       onVisiblePageChange={controls.onCurrentPageChange}
       onScrollProgressChange={controls.onScrollProgressChange}
     />
@@ -33,28 +33,35 @@ function SplitDocument() {
 export function Example() {
   return (
     <SplitViewerProvider result={result}>
-      <ViewerRoot bare defaultOpen>
-        <SplitViewerHeader />
-        <ViewerBody>
-          <SplitViewerSidebar>
-            <SplitViewerPageRail />
-          </SplitViewerSidebar>
-          <ViewerSurface>
-            <SplitViewerLegend />
-            <SplitViewerDocument document={<SplitDocument />} />
-          </ViewerSurface>
-        </ViewerBody>
-      </ViewerRoot>
+      <FileViewer source={source} bare defaultOpen>
+        <PdfViewerProvider>
+          <FileViewerHeader>
+            <FileViewerSidebarTrigger />
+            <FileViewerTitle />
+            <SplitViewerHeaderMeta />
+            <FileViewerControls />
+          </FileViewerHeader>
+          <FileViewerBody>
+            <SplitViewerSidebar>
+              <SplitViewerPageRail />
+            </SplitViewerSidebar>
+            <FileViewerSurface>
+              <SplitViewerLegend />
+              <SplitViewerDocument document={<SplitDocument />} />
+            </FileViewerSurface>
+          </FileViewerBody>
+        </PdfViewerProvider>
+      </FileViewer>
     </SplitViewerProvider>
   )
 }
 ```
 
-`SplitViewerHeader` owns the full-width viewer title row.
-`SplitViewerSidebar` is body-scoped, so the page rail starts below the
-header. `SplitViewerLegend` lives inside `ViewerSurface` above the document,
-which lets the rail dominate the legend and document body without taking over
-the header.
+`FileViewerHeader` owns the full-width file row. `SplitViewerHeaderMeta` contributes
+split-specific passive facts inside that row. `SplitViewerSidebar` is
+body-scoped, so the page rail starts below the header. `SplitViewerLegend`
+lives inside `FileViewerSurface` above the document, which lets the rail dominate
+the legend and document body without taking over the header.
 `SplitViewerDocument` only frames the selected document node; it does not
 receive hidden layout slots.
 
@@ -66,6 +73,8 @@ document coordination comes from `useSplitViewerDocumentControls`.
 
 ```tsx
 export function EasyExample() {
-  return <SplitViewer result={result} document={<SplitDocument />} />
+  return (
+    <SplitViewer source={source} result={result} document={<SplitDocument />} />
+  )
 }
 ```
