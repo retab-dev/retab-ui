@@ -4,20 +4,16 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import type { SourceFieldLink } from "@/components/ui/source-field-link"
+import {
+  useSourceTableHoverController,
+  type JsonFormSourceLinkActions,
+} from "@/components/json-form/source-link-table-hover"
 
 export type JsonFormSourceLink = SourceFieldLink
-export type JsonFormSourceLinkActions = Omit<SourceFieldLink, "activePath">
 
 const ActiveSourcePathContext = React.createContext<string | null>(null)
 const SourceLinkActionsContext =
   React.createContext<JsonFormSourceLinkActions | null>(null)
-
-type SourceTableCell = HTMLElement
-const SOURCE_PATH_ATTRIBUTE = "data-source-path"
-const SOURCE_ACTIVE_ATTRIBUTE = "data-source-active"
-const SOURCE_CELL_SELECTOR = `[${SOURCE_PATH_ATTRIBUTE}]`
-const TABLE_CELL_SELECTOR = "[data-table-cell]"
-const SCROLL_SOURCE_HOVER_INTERVAL_MS = 32
 
 export function JsonFormSourceLinkProvider({
   sourceLink,
@@ -26,17 +22,17 @@ export function JsonFormSourceLinkProvider({
   sourceLink?: JsonFormSourceLink
   children: React.ReactNode
 }) {
-  const onFieldHover = sourceLink?.onFieldHover
-  const selectField = sourceLink?.selectField
+  const onSourceHover = sourceLink?.onSourceHover
+  const selectSourcePath = sourceLink?.selectSourcePath
   const sourceLinkActions = React.useMemo<JsonFormSourceLinkActions | null>(
-    () => (onFieldHover ? { onFieldHover, selectField } : null),
-    [onFieldHover, selectField]
+    () => (onSourceHover ? { onSourceHover, selectSourcePath } : null),
+    [onSourceHover, selectSourcePath]
   )
 
   return (
     <SourceLinkActionsContext.Provider value={sourceLinkActions}>
       <ActiveSourcePathContext.Provider
-        value={sourceLink?.activePath ?? null}
+        value={sourceLink?.activeSourcePath ?? null}
       >
         {children}
       </ActiveSourcePathContext.Provider>
@@ -59,236 +55,12 @@ export function useSourceLinkedTableCells({
   tableRef: React.RefObject<HTMLElement | null>
   refreshKey: unknown
 }) {
-  const activeSourcePath = useActiveSourcePath()
-  const sourceLinkActions = useSourceLinkActions()
-  const sourceLinked = Boolean(sourceLinkActions)
-  const activeSourceCellRef = React.useRef<Element | null>(null)
-  const hoveredSourcePathRef = React.useRef<string | null>(null)
-  const pendingHoverPathRef = React.useRef<string | null>(null)
-  const pendingHoverFrameRef = React.useRef<number | null>(null)
-  const pendingScrollHoverFrameRef = React.useRef<number | null>(null)
-  const latestScrollHoverAtRef = React.useRef(Number.NEGATIVE_INFINITY)
-  const latestPointerPointRef = React.useRef<{ x: number; y: number } | null>(
-    null
-  )
-  const isScrollingRef = React.useRef(false)
-
-  const setActiveSourceCell = React.useCallback((cell: Element | null) => {
-    if (activeSourceCellRef.current === cell) return
-    activeSourceCellRef.current?.removeAttribute(SOURCE_ACTIVE_ATTRIBUTE)
-    if (cell) cell.setAttribute(SOURCE_ACTIVE_ATTRIBUTE, "true")
-    activeSourceCellRef.current = cell
-  }, [])
-
-  const sourcePathForCell = React.useCallback(
-    (cell: Element | null): string | null =>
-      cell?.getAttribute(SOURCE_PATH_ATTRIBUTE) ?? null,
-    []
-  )
-
-  React.useEffect(() => {
-    if (!sourceLinked || !activeSourcePath) {
-      setActiveSourceCell(null)
-      return
-    }
-    if (
-      hoveredSourcePathRef.current === activeSourcePath &&
-      activeSourceCellRef.current?.getAttribute(SOURCE_PATH_ATTRIBUTE) ===
-        activeSourcePath
-    ) {
-      return
-    }
-
-    const table = tableRef.current
-    if (!table) return
-    for (const cell of table.querySelectorAll(SOURCE_CELL_SELECTOR)) {
-      if (cell.getAttribute(SOURCE_PATH_ATTRIBUTE) === activeSourcePath) {
-        setActiveSourceCell(cell)
-        return
-      }
-    }
-    setActiveSourceCell(null)
-  }, [activeSourcePath, sourceLinked, refreshKey, setActiveSourceCell, tableRef])
-
-  const getCellFromTarget = React.useCallback(
-    (target: EventTarget | null): SourceTableCell | null => {
-      if (!(target instanceof Element)) return null
-      const cell = target.closest<SourceTableCell>(TABLE_CELL_SELECTOR)
-      return cell && tableRef.current?.contains(cell) ? cell : null
-    },
-    [tableRef]
-  )
-
-  const cancelPendingHover = React.useCallback(() => {
-    if (pendingHoverFrameRef.current === null) return
-    cancelAnimationFrame(pendingHoverFrameRef.current)
-    pendingHoverFrameRef.current = null
-  }, [])
-
-  const cancelPendingScrollHover = React.useCallback(() => {
-    if (pendingScrollHoverFrameRef.current === null) return
-    cancelAnimationFrame(pendingScrollHoverFrameRef.current)
-    pendingScrollHoverFrameRef.current = null
-  }, [])
-
-  const reportHoveredSourcePath = React.useCallback(
-    (path: string | null) => {
-      if (!sourceLinkActions) return
-      pendingHoverPathRef.current = path
-      if (pendingHoverFrameRef.current !== null) return
-      pendingHoverFrameRef.current = requestAnimationFrame(() => {
-        pendingHoverFrameRef.current = null
-        sourceLinkActions.onFieldHover(pendingHoverPathRef.current)
-      })
-    },
-    [sourceLinkActions]
-  )
-
-  const setHoveredSourcePath = React.useCallback(
-    (path: string | null, cell: Element | null) => {
-      if (!sourceLinkActions) return
-      if (hoveredSourcePathRef.current === path) return
-      hoveredSourcePathRef.current = path
-      setActiveSourceCell(cell)
-      reportHoveredSourcePath(path)
-    },
-    [sourceLinkActions, reportHoveredSourcePath, setActiveSourceCell]
-  )
-
-  React.useEffect(
-    () => () => {
-      cancelPendingHover()
-      cancelPendingScrollHover()
-    },
-    [cancelPendingHover, cancelPendingScrollHover]
-  )
-
-  const selectCellSource = React.useCallback(
-    (cell: HTMLElement | null) => {
-      const sourcePath = sourcePathForCell(cell)
-      if (!sourcePath) return false
-      cancelPendingHover()
-      sourceLinkActions?.selectField?.(sourcePath)
-      return true
-    },
-    [cancelPendingHover, sourceLinkActions, sourcePathForCell]
-  )
-
-  const handlePointerMove = React.useCallback(
-    (event: React.PointerEvent<HTMLElement>) => {
-      if (!sourceLinkActions) return
-      latestPointerPointRef.current = {
-        x: event.clientX,
-        y: event.clientY,
-      }
-      if (isScrollingRef.current) return
-      const cell = getCellFromTarget(event.target)
-      setHoveredSourcePath(sourcePathForCell(cell), cell)
-    },
-    [
-      sourceLinkActions,
-      getCellFromTarget,
-      setHoveredSourcePath,
-      sourcePathForCell,
-    ]
-  )
-
-  const handlePointerLeave = React.useCallback(
-    (event: React.PointerEvent<HTMLElement>) => {
-      latestPointerPointRef.current = {
-        x: event.clientX,
-        y: event.clientY,
-      }
-      setHoveredSourcePath(null, null)
-    },
-    [setHoveredSourcePath]
-  )
-
-  const handleScrollStart = React.useCallback(() => {
-    isScrollingRef.current = true
-  }, [])
-
-  const restoreHoveredSourceAtPointer = React.useCallback(() => {
-    if (!sourceLinkActions) return
-    const point = latestPointerPointRef.current
-    if (!point) return
-    const ownerDocument = tableRef.current?.ownerDocument
-    if (!ownerDocument) return
-    const element = ownerDocument.elementFromPoint(point.x, point.y)
-    const cell = getCellFromTarget(element)
-    setHoveredSourcePath(sourcePathForCell(cell), cell)
-  }, [
-    sourceLinkActions,
+  return useSourceTableHoverController({
+    activeSourcePath: useActiveSourcePath(),
+    refreshKey,
+    sourceLinkActions: useSourceLinkActions(),
     tableRef,
-    getCellFromTarget,
-    setHoveredSourcePath,
-    sourcePathForCell,
-  ])
-
-  const handleScrollEnd = React.useCallback(() => {
-    isScrollingRef.current = false
-    cancelPendingScrollHover()
-    latestScrollHoverAtRef.current = Number.NEGATIVE_INFINITY
-    restoreHoveredSourceAtPointer()
-  }, [cancelPendingScrollHover, restoreHoveredSourceAtPointer])
-
-  const handleScrollMove = React.useCallback(() => {
-    if (!sourceLinkActions || pendingScrollHoverFrameRef.current !== null) {
-      return
-    }
-    const now = performance.now()
-    if (now - latestScrollHoverAtRef.current < SCROLL_SOURCE_HOVER_INTERVAL_MS) {
-      return
-    }
-    pendingScrollHoverFrameRef.current = requestAnimationFrame(() => {
-      pendingScrollHoverFrameRef.current = null
-      latestScrollHoverAtRef.current = performance.now()
-      restoreHoveredSourceAtPointer()
-    })
-  }, [sourceLinkActions, restoreHoveredSourceAtPointer])
-
-  const handleFocus = React.useCallback(
-    (event: React.FocusEvent<HTMLElement>) => {
-      if (!sourceLinkActions) return
-      const cell = getCellFromTarget(event.target)
-      if (!cell) return
-      const sourcePath = sourcePathForCell(cell)
-      hoveredSourcePathRef.current = sourcePath
-      setActiveSourceCell(cell)
-      sourceLinkActions.onFieldHover(sourcePath)
-    },
-    [
-      sourceLinkActions,
-      getCellFromTarget,
-      setActiveSourceCell,
-      sourcePathForCell,
-    ]
-  )
-
-  const handleBlur = React.useCallback(
-    (event: React.FocusEvent<HTMLElement>) => {
-      if (!sourceLinkActions) return
-      const cell = getCellFromTarget(event.target)
-      if (!cell || cell.contains(event.relatedTarget as Node | null)) return
-      hoveredSourcePathRef.current = null
-      setActiveSourceCell(null)
-      sourceLinkActions.onFieldHover(null)
-    },
-    [sourceLinkActions, getCellFromTarget, setActiveSourceCell]
-  )
-
-  return {
-    sourceLinked,
-    getCellFromTarget,
-    selectCellSource,
-    handlePointerMove,
-    handlePointerLeave,
-    handleFocus,
-    handleBlur,
-    handleScrollStart,
-    handleScrollMove,
-    handleScrollEnd,
-  }
+  })
 }
 
 function shouldSelectSourceFromKeyDown(event: React.KeyboardEvent): boolean {
@@ -314,14 +86,14 @@ export function SourceLinkShell({
 
   return (
     <div
-      onMouseEnter={() => sourceLinkActions.onFieldHover(sourcePath)}
-      onMouseLeave={() => sourceLinkActions.onFieldHover(null)}
-      onFocus={() => sourceLinkActions.onFieldHover(sourcePath)}
-      onBlur={() => sourceLinkActions.onFieldHover(null)}
-      onClick={() => sourceLinkActions.selectField?.(sourcePath)}
+      onMouseEnter={() => sourceLinkActions.onSourceHover(sourcePath)}
+      onMouseLeave={() => sourceLinkActions.onSourceHover(null)}
+      onFocus={() => sourceLinkActions.onSourceHover(sourcePath)}
+      onBlur={() => sourceLinkActions.onSourceHover(null)}
+      onClick={() => sourceLinkActions.selectSourcePath?.(sourcePath)}
       onKeyDownCapture={(event) => {
         if (shouldSelectSourceFromKeyDown(event)) {
-          sourceLinkActions.selectField?.(sourcePath)
+          sourceLinkActions.selectSourcePath?.(sourcePath)
         }
       }}
       className={cn(

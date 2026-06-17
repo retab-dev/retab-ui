@@ -4,42 +4,24 @@ import * as React from "react"
 import { useController, useFormContext } from "react-hook-form"
 
 import { cn } from "@/lib/utils"
-import {
-  DataCell,
-  type DataCellCommitValue,
-  type DataCellValueMeta,
-} from "@/components/ui/data-cell"
+import { DataCell } from "@/components/ui/data-cell"
 import {
   dataCellNumberValue,
   dataCellTextValue,
-  datetimeLocalInputValue,
   ScalarControl,
 } from "@/components/json-form/scalar-control"
 import type { Column } from "@/components/json-form/schema-model"
-import type { ArrayTableDataCellKind } from "@/components/json-form/table/array-table-format"
-
-type SetArrayTableCellValue = (
-  path: string,
-  value: unknown,
-  options: {
-    shouldDirty: true
-    shouldTouch: true
-    shouldValidate: true
-  }
-) => void
-
-export type ArrayTableCellModel = {
-  path: string
-  sourcePath: string
-  label: string
-  displayText: string
-  kind: ArrayTableDataCellKind
-  value: unknown
-  isEnum: boolean
-  isEditing: boolean
-  isScalarEditing: boolean
-  sourceLinked: boolean
-}
+import {
+  commitArrayTableCellValue,
+  type CommitArrayTableCellValue,
+  type SetArrayTableCellValue,
+} from "@/components/json-form/table/array-table-cell-commit"
+import type { ArrayTableCellModel } from "@/components/json-form/table/array-table-cell-model"
+import {
+  arrayTableCellClassName,
+  arrayTableCellProps,
+  editableArrayTableCellProps,
+} from "@/components/json-form/table/array-table-cell-props"
 
 export function ArrayTableCell({
   model,
@@ -52,40 +34,22 @@ export function ArrayTableCell({
   setValue: SetArrayTableCellValue
   closeEditor: () => void
 }) {
-  const cellClassName = cn(
-    "min-w-0 rounded data-[source-active=true]:bg-primary/5 data-[source-active=true]:ring-1 data-[source-active=true]:ring-primary/30",
-    !model.isEditing && !model.isScalarEditing
-      ? "hover:bg-background focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring/30"
-      : "px-1 py-0.5",
-    model.sourceLinked &&
-      (model.isEditing || model.isScalarEditing) &&
-      "hover:bg-muted/55"
+  const cellClassName = arrayTableCellClassName(model)
+  const cellProps = arrayTableCellProps(model)
+  const commitValue = React.useCallback<CommitArrayTableCellValue>(
+    (nextValue, meta) => {
+      commitArrayTableCellValue({
+        column,
+        currentValue: model.value,
+        meta,
+        nextValue,
+        path: model.path,
+        setValue,
+      })
+    },
+    [column, model.path, model.value, setValue]
   )
-  const cellProps = {
-    "data-slot": "data-cell",
-    "data-table-cell": "",
-    "data-source-path": model.sourceLinked ? model.sourcePath : undefined,
-    className: cellClassName,
-  }
-  const commitValue = (
-    nextValue: DataCellCommitValue,
-    meta?: DataCellValueMeta
-  ) => {
-    const normalizedValue = normalizeArrayTableCellValue({
-      column,
-      currentValue: model.value,
-      nextValue,
-      meta,
-    })
-
-    if (normalizedValue === NO_CELL_COMMIT) return
-    setValue(model.path, normalizedValue, {
-      shouldDirty: true,
-      shouldTouch: true,
-      shouldValidate: true,
-    })
-  }
-  const editableProps = editableCellProps({
+  const editableProps = editableArrayTableCellProps({
     model,
     commitValue,
     closeEditor,
@@ -157,80 +121,6 @@ export function ArrayTableCell({
       className={cn(cellClassName, "text-sm")}
     />
   )
-}
-
-function editableCellProps({
-  model,
-  commitValue,
-  closeEditor,
-}: {
-  model: ArrayTableCellModel
-  commitValue: (value: DataCellCommitValue, meta?: DataCellValueMeta) => void
-  closeEditor: () => void
-}) {
-  return {
-    active: model.isScalarEditing,
-    editable: model.isScalarEditing,
-    role: !model.isScalarEditing ? "button" : undefined,
-    "aria-label": `${model.label} ${model.displayText}`,
-    tabIndex: 0,
-    "data-table-cell-editable": !model.isScalarEditing ? "true" : undefined,
-    "data-table-cell-path": !model.isScalarEditing ? model.path : undefined,
-    autoFocus: model.isScalarEditing,
-    name: model.path,
-    onCommit: commitValue,
-    "data-table-cell-editor": model.isScalarEditing ? "true" : undefined,
-    onBlur: () => {
-      if (model.isScalarEditing) closeEditor()
-    },
-  }
-}
-
-const NO_CELL_COMMIT = Symbol("NO_CELL_COMMIT")
-
-function normalizeArrayTableCellValue({
-  column,
-  currentValue,
-  nextValue,
-  meta,
-}: {
-  column: Column
-  currentValue: unknown
-  nextValue: DataCellCommitValue
-  meta?: DataCellValueMeta
-}): unknown | typeof NO_CELL_COMMIT {
-  let normalizedValue: unknown
-  if (column.kind === "number" || column.kind === "integer") {
-    if (meta && !meta.isValid) return NO_CELL_COMMIT
-    normalizedValue =
-      typeof nextValue === "number"
-        ? nextValue
-        : nextValue === null && column.nullable && meta?.isEmpty !== false
-          ? null
-          : undefined
-    if (normalizedValue === undefined) return NO_CELL_COMMIT
-  } else if (column.kind === "boolean") {
-    normalizedValue = Boolean(nextValue)
-  } else {
-    const currentText = currentValue == null ? "" : String(currentValue)
-    const currentDisplay =
-      column.schema.format === "date-time"
-        ? datetimeLocalInputValue(currentText)
-        : currentText
-    const nextText = typeof nextValue === "string" ? nextValue : ""
-    const nextDisplay =
-      column.schema.format === "date-time"
-        ? datetimeLocalInputValue(nextText)
-        : nextText
-
-    if (nextDisplay === currentDisplay) return NO_CELL_COMMIT
-    normalizedValue =
-      nextDisplay === "" && column.nullable ? null : nextDisplay
-  }
-
-  return Object.is(currentValue, normalizedValue)
-    ? NO_CELL_COMMIT
-    : normalizedValue
 }
 
 function ArrayTableCellEditor({

@@ -11,6 +11,9 @@ const devServerTimeoutMs = Number(
   process.env.PROFILE_DEV_SERVER_TIMEOUT_MS ?? 60_000
 )
 const expectedProfileText = process.env.PROFILE_EXPECTED_TEXT ?? "JSON table"
+const bodyPreviewLength = Number(
+  process.env.PROFILE_ERROR_BODY_PREVIEW_LENGTH ?? 12_000
+)
 
 const enumFieldPath = "transactions.0.transaction_type"
 const dateFieldPath = "transactions.0.date"
@@ -39,6 +42,13 @@ function profileUrlForPort(profileUrl, port) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function truncateBody(body) {
+  if (body.length <= bodyPreviewLength) return body
+  return `${body.slice(0, bodyPreviewLength)}\n... truncated ${
+    body.length - bodyPreviewLength
+  } chars`
 }
 
 async function collectCommandOutput(command, args, timeoutMs = 2_000) {
@@ -98,6 +108,15 @@ async function listeningProcessSummaryForPort(port) {
     .join("; ")
 }
 
+async function listeningProcessSummary(profileUrl) {
+  const parsed = new URL(profileUrl)
+  if (!["localhost", "127.0.0.1", "::1"].includes(parsed.hostname)) {
+    return ""
+  }
+
+  return listeningProcessSummaryForPort(profilePort(profileUrl))
+}
+
 async function isPortAvailable(port) {
   return !(await listeningProcessSummaryForPort(port))
 }
@@ -117,20 +136,77 @@ async function checkProfilePage(profileUrl) {
   try {
     const response = await fetch(profileUrl, { signal: controller.signal })
     const body = await response.text()
-    return {
-      ok: response.ok && body.includes(expectedProfileText),
-      detail: response.ok
-        ? `response did not contain ${JSON.stringify(expectedProfileText)}`
-        : `HTTP ${response.status}`,
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        kind: "unhealthy",
+        detail: `HTTP ${response.status}`,
+        body: truncateBody(body),
+      }
     }
+
+    if (!body.includes(expectedProfileText)) {
+      return {
+        ok: false,
+        kind: "unhealthy",
+        detail: `response did not contain ${JSON.stringify(
+          expectedProfileText
+        )}`,
+        body: truncateBody(body),
+      }
+    }
+
+    return { ok: true, kind: "ok" }
   } catch (error) {
     return {
       ok: false,
+      kind: isReachabilityError(error) ? "unreachable" : "unhealthy",
       detail: error instanceof Error ? error.message : String(error),
+      body: "",
     }
   } finally {
     clearTimeout(timeout)
   }
+}
+
+function isReachabilityError(error) {
+  if (
+    typeof DOMException !== "undefined" &&
+    error instanceof DOMException &&
+    error.name === "AbortError"
+  ) {
+    return true
+  }
+  if (!(error instanceof Error)) return false
+
+  const cause = error.cause
+  return (
+    error.name === "AbortError" ||
+    error.name === "TypeError" ||
+    (cause &&
+      typeof cause === "object" &&
+      "code" in cause &&
+      ["ECONNREFUSED", "ECONNRESET", "ENOTFOUND", "EHOSTUNREACH"].includes(
+        String(cause.code)
+      ))
+  )
+}
+
+function profileReachabilityError(profileUrl, check, processSummary) {
+  const detail = check?.detail ?? "unknown error"
+  const lines = [
+    `Profile page is not reachable at ${profileUrl} (${detail}).`,
+    `Server mode: ${serverMode}`,
+    processSummary ? `Listener: ${processSummary}` : null,
+    `Expected text: ${JSON.stringify(expectedProfileText)}`,
+  ].filter(Boolean)
+
+  if (check?.body) {
+    lines.push("", "Response body preview:", check.body)
+  }
+
+  return new Error(lines.join("\n"))
 }
 
 function startManagedDevServer(profileUrl) {
@@ -193,6 +269,7 @@ async function waitForProfilePage(profileUrl, devServer) {
     [
       `Managed Next dev server did not expose ${profileUrl} within ${devServerTimeoutMs}ms.`,
       `Last check: ${lastCheck?.detail ?? "none"}`,
+      lastCheck?.body ? `\nResponse body preview:\n${lastCheck.body}` : "",
       "",
       "Dev server log tail:",
       devServer.logs.join(""),
@@ -204,8 +281,10 @@ async function resolveProfileUrl() {
   if (serverMode === "existing") {
     const check = await checkProfilePage(requestedProfileUrl)
     if (!check.ok) {
-      throw new Error(
-        `Profile page is not reachable at ${requestedProfileUrl}: ${check.detail}`
+      throw profileReachabilityError(
+        requestedProfileUrl,
+        check,
+        await listeningProcessSummary(requestedProfileUrl)
       )
     }
     return { profileUrl: requestedProfileUrl, devServer: null }
@@ -221,7 +300,25 @@ async function resolveProfileUrl() {
 
   if (serverMode === "auto") {
     const check = await checkProfilePage(requestedProfileUrl)
-    if (check.ok) return { profileUrl: requestedProfileUrl, devServer: null }
+    if (check.ok) {
+      const processSummary = await listeningProcessSummary(requestedProfileUrl)
+      console.log(
+        [
+          `Using existing JSON-table profile route: ${requestedProfileUrl}`,
+          processSummary ? `Listener: ${processSummary}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n")
+      )
+      return { profileUrl: requestedProfileUrl, devServer: null }
+    }
+    if (check.kind === "unhealthy") {
+      throw profileReachabilityError(
+        requestedProfileUrl,
+        check,
+        await listeningProcessSummary(requestedProfileUrl)
+      )
+    }
   }
 
   const port = await findAvailablePort(profilePort(requestedProfileUrl))

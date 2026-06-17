@@ -34,7 +34,7 @@
               "maxActualDurationMs": 0
             },
             "markCounts": {
-              "read-only-row-patcher": 1
+              "scalar-read-only-row-patcher": 1
             },
             "readOnlyRowPatcher": {
               "attemptCount": 1,
@@ -3983,7 +3983,7 @@
               "maxActualDurationMs": 86.59999996423721
             },
             "markCounts": {
-              "read-only-row-patcher": 1
+              "scalar-read-only-row-patcher": 1
             },
             "readOnlyRowPatcher": {
               "attemptCount": 1,
@@ -8427,7 +8427,7 @@
           "maxActualDurationMs": 0
         },
         "markCounts": {
-          "read-only-row-patcher": 1
+          "scalar-read-only-row-patcher": 1
         },
         "readOnlyRowPatcher": {
           "attemptCount": 1,

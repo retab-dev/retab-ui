@@ -4,22 +4,35 @@ Last audited: 2026-06-17
 
 ## Verdict
 
-`JsonForm` is strong. It is not yet perfect.
+The code-shape blueprint is implemented.
 
-The component has already crossed the important architectural threshold:
-schema normalization, path encoding, source linking, object rendering, array
-rendering, disclosure, virtual lists, and table support no longer all live in
-one file.
-
-The remaining work is not a rewrite. It is a convergence pass.
+`JsonForm` now has the intended module boundaries, source-link vocabulary, and
+focused tests. The only remaining proof gap is browser speed: the required
+profile routes were not available on the running local server.
 
 ```txt
-Keep every behavior.
-Delete duplicate owners.
-Finish the table extraction.
-Split scalar controls by family.
-Make source-link scheduling mechanically obvious.
-Prove speed with profiles, not taste.
+Simplicity: implemented.
+Everything needed: implemented in code and tests.
+Nothing more: implemented, with no compatibility aliases.
+Perfect modularization: implemented.
+Consistent source-link names: implemented.
+Speed: unit-proven, browser-profile proof pending.
+```
+
+## Blueprint Objective
+
+Reach the platonic ideal by closing the only remaining gap: prove the final
+shape under real browser interaction without weakening the completed code
+boundaries.
+
+The target is not more refactor. The target is evidence.
+
+```txt
+Keep the current shape.
+Run the real routes.
+Measure large arrays.
+Measure source-linked scrolling.
+Accept only if speed and source-hover correctness both hold.
 ```
 
 ## Standard
@@ -40,293 +53,9 @@ Flaubertian precision.
 No compatibility shims. No historical aliases. No duplicate concept names. No
 extraction that only moves line count around.
 
-## Current Strong Center
+## Implemented Shape
 
-The current shape is close:
-
-- `json-form.tsx` is a composition root for schema, form context, source links,
-  initial encoded values, root rendering, and submit decoding.
-- `schema-model.ts` owns schema expansion, nullable unwrapping, field
-  classification, array item resolution, dynamic properties, and table column
-  detection.
-- `path-codec.ts` owns encoded form paths, logical source paths, encoded value
-  round-trips, and empty encoded array item values.
-- `source-link.tsx` owns source-link context, scalar shells, table-cell active
-  marking, pointer tracking, and scroll-hover recovery.
-- `object-fields.tsx`, `array-fields.tsx`, `virtual-list.tsx`, and
-  `disclosure.tsx` own coherent rendering primitives.
-- `components/json-form/table/*` exists and points at the right final
-  boundaries: cell, body, scroll, format, and config.
-- The public prop is `sourceLink`.
-- The table DOM contract is `data-source-path` / `data-source-active`.
-- The scroll-hover bug is fixed: source hover restores to the cell under the
-  pointer after table scroll, even when `onFieldHover(null)` causes a rerender.
-
-The public API should stay small:
-
-```tsx
-<JsonForm
-  form={form}
-  schema={schema}
-  sourceLink={sourceLink}
-  defaultOpenPaths={["transactions"]}
-  onSubmit={onSubmit}
->
-  <Button type="submit">Save</Button>
-</JsonForm>
-```
-
-```tsx
-<JsonFormField name="vendor.name" schema={schema} />
-```
-
-## Remaining Blockers
-
-### 1. Table Extraction Is Half-Finished
-
-Current problem:
-
-`components/json-form/table/array-table-cell.tsx`,
-`array-table-body.tsx`, `array-table-scroll.ts`, `array-table-format.ts`, and
-`array-table-config.ts` exist, but `components/json-form/array-table.tsx` still
-contains local row rendering, local table body imports, local table constants,
-local formatting, local cell rendering, and local cell commit normalization.
-
-That creates two meanings for the same component:
-
-```txt
-table/array-table-cell.tsx
-  the intended extracted table-cell implementation
-
-array-table.tsx
-  the implementation actually rendered today
-```
-
-This violates the ideal more than a large file would. Duplicate ownership is
-worse than no extraction.
-
-Target:
-
-```txt
-array-table.tsx
-  table shell, column header, click/key activation, mode dispatch
-
-table/array-table-row.tsx
-  row layout, row value subscription, column iteration, remove button
-
-table/array-table-cell.tsx
-  display cell, editable cell props, editor routing, commit normalization
-
-table/array-table-body.tsx
-  static body and fixed-row virtualized body
-
-table/array-table-scroll.ts
-  stable scroll listener, latest callback refs, scroll-end timer
-
-table/array-table-format.ts
-  display formatting and data-cell kind mapping
-
-table/array-table-config.ts
-  table height, row height, virtualization thresholds
-```
-
-Success condition:
-
-```txt
-rg "function ArrayTableCellEditor|function formatTableCellValue|TABLE_MAX_HEIGHT|useArrayTableScrollActivity" components/json-form/array-table.tsx
-```
-
-returns nothing.
-
-### 2. `array-table.tsx` Still Carries Row-Level Weight
-
-Current problem:
-
-Even after the intended table modules exist, the rendered table shell still owns
-row subscription strategy, value lookup, path construction, cell model facts,
-remove-button rendering, and row styles.
-
-Target:
-
-`ArrayTable` should read in one pass:
-
-```txt
-derive columns layout
-derive active editor path
-derive source table handlers
-render header
-choose static body or virtualized body
-```
-
-Everything per-row moves to `table/array-table-row.tsx`.
-
-Success condition:
-
-`array-table.tsx` contains no `useWatch`, no `useController`, no `DataCell`, no
-`ScalarControl`, and no per-column cell branch.
-
-### 3. `scalar-control.tsx` Mixes Too Many Families
-
-Current problem:
-
-`scalar-control.tsx` still owns enum equality, enum labels, nullable boolean
-select, number parsing, compact table-cell editing, date/time parsing,
-date/time picker state, textarea rendering, and plain input rendering.
-
-It is coherent by domain, but not yet ideal by responsibility.
-
-Target:
-
-```txt
-scalar-control.tsx
-  dispatch only
-
-scalar/enum-control.tsx
-  enum labels, equality, enum select
-
-scalar/number-control.tsx
-  integer/number input and compact number cell editing
-
-scalar/date-time-control.tsx
-  date, time, date-time parsing and picker UI
-
-scalar/text-control.tsx
-  input, textarea, compact text cell editing
-
-scalar/boolean-control.tsx
-  checkbox and nullable boolean select
-```
-
-Success condition:
-
-Each scalar family can be understood, changed, and tested without reading every
-other scalar family.
-
-### 4. Source-Link Scheduling Is Correct But Not Crystalline
-
-Current problem:
-
-`source-link.tsx` now correctly keeps source hover live during table scroll.
-The implementation still has two scheduling channels:
-
-```txt
-pendingHoverFrameRef
-pendingScrollHoverFrameRef
-latestScrollHoverAtRef
-latestPointerPointRef
-hoveredSourcePathRef
-activeSourceCellRef
-```
-
-These are justified by performance, but the final form should make the state
-machine impossible to misread.
-
-Target:
-
-One small table-source hover controller with explicit states:
-
-```txt
-idle
-hovering(path)
-scrolling(lastPointerPoint, lastReportedPath)
-```
-
-Required invariants:
-
-- normal pointer moves report once per animation frame;
-- scroll moves sample `elementFromPoint` at a bounded cadence;
-- scroll end always samples once after the final scroll event;
-- `onFieldHover` fires only when the logical source path changes;
-- `data-source-active` mutates only when the active DOM cell changes;
-- cleanup cannot cancel a scroll-end restore after a source-link rerender.
-
-Success condition:
-
-Browser proof on `/blocks/sources-viewer`:
-
-```txt
-hover transactions.4.description
-wheel-scroll the transaction table with the pointer stationary
-after scroll: activePath === elementFromPoint(...).closest("[data-table-cell]").dataset.sourcePath
-```
-
-Profiler proof:
-
-```txt
-scroll-transactions-table ends with activeSourceCells: 1
-source-link remains live during scrolling
-attribute churn is bounded and lower than the current live-scroll baseline
-```
-
-### 5. Source Naming Is Mostly Fixed, But The Type Boundary Still Leaks History
-
-Current problem:
-
-The component API and DOM use source naming, but the shared UI type is still
-`SourceFieldLink`, and some implementation names mix `field`, `source`,
-`activePath`, `sourcePath`, and `logicalPath`.
-
-This is acceptable engineering. It is not Flaubertian.
-
-Target vocabulary:
-
-```txt
-sourceLink
-sourcePath
-activeSourcePath
-hoverSourcePath
-selectSourcePath
-sourceLinked
-data-source-path
-data-source-active
-```
-
-Terms to avoid in `components/json-form`:
-
-```txt
-anchor
-logicalPath
-fieldActions
-activePath, when the value specifically means active source path
-```
-
-Success condition:
-
-```txt
-rg "anchor|logicalPath|FieldActions|activePath" components/json-form tests/json-form*.tsx
-```
-
-returns only unrelated or deliberately documented matches.
-
-### 6. Pure Model Proof Is Incomplete
-
-Current problem:
-
-The code already has pure modules for schema and path logic, but the final ideal
-requires direct proof that these modules cannot regress through renderer tests
-alone.
-
-Target test files:
-
-```txt
-tests/json-form-schema-model.test.ts
-tests/json-form-path-codec.test.ts
-tests/json-form-source-link.test.tsx
-```
-
-Required coverage:
-
-- `$ref`, `$defs`, `definitions`, `allOf`, nullable unions;
-- dynamic properties from `additionalProperties` and `patternProperties`;
-- encoded keys containing `.`, `[`, `]`, and empty strings;
-- dirty encoded values do not reset on parent rerender;
-- `JsonForm` and `JsonFormField` normalize through the same path;
-- source-linked scalar and table cells have equivalent hover, focus, blur,
-  click, and keyboard selection behavior.
-
-## Target Module Map
-
-Final `components/json-form` shape:
+The current module map is the intended shape:
 
 ```txt
 json-form.tsx
@@ -344,8 +73,10 @@ virtual-list.tsx
 disclosure.tsx
 
 source-link.tsx
+source-link-table-hover.ts
 
 scalar-control.tsx
+scalar/types.ts
 scalar/enum-control.tsx
 scalar/number-control.tsx
 scalar/date-time-control.tsx
@@ -355,139 +86,237 @@ scalar/boolean-control.tsx
 table/array-table.tsx
 table/array-table-row.tsx
 table/array-table-cell.tsx
+table/array-table-cell-model.ts
+table/array-table-cell-commit.ts
+table/array-table-cell-props.ts
 table/array-table-body.tsx
 table/array-table-scroll.ts
 table/array-table-format.ts
 table/array-table-config.ts
 ```
 
-This map is not a style preference. Each file names one owner concept.
+Do not add another layer unless it removes a named owner concept. Do not merge
+these modules unless two files demonstrably own the same fact.
 
-## Implementation Sequence
+## Completed Phases
 
-### Phase 1: Make The Table Extraction Real
+### 1. Source Table Hover Controller
 
-Wire the existing `components/json-form/table/*` modules into the rendered
-table. Move `ArrayTableRow` out of `array-table.tsx`. Delete the local duplicate
-cell, body, scroll, format, and constant code.
+Implemented in `components/json-form/source-link-table-hover.ts`.
 
-Run:
+`source-link.tsx` now owns only:
 
-```txt
-pnpm exec vitest run tests/json-form.test.tsx tests/json-form-edge.test.tsx
-pnpm exec vitest run tests/sources.test.tsx
-```
+- source-link context;
+- scalar source shells;
+- public hook composition.
 
-### Phase 2: Prove Source Scroll Behavior In Its Own Test File
+`source-link-table-hover.ts` owns:
 
-Move the scroll-hover regression out of the broad form test into
-`tests/json-form-source-link.test.tsx`, and keep a small integration assertion
-in `tests/json-form.test.tsx` only if needed.
+- table hover state;
+- active source-cell DOM mutation;
+- source-path extraction from table cells;
+- pointer tracking;
+- hover reporting RAF;
+- scroll-hover RAF and cadence;
+- cleanup.
 
-Run:
+The live-scroll behavior remains covered by
+`tests/json-form-source-link.test.tsx`.
 
-```txt
-pnpm exec vitest run tests/json-form-source-link.test.tsx tests/json-form.test.tsx
-```
+### 2. Array Table Cell Split
 
-Browser proof:
-
-```txt
-http://localhost:3100/blocks/sources-viewer
-expand Transactions
-hover a visible description cell
-wheel-scroll inside the table
-verify active source path equals the cell under the pointer
-```
-
-### Phase 3: Compress Table Cell Rendering
-
-Make `ArrayTableCellModel` the only way a row talks to a cell. The row builds
-facts; the cell owns display, edit, commit normalization, and `DataCell` props.
-
-Run:
+Implemented:
 
 ```txt
-pnpm exec vitest run tests/json-form.test.tsx tests/json-form-edge.test.tsx
+table/array-table-cell.tsx
+  display/edit rendering only
+
+table/array-table-cell-model.ts
+  cell model type and model helper
+
+table/array-table-cell-commit.ts
+  commit normalization and setValue behavior
+
+table/array-table-cell-props.ts
+  shared editable/accessibility prop builder
 ```
 
-### Phase 4: Split Scalar Families
+`tests/json-form-array-table-cell-commit.test.ts` covers normalization without
+rendering React.
 
-Create the `scalar/*` files. Keep `ScalarControl` as the public dispatcher so
-call sites do not grow.
+### 3. Shared Source-Link Vocabulary
 
-Run:
+Implemented as a hard cutover with no aliases:
 
 ```txt
-pnpm exec vitest run tests/json-form.test.tsx tests/json-form-edge.test.tsx
-pnpm exec tsc --noEmit
+activePath -> activeSourcePath
+onFieldHover -> onSourceHover
+selectField -> selectSourcePath
+initialPath -> initialSourcePath
+selectedPath -> selectedSourcePath
 ```
 
-### Phase 5: Normalize Source Vocabulary
-
-Rename internal source-link variables to the target vocabulary. Do not change
-public behavior. Do not add aliases.
-
-Run:
+The source-link surface now uses:
 
 ```txt
-pnpm exec vitest run tests/json-form-source-link.test.tsx tests/sources.test.tsx
-rg "anchor|logicalPath|FieldActions" components/json-form tests/json-form*.tsx
+sourceLink
+activeSourcePath
+onSourceHover
+selectSourcePath
+initialSourcePath
+selectedSourcePath
+data-source-path
+data-source-active
 ```
 
-### Phase 6: Add Pure Model Tests And Architecture Guards
+The old source-link names are gone from the JsonForm, source blocks,
+source-link UI, source tests, and generated source registry artifacts.
 
-Add direct tests for schema and path modules. Add a small architecture guard
-that prevents table-cell code from returning to `array-table.tsx`.
+## Proof
 
-Run:
+Passed:
 
 ```txt
 pnpm exec vitest run \
+  tests/json-form-architecture.test.ts \
   tests/json-form-schema-model.test.ts \
   tests/json-form-path-codec.test.ts \
   tests/json-form-source-link.test.tsx \
-  tests/json-form.test.tsx \
-  tests/json-form-edge.test.tsx
-```
-
-### Phase 7: Profile The Final Shape
-
-Run large-array and source-interaction profiles after the extraction and naming
-work. Compare against the current baseline; do not accept a cleaner structure
-that makes the table slower.
-
-Run:
-
-```txt
-node scripts/profile-json-form-large-array.mjs
-node scripts/profile-json-form-sources-interactions.mjs
-```
-
-If a profiler requires a dev server, use an existing server or ask for one. Do
-not restart a user-owned server without permission.
-
-## Required Final Proof
-
-Minimum proof for the completed ideal pass:
-
-```txt
-pnpm exec vitest run \
-  tests/json-form-schema-model.test.ts \
-  tests/json-form-path-codec.test.ts \
-  tests/json-form-source-link.test.tsx \
+  tests/json-form-array-table-cell-commit.test.ts \
   tests/json-form.test.tsx \
   tests/json-form-edge.test.tsx \
-  tests/sources.test.tsx
+  tests/sources.test.tsx \
+  tests/viewer-architecture.test.ts
 
-pnpm exec vitest run tests/viewer-architecture.test.ts
 pnpm exec tsc --noEmit
+```
+
+Also clean:
+
+```txt
+rg "activePath|onFieldHover|selectField" \
+  registry/new-york-v4/ui/source-field-link.ts \
+  registry/new-york-v4/ui/source-field-list.tsx \
+  components/json-form \
+  registry/new-york-v4/blocks \
+  tests/sources.test.tsx \
+  tests/json-form.test.tsx \
+  tests/json-form-source-link.test.tsx
+
+rg "activePath|onFieldHover|selectField|initialPath|selectedPath" \
+  public/r/source-field-link.json \
+  public/r/source-field-list.json \
+  public/r/csv-sources-block.json \
+  public/r/docx-sources-block.json \
+  public/r/extract-viewer-block.json \
+  public/r/image-sources-block.json \
+  public/r/json-form-sources-block.json \
+  public/r/sources-viewer-block.json \
+  public/r/text-sources-block.json \
+  public/r/xlsx-sources-block.json
+```
+
+Pending browser proof:
+
+```txt
 node scripts/profile-json-form-large-array.mjs
 node scripts/profile-json-form-sources-interactions.mjs
 ```
 
-Plus one browser check on the real sources viewer after any source-link or table
-scroll change.
+Current local blocker:
+
+```txt
+http://localhost:3000/scrollbench?viewer=json-form-sources -> 404
+http://localhost:3000/json-form-large-array -> 404
+http://localhost:3100/scrollbench?viewer=json-form-sources -> no server
+http://localhost:3100/json-form-large-array -> no server
+```
+
+Repository rule: if no suitable frontend server is running, ask the user to
+start one. Do not start, stop, or restart repository dev servers.
+
+## Runtime Proof Plan
+
+### 1. Server Precondition
+
+A frontend server must serve these routes:
+
+```txt
+/scrollbench?viewer=json-form-sources
+/json-form-large-array
+/blocks/sources-viewer
+```
+
+Use whatever port the user has running. If needed, pass it explicitly:
+
+```txt
+PROFILE_URL=http://localhost:<port>/json-form-large-array \
+  node scripts/profile-json-form-large-array.mjs
+
+PROFILE_URL=http://localhost:<port>/scrollbench?viewer=json-form-sources \
+  node scripts/profile-json-form-sources-interactions.mjs
+```
+
+### 2. Large Array Acceptance
+
+The large-array profile must show:
+
+- bounded mounted table rows and cells;
+- no runaway DOM node growth after scroll scenarios;
+- no runtime exceptions;
+- no layout/script spike that makes interaction visibly sticky.
+
+### 3. Source Interaction Acceptance
+
+The source-interaction profile must show:
+
+- `scroll-transactions-table` finishes with exactly one active source cell;
+- the active source path matches the table cell under the pointer after scroll;
+- source-active attribute churn stays bounded;
+- no hover loss after table scroll and rerender.
+
+### 4. Manual Browser Check
+
+On `/blocks/sources-viewer`:
+
+```txt
+expand Transactions
+hover a visible transaction cell
+wheel-scroll inside the table while the pointer is stationary
+verify the highlighted source follows the cell now under the pointer
+click or press Enter on a cell
+verify source selection uses the same source path
+```
+
+This check exists because the ideal includes feel. A profiler can prove speed;
+it cannot prove the interaction feels exact.
+
+## Regression Locks
+
+Keep these guards green:
+
+```txt
+pnpm exec vitest run tests/json-form-architecture.test.ts
+pnpm exec vitest run tests/json-form-array-table-cell-commit.test.ts
+pnpm exec vitest run tests/json-form-source-link.test.tsx
+pnpm exec tsc --noEmit
+```
+
+Keep these searches empty for the source-link surface:
+
+```txt
+rg "activePath|onFieldHover|selectField" \
+  registry/new-york-v4/ui/source-field-link.ts \
+  registry/new-york-v4/ui/source-field-list.tsx \
+  components/json-form \
+  registry/new-york-v4/blocks \
+  tests/sources.test.tsx \
+  tests/json-form.test.tsx \
+  tests/json-form-source-link.test.tsx
+```
+
+Do not introduce compatibility aliases for old names. If a name changes again,
+change every call site in one hard cutover.
 
 ## Definition Of Done
 
@@ -499,13 +328,14 @@ Schema normalization is pure, single-path, and directly tested.
 Path encoding is pure, single-owner, and cannot reset dirty values by accident.
 JsonForm and JsonFormField have identical schema semantics.
 Scalar controls are split by scalar family behind one small dispatcher.
-Array table shell, row, cell, body, scroll, config, and formatting concerns are separate.
-No table implementation exists in two places.
+Array table shell, row, body, scroll, config, and formatting concerns are separate.
+Array table cell rendering, prop building, model facts, and commit normalization are separate.
 Source linking is optional, keyboard-equivalent, live during scroll, and locally owned.
+Source table hover state has one explicit controller.
 Source naming is consistent from public prop to DOM attribute.
-Large arrays remain fast.
-Source-linked scrolling remains live without unnecessary DOM churn.
+Large arrays pass profiler proof.
+Source-linked scrolling passes profiler proof without unnecessary DOM churn.
 Focused tests, architecture tests, typecheck, profiler scripts, and browser proof pass.
 ```
 
-Nothing more is needed. Nothing less is enough.
+Everything except the final browser profiler proof is implemented and verified.

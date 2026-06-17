@@ -1584,8 +1584,8 @@ describe("JsonForm arrays", () => {
 
 describe("JsonForm source linking", () => {
   it("reports scalar hover, focus, blur, and selection by field path", () => {
-    const onFieldHover = vi.fn()
-    const selectField = vi.fn()
+    const onSourceHover = vi.fn()
+    const selectSourcePath = vi.fn()
     renderJsonForm({
       schema: {
         type: "object",
@@ -1595,9 +1595,9 @@ describe("JsonForm source linking", () => {
       },
       defaultValues: { customer_name: "Jane" },
       sourceLink: {
-        activePath: "customer_name",
-        onFieldHover,
-        selectField,
+        activeSourcePath: "customer_name",
+        onSourceHover,
+        selectSourcePath,
       },
     })
 
@@ -1609,14 +1609,14 @@ describe("JsonForm source linking", () => {
     fireEvent.blur(input)
     fireEvent.click(input)
 
-    expect(onFieldHover).toHaveBeenCalledWith("customer_name")
-    expect(onFieldHover).toHaveBeenCalledWith(null)
-    expect(selectField).toHaveBeenCalledWith("customer_name")
+    expect(onSourceHover).toHaveBeenCalledWith("customer_name")
+    expect(onSourceHover).toHaveBeenCalledWith(null)
+    expect(selectSourcePath).toHaveBeenCalledWith("customer_name")
   })
 
   it("selects a focused source-linked scalar field from the keyboard", () => {
-    const onFieldHover = vi.fn()
-    const selectField = vi.fn()
+    const onSourceHover = vi.fn()
+    const selectSourcePath = vi.fn()
     renderJsonForm({
       schema: {
         type: "object",
@@ -1626,9 +1626,9 @@ describe("JsonForm source linking", () => {
       },
       defaultValues: { customer_name: "Jane" },
       sourceLink: {
-        activePath: null,
-        onFieldHover,
-        selectField,
+        activeSourcePath: null,
+        onSourceHover,
+        selectSourcePath,
       },
     })
 
@@ -1637,13 +1637,13 @@ describe("JsonForm source linking", () => {
     fireEvent.keyDown(input, { key: "Enter" })
     fireEvent.keyDown(input, { key: " " })
 
-    expect(selectField).toHaveBeenCalledTimes(1)
-    expect(selectField).toHaveBeenCalledWith("customer_name")
+    expect(selectSourcePath).toHaveBeenCalledTimes(1)
+    expect(selectSourcePath).toHaveBeenCalledWith("customer_name")
   })
 
   it("reports table-cell source paths", () => {
-    const onFieldHover = vi.fn()
-    const selectField = vi.fn()
+    const onSourceHover = vi.fn()
+    const selectSourcePath = vi.fn()
     renderJsonForm({
       schema: {
         type: "object",
@@ -1662,9 +1662,9 @@ describe("JsonForm source linking", () => {
       },
       defaultValues: { rows: [{ value: "A" }] },
       sourceLink: {
-        activePath: "rows.0.value",
-        onFieldHover,
-        selectField,
+        activeSourcePath: "rows.0.value",
+        onSourceHover,
+        selectSourcePath,
       },
     })
 
@@ -1676,14 +1676,14 @@ describe("JsonForm source linking", () => {
     fireEvent.blur(cell)
     fireEvent.click(cell)
 
-    expect(onFieldHover).toHaveBeenCalledWith("rows.0.value")
-    expect(onFieldHover).toHaveBeenCalledWith(null)
-    expect(selectField).toHaveBeenCalledWith("rows.0.value")
+    expect(onSourceHover).toHaveBeenCalledWith("rows.0.value")
+    expect(onSourceHover).toHaveBeenCalledWith(null)
+    expect(selectSourcePath).toHaveBeenCalledWith("rows.0.value")
   })
 
   it("keeps source-linked table cells in display mode on hover", async () => {
-    const onFieldHover = vi.fn()
-    const selectField = vi.fn()
+    const onSourceHover = vi.fn()
+    const selectSourcePath = vi.fn()
     renderJsonForm({
       schema: {
         type: "object",
@@ -1702,9 +1702,9 @@ describe("JsonForm source linking", () => {
       },
       defaultValues: { rows: [{ amount: 1875.24 }] },
       sourceLink: {
-        activePath: null,
-        onFieldHover,
-        selectField,
+        activeSourcePath: null,
+        onSourceHover,
+        selectSourcePath,
       },
     })
 
@@ -1714,7 +1714,7 @@ describe("JsonForm source linking", () => {
     expect(cell.getAttribute("data-mode")).toBe("display")
     expect(screen.queryByRole("spinbutton")).toBeNull()
     await waitFor(() =>
-      expect(onFieldHover).toHaveBeenCalledWith("rows.0.amount")
+      expect(onSourceHover).toHaveBeenCalledWith("rows.0.amount")
     )
 
     fireEvent.click(cell)
@@ -1722,7 +1722,7 @@ describe("JsonForm source linking", () => {
     const input = screen.getByRole("spinbutton", { name: "Amount 1875.24" })
     expect((input as HTMLInputElement).type).toBe("number")
     expect(input.getAttribute("data-slot")).toBe("data-cell")
-    expect(selectField).toHaveBeenCalledWith("rows.0.amount")
+    expect(selectSourcePath).toHaveBeenCalledWith("rows.0.amount")
   })
 })
 

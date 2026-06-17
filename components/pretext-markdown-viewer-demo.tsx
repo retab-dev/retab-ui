@@ -158,10 +158,12 @@ const PRETEXT_MARKDOWN_VIEWER_DEMO_TEXT = [
   "",
   '<Metric label="Parse accuracy" value="99.2%" />',
   '<Metric label="Mounted chunks" value="small window" />',
-  '<Badge label="Stable" tone="success" /> <Badge label="Watch" tone="warning" /> <Badge label="Policy" tone="info" />',
+  '<Badge label="Stable" tone="success" /> <Badge label="Watch" tone="warning" /> <Badge label="Policy" tone="default" />',
   "",
   '<Callout kind="warning" title="Review generated reports">',
+  "",
   "Component Markdown can contain **safe Markdown children**, lists, `inline code`, and links to [local sections](#code-blocks).",
+  "",
   "</Callout>",
   "",
   ':::tip{title="Directive callout"}',
@@ -229,7 +231,7 @@ const PRETEXT_MARKDOWN_VIEWER_DEMO_TEXT = [
   "",
   "Oversized blocks stay inspectable without mounting the full rich subtree. This deliberately large code fence and table should render as bounded source previews with copy actions.",
   "",
-  "```ts title=\"huge-generated.ts\"",
+  '```ts title="huge-generated.ts"',
   ...Array.from(
     { length: 460 },
     (_, index) => `export const generatedLine${index + 1} = ${index + 1}`

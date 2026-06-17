@@ -19,12 +19,12 @@ afterEach(cleanup)
 
 describe("json-form source link", () => {
   it("previews on focus and selects on Enter without hijacking text input Space", () => {
-    const onFieldHover = vi.fn()
-    const selectField = vi.fn()
+    const onSourceHover = vi.fn()
+    const selectSourcePath = vi.fn()
 
     render(
       <JsonFormSourceLinkProvider
-        sourceLink={{ activePath: null, onFieldHover, selectField }}
+        sourceLink={{ activeSourcePath: null, onSourceHover, selectSourcePath }}
       >
         <SourceLinkShell sourcePath="customer.name">
           <label>
@@ -41,15 +41,15 @@ describe("json-form source link", () => {
     fireEvent.keyDown(input, { key: " " })
     fireEvent.blur(input)
 
-    expect(onFieldHover).toHaveBeenCalledWith("customer.name")
-    expect(onFieldHover).toHaveBeenCalledWith(null)
-    expect(selectField).toHaveBeenCalledTimes(1)
-    expect(selectField).toHaveBeenCalledWith("customer.name")
+    expect(onSourceHover).toHaveBeenCalledWith("customer.name")
+    expect(onSourceHover).toHaveBeenCalledWith(null)
+    expect(selectSourcePath).toHaveBeenCalledTimes(1)
+    expect(selectSourcePath).toHaveBeenCalledWith("customer.name")
   })
 
   it("owns table-cell active state, hover preview, and selection", async () => {
-    const onFieldHover = vi.fn()
-    const selectField = vi.fn()
+    const onSourceHover = vi.fn()
+    const selectSourcePath = vi.fn()
 
     function TableSourceHarness() {
       const tableRef = React.useRef<HTMLDivElement>(null)
@@ -85,7 +85,11 @@ describe("json-form source link", () => {
 
     render(
       <JsonFormSourceLinkProvider
-        sourceLink={{ activePath: "rows.0.value", onFieldHover, selectField }}
+        sourceLink={{
+          activeSourcePath: "rows.0.value",
+          onSourceHover,
+          selectSourcePath,
+        }}
       >
         <TableSourceHarness />
       </JsonFormSourceLinkProvider>
@@ -98,20 +102,20 @@ describe("json-form source link", () => {
 
     fireEvent.pointerMove(cell, { clientX: 12, clientY: 16 })
     await waitFor(() =>
-      expect(onFieldHover).toHaveBeenCalledWith("rows.0.value")
+      expect(onSourceHover).toHaveBeenCalledWith("rows.0.value")
     )
 
     fireEvent.click(cell)
-    expect(selectField).toHaveBeenCalledWith("rows.0.value")
+    expect(selectSourcePath).toHaveBeenCalledWith("rows.0.value")
 
     fireEvent.focus(cell)
     fireEvent.blur(cell)
-    expect(onFieldHover).toHaveBeenCalledWith(null)
+    expect(onSourceHover).toHaveBeenCalledWith(null)
   })
 
   it("updates table-cell source hover during scroll without clearing it", async () => {
-    const onFieldHover = vi.fn()
-    const selectField = vi.fn()
+    const onSourceHover = vi.fn()
+    const selectSourcePath = vi.fn()
 
     function TableSourceHarness() {
       const tableRef = React.useRef<HTMLDivElement>(null)
@@ -151,7 +155,7 @@ describe("json-form source link", () => {
 
     render(
       <JsonFormSourceLinkProvider
-        sourceLink={{ activePath: null, onFieldHover, selectField }}
+        sourceLink={{ activeSourcePath: null, onSourceHover, selectSourcePath }}
       >
         <TableSourceHarness />
       </JsonFormSourceLinkProvider>
@@ -168,16 +172,16 @@ describe("json-form source link", () => {
     try {
       fireEvent.pointerMove(firstCell, { clientX: 12, clientY: 16 })
       await waitFor(() =>
-        expect(onFieldHover).toHaveBeenCalledWith("rows.0.value")
+        expect(onSourceHover).toHaveBeenCalledWith("rows.0.value")
       )
 
-      onFieldHover.mockClear()
+      onSourceHover.mockClear()
       fireEvent.scroll(firstCell.parentElement!)
 
       await waitFor(() =>
-        expect(onFieldHover).toHaveBeenCalledWith("rows.1.value")
+        expect(onSourceHover).toHaveBeenCalledWith("rows.1.value")
       )
-      expect(onFieldHover).not.toHaveBeenCalledWith(null)
+      expect(onSourceHover).not.toHaveBeenCalledWith(null)
     } finally {
       Object.defineProperty(document, "elementFromPoint", {
         configurable: true,

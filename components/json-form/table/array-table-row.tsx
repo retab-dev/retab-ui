@@ -11,13 +11,10 @@ import {
   joinJsonFormPath,
   joinJsonSourcePath,
 } from "@/components/json-form/path-codec"
-import { labelFor, type Column } from "@/components/json-form/schema-model"
-import { TABLE_ROW_HEIGHT } from "@/components/json-form/table/array-table-config"
+import type { Column } from "@/components/json-form/schema-model"
 import { ArrayTableCell } from "@/components/json-form/table/array-table-cell"
-import {
-  dataCellKindForColumn,
-  formatArrayTableCellValue,
-} from "@/components/json-form/table/array-table-format"
+import { createArrayTableCellModel } from "@/components/json-form/table/array-table-cell-model"
+import { TABLE_ROW_HEIGHT } from "@/components/json-form/table/array-table-config"
 
 export const ArrayTableRow = React.memo(function ArrayTableRow({
   name,
@@ -87,24 +84,18 @@ export const ArrayTableRow = React.memo(function ArrayTableRow({
       {columns.map((column) => {
         const path = joinJsonFormPath(rowPath, column.key)
         const value = rowValue?.[encodeJsonFormKey(column.key)]
-        const isEnum = column.kind === "enum"
-        const isActiveEditor = activeEditorPath === path
 
         return (
           <ArrayTableCell
             key={column.key}
-            model={{
+            model={createArrayTableCellModel({
               path,
               sourcePath: joinJsonSourcePath(rowSourcePath, column.key),
-              label: labelFor(column.key, column.schema),
-              displayText: formatArrayTableCellValue({ value, column }),
-              kind: dataCellKindForColumn(column),
+              column,
               value,
-              isEnum,
-              isEditing: isEnum && isActiveEditor,
-              isScalarEditing: !isEnum && isActiveEditor,
+              activeEditorPath,
               sourceLinked,
-            }}
+            })}
             column={column}
             setValue={setValue}
             closeEditor={closeEditor}

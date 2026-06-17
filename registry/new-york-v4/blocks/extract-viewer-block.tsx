@@ -95,7 +95,9 @@ export function ExtractViewerBlock() {
 }
 
 function ExtractViewerContent() {
-  const link = useSegmentedSourceFieldLink({ initialPath: FIELDS[0]?.key })
+  const link = useSegmentedSourceFieldLink({
+    initialSourcePath: FIELDS[0]?.key,
+  })
   const setPdfViewerHandle = useSegmentedPdfViewerHandle()
   const renderPageOverlay = useSegmentedPdfSourceOverlay(link)
   const { documentHandlers } = useSegmentedDocumentViewport()
@@ -130,7 +132,10 @@ function ExtractViewerContent() {
               </FileViewerBody>
             </PdfViewerProvider>
           </FileViewer>
-          <SourceIndicator path={link.activePath} found={!!link.activeAnchor} />
+          <SourceIndicator
+            path={link.activeSourcePath}
+            found={!!link.activeAnchor}
+          />
         </ViewerSurface>
         <ViewerSidebar
           aria-label="Extracted fields"

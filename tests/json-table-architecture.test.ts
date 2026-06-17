@@ -478,6 +478,9 @@ describe("json table and DataCell architecture", () => {
       "tests/scalar-read-only-json-row-patcher.test.tsx"
     )
     expect(packageJson.scripts?.["test:json-table"]).toContain(
+      "tests/json-table-profiler-architecture.test.ts"
+    )
+    expect(packageJson.scripts?.["test:json-table"]).toContain(
       "tests/json-table-row-policy.test.tsx"
     )
     expect(packageJson.scripts?.["test:json-table"]).toContain(
@@ -526,6 +529,14 @@ describe("json table and DataCell architecture", () => {
     )
     expect(architectureContent.includes("pnpm verify:json-table")).toBe(true)
     expect(architectureContent.includes("pnpm test:json-table")).toBe(true)
+    expect(architectureContent.includes("Maintainer local full proof")).toBe(
+      true
+    )
+    expect(architectureContent.includes("Agent/repo-policy proof")).toBe(true)
+    expect(architectureContent.includes("CI proof")).toBe(true)
+    expect(architectureContent.includes("PROFILE_SERVER_MODE=existing")).toBe(
+      true
+    )
     expect(architectureContent.includes("JSON_TABLE_PROFILE_WARMUP=1")).toBe(
       true
     )
@@ -602,13 +613,16 @@ describe("json table and DataCell architecture", () => {
 
     for (const requiredDocument of [
       "## Current Documents",
+      "design/data-cell-json-table-literal-platonic-gap-blueprint.md",
       "design/data-cell-json-table-platonic-issues-blueprint.md",
       "design/data-cell-json-table-current-platonic-gap-blueprint.md",
       "design/data-cell-json-table-style-invalidation-findings.md",
       "components/json-table/json-table-performance-budget.json",
       "scripts/profile-json-table-primitive-interactions.mjs",
+      "scripts/json-table-profiler/*",
       "scripts/verify-json-table-performance-budget.mjs",
       "scripts/verify-json-table-performance-budget-fresh.mjs",
+      "scripts/verify-json-table-accessibility.mjs",
       "Older JSON-table blueprints are historical",
     ]) {
       expect(
@@ -2594,7 +2608,13 @@ describe("json table and DataCell architecture", () => {
   it("keeps fresh performance verification self-diagnosing", () => {
     const verifierFile =
       "scripts/verify-json-table-performance-budget-fresh.mjs"
+    const accessibilityVerifierFile =
+      "scripts/verify-json-table-accessibility.mjs"
     const content = readFileSync(join(repoRoot, verifierFile), "utf8")
+    const accessibilityContent = readFileSync(
+      join(repoRoot, accessibilityVerifierFile),
+      "utf8"
+    )
 
     for (const requiredToken of [
       "PROFILE_SERVER_MODE",
@@ -2613,6 +2633,25 @@ describe("json table and DataCell architecture", () => {
     }
 
     expect(content.includes("Start it with: pnpm dev")).toBe(false)
+
+    for (const requiredToken of [
+      "profileReachabilityError",
+      "listeningProcessSummary",
+      "Listener:",
+      "Response body preview",
+      "Server mode:",
+      "kind: \"unhealthy\"",
+      "\"unreachable\"",
+    ]) {
+      expect(
+        accessibilityContent.includes(requiredToken),
+        `${accessibilityVerifierFile} keeps fresh setup diagnostic ${requiredToken}`
+      ).toBe(true)
+    }
+
+    expect(accessibilityContent.includes("Start it with: pnpm dev")).toBe(
+      false
+    )
   })
 
   it("keeps browser accessibility verification checking virtualized column behavior", () => {
@@ -2725,201 +2764,6 @@ describe("json table and DataCell architecture", () => {
       expect(
         content.includes(requiredToken),
         `${stressFile} keeps ${requiredToken}`
-      ).toBe(true)
-    }
-  })
-
-  it("keeps primitive interaction profiling repeatable", () => {
-    const profilerFile = "scripts/profile-json-table-primitive-interactions.mjs"
-    const verifierFile = "scripts/verify-json-table-performance-budget.mjs"
-    const content = readFileSync(join(repoRoot, profilerFile), "utf8")
-    const verifierContent = readFileSync(join(repoRoot, verifierFile), "utf8")
-
-    for (const requiredToken of [
-      "JSON_TABLE_PROFILE_REPEAT",
-      "JSON_TABLE_PROFILE_WARMUP",
-      "JSON_TABLE_PROFILE_TRACE",
-      "JSON_TABLE_PROFILE_TARGETS",
-      "JSON_TABLE_PROFILE_SCENARIOS",
-      "JSON_TABLE_STYLE_CLASS_EXPERIMENTS",
-      '"--repeat"',
-      '"--warmup"',
-      '"--trace"',
-      '"--targets"',
-      '"--scenarios"',
-      '"--style-class-experiments"',
-      "buildRepeatedProfileSummary",
-      "repeatedScenarios",
-      "targetFilter",
-      "scenarioFilter",
-      "styleClassExperiments",
-      "assertSelectedScenarioNamesMatched",
-      "assertFilteredProfile",
-      "warmupCount",
-      "traceMode",
-      "traceCategories",
-      "traceStyleMs",
-      "median",
-      "p90",
-      "worst",
-    ]) {
-      expect(
-        content.includes(requiredToken),
-        `${profilerFile} keeps ${requiredToken}`
-      ).toBe(true)
-    }
-
-    for (const requiredToken of [
-      "selectedBudgetProfileEntries",
-      "selectedScenarioBudgetEntries",
-      "report.targetFilter",
-      "report.scenarioFilter",
-      "Missing performance budget profile",
-      "Missing performance budget scenario",
-    ]) {
-      expect(
-        verifierContent.includes(requiredToken),
-        `${verifierFile} keeps target-filtered repeated profile support ${requiredToken}`
-      ).toBe(true)
-    }
-  })
-
-  it("keeps primitive interaction profiling surface-attributed", () => {
-    const profilerFile = "scripts/profile-json-table-primitive-interactions.mjs"
-    const verifierFile = "scripts/verify-json-table-performance-budget.mjs"
-    const profileRouteFile = "app/(app)/json-table-profile/page.tsx"
-    const profileProbeFile = "components/json-table/json-table-style-probe.tsx"
-    const profilerContent = readFileSync(join(repoRoot, profilerFile), "utf8")
-    const verifierContent = readFileSync(join(repoRoot, verifierFile), "utf8")
-    const profileRouteContent = readFileSync(
-      join(repoRoot, profileRouteFile),
-      "utf8"
-    )
-    const profileProbeContent = readFileSync(
-      join(repoRoot, profileProbeFile),
-      "utf8"
-    )
-
-    for (const requiredToken of [
-      "mountedSurfaceSnapshot",
-      "mountedSurfaceDelta",
-      "mountedSurface",
-      "shouldRunStyleProbeScenarios",
-      "installStyleClassExperiments",
-      "styleClassExperimentRules",
-      "disable-row-hover",
-      "disable-active-cell-overlay",
-      "disable-focus-visible-ring",
-      "disable-portal-shadow",
-      "clickStyleProbeButton",
-      "open-empty-portal-shell",
-      "open-select-popup-shell",
-      "open-picker-popup-shell",
-      "headerCells",
-      "headerNodes",
-      "editableCells",
-      "bodyNodes",
-      "popupNodes",
-      "popupRoots",
-      "json-table-inert-popup",
-      "data-json-table-style-probe",
-      "styleSheets",
-      "styleElements",
-      "linkedStyleSheets",
-      "focusedElement",
-      "hoveredEditableCells",
-      "styleAttributionHint",
-      "Tracing.start",
-      "Tracing.dataCollected",
-      "traceEventSummary",
-    ]) {
-      expect(
-        profilerContent.includes(requiredToken),
-        `${profilerFile} keeps ${requiredToken}`
-      ).toBe(true)
-    }
-
-    for (const requiredToken of [
-      "mountedHeaderCells",
-      "mountedHeaderNodes",
-      "mountedEditableCells",
-      "mountedBodyNodes",
-      "mountedPopupRoots",
-      "mountedPopupNodes",
-      "styleSheets",
-      "focusedElementLabel",
-      "styleAttributionHint",
-      "surface=header",
-      "nodes=header",
-      "focus=",
-      "owner=",
-      "traceStyle=",
-      "traceLayout=",
-    ]) {
-      expect(
-        verifierContent.includes(requiredToken),
-        `${verifierFile} keeps ${requiredToken}`
-      ).toBe(true)
-    }
-
-    for (const requiredToken of ["JsonTableStyleProbe"]) {
-      expect(
-        profileRouteContent.includes(requiredToken),
-        `${profileRouteFile} keeps ${requiredToken}`
-      ).toBe(true)
-    }
-
-    for (const requiredToken of [
-      "json-table-style-probe",
-      "json-table-inert-popup",
-      "data-cell-select-popup",
-      "data-cell-picker-popup",
-    ]) {
-      expect(
-        profileProbeContent.includes(requiredToken),
-        `${profileProbeFile} keeps ${requiredToken}`
-      ).toBe(true)
-    }
-  })
-
-  it("keeps primitive interaction profiling date commits stable", () => {
-    const profilerFile = "scripts/profile-json-table-primitive-interactions.mjs"
-    const content = readFileSync(join(repoRoot, profilerFile), "utf8")
-
-    for (const requiredToken of [
-      "calendarCommitDatePoint",
-      "button[data-day]",
-      "data-selected-single",
-      "enabledVisibleButtons",
-      "No date commit button found:",
-    ]) {
-      expect(
-        content.includes(requiredToken),
-        `${profilerFile} keeps ${requiredToken}`
-      ).toBe(true)
-    }
-
-    expect(content.includes('className.includes("outside")')).toBe(false)
-  })
-
-  it("keeps primitive interaction profiling lifecycle stable", () => {
-    const profilerFile = "scripts/profile-json-table-primitive-interactions.mjs"
-    const content = readFileSync(join(repoRoot, profilerFile), "utf8")
-
-    for (const requiredToken of [
-      "activateEditableProfile",
-      "profilePageState",
-      "recoverBlankEditableProfile",
-      "closeChromeTarget",
-      "closeProfileTargets",
-      "profileSurfaceTimeoutMs",
-      "editableCellTimeoutMs",
-      "/json/close/",
-      "Editable JSON table did not mount:",
-    ]) {
-      expect(
-        content.includes(requiredToken),
-        `${profilerFile} keeps ${requiredToken}`
       ).toBe(true)
     }
   })

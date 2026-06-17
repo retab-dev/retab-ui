@@ -6,30 +6,26 @@ import { CalendarIcon, ClockIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
-import {
-  DataCell,
-  formatDataCellDisplayValue,
-} from "@/components/ui/data-cell"
+import { DataCell, formatDataCellDisplayValue } from "@/components/ui/data-cell"
 import { Input } from "@/components/ui/input"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { compactJsonFormDataCellClass } from "@/components/json-form/scalar/constants"
-import type {
-  ControlFieldApi,
-  ScalarControlDomProps,
+import {
+  compactJsonFormDataCellClass,
+  type ControlFieldApi,
+  type DateTimeControlKind,
+  type ScalarControlDomProps,
 } from "@/components/json-form/scalar/types"
-
-export type DateTimeControlKind = "date" | "time" | "date-time"
 
 export function datetimeLocalInputValue(value: string): string {
   const withoutTimezone = value.trim().replace(/(?:Z|[+-]\d{2}:\d{2})$/, "")
   return withoutTimezone.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/)?.[0] ?? value
 }
 
-export function DateTimeControl({
+export function DateTimeScalarControl({
   kind,
   field,
   compact,
@@ -42,35 +38,34 @@ export function DateTimeControl({
   nullable: boolean
 } & ScalarControlDomProps) {
   const value = field.value == null ? "" : String(field.value)
-
-  if (compact) {
+  if (!compact) {
     return (
-      <DataCell
+      <DateTimePickerControl
         {...controlProps}
         kind={kind}
-        active
-        value={field.value == null ? null : value}
-        dateTimeZone={kind === "date-time" ? "preserve" : undefined}
-        draftValue={kind === "date-time" ? datetimeLocalInputValue(value) : value}
-        className={compactJsonFormDataCellClass}
-        onDraftValueChange={(nextValue) =>
-          field.onChange(nextValue === "" && nullable ? null : nextValue)
-        }
-        onCommit={(nextValue) =>
-          field.onChange(nextValue === "" && nullable ? null : nextValue)
-        }
-        onBlur={field.onBlur}
-        name={field.name}
+        field={field}
+        nullable={nullable}
       />
     )
   }
 
   return (
-    <DateTimePickerControl
+    <DataCell
       {...controlProps}
       kind={kind}
-      field={field}
-      nullable={nullable}
+      active
+      value={field.value == null ? null : value}
+      dateTimeZone={kind === "date-time" ? "preserve" : undefined}
+      draftValue={kind === "date-time" ? datetimeLocalInputValue(value) : value}
+      className={compactJsonFormDataCellClass}
+      onDraftValueChange={(nextValue) =>
+        field.onChange(nextValue === "" && nullable ? null : nextValue)
+      }
+      onCommit={(nextValue) =>
+        field.onChange(nextValue === "" && nullable ? null : nextValue)
+      }
+      onBlur={field.onBlur}
+      name={field.name}
     />
   )
 }

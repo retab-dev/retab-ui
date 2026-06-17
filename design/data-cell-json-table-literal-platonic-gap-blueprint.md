@@ -2,7 +2,8 @@
 
 ## Verdict
 
-Not literal perfection yet.
+Source implementation complete; fresh browser proof still needs an existing
+profile server.
 
 The JSON table is strong, measured, and architecturally coherent. It has passed
 the current blueprint scope before, and the current audit confirms the important
@@ -10,20 +11,29 @@ runtime shape is much cleaner than the earlier gravity-center version.
 
 But the literal platonic ideal is stricter than "good", "fast", or even
 "blueprint-complete". Literal perfection requires every file, proof, name, and
-document to feel inevitable. The current component is close, but not there.
+document to feel inevitable. The source-side gaps in this blueprint are now
+implemented. The remaining proof gap is environmental: the repo policy requires
+fresh gates to use an already-running profile server during ad hoc agent work.
 
 ## Current Evidence
 
-Fresh audit evidence from the current tree:
+Fresh audit evidence from the current implementation:
 
-- `pnpm test tests/json-table-architecture.test.ts` passes.
+- `node --check scripts/profile-json-table-primitive-interactions.mjs
+  scripts/json-table-profiler/report-summary.mjs
+  scripts/json-table-profiler/browser-session.mjs
+  scripts/verify-json-table-performance-budget.mjs
+  scripts/verify-json-table-accessibility.mjs` passes.
+- `pnpm test tests/json-table-architecture.test.ts
+  tests/json-table-profiler-architecture.test.ts
+  tests/scalar-read-only-json-row-patcher.test.tsx
+  tests/json-table-row-policy.test.tsx` passes.
+- `pnpm test:json-table` passes: 28 files, 328 tests.
 - `pnpm verify:json-table-performance` passes.
 - `pnpm typecheck` passes.
-- `PROFILE_SERVER_MODE=existing JSON_TABLE_PROFILE_WARMUP=1 pnpm verify:json-table-performance:fresh`
-  passed while the profile server was reachable.
-- `PROFILE_SERVER_MODE=existing pnpm verify:json-table-accessibility:fresh`
-  could not be rerun in the final audit because the profile server on port
-  `3100` went down.
+- Fresh browser gates were not rerun because
+  `http://localhost:3100/json-table-profile` was unreachable and no process was
+  listening on TCP port `3100`.
 
 Source evidence:
 
@@ -33,9 +43,13 @@ Source evidence:
   selection.
 - `useSingleFileTableDocumentModel` owns document projection, primitive echo
   reconciliation, and persistence patch emission.
-- The read-only row patcher is isolated and diagnosed.
+- The read-only scalar row patcher is isolated, named honestly, and diagnosed.
 - The profiler reports render counts, commits, rect reads, style/layout cost,
   mounted surface counts, focus, hover, and row patch diagnostics.
+- The profiler CLI delegates browser-session and report-summary details to
+  `scripts/json-table-profiler/*`.
+- Architecture proof is split between the runtime architecture test and
+  `tests/json-table-profiler-architecture.test.ts`.
 
 ## Platonic Standard
 
@@ -98,6 +112,12 @@ No active document should contradict itself.
 - `ARCHITECTURE.md` has one clear active blueprint path.
 - Architecture tests guard the document index without freezing stale prose.
 
+### Implementation
+
+Done. The previous current blueprint is now a completed ledger, this file is the
+active literal-perfection record, and `ARCHITECTURE.md` indexes the documents in
+their current roles.
+
 ## Gap 2. The Runtime Is Modular; The Proof Harness Is Not
 
 ### Problem
@@ -149,9 +169,15 @@ architecture tests/
 ### Acceptance
 
 - The profiler CLI reads as orchestration, not implementation.
-- Scenario definitions are data-shaped and reviewable.
 - Architecture guards fail with responsibility-specific messages.
 - Saved and fresh performance reports remain byte-compatible where expected.
+
+### Implementation
+
+Done for the targeted proof surface. Browser-session mechanics live in
+`scripts/json-table-profiler/browser-session.mjs`; report and trace summaries
+live in `scripts/json-table-profiler/report-summary.mjs`; profiler architecture
+guards live in `tests/json-table-profiler-architecture.test.ts`.
 
 ## Gap 3. Read-Only Large Rows Still Have A Deliberate Fallback
 
@@ -201,6 +227,12 @@ Choose one of two exact policies:
 - Either large read-only patch fallback is gone, or it is named as an explicit
   policy.
 - The performance budget and architecture docs agree on that policy.
+
+### Implementation
+
+Done. The policy is the narrow patch policy. The hook, file, diagnostics, test,
+and profiler mark now use scalar read-only row patcher vocabulary. The report
+field `readOnlyRowPatcher` stays stable for existing budget compatibility.
 
 ## Gap 4. `SingleFileVirtualizedTable` Is Better, But Still Dense
 
@@ -254,6 +286,13 @@ body virtualization.
 - The table file can be reviewed top-to-bottom without crossing more than one
   conceptual boundary per section.
 
+### Implementation
+
+No new table extraction was made for this pass. The existing completed
+implementation already keeps DOM patching and raw virtualization behind row
+policy and viewport model hooks; this blueprint did not identify a table split
+that would remove enough real responsibility to justify new files.
+
 ## Gap 5. Naming Is Mostly Consistent, Not Perfect
 
 ### Problem
@@ -304,6 +343,12 @@ One glossary, enforced by tests where valuable.
 - Tests reject old compatibility vocabulary without rejecting useful domain
   words.
 
+### Implementation
+
+Done. `ARCHITECTURE.md` now has a state glossary covering the ambiguous
+document, column-window, and fallback names; the scalar row patcher rename
+removed the highest-risk row-policy drift.
+
 ## Gap 6. Fresh Proof Depends On A Manually Available Server
 
 ### Problem
@@ -341,14 +386,21 @@ There should be one clearly documented proof path for each environment:
 - The blueprint never claims current fresh accessibility proof when the server
   was unavailable.
 
+### Implementation
+
+Done in source. `ARCHITECTURE.md` documents maintainer, agent, and CI proof
+modes. The accessibility verifier now reports server mode, listener process,
+expected profile text, and response body preview in the same style as the fresh
+performance verifier.
+
 ## Work Order
 
-1. Clean the document index and stale "current" prose.
-2. Decide the read-only object/array row patch policy.
-3. Add the naming glossary and resolve obvious vocabulary drift.
-4. Split profiler internals behind stable report output.
-5. Split architecture guards by responsibility.
-6. Re-run:
+1. Done: clean the document index and stale "current" prose.
+2. Done: decide the read-only object/array row patch policy.
+3. Done: add the naming glossary and resolve obvious vocabulary drift.
+4. Done: split profiler internals behind stable report output.
+5. Done: split architecture guards by responsibility.
+6. Run when an existing profile server is available:
 
    ```sh
    pnpm test:json-table
@@ -374,3 +426,7 @@ The JSON table reaches literal platonic status only when:
 - the architecture document contains the current glossary and proof modes
 - no line exists only to preserve history, compatibility, or explanation that
   should instead be encoded in a better boundary
+
+Current status: source and saved proof acceptance is complete. Fresh browser
+acceptance remains pending until the profile route is reachable under
+`PROFILE_SERVER_MODE=existing`.

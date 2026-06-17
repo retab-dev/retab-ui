@@ -12,8 +12,8 @@ import {
   TABLE_ROW_OVERSCAN,
 } from "@/components/json-form/table/array-table-config"
 import {
-  type ArrayTableScrollHandlers,
   useArrayTableScrollActivity,
+  type ArrayTableScrollHandlers,
 } from "@/components/json-form/table/array-table-scroll"
 
 type ArrayTableField = { id: string }

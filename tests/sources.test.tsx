@@ -199,11 +199,11 @@ const sourceFieldSamples = [
 ]
 
 function SegmentedFieldLinkProbe({
-  initialPath,
+  initialSourcePath,
 }: {
-  initialPath: string | null
+  initialSourcePath: string | null
 }) {
-  const link = useSegmentedSourceFieldLink({ initialPath })
+  const link = useSegmentedSourceFieldLink({ initialSourcePath })
 
   return (
     <output
@@ -211,13 +211,17 @@ function SegmentedFieldLinkProbe({
       data-active-anchor={link.activeAnchor ? "true" : "false"}
       data-active-anchor-count={link.activeAnchors.length}
     >
-      {link.activePath ?? "none"}
+      {link.activeSourcePath ?? "none"}
     </output>
   )
 }
 
-function SegmentedPdfOverlayProbe({ initialPath }: { initialPath: string }) {
-  const link = useSegmentedSourceFieldLink({ initialPath })
+function SegmentedPdfOverlayProbe({
+  initialSourcePath,
+}: {
+  initialSourcePath: string
+}) {
+  const link = useSegmentedSourceFieldLink({ initialSourcePath })
   const renderOverlay = useSegmentedPdfSourceOverlay(link)
 
   return (
@@ -266,8 +270,8 @@ function SegmentedFieldLinkNavigationProbe({
     <>
       <button
         type="button"
-        onMouseEnter={() => link.onFieldHover("logo")}
-        onClick={() => link.selectField?.("logo")}
+        onMouseEnter={() => link.onSourceHover("logo")}
+        onClick={() => link.selectSourcePath?.("logo")}
       >
         logo source
       </button>
@@ -276,7 +280,7 @@ function SegmentedFieldLinkNavigationProbe({
         data-active-anchor={link.activeAnchor ? "true" : "false"}
         data-active-anchor-count={link.activeAnchors.length}
       >
-        {link.activePath ?? "none"}
+        {link.activeSourcePath ?? "none"}
       </output>
     </>
   )
@@ -352,12 +356,12 @@ function SourceLinkedJsonFormProbe({
   const sourceLink = React.useMemo(
     () => ({
       ...link,
-      onFieldHover: (path: string | null) => {
-        link.onFieldHover(path)
+      onSourceHover: (path: string | null) => {
+        link.onSourceHover(path)
         if (path) scrollToPath(path, "auto")
       },
-      selectField: (path: string) => {
-        link.selectField?.(path)
+      selectSourcePath: (path: string) => {
+        link.selectSourcePath?.(path)
         scrollToPath(path, "smooth")
       },
     }),
@@ -367,7 +371,7 @@ function SourceLinkedJsonFormProbe({
   return (
     <>
       <SourceIndicator
-        path={sourceLink.activePath}
+        path={sourceLink.activeSourcePath}
         found={!!sourceLink.activeSegment}
       />
       <JsonForm form={form} schema={schema} sourceLink={sourceLink} />
@@ -846,7 +850,7 @@ describe("source evidence projection", () => {
 
     render(
       <SegmentedDocumentProvider model={model}>
-        <SegmentedFieldLinkProbe initialPath="statement_date" />
+        <SegmentedFieldLinkProbe initialSourcePath="statement_date" />
       </SegmentedDocumentProvider>
     )
 
@@ -889,7 +893,7 @@ describe("source evidence projection", () => {
 
     render(
       <SegmentedDocumentProvider model={model}>
-        <SegmentedPdfOverlayProbe initialPath="invoice.amount" />
+        <SegmentedPdfOverlayProbe initialSourcePath="invoice.amount" />
       </SegmentedDocumentProvider>
     )
 
@@ -1831,9 +1835,9 @@ describe("source UI components", () => {
 
   it("SourceFieldList renders fields and forwards hover, focus, blur, and click events", () => {
     const link = {
-      activePath: "total",
-      onFieldHover: vi.fn(),
-      selectField: vi.fn(),
+      activeSourcePath: "total",
+      onSourceHover: vi.fn(),
+      selectSourcePath: vi.fn(),
     }
 
     render(
@@ -1868,20 +1872,20 @@ describe("source UI components", () => {
     fireEvent.blur(total)
     fireEvent.click(total)
 
-    expect(link.onFieldHover.mock.calls).toEqual([
+    expect(link.onSourceHover.mock.calls).toEqual([
       ["total"],
       ["total"],
       [null],
       [null],
     ])
-    expect(link.selectField).toHaveBeenCalledWith("total")
+    expect(link.selectSourcePath).toHaveBeenCalledWith("total")
   })
 
   it("SourceFieldList marks only the exact active path", () => {
     const link = {
-      activePath: "total.tax",
-      onFieldHover: vi.fn(),
-      selectField: vi.fn(),
+      activeSourcePath: "total.tax",
+      onSourceHover: vi.fn(),
+      selectSourcePath: vi.fn(),
     }
 
     const { rerender } = render(
@@ -1905,7 +1909,7 @@ describe("source UI components", () => {
           { key: "total", label: "Total", value: "$120.00" },
           { key: "total.tax", label: "Tax", value: "$8.00" },
         ]}
-        link={{ ...link, activePath: "total" }}
+        link={{ ...link, activeSourcePath: "total" }}
       />
     )
 
@@ -1924,9 +1928,9 @@ describe("source UI components", () => {
         className="custom-source-list"
         fields={[]}
         link={{
-          activePath: null,
-          onFieldHover: vi.fn(),
-          selectField: vi.fn(),
+          activeSourcePath: null,
+          onSourceHover: vi.fn(),
+          selectSourcePath: vi.fn(),
         }}
       />
     )
@@ -1942,9 +1946,9 @@ describe("source UI components", () => {
 
   it("SourceFieldList handles dynamic field rows without keeping removed controls", () => {
     const link = {
-      activePath: "date",
-      onFieldHover: vi.fn(),
-      selectField: vi.fn(),
+      activeSourcePath: "date",
+      onSourceHover: vi.fn(),
+      selectSourcePath: vi.fn(),
     }
     const { rerender } = render(
       <SourceFieldList

@@ -1,17 +1,15 @@
 "use client"
 
-import * as React from "react"
-
 import { DataCell } from "@/components/ui/data-cell"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/json-form/form-primitives"
-import type { Schema } from "@/components/json-form/schema-model"
-import { compactJsonFormDataCellClass } from "@/components/json-form/scalar/constants"
-import type {
-  ControlFieldApi,
-  JsonFormTextInput,
-  ScalarControlDomProps,
+import {
+  compactJsonFormDataCellClass,
+  type ControlFieldApi,
+  type JsonFormTextInput,
+  type ScalarControlDomProps,
 } from "@/components/json-form/scalar/types"
+import type { Schema } from "@/components/json-form/schema-model"
 
 export function TextControl({
   schema,

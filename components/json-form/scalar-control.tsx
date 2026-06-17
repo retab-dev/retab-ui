@@ -1,14 +1,12 @@
 "use client"
 
-import * as React from "react"
-
 import {
   BooleanControl,
   NullableBooleanControl,
 } from "@/components/json-form/scalar/boolean-control"
 import {
-  DateTimeControl,
   datetimeLocalInputValue,
+  DateTimeScalarControl,
 } from "@/components/json-form/scalar/date-time-control"
 import {
   EnumControl,
@@ -25,6 +23,7 @@ import {
 } from "@/components/json-form/scalar/text-control"
 import type {
   ControlFieldApi,
+  DateTimeControlKind,
   JsonFormTextInput,
   ScalarControlDomProps,
 } from "@/components/json-form/scalar/types"
@@ -92,9 +91,9 @@ export function ScalarControl({
     schema.format === "date-time"
   ) {
     return (
-      <DateTimeControl
+      <DateTimeScalarControl
         {...controlProps}
-        kind={schema.format}
+        kind={schema.format as DateTimeControlKind}
         field={field}
         compact={compact}
         nullable={nullable}

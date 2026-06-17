@@ -256,7 +256,7 @@ function SourceLinkedViewer({
         <FileViewerSurface className="relative">
           {children}
           <SourceIndicator
-            path={link.activePath}
+            path={link.activeSourcePath}
             found={!!link.activeSegment}
           />
         </FileViewerSurface>
@@ -308,15 +308,15 @@ type SourceTarget = {
 }
 
 function useSourceTargetedSegmentedFieldLink({
-  initialPath,
+  initialSourcePath,
   sources,
   target,
 }: {
-  initialPath?: string | null
+  initialSourcePath?: string | null
   sources: SourceMap
   target: SourceTarget
 }): SegmentedSourceFieldLink {
-  const link = useSegmentedSourceFieldLink({ initialPath })
+  const link = useSegmentedSourceFieldLink({ initialSourcePath })
   const scrollToPath = React.useCallback(
     (path: string, behavior: ScrollBehavior) => {
       const source = sources[path]
@@ -324,16 +324,16 @@ function useSourceTargetedSegmentedFieldLink({
     },
     [sources, target]
   )
-  const onFieldHover = React.useCallback(
+  const onSourceHover = React.useCallback(
     (path: string | null) => {
-      link.onFieldHover(path)
+      link.onSourceHover(path)
       if (path) scrollToPath(path, "auto")
     },
     [link, scrollToPath]
   )
-  const selectField = React.useCallback(
+  const selectSourcePath = React.useCallback(
     (path: string) => {
-      link.selectField?.(path)
+      link.selectSourcePath?.(path)
       scrollToPath(path, "smooth")
     },
     [link, scrollToPath]
@@ -342,10 +342,10 @@ function useSourceTargetedSegmentedFieldLink({
   return React.useMemo(
     () => ({
       ...link,
-      onFieldHover,
-      selectField,
+      onSourceHover,
+      selectSourcePath,
     }),
-    [link, onFieldHover, selectField]
+    [link, onSourceHover, selectSourcePath]
   )
 }
 
@@ -368,7 +368,7 @@ function PdfTab() {
 
 function PdfTabContent() {
   const link = useSegmentedSourceFieldLink({
-    initialPath: PDF_INITIAL_SOURCE_PATH,
+    initialSourcePath: PDF_INITIAL_SOURCE_PATH,
   })
   const { documentHandlers } = useSegmentedDocumentViewport()
   const renderPageOverlay = useSegmentedPdfSourceOverlay(link)
@@ -404,7 +404,7 @@ function ImageTab() {
 
 function ImageTabContent() {
   const link = useSegmentedSourceFieldLink({
-    initialPath: IMAGE_FIELDS[0]?.key,
+    initialSourcePath: IMAGE_FIELDS[0]?.key,
   })
   const { documentHandlers } = useSegmentedDocumentViewport()
   const renderFrameOverlay = useSegmentedImageSourceOverlay(link)
@@ -441,12 +441,12 @@ function TextTabContent() {
   const viewerRef = React.useRef<TextViewerHandle>(null)
   const target = useTextSourceTarget(viewerRef)
   const link = useSourceTargetedSegmentedFieldLink({
-    initialPath: TEXT_FIELDS[0]?.key,
+    initialSourcePath: TEXT_FIELDS[0]?.key,
     sources: TEXT_EXTRACTION.sources,
     target,
   })
   const highlight = sourceToTextHighlight(
-    sourceForPath(TEXT_EXTRACTION.sources, link.activePath)
+    sourceForPath(TEXT_EXTRACTION.sources, link.activeSourcePath)
   )
 
   return (
@@ -479,12 +479,12 @@ function CsvTabContent() {
   const viewerRef = React.useRef<CsvViewerHandle>(null)
   const target = useCsvSourceTarget(viewerRef)
   const link = useSourceTargetedSegmentedFieldLink({
-    initialPath: CSV_FIELDS[0]?.key,
+    initialSourcePath: CSV_FIELDS[0]?.key,
     sources: CSV_EXTRACTION.sources,
     target,
   })
   const activeCell = sourceToCsvCell(
-    sourceForPath(CSV_EXTRACTION.sources, link.activePath)
+    sourceForPath(CSV_EXTRACTION.sources, link.activeSourcePath)
   )
 
   return (
@@ -516,12 +516,12 @@ function ExcelTabContent() {
   const viewerRef = React.useRef<XlsxViewerHandle>(null)
   const target = useXlsxSourceTarget(viewerRef)
   const link = useSourceTargetedSegmentedFieldLink({
-    initialPath: XLSX_FIELDS[0]?.key,
+    initialSourcePath: XLSX_FIELDS[0]?.key,
     sources: XLSX_EXTRACTION.sources,
     target,
   })
   const activeCell = sourceToXlsxCell(
-    sourceForPath(XLSX_EXTRACTION.sources, link.activePath)
+    sourceForPath(XLSX_EXTRACTION.sources, link.activeSourcePath)
   )
 
   return (
@@ -553,12 +553,12 @@ function DocxTabContent() {
   const viewerRef = React.useRef<DocxViewerHandle>(null)
   const target = useDocxSourceTarget(viewerRef)
   const link = useSourceTargetedSegmentedFieldLink({
-    initialPath: DOCX_FIELDS[0]?.key,
+    initialSourcePath: DOCX_FIELDS[0]?.key,
     sources: DOCX_EXTRACTION.sources,
     target,
   })
   const highlight = sourceToDocxHighlight(
-    sourceForPath(DOCX_EXTRACTION.sources, link.activePath)
+    sourceForPath(DOCX_EXTRACTION.sources, link.activeSourcePath)
   )
 
   return (

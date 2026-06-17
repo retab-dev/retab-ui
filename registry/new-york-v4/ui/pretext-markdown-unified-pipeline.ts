@@ -783,6 +783,15 @@ function transformPretextMarkdownComponentChildren(
         children[index] = createPretextMarkdownComponentNode(component)
         continue
       }
+      // CommonMark merges consecutive component tags (no blank line between)
+      // into one HTML block; split it so each tag renders as its own component
+      // (or its own fallback) instead of the whole run falling through to text.
+      const multiple = splitPretextMarkdownComponentHtml(child.value, file)
+      if (multiple) {
+        children.splice(index, 1, ...multiple)
+        index += multiple.length - 1
+        continue
+      }
       if (isPretextMarkdownComponentHtml(child.value)) {
         const reason = fallbackReasonForHtml(child.value)
         emitPretextMarkdownComponentFallbackMessage({
@@ -1037,8 +1046,61 @@ function createPretextMarkdownCalloutNode(
   }
 }
 
+// Splits an HTML block holding several self-closing component tags (only
+// whitespace between them) into one node per tag: a component node when the tag
+// parses, otherwise a fallback node — so one invalid tag never blanks the whole
+// run. Returns null only when the block isn't entirely component tags (then
+// normal HTML handling applies).
+function splitPretextMarkdownComponentHtml(value: string, file: VFile) {
+  const trimmed = value.trim()
+  // Quote-aware so `>` inside an attribute value doesn't end a tag early.
+  const tagPattern = /<[A-Z][A-Za-z0-9]*\b(?:[^>"']|"[^"]*"|'[^']*')*\/>/g
+  const matches = [...trimmed.matchAll(tagPattern)]
+  if (matches.length < 2) return null
+
+  let cursor = 0
+  for (const match of matches) {
+    if (trimmed.slice(cursor, match.index).trim() !== "") return null
+    cursor = match.index + match[0].length
+  }
+  if (trimmed.slice(cursor).trim() !== "") return null
+
+  // Only treat the block as components when every tag names a known component.
+  if (
+    !matches.every((match) => {
+      const name = componentNameFromHtml(match[0])
+      return name !== null && isPretextMarkdownLeafComponentName(name)
+    })
+  ) {
+    return null
+  }
+
+  return matches.map((match) => {
+    const tag = match[0]
+    const component = parsePretextMarkdownComponentHtml(tag)
+    if (component) return createPretextMarkdownComponentNode(component)
+    const reason = fallbackReasonForHtml(tag)
+    emitPretextMarkdownComponentFallbackMessage({
+      file,
+      node: { type: "html", value: tag } as PretextMarkdownMdastNode,
+      reason,
+    })
+    return createPretextMarkdownComponentFallbackNode({
+      name: componentNameFromHtml(tag) ?? "Component",
+      reason,
+      source: tag,
+    })
+  })
+}
+
 function parsePretextMarkdownComponentHtml(value: string) {
-  const match = /^<([A-Z][A-Za-z0-9]*)\b([\s\S]*)\/>$/.exec(value.trim())
+  // Match exactly one self-closing tag: attribute chars are either non-quote/
+  // non-`>` or fully-quoted strings, so `>` inside an attribute (e.g. a mermaid
+  // `source="graph TD; A-->B"`) is allowed, while a multi-tag HTML block fails
+  // here and is handled by splitPretextMarkdownComponentHtml.
+  const match = /^<([A-Z][A-Za-z0-9]*)\b((?:[^>"']|"[^"]*"|'[^']*')*)\/>$/.exec(
+    value.trim()
+  )
   if (!match) return null
   const name = match[1]!
   const propsText = match[2]!

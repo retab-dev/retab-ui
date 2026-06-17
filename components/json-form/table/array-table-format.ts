@@ -1,5 +1,8 @@
 import type { DataCellKind } from "@/components/ui/data-cell"
-import { enumLabel, enumValueEquals } from "@/components/json-form/scalar-control"
+import {
+  enumLabel,
+  enumValueEquals,
+} from "@/components/json-form/scalar-control"
 import type { Column } from "@/components/json-form/schema-model"
 
 export type ArrayTableDataCellKind = Exclude<DataCellKind, "select">

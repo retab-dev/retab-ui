@@ -114,7 +114,10 @@ function JsonFormSourcesContent({
               </FileViewerBody>
             </PdfViewerProvider>
           </FileViewer>
-          <SourceIndicator path={link.activePath} found={!!link.activeAnchor} />
+          <SourceIndicator
+            path={link.activeSourcePath}
+            found={!!link.activeAnchor}
+          />
         </ViewerSurface>
         <ViewerSidebar
           aria-label="Extracted data sources"

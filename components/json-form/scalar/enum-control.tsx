@@ -9,12 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { isRecordValue, type Schema } from "@/components/json-form/schema-model"
 import {
   compactJsonFormSelectDataCellClass,
   type ControlFieldApi,
   type ScalarControlDomProps,
 } from "@/components/json-form/scalar/types"
+import { isRecordValue, type Schema } from "@/components/json-form/schema-model"
 
 export const NULL_SELECT_VALUE = "__json-form-null__"
 
@@ -116,7 +116,10 @@ export function EnumControl({
           <SelectItem value={NULL_SELECT_VALUE}>No value</SelectItem>
         ) : null}
         {enumValues.map((option, index) => (
-          <SelectItem key={enumOptionValue(index)} value={enumOptionValue(index)}>
+          <SelectItem
+            key={enumOptionValue(index)}
+            value={enumOptionValue(index)}
+          >
             {enumLabel(option)}
           </SelectItem>
         ))}

@@ -986,7 +986,7 @@ describe("PretextMarkdownViewer", () => {
     expect(inner?.querySelector("ul li")?.textContent).toContain("Nested item")
     expect(outer?.className).toContain("[&_blockquote]:my-3")
     expect(outer?.className).toContain("[&>ul]:my-2")
-    expect(inner?.className).toContain("border-l-4")
+    expect(inner?.className).toContain("border-l-2")
     expect(screen.queryByRole("note", { name: "Outer quote." })).toBeNull()
   })
 

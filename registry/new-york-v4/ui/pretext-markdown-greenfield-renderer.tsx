@@ -5,11 +5,13 @@ import { Fragment, jsx, jsxs } from "react/jsx-runtime"
 import { toJsxRuntime } from "hast-util-to-jsx-runtime"
 import {
   BadgeAlert,
+  Check,
   CircleAlert,
   Copy,
   ExternalLink,
   Info,
   Lightbulb,
+  Link2,
   TriangleAlert,
 } from "lucide-react"
 
@@ -59,7 +61,7 @@ export function PretextMarkdownGreenfieldChunkRenderer({
     <PretextMarkdownContentReadyContext.Provider value={notifyContentReady}>
       <div
         ref={ref}
-        className="pretext-markdown-greenfield-content min-w-0 text-[16px] leading-7 text-foreground"
+        className="pretext-markdown-greenfield-content min-w-0 text-[15.5px] leading-relaxed text-foreground"
         data-slot="pretext-markdown-greenfield-content"
       >
         {renderHastChildren(chunk.hastChildren)}
@@ -176,7 +178,7 @@ const markdownComponents = {
     return (
       <blockquote
         {...props}
-        className="my-5 border-l-4 border-border pl-4 text-muted-foreground [&_blockquote]:my-3 [&_ol]:list-[lower-alpha] [&>ul]:my-2"
+        className="my-4 border-l-2 border-border pl-4 text-muted-foreground italic [&_blockquote]:my-3 [&_ol]:list-[lower-alpha] [&>ul]:my-2"
       >
         {children}
       </blockquote>
@@ -393,14 +395,35 @@ const markdownComponents = {
 
     return <div {...withoutInternalPretextMetadata(props)}>{children}</div>
   },
-  h1: headingComponent("h1", "mt-0 mb-5 text-3xl font-semibold"),
-  h2: headingComponent("h2", "mt-9 mb-4 text-2xl font-semibold first:mt-0"),
-  h3: headingComponent("h3", "mt-7 mb-3 text-xl font-semibold first:mt-0"),
-  h4: headingComponent("h4", "mt-6 mb-2 text-lg font-semibold first:mt-0"),
-  h5: headingComponent("h5", "mt-5 mb-2 text-base font-semibold first:mt-0"),
+  h1: headingComponent(
+    "h1",
+    "mt-6 mb-3 first:mt-0",
+    "text-[1.55em] leading-tight font-semibold tracking-tight"
+  ),
+  h2: headingComponent(
+    "h2",
+    "mt-7 mb-3 first:mt-0",
+    "text-[1.3em] leading-snug font-semibold tracking-tight"
+  ),
+  h3: headingComponent(
+    "h3",
+    "mt-5 mb-2 first:mt-0",
+    "text-[1.1em] leading-snug font-semibold"
+  ),
+  h4: headingComponent(
+    "h4",
+    "mt-4 mb-2 first:mt-0",
+    "text-[1em] leading-snug font-semibold"
+  ),
+  h5: headingComponent(
+    "h5",
+    "mt-4 mb-1.5 first:mt-0",
+    "text-[0.95em] leading-snug font-semibold"
+  ),
   h6: headingComponent(
     "h6",
-    "mt-5 mb-2 text-sm font-semibold text-muted-foreground first:mt-0"
+    "mt-4 mb-1.5 first:mt-0",
+    "text-[0.9em] leading-snug font-semibold text-muted-foreground"
   ),
   hr: ({ node: _node, ...props }: any) => (
     <hr
@@ -471,7 +494,7 @@ const markdownComponents = {
     <ol
       {...props}
       className={[
-        "my-4 ml-6 list-decimal space-y-1 [&_ol]:list-[lower-alpha]",
+        "my-3 ml-5 list-decimal space-y-1 [&_ol]:list-[lower-alpha]",
         className,
       ]
         .filter(Boolean)
@@ -490,7 +513,7 @@ const markdownComponents = {
       return (
         <div
           {...props}
-          className="my-4 min-w-0 leading-7 [overflow-wrap:anywhere]"
+          className="my-3 min-w-0 leading-relaxed [overflow-wrap:anywhere]"
         />
       )
     }
@@ -644,30 +667,19 @@ const markdownComponents = {
     return (
       <div
         aria-label="Markdown table"
-        className="my-5 overflow-hidden rounded-md border"
+        className="group relative my-4 overflow-hidden rounded-lg border"
         data-pretext-markdown-table-region=""
         role="region"
         tabIndex={0}
         onKeyDown={handleHorizontalScrollKeyDown}
       >
-        <button
-          aria-label="Copy table as TSV"
-          className="flex w-full items-center justify-between gap-3 border-b bg-muted/55 px-3 py-2 text-left text-xs font-medium text-muted-foreground hover:text-foreground"
-          type="button"
-          onClick={(event) => copyTable(event.currentTarget)}
-        >
-          <span>Table</span>
-          <span className="inline-flex items-center gap-1">
-            <Copy className="size-3.5" aria-hidden="true" />
-            Copy
-          </span>
-        </button>
+        <TableCopyButton />
         <div className="overflow-x-auto" data-pretext-markdown-table-scroll="">
           <table
             {...props}
             aria-colcount={ariaColumnCount}
             aria-rowcount={tableRowCount(table)}
-            className="w-full border-collapse text-sm"
+            className="w-full border-collapse text-[0.85em]"
             data-pretext-markdown-table=""
             style={{
               ...style,
@@ -688,7 +700,7 @@ const markdownComponents = {
       <td
         {...props}
         align={typeof resolvedAlign === "string" ? resolvedAlign : undefined}
-        className="border-t border-border px-3 py-2 align-top [overflow-wrap:break-word] [&[align=center]]:text-center [&[align=right]]:text-right [&[align=right]]:tabular-nums"
+        className="border-t border-border px-3 py-1.5 align-top [overflow-wrap:break-word] [&[align=center]]:text-center [&[align=right]]:text-right [&[align=right]]:tabular-nums"
       />
     )
   },
@@ -698,7 +710,7 @@ const markdownComponents = {
       <th
         {...props}
         align={typeof resolvedAlign === "string" ? resolvedAlign : undefined}
-        className="border-b border-border bg-muted/55 px-3 py-2 text-left align-top font-medium [overflow-wrap:break-word] [&[align=center]]:text-center [&[align=right]]:text-right [&[align=right]]:tabular-nums"
+        className="border-b border-border bg-muted/55 px-3 py-1.5 text-left align-top font-medium [overflow-wrap:break-word] [&[align=center]]:text-center [&[align=right]]:text-right [&[align=right]]:tabular-nums"
         scope="col"
       />
     )
@@ -709,7 +721,7 @@ const markdownComponents = {
     <ul
       {...props}
       className={[
-        "my-4 ml-6 list-disc space-y-1 [&_ul]:list-[circle]",
+        "my-3 ml-5 list-disc space-y-1 [&_ul]:list-[circle]",
         className,
       ]
         .filter(Boolean)
@@ -720,28 +732,54 @@ const markdownComponents = {
 
 function headingComponent(
   Tag: "h1" | "h2" | "h3" | "h4" | "h5" | "h6",
-  className: string
+  blockClassName: string,
+  textClassName: string
 ) {
   return function Heading({ children, node, ...props }: any) {
     const id = typeof props.id === "string" ? props.id : ""
     const text =
       extractHastText(readHastElement(node)) || reactNodeText(children)
-    return (
-      <>
-        <Tag {...props} className={className}>
+    if (!id) {
+      return (
+        <Tag {...props} className={`${blockClassName} ${textClassName}`}>
           {children}
         </Tag>
-        {id ? (
-          <button
-            aria-label={`Copy link to ${text}`}
-            className="sr-only"
-            type="button"
-            onClick={() => copyHeadingLink(id)}
-          />
-        ) : null}
-      </>
+      )
+    }
+    return (
+      <div className={`group/heading relative ${blockClassName}`}>
+        <Tag {...props} className={textClassName}>
+          {children}
+        </Tag>
+        <HeadingAnchor id={id} text={text} />
+      </div>
     )
   }
+}
+
+// A GitHub-style anchor that appears in the left gutter on hover/focus and
+// copies a deep link to the heading. Kept as a sibling of the heading (not a
+// child) so it never leaks into the heading's accessible name.
+function HeadingAnchor({ id, text }: { id: string; text: string }) {
+  const [copied, setCopied] = React.useState(false)
+  return (
+    <button
+      aria-label={`Copy link to ${text}`}
+      className="absolute top-1/2 -left-7 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity group-hover/heading:opacity-100 hover:text-foreground focus-visible:opacity-100"
+      type="button"
+      onClick={() => {
+        copyHeadingLink(id)
+        setCopied(true)
+        window.setTimeout(() => setCopied(false), 1200)
+      }}
+    >
+      {copied ? (
+        <Check className="size-4" aria-hidden="true" />
+      ) : (
+        <Link2 className="size-4" aria-hidden="true" />
+      )}
+    </button>
+  )
 }
 
 function PretextMarkdownGreenfieldHostileChunk({
@@ -903,7 +941,7 @@ function PretextMarkdownCodeBlock({
       </figcaption>
       <pre
         aria-label={`${language} code source`}
-        className="overflow-x-auto p-4 [overflow-wrap:normal] [&_code]:min-w-max"
+        className="overflow-x-auto p-3 [overflow-wrap:normal] [&_code]:min-w-max"
         data-pretext-code-source=""
         role="region"
         tabIndex={0}
@@ -916,7 +954,7 @@ function PretextMarkdownCodeBlock({
               : undefined
           }
           className={[
-            "block font-mono text-sm leading-6",
+            "block font-mono text-sm leading-5",
             metadata.showLineNumbers
               ? "[counter-reset:line] before:content-[counter(line)]"
               : "",
@@ -951,7 +989,7 @@ function PretextMarkdownCodeBlock({
                   metadata.showLineNumbers ? `Line ${lineNumber}` : undefined
                 }
                 className={[
-                  "block min-h-6 whitespace-pre",
+                  "block min-h-5 whitespace-pre",
                   diffKind === "add" ? "bg-emerald-500/10" : "",
                   diffKind === "remove" ? "bg-red-500/10" : "",
                 ]
@@ -2191,6 +2229,31 @@ function findDescendantElement(
     if (found) return found
   }
   return null
+}
+
+// A subtle hover copy affordance in the table's top-right corner, replacing the
+// persistent chrome bar so the table reads as a clean document table.
+function TableCopyButton() {
+  const [copied, setCopied] = React.useState(false)
+  return (
+    <button
+      aria-label="Copy table as TSV"
+      className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 rounded-md border bg-background/90 px-2 py-1 text-xs font-medium text-muted-foreground opacity-0 shadow-sm backdrop-blur-sm transition-opacity group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100"
+      type="button"
+      onClick={(event) => {
+        copyTable(event.currentTarget)
+        setCopied(true)
+        window.setTimeout(() => setCopied(false), 1200)
+      }}
+    >
+      {copied ? (
+        <Check className="size-3.5" aria-hidden="true" />
+      ) : (
+        <Copy className="size-3.5" aria-hidden="true" />
+      )}
+      {copied ? "Copied" : "Copy"}
+    </button>
+  )
 }
 
 function copyTable(button: HTMLButtonElement) {

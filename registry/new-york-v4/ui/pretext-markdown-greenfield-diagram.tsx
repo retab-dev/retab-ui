@@ -26,37 +26,13 @@ type DiagramState =
   | { status: "ready"; svg: string }
 type ReadyDiagramState = Extract<DiagramState, { status: "ready" }>
 
-// Mermaid rendering is an asynchronous external system (a dynamically imported
-// engine). Its resolved results live in a module-level store that the viewer
-// reads through useSyncExternalStore, rather than driving the render from an
-// effect. Keyed per element id + source, so two instances never share an SVG
-// (mermaid embeds the element id into the markup).
-const mermaidDiagramResultCache = new Map<string, DiagramState>()
-const mermaidDiagramInFlight = new Set<string>()
-const mermaidDiagramSubscribers = new Set<() => void>()
-
-function ensureMermaidDiagram(
-  cacheKey: string,
-  source: string,
-  elementId: string
-) {
-  if (
-    mermaidDiagramResultCache.has(cacheKey) ||
-    mermaidDiagramInFlight.has(cacheKey)
-  ) {
-    return
-  }
-  mermaidDiagramInFlight.add(cacheKey)
-  void renderMermaidDiagram(source, elementId).then((result) => {
-    mermaidDiagramInFlight.delete(cacheKey)
-    mermaidDiagramResultCache.set(cacheKey, result)
-    while (mermaidDiagramResultCache.size > 128) {
-      const oldestKey = mermaidDiagramResultCache.keys().next().value
-      if (oldestKey === undefined) break
-      mermaidDiagramResultCache.delete(oldestKey)
-    }
-    for (const notify of mermaidDiagramSubscribers) notify()
-  })
+// A per-instance async store for one diagram's mermaid render. Kept per
+// component (not module-global) so instances never share state — no cross-
+// render notify fan-out and no shared cache keyed by a render-order id.
+type MermaidDiagramStore = {
+  key: string
+  result: DiagramState | null
+  listeners: Set<() => void>
 }
 
 export function PretextMarkdownGreenfieldDiagram({
@@ -93,21 +69,36 @@ export function PretextMarkdownGreenfieldDiagram({
     [descriptionId, captionId].filter(Boolean).join(" ") || undefined
 
   // Derive the displayed state: a limit message fails immediately; otherwise the
-  // state follows the async mermaid store (loading until it resolves).
-  const cacheKey = `${elementId}\0${source}`
+  // state follows this instance's async mermaid store (loading until resolved).
+  const storeRef = React.useRef<MermaidDiagramStore | null>(null)
+  if (storeRef.current === null) {
+    storeRef.current = { key: "", listeners: new Set(), result: null }
+  }
+  const store = storeRef.current
+  const renderKey = limitMessage ? "" : `${elementId}\0${source}`
   const subscribe = React.useCallback(
     (onStoreChange: () => void) => {
-      mermaidDiagramSubscribers.add(onStoreChange)
-      if (!limitMessage) ensureMermaidDiagram(cacheKey, source, elementId)
+      store.listeners.add(onStoreChange)
+      // Kick off (or restart on source change) the render here, in the store
+      // subscription, so no effect is needed.
+      if (!limitMessage && store.key !== renderKey) {
+        store.key = renderKey
+        store.result = null
+        void renderMermaidDiagram(source, elementId).then((result) => {
+          if (store.key !== renderKey) return
+          store.result = result
+          for (const listener of store.listeners) listener()
+        })
+      }
       return () => {
-        mermaidDiagramSubscribers.delete(onStoreChange)
+        store.listeners.delete(onStoreChange)
       }
     },
-    [cacheKey, elementId, limitMessage, source]
+    [elementId, limitMessage, renderKey, source, store]
   )
   const getSnapshot = React.useCallback(
-    () => mermaidDiagramResultCache.get(cacheKey) ?? null,
-    [cacheKey]
+    () => (store.key === renderKey ? store.result : null),
+    [renderKey, store]
   )
   const resolvedState = React.useSyncExternalStore(
     subscribe,

@@ -62,7 +62,9 @@ export function ImageSourcesBlock() {
 }
 
 function ImageSourcesContent() {
-  const link = useSegmentedSourceFieldLink({ initialPath: FIELDS[0]?.key })
+  const link = useSegmentedSourceFieldLink({
+    initialSourcePath: FIELDS[0]?.key,
+  })
   const { documentHandlers } = useSegmentedDocumentViewport()
   const renderFrameOverlay = useSegmentedImageSourceOverlay(link)
   const setImageViewerHandle = useSegmentedImageViewerHandle()
@@ -89,7 +91,10 @@ function ImageSourcesContent() {
             onVisibleFrameChange={documentHandlers.onCurrentPageChange}
             renderFrameOverlay={renderFrameOverlay}
           />
-          <SourceIndicator path={link.activePath} found={!!link.activeAnchor} />
+          <SourceIndicator
+            path={link.activeSourcePath}
+            found={!!link.activeAnchor}
+          />
         </FileViewerSurface>
         <FileViewerSidebar
           aria-label="Source fields"

@@ -44,6 +44,8 @@ Read these documents in this order:
 9. `scripts/verify-json-table-performance-budget.mjs` and
    `scripts/verify-json-table-performance-budget-fresh.mjs`: saved and fresh
    budget gates.
+10. `scripts/verify-json-table-accessibility.mjs`: fresh browser accessibility
+    and virtualized-column geometry gate.
 
 ## State Glossary
 
@@ -404,7 +406,9 @@ Read-only scalar rows use the DOM row patch policy:
 
 `tests/json-table-row-render.test.tsx` protects the user-facing interaction
 contract. `tests/json-table-architecture.test.ts` protects the hard-cutover
-architecture by rejecting legacy names and deleted compatibility files.
+runtime architecture by rejecting legacy names and deleted compatibility files.
+`tests/json-table-profiler-architecture.test.ts` protects the profiler CLI,
+browser-session helpers, report summaries, and budget-verifier contract.
 
 ## Verification Contract
 
@@ -436,6 +440,24 @@ managed dev server when no route is reachable, and fails with diagnostics when a
 route responds with the wrong page. Forced `managed` mode is useful only when no
 other Next dev server for this repository is running; Next 16 allows one dev
 server per repository, even on different ports.
+
+Use the proof mode that matches who owns the server lifecycle:
+
+- **Maintainer local full proof:** run `pnpm verify:json-table`. This uses
+  `PROFILE_SERVER_MODE=auto`, so it may reuse a healthy profile route or start a
+  managed server on an available port.
+- **Agent/repo-policy proof:** run the fresh gates with
+  `PROFILE_SERVER_MODE=existing`. If the profile route is unreachable, that is
+  an external-state failure. Do not start, stop, or restart the dev server
+  during ad hoc repo work.
+- **CI proof:** run the canonical gate in a controlled browser/server
+  environment. CI may use `PROFILE_SERVER_MODE=auto` or `managed` only when the
+  job owns the server process.
+
+The fresh performance and accessibility gates must both print profile-route
+diagnostics that separate component failures from setup failures. For local
+profile routes, those diagnostics include the current listener process when one
+is available.
 
 Run `pnpm typecheck` before claiming repository-wide TypeScript health; it is
 kept outside `verify:json-table` because the full app typecheck also covers
