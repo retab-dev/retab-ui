@@ -25,42 +25,79 @@ import {
 } from "@/components/ui/viewer"
 
 import {
+  azureToLayoutDocument,
+  type AzureDocument,
+} from "./layout-blocks-azure"
+import {
+  documentAiPageImages,
   documentAiToLayoutDocument,
   type DocumentAiDocument,
 } from "./layout-blocks-document-ai"
-import { documentAiToPdfBlob } from "./layout-blocks-document-ai-pdf"
 import { createLayoutBlocksViewerModel } from "./layout-blocks-model"
 import { LayoutBlocksPanel } from "./layout-blocks-panel"
+import { layoutDocumentToPdfBlob } from "./layout-blocks-pdf"
 import { createOcrSegmentedDocumentModel } from "./layout-blocks-segmented-document-model"
+import {
+  textractToLayoutDocument,
+  type TextractDocument,
+} from "./layout-blocks-textract"
+import type { LayoutDocument, LayoutLevel } from "./layout-blocks-types"
 import { LayoutOverlayLayer } from "./layout-overlay-layer"
 
 const LOW_CONFIDENCE_THRESHOLD = 0.9
-const INSPECTED_LEVELS = ["block"] as const
+const LEVEL_ORDER: LayoutLevel[] = ["block", "paragraph", "line", "word"]
+const EMPTY_PAGE_IMAGES: ReadonlyMap<number, string> = new Map()
 
-export function DocumentAiLayoutBlocks({
+/**
+ * Discriminated source for the OCR viewer. Each provider's raw output is
+ * normalized to a shared {@link LayoutDocument} before rendering, so the viewer
+ * itself is provider-agnostic.
+ */
+export type OcrSource =
+  | {
+      provider: "google-document-ai"
+      output: DocumentAiDocument
+      pageImages?: ReadonlyMap<number, string>
+    }
+  | {
+      provider: "aws-textract"
+      output: TextractDocument
+      pageImages?: ReadonlyMap<number, string>
+    }
+  | {
+      provider: "azure-document-intelligence"
+      output: AzureDocument
+      pageImages?: ReadonlyMap<number, string>
+    }
+
+export function OcrLayoutBlocks({
   className,
   heightClassName = "h-[680px]",
-  output,
+  source,
 }: {
   className?: string
   heightClassName?: string
-  output: DocumentAiDocument
+  source: OcrSource
 }) {
-  const layoutDocument = React.useMemo(
-    () => documentAiToLayoutDocument(output),
-    [output]
+  const { document: layoutDocument, pageImages } = React.useMemo(
+    () => normalizeOcrSource(source),
+    [source]
   )
-  const pdfSource = useDocumentAiPdfSource(output)
+  const inspectedLevels = React.useMemo(
+    () => inspectedLevelsForDocument(layoutDocument),
+    [layoutDocument]
+  )
+  const pdfSource = useLayoutPdfSource(layoutDocument, pageImages)
   const [lowConfidenceOnly, setLowConfidenceOnly] = React.useState(false)
   const model = React.useMemo(
     () =>
       createLayoutBlocksViewerModel({
         document: layoutDocument,
-        levels: INSPECTED_LEVELS,
+        levels: inspectedLevels,
         lowConfidenceOnly,
         threshold: LOW_CONFIDENCE_THRESHOLD,
       }),
-    [layoutDocument, lowConfidenceOnly]
+    [layoutDocument, inspectedLevels, lowConfidenceOnly]
   )
   const segmentedDocumentModel = React.useMemo(
     () =>
@@ -73,9 +110,10 @@ export function DocumentAiLayoutBlocks({
 
   return (
     <SegmentedDocumentProvider model={segmentedDocumentModel}>
-      <DocumentAiLayoutBlocksContent
+      <OcrLayoutBlocksContent
         className={className}
         heightClassName={heightClassName}
+        inspectedLevels={inspectedLevels}
         lowConfidenceOnly={lowConfidenceOnly}
         model={model}
         pdfSource={pdfSource}
@@ -85,9 +123,36 @@ export function DocumentAiLayoutBlocks({
   )
 }
 
-function DocumentAiLayoutBlocksContent({
+/**
+ * Back-compatible entry point for Google Document AI output. Prefer
+ * {@link OcrLayoutBlocks} with an explicit {@link OcrSource} for new code.
+ */
+export function DocumentAiLayoutBlocks({
   className,
   heightClassName,
+  output,
+}: {
+  className?: string
+  heightClassName?: string
+  output: DocumentAiDocument
+}) {
+  const source = React.useMemo<OcrSource>(
+    () => ({ provider: "google-document-ai", output }),
+    [output]
+  )
+  return (
+    <OcrLayoutBlocks
+      className={className}
+      heightClassName={heightClassName}
+      source={source}
+    />
+  )
+}
+
+function OcrLayoutBlocksContent({
+  className,
+  heightClassName,
+  inspectedLevels,
   lowConfidenceOnly,
   model,
   pdfSource,
@@ -95,9 +160,10 @@ function DocumentAiLayoutBlocksContent({
 }: {
   className?: string
   heightClassName: string
+  inspectedLevels: readonly LayoutLevel[]
   lowConfidenceOnly: boolean
   model: ReturnType<typeof createLayoutBlocksViewerModel>
-  pdfSource: ReturnType<typeof useDocumentAiPdfSource>
+  pdfSource: ReturnType<typeof useLayoutPdfSource>
   setLowConfidenceOnly: React.Dispatch<React.SetStateAction<boolean>>
 }) {
   const segmentedViewport = useSegmentedDocumentViewport()
@@ -126,7 +192,7 @@ function DocumentAiLayoutBlocksContent({
           page={page}
           rotation={rotation}
           selectedItemId={selectedItemId}
-          visibleLevels={INSPECTED_LEVELS}
+          visibleLevels={inspectedLevels}
           onItemClick={(item) => {
             selectItem(item.id)
             navigateItem(item.id, { behavior: "smooth", clearPreview: false })
@@ -139,6 +205,7 @@ function DocumentAiLayoutBlocksContent({
     [
       activeItemId,
       clearPreview,
+      inspectedLevels,
       model.index.pagesByNumber,
       model.visibleItems,
       navigateItem,
@@ -154,11 +221,12 @@ function DocumentAiLayoutBlocksContent({
     [segmentedViewport.documentHandlers]
   )
 
+  const level = inspectedLevels[0] ?? "block"
+
   return (
     <ViewerRoot
       data-layout-blocks=""
       className={cn("bg-background", heightClassName, className)}
-      bare
       defaultOpen
       sidebarSide="right"
     >
@@ -169,7 +237,7 @@ function DocumentAiLayoutBlocksContent({
             <div className="flex min-w-0 items-center gap-2">
               <div className="truncate text-sm font-medium">OCR</div>
               <div className="shrink-0 text-xs text-muted-foreground">
-                {model.visibleItems.length} blocks
+                {levelCountLabel(level, model.visibleItems.length)}
               </div>
             </div>
           </div>
@@ -189,7 +257,7 @@ function DocumentAiLayoutBlocksContent({
       <ViewerBody>
         <ViewerSurface>
           {pdfSource.source ? (
-            <FileViewer source={pdfSource.source} bare className="h-full">
+            <FileViewer source={pdfSource.source} className="h-full">
               <PdfViewerProvider>
                 <PdfViewerPages
                   ref={setPdfViewerHandle}
@@ -221,8 +289,8 @@ function DocumentAiLayoutBlocksContent({
             className="min-h-0 flex-1"
             emptyLabel={
               lowConfidenceOnly
-                ? "No low-confidence OCR blocks found."
-                : "No OCR blocks found."
+                ? `No low-confidence OCR ${levelPlural(level)} found.`
+                : `No OCR ${levelPlural(level)} found.`
             }
             items={model.evidenceItems}
             selectedItemId={selectedItemId}
@@ -243,7 +311,61 @@ function DocumentAiLayoutBlocksContent({
   )
 }
 
-function useDocumentAiPdfSource(output: DocumentAiDocument) {
+function normalizeOcrSource(source: OcrSource): {
+  document: LayoutDocument
+  pageImages: ReadonlyMap<number, string>
+} {
+  switch (source.provider) {
+    case "aws-textract":
+      return {
+        document: textractToLayoutDocument(source.output),
+        pageImages: source.pageImages ?? EMPTY_PAGE_IMAGES,
+      }
+    case "azure-document-intelligence":
+      return {
+        document: azureToLayoutDocument(source.output),
+        pageImages: source.pageImages ?? EMPTY_PAGE_IMAGES,
+      }
+    case "google-document-ai":
+    default:
+      return {
+        document: documentAiToLayoutDocument(source.output),
+        pageImages: source.pageImages ?? documentAiPageImages(source.output),
+      }
+  }
+}
+
+/** Pick the coarsest level present so the viewer always has rows to inspect. */
+function inspectedLevelsForDocument(document: LayoutDocument): LayoutLevel[] {
+  for (const level of LEVEL_ORDER) {
+    if (document.items.some((item) => item.level === level)) return [level]
+  }
+  return ["block"]
+}
+
+function levelPlural(level: LayoutLevel): string {
+  switch (level) {
+    case "block":
+      return "blocks"
+    case "paragraph":
+      return "paragraphs"
+    case "line":
+      return "lines"
+    case "word":
+      return "words"
+  }
+}
+
+function levelCountLabel(level: LayoutLevel, count: number): string {
+  const plural = levelPlural(level)
+  const singular = plural.slice(0, -1)
+  return `${count} ${count === 1 ? singular : plural}`
+}
+
+function useLayoutPdfSource(
+  document: LayoutDocument,
+  pageImages: ReadonlyMap<number, string>
+) {
   const [state, setState] = React.useState<{
     error?: string
     source?: PdfDocumentSource
@@ -253,7 +375,7 @@ function useDocumentAiPdfSource(output: DocumentAiDocument) {
     let isCurrent = true
     setState({})
 
-    documentAiToPdfBlob(output)
+    layoutDocumentToPdfBlob(document, new Map(pageImages))
       .then((blob) => {
         if (!isCurrent) return
         setState({
@@ -261,7 +383,7 @@ function useDocumentAiPdfSource(output: DocumentAiDocument) {
             kind: "blob",
             blob,
             fileName: "ocr-pages.pdf",
-            identityKey: `document-ai-pdf:${output.pages?.length ?? 0}:${blob.size}`,
+            identityKey: `ocr-pdf:${document.pages.length}:${pageImages.size}:${blob.size}`,
             mimeType: "application/pdf",
           },
         })
@@ -279,15 +401,23 @@ function useDocumentAiPdfSource(output: DocumentAiDocument) {
     return () => {
       isCurrent = false
     }
-  }, [output])
+  }, [document, pageImages])
 
   return state
 }
 
 export type { LayoutItem, LayoutLevel, LayoutPage } from "./layout-blocks-types"
 export type { DocumentAiDocument } from "./layout-blocks-document-ai"
-export { documentAiToLayoutDocument } from "./layout-blocks-document-ai"
+export type { TextractDocument } from "./layout-blocks-textract"
+export type { AzureDocument } from "./layout-blocks-azure"
+export {
+  documentAiPageImages,
+  documentAiToLayoutDocument,
+} from "./layout-blocks-document-ai"
+export { textractToLayoutDocument } from "./layout-blocks-textract"
+export { azureToLayoutDocument } from "./layout-blocks-azure"
 export { documentAiToPdfBlob } from "./layout-blocks-document-ai-pdf"
+export { layoutDocumentToPdfBlob } from "./layout-blocks-pdf"
 export { createLayoutItemIndex } from "./layout-blocks-index"
 export {
   createLayoutBlocksViewerModel,

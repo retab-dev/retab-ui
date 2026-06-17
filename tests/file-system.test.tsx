@@ -302,7 +302,7 @@ describe("FileSystem", () => {
   it("opens files from composed provider parts with the exported dialog", async () => {
     render(
       <FileSystemProvider defaultPath="reports/" items={items}>
-        <ViewerRoot data-viewer="file-system" bare>
+        <ViewerRoot data-viewer="file-system">
           <ViewerHeader>
             <FileSystemHeader />
           </ViewerHeader>
@@ -327,7 +327,7 @@ describe("FileSystem", () => {
   it("opens the selected list file from the keyboard", async () => {
     render(
       <FileSystemProvider defaultPath="reports/" items={items}>
-        <ViewerRoot data-viewer="file-system" bare>
+        <ViewerRoot data-viewer="file-system">
           <ViewerHeader>
             <FileSystemHeader />
           </ViewerHeader>

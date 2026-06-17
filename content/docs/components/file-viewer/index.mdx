@@ -1,0 +1,171 @@
+---
+title: Overview
+description: One viewer for everything — detects the file type and renders the right component, from PDFs and spreadsheets to images, code, Markdown, and HTML.
+component: true
+---
+
+The File Viewer is a single entry point for previewing any file. It detects the
+type from the file name (then the MIME type) and **lazy-loads only the matching
+viewer**, so the heavy parser for a format you never open is never downloaded.
+
+It is the flagship document component. The format renderers are not peers of
+File Viewer; they are routes inside it:
+[PDF](/docs/components/file-viewer/renderers/pdf),
+[DOCX](/docs/components/file-viewer/renderers/docx),
+[Image](/docs/components/file-viewer/renderers/image),
+[PPTX](/docs/components/file-viewer/renderers/pptx),
+[XLSX](/docs/components/file-viewer/renderers/xlsx), and
+[CSV](/docs/components/file-viewer/renderers/csv). File Viewer also owns inline,
+client-side rendering for **text, code, JSON,
+[Markdown](/docs/components/file-viewer/renderers/markdown), and HTML**.
+
+<ComponentPreview name="file-viewer-demo" />
+
+## Installation
+
+```bash
+npx shadcn@latest add @retab/file-viewer
+```
+
+This pulls in the format-specific viewers it delegates to, plus the
+[Markdown Viewer](/docs/components/file-viewer/renderers/markdown)
+for Markdown documents, custom fixed-line virtualization for the Code Viewer,
+and `@chenglou/pretext` for the wrapped Text and Markdown surfaces.
+
+## Usage
+
+```tsx
+import { FileViewer } from "@/components/ui/file-viewer"
+
+export function Example() {
+  return (
+    <FileViewer
+      source={{ kind: "url", url: "/report.pdf", fileName: "report.pdf" }}
+    />
+  )
+}
+```
+
+`source.fileName` drives type detection and the download button. If you only
+have a URL, the URL is used for display and its basename is used for downloads;
+pass `source.mimeType` when the extension is missing or ambiguous, or `as` to
+force a category.
+
+## Composition Boundaries
+
+`FileViewer` is a file router and file-scoped composition root. Do not use it to
+own workflow semantics. Do use its named anatomy when a file-backed surface
+needs sidebars, composed panes, or file-scoped navigation.
+
+Use the file viewer parts when a workflow needs one file header above domain
+chrome:
+
+```tsx
+<FileViewer source={source} defaultOpen>
+  <FileViewerHeader>
+    <FileViewerSidebarTrigger />
+    <FileViewerTitle />
+    <FileViewerMeta />
+    <FileViewerControls />
+  </FileViewerHeader>
+  <FileViewerBody>
+    <FileViewerSidebar aria-label="Document sections" />
+    <FileViewerSurface>
+      <FileViewerDocument />
+    </FileViewerSurface>
+  </FileViewerBody>
+</FileViewer>
+```
+
+`FileViewerTitle` answers what file this is, `FileViewerMeta` renders passive
+facts, and `FileViewerControls` renders operational controls registered by the
+active file renderer. `FileViewerDocument` is the routed file renderer.
+
+See [Anatomy](/docs/components/file-viewer/anatomy) for the compound API and
+[Sidebar](/docs/components/file-viewer/navigation) for file-scoped navigation.
+
+Use the easy shell for the common case:
+
+```tsx
+<FileViewer source={source} />
+```
+
+Use the composed shell when the file surface needs file-scoped sidebars or
+custom header composition:
+
+```tsx
+<FileViewer source={source}>
+  <FileViewerHeader>
+    <FileViewerTitle />
+    <FileViewerMeta />
+    <FileViewerControls />
+  </FileViewerHeader>
+  <FileViewerBody>
+    <FileViewerSurface>
+      <FileViewerDocument />
+    </FileViewerSurface>
+  </FileViewerBody>
+</FileViewer>
+```
+
+Use `FileViewer bare` only for standalone nested leaf previews where the parent
+already owns the surrounding surface:
+
+```tsx
+<FileViewer source={attachment.source} bare />
+```
+
+## Supported types
+
+| Category     | Extensions                                                                      | Rendered by             |
+| ------------ | ------------------------------------------------------------------------------- | ----------------------- |
+| PDF          | `pdf`                                                                           | PDF Viewer              |
+| Word         | `docx`                                                                          | DOCX Viewer             |
+| Spreadsheet  | `xlsx`, `xls`, `xlsm`                                                           | XLSX Viewer             |
+| Presentation | `pptx`                                                                          | PPTX Viewer             |
+| Tabular      | `csv`, `tsv`                                                                    | CSV Viewer              |
+| Image        | `png`, `jpg`, `jpeg`, `gif`, `webp`, `avif`, `svg`, `bmp`, `ico`, `tif`, `tiff` | Image Viewer            |
+| Markdown     | `md`, `markdown`, `text/markdown`                                               | Markdown Viewer |
+| HTML         | `html`, `htm`                                                                   | sandboxed iframe        |
+| Text         | `txt`, `text`                                                                   | Pretext Text Viewer     |
+| Code & logs  | `log`, `json`, `xml`, `yaml`, `mdx`, `ts`, `py`, `go`, …                        | Code Viewer             |
+
+Anything unrecognized falls back to a download card.
+
+The [Email Viewer](/docs/components/file-viewer/renderers/email) also belongs to
+the File Viewer category, but it is a compound MIME viewer rather than a routed
+`FileViewerDocument` renderer: its body and attachment leaves render through
+File Viewer primitives.
+
+## How it performs
+
+- **Code-split delegation.** Each format-specific viewer is a `React.lazy`
+  import — opening a PDF never loads SheetJS, pptxviewjs, or the others.
+- **Code and text split.** Code-like files render as fixed lines through the
+  Code Viewer with line numbers. Prose text renders
+  through the Pretext Text Viewer with natural wrapping and custom
+  variable-height virtualization.
+- **Markdown has a dedicated continuous document path.** Markdown URL, Blob,
+  inline text, and MIME-only sources route to `MarkdownViewer`, which
+  keeps Pretext-informed virtual chunks as an internal layout strategy while
+  React/GFM owns the visible document rendering. The Text Viewer remains for
+  prose text that is not Markdown.
+- **Safe HTML.** Standalone `.html` files render inside a `<iframe sandbox>` with
+  no script execution and no same-origin access, so untrusted documents preview
+  without running code or reaching the app.
+
+## API Reference
+
+| Prop        | Type           | Description                                                                                       |
+| ----------- | -------------- | ------------------------------------------------------------------------------------------------- |
+| `source`    | `ViewerSource` | Canonical file source. URL, Blob, and text sources carry file metadata with the payload identity. |
+| `as`        | `FileCategory` | Force a category, bypassing detection.                                                            |
+| `bare`      | `boolean`      | Drop the outer border/background so the viewer fills its container.                               |
+| `className` | `string`       | Optional class on the viewer root element.                                                        |
+
+The `detectCategory(fileName, mimeType?)` helper is also exported if you need to
+branch on the resolved category yourself.
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer.tsx" />

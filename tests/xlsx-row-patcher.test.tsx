@@ -136,6 +136,93 @@ describe("XLSX row patcher", () => {
     }
   })
 
+  it("resyncs rows hidden by the fast path back to the canonical window", () => {
+    const rowWindow = buildRowWindow([
+      {
+        ariaRowIndex: "1",
+        rowNumber: "1",
+        cells: [
+          { text: "r0c0", numeric: false, active: false },
+          { text: "r0c1", numeric: true, active: false },
+        ],
+      },
+      {
+        ariaRowIndex: "2",
+        rowNumber: "2",
+        cells: [
+          { text: "r1c0", numeric: false, active: false },
+          { text: "r1c1", numeric: true, active: false },
+        ],
+      },
+      {
+        ariaRowIndex: "3",
+        rowNumber: "3",
+        cells: [
+          { text: "r2c0", numeric: false, active: false },
+          { text: "r2c1", numeric: true, active: false },
+        ],
+      },
+      {
+        ariaRowIndex: "4",
+        rowNumber: "4",
+        cells: [
+          { text: "r3c0", numeric: false, active: false },
+          { text: "r3c1", numeric: true, active: false },
+        ],
+      },
+      {
+        ariaRowIndex: "5",
+        rowNumber: "5",
+        cells: [
+          { text: "r4c0", numeric: false, active: false },
+          { text: "r4c1", numeric: true, active: false },
+        ],
+      },
+    ])
+    const state = createPatchState()
+    const { result } = renderHook(() =>
+      useXlsxRowPatcher({
+        rowWindowRef: { current: rowWindow },
+        getState: () => state,
+      })
+    )
+
+    expect(result.current.patch(createViewport())).toBe("handled")
+    expect(rowHandles(rowWindow).map((row) => row.hidden)).toEqual([
+      false,
+      false,
+      false,
+      true,
+      true,
+    ])
+
+    result.current.resync([
+      { index: 3, start: 72, size: 24, end: 96 },
+      { index: 4, start: 96, size: 24, end: 120 },
+      { index: 5, start: 120, size: 24, end: 144 },
+      { index: 6, start: 144, size: 24, end: 168 },
+      { index: 7, start: 168, size: 24, end: 192 },
+    ])
+
+    const rows = rowHandles(rowWindow)
+    expect(rows.map((row) => row.hidden)).toEqual([
+      false,
+      false,
+      false,
+      false,
+      false,
+    ])
+    expect(rows.map((row) => row.style.transform)).toEqual([
+      "translate3d(0, 72px, 0)",
+      "translate3d(0, 96px, 0)",
+      "translate3d(0, 120px, 0)",
+      "translate3d(0, 144px, 0)",
+      "translate3d(0, 168px, 0)",
+    ])
+    expect(rowText(rows[3]!)).toEqual(["7", "r6c0", "600"])
+    expect(rowText(rows[4]!)).toEqual(["8", "r7c0", "700"])
+  })
+
   it("declines the fast path after the active cell changes", () => {
     const rowWindow = buildRowWindow([
       {

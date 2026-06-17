@@ -45,7 +45,8 @@ function connectCdp(webSocketUrl) {
     if (payload.id && pending.has(payload.id)) {
       const request = pending.get(payload.id)
       pending.delete(payload.id)
-      if (payload.error) request.reject(new Error(JSON.stringify(payload.error)))
+      if (payload.error)
+        request.reject(new Error(JSON.stringify(payload.error)))
       else request.resolve(payload.result)
       return
     }

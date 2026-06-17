@@ -1,0 +1,13 @@
+{
+  "title": "Navigation",
+  "pages": [
+    "index",
+    "file-viewer-sidebar-trigger",
+    "file-viewer-thumbnails",
+    "file-viewer-attachments",
+    "file-viewer-segments",
+    "file-viewer-segment-legend",
+    "file-viewer-page-rail",
+    "sidebar-list"
+  ]
+}

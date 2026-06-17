@@ -60,12 +60,12 @@ export function SourceFieldList({
       </div>
       <InteractiveItemList
         aria-label={title}
-        activeItemId={link.activePath}
+        activeItemId={link.activeSourcePath}
         emptyLabel="No fields."
         items={evidenceItems}
-        onActivateItem={(item) => link.selectField?.(item.id)}
-        onClearPreview={() => link.onFieldHover(null)}
-        onPreviewItem={(item) => link.onFieldHover(item.id)}
+        onActivateItem={(item) => link.selectSourcePath?.(item.id)}
+        onClearPreview={() => link.onSourceHover(null)}
+        onPreviewItem={(item) => link.onSourceHover(item.id)}
         renderItem={(item, state) => (
           <SourceFieldRow
             item={item}

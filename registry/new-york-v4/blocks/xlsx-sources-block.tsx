@@ -76,22 +76,21 @@ function XlsxSourcesContent({
 }) {
   const target = useXlsxSourceTarget(viewerRef)
   const segmentedLink = useSegmentedSourceFieldLink({
-    initialPath: FIELDS[0]?.key,
+    initialSourcePath: FIELDS[0]?.key,
   })
   const link = useTargetedSourceFieldLink({
     fieldByKey: FIELD_BY_KEY,
     link: segmentedLink,
     target,
   })
-  const activeSource = link.activePath
-    ? FIELD_BY_KEY.get(link.activePath)?.source
+  const activeSource = link.activeSourcePath
+    ? FIELD_BY_KEY.get(link.activeSourcePath)?.source
     : undefined
   const activeCell = sourceToXlsxCell(activeSource)
 
   return (
     <FileViewer
       source={XLSX_SOURCE}
-      bare
       className="h-full min-h-[680px] bg-background"
     >
       <FileViewerHeader>
@@ -109,7 +108,10 @@ function XlsxSourcesContent({
             controls={false}
             activeCell={activeCell}
           />
-          <SourceIndicator path={link.activePath} found={!!activeSource} />
+          <SourceIndicator
+            path={link.activeSourcePath}
+            found={!!activeSource}
+          />
         </FileViewerSurface>
         <FileViewerSidebar
           aria-label="Source fields"
@@ -141,16 +143,16 @@ function useTargetedSourceFieldLink({
     },
     [fieldByKey, target]
   )
-  const onFieldHover = React.useCallback(
+  const onSourceHover = React.useCallback(
     (path: string | null) => {
-      link.onFieldHover(path)
+      link.onSourceHover(path)
       if (path) scrollToField(path, "auto")
     },
     [link, scrollToField]
   )
-  const selectField = React.useCallback(
+  const selectSourcePath = React.useCallback(
     (path: string) => {
-      link.selectField?.(path)
+      link.selectSourcePath?.(path)
       scrollToField(path, "smooth")
     },
     [link, scrollToField]
@@ -159,9 +161,9 @@ function useTargetedSourceFieldLink({
   return React.useMemo(
     () => ({
       ...link,
-      onFieldHover,
-      selectField,
+      onSourceHover,
+      selectSourcePath,
     }),
-    [link, onFieldHover, selectField]
+    [link, onSourceHover, selectSourcePath]
   )
 }

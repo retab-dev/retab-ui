@@ -111,6 +111,18 @@ export function documentAiPageToDataUrl(page: DocumentAiPage) {
   }`
 }
 
+/** Map of page number → embedded page-image data URL, for the PDF backdrop. */
+export function documentAiPageImages(
+  input: DocumentAiDocument
+): Map<number, string> {
+  const images = new Map<number, string>()
+  ;(input.pages ?? []).forEach((page, index) => {
+    const dataUrl = documentAiPageToDataUrl(page)
+    if (dataUrl) images.set(page.pageNumber ?? index + 1, dataUrl)
+  })
+  return images
+}
+
 function documentAiPageToLayoutPage(
   page: DocumentAiPage,
   pageIndex: number

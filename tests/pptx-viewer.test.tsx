@@ -2011,7 +2011,7 @@ describe("PptxViewer", () => {
 
   it("supports bare layout, viewer chrome, and hidden controls", async () => {
     await renderPptx(
-      <ViewerRoot bare>
+      <ViewerRoot>
         <ViewerHeader data-testid="pptx-header">header</ViewerHeader>
         <ViewerBody>
           <ViewerSidebar data-testid="pptx-aside">aside</ViewerSidebar>

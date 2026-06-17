@@ -25,25 +25,45 @@ Read these documents in this order:
 
 1. `components/json-table/ARCHITECTURE.md`: current runtime ownership and
    verification contract.
-2. `design/data-cell-json-table-platonic-issues-blueprint.md`: current issue
+2. `design/data-cell-json-table-literal-platonic-gap-blueprint.md`: active
+   blueprint for the remaining literal-perfection gaps.
+3. `design/data-cell-json-table-current-platonic-gap-blueprint.md`: completed
+   ledger for the previous row-policy, viewport, profiler, and architecture
+   guard implementation.
+4. `design/data-cell-json-table-platonic-issues-blueprint.md`: historical issue
    ledger. Older JSON-table blueprints are historical unless this ledger points
    back to them.
-3. `design/data-cell-json-table-style-invalidation-findings.md`: current
+5. `design/data-cell-json-table-style-invalidation-findings.md`: current
    style/layout attribution notes for select and picker performance.
-4. `components/json-table/json-table-performance-budget.json`: checked
+6. `components/json-table/json-table-performance-budget.json`: checked
    performance budgets.
-5. `scripts/profile-json-table-primitive-interactions.mjs`: profiler that
+7. `scripts/profile-json-table-primitive-interactions.mjs`: profiler CLI that
    produces saved and fresh JSON-table interaction reports.
-6. `scripts/verify-json-table-performance-budget.mjs` and
+8. `scripts/json-table-profiler/*`: profiler helper modules for browser
+   sessions and report summaries.
+9. `scripts/verify-json-table-performance-budget.mjs` and
    `scripts/verify-json-table-performance-budget-fresh.mjs`: saved and fresh
    budget gates.
+10. `scripts/verify-json-table-accessibility.mjs`: fresh browser accessibility
+    and virtualized-column geometry gate.
 
 ## State Glossary
 
 - `sourceDocument` is the latest document received from parent props.
 - `projectionDocument` is the document identity used to project visible rows.
+- `currentProjectionDocument` is the render-time projection document after the
+  document model accounts for a not-yet-reconciled new source document.
 - `confirmedDocumentData` is the authoritative data base used for outgoing
   document patches.
+- `visibleColumns` is the schema model output: the schema-derived columns
+  available to the table.
+- `schemaVisibleColumns` is the table-local alias used where the table passes
+  that full schema column set to viewport and row-policy hooks.
+- `renderedColumnWindow` is the actual column window rendered by the current
+  table mode. Editable tables render the virtual body window. Read-only tables
+  render the full schema-visible column set.
+- `fallbackTextDataCellProps` is a domain fallback for unsupported primitive
+  kinds. It is not a compatibility shim for removed table behavior.
 - A parent echo is a same-document-id source update caused by a table commit.
 - A primitive pending value is a scalar value owned by
   `JsonTablePrimitiveEditStore` until the parent echo confirms it.
@@ -157,6 +177,23 @@ editing, commit, and hover. Each mounted cell receives its own `cellProjection`
 because projected cell, rendered column, and absolute column index are
 cell-specific. Cell memoization compares the meaningful fields inside each
 group; it does not depend on group object churn.
+
+## Table Runtime Ownership
+
+`SingleFileVirtualizedTable` composes table runtime state. It should not own the
+row patcher or raw fixed-grid virtualization details directly.
+
+- `useJsonTableEditSessionCoordinator` owns primitive active identity and
+  structured edit-session state.
+- `useJsonTableRowPolicy` owns the editable/read-only row update strategy. It
+  installs the read-only DOM patcher only for read-only tables and exposes the
+  row scroll strategy plus row invalidation callback to the table.
+- `useJsonTableViewportModel` owns fixed-grid virtualization, total table width,
+  total row size, and translation from fixed-grid column items into the
+  `JsonTableRenderedColumnWindow`.
+- `useJsonTableRenderedColumnWindow` owns the editable/read-only column-window
+  rule: editable tables receive the mounted body column window; read-only tables
+  receive the full schema-visible column window.
 
 ## Interaction Contract
 
@@ -351,20 +388,27 @@ Editable tables use the React row policy:
 - the read-only DOM patcher is not used, because editable rows can contain
   active controls and local edit state that must not be rewritten imperatively
 
-Read-only tables use the DOM row patch policy:
+Read-only scalar rows use the DOM row patch policy:
 
 - default row overscan is larger for scroll continuity
-- jump-scroll row updates may be handled by `useReadOnlyJsonRowPatcher`
-- the patcher is limited to scalar/boolean read-only rows with stable DOM shape
+- jump-scroll row updates may be handled by
+  `useScalarReadOnlyJsonRowPatcher`
+- the patcher is intentionally limited to scalar/boolean read-only rows with
+  stable DOM shape
 - unsupported shapes fall back to the normal React virtualization path
-- every patch attempt emits a `read-only-row-patcher` profiler mark with a
-  fallback reason or the handled `rowsPatched` count
+- every patch attempt emits a `scalar-read-only-row-patcher` profiler mark with
+  a fallback reason or the handled `rowsPatched` count
+- the saved performance budget includes `read-only-scroll-jump`: scalar
+  read-only rows must patch with zero fallbacks, while large read-only rows with
+  object/array cells must emit a diagnosed `shape-mismatch` fallback reason
 
 ## Regression Guards
 
 `tests/json-table-row-render.test.tsx` protects the user-facing interaction
 contract. `tests/json-table-architecture.test.ts` protects the hard-cutover
-architecture by rejecting legacy names and deleted compatibility files.
+runtime architecture by rejecting legacy names and deleted compatibility files.
+`tests/json-table-profiler-architecture.test.ts` protects the profiler CLI,
+browser-session helpers, report summaries, and budget-verifier contract.
 
 ## Verification Contract
 
@@ -396,6 +440,24 @@ managed dev server when no route is reachable, and fails with diagnostics when a
 route responds with the wrong page. Forced `managed` mode is useful only when no
 other Next dev server for this repository is running; Next 16 allows one dev
 server per repository, even on different ports.
+
+Use the proof mode that matches who owns the server lifecycle:
+
+- **Maintainer local full proof:** run `pnpm verify:json-table`. This uses
+  `PROFILE_SERVER_MODE=auto`, so it may reuse a healthy profile route or start a
+  managed server on an available port.
+- **Agent/repo-policy proof:** run the fresh gates with
+  `PROFILE_SERVER_MODE=existing`. If the profile route is unreachable, that is
+  an external-state failure. Do not start, stop, or restart the dev server
+  during ad hoc repo work.
+- **CI proof:** run the canonical gate in a controlled browser/server
+  environment. CI may use `PROFILE_SERVER_MODE=auto` or `managed` only when the
+  job owns the server process.
+
+The fresh performance and accessibility gates must both print profile-route
+diagnostics that separate component failures from setup failures. For local
+profile routes, those diagnostics include the current listener process when one
+is available.
 
 Run `pnpm typecheck` before claiming repository-wide TypeScript health; it is
 kept outside `verify:json-table` because the full app typecheck also covers
@@ -441,10 +503,20 @@ activation during setup, waits for actionable calendar day buttons before date
 commit profiling, and reports profile-page diagnostics when the editable table
 does not mount.
 
+Every profiled scenario records a mounted-surface snapshot before and after the
+interaction. The snapshot includes header cells/nodes, body editable
+cells/nodes, popup roots/nodes, active and hovered editable cell counts,
+stylesheet counts, and focused-element metadata. The saved verifier prints
+those fields as `surface=`, `nodes=`, `css=`, `active=`, `hover=`, `focus=`,
+and `owner=` so a style or latency failure points to the likely mounted surface
+instead of only reporting a number.
+
 For style-invalidation work, run the profiler with
 `JSON_TABLE_STYLE_EXPERIMENTS=1` or `--style-experiments`. This adds large-table
 row-count, extra-column-count, and overscan variants and prints a compact
-`open-enum`, `open-date`, and `switch-dirty-cell` style-cost table. Those
+`open-enum`, `open-date`, and `switch-dirty-cell` style-cost table. It also
+profiles inert popup shells for an empty portal, select popup, and picker popup
+so overlay CSS cost can be separated from JSON table edit logic. Those
 experiment profiles are diagnostic; the normal verifier still gates the stable
 `default` and `large` profiles.
 
@@ -453,13 +525,22 @@ cause evidence. Trace mode records per-scenario Chrome trace summaries with
 top timed events, style/layout/script buckets, and invalidation events when
 Chrome reports them. It is opt-in because it makes browser profiling heavier.
 
+Use `JSON_TABLE_STYLE_CLASS_EXPERIMENTS=disable-row-hover,...` or
+`--style-class-experiments disable-row-hover,...` for profiler-only CSS
+experiments. Available toggles are `disable-row-hover`,
+`disable-active-cell-overlay`, `disable-focus-visible-ring`, and
+`disable-portal-shadow`. They inject a temporary style tag into the profiled
+page so style/layout costs can be compared without changing production classes
+or interaction semantics.
+
 Use `JSON_TABLE_PROFILE_TARGETS=large` / `--targets large` and
 `JSON_TABLE_PROFILE_SCENARIOS=open-enum,open-date,...` / `--scenarios ...` for
-focused diagnostic trace runs. Target filters are safe with profiler assertion;
-scenario filters are diagnostic-only and are refused with `--assert`, because
-the canonical assertion must keep covering the full scenario matrix. Filtered
-reports record `targetFilter` and `scenarioFilter` and fail if a requested
-scenario name is never measured.
+focused diagnostic trace runs and targeted repeated-profile gates. Target and
+scenario filters are safe with profiler assertion: unfiltered assertion covers
+the full scenario matrix, while filtered assertion validates the selected
+scenarios with their scenario-specific invariants. Filtered reports record
+`targetFilter` and `scenarioFilter` and fail if a requested scenario name is
+never measured.
 
 Repeated profiles report median, p90, and worst. The canonical gate validates a
 single warmed measured run for fast local feedback. If repeated-run gating is

@@ -4,7 +4,12 @@ import * as React from "react"
 
 import { type ViewerResource } from "@/lib/viewer-resource"
 
-import { isProseTextDescriptor, type FileDescriptor } from "./file-viewer-core"
+import {
+  isProseTextDescriptor,
+  type FileCategory,
+  type FileDescriptor,
+  type FileViewerDocumentChrome,
+} from "./file-viewer-core"
 import { CsvFileContent } from "./file-viewer-csv-viewer"
 import { UnsupportedCard } from "./file-viewer-fallback"
 import { HtmlFileContent } from "./file-viewer-html-viewer"
@@ -39,9 +44,9 @@ const ProseTextViewer = React.lazy(() =>
     default: m.ChenglouTextViewer,
   }))
 )
-const PretextMarkdownViewer = React.lazy(() =>
-  import("@/components/ui/pretext-markdown-viewer").then((m) => ({
-    default: m.PretextMarkdownViewer,
+const MarkdownViewer = React.lazy(() =>
+  import("@/components/ui/markdown-viewer").then((m) => ({
+    default: m.MarkdownViewer,
   }))
 )
 const CodeTextViewer = React.lazy(() =>
@@ -53,274 +58,144 @@ const CodeTextViewer = React.lazy(() =>
 export type FileViewerRouteProps = {
   bare?: boolean
   className?: string
+  documentChrome: FileViewerDocumentChrome
   descriptor: FileDescriptor
   descriptorSignal: AbortSignal
   isolateStyles: boolean
-  leafControls: boolean
-  leafDownload: boolean
   resource: ViewerResource
+}
+
+type RenderContext = {
+  descriptor: FileDescriptor
+  resource: ViewerResource
+  className?: string
+  bare: boolean
+  controls: boolean
+  isolateStyles: boolean
+  descriptorSignal: AbortSignal
+}
+
+// Categories a text-kind source (raw text, no blob/url backing) can render.
+const TEXT_SOURCE_CATEGORIES = new Set<FileCategory>([
+  "csv",
+  "markdown",
+  "html",
+  "text",
+])
+
+const RENDERERS: Partial<
+  Record<FileCategory, (ctx: RenderContext) => React.ReactNode>
+> = {
+  pdf: ({ resource, className, bare, controls }) => (
+    <PdfResourceContent
+      resource={resource}
+      className={className}
+      bare={bare}
+      controls={controls}
+      download
+    />
+  ),
+  docx: ({ resource, className, bare, controls }) => (
+    <DocxResourceContent
+      resource={resource}
+      className={className}
+      bare={bare}
+      controls={controls}
+      download
+    />
+  ),
+  image: ({ resource, className, bare, controls }) => (
+    <ImageResourceContent
+      resource={resource}
+      className={className}
+      bare={bare}
+      controls={controls}
+      download
+    />
+  ),
+  pptx: ({ resource, className, bare, controls }) => (
+    <PptxResourceContent
+      resource={resource}
+      className={className}
+      bare={bare}
+      controls={controls}
+      download
+    />
+  ),
+  xlsx: ({ resource, className, bare, controls, isolateStyles }) => (
+    <XlsxResourceContent
+      resource={resource}
+      className={className}
+      bare={bare}
+      controls={controls}
+      download
+      isolateStyles={isolateStyles}
+    />
+  ),
+  csv: ({ resource, className, bare, controls, isolateStyles }) => (
+    <CsvFileContent
+      resource={resource}
+      className={className}
+      bare={bare}
+      controls={controls}
+      isolateStyles={isolateStyles}
+    />
+  ),
+  html: ({ resource, className, bare, controls, descriptorSignal }) => (
+    <HtmlFileContent
+      resource={resource}
+      className={className}
+      bare={bare}
+      controls={controls}
+      descriptorSignal={descriptorSignal}
+    />
+  ),
+  markdown: ({ resource, className, bare, controls }) => (
+    <MarkdownViewer
+      source={resource.descriptor.source}
+      className={className}
+      controls={controls}
+      download
+      bare={bare}
+    />
+  ),
+  text: renderTextViewer,
 }
 
 export function FileViewerRoute({
   descriptor,
   className,
+  documentChrome,
   bare = false,
   isolateStyles,
   descriptorSignal,
   resource,
-  leafControls,
-  leafDownload,
 }: FileViewerRouteProps) {
   const { category } = descriptor
-  const directLoadUrl = resource.content.directUrl ?? undefined
+  const standalone = documentChrome === "standalone"
+  const isTextSource = descriptor.source.kind === "text"
 
-  if (descriptor.source.kind === "text") {
-    if (category === "csv") {
-      return (
-        <CsvFileContent
-          resource={resource}
-          className={className}
-          bare={bare}
-          isolateStyles={isolateStyles}
-        />
-      )
-    }
-    if (category === "markdown") {
-      return (
-        <PretextMarkdownViewer
-          source={resource.descriptor.source}
-          className={className}
-          download={leafDownload}
-          bare={bare}
-        />
-      )
-    }
-    if (category === "html") {
-      return (
-        <HtmlFileContent
-          resource={resource}
-          className={className}
-          bare={bare}
-          descriptorSignal={descriptorSignal}
-        />
-      )
-    }
-    if (category === "text") {
-      return renderTextViewer({
-        descriptor,
-        resource,
-        className,
-        bare,
-        download: leafDownload,
-      })
-    }
-    return (
-      <UnsupportedCard
-        resource={resource}
-        className={className}
-        bare={bare}
-        showDownload={leafDownload}
-      />
-    )
+  const renderer = RENDERERS[category]
+  if (renderer && (!isTextSource || TEXT_SOURCE_CATEGORIES.has(category))) {
+    return renderer({
+      descriptor,
+      resource,
+      className,
+      bare,
+      controls: standalone,
+      isolateStyles,
+      descriptorSignal,
+    })
   }
 
-  if (!directLoadUrl) {
-    if (category === "pdf" && descriptor.source.kind === "blob") {
-      return (
-        <PdfResourceContent
-          resource={resource}
-          className={className}
-          bare={bare}
-          download={leafDownload}
-          controls={leafControls}
-        />
-      )
-    }
-    if (category === "image" && descriptor.source.kind === "blob") {
-      return (
-        <ImageResourceContent
-          resource={resource}
-          className={className}
-          bare={bare}
-          download={leafDownload}
-          controls={leafControls}
-        />
-      )
-    }
-    if (category === "pptx" && descriptor.source.kind === "blob") {
-      return (
-        <PptxResourceContent
-          resource={resource}
-          className={className}
-          bare={bare}
-          download={leafDownload}
-          controls={leafControls}
-        />
-      )
-    }
-    if (category === "csv" && descriptor.source.kind === "blob") {
-      return (
-        <CsvFileContent
-          resource={resource}
-          className={className}
-          bare={bare}
-          isolateStyles={isolateStyles}
-        />
-      )
-    }
-    if (category === "html" && descriptor.source.kind === "blob") {
-      return (
-        <HtmlFileContent
-          resource={resource}
-          className={className}
-          bare={bare}
-          descriptorSignal={descriptorSignal}
-        />
-      )
-    }
-    if (category === "docx" && descriptor.source.kind === "blob") {
-      return (
-        <DocxResourceContent
-          resource={resource}
-          className={className}
-          bare={bare}
-          download={leafDownload}
-          controls={leafControls}
-        />
-      )
-    }
-    if (category === "xlsx" && descriptor.source.kind === "blob") {
-      return (
-        <XlsxResourceContent
-          resource={resource}
-          className={className}
-          bare={bare}
-          download={leafDownload}
-          isolateStyles={isolateStyles}
-        />
-      )
-    }
-    if (category === "markdown" && descriptor.source.kind === "blob") {
-      return (
-        <PretextMarkdownViewer
-          source={resource.descriptor.source}
-          className={className}
-          download={leafDownload}
-          bare={bare}
-        />
-      )
-    }
-    if (category === "text" && descriptor.source.kind === "blob") {
-      return renderTextViewer({
-        descriptor,
-        resource,
-        className,
-        bare,
-        download: leafDownload,
-      })
-    }
-    return (
-      <UnsupportedCard
-        resource={resource}
-        className={className}
-        bare={bare}
-        showDownload={leafDownload}
-      />
-    )
-  }
-
-  switch (category) {
-    case "pdf":
-      return (
-        <PdfResourceContent
-          resource={resource}
-          className={className}
-          bare={bare}
-          download={leafDownload}
-        />
-      )
-    case "docx":
-      return (
-        <DocxResourceContent
-          resource={resource}
-          className={className}
-          bare={bare}
-          download={leafDownload}
-        />
-      )
-    case "image":
-      return (
-        <ImageResourceContent
-          resource={resource}
-          className={className}
-          bare={bare}
-          download={leafDownload}
-        />
-      )
-    case "pptx":
-      return (
-        <PptxResourceContent
-          resource={resource}
-          className={className}
-          bare={bare}
-          download={leafDownload}
-        />
-      )
-    case "xlsx":
-      return (
-        <XlsxResourceContent
-          resource={resource}
-          className={className}
-          bare={bare}
-          download={leafDownload}
-          isolateStyles={isolateStyles}
-        />
-      )
-    case "csv":
-      return (
-        <CsvFileContent
-          resource={resource}
-          className={className}
-          bare={bare}
-          isolateStyles={isolateStyles}
-        />
-      )
-    case "markdown":
-      return (
-        <PretextMarkdownViewer
-          source={resource.descriptor.source}
-          className={className}
-          download={leafDownload}
-          bare={bare}
-        />
-      )
-    case "html":
-      return (
-        <HtmlFileContent
-          resource={resource}
-          className={className}
-          bare={bare}
-          descriptorSignal={descriptorSignal}
-        />
-      )
-    case "text":
-      return renderTextViewer({
-        descriptor,
-        resource,
-        className,
-        bare,
-        download: leafDownload,
-      })
-    default:
-      return (
-        <UnsupportedCard
-          resource={resource}
-          className={className}
-          bare={bare}
-          showDownload={leafDownload}
-        />
-      )
-  }
+  return (
+    <UnsupportedCard
+      resource={resource}
+      className={className}
+      bare={bare}
+      showDownload={standalone}
+    />
+  )
 }
 
 function renderTextViewer({
@@ -328,21 +203,16 @@ function renderTextViewer({
   resource,
   className,
   bare,
-  download,
-}: {
-  descriptor: FileDescriptor
-  resource: ViewerResource
-  className?: string
-  bare: boolean
-  download?: boolean
-}) {
+  controls,
+}: RenderContext): React.ReactNode {
   const source = resource.descriptor.source
   if (isProseTextDescriptor(descriptor)) {
     return (
       <ProseTextViewer
         source={source}
         className={className}
-        download={download}
+        controls={controls}
+        download
         bare={bare}
         mode="text"
       />
@@ -352,7 +222,8 @@ function renderTextViewer({
     <CodeTextViewer
       source={source}
       className={className}
-      download={download}
+      controls={controls}
+      download
       bare={bare}
     />
   )

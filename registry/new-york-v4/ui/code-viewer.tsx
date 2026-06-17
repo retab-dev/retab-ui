@@ -9,7 +9,7 @@ import { PlainTextViewerFrame } from "./plain-text-viewer-frame"
 
 export type {
   CodeDocumentSource,
-  TextLineRange,
+  CodeLineRange,
   CodeViewerHandle,
   CodeViewerProps,
 } from "./code-viewer-types"

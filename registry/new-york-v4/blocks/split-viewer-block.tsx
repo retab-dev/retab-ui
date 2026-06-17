@@ -51,7 +51,6 @@ export function SplitViewerBlock() {
       <SplitViewerProvider result={SPLIT_RESULT}>
         <FileViewer
           source={source}
-          bare
           defaultOpen
           className="h-full flex-1 bg-background"
         >

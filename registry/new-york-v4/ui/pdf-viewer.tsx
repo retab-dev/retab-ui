@@ -96,8 +96,11 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
     return (
       <FileViewer
         source={source}
-        bare={bare}
-        className={cn("h-full", className)}
+        className={cn(
+          "h-full",
+          bare && "rounded-none border-0 bg-transparent",
+          className
+        )}
       >
         <PdfViewerProvider>
           <FileViewerHeader>

@@ -21,7 +21,8 @@ import {
 } from "vitest"
 
 import type { SourceFieldLink } from "@/components/ui/source-field-link"
-import { JsonForm } from "@/components/json-form/json-form"
+import { Form } from "@/components/json-form/form-primitives"
+import { JsonForm, JsonFormField } from "@/components/json-form/json-form"
 
 const originalResizeObserver = globalThis.ResizeObserver
 
@@ -75,12 +76,12 @@ function findAncestorWithClass(
 function renderJsonForm({
   schema,
   defaultValues = {},
-  anchorLink,
+  sourceLink,
   defaultOpenPaths,
 }: {
   schema: JSONSchema7
   defaultValues?: FormValues
-  anchorLink?: SourceFieldLink
+  sourceLink?: SourceFieldLink
   defaultOpenPaths?: readonly string[]
 }) {
   const submissions: FormValues[] = []
@@ -98,7 +99,7 @@ function renderJsonForm({
       <JsonForm
         form={form}
         schema={schema}
-        anchorLink={anchorLink}
+        sourceLink={sourceLink}
         defaultOpenPaths={defaultOpenPaths}
         onSubmit={(data) => submissions.push(cloneJson(data) as FormValues)}
       >
@@ -681,6 +682,58 @@ describe("JsonForm objects and refs", () => {
     })
   })
 
+  it("preserves dirty encoded-key values when an inline schema is recreated", async () => {
+    const submissions: FormValues[] = []
+
+    function Harness() {
+      const [revision, setRevision] = React.useState(0)
+      const form = useForm<FormValues>({
+        defaultValues: {
+          "invoice.number": "INV-1",
+        },
+      })
+
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => setRevision((value) => value + 1)}
+          >
+            Rerender {revision}
+          </button>
+          <JsonForm
+            form={form}
+            schema={{
+              type: "object",
+              additionalProperties: { type: "string" },
+            }}
+            onSubmit={(data) => submissions.push(cloneJson(data) as FormValues)}
+          >
+            <button type="submit">Submit</button>
+          </JsonForm>
+        </>
+      )
+    }
+
+    render(<Harness />)
+
+    const input = (await screen.findByLabelText(
+      "invoice.number"
+    )) as HTMLInputElement
+    fireEvent.change(input, { target: { value: "INV-2" } })
+    fireEvent.click(screen.getByRole("button", { name: /Rerender/ }))
+
+    await waitFor(() =>
+      expect(
+        (screen.getByLabelText("invoice.number") as HTMLInputElement).value
+      ).toBe("INV-2")
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }))
+    await waitFor(() => expect(submissions).toHaveLength(1))
+    expect(submissions[0]).toEqual({ "invoice.number": "INV-2" })
+  })
+
   it("renders patternProperties entries with their matching schema", async () => {
     const { submit } = renderJsonForm({
       schema: {
@@ -817,6 +870,45 @@ describe("JsonForm objects and refs", () => {
     })
 
     await expect(submit()).resolves.toEqual({ rows: [{ code: "B", count: 1 }] })
+  })
+
+  it("normalizes standalone JsonFormField composition schemas", () => {
+    function Harness() {
+      const form = useForm<FormValues>({
+        defaultValues: { total: { amount: 5, currency: "USD" } },
+      })
+      return (
+        <Form {...form}>
+          <JsonFormField
+            name="total"
+            schema={{
+              title: "Total",
+              allOf: [
+                {
+                  type: "object",
+                  properties: { amount: { type: "number", title: "Amount" } },
+                },
+                {
+                  type: "object",
+                  properties: {
+                    currency: { type: "string", title: "Currency" },
+                  },
+                },
+              ],
+            }}
+          />
+        </Form>
+      )
+    }
+
+    render(<Harness />)
+
+    expect((screen.getByLabelText("Amount") as HTMLInputElement).value).toBe(
+      "5"
+    )
+    expect((screen.getByLabelText("Currency") as HTMLInputElement).value).toBe(
+      "USD"
+    )
   })
 })
 
@@ -1490,10 +1582,10 @@ describe("JsonForm arrays", () => {
   })
 })
 
-describe("JsonForm anchor linking", () => {
+describe("JsonForm source linking", () => {
   it("reports scalar hover, focus, blur, and selection by field path", () => {
-    const onFieldHover = vi.fn()
-    const selectField = vi.fn()
+    const onSourceHover = vi.fn()
+    const selectSourcePath = vi.fn()
     renderJsonForm({
       schema: {
         type: "object",
@@ -1502,10 +1594,10 @@ describe("JsonForm anchor linking", () => {
         },
       },
       defaultValues: { customer_name: "Jane" },
-      anchorLink: {
-        activePath: "customer_name",
-        onFieldHover,
-        selectField,
+      sourceLink: {
+        activeSourcePath: "customer_name",
+        onSourceHover,
+        selectSourcePath,
       },
     })
 
@@ -1517,14 +1609,41 @@ describe("JsonForm anchor linking", () => {
     fireEvent.blur(input)
     fireEvent.click(input)
 
-    expect(onFieldHover).toHaveBeenCalledWith("customer_name")
-    expect(onFieldHover).toHaveBeenCalledWith(null)
-    expect(selectField).toHaveBeenCalledWith("customer_name")
+    expect(onSourceHover).toHaveBeenCalledWith("customer_name")
+    expect(onSourceHover).toHaveBeenCalledWith(null)
+    expect(selectSourcePath).toHaveBeenCalledWith("customer_name")
+  })
+
+  it("selects a focused source-linked scalar field from the keyboard", () => {
+    const onSourceHover = vi.fn()
+    const selectSourcePath = vi.fn()
+    renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          customer_name: { type: "string", title: "Customer Name" },
+        },
+      },
+      defaultValues: { customer_name: "Jane" },
+      sourceLink: {
+        activeSourcePath: null,
+        onSourceHover,
+        selectSourcePath,
+      },
+    })
+
+    const input = screen.getByLabelText("Customer Name")
+    fireEvent.focus(input)
+    fireEvent.keyDown(input, { key: "Enter" })
+    fireEvent.keyDown(input, { key: " " })
+
+    expect(selectSourcePath).toHaveBeenCalledTimes(1)
+    expect(selectSourcePath).toHaveBeenCalledWith("customer_name")
   })
 
   it("reports table-cell source paths", () => {
-    const onFieldHover = vi.fn()
-    const selectField = vi.fn()
+    const onSourceHover = vi.fn()
+    const selectSourcePath = vi.fn()
     renderJsonForm({
       schema: {
         type: "object",
@@ -1542,10 +1661,10 @@ describe("JsonForm anchor linking", () => {
         },
       },
       defaultValues: { rows: [{ value: "A" }] },
-      anchorLink: {
-        activePath: "rows.0.value",
-        onFieldHover,
-        selectField,
+      sourceLink: {
+        activeSourcePath: "rows.0.value",
+        onSourceHover,
+        selectSourcePath,
       },
     })
 
@@ -1553,18 +1672,18 @@ describe("JsonForm anchor linking", () => {
     expect(cell).toBeTruthy()
 
     fireEvent.focus(cell)
-    expect(cell.getAttribute("data-anchor-active")).toBe("true")
+    expect(cell.getAttribute("data-source-active")).toBe("true")
     fireEvent.blur(cell)
     fireEvent.click(cell)
 
-    expect(onFieldHover).toHaveBeenCalledWith("rows.0.value")
-    expect(onFieldHover).toHaveBeenCalledWith(null)
-    expect(selectField).toHaveBeenCalledWith("rows.0.value")
+    expect(onSourceHover).toHaveBeenCalledWith("rows.0.value")
+    expect(onSourceHover).toHaveBeenCalledWith(null)
+    expect(selectSourcePath).toHaveBeenCalledWith("rows.0.value")
   })
 
   it("keeps source-linked table cells in display mode on hover", async () => {
-    const onFieldHover = vi.fn()
-    const selectField = vi.fn()
+    const onSourceHover = vi.fn()
+    const selectSourcePath = vi.fn()
     renderJsonForm({
       schema: {
         type: "object",
@@ -1582,10 +1701,10 @@ describe("JsonForm anchor linking", () => {
         },
       },
       defaultValues: { rows: [{ amount: 1875.24 }] },
-      anchorLink: {
-        activePath: null,
-        onFieldHover,
-        selectField,
+      sourceLink: {
+        activeSourcePath: null,
+        onSourceHover,
+        selectSourcePath,
       },
     })
 
@@ -1595,7 +1714,7 @@ describe("JsonForm anchor linking", () => {
     expect(cell.getAttribute("data-mode")).toBe("display")
     expect(screen.queryByRole("spinbutton")).toBeNull()
     await waitFor(() =>
-      expect(onFieldHover).toHaveBeenCalledWith("rows.0.amount")
+      expect(onSourceHover).toHaveBeenCalledWith("rows.0.amount")
     )
 
     fireEvent.click(cell)
@@ -1603,7 +1722,7 @@ describe("JsonForm anchor linking", () => {
     const input = screen.getByRole("spinbutton", { name: "Amount 1875.24" })
     expect((input as HTMLInputElement).type).toBe("number")
     expect(input.getAttribute("data-slot")).toBe("data-cell")
-    expect(selectField).toHaveBeenCalledWith("rows.0.amount")
+    expect(selectSourcePath).toHaveBeenCalledWith("rows.0.amount")
   })
 })
 

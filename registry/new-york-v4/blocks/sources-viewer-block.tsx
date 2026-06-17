@@ -26,17 +26,17 @@ import {
   type DocxViewerHandle,
 } from "@/components/ui/docx-viewer"
 import {
+  FileViewer,
   FileViewerBody,
   FileViewerControls,
   FileViewerHeader,
   FileViewerMeta,
+  FileViewerSidebar,
+  FileViewerSidebarTrigger,
   FileViewerSurface,
   FileViewerTitle,
-} from "@/components/ui/file-viewer"
-import {
-  FileViewerProvider,
   useFileViewerResource,
-} from "@/components/ui/file-viewer-internal"
+} from "@/components/ui/file-viewer"
 import {
   ImageViewerFrames,
   ImageViewerProvider,
@@ -71,11 +71,6 @@ import {
   TextViewerProvider,
   type TextViewerHandle,
 } from "@/components/ui/text-viewer"
-import {
-  ViewerRoot,
-  ViewerSidebar,
-  ViewerSidebarTrigger,
-} from "@/components/ui/viewer"
 import {
   sourceToXlsxCell,
   useXlsxSourceTarget,
@@ -149,7 +144,7 @@ type SourceExtraction = {
 }
 
 type SourceLinkedViewerSource = React.ComponentProps<
-  typeof FileViewerProvider
+  typeof FileViewer
 >["source"]
 
 // Build a JSON form's inputs from a flat field array. The schema property names
@@ -235,7 +230,7 @@ function fieldsToSegmentedFields(fields: readonly FlatField[]) {
 function SourceLinkedFileHeader() {
   return (
     <FileViewerHeader>
-      <ViewerSidebarTrigger className="-ml-1" />
+      <FileViewerSidebarTrigger className="-ml-1" />
       <FileViewerTitle />
       <FileViewerMeta />
       <FileViewerControls />
@@ -255,28 +250,26 @@ function SourceLinkedViewer({
   source: SourceLinkedViewerSource
 }) {
   return (
-    <ViewerRoot bare defaultOpen className="h-full bg-background">
-      <FileViewerProvider source={source}>
-        <SourceLinkedFileHeader />
-        <FileViewerBody>
-          <FileViewerSurface className="relative">
-            {children}
-            <SourceIndicator
-              path={link.activePath}
-              found={!!link.activeSegment}
-            />
-          </FileViewerSurface>
-          <ViewerSidebar
-            aria-label="Source-linked fields"
-            side="right"
-            width="420px"
-            className="flex flex-shrink-0 flex-col border-l"
-          >
-            <SourcesForm extraction={extraction} link={link} />
-          </ViewerSidebar>
-        </FileViewerBody>
-      </FileViewerProvider>
-    </ViewerRoot>
+    <FileViewer source={source} defaultOpen className="h-full bg-background">
+      <SourceLinkedFileHeader />
+      <FileViewerBody>
+        <FileViewerSurface className="relative">
+          {children}
+          <SourceIndicator
+            path={link.activeSourcePath}
+            found={!!link.activeSegment}
+          />
+        </FileViewerSurface>
+        <FileViewerSidebar
+          aria-label="Source-linked fields"
+          side="right"
+          width="420px"
+          className="flex flex-shrink-0 flex-col border-l"
+        >
+          <SourcesForm extraction={extraction} link={link} />
+        </FileViewerSidebar>
+      </FileViewerBody>
+    </FileViewer>
   )
 }
 
@@ -291,7 +284,7 @@ function SourcesForm({
     defaultValues: extraction.values,
   })
 
-  // `json-form` is field-anchor-aware: pass the link and every field becomes a
+  // `json-form` is source-aware: pass the link and every field becomes a
   // hoverable card that reports its path. No per-field wiring needed.
   return (
     <>
@@ -303,7 +296,7 @@ function SourcesForm({
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="p-4">
-          <JsonForm form={form} schema={extraction.schema} anchorLink={link} />
+          <JsonForm form={form} schema={extraction.schema} sourceLink={link} />
         </div>
       </ScrollArea>
     </>
@@ -315,15 +308,15 @@ type SourceTarget = {
 }
 
 function useSourceTargetedSegmentedFieldLink({
-  initialPath,
+  initialSourcePath,
   sources,
   target,
 }: {
-  initialPath?: string | null
+  initialSourcePath?: string | null
   sources: SourceMap
   target: SourceTarget
 }): SegmentedSourceFieldLink {
-  const link = useSegmentedSourceFieldLink({ initialPath })
+  const link = useSegmentedSourceFieldLink({ initialSourcePath })
   const scrollToPath = React.useCallback(
     (path: string, behavior: ScrollBehavior) => {
       const source = sources[path]
@@ -331,16 +324,16 @@ function useSourceTargetedSegmentedFieldLink({
     },
     [sources, target]
   )
-  const onFieldHover = React.useCallback(
+  const onSourceHover = React.useCallback(
     (path: string | null) => {
-      link.onFieldHover(path)
+      link.onSourceHover(path)
       if (path) scrollToPath(path, "auto")
     },
     [link, scrollToPath]
   )
-  const selectField = React.useCallback(
+  const selectSourcePath = React.useCallback(
     (path: string) => {
-      link.selectField?.(path)
+      link.selectSourcePath?.(path)
       scrollToPath(path, "smooth")
     },
     [link, scrollToPath]
@@ -349,10 +342,10 @@ function useSourceTargetedSegmentedFieldLink({
   return React.useMemo(
     () => ({
       ...link,
-      onFieldHover,
-      selectField,
+      onSourceHover,
+      selectSourcePath,
     }),
-    [link, onFieldHover, selectField]
+    [link, onSourceHover, selectSourcePath]
   )
 }
 
@@ -375,7 +368,7 @@ function PdfTab() {
 
 function PdfTabContent() {
   const link = useSegmentedSourceFieldLink({
-    initialPath: PDF_INITIAL_SOURCE_PATH,
+    initialSourcePath: PDF_INITIAL_SOURCE_PATH,
   })
   const { documentHandlers } = useSegmentedDocumentViewport()
   const renderPageOverlay = useSegmentedPdfSourceOverlay(link)
@@ -411,7 +404,7 @@ function ImageTab() {
 
 function ImageTabContent() {
   const link = useSegmentedSourceFieldLink({
-    initialPath: IMAGE_FIELDS[0]?.key,
+    initialSourcePath: IMAGE_FIELDS[0]?.key,
   })
   const { documentHandlers } = useSegmentedDocumentViewport()
   const renderFrameOverlay = useSegmentedImageSourceOverlay(link)
@@ -448,12 +441,12 @@ function TextTabContent() {
   const viewerRef = React.useRef<TextViewerHandle>(null)
   const target = useTextSourceTarget(viewerRef)
   const link = useSourceTargetedSegmentedFieldLink({
-    initialPath: TEXT_FIELDS[0]?.key,
+    initialSourcePath: TEXT_FIELDS[0]?.key,
     sources: TEXT_EXTRACTION.sources,
     target,
   })
   const highlight = sourceToTextHighlight(
-    sourceForPath(TEXT_EXTRACTION.sources, link.activePath)
+    sourceForPath(TEXT_EXTRACTION.sources, link.activeSourcePath)
   )
 
   return (
@@ -486,12 +479,12 @@ function CsvTabContent() {
   const viewerRef = React.useRef<CsvViewerHandle>(null)
   const target = useCsvSourceTarget(viewerRef)
   const link = useSourceTargetedSegmentedFieldLink({
-    initialPath: CSV_FIELDS[0]?.key,
+    initialSourcePath: CSV_FIELDS[0]?.key,
     sources: CSV_EXTRACTION.sources,
     target,
   })
   const activeCell = sourceToCsvCell(
-    sourceForPath(CSV_EXTRACTION.sources, link.activePath)
+    sourceForPath(CSV_EXTRACTION.sources, link.activeSourcePath)
   )
 
   return (
@@ -503,7 +496,7 @@ function CsvTabContent() {
       <FileResourceCsvViewer
         ref={viewerRef}
         fillHeight
-        className="h-full rounded-none border-0"
+        className="h-full"
         controls={false}
         activeCell={activeCell}
       />
@@ -523,12 +516,12 @@ function ExcelTabContent() {
   const viewerRef = React.useRef<XlsxViewerHandle>(null)
   const target = useXlsxSourceTarget(viewerRef)
   const link = useSourceTargetedSegmentedFieldLink({
-    initialPath: XLSX_FIELDS[0]?.key,
+    initialSourcePath: XLSX_FIELDS[0]?.key,
     sources: XLSX_EXTRACTION.sources,
     target,
   })
   const activeCell = sourceToXlsxCell(
-    sourceForPath(XLSX_EXTRACTION.sources, link.activePath)
+    sourceForPath(XLSX_EXTRACTION.sources, link.activeSourcePath)
   )
 
   return (
@@ -560,12 +553,12 @@ function DocxTabContent() {
   const viewerRef = React.useRef<DocxViewerHandle>(null)
   const target = useDocxSourceTarget(viewerRef)
   const link = useSourceTargetedSegmentedFieldLink({
-    initialPath: DOCX_FIELDS[0]?.key,
+    initialSourcePath: DOCX_FIELDS[0]?.key,
     sources: DOCX_EXTRACTION.sources,
     target,
   })
   const highlight = sourceToDocxHighlight(
-    sourceForPath(DOCX_EXTRACTION.sources, link.activePath)
+    sourceForPath(DOCX_EXTRACTION.sources, link.activeSourcePath)
   )
 
   return (

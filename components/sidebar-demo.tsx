@@ -40,11 +40,10 @@ export function ViewerSidebarDemo() {
 
   return (
     <div
-      className="not-prose my-6 h-[640px] overflow-hidden rounded-xl border bg-background"
+      className="not-prose h-[640px] overflow-hidden rounded-xl border bg-background"
       data-demo="viewer-sidebar"
     >
       <ViewerRoot
-        bare
         defaultOpen
         mode="inline"
         sidebarCollapsible="offcanvas"

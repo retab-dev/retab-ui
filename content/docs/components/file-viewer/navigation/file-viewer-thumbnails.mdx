@@ -1,0 +1,57 @@
+---
+title: FileViewerThumbnails
+description: Page thumbnail navigation for document renderers inside File Viewer.
+component: true
+---
+
+Use thumbnail navigation inside `FileViewerSidebar` when the file renderer has
+page-like units. PDF exposes this through `PdfViewerThumbnails`; other page
+renderers should follow the same sidebar contract.
+
+```tsx
+<FileViewer source={source} defaultOpen>
+  <PdfViewerProvider>
+    <FileViewerHeader>
+      <FileViewerSidebarTrigger />
+      <FileViewerTitle />
+      <FileViewerMeta />
+      <FileViewerControls />
+    </FileViewerHeader>
+    <FileViewerBody>
+      <FileViewerSidebar aria-label="PDF pages">
+        <PdfViewerThumbnails />
+      </FileViewerSidebar>
+      <FileViewerSurface>
+        <PdfViewerPages />
+      </FileViewerSurface>
+    </FileViewerBody>
+  </PdfViewerProvider>
+</FileViewer>
+```
+
+## Behavior
+
+- The sidebar owns placement; the renderer-owned thumbnail component owns page
+  rendering, current-page highlight, and page selection.
+- `PdfViewerThumbnails` is **provider-bound**: inside `PdfViewerProvider` it
+  reads the resource, current page, and page-jump command automatically, so it
+  takes no wiring props.
+- Only thumbnails near the rail viewport render images; the rest stay as sized
+  placeholders, so a long document does not rasterize every page at once.
+- When page state is owned outside the provider, drop down to the controlled
+  [FileViewerPageRail](/docs/components/file-viewer/navigation/file-viewer-page-rail)
+  (`PdfThumbnailRail`) instead.
+
+## API Reference
+
+`PdfViewerThumbnails` — the provider-bound adapter:
+
+| Prop             | Type                   | Description                                                       |
+| ---------------- | ---------------------- | ----------------------------------------------------------------- |
+| `thumbnailWidth` | `number`               | Thumbnail image width in CSS px. The sidebar shell owns rail width.|
+| `thumbnailShape` | `"page" \| "square"`   | Preserve page aspect (`page`) or crop into a square frame.        |
+| `className`      | `string`               | Optional class on the thumbnail rail.                             |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/pdf-viewer-thumbnails.tsx" />

@@ -63,7 +63,6 @@ export function SplitViewer({
     <SplitViewerProvider result={result} isProcessing={isProcessing}>
       <FileViewer
         source={source}
-        bare
         defaultOpen
         mode="inline"
         className="h-full flex-1 bg-background"

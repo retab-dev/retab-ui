@@ -7,7 +7,11 @@ import { extractionSourcesToSourceMap } from "@/lib/document-source"
 import {
   FileViewer,
   FileViewerBody,
+  FileViewerControls,
+  FileViewerHeader,
+  FileViewerMeta,
   FileViewerSurface,
+  FileViewerTitle,
 } from "@/components/ui/file-viewer"
 import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -58,7 +62,7 @@ const SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel({
  * value came from in the PDF and scrolls to it.
  *
  * This is the abstraction working across components that don't know about each
- * other: `json-form` receives a field-anchor link and every field reports its
+ * other: `json-form` receives a source link and every field reports its
  * path on hover; the PDF adapter is the target. No bespoke wiring between form
  * and viewer.
  */
@@ -86,7 +90,7 @@ function JsonFormSourcesContent({
   const form = useForm<Record<string, unknown>>({ defaultValues: extraction })
 
   return (
-    <ViewerRoot bare className="h-full min-h-[680px] bg-background">
+    <ViewerRoot className="h-full min-h-[680px] bg-background">
       <ViewerBody>
         <ViewerSurface className="relative">
           <FileViewer
@@ -95,9 +99,13 @@ function JsonFormSourcesContent({
               url: PDF_URL,
               fileName: "jane-doe-bank-statement-5-pages.pdf",
             }}
-            bare
             className="h-full"
           >
+            <FileViewerHeader>
+              <FileViewerTitle />
+              <FileViewerMeta />
+              <FileViewerControls />
+            </FileViewerHeader>
             <PdfViewerProvider>
               <FileViewerBody>
                 <FileViewerSurface>
@@ -115,7 +123,10 @@ function JsonFormSourcesContent({
               </FileViewerBody>
             </PdfViewerProvider>
           </FileViewer>
-          <SourceIndicator path={link.activePath} found={!!link.activeAnchor} />
+          <SourceIndicator
+            path={link.activeSourcePath}
+            found={!!link.activeAnchor}
+          />
         </ViewerSurface>
         <ViewerSidebar
           aria-label="Extracted data sources"
@@ -135,7 +146,7 @@ function JsonFormSourcesContent({
               <JsonForm
                 form={form}
                 schema={schema}
-                anchorLink={link}
+                sourceLink={link}
                 defaultOpenPaths={defaultOpenPaths}
               />
             </div>

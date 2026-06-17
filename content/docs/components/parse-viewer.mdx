@@ -1,0 +1,106 @@
+---
+title: Parse Viewer
+description: Renders page-by-page markdown while preserving the original document structure.
+component: true
+---
+
+When a document is converted to markdown page by page, it should usually be
+rendered page by page too. Keeping page boundaries visible preserves the
+document's original structure: headers, tables, footers, repeated sections, and
+page-local context stay attached to the page they came from.
+
+The parse viewer is made for that shape of output. It renders each markdown page
+as its own document page, with a **Rendered/Text** toggle, page position, zoom
+controls, copy, and download actions. Below is the raw renderer on its own.
+
+<ComponentPreview name="parse-viewer-demo" contentClassName="p-0" />
+
+## Large Document
+
+This fixture renders 1,000 markdown pages. It exists to prove the viewer keeps
+the mounted page DOM bounded while scrolling, switching modes, and zooming.
+
+<ComponentPreview name="large-parse-viewer-demo" contentClassName="p-0" />
+
+Pair it with a source document by composing `ParseViewerProvider`,
+`ParseViewerMarkdown`, and a document component that uses
+`useParseViewerDocument`. The standard side-by-side parse layout is available in
+the [Parse Viewer block](/blocks/parse).
+
+## Viewer Composition
+
+Pass page-by-page markdown through `result.output.pages`. When you also want to
+show the source document, make it a visible sibling of `ParseViewerMarkdown`.
+The document component subscribes to parse sync with `useParseViewerDocument`.
+
+The source document should tag its pages with `data-page-number` (the bundled
+`PdfViewer` does) so the original document and rendered markdown can stay synced
+as the user scrolls.
+
+```tsx
+import * as React from "react"
+
+import { PdfViewer } from "@/components/ui/pdf-viewer"
+import { ViewerBody, ViewerRoot, ViewerSurface } from "@/components/ui/viewer"
+import {
+  ParseViewerHeader,
+  ParseViewerMarkdown,
+  ParseViewerProvider,
+  useParseViewerDocument,
+} from "@/components/viewers/parse/parse-viewer"
+
+export function Example({ result }) {
+  return (
+    <ParseViewerProvider result={result}>
+      <ViewerRoot>
+        <ParseViewerHeader />
+        <ViewerBody>
+          <ViewerSurface>
+            <SourceDocument />
+          </ViewerSurface>
+          <ViewerSurface>
+            <ParseViewerMarkdown />
+          </ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
+    </ParseViewerProvider>
+  )
+}
+
+function SourceDocument() {
+  const document = useParseViewerDocument()
+  const viewerRef = React.useRef(null)
+
+  React.useEffect(() => {
+    document.setDocumentHandle({
+      scrollToPage: (pageNumber, options) => {
+        viewerRef.current?.scrollToPage(pageNumber, options)
+      },
+    })
+    return () => document.setDocumentHandle(null)
+  }, [document])
+
+  return (
+    <PdfViewer
+      ref={viewerRef}
+      source={{ kind: "url", url: "/document.pdf" }}
+      bare
+      onVisiblePageChange={document.onCurrentPageChange}
+      onScrollProgressChange={document.onScrollProgressChange}
+      className="h-full"
+    />
+  )
+}
+```
+
+## Usage
+
+Use `<ParseViewer result={result} />` to show the parsed markdown full-width.
+
+## API Reference
+
+| Prop                  | Type                           | Description                                                                         |
+| --------------------- | ------------------------------ | ----------------------------------------------------------------------------------- |
+| `result`              | `ParseResponse \| null`        | The parsed document output; `output.pages` is an array of per-page markdown.        |
+| `isProcessing`        | `boolean`                      | Show the parsing state while a result is pending.                                   |
+| `onVisiblePageChange` | `(pageNumber: number) => void` | Fired with the 1-based page nearest the top of the markdown viewport as it scrolls. |

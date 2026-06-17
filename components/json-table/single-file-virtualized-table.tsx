@@ -3,13 +3,11 @@
 import React, { useCallback, useRef, useState } from "react"
 import type { JSONSchema7 } from "json-schema"
 
-import { fixedGridColumnWidths } from "@/components/ui/fixed-grid-columns"
 import {
   getFixedGridCanvasStyle,
   getFixedGridRowWindowStyle,
 } from "@/components/ui/fixed-grid-layout"
 import { FixedGridViewport } from "@/components/ui/fixed-grid-viewport"
-import { useFixedGridVirtualization } from "@/components/ui/fixed-grid-virtualization"
 import {
   TableBody,
   TableHead,
@@ -33,24 +31,16 @@ import type { ProjectedRow } from "@/components/json-table/lib/document-projecti
 import { buildHeaderGridRows } from "@/components/json-table/lib/header-nodes"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
-import {
-  useReadOnlyJsonRowPatcher,
-  type ReadOnlyJsonRowPatchState,
-} from "@/components/json-table/read-only-json-row-patcher"
 import { useJsonTableEditSessionCoordinator } from "@/components/json-table/use-json-table-edit-session-coordinator"
-import { useJsonTableRenderedColumnWindow } from "@/components/json-table/use-json-table-rendered-column-window"
+import { useJsonTableRowPolicy } from "@/components/json-table/use-json-table-row-policy"
+import { useJsonTableViewportModel } from "@/components/json-table/use-json-table-viewport-model"
 
 import { SingleFileFormRow } from "./single-file-form-row"
 import {
-  getColumnWidthPx,
   getRowHeightPx,
   useSheetOptionsStore,
   type ColumnWidth,
 } from "./table-options-store"
-
-const defaultEditableRowOverscan = 0
-const defaultReadOnlyRowOverscan = 12
-const editableColumnOverscan = 2
 
 interface SingleFileVirtualizedTableProps {
   headerNodes: JsonTableHeaderNode[]
@@ -259,19 +249,8 @@ export const SingleFileVirtualizedTable =
         documentId: document.id,
       })
 
-      const totalWidth = fixedGridColumnWidths(schemaVisibleColumns).reduce(
-        (total, widthPx) => total + widthPx,
-        0
-      )
-
       const rowHeightPx = getRowHeightPx(rowHeight)
       const isJsonEditable = jsonEditMode === "editable"
-      const resolvedOverscan =
-        overscan ??
-        (isJsonEditable
-          ? defaultEditableRowOverscan
-          : defaultReadOnlyRowOverscan)
-      const resolvedJumpOverscan = jumpOverscan ?? resolvedOverscan
       const scrollRef = useRef<HTMLDivElement>(null)
       const [scrollElement, setScrollElement] =
         useState<HTMLDivElement | null>(null)
@@ -281,56 +260,34 @@ export const SingleFileVirtualizedTable =
       }, [])
       const headerScrollRef = useRef<HTMLDivElement>(null)
       const rowWindowRef = useRef<HTMLTableSectionElement>(null)
-      const getReadOnlyRowPatchState =
-        React.useCallback((): ReadOnlyJsonRowPatchState => {
-          return {
-            isEnabled: !isJsonEditable,
-            projectedRows,
-            rowHeightPx,
-            visibleColumns: schemaVisibleColumns,
-          }
-        }, [isJsonEditable, projectedRows, rowHeightPx, schemaVisibleColumns])
-      const rowPatcher = useReadOnlyJsonRowPatcher({
-        rowWindowRef,
-        getState: getReadOnlyRowPatchState,
-      })
-      const rowScrollStrategy = React.useMemo(
-        () =>
-          isJsonEditable ? undefined : { handleViewport: rowPatcher.patch },
-        [isJsonEditable, rowPatcher]
-      )
-      const {
-        columnItems: renderedBodyColumnItems,
-        leftPad: leftPadWidthPx,
-        rightPad: rightPadWidthPx,
-        virtualRows,
-        totalRowSize,
-      } = useFixedGridVirtualization({
-        rowCount,
-        columnCount: schemaVisibleColumns.length,
-        rowSize: rowHeightPx,
-        columnSize: getColumnWidthPx(columnWidth),
-        rowOverscan: resolvedOverscan,
-        columnOverscan: editableColumnOverscan,
-        jumpRowOverscan: resolvedJumpOverscan,
-        jumpColumnOverscan: editableColumnOverscan,
-        minimumRenderedRows: 1,
-        rowScrollStrategy,
-        scrollRef,
-        scrollElement,
-        virtualizeColumns: isJsonEditable,
-      })
-      const renderedColumnWindow = useJsonTableRenderedColumnWindow({
+      const rowPolicy = useJsonTableRowPolicy({
         isJsonEditable,
-        leftPadWidthPx,
-        renderedBodyColumnItems,
-        rightPadWidthPx,
+        projectedRows,
+        rowHeightPx,
+        rowWindowRef,
         schemaVisibleColumns,
+      })
+      const {
+        renderedColumnWindow,
+        totalRowSize,
+        totalWidth,
+        virtualRows,
+      } = useJsonTableViewportModel({
+        columnWidth,
+        isJsonEditable,
+        jumpOverscan,
+        overscan,
+        rowCount,
+        rowHeightPx,
+        rowScrollStrategy: rowPolicy.rowScrollStrategy,
+        schemaVisibleColumns,
+        scrollElement,
+        scrollRef,
       })
 
       React.useLayoutEffect(() => {
-        rowPatcher.invalidate()
-      }, [rowPatcher, virtualRows, renderedColumnWindow, projectedRows])
+        rowPolicy.invalidateRows()
+      }, [rowPolicy, virtualRows, renderedColumnWindow, projectedRows])
       recordJsonTableRender("SingleFileVirtualizedTable", document.id, {
         columnCount: schemaVisibleColumns.length,
         primitiveActiveFieldPath:

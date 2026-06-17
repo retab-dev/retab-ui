@@ -4,7 +4,10 @@ import * as React from "react"
 
 import type { Source } from "@/lib/document-source"
 import { sourceToCsvCell, useCsvSourceTarget } from "@/components/ui/csv-source"
-import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
+import {
+  CsvViewerDocument,
+  type CsvViewerHandle,
+} from "@/components/ui/csv-viewer"
 import {
   FileViewer,
   FileViewerBody,
@@ -79,22 +82,21 @@ function CsvSourcesContent({
 }) {
   const target = useCsvSourceTarget(viewerRef)
   const segmentedLink = useSegmentedSourceFieldLink({
-    initialPath: FIELDS[0]?.key,
+    initialSourcePath: FIELDS[0]?.key,
   })
   const link = useTargetedSourceFieldLink({
     fieldByKey: FIELD_BY_KEY,
     link: segmentedLink,
     target,
   })
-  const activeSource = link.activePath
-    ? FIELD_BY_KEY.get(link.activePath)?.source
+  const activeSource = link.activeSourcePath
+    ? FIELD_BY_KEY.get(link.activeSourcePath)?.source
     : undefined
   const activeCell = sourceToCsvCell(activeSource)
 
   return (
     <FileViewer
       source={CSV_SOURCE}
-      bare
       className="h-full min-h-[680px] bg-background"
     >
       <FileViewerHeader>
@@ -104,16 +106,16 @@ function CsvSourcesContent({
       </FileViewerHeader>
       <FileViewerBody>
         <FileViewerSurface className="relative">
-          <CsvViewer
+          <CsvViewerDocument
             ref={viewerRef}
             source={CSV_SOURCE}
             fillHeight
-            className="h-full rounded-none border-0"
+            className="h-full"
             controls={false}
             activeCell={activeCell}
           />
           <SourceIndicator
-            path={link.activePath}
+            path={link.activeSourcePath}
             found={!!activeSource}
             className="top-2"
           />
@@ -148,16 +150,16 @@ function useTargetedSourceFieldLink({
     },
     [fieldByKey, target]
   )
-  const onFieldHover = React.useCallback(
+  const onSourceHover = React.useCallback(
     (path: string | null) => {
-      link.onFieldHover(path)
+      link.onSourceHover(path)
       if (path) scrollToField(path, "auto")
     },
     [link, scrollToField]
   )
-  const selectField = React.useCallback(
+  const selectSourcePath = React.useCallback(
     (path: string) => {
-      link.selectField?.(path)
+      link.selectSourcePath?.(path)
       scrollToField(path, "smooth")
     },
     [link, scrollToField]
@@ -166,9 +168,9 @@ function useTargetedSourceFieldLink({
   return React.useMemo(
     () => ({
       ...link,
-      onFieldHover,
-      selectField,
+      onSourceHover,
+      selectSourcePath,
     }),
-    [link, onFieldHover, selectField]
+    [link, onSourceHover, selectSourcePath]
   )
 }

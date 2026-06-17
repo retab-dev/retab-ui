@@ -4,7 +4,7 @@ import { FileViewer } from "@/components/ui/file-viewer"
 
 export function HtmlViewerDemo() {
   return (
-    <div className="not-prose my-6 h-[540px] min-h-0">
+    <div className="h-[540px] min-h-0">
       <FileViewer
         source={{
           kind: "url",
@@ -12,6 +12,7 @@ export function HtmlViewerDemo() {
           fileName: "welcome.html",
           mimeType: "text/html",
         }}
+        bare
         className="h-full"
         isolateStyles
       />

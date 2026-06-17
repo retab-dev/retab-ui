@@ -156,8 +156,21 @@ function getFileSource(file: DemoFile) {
       }
 }
 
-function FileCanvas({ file, idPrefix }: { file: DemoFile; idPrefix: string }) {
+function FileCanvas({
+  file,
+  idPrefix,
+  showFileHeader = true,
+}: {
+  file: DemoFile
+  idPrefix: string
+  showFileHeader?: boolean
+}) {
   const source = React.useMemo(() => getFileSource(file), [file])
+  const fileViewerProps = {
+    source,
+    className: "h-full",
+    isolateStyles: true,
+  } as const
 
   return (
     <div
@@ -166,14 +179,11 @@ function FileCanvas({ file, idPrefix }: { file: DemoFile; idPrefix: string }) {
       aria-labelledby={`${idPrefix}-${file.file}-tab`}
       className="h-[min(680px,calc(100svh-10rem))] min-h-[420px] w-full rounded-xl shadow-sm"
     >
-      <FileViewer
-        // Changing files is a hard viewer boundary: format-local zoom, sheet,
-        // and scroll state should not leak between unrelated sample documents.
-        key={file.file}
-        source={source}
-        className="h-full"
-        isolateStyles
-      />
+      {showFileHeader ? (
+        <FileViewer key={file.file} {...fileViewerProps} />
+      ) : (
+        <FileViewer key={file.file} {...fileViewerProps} bare />
+      )}
     </div>
   )
 }
@@ -187,7 +197,7 @@ export function FileViewerDemo() {
   const activeFile = getActiveFile(DOCS_DEMO_FILES, active)
 
   return (
-    <div className="not-prose my-6 flex flex-col gap-3">
+    <div className="flex flex-col gap-3">
       <FileTabs
         activeFileKey={active}
         idPrefix={idPrefix}
@@ -222,7 +232,11 @@ export function FileViewerShowcase() {
           onChange={setActive}
         />
       </div>
-      <FileCanvas file={activeFile} idPrefix={idPrefix} />
+      <FileCanvas
+        file={activeFile}
+        idPrefix={idPrefix}
+        showFileHeader={false}
+      />
     </div>
   )
 }

@@ -1,6 +1,7 @@
 ---
 title: Schema Builder
 description: Build the JSON Schema that drives a Retab extraction — the same editor used in the Retab dashboard.
+component: true
 ---
 
 The Schema Builder is the JSON Schema editor from the Retab dashboard: recursive
@@ -10,7 +11,7 @@ an extraction runs against and emits standard JSON Schema. The editor normalizes
 object properties as required; use nullable field types when a required field may
 return `null`.
 
-<RetabSchemaBuilderDemo />
+<ComponentPreview name="schema-builder-demo" />
 
 ## Usage
 
@@ -34,46 +35,26 @@ export function Example() {
 }
 ```
 
-## Patterns
-
-The Schema Builder is fully controlled: it never owns the schema, so the same
-`value`/`onValueChange` pair drives every pattern below.
-
-Because `onValueChange` emits standard JSON Schema on every commit, you can render
-the live result next to the editor — this is exactly the `json_schema` an
-extraction runs against.
-
-<ComponentPreview name="schema-builder-live-json" />
-
-Swap `value` to load a different starting point. Presets, saved templates, and
-"duplicate this schema" all reduce to setting controlled state.
-
-<ComponentPreview name="schema-builder-presets" />
+## Read-only
 
 Pass `readOnly` to render an existing schema as a static, non-editable summary —
-useful for review screens and run history.
+no type pickers, inline inputs, or row actions. Useful for review screens and
+run history.
 
 <ComponentPreview name="schema-builder-read-only" />
 
-## Feature surfaces
+## Definitions and features
 
-Optional surfaces are off by default (except `definitions`) and turn on through
-`features`. Enable only what a given screen needs.
-
-Set `features={{ jsonMode: true }}` to add the Fields ⇄ JSON toggle. Control the
-active view with `view` / `onViewChange` to persist or sync it.
-
-<ComponentPreview name="schema-builder-json-mode" />
-
-`definitions` lets a schema reuse a shared shape through `$defs` and `$ref`;
-`objectTemplates` and `importExport` add reusable object templates and
-import/export actions. This example turns them all on over a schema whose
-`billing_address` and `shipping_address` reference one `address` definition.
+Optional surfaces turn on through `features` (only `definitions` is on by
+default). `definitions` lets a schema reuse a shared shape through `$defs` and
+`$ref`; `objectTemplates` and `importExport` add reusable object templates and
+import/export actions, and `jsonMode` adds the Fields ⇄ JSON toggle. This example
+enables them all over a schema whose `billing_address` and `shipping_address`
+reference one `address` definition.
 
 <ComponentPreview name="schema-builder-definitions" />
 
-## Props
-
+## API Reference
 | Prop | Type | Description |
 | --- | --- | --- |
 | `value` | `ExtendedJSONSchema7` | The schema state. |
@@ -100,7 +81,7 @@ through `onCommitPropertyDraft`.
 drops it into a `<DialogContent>` while you can reuse the same subcomponent in a
 popover or an inline panel.
 
-<PropertyFormDemo />
+<ComponentPreview name="property-form-demo" />
 
 ### Using Property Form standalone
 
@@ -150,3 +131,7 @@ export function Example() {
 | `onDelete`              | `() => void`                                            | Optional. Shows the Delete Property action.                                                                    |
 | `submitLabel`           | `string`                                                | Submit button label. Defaults to `"Save Changes"`.                                                             |
 | `mode`                  | `"editable" \| "readOnly" \| "descriptionOnly"`         | Defaults to `"editable"`.                                                                                      |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/schema-builder.tsx" />

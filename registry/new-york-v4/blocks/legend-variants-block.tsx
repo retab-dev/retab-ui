@@ -185,7 +185,7 @@ function Cell({
           ref={panelRef}
           className="aspect-[21/29.7] h-full max-w-full overflow-hidden rounded-lg border bg-card"
         >
-          <ViewerRoot bare className="h-full">
+          <ViewerRoot className="h-full">
             <ViewerBody>
               <ViewerSidebar
                 aria-label="Legend"
@@ -204,7 +204,6 @@ function Cell({
                         url: PDF_URL,
                         fileName: "an-image-is-worth-16x16-words.pdf",
                       }}
-                      bare
                       className="h-full"
                     >
                       <PdfViewerProvider>

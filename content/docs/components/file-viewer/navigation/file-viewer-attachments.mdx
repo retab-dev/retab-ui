@@ -1,0 +1,148 @@
+---
+title: FileViewerAttachments
+description: A providerless file attachment navigator built from SidebarList primitives and FileThumbnail.
+component: true
+---
+
+`AttachmentSidebar` renders selectable file attachments. It owns attachment row
+semantics: file name, size or type, disabled state, selected state, decorative
+thumbnail presentation, and empty state.
+
+It does not own rail placement. Put it inside `FileViewerSidebar`, a modal, or
+another container that owns layout.
+
+## Installation
+
+```bash
+npx shadcn@latest add @retab/attachment-sidebar
+```
+
+## Example
+
+This example mounts the sidebar in a right `FileViewerSidebar`. The file viewer
+owns the rail placement and collapse wiring; `AttachmentSidebar` owns the
+attachment rows and selected attachment state.
+
+<ComponentPreview name="attachment-sidebar-demo" />
+
+## Usage
+
+```tsx
+import {
+  AttachmentSidebar,
+  type AttachmentSidebarItem,
+} from "@/components/ui/attachment-sidebar"
+
+const attachments = [
+  {
+    id: "contract",
+    source: {
+      kind: "url",
+      url: "/contract.pdf",
+      fileName: "contract.pdf",
+    },
+    size: 812_000,
+  },
+] satisfies readonly AttachmentSidebarItem[]
+
+<AttachmentSidebar
+  items={attachments}
+  selectedId={selectedId}
+  onSelect={setSelectedId}
+/>
+```
+
+## In File Viewer
+
+Use `AttachmentSidebar` as the content grammar inside the viewer rail:
+
+```tsx
+<FileViewer source={selected.source} defaultOpen sidebarSide="right">
+  <FileViewerHeader>
+    <FileViewerSidebarTrigger />
+    <FileViewerTitle />
+    <FileViewerMeta />
+    <FileViewerControls />
+  </FileViewerHeader>
+  <FileViewerBody>
+    <FileViewerSurface>
+      <FileViewerDocument />
+    </FileViewerSurface>
+    <FileViewerSidebar
+      aria-label="Email attachments"
+      side="right"
+      width="20rem"
+    >
+      <AttachmentSidebar
+        items={attachments}
+        selectedId={selectedId}
+        onSelect={setSelectedId}
+        side="right"
+        width="20rem"
+      />
+    </FileViewerSidebar>
+  </FileViewerBody>
+</FileViewer>
+```
+
+To add domain-specific groups before the attachment list, pass children:
+
+```tsx
+<AttachmentSidebar items={attachments}>
+  <SidebarListGroup>
+    <SidebarListGroupLabel>Message</SidebarListGroupLabel>
+    <SidebarListGroupContent>
+      <SidebarListMenu>
+        <SidebarListMenuItem>
+          <SidebarListButton>Body</SidebarListButton>
+        </SidebarListMenuItem>
+      </SidebarListMenu>
+    </SidebarListGroupContent>
+  </SidebarListGroup>
+</AttachmentSidebar>
+```
+
+The thumbnail inside each row uses `FileThumbnail presentation="decorative"` so
+the button's accessible name remains the attachment command, not a flattened
+dump of thumbnail internals.
+
+## Behavior
+
+- Renders a default header with the attachment count.
+- Renders empty-state copy when `items` is empty.
+- Marks the selected item with `aria-current="page"`.
+- Forwards disabled attachment state to the row button.
+- Uses `label`, then the resource file name, as the visible row title.
+- Uses `description`, then formatted size, then MIME/category as row metadata.
+- Calls `onSelect(id)` when an enabled attachment row is clicked.
+
+## API Reference
+
+### `AttachmentSidebar`
+
+| Prop         | Type                               | Default             |
+| ------------ | ---------------------------------- | ------------------- |
+| `items`      | `readonly AttachmentSidebarItem[]` | `-`                 |
+| `selectedId` | `string \| null`                   | `undefined`         |
+| `onSelect`   | `(id: string) => void`             | `undefined`         |
+| `header`     | `React.ReactNode`                  | attachment count    |
+| `emptyLabel` | `React.ReactNode`                  | `"No attachments."` |
+| `children`   | `React.ReactNode`                  | `undefined`         |
+| `side`       | `"left" \| "right"`                | `"right"`           |
+| `width`      | `string`                           | `"18rem"`           |
+| `className`  | `string`                           | `undefined`         |
+
+### `AttachmentSidebarItem`
+
+| Field         | Type           | Required |
+| ------------- | -------------- | -------- |
+| `id`          | `string`       | Yes      |
+| `source`      | `ViewerSource` | Yes      |
+| `label`       | `string`       | No       |
+| `description` | `string`       | No       |
+| `size`        | `number`       | No       |
+| `isDisabled`  | `boolean`      | No       |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/attachment-sidebar.tsx" />

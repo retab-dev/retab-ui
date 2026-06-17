@@ -4,7 +4,7 @@ import { CodeViewer } from "@/components/ui/code-viewer"
 
 export function CodeViewerDemo() {
   return (
-    <div className="not-prose my-6 h-[460px] min-h-0">
+    <div className="h-[460px] min-h-0">
       <CodeViewer
         source={{
           kind: "url",
@@ -12,6 +12,7 @@ export function CodeViewerDemo() {
           fileName: "server.log",
           mimeType: "text/plain",
         }}
+        bare
         className="h-full"
       />
     </div>

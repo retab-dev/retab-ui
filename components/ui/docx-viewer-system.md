@@ -7,7 +7,7 @@ This document maps the DOCX viewer as implemented in `registry/new-york-v4/ui/do
 ```mermaid
 flowchart TB
   subgraph "Consumers"
-    Docs["content/docs/viewers/docx-viewer.mdx"]
+    Docs["content/docs/components/file-viewer/renderers/docx.mdx"]
     Demo["components/docx-viewer-demo.tsx"]
     Scrollbench["app/(view)/scrollbench/scrollbench-client.tsx"]
     SkeletonVerifier["app/(view)/viewer-skeleton-verifier/[viewer]/viewer-skeleton-verifier-client.tsx"]

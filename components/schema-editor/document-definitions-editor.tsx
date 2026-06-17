@@ -58,7 +58,7 @@ export function DocumentDefinitionsEditor({
 
   if (controller.shouldShowClosedPrompt) {
     return mode === "descriptionOnly" ? null : (
-      <div className="mt-6 flex pb-4">
+      <div className="mt-4 flex">
         <div
           className="rounded-md transition-colors duration-300"
           id={DEFINITIONS_SECTION_ID}
@@ -82,7 +82,7 @@ export function DocumentDefinitionsEditor({
   return (
     <Accordion
       id={DEFINITIONS_SECTION_ID}
-      className="mt-6 w-full rounded-lg border border-border px-4 pb-0 shadow-sm"
+      className="mt-6 w-full rounded-lg border border-border px-4 pb-0"
       value={[controller.accordionValue]}
       onValueChange={(value) => setAccordionOpen(value.includes("defs"))}
     >

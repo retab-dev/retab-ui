@@ -9,7 +9,7 @@ import {
 
 export function TextViewerDemo() {
   return (
-    <div className="not-prose my-6 h-[620px] min-h-0">
+    <div className="h-[620px] min-h-0">
       <TextViewer
         source={{
           kind: "text",
@@ -17,6 +17,7 @@ export function TextViewerDemo() {
           fileName: LONG_TEXT_SAMPLE_FILE_NAME,
           mimeType: LONG_TEXT_SAMPLE_MIME_TYPE,
         }}
+        bare
         className="h-full"
         highlight={{ start: 1, end: 3 }}
       />

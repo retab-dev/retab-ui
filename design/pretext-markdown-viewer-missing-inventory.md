@@ -7,23 +7,30 @@ leaking virtual chunks as visible pages.
 
 ## Missing Features
 
-1. Full Mermaid / diagram syntax beyond the current graph/flowchart surface.
+1. Full Mermaid / diagram syntax beyond the current graph/flowchart/sequence/state/class/ER/journey/Gantt/Git graph/timeline/mind map/quadrant/requirement/XY chart/Sankey/C4/pie
+   fallback surface and Mermaid-frontmatter-aware source-derived summaries.
 2. Broader directive semantics beyond current callouts and restricted component directives.
 3. Broader MDX/component markdown beyond the restricted `Metric`, `Badge`,
    `Image`, `Video`, `Diagram`, `Callout`, `Accordion`, and `Tabs` / `Tab`
    subset.
 4. Footnote polish beyond current labelled GFM references, labelled backrefs, bidirectional fragment targets, and document-wide definition resolution across virtual chunks.
-5. Math / KaTeX polish beyond initial inline and block rendering.
-6. Syntax highlighting polish beyond current `rehype-pretty-code` rendering, title/caption metadata, line numbers, highlighted line/character styling, and diff add/remove styling.
+5. Math / KaTeX polish beyond current inline/block rendering, stable math
+   markers, labelled keyboard-scrollable block math regions, and bounded
+   untrusted KaTeX settings.
+6. Syntax highlighting polish beyond current `rehype-pretty-code` rendering,
+   broader language alias normalization, title/caption metadata, line numbers,
+   accessible line labels for numbered blocks, highlighted line/character
+   styling, and diff add/remove styling.
 7. Code block copy polish beyond the current full-block and selected-code copy controls.
-8. Raw HTML sanitizer schema polish beyond the current safe static HTML and inline `kbd`/`q`/`ins`/`var`/`samp`/`sub`/`sup` rendering.
+8. Raw HTML sanitizer schema polish beyond the current safe static HTML and inline `kbd`/`q`/`ins`/`abbr`/`time`/`cite`/`dfn`/`small`/`var`/`samp`/`sub`/`sup` rendering.
 9. Broader GitHub alert visual polish beyond the current labelled title/body surface with variant icons.
 10. Emoji presentation/accessibility polish beyond upstream GitHub gemoji text replacement.
 11. Typography presentation polish beyond upstream SmartyPants text replacement.
 12. Heading visual polish beyond the current h1-h6 renderer coverage.
 13. Nested list/callout/table visual polish audit.
 14. Table polish parity with the old markdown viewer.
-15. Table copy polish beyond current rendered-cell TSV copy.
+15. Table copy polish beyond current rendered-cell TSV copy and selected
+    in-table text copy.
 16. Broader image polish beyond the current blocked/loading/ready/failed/retry surface with associated captions, lazy loading, max-width containment, decoded aspect-ratio stabilization, and resource blocking.
 17. Component-specific stable block heights for rich blocks beyond current
     top-level prose/code/table/frontmatter estimates and Mermaid source-derived
@@ -102,11 +109,13 @@ leaking virtual chunks as visible pages.
 ## Missing Rich Block Work
 
 61. Full Mermaid rendering polish beyond current source-derived deterministic
-    pre-layout body dimensions and oversized-source render guard.
+    pre-layout body dimensions, fenced/component title/caption surface,
+    recoverable graph/flowchart/sequence/state/class/ER/journey/Gantt/Git graph/timeline/mind map/quadrant/requirement/XY chart/Sankey/C4/pie fallback rendering, Mermaid-frontmatter-aware
+    source-derived summaries, and oversized-source render guard.
 62. Broader Mermaid loading/error-state polish beyond current shared reserved
     scroll box for loading/error/ready states, Mermaid-only source-backed
-    loading state, and failed-state source preview for parse errors and
-    oversized-source refusal.
+    loading state, labelled keyboard-scrollable diagram body region, and
+    failed-state source preview for parse errors and oversized-source refusal.
 63. Broader Mermaid source-copy polish beyond the current full-source copy,
     copyable oversized-source fallback, and ready-state sanitized SVG copy
     controls.
@@ -114,7 +123,9 @@ leaking virtual chunks as visible pages.
     disabled flowchart HTML labels, bounded width behavior, oversized-source
     render guard, and SVG sanitization boundary denying style/link/resource
     and animation surfaces plus SVG `id` / `name` prefixing.
-65. Broader code block language header polish beyond current normalized language, title/caption metadata, and opt-in Pretty Code line-number metadata.
+65. Broader code block language header polish beyond current normalized
+    language, expanded common language aliases, title/caption metadata, and
+    opt-in Pretty Code line-number metadata.
 66. Code block line virtualization for large fences.
 67. Browser-level code block horizontal scrolling verification beyond the current labelled keyboard-focusable source region and max-content code body.
 68. Broader code block line wrapping policy beyond the current non-wrapping horizontal source region.
@@ -128,9 +139,12 @@ leaking virtual chunks as visible pages.
     the current route smoke for labelled bidirectional fragment targets and
     component coverage for document-wide definitions across chunks.
 76. Footnote section layout polish at the end of the continuous document.
-77. Math inline rendering polish.
-78. Math block rendering polish.
-79. KaTeX CSS and sanitization policy.
+77. Math inline rendering polish beyond current KaTeX output with stable inline
+    math markers.
+78. Math block rendering polish beyond current labelled keyboard-scrollable
+    block math regions.
+79. KaTeX CSS and sanitization policy beyond current untrusted bounded-input
+    KaTeX settings.
 80. Safe image sizing from source metadata before decode, beyond current decoded natural dimensions and max-width containment.
 81. Broader image alt-text presentation beyond current blocked/loading/ready/failed/retry states and failed-image alt text.
 82. Broader video/component placeholder policy beyond current restricted video blocked/failed states.
@@ -168,10 +182,15 @@ leaking virtual chunks as visible pages.
 102. Proper list semantics for nested lists, not only `role="listitem"` rows.
 103. Browser/screen-reader verification for task-list checkbox semantics beyond
      current disabled/read-only DOM contract and checked/unchecked state marker.
-104. Broader table accessibility beyond the current deterministic header/cell associations for rendered rows.
-105. Broader code block accessibility beyond current labelled code block/source regions and keyboard-focusable horizontal source region, including line-level navigation if line numbers are added.
+104. Broader table accessibility beyond the current deterministic header/cell associations and row/column count/index annotations for rendered rows.
+105. Broader code block accessibility beyond current labelled code block/source
+     regions, keyboard-focusable horizontal source region, and accessible
+     line labels for numbered code blocks.
 106. Broader diagram accessibility beyond current labelled Mermaid
-     group/image/source fallback and source-derived graph/sequence summaries.
+     group/image/body/source fallback, keyboard-scrollable body region, and
+     Mermaid-frontmatter-aware source-derived
+     graph/sequence/state/class/ER/journey/Gantt/Git graph/timeline/mind
+     map/quadrant/requirement/XY chart/Sankey/C4/pie summaries.
 107. Broader footnote accessibility beyond current labelled refs/backrefs,
      labelled collected footnotes section, document-wide definition resolution,
      and route-level ref/backref smoke.
@@ -277,7 +296,7 @@ leaking virtual chunks as visible pages.
 180. Broader soft line break rendering policy beyond current `remark-breaks`
      behavior and stable soft-break render markers.
 181. Broader inline HTML fallback styling beyond the current styled safe inline
-     tags and raw-inline fallback markers.
+     tags, semantic raw HTML inline tags, and raw-inline fallback markers.
 182. Broader inline autolink styling beyond current stable link-form markers
      and literal monospace styling for `www.` / HTTP(S) autolinks.
 183. Broader inline email autolink styling beyond current email link kind,
@@ -310,18 +329,22 @@ leaking virtual chunks as visible pages.
 206. Blockquote plus table nesting.
 207. Blockquote plus code nesting.
 208. Broader code fence language alias policy beyond current lowercasing and
-     common aliases for TypeScript, JavaScript, shell, JSONC, Python, and
-     Mermaid fences.
+     common aliases for TypeScript, JavaScript, shell/terminal sessions, JSONC,
+     YAML, Markdown, diff/patches, Dockerfile, Ruby, Python, and Mermaid
+     fences.
 209. Code fence title/meta parsing decision.
 210. Broader code fence diff highlighting polish beyond current `diff` fence add/remove line styling.
-211. Broader code fence line-number polish beyond current opt-in Pretty Code `showLineNumbers` / `showLineNumbers{n}` support.
+211. Broader code fence line-number polish beyond current opt-in Pretty Code
+     `showLineNumbers` / `showLineNumbers{n}` support with accessible
+     line-number labels.
 212. Broader code fence highlighted-line polish beyond current Pretty Code line and character highlight metadata support.
 213. Broader table caption support beyond current safe raw HTML `<caption>` rendering.
 214. Broader table cell inline Markdown parity beyond the current emphasis, code, strike, link, shortcode, and TSV copy coverage.
 215. Table cell wrapping measurement using Pretext per cell.
 216. Table row height cache.
 217. Browser-level table keyboard scroll behavior beyond current focusable horizontal scroll region with Arrow/Home/End controls.
-218. Table copy selected row/cell decision.
+218. Table copy selected row/cell polish beyond current selected in-table text
+     copy fallback.
 219. Broader image caption polish beyond current title captions associated through `aria-describedby`.
 220. Browser-level image max-width behavior in narrow containers beyond current max-width containment classes.
 221. Image aspect ratio reservation from source metadata before decode beyond current decoded natural-size stabilization.
@@ -361,7 +384,8 @@ leaking virtual chunks as visible pages.
 251. Initial components beyond the current restricted `Accordion`.
 252. Initial components beyond the current restricted `Image`.
 253. Initial components beyond the current restricted `Video`.
-254. Initial components beyond the current restricted `Diagram`.
+254. Initial components beyond the current restricted `Diagram` with
+     title/caption metadata.
 255. Unknown component visual design beyond the current inert diagnostic source-preview surface.
 
 ## Missing Security Work
@@ -377,7 +401,8 @@ leaking virtual chunks as visible pages.
 260. Broader image URL extension/type policy beyond current SVG/SVGZ resource blocking.
 261. Link `target`/`rel` same-origin routing policy review beyond the current
      invariant tests and route smoke.
-262. Raw HTML whitelist review beyond the current safe static HTML policy.
+262. Raw HTML whitelist review beyond the current safe static HTML policy and
+     explicitly constrained semantic inline raw HTML tags.
 263. Broader active raw HTML denylist coverage beyond the current iframe/object/embed/form/input/button/style/link/meta tests.
 264. Broader SVG sanitization coverage beyond the current SVG script/style,
      link/resource, animation, and attribute-denylist mounting tests.
@@ -393,7 +418,8 @@ leaking virtual chunks as visible pages.
      initialization invariant, oversized-source guard, and sanitized SVG
      mounting coverage.
 271. Broader KaTeX security fuzzing beyond the current untrusted-input,
-     bounded-expansion, bounded-size, and unsafe-command regression coverage.
+     bounded-expansion, bounded-size, unsafe-command regression coverage, and
+     labelled bounded block-math rendering surface.
 272. Fuzz tests with random HTML/Markdown mixes.
 273. Security review checklist before FileViewer rollout.
 274. Dependency audit for parser/render libraries.

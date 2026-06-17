@@ -76,7 +76,11 @@ export const ImageResourceContent = React.forwardRef<
   return (
     <ViewerErrorBoundary
       className={props.className}
-      download={props.download === false ? null : resource.originalDownload}
+      download={
+        props.controls === false || props.download === false
+          ? null
+          : resource.originalDownload
+      }
       format="image"
       resetKey={resource.keys.resource}
       sourceKind={resource.sourceKind}

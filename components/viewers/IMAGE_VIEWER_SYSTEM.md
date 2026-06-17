@@ -12,7 +12,7 @@ flowchart TD
   subgraph PublicSurface["Public and install surface"]
     Registry["registry.json entry: image-viewer\n- title and description\n- deps: lucide-react, utif@3.1.0\n- registry deps: utils, button, scroll-area, separator, skeleton\n- files copied into @ui and @lib targets"]
     PublicRegistry["public/r/image-viewer.json and public/r/registry.json\npublished registry payloads"]
-    Docs["content/docs/viewers/image-viewer.mdx\n- install command\n- usage example\n- performance model\n- props table"]
+    Docs["content/docs/components/file-viewer/renderers/image.mdx\n- install command\n- usage example\n- performance model\n- props table"]
     Demo["components/image-viewer-demo.tsx\nrenders /samples/entropy.tiff\nfallback size 1275 x 1650"]
     Shims["components/ui/image-viewer*.tsx and lib/image-*.ts\nthin re-export shims to registry/new-york-v4"]
     SourceShim["components/ui/image-source.tsx\nre-export source adapter"]
@@ -455,7 +455,7 @@ flowchart LR
 | Source adapter     | `registry/new-york-v4/ui/image-source.tsx`                                                                  | Converts source anchors to frame/area, rotates highlight geometry, bridges `useSourceLink` to the image viewer handle.                     |
 | Integration blocks | `registry/new-york-v4/blocks/image-sources-block.tsx`, `sources-viewer-block.tsx`                        | Real field/source UI demonstrating hover/click source linking into image overlays and scrolling.                                           |
 | Re-export shims    | `components/ui/image-viewer*.tsx`, `components/ui/image-source.tsx`, `lib/image-*.ts`                       | Local import surface that points at the registry implementation.                                                                           |
-| Docs and demo      | `content/docs/viewers/image-viewer.mdx`, `components/image-viewer-demo.tsx`                                 | User-facing install, usage, performance explanation, prop table, and TIFF sample.                                                          |
+| Docs and demo      | `content/docs/components/file-viewer/renderers/image.mdx`, `components/image-viewer-demo.tsx`                                 | User-facing install, usage, performance explanation, prop table, and TIFF sample.                                                          |
 | Tests              | `tests/image-viewer*.test.tsx`, `tests/sources.test.tsx`, `tests/file-viewer.test.tsx`                      | Lifecycle, cache, worker, rendering, geometry, integration, and routing coverage.                                                          |
 
 ## Key Invariants

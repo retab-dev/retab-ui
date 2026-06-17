@@ -11,6 +11,8 @@ import {
 } from "@/lib/viewer-errors"
 import {
   resolveViewerDescriptor,
+  textPayloadIdentityKey,
+  textPayloadKey,
   type BlobViewerSource,
   type FileCategory,
   type TextSource,
@@ -290,7 +292,26 @@ function downloadCacheKey(source: ViewerSource) {
 function payloadCacheKey(source: ViewerSource) {
   if (source.kind === "url") return ""
   if (source.kind === "blob") return blobObjectKey(source.blob)
-  return `text:${source.text.length}:${hashString(source.text)}`
+  return textPayloadIdentityKey(source.text)
+}
+
+export function viewerResourceRenderKey(resource: ViewerResource): string {
+  const source = resource.descriptor.source
+  const load = [
+    source.kind,
+    source.identityKey ?? "",
+    sourceMimeType(source) ?? "",
+    directLoadCacheKey(source),
+    viewerContentRenderKey(resource.content),
+  ].join("\u0000")
+
+  return [load, resource.keys.presentation].join("\u0000")
+}
+
+export function viewerContentRenderKey(content: ViewerResourceContent): string {
+  if (content.payload.kind === "text")
+    return textPayloadKey(content.payload.text)
+  return content.key
 }
 
 function sourceMimeType(source: ViewerSource) {
@@ -306,15 +327,6 @@ function blobObjectKey(blob: Blob) {
     blobObjectKeys.set(blob, key)
   }
   return key
-}
-
-function hashString(text: string) {
-  let hash = 0x811c9dc5
-  for (let index = 0; index < text.length; index += 1) {
-    hash ^= text.charCodeAt(index)
-    hash = Math.imul(hash, 0x01000193)
-  }
-  return (hash >>> 0).toString(36)
 }
 
 export function blobSource(

@@ -327,7 +327,7 @@ export function PageMarkdownViewerHeader({
 export function PageMarkdownViewer(props: PageMarkdownViewerProps) {
   return (
     <PageMarkdownViewerProvider {...props}>
-      <ViewerRoot bare className="h-full flex-1 bg-background">
+      <ViewerRoot className="h-full flex-1 bg-background">
         <PageMarkdownViewerHeader />
         <ViewerBody>
           <ViewerSurface>

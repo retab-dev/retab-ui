@@ -1,0 +1,72 @@
+---
+title: Anatomy
+description: "The compound File Viewer structure: root, header, body, sidebar slot, surface, and routed document."
+---
+
+`FileViewer` is both the easy API and the composition root. The common case is
+one line:
+
+```tsx
+<FileViewer source={source} />
+```
+
+When the file surface needs its own header, sidebar, or surrounding workflow
+chrome, compose the same primitive parts explicitly:
+
+```tsx
+<FileViewer source={source} defaultOpen>
+  <FileViewerHeader>
+    <FileViewerSidebarTrigger />
+    <FileViewerTitle />
+    <FileViewerMeta />
+    <FileViewerControls />
+  </FileViewerHeader>
+
+  <FileViewerBody>
+    <FileViewerSidebar aria-label="Document navigation">
+      <FileViewerThumbnails />
+    </FileViewerSidebar>
+
+    <FileViewerSurface>
+      <FileViewerDocument />
+    </FileViewerSurface>
+  </FileViewerBody>
+</FileViewer>
+```
+
+## Boundaries
+
+- `FileViewer` owns file identity, source loading, route detection, sidebar
+  state, and the file-scoped provider.
+- `FileViewerHeader` owns the full-width file row.
+- `FileViewerBody` owns the horizontal layout under the header.
+- `FileViewerSidebar` is the optional navigation slot. It does not decide what
+  the rows mean.
+- `FileViewerSurface` owns the main file surface beside the sidebar.
+- `FileViewerDocument` renders the routed file renderer.
+
+Navigation components live inside `FileViewerSidebar`. They are not part of the
+irreducible shell:
+
+```tsx
+<FileViewerSidebar aria-label="Attachments">
+  <AttachmentSidebar
+    items={attachments}
+    selectedId={selectedId}
+    onSelect={setSelectedId}
+  />
+</FileViewerSidebar>
+```
+
+Use `FileViewer bare` only for a nested file leaf when a parent viewer already
+owns the surrounding frame:
+
+```tsx
+<FileViewer source={attachment.source} bare />
+```
+
+## Mental model
+
+File Viewer owns file identity and anatomy. `ViewerFrame` or the host surface
+owns the outer frame. Renderers own pixels. Navigation owns movement inside the
+file surface. Workflow viewers own domain semantics outside the file.

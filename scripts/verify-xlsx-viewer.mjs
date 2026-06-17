@@ -8,7 +8,7 @@ import { join } from "node:path"
 
 const targetUrl =
   process.env.XLSX_VIEWER_URL ??
-  "http://localhost:3100/docs/viewers/xlsx-viewer"
+  "http://localhost:3100/docs/components/file-viewer/renderers/xlsx"
 const timeoutMs = Number(process.env.XLSX_VIEWER_TIMEOUT_MS ?? 20_000)
 
 const chromePath = findChrome()

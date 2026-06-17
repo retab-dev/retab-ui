@@ -86,7 +86,11 @@ export const PdfResourceContent = React.forwardRef<
   return (
     <ViewerErrorBoundary
       className={props.className}
-      download={props.download === false ? null : resource.originalDownload}
+      download={
+        props.controls === false || props.download === false
+          ? null
+          : resource.originalDownload
+      }
       format="pdf"
       onRetry={() => clearPdfDocumentResource(resource.content)}
       resetKey={resource.keys.resource}

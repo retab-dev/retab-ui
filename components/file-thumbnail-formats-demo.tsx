@@ -5,7 +5,6 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import type { FileCategory } from "@/lib/viewer-source"
 import { FileThumbnail } from "@/components/ui/file-thumbnail"
-import { DocsViewCodeBlock } from "@/components/docs-code-block"
 
 /**
  * The hero showcase: one bordered card with a large, labeled, *square* preview
@@ -130,91 +129,5 @@ export function FileThumbnailFormatsGrid({
 }
 
 export function FileThumbnailFormatsDemo() {
-  return (
-    <div
-      data-slot="component-preview"
-      className="group relative mt-4 mb-2 flex flex-col overflow-hidden rounded-xl border"
-    >
-      <FileThumbnailFormatsGrid />
-      <DocsViewCodeBlock code={formatsDemoCode} />
-    </div>
-  )
+  return <FileThumbnailFormatsGrid />
 }
-
-const formatsDemoCode = `"use client"
-
-import { FileThumbnail } from "@/components/ui/file-thumbnail"
-
-// FileThumbnail renders the first unit — page 1, first sheet, first slide,
-// first TIFF frame, or the head of a text/markdown/html/csv file. Pass
-// thumbnailShape="square" keeps every preview tile uniform.
-//
-export function ImageThumbnail() {
-  return (
-    <FileThumbnail
-      source={{
-        kind: "url",
-        url: "/page.png",
-        fileName: "page.png",
-        mimeType: "image/png",
-      }}
-      thumbnailShape="square"
-    />
-  )
-}
-
-export function PdfThumbnail() {
-  return (
-    <FileThumbnail
-      source={{
-        kind: "url",
-        url: "/an-image-is-worth-16x16-words.pdf",
-        fileName: "an-image-is-worth-16x16-words.pdf",
-        mimeType: "application/pdf",
-      }}
-      thumbnailShape="square"
-    />
-  )
-}
-
-export function DocxThumbnail() {
-  return (
-    <FileThumbnail
-      source={{
-        kind: "url",
-        url: "/quarterly-business-review.docx",
-        fileName: "quarterly-business-review.docx",
-        mimeType:
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      }}
-      thumbnailShape="square"
-    />
-  )
-}
-
-export function XlsxThumbnail() {
-  return (
-    <FileThumbnail
-      source={{
-        kind: "url",
-        url: "/financials.xlsx",
-        fileName: "financials.xlsx",
-        mimeType:
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      }}
-      thumbnailShape="square"
-    />
-  )
-}
-
-// You can still feed externally generated thumbnails through previewImageUrl or
-// previewContent when the preview already exists.
-export function ExternalThumbnail({ url }: { url: string }) {
-  return (
-    <FileThumbnail
-      file={{ name: "contract.pdf", type: "application/pdf" }}
-      thumbnailShape="square"
-      previewImageUrl={url}
-    />
-  )
-}`

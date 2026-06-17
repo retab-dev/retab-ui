@@ -1,6 +1,7 @@
 ---
 title: JSON Form
 description: A JSON-Schema-driven form built entirely on shadcn's FormField abstraction.
+component: true
 ---
 
 `JsonForm` renders a whole JSON Schema as an editable form: nested objects
@@ -13,7 +14,7 @@ typed (text, number, date, enum, checkbox). It's built entirely on shadcn's
 its field path — and `JsonForm` is the thin convenience wrapper that renders a
 whole schema and owns the `<form>`.
 
-<JsonFormDemo />
+<ComponentPreview name="json-form-demo" />
 
 ## Usage
 
@@ -50,19 +51,19 @@ export function VendorNameField() {
 }
 ```
 
-## Props
+## API Reference
 
 ### `JsonForm`
 
-| Prop         | Type                                       | Description                                                                                                                                                         |
-| ------------ | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `form`       | `UseFormReturn`                            | A `react-hook-form` instance holding the data values.                                                                                                               |
-| `schema`     | `JSONSchema7`                              | The schema describing the form's structure.                                                                                                                         |
-| `onSubmit`   | `SubmitHandler`                            | Optional submit handler for the underlying `<form>`.                                                                                                                |
-| `textInput`  | `"input" \| "textarea"`                    | Optional override for plain string fields. Omit it to keep the default auto behavior (`format: "textarea"` or long strings render as textareas).                    |
-| `anchorLink` | `SourceFieldLink` from `source-field-link` | Opt into field-level anchor linking — every scalar becomes a hoverable card that reports its path and highlights when active (wire it from `useAnchoredSourceFieldLink`). |
-| `children`   | `ReactNode`                                | Rendered after the fields, e.g. a submit button.                                                                                                                    |
-| `className`  | `string`                                   | Class names for the form container.                                                                                                                                 |
+| Prop         | Type                                       | Description                                                                                                                                                                |
+| ------------ | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `form`       | `UseFormReturn`                            | A `react-hook-form` instance holding the data values.                                                                                                                      |
+| `schema`     | `JSONSchema7`                              | The schema describing the form's structure.                                                                                                                                |
+| `onSubmit`   | `SubmitHandler`                            | Optional submit handler for the underlying `<form>`.                                                                                                                       |
+| `textInput`  | `"input" \| "textarea"`                    | Optional override for plain string fields. Omit it to keep the default auto behavior (`format: "textarea"` or long strings render as textareas).                           |
+| `sourceLink` | `SourceFieldLink` from `source-field-link` | Opt into field-level source linking — every scalar becomes a hoverable card that reports its path and highlights when active (wire it from `useSegmentedSourceFieldLink`). |
+| `children`   | `ReactNode`                                | Rendered after the fields, e.g. a submit button.                                                                                                                           |
+| `className`  | `string`                                   | Class names for the form container.                                                                                                                                        |
 
 ### `JsonFormField`
 

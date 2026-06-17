@@ -1,0 +1,48 @@
+---
+title: FileViewerBody
+description: The layout row below the header, usually containing a sidebar and a surface.
+component: true
+---
+
+`FileViewerBody` owns the space below `FileViewerHeader`. It is the boundary
+between optional file-scoped navigation and the main file surface.
+
+```tsx
+<FileViewerBody>
+  <FileViewerSidebar aria-label="PDF pages" />
+  <FileViewerSurface>
+    <FileViewerDocument />
+  </FileViewerSurface>
+</FileViewerBody>
+```
+
+A body can also hold a surface alone, with no sidebar:
+
+```tsx
+<FileViewerBody>
+  <FileViewerSurface>
+    <FileViewerDocument />
+  </FileViewerSurface>
+</FileViewerBody>
+```
+
+## Behavior
+
+- Renders a `data-slot="file-viewer-body"` row that fills the remaining height
+  below the header and lays out the sidebar beside the surface.
+- It is purely structural: it does not know whether the sidebar contains
+  thumbnails, attachments, segments, or source fields, and it does not own
+  sidebar open/collapse state — that lives on `FileViewer`.
+- Sidebar placement (side, width, inline vs. overlay) is resolved from the root
+  and the `FileViewerSidebar` inside the body.
+
+## API Reference
+
+| Prop       | Type                                      | Description                                              |
+| ---------- | ----------------------------------------- | -------------------------------------------------------- |
+| `children` | `React.ReactNode`                         | Typically a `FileViewerSidebar` and a `FileViewerSurface`.|
+| `...props` | `React.ComponentProps<typeof ViewerBody>` | Standard body props; `className` is forwarded.           |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer.tsx" />

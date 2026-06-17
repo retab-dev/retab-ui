@@ -6,19 +6,23 @@ import { inferCsvDialect } from "@/lib/csv"
 import { cn } from "@/lib/utils"
 import type { ViewerResource } from "@/lib/viewer-resource"
 
-const CsvViewer = React.lazy(() =>
-  import("@/components/ui/csv-viewer").then((m) => ({ default: m.CsvViewer }))
+const CsvViewerDocument = React.lazy(() =>
+  import("@/components/ui/csv-viewer").then((m) => ({
+    default: m.CsvViewerDocument,
+  }))
 )
 
 export function CsvFileContent({
   resource,
   className,
   bare,
+  controls = false,
   isolateStyles,
 }: {
   resource: ViewerResource
   className?: string
   bare?: boolean
+  controls?: boolean
   isolateStyles?: boolean
 }) {
   const source = resource.descriptor.source
@@ -36,12 +40,11 @@ export function CsvFileContent({
         className
       )}
     >
-      <CsvViewer
+      <CsvViewerDocument
         source={source}
         dialect={dialect}
         fillHeight
-        controls={false}
-        className="rounded-none border-0 bg-transparent"
+        controls={controls}
         isolateStyles={isolateStyles}
       />
     </div>

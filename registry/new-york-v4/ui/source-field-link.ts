@@ -6,28 +6,30 @@ import type { DocumentSegment, SegmentAnchor } from "./segmented-document-model"
 import { useSegmentedItemLink } from "./segmented-item-link"
 
 export type SourceFieldLink = {
-  activePath: string | null
-  onFieldHover: (path: string | null) => void
-  selectField?: (path: string) => void
+  activeSourcePath: string | null
+  onSourceHover: (path: string | null) => void
+  selectSourcePath?: (path: string) => void
 }
 
 export type SegmentedSourceFieldLink = SourceFieldLink & {
   activeAnchor: SegmentAnchor | null
   activeAnchors: readonly SegmentAnchor[]
   activeSegment: DocumentSegment | null
-  selectedPath: string | null
+  selectedSourcePath: string | null
 }
 
 export type SegmentedSourceFieldLinkOptions = {
-  initialPath?: string | null
+  initialSourcePath?: string | null
 }
 
 export function useSegmentedSourceFieldLink(
   options: SegmentedSourceFieldLinkOptions = {}
 ): SegmentedSourceFieldLink {
-  const link = useSegmentedItemLink({ initialItemId: options.initialPath })
+  const link = useSegmentedItemLink({
+    initialItemId: options.initialSourcePath,
+  })
 
-  const onFieldHover = React.useCallback(
+  const onSourceHover = React.useCallback(
     (path: string | null) => {
       if (!path) {
         link.previewItem(null)
@@ -40,7 +42,7 @@ export function useSegmentedSourceFieldLink(
     [link]
   )
 
-  const selectField = React.useCallback(
+  const selectSourcePath = React.useCallback(
     (path: string) => {
       link.selectItem(path)
       link.navigateItem(path, { behavior: "smooth", clearPreview: false })
@@ -52,11 +54,11 @@ export function useSegmentedSourceFieldLink(
     () => ({
       activeAnchor: link.activeAnchor,
       activeAnchors: link.activeAnchors,
-      activePath: link.activeItemId,
+      activeSourcePath: link.activeItemId,
       activeSegment: link.activeSegment,
-      onFieldHover,
-      selectField,
-      selectedPath: link.selectedItemId,
+      onSourceHover,
+      selectSourcePath,
+      selectedSourcePath: link.selectedItemId,
     }),
     [
       link.activeAnchor,
@@ -64,8 +66,8 @@ export function useSegmentedSourceFieldLink(
       link.activeItemId,
       link.activeSegment,
       link.selectedItemId,
-      onFieldHover,
-      selectField,
+      onSourceHover,
+      selectSourcePath,
     ]
   )
 }

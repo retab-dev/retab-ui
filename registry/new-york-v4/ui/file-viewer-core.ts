@@ -3,18 +3,19 @@ import {
   extensionOf,
   extractName,
   resolveViewerDescriptor,
+  textPayloadKey,
   type FileCategory,
   type ViewerDescriptor,
   type ViewerSource,
 } from "@/lib/viewer-source"
 
 export type { FileCategory, ViewerSource }
+export type FileViewerDocumentChrome = "shell" | "standalone"
 
 export interface FileViewerProps {
   source: ViewerSource
   as?: FileCategory
   className?: string
-  bare?: boolean
   isolateStyles?: boolean
 }
 
@@ -32,11 +33,21 @@ export function resolveFileDescriptor({
 
 export function descriptorResetKey(descriptor: FileDescriptor): string {
   return [
-    descriptor.identityKey,
+    descriptorIdentityResetKey(descriptor),
     descriptor.displayName,
     descriptor.mimeType ?? "",
     descriptor.category,
   ].join("\u0000")
+}
+
+function descriptorIdentityResetKey(descriptor: FileDescriptor): string {
+  if (
+    descriptor.source.kind === "text" &&
+    descriptor.source.identityKey == null
+  ) {
+    return textPayloadKey(descriptor.source.text)
+  }
+  return descriptor.identityKey
 }
 
 export function isProseTextDescriptor(descriptor: FileDescriptor): boolean {

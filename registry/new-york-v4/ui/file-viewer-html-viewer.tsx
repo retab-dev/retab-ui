@@ -3,11 +3,15 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
-import type { ViewerResource } from "@/lib/viewer-resource"
+import {
+  viewerContentRenderKey,
+  type ViewerResource,
+} from "@/lib/viewer-resource"
 
 import { ViewerFallback } from "./file-viewer-fallback"
 import { loadTextResource } from "./file-viewer-text-resource"
 import { isAbortError } from "./viewer-abortable-request"
+import { useViewerControlsRegistration } from "./viewer-controls"
 import { useZoom, ZoomActions } from "./viewer-zoom"
 
 type HtmlLoadState =
@@ -19,21 +23,24 @@ export function HtmlFileContent({
   resource,
   className,
   bare,
+  controls = true,
   descriptorSignal,
 }: {
   resource: ViewerResource
   className?: string
   bare?: boolean
+  controls?: boolean
   descriptorSignal: AbortSignal
 }) {
   if (resource.content.payload.kind === "text") {
     return (
       <HtmlFileContentFrame
-        key={resource.content.key}
+        key={viewerContentRenderKey(resource.content)}
         resource={resource}
         html={resource.content.payload.text}
         className={className}
         bare={bare}
+        controls={controls}
       />
     )
   }
@@ -42,6 +49,7 @@ export function HtmlFileContent({
       resource={resource}
       className={className}
       bare={bare}
+      controls={controls}
       descriptorSignal={descriptorSignal}
     />
   )
@@ -51,11 +59,13 @@ function HtmlFileResource({
   resource,
   className,
   bare,
+  controls,
   descriptorSignal,
 }: {
   resource: ViewerResource
   className?: string
   bare?: boolean
+  controls: boolean
   descriptorSignal: AbortSignal
 }) {
   const content = resource.content
@@ -122,6 +132,7 @@ function HtmlFileResource({
       html={html}
       className={className}
       bare={bare}
+      controls={controls}
     />
   )
 }
@@ -131,14 +142,18 @@ function HtmlFileContentFrame({
   html,
   className,
   bare,
+  controls,
 }: {
   resource: ViewerResource
   html: string
   className?: string
   bare?: boolean
+  controls: boolean
 }) {
   const fileName = resource.fileName
   const { scale, zoom, reset } = useZoom()
+  useHtmlControlsRegistration({ reset, scale, zoom })
+
   return (
     <div
       data-slot="html-file-viewer-content"
@@ -148,10 +163,39 @@ function HtmlFileContentFrame({
         className
       )}
     >
-      <HtmlContentToolbar scale={scale} zoom={zoom} reset={reset} />
+      {controls ? (
+        <HtmlContentToolbar scale={scale} zoom={zoom} reset={reset} />
+      ) : null}
       <SandboxedDoc html={html} title={fileName} scale={scale} />
     </div>
   )
+}
+
+function useHtmlControlsRegistration({
+  reset,
+  scale,
+  zoom,
+}: {
+  reset: () => void
+  scale: number
+  zoom: (factor: number) => void
+}) {
+  const onControlsChange = useViewerControlsRegistration()
+
+  React.useEffect(() => {
+    if (!onControlsChange) return
+
+    onControlsChange({
+      zoom: {
+        scale,
+        onZoomOut: () => zoom(1 / 1.2),
+        onZoomIn: () => zoom(1.2),
+        onReset: reset,
+      },
+    })
+
+    return () => onControlsChange(null)
+  }, [onControlsChange, reset, scale, zoom])
 }
 
 function HtmlContentToolbar({

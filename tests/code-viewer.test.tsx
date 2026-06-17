@@ -292,7 +292,7 @@ describe("code-viewer-syntax", () => {
     const firstTokens = syntax.getLineTokens('{"name":"retab"}')
     const secondTokens = syntax.getLineTokens('{"name":"retab"}')
 
-    expect(syntax.identity).toBe("json:v1")
+    expect(syntax.identity).toBe("json")
     expect(firstTokens).toBe(secondTokens)
     expect(firstTokens).toEqual(
       expect.arrayContaining([
@@ -488,7 +488,7 @@ describe("code-viewer-projector", () => {
     project({
       rowHost,
       syntax: {
-        identity: "json:v1",
+        identity: "json",
         getLineTokens: () => [{ kind: "string", text: '"value"' }],
       },
       textLines: ['"value"'],
@@ -533,7 +533,7 @@ describe("code-viewer-projector", () => {
     const { rowHost, viewport } = createProjectionElements()
     const textLines = ['"value"']
     const syntax = {
-      identity: "json:v1",
+      identity: "json",
       getLineTokens: () => [{ kind: "string", text: '"value"' }],
     }
     const projector = project({ rowHost, syntax, textLines, viewport })
@@ -581,7 +581,7 @@ describe("code-viewer-projector", () => {
       projector,
       rowHost,
       syntax: {
-        identity: "json:v1",
+        identity: "json",
         getLineTokens: () => [{ kind: "string", text: '"value"' }],
       },
       textLines,
@@ -1746,7 +1746,7 @@ describe("CodeViewer", () => {
     expect(line?.querySelector(".cv-token-property")?.textContent).toBe(
       '"enabled"'
     )
-    expect(line?.querySelector(".cv-token-keyword")?.textContent).toBe("true")
+    expect(line?.querySelector(".cv-token-boolean")?.textContent).toBe("true")
     expect(line?.querySelector(".cv-token-number")?.textContent).toBe("25")
     expect(line?.querySelector(".cv-token-string")?.textContent).toBe(
       '"viewer"'
@@ -1766,9 +1766,9 @@ describe("CodeViewer", () => {
     ).toHaveLength(1)
   })
 
-  it("renders TypeScript as plain fixed-line code without syntax tokens", () => {
+  it("renders unmapped file types as plain fixed-line code without syntax tokens", () => {
     const { container } = render(
-      <CodeViewer source={textSource("const value = true", "sample.ts")} />
+      <CodeViewer source={textSource("const value = true", "notes.txt")} />
     )
 
     expect(screen.getByText("const value = true")).toBeTruthy()

@@ -2,6 +2,27 @@ import Prism from "prismjs"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
 
+// A curated set of common languages ships by default. Add another by importing
+// its Prism component here (or at your app entry) and adding a row to
+// LANGUAGE_BY_EXTENSION:
+//   import "prismjs/components/prism-kotlin"
+//   const LANGUAGE_BY_EXTENSION = { ...; kt: "kotlin" }
+//
+// markup (html/xml), css, and javascript are part of Prism core. The order of
+// these imports matters: tsx extends jsx + typescript, so both load first.
+import "prismjs/components/prism-json"
+import "prismjs/components/prism-typescript"
+import "prismjs/components/prism-jsx"
+import "prismjs/components/prism-tsx"
+import "prismjs/components/prism-python"
+import "prismjs/components/prism-yaml"
+import "prismjs/components/prism-bash"
+import "prismjs/components/prism-sql"
+import "prismjs/components/prism-go"
+import "prismjs/components/prism-rust"
+import "prismjs/components/prism-java"
+import "prismjs/components/prism-markdown"
+
 Prism.manual = true
 
 export type CodeTokenLeaf = {
@@ -14,39 +35,113 @@ export type CodeSyntax = {
   getLineTokens(line: string): readonly CodeTokenLeaf[] | null
 }
 
-const JSON_LINE_MAX = 2000
+const CODE_LINE_TOKENIZE_MAX = 2000
 
-const JSON_LANGUAGE: Prism.Grammar = {
-  property: {
-    pattern: /"(?:\\.|[^\\"\r\n])*"(?=\s*:)/,
-    greedy: true,
-  },
-  string: {
-    pattern: /"(?:\\.|[^\\"\r\n])*"(?!\s*:)/,
-    greedy: true,
-  },
-  number: /-?\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b/,
-  punctuation: /[{}[\],]/,
-  operator: /:/,
-  boolean: /\b(?:false|true)\b/,
-  null: { pattern: /\bnull\b/, alias: "keyword" },
+// File extension -> Prism language id. The one piece of knowledge the viewer
+// owns; Prism does not map extensions to languages. This is the single seam.
+const LANGUAGE_BY_EXTENSION: Record<string, string> = {
+  json: "json",
+  json5: "json",
+  js: "javascript",
+  mjs: "javascript",
+  cjs: "javascript",
+  jsx: "jsx",
+  ts: "typescript",
+  mts: "typescript",
+  cts: "typescript",
+  tsx: "tsx",
+  py: "python",
+  yaml: "yaml",
+  yml: "yaml",
+  sh: "bash",
+  bash: "bash",
+  zsh: "bash",
+  sql: "sql",
+  go: "go",
+  rs: "rust",
+  java: "java",
+  md: "markdown",
+  markdown: "markdown",
+  css: "css",
+  html: "markup",
+  htm: "markup",
+  xml: "markup",
+  svg: "markup",
+}
+
+// MIME -> Prism language id, used only for inline sources with no extension.
+const LANGUAGE_BY_MIME: Record<string, string> = {
+  "application/json": "json",
+  "text/javascript": "javascript",
+  "application/javascript": "javascript",
+  "text/typescript": "typescript",
+  "application/typescript": "typescript",
+  "text/x-python": "python",
+  "application/x-python": "python",
+  "text/yaml": "yaml",
+  "application/yaml": "yaml",
+  "application/x-yaml": "yaml",
+  "text/x-sh": "bash",
+  "application/x-sh": "bash",
+  "application/sql": "sql",
+  "text/markdown": "markdown",
+  "text/css": "css",
+  "text/html": "markup",
+  "application/xml": "markup",
+  "text/xml": "markup",
 }
 
 export const CODE_VIEWER_SYNTAX_STYLE = `
-.cv-token-property { color: var(--cv-token-property, #0550ae); }
-.cv-token-string { color: var(--cv-token-string, #0a7d33); }
+.cv-token-comment { color: var(--cv-token-comment, #6e7781); font-style: italic; }
+.cv-token-property,
+.cv-token-tag,
+.cv-token-attr-name,
+.cv-token-symbol { color: var(--cv-token-property, #0550ae); }
+.cv-token-string,
+.cv-token-char,
+.cv-token-attr-value,
+.cv-token-url,
+.cv-token-regex { color: var(--cv-token-string, #0a7d33); }
 .cv-token-number { color: var(--cv-token-number, #b5690c); }
-.cv-token-keyword { color: var(--cv-token-keyword, #8250df); }
-.cv-token-punctuation { color: var(--cv-token-punctuation, color-mix(in oklab, var(--foreground) 55%, transparent)); }
-.dark .cv-token-property { color: var(--cv-token-property, #6cb6ff); }
-.dark .cv-token-string { color: var(--cv-token-string, #8ddb8c); }
+.cv-token-keyword,
+.cv-token-boolean,
+.cv-token-null,
+.cv-token-constant,
+.cv-token-atrule,
+.cv-token-important { color: var(--cv-token-keyword, #8250df); }
+.cv-token-function,
+.cv-token-class-name,
+.cv-token-builtin { color: var(--cv-token-function, #8250df); }
+.cv-token-variable { color: var(--cv-token-variable, #953800); }
+.cv-token-punctuation,
+.cv-token-operator { color: var(--cv-token-punctuation, color-mix(in oklab, var(--foreground) 55%, transparent)); }
+.dark .cv-token-comment { color: var(--cv-token-comment, #8b949e); }
+.dark .cv-token-property,
+.dark .cv-token-tag,
+.dark .cv-token-attr-name,
+.dark .cv-token-symbol { color: var(--cv-token-property, #6cb6ff); }
+.dark .cv-token-string,
+.dark .cv-token-char,
+.dark .cv-token-attr-value,
+.dark .cv-token-url,
+.dark .cv-token-regex { color: var(--cv-token-string, #8ddb8c); }
 .dark .cv-token-number { color: var(--cv-token-number, #e3b341); }
-.dark .cv-token-keyword { color: var(--cv-token-keyword, #dcbdfb); }
+.dark .cv-token-keyword,
+.dark .cv-token-boolean,
+.dark .cv-token-null,
+.dark .cv-token-constant,
+.dark .cv-token-atrule,
+.dark .cv-token-important { color: var(--cv-token-keyword, #dcbdfb); }
+.dark .cv-token-function,
+.dark .cv-token-class-name,
+.dark .cv-token-builtin { color: var(--cv-token-function, #d2a8ff); }
+.dark .cv-token-variable { color: var(--cv-token-variable, #ffa657); }
 `
 
 export function createCodeSyntax(resource: ViewerResource): CodeSyntax {
-  const prismLanguage = codeSyntaxLanguage(resource)
-  if (!prismLanguage) {
+  const languageId = codeLanguageId(resource)
+  const grammar = languageId ? (Prism.languages[languageId] ?? null) : null
+  if (!languageId || !grammar) {
     return {
       identity: "plain",
       getLineTokens: () => null,
@@ -56,31 +151,27 @@ export function createCodeSyntax(resource: ViewerResource): CodeSyntax {
   const tokenCache = new Map<string, readonly CodeTokenLeaf[]>()
 
   return {
-    identity: "json:v1",
+    identity: languageId,
     getLineTokens: (line) => {
-      if (line.length === 0 || line.length > JSON_LINE_MAX) return null
+      if (line.length === 0 || line.length > CODE_LINE_TOKENIZE_MAX) return null
 
       const cachedTokens = tokenCache.get(line)
       if (cachedTokens) return cachedTokens
 
-      const tokens = flattenCodeTokens(Prism.tokenize(line, prismLanguage))
+      const tokens = flattenCodeTokens(Prism.tokenize(line, grammar))
       tokenCache.set(line, tokens)
       return tokens
     },
   }
 }
 
-function codeSyntaxLanguage(resource: ViewerResource): Prism.Grammar | null {
-  const fileName = resource.fileName.toLowerCase()
+function codeLanguageId(resource: ViewerResource): string | null {
+  const extension = resource.fileName.toLowerCase().split(".").pop()
+  const byExtension = extension ? LANGUAGE_BY_EXTENSION[extension] : undefined
+  if (byExtension) return byExtension
+
   const mimeType = resource.content.mimeType?.toLowerCase().split(";")[0].trim()
-  if (
-    fileName.endsWith(".json") ||
-    fileName.endsWith(".json5") ||
-    mimeType === "application/json"
-  ) {
-    return JSON_LANGUAGE
-  }
-  return null
+  return (mimeType && LANGUAGE_BY_MIME[mimeType]) ?? null
 }
 
 function flattenCodeTokens(

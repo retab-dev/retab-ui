@@ -212,41 +212,6 @@ const forbiddenPrimitiveIgnoredPropAliases = [
   `_on${"Picker"}OpenChange`,
 ]
 
-const jsonTableLineCountLimits = [
-  {
-    file: "components/json-table/editable-json-table-cell.tsx",
-    maxLines: 80,
-  },
-  {
-    file: "components/json-table/use-json-table-editable-cell-model.ts",
-    maxLines: 180,
-  },
-  {
-    file: "components/json-table/use-json-table-cell-field.ts",
-    maxLines: 220,
-  },
-  {
-    file: "components/json-table/use-json-table-primitive-control.ts",
-    maxLines: 220,
-  },
-  {
-    file: "components/json-table/use-json-table-structured-cell-controller.ts",
-    maxLines: 160,
-  },
-  {
-    file: "components/json-table/use-json-table-shell-handlers.ts",
-    maxLines: 220,
-  },
-  {
-    file: "components/json-table/use-json-table-focus-return.ts",
-    maxLines: 220,
-  },
-  {
-    file: "components/json-table/json-table-cell-shell.ts",
-    maxLines: 220,
-  },
-]
-
 const forbiddenRuntimeRegexes = [
   /\bprops\.session\b/,
   /\bprops\.commit\b/,
@@ -510,7 +475,16 @@ describe("json table and DataCell architecture", () => {
       "tests/json-table-enum-accessibility-interactions.test.tsx"
     )
     expect(packageJson.scripts?.["test:json-table"]).toContain(
-      "tests/read-only-json-row-patcher.test.tsx"
+      "tests/scalar-read-only-json-row-patcher.test.tsx"
+    )
+    expect(packageJson.scripts?.["test:json-table"]).toContain(
+      "tests/json-table-profiler-architecture.test.ts"
+    )
+    expect(packageJson.scripts?.["test:json-table"]).toContain(
+      "tests/json-table-row-policy.test.tsx"
+    )
+    expect(packageJson.scripts?.["test:json-table"]).toContain(
+      "tests/json-table-viewport-model.test.tsx"
     )
     expect(packageJson.scripts?.["test:json-table"]).toContain(
       "tests/json-table-structured-cell.test.tsx"
@@ -529,6 +503,12 @@ describe("json table and DataCell architecture", () => {
     )
     expect(packageJson.scripts?.["verify:json-table"]).toContain(
       "pnpm verify:json-table-accessibility:fresh"
+    )
+    expect(packageJson.scripts?.["verify:json-table"]).toContain(
+      "JSON_TABLE_PROFILE_REPEAT=3"
+    )
+    expect(packageJson.scripts?.["verify:json-table"]).toContain(
+      "JSON_TABLE_PROFILE_SCENARIOS=open-enum,open-date,switch-dirty-cell,open-far-enum,open-far-date,commit-far-text"
     )
     expect(packageJson.scripts?.["verify:data-cell"]).toContain(
       "verify-data-cell-parity.mjs"
@@ -549,6 +529,14 @@ describe("json table and DataCell architecture", () => {
     )
     expect(architectureContent.includes("pnpm verify:json-table")).toBe(true)
     expect(architectureContent.includes("pnpm test:json-table")).toBe(true)
+    expect(architectureContent.includes("Maintainer local full proof")).toBe(
+      true
+    )
+    expect(architectureContent.includes("Agent/repo-policy proof")).toBe(true)
+    expect(architectureContent.includes("CI proof")).toBe(true)
+    expect(architectureContent.includes("PROFILE_SERVER_MODE=existing")).toBe(
+      true
+    )
     expect(architectureContent.includes("JSON_TABLE_PROFILE_WARMUP=1")).toBe(
       true
     )
@@ -558,9 +546,7 @@ describe("json table and DataCell architecture", () => {
     expect(architectureContent.includes("JSON_TABLE_PROFILE_SCENARIOS")).toBe(
       true
     )
-    expect(
-      architectureContent.includes("scenario filters are diagnostic-only")
-    ).toBe(true)
+    expect(architectureContent.includes("filtered assertion")).toBe(true)
     expect(
       architectureContent.includes("use p90 for latency/style budgets")
     ).toBe(true)
@@ -627,12 +613,16 @@ describe("json table and DataCell architecture", () => {
 
     for (const requiredDocument of [
       "## Current Documents",
+      "design/data-cell-json-table-literal-platonic-gap-blueprint.md",
       "design/data-cell-json-table-platonic-issues-blueprint.md",
+      "design/data-cell-json-table-current-platonic-gap-blueprint.md",
       "design/data-cell-json-table-style-invalidation-findings.md",
       "components/json-table/json-table-performance-budget.json",
       "scripts/profile-json-table-primitive-interactions.mjs",
+      "scripts/json-table-profiler/*",
       "scripts/verify-json-table-performance-budget.mjs",
       "scripts/verify-json-table-performance-budget-fresh.mjs",
+      "scripts/verify-json-table-accessibility.mjs",
       "Older JSON-table blueprints are historical",
     ]) {
       expect(
@@ -2242,6 +2232,9 @@ describe("json table and DataCell architecture", () => {
       "components/json-table/use-json-table-rendered-column-window.ts"
     const columnWindowFile =
       "components/json-table/json-table-rendered-column-window.ts"
+    const rowPolicyHookFile = "components/json-table/use-json-table-row-policy.ts"
+    const viewportHookFile =
+      "components/json-table/use-json-table-viewport-model.ts"
     const tableContent = readFileSync(join(repoRoot, tableFile), "utf8")
     const rowContent = readFileSync(join(repoRoot, rowFile), "utf8")
     const editSessionContent = readFileSync(
@@ -2259,6 +2252,14 @@ describe("json table and DataCell architecture", () => {
     )
     const columnWindowContent = readFileSync(
       join(repoRoot, columnWindowFile),
+      "utf8"
+    )
+    const rowPolicyHookContent = readFileSync(
+      join(repoRoot, rowPolicyHookFile),
+      "utf8"
+    )
+    const viewportHookContent = readFileSync(
+      join(repoRoot, viewportHookFile),
       "utf8"
     )
 
@@ -2286,7 +2287,26 @@ describe("json table and DataCell architecture", () => {
     expect(
       columnWindowContent.includes("jsonTableVirtualRenderedColumnWindow")
     ).toBe(true)
-    expect(tableContent.includes("useJsonTableRenderedColumnWindow")).toBe(true)
+    expect(tableContent.includes("useJsonTableRowPolicy")).toBe(true)
+    expect(tableContent.includes("useJsonTableViewportModel")).toBe(true)
+    expect(tableContent.includes("useJsonTableRenderedColumnWindow")).toBe(
+      false
+    )
+    expect(tableContent.includes("useScalarReadOnlyJsonRowPatcher")).toBe(
+      false
+    )
+    expect(tableContent.includes("useFixedGridVirtualization")).toBe(false)
+    expect(
+      rowPolicyHookContent.includes("useScalarReadOnlyJsonRowPatcher")
+    ).toBe(
+      true
+    )
+    expect(viewportHookContent.includes("useFixedGridVirtualization")).toBe(
+      true
+    )
+    expect(
+      viewportHookContent.includes("useJsonTableRenderedColumnWindow")
+    ).toBe(true)
     expect(
       columnWindowHookContent.includes("jsonTableFullRenderedColumnWindow")
     ).toBe(true)
@@ -2304,14 +2324,16 @@ describe("json table and DataCell architecture", () => {
       false
     )
     expect(tableContent.includes("schemaVisibleColumns")).toBe(true)
-    expect(tableContent.includes("renderedBodyColumnItems")).toBe(true)
-    expect(tableContent.includes("leftPadWidthPx")).toBe(true)
-    expect(tableContent.includes("rightPadWidthPx")).toBe(true)
-    expect(tableContent.includes("columnItems: renderedBodyColumnItems")).toBe(
+    expect(viewportHookContent.includes("renderedBodyColumnItems")).toBe(true)
+    expect(viewportHookContent.includes("leftPadWidthPx")).toBe(true)
+    expect(viewportHookContent.includes("rightPadWidthPx")).toBe(true)
+    expect(
+      viewportHookContent.includes("columnItems: renderedBodyColumnItems")
+    ).toBe(
       true
     )
-    expect(tableContent.includes("leftPad: leftPadWidthPx")).toBe(true)
-    expect(tableContent.includes("rightPad: rightPadWidthPx")).toBe(true)
+    expect(viewportHookContent.includes("leftPad: leftPadWidthPx")).toBe(true)
+    expect(viewportHookContent.includes("rightPad: rightPadWidthPx")).toBe(true)
     for (const ambiguousColumnWindowName of [
       "const { columnItems",
       " leftPad,",
@@ -2322,6 +2344,8 @@ describe("json table and DataCell architecture", () => {
         `${tableFile} contains ambiguous virtualizer boundary name ${ambiguousColumnWindowName}`
       ).toBe(false)
     }
+    expect(rowPolicyHookContent.includes("isJsonEditable")).toBe(true)
+    expect(rowPolicyHookContent.includes("rowScrollStrategy")).toBe(true)
     expect(columnWindowHookContent.includes("isJsonEditable")).toBe(true)
     expect(columnWindowHookContent.includes("renderedBodyColumnItems")).toBe(
       true
@@ -2367,8 +2391,9 @@ describe("json table and DataCell architecture", () => {
 
   it("keeps read-only row patching policy explicit and diagnosed", () => {
     const architectureFile = "components/json-table/ARCHITECTURE.md"
-    const patcherFile = "components/json-table/read-only-json-row-patcher.ts"
-    const patcherTestFile = "tests/read-only-json-row-patcher.test.tsx"
+    const patcherFile =
+      "components/json-table/scalar-read-only-json-row-patcher.ts"
+    const patcherTestFile = "tests/scalar-read-only-json-row-patcher.test.tsx"
     const architectureContent = readFileSync(
       join(repoRoot, architectureFile),
       "utf8"
@@ -2382,9 +2407,10 @@ describe("json table and DataCell architecture", () => {
     for (const documentedPolicy of [
       "### Editable And Read-Only Row Policies",
       "Editable tables use the React row policy",
-      "Read-only tables use the DOM row patch policy",
+      "Read-only scalar rows use the DOM row patch policy",
       "active controls and local edit state",
-      "`read-only-row-patcher` profiler mark",
+      "`scalar-read-only-row-patcher` profiler mark",
+      "fallback reason or the handled `rowsPatched` count",
     ]) {
       expect(
         architectureContent.includes(documentedPolicy),
@@ -2393,11 +2419,11 @@ describe("json table and DataCell architecture", () => {
     }
 
     for (const diagnosticToken of [
-      "ReadOnlyJsonRowPatchDiagnostic",
+      "ScalarReadOnlyJsonRowPatchDiagnostic",
       "rowsPatched",
       "shape-mismatch",
       "unsupported-viewport",
-      'markJsonTableProfile("read-only-row-patcher"',
+      'markJsonTableProfile("scalar-read-only-row-patcher"',
     ]) {
       expect(
         patcherContent.includes(diagnosticToken),
@@ -2416,6 +2442,43 @@ describe("json table and DataCell architecture", () => {
         `${patcherTestFile} misses row patch diagnostic coverage ${diagnosticTestToken}`
       ).toBe(true)
     }
+
+    const profilerFile = "scripts/profile-json-table-primitive-interactions.mjs"
+    const verifierFile = "scripts/verify-json-table-performance-budget.mjs"
+    const budgetFile = "components/json-table/json-table-performance-budget.json"
+    const profilerContent = readFileSync(join(repoRoot, profilerFile), "utf8")
+    const verifierContent = readFileSync(join(repoRoot, verifierFile), "utf8")
+    const budgetContent = readFileSync(join(repoRoot, budgetFile), "utf8")
+
+    for (const requiredToken of [
+      "read-only-scroll-jump",
+      "loadReadOnlyProfile",
+      "waitForReadOnlyProfileSurface",
+      "readOnlyRowPatcher",
+    ]) {
+      expect(
+        profilerContent.includes(requiredToken),
+        `${profilerFile} misses read-only profiler token ${requiredToken}`
+      ).toBe(true)
+    }
+
+    for (const requiredToken of [
+      "minReadOnlyRowPatchHandledCount",
+      "maxReadOnlyRowPatchFallbackCount",
+      "minReadOnlyRowPatchFallbackCount",
+      "minReadOnlyRowsPatched",
+    ]) {
+      expect(
+        verifierContent.includes(requiredToken),
+        `${verifierFile} misses read-only verifier token ${requiredToken}`
+      ).toBe(true)
+      expect(
+        budgetContent.includes(requiredToken),
+        `${budgetFile} misses read-only budget token ${requiredToken}`
+      ).toBe(true)
+    }
+
+    expect(verifierContent.includes("rowPatch=handled")).toBe(true)
   })
 
   it("keeps JsonTableCellProps grouped by ownership", () => {
@@ -2545,7 +2608,13 @@ describe("json table and DataCell architecture", () => {
   it("keeps fresh performance verification self-diagnosing", () => {
     const verifierFile =
       "scripts/verify-json-table-performance-budget-fresh.mjs"
+    const accessibilityVerifierFile =
+      "scripts/verify-json-table-accessibility.mjs"
     const content = readFileSync(join(repoRoot, verifierFile), "utf8")
+    const accessibilityContent = readFileSync(
+      join(repoRoot, accessibilityVerifierFile),
+      "utf8"
+    )
 
     for (const requiredToken of [
       "PROFILE_SERVER_MODE",
@@ -2564,6 +2633,25 @@ describe("json table and DataCell architecture", () => {
     }
 
     expect(content.includes("Start it with: pnpm dev")).toBe(false)
+
+    for (const requiredToken of [
+      "profileReachabilityError",
+      "listeningProcessSummary",
+      "Listener:",
+      "Response body preview",
+      "Server mode:",
+      "kind: \"unhealthy\"",
+      "\"unreachable\"",
+    ]) {
+      expect(
+        accessibilityContent.includes(requiredToken),
+        `${accessibilityVerifierFile} keeps fresh setup diagnostic ${requiredToken}`
+      ).toBe(true)
+    }
+
+    expect(accessibilityContent.includes("Start it with: pnpm dev")).toBe(
+      false
+    )
   })
 
   it("keeps browser accessibility verification checking virtualized column behavior", () => {
@@ -2680,125 +2768,6 @@ describe("json table and DataCell architecture", () => {
     }
   })
 
-  it("keeps primitive interaction profiling repeatable", () => {
-    const profilerFile = "scripts/profile-json-table-primitive-interactions.mjs"
-    const content = readFileSync(join(repoRoot, profilerFile), "utf8")
-
-    for (const requiredToken of [
-      "JSON_TABLE_PROFILE_REPEAT",
-      "JSON_TABLE_PROFILE_WARMUP",
-      "JSON_TABLE_PROFILE_TRACE",
-      "JSON_TABLE_PROFILE_TARGETS",
-      "JSON_TABLE_PROFILE_SCENARIOS",
-      '"--repeat"',
-      '"--warmup"',
-      '"--trace"',
-      '"--targets"',
-      '"--scenarios"',
-      "buildRepeatedProfileSummary",
-      "repeatedScenarios",
-      "targetFilter",
-      "scenarioFilter",
-      "assertSelectedScenarioNamesMatched",
-      "diagnostic-only",
-      "warmupCount",
-      "traceMode",
-      "traceCategories",
-      "traceStyleMs",
-      "median",
-      "p90",
-      "worst",
-    ]) {
-      expect(
-        content.includes(requiredToken),
-        `${profilerFile} keeps ${requiredToken}`
-      ).toBe(true)
-    }
-  })
-
-  it("keeps primitive interaction profiling surface-attributed", () => {
-    const profilerFile = "scripts/profile-json-table-primitive-interactions.mjs"
-    const verifierFile = "scripts/verify-json-table-performance-budget.mjs"
-    const profilerContent = readFileSync(join(repoRoot, profilerFile), "utf8")
-    const verifierContent = readFileSync(join(repoRoot, verifierFile), "utf8")
-
-    for (const requiredToken of [
-      "mountedSurfaceSnapshot",
-      "mountedSurfaceDelta",
-      "mountedSurface",
-      "headerCells",
-      "editableCells",
-      "popupNodes",
-      "styleAttributionHint",
-      "Tracing.start",
-      "Tracing.dataCollected",
-      "traceEventSummary",
-    ]) {
-      expect(
-        profilerContent.includes(requiredToken),
-        `${profilerFile} keeps ${requiredToken}`
-      ).toBe(true)
-    }
-
-    for (const requiredToken of [
-      "mountedHeaderCells",
-      "mountedEditableCells",
-      "mountedPopupNodes",
-      "styleAttributionHint",
-      "surface=header",
-      "owner=",
-      "traceStyle=",
-      "traceLayout=",
-    ]) {
-      expect(
-        verifierContent.includes(requiredToken),
-        `${verifierFile} keeps ${requiredToken}`
-      ).toBe(true)
-    }
-  })
-
-  it("keeps primitive interaction profiling date commits stable", () => {
-    const profilerFile = "scripts/profile-json-table-primitive-interactions.mjs"
-    const content = readFileSync(join(repoRoot, profilerFile), "utf8")
-
-    for (const requiredToken of [
-      "calendarCommitDatePoint",
-      "button[data-day]",
-      "data-selected-single",
-      "enabledVisibleButtons",
-      "No date commit button found:",
-    ]) {
-      expect(
-        content.includes(requiredToken),
-        `${profilerFile} keeps ${requiredToken}`
-      ).toBe(true)
-    }
-
-    expect(content.includes('className.includes("outside")')).toBe(false)
-  })
-
-  it("keeps primitive interaction profiling lifecycle stable", () => {
-    const profilerFile = "scripts/profile-json-table-primitive-interactions.mjs"
-    const content = readFileSync(join(repoRoot, profilerFile), "utf8")
-
-    for (const requiredToken of [
-      "activateEditableProfile",
-      "profilePageState",
-      "recoverBlankEditableProfile",
-      "closeChromeTarget",
-      "closeProfileTargets",
-      "profileSurfaceTimeoutMs",
-      "editableCellTimeoutMs",
-      "/json/close/",
-      "Editable JSON table did not mount:",
-    ]) {
-      expect(
-        content.includes(requiredToken),
-        `${profilerFile} keeps ${requiredToken}`
-      ).toBe(true)
-    }
-  })
-
   it("keeps the generated DataCell registry artifact complete and clean", () => {
     const artifactFile = "public/r/data-cell.json"
     const content = readFileSync(join(repoRoot, artifactFile), "utf8")
@@ -2817,13 +2786,119 @@ describe("json table and DataCell architecture", () => {
     }
   })
 
-  it("keeps json table cell modules below gravity-well size", () => {
-    for (const { file, maxLines } of jsonTableLineCountLimits) {
+  it("keeps json table cell modules split by responsibility", () => {
+    const moduleContracts = [
+      {
+        file: "components/json-table/editable-json-table-cell.tsx",
+        required: [
+          "useJsonTableEditableCellModel",
+          "EditableJsonTableCellContent",
+        ],
+        forbidden: [
+          "useJsonTablePrimitiveCommitController",
+          "useJsonTableStructuredCellController",
+          "editableJsonTableCellShellProps",
+          "useJsonTableShellHandlers",
+          "useJsonTableFocusReturn",
+        ],
+      },
+      {
+        file: "components/json-table/use-json-table-editable-cell-model.ts",
+        required: [
+          "disabledJsonTableCellShellProps",
+          "editableJsonTableCellShellProps",
+          "useJsonTablePrimitiveControl",
+          "structuredActiveProps",
+        ],
+        forbidden: [
+          "useScalarReadOnlyJsonRowPatcher",
+          "useFixedGridVirtualization",
+          "setValueAtMaterializedPath",
+        ],
+      },
+      {
+        file: "components/json-table/use-json-table-cell-field.ts",
+        required: [
+          "useJsonTableCellField",
+          "getFieldMetadata",
+          "materializedFieldPath",
+        ],
+        forbidden: [
+          "onCellCommit",
+          "setPrimitiveActiveCell",
+          "startStructuredEditSession",
+        ],
+      },
+      {
+        file: "components/json-table/use-json-table-primitive-control.ts",
+        required: [
+          "useJsonTablePrimitiveCommitController",
+          "primitiveEditStore.commitValue",
+          'visibleThrough: "primitivePendingValue"',
+        ],
+        forbidden: [
+          "startStructuredEditSession",
+          "setStructuredEditSessionOverlayOpen",
+          "setValueAtMaterializedPath",
+        ],
+      },
+      {
+        file: "components/json-table/use-json-table-structured-cell-controller.ts",
+        required: [
+          "useJsonTableStructuredCellController",
+          "structuredPendingValue",
+          'visibleThrough: "projectedDocumentValue"',
+        ],
+        forbidden: [
+          "JsonTablePrimitiveEditStore",
+          "primitiveEditStore",
+          "setValueAtMaterializedPath",
+        ],
+      },
+      {
+        file: "components/json-table/use-json-table-shell-handlers.ts",
+        required: [
+          "useJsonTableShellHandlers",
+          "onPointerDown",
+          "onKeyDown",
+        ],
+        forbidden: ["DataCell", "onCellCommit", "setValueAtMaterializedPath"],
+      },
+      {
+        file: "components/json-table/use-json-table-focus-return.ts",
+        required: [
+          "useJsonTableFocusReturn",
+          "jsonTableFocusReturnTarget",
+          "preventScroll: true",
+        ],
+        forbidden: ["onCellCommit", "DataCell", "setValueAtMaterializedPath"],
+      },
+      {
+        file: "components/json-table/json-table-cell-shell.ts",
+        required: [
+          "editableJsonTableCellShellProps",
+          "disabledJsonTableCellShellProps",
+          "interactiveCellOverlayClass",
+        ],
+        forbidden: ["React.use", "DataCell", "onCellCommit"],
+      },
+    ]
+
+    for (const { file, required, forbidden } of moduleContracts) {
       const content = readFileSync(join(repoRoot, file), "utf8")
 
-      expect(lineCount(content), `${file} line count`).toBeLessThanOrEqual(
-        maxLines
-      )
+      for (const requiredToken of required) {
+        expect(
+          content.includes(requiredToken),
+          `${file} owns ${requiredToken}`
+        ).toBe(true)
+      }
+      for (const forbiddenToken of forbidden) {
+        expect(
+          content.includes(forbiddenToken),
+          `${file} should not own ${forbiddenToken}`
+        ).toBe(false)
+      }
     }
   })
 })

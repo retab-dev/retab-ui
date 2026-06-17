@@ -64,7 +64,11 @@ export function PptxResourceContent(props: PptxResourceContentProps) {
     <ViewerErrorBoundary
       className={props.className}
       bare={props.bare}
-      download={props.download === false ? null : resource.originalDownload}
+      download={
+        props.controls === false || props.download === false
+          ? null
+          : resource.originalDownload
+      }
       format="pptx"
       resetKey={getPptxResetKey({
         resourceKey: resource.keys.resource,

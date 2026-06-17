@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   useViewerSidebar,
   ViewerBody,
+  ViewerFrame,
   ViewerHeader,
   ViewerRoot,
   ViewerSidebar,
@@ -142,21 +143,9 @@ describe("viewer primitives", () => {
     }
   })
 
-  it("uses framed chrome by default and removes all frame styling in bare mode", () => {
-    const { rerender } = render(
+  it("keeps ViewerRoot unframed and exposes ViewerFrame for visible chrome", () => {
+    render(
       <ViewerRoot data-testid="root">
-        <ViewerBody>
-          <ViewerSurface>Surface</ViewerSurface>
-        </ViewerBody>
-      </ViewerRoot>
-    )
-
-    expect(screen.getByTestId("root").className).toContain("rounded-xl")
-    expect(screen.getByTestId("root").className).toContain("border")
-    expect(screen.getByTestId("root").className).toContain("bg-muted/30")
-
-    rerender(
-      <ViewerRoot bare data-testid="root">
         <ViewerBody>
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
@@ -166,6 +155,23 @@ describe("viewer primitives", () => {
     expect(screen.getByTestId("root").className).not.toContain("rounded-xl")
     expect(screen.getByTestId("root").className).not.toContain("border")
     expect(screen.getByTestId("root").className).not.toContain("bg-muted")
+
+    cleanup()
+
+    render(
+      <ViewerFrame data-testid="frame">
+        <ViewerRoot data-testid="root">
+          <ViewerBody>
+            <ViewerSurface>Surface</ViewerSurface>
+          </ViewerBody>
+        </ViewerRoot>
+      </ViewerFrame>
+    )
+
+    expect(screen.getByTestId("frame").className).toContain("rounded-xl")
+    expect(screen.getByTestId("frame").className).toContain("border")
+    expect(screen.getByTestId("frame").className).toContain("bg-background")
+    expect(screen.getByTestId("root").className).not.toContain("rounded-xl")
   })
 
   it("does not bake domain semantics into the primitive sidebar or surface", () => {

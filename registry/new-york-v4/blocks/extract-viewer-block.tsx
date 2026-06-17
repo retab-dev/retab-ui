@@ -95,14 +95,16 @@ export function ExtractViewerBlock() {
 }
 
 function ExtractViewerContent() {
-  const link = useSegmentedSourceFieldLink({ initialPath: FIELDS[0]?.key })
+  const link = useSegmentedSourceFieldLink({
+    initialSourcePath: FIELDS[0]?.key,
+  })
   const setPdfViewerHandle = useSegmentedPdfViewerHandle()
   const renderPageOverlay = useSegmentedPdfSourceOverlay(link)
   const { documentHandlers } = useSegmentedDocumentViewport()
   const form = useForm<Record<string, unknown>>({ defaultValues })
 
   return (
-    <ViewerRoot bare defaultOpen className="h-full min-h-[680px] bg-background">
+    <ViewerRoot defaultOpen className="h-full min-h-[680px] bg-background">
       <ViewerHeader className="flex min-h-10 items-center gap-2 px-2">
         <ViewerSidebarTrigger />
         <h2 className="min-w-0 truncate text-sm font-medium">Extracted data</h2>
@@ -112,7 +114,7 @@ function ExtractViewerContent() {
       </ViewerHeader>
       <ViewerBody>
         <ViewerSurface className="relative">
-          <FileViewer source={PDF_SOURCE} bare className="h-full">
+          <FileViewer source={PDF_SOURCE} className="h-full">
             <PdfViewerProvider>
               <FileViewerBody>
                 <FileViewerSurface>
@@ -130,7 +132,10 @@ function ExtractViewerContent() {
               </FileViewerBody>
             </PdfViewerProvider>
           </FileViewer>
-          <SourceIndicator path={link.activePath} found={!!link.activeAnchor} />
+          <SourceIndicator
+            path={link.activeSourcePath}
+            found={!!link.activeAnchor}
+          />
         </ViewerSurface>
         <ViewerSidebar
           aria-label="Extracted fields"
@@ -140,7 +145,7 @@ function ExtractViewerContent() {
         >
           <ScrollArea className="min-h-0 flex-1">
             <div className="p-4">
-              <JsonForm form={form} schema={schema} anchorLink={link} />
+              <JsonForm form={form} schema={schema} sourceLink={link} />
             </div>
           </ScrollArea>
         </ViewerSidebar>

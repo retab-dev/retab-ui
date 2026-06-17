@@ -1,0 +1,135 @@
+---
+title: Sidebar List
+description: Providerless grouped-row primitives for embedded domain sidebars and File Viewer rail content.
+component: true
+---
+
+`SidebarList*` primitives provide sidebar row grammar without
+`SidebarProvider`. Use them when a component needs grouped rows, active states,
+disabled states, and sidebar tokens, but does not own app navigation,
+persistence, mobile sheet projection, or global shortcuts.
+
+`SegmentSidebar` and `AttachmentSidebar` use this layer internally.
+
+## Installation
+
+```bash
+npx shadcn@latest add @retab/sidebar-list
+```
+
+## Example
+
+This example shows the primitive row grammar directly: root, header, content,
+groups, labels, menu items, active rows, disabled rows, and separators.
+
+<ComponentPreview name="sidebar-list-demo" />
+
+## Usage
+
+```tsx
+import {
+  SidebarListButton,
+  SidebarListContent,
+  SidebarListGroup,
+  SidebarListGroupContent,
+  SidebarListGroupLabel,
+  SidebarListHeader,
+  SidebarListMenu,
+  SidebarListMenuItem,
+  SidebarListRoot,
+} from "@/components/ui/sidebar-list"
+
+export function Example() {
+  return (
+    <SidebarListRoot width="18rem">
+      <SidebarListHeader>Attachments</SidebarListHeader>
+      <SidebarListContent>
+        <SidebarListGroup>
+          <SidebarListGroupLabel>Files</SidebarListGroupLabel>
+          <SidebarListGroupContent>
+            <SidebarListMenu>
+              <SidebarListMenuItem>
+                <SidebarListButton isActive>contract.pdf</SidebarListButton>
+              </SidebarListMenuItem>
+            </SidebarListMenu>
+          </SidebarListGroupContent>
+        </SidebarListGroup>
+      </SidebarListContent>
+    </SidebarListRoot>
+  )
+}
+```
+
+Use `SidebarList*` inside `FileViewerSidebar` only as content grammar. The
+enclosing `FileViewerSidebar` still owns placement, width, collapse behavior,
+and the accessible rail label.
+
+```tsx
+<FileViewerSidebar aria-label="Document workspace" width="20rem">
+  <SidebarListRoot width="20rem">
+    <SidebarListHeader>Workspace</SidebarListHeader>
+    <SidebarListContent>
+      <SidebarListGroup>
+        <SidebarListGroupLabel>Sources</SidebarListGroupLabel>
+        <SidebarListGroupContent>
+          <SidebarListMenu>
+            {items.map((item) => (
+              <SidebarListMenuItem key={item.id}>
+                <SidebarListButton
+                  isActive={activeId === item.id}
+                  onClick={() => setActiveId(item.id)}
+                >
+                  {item.label}
+                </SidebarListButton>
+              </SidebarListMenuItem>
+            ))}
+          </SidebarListMenu>
+        </SidebarListGroupContent>
+      </SidebarListGroup>
+    </SidebarListContent>
+  </SidebarListRoot>
+</FileViewerSidebar>
+```
+
+## Button Rendering
+
+`SidebarListButton` renders a `button` by default and sets `type="button"` for
+native button output. Use `asChild` or `render` when the row should be another
+element:
+
+```tsx
+<SidebarListButton asChild isActive>
+  <a href="/docs/components/file-viewer">File viewer</a>
+</SidebarListButton>
+```
+
+## Do Not Use For
+
+- app navigation;
+- mobile sidebar sheets;
+- global sidebar shortcuts;
+- PDF thumbnail virtualization;
+- file-viewer spatial placement.
+
+## API Reference
+
+| Component                 | Base props                           | Notes                                          |
+| ------------------------- | ------------------------------------ | ---------------------------------------------- |
+| `SidebarListRoot`         | `React.ComponentProps<"div">`        | Accepts `width?: string`.                      |
+| `SidebarListHeader`       | `React.ComponentProps<"div">`        | Header area above scrollable content.          |
+| `SidebarListContent`      | `React.ComponentProps<"div">`        | Scrollable grouped-row area.                   |
+| `SidebarListGroup`        | `React.ComponentProps<"div">`        | One logical section.                           |
+| `SidebarListGroupLabel`   | `React.ComponentProps<"div">`        | Section label row.                             |
+| `SidebarListGroupContent` | `React.ComponentProps<"div">`        | Wrapper around one group's rows.               |
+| `SidebarListMenu`         | `React.ComponentProps<"ul">`         | List container.                                |
+| `SidebarListMenuItem`     | `React.ComponentProps<"li">`         | List item wrapper.                             |
+| `SidebarListButton`       | `useRender.ComponentProps<"button">` | Adds `isActive`, `variant`, `size`, `asChild`. |
+| `SidebarListSeparator`    | `Separator` props                    | Separator aligned to sidebar inset.            |
+
+`SidebarListButton` supports the sidebar row variants from
+`sidebarRowButtonVariants`: `variant="default" | "outline"` and
+`size="default" | "sm" | "lg"`.
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/sidebar-list.tsx" />

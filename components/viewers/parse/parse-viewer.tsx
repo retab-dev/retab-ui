@@ -75,7 +75,7 @@ export function ParseViewer({
       isProcessing={isProcessing}
       onVisiblePageChange={onVisiblePageChange}
     >
-      <ViewerRoot bare className="h-full flex-1 bg-background">
+      <ViewerRoot className="h-full flex-1 bg-background">
         <ParseViewerHeader />
         <ViewerBody>
           <ViewerSurface>

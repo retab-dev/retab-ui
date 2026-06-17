@@ -3,7 +3,6 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
-import { type ViewerResource } from "@/lib/viewer-resource"
 import {
   ViewerBody,
   ViewerHeader,
@@ -17,41 +16,49 @@ import {
   type ViewerSurfaceProps,
 } from "@/components/ui/viewer"
 
-import {
-  type FileCategory,
-  type FileDescriptor,
-  type FileViewerProps as FileViewerCoreProps,
-} from "./file-viewer-core"
-import {
-  FileViewerDocument,
-  InternalFileViewerDocument,
-} from "./file-viewer-document"
+import { type FileViewerProps as FileViewerCoreProps } from "./file-viewer-core"
+import { FileViewerDocument } from "./file-viewer-document"
 import {
   FileViewerProvider,
   useFileViewerContext,
+  useFileViewerControlsState,
 } from "./file-viewer-internal"
-import { ViewerControls, type ViewerControlsState } from "./viewer-controls"
+import { ViewerControls } from "./viewer-controls"
 
-export { type FileCategory } from "./file-viewer-core"
+export {
+  detectCategory,
+  type FileCategory,
+  type ViewerSource,
+} from "./file-viewer-core"
 export {
   FileViewerDocument,
   type FileViewerDocumentProps,
 } from "./file-viewer-document"
 export { useFileViewerResource } from "./file-viewer-internal"
 
-export type FileViewerProps = FileViewerCoreProps &
-  Pick<
-    ViewerRootProps,
-    | "defaultOpen"
-    | "inlineBreakpoint"
-    | "mode"
-    | "onOpenChange"
-    | "open"
-    | "sidebarCollapsible"
-    | "sidebarSide"
-  > & {
+type FileViewerRootOptions = Pick<
+  ViewerRootProps,
+  | "defaultOpen"
+  | "inlineBreakpoint"
+  | "mode"
+  | "onOpenChange"
+  | "open"
+  | "sidebarCollapsible"
+  | "sidebarSide"
+>
+
+export type FileViewerRootProps = FileViewerCoreProps &
+  FileViewerRootOptions & {
+    bare?: false
     children?: React.ReactNode
   }
+
+export type FileViewerStandaloneProps = FileViewerCoreProps & {
+  bare: true
+  children?: never
+}
+
+export type FileViewerProps = FileViewerRootProps | FileViewerStandaloneProps
 
 export type FileViewerHeaderProps = React.ComponentProps<typeof ViewerHeader>
 
@@ -61,40 +68,19 @@ export type FileViewerMetaProps = React.ComponentProps<"span">
 
 export type FileViewerControlsProps = Omit<
   React.ComponentProps<typeof ViewerControls>,
-  "downloads" | "position" | "rotate" | "subtitle" | "title" | "zoom"
+  | "downloads"
+  | "loading"
+  | "position"
+  | "rotate"
+  | "subtitle"
+  | "title"
+  | "zoom"
 >
 
 export type FileViewerBodyProps = React.ComponentProps<typeof ViewerBody>
 export type FileViewerSidebarProps = ViewerSidebarProps
 export type FileViewerSurfaceProps = ViewerSurfaceProps
 export type FileViewerSidebarTriggerProps = ViewerSidebarTriggerProps
-
-type FileViewerState = {
-  descriptor: FileDescriptor
-  resource: ViewerResource
-  controlsState: ViewerControlsState | null
-  setControlsState: (state: ViewerControlsState | null) => void
-}
-
-type FileViewerHeaderState = FileViewerState
-
-function useFileViewer(): FileViewerState {
-  const { descriptor, resource, setControlsState, controlsState } =
-    useFileViewerContext()
-  return React.useMemo(
-    () => ({
-      descriptor,
-      resource,
-      setControlsState,
-      controlsState,
-    }),
-    [descriptor, resource, setControlsState, controlsState]
-  )
-}
-
-function useFileViewerHeader(): FileViewerHeaderState {
-  return useFileViewer()
-}
 
 export function FileViewerHeader({
   children,
@@ -122,7 +108,7 @@ export function FileViewerHeader({
 }
 
 export function FileViewerTitle({ className, ...props }: FileViewerTitleProps) {
-  const { descriptor } = useFileViewerHeader()
+  const { descriptor } = useFileViewerContext()
 
   return (
     <div
@@ -141,7 +127,7 @@ export function FileViewerTitle({ className, ...props }: FileViewerTitleProps) {
 }
 
 export function FileViewerMeta({ className, ...props }: FileViewerMetaProps) {
-  const { descriptor, resource } = useFileViewerHeader()
+  const { descriptor, resource } = useFileViewerContext()
   const meta = resource.mimeType || descriptor.mimeType || descriptor.category
 
   if (!meta) return null
@@ -165,15 +151,13 @@ export function FileViewerControls({
   extra,
   ...props
 }: FileViewerControlsProps) {
-  const { resource, controlsState } = useFileViewerHeader()
-  const registeredDownloads = controlsState?.downloads
-  const downloads =
-    registeredDownloads !== undefined
-      ? registeredDownloads
-      : [resource.originalDownload]
+  const { resource } = useFileViewerContext()
+  const controlsState = useFileViewerControlsState()
+  const downloads = controlsState?.downloads ?? [resource.originalDownload]
 
   return (
     <ViewerControls
+      {...props}
       data-slot="file-viewer-controls"
       className={cn(
         "ml-0 h-auto min-w-0 basis-full border-b-0 bg-transparent px-0 sm:ml-auto sm:basis-auto",
@@ -185,7 +169,6 @@ export function FileViewerControls({
       position={controlsState?.position ?? null}
       rotate={controlsState?.rotate ?? null}
       zoom={controlsState?.zoom ?? null}
-      {...props}
     />
   )
 }
@@ -226,48 +209,35 @@ export function FileViewerSidebarTrigger({
   )
 }
 
-export function FileViewer({
-  as,
-  bare = false,
-  children,
-  className,
-  defaultOpen,
-  inlineBreakpoint,
-  isolateStyles,
-  mode,
-  onOpenChange,
-  open,
-  sidebarCollapsible,
-  sidebarSide,
-  source,
-}: FileViewerProps) {
-  if (children != null) {
+export function FileViewer(props: FileViewerProps) {
+  if (props.bare) {
+    const { as, className, isolateStyles, source } = props
     return (
-      <FileViewerProvider as={as} isolateStyles={isolateStyles} source={source}>
-        <ViewerRoot
-          bare={bare}
-          className={cn("h-full", className)}
-          defaultOpen={defaultOpen}
-          inlineBreakpoint={inlineBreakpoint}
-          mode={mode}
-          onOpenChange={onOpenChange}
-          open={open}
-          sidebarCollapsible={sidebarCollapsible}
-          sidebarSide={sidebarSide}
-        >
-          {children}
-        </ViewerRoot>
+      <FileViewerProvider
+        as={as}
+        documentChrome="standalone"
+        isolateStyles={isolateStyles}
+        source={source}
+      >
+        <FileViewerDocument className={className} />
       </FileViewerProvider>
     )
   }
 
-  if (bare) {
-    return (
-      <FileViewerProvider as={as} isolateStyles={isolateStyles} source={source}>
-        <FileViewerDocument bare className={className} />
-      </FileViewerProvider>
-    )
-  }
+  const {
+    as,
+    children,
+    className,
+    defaultOpen,
+    inlineBreakpoint,
+    isolateStyles,
+    mode,
+    onOpenChange,
+    open,
+    sidebarCollapsible,
+    sidebarSide,
+    source,
+  } = props
 
   return (
     <FileViewerProvider as={as} isolateStyles={isolateStyles} source={source}>
@@ -286,12 +256,7 @@ export function FileViewer({
             <FileViewerHeader />
             <FileViewerBody>
               <FileViewerSurface>
-                <InternalFileViewerDocument
-                  bare
-                  className="h-full"
-                  leafControls={false}
-                  leafDownload={false}
-                />
+                <FileViewerDocument />
               </FileViewerSurface>
             </FileViewerBody>
           </>

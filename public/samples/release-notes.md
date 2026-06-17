@@ -76,7 +76,7 @@ Footnotes are styled and linked.[^virtualization]
     Only visible Markdown pages are mounted; the full source
     remains available for search, copy, and download.
 
-Read more in the [File Viewer docs](/docs/viewers/file-viewer).
+Read more in the [File Viewer docs](/docs/components/file-viewer).
 
 ## 3.9.0
 

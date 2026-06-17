@@ -82,7 +82,7 @@ function SourceDocumentRenderer({
 
   if (canPreviewEditViewerDocument(document)) {
     return (
-      <FileViewer source={source} bare className="h-full">
+      <FileViewer source={source} className="h-full">
         <PdfViewerProvider>
           <PdfViewerPages
             ref={setPdfViewerHandle}

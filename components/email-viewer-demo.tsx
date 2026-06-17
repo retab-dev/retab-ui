@@ -248,8 +248,8 @@ export function EmailViewerDemo() {
   const message = React.useMemo(() => createFakeEmailMessage(), [])
 
   return (
-    <div className="not-prose h-[720px] min-h-0">
-      <EmailViewer message={message} className="h-full" />
+    <div className="h-[720px] min-h-0">
+      <EmailViewer message={message} mode="inline" className="h-full" />
     </div>
   )
 }

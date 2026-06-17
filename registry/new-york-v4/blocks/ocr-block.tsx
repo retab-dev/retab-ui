@@ -2,40 +2,151 @@
 
 import * as React from "react"
 
+import { cn } from "@/lib/utils"
 import {
-  DocumentAiLayoutBlocks,
+  documentAiPageImages,
+  OcrLayoutBlocks,
+  type AzureDocument,
   type DocumentAiDocument,
+  type OcrSource,
+  type TextractDocument,
 } from "@/components/ui/layout-blocks"
 
+type ProviderId = OcrSource["provider"]
+type ProviderSample = {
+  output: unknown
+  pageImageOutput?: DocumentAiDocument
+}
+
 /**
- * OCR block — a scanned document image beside its OCR blocks, confidence, and
- * source polygons. Built from Google Document AI output.
+ * OCR block — a scanned document beside its detected text blocks, confidence,
+ * and source polygons. The same viewer renders output from any supported OCR
+ * provider; pick one to see its normalized layout.
  *
- * The Document AI sample is ~21 MB, so it is loaded on demand with a dynamic
- * import rather than bundled into the page's initial JavaScript.
+ * Samples are loaded on demand with dynamic imports (the Document AI sample is
+ * ~21 MB) so they stay off the page's initial JavaScript.
  */
+const PROVIDERS: {
+  id: ProviderId
+  label: string
+  load: () => Promise<ProviderSample>
+}[] = [
+  {
+    id: "google-document-ai",
+    label: "Google Document AI",
+    load: async () => {
+      const output = await import("@/sample/documentai-output.json")
+      return { output: output.default }
+    },
+  },
+  {
+    id: "aws-textract",
+    label: "AWS Textract",
+    load: async () => {
+      const [output, pageImageOutput] = await Promise.all([
+        import("@/sample/textract-output.json"),
+        import("@/sample/documentai-output.json"),
+      ])
+      return {
+        output: output.default,
+        pageImageOutput: pageImageOutput.default as DocumentAiDocument,
+      }
+    },
+  },
+  {
+    id: "azure-document-intelligence",
+    label: "Azure Document Intelligence",
+    load: async () => {
+      const [output, pageImageOutput] = await Promise.all([
+        import("@/sample/azure-output.json"),
+        import("@/sample/documentai-output.json"),
+      ])
+      return {
+        output: output.default,
+        pageImageOutput: pageImageOutput.default as DocumentAiDocument,
+      }
+    },
+  },
+]
+
 export function OcrBlock() {
-  const [output, setOutput] = React.useState<DocumentAiDocument | null>(null)
+  const [provider, setProvider] =
+    React.useState<ProviderId>("google-document-ai")
+  const [outputs, setOutputs] = React.useState<
+    Partial<Record<ProviderId, ProviderSample>>
+  >({})
 
   React.useEffect(() => {
+    if (outputs[provider]) return
     let active = true
-    void import("@/sample/documentai-output.json").then((module) => {
-      if (active) setOutput(module.default as DocumentAiDocument)
+    const entry = PROVIDERS.find((item) => item.id === provider)
+    void entry?.load().then((sample) => {
+      if (active) {
+        setOutputs((current) => ({ ...current, [provider]: sample }))
+      }
     })
     return () => {
       active = false
     }
-  }, [])
+  }, [outputs, provider])
+
+  const sample = outputs[provider]
+  const source = React.useMemo<OcrSource | null>(
+    () => (sample ? toOcrSource(provider, sample) : null),
+    [sample, provider]
+  )
 
   return (
-    <div className="h-full min-h-[680px] bg-background">
-      {output ? (
-        <DocumentAiLayoutBlocks heightClassName="h-full" output={output} />
-      ) : (
-        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-          Loading OCR sample…
-        </div>
-      )}
+    <div className="flex h-full min-h-[680px] flex-col bg-background">
+      <div className="flex flex-wrap items-center gap-1.5 border-b p-2">
+        {PROVIDERS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setProvider(item.id)}
+            className={cn(
+              "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+              provider === item.id
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      <div className="min-h-0 flex-1">
+        {source ? (
+          <OcrLayoutBlocks heightClassName="h-full" source={source} />
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+            Loading OCR sample…
+          </div>
+        )}
+      </div>
     </div>
   )
+}
+
+function toOcrSource(provider: ProviderId, sample: ProviderSample): OcrSource {
+  const pageImages = sample.pageImageOutput
+    ? documentAiPageImages(sample.pageImageOutput)
+    : undefined
+
+  switch (provider) {
+    case "aws-textract":
+      return { provider, output: sample.output as TextractDocument, pageImages }
+    case "azure-document-intelligence":
+      return {
+        provider,
+        output: sample.output as AzureDocument,
+        pageImages,
+      }
+    case "google-document-ai":
+    default:
+      return {
+        provider: "google-document-ai",
+        output: sample.output as DocumentAiDocument,
+      }
+  }
 }
