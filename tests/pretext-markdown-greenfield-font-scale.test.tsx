@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import { createPretextMarkdownGreenfieldDocument } from "@/registry/new-york-v4/ui/pretext-markdown-greenfield-document"
 import {
   PRETEXT_MARKDOWN_GREENFIELD_BASE_FONT_PX,
+  PRETEXT_MARKDOWN_GREENFIELD_BASE_SPACING_REM,
   PretextMarkdownGreenfieldChunkRenderer,
 } from "@/registry/new-york-v4/ui/pretext-markdown-greenfield-renderer"
 
@@ -40,6 +41,17 @@ describe("pretext markdown rendered font scaling", () => {
     // doubles the body size (and, via em units, everything else).
     expect(content?.style.fontSize).toBe(
       `${PRETEXT_MARKDOWN_GREENFIELD_BASE_FONT_PX * 2}px`
+    )
+  })
+
+  it("scales the spacing unit with zoom so vertical rhythm tracks the type", () => {
+    expect(renderFirstChunk(1)?.style.getPropertyValue("--spacing")).toBe(
+      `${(PRETEXT_MARKDOWN_GREENFIELD_BASE_SPACING_REM * 1).toFixed(5)}rem`
+    )
+    // Doubling the zoom doubles the spacing scale, so every margin/padding/gap
+    // that resolves to calc(var(--spacing) * n) grows in step with the body.
+    expect(renderFirstChunk(2)?.style.getPropertyValue("--spacing")).toBe(
+      `${(PRETEXT_MARKDOWN_GREENFIELD_BASE_SPACING_REM * 2).toFixed(5)}rem`
     )
   })
 

@@ -36,6 +36,9 @@ const PretextMarkdownContentReadyContext = React.createContext<
 // tables, footnotes) is authored in `em` relative to this, so scaling this one
 // value with the zoom `fontScale` resizes the whole document as one system.
 export const PRETEXT_MARKDOWN_GREENFIELD_BASE_FONT_PX = 15.5
+// Tailwind v4's default spacing unit (0.25rem). Scaling it with the zoom
+// fontScale keeps padding/margins proportional to the body text.
+export const PRETEXT_MARKDOWN_GREENFIELD_BASE_SPACING_REM = 0.25
 
 export function PretextMarkdownGreenfieldChunkRenderer({
   activeMatchOccurrence,
@@ -74,9 +77,16 @@ export function PretextMarkdownGreenfieldChunkRenderer({
         ref={ref}
         className="pretext-markdown-greenfield-content min-w-0 leading-relaxed text-foreground"
         data-slot="pretext-markdown-greenfield-content"
-        style={{
-          fontSize: `${PRETEXT_MARKDOWN_GREENFIELD_BASE_FONT_PX * fontScale}px`,
-        }}
+        // Scale both the font and the spacing scale with zoom so vertical
+        // rhythm tracks the type size. Tailwind v4 spacing utilities resolve to
+        // calc(var(--spacing) * n), so overriding --spacing here scales every
+        // margin/padding/gap inside the document at once.
+        style={
+          {
+            "--spacing": `${(PRETEXT_MARKDOWN_GREENFIELD_BASE_SPACING_REM * fontScale).toFixed(5)}rem`,
+            fontSize: `${PRETEXT_MARKDOWN_GREENFIELD_BASE_FONT_PX * fontScale}px`,
+          } as React.CSSProperties
+        }
       >
         {renderHastChildren(
           chunk.hastChildren,
