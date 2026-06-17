@@ -220,7 +220,7 @@ const markdownComponents = {
   caption: ({ node: _node, ...props }: any) => (
     <caption
       {...props}
-      className="caption-top px-3 py-2 text-left text-sm font-medium text-muted-foreground"
+      className="caption-top px-3 py-2 text-left text-[0.85em] font-medium text-muted-foreground"
     />
   ),
   del: ({ node: _node, ...props }: any) => (
@@ -578,7 +578,7 @@ const markdownComponents = {
       return (
         <pre
           {...props}
-          className="my-4 overflow-x-auto rounded-md border bg-muted/25 p-4 font-mono text-sm leading-6 whitespace-pre"
+          className="my-4 overflow-x-auto rounded-md border bg-muted/25 p-4 font-mono text-[0.9em] leading-[1.7] whitespace-pre"
           data-pretext-markdown-frontmatter-source=""
           role="region"
           tabIndex={0}
@@ -619,7 +619,7 @@ const markdownComponents = {
         aria-label={isFootnotes ? "Footnotes" : props["aria-label"]}
         className={[
           isFootnotes
-            ? "mt-10 border-t pt-5 text-sm text-muted-foreground"
+            ? "mt-10 border-t pt-5 text-[0.9em] text-muted-foreground"
             : "my-5",
           className,
         ]
@@ -925,7 +925,11 @@ function PretextMarkdownCodeBlock({
   return (
     <figure
       aria-label={`${title} code block`}
-      className="my-5 overflow-hidden rounded-md border bg-muted/25"
+      // text-[1em] keeps the code block on the document's scaling em cascade:
+      // a host stylesheet (e.g. the demo's rehype-pretty-code rule) may pin
+      // [data-rehype-pretty-code-figure] to a fixed font-size, which would stop
+      // the block from following the zoom control. A utility-layer size wins.
+      className="my-5 overflow-hidden rounded-md border bg-muted/25 text-[1em]"
       data-pretext-code-language={language}
       data-rehype-pretty-code-figure=""
       role="group"
@@ -974,7 +978,7 @@ function PretextMarkdownCodeBlock({
               : undefined
           }
           className={[
-            "block font-mono text-sm leading-5",
+            "block font-mono text-[0.9em] leading-[1.45]",
             metadata.showLineNumbers
               ? "[counter-reset:line] before:content-[counter(line)]"
               : "",

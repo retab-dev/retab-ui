@@ -42,4 +42,23 @@ describe("pretext markdown rendered font scaling", () => {
       `${PRETEXT_MARKDOWN_GREENFIELD_BASE_FONT_PX * 2}px`
     )
   })
+
+  it("keeps code blocks on the em cascade so they scale with the body", () => {
+    const parsed = createPretextMarkdownGreenfieldDocument(
+      "```ts\nexport const scaled = true\n```"
+    )
+    const { container } = render(
+      <PretextMarkdownGreenfieldChunkRenderer chunk={parsed.chunks[0]} />
+    )
+
+    // The figure must neutralize any host-stylesheet fixed font-size...
+    const figure = container.querySelector("figure")
+    expect(figure?.className).toContain("text-[1em]")
+
+    // ...and the code lines must be sized in em (rem-based text-sm would pin
+    // the block to the root and break zoom).
+    const code = container.querySelector("figure code")
+    expect(code?.className).toMatch(/text-\[[0-9.]+em\]/)
+    expect(code?.className).not.toMatch(/\btext-sm\b/)
+  })
 })
