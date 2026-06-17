@@ -67,7 +67,7 @@ export function useSourceLinkedTableCells({
   const pendingHoverPathRef = React.useRef<string | null>(null)
   const pendingHoverFrameRef = React.useRef<number | null>(null)
   const pendingScrollHoverFrameRef = React.useRef<number | null>(null)
-  const latestScrollHoverAtRef = React.useRef(0)
+  const latestScrollHoverAtRef = React.useRef(Number.NEGATIVE_INFINITY)
   const latestPointerPointRef = React.useRef<{ x: number; y: number } | null>(
     null
   )
@@ -228,7 +228,7 @@ export function useSourceLinkedTableCells({
   const handleScrollEnd = React.useCallback(() => {
     isScrollingRef.current = false
     cancelPendingScrollHover()
-    latestScrollHoverAtRef.current = 0
+    latestScrollHoverAtRef.current = Number.NEGATIVE_INFINITY
     restoreHoveredSourceAtPointer()
   }, [cancelPendingScrollHover, restoreHoveredSourceAtPointer])
 

@@ -1,7 +1,5 @@
 "use client"
 
-import * as React from "react"
-
 import {
   DataCell,
   parseDataCellNumberInput,
@@ -9,10 +7,10 @@ import {
   type DataCellValueMeta,
 } from "@/components/ui/data-cell"
 import { Input } from "@/components/ui/input"
-import { compactJsonFormDataCellClass } from "@/components/json-form/scalar/constants"
-import type {
-  ControlFieldApi,
-  ScalarControlDomProps,
+import {
+  compactJsonFormDataCellClass,
+  type ControlFieldApi,
+  type ScalarControlDomProps,
 } from "@/components/json-form/scalar/types"
 
 export function NumberControl({

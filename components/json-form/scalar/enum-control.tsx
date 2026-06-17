@@ -9,16 +9,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { Schema } from "@/components/json-form/schema-model"
-import { isRecordValue } from "@/components/json-form/schema-model"
+import { isRecordValue, type Schema } from "@/components/json-form/schema-model"
 import {
   compactJsonFormSelectDataCellClass,
-  NULL_SELECT_VALUE,
-} from "@/components/json-form/scalar/constants"
-import type {
-  ControlFieldApi,
-  ScalarControlDomProps,
+  type ControlFieldApi,
+  type ScalarControlDomProps,
 } from "@/components/json-form/scalar/types"
+
+export const NULL_SELECT_VALUE = "__json-form-null__"
 
 function enumOptionValue(index: number): string {
   return `enum:${index}`
@@ -45,7 +43,9 @@ export function enumValueEquals(a: unknown, b: unknown): boolean {
     }
     return a.every((item, index) => enumValueEquals(item, b[index]))
   }
-  if (!isRecordValue(a) || !isRecordValue(b)) return false
+  if (!isRecordValue(a) || !isRecordValue(b)) {
+    return false
+  }
 
   const aKeys = Object.keys(a)
   const bKeys = Object.keys(b)

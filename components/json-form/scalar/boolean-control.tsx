@@ -1,8 +1,5 @@
 "use client"
 
-import * as React from "react"
-
-import { Checkbox } from "@/components/json-form/form-primitives"
 import {
   Select,
   SelectContent,
@@ -10,28 +7,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { NULL_SELECT_VALUE } from "@/components/json-form/scalar/constants"
-import type {
-  ControlFieldApi,
-  ScalarControlDomProps,
+import { NULL_SELECT_VALUE } from "@/components/json-form/scalar/enum-control"
+import {
+  type ControlFieldApi,
+  type ScalarControlDomProps,
 } from "@/components/json-form/scalar/types"
-
-export function BooleanControl({
-  field,
-  label,
-}: {
-  field: ControlFieldApi
-  label: string
-}) {
-  return (
-    <Checkbox
-      checked={Boolean(field.value)}
-      aria-label={label}
-      onCheckedChange={(value) => field.onChange(value === true)}
-      onBlur={field.onBlur}
-    />
-  )
-}
 
 export function NullableBooleanControl({
   field,
