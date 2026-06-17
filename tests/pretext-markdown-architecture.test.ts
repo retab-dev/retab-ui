@@ -33,6 +33,7 @@ const repoRoot = process.cwd()
 const execFileAsync = promisify(execFile)
 const pretextMarkdownFiles = [
   "registry/new-york-v4/ui/pretext-markdown-viewer.tsx",
+  "registry/new-york-v4/ui/pretext-markdown-greenfield-code-highlight.tsx",
   "registry/new-york-v4/ui/pretext-markdown-greenfield-content.tsx",
   "registry/new-york-v4/ui/pretext-markdown-greenfield-diagram.tsx",
   "registry/new-york-v4/ui/pretext-markdown-greenfield-document.ts",

@@ -4330,6 +4330,11 @@
           "target": "@ui/pretext-markdown-greenfield-content.tsx"
         },
         {
+          "path": "registry/new-york-v4/ui/pretext-markdown-greenfield-code-highlight.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pretext-markdown-greenfield-code-highlight.tsx"
+        },
+        {
           "path": "registry/new-york-v4/ui/pretext-markdown-greenfield-diagram.tsx",
           "type": "registry:ui",
           "target": "@ui/pretext-markdown-greenfield-diagram.tsx"
