@@ -31,6 +31,34 @@ type Registry = {
 
 const repoRoot = process.cwd()
 const execFileAsync = promisify(execFile)
+
+// The 14 primitives migrated to stock shadcn. They are bare registry
+// dependencies that resolve to upstream shadcn files, so they no longer ship
+// their own files (and thus install targets) inside the Retab registry. An
+// import that resolves to one of these is satisfied by the bare dependency.
+const migratedShadcnPrimitives = new Set([
+  "button",
+  "dialog",
+  "sheet",
+  "dropdown-menu",
+  "popover",
+  "tooltip",
+  "select",
+  "tabs",
+  "accordion",
+  "collapsible",
+  "separator",
+  "card",
+  "badge",
+  "breadcrumb",
+])
+
+function migratedPrimitiveForSpecifier(specifier: string) {
+  const withoutQuery = specifier.split("?")[0]!
+  const basename = withoutQuery.split("/").pop() ?? ""
+  return migratedShadcnPrimitives.has(basename) ? basename : null
+}
+
 const markdownFiles = [
   "registry/new-york-v4/ui/markdown-viewer.tsx",
   "registry/new-york-v4/ui/markdown-greenfield-code-highlight.tsx",
@@ -604,6 +632,13 @@ describe("Markdown architecture", () => {
         packageNameForDependency
       )
     )
+    const installedBarePrimitives = new Set(
+      installedFiles.flatMap((file) =>
+        (itemsByName.get(file.itemName)?.registryDependencies ?? [])
+          .filter((name) => !name.startsWith("@retab/"))
+          .map(registryDependencyItemName)
+      )
+    )
     const missingImports: string[] = []
     const missingPackages: string[] = []
 
@@ -619,6 +654,13 @@ describe("Markdown architecture", () => {
           specifier,
         })
         if (resolved) continue
+        const migratedPrimitive = migratedPrimitiveForSpecifier(specifier)
+        if (
+          migratedPrimitive &&
+          installedBarePrimitives.has(migratedPrimitive)
+        ) {
+          continue
+        }
         missingImports.push(
           `${file.target} imports ${specifier}, but no installed registry file resolves it`
         )
@@ -633,6 +675,13 @@ describe("Markdown architecture", () => {
             specifier,
           })
           if (resolved) continue
+          const migratedPrimitive = migratedPrimitiveForSpecifier(specifier)
+          if (
+            migratedPrimitive &&
+            installedBarePrimitives.has(migratedPrimitive)
+          ) {
+            continue
+          }
           missingImports.push(
             `${file.target} imports ${specifier}, but no installed registry file resolves it`
           )
@@ -673,7 +722,7 @@ describe("Markdown architecture", () => {
       "components/ui/markdown-viewer.tsx"
     )
     expect(expectedRetabFiles).toContain("components/ui/text-viewer.tsx")
-    expect(expectedRetabFiles).toContain("lib/viewer-download.ts")
+    expect(expectedRetabFiles).toContain("lib/viewer-download-actions.ts")
 
     await withLocalRegistryServer(async (registryUrl) => {
       const projectDir = await createShadcnSmokeProject({ registryUrl })

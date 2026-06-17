@@ -4,9 +4,9 @@
   "title": "Segmented Document",
   "description": "Shared segmented-document model, provider, viewport controller, and anchor navigation for split, partition, source, OCR, and bbox viewers.",
   "registryDependencies": [
-    "segments",
-    "segment-interaction",
-    "use-segment-interaction"
+    "@retab/segments",
+    "@retab/segment-interaction",
+    "@retab/use-segment-interaction"
   ],
   "files": [
     {

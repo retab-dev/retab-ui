@@ -8,7 +8,7 @@ const imperativeHandleFiles = [
   "registry/new-york-v4/ui/csv-viewer.tsx",
   "registry/new-york-v4/ui/docx-viewer-content.tsx",
   "registry/new-york-v4/ui/image-viewer-hooks.ts",
-  "registry/new-york-v4/ui/markdown-document-viewer.tsx",
+  "registry/new-york-v4/ui/markdown-greenfield-content.tsx",
   "registry/new-york-v4/ui/pdf-viewer.tsx",
   "registry/new-york-v4/ui/text-viewer-chenglou-content.tsx",
   "registry/new-york-v4/ui/text-viewer-content.tsx",

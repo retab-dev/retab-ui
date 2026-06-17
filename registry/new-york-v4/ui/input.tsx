@@ -1,12 +1,11 @@
 "use client"
 
 import type * as React from "react"
-import { Input as InputPrimitive } from "@base-ui/react/input"
 
 import { cn } from "@/lib/utils"
 
 export type InputProps = Omit<
-  InputPrimitive.Props & React.RefAttributes<HTMLInputElement>,
+  React.ComponentProps<"input"> & React.RefAttributes<HTMLInputElement>,
   "size"
 > & {
   size?: "sm" | "default" | "lg" | number
@@ -18,7 +17,7 @@ export function Input({
   className,
   size = "default",
   unstyled = false,
-  nativeInput = false,
+  nativeInput: _nativeInput = false,
   style,
   ...props
 }: InputProps): React.ReactElement {
@@ -50,25 +49,13 @@ export function Input({
       data-size={size}
       data-slot="input-control"
     >
-      {nativeInput ? (
-        <input
-          className={inputClassName}
-          data-slot="input"
-          size={typeof size === "number" ? size : undefined}
-          style={typeof style === "function" ? undefined : style}
-          {...props}
-        />
-      ) : (
-        <InputPrimitive
-          className={inputClassName}
-          data-slot="input"
-          size={typeof size === "number" ? size : undefined}
-          style={style}
-          {...props}
-        />
-      )}
+      <input
+        className={inputClassName}
+        data-slot="input"
+        size={typeof size === "number" ? size : undefined}
+        style={typeof style === "function" ? undefined : style}
+        {...props}
+      />
     </span>
   )
 }
-
-export { InputPrimitive }

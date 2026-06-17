@@ -4,10 +4,10 @@
   "title": "Segment Sidebar",
   "description": "Selectable list of segments with page ranges and confidence bars.",
   "registryDependencies": [
-    "segments",
-    "segment-interaction",
-    "sidebar-list",
-    "utils"
+    "@retab/segments",
+    "@retab/segment-interaction",
+    "@retab/sidebar-list",
+    "@retab/utils"
   ],
   "files": [
     {

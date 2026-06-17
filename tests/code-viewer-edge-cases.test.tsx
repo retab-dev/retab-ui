@@ -85,6 +85,17 @@ function gutterWidth(
   return gutter?.style.width ?? null
 }
 
+function gutterRail(container: HTMLElement): HTMLElement | null {
+  return container.querySelector("[data-code-gutter-rail]")
+}
+
+function lineRow(
+  container: HTMLElement,
+  lineNumber: number
+): HTMLElement | null {
+  return container.querySelector(`[data-line-number="${lineNumber}"]`)
+}
+
 function frameClassName(container: HTMLElement): string {
   return container.querySelector('[data-slot="code-viewer"]')?.className ?? ""
 }
@@ -253,6 +264,20 @@ describe("gutter sizing", () => {
     const { container } = render(<CodeViewer source={textSource("")} />)
     expect(gutterWidth(container, 1)).toBe("calc(2ch + 1.25rem)")
   })
+
+  it("keeps the fixed gutter rail on the same monospace metrics as row gutters", () => {
+    const { container } = render(
+      <CodeViewer
+        source={textSource(Array.from({ length: 6001 }, () => "x").join("\n"))}
+        controls={false}
+      />
+    )
+
+    const rail = gutterRail(container)
+    expect(rail?.style.width).toBe(gutterWidth(container, 1))
+    expect(rail?.style.fontSize).toBe("12px")
+    expect(rail?.className).toContain("font-mono")
+  })
 })
 
 describe("highlight boundaries", () => {
@@ -264,15 +289,9 @@ describe("highlight boundaries", () => {
       />
     )
 
-    expect(
-      container.querySelector('[data-line-number="1"]')?.className
-    ).toContain("bg-primary/12")
-    expect(
-      container.querySelector('[data-line-number="2"]')?.className
-    ).toContain("bg-primary/12")
-    expect(
-      container.querySelector('[data-line-number="3"]')?.className
-    ).not.toContain("bg-primary/12")
+    expect(lineRow(container, 1)?.style.backgroundColor).toContain("color-mix")
+    expect(lineRow(container, 2)?.style.backgroundColor).toContain("color-mix")
+    expect(lineRow(container, 3)?.style.backgroundColor).toBe("")
   })
 
   it("highlights the final line when the range ends exactly at the line count", () => {
@@ -283,12 +302,8 @@ describe("highlight boundaries", () => {
       />
     )
 
-    expect(
-      container.querySelector('[data-line-number="3"]')?.className
-    ).toContain("bg-primary/12")
-    expect(
-      container.querySelector('[data-line-number="2"]')?.className
-    ).not.toContain("bg-primary/12")
+    expect(lineRow(container, 3)?.style.backgroundColor).toContain("color-mix")
+    expect(lineRow(container, 2)?.style.backgroundColor).toBe("")
   })
 
   it("clamps a range that overruns the document end", () => {
@@ -299,15 +314,9 @@ describe("highlight boundaries", () => {
       />
     )
 
-    expect(
-      container.querySelector('[data-line-number="1"]')?.className
-    ).not.toContain("bg-primary/12")
-    expect(
-      container.querySelector('[data-line-number="2"]')?.className
-    ).toContain("bg-primary/12")
-    expect(
-      container.querySelector('[data-line-number="3"]')?.className
-    ).toContain("bg-primary/12")
+    expect(lineRow(container, 1)?.style.backgroundColor).toBe("")
+    expect(lineRow(container, 2)?.style.backgroundColor).toContain("color-mix")
+    expect(lineRow(container, 3)?.style.backgroundColor).toContain("color-mix")
   })
 
   it("does not highlight a zero/negative range entirely before line 1", () => {
@@ -329,9 +338,7 @@ describe("highlight boundaries", () => {
       />
     )
 
-    expect(
-      container.querySelector('[data-line-number="1"]')?.className
-    ).toContain("bg-primary/12")
+    expect(lineRow(container, 1)?.style.backgroundColor).toContain("color-mix")
   })
 })
 
@@ -372,11 +379,13 @@ describe("code viewer surface colors", () => {
       '[data-line-number="1"] span:last-child'
     )
 
-    expect(viewport?.className).toContain("bg-background")
+    expect(viewport?.parentElement?.parentElement?.className).toContain(
+      "bg-background"
+    )
     expect(gutter?.className).toContain("sticky")
     expect(gutter?.className).toContain("left-0")
-    expect(gutter?.className).toContain("bg-muted/30")
     expect(gutter?.className).toContain("border-r")
+    expect(gutter?.style.backgroundColor).toContain("color-mix")
     expect(code?.className).not.toContain("bg-muted")
   })
 })

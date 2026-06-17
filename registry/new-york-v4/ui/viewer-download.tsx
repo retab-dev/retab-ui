@@ -8,7 +8,9 @@ import {
   ViewerDownloadError,
   type ViewerDownloadAction,
   type ViewerDownloadPayload,
-} from "@/lib/viewer-download"
+} from "@/lib/viewer-download-actions"
+
+import { Spinner } from "@/components/ui/spinner"
 
 import { Button, buttonVariants } from "./button"
 import {
@@ -259,11 +261,14 @@ export function ViewerDownloadButton({
       className={className}
       aria-label={label}
       title={label}
-      disabled={disabled}
-      loading={isPending}
+      disabled={disabled || isPending}
       onClick={handleClick}
     >
-      <Download className={showLabel ? "mr-1.5 size-4" : undefined} />
+      {isPending ? (
+        <Spinner className="size-4 animate-spin" />
+      ) : (
+        <Download className={showLabel ? "mr-1.5 size-4" : undefined} />
+      )}
       {showLabel ? label : null}
     </Button>
   )
@@ -286,21 +291,23 @@ export function ViewerDownloadMenu({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            variant={variant}
-            size={size}
-            className={className}
-            aria-label={label}
-            title={label}
-            loading={pendingActionId != null}
-          >
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant={variant}
+          size={size}
+          className={className}
+          aria-label={label}
+          title={label}
+          disabled={pendingActionId != null}
+        >
+          {pendingActionId != null ? (
+            <Spinner className="size-4 animate-spin" />
+          ) : (
             <Download className={showLabel ? "mr-1.5 size-4" : undefined} />
-            {showLabel ? label : null}
-          </Button>
-        }
-      />
+          )}
+          {showLabel ? label : null}
+        </Button>
+      </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {actions.map((action) => (
           <DropdownMenuItem

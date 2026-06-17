@@ -94,6 +94,25 @@ function urlSource(url: string, fileName?: string) {
   return { kind: "url" as const, url, fileName }
 }
 
+// The code-viewer projector paints highlighted rows with an opaque inline
+// `background-color` (mixed from the theme's --foreground/--background pair),
+// not a Tailwind class, so the highlight signal is the row's inline style.
+function rowHighlightBackground(
+  container: HTMLElement,
+  lineNumber: number
+): string {
+  const row = container.querySelector<HTMLElement>(
+    `[data-line-number="${lineNumber}"]`
+  )
+  return row?.style.backgroundColor ?? ""
+}
+
+function anyRowHighlighted(container: HTMLElement): boolean {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>("[data-line-number]")
+  ).some((row) => row.style.backgroundColor !== "")
+}
+
 function downloadableUrlSource({
   url,
   fileName,
@@ -1923,18 +1942,10 @@ describe("CodeViewer", () => {
       />
     )
 
-    expect(
-      container.querySelector('[data-line-number="1"]')?.className
-    ).not.toContain("bg-primary/12")
-    expect(
-      container.querySelector('[data-line-number="2"]')?.className
-    ).toContain("bg-primary/12")
-    expect(
-      container.querySelector('[data-line-number="3"]')?.className
-    ).toContain("bg-primary/12")
-    expect(
-      container.querySelector('[data-line-number="4"]')?.className
-    ).not.toContain("bg-primary/12")
+    expect(rowHighlightBackground(container, 1)).toBe("")
+    expect(rowHighlightBackground(container, 2)).not.toBe("")
+    expect(rowHighlightBackground(container, 3)).not.toBe("")
+    expect(rowHighlightBackground(container, 4)).toBe("")
   })
 
   it("clamps highlight ranges that partly overlap the document", () => {
@@ -1945,15 +1956,9 @@ describe("CodeViewer", () => {
       />
     )
 
-    expect(
-      container.querySelector('[data-line-number="1"]')?.className
-    ).toContain("bg-primary/12")
-    expect(
-      container.querySelector('[data-line-number="2"]')?.className
-    ).toContain("bg-primary/12")
-    expect(
-      container.querySelector('[data-line-number="3"]')?.className
-    ).not.toContain("bg-primary/12")
+    expect(rowHighlightBackground(container, 1)).not.toBe("")
+    expect(rowHighlightBackground(container, 2)).not.toBe("")
+    expect(rowHighlightBackground(container, 3)).toBe("")
   })
 
   it("does not highlight invalid ranges", () => {
@@ -1964,7 +1969,7 @@ describe("CodeViewer", () => {
       />
     )
 
-    expect(container.querySelector(".bg-primary\\/12")).toBeNull()
+    expect(anyRowHighlighted(container)).toBe(false)
   })
 
   it("updates highlighted rows when the highlight prop changes", () => {
@@ -1972,7 +1977,7 @@ describe("CodeViewer", () => {
       <CodeViewer source={textSource("one\ntwo\nthree")} highlight={null} />
     )
 
-    expect(container.querySelector(".bg-primary\\/12")).toBeNull()
+    expect(anyRowHighlighted(container)).toBe(false)
 
     rerender(
       <CodeViewer
@@ -1981,15 +1986,9 @@ describe("CodeViewer", () => {
       />
     )
 
-    expect(
-      container.querySelector('[data-line-number="1"]')?.className
-    ).not.toContain("bg-primary/12")
-    expect(
-      container.querySelector('[data-line-number="2"]')?.className
-    ).toContain("bg-primary/12")
-    expect(
-      container.querySelector('[data-line-number="3"]')?.className
-    ).not.toContain("bg-primary/12")
+    expect(rowHighlightBackground(container, 1)).toBe("")
+    expect(rowHighlightBackground(container, 2)).not.toBe("")
+    expect(rowHighlightBackground(container, 3)).toBe("")
   })
 
   it("scrolls to reveal the full requested range", () => {

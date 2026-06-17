@@ -4,7 +4,7 @@ import * as React from "react"
 import { RotateCcw } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import type { ViewerDownloadAction } from "@/lib/viewer-download"
+import type { ViewerDownloadAction } from "@/lib/viewer-download-actions"
 import {
   toViewerErrorInfo,
   type ViewerErrorContext,

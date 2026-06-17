@@ -4,9 +4,9 @@
   "title": "Page Timeline",
   "description": "A colored page strip that ties a Segment[] to the document; hover/select syncing and click-to-jump.",
   "registryDependencies": [
-    "segments",
-    "segment-interaction",
-    "utils"
+    "@retab/segments",
+    "@retab/segment-interaction",
+    "@retab/utils"
   ],
   "files": [
     {

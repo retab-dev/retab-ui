@@ -107,10 +107,12 @@ export default async function Page(props: {
                         variant="secondary"
                         size="icon"
                         className="extend-touch-target size-8 shadow-none md:size-7"
-                        render={<Link href={neighbours.previous.url} />}
+                        asChild
                       >
-                        <ChevronLeft />
-                        <span className="sr-only">Previous</span>
+                        <Link href={neighbours.previous.url}>
+                          <ChevronLeft />
+                          <span className="sr-only">Previous</span>
+                        </Link>
                       </Button>
                     )}
                     {neighbours.next && (
@@ -118,10 +120,12 @@ export default async function Page(props: {
                         variant="secondary"
                         size="icon"
                         className="extend-touch-target size-8 shadow-none md:size-7"
-                        render={<Link href={neighbours.next.url} />}
+                        asChild
                       >
-                        <span className="sr-only">Next</span>
-                        <ChevronRight />
+                        <Link href={neighbours.next.url}>
+                          <span className="sr-only">Next</span>
+                          <ChevronRight />
+                        </Link>
                       </Button>
                     )}
                   </div>
@@ -146,15 +150,15 @@ export default async function Page(props: {
                 variant="secondary"
                 size="sm"
                 className="shadow-none"
-                render={
-                  <Link
-                    href={neighbours.previous.url}
-                    className="inline-flex min-w-0 items-center gap-2 whitespace-nowrap"
-                  />
-                }
+                asChild
               >
-                <ChevronLeft className="shrink-0" />
-                <span className="truncate">{neighbours.previous.name}</span>
+                <Link
+                  href={neighbours.previous.url}
+                  className="inline-flex min-w-0 items-center gap-2 whitespace-nowrap"
+                >
+                  <ChevronLeft className="shrink-0" />
+                  <span className="truncate">{neighbours.previous.name}</span>
+                </Link>
               </Button>
             )}
             {neighbours.next && (
@@ -162,15 +166,15 @@ export default async function Page(props: {
                 variant="secondary"
                 size="sm"
                 className="ml-auto shadow-none"
-                render={
-                  <Link
-                    href={neighbours.next.url}
-                    className="inline-flex min-w-0 items-center gap-2 whitespace-nowrap"
-                  />
-                }
+                asChild
               >
-                <span className="truncate">{neighbours.next.name}</span>
-                <ChevronRight className="shrink-0" />
+                <Link
+                  href={neighbours.next.url}
+                  className="inline-flex min-w-0 items-center gap-2 whitespace-nowrap"
+                >
+                  <span className="truncate">{neighbours.next.name}</span>
+                  <ChevronRight className="shrink-0" />
+                </Link>
               </Button>
             )}
           </div>

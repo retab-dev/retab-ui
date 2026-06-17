@@ -27,27 +27,29 @@ export function SiteHeader() {
             className="flex lg:hidden"
           />
           <Button
+            asChild
             variant="ghost"
             size="icon"
             className="hidden size-8 lg:flex"
-            render={<Link href="/" />}
           >
-            <Icons.logo className="size-5 text-foreground" />
-            <span className="sr-only">{siteConfig.name}</span>
+            <Link href="/">
+              <Icons.logo className="size-5 text-foreground" />
+              <span className="sr-only">{siteConfig.name}</span>
+            </Link>
           </Button>
           <MainNav items={siteConfig.navItems} className="hidden lg:flex" />
           <div className="ml-auto flex items-center gap-2 md:flex-1 md:justify-end">
             <Button
+              asChild
               size="sm"
               variant="ghost"
               className="hidden h-8 shadow-none md:flex"
-              render={
-                <Link href="https://retab.com" target="_blank" rel="noreferrer" />
-              }
             >
-              <span className="whitespace-nowrap text-xs text-muted-foreground">
-                Built by Retab
-              </span>
+              <Link href="https://retab.com" target="_blank" rel="noreferrer">
+                <span className="whitespace-nowrap text-xs text-muted-foreground">
+                  Built by Retab
+                </span>
+              </Link>
             </Button>
             <Separator
               orientation="vertical"

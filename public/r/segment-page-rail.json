@@ -4,10 +4,10 @@
   "title": "Segment Page Rail",
   "description": "Vertical page rail for Segment[] documents with current-page following, scroll progress, and page selection.",
   "registryDependencies": [
-    "segments",
-    "segment-interaction",
-    "page-ribbon",
-    "utils"
+    "@retab/segments",
+    "@retab/segment-interaction",
+    "@retab/page-ribbon",
+    "@retab/utils"
   ],
   "files": [
     {

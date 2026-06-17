@@ -4,7 +4,7 @@
   "title": "File Thumbnail Frame",
   "description": "Dependency-free thumbnail frame with a loading shimmer, fade-in, and muted fallback surface.",
   "registryDependencies": [
-    "utils"
+    "@retab/utils"
   ],
   "files": [
     {

@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { ChevronDown, ChevronUp, Search, X } from "lucide-react"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
 
@@ -22,7 +21,6 @@ import { MarkdownGreenfieldChunkRenderer } from "./markdown-greenfield-renderer"
 import {
   getMarkdownGreenfieldScrollAnchor,
   getMarkdownGreenfieldScrollTopForLineRange,
-  getMarkdownGreenfieldSourceLineForScrollTop,
   getMarkdownGreenfieldVisibleFrames,
   resolveMarkdownGreenfieldScrollAnchor,
   type MarkdownGreenfieldScrollAnchor,
@@ -37,7 +35,6 @@ import { normalizeTextLineRange } from "./text-viewer-ranges"
 import {
   readTextResource,
   resolvedTextViewerBounds,
-  splitTextLines,
 } from "./text-viewer-resource"
 import { clampTextViewerScale } from "./text-viewer-scale"
 import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types"
@@ -48,22 +45,10 @@ const DEFAULT_VIEWPORT_WIDTH = 900
 const INITIAL_CONTENT_WIDTH = 820
 const VIEWER_HORIZONTAL_PADDING = 32
 const OVERSCAN_PX = 800
-const SOURCE_LINE_HEIGHT = 22
-const MAX_SEARCH_MATCHES = 10_000
-
-type MarkdownGreenfieldViewMode = "rendered" | "source"
 
 type ViewportSize = {
   height: number
   width: number
-}
-
-type MarkdownSearchMatch = {
-  endLine: number
-  endOffset: number
-  index: number
-  startLine: number
-  startOffset: number
 }
 
 type MarkdownScrollToLineOptions = ScrollToOptions & {
@@ -107,7 +92,6 @@ export function MarkdownGreenfieldContent({
     () => measurementDocumentIdForText(text),
     [text]
   )
-  const sourceLines = React.useMemo(() => splitTextLines(text), [text])
   const downloadAction = download ? resource.originalDownload : null
   const [downloadError, setDownloadError] = React.useState("")
   const [fontScale, setFontScale] = React.useState(1)
@@ -115,23 +99,20 @@ export function MarkdownGreenfieldContent({
     () => new Map<string, number>()
   )
   const [scrollTop, setScrollTop] = React.useState(0)
-  const [viewMode, setViewMode] =
-    React.useState<MarkdownGreenfieldViewMode>("rendered")
   const [viewportSize, setViewportSize] = React.useState<ViewportSize>({
     height: 0,
     width: 0,
   })
   const [contentWidth, setContentWidth] = React.useState(INITIAL_CONTENT_WIDTH)
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
-  const pendingAnchorRef =
-    React.useRef<MarkdownGreenfieldScrollAnchor | null>(null)
+  const pendingAnchorRef = React.useRef<MarkdownGreenfieldScrollAnchor | null>(
+    null
+  )
   const prevFrameChunksRef = React.useRef<
     readonly MarkdownGreenfieldChunkFrame[] | null
   >(null)
-  const pendingModeSourceLineRef = React.useRef<number | null>(null)
   const viewportHeight = viewportSize.height || DEFAULT_VIEWPORT_HEIGHT
   const viewportWidth = viewportSize.width || DEFAULT_VIEWPORT_WIDTH
-  const sourceLineHeight = SOURCE_LINE_HEIGHT * fontScale
   const measuredHeightLookup = React.useMemo(
     () => ({
       get: (
@@ -162,35 +143,7 @@ export function MarkdownGreenfieldContent({
     () => normalizeTextLineRange(highlight, document.lineCount),
     [document.lineCount, highlight]
   )
-  const {
-    activeSearchMatch,
-    activeSearchRange,
-    clearSearch,
-    goToSearchMatch,
-    searchMatches,
-    searchQuery,
-    setSearchQuery,
-  } = useMarkdownSearch({ lineCount: document.lineCount, text })
-  const visibleHighlightRange = activeSearchRange ?? highlightRange
-  // Locate the toolbar's current match within its chunk so the renderer can
-  // mark that single occurrence active. Matches are in document order, so the
-  // chunk-local index is the global index minus the matches in earlier chunks.
-  const activeMatchLocation = React.useMemo(() => {
-    if (!activeSearchMatch) return null
-    const chunkFrame = frame.chunks.find(
-      (candidate) =>
-        candidate.sourceStartLine <= activeSearchMatch.startLine &&
-        activeSearchMatch.startLine <= candidate.sourceEndLine
-    )
-    if (!chunkFrame) return null
-    const matchesBeforeChunk = searchMatches.filter(
-      (match) => match.startLine < chunkFrame.sourceStartLine
-    ).length
-    return {
-      chunkIndex: chunkFrame.index,
-      occurrence: activeSearchMatch.index - matchesBeforeChunk,
-    }
-  }, [activeSearchMatch, frame.chunks, searchMatches])
+  const visibleHighlightRange = highlightRange
   const visibleFrames = React.useMemo(
     () =>
       getMarkdownGreenfieldVisibleFrames({
@@ -314,18 +267,14 @@ export function MarkdownGreenfieldContent({
 
       const preferredChunkId =
         options?.preferredChunkId ??
-        findMarkdownGreenfieldChunkBySourceLine(document, range.start)
-          ?.id
-      const top =
-        viewMode === "source"
-          ? (range.start - 1) * sourceLineHeight
-          : getMarkdownGreenfieldScrollTopForLineRange({
-              chunks: document.chunks,
-              frames: frame.chunks,
-              preferredChunkId,
-              range,
-              viewportHeight: viewport.clientHeight || viewportHeight,
-            })
+        findMarkdownGreenfieldChunkBySourceLine(document, range.start)?.id
+      const top = getMarkdownGreenfieldScrollTopForLineRange({
+        chunks: document.chunks,
+        frames: frame.chunks,
+        preferredChunkId,
+        range,
+        viewportHeight: viewport.clientHeight || viewportHeight,
+      })
       if (top == null) return
       viewport.scrollTo({
         behavior: resolveScrollBehavior(options?.behavior),
@@ -334,7 +283,7 @@ export function MarkdownGreenfieldContent({
       })
       setScrollTop(top)
     },
-    [document, frame.chunks, sourceLineHeight, viewMode, viewportHeight]
+    [document, frame.chunks, viewportHeight]
   )
 
   // A stable handle to the latest scrollToLineRange. The callback's identity
@@ -369,21 +318,13 @@ export function MarkdownGreenfieldContent({
     scrollToLineRangeRef.current(highlightRange)
   }, [highlightRange])
 
-  React.useLayoutEffect(() => {
-    if (!activeSearchRange) return
-    scrollToLineRangeRef.current(activeSearchRange, { behavior: "auto" })
-  }, [activeSearchRange])
-
   // Subscribes to the browser's hash/history (a non-React external source) and
   // scrolls the matching fragment into view before paint.
   React.useLayoutEffect(() => {
     const scrollToCurrentHash = () => {
       const hash = window.location.hash
       if (!hash) return
-      const target = findMarkdownGreenfieldFragmentTargetById(
-        document,
-        hash
-      )
+      const target = findMarkdownGreenfieldFragmentTargetById(document, hash)
       if (!target) return
       const chunk = findMarkdownGreenfieldChunkByBlockId(
         document,
@@ -406,19 +347,6 @@ export function MarkdownGreenfieldContent({
       window.removeEventListener("popstate", scrollToCurrentHash)
     }
   }, [document])
-
-  React.useLayoutEffect(() => {
-    const sourceLine = pendingModeSourceLineRef.current
-    if (sourceLine == null) return
-    pendingModeSourceLineRef.current = null
-    scrollToLineRange(
-      normalizeTextLineRange(
-        { end: sourceLine, start: sourceLine },
-        document.lineCount
-      ),
-      { behavior: "auto" }
-    )
-  }, [document.lineCount, scrollToLineRange, viewMode])
 
   const recordMeasuredHeight = React.useCallback(
     (chunk: MarkdownGreenfieldChunk, height: number) => {
@@ -448,19 +376,6 @@ export function MarkdownGreenfieldContent({
     },
     []
   )
-  const switchMode = (nextMode: MarkdownGreenfieldViewMode) => {
-    if (nextMode === viewMode) return
-    const currentScrollTop = viewportRef.current?.scrollTop ?? scrollTop
-    pendingModeSourceLineRef.current =
-      viewMode === "source"
-        ? Math.max(1, Math.floor(currentScrollTop / sourceLineHeight) + 1)
-        : getMarkdownGreenfieldSourceLineForScrollTop({
-            chunks: document.chunks,
-            frames: frame.chunks,
-            scrollTop: currentScrollTop,
-          })
-    setViewMode(nextMode)
-  }
   const zoom = (factor: number) => {
     captureAnchor()
     setFontScale((scale) => clampTextViewerScale(scale * factor))
@@ -474,33 +389,9 @@ export function MarkdownGreenfieldContent({
     <TextViewerFrame className={className} bare={bare}>
       {controls ? (
         <TextViewerControls
-          copyLabel="Copy Markdown"
-          copyText={document.text}
           downloadAction={downloadAction}
-          extra={
-            <span className="flex min-w-0 items-center gap-2">
-              <DownloadError message={downloadError} />
-              <MarkdownSearchControl
-                activeMatchIndex={
-                  activeSearchMatch ? activeSearchMatch.index : 0
-                }
-                matchCount={searchMatches.length}
-                query={searchQuery}
-                onClear={clearSearch}
-                onNext={() => goToSearchMatch(1)}
-                onPrevious={() => goToSearchMatch(-1)}
-                onQueryChange={setSearchQuery}
-              />
-            </span>
-          }
+          extra={<DownloadError message={downloadError} />}
           fontScale={fontScale}
-          leading={
-            <ViewModeControl
-              mode={viewMode}
-              wordCount={document.wordCount}
-              onModeChange={switchMode}
-            />
-          }
           wordCount={document.wordCount}
           onDownloadError={handleDownloadError}
           onResetZoom={resetZoom}
@@ -518,103 +409,71 @@ export function MarkdownGreenfieldContent({
         viewportClassName="bg-background [overflow-anchor:none]"
         viewportRef={viewportRef}
         viewportProps={{
-          onClickCapture:
-            viewMode === "rendered"
-              ? (event) =>
-                  handleRenderedClick({ document, event, scrollToLineRange })
-              : undefined,
+          onClickCapture: (event) =>
+            handleRenderedClick({ document, event, scrollToLineRange }),
           onScroll: (event) => setScrollTop(event.currentTarget.scrollTop),
         }}
       >
-        {viewMode === "source" ? (
-          <div
-            className="relative min-w-max bg-background"
-            data-slot="markdown-source-scroll-canvas"
-            style={{
-              height:
-                Math.max(sourceLines.length, 1) *
-                SOURCE_LINE_HEIGHT *
-                fontScale,
-              minWidth: viewportWidth,
-            }}
-          >
-            <SourceCanvas
-              fontScale={fontScale}
-              highlightRange={visibleHighlightRange}
-              lines={sourceLines}
-              scrollTop={scrollTop}
-              viewportHeight={viewportHeight}
-            />
-          </div>
-        ) : (
-          <div
-            className="relative min-w-0"
-            data-projection="unified-hast-markdown"
-            data-slot="markdown-virtual-canvas"
-            style={{
-              height: Math.max(frame.totalHeight, viewportHeight),
-              minWidth: viewportWidth,
-            }}
-          >
-            <NativeFindIndex
-              chunks={document.chunks}
-              lineCount={document.lineCount}
-              scrollToLineRange={scrollToLineRange}
-            />
-            {document.text.trim() ? (
-              visibleFrames.map((chunkFrame) => {
-                const chunk = document.chunks[chunkFrame.index]
-                if (!chunk) return null
-                return (
-                  <ChunkFrame
-                    key={chunk.id}
+        <div
+          className="relative min-w-0"
+          data-projection="unified-hast-markdown"
+          data-slot="markdown-virtual-canvas"
+          style={{
+            height: Math.max(frame.totalHeight, viewportHeight),
+            minWidth: viewportWidth,
+          }}
+        >
+          <NativeFindIndex
+            chunks={document.chunks}
+            lineCount={document.lineCount}
+            scrollToLineRange={scrollToLineRange}
+          />
+          {document.text.trim() ? (
+            visibleFrames.map((chunkFrame) => {
+              const chunk = document.chunks[chunkFrame.index]
+              if (!chunk) return null
+              return (
+                <ChunkFrame
+                  key={chunk.id}
+                  chunk={chunk}
+                  frame={chunkFrame}
+                  highlightRange={visibleHighlightRange}
+                  highlighted={chunkIntersectsLineRange({
+                    chunkFrame,
+                    range: visibleHighlightRange,
+                  })}
+                  measurementKey={measuredHeightKey({
+                    chunk,
+                    context: {
+                      fontScale,
+                      policyVersion: MARKDOWN_GREENFIELD_LAYOUT_POLICY_VERSION,
+                      width: Math.max(1, contentWidth),
+                    },
+                    documentMeasurementId,
+                  })}
+                  onMeasuredHeight={recordMeasuredHeight}
+                >
+                  <MarkdownGreenfieldChunkRenderer
                     chunk={chunk}
-                    frame={chunkFrame}
-                    highlightRange={visibleHighlightRange}
-                    highlighted={chunkIntersectsLineRange({
-                      chunkFrame,
-                      range: visibleHighlightRange,
-                    })}
-                    measurementKey={measuredHeightKey({
-                      chunk,
-                      context: {
-                        fontScale,
-                        policyVersion:
-                          MARKDOWN_GREENFIELD_LAYOUT_POLICY_VERSION,
-                        width: Math.max(1, contentWidth),
-                      },
-                      documentMeasurementId,
-                    })}
-                    onMeasuredHeight={recordMeasuredHeight}
-                  >
-                    <MarkdownGreenfieldChunkRenderer
-                      activeMatchOccurrence={
-                        activeMatchLocation?.chunkIndex === chunk.index
-                          ? activeMatchLocation.occurrence
-                          : undefined
-                      }
-                      chunk={chunk}
-                      fontScale={fontScale}
-                      onContentReady={() =>
-                        measureChunkFrame(chunk, recordMeasuredHeight)
-                      }
-                      searchQuery={searchQuery}
-                    />
-                  </ChunkFrame>
-                )
-              })
-            ) : (
-              <div
-                aria-label="Empty Markdown document"
-                className="absolute inset-x-4 top-0 flex min-h-40 items-center justify-center text-sm text-muted-foreground"
-                data-slot="markdown-empty-state"
-                role="status"
-              >
-                Empty Markdown document
-              </div>
-            )}
-          </div>
-        )}
+                    fontScale={fontScale}
+                    onContentReady={() =>
+                      measureChunkFrame(chunk, recordMeasuredHeight)
+                    }
+                  />
+                </ChunkFrame>
+              )
+            })
+          ) : (
+            <div
+              aria-label="Empty Markdown document"
+              className="absolute inset-x-4 top-0 flex min-h-40 items-center justify-center text-sm text-muted-foreground"
+              data-slot="markdown-empty-state"
+              role="status"
+            >
+              Empty Markdown document
+            </div>
+          )}
+        </div>
       </ScrollArea>
     </TextViewerFrame>
   )
@@ -724,46 +583,6 @@ function nativeFindTextForHastNode(node: MarkdownHastNode): string {
   return element.children.map(nativeFindTextForHastNode).join(" ")
 }
 
-function ViewModeControl({
-  mode,
-  wordCount,
-  onModeChange,
-}: {
-  mode: MarkdownGreenfieldViewMode
-  wordCount: number
-  onModeChange: (mode: MarkdownGreenfieldViewMode) => void
-}) {
-  return (
-    <span className="flex min-w-0 items-center gap-2">
-      <span className="hidden text-xs text-muted-foreground tabular-nums sm:inline">
-        {wordCount} word{wordCount === 1 ? "" : "s"}
-      </span>
-      <span
-        aria-label="Markdown view mode"
-        className="inline-flex overflow-hidden rounded-md border bg-muted/35 p-0.5"
-        role="group"
-      >
-        {(["rendered", "source"] as const).map((item) => (
-          <button
-            key={item}
-            aria-pressed={mode === item}
-            className={[
-              "h-6 px-2 text-xs font-medium capitalize transition-colors",
-              mode === item
-                ? "rounded-sm bg-background text-foreground shadow-xs"
-                : "text-muted-foreground hover:text-foreground",
-            ].join(" ")}
-            type="button"
-            onClick={() => onModeChange(item)}
-          >
-            {item === "source" ? "Text" : "Rendered"}
-          </button>
-        ))}
-      </span>
-    </span>
-  )
-}
-
 function DownloadError({ message }: { message: string }) {
   if (!message) return null
   return (
@@ -774,117 +593,6 @@ function DownloadError({ message }: { message: string }) {
     >
       {message}
     </span>
-  )
-}
-
-function MarkdownSearchControl({
-  activeMatchIndex,
-  matchCount,
-  query,
-  onClear,
-  onNext,
-  onPrevious,
-  onQueryChange,
-}: {
-  activeMatchIndex: number
-  matchCount: number
-  query: string
-  onClear: () => void
-  onNext: () => void
-  onPrevious: () => void
-  onQueryChange: (query: string) => void
-}) {
-  const searchId = React.useId()
-  const statusId = React.useId()
-  const hasQuery = query.trim().length > 0
-  const hasMatches = matchCount > 0
-  const status = !hasQuery
-    ? "No search"
-    : hasMatches
-      ? `${Math.min(activeMatchIndex + 1, matchCount)} / ${matchCount}`
-      : "No matches"
-
-  return (
-    <form
-      className="flex min-w-0 items-center gap-1"
-      data-slot="markdown-search"
-      role="search"
-      onSubmit={(event) => {
-        event.preventDefault()
-        onNext()
-      }}
-    >
-      <label className="sr-only" htmlFor={searchId}>
-        Search Markdown
-      </label>
-      <span className="relative block w-36 min-w-0 sm:w-44">
-        <Search
-          aria-hidden="true"
-          className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground"
-        />
-        <input
-          id={searchId}
-          aria-describedby={statusId}
-          aria-label="Search Markdown"
-          className="h-7 w-full rounded-md border bg-background pr-7 pl-7 text-xs transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-          data-slot="markdown-search-input"
-          placeholder="Search"
-          type="search"
-          value={query}
-          onChange={(event) => onQueryChange(event.currentTarget.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.preventDefault()
-              onClear()
-              return
-            }
-            if (event.key !== "Enter") return
-
-            event.preventDefault()
-            if (event.shiftKey) onPrevious()
-            else onNext()
-          }}
-        />
-        {hasQuery ? (
-          <button
-            aria-label="Clear Markdown search"
-            className="absolute top-1/2 right-1 inline-flex size-5 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-            type="button"
-            onClick={onClear}
-          >
-            <X aria-hidden="true" className="size-3.5" />
-          </button>
-        ) : null}
-      </span>
-      <span
-        id={statusId}
-        aria-live="polite"
-        className="hidden w-12 text-center text-xs text-muted-foreground tabular-nums sm:inline"
-        data-slot="markdown-search-status"
-      >
-        {hasQuery ? status : ""}
-      </span>
-      <button
-        aria-label="Previous Markdown search match"
-        className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
-        disabled={!hasMatches}
-        title="Previous Markdown search match"
-        type="button"
-        onClick={onPrevious}
-      >
-        <ChevronUp aria-hidden="true" className="size-4" />
-      </button>
-      <button
-        aria-label="Next Markdown search match"
-        className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
-        disabled={!hasMatches}
-        title="Next Markdown search match"
-        type="button"
-        onClick={onNext}
-      >
-        <ChevronDown aria-hidden="true" className="size-4" />
-      </button>
-    </form>
   )
 }
 
@@ -903,10 +611,7 @@ function ChunkFrame({
   highlightRange: { end: number; start: number } | null
   highlighted: boolean
   measurementKey: string
-  onMeasuredHeight: (
-    chunk: MarkdownGreenfieldChunk,
-    height: number
-  ) => void
+  onMeasuredHeight: (chunk: MarkdownGreenfieldChunk, height: number) => void
 }) {
   const ref = React.useRef<HTMLDivElement | null>(null)
 
@@ -954,194 +659,6 @@ function ChunkFrame({
   )
 }
 
-function SourceCanvas({
-  fontScale,
-  highlightRange,
-  lines,
-  scrollTop,
-  viewportHeight,
-}: {
-  fontScale: number
-  highlightRange: { end: number; start: number } | null
-  lines: readonly string[]
-  scrollTop: number
-  viewportHeight: number
-}) {
-  const lineHeight = SOURCE_LINE_HEIGHT * fontScale
-  const start = Math.max(0, Math.floor(scrollTop / lineHeight) - 24)
-  const end = Math.min(
-    lines.length,
-    Math.ceil((scrollTop + viewportHeight) / lineHeight) + 24
-  )
-
-  return (
-    <pre
-      aria-label="Markdown source"
-      className="absolute inset-x-0 top-0 m-0 min-w-max bg-background font-mono text-[13px] leading-none text-foreground"
-      data-slot="markdown-source-canvas"
-      role="region"
-      style={{ height: Math.max(lines.length, 1) * lineHeight }}
-      tabIndex={0}
-    >
-      {lines.slice(start, end).map((line, offset) => {
-        const lineNumber = start + offset + 1
-        const highlighted =
-          highlightRange &&
-          lineNumber >= highlightRange.start &&
-          lineNumber <= highlightRange.end
-        return (
-          <div
-            key={lineNumber}
-            className={[
-              "absolute inset-x-0 grid grid-cols-[4rem_minmax(0,1fr)] px-4",
-              highlighted ? "bg-primary/12" : "",
-            ].join(" ")}
-            data-source-line={lineNumber}
-            style={{
-              height: lineHeight,
-              lineHeight: `${lineHeight}px`,
-              top: (lineNumber - 1) * lineHeight,
-            }}
-          >
-            <span
-              aria-hidden="true"
-              className="pr-4 text-right text-muted-foreground select-none"
-            >
-              {lineNumber}
-            </span>
-            <code className="whitespace-pre" data-source-line-content="">
-              {line || " "}
-            </code>
-          </div>
-        )
-      })}
-    </pre>
-  )
-}
-
-function useMarkdownSearch({
-  lineCount,
-  text,
-}: {
-  lineCount: number
-  text: string
-}) {
-  const [searchQuery, setSearchQuery] = React.useState("")
-  const [activeIndex, setActiveIndex] = React.useState(0)
-  const searchMatches = React.useMemo(
-    () => buildMarkdownSearchMatches(text, searchQuery),
-    [searchQuery, text]
-  )
-  const activeSearchMatch =
-    searchMatches.length === 0
-      ? null
-      : searchMatches[Math.min(activeIndex, searchMatches.length - 1)]
-  const activeSearchRange = React.useMemo(
-    () =>
-      activeSearchMatch
-        ? normalizeTextLineRange(
-            {
-              end: activeSearchMatch.endLine,
-              start: activeSearchMatch.startLine,
-            },
-            lineCount
-          )
-        : null,
-    [activeSearchMatch, lineCount]
-  )
-
-  // Changing the query resets the active match in the same event that sets it,
-  // rather than reacting to the change in an effect.
-  const updateSearchQuery = React.useCallback((next: string) => {
-    setSearchQuery(next)
-    setActiveIndex(0)
-  }, [])
-
-  const goToSearchMatch = React.useCallback(
-    (direction: 1 | -1) => {
-      setActiveIndex((current) => {
-        if (searchMatches.length === 0) return 0
-        return (
-          (current + direction + searchMatches.length) % searchMatches.length
-        )
-      })
-    },
-    [searchMatches.length]
-  )
-  const clearSearch = React.useCallback(() => {
-    setSearchQuery("")
-    setActiveIndex(0)
-  }, [])
-
-  return {
-    activeSearchMatch,
-    activeSearchRange,
-    clearSearch,
-    goToSearchMatch,
-    searchMatches,
-    searchQuery,
-    setSearchQuery: updateSearchQuery,
-  }
-}
-
-function buildMarkdownSearchMatches(
-  text: string,
-  query: string
-): MarkdownSearchMatch[] {
-  const normalizedQuery = query.trim()
-  if (!normalizedQuery) return []
-
-  const lineStarts = getMarkdownLineStarts(text)
-  const lowerText = text.toLowerCase()
-  const lowerQuery = normalizedQuery.toLowerCase()
-  const matches: MarkdownSearchMatch[] = []
-  let offset = 0
-
-  while (matches.length < MAX_SEARCH_MATCHES) {
-    const startOffset = lowerText.indexOf(lowerQuery, offset)
-    if (startOffset === -1) break
-
-    const endOffset = startOffset + lowerQuery.length
-    matches.push({
-      endLine: getMarkdownLineNumberForOffset(
-        lineStarts,
-        Math.max(startOffset, endOffset - 1)
-      ),
-      endOffset,
-      index: matches.length,
-      startLine: getMarkdownLineNumberForOffset(lineStarts, startOffset),
-      startOffset,
-    })
-    offset = Math.max(endOffset, startOffset + 1)
-  }
-
-  return matches
-}
-
-function getMarkdownLineStarts(text: string) {
-  const lineStarts = [0]
-  for (let index = 0; index < text.length; index += 1) {
-    if (text[index] === "\n") lineStarts.push(index + 1)
-  }
-  return lineStarts
-}
-
-function getMarkdownLineNumberForOffset(
-  lineStarts: readonly number[],
-  offset: number
-) {
-  let low = 0
-  let high = lineStarts.length - 1
-
-  while (low <= high) {
-    const middle = Math.floor((low + high) / 2)
-    if ((lineStarts[middle] ?? 0) <= offset) low = middle + 1
-    else high = middle - 1
-  }
-
-  return Math.max(1, high + 1)
-}
-
 function resolveScrollBehavior(behavior: ScrollBehavior | undefined) {
   if (behavior) return behavior
   if (
@@ -1171,10 +688,7 @@ function handleRenderedClick({
 
   const target = findMarkdownGreenfieldFragmentTargetById(document, href)
   if (!target) return
-  const chunk = findMarkdownGreenfieldChunkByBlockId(
-    document,
-    target.blockId
-  )
+  const chunk = findMarkdownGreenfieldChunkByBlockId(document, target.blockId)
 
   event.preventDefault()
   window.history.pushState(null, "", href)
@@ -1203,10 +717,7 @@ function chunkIntersectsLineRange({
 
 function measureChunkFrame(
   _chunk: MarkdownGreenfieldChunk,
-  _onMeasuredHeight: (
-    chunk: MarkdownGreenfieldChunk,
-    height: number
-  ) => void
+  _onMeasuredHeight: (chunk: MarkdownGreenfieldChunk, height: number) => void
 ) {
   // The wrapper frame owns ResizeObserver measurement. This callback exists so
   // rich children can request a measurement pass without knowing the wrapper.

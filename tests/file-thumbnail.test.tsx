@@ -950,12 +950,12 @@ describe("FileThumbnail registry item", () => {
     expect(files).toContain("components/file-thumbnail-tiff.worker.ts")
     expect(files).toContain("components/file-thumbnail-xlsx.worker.ts")
     expect(item?.registryDependencies).toEqual([
-      "file-thumbnail-frame",
-      "pdf-document-resource",
-      "docx-document-resource",
-      "csv",
-      "xlsx-worker-protocol",
-      "utils",
+      "@retab/file-thumbnail-frame",
+      "@retab/pdf-document-resource",
+      "@retab/docx-document-resource",
+      "@retab/csv",
+      "@retab/xlsx-worker-protocol",
+      "@retab/utils",
     ])
     expect(item?.dependencies ?? []).toEqual([
       "@e965/xlsx",

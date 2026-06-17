@@ -4,8 +4,8 @@
   "title": "CSV source adapter",
   "description": "Bridges the document-source model to the CSV viewer: csvAnchorToTarget and sourceToCsvCell for csv_cell anchors.",
   "registryDependencies": [
-    "csv-viewer",
-    "document-source"
+    "@retab/csv-viewer",
+    "@retab/document-source"
   ],
   "files": [
     {

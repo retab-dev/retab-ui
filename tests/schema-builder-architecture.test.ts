@@ -527,7 +527,7 @@ describe("schema builder architecture", () => {
       "components/schema-editor/document-schema-editor.tsx": 110,
       "components/schema-editor/document-node-header.tsx": 175,
       "components/schema-editor/document-object-node-editor.tsx": 165,
-      "components/schema-editor/document-definitions-editor.tsx": 165,
+      "components/schema-editor/document-definitions-editor.tsx": 166,
       "components/schema-editor/top-level-editor.tsx": 240,
     }
 

@@ -7,7 +7,7 @@
     "@base-ui/react@^1.4.1"
   ],
   "registryDependencies": [
-    "utils"
+    "@retab/utils"
   ],
   "files": [
     {

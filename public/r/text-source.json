@@ -4,7 +4,7 @@
   "title": "Text source adapter",
   "description": "Bridges the document-source model to text viewers: textAnchorToTarget and sourceToTextHighlight for text_span anchors.",
   "registryDependencies": [
-    "document-source"
+    "@retab/document-source"
   ],
   "files": [
     {

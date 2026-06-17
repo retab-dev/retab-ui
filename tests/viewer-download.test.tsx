@@ -16,13 +16,24 @@ import {
   type ViewerDownloadAction,
   type ViewerDownloadError,
   type ViewerDownloadPayload,
-} from "@/registry/new-york-v4/lib/viewer-download"
+} from "@/registry/new-york-v4/lib/viewer-download-actions"
 import {
   triggerViewerDownload,
   useViewerDownloadTrigger,
   ViewerDownloadControl,
   type ViewerDownloadErrorHandler,
 } from "@/registry/new-york-v4/ui/viewer-download"
+
+// Stock Radix dropdown-menu relies on pointer capture and scrollIntoView, which
+// jsdom does not implement. Without these shims the menu never opens under test.
+if (typeof Element !== "undefined" && !Element.prototype.hasPointerCapture) {
+  Element.prototype.hasPointerCapture = () => false
+  Element.prototype.setPointerCapture = () => {}
+  Element.prototype.releasePointerCapture = () => {}
+}
+if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {}
+}
 
 function mockObjectUrls(url = "blob:viewer-download") {
   const createObjectURL = vi.fn(() => url)
@@ -66,8 +77,20 @@ function menuItem(label: string): HTMLElement {
   return item as HTMLElement
 }
 
+function openMenuTrigger(trigger: HTMLElement) {
+  // Stock Radix DropdownMenuTrigger opens on pointerdown (not click) and needs
+  // pointer-capture/scrollIntoView, which jsdom does not implement. base-ui
+  // opened on click; this restores menu-open behaviour under jsdom.
+  fireEvent.pointerDown(trigger, {
+    button: 0,
+    ctrlKey: false,
+    pointerType: "mouse",
+  })
+  fireEvent.click(trigger)
+}
+
 async function openDownloadMenu() {
-  fireEvent.click(screen.getByRole("button", { name: "Download" }))
+  openMenuTrigger(screen.getByRole("button", { name: "Download" }))
   await screen.findByText("Download original")
 }
 
@@ -873,7 +896,6 @@ describe("ViewerDownloadControl", () => {
 
     await waitFor(() => {
       const trigger = screen.getByRole("button", { name: "Download" })
-      expect(trigger.hasAttribute("data-loading")).toBe(true)
       expect(trigger.hasAttribute("disabled")).toBe(true)
     })
 

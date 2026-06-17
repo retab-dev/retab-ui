@@ -81,10 +81,12 @@ export function DocumentDefinitionsEditor({
 
   return (
     <Accordion
+      type="single"
+      collapsible
       id={DEFINITIONS_SECTION_ID}
       className="mt-6 w-full rounded-lg border border-border px-4 pb-0"
-      value={[controller.accordionValue]}
-      onValueChange={(value) => setAccordionOpen(value.includes("defs"))}
+      value={controller.accordionValue}
+      onValueChange={(value) => setAccordionOpen(value === "defs")}
     >
       <AccordionItem value="defs" className="border-none bg-transparent">
         <AccordionTrigger className="bg-transparent font-medium text-muted-foreground">

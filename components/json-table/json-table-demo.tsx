@@ -48,15 +48,15 @@ const demoSchema = {
         ...((schema.properties?.transactions as Record<string, unknown>)
           ?.items as Record<string, unknown>),
         properties: {
+          ...((
+            (schema.properties?.transactions as Record<string, unknown>)
+              ?.items as Record<string, unknown>
+          )?.properties as Record<string, unknown>),
           is_reconciled: {
             type: "boolean",
             title: "Reconciled",
             description: "Whether this transaction has been reviewed.",
           },
-          ...((
-            (schema.properties?.transactions as Record<string, unknown>)
-              ?.items as Record<string, unknown>
-          )?.properties as Record<string, unknown>),
         },
       },
     },

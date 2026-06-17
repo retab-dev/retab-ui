@@ -4,7 +4,7 @@
   "title": "Document evidence",
   "description": "Pure projection types for semantic evidence rows that can resolve to document anchors.",
   "registryDependencies": [
-    "document-anchor"
+    "@retab/document-anchor"
   ],
   "files": [
     {

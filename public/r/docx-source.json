@@ -4,8 +4,8 @@
   "title": "DOCX source adapter",
   "description": "Bridges the document-source model to the DOCX viewer: docxAnchorToTarget and sourceToDocxHighlight for docx_text_span and docx_table_cell anchors.",
   "registryDependencies": [
-    "docx-viewer",
-    "document-source"
+    "@retab/docx-viewer",
+    "@retab/document-source"
   ],
   "files": [
     {

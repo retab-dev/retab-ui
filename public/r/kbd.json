@@ -4,7 +4,7 @@
   "title": "Kbd",
   "description": "A keyboard shortcut display primitive.",
   "registryDependencies": [
-    "utils"
+    "@retab/utils"
   ],
   "files": [
     {

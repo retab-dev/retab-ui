@@ -27,6 +27,7 @@ import {
 } from "@/components/viewers/page-markdown/page-markdown-sync"
 import {
   ParseViewer,
+  ParseViewerHeader,
   ParseViewerMarkdown,
   ParseViewerProvider,
   useParseViewerDocument,
@@ -67,6 +68,7 @@ function ParseViewerSyncHarness({
       result={result}
       onVisiblePageChange={onVisiblePageChange}
     >
+      <ParseViewerHeader />
       {children}
       <ParseViewerMarkdown />
     </ParseViewerProvider>
@@ -261,7 +263,7 @@ describe("ParseViewer view mode", () => {
   it("shows the literal markdown source in text mode", async () => {
     const { container } = render(<ParseViewer result={parseResult()} />)
 
-    fireEvent.click(screen.getByRole("tab", { name: "Text" }))
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Text" }))
 
     await waitFor(() => {
       expect(
@@ -277,7 +279,7 @@ describe("ParseViewer view mode", () => {
     const result = parseResult({}, { id: "doc-stable" })
     const { container, rerender } = render(<ParseViewer result={result} />)
 
-    fireEvent.click(screen.getByRole("tab", { name: "Text" }))
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Text" }))
     await waitFor(() => {
       expect(
         Array.from(container.querySelectorAll("pre")).some(
@@ -301,7 +303,7 @@ describe("ParseViewer view mode", () => {
       <ParseViewer result={parseResult({}, { id: "doc-one" })} />
     )
 
-    fireEvent.click(screen.getByRole("tab", { name: "Text" }))
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Text" }))
     await waitFor(() => {
       expect(
         Array.from(container.querySelectorAll("pre")).some(
@@ -739,12 +741,16 @@ describe("ParseViewer compact controls", () => {
 
     render(<ParseViewer result={parseResult({ text: "menu copy text" })} />)
 
-    fireEvent.click(screen.getByLabelText("More markdown actions"))
+    const trigger = screen.getByLabelText("More markdown actions")
+    fireEvent.pointerDown(trigger, { button: 0 })
+    fireEvent.pointerUp(trigger, { button: 0 })
 
     const copyItem = await screen.findByText("Copy markdown")
     fireEvent.click(copyItem)
 
-    expect(writeText).toHaveBeenCalledWith("menu copy text")
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith("menu copy text")
+    })
   })
 })
 
@@ -763,7 +769,7 @@ describe("ParseViewer reset contract (keyed on document.id)", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("tab", { name: "Text" }))
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Text" }))
     await waitFor(() => {
       expect(container.querySelectorAll("pre").length).toBeGreaterThan(0)
     })
@@ -1181,7 +1187,7 @@ describe("ParseViewer text mode rendering", () => {
   it("renders each visible page as its own preformatted block", async () => {
     const { container } = render(<ParseViewer result={parseResult()} />)
 
-    fireEvent.click(screen.getByRole("tab", { name: "Text" }))
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Text" }))
 
     await waitFor(() => {
       const blocks = Array.from(container.querySelectorAll("pre")).map(

@@ -223,13 +223,13 @@ export function DocsCopyPage({ page, url }: { page: string; url: string }) {
 
             return (
               <Button
+                asChild
                 variant="ghost"
                 size="lg"
                 key={key}
                 className="w-full justify-start text-base font-normal *:[svg]:text-muted-foreground"
-                render={React.cloneElement(item, { children: undefined })}
               >
-                {item.props.children}
+                {item}
               </Button>
             )
           })}

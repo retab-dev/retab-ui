@@ -12,10 +12,11 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "utils",
+        "@retab/utils",
         "button",
         "separator",
-        "skeleton",
+        "@retab/skeleton",
+        "@retab/spinner",
         "dropdown-menu"
       ],
       "files": [
@@ -30,9 +31,9 @@
           "target": "@ui/viewer-download.tsx"
         },
         {
-          "path": "registry/new-york-v4/lib/viewer-download.ts",
+          "path": "registry/new-york-v4/lib/viewer-download-actions.ts",
           "type": "registry:lib",
-          "target": "@lib/viewer-download.ts"
+          "target": "@lib/viewer-download-actions.ts"
         }
       ]
     },
@@ -67,26 +68,6 @@
       ]
     },
     {
-      "name": "accordion",
-      "type": "registry:ui",
-      "title": "Accordion",
-      "description": "A vertically stacked set of expandable content panels.",
-      "dependencies": [
-        "@base-ui/react@^1.4.1",
-        "lucide-react"
-      ],
-      "registryDependencies": [
-        "utils"
-      ],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/accordion.tsx",
-          "type": "registry:ui",
-          "target": "@ui/accordion.tsx"
-        }
-      ]
-    },
-    {
       "name": "alert",
       "type": "registry:ui",
       "title": "Alert",
@@ -95,7 +76,7 @@
         "class-variance-authority@^0.7.1"
       ],
       "registryDependencies": [
-        "utils"
+        "@retab/utils"
       ],
       "files": [
         {
@@ -115,7 +96,7 @@
       ],
       "registryDependencies": [
         "button",
-        "utils"
+        "@retab/utils"
       ],
       "files": [
         {
@@ -148,114 +129,15 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "input",
-        "scroll-area",
-        "utils"
+        "@retab/input",
+        "@retab/scroll-area",
+        "@retab/utils"
       ],
       "files": [
         {
           "path": "registry/new-york-v4/ui/autocomplete.tsx",
           "type": "registry:ui",
           "target": "@ui/autocomplete.tsx"
-        }
-      ]
-    },
-    {
-      "name": "badge",
-      "type": "registry:ui",
-      "title": "Badge",
-      "description": "A compact label for status, metadata, and categorization.",
-      "dependencies": [
-        "@base-ui/react@^1.4.1",
-        "class-variance-authority@^0.7.1"
-      ],
-      "registryDependencies": [
-        "utils"
-      ],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/badge.tsx",
-          "type": "registry:ui",
-          "target": "@ui/badge.tsx"
-        }
-      ]
-    },
-    {
-      "name": "breadcrumb",
-      "type": "registry:ui",
-      "title": "Breadcrumb",
-      "description": "Navigation breadcrumbs for page hierarchy.",
-      "dependencies": [
-        "@base-ui/react@^1.4.1",
-        "lucide-react"
-      ],
-      "registryDependencies": [
-        "utils"
-      ],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/breadcrumb.tsx",
-          "type": "registry:ui",
-          "target": "@ui/breadcrumb.tsx"
-        }
-      ]
-    },
-    {
-      "name": "button",
-      "type": "registry:ui",
-      "title": "Button",
-      "description": "A polymorphic button primitive with variants, sizes, and loading state.",
-      "dependencies": [
-        "@base-ui/react@^1.4.1",
-        "class-variance-authority@^0.7.1"
-      ],
-      "registryDependencies": [
-        "spinner",
-        "utils"
-      ],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/button.tsx",
-          "type": "registry:ui",
-          "target": "@ui/button.tsx"
-        }
-      ]
-    },
-    {
-      "name": "card",
-      "type": "registry:ui",
-      "title": "Card",
-      "description": "A flexible container primitive for grouped content.",
-      "dependencies": [
-        "@base-ui/react@^1.4.1"
-      ],
-      "registryDependencies": [
-        "utils"
-      ],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/card.tsx",
-          "type": "registry:ui",
-          "target": "@ui/card.tsx"
-        }
-      ]
-    },
-    {
-      "name": "collapsible",
-      "type": "registry:ui",
-      "title": "Collapsible",
-      "description": "A disclosure primitive for expandable content.",
-      "dependencies": [
-        "@base-ui/react@^1.4.1"
-      ],
-      "registryDependencies": [
-        "utils"
-      ],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/collapsible.tsx",
-          "type": "registry:ui",
-          "target": "@ui/collapsible.tsx"
         }
       ]
     },
@@ -270,55 +152,13 @@
       ],
       "registryDependencies": [
         "dialog",
-        "utils"
+        "@retab/utils"
       ],
       "files": [
         {
           "path": "registry/new-york-v4/ui/command.tsx",
           "type": "registry:ui",
           "target": "@ui/command.tsx"
-        }
-      ]
-    },
-    {
-      "name": "dialog",
-      "type": "registry:ui",
-      "title": "Dialog",
-      "description": "An accessible modal dialog built on Base UI.",
-      "dependencies": [
-        "@base-ui/react@^1.4.1",
-        "lucide-react"
-      ],
-      "registryDependencies": [
-        "button",
-        "scroll-area",
-        "utils"
-      ],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/dialog.tsx",
-          "type": "registry:ui",
-          "target": "@ui/dialog.tsx"
-        }
-      ]
-    },
-    {
-      "name": "dropdown-menu",
-      "type": "registry:ui",
-      "title": "Dropdown Menu",
-      "description": "A dropdown menu built on Base UI menu primitives.",
-      "dependencies": [
-        "@base-ui/react@^1.4.1",
-        "lucide-react"
-      ],
-      "registryDependencies": [
-        "utils"
-      ],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/dropdown-menu.tsx",
-          "type": "registry:ui",
-          "target": "@ui/dropdown-menu.tsx"
         }
       ]
     },
@@ -349,10 +189,10 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "dropzone",
-        "file-thumbnail",
-        "file-size-format",
-        "utils"
+        "@retab/dropzone",
+        "@retab/file-thumbnail",
+        "@retab/file-size-format",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -384,7 +224,7 @@
         "@base-ui/react@^1.4.1"
       ],
       "registryDependencies": [
-        "utils"
+        "@retab/utils"
       ],
       "files": [
         {
@@ -403,7 +243,7 @@
         "radix-ui"
       ],
       "registryDependencies": [
-        "utils"
+        "@retab/utils"
       ],
       "files": [
         {
@@ -423,8 +263,8 @@
         "react-hook-form"
       ],
       "registryDependencies": [
-        "label",
-        "utils"
+        "@retab/label",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -440,11 +280,11 @@
       "title": "Data Cell",
       "description": "A lightweight editable cell for scalar document data: text, numbers, booleans, dates, times, and date-times.",
       "registryDependencies": [
-        "calendar",
-        "input",
+        "@retab/calendar",
+        "@retab/input",
         "popover",
         "select",
-        "utils"
+        "@retab/utils"
       ],
       "files": [
         {
@@ -610,7 +450,7 @@
       ],
       "registryDependencies": [
         "button",
-        "utils"
+        "@retab/utils"
       ],
       "files": [
         {
@@ -631,7 +471,7 @@
       ],
       "registryDependencies": [
         "separator",
-        "utils"
+        "@retab/utils"
       ],
       "files": [
         {
@@ -650,8 +490,8 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "scroll-area",
-        "utils"
+        "@retab/scroll-area",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -667,32 +507,13 @@
       "title": "Kbd",
       "description": "A keyboard shortcut display primitive.",
       "registryDependencies": [
-        "utils"
+        "@retab/utils"
       ],
       "files": [
         {
           "path": "registry/new-york-v4/ui/kbd.tsx",
           "type": "registry:ui",
           "target": "@ui/kbd.tsx"
-        }
-      ]
-    },
-    {
-      "name": "popover",
-      "type": "registry:ui",
-      "title": "Popover",
-      "description": "A floating popover built on Base UI.",
-      "dependencies": [
-        "@base-ui/react@^1.4.1"
-      ],
-      "registryDependencies": [
-        "utils"
-      ],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/popover.tsx",
-          "type": "registry:ui",
-          "target": "@ui/popover.tsx"
         }
       ]
     },
@@ -705,53 +526,13 @@
         "@base-ui/react@^1.4.1"
       ],
       "registryDependencies": [
-        "utils"
+        "@retab/utils"
       ],
       "files": [
         {
           "path": "registry/new-york-v4/ui/scroll-area.tsx",
           "type": "registry:ui",
           "target": "@ui/scroll-area.tsx"
-        }
-      ]
-    },
-    {
-      "name": "select",
-      "type": "registry:ui",
-      "title": "Select",
-      "description": "A select control built on Base UI.",
-      "dependencies": [
-        "@base-ui/react@^1.4.1",
-        "class-variance-authority@^0.7.1",
-        "lucide-react"
-      ],
-      "registryDependencies": [
-        "utils"
-      ],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/select.tsx",
-          "type": "registry:ui",
-          "target": "@ui/select.tsx"
-        }
-      ]
-    },
-    {
-      "name": "separator",
-      "type": "registry:ui",
-      "title": "Separator",
-      "description": "A visual separator built on Base UI.",
-      "dependencies": [
-        "@base-ui/react@^1.4.1"
-      ],
-      "registryDependencies": [
-        "utils"
-      ],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/separator.tsx",
-          "type": "registry:ui",
-          "target": "@ui/separator.tsx"
         }
       ]
     },
@@ -764,7 +545,7 @@
         "radix-ui"
       ],
       "registryDependencies": [
-        "utils"
+        "@retab/utils"
       ],
       "files": [
         {
@@ -780,7 +561,7 @@
       "title": "Table",
       "description": "Semantic table primitives for structured data.",
       "registryDependencies": [
-        "utils"
+        "@retab/utils"
       ],
       "files": [
         {
@@ -796,35 +577,13 @@
       "title": "Textarea",
       "description": "A styled multiline text input.",
       "registryDependencies": [
-        "utils"
+        "@retab/utils"
       ],
       "files": [
         {
           "path": "registry/new-york-v4/ui/textarea.tsx",
           "type": "registry:ui",
           "target": "@ui/textarea.tsx"
-        }
-      ]
-    },
-    {
-      "name": "sheet",
-      "type": "registry:ui",
-      "title": "Sheet",
-      "description": "A side sheet built on Base UI dialog primitives.",
-      "dependencies": [
-        "@base-ui/react@^1.4.1",
-        "lucide-react"
-      ],
-      "registryDependencies": [
-        "button",
-        "scroll-area",
-        "utils"
-      ],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/sheet.tsx",
-          "type": "registry:ui",
-          "target": "@ui/sheet.tsx"
         }
       ]
     },
@@ -855,13 +614,13 @@
       ],
       "registryDependencies": [
         "button",
-        "input",
-        "scroll-area",
+        "@retab/input",
+        "@retab/scroll-area",
         "separator",
-        "sidebar-row",
-        "skeleton",
-        "use-mobile",
-        "utils"
+        "@retab/sidebar-row",
+        "@retab/skeleton",
+        "@retab/use-mobile",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -881,8 +640,8 @@
       ],
       "registryDependencies": [
         "separator",
-        "sidebar-row",
-        "utils"
+        "@retab/sidebar-row",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -898,7 +657,7 @@
       "title": "Skeleton",
       "description": "A loading placeholder with shimmer animation.",
       "registryDependencies": [
-        "utils"
+        "@retab/utils"
       ],
       "files": [
         {
@@ -935,51 +694,13 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "utils"
+        "@retab/utils"
       ],
       "files": [
         {
           "path": "registry/new-york-v4/ui/spinner.tsx",
           "type": "registry:ui",
           "target": "@ui/spinner.tsx"
-        }
-      ]
-    },
-    {
-      "name": "tabs",
-      "type": "registry:ui",
-      "title": "Tabs",
-      "description": "A tabs primitive built on Base UI.",
-      "dependencies": [
-        "@base-ui/react@^1.4.1"
-      ],
-      "registryDependencies": [
-        "utils"
-      ],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/tabs.tsx",
-          "type": "registry:ui",
-          "target": "@ui/tabs.tsx"
-        }
-      ]
-    },
-    {
-      "name": "tooltip",
-      "type": "registry:ui",
-      "title": "Tooltip",
-      "description": "A tooltip primitive built on Base UI.",
-      "dependencies": [
-        "@base-ui/react@^1.4.1"
-      ],
-      "registryDependencies": [
-        "utils"
-      ],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/tooltip.tsx",
-          "type": "registry:ui",
-          "target": "@ui/tooltip.tsx"
         }
       ]
     },
@@ -993,7 +714,7 @@
         "react-resizable-panels@^4.11.2"
       ],
       "registryDependencies": [
-        "utils"
+        "@retab/utils"
       ],
       "files": [
         {
@@ -1089,8 +810,8 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "csv",
-        "utils",
+        "@retab/csv",
+        "@retab/utils",
         "button",
         "dropdown-menu",
         "@retab/viewer-controls"
@@ -1127,9 +848,9 @@
           "target": "@lib/viewer-resource.ts"
         },
         {
-          "path": "registry/new-york-v4/lib/viewer-download.ts",
+          "path": "registry/new-york-v4/lib/viewer-download-actions.ts",
           "type": "registry:lib",
-          "target": "@lib/viewer-download.ts"
+          "target": "@lib/viewer-download-actions.ts"
         },
         {
           "path": "registry/new-york-v4/lib/viewer-errors.ts",
@@ -1262,15 +983,15 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "file-viewer",
-        "pdf-document-resource",
-        "utils",
+        "@retab/file-viewer",
+        "@retab/pdf-document-resource",
+        "@retab/utils",
         "button",
-        "scroll-area",
+        "@retab/scroll-area",
         "separator",
-        "skeleton",
+        "@retab/skeleton",
         "dropdown-menu",
-        "spinner",
+        "@retab/spinner",
         "@retab/viewer-controls"
       ],
       "files": [
@@ -1421,12 +1142,12 @@
         "docx-preview"
       ],
       "registryDependencies": [
-        "docx-document-resource",
-        "utils",
+        "@retab/docx-document-resource",
+        "@retab/utils",
         "button",
-        "scroll-area",
+        "@retab/scroll-area",
         "separator",
-        "skeleton",
+        "@retab/skeleton",
         "dropdown-menu",
         "@retab/viewer-controls"
       ],
@@ -1507,9 +1228,9 @@
           "target": "@lib/viewer-resource.ts"
         },
         {
-          "path": "registry/new-york-v4/lib/viewer-download.ts",
+          "path": "registry/new-york-v4/lib/viewer-download-actions.ts",
           "type": "registry:lib",
-          "target": "@lib/viewer-download.ts"
+          "target": "@lib/viewer-download-actions.ts"
         },
         {
           "path": "registry/new-york-v4/lib/viewer-errors.ts",
@@ -1533,11 +1254,11 @@
         "utif@3.1.0"
       ],
       "registryDependencies": [
-        "utils",
+        "@retab/utils",
         "button",
-        "scroll-area",
+        "@retab/scroll-area",
         "separator",
-        "skeleton",
+        "@retab/skeleton",
         "@retab/viewer-controls"
       ],
       "files": [
@@ -1567,9 +1288,9 @@
           "target": "@lib/viewer-resource.ts"
         },
         {
-          "path": "registry/new-york-v4/lib/viewer-download.ts",
+          "path": "registry/new-york-v4/lib/viewer-download-actions.ts",
           "type": "registry:lib",
-          "target": "@lib/viewer-download.ts"
+          "target": "@lib/viewer-download-actions.ts"
         },
         {
           "path": "registry/new-york-v4/lib/viewer-errors.ts",
@@ -1647,13 +1368,13 @@
         "@tanstack/react-virtual@^3.13.12"
       ],
       "registryDependencies": [
-        "document-evidence",
-        "file-viewer",
-        "interactive-item-list",
-        "pdf-viewer",
-        "scroll-area",
-        "segmented-document",
-        "utils"
+        "@retab/document-evidence",
+        "@retab/file-viewer",
+        "@retab/interactive-item-list",
+        "@retab/pdf-viewer",
+        "@retab/scroll-area",
+        "@retab/segmented-document",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -1735,11 +1456,11 @@
         "chart.js"
       ],
       "registryDependencies": [
-        "utils",
+        "@retab/utils",
         "button",
-        "scroll-area",
+        "@retab/scroll-area",
         "separator",
-        "skeleton",
+        "@retab/skeleton",
         "dropdown-menu",
         "@retab/viewer-controls"
       ],
@@ -1878,8 +1599,8 @@
       "title": "XLSX SheetJS flattener",
       "description": "Pure SheetJS-to-compact-sheet flattening helpers for the XLSX viewer worker.",
       "registryDependencies": [
-        "xlsx-worker-protocol",
-        "xlsx-workbook"
+        "@retab/xlsx-worker-protocol",
+        "@retab/xlsx-workbook"
       ],
       "files": [
         {
@@ -1899,13 +1620,13 @@
         "@e965/xlsx@0.20.3"
       ],
       "registryDependencies": [
-        "xlsx-worker-protocol",
-        "xlsx-workbook",
-        "xlsx-sheetjs-flattener",
-        "utils",
+        "@retab/xlsx-worker-protocol",
+        "@retab/xlsx-workbook",
+        "@retab/xlsx-sheetjs-flattener",
+        "@retab/utils",
         "button",
         "separator",
-        "skeleton",
+        "@retab/skeleton",
         "@retab/viewer-controls"
       ],
       "files": [
@@ -1935,9 +1656,9 @@
           "target": "@lib/viewer-resource.ts"
         },
         {
-          "path": "registry/new-york-v4/lib/viewer-download.ts",
+          "path": "registry/new-york-v4/lib/viewer-download-actions.ts",
           "type": "registry:lib",
-          "target": "@lib/viewer-download.ts"
+          "target": "@lib/viewer-download-actions.ts"
         },
         {
           "path": "registry/new-york-v4/lib/viewer-errors.ts",
@@ -2102,19 +1823,19 @@
         "dompurify@3.4.9"
       ],
       "registryDependencies": [
-        "utils",
+        "@retab/utils",
         "button",
-        "pdf-viewer",
-        "docx-viewer",
-        "image-viewer",
-        "pptx-viewer",
-        "xlsx-viewer",
-        "csv-viewer",
-        "code-viewer",
-        "text-viewer-chenglou",
-        "markdown-viewer",
+        "@retab/pdf-viewer",
+        "@retab/docx-viewer",
+        "@retab/image-viewer",
+        "@retab/pptx-viewer",
+        "@retab/xlsx-viewer",
+        "@retab/csv-viewer",
+        "@retab/code-viewer",
+        "@retab/text-viewer-chenglou",
+        "@retab/markdown-viewer",
         "@retab/viewer-controls",
-        "skeleton"
+        "@retab/skeleton"
       ],
       "files": [
         {
@@ -2178,9 +1899,9 @@
           "target": "@ui/file-viewer-csv-viewer.tsx"
         },
         {
-          "path": "registry/new-york-v4/lib/viewer-download.ts",
+          "path": "registry/new-york-v4/lib/viewer-download-actions.ts",
           "type": "registry:lib",
-          "target": "@lib/viewer-download.ts"
+          "target": "@lib/viewer-download-actions.ts"
         },
         {
           "path": "registry/new-york-v4/lib/viewer-errors.ts",
@@ -2214,16 +1935,16 @@
         "@tanstack/react-virtual"
       ],
       "registryDependencies": [
-        "utils",
+        "@retab/utils",
         "breadcrumb",
         "button",
         "dialog",
-        "file-size-format",
-        "file-thumbnail",
-        "file-viewer",
-        "input",
-        "scroll-area",
-        "spinner",
+        "@retab/file-size-format",
+        "@retab/file-thumbnail",
+        "@retab/file-viewer",
+        "@retab/input",
+        "@retab/scroll-area",
+        "@retab/spinner",
         "tabs"
       ],
       "files": [
@@ -2383,9 +2104,9 @@
         "@pierre/trees"
       ],
       "registryDependencies": [
-        "utils",
+        "@retab/utils",
         "breadcrumb",
-        "file-viewer"
+        "@retab/file-viewer"
       ],
       "files": [
         {
@@ -2424,8 +2145,8 @@
       "title": "PDF source adapter",
       "description": "Bridges the document-source model to the PDF viewer: pdfAnchorToTarget and renderPdfSourceOverlay for PDF bbox anchors.",
       "registryDependencies": [
-        "pdf-viewer",
-        "document-source"
+        "@retab/pdf-viewer",
+        "@retab/document-source"
       ],
       "files": [
         {
@@ -2454,7 +2175,7 @@
       "title": "Segment Interaction",
       "description": "React-free hover, focus, selection, and current-page helpers for Segment[] surfaces.",
       "registryDependencies": [
-        "segments"
+        "@retab/segments"
       ],
       "files": [
         {
@@ -2470,7 +2191,7 @@
       "title": "useSegmentInteraction",
       "description": "Client hook that coordinates hover, focus, and persistent selection across Segment[] surfaces.",
       "registryDependencies": [
-        "segment-interaction"
+        "@retab/segment-interaction"
       ],
       "files": [
         {
@@ -2486,9 +2207,9 @@
       "title": "Segment Legend",
       "description": "Compact color legend for a Segment[] with shared hover, focus, and selection state.",
       "registryDependencies": [
-        "segments",
-        "segment-interaction",
-        "utils"
+        "@retab/segments",
+        "@retab/segment-interaction",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -2504,10 +2225,10 @@
       "title": "Segment Sidebar",
       "description": "Selectable list of segments with page ranges and confidence bars.",
       "registryDependencies": [
-        "segments",
-        "segment-interaction",
-        "sidebar-list",
-        "utils"
+        "@retab/segments",
+        "@retab/segment-interaction",
+        "@retab/sidebar-list",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -2523,9 +2244,9 @@
       "title": "Page Timeline",
       "description": "A colored page strip that ties a Segment[] to the document; hover/select syncing and click-to-jump.",
       "registryDependencies": [
-        "segments",
-        "segment-interaction",
-        "utils"
+        "@retab/segments",
+        "@retab/segment-interaction",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -2541,9 +2262,9 @@
       "title": "Page Ribbon",
       "description": "A page-axis ribbon: segments drawn as blocks spanning their pages. One vertical lane = a split sidebar; many horizontal rows (consensus + votes) = a partition waterfall. Shared hover/focus/selection + click-to-jump.",
       "registryDependencies": [
-        "segments",
-        "segment-interaction",
-        "utils"
+        "@retab/segments",
+        "@retab/segment-interaction",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -2559,10 +2280,10 @@
       "title": "Segment Page Rail",
       "description": "Vertical page rail for Segment[] documents with current-page following, scroll progress, and page selection.",
       "registryDependencies": [
-        "segments",
-        "segment-interaction",
-        "page-ribbon",
-        "utils"
+        "@retab/segments",
+        "@retab/segment-interaction",
+        "@retab/page-ribbon",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -2578,9 +2299,9 @@
       "title": "Segmented Document",
       "description": "Shared segmented-document model, provider, viewport controller, and anchor navigation for split, partition, source, OCR, and bbox viewers.",
       "registryDependencies": [
-        "segments",
-        "segment-interaction",
-        "use-segment-interaction"
+        "@retab/segments",
+        "@retab/segment-interaction",
+        "@retab/use-segment-interaction"
       ],
       "files": [
         {
@@ -2611,7 +2332,7 @@
       "title": "Schema Builder",
       "description": "Controlled JSON Schema editor for building Retab extraction schemas — fields, types, nested objects, arrays, enums, and required flags.",
       "registryDependencies": [
-        "utils"
+        "@retab/utils"
       ],
       "files": [
         {
@@ -2630,10 +2351,10 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "utils",
-        "sidebar-list",
-        "file-size-format",
-        "file-thumbnail"
+        "@retab/utils",
+        "@retab/sidebar-list",
+        "@retab/file-size-format",
+        "@retab/file-thumbnail"
       ],
       "files": [
         {
@@ -2652,10 +2373,10 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "utils",
-        "file-size-format",
-        "file-thumbnail",
-        "file-viewer"
+        "@retab/utils",
+        "@retab/file-size-format",
+        "@retab/file-thumbnail",
+        "@retab/file-viewer"
       ],
       "files": [
         {
@@ -2691,7 +2412,7 @@
       "title": "File Thumbnail Frame",
       "description": "Dependency-free thumbnail frame with a loading shimmer, fade-in, and muted fallback surface.",
       "registryDependencies": [
-        "utils"
+        "@retab/utils"
       ],
       "files": [
         {
@@ -2732,12 +2453,12 @@
       "title": "File Thumbnail",
       "description": "Render complete file thumbnails from browser files, URLs, blobs, text sources, external images, or custom preview content.",
       "registryDependencies": [
-        "file-thumbnail-frame",
-        "pdf-document-resource",
-        "docx-document-resource",
-        "csv",
-        "xlsx-worker-protocol",
-        "utils"
+        "@retab/file-thumbnail-frame",
+        "@retab/pdf-document-resource",
+        "@retab/docx-document-resource",
+        "@retab/csv",
+        "@retab/xlsx-worker-protocol",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -2939,8 +2660,8 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "utils",
-        "file-thumbnail"
+        "@retab/utils",
+        "@retab/file-thumbnail"
       ],
       "files": [
         {
@@ -2956,7 +2677,7 @@
       "title": "OCR",
       "description": "OCR review for a scanned document: source page, detected text blocks, confidence filtering, and matching polygon overlays. Switch between Google Document AI, AWS Textract, and Azure Document Intelligence output.",
       "registryDependencies": [
-        "layout-blocks"
+        "@retab/layout-blocks"
       ],
       "files": [
         {
@@ -2993,12 +2714,12 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "file-viewer",
-        "pdf-viewer",
-        "segment-legend",
-        "segment-page-rail",
-        "segmented-document",
-        "segments"
+        "@retab/file-viewer",
+        "@retab/pdf-viewer",
+        "@retab/segment-legend",
+        "@retab/segment-page-rail",
+        "@retab/segmented-document",
+        "@retab/segments"
       ],
       "files": [
         {
@@ -3035,12 +2756,12 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "file-viewer",
-        "pdf-viewer",
-        "segment-legend",
-        "page-ribbon",
-        "segmented-document",
-        "segments"
+        "@retab/file-viewer",
+        "@retab/pdf-viewer",
+        "@retab/segment-legend",
+        "@retab/page-ribbon",
+        "@retab/segmented-document",
+        "@retab/segments"
       ],
       "files": [
         {
@@ -3080,14 +2801,14 @@
         "rehype-raw"
       ],
       "registryDependencies": [
-        "file-viewer",
-        "pdf-viewer",
+        "@retab/file-viewer",
+        "@retab/pdf-viewer",
         "button",
         "dropdown-menu",
-        "scroll-area",
-        "resizable",
+        "@retab/scroll-area",
+        "@retab/resizable",
         "separator",
-        "spinner",
+        "@retab/spinner",
         "tabs"
       ],
       "files": [
@@ -3205,11 +2926,11 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "pdf-viewer",
-        "file-viewer",
-        "scroll-area",
+        "@retab/pdf-viewer",
+        "@retab/file-viewer",
+        "@retab/scroll-area",
         "tabs",
-        "segmented-document"
+        "@retab/segmented-document"
       ],
       "files": [
         {
@@ -3313,15 +3034,15 @@
       "title": "Extract Viewer",
       "description": "Extracted data beside the source PDF, rendered as a JSON form and linked by sources — hover or select a field to highlight where its value came from and scroll the page to it.",
       "registryDependencies": [
-        "file-viewer",
-        "pdf-viewer",
-        "document-source",
-        "scroll-area",
-        "segmented-document",
-        "source-segmented-document",
-        "utils",
-        "source-field-link",
-        "source-indicator"
+        "@retab/file-viewer",
+        "@retab/pdf-viewer",
+        "@retab/document-source",
+        "@retab/scroll-area",
+        "@retab/segmented-document",
+        "@retab/source-segmented-document",
+        "@retab/utils",
+        "@retab/source-field-link",
+        "@retab/source-indicator"
       ],
       "files": [
         {
@@ -3353,26 +3074,26 @@
         "@tanstack/react-virtual"
       ],
       "registryDependencies": [
-        "file-viewer",
-        "pdf-viewer",
-        "image-viewer",
-        "image-source",
-        "text-viewer",
-        "text-source",
-        "csv-viewer",
-        "csv-source",
-        "xlsx-viewer",
-        "xlsx-source",
-        "docx-viewer",
-        "docx-source",
-        "document-source",
-        "scroll-area",
-        "segmented-document",
-        "source-evidence",
-        "source-segmented-document",
-        "source-field-link",
-        "source-indicator",
-        "utils"
+        "@retab/file-viewer",
+        "@retab/pdf-viewer",
+        "@retab/image-viewer",
+        "@retab/image-source",
+        "@retab/text-viewer",
+        "@retab/text-source",
+        "@retab/csv-viewer",
+        "@retab/csv-source",
+        "@retab/xlsx-viewer",
+        "@retab/xlsx-source",
+        "@retab/docx-viewer",
+        "@retab/docx-source",
+        "@retab/document-source",
+        "@retab/scroll-area",
+        "@retab/segmented-document",
+        "@retab/source-evidence",
+        "@retab/source-segmented-document",
+        "@retab/source-field-link",
+        "@retab/source-indicator",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -3424,15 +3145,15 @@
         "react-hook-form"
       ],
       "registryDependencies": [
-        "file-viewer",
-        "pdf-viewer",
-        "document-source",
-        "scroll-area",
-        "segmented-document",
-        "source-evidence",
-        "source-segmented-document",
-        "source-field-link",
-        "source-indicator"
+        "@retab/file-viewer",
+        "@retab/pdf-viewer",
+        "@retab/document-source",
+        "@retab/scroll-area",
+        "@retab/segmented-document",
+        "@retab/source-evidence",
+        "@retab/source-segmented-document",
+        "@retab/source-field-link",
+        "@retab/source-indicator"
       ],
       "files": [
         {
@@ -3456,9 +3177,9 @@
       "title": "PDF Viewer Thumbnails",
       "description": "PDF-owned page thumbnail navigation for explicit PdfViewer composition: lazy pdfjs thumbnails, active-page highlight, and click-to-jump.",
       "registryDependencies": [
-        "pdf-viewer",
-        "utils",
-        "spinner"
+        "@retab/pdf-viewer",
+        "@retab/utils",
+        "@retab/spinner"
       ],
       "files": [
         {
@@ -3517,11 +3238,11 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "dropzone",
-        "file-viewer",
-        "file-size-format",
-        "file-uploader",
-        "file-thumbnail"
+        "@retab/dropzone",
+        "@retab/file-viewer",
+        "@retab/file-size-format",
+        "@retab/file-uploader",
+        "@retab/file-thumbnail"
       ],
       "files": [
         {
@@ -3665,7 +3386,7 @@
         "@tanstack/react-virtual"
       ],
       "registryDependencies": [
-        "file-system"
+        "@retab/file-system"
       ],
       "files": [
         {
@@ -3692,7 +3413,7 @@
         "@pierre/trees"
       ],
       "registryDependencies": [
-        "file-system-light"
+        "@retab/file-system-light"
       ],
       "files": [
         {
@@ -3709,10 +3430,17 @@
       "name": "primitive-cards-block",
       "type": "registry:block",
       "title": "Primitive Run Cards",
-      "description": "Each primitive's result framed as a run card — a document thumbnail with a status pill and the primitive's output in the body. Composes run-card with per-primitive result rendering; starts with classification and split.",
+      "description": "Each Retab primitive's result framed as a run card — a document thumbnail with a status pill and the primitive's output in the card body. Classification shows the page with its category and reasoning; split a mini page rail of color-keyed subdocuments; partition a keyed-chunk legend with an overlap ribbon; parse the page rendered as markdown; extract the page with each field's source box drawn over it. Composes run-card with per-primitive rendering over the shared segments model.",
+      "dependencies": [
+        "react-markdown",
+        "remark-gfm"
+      ],
       "registryDependencies": [
-        "run-card",
-        "segments"
+        "@retab/run-card",
+        "@retab/segments",
+        "@retab/page-ribbon",
+        "@retab/segment-legend",
+        "@retab/document-source"
       ],
       "files": [
         {
@@ -3734,6 +3462,21 @@
           "path": "components/viewers/lib/split-types.ts",
           "type": "registry:lib",
           "target": "@components/viewers/lib/split-types.ts"
+        },
+        {
+          "path": "components/viewers/lib/partition-types.ts",
+          "type": "registry:lib",
+          "target": "@components/viewers/lib/partition-types.ts"
+        },
+        {
+          "path": "components/viewers/sample-data/extract.json",
+          "type": "registry:file",
+          "target": "@components/viewers/sample-data/extract.json"
+        },
+        {
+          "path": "components/viewers/sample-data/parse.json",
+          "type": "registry:file",
+          "target": "@components/viewers/sample-data/parse.json"
         }
       ],
       "categories": [
@@ -3749,9 +3492,9 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "file-viewer",
-        "pdf-viewer",
-        "pdf-viewer-thumbnails",
+        "@retab/file-viewer",
+        "@retab/pdf-viewer",
+        "@retab/pdf-viewer-thumbnails",
         "button"
       ],
       "files": [
@@ -3813,10 +3556,10 @@
       "title": "Source field list",
       "description": "A field list that drives source-field interaction: hover previews the field location in the viewer, click selects it.",
       "registryDependencies": [
-        "interactive-item-list",
-        "source-field-link",
-        "source-evidence",
-        "utils"
+        "@retab/interactive-item-list",
+        "@retab/source-field-link",
+        "@retab/source-evidence",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -3832,7 +3575,7 @@
       "title": "Source field link",
       "description": "A field-path adapter over segmented-document anchors.",
       "registryDependencies": [
-        "segmented-document"
+        "@retab/segmented-document"
       ],
       "files": [
         {
@@ -3861,7 +3604,7 @@
       "title": "Document evidence",
       "description": "Pure projection types for semantic evidence rows that can resolve to document anchors.",
       "registryDependencies": [
-        "document-anchor"
+        "@retab/document-anchor"
       ],
       "files": [
         {
@@ -3880,8 +3623,8 @@
         "@tanstack/react-virtual@^3.13.12"
       ],
       "registryDependencies": [
-        "scroll-area",
-        "utils"
+        "@retab/scroll-area",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -3897,9 +3640,9 @@
       "title": "Source evidence",
       "description": "Projection helpers that convert document sources, source maps, and source fields into evidence rows with resolved document anchors.",
       "registryDependencies": [
-        "document-evidence",
-        "document-source",
-        "source-anchor"
+        "@retab/document-evidence",
+        "@retab/document-source",
+        "@retab/source-anchor"
       ],
       "files": [
         {
@@ -3915,12 +3658,12 @@
       "title": "Source segmented document",
       "description": "Projection helpers and overlays that convert PDF/image bbox document sources into segmented-document segments, anchors, and active source highlights.",
       "registryDependencies": [
-        "document-source",
-        "source-field-link",
-        "image-source",
-        "image-viewer",
-        "pdf-viewer",
-        "segmented-document"
+        "@retab/document-source",
+        "@retab/source-field-link",
+        "@retab/image-source",
+        "@retab/image-viewer",
+        "@retab/pdf-viewer",
+        "@retab/segmented-document"
       ],
       "files": [
         {
@@ -3941,8 +3684,8 @@
       "title": "Layout blocks segmented document",
       "description": "Projection helpers that convert OCR/layout blocks into segmented-document segments and anchors.",
       "registryDependencies": [
-        "layout-blocks",
-        "segmented-document"
+        "@retab/layout-blocks",
+        "@retab/segmented-document"
       ],
       "files": [
         {
@@ -3958,8 +3701,8 @@
       "title": "Source anchor",
       "description": "Pure conversion from document-source anchors to document viewer anchors.",
       "registryDependencies": [
-        "document-anchor",
-        "document-source"
+        "@retab/document-anchor",
+        "@retab/document-source"
       ],
       "files": [
         {
@@ -3975,8 +3718,8 @@
       "title": "Image source adapter",
       "description": "Bridges the document-source model to the image viewer: imageAnchorToTarget, rotateImageArea, and renderImageSourceOverlay for image_bbox anchors.",
       "registryDependencies": [
-        "image-viewer",
-        "document-source"
+        "@retab/image-viewer",
+        "@retab/document-source"
       ],
       "files": [
         {
@@ -4003,9 +3746,9 @@
       "registryDependencies": [
         "button",
         "dropdown-menu",
-        "scroll-area",
-        "skeleton",
-        "utils",
+        "@retab/scroll-area",
+        "@retab/skeleton",
+        "@retab/utils",
         "@retab/viewer-controls"
       ],
       "files": [
@@ -4120,9 +3863,9 @@
           "target": "@lib/viewer-resource.ts"
         },
         {
-          "path": "registry/new-york-v4/lib/viewer-download.ts",
+          "path": "registry/new-york-v4/lib/viewer-download-actions.ts",
           "type": "registry:lib",
-          "target": "@lib/viewer-download.ts"
+          "target": "@lib/viewer-download-actions.ts"
         },
         {
           "path": "registry/new-york-v4/lib/viewer-errors.ts",
@@ -4149,9 +3892,9 @@
       "registryDependencies": [
         "button",
         "dropdown-menu",
-        "scroll-area",
-        "skeleton",
-        "utils",
+        "@retab/scroll-area",
+        "@retab/skeleton",
+        "@retab/utils",
         "@retab/viewer-controls"
       ],
       "files": [
@@ -4251,9 +3994,9 @@
           "target": "@lib/viewer-resource.ts"
         },
         {
-          "path": "registry/new-york-v4/lib/viewer-download.ts",
+          "path": "registry/new-york-v4/lib/viewer-download-actions.ts",
           "type": "registry:lib",
-          "target": "@lib/viewer-download.ts"
+          "target": "@lib/viewer-download-actions.ts"
         },
         {
           "path": "registry/new-york-v4/lib/viewer-errors.ts",
@@ -4273,7 +4016,7 @@
       "title": "Chenglou Text Viewer",
       "description": "An imperative Pretext prose viewer that keeps Text Viewer parsing/layout but projects visible rows through a Chenglou-style DOM cache.",
       "registryDependencies": [
-        "text-viewer"
+        "@retab/text-viewer"
       ],
       "files": [
         {
@@ -4387,7 +4130,7 @@
       "title": "Text source adapter",
       "description": "Bridges the document-source model to text viewers: textAnchorToTarget and sourceToTextHighlight for text_span anchors.",
       "registryDependencies": [
-        "document-source"
+        "@retab/document-source"
       ],
       "files": [
         {
@@ -4408,8 +4151,8 @@
       "title": "CSV source adapter",
       "description": "Bridges the document-source model to the CSV viewer: csvAnchorToTarget and sourceToCsvCell for csv_cell anchors.",
       "registryDependencies": [
-        "csv-viewer",
-        "document-source"
+        "@retab/csv-viewer",
+        "@retab/document-source"
       ],
       "files": [
         {
@@ -4425,8 +4168,8 @@
       "title": "Excel source adapter",
       "description": "Bridges the document-source model to the XLSX viewer: xlsxAnchorToTarget and sourceToXlsxCell for spreadsheet_cell anchors.",
       "registryDependencies": [
-        "xlsx-viewer",
-        "document-source"
+        "@retab/xlsx-viewer",
+        "@retab/document-source"
       ],
       "files": [
         {
@@ -4442,8 +4185,8 @@
       "title": "DOCX source adapter",
       "description": "Bridges the document-source model to the DOCX viewer: docxAnchorToTarget and sourceToDocxHighlight for docx_text_span and docx_table_cell anchors.",
       "registryDependencies": [
-        "docx-viewer",
-        "document-source"
+        "@retab/docx-viewer",
+        "@retab/document-source"
       ],
       "files": [
         {
@@ -4459,14 +4202,14 @@
       "title": "Image Sources",
       "description": "Extracted fields linked to a scanned page image — hover to highlight the image_bbox region.",
       "registryDependencies": [
-        "image-viewer",
-        "image-source",
-        "document-source",
-        "segmented-document",
-        "source-segmented-document",
-        "source-field-list",
-        "source-field-link",
-        "source-indicator"
+        "@retab/image-viewer",
+        "@retab/image-source",
+        "@retab/document-source",
+        "@retab/segmented-document",
+        "@retab/source-segmented-document",
+        "@retab/source-field-list",
+        "@retab/source-field-link",
+        "@retab/source-indicator"
       ],
       "files": [
         {
@@ -4490,14 +4233,14 @@
       "title": "Text Sources",
       "description": "Values extracted from a log file linked to the lines they came from — hover to highlight a line range.",
       "registryDependencies": [
-        "text-viewer",
-        "text-source",
-        "document-source",
-        "segmented-document",
-        "source-segmented-document",
-        "source-field-list",
-        "source-field-link",
-        "source-indicator"
+        "@retab/text-viewer",
+        "@retab/text-source",
+        "@retab/document-source",
+        "@retab/segmented-document",
+        "@retab/source-segmented-document",
+        "@retab/source-field-list",
+        "@retab/source-field-link",
+        "@retab/source-indicator"
       ],
       "files": [
         {
@@ -4521,14 +4264,14 @@
       "title": "DOCX Sources",
       "description": "Values extracted from a Word document linked back to where they came from — hover to highlight the text and scroll to it.",
       "registryDependencies": [
-        "docx-viewer",
-        "docx-source",
-        "document-source",
-        "segmented-document",
-        "source-segmented-document",
-        "source-field-list",
-        "source-field-link",
-        "source-indicator"
+        "@retab/docx-viewer",
+        "@retab/docx-source",
+        "@retab/document-source",
+        "@retab/segmented-document",
+        "@retab/source-segmented-document",
+        "@retab/source-field-list",
+        "@retab/source-field-link",
+        "@retab/source-indicator"
       ],
       "files": [
         {
@@ -4552,14 +4295,14 @@
       "title": "CSV Sources",
       "description": "Extracted values linked to spreadsheet cells — hover to highlight a cell and scroll to it.",
       "registryDependencies": [
-        "csv-viewer",
-        "csv-source",
-        "document-source",
-        "segmented-document",
-        "source-segmented-document",
-        "source-field-list",
-        "source-field-link",
-        "source-indicator"
+        "@retab/csv-viewer",
+        "@retab/csv-source",
+        "@retab/document-source",
+        "@retab/segmented-document",
+        "@retab/source-segmented-document",
+        "@retab/source-field-list",
+        "@retab/source-field-link",
+        "@retab/source-indicator"
       ],
       "files": [
         {
@@ -4583,14 +4326,14 @@
       "title": "Excel Sources",
       "description": "Extracted values linked to spreadsheet cells across sheets — hover to switch sheet, highlight the cell, and scroll to it.",
       "registryDependencies": [
-        "xlsx-viewer",
-        "xlsx-source",
-        "document-source",
-        "segmented-document",
-        "source-segmented-document",
-        "source-field-list",
-        "source-field-link",
-        "source-indicator"
+        "@retab/xlsx-viewer",
+        "@retab/xlsx-source",
+        "@retab/document-source",
+        "@retab/segmented-document",
+        "@retab/source-segmented-document",
+        "@retab/source-field-list",
+        "@retab/source-field-link",
+        "@retab/source-indicator"
       ],
       "files": [
         {
@@ -4614,7 +4357,7 @@
       "title": "Source indicator",
       "description": "A floating pill that reports active field source state over a viewer: nothing selected, a located field path, or a field with no source.",
       "registryDependencies": [
-        "utils"
+        "@retab/utils"
       ],
       "files": [
         {
@@ -4630,7 +4373,7 @@
       "title": "Default File Uploader",
       "description": "The standard visual file uploader built on the headless dropzone primitive.",
       "registryDependencies": [
-        "file-uploader"
+        "@retab/file-uploader"
       ],
       "files": [
         {
@@ -4652,10 +4395,10 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "dropzone",
-        "file-viewer",
-        "file-size-format",
-        "file-thumbnail"
+        "@retab/dropzone",
+        "@retab/file-viewer",
+        "@retab/file-size-format",
+        "@retab/file-thumbnail"
       ],
       "files": [
         {
@@ -4687,9 +4430,9 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "dropzone",
-        "file-size-format",
-        "utils"
+        "@retab/dropzone",
+        "@retab/file-size-format",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -4716,9 +4459,9 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "dropzone",
-        "file-size-format",
-        "utils"
+        "@retab/dropzone",
+        "@retab/file-size-format",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -4745,9 +4488,9 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "dropzone",
-        "file-size-format",
-        "utils"
+        "@retab/dropzone",
+        "@retab/file-size-format",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -4774,9 +4517,9 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "dropzone",
-        "file-size-format",
-        "utils"
+        "@retab/dropzone",
+        "@retab/file-size-format",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -4803,9 +4546,9 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "dropzone",
-        "file-thumbnail",
-        "utils"
+        "@retab/dropzone",
+        "@retab/file-thumbnail",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -4832,10 +4575,10 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "dropzone",
-        "file-thumbnail",
-        "file-size-format",
-        "utils"
+        "@retab/dropzone",
+        "@retab/file-thumbnail",
+        "@retab/file-size-format",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -4862,9 +4605,9 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "dropzone",
-        "file-thumbnail",
-        "utils"
+        "@retab/dropzone",
+        "@retab/file-thumbnail",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -4891,10 +4634,10 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "dropzone",
-        "file-thumbnail",
-        "file-size-format",
-        "utils"
+        "@retab/dropzone",
+        "@retab/file-thumbnail",
+        "@retab/file-size-format",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -4921,10 +4664,10 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "dropzone",
-        "file-thumbnail",
-        "file-size-format",
-        "utils"
+        "@retab/dropzone",
+        "@retab/file-thumbnail",
+        "@retab/file-size-format",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -4951,10 +4694,10 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "dropzone",
-        "file-thumbnail",
-        "file-size-format",
-        "utils"
+        "@retab/dropzone",
+        "@retab/file-thumbnail",
+        "@retab/file-size-format",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -4981,9 +4724,9 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "dropzone",
-        "file-thumbnail",
-        "utils"
+        "@retab/dropzone",
+        "@retab/file-thumbnail",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -5007,9 +4750,9 @@
       "title": "Required Packet",
       "description": "Slot-level dropzones for checklist-driven packet collection.",
       "registryDependencies": [
-        "dropzone",
-        "file-thumbnail",
-        "utils"
+        "@retab/dropzone",
+        "@retab/file-thumbnail",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -5033,9 +4776,9 @@
       "title": "Pinboard Drop Surface",
       "description": "A full canvas trigger that pins dropped files as cards.",
       "registryDependencies": [
-        "dropzone",
-        "file-thumbnail",
-        "utils"
+        "@retab/dropzone",
+        "@retab/file-thumbnail",
+        "@retab/utils"
       ],
       "files": [
         {
@@ -5059,8 +4802,8 @@
       "title": "Disabled Dropzone",
       "description": "Disabled input, trigger focus, intake, and drag behavior.",
       "registryDependencies": [
-        "dropzone",
-        "utils"
+        "@retab/dropzone",
+        "@retab/utils"
       ],
       "files": [
         {

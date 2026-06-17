@@ -2020,10 +2020,14 @@ describe("split segment composition", () => {
     const root = document.querySelector<HTMLElement>(
       '[data-slot="viewer-root"]'
     )
-    expect(root?.children[0]?.getAttribute("data-slot")).toBe("viewer-header")
-    expect(root?.children[1]?.getAttribute("data-slot")).toBe("viewer-body")
+    expect(root?.children[0]?.getAttribute("data-slot")).toBe(
+      "file-viewer-header"
+    )
+    expect(root?.children[1]?.getAttribute("data-slot")).toBe(
+      "file-viewer-body"
+    )
     const body = root?.querySelector<HTMLElement>(
-      ':scope > [data-slot="viewer-body"]'
+      ':scope > [data-slot="file-viewer-body"]'
     )
     expect(
       body?.querySelector(':scope > [data-slot="viewer-sidebar"]')
@@ -2036,7 +2040,7 @@ describe("split segment composition", () => {
     expect(sidebar?.className).not.toContain("bg-background")
     expect(sidebar?.className).not.toContain("absolute")
     const surface = body?.querySelector<HTMLElement>(
-      ':scope > [data-slot="viewer-surface"]'
+      ':scope > [data-slot="file-viewer-surface"]'
     )
     expect(surface).toBeTruthy()
     expect(

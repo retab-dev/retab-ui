@@ -4,7 +4,15 @@ import * as React from "react"
 import { PanelLeft, PanelRight } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { Button, type ButtonProps } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
+
+// Stock Button no longer exports ButtonProps or a `loading` prop. ViewerSidebarTrigger
+// keeps its own `loading` API, so we define ButtonProps locally as the stock Button's
+// props plus the retab `loading` flag (translated to disabled + Spinner at the leaf).
+type ButtonProps = React.ComponentProps<typeof Button> & {
+  loading?: boolean
+}
 
 export type ViewerRootProps = React.ComponentProps<"div"> & {
   defaultOpen?: boolean
@@ -662,7 +670,6 @@ export function ViewerSidebarTrigger({
       data-viewer-root-id={rootId}
       data-viewer-sidebar-trigger=""
       disabled={isDisabled}
-      loading={loading}
       onClick={(event) => {
         setLastTriggerElement(event.currentTarget)
         if (isDisabled) {
@@ -683,9 +690,10 @@ export function ViewerSidebarTrigger({
       variant={variant}
       {...props}
     >
+      {loading ? <Spinner className="size-4 animate-spin" /> : null}
       {children ?? (
         <>
-          <Icon />
+          {loading ? null : <Icon />}
           <span className="sr-only">Toggle sidebar</span>
         </>
       )}

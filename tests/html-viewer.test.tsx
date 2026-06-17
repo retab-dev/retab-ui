@@ -90,6 +90,26 @@ function iframes(container: HTMLElement) {
   return Array.from(container.querySelectorAll("iframe"))
 }
 
+function expectIframeSrcDoc(
+  iframe: HTMLIFrameElement | null | undefined,
+  html: string
+) {
+  expect(iframe).toBeTruthy()
+  const srcdoc = iframe?.getAttribute("srcdoc") ?? ""
+  expect(srcdoc).toContain("data-retab-html-viewer-padding")
+  expect(srcdoc).toContain("padding: 1rem")
+  expect(srcdoc).toContain("body > :first-child")
+  expect(srcdoc).toContain("margin-block-start: 0")
+  expect(srcdoc).toContain(html)
+}
+
+function iframeSrcDocIncludes(
+  iframe: HTMLIFrameElement | null | undefined,
+  html: string
+) {
+  return iframe?.getAttribute("srcdoc")?.includes(html) ?? false
+}
+
 class TestErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { error: unknown }
@@ -126,7 +146,7 @@ afterEach(() => {
 })
 
 describe("HtmlFileContent", () => {
-  it("renders URL HTML into an empty-sandbox iframe without rewriting the document", async () => {
+  it("renders URL HTML into an empty-sandbox iframe with document padding", async () => {
     const html =
       "<!doctype html><html><body><h1>Invoice</h1><script>window.__html_viewer_ran = true</script></body></html>"
     const pending = deferred<Response>()
@@ -151,7 +171,11 @@ describe("HtmlFileContent", () => {
       expect.objectContaining({ signal: expect.any(AbortSignal) })
     )
     expect(iframe.getAttribute("sandbox")).toBe("")
-    expect(iframe.getAttribute("srcdoc")).toBe(html)
+    expectIframeSrcDoc(iframe, "<h1>Invoice</h1>")
+    expectIframeSrcDoc(
+      iframe,
+      "<script>window.__html_viewer_ran = true</script>"
+    )
     expect(iframe.getAttribute("title")).toBe("invoice.html")
     expect(
       (globalThis as { __html_viewer_ran?: boolean }).__html_viewer_ran
@@ -190,7 +214,7 @@ describe("HtmlFileContent", () => {
       "/api/files/preview?id=42",
       expect.any(Object)
     )
-    expect(iframe.getAttribute("srcdoc")).toBe("<main>signed document</main>")
+    expectIframeSrcDoc(iframe, "<main>signed document</main>")
     expect(iframe.getAttribute("title")).toBe("preview")
     expect(
       screen.getByRole("link", { name: "Download" }).getAttribute("download")
@@ -216,9 +240,7 @@ describe("HtmlFileContent", () => {
     await waitFor(() => expect(fetch).toHaveBeenCalled())
     await resolveFetch(pending, response("<p>preview</p>", { status: 200 }))
 
-    expect((await findIframe(container)).getAttribute("srcdoc")).toBe(
-      "<p>preview</p>"
-    )
+    expectIframeSrcDoc(await findIframe(container), "<p>preview</p>")
     expect(
       screen.getByRole("link", { name: "Download" }).getAttribute("href")
     ).toBe("/download/original.html")
@@ -333,7 +355,7 @@ describe("HtmlFileContent", () => {
 
     expect(fetchMock).not.toHaveBeenCalled()
     expect(iframe.getAttribute("sandbox")).toBe("")
-    expect(iframe.getAttribute("srcdoc")).toBe(html)
+    expectIframeSrcDoc(iframe, html)
     expect(iframe.getAttribute("title")).toBe("inline.html")
     expect(screen.queryByText(/No preview for/)).toBeNull()
     expect(screen.getByRole("button", { name: "Download" })).toBeTruthy()
@@ -349,7 +371,7 @@ describe("HtmlFileContent", () => {
       <FileViewer source={htmlTextSource(html, "inline-download.html")} />
     )
 
-    expect((await findIframe(container)).getAttribute("srcdoc")).toBe(html)
+    expectIframeSrcDoc(await findIframe(container), html)
 
     fireEvent.click(screen.getByRole("button", { name: "Download" }))
 
@@ -376,9 +398,7 @@ describe("HtmlFileContent", () => {
 
     expect(fetchMock).not.toHaveBeenCalled()
     expect(iframe.getAttribute("sandbox")).toBe("")
-    expect(iframe.getAttribute("srcdoc")).toBe(
-      "<main><h1>Blob HTML</h1></main>"
-    )
+    expectIframeSrcDoc(iframe, "<main><h1>Blob HTML</h1></main>")
     expect(iframe.getAttribute("title")).toBe("blob.html")
     expect(screen.queryByText(/No preview for/)).toBeNull()
   })
@@ -450,16 +470,12 @@ describe("HtmlFileContent", () => {
 
     const { container, rerender } = render(<FileViewer source={firstSource} />)
 
-    expect((await findIframe(container)).getAttribute("srcdoc")).toBe(
-      "<p>first</p>"
-    )
+    expectIframeSrcDoc(await findIframe(container), "<p>first</p>")
 
     rerender(<FileViewer source={secondSource} />)
 
     await waitFor(() => {
-      expect(container.querySelector("iframe")?.getAttribute("srcdoc")).toBe(
-        "<p>second</p>"
-      )
+      expectIframeSrcDoc(container.querySelector("iframe"), "<p>second</p>")
     })
     fireEvent.click(screen.getByRole("button", { name: "Download" }))
 
@@ -517,16 +533,15 @@ describe("HtmlFileContent", () => {
       await Promise.resolve()
     })
 
-    expect((await findIframe(container)).getAttribute("srcdoc")).toBe(
-      "<p>second slow blob</p>"
-    )
+    expectIframeSrcDoc(await findIframe(container), "<p>second slow blob</p>")
 
     await act(async () => {
       firstText.resolve("<p>first late blob</p>")
       await Promise.resolve()
     })
 
-    expect(container.querySelector("iframe")?.getAttribute("srcdoc")).toBe(
+    expectIframeSrcDoc(
+      container.querySelector("iframe"),
       "<p>second slow blob</p>"
     )
   })
@@ -541,9 +556,7 @@ describe("HtmlFileContent", () => {
       />
     )
 
-    expect((await findIframe(container)).getAttribute("srcdoc")).toBe(
-      "<p>remote original</p>"
-    )
+    expectIframeSrcDoc(await findIframe(container), "<p>remote original</p>")
     const download = await screen.findByRole("link", { name: "Download" })
     expect(download.getAttribute("href")).toBe("/download/remote-original.html")
     expect(download.getAttribute("download")).toBe("remote.html")
@@ -606,7 +619,7 @@ describe("HtmlFileContent", () => {
     await resolveFetch(pending, response("<strong>forced html</strong>"))
 
     const iframe = await findIframe(container)
-    expect(iframe.getAttribute("srcdoc")).toBe("<strong>forced html</strong>")
+    expectIframeSrcDoc(iframe, "<strong>forced html</strong>")
     expect(iframe.getAttribute("title")).toBe("raw.txt")
   })
 
@@ -623,7 +636,7 @@ describe("HtmlFileContent", () => {
     )
 
     const iframe = await findIframe(container)
-    expect(iframe.getAttribute("srcdoc")).toBe("<p>forced blob</p>")
+    expectIframeSrcDoc(iframe, "<p>forced blob</p>")
     expect(iframe.getAttribute("title")).toBe("payload.bin")
     expect(screen.queryByText(/No preview for/)).toBeNull()
   })
@@ -657,7 +670,7 @@ describe("HtmlFileContent", () => {
     fireEvent.click(screen.getByLabelText("Zoom in"))
     fireEvent.click(screen.getByLabelText("Zoom in"))
     expect(iframe.style.zoom).toBe("1.44")
-    fireEvent.click(screen.getByLabelText("Actual size"))
+    fireEvent.click(screen.getByTitle("Reset zoom"))
     expect(iframe.style.zoom).toBe("1")
     expect(screen.getByText("100%")).toBeTruthy()
   })
@@ -708,8 +721,10 @@ describe("HtmlFileContent", () => {
 
     await waitFor(() => expect(iframes(container)).toHaveLength(2))
     expect(
-      iframes(container).map((iframe) => iframe.getAttribute("srcdoc"))
-    ).toEqual(["<p>shared</p>", "<p>shared</p>"])
+      iframes(container).every((iframe) =>
+        iframeSrcDocIncludes(iframe, "<p>shared</p>")
+      )
+    ).toBe(true)
   })
 
   it("keeps a shared HTML fetch alive until every subscriber unmounts", async () => {
@@ -781,9 +796,8 @@ describe("HtmlFileContent", () => {
 
     await waitFor(() => {
       expect(
-        iframes(container).some(
-          (iframe) =>
-            iframe.getAttribute("srcdoc") === "<p>first still mounted</p>"
+        iframes(container).some((iframe) =>
+          iframeSrcDocIncludes(iframe, "<p>first still mounted</p>")
         )
       ).toBe(true)
     })
@@ -818,13 +832,13 @@ describe("HtmlFileContent", () => {
     await resolveFetch(newResponse, response("<p>new</p>", { status: 200 }))
 
     const iframe = await findIframe(container)
-    expect(iframe.getAttribute("srcdoc")).toBe("<p>new</p>")
+    expectIframeSrcDoc(iframe, "<p>new</p>")
 
     oldResponse.resolve(response("<p>old</p>", { status: 200 }))
     await Promise.resolve()
 
     expect(iframes(container)).toHaveLength(1)
-    expect(iframes(container)[0]?.getAttribute("srcdoc")).toBe("<p>new</p>")
+    expectIframeSrcDoc(iframes(container)[0], "<p>new</p>")
   })
 
   it("ignores late stale HTML failures after a descriptor change", async () => {
@@ -868,9 +882,7 @@ describe("HtmlFileContent", () => {
       oldResponse.reject(new Error("old request failed late"))
       await Promise.resolve()
 
-      expect((await findIframe(container)).getAttribute("srcdoc")).toBe(
-        "<p>new wins</p>"
-      )
+      expectIframeSrcDoc(await findIframe(container), "<p>new wins</p>")
       expect(screen.queryByRole("alert")).toBeNull()
     } finally {
       consoleError.mockRestore()
@@ -941,7 +953,7 @@ describe("HtmlFileContent", () => {
       await resolveFetch(good, response("<p>good</p>", { status: 200 }))
 
       const iframe = await findIframe(container)
-      expect(iframe.getAttribute("srcdoc")).toBe("<p>good</p>")
+      expectIframeSrcDoc(iframe, "<p>good</p>")
       expect(screen.queryByRole("alert")).toBeNull()
     } finally {
       consoleError.mockRestore()
@@ -972,9 +984,7 @@ describe("HtmlFileContent", () => {
       expect(fetch).toHaveBeenCalledWith("/direct-a.html", expect.any(Object))
     )
     await resolveFetch(first, response("<p>first</p>", { status: 200 }))
-    expect((await findIframe(container)).getAttribute("srcdoc")).toBe(
-      "<p>first</p>"
-    )
+    expectIframeSrcDoc(await findIframe(container), "<p>first</p>")
 
     rerender(
       <HtmlFileContent
@@ -992,9 +1002,7 @@ describe("HtmlFileContent", () => {
     )
     await resolveFetch(second, response("<p>second</p>", { status: 200 }))
 
-    expect((await findIframe(container)).getAttribute("srcdoc")).toBe(
-      "<p>second</p>"
-    )
+    expectIframeSrcDoc(await findIframe(container), "<p>second</p>")
   })
 
   it("aborts stale direct HTML fetches when URL changes with the same signal", async () => {
@@ -1035,9 +1043,7 @@ describe("HtmlFileContent", () => {
     await waitFor(() => expect(secondSignal).toBeTruthy())
     await resolveFetch(second, response("<p>second same signal</p>"))
 
-    expect((await findIframe(container)).getAttribute("srcdoc")).toBe(
-      "<p>second same signal</p>"
-    )
+    expectIframeSrcDoc(await findIframe(container), "<p>second same signal</p>")
   })
 
   it("keeps a shared direct HTML fetch alive when one subscriber changes URL", async () => {
@@ -1094,8 +1100,11 @@ describe("HtmlFileContent", () => {
 
     await waitFor(() => expect(iframes(container)).toHaveLength(2))
     expect(
-      iframes(container).map((iframe) => iframe.getAttribute("srcdoc"))
-    ).toEqual(["<p>next direct</p>", "<p>shared still needed</p>"])
+      iframeSrcDocIncludes(iframes(container)[0], "<p>next direct</p>")
+    ).toBe(true)
+    expect(
+      iframeSrcDocIncludes(iframes(container)[1], "<p>shared still needed</p>")
+    ).toBe(true)
   })
 
   it("aborts direct HTML fetches on unmount", async () => {
@@ -1190,9 +1199,7 @@ describe("HtmlFileContent", () => {
       />
     )
 
-    expect((await findIframe(container)).getAttribute("srcdoc")).toBe(
-      "<p>inline first</p>"
-    )
+    expectIframeSrcDoc(await findIframe(container), "<p>inline first</p>")
 
     rerender(
       <HtmlFileContent
@@ -1213,7 +1220,7 @@ describe("HtmlFileContent", () => {
     await resolveFetch(fetched, response("<p>fetched next</p>"))
 
     const iframe = await findIframe(container)
-    expect(iframe.getAttribute("srcdoc")).toBe("<p>fetched next</p>")
+    expectIframeSrcDoc(iframe, "<p>fetched next</p>")
     expect(iframe.getAttribute("title")).toBe("fetched.html")
   })
 
@@ -1239,9 +1246,7 @@ describe("HtmlFileContent", () => {
       )
     )
     await resolveFetch(fetched, response("<p>fetched first</p>"))
-    expect((await findIframe(container)).getAttribute("srcdoc")).toBe(
-      "<p>fetched first</p>"
-    )
+    expectIframeSrcDoc(await findIframe(container), "<p>fetched first</p>")
 
     rerender(
       <HtmlFileContent
@@ -1251,7 +1256,7 @@ describe("HtmlFileContent", () => {
     )
 
     const iframe = await findIframe(container)
-    expect(iframe.getAttribute("srcdoc")).toBe("<p>inline next</p>")
+    expectIframeSrcDoc(iframe, "<p>inline next</p>")
     expect(iframe.getAttribute("title")).toBe("inline.html")
   })
 
@@ -1266,9 +1271,7 @@ describe("HtmlFileContent", () => {
       />
     )
 
-    expect((await findIframe(container)).getAttribute("srcdoc")).toBe(
-      "<p>first blob</p>"
-    )
+    expectIframeSrcDoc(await findIframe(container), "<p>first blob</p>")
 
     rerender(
       <HtmlFileContent
@@ -1281,9 +1284,7 @@ describe("HtmlFileContent", () => {
       expect(container.querySelector("iframe")).toBeNull()
     })
 
-    expect((await findIframe(container)).getAttribute("srcdoc")).toBe(
-      "<p>second blob</p>"
-    )
+    expectIframeSrcDoc(await findIframe(container), "<p>second blob</p>")
   })
 
   it("surfaces Blob HTML read failures to an error boundary", async () => {
@@ -1336,8 +1337,7 @@ describe("HtmlFileContent", () => {
       const download = screen
         .getAllByRole("link", { name: "Download" })
         .find(
-          (link) =>
-            link.getAttribute("href") === "/download/broken-blob.html"
+          (link) => link.getAttribute("href") === "/download/broken-blob.html"
         )
       expect(download).toBeDefined()
       if (!download) throw new Error("Expected Blob HTML download link.")
@@ -1369,7 +1369,7 @@ describe("HtmlFileContent", () => {
         ?.className
     ).toContain("h-full")
     expect(screen.queryByRole("link", { name: "Download" })).toBeNull()
-    expect(iframe.getAttribute("srcdoc")).toBe("<article>direct</article>")
+    expectIframeSrcDoc(iframe, "<article>direct</article>")
     expect(iframe.getAttribute("title")).toBe("direct.html")
   })
 })

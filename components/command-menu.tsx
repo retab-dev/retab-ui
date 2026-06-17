@@ -552,7 +552,6 @@ function DialogContent({
 }) {
   return (
     <BaseDialogContent
-      bottomStickOnMobile={false}
       className={cn("gap-4 p-6 sm:max-w-lg", className)}
       data-slot="dialog-content"
       showCloseButton={false}

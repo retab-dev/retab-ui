@@ -4,14 +4,14 @@
   "title": "Excel Sources",
   "description": "Extracted values linked to spreadsheet cells across sheets — hover to switch sheet, highlight the cell, and scroll to it.",
   "registryDependencies": [
-    "xlsx-viewer",
-    "xlsx-source",
-    "document-source",
-    "segmented-document",
-    "source-segmented-document",
-    "source-field-list",
-    "source-field-link",
-    "source-indicator"
+    "@retab/xlsx-viewer",
+    "@retab/xlsx-source",
+    "@retab/document-source",
+    "@retab/segmented-document",
+    "@retab/source-segmented-document",
+    "@retab/source-field-list",
+    "@retab/source-field-link",
+    "@retab/source-indicator"
   ],
   "files": [
     {

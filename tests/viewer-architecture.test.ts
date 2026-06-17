@@ -104,6 +104,34 @@ const canonicalViewerNames = new Set([
 
 const sourceExtensions = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]
 
+// The 14 primitives migrated to stock shadcn. They are referenced as bare
+// registry dependencies and resolve to upstream shadcn files, so they no
+// longer ship their own files inside registry.json. Their in-repo source
+// still lives at registry/new-york-v4/ui/<name>.tsx, so relative imports to
+// them are satisfied by the bare dependency, not by a listed registry file.
+const migratedShadcnPrimitives = new Set([
+  "button",
+  "dialog",
+  "sheet",
+  "dropdown-menu",
+  "popover",
+  "tooltip",
+  "select",
+  "tabs",
+  "accordion",
+  "collapsible",
+  "separator",
+  "card",
+  "badge",
+  "breadcrumb",
+])
+
+const migratedShadcnPrimitiveFiles = new Set(
+  Array.from(migratedShadcnPrimitives).map(
+    (name) => `registry/new-york-v4/ui/${name}.tsx`
+  )
+)
+
 function readJson<T>(path: string): T {
   return JSON.parse(readFileSync(join(repoRoot, path), "utf8")) as T
 }
@@ -1169,16 +1197,16 @@ describe("viewer architecture", () => {
       ])
     )
     expect(fileViewerItem?.registryDependencies ?? []).toContain(
-      "markdown-viewer"
+      "@retab/markdown-viewer"
     )
     expect(fileViewerItem?.registryDependencies ?? []).not.toContain(
-      "markdown-document-viewer"
+      "@retab/markdown-document-viewer"
     )
     expect(publicFileViewerItem.registryDependencies ?? []).toContain(
-      "markdown-viewer"
+      "@retab/markdown-viewer"
     )
     expect(publicFileViewerItem.registryDependencies ?? []).not.toContain(
-      "markdown-document-viewer"
+      "@retab/markdown-document-viewer"
     )
     expect(fileViewerSource).not.toContain(
       'import("@/components/ui/markdown-viewer")'
@@ -1655,16 +1683,20 @@ describe("viewer architecture", () => {
     expect(sharedRail).toContain("export function SegmentPageRail")
     expect(sharedRail).not.toContain("components/viewers/split")
     expect(segmentPageRailItem?.registryDependencies ?? []).toEqual([
-      "segments",
-      "segment-interaction",
-      "page-ribbon",
-      "utils",
+      "@retab/segments",
+      "@retab/segment-interaction",
+      "@retab/page-ribbon",
+      "@retab/utils",
     ])
-    expect(splitItem?.registryDependencies ?? []).toContain("segment-page-rail")
     expect(splitItem?.registryDependencies ?? []).toContain(
-      "segmented-document"
+      "@retab/segment-page-rail"
     )
-    expect(splitItem?.registryDependencies ?? []).not.toContain("page-ribbon")
+    expect(splitItem?.registryDependencies ?? []).toContain(
+      "@retab/segmented-document"
+    )
+    expect(splitItem?.registryDependencies ?? []).not.toContain(
+      "@retab/page-ribbon"
+    )
     expect(splitItem?.files.map((file) => file.path) ?? []).not.toContain(
       "components/viewers/segmented-document/use-segment-viewport-controller.ts"
     )
@@ -2425,7 +2457,9 @@ describe("viewer architecture", () => {
 
     expect(content).not.toContain("const isGallery")
     expect(sidebarTag).toContain('aria-label="Files"')
-    expect(sidebarTag).toContain('width="min(22rem, 85vw)"')
+    expect(sidebarTag).toContain("width={sidebarWidth}")
+    expect(content).toContain("FILE_SYSTEM_SIDEBAR_WIDTH")
+    expect(content).toContain("FILE_SYSTEM_COLUMNS_SIDEBAR_WIDTH")
     expect(sidebarTag).not.toContain('width="58%"')
     expect(content).not.toContain("{isGallery ? null : (")
     expect(surfaceTag).not.toMatch(/\bhidden\b/)
@@ -3672,7 +3706,7 @@ describe("viewer architecture", () => {
       }),
     ])
     expect(itemsByName.get("source-field-link")?.registryDependencies).toEqual(
-      expect.arrayContaining(["segmented-document"])
+      expect.arrayContaining(["@retab/segmented-document"])
     )
     expect(
       itemsByName.get("source-field-link")?.registryDependencies
@@ -3691,25 +3725,32 @@ describe("viewer architecture", () => {
     )
     expect(itemsByName.get("source-field-list")?.registryDependencies).toEqual(
       expect.arrayContaining([
-        "interactive-item-list",
-        "source-field-link",
-        "source-evidence",
+        "@retab/interactive-item-list",
+        "@retab/source-field-link",
+        "@retab/source-evidence",
       ])
     )
     expect(itemsByName.get("source-evidence")?.registryDependencies).toEqual(
-      expect.arrayContaining(["document-evidence", "source-anchor"])
+      expect.arrayContaining(["@retab/document-evidence", "@retab/source-anchor"])
     )
     expect(
       itemsByName.get("source-segmented-document")?.registryDependencies
-    ).toEqual(expect.arrayContaining(["document-source", "segmented-document"]))
+    ).toEqual(
+      expect.arrayContaining([
+        "@retab/document-source",
+        "@retab/segmented-document",
+      ])
+    )
     expect(
       itemsByName.get("layout-blocks-segmented-document")?.registryDependencies
-    ).toEqual(expect.arrayContaining(["layout-blocks", "segmented-document"]))
+    ).toEqual(
+      expect.arrayContaining(["@retab/layout-blocks", "@retab/segmented-document"])
+    )
     expect(itemsByName.get("layout-blocks")?.registryDependencies).toEqual(
       expect.arrayContaining([
-        "document-evidence",
-        "interactive-item-list",
-        "segmented-document",
+        "@retab/document-evidence",
+        "@retab/interactive-item-list",
+        "@retab/segmented-document",
       ])
     )
     expect(itemsByName.get("layout-blocks")?.registryDependencies).not.toEqual(
@@ -3719,8 +3760,8 @@ describe("viewer architecture", () => {
       itemsByName.get("json-form-sources-block")?.registryDependencies
     ).toEqual(
       expect.arrayContaining([
-        "segmented-document",
-        "source-segmented-document",
+        "@retab/segmented-document",
+        "@retab/source-segmented-document",
       ])
     )
     expect(
@@ -3732,8 +3773,8 @@ describe("viewer architecture", () => {
       itemsByName.get("image-sources-block")?.registryDependencies
     ).toEqual(
       expect.arrayContaining([
-        "segmented-document",
-        "source-segmented-document",
+        "@retab/segmented-document",
+        "@retab/source-segmented-document",
       ])
     )
     expect(
@@ -3743,8 +3784,8 @@ describe("viewer architecture", () => {
       itemsByName.get("extract-viewer-block")?.registryDependencies
     ).toEqual(
       expect.arrayContaining([
-        "segmented-document",
-        "source-segmented-document",
+        "@retab/segmented-document",
+        "@retab/source-segmented-document",
       ])
     )
     expect(
@@ -3756,8 +3797,8 @@ describe("viewer architecture", () => {
       itemsByName.get("sources-viewer-block")?.registryDependencies
     ).toEqual(
       expect.arrayContaining([
-        "segmented-document",
-        "source-segmented-document",
+        "@retab/segmented-document",
+        "@retab/source-segmented-document",
       ])
     )
     expect(
@@ -4155,6 +4196,7 @@ describe("viewer architecture", () => {
 
     for (const item of viewerRegistryItems(registry)) {
       const listedFiles = new Set(item.files.map((file) => file.path))
+      const bareDependencies = new Set(item.registryDependencies ?? [])
       const dependencyFiles = new Set(
         (item.registryDependencies ?? []).flatMap(
           (name) =>
@@ -4171,6 +4213,19 @@ describe("viewer architecture", () => {
           if (!importedFile?.startsWith("registry/new-york-v4/")) continue
           if (listedFiles.has(importedFile)) continue
           if (dependencyFiles.has(importedFile)) continue
+          // Imports that resolve to a migrated stock-shadcn primitive are
+          // satisfied by a bare registry dependency (button, dropdown-menu, …),
+          // which no longer ships its own files inside registry.json.
+          if (
+            migratedShadcnPrimitiveFiles.has(importedFile) &&
+            bareDependencies.has(
+              importedFile
+                .replace(/^registry\/new-york-v4\/ui\//, "")
+                .replace(/\.tsx$/, "")
+            )
+          ) {
+            continue
+          }
           missingModules.push(
             `${item.name}: ${file.path} imports ${importedFile}`
           )
@@ -4203,27 +4258,34 @@ describe("viewer architecture", () => {
     expect(sidebarRow?.files.map((file) => file.path)).toEqual([
       "registry/new-york-v4/ui/sidebar-row.ts",
     ])
-    expect(sidebar?.registryDependencies ?? []).toContain("sidebar-row")
+    expect(sidebar?.registryDependencies ?? []).toContain("@retab/sidebar-row")
     expect(sidebar?.dependencies ?? []).not.toContain(
       "class-variance-authority@^0.7.1"
     )
-    expect(sidebarSource).toContain('from "./sidebar-row"')
+    // The migrated stock-shadcn sidebar is self-contained: it defines its
+    // menu-button variants inline rather than importing them from sidebar-row
+    // (the shared row module is still consumed by sidebar-list and friends).
+    expect(sidebarSource).toContain("const sidebarMenuButtonVariants = cva(")
     expect(sidebarSource).not.toContain("EmbeddedSidebarProvider")
     expect(sidebarSource).not.toContain("scope?:")
     expect(sidebarSource).not.toContain("data-sidebar-scope")
 
-    expect(sidebarList?.registryDependencies ?? []).toContain("sidebar-row")
+    expect(sidebarList?.registryDependencies ?? []).toContain(
+      "@retab/sidebar-row"
+    )
     expect(sidebarList?.registryDependencies ?? []).not.toContain("sidebar")
     expect(sidebarListSource).toContain('from "./sidebar-row"')
     expect(sidebarListSource).not.toContain('from "./sidebar"')
 
-    expect(segmentSidebar?.registryDependencies ?? []).toContain("sidebar-list")
+    expect(segmentSidebar?.registryDependencies ?? []).toContain(
+      "@retab/sidebar-list"
+    )
     expect(segmentSidebar?.registryDependencies ?? []).not.toContain("sidebar")
     expect(segmentSidebarSource).toContain('from "./sidebar-list"')
     expect(segmentSidebarSource).not.toContain("EmbeddedSidebarProvider")
 
     expect(attachmentSidebar?.registryDependencies ?? []).toContain(
-      "sidebar-list"
+      "@retab/sidebar-list"
     )
     expect(attachmentSidebar?.registryDependencies ?? []).not.toContain(
       "sidebar"

@@ -558,7 +558,9 @@ describe("sidebar primitive defaults", () => {
     render(
       <SidebarProvider>
         <SidebarGroup>
-          <SidebarGroupLabel render={<h2 />}>Projects</SidebarGroupLabel>
+          <SidebarGroupLabel asChild>
+            <h2>Projects</h2>
+          </SidebarGroupLabel>
         </SidebarGroup>
       </SidebarProvider>
     )
@@ -589,7 +591,9 @@ describe("sidebar primitive defaults", () => {
     render(
       <form onSubmit={onSubmit}>
         <SidebarProvider>
-          <SidebarTrigger render={<button type="submit" />} />
+          <SidebarTrigger asChild>
+            <button type="submit" />
+          </SidebarTrigger>
         </SidebarProvider>
       </form>
     )
@@ -652,11 +656,9 @@ describe("sidebar bug-hunt coverage", () => {
 
     const { container } = render(
       <SidebarProvider defaultOpen>
-        <SidebarTrigger
-          disabled
-          onClick={onClick}
-          render={<a href="#disabled-trigger" />}
-        />
+        <SidebarTrigger disabled onClick={onClick} asChild>
+          <a href="#disabled-trigger" />
+        </SidebarTrigger>
         <ContextProbe />
       </SidebarProvider>
     )
@@ -680,11 +682,9 @@ describe("sidebar bug-hunt coverage", () => {
 
     const { container } = render(
       <SidebarProvider defaultOpen>
-        <SidebarTrigger
-          loading
-          onClick={onClick}
-          render={<a href="#loading-trigger" />}
-        />
+        <SidebarTrigger loading onClick={onClick} asChild>
+          <a href="#loading-trigger" />
+        </SidebarTrigger>
         <ContextProbe />
       </SidebarProvider>
     )
@@ -727,11 +727,9 @@ describe("sidebar bug-hunt coverage", () => {
 
     const { container } = render(
       <SidebarProvider defaultOpen>
-        <SidebarTrigger
-          aria-disabled="true"
-          onClick={onClick}
-          render={<a href="#aria-disabled-trigger" />}
-        />
+        <SidebarTrigger aria-disabled="true" onClick={onClick} asChild>
+          <a href="#aria-disabled-trigger" />
+        </SidebarTrigger>
         <ContextProbe />
       </SidebarProvider>
     )
@@ -815,10 +813,9 @@ describe("sidebar bug-hunt coverage", () => {
 
     const { container } = render(
       <SidebarProvider defaultOpen>
-        <SidebarTrigger
-          onClick={onClick}
-          render={<a href="#navigation" />}
-        />
+        <SidebarTrigger onClick={onClick} asChild>
+          <a href="#navigation" />
+        </SidebarTrigger>
         <ContextProbe />
       </SidebarProvider>
     )
@@ -846,8 +843,10 @@ describe("sidebar bug-hunt coverage", () => {
       <SidebarProvider defaultOpen>
         <SidebarTrigger
           onClick={onClick as React.MouseEventHandler<HTMLButtonElement>}
-          render={<span role="button" tabIndex={0} />}
-        />
+          asChild
+        >
+          <span role="button" tabIndex={0} />
+        </SidebarTrigger>
         <ContextProbe />
       </SidebarProvider>
     )
@@ -1221,20 +1220,18 @@ describe("sidebar bug-hunt coverage", () => {
     render(
       <SidebarProvider>
         <SidebarGroup>
-          <SidebarGroupAction
-            aria-label="Group link"
-            render={<a href="/group" />}
-          />
+          <SidebarGroupAction aria-label="Group link" asChild>
+            <a href="/group" />
+          </SidebarGroupAction>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton render={<a href="/button-link" />}>
-                  Button link
+                <SidebarMenuButton asChild>
+                  <a href="/button-link">Button link</a>
                 </SidebarMenuButton>
-                <SidebarMenuAction
-                  aria-label="Menu action link"
-                  render={<a href="/action" />}
-                />
+                <SidebarMenuAction aria-label="Menu action link" asChild>
+                  <a href="/action" />
+                </SidebarMenuAction>
                 <SidebarMenuSub>
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton href="/sub-link">
@@ -1264,23 +1261,21 @@ describe("sidebar bug-hunt coverage", () => {
     render(
       <form onSubmit={onSubmit}>
         <SidebarProvider>
-          <SidebarGroupAction
-            aria-label="Submit group"
-            render={<button type="submit" />}
-          />
+          <SidebarGroupAction aria-label="Submit group" asChild>
+            <button type="submit" />
+          </SidebarGroupAction>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton render={<button type="submit" />}>
-                Submit menu
+              <SidebarMenuButton asChild>
+                <button type="submit">Submit menu</button>
               </SidebarMenuButton>
-              <SidebarMenuAction
-                aria-label="Submit action"
-                render={<button type="submit" />}
-              />
+              <SidebarMenuAction aria-label="Submit action" asChild>
+                <button type="submit" />
+              </SidebarMenuAction>
               <SidebarMenuSub>
                 <SidebarMenuSubItem>
-                  <SidebarMenuSubButton render={<button type="submit" />}>
-                    Submit sub
+                  <SidebarMenuSubButton asChild>
+                    <button type="submit">Submit sub</button>
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
               </SidebarMenuSub>

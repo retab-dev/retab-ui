@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { ChevronDown } from "lucide-react"
+import { Select as SelectPrimitive } from "radix-ui"
 
 import {
   DataCell,
@@ -12,7 +13,6 @@ import {
   Select,
   SelectContent,
   SelectItem,
-  SelectPrimitive,
   SelectValue,
 } from "@/components/ui/select"
 

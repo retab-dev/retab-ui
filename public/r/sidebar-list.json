@@ -8,8 +8,8 @@
   ],
   "registryDependencies": [
     "separator",
-    "sidebar-row",
-    "utils"
+    "@retab/sidebar-row",
+    "@retab/utils"
   ],
   "files": [
     {

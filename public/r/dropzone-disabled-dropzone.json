@@ -4,8 +4,8 @@
   "title": "Disabled Dropzone",
   "description": "Disabled input, trigger focus, intake, and drag behavior.",
   "registryDependencies": [
-    "dropzone",
-    "utils"
+    "@retab/dropzone",
+    "@retab/utils"
   ],
   "files": [
     {

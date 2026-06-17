@@ -4,7 +4,7 @@
   "title": "Segment Interaction",
   "description": "React-free hover, focus, selection, and current-page helpers for Segment[] surfaces.",
   "registryDependencies": [
-    "segments"
+    "@retab/segments"
   ],
   "files": [
     {

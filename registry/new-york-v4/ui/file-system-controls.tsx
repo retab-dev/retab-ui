@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { TabsPrimitive } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import type {
   FileSystemBrowserState,
@@ -160,26 +160,26 @@ function FileSystemViewTabs({
   view: FileSystemHeaderState["view"]
 }) {
   return (
-    <TabsPrimitive.Root
+    <Tabs
       value={view}
       onValueChange={(nextView) => setView(nextView as FileSystemView)}
       className="hidden md:block"
       data-slot="file-system-view-tabs"
     >
-      <TabsPrimitive.List className="relative z-0 grid h-8 grid-cols-3 items-center gap-0.5 rounded-md bg-muted/80 p-0.5 text-muted-foreground">
+      <TabsList className="relative z-0 grid h-8 grid-cols-3 items-center gap-0.5 rounded-md bg-muted/80 p-0.5 text-muted-foreground">
         {VIEW_OPTIONS.map((option) => (
-          <TabsPrimitive.Tab
+          <TabsTrigger
             key={option.value}
             value={option.value}
             aria-label={`${option.label} view`}
             title={`${option.label} view`}
-            className="flex size-7 cursor-pointer items-center justify-center rounded-sm transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-disabled:pointer-events-none data-disabled:opacity-50 data-active:bg-background data-active:text-foreground data-active:shadow-xs data-active:ring-1 data-active:ring-border/40 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+            className="flex size-7 cursor-pointer items-center justify-center rounded-sm transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs data-[state=active]:ring-1 data-[state=active]:ring-border/40 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
           >
             <option.icon aria-hidden />
-          </TabsPrimitive.Tab>
+          </TabsTrigger>
         ))}
-      </TabsPrimitive.List>
-    </TabsPrimitive.Root>
+      </TabsList>
+    </Tabs>
   )
 }
 

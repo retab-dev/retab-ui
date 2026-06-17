@@ -4,8 +4,8 @@
   "title": "Excel source adapter",
   "description": "Bridges the document-source model to the XLSX viewer: xlsxAnchorToTarget and sourceToXlsxCell for spreadsheet_cell anchors.",
   "registryDependencies": [
-    "xlsx-viewer",
-    "document-source"
+    "@retab/xlsx-viewer",
+    "@retab/document-source"
   ],
   "files": [
     {

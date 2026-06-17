@@ -27,6 +27,29 @@ import {
 import { resolveCsvResource } from "@/registry/new-york-v4/ui/csv-viewer-resource"
 import { toCsvFormatError } from "@/registry/new-york-v4/ui/csv-viewer-worker"
 
+// Stock Radix dropdown-menu relies on pointer capture and scrollIntoView, which
+// jsdom does not implement. Without these shims the Download menu never opens.
+if (typeof Element !== "undefined" && !Element.prototype.hasPointerCapture) {
+  Element.prototype.hasPointerCapture = () => false
+  Element.prototype.setPointerCapture = () => {}
+  Element.prototype.releasePointerCapture = () => {}
+}
+if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {}
+}
+
+// Stock Radix DropdownMenuTrigger opens on pointerdown (not click); base-ui
+// opened on click. Drive both events so the menu opens under jsdom.
+function openDownloadMenu() {
+  const trigger = screen.getByRole("button", { name: "Download" })
+  fireEvent.pointerDown(trigger, {
+    button: 0,
+    ctrlKey: false,
+    pointerType: "mouse",
+  })
+  fireEvent.click(trigger)
+}
+
 class ResizeObserverMock {
   observe() {}
   unobserve() {}
@@ -1325,7 +1348,7 @@ describe("CsvViewer URL source loading", () => {
     ).toBeTruthy()
     expect(screen.queryByRole("button", { name: "Retry" })).toBeNull()
 
-    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+    openDownloadMenu()
 
     const exportItem = await screen.findByText("Export table")
     expect(
@@ -1485,7 +1508,7 @@ describe("CsvViewer URL source loading", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
 
-    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+    openDownloadMenu()
     fireEvent.click(await screen.findByText("Export table"))
 
     await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(1))
@@ -1584,7 +1607,7 @@ describe("CsvViewer URL source loading", () => {
     expect(screen.queryByText("one")).toBeNull()
     expect(screen.queryByText("two")).toBeNull()
 
-    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+    openDownloadMenu()
     const exportItem = await screen.findByText("Export table")
     expect(
       exportItem.closest('[role="menuitem"]')?.getAttribute("aria-disabled")
@@ -2179,7 +2202,7 @@ describe("CsvViewer download names", () => {
     )
 
     expect(screen.getByText("No rows")).toBeTruthy()
-    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+    openDownloadMenu()
     const exportItem = await screen.findByText("Export table")
     expect(
       exportItem.closest('[role="menuitem"]')?.getAttribute("aria-disabled")
@@ -2205,7 +2228,7 @@ describe("CsvViewer download names", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+    openDownloadMenu()
     fireEvent.click(await screen.findByText("Export table"))
 
     await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(1))
@@ -2233,7 +2256,7 @@ describe("CsvViewer download names", () => {
 
     expect(await screen.findByText("2")).toBeTruthy()
 
-    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+    openDownloadMenu()
     fireEvent.click(await screen.findByText("Export table"))
 
     await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(1))
@@ -2259,7 +2282,7 @@ describe("CsvViewer download names", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+    openDownloadMenu()
     fireEvent.click(await screen.findByText("Download original"))
 
     await waitFor(() => {
@@ -2278,7 +2301,7 @@ describe("CsvViewer download names", () => {
       <CsvViewer source={csvBlobSource("a,b\n1,2", "csv:original-blob")} />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+    openDownloadMenu()
     fireEvent.click(await screen.findByText("Download original"))
 
     await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(1))
@@ -2389,7 +2412,7 @@ describe("CsvViewer download names", () => {
 
     expect(await screen.findByText("b")).toBeTruthy()
 
-    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+    openDownloadMenu()
 
     expect(await screen.findByText("Download original")).toBeTruthy()
     expect(within(document.body).getByText("Export table")).toBeTruthy()
@@ -2410,7 +2433,7 @@ describe("CsvViewer download names", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+    openDownloadMenu()
 
     const exportItem = await screen.findByText("Export table")
     expect(
@@ -2452,7 +2475,7 @@ describe("CsvViewer download names", () => {
 
     expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy()
 
-    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+    openDownloadMenu()
 
     const exportItem = await screen.findByText("Export table")
     expect(

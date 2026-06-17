@@ -4,7 +4,7 @@ import * as React from "react"
 import { Download, Maximize, Minus, Plus, RotateCw } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import type { ViewerDownloadAction } from "@/lib/viewer-download"
+import type { ViewerDownloadAction } from "@/lib/viewer-download-actions"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"

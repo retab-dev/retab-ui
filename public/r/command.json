@@ -9,7 +9,7 @@
   ],
   "registryDependencies": [
     "dialog",
-    "utils"
+    "@retab/utils"
   ],
   "files": [
     {

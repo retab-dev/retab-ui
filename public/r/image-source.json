@@ -4,8 +4,8 @@
   "title": "Image source adapter",
   "description": "Bridges the document-source model to the image viewer: imageAnchorToTarget, rotateImageArea, and renderImageSourceOverlay for image_bbox anchors.",
   "registryDependencies": [
-    "image-viewer",
-    "document-source"
+    "@retab/image-viewer",
+    "@retab/document-source"
   ],
   "files": [
     {

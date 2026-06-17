@@ -268,7 +268,7 @@ describe("ParseViewer", () => {
   it("switches rendered parse pages into text mode", async () => {
     const { container } = render(<ParseViewer result={parseResult()} />)
 
-    fireEvent.click(screen.getByRole("tab", { name: "Text" }))
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Text" }))
 
     await waitFor(() => {
       expect(

@@ -206,8 +206,7 @@ function DateTimePickerControl({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="w-auto rounded-xl p-0 before:rounded-[calc(var(--radius-xl)-1px)]"
-        viewportClassName="p-2"
+        className="w-auto rounded-xl p-2 before:rounded-[calc(var(--radius-xl)-1px)]"
       >
         {(kind === "date" || kind === "date-time") && (
           <Calendar

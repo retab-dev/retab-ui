@@ -64,7 +64,7 @@ footnotes resolve before the viewer slices the HAST.
 - **Continuous rendering** - no page count, page frame, or page delimiter should be part of the Markdown user experience.
 - **Document-wide Markdown semantics** - Markdown is parsed once with unified, GFM, math, directives, raw HTML handling, and sanitization before visible chunks are projected.
 - **Pretext layout** - visible chunks start from block-aware, Pretext-informed height estimates, then measured heights feed back into the virtual frame.
-- **Rendered/Text toggle** - rendered Markdown and source-faithful raw Markdown share one viewer frame and one controls.
+- **Always rendered** - Markdown is always shown as rendered output; there is no source/text view mode.
 - **Markdown-first routing** - sources are parsed as Markdown even when the file extension is generic text.
 - **Source-line addressing** - `highlight` and `scrollToLineRange` keep using 1-based inclusive source-line ranges.
 - **Stable heading anchors** - heading DOM IDs and virtual fragment navigation come from the same model-owned slug registry.
@@ -76,8 +76,7 @@ footnotes resolve before the viewer slices the HAST.
 
 - A document-wide unified pipeline parses Markdown with `remark-parse`, `remark-gfm`, directives, math, gemoji, prose transforms, smart punctuation, `remark-rehype`, `rehype-raw`, `rehype-sanitize`, slugging, and KaTeX. Virtualization slices the resulting HAST after document semantics such as reference links and footnotes have already resolved.
 - Virtual chunks are projected as continuous document content, without visible page shells, page labels, or inter-page gutters. Blank Markdown renders an explicit empty document state.
-- The controls include a Rendered/Text toggle. Text mode uses a real-height virtual source canvas, line numbers, source-line scrolling, source-line anchored mode switching, and a labelled keyboard-focusable source region for horizontal overflow.
-- The controls include source-backed search. Matches are computed against the full raw Markdown source, previous/next navigation wraps through the result set, the active match is highlighted distinctly, and it drives the same source-line scrolling and rendered/source highlight path used by external highlights.
+- The controls include source-backed search. Matches are computed against the full raw Markdown source, previous/next navigation wraps through the result set, the active match is highlighted distinctly, and it drives the same source-line scrolling and rendered highlight path used by external highlights.
 - Zoom scales the rendered type and spacing together off a single em cascade so the document grows as one system; the layout and spacing track the zoom level.
 - The greenfield document model keeps stable virtual chunk IDs, source-line ranges, measured heights, hostility flags, document headings, and a unified source map for line/offset lookup. The private virtualizer owns pixel-overscanned chunk projection, source-line scroll offset lookup, rendered chunk highlight markers, and scroll-anchor capture/restore across measured height updates.
 - GitHub blockquote alert markers such as `> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]`, and `> [!CAUTION]` render as labelled alert surfaces with marker-free prose. Regular blockquotes keep semantic `blockquote` markup.

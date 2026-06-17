@@ -3,6 +3,26 @@ import { execFileSync } from "node:child_process"
 import { existsSync, readFileSync, statSync } from "node:fs"
 import { relative, resolve } from "node:path"
 
+// Bare shadcn primitives that retab no longer publishes locally; consumers pull
+// these from the default shadcn registry (shadcn.com), so a bare name here is an
+// external dependency, not a missing local item.
+const EXTERNAL_STOCK_PRIMITIVES = new Set([
+  "button",
+  "dialog",
+  "sheet",
+  "dropdown-menu",
+  "popover",
+  "tooltip",
+  "select",
+  "tabs",
+  "accordion",
+  "collapsible",
+  "separator",
+  "card",
+  "badge",
+  "breadcrumb",
+])
+
 const registryPaths = process.argv.slice(2)
 const selectedRegistryPaths =
   registryPaths.length > 0 ? registryPaths : ["registry.json"]
@@ -152,7 +172,11 @@ function validateRegistryFilePath(label, sourcePath) {
 }
 
 function isExternalRegistryDependency(dependency) {
-  return dependency.startsWith("@") || /^https?:\/\//.test(dependency)
+  return (
+    dependency.startsWith("@") ||
+    /^https?:\/\//.test(dependency) ||
+    EXTERNAL_STOCK_PRIMITIVES.has(dependency)
+  )
 }
 
 function findRepoRoot() {

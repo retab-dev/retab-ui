@@ -4,7 +4,7 @@
   "title": "Schema Builder",
   "description": "Controlled JSON Schema editor for building Retab extraction schemas — fields, types, nested objects, arrays, enums, and required flags.",
   "registryDependencies": [
-    "utils"
+    "@retab/utils"
   ],
   "files": [
     {

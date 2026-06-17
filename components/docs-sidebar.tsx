@@ -112,17 +112,22 @@ export function DocsSidebar({
 
           return groups.map((group) => (
             <SidebarGroup key={group.id}>
-              <SidebarGroupLabel
-                className={cn(
-                  "font-medium text-muted-foreground",
-                  group.url &&
+              {group.url ? (
+                <SidebarGroupLabel
+                  asChild
+                  className={cn(
+                    "font-medium text-muted-foreground",
                     "transition-colors hover:text-foreground data-[active=true]:text-foreground"
-                )}
-                data-active={group.url ? pathname === group.url : undefined}
-                render={group.url ? <Link href={group.url} /> : undefined}
-              >
-                {group.name}
-              </SidebarGroupLabel>
+                  )}
+                  data-active={pathname === group.url}
+                >
+                  <Link href={group.url}>{group.name}</Link>
+                </SidebarGroupLabel>
+              ) : (
+                <SidebarGroupLabel className="font-medium text-muted-foreground">
+                  {group.name}
+                </SidebarGroupLabel>
+              )}
               <SidebarGroupContent>
                 {item.type === "folder" ? (
                   <SidebarMenu className="gap-0.5">

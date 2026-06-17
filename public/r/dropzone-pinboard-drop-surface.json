@@ -4,9 +4,9 @@
   "title": "Pinboard Drop Surface",
   "description": "A full canvas trigger that pins dropped files as cards.",
   "registryDependencies": [
-    "dropzone",
-    "file-thumbnail",
-    "utils"
+    "@retab/dropzone",
+    "@retab/file-thumbnail",
+    "@retab/utils"
   ],
   "files": [
     {

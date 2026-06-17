@@ -9,12 +9,43 @@ import {
   within,
 } from "@testing-library/react"
 import type { JSONSchema7 } from "json-schema"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
 import { SchemaInlineDescription } from "@/components/schema-editor/primitives/schema-inline-description"
 import { SchemaBuilder } from "@/components/schema-editor/schema-builder"
 
+beforeAll(() => {
+  // Radix DropdownMenu reads these jsdom-unimplemented pointer APIs when opening.
+  HTMLElement.prototype.scrollIntoView = vi.fn()
+  if (!HTMLElement.prototype.hasPointerCapture) {
+    HTMLElement.prototype.hasPointerCapture = () => false
+  }
+  if (!HTMLElement.prototype.setPointerCapture) {
+    HTMLElement.prototype.setPointerCapture = () => {}
+  }
+  if (!HTMLElement.prototype.releasePointerCapture) {
+    HTMLElement.prototype.releasePointerCapture = () => {}
+  }
+})
+
 afterEach(cleanup)
+
+/**
+ * Opens a Radix DropdownMenu trigger. Radix opens on the pointer-down sequence
+ * (a plain `click` is ignored in jsdom), so dispatch that instead.
+ */
+function openRadixTrigger(trigger: HTMLElement) {
+  fireEvent.pointerDown(trigger, {
+    button: 0,
+    ctrlKey: false,
+    pointerType: "mouse",
+  })
+  fireEvent.pointerUp(trigger, {
+    button: 0,
+    ctrlKey: false,
+    pointerType: "mouse",
+  })
+}
 
 /** Controlled editor harness that records every emitted schema. */
 function renderEditor(
@@ -44,11 +75,11 @@ function renderEditor(
 }
 
 function openSchemaActionsMenu() {
-  fireEvent.click(screen.getByRole("button", { name: "Open schema actions" }))
+  openRadixTrigger(screen.getByRole("button", { name: "Open schema actions" }))
 }
 
 function openTypeMenu(label: string) {
-  fireEvent.click(screen.getByRole("button", { name: label }))
+  openRadixTrigger(screen.getByRole("button", { name: label }))
 }
 
 const sample: JSONSchema7 = {

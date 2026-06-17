@@ -66,14 +66,13 @@ export function SchemaTypeMenu({
   value,
   variant,
 }: SchemaTypeMenuProps) {
-  const runMenuAction = (
-    event: React.MouseEvent<HTMLElement>,
-    item: SchemaTypeMenuItem
-  ) => {
+  const runMenuAction = (event: Event, item: SchemaTypeMenuItem) => {
     if (!editable) {
       event.preventDefault()
-      event.stopPropagation()
       return
+    }
+    if (item.closeOnSelect === false) {
+      event.preventDefault()
     }
     item.onSelect()
   }
@@ -163,15 +162,12 @@ function SchemaTypeMenuDropdownItem({
 }: {
   editable: boolean
   item: SchemaTypeMenuItem
-  onSelect: (
-    event: React.MouseEvent<HTMLElement>,
-    item: SchemaTypeMenuItem
-  ) => void
+  onSelect: (event: Event, item: SchemaTypeMenuItem) => void
 }) {
   return (
     <DropdownMenuItem
-      closeOnClick={editable && item.closeOnSelect !== false}
-      onClick={(event) => onSelect(event, item)}
+      disabled={!editable}
+      onSelect={(event) => onSelect(event, item)}
     >
       {item.icon}
       {item.label}

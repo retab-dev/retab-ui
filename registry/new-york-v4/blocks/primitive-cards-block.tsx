@@ -13,6 +13,7 @@ import { FileThumbnail } from "@/components/ui/file-thumbnail"
 import { PageRibbon, type RibbonRow } from "@/components/ui/page-ribbon"
 import { RunCard } from "@/components/ui/run-card"
 import { SegmentLegend } from "@/components/ui/segment-legend"
+import type { Source, SourceAnchor } from "@/lib/document-source"
 import type { ClassifyResult } from "@/components/viewers/lib/classify-types"
 import type { PartitionResult } from "@/components/viewers/lib/partition-types"
 import type { SplitView } from "@/components/viewers/lib/split-types"
@@ -75,33 +76,34 @@ const PARSE = {
     .join("\n"),
 }
 
+// The extracted fields, in the canonical extract shape (a `Source` per value),
+// tinted with a palette color for the source box and its legend swatch.
 type ExtractField = {
   key: string
   label: string
   value: string
-  anchor: { left: number; top: number; width: number; height: number }
+  source: Source
   color: string
 }
 
 const EXTRACT = {
   file: { name: "bank-statement.pdf", type: "application/pdf" },
   thumbnail: "/samples/bank-statement-page-1.png",
-  fields: (
-    extractSample as Array<{
-      key: string
-      label: string
-      value: string
-      source: { anchor: ExtractField["anchor"] }
-    }>
-  ).map(
+  fields: (extractSample as Omit<ExtractField, "color">[]).map(
     (field, i): ExtractField => ({
-      key: field.key,
-      label: field.label,
-      value: field.value,
-      anchor: field.source.anchor,
+      ...field,
       color: SEGMENT_PALETTE[i % SEGMENT_PALETTE.length],
     })
   ),
+}
+
+/** The normalized [0, 1] page box of a source, or null when it isn't a region. */
+function anchorBox(anchor: SourceAnchor) {
+  if (anchor.kind === "pdf_bbox" || anchor.kind === "image_bbox") {
+    const { left, top, width, height } = anchor
+    return { left, top, width, height }
+  }
+  return null
 }
 
 /**
@@ -334,21 +336,25 @@ function ExtractCard() {
               previewAspectRatio={PAGE_ASPECT}
               className="absolute inset-0 size-full rounded-none border-0"
             />
-            {fields.map((field) => (
-              <span
-                key={field.key}
-                className="absolute rounded-[2px]"
-                style={{
-                  left: `${field.anchor.left * 100}%`,
-                  top: `${field.anchor.top * 100}%`,
-                  width: `${field.anchor.width * 100}%`,
-                  height: `${field.anchor.height * 100}%`,
-                  backgroundColor: withAlpha(field.color, 0.25),
-                  boxShadow: `0 0 0 1.5px ${field.color}`,
-                }}
-                title={`${field.label}: ${field.value}`}
-              />
-            ))}
+            {fields.map((field) => {
+              const box = anchorBox(field.source.anchor)
+              if (!box) return null
+              return (
+                <span
+                  key={field.key}
+                  className="absolute rounded-[2px]"
+                  style={{
+                    left: `${box.left * 100}%`,
+                    top: `${box.top * 100}%`,
+                    width: `${box.width * 100}%`,
+                    height: `${box.height * 100}%`,
+                    backgroundColor: withAlpha(field.color, 0.25),
+                    boxShadow: `0 0 0 1.5px ${field.color}`,
+                  }}
+                  title={`${field.label}: ${field.value}`}
+                />
+              )
+            })}
           </div>
         </div>
       }

@@ -291,7 +291,6 @@ export function MarkdownViewerDemo() {
             mimeType: "text/markdown",
           }}
           className="h-full"
-          highlight={{ start: 7, end: 7 }}
         />
       ) : null}
     </div>

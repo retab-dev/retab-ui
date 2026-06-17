@@ -31,7 +31,7 @@ export function EditViewerControls({
           value={mode}
           onValueChange={(value) => onModeChange(value as EditViewerMode)}
         >
-          <TabsList variant="underline" className="py-0">
+          <TabsList variant="line" className="py-0">
             {modes.map((availableMode) => (
               <TabsTrigger
                 key={availableMode}

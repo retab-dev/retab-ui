@@ -449,7 +449,7 @@ describe("FileSystem", () => {
     fireEvent.click(await findFileTreeItem(/report.pdf/i))
     await screen.findByText("report.pdf selected")
 
-    fireEvent.click(screen.getByRole("tab", { name: "Grid view" }))
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Grid view" }))
 
     expect(
       screen
@@ -815,7 +815,7 @@ describe("FileSystem", () => {
 
     expect(screen.getByTestId("controlled-view").textContent).toBe("list")
 
-    fireEvent.click(screen.getByRole("tab", { name: "Grid view" }))
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Grid view" }))
 
     await waitFor(() => {
       expect(screen.getByTestId("controlled-view").textContent).toBe("grid")
@@ -1387,7 +1387,7 @@ describe("FileSystem", () => {
           .getAttribute("aria-selected")
       ).toBe("true")
     })
-    fireEvent.click(screen.getByRole("tab", { name: "List view" }))
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "List view" }))
     await waitFor(() => {
       expect(fileTreeRoot().textContent ?? "").toContain("load failed")
     })

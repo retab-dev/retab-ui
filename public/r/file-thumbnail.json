@@ -12,12 +12,12 @@
     "utif"
   ],
   "registryDependencies": [
-    "file-thumbnail-frame",
-    "pdf-document-resource",
-    "docx-document-resource",
-    "csv",
-    "xlsx-worker-protocol",
-    "utils"
+    "@retab/file-thumbnail-frame",
+    "@retab/pdf-document-resource",
+    "@retab/docx-document-resource",
+    "@retab/csv",
+    "@retab/xlsx-worker-protocol",
+    "@retab/utils"
   ],
   "files": [
     {

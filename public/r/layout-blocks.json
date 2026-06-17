@@ -7,13 +7,13 @@
     "@tanstack/react-virtual@^3.13.12"
   ],
   "registryDependencies": [
-    "document-evidence",
-    "file-viewer",
-    "interactive-item-list",
-    "pdf-viewer",
-    "scroll-area",
-    "segmented-document",
-    "utils"
+    "@retab/document-evidence",
+    "@retab/file-viewer",
+    "@retab/interactive-item-list",
+    "@retab/pdf-viewer",
+    "@retab/scroll-area",
+    "@retab/segmented-document",
+    "@retab/utils"
   ],
   "files": [
     {

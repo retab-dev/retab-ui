@@ -7,7 +7,7 @@
     "class-variance-authority@^0.7.1"
   ],
   "registryDependencies": [
-    "utils"
+    "@retab/utils"
   ],
   "files": [
     {

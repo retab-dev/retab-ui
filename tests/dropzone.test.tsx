@@ -1355,17 +1355,17 @@ describe("Dropzone registry split", () => {
     ])
     expect(fileUploader?.dependencies).toEqual(["lucide-react"])
     expect(fileUploader?.registryDependencies).toEqual([
-      "dropzone",
-      "file-thumbnail",
-      "file-size-format",
-      "utils",
+      "@retab/dropzone",
+      "@retab/file-thumbnail",
+      "@retab/file-size-format",
+      "@retab/utils",
     ])
     expect(dropzoneBlock?.registryDependencies).toEqual([
-      "dropzone",
-      "file-viewer",
-      "file-size-format",
-      "file-uploader",
-      "file-thumbnail",
+      "@retab/dropzone",
+      "@retab/file-viewer",
+      "@retab/file-size-format",
+      "@retab/file-uploader",
+      "@retab/file-thumbnail",
     ])
     expect(dropzoneBlock?.files.map((file) => file.path)).toEqual([
       "registry/new-york-v4/blocks/dropzone-block.tsx",

@@ -3,7 +3,6 @@
 import { X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { InputPrimitive } from "@/components/ui/input"
 
 export interface SchemaChipItem {
   id: string
@@ -36,15 +35,15 @@ export function SchemaChipList({
                 data-slot="schema-chip"
                 className="flex items-center gap-1 rounded-md border border-border bg-muted px-1 shadow-none"
               >
-                <InputPrimitive
+                <input
                   aria-label={item.inputLabel}
                   data-slot="schema-chip-input"
                   disabled={!editable}
                   value={item.value}
-                  onChange={(event) => {
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
                     onReplace(item.id, event.target.value)
                   }}
-                  onKeyDown={(event) => {
+                  onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
                     if (event.key === "Enter") {
                       event.stopPropagation()
                     }

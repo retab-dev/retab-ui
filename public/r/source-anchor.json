@@ -4,8 +4,8 @@
   "title": "Source anchor",
   "description": "Pure conversion from document-source anchors to document viewer anchors.",
   "registryDependencies": [
-    "document-anchor",
-    "document-source"
+    "@retab/document-anchor",
+    "@retab/document-source"
   ],
   "files": [
     {

@@ -7,8 +7,8 @@
     "lucide-react"
   ],
   "registryDependencies": [
-    "scroll-area",
-    "utils"
+    "@retab/scroll-area",
+    "@retab/utils"
   ],
   "files": [
     {

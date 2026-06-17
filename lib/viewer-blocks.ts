@@ -439,7 +439,7 @@ export const VIEWER_BLOCKS = [
     registryName: "primitive-cards-block",
     title: "Primitive Run Cards",
     description:
-      "Each primitive's result framed as a run card — a document thumbnail with a status pill and the primitive's output in the body. Classification shows one thumbnail; a split swaps it for a bundle of much smaller per-subdocument FileThumbnails, color-keyed to the legend. Composes the RunCard shell with per-primitive rendering.",
+      "Each Retab primitive's result framed as a run card — a document thumbnail with a status pill and the primitive's output in the card body. Classification shows the page with its category and reasoning; split a mini page rail of color-keyed subdocuments; partition a keyed-chunk legend with an overlap ribbon; parse the page rendered as markdown; extract the page with each field's source box drawn over it. Composes the RunCard shell with per-primitive rendering over the shared segments model.",
     command: getRegistryAddCommand("primitive-cards-block"),
     docsHref: "/docs/components/file-thumbnail",
     viewHref: "/view/blocks/primitive-cards",

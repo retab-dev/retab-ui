@@ -4,14 +4,14 @@
   "title": "DOCX Sources",
   "description": "Values extracted from a Word document linked back to where they came from — hover to highlight the text and scroll to it.",
   "registryDependencies": [
-    "docx-viewer",
-    "docx-source",
-    "document-source",
-    "segmented-document",
-    "source-segmented-document",
-    "source-field-list",
-    "source-field-link",
-    "source-indicator"
+    "@retab/docx-viewer",
+    "@retab/docx-source",
+    "@retab/document-source",
+    "@retab/segmented-document",
+    "@retab/source-segmented-document",
+    "@retab/source-field-list",
+    "@retab/source-field-link",
+    "@retab/source-indicator"
   ],
   "files": [
     {

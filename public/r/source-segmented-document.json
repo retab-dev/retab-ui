@@ -4,12 +4,12 @@
   "title": "Source segmented document",
   "description": "Projection helpers and overlays that convert PDF/image bbox document sources into segmented-document segments, anchors, and active source highlights.",
   "registryDependencies": [
-    "document-source",
-    "source-field-link",
-    "image-source",
-    "image-viewer",
-    "pdf-viewer",
-    "segmented-document"
+    "@retab/document-source",
+    "@retab/source-field-link",
+    "@retab/image-source",
+    "@retab/image-viewer",
+    "@retab/pdf-viewer",
+    "@retab/segmented-document"
   ],
   "files": [
     {

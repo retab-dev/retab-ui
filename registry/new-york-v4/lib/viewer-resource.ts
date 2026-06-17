@@ -3,7 +3,7 @@ import {
   createHrefDownloadAction,
   createTextDownloadAction,
   type ViewerDownloadAction,
-} from "@/lib/viewer-download"
+} from "@/lib/viewer-download-actions"
 import {
   isAbortError,
   ResourceError,

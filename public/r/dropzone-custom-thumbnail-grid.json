@@ -7,9 +7,9 @@
     "lucide-react"
   ],
   "registryDependencies": [
-    "dropzone",
-    "file-thumbnail",
-    "utils"
+    "@retab/dropzone",
+    "@retab/file-thumbnail",
+    "@retab/utils"
   ],
   "files": [
     {

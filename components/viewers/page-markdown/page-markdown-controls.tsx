@@ -80,7 +80,7 @@ function ModeTabs({
       value={mode}
       onValueChange={(value) => onChange(value as PageMarkdownViewMode)}
     >
-      <TabsList variant="underline" className="py-0">
+      <TabsList variant="line" className="py-0">
         <TabsTrigger value="rendered" className="h-8 text-xs sm:text-xs">
           Rendered
         </TabsTrigger>

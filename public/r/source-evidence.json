@@ -4,9 +4,9 @@
   "title": "Source evidence",
   "description": "Projection helpers that convert document sources, source maps, and source fields into evidence rows with resolved document anchors.",
   "registryDependencies": [
-    "document-evidence",
-    "document-source",
-    "source-anchor"
+    "@retab/document-evidence",
+    "@retab/document-source",
+    "@retab/source-anchor"
   ],
   "files": [
     {

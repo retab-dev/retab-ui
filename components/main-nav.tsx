@@ -30,19 +30,19 @@ export function MainNav({
                 variant="ghost"
                 size="sm"
                 className="px-2.5"
-                render={
-                  <Link
-                    href={item.href}
-                    data-active={
-                      item.href === "/blocks"
-                        ? pathname.startsWith(item.href)
-                        : pathname === item.href
-                    }
-                    className="relative items-center"
-                  />
-                }
+                asChild
               >
-                {item.label}
+                <Link
+                  href={item.href}
+                  data-active={
+                    item.href === "/blocks"
+                      ? pathname.startsWith(item.href)
+                      : pathname === item.href
+                  }
+                  className="relative items-center"
+                >
+                  {item.label}
+                </Link>
               </Button>
             </NavigationMenuItem>
           ))}

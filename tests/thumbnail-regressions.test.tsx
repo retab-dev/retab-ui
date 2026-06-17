@@ -1446,7 +1446,7 @@ describe("thumbnail generated registry regressions", () => {
       readFileSync("public/r/file-thumbnail-frame.json", "utf8")
     )
 
-    expect(item.registryDependencies).toEqual(["utils"])
+    expect(item.registryDependencies).toEqual(["@retab/utils"])
     expect(item.dependencies ?? []).toEqual([])
     expect(JSON.stringify(item)).not.toMatch(
       /pdfjs-dist|docx-preview|pptxviewjs|@e965\/xlsx|utif|marked|dompurify/
@@ -1464,12 +1464,12 @@ describe("thumbnail generated registry regressions", () => {
     const files = item.files.map((file) => file.target ?? file.path)
 
     expect(item.registryDependencies).toEqual([
-      "file-thumbnail-frame",
-      "pdf-document-resource",
-      "docx-document-resource",
-      "csv",
-      "xlsx-worker-protocol",
-      "utils",
+      "@retab/file-thumbnail-frame",
+      "@retab/pdf-document-resource",
+      "@retab/docx-document-resource",
+      "@retab/csv",
+      "@retab/xlsx-worker-protocol",
+      "@retab/utils",
     ])
     expect(item.dependencies).toEqual([
       "@e965/xlsx",

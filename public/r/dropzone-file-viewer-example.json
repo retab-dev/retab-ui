@@ -7,10 +7,10 @@
     "lucide-react"
   ],
   "registryDependencies": [
-    "dropzone",
-    "file-viewer",
-    "file-size-format",
-    "file-thumbnail"
+    "@retab/dropzone",
+    "@retab/file-viewer",
+    "@retab/file-size-format",
+    "@retab/file-thumbnail"
   ],
   "files": [
     {

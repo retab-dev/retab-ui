@@ -4,7 +4,7 @@
   "title": "Chenglou Text Viewer",
   "description": "An imperative Pretext prose viewer that keeps Text Viewer parsing/layout but projects visible rows through a Chenglou-style DOM cache.",
   "registryDependencies": [
-    "text-viewer"
+    "@retab/text-viewer"
   ],
   "files": [
     {

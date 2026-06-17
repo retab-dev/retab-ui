@@ -3,7 +3,7 @@ import {
   normalizeCsvDelimiter,
   type CsvDialect,
 } from "@/lib/csv"
-import type { ViewerDownloadAction } from "@/lib/viewer-download"
+import type { ViewerDownloadAction } from "@/lib/viewer-download-actions"
 import type { ViewerResource } from "@/lib/viewer-resource"
 
 export function escapeDelimitedField(value: string, delimiter: string): string {

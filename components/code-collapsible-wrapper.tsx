@@ -49,14 +49,16 @@ export function CodeCollapsibleWrapper({
           <span className="truncate">{title}</span>
         </div>
         <div className="flex shrink-0 items-center">
-          <CollapsibleTrigger
-            render={<button type="button" />}
-            className={cn(
-              buttonVariants({ size: "sm", variant: "ghost" }),
-              "h-7 rounded-md px-2 text-muted-foreground"
-            )}
-          >
-            {isOpened ? "Collapse" : "Expand"}
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                buttonVariants({ size: "sm", variant: "ghost" }),
+                "h-7 rounded-md px-2 text-muted-foreground"
+              )}
+            >
+              {isOpened ? "Collapse" : "Expand"}
+            </button>
           </CollapsibleTrigger>
           <Separator orientation="vertical" className="mx-1.5 h-4!" />
           {copyValue ? (
@@ -73,15 +75,17 @@ export function CodeCollapsibleWrapper({
           {closedContent}
         </div>
       )}
-      <CollapsibleTrigger
-        render={<button type="button" />}
-        className="absolute inset-x-0 bottom-0 flex h-24 items-end justify-center rounded-b-lg bg-transparent pb-4 text-sm text-muted-foreground group-data-open/collapsible:hidden"
-        style={{
-          background:
-            "linear-gradient(to top, var(--color-code), color-mix(in oklab, var(--color-code) 68%, transparent), transparent)",
-        }}
-      >
-        {isOpened ? "Collapse" : "Expand"}
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="absolute inset-x-0 bottom-0 flex h-24 items-end justify-center rounded-b-lg bg-transparent pb-4 text-sm text-muted-foreground group-data-open/collapsible:hidden"
+          style={{
+            background:
+              "linear-gradient(to top, var(--color-code), color-mix(in oklab, var(--color-code) 68%, transparent), transparent)",
+          }}
+        >
+          {isOpened ? "Collapse" : "Expand"}
+        </button>
       </CollapsibleTrigger>
     </Collapsible>
   )

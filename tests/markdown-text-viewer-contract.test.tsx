@@ -204,18 +204,6 @@ describe("Markdown/Text viewer contract", () => {
     expect(viewport!.scrollTop).toBeGreaterThan(0)
   })
 
-  it("anchors Markdown source-mode rows to the source canvas origin", () => {
-    const source = readFileSync(
-      "registry/new-york-v4/ui/markdown-greenfield-content.tsx",
-      "utf8"
-    )
-
-    expect(source).toContain('data-slot="markdown-source-canvas"')
-    expect(source).toContain(
-      '"absolute inset-x-0 grid grid-cols-[4rem_minmax(0,1fr)] px-4"'
-    )
-  })
-
   it("copies complete FileViewer Markdown tables from the document projection", async () => {
     render(
       <FileViewer

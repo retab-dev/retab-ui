@@ -4,9 +4,9 @@
   "title": "Required Packet",
   "description": "Slot-level dropzones for checklist-driven packet collection.",
   "registryDependencies": [
-    "dropzone",
-    "file-thumbnail",
-    "utils"
+    "@retab/dropzone",
+    "@retab/file-thumbnail",
+    "@retab/utils"
   ],
   "files": [
     {

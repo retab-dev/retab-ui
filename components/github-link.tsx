@@ -10,23 +10,18 @@ const GITHUB_REPO = "retab-dev/ui"
 
 export function GitHubLink() {
   return (
-    <Button
-      size="sm"
-      variant="ghost"
-      className="h-8 shadow-none"
-      render={
-        <Link
-          href={siteConfig.links.github}
-          target="_blank"
-          rel="noreferrer"
-          aria-label="View Retab UI on GitHub"
-        />
-      }
-    >
-      <Icons.gitHub />
-      <React.Suspense fallback={<Skeleton className="h-4 w-[24px]" />}>
-        <StarsCount />
-      </React.Suspense>
+    <Button size="sm" variant="ghost" className="h-8 shadow-none" asChild>
+      <Link
+        href={siteConfig.links.github}
+        target="_blank"
+        rel="noreferrer"
+        aria-label="View Retab UI on GitHub"
+      >
+        <Icons.gitHub />
+        <React.Suspense fallback={<Skeleton className="h-4 w-[24px]" />}>
+          <StarsCount />
+        </React.Suspense>
+      </Link>
     </Button>
   )
 }

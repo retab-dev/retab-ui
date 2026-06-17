@@ -4,7 +4,7 @@
   "title": "Textarea",
   "description": "A styled multiline text input.",
   "registryDependencies": [
-    "utils"
+    "@retab/utils"
   ],
   "files": [
     {

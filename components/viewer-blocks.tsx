@@ -92,13 +92,8 @@ export function ViewerBlockTabs() {
           })}
         </ul>
       </nav>
-      <Button
-        variant="secondary"
-        size="sm"
-        className="ml-auto"
-        render={<Link href="/docs/components" />}
-      >
-        Browse components
+      <Button variant="secondary" size="sm" className="ml-auto" asChild>
+        <Link href="/docs/components">Browse components</Link>
       </Button>
     </div>
   )

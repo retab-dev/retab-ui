@@ -4,7 +4,7 @@
   "title": "Source indicator",
   "description": "A floating pill that reports active field source state over a viewer: nothing selected, a located field path, or a field with no source.",
   "registryDependencies": [
-    "utils"
+    "@retab/utils"
   ],
   "files": [
     {

@@ -32,6 +32,18 @@ beforeAll(() => {
     unobserve() {}
     disconnect() {}
   }
+  // Radix Select (stock shadcn) calls these jsdom-unimplemented DOM APIs when
+  // the listbox opens; shim them so option items mount without throwing.
+  HTMLElement.prototype.scrollIntoView = vi.fn()
+  if (!HTMLElement.prototype.hasPointerCapture) {
+    HTMLElement.prototype.hasPointerCapture = () => false
+  }
+  if (!HTMLElement.prototype.setPointerCapture) {
+    HTMLElement.prototype.setPointerCapture = () => {}
+  }
+  if (!HTMLElement.prototype.releasePointerCapture) {
+    HTMLElement.prototype.releasePointerCapture = () => {}
+  }
 })
 
 afterEach(cleanup)
@@ -142,7 +154,10 @@ async function selectOption(label: string, option: string) {
   const trigger = screen.getByLabelText(label)
   fireEvent.focus(trigger)
   fireEvent.keyDown(trigger, { key: "ArrowDown" })
-  const optionElement = await screen.findByText(option)
+  // Radix Select mirrors the selected value into the trigger via SelectValue,
+  // so scope the option lookup to the open listbox to avoid matching it twice.
+  const content = await screen.findByRole("listbox")
+  const optionElement = await within(content).findByText(option)
   const optionItem = optionElement.closest<HTMLElement>(
     '[data-slot="select-item"]'
   )
@@ -414,7 +429,10 @@ describe("JsonForm scalar fields", () => {
     fireEvent.focus(trigger)
     fireEvent.keyDown(trigger, { key: "ArrowDown" })
 
-    const nullOptions = await screen.findAllByText("No value")
+    // Scope to the open listbox so we count the rendered choice, not Radix's
+    // hidden native-<option> bubble mirror it keeps for form integration.
+    const content = await screen.findByRole("listbox")
+    const nullOptions = within(content).getAllByText("No value")
     expect(nullOptions).toHaveLength(1)
     const nullOptionItem = nullOptions[0].closest<HTMLElement>(
       '[data-slot="select-item"]'
@@ -1358,7 +1376,8 @@ describe("JsonForm arrays", () => {
     let trigger = screen.getByRole("combobox")
     fireEvent.focus(trigger)
     fireEvent.keyDown(trigger, { key: "ArrowDown" })
-    const scoreOption = await screen.findByText("3")
+    const scoreContent = await screen.findByRole("listbox")
+    const scoreOption = await within(scoreContent).findByText("3")
     const scoreOptionItem = scoreOption.closest<HTMLElement>(
       '[data-slot="select-item"]'
     )
@@ -1379,7 +1398,8 @@ describe("JsonForm arrays", () => {
     trigger = screen.getByRole("combobox")
     fireEvent.focus(trigger)
     fireEvent.keyDown(trigger, { key: "ArrowDown" })
-    const acceptedOption = await screen.findByText("false")
+    const acceptedContent = await screen.findByRole("listbox")
+    const acceptedOption = await within(acceptedContent).findByText("false")
     const acceptedOptionItem = acceptedOption.closest<HTMLElement>(
       '[data-slot="select-item"]'
     )

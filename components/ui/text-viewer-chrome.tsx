@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Check, Copy } from "lucide-react"
 
-import { type ViewerDownloadAction } from "@/lib/viewer-download"
+import { type ViewerDownloadAction } from "@/lib/viewer-download-actions"
 
 import { Skeleton } from "./skeleton"
 import { TextCodeViewerFrame } from "./text-code-viewer-chrome"

@@ -7,10 +7,10 @@
     "lucide-react"
   ],
   "registryDependencies": [
-    "utils",
-    "sidebar-list",
-    "file-size-format",
-    "file-thumbnail"
+    "@retab/utils",
+    "@retab/sidebar-list",
+    "@retab/file-size-format",
+    "@retab/file-thumbnail"
   ],
   "files": [
     {

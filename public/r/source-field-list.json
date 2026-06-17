@@ -4,10 +4,10 @@
   "title": "Source field list",
   "description": "A field list that drives source-field interaction: hover previews the field location in the viewer, click selects it.",
   "registryDependencies": [
-    "interactive-item-list",
-    "source-field-link",
-    "source-evidence",
-    "utils"
+    "@retab/interactive-item-list",
+    "@retab/source-field-link",
+    "@retab/source-evidence",
+    "@retab/utils"
   ],
   "files": [
     {

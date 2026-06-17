@@ -1,6 +1,6 @@
 import * as React from "react"
 
-import type { ViewerDownloadAction } from "@/lib/viewer-download"
+import type { ViewerDownloadAction } from "@/lib/viewer-download-actions"
 import type {
   ViewerResource,
   ViewerResourceContent,

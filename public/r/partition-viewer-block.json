@@ -7,12 +7,12 @@
     "lucide-react"
   ],
   "registryDependencies": [
-    "file-viewer",
-    "pdf-viewer",
-    "segment-legend",
-    "page-ribbon",
-    "segmented-document",
-    "segments"
+    "@retab/file-viewer",
+    "@retab/pdf-viewer",
+    "@retab/segment-legend",
+    "@retab/page-ribbon",
+    "@retab/segmented-document",
+    "@retab/segments"
   ],
   "files": [
     {

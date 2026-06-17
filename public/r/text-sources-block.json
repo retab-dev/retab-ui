@@ -4,14 +4,14 @@
   "title": "Text Sources",
   "description": "Values extracted from a log file linked to the lines they came from — hover to highlight a line range.",
   "registryDependencies": [
-    "text-viewer",
-    "text-source",
-    "document-source",
-    "segmented-document",
-    "source-segmented-document",
-    "source-field-list",
-    "source-field-link",
-    "source-indicator"
+    "@retab/text-viewer",
+    "@retab/text-source",
+    "@retab/document-source",
+    "@retab/segmented-document",
+    "@retab/source-segmented-document",
+    "@retab/source-field-list",
+    "@retab/source-field-link",
+    "@retab/source-indicator"
   ],
   "files": [
     {

@@ -8,8 +8,8 @@
     "react-hook-form"
   ],
   "registryDependencies": [
-    "label",
-    "utils"
+    "@retab/label",
+    "@retab/utils"
   ],
   "files": [
     {

@@ -4,8 +4,8 @@
   "title": "Layout blocks segmented document",
   "description": "Projection helpers that convert OCR/layout blocks into segmented-document segments and anchors.",
   "registryDependencies": [
-    "layout-blocks",
-    "segmented-document"
+    "@retab/layout-blocks",
+    "@retab/segmented-document"
   ],
   "files": [
     {

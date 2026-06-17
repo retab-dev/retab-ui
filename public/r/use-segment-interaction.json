@@ -4,7 +4,7 @@
   "title": "useSegmentInteraction",
   "description": "Client hook that coordinates hover, focus, and persistent selection across Segment[] surfaces.",
   "registryDependencies": [
-    "segment-interaction"
+    "@retab/segment-interaction"
   ],
   "files": [
     {

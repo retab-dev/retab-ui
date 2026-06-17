@@ -388,7 +388,9 @@ describe("PageMarkdownViewer", () => {
 
     render(<PageMarkdownViewer pages={PAGES} text="compact markdown" />)
 
-    fireEvent.click(screen.getByLabelText("More markdown actions"))
+    const copyTrigger = screen.getByLabelText("More markdown actions")
+    fireEvent.pointerDown(copyTrigger, { button: 0 })
+    fireEvent.pointerUp(copyTrigger, { button: 0 })
     fireEvent.click(await screen.findByText("Copy markdown"))
 
     await waitFor(() => {
@@ -423,7 +425,9 @@ describe("PageMarkdownViewer", () => {
       />
     )
 
-    fireEvent.click(screen.getByLabelText("More markdown actions"))
+    const downloadTrigger = screen.getByLabelText("More markdown actions")
+    fireEvent.pointerDown(downloadTrigger, { button: 0 })
+    fireEvent.pointerUp(downloadTrigger, { button: 0 })
     fireEvent.click(await screen.findByText("Download markdown"))
 
     await waitFor(() => {
@@ -438,7 +442,7 @@ describe("PageMarkdownViewer", () => {
   it("switches from rendered markdown to page text", async () => {
     const { container } = render(<PageMarkdownViewer pages={PAGES} />)
 
-    fireEvent.click(screen.getByRole("tab", { name: "Text" }))
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Text" }))
 
     await waitFor(() => {
       expect(
@@ -1154,7 +1158,7 @@ describe("PageMarkdownViewer", () => {
       <PageMarkdownViewer pages={PAGES} resetKey="document-one" />
     )
 
-    fireEvent.click(screen.getByRole("tab", { name: "Text" }))
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Text" }))
     fireEvent.click(screen.getByLabelText("Zoom in"))
 
     await waitFor(() => {

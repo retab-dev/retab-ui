@@ -7,15 +7,15 @@
     "react-hook-form"
   ],
   "registryDependencies": [
-    "file-viewer",
-    "pdf-viewer",
-    "document-source",
-    "scroll-area",
-    "segmented-document",
-    "source-segmented-document",
-    "utils",
-    "source-field-link",
-    "source-indicator"
+    "@retab/file-viewer",
+    "@retab/pdf-viewer",
+    "@retab/document-source",
+    "@retab/scroll-area",
+    "@retab/segmented-document",
+    "@retab/source-segmented-document",
+    "@retab/utils",
+    "@retab/source-field-link",
+    "@retab/source-indicator"
   ],
   "files": [
     {

@@ -7,8 +7,8 @@
     "lucide-react"
   ],
   "registryDependencies": [
-    "utils",
-    "file-thumbnail"
+    "@retab/utils",
+    "@retab/file-thumbnail"
   ],
   "files": [
     {

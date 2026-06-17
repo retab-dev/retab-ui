@@ -7,11 +7,11 @@
     "lucide-react"
   ],
   "registryDependencies": [
-    "pdf-viewer",
-    "file-viewer",
-    "scroll-area",
+    "@retab/pdf-viewer",
+    "@retab/file-viewer",
+    "@retab/scroll-area",
     "tabs",
-    "segmented-document"
+    "@retab/segmented-document"
   ],
   "files": [
     {
@@ -88,7 +88,7 @@
     },
     {
       "path": "components/viewers/edit/edit-viewer-controls.tsx",
-      "content": "import { FileText } from \"lucide-react\"\n\nimport { Tabs, TabsList, TabsTrigger } from \"@/components/ui/tabs\"\n\nimport { EditViewerStatusBadge } from \"./edit-viewer-states\"\nimport type { EditViewerMode, EditViewerStatus } from \"./edit-viewer-types\"\n\nconst MODE_LABELS: Record<EditViewerMode, string> = {\n  source: \"Source\",\n  preview: \"Preview\",\n  filled: \"Filled\",\n}\n\nexport function EditViewerControls({\n  modes,\n  mode,\n  onModeChange,\n  status,\n}: {\n  modes: readonly EditViewerMode[]\n  mode: EditViewerMode | null\n  onModeChange: (mode: EditViewerMode) => void\n  status: Exclude<EditViewerStatus, { state: \"idle\" }> | null\n}) {\n  if (modes.length === 0) return null\n\n  return (\n    <div className=\"flex h-full min-w-0 items-center gap-3\">\n      {modes.length > 1 && mode ? (\n        <Tabs\n          value={mode}\n          onValueChange={(value) => onModeChange(value as EditViewerMode)}\n        >\n          <TabsList variant=\"underline\" className=\"py-0\">\n            {modes.map((availableMode) => (\n              <TabsTrigger\n                key={availableMode}\n                value={availableMode}\n                className=\"h-9 text-xs sm:text-xs\"\n                aria-label={`${MODE_LABELS[availableMode]} view`}\n              >\n                {MODE_LABELS[availableMode]}\n              </TabsTrigger>\n            ))}\n          </TabsList>\n        </Tabs>\n      ) : (\n        <div className=\"flex items-center gap-2 text-sm font-medium\">\n          <FileText className=\"size-4 text-muted-foreground\" />\n          {mode ? MODE_LABELS[mode] : \"Edit output\"}\n        </div>\n      )}\n      {status ? <EditViewerStatusBadge status={status} /> : null}\n    </div>\n  )\n}\n",
+      "content": "import { FileText } from \"lucide-react\"\n\nimport { Tabs, TabsList, TabsTrigger } from \"@/components/ui/tabs\"\n\nimport { EditViewerStatusBadge } from \"./edit-viewer-states\"\nimport type { EditViewerMode, EditViewerStatus } from \"./edit-viewer-types\"\n\nconst MODE_LABELS: Record<EditViewerMode, string> = {\n  source: \"Source\",\n  preview: \"Preview\",\n  filled: \"Filled\",\n}\n\nexport function EditViewerControls({\n  modes,\n  mode,\n  onModeChange,\n  status,\n}: {\n  modes: readonly EditViewerMode[]\n  mode: EditViewerMode | null\n  onModeChange: (mode: EditViewerMode) => void\n  status: Exclude<EditViewerStatus, { state: \"idle\" }> | null\n}) {\n  if (modes.length === 0) return null\n\n  return (\n    <div className=\"flex h-full min-w-0 items-center gap-3\">\n      {modes.length > 1 && mode ? (\n        <Tabs\n          value={mode}\n          onValueChange={(value) => onModeChange(value as EditViewerMode)}\n        >\n          <TabsList variant=\"line\" className=\"py-0\">\n            {modes.map((availableMode) => (\n              <TabsTrigger\n                key={availableMode}\n                value={availableMode}\n                className=\"h-9 text-xs sm:text-xs\"\n                aria-label={`${MODE_LABELS[availableMode]} view`}\n              >\n                {MODE_LABELS[availableMode]}\n              </TabsTrigger>\n            ))}\n          </TabsList>\n        </Tabs>\n      ) : (\n        <div className=\"flex items-center gap-2 text-sm font-medium\">\n          <FileText className=\"size-4 text-muted-foreground\" />\n          {mode ? MODE_LABELS[mode] : \"Edit output\"}\n        </div>\n      )}\n      {status ? <EditViewerStatusBadge status={status} /> : null}\n    </div>\n  )\n}\n",
       "type": "registry:component",
       "target": "@components/viewers/edit/edit-viewer-controls.tsx"
     },

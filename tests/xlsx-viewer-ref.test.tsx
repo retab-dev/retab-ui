@@ -52,6 +52,17 @@ vi.mock("@/components/ui/xlsx-grid", async () => {
   }
 })
 
+// Stock Radix DropdownMenu relies on pointer capture and scrollIntoView, which
+// jsdom does not implement; these shims keep the menu openable under jsdom.
+if (typeof Element !== "undefined" && !Element.prototype.hasPointerCapture) {
+  Element.prototype.hasPointerCapture = () => false
+  Element.prototype.setPointerCapture = () => {}
+  Element.prototype.releasePointerCapture = () => {}
+}
+if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {}
+}
+
 const originalFetch = globalThis.fetch
 const originalWorker = globalThis.Worker
 
@@ -93,6 +104,18 @@ function captureAnchorClicks() {
     })
   })
   return clicks
+}
+
+function openDownloadMenu() {
+  // Stock Radix DropdownMenuTrigger opens on pointerdown (not click); base-ui
+  // opened on click, so drive both events to open the menu under jsdom.
+  const trigger = screen.getByRole("button", { name: "Download" })
+  fireEvent.pointerDown(trigger, {
+    button: 0,
+    ctrlKey: false,
+    pointerType: "mouse",
+  })
+  fireEvent.click(trigger)
 }
 
 beforeEach(() => {
@@ -288,7 +311,7 @@ describe("XlsxViewer imperative ref", () => {
     expect(await screen.findByRole("grid", { name: "Detail" })).toBeTruthy()
     expect(createObjectURL).not.toHaveBeenCalled()
 
-    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+    openDownloadMenu()
     fireEvent.click(await screen.findByText("Export sheet"))
 
     await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(1))
@@ -338,7 +361,7 @@ describe("XlsxViewer imperative ref", () => {
 
     expect(await screen.findByRole("grid", { name: "Only" })).toBeTruthy()
 
-    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+    openDownloadMenu()
 
     expect(await screen.findByText("Download original")).toBeTruthy()
     expect(await screen.findByText("Export sheet")).toBeTruthy()

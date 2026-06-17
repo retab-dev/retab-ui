@@ -4,9 +4,9 @@
   "title": "Page Ribbon",
   "description": "A page-axis ribbon: segments drawn as blocks spanning their pages. One vertical lane = a split sidebar; many horizontal rows (consensus + votes) = a partition waterfall. Shared hover/focus/selection + click-to-jump.",
   "registryDependencies": [
-    "segments",
-    "segment-interaction",
-    "utils"
+    "@retab/segments",
+    "@retab/segment-interaction",
+    "@retab/utils"
   ],
   "files": [
     {

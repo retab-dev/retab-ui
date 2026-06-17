@@ -8,7 +8,7 @@
   ],
   "registryDependencies": [
     "button",
-    "utils"
+    "@retab/utils"
   ],
   "files": [
     {

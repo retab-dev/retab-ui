@@ -7,9 +7,9 @@
     "lucide-react"
   ],
   "registryDependencies": [
-    "dropzone",
-    "file-size-format",
-    "utils"
+    "@retab/dropzone",
+    "@retab/file-size-format",
+    "@retab/utils"
   ],
   "files": [
     {

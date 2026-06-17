@@ -4,7 +4,7 @@
   "title": "Table",
   "description": "Semantic table primitives for structured data.",
   "registryDependencies": [
-    "utils"
+    "@retab/utils"
   ],
   "files": [
     {

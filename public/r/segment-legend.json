@@ -4,9 +4,9 @@
   "title": "Segment Legend",
   "description": "Compact color legend for a Segment[] with shared hover, focus, and selection state.",
   "registryDependencies": [
-    "segments",
-    "segment-interaction",
-    "utils"
+    "@retab/segments",
+    "@retab/segment-interaction",
+    "@retab/utils"
   ],
   "files": [
     {

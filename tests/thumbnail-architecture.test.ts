@@ -166,7 +166,7 @@ describe("thumbnail architecture", () => {
     )
 
     expect(item).toBeTruthy()
-    expect(item!.registryDependencies).toEqual(["utils"])
+    expect(item!.registryDependencies).toEqual(["@retab/utils"])
     expect(item!.files.map((file) => file.path)).toEqual([
       "registry/new-york-v4/ui/file-thumbnail-frame.tsx",
       "registry/new-york-v4/ui/file-thumbnail-frame-types.ts",
@@ -215,8 +215,12 @@ describe("thumbnail architecture", () => {
       "registry/new-york-v4/lib/docx-document-resource.ts",
       "registry/new-york-v4/lib/viewer-resource.ts",
     ])
-    expect(pdfViewer!.registryDependencies).toContain("pdf-document-resource")
-    expect(docxViewer!.registryDependencies).toContain("docx-document-resource")
+    expect(pdfViewer!.registryDependencies).toContain(
+      "@retab/pdf-document-resource"
+    )
+    expect(docxViewer!.registryDependencies).toContain(
+      "@retab/docx-document-resource"
+    )
     expect(pdfViewer!.files.map((file) => file.path)).not.toContain(
       "registry/new-york-v4/ui/pdf-viewer-resource.ts"
     )
@@ -255,12 +259,12 @@ describe("thumbnail architecture", () => {
       "utif",
     ])
     expect(item!.registryDependencies).toEqual([
-      "file-thumbnail-frame",
-      "pdf-document-resource",
-      "docx-document-resource",
-      "csv",
-      "xlsx-worker-protocol",
-      "utils",
+      "@retab/file-thumbnail-frame",
+      "@retab/pdf-document-resource",
+      "@retab/docx-document-resource",
+      "@retab/csv",
+      "@retab/xlsx-worker-protocol",
+      "@retab/utils",
     ])
     const files = item!.files.map((file) => file.path)
     expect(files).toContain("registry/new-york-v4/ui/file-thumbnail.tsx")

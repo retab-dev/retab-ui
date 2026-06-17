@@ -4,14 +4,14 @@
   "title": "Image Sources",
   "description": "Extracted fields linked to a scanned page image — hover to highlight the image_bbox region.",
   "registryDependencies": [
-    "image-viewer",
-    "image-source",
-    "document-source",
-    "segmented-document",
-    "source-segmented-document",
-    "source-field-list",
-    "source-field-link",
-    "source-indicator"
+    "@retab/image-viewer",
+    "@retab/image-source",
+    "@retab/document-source",
+    "@retab/segmented-document",
+    "@retab/source-segmented-document",
+    "@retab/source-field-list",
+    "@retab/source-field-link",
+    "@retab/source-indicator"
   ],
   "files": [
     {

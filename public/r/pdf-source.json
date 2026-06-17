@@ -4,8 +4,8 @@
   "title": "PDF source adapter",
   "description": "Bridges the document-source model to the PDF viewer: pdfAnchorToTarget and renderPdfSourceOverlay for PDF bbox anchors.",
   "registryDependencies": [
-    "pdf-viewer",
-    "document-source"
+    "@retab/pdf-viewer",
+    "@retab/document-source"
   ],
   "files": [
     {

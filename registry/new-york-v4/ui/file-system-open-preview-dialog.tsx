@@ -42,15 +42,11 @@ export function FileSystemOpenPreview() {
                 {file.name}
               </DialogTitle>
               {source?.kind === "url" ? (
-                <Button
-                  render={
-                    <a href={source.url} target="_blank" rel="noreferrer" />
-                  }
-                  size="xs"
-                  variant="outline"
-                >
-                  <ExternalLink className="size-3.5" aria-hidden />
-                  Open
+                <Button asChild size="xs" variant="outline">
+                  <a href={source.url} target="_blank" rel="noreferrer">
+                    <ExternalLink className="size-3.5" aria-hidden />
+                    Open
+                  </a>
                 </Button>
               ) : null}
             </div>

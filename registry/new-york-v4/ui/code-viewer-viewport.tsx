@@ -43,8 +43,12 @@ export function CodeViewerViewport({
       <div
         aria-hidden
         data-code-gutter-rail=""
-        className="pointer-events-none absolute inset-y-0 left-0 z-0 border-r"
-        style={{ width: gutterWidth, backgroundColor: CODE_GUTTER_BACKGROUND }}
+        className="pointer-events-none absolute inset-y-0 left-0 z-0 border-r font-mono"
+        style={{
+          width: gutterWidth,
+          backgroundColor: CODE_GUTTER_BACKGROUND,
+          fontSize,
+        }}
       />
       <ScrollArea className="absolute inset-0 z-10" viewportRef={viewportRef}>
         <div

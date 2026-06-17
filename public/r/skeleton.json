@@ -4,7 +4,7 @@
   "title": "Skeleton",
   "description": "A loading placeholder with shimmer animation.",
   "registryDependencies": [
-    "utils"
+    "@retab/utils"
   ],
   "files": [
     {

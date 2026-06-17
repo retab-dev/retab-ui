@@ -63,20 +63,11 @@ export default function IndexPage() {
         </PageHeaderHeading>
         <PageHeaderDescription>{description}</PageHeaderDescription>
         <PageActions>
-          <Button
-            size="sm"
-            className="h-[31px] rounded-lg"
-            render={<Link href="/docs/components" />}
-          >
-            View components
+          <Button size="sm" className="h-[31px] rounded-lg" asChild>
+            <Link href="/docs/components">View components</Link>
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="rounded-lg"
-            render={<Link href="/docs" />}
-          >
-            Documentation
+          <Button size="sm" variant="ghost" className="rounded-lg" asChild>
+            <Link href="/docs">Documentation</Link>
           </Button>
         </PageActions>
       </PageHeader>

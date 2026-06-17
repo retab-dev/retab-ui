@@ -3,7 +3,7 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
-import type { ViewerDownloadAction } from "@/lib/viewer-download"
+import type { ViewerDownloadAction } from "@/lib/viewer-download-actions"
 import type { ViewerResource } from "@/lib/viewer-resource"
 
 import type { CsvResourceState } from "./csv-viewer-state"

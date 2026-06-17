@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Check, Copy, Download, MoreHorizontal } from "lucide-react"
 
-import { createTextDownloadAction } from "@/lib/viewer-download"
+import { createTextDownloadAction } from "@/lib/viewer-download-actions"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Spinner } from "@/components/ui/spinner"
 import {
   useViewerDownloadTrigger,
   type ViewerDownloadErrorHandler,
@@ -142,10 +143,14 @@ function DownloadMarkdownButton({
       className="size-7"
       aria-label="Download markdown"
       title="Download markdown"
-      loading={download.isPending}
+      disabled={download.isPending}
       onClick={download.trigger}
     >
-      <Download />
+      {download.isPending ? (
+        <Spinner className="size-4 animate-spin" />
+      ) : (
+        <Download />
+      )}
     </Button>
   )
 }

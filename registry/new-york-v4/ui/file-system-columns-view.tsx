@@ -15,6 +15,12 @@ import { useFileSystemRovingFocus } from "./use-file-system-roving-focus"
 
 const COLUMN_ROW_HEIGHT = 32
 
+// The columns view stacks multiple `w-64` (16rem) columns side by side, so it
+// needs a substantially wider sidebar than the single-pane list/tree views.
+export const FILE_SYSTEM_SIDEBAR_WIDTH = "min(22rem, 85vw)"
+export const FILE_SYSTEM_COLUMNS_SIDEBAR_WIDTH =
+  "min(clamp(32rem, 40vw, 40rem), 85vw)"
+
 export function FileSystemColumnsView({
   controller,
 }: {

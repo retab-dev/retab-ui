@@ -4,14 +4,14 @@
   "title": "CSV Sources",
   "description": "Extracted values linked to spreadsheet cells — hover to highlight a cell and scroll to it.",
   "registryDependencies": [
-    "csv-viewer",
-    "csv-source",
-    "document-source",
-    "segmented-document",
-    "source-segmented-document",
-    "source-field-list",
-    "source-field-link",
-    "source-indicator"
+    "@retab/csv-viewer",
+    "@retab/csv-source",
+    "@retab/document-source",
+    "@retab/segmented-document",
+    "@retab/source-segmented-document",
+    "@retab/source-field-list",
+    "@retab/source-field-link",
+    "@retab/source-indicator"
   ],
   "files": [
     {

@@ -1,7 +1,3 @@
 "use client"
 
-export {
-  Input,
-  InputPrimitive,
-  type InputProps,
-} from "@/registry/new-york-v4/ui/input"
+export { Input, type InputProps } from "@/registry/new-york-v4/ui/input"

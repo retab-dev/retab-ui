@@ -26,7 +26,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { InputPrimitive } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import {
   Tooltip,
@@ -69,16 +68,16 @@ export function TopLevelEditor({
     <div className="pb-4">
       <div className="group flex flex-col items-start justify-between pl-0 sm:flex-row sm:items-center">
         <div className="flex min-w-0 flex-1 items-center space-x-2">
-          <InputPrimitive
+          <input
             className="m-0 h-5 w-full min-w-0 rounded-none border-none bg-transparent p-0 text-lg font-medium text-foreground shadow-none outline-none placeholder:text-muted-foreground/72 focus-visible:ring-0 disabled:opacity-64 md:text-lg"
             value={controller.currentTitle}
             placeholder="Add a title to your schema"
-            onChange={(event) => {
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
               controller.setDraftTitle(event.target.value)
               controller.setIsTitleDirty(true)
             }}
             onBlur={controller.commitTitle}
-            onKeyDown={(event) => {
+            onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
               if (event.key === "Enter") controller.commitTitle()
             }}
             disabled={mode === "readOnly" || mode === "descriptionOnly"}

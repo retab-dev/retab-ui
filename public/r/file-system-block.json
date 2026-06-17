@@ -9,7 +9,7 @@
     "@tanstack/react-virtual"
   ],
   "registryDependencies": [
-    "file-system"
+    "@retab/file-system"
   ],
   "files": [
     {

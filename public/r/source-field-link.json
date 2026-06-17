@@ -4,7 +4,7 @@
   "title": "Source field link",
   "description": "A field-path adapter over segmented-document anchors.",
   "registryDependencies": [
-    "segmented-document"
+    "@retab/segmented-document"
   ],
   "files": [
     {

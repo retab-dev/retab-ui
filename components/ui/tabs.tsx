@@ -6,5 +6,5 @@ export {
   TabsList,
   TabsPrimitive,
   TabsTrigger,
-  type TabsVariant,
+  tabsListVariants,
 } from "@/registry/new-york-v4/ui/tabs"

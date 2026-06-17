@@ -4,7 +4,7 @@
   "title": "Default File Uploader",
   "description": "The standard visual file uploader built on the headless dropzone primitive.",
   "registryDependencies": [
-    "file-uploader"
+    "@retab/file-uploader"
   ],
   "files": [
     {

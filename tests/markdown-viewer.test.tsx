@@ -244,9 +244,7 @@ describe("MarkdownViewer", () => {
       container.querySelector('[data-slot="markdown-document-page"]')
     ).toBeNull()
     expect(container.querySelector("[data-markdown-page]")).toBeNull()
-    expect(
-      container.querySelector("[data-markdown-chunk]")
-    ).toBeTruthy()
+    expect(container.querySelector("[data-markdown-chunk]")).toBeTruthy()
     expect(container.textContent).not.toContain("Page 1 of")
   })
 
@@ -297,195 +295,7 @@ describe("MarkdownViewer", () => {
       container.querySelector('[data-slot="markdown-empty-state"]')
     ).toBeTruthy()
     expect(container.querySelector("[data-markdown-chunk]")).toBeNull()
-
-    fireEvent.click(screen.getByRole("button", { name: "Text" }))
-
-    expect(
-      container.querySelector('[data-slot="markdown-source-canvas"]')
-    ).toBeTruthy()
-    expect(
-      container.querySelector('[data-slot="markdown-empty-state"]')
-    ).toBeNull()
   })
-
-  it("copies the full Markdown source from the controls", async () => {
-    const source = [
-      "# Release Notes",
-      "",
-      "Copy **source**, not rendering.",
-    ].join("\n")
-    render(<MarkdownViewer source={markdownSource(source)} />)
-
-    expect(
-      await screen.findByRole("heading", { name: "Release Notes" })
-    ).toBeTruthy()
-    fireEvent.click(screen.getByLabelText("Copy Markdown"))
-
-    await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(source)
-    })
-  })
-
-  it("shows full Markdown source copy failures from the controls", async () => {
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: {},
-    })
-
-    render(<MarkdownViewer source={markdownSource("# Release Notes")} />)
-
-    expect(
-      await screen.findByRole("heading", { name: "Release Notes" })
-    ).toBeTruthy()
-    fireEvent.click(screen.getByLabelText("Copy Markdown"))
-
-    expect(await screen.findByLabelText("Copy failed")).toBeTruthy()
-  })
-
-  it("ignores stale full Markdown source copy failures", async () => {
-    const writes: Array<ReturnType<typeof createDeferred<void>>> = []
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: {
-        writeText: vi.fn(() => {
-          const write = createDeferred<void>()
-          writes.push(write)
-          return write.promise
-        }),
-      },
-    })
-
-    render(<MarkdownViewer source={markdownSource("# Release Notes")} />)
-
-    expect(
-      await screen.findByRole("heading", { name: "Release Notes" })
-    ).toBeTruthy()
-    fireEvent.click(screen.getByLabelText("Copy Markdown"))
-    fireEvent.click(screen.getByLabelText("Copy Markdown"))
-
-    await act(async () => {
-      writes[1]?.resolve()
-    })
-    expect(await screen.findByLabelText("Copied")).toBeTruthy()
-
-    await act(async () => {
-      writes[0]?.reject(new Error("late denied"))
-    })
-    expect(screen.getByLabelText("Copied")).toBeTruthy()
-    expect(screen.queryByLabelText("Copy failed")).toBeNull()
-  })
-
-  it("toggles between rendered Markdown and source-faithful text", async () => {
-    const source = [
-      "# Release Notes",
-      "",
-      "Copy **source**, not rendering.",
-    ].join("\n")
-    render(<MarkdownViewer source={markdownSource(source)} />)
-
-    expect(
-      await screen.findByRole("heading", { name: "Release Notes" })
-    ).toBeTruthy()
-
-    fireEvent.click(screen.getByRole("button", { name: "Text" }))
-
-    expect(screen.getByText("# Release Notes")).toBeTruthy()
-    expect(screen.getByText("Copy **source**, not rendering.")).toBeTruthy()
-    expect(
-      document.querySelector('[data-slot="markdown-source-canvas"]')
-    ).toBeTruthy()
-    expect(screen.getByRole("region", { name: "Markdown source" })).toBe(
-      document.querySelector('[data-slot="markdown-source-canvas"]')
-    )
-    expect(
-      document
-        .querySelector('[data-slot="markdown-source-canvas"]')
-        ?.getAttribute("tabindex")
-    ).toBe("0")
-    expect(
-      Array.from(
-        document.querySelectorAll(
-          '[data-slot="markdown-source-canvas"] [data-source-line] span[aria-hidden="true"]'
-        )
-      ).map((lineNumber) => lineNumber.textContent)
-    ).toEqual(["1", "2", "3"])
-    expect(
-      Array.from(document.querySelectorAll("[data-source-line-content]")).map(
-        (line) => line.textContent
-      )
-    ).toEqual(["# Release Notes", " ", "Copy **source**, not rendering."])
-    expect(
-      document.querySelector('[data-slot="markdown-virtual-canvas"]')
-    ).toBeNull()
-    expect(screen.queryByRole("heading", { name: "Release Notes" })).toBeNull()
-
-    fireEvent.click(screen.getByRole("button", { name: "Rendered" }))
-
-    expect(
-      await screen.findByRole("heading", { name: "Release Notes" })
-    ).toBeTruthy()
-  })
-
-  it("preserves the source-line position when toggling rendered and text modes", async () => {
-    const viewerRef = React.createRef<TextViewerHandle>()
-    const source = Array.from({ length: 70 }, (_, index) =>
-      [`## Section ${index + 1}`, "", `Paragraph ${index + 1}.`].join("\n")
-    ).join("\n\n")
-    render(
-      <MarkdownViewer ref={viewerRef} source={markdownSource(source)} />
-    )
-
-    await screen.findByRole("heading", { name: "Section 1" })
-    viewerRef.current?.scrollToLineRange(
-      { start: 160, end: 160 },
-      { behavior: "auto" }
-    )
-    const viewport = viewerRef.current?.getViewportElement()
-    expect(viewport?.scrollTop).toBeGreaterThan(0)
-
-    fireEvent.click(screen.getByRole("button", { name: "Text" }))
-
-    await waitFor(() => {
-      expect(
-        document.querySelector('[data-slot="markdown-source-canvas"]')
-      ).toBeTruthy()
-      expect(viewport?.scrollTop).toBeGreaterThan(0)
-    })
-    const sourceModeScrollTop = viewport?.scrollTop ?? 0
-
-    fireEvent.click(screen.getByRole("button", { name: "Rendered" }))
-
-    await waitFor(() => {
-      expect(
-        document.querySelector('[data-slot="markdown-virtual-canvas"]')
-      ).toBeTruthy()
-      expect(viewport?.scrollTop).toBeGreaterThan(0)
-    })
-    expect(viewport?.scrollTop).not.toBe(sourceModeScrollTop)
-  })
-
-  it("scrolls source text mode by source line range", async () => {
-    const viewerRef = React.createRef<TextViewerHandle>()
-    const source = Array.from(
-      { length: 80 },
-      (_, index) => `line ${index + 1}`
-    ).join("\n")
-    render(
-      <MarkdownViewer ref={viewerRef} source={markdownSource(source)} />
-    )
-
-    fireEvent.click(await screen.findByRole("button", { name: "Text" }))
-
-    const viewport = viewerRef.current?.getViewportElement()
-    expect(viewport).toBeTruthy()
-    viewerRef.current?.scrollToLineRange(
-      { start: 40, end: 40 },
-      { behavior: "auto" }
-    )
-
-    expect(viewport?.scrollTop).toBeGreaterThan(0)
-  })
-
   it("scrolls rendered mode by source line range through the virtual document", async () => {
     const viewerRef = React.createRef<TextViewerHandle>()
     const source = Array.from({ length: 50 }, (_, index) =>
@@ -675,9 +485,7 @@ describe("MarkdownViewer", () => {
     ].join("\n")
     const clicks = captureAnchorClicks()
     const { createObjectURL, revokeObjectURL } = mockObjectUrls()
-    render(
-      <MarkdownViewer source={markdownSource(source, "release.md")} />
-    )
+    render(<MarkdownViewer source={markdownSource(source, "release.md")} />)
 
     expect(
       await screen.findByRole("heading", { name: "Release Notes" })
@@ -692,9 +500,7 @@ describe("MarkdownViewer", () => {
     expect(clicks).toEqual([
       { href: "blob:markdown-download", download: "release.md" },
     ])
-    expect(revokeObjectURL).toHaveBeenCalledWith(
-      "blob:markdown-download"
-    )
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:markdown-download")
   })
 
   it("shows and resets generated Markdown download failures", async () => {
@@ -3562,10 +3368,7 @@ describe("MarkdownViewer", () => {
     )
     const hostileSource = ["```txt", ...hostileLines, "```"].join("\n")
     const { container } = render(
-      <MarkdownViewer
-        source={markdownSource(hostileSource)}
-        controls={false}
-      />
+      <MarkdownViewer source={markdownSource(hostileSource)} controls={false} />
     )
 
     expect(await screen.findByText("Large Markdown block")).toBeTruthy()
@@ -3578,13 +3381,11 @@ describe("MarkdownViewer", () => {
     )
 
     expect(fallback).toBeTruthy()
+    expect(fallback?.getAttribute("data-markdown-hostile-line-count")).toBe(
+      "403"
+    )
     expect(
-      fallback?.getAttribute("data-markdown-hostile-line-count")
-    ).toBe("403")
-    expect(
-      Number(
-        fallback?.getAttribute("data-markdown-hostile-omitted-lines")
-      )
+      Number(fallback?.getAttribute("data-markdown-hostile-omitted-lines"))
     ).toBeGreaterThan(300)
     expect(preview?.textContent).toContain("hostile-line-0")
     expect(preview?.textContent).not.toContain("hostile-line-200")
@@ -4668,9 +4469,7 @@ describe("MarkdownViewer", () => {
     expect(screen.getByText("priority")).toBeTruthy()
     expect(screen.getByText("2")).toBeTruthy()
     expect(await screen.findByRole("heading", { name: "Body" })).toBeTruthy()
-    const frontmatter = container.querySelector(
-      "[data-markdown-frontmatter]"
-    )
+    const frontmatter = container.querySelector("[data-markdown-frontmatter]")
     expect(frontmatter).toBeTruthy()
     const metadata = frontmatter?.querySelector(
       "[data-markdown-frontmatter-metadata]"
@@ -4755,9 +4554,7 @@ describe("MarkdownViewer", () => {
     )
 
     await screen.findByRole("heading", { name: "Body" })
-    const frontmatter = container.querySelector(
-      "[data-markdown-frontmatter]"
-    )
+    const frontmatter = container.querySelector("[data-markdown-frontmatter]")
     const metadata = frontmatter?.querySelector(
       "[data-markdown-frontmatter-metadata]"
     )
@@ -4781,9 +4578,7 @@ describe("MarkdownViewer", () => {
       container.querySelector("[data-pretext-thematic-break]")
     ).toBeTruthy()
     expect(screen.getByText("title: Draft")).toBeTruthy()
-    expect(
-      container.querySelector("[data-markdown-frontmatter]")
-    ).toBeNull()
+    expect(container.querySelector("[data-markdown-frontmatter]")).toBeNull()
 
     rerender(
       <MarkdownViewer
@@ -4796,9 +4591,7 @@ describe("MarkdownViewer", () => {
     expect(
       container.querySelectorAll("[data-pretext-thematic-break]")
     ).toHaveLength(2)
-    expect(
-      container.querySelector("[data-markdown-frontmatter]")
-    ).toBeNull()
+    expect(container.querySelector("[data-markdown-frontmatter]")).toBeNull()
   })
 
   it("uses the same stable ids for rendered and modeled headings", async () => {

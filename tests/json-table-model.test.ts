@@ -491,6 +491,69 @@ describe("json table schema inspection", () => {
     )
   })
 
+  it("preserves schema property order for visible table columns", () => {
+    const orderedSchema: JSONSchema7 = {
+      type: "object",
+      properties: {
+        transactions: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              date: { type: "string", format: "date" },
+              amount: {
+                type: "object",
+                properties: {
+                  amount: { type: "number" },
+                  iso_4217_currency_code: { type: "string" },
+                },
+              },
+              description: { type: "string" },
+              check_number: { type: ["string", "null"] },
+              is_reconciled: { type: "boolean" },
+            },
+          },
+        },
+      },
+    }
+
+    const [nodes] = buildHeaderNodesFromSchema(orderedSchema, [])
+    const visiblePaths = flattenHeaderNodes(nodes).map((node) => node.key)
+
+    expect(visiblePaths).toEqual([
+      "transactions.*.date",
+      "transactions.*.amount.amount",
+      "transactions.*.amount.iso_4217_currency_code",
+      "transactions.*.description",
+      "transactions.*.check_number",
+      "transactions.*.is_reconciled",
+    ])
+
+    const rows = projectDocumentRows({
+      document: {
+        id: "doc_1",
+        data: {
+          transactions: [
+            {
+              is_reconciled: true,
+              check_number: null,
+              description: "Debit card purchase",
+              amount: {
+                iso_4217_currency_code: "USD",
+                amount: 12.34,
+              },
+              date: "2025-08-20",
+            },
+          ],
+        },
+      },
+      includeArrayAddRows: false,
+      visiblePaths,
+    })
+
+    expect(rows[0].cells.map((cell) => cell?.key)).toEqual(visiblePaths)
+  })
+
   it("folds object and array headers to parent value columns", () => {
     const collapsibleSchema: JSONSchema7 = {
       type: "object",

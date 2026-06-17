@@ -49,7 +49,36 @@ beforeAll(() => {
     unobserve() {}
     disconnect() {}
   }
+  // Radix DropdownMenu/Select read these jsdom-unimplemented pointer APIs when
+  // opening; shim them so triggers open and option lists mount.
+  HTMLElement.prototype.scrollIntoView = vi.fn()
+  if (!HTMLElement.prototype.hasPointerCapture) {
+    HTMLElement.prototype.hasPointerCapture = () => false
+  }
+  if (!HTMLElement.prototype.setPointerCapture) {
+    HTMLElement.prototype.setPointerCapture = () => {}
+  }
+  if (!HTMLElement.prototype.releasePointerCapture) {
+    HTMLElement.prototype.releasePointerCapture = () => {}
+  }
 })
+
+/**
+ * Opens a Radix DropdownMenu/Select trigger. Radix opens on the pointer-down
+ * sequence (a plain `click` is ignored), so dispatch that instead.
+ */
+function openRadixTrigger(trigger: HTMLElement) {
+  fireEvent.pointerDown(trigger, {
+    button: 0,
+    ctrlKey: false,
+    pointerType: "mouse",
+  })
+  fireEvent.pointerUp(trigger, {
+    button: 0,
+    ctrlKey: false,
+    pointerType: "mouse",
+  })
+}
 
 afterEach(cleanup)
 
@@ -93,7 +122,7 @@ function editableCapabilities(
 
 async function selectDataType(label: string, triggerIndex = 0) {
   const triggers = screen.getAllByRole("button", { name: /^Data type/ })
-  fireEvent.click(triggers[triggerIndex])
+  openRadixTrigger(triggers[triggerIndex])
   fireEvent.click(await screen.findByText(label))
 }
 
@@ -1115,7 +1144,7 @@ describe("PropertyForm", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Data type" }))
+    openRadixTrigger(screen.getByRole("button", { name: "Data type" }))
     const definitionTrigger = await screen.findByText("definition")
     fireEvent.focus(definitionTrigger)
     fireEvent.keyDown(definitionTrigger, { key: "ArrowRight" })
@@ -1169,7 +1198,7 @@ describe("PropertyForm", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Data type" }))
+    openRadixTrigger(screen.getByRole("button", { name: "Data type" }))
     const definitionTrigger = await screen.findByText("definition")
     fireEvent.focus(definitionTrigger)
     fireEvent.keyDown(definitionTrigger, { key: "ArrowRight" })
@@ -2225,7 +2254,7 @@ describe("PropertyForm", () => {
     )
 
     const trigger = screen.getByRole("button", { name: "Data type" })
-    fireEvent.click(trigger)
+    openRadixTrigger(trigger)
     const definitionTrigger = await screen.findByText("definition")
     fireEvent.focus(definitionTrigger)
     fireEvent.keyDown(definitionTrigger, { key: "ArrowRight" })
@@ -2268,7 +2297,7 @@ describe("PropertyForm", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Data type" }))
+    openRadixTrigger(screen.getByRole("button", { name: "Data type" }))
     const definitionTrigger = await screen.findByText("definition")
     fireEvent.focus(definitionTrigger)
     fireEvent.keyDown(definitionTrigger, { key: "ArrowRight" })
@@ -2365,7 +2394,7 @@ describe("PropertyForm", () => {
     )
 
     const trigger = screen.getByRole("button", { name: "Data type" })
-    fireEvent.click(trigger)
+    openRadixTrigger(trigger)
     const definitionTrigger = await screen.findByText("definition")
     fireEvent.focus(definitionTrigger)
     fireEvent.keyDown(definitionTrigger, { key: "ArrowRight" })
@@ -2416,7 +2445,7 @@ describe("PropertyForm", () => {
     )
 
     const trigger = screen.getByRole("button", { name: "Data type" })
-    fireEvent.click(trigger)
+    openRadixTrigger(trigger)
     const definitionTrigger = await screen.findByText("definition")
     fireEvent.focus(definitionTrigger)
     fireEvent.keyDown(definitionTrigger, { key: "ArrowRight" })
@@ -2453,7 +2482,7 @@ describe("PropertyForm", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Data type" }))
+    openRadixTrigger(screen.getByRole("button", { name: "Data type" }))
     const definitionTrigger = await screen.findByText("definition")
     fireEvent.focus(definitionTrigger)
     fireEvent.keyDown(definitionTrigger, { key: "ArrowRight" })
@@ -2490,7 +2519,7 @@ describe("PropertyForm", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Data type" }))
+    openRadixTrigger(screen.getByRole("button", { name: "Data type" }))
     const definitionTrigger = await screen.findByText("definition")
     fireEvent.focus(definitionTrigger)
     fireEvent.keyDown(definitionTrigger, { key: "ArrowRight" })

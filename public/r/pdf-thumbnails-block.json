@@ -7,9 +7,9 @@
     "lucide-react"
   ],
   "registryDependencies": [
-    "file-viewer",
-    "pdf-viewer",
-    "pdf-viewer-thumbnails",
+    "@retab/file-viewer",
+    "@retab/pdf-viewer",
+    "@retab/pdf-viewer-thumbnails",
     "button"
   ],
   "files": [

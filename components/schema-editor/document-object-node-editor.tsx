@@ -111,7 +111,9 @@ export function DocumentObjectNodeEditor({
     return (
       <div>
         <Accordion
-          defaultValue={["properties"]}
+          type="single"
+          collapsible
+          defaultValue="properties"
           className="w-full rounded-lg border border-border px-4 pb-0"
         >
           <AccordionItem value="properties" className="border-none">

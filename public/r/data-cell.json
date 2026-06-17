@@ -4,11 +4,11 @@
   "title": "Data Cell",
   "description": "A lightweight editable cell for scalar document data: text, numbers, booleans, dates, times, and date-times.",
   "registryDependencies": [
-    "calendar",
-    "input",
+    "@retab/calendar",
+    "@retab/input",
     "popover",
     "select",
-    "utils"
+    "@retab/utils"
   ],
   "files": [
     {

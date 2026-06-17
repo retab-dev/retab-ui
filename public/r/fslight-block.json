@@ -7,7 +7,7 @@
     "@pierre/trees"
   ],
   "registryDependencies": [
-    "file-system-light"
+    "@retab/file-system-light"
   ],
   "files": [
     {
