@@ -16,7 +16,7 @@ const MARKDOWN_VIEWER_DEMO_TEXT = [
   "[^overview]: Footnotes stay connected to their references with labelled backrefs.",
   "",
   "> [!IMPORTANT]",
-  "> This component is separate from the existing Markdown Viewer and is the place where the Pretext-based approach can evolve.",
+  "> The Markdown Viewer renders the whole document as one continuous, virtualized surface — chunking stays internal, so there are no page frames in the reading experience.",
   "",
   "> [!NOTE]",
   "> GitHub alerts render as labelled regions and remove the marker from visible prose.",
