@@ -10,7 +10,6 @@ import { useIsClient } from "@/components/ui/use-is-client"
 
 import {
   descriptorResetKey,
-  resolveFileDescriptor,
   type FileDescriptor,
   type FileViewerDocumentChrome,
   type FileViewerProps as FileViewerCoreProps,
@@ -47,6 +46,11 @@ const FileViewerContext = React.createContext<FileViewerContextValue | null>(
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect
 
+// Per-descriptor cancellation signal. Aborting is deferred a macrotask so a
+// keyed remount (or StrictMode's mount/unmount/mount) can cancel the pending
+// abort and keep reusing the shared resource request instead of tearing it down
+// and immediately refetching. Powers HtmlFileContent's external-cancellation
+// contract (see html-viewer-edge-cases: abort mid-load).
 function useDescriptorSignal(descriptorKey: string): AbortSignal {
   const controller = React.useMemo(() => {
     void descriptorKey
@@ -120,7 +124,11 @@ export function FileViewerProvider({
     () => createViewerResource(source, as),
     [source, as]
   )
-  const descriptor = resolveFileDescriptor({ source, as })
+  // createViewerResource already resolved this descriptor; reuse it instead of
+  // recomputing. The interned resource is referentially stable across renders,
+  // so the context value below stays stable too (a fresh resolve would mint a
+  // new object every render and defeat the useMemo).
+  const descriptor = resource.descriptor
   const descriptorKey = descriptorResetKey(descriptor)
   const descriptorSignal = useDescriptorSignal(descriptorKey)
   const value = React.useMemo<FileViewerContextValue>(

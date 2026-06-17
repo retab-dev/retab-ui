@@ -1,0 +1,20 @@
+---
+title: FileViewerBody
+description: The layout row below the header, usually containing a sidebar and a surface.
+component: true
+---
+
+`FileViewerBody` owns the space below `FileViewerHeader`. It is the boundary
+between optional file-scoped navigation and the main file surface.
+
+```tsx
+<FileViewerBody>
+  <FileViewerSidebar aria-label="PDF pages" />
+  <FileViewerSurface>
+    <FileViewerDocument />
+  </FileViewerSurface>
+</FileViewerBody>
+```
+
+Keep `FileViewerBody` structural. It should not know whether the sidebar
+contains thumbnails, attachments, segments, or source fields.

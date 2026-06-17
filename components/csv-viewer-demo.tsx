@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-import { CsvViewer } from "@/components/ui/csv-viewer"
+import { CsvViewerDocument } from "@/components/ui/csv-viewer"
 
 const FIRST = ["Jane", "John", "Amara", "Liu", "Diego", "Sofia", "Noah", "Mia"]
 const LAST = [
@@ -55,8 +55,8 @@ function buildCsv(rows: number): string {
 export function CsvViewerDemo() {
   const csv = React.useMemo(() => buildCsv(5000), [])
   return (
-    <div>
-      <CsvViewer
+    <div className="min-h-0">
+      <CsvViewerDocument
         source={{ kind: "text", text: csv, fileName: "people.csv" }}
         height={420}
         isolateStyles
@@ -73,8 +73,8 @@ export function CsvViewerStreamingDemo() {
     []
   )
   return (
-    <div>
-      <CsvViewer
+    <div className="min-h-0">
+      <CsvViewerDocument
         source={{
           kind: "blob",
           blob: source,

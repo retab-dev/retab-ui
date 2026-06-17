@@ -454,7 +454,7 @@ async function assertHeaderBodyAlignment(page, label) {
 async function enterJsonEditableMode(page) {
   await page.evaluate(() => {
     const group = Array.from(document.querySelectorAll('[role="group"]')).find(
-      (element) => element.getAttribute("aria-label") === "JSON edit mode"
+      (element) => element.getAttribute("aria-label") === "Data edit mode"
     )
     const button = group
       ? Array.from(group.querySelectorAll("button")).find(

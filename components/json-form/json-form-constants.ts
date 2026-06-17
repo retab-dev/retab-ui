@@ -1,0 +1,3 @@
+export const AUTO_COLLAPSE_DEPTH = 1
+export const CARD_VIRTUALIZE_THRESHOLD = 30
+export const LONG_ARRAY_THRESHOLD = 8

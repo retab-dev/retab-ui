@@ -1,0 +1,22 @@
+---
+title: FileViewerPageRail
+description: Controlled page rail navigation for custom document compositions.
+component: true
+---
+
+Use a controlled page rail when the document handle and current page are owned
+outside the easy renderer API. PDF exposes this lower-level shape as
+`PdfThumbnailRail`.
+
+```tsx
+<PdfThumbnailRail
+  resource={resource}
+  currentPage={currentPage}
+  onSelectPage={scrollToPage}
+  thumbnailWidth={120}
+  thumbnailShape="page"
+/>
+```
+
+Prefer renderer-bound thumbnails for normal File Viewer compositions. Use the
+controlled rail when another workflow already owns page state.

@@ -303,7 +303,7 @@ describe("getSidebarGroupsFromFolder", () => {
           children: [
             page("/docs/components/file-viewer", "File Viewer"),
             page("/docs/components/file-viewer/anatomy", "Anatomy"),
-            page("/docs/components/file-viewer/pdf-viewer", "PDF Viewer"),
+            page("/docs/components/file-viewer/renderers/pdf", "PDF Viewer"),
           ],
         }),
       ],
@@ -317,6 +317,65 @@ describe("getSidebarGroupsFromFolder", () => {
     expect(fileViewer?.pages.map((p) => p.name)).toEqual([
       "Anatomy",
       "PDF Viewer",
+    ])
+  })
+
+  it("keeps nested component folders as sidebar sections", () => {
+    const components = folder({
+      $id: "components",
+      name: "Components",
+      children: [
+        separator("File Viewer"),
+        folder({
+          name: "File Viewer",
+          children: [
+            page("/docs/components/file-viewer", "Overview"),
+            folder({
+              name: "Anatomy",
+              children: [
+                page("/docs/components/file-viewer/anatomy", "Anatomy"),
+                page(
+                  "/docs/components/file-viewer/anatomy/file-viewer",
+                  "FileViewer"
+                ),
+                page(
+                  "/docs/components/file-viewer/anatomy/file-viewer-header",
+                  "FileViewerHeader"
+                ),
+              ],
+            }),
+            folder({
+              name: "Renderers",
+              children: [
+                page("/docs/components/file-viewer/renderers/pdf", "PDF"),
+                page("/docs/components/file-viewer/renderers/image", "Image"),
+              ],
+            }),
+          ],
+        }),
+      ],
+    })
+
+    const groups = getSidebarGroupsFromFolder(components, "radix")
+    const fileViewer = groups.find((g) => g.name === "File Viewer")
+
+    expect(fileViewer?.url).toBeUndefined()
+    expect(fileViewer?.pages.map((p) => p.name)).toEqual(["Overview"])
+    expect(fileViewer?.sections?.map((section) => section.name)).toEqual([
+      "Anatomy",
+      "Renderers",
+    ])
+    expect(fileViewer?.sections?.[0]?.url).toBe(
+      "/docs/components/file-viewer/anatomy"
+    )
+    expect(fileViewer?.sections?.[0]?.pages.map((p) => p.name)).toEqual([
+      "FileViewer",
+      "FileViewerHeader",
+    ])
+    expect(fileViewer?.sections?.[1]?.url).toBeUndefined()
+    expect(fileViewer?.sections?.[1]?.pages.map((p) => p.name)).toEqual([
+      "PDF",
+      "Image",
     ])
   })
 

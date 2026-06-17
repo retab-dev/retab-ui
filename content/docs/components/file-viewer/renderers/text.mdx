@@ -1,0 +1,117 @@
+---
+title: Text
+description: A Pretext-powered wrapped text viewer with variable-height virtualization, prose chrome, source-line highlights, zoom, retry, and download.
+component: true
+---
+
+The Text Viewer is for prose text that is not Markdown. It uses Pretext to
+predict wrapped line heights without measuring DOM nodes, then renders a custom
+variable-height virtual window so long documents stay responsive while text
+wraps naturally inside the viewport.
+
+<ComponentPreview name="text-viewer-demo" contentClassName="p-0" />
+
+## Installation
+
+```bash
+npx shadcn@latest add @retab/text-viewer
+```
+
+## Usage
+
+```tsx
+import { TextViewer } from "@/components/ui/text-viewer"
+
+export function Example() {
+  return (
+    <TextViewer
+      source={{
+        kind: "text",
+        text: "Text and code want different surfaces. Prose wants wrapping.",
+        fileName: "notes.txt",
+      }}
+      highlight={{ start: 1, end: 1 }}
+    />
+  )
+}
+```
+
+URL and Blob sources use the same bounded text resource path as the Code Viewer:
+
+```tsx
+<TextViewer
+  source={{
+    kind: "url",
+    url: "/samples/notes.txt",
+    fileName: "notes.txt",
+  }}
+/>
+```
+
+## Features
+
+- **Natural wrapping** — prose stays within the viewport instead of forcing horizontal scrolling.
+- **Pretext layout** — line heights are predicted from text, font, width, and line-height without mounting rows for measurement.
+- **Custom virtualization** — variable-height source lines are windowed with local offset math, not TanStack Virtual.
+- **Stable source-line addressing** — `highlight` and `scrollToLineRange` still use 1-based inclusive source-line ranges.
+- **Prose chrome** — the controls shows word count, text scale controls, and downloads from the source resource.
+- **Markdown stays separate** — `.md`, `.markdown`, and `text/markdown` sources route through the dedicated Pretext Markdown Viewer, not through Text Viewer markdown mode.
+
+## Markdown Boundary
+
+Markdown is no longer a Text Viewer rendering mode in File Viewer routing.
+Markdown files and inline Markdown sources use
+[`PretextMarkdownViewer`](/docs/components/file-viewer/renderers/pretext-markdown), which owns the
+React/GFM document semantics, Rendered/Text toggle, safe raw HTML policy,
+alerts, diagrams, frontmatter, tables, footnotes, and restricted component
+markdown.
+
+Use Text Viewer for prose payloads such as notes, transcripts, extracted text,
+and other wrapped source text where Markdown syntax should be shown literally
+or is not part of the file contract. `.mdx` files are source files and route to
+the Code Viewer in the File Viewer.
+
+## Text And Code
+
+Plain prose text does not show a code-style line-number gutter. Logs, JSON, and
+source-like files remain Code Viewer responsibilities and keep their line
+numbers, monospaced layout, syntax support, and line-oriented scrolling.
+
+## API Reference
+
+| Prop        | Type                    | Description                                                                |
+| ----------- | ----------------------- | -------------------------------------------------------------------------- |
+| `source`    | `TextDocumentSource`    | Required source descriptor. Supports URL, Blob, and inline text resources. |
+| `className` | `string`                | Optional class on the viewer container.                                    |
+| `controls`  | `boolean`               | Show word count, zoom controls, and download action. Defaults to `true`.   |
+| `highlight` | `TextLineRange \| null` | 1-based inclusive source-line range to highlight.                          |
+| `bare`      | `boolean`               | Drop the outer border/background so the viewer fills its container.        |
+| `maxBytes`  | `number`                | Maximum text payload size accepted by the viewer.                          |
+| `maxLines`  | `number`                | Maximum number of source lines accepted by the viewer.                     |
+
+## Ref
+
+```tsx
+import * as React from "react"
+
+import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
+
+export function Example() {
+  const viewerRef = React.useRef<TextViewerHandle>(null)
+
+  return (
+    <TextViewer
+      ref={viewerRef}
+      source={{ kind: "text", text: "alpha\nlong prose paragraph\nomega" }}
+      highlight={{ start: 2, end: 2 }}
+    />
+  )
+}
+```
+
+`scrollToLineRange(range, options?)` scrolls any normalized source-line range
+into view, even when that line is outside the currently mounted virtual window.
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/text-viewer.tsx" />

@@ -15,7 +15,7 @@ flowchart TB
     ResourceUsage["Resource usage<br/>PptxResourceContent(resource, props)"]
     FileViewer["FileViewer<br/>category route"]
     Demo["components/pptx-viewer-demo.tsx<br/>sample deck + overlay example"]
-    Docs["content/docs/components/file-viewer/pptx-viewer.mdx<br/>install, props, behavior"]
+    Docs["content/docs/components/file-viewer/renderers/pptx.mdx<br/>install, props, behavior"]
     Registry["registry.json + public/r/pptx-viewer.json<br/>shadcn registry item"]
     ScrollBench["scrollbench pptx target<br/>[data-slot=pptx-viewer] viewport"]
     Tests["tests/pptx-viewer*.test.tsx<br/>unit, integration, cache, edge cases"]
@@ -428,7 +428,7 @@ flowchart TB
   subgraph Public["Public / Consumer Files"]
     A["components/ui/pptx-viewer.tsx<br/>re-export"]
     B["components/pptx-viewer-demo.tsx<br/>demo + overlay"]
-    C["content/docs/components/file-viewer/pptx-viewer.mdx<br/>docs"]
+    C["content/docs/components/file-viewer/renderers/pptx.mdx<br/>docs"]
     D["public/r/pptx-viewer.json<br/>generated registry item"]
     E["registry.json<br/>registry manifest"]
   end

@@ -207,12 +207,13 @@ export type EmailViewerProps = {
   defaultSelectedPath?: MimePartPath
   onSelectedPathChange?: (path: MimePartPath, node: MimePartNode) => void
   maxNestedMessageDepth?: number
+  mode?: "auto" | "inline" | "overlay"
   className?: string
 }
 
 export type EmailViewerProviderProps = Omit<
   EmailViewerProps,
-  "className"
+  "className" | "mode"
 > & {
   children: ReactNode
 }

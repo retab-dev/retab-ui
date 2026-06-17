@@ -250,11 +250,7 @@ function SourceLinkedViewer({
   source: SourceLinkedViewerSource
 }) {
   return (
-    <FileViewer
-      source={source}
-      defaultOpen
-      className="h-full bg-background"
-    >
+    <FileViewer source={source} defaultOpen className="h-full bg-background">
       <SourceLinkedFileHeader />
       <FileViewerBody>
         <FileViewerSurface className="relative">
@@ -288,7 +284,7 @@ function SourcesForm({
     defaultValues: extraction.values,
   })
 
-  // `json-form` is field-anchor-aware: pass the link and every field becomes a
+  // `json-form` is source-aware: pass the link and every field becomes a
   // hoverable card that reports its path. No per-field wiring needed.
   return (
     <>
@@ -300,7 +296,7 @@ function SourcesForm({
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="p-4">
-          <JsonForm form={form} schema={extraction.schema} anchorLink={link} />
+          <JsonForm form={form} schema={extraction.schema} sourceLink={link} />
         </div>
       </ScrollArea>
     </>

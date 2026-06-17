@@ -16,7 +16,7 @@
     "skeleton",
     "dropdown-menu",
     "spinner",
-    "viewer-controls"
+    "@retab/viewer-controls"
   ],
   "files": [
     {

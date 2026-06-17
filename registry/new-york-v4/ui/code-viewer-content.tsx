@@ -4,7 +4,7 @@ import * as React from "react"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
 
-import { CodeViewerFrame, CodeViewerControls } from "./code-viewer-chrome"
+import { CodeViewerControls, CodeViewerFrame } from "./code-viewer-chrome"
 import { scrollLineRangeMetricsIntoView } from "./code-viewer-layout"
 import { useCodeProjectionScheduler } from "./code-viewer-projection-scheduler"
 import { createCodeProjector } from "./code-viewer-projector"

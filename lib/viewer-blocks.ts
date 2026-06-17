@@ -453,7 +453,7 @@ export const VIEWER_BLOCKS = [
     description:
       "A PDF viewer with a toggleable page-thumbnail sidebar in the aside slot. Thumbnails render lazily as they scroll into view, highlight the current page, and jump on click.",
     command: getRegistryAddCommand("pdf-thumbnails-block"),
-    docsHref: "/docs/components/file-viewer/pdf-viewer",
+    docsHref: "/docs/components/file-viewer/renderers/pdf",
     viewHref: "/view/blocks/pdf-thumbnails",
     featured: true,
     categories: [],

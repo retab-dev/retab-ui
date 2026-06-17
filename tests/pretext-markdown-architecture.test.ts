@@ -33,19 +33,30 @@ const repoRoot = process.cwd()
 const execFileAsync = promisify(execFile)
 const pretextMarkdownFiles = [
   "registry/new-york-v4/ui/pretext-markdown-viewer.tsx",
-  "registry/new-york-v4/ui/pretext-markdown-viewer-content.tsx",
+  "registry/new-york-v4/ui/pretext-markdown-greenfield-content.tsx",
+  "registry/new-york-v4/ui/pretext-markdown-greenfield-diagram.tsx",
+  "registry/new-york-v4/ui/pretext-markdown-greenfield-document.ts",
+  "registry/new-york-v4/ui/pretext-markdown-greenfield-layout.ts",
+  "registry/new-york-v4/ui/pretext-markdown-greenfield-renderer.tsx",
+  "registry/new-york-v4/ui/pretext-markdown-greenfield-virtualizer.ts",
+  "registry/new-york-v4/ui/pretext-markdown-hast-types.ts",
+  "registry/new-york-v4/ui/pretext-markdown-source-map.ts",
+  "registry/new-york-v4/ui/pretext-markdown-unified-pipeline.ts",
+  "registry/new-york-v4/ui/pretext-markdown-url-policy.ts",
+]
+const removedLegacyPretextMarkdownFiles = [
+  "registry/new-york-v4/ui/pretext-markdown-components.ts",
+  "registry/new-york-v4/ui/pretext-markdown-controls.tsx",
   "registry/new-york-v4/ui/pretext-markdown-document-model.ts",
   "registry/new-york-v4/ui/pretext-markdown-layout.ts",
+  "registry/new-york-v4/ui/pretext-markdown-mermaid.tsx",
   "registry/new-york-v4/ui/pretext-markdown-parser.ts",
   "registry/new-york-v4/ui/pretext-markdown-policy.ts",
-  "registry/new-york-v4/ui/pretext-markdown-table-accessibility.ts",
-  "registry/new-york-v4/ui/pretext-markdown-virtualizer.ts",
   "registry/new-york-v4/ui/pretext-markdown-renderer.tsx",
-  "registry/new-york-v4/ui/pretext-markdown-controls.tsx",
-  "registry/new-york-v4/ui/pretext-markdown-mermaid.tsx",
-  "registry/new-york-v4/ui/pretext-markdown-url-policy.ts",
   "registry/new-york-v4/ui/pretext-markdown-sanitize.ts",
-  "registry/new-york-v4/ui/pretext-markdown-components.ts",
+  "registry/new-york-v4/ui/pretext-markdown-table-accessibility.ts",
+  "registry/new-york-v4/ui/pretext-markdown-viewer-content.tsx",
+  "registry/new-york-v4/ui/pretext-markdown-virtualizer.ts",
 ]
 const textViewerFiles = [
   "registry/new-york-v4/ui/text-viewer.tsx",
@@ -73,12 +84,12 @@ const textViewerFiles = [
   "components/ui/text-viewer-chrome.tsx",
 ]
 const pretextMarkdownDocsPath =
-  "content/docs/components/file-viewer/pretext-markdown-viewer.mdx"
+  "content/docs/components/file-viewer/renderers/pretext-markdown.mdx"
 const viewerDocsPaths = [
   "content/docs/components/index.mdx",
   "content/docs/components/file-viewer/index.mdx",
-  "content/docs/components/file-viewer/text-viewer.mdx",
-  "content/docs/components/file-viewer/markdown-viewer.mdx",
+  "content/docs/components/file-viewer/renderers/text.mdx",
+  "content/docs/components/file-viewer/renderers/markdown.mdx",
   pretextMarkdownDocsPath,
 ]
 
@@ -100,6 +111,10 @@ function readPretextMarkdownRegistryArtifact() {
   ) as RegistryItem & {
     type: string
   }
+}
+
+function readGeneratedRegistryIndex() {
+  return JSON.parse(read("public/r/registry.json")) as Registry
 }
 
 function importSpecifiers(source: string) {
@@ -473,6 +488,14 @@ async function withLocalRegistryServer<T>(
 }
 
 describe("Pretext Markdown architecture", () => {
+  it("keeps the old chunk-local Pretext Markdown stack deleted", () => {
+    for (const file of removedLegacyPretextMarkdownFiles) {
+      expect(existsSync(join(repoRoot, file)), `${file} still exists`).toBe(
+        false
+      )
+    }
+  })
+
   it("keeps the implementation independent from old Markdown Document modules", () => {
     for (const file of pretextMarkdownFiles) {
       const source = read(file)
@@ -501,6 +524,25 @@ describe("Pretext Markdown architecture", () => {
     )
   })
 
+  it("keeps the generated registry index on the greenfield Pretext item", () => {
+    const registryItem = readRegistry().items.find(
+      (item) => item.name === "pretext-markdown-viewer"
+    )
+    const generatedItem = readGeneratedRegistryIndex().items.find(
+      (item) => item.name === "pretext-markdown-viewer"
+    )
+
+    expect(generatedItem).toEqual(registryItem)
+    expect(generatedItem?.files.map((file) => file.path).sort()).toEqual(
+      [...pretextMarkdownFiles].sort()
+    )
+    expect(generatedItem?.dependencies ?? []).not.toContain("marked@18.0.5")
+    expect(generatedItem?.dependencies ?? []).not.toContain("react-markdown")
+    expect(generatedItem?.dependencies ?? []).not.toContain(
+      "rehype-pretty-code"
+    )
+  })
+
   it("ships a synchronized registry artifact for installation", () => {
     const artifact = readPretextMarkdownRegistryArtifact()
 
@@ -511,25 +553,25 @@ describe("Pretext Markdown architecture", () => {
       "button",
     ])
     expect(artifact.dependencies ?? []).toEqual([
-      "@chenglou/pretext",
-      "dompurify@3.4.9",
+      "hast-util-to-jsx-runtime",
       "katex",
       "lucide-react",
-      "marked@18.0.5",
       "mermaid",
-      "react-markdown",
       "rehype-katex",
-      "rehype-pretty-code",
       "rehype-raw",
       "rehype-sanitize",
+      "rehype-slug",
       "remark-breaks",
       "remark-directive",
       "remark-gemoji",
       "remark-gfm",
       "remark-math",
+      "remark-parse",
+      "remark-rehype",
       "remark-smartypants",
+      "shiki",
       "unified",
-      "unist-util-visit",
+      "vfile",
     ])
     expect(artifact.files.map((file) => file.path).sort()).toEqual(
       [...pretextMarkdownFiles].sort()
@@ -605,6 +647,7 @@ describe("Pretext Markdown architecture", () => {
           continue
         }
         if (installedPackages.has(packageName)) continue
+        if (installedPackages.has(`@types/${packageName}`)) continue
         missingPackages.push(
           `${file.target} imports ${specifier}, but ${packageName} is not declared by the installed registry tree`
         )
@@ -634,25 +677,41 @@ describe("Pretext Markdown architecture", () => {
     await withLocalRegistryServer(async (registryUrl) => {
       const projectDir = await createShadcnSmokeProject({ registryUrl })
       try {
-        await execFileAsync(
-          "pnpm",
-          [
-            "exec",
-            "shadcn",
-            "add",
-            "@retab/pretext-markdown-viewer",
-            "--cwd",
-            projectDir,
-            "-y",
-            "--overwrite",
-            "--silent",
-          ],
-          {
-            cwd: repoRoot,
-            timeout: 60_000,
-            maxBuffer: 1024 * 1024 * 8,
+        try {
+          await execFileAsync(
+            "pnpm",
+            [
+              "exec",
+              "shadcn",
+              "add",
+              "@retab/pretext-markdown-viewer",
+              "--cwd",
+              projectDir,
+              "-y",
+              "--overwrite",
+            ],
+            {
+              cwd: repoRoot,
+              timeout: 60_000,
+              maxBuffer: 1024 * 1024 * 8,
+            }
+          )
+        } catch (error) {
+          const failed = error as {
+            message?: string
+            stderr?: string
+            stdout?: string
           }
-        )
+          throw new Error(
+            [
+              failed.message,
+              failed.stdout ? `stdout:\n${failed.stdout}` : "",
+              failed.stderr ? `stderr:\n${failed.stderr}` : "",
+            ]
+              .filter(Boolean)
+              .join("\n\n")
+          )
+        }
 
         const missingFiles = expectedRetabFiles.filter(
           (path) => !existsSync(join(projectDir, path))
@@ -669,7 +728,9 @@ describe("Pretext Markdown architecture", () => {
           join(projectDir, "components/ui/pretext-markdown-viewer.tsx"),
           "utf8"
         )
-        expect(installedViewer).toContain("./pretext-markdown-viewer-content")
+        expect(installedViewer).toContain(
+          "./pretext-markdown-greenfield-content"
+        )
         expect(installedViewer).not.toContain("markdown-document-viewer")
         expect(
           await readJson("public/r/pretext-markdown-viewer.json")
@@ -703,44 +764,46 @@ describe("Pretext Markdown architecture", () => {
     }
   })
 
-  it("keeps the viewer content on the private Pretext layout and virtualizer", () => {
+  it("keeps the viewer content on the private greenfield layout and virtualizer", () => {
     const imports = importSpecifiers(
-      read("registry/new-york-v4/ui/pretext-markdown-viewer-content.tsx")
+      read("registry/new-york-v4/ui/pretext-markdown-greenfield-content.tsx")
     )
 
-    expect(imports).toContain("./pretext-markdown-layout")
-    expect(imports).toContain("./pretext-markdown-virtualizer")
+    expect(imports).toContain("./pretext-markdown-greenfield-layout")
+    expect(imports).toContain("./pretext-markdown-greenfield-virtualizer")
     expect(imports).not.toContain("./markdown-document-layout")
     expect(imports).not.toContain("./markdown-document-virtualizer")
     expect(imports).not.toContain("./text-viewer-layout")
     expect(imports).not.toContain("./text-viewer-virtualization")
   })
 
-  it("keeps the parser dependency behind the Pretext Markdown parser adapter", () => {
-    const parserImports = importSpecifiers(
-      read("registry/new-york-v4/ui/pretext-markdown-parser.ts")
+  it("keeps Markdown parsing inside the unified pipeline", () => {
+    const pipelineImports = importSpecifiers(
+      read("registry/new-york-v4/ui/pretext-markdown-unified-pipeline.ts")
     )
-    expect(parserImports).toContain("marked")
+    expect(pipelineImports).toContain("remark-parse")
+    expect(pipelineImports).toContain("remark-rehype")
 
     for (const file of pretextMarkdownFiles) {
-      if (file.endsWith("pretext-markdown-parser.ts")) continue
+      if (file.endsWith("pretext-markdown-unified-pipeline.ts")) continue
       const imports = importSpecifiers(read(file))
       expect(imports, `${file} imports marked directly`).not.toContain("marked")
+      expect(imports, `${file} imports remark-parse directly`).not.toContain(
+        "remark-parse"
+      )
     }
   })
 
-  it("keeps heading IDs owned by the document model instead of rehype slugging", () => {
-    const policySource = read(
-      "registry/new-york-v4/ui/pretext-markdown-policy.ts"
+  it("derives heading IDs from the full-document HAST model", () => {
+    const pipelineSource = read(
+      "registry/new-york-v4/ui/pretext-markdown-unified-pipeline.ts"
     )
     const modelSource = read(
-      "registry/new-york-v4/ui/pretext-markdown-document-model.ts"
+      "registry/new-york-v4/ui/pretext-markdown-greenfield-document.ts"
     )
 
-    expect(policySource).toContain("remarkPretextHeadingIds")
-    expect(policySource).not.toContain("rehypeSlug")
-    expect(policySource).not.toContain("rehype-slug")
-    expect(modelSource).toContain("createPretextMarkdownHeadingSlug")
+    expect(pipelineSource).toContain("rehypeSlug")
+    expect(modelSource).toContain("createPretextMarkdownGreenfieldHeadings")
   })
 
   it("keeps TextViewer modules from importing the Pretext Markdown fork", () => {
@@ -780,7 +843,7 @@ describe("Pretext Markdown architecture", () => {
     )
 
     expect(docs["content/docs/components/file-viewer/index.mdx"]).toContain(
-      "[Pretext Markdown Viewer](/docs/components/file-viewer/pretext-markdown-viewer)"
+      "[Pretext Markdown Viewer](/docs/components/file-viewer/renderers/pretext-markdown)"
     )
     expect(docs["content/docs/components/file-viewer/index.mdx"]).toContain(
       "| Markdown     | `md`, `markdown`, `text/markdown`"
@@ -792,14 +855,14 @@ describe("Pretext Markdown architecture", () => {
       "Markdown URL, Blob,\n  inline text, and MIME-only sources route to `PretextMarkdownViewer`"
     )
     expect(
-      docs["content/docs/components/file-viewer/text-viewer.mdx"]
+      docs["content/docs/components/file-viewer/renderers/text.mdx"]
     ).toContain(
       "Markdown files and inline Markdown sources use\n[`PretextMarkdownViewer`]"
     )
     expect(
-      docs["content/docs/components/file-viewer/markdown-viewer.mdx"]
+      docs["content/docs/components/file-viewer/renderers/markdown.mdx"]
     ).toContain(
-      "[Pretext Markdown Viewer](/docs/components/file-viewer/pretext-markdown-viewer)"
+      "[Pretext Markdown Viewer](/docs/components/file-viewer/renderers/pretext-markdown)"
     )
 
     for (const [path, content] of Object.entries(docs)) {

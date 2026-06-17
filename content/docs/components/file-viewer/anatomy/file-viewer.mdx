@@ -1,0 +1,35 @@
+---
+title: FileViewer
+description: The File Viewer root owns source identity, route detection, sidebar state, and the file-scoped composition context.
+component: true
+---
+
+`FileViewer` is the composition root and the easy API. With no children, it
+renders the default file viewer. With children, it exposes the same file-scoped
+state to `FileViewerHeader`, `FileViewerBody`, `FileViewerSidebar`,
+`FileViewerSurface`, and `FileViewerDocument`.
+
+```tsx
+<FileViewer source={source} />
+```
+
+```tsx
+<FileViewer source={source} defaultOpen>
+  <FileViewerHeader>
+    <FileViewerSidebarTrigger />
+    <FileViewerTitle />
+    <FileViewerMeta />
+    <FileViewerControls />
+  </FileViewerHeader>
+  <FileViewerBody>
+    <FileViewerSidebar aria-label="Document navigation" />
+    <FileViewerSurface>
+      <FileViewerDocument />
+    </FileViewerSurface>
+  </FileViewerBody>
+</FileViewer>
+```
+
+`FileViewer` should own file concerns only: source loading, type routing,
+download identity, sidebar state, and renderer control registration. Workflow
+semantics belong outside it.

@@ -2,6 +2,7 @@ import {
   JsonTableDemo,
   type JsonTableDemoProfileVariant,
 } from "@/components/json-table/json-table-demo"
+import { JsonTableStyleProbe } from "@/components/json-table/json-table-style-probe"
 
 export default async function JsonTableProfilePage({
   searchParams,
@@ -26,6 +27,7 @@ export default async function JsonTableProfilePage({
           profileOverscan={overscan}
           profileJumpOverscan={jumpOverscan}
         />
+        <JsonTableStyleProbe />
       </section>
     </main>
   )

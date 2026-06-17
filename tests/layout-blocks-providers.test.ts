@@ -25,16 +25,34 @@ import type {
 
 const textractFixture = textractOutput as TextractDocument
 const azureFixture = azureOutput as AzureDocument
+const DOCUMENT_AI_PAGE_COUNT = 15
+const DOCUMENT_AI_PAGE_WIDTH = 1681
+const DOCUMENT_AI_PAGE_HEIGHT = 2378
+const DOCUMENT_AI_BLOCK_COUNT = 625
+const DOCUMENT_AI_PARAGRAPH_COUNT = 667
+const DOCUMENT_AI_LINE_COUNT = 1030
+const DOCUMENT_AI_WORD_COUNT = 9612
 
 describe("AWS Textract layout blocks", () => {
-  it("normalizes pages, lines, and words from Textract blocks", () => {
+  it("normalizes generated Document AI pages, blocks, lines, and words", () => {
     const document = textractToLayoutDocument(textractFixture)
 
-    expect(document.pages).toHaveLength(1)
-    expect(document.pages[0]).toMatchObject({ pageNumber: 1, rotation: 0 })
-    expect(document.items.filter((i) => i.level === "line")).toHaveLength(9)
-    expect(document.items.filter((i) => i.level === "word")).toHaveLength(27)
-    expect(document.items.some((i) => i.level === "block")).toBe(false)
+    expect(document.pages).toHaveLength(DOCUMENT_AI_PAGE_COUNT)
+    expect(document.pages[0]).toMatchObject({
+      pageNumber: 1,
+      width: DOCUMENT_AI_PAGE_WIDTH,
+      height: DOCUMENT_AI_PAGE_HEIGHT,
+      rotation: 0,
+    })
+    expect(document.items.filter((i) => i.level === "block")).toHaveLength(
+      DOCUMENT_AI_BLOCK_COUNT
+    )
+    expect(document.items.filter((i) => i.level === "line")).toHaveLength(
+      DOCUMENT_AI_LINE_COUNT
+    )
+    expect(document.items.filter((i) => i.level === "word")).toHaveLength(
+      DOCUMENT_AI_WORD_COUNT
+    )
   })
 
   it("converts Textract 0–100 confidence onto a 0–1 scale", () => {
@@ -62,11 +80,13 @@ describe("AWS Textract layout blocks", () => {
     expect(parent?.text).toContain(word.text)
   })
 
-  it("projects normalized geometry inside the synthetic page bounds", () => {
+  it("projects normalized geometry inside the generated page bounds", () => {
     const document = textractToLayoutDocument(textractFixture)
-    const page = document.pages[0]!
 
     for (const item of document.items) {
+      const page = document.pages.find(
+        (candidate) => candidate.pageNumber === item.pageNumber
+      )!
       expect(item.rect).toBeDefined()
       expect(item.rect!.left).toBeGreaterThanOrEqual(0)
       expect(item.rect!.top).toBeGreaterThanOrEqual(0)
@@ -113,31 +133,38 @@ describe("AWS Textract layout blocks", () => {
 })
 
 describe("Azure Document Intelligence layout blocks", () => {
-  it("normalizes paragraphs, lines, and words from analyzeResult", () => {
+  it("normalizes generated Document AI paragraphs, lines, and words", () => {
     const document = azureToLayoutDocument(azureFixture)
 
-    expect(document.pages).toHaveLength(1)
-    expect(document.items.filter((i) => i.level === "block")).toHaveLength(9)
-    expect(document.items.filter((i) => i.level === "line")).toHaveLength(9)
-    expect(document.items.filter((i) => i.level === "word")).toHaveLength(27)
+    expect(document.pages).toHaveLength(DOCUMENT_AI_PAGE_COUNT)
+    expect(document.items.filter((i) => i.level === "block")).toHaveLength(
+      DOCUMENT_AI_PARAGRAPH_COUNT
+    )
+    expect(document.items.filter((i) => i.level === "line")).toHaveLength(
+      DOCUMENT_AI_LINE_COUNT
+    )
+    expect(document.items.filter((i) => i.level === "word")).toHaveLength(
+      DOCUMENT_AI_WORD_COUNT
+    )
   })
 
-  it("scales inch page units and geometry into a pixel coordinate space", () => {
+  it("keeps generated pixel page units in the source coordinate space", () => {
     const document = azureToLayoutDocument(azureFixture)
     const page = document.pages[0]!
 
-    // 8.5in × 11in at 96 dpi.
-    expect(page.width).toBeCloseTo(816, 5)
-    expect(page.height).toBeCloseTo(1056, 5)
+    expect(page.width).toBe(DOCUMENT_AI_PAGE_WIDTH)
+    expect(page.height).toBe(DOCUMENT_AI_PAGE_HEIGHT)
   })
 
   it("carries the full content buffer and maps paragraph roles to kinds", () => {
     const document = azureToLayoutDocument(azureFixture)
-    const title = document.items.find((i) => i.level === "block")
+    const title = document.items.find(
+      (i) => i.level === "block" && i.kind === "title"
+    )
 
-    expect(document.text.startsWith("ACME CORPORATION")).toBe(true)
+    expect(document.text.startsWith("arXiv:1412.6980v9")).toBe(true)
     expect(title?.kind).toBe("title")
-    expect(title?.text).toBe("ACME CORPORATION")
+    expect(title?.text).toBe("ADAM: A METHOD FOR STOCHASTIC OPTIMIZATION\n")
   })
 
   it("derives word → line → block hierarchy from spans", () => {
@@ -158,7 +185,9 @@ describe("Azure Document Intelligence layout blocks", () => {
       .analyzeResult as AzureDocument
     const document = azureToLayoutDocument(bare)
 
-    expect(document.items.filter((i) => i.level === "word")).toHaveLength(27)
+    expect(document.items.filter((i) => i.level === "word")).toHaveLength(
+      DOCUMENT_AI_WORD_COUNT
+    )
   })
 })
 
@@ -173,26 +202,29 @@ function inspectedLevel(document: LayoutDocument): LayoutLevel {
 }
 
 describe("OCR viewer pipeline across providers", () => {
-  const cases: { name: string; document: LayoutDocument; level: LayoutLevel }[] =
-    [
-      {
-        name: "Google Document AI",
-        document: documentAiToLayoutDocument(
-          documentAiOutput as DocumentAiDocument
-        ),
-        level: "block",
-      },
-      {
-        name: "AWS Textract",
-        document: textractToLayoutDocument(textractFixture),
-        level: "line",
-      },
-      {
-        name: "Azure Document Intelligence",
-        document: azureToLayoutDocument(azureFixture),
-        level: "block",
-      },
-    ]
+  const cases: {
+    name: string
+    document: LayoutDocument
+    level: LayoutLevel
+  }[] = [
+    {
+      name: "Google Document AI",
+      document: documentAiToLayoutDocument(
+        documentAiOutput as DocumentAiDocument
+      ),
+      level: "block",
+    },
+    {
+      name: "AWS Textract",
+      document: textractToLayoutDocument(textractFixture),
+      level: "block",
+    },
+    {
+      name: "Azure Document Intelligence",
+      document: azureToLayoutDocument(azureFixture),
+      level: "block",
+    },
+  ]
 
   it.each(cases)(
     "builds a non-empty viewer + segmented model for $name",

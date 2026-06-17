@@ -1,5 +1,6 @@
 "use client"
 
+import type * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -16,6 +17,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
 
 const TOP_LEVEL_SECTIONS = [
@@ -95,7 +99,11 @@ export function DocsSidebar({
                       return !EXCLUDED_PAGES.includes(page.url)
                     }),
                   }))
-                  .filter((group) => group.pages.length > 0)
+                  .filter(
+                    (group) =>
+                      group.pages.length > 0 ||
+                      (group.sections?.length ?? 0) > 0
+                  )
               : []
 
           if (groups.length === 0) {
@@ -118,24 +126,54 @@ export function DocsSidebar({
               <SidebarGroupContent>
                 {item.type === "folder" ? (
                   <SidebarMenu className="gap-0.5">
-                    {group.pages.map((page) => {
-                      return (
-                        <SidebarMenuItem key={page.url} className="relative">
+                    {group.pages.map((page) => (
+                      <DocsSidebarPageItem
+                        key={page.url}
+                        page={page}
+                        pathname={pathname}
+                      />
+                    ))}
+                    {group.sections?.map((section) => (
+                      <SidebarMenuItem key={section.id} className="relative">
+                        {section.url ? (
                           <SidebarMenuButton
                             asChild
-                            isActive={page.url === pathname}
+                            isActive={section.url === pathname}
                             className={cn(
                               "relative h-[30px] w-fit overflow-visible border border-transparent text-[0.8rem] font-medium after:absolute after:inset-x-0 after:-inset-y-1 after:z-0 after:rounded-md data-[active=true]:border-accent data-[active=true]:bg-accent 3xl:fixed:w-full 3xl:fixed:max-w-48"
                             )}
                           >
-                            <Link href={page.url}>
+                            <Link href={section.url}>
                               <span className="absolute inset-0 flex w-(--sidebar-menu-width) bg-transparent" />
-                              {page.name}
+                              {section.name}
                             </Link>
                           </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )
-                    })}
+                        ) : (
+                          <div className="flex h-[30px] items-center px-2 text-[0.8rem] font-medium text-muted-foreground">
+                            {section.name}
+                          </div>
+                        )}
+                        <SidebarMenuSub className="mx-0 ml-3 gap-0.5 py-0">
+                          {section.pages.map((page) => (
+                            <SidebarMenuSubItem
+                              key={page.url}
+                              className="relative"
+                            >
+                              <SidebarMenuSubButton
+                                asChild
+                                isActive={page.url === pathname}
+                                className="relative h-[28px] w-fit overflow-visible border border-transparent text-[0.78rem] font-medium after:absolute after:inset-x-0 after:-inset-y-1 after:z-0 after:rounded-md data-[active=true]:border-accent data-[active=true]:bg-accent"
+                              >
+                                <Link href={page.url}>
+                                  <span className="absolute inset-0 flex w-(--sidebar-menu-width) bg-transparent" />
+                                  {page.name}
+                                </Link>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      </SidebarMenuItem>
+                    ))}
                   </SidebarMenu>
                 ) : null}
               </SidebarGroupContent>
@@ -145,5 +183,30 @@ export function DocsSidebar({
         <div className="sticky -bottom-1 z-10 h-16 shrink-0 bg-linear-to-t from-background via-background/80 to-background/50 blur-xs" />
       </SidebarContent>
     </Sidebar>
+  )
+}
+
+function DocsSidebarPageItem({
+  page,
+  pathname,
+}: {
+  page: { name: React.ReactNode; url: string }
+  pathname: string
+}) {
+  return (
+    <SidebarMenuItem key={page.url} className="relative">
+      <SidebarMenuButton
+        asChild
+        isActive={page.url === pathname}
+        className={cn(
+          "relative h-[30px] w-fit overflow-visible border border-transparent text-[0.8rem] font-medium after:absolute after:inset-x-0 after:-inset-y-1 after:z-0 after:rounded-md data-[active=true]:border-accent data-[active=true]:bg-accent 3xl:fixed:w-full 3xl:fixed:max-w-48"
+        )}
+      >
+        <Link href={page.url}>
+          <span className="absolute inset-0 flex w-(--sidebar-menu-width) bg-transparent" />
+          {page.name}
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
   )
 }

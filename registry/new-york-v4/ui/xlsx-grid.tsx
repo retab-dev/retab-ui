@@ -181,7 +181,7 @@ export function XlsxGrid({
   })
 
   React.useLayoutEffect(() => {
-    rowPatcher.invalidate()
+    rowPatcher.resync(virtualRows)
   }, [
     rowPatcher,
     virtualRows,

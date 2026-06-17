@@ -1,0 +1,20 @@
+---
+title: FileViewerControls
+description: The header slot for controls registered by the active renderer.
+component: true
+---
+
+`FileViewerControls` renders operational controls registered by the current file
+renderer: zoom, page position, rotate, retry, copy, and download.
+
+```tsx
+<FileViewerHeader>
+  <FileViewerTitle />
+  <FileViewerMeta />
+  <FileViewerControls />
+</FileViewerHeader>
+```
+
+The header does not need PDF-specific or spreadsheet-specific props. Renderers
+register controls into the file viewer context, and `FileViewerControls` renders
+the current set.

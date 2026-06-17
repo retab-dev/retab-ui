@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs"
 import * as React from "react"
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { inferCsvDialect } from "@/lib/csv"
 import { createViewerResource } from "@/lib/viewer-resource"
@@ -76,6 +76,13 @@ vi.mock("@/components/ui/xlsx-viewer", () => ({
     return "Mock XLSX viewer"
   },
 }))
+
+beforeEach(() => {
+  Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+    configurable: true,
+    value: vi.fn(),
+  })
+})
 
 afterEach(() => {
   cleanup()
@@ -288,39 +295,31 @@ describe("FileViewer detection helpers", () => {
     expect(source).not.toContain("./file-viewer-markdown-viewer")
   })
 
-  it("routes Blob DOCX sources through the canonical resource viewer", () => {
+  it("routes DOCX through the canonical resource viewer", () => {
     const source = readFileSync(
       "registry/new-york-v4/ui/file-viewer-route.tsx",
       "utf8"
     )
 
-    expect(source).toContain(
-      'category === "docx" && descriptor.source.kind === "blob"'
-    )
-    expect(source).toContain(
-      "<DocxResourceContent\n          resource={resource}"
-    )
+    expect(source).toContain("<DocxResourceContent")
     expect(source).not.toContain("<DocxViewer")
     expect(source).not.toContain("source={descriptor.source}")
   })
 
-  it("routes Blob text sources before the unsupported fallback", () => {
+  it("treats text as a first-class renderer, never the unsupported fallback", () => {
     const source = readFileSync(
       "registry/new-york-v4/ui/file-viewer-route.tsx",
       "utf8"
     )
-    const blobBranch = source.slice(
-      source.indexOf("if (!directLoadUrl) {"),
-      source.indexOf("  switch (category) {")
+    // `text` is an entry in the renderer table, so it always resolves to a
+    // viewer rather than falling through to the UnsupportedCard fallback...
+    expect(source).toMatch(/text:\s*renderTextViewer/)
+    // ...and it is a permitted category for raw text-kind sources too.
+    const allowlist = source.slice(
+      source.indexOf("TEXT_SOURCE_CATEGORIES"),
+      source.indexOf("const RENDERERS")
     )
-    const textRouteIndex = blobBranch.indexOf(
-      'category === "text" && descriptor.source.kind === "blob"'
-    )
-    const unsupportedIndex = blobBranch.indexOf("<UnsupportedCard")
-
-    expect(textRouteIndex).toBeGreaterThan(-1)
-    expect(unsupportedIndex).toBeGreaterThan(-1)
-    expect(textRouteIndex).toBeLessThan(unsupportedIndex)
+    expect(allowlist).toContain('"text"')
   })
 
   it("keeps route-owned document adapters resource-first", () => {
@@ -1339,6 +1338,30 @@ describe("FileViewer text rendering", () => {
 
     expect(
       await screen.findByRole("heading", { name: "Blob Markdown" })
+    ).toBeTruthy()
+    expect(screen.getByText("Body copy")).toBeTruthy()
+    expect(
+      document.querySelector('[data-slot="pretext-markdown-virtual-canvas"]')
+    ).toBeTruthy()
+    expect(document.querySelector('[data-slot="code-viewer"]')).toBeNull()
+    expect(document.querySelector(".fv-markdown")).toBeNull()
+  })
+
+  it("renders MIME-only Blob markdown sources through the resource route", async () => {
+    mockPretextCanvasMeasurement()
+    render(
+      <FileViewer
+        source={markdownBlobSource(
+          "# Blob MIME Markdown\n\nBody copy\n",
+          "download",
+          "text/markdown; charset=utf-8",
+          "blob:download-markdown"
+        )}
+      />
+    )
+
+    expect(
+      await screen.findByRole("heading", { name: "Blob MIME Markdown" })
     ).toBeTruthy()
     expect(screen.getByText("Body copy")).toBeTruthy()
     expect(

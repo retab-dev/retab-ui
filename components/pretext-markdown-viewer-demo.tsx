@@ -39,7 +39,7 @@ const PRETEXT_MARKDOWN_VIEWER_DEMO_TEXT = [
   "- [x] GitHub alert marker normalization",
   "- [x] Tables, lists, quotes, rules, and fenced code blocks",
   "- [x] Mermaid diagrams, math, footnotes, raw HTML policy, and restricted components",
-  "- [ ] Hostile-block inner virtualization",
+  "- [x] Hostile-block inner virtualization",
   "- [ ] Full production a11y pass across every edge case",
   "",
   "1. Ordered lists preserve start values and nesting.",
@@ -57,10 +57,10 @@ const PRETEXT_MARKDOWN_VIEWER_DEMO_TEXT = [
   "| Layout | ✅ Ready | Platform | Low | Continuous virtual flow with measured-height correction. |",
   "| Source mode | ✅ Ready | Text | Low | Raw Markdown is virtualized with line numbers. |",
   "| Tables | ✅ Ready | Docs | Medium | Inline Markdown, alignment, scroll, and TSV copy. |",
-  "| Code blocks | ✅ Ready | DX | Medium | Pretty code, title/caption metadata, copy action. |",
+  "| Code blocks | ✅ Ready | DX | Medium | Source blocks, title/caption metadata, line markers, and copy action. |",
   "| Mermaid | ✅ Ready | Rendering | Medium | Strict security settings and contained failures. |",
   "| Media | ✅ Ready | Policy | Medium | Safe images and videos use the same URL policy. |",
-  "| Hostile blocks | ⚠️ Partial | Perf | High | Isolated today; inner virtualization still pending. |",
+  "| Hostile blocks | ✅ Ready | Perf | Medium | Oversized code, tables, and raw HTML render as bounded copyable source previews. |",
   "",
   "## Code Blocks",
   "",
@@ -82,7 +82,7 @@ const PRETEXT_MARKDOWN_VIEWER_DEMO_TEXT = [
   "}",
   "```",
   "",
-  '```python title="score_pipeline.py" caption="Syntax highlighting should stay readable in long reports."',
+  '```python title="score_pipeline.py" caption="Code blocks should stay readable in long reports."',
   "from dataclasses import dataclass",
   "",
   "@dataclass(frozen=True)",
@@ -196,7 +196,7 @@ const PRETEXT_MARKDOWN_VIEWER_DEMO_TEXT = [
   "",
   "## Media",
   "",
-  '![Dashboard preview](/samples/dashboard-preview.svg "Safe SVG image rendered through the image surface")',
+  '![Dashboard preview](/samples/attention-page-1.png "Safe PNG image rendered through the image surface")',
   "",
   '::image{src="/samples/attention-page-1.png" alt="Attention sample page" title="PNG image loaded from public samples"}',
   "",
@@ -223,6 +223,24 @@ const PRETEXT_MARKDOWN_VIEWER_DEMO_TEXT = [
   ...Array.from({ length: 18 }, (_, index) => {
     const rowNumber = index + 1
     return `| ${rowNumber} | Scenario ${rowNumber} | Markdown, HTML, math, or component syntax | Render safely without horizontal page growth | Browser smoke and focused tests |`
+  }),
+  "",
+  "## Hostile Blocks",
+  "",
+  "Oversized blocks stay inspectable without mounting the full rich subtree. This deliberately large code fence and table should render as bounded source previews with copy actions.",
+  "",
+  "```ts title=\"huge-generated.ts\"",
+  ...Array.from(
+    { length: 460 },
+    (_, index) => `export const generatedLine${index + 1} = ${index + 1}`
+  ),
+  "```",
+  "",
+  "| Row | A | B | C | D | E | F | G |",
+  "| ---: | --- | --- | --- | --- | --- | --- | --- |",
+  ...Array.from({ length: 252 }, (_, rowIndex) => {
+    const rowNumber = rowIndex + 1
+    return `| ${rowNumber} | alpha-${rowNumber} | beta-${rowNumber} | gamma-${rowNumber} | delta-${rowNumber} | epsilon-${rowNumber} | zeta-${rowNumber} | eta-${rowNumber} |`
   }),
   "",
   "---",

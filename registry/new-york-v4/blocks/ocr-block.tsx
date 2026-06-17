@@ -4,6 +4,7 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import {
+  documentAiPageImages,
   OcrLayoutBlocks,
   type AzureDocument,
   type DocumentAiDocument,
@@ -12,6 +13,10 @@ import {
 } from "@/components/ui/layout-blocks"
 
 type ProviderId = OcrSource["provider"]
+type ProviderSample = {
+  output: unknown
+  pageImageOutput?: DocumentAiDocument
+}
 
 /**
  * OCR block — a scanned document beside its detected text blocks, confidence,
@@ -24,40 +29,60 @@ type ProviderId = OcrSource["provider"]
 const PROVIDERS: {
   id: ProviderId
   label: string
-  load: () => Promise<{ default: unknown }>
+  load: () => Promise<ProviderSample>
 }[] = [
   {
     id: "google-document-ai",
     label: "Google Document AI",
-    load: () => import("@/sample/documentai-output.json"),
+    load: async () => {
+      const output = await import("@/sample/documentai-output.json")
+      return { output: output.default }
+    },
   },
   {
     id: "aws-textract",
     label: "AWS Textract",
-    load: () => import("@/sample/textract-output.json"),
+    load: async () => {
+      const [output, pageImageOutput] = await Promise.all([
+        import("@/sample/textract-output.json"),
+        import("@/sample/documentai-output.json"),
+      ])
+      return {
+        output: output.default,
+        pageImageOutput: pageImageOutput.default as DocumentAiDocument,
+      }
+    },
   },
   {
     id: "azure-document-intelligence",
     label: "Azure Document Intelligence",
-    load: () => import("@/sample/azure-output.json"),
+    load: async () => {
+      const [output, pageImageOutput] = await Promise.all([
+        import("@/sample/azure-output.json"),
+        import("@/sample/documentai-output.json"),
+      ])
+      return {
+        output: output.default,
+        pageImageOutput: pageImageOutput.default as DocumentAiDocument,
+      }
+    },
   },
 ]
 
 export function OcrBlock() {
-  const [provider, setProvider] = React.useState<ProviderId>(
-    "google-document-ai"
-  )
+  const [provider, setProvider] =
+    React.useState<ProviderId>("google-document-ai")
   const [outputs, setOutputs] = React.useState<
-    Partial<Record<ProviderId, unknown>>
+    Partial<Record<ProviderId, ProviderSample>>
   >({})
 
   React.useEffect(() => {
     if (outputs[provider]) return
     let active = true
     const entry = PROVIDERS.find((item) => item.id === provider)
-    void entry?.load().then((module) => {
+    void entry?.load().then((sample) => {
       if (active) {
-        setOutputs((current) => ({ ...current, [provider]: module.default }))
+        setOutputs((current) => ({ ...current, [provider]: sample }))
       }
     })
     return () => {
@@ -65,10 +90,10 @@ export function OcrBlock() {
     }
   }, [outputs, provider])
 
-  const output = outputs[provider]
+  const sample = outputs[provider]
   const source = React.useMemo<OcrSource | null>(
-    () => (output ? toOcrSource(provider, output) : null),
-    [output, provider]
+    () => (sample ? toOcrSource(provider, sample) : null),
+    [sample, provider]
   )
 
   return (
@@ -103,17 +128,25 @@ export function OcrBlock() {
   )
 }
 
-function toOcrSource(provider: ProviderId, output: unknown): OcrSource {
+function toOcrSource(provider: ProviderId, sample: ProviderSample): OcrSource {
+  const pageImages = sample.pageImageOutput
+    ? documentAiPageImages(sample.pageImageOutput)
+    : undefined
+
   switch (provider) {
     case "aws-textract":
-      return { provider, output: output as TextractDocument }
+      return { provider, output: sample.output as TextractDocument, pageImages }
     case "azure-document-intelligence":
-      return { provider, output: output as AzureDocument }
+      return {
+        provider,
+        output: sample.output as AzureDocument,
+        pageImages,
+      }
     case "google-document-ai":
     default:
       return {
         provider: "google-document-ai",
-        output: output as DocumentAiDocument,
+        output: sample.output as DocumentAiDocument,
       }
   }
 }

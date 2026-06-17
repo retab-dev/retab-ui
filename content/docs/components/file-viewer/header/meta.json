@@ -1,0 +1,9 @@
+{
+  "title": "Header",
+  "pages": [
+    "index",
+    "file-viewer-title",
+    "file-viewer-meta",
+    "file-viewer-controls"
+  ]
+}

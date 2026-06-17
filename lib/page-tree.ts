@@ -8,6 +8,12 @@ export type PageTreeSeparator = Extract<
   PageTreeFolderChild,
   { type: "separator" }
 >
+export type PageTreeSidebarSection = {
+  id: string
+  name: PageTreeFolder["name"]
+  url?: string
+  pages: PageTreePage[]
+}
 export type PageTreeSidebarGroup = {
   id: string
   name: PageTreeFolder["name"]
@@ -18,6 +24,7 @@ export type PageTreeSidebarGroup = {
    */
   url?: string
   pages: PageTreePage[]
+  sections?: PageTreeSidebarSection[]
 }
 
 // Recursively find all pages in a folder tree.
@@ -117,6 +124,25 @@ export function getSidebarGroupsFromFolder(
     if (child.type === "folder") {
       const currentGroup = groups[groups.length - 1]
       const folderPages = getPagesFromFolder(child, currentBase)
+      const sections = child.children
+        .filter((nested): nested is PageTreeFolder => nested.type === "folder")
+        .map((nested) => {
+          const sectionPages = getPagesFromFolder(nested, currentBase)
+          const sectionIndexPage = sectionPages.find(
+            (page) => page.name === nested.name
+          )
+
+          return {
+            id:
+              nested.$id ??
+              `${child.$id ?? String(child.name)}-${String(nested.name)}`,
+            name: nested.name,
+            url: sectionIndexPage?.url,
+            pages: sectionPages.filter((page) => page !== sectionIndexPage),
+          }
+        })
+        .filter((section) => section.pages.length > 0 || section.url)
+
       // When the nested folder's index page shares the current separator's
       // name (e.g. the "File Viewer" separator + the file-viewer folder index),
       // promote it to the group label's link rather than listing it again as
@@ -130,10 +156,15 @@ export function getSidebarGroupsFromFolder(
       currentGroup?.pages.push(
         ...folderPages.filter((page) => page !== indexPage)
       )
+      if (currentGroup && sections.length > 0) {
+        currentGroup.sections = [...(currentGroup.sections ?? []), ...sections]
+      }
     }
   }
 
-  return groups.filter((group) => group.pages.length > 0)
+  return groups.filter(
+    (group) => group.pages.length > 0 || (group.sections?.length ?? 0) > 0
+  )
 }
 
 export function getNestedPagesFromFolder(

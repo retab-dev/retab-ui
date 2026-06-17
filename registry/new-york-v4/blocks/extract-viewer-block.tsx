@@ -140,7 +140,7 @@ function ExtractViewerContent() {
         >
           <ScrollArea className="min-h-0 flex-1">
             <div className="p-4">
-              <JsonForm form={form} schema={schema} anchorLink={link} />
+              <JsonForm form={form} schema={schema} sourceLink={link} />
             </div>
           </ScrollArea>
         </ViewerSidebar>

@@ -1,5 +1,5 @@
 ---
-title: File Viewer
+title: Overview
 description: One viewer for everything — detects the file type and renders the right component, from PDFs and spreadsheets to images, code, Markdown, and HTML.
 component: true
 ---
@@ -10,14 +10,14 @@ viewer**, so the heavy parser for a format you never open is never downloaded.
 
 It is the flagship document component. The format renderers are not peers of
 File Viewer; they are routes inside it:
-[PDF](/docs/components/file-viewer/pdf-viewer),
-[DOCX](/docs/components/file-viewer/docx-viewer),
-[Image](/docs/components/file-viewer/image-viewer),
-[PPTX](/docs/components/file-viewer/pptx-viewer),
-[XLSX](/docs/components/file-viewer/xlsx-viewer), and
-[CSV](/docs/components/file-viewer/csv-viewer). File Viewer also owns inline,
+[PDF](/docs/components/file-viewer/renderers/pdf),
+[DOCX](/docs/components/file-viewer/renderers/docx),
+[Image](/docs/components/file-viewer/renderers/image),
+[PPTX](/docs/components/file-viewer/renderers/pptx),
+[XLSX](/docs/components/file-viewer/renderers/xlsx), and
+[CSV](/docs/components/file-viewer/renderers/csv). File Viewer also owns inline,
 client-side rendering for **text, code, JSON,
-[Markdown](/docs/components/file-viewer/pretext-markdown-viewer), and HTML**.
+[Markdown](/docs/components/file-viewer/renderers/pretext-markdown), and HTML**.
 
 <ComponentPreview name="file-viewer-demo" />
 
@@ -28,7 +28,7 @@ npx shadcn@latest add @retab/file-viewer
 ```
 
 This pulls in the format-specific viewers it delegates to, plus the
-[Pretext Markdown Viewer](/docs/components/file-viewer/pretext-markdown-viewer)
+[Pretext Markdown Viewer](/docs/components/file-viewer/renderers/pretext-markdown)
 for Markdown documents, custom fixed-line virtualization for the Code Viewer,
 and `@chenglou/pretext` for the wrapped Text and Markdown surfaces.
 
@@ -82,7 +82,7 @@ facts, and `FileViewerControls` renders operational controls registered by the
 active file renderer. `FileViewerDocument` is the routed file renderer.
 
 See [Anatomy](/docs/components/file-viewer/anatomy) for the compound API and
-[Sidebar](/docs/components/file-viewer/sidebar) for file-scoped navigation.
+[Sidebar](/docs/components/file-viewer/navigation) for file-scoped navigation.
 
 Use the easy shell for the common case:
 
@@ -132,7 +132,7 @@ already owns the surrounding surface:
 
 Anything unrecognized falls back to a download card.
 
-The [Email Viewer](/docs/components/file-viewer/email-viewer) also belongs to
+The [Email Viewer](/docs/components/file-viewer/renderers/email) also belongs to
 the File Viewer category, but it is a compound MIME viewer rather than a routed
 `FileViewerDocument` renderer: its body and attachment leaves render through
 File Viewer primitives.

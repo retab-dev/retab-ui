@@ -6,7 +6,7 @@ import { ClassifierViewer } from "@/components/viewers/classify/classifier-viewe
 export function ClassificationViewerExample() {
   return (
     <div
-      className="not-prose flex flex-col overflow-hidden rounded-xl border"
+      className="not-prose flex min-h-0 flex-col overflow-hidden"
       style={{ height: 520 }}
     >
       <ClassifierViewer

@@ -3,7 +3,7 @@
 import * as React from "react"
 
 import { PlainTextViewerFrame } from "./plain-text-viewer-frame"
-import { PretextMarkdownViewerContent } from "./pretext-markdown-viewer-content"
+import { PretextMarkdownGreenfieldContent } from "./pretext-markdown-greenfield-content"
 import { TextViewerFallback } from "./text-viewer-chrome"
 import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types"
 
@@ -24,7 +24,7 @@ export const PretextMarkdownViewer = React.forwardRef<
       forwardedRef={ref}
       clientFallbackPolicy="non-inline-source"
       Fallback={TextViewerFallback}
-      Content={PretextMarkdownViewerContent}
+      Content={PretextMarkdownGreenfieldContent}
     />
   )
 })

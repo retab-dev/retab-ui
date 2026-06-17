@@ -1,0 +1,17 @@
+{
+  "title": "Renderers",
+  "pages": [
+    "pdf",
+    "image",
+    "csv",
+    "code",
+    "text",
+    "markdown",
+    "pretext-markdown",
+    "html",
+    "email",
+    "xlsx",
+    "docx",
+    "pptx"
+  ]
+}

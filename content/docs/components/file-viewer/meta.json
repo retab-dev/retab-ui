@@ -1,29 +1,4 @@
 {
   "title": "File Viewer",
-  "pages": [
-    "index",
-    "---Anatomy---",
-    "anatomy",
-    "header",
-    "sidebar",
-    "---Navigation---",
-    "attachment-sidebar",
-    "segment-sidebar",
-    "segment-legend",
-    "sidebar-list",
-    "---Compound Files---",
-    "email-viewer",
-    "---Renderers---",
-    "pdf-viewer",
-    "image-viewer",
-    "csv-viewer",
-    "code-viewer",
-    "text-viewer",
-    "markdown-viewer",
-    "pretext-markdown-viewer",
-    "html-viewer",
-    "xlsx-viewer",
-    "docx-viewer",
-    "pptx-viewer"
-  ]
+  "pages": ["index", "anatomy", "header", "navigation", "renderers", "recipes"]
 }

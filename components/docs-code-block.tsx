@@ -7,22 +7,6 @@ import { Button } from "@/components/ui/button"
 import { CodeCollapsibleWrapper } from "@/components/code-collapsible-wrapper"
 import { HighlightedCodeBlock } from "@/components/highlighted-code-block"
 
-const VIEW_CODE_COLLAPSE_LINE_THRESHOLD = 20
-
-function getLineCount(code: string) {
-  if (!code) return 0
-
-  let lineCount = 1
-
-  for (let index = 0; index < code.length; index += 1) {
-    if (code.charCodeAt(index) === 10) {
-      lineCount += 1
-    }
-  }
-
-  return lineCount
-}
-
 function DocsSourceCodePreview({
   code,
   fileName,
@@ -97,8 +81,7 @@ export function DocsViewCodeBlock({
   language?: string
 }) {
   const [isCodeVisible, setIsCodeVisible] = React.useState(false)
-  const shouldCollapse = getLineCount(code) > VIEW_CODE_COLLAPSE_LINE_THRESHOLD
-  const isExpanded = !shouldCollapse || isCodeVisible
+  const isExpanded = isCodeVisible
 
   return (
     <div
@@ -170,10 +153,7 @@ export function DocsMdxCodeBlock({
     <HighlightedCodeBlock
       code={code}
       copyButtonClassName={copyButtonClassName}
-      className={cn(
-        "mt-6! mb-0 min-w-0 max-w-full",
-        className
-      )}
+      className={cn("mt-6! mb-0 max-w-full min-w-0", className)}
       fileName={fileName}
       language={language}
       lazy={false}

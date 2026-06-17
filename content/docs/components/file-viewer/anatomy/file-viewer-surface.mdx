@@ -1,0 +1,18 @@
+---
+title: FileViewerSurface
+description: The main file surface beside an optional sidebar.
+component: true
+---
+
+`FileViewerSurface` is the primary content slot inside `FileViewerBody`. In the
+common composition it contains `FileViewerDocument`, but it can also wrap a
+domain-owned file surface.
+
+```tsx
+<FileViewerSurface>
+  <FileViewerDocument />
+</FileViewerSurface>
+```
+
+Use one surface for the file. Split panes and workflow comparisons should be
+modeled by the parent workflow, not by overloading this slot.

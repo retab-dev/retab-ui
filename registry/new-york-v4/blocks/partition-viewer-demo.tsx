@@ -44,7 +44,7 @@ function PartitionDemoDocument() {
 export function PartitionViewerExample() {
   return (
     <div
-      className="not-prose flex flex-col overflow-hidden rounded-xl border"
+      className="not-prose flex min-h-0 flex-col overflow-hidden"
       style={{ height: 640 }}
     >
       <PartitionViewer

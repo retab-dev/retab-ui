@@ -16,7 +16,7 @@
     "separator",
     "skeleton",
     "dropdown-menu",
-    "viewer-controls"
+    "@retab/viewer-controls"
   ],
   "files": [
     {

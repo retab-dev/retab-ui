@@ -34,7 +34,7 @@ const largeParseResult: ParseResponse = {
 
 export function ParseViewerDemo() {
   return (
-    <div className="flex h-[680px] flex-col overflow-hidden rounded-xl border">
+    <div className="flex h-[680px] min-h-0 flex-col overflow-hidden">
       <ParseViewer result={multiPageParseResult} />
     </div>
   )
@@ -44,7 +44,7 @@ export function LargeParseViewerDemo() {
   return (
     <div
       data-slot="large-parse-viewer-demo"
-      className="flex h-[680px] flex-col overflow-hidden rounded-xl border"
+      className="flex h-[680px] min-h-0 flex-col overflow-hidden"
     >
       <ParseViewer result={largeParseResult} />
     </div>

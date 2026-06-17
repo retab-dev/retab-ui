@@ -98,7 +98,7 @@ Current Retab files inspected:
 - `registry/new-york-v4/ui/markdown-document-renderers.tsx`
 - `registry/new-york-v4/ui/markdown-document-plugins.ts`
 - `registry/new-york-v4/blocks/parse-viewer-block.tsx`
-- `content/docs/components/file-viewer/pretext-markdown-viewer.mdx`
+- `content/docs/components/file-viewer/renderers/pretext-markdown.mdx`
 - `design/pretext-markdown-viewer-missing-inventory.md`
 
 Package license check:
@@ -366,7 +366,7 @@ target flow makes chunk boundaries visible only to virtualization.
 
 ### Documentation Drift
 
-`content/docs/components/file-viewer/pretext-markdown-viewer.mdx` currently
+`content/docs/components/file-viewer/renderers/pretext-markdown.mdx` currently
 claims a very broad feature set. Some of that is implemented, some is partial,
 and some depends on fragile local workarounds. Treat that page as product
 aspiration until the architecture below is implemented and verified.

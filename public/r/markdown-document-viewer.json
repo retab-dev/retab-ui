@@ -23,7 +23,7 @@
     "text-viewer",
     "separator",
     "tabs",
-    "viewer-controls"
+    "@retab/viewer-controls"
   ],
   "files": [
     {

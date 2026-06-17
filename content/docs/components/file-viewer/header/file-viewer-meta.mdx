@@ -1,0 +1,19 @@
+---
+title: FileViewerMeta
+description: Passive metadata for the active file, placed beside the title.
+component: true
+---
+
+`FileViewerMeta` renders passive facts about the current file: category, MIME
+type, page position, or renderer-provided metadata.
+
+```tsx
+<FileViewerHeader>
+  <FileViewerTitle />
+  <FileViewerMeta />
+  <FileViewerControls />
+</FileViewerHeader>
+```
+
+Metadata belongs next to the title on the left. Actions belong in
+`FileViewerControls` on the right.

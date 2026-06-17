@@ -17,6 +17,7 @@ export function TextViewerDemo() {
           fileName: LONG_TEXT_SAMPLE_FILE_NAME,
           mimeType: LONG_TEXT_SAMPLE_MIME_TYPE,
         }}
+        bare
         className="h-full"
         highlight={{ start: 1, end: 3 }}
       />

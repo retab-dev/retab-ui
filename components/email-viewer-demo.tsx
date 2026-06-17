@@ -249,7 +249,7 @@ export function EmailViewerDemo() {
 
   return (
     <div className="h-[720px] min-h-0">
-      <EmailViewer message={message} className="h-full" />
+      <EmailViewer message={message} mode="inline" className="h-full" />
     </div>
   )
 }

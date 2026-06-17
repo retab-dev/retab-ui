@@ -1093,7 +1093,7 @@
         "utils",
         "button",
         "dropdown-menu",
-        "viewer-controls"
+        "@retab/viewer-controls"
       ],
       "files": [
         {
@@ -1271,7 +1271,7 @@
         "skeleton",
         "dropdown-menu",
         "spinner",
-        "viewer-controls"
+        "@retab/viewer-controls"
       ],
       "files": [
         {
@@ -1428,7 +1428,7 @@
         "separator",
         "skeleton",
         "dropdown-menu",
-        "viewer-controls"
+        "@retab/viewer-controls"
       ],
       "files": [
         {
@@ -1538,7 +1538,7 @@
         "scroll-area",
         "separator",
         "skeleton",
-        "viewer-controls"
+        "@retab/viewer-controls"
       ],
       "files": [
         {
@@ -1741,7 +1741,7 @@
         "separator",
         "skeleton",
         "dropdown-menu",
-        "viewer-controls"
+        "@retab/viewer-controls"
       ],
       "files": [
         {
@@ -1906,7 +1906,7 @@
         "button",
         "separator",
         "skeleton",
-        "viewer-controls"
+        "@retab/viewer-controls"
       ],
       "files": [
         {
@@ -2113,7 +2113,7 @@
         "code-viewer",
         "text-viewer-chenglou",
         "pretext-markdown-viewer",
-        "viewer-controls",
+        "@retab/viewer-controls",
         "skeleton"
       ],
       "files": [
@@ -4006,7 +4006,7 @@
         "scroll-area",
         "skeleton",
         "utils",
-        "viewer-controls"
+        "@retab/viewer-controls"
       ],
       "files": [
         {
@@ -4143,7 +4143,8 @@
       "description": "A Pretext-powered prose viewer with natural wrapping, custom variable-height virtualization, source-line highlights, retry, zoom, and download.",
       "dependencies": [
         "@chenglou/pretext",
-        "lucide-react"
+        "lucide-react",
+        "marked@18.0.5"
       ],
       "registryDependencies": [
         "button",
@@ -4151,7 +4152,7 @@
         "scroll-area",
         "skeleton",
         "utils",
-        "viewer-controls"
+        "@retab/viewer-controls"
       ],
       "files": [
         {
@@ -4293,25 +4294,25 @@
       "title": "Pretext Markdown Viewer",
       "description": "A continuous Markdown viewer forked from the Chenglou Pretext text viewer, with block virtualization and no visible page model.",
       "dependencies": [
-        "@chenglou/pretext",
-        "dompurify@3.4.9",
+        "hast-util-to-jsx-runtime",
         "katex",
         "lucide-react",
-        "marked@18.0.5",
         "mermaid",
-        "react-markdown",
         "rehype-katex",
-        "rehype-pretty-code",
         "rehype-raw",
         "rehype-sanitize",
+        "rehype-slug",
         "remark-breaks",
         "remark-directive",
         "remark-gemoji",
         "remark-gfm",
         "remark-math",
+        "remark-parse",
+        "remark-rehype",
         "remark-smartypants",
+        "shiki",
         "unified",
-        "unist-util-visit"
+        "vfile"
       ],
       "registryDependencies": [
         "@retab/text-viewer",
@@ -4324,69 +4325,54 @@
           "target": "@ui/pretext-markdown-viewer.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-viewer-content.tsx",
+          "path": "registry/new-york-v4/ui/pretext-markdown-greenfield-content.tsx",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-viewer-content.tsx"
+          "target": "@ui/pretext-markdown-greenfield-content.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-document-model.ts",
+          "path": "registry/new-york-v4/ui/pretext-markdown-greenfield-diagram.tsx",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-document-model.ts"
+          "target": "@ui/pretext-markdown-greenfield-diagram.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-layout.ts",
+          "path": "registry/new-york-v4/ui/pretext-markdown-greenfield-document.ts",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-layout.ts"
+          "target": "@ui/pretext-markdown-greenfield-document.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-parser.ts",
+          "path": "registry/new-york-v4/ui/pretext-markdown-greenfield-layout.ts",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-parser.ts"
+          "target": "@ui/pretext-markdown-greenfield-layout.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-policy.ts",
+          "path": "registry/new-york-v4/ui/pretext-markdown-greenfield-renderer.tsx",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-policy.ts"
+          "target": "@ui/pretext-markdown-greenfield-renderer.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-table-accessibility.ts",
+          "path": "registry/new-york-v4/ui/pretext-markdown-greenfield-virtualizer.ts",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-table-accessibility.ts"
+          "target": "@ui/pretext-markdown-greenfield-virtualizer.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-virtualizer.ts",
+          "path": "registry/new-york-v4/ui/pretext-markdown-hast-types.ts",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-virtualizer.ts"
+          "target": "@ui/pretext-markdown-hast-types.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-renderer.tsx",
+          "path": "registry/new-york-v4/ui/pretext-markdown-source-map.ts",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-renderer.tsx"
+          "target": "@ui/pretext-markdown-source-map.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-controls.tsx",
+          "path": "registry/new-york-v4/ui/pretext-markdown-unified-pipeline.ts",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-controls.tsx"
-        },
-        {
-          "path": "registry/new-york-v4/ui/pretext-markdown-mermaid.tsx",
-          "type": "registry:ui",
-          "target": "@ui/pretext-markdown-mermaid.tsx"
+          "target": "@ui/pretext-markdown-unified-pipeline.ts"
         },
         {
           "path": "registry/new-york-v4/ui/pretext-markdown-url-policy.ts",
           "type": "registry:ui",
           "target": "@ui/pretext-markdown-url-policy.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/pretext-markdown-sanitize.ts",
-          "type": "registry:ui",
-          "target": "@ui/pretext-markdown-sanitize.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/pretext-markdown-components.ts",
-          "type": "registry:ui",
-          "target": "@ui/pretext-markdown-components.ts"
         }
       ]
     },
@@ -4415,7 +4401,7 @@
         "text-viewer",
         "separator",
         "tabs",
-        "viewer-controls"
+        "@retab/viewer-controls"
       ],
       "files": [
         {

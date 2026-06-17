@@ -16,7 +16,7 @@ export const dynamic = "force-static"
 export const dynamicParams = false
 
 const PRETEXT_MARKDOWN_VIEWER_DOC_URL =
-  "/docs/components/file-viewer/pretext-markdown-viewer"
+  "/docs/components/file-viewer/renderers/pretext-markdown"
 
 export function generateStaticParams() {
   return source.generateParams()

@@ -1,0 +1,33 @@
+---
+title: FileViewerThumbnails
+description: Page thumbnail navigation for document renderers inside File Viewer.
+component: true
+---
+
+Use thumbnail navigation inside `FileViewerSidebar` when the file renderer has
+page-like units. PDF exposes this through `PdfViewerThumbnails`; other page
+renderers should follow the same sidebar contract.
+
+```tsx
+<FileViewer source={source} defaultOpen>
+  <PdfViewerProvider>
+    <FileViewerHeader>
+      <FileViewerSidebarTrigger />
+      <FileViewerTitle />
+      <FileViewerMeta />
+      <FileViewerControls />
+    </FileViewerHeader>
+    <FileViewerBody>
+      <FileViewerSidebar aria-label="PDF pages">
+        <PdfViewerThumbnails />
+      </FileViewerSidebar>
+      <FileViewerSurface>
+        <PdfViewerPages />
+      </FileViewerSurface>
+    </FileViewerBody>
+  </PdfViewerProvider>
+</FileViewer>
+```
+
+The sidebar owns placement. The renderer-owned thumbnail component owns page
+rendering, current-page state, and page selection.

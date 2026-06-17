@@ -58,7 +58,7 @@ const SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel({
  * value came from in the PDF and scrolls to it.
  *
  * This is the abstraction working across components that don't know about each
- * other: `json-form` receives a field-anchor link and every field reports its
+ * other: `json-form` receives a source link and every field reports its
  * path on hover; the PDF adapter is the target. No bespoke wiring between form
  * and viewer.
  */
@@ -134,7 +134,7 @@ function JsonFormSourcesContent({
               <JsonForm
                 form={form}
                 schema={schema}
-                anchorLink={link}
+                sourceLink={link}
                 defaultOpenPaths={defaultOpenPaths}
               />
             </div>

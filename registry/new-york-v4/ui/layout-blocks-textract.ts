@@ -43,6 +43,12 @@ export type TextractBlock = {
 export type TextractDocument = {
   DocumentMetadata?: {
     Pages?: number
+    /**
+     * Retab fixture extension: Textract geometry is normalized and the service
+     * response does not include source page dimensions. Generated showcase
+     * fixtures can carry page dimensions here so overlays keep the source aspect.
+     */
+    PageSizes?: Array<{ Page?: number; Width?: number; Height?: number }>
   }
   Blocks?: TextractBlock[]
 }
@@ -75,7 +81,6 @@ export function textractToLayoutDocument(
   input: TextractDocument,
   options: TextractAdapterOptions = {}
 ): LayoutDocument {
-  const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE
   const blocks = input.Blocks ?? []
   const blocksById = new Map<string, TextractBlock>()
   for (const block of blocks) {
@@ -83,12 +88,17 @@ export function textractToLayoutDocument(
   }
 
   const pageNumbers = collectPageNumbers(blocks)
-  const pages: LayoutPage[] = pageNumbers.map((pageNumber) => ({
-    pageNumber,
-    width: pageSize.width,
-    height: pageSize.height,
-    rotation: 0,
-  }))
+  const metadataPageSizes = collectMetadataPageSizes(input)
+  const pages: LayoutPage[] = pageNumbers.map((pageNumber) => {
+    const pageSize =
+      options.pageSize ?? metadataPageSizes.get(pageNumber) ?? DEFAULT_PAGE_SIZE
+    return {
+      pageNumber,
+      width: pageSize.width,
+      height: pageSize.height,
+      rotation: 0,
+    }
+  })
   const pagesByNumber = new Map(pages.map((page) => [page.pageNumber, page]))
 
   // Reverse-index CHILD relationships so each block can find its parent.
@@ -120,9 +130,7 @@ export function textractToLayoutDocument(
 
     const text = textractBlockText(block, blocksById)
     const span =
-      text.length > 0
-        ? { start: cursor, end: cursor + text.length }
-        : undefined
+      text.length > 0 ? { start: cursor, end: cursor + text.length } : undefined
     if (text.length > 0) {
       textParts.push(text)
       cursor += text.length + 1
@@ -152,6 +160,22 @@ function collectPageNumbers(blocks: TextractBlock[]): number[] {
   }
   if (numbers.size === 0) numbers.add(1)
   return [...numbers].sort((a, b) => a - b)
+}
+
+function collectMetadataPageSizes(
+  input: TextractDocument
+): Map<number, { width: number; height: number }> {
+  const pageSizes = new Map<number, { width: number; height: number }>()
+
+  for (const pageSize of input.DocumentMetadata?.PageSizes ?? []) {
+    const pageNumber = pageSize.Page
+    const width = finitePositiveNumber(pageSize.Width)
+    const height = finitePositiveNumber(pageSize.Height)
+    if (pageNumber == null || !width || !height) continue
+    pageSizes.set(pageNumber, { width, height })
+  }
+
+  return pageSizes
 }
 
 function textractLevel(blockType: string | undefined): LayoutLevel | undefined {
@@ -218,10 +242,7 @@ function textractQuad(
   return undefined
 }
 
-function textractKind(
-  blockType: string | undefined,
-  text: string
-): LayoutKind {
+function textractKind(blockType: string | undefined, text: string): LayoutKind {
   switch (blockType) {
     case "LAYOUT_TITLE":
       return "title"
@@ -251,4 +272,9 @@ function normalizeConfidence(confidence: number | undefined) {
   if (confidence == null || !Number.isFinite(confidence)) return undefined
   // Textract reports confidence on a 0–100 scale.
   return Math.min(1, Math.max(0, confidence / 100))
+}
+
+function finitePositiveNumber(value: number | undefined) {
+  if (value == null || !Number.isFinite(value) || value <= 0) return undefined
+  return value
 }

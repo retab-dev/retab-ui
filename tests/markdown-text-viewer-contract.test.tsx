@@ -67,13 +67,20 @@ describe("Markdown/Text viewer contract", () => {
       "registry/new-york-v4/ui/file-viewer.tsx",
       "utf8"
     )
+    const fileViewerRouteSource = readFileSync(
+      "registry/new-york-v4/ui/file-viewer-route.tsx",
+      "utf8"
+    )
 
-    expect(fileViewerSource).toContain(
+    expect(fileViewerRouteSource).toContain(
       'import("@/components/ui/pretext-markdown-viewer")'
     )
-    expect(fileViewerSource).toContain("<PretextMarkdownViewer")
+    expect(fileViewerRouteSource).toContain("<PretextMarkdownViewer")
     expect(fileViewerSource).not.toContain('mode="markdown"')
     expect(fileViewerSource).not.toContain(
+      'import("@/components/ui/markdown-document-viewer")'
+    )
+    expect(fileViewerRouteSource).not.toContain(
       'import("@/components/ui/markdown-document-viewer")'
     )
     expect(fileViewerSource).not.toContain("MarkdownDocViewer")
@@ -199,12 +206,13 @@ describe("Markdown/Text viewer contract", () => {
 
   it("anchors Pretext Markdown source-mode rows to the source canvas origin", () => {
     const source = readFileSync(
-      "registry/new-york-v4/ui/pretext-markdown-viewer-content.tsx",
+      "registry/new-york-v4/ui/pretext-markdown-greenfield-content.tsx",
       "utf8"
     )
 
+    expect(source).toContain('data-slot="pretext-markdown-source-canvas"')
     expect(source).toContain(
-      '"absolute top-0 right-0 left-0 grid whitespace-pre"'
+      '"absolute inset-x-0 grid grid-cols-[4rem_minmax(0,1fr)] px-4"'
     )
   })
 
@@ -231,7 +239,7 @@ describe("Markdown/Text viewer contract", () => {
       screen.getByText("Alpha").closest("tr")?.querySelectorAll("td")[1]
         ?.headers
     ).toBe(amountHeader.id)
-    fireEvent.click(screen.getByLabelText("Copy table"))
+    fireEvent.click(screen.getByLabelText("Copy table as TSV"))
     await waitFor(() => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
         ["Name\tAmount", "Alpha\t1", "Beta\t2"].join("\n")

@@ -54,9 +54,21 @@ const EMPTY_PAGE_IMAGES: ReadonlyMap<number, string> = new Map()
  * itself is provider-agnostic.
  */
 export type OcrSource =
-  | { provider: "google-document-ai"; output: DocumentAiDocument }
-  | { provider: "aws-textract"; output: TextractDocument }
-  | { provider: "azure-document-intelligence"; output: AzureDocument }
+  | {
+      provider: "google-document-ai"
+      output: DocumentAiDocument
+      pageImages?: ReadonlyMap<number, string>
+    }
+  | {
+      provider: "aws-textract"
+      output: TextractDocument
+      pageImages?: ReadonlyMap<number, string>
+    }
+  | {
+      provider: "azure-document-intelligence"
+      output: AzureDocument
+      pageImages?: ReadonlyMap<number, string>
+    }
 
 export function OcrLayoutBlocks({
   className,
@@ -307,26 +319,24 @@ function normalizeOcrSource(source: OcrSource): {
     case "aws-textract":
       return {
         document: textractToLayoutDocument(source.output),
-        pageImages: EMPTY_PAGE_IMAGES,
+        pageImages: source.pageImages ?? EMPTY_PAGE_IMAGES,
       }
     case "azure-document-intelligence":
       return {
         document: azureToLayoutDocument(source.output),
-        pageImages: EMPTY_PAGE_IMAGES,
+        pageImages: source.pageImages ?? EMPTY_PAGE_IMAGES,
       }
     case "google-document-ai":
     default:
       return {
         document: documentAiToLayoutDocument(source.output),
-        pageImages: documentAiPageImages(source.output),
+        pageImages: source.pageImages ?? documentAiPageImages(source.output),
       }
   }
 }
 
 /** Pick the coarsest level present so the viewer always has rows to inspect. */
-function inspectedLevelsForDocument(
-  document: LayoutDocument
-): LayoutLevel[] {
+function inspectedLevelsForDocument(document: LayoutDocument): LayoutLevel[] {
   for (const level of LEVEL_ORDER) {
     if (document.items.some((item) => item.level === level)) return [level]
   }
@@ -400,7 +410,10 @@ export type { LayoutItem, LayoutLevel, LayoutPage } from "./layout-blocks-types"
 export type { DocumentAiDocument } from "./layout-blocks-document-ai"
 export type { TextractDocument } from "./layout-blocks-textract"
 export type { AzureDocument } from "./layout-blocks-azure"
-export { documentAiToLayoutDocument } from "./layout-blocks-document-ai"
+export {
+  documentAiPageImages,
+  documentAiToLayoutDocument,
+} from "./layout-blocks-document-ai"
 export { textractToLayoutDocument } from "./layout-blocks-textract"
 export { azureToLayoutDocument } from "./layout-blocks-azure"
 export { documentAiToPdfBlob } from "./layout-blocks-document-ai-pdf"

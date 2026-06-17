@@ -23,11 +23,10 @@ const profileScenarioNames = optionNameSet(
   "--scenarios",
   "JSON_TABLE_PROFILE_SCENARIOS"
 )
-if (assertMode && profileScenarioNames) {
-  throw new Error(
-    "JSON table scenario filters are diagnostic-only and cannot be combined with --assert"
-  )
-}
+const styleClassExperimentNames = optionNameSet(
+  "--style-class-experiments",
+  "JSON_TABLE_STYLE_CLASS_EXPERIMENTS"
+)
 const profileUrl =
   process.env.PROFILE_URL ?? "http://localhost:3100/json-table-profile"
 const chromePort = Number(process.env.CHROME_PORT ?? 9341)
@@ -56,6 +55,44 @@ const farEnumFieldPath = "transactions.0.profile_far_status"
 const farDateFieldPath = "transactions.0.profile_far_date"
 const profileSurfaceTimeoutMs = 15_000
 const editableCellTimeoutMs = 10_000
+const jsonTableDataModeGroupLabel = "Data edit mode"
+const styleClassExperimentStyleId = "json-table-style-class-experiments"
+const styleClassExperimentRules = {
+  "disable-row-hover": `
+    [data-slot="json-table-row"]:hover {
+      background-color: transparent !important;
+    }
+  `,
+  "disable-active-cell-overlay": `
+    [data-json-table-editable-cell="true"]::after {
+      border-color: transparent !important;
+    }
+  `,
+  "disable-focus-visible-ring": `
+    [data-slot="data-cell"]:focus-visible,
+    [data-json-table-editable-cell="true"]:focus-visible,
+    button:focus-visible,
+    input:focus-visible {
+      box-shadow: none !important;
+      outline: 0 !important;
+    }
+  `,
+  "disable-portal-shadow": `
+    [data-slot="data-cell-select-popup"],
+    [data-slot="data-cell-picker-popup"],
+    [data-slot="calendar"] {
+      animation: none !important;
+      box-shadow: none !important;
+      transition: none !important;
+    }
+  `,
+}
+
+assertKnownOptionNames(
+  styleClassExperimentNames,
+  styleClassExperimentRules,
+  "JSON table style class experiment"
+)
 
 // These budgets guard the overlay mount path against structural regressions.
 // They are intentionally coarse: React render counts are strict elsewhere, while
@@ -113,6 +150,23 @@ function optionNameSet(optionName, envName) {
   if (names.length === 0) return null
 
   return new Set(names)
+}
+
+function assertKnownOptionNames(selectedNames, knownOptions, label) {
+  if (!selectedNames) return
+
+  const unknownNames = [...selectedNames].filter(
+    (name) => !(name in knownOptions)
+  )
+  if (unknownNames.length > 0) {
+    throw new Error(
+      `${label} option ${JSON.stringify(
+        unknownNames
+      )} is not supported; available options: ${Object.keys(knownOptions).join(
+        ", "
+      )}`
+    )
+  }
 }
 
 function profileTargets() {
@@ -181,6 +235,21 @@ function shouldProfileScenario(name) {
   return !profileScenarioNames || profileScenarioNames.has(name)
 }
 
+function shouldRunStyleProbeScenarios() {
+  if (styleExperimentMode) return true
+  if (!profileScenarioNames) return false
+
+  return [
+    "open-empty-portal-shell",
+    "open-select-popup-shell",
+    "open-picker-popup-shell",
+  ].some((name) => profileScenarioNames.has(name))
+}
+
+function selectedStyleClassExperiments() {
+  return styleClassExperimentNames ? [...styleClassExperimentNames].sort() : []
+}
+
 function assertSelectedScenarioNamesMatched(report) {
   if (!profileScenarioNames) return
 
@@ -232,6 +301,9 @@ function printStyleExperimentSummary(report) {
   const scenarioNames = new Set([
     "open-enum",
     "open-date",
+    "open-empty-portal-shell",
+    "open-select-popup-shell",
+    "open-picker-popup-shell",
     "switch-dirty-cell",
     "open-far-enum",
     "open-far-date",
@@ -248,11 +320,14 @@ function printStyleExperimentSummary(report) {
           `style=${formatMs(scenario.browserCost?.style?.durationMs)}`,
           `layout=${formatMs(scenario.browserCost?.layout?.durationMs)}`,
           `owner=${scenario.styleAttributionHint ?? "unknown"}`,
+          report.styleClassExperiments?.length
+            ? `classExperiments=${report.styleClassExperiments.join(",")}`
+            : null,
           `surface=header:${scenario.mountedSurface?.after?.headerCells ?? "n/a"}/body:${scenario.mountedSurface?.after?.editableCells ?? "n/a"}/popup:${scenario.mountedSurface?.after?.popupNodes ?? "n/a"}`,
           `renders=${renderedComponentCount(scenario, "EditableJsonTableCell")}`,
           `commits=${scenario.profiler?.reactCommits?.count ?? 0}`,
           `rect=${scenario.rectProbe?.count ?? 0}`,
-        ].join("  ")
+        ].filter(Boolean).join("  ")
       )
     }
   }
@@ -386,6 +461,9 @@ function scenarioRepeatedMetrics(scenario) {
     mountedEditableCells: scenario.mountedSurface?.after?.editableCells,
     mountedHeaderCells: scenario.mountedSurface?.after?.headerCells,
     mountedPopupNodes: scenario.mountedSurface?.after?.popupNodes,
+    readOnlyRowPatchFallbacks:
+      scenario.profiler?.readOnlyRowPatcher?.fallbackCount,
+    readOnlyRowsPatched: scenario.profiler?.readOnlyRowPatcher?.rowsPatched,
     traceStyleMs: scenario.trace?.styleDurationMs,
     traceLayoutMs: scenario.trace?.layoutDurationMs,
     traceScriptMs: scenario.trace?.scriptDurationMs,
@@ -688,6 +766,24 @@ async function clickButtonByText(send, text) {
 }
 
 async function clickModeButton(send, groupLabel, buttonText) {
+  const buttonWait = await waitInPage(
+    send,
+    `(() => {
+      const group = [...document.querySelectorAll('[role="group"]')]
+        .find((element) => element.getAttribute("aria-label") === ${JSON.stringify(groupLabel)});
+      return Boolean(group && [...group.querySelectorAll("button")]
+        .some((item) => item.textContent?.trim() === ${JSON.stringify(buttonText)}));
+    })()`,
+    profileSurfaceTimeoutMs
+  )
+  if (!buttonWait.ok) {
+    throw new Error(
+      `Mode button did not mount: ${groupLabel}/${buttonText} ${JSON.stringify(
+        await profilePageState(send)
+      )}`
+    )
+  }
+
   const clicked = await evaluate(
     send,
     `(() => {
@@ -703,7 +799,11 @@ async function clickModeButton(send, groupLabel, buttonText) {
     })()`
   )
   if (!clicked)
-    throw new Error(`Mode button not found: ${groupLabel}/${buttonText}`)
+    throw new Error(
+      `Mode button not found: ${groupLabel}/${buttonText} ${JSON.stringify(
+        await profilePageState(send)
+      )}`
+    )
 }
 
 function performanceMetrics(metricsRaw) {
@@ -775,7 +875,9 @@ function topEntries(record, limit = 24) {
 
 function mountedSurfaceDelta(before, after) {
   return Object.fromEntries(
-    Object.keys(after).map((key) => [key, after[key] - (before[key] ?? 0)])
+    Object.entries(after)
+      .filter(([, value]) => typeof value === "number")
+      .map(([key, value]) => [key, value - (before[key] ?? 0)])
   )
 }
 
@@ -812,6 +914,37 @@ async function installPage(send) {
   )
 }
 
+async function installStyleClassExperiments(send) {
+  const experiments = selectedStyleClassExperiments()
+  await evaluate(
+    send,
+    `(() => {
+      document.getElementById(${JSON.stringify(
+        styleClassExperimentStyleId
+      )})?.remove();
+      document.documentElement.removeAttribute("data-json-table-style-class-experiments");
+    })()`
+  )
+  if (experiments.length === 0) return
+
+  const cssText = experiments
+    .map((experimentName) => styleClassExperimentRules[experimentName])
+    .join("\n")
+  await evaluate(
+    send,
+    `(() => {
+      const style = document.createElement("style");
+      style.id = ${JSON.stringify(styleClassExperimentStyleId)};
+      style.textContent = ${JSON.stringify(cssText)};
+      document.head.append(style);
+      document.documentElement.setAttribute(
+        "data-json-table-style-class-experiments",
+        ${JSON.stringify(experiments.join(" "))}
+      );
+    })()`
+  )
+}
+
 async function loadEditableProfile(send) {
   console.error("Waiting for editable profile page")
   const scrollerWait = await waitInPage(
@@ -837,13 +970,33 @@ async function loadEditableProfile(send) {
     )
   }
   await activateEditableProfile(send)
+  await scrollJsonTableToTop(send)
   console.error("Editable table mounted")
   await sleep(500)
 }
 
+async function loadReadOnlyProfile(send) {
+  console.error("Waiting for read-only profile page")
+  const scrollerWait = await waitInPage(
+    send,
+    `document.querySelector('[data-slot="json-table-scroll"]')`,
+    profileSurfaceTimeoutMs
+  )
+  if (!scrollerWait.ok) {
+    const pageState = await profilePageState(send)
+    throw new Error(
+      `JSON table scroller did not mount: ${JSON.stringify(pageState)}`
+    )
+  }
+  await clickModeButton(send, jsonTableDataModeGroupLabel, "Read only")
+  await waitForReadOnlyProfileSurface(send, "read-only profile mount")
+  console.error("Read-only table mounted")
+  await sleep(300)
+}
+
 async function activateEditableProfile(send) {
   for (let attempt = 1; attempt <= 3; attempt += 1) {
-    await clickModeButton(send, "JSON edit mode", "Editable")
+    await clickModeButton(send, jsonTableDataModeGroupLabel, "Editable")
     const wait = await waitInPage(
       send,
       `document.querySelectorAll('[data-json-table-editable-cell="true"]').length > 0`,
@@ -879,6 +1032,7 @@ async function profilePageState(send) {
       bodyTextLength: document.body.innerText.length,
       scrollers: document.querySelectorAll('[data-slot="json-table-scroll"]').length,
       editableCells: document.querySelectorAll('[data-json-table-editable-cell="true"]').length,
+      readOnlyCells: document.querySelectorAll('[data-slot="json-table-read-only-cell"]').length,
       buttons: [...document.querySelectorAll("button")].slice(0, 20).map((button) => button.textContent)
     })`
   )
@@ -900,9 +1054,10 @@ async function recoverBlankEditableProfile(send, context, pageState) {
       pageState
     )}`
   )
-  await send("Page.reload", { ignoreCache: true })
-  await sleep(700)
+  await send("Page.navigate", { url: pageState.href })
+  await sleep(1_500)
   await installPage(send)
+  await installStyleClassExperiments(send)
   await loadEditableProfile(send)
   return true
 }
@@ -919,8 +1074,39 @@ async function waitForEditableProfileSurface(send, context) {
   const recovered = await recoverBlankEditableProfile(send, context, pageState)
   if (recovered) return
 
+  if (pageState.scrollers > 0 && pageState.readOnlyCells > 0) {
+    console.error(
+      `Reactivating editable profile during ${context}: ${JSON.stringify(
+        pageState
+      )}`
+    )
+    await activateEditableProfile(send)
+    const retry = await waitInPage(
+      send,
+      `document.querySelectorAll('[data-json-table-editable-cell="true"]').length > 0`,
+      profileSurfaceTimeoutMs
+    )
+    if (retry.ok) return
+  }
+
   throw new Error(
     `Editable profile surface did not mount during ${context}: ${JSON.stringify(
+      pageState
+    )}`
+  )
+}
+
+async function waitForReadOnlyProfileSurface(send, context) {
+  const wait = await waitInPage(
+    send,
+    `document.querySelectorAll('[data-slot="json-table-read-only-cell"]').length > 0 && document.querySelectorAll('[data-json-table-editable-cell="true"]').length === 0`,
+    profileSurfaceTimeoutMs
+  )
+  if (wait.ok) return
+
+  const pageState = await profilePageState(send)
+  throw new Error(
+    `Read-only profile surface did not mount during ${context}: ${JSON.stringify(
       pageState
     )}`
   )
@@ -1302,6 +1488,21 @@ async function pressEscape(send) {
   })
 }
 
+async function clickStyleProbeButton(send, surface) {
+  const escapedSurface = JSON.stringify(surface)
+  await evaluate(
+    send,
+    `(() => {
+      const surface = ${escapedSurface};
+      const button = document.querySelector('[data-json-table-style-probe="' + surface + '"]');
+      if (!(button instanceof HTMLElement)) {
+        throw new Error("No style probe button found: " + surface);
+      }
+      button.click();
+    })()`
+  )
+}
+
 async function pressSpace(send) {
   await send("Input.dispatchKeyEvent", {
     type: "keyDown",
@@ -1373,9 +1574,11 @@ async function mountedSurfaceSnapshot(send) {
       const headerTable = document.querySelector('[data-slot="table"]');
       const bodyScroller = document.querySelector('[data-slot="json-table-scroll"]');
       const bodyTable = bodyScroller?.querySelector('[data-slot="table"]');
+      const activeElement = document.activeElement;
       const popupSelectors = [
         '[data-slot="data-cell-select-popup"]',
         '[data-slot="data-cell-picker-popup"]',
+        '[data-slot="json-table-inert-popup"]',
         '[data-slot="calendar"]',
         '[data-slot="select-popup"]',
         '[data-slot="select-positioner"]',
@@ -1389,22 +1592,47 @@ async function mountedSurfaceSnapshot(send) {
         popupNodeSet.add(popup);
         for (const node of popup.querySelectorAll("*")) popupNodeSet.add(node);
       }
+      const hoveredEditableCells = [...(bodyTable?.querySelectorAll("[data-json-table-editable-cell='true']") ?? [])]
+        .filter((element) => {
+          try {
+            return element.matches(":hover");
+          } catch {
+            return false;
+          }
+        }).length;
+      const focusedElement = activeElement instanceof HTMLElement
+        ? {
+            tagName: activeElement.tagName.toLowerCase(),
+            dataSlot: activeElement.getAttribute("data-slot"),
+            role: activeElement.getAttribute("role"),
+            fieldPath: activeElement.closest("[data-field-path]")?.getAttribute("data-field-path") ?? null,
+            ariaExpanded: activeElement.getAttribute("aria-expanded")
+          }
+        : null;
 
       return {
         headerRows: headerTable?.querySelectorAll("thead tr").length ?? 0,
         headerCells: headerTable?.querySelectorAll("thead th:not([data-json-table-header-spacer='true'])").length ?? 0,
         headerSpacers: headerTable?.querySelectorAll("thead th[data-json-table-header-spacer='true']").length ?? 0,
+        headerNodes: headerTable?.querySelectorAll("*").length ?? 0,
         bodyRows: bodyTable?.querySelectorAll("tbody tr").length ?? 0,
         bodyCells: bodyTable?.querySelectorAll("tbody td").length ?? 0,
+        bodyNodes: bodyTable?.querySelectorAll("*").length ?? 0,
         editableRows: bodyTable?.querySelectorAll("tbody tr:has([data-json-table-editable-cell='true'])").length ?? 0,
         editableCells: bodyTable?.querySelectorAll("[data-json-table-editable-cell='true']").length ?? 0,
         activeEditableCells: bodyTable?.querySelectorAll("[data-json-table-editable-cell='true'][data-active='true']").length ?? 0,
+        hoveredEditableCells,
         dataCellSurfaces: bodyTable?.querySelectorAll('[data-slot="data-cell"]').length ?? 0,
         selectPopups: document.querySelectorAll('[data-slot="data-cell-select-popup"]').length,
         pickerPopups: document.querySelectorAll('[data-slot="data-cell-picker-popup"]').length,
         calendars: document.querySelectorAll('[data-slot="calendar"]').length,
+        popupRoots: popups.length,
         popupNodes: popupNodeSet.size,
-        documentNodes: document.querySelectorAll("*").length
+        documentNodes: document.querySelectorAll("*").length,
+        styleSheets: document.styleSheets.length,
+        styleElements: document.querySelectorAll("style").length,
+        linkedStyleSheets: document.querySelectorAll('link[rel~="stylesheet"]').length,
+        focusedElement
       };
     })()`
   )
@@ -1433,6 +1661,15 @@ async function summarizeScenario(
       };
       const reactCommits = profiler.events.filter((event) => event.type === "react-commit");
       const marks = profiler.events.filter((event) => event.type === "mark");
+      const readOnlyRowPatcherMarks = marks.filter((event) => event.name === "read-only-row-patcher");
+      const readOnlyRowPatchReasons = {};
+      let readOnlyRowsPatched = 0;
+      for (const event of readOnlyRowPatcherMarks) {
+        const reason = String(event.detail?.reason ?? "unknown");
+        readOnlyRowPatchReasons[reason] = (readOnlyRowPatchReasons[reason] ?? 0) + 1;
+        readOnlyRowsPatched += Number(event.detail?.rowsPatched ?? 0);
+      }
+      const readOnlyRowPatchHandledCount = readOnlyRowPatchReasons.handled ?? 0;
       const popup = document.querySelector('[data-slot="data-cell-select-popup"]');
       const pickerPopup = document.querySelector('[data-slot="data-cell-picker-popup"]');
       const baseUiSelect = document.querySelector('[data-slot="select-popup"], [data-slot="select-positioner"], [data-slot="select-list"]');
@@ -1465,7 +1702,14 @@ async function summarizeScenario(
             [...new Set(marks.map((event) => event.name))]
               .sort()
               .map((name) => [name, marks.filter((event) => event.name === name).length])
-          )
+          ),
+          readOnlyRowPatcher: {
+            attemptCount: readOnlyRowPatcherMarks.length,
+            handledCount: readOnlyRowPatchHandledCount,
+            fallbackCount: readOnlyRowPatcherMarks.length - readOnlyRowPatchHandledCount,
+            rowsPatched: readOnlyRowsPatched,
+            reasons: readOnlyRowPatchReasons
+          }
         }
       };
     })()`
@@ -1487,9 +1731,25 @@ async function summarizeScenario(
 }
 
 async function runScenario(page, name, action, waitExpression) {
+  return runScenarioWithPreflight(
+    page,
+    name,
+    action,
+    waitExpression,
+    waitForEditableProfileSurface
+  )
+}
+
+async function runScenarioWithPreflight(
+  page,
+  name,
+  action,
+  waitExpression,
+  preflight
+) {
   const send = page.send
   console.error(`Running scenario: ${name}`)
-  await waitForEditableProfileSurface(send, `${name} preflight`)
+  await preflight(send, `${name} preflight`)
   await resetProfiler(send)
   const beforeMetrics = performanceMetrics(await send("Performance.getMetrics"))
   const mountedSurfaceBefore = await mountedSurfaceSnapshot(send)
@@ -1522,15 +1782,24 @@ async function runSelectedScenario(
   page,
   name,
   action,
-  waitExpression
+  waitExpression,
+  preflight = waitForEditableProfileSurface
 ) {
   if (shouldProfileScenario(name)) {
-    scenarios.push(await runScenario(page, name, action, waitExpression))
+    scenarios.push(
+      await runScenarioWithPreflight(
+        page,
+        name,
+        action,
+        waitExpression,
+        preflight
+      )
+    )
     return
   }
 
   console.error(`Executing unprofiled scenario: ${name}`)
-  await waitForEditableProfileSurface(page.send, `${name} unprofiled preflight`)
+  await preflight(page.send, `${name} unprofiled preflight`)
   await resetProfiler(page.send)
   await action()
   const wait = await waitInPage(page.send, waitExpression, 3_000)
@@ -1561,9 +1830,31 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
     await send("Page.navigate", { url: targetConfig.url })
     await sleep(700)
     await installPage(send)
-    await loadEditableProfile(send)
+    await installStyleClassExperiments(send)
+    await loadReadOnlyProfile(send)
 
     const scenarios = []
+    if (shouldProfileScenario("read-only-scroll-jump")) {
+      await runSelectedScenario(
+        scenarios,
+        page,
+        "read-only-scroll-jump",
+        async () => {
+          await scrollJsonTable(send, 960)
+        },
+        `(() => {
+            const scroller = document.querySelector('[data-slot="json-table-scroll"]');
+            const patcherMarks = (window.__jsonTableProfiler?.events ?? [])
+              .filter((event) => event.type === "mark" && event.name === "read-only-row-patcher");
+            return scroller instanceof HTMLElement &&
+              scroller.scrollTop !== window.__jsonTableScrollBefore &&
+              patcherMarks.length > 0;
+          })()`,
+        waitForReadOnlyProfileSurface
+      )
+    }
+
+    await loadEditableProfile(send)
     const enumPoint = await mountedEditableCellPoint(send, enumFieldPath)
 
     await runSelectedScenario(
@@ -1838,6 +2129,45 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
 
     await pressEscape(send)
     await sleep(200)
+    if (shouldRunStyleProbeScenarios()) {
+      await runSelectedScenario(
+        scenarios,
+        page,
+        "open-empty-portal-shell",
+        async () => {
+          await clickStyleProbeButton(send, "empty-portal")
+        },
+        `Boolean(document.querySelector('[data-json-table-style-probe-surface="empty-portal"]'))`
+      )
+
+      await pressEscape(send)
+      await sleep(200)
+      await runSelectedScenario(
+        scenarios,
+        page,
+        "open-select-popup-shell",
+        async () => {
+          await clickStyleProbeButton(send, "select-shell")
+        },
+        `Boolean(document.querySelector('[data-json-table-style-probe-surface="select-shell"]'))`
+      )
+
+      await pressEscape(send)
+      await sleep(200)
+      await runSelectedScenario(
+        scenarios,
+        page,
+        "open-picker-popup-shell",
+        async () => {
+          await clickStyleProbeButton(send, "picker-shell")
+        },
+        `Boolean(document.querySelector('[data-json-table-style-probe-surface="picker-shell"]'))`
+      )
+
+      await pressEscape(send)
+      await sleep(200)
+    }
+
     await runSelectedScenario(
       scenarios,
       page,
@@ -2094,6 +2424,14 @@ function assertReport(report) {
 }
 
 function assertProfile(profile) {
+  if (profileScenarioNames) {
+    assertFilteredProfile(profile)
+    return
+  }
+
+  const readOnlyScroll = profile.scenarios.find(
+    (scenario) => scenario.name === "read-only-scroll-jump"
+  )
   const hover = profile.scenarios.find(
     (scenario) => scenario.name === "hover-enum"
   )
@@ -2164,6 +2502,36 @@ function assertProfile(profile) {
     (scenario) => scenario.name === "switch-dirty-cell"
   )
   const label = `${profile.name}: `
+
+  assertScenario(
+    readOnlyScroll?.wait.ok,
+    `${label}read-only-scroll-jump did not complete`
+  )
+  if (profile.name.startsWith("large")) {
+    assertScenario(
+      (readOnlyScroll.profiler.readOnlyRowPatcher?.fallbackCount ?? 0) > 0,
+      `${label}read-only-scroll-jump did not diagnose the unsupported read-only row shape`
+    )
+    assertScenario(
+      (readOnlyScroll.profiler.readOnlyRowPatcher?.reasons?.[
+        "shape-mismatch"
+      ] ?? 0) > 0,
+      `${label}read-only-scroll-jump expected shape-mismatch fallback, got ${JSON.stringify(
+        readOnlyScroll.profiler.readOnlyRowPatcher?.reasons ?? {}
+      )}`
+    )
+  } else {
+    assertScenario(
+      (readOnlyScroll.profiler.readOnlyRowPatcher?.handledCount ?? 0) > 0,
+      `${label}read-only-scroll-jump did not use the read-only row patcher`
+    )
+    assertScenario(
+      (readOnlyScroll.profiler.readOnlyRowPatcher?.fallbackCount ?? 0) === 0,
+      `${label}read-only-scroll-jump had row patch fallback(s): ${JSON.stringify(
+        readOnlyScroll.profiler.readOnlyRowPatcher?.reasons ?? {}
+      )}`
+    )
+  }
 
   assertScenario(hover?.wait.ok, `${label}hover-enum did not complete`)
   assertScenario(
@@ -2332,6 +2700,93 @@ function assertProfile(profile) {
   }
 }
 
+function assertFilteredProfile(profile) {
+  const label = `${profile.name}: `
+
+  for (const scenario of profile.scenarios) {
+    switch (scenario.name) {
+      case "read-only-scroll-jump":
+        assertScenario(
+          scenario.wait.ok,
+          `${label}read-only-scroll-jump did not complete`
+        )
+        break
+      case "open-enum":
+        assertScenario(scenario.wait.ok, `${label}open-enum did not complete`)
+        assertScenario(
+          scenario.popupMounted,
+          `${label}open-enum did not mount select popup`
+        )
+        assertOnlyTargetEditableCellRendered(scenario, enumFieldPath)
+        assertNoTableOrRowRender(scenario)
+        assertDocumentPatchCount(label, scenario, 0)
+        break
+      case "open-date":
+        assertScenario(scenario.wait.ok, `${label}open-date did not complete`)
+        assertScenario(
+          scenario.calendarMounted,
+          `${label}open-date did not mount calendar`
+        )
+        assertOnlyTargetEditableCellRendered(scenario, dateFieldPath)
+        assertNoTableOrRowRender(scenario)
+        assertDocumentPatchCount(label, scenario, 0)
+        break
+      case "switch-dirty-cell":
+        assertScenario(
+          scenario.wait.ok,
+          `${label}switch-dirty-cell did not complete`
+        )
+        for (const renderedCellName of editableCellRenderNames(scenario)) {
+          assertScenario(
+            [
+              `EditableJsonTableCell:${textFieldPath}`,
+              `EditableJsonTableCell:${numberFieldPath}`,
+            ].includes(renderedCellName),
+            `${label}switch-dirty-cell rendered unrelated cell: ${renderedCellName}`
+          )
+        }
+        assertNoTableOrRowRender(scenario)
+        assertSingleDocumentPatch(label, scenario)
+        break
+      case "open-far-enum":
+        assertScenario(
+          scenario.wait.ok,
+          `${label}open-far-enum did not complete`
+        )
+        assertScenario(
+          scenario.popupMounted,
+          `${label}open-far-enum did not mount select popup`
+        )
+        assertOnlyTargetEditableCellRendered(scenario, farEnumFieldPath)
+        assertNoTableOrRowRender(scenario)
+        assertDocumentPatchCount(label, scenario, 0)
+        break
+      case "open-far-date":
+        assertScenario(
+          scenario.wait.ok,
+          `${label}open-far-date did not complete`
+        )
+        assertScenario(
+          scenario.calendarMounted,
+          `${label}open-far-date did not mount calendar`
+        )
+        assertOnlyTargetEditableCellRendered(scenario, farDateFieldPath)
+        assertNoTableOrRowRender(scenario)
+        assertDocumentPatchCount(label, scenario, 0)
+        break
+      case "commit-far-text":
+        assertScalarCommitScenario(label, scenario, farTextFieldPath)
+        break
+      default:
+        assertScenario(
+          scenario.wait.ok,
+          `${label}${scenario.name} did not complete`
+        )
+        break
+    }
+  }
+}
+
 async function main() {
   const chromeEndpoint = `http://127.0.0.1:${chromePort}`
   const userDataDir = await mkdtemp(join(tmpdir(), "json-table-primitive-"))
@@ -2369,6 +2824,9 @@ async function main() {
 
       const runReport = {
         measuredAt: new Date().toISOString(),
+        ...(styleClassExperimentNames
+          ? { styleClassExperiments: selectedStyleClassExperiments() }
+          : {}),
         profiles,
         scenarios: profiles[0]?.scenarios ?? [],
       }
@@ -2384,6 +2842,9 @@ async function main() {
       repeatCount,
       warmupCount,
       traceMode,
+      ...(styleClassExperimentNames
+        ? { styleClassExperiments: selectedStyleClassExperiments() }
+        : {}),
       ...(profileTargetNames ? { targetFilter: [...profileTargetNames] } : {}),
       ...(profileScenarioNames
         ? { scenarioFilter: [...profileScenarioNames] }

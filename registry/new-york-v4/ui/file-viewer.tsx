@@ -3,7 +3,6 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
-import { type ViewerResource } from "@/lib/viewer-resource"
 import {
   ViewerBody,
   ViewerHeader,
@@ -17,17 +16,13 @@ import {
   type ViewerSurfaceProps,
 } from "@/components/ui/viewer"
 
-import {
-  type FileCategory,
-  type FileDescriptor,
-  type FileViewerProps as FileViewerCoreProps,
-} from "./file-viewer-core"
+import { type FileViewerProps as FileViewerCoreProps } from "./file-viewer-core"
 import { FileViewerDocument } from "./file-viewer-document"
 import {
   FileViewerProvider,
   useFileViewerContext,
 } from "./file-viewer-internal"
-import { ViewerControls, type ViewerControlsState } from "./viewer-controls"
+import { ViewerControls } from "./viewer-controls"
 
 export { type FileCategory } from "./file-viewer-core"
 export {
@@ -76,33 +71,6 @@ export type FileViewerSidebarProps = ViewerSidebarProps
 export type FileViewerSurfaceProps = ViewerSurfaceProps
 export type FileViewerSidebarTriggerProps = ViewerSidebarTriggerProps
 
-type FileViewerState = {
-  descriptor: FileDescriptor
-  resource: ViewerResource
-  controlsState: ViewerControlsState | null
-  setControlsState: (state: ViewerControlsState | null) => void
-}
-
-type FileViewerHeaderState = FileViewerState
-
-function useFileViewer(): FileViewerState {
-  const { descriptor, resource, setControlsState, controlsState } =
-    useFileViewerContext()
-  return React.useMemo(
-    () => ({
-      descriptor,
-      resource,
-      setControlsState,
-      controlsState,
-    }),
-    [descriptor, resource, setControlsState, controlsState]
-  )
-}
-
-function useFileViewerHeader(): FileViewerHeaderState {
-  return useFileViewer()
-}
-
 export function FileViewerHeader({
   children,
   className,
@@ -129,7 +97,7 @@ export function FileViewerHeader({
 }
 
 export function FileViewerTitle({ className, ...props }: FileViewerTitleProps) {
-  const { descriptor } = useFileViewerHeader()
+  const { descriptor } = useFileViewerContext()
 
   return (
     <div
@@ -148,7 +116,7 @@ export function FileViewerTitle({ className, ...props }: FileViewerTitleProps) {
 }
 
 export function FileViewerMeta({ className, ...props }: FileViewerMetaProps) {
-  const { descriptor, resource } = useFileViewerHeader()
+  const { descriptor, resource } = useFileViewerContext()
   const meta = resource.mimeType || descriptor.mimeType || descriptor.category
 
   if (!meta) return null
@@ -172,7 +140,7 @@ export function FileViewerControls({
   extra,
   ...props
 }: FileViewerControlsProps) {
-  const { resource, controlsState } = useFileViewerHeader()
+  const { resource, controlsState } = useFileViewerContext()
   const registeredDownloads = controlsState?.downloads
   const hasRegisteredDownloads = registeredDownloads !== undefined
   const downloads =
@@ -261,25 +229,6 @@ export function FileViewer(props: FileViewerProps) {
     sidebarSide,
     source,
   } = props
-
-  if (children != null) {
-    return (
-      <FileViewerProvider as={as} isolateStyles={isolateStyles} source={source}>
-        <ViewerRoot
-          className={cn("h-full", className)}
-          defaultOpen={defaultOpen}
-          inlineBreakpoint={inlineBreakpoint}
-          mode={mode}
-          onOpenChange={onOpenChange}
-          open={open}
-          sidebarCollapsible={sidebarCollapsible}
-          sidebarSide={sidebarSide}
-        >
-          {children}
-        </ViewerRoot>
-      </FileViewerProvider>
-    )
-  }
 
   return (
     <FileViewerProvider as={as} isolateStyles={isolateStyles} source={source}>

@@ -40,13 +40,13 @@ const publicDocsRoots = ["content/docs/components"]
 
 const compoundViewerDocContracts = [
   {
-    file: "content/docs/components/file-viewer/pdf-viewer.mdx",
+    file: "content/docs/components/file-viewer/renderers/pdf.mdx",
     provider: "PdfViewerProvider",
     root: "<FileViewer",
     easyApi: "PdfViewer",
   },
   {
-    file: "content/docs/components/file-viewer/email-viewer.mdx",
+    file: "content/docs/components/file-viewer/renderers/email.mdx",
     provider: "EmailViewerProvider",
     root: "<ViewerRoot",
     easyApi: "EmailViewer",
@@ -124,6 +124,10 @@ const sourceExtensions = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]
 
 function readJson<T>(path: string): T {
   return JSON.parse(readFileSync(join(repoRoot, path), "utf8")) as T
+}
+
+function registryDependencyItemName(name: string) {
+  return name.replace(/^@retab\//, "")
 }
 
 function publicRegistryFileContent(itemName: string, filePath: string): string {
@@ -1038,8 +1042,11 @@ describe("viewer architecture", () => {
 
     for (const itemName of migratedViewerItems) {
       const item = registry.items.find((entry) => entry.name === itemName)
-      expect(item?.registryDependencies ?? []).toContain("viewer-controls")
-      expect(item?.registryDependencies ?? []).not.toContain("viewer-toolbar")
+      const registryDependencies = (item?.registryDependencies ?? []).map(
+        registryDependencyItemName
+      )
+      expect(registryDependencies).toContain("viewer-controls")
+      expect(registryDependencies).not.toContain("viewer-toolbar")
       expect(item?.files.map((file) => file.path) ?? []).not.toEqual(
         expect.arrayContaining(removedToolbarFiles)
       )
@@ -1085,7 +1092,7 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/ui/pdf-viewer.tsx",
       "registry/new-york-v4/ui/plain-text-viewer-frame.tsx",
       "registry/new-york-v4/ui/pptx-viewer.tsx",
-      "registry/new-york-v4/ui/pretext-markdown-viewer-content.tsx",
+      "registry/new-york-v4/ui/pretext-markdown-greenfield-content.tsx",
       "registry/new-york-v4/ui/text-viewer-content.tsx",
       "registry/new-york-v4/ui/text-viewer-chenglou-content.tsx",
       "registry/new-york-v4/ui/xlsx-viewer.tsx",
@@ -1263,14 +1270,20 @@ describe("viewer architecture", () => {
       "export function InternalFileViewerDocument"
     )
     expect(documentFileViewerSource).not.toContain("FileViewerDocumentRenderer")
-    expect(documentFileViewerSource).toContain("function useFileViewerDocument")
+    // The document reads context directly rather than through a pass-through
+    // selector hook (useFileViewerDocument was inlined).
+    expect(documentFileViewerSource).not.toContain("function useFileViewerDocument")
+    expect(documentFileViewerSource).toContain("useFileViewerContext()")
     expect(documentFileViewerSource).toContain("FileErrorBoundary")
     expect(documentFileViewerSource).toContain("ViewerFallback")
     expect(documentFileViewerSource).toContain("React.Suspense")
     expect(documentFileViewerSource).toContain("descriptorSignal")
     expect(documentFileViewerSource).toContain('from "./file-viewer-route"')
     expect(documentFileViewerSource).toContain("<FileViewerRoute")
-    expect(fileViewerSource).toContain("function useFileViewerHeader()")
+    // Header parts read context directly; the useFileViewer/useFileViewerHeader
+    // pass-through selectors were inlined.
+    expect(fileViewerSource).not.toContain("function useFileViewerHeader")
+    expect(fileViewerSource).toContain("useFileViewerContext()")
     expect(fileViewerSource).not.toContain("CsvFileContent")
     expect(fileViewerSource).not.toContain("HtmlFileContent")
     expect(routeFileViewerSource).toContain("CsvFileContent")
@@ -1427,16 +1440,17 @@ describe("viewer architecture", () => {
     expect(
       fileContent("registry/new-york-v4/ui/file-viewer-core.ts")
     ).toContain('export type FileViewerDocumentChrome = "shell" | "standalone"')
-    expect(routeFileViewerSource).toContain("function fileViewerRouteChrome")
-    expect(routeFileViewerSource).toContain("function fileViewerRendererChrome")
-    expect(routeFileViewerSource).toContain("function fileViewerLocalChrome")
-    expect(routeFileViewerSource).toContain("function fileViewerFallbackChrome")
-    expect(routeFileViewerSource).toContain("exposeDownload")
-    expect(routeFileViewerSource).toContain("localFallbackDownload")
-    expect(routeFileViewerSource).toContain("localControls")
+    // Chrome is derived from a single boolean and passed as explicit props,
+    // not assembled into per-call chrome structs.
+    expect(routeFileViewerSource).toContain(
+      'const standalone = documentChrome === "standalone"'
+    )
+    expect(routeFileViewerSource).not.toContain("fileViewerRouteChrome")
+    expect(routeFileViewerSource).not.toContain("rendererChrome")
+    expect(routeFileViewerSource).not.toContain("localChrome")
+    expect(routeFileViewerSource).not.toContain("fallbackChrome")
     expect(routeFileViewerSource).not.toContain("rendererDownload")
     expect(routeFileViewerSource).not.toContain("fallbackDownload")
-    expect(routeFileViewerSource).toContain("exposeDownload: true")
 
     const expectEveryRouteOpeningContains = (
       component: string,
@@ -1454,29 +1468,45 @@ describe("viewer architecture", () => {
       }
     }
 
+    const expectEveryRouteOpeningExcludes = (
+      component: string,
+      value: string
+    ) => {
+      const openings = Array.from(
+        routeFileViewerSource.matchAll(
+          new RegExp(`<${component}\\b(?:(?!/>)[\\s\\S])*?/>`, "g")
+        )
+      )
+
+      expect(openings.length, `${component} route count`).toBeGreaterThan(0)
+      for (const opening of openings) {
+        expect(opening[0], `${component} omits ${value}`).not.toContain(value)
+      }
+    }
+
+    // Renderer-chrome leaves receive both the controls flag and the download
+    // affordance (a bare `download` prop).
     for (const route of [
       "PdfResourceContent",
       "ImageResourceContent",
       "PptxResourceContent",
       "DocxResourceContent",
       "XlsxResourceContent",
-    ]) {
-      expectEveryRouteOpeningContains(route, "{...rendererChrome}")
-    }
-    for (const route of ["CsvFileContent", "HtmlFileContent"]) {
-      expectEveryRouteOpeningContains(route, "{...localChrome}")
-    }
-    expectEveryRouteOpeningContains(
       "PretextMarkdownViewer",
-      "{...rendererChrome}"
-    )
-    expectEveryRouteOpeningContains("UnsupportedCard", "{...fallbackChrome}")
-
-    for (const call of routeFileViewerSource.matchAll(
-      /return renderTextViewer\(\{(?:(?!\}\))[\s\S])*\}\)/g
-    )) {
-      expect(call[0]).toContain("...rendererChrome")
+      "ProseTextViewer",
+      "CodeTextViewer",
+    ]) {
+      expectEveryRouteOpeningContains(route, "controls={controls}")
+      expectEveryRouteOpeningContains(route, "download")
     }
+    // Local-chrome leaves receive controls but own their own download chrome,
+    // so the route never passes them a download prop.
+    for (const route of ["CsvFileContent", "HtmlFileContent"]) {
+      expectEveryRouteOpeningContains(route, "controls={controls}")
+      expectEveryRouteOpeningExcludes(route, "download")
+    }
+    // The unsupported fallback exposes download only in standalone chrome.
+    expectEveryRouteOpeningContains("UnsupportedCard", "showDownload={standalone}")
 
     expect(
       fileContent("registry/new-york-v4/ui/pdf-viewer-content.tsx")
@@ -2144,7 +2174,7 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/blocks/split-viewer-block.tsx",
       "registry/new-york-v4/blocks/partition-viewer-block.tsx",
       "registry/new-york-v4/blocks/sources-viewer-block.tsx",
-      "content/docs/components/file-viewer/pdf-viewer.mdx",
+      "content/docs/components/file-viewer/renderers/pdf.mdx",
       "content/docs/components/split-viewer.mdx",
       "content/docs/components/partition-viewer.mdx",
     ]
@@ -2936,7 +2966,7 @@ describe("viewer architecture", () => {
 
   it("keeps public email docs on final named anatomy", () => {
     const emailDocs = fileContent(
-      "content/docs/components/file-viewer/email-viewer.mdx"
+      "content/docs/components/file-viewer/renderers/email.mdx"
     )
     const supersededDocs = [
       "design/email-viewer-final-blueprint.md",
@@ -3159,18 +3189,18 @@ describe("viewer architecture", () => {
 
   it("documents intentional sidebar composition boundaries", () => {
     const sidebarDoc = fileContent(
-      "content/docs/components/file-viewer/sidebar.mdx"
+      "content/docs/components/file-viewer/navigation/index.mdx"
     )
     const compactSidebarDoc = compactWhitespace(sidebarDoc)
     const segmentSidebarDoc = fileContent(
-      "content/docs/components/file-viewer/segment-sidebar.mdx"
+      "content/docs/components/file-viewer/navigation/file-viewer-segments.mdx"
     )
     const compactSegmentSidebarDoc = compactWhitespace(segmentSidebarDoc)
     const sidebarListDoc = fileContent(
-      "content/docs/components/file-viewer/sidebar-list.mdx"
+      "content/docs/components/file-viewer/navigation/sidebar-list.mdx"
     )
     const attachmentSidebarDoc = fileContent(
-      "content/docs/components/file-viewer/attachment-sidebar.mdx"
+      "content/docs/components/file-viewer/navigation/file-viewer-attachments.mdx"
     )
     const sidebarDesign = fileContent(
       "design/sidebar-domain-composition-design.md"
@@ -3236,7 +3266,7 @@ describe("viewer architecture", () => {
 
   it("documents nested ViewerRoot and bare mode boundaries", () => {
     const emailViewerDoc = fileContent(
-      "content/docs/components/file-viewer/email-viewer.mdx"
+      "content/docs/components/file-viewer/renderers/email.mdx"
     )
     const fileViewerDoc = fileContent(
       "content/docs/components/file-viewer/index.mdx"
@@ -4150,7 +4180,9 @@ describe("viewer architecture", () => {
       const dependencyFiles = new Set(
         (item.registryDependencies ?? []).flatMap(
           (name) =>
-            registryItemsByName.get(name)?.files.map((file) => file.path) ?? []
+            registryItemsByName
+              .get(registryDependencyItemName(name))
+              ?.files.map((file) => file.path) ?? []
         )
       )
 

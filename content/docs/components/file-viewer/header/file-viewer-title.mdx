@@ -1,0 +1,19 @@
+---
+title: FileViewerTitle
+description: The file title element for the active File Viewer source.
+component: true
+---
+
+`FileViewerTitle` renders the current file display name. It is the primary file
+identity in the header.
+
+```tsx
+<FileViewerHeader>
+  <FileViewerTitle />
+  <FileViewerMeta />
+  <FileViewerControls />
+</FileViewerHeader>
+```
+
+Do not add a decorative file icon beside the title. The file name should carry
+the identity; metadata and controls provide the surrounding context.

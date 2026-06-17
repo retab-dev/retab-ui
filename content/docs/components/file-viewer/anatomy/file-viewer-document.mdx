@@ -1,0 +1,18 @@
+---
+title: FileViewerDocument
+description: The routed renderer selected from the current file source.
+component: true
+---
+
+`FileViewerDocument` renders the active file route. It is the leaf that chooses
+PDF, image, CSV, text, Markdown, HTML, email, Office, or another supported
+renderer from the current `FileViewer` source.
+
+```tsx
+<FileViewerSurface>
+  <FileViewerDocument />
+</FileViewerSurface>
+```
+
+Keep renderer-specific controls inside the renderer. The controls register
+upward and appear through `FileViewerControls`.

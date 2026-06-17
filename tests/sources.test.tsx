@@ -370,7 +370,7 @@ function SourceLinkedJsonFormProbe({
         path={sourceLink.activePath}
         found={!!sourceLink.activeSegment}
       />
-      <JsonForm form={form} schema={schema} anchorLink={sourceLink} />
+      <JsonForm form={form} schema={schema} sourceLink={sourceLink} />
     </>
   )
 }

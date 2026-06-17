@@ -12,6 +12,7 @@ export function HtmlViewerDemo() {
           fileName: "welcome.html",
           mimeType: "text/html",
         }}
+        bare
         className="h-full"
         isolateStyles
       />

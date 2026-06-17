@@ -11,6 +11,17 @@ import {
 } from "./code-viewer-virtualization"
 import { isLineInRange, type NormalizedTextLineRange } from "./line-ranges"
 
+// Opaque fills mixed from the theme's opaque `--foreground`/`--background`
+// tokens (the `--muted`/`--accent` tokens are alpha-based, so they cannot mask
+// scrolled content). Shared with the viewport's full-height gutter rail.
+export const CODE_GUTTER_BACKGROUND =
+  "color-mix(in oklab, var(--foreground) 3%, var(--background))"
+const CODE_HIGHLIGHT_BACKGROUND =
+  "color-mix(in oklab, var(--foreground) 8%, var(--background))"
+const CODE_HIGHLIGHT_ACCENT_SHADOW = "inset 2px 0 0 0 var(--primary)"
+const CODE_HIGHLIGHT_NUMBER_COLOR =
+  "color-mix(in oklab, var(--foreground) 70%, transparent)"
+
 export type CodeProjectionIdentity = {
   contentIdentity: string
   layoutIdentity: string
@@ -237,13 +248,18 @@ function createCodeRow(): CodeRowCache {
   const gutterSpan = document.createElement("span")
   const contentSpan = document.createElement("span")
 
-  row.className = codeRowClassName(false)
+  row.className = codeRowClassName()
   row.style.position = "absolute"
   row.style.top = "0"
   row.style.left = "0"
 
   gutterSpan.className =
-    "sticky left-0 z-10 flex-shrink-0 border-r bg-muted/30 px-2 pr-3 text-right text-muted-foreground/60 select-none"
+    "sticky left-0 z-10 flex-shrink-0 border-r px-2 pr-3 text-right text-muted-foreground/60 select-none"
+  // The gutter must paint an opaque background so horizontally-scrolled code
+  // never shows through the sticky line-number column. The theme's `--muted`
+  // token is alpha-based (translucent), so the fill is mixed from the opaque
+  // `--foreground`/`--background` pair instead.
+  gutterSpan.style.backgroundColor = CODE_GUTTER_BACKGROUND
   gutterSpan.dataset.codeGutter = ""
   gutterSpan.setAttribute("aria-hidden", "true")
   contentSpan.className = "whitespace-pre px-2"
@@ -271,9 +287,31 @@ function patchCodeRowLayout({
   row: CodeRowCache
 }) {
   row.row.dataset.lineNumber = String(lineNumber)
-  row.row.className = codeRowClassName(isHighlighted)
   setStyleValue(row.gutterSpan.style, "width", gutterWidth)
   setTextContent(row.gutterSpan, String(lineNumber))
+
+  // Highlighted range: a continuous opaque band (no per-row borders) with a
+  // single left accent stripe on the gutter that merges across adjacent lines.
+  setStyleValue(
+    row.row.style,
+    "background-color",
+    isHighlighted ? CODE_HIGHLIGHT_BACKGROUND : ""
+  )
+  setStyleValue(
+    row.gutterSpan.style,
+    "background-color",
+    isHighlighted ? CODE_HIGHLIGHT_BACKGROUND : CODE_GUTTER_BACKGROUND
+  )
+  setStyleValue(
+    row.gutterSpan.style,
+    "box-shadow",
+    isHighlighted ? CODE_HIGHLIGHT_ACCENT_SHADOW : ""
+  )
+  setStyleValue(
+    row.gutterSpan.style,
+    "color",
+    isHighlighted ? CODE_HIGHLIGHT_NUMBER_COLOR : ""
+  )
 }
 
 function patchCodeRowContent({
@@ -318,13 +356,8 @@ function patchCodeContent(
   contentSpan.append(fragment)
 }
 
-function codeRowClassName(isHighlighted: boolean) {
-  return [
-    "absolute top-0 left-0 flex min-w-full",
-    isHighlighted ? "bg-primary/12 ring-1 ring-primary/30 ring-inset" : "",
-  ]
-    .filter(Boolean)
-    .join(" ")
+function codeRowClassName() {
+  return "absolute top-0 left-0 flex min-w-full"
 }
 
 function setStyleValue(

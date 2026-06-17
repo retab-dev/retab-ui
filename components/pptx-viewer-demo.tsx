@@ -11,13 +11,14 @@ const sampleBox = { slide: 1, left: 0.0, top: 0.0, width: 1.0, height: 0.187 }
 
 export function PptxViewerDemo() {
   return (
-    <div className="h-[600px]">
+    <div className="h-[600px] min-h-0">
       <PptxViewer
         source={{
           kind: "url",
           url: "/samples/sample-deck.pptx",
           fileName: "sample-deck.pptx",
         }}
+        bare
         className="h-full"
         fallbackSlideSize={{ width: 960, height: 540 }}
         renderSlideOverlay={({ slideNumber }) =>

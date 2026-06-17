@@ -7,6 +7,7 @@ import {
   fireEvent,
   render,
   screen,
+  within,
   waitFor,
 } from "@testing-library/react"
 import { hydrateRoot } from "react-dom/client"
@@ -61,6 +62,14 @@ function markdownSource(text: string, fileName = "notes.md") {
     mimeType: "text/markdown",
     text,
   }
+}
+
+function visibleMarkdownContent(container: HTMLElement) {
+  const content = container.querySelector<HTMLElement>(
+    '[data-slot="pretext-markdown-greenfield-content"]'
+  )
+  expect(content).toBeTruthy()
+  return content as HTMLElement
 }
 
 function markdownUrlSource({
@@ -1014,7 +1023,7 @@ describe("PretextMarkdownViewer", () => {
   })
 
   it("applies prose transforms without rewriting inline code", async () => {
-    render(
+    const { container } = render(
       <PretextMarkdownViewer
         source={markdownSource(
           'Use "quotes" -- dash ... -> arrows 1/2 :sparkles: and `literal "quotes" -- ... -> 1/2 :sparkles:`.'
@@ -1022,16 +1031,17 @@ describe("PretextMarkdownViewer", () => {
         controls={false}
       />
     )
+    const content = within(visibleMarkdownContent(container))
 
-    expect(await screen.findByText(/“quotes”/)).toBeTruthy()
-    expect(screen.getByText(/— dash … → arrows ½ ✨/)).toBeTruthy()
+    expect(await content.findByText(/“quotes”/)).toBeTruthy()
+    expect(content.getByText(/— dash … → arrows ½ ✨/)).toBeTruthy()
     expect(
-      screen.getByText('literal "quotes" -- ... -> 1/2 :sparkles:')
+      content.getByText('literal "quotes" -- ... -> 1/2 :sparkles:')
     ).toBeTruthy()
   })
 
   it("renders common GitHub emoji shortcodes while keeping code literal", async () => {
-    render(
+    const { container } = render(
       <PretextMarkdownViewer
         source={markdownSource(
           "Ship :rocket: fixes :bug: docs :memo: atom :atom_symbol: and `literal :rocket: :bug: :atom_symbol:`."
@@ -1039,12 +1049,13 @@ describe("PretextMarkdownViewer", () => {
         controls={false}
       />
     )
+    const content = within(visibleMarkdownContent(container))
 
     expect(
-      await screen.findByText(/Ship 🚀 fixes 🐛 docs 📝 atom ⚛️/)
+      await content.findByText(/Ship 🚀 fixes 🐛 docs 📝 atom ⚛️/)
     ).toBeTruthy()
     expect(
-      screen.getByText("literal :rocket: :bug: :atom_symbol:")
+      content.getByText("literal :rocket: :bug: :atom_symbol:")
     ).toBeTruthy()
   })
 
@@ -1058,7 +1069,7 @@ describe("PretextMarkdownViewer", () => {
       />
     )
 
-    const paragraph = await screen.findByText(
+    const paragraph = await within(visibleMarkdownContent(container)).findByText(
       "Escaped *stars*, [label](/docs/example), # heading, `code`, and \\ slash."
     )
     expect(paragraph).toBeTruthy()
@@ -1082,7 +1093,9 @@ describe("PretextMarkdownViewer", () => {
       />
     )
 
-    expect(await screen.findByText(/First line/)).toBeTruthy()
+    expect(
+      await within(visibleMarkdownContent(container)).findByText(/First line/)
+    ).toBeTruthy()
     const lineBreak = container.querySelector("p br")
     expect(lineBreak).toBeTruthy()
     expect(lineBreak?.getAttribute("data-pretext-line-break")).toBe("soft")
@@ -2030,8 +2043,9 @@ describe("PretextMarkdownViewer", () => {
       />
     )
 
-    expect(await screen.findByText(/import Chart from/)).toBeTruthy()
-    expect(screen.getByText(/export const metadata/)).toBeTruthy()
+    const content = within(visibleMarkdownContent(container))
+    expect(await content.findByText(/import Chart from/)).toBeTruthy()
+    expect(content.getByText(/export const metadata/)).toBeTruthy()
     expect(container.textContent).toContain("<Remote.Widget")
     expect(container.textContent).toContain("<Metric.Remote")
     expect(
@@ -3387,7 +3401,9 @@ describe("PretextMarkdownViewer", () => {
       />
     )
 
-    expect(await screen.findByText(/Inline math/)).toBeTruthy()
+    expect(
+      await within(visibleMarkdownContent(container)).findByText(/Inline math/)
+    ).toBeTruthy()
     expect(container.querySelectorAll(".katex").length).toBeGreaterThanOrEqual(
       2
     )
@@ -3432,7 +3448,9 @@ describe("PretextMarkdownViewer", () => {
       />
     )
 
-    expect(await screen.findByText(/Unsafe/)).toBeTruthy()
+    expect(
+      await within(visibleMarkdownContent(container)).findByText(/Unsafe/)
+    ).toBeTruthy()
     expect(container.querySelectorAll(".katex").length).toBeGreaterThanOrEqual(
       2
     )
@@ -3562,9 +3580,15 @@ describe("PretextMarkdownViewer", () => {
       )
     ).toBeGreaterThan(300)
     expect(preview?.textContent).toContain("hostile-line-0")
-    expect(preview?.textContent).toContain("hostile-line-400")
-    expect(preview?.textContent).toContain("source lines omitted")
     expect(preview?.textContent).not.toContain("hostile-line-200")
+
+    preview!.scrollTop = 9_600
+    fireEvent.scroll(preview!)
+
+    await waitFor(() => {
+      expect(preview?.textContent).toContain("hostile-line-400")
+    })
+    expect(preview?.textContent).not.toContain("hostile-line-0")
 
     fireEvent.click(screen.getByLabelText("Copy large Markdown block source"))
     await waitFor(() => {
@@ -3993,7 +4017,7 @@ describe("PretextMarkdownViewer", () => {
     const headers = container.querySelectorAll<HTMLTableCellElement>("th")
     const cells = container.querySelectorAll<HTMLTableCellElement>("td")
     expect(headers[0]?.id).toMatch(
-      /^pretext-markdown-chunk-\d+-\d+-table-0-column-0$/
+      /^pretext-markdown-table-\d+-column-1$/
     )
     expect(headers[0]?.scope).toBe("col")
     expect(headers[0]?.getAttribute("aria-colindex")).toBe("1")
@@ -4001,7 +4025,7 @@ describe("PretextMarkdownViewer", () => {
       "1"
     )
     expect(headers[1]?.id).toMatch(
-      /^pretext-markdown-chunk-\d+-\d+-table-0-column-1$/
+      /^pretext-markdown-table-\d+-column-2$/
     )
     expect(headers[1]?.getAttribute("aria-colindex")).toBe("2")
     expect(headers[0]?.className).toContain("text-left")
@@ -4027,9 +4051,9 @@ describe("PretextMarkdownViewer", () => {
       ""
     )
     expect(screen.getByRole("link", { name: /Site/ })).toBeTruthy()
-    expect(screen.getByText(/✅/)).toBeTruthy()
+    expect(within(table).getByText(/✅/)).toBeTruthy()
 
-    const copyTableButton = screen.getByLabelText("Copy table")
+    const copyTableButton = screen.getByLabelText("Copy table as TSV")
     fireEvent.click(copyTableButton)
 
     await waitFor(() => {
@@ -4071,30 +4095,34 @@ describe("PretextMarkdownViewer", () => {
     const tableRegion = await screen.findByRole("region", {
       name: "Markdown table",
     })
-    Object.defineProperty(tableRegion, "clientWidth", {
+    const tableScroller = tableRegion.querySelector<HTMLElement>(
+      "[data-pretext-markdown-table-scroll]"
+    )
+    expect(tableScroller).toBeTruthy()
+    Object.defineProperty(tableScroller, "clientWidth", {
       configurable: true,
       value: 200,
     })
-    Object.defineProperty(tableRegion, "scrollWidth", {
+    Object.defineProperty(tableScroller, "scrollWidth", {
       configurable: true,
       value: 900,
     })
 
     fireEvent.keyDown(tableRegion, { key: "ArrowRight" })
 
-    expect(tableRegion.scrollLeft).toBe(50)
+    expect(tableScroller!.scrollLeft).toBe(50)
 
     fireEvent.keyDown(tableRegion, { key: "End" })
 
-    expect(tableRegion.scrollLeft).toBe(700)
+    expect(tableScroller!.scrollLeft).toBe(700)
 
     fireEvent.keyDown(tableRegion, { key: "ArrowLeft" })
 
-    expect(tableRegion.scrollLeft).toBe(650)
+    expect(tableScroller!.scrollLeft).toBe(650)
 
     fireEvent.keyDown(tableRegion, { key: "Home" })
 
-    expect(tableRegion.scrollLeft).toBe(0)
+    expect(tableScroller!.scrollLeft).toBe(0)
   })
 
   it("renders safe table captions without changing table copy output", async () => {
@@ -4122,7 +4150,7 @@ describe("PretextMarkdownViewer", () => {
     expect(caption?.getAttribute("onclick")).toBeNull()
     expect(caption?.className).toContain("caption-top")
 
-    fireEvent.click(screen.getByLabelText("Copy table"))
+    fireEvent.click(screen.getByLabelText("Copy table as TSV"))
 
     await waitFor(() => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(

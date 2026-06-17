@@ -1,0 +1,21 @@
+---
+title: FileViewerHeader
+description: The full-width file row for title, passive metadata, sidebar trigger, and active renderer controls.
+component: true
+---
+
+`FileViewerHeader` is the top row of a composed file viewer. It is intentionally
+file-type agnostic: PDF, image, spreadsheet, text, and email renderers all
+register their operational controls into the same header surface.
+
+```tsx
+<FileViewerHeader>
+  <FileViewerSidebarTrigger />
+  <FileViewerTitle />
+  <FileViewerMeta />
+  <FileViewerControls />
+</FileViewerHeader>
+```
+
+Use the header for file identity and controls. Do not put domain workflow state
+there unless the file viewer itself owns it.

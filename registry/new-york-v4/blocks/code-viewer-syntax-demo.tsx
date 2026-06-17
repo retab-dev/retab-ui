@@ -10,7 +10,7 @@ type Sample = {
   id: string
   label: string
   fileName: string
-  highlight: TextLineRange
+  highlight: CodeLineRange
   code: string
 }
 
@@ -156,7 +156,7 @@ export function CodeViewerSyntaxDemo() {
           )
         })}
       </div>
-      <div className="h-[360px]">
+      <div className="h-[360px] min-h-0">
         <CodeViewer
           key={active.id}
           source={{
@@ -165,6 +165,7 @@ export function CodeViewerSyntaxDemo() {
             fileName: active.fileName,
           }}
           highlight={active.highlight}
+          bare
           className="h-full"
         />
       </div>

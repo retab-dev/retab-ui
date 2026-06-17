@@ -114,7 +114,10 @@ type EmailViewerInternalProps = EmailViewerProps & {
   nestedMessageDepth?: number
 }
 
-type EmailViewerLayoutProps = Pick<EmailViewerInternalProps, "className">
+type EmailViewerLayoutProps = Pick<
+  EmailViewerInternalProps,
+  "className" | "mode"
+>
 
 const EmailViewerContext = React.createContext<EmailViewerContextValue | null>(
   null
@@ -242,6 +245,7 @@ function EmailViewerInternal({
   defaultSelectedPath,
   onSelectedPathChange,
   maxNestedMessageDepth,
+  mode,
   nestedMessageDepth = 0,
   className,
 }: EmailViewerInternalProps) {
@@ -254,7 +258,7 @@ function EmailViewerInternal({
         onSelectedPathChange={onSelectedPathChange}
         maxNestedMessageDepth={maxNestedMessageDepth}
       >
-        <EmailViewerLayout className={className} />
+        <EmailViewerLayout className={className} mode={mode} />
       </EmailViewerProvider>
     )
   }
@@ -268,15 +272,20 @@ function EmailViewerInternal({
       maxNestedMessageDepth={maxNestedMessageDepth}
       nestedMessageDepth={nestedMessageDepth}
     >
-      <EmailViewerLayout className={className} />
+      <EmailViewerLayout className={className} mode={mode} />
     </EmailViewerProviderInternal>
   )
 }
 
-function EmailViewerLayout({ className }: EmailViewerLayoutProps) {
+function EmailViewerLayout({ className, mode }: EmailViewerLayoutProps) {
   return (
     <div data-slot="email-viewer" className={cn("min-h-0", className)}>
-      <ViewerRoot defaultOpen sidebarSide="right" className="h-full">
+      <ViewerRoot
+        defaultOpen
+        mode={mode}
+        sidebarSide="right"
+        className="h-full"
+      >
         <EmailViewerHeader />
         <ViewerBody className="flex-col md:flex-row">
           <ViewerSurface className="min-h-[26rem] md:min-h-0">

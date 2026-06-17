@@ -8,6 +8,7 @@ import { fixedVirtualItems } from "@/components/ui/fixed-grid-virtualization"
 import type {
   FixedGridJumpViewportResult,
   FixedGridViewport,
+  FixedGridVirtualItem,
 } from "@/components/ui/fixed-grid-virtualization"
 import type { XlsxGridColumnItem } from "@/components/ui/xlsx-grid-row"
 
@@ -23,6 +24,7 @@ export interface XlsxRowPatchState {
 
 export interface XlsxRowPatcher {
   patch: (viewport: FixedGridViewport) => FixedGridJumpViewportResult
+  resync: (virtualRows: FixedGridVirtualItem[]) => void
   invalidate: () => void
 }
 
@@ -80,6 +82,22 @@ export function useXlsxRowPatcher({
     rowHandleCacheRef.current = null
   }, [])
 
+  const resync = React.useCallback(
+    (virtualRows: FixedGridVirtualItem[]) => {
+      const rowWindow = rowWindowRef.current
+      if (!rowWindow) return
+      const state = getState()
+      const cache = readRowHandles(rowWindow, state, {
+        scrollLeft: 0,
+      })
+      if (cache.rows.length > 0) {
+        patchRows(cache.rows, virtualRows, state)
+      }
+      rowHandleCacheRef.current = null
+    },
+    [getState, rowWindowRef]
+  )
+
   const patch = React.useCallback(
     (viewport: FixedGridViewport): FixedGridJumpViewportResult => {
       const state = getState()
@@ -126,7 +144,10 @@ export function useXlsxRowPatcher({
     [getState, rowWindowRef]
   )
 
-  return React.useMemo(() => ({ invalidate, patch }), [invalidate, patch])
+  return React.useMemo(
+    () => ({ invalidate, patch, resync }),
+    [invalidate, patch, resync]
+  )
 }
 
 function patchRows(
@@ -227,7 +248,7 @@ function canPatchRowHandles(
 function readRowHandles(
   rowWindow: HTMLDivElement,
   state: XlsxRowPatchState,
-  viewport: FixedGridViewport
+  viewport: Pick<FixedGridViewport, "scrollLeft">
 ): XlsxRowHandleCache {
   const rows = Array.from(
     rowWindow.querySelectorAll<HTMLElement>('[data-slot="xlsx-row"]')

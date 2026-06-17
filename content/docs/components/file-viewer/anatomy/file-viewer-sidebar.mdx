@@ -1,0 +1,21 @@
+---
+title: FileViewerSidebar
+description: The optional file-scoped rail beside the file surface.
+component: true
+---
+
+`FileViewerSidebar` is the spatial slot for file navigation. It owns placement,
+width, side, collapse behavior, and the accessible rail label.
+
+```tsx
+<FileViewerSidebar aria-label="Document sections" width="18rem">
+  <SegmentSidebar
+    segments={segments}
+    interaction={interaction}
+    currentPage={currentPage}
+  />
+</FileViewerSidebar>
+```
+
+The sidebar content owns row semantics. `FileViewerSidebar` only owns where the
+rail lives and how it opens.
