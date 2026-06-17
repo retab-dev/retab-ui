@@ -570,6 +570,7 @@ export function PretextMarkdownGreenfieldContent({
                   >
                     <PretextMarkdownGreenfieldChunkRenderer
                       chunk={chunk}
+                      fontScale={fontScale}
                       onContentReady={() =>
                         measureChunkFrame(chunk, recordMeasuredHeight)
                       }

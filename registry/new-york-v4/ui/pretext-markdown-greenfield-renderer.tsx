@@ -32,12 +32,19 @@ const PretextMarkdownContentReadyContext = React.createContext<
   (() => void) | null
 >(null)
 
+// The rendered body size at 100% zoom. Every other size (headings, code,
+// tables, footnotes) is authored in `em` relative to this, so scaling this one
+// value with the zoom `fontScale` resizes the whole document as one system.
+export const PRETEXT_MARKDOWN_GREENFIELD_BASE_FONT_PX = 15.5
+
 export function PretextMarkdownGreenfieldChunkRenderer({
   chunk,
+  fontScale = 1,
   onContentReady,
   searchQuery,
 }: {
   chunk: PretextMarkdownGreenfieldChunk
+  fontScale?: number
   onContentReady?: () => void
   searchQuery?: string
 }) {
@@ -63,8 +70,11 @@ export function PretextMarkdownGreenfieldChunkRenderer({
     <PretextMarkdownContentReadyContext.Provider value={notifyContentReady}>
       <div
         ref={ref}
-        className="pretext-markdown-greenfield-content min-w-0 text-[15.5px] leading-relaxed text-foreground"
+        className="pretext-markdown-greenfield-content min-w-0 leading-relaxed text-foreground"
         data-slot="pretext-markdown-greenfield-content"
+        style={{
+          fontSize: `${PRETEXT_MARKDOWN_GREENFIELD_BASE_FONT_PX * fontScale}px`,
+        }}
       >
         {renderHastChildren(chunk.hastChildren, searchQuery)}
       </div>
