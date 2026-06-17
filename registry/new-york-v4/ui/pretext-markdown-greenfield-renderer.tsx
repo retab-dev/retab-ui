@@ -38,11 +38,13 @@ const PretextMarkdownContentReadyContext = React.createContext<
 export const PRETEXT_MARKDOWN_GREENFIELD_BASE_FONT_PX = 15.5
 
 export function PretextMarkdownGreenfieldChunkRenderer({
+  activeMatchOccurrence,
   chunk,
   fontScale = 1,
   onContentReady,
   searchQuery,
 }: {
+  activeMatchOccurrence?: number
   chunk: PretextMarkdownGreenfieldChunk
   fontScale?: number
   onContentReady?: () => void
@@ -76,7 +78,11 @@ export function PretextMarkdownGreenfieldChunkRenderer({
           fontSize: `${PRETEXT_MARKDOWN_GREENFIELD_BASE_FONT_PX * fontScale}px`,
         }}
       >
-        {renderHastChildren(chunk.hastChildren, searchQuery)}
+        {renderHastChildren(
+          chunk.hastChildren,
+          searchQuery,
+          activeMatchOccurrence
+        )}
       </div>
     </PretextMarkdownContentReadyContext.Provider>
   )
@@ -84,7 +90,8 @@ export function PretextMarkdownGreenfieldChunkRenderer({
 
 function renderHastChildren(
   children: readonly PretextMarkdownHastNode[],
-  searchQuery?: string
+  searchQuery?: string,
+  activeMatchOccurrence?: number
 ) {
   const root: PretextMarkdownHastRoot = {
     type: "root",
@@ -93,7 +100,13 @@ function renderHastChildren(
 
   const normalizedQuery = searchQuery?.trim().toLowerCase()
   if (normalizedQuery) {
-    highlightPretextMarkdownSearchMatches(root.children, normalizedQuery)
+    // The counter tracks rendered occurrences in document order so the one at
+    // activeMatchOccurrence (the chunk-local index of the toolbar's current
+    // match) can be marked active and styled distinctly from the rest.
+    highlightPretextMarkdownSearchMatches(root.children, normalizedQuery, {
+      count: 0,
+      active: activeMatchOccurrence ?? -1,
+    })
   }
 
   return toJsxRuntime(root as never, {
@@ -459,13 +472,22 @@ const markdownComponents = {
       data-pretext-raw-inline=""
     />
   ),
-  mark: ({ node: _node, ...props }: any) => (
-    <mark
-      {...props}
-      className="rounded bg-yellow-200/70 px-1 text-foreground dark:bg-yellow-400/30"
-      data-pretext-raw-inline=""
-    />
-  ),
+  mark: ({ node: _node, ...props }: any) => {
+    const isActiveMatch = "data-pretext-search-match-active" in props
+    return (
+      <mark
+        {...props}
+        aria-current={isActiveMatch ? "true" : undefined}
+        className={[
+          "rounded px-1 text-foreground",
+          isActiveMatch
+            ? "bg-amber-400 ring-1 ring-amber-500/70 dark:bg-amber-500/70"
+            : "bg-yellow-200/70 dark:bg-yellow-400/30",
+        ].join(" ")}
+        data-pretext-raw-inline=""
+      />
+    )
+  },
   img: ({ alt, height, node: _node, src, title, width }: any) => (
     <PretextMarkdownImageSurface
       alt={alt ?? ""}
@@ -1386,16 +1408,20 @@ const PRETEXT_MARKDOWN_SEARCH_SKIP_TAGS = new Set([
 // insensitive occurrence of the active query in a <mark> so matches are visible
 // where the search navigates. Mutates the freshly cloned chunk tree in place,
 // matching the same trimmed-substring semantics as the toolbar match count.
+type PretextMarkdownSearchHighlightContext = { active: number; count: number }
+
 function highlightPretextMarkdownSearchMatches(
   nodes: PretextMarkdownHastNode[],
-  lowerQuery: string
+  lowerQuery: string,
+  context: PretextMarkdownSearchHighlightContext
 ) {
   for (let index = 0; index < nodes.length; index += 1) {
     const node = nodes[index]
     if (node.type === "text" && typeof node.value === "string") {
       const replacement = splitPretextMarkdownTextForSearch(
         node.value,
-        lowerQuery
+        lowerQuery,
+        context
       )
       if (replacement) {
         nodes.splice(index, 1, ...replacement)
@@ -1406,14 +1432,15 @@ function highlightPretextMarkdownSearchMatches(
     if (node.type === "element" && Array.isArray(node.children)) {
       const tagName = (node as PretextMarkdownHastElement).tagName.toLowerCase()
       if (PRETEXT_MARKDOWN_SEARCH_SKIP_TAGS.has(tagName)) continue
-      highlightPretextMarkdownSearchMatches(node.children, lowerQuery)
+      highlightPretextMarkdownSearchMatches(node.children, lowerQuery, context)
     }
   }
 }
 
 function splitPretextMarkdownTextForSearch(
   value: string,
-  lowerQuery: string
+  lowerQuery: string,
+  context: PretextMarkdownSearchHighlightContext
 ): PretextMarkdownHastNode[] | null {
   const lowerValue = value.toLowerCase()
   let matchStart = lowerValue.indexOf(lowerQuery)
@@ -1426,10 +1453,14 @@ function splitPretextMarkdownTextForSearch(
       out.push({ type: "text", value: value.slice(cursor, matchStart) })
     }
     const matchEnd = matchStart + lowerQuery.length
+    const isActive = context.count === context.active
+    context.count += 1
     out.push({
       type: "element",
       tagName: "mark",
-      properties: { dataPretextSearchMatch: "" },
+      properties: isActive
+        ? { dataPretextSearchMatch: "", dataPretextSearchMatchActive: "" }
+        : { dataPretextSearchMatch: "" },
       children: [{ type: "text", value: value.slice(matchStart, matchEnd) }],
     })
     cursor = matchEnd

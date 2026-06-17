@@ -172,6 +172,25 @@ export function PretextMarkdownGreenfieldContent({
     setSearchQuery,
   } = useMarkdownSearch({ lineCount: document.lineCount, text })
   const visibleHighlightRange = activeSearchRange ?? highlightRange
+  // Locate the toolbar's current match within its chunk so the renderer can
+  // mark that single occurrence active. Matches are in document order, so the
+  // chunk-local index is the global index minus the matches in earlier chunks.
+  const activeMatchLocation = React.useMemo(() => {
+    if (!activeSearchMatch) return null
+    const chunkFrame = frame.chunks.find(
+      (candidate) =>
+        candidate.sourceStartLine <= activeSearchMatch.startLine &&
+        activeSearchMatch.startLine <= candidate.sourceEndLine
+    )
+    if (!chunkFrame) return null
+    const matchesBeforeChunk = searchMatches.filter(
+      (match) => match.startLine < chunkFrame.sourceStartLine
+    ).length
+    return {
+      chunkIndex: chunkFrame.index,
+      occurrence: activeSearchMatch.index - matchesBeforeChunk,
+    }
+  }, [activeSearchMatch, frame.chunks, searchMatches])
   const visibleFrames = React.useMemo(
     () =>
       getPretextMarkdownGreenfieldVisibleFrames({
@@ -569,6 +588,11 @@ export function PretextMarkdownGreenfieldContent({
                     onMeasuredHeight={recordMeasuredHeight}
                   >
                     <PretextMarkdownGreenfieldChunkRenderer
+                      activeMatchOccurrence={
+                        activeMatchLocation?.chunkIndex === chunk.index
+                          ? activeMatchLocation.occurrence
+                          : undefined
+                      }
                       chunk={chunk}
                       fontScale={fontScale}
                       onContentReady={() =>

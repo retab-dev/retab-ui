@@ -8,12 +8,17 @@ import { PretextMarkdownGreenfieldChunkRenderer } from "@/registry/new-york-v4/u
 
 afterEach(cleanup)
 
-function renderFirstChunk(markdown: string, searchQuery?: string) {
+function renderFirstChunk(
+  markdown: string,
+  searchQuery?: string,
+  activeMatchOccurrence?: number
+) {
   const parsed = createPretextMarkdownGreenfieldDocument(markdown)
   const chunk = parsed.chunks[0]
   expect(chunk).toBeDefined()
   return render(
     <PretextMarkdownGreenfieldChunkRenderer
+      activeMatchOccurrence={activeMatchOccurrence}
       chunk={chunk}
       searchQuery={searchQuery}
     />
@@ -32,6 +37,24 @@ describe("pretext markdown search highlighting", () => {
     // Original casing is preserved inside the highlight.
     expect(marks[0]?.textContent).toBe("Virtualization")
     expect(marks[1]?.textContent).toBe("virtualization")
+  })
+
+  it("marks only the active occurrence so the current match stands out", () => {
+    const { container } = renderFirstChunk(
+      "Virtualization keeps the viewer fast, and virtualization scales.",
+      "virtualization",
+      1
+    )
+
+    const marks = container.querySelectorAll("mark[data-pretext-search-match]")
+    const active = container.querySelectorAll(
+      "mark[data-pretext-search-match-active]"
+    )
+    expect(marks).toHaveLength(2)
+    expect(active).toHaveLength(1)
+    // Occurrence index 1 is the second match.
+    expect(active[0]?.textContent).toBe("virtualization")
+    expect(active[0]?.getAttribute("aria-current")).toBe("true")
   })
 
   it("renders no highlights when the query is empty or whitespace", () => {
