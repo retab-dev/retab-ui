@@ -8,7 +8,6 @@ import { JsonFormArray } from "@/components/json-form/array-fields"
 import { WithDescription } from "@/components/json-form/disclosure"
 import type { JsonFormFieldRenderProps } from "@/components/json-form/field-renderer"
 import {
-  Checkbox,
   Form,
   FormControl,
   FormField,
@@ -27,6 +26,7 @@ import {
   schemaNeedsJsonFormPathEncoding,
 } from "@/components/json-form/path-codec"
 import {
+  BooleanControl,
   NullableBooleanControl,
   ScalarControl,
   type JsonFormTextInput,
@@ -40,7 +40,7 @@ import {
 } from "@/components/json-form/schema-model"
 import {
   JsonFormSourceLinkProvider,
-  SourceFieldLinkShell,
+  SourceLinkShell,
   type JsonFormSourceLink,
 } from "@/components/json-form/source-link"
 
@@ -90,13 +90,13 @@ export function JsonFormField({
   const { schema, nullable } = unwrapNullable(expandedSchema)
   const kind = fieldKind(schema)
   const heading = labelFor(name, schema, label)
-  const logicalPath = sourcePath ?? name
+  const resolvedSourcePath = sourcePath ?? name
 
   if (kind === "object") {
     return (
       <JsonFormObject
         name={name}
-        sourcePath={logicalPath}
+        sourcePath={resolvedSourcePath}
         schema={schema}
         label={heading}
         textInput={textInput}
@@ -111,7 +111,7 @@ export function JsonFormField({
     return (
       <JsonFormArray
         name={name}
-        sourcePath={logicalPath}
+        sourcePath={resolvedSourcePath}
         schema={schema}
         label={heading}
         textInput={textInput}
@@ -125,7 +125,7 @@ export function JsonFormField({
   if (kind === "boolean") {
     if (nullable) {
       return (
-        <SourceFieldLinkShell name={logicalPath}>
+        <SourceLinkShell sourcePath={resolvedSourcePath}>
           <FormField
             name={name}
             render={({ field }) => (
@@ -148,12 +148,12 @@ export function JsonFormField({
               </FormItem>
             )}
           />
-        </SourceFieldLinkShell>
+        </SourceLinkShell>
       )
     }
 
     return (
-      <SourceFieldLinkShell name={logicalPath}>
+      <SourceLinkShell sourcePath={resolvedSourcePath}>
         <FormField
           name={name}
           render={({ field }) => (
@@ -167,23 +167,21 @@ export function JsonFormField({
                 </FormLabel>
               </WithDescription>
               <FormControl>
-                <Checkbox
-                  checked={Boolean(field.value)}
-                  aria-label={`${heading}${required ? " *" : ""}`}
-                  onCheckedChange={(value) => field.onChange(value === true)}
-                  onBlur={field.onBlur}
+                <BooleanControl
+                  field={field}
+                  label={`${heading}${required ? " *" : ""}`}
                 />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-      </SourceFieldLinkShell>
+      </SourceLinkShell>
     )
   }
 
   return (
-    <SourceFieldLinkShell name={logicalPath}>
+    <SourceLinkShell sourcePath={resolvedSourcePath}>
       <FormField
         name={name}
         render={({ field }) => (
@@ -207,7 +205,7 @@ export function JsonFormField({
           </FormItem>
         )}
       />
-    </SourceFieldLinkShell>
+    </SourceLinkShell>
   )
 }
 

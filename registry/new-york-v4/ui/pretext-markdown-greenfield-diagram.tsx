@@ -26,6 +26,39 @@ type DiagramState =
   | { status: "ready"; svg: string }
 type ReadyDiagramState = Extract<DiagramState, { status: "ready" }>
 
+// Mermaid rendering is an asynchronous external system (a dynamically imported
+// engine). Its resolved results live in a module-level store that the viewer
+// reads through useSyncExternalStore, rather than driving the render from an
+// effect. Keyed per element id + source, so two instances never share an SVG
+// (mermaid embeds the element id into the markup).
+const mermaidDiagramResultCache = new Map<string, DiagramState>()
+const mermaidDiagramInFlight = new Set<string>()
+const mermaidDiagramSubscribers = new Set<() => void>()
+
+function ensureMermaidDiagram(
+  cacheKey: string,
+  source: string,
+  elementId: string
+) {
+  if (
+    mermaidDiagramResultCache.has(cacheKey) ||
+    mermaidDiagramInFlight.has(cacheKey)
+  ) {
+    return
+  }
+  mermaidDiagramInFlight.add(cacheKey)
+  void renderMermaidDiagram(source, elementId).then((result) => {
+    mermaidDiagramInFlight.delete(cacheKey)
+    mermaidDiagramResultCache.set(cacheKey, result)
+    while (mermaidDiagramResultCache.size > 128) {
+      const oldestKey = mermaidDiagramResultCache.keys().next().value
+      if (oldestKey === undefined) break
+      mermaidDiagramResultCache.delete(oldestKey)
+    }
+    for (const notify of mermaidDiagramSubscribers) notify()
+  })
+}
+
 export function PretextMarkdownGreenfieldDiagram({
   caption,
   componentName,
@@ -43,12 +76,8 @@ export function PretextMarkdownGreenfieldDiagram({
     () => readDiagramLimitMessage(source),
     [source]
   )
-  const initialState = React.useMemo(
-    () => createInitialDiagramState({ limitMessage, source }),
-    [limitMessage, source]
-  )
-  const [state, setState] = React.useState<DiagramState>(initialState)
   const diagramId = React.useId().replace(/:/g, "")
+  const elementId = `pretext-markdown-diagram-${diagramId}`
   const description = React.useMemo(() => describeDiagram(source), [source])
   const bodyHeight = React.useMemo(
     () => estimateDiagramBodyHeight(source),
@@ -63,33 +92,35 @@ export function PretextMarkdownGreenfieldDiagram({
   const describedBy =
     [descriptionId, captionId].filter(Boolean).join(" ") || undefined
 
-  React.useLayoutEffect(() => {
-    setState(initialState)
-  }, [initialState])
+  // Derive the displayed state: a limit message fails immediately; otherwise the
+  // state follows the async mermaid store (loading until it resolves).
+  const cacheKey = `${elementId}\0${source}`
+  const subscribe = React.useCallback(
+    (onStoreChange: () => void) => {
+      mermaidDiagramSubscribers.add(onStoreChange)
+      if (!limitMessage) ensureMermaidDiagram(cacheKey, source, elementId)
+      return () => {
+        mermaidDiagramSubscribers.delete(onStoreChange)
+      }
+    },
+    [cacheKey, elementId, limitMessage, source]
+  )
+  const getSnapshot = React.useCallback(
+    () => mermaidDiagramResultCache.get(cacheKey) ?? null,
+    [cacheKey]
+  )
+  const resolvedState = React.useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    () => null
+  )
+  const state: DiagramState = limitMessage
+    ? { status: "failed", message: limitMessage }
+    : (resolvedState ?? { status: "loading" })
 
   React.useLayoutEffect(() => {
     onContentReady?.()
   }, [bodyHeight, onContentReady, state.status])
-
-  React.useEffect(() => {
-    if (limitMessage) return
-
-    let isMounted = true
-    void renderMermaidDiagram(source, `pretext-markdown-diagram-${diagramId}`)
-      .then((result) => {
-        if (isMounted) setState(result)
-      })
-      .catch((error: unknown) => {
-        if (!isMounted) return
-        setState({
-          status: "failed",
-          message: error instanceof Error ? error.message : "Invalid diagram",
-        })
-      })
-    return () => {
-      isMounted = false
-    }
-  }, [diagramId, limitMessage, source])
 
   return (
     <figure
@@ -226,16 +257,6 @@ function DiagramCopyButton({
       )}
     </button>
   )
-}
-
-function createInitialDiagramState({
-  limitMessage,
-}: {
-  limitMessage: string | null
-  source: string
-}): DiagramState {
-  if (limitMessage) return { status: "failed", message: limitMessage }
-  return { status: "loading" }
 }
 
 async function renderMermaidDiagram(

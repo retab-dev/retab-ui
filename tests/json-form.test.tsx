@@ -1672,7 +1672,7 @@ describe("JsonForm source linking", () => {
     expect(cell).toBeTruthy()
 
     fireEvent.focus(cell)
-    expect(cell.getAttribute("data-anchor-active")).toBe("true")
+    expect(cell.getAttribute("data-source-active")).toBe("true")
     fireEvent.blur(cell)
     fireEvent.click(cell)
 

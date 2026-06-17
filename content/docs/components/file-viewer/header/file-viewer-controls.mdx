@@ -7,6 +7,10 @@ component: true
 `FileViewerControls` renders operational controls registered by the current file
 renderer: zoom, page position, rotate, retry, copy, and download.
 
+<ComponentPreview name="file-viewer-header-demo" />
+
+## Usage
+
 ```tsx
 <FileViewerHeader>
   <FileViewerTitle />
@@ -15,6 +19,32 @@ renderer: zoom, page position, rotate, retry, copy, and download.
 </FileViewerHeader>
 ```
 
-The header does not need PDF-specific or spreadsheet-specific props. Renderers
-register controls into the file viewer context, and `FileViewerControls` renders
-the current set.
+Add workflow actions beside the renderer controls with `extra`:
+
+```tsx
+<FileViewerControls extra={<ApproveButton />} />
+```
+
+## Behavior
+
+- Reads the registered control set (`position`, `zoom`, `rotate`, `loading`,
+  `extra`) from file-viewer context. The header takes no PDF- or
+  spreadsheet-specific props — renderers register their controls upward.
+- Download defaults to the file's original download action. A renderer can
+  register its own `downloads` (and registering an empty list hides the
+  download button entirely).
+- Renders a `data-slot="file-viewer-controls"` row, right-aligned in the header.
+- The `extra` prop is merged with any renderer-registered extras, so workflow
+  actions can sit beside the renderer's own controls.
+
+## API Reference
+
+| Prop        | Type              | Description                                                       |
+| ----------- | ----------------- | ----------------------------------------------------------------- |
+| `extra`     | `React.ReactNode` | Workflow actions rendered beside the registered controls.         |
+| `className` | `string`          | Class merged onto the controls row.                               |
+| `...props`  | `ViewerControls` props | All `ViewerControls` props except the renderer-registered ones (`title`, `subtitle`, `position`, `zoom`, `rotate`, `downloads`). |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer.tsx" />

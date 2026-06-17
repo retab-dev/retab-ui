@@ -30,16 +30,10 @@ function FileViewerDocumentContent({
     isClient,
     isolateStyles,
     resource,
-    setControlsState,
   } = useFileViewerContext()
   const fallback = (
     <ViewerFallback resource={resource} className={className} bare={bare} />
   )
-
-  React.useEffect(() => {
-    setControlsState(null)
-    return () => setControlsState(null)
-  }, [descriptorKey, setControlsState])
 
   if (!isClient) return fallback
 

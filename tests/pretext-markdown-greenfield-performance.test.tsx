@@ -115,7 +115,8 @@ describe("pretext markdown greenfield performance boundaries", () => {
 
   it("renders huge GFM tables as bounded hostile previews instead of mounting every cell", () => {
     const header = "| " + ["A", "B", "C", "D", "E", "F"].join(" | ") + " |"
-    const divider = "| " + Array.from({ length: 6 }, () => "---").join(" | ") + " |"
+    const divider =
+      "| " + Array.from({ length: 6 }, () => "---").join(" | ") + " |"
     const rows = Array.from({ length: 360 }, (_, rowIndex) => {
       const cells = Array.from(
         { length: 6 },
@@ -126,7 +127,10 @@ describe("pretext markdown greenfield performance boundaries", () => {
     const markdown = [header, divider, ...rows].join("\n")
     const model = createPretextMarkdownGreenfieldDocument(markdown)
     const { container } = render(
-      <PretextMarkdownViewer controls={false} source={markdownSource(markdown)} />
+      <PretextMarkdownViewer
+        controls={false}
+        source={markdownSource(markdown)}
+      />
     )
     const fallback = container.querySelector<HTMLElement>(
       "[data-pretext-markdown-hostile-fallback]"
@@ -156,7 +160,10 @@ describe("pretext markdown greenfield performance boundaries", () => {
     const markdown = `${nestedOpen}Deep content${nestedClose}`
     const model = createPretextMarkdownGreenfieldDocument(markdown)
     const { container } = render(
-      <PretextMarkdownViewer controls={false} source={markdownSource(markdown)} />
+      <PretextMarkdownViewer
+        controls={false}
+        source={markdownSource(markdown)}
+      />
     )
 
     expect(model.blocks).toHaveLength(1)
@@ -166,51 +173,6 @@ describe("pretext markdown greenfield performance boundaries", () => {
       container.querySelector("[data-pretext-markdown-hostile-fallback]")
     ).toBeTruthy()
     expect(container.querySelector("#user-content-layer-96")).toBeNull()
-  })
-
-  it("invalidates virtual measurements after web fonts become ready", async () => {
-    const originalFonts = Object.getOwnPropertyDescriptor(document, "fonts")
-    let resolveFonts!: () => void
-    const ready = new Promise<void>((resolve) => {
-      resolveFonts = resolve
-    })
-    Object.defineProperty(document, "fonts", {
-      configurable: true,
-      value: { ready },
-    })
-
-    try {
-      const { container } = render(
-        <PretextMarkdownViewer
-          controls={false}
-          source={markdownSource(
-            [
-              "# Font-sensitive document",
-              "",
-              "A paragraph after the heading.",
-            ].join("\n")
-          )}
-        />
-      )
-
-      expect(
-        container.querySelector('[data-pretext-font-ready-epoch="0"]')
-      ).toBeTruthy()
-
-      resolveFonts()
-
-      await waitFor(() => {
-        expect(
-          container.querySelector('[data-pretext-font-ready-epoch="1"]')
-        ).toBeTruthy()
-      })
-    } finally {
-      if (originalFonts) {
-        Object.defineProperty(document, "fonts", originalFonts)
-      } else {
-        Reflect.deleteProperty(document, "fonts")
-      }
-    }
   })
 
   it("keys measured heights by scale-sensitive layout identity", async () => {

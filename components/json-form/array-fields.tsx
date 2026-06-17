@@ -6,7 +6,7 @@ import { useFieldArray, useFormContext, useWatch } from "react-hook-form"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { ArrayTable } from "@/components/json-form/array-table"
+import { ArrayTable } from "@/components/json-form/table/array-table"
 import { DisclosureHeader } from "@/components/json-form/disclosure"
 import type { RenderJsonFormField } from "@/components/json-form/field-renderer"
 import {

@@ -17,5 +17,28 @@ width, side, collapse behavior, and the accessible rail label.
 </FileViewerSidebar>
 ```
 
-The sidebar content owns row semantics. `FileViewerSidebar` only owns where the
-rail lives and how it opens.
+## Behavior
+
+- Renders a `data-slot="file-viewer-sidebar"` rail and reads its open/collapsed
+  state from `FileViewer` — toggle it with `FileViewerSidebarTrigger`.
+- The content owns row semantics; the sidebar only owns *where* the rail lives
+  and *how* it opens. Drop in any navigation: thumbnails, attachments, segments,
+  or source fields.
+- `width` and `side` set the rail shell; whether it renders inline or as an
+  overlay is resolved from the root's `mode`/`inlineBreakpoint` and available
+  width.
+- Always pass `aria-label` — the rail is a landmark and needs an accessible name.
+
+## API Reference
+
+| Prop          | Type                    | Description                                                       |
+| ------------- | ----------------------- | ----------------------------------------------------------------- |
+| `aria-label`  | `string`                | Accessible name for the navigation rail. Recommended.             |
+| `width`       | `string`                | Rail width (e.g. `"18rem"`). Sets the `--viewer-sidebar-width`.   |
+| `side`        | `"left" \| "right"`     | Which side the rail mounts on. Falls back to the root's setting.  |
+| `collapsible` | `"offcanvas" \| "none"` | Whether the rail can collapse off-canvas.                         |
+| `...props`    | `React.ComponentProps<"aside">` | Standard `aside` props; `className` is forwarded.         |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer.tsx" />

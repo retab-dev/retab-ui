@@ -11,7 +11,8 @@ import {
 } from "@/lib/viewer-errors"
 import {
   createViewerResource,
-  type ViewerContentIdentity,
+  viewerContentRenderKey,
+  viewerResourceRenderKey,
   type ViewerResource,
 } from "@/lib/viewer-resource"
 import type {
@@ -89,7 +90,7 @@ export function PlainTextViewerFrame<
   if (!resource) {
     throw new Error("PlainTextViewerFrame requires a source or resource.")
   }
-  const contentBaseKey = plainTextViewerContentBaseKey(resource.content, props)
+  const contentBaseKey = plainTextViewerContentBaseKey(resource, props)
   const retryVersion =
     retryState.contentKey === contentBaseKey ? retryState.version : 0
   const resetKey = plainTextViewerResetKey(resource, props, retryVersion)
@@ -182,9 +183,12 @@ function plainTextViewerResetKey(
   retryVersion: number
 ): string {
   const [maxBytesKey, maxLinesKey] = plainTextViewerBoundsResetKey(props)
-  return [resource.keys.resource, retryVersion, maxBytesKey, maxLinesKey].join(
-    "\u0000"
-  )
+  return [
+    viewerResourceRenderKey(resource),
+    retryVersion,
+    maxBytesKey,
+    maxLinesKey,
+  ].join("\u0000")
 }
 
 function plainTextViewerContentResetKey(
@@ -195,11 +199,15 @@ function plainTextViewerContentResetKey(
 }
 
 function plainTextViewerContentBaseKey(
-  content: ViewerContentIdentity,
+  resource: ViewerResource,
   props: Pick<PlainTextViewerFramePublicProps, "maxBytes" | "maxLines">
 ): string {
   const [maxBytesKey, maxLinesKey] = plainTextViewerBoundsResetKey(props)
-  return [content.key, maxBytesKey, maxLinesKey].join("\u0000")
+  return [
+    viewerContentRenderKey(resource.content),
+    maxBytesKey,
+    maxLinesKey,
+  ].join("\u0000")
 }
 
 function plainTextViewerBoundsResetKey(

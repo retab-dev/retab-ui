@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
   JsonFormSourceLinkProvider,
-  SourceFieldLinkShell,
+  SourceLinkShell,
   useSourceLinkedTableCells,
 } from "@/components/json-form/source-link"
 
@@ -26,12 +26,12 @@ describe("json-form source link", () => {
       <JsonFormSourceLinkProvider
         sourceLink={{ activePath: null, onFieldHover, selectField }}
       >
-        <SourceFieldLinkShell name="customer.name">
+        <SourceLinkShell sourcePath="customer.name">
           <label>
             Customer
             <input aria-label="Customer" />
           </label>
-        </SourceFieldLinkShell>
+        </SourceLinkShell>
       </JsonFormSourceLinkProvider>
     )
 
@@ -70,7 +70,7 @@ describe("json-form source link", () => {
           <button
             type="button"
             data-table-cell=""
-            data-anchor-path="rows.0.value"
+            data-source-path="rows.0.value"
             onClick={(event) =>
               sourceTable.selectCellSource(
                 sourceTable.getCellFromTarget(event.target)
@@ -93,7 +93,7 @@ describe("json-form source link", () => {
 
     const cell = screen.getByRole("button", { name: "Value" })
     await waitFor(() =>
-      expect(cell.getAttribute("data-anchor-active")).toBe("true")
+      expect(cell.getAttribute("data-source-active")).toBe("true")
     )
 
     fireEvent.pointerMove(cell, { clientX: 12, clientY: 16 })
@@ -134,14 +134,14 @@ describe("json-form source link", () => {
           <button
             type="button"
             data-table-cell=""
-            data-anchor-path="rows.0.value"
+            data-source-path="rows.0.value"
           >
             Row 1
           </button>
           <button
             type="button"
             data-table-cell=""
-            data-anchor-path="rows.1.value"
+            data-source-path="rows.1.value"
           >
             Row 2
           </button>

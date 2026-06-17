@@ -475,7 +475,7 @@ describe("json table and DataCell architecture", () => {
       "tests/json-table-enum-accessibility-interactions.test.tsx"
     )
     expect(packageJson.scripts?.["test:json-table"]).toContain(
-      "tests/read-only-json-row-patcher.test.tsx"
+      "tests/scalar-read-only-json-row-patcher.test.tsx"
     )
     expect(packageJson.scripts?.["test:json-table"]).toContain(
       "tests/json-table-row-policy.test.tsx"
@@ -2278,9 +2278,13 @@ describe("json table and DataCell architecture", () => {
     expect(tableContent.includes("useJsonTableRenderedColumnWindow")).toBe(
       false
     )
-    expect(tableContent.includes("useReadOnlyJsonRowPatcher")).toBe(false)
+    expect(tableContent.includes("useScalarReadOnlyJsonRowPatcher")).toBe(
+      false
+    )
     expect(tableContent.includes("useFixedGridVirtualization")).toBe(false)
-    expect(rowPolicyHookContent.includes("useReadOnlyJsonRowPatcher")).toBe(
+    expect(
+      rowPolicyHookContent.includes("useScalarReadOnlyJsonRowPatcher")
+    ).toBe(
       true
     )
     expect(viewportHookContent.includes("useFixedGridVirtualization")).toBe(
@@ -2373,8 +2377,9 @@ describe("json table and DataCell architecture", () => {
 
   it("keeps read-only row patching policy explicit and diagnosed", () => {
     const architectureFile = "components/json-table/ARCHITECTURE.md"
-    const patcherFile = "components/json-table/read-only-json-row-patcher.ts"
-    const patcherTestFile = "tests/read-only-json-row-patcher.test.tsx"
+    const patcherFile =
+      "components/json-table/scalar-read-only-json-row-patcher.ts"
+    const patcherTestFile = "tests/scalar-read-only-json-row-patcher.test.tsx"
     const architectureContent = readFileSync(
       join(repoRoot, architectureFile),
       "utf8"
@@ -2388,9 +2393,9 @@ describe("json table and DataCell architecture", () => {
     for (const documentedPolicy of [
       "### Editable And Read-Only Row Policies",
       "Editable tables use the React row policy",
-      "Read-only tables use the DOM row patch policy",
+      "Read-only scalar rows use the DOM row patch policy",
       "active controls and local edit state",
-      "`read-only-row-patcher` profiler mark",
+      "`scalar-read-only-row-patcher` profiler mark",
       "fallback reason or the handled `rowsPatched` count",
     ]) {
       expect(
@@ -2400,11 +2405,11 @@ describe("json table and DataCell architecture", () => {
     }
 
     for (const diagnosticToken of [
-      "ReadOnlyJsonRowPatchDiagnostic",
+      "ScalarReadOnlyJsonRowPatchDiagnostic",
       "rowsPatched",
       "shape-mismatch",
       "unsupported-viewport",
-      'markJsonTableProfile("read-only-row-patcher"',
+      'markJsonTableProfile("scalar-read-only-row-patcher"',
     ]) {
       expect(
         patcherContent.includes(diagnosticToken),
@@ -2962,7 +2967,7 @@ describe("json table and DataCell architecture", () => {
           "structuredActiveProps",
         ],
         forbidden: [
-          "useReadOnlyJsonRowPatcher",
+          "useScalarReadOnlyJsonRowPatcher",
           "useFixedGridVirtualization",
           "setValueAtMaterializedPath",
         ],

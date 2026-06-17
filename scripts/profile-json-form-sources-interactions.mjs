@@ -181,9 +181,9 @@ async function installPageHelpers(send) {
           const profile = window.__jsonFormSourceProfile;
           for (const mutation of mutations) {
             if (mutation.type !== "attributes") continue;
-            if (mutation.attributeName !== "data-anchor-active") continue;
+            if (mutation.attributeName !== "data-source-active") continue;
             profile.activeAttributeChanges += 1;
-            if (mutation.target.getAttribute("data-anchor-active") === "true") {
+            if (mutation.target.getAttribute("data-source-active") === "true") {
               profile.activeAttributeSets += 1;
             } else {
               profile.activeAttributeClears += 1;
@@ -192,7 +192,7 @@ async function installPageHelpers(send) {
         });
         window.__jsonFormSourceObserver.observe(document.documentElement, {
           attributes: true,
-          attributeFilter: ["data-anchor-active"],
+          attributeFilter: ["data-source-active"],
           subtree: true
         });
       }
@@ -201,13 +201,13 @@ async function installPageHelpers(send) {
         window.__jsonFormSourceEventCountersInstalled = true;
         document.addEventListener("mouseover", (event) => {
           const target = event.target;
-          if (target instanceof Element && target.closest("[data-anchor-path]")) {
+          if (target instanceof Element && target.closest("[data-source-path]")) {
             window.__jsonFormSourceProfile.sourcePathMouseOvers += 1;
           }
         }, true);
         document.addEventListener("mouseout", (event) => {
           const target = event.target;
-          if (target instanceof Element && target.closest("[data-anchor-path]")) {
+          if (target instanceof Element && target.closest("[data-source-path]")) {
             window.__jsonFormSourceProfile.sourcePathMouseOuts += 1;
           }
         }, true);
@@ -241,8 +241,8 @@ async function collectScenario(send) {
       sourceProfile: window.__jsonFormSourceProfile,
       dom: {
         nodes: document.getElementsByTagName("*").length,
-        sourceCells: document.querySelectorAll("[data-anchor-path]").length,
-        activeSourceCells: document.querySelectorAll("[data-anchor-active='true']").length,
+        sourceCells: document.querySelectorAll("[data-source-path]").length,
+        activeSourceCells: document.querySelectorAll("[data-source-active='true']").length,
         rows: document.querySelectorAll('[data-slot="json-form-table-scroll"] [data-index]').length
       }
     }))()`
@@ -340,7 +340,7 @@ async function visibleSourceCellPoints(send, limit) {
     `(() => {
       const scroller = document.querySelector('[data-slot="json-form-table-scroll"]');
       if (!scroller) return [];
-      return [...scroller.querySelectorAll("[data-anchor-path]")]
+      return [...scroller.querySelectorAll("[data-source-path]")]
         .slice(0, ${limit})
         .map((cell) => {
           const rect = cell.getBoundingClientRect();
@@ -414,7 +414,7 @@ try {
 
   await waitInPage(
     send,
-    `document.querySelectorAll('[data-slot="json-form-table-scroll"] [data-anchor-path]').length > 0`,
+    `document.querySelectorAll('[data-slot="json-form-table-scroll"] [data-source-path]').length > 0`,
     30_000
   )
   await installPageHelpers(send)
@@ -442,7 +442,7 @@ try {
           scrollWidth: scroller.scrollWidth,
           clientWidth: scroller.clientWidth
         },
-        sourceCells: document.querySelectorAll("[data-anchor-path]").length,
+        sourceCells: document.querySelectorAll("[data-source-path]").length,
         totalDomNodes: document.getElementsByTagName("*").length
       };
     })()`

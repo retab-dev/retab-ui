@@ -3,6 +3,22 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
+import {
+  closeChromeTarget,
+  closeProfileTargets,
+  connectCdp,
+  evaluate,
+  sleep,
+  waitForDevToolsEndpoint,
+  waitInPage,
+} from "./json-table-profiler/browser-session.mjs"
+import {
+  buildRepeatedProfileSummary,
+  printRepeatedProfileSummary,
+  printStyleExperimentSummary,
+  traceEventSummary,
+} from "./json-table-profiler/report-summary.mjs"
+
 const assertMode = process.argv.includes("--assert")
 const styleExperimentMode =
   process.argv.includes("--style-experiments") ||
@@ -282,419 +298,6 @@ function urlWithSearchParams(url, params) {
     parsed.searchParams.set(key, value)
   }
   return parsed.toString()
-}
-
-function formatMs(value) {
-  if (value === null || value === undefined) return "n/a"
-  return `${Number.isInteger(value) ? value : value.toFixed(1)}ms`
-}
-
-function renderedComponentCount(scenario, componentName) {
-  return (
-    scenario.profiler?.renders?.byComponent?.find(
-      (entry) => entry.name === componentName
-    )?.count ?? 0
-  )
-}
-
-function printStyleExperimentSummary(report) {
-  const scenarioNames = new Set([
-    "open-enum",
-    "open-date",
-    "open-empty-portal-shell",
-    "open-select-popup-shell",
-    "open-picker-popup-shell",
-    "switch-dirty-cell",
-    "open-far-enum",
-    "open-far-date",
-    "commit-far-text",
-  ])
-  console.log("json-table style experiment summary")
-  for (const profile of report.profiles ?? []) {
-    for (const scenario of profile.scenarios ?? []) {
-      if (!scenarioNames.has(scenario.name)) continue
-      console.log(
-        [
-          `${profile.name}/${scenario.name}`,
-          `elapsed=${formatMs(scenario.elapsedMs)}`,
-          `style=${formatMs(scenario.browserCost?.style?.durationMs)}`,
-          `layout=${formatMs(scenario.browserCost?.layout?.durationMs)}`,
-          `owner=${scenario.styleAttributionHint ?? "unknown"}`,
-          report.styleClassExperiments?.length
-            ? `classExperiments=${report.styleClassExperiments.join(",")}`
-            : null,
-          `surface=header:${scenario.mountedSurface?.after?.headerCells ?? "n/a"}/body:${scenario.mountedSurface?.after?.editableCells ?? "n/a"}/popup:${scenario.mountedSurface?.after?.popupNodes ?? "n/a"}`,
-          `renders=${renderedComponentCount(scenario, "EditableJsonTableCell")}`,
-          `commits=${scenario.profiler?.reactCommits?.count ?? 0}`,
-          `rect=${scenario.rectProbe?.count ?? 0}`,
-        ].filter(Boolean).join("  ")
-      )
-    }
-  }
-}
-
-function percentile(values, percentileRank) {
-  const sortedValues = values
-    .filter((value) => Number.isFinite(value))
-    .sort((a, b) => a - b)
-  if (sortedValues.length === 0) return null
-
-  const index = Math.min(
-    sortedValues.length - 1,
-    Math.max(0, Math.ceil(percentileRank * sortedValues.length) - 1)
-  )
-  return sortedValues[index]
-}
-
-function median(values) {
-  const sortedValues = values
-    .filter((value) => Number.isFinite(value))
-    .sort((a, b) => a - b)
-  if (sortedValues.length === 0) return null
-
-  const middle = Math.floor(sortedValues.length / 2)
-  if (sortedValues.length % 2 === 1) return sortedValues[middle]
-  return (sortedValues[middle - 1] + sortedValues[middle]) / 2
-}
-
-function worst(values) {
-  const finiteValues = values.filter((value) => Number.isFinite(value))
-  if (finiteValues.length === 0) return null
-  return Math.max(...finiteValues)
-}
-
-function repeatedMetricSummary(values) {
-  return {
-    median: median(values),
-    p90: percentile(values, 0.9),
-    worst: worst(values),
-  }
-}
-
-function traceEventDurationMs(event) {
-  return Number.isFinite(event.dur) ? event.dur / 1000 : 0
-}
-
-function traceEventGroupSummary(events, predicate, limit = 12) {
-  const groups = new Map()
-  for (const event of events) {
-    if (event.ph !== "X" || !predicate(event)) continue
-    const durationMs = traceEventDurationMs(event)
-    const group = groups.get(event.name) ?? {
-      name: event.name,
-      count: 0,
-      durationMs: 0,
-    }
-    group.count += 1
-    group.durationMs += durationMs
-    groups.set(event.name, group)
-  }
-
-  return [...groups.values()]
-    .sort((a, b) => b.durationMs - a.durationMs)
-    .slice(0, limit)
-    .map((group) => ({
-      ...group,
-      durationMs: Number(group.durationMs.toFixed(3)),
-    }))
-}
-
-function isTraceStyleEvent(event) {
-  return /recalculate|style|selector|invalidation/i.test(event.name)
-}
-
-function isTraceLayoutEvent(event) {
-  return /layout|updateLayoutTree/i.test(event.name)
-}
-
-function isTraceScriptEvent(event) {
-  return /function|evaluate|event|timer|script|v8/i.test(event.name)
-}
-
-function traceDurationMs(events, predicate) {
-  return Number(
-    events
-      .filter((event) => event.ph === "X" && predicate(event))
-      .reduce((total, event) => total + traceEventDurationMs(event), 0)
-      .toFixed(3)
-  )
-}
-
-function traceEventSummary(events) {
-  const timedEvents = events.filter((event) => event.ph === "X")
-  const invalidationEvents = events.filter((event) =>
-    /invalidat/i.test(event.name)
-  )
-
-  return {
-    eventCount: events.length,
-    timedEventCount: timedEvents.length,
-    totalTimedDurationMs: traceDurationMs(timedEvents, () => true),
-    styleDurationMs: traceDurationMs(timedEvents, isTraceStyleEvent),
-    layoutDurationMs: traceDurationMs(timedEvents, isTraceLayoutEvent),
-    scriptDurationMs: traceDurationMs(timedEvents, isTraceScriptEvent),
-    topEvents: traceEventGroupSummary(timedEvents, () => true),
-    topStyleEvents: traceEventGroupSummary(timedEvents, isTraceStyleEvent),
-    topLayoutEvents: traceEventGroupSummary(timedEvents, isTraceLayoutEvent),
-    invalidationEvents: traceEventGroupSummary(
-      invalidationEvents,
-      () => true,
-      16
-    ),
-  }
-}
-
-function scenarioRepeatedMetrics(scenario) {
-  return {
-    elapsedMs: scenario.elapsedMs,
-    styleMs: scenario.browserCost?.style?.durationMs,
-    layoutMs: scenario.browserCost?.layout?.durationMs,
-    scriptMs: scenario.browserCost?.scriptDurationMs,
-    reactCommits: scenario.profiler?.reactCommits?.count,
-    editableCellRenders: renderedComponentCount(
-      scenario,
-      "EditableJsonTableCell"
-    ),
-    rectReads: scenario.rectProbe?.count,
-    documentPatches: scenario.profiler?.markCounts?.["document-patch-start"],
-    domNodeDelta: scenario.metricsDelta?.Nodes,
-    mountedEditableCells: scenario.mountedSurface?.after?.editableCells,
-    mountedHeaderCells: scenario.mountedSurface?.after?.headerCells,
-    mountedPopupNodes: scenario.mountedSurface?.after?.popupNodes,
-    readOnlyRowPatchFallbacks:
-      scenario.profiler?.readOnlyRowPatcher?.fallbackCount,
-    readOnlyRowsPatched: scenario.profiler?.readOnlyRowPatcher?.rowsPatched,
-    traceStyleMs: scenario.trace?.styleDurationMs,
-    traceLayoutMs: scenario.trace?.layoutDurationMs,
-    traceScriptMs: scenario.trace?.scriptDurationMs,
-  }
-}
-
-function buildRepeatedProfileSummary(runs) {
-  const scenarioGroups = new Map()
-
-  for (const run of runs) {
-    for (const profile of run.profiles ?? []) {
-      for (const scenario of profile.scenarios ?? []) {
-        const key = `${profile.name}/${scenario.name}`
-        const group = scenarioGroups.get(key) ?? {
-          profile: profile.name,
-          scenario: scenario.name,
-          runs: 0,
-          metrics: {},
-        }
-        const metrics = scenarioRepeatedMetrics(scenario)
-        for (const [metricName, value] of Object.entries(metrics)) {
-          group.metrics[metricName] ??= []
-          group.metrics[metricName].push(value)
-        }
-        group.runs += 1
-        scenarioGroups.set(key, group)
-      }
-    }
-  }
-
-  return [...scenarioGroups.values()].map((group) => ({
-    profile: group.profile,
-    scenario: group.scenario,
-    runs: group.runs,
-    metrics: Object.fromEntries(
-      Object.entries(group.metrics).map(([metricName, values]) => [
-        metricName,
-        repeatedMetricSummary(values),
-      ])
-    ),
-  }))
-}
-
-function printRepeatedProfileSummary(report) {
-  if (!report.repeatedScenarios?.length) return
-
-  console.log("json-table repeated profile summary")
-  for (const scenario of report.repeatedScenarios) {
-    const elapsed = scenario.metrics.elapsedMs
-    const style = scenario.metrics.styleMs
-    const layout = scenario.metrics.layoutMs
-    const traceStyle = scenario.metrics.traceStyleMs
-    const traceLayout = scenario.metrics.traceLayoutMs
-    console.log(
-      [
-        `${scenario.profile}/${scenario.scenario}`,
-        `runs=${scenario.runs}`,
-        `elapsed median=${formatMs(elapsed?.median)} p90=${formatMs(
-          elapsed?.p90
-        )} worst=${formatMs(elapsed?.worst)}`,
-        `style median=${formatMs(style?.median)} p90=${formatMs(
-          style?.p90
-        )} worst=${formatMs(style?.worst)}`,
-        `layout median=${formatMs(layout?.median)} p90=${formatMs(
-          layout?.p90
-        )} worst=${formatMs(layout?.worst)}`,
-        traceStyle
-          ? `traceStyle median=${formatMs(
-              traceStyle.median
-            )} p90=${formatMs(traceStyle.p90)} worst=${formatMs(
-              traceStyle.worst
-            )}`
-          : null,
-        traceLayout
-          ? `traceLayout median=${formatMs(
-              traceLayout.median
-            )} p90=${formatMs(traceLayout.p90)} worst=${formatMs(
-              traceLayout.worst
-            )}`
-          : null,
-      ]
-        .filter(Boolean)
-        .join("  ")
-    )
-  }
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-async function fetchJson(url, options) {
-  const response = await fetch(url, options)
-  if (!response.ok) throw new Error(`${url}: ${response.status}`)
-  return response.json()
-}
-
-async function waitForDevToolsEndpoint(endpoint) {
-  const startedAt = Date.now()
-  while (Date.now() - startedAt < 15_000) {
-    try {
-      return await fetchJson(`${endpoint}/json/version`)
-    } catch {
-      await sleep(100)
-    }
-  }
-  throw new Error(`Chrome DevTools endpoint did not start at ${endpoint}`)
-}
-
-async function closeChromeTarget(chromeEndpoint, targetId) {
-  if (!targetId) return
-
-  try {
-    await fetch(`${chromeEndpoint}/json/close/${encodeURIComponent(targetId)}`)
-  } catch {}
-}
-
-function isProfileTarget(target) {
-  if (!target?.url) return false
-
-  try {
-    const targetUrl = new URL(target.url)
-    const configuredUrl = new URL(profileUrl)
-    return targetUrl.pathname === configuredUrl.pathname
-  } catch {
-    return false
-  }
-}
-
-async function closeProfileTargets(chromeEndpoint) {
-  let targets = []
-  try {
-    targets = await fetchJson(`${chromeEndpoint}/json/list`)
-  } catch {
-    return
-  }
-
-  for (const target of targets) {
-    if (isProfileTarget(target))
-      await closeChromeTarget(chromeEndpoint, target.id)
-  }
-}
-
-function connectCdp(webSocketUrl) {
-  const socket = new WebSocket(webSocketUrl)
-  let nextId = 0
-  const pending = new Map()
-  const listeners = new Map()
-
-  function emit(method, params) {
-    for (const listener of listeners.get(method) ?? []) listener(params)
-  }
-
-  socket.addEventListener("message", (message) => {
-    const payload = JSON.parse(message.data)
-    if (!payload.id) {
-      if (payload.method) emit(payload.method, payload.params ?? {})
-      return
-    }
-    if (!pending.has(payload.id)) return
-
-    const request = pending.get(payload.id)
-    pending.delete(payload.id)
-    if (payload.error) request.reject(new Error(JSON.stringify(payload.error)))
-    else request.resolve(payload.result)
-  })
-
-  return new Promise((resolve, reject) => {
-    socket.addEventListener("open", () => {
-      resolve({
-        socket,
-        send(method, params = {}) {
-          const id = ++nextId
-          socket.send(JSON.stringify({ id, method, params }))
-          return new Promise((resolve, reject) => {
-            pending.set(id, { resolve, reject })
-          })
-        },
-        on(method, listener) {
-          const methodListeners = listeners.get(method) ?? new Set()
-          methodListeners.add(listener)
-          listeners.set(method, methodListeners)
-          return () => methodListeners.delete(listener)
-        },
-      })
-    })
-    socket.addEventListener("error", reject)
-  })
-}
-
-async function evaluate(send, expression) {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
-    try {
-      const result = await send("Runtime.evaluate", {
-        expression,
-        awaitPromise: true,
-        returnByValue: true,
-      })
-      if (result.exceptionDetails) {
-        throw new Error(JSON.stringify(result.exceptionDetails))
-      }
-      return result.result.value
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      const isTransientContextError =
-        message.includes("Cannot find default execution context") ||
-        message.includes("Inspected target navigated") ||
-        message.includes("Execution context was destroyed")
-      if (!isTransientContextError || attempt === 49) throw error
-      await sleep(100)
-    }
-  }
-
-  throw new Error("Runtime.evaluate did not complete")
-}
-
-async function waitInPage(send, expression, timeoutMs = 5_000) {
-  return evaluate(
-    send,
-    `(async () => {
-      const startedAt = performance.now();
-      while (performance.now() - startedAt < ${timeoutMs}) {
-        if (${expression}) {
-          await new Promise((resolve) => setTimeout(resolve, 32));
-          return { ok: true, elapsedMs: performance.now() - startedAt };
-        }
-        await new Promise((resolve) => setTimeout(resolve, 16));
-      }
-      return { ok: false, elapsedMs: performance.now() - startedAt };
-    })()`
-  )
 }
 
 async function startScenarioTrace(page) {
@@ -1661,7 +1264,7 @@ async function summarizeScenario(
       };
       const reactCommits = profiler.events.filter((event) => event.type === "react-commit");
       const marks = profiler.events.filter((event) => event.type === "mark");
-      const readOnlyRowPatcherMarks = marks.filter((event) => event.name === "read-only-row-patcher");
+      const readOnlyRowPatcherMarks = marks.filter((event) => event.name === "scalar-read-only-row-patcher");
       const readOnlyRowPatchReasons = {};
       let readOnlyRowsPatched = 0;
       for (const event of readOnlyRowPatcherMarks) {
@@ -1845,7 +1448,7 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
         `(() => {
             const scroller = document.querySelector('[data-slot="json-table-scroll"]');
             const patcherMarks = (window.__jsonTableProfiler?.events ?? [])
-              .filter((event) => event.type === "mark" && event.name === "read-only-row-patcher");
+              .filter((event) => event.type === "mark" && event.name === "scalar-read-only-row-patcher");
             return scroller instanceof HTMLElement &&
               scroller.scrollTop !== window.__jsonTableScrollBefore &&
               patcherMarks.length > 0;
@@ -2806,7 +2409,7 @@ async function main() {
 
   try {
     await waitForDevToolsEndpoint(chromeEndpoint)
-    await closeProfileTargets(chromeEndpoint)
+    await closeProfileTargets(chromeEndpoint, profileUrl)
     const runs = []
     let profiles = []
 

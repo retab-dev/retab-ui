@@ -11,19 +11,19 @@ import type { VisibleColumn } from "@/components/json-table/json-table-cell-type
 import { markJsonTableProfile } from "@/components/json-table/json-table-profiler"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 
-export interface ReadOnlyJsonRowPatchState {
+export interface ScalarReadOnlyJsonRowPatchState {
   isEnabled: boolean
   projectedRows: ProjectedRow[]
   rowHeightPx: number
   visibleColumns: VisibleColumn[]
 }
 
-export interface ReadOnlyJsonRowPatcher {
+export interface ScalarReadOnlyJsonRowPatcher {
   patch: (viewport: FixedGridViewport) => FixedGridJumpViewportResult
   invalidate: () => void
 }
 
-export type ReadOnlyJsonRowPatchDiagnostic =
+export type ScalarReadOnlyJsonRowPatchDiagnostic =
   | {
       reason: "handled"
       rowsPatched: number
@@ -64,15 +64,15 @@ const PATCH_ROW_OVERSCAN = 0
 const MINIMUM_PATCH_VISIBLE_ROWS = 1
 const TEXT_NODE = 3
 
-export function useReadOnlyJsonRowPatcher({
+export function useScalarReadOnlyJsonRowPatcher({
   rowWindowRef,
   getState,
   onDiagnostic,
 }: {
   rowWindowRef: React.RefObject<HTMLElement | null>
-  getState: () => ReadOnlyJsonRowPatchState
-  onDiagnostic?: (diagnostic: ReadOnlyJsonRowPatchDiagnostic) => void
-}): ReadOnlyJsonRowPatcher {
+  getState: () => ScalarReadOnlyJsonRowPatchState
+  onDiagnostic?: (diagnostic: ScalarReadOnlyJsonRowPatchDiagnostic) => void
+}): ScalarReadOnlyJsonRowPatcher {
   const rowHandleCacheRef = React.useRef<JsonRowHandleCache | null>(null)
 
   const invalidate = React.useCallback(() => {
@@ -161,7 +161,7 @@ export function useReadOnlyJsonRowPatcher({
 function patchRows(
   rowHandles: JsonRowHandle[],
   virtualRows: ReturnType<typeof fixedVirtualItems>,
-  state: ReadOnlyJsonRowPatchState
+  state: ScalarReadOnlyJsonRowPatchState
 ) {
   let rowsPatched = 0
   for (let handleIndex = 0; handleIndex < rowHandles.length; handleIndex++) {
@@ -228,7 +228,7 @@ function emptyDisplayText(kind: string) {
 
 function canPatchRows(
   viewport: FixedGridViewport,
-  state: ReadOnlyJsonRowPatchState
+  state: ScalarReadOnlyJsonRowPatchState
 ) {
   return (
     state.isEnabled &&
@@ -240,8 +240,8 @@ function canPatchRows(
 
 function patchDisabledReason(
   viewport: FixedGridViewport,
-  state: ReadOnlyJsonRowPatchState
-): ReadOnlyJsonRowPatchDiagnostic["reason"] {
+  state: ScalarReadOnlyJsonRowPatchState
+): ScalarReadOnlyJsonRowPatchDiagnostic["reason"] {
   if (!state.isEnabled || state.rowHeightPx <= 0) return "disabled"
   if (viewport.scrollLeft !== 0 || viewport.isJumpingColumns) {
     return "unsupported-viewport"
@@ -251,18 +251,18 @@ function patchDisabledReason(
 
 function recordPatchDiagnostic(
   onDiagnostic:
-    | ((diagnostic: ReadOnlyJsonRowPatchDiagnostic) => void)
+    | ((diagnostic: ScalarReadOnlyJsonRowPatchDiagnostic) => void)
     | undefined,
-  diagnostic: ReadOnlyJsonRowPatchDiagnostic
+  diagnostic: ScalarReadOnlyJsonRowPatchDiagnostic
 ) {
   onDiagnostic?.(diagnostic)
-  markJsonTableProfile("read-only-row-patcher", diagnostic)
+  markJsonTableProfile("scalar-read-only-row-patcher", diagnostic)
 }
 
 function canPatchRowHandles(
   rowHandles: JsonRowHandle[],
   virtualRows: ReturnType<typeof fixedVirtualItems>,
-  state: ReadOnlyJsonRowPatchState
+  state: ScalarReadOnlyJsonRowPatchState
 ) {
   for (let handleIndex = 0; handleIndex < virtualRows.length; handleIndex++) {
     const rowHandle = rowHandles[handleIndex]

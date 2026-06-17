@@ -202,6 +202,23 @@ function defaultFileName(source: ViewerSource) {
 
 function defaultIdentityKey(source: ViewerSource) {
   if (source.kind === "url") return `url:${source.url}`
-  if (source.kind === "text") return `text:${source.text}`
+  if (source.kind === "text") return textPayloadIdentityKey(source.text)
   return source.identityKey
+}
+
+export function textPayloadIdentityKey(text: string) {
+  return `text:${text}`
+}
+
+export function textPayloadKey(text: string) {
+  return `text:${text.length}:${hashString(text)}`
+}
+
+function hashString(text: string) {
+  let hash = 0x811c9dc5
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return (hash >>> 0).toString(36)
 }

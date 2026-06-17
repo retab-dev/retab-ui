@@ -21,10 +21,15 @@ import { FileViewerDocument } from "./file-viewer-document"
 import {
   FileViewerProvider,
   useFileViewerContext,
+  useFileViewerControlsState,
 } from "./file-viewer-internal"
 import { ViewerControls } from "./viewer-controls"
 
-export { type FileCategory } from "./file-viewer-core"
+export {
+  detectCategory,
+  type FileCategory,
+  type ViewerSource,
+} from "./file-viewer-core"
 export {
   FileViewerDocument,
   type FileViewerDocumentProps,
@@ -63,7 +68,13 @@ export type FileViewerMetaProps = React.ComponentProps<"span">
 
 export type FileViewerControlsProps = Omit<
   React.ComponentProps<typeof ViewerControls>,
-  "downloads" | "position" | "rotate" | "subtitle" | "title" | "zoom"
+  | "downloads"
+  | "loading"
+  | "position"
+  | "rotate"
+  | "subtitle"
+  | "title"
+  | "zoom"
 >
 
 export type FileViewerBodyProps = React.ComponentProps<typeof ViewerBody>
@@ -140,14 +151,13 @@ export function FileViewerControls({
   extra,
   ...props
 }: FileViewerControlsProps) {
-  const { resource, controlsState } = useFileViewerContext()
-  const registeredDownloads = controlsState?.downloads
-  const hasRegisteredDownloads = registeredDownloads !== undefined
-  const downloads =
-    hasRegisteredDownloads ? registeredDownloads : [resource.originalDownload]
+  const { resource } = useFileViewerContext()
+  const controlsState = useFileViewerControlsState()
+  const downloads = controlsState?.downloads ?? [resource.originalDownload]
 
   return (
     <ViewerControls
+      {...props}
       data-slot="file-viewer-controls"
       className={cn(
         "ml-0 h-auto min-w-0 basis-full border-b-0 bg-transparent px-0 sm:ml-auto sm:basis-auto",
@@ -159,7 +169,6 @@ export function FileViewerControls({
       position={controlsState?.position ?? null}
       rotate={controlsState?.rotate ?? null}
       zoom={controlsState?.zoom ?? null}
-      {...props}
     />
   )
 }

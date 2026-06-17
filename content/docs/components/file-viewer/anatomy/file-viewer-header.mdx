@@ -8,6 +8,13 @@ component: true
 file-type agnostic: PDF, image, spreadsheet, text, and email renderers all
 register their operational controls into the same header surface.
 
+<ComponentPreview name="file-viewer-header-demo" />
+
+## Usage
+
+Compose the header explicitly, with the sidebar trigger first when the body has
+a sidebar:
+
 ```tsx
 <FileViewerHeader>
   <FileViewerSidebarTrigger />
@@ -17,5 +24,32 @@ register their operational controls into the same header surface.
 </FileViewerHeader>
 ```
 
-Use the header for file identity and controls. Do not put domain workflow state
-there unless the file viewer itself owns it.
+Rendered without children, `FileViewerHeader` falls back to the default
+`FileViewerTitle` / `FileViewerMeta` / `FileViewerControls` composition:
+
+```tsx
+<FileViewerHeader />
+```
+
+## Behavior
+
+- Renders a `data-slot="file-viewer-header"` row with a flex layout that wraps on
+  narrow widths and lines up on wider ones.
+- With no children, it renders the default title, metadata, and controls — so
+  the common case needs no inner markup.
+- It owns layout only. Renderer-specific controls register into file-viewer
+  state and surface through `FileViewerControls`; the header never takes
+  PDF- or spreadsheet-specific props.
+- Use it for file identity and controls. Keep domain workflow state out of the
+  header unless the file viewer itself owns it.
+
+## API Reference
+
+| Prop       | Type                                       | Description                                                |
+| ---------- | ------------------------------------------ | ---------------------------------------------------------- |
+| `children` | `React.ReactNode`                          | Header parts. Omit to use the default title/meta/controls. |
+| `...props` | `React.ComponentProps<typeof ViewerHeader>`| Standard header props; `className` merges with the layout. |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer.tsx" />

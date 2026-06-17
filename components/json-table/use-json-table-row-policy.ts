@@ -6,9 +6,9 @@ import type { FixedGridRowScrollStrategy } from "@/components/ui/fixed-grid-virt
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import {
-  useReadOnlyJsonRowPatcher,
-  type ReadOnlyJsonRowPatchState,
-} from "@/components/json-table/read-only-json-row-patcher"
+  useScalarReadOnlyJsonRowPatcher,
+  type ScalarReadOnlyJsonRowPatchState,
+} from "@/components/json-table/scalar-read-only-json-row-patcher"
 
 export type JsonTableRowPolicy = {
   invalidateRows: () => void
@@ -28,8 +28,8 @@ export function useJsonTableRowPolicy({
   rowWindowRef: React.RefObject<HTMLElement | null>
   schemaVisibleColumns: VisibleColumn[]
 }): JsonTableRowPolicy {
-  const getReadOnlyRowPatchState =
-    React.useCallback((): ReadOnlyJsonRowPatchState => {
+  const getScalarReadOnlyRowPatchState =
+    React.useCallback((): ScalarReadOnlyJsonRowPatchState => {
       return {
         isEnabled: !isJsonEditable,
         projectedRows,
@@ -38,23 +38,23 @@ export function useJsonTableRowPolicy({
       }
     }, [isJsonEditable, projectedRows, rowHeightPx, schemaVisibleColumns])
 
-  const readOnlyRowPatcher = useReadOnlyJsonRowPatcher({
+  const scalarReadOnlyRowPatcher = useScalarReadOnlyJsonRowPatcher({
     rowWindowRef,
-    getState: getReadOnlyRowPatchState,
+    getState: getScalarReadOnlyRowPatchState,
   })
   const rowScrollStrategy = React.useMemo(
     () =>
       isJsonEditable
         ? undefined
-        : { handleViewport: readOnlyRowPatcher.patch },
-    [isJsonEditable, readOnlyRowPatcher.patch]
+        : { handleViewport: scalarReadOnlyRowPatcher.patch },
+    [isJsonEditable, scalarReadOnlyRowPatcher.patch]
   )
 
   return React.useMemo(
     () => ({
-      invalidateRows: readOnlyRowPatcher.invalidate,
+      invalidateRows: scalarReadOnlyRowPatcher.invalidate,
       rowScrollStrategy,
     }),
-    [readOnlyRowPatcher.invalidate, rowScrollStrategy]
+    [scalarReadOnlyRowPatcher.invalidate, rowScrollStrategy]
   )
 }

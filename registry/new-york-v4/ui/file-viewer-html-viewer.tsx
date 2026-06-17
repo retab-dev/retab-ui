@@ -3,7 +3,10 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
-import type { ViewerResource } from "@/lib/viewer-resource"
+import {
+  viewerContentRenderKey,
+  type ViewerResource,
+} from "@/lib/viewer-resource"
 
 import { ViewerFallback } from "./file-viewer-fallback"
 import { loadTextResource } from "./file-viewer-text-resource"
@@ -32,7 +35,7 @@ export function HtmlFileContent({
   if (resource.content.payload.kind === "text") {
     return (
       <HtmlFileContentFrame
-        key={resource.content.key}
+        key={viewerContentRenderKey(resource.content)}
         resource={resource}
         html={resource.content.payload.text}
         className={className}

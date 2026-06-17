@@ -24,5 +24,24 @@ component: true
 </FileViewer>
 ```
 
-The trigger targets the nearest `FileViewer` scope. Nested file viewers get
-their own sidebar state.
+## Behavior
+
+- Renders a `data-slot="file-viewer-sidebar-trigger"` button that flips the
+  open/collapsed state owned by the surrounding `FileViewer`.
+- Targets the **nearest** `FileViewer` scope — nested file viewers each keep
+  their own sidebar state.
+- It is a thin wrapper over the button primitive, so it accepts the usual
+  `variant`, `size`, `className`, and `onClick` props; the toggle runs before
+  any `onClick` you pass.
+- Only render it when the body has a `FileViewerSidebar` — there is nothing to
+  toggle otherwise.
+
+## API Reference
+
+| Prop       | Type          | Description                                                       |
+| ---------- | ------------- | ----------------------------------------------------------------- |
+| `...props` | `ButtonProps` | Button props (`variant`, `size`, `className`, `onClick`, …). The trigger toggles the nearest sidebar in addition to any handler you pass. |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer.tsx" />

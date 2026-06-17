@@ -9,9 +9,9 @@ import type { VisibleColumn } from "@/components/json-table/json-table-cell-type
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import {
-  useReadOnlyJsonRowPatcher,
-  type ReadOnlyJsonRowPatchState,
-} from "@/components/json-table/read-only-json-row-patcher"
+  useScalarReadOnlyJsonRowPatcher,
+  type ScalarReadOnlyJsonRowPatchState,
+} from "@/components/json-table/scalar-read-only-json-row-patcher"
 
 afterEach(() => {
   cleanup()
@@ -26,7 +26,7 @@ const schema: JSONSchema7 = {
   },
 }
 
-describe("read-only JSON row patcher", () => {
+describe("scalar read-only JSON row patcher", () => {
   it("patches read-only row positions and cell text", () => {
     const rowWindow = buildRowWindow([
       { rowIndex: 0, cells: ["row 0", "1"] },
@@ -35,7 +35,7 @@ describe("read-only JSON row patcher", () => {
     ])
     const state = createPatchState()
     const { result } = renderHook(() =>
-      useReadOnlyJsonRowPatcher({
+      useScalarReadOnlyJsonRowPatcher({
         rowWindowRef: { current: rowWindow },
         getState: () => state,
       })
@@ -64,7 +64,7 @@ describe("read-only JSON row patcher", () => {
     const onDiagnostic = vi.fn()
     const state = createPatchState()
     const { result } = renderHook(() =>
-      useReadOnlyJsonRowPatcher({
+      useScalarReadOnlyJsonRowPatcher({
         rowWindowRef: { current: rowWindow },
         getState: () => state,
         onDiagnostic,
@@ -93,7 +93,7 @@ describe("read-only JSON row patcher", () => {
       ],
     })
     const { result } = renderHook(() =>
-      useReadOnlyJsonRowPatcher({
+      useScalarReadOnlyJsonRowPatcher({
         rowWindowRef: { current: rowWindow },
         getState: () => state,
       })
@@ -127,7 +127,7 @@ describe("read-only JSON row patcher", () => {
     const onDiagnostic = vi.fn()
     const state = createPatchState()
     const { result } = renderHook(() =>
-      useReadOnlyJsonRowPatcher({
+      useScalarReadOnlyJsonRowPatcher({
         rowWindowRef: { current: rowWindow },
         getState: () => state,
         onDiagnostic,
@@ -151,7 +151,7 @@ describe("read-only JSON row patcher", () => {
     const onDiagnostic = vi.fn()
     const state = createPatchState()
     const { result } = renderHook(() =>
-      useReadOnlyJsonRowPatcher({
+      useScalarReadOnlyJsonRowPatcher({
         rowWindowRef: { current: rowWindow },
         getState: () => state,
         onDiagnostic,
@@ -174,8 +174,8 @@ describe("read-only JSON row patcher", () => {
 })
 
 function createPatchState(
-  overrides: Partial<ReadOnlyJsonRowPatchState> = {}
-): ReadOnlyJsonRowPatchState {
+  overrides: Partial<ScalarReadOnlyJsonRowPatchState> = {}
+): ScalarReadOnlyJsonRowPatchState {
   return {
     isEnabled: true,
     projectedRows: Array.from({ length: 10 }, (_, rowIndex) =>

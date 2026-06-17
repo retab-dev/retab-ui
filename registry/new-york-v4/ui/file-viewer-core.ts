@@ -3,6 +3,7 @@ import {
   extensionOf,
   extractName,
   resolveViewerDescriptor,
+  textPayloadKey,
   type FileCategory,
   type ViewerDescriptor,
   type ViewerSource,
@@ -32,11 +33,21 @@ export function resolveFileDescriptor({
 
 export function descriptorResetKey(descriptor: FileDescriptor): string {
   return [
-    descriptor.identityKey,
+    descriptorIdentityResetKey(descriptor),
     descriptor.displayName,
     descriptor.mimeType ?? "",
     descriptor.category,
   ].join("\u0000")
+}
+
+function descriptorIdentityResetKey(descriptor: FileDescriptor): string {
+  if (
+    descriptor.source.kind === "text" &&
+    descriptor.source.identityKey == null
+  ) {
+    return textPayloadKey(descriptor.source.text)
+  }
+  return descriptor.identityKey
 }
 
 export function isProseTextDescriptor(descriptor: FileDescriptor): boolean {

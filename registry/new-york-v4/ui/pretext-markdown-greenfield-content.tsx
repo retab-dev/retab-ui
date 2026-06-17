@@ -111,7 +111,6 @@ export function PretextMarkdownGreenfieldContent({
   const downloadAction = download ? resource.originalDownload : null
   const [downloadError, setDownloadError] = React.useState("")
   const [fontScale, setFontScale] = React.useState(1)
-  const [fontReadyEpoch, setFontReadyEpoch] = React.useState(0)
   const [measuredHeights, setMeasuredHeights] = React.useState(
     () => new Map<string, number>()
   )
@@ -129,7 +128,6 @@ export function PretextMarkdownGreenfieldContent({
   const prevFrameChunksRef = React.useRef<
     readonly PretextMarkdownGreenfieldChunkFrame[] | null
   >(null)
-  const captureAnchorRef = React.useRef<() => void>(() => {})
   const pendingModeSourceLineRef = React.useRef<number | null>(null)
   const viewportHeight = viewportSize.height || DEFAULT_VIEWPORT_HEIGHT
   const viewportWidth = viewportSize.width || DEFAULT_VIEWPORT_WIDTH
@@ -150,15 +148,16 @@ export function PretextMarkdownGreenfieldContent({
     }),
     [documentMeasurementId, measuredHeights]
   )
-  const frame = React.useMemo(() => {
-    void fontReadyEpoch
-    return layoutPretextMarkdownGreenfieldDocument({
-      contentWidth,
-      document,
-      fontScale,
-      measuredHeights: measuredHeightLookup,
-    })
-  }, [contentWidth, document, fontReadyEpoch, fontScale, measuredHeightLookup])
+  const frame = React.useMemo(
+    () =>
+      layoutPretextMarkdownGreenfieldDocument({
+        contentWidth,
+        document,
+        fontScale,
+        measuredHeights: measuredHeightLookup,
+      }),
+    [contentWidth, document, fontScale, measuredHeightLookup]
+  )
   const highlightRange = React.useMemo(
     () => normalizeTextLineRange(highlight, document.lineCount),
     [document.lineCount, highlight]
@@ -194,19 +193,6 @@ export function PretextMarkdownGreenfieldContent({
       scrollTop: liveScrollTop,
     })
   }, [frame.chunks, scrollTop])
-  const invalidateMeasuredLayout = React.useCallback(() => {
-    // Font faces load incrementally (body, mono, emoji, ...), firing
-    // `loadingdone` repeatedly. Do NOT clear measured heights here: wiping every
-    // measurement re-inflates the whole document to estimates and repositions
-    // scroll on each font load, which reads as the viewport bouncing while you
-    // scroll. Mounted chunks whose box actually changes on a font swap are
-    // re-measured by their own ResizeObserver, so a marker bump is enough.
-    setFontReadyEpoch((epoch) => epoch + 1)
-  }, [])
-
-  React.useLayoutEffect(() => {
-    captureAnchorRef.current = captureAnchor
-  }, [captureAnchor])
 
   React.useLayoutEffect(() => {
     setMeasuredHeights(new Map())
@@ -238,24 +224,6 @@ export function PretextMarkdownGreenfieldContent({
     observer?.observe(viewport)
     return () => observer?.disconnect()
   }, [])
-
-  React.useEffect(() => {
-    if (typeof window === "undefined") return
-    const fonts = window.document.fonts
-    if (!fonts?.ready) return
-
-    let cancelled = false
-    const handleFontsReady = () => {
-      if (cancelled) return
-      invalidateMeasuredLayout()
-    }
-    Promise.resolve(fonts.ready).then(handleFontsReady)
-    fonts.addEventListener?.("loadingdone", handleFontsReady)
-    return () => {
-      cancelled = true
-      fonts.removeEventListener?.("loadingdone", handleFontsReady)
-    }
-  }, [invalidateMeasuredLayout, text])
 
   React.useLayoutEffect(() => {
     const nextWidth = Math.max(1, viewportWidth - VIEWER_HORIZONTAL_PADDING * 2)
@@ -374,17 +342,22 @@ export function PretextMarkdownGreenfieldContent({
     [document.lineCount]
   )
 
-  React.useEffect(() => {
+  // Scrolling is an imperative DOM mutation that must run before paint to avoid
+  // a visible jump, so these reactions to a changed target line/range live in
+  // layout effects, not useEffect.
+  React.useLayoutEffect(() => {
     if (!highlightRange) return
     scrollToLineRangeRef.current(highlightRange)
   }, [highlightRange])
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (!activeSearchRange) return
     scrollToLineRangeRef.current(activeSearchRange, { behavior: "auto" })
   }, [activeSearchRange])
 
-  React.useEffect(() => {
+  // Subscribes to the browser's hash/history (a non-React external source) and
+  // scrolls the matching fragment into view before paint.
+  React.useLayoutEffect(() => {
     const scrollToCurrentHash = () => {
       const hash = window.location.hash
       if (!hash) return
@@ -537,7 +510,6 @@ export function PretextMarkdownGreenfieldContent({
         {viewMode === "source" ? (
           <div
             className="relative min-w-max bg-background"
-            data-pretext-font-ready-epoch={fontReadyEpoch}
             data-slot="pretext-markdown-source-scroll-canvas"
             style={{
               height:
@@ -558,7 +530,6 @@ export function PretextMarkdownGreenfieldContent({
         ) : (
           <div
             className="relative min-w-0"
-            data-pretext-font-ready-epoch={fontReadyEpoch}
             data-projection="unified-hast-pretext-markdown"
             data-slot="pretext-markdown-virtual-canvas"
             style={{
@@ -1053,9 +1024,12 @@ function useMarkdownSearch({
     [activeSearchMatch, lineCount]
   )
 
-  React.useEffect(() => {
+  // Changing the query resets the active match in the same event that sets it,
+  // rather than reacting to the change in an effect.
+  const updateSearchQuery = React.useCallback((next: string) => {
+    setSearchQuery(next)
     setActiveIndex(0)
-  }, [searchQuery])
+  }, [])
 
   const goToSearchMatch = React.useCallback(
     (direction: 1 | -1) => {
@@ -1080,7 +1054,7 @@ function useMarkdownSearch({
     goToSearchMatch,
     searchMatches,
     searchQuery,
-    setSearchQuery,
+    setSearchQuery: updateSearchQuery,
   }
 }
 

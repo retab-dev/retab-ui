@@ -1,12 +1,30 @@
 # JSON Form Platonic Ideal Blueprint
 
-Last audited: 2026-06-16
+Last audited: 2026-06-17
 
-## Objective
+## Verdict
 
-Define the final shape of `JsonForm` as a schema-driven editable form component.
+`JsonForm` is strong. It is not yet perfect.
 
-The standard is perfection:
+The component has already crossed the important architectural threshold:
+schema normalization, path encoding, source linking, object rendering, array
+rendering, disclosure, virtual lists, and table support no longer all live in
+one file.
+
+The remaining work is not a rewrite. It is a convergence pass.
+
+```txt
+Keep every behavior.
+Delete duplicate owners.
+Finish the table extraction.
+Split scalar controls by family.
+Make source-link scheduling mechanically obvious.
+Prove speed with profiles, not taste.
+```
+
+## Standard
+
+The component is done only when it satisfies this standard:
 
 ```txt
 Simplicity.
@@ -19,608 +37,475 @@ Perfectly consistent names.
 Flaubertian precision.
 ```
 
-The current implementation is strong, but it is not the platonic ideal. It has
-serious behavior coverage, lazy mounting, dense table mode, virtualization, and
-source linking. The remaining problems are boundary problems: too many domains
-live in one file, a few schema paths are not normalized identically, and source
-linking is partly embedded in table implementation details.
+No compatibility shims. No historical aliases. No duplicate concept names. No
+extraction that only moves line count around.
 
-## Current Verdict
+## Current Strong Center
 
-`JsonForm` is useful and well-tested. After the 2026-06-16 implementation pass,
-it is much closer to inevitable, but final performance proof is still pending.
+The current shape is close:
 
-The good center is:
-
-```txt
-JsonForm owns whole-form rendering and submit decoding.
-JsonFormField owns one field path.
-schema-utils owns JSON Schema expansion and classification.
-form-primitives owns local shadcn-compatible form parts.
-Flat scalar object arrays render as editable tables.
-Large arrays avoid mounting every row.
-Source linking is opt-in.
-```
-
-The implemented center is now sharper:
-
-```txt
-Schema model produces normalized render nodes.
-Path codec owns react-hook-form path encoding and output decoding.
-Scalar controls own scalar editing only.
-Array table owns grid interaction only.
-Source link adapter owns field preview and selection only.
-JsonForm composes these pieces and owns no low-level mechanics.
-```
-
-Implementation checkpoint:
-
-- `json-form.tsx` is a composition root for schema normalization, form context,
-  source-link context, encoded initial values, root rendering, and submit
-  decoding.
+- `json-form.tsx` is a composition root for schema, form context, source links,
+  initial encoded values, root rendering, and submit decoding.
 - `schema-model.ts` owns schema expansion, nullable unwrapping, field
-  classification, array item resolution, dynamic object property matching, and
-  table column detection.
-- `path-codec.ts` owns encoded form paths, source paths, encoded value
+  classification, array item resolution, dynamic properties, and table column
+  detection.
+- `path-codec.ts` owns encoded form paths, logical source paths, encoded value
   round-trips, and empty encoded array item values.
-- `scalar-control.tsx`, `source-link.tsx`, `object-fields.tsx`,
-  `array-fields.tsx`, `array-table.tsx`, `disclosure.tsx`, and
-  `virtual-list.tsx` now each have one coherent owner concept.
-- The public source-link prop is `sourceLink`; the old `anchorLink` compatibility
-  path is gone.
+- `source-link.tsx` owns source-link context, scalar shells, table-cell active
+  marking, pointer tracking, and scroll-hover recovery.
+- `object-fields.tsx`, `array-fields.tsx`, `virtual-list.tsx`, and
+  `disclosure.tsx` own coherent rendering primitives.
+- `components/json-form/table/*` exists and points at the right final
+  boundaries: cell, body, scroll, format, and config.
+- The public prop is `sourceLink`.
+- The table DOM contract is `data-source-path` / `data-source-active`.
+- The scroll-hover bug is fixed: source hover restores to the cell under the
+  pointer after table scroll, even when `onFieldHover(null)` causes a rerender.
 
-## Non-Negotiable Contract
-
-`JsonForm` should accept:
+The public API should stay small:
 
 ```tsx
 <JsonForm
   form={form}
   schema={schema}
-  onSubmit={onSubmit}
-  textInput="input"
   sourceLink={sourceLink}
   defaultOpenPaths={["transactions"]}
+  onSubmit={onSubmit}
 >
   <Button type="submit">Save</Button>
 </JsonForm>
 ```
 
-`JsonFormField` should accept:
-
 ```tsx
 <JsonFormField name="vendor.name" schema={schema} />
 ```
 
-Both APIs must use the same schema normalization and the same path codec. A
-single-field render should not be a weaker version of whole-form render.
+## Remaining Blockers
 
-## Current Strengths
+### 1. Table Extraction Is Half-Finished
 
-The component already earns its place:
+Current problem:
 
-- `JsonForm` delegates form state to `react-hook-form`.
-- Scalar fields render through local `FormField` primitives.
-- Nested objects and arrays lazy-mount behind disclosure rows.
-- Flat scalar object arrays collapse into a dense editable table.
-- Large card arrays use `@tanstack/react-virtual`.
-- Large table arrays use fixed-row virtualization.
-- Special object keys round-trip through an encoded form path.
-- Nullable scalar, enum, date, time, date-time, boolean, tuple array,
-  `additionalProperties`, and `patternProperties` cases have tests.
-- Source hover and selection work in table and non-table contexts.
+`components/json-form/table/array-table-cell.tsx`,
+`array-table-body.tsx`, `array-table-scroll.ts`, `array-table-format.ts`, and
+`array-table-config.ts` exist, but `components/json-form/array-table.tsx` still
+contains local row rendering, local table body imports, local table constants,
+local formatting, local cell rendering, and local cell commit normalization.
 
-These strengths should be preserved. The blueprint is not a rewrite for novelty.
-It is a compression pass that makes the current behavior easier to reason about
-and harder to regress.
-
-## Platonic Module Boundaries
-
-### `components/json-form/schema-model.ts`
-
-Owns schema normalization.
-
-Responsibilities:
-
-- expand local `$ref`;
-- merge `allOf`;
-- unwrap nullable unions;
-- classify field kind;
-- resolve array item schemas;
-- resolve static, pattern, and additional properties;
-- produce stable render descriptors.
-
-It should not import React.
-
-Ideal exports:
-
-```ts
-export type JsonFormSchemaNode
-export type JsonFormFieldKind
-export type JsonFormColumn
-
-export function normalizeJsonFormSchema(schema: JSONSchema7): JsonFormSchemaNode
-export function jsonFormFieldKind(schema: JsonFormSchemaNode): JsonFormFieldKind
-export function jsonFormObjectEntries(node: JsonFormSchemaNode, value: unknown): JsonFormObjectEntry[]
-export function jsonFormArrayItemNode(node: JsonFormSchemaNode, index: number): JsonFormSchemaNode
-export function jsonFormTableColumns(node: JsonFormSchemaNode): JsonFormColumn[] | null
-export function emptyJsonFormValue(node: JsonFormSchemaNode): unknown
-```
-
-`expandRefs`, `unwrapNullable`, `fieldKind`, `scalarObjectColumns`,
-`emptyValueFor`, and the dynamic-property helpers should converge here.
-
-### `components/json-form/path-codec.ts`
-
-Owns the mismatch between logical JSON keys and `react-hook-form` dot paths.
-
-Responsibilities:
-
-- encode one object key;
-- decode one object key;
-- join form paths;
-- join source/logical paths;
-- encode default values before form rendering;
-- decode submit values after form rendering;
-- decide whether a schema requires encoded paths.
-
-It should not import React.
-
-Ideal exports:
-
-```ts
-export function encodeJsonFormKey(key: string): string
-export function decodeJsonFormKey(key: string): string
-export function joinJsonFormPath(parent: string, key: string | number): string
-export function joinJsonSourcePath(parent: string, key: string | number): string
-export function schemaNeedsJsonFormPathEncoding(
-  node: JsonFormSchemaNode
-): boolean
-export function encodeJsonFormValue(
-  node: JsonFormSchemaNode,
-  value: unknown
-): unknown
-export function decodeJsonFormValue(
-  node: JsonFormSchemaNode,
-  value: unknown
-): unknown
-```
-
-The codec must be pure and testable. It must not reset form state by schema
-object identity.
-
-### `components/json-form/scalar-control.tsx`
-
-Owns scalar editing.
-
-Responsibilities:
-
-- string input;
-- textarea;
-- number and integer input;
-- boolean checkbox;
-- nullable boolean select;
-- enum select;
-- date, time, and date-time picker;
-- compact cell editor variant.
-
-It should not know about objects, arrays, source links, disclosure, or table row
-virtualization.
-
-### `components/json-form/source-link.tsx`
-
-Owns optional field source interactions.
-
-Responsibilities:
-
-- expose one provider for active source path and source actions;
-- wrap scalar leaves;
-- expose table-cell props without requiring table code to mutate DOM manually;
-- provide keyboard-equivalent selection for scalar leaves and table cells.
-
-The prop name should be exact. The historical public prop was `anchorLink`, but
-the actual model is a source field link. The implemented name is `sourceLink`;
-there should be no compatibility shim or lingering call sites.
-
-### `components/json-form/object-fields.tsx`
-
-Owns object rendering.
-
-Responsibilities:
-
-- disclosure state;
-- object summary;
-- static entries;
-- dynamic entries from current value;
-- recursive field rendering.
-
-It should consume normalized schema nodes and path helpers. It should not expand
-refs, encode values, or know about table behavior.
-
-### `components/json-form/array-fields.tsx`
-
-Owns array rendering choice.
-
-Responsibilities:
-
-- add/remove constraints;
-- empty item creation;
-- card mode;
-- table mode dispatch;
-- tuple item schema selection.
-
-It should not own cell editing internals.
-
-### `components/json-form/array-table.tsx`
-
-Owns dense scalar object array editing.
-
-Responsibilities:
-
-- grid template and width;
-- row rendering;
-- editor activation;
-- keyboard activation;
-- scroll body selection;
-- fixed-row virtualization;
-- row-local value subscription strategy.
-
-It should consume `JsonFormColumn[]` and `ScalarControl`. It should not contain
-schema expansion, path encoding, or source model definitions.
-
-### `components/json-form/disclosure.tsx`
-
-Owns disclosure UI only.
-
-Responsibilities:
-
-- arrow state;
-- title;
-- summary;
-- description tooltip;
-- action slot.
-
-This is small, but extracting it removes a repeated visual primitive from the
-main composition file and gives object and array rendering the same vocabulary.
-
-### `components/json-form/json-form.tsx`
-
-Owns composition only.
-
-Responsibilities:
-
-- normalize schema once;
-- provide form context;
-- provide source link context;
-- encode initial values when required;
-- render root fields;
-- decode submitted data.
-
-It should not contain table event machinery, date parsing, path encoding, or
-schema recursion helpers.
-
-## Defects Blocking The Ideal
-
-### 1. Schema Identity Can Reset Encoded Forms
-
-Status: fixed in the implementation pass; encoded initial values are reset once
-per mounted form, not every time the schema object identity changes.
-
-Historical location:
+That creates two meanings for the same component:
 
 ```txt
-components/json-form/json-form.tsx
-  expandedSchema memoized from schema object identity
-  encoded-path effect calls form.reset(...)
+table/array-table-cell.tsx
+  the intended extracted table-cell implementation
+
+array-table.tsx
+  the implementation actually rendered today
 ```
 
-Problem:
+This violates the ideal more than a large file would. Duplicate ownership is
+worse than no extraction.
 
-Schemas that require path encoding can reset current form values whenever a
-parent recreates the schema object. This is especially risky for inline schemas
-and dynamic parent renders.
-
-Ideal:
-
-Encoding should happen through an explicit initialization path that is stable for
-the mounted form, not through an effect tied to schema object identity. If schema
-changes are supported, they should be treated as a deliberate schema replacement
-with clear reset semantics.
-
-Required tests:
-
-- inline schema object rerender preserves dirty encoded-key edits;
-- changing unrelated parent state does not call `form.reset`;
-- deliberate schema replacement updates rendered fields without silently losing
-  edited values unless the caller resets the form.
-
-### 2. `JsonFormField` Does Not Normalize Like `JsonForm`
-
-Status: fixed; `JsonFormField` now always normalizes through `expandRefs`.
-
-Historical location:
+Target:
 
 ```txt
-components/json-form/json-form.tsx
-  JsonFormField expands refs only when $ref/$defs/definitions are present
+array-table.tsx
+  table shell, column header, click/key activation, mode dispatch
+
+table/array-table-row.tsx
+  row layout, row value subscription, column iteration, remove button
+
+table/array-table-cell.tsx
+  display cell, editable cell props, editor routing, commit normalization
+
+table/array-table-body.tsx
+  static body and fixed-row virtualized body
+
+table/array-table-scroll.ts
+  stable scroll listener, latest callback refs, scroll-end timer
+
+table/array-table-format.ts
+  display formatting and data-cell kind mapping
+
+table/array-table-config.ts
+  table height, row height, virtualization thresholds
 ```
-
-Problem:
-
-`JsonFormField` is documented as the unit of composition, but standalone fields
-can miss schema composition such as `allOf`.
-
-Ideal:
-
-`JsonFormField` should accept either raw schema or a normalized node. If it
-accepts raw schema, it must normalize through the same path as `JsonForm`.
-
-Required tests:
-
-- standalone `JsonFormField` renders an `allOf` object;
-- standalone `JsonFormField` renders `anyOf` nullable metadata;
-- standalone `JsonFormField` handles local `$defs` with sibling overrides.
-
-### 3. `allOf` Expansion Returns Before Recursive Sibling Expansion
-
-Status: fixed in `schema-model.ts`; `allOf` branches merge before sibling
-children are recursively normalized.
-
-Historical location:
-
-```txt
-components/json-form/schema-utils.ts
-  expandRefs returns immediately from allOf branch
-```
-
-Problem:
-
-When a schema node contains `allOf` and sibling `properties`, `items`,
-`additionalProperties`, or `patternProperties`, sibling nodes can avoid the later
-recursive expansion pass.
-
-Ideal:
-
-Schema normalization should be a pipeline:
-
-```txt
-resolve ref
-merge composition
-normalize children
-classify
-```
-
-No branch should skip child normalization.
-
-Required tests:
-
-- `allOf` plus sibling property refs expand fully;
-- `allOf` plus sibling array item refs expand fully;
-- `allOf` plus sibling additionalProperties refs expand fully.
-
-### 4. Source Selection Is Not Fully Keyboard Equivalent
-
-Status: fixed for scalar Enter selection without hijacking input Space, and
-preserved for table-cell Enter/Space activation.
-
-Historical location:
-
-```txt
-components/json-form/json-form.tsx
-  SourceFieldLinkShell
-  ArrayTable keyboard handlers
-```
-
-Problem:
-
-Table cells support Enter/Space activation. Non-table scalar source shells rely
-on click for persistent selection.
-
-Ideal:
-
-Every source-linked scalar field should expose the same interaction contract:
-
-```txt
-hover/focus previews
-click selects
-Enter selects
-Space selects when focus is on the source shell
-blur clears preview
-```
-
-Required tests:
-
-- focused source-linked scalar field selects on Enter;
-- focused source-linked scalar field selects on Space where appropriate;
-- text input Space still types a space and does not hijack editing;
-- table source-cell behavior remains unchanged.
-
-### 5. Documentation Names The Wrong Hook
-
-Status: fixed; docs now use `useSegmentedSourceFieldLink`.
-
-Historical location:
-
-```txt
-content/docs/components/json-form.mdx
-  useAnchoredSourceFieldLink
-```
-
-Problem:
-
-Docs mention an old hook while the current source-link model exposes
-`useSegmentedSourceFieldLink`.
-
-Ideal:
-
-Docs should use the same names as the shipped API. Architecture tests already
-ban the old hook in several source-viewer paths; the docs should agree.
-
-Required tests:
-
-- docs text does not mention `useAnchoredSourceFieldLink`;
-- docs text does mention `useSegmentedSourceFieldLink`.
-
-## Final Implementation Sequence
-
-### Phase 1: Extract Pure Schema And Path Logic
-
-Move pure helpers out of `json-form.tsx`:
-
-```txt
-encodeFormSegment
-decodeFormSegment
-joinFormPath
-joinSourcePath
-schemaUsesEncodedPaths
-encodeValueForForm
-decodeValueFromForm
-emptyArrayItemValue
-arrayItemSchemaAt
-canAppendArrayItem
-canRemoveArrayItem
-dynamic property helpers
-```
-
-Keep exported behavior unchanged. Add focused unit tests for the extracted
-modules before changing component behavior.
 
 Success condition:
 
 ```txt
-json-form.tsx loses pure schema/path machinery.
-All existing JsonForm tests pass.
-New path-codec tests cover encoded keys and dirty-value preservation.
+rg "function ArrayTableCellEditor|function formatTableCellValue|TABLE_MAX_HEIGHT|useArrayTableScrollActivity" components/json-form/array-table.tsx
 ```
 
-### Phase 2: Make Normalization Single-Path
+returns nothing.
 
-Replace ad hoc `expandRefs` calls with one normalized schema model.
+### 2. `array-table.tsx` Still Carries Row-Level Weight
+
+Current problem:
+
+Even after the intended table modules exist, the rendered table shell still owns
+row subscription strategy, value lookup, path construction, cell model facts,
+remove-button rendering, and row styles.
+
+Target:
+
+`ArrayTable` should read in one pass:
+
+```txt
+derive columns layout
+derive active editor path
+derive source table handlers
+render header
+choose static body or virtualized body
+```
+
+Everything per-row moves to `table/array-table-row.tsx`.
+
+Success condition:
+
+`array-table.tsx` contains no `useWatch`, no `useController`, no `DataCell`, no
+`ScalarControl`, and no per-column cell branch.
+
+### 3. `scalar-control.tsx` Mixes Too Many Families
+
+Current problem:
+
+`scalar-control.tsx` still owns enum equality, enum labels, nullable boolean
+select, number parsing, compact table-cell editing, date/time parsing,
+date/time picker state, textarea rendering, and plain input rendering.
+
+It is coherent by domain, but not yet ideal by responsibility.
+
+Target:
+
+```txt
+scalar-control.tsx
+  dispatch only
+
+scalar/enum-control.tsx
+  enum labels, equality, enum select
+
+scalar/number-control.tsx
+  integer/number input and compact number cell editing
+
+scalar/date-time-control.tsx
+  date, time, date-time parsing and picker UI
+
+scalar/text-control.tsx
+  input, textarea, compact text cell editing
+
+scalar/boolean-control.tsx
+  checkbox and nullable boolean select
+```
+
+Success condition:
+
+Each scalar family can be understood, changed, and tested without reading every
+other scalar family.
+
+### 4. Source-Link Scheduling Is Correct But Not Crystalline
+
+Current problem:
+
+`source-link.tsx` now correctly keeps source hover live during table scroll.
+The implementation still has two scheduling channels:
+
+```txt
+pendingHoverFrameRef
+pendingScrollHoverFrameRef
+latestScrollHoverAtRef
+latestPointerPointRef
+hoveredSourcePathRef
+activeSourceCellRef
+```
+
+These are justified by performance, but the final form should make the state
+machine impossible to misread.
+
+Target:
+
+One small table-source hover controller with explicit states:
+
+```txt
+idle
+hovering(path)
+scrolling(lastPointerPoint, lastReportedPath)
+```
+
+Required invariants:
+
+- normal pointer moves report once per animation frame;
+- scroll moves sample `elementFromPoint` at a bounded cadence;
+- scroll end always samples once after the final scroll event;
+- `onFieldHover` fires only when the logical source path changes;
+- `data-source-active` mutates only when the active DOM cell changes;
+- cleanup cannot cancel a scroll-end restore after a source-link rerender.
+
+Success condition:
+
+Browser proof on `/blocks/sources-viewer`:
+
+```txt
+hover transactions.4.description
+wheel-scroll the transaction table with the pointer stationary
+after scroll: activePath === elementFromPoint(...).closest("[data-table-cell]").dataset.sourcePath
+```
+
+Profiler proof:
+
+```txt
+scroll-transactions-table ends with activeSourceCells: 1
+source-link remains live during scrolling
+attribute churn is bounded and lower than the current live-scroll baseline
+```
+
+### 5. Source Naming Is Mostly Fixed, But The Type Boundary Still Leaks History
+
+Current problem:
+
+The component API and DOM use source naming, but the shared UI type is still
+`SourceFieldLink`, and some implementation names mix `field`, `source`,
+`activePath`, `sourcePath`, and `logicalPath`.
+
+This is acceptable engineering. It is not Flaubertian.
+
+Target vocabulary:
+
+```txt
+sourceLink
+sourcePath
+activeSourcePath
+hoverSourcePath
+selectSourcePath
+sourceLinked
+data-source-path
+data-source-active
+```
+
+Terms to avoid in `components/json-form`:
+
+```txt
+anchor
+logicalPath
+fieldActions
+activePath, when the value specifically means active source path
+```
 
 Success condition:
 
 ```txt
-JsonForm and JsonFormField normalize identically.
-allOf sibling recursion bugs are closed.
-Schema utility tests describe normalization behavior, not implementation details.
+rg "anchor|logicalPath|FieldActions|activePath" components/json-form tests/json-form*.tsx
 ```
 
-### Phase 3: Extract Scalar Controls
+returns only unrelated or deliberately documented matches.
 
-Move scalar editing and date/time helpers into `scalar-control.tsx`.
+### 6. Pure Model Proof Is Incomplete
 
-Success condition:
+Current problem:
+
+The code already has pure modules for schema and path logic, but the final ideal
+requires direct proof that these modules cannot regress through renderer tests
+alone.
+
+Target test files:
 
 ```txt
-ScalarControl receives kind, schema, value adapter, compact flag, and nullable flag.
-It does not import object, array, source, or virtualization code.
-JsonForm table and regular fields share the same scalar editor.
+tests/json-form-schema-model.test.ts
+tests/json-form-path-codec.test.ts
+tests/json-form-source-link.test.tsx
 ```
 
-### Phase 4: Extract Source Link Adapter
+Required coverage:
 
-Move source-link contexts, shell, and table-cell source helpers into
-`source-link.tsx`.
+- `$ref`, `$defs`, `definitions`, `allOf`, nullable unions;
+- dynamic properties from `additionalProperties` and `patternProperties`;
+- encoded keys containing `.`, `[`, `]`, and empty strings;
+- dirty encoded values do not reset on parent rerender;
+- `JsonForm` and `JsonFormField` normalize through the same path;
+- source-linked scalar and table cells have equivalent hover, focus, blur,
+  click, and keyboard selection behavior.
 
-Success condition:
+## Target Module Map
 
-```txt
-Non-table and table source interactions share one vocabulary.
-Keyboard selection is complete.
-ArrayTable no longer manually owns active source DOM mutation if a declarative
-cell prop can express the state without regressing hover performance.
-```
-
-If imperative DOM mutation is still required for table hover performance, it
-must be isolated in `source-link.tsx` and named as a performance adapter.
-
-### Phase 5: Extract Object, Array, And Table Renderers
-
-Split rendering:
+Final `components/json-form` shape:
 
 ```txt
+json-form.tsx
+form-primitives.tsx
+json-form-constants.ts
+open-paths.tsx
+
+schema-model.ts
+path-codec.ts
+
+field-renderer.ts
 object-fields.tsx
 array-fields.tsx
-array-table.tsx
-disclosure.tsx
 virtual-list.tsx
+disclosure.tsx
+
+source-link.tsx
+
+scalar-control.tsx
+scalar/enum-control.tsx
+scalar/number-control.tsx
+scalar/date-time-control.tsx
+scalar/text-control.tsx
+scalar/boolean-control.tsx
+
+table/array-table.tsx
+table/array-table-row.tsx
+table/array-table-cell.tsx
+table/array-table-body.tsx
+table/array-table-scroll.ts
+table/array-table-format.ts
+table/array-table-config.ts
 ```
 
-Success condition:
+This map is not a style preference. Each file names one owner concept.
+
+## Implementation Sequence
+
+### Phase 1: Make The Table Extraction Real
+
+Wire the existing `components/json-form/table/*` modules into the rendered
+table. Move `ArrayTableRow` out of `array-table.tsx`. Delete the local duplicate
+cell, body, scroll, format, and constant code.
+
+Run:
 
 ```txt
-json-form.tsx becomes a small composition root.
-Each file has one owner concept.
-No file needs a section divider comment to be readable.
+pnpm exec vitest run tests/json-form.test.tsx tests/json-form-edge.test.tsx
+pnpm exec vitest run tests/sources.test.tsx
 ```
 
-### Phase 6: Rename `anchorLink` To `sourceLink`
+### Phase 2: Prove Source Scroll Behavior In Its Own Test File
 
-Make the public API match the model.
+Move the scroll-hover regression out of the broad form test into
+`tests/json-form-source-link.test.tsx`, and keep a small integration assertion
+in `tests/json-form.test.tsx` only if needed.
 
-Required call-site updates:
+Run:
 
 ```txt
-registry/new-york-v4/blocks/json-form-sources-block.tsx
-registry/new-york-v4/blocks/sources-viewer-block.tsx
-registry/new-york-v4/blocks/extract-viewer-block.tsx
-tests/json-form.test.tsx
-tests/sources.test.tsx
-content/docs/components/json-form.mdx
-public registry payloads after registry build
+pnpm exec vitest run tests/json-form-source-link.test.tsx tests/json-form.test.tsx
 ```
 
-No compatibility shim. Update the call sites and tests in the same change.
+Browser proof:
 
-## Testing Standard
+```txt
+http://localhost:3100/blocks/sources-viewer
+expand Transactions
+hover a visible description cell
+wheel-scroll inside the table
+verify active source path equals the cell under the pointer
+```
 
-The minimum proof after the blueprint is implemented:
+### Phase 3: Compress Table Cell Rendering
+
+Make `ArrayTableCellModel` the only way a row talks to a cell. The row builds
+facts; the cell owns display, edit, commit normalization, and `DataCell` props.
+
+Run:
+
+```txt
+pnpm exec vitest run tests/json-form.test.tsx tests/json-form-edge.test.tsx
+```
+
+### Phase 4: Split Scalar Families
+
+Create the `scalar/*` files. Keep `ScalarControl` as the public dispatcher so
+call sites do not grow.
+
+Run:
+
+```txt
+pnpm exec vitest run tests/json-form.test.tsx tests/json-form-edge.test.tsx
+pnpm exec tsc --noEmit
+```
+
+### Phase 5: Normalize Source Vocabulary
+
+Rename internal source-link variables to the target vocabulary. Do not change
+public behavior. Do not add aliases.
+
+Run:
+
+```txt
+pnpm exec vitest run tests/json-form-source-link.test.tsx tests/sources.test.tsx
+rg "anchor|logicalPath|FieldActions" components/json-form tests/json-form*.tsx
+```
+
+### Phase 6: Add Pure Model Tests And Architecture Guards
+
+Add direct tests for schema and path modules. Add a small architecture guard
+that prevents table-cell code from returning to `array-table.tsx`.
+
+Run:
 
 ```txt
 pnpm exec vitest run \
   tests/json-form-schema-model.test.ts \
   tests/json-form-path-codec.test.ts \
+  tests/json-form-source-link.test.tsx \
   tests/json-form.test.tsx \
   tests/json-form-edge.test.tsx
 ```
 
-Add:
+### Phase 7: Profile The Final Shape
 
-```txt
-tests/json-form-source-link.test.tsx
-```
+Run large-array and source-interaction profiles after the extraction and naming
+work. Compare against the current baseline; do not accept a cleaner structure
+that makes the table slower.
 
-Run architecture/docs tests touched by naming changes:
-
-```txt
-pnpm exec vitest run tests/viewer-architecture.test.ts
-```
-
-Run performance profiles when table source-link or virtualization internals
-change:
+Run:
 
 ```txt
 node scripts/profile-json-form-large-array.mjs
 node scripts/profile-json-form-sources-interactions.mjs
 ```
 
-If these profiles require a dev server, ask the user to start it. Do not start,
-stop, or restart dev servers from this repository.
+If a profiler requires a dev server, use an existing server or ask for one. Do
+not restart a user-owned server without permission.
+
+## Required Final Proof
+
+Minimum proof for the completed ideal pass:
+
+```txt
+pnpm exec vitest run \
+  tests/json-form-schema-model.test.ts \
+  tests/json-form-path-codec.test.ts \
+  tests/json-form-source-link.test.tsx \
+  tests/json-form.test.tsx \
+  tests/json-form-edge.test.tsx \
+  tests/sources.test.tsx
+
+pnpm exec vitest run tests/viewer-architecture.test.ts
+pnpm exec tsc --noEmit
+node scripts/profile-json-form-large-array.mjs
+node scripts/profile-json-form-sources-interactions.mjs
+```
+
+Plus one browser check on the real sources viewer after any source-link or table
+scroll change.
 
 ## Definition Of Done
 
-The component reaches the platonic ideal when all of this is true:
+`JsonForm` reaches the platonic ideal when all of this is true:
 
 ```txt
-json-form.tsx is a composition root, not the whole implementation.
-Schema normalization is pure, single-path, and fully tested.
+json-form.tsx is only a composition root.
+Schema normalization is pure, single-path, and directly tested.
 Path encoding is pure, single-owner, and cannot reset dirty values by accident.
 JsonForm and JsonFormField have identical schema semantics.
-Scalar controls are shared between regular fields and table cells.
-Source linking is optional, keyboard-equivalent, and locally owned.
-Array table code contains only table concerns.
-Docs use the current public names.
-Focused tests and performance scripts pass.
+Scalar controls are split by scalar family behind one small dispatcher.
+Array table shell, row, cell, body, scroll, config, and formatting concerns are separate.
+No table implementation exists in two places.
+Source linking is optional, keyboard-equivalent, live during scroll, and locally owned.
+Source naming is consistent from public prop to DOM attribute.
+Large arrays remain fast.
+Source-linked scrolling remains live without unnecessary DOM churn.
+Focused tests, architecture tests, typecheck, profiler scripts, and browser proof pass.
 ```
 
 Nothing more is needed. Nothing less is enough.

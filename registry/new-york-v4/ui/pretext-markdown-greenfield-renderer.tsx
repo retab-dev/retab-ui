@@ -688,7 +688,7 @@ const markdownComponents = {
       <td
         {...props}
         align={typeof resolvedAlign === "string" ? resolvedAlign : undefined}
-        className="border-t border-border px-3 py-2 align-top [overflow-wrap:anywhere] [&[align=center]]:text-center [&[align=right]]:text-right [&[align=right]]:tabular-nums"
+        className="border-t border-border px-3 py-2 align-top [overflow-wrap:break-word] [&[align=center]]:text-center [&[align=right]]:text-right [&[align=right]]:tabular-nums"
       />
     )
   },
@@ -698,7 +698,7 @@ const markdownComponents = {
       <th
         {...props}
         align={typeof resolvedAlign === "string" ? resolvedAlign : undefined}
-        className="border-b border-border bg-muted/55 px-3 py-2 text-left align-top font-medium [overflow-wrap:anywhere] [&[align=center]]:text-center [&[align=right]]:text-right [&[align=right]]:tabular-nums"
+        className="border-b border-border bg-muted/55 px-3 py-2 text-left align-top font-medium [overflow-wrap:break-word] [&[align=center]]:text-center [&[align=right]]:text-right [&[align=right]]:tabular-nums"
         scope="col"
       />
     )
@@ -1044,10 +1044,16 @@ function PretextMarkdownImageSurface({
   )
   const captionId = React.useId()
 
-  React.useEffect(() => {
+  // Reset load state when the source/aspect-ratio inputs change by adjusting
+  // state during render (React's prop-change pattern) instead of in an effect.
+  const sourceResetKey = `${safeSrc} ${explicitAspectRatio ?? ""}`
+  const [prevSourceResetKey, setPrevSourceResetKey] =
+    React.useState(sourceResetKey)
+  if (sourceResetKey !== prevSourceResetKey) {
+    setPrevSourceResetKey(sourceResetKey)
     setState(safeSrc ? "loading" : "blocked")
     setAspectRatio(explicitAspectRatio ?? "")
-  }, [explicitAspectRatio, safeSrc])
+  }
 
   React.useLayoutEffect(() => {
     notifyContentReady?.()
@@ -1691,41 +1697,57 @@ type RawShikiToken = {
 }
 
 const shikiCodeLineCache = new Map<string, Promise<ShikiCodeToken[][] | null>>()
+const resolvedShikiCodeLines = new Map<string, ShikiCodeToken[][] | null>()
+const shikiCodeLineSubscribers = new Set<() => void>()
 
+function ensureShikiCodeLines(args: {
+  cacheKey: string
+  expectedLineCount: number
+  language: string
+  source: string
+}) {
+  if (resolvedShikiCodeLines.has(args.cacheKey)) return
+  void getShikiCodeLines(args).then((lines) => {
+    resolvedShikiCodeLines.set(args.cacheKey, lines)
+    while (resolvedShikiCodeLines.size > 128) {
+      const oldestKey = resolvedShikiCodeLines.keys().next().value
+      if (oldestKey === undefined) break
+      resolvedShikiCodeLines.delete(oldestKey)
+    }
+    for (const notify of shikiCodeLineSubscribers) notify()
+  })
+}
+
+// Shiki tokenization is an asynchronous external system (a dynamically imported
+// highlighter with a shared resolved-value cache). The viewer subscribes to
+// that cache with useSyncExternalStore — the React-idiomatic way to read an
+// external store — rather than driving the load from an effect. The snapshot
+// returns a stable reference (the cached array, or null while pending) so
+// rendering stays progressive: plain source first, highlighted once resolved.
 function useShikiCodeLines(
   source: string,
   language: string,
   expectedLineCount: number
 ) {
   const cacheKey = `${language}\0${source}`
-  const [state, setState] = React.useState<{
-    cacheKey: string
-    lines: ShikiCodeToken[][] | null
-  }>(() => ({ cacheKey, lines: null }))
-
-  React.useEffect(() => {
-    let canceled = false
-
-    setState((current) =>
-      current.cacheKey === cacheKey ? current : { cacheKey, lines: null }
-    )
-
-    getShikiCodeLines({
-      cacheKey,
-      expectedLineCount,
-      language,
-      source,
-    }).then((lines) => {
-      if (canceled) return
-      setState({ cacheKey, lines })
-    })
-
-    return () => {
-      canceled = true
-    }
-  }, [cacheKey, expectedLineCount, language, source])
-
-  return state.cacheKey === cacheKey ? state.lines : null
+  const subscribe = React.useCallback(
+    (onStoreChange: () => void) => {
+      shikiCodeLineSubscribers.add(onStoreChange)
+      ensureShikiCodeLines({ cacheKey, expectedLineCount, language, source })
+      return () => {
+        shikiCodeLineSubscribers.delete(onStoreChange)
+      }
+    },
+    [cacheKey, expectedLineCount, language, source]
+  )
+  const getSnapshot = React.useCallback(
+    () =>
+      resolvedShikiCodeLines.has(cacheKey)
+        ? (resolvedShikiCodeLines.get(cacheKey) ?? null)
+        : null,
+    [cacheKey]
+  )
+  return React.useSyncExternalStore(subscribe, getSnapshot, () => null)
 }
 
 function getShikiCodeLines({

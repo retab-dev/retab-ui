@@ -16,5 +16,33 @@ between optional file-scoped navigation and the main file surface.
 </FileViewerBody>
 ```
 
-Keep `FileViewerBody` structural. It should not know whether the sidebar
-contains thumbnails, attachments, segments, or source fields.
+A body can also hold a surface alone, with no sidebar:
+
+```tsx
+<FileViewerBody>
+  <FileViewerSurface>
+    <FileViewerDocument />
+  </FileViewerSurface>
+</FileViewerBody>
+```
+
+## Behavior
+
+- Renders a `data-slot="file-viewer-body"` row that fills the remaining height
+  below the header and lays out the sidebar beside the surface.
+- It is purely structural: it does not know whether the sidebar contains
+  thumbnails, attachments, segments, or source fields, and it does not own
+  sidebar open/collapse state — that lives on `FileViewer`.
+- Sidebar placement (side, width, inline vs. overlay) is resolved from the root
+  and the `FileViewerSidebar` inside the body.
+
+## API Reference
+
+| Prop       | Type                                      | Description                                              |
+| ---------- | ----------------------------------------- | -------------------------------------------------------- |
+| `children` | `React.ReactNode`                         | Typically a `FileViewerSidebar` and a `FileViewerSurface`.|
+| `...props` | `React.ComponentProps<typeof ViewerBody>` | Standard body props; `className` is forwarded.           |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer.tsx" />

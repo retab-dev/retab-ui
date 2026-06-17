@@ -4,8 +4,12 @@ description: Passive metadata for the active file, placed beside the title.
 component: true
 ---
 
-`FileViewerMeta` renders passive facts about the current file: category, MIME
-type, page position, or renderer-provided metadata.
+`FileViewerMeta` renders passive facts about the current file: its MIME type or
+category. It sits next to the title and never carries actions.
+
+<ComponentPreview name="file-viewer-header-demo" />
+
+## Usage
 
 ```tsx
 <FileViewerHeader>
@@ -15,5 +19,23 @@ type, page position, or renderer-provided metadata.
 </FileViewerHeader>
 ```
 
-Metadata belongs next to the title on the left. Actions belong in
-`FileViewerControls` on the right.
+## Behavior
+
+- Resolves its text from context as `resource.mimeType`, falling back to the
+  descriptor's MIME type, then the detected category.
+- Renders **nothing** when there is no metadata to show, so it never leaves an
+  empty gap in the header.
+- Renders a `data-slot="file-viewer-meta"` element with muted, truncating text.
+- Metadata belongs next to the title on the left; actions belong in
+  `FileViewerControls` on the right.
+
+## API Reference
+
+| Prop        | Type                           | Description                                          |
+| ----------- | ------------------------------ | ---------------------------------------------------- |
+| `className` | `string`                       | Class merged onto the metadata element.              |
+| `...props`  | `React.ComponentProps<"span">` | Standard `span` props spread onto the element.       |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer.tsx" />

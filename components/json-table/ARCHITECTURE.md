@@ -25,18 +25,23 @@ Read these documents in this order:
 
 1. `components/json-table/ARCHITECTURE.md`: current runtime ownership and
    verification contract.
-2. `design/data-cell-json-table-platonic-issues-blueprint.md`: current issue
+2. `design/data-cell-json-table-literal-platonic-gap-blueprint.md`: active
+   blueprint for the remaining literal-perfection gaps.
+3. `design/data-cell-json-table-current-platonic-gap-blueprint.md`: completed
+   ledger for the previous row-policy, viewport, profiler, and architecture
+   guard implementation.
+4. `design/data-cell-json-table-platonic-issues-blueprint.md`: historical issue
    ledger. Older JSON-table blueprints are historical unless this ledger points
    back to them.
-3. `design/data-cell-json-table-current-platonic-gap-blueprint.md`: current
-   implementation blueprint for the remaining non-platonic gaps.
-4. `design/data-cell-json-table-style-invalidation-findings.md`: current
+5. `design/data-cell-json-table-style-invalidation-findings.md`: current
    style/layout attribution notes for select and picker performance.
-5. `components/json-table/json-table-performance-budget.json`: checked
+6. `components/json-table/json-table-performance-budget.json`: checked
    performance budgets.
-6. `scripts/profile-json-table-primitive-interactions.mjs`: profiler that
+7. `scripts/profile-json-table-primitive-interactions.mjs`: profiler CLI that
    produces saved and fresh JSON-table interaction reports.
-7. `scripts/verify-json-table-performance-budget.mjs` and
+8. `scripts/json-table-profiler/*`: profiler helper modules for browser
+   sessions and report summaries.
+9. `scripts/verify-json-table-performance-budget.mjs` and
    `scripts/verify-json-table-performance-budget-fresh.mjs`: saved and fresh
    budget gates.
 
@@ -44,8 +49,19 @@ Read these documents in this order:
 
 - `sourceDocument` is the latest document received from parent props.
 - `projectionDocument` is the document identity used to project visible rows.
+- `currentProjectionDocument` is the render-time projection document after the
+  document model accounts for a not-yet-reconciled new source document.
 - `confirmedDocumentData` is the authoritative data base used for outgoing
   document patches.
+- `visibleColumns` is the schema model output: the schema-derived columns
+  available to the table.
+- `schemaVisibleColumns` is the table-local alias used where the table passes
+  that full schema column set to viewport and row-policy hooks.
+- `renderedColumnWindow` is the actual column window rendered by the current
+  table mode. Editable tables render the virtual body window. Read-only tables
+  render the full schema-visible column set.
+- `fallbackTextDataCellProps` is a domain fallback for unsupported primitive
+  kinds. It is not a compatibility shim for removed table behavior.
 - A parent echo is a same-document-id source update caused by a table commit.
 - A primitive pending value is a scalar value owned by
   `JsonTablePrimitiveEditStore` until the parent echo confirms it.
@@ -370,17 +386,19 @@ Editable tables use the React row policy:
 - the read-only DOM patcher is not used, because editable rows can contain
   active controls and local edit state that must not be rewritten imperatively
 
-Read-only tables use the DOM row patch policy:
+Read-only scalar rows use the DOM row patch policy:
 
 - default row overscan is larger for scroll continuity
-- jump-scroll row updates may be handled by `useReadOnlyJsonRowPatcher`
-- the patcher is limited to scalar/boolean read-only rows with stable DOM shape
+- jump-scroll row updates may be handled by
+  `useScalarReadOnlyJsonRowPatcher`
+- the patcher is intentionally limited to scalar/boolean read-only rows with
+  stable DOM shape
 - unsupported shapes fall back to the normal React virtualization path
-- every patch attempt emits a `read-only-row-patcher` profiler mark with a
-  fallback reason or the handled `rowsPatched` count
+- every patch attempt emits a `scalar-read-only-row-patcher` profiler mark with
+  a fallback reason or the handled `rowsPatched` count
 - the saved performance budget includes `read-only-scroll-jump`: scalar
   read-only rows must patch with zero fallbacks, while large read-only rows with
-  object/array cells must emit a diagnosed fallback reason
+  object/array cells must emit a diagnosed `shape-mismatch` fallback reason
 
 ## Regression Guards
 

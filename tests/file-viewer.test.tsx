@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs"
 import * as React from "react"
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react"
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { inferCsvDialect } from "@/lib/csv"
@@ -16,6 +23,7 @@ import {
   FileViewerMeta,
   FileViewerSurface,
   FileViewerTitle,
+  useFileViewerResource,
 } from "@/registry/new-york-v4/ui/file-viewer"
 import {
   descriptorResetKey,
@@ -232,7 +240,15 @@ describe("FileViewer detection helpers", () => {
       fileName: "inline.log",
     })
     expect(descriptor.identityKey).toBe("text:inline content")
-    expect(createViewerResource(source).content.directUrl).toBeNull()
+    expect(descriptorResetKey(descriptor)).toBe(
+      "text:14:pnnfux\u0000inline.log\u0000\u0000text"
+    )
+
+    const resource = createViewerResource(source)
+
+    expect(resource.content.directUrl).toBeNull()
+    expect(resource.content.key).toContain("text:inline content")
+    expect(resource.keys.resource).toContain("text:inline content")
   })
 
   it("keeps prose as the only text subtype", () => {
@@ -423,6 +439,7 @@ describe("FileViewer detection helpers", () => {
         "FileViewerSidebarTrigger",
         "FileViewerSurface",
         "FileViewerTitle",
+        "detectCategory",
         "useFileViewerResource",
       ])
     )
@@ -577,6 +594,81 @@ describe("FileViewer detection helpers", () => {
     expect(screen.getByText("pdf")).toBeTruthy()
     expect(screen.queryByText("Renderer title")).toBeNull()
     expect(screen.queryByText("Renderer subtitle")).toBeNull()
+  })
+
+  it("keeps registered controls authoritative over passthrough props", async () => {
+    function RegisterControls() {
+      const registerControls = useViewerControlsRegistration()
+
+      React.useEffect(() => {
+        registerControls?.({
+          position: { kind: "page", current: 2, total: 5 },
+          downloads: [],
+        })
+        return () => registerControls?.(null)
+      }, [registerControls])
+
+      return null
+    }
+
+    render(
+      <FileViewer source={urlSource("/files/report.pdf", "report.pdf")}>
+        <FileViewerHeader>
+          <FileViewerTitle />
+          <FileViewerControls
+            {...({ position: { label: "Wrong position" } } as object)}
+          />
+        </FileViewerHeader>
+        <RegisterControls />
+      </FileViewer>
+    )
+
+    await waitFor(() => expect(screen.getByText("Page 2 of 5")).toBeTruthy())
+    expect(screen.queryByText("Wrong position")).toBeNull()
+  })
+
+  it("does not rerender file resource consumers when registered controls change", async () => {
+    const resourceRenders = vi.fn()
+
+    function ResourceProbe() {
+      const resource = useFileViewerResource()
+      resourceRenders(resource.fileName)
+      return null
+    }
+
+    function RegisterControls() {
+      const [current, setCurrent] = React.useState(1)
+      const registerControls = useViewerControlsRegistration()
+
+      React.useEffect(() => {
+        registerControls?.({
+          position: { kind: "page", current, total: 5 },
+          downloads: [],
+        })
+        return () => registerControls?.(null)
+      }, [current, registerControls])
+
+      return <button onClick={() => setCurrent(2)}>Next page</button>
+    }
+
+    render(
+      <FileViewer source={urlSource("/files/report.pdf", "report.pdf")}>
+        <FileViewerHeader>
+          <FileViewerTitle />
+          <FileViewerControls />
+        </FileViewerHeader>
+        <ResourceProbe />
+        <RegisterControls />
+      </FileViewer>
+    )
+
+    await waitFor(() => expect(screen.getByText("Page 1 of 5")).toBeTruthy())
+    resourceRenders.mockClear()
+
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }))
+
+    await waitFor(() => expect(screen.getByText("Page 2 of 5")).toBeTruthy())
+    expect(resourceRenders).not.toHaveBeenCalled()
   })
 
   it("ignores stale file header control cleanup from an inactive registration", async () => {
@@ -1406,7 +1498,9 @@ describe("FileViewer text rendering", () => {
     )
 
     expect(screen.getByText(/No preview for/)).toBeTruthy()
-    expect(container.querySelector('[data-slot="file-viewer-header"]')).toBeNull()
+    expect(
+      container.querySelector('[data-slot="file-viewer-header"]')
+    ).toBeNull()
     expect(screen.getAllByRole("link", { name: "Download" })).toHaveLength(1)
     expect(
       screen.getByRole("link", { name: "Download" }).getAttribute("download")

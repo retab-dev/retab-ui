@@ -9,9 +9,18 @@ renders the default file viewer. With children, it exposes the same file-scoped
 state to `FileViewerHeader`, `FileViewerBody`, `FileViewerSidebar`,
 `FileViewerSurface`, and `FileViewerDocument`.
 
+<ComponentPreview name="file-viewer-demo" contentClassName="p-0" />
+
+## Usage
+
+The zero-config form detects the renderer from the source and renders the
+default header, body, and surface:
+
 ```tsx
 <FileViewer source={source} />
 ```
+
+The composed form gives you the same file-scoped context with explicit slots:
 
 ```tsx
 <FileViewer source={source} defaultOpen>
@@ -30,6 +39,44 @@ state to `FileViewerHeader`, `FileViewerBody`, `FileViewerSidebar`,
 </FileViewer>
 ```
 
-`FileViewer` should own file concerns only: source loading, type routing,
-download identity, sidebar state, and renderer control registration. Workflow
-semantics belong outside it.
+Pass `bare` to render only the routed document, with no header/body chrome — for
+embedding a single file inside your own layout:
+
+```tsx
+<FileViewer bare source={source} className="h-full" />
+```
+
+## Behavior
+
+- **Source routing.** `FileViewer` resolves the source into a category and
+  selects a renderer (PDF, image, CSV, text, Markdown, HTML, Office, …). Pass
+  `as` to force a category instead of detecting one.
+- **Single source of truth.** The resolved descriptor and resource are shared
+  through context, so every part reads the same identity — there is no prop
+  drilling between header, sidebar, and surface.
+- **Sidebar state.** The root owns open/collapsed state (`defaultOpen`, or
+  controlled `open`/`onOpenChange`) and the layout `mode`.
+- **Ownership boundary.** `FileViewer` owns file concerns only: source loading,
+  type routing, download identity, sidebar state, and renderer control
+  registration. Workflow semantics belong outside it.
+
+## API Reference
+
+| Prop                 | Type                              | Description                                                          |
+| -------------------- | --------------------------------- | -------------------------------------------------------------------- |
+| `source`             | `ViewerSource`                    | The file to display: a `url`, `blob`, or `text` source. Required.    |
+| `as`                 | `FileCategory`                    | Force a renderer category instead of detecting it from the source.   |
+| `bare`               | `boolean`                         | Render only the routed document, with no header/body/sidebar chrome. |
+| `className`          | `string`                          | Class on the viewer root (or on the document when `bare`).           |
+| `isolateStyles`      | `boolean`                         | Scope renderer styles so host page CSS cannot leak into the document.|
+| `defaultOpen`        | `boolean`                         | Whether the sidebar starts open (uncontrolled).                      |
+| `open`               | `boolean`                         | Controlled sidebar open state. Pair with `onOpenChange`.             |
+| `onOpenChange`       | `(open: boolean) => void`         | Fired when the sidebar open state should change.                     |
+| `mode`               | `"auto" \| "inline" \| "overlay"` | Sidebar layout mode. `auto` switches on available width.             |
+| `inlineBreakpoint`   | `number`                          | Width in px above which `auto` mode renders the sidebar inline.      |
+| `sidebarSide`        | `"left" \| "right"`               | Which side the sidebar mounts on.                                    |
+| `sidebarCollapsible` | `"offcanvas" \| "none"`           | Whether the sidebar can collapse off-canvas.                         |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer.tsx" />

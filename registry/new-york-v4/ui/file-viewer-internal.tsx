@@ -11,8 +11,8 @@ import { useIsClient } from "@/components/ui/use-is-client"
 import {
   descriptorResetKey,
   type FileDescriptor,
-  type FileViewerDocumentChrome,
   type FileViewerProps as FileViewerCoreProps,
+  type FileViewerDocumentChrome,
 } from "./file-viewer-core"
 import {
   ViewerControlsRegistrationProvider,
@@ -35,13 +35,17 @@ type FileViewerContextValue = {
   isClient: boolean
   isolateStyles: boolean
   resource: ViewerResource
+}
+
+type FileViewerControlsContextValue = {
   controlsState: ViewerControlsState | null
-  setControlsState: (state: ViewerControlsState | null) => void
 }
 
 const FileViewerContext = React.createContext<FileViewerContextValue | null>(
   null
 )
+const FileViewerControlsContext =
+  React.createContext<FileViewerControlsContextValue | null>(null)
 
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect
@@ -92,6 +96,14 @@ export function useFileViewerContext() {
   return context
 }
 
+export function useFileViewerControlsState(): ViewerControlsState | null {
+  const context = React.useContext(FileViewerControlsContext)
+  if (!context) {
+    throw new Error("File viewer controls must be used within FileViewer.")
+  }
+  return context.controlsState
+}
+
 export function useOptionalFileViewerResource(): ViewerResource | null {
   return React.useContext(FileViewerContext)?.resource ?? null
 }
@@ -112,14 +124,6 @@ export function FileViewerProvider({
   source,
 }: FileViewerProviderProps) {
   const isClient = useIsClient()
-  const [controlsState, setControlsState] =
-    React.useState<ViewerControlsState | null>(null)
-  const handleControlsChange = React.useCallback(
-    (state: ViewerControlsState | null) => {
-      setControlsState(state)
-    },
-    []
-  )
   const resource = React.useMemo(
     () => createViewerResource(source, as),
     [source, as]
@@ -131,6 +135,20 @@ export function FileViewerProvider({
   const descriptor = resource.descriptor
   const descriptorKey = descriptorResetKey(descriptor)
   const descriptorSignal = useDescriptorSignal(descriptorKey)
+  const [controlsRegistration, setControlsRegistration] = React.useState<{
+    descriptorKey: string
+    state: ViewerControlsState | null
+  }>({ descriptorKey, state: null })
+  const controlsState =
+    controlsRegistration.descriptorKey === descriptorKey
+      ? controlsRegistration.state
+      : null
+  const handleControlsChange = React.useCallback(
+    (state: ViewerControlsState | null) => {
+      setControlsRegistration({ descriptorKey, state })
+    },
+    [descriptorKey]
+  )
   const value = React.useMemo<FileViewerContextValue>(
     () => ({
       descriptor,
@@ -140,29 +158,33 @@ export function FileViewerProvider({
       isClient,
       isolateStyles,
       resource,
-      setControlsState: handleControlsChange,
-      controlsState,
     }),
     [
       descriptor,
       descriptorKey,
       descriptorSignal,
       documentChrome,
-      handleControlsChange,
       isClient,
       isolateStyles,
       resource,
-      controlsState,
     ]
+  )
+  const controlsValue = React.useMemo<FileViewerControlsContextValue>(
+    () => ({
+      controlsState,
+    }),
+    [controlsState]
   )
 
   return (
     <FileViewerContext.Provider value={value}>
-      <ViewerControlsRegistrationProvider
-        onControlsChange={handleControlsChange}
-      >
-        {children}
-      </ViewerControlsRegistrationProvider>
+      <FileViewerControlsContext.Provider value={controlsValue}>
+        <ViewerControlsRegistrationProvider
+          onControlsChange={handleControlsChange}
+        >
+          {children}
+        </ViewerControlsRegistrationProvider>
+      </FileViewerControlsContext.Provider>
     </FileViewerContext.Provider>
   )
 }

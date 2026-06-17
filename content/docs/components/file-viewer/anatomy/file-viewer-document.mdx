@@ -14,5 +14,23 @@ renderer from the current `FileViewer` source.
 </FileViewerSurface>
 ```
 
-Keep renderer-specific controls inside the renderer. The controls register
-upward and appear through `FileViewerControls`.
+## Behavior
+
+- Reads the resolved source from context and dispatches to the matching
+  renderer. Unsupported types fall back to a download card.
+- Renderers are **lazy-loaded** — only the one your file needs is fetched, so a
+  PDF page never ships the spreadsheet engine.
+- Renders behind `Suspense` (showing a category-shaped skeleton while the
+  renderer loads) and an error boundary that resets when the file changes.
+- Keep renderer-specific controls inside the renderer. They register upward and
+  appear through `FileViewerControls`, so the document needs no control props.
+
+## API Reference
+
+| Prop        | Type     | Description                                          |
+| ----------- | -------- | ---------------------------------------------------- |
+| `className` | `string` | Optional class on the rendered document container.   |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer-document.tsx" />

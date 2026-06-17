@@ -7,8 +7,8 @@ import {
   fireEvent,
   render,
   screen,
-  within,
   waitFor,
+  within,
 } from "@testing-library/react"
 import { hydrateRoot } from "react-dom/client"
 import { renderToString } from "react-dom/server"
@@ -1069,7 +1069,9 @@ describe("PretextMarkdownViewer", () => {
       />
     )
 
-    const paragraph = await within(visibleMarkdownContent(container)).findByText(
+    const paragraph = await within(
+      visibleMarkdownContent(container)
+    ).findByText(
       "Escaped *stars*, [label](/docs/example), # heading, `code`, and \\ slash."
     )
     expect(paragraph).toBeTruthy()
@@ -1203,11 +1205,16 @@ describe("PretextMarkdownViewer", () => {
     const metric = container.querySelector('[data-pretext-component="Metric"]')
     const badge = container.querySelector('[data-pretext-component="Badge"]')
 
+    // Inline contexts (paragraphs, links, badges) have no scroll region, so a
+    // pathological unbreakable token must break anywhere to stay within width.
     expect(paragraph.className).toContain("[overflow-wrap:anywhere]")
     expect(link.className).toContain("[overflow-wrap:anywhere]")
+    // Table cells keep words intact (GitHub-grade: "Medium" must not break into
+    // "Mediu m"); the table's overflow-x-auto scroll region — not mid-word
+    // breaking — provides the within-viewer-width guarantee.
     expect(tableCells).toHaveLength(2)
-    expect(tableCells[0]?.className).toContain("[overflow-wrap:anywhere]")
-    expect(tableCells[1]?.className).toContain("[overflow-wrap:anywhere]")
+    expect(tableCells[0]?.className).toContain("[overflow-wrap:break-word]")
+    expect(tableCells[1]?.className).toContain("[overflow-wrap:break-word]")
     expect(metric?.className).toContain("min-w-0")
     expect(metric?.textContent).toContain(longToken)
     expect(badge?.className).toContain("[overflow-wrap:anywhere]")
@@ -4016,17 +4023,13 @@ describe("PretextMarkdownViewer", () => {
     expect(rows[1]?.getAttribute("data-pretext-table-row-index")).toBe("2")
     const headers = container.querySelectorAll<HTMLTableCellElement>("th")
     const cells = container.querySelectorAll<HTMLTableCellElement>("td")
-    expect(headers[0]?.id).toMatch(
-      /^pretext-markdown-table-\d+-column-1$/
-    )
+    expect(headers[0]?.id).toMatch(/^pretext-markdown-table-\d+-column-1$/)
     expect(headers[0]?.scope).toBe("col")
     expect(headers[0]?.getAttribute("aria-colindex")).toBe("1")
     expect(headers[0]?.getAttribute("data-pretext-table-column-index")).toBe(
       "1"
     )
-    expect(headers[1]?.id).toMatch(
-      /^pretext-markdown-table-\d+-column-2$/
-    )
+    expect(headers[1]?.id).toMatch(/^pretext-markdown-table-\d+-column-2$/)
     expect(headers[1]?.getAttribute("aria-colindex")).toBe("2")
     expect(headers[0]?.className).toContain("text-left")
     expect(headers[1]?.align).toBe("center")
@@ -4834,7 +4837,11 @@ describe("PretextMarkdownViewer", () => {
   })
 
   it("copies a stable heading link without changing the heading name", async () => {
-    window.history.replaceState(null, "", "/docs/components/file-viewer/pretext?tab=rendered")
+    window.history.replaceState(
+      null,
+      "",
+      "/docs/components/file-viewer/pretext?tab=rendered"
+    )
 
     render(
       <PretextMarkdownViewer
@@ -5021,7 +5028,11 @@ describe("PretextMarkdownViewer", () => {
   })
 
   it("resolves back and forward fragment navigation through popstate", async () => {
-    window.history.replaceState(null, "", "/docs/components/file-viewer/pretext")
+    window.history.replaceState(
+      null,
+      "",
+      "/docs/components/file-viewer/pretext"
+    )
     const sections = Array.from(
       { length: 40 },
       (_, index) => `## Filler ${index + 1}\n\nParagraph ${index + 1}.`
