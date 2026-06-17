@@ -61,4 +61,22 @@ describe("pretext markdown rendered font scaling", () => {
     expect(code?.className).toMatch(/text-\[[0-9.]+em\]/)
     expect(code?.className).not.toMatch(/\btext-sm\b/)
   })
+
+  it("scales alert labels with the body instead of pinning them", () => {
+    const parsed = createPretextMarkdownGreenfieldDocument(
+      "> [!NOTE]\n> Body copy that scales with the document."
+    )
+    const { container } = render(
+      <PretextMarkdownGreenfieldChunkRenderer chunk={parsed.chunks[0]} />
+    )
+
+    // The alert title (label + icon) must ride the em cascade so it grows with
+    // the alert body under zoom — a rem-based text-sm would leave it pinned.
+    const title = container.querySelector("[data-pretext-alert-title]")
+    expect(title?.className).toMatch(/text-\[[0-9.]+em\]/)
+    expect(title?.className).not.toMatch(/\btext-sm\b/)
+    expect(title?.querySelector("svg")?.getAttribute("class")).toMatch(
+      /size-\[[0-9.]+em\]/
+    )
+  })
 })

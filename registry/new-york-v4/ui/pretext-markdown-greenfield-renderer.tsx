@@ -179,10 +179,10 @@ const markdownComponents = {
           role="note"
         >
           <div
-            className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground"
+            className="mb-2 flex items-center gap-2 text-[0.9em] font-semibold text-foreground"
             data-pretext-alert-title=""
           >
-            <Icon className="size-4" aria-hidden="true" />
+            <Icon className="size-[1.15em]" aria-hidden="true" />
             {label}
           </div>
           <div
@@ -259,7 +259,7 @@ const markdownComponents = {
           data-pretext-callout-kind={calloutKind}
           role="note"
         >
-          <div className="mb-2 text-sm font-semibold">{title}</div>
+          <div className="mb-2 text-[0.9em] font-semibold">{title}</div>
           <div className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
             {children}
           </div>
@@ -299,10 +299,10 @@ const markdownComponents = {
           className="my-4 w-fit max-w-full min-w-0 rounded-md border bg-muted/25 px-4 py-3"
           data-pretext-component="Metric"
         >
-          <div className="text-sm [overflow-wrap:anywhere] text-muted-foreground">
+          <div className="text-[0.9em] [overflow-wrap:anywhere] text-muted-foreground">
             {readOptionalString(componentProps.label)}
           </div>
-          <div className="text-2xl font-semibold [overflow-wrap:anywhere]">
+          <div className="text-[1.55em] font-semibold [overflow-wrap:anywhere]">
             {readOptionalString(componentProps.value)}
           </div>
         </div>
@@ -314,7 +314,7 @@ const markdownComponents = {
       )
       return (
         <span
-          className="inline-flex max-w-full items-center rounded-md border bg-muted/35 px-2 py-0.5 text-sm font-medium [overflow-wrap:anywhere]"
+          className="inline-flex max-w-full items-center rounded-md border bg-muted/35 px-2 py-0.5 text-[0.9em] font-medium [overflow-wrap:anywhere]"
           data-pretext-component="Badge"
         >
           {readOptionalString(componentProps.label)}
@@ -336,7 +336,7 @@ const markdownComponents = {
           data-pretext-component="Callout"
           role="note"
         >
-          <div className="mb-2 text-sm font-semibold">{title}</div>
+          <div className="mb-2 text-[0.9em] font-semibold">{title}</div>
           <div className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
             {children}
           </div>
@@ -1280,7 +1280,7 @@ function PretextMarkdownVideoSurface({
         onError={() => setFailed(true)}
       />
       {title ? (
-        <figcaption className="mt-2 text-sm text-muted-foreground">
+        <figcaption className="mt-2 text-[0.9em] text-muted-foreground">
           {title}
         </figcaption>
       ) : null}
