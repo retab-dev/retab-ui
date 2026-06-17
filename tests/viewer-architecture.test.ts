@@ -990,7 +990,6 @@ describe("viewer architecture", () => {
       "csv-viewer",
       "code-viewer",
       "text-viewer",
-      "markdown-document-viewer",
     ]
     const removedToolbarFiles = [
       "registry/new-york-v4/ui/viewer-toolbar.tsx",
@@ -1015,7 +1014,7 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/ui/csv-viewer-chrome.tsx",
       "registry/new-york-v4/ui/code-viewer-chrome.tsx",
       "registry/new-york-v4/ui/text-viewer-chrome.tsx",
-      "registry/new-york-v4/ui/markdown-document-viewer.tsx",
+      "registry/new-york-v4/ui/markdown-greenfield-content.tsx",
       "components/viewers/page-markdown/page-markdown-controls.tsx",
     ]
     const forbiddenNames = [
@@ -1088,11 +1087,10 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/ui/csv-viewer.tsx",
       "registry/new-york-v4/ui/docx-viewer.tsx",
       "registry/new-york-v4/ui/image-viewer.tsx",
-      "registry/new-york-v4/ui/markdown-document-viewer.tsx",
       "registry/new-york-v4/ui/pdf-viewer.tsx",
       "registry/new-york-v4/ui/plain-text-viewer-frame.tsx",
       "registry/new-york-v4/ui/pptx-viewer.tsx",
-      "registry/new-york-v4/ui/pretext-markdown-greenfield-content.tsx",
+      "registry/new-york-v4/ui/markdown-greenfield-content.tsx",
       "registry/new-york-v4/ui/text-viewer-content.tsx",
       "registry/new-york-v4/ui/text-viewer-chenglou-content.tsx",
       "registry/new-york-v4/ui/xlsx-viewer.tsx",
@@ -1122,7 +1120,7 @@ describe("viewer architecture", () => {
     }
   })
 
-  it("keeps FileViewer registry installs wired to Pretext Markdown", () => {
+  it("keeps FileViewer registry installs wired to Markdown", () => {
     const registry = readJson<Registry>("registry.json")
     const fileViewerItem = registry.items.find(
       (item) => item.name === "file-viewer"
@@ -1189,22 +1187,22 @@ describe("viewer architecture", () => {
       ])
     )
     expect(fileViewerItem?.registryDependencies ?? []).toContain(
-      "pretext-markdown-viewer"
+      "markdown-viewer"
     )
     expect(fileViewerItem?.registryDependencies ?? []).not.toContain(
       "markdown-document-viewer"
     )
     expect(publicFileViewerItem.registryDependencies ?? []).toContain(
-      "pretext-markdown-viewer"
+      "markdown-viewer"
     )
     expect(publicFileViewerItem.registryDependencies ?? []).not.toContain(
       "markdown-document-viewer"
     )
     expect(fileViewerSource).not.toContain(
-      'import("@/components/ui/pretext-markdown-viewer")'
+      'import("@/components/ui/markdown-viewer")'
     )
     expect(routeFileViewerSource).toContain(
-      'import("@/components/ui/pretext-markdown-viewer")'
+      'import("@/components/ui/markdown-viewer")'
     )
     expect(fileViewerSource).not.toContain("export function FileViewerProvider")
     expect(fileViewerSource).not.toContain("export type FileViewerProvider")
@@ -1307,10 +1305,10 @@ describe("viewer architecture", () => {
       "export function FileViewerProvider"
     )
     expect(publicFileViewerSource).not.toContain(
-      'import("@/components/ui/pretext-markdown-viewer")'
+      'import("@/components/ui/markdown-viewer")'
     )
     expect(publicRouteFileViewerSource).toContain(
-      'import("@/components/ui/pretext-markdown-viewer")'
+      'import("@/components/ui/markdown-viewer")'
     )
     expect(publicFileViewerSource).not.toContain(
       "export function FileViewerProvider"
@@ -1492,7 +1490,7 @@ describe("viewer architecture", () => {
       "PptxResourceContent",
       "DocxResourceContent",
       "XlsxResourceContent",
-      "PretextMarkdownViewer",
+      "MarkdownViewer",
       "ProseTextViewer",
       "CodeTextViewer",
     ]) {

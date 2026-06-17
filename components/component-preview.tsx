@@ -20,14 +20,13 @@ import { HtmlViewerDemo } from "@/components/html-viewer-demo"
 import { ImageViewerDemo } from "@/components/image-viewer-demo"
 import { JsonFormDemo } from "@/components/json-form-demo"
 import { JsonTableDemo } from "@/components/json-table/json-table-demo"
-import { MarkdownViewerDemo } from "@/components/markdown-viewer-demo"
 import {
   LargeParseViewerDemo,
   ParseViewerDemo,
 } from "@/components/parse-viewer-demo"
 import { PdfViewerDemo } from "@/components/pdf-viewer-demo"
 import { PptxViewerDemo } from "@/components/pptx-viewer-demo"
-import { PretextMarkdownViewerDemo } from "@/components/pretext-markdown-viewer-demo"
+import { MarkdownViewerDemo } from "@/components/markdown-viewer-demo"
 import { PropertyFormDemo } from "@/components/property-form-demo"
 import { RetabSchemaBuilderDemo } from "@/components/retab-schema-builder-demo"
 import { ViewerSidebarDemo } from "@/components/sidebar-demo"
@@ -216,10 +215,6 @@ const REGISTRY = {
   "markdown-viewer-demo": {
     component: MarkdownViewerDemo,
     src: "components/markdown-viewer-demo.tsx",
-  },
-  "pretext-markdown-viewer-demo": {
-    component: PretextMarkdownViewerDemo,
-    src: "components/pretext-markdown-viewer-demo.tsx",
   },
   "html-viewer-demo": {
     component: HtmlViewerDemo,

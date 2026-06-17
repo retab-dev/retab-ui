@@ -9,14 +9,14 @@ import { absoluteUrl } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { DocsCopyPage } from "@/components/docs-copy-page"
 import { DocsTableOfContents } from "@/components/docs-toc"
-import { PretextMarkdownViewerDemo } from "@/components/pretext-markdown-viewer-demo"
+import { MarkdownViewerDemo } from "@/components/markdown-viewer-demo"
 
 export const revalidate = false
 export const dynamic = "force-static"
 export const dynamicParams = false
 
-const PRETEXT_MARKDOWN_VIEWER_DOC_URL =
-  "/docs/components/file-viewer/renderers/pretext-markdown"
+const MARKDOWN_VIEWER_DOC_URL =
+  "/docs/components/file-viewer/renderers/markdown"
 
 export function generateStaticParams() {
   return source.generateParams()
@@ -135,8 +135,8 @@ export default async function Page(props: {
             </div>
           </div>
           <div className="w-full flex-1 pb-16 *:data-[slot=alert]:first:mt-0 sm:pb-0">
-            {page.url === PRETEXT_MARKDOWN_VIEWER_DOC_URL ? (
-              <PretextMarkdownViewerDemo />
+            {page.url === MARKDOWN_VIEWER_DOC_URL ? (
+              <MarkdownViewerDemo />
             ) : null}
             <MDX components={mdxComponents} />
           </div>

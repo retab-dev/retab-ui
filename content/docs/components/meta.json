@@ -7,15 +7,11 @@
     "json-form",
     "json-table",
     "schema-builder",
+    "parse-viewer",
     "---File Intake---",
     "dropzone",
     "file-thumbnail",
     "---File Viewer---",
-    "file-viewer",
-    "---Result Viewers---",
-    "classification-viewer",
-    "partition-viewer",
-    "split-viewer",
-    "parse-viewer"
+    "file-viewer"
   ]
 }

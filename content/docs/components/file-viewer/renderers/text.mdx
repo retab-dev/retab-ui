@@ -55,13 +55,13 @@ URL and Blob sources use the same bounded text resource path as the Code Viewer:
 - **Custom virtualization** — variable-height source lines are windowed with local offset math, not TanStack Virtual.
 - **Stable source-line addressing** — `highlight` and `scrollToLineRange` still use 1-based inclusive source-line ranges.
 - **Prose chrome** — the controls shows word count, text scale controls, and downloads from the source resource.
-- **Markdown stays separate** — `.md`, `.markdown`, and `text/markdown` sources route through the dedicated Pretext Markdown Viewer, not through Text Viewer markdown mode.
+- **Markdown stays separate** — `.md`, `.markdown`, and `text/markdown` sources route through the dedicated Markdown Viewer, not through Text Viewer markdown mode.
 
 ## Markdown Boundary
 
 Markdown is no longer a Text Viewer rendering mode in File Viewer routing.
 Markdown files and inline Markdown sources use
-[`PretextMarkdownViewer`](/docs/components/file-viewer/renderers/pretext-markdown), which owns the
+[`MarkdownViewer`](/docs/components/file-viewer/renderers/markdown), which owns the
 React/GFM document semantics, Rendered/Text toggle, safe raw HTML policy,
 alerts, diagrams, frontmatter, tables, footnotes, and restricted component
 markdown.

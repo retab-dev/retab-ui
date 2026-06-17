@@ -1,4 +1,4 @@
 {
   "title": "File Viewer",
-  "pages": ["index", "anatomy", "header", "navigation", "renderers", "recipes"]
+  "pages": ["index", "anatomy", "header", "navigation", "renderers"]
 }

@@ -17,7 +17,7 @@ File Viewer; they are routes inside it:
 [XLSX](/docs/components/file-viewer/renderers/xlsx), and
 [CSV](/docs/components/file-viewer/renderers/csv). File Viewer also owns inline,
 client-side rendering for **text, code, JSON,
-[Markdown](/docs/components/file-viewer/renderers/pretext-markdown), and HTML**.
+[Markdown](/docs/components/file-viewer/renderers/markdown), and HTML**.
 
 <ComponentPreview name="file-viewer-demo" />
 
@@ -28,7 +28,7 @@ npx shadcn@latest add @retab/file-viewer
 ```
 
 This pulls in the format-specific viewers it delegates to, plus the
-[Pretext Markdown Viewer](/docs/components/file-viewer/renderers/pretext-markdown)
+[Markdown Viewer](/docs/components/file-viewer/renderers/markdown)
 for Markdown documents, custom fixed-line virtualization for the Code Viewer,
 and `@chenglou/pretext` for the wrapped Text and Markdown surfaces.
 
@@ -125,7 +125,7 @@ already owns the surrounding surface:
 | Presentation | `pptx`                                                                          | PPTX Viewer             |
 | Tabular      | `csv`, `tsv`                                                                    | CSV Viewer              |
 | Image        | `png`, `jpg`, `jpeg`, `gif`, `webp`, `avif`, `svg`, `bmp`, `ico`, `tif`, `tiff` | Image Viewer            |
-| Markdown     | `md`, `markdown`, `text/markdown`                                               | Pretext Markdown Viewer |
+| Markdown     | `md`, `markdown`, `text/markdown`                                               | Markdown Viewer |
 | HTML         | `html`, `htm`                                                                   | sandboxed iframe        |
 | Text         | `txt`, `text`                                                                   | Pretext Text Viewer     |
 | Code & logs  | `log`, `json`, `xml`, `yaml`, `mdx`, `ts`, `py`, `go`, …                        | Code Viewer             |
@@ -146,7 +146,7 @@ File Viewer primitives.
   through the Pretext Text Viewer with natural wrapping and custom
   variable-height virtualization.
 - **Markdown has a dedicated continuous document path.** Markdown URL, Blob,
-  inline text, and MIME-only sources route to `PretextMarkdownViewer`, which
+  inline text, and MIME-only sources route to `MarkdownViewer`, which
   keeps Pretext-informed virtual chunks as an internal layout strategy while
   React/GFM owns the visible document rendering. The Text Viewer remains for
   prose text that is not Markdown.

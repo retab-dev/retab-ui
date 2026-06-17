@@ -44,9 +44,9 @@ const ProseTextViewer = React.lazy(() =>
     default: m.ChenglouTextViewer,
   }))
 )
-const PretextMarkdownViewer = React.lazy(() =>
-  import("@/components/ui/pretext-markdown-viewer").then((m) => ({
-    default: m.PretextMarkdownViewer,
+const MarkdownViewer = React.lazy(() =>
+  import("@/components/ui/markdown-viewer").then((m) => ({
+    default: m.MarkdownViewer,
   }))
 )
 const CodeTextViewer = React.lazy(() =>
@@ -151,7 +151,7 @@ const RENDERERS: Partial<
     />
   ),
   markdown: ({ resource, className, bare, controls }) => (
-    <PretextMarkdownViewer
+    <MarkdownViewer
       source={resource.descriptor.source}
       className={className}
       controls={controls}

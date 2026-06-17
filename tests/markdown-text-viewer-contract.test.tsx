@@ -62,7 +62,7 @@ afterEach(() => {
 })
 
 describe("Markdown/Text viewer contract", () => {
-  it("routes FileViewer Markdown through PretextMarkdownViewer, not the old HTML markdown document viewer", async () => {
+  it("routes FileViewer Markdown through MarkdownViewer, not the old HTML markdown document viewer", async () => {
     const fileViewerSource = readFileSync(
       "registry/new-york-v4/ui/file-viewer.tsx",
       "utf8"
@@ -73,9 +73,9 @@ describe("Markdown/Text viewer contract", () => {
     )
 
     expect(fileViewerRouteSource).toContain(
-      'import("@/components/ui/pretext-markdown-viewer")'
+      'import("@/components/ui/markdown-viewer")'
     )
-    expect(fileViewerRouteSource).toContain("<PretextMarkdownViewer")
+    expect(fileViewerRouteSource).toContain("<MarkdownViewer")
     expect(fileViewerSource).not.toContain('mode="markdown"')
     expect(fileViewerSource).not.toContain(
       'import("@/components/ui/markdown-document-viewer")'
@@ -107,7 +107,7 @@ describe("Markdown/Text viewer contract", () => {
     ).toBeTruthy()
     expect(document.querySelector('[data-slot="text-viewer"]')).toBeTruthy()
     expect(
-      document.querySelector('[data-slot="pretext-markdown-virtual-canvas"]')
+      document.querySelector('[data-slot="markdown-virtual-canvas"]')
     ).toBeTruthy()
     expect(
       document.querySelector('[data-slot="markdown-document-virtual-canvas"]')
@@ -204,13 +204,13 @@ describe("Markdown/Text viewer contract", () => {
     expect(viewport!.scrollTop).toBeGreaterThan(0)
   })
 
-  it("anchors Pretext Markdown source-mode rows to the source canvas origin", () => {
+  it("anchors Markdown source-mode rows to the source canvas origin", () => {
     const source = readFileSync(
-      "registry/new-york-v4/ui/pretext-markdown-greenfield-content.tsx",
+      "registry/new-york-v4/ui/markdown-greenfield-content.tsx",
       "utf8"
     )
 
-    expect(source).toContain('data-slot="pretext-markdown-source-canvas"')
+    expect(source).toContain('data-slot="markdown-source-canvas"')
     expect(source).toContain(
       '"absolute inset-x-0 grid grid-cols-[4rem_minmax(0,1fr)] px-4"'
     )

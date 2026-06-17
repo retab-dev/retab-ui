@@ -28,7 +28,7 @@
     "verify:json-table": "pnpm test:json-table && pnpm verify:json-table-performance && PROFILE_SERVER_MODE=auto PROFILE_DEV_SERVER_TIMEOUT_MS=90000 JSON_TABLE_PROFILE_WARMUP=1 pnpm verify:json-table-performance:fresh && PROFILE_SERVER_MODE=auto PROFILE_DEV_SERVER_TIMEOUT_MS=90000 pnpm verify:json-table-accessibility:fresh && PROFILE_SERVER_MODE=auto PROFILE_DEV_SERVER_TIMEOUT_MS=90000 JSON_TABLE_PROFILE_WARMUP=1 JSON_TABLE_PROFILE_REPEAT=3 JSON_TABLE_PROFILE_TARGETS=large JSON_TABLE_PROFILE_SCENARIOS=open-enum,open-date,switch-dirty-cell,open-far-enum,open-far-date,commit-far-text pnpm verify:json-table-performance:fresh",
     "verify:data-cell": "node scripts/verify-data-cell-parity.mjs",
     "verify:data-cell-registry": "node scripts/verify-data-cell-registry-determinism.mjs",
-    "verify:pretext-markdown-viewer": "node scripts/verify-pretext-markdown-viewer.mjs",
+    "verify:markdown-viewer": "node scripts/verify-markdown-viewer.mjs",
     "verify:viewer-skeletons": "node scripts/verify-viewer-skeletons.mjs",
     "verify:xlsx-viewer": "node scripts/verify-xlsx-viewer.mjs",
     "postinstall": "fumadocs-mdx",

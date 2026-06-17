@@ -389,7 +389,7 @@ describe("FileViewer detection helpers", () => {
       'import("@/components/ui/text-viewer-chenglou")'
     )
     expect(routeSource).toContain(
-      'import("@/components/ui/pretext-markdown-viewer")'
+      'import("@/components/ui/markdown-viewer")'
     )
     expect(routeSource).not.toContain(
       'import("@/components/ui/markdown-document-viewer")'
@@ -1071,7 +1071,7 @@ describe("FileViewer text rendering", () => {
     expect(container.querySelector("[data-line-number]")).toBeNull()
   })
 
-  it("routes markdown files through the Pretext Markdown Viewer", async () => {
+  it("routes markdown files through the Markdown Viewer", async () => {
     mockPretextCanvasMeasurement()
     vi.stubGlobal(
       "fetch",
@@ -1092,7 +1092,7 @@ describe("FileViewer text rendering", () => {
     expect(screen.getByText("Body copy")).toBeTruthy()
     expect(container.querySelector('[data-slot="text-viewer"]')).toBeTruthy()
     expect(
-      container.querySelector('[data-slot="pretext-markdown-virtual-canvas"]')
+      container.querySelector('[data-slot="markdown-virtual-canvas"]')
     ).toBeTruthy()
     expect(
       container.querySelector('[data-slot="markdown-document-virtual-canvas"]')
@@ -1102,7 +1102,7 @@ describe("FileViewer text rendering", () => {
     expect(container.querySelector("iframe")).toBeNull()
   })
 
-  it("routes extensionless Markdown MIME URL sources through the Pretext Markdown Viewer", async () => {
+  it("routes extensionless Markdown MIME URL sources through the Markdown Viewer", async () => {
     mockPretextCanvasMeasurement()
     vi.stubGlobal(
       "fetch",
@@ -1120,7 +1120,7 @@ describe("FileViewer text rendering", () => {
     ).toBeTruthy()
     expect(screen.getByText("Body copy")).toBeTruthy()
     expect(
-      container.querySelector('[data-slot="pretext-markdown-virtual-canvas"]')
+      container.querySelector('[data-slot="markdown-virtual-canvas"]')
     ).toBeTruthy()
     expect(container.querySelector('[data-slot="code-viewer"]')).toBeNull()
     expect(container.querySelector(".fv-markdown")).toBeNull()
@@ -1387,7 +1387,7 @@ describe("FileViewer text rendering", () => {
     expect(screen.getByText("Body copy")).toBeTruthy()
     expect(document.querySelector('[data-slot="text-viewer"]')).toBeTruthy()
     expect(
-      document.querySelector('[data-slot="pretext-markdown-virtual-canvas"]')
+      document.querySelector('[data-slot="markdown-virtual-canvas"]')
     ).toBeTruthy()
     expect(document.querySelector('[data-slot="code-viewer"]')).toBeNull()
     expect(document.querySelector(".fv-markdown")).toBeNull()
@@ -1414,7 +1414,7 @@ describe("FileViewer text rendering", () => {
     ).toBeTruthy()
     expect(screen.getByText("Body copy")).toBeTruthy()
     expect(
-      document.querySelector('[data-slot="pretext-markdown-virtual-canvas"]')
+      document.querySelector('[data-slot="markdown-virtual-canvas"]')
     ).toBeTruthy()
     expect(document.querySelector('[data-slot="code-viewer"]')).toBeNull()
     expect(document.querySelector(".fv-markdown")).toBeNull()
@@ -1433,7 +1433,7 @@ describe("FileViewer text rendering", () => {
     ).toBeTruthy()
     expect(screen.getByText("Body copy")).toBeTruthy()
     expect(
-      document.querySelector('[data-slot="pretext-markdown-virtual-canvas"]')
+      document.querySelector('[data-slot="markdown-virtual-canvas"]')
     ).toBeTruthy()
     expect(document.querySelector('[data-slot="code-viewer"]')).toBeNull()
     expect(document.querySelector(".fv-markdown")).toBeNull()
@@ -1457,7 +1457,7 @@ describe("FileViewer text rendering", () => {
     ).toBeTruthy()
     expect(screen.getByText("Body copy")).toBeTruthy()
     expect(
-      document.querySelector('[data-slot="pretext-markdown-virtual-canvas"]')
+      document.querySelector('[data-slot="markdown-virtual-canvas"]')
     ).toBeTruthy()
     expect(document.querySelector('[data-slot="code-viewer"]')).toBeNull()
     expect(document.querySelector(".fv-markdown")).toBeNull()

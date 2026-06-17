@@ -2112,7 +2112,7 @@
         "csv-viewer",
         "code-viewer",
         "text-viewer-chenglou",
-        "pretext-markdown-viewer",
+        "markdown-viewer",
         "@retab/viewer-controls",
         "skeleton"
       ],
@@ -4289,9 +4289,9 @@
       ]
     },
     {
-      "name": "pretext-markdown-viewer",
+      "name": "markdown-viewer",
       "type": "registry:ui",
-      "title": "Pretext Markdown Viewer",
+      "title": "Markdown Viewer",
       "description": "A continuous Markdown viewer forked from the Chenglou Pretext text viewer, with block virtualization and no visible page model.",
       "dependencies": [
         "hast-util-to-jsx-runtime",
@@ -4320,164 +4320,64 @@
       ],
       "files": [
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-viewer.tsx",
+          "path": "registry/new-york-v4/ui/markdown-viewer.tsx",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-viewer.tsx"
+          "target": "@ui/markdown-viewer.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-greenfield-content.tsx",
+          "path": "registry/new-york-v4/ui/markdown-greenfield-content.tsx",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-greenfield-content.tsx"
+          "target": "@ui/markdown-greenfield-content.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-greenfield-code-highlight.tsx",
+          "path": "registry/new-york-v4/ui/markdown-greenfield-code-highlight.tsx",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-greenfield-code-highlight.tsx"
+          "target": "@ui/markdown-greenfield-code-highlight.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-greenfield-diagram.tsx",
+          "path": "registry/new-york-v4/ui/markdown-greenfield-diagram.tsx",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-greenfield-diagram.tsx"
+          "target": "@ui/markdown-greenfield-diagram.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-greenfield-document.ts",
+          "path": "registry/new-york-v4/ui/markdown-greenfield-document.ts",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-greenfield-document.ts"
+          "target": "@ui/markdown-greenfield-document.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-greenfield-layout.ts",
+          "path": "registry/new-york-v4/ui/markdown-greenfield-layout.ts",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-greenfield-layout.ts"
+          "target": "@ui/markdown-greenfield-layout.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-greenfield-renderer.tsx",
+          "path": "registry/new-york-v4/ui/markdown-greenfield-renderer.tsx",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-greenfield-renderer.tsx"
+          "target": "@ui/markdown-greenfield-renderer.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-greenfield-virtualizer.ts",
+          "path": "registry/new-york-v4/ui/markdown-greenfield-virtualizer.ts",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-greenfield-virtualizer.ts"
+          "target": "@ui/markdown-greenfield-virtualizer.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-hast-types.ts",
+          "path": "registry/new-york-v4/ui/markdown-hast-types.ts",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-hast-types.ts"
+          "target": "@ui/markdown-hast-types.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-source-map.ts",
+          "path": "registry/new-york-v4/ui/markdown-source-map.ts",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-source-map.ts"
+          "target": "@ui/markdown-source-map.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-unified-pipeline.ts",
+          "path": "registry/new-york-v4/ui/markdown-unified-pipeline.ts",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-unified-pipeline.ts"
+          "target": "@ui/markdown-unified-pipeline.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/pretext-markdown-url-policy.ts",
+          "path": "registry/new-york-v4/ui/markdown-url-policy.ts",
           "type": "registry:ui",
-          "target": "@ui/pretext-markdown-url-policy.ts"
-        }
-      ]
-    },
-    {
-      "name": "markdown-document-viewer",
-      "type": "registry:ui",
-      "title": "Markdown Document Viewer",
-      "description": "A continuous Markdown document viewer that renders visible chunks with React Markdown/GFM and uses a custom virtualizer for large files.",
-      "dependencies": [
-        "@chenglou/pretext",
-        "katex",
-        "lucide-react",
-        "marked@18.0.5",
-        "react-markdown",
-        "rehype-katex",
-        "rehype-pretty-code",
-        "rehype-raw",
-        "rehype-sanitize",
-        "remark-breaks",
-        "remark-directive",
-        "remark-gfm",
-        "remark-math",
-        "unist-util-visit"
-      ],
-      "registryDependencies": [
-        "text-viewer",
-        "separator",
-        "tabs",
-        "@retab/viewer-controls"
-      ],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/markdown-document-viewer.tsx",
-          "type": "registry:ui",
-          "target": "@ui/markdown-document-viewer.tsx"
-        },
-        {
-          "path": "registry/new-york-v4/ui/markdown-document-layout.ts",
-          "type": "registry:ui",
-          "target": "@ui/markdown-document-layout.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/markdown-document-renderer.tsx",
-          "type": "registry:ui",
-          "target": "@ui/markdown-document-renderer.tsx"
-        },
-        {
-          "path": "registry/new-york-v4/ui/markdown-document-table-accessibility.ts",
-          "type": "registry:ui",
-          "target": "@ui/markdown-document-table-accessibility.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/markdown-document-renderers.tsx",
-          "type": "registry:ui",
-          "target": "@ui/markdown-document-renderers.tsx"
-        },
-        {
-          "path": "registry/new-york-v4/ui/markdown-document-plugins.ts",
-          "type": "registry:ui",
-          "target": "@ui/markdown-document-plugins.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/markdown-document-prose-transforms.ts",
-          "type": "registry:ui",
-          "target": "@ui/markdown-document-prose-transforms.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/markdown-document-components.tsx",
-          "type": "registry:ui",
-          "target": "@ui/markdown-document-components.tsx"
-        },
-        {
-          "path": "registry/new-york-v4/ui/markdown-document-sanitize.ts",
-          "type": "registry:ui",
-          "target": "@ui/markdown-document-sanitize.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/markdown-document-callouts.tsx",
-          "type": "registry:ui",
-          "target": "@ui/markdown-document-callouts.tsx"
-        },
-        {
-          "path": "registry/new-york-v4/ui/markdown-document-copy.tsx",
-          "type": "registry:ui",
-          "target": "@ui/markdown-document-copy.tsx"
-        },
-        {
-          "path": "registry/new-york-v4/ui/markdown-document-url-policy.ts",
-          "type": "registry:ui",
-          "target": "@ui/markdown-document-url-policy.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/markdown-document-model.ts",
-          "type": "registry:ui",
-          "target": "@ui/markdown-document-model.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/markdown-document-virtualizer.ts",
-          "type": "registry:ui",
-          "target": "@ui/markdown-document-virtualizer.ts"
+          "target": "@ui/markdown-url-policy.ts"
         }
       ]
     },
