@@ -1042,7 +1042,7 @@ function PretextMarkdownCodeBlock({
       </pre>
       {metadata.caption ? (
         <figcaption
-          className="border-t px-3 py-2 text-sm text-muted-foreground"
+          className="border-t px-3 py-2 text-[0.9em] text-muted-foreground"
           data-pretext-code-caption=""
         >
           {metadata.caption}
@@ -1215,7 +1215,7 @@ function PretextMarkdownImageSurface({
       {title ? (
         <figcaption
           id={captionId}
-          className="mt-2 text-sm text-muted-foreground"
+          className="mt-2 text-[0.9em] text-muted-foreground"
           data-pretext-image-caption=""
         >
           {title}
