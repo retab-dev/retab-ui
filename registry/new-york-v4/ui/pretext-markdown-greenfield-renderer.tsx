@@ -35,9 +35,11 @@ const PretextMarkdownContentReadyContext = React.createContext<
 export function PretextMarkdownGreenfieldChunkRenderer({
   chunk,
   onContentReady,
+  searchQuery,
 }: {
   chunk: PretextMarkdownGreenfieldChunk
   onContentReady?: () => void
+  searchQuery?: string
 }) {
   const ref = React.useRef<HTMLDivElement | null>(null)
   const notifyContentReady = React.useCallback(() => {
@@ -64,16 +66,24 @@ export function PretextMarkdownGreenfieldChunkRenderer({
         className="pretext-markdown-greenfield-content min-w-0 text-[15.5px] leading-relaxed text-foreground"
         data-slot="pretext-markdown-greenfield-content"
       >
-        {renderHastChildren(chunk.hastChildren)}
+        {renderHastChildren(chunk.hastChildren, searchQuery)}
       </div>
     </PretextMarkdownContentReadyContext.Provider>
   )
 }
 
-function renderHastChildren(children: readonly PretextMarkdownHastNode[]) {
+function renderHastChildren(
+  children: readonly PretextMarkdownHastNode[],
+  searchQuery?: string
+) {
   const root: PretextMarkdownHastRoot = {
     type: "root",
     children: children.map(cloneHastNode),
+  }
+
+  const normalizedQuery = searchQuery?.trim().toLowerCase()
+  if (normalizedQuery) {
+    highlightPretextMarkdownSearchMatches(root.children, normalizedQuery)
   }
 
   return toJsxRuntime(root as never, {
@@ -442,7 +452,7 @@ const markdownComponents = {
   mark: ({ node: _node, ...props }: any) => (
     <mark
       {...props}
-      className="rounded bg-yellow-200/70 px-1 text-foreground"
+      className="rounded bg-yellow-200/70 px-1 text-foreground dark:bg-yellow-400/30"
       data-pretext-raw-inline=""
     />
   ),
@@ -1345,6 +1355,76 @@ function PretextMarkdownTabs({
       ))}
     </div>
   )
+}
+
+// Tags whose text is verbatim source (code) or already a highlight; wrapping a
+// match inside them would corrupt the rendered output, so they are skipped.
+const PRETEXT_MARKDOWN_SEARCH_SKIP_TAGS = new Set([
+  "code",
+  "pre",
+  "mark",
+  "script",
+  "style",
+  "textarea",
+])
+
+// Browser-find-style highlighting for the in-app search: wraps every case-
+// insensitive occurrence of the active query in a <mark> so matches are visible
+// where the search navigates. Mutates the freshly cloned chunk tree in place,
+// matching the same trimmed-substring semantics as the toolbar match count.
+function highlightPretextMarkdownSearchMatches(
+  nodes: PretextMarkdownHastNode[],
+  lowerQuery: string
+) {
+  for (let index = 0; index < nodes.length; index += 1) {
+    const node = nodes[index]
+    if (node.type === "text" && typeof node.value === "string") {
+      const replacement = splitPretextMarkdownTextForSearch(
+        node.value,
+        lowerQuery
+      )
+      if (replacement) {
+        nodes.splice(index, 1, ...replacement)
+        index += replacement.length - 1
+      }
+      continue
+    }
+    if (node.type === "element" && Array.isArray(node.children)) {
+      const tagName = (node as PretextMarkdownHastElement).tagName.toLowerCase()
+      if (PRETEXT_MARKDOWN_SEARCH_SKIP_TAGS.has(tagName)) continue
+      highlightPretextMarkdownSearchMatches(node.children, lowerQuery)
+    }
+  }
+}
+
+function splitPretextMarkdownTextForSearch(
+  value: string,
+  lowerQuery: string
+): PretextMarkdownHastNode[] | null {
+  const lowerValue = value.toLowerCase()
+  let matchStart = lowerValue.indexOf(lowerQuery)
+  if (matchStart === -1) return null
+
+  const out: PretextMarkdownHastNode[] = []
+  let cursor = 0
+  while (matchStart !== -1) {
+    if (matchStart > cursor) {
+      out.push({ type: "text", value: value.slice(cursor, matchStart) })
+    }
+    const matchEnd = matchStart + lowerQuery.length
+    out.push({
+      type: "element",
+      tagName: "mark",
+      properties: { dataPretextSearchMatch: "" },
+      children: [{ type: "text", value: value.slice(matchStart, matchEnd) }],
+    })
+    cursor = matchEnd
+    matchStart = lowerValue.indexOf(lowerQuery, cursor)
+  }
+  if (cursor < value.length) {
+    out.push({ type: "text", value: value.slice(cursor) })
+  }
+  return out
 }
 
 function cloneHastNode<T extends PretextMarkdownHastNode>(node: T): T {

@@ -573,6 +573,7 @@ export function PretextMarkdownGreenfieldContent({
                       onContentReady={() =>
                         measureChunkFrame(chunk, recordMeasuredHeight)
                       }
+                      searchQuery={searchQuery}
                     />
                   </ChunkFrame>
                 )
