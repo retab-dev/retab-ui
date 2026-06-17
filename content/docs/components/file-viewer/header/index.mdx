@@ -92,13 +92,77 @@ the default title/meta/controls composition:
 </FileViewer>
 ```
 
-## Ownership
+## Parts
 
-- `FileViewerTitle` renders the file display name.
-- `FileViewerMeta` renders passive file metadata such as MIME type or category.
-- `FileViewerControls` renders active renderer controls: page position, zoom,
-  rotate, retry, copy, and download when the current renderer registers them.
-- `FileViewerSidebarTrigger` toggles the nearest `FileViewerSidebar`.
+The header is composed from four context-aware parts. None of them take a
+`source` prop — each reads what it needs from the file viewer state.
+
+### FileViewerTitle
+
+Renders the current file display name and is the primary file identity in the
+header.
+
+```tsx
+<FileViewerTitle />
+```
+
+- Reads `descriptor.displayName` from file-viewer context — it takes no `source`
+  or name prop of its own.
+- Renders a `data-slot="file-viewer-title"` element with a truncating label and a
+  native `title` tooltip, so long file names clip cleanly and stay readable on
+  hover.
+- Do not add a decorative file icon beside the title. The file name carries the
+  identity; metadata and controls provide the surrounding context.
+
+### FileViewerMeta
+
+Renders passive facts about the current file — its MIME type or category — beside
+the title. It never carries actions.
+
+```tsx
+<FileViewerTitle />
+<FileViewerMeta />
+```
+
+- Resolves its text from context as `resource.mimeType`, falling back to the
+  descriptor's MIME type, then the detected category.
+- Renders **nothing** when there is no metadata to show, so it never leaves an
+  empty gap in the header.
+- Renders a `data-slot="file-viewer-meta"` element with muted, truncating text.
+
+### FileViewerControls
+
+Renders operational controls registered by the active renderer: page position,
+zoom, rotate, retry, copy, and download.
+
+```tsx
+<FileViewerControls />
+```
+
+Add workflow actions beside the renderer controls with `extra`:
+
+```tsx
+<FileViewerControls extra={<ApproveButton />} />
+```
+
+- Reads the registered control set (`position`, `zoom`, `rotate`, `loading`,
+  `extra`) from file-viewer context. The header takes no PDF- or
+  spreadsheet-specific props — renderers register their controls upward.
+- Download defaults to the file's original download action. A renderer can
+  register its own `downloads` (and registering an empty list hides the download
+  button entirely).
+- Renders a `data-slot="file-viewer-controls"` row, right-aligned in the header.
+- The `extra` prop is merged with any renderer-registered extras, so workflow
+  actions can sit beside the renderer's own controls.
+
+### FileViewerSidebarTrigger
+
+Toggles the nearest `FileViewerSidebar`. Place it before the title when the body
+contains a sidebar.
+
+```tsx
+<FileViewerSidebarTrigger />
+```
 
 The header does not know whether the document is a PDF, spreadsheet, image, or
 email. Renderer-specific controls register into the file viewer state and appear

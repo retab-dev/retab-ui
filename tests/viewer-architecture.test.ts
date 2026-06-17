@@ -52,28 +52,10 @@ const compoundViewerDocContracts = [
     easyApi: "EmailViewer",
   },
   {
-    file: "content/docs/components/split-viewer.mdx",
-    provider: "SplitViewerProvider",
-    root: "<FileViewer",
-    easyApi: "SplitViewer",
-  },
-  {
     file: "content/docs/components/parse-viewer.mdx",
     provider: "ParseViewerProvider",
     root: "<ViewerRoot",
     easyApi: "ParseViewer",
-  },
-  {
-    file: "content/docs/components/partition-viewer.mdx",
-    provider: "PartitionViewerProvider",
-    root: "<FileViewer",
-    easyApi: "PartitionViewer",
-  },
-  {
-    file: "content/docs/components/classification-viewer.mdx",
-    provider: "ClassifierViewerProvider",
-    root: "<ViewerRoot",
-    easyApi: "ClassifierViewer",
   },
 ]
 
@@ -2173,8 +2155,6 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/blocks/partition-viewer-block.tsx",
       "registry/new-york-v4/blocks/sources-viewer-block.tsx",
       "content/docs/components/file-viewer/renderers/pdf.mdx",
-      "content/docs/components/split-viewer.mdx",
-      "content/docs/components/partition-viewer.mdx",
     ]
 
     for (const file of files) {

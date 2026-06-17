@@ -7,7 +7,11 @@ import { extractionSourcesToSourceMap } from "@/lib/document-source"
 import {
   FileViewer,
   FileViewerBody,
+  FileViewerControls,
+  FileViewerHeader,
+  FileViewerMeta,
   FileViewerSurface,
+  FileViewerTitle,
 } from "@/components/ui/file-viewer"
 import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -97,6 +101,11 @@ function JsonFormSourcesContent({
             }}
             className="h-full"
           >
+            <FileViewerHeader>
+              <FileViewerTitle />
+              <FileViewerMeta />
+              <FileViewerControls />
+            </FileViewerHeader>
             <PdfViewerProvider>
               <FileViewerBody>
                 <FileViewerSurface>
