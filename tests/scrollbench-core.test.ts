@@ -9,6 +9,9 @@ import {
   SCENARIOS,
   summarizeFrameDurations,
   summarizeImageRenderTimings,
+  summarizeRepeatedScrollBenchRuns,
+  type ScenarioDefinition,
+  type ScrollBenchResult,
 } from "@/app/(view)/scrollbench/scrollbench-core"
 
 describe("scrollbench core", () => {
@@ -166,6 +169,11 @@ describe("scrollbench core", () => {
     expect(result.averageScrollMutationMs).toBe(0)
     expect(result.p95ScrollMutationMs).toBe(0)
     expect(result.maxScrollMutationMs).toBe(0)
+    expect(result.longTasks).toMatchObject({
+      count: 0,
+      maxMs: 0,
+      totalMs: 0,
+    })
     expect(result.domMutation).toMatchObject({
       addedElements: 0,
       mutationRecords: 0,
@@ -243,6 +251,7 @@ describe("scrollbench core", () => {
       stepPx: 64,
       distancePx: 425,
       warmupFrameMs: [8, 9],
+      longTaskDurations: [52, 80, Number.NaN, -1],
       domMutation: {
         addedElements: 6,
         addedNodes: 10,
@@ -269,6 +278,12 @@ describe("scrollbench core", () => {
     expect(result.averageScrollMutationMs).toBe(3.75)
     expect(result.p95ScrollMutationMs).toBe(4)
     expect(result.maxScrollMutationMs).toBe(8)
+    expect(result.longTasks).toMatchObject({
+      averageMs: 66,
+      count: 2,
+      maxMs: 80,
+      totalMs: 132,
+    })
     expect(result.domMutation).toMatchObject({
       addedElements: 6,
       addedNodes: 10,
@@ -321,6 +336,99 @@ describe("scrollbench core", () => {
     expect(result.distancePx).toBe(0)
   })
 
+  it("aggregates repeated scrollbench runs into per-scenario distributions", () => {
+    const small = SCENARIOS[0]
+    const large = SCENARIOS[1]
+    const runA = createRun({
+      maxScrollTop: 1000,
+      scenarios: [
+        createScenarioResult({
+          scenario: small,
+          frameDurations: [8.3, 8.4, 8.2, 8.5],
+          mutationRecords: 100,
+          addedElements: 40,
+          removedElements: 35,
+          maxScrollportElementCount: 120,
+          maxViewerElementCount: 140,
+        }),
+        createScenarioResult({
+          scenario: large,
+          frameDurations: [9, 9.1, 9.2, 9.3],
+          mutationRecords: 500,
+          addedElements: 240,
+          removedElements: 235,
+          maxScrollportElementCount: 220,
+          maxViewerElementCount: 240,
+        }),
+      ],
+    })
+    const runB = createRun({
+      maxScrollTop: 2000,
+      scenarios: [
+        createScenarioResult({
+          scenario: small,
+          frameDurations: [10, 20, 40, 30],
+          mutationRecords: 200,
+          addedElements: 80,
+          removedElements: 70,
+          maxScrollportElementCount: 130,
+          maxViewerElementCount: 150,
+          longTaskDurations: [60],
+        }),
+        createScenarioResult({
+          scenario: large,
+          frameDurations: [11, 12, 13, 14],
+          mutationRecords: 700,
+          addedElements: 340,
+          removedElements: 335,
+          maxScrollportElementCount: 230,
+          maxViewerElementCount: 250,
+        }),
+      ],
+    })
+
+    const result = summarizeRepeatedScrollBenchRuns([runA, runB])
+    const smallRepeat = result.scenarios.find(
+      (scenario) => scenario.id === small.id
+    )
+
+    expect(result.viewer).toBe("text")
+    expect(result.runCount).toBe(2)
+    expect(result.viewport.maxScrollTop).toBe(2000)
+    expect(smallRepeat).toBeDefined()
+    expect(smallRepeat?.runs).toBe(2)
+    expect(smallRepeat?.rafLimitedRuns).toBe(1)
+    expect(smallRepeat?.workLimitedRuns).toBe(1)
+    expect(smallRepeat?.worstRunIndex).toBe(1)
+    expect(smallRepeat?.p95FrameMs.average).toBeCloseTo(19.2)
+    expect(smallRepeat?.p95FrameMs.max).toBe(30)
+    expect(smallRepeat?.p95FrameMs.stdDev).toBeCloseTo(10.8)
+    expect(smallRepeat?.mutationRecords).toMatchObject({
+      average: 150,
+      max: 200,
+      total: 300,
+    })
+    expect(smallRepeat?.addedElements).toMatchObject({
+      average: 60,
+      max: 80,
+      total: 120,
+    })
+    expect(smallRepeat?.maxViewerElementCount).toMatchObject({
+      average: 145,
+      max: 150,
+    })
+    expect(smallRepeat?.longTaskCount).toMatchObject({
+      average: 0.5,
+      max: 1,
+      total: 1,
+    })
+    expect(smallRepeat?.longTaskTotalMs).toMatchObject({
+      average: 30,
+      max: 60,
+      total: 60,
+    })
+  })
+
   it("summarizes image render timings with status and cache counts", () => {
     const result = summarizeImageRenderTimings([
       { durationMs: 12, pixelRatio: 2, renderScale: 2.4, status: "rendered" },
@@ -360,3 +468,62 @@ describe("scrollbench core", () => {
     })
   })
 })
+
+function createRun({
+  maxScrollTop,
+  scenarios,
+}: {
+  maxScrollTop: number
+  scenarios: ScrollBenchResult["scenarios"]
+}): ScrollBenchResult {
+  return {
+    viewer: "text",
+    measuredAt: "2026-06-18T00:00:00.000Z",
+    viewport: {
+      clientHeight: 500,
+      clientWidth: 900,
+      maxScrollLeft: 0,
+      maxScrollTop,
+      renderedElementCount: 100,
+      scrollHeight: maxScrollTop + 500,
+      scrollWidth: 900,
+      scrollportElementCount: 80,
+    },
+    scenarios,
+  }
+}
+
+function createScenarioResult({
+  scenario,
+  frameDurations,
+  mutationRecords,
+  addedElements,
+  removedElements,
+  maxScrollportElementCount,
+  maxViewerElementCount,
+  longTaskDurations = [],
+}: {
+  scenario: ScenarioDefinition
+  frameDurations: number[]
+  mutationRecords: number
+  addedElements: number
+  removedElements: number
+  maxScrollportElementCount: number
+  maxViewerElementCount: number
+  longTaskDurations?: number[]
+}) {
+  return summarizeFrameDurations({
+    scenario,
+    frameDurations,
+    stepPx: 64,
+    distancePx: 256,
+    longTaskDurations,
+    domMutation: {
+      addedElements,
+      maxScrollportElementCount,
+      maxViewerElementCount,
+      mutationRecords,
+      removedElements,
+    },
+  })
+}

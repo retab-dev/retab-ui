@@ -54,6 +54,7 @@ export interface ScenarioResult {
   averageScrollMutationMs: number
   p95ScrollMutationMs: number
   maxScrollMutationMs: number
+  longTasks: DurationTimingResult
   domMutation: ScrollDomMutationResult
   slowestFrameIndex: number
   frames: number
@@ -85,6 +86,45 @@ export interface ScrollDomMutationResult {
   mutationRecords: number
   removedElements: number
   removedNodes: number
+}
+
+export interface NumberDistributionResult {
+  average: number
+  count: number
+  max: number
+  min: number
+  p50: number
+  p95: number
+  stdDev: number
+  total: number
+}
+
+export interface ScenarioRepeatResult {
+  id: ScenarioDefinition["id"]
+  label: string
+  runs: number
+  rafLimitedRuns: number
+  workLimitedRuns: number
+  worstRunIndex: number
+  p95FrameMs: NumberDistributionResult
+  maxFrameMs: NumberDistributionResult
+  frameStdDevMs: NumberDistributionResult
+  over16: NumberDistributionResult
+  over33: NumberDistributionResult
+  estimatedDroppedFrames: NumberDistributionResult
+  p95RafBudgetRatio: NumberDistributionResult
+  maxRafBudgetRatio: NumberDistributionResult
+  p95ScrollMutationMs: NumberDistributionResult
+  maxScrollMutationMs: NumberDistributionResult
+  longTaskCount: NumberDistributionResult
+  longTaskTotalMs: NumberDistributionResult
+  longTaskMaxMs: NumberDistributionResult
+  mutationRecords: NumberDistributionResult
+  addedElements: NumberDistributionResult
+  removedElements: NumberDistributionResult
+  attributeMutations: NumberDistributionResult
+  maxScrollportElementCount: NumberDistributionResult
+  maxViewerElementCount: NumberDistributionResult
 }
 
 export interface ScrollFrameSample {
@@ -160,6 +200,15 @@ export interface ScrollBenchResult {
   scenarios: ScenarioResult[]
   imageRendering?: ImageRenderingResult
   sourceLoad?: SourceLoadTimingResult
+}
+
+export interface ScrollBenchRepeatResult {
+  viewer: ViewerId
+  measuredAt: string
+  runCount: number
+  viewport: ScrollBenchResult["viewport"]
+  scenarios: ScenarioRepeatResult[]
+  runs: ScrollBenchResult[]
 }
 
 export const VIEWERS: readonly ViewerOption[] = [
@@ -298,6 +347,7 @@ export function summarizeFrameDurations({
   distancePx,
   warmupFrameMs = [],
   domMutation,
+  longTaskDurations = [],
 }: {
   scenario: ScenarioDefinition
   frameDurations: readonly number[]
@@ -306,6 +356,7 @@ export function summarizeFrameDurations({
   distancePx: number
   warmupFrameMs?: readonly number[]
   domMutation?: Partial<ScrollDomMutationResult>
+  longTaskDurations?: readonly number[]
 }): ScenarioResult {
   const candidateSamples =
     samples ??
@@ -420,6 +471,9 @@ export function summarizeFrameDurations({
     p95ScrollMutationMs: percentile(scrollMutationDurations, 0.95),
     maxScrollMutationMs:
       scrollMutationDurations[scrollMutationDurations.length - 1] ?? 0,
+    longTasks: summarizeDurationTimings(
+      longTaskDurations.map((durationMs) => ({ durationMs }))
+    ),
     domMutation: resolvedDomMutation,
     slowestFrameIndex: slowestFrameIndex(validSamples),
     frames: validFrameDurations.length,
@@ -492,6 +546,33 @@ export function summarizeImageRenderTimings(
   }
 }
 
+export function summarizeRepeatedScrollBenchRuns(
+  runs: readonly ScrollBenchResult[]
+): ScrollBenchRepeatResult {
+  const validRuns = runs.filter(isScrollBenchResult)
+  const fallbackViewport = {
+    clientHeight: 0,
+    clientWidth: 0,
+    maxScrollLeft: 0,
+    maxScrollTop: 0,
+    renderedElementCount: 0,
+    scrollHeight: 0,
+    scrollWidth: 0,
+    scrollportElementCount: 0,
+  }
+
+  return {
+    viewer: validRuns[0]?.viewer ?? DEFAULT_VIEWER,
+    measuredAt: new Date().toISOString(),
+    runCount: validRuns.length,
+    viewport: validRuns[validRuns.length - 1]?.viewport ?? fallbackViewport,
+    scenarios: SCENARIOS.map((scenario) =>
+      summarizeRepeatedScenario(validRuns, scenario)
+    ),
+    runs: [...validRuns],
+  }
+}
+
 function maxFiniteMetric(
   timings: readonly ImageRenderTiming[],
   key: "pixelRatio" | "renderScale"
@@ -504,6 +585,97 @@ function maxFiniteMetric(
     }
   }
   return max
+}
+
+function summarizeRepeatedScenario(
+  runs: readonly ScrollBenchResult[],
+  scenario: ScenarioDefinition
+): ScenarioRepeatResult {
+  const scenarioRuns = runs
+    .map((run, runIndex) => ({
+      runIndex,
+      scenario: run.scenarios.find((item) => item.id === scenario.id) ?? null,
+    }))
+    .filter(isScenarioRun)
+  const scenarios = scenarioRuns.map((item) => item.scenario)
+  const rafLimitedRuns = scenarios.filter((item) => item.isRafLimited).length
+
+  return {
+    id: scenario.id,
+    label: scenario.label,
+    runs: scenarios.length,
+    rafLimitedRuns,
+    workLimitedRuns: scenarios.length - rafLimitedRuns,
+    worstRunIndex: worstScenarioRunIndex(scenarioRuns),
+    p95FrameMs: summarizeNumbers(scenarios.map((item) => item.p95FrameMs)),
+    maxFrameMs: summarizeNumbers(scenarios.map((item) => item.maxFrameMs)),
+    frameStdDevMs: summarizeNumbers(
+      scenarios.map((item) => item.frameStdDevMs)
+    ),
+    over16: summarizeNumbers(scenarios.map((item) => item.over16)),
+    over33: summarizeNumbers(scenarios.map((item) => item.over33)),
+    estimatedDroppedFrames: summarizeNumbers(
+      scenarios.map((item) => item.estimatedDroppedFrames)
+    ),
+    p95RafBudgetRatio: summarizeNumbers(
+      scenarios.map((item) => item.p95RafBudgetRatio)
+    ),
+    maxRafBudgetRatio: summarizeNumbers(
+      scenarios.map((item) => item.maxRafBudgetRatio)
+    ),
+    p95ScrollMutationMs: summarizeNumbers(
+      scenarios.map((item) => item.p95ScrollMutationMs)
+    ),
+    maxScrollMutationMs: summarizeNumbers(
+      scenarios.map((item) => item.maxScrollMutationMs)
+    ),
+    longTaskCount: summarizeNumbers(
+      scenarios.map((item) => item.longTasks.count)
+    ),
+    longTaskTotalMs: summarizeNumbers(
+      scenarios.map((item) => item.longTasks.totalMs)
+    ),
+    longTaskMaxMs: summarizeNumbers(
+      scenarios.map((item) => item.longTasks.maxMs)
+    ),
+    mutationRecords: summarizeNumbers(
+      scenarios.map((item) => item.domMutation.mutationRecords)
+    ),
+    addedElements: summarizeNumbers(
+      scenarios.map((item) => item.domMutation.addedElements)
+    ),
+    removedElements: summarizeNumbers(
+      scenarios.map((item) => item.domMutation.removedElements)
+    ),
+    attributeMutations: summarizeNumbers(
+      scenarios.map((item) => item.domMutation.attributeMutations)
+    ),
+    maxScrollportElementCount: summarizeNumbers(
+      scenarios.map((item) => item.domMutation.maxScrollportElementCount)
+    ),
+    maxViewerElementCount: summarizeNumbers(
+      scenarios.map((item) => item.domMutation.maxViewerElementCount)
+    ),
+  }
+}
+
+function summarizeNumbers(values: readonly number[]): NumberDistributionResult {
+  const sortedValues = values
+    .filter((value) => Number.isFinite(value))
+    .sort((a, b) => a - b)
+  const total = sortedValues.reduce((sum, value) => sum + value, 0)
+  const average = sortedValues.length === 0 ? 0 : total / sortedValues.length
+
+  return {
+    average,
+    count: sortedValues.length,
+    max: sortedValues[sortedValues.length - 1] ?? 0,
+    min: sortedValues[0] ?? 0,
+    p50: percentile(sortedValues, 0.5),
+    p95: percentile(sortedValues, 0.95),
+    stdDev: standardDeviation(sortedValues, average),
+    total,
+  }
 }
 
 function summarizeDurationTimings(
@@ -556,6 +728,17 @@ function ratio(count: number, total: number) {
   return total === 0 ? 0 : count / total
 }
 
+function isScrollBenchResult(value: ScrollBenchResult) {
+  return value.scenarios.length > 0
+}
+
+function isScenarioRun(value: {
+  runIndex: number
+  scenario: ScenarioResult | null
+}): value is { runIndex: number; scenario: ScenarioResult } {
+  return value.scenario !== null
+}
+
 function safeMetric(value: number) {
   return Number.isFinite(value) ? value : 0
 }
@@ -572,6 +755,21 @@ function slowestFrameIndex(samples: readonly ScrollFrameSample[]) {
   }
 
   return index
+}
+
+function worstScenarioRunIndex(
+  scenarioRuns: readonly { runIndex: number; scenario: ScenarioResult }[]
+) {
+  let worstRunIndex = -1
+  let worstP95FrameMs = -1
+
+  for (const item of scenarioRuns) {
+    if (item.scenario.p95FrameMs < worstP95FrameMs) continue
+    worstP95FrameMs = item.scenario.p95FrameMs
+    worstRunIndex = item.runIndex
+  }
+
+  return worstRunIndex
 }
 
 function standardDeviation(values: readonly number[], average: number) {

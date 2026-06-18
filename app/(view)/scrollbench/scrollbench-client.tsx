@@ -29,10 +29,14 @@ import {
   resolveViewer,
   SCENARIOS,
   summarizeImageRenderTimings,
+  summarizeRepeatedScrollBenchRuns,
   VIEWERS,
   type ImageRenderTiming,
+  type NumberDistributionResult,
   type ScenarioDefinition,
+  type ScenarioRepeatResult,
   type ScenarioResult,
+  type ScrollBenchRepeatResult,
   type ScrollBenchResult,
   type SourceLoadTimingResult,
   type ViewerId,
@@ -61,6 +65,7 @@ const SCROLLBENCH_JSON_OVERSCAN = 12
 const SCROLLBENCH_JSON_JUMP_OVERSCAN = 4
 const SCROLLBENCH_JSON_MAX_ROW_COUNT = 100_000
 const SCROLLBENCH_JSON_MAX_OVERSCAN = 200
+const SCROLLBENCH_MAX_REPEAT_RUNS = 10
 const JSON_FORM_SOURCES_DEFAULT_OPEN_PATHS = ["transactions"] as const
 const jsonTableSchema = createScrollBenchJsonSchema()
 
@@ -79,6 +84,7 @@ interface InitialScrollBenchJsonSettings {
 interface ScrollBenchController {
   getScroller: () => HTMLElement | null
   run: () => Promise<ScrollBenchResult>
+  runMany: (count?: number) => Promise<ScrollBenchRepeatResult>
   runScenario: (scenarioId: ScenarioDefinition["id"]) => Promise<ScenarioResult>
 }
 
@@ -97,6 +103,8 @@ export function ScrollBenchClient({
 }) {
   const rootRef = React.useRef<HTMLDivElement | null>(null)
   const viewportHandleRef = React.useRef<ViewportHandle | null>(null)
+  const controllerRef = React.useRef<ScrollBenchController | null>(null)
+  const autorunStartedRef = React.useRef(false)
   const runAbortRef = React.useRef<AbortController | null>(null)
   const imageRenderTimingsRef = React.useRef<ImageRenderTiming[]>([])
   const sourceLoadTimingRef = React.useRef<SourceLoadTimingResult | null>(null)
@@ -108,6 +116,8 @@ export function ScrollBenchClient({
   const [status, setStatus] = React.useState<RunStatus>("idle")
   const [error, setError] = React.useState<string | null>(null)
   const [result, setResult] = React.useState<ScrollBenchResult | null>(null)
+  const [repeatResult, setRepeatResult] =
+    React.useState<ScrollBenchRepeatResult | null>(null)
 
   const csvValue = React.useMemo(() => createScrollBenchCsv(), [])
   const csvVariant = React.useMemo(readCsvScrollBenchVariant, [])
@@ -173,31 +183,22 @@ export function ScrollBenchClient({
     [getScroller]
   )
 
-  const run = React.useCallback(async () => {
-    runAbortRef.current?.abort()
-    const abortController = new AbortController()
-    runAbortRef.current = abortController
-    imageRenderTimingsRef.current = []
+  const measureOnce = React.useCallback(
+    async (signal: AbortSignal) => {
+      imageRenderTimingsRef.current = []
 
-    setStatus("running")
-    setError(null)
-    setResult(null)
-
-    try {
-      const scroller = await waitForScroller(getScroller, {
-        signal: abortController.signal,
-      })
+      const scroller = await waitForScroller(getScroller, { signal })
       const scenarios: ScenarioResult[] = []
 
       for (const scenario of SCENARIOS) {
         scenarios.push(
           await measureScenario(scroller, scenario, {
-            signal: abortController.signal,
+            signal,
           })
         )
       }
 
-      const nextResult: ScrollBenchResult = {
+      return {
         viewer,
         imageRendering:
           viewer === "pptx" || viewer === "image"
@@ -210,7 +211,23 @@ export function ScrollBenchClient({
             : undefined,
         viewport: viewportMetrics(scroller),
         scenarios,
-      }
+      } satisfies ScrollBenchResult
+    },
+    [getScroller, viewer]
+  )
+
+  const run = React.useCallback(async () => {
+    runAbortRef.current?.abort()
+    const abortController = new AbortController()
+    runAbortRef.current = abortController
+
+    setStatus("running")
+    setError(null)
+    setResult(null)
+    setRepeatResult(null)
+
+    try {
+      const nextResult = await measureOnce(abortController.signal)
       if (!abortController.signal.aborted) {
         setResult(nextResult)
         setStatus("done")
@@ -227,12 +244,56 @@ export function ScrollBenchClient({
     } finally {
       if (runAbortRef.current === abortController) runAbortRef.current = null
     }
-  }, [getScroller, viewer])
+  }, [measureOnce])
+
+  const runMany = React.useCallback(
+    async (count = 3) => {
+      runAbortRef.current?.abort()
+      const abortController = new AbortController()
+      runAbortRef.current = abortController
+      const runCount = normalizeRepeatRunCount(count)
+
+      setStatus("running")
+      setError(null)
+      setResult(null)
+      setRepeatResult(null)
+
+      try {
+        const runs: ScrollBenchResult[] = []
+
+        for (let index = 0; index < runCount; index += 1) {
+          runs.push(await measureOnce(abortController.signal))
+        }
+
+        const nextRepeatResult = summarizeRepeatedScrollBenchRuns(runs)
+        if (!abortController.signal.aborted) {
+          setResult(runs[runs.length - 1] ?? null)
+          setRepeatResult(nextRepeatResult)
+          setStatus("done")
+        }
+        return nextRepeatResult
+      } catch (caught) {
+        if (isAbortError(caught)) throw caught
+
+        const message =
+          caught instanceof Error ? caught.message : "Scrollbench failed"
+        setError(message)
+        setStatus("failed")
+        throw caught
+      } finally {
+        if (runAbortRef.current === abortController) runAbortRef.current = null
+      }
+    },
+    [measureOnce]
+  )
+
+  controllerRef.current = { getScroller, run, runMany, runScenario }
 
   React.useEffect(() => {
     runAbortRef.current?.abort()
     viewportHandleRef.current = null
     setResult(null)
+    setRepeatResult(null)
     setError(null)
     setStatus("idle")
     writeViewerToUrl(viewer)
@@ -243,22 +304,45 @@ export function ScrollBenchClient({
     runAbortRef.current?.abort()
     sourceLoadTimingRef.current = null
     setResult(null)
+    setRepeatResult(null)
     setError(null)
     setStatus("idle")
   }, [pptxFile, viewer])
 
   React.useEffect(() => {
-    window.__scrollbench = { getScroller, run, runScenario }
-    return () => {
-      if (window.__scrollbench?.run === run) delete window.__scrollbench
+    const controller: ScrollBenchController = {
+      getScroller: () => controllerRef.current?.getScroller() ?? null,
+      run: () =>
+        controllerRef.current?.run() ??
+        Promise.reject(scrollBenchControllerNotReadyError()),
+      runMany: (count) =>
+        controllerRef.current?.runMany(count) ??
+        Promise.reject(scrollBenchControllerNotReadyError()),
+      runScenario: (scenarioId) =>
+        controllerRef.current?.runScenario(scenarioId) ??
+        Promise.reject(scrollBenchControllerNotReadyError()),
     }
-  }, [getScroller, run, runScenario])
+
+    window.__scrollbench = controller
+    return () => {
+      if (window.__scrollbench === controller) delete window.__scrollbench
+    }
+  }, [])
 
   React.useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("autorun") === "1") {
-      void run().catch(() => undefined)
+    if (autorunStartedRef.current) return
+    autorunStartedRef.current = true
+
+    const searchParams = new URLSearchParams(window.location.search)
+    if (searchParams.get("autorun") === "1") {
+      const runCount = normalizeRepeatRunCount(searchParams.get("runs"))
+      const controller = controllerRef.current
+      const runPromise =
+        (runCount > 1 ? controller?.runMany(runCount) : controller?.run()) ??
+        Promise.resolve()
+      void runPromise.catch(() => undefined)
     }
-  }, [run])
+  }, [])
 
   return (
     <main
@@ -298,6 +382,16 @@ export function ScrollBenchClient({
           data-testid="scrollbench-run"
         >
           {status === "running" ? "Running" : "Run"}
+        </button>
+
+        <button
+          type="button"
+          className="h-8 rounded-md border bg-background px-3 text-sm font-medium shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={status === "running"}
+          onClick={() => void runMany(3).catch(() => undefined)}
+          data-testid="scrollbench-run-many"
+        >
+          Run 3x
         </button>
       </header>
 
@@ -349,7 +443,12 @@ export function ScrollBenchClient({
             ) : null}
           </div>
 
-          <MetricPanel result={result} status={status} error={error} />
+          <MetricPanel
+            result={result}
+            repeatResult={repeatResult}
+            status={status}
+            error={error}
+          />
         </aside>
       </section>
     </main>
@@ -540,10 +639,12 @@ function getScrollBenchPptxSource(file: File | null) {
 
 function MetricPanel({
   result,
+  repeatResult,
   status,
   error,
 }: {
   result: ScrollBenchResult | null
+  repeatResult: ScrollBenchRepeatResult | null
   status: RunStatus
   error: string | null
 }) {
@@ -573,6 +674,8 @@ function MetricPanel({
 
   return (
     <div className="space-y-3" data-testid="scrollbench-results">
+      {repeatResult ? <RepeatMetricPanel result={repeatResult} /> : null}
+
       <div className="grid grid-cols-3 gap-2">
         {result.scenarios.map((scenario) => (
           <div
@@ -710,6 +813,132 @@ function MetricPanel({
   )
 }
 
+function RepeatMetricPanel({ result }: { result: ScrollBenchRepeatResult }) {
+  return (
+    <>
+      <MetricGroup title="Repeatability">
+        <Metric label="runs" value={formatNumber(result.runCount)} />
+        <Metric label="viewer" value={result.viewer} />
+        <Metric label="viewport" value={formatSize(result.viewport)} />
+        <Metric
+          label="scrollable y"
+          value={`${formatNumber(result.viewport.maxScrollTop)}px`}
+        />
+      </MetricGroup>
+
+      {result.scenarios.map((scenario) => (
+        <ScenarioRepeatMetricGroup key={scenario.id} scenario={scenario} />
+      ))}
+    </>
+  )
+}
+
+function ScenarioRepeatMetricGroup({
+  scenario,
+}: {
+  scenario: ScenarioRepeatResult
+}) {
+  return (
+    <MetricGroup title={`${scenario.label} repeat`}>
+      <Metric
+        label="rAF-limited runs"
+        value={`${formatNumber(scenario.rafLimitedRuns)} / ${formatNumber(
+          scenario.runs
+        )}`}
+      />
+      <Metric
+        label="work-limited runs"
+        value={formatNumber(scenario.workLimitedRuns)}
+      />
+      <Metric
+        label="worst run"
+        value={
+          scenario.worstRunIndex >= 0
+            ? `#${formatNumber(scenario.worstRunIndex + 1)}`
+            : "-"
+        }
+      />
+      <Metric label="p95" value={formatDistributionMs(scenario.p95FrameMs)} />
+      <Metric
+        label="p95 std dev"
+        value={`${formatNumber(scenario.p95FrameMs.stdDev)}ms`}
+      />
+      <Metric
+        label="max frame"
+        value={formatDistributionMs(scenario.maxFrameMs)}
+      />
+      <Metric
+        label=">16.7ms"
+        value={formatDistributionCount(scenario.over16)}
+      />
+      <Metric
+        label=">33.3ms"
+        value={formatDistributionCount(scenario.over33)}
+      />
+      <Metric
+        label="missed 60Hz frames"
+        value={formatDistributionCount(scenario.estimatedDroppedFrames)}
+      />
+      <Metric
+        label="p95 / rAF"
+        value={formatDistributionRatio(scenario.p95RafBudgetRatio)}
+      />
+      <Metric
+        label="max / rAF"
+        value={formatDistributionRatio(scenario.maxRafBudgetRatio)}
+      />
+      <Metric
+        label="scroll mutation p95"
+        value={formatDistributionMs(scenario.p95ScrollMutationMs)}
+      />
+      <Metric
+        label="scroll mutation max"
+        value={formatDistributionMs(scenario.maxScrollMutationMs)}
+      />
+      <Metric
+        label="long tasks"
+        value={formatDistributionCount(scenario.longTaskCount)}
+      />
+      <Metric
+        label="long task total"
+        value={formatDistributionMs(scenario.longTaskTotalMs)}
+      />
+      <Metric
+        label="long task max"
+        value={formatDistributionMs(scenario.longTaskMaxMs)}
+      />
+      <Metric
+        label="mutation records"
+        value={formatDistributionCount(scenario.mutationRecords)}
+      />
+      <Metric
+        label="mutation total"
+        value={formatNumber(scenario.mutationRecords.total)}
+      />
+      <Metric
+        label="added elements"
+        value={formatDistributionCount(scenario.addedElements)}
+      />
+      <Metric
+        label="removed elements"
+        value={formatDistributionCount(scenario.removedElements)}
+      />
+      <Metric
+        label="attribute mutations"
+        value={formatDistributionCount(scenario.attributeMutations)}
+      />
+      <Metric
+        label="scrollport nodes"
+        value={formatDistributionCount(scenario.maxScrollportElementCount)}
+      />
+      <Metric
+        label="viewer nodes"
+        value={formatDistributionCount(scenario.maxViewerElementCount)}
+      />
+    </MetricGroup>
+  )
+}
+
 function ScenarioMetricGroup({ scenario }: { scenario: ScenarioResult }) {
   const warmup = scenario.warmupFrameMs
     .map((duration) => `${formatNumber(duration)}ms`)
@@ -762,6 +991,18 @@ function ScenarioMetricGroup({ scenario }: { scenario: ScenarioResult }) {
       <Metric
         label="scroll mutation max"
         value={`${formatNumber(scenario.maxScrollMutationMs)}ms`}
+      />
+      <Metric
+        label="long tasks"
+        value={formatNumber(scenario.longTasks.count)}
+      />
+      <Metric
+        label="long task total"
+        value={`${formatNumber(scenario.longTasks.totalMs)}ms`}
+      />
+      <Metric
+        label="long task max"
+        value={`${formatNumber(scenario.longTasks.maxMs)}ms`}
       />
       <Metric
         label="mutation records"
@@ -881,6 +1122,24 @@ function Metric({ label, value }: { label: string; value: string }) {
   )
 }
 
+function formatDistributionCount(distribution: NumberDistributionResult) {
+  return `${formatNumber(distribution.average)} avg / ${formatNumber(
+    distribution.max
+  )} max`
+}
+
+function formatDistributionMs(distribution: NumberDistributionResult) {
+  return `${formatNumber(distribution.average)}ms avg / ${formatNumber(
+    distribution.max
+  )}ms max`
+}
+
+function formatDistributionRatio(distribution: NumberDistributionResult) {
+  return `${formatRatio(distribution.average)} avg / ${formatRatio(
+    distribution.max
+  )} max`
+}
+
 function formatBudgetCount(count: number, ratio: number) {
   return `${formatNumber(count)} (${formatPercent(ratio)})`
 }
@@ -948,6 +1207,19 @@ function readCsvScrollBenchVariant(): CsvScrollBenchVariant {
     "active-cell"
     ? "active-cell"
     : "default"
+}
+
+function normalizeRepeatRunCount(value: number | string | null | undefined) {
+  return readBoundedIntegerParam({
+    rawValue: value == null ? undefined : String(value),
+    fallback: 3,
+    min: 1,
+    max: SCROLLBENCH_MAX_REPEAT_RUNS,
+  })
+}
+
+function scrollBenchControllerNotReadyError() {
+  return new Error("Scrollbench controller is not ready.")
 }
 
 function readScrollBenchJsonSettings(

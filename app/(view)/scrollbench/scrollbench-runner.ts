@@ -45,6 +45,7 @@ export async function measureScenario(
     scroller,
     viewerRoot,
   })
+  const longTaskTracker = createLongTaskTracker()
 
   scroller.scrollTop = 0
   warmupFrameMs.push(await timedNextFrame(signal))
@@ -55,6 +56,7 @@ export async function measureScenario(
 
   try {
     mutationTracker.start()
+    longTaskTracker.start()
 
     for (let index = 0; index < targets.length; index += 1) {
       const target = targets[index] ?? 0
@@ -84,6 +86,7 @@ export async function measureScenario(
       previousScrollTop = actualScrollTop
     }
   } finally {
+    longTaskTracker.stop()
     mutationTracker.stop()
   }
 
@@ -93,6 +96,7 @@ export async function measureScenario(
     domMutation: mutationTracker.result(),
     scenario,
     frameDurations,
+    longTaskDurations: longTaskTracker.durations(),
     samples,
     stepPx,
     distancePx: measuredScrollDistance(targets),
@@ -324,6 +328,35 @@ function createScrollDomMutationTracker({
   }
 }
 
+function createLongTaskTracker() {
+  const durations: number[] = []
+  const supportsLongTasks =
+    typeof PerformanceObserver !== "undefined" &&
+    Array.isArray(PerformanceObserver.supportedEntryTypes) &&
+    PerformanceObserver.supportedEntryTypes.includes("longtask")
+  const observer = supportsLongTasks
+    ? new PerformanceObserver((list) =>
+        recordPerformanceEntryDurations(list.getEntries(), durations)
+      )
+    : null
+
+  return {
+    durations: () => [...durations],
+    start: () => {
+      try {
+        observer?.observe({ entryTypes: ["longtask"] })
+      } catch {
+        durations.length = 0
+      }
+    },
+    stop: () => {
+      if (!observer) return
+      recordPerformanceEntryDurations(observer.takeRecords(), durations)
+      observer.disconnect()
+    },
+  }
+}
+
 function elementCount(element: HTMLElement) {
   return element.querySelectorAll("*").length
 }
@@ -338,6 +371,17 @@ function nodeListElementCount(nodes: NodeList) {
   }
 
   return count
+}
+
+function recordPerformanceEntryDurations(
+  entries: readonly PerformanceEntry[],
+  durations: number[]
+) {
+  for (const entry of entries) {
+    if (Number.isFinite(entry.duration) && entry.duration >= 0) {
+      durations.push(entry.duration)
+    }
+  }
 }
 
 function recordMutationRecords(
