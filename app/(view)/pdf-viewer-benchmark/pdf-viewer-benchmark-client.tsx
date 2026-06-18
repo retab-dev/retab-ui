@@ -156,11 +156,7 @@ function readSnapshot(): PdfViewerBenchmarkSnapshot {
   const slots = Array.from(
     document.querySelectorAll<HTMLElement>("[data-slot='pdf-page-slot']")
   )
-  const currentPageText =
-    document
-      .querySelector("[data-slot='viewer-controls']")
-      ?.textContent?.replace(/\s+/g, " ")
-      .trim() ?? ""
+  const currentPageText = readCurrentPageText()
 
   return {
     canvasCount: document.querySelectorAll("canvas").length,
@@ -172,6 +168,17 @@ function readSnapshot(): PdfViewerBenchmarkSnapshot {
     scrollTop: viewport?.scrollTop ?? 0,
     slotPages: slots.map((slot) => Number(slot.dataset.pageNumber)),
   }
+}
+
+function readCurrentPageText() {
+  const controls = document.querySelector(
+    "[data-slot='viewer-controls'], [data-slot='file-viewer-controls']"
+  )
+  const position =
+    controls?.querySelector(":scope > span") ??
+    controls?.querySelector(":scope > div > span:last-child")
+
+  return (position ?? controls)?.textContent?.replace(/\s+/g, " ").trim() ?? ""
 }
 
 function recordPdfViewerBenchmarkRenderTiming(timing: PdfPageRenderTiming) {
