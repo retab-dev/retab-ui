@@ -269,7 +269,8 @@ export function ScrollBenchClient({
         <div className="mr-2 min-w-0">
           <h1 className="text-sm leading-5 font-semibold">Scrollbench</h1>
           <p className="text-xs text-muted-foreground">
-            Normalized small and large jump FPS across viewer scrollports.
+            Frame distribution, jank, scroll path, and DOM pressure across
+            viewer scrollports.
           </p>
         </div>
 
@@ -300,7 +301,7 @@ export function ScrollBenchClient({
         </button>
       </header>
 
-      <section className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_320px] max-lg:grid-cols-1">
+      <section className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_380px] max-lg:grid-cols-1">
         <div
           ref={rootRef}
           className="min-h-0 min-w-0"
@@ -321,7 +322,7 @@ export function ScrollBenchClient({
           })}
         </div>
 
-        <aside className="flex min-h-0 flex-col gap-3 border-l bg-muted/20 p-3 max-lg:h-64 max-lg:border-t max-lg:border-l-0">
+        <aside className="flex min-h-0 flex-col gap-3 overflow-auto border-l bg-muted/20 p-3 max-lg:h-64 max-lg:border-t max-lg:border-l-0">
           <div>
             <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
               Fixture
@@ -565,7 +566,7 @@ function MetricPanel({
       >
         {status === "running"
           ? "Measuring scroll frames..."
-          : "Run the benchmark to record FPS."}
+          : "Run the benchmark to record frame budget metrics."}
       </div>
     )
   }
@@ -580,115 +581,294 @@ function MetricPanel({
               "rounded-md border bg-background p-3",
               scenario.id === "large" ? "col-span-2" : ""
             )}
-            data-testid={`scrollbench-${scenario.id}-fps`}
+            data-testid={`scrollbench-${scenario.id}-summary`}
           >
             <div className="text-xs text-muted-foreground">
               {scenario.label}
             </div>
             <div className="mt-1 text-2xl font-semibold tabular-nums">
-              {formatNumber(scenario.fps)}
+              {formatNumber(scenario.p95FrameMs)}ms
             </div>
-            <div className="text-xs text-muted-foreground">fps</div>
+            <div className="text-xs text-muted-foreground">
+              p95 · max {formatNumber(scenario.maxFrameMs)}ms
+            </div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              {scenario.isRafLimited
+                ? `rAF-limited at ${formatNumber(scenario.rafFps)} fps`
+                : `${formatNumber(scenario.over16)} over 16.7ms`}
+            </div>
           </div>
         ))}
       </div>
 
-      <dl className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-md border bg-background p-3 text-xs">
-        <Metric label="Viewport" value={`${result.viewport.clientHeight}px`} />
+      <MetricGroup title="Viewport">
+        <Metric label="viewport" value={formatSize(result.viewport)} />
+        <Metric label="scroll size" value={formatScrollSize(result.viewport)} />
         <Metric
-          label="Scrollable"
-          value={`${result.viewport.maxScrollTop}px`}
+          label="scrollable y"
+          value={`${formatNumber(result.viewport.maxScrollTop)}px`}
         />
-        {result.scenarios.map((scenario) => (
-          <React.Fragment key={scenario.id}>
-            <Metric
-              label={`${scenario.id} p95`}
-              value={`${formatNumber(scenario.p95FrameMs)}ms`}
-            />
-            <Metric
-              label={`${scenario.id} >33ms`}
-              value={String(scenario.over33)}
-            />
-          </React.Fragment>
-        ))}
-        {result.imageRendering ? (
-          <>
-            <Metric
-              label="image renders"
-              value={String(result.imageRendering.count)}
-            />
-            <Metric
-              label="image total"
-              value={`${formatNumber(result.imageRendering.totalMs)}ms`}
-            />
-            <Metric
-              label="image avg"
-              value={`${formatNumber(result.imageRendering.averageMs)}ms`}
-            />
-            <Metric
-              label="first uncached"
-              value={`${formatNumber(result.imageRendering.firstUncachedMs)}ms`}
-            />
-            <Metric
-              label="image p95"
-              value={`${formatNumber(result.imageRendering.p95Ms)}ms`}
-            />
-            <Metric
-              label="image max"
-              value={`${formatNumber(result.imageRendering.maxMs)}ms`}
-            />
-            <Metric
-              label="image cached"
-              value={String(result.imageRendering.cached)}
-            />
-            <Metric
-              label="uncached p95"
-              value={`${formatNumber(result.imageRendering.uncachedTiming.p95Ms)}ms`}
-            />
-            <Metric
-              label="cached p95"
-              value={`${formatNumber(result.imageRendering.cachedTiming.p95Ms)}ms`}
-            />
-            <Metric
-              label="max scale"
-              value={formatNumber(result.imageRendering.maxRenderScale)}
-            />
-            <Metric
-              label="max dpr"
-              value={formatNumber(result.imageRendering.maxPixelRatio)}
-            />
-          </>
-        ) : null}
-        {result.sourceLoad ? (
-          <>
-            <Metric
-              label="load total"
-              value={`${formatNumber(result.sourceLoad.totalMs)}ms`}
-            />
-            <Metric
-              label="load bytes"
-              value={formatBytes(result.sourceLoad.byteLength)}
-            />
-            <Metric
-              label="read bytes"
-              value={`${formatNumber(result.sourceLoad.readBytesMs)}ms`}
-            />
-            <Metric
-              label="import pptx"
-              value={`${formatNumber(result.sourceLoad.importPptxMs)}ms`}
-            />
-            <Metric
-              label="read size"
-              value={`${formatNumber(result.sourceLoad.readSlideSizeMs)}ms`}
-            />
-            <Metric
-              label="parse deck"
-              value={`${formatNumber(result.sourceLoad.loadFileMs)}ms`}
-            />
-          </>
-        ) : null}
-      </dl>
+        <Metric
+          label="scrollable x"
+          value={`${formatNumber(result.viewport.maxScrollLeft)}px`}
+        />
+        <Metric
+          label="viewer nodes"
+          value={formatNumber(result.viewport.renderedElementCount)}
+        />
+        <Metric
+          label="scrollport nodes"
+          value={formatNumber(result.viewport.scrollportElementCount)}
+        />
+      </MetricGroup>
+
+      {result.scenarios.map((scenario) => (
+        <ScenarioMetricGroup key={scenario.id} scenario={scenario} />
+      ))}
+
+      {result.imageRendering || result.sourceLoad ? (
+        <MetricGroup title="Media">
+          {result.imageRendering ? (
+            <>
+              <Metric
+                label="image renders"
+                value={String(result.imageRendering.count)}
+              />
+              <Metric
+                label="image total"
+                value={`${formatNumber(result.imageRendering.totalMs)}ms`}
+              />
+              <Metric
+                label="image avg"
+                value={`${formatNumber(result.imageRendering.averageMs)}ms`}
+              />
+              <Metric
+                label="first uncached"
+                value={`${formatNumber(result.imageRendering.firstUncachedMs)}ms`}
+              />
+              <Metric
+                label="image p95"
+                value={`${formatNumber(result.imageRendering.p95Ms)}ms`}
+              />
+              <Metric
+                label="image max"
+                value={`${formatNumber(result.imageRendering.maxMs)}ms`}
+              />
+              <Metric
+                label="image cached"
+                value={String(result.imageRendering.cached)}
+              />
+              <Metric
+                label="uncached p95"
+                value={`${formatNumber(result.imageRendering.uncachedTiming.p95Ms)}ms`}
+              />
+              <Metric
+                label="cached p95"
+                value={`${formatNumber(result.imageRendering.cachedTiming.p95Ms)}ms`}
+              />
+              <Metric
+                label="max scale"
+                value={formatNumber(result.imageRendering.maxRenderScale)}
+              />
+              <Metric
+                label="max dpr"
+                value={formatNumber(result.imageRendering.maxPixelRatio)}
+              />
+            </>
+          ) : null}
+          {result.sourceLoad ? (
+            <>
+              <Metric
+                label="load total"
+                value={`${formatNumber(result.sourceLoad.totalMs)}ms`}
+              />
+              <Metric
+                label="load bytes"
+                value={formatBytes(result.sourceLoad.byteLength)}
+              />
+              <Metric
+                label="read bytes"
+                value={`${formatNumber(result.sourceLoad.readBytesMs)}ms`}
+              />
+              <Metric
+                label="import pptx"
+                value={`${formatNumber(result.sourceLoad.importPptxMs)}ms`}
+              />
+              <Metric
+                label="read size"
+                value={`${formatNumber(result.sourceLoad.readSlideSizeMs)}ms`}
+              />
+              <Metric
+                label="parse deck"
+                value={`${formatNumber(result.sourceLoad.loadFileMs)}ms`}
+              />
+            </>
+          ) : null}
+        </MetricGroup>
+      ) : null}
     </div>
+  )
+}
+
+function ScenarioMetricGroup({ scenario }: { scenario: ScenarioResult }) {
+  const warmup = scenario.warmupFrameMs
+    .map((duration) => `${formatNumber(duration)}ms`)
+    .join(" / ")
+
+  return (
+    <MetricGroup title={scenario.label}>
+      <Metric
+        label="status"
+        value={scenario.isRafLimited ? "rAF-limited" : "work-limited"}
+      />
+      <Metric label="measured fps" value={formatNumber(scenario.fps)} />
+      <Metric label="rAF ceiling" value={formatNumber(scenario.rafFps)} />
+      <Metric
+        label="rAF frame"
+        value={`${formatNumber(scenario.rafFrameMs)}ms`}
+      />
+      <Metric label="frames" value={formatNumber(scenario.frames)} />
+      <Metric
+        label="avg"
+        value={`${formatNumber(scenario.averageFrameMs)}ms`}
+      />
+      <Metric
+        label="std dev"
+        value={`${formatNumber(scenario.frameStdDevMs)}ms`}
+      />
+      <Metric label="min" value={`${formatNumber(scenario.minFrameMs)}ms`} />
+      <Metric label="p50" value={`${formatNumber(scenario.p50FrameMs)}ms`} />
+      <Metric label="p75" value={`${formatNumber(scenario.p75FrameMs)}ms`} />
+      <Metric label="p90" value={`${formatNumber(scenario.p90FrameMs)}ms`} />
+      <Metric label="p95" value={`${formatNumber(scenario.p95FrameMs)}ms`} />
+      <Metric label="p99" value={`${formatNumber(scenario.p99FrameMs)}ms`} />
+      <Metric label="max" value={`${formatNumber(scenario.maxFrameMs)}ms`} />
+      <Metric
+        label="p95 / rAF"
+        value={formatRatio(scenario.p95RafBudgetRatio)}
+      />
+      <Metric
+        label="max / rAF"
+        value={formatRatio(scenario.maxRafBudgetRatio)}
+      />
+      <Metric
+        label="scroll mutation avg"
+        value={`${formatNumber(scenario.averageScrollMutationMs)}ms`}
+      />
+      <Metric
+        label="scroll mutation p95"
+        value={`${formatNumber(scenario.p95ScrollMutationMs)}ms`}
+      />
+      <Metric
+        label="scroll mutation max"
+        value={`${formatNumber(scenario.maxScrollMutationMs)}ms`}
+      />
+      <Metric
+        label="mutation records"
+        value={formatNumber(scenario.domMutation.mutationRecords)}
+      />
+      <Metric
+        label="added elements"
+        value={formatNumber(scenario.domMutation.addedElements)}
+      />
+      <Metric
+        label="removed elements"
+        value={formatNumber(scenario.domMutation.removedElements)}
+      />
+      <Metric
+        label="attribute mutations"
+        value={formatNumber(scenario.domMutation.attributeMutations)}
+      />
+      <Metric
+        label="text mutations"
+        value={formatNumber(scenario.domMutation.characterDataMutations)}
+      />
+      <Metric
+        label="scrollport nodes"
+        value={formatNodeRange({
+          final: scenario.domMutation.finalScrollportElementCount,
+          initial: scenario.domMutation.initialScrollportElementCount,
+          max: scenario.domMutation.maxScrollportElementCount,
+        })}
+      />
+      <Metric
+        label="viewer nodes"
+        value={formatNodeRange({
+          final: scenario.domMutation.finalViewerElementCount,
+          initial: scenario.domMutation.initialViewerElementCount,
+          max: scenario.domMutation.maxViewerElementCount,
+        })}
+      />
+      <Metric
+        label="slowest frame"
+        value={String(scenario.slowestFrameIndex)}
+      />
+      <Metric
+        label=">16.7ms"
+        value={formatBudgetCount(scenario.over16, scenario.over16Ratio)}
+      />
+      <Metric
+        label=">33.3ms"
+        value={formatBudgetCount(scenario.over33, scenario.over33Ratio)}
+      />
+      <Metric label=">50ms" value={formatNumber(scenario.over50)} />
+      <Metric label=">100ms" value={formatNumber(scenario.over100)} />
+      <Metric
+        label="missed 60Hz frames"
+        value={formatNumber(scenario.estimatedDroppedFrames)}
+      />
+      <Metric label="step" value={`${formatNumber(scenario.stepPx)}px`} />
+      <Metric
+        label="target distance"
+        value={`${formatNumber(scenario.distancePx)}px`}
+      />
+      <Metric
+        label="actual distance"
+        value={`${formatNumber(scenario.actualDistancePx)}px`}
+      />
+      <Metric
+        label="avg delta"
+        value={`${formatNumber(scenario.averageScrollDeltaPx)}px`}
+      />
+      <Metric
+        label="max delta"
+        value={`${formatNumber(scenario.maxScrollDeltaPx)}px`}
+      />
+      <Metric
+        label="scroll range"
+        value={`${formatNumber(scenario.minScrollTop)}-${formatNumber(
+          scenario.maxScrollTop
+        )}px`}
+      />
+      <Metric
+        label="targets"
+        value={`${formatNumber(scenario.uniqueTargetCount)} / ${formatNumber(
+          scenario.targetCount
+        )}`}
+      />
+      <Metric
+        label="direction changes"
+        value={formatNumber(scenario.directionChanges)}
+      />
+      <Metric label="warmup" value={warmup || "0ms"} />
+    </MetricGroup>
+  )
+}
+
+function MetricGroup({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="rounded-md border bg-background p-3">
+      <h2 className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+        {title}
+      </h2>
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">{children}</dl>
+    </section>
   )
 }
 
@@ -699,6 +879,48 @@ function Metric({ label, value }: { label: string; value: string }) {
       <dd className="text-right font-medium tabular-nums">{value}</dd>
     </>
   )
+}
+
+function formatBudgetCount(count: number, ratio: number) {
+  return `${formatNumber(count)} (${formatPercent(ratio)})`
+}
+
+function formatNodeRange({
+  final,
+  initial,
+  max,
+}: {
+  final: number
+  initial: number
+  max: number
+}) {
+  return `${formatNumber(initial)} -> ${formatNumber(final)} (max ${formatNumber(
+    max
+  )})`
+}
+
+function formatPercent(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 1,
+    style: "percent",
+  }).format(Number.isFinite(value) ? value : 0)
+}
+
+function formatRatio(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "0x"
+  return `${formatNumber(value)}x`
+}
+
+function formatScrollSize(viewport: ScrollBenchResult["viewport"]) {
+  return `${formatNumber(viewport.scrollWidth)} x ${formatNumber(
+    viewport.scrollHeight
+  )}px`
+}
+
+function formatSize(viewport: ScrollBenchResult["viewport"]) {
+  return `${formatNumber(viewport.clientWidth)} x ${formatNumber(
+    viewport.clientHeight
+  )}px`
 }
 
 function formatNumber(value: number) {

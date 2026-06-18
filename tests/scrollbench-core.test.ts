@@ -130,23 +130,171 @@ describe("scrollbench core", () => {
     ).toBe(350)
   })
 
-  it("summarizes frame durations into fps and frame budget counts", () => {
+  it("summarizes frame durations into frame budget counts and rAF ceiling", () => {
     const scenario = SCENARIOS[0]
     const result = summarizeFrameDurations({
       scenario,
       frameDurations: [10, 20, 40, 30],
       stepPx: 64,
       distancePx: 256,
+      warmupFrameMs: [8, 10],
     })
 
     expect(result.fps).toBe(40)
+    expect(result.rafFrameMs).toBe(20)
+    expect(result.rafFps).toBe(50)
+    expect(result.isRafLimited).toBe(false)
     expect(result.averageFrameMs).toBe(25)
+    expect(result.totalFrameMs).toBe(100)
+    expect(result.minFrameMs).toBe(10)
+    expect(result.frameStdDevMs).toBeCloseTo(11.1803398875)
     expect(result.p50FrameMs).toBe(20)
+    expect(result.p75FrameMs).toBe(30)
+    expect(result.p90FrameMs).toBe(30)
     expect(result.p95FrameMs).toBe(30)
+    expect(result.p99FrameMs).toBe(30)
     expect(result.maxFrameMs).toBe(40)
     expect(result.over16).toBe(3)
     expect(result.over33).toBe(1)
+    expect(result.over50).toBe(0)
+    expect(result.over100).toBe(0)
+    expect(result.over16Ratio).toBe(0.75)
+    expect(result.over33Ratio).toBe(0.25)
+    expect(result.estimatedDroppedFrames).toBe(1)
+    expect(result.p95RafBudgetRatio).toBe(1.5)
+    expect(result.maxRafBudgetRatio).toBe(2)
+    expect(result.averageScrollMutationMs).toBe(0)
+    expect(result.p95ScrollMutationMs).toBe(0)
+    expect(result.maxScrollMutationMs).toBe(0)
+    expect(result.domMutation).toMatchObject({
+      addedElements: 0,
+      mutationRecords: 0,
+      removedElements: 0,
+    })
+    expect(result.slowestFrameIndex).toBe(2)
     expect(result.frames).toBe(4)
+  })
+
+  it("marks a smooth run as rAF-limited instead of treating fps as primary throughput", () => {
+    const scenario = SCENARIOS[0]
+    const result = summarizeFrameDurations({
+      scenario,
+      frameDurations: [8.3, 8.4, 8.2, 8.5],
+      stepPx: 64,
+      distancePx: 256,
+      warmupFrameMs: [8.3, 8.4],
+    })
+
+    expect(result.isRafLimited).toBe(true)
+    expect(result.rafFrameMs).toBe(8.3)
+    expect(result.rafFps).toBeCloseTo(120.4819277)
+    expect(result.fps).toBeCloseTo(119.760479)
+    expect(result.p95RafBudgetRatio).toBeCloseTo(8.4 / 8.3)
+    expect(result.maxRafBudgetRatio).toBeCloseTo(8.5 / 8.3)
+  })
+
+  it("summarizes raw scroll frame samples", () => {
+    const scenario = SCENARIOS[0]
+    const result = summarizeFrameDurations({
+      scenario,
+      frameDurations: [],
+      samples: [
+        {
+          actualScrollTop: 100,
+          frameMs: 10,
+          index: 0,
+          scrollDeltaPx: 100,
+          scrollMutationMs: 1,
+          scrollportElementCount: 20,
+          targetScrollTop: 100,
+          viewerElementCount: 25,
+        },
+        {
+          actualScrollTop: 190,
+          frameMs: 20,
+          index: 1,
+          scrollDeltaPx: 90,
+          scrollMutationMs: 2,
+          scrollportElementCount: 22,
+          targetScrollTop: 200,
+          viewerElementCount: 27,
+        },
+        {
+          actualScrollTop: 50,
+          frameMs: 40,
+          index: 2,
+          scrollDeltaPx: -140,
+          scrollMutationMs: 8,
+          scrollportElementCount: 18,
+          targetScrollTop: 50,
+          viewerElementCount: 23,
+        },
+        {
+          actualScrollTop: 125,
+          frameMs: 30,
+          index: 3,
+          scrollDeltaPx: 75,
+          scrollMutationMs: 4,
+          scrollportElementCount: 24,
+          targetScrollTop: 125,
+          viewerElementCount: 29,
+        },
+      ],
+      stepPx: 64,
+      distancePx: 425,
+      warmupFrameMs: [8, 9],
+      domMutation: {
+        addedElements: 6,
+        addedNodes: 10,
+        attributeMutations: 8,
+        characterDataMutations: 4,
+        finalScrollportElementCount: 24,
+        finalViewerElementCount: 29,
+        initialScrollportElementCount: 20,
+        initialViewerElementCount: 25,
+        mutationRecords: 22,
+        removedElements: 2,
+        removedNodes: 3,
+      },
+    })
+
+    expect(result.actualDistancePx).toBe(405)
+    expect(result.averageScrollDeltaPx).toBe(101.25)
+    expect(result.maxScrollDeltaPx).toBe(140)
+    expect(result.minScrollTop).toBe(0)
+    expect(result.maxScrollTop).toBe(190)
+    expect(result.targetCount).toBe(4)
+    expect(result.uniqueTargetCount).toBe(4)
+    expect(result.directionChanges).toBe(2)
+    expect(result.averageScrollMutationMs).toBe(3.75)
+    expect(result.p95ScrollMutationMs).toBe(4)
+    expect(result.maxScrollMutationMs).toBe(8)
+    expect(result.domMutation).toMatchObject({
+      addedElements: 6,
+      addedNodes: 10,
+      attributeMutations: 8,
+      characterDataMutations: 4,
+      finalScrollportElementCount: 24,
+      finalViewerElementCount: 29,
+      initialScrollportElementCount: 20,
+      initialViewerElementCount: 25,
+      maxScrollportElementCount: 24,
+      maxViewerElementCount: 29,
+      mutationRecords: 22,
+      removedElements: 2,
+      removedNodes: 3,
+    })
+    expect(result.warmupFrameMs).toEqual([8, 9])
+    expect(result.samples).toHaveLength(4)
+    expect(result.samples[2]).toMatchObject({
+      actualScrollTop: 50,
+      frameMs: 40,
+      scrollDeltaPx: -140,
+      scrollMutationMs: 8,
+      scrollportElementCount: 18,
+      targetScrollTop: 50,
+      viewerElementCount: 23,
+    })
   })
 
   it("summarizes only finite positive frame durations", () => {
@@ -159,10 +307,15 @@ describe("scrollbench core", () => {
     })
 
     expect(result.fps).toBeCloseTo(66.6666666667)
+    expect(result.rafFrameMs).toBe(10)
+    expect(result.rafFps).toBe(100)
+    expect(result.isRafLimited).toBe(false)
     expect(result.averageFrameMs).toBe(15)
     expect(result.p50FrameMs).toBe(10)
     expect(result.p95FrameMs).toBe(10)
     expect(result.maxFrameMs).toBe(20)
+    expect(result.over16Ratio).toBe(0.5)
+    expect(result.estimatedDroppedFrames).toBe(0)
     expect(result.frames).toBe(2)
     expect(result.stepPx).toBe(0)
     expect(result.distancePx).toBe(0)

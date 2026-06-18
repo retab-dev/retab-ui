@@ -10,6 +10,8 @@ import {
   summarizeFrameDurations,
   type ScenarioDefinition,
   type ScenarioResult,
+  type ScrollDomMutationResult,
+  type ScrollFrameSample,
 } from "./scrollbench-core"
 
 const VIEWER_READY_TIMEOUT_MS = 30_000
@@ -36,35 +38,72 @@ export async function measureScenario(
   })
   const targets = buildScrollTargets({ maxScrollTop, stepPx })
   const frameDurations: number[] = []
+  const samples: ScrollFrameSample[] = []
+  const warmupFrameMs: number[] = []
+  const viewerRoot = closestViewerRoot(scroller)
+  const mutationTracker = createScrollDomMutationTracker({
+    scroller,
+    viewerRoot,
+  })
 
   scroller.scrollTop = 0
-  await nextFrame(signal)
-  await nextFrame(signal)
+  warmupFrameMs.push(await timedNextFrame(signal))
+  warmupFrameMs.push(await timedNextFrame(signal))
 
   let previous = performance.now()
+  let previousScrollTop = scroller.scrollTop
 
-  for (const target of targets) {
-    throwIfAborted(signal)
-    scroller.scrollTop = target
-    scroller.dispatchEvent(new Event("scroll", { bubbles: true }))
+  try {
+    mutationTracker.start()
 
-    await nextFrame(signal)
-    const now = performance.now()
-    frameDurations.push(now - previous)
-    previous = now
+    for (let index = 0; index < targets.length; index += 1) {
+      const target = targets[index] ?? 0
+      throwIfAborted(signal)
+      const mutationStart = performance.now()
+      scroller.scrollTop = target
+      scroller.dispatchEvent(new Event("scroll", { bubbles: true }))
+      const scrollMutationMs = performance.now() - mutationStart
+
+      await nextFrame(signal)
+      const now = performance.now()
+      const actualScrollTop = scroller.scrollTop
+      const frameMs = now - previous
+      const elementCounts = mutationTracker.sampleElementCounts()
+      frameDurations.push(frameMs)
+      samples.push({
+        actualScrollTop,
+        frameMs,
+        index,
+        scrollDeltaPx: actualScrollTop - previousScrollTop,
+        scrollMutationMs,
+        scrollportElementCount: elementCounts.scrollportElementCount,
+        targetScrollTop: target,
+        viewerElementCount: elementCounts.viewerElementCount,
+      })
+      previous = now
+      previousScrollTop = actualScrollTop
+    }
+  } finally {
+    mutationTracker.stop()
   }
 
   await nextFrame(signal)
 
   return summarizeFrameDurations({
+    domMutation: mutationTracker.result(),
     scenario,
     frameDurations,
+    samples,
     stepPx,
     distancePx: measuredScrollDistance(targets),
+    warmupFrameMs,
   })
 }
 
-export function findScrollableViewport(root: HTMLElement | null, selector: string) {
+export function findScrollableViewport(
+  root: HTMLElement | null,
+  selector: string
+) {
   if (!root) return null
 
   const declaredScroller = findFixedGridScroller({ root, selector })
@@ -121,12 +160,20 @@ export async function waitForScroller(
 
 export function viewportMetrics(scroller: HTMLElement) {
   const clientHeight = finitePositiveMetric(scroller.clientHeight)
+  const clientWidth = finitePositiveMetric(scroller.clientWidth)
   const scrollHeight = finitePositiveMetric(scroller.scrollHeight)
+  const scrollWidth = finitePositiveMetric(scroller.scrollWidth)
+  const viewerRoot = closestViewerRoot(scroller)
 
   return {
     clientHeight,
+    clientWidth,
     scrollHeight,
+    scrollWidth,
     maxScrollTop: Math.max(0, scrollHeight - clientHeight),
+    maxScrollLeft: Math.max(0, scrollWidth - clientWidth),
+    renderedElementCount: viewerRoot.querySelectorAll("*").length,
+    scrollportElementCount: scroller.querySelectorAll("*").length,
   }
 }
 
@@ -152,6 +199,12 @@ function nextFrame(signal?: AbortSignal) {
       resolve()
     })
   })
+}
+
+async function timedNextFrame(signal?: AbortSignal) {
+  const start = performance.now()
+  await nextFrame(signal)
+  return performance.now() - start
 }
 
 function delay(ms: number, signal?: AbortSignal) {
@@ -185,4 +238,127 @@ function abortError() {
 
 function finitePositiveMetric(value: number) {
   return Number.isFinite(value) && value > 0 ? value : 0
+}
+
+function closestViewerRoot(scroller: HTMLElement) {
+  let element: HTMLElement | null = scroller
+
+  while (element) {
+    const slot = element.getAttribute("data-slot")
+    if (slot?.endsWith("-viewer")) return element
+    element = element.parentElement
+  }
+
+  return scroller
+}
+
+function createScrollDomMutationTracker({
+  scroller,
+  viewerRoot,
+}: {
+  scroller: HTMLElement
+  viewerRoot: HTMLElement
+}) {
+  const state: ScrollDomMutationResult = {
+    addedElements: 0,
+    addedNodes: 0,
+    attributeMutations: 0,
+    characterDataMutations: 0,
+    finalScrollportElementCount: 0,
+    finalViewerElementCount: 0,
+    initialScrollportElementCount: elementCount(scroller),
+    initialViewerElementCount: elementCount(viewerRoot),
+    maxScrollportElementCount: 0,
+    maxViewerElementCount: 0,
+    mutationRecords: 0,
+    removedElements: 0,
+    removedNodes: 0,
+  }
+  state.maxScrollportElementCount = state.initialScrollportElementCount
+  state.maxViewerElementCount = state.initialViewerElementCount
+
+  const observer =
+    typeof MutationObserver === "undefined"
+      ? null
+      : new MutationObserver((records) => recordMutationRecords(records, state))
+
+  return {
+    result: () => ({ ...state }),
+    sampleElementCounts: () => {
+      const scrollportElementCount = elementCount(scroller)
+      const viewerElementCount = elementCount(viewerRoot)
+      state.maxScrollportElementCount = Math.max(
+        state.maxScrollportElementCount,
+        scrollportElementCount
+      )
+      state.maxViewerElementCount = Math.max(
+        state.maxViewerElementCount,
+        viewerElementCount
+      )
+      return { scrollportElementCount, viewerElementCount }
+    },
+    start: () => {
+      observer?.observe(viewerRoot, {
+        attributes: true,
+        characterData: true,
+        childList: true,
+        subtree: true,
+      })
+    },
+    stop: () => {
+      if (observer) {
+        recordMutationRecords(observer.takeRecords(), state)
+        observer.disconnect()
+      }
+      state.finalScrollportElementCount = elementCount(scroller)
+      state.finalViewerElementCount = elementCount(viewerRoot)
+      state.maxScrollportElementCount = Math.max(
+        state.maxScrollportElementCount,
+        state.finalScrollportElementCount
+      )
+      state.maxViewerElementCount = Math.max(
+        state.maxViewerElementCount,
+        state.finalViewerElementCount
+      )
+    },
+  }
+}
+
+function elementCount(element: HTMLElement) {
+  return element.querySelectorAll("*").length
+}
+
+function nodeListElementCount(nodes: NodeList) {
+  let count = 0
+
+  for (const node of nodes) {
+    if (node.nodeType !== Node.ELEMENT_NODE) continue
+    count += 1
+    count += (node as Element).querySelectorAll("*").length
+  }
+
+  return count
+}
+
+function recordMutationRecords(
+  records: readonly MutationRecord[],
+  state: ScrollDomMutationResult
+) {
+  state.mutationRecords += records.length
+
+  for (const record of records) {
+    if (record.type === "attributes") {
+      state.attributeMutations += 1
+      continue
+    }
+    if (record.type === "characterData") {
+      state.characterDataMutations += 1
+      continue
+    }
+
+    state.addedNodes += record.addedNodes.length
+    state.removedNodes += record.removedNodes.length
+    state.addedElements += nodeListElementCount(record.addedNodes)
+    state.removedElements += nodeListElementCount(record.removedNodes)
+  }
 }

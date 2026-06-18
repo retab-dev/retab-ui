@@ -2807,8 +2807,13 @@ describe("scrollbench runner infrastructure", () => {
 
     expect(viewportMetrics(scroller)).toEqual({
       clientHeight: 320,
+      clientWidth: 0,
+      maxScrollLeft: 0,
       scrollHeight: 1280,
+      scrollWidth: 0,
       maxScrollTop: 960,
+      renderedElementCount: 0,
+      scrollportElementCount: 0,
     })
   })
 
@@ -2819,8 +2824,13 @@ describe("scrollbench runner infrastructure", () => {
 
     expect(viewportMetrics(scroller)).toEqual({
       clientHeight: 500,
+      clientWidth: 0,
+      maxScrollLeft: 0,
       scrollHeight: 120,
+      scrollWidth: 0,
       maxScrollTop: 0,
+      renderedElementCount: 0,
+      scrollportElementCount: 0,
     })
   })
 
@@ -2831,8 +2841,13 @@ describe("scrollbench runner infrastructure", () => {
 
     expect(viewportMetrics(scroller)).toEqual({
       clientHeight: 0,
+      clientWidth: 0,
+      maxScrollLeft: 0,
       scrollHeight: 0,
+      scrollWidth: 0,
       maxScrollTop: 0,
+      renderedElementCount: 0,
+      scrollportElementCount: 0,
     })
   })
 
