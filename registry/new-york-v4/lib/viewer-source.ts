@@ -207,7 +207,7 @@ function defaultIdentityKey(source: ViewerSource) {
 }
 
 export function textPayloadIdentityKey(text: string) {
-  return `text:${text}`
+  return textPayloadKey(text)
 }
 
 export function textPayloadKey(text: string) {

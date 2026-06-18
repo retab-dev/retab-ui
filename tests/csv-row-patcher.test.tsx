@@ -7,6 +7,7 @@ import {
   useCsvRowPatcher,
   type CsvRowPatchState,
 } from "@/registry/new-york-v4/ui/csv-viewer-row-patcher"
+import { createCsvRowStoreFromRows } from "@/registry/new-york-v4/ui/csv-row-store"
 import type { FixedGridViewport } from "@/registry/new-york-v4/ui/fixed-grid-virtualization"
 
 afterEach(() => {
@@ -46,7 +47,7 @@ describe("CSV row patcher", () => {
     expect(rowText(rows[2]!)).toEqual(["8", "r7c0", "r7c1"])
   })
 
-  it("declines the fast path while a cell is active", () => {
+  it("keeps the fast path while a cell is active and patches the active class", () => {
     const rowWindow = buildRowWindow([
       { ariaRowIndex: "2", rowNumber: "1", cells: ["r0c0", "r0c1"] },
       { ariaRowIndex: "3", rowNumber: "2", cells: ["r1c0", "r1c1"] },
@@ -62,8 +63,31 @@ describe("CSV row patcher", () => {
       })
     )
 
-    expect(result.current.patch(createJumpViewport())).toBe("pass")
-    expect(rowText(rowHandles(rowWindow)[0]!)).toEqual(["1", "r0c0", "r0c1"])
+    expect(result.current.patch(createJumpViewport())).toBe("handled")
+    expect(rowText(rowHandles(rowWindow)[0]!)).toEqual(["6", "r5c0", "r5c1"])
+    expect(
+      rowHandles(rowWindow)[0]!
+        .querySelectorAll('[data-slot="csv-cell"]')[1]!
+        .className.includes("ring-primary/50")
+    ).toBe(true)
+  })
+
+  it("keeps the fast path at a stable non-zero horizontal offset", () => {
+    const rowWindow = buildRowWindow([
+      { ariaRowIndex: "2", rowNumber: "1", cells: ["r0c0", "r0c1"] },
+      { ariaRowIndex: "3", rowNumber: "2", cells: ["r1c0", "r1c1"] },
+      { ariaRowIndex: "4", rowNumber: "3", cells: ["r2c0", "r2c1"] },
+    ])
+    const { result } = renderHook(() =>
+      useCsvRowPatcher({
+        rowWindowRef: { current: rowWindow },
+        getState: () => createPatchState(),
+      })
+    )
+
+    expect(
+      result.current.patch({ ...createJumpViewport(), scrollLeft: 360 })
+    ).toBe("handled")
   })
 
   it("resync restores canonical visibility a stale patch left hidden", () => {
@@ -167,10 +191,12 @@ function createPatchState(
     effectiveRowHeight: 10,
     rowOrder: null,
     shouldVirtualizeRows: true,
-    sourceRows: Array.from({ length: 20 }, (_, rowIndex) => [
-      `r${rowIndex}c0`,
-      `r${rowIndex}c1`,
-    ]),
+    rowStore: createCsvRowStoreFromRows(
+      Array.from({ length: 20 }, (_, rowIndex) => [
+        `r${rowIndex}c0`,
+        `r${rowIndex}c1`,
+      ])
+    ),
     ...overrides,
   }
 }

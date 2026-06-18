@@ -1,16 +1,21 @@
 import { resolveCsvDialect, type CsvDialect, type CsvTable } from "@/lib/csv"
 import type {
   ViewerContentPayload,
+  ViewerContentBlob,
   ViewerContentStream,
   ViewerResource,
 } from "@/lib/viewer-resource"
+import { viewerContentRenderKey } from "@/lib/viewer-resource"
 import type {
   BlobViewerSource,
   TextSource,
   UrlViewerSource,
 } from "@/lib/viewer-source"
+import { textPayloadKey } from "@/lib/viewer-source"
 
-export type CsvContent = ViewerContentPayload & ViewerContentStream
+export type CsvContent = ViewerContentPayload &
+  ViewerContentBlob &
+  ViewerContentStream
 
 export type CsvResource =
   | { kind: "resource"; content: CsvContent }
@@ -94,7 +99,12 @@ export function csvViewerSortResetKey({
   resource?: ViewerResource | null
 }): unknown {
   const dialectKey = `${dialect.delimiter}\u0000${dialect.hasHeader}`
-  if (resource) return `${resource.keys.load}\u0000${dialectKey}`
+  if (source?.kind === "text") {
+    return `${source.identityKey ?? ""}\u0000${textPayloadKey(source.text)}\u0000${dialectKey}`
+  }
+  if (resource) {
+    return `${resource.keys.load}\u0000${viewerContentRenderKey(resource.content)}\u0000${dialectKey}`
+  }
   if (source?.kind === "table") return source.identityKey ?? source.table
   return "empty"
 }

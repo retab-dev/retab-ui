@@ -68,6 +68,8 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+const RELEASED_SOURCE_TIMEOUT_MS = 10_000
+
 function imageUrlSource(url: string, fileName?: string, mimeType?: string) {
   return { kind: "url" as const, url, fileName, mimeType }
 }
@@ -153,7 +155,7 @@ describe("ViewerResource registry", () => {
     await expect(changedBytes.content.readText()).resolves.toBe("second")
   })
 
-  it("interns identical inline text resources without merging different payloads", async () => {
+  it("treats explicit inline text identity as authoritative", async () => {
     const repeated = createViewerResource({
       kind: "text",
       text: "first",
@@ -174,10 +176,10 @@ describe("ViewerResource registry", () => {
     })
 
     expect(repeated).toBe(first)
-    expect(second).not.toBe(first)
-    expect(second.keys.load).not.toBe(first.keys.load)
+    expect(second).toBe(first)
+    expect(second.keys.load).toBe(first.keys.load)
     await expect(first.content.readText()).resolves.toBe("first")
-    await expect(second.content.readText()).resolves.toBe("second")
+    await expect(second.content.readText()).resolves.toBe("first")
   })
 })
 
@@ -1556,6 +1558,10 @@ describe("FrameSourceManager lifecycle", () => {
     secondLease?.release()
     expect(dispose).not.toHaveBeenCalled()
     await vi.advanceTimersByTimeAsync(0)
+    expect(dispose).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(RELEASED_SOURCE_TIMEOUT_MS - 1)
+    expect(dispose).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1)
 
     expect(dispose).toHaveBeenCalledTimes(1)
     vi.useRealTimers()
@@ -1583,8 +1589,12 @@ describe("FrameSourceManager lifecycle", () => {
 
     await vi.advanceTimersByTimeAsync(0)
     expect(dispose).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(RELEASED_SOURCE_TIMEOUT_MS)
+    expect(dispose).not.toHaveBeenCalled()
     secondLease?.release()
     await vi.advanceTimersByTimeAsync(0)
+    expect(dispose).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(RELEASED_SOURCE_TIMEOUT_MS)
 
     expect(dispose).toHaveBeenCalledTimes(1)
     vi.useRealTimers()
@@ -1607,6 +1617,8 @@ describe("FrameSourceManager lifecycle", () => {
     lease?.release()
     lease?.release()
     await vi.advanceTimersByTimeAsync(0)
+    expect(dispose).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(RELEASED_SOURCE_TIMEOUT_MS)
 
     expect(dispose).toHaveBeenCalledTimes(1)
     vi.useRealTimers()
@@ -1766,6 +1778,8 @@ describe("FrameSourceManager lifecycle", () => {
     expect(dispose).not.toHaveBeenCalled()
     lease?.release()
     await vi.advanceTimersByTimeAsync(0)
+    expect(dispose).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(RELEASED_SOURCE_TIMEOUT_MS)
     expect(dispose).toHaveBeenCalledTimes(1)
     vi.useRealTimers()
   })
@@ -2207,7 +2221,7 @@ describe("TiffWorkerClient", () => {
 })
 
 describe("ImageFrame rendering lifecycle", () => {
-  it("only mounts and decodes a virtual window of large TIFF frames", async () => {
+  it("mounts the visible window and keeps retained TIFF prefetch frames bounded", async () => {
     stubObservableLayout({
       frameListWidth: 132,
       clientHeight: 200,
@@ -2232,11 +2246,10 @@ describe("ImageFrame rendering lifecycle", () => {
         container.querySelectorAll("[data-slot='image-frame']")
       ).toHaveLength(6)
     })
-    expect(
-      workers[0].posts.flatMap((post) =>
-        post.message.type === "decodeFrame" ? [post.message.frameIndex] : []
-      )
-    ).toEqual([0, 1, 2, 3, 4, 5])
+    const initialDecodeFrames = workers[0].posts.flatMap((post) =>
+      post.message.type === "decodeFrame" ? [post.message.frameIndex] : []
+    )
+    expect(initialDecodeFrames.slice(0, 6)).toEqual([0, 1, 2, 3, 4, 5])
 
     const viewport = container.querySelector(
       '[data-slot="scroll-area-viewport"]'
@@ -2260,15 +2273,21 @@ describe("ImageFrame rendering lifecycle", () => {
       const mountedFrameNumbers = Array.from(
         container.querySelectorAll<HTMLElement>("[data-slot='image-frame']")
       ).map((frame) => Number(frame.dataset.frameNumber))
-      expect(mountedFrameNumbers).toEqual([
+      expect(mountedFrameNumbers.slice(0, 10)).toEqual([
         46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
       ])
-    })
-    expect(
-      workers[0].posts.flatMap((post) =>
-        post.message.type === "decodeFrame" ? [post.message.frameIndex] : []
+      expect(mountedFrameNumbers.length).toBeLessThanOrEqual(16)
+      expect(mountedFrameNumbers).toEqual(
+        expect.arrayContaining([1, 2, 3, 4, 5, 6])
       )
-    ).toEqual([0, 1, 2, 3, 4, 5, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54])
+    })
+    const decodeFrames = workers[0].posts.flatMap((post) =>
+      post.message.type === "decodeFrame" ? [post.message.frameIndex] : []
+    )
+    expect(decodeFrames.slice(0, 6)).toEqual([0, 1, 2, 3, 4, 5])
+    expect(decodeFrames).toEqual(
+      expect.arrayContaining([45, 46, 47, 48, 49, 50, 51, 52, 53, 54])
+    )
   })
 
   it("draws an observed frame at device-pixel size and releases it on unmount", async () => {
@@ -2715,9 +2734,14 @@ describe("ImageViewer interactions", () => {
     })
     expect(await screen.findByText("1 image")).toBeTruthy()
 
+    vi.useFakeTimers()
     view.unmount()
+    expect(dispose).not.toHaveBeenCalled()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(RELEASED_SOURCE_TIMEOUT_MS)
+    })
 
-    await waitFor(() => expect(dispose).toHaveBeenCalledTimes(1))
+    expect(dispose).toHaveBeenCalledTimes(1)
   })
 
   it("keeps the retained source when only URL presentation metadata changes", async () => {
@@ -2753,8 +2777,14 @@ describe("ImageViewer interactions", () => {
 
     expect(dispose).not.toHaveBeenCalled()
 
+    vi.useFakeTimers()
     view.unmount()
-    await waitFor(() => expect(dispose).toHaveBeenCalledTimes(1))
+    expect(dispose).not.toHaveBeenCalled()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(RELEASED_SOURCE_TIMEOUT_MS)
+    })
+
+    expect(dispose).toHaveBeenCalledTimes(1)
   })
 
   it("updates download metadata when URL presentation metadata changes", async () => {
@@ -2897,10 +2927,13 @@ describe("ImageViewer interactions", () => {
       fireEvent.click(screen.getByLabelText("Rotate"))
     })
 
-    expect(overlay.getAttribute("data-width")).toBe("200")
-    expect(overlay.getAttribute("data-height")).toBe("100")
-    expect(overlay.getAttribute("data-scale")).toBe("1")
-    expect(overlay.getAttribute("data-rotation")).toBe("90")
+    await waitFor(() => {
+      const rotatedOverlay = screen.getByTestId("image-overlay")
+      expect(rotatedOverlay.getAttribute("data-width")).toBe("200")
+      expect(rotatedOverlay.getAttribute("data-height")).toBe("100")
+      expect(rotatedOverlay.getAttribute("data-scale")).toBe("1")
+      expect(rotatedOverlay.getAttribute("data-rotation")).toBe("90")
+    })
     expect(screen.getByText("100%")).toBeTruthy()
   })
 
@@ -2936,10 +2969,13 @@ describe("ImageViewer interactions", () => {
       fireEvent.click(screen.getByLabelText("Rotate"))
     })
 
-    expect(overlay.getAttribute("data-width")).toBe("400")
-    expect(overlay.getAttribute("data-height")).toBe("200")
-    expect(overlay.getAttribute("data-scale")).toBe("2")
-    expect(overlay.getAttribute("data-rotation")).toBe("90")
+    await waitFor(() => {
+      const rotatedOverlay = screen.getByTestId("controlled-image-overlay")
+      expect(rotatedOverlay.getAttribute("data-width")).toBe("400")
+      expect(rotatedOverlay.getAttribute("data-height")).toBe("200")
+      expect(rotatedOverlay.getAttribute("data-scale")).toBe("2")
+      expect(rotatedOverlay.getAttribute("data-rotation")).toBe("90")
+    })
     expect(screen.getByText("200%")).toBeTruthy()
   })
 

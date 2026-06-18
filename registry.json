@@ -883,9 +883,29 @@
           "target": "@ui/csv-viewer-row-patcher.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/csv-viewer-cell-classes.ts",
+          "type": "registry:ui",
+          "target": "@ui/csv-viewer-cell-classes.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/csv-row-store.ts",
+          "type": "registry:ui",
+          "target": "@ui/csv-row-store.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/csv-viewer-sort.ts",
           "type": "registry:ui",
           "target": "@ui/csv-viewer-sort.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/csv-viewer-sort-worker.ts",
+          "type": "registry:ui",
+          "target": "@ui/csv-viewer-sort-worker.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/csv-viewer-sort.worker.ts",
+          "type": "registry:ui",
+          "target": "@ui/csv-viewer-sort.worker.ts"
         },
         {
           "path": "registry/new-york-v4/ui/fixed-grid-virtualization.ts",
@@ -1198,6 +1218,11 @@
           "target": "@ui/docx-viewer-scale.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/docx-viewer-layout.ts",
+          "type": "registry:ui",
+          "target": "@ui/docx-viewer-layout.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/docx-viewer-scroll.ts",
           "type": "registry:ui",
           "target": "@ui/docx-viewer-scroll.ts"
@@ -1462,7 +1487,6 @@
       "dependencies": [
         "lucide-react",
         "pptxviewjs@1.1.9",
-        "jszip",
         "chart.js"
       ],
       "registryDependencies": [
@@ -1509,11 +1533,6 @@
           "path": "registry/new-york-v4/ui/pptx-viewer-core.ts",
           "type": "registry:ui",
           "target": "@ui/pptx-viewer-core.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/pptx-viewer-presentation.ts",
-          "type": "registry:ui",
-          "target": "@ui/pptx-viewer-presentation.ts"
         },
         {
           "path": "registry/new-york-v4/ui/pptx-viewer-cache.ts",
@@ -2655,7 +2674,6 @@
       "dependencies": [
         "@e965/xlsx",
         "dompurify",
-        "jszip",
         "marked",
         "pptxviewjs",
         "utif"
@@ -3896,8 +3914,26 @@
       "description": "A Pretext-powered prose viewer with natural wrapping, custom variable-height virtualization, source-line highlights, retry, zoom, and download.",
       "dependencies": [
         "@chenglou/pretext",
+        "hast-util-to-jsx-runtime",
+        "katex",
         "lucide-react",
-        "marked@18.0.5"
+        "marked@18.0.5",
+        "mermaid",
+        "rehype-katex",
+        "rehype-raw",
+        "rehype-sanitize",
+        "rehype-slug",
+        "remark-breaks",
+        "remark-directive",
+        "remark-gemoji",
+        "remark-gfm",
+        "remark-math",
+        "remark-parse",
+        "remark-rehype",
+        "remark-smartypants",
+        "shiki",
+        "unified",
+        "vfile"
       ],
       "registryDependencies": [
         "button",
@@ -3942,6 +3978,76 @@
           "path": "registry/new-york-v4/ui/text-viewer-content.tsx",
           "type": "registry:ui",
           "target": "@ui/text-viewer-content.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-viewer-chenglou-content.tsx",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-chenglou-content.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-greenfield-content.tsx",
+          "type": "registry:ui",
+          "target": "@ui/markdown-greenfield-content.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-greenfield-code-highlight.tsx",
+          "type": "registry:ui",
+          "target": "@ui/markdown-greenfield-code-highlight.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-greenfield-diagram.tsx",
+          "type": "registry:ui",
+          "target": "@ui/markdown-greenfield-diagram.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-greenfield-document.ts",
+          "type": "registry:ui",
+          "target": "@ui/markdown-greenfield-document.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-greenfield-document-store.ts",
+          "type": "registry:ui",
+          "target": "@ui/markdown-greenfield-document-store.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-greenfield-document.worker.ts",
+          "type": "registry:ui",
+          "target": "@ui/markdown-greenfield-document.worker.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-greenfield-layout.ts",
+          "type": "registry:ui",
+          "target": "@ui/markdown-greenfield-layout.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-greenfield-renderer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/markdown-greenfield-renderer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-greenfield-virtualizer.ts",
+          "type": "registry:ui",
+          "target": "@ui/markdown-greenfield-virtualizer.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-hast-types.ts",
+          "type": "registry:ui",
+          "target": "@ui/markdown-hast-types.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-source-map.ts",
+          "type": "registry:ui",
+          "target": "@ui/markdown-source-map.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-unified-pipeline.ts",
+          "type": "registry:ui",
+          "target": "@ui/markdown-unified-pipeline.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-url-policy.ts",
+          "type": "registry:ui",
+          "target": "@ui/markdown-url-policy.ts"
         },
         {
           "path": "registry/new-york-v4/ui/text-viewer-layout.ts",
@@ -4047,9 +4153,11 @@
       "title": "Markdown Viewer",
       "description": "A continuous Markdown viewer forked from the Chenglou Pretext text viewer, with block virtualization and no visible page model.",
       "dependencies": [
+        "@chenglou/pretext",
         "hast-util-to-jsx-runtime",
         "katex",
         "lucide-react",
+        "marked@18.0.5",
         "mermaid",
         "rehype-katex",
         "rehype-raw",
@@ -4068,14 +4176,104 @@
         "vfile"
       ],
       "registryDependencies": [
-        "@retab/text-viewer",
-        "button"
+        "button",
+        "dropdown-menu",
+        "@retab/scroll-area",
+        "@retab/skeleton",
+        "@retab/spinner",
+        "@retab/utils",
+        "@retab/viewer-controls"
       ],
       "files": [
         {
           "path": "registry/new-york-v4/ui/markdown-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/markdown-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/plain-text-viewer-frame.tsx",
+          "type": "registry:ui",
+          "target": "@ui/plain-text-viewer-frame.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-viewer-chrome.tsx",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-chrome.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-code-viewer-chrome.tsx",
+          "type": "registry:ui",
+          "target": "@ui/text-code-viewer-chrome.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-download.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-download.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-error.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-error.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-viewer-layout.ts",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-layout.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-viewer-ranges.ts",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-ranges.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/line-ranges.ts",
+          "type": "registry:ui",
+          "target": "@ui/line-ranges.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-viewer-resource.ts",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/plain-text-resource.ts",
+          "type": "registry:ui",
+          "target": "@ui/plain-text-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-viewer-scale.ts",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-scale.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-viewer-types.ts",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-types.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-source.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-source.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-resource.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-download-actions.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-download-actions.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-errors.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-errors.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-is-client.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-is-client.ts"
         },
         {
           "path": "registry/new-york-v4/ui/markdown-greenfield-content.tsx",

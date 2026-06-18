@@ -174,6 +174,8 @@ export const CsvResourceContent = React.forwardRef<
   const [zoom, setZoom] = React.useState(1)
   const columns = resourceState.columns
   const sourceRows = resourceState.sourceRows
+  const rowStore = resourceState.rowStore
+  const rowCount = rowStore.rowCount
   const canExportTable =
     resourceState.status === "ready" || resourceState.status === "empty"
   const sortResetKey = csvViewerSortResetKey({
@@ -214,11 +216,11 @@ export const CsvResourceContent = React.forwardRef<
       csvViewerStatusNode({
         resourceState,
         resource,
-        rowCount: sourceRows.length,
+        rowCount,
         showDownload: controls,
         onRetry: () => setRetryVersion((version) => version + 1),
       }),
-    [controls, resource, resourceState, sourceRows.length]
+    [controls, resource, resourceState, rowCount]
   )
   const zoomOut = React.useCallback(
     () => setZoom((value) => clampCsvViewerZoom(value / 1.2)),
@@ -236,7 +238,7 @@ export const CsvResourceContent = React.forwardRef<
     onResetZoom: resetZoom,
     onZoomIn: zoomIn,
     onZoomOut: zoomOut,
-    rowCount: sourceRows.length,
+    rowCount,
     zoom,
   })
 
@@ -249,7 +251,7 @@ export const CsvResourceContent = React.forwardRef<
     >
       <CsvViewerHeader
         controls={controls}
-        rowCount={sourceRows.length}
+        rowCount={rowCount}
         columnCount={columns.length}
         isLoading={resourceState.status === "loading"}
         zoom={zoom}
@@ -259,7 +261,7 @@ export const CsvResourceContent = React.forwardRef<
       <CsvGrid
         ref={gridRef}
         columns={columns}
-        sourceRows={sourceRows}
+        rowStore={rowStore}
         activeCell={activeCell ?? null}
         height={height}
         fillHeight={fillHeight}

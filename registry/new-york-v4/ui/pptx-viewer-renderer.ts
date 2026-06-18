@@ -13,15 +13,8 @@ import {
   type PptxSize,
   type PptxSourceLoadTiming,
 } from "./pptx-viewer-core"
-import { parsePptxSlideSize } from "./pptx-viewer-presentation"
 
 type PptxModule = typeof PptxNS
-
-interface JSZipLike {
-  loadAsync(data: ArrayBuffer): Promise<{
-    file(path: string): { async(type: "string"): Promise<string> } | null
-  }>
-}
 
 export type PptxRendererErrorKind = ViewerFormatErrorKind
 
@@ -49,32 +42,10 @@ export interface PptxRenderer {
 }
 
 let pptxModulePromise: Promise<PptxModule> | null = null
-let jszipPromise: Promise<JSZipLike> | null = null
 
 function loadPptx(): Promise<PptxModule> {
   if (!pptxModulePromise) pptxModulePromise = import("pptxviewjs")
   return pptxModulePromise
-}
-
-function loadJSZip(): Promise<JSZipLike> {
-  if (!jszipPromise) {
-    jszipPromise = import("jszip").then(
-      (mod) =>
-        ((mod as { default?: unknown }).default ?? mod) as unknown as JSZipLike
-    )
-  }
-  return jszipPromise
-}
-
-async function readSlideSize(buffer: ArrayBuffer): Promise<PptxSize> {
-  try {
-    const JSZip = await loadJSZip()
-    const zip = await JSZip.loadAsync(buffer)
-    const xml = await zip.file("ppt/presentation.xml")?.async("string")
-    return parsePptxSlideSize(xml)
-  } catch {
-    return DEFAULT_PPTX_SLIDE_SIZE
-  }
 }
 
 export async function createPptxRenderer(
@@ -91,19 +62,17 @@ export async function createPptxRenderer(
     pptx,
     durationMs: now() - importPptxStartedAt,
   }))
-  const readSlideSizeStartedAt = now()
-  const slideSizePromise = readSlideSize(buffer).then((baseSize) => ({
-    baseSize,
-    durationMs: now() - readSlideSizeStartedAt,
-  }))
-  const [pptx, baseSize] = await Promise.all([pptxPromise, slideSizePromise])
+  const pptx = await pptxPromise
   const { PPTXViewer } = pptx.pptx
   const offscreen = document.createElement("canvas")
   const viewer = new PPTXViewer({
     canvas: offscreen,
     slideSizeMode: "actual",
+    autoExposeGlobals: false,
     autoChartRerenderDelayMs: 0,
+    enableThumbnails: false,
   })
+  const loadedViewer = viewer as unknown as LoadedPptxViewer
 
   const loadFileStartedAt = now()
   try {
@@ -116,6 +85,10 @@ export async function createPptxRenderer(
     })
   }
   const loadFileMs = now() - loadFileStartedAt
+
+  const readSlideSizeStartedAt = now()
+  const baseSize = readLoadedSlideSize(loadedViewer)
+  const readSlideSizeMs = now() - readSlideSizeStartedAt
 
   let slideCount: number
   const inspectStartedAt = now()
@@ -143,7 +116,7 @@ export async function createPptxRenderer(
     inspectMs,
     loadFileMs,
     readBytesMs,
-    readSlideSizeMs: baseSize.durationMs,
+    readSlideSizeMs,
     slideCount,
     totalMs: now() - totalStartedAt,
   })
@@ -152,7 +125,7 @@ export async function createPptxRenderer(
 
   return {
     slideCount,
-    baseSize: baseSize.baseSize,
+    baseSize,
     async renderSlide({ slideIndex, canvas, renderScale }) {
       if (disposed) {
         throw new PptxRendererError(
@@ -173,6 +146,7 @@ export async function createPptxRenderer(
         )
       }
       try {
+        setPptxRenderPixelRatio(loadedViewer, canvas, baseSize, renderScale)
         await viewer.renderSlide(slideIndex, canvas, {
           scale: renderScale,
           quality: "high",
@@ -207,6 +181,119 @@ function readPptxBytes(content: ViewerContentBytes): Promise<ArrayBuffer> {
   return content.readBytes()
 }
 
+type LoadedPptxViewer = {
+  getSlideDimensions?: () => unknown
+  processor?: unknown
+  presentation?: unknown
+}
+
+type LoadedPptxProcessor = {
+  getSlideDimensions?: () => unknown
+  processor?: unknown
+  presentation?: unknown
+  renderContext?: {
+    pixelRatio?: number
+    dpi?: number
+  }
+  setPixelRatio?: (ratio: number) => void
+}
+
+function readLoadedSlideSize(viewer: LoadedPptxViewer): PptxSize {
+  return (
+    parseLoadedSlideSize(readLoadedSlideDimensions(viewer)) ??
+    DEFAULT_PPTX_SLIDE_SIZE
+  )
+}
+
+function readLoadedSlideDimensions(viewer: LoadedPptxViewer): unknown {
+  try {
+    const dimensions = viewer.getSlideDimensions?.()
+    if (dimensions) return dimensions
+  } catch {
+    /* fall through to exposed presentation objects */
+  }
+
+  const processor = viewer.processor as LoadedPptxProcessor | undefined
+  try {
+    const dimensions = processor?.getSlideDimensions?.()
+    if (dimensions) return dimensions
+  } catch {
+    /* fall through to presentation fields */
+  }
+
+  return (
+    readPresentationSlideSize(viewer.presentation) ??
+    readPresentationSlideSize(processor?.presentation) ??
+    readPresentationSlideSize(
+      (processor?.processor as LoadedPptxProcessor | undefined)?.presentation
+    )
+  )
+}
+
+function readPresentationSlideSize(presentation: unknown): unknown {
+  if (!presentation || typeof presentation !== "object") return null
+  const slideSize = (presentation as { slideSize?: unknown }).slideSize
+  return slideSize ?? null
+}
+
+function parseLoadedSlideSize(value: unknown): PptxSize | null {
+  if (!value || typeof value !== "object") return null
+  const { cx, cy } = value as { cx?: unknown; cy?: unknown }
+  const widthEmu = Number(cx)
+  const heightEmu = Number(cy)
+  if (
+    !Number.isFinite(widthEmu) ||
+    !Number.isFinite(heightEmu) ||
+    widthEmu <= 0 ||
+    heightEmu <= 0
+  ) {
+    return null
+  }
+
+  const width = Math.round(widthEmu / 9525)
+  const height = Math.round(heightEmu / 9525)
+  if (width <= 0 || height <= 0) return null
+  return { width, height }
+}
+
+function setPptxRenderPixelRatio(
+  viewer: LoadedPptxViewer,
+  canvas: HTMLCanvasElement,
+  baseSize: PptxSize,
+  renderScale: number
+) {
+  const logicalWidth = Number.parseFloat(canvas.style.width)
+  const zoomScale =
+    Number.isFinite(logicalWidth) && logicalWidth > 0 && baseSize.width > 0
+      ? logicalWidth / baseSize.width
+      : 1
+  const pixelRatio = renderScale / zoomScale
+  if (!Number.isFinite(pixelRatio) || pixelRatio <= 0) return
+
+  const processor = viewer.processor as LoadedPptxProcessor | undefined
+  const innerProcessor = processor?.processor as LoadedPptxProcessor | undefined
+  setProcessorPixelRatio(processor, pixelRatio)
+  setProcessorPixelRatio(innerProcessor, pixelRatio)
+}
+
+function setProcessorPixelRatio(
+  processor: LoadedPptxProcessor | undefined,
+  pixelRatio: number
+) {
+  if (!processor) return
+  if (typeof processor.setPixelRatio === "function") {
+    try {
+      processor.setPixelRatio(pixelRatio)
+      return
+    } catch {
+      /* fall through to direct renderContext patching */
+    }
+  }
+  if (!processor.renderContext) return
+  processor.renderContext.pixelRatio = pixelRatio
+  processor.renderContext.dpi = pixelRatio * 96
+}
+
 function isValidSlideIndex(slideIndex: number, slideCount: number) {
   return (
     Number.isInteger(slideIndex) && slideIndex >= 0 && slideIndex < slideCount
@@ -223,5 +310,8 @@ function now() {
 
 export function resetPptxRendererModules() {
   pptxModulePromise = null
-  jszipPromise = null
+}
+
+export function preloadPptxRenderer() {
+  void loadPptx()
 }

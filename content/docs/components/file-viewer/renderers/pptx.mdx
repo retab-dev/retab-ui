@@ -15,9 +15,8 @@ It does continuous-scroll rendering, zoom, rotate, fit-to-width, and download, a
 exposes a per-slide overlay slot so you can draw bounding-box citations on top of
 the rendered slide.
 
-The deck loads with React's `use()` and Suspense, slides render lazily via an
-`IntersectionObserver` (only slides near the viewport hit the canvas), and
-renders are serialized so they never race.
+The deck loads with React's `use()` and Suspense, a math-based virtual slide
+window keeps the DOM bounded, and renders are serialized so they never race.
 
 <ComponentPreview name="pptx-viewer-demo" contentClassName="p-0" />
 
@@ -27,9 +26,8 @@ renders are serialized so they never race.
 npx shadcn@latest add @retab/pptx-viewer
 ```
 
-This pulls in `pptxviewjs` and its `jszip` peer (used both to unzip the deck and
-to read the slide size). `chart.js` is also installed because the library imports
-it statically; it is only exercised when a deck actually contains charts.
+This pulls in `pptxviewjs`. `chart.js` is also installed because the library
+imports it statically; it is only exercised when a deck actually contains charts.
 
 ## Usage
 
@@ -74,13 +72,16 @@ normalized boxes map with simple percentages:
 ## How it performs
 
 - **Canvas rendering, client-side.** Slides parse and rasterize in the browser —
-  no conversion service. The slide size is read straight from `presentation.xml`,
-  so every slide reserves its box before anything is drawn.
+  no conversion service. The slide size is read from the loaded `pptxviewjs`
+  presentation, so every slide reserves its box before anything is drawn without
+  reopening the archive.
 - **Lazy slides.** Only slides near the viewport render; off-screen canvases are
   dropped, keeping a long deck bounded.
 - **Bitmap cache.** Each rendered slide is cached as an `ImageBitmap` (a capped
   LRU keyed by slide + zoom), so scroll-back and revisited zoom levels redraw
   instantly instead of re-running the renderer.
+- **Adaptive render scale.** The viewer caps high-DPI raster work while preserving
+  zoom, avoiding runaway canvas costs on dense displays.
 - **Serialized, cancellable renders.** The underlying viewer holds one drawing
   context, so heavy renders are queued — never overlapping, never racing — and a
   queued render is skipped if its slide has already scrolled away, so
@@ -88,6 +89,9 @@ normalized boxes map with simple percentages:
 - **Scroll-aware rendering.** Slides render as soon as they near the viewport, so
   visible content appears immediately. Pass `eager={false}` for very large decks
   when uncached slide renders should wait until scrolling settles.
+- **Shared thumbnail source.** File thumbnails reuse the same parsed deck source
+  and bitmap cache as the full viewer instead of parsing the presentation a
+  second time.
 - **Bounded source ownership.** Parsed deck sources and rendered bitmaps are
   kept in a small LRU and disposed when evicted, so browsing many presentations
   does not leave old decks resident indefinitely.

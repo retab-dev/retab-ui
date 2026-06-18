@@ -17,6 +17,7 @@ export interface PptxSlideRenderTiming {
   slideNumber: number
   durationMs: number
   renderScale: number
+  pixelRatio: number
   cached: boolean
   status: "rendered" | "cancelled" | "failed"
 }
@@ -42,6 +43,12 @@ export interface PptxResetInput {
 export interface PptxBitmapCacheInput {
   slideIndex: number
   renderScale: number
+}
+
+export interface PptxSlideRenderPriority {
+  isCurrentSlide: boolean
+  isInViewport: boolean
+  distanceFromReadingMarker: number
 }
 
 export const DEFAULT_PPTX_SLIDE_SIZE = {
@@ -86,6 +93,11 @@ export function getPptxBitmapCacheKey({
   renderScale,
 }: PptxBitmapCacheInput) {
   return `${slideIndex}@${Math.round(renderScale * 1000)}`
+}
+
+export function getPptxRenderPixelRatio(rawPixelRatio: number) {
+  if (!Number.isFinite(rawPixelRatio) || rawPixelRatio <= 0) return 1
+  return Math.min(rawPixelRatio, 2)
 }
 
 export function getScaledSlideSize(

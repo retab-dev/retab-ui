@@ -75,6 +75,29 @@ const markdownFiles = [
   "registry/new-york-v4/ui/markdown-unified-pipeline.ts",
   "registry/new-york-v4/ui/markdown-url-policy.ts",
 ]
+const markdownViewerSupportFiles = [
+  "registry/new-york-v4/ui/plain-text-viewer-frame.tsx",
+  "registry/new-york-v4/ui/text-viewer-chrome.tsx",
+  "registry/new-york-v4/ui/text-code-viewer-chrome.tsx",
+  "registry/new-york-v4/ui/viewer-download.tsx",
+  "registry/new-york-v4/ui/viewer-error.tsx",
+  "registry/new-york-v4/ui/text-viewer-layout.ts",
+  "registry/new-york-v4/ui/text-viewer-ranges.ts",
+  "registry/new-york-v4/ui/line-ranges.ts",
+  "registry/new-york-v4/ui/text-viewer-resource.ts",
+  "registry/new-york-v4/ui/plain-text-resource.ts",
+  "registry/new-york-v4/ui/text-viewer-scale.ts",
+  "registry/new-york-v4/ui/text-viewer-types.ts",
+  "registry/new-york-v4/lib/viewer-source.ts",
+  "registry/new-york-v4/lib/viewer-resource.ts",
+  "registry/new-york-v4/lib/viewer-download-actions.ts",
+  "registry/new-york-v4/lib/viewer-errors.ts",
+  "registry/new-york-v4/ui/use-is-client.ts",
+]
+const markdownViewerRegistryFiles = [
+  ...markdownFiles,
+  ...markdownViewerSupportFiles,
+]
 const removedLegacyMarkdownFiles = [
   "registry/new-york-v4/ui/markdown-components.ts",
   "registry/new-york-v4/ui/markdown-controls.tsx",
@@ -137,9 +160,7 @@ async function readJson(path: string) {
 }
 
 function readMarkdownRegistryArtifact() {
-  return JSON.parse(
-    read("public/r/markdown-viewer.json")
-  ) as RegistryItem & {
+  return JSON.parse(read("public/r/markdown-viewer.json")) as RegistryItem & {
     type: string
   }
 }
@@ -551,7 +572,7 @@ describe("Markdown architecture", () => {
     )
     expect(item?.dependencies ?? []).not.toContain("markdown-document-viewer")
     expect(item?.files.map((file) => file.path).sort()).toEqual(
-      [...markdownFiles].sort()
+      [...markdownViewerRegistryFiles].sort()
     )
   })
 
@@ -565,9 +586,8 @@ describe("Markdown architecture", () => {
 
     expect(generatedItem).toEqual(registryItem)
     expect(generatedItem?.files.map((file) => file.path).sort()).toEqual(
-      [...markdownFiles].sort()
+      [...markdownViewerRegistryFiles].sort()
     )
-    expect(generatedItem?.dependencies ?? []).not.toContain("marked@18.0.5")
     expect(generatedItem?.dependencies ?? []).not.toContain("react-markdown")
     expect(generatedItem?.dependencies ?? []).not.toContain(
       "rehype-pretty-code"
@@ -580,13 +600,20 @@ describe("Markdown architecture", () => {
     expect(artifact.name).toBe("markdown-viewer")
     expect(artifact.type).toBe("registry:ui")
     expect(artifact.registryDependencies ?? []).toEqual([
-      "@retab/text-viewer",
       "button",
+      "dropdown-menu",
+      "@retab/scroll-area",
+      "@retab/skeleton",
+      "@retab/spinner",
+      "@retab/utils",
+      "@retab/viewer-controls",
     ])
     expect(artifact.dependencies ?? []).toEqual([
+      "@chenglou/pretext",
       "hast-util-to-jsx-runtime",
       "katex",
       "lucide-react",
+      "marked@18.0.5",
       "mermaid",
       "rehype-katex",
       "rehype-raw",
@@ -605,13 +632,19 @@ describe("Markdown architecture", () => {
       "vfile",
     ])
     expect(artifact.files.map((file) => file.path).sort()).toEqual(
-      [...markdownFiles].sort()
+      [...markdownViewerRegistryFiles].sort()
     )
 
+    const expectedFiles = new Map(
+      readRegistry()
+        .items.find((item) => item.name === "markdown-viewer")
+        ?.files.map((file) => [file.path, file]) ?? []
+    )
     for (const file of artifact.files) {
-      expect(file.type, `${file.path} registry type`).toBe("registry:ui")
-      expect(file.target, `${file.path} registry target`).toMatch(
-        /^@ui\/markdown-/
+      const expectedFile = expectedFiles.get(file.path)
+      expect(file.type, `${file.path} registry type`).toBe(expectedFile?.type)
+      expect(file.target, `${file.path} registry target`).toBe(
+        expectedFile?.target
       )
       expect(file.content, `${file.path} registry content`).toBe(
         read(file.path)
@@ -720,10 +753,11 @@ describe("Markdown architecture", () => {
       .map((file) => installedPathForRegistryTarget(file.target ?? file.path))
       .sort()
 
+    expect(expectedRetabFiles).toContain("components/ui/markdown-viewer.tsx")
     expect(expectedRetabFiles).toContain(
-      "components/ui/markdown-viewer.tsx"
+      "components/ui/plain-text-viewer-frame.tsx"
     )
-    expect(expectedRetabFiles).toContain("components/ui/text-viewer.tsx")
+    expect(expectedRetabFiles).toContain("components/ui/text-viewer-chrome.tsx")
     expect(expectedRetabFiles).toContain("lib/viewer-download-actions.ts")
 
     await withLocalRegistryServer(async (registryUrl) => {
@@ -780,14 +814,18 @@ describe("Markdown architecture", () => {
           join(projectDir, "components/ui/markdown-viewer.tsx"),
           "utf8"
         )
-        expect(installedViewer).toContain(
-          "./markdown-greenfield-content"
-        )
+        expect(installedViewer).toContain("./markdown-greenfield-content")
         expect(installedViewer).not.toContain("markdown-document-viewer")
-        expect(
-          await readJson("public/r/markdown-viewer.json")
-        ).toMatchObject({
-          registryDependencies: ["@retab/text-viewer", "button"],
+        expect(await readJson("public/r/markdown-viewer.json")).toMatchObject({
+          registryDependencies: [
+            "button",
+            "dropdown-menu",
+            "@retab/scroll-area",
+            "@retab/skeleton",
+            "@retab/spinner",
+            "@retab/utils",
+            "@retab/viewer-controls",
+          ],
         })
       } finally {
         await rm(projectDir, { recursive: true, force: true })
@@ -858,8 +896,9 @@ describe("Markdown architecture", () => {
     expect(modelSource).toContain("createMarkdownGreenfieldHeadings")
   })
 
-  it("keeps TextViewer modules from importing the Markdown fork", () => {
+  it("keeps TextViewer internals from importing the Markdown fork", () => {
     for (const file of textViewerFiles) {
+      if (file === "registry/new-york-v4/ui/text-viewer.tsx") continue
       const imports = importSpecifiers(read(file))
       for (const specifier of imports) {
         expect(

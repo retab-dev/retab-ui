@@ -1,4 +1,8 @@
-import { createCsvNormalizer, padRowsToColumnCount } from "./csv-normalizer"
+import {
+  createCsvNormalizer,
+  padRowsToColumnCount,
+  type CsvNormalizer,
+} from "./csv-normalizer"
 import { createCsvParser } from "./csv-parser"
 
 export {
@@ -43,22 +47,36 @@ export function parseCsv(
 ): ParsedCsv {
   const parser = createCsvParser({ delimiter: options.delimiter })
   const normalizer = createCsvNormalizer({ hasHeader: options.hasHeader })
-  const records = parser.push(input).concat(parser.flush())
   const rows: string[][] = []
   let columns: string[] = []
 
+  handleCsvRecords(parser.push(input), normalizer, rows, (nextColumns) => {
+    columns = nextColumns
+    padRowsToColumnCount(rows, columns.length)
+  })
+  handleCsvRecords(parser.flush(), normalizer, rows, (nextColumns) => {
+    columns = nextColumns
+    padRowsToColumnCount(rows, columns.length)
+  })
+
+  return { columns, rows }
+}
+
+function handleCsvRecords(
+  records: string[][],
+  normalizer: CsvNormalizer,
+  rows: string[][],
+  onColumns: (columns: string[]) => void
+) {
   for (const record of records) {
     for (const event of normalizer.accept(record)) {
       if (event.type === "columns") {
-        columns = event.columns
-        padRowsToColumnCount(rows, columns.length)
+        onColumns(event.columns)
       } else {
         rows.push(event.row)
       }
     }
   }
-
-  return { columns, rows }
 }
 
 /** Pad a record to a fixed width. */

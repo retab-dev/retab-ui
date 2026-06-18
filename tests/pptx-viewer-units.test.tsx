@@ -20,7 +20,6 @@ import {
   normalizePptxScale,
 } from "@/registry/new-york-v4/ui/pptx-viewer-core"
 import { PptxViewerFallback } from "@/registry/new-york-v4/ui/pptx-viewer-fallback"
-import { parsePptxSlideSize } from "@/registry/new-york-v4/ui/pptx-viewer-presentation"
 import { createPptxScrollActivity } from "@/registry/new-york-v4/ui/pptx-viewer-scroll"
 import {
   createPptxSlideLayout,
@@ -186,84 +185,6 @@ describe("getPptxFitScale", () => {
     expect(getPptxFitScale(null, 960)).toBe(1)
     expect(getPptxFitScale(Number.NaN, 960)).toBe(1)
     expect(getPptxFitScale(800, -5)).toBe(1)
-  })
-})
-
-// Real presentation.xml always declares the presentationml namespace; an
-// undeclared `p:` prefix makes jsdom emit a <parsererror>, which is a separate
-// (already-covered) fallback path. Declare xmlns:p so these cases exercise the
-// genuine attribute-parsing logic rather than the parse-error fallback.
-const P_NS =
-  'xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"'
-
-describe("parsePptxSlideSize edge cases", () => {
-  it("falls back when only one slide-size axis is present", () => {
-    expect(
-      parsePptxSlideSize(
-        `<p:presentation ${P_NS}><p:sldSz cx="9144000"/></p:presentation>`
-      )
-    ).toEqual(DEFAULT_PPTX_SLIDE_SIZE)
-    expect(
-      parsePptxSlideSize(
-        `<p:presentation ${P_NS}><p:sldSz cy="6858000"/></p:presentation>`
-      )
-    ).toEqual(DEFAULT_PPTX_SLIDE_SIZE)
-  })
-
-  it("falls back when an axis is zero or negative", () => {
-    expect(
-      parsePptxSlideSize(
-        `<p:presentation ${P_NS}><p:sldSz cx="0" cy="6858000"/></p:presentation>`
-      )
-    ).toEqual(DEFAULT_PPTX_SLIDE_SIZE)
-    expect(
-      parsePptxSlideSize(
-        `<p:presentation ${P_NS}><p:sldSz cx="9144000" cy="-1"/></p:presentation>`
-      )
-    ).toEqual(DEFAULT_PPTX_SLIDE_SIZE)
-  })
-
-  it("uses the first sldSz element when several are present", () => {
-    expect(
-      parsePptxSlideSize(
-        `<p:presentation ${P_NS}><p:sldSz cx="12192000" cy="6858000"/><p:sldSz cx="9144000" cy="6858000"/></p:presentation>`
-      )
-    ).toEqual({ width: 1280, height: 720 })
-  })
-
-  it("rounds fractional EMU values to the nearest CSS pixel", () => {
-    // 9144000.5 EMU / 9525 ≈ 960.00005 -> 960
-    expect(
-      parsePptxSlideSize(
-        `<p:presentation ${P_NS}><p:sldSz cx="9144000.5" cy="6858000"/></p:presentation>`
-      )
-    ).toEqual({ width: 960, height: 720 })
-    // 9529 EMU / 9525 ≈ 1.0004 -> rounds to 1px
-    expect(
-      parsePptxSlideSize(
-        `<p:presentation ${P_NS}><p:sldSz cx="9529" cy="9529"/></p:presentation>`
-      )
-    ).toEqual({ width: 1, height: 1 })
-  })
-
-  it("falls back when positive EMU values round to an unusable zero-pixel size", () => {
-    expect(
-      parsePptxSlideSize(
-        `<p:presentation ${P_NS}><p:sldSz cx="1" cy="1"/></p:presentation>`
-      )
-    ).toEqual(DEFAULT_PPTX_SLIDE_SIZE)
-  })
-
-  it("falls back for empty, whitespace, and null input", () => {
-    expect(parsePptxSlideSize("")).toEqual(DEFAULT_PPTX_SLIDE_SIZE)
-    expect(parsePptxSlideSize(null)).toEqual(DEFAULT_PPTX_SLIDE_SIZE)
-    expect(parsePptxSlideSize(undefined)).toEqual(DEFAULT_PPTX_SLIDE_SIZE)
-  })
-
-  it("falls back when the injected parser returns null", () => {
-    expect(parsePptxSlideSize("<ignored/>", () => null)).toEqual(
-      DEFAULT_PPTX_SLIDE_SIZE
-    )
   })
 })
 

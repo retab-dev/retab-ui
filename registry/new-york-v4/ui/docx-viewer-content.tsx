@@ -13,7 +13,12 @@ import {
 } from "./docx-viewer-chrome"
 import { DOCX_SCOPED_STYLES, toDocxFormatError } from "./docx-viewer-core"
 import { useDocxHighlight } from "./docx-viewer-highlight"
-import { commitDocxRender, renderDocxPreview } from "./docx-viewer-render"
+import type { DocxPageLayout } from "./docx-viewer-layout"
+import {
+  commitDocxRender,
+  loadDocxPreview,
+  renderDocxPreview,
+} from "./docx-viewer-render"
 import { useDocxViewerScale } from "./docx-viewer-scale"
 import { useDocxViewerScroll } from "./docx-viewer-scroll"
 import {
@@ -48,6 +53,8 @@ export function DocxViewerContent({
 }: DocxResourceContentProps & {
   forwardedRef?: React.ForwardedRef<DocxViewerHandle>
 }) {
+  const docxPreviewPromise = loadDocxPreview()
+  void docxPreviewPromise.catch(() => undefined)
   const buffer = React.use(
     getDocxDocumentResource(resource.content, { retainRejected: true })
   )
@@ -57,6 +64,9 @@ export function DocxViewerContent({
   const [numPages, setNumPages] = React.useState(0)
   const [pageWidth, setPageWidth] = React.useState<number | null>(null)
   const [renderIndex, setRenderIndex] = React.useState<DocxRenderIndex | null>(
+    null
+  )
+  const [pageLayout, setPageLayout] = React.useState<DocxPageLayout | null>(
     null
   )
   const [ready, setReady] = React.useState(false)
@@ -79,9 +89,11 @@ export function DocxViewerContent({
     scrollViewportRef,
   } = useDocxViewerScroll({
     layoutKey: scale,
+    pageLayout,
     onScrollProgressChange,
     onVisiblePageChange,
     ready,
+    scale,
   })
   const scaleRef = React.useRef(scale)
   React.useEffect(() => {
@@ -128,10 +140,11 @@ export function DocxViewerContent({
     setReady(false)
     setNumPages(0)
     setRenderIndex(null)
+    setPageLayout(null)
     renderIndexRef.current = null
     resetScroll()
     host.replaceChildren()
-    renderDocxPreview(buffer)
+    renderDocxPreview(buffer, docxPreviewPromise)
       .then((renderHost) => {
         if (cancelled) return
         const result = commitDocxRender({
@@ -144,6 +157,7 @@ export function DocxViewerContent({
         setRenderIndex(nextRenderIndex)
         setNumPages(result.numPages)
         setPageWidth(result.pageWidth)
+        setPageLayout(result.pageLayout)
         setReady(true)
       })
       .catch((err) => {
@@ -161,7 +175,7 @@ export function DocxViewerContent({
     return () => {
       cancelled = true
     }
-  }, [buffer, resetScroll])
+  }, [buffer, docxPreviewPromise, resetScroll])
 
   React.useEffect(() => {
     if (ready) measureScroll()

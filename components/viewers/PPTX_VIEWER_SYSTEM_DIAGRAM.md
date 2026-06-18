@@ -19,14 +19,14 @@ flowchart TB
     Registry["registry.json + public/r/pptx-viewer.json<br/>shadcn registry item"]
     ScrollBench["scrollbench pptx target<br/>[data-slot=pptx-viewer] viewport"]
     Tests["tests/pptx-viewer*.test.tsx<br/>unit, integration, cache, edge cases"]
-    Thumbnail["PptxFirstSlide thumbnail renderer<br/>separate first-slide pipeline"]
+    Thumbnail["PptxFirstSlide thumbnail renderer<br/>shared PptxSource first-slide render"]
   end
 
   %% Registry/package surface
   subgraph Package["Published Component Boundary"]
     Wrapper["components/ui/pptx-viewer.tsx<br/>export * from registry implementation"]
     Main["registry/new-york-v4/ui/pptx-viewer.tsx<br/>PptxViewer + PptxResourceContent + content shell"]
-    RegistryDeps["Registry deps<br/>lucide-react, pptxviewjs@1.1.9, jszip, chart.js<br/>button, scroll-area, separator, skeleton, utils"]
+    RegistryDeps["Registry deps<br/>lucide-react, pptxviewjs@1.1.9, chart.js<br/>button, scroll-area, separator, skeleton, utils"]
   end
 
   Direct --> Wrapper --> Main
@@ -37,7 +37,7 @@ flowchart TB
   Registry --> Wrapper
   ScrollBench --> Main
   Tests --> Main
-  Thumbnail -. "shares pptxviewjs/jszip ideas, not viewer cache" .-> RendererLib["pptxviewjs + jszip"]
+  Thumbnail -->|"getPptxSource(content).retain()"| SourceCache
 
   %% Resource system
   subgraph ResourceSystem["Shared Viewer Resource System"]
@@ -91,11 +91,9 @@ flowchart TB
     CreateRenderer["createPptxRenderer(content, onLoadTiming)"]
     ReadBytes["readPptxBytes(content)<br/>content.readBytes()"]
     ImportPptx["dynamic import('pptxviewjs')<br/>module promise cached"]
-    ImportZip["dynamic import('jszip')<br/>module promise cached"]
-    ReadSlideSize["readSlideSize(buffer)<br/>zip ppt/presentation.xml<br/>parsePptxSlideSize(xml)<br/>fallback 960x720"]
-    ParseSize["parsePptxSlideSize<br/>DOMParser application/xml<br/>find localName sldSz<br/>EMU / 9525 -> CSS px<br/>invalid XML/missing axes -> default"]
-    PptxViewerLib["new PPTXViewer({ canvas: offscreen, slideSizeMode: actual, autoChartRerenderDelayMs: 0 })"]
+    PptxViewerLib["new PPTXViewer({ canvas: offscreen, slideSizeMode: actual, autoExposeGlobals: false, autoChartRerenderDelayMs: 0, enableThumbnails: false })"]
     LoadFile["viewer.loadFile(buffer)<br/>parse OOXML deck"]
+    ReadSlideSize["readLoadedSlideSize(viewer)<br/>getSlideDimensions / processor presentation<br/>EMU / 9525 -> CSS px<br/>fallback 960x720"]
     InspectSlides["viewer.getSlideCount()<br/>must be positive integer"]
     Renderer["PptxRenderer<br/>slideCount, baseSize<br/>renderSlide(input)<br/>dispose()"]
     LoadTiming["PptxSourceLoadTiming<br/>byteLength, slideCount, totalMs<br/>readBytesMs, importPptxMs, readSlideSizeMs, loadFileMs, inspectMs"]
@@ -108,11 +106,8 @@ flowchart TB
   SourceCache -->|"hit"| SourceEntry
   SourceCache -->|"miss"| CreateRenderer
   CreateRenderer --> ReadBytes
-  CreateRenderer -->|"parallel after bytes"| ImportPptx
-  CreateRenderer -->|"parallel after bytes"| ImportZip
-  ImportZip --> ReadSlideSize --> ParseSize
-  ImportPptx --> PptxViewerLib
-  PptxViewerLib --> LoadFile --> InspectSlides --> Renderer
+  CreateRenderer --> ImportPptx --> PptxViewerLib
+  PptxViewerLib --> LoadFile --> ReadSlideSize --> InspectSlides --> Renderer
   Renderer --> RendererSource
   RendererSource --> SourceEntry
   SourceEntry --> SourceCache
@@ -133,12 +128,12 @@ flowchart TB
     ScrollActivity["createPptxScrollActivity<br/>idle after 120ms<br/>only used to defer uncached renders when eager=false"]
     Controls["PptxToolbar<br/>Slide current/count<br/>minus, percent, plus, fit, rotate, download"]
     Layout["Viewer shell<br/>optional aside left rail<br/>optional header below controls<br/>PptxSlideScroller fills remaining space"]
-    Scroller["PptxSlideScroller<br/>ScrollArea viewport<br/>renders one PptxSlideFrame per slide"]
-    Frame["PptxSlideFrame<br/>IntersectionObserver root = scroll viewport<br/>rootMargin 150% 0px<br/>skeleton until near viewport"]
+    Scroller["PptxSlideScroller<br/>native scroll viewport<br/>math-based virtual slide window"]
+    Frame["PptxSlideFrame<br/>current/viewport priority<br/>skeleton until rendered"]
     SizeMath["Frame sizing<br/>slideSize = baseSize * zoomScale<br/>visibleSize = rotated slide size<br/>outer frame sized to visibleSize<br/>inner canvas container rotated around center"]
-    Canvas["PptxSlideCanvas<br/>renderScale = zoomScale * devicePixelRatio<br/>canvas CSS size = slideSize<br/>state idle/rendering/rendered/failed"]
+    Canvas["PptxSlideCanvas<br/>renderScale = zoomScale * capped pixelRatio<br/>canvas CSS size = slideSize<br/>state idle/rendering/rendered/failed"]
     Overlay["PptxSlideOverlay<br/>pointer-events none<br/>renderSlideOverlay({ slideNumber, width, height, scale, rotation })"]
-    SlideTiming["onSlideRenderTiming<br/>slideNumber, durationMs, renderScale, cached, status"]
+    SlideTiming["onSlideRenderTiming<br/>slideNumber, durationMs, renderScale, pixelRatio, cached, status"]
   end
 
   Content --> Core
@@ -162,13 +157,13 @@ flowchart TB
   %% Bitmap cache and render queue
   subgraph RenderQueueCache["Serialized Render Queue + Bitmap Cache"]
     HasBitmap["source.hasBitmap(slideIndex, renderScale)<br/>key = slideIndex@round(renderScale*1000)"]
-    BitmapCache["RendererSource.bitmaps<br/>DisposableLruCache keyed by bitmap key<br/>max 8 bitmaps per source"]
-    BitmapEntry["PptxBitmapEntry<br/>ImageBitmap<br/>dispose() closes bitmap"]
-    Queue["RendererSource.queue<br/>promise chain serializes renderSlide calls"]
+    BitmapCache["RendererSource.bitmaps<br/>DisposableLruCache keyed by bitmap key<br/>max 8 bitmaps and 24M pixels per source"]
+    BitmapEntry["PptxBitmapEntry<br/>ImageBitmap + pixelCount<br/>dispose() closes bitmap"]
+    Queue["RendererSource.queue<br/>priority queue serializes renderSlide calls<br/>current slide, viewport, reading-marker distance, sequence"]
     LiveCheck["isLive callback<br/>returns false after canvas unmount/cancel"]
     DrawCached["drawCachedBitmap<br/>sets canvas.width/height to bitmap size<br/>2d drawImage"]
     RenderSlideLib["PptxRenderer.renderSlide<br/>validates disposed, slide bounds, positive finite scale<br/>viewer.renderSlide(slideIndex, canvas, { scale, quality: high })"]
-    Snapshot["createImageBitmap(canvas)<br/>if supported, cache rendered bitmap<br/>snapshot failure does not fail rendered slide"]
+    Snapshot["createImageBitmap(canvas)<br/>async snapshot after render resolves<br/>shared by duplicate requests<br/>snapshot failure does not fail rendered slide"]
     RenderResult["PptxRenderResult<br/>rendered | cancelled | failed(PptxRendererError)"]
     SlideFailure["Slide-level render failure UI<br/>Could not render slide N<br/>does not trip whole-viewer boundary"]
   end
@@ -230,7 +225,6 @@ sequenceDiagram
   participant Cache as sourceCache
   participant CR as createPptxRenderer
   participant Bytes as ViewerResourceContent.readBytes
-  participant Zip as jszip
   participant Lib as pptxviewjs.PPTXViewer
   participant RS as RendererSource
   participant UI as PptxSlideCanvas
@@ -249,14 +243,11 @@ sequenceDiagram
     Cache->>CR: create renderer promise
     CR->>Bytes: read ArrayBuffer from URL fetch or Blob
     Bytes-->>CR: ArrayBuffer
-    par import renderer
-      CR->>Lib: dynamic import pptxviewjs
-    and read slide size
-      CR->>Zip: dynamic import jszip and load ppt/presentation.xml
-      Zip-->>CR: base slide size or default 960x720
-    end
+    CR->>Lib: dynamic import pptxviewjs
     CR->>Lib: new PPTXViewer(offscreen canvas, actual slide size mode)
     CR->>Lib: loadFile(buffer)
+    CR->>Lib: getSlideDimensions() or loaded presentation slide size
+    Lib-->>CR: base slide size or default 960x720
     CR->>Lib: getSlideCount()
     Lib-->>CR: positive slide count
     CR-->>Cache: SourceCacheEntry promise resolves RendererSource
@@ -387,7 +378,7 @@ flowchart LR
 flowchart TB
   subgraph FailureInputs["Failure Inputs"]
     FetchFail["URL fetch failure, HTTP error, partial content, abort"]
-    ZipFail["jszip or presentation.xml read failure"]
+    SizeFail["loaded slide-size read failure"]
     LoadFail["pptxviewjs loadFile failure"]
     InspectFail["getSlideCount throws or returns non-positive count"]
     BoundsFail["invalid slide index or invalid render scale"]
@@ -397,7 +388,7 @@ flowchart TB
   end
 
   FetchFail --> ResourceError["ResourceError<br/>resource domain"]
-  ZipFail --> DefaultSize["slide-size fallback to 960x720<br/>not fatal"]
+  SizeFail --> DefaultSize["slide-size fallback to 960x720<br/>not fatal"]
   LoadFail --> PptxError["PptxRendererError<br/>format domain, pptx"]
   InspectFail --> PptxError
   BoundsFail --> PptxError
@@ -440,7 +431,6 @@ flowchart TB
     I["pptx-viewer-hooks.ts<br/>React.use source + retain"]
     J["pptx-viewer-source.ts<br/>source cache, retain, queue, bitmap cache"]
     K["pptx-viewer-renderer.ts<br/>bytes, imports, loadFile, renderSlide"]
-    L["pptx-viewer-presentation.ts<br/>presentation.xml size parse"]
     M["pptx-viewer-cache.ts<br/>DisposableLruCache + ImageBitmap entry"]
     N["pptx-viewer-scroll.ts<br/>scroll idle tracker"]
     O["pptx-viewer-viewport.ts<br/>ResizeObserver width"]
@@ -466,12 +456,9 @@ flowchart TB
     AC["fetch / Blob / ArrayBuffer"]
     AD["React Suspense + React.use"]
     AE["ResizeObserver"]
-    AF["IntersectionObserver"]
-    AG["DOMParser"]
     AH["CanvasRenderingContext2D"]
     AI["createImageBitmap"]
     AJ["pptxviewjs"]
-    AK["jszip"]
     AL["chart.js peer for pptxviewjs"]
   end
 

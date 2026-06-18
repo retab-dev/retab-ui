@@ -170,9 +170,9 @@ describe("scrollbench core", () => {
 
   it("summarizes image render timings with status and cache counts", () => {
     const result = summarizeImageRenderTimings([
-      { durationMs: 12, status: "rendered" },
+      { durationMs: 12, pixelRatio: 2, renderScale: 2.4, status: "rendered" },
       { cached: true, durationMs: 4, status: "rendered" },
-      { durationMs: 40, status: "failed" },
+      { durationMs: 40, pixelRatio: 1, renderScale: 1, status: "failed" },
       { durationMs: 20, status: "cancelled" },
       { durationMs: Number.NaN, status: "rendered" },
       { durationMs: -1, status: "rendered" },
@@ -185,6 +185,9 @@ describe("scrollbench core", () => {
     expect(result.cancelled).toBe(1)
     expect(result.totalMs).toBe(76)
     expect(result.averageMs).toBe(19)
+    expect(result.firstUncachedMs).toBe(12)
+    expect(result.maxPixelRatio).toBe(2)
+    expect(result.maxRenderScale).toBe(2.4)
     expect(result.p50Ms).toBe(12)
     expect(result.p95Ms).toBe(20)
     expect(result.maxMs).toBe(40)

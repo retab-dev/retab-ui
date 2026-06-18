@@ -56,17 +56,28 @@ type VisibleRange = {
   start: number
 }
 
+type LastProjection = CodeProjectionIdentity & {
+  highlightIdentity: string
+  totalHeight: string
+  visibleEnd: number
+  visibleStart: number
+}
+
+const MAX_RECYCLED_CODE_ROWS = 512
+
 export function createCodeProjector(): CodeProjector {
   let identity: CodeProjectionIdentity | null = null
+  let lastProjection: LastProjection | null = null
   let rowHost: HTMLPreElement | null = null
+  let recycledRows: CodeRowCache[] = []
   let rows: Array<CodeRowCache | undefined> = []
   let visibleRange: VisibleRange | null = null
 
   return {
     project(input) {
       if (rowHost !== input.rowHost) {
-        rowHost = input.rowHost
         clearRows()
+        rowHost = input.rowHost
       }
 
       const nextIdentity = codeProjectionIdentity(input)
@@ -80,14 +91,10 @@ export function createCodeProjector(): CodeProjector {
         identity = nextIdentity
       }
 
-      setStyleValue(
-        input.rowHost.style,
-        "height",
-        `${getCodeVirtualTotalSize({
-          lineCount: input.textLines.length,
-          lineHeight: input.lineHeight,
-        })}px`
-      )
+      const totalHeight = `${getCodeVirtualTotalSize({
+        lineCount: input.textLines.length,
+        lineHeight: input.lineHeight,
+      })}px`
 
       const visibleLines = getCodeVirtualLines({
         lineCount: input.textLines.length,
@@ -99,6 +106,20 @@ export function createCodeProjector(): CodeProjector {
           input.viewport.clientHeight || CODE_VIEWER_INITIAL_VIEWPORT_HEIGHT,
       })
       const nextVisibleRange = codeVisibleRange(visibleLines)
+      const nextProjection = codeLastProjection({
+        input,
+        totalHeight,
+        visibleRange: nextVisibleRange,
+      })
+      if (
+        lastProjection &&
+        isSameCodeProjection(lastProjection, nextProjection)
+      ) {
+        return
+      }
+      lastProjection = nextProjection
+
+      setStyleValue(input.rowHost.style, "height", totalHeight)
 
       removeRowsOutsideVisibleRange(nextVisibleRange)
 
@@ -110,6 +131,7 @@ export function createCodeProjector(): CodeProjector {
     },
     destroy() {
       clearRows()
+      recycledRows = []
       rowHost = null
       identity = null
     },
@@ -143,8 +165,12 @@ export function createCodeProjector(): CodeProjector {
   }
 
   function clearRows() {
+    for (const row of rows) {
+      if (row) recycleCodeRow(row)
+    }
     rowHost?.replaceChildren()
     rows = []
+    lastProjection = null
     visibleRange = null
   }
 
@@ -164,7 +190,16 @@ export function createCodeProjector(): CodeProjector {
       const row = rows[index]
       if (!row) continue
       row.row.remove()
+      recycleCodeRow(row)
       rows[index] = undefined
+    }
+  }
+
+  function recycleCodeRow(row: CodeRowCache) {
+    row.contentIdentity = ""
+    row.layoutIdentity = ""
+    if (recycledRows.length < MAX_RECYCLED_CODE_ROWS) {
+      recycledRows.push(row)
     }
   }
 
@@ -187,7 +222,7 @@ export function createCodeProjector(): CodeProjector {
 
     let row = rows[visibleLine.index]
     if (!row) {
-      row = createCodeRow()
+      row = recycledRows.pop() ?? createCodeRow()
       rows[visibleLine.index] = row
     }
 
@@ -219,6 +254,42 @@ export function createCodeProjector(): CodeProjector {
 
     return row.row
   }
+}
+
+function codeLastProjection({
+  input,
+  totalHeight,
+  visibleRange,
+}: {
+  input: CodeProjectionInput
+  totalHeight: string
+  visibleRange: VisibleRange
+}): LastProjection {
+  return {
+    contentIdentity: input.contentIdentity,
+    highlightIdentity: codeHighlightIdentity(input.highlightRange),
+    layoutIdentity: input.layoutIdentity,
+    syntaxIdentity: input.syntaxIdentity,
+    totalHeight,
+    visibleEnd: visibleRange.end,
+    visibleStart: visibleRange.start,
+  }
+}
+
+function codeHighlightIdentity(range: NormalizedTextLineRange | null) {
+  return range ? `${range.start}:${range.end}` : ""
+}
+
+function isSameCodeProjection(previous: LastProjection, next: LastProjection) {
+  return (
+    previous.contentIdentity === next.contentIdentity &&
+    previous.highlightIdentity === next.highlightIdentity &&
+    previous.layoutIdentity === next.layoutIdentity &&
+    previous.syntaxIdentity === next.syntaxIdentity &&
+    previous.totalHeight === next.totalHeight &&
+    previous.visibleEnd === next.visibleEnd &&
+    previous.visibleStart === next.visibleStart
+  )
 }
 
 function codeProjectionIdentity({

@@ -49,7 +49,7 @@ flowchart TD
     GetImageSource["getImageSource(content)\nimageFrameSourceManager.load(content, createTiffWorker)"]
     ManagerEntry["FrameSourceEntry\nstate: pending, resolved, evictable, disposed\nabortController\npromise\nsource\nleaseCount\ndisposeTimer"]
     LoadShare["load key sharing\nsame content.key shares pending/resolved load\npresentation-only changes reuse decoded source"]
-    RetainLease["retain(content, source)\ncallback ref increments leaseCount\ncancels dispose timer\nrelease decrements and schedules disposal"]
+    RetainLease["retain(content, source)\ncallback ref increments leaseCount\ncancels dispose timer\nrelease decrements and schedules 10s warm disposal"]
     ClearTests["resetImageSourceCacheForTests -> manager.clear()\naborts pending loads and disposes resolved sources"]
     RouteDecision["createSource decision\n1. declared TIFF by ext or MIME -> readBytes -> TIFF\n2. declared native image -> readBlob -> native\n3. unknown -> readBlob -> sniff first 4 bytes -> TIFF or native"]
     TiffDetect["TIFF detection\n- .tif or .tiff URL\n- image/tiff or image/x-tiff MIME\n- magic bytes II*0 or MM0*"]
@@ -74,7 +74,7 @@ flowchart TD
 
   subgraph FrameSource["FrameSource and BitmapCache"]
     CreateFrameSource["createFrameSource\nvalidates non-empty frames and positive finite dimensions\ncloses invalid initial bitmaps on failure"]
-    FrameSourceApi["FrameSource API\nkind: native-image or tiff\nframes: descriptors\nacquire(frameIndex)\nrelease(frameIndex)\ndispose(reason)"]
+    FrameSourceApi["FrameSource API\nkind: native-image or tiff\nframes: descriptors\nacquire(frameIndex)\nhasDecodedFrame(frameIndex)\nprefetch(frameIndexes)\nrelease(frameIndex)\ndispose(reason)"]
     BitmapCache["BitmapCache\nMap frameIndex -> ImageBitmap\npinnedFrameCounts\nframeRecency LRU\nmaxDecodedFrames default 16"]
     Acquire["acquire(frameIndex)\nrejects disposed or invalid index\npins frame\nreturns cached bitmap if present\nshares one in-flight decode per frame"]
     Inflight["InflightFrameDecode\npromise, reject, pinCount\nlate stale decode is closed and rejected as disposed"]
@@ -90,24 +90,26 @@ flowchart TD
     FitWidth["fit-width scale\nwidest rotated frame width\n(frameListWidth - 32px horizontal padding) / widestFrameWidth\nthen clamp 0.25 to 5"]
     Rotation["rotation\nrawRotation increments by 90\nnormalizeRotation -> 0, 90, 180, 270"]
     VisibleHook["useVisibleFrame\nstate currentFrameNumber\nreset to frame 1 on source change\non scroll reports progress 0..1\nfinds frame at viewport marker y=20%, x=center"]
-    VisibleFallback["visible frame fallback\nuses elementsFromPoint first\nthen frame bounding boxes if unavailable\noverlay spoofing ignored via closest data-slot=image-frame"]
+    VisibleFallback["visible frame math\nuses layout offsets and viewport scrollTop\noverlay DOM cannot spoof current frame detection"]
     ImperativeHandle["useImageViewerHandle\nscrollToFrameArea(frameNumber, area, options)\nnormalizes top percent 0..100\nscrolls viewport to frame top + area top - 48px\ngetViewportElement returns viewport"]
     Shell["viewer shell\nflex column\nbare -> h-full bg-muted/20\nframed -> rounded-xl border bg-muted/30\ndata-slot=image-viewer"]
     Controls["ImageViewerControls\ncount label\nzoom out, zoom in, fit width, rotate, download\ncontrolled scale disables zoom and fit buttons"]
     Slots["slots\nheader full-width strip below controls\naside left rail beside scroll viewport"]
-    ScrollAreaNode["ScrollArea viewport\nviewportRef=scrollViewportRef\nonScroll=handleScroll\nframe list centered with gap and padding"]
+    ScrollAreaNode["ImageFrameScroller\nScrollArea viewport\npersistent virtual canvas\nrequestAnimationFrame projection"]
   end
 
   subgraph FrameRender["Per-frame rendering"]
-    FrameMap["frameSource.frames.map -> ImageFrame\nkey=frameIndex\nframeIndex is 0-based\nframeNumber is 1-based"]
+    FrameMap["visible frame numbers -> projected shells\nframeIndex is 0-based\nframeNumber is 1-based"]
     FrameGeometry["frameCssSize\nrotatedSize swaps width/height for 90/270\nCSS size = rotated intrinsic size * scale"]
     FrameBox["ImageFrame outer div\nposition relative\nshadow and border ring\nstyle width/height from frameRect\ndata-slot=image-frame\ndata-frame-number=frameNumber"]
-    Intersection["IntersectionObserver callback ref\nroot = closest scroll-area viewport\nrootMargin = 150% vertical\nisNearViewport gates canvas mount"]
-    SkeletonFrame["far frame -> Skeleton fills reserved frame box\nscroll height stays stable before decode"]
-    CanvasMount["near frame -> ImageFrameCanvas\ncanvas ref callback draws and cleans up without useEffect"]
+    Projection["Projected frame cache\nshells keep their own React roots\nrender key tracks source, scale, rotation, DPR, quality, callbacks"]
+    RetainedFrames["retained rendered window\nLRU eviction by decoded-pixel and rendered-pixel budgets\nvisible frames are never evicted"]
+    PrefetchFrames["direction-aware prefetch\nvisible frames draw first\nnext likely frames decode through FrameSource.prefetch"]
+    CanvasMount["ImageFrameCanvas\ncanvas ref callback draws and cleans up without useEffect"]
     CanvasSizing["canvas bitmap size\nCSS width/height = frameRect\nbacking width/height = floor(frameRect * devicePixelRatio)\nminimum 1px"]
-    CanvasDraw["draw path\nsource.acquire(frameIndex)\nctx.save\nscale by DPR\ntranslate to center\nrotate by radians\nimageSmoothingQuality=high\ndrawImage centered at intrinsicSize * scale\nctx.restore in finally"]
+    CanvasDraw["draw path\nsource.acquire(frameIndex)\nctx.save\nscale by DPR\ntranslate to center\nrotate by radians\nimageSmoothingQuality=low while scrolling, high when idle\ndrawImage centered at intrinsicSize * scale\nctx.restore in finally"]
     CanvasCleanup["cleanup\ncancelled=true\nsource.release(frameIndex)\nImageSourceDisposedError during teardown is ignored\nother decode/draw failures are thrown to boundary"]
+    Timing["onFrameRenderTiming\ncached flag from hasDecodedFrame\nduration, frameNumber, pixelRatio, renderScale, status"]
     OverlaySlot["renderOverlay wrapper\nabsolute inset overlay\npointer-events-none\nreceives frameNumber, frameRect, scale, rotation"]
   end
 
@@ -224,16 +226,19 @@ flowchart TD
   VisibleHook --> VisibleFallback
   VisibleHook --> ScrollAreaNode
   ImperativeHandle --> ScrollAreaNode
-  FrameMap --> FrameGeometry
+  FrameMap --> Projection
+  Projection --> RetainedFrames
+  Projection --> PrefetchFrames
+  PrefetchFrames --> FrameSourceApi
+  RetainedFrames --> FrameGeometry
   FrameGeometry --> FrameBox
-  FrameBox --> Intersection
-  Intersection -- "not near viewport" --> SkeletonFrame
-  Intersection -- "near viewport" --> CanvasMount
+  FrameBox --> CanvasMount
   CanvasMount --> CanvasSizing
   CanvasMount --> CanvasDraw
   CanvasDraw --> FrameSourceApi
   CanvasMount --> CanvasCleanup
   CanvasCleanup --> FrameSourceApi
+  CanvasDraw --> Timing
   FrameBox --> OverlaySlot
 
   DocumentSource --> AnchorArea
@@ -284,7 +289,8 @@ sequenceDiagram
   participant TWC as TiffWorkerClient
   participant WW as image-viewer.worker.ts
   participant FS as FrameSource and BitmapCache
-  participant Frame as ImageFrame
+  participant Scroller as ImageFrameScroller
+  participant Frame as Projected ImageFrame
   participant Canvas as ImageFrameCanvas
   participant UI as Controls, overlay, callbacks
 
@@ -306,33 +312,32 @@ sequenceDiagram
   IVC->>FSM: retain(content, source) through callback ref
   FSM->>FSM: leaseCount += 1, state resolved, cancel dispose timer
   IVC->>UI: render controls count label and controls
-  IVC->>Frame: map every descriptor to an ImageFrame
+  IVC->>Scroller: render scroll area with frame layout model
+  Scroller->>Scroller: compute visible frame numbers from scrollTop and viewport height
+  Scroller->>FS: prefetch next frames in scroll direction
+  Scroller->>Frame: create or reuse projected shell and React root
   Frame->>Frame: reserve CSS box from intrinsic size, scale, rotation
-  Frame->>Frame: observe with IntersectionObserver rootMargin 150%
-  alt frame is far from viewport
-    Frame-->>App: render skeleton inside reserved box
-  else frame is near viewport
-    Frame->>Canvas: mount canvas
-    Canvas->>Canvas: size backing store by CSS size * DPR
-    Canvas->>FS: acquire(frameIndex)
-    FS->>FS: pin frame and check BitmapCache
-    alt bitmap cached
-      FS-->>Canvas: cached ImageBitmap
-    else no cached bitmap
-      FS->>TWC: decode(frameIndex) or join existing in-flight decode
-      TWC->>WW: postMessage decodeFrame requestId
-      WW->>WW: UTIF.decodeImage(buffer, ifd)
-      WW->>WW: UTIF.toRGBA8 -> ImageData -> createImageBitmap
-      WW-->>TWC: decodeFrameOk with transferred ImageBitmap
-      TWC-->>FS: resolve matching request
-      FS->>FS: cache bitmap, touch recency, evict unpinned frames over cap
-      FS-->>Canvas: ImageBitmap
-    end
-    Canvas->>Canvas: save, scale DPR, translate center, rotate, drawImage, restore
-    Canvas-->>UI: overlay slot paints active bbox if frame matches
+  Frame->>Canvas: mount canvas when render key changes
+  Canvas->>Canvas: size backing store by CSS size * DPR
+  Canvas->>FS: hasDecodedFrame(frameIndex), then acquire(frameIndex)
+  FS->>FS: pin frame and check BitmapCache
+  alt bitmap cached
+    FS-->>Canvas: cached ImageBitmap
+  else no cached bitmap
+    FS->>TWC: decode(frameIndex) or join existing in-flight decode
+    TWC->>WW: postMessage decodeFrame requestId
+    WW->>WW: UTIF.decodeImage(buffer, ifd)
+    WW->>WW: UTIF.toRGBA8 -> ImageData -> createImageBitmap
+    WW-->>TWC: decodeFrameOk with transferred ImageBitmap
+    TWC-->>FS: resolve matching request
+    FS->>FS: cache bitmap, touch recency, evict unpinned frames over cap
+    FS-->>Canvas: ImageBitmap
   end
+  Canvas->>Canvas: save, scale DPR, translate center, rotate, drawImage, restore
+  Canvas-->>UI: report frame timing and paint active bbox overlay if frame matches
+  Scroller->>Scroller: retain recent projected shells until pixel budgets force eviction
   UI->>IVC: scroll event
-  IVC->>UI: report progress 0..1 and visible frame nearest marker
+  IVC->>UI: report progress 0..1 and visible frame nearest layout marker
   App->>UI: hover or select sourced field
   UI->>IVC: useImageSourceTarget calls ref.scrollToFrameArea(frame, percent area)
   IVC->>UI: scroll viewport to frame area with 48px headroom
@@ -340,7 +345,7 @@ sequenceDiagram
   Canvas->>FS: release(frameIndex)
   FS->>FS: unpin; cancel decode if no pins and no bitmap
   IVC->>FSM: release lease
-  FSM->>FSM: leaseCount 0 -> evictable -> schedule disposal
+  FSM->>FSM: leaseCount 0 -> evictable -> schedule warm disposal
   FSM->>FS: dispose reason when timer fires or clear is called
   FS->>TWC: cancel in-flight decodes and dispose worker
   TWC->>WW: terminate
@@ -439,24 +444,24 @@ flowchart LR
 
 ## File and Responsibility Index
 
-| Area               | Files                                                                                                       | Responsibility                                                                                                                             |
-| ------------------ | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Public viewer API  | `registry/new-york-v4/ui/image-viewer.tsx`, `image-viewer-types.ts`                                         | `ImageViewer`, `ImageResourceContent`, public props, handle, test helpers, client/Suspense/error boundary entry.                            |
-| Content shell      | `registry/new-york-v4/ui/image-viewer-content.tsx`                                                          | Loads `FrameSource`, retains source lease, renders controls, header, aside, scroll area, frames, and source cache helpers.                  |
-| Hooks              | `registry/new-york-v4/ui/image-viewer-hooks.ts`                                                             | Fit-width scale, controlled/uncontrolled zoom, rotation reset, visible frame detection, scroll progress, imperative handle.                |
-| Frame rendering    | `registry/new-york-v4/ui/image-viewer-frame.tsx`                                                            | Lazy frame observation, skeleton/canvas switch, DPR canvas sizing, acquire/draw/release lifecycle, overlay mount.                          |
-| Controls/fallback   | `registry/new-york-v4/ui/image-viewer-chrome.tsx`                                                           | Controls, download control, skeleton controls, fallback frame sizing.                                                               |
-| Geometry           | `registry/new-york-v4/lib/image-geometry.ts`                                                                | Quarter-turn normalization, rotated sizes, frame CSS size, bbox rotation, frame index/number conversion.                                   |
-| Frame source       | `registry/new-york-v4/lib/image-frame-source.ts`                                                            | FrameSource abstraction, BitmapCache, acquire/release/dispose semantics, native image source, TIFF/native detection helpers, image errors. |
-| Source cache       | `registry/new-york-v4/lib/image-source-cache.ts`                                                            | Shared load cache keyed by resource content, source lifetime leases, disposal timers, source route selection.                              |
-| TIFF client        | `registry/new-york-v4/lib/image-tiff-source.ts`                                                             | Main-thread worker client, init/decode/cancel protocol, malformed message handling, worker termination.                                    |
-| TIFF worker        | `registry/new-york-v4/ui/image-viewer.worker.ts`                                                            | UTIF metadata parse, serialized decode queue, cancellation set, RGBA conversion, ImageBitmap transfer.                                     |
-| Resource infra     | `registry/new-york-v4/lib/viewer-source.ts`, `viewer-resource.ts`, `viewer-download.ts`, `viewer-errors.ts` | Source descriptors, stable keys, interned resources, readers, download actions, shared error shapes.                                       |
-| Source adapter     | `registry/new-york-v4/ui/image-source.tsx`                                                                  | Converts source anchors to frame/area, rotates highlight geometry, bridges `useSourceLink` to the image viewer handle.                     |
-| Integration blocks | `registry/new-york-v4/blocks/image-sources-block.tsx`, `sources-viewer-block.tsx`                        | Real field/source UI demonstrating hover/click source linking into image overlays and scrolling.                                           |
-| Re-export shims    | `components/ui/image-viewer*.tsx`, `components/ui/image-source.tsx`, `lib/image-*.ts`                       | Local import surface that points at the registry implementation.                                                                           |
-| Docs and demo      | `content/docs/components/file-viewer/renderers/image.mdx`, `components/image-viewer-demo.tsx`                                 | User-facing install, usage, performance explanation, prop table, and TIFF sample.                                                          |
-| Tests              | `tests/image-viewer*.test.tsx`, `tests/sources.test.tsx`, `tests/file-viewer.test.tsx`                      | Lifecycle, cache, worker, rendering, geometry, integration, and routing coverage.                                                          |
+| Area               | Files                                                                                                       | Responsibility                                                                                                                                      |
+| ------------------ | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Public viewer API  | `registry/new-york-v4/ui/image-viewer.tsx`, `image-viewer-types.ts`                                         | `ImageViewer`, `ImageResourceContent`, public props, handle, test helpers, client/Suspense/error boundary entry.                                    |
+| Content shell      | `registry/new-york-v4/ui/image-viewer-content.tsx`                                                          | Loads `FrameSource`, retains source lease, renders controls, header, aside, scroll area, frames, and source cache helpers.                          |
+| Hooks              | `registry/new-york-v4/ui/image-viewer-hooks.ts`                                                             | Fit-width scale, controlled/uncontrolled zoom, rotation reset, visible frame detection, scroll progress, imperative handle.                         |
+| Frame rendering    | `registry/new-york-v4/ui/image-viewer-frame.tsx`                                                            | Projected frame scroller, retained rendered window, prefetch, DPR canvas sizing, acquire/draw/release lifecycle, overlay mount.                     |
+| Controls/fallback  | `registry/new-york-v4/ui/image-viewer-chrome.tsx`                                                           | Controls, download control, skeleton controls, fallback frame sizing.                                                                               |
+| Geometry           | `registry/new-york-v4/lib/image-geometry.ts`                                                                | Quarter-turn normalization, rotated sizes, frame CSS size, bbox rotation, frame index/number conversion.                                            |
+| Frame source       | `registry/new-york-v4/lib/image-frame-source.ts`                                                            | FrameSource abstraction, BitmapCache, acquire/prefetch/release/dispose semantics, native image source, TIFF/native detection helpers, image errors. |
+| Source cache       | `registry/new-york-v4/lib/image-source-cache.ts`                                                            | Shared load cache keyed by resource content, source lifetime leases, warm-release disposal timers, source route selection.                          |
+| TIFF client        | `registry/new-york-v4/lib/image-tiff-source.ts`                                                             | Main-thread worker client, init/decode/cancel protocol, malformed message handling, worker termination.                                             |
+| TIFF worker        | `registry/new-york-v4/ui/image-viewer.worker.ts`                                                            | UTIF metadata parse, serialized decode queue, cancellation set, RGBA conversion, ImageBitmap transfer.                                              |
+| Resource infra     | `registry/new-york-v4/lib/viewer-source.ts`, `viewer-resource.ts`, `viewer-download.ts`, `viewer-errors.ts` | Source descriptors, stable keys, interned resources, readers, download actions, shared error shapes.                                                |
+| Source adapter     | `registry/new-york-v4/ui/image-source.tsx`                                                                  | Converts source anchors to frame/area, rotates highlight geometry, bridges `useSourceLink` to the image viewer handle.                              |
+| Integration blocks | `registry/new-york-v4/blocks/image-sources-block.tsx`, `sources-viewer-block.tsx`                           | Real field/source UI demonstrating hover/click source linking into image overlays and scrolling.                                                    |
+| Re-export shims    | `components/ui/image-viewer*.tsx`, `components/ui/image-source.tsx`, `lib/image-*.ts`                       | Local import surface that points at the registry implementation.                                                                                    |
+| Docs and demo      | `content/docs/components/file-viewer/renderers/image.mdx`, `components/image-viewer-demo.tsx`               | User-facing install, usage, performance explanation, prop table, and TIFF sample.                                                                   |
+| Tests              | `tests/image-viewer*.test.tsx`, `tests/sources.test.tsx`, `tests/file-viewer.test.tsx`                      | Lifecycle, cache, worker, rendering, geometry, integration, and routing coverage.                                                                   |
 
 ## Key Invariants
 
@@ -466,16 +471,18 @@ flowchart LR
   scroll height stays stable during lazy loading.
 - Decoded bitmap memory is bounded by `maxDecodedFrames` and protected by pin
   counts while canvases are mounted.
+- Rendered frame retention is separately bounded by rendered pixels and reset by
+  source, scale, rotation, DPR, or callback identity changes.
 - Presentation metadata changes can update filenames/download labels without
   forcing a new image load when the load key is unchanged.
-- Source leases keep a loaded `FrameSource` alive only while a mounted viewer
-  claims it; released or never-claimed sources are disposed by timers.
+- Source leases keep a loaded `FrameSource` warm for a short grace period after
+  release; never-claimed sources are disposed by their separate timer.
 - Controlled `scale` disables controls zoom and fit-width changes; uncontrolled
   scale resets to fit-width when the source changes.
 - Rotation is always a normalized quarter turn, and overlay geometry uses the
   same rotation math as frame rendering.
-- Imperative scrolling only targets real `data-slot="image-frame"` elements and
-  clamps area percentages before calculating scroll position.
+- Imperative scrolling uses the frame layout model and clamps area percentages
+  before calculating scroll position.
 - Disposal errors from normal teardown are ignored in frame canvases; decode and
   draw errors that indicate real failure surface through the viewer boundary.
 - Test helpers can clear resource/source caches and create synthetic frame

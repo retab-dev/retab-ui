@@ -25,7 +25,6 @@ import {
   getPptxResetKey,
   type PptxSlideOverlayProps,
 } from "@/registry/new-york-v4/ui/pptx-viewer-core"
-import { parsePptxSlideSize } from "@/registry/new-york-v4/ui/pptx-viewer-presentation"
 import { PptxRendererError } from "@/registry/new-york-v4/ui/pptx-viewer-renderer"
 import { createPptxScrollActivity } from "@/registry/new-york-v4/ui/pptx-viewer-scroll"
 import { PptxSlideScroller } from "@/registry/new-york-v4/ui/pptx-viewer-slide"
@@ -47,19 +46,11 @@ import { ViewerErrorBoundary } from "@/registry/new-york-v4/ui/viewer-error"
 
 const pptxMock = vi.hoisted(() => ({
   destroy: vi.fn(),
+  getSlideDimensions: vi.fn(() => ({ cx: 9144000, cy: 6858000 })),
   getSlideCount: vi.fn(() => 1),
   loadFile: vi.fn(async () => undefined),
   renderSlide: vi.fn(async () => undefined),
   viewerOptions: [] as Array<Record<string, unknown>>,
-}))
-
-const zipMock = vi.hoisted(() => ({
-  xml: '<p:presentation><p:sldSz cx="9144000" cy="6858000"/></p:presentation>',
-  loadAsync: vi.fn(async () => ({
-    file: vi.fn(() => ({
-      async: vi.fn(async () => zipMock.xml),
-    })),
-  })),
 }))
 
 vi.mock("pptxviewjs", () => ({
@@ -68,15 +59,10 @@ vi.mock("pptxviewjs", () => ({
       pptxMock.viewerOptions.push(options)
     }
     destroy = pptxMock.destroy
+    getSlideDimensions = pptxMock.getSlideDimensions
     getSlideCount = pptxMock.getSlideCount
     loadFile = pptxMock.loadFile
     renderSlide = pptxMock.renderSlide
-  },
-}))
-
-vi.mock("jszip", () => ({
-  default: {
-    loadAsync: zipMock.loadAsync,
   },
 }))
 
@@ -258,6 +244,8 @@ function createManualPptxActivity(isScrolling = true) {
 
 beforeEach(() => {
   pptxMock.destroy.mockClear()
+  pptxMock.getSlideDimensions.mockReset()
+  pptxMock.getSlideDimensions.mockReturnValue({ cx: 9144000, cy: 6858000 })
   pptxMock.getSlideCount.mockReset()
   pptxMock.getSlideCount.mockReturnValue(1)
   pptxMock.loadFile.mockReset()
@@ -265,9 +253,6 @@ beforeEach(() => {
   pptxMock.renderSlide.mockReset()
   pptxMock.renderSlide.mockResolvedValue(undefined)
   pptxMock.viewerOptions.length = 0
-  zipMock.xml =
-    '<p:presentation><p:sldSz cx="9144000" cy="6858000"/></p:presentation>'
-  zipMock.loadAsync.mockClear()
   bitmapMocks.length = 0
 
   vi.stubGlobal("ResizeObserver", MockResizeObserver)
@@ -313,79 +298,6 @@ afterEach(() => {
 })
 
 describe("PptxViewer helpers", () => {
-  it("parses slide size from presentation.xml and falls back to 4:3", () => {
-    // Declare xmlns:p (as real presentation.xml does) and use non-default dims so
-    // this exercises the parse path rather than coincidentally matching the 960x720
-    // parse-error fallback.
-    expect(
-      parsePptxSlideSize(
-        '<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldSz cx="12192000" cy="6858000"/></p:presentation>'
-      )
-    ).toEqual({ width: 1280, height: 720 })
-
-    expect(parsePptxSlideSize("<p:presentation />")).toEqual({
-      width: 960,
-      height: 720,
-    })
-  })
-
-  it("parses slide size across namespace prefixes and attribute order", () => {
-    expect(
-      parsePptxSlideSize(
-        '<deck:presentation xmlns:deck="presentation"><deck:sldSz cy="5143500" cx="12192000"/></deck:presentation>'
-      )
-    ).toEqual({ width: 1280, height: 540 })
-  })
-
-  it("falls back to 4:3 for invalid slide size XML", () => {
-    expect(parsePptxSlideSize("<p:presentation")).toEqual({
-      width: 960,
-      height: 720,
-    })
-    expect(
-      parsePptxSlideSize(
-        '<p:presentation><p:sldSz cx="-1" cy="6858000"/></p:presentation>'
-      )
-    ).toEqual({
-      width: 960,
-      height: 720,
-    })
-    expect(
-      parsePptxSlideSize(
-        '<p:presentation><p:sldSz cx="nan" cy="6858000"/></p:presentation>'
-      )
-    ).toEqual({
-      width: 960,
-      height: 720,
-    })
-  })
-
-  it("falls back to 4:3 when a supplied slide-size XML parser throws", () => {
-    expect(
-      parsePptxSlideSize("<p:presentation />", () => {
-        throw new Error("parser unavailable")
-      })
-    ).toEqual({
-      width: 960,
-      height: 720,
-    })
-  })
-
-  it("accepts an injected XML parser for slide size parsing", () => {
-    const parseXml = vi.fn(() =>
-      new DOMParser().parseFromString(
-        '<deck:presentation xmlns:deck="presentation"><deck:sldSz cx="6096000" cy="3429000"/></deck:presentation>',
-        "application/xml"
-      )
-    )
-
-    expect(parsePptxSlideSize("<ignored />", parseXml)).toEqual({
-      width: 640,
-      height: 360,
-    })
-    expect(parseXml).toHaveBeenCalledWith("<ignored />")
-  })
-
   it("clamps fit-width scale for narrow containers", () => {
     expect(getPptxFitScale(16, 960)).toBe(0.1)
     expect(getPptxFitScale(1952, 960)).toBe(2)
@@ -507,8 +419,10 @@ describe("PptxViewer helpers", () => {
     expect(pptxMock.destroy).toHaveBeenCalledTimes(1)
   })
 
-  it("falls back to the default slide size when the PPTX archive cannot be inspected", async () => {
-    zipMock.loadAsync.mockRejectedValueOnce(new Error("zip failed"))
+  it("falls back to the default slide size when loaded dimensions cannot be read", async () => {
+    pptxMock.getSlideDimensions.mockImplementationOnce(() => {
+      throw new Error("dimensions failed")
+    })
 
     await expect(
       getPptxSource(pptxUrlResource("/unknown-size.pptx"))
@@ -518,15 +432,16 @@ describe("PptxViewer helpers", () => {
     })
   })
 
-  it("falls back to the default slide size when presentation.xml is missing", async () => {
-    zipMock.loadAsync.mockResolvedValueOnce({
-      file: vi.fn(() => null),
-    } as never)
+  it("reads loaded slide size from pptxviewjs", async () => {
+    pptxMock.getSlideDimensions.mockReturnValueOnce({
+      cx: 12192000,
+      cy: 6858000,
+    })
 
     await expect(
-      getPptxSource(pptxUrlResource("/missing-presentation-xml.pptx"))
+      getPptxSource(pptxUrlResource("/loaded-size.pptx"))
     ).resolves.toMatchObject({
-      baseSize: { width: 960, height: 720 },
+      baseSize: { width: 1280, height: 720 },
       slideCount: 1,
     })
   })
@@ -635,6 +550,9 @@ describe("PptxViewer helpers", () => {
         slideIndex: 0,
       })
     ).resolves.toEqual({ status: "rendered" })
+    await waitFor(() => {
+      expect(source.hasBitmap({ renderScale: 1, slideIndex: 0 })).toBe(true)
+    })
     await expect(
       source.renderSlide({
         canvas: secondCanvas,
@@ -661,6 +579,9 @@ describe("PptxViewer helpers", () => {
         slideIndex: 0,
       })
     ).resolves.toEqual({ status: "rendered" })
+    await waitFor(() => {
+      expect(source.hasBitmap({ renderScale: 1, slideIndex: 0 })).toBe(true)
+    })
 
     drawImageMock.mockImplementationOnce(() => {
       throw new Error("draw failed")
@@ -691,6 +612,9 @@ describe("PptxViewer helpers", () => {
         slideIndex: 0,
       })
     ).resolves.toEqual({ status: "rendered" })
+    await waitFor(() => {
+      expect(source.hasBitmap({ renderScale: 1, slideIndex: 0 })).toBe(true)
+    })
 
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null)
 
@@ -831,8 +755,10 @@ describe("PptxViewer helpers", () => {
     source.dispose()
     bitmapReady.resolve(bitmap)
 
-    await expect(render).resolves.toEqual({ status: "cancelled" })
-    expect(bitmap.close).toHaveBeenCalledTimes(1)
+    await expect(render).resolves.toEqual({ status: "rendered" })
+    await waitFor(() => {
+      expect(bitmap.close).toHaveBeenCalledTimes(1)
+    })
     expect(source.hasBitmap({ renderScale: 1, slideIndex: 0 })).toBe(false)
   })
 
@@ -867,8 +793,10 @@ describe("PptxViewer helpers", () => {
     isLive = false
     bitmapReady.resolve(bitmap)
 
-    await expect(render).resolves.toEqual({ status: "cancelled" })
-    expect(bitmap.close).toHaveBeenCalledTimes(1)
+    await expect(render).resolves.toEqual({ status: "rendered" })
+    await waitFor(() => {
+      expect(bitmap.close).toHaveBeenCalledTimes(1)
+    })
     expect(source.hasBitmap({ renderScale: 1, slideIndex: 0 })).toBe(false)
   })
 
@@ -933,7 +861,7 @@ describe("PptxViewer helpers", () => {
     isLive = false
     snapshot.resolve(undefined)
 
-    await expect(render).resolves.toEqual({ status: "cancelled" })
+    await expect(render).resolves.toEqual({ status: "rendered" })
     expect(source.hasBitmap({ renderScale: 1, slideIndex: 0 })).toBe(false)
   })
 
@@ -950,7 +878,9 @@ describe("PptxViewer helpers", () => {
       })
     ).resolves.toEqual({ status: "rendered" })
 
-    expect(source.hasBitmap({ renderScale: 1, slideIndex: 0 })).toBe(true)
+    await waitFor(() => {
+      expect(source.hasBitmap({ renderScale: 1, slideIndex: 0 })).toBe(true)
+    })
 
     source.dispose()
 
@@ -1004,9 +934,11 @@ describe("PptxViewer helpers", () => {
       ).resolves.toEqual({ status: "rendered" })
     }
 
-    expect(bitmapMocks[0]?.close).toHaveBeenCalledTimes(1)
-    expect(source.hasBitmap({ renderScale: 1, slideIndex: 0 })).toBe(false)
-    expect(source.hasBitmap({ renderScale: 1, slideIndex: 1 })).toBe(true)
+    await waitFor(() => {
+      expect(bitmapMocks[0]?.close).toHaveBeenCalledTimes(1)
+      expect(source.hasBitmap({ renderScale: 1, slideIndex: 0 })).toBe(false)
+      expect(source.hasBitmap({ renderScale: 1, slideIndex: 1 })).toBe(true)
+    })
   })
 
   it("can retry a slide render after a renderer failure", async () => {
@@ -1201,6 +1133,7 @@ describe("PptxViewer", () => {
         expect.objectContaining({
           cached: false,
           durationMs: expect.any(Number),
+          pixelRatio: expect.any(Number),
           renderScale: expect.any(Number),
           slideNumber: 1,
           status: "rendered",
@@ -1689,7 +1622,7 @@ describe("PptxViewer", () => {
   it("reports deferred slide timings as cached when a bitmap appears before idle", async () => {
     const onSlideRenderTiming = vi.fn()
     const { activity, runIdle } = createManualPptxActivity()
-    const source = createFakePptxSource()
+    const source = createFakePptxSource({ slideCount: 20 })
     let hasBitmap = false
     source.hasBitmap.mockImplementation(() => hasBitmap)
 
@@ -1707,7 +1640,11 @@ describe("PptxViewer", () => {
       />
     )
 
-    expect(source.renderSlide).not.toHaveBeenCalled()
+    await waitFor(() => {
+      expect(renderedSlideIndexes(source)).toEqual([0])
+    })
+    source.renderSlide.mockClear()
+    onSlideRenderTiming.mockClear()
     hasBitmap = true
 
     await act(async () => {
@@ -1715,6 +1652,7 @@ describe("PptxViewer", () => {
     })
 
     await waitFor(() => {
+      expect(renderedSlideIndexes(source)).toEqual([1, 2])
       expect(onSlideRenderTiming).toHaveBeenCalledWith(
         expect.objectContaining({
           cached: true,
@@ -2796,9 +2734,9 @@ describe("PptxViewer", () => {
     expect(consoleError).toHaveBeenCalled()
   })
 
-  it("defers uncached slide renders until scrolling settles", async () => {
+  it("renders the current slide immediately while scrolling and defers overscan slides", async () => {
     const { activity, runIdle } = createManualPptxActivity()
-    const source = createFakePptxSource()
+    const source = createFakePptxSource({ slideCount: 20 })
 
     await act(async () => {
       render(
@@ -2815,18 +2753,20 @@ describe("PptxViewer", () => {
       )
     })
 
-    expect(source.renderSlide).not.toHaveBeenCalled()
+    await waitFor(() => {
+      expect(renderedSlideIndexes(source)).toEqual([0])
+    })
 
     await act(async () => {
       runIdle()
     })
 
-    expect(source.renderSlide).toHaveBeenCalledTimes(1)
+    expect(new Set(renderedSlideIndexes(source))).toEqual(new Set([0, 1, 2]))
   })
 
   it("does not run deferred slide renders after unmount", async () => {
     const { activity, runIdle } = createManualPptxActivity()
-    const source = createFakePptxSource()
+    const source = createFakePptxSource({ slideCount: 20 })
 
     const view = render(
       <PptxSlideScroller
@@ -2847,7 +2787,7 @@ describe("PptxViewer", () => {
       runIdle()
     })
 
-    expect(source.renderSlide).not.toHaveBeenCalled()
+    expect(renderedSlideIndexes(source)).toEqual([0])
   })
 
   it("renders immediately during scrolling when eager or cached", async () => {
@@ -3177,7 +3117,11 @@ describe("PptxViewer", () => {
       runIdle()
     })
 
-    expect(renderedSlideIndexes(source)).not.toContain(0)
+    const slideIndexes = renderedSlideIndexes(source)
+    expect(slideIndexes).toContain(0)
+    expect(slideIndexes).toContain(9)
+    expect(slideIndexes).not.toContain(1)
+    expect(slideIndexes).not.toContain(2)
   })
 
   it("removes virtual slide shells when the scroller unmounts", async () => {
@@ -3273,7 +3217,7 @@ describe("PptxViewer", () => {
     expect(screen.queryByText("Couldn't render slide 1.")).toBeNull()
   })
 
-  it("renders slides at zoom scale multiplied by device pixel ratio", async () => {
+  it("caps rendered DPR while multiplying by zoom scale", async () => {
     const source = createFakePptxSource()
     const activity = createManualPptxActivity(false).activity
     Object.defineProperty(window, "devicePixelRatio", {
@@ -3299,7 +3243,7 @@ describe("PptxViewer", () => {
     await waitFor(() => {
       expect(source.renderSlide).toHaveBeenCalledWith(
         expect.objectContaining({
-          renderScale: 3,
+          renderScale: 2.4,
           slideIndex: 0,
         })
       )

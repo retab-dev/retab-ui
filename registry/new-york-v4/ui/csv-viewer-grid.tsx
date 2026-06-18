@@ -9,8 +9,13 @@ import {
   useCsvRowPatcher,
   type CsvRowPatchState,
 } from "./csv-viewer-row-patcher"
+import { csvCellClassName } from "./csv-viewer-cell-classes"
+import type { CsvRowStore } from "./csv-row-store"
 import { CSV_SCROLLBAR_CSS, HeaderAwareScrollbar } from "./csv-viewer-scrollbar"
-import { sortedRowOrder } from "./csv-viewer-sort"
+import {
+  sortCsvRowsInWorker,
+  sortCsvRowsOnMainThread,
+} from "./csv-viewer-sort-worker"
 import type { CsvCellAddress } from "./csv-viewer-state"
 import { CsvStyleScope } from "./csv-viewer-style-scope"
 import { fixedGridColumnWidths } from "./fixed-grid-columns"
@@ -28,7 +33,7 @@ import {
   type FixedGridRowPoolSlot,
 } from "./fixed-grid-virtualization"
 
-type Row = string[]
+type Row = string[] | undefined
 
 export interface CsvGridHandle {
   scrollToCell: (
@@ -40,7 +45,7 @@ export interface CsvGridHandle {
 
 export interface CsvGridProps {
   columns: string[]
-  sourceRows: string[][]
+  rowStore: CsvRowStore
   activeCell: CsvCellAddress | null
   height: number
   fillHeight: boolean
@@ -60,12 +65,13 @@ const ROW_OVERSCAN = 4
 const JUMP_ROW_OVERSCAN = 0
 const SMALL_TABLE_ROW_LIMIT = 200
 const SMALL_TABLE_COLUMN_LIMIT = 8
+const WORKER_SORT_ROW_THRESHOLD = 20_000
 
 export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
   function CsvGrid(
     {
       columns,
-      sourceRows,
+      rowStore,
       activeCell,
       height,
       fillHeight,
@@ -99,10 +105,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       )
     }, [])
 
-    const rowOrder = React.useMemo<number[] | null>(() => {
-      if (!sort) return null
-      return sortedRowOrder(sourceRows, sort.columnIndex, sort.descending)
-    }, [sourceRows, sort])
+    const rowOrder = useCsvSortedRowOrder({ rowStore, sort })
 
     const displayIndexByRowIndex = React.useMemo<Map<
       number,
@@ -117,14 +120,16 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
     }, [rowOrder])
 
     const rowAt = React.useCallback(
-      (displayRowIndex: number): Row =>
-        sourceRows[rowOrder ? rowOrder[displayRowIndex] : displayRowIndex],
-      [sourceRows, rowOrder]
+      (displayRowIndex: number): Row => {
+        const sourceRowIndex = rowOrder?.[displayRowIndex] ?? displayRowIndex
+        return rowStore.getRow(sourceRowIndex)
+      },
+      [rowStore, rowOrder]
     )
 
     const rowIndexAt = React.useCallback(
       (displayRowIndex: number): number =>
-        rowOrder ? rowOrder[displayRowIndex] : displayRowIndex,
+        rowOrder?.[displayRowIndex] ?? displayRowIndex,
       [rowOrder]
     )
 
@@ -137,8 +142,9 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       setViewportElement((current) => (current === node ? current : node))
     }, [])
     const columnCount = columns.length
+    const rowCount = rowStore.rowCount
     const columnOffset = 1
-    const shouldVirtualizeRows = sourceRows.length > SMALL_TABLE_ROW_LIMIT
+    const shouldVirtualizeRows = rowCount > SMALL_TABLE_ROW_LIMIT
     const shouldVirtualizeColumns = columnCount > SMALL_TABLE_COLUMN_LIMIT
     const effectiveRowHeight = Math.max(1, Math.round(ROW_HEIGHT * scale))
     const effectiveColumnWidth = Math.max(1, Math.round(COLUMN_WIDTH * scale))
@@ -149,16 +155,16 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
         activeCell: activeCell ?? null,
         columnItems: columnItemsRef.current,
         effectiveRowHeight,
+        rowStore,
         rowOrder,
         shouldVirtualizeRows,
-        sourceRows,
       }),
       [
         activeCell,
         effectiveRowHeight,
+        rowStore,
         rowOrder,
         shouldVirtualizeRows,
-        sourceRows,
       ]
     )
     const rowPatcher = useCsvRowPatcher({
@@ -180,7 +186,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       scrollToCell,
       viewportClientHeight,
     } = useFixedGridVirtualization({
-      rowCount: sourceRows.length,
+      rowCount,
       columnCount,
       rowSize: effectiveRowHeight,
       columnSize: effectiveColumnWidth,
@@ -236,7 +242,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       2
     const rowPoolSlots = useFixedRowPool({
       minimumPoolSize: minimumRowPoolSize,
-      rowCount: sourceRows.length,
+      rowCount,
       virtualRows,
     })
 
@@ -259,7 +265,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
         data-slot="csv-grid"
         role="table"
         aria-label={CSV_TABLE_LABEL}
-        aria-rowcount={sourceRows.length + 1}
+        aria-rowcount={rowCount + 1}
         aria-colcount={columnCount + columnOffset}
         className={cn("relative", fillHeight && "min-h-0 flex-1")}
       >
@@ -326,7 +332,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
                     <CsvRowSlot
                       key={slot.slotIndex}
                       slot={slot}
-                      sourceRowCount={sourceRows.length}
+                      sourceRowCount={rowCount}
                       rowAt={rowAt}
                       rowIndexAt={rowIndexAt}
                       gridTemplate={gridTemplate}
@@ -341,7 +347,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
                 </div>
               ) : (
                 <div role="rowgroup">
-                  {sourceRows.map((_, displayRowIndex) => (
+                  {Array.from({ length: rowCount }, (_, displayRowIndex) => (
                     <CsvRow
                       key={displayRowIndex}
                       cells={rowAt(displayRowIndex)}
@@ -373,6 +379,64 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
     )
   }
 )
+
+function useCsvSortedRowOrder({
+  rowStore,
+  sort,
+}: {
+  rowStore: CsvRowStore
+  sort: { columnIndex: number; descending: boolean } | null
+}): number[] | null {
+  const [workerRowOrder, setWorkerRowOrder] = React.useState<number[] | null>(
+    null
+  )
+  const sourceRows = React.useMemo(
+    () => (sort ? rowStore.materializeRows() : null),
+    [rowStore, sort]
+  )
+  const shouldUseWorker =
+    !!sort &&
+    !!sourceRows &&
+    sourceRows.length >= WORKER_SORT_ROW_THRESHOLD &&
+    typeof Worker !== "undefined"
+
+  React.useEffect(() => {
+    setWorkerRowOrder(null)
+    if (!sort || !sourceRows || !shouldUseWorker) return
+
+    const controller = new AbortController()
+    void sortCsvRowsInWorker({
+      sourceRows,
+      columnIndex: sort.columnIndex,
+      descending: sort.descending,
+      signal: controller.signal,
+    }).then(
+      (rowOrder) => setWorkerRowOrder(rowOrder),
+      (error) => {
+        if (controller.signal.aborted) return
+        setWorkerRowOrder(
+          sortCsvRowsOnMainThread({
+            sourceRows,
+            columnIndex: sort.columnIndex,
+            descending: sort.descending,
+          })
+        )
+      }
+    )
+
+    return () => controller.abort()
+  }, [shouldUseWorker, sort, sourceRows])
+
+  return React.useMemo(() => {
+    if (!sort || !sourceRows) return null
+    if (shouldUseWorker) return workerRowOrder
+    return sortCsvRowsOnMainThread({
+      sourceRows,
+      columnIndex: sort.columnIndex,
+      descending: sort.descending,
+    })
+  }, [shouldUseWorker, sort, sourceRows, workerRowOrder])
+}
 
 function Spacer({ width }: { width: number }) {
   return <div role="presentation" aria-hidden style={{ width }} />
@@ -552,11 +616,7 @@ const CsvRow = React.memo(function CsvRow({
             role="cell"
             aria-colindex={columnOffset + item.index + 1}
             data-slot="csv-cell"
-            className={cn(
-              "flex items-center truncate border-r px-3 last:border-r-0",
-              isActive &&
-                "bg-primary/12 ring-1 ring-primary/50 ring-offset-0 ring-inset"
-            )}
+            className={csvCellClassName(isActive)}
             title={isVirtualized ? undefined : text}
           >
             <span className="truncate">{text}</span>

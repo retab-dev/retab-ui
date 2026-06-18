@@ -1,10 +1,10 @@
 "use client"
 
 import * as React from "react"
-import type * as PptxNS from "pptxviewjs"
 
 import { cn } from "@/lib/utils"
 import type { ViewerResource } from "@/lib/viewer-resource"
+import { getPptxSource } from "@/components/ui/pptx-viewer-source"
 import {
   cachedThumbnailResource,
   createThumbnailArtifactCache,
@@ -24,12 +24,6 @@ import {
 import type { ThumbnailAnchor } from "@/components/file-thumbnail/types"
 import { ANCHOR_CORNER } from "@/components/file-thumbnail/types"
 
-let pptxLib: Promise<typeof PptxNS> | null = null
-function loadPptx() {
-  if (!pptxLib) pptxLib = import("pptxviewjs")
-  return pptxLib
-}
-
 interface PptxFirstSlideSource {
   render: (canvas: HTMLCanvasElement, scale: number) => Promise<void>
   baseWidth: number
@@ -38,7 +32,7 @@ interface PptxFirstSlideSource {
 }
 
 const pptxCache = createThumbnailArtifactCache<PptxFirstSlideSource>({
-  maxEntries: 16,
+  maxEntries: 4,
   dispose: (source) => source.dispose?.(),
 })
 
@@ -56,68 +50,39 @@ function getPptxFirstSlide(
         "Failed to parse presentation thumbnail",
         () =>
           timedThumbnail(`pptx:total ${shortName(meta)}`, async () => {
-            const [buf, mod] = await Promise.all([
-              content.readBytes(),
-              loadPptx(),
-            ])
-            const { PPTXViewer } = mod
-            const offscreen = document.createElement("canvas")
-            const viewer = new PPTXViewer({
-              canvas: offscreen,
-              slideSizeMode: "actual",
-            })
-            await viewer.loadFile(buf)
-            const size = await readSlideSize(buf.slice(0))
-            const disposableViewer = viewer as { dispose?: () => void }
+            const source = await getPptxSource(content)
+            const release = source.retain()
             const render = async (canvas: HTMLCanvasElement, scale: number) => {
               await withThumbnailFormatError(
                 "pptx",
                 "render_failed",
                 meta.fileName,
                 "Failed to render presentation thumbnail",
-                () => viewer.renderSlide(0, canvas, { scale, quality: "high" })
+                async () => {
+                  const result = await source.renderSlide({
+                    canvas,
+                    renderScale: scale,
+                    slideIndex: 0,
+                    priority: {
+                      distanceFromReadingMarker: 0,
+                      isCurrentSlide: true,
+                      isInViewport: true,
+                    },
+                  })
+                  if (result.status === "failed") throw result.error
+                }
               )
             }
             return {
               render,
-              baseWidth: size.width,
-              baseHeight: size.height,
-              dispose: () => disposableViewer.dispose?.(),
+              baseWidth: source.baseSize.width,
+              baseHeight: source.baseSize.height,
+              dispose: release,
             }
           })
       )
     )
   )
-}
-
-const EMU_PER_PX = 9525
-
-async function readSlideSize(buf: ArrayBuffer) {
-  try {
-    const mod = (await import("jszip")) as unknown as {
-      default?: { loadAsync(b: ArrayBuffer): Promise<JSZipLike> }
-      loadAsync?: (b: ArrayBuffer) => Promise<JSZipLike>
-    }
-    const JSZip = (mod.default ?? mod) as {
-      loadAsync(b: ArrayBuffer): Promise<JSZipLike>
-    }
-    const zip = await JSZip.loadAsync(buf)
-    const xml = await zip.file("ppt/presentation.xml")?.async("string")
-    const m = xml?.match(/<p:sldSz[^>]*\bcx="(\d+)"[^>]*\bcy="(\d+)"/)
-    if (m) {
-      return {
-        width: Math.round(Number(m[1]) / EMU_PER_PX),
-        height: Math.round(Number(m[2]) / EMU_PER_PX),
-      }
-    }
-  } catch {
-    /* fall through */
-  }
-  return { width: 960, height: 720 }
-}
-
-interface JSZipLike {
-  file(path: string): { async(type: "string"): Promise<string> } | null
 }
 
 export function PptxFirstSlide({
@@ -129,6 +94,20 @@ export function PptxFirstSlide({
   thumbnailKey: string
   anchor: ThumbnailAnchor
 }) {
+  React.useEffect(() => {
+    const preload = () => {
+      void import("@/components/ui/pptx-viewer").then((module) => {
+        module.preloadPptxViewer()
+      })
+    }
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(preload)
+      return () => window.cancelIdleCallback(id)
+    }
+    const id = window.setTimeout(preload, 0)
+    return () => window.clearTimeout(id)
+  }, [])
+
   const source = useThumbnailResource(
     getPptxFirstSlide(
       thumbnailFileMeta(resource),

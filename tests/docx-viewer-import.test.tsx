@@ -6,6 +6,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { resetDocxDocumentResourceCacheForTests } from "@/lib/docx-document-resource"
 import { clearViewerResourceRegistryForTests } from "@/registry/new-york-v4/lib/viewer-resource"
+import { DocxViewer } from "@/registry/new-york-v4/ui/docx-viewer"
+
+const docxPreviewMock = vi.hoisted(() => ({
+  shouldFailImport: false,
+  renderAsync: vi.fn(),
+}))
+
+vi.mock("docx-preview", () => {
+  if (docxPreviewMock.shouldFailImport) throw new Error("chunk failed")
+  return { renderAsync: docxPreviewMock.renderAsync }
+})
 
 const originalGetAnimations = HTMLElement.prototype.getAnimations
 
@@ -73,7 +84,8 @@ async function renderDocx(ui: React.ReactElement) {
 }
 
 beforeEach(() => {
-  vi.resetModules()
+  docxPreviewMock.shouldFailImport = false
+  docxPreviewMock.renderAsync.mockReset()
   vi.stubGlobal("ResizeObserver", ResizeObserverMock)
   vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
     callback(0)
@@ -103,23 +115,16 @@ afterEach(() => {
   } else {
     Reflect.deleteProperty(HTMLElement.prototype, "getAnimations")
   }
-  vi.doUnmock("docx-preview")
-  vi.resetModules()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
 
 describe("DocxViewer lazy import", () => {
   it("retries the docx-preview import after a transient chunk failure", async () => {
-    let shouldFailImport = true
-    const renderAsync = vi.fn(async (_buffer, host: HTMLElement) => {
+    docxPreviewMock.shouldFailImport = true
+    docxPreviewMock.renderAsync.mockImplementation(async (_buffer, host) => {
       installRenderedDocument(host)
     })
-    vi.doMock("docx-preview", () => {
-      if (shouldFailImport) throw new Error("chunk failed")
-      return { renderAsync }
-    })
-    const { DocxViewer } = await import("@/registry/new-york-v4/ui/docx-viewer")
 
     await renderDocx(
       <DocxViewer
@@ -134,7 +139,7 @@ describe("DocxViewer lazy import", () => {
     expect(
       await screen.findByText("Couldn't render this document.")
     ).toBeTruthy()
-    shouldFailImport = false
+    docxPreviewMock.shouldFailImport = false
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Retry" }))
@@ -142,6 +147,6 @@ describe("DocxViewer lazy import", () => {
 
     expect(await screen.findByText("Recovered document")).toBeTruthy()
     expect(screen.getByText("Page 1 of 1")).toBeTruthy()
-    expect(renderAsync).toHaveBeenCalledTimes(1)
+    expect(docxPreviewMock.renderAsync).toHaveBeenCalledTimes(1)
   })
 })

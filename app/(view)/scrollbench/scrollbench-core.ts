@@ -38,6 +38,8 @@ export interface ScenarioResult {
 
 export interface ImageRenderTiming {
   durationMs: number
+  pixelRatio?: number
+  renderScale?: number
   cached?: boolean
   status?: "rendered" | "cancelled" | "failed"
 }
@@ -59,9 +61,12 @@ export interface ImageRenderingResult {
   cancelled: number
   totalMs: number
   averageMs: number
+  firstUncachedMs: number
   p50Ms: number
   p95Ms: number
   maxMs: number
+  maxPixelRatio: number
+  maxRenderScale: number
   cachedTiming: DurationTimingResult
   uncachedTiming: DurationTimingResult
 }
@@ -146,7 +151,7 @@ export const VIEWERS: readonly ViewerOption[] = [
   {
     id: "image",
     label: "Image",
-    sample: "attention-page-1.png at 2x",
+    sample: "entropy.tiff",
     scrollerSelector:
       '[data-slot="image-viewer"] [data-slot="scroll-area-viewport"]',
   },
@@ -266,6 +271,9 @@ export function summarizeImageRenderTimings(
     .sort((a, b) => a - b)
   const totalMs = durations.reduce((sum, duration) => sum + duration, 0)
   const count = validTimings.length
+  const uncachedTimings = validTimings.filter(
+    (timing) => timing.cached !== true
+  )
 
   return {
     count,
@@ -278,16 +286,31 @@ export function summarizeImageRenderTimings(
       .length,
     totalMs,
     averageMs: count === 0 ? 0 : totalMs / count,
+    firstUncachedMs: uncachedTimings[0]?.durationMs ?? 0,
     p50Ms: percentile(durations, 0.5),
     p95Ms: percentile(durations, 0.95),
     maxMs: durations[durations.length - 1] ?? 0,
+    maxPixelRatio: maxFiniteMetric(validTimings, "pixelRatio"),
+    maxRenderScale: maxFiniteMetric(validTimings, "renderScale"),
     cachedTiming: summarizeDurationTimings(
       validTimings.filter((timing) => timing.cached === true)
     ),
-    uncachedTiming: summarizeDurationTimings(
-      validTimings.filter((timing) => timing.cached !== true)
-    ),
+    uncachedTiming: summarizeDurationTimings(uncachedTimings),
   }
+}
+
+function maxFiniteMetric(
+  timings: readonly ImageRenderTiming[],
+  key: "pixelRatio" | "renderScale"
+) {
+  let max = 0
+  for (const timing of timings) {
+    const value = key === "pixelRatio" ? timing.pixelRatio : timing.renderScale
+    if (typeof value === "number" && Number.isFinite(value) && value > max) {
+      max = value
+    }
+  }
+  return max
 }
 
 function summarizeDurationTimings(

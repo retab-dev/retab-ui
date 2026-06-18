@@ -29,10 +29,12 @@ const rendererMocks = vi.hoisted(() => ({
     renderAsync: vi.fn(),
   },
   pptx: {
+    destroy: vi.fn(),
+    getSlideCount: vi.fn(() => 1),
+    getSlideDimensions: vi.fn(() => ({ cx: 9144000, cy: 6858000 })),
     loadFile: vi.fn(),
     renderSlide: vi.fn(),
     dispose: vi.fn(),
-    loadZipAsync: vi.fn(),
   },
   markdown: {
     parse: vi.fn(),
@@ -55,17 +57,13 @@ vi.mock("docx-preview", () => ({
 
 vi.mock("pptxviewjs", () => ({
   PPTXViewer: class {
+    destroy = rendererMocks.pptx.destroy
+    getSlideCount = rendererMocks.pptx.getSlideCount
+    getSlideDimensions = rendererMocks.pptx.getSlideDimensions
     loadFile = rendererMocks.pptx.loadFile
     renderSlide = rendererMocks.pptx.renderSlide
     dispose = rendererMocks.pptx.dispose
   },
-}))
-
-vi.mock("jszip", () => ({
-  default: {
-    loadAsync: rendererMocks.pptx.loadZipAsync,
-  },
-  loadAsync: rendererMocks.pptx.loadZipAsync,
 }))
 
 vi.mock("marked", () => ({
@@ -286,15 +284,17 @@ beforeEach(() => {
   )
   rendererMocks.docx.bytesPromise = Promise.resolve(new ArrayBuffer(4))
   rendererMocks.docx.renderAsync.mockReset()
+  rendererMocks.pptx.destroy.mockReset()
+  rendererMocks.pptx.getSlideCount.mockReset()
+  rendererMocks.pptx.getSlideCount.mockReturnValue(1)
+  rendererMocks.pptx.getSlideDimensions.mockReset()
+  rendererMocks.pptx.getSlideDimensions.mockReturnValue({
+    cx: 9144000,
+    cy: 6858000,
+  })
   rendererMocks.pptx.loadFile.mockReset()
   rendererMocks.pptx.renderSlide.mockReset()
   rendererMocks.pptx.dispose.mockReset()
-  rendererMocks.pptx.loadZipAsync.mockReset()
-  rendererMocks.pptx.loadZipAsync.mockResolvedValue({
-    file: () => ({
-      async: async () => '<p:sldSz cx="9144000" cy="6858000"/>',
-    }),
-  })
   rendererMocks.markdown.parse.mockReset()
   rendererMocks.markdown.parse.mockImplementation(
     async (text: string) => `<p>${text}</p>`
@@ -1474,7 +1474,6 @@ describe("thumbnail generated registry regressions", () => {
     expect(item.dependencies).toEqual([
       "@e965/xlsx",
       "dompurify",
-      "jszip",
       "marked",
       "pptxviewjs",
       "utif",

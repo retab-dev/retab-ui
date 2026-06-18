@@ -26,6 +26,11 @@ import {
   DocxViewer,
   type DocxViewerHandle,
 } from "@/registry/new-york-v4/ui/docx-viewer"
+import {
+  DOCX_PAGE_GAP_PX,
+  DOCX_READING_MARKER_RATIO,
+  DOCX_VIEWER_PADDING_PX,
+} from "@/registry/new-york-v4/ui/docx-viewer-layout"
 
 const docxMock = vi.hoisted(() => ({
   renderAsync: vi.fn(),
@@ -397,16 +402,16 @@ describe("DocxViewer page count + visible page", () => {
       '[data-slot="scroll-area-viewport"]'
     )
     expect(viewport).toBeTruthy()
-    // Viewport rect: top 0, height 500 -> marker = 0 + 500 * 0.2 = 100.
-    viewport!.getBoundingClientRect = vi.fn(() => rect(0, 800, 500))
-    const pages = document.querySelectorAll<HTMLElement>("[data-page-number]")
-    pages[0]!.getBoundingClientRect = vi.fn(() => rect(-1000))
-    // Page 2's top is exactly at the marker; an inclusive `<=` must select it.
-    pages[1]!.getBoundingClientRect = vi.fn(() => rect(100))
+    const viewportHeight = 500
+    const scrollTop =
+      DOCX_VIEWER_PADDING_PX +
+      1056 +
+      DOCX_PAGE_GAP_PX -
+      viewportHeight * DOCX_READING_MARKER_RATIO
     setScrollMetrics(viewport!, {
-      clientHeight: 500,
-      scrollHeight: 1500,
-      scrollTop: 600,
+      clientHeight: viewportHeight,
+      scrollHeight: scrollTop * 2 + viewportHeight,
+      scrollTop,
     })
 
     fireEvent.scroll(viewport!)
@@ -480,7 +485,7 @@ describe("DocxViewer imperative handle before render", () => {
 })
 
 describe("DocxViewer highlight target keys", () => {
-  it("reuses the committed text index for imperative target scrolling", async () => {
+  it("builds the text index on first imperative text target and reuses it", async () => {
     const createTreeWalker = vi.spyOn(document, "createTreeWalker")
     const ref = React.createRef<DocxViewerHandle>()
 
@@ -488,10 +493,15 @@ describe("DocxViewer highlight target keys", () => {
       <DocxViewer ref={ref} source={docxUrlSource("/indexed-scroll.docx")} />
     )
     await waitForRenderedDocx()
-    const committedRenderWalks = createTreeWalker.mock.calls.length
-    expect(committedRenderWalks).toBeGreaterThan(0)
+    const renderWalks = createTreeWalker.mock.calls.length
 
     const scrollIntoView = vi.spyOn(HTMLElement.prototype, "scrollIntoView")
+    ref.current?.scrollToTarget(
+      { kind: "text", text: "revenue increased" },
+      { behavior: "auto" }
+    )
+    const indexedWalks = createTreeWalker.mock.calls.length
+    expect(indexedWalks).toBe(renderWalks + 1)
     ref.current?.scrollToTarget(
       { kind: "text", text: "revenue increased" },
       { behavior: "auto" }
@@ -501,11 +511,11 @@ describe("DocxViewer highlight target keys", () => {
       { behavior: "auto" }
     )
 
-    expect(scrollIntoView).toHaveBeenCalledTimes(2)
-    expect(createTreeWalker).toHaveBeenCalledTimes(committedRenderWalks)
+    expect(scrollIntoView).toHaveBeenCalledTimes(3)
+    expect(createTreeWalker).toHaveBeenCalledTimes(indexedWalks)
   })
 
-  it("builds the text index once for a committed render and reuses it for highlight changes", async () => {
+  it("builds the text index once and reuses it for highlight changes", async () => {
     const highlights = new Map<string, MockHighlight>()
     installHighlightApi(highlights)
     const createTreeWalker = vi.spyOn(document, "createTreeWalker")
@@ -514,8 +524,7 @@ describe("DocxViewer highlight target keys", () => {
       <DocxViewer source={docxUrlSource("/indexed-highlight.docx")} />
     )
     await waitForRenderedDocx()
-    const committedRenderWalks = createTreeWalker.mock.calls.length
-    expect(committedRenderWalks).toBeGreaterThan(0)
+    const renderWalks = createTreeWalker.mock.calls.length
 
     await act(async () => {
       view.rerender(
@@ -530,6 +539,7 @@ describe("DocxViewer highlight target keys", () => {
         "revenue increased"
       )
     })
+    expect(createTreeWalker).toHaveBeenCalledTimes(renderWalks + 1)
 
     await act(async () => {
       view.rerender(
@@ -545,7 +555,7 @@ describe("DocxViewer highlight target keys", () => {
       )
     })
 
-    expect(createTreeWalker).toHaveBeenCalledTimes(committedRenderWalks)
+    expect(createTreeWalker).toHaveBeenCalledTimes(renderWalks + 1)
   })
 
   it("does not recreate a cell highlight across re-renders with an equal target", async () => {

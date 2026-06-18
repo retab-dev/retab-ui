@@ -19,9 +19,8 @@ import type { CodeViewerHandle, CodeViewerProps } from "./code-viewer-types"
 import { CodeViewerViewport } from "./code-viewer-viewport"
 import { normalizeTextLineRange } from "./line-ranges"
 import {
-  readTextResource,
+  readTextDocument,
   resolvedTextViewerBounds,
-  splitTextLines,
 } from "./plain-text-resource"
 import {
   useViewerControlsRegistration,
@@ -32,6 +31,8 @@ type CodeReadingAnchor = {
   lineIndex: number
   offsetPx: number
 }
+
+const CODE_VIEWER_DEFERRED_SYNTAX_LINE_COUNT = 500
 
 export function CodeViewerContent({
   resource,
@@ -50,13 +51,25 @@ export function CodeViewerContent({
   forwardedRef?: React.ForwardedRef<CodeViewerHandle>
 }) {
   const bounds = resolvedTextViewerBounds({ maxBytes, maxLines })
-  const text = readTextResource({
+  const textDocument = readTextDocument({
     content: resource.content,
     retryVersion,
     bounds,
   })
-  const textLines = React.useMemo(() => splitTextLines(text), [text])
-  const syntax = React.useMemo(() => createCodeSyntax(resource), [resource])
+  const textLines = textDocument.lines
+  const [syntaxVersion, setSyntaxVersion] = React.useState(0)
+  const syntax = React.useMemo(
+    () =>
+      createCodeSyntax(resource, {
+        deferTokens: textLines.length > CODE_VIEWER_DEFERRED_SYNTAX_LINE_COUNT,
+        onTokensChanged: () => setSyntaxVersion((version) => version + 1),
+      }),
+    [resource, textLines.length]
+  )
+  const syntaxIdentity =
+    syntaxVersion === 0
+      ? syntax.identity
+      : `${syntax.identity}\u0000${syntaxVersion}`
   const highlightStart = highlight?.start
   const highlightEnd = highlight?.end
   const highlightRange = React.useMemo(
@@ -170,7 +183,7 @@ export function CodeViewerContent({
       lineHeight,
       rowHost,
       syntax,
-      syntaxIdentity: syntax.identity,
+      syntaxIdentity,
       textLines,
       viewport,
     })
@@ -182,6 +195,7 @@ export function CodeViewerContent({
     lineHeight,
     projector,
     syntax,
+    syntaxIdentity,
     textLines,
   ])
 
@@ -191,6 +205,10 @@ export function CodeViewerContent({
   })
 
   React.useEffect(() => () => projector.destroy(), [projector])
+  React.useEffect(() => {
+    setSyntaxVersion(0)
+    return () => syntax.destroy?.()
+  }, [syntax])
 
   useCodeControlsRegistration({
     downloadAction,

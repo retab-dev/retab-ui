@@ -265,8 +265,11 @@ describe("Markdown/Text viewer contract", () => {
     expect(container.querySelector("img")).toBeNull()
     expect(container.querySelector("[onerror]")).toBeNull()
     expect(
-      container.querySelector('[data-slot="text-virtual-canvas"]')
+      container.querySelector('[data-slot="markdown-virtual-canvas"]')
     ).toBeTruthy()
+    expect(
+      container.querySelector('[data-slot="text-virtual-canvas"]')
+    ).toBeNull()
   })
 
   it("keeps TextViewer free of code line numbers while CodeViewer keeps the numbered code surface", async () => {

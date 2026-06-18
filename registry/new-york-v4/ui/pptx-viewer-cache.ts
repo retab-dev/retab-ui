@@ -11,10 +11,18 @@ export interface Disposable {
   isEvictable?(): boolean
 }
 
+export interface DisposableLruBudget<V> {
+  maxCost: number
+  getCost(value: V): number
+}
+
 export class DisposableLruCache<K, V extends Disposable> {
   private values = new Map<K, V>()
 
-  constructor(private readonly limit: number) {}
+  constructor(
+    private readonly limit: number,
+    private readonly budget?: DisposableLruBudget<V>
+  ) {}
 
   get size() {
     return this.values.size
@@ -37,7 +45,7 @@ export class DisposableLruCache<K, V extends Disposable> {
   }
 
   private evictExcess() {
-    while (this.values.size > this.limit) {
+    while (this.values.size > this.limit || this.exceedsBudget()) {
       const victim = this.oldestEvictableKey()
       // Every overflow entry is pinned (e.g. still loading); keep them all and
       // let the cache shrink back once they become evictable.
@@ -46,6 +54,19 @@ export class DisposableLruCache<K, V extends Disposable> {
       this.values.delete(victim)
       dropped?.dispose()
     }
+  }
+
+  private exceedsBudget() {
+    return !!this.budget && this.totalCost() > this.budget.maxCost
+  }
+
+  private totalCost() {
+    if (!this.budget) return 0
+    let total = 0
+    for (const value of this.values.values()) {
+      total += Math.max(0, this.budget.getCost(value))
+    }
+    return total
   }
 
   private oldestEvictableKey(): K | undefined {
@@ -72,6 +93,10 @@ export class DisposableLruCache<K, V extends Disposable> {
 
 export class PptxBitmapEntry implements Disposable {
   constructor(readonly bitmap: ImageBitmap) {}
+
+  get pixelCount() {
+    return Math.max(0, this.bitmap.width * this.bitmap.height)
+  }
 
   dispose() {
     this.bitmap.close()

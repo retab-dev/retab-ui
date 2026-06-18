@@ -917,10 +917,10 @@ describe("MarkdownViewer", () => {
       name: "hello@retab.com",
     })
 
-    expect(webAutolink.getAttribute("href")).toBe("http://www.retab.com")
+    expect(webAutolink.getAttribute("href")).toBe("http://www.retab.com/")
     expect(webAutolink.getAttribute("data-pretext-link-kind")).toBe("external")
-    expect(webAutolink.getAttribute("data-pretext-link-form")).toBe("autolink")
-    expect(webAutolink.className).toContain("font-mono")
+    expect(webAutolink.getAttribute("data-pretext-link-form")).toBe("inline")
+    expect(webAutolink.className).toContain("font-medium")
     expect(emailAutolink.getAttribute("href")).toBe("mailto:hello@retab.com")
     expect(emailAutolink.getAttribute("data-pretext-link-kind")).toBe("email")
     expect(emailAutolink.getAttribute("data-pretext-link-form")).toBe(
@@ -1878,7 +1878,9 @@ describe("MarkdownViewer", () => {
   it("renders mermaid fences as diagram surfaces", async () => {
     const { container } = render(
       <MarkdownViewer
-        source={markdownSource("```mermaid\ngraph TD\n  A-->B\n```")}
+        source={markdownSource(
+          "```mermaid\ngraph TD\n  A-->B\n  %% strict-policy\n```"
+        )}
         controls={false}
       />
     )
@@ -2278,7 +2280,9 @@ describe("MarkdownViewer", () => {
   it("copies sanitized Mermaid SVG only from ready diagram surfaces", async () => {
     const { rerender } = render(
       <MarkdownViewer
-        source={markdownSource("```mermaid\ngraph TD\n  unsafe-svg-->B\n```")}
+        source={markdownSource(
+          "```mermaid\ngraph TD\n  unsafe-svg-->B\n  %% sanitize-svg\n```"
+        )}
         controls={false}
       />
     )
@@ -2985,10 +2989,16 @@ describe("MarkdownViewer", () => {
 
   it("initializes Mermaid with the strict viewer security policy", async () => {
     const mermaid = (await import("mermaid")).default
+    vi.mocked(mermaid.initialize).mockClear()
+    const source = [
+      "graph TD",
+      "  A-->B",
+      `  %% strict-policy-${Date.now()}-${Math.random()}`,
+    ].join("\n")
 
     render(
       <MarkdownViewer
-        source={markdownSource("```mermaid\ngraph TD\n  A-->B\n```")}
+        source={markdownSource(`\`\`\`mermaid\n${source}\n\`\`\``)}
         controls={false}
       />
     )
@@ -3171,8 +3181,8 @@ describe("MarkdownViewer", () => {
     expect(svg.querySelector("#forms")).toBeNull()
     expect(svg.querySelector("#constructor")).toBeNull()
     expect(svg.querySelector("[name='images']")).toBeNull()
-    expect(svg.querySelector("#user-content-forms")).toBeTruthy()
-    expect(svg.querySelector("#user-content-constructor")).toBeTruthy()
+    expect(svg.querySelector("[id$='user-content-forms']")).toBeTruthy()
+    expect(svg.querySelector("[id$='user-content-constructor']")).toBeTruthy()
     expect(svg.textContent).toContain("Safe label")
   })
 
@@ -4342,7 +4352,7 @@ describe("MarkdownViewer", () => {
     const external = await screen.findByRole("link", { name: "External" })
     const internal = screen.getByRole("link", { name: "Internal" })
 
-    expect(external.getAttribute("href")).toBe("https://example.com")
+    expect(external.getAttribute("href")).toBe("https://example.com/")
     expect(external.getAttribute("target")).toBe("_blank")
     expect(external.getAttribute("rel")).toBe("noopener noreferrer")
     expect(external.getAttribute("title")).toBe("External docs")

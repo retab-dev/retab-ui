@@ -283,7 +283,13 @@ const EMPTY_MARK_STATE: MarkState = {
   strike: false,
   title: null,
 }
+const PREPARED_TEXT_DOCUMENT_CACHE_LIMIT = 32
+const PREPARED_TEXT_DOCUMENT_CACHE_VERSION = "prepared-text-v1"
 const markerWidthCache = new Map<string, number>()
+const preparedTextDocumentCache = new Map<
+  string,
+  { document: PreparedTextDocument; text: string }
+>()
 
 export function resolveTextViewerMode({
   fileName,
@@ -310,6 +316,33 @@ export function createPreparedTextDocument({
   text: string
   style: TextStyleConfig
 }): PreparedTextDocument {
+  const cacheKey = preparedTextDocumentCacheKey({ mode, text, style })
+  const cached = preparedTextDocumentCache.get(cacheKey)
+  if (cached?.text === text) {
+    preparedTextDocumentCache.delete(cacheKey)
+    preparedTextDocumentCache.set(cacheKey, cached)
+    return cached.document
+  }
+
+  const document = createUncachedPreparedTextDocument({ mode, text, style })
+  preparedTextDocumentCache.set(cacheKey, { document, text })
+  trimPreparedTextDocumentCache()
+  return document
+}
+
+export function clearPreparedTextDocumentCacheForTests() {
+  preparedTextDocumentCache.clear()
+}
+
+function createUncachedPreparedTextDocument({
+  mode,
+  text,
+  style,
+}: {
+  mode: TextViewerMode
+  text: string
+  style: TextStyleConfig
+}): PreparedTextDocument {
   const sourceLineCount = splitTextLines(text).length
   const blocks =
     mode === "markdown"
@@ -321,6 +354,32 @@ export function createPreparedTextDocument({
     mode,
     sourceLineCount,
     wordCount: countTextWords(text),
+  }
+}
+
+function preparedTextDocumentCacheKey({
+  mode,
+  text,
+  style,
+}: {
+  mode: TextViewerMode
+  text: string
+  style: TextStyleConfig
+}) {
+  return [
+    PREPARED_TEXT_DOCUMENT_CACHE_VERSION,
+    mode,
+    safeScale(style.fontScale),
+    text.length,
+    hashTextForPreparedDocument(text),
+  ].join("\u0000")
+}
+
+function trimPreparedTextDocumentCache() {
+  while (preparedTextDocumentCache.size > PREPARED_TEXT_DOCUMENT_CACHE_LIMIT) {
+    const firstKey = preparedTextDocumentCache.keys().next().value
+    if (firstKey === undefined) return
+    preparedTextDocumentCache.delete(firstKey)
   }
 }
 
@@ -2110,6 +2169,15 @@ function stripSingleTrailingNewline(text: string) {
 function countTextWords(text: string) {
   const matches = text.trim().match(/\S+/g)
   return matches?.length ?? 0
+}
+
+function hashTextForPreparedDocument(text: string) {
+  let hash = 2166136261
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return (hash >>> 0).toString(36)
 }
 
 function safeWidth(width: number) {

@@ -1750,6 +1750,56 @@ describe("fixed grid virtualization math", () => {
     expect(result.current.rightPad).toBe(510)
   })
 
+  it("lets horizontal jump viewports settle back to full column overscan", () => {
+    vi.useFakeTimers()
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 20)
+    defineHorizontalViewportMetric(scroller, "clientWidth", 30)
+    defineScrollMetric(scroller, "scrollTop", 0)
+    defineScrollMetric(scroller, "scrollLeft", 0)
+    vi.stubGlobal("ResizeObserver", StubResizeObserver)
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLElement | null>
+    const { result } = renderHook(() =>
+      useFixedGridVirtualization({
+        rowCount: 100,
+        columnCount: 100,
+        rowSize: 10,
+        columnSize: 10,
+        rowOverscan: 5,
+        columnOverscan: 5,
+        jumpRowOverscan: 0,
+        jumpColumnOverscan: 0,
+        scrollRef,
+        scrollElement: scroller,
+      })
+    )
+
+    defineScrollMetric(scroller, "scrollLeft", 400)
+    act(() => {
+      scroller.dispatchEvent(new Event("scroll"))
+    })
+
+    expect(result.current.columnItems[0]?.index).toBe(40)
+    expect(result.current.columnItems.at(-1)?.index).toBe(48)
+
+    act(() => {
+      vi.advanceTimersByTime(80)
+    })
+
+    expect(result.current.columnItems[0]?.index).toBe(35)
+    expect(result.current.columnItems.at(-1)?.index).toBe(53)
+    expect(result.current.leftPad).toBe(350)
+    expect(result.current.rightPad).toBe(460)
+  })
+
   it("lets handled jump-row viewports settle after skipping immediate React window updates", () => {
     vi.useFakeTimers()
     const scroller = document.createElement("div")

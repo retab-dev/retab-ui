@@ -12,6 +12,15 @@ export interface ImageFrameOverlayProps {
   rotation: number
 }
 
+export interface ImageFrameRenderTiming {
+  cached: boolean
+  durationMs: number
+  frameNumber: number
+  pixelRatio: number
+  renderScale: number
+  status: "rendered" | "cancelled" | "failed"
+}
+
 /**
  * Imperative handle for driving the viewer from outside (e.g. scroll to the
  * source of a hovered field). Obtain it with a `ref` on `<ImageViewer>`.
@@ -50,6 +59,8 @@ export interface ImageViewerProps {
   download?: boolean
   /** Render absolutely-positioned overlays (e.g. bbox citations) on each frame. */
   renderFrameOverlay?: (props: ImageFrameOverlayProps) => React.ReactNode
+  /** Reports measured canvas render work for benchmark and profiling surfaces. */
+  onFrameRenderTiming?: (timing: ImageFrameRenderTiming) => void
   /** Fired with the 1-based frame nearest the top of the viewport as you scroll. */
   onVisibleFrameChange?: (frameNumber: number) => void
   /** Fired with scroll progress in [0, 1] (for a fine-grained scroll cursor). */

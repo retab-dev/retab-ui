@@ -239,7 +239,7 @@ describe("FileViewer detection helpers", () => {
       displayName: "inline.log",
       fileName: "inline.log",
     })
-    expect(descriptor.identityKey).toBe("text:inline content")
+    expect(descriptor.identityKey).toBe("text:14:pnnfux")
     expect(descriptorResetKey(descriptor)).toBe(
       "text:14:pnnfux\u0000inline.log\u0000\u0000text"
     )
@@ -247,8 +247,9 @@ describe("FileViewer detection helpers", () => {
     const resource = createViewerResource(source)
 
     expect(resource.content.directUrl).toBeNull()
-    expect(resource.content.key).toContain("text:inline content")
-    expect(resource.keys.resource).toContain("text:inline content")
+    expect(resource.content.key).toContain("text:14:pnnfux")
+    expect(resource.keys.resource).toContain("text:14:pnnfux")
+    expect(resource.content.key).not.toContain("inline content")
   })
 
   it("keeps prose as the only text subtype", () => {
@@ -388,9 +389,7 @@ describe("FileViewer detection helpers", () => {
     expect(routeSource).toContain(
       'import("@/components/ui/text-viewer-chenglou")'
     )
-    expect(routeSource).toContain(
-      'import("@/components/ui/markdown-viewer")'
-    )
+    expect(routeSource).toContain('import("@/components/ui/markdown-viewer")')
     expect(routeSource).not.toContain(
       'import("@/components/ui/markdown-document-viewer")'
     )

@@ -21,13 +21,15 @@ touch the main heap. It caps how many decoded bitmaps it keeps and frees the
 worker's per-frame buffers as it goes, so a hundred-page scan stays smooth and
 flat in memory.
 
-It is built without `useEffect`: the image source loads with React's `use()` and
-Suspense, frames mount lazily via an `IntersectionObserver`, and each canvas
-draws from a ref callback (releasing its bitmap on cleanup).
+The image source loads with React's `use()` and Suspense. The scroll viewport
+projects frames into a persistent virtual canvas, keeps recently rendered frames
+inside a pixel budget, prefetches ahead in the scroll direction, and redraws at
+high quality once scrolling settles. Each canvas draws from a ref callback and
+releases its bitmap on cleanup.
 
-The no-effect lifecycle uses React 19 callback-ref cleanup semantics. Use this
-viewer in React 19 apps, or port the observer/canvas cleanup paths to effects
-before installing it in a React 18 app.
+The canvas lifecycle uses React 19 callback-ref cleanup semantics. Use this
+viewer in React 19 apps, or port the canvas cleanup path to effects before
+installing it in a React 18 app.
 
 <ComponentPreview name="image-viewer-demo" contentClassName="p-0" />
 
@@ -90,31 +92,39 @@ normalized boxes map with simple percentages.
   off-thread); TIFF frames decode in a Web Worker that transfers the resulting
   `ImageBitmap` back. Either way the heavy work and the pixels stay off the main
   thread, so scrolling never blocks on decode.
-- **Lazy frames.** Each frame reserves its box from the TIFF's IFD dimensions up
-  front, so scroll height is correct without decoding anything. Pixels decode
-  only when a frame nears the viewport.
+- **Projected frames.** Each frame reserves its box from the TIFF's IFD
+  dimensions up front, so scroll height is correct without decoding anything.
+  The viewport patches a persistent virtual canvas on animation frames instead
+  of remounting every visible frame through the parent React tree.
+- **Rendered-frame retention.** Recently visible canvases stay mounted while the
+  retained rendered-pixel budget allows it. Small multi-page scans can jump back
+  to already-rendered pages without paying another full canvas draw.
+- **Direction-aware prefetch.** The visible window decodes first, then the source
+  prefetches the next likely frames in the current scroll direction.
 - **Bounded memory.** Decoded bitmaps past a small cap are closed (and re-decoded
-  cheaply on scroll-back), and the worker frees UTIF's per-frame buffer after each
-  decode — so a 48-page scan holds flat memory across a full scroll instead of
-  accumulating every page's pixels.
+  cheaply on scroll-back), rendered canvases are evicted by pixel budget, and the
+  worker frees UTIF's per-frame buffer after each decode — so a 48-page scan
+  holds flat memory across a full scroll instead of accumulating every page's
+  pixels.
 
 ## API Reference
 
 The Image Viewer uses frame vocabulary throughout: a single image has one frame,
 and a multi-page TIFF has one frame per TIFF page.
 
-| Prop                     | Type                                  | Description                                                                    |
-| ------------------------ | ------------------------------------- | ------------------------------------------------------------------------------ |
-| `source`                 | `UrlViewerSource \| BlobViewerSource` | Canonical image source. PNG/JPEG/WebP/GIF/AVIF/BMP/ICO or TIFF.                |
-| `scale`                  | `number`                              | Optional fixed scale; omit to fit frame width to the container.                |
-| `controls`               | `boolean`                             | Show the zoom/rotate/download controls. Defaults to `true`.                    |
-| `renderFrameOverlay`     | `(props) => ReactNode`                | Per-frame overlay; receives `{ frameNumber, width, height, scale, rotation }`. |
-| `onVisibleFrameChange`   | `(frame: number) => void`             | Fires with the frame nearest the top of the viewport on scroll.                |
-| `onScrollProgressChange` | `(progress: number) => void`          | Fires with scroll progress in `[0, 1]`.                                        |
-| `header`                 | `ReactNode`                           | Full-width strip below the controls (e.g. a legend).                           |
-| `aside`                  | `ReactNode`                           | Left rail alongside the scrolling frames (e.g. a page ribbon).                 |
-| `bare`                   | `boolean`                             | Drop the outer border/background so the viewer fills its container.            |
-| `className`              | `string`                              | Optional class on the viewer root element.                                     |
+| Prop                     | Type                                  | Description                                                                                |
+| ------------------------ | ------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `source`                 | `UrlViewerSource \| BlobViewerSource` | Canonical image source. PNG/JPEG/WebP/GIF/AVIF/BMP/ICO or TIFF.                            |
+| `scale`                  | `number`                              | Optional fixed scale; omit to fit frame width to the container.                            |
+| `controls`               | `boolean`                             | Show the zoom/rotate/download controls. Defaults to `true`.                                |
+| `renderFrameOverlay`     | `(props) => ReactNode`                | Per-frame overlay; receives `{ frameNumber, width, height, scale, rotation }`.             |
+| `onFrameRenderTiming`    | `(timing) => void`                    | Optional profiling callback for frame draw duration, cache status, DPR, and render status. |
+| `onVisibleFrameChange`   | `(frame: number) => void`             | Fires with the frame nearest the top of the viewport on scroll.                            |
+| `onScrollProgressChange` | `(progress: number) => void`          | Fires with scroll progress in `[0, 1]`.                                                    |
+| `header`                 | `ReactNode`                           | Full-width strip below the controls (e.g. a legend).                                       |
+| `aside`                  | `ReactNode`                           | Left rail alongside the scrolling frames (e.g. a page ribbon).                             |
+| `bare`                   | `boolean`                             | Drop the outer border/background so the viewer fills its container.                        |
+| `className`              | `string`                              | Optional class on the viewer root element.                                                 |
 
 ## Source
 

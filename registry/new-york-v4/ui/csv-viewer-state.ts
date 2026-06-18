@@ -1,7 +1,6 @@
 import * as React from "react"
 
 import {
-  padRowsToColumnCount,
   parseCsv,
   streamCsv,
   type CsvDialect,
@@ -19,6 +18,12 @@ import {
   type CsvResourceInput,
 } from "./csv-viewer-resource"
 import {
+  createCsvRowStoreFromRows,
+  createMutableCsvRowStore,
+  emptyCsvRowStore,
+  type CsvRowStore,
+} from "./csv-row-store"
+import {
   CsvWorkerUnavailableError,
   parseCsvInWorker,
   toCsvFormatError,
@@ -26,18 +31,40 @@ import {
 import type { GridCellCoordinate } from "./fixed-grid-selection"
 
 const CSV_STREAM_BATCH_SIZE = 5000
+const SYNC_TEXT_PARSE_MAX_BYTES = 256 * 1024
 
 export type CsvCellAddress = GridCellCoordinate
 
 export type CsvResourceState =
-  | { status: "idle"; columns: string[]; sourceRows: string[][] }
-  | { status: "loading"; columns: string[]; sourceRows: string[][] }
-  | { status: "ready"; columns: string[]; sourceRows: string[][] }
-  | { status: "empty"; columns: string[]; sourceRows: string[][] }
+  | {
+      status: "idle"
+      columns: string[]
+      sourceRows: string[][]
+      rowStore: CsvRowStore
+    }
+  | {
+      status: "loading"
+      columns: string[]
+      sourceRows: string[][]
+      rowStore: CsvRowStore
+    }
+  | {
+      status: "ready"
+      columns: string[]
+      sourceRows: string[][]
+      rowStore: CsvRowStore
+    }
+  | {
+      status: "empty"
+      columns: string[]
+      sourceRows: string[][]
+      rowStore: CsvRowStore
+    }
   | {
       status: "error"
       columns: string[]
       sourceRows: string[][]
+      rowStore: CsvRowStore
       error: unknown
     }
 
@@ -45,9 +72,10 @@ export function readyCsvState(
   columns: string[],
   sourceRows: string[][]
 ): CsvResourceState {
+  const rowStore = createCsvRowStoreFromRows(sourceRows)
   return sourceRows.length === 0
-    ? { status: "empty", columns, sourceRows }
-    : { status: "ready", columns, sourceRows }
+    ? { status: "empty", columns, sourceRows, rowStore }
+    : { status: "ready", columns, sourceRows, rowStore }
 }
 
 export function useCsvResourceState({
@@ -66,9 +94,13 @@ export function useCsvResourceState({
     [delimiter, hasHeader]
   )
   const tableSource = source?.kind === "table" ? source : null
+  const textSource = source?.kind === "text" ? source : null
   const csvResource = React.useMemo<CsvResource>(() => {
     if (tableSource) {
       return resolveCsvResource({ source: tableSource })
+    }
+    if (textSource) {
+      return { kind: "text", text: textSource.text }
     }
     if (!content) {
       return { kind: "empty" }
@@ -77,17 +109,23 @@ export function useCsvResourceState({
       return { kind: "text", text: content.payload.text }
     }
     return { kind: "resource", content }
-  }, [tableSource, content])
+  }, [tableSource, textSource, content])
   const syncState = React.useMemo<CsvResourceState | null>(() => {
     if (csvResource.kind === "table") {
       return readyCsvState(csvResource.table.columns, csvResource.table.rows)
     }
     if (csvResource.kind === "text") {
+      if (csvResource.text.length > SYNC_TEXT_PARSE_MAX_BYTES) return null
       const table = parseCsv(csvResource.text, csvDialect)
       return readyCsvState(table.columns, table.rows)
     }
     if (csvResource.kind === "empty") {
-      return { status: "idle", columns: [], sourceRows: [] }
+      return {
+        status: "idle",
+        columns: [],
+        sourceRows: [],
+        rowStore: emptyCsvRowStore(),
+      }
     }
     return null
   }, [csvResource, csvDialect])
@@ -96,41 +134,60 @@ export function useCsvResourceState({
     status: "idle",
     columns: [],
     sourceRows: [],
+    rowStore: emptyCsvRowStore(),
   })
 
   React.useEffect(() => {
-    if (csvResource.kind !== "resource") return
+    if (syncState) return
+    if (csvResource.kind !== "resource" && csvResource.kind !== "text") return
 
     const controller = new AbortController()
-    const sourceRows: string[][] = []
+    const rowStore = createMutableCsvRowStore()
     let columns: string[] = []
     let cancelled = false
-    setState({ status: "loading", columns: [], sourceRows: [] })
+    setState({
+      status: "loading",
+      columns: [],
+      sourceRows: [],
+      rowStore: rowStore.snapshot(),
+    })
 
     const onColumns = (next: string[]) => {
       if (cancelled) return
       columns = next
-      padRowsToColumnCount(sourceRows, columns.length)
-      setState({ status: "loading", columns, sourceRows: sourceRows.slice() })
+      rowStore.padRowsToColumnCount(columns.length)
+      setState({
+        status: "loading",
+        columns,
+        sourceRows: [],
+        rowStore: rowStore.snapshot(),
+      })
     }
 
     const onSourceRows = (sourceRowBatch: string[][]) => {
       if (cancelled) return
-      sourceRows.push(...sourceRowBatch)
-      setState({ status: "loading", columns, sourceRows: sourceRows.slice() })
+      rowStore.appendRows(sourceRowBatch)
+      setState({
+        status: "loading",
+        columns,
+        sourceRows: [],
+        rowStore: rowStore.snapshot(),
+      })
     }
 
     const onDone = () => {
       if (cancelled) return
-      setState(readyCsvState(columns, sourceRows.slice()))
+      setState(readyCsvState(columns, rowStore.materializeRows()))
     }
 
     const onError = (error: unknown) => {
       if (cancelled || controller.signal.aborted) return
+      const sourceRows = rowStore.materializeRows()
       setState({
         status: "error",
         columns,
-        sourceRows: sourceRows.slice(),
+        sourceRows,
+        rowStore: createCsvRowStoreFromRows(sourceRows),
         error: toCsvPreviewError(error),
       })
     }
@@ -149,8 +206,31 @@ export function useCsvResourceState({
     }
 
     const runResource = async () => {
-      if (csvResource.kind !== "resource") return
       try {
+        if (csvResource.kind === "text") {
+          const textBlob = new Blob([csvResource.text], { type: "text/csv" })
+          if (typeof Worker !== "undefined") {
+            void parseCsvInWorker({
+              source: textBlob,
+              dialect: csvDialect,
+              batchSize: CSV_STREAM_BATCH_SIZE,
+              onColumns,
+              onSourceRows,
+              signal: controller.signal,
+            }).then(onDone, (error) => {
+              if (error instanceof CsvWorkerUnavailableError) {
+                runMainThread(csvResource.text)
+              } else {
+                onError(error)
+              }
+            })
+            return
+          }
+
+          runMainThread(csvResource.text)
+          return
+        }
+
         if (csvResource.content.payload.kind === "blob") {
           const { blob } = csvResource.content.payload
           if (typeof Worker !== "undefined") {
@@ -175,6 +255,41 @@ export function useCsvResourceState({
           return
         }
 
+        if (
+          csvResource.content.payload.kind === "url" &&
+          typeof Worker !== "undefined"
+        ) {
+          void csvResource.content
+            .readBlob({ signal: controller.signal })
+            .then((blob) =>
+              parseCsvInWorker({
+                source: blob,
+                dialect: csvDialect,
+                batchSize: CSV_STREAM_BATCH_SIZE,
+                onColumns,
+                onSourceRows,
+                signal: controller.signal,
+              })
+            )
+            .then(onDone, (error) => {
+              if (error instanceof CsvWorkerUnavailableError) {
+                void runResourceStream()
+              } else {
+                onError(error)
+              }
+            })
+          return
+        }
+
+        await runResourceStream()
+      } catch (error) {
+        onError(error)
+      }
+    }
+
+    const runResourceStream = async () => {
+      if (csvResource.kind !== "resource") return
+      try {
         runMainThread(
           await csvResource.content.readStream({
             signal: controller.signal,
@@ -191,7 +306,7 @@ export function useCsvResourceState({
       cancelled = true
       controller.abort()
     }
-  }, [csvResource, csvDialect, retryVersion])
+  }, [csvResource, csvDialect, retryVersion, syncState])
 
   return syncState ?? state
 }

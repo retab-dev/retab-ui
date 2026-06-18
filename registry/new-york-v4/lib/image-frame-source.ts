@@ -82,6 +82,8 @@ export interface FrameSource {
   kind: "native-image" | "tiff"
   frames: readonly FrameDescriptor[]
   acquire(frameIndex: number): Promise<ImageBitmap>
+  hasDecodedFrame(frameIndex: number): boolean
+  prefetch(frameIndexes: readonly number[]): void
   release(frameIndex: number): void
   dispose(reason?: Error): void
 }
@@ -277,6 +279,22 @@ export function createFrameSource({
       inflight.pinCount += 1
 
       return inflight.promise
+    },
+    hasDecodedFrame(frameIndex) {
+      if (disposed) return false
+      if (!isValidFrameIndex(frameIndex, frames.length)) return false
+      return bitmapCache.has(frameIndex)
+    },
+    prefetch(frameIndexes) {
+      if (disposed) return
+      for (const frameIndex of frameIndexes) {
+        if (!isValidFrameIndex(frameIndex, frames.length)) continue
+        if (bitmapCache.has(frameIndex)) continue
+        if (inflightDecodes.has(frameIndex)) continue
+        void this.acquire(frameIndex)
+          .catch(() => undefined)
+          .finally(() => this.release(frameIndex))
+      }
     },
     release(frameIndex) {
       if (!isValidFrameIndex(frameIndex, frames.length)) return

@@ -1,9 +1,21 @@
 import type { DocxTarget } from "./docx-viewer-types"
 
 export interface DocxRenderIndex {
+  root: HTMLElement
+  text: DocxTextIndex | null
+  cells: Map<string, HTMLElement> | null
+}
+
+interface DocxTextIndex {
   text: string
-  positions: Array<{ node: Text; offset: number }>
-  cells: Map<string, HTMLElement>
+  spans: DocxTextSpan[]
+}
+
+interface DocxTextSpan {
+  start: number
+  end: number
+  node: Text
+  sourceStartOffset: number
 }
 
 const INLINE_TAGS = new Set([
@@ -41,11 +53,10 @@ const INLINE_TAGS = new Set([
 ])
 
 export function buildDocxRenderIndex(root: HTMLElement): DocxRenderIndex {
-  const textIndex = buildDocxTextIndex(root)
   return {
-    text: textIndex.text,
-    positions: textIndex.positions,
-    cells: buildDocxCellIndex(root),
+    root,
+    text: null,
+    cells: null,
   }
 }
 
@@ -54,7 +65,8 @@ export function resolveDocxTarget(
   target: DocxTarget
 ): Range | null {
   if (target.kind === "cell") {
-    const cell = index.cells.get(cellKey(target.table, target.row, target.column))
+    const cells = index.cells ?? (index.cells = buildDocxCellIndex(index.root))
+    const cell = cells.get(cellKey(target.table, target.row, target.column))
     if (!cell) return null
     const range = document.createRange()
     range.selectNodeContents(cell)
@@ -63,10 +75,11 @@ export function resolveDocxTarget(
 
   const needle = normalizeTextTarget(target.text)
   if (!needle) return null
-  const idx = index.text.indexOf(needle)
+  const textIndex = index.text ?? (index.text = buildDocxTextIndex(index.root))
+  const idx = textIndex.text.indexOf(needle)
   if (idx === -1) return null
-  const start = index.positions[idx]
-  const end = index.positions[idx + needle.length - 1]
+  const start = findTextPoint(textIndex, idx)
+  const end = findTextPoint(textIndex, idx + needle.length - 1)
   if (!start || !end) return null
   const range = document.createRange()
   range.setStart(start.node, start.offset)
@@ -108,10 +121,23 @@ function buildDocxTextIndex(root: HTMLElement) {
     NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT
   )
   let normalized = ""
-  const positions: { node: Text; offset: number }[] = []
+  const spans: DocxTextSpan[] = []
   let prevSpace = false
   let prevBlock: HTMLElement | null = null
   let pendingBreak = false
+
+  const append = (text: string, node: Text, sourceStartOffset: number) => {
+    if (!text) return
+    const start = normalized.length
+    normalized += text
+    spans.push({
+      start,
+      end: start + text.length,
+      node,
+      sourceStartOffset,
+    })
+  }
+
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
     if (n.nodeType === Node.ELEMENT_NODE) {
       const tag = (n as HTMLElement).tagName
@@ -129,8 +155,7 @@ function buildDocxTextIndex(root: HTMLElement) {
     pendingBreak = false
     if (broke && !prevSpace && normalized) {
       prevSpace = true
-      normalized += " "
-      positions.push({ node: n as Text, offset: 0 })
+      append(" ", n as Text, 0)
     }
     prevBlock = block
     const data = (n as Text).data
@@ -138,15 +163,38 @@ function buildDocxTextIndex(root: HTMLElement) {
       if (/\s/.test(data[i])) {
         if (prevSpace) continue
         prevSpace = true
-        normalized += " "
+        append(" ", n as Text, i)
       } else {
+        const start = i
+        i += 1
+        while (i < data.length && !/\s/.test(data[i])) i += 1
+        append(data.slice(start, i), n as Text, start)
+        i -= 1
         prevSpace = false
-        normalized += data[i]
       }
-      positions.push({ node: n as Text, offset: i })
     }
   }
-  return { text: normalized, positions }
+  return { text: normalized, spans }
+}
+
+function findTextPoint(index: DocxTextIndex, offset: number) {
+  let low = 0
+  let high = index.spans.length - 1
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2)
+    const span = index.spans[mid]!
+    if (offset < span.start) {
+      high = mid - 1
+    } else if (offset >= span.end) {
+      low = mid + 1
+    } else {
+      return {
+        node: span.node,
+        offset: span.sourceStartOffset + offset - span.start,
+      }
+    }
+  }
+  return null
 }
 
 function cellKey(table: number, row: number, column: number) {

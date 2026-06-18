@@ -41,6 +41,7 @@ import {
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
   MAX_TEXT_RESOURCE_CACHE_ENTRIES,
+  readTextDocument,
   readTextResource,
   resolvedTextViewerBounds,
   splitTextLines,
@@ -548,6 +549,59 @@ describe("code-viewer-projector", () => {
     expect(textContent).not.toHaveBeenCalled()
   })
 
+  it("does no row work when scrolling inside the same virtual window", () => {
+    const { rowHost, viewport } = createProjectionElements()
+    const textLines = Array.from(
+      { length: 100 },
+      (_, index) => `line ${index + 1}`
+    )
+    const projector = project({ rowHost, textLines, viewport })
+    const insertBefore = vi.spyOn(Node.prototype, "insertBefore")
+    const removeChild = vi.spyOn(Node.prototype, "removeChild")
+    const textContent = vi.spyOn(Node.prototype, "textContent", "set")
+
+    viewport.scrollTop = 1
+    projectAgain({ projector, rowHost, textLines, viewport })
+
+    expect(insertBefore).not.toHaveBeenCalled()
+    expect(removeChild).not.toHaveBeenCalled()
+    expect(textContent).not.toHaveBeenCalled()
+  })
+
+  it("still patches rows when scrolling to a different virtual window", () => {
+    const { rowHost, viewport } = createProjectionElements()
+    const textLines = Array.from(
+      { length: 100 },
+      (_, index) => `line ${index + 1}`
+    )
+    const projector = project({ rowHost, textLines, viewport })
+    const insertBefore = vi.spyOn(Node.prototype, "insertBefore")
+
+    viewport.scrollTop = 80 * 20
+    projectAgain({ projector, rowHost, textLines, viewport })
+
+    expect(insertBefore).toHaveBeenCalled()
+    expect(rowHost.querySelector('[data-line-number="80"]')).toBeTruthy()
+  })
+
+  it("reuses detached row nodes when jumping to a new virtual window", () => {
+    const { rowHost, viewport } = createProjectionElements()
+    const textLines = Array.from(
+      { length: 100 },
+      (_, index) => `line ${index + 1}`
+    )
+    const projector = project({ rowHost, textLines, viewport })
+    const createElement = vi.spyOn(document, "createElement")
+
+    viewport.scrollTop = 80 * 20
+    projectAgain({ projector, rowHost, textLines, viewport })
+
+    expect(createElement).not.toHaveBeenCalled()
+    expect(rowHost.querySelector('[data-line-number="1"]')).toBeNull()
+    expect(rowHost.querySelector('[data-line-number="80"]')).toBeTruthy()
+    expect(rowHost.textContent).toContain("line 80")
+  })
+
   it("does not rebuild token content for highlight or layout changes", () => {
     const { rowHost, viewport } = createProjectionElements()
     const textLines = ['"value"']
@@ -645,6 +699,27 @@ describe("text-viewer-resource", () => {
       "four",
       "",
     ])
+  })
+
+  it("caches prepared inline text documents by content identity and bounds", () => {
+    const content = createViewerResource(textSource("one\ntwo")).content
+    const bounds = resolvedTextViewerBounds()
+    const first = readTextDocument({ content, retryVersion: 0, bounds })
+    const second = readTextDocument({ content, retryVersion: 0, bounds })
+
+    expect(second).toBe(first)
+    expect(first.text).toBe("one\ntwo")
+    expect(first.lines).toEqual(["one", "two"])
+    expect(first.lineCount).toBe(2)
+  })
+
+  it("keeps large inline text resource keys bounded", () => {
+    const text = "x".repeat(50_000)
+    const resource = createViewerResource(textSource(text, "large.txt"))
+
+    expect(resource.content.key.length).toBeLessThan(128)
+    expect(resource.content.key).not.toContain(text)
+    expect(resource.keys.resource).not.toContain(text)
   })
 
   it("models text bounds failures as format errors", () => {
@@ -1770,6 +1845,25 @@ describe("CodeViewer", () => {
     expect(line?.querySelector(".cv-token-string")?.textContent).toBe(
       '"viewer"'
     )
+  })
+
+  it("defers syntax tokenization for large highlighted files", async () => {
+    const text = Array.from(
+      { length: 600 },
+      (_, index) => `{"row":${index + 1},"enabled":true}`
+    ).join("\n")
+    const { container } = render(
+      <CodeViewer source={textSource(text, "large.json")} controls={false} />
+    )
+
+    expect(screen.getByText('{"row":1,"enabled":true}')).toBeTruthy()
+    expect(container.querySelector(".cv-token-property")).toBeNull()
+
+    await waitFor(() => {
+      expect(container.querySelector(".cv-token-property")?.textContent).toBe(
+        '"row"'
+      )
+    })
   })
 
   it("installs syntax styles once for every code viewer instance", () => {

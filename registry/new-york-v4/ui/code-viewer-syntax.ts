@@ -32,7 +32,13 @@ export type CodeTokenLeaf = {
 
 export type CodeSyntax = {
   identity: string
+  destroy?: () => void
   getLineTokens(line: string): readonly CodeTokenLeaf[] | null
+}
+
+export type CodeSyntaxOptions = {
+  deferTokens?: boolean
+  onTokensChanged?: () => void
 }
 
 const CODE_LINE_TOKENIZE_MAX = 2000
@@ -138,7 +144,10 @@ export const CODE_VIEWER_SYNTAX_STYLE = `
 .dark .cv-token-variable { color: var(--cv-token-variable, #ffa657); }
 `
 
-export function createCodeSyntax(resource: ViewerResource): CodeSyntax {
+export function createCodeSyntax(
+  resource: ViewerResource,
+  options: CodeSyntaxOptions = {}
+): CodeSyntax {
   const languageId = codeLanguageId(resource)
   const grammar = languageId ? (Prism.languages[languageId] ?? null) : null
   if (!languageId || !grammar) {
@@ -147,10 +156,22 @@ export function createCodeSyntax(resource: ViewerResource): CodeSyntax {
       getLineTokens: () => null,
     }
   }
+  const prismGrammar = grammar
 
   const tokenCache = new Map<string, readonly CodeTokenLeaf[]>()
+  const pendingLines = new Set<string>()
+  let flushHandle = 0
+  let isDestroyed = false
 
   return {
+    destroy: () => {
+      isDestroyed = true
+      pendingLines.clear()
+      if (flushHandle) {
+        window.clearTimeout(flushHandle)
+        flushHandle = 0
+      }
+    },
     identity: languageId,
     getLineTokens: (line) => {
       if (line.length === 0 || line.length > CODE_LINE_TOKENIZE_MAX) return null
@@ -158,10 +179,36 @@ export function createCodeSyntax(resource: ViewerResource): CodeSyntax {
       const cachedTokens = tokenCache.get(line)
       if (cachedTokens) return cachedTokens
 
-      const tokens = flattenCodeTokens(Prism.tokenize(line, grammar))
+      if (options.deferTokens) {
+        scheduleDeferredTokenization(line)
+        return null
+      }
+
+      const tokens = flattenCodeTokens(Prism.tokenize(line, prismGrammar))
       tokenCache.set(line, tokens)
       return tokens
     },
+  }
+
+  function scheduleDeferredTokenization(line: string) {
+    pendingLines.add(line)
+    if (flushHandle || isDestroyed) return
+
+    flushHandle = window.setTimeout(() => {
+      flushHandle = 0
+      if (isDestroyed || pendingLines.size === 0) return
+
+      const lines = Array.from(pendingLines)
+      pendingLines.clear()
+      for (const pendingLine of lines) {
+        if (tokenCache.has(pendingLine)) continue
+        tokenCache.set(
+          pendingLine,
+          flattenCodeTokens(Prism.tokenize(pendingLine, prismGrammar))
+        )
+      }
+      options.onTokensChanged?.()
+    }, 0)
   }
 }
 

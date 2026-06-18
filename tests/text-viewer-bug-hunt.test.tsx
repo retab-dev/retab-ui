@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TextViewer } from "@/components/ui/text-viewer"
 import {
+  clearPreparedTextDocumentCacheForTests,
   createPreparedTextDocument,
   getCodeVisibleLineWindow,
   getInlineVisibleLineWindow,
@@ -54,6 +55,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  clearPreparedTextDocumentCacheForTests()
   vi.restoreAllMocks()
 })
 
@@ -94,9 +96,7 @@ describe("normalizeTextLineRange", () => {
   it("returns null for non-positive or non-finite line counts", () => {
     expect(normalizeTextLineRange({ start: 1, end: 2 }, 0)).toBeNull()
     expect(normalizeTextLineRange({ start: 1, end: 2 }, -5)).toBeNull()
-    expect(
-      normalizeTextLineRange({ start: 1, end: 2 }, Number.NaN)
-    ).toBeNull()
+    expect(normalizeTextLineRange({ start: 1, end: 2 }, Number.NaN)).toBeNull()
   })
 
   it("swaps reversed ranges", () => {
@@ -320,6 +320,34 @@ describe("resolveTextViewerMode", () => {
 // ---------------------------------------------------------------------------
 
 describe("createPreparedTextDocument (plain text)", () => {
+  it("reuses prepared documents for identical mode, text, and style", () => {
+    clearPreparedTextDocumentCacheForTests()
+    const first = createPreparedTextDocument({
+      mode: "text",
+      style: { fontScale: 1 },
+      text: "alpha\nbeta",
+    })
+    const second = createPreparedTextDocument({
+      mode: "text",
+      style: { fontScale: 1 },
+      text: "alpha\nbeta",
+    })
+    const markdown = createPreparedTextDocument({
+      mode: "markdown",
+      style: { fontScale: 1 },
+      text: "alpha\nbeta",
+    })
+    const scaled = createPreparedTextDocument({
+      mode: "text",
+      style: { fontScale: 1.2 },
+      text: "alpha\nbeta",
+    })
+
+    expect(second).toBe(first)
+    expect(markdown).not.toBe(first)
+    expect(scaled).not.toBe(first)
+  })
+
   it("counts source lines including a trailing newline", () => {
     expect(prepareText("a\nb\nc").sourceLineCount).toBe(3)
     expect(prepareText("a\nb\nc\n").sourceLineCount).toBe(4)
@@ -510,9 +538,7 @@ describe("serializeMarkdownTableForClipboard", () => {
   })
 
   it("collapses tabs and newlines inside a cell", () => {
-    const table = findTableBlock(
-      ["| Col |", "| --- |", "| a b |"].join("\n")
-    )
+    const table = findTableBlock(["| Col |", "| --- |", "| a b |"].join("\n"))
     const serialized = serializeMarkdownTableForClipboard(table)
     expect(serialized).not.toMatch(/\t.*\t/)
     expect(serialized.split("\n")).toHaveLength(2)
@@ -1187,9 +1213,7 @@ describe("TextViewer component behavior", () => {
     const { container } = render(
       <TextViewer source={textSource("")} controls={false} />
     )
-    expect(
-      container.querySelector('[data-slot="text-viewer"]')
-    ).toBeTruthy()
+    expect(container.querySelector('[data-slot="text-viewer"]')).toBeTruthy()
   })
 
   it("renders a whitespace-only document without crashing", () => {
@@ -1229,13 +1253,9 @@ describe("TextViewer component behavior", () => {
       />
     )
     await waitFor(() => {
-      expect(
-        container.querySelector('[data-source-line="1"]')
-      ).toBeTruthy()
+      expect(container.querySelector('[data-source-line="1"]')).toBeTruthy()
     })
-    expect(
-      container.querySelector(".bg-primary\\/12")
-    ).toBeNull()
+    expect(container.querySelector(".bg-primary\\/12")).toBeNull()
   })
 
   it("clamps a partially out-of-range highlight to the document", async () => {
@@ -1280,17 +1300,16 @@ describe("TextViewer component behavior", () => {
     })
   })
 
-  it("treats h3-h6 markdown headings consistently (documents current semantics)", async () => {
+  it("routes markdown h3-h6 headings through semantic Markdown output", async () => {
     render(
       <TextViewer
         source={markdownSource("### Small Heading")}
         controls={false}
       />
     )
-    const text = await screen.findByText("Small Heading")
-    const block = text.closest('[data-slot="text-line"]')
-    // h3 collapses to body variant: no heading role is exposed.
-    expect(block?.getAttribute("role")).not.toBe("heading")
+    expect(
+      await screen.findByRole("heading", { name: "Small Heading", level: 3 })
+    ).toBeTruthy()
   })
 
   it("renders a tab character line without throwing and addresses it", async () => {
@@ -1332,13 +1351,14 @@ describe("TextViewer component behavior", () => {
       />
     )
     const target = await waitFor(() => {
-      const block = Array.from(
-        container.querySelectorAll<HTMLElement>('[data-slot="text-line"]')
-      ).find((el) => el.textContent?.includes("Para three."))
-      expect(block).toBeTruthy()
-      return block as HTMLElement
+      const chunk = container.querySelector<HTMLElement>(
+        "[data-markdown-highlighted]"
+      )
+      expect(chunk).toBeTruthy()
+      return chunk as HTMLElement
     })
-    expect(target.getAttribute("data-source-line")).toBe("3")
-    expect(target.className).toContain("bg-primary/12")
+    expect(target.textContent).toContain("Para three.")
+    expect(target.getAttribute("data-source-highlight-start")).toBe("3")
+    expect(target.getAttribute("data-source-highlight-end")).toBe("3")
   })
 })

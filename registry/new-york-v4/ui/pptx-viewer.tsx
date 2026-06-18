@@ -11,6 +11,7 @@ import {
 import { getPptxFitScale, getPptxResetKey } from "./pptx-viewer-core"
 import { PptxViewerFallback } from "./pptx-viewer-fallback"
 import { useRetainedPptxSource } from "./pptx-viewer-hooks"
+import { preloadPptxRenderer } from "./pptx-viewer-renderer"
 import { createPptxScrollActivity } from "./pptx-viewer-scroll"
 import {
   PPTX_SLIDE_GAP,
@@ -26,8 +27,8 @@ import {
 } from "./pptx-viewer-visible-slide"
 import { usePptxZoom } from "./pptx-viewer-zoom"
 import { useIsClient } from "./use-is-client"
-import { ViewerErrorBoundary } from "./viewer-error"
 import { ViewerControls } from "./viewer-controls"
+import { ViewerErrorBoundary } from "./viewer-error"
 
 export type { PptxDocumentSource, PptxViewerProps } from "./pptx-viewer-types"
 export type {
@@ -35,6 +36,10 @@ export type {
   PptxSlideRenderTiming,
   PptxSlideOverlayProps,
 } from "./pptx-viewer-core"
+
+export function preloadPptxViewer() {
+  preloadPptxRenderer()
+}
 
 export type PptxResourceContentProps = Omit<PptxViewerProps, "source"> & {
   resource: ViewerResource

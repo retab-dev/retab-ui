@@ -10,6 +10,7 @@ const chromePath =
   process.env.CHROME_PATH ??
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 const shouldAssert = process.argv.includes("--assert")
+const shouldWarmup = process.env.CSV_SCROLLBENCH_WARMUP !== "0"
 const frameP95BudgetMs = Number(
   process.env.CSV_SCROLLBENCH_P95_BUDGET_MS ?? 16.7
 )
@@ -316,8 +317,11 @@ async function readPageProfile(send) {
   )
 }
 
-async function runScenario(page, send, scenarioId) {
+async function runScenario(page, send, scenarioId, options = {}) {
   await settleScrollerAtTop(send)
+  if (options.setupExpression) {
+    await evaluate(send, options.setupExpression)
+  }
   await resetPageProfilers(send)
   const beforeMetrics = await performanceMetrics(send)
   page.events.length = 0
@@ -346,12 +350,20 @@ async function runScenario(page, send, scenarioId) {
   const pageProfile = await readPageProfile(send)
 
   return {
-    id: scenarioId,
+    id: options.id ?? scenarioId,
+    baseScenarioId: scenarioId,
     scrollbench,
     metricsDelta: metricDelta(beforeMetrics, afterMetrics),
     trace: summarizeTrace(traceEvents),
     ...pageProfile,
   }
+}
+
+async function warmUpScrollbench(send) {
+  await settleScrollerAtTop(send)
+  await evaluate(send, `window.__scrollbench.runScenario("small")`)
+  await settleScrollerAtTop(send)
+  await resetPageProfilers(send)
 }
 
 function assertProfile(report) {
@@ -510,9 +522,31 @@ try {
     })()`
   )
 
+  if (shouldWarmup) {
+    console.error("Warming up CSV ScrollBench")
+    await warmUpScrollbench(send)
+  }
+
   const scenarios = [
     await runScenario(page, send, "small"),
     await runScenario(page, send, "large"),
+    await runScenario(page, send, "large", {
+      id: "horizontal-large",
+      setupExpression: `new Promise((resolve) => {
+        const scroller = window.__scrollbench?.getScroller?.();
+        if (!scroller) {
+          resolve(false);
+          return;
+        }
+        scroller.scrollLeft = 12 * 180;
+        scroller.dispatchEvent(new Event("scroll", { bubbles: true }));
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setTimeout(() => resolve(true), 100);
+          });
+        });
+      })`,
+    }),
   ]
 
   const report = {

@@ -30,6 +30,18 @@ export function compareCsvCells(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0
 }
 
+export type CsvSortKey =
+  | {
+      kind: "number"
+      value: number
+      rowIndex: number
+    }
+  | {
+      kind: "text"
+      value: string
+      rowIndex: number
+    }
+
 /**
  * Returns the display order (source-row indices) for a column sort. Ascending
  * order follows `compareCsvCells`; descending negates it. Rows that compare
@@ -42,14 +54,48 @@ export function sortedRowOrder(
   columnIndex: number,
   descending: boolean
 ): number[] {
-  const order = sourceRows.map((_, rowIndex) => rowIndex)
+  return sortedRowOrderFromKeys(
+    sourceRows.map((row, rowIndex) =>
+      csvSortKey(row[columnIndex] ?? "", rowIndex)
+    ),
+    descending
+  )
+}
+
+export function csvSortKey(value: string, rowIndex: number): CsvSortKey {
+  if (isNumericCell(value)) {
+    return {
+      kind: "number",
+      value: Number(value),
+      rowIndex,
+    }
+  }
+  return {
+    kind: "text",
+    value,
+    rowIndex,
+  }
+}
+
+export function sortedRowOrderFromKeys(
+  keys: CsvSortKey[],
+  descending: boolean
+): number[] {
+  const orderedKeys = keys.slice()
   const direction = descending ? -1 : 1
-  order.sort((a, b) => {
-    const cmp = compareCsvCells(
-      sourceRows[a][columnIndex] ?? "",
-      sourceRows[b][columnIndex] ?? ""
-    )
-    return cmp !== 0 ? direction * cmp : a - b
+  orderedKeys.sort((a, b) => {
+    const cmp = compareCsvSortKeys(a, b)
+    return cmp !== 0 ? direction * cmp : a.rowIndex - b.rowIndex
   })
-  return order
+  return orderedKeys.map((key) => key.rowIndex)
+}
+
+function compareCsvSortKeys(a: CsvSortKey, b: CsvSortKey): number {
+  if (a.kind === "number" && b.kind === "number") {
+    const diff = a.value - b.value
+    return diff < 0 ? -1 : diff > 0 ? 1 : 0
+  }
+  if (a.kind === "number") return -1
+  if (b.kind === "number") return 1
+  return a.value < b.value ? -1 : a.value > b.value ? 1 : 0
 }

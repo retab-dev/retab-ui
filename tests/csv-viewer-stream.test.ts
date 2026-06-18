@@ -431,18 +431,23 @@ describe("resolveCsvDialect delimiter validity", () => {
 
 describe("readyCsvState", () => {
   it("is empty when there are no rows", () => {
-    expect(readyCsvState(["a", "b"], [])).toEqual({
+    const state = readyCsvState(["a", "b"], [])
+    expect(state).toMatchObject({
       status: "empty",
       columns: ["a", "b"],
       sourceRows: [],
     })
+    expect(state.rowStore.rowCount).toBe(0)
   })
 
   it("is ready when there is at least one row", () => {
-    expect(readyCsvState(["a"], [["1"]])).toEqual({
+    const state = readyCsvState(["a"], [["1"]])
+    expect(state).toMatchObject({
       status: "ready",
       columns: ["a"],
       sourceRows: [["1"]],
     })
+    expect(state.rowStore.rowCount).toBe(1)
+    expect(state.rowStore.getRow(0)).toEqual(["1"])
   })
 })

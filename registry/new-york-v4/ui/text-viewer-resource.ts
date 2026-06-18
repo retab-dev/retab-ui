@@ -66,10 +66,16 @@ export function toTextFormatError(
   })
 }
 
+export interface PreparedTextDocument {
+  text: string
+  lines: readonly string[]
+  lineCount: number
+}
+
 interface TextResource {
-  promise: Promise<string>
+  promise: Promise<PreparedTextDocument>
   status: "pending" | "resolved" | "rejected"
-  value?: string
+  value?: PreparedTextDocument
   error?: unknown
 }
 
@@ -109,12 +115,7 @@ export function assertTextWithinBounds(
   text: string,
   bounds: Required<TextViewerBounds>
 ) {
-  if (new TextEncoder().encode(text).byteLength > bounds.maxBytes) {
-    throw new TextViewerTooLargeError("bytes")
-  }
-  if (lineCountOf(text) > bounds.maxLines) {
-    throw new TextViewerTooLargeError("lines")
-  }
+  prepareTextDocument(text, bounds)
 }
 
 // Split into stable source lines. The prose viewer may wrap each source line
@@ -133,23 +134,86 @@ export function readTextResource({
   retryVersion: number
   bounds: Required<TextViewerBounds>
 }) {
+  return readTextDocument({ content, retryVersion, bounds }).text
+}
+
+export function readTextDocument({
+  content,
+  retryVersion,
+  bounds,
+}: {
+  content: TextViewerContent
+  retryVersion: number
+  bounds: Required<TextViewerBounds>
+}): PreparedTextDocument {
+  const resourceKey = textViewerResourceKey({ content, retryVersion, bounds })
   const inlineText = inlineTextResource(content)
   if (inlineText != null) {
-    assertTextWithinBounds(inlineText, bounds)
-    return inlineText
+    return getInlineTextDocument({
+      bounds,
+      resourceKey,
+      text: inlineText,
+    })
   }
 
-  const resourceKey = textViewerResourceKey({ content, retryVersion, bounds })
   const textResource = getTextResource({ content, resourceKey, bounds })
 
-  if (textResource.status === "resolved") return textResource.value ?? ""
+  if (textResource.status === "resolved") {
+    return textResource.value ?? emptyPreparedTextDocument(bounds)
+  }
   if (textResource.status === "rejected") throw textResource.error
 
   throw textResource.promise
 }
 
+export function prepareTextDocument(
+  text: string,
+  bounds: Required<TextViewerBounds>,
+  options: { isByteLengthChecked?: boolean } = {}
+): PreparedTextDocument {
+  if (
+    !options.isByteLengthChecked &&
+    new TextEncoder().encode(text).byteLength > bounds.maxBytes
+  ) {
+    throw new TextViewerTooLargeError("bytes")
+  }
+
+  const lines = splitTextLines(text)
+  if (lines.length > bounds.maxLines) {
+    throw new TextViewerTooLargeError("lines")
+  }
+
+  return {
+    lineCount: lines.length,
+    lines,
+    text,
+  }
+}
+
 function inlineTextResource(content: ViewerContentPayload) {
   return content.payload.kind === "text" ? content.payload.text : null
+}
+
+function getInlineTextDocument({
+  bounds,
+  resourceKey,
+  text,
+}: {
+  bounds: Required<TextViewerBounds>
+  resourceKey: string
+  text: string
+}) {
+  const cached = textResourceCache.get(resourceKey)
+  if (cached?.status === "resolved" && cached.value) return cached.value
+
+  const document = prepareTextDocument(text, bounds)
+  textResourceCache.set(resourceKey, {
+    promise: Promise.resolve(document),
+    status: "resolved",
+    value: document,
+  })
+  trimTextResourceCache()
+  return document
 }
 
 function getTextResource({
@@ -165,7 +229,9 @@ function getTextResource({
   if (!textResource) {
     const nextResource: TextResource = {
       status: "pending",
-      promise: readBoundedTextResource(content, bounds),
+      promise: readBoundedTextResource(content, bounds).then((text) =>
+        prepareTextDocument(text, bounds, { isByteLengthChecked: true })
+      ),
     }
     nextResource.promise.then(
       (value) => {
@@ -196,8 +262,10 @@ async function readBoundedTextResource(
   }
 }
 
-function lineCountOf(text: string) {
-  return splitTextLines(text).length
+function emptyPreparedTextDocument(
+  bounds: Required<TextViewerBounds>
+): PreparedTextDocument {
+  return prepareTextDocument("", bounds)
 }
 
 function resolveTextViewerBound(value: number, boundName: TextViewerBoundName) {

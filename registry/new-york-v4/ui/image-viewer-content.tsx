@@ -13,7 +13,7 @@ import {
   type ViewerContentIdentity,
   type ViewerResource,
 } from "@/lib/viewer-resource"
-import { ImageFrame } from "@/components/ui/image-viewer-frame"
+import { ImageFrameScroller } from "@/components/ui/image-viewer-frame"
 import {
   MAX_VIEWER_SCALE,
   MIN_VIEWER_SCALE,
@@ -26,18 +26,13 @@ import {
   type ImageViewerHandle,
   type ImageViewerProps,
 } from "@/components/ui/image-viewer-types"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   useViewerControlsRegistration,
   ViewerControls,
   type ViewerControlsState,
 } from "@/components/ui/viewer-controls"
 
-import {
-  createImageFrameLayout,
-  getImageFrameLayout,
-  useImageFrameVirtualization,
-} from "./image-viewer-virtualization"
+import { createImageFrameLayout } from "./image-viewer-virtualization"
 
 export function ImageViewerContent({
   resource,
@@ -48,6 +43,7 @@ export function ImageViewerContent({
   onScaleChange,
   controls = true,
   renderFrameOverlay,
+  onFrameRenderTiming,
   onVisibleFrameChange,
   onScrollProgressChange,
   bare = false,
@@ -84,7 +80,6 @@ export function ImageViewerContent({
   const {
     currentFrameNumber,
     handleScroll,
-    scrollViewportElement,
     scrollViewportRef,
     setScrollViewportRef,
   } = useVisibleFrame(
@@ -93,12 +88,6 @@ export function ImageViewerContent({
     onScrollProgressChange,
     onVisibleFrameChange
   )
-  const { visibleFrameNumbers, measureVisibleFrames } =
-    useImageFrameVirtualization({
-      layout: frameLayout,
-      resetKey: frameSource,
-      viewportElement: scrollViewportElement,
-    })
   useImageViewerHandle(forwardedRef, scrollViewportRef, frameLayout)
 
   const frameCount = frameSource.frames.length
@@ -131,10 +120,6 @@ export function ImageViewerContent({
     zoomIn,
     zoomOut,
   })
-  const handleViewportScroll = React.useCallback(() => {
-    handleScroll()
-    measureVisibleFrames()
-  }, [handleScroll, measureVisibleFrames])
 
   return (
     <div
@@ -164,61 +149,17 @@ export function ImageViewerContent({
       <div className="flex min-h-0 flex-1">
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
           <div className="relative flex min-h-0 flex-1 flex-col">
-            <ScrollArea
-              className="min-h-0 flex-1"
+            <ImageFrameScroller
+              source={frameSource}
+              layout={frameLayout}
+              scale={scale}
+              rotation={rotation}
+              frameListRef={frameListRef}
               viewportRef={setScrollViewportRef}
-              viewportProps={{ onScroll: handleViewportScroll }}
-            >
-              <div
-                ref={frameListRef}
-                className="relative min-h-full w-full"
-                style={{ height: frameLayout.totalHeight }}
-              >
-                <div
-                  className="relative mx-auto h-full w-full"
-                  style={{
-                    minWidth:
-                      frameLayout.maxFrameWidth + frameLayout.padding * 2,
-                  }}
-                >
-                  {visibleFrameNumbers.map((frameNumber) => {
-                    const frame = getImageFrameLayout(frameLayout, frameNumber)
-                    if (!frame) return null
-
-                    return (
-                      <div
-                        key={frameNumber}
-                        className="absolute left-1/2 -translate-x-1/2"
-                        style={{
-                          top: frame.offsetTop,
-                          width: frame.width,
-                          height: frame.height,
-                        }}
-                      >
-                        <ImageFrame
-                          source={frameSource}
-                          frameIndex={frame.frameIndex}
-                          scale={scale}
-                          rotation={rotation}
-                          renderOverlay={
-                            renderFrameOverlay
-                              ? ({ frameNumber, frameRect, scale, rotation }) =>
-                                  renderFrameOverlay({
-                                    frameNumber,
-                                    width: frameRect.width,
-                                    height: frameRect.height,
-                                    scale,
-                                    rotation,
-                                  })
-                              : undefined
-                          }
-                        />
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </ScrollArea>
+              onScroll={handleScroll}
+              renderFrameOverlay={renderFrameOverlay}
+              onFrameRenderTiming={onFrameRenderTiming}
+            />
           </div>
         </div>
       </div>

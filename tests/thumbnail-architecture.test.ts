@@ -253,7 +253,6 @@ describe("thumbnail architecture", () => {
     expect(item!.dependencies).toEqual([
       "@e965/xlsx",
       "dompurify",
-      "jszip",
       "marked",
       "pptxviewjs",
       "utif",

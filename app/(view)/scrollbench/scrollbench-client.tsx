@@ -9,6 +9,7 @@ import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
 import { DocxViewer, type DocxViewerHandle } from "@/components/ui/docx-viewer"
 import {
   ImageViewer,
+  type ImageFrameRenderTiming,
   type ImageViewerHandle,
 } from "@/components/ui/image-viewer"
 import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
@@ -53,6 +54,7 @@ type ViewportHandle =
   | ImageViewerHandle
 
 type RunStatus = "idle" | "running" | "done" | "failed"
+type CsvScrollBenchVariant = "default" | "active-cell"
 
 const SCROLLBENCH_JSON_ROW_COUNT = 20_000
 const SCROLLBENCH_JSON_OVERSCAN = 12
@@ -108,6 +110,7 @@ export function ScrollBenchClient({
   const [result, setResult] = React.useState<ScrollBenchResult | null>(null)
 
   const csvValue = React.useMemo(() => createScrollBenchCsv(), [])
+  const csvVariant = React.useMemo(readCsvScrollBenchVariant, [])
   const jsonSettings = React.useMemo(
     () => readScrollBenchJsonSettings(initialJsonSettings),
     [initialJsonSettings]
@@ -142,6 +145,12 @@ export function ScrollBenchClient({
   )
   const handlePptxSlideRenderTiming = React.useCallback(
     (timing: PptxSlideRenderTiming) => {
+      imageRenderTimingsRef.current.push(timing)
+    },
+    []
+  )
+  const handleImageFrameRenderTiming = React.useCallback(
+    (timing: ImageFrameRenderTiming) => {
       imageRenderTimingsRef.current.push(timing)
     },
     []
@@ -191,7 +200,7 @@ export function ScrollBenchClient({
       const nextResult: ScrollBenchResult = {
         viewer,
         imageRendering:
-          viewer === "pptx"
+          viewer === "pptx" || viewer === "image"
             ? summarizeImageRenderTimings(imageRenderTimingsRef.current)
             : undefined,
         measuredAt: new Date().toISOString(),
@@ -300,12 +309,14 @@ export function ScrollBenchClient({
           {renderViewer({
             viewer,
             csvValue,
+            csvVariant,
             jsonTableDocument,
             jsonSettings,
             pptxFile,
             textValue,
             onPptxSourceLoadTiming: handlePptxSourceLoadTiming,
             onPptxSlideRenderTiming: handlePptxSlideRenderTiming,
+            onImageFrameRenderTiming: handleImageFrameRenderTiming,
             setViewportHandle,
           })}
         </div>
@@ -347,6 +358,7 @@ export function ScrollBenchClient({
 function renderViewer({
   viewer,
   csvValue,
+  csvVariant,
   jsonTableDocument,
   jsonSettings,
   pptxFile,
@@ -354,9 +366,11 @@ function renderViewer({
   setViewportHandle,
   onPptxSourceLoadTiming,
   onPptxSlideRenderTiming,
+  onImageFrameRenderTiming,
 }: {
   viewer: ViewerId
   csvValue: string
+  csvVariant: CsvScrollBenchVariant
   jsonTableDocument: TableDocument
   jsonSettings: ScrollBenchJsonSettings
   pptxFile: File | null
@@ -364,6 +378,7 @@ function renderViewer({
   setViewportHandle: (handle: ViewportHandle | null) => void
   onPptxSourceLoadTiming: (timing: PptxSourceLoadTiming) => void
   onPptxSlideRenderTiming: (timing: PptxSlideRenderTiming) => void
+  onImageFrameRenderTiming: (timing: ImageFrameRenderTiming) => void
 }) {
   const viewerClassName = "h-full rounded-none border-0"
 
@@ -394,6 +409,11 @@ function renderViewer({
           className={viewerClassName}
           controls={false}
           fillHeight
+          activeCell={
+            csvVariant === "active-cell"
+              ? { rowIndex: 1000, columnIndex: 1 }
+              : null
+          }
           isolateStyles={false}
         />
       )
@@ -480,12 +500,12 @@ function renderViewer({
           ref={setViewportHandle as React.Ref<ImageViewerHandle>}
           source={{
             kind: "url",
-            url: "/samples/attention-page-1.png",
-            fileName: "attention-page-1.png",
+            url: "/samples/entropy.tiff",
+            fileName: "entropy.tiff",
           }}
           className={viewerClassName}
-          scale={2}
           controls={false}
+          onFrameRenderTiming={onImageFrameRenderTiming}
           bare
         />
       )
@@ -606,6 +626,10 @@ function MetricPanel({
               value={`${formatNumber(result.imageRendering.averageMs)}ms`}
             />
             <Metric
+              label="first uncached"
+              value={`${formatNumber(result.imageRendering.firstUncachedMs)}ms`}
+            />
+            <Metric
               label="image p95"
               value={`${formatNumber(result.imageRendering.p95Ms)}ms`}
             />
@@ -624,6 +648,14 @@ function MetricPanel({
             <Metric
               label="cached p95"
               value={`${formatNumber(result.imageRendering.cachedTiming.p95Ms)}ms`}
+            />
+            <Metric
+              label="max scale"
+              value={formatNumber(result.imageRendering.maxRenderScale)}
+            />
+            <Metric
+              label="max dpr"
+              value={formatNumber(result.imageRendering.maxPixelRatio)}
             />
           </>
         ) : null}
@@ -686,6 +718,14 @@ function writeViewerToUrl(viewer: ViewerId) {
   const url = new URL(window.location.href)
   url.searchParams.set("viewer", viewer)
   window.history.replaceState(null, "", url)
+}
+
+function readCsvScrollBenchVariant(): CsvScrollBenchVariant {
+  if (typeof window === "undefined") return "default"
+  return new URLSearchParams(window.location.search).get("csvVariant") ===
+    "active-cell"
+    ? "active-cell"
+    : "default"
 }
 
 function readScrollBenchJsonSettings(

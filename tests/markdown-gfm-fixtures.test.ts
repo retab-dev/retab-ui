@@ -143,6 +143,7 @@ describe("pretext markdown unified GFM fixtures", () => {
       "remark-markdown-definition-lists",
       "remark-markdown-components",
       "remark-markdown-code-metadata",
+      "remark-markdown-trusted-images",
     ])
     expect(MARKDOWN_REHYPE_PLUGINS).toEqual([
       "remark-rehype",

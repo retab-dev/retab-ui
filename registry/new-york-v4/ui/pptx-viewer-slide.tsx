@@ -6,10 +6,12 @@ import { createRoot, type Root } from "react-dom/client"
 import { Skeleton } from "@/components/ui/skeleton"
 
 import {
+  getPptxRenderPixelRatio,
   getScaledSlideSize,
   getVisibleSlideSize,
   type PptxSize,
   type PptxSlideOverlayProps,
+  type PptxSlideRenderPriority,
   type PptxSlideRenderTiming,
 } from "./pptx-viewer-core"
 import { type PptxScrollActivity } from "./pptx-viewer-scroll"
@@ -26,6 +28,7 @@ type SlideRenderState = "idle" | "rendering" | "rendered" | "failed"
 export const PPTX_SLIDE_GAP = 16
 export const PPTX_SLIDE_PADDING = 16
 const PPTX_SLIDE_OVERSCAN = 2
+const PPTX_READING_MARKER_RATIO = 0.2
 
 export interface PptxSlideScrollerProps {
   source: PptxSource
@@ -139,12 +142,9 @@ export function PptxSlideScroller({
     [containerRef, viewportRef]
   )
 
-  const setCanvasRef = React.useCallback(
-    (element: HTMLDivElement | null) => {
-      canvasRef.current = element
-    },
-    []
-  )
+  const setCanvasRef = React.useCallback((element: HTMLDivElement | null) => {
+    canvasRef.current = element
+  }, [])
 
   const handleScroll = React.useCallback(() => {
     onScroll()
@@ -179,6 +179,8 @@ function PptxSlideFrame({
   renderSlideOverlay,
   getSlideRenderTiming,
   isProjectedLive,
+  priority,
+  shouldRenderImmediately,
 }: {
   source: PptxSource
   slideIndex: number
@@ -191,6 +193,8 @@ function PptxSlideFrame({
     | ((timing: PptxSlideRenderTiming) => void)
     | undefined
   isProjectedLive?: () => boolean
+  priority: PptxSlideRenderPriority
+  shouldRenderImmediately: boolean
 }) {
   const slideSize = getScaledSlideSize(source.baseSize, zoomScale)
   const visibleSize = getVisibleSlideSize(slideSize, rotation)
@@ -218,6 +222,8 @@ function PptxSlideFrame({
           activity={activity}
           getSlideRenderTiming={getSlideRenderTiming}
           isProjectedLive={isProjectedLive}
+          priority={priority}
+          shouldRenderImmediately={shouldRenderImmediately}
         />
       </div>
       {renderSlideOverlay ? (
@@ -241,6 +247,8 @@ function PptxSlideCanvas({
   activity,
   getSlideRenderTiming,
   isProjectedLive,
+  priority,
+  shouldRenderImmediately,
 }: {
   source: PptxSource
   slideIndex: number
@@ -251,9 +259,11 @@ function PptxSlideCanvas({
     | ((timing: PptxSlideRenderTiming) => void)
     | undefined
   isProjectedLive?: () => boolean
+  priority: PptxSlideRenderPriority
+  shouldRenderImmediately: boolean
 }) {
   const rawDpr = typeof window !== "undefined" ? window.devicePixelRatio : 1
-  const dpr = Number.isFinite(rawDpr) && rawDpr > 0 ? rawDpr : 1
+  const pixelRatio = getPptxRenderPixelRatio(rawDpr)
   const slideSize = getScaledSlideSize(source.baseSize, zoomScale)
   const [renderState, setRenderState] = React.useState<SlideRenderState>("idle")
   const canvasElementRef = React.useRef<HTMLCanvasElement | null>(null)
@@ -267,7 +277,7 @@ function PptxSlideCanvas({
     if (!canvas) return
 
     let cancelled = false
-    const renderScale = zoomScale * dpr
+    const renderScale = zoomScale * pixelRatio
     const immediateCached = source.hasBitmap({ slideIndex, renderScale })
     setRenderState("rendering")
 
@@ -281,12 +291,14 @@ function PptxSlideCanvas({
           canvas,
           renderScale,
           isLive: () => !cancelled,
+          priority,
         })
         .then((result) => {
           if (cancelled || (isProjectedLive && !isProjectedLive())) return
           notifySlideRenderTiming(getSlideRenderTiming?.(), {
             cached: startedCached,
             durationMs: now() - startedAt,
+            pixelRatio,
             renderScale,
             slideNumber: slideIndex + 1,
             status: result.status,
@@ -299,6 +311,7 @@ function PptxSlideCanvas({
           notifySlideRenderTiming(getSlideRenderTiming?.(), {
             cached: startedCached,
             durationMs: now() - startedAt,
+            pixelRatio,
             renderScale,
             slideNumber: slideIndex + 1,
             status: "failed",
@@ -307,7 +320,12 @@ function PptxSlideCanvas({
         })
     }
 
-    if (eager || immediateCached || !activity.isScrolling()) {
+    if (
+      shouldRenderImmediately ||
+      eager ||
+      immediateCached ||
+      !activity.isScrolling()
+    ) {
       start()
       return () => {
         cancelled = true
@@ -323,10 +341,12 @@ function PptxSlideCanvas({
     }
   }, [
     activity,
-    dpr,
     eager,
     getSlideRenderTiming,
     isProjectedLive,
+    pixelRatio,
+    priority,
+    shouldRenderImmediately,
     zoomScale,
     slideIndex,
     source,
@@ -429,12 +449,14 @@ function projectPptxSlides({
     cache.resetKey = `${sourceKey}:${resetKey}`
   }
 
+  const scrollTop = viewport?.scrollTop ?? 0
+  const viewportHeight =
+    viewport?.clientHeight || viewport?.getBoundingClientRect().height || 0
   const virtualSlides = getPptxVirtualSlides({
     layout,
     overscanSlides: PPTX_SLIDE_OVERSCAN,
-    scrollTop: viewport?.scrollTop ?? 0,
-    viewportHeight:
-      viewport?.clientHeight || viewport?.getBoundingClientRect().height || 0,
+    scrollTop,
+    viewportHeight,
   })
   const visibleSlideIndexes = new Set(
     virtualSlides.map((virtualSlide) => virtualSlide.index)
@@ -457,6 +479,12 @@ function projectPptxSlides({
       eager,
       onSlideRenderTiming,
       projectedSlide,
+      priority: getPptxSlideRenderPriority({
+        layout,
+        scrollTop,
+        viewportHeight,
+        virtualSlide,
+      }),
       renderSlideOverlay,
       rotation,
       source,
@@ -529,6 +557,7 @@ function renderPptxProjectedSlide({
   eager,
   onSlideRenderTiming,
   projectedSlide,
+  priority,
   renderSlideOverlay,
   rotation,
   source,
@@ -539,6 +568,7 @@ function renderPptxProjectedSlide({
   eager: boolean
   onSlideRenderTiming?: (timing: PptxSlideRenderTiming) => void
   projectedSlide: PptxProjectedSlide
+  priority: PptxSlideRenderPriority
   renderSlideOverlay?: (props: PptxSlideOverlayProps) => React.ReactNode
   rotation: number
   source: PptxSource
@@ -553,6 +583,8 @@ function renderPptxProjectedSlide({
     zoomScale,
     rotation,
     eager,
+    priority.isCurrentSlide,
+    priority.isInViewport,
   ].join("\u0000")
   const shouldRender =
     projectedSlide.renderKey !== renderKey ||
@@ -583,8 +615,41 @@ function renderPptxProjectedSlide({
         projectedSlide.onSlideRenderTiming ?? undefined
       }
       isProjectedLive={() => projectedSlide.isLive}
+      priority={priority}
+      shouldRenderImmediately={priority.isCurrentSlide || priority.isInViewport}
     />
   )
+}
+
+function getPptxSlideRenderPriority({
+  layout,
+  scrollTop,
+  viewportHeight,
+  virtualSlide,
+}: {
+  layout: PptxSlideLayout
+  scrollTop: number
+  viewportHeight: number
+  virtualSlide: PptxVirtualSlide
+}): PptxSlideRenderPriority {
+  const safeScrollTop =
+    Number.isFinite(scrollTop) && scrollTop > 0 ? scrollTop : 0
+  const safeViewportHeight =
+    Number.isFinite(viewportHeight) && viewportHeight > 0
+      ? viewportHeight
+      : layout.slideHeight
+  const marker = safeScrollTop + safeViewportHeight * PPTX_READING_MARKER_RATIO
+  const slideTop = virtualSlide.top
+  const slideBottom = slideTop + virtualSlide.height
+  const viewportBottom = safeScrollTop + safeViewportHeight
+
+  return {
+    distanceFromReadingMarker: Math.abs(
+      slideTop + virtualSlide.height / 2 - marker
+    ),
+    isCurrentSlide: marker >= slideTop && marker < slideBottom,
+    isInViewport: slideBottom > safeScrollTop && slideTop < viewportBottom,
+  }
 }
 
 function disposePptxSlideProjectionCache(cache: PptxSlideProjectionCache) {

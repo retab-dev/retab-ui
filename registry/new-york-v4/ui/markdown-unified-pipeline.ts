@@ -545,7 +545,7 @@ function remarkMarkdownCodeMetadata() {
 function remarkMarkdownTrustedImages() {
   return function transform(tree: unknown) {
     visitMarkdownMdastNodes(tree as MarkdownMdastRoot, (node) => {
-      if (node.type !== "image") return
+      if (node.type !== "image" && node.type !== "imageReference") return
       node.data = {
         ...node.data,
         hProperties: {

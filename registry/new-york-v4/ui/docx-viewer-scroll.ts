@@ -1,29 +1,28 @@
 import * as React from "react"
 
 import { clamp } from "./docx-viewer-core"
-
-const DOCX_READING_MARKER_RATIO = 0.2
-
-type DocxReadingAnchor =
-  | {
-      kind: "top"
-    }
-  | {
-      kind: "page"
-      pageNumber: number
-      yPercent: number
-    }
+import {
+  captureDocxReadingAnchorFromLayout,
+  findDocxPageByMarker,
+  restoreDocxReadingAnchorFromLayout,
+  type DocxPageLayout,
+  type DocxReadingAnchor,
+} from "./docx-viewer-layout"
 
 export function useDocxViewerScroll({
   layoutKey,
+  pageLayout,
   onScrollProgressChange,
   onVisiblePageChange,
   ready,
+  scale,
 }: {
   layoutKey: unknown
+  pageLayout: DocxPageLayout | null
   onScrollProgressChange?: (progress: number) => void
   onVisiblePageChange?: (page: number) => void
   ready: boolean
+  scale: number
 }) {
   const scrollViewportRef = React.useRef<HTMLDivElement | null>(null)
   const lastReported = React.useRef(0)
@@ -47,30 +46,25 @@ export function useDocxViewerScroll({
     onScrollProgressChange?.(
       scrollable > 0 ? clamp(viewport.scrollTop / scrollable, 0, 1) : 0
     )
-    const rect = viewport.getBoundingClientRect()
-    const marker = rect.top + rect.height * DOCX_READING_MARKER_RATIO
-    const pages = viewport.querySelectorAll<HTMLElement>("[data-page-number]")
-    let current = 1
-    let currentPageElement: HTMLElement | null = null
-    for (const el of pages) {
-      if (el.getBoundingClientRect().top <= marker) {
-        current = Number(el.dataset.pageNumber)
-        currentPageElement = el
-      } else {
-        break
-      }
-    }
-    latestAnchorRef.current = captureDocxReadingAnchor(
-      viewport,
-      currentPageElement,
-      current
-    )
+    const current =
+      findDocxPageByMarker({
+        layout: pageLayout,
+        scale,
+        scrollTop: viewport.scrollTop,
+        viewportHeight: viewport.clientHeight,
+      })?.pageNumber ?? 1
+    latestAnchorRef.current = captureDocxReadingAnchorFromLayout({
+      layout: pageLayout,
+      scale,
+      scrollTop: viewport.scrollTop,
+      viewportHeight: viewport.clientHeight,
+    })
     if (current && current !== lastReported.current) {
       lastReported.current = current
       setCurrentPage(current)
       onVisiblePageChange?.(current)
     }
-  }, [onScrollProgressChange, onVisiblePageChange])
+  }, [onScrollProgressChange, onVisiblePageChange, pageLayout, scale])
 
   const handleScroll = React.useCallback(() => {
     if (scrollFrame.current) return
@@ -92,9 +86,20 @@ export function useDocxViewerScroll({
     const viewport = scrollViewportRef.current
     if (!viewport) return
 
-    restoreDocxReadingAnchor(viewport, latestAnchorRef.current)
+    const maxScrollTop = Math.max(
+      0,
+      viewport.scrollHeight - viewport.clientHeight
+    )
+    const restored = restoreDocxReadingAnchorFromLayout({
+      anchor: latestAnchorRef.current,
+      layout: pageLayout,
+      maxScrollTop,
+      scale,
+      viewportHeight: viewport.clientHeight,
+    })
+    if (restored != null) viewport.scrollTop = restored
     measureScroll()
-  }, [layoutKey, measureScroll, ready])
+  }, [layoutKey, measureScroll, pageLayout, ready, scale])
 
   React.useEffect(
     () => () => {
@@ -110,58 +115,4 @@ export function useDocxViewerScroll({
     resetScroll,
     scrollViewportRef,
   }
-}
-
-function captureDocxReadingAnchor(
-  viewport: HTMLDivElement,
-  pageElement: HTMLElement | null,
-  pageNumber: number
-): DocxReadingAnchor {
-  if (viewport.scrollTop <= 0) return { kind: "top" }
-  if (!pageElement || pageNumber < 1) return { kind: "top" }
-
-  const viewportRect = viewport.getBoundingClientRect()
-  const pageRect = pageElement.getBoundingClientRect()
-  if (pageRect.height <= 0) return { kind: "top" }
-
-  const marker =
-    viewportRect.top + viewportRect.height * DOCX_READING_MARKER_RATIO
-  return {
-    kind: "page",
-    pageNumber,
-    yPercent: clamp((marker - pageRect.top) / pageRect.height, 0, 1),
-  }
-}
-
-function restoreDocxReadingAnchor(
-  viewport: HTMLDivElement,
-  anchor: DocxReadingAnchor
-) {
-  if (anchor.kind === "top") {
-    viewport.scrollTop = 0
-    return
-  }
-
-  const pageElement = viewport.querySelector<HTMLElement>(
-    `[data-page-number="${anchor.pageNumber}"]`
-  )
-  if (!pageElement) return
-
-  const viewportRect = viewport.getBoundingClientRect()
-  const pageRect = pageElement.getBoundingClientRect()
-  if (pageRect.height <= 0) return
-
-  const marker =
-    viewportRect.top + viewportRect.height * DOCX_READING_MARKER_RATIO
-  const pageTopInViewport = pageRect.top - viewportRect.top
-  const targetTop =
-    viewport.scrollTop +
-    pageTopInViewport +
-    pageRect.height * anchor.yPercent -
-    (marker - viewportRect.top)
-  const maxScrollTop = Math.max(
-    0,
-    viewport.scrollHeight - viewport.clientHeight
-  )
-  viewport.scrollTop = clamp(targetTop, 0, maxScrollTop)
 }

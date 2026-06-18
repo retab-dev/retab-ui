@@ -24,6 +24,11 @@ import {
   type DocxViewerHandle,
 } from "@/registry/new-york-v4/ui/docx-viewer"
 import {
+  DOCX_PAGE_GAP_PX,
+  DOCX_READING_MARKER_RATIO,
+  DOCX_VIEWER_PADDING_PX,
+} from "@/registry/new-york-v4/ui/docx-viewer-layout"
+import {
   ViewerBody,
   ViewerHeader,
   ViewerRoot,
@@ -756,7 +761,10 @@ describe("DocxViewer", () => {
     })
 
     const view = await renderDocx(
-      <DocxViewer source={docxUrlSource("/no-controls.docx")} controls={false} />
+      <DocxViewer
+        source={docxUrlSource("/no-controls.docx")}
+        controls={false}
+      />
     )
 
     expect(screen.queryByLabelText("Zoom in")).toBeNull()
@@ -1269,15 +1277,17 @@ describe("DocxViewer", () => {
       '[data-slot="scroll-area-viewport"]'
     )
     expect(viewport).toBeTruthy()
-    const pages = document.querySelectorAll<HTMLElement>("[data-page-number]")
-    pages[0]!.getBoundingClientRect = vi.fn(() => rect(-500))
-    pages[1]!.getBoundingClientRect = vi.fn(() => rect(50))
+    const viewportHeight = 500
+    const scrollTop =
+      DOCX_VIEWER_PADDING_PX +
+      1056 +
+      DOCX_PAGE_GAP_PX -
+      viewportHeight * DOCX_READING_MARKER_RATIO
     setScrollMetrics(viewport!, {
-      clientHeight: 500,
-      scrollHeight: 1500,
-      scrollTop: 500,
+      clientHeight: viewportHeight,
+      scrollHeight: scrollTop * 2 + viewportHeight,
+      scrollTop,
     })
-    viewport!.getBoundingClientRect = vi.fn(() => rect(0, 800, 500))
 
     fireEvent.scroll(viewport!)
 
@@ -1302,15 +1312,17 @@ describe("DocxViewer", () => {
       '[data-slot="scroll-area-viewport"]'
     )
     expect(viewport).toBeTruthy()
-    const pages = document.querySelectorAll<HTMLElement>("[data-page-number]")
-    pages[0]!.getBoundingClientRect = vi.fn(() => rect(-500))
-    pages[1]!.getBoundingClientRect = vi.fn(() => rect(50))
+    const viewportHeight = 500
+    const scrollTop =
+      DOCX_VIEWER_PADDING_PX +
+      1056 +
+      DOCX_PAGE_GAP_PX -
+      viewportHeight * DOCX_READING_MARKER_RATIO
     setScrollMetrics(viewport!, {
-      clientHeight: 500,
-      scrollHeight: 1500,
-      scrollTop: 500,
+      clientHeight: viewportHeight,
+      scrollHeight: scrollTop * 2 + viewportHeight,
+      scrollTop,
     })
-    viewport!.getBoundingClientRect = vi.fn(() => rect(0, 800, 500))
 
     fireEvent.scroll(viewport!)
     expect(await screen.findByText("Page 2 of 2")).toBeTruthy()
@@ -1477,21 +1489,17 @@ describe("DocxViewer", () => {
       '[data-slot="scroll-area-viewport"]'
     )
     expect(viewport).toBeTruthy()
-    const pages = document.querySelectorAll<HTMLElement>("[data-page-number]")
-    pages[0]!.getBoundingClientRect = vi.fn(() => rect(-1200))
-    pages[1]!.getBoundingClientRect = vi.fn(() => rect(-50))
-    viewport!.getBoundingClientRect = vi.fn(() => rect(0, 800, 500))
 
     setScrollMetrics(viewport!, {
       clientHeight: 500,
-      scrollHeight: 1500,
-      scrollTop: 250,
+      scrollHeight: 2500,
+      scrollTop: 500,
     })
     fireEvent.scroll(viewport!)
     setScrollMetrics(viewport!, {
       clientHeight: 500,
-      scrollHeight: 1500,
-      scrollTop: 750,
+      scrollHeight: 2500,
+      scrollTop: 1500,
     })
     fireEvent.scroll(viewport!)
 
@@ -3005,25 +3013,6 @@ describe("DocxViewer edge cases", () => {
       scrollHeight: 7000,
       scrollTop: 2140,
     })
-    viewport!.getBoundingClientRect = vi.fn(() => rect(0, 800, 500))
-
-    const host = document.querySelector<HTMLElement>(
-      '[data-slot="docx-viewer"] .docx-wrapper'
-    )?.parentElement
-    expect(host).toBeTruthy()
-    const pageTops = [0, 1100, 2200, 3300, 4400]
-    document
-      .querySelectorAll<HTMLElement>("[data-page-number]")
-      .forEach((page, index) => {
-        page.getBoundingClientRect = vi.fn(() => {
-          const zoom = Number(host!.style.zoom || 1)
-          return rect(
-            pageTops[index]! * zoom - viewport!.scrollTop,
-            816 * zoom,
-            1056 * zoom
-          )
-        })
-      })
 
     fireEvent.scroll(viewport!)
 
@@ -3033,7 +3022,7 @@ describe("DocxViewer edge cases", () => {
 
     expect(await screen.findByText("120%")).toBeTruthy()
     expect(await screen.findByText("Page 3 of 5")).toBeTruthy()
-    expect(viewport!.scrollTop).toBeCloseTo(2588, 5)
+    expect(viewport!.scrollTop).toBeCloseTo(2584.8, 5)
   })
 
   it("ignores whitespace-only text highlight targets", async () => {

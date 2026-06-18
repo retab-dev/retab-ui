@@ -3,6 +3,8 @@
 import * as React from "react"
 
 import type { CsvCellAddress } from "./csv-viewer-state"
+import { csvCellClassName } from "./csv-viewer-cell-classes"
+import type { CsvRowStore } from "./csv-row-store"
 import {
   fixedVirtualItems,
   type FixedGridColumnItem,
@@ -17,7 +19,7 @@ export interface CsvRowPatchState {
   effectiveRowHeight: number
   rowOrder: number[] | null
   shouldVirtualizeRows: boolean
-  sourceRows: string[][]
+  rowStore: CsvRowStore
 }
 
 export interface CsvRowPatcher {
@@ -27,6 +29,8 @@ export interface CsvRowPatcher {
 }
 
 interface CsvCellHandle {
+  element: HTMLElement
+  className: string
   textNode: Text | null
 }
 
@@ -103,7 +107,7 @@ export function useCsvRowPatcher({
       if (cache.rows.length === 0) return "pass"
 
       const nextRows = fixedVirtualItems({
-        count: state.sourceRows.length,
+        count: state.rowStore.rowCount,
         size: state.effectiveRowHeight,
         scrollOffset: viewport.scrollTop,
         viewportSize: viewport.clientHeight,
@@ -154,37 +158,59 @@ function patchRows(
     const sourceRowIndex = state.rowOrder
       ? state.rowOrder[displayRowIndex]
       : displayRowIndex
-    const sourceRow = state.sourceRows[sourceRowIndex]
+    const sourceRow = state.rowStore.getRow(sourceRowIndex)
     const transform = `translate3d(0, ${virtualRow.start}px, 0)`
 
     setRowHidden(rowHandle, false)
     setRowTransform(rowHandle, transform)
 
-    if (rowHandle.sourceRowIndex === sourceRowIndex) continue
-    rowHandle.sourceRowIndex = sourceRowIndex
-    setTextNodeValue(rowHandle.rowNumberTextNode, String(sourceRowIndex + 1))
-    patchCells(rowHandle, sourceRow, state.columnItems)
+    if (rowHandle.sourceRowIndex !== sourceRowIndex) {
+      rowHandle.sourceRowIndex = sourceRowIndex
+      setTextNodeValue(rowHandle.rowNumberTextNode, String(sourceRowIndex + 1))
+      patchCells(rowHandle, sourceRow, sourceRowIndex, state)
+    } else {
+      patchCellActiveState(rowHandle, sourceRowIndex, state)
+    }
   }
 }
 
 function patchCells(
   rowHandle: CsvRowHandle,
   sourceRow: string[] | undefined,
-  columnItems: FixedGridColumnItem[]
+  sourceRowIndex: number,
+  state: CsvRowPatchState
 ) {
-  for (let cellIndex = 0; cellIndex < columnItems.length; cellIndex++) {
-    const columnIndex = columnItems[cellIndex]?.index
+  for (let cellIndex = 0; cellIndex < state.columnItems.length; cellIndex++) {
+    const columnIndex = state.columnItems[cellIndex]?.index
     const text =
       typeof columnIndex === "number" ? (sourceRow?.[columnIndex] ?? "") : ""
     setTextNodeValue(rowHandle.cells[cellIndex]?.textNode ?? null, text)
+    setCellActive(
+      rowHandle.cells[cellIndex],
+      state.activeCell?.rowIndex === sourceRowIndex &&
+        state.activeCell.columnIndex === columnIndex
+    )
+  }
+}
+
+function patchCellActiveState(
+  rowHandle: CsvRowHandle,
+  sourceRowIndex: number,
+  state: CsvRowPatchState
+) {
+  for (let cellIndex = 0; cellIndex < state.columnItems.length; cellIndex++) {
+    const columnIndex = state.columnItems[cellIndex]?.index
+    setCellActive(
+      rowHandle.cells[cellIndex],
+      state.activeCell?.rowIndex === sourceRowIndex &&
+        state.activeCell.columnIndex === columnIndex
+    )
   }
 }
 
 function canPatchRows(viewport: FixedGridViewport, state: CsvRowPatchState) {
   return (
     state.shouldVirtualizeRows &&
-    !state.activeCell &&
-    viewport.scrollLeft === 0 &&
     !viewport.isJumpingColumns
   )
 }
@@ -214,6 +240,8 @@ function readRowHandles(rowWindow: HTMLDivElement): CsvRowHandleCache {
     const cells = Array.from(
       element.querySelectorAll<HTMLElement>('[data-slot="csv-cell"]')
     ).map((cell) => ({
+      element: cell,
+      className: cell.className,
       textNode: firstTextNode(cell.firstElementChild ?? cell),
     }))
 
@@ -237,6 +265,14 @@ function firstTextNode(element: Element | null): Text | null {
 
 function setTextNodeValue(textNode: Text | null, value: string) {
   if (textNode && textNode.nodeValue !== value) textNode.nodeValue = value
+}
+
+function setCellActive(cell: CsvCellHandle | undefined, isActive: boolean) {
+  if (!cell) return
+  const className = csvCellClassName(isActive)
+  if (cell.className === className) return
+  cell.element.className = className
+  cell.className = className
 }
 
 function setRowTransform(row: CsvRowHandle, transform: string) {

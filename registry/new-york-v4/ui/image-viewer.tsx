@@ -28,6 +28,7 @@ import { ViewerErrorBoundary } from "@/components/ui/viewer-error"
 export type {
   ImageDocumentSource,
   ImageFrameOverlayProps,
+  ImageFrameRenderTiming,
   ImageViewerHandle,
   ImageViewerProps,
 } from "@/components/ui/image-viewer-types"

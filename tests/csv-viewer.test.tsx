@@ -1781,6 +1781,60 @@ describe("CsvViewer Blob source loading", () => {
     expect(terminate).toHaveBeenCalledTimes(1)
   })
 
+  it("parses large text resources through the worker path", async () => {
+    let postedSource: unknown = null
+
+    class SuccessfulTextWorker {
+      onmessage: ((event: MessageEvent) => void) | null = null
+      onerror: (() => void) | null = null
+
+      postMessage(request: { parseRequestId: string; source: Blob }) {
+        postedSource = request.source
+        queueMicrotask(() => {
+          this.onmessage?.({
+            data: {
+              type: "columns",
+              parseRequestId: request.parseRequestId,
+              columns: ["a", "b"],
+            },
+          } as MessageEvent)
+          this.onmessage?.({
+            data: {
+              type: "sourceRows",
+              parseRequestId: request.parseRequestId,
+              sourceRows: [["large-text", "worker"]],
+            },
+          } as MessageEvent)
+          this.onmessage?.({
+            data: {
+              type: "done",
+              parseRequestId: request.parseRequestId,
+            },
+          } as MessageEvent)
+        })
+      }
+
+      terminate() {}
+    }
+
+    vi.stubGlobal("Worker", SuccessfulTextWorker)
+
+    render(
+      <CsvViewer
+        source={{
+          kind: "text",
+          text: `a,b\n${"1,2\n".repeat(80_000)}`,
+          fileName: "large-text.csv",
+        }}
+        controls={false}
+      />
+    )
+
+    expect(await screen.findByText("large-text")).toBeTruthy()
+    expect(screen.getByText("worker")).toBeTruthy()
+    expect(postedSource).toBeInstanceOf(Blob)
+  })
+
   it("pads worker rows that were emitted before a later column-widening event", async () => {
     class WideningWorker {
       onmessage: ((event: MessageEvent) => void) | null = null

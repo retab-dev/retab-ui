@@ -12,6 +12,7 @@ import {
   getPptxBitmapCacheKey,
   type PptxBitmapCacheInput,
   type PptxSize,
+  type PptxSlideRenderPriority,
   type PptxSourceLoadTiming,
 } from "./pptx-viewer-core"
 import {
@@ -23,12 +24,14 @@ import {
 const PPTX_SOURCE_CACHE_MAX = 4
 const PPTX_SOURCE_TIMING_CACHE_MAX = 32
 const PPTX_BITMAP_CACHE_MAX = 8
+const PPTX_BITMAP_CACHE_MAX_PIXELS = 24_000_000
 
 export type PptxSourceRelease = () => void
 
 export interface PptxSourceRenderInput extends PptxBitmapCacheInput {
   canvas: HTMLCanvasElement
   isLive?: () => boolean
+  priority?: PptxSlideRenderPriority
 }
 
 export type PptxRenderResult =
@@ -49,9 +52,16 @@ class RendererSource implements PptxSource {
   readonly baseSize: PptxSize
 
   private readonly bitmaps = new DisposableLruCache<string, PptxBitmapEntry>(
-    PPTX_BITMAP_CACHE_MAX
+    PPTX_BITMAP_CACHE_MAX,
+    {
+      maxCost: PPTX_BITMAP_CACHE_MAX_PIXELS,
+      getCost: (entry) => entry.pixelCount,
+    }
   )
-  private queue: Promise<unknown> = Promise.resolve()
+  private queue: PptxQueuedRender[] = []
+  private isRendering = false
+  private nextSequence = 1
+  private bitmapSnapshots = new Map<string, Promise<void>>()
   private retainCount = 0
   private disposeRequested = false
   private disposed = false
@@ -102,49 +112,19 @@ class RendererSource implements PptxSource {
       return Promise.resolve(drawCachedBitmap(input.canvas, cached.bitmap))
     }
 
-    const run = this.queue
-      .catch(() => {})
-      .then(async (): Promise<PptxRenderResult> => {
-        if (this.disposed) return { status: "cancelled" }
-        if (!isRenderLive(input)) return { status: "cancelled" }
+    const snapshot = this.bitmapSnapshots.get(bitmapKey)
+    if (snapshot) return this.renderAfterSnapshot(input, snapshot)
 
-        const queuedCached = this.bitmaps.get(bitmapKey)
-        if (queuedCached) {
-          return drawCachedBitmap(input.canvas, queuedCached.bitmap)
-        }
-
-        try {
-          await this.renderer.renderSlide(input)
-        } catch (error) {
-          if (this.disposed) return { status: "cancelled" }
-          if (!isRenderLive(input)) return { status: "cancelled" }
-          return {
-            status: "failed",
-            error: normalizeRendererError(error),
-          }
-        }
-
-        if (this.disposed) return { status: "cancelled" }
-        if (!isRenderLive(input)) return { status: "cancelled" }
-
-        try {
-          const bitmap = await createImageBitmap(input.canvas)
-          if (this.disposed || !isRenderLive(input)) {
-            bitmap.close()
-            return { status: "cancelled" }
-          }
-          this.bitmaps.set(bitmapKey, new PptxBitmapEntry(bitmap))
-        } catch {
-          if (this.disposed) return { status: "cancelled" }
-          if (!isRenderLive(input)) return { status: "cancelled" }
-          /* Snapshot unsupported: the slide still rendered, just without cache. */
-        }
-
-        return { status: "rendered" }
+    return new Promise<PptxRenderResult>((resolve) => {
+      this.queue.push({
+        bitmapKey,
+        input,
+        resolve,
+        sequence: this.nextSequence,
       })
-
-    this.queue = run.catch(() => {})
-    return run
+      this.nextSequence += 1
+      this.pumpQueue()
+    })
   }
 
   retain(): PptxSourceRelease {
@@ -167,9 +147,170 @@ class RendererSource implements PptxSource {
   private close() {
     if (this.disposed) return
     this.disposed = true
+    for (const task of this.queue.splice(0))
+      task.resolve({ status: "cancelled" })
+    this.bitmapSnapshots.clear()
     this.bitmaps.clear()
     this.renderer.dispose()
   }
+
+  private pumpQueue() {
+    if (this.isRendering) return
+    this.isRendering = true
+    void this.drainQueue()
+  }
+
+  private async drainQueue() {
+    try {
+      while (!this.disposed && this.queue.length > 0) {
+        const task = this.takeNextTask()
+        if (!task) break
+        await this.runTask(task)
+      }
+    } finally {
+      this.isRendering = false
+      if (!this.disposed && this.queue.length > 0) this.pumpQueue()
+    }
+  }
+
+  private takeNextTask() {
+    let bestIndex = -1
+    let bestRank: PptxRenderRank | null = null
+    for (let index = 0; index < this.queue.length; index += 1) {
+      const task = this.queue[index]
+      if (!task) continue
+      const rank = getRenderRank(task)
+      if (!bestRank || compareRenderRanks(rank, bestRank) < 0) {
+        bestRank = rank
+        bestIndex = index
+      }
+    }
+    if (bestIndex < 0) return null
+    const [task] = this.queue.splice(bestIndex, 1)
+    return task ?? null
+  }
+
+  private async runTask(task: PptxQueuedRender) {
+    if (this.disposed) {
+      task.resolve({ status: "cancelled" })
+      return
+    }
+    if (!isRenderLive(task.input)) {
+      task.resolve({ status: "cancelled" })
+      return
+    }
+
+    const cached = this.bitmaps.get(task.bitmapKey)
+    if (cached) {
+      task.resolve(drawCachedBitmap(task.input.canvas, cached.bitmap))
+      return
+    }
+
+    const snapshot = this.bitmapSnapshots.get(task.bitmapKey)
+    if (snapshot) {
+      task.resolve(this.renderAfterSnapshot(task.input, snapshot))
+      return
+    }
+
+    try {
+      await this.renderer.renderSlide(task.input)
+    } catch (error) {
+      if (this.disposed || !isRenderLive(task.input)) {
+        task.resolve({ status: "cancelled" })
+        return
+      }
+      task.resolve({
+        status: "failed",
+        error: normalizeRendererError(error),
+      })
+      return
+    }
+
+    if (this.disposed || !isRenderLive(task.input)) {
+      task.resolve({ status: "cancelled" })
+      return
+    }
+
+    this.scheduleBitmapSnapshot(task)
+    task.resolve({ status: "rendered" })
+  }
+
+  private renderAfterSnapshot(
+    input: PptxSourceRenderInput,
+    snapshot: Promise<void>
+  ): Promise<PptxRenderResult> {
+    return snapshot.then(
+      () => {
+        if (this.disposed) return { status: "cancelled" }
+        if (!isRenderLive(input)) return { status: "cancelled" }
+        const cached = this.bitmaps.get(getPptxBitmapCacheKey(input))
+        if (cached) return drawCachedBitmap(input.canvas, cached.bitmap)
+        return this.renderSlide(input)
+      },
+      () => {
+        if (this.disposed) return { status: "cancelled" }
+        if (!isRenderLive(input)) return { status: "cancelled" }
+        return this.renderSlide(input)
+      }
+    )
+  }
+
+  private scheduleBitmapSnapshot(task: PptxQueuedRender) {
+    const snapshot = this.captureBitmap(task)
+    this.bitmapSnapshots.set(task.bitmapKey, snapshot)
+    snapshot.finally(() => {
+      if (this.bitmapSnapshots.get(task.bitmapKey) === snapshot) {
+        this.bitmapSnapshots.delete(task.bitmapKey)
+      }
+    })
+  }
+
+  private async captureBitmap(task: PptxQueuedRender) {
+    let bitmap: ImageBitmap | null = null
+    try {
+      bitmap = await createImageBitmap(task.input.canvas)
+      if (this.disposed || !isRenderLive(task.input)) {
+        bitmap.close()
+        return
+      }
+      this.bitmaps.set(task.bitmapKey, new PptxBitmapEntry(bitmap))
+      bitmap = null
+    } catch {
+      if (bitmap) bitmap.close()
+      /* Snapshot unsupported: the slide still rendered, just without cache. */
+    }
+  }
+}
+
+type PptxQueuedRender = {
+  bitmapKey: string
+  input: PptxSourceRenderInput
+  resolve: (result: PptxRenderResult | PromiseLike<PptxRenderResult>) => void
+  sequence: number
+}
+
+type PptxRenderRank = {
+  visibility: number
+  distance: number
+  sequence: number
+}
+
+function getRenderRank(task: PptxQueuedRender): PptxRenderRank {
+  const priority = task.input.priority
+  return {
+    visibility: priority?.isCurrentSlide ? 0 : priority?.isInViewport ? 1 : 2,
+    distance:
+      priority && Number.isFinite(priority.distanceFromReadingMarker)
+        ? Math.max(0, priority.distanceFromReadingMarker)
+        : Number.MAX_SAFE_INTEGER,
+    sequence: task.sequence,
+  }
+}
+
+function compareRenderRanks(a: PptxRenderRank, b: PptxRenderRank) {
+  if (a.visibility !== b.visibility) return a.visibility - b.visibility
+  if (a.distance !== b.distance) return a.distance - b.distance
+  return a.sequence - b.sequence
 }
 
 class SourceCacheEntry implements Disposable {

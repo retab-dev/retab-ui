@@ -4,9 +4,11 @@ import * as React from "react"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
 
+import { MarkdownGreenfieldContent } from "./markdown-greenfield-content"
 import { PlainTextViewerFrame } from "./plain-text-viewer-frame"
+import { ChenglouTextViewerContent } from "./text-viewer-chenglou-content"
 import { TextViewerFallback } from "./text-viewer-chrome"
-import { TextViewerContent } from "./text-viewer-content"
+import { resolveTextViewerMode } from "./text-viewer-layout"
 import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types"
 
 export type {
@@ -18,6 +20,13 @@ export type {
 
 export type TextResourceContentProps = Omit<TextViewerProps, "source"> & {
   resource: ViewerResource
+}
+
+type RoutedTextViewerContentProps = Omit<TextViewerProps, "source"> & {
+  source?: TextViewerProps["source"]
+  resource: ViewerResource
+  retryVersion: number
+  forwardedRef?: React.ForwardedRef<TextViewerHandle>
 }
 
 export type TextViewerProviderProps = {
@@ -35,7 +44,7 @@ export const TextViewer = React.forwardRef<TextViewerHandle, TextViewerProps>(
         forwardedRef={ref}
         clientFallbackPolicy="always"
         Fallback={TextViewerFallback}
-        Content={TextViewerContent}
+        Content={TextViewerRoutedContent}
       />
     )
   }
@@ -85,7 +94,25 @@ export const TextResourceContent = React.forwardRef<
       forwardedRef={ref}
       clientFallbackPolicy="always"
       Fallback={TextViewerFallback}
-      Content={TextViewerContent}
+      Content={TextViewerRoutedContent}
     />
   )
 })
+
+function TextViewerRoutedContent(props: RoutedTextViewerContentProps) {
+  const mode =
+    props.mode ??
+    resolveTextViewerMode({
+      fileName: props.resource.fileName,
+      mimeType: props.resource.content.mimeType,
+    })
+  const source =
+    props.source ??
+    (props.resource.descriptor.source as TextViewerProps["source"])
+
+  if (mode === "markdown") {
+    return <MarkdownGreenfieldContent {...props} source={source} />
+  }
+
+  return <ChenglouTextViewerContent {...props} mode="text" source={source} />
+}

@@ -11,7 +11,6 @@ import {
 } from "@/lib/viewer-errors"
 import {
   resolveViewerDescriptor,
-  textPayloadIdentityKey,
   textPayloadKey,
   type BlobViewerSource,
   type FileCategory,
@@ -248,7 +247,7 @@ function viewerResourceKeys(
   source: ViewerSource,
   descriptor: ViewerDescriptor
 ): ViewerResourceKeys {
-  const load = viewerResourceLoadKey(source)
+  const load = viewerResourceLoadKey(source, descriptor)
   const presentation = viewerResourcePresentationKey(source, descriptor)
   return {
     load,
@@ -257,13 +256,16 @@ function viewerResourceKeys(
   }
 }
 
-function viewerResourceLoadKey(source: ViewerSource) {
+function viewerResourceLoadKey(
+  source: ViewerSource,
+  descriptor: ViewerDescriptor
+) {
   return [
     source.kind,
     source.identityKey ?? "",
     sourceMimeType(source) ?? "",
     directLoadCacheKey(source),
-    payloadCacheKey(source),
+    payloadCacheKey(source, descriptor),
   ].join("\u0000")
 }
 
@@ -289,10 +291,10 @@ function downloadCacheKey(source: ViewerSource) {
   return source.downloadUrl ?? ""
 }
 
-function payloadCacheKey(source: ViewerSource) {
+function payloadCacheKey(source: ViewerSource, descriptor: ViewerDescriptor) {
   if (source.kind === "url") return ""
   if (source.kind === "blob") return blobObjectKey(source.blob)
-  return textPayloadIdentityKey(source.text)
+  return source.identityKey ? "" : descriptor.identityKey
 }
 
 export function viewerResourceRenderKey(resource: ViewerResource): string {
@@ -703,7 +705,6 @@ async function readBoundedResponseText(
   const finalText = decoder.decode()
   lineLimitTracker.push(finalText)
   text += finalText
-  assertLineLimit(text, bounds.maxLines)
   return text
 }
 
