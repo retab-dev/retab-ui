@@ -62,7 +62,9 @@ describe("VanillaChengTextViewer parity", () => {
     ).toBeTruthy()
     expect(screen.getByRole("table")).toBeTruthy()
     expect(screen.getByRole("columnheader", { name: "Amount" })).toBeTruthy()
-    expect(screen.getByRole("link", { name: "Item" }).closest("th")).toBeTruthy()
+    expect(
+      screen.getByRole("link", { name: "Item" }).closest("th")
+    ).toBeTruthy()
     expect(
       screen.getByRole("link", { name: "Item" }).getAttribute("title")
     ).toBe("Items title")
@@ -84,9 +86,7 @@ describe("VanillaChengTextViewer parity", () => {
     )
 
     expect(await screen.findByText("# not a heading")).toBeTruthy()
-    expect(
-      screen.queryByRole("heading", { name: "not a heading" })
-    ).toBeNull()
+    expect(screen.queryByRole("heading", { name: "not a heading" })).toBeNull()
 
     const highlightedLine = await waitFor(() => {
       const line = container.querySelector<HTMLElement>(
@@ -95,13 +95,17 @@ describe("VanillaChengTextViewer parity", () => {
       expect(line).toBeTruthy()
       return line as HTMLElement
     })
-    expect(highlightedLine.className).toContain("bg-primary/12")
+    expect(highlightedLine.getAttribute("data-text-highlighted")).toBe("")
+    expect(highlightedLine.style.backgroundColor).toBe(
+      "color-mix(in oklab, var(--foreground) 8%, var(--background))"
+    )
+    expect(highlightedLine.style.boxShadow).toBe(
+      "inset 2px 0 0 0 var(--primary)"
+    )
   })
 
   it("keeps the shared controls and zoom behavior", async () => {
-    render(
-      <VanillaChengTextViewer source={textSource("zoomable prose")} />
-    )
+    render(<VanillaChengTextViewer source={textSource("zoomable prose")} />)
 
     expect(await screen.findByText("100%")).toBeTruthy()
     fireEvent.click(screen.getByLabelText("Zoom in"))

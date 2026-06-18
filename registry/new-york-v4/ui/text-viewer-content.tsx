@@ -60,6 +60,11 @@ import {
 const TEXT_VIEWER_HORIZONTAL_PADDING = 16
 const TEXT_VIEWER_INITIAL_TEXT_WIDTH = 768
 const TEXT_VIEWER_OVERSCAN_PX = 320
+const TEXT_VIEWER_HIGHLIGHT_STYLE = {
+  backgroundColor:
+    "color-mix(in oklab, var(--foreground) 8%, var(--background))",
+  boxShadow: "inset 2px 0 0 0 var(--primary)",
+} satisfies React.CSSProperties
 
 type TextViewerContentProps = Omit<TextViewerProps, "source"> & {
   resource: ViewerResource
@@ -656,11 +661,9 @@ function InlineTextBlock({
 
   return (
     <div
-      className={cn(
-        "absolute left-0 w-full px-4",
-        isHighlighted && "bg-primary/12 ring-1 ring-primary/30 ring-inset"
-      )}
+      className="absolute left-0 w-full px-4"
       data-slot="text-line"
+      data-text-highlighted={isHighlighted ? "" : undefined}
       data-source-line={frame.sourceStartLine}
       data-list-depth={frame.listDepth || undefined}
       data-quote-depth={frame.quoteDepth || undefined}
@@ -671,6 +674,7 @@ function InlineTextBlock({
       style={{
         height: frame.height,
         transform: `translateY(${frame.top}px)`,
+        ...(isHighlighted ? TEXT_VIEWER_HIGHLIGHT_STYLE : null),
       }}
     >
       <BlockChrome frame={frame} />
@@ -778,11 +782,9 @@ function CodeTextBlock({
 
   return (
     <div
-      className={cn(
-        "absolute left-0 w-full px-4",
-        isHighlighted && "bg-primary/12 ring-1 ring-primary/30 ring-inset"
-      )}
+      className="absolute left-0 w-full px-4"
       data-slot="text-line"
+      data-text-highlighted={isHighlighted ? "" : undefined}
       data-source-line={frame.sourceStartLine}
       data-list-depth={frame.listDepth || undefined}
       data-quote-depth={frame.quoteDepth || undefined}
@@ -791,6 +793,7 @@ function CodeTextBlock({
       style={{
         height: frame.height,
         transform: `translateY(${frame.top}px)`,
+        ...(isHighlighted ? TEXT_VIEWER_HIGHLIGHT_STYLE : null),
       }}
     >
       <BlockChrome frame={frame} />
@@ -896,11 +899,9 @@ function ImageTextBlock({
 
   return (
     <figure
-      className={cn(
-        "absolute left-0 w-full px-4",
-        isHighlighted && "bg-primary/12 ring-1 ring-primary/30 ring-inset"
-      )}
+      className="absolute left-0 w-full px-4"
       data-slot="text-line"
+      data-text-highlighted={isHighlighted ? "" : undefined}
       data-source-line={frame.sourceStartLine}
       data-list-depth={frame.listDepth || undefined}
       data-quote-depth={frame.quoteDepth || undefined}
@@ -909,6 +910,7 @@ function ImageTextBlock({
       style={{
         height: frame.height,
         transform: `translateY(${frame.top}px)`,
+        ...(isHighlighted ? TEXT_VIEWER_HIGHLIGHT_STYLE : null),
       }}
     >
       <BlockChrome frame={frame} />
@@ -971,11 +973,9 @@ function RuleTextBlock({
 }) {
   return (
     <div
-      className={cn(
-        "absolute left-0 w-full px-4",
-        isHighlighted && "bg-primary/12 ring-1 ring-primary/30 ring-inset"
-      )}
+      className="absolute left-0 w-full px-4"
       data-slot="text-line"
+      data-text-highlighted={isHighlighted ? "" : undefined}
       data-source-line={frame.sourceStartLine}
       data-list-depth={frame.listDepth || undefined}
       data-quote-depth={frame.quoteDepth || undefined}
@@ -984,6 +984,7 @@ function RuleTextBlock({
       style={{
         height: frame.height,
         transform: `translateY(${frame.top}px)`,
+        ...(isHighlighted ? TEXT_VIEWER_HIGHLIGHT_STYLE : null),
       }}
     >
       <BlockChrome frame={frame} />
@@ -1022,11 +1023,9 @@ function TableTextBlock({
 
   return (
     <div
-      className={cn(
-        "absolute left-0 w-full px-4",
-        isHighlighted && "bg-primary/12 ring-1 ring-primary/30 ring-inset"
-      )}
+      className="absolute left-0 w-full px-4"
       data-slot="text-line"
+      data-text-highlighted={isHighlighted ? "" : undefined}
       data-source-line={frame.sourceStartLine}
       data-list-depth={frame.listDepth || undefined}
       data-quote-depth={frame.quoteDepth || undefined}
@@ -1035,6 +1034,7 @@ function TableTextBlock({
       style={{
         height: frame.height,
         transform: `translateY(${frame.top}px)`,
+        ...(isHighlighted ? TEXT_VIEWER_HIGHLIGHT_STYLE : null),
       }}
     >
       <BlockChrome frame={frame} />

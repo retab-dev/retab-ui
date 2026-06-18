@@ -46,6 +46,11 @@ const DEFAULT_VIEWPORT_WIDTH = 900
 const INITIAL_CONTENT_WIDTH = 820
 const VIEWER_HORIZONTAL_PADDING = 32
 const OVERSCAN_PX = 800
+const MARKDOWN_GREENFIELD_HIGHLIGHT_STYLE = {
+  backgroundColor:
+    "color-mix(in oklab, var(--foreground) 8%, var(--background))",
+  boxShadow: "inset 2px 0 0 0 var(--primary)",
+} satisfies React.CSSProperties
 
 type MarkdownIdleWindow = Window &
   typeof globalThis & {
@@ -774,7 +779,6 @@ function ChunkFrame({
       }
       className={[
         "absolute left-1/2 w-full max-w-4xl -translate-x-1/2 px-8 py-1",
-        highlighted ? "ring-1 ring-primary/25 ring-inset" : "",
       ].join(" ")}
       data-markdown-chunk=""
       data-markdown-highlighted={highlighted ? "" : undefined}
@@ -786,7 +790,10 @@ function ChunkFrame({
       data-source-end-line={frame.sourceEndLine}
       data-source-start-line={frame.sourceStartLine}
       role={highlighted ? "region" : undefined}
-      style={{ top: frame.top }}
+      style={{
+        top: frame.top,
+        ...(highlighted ? MARKDOWN_GREENFIELD_HIGHLIGHT_STYLE : null),
+      }}
     >
       {children}
     </section>

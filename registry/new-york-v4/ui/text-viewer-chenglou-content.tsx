@@ -5,7 +5,7 @@ import * as React from "react"
 import type { ViewerResource } from "@/lib/viewer-resource"
 
 import { ScrollArea } from "./scroll-area"
-import { TextViewerFrame, TextViewerControls } from "./text-viewer-chrome"
+import { TextViewerControls, TextViewerFrame } from "./text-viewer-chrome"
 import {
   createPreparedTextDocument,
   getCodeVisibleLineWindow,
@@ -50,6 +50,9 @@ const TEXT_VIEWER_DEFAULT_VIEWPORT_HEIGHT = 600
 const TEXT_VIEWER_DEFAULT_VIEWPORT_WIDTH = 800
 const TEXT_VIEWER_INITIAL_TEXT_WIDTH = 768
 const TEXT_VIEWER_OVERSCAN_PX = 320
+const TEXT_VIEWER_HIGHLIGHT_BACKGROUND =
+  "color-mix(in oklab, var(--foreground) 8%, var(--background))"
+const TEXT_VIEWER_HIGHLIGHT_ACCENT_SHADOW = "inset 2px 0 0 0 var(--primary)"
 
 type CachedRow = {
   renderKey: string
@@ -643,10 +646,16 @@ function renderRowContent({
   viewportBottom: number
   viewportTop: number
 }) {
+  const isHighlighted = textFrameIsHighlighted(frame, highlightRange)
   row.replaceChildren()
-  row.className = rowClassName(frame, highlightRange)
+  row.className = "absolute left-0 w-full px-4"
   row.dataset.slot = "text-line"
   row.dataset.sourceLine = String(frame.sourceStartLine)
+  if (isHighlighted) {
+    row.dataset.textHighlighted = ""
+  } else {
+    delete row.dataset.textHighlighted
+  }
   if (block.kind === "inline" && block.headingId) {
     row.id = block.headingId
     row.dataset.headingId = block.headingId
@@ -672,6 +681,10 @@ function renderRowContent({
   row.style.paddingRight = "16px"
   row.style.height = `${frame.height}px`
   row.style.transform = `translateY(${frame.top}px)`
+  row.style.backgroundColor = isHighlighted
+    ? TEXT_VIEWER_HIGHLIGHT_BACKGROUND
+    : ""
+  row.style.boxShadow = isHighlighted ? TEXT_VIEWER_HIGHLIGHT_ACCENT_SHADOW : ""
 
   appendBlockChrome(row, frame)
 
@@ -1185,17 +1198,13 @@ function isLocalFragmentHref(href: string) {
   return href.startsWith("#")
 }
 
-function rowClassName(
+function textFrameIsHighlighted(
   frame: TextBlockFrame,
   highlightRange: ReturnType<typeof normalizeTextLineRange>
 ) {
-  const highlighted =
-    frame.sourceStartLine === frame.sourceEndLine
-      ? isLineInRange(frame.sourceStartLine, highlightRange)
-      : textFrameIntersectsLineRange({ frame, range: highlightRange })
-  return highlighted
-    ? "absolute left-0 w-full px-4 bg-primary/12 ring-1 ring-primary/30 ring-inset"
-    : "absolute left-0 w-full px-4"
+  return frame.sourceStartLine === frame.sourceEndLine
+    ? isLineInRange(frame.sourceStartLine, highlightRange)
+    : textFrameIntersectsLineRange({ frame, range: highlightRange })
 }
 
 function blockVisibleWindowKey(

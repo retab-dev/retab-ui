@@ -118,9 +118,15 @@ describe("public TextViewer prose cutover", () => {
     const firstLine = await findSourceLine(container, 1)
     const highlightedLine = await findSourceLine(container, 2)
     const thirdLine = await findSourceLine(container, 3)
-    expect(highlightedLine.className).toContain("bg-primary/12")
-    expect(firstLine.className).not.toContain("bg-primary/12")
-    expect(thirdLine.className).not.toContain("bg-primary/12")
+    expect(highlightedLine.getAttribute("data-text-highlighted")).toBe("")
+    expect(highlightedLine.style.backgroundColor).toBe(
+      "color-mix(in oklab, var(--foreground) 8%, var(--background))"
+    )
+    expect(highlightedLine.style.boxShadow).toBe(
+      "inset 2px 0 0 0 var(--primary)"
+    )
+    expect(firstLine.getAttribute("data-text-highlighted")).toBeNull()
+    expect(thirdLine.getAttribute("data-text-highlighted")).toBeNull()
   })
 
   it("keeps the existing zoom controls on the public prose viewer", async () => {

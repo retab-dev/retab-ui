@@ -347,6 +347,12 @@ describe("MarkdownViewer", () => {
     expect(highlightedChunk?.getAttribute("data-source-highlight-end")).toBe(
       "5"
     )
+    expect(highlightedChunk?.style.backgroundColor).toBe(
+      "color-mix(in oklab, var(--foreground) 8%, var(--background))"
+    )
+    expect(highlightedChunk?.style.boxShadow).toBe(
+      "inset 2px 0 0 0 var(--primary)"
+    )
     expect(
       screen.getByRole("region", { name: "Highlighted source lines 5-5" })
     ).toBe(highlightedChunk)

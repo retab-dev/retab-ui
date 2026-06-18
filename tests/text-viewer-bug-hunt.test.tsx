@@ -1255,7 +1255,7 @@ describe("TextViewer component behavior", () => {
     await waitFor(() => {
       expect(container.querySelector('[data-source-line="1"]')).toBeTruthy()
     })
-    expect(container.querySelector(".bg-primary\\/12")).toBeNull()
+    expect(container.querySelector("[data-text-highlighted]")).toBeNull()
   })
 
   it("clamps a partially out-of-range highlight to the document", async () => {
@@ -1271,7 +1271,11 @@ describe("TextViewer component behavior", () => {
       expect(el).toBeTruthy()
       return el as HTMLElement
     })
-    expect(second.className).toContain("bg-primary/12")
+    expect(second.getAttribute("data-text-highlighted")).toBe("")
+    expect(second.style.backgroundColor).toBe(
+      "color-mix(in oklab, var(--foreground) 8%, var(--background))"
+    )
+    expect(second.style.boxShadow).toBe("inset 2px 0 0 0 var(--primary)")
   })
 
   it("exposes a working imperative scrollToLineRange handle", async () => {
@@ -1337,7 +1341,11 @@ describe("TextViewer component behavior", () => {
       return el as HTMLElement
     })
     expect(target.textContent).toContain("para three")
-    expect(target.className).toContain("bg-primary/12")
+    expect(target.getAttribute("data-text-highlighted")).toBe("")
+    expect(target.style.backgroundColor).toBe(
+      "color-mix(in oklab, var(--foreground) 8%, var(--background))"
+    )
+    expect(target.style.boxShadow).toBe("inset 2px 0 0 0 var(--primary)")
   })
 
   // User-facing payoff of the source-line fix: highlighting the true source
@@ -1360,5 +1368,9 @@ describe("TextViewer component behavior", () => {
     expect(target.textContent).toContain("Para three.")
     expect(target.getAttribute("data-source-highlight-start")).toBe("3")
     expect(target.getAttribute("data-source-highlight-end")).toBe("3")
+    expect(target.style.backgroundColor).toBe(
+      "color-mix(in oklab, var(--foreground) 8%, var(--background))"
+    )
+    expect(target.style.boxShadow).toBe("inset 2px 0 0 0 var(--primary)")
   })
 })
