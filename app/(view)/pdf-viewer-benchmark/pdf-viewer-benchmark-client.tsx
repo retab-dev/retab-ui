@@ -2,7 +2,11 @@
 
 import * as React from "react"
 
-import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
+import {
+  PdfViewer,
+  type PdfPageRenderTiming,
+  type PdfViewerHandle,
+} from "@/components/ui/pdf-viewer"
 
 const BENCHMARK_PAGE_COUNT = 585
 const BENCHMARK_PDF_SRC = "/samples/big-911-report.pdf"
@@ -13,6 +17,7 @@ type PdfViewerBenchmarkSnapshot = {
   clientHeight: number
   currentPageText: string
   pageSlotCount: number
+  renderTimings: PdfPageRenderTiming[]
   scrollHeight: number
   scrollTop: number
   slotPages: number[]
@@ -32,11 +37,14 @@ declare global {
   }
 }
 
+const pdfViewerBenchmarkRenderTimings: PdfPageRenderTiming[] = []
+
 export function PdfViewerBenchmarkClient() {
   const viewerRef = React.useRef<PdfViewerHandle>(null)
   const [resultJson, setResultJson] = React.useState("")
 
   React.useEffect(() => {
+    clearPdfViewerBenchmarkRenderTimings()
     const benchmark = {
       snapshot: readSnapshot,
       jumpToPage: (pageNumber: number) =>
@@ -62,6 +70,7 @@ export function PdfViewerBenchmarkClient() {
         }}
         className="h-full"
         bare
+        onPageRenderTiming={recordPdfViewerBenchmarkRenderTiming}
       />
       <div
         aria-hidden="true"
@@ -106,6 +115,7 @@ function jumpToPage(
     BENCHMARK_PAGE_COUNT,
     Math.max(1, Math.round(pageNumber))
   )
+  clearPdfViewerBenchmarkRenderTimings()
   const startedAt = performance.now()
   viewer?.scrollToPage(targetPage, { behavior: "auto" })
 
@@ -115,10 +125,13 @@ function jumpToPage(
     function measure() {
       const snapshot = readSnapshot()
       const hasTargetSlot = snapshot.slotPages.includes(targetPage)
-      const hasRenderedCanvas = snapshot.canvasCount > 0
+      const hasRenderedTargetPage = snapshot.renderTimings.some(
+        (timing) =>
+          timing.pageNumber === targetPage && timing.status === "rendered"
+      )
 
       if (
-        (hasTargetSlot && hasRenderedCanvas) ||
+        (hasTargetSlot && hasRenderedTargetPage) ||
         performance.now() > deadline
       ) {
         resolve({
@@ -154,8 +167,17 @@ function readSnapshot(): PdfViewerBenchmarkSnapshot {
     clientHeight: viewport?.clientHeight ?? 0,
     currentPageText,
     pageSlotCount: slots.length,
+    renderTimings: [...pdfViewerBenchmarkRenderTimings],
     scrollHeight: viewport?.scrollHeight ?? 0,
     scrollTop: viewport?.scrollTop ?? 0,
     slotPages: slots.map((slot) => Number(slot.dataset.pageNumber)),
   }
+}
+
+function recordPdfViewerBenchmarkRenderTiming(timing: PdfPageRenderTiming) {
+  pdfViewerBenchmarkRenderTimings.push(timing)
+}
+
+function clearPdfViewerBenchmarkRenderTimings() {
+  pdfViewerBenchmarkRenderTimings.length = 0
 }

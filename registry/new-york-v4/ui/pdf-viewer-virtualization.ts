@@ -1,9 +1,17 @@
 import * as React from "react"
 
 import {
+  getPdfPreloadPageNumbers,
+  getPdfRenderPageNumbers,
   getPdfVisiblePageNumbers,
   type PdfPageLayoutModel,
 } from "./pdf-viewer-layout"
+
+type PdfPageWindow = {
+  visiblePageNumbers: readonly number[]
+  renderPageNumbers: readonly number[]
+  preloadPageNumbers: readonly number[]
+}
 
 export function usePdfPageVirtualization({
   layout,
@@ -16,51 +24,76 @@ export function usePdfPageVirtualization({
 }) {
   const measureFrameRef = React.useRef(0)
   const lastMeasuredResetKeyRef = React.useRef<unknown>(resetKey)
-  const getCurrentVisiblePageNumbers = React.useCallback(
-    () =>
-      getPdfVisiblePageNumbers({
+  const getCurrentVisiblePageNumbers = React.useCallback((): PdfPageWindow => {
+    const scrollTop = Object.is(lastMeasuredResetKeyRef.current, resetKey)
+      ? (viewportElement?.scrollTop ?? 0)
+      : 0
+    const viewportHeight = viewportElement?.clientHeight ?? 0
+    const renderPageNumbers = getPdfRenderPageNumbers({
+      layout,
+      scrollTop,
+      viewportHeight,
+    })
+
+    return {
+      visiblePageNumbers: getPdfVisiblePageNumbers({
         layout,
-        scrollTop: Object.is(lastMeasuredResetKeyRef.current, resetKey)
-          ? (viewportElement?.scrollTop ?? 0)
-          : 0,
+        scrollTop,
+        viewportHeight,
+      }),
+      renderPageNumbers,
+      preloadPageNumbers: getPdfPreloadPageNumbers({
+        layout,
+        renderPageNumbers,
+      }),
+    }
+  }, [layout, resetKey, viewportElement])
+  const getResetPageWindow = React.useCallback(() => {
+    const renderPageNumbers = getPdfRenderPageNumbers({
+      layout,
+      scrollTop: 0,
+      viewportHeight: viewportElement?.clientHeight ?? 0,
+    })
+
+    return {
+      visiblePageNumbers: getPdfVisiblePageNumbers({
+        layout,
+        scrollTop: 0,
         viewportHeight: viewportElement?.clientHeight ?? 0,
       }),
-    [layout, resetKey, viewportElement]
-  )
+      renderPageNumbers,
+      preloadPageNumbers: getPdfPreloadPageNumbers({
+        layout,
+        renderPageNumbers,
+      }),
+    }
+  }, [layout, viewportElement])
   const [state, setState] = React.useState<{
     layout: PdfPageLayoutModel
     resetKey: unknown
-    visiblePageNumbers: readonly number[]
+    pageWindow: PdfPageWindow
   }>(() => ({
     layout,
     resetKey,
-    visiblePageNumbers: getPdfVisiblePageNumbers({
-      layout,
-      scrollTop: viewportElement?.scrollTop ?? 0,
-      viewportHeight: viewportElement?.clientHeight ?? 0,
-    }),
+    pageWindow: getCurrentVisiblePageNumbers(),
   }))
-  const visiblePageNumbers =
+  const pageWindow =
     Object.is(state.layout, layout) && Object.is(state.resetKey, resetKey)
-      ? state.visiblePageNumbers
-      : getPdfVisiblePageNumbers({
-          layout,
-          scrollTop: Object.is(state.resetKey, resetKey)
-            ? (viewportElement?.scrollTop ?? 0)
-            : 0,
-          viewportHeight: viewportElement?.clientHeight ?? 0,
-        })
+      ? state.pageWindow
+      : Object.is(state.resetKey, resetKey)
+        ? getCurrentVisiblePageNumbers()
+        : getResetPageWindow()
 
   const measureVisiblePagesNow = React.useCallback(() => {
     measureFrameRef.current = 0
-    const nextPageNumbers = getCurrentVisiblePageNumbers()
+    const nextPageWindow = getCurrentVisiblePageNumbers()
     lastMeasuredResetKeyRef.current = resetKey
     setState((previousState) =>
       Object.is(previousState.layout, layout) &&
       Object.is(previousState.resetKey, resetKey) &&
-      arePageNumbersEqual(previousState.visiblePageNumbers, nextPageNumbers)
+      arePageWindowsEqual(previousState.pageWindow, nextPageWindow)
         ? previousState
-        : { layout, resetKey, visiblePageNumbers: nextPageNumbers }
+        : { layout, resetKey, pageWindow: nextPageWindow }
     )
   }, [getCurrentVisiblePageNumbers, layout, resetKey])
   const measureVisiblePagesNowRef = React.useRef(measureVisiblePagesNow)
@@ -92,7 +125,32 @@ export function usePdfPageVirtualization({
     []
   )
 
-  return { visiblePageNumbers, measureVisiblePages }
+  return {
+    visiblePageNumbers: pageWindow.visiblePageNumbers,
+    renderPageNumbers: pageWindow.renderPageNumbers,
+    preloadPageNumbers: pageWindow.preloadPageNumbers,
+    measureVisiblePages,
+  }
+}
+
+function arePageWindowsEqual(
+  previousPageWindow: PdfPageWindow,
+  nextPageWindow: PdfPageWindow
+) {
+  return (
+    arePageNumbersEqual(
+      previousPageWindow.visiblePageNumbers,
+      nextPageWindow.visiblePageNumbers
+    ) &&
+    arePageNumbersEqual(
+      previousPageWindow.renderPageNumbers,
+      nextPageWindow.renderPageNumbers
+    ) &&
+    arePageNumbersEqual(
+      previousPageWindow.preloadPageNumbers,
+      nextPageWindow.preloadPageNumbers
+    )
+  )
 }
 
 function arePageNumbersEqual(

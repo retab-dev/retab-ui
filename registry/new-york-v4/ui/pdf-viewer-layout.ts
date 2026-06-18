@@ -142,12 +142,77 @@ export function getPdfVisiblePageNumbers({
 }) {
   if (layout.pageCount === 0) return []
 
-  const startOffset = Math.max(0, scrollTop - viewportHeight)
-  const endOffset = scrollTop + viewportHeight * 2
-  const firstVisiblePage = findPdfPageByOffset(layout, startOffset)
-  const lastVisiblePage = findPdfPageByOffset(layout, endOffset)
+  return getPdfPageNumbersInRange({
+    layout,
+    startOffset: Math.max(0, scrollTop - viewportHeight),
+    endOffset: scrollTop + viewportHeight * 2,
+    overscanPages,
+  })
+}
+
+export function getPdfRenderPageNumbers({
+  layout,
+  scrollTop,
+  viewportHeight,
+  overscanPages = 0,
+}: {
+  layout: PdfPageLayoutModel
+  scrollTop: number
+  viewportHeight: number
+  overscanPages?: number
+}) {
+  if (layout.pageCount === 0) return []
+
+  return getPdfPageNumbersInRange({
+    layout,
+    startOffset: scrollTop,
+    endOffset: scrollTop + viewportHeight,
+    overscanPages,
+  })
+}
+
+export function getPdfPreloadPageNumbers({
+  layout,
+  renderPageNumbers,
+  overscanPages = 4,
+}: {
+  layout: PdfPageLayoutModel
+  renderPageNumbers: readonly number[]
+  overscanPages?: number
+}) {
+  if (layout.pageCount === 0 || renderPageNumbers.length === 0) return []
+
+  const firstRenderPage = renderPageNumbers[0]
+  const lastRenderPage = renderPageNumbers[renderPageNumbers.length - 1]
+  const firstPage = Math.max(1, firstRenderPage - overscanPages)
+  const lastPage = Math.min(layout.pageCount, lastRenderPage + overscanPages)
+
+  return createPageNumberRange(firstPage, lastPage)
+}
+
+function getPdfPageNumbersInRange({
+  layout,
+  startOffset,
+  endOffset,
+  overscanPages,
+}: {
+  layout: PdfPageLayoutModel
+  startOffset: number
+  endOffset: number
+  overscanPages: number
+}) {
+  const safeStartOffset = Math.max(0, startOffset)
+  const safeEndOffset = Math.max(safeStartOffset, endOffset)
+  const firstVisiblePage = findPdfPageByOffset(layout, safeStartOffset)
+  const lastVisiblePage = findPdfPageByOffset(layout, safeEndOffset)
   const firstPage = Math.max(1, firstVisiblePage - overscanPages)
   const lastPage = Math.min(layout.pageCount, lastVisiblePage + overscanPages)
+
+  return createPageNumberRange(firstPage, lastPage)
+}
+
+function createPageNumberRange(firstPage: number, lastPage: number) {
+  if (lastPage < firstPage) return []
 
   return Array.from(
     { length: lastPage - firstPage + 1 },

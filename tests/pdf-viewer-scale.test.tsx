@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   clampPdfScale,
   getPdfFitWidthScale,
+  getPdfPageDevicePixelRatio,
   MAX_PDF_SCALE,
   MIN_PDF_SCALE,
   PDF_PAGE_HORIZONTAL_PADDING,
@@ -40,6 +41,24 @@ describe("pdf-viewer-scale", () => {
       MIN_PDF_SCALE
     )
     expect(getPdfFitWidthScale(10000, 100)).toBe(MAX_PDF_SCALE)
+  })
+
+  it("caps page device pixel ratio by render mode", () => {
+    expect(
+      getPdfPageDevicePixelRatio({ devicePixelRatio: 3, mode: "settled" })
+    ).toBe(2)
+    expect(
+      getPdfPageDevicePixelRatio({ devicePixelRatio: 3, mode: "scrolling" })
+    ).toBe(1)
+    expect(
+      getPdfPageDevicePixelRatio({
+        devicePixelRatio: Number.NaN,
+        mode: "settled",
+      })
+    ).toBe(1)
+    expect(
+      getPdfPageDevicePixelRatio({ devicePixelRatio: -1, mode: "settled" })
+    ).toBe(1)
   })
 
   it("cancels a pending measured-width frame when the element is replaced", async () => {

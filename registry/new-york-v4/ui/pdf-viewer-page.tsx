@@ -1,25 +1,34 @@
 import * as React from "react"
 
-import type { PdfDocumentProxy } from "@/lib/pdf-document-types"
 import { readPdfPageResource } from "@/lib/pdf-document-resource"
+import type { PdfDocumentProxy } from "@/lib/pdf-document-types"
 
 import { getPdfCanvasPixelSize } from "./pdf-viewer-canvas"
 import { toPdfRenderFailedError } from "./pdf-viewer-render-error"
-import type { PageOverlayProps, PdfPageSize } from "./pdf-viewer-types"
+import type {
+  PageOverlayProps,
+  PdfPageRenderStatus,
+  PdfPageRenderTiming,
+  PdfPageSize,
+} from "./pdf-viewer-types"
 
 export function PdfPage({
   document,
   pageNumber,
   scale,
   rotation,
+  devicePixelRatio,
   renderOverlay,
+  onRenderTiming,
   onSize,
 }: {
   document: PdfDocumentProxy
   pageNumber: number
   scale: number
   rotation: number
+  devicePixelRatio: number
   renderOverlay?: (props: PageOverlayProps) => React.ReactNode
+  onRenderTiming?: (timing: PdfPageRenderTiming) => void
   onSize?: (pageNumber: number, size: PdfPageSize) => void
 }) {
   const page = readPdfPageResource(document, pageNumber)
@@ -43,16 +52,29 @@ export function PdfPage({
       }),
     [page, rotation, scale]
   )
-  const devicePixelRatio =
-    (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1
   const [renderError, setRenderError] = React.useState<unknown>(null)
   if (renderError) throw renderError
 
   const canvasRef = React.useCallback(
     (canvas: HTMLCanvasElement | null) => {
       if (!canvas) return
+      const startedAt = readNow()
+      let didReportRenderTiming = false
+      const reportRenderTiming = (status: PdfPageRenderStatus) => {
+        if (didReportRenderTiming) return
+        didReportRenderTiming = true
+        onRenderTiming?.({
+          pageNumber,
+          scale,
+          rotation,
+          devicePixelRatio,
+          status,
+          durationMs: Math.max(0, readNow() - startedAt),
+        })
+      }
       const context = canvas.getContext("2d")
       if (!context) {
+        reportRenderTiming("failed")
         setRenderError(
           toPdfRenderFailedError(new Error("Canvas 2D context unavailable."))
         )
@@ -73,19 +95,38 @@ export function PdfPage({
               : undefined,
         })
       } catch (error) {
+        reportRenderTiming("failed")
         setRenderError(toPdfRenderFailedError(error))
         return
       }
       let isActive = true
-      renderTask.promise.catch((error) => {
-        if (isActive) setRenderError(toPdfRenderFailedError(error))
-      })
+      renderTask.promise.then(
+        () => {
+          reportRenderTiming("rendered")
+        },
+        (error) => {
+          if (!isActive) return
+          reportRenderTiming("failed")
+          setRenderError(toPdfRenderFailedError(error))
+        }
+      )
       return () => {
         isActive = false
-        renderTask.cancel()
+        if (!didReportRenderTiming) {
+          reportRenderTiming("cancelled")
+          renderTask.cancel()
+        }
       }
     },
-    [devicePixelRatio, page, viewport]
+    [
+      devicePixelRatio,
+      onRenderTiming,
+      page,
+      pageNumber,
+      rotation,
+      scale,
+      viewport,
+    ]
   )
 
   return (
@@ -113,4 +154,8 @@ export function PdfPage({
       ) : null}
     </div>
   )
+}
+
+function readNow() {
+  return typeof performance !== "undefined" ? performance.now() : Date.now()
 }

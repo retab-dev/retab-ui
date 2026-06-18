@@ -28,3 +28,14 @@ export type PdfPageSize = {
   width: number
   height: number
 }
+
+export type PdfPageRenderStatus = "rendered" | "cancelled" | "failed"
+
+export type PdfPageRenderTiming = {
+  pageNumber: number
+  scale: number
+  rotation: number
+  devicePixelRatio: number
+  status: PdfPageRenderStatus
+  durationMs: number
+}

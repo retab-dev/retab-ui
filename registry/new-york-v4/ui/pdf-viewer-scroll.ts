@@ -81,9 +81,9 @@ export function usePdfScroll({
       scrollable > 0 ? clamp(viewportElement.scrollTop / scrollable, 0, 1) : 0
     onScrollProgressChange?.(progress)
 
-    const viewportRect = viewportElement.getBoundingClientRect()
     const markerOffset =
-      viewportElement.scrollTop + viewportRect.height * PDF_READING_MARKER_RATIO
+      viewportElement.scrollTop +
+      viewportElement.clientHeight * PDF_READING_MARKER_RATIO
     const visiblePage = findPdfPageByOffset(layout, markerOffset)
 
     if (
@@ -183,8 +183,8 @@ export function usePdfScroll({
             : viewportElement.scrollTop
       }
 
-      const targetLeft = getPdfPageAreaScrollLeft(viewportElement, {
-        pageNumber,
+      const targetLeft = getPdfPageAreaScrollLeft(viewportElement, layout, {
+        pageLayout,
         left: target.left,
         width: target.width,
       })
@@ -237,8 +237,9 @@ export function usePdfScroll({
 
 function getPdfPageAreaScrollLeft(
   viewportElement: HTMLDivElement,
+  layout: PdfPageLayoutModel,
   target: {
-    pageNumber: number
+    pageLayout: NonNullable<ReturnType<typeof getPdfPageLayout>>
     left?: number
     width?: number
   }
@@ -247,17 +248,16 @@ function getPdfPageAreaScrollLeft(
   const targetWidthPercent = normalizeOptionalPercent(target.width)
   if (targetLeftPercent == null || targetWidthPercent == null) return undefined
 
-  const pageElement = viewportElement.querySelector<HTMLElement>(
-    `[data-slot="pdf-page-slot"][data-page-number="${target.pageNumber}"]`
+  const documentInlineOffset = Math.max(
+    0,
+    (viewportElement.clientWidth - layout.maxPageWidth) / 2
   )
-  if (!pageElement) return undefined
-
-  const viewportRect = viewportElement.getBoundingClientRect()
-  const pageRect = pageElement.getBoundingClientRect()
-  const pageLeft =
-    pageRect.left - viewportRect.left + viewportElement.scrollLeft
-  const areaLeft = pageLeft + (targetLeftPercent / 100) * pageRect.width
-  const areaRight = areaLeft + (targetWidthPercent / 100) * pageRect.width
+  const pageInlineOffset =
+    documentInlineOffset + (layout.maxPageWidth - target.pageLayout.width) / 2
+  const areaLeft =
+    pageInlineOffset + (targetLeftPercent / 100) * target.pageLayout.width
+  const areaRight =
+    areaLeft + (targetWidthPercent / 100) * target.pageLayout.width
   const visibleLeft =
     viewportElement.scrollLeft + PDF_SCROLL_TARGET_INLINE_HEADROOM
   const visibleRight =
@@ -291,11 +291,7 @@ function capturePdfReadingAnchor(
   if (layout.pageCount === 0) return null
   if (viewportElement.scrollTop <= 0) return { kind: "top" }
 
-  const viewportRect = viewportElement.getBoundingClientRect()
-  const viewportHeight =
-    Number.isFinite(viewportRect.height) && viewportRect.height > 0
-      ? viewportRect.height
-      : viewportElement.clientHeight
+  const viewportHeight = viewportElement.clientHeight
   const markerOffset =
     viewportElement.scrollTop + viewportHeight * PDF_READING_MARKER_RATIO
   const pageNumber = findPdfPageByOffset(layout, markerOffset)
@@ -326,15 +322,14 @@ function restorePdfReadingAnchor(
   const pageLayout = getPdfPageLayout(layout, anchor.pageNumber)
   if (!pageLayout) return
 
-  const viewportRect = viewportElement.getBoundingClientRect()
-  const viewportHeight =
-    Number.isFinite(viewportRect.height) && viewportRect.height > 0
-      ? viewportRect.height
-      : viewportElement.clientHeight
+  const viewportHeight = viewportElement.clientHeight
   const targetTop =
     pageLayout.offsetTop +
     pageLayout.height * anchor.yPercent -
     viewportHeight * PDF_READING_MARKER_RATIO
-  const maxScrollTop = Math.max(0, layout.totalHeight - viewportElement.clientHeight)
+  const maxScrollTop = Math.max(
+    0,
+    layout.totalHeight - viewportElement.clientHeight
+  )
   viewportElement.scrollTop = clamp(targetTop, 0, maxScrollTop)
 }

@@ -20,16 +20,23 @@ import {
 } from "./pdf-viewer-layout"
 import { PdfPage } from "./pdf-viewer-page"
 import { usePdfPageSizes } from "./pdf-viewer-page-sizes"
-import { useMeasuredElementWidth, usePdfScale } from "./pdf-viewer-scale"
+import { usePdfPageRenderScheduler } from "./pdf-viewer-render-scheduler"
+import {
+  getPdfPageDevicePixelRatio,
+  useMeasuredElementWidth,
+  usePdfScale,
+} from "./pdf-viewer-scale"
 import { usePdfScroll } from "./pdf-viewer-scroll"
 import { PageSkeleton, PdfViewerFallback } from "./pdf-viewer-states"
 import type {
   PageOverlayProps,
+  PdfPageRenderTiming,
   PdfPageSize,
   PdfViewerHandle,
 } from "./pdf-viewer-types"
 import { usePdfPageVirtualization } from "./pdf-viewer-virtualization"
 import { useIsClient } from "./use-is-client"
+import { usePdfPageMetrics } from "./use-pdf-page-metrics"
 import {
   useViewerControlsRegistration,
   ViewerControls,
@@ -54,6 +61,8 @@ export type PdfViewerContentProps = {
   onVisiblePageChange?: (page: number) => void
   /** Fired with scroll progress in [0, 1] (for a fine-grained scroll cursor). */
   onScrollProgressChange?: (progress: number) => void
+  /** Reports page render work for profiling and benchmark surfaces. */
+  onPageRenderTiming?: (timing: PdfPageRenderTiming) => void
   /** Drop the outer border/rounded/background so the viewer fills its container. */
   bare?: boolean
 }
@@ -122,6 +131,7 @@ function PdfViewerInner({
   renderPageOverlay,
   onVisiblePageChange,
   onScrollProgressChange,
+  onPageRenderTiming,
   bare = false,
   forwardedRef,
 }: PdfResourceContentProps & {
@@ -145,6 +155,10 @@ function PdfViewerInner({
   })
 
   const { pageSizeByNumber, setPageSize } = usePdfPageSizes(document)
+  const { metricByPageNumber, requestPageMetrics } = usePdfPageMetrics(
+    document,
+    document
+  )
   const pageLayout = React.useMemo(
     () =>
       createPdfPageLayout({
@@ -189,11 +203,51 @@ function PdfViewerInner({
     zoomIn,
     zoomOut,
   })
-  const { visiblePageNumbers, measureVisiblePages } = usePdfPageVirtualization({
+  const {
+    visiblePageNumbers,
+    renderPageNumbers,
+    preloadPageNumbers,
+    measureVisiblePages,
+  } = usePdfPageVirtualization({
     layout: pageLayout,
     resetKey: document,
     viewportElement,
   })
+  const pageDevicePixelRatio = getPdfPageDevicePixelRatio({
+    devicePixelRatio:
+      (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1,
+    mode: "settled",
+  })
+  const {
+    activePageNumbers: activeRenderPageNumbers,
+    onPageRenderTiming: handleScheduledPageRenderTiming,
+  } = usePdfPageRenderScheduler({
+    pageNumbers: renderPageNumbers,
+    scale: resolvedScale,
+    rotation,
+    devicePixelRatio: pageDevicePixelRatio,
+    resetKey: document,
+  })
+  const handlePageRenderTiming = React.useCallback(
+    (timing: PdfPageRenderTiming) => {
+      handleScheduledPageRenderTiming(timing)
+      onPageRenderTiming?.(timing)
+    },
+    [handleScheduledPageRenderTiming, onPageRenderTiming]
+  )
+
+  React.useEffect(() => {
+    requestPageMetrics(preloadPageNumbers)
+  }, [preloadPageNumbers, requestPageMetrics])
+
+  React.useEffect(() => {
+    for (const metric of metricByPageNumber.values()) {
+      setPageSize(metric.pageNumber, {
+        width: metric.width,
+        height: metric.height,
+      })
+    }
+  }, [metricByPageNumber, setPageSize])
 
   React.useEffect(() => {
     measureScroll()
@@ -260,9 +314,12 @@ function PdfViewerInner({
                 document={document}
                 layout={pageLayout}
                 pageNumbers={visiblePageNumbers}
+                renderPageNumbers={activeRenderPageNumbers}
                 renderPageOverlay={renderPageOverlay}
                 rotation={rotation}
                 scale={resolvedScale}
+                devicePixelRatio={pageDevicePixelRatio}
+                onPageRenderTiming={handlePageRenderTiming}
                 setPageSize={setPageSize}
               />
             </ScrollArea>
@@ -374,20 +431,31 @@ function PdfDocumentPagesLayer({
   document,
   layout,
   pageNumbers,
+  renderPageNumbers,
   renderPageOverlay,
   rotation,
   scale,
+  devicePixelRatio,
+  onPageRenderTiming,
   setPageSize,
 }: {
   containerRef: React.RefCallback<HTMLDivElement>
   document: PdfDocument
   layout: PdfPageLayoutModel
   pageNumbers: readonly number[]
+  renderPageNumbers: readonly number[]
   renderPageOverlay?: (props: PageOverlayProps) => React.ReactNode
   rotation: number
   scale: number
+  devicePixelRatio: number
+  onPageRenderTiming?: (timing: PdfPageRenderTiming) => void
   setPageSize: PdfPageSizeSetter
 }) {
+  const renderPageNumberSet = React.useMemo(
+    () => new Set(renderPageNumbers),
+    [renderPageNumbers]
+  )
+
   return (
     <div
       ref={containerRef}
@@ -418,16 +486,22 @@ function PdfDocumentPagesLayer({
                 minHeight: page.height,
               }}
             >
-              <React.Suspense fallback={<PageSkeleton />}>
-                <PdfPage
-                  document={document}
-                  pageNumber={pageNumber}
-                  scale={scale}
-                  rotation={rotation}
-                  renderOverlay={renderPageOverlay}
-                  onSize={setPageSize}
-                />
-              </React.Suspense>
+              {renderPageNumberSet.has(pageNumber) ? (
+                <React.Suspense fallback={<PageSkeleton />}>
+                  <PdfPage
+                    document={document}
+                    pageNumber={pageNumber}
+                    scale={scale}
+                    rotation={rotation}
+                    devicePixelRatio={devicePixelRatio}
+                    renderOverlay={renderPageOverlay}
+                    onRenderTiming={onPageRenderTiming}
+                    onSize={setPageSize}
+                  />
+                </React.Suspense>
+              ) : (
+                <PageSkeleton />
+              )}
             </div>
           )
         })}

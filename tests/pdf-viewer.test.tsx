@@ -46,6 +46,10 @@ import {
   PdfViewerThumbnails,
 } from "@/registry/new-york-v4/ui/pdf-viewer-thumbnails"
 import {
+  PDF_PAGE_METRIC_CONCURRENCY,
+  usePdfPageMetrics,
+} from "@/registry/new-york-v4/ui/use-pdf-page-metrics"
+import {
   PDF_THUMBNAIL_PAGE_METRIC_CONCURRENCY,
   usePdfThumbnailPageMetrics,
 } from "@/registry/new-york-v4/ui/use-pdf-thumbnail-page-metrics"
@@ -291,6 +295,7 @@ function pdfUrlResource(url: string, fileName?: string) {
 }
 
 type PdfMetricDocument = Parameters<typeof usePdfThumbnailPageMetrics>[0]
+type PdfPageMetricDocument = Parameters<typeof usePdfPageMetrics>[0]
 
 class TestMetricErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -659,6 +664,65 @@ describe("PdfViewer", () => {
     expect(firstLoadedMap).not.toBe(secondLoadedMap)
     expect(firstLoadedMap.size).toBe(1)
     expect(secondLoadedMap.size).toBe(2)
+  })
+
+  it("bounds concurrent main page metric requests and records page metrics", async () => {
+    const pages = Array.from({ length: 12 }, (_, index) =>
+      makePage(100 + index, 200 + index, index === 0 ? 90 : 0)
+    )
+    const pageRequests = pages.map(() => pdfjsMock.deferred<MockPage>())
+    const doc = {
+      numPages: pages.length,
+      getPage: vi.fn(
+        (pageNumber: number) => pageRequests[pageNumber - 1].promise
+      ),
+      destroy: vi.fn(() => Promise.resolve()),
+    }
+    const pageNumbers = pages.map((_, index) => index + 1)
+
+    function MetricRequestHarness() {
+      const { metricByPageNumber, requestPageMetrics, status } =
+        usePdfPageMetrics(doc as unknown as PdfPageMetricDocument, doc)
+
+      React.useEffect(() => {
+        requestPageMetrics(pageNumbers)
+      }, [requestPageMetrics])
+
+      return (
+        <div
+          data-loaded={metricByPageNumber.size}
+          data-rotation={metricByPageNumber.get(1)?.rotation ?? ""}
+          data-status={status}
+          data-width={metricByPageNumber.get(1)?.width ?? ""}
+        />
+      )
+    }
+
+    render(<MetricRequestHarness />)
+
+    await waitFor(() =>
+      expect(doc.getPage).toHaveBeenCalledTimes(PDF_PAGE_METRIC_CONCURRENCY)
+    )
+    expect(doc.getPage).not.toHaveBeenCalledWith(
+      PDF_PAGE_METRIC_CONCURRENCY + 1
+    )
+
+    await act(async () => {
+      pageRequests[0].resolve(pages[0])
+      await Promise.resolve()
+    })
+
+    await waitFor(() =>
+      expect(doc.getPage).toHaveBeenCalledWith(PDF_PAGE_METRIC_CONCURRENCY + 1)
+    )
+    await waitFor(() =>
+      expect(
+        document.querySelector("[data-rotation]")?.getAttribute("data-rotation")
+      ).toBe("90")
+    )
+    expect(
+      document.querySelector("[data-width]")?.getAttribute("data-width")
+    ).toBe("200")
   })
 
   it("does not render controls chrome in the fallback when controls is false", async () => {
@@ -2259,6 +2323,139 @@ describe("PdfViewer", () => {
     expect(renderCall.transform).toEqual([2, 0, 0, 2, 0, 0])
   })
 
+  it("caps high-DPI page canvases without changing css size", async () => {
+    const page = makePage(100, 200)
+    const doc = {
+      numPages: 1,
+      getPage: vi.fn(() => Promise.resolve(page)),
+      destroy: vi.fn(() => Promise.resolve()),
+    }
+    pdfjsMock.docs.set("/capped-dpr.pdf", doc)
+
+    Object.defineProperty(window, "devicePixelRatio", {
+      configurable: true,
+      value: 3,
+    })
+
+    await act(async () => {
+      render(
+        <PdfViewer source={pdfUrlSource("/capped-dpr.pdf")} defaultScale={1} />
+      )
+    })
+
+    await waitFor(() => expect(page.render).toHaveBeenCalledTimes(1))
+    const renderCall = page.render.mock.calls[0]?.[0]
+    const canvas = renderCall.canvas as HTMLCanvasElement
+
+    expect(canvas.width).toBe(200)
+    expect(canvas.height).toBe(400)
+    expect(canvas.style.width).toBe("100px")
+    expect(canvas.style.height).toBe("200px")
+    expect(renderCall.transform).toEqual([2, 0, 0, 2, 0, 0])
+  })
+
+  it("reports completed page render timings", async () => {
+    const onPageRenderTiming = vi.fn()
+    const page = makePage(100, 200)
+    page.render.mockImplementationOnce(() => {
+      const task = {
+        promise: Promise.resolve(),
+        cancel: vi.fn(),
+      }
+      pdfjsMock.renderTasks.push(task)
+      return task
+    })
+    const doc = {
+      numPages: 1,
+      getPage: vi.fn(() => Promise.resolve(page)),
+      destroy: vi.fn(() => Promise.resolve()),
+    }
+    pdfjsMock.docs.set("/render-timing.pdf", doc)
+
+    Object.defineProperty(window, "devicePixelRatio", {
+      configurable: true,
+      value: 1,
+    })
+
+    await act(async () => {
+      render(
+        <PdfViewer
+          source={pdfUrlSource("/render-timing.pdf")}
+          defaultScale={1}
+          onPageRenderTiming={onPageRenderTiming}
+        />
+      )
+    })
+
+    await waitFor(() =>
+      expect(onPageRenderTiming).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pageNumber: 1,
+          scale: 1,
+          rotation: 0,
+          devicePixelRatio: 1,
+          status: "rendered",
+          durationMs: expect.any(Number),
+        })
+      )
+    )
+  })
+
+  it("preloads overscan page metrics without rendering overscan canvases", async () => {
+    const doc = makeDoc([
+      [100, 200],
+      [400, 500],
+      [100, 200],
+    ])
+    pdfjsMock.docs.set("/metric-preload.pdf", doc)
+
+    await act(async () => {
+      render(
+        <PdfViewer
+          source={pdfUrlSource("/metric-preload.pdf")}
+          defaultScale={5}
+        />
+      )
+    })
+    await findByTextContent("Page 1 of 3")
+
+    await waitFor(() => expect(doc.getPage).toHaveBeenCalledWith(2))
+    await waitFor(() =>
+      expect(
+        document.querySelector<HTMLElement>("[data-page-number='2']")?.style
+          .width
+      ).toBe("2000px")
+    )
+
+    expect(doc.pages[0].render).toHaveBeenCalledTimes(1)
+    expect(doc.pages[1].render).not.toHaveBeenCalled()
+  })
+
+  it("bounds simultaneous visible page canvas renders", async () => {
+    const doc = makeDoc([
+      [100, 200],
+      [100, 200],
+      [100, 200],
+      [100, 200],
+    ])
+    pdfjsMock.docs.set("/render-budget.pdf", doc)
+
+    await act(async () => {
+      render(
+        <PdfViewer
+          source={pdfUrlSource("/render-budget.pdf")}
+          defaultScale={1}
+        />
+      )
+    })
+    await findByTextContent("Page 1 of 4")
+
+    await waitFor(() => expect(pdfjsMock.renderTasks).toHaveLength(2))
+    expect(doc.pages[0].render).toHaveBeenCalledTimes(1)
+    expect(doc.pages[1].render).toHaveBeenCalledTimes(1)
+    expect(doc.pages[2].render).not.toHaveBeenCalled()
+  })
+
   it("keeps tiny rendered page canvases drawable", async () => {
     const doc = makeDoc([[1, 1]])
     const page = doc.pages[0]
@@ -2286,6 +2483,7 @@ describe("PdfViewer", () => {
   it("surfaces page render task failures through the viewer error state", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {})
     const renderFailure = pdfjsMock.deferred<void>()
+    const onPageRenderTiming = vi.fn()
     const page = makePage(100, 200)
     page.render.mockImplementation(() => {
       const task = {
@@ -2303,7 +2501,12 @@ describe("PdfViewer", () => {
     pdfjsMock.docs.set("/render-failed.pdf", doc)
 
     await act(async () => {
-      render(<PdfViewer source={pdfUrlSource("/render-failed.pdf")} />)
+      render(
+        <PdfViewer
+          source={pdfUrlSource("/render-failed.pdf")}
+          onPageRenderTiming={onPageRenderTiming}
+        />
+      )
     })
     await waitFor(() => expect(page.render).toHaveBeenCalled())
 
@@ -2314,6 +2517,13 @@ describe("PdfViewer", () => {
 
     const alert = await screen.findByRole("alert")
     expect(alert.getAttribute("data-error-kind")).toBe("render_failed")
+    expect(onPageRenderTiming).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pageNumber: 1,
+        status: "failed",
+        durationMs: expect.any(Number),
+      })
+    )
   })
 
   it("normalizes synchronous page render throws as render failures", async () => {
@@ -2354,6 +2564,7 @@ describe("PdfViewer", () => {
 
   it("cancels stale page render tasks when scale changes and when unmounted", async () => {
     pdfjsMock.docs.set("/cancel-render.pdf", makeDoc([[100, 200]]))
+    const onPageRenderTiming = vi.fn()
 
     let view!: ReturnType<typeof render>
     await act(async () => {
@@ -2361,6 +2572,7 @@ describe("PdfViewer", () => {
         <PdfViewer
           source={pdfUrlSource("/cancel-render.pdf")}
           defaultScale={1}
+          onPageRenderTiming={onPageRenderTiming}
         />
       )
     })
@@ -2372,6 +2584,13 @@ describe("PdfViewer", () => {
 
     await waitFor(() => expect(pdfjsMock.renderTasks).toHaveLength(2))
     expect(firstTask.cancel).toHaveBeenCalledTimes(1)
+    expect(onPageRenderTiming).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pageNumber: 1,
+        status: "cancelled",
+        durationMs: expect.any(Number),
+      })
+    )
 
     const secondTask = pdfjsMock.renderTasks[1]
     view.unmount()
