@@ -828,7 +828,12 @@ describe("Markdown architecture", () => {
           ],
         })
       } finally {
-        await rm(projectDir, { recursive: true, force: true })
+        await rm(projectDir, {
+          recursive: true,
+          force: true,
+          maxRetries: 5,
+          retryDelay: 100,
+        })
       }
     })
   }, 90_000)

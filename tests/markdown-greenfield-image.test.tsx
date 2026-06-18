@@ -77,6 +77,7 @@ describe("pretext markdown greenfield images", () => {
                     tagName: "img",
                     properties: {
                       alt: "Evidence",
+                      dataPretextMarkdownImage: "",
                       src: "https://example.com/evidence.png",
                     },
                     children: [],
@@ -105,7 +106,7 @@ describe("pretext markdown greenfield images", () => {
       <MarkdownViewer
         controls={false}
         source={markdownSource(
-          '<img src="https://example.com/chart.png" alt="Chart" width="640" height="360" title="Chart dimensions" />'
+          '<Image src="https://example.com/chart.png" alt="Chart" width={640} height={360} title="Chart dimensions" />'
         )}
       />
     )

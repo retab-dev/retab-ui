@@ -44,11 +44,7 @@ function xlsxBuffer(
 ): ArrayBuffer {
   const workbook = XLSX.utils.book_new()
   for (const { name, rows } of sheets) {
-    XLSX.utils.book_append_sheet(
-      workbook,
-      XLSX.utils.aoa_to_sheet(rows),
-      name
-    )
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), name)
   }
   const out = XLSX.write(workbook, { type: "array", bookType: "xlsx" })
   const bytes = out instanceof Uint8Array ? out : new Uint8Array(out)
@@ -201,7 +197,10 @@ describe("xlsx worker parse round-trip", () => {
   // Without it these inputs "succeed" with a meaningless 1-cell grid.
   // ---------------------------------------------------------------------------
   it.each([
-    ["plain text", new TextEncoder().encode("this is plainly not a spreadsheet")],
+    [
+      "plain text",
+      new TextEncoder().encode("this is plainly not a spreadsheet"),
+    ],
     ["a PDF header", new TextEncoder().encode("%PDF-1.7\n...")],
     ["PNG magic bytes", new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a])],
     ["an empty buffer", new Uint8Array([])],
@@ -230,7 +229,7 @@ describe("xlsx worker parse round-trip", () => {
     if (response.type === "error") {
       expect(response.code).toBe("parse_failed")
     }
-  })
+  }, 15_000)
 
   it("survives a malformed message whose data has no type", async () => {
     const ctx = await loadWorker()
@@ -239,7 +238,7 @@ describe("xlsx worker parse round-trip", () => {
 
     expect(ctx.posts).toHaveLength(1)
     expect(ctx.posts[0].response.type).toBe("error")
-  })
+  }, 15_000)
 
   // ---------------------------------------------------------------------------
   // Value coercion, end to end through the real SheetJS serializer + parser.

@@ -3168,6 +3168,10 @@ describe("PdfViewer", () => {
         />
       )
       await screen.findByText("1")
+      await act(async () => {
+        await Promise.resolve()
+        await Promise.resolve()
+      })
 
       now.mockReturnValue(1300)
       fireEvent.scroll(
