@@ -29,6 +29,7 @@
     "verify:data-cell": "node scripts/verify-data-cell-parity.mjs",
     "verify:data-cell-registry": "node scripts/verify-data-cell-registry-determinism.mjs",
     "verify:markdown-viewer": "node scripts/verify-markdown-viewer.mjs",
+    "verify:markdown-viewer:performance": "node scripts/verify-markdown-viewer-performance.mjs",
     "verify:viewer-skeletons": "node scripts/verify-viewer-skeletons.mjs",
     "verify:xlsx-viewer": "node scripts/verify-xlsx-viewer.mjs",
     "postinstall": "fumadocs-mdx",

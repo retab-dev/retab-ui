@@ -20,6 +20,8 @@ const MERMAID_CONFIG = {
   theme: "default",
 } as const
 
+const mermaidDiagramCache = new Map<string, Promise<DiagramState>>()
+
 type DiagramState =
   | { status: "failed"; message: string }
   | { status: "loading" }
@@ -254,11 +256,36 @@ async function renderMermaidDiagram(
   source: string,
   id: string
 ): Promise<DiagramState> {
+  const state = await getCachedMermaidDiagram(source)
+  return state.status === "ready"
+    ? { status: "ready", svg: scopeCachedMermaidSvg(state.svg, id) }
+    : state
+}
+
+function getCachedMermaidDiagram(source: string) {
+  const key = `${MERMAID_CONFIG.theme}\0${source}`
+  let cached = mermaidDiagramCache.get(key)
+  if (!cached) {
+    cached = loadMermaidDiagram(source)
+    mermaidDiagramCache.set(key, cached)
+    while (mermaidDiagramCache.size > 64) {
+      const oldestKey = mermaidDiagramCache.keys().next().value
+      if (!oldestKey) break
+      mermaidDiagramCache.delete(oldestKey)
+    }
+  }
+  return cached
+}
+
+async function loadMermaidDiagram(source: string): Promise<DiagramState> {
   try {
     const mermaidModule = await import("mermaid")
     const mermaid = mermaidModule.default
     mermaid.initialize?.(MERMAID_CONFIG)
-    const result = await mermaid.render(id, source)
+    const result = await mermaid.render(
+      `markdown-diagram-cache-${hashMermaidSource(source)}`,
+      source
+    )
     return { status: "ready", svg: sanitizeSvg(result.svg) }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Invalid diagram"
@@ -267,6 +294,47 @@ async function renderMermaidDiagram(
     }
     return renderBasicMermaidDiagram(source)
   }
+}
+
+function scopeCachedMermaidSvg(svg: string, idPrefix: string) {
+  if (typeof DOMParser === "undefined") return svg
+  const document = new DOMParser().parseFromString(svg, "image/svg+xml")
+  const root = document.documentElement
+  if (!root || root.tagName.toLowerCase() !== "svg") return svg
+
+  const ids = new Map<string, string>()
+  for (const element of Array.from(root.querySelectorAll("[id]"))) {
+    const id = element.getAttribute("id")
+    if (!id) continue
+    const nextId = `${idPrefix}-${id}`
+    ids.set(id, nextId)
+    element.setAttribute("id", nextId)
+  }
+  if (!ids.size) return new XMLSerializer().serializeToString(root)
+
+  for (const element of Array.from(root.querySelectorAll("*"))) {
+    for (const attribute of Array.from(element.attributes)) {
+      const value = attribute.value
+      let nextValue = value
+      for (const [oldId, nextId] of ids) {
+        nextValue = nextValue
+          .replaceAll(`url(#${oldId})`, `url(#${nextId})`)
+          .replaceAll(`#${oldId}`, `#${nextId}`)
+      }
+      if (nextValue !== value) element.setAttribute(attribute.name, nextValue)
+    }
+  }
+
+  return new XMLSerializer().serializeToString(root)
+}
+
+function hashMermaidSource(source: string) {
+  let hash = 2166136261
+  for (let index = 0; index < source.length; index += 1) {
+    hash ^= source.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return (hash >>> 0).toString(36)
 }
 
 function renderBasicMermaidDiagram(source: string): ReadyDiagramState {

@@ -4088,6 +4088,16 @@
           "target": "@ui/markdown-greenfield-document.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/markdown-greenfield-document-store.ts",
+          "type": "registry:ui",
+          "target": "@ui/markdown-greenfield-document-store.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-greenfield-document.worker.ts",
+          "type": "registry:ui",
+          "target": "@ui/markdown-greenfield-document.worker.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/markdown-greenfield-layout.ts",
           "type": "registry:ui",
           "target": "@ui/markdown-greenfield-layout.ts"

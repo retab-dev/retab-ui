@@ -11,6 +11,7 @@ import {
   findMarkdownGreenfieldFragmentTargetById,
   type MarkdownGreenfieldChunk,
 } from "./markdown-greenfield-document"
+import { useMarkdownGreenfieldDocument } from "./markdown-greenfield-document-store"
 import {
   layoutMarkdownGreenfieldDocument,
   MARKDOWN_GREENFIELD_LAYOUT_POLICY_VERSION,
@@ -45,6 +46,12 @@ const DEFAULT_VIEWPORT_WIDTH = 900
 const INITIAL_CONTENT_WIDTH = 820
 const VIEWER_HORIZONTAL_PADDING = 32
 const OVERSCAN_PX = 800
+
+type MarkdownIdleWindow = Window &
+  typeof globalThis & {
+    cancelIdleCallback?: Window["cancelIdleCallback"]
+    requestIdleCallback?: Window["requestIdleCallback"]
+  }
 
 type ViewportSize = {
   height: number
@@ -84,10 +91,13 @@ export function MarkdownGreenfieldContent({
       }),
     [bounds, resource.content, retryVersion]
   )
-  const document = React.useMemo(
-    () => createMarkdownGreenfieldDocument(text),
-    [text]
+  const parsedDocument = useMarkdownGreenfieldDocument(text)
+  const pendingDocument = React.useMemo(
+    () => createMarkdownGreenfieldDocument(" "),
+    []
   )
+  const document = parsedDocument ?? pendingDocument
+  const isDocumentPending = parsedDocument == null
   const documentMeasurementId = React.useMemo(
     () => measurementDocumentIdForText(text),
     [text]
@@ -98,6 +108,8 @@ export function MarkdownGreenfieldContent({
   const [measuredHeights, setMeasuredHeights] = React.useState(
     () => new Map<string, number>()
   )
+  const [measuredHeightsRevision, setMeasuredHeightsRevision] =
+    React.useState(0)
   const [scrollTop, setScrollTop] = React.useState(0)
   const [viewportSize, setViewportSize] = React.useState<ViewportSize>({
     height: 0,
@@ -105,6 +117,10 @@ export function MarkdownGreenfieldContent({
   })
   const [contentWidth, setContentWidth] = React.useState(INITIAL_CONTENT_WIDTH)
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
+  const scrollTopRef = React.useRef(0)
+  const scrollFrameRef = React.useRef<number | null>(null)
+  const pendingMeasuredHeightsRef = React.useRef(new Map<string, number>())
+  const measuredHeightFrameRef = React.useRef<number | null>(null)
   const pendingAnchorRef = React.useRef<MarkdownGreenfieldScrollAnchor | null>(
     null
   )
@@ -126,8 +142,9 @@ export function MarkdownGreenfieldContent({
             documentMeasurementId,
           })
         ),
+      cacheKey: `${documentMeasurementId}:${measuredHeightsRevision}`,
     }),
-    [documentMeasurementId, measuredHeights]
+    [documentMeasurementId, measuredHeights, measuredHeightsRevision]
   )
   const frame = React.useMemo(
     () =>
@@ -159,18 +176,85 @@ export function MarkdownGreenfieldContent({
     // state, which lags behind during fast scrolling. Capturing a stale value
     // here makes the anchor-restore effect yank the viewport back to an old
     // (often near-top) position when a freshly revealed chunk is measured.
-    const liveScrollTop = viewportRef.current?.scrollTop ?? scrollTop
+    const liveScrollTop = viewportRef.current?.scrollTop ?? scrollTopRef.current
     pendingAnchorRef.current = getMarkdownGreenfieldScrollAnchor({
       frames: frame.chunks,
       scrollTop: liveScrollTop,
     })
-  }, [frame.chunks, scrollTop])
+  }, [frame.chunks])
+
+  const commitScrollTop = React.useCallback((nextScrollTop: number) => {
+    scrollTopRef.current = nextScrollTop
+    setScrollTop(nextScrollTop)
+  }, [])
+
+  const scheduleScrollTop = React.useCallback(
+    (nextScrollTop: number) => {
+      scrollTopRef.current = nextScrollTop
+      if (scrollFrameRef.current !== null) return
+      if (typeof requestAnimationFrame !== "function") {
+        commitScrollTop(scrollTopRef.current)
+        return
+      }
+      scrollFrameRef.current = requestAnimationFrame(() => {
+        scrollFrameRef.current = null
+        commitScrollTop(scrollTopRef.current)
+      })
+    },
+    [commitScrollTop]
+  )
+
+  const flushMeasuredHeights = React.useCallback(() => {
+    measuredHeightFrameRef.current = null
+    const pending = pendingMeasuredHeightsRef.current
+    if (!pending.size) return
+    pendingMeasuredHeightsRef.current = new Map()
+    setMeasuredHeights((current) => {
+      let next: Map<string, number> | null = null
+      for (const [key, height] of pending) {
+        if (Math.abs((current.get(key) ?? 0) - height) < 1) continue
+        next ??= new Map(current)
+        next.set(key, height)
+      }
+      if (!next) return current
+      setMeasuredHeightsRevision((revision) => revision + 1)
+      return next
+    })
+  }, [])
+
+  const scheduleMeasuredHeightsFlush = React.useCallback(() => {
+    if (measuredHeightFrameRef.current !== null) return
+    if (typeof requestAnimationFrame !== "function") {
+      flushMeasuredHeights()
+      return
+    }
+    measuredHeightFrameRef.current = requestAnimationFrame(flushMeasuredHeights)
+  }, [flushMeasuredHeights])
 
   React.useLayoutEffect(() => {
     setMeasuredHeights(new Map())
-    setScrollTop(0)
+    setMeasuredHeightsRevision((revision) => revision + 1)
+    commitScrollTop(0)
     viewportRef.current?.scrollTo({ left: 0, top: 0 })
-  }, [document])
+  }, [commitScrollTop, document])
+
+  React.useEffect(
+    () => () => {
+      if (
+        scrollFrameRef.current !== null &&
+        typeof cancelAnimationFrame === "function"
+      ) {
+        cancelAnimationFrame(scrollFrameRef.current)
+      }
+      if (
+        measuredHeightFrameRef.current !== null &&
+        typeof cancelAnimationFrame === "function"
+      ) {
+        cancelAnimationFrame(measuredHeightFrameRef.current)
+      }
+    },
+    []
+  )
 
   React.useLayoutEffect(() => {
     const viewport = viewportRef.current
@@ -223,7 +307,7 @@ export function MarkdownGreenfieldContent({
       })
       if (nextScrollTop == null) return
       viewport.scrollTop = nextScrollTop
-      setScrollTop(nextScrollTop)
+      commitScrollTop(nextScrollTop)
       return
     }
 
@@ -254,8 +338,8 @@ export function MarkdownGreenfieldContent({
     if (delta === 0) return
     const nextScrollTop = Math.max(0, liveScrollTop + delta)
     viewport.scrollTop = nextScrollTop
-    setScrollTop(nextScrollTop)
-  }, [frame.chunks])
+    commitScrollTop(nextScrollTop)
+  }, [commitScrollTop, frame.chunks])
 
   const scrollToLineRange = React.useCallback(
     (
@@ -281,9 +365,9 @@ export function MarkdownGreenfieldContent({
         left: options?.left,
         top,
       })
-      setScrollTop(top)
+      commitScrollTop(top)
     },
-    [document, frame.chunks, viewportHeight]
+    [commitScrollTop, document, frame.chunks, viewportHeight]
   )
 
   // A stable handle to the latest scrollToLineRange. The callback's identity
@@ -360,14 +444,15 @@ export function MarkdownGreenfieldContent({
         },
         documentMeasurementId,
       })
-      setMeasuredHeights((current) => {
-        if (Math.abs((current.get(key) ?? 0) - height) < 1) return current
-        const next = new Map(current)
-        next.set(key, height)
-        return next
-      })
+      pendingMeasuredHeightsRef.current.set(key, height)
+      scheduleMeasuredHeightsFlush()
     },
-    [contentWidth, documentMeasurementId, fontScale]
+    [
+      contentWidth,
+      documentMeasurementId,
+      fontScale,
+      scheduleMeasuredHeightsFlush,
+    ]
   )
   const handleDownloadError = React.useCallback<ViewerDownloadErrorHandler>(
     (error) => {
@@ -392,7 +477,11 @@ export function MarkdownGreenfieldContent({
           downloadAction={downloadAction}
           extra={<DownloadError message={downloadError} />}
           fontScale={fontScale}
-          wordCount={document.wordCount}
+          wordCount={
+            isDocumentPending
+              ? estimateMarkdownWordCount(text)
+              : document.wordCount
+          }
           onDownloadError={handleDownloadError}
           onResetZoom={resetZoom}
           onZoomIn={() => zoom(1.2)}
@@ -411,7 +500,7 @@ export function MarkdownGreenfieldContent({
         viewportProps={{
           onClickCapture: (event) =>
             handleRenderedClick({ document, event, scrollToLineRange }),
-          onScroll: (event) => setScrollTop(event.currentTarget.scrollTop),
+          onScroll: (event) => scheduleScrollTop(event.currentTarget.scrollTop),
         }}
       >
         <div
@@ -423,12 +512,23 @@ export function MarkdownGreenfieldContent({
             minWidth: viewportWidth,
           }}
         >
-          <NativeFindIndex
-            chunks={document.chunks}
-            lineCount={document.lineCount}
-            scrollToLineRange={scrollToLineRange}
-          />
-          {document.text.trim() ? (
+          {isDocumentPending ? null : (
+            <DeferredNativeFindIndex
+              chunks={document.chunks}
+              lineCount={document.lineCount}
+              scrollToLineRange={scrollToLineRange}
+            />
+          )}
+          {isDocumentPending ? (
+            <div
+              aria-label="Preparing Markdown document"
+              className="absolute inset-x-4 top-0 flex min-h-40 items-center justify-center text-sm text-muted-foreground"
+              data-slot="markdown-loading-state"
+              role="status"
+            >
+              Preparing Markdown...
+            </div>
+          ) : document.text.trim() ? (
             visibleFrames.map((chunkFrame) => {
               const chunk = document.chunks[chunkFrame.index]
               if (!chunk) return null
@@ -456,9 +556,6 @@ export function MarkdownGreenfieldContent({
                   <MarkdownGreenfieldChunkRenderer
                     chunk={chunk}
                     fontScale={fontScale}
-                    onContentReady={() =>
-                      measureChunkFrame(chunk, recordMeasuredHeight)
-                    }
                   />
                 </ChunkFrame>
               )
@@ -476,6 +573,43 @@ export function MarkdownGreenfieldContent({
         </div>
       </ScrollArea>
     </TextViewerFrame>
+  )
+}
+
+function DeferredNativeFindIndex({
+  chunks,
+  lineCount,
+  scrollToLineRange,
+}: {
+  chunks: readonly MarkdownGreenfieldChunk[]
+  lineCount: number
+  scrollToLineRange: (
+    range: ReturnType<typeof normalizeTextLineRange>,
+    options?: MarkdownScrollToLineOptions
+  ) => void
+}) {
+  const [isReady, setIsReady] = React.useState(false)
+
+  React.useEffect(() => {
+    setIsReady(false)
+    const show = () => setIsReady(true)
+    if (typeof window === "undefined") return
+    const browserWindow = window as MarkdownIdleWindow
+    if (browserWindow.requestIdleCallback && browserWindow.cancelIdleCallback) {
+      const idleId = browserWindow.requestIdleCallback(show, { timeout: 400 })
+      return () => browserWindow.cancelIdleCallback?.(idleId)
+    }
+    const timeoutId = browserWindow.setTimeout(show, 80)
+    return () => browserWindow.clearTimeout(timeoutId)
+  }, [chunks])
+
+  if (!isReady) return null
+  return (
+    <NativeFindIndex
+      chunks={chunks}
+      lineCount={lineCount}
+      scrollToLineRange={scrollToLineRange}
+    />
   )
 }
 
@@ -715,14 +849,6 @@ function chunkIntersectsLineRange({
   )
 }
 
-function measureChunkFrame(
-  _chunk: MarkdownGreenfieldChunk,
-  _onMeasuredHeight: (chunk: MarkdownGreenfieldChunk, height: number) => void
-) {
-  // The wrapper frame owns ResizeObserver measurement. This callback exists so
-  // rich children can request a measurement pass without knowing the wrapper.
-}
-
 function measuredHeightKey({
   chunk,
   context,
@@ -748,4 +874,8 @@ function measurementDocumentIdForText(text: string) {
     hash = Math.imul(hash, 16777619)
   }
   return `md-${text.length}-${(hash >>> 0).toString(36)}`
+}
+
+function estimateMarkdownWordCount(text: string) {
+  return text.trim().split(/\s+/).filter(Boolean).length
 }

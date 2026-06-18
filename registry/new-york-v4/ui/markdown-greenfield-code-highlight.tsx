@@ -236,7 +236,7 @@ type RawShikiToken = {
 
 const shikiCodeLineCache = new Map<string, Promise<ShikiCodeToken[][] | null>>()
 const resolvedShikiCodeLines = new Map<string, ShikiCodeToken[][] | null>()
-const shikiCodeLineSubscribers = new Set<() => void>()
+const shikiCodeLineSubscribersByKey = new Map<string, Set<() => void>>()
 
 function ensureShikiCodeLines(args: {
   cacheKey: string
@@ -252,7 +252,7 @@ function ensureShikiCodeLines(args: {
       if (oldestKey === undefined) break
       resolvedShikiCodeLines.delete(oldestKey)
     }
-    for (const notify of shikiCodeLineSubscribers) notify()
+    notifyShikiCodeLineSubscribers(args.cacheKey)
   })
 }
 
@@ -270,10 +270,14 @@ export function useShikiCodeLines(
   const cacheKey = `${language}\0${source}`
   const subscribe = React.useCallback(
     (onStoreChange: () => void) => {
-      shikiCodeLineSubscribers.add(onStoreChange)
+      const subscribers =
+        shikiCodeLineSubscribersByKey.get(cacheKey) ?? new Set()
+      subscribers.add(onStoreChange)
+      shikiCodeLineSubscribersByKey.set(cacheKey, subscribers)
       ensureShikiCodeLines({ cacheKey, expectedLineCount, language, source })
       return () => {
-        shikiCodeLineSubscribers.delete(onStoreChange)
+        subscribers.delete(onStoreChange)
+        if (!subscribers.size) shikiCodeLineSubscribersByKey.delete(cacheKey)
       }
     },
     [cacheKey, expectedLineCount, language, source]
@@ -286,6 +290,12 @@ export function useShikiCodeLines(
     [cacheKey]
   )
   return React.useSyncExternalStore(subscribe, getSnapshot, () => null)
+}
+
+function notifyShikiCodeLineSubscribers(cacheKey: string) {
+  const subscribers = shikiCodeLineSubscribersByKey.get(cacheKey)
+  if (!subscribers) return
+  for (const notify of subscribers) notify()
 }
 
 function getShikiCodeLines({

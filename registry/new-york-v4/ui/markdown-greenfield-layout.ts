@@ -51,6 +51,7 @@ export type MarkdownGreenfieldChunkFrame = {
 }
 
 export type MarkdownGreenfieldMeasuredHeights = {
+  cacheKey?: string
   get(
     chunk: MarkdownGreenfieldChunk,
     context: MarkdownGreenfieldMeasurementContext
@@ -89,6 +90,7 @@ export function layoutMarkdownGreenfieldDocument({
     context,
     document,
     measuredHeightByChunkId,
+    measuredHeightsCacheKey: measuredHeights?.cacheKey,
   })
   const cached = markdownGreenfieldLayoutCache.get(cacheKey)
   if (cached?.document === document) {
@@ -105,9 +107,7 @@ export function layoutMarkdownGreenfieldDocument({
     const estimatedHeight = estimateMarkdownGreenfieldChunkHeight({
       blocks: chunk.blockIds
         .map((blockId) => blocksById.get(blockId))
-        .filter((block): block is MarkdownGreenfieldBlock =>
-          Boolean(block)
-        ),
+        .filter((block): block is MarkdownGreenfieldBlock => Boolean(block)),
       fontScale,
       width,
     })
@@ -256,23 +256,31 @@ function markdownGreenfieldLayoutCacheKey({
   context,
   document,
   measuredHeightByChunkId,
+  measuredHeightsCacheKey,
 }: {
   context: MarkdownGreenfieldMeasurementContext
   document: MarkdownGreenfieldDocument
   measuredHeightByChunkId: ReadonlyMap<string, number>
+  measuredHeightsCacheKey?: string
 }) {
   return [
     markdownGreenfieldLayoutDocumentId(document),
     Math.round(context.width * 100) / 100,
     context.fontScale.toFixed(4),
     context.policyVersion,
-    document.chunks
-      .map((chunk) => {
-        const measuredHeight = measuredHeightByChunkId.get(chunk.id)
-        return `${chunk.id}:${measuredHeight == null ? "-" : measuredHeight.toFixed(2)}`
-      })
-      .join("|"),
+    measuredHeightsCacheKey ??
+      measuredHeightsDetailedCacheKey(measuredHeightByChunkId),
   ].join(":")
+}
+
+function measuredHeightsDetailedCacheKey(
+  measuredHeightByChunkId: ReadonlyMap<string, number>
+) {
+  return Array.from(measuredHeightByChunkId)
+    .map(
+      ([chunkId, measuredHeight]) => `${chunkId}:${measuredHeight.toFixed(2)}`
+    )
+    .join("|")
 }
 
 function markdownGreenfieldLayoutDocumentId(
@@ -285,9 +293,7 @@ function markdownGreenfieldLayoutDocumentId(
   return next
 }
 
-function freezeMarkdownGreenfieldFrame(
-  frame: MarkdownGreenfieldFrame
-) {
+function freezeMarkdownGreenfieldFrame(frame: MarkdownGreenfieldFrame) {
   for (const chunk of frame.chunks) Object.freeze(chunk)
   Object.freeze(frame.chunks)
   return Object.freeze(frame)

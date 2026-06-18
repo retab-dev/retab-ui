@@ -35,9 +35,9 @@ import {
   sanitizeMarkdownUrl,
 } from "./markdown-url-policy"
 
-const MarkdownContentReadyContext = React.createContext<
-  (() => void) | null
->(null)
+const MarkdownContentReadyContext = React.createContext<(() => void) | null>(
+  null
+)
 
 // The rendered body size at 100% zoom. Every other size (headings, code,
 // tables, footnotes) is authored in `em` relative to this, so scaling this one
@@ -47,63 +47,70 @@ export const MARKDOWN_GREENFIELD_BASE_FONT_PX = 15.5
 // fontScale keeps padding/margins proportional to the body text.
 export const MARKDOWN_GREENFIELD_BASE_SPACING_REM = 0.25
 
-export function MarkdownGreenfieldChunkRenderer({
-  activeMatchOccurrence,
-  chunk,
-  fontScale = 1,
-  onContentReady,
-  searchQuery,
-}: {
-  activeMatchOccurrence?: number
-  chunk: MarkdownGreenfieldChunk
-  fontScale?: number
-  onContentReady?: () => void
-  searchQuery?: string
-}) {
-  const ref = React.useRef<HTMLDivElement | null>(null)
-  const notifyContentReady = React.useCallback(() => {
-    onContentReady?.()
-  }, [onContentReady])
-
-  React.useLayoutEffect(() => {
-    notifyContentReady()
-    const element = ref.current
-    if (!element || typeof ResizeObserver === "undefined") return
-    const observer = new ResizeObserver(notifyContentReady)
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [chunk.id, notifyContentReady])
-
-  if (chunk.isHostile) {
-    return <MarkdownGreenfieldHostileChunk chunk={chunk} />
-  }
-
-  return (
-    <MarkdownContentReadyContext.Provider value={notifyContentReady}>
-      <div
-        ref={ref}
-        className="markdown-greenfield-content min-w-0 leading-relaxed text-foreground"
-        data-slot="markdown-greenfield-content"
-        // Scale both the font and the spacing scale with zoom so vertical
-        // rhythm tracks the type size. Tailwind v4 spacing utilities resolve to
-        // calc(var(--spacing) * n), so overriding --spacing here scales every
-        // margin/padding/gap inside the document at once.
-        style={
-          {
-            "--spacing": `${(MARKDOWN_GREENFIELD_BASE_SPACING_REM * fontScale).toFixed(5)}rem`,
-            fontSize: `${MARKDOWN_GREENFIELD_BASE_FONT_PX * fontScale}px`,
-          } as React.CSSProperties
-        }
-      >
-        {renderHastChildren(
+export const MarkdownGreenfieldChunkRenderer = React.memo(
+  function MarkdownGreenfieldChunkRenderer({
+    activeMatchOccurrence,
+    chunk,
+    fontScale = 1,
+    onContentReady,
+    searchQuery,
+  }: {
+    activeMatchOccurrence?: number
+    chunk: MarkdownGreenfieldChunk
+    fontScale?: number
+    onContentReady?: () => void
+    searchQuery?: string
+  }) {
+    const ref = React.useRef<HTMLDivElement | null>(null)
+    const notifyContentReady = React.useCallback(() => {
+      onContentReady?.()
+    }, [onContentReady])
+    const renderedChildren = React.useMemo(
+      () =>
+        renderHastChildren(
           chunk.hastChildren,
           searchQuery,
           activeMatchOccurrence
-        )}
-      </div>
-    </MarkdownContentReadyContext.Provider>
-  )
-}
+        ),
+      [activeMatchOccurrence, chunk.hastChildren, searchQuery]
+    )
+
+    React.useLayoutEffect(() => {
+      notifyContentReady()
+      const element = ref.current
+      if (!element || typeof ResizeObserver === "undefined") return
+      const observer = new ResizeObserver(notifyContentReady)
+      observer.observe(element)
+      return () => observer.disconnect()
+    }, [chunk.id, notifyContentReady])
+
+    if (chunk.isHostile) {
+      return <MarkdownGreenfieldHostileChunk chunk={chunk} />
+    }
+
+    return (
+      <MarkdownContentReadyContext.Provider value={notifyContentReady}>
+        <div
+          ref={ref}
+          className="markdown-greenfield-content min-w-0 leading-relaxed text-foreground"
+          data-slot="markdown-greenfield-content"
+          // Scale both the font and the spacing scale with zoom so vertical
+          // rhythm tracks the type size. Tailwind v4 spacing utilities resolve to
+          // calc(var(--spacing) * n), so overriding --spacing here scales every
+          // margin/padding/gap inside the document at once.
+          style={
+            {
+              "--spacing": `${(MARKDOWN_GREENFIELD_BASE_SPACING_REM * fontScale).toFixed(5)}rem`,
+              fontSize: `${MARKDOWN_GREENFIELD_BASE_FONT_PX * fontScale}px`,
+            } as React.CSSProperties
+          }
+        >
+          {renderedChildren}
+        </div>
+      </MarkdownContentReadyContext.Provider>
+    )
+  }
+)
 
 function renderHastChildren(
   children: readonly MarkdownHastNode[],
@@ -505,15 +512,18 @@ const markdownComponents = {
       />
     )
   },
-  img: ({ alt, height, node: _node, src, title, width }: any) => (
-    <MarkdownImageSurface
-      alt={alt ?? ""}
-      height={readOptionalNumber(height)}
-      src={src ?? ""}
-      title={title}
-      width={readOptionalNumber(width)}
-    />
-  ),
+  img: ({ alt, height, node, src, title, width }: any) => {
+    if (!hasDataProperty(node, "dataPretextMarkdownImage")) return null
+    return (
+      <MarkdownImageSurface
+        alt={alt ?? ""}
+        height={readOptionalNumber(height)}
+        src={src ?? ""}
+        title={title}
+        width={readOptionalNumber(width)}
+      />
+    )
+  },
   input: ({ checked, node: _node, type, ...props }: any) => {
     if (type !== "checkbox") return null
     return (
@@ -1102,9 +1112,7 @@ function MarkdownMeasuredDiagram({
   source: string
   title?: string
 }) {
-  const notifyContentReady = React.useContext(
-    MarkdownContentReadyContext
-  )
+  const notifyContentReady = React.useContext(MarkdownContentReadyContext)
   return (
     <MarkdownGreenfieldDiagram
       caption={caption}
@@ -1131,9 +1139,7 @@ function MarkdownImageSurface({
   title?: string
   width?: number
 }) {
-  const notifyContentReady = React.useContext(
-    MarkdownContentReadyContext
-  )
+  const notifyContentReady = React.useContext(MarkdownContentReadyContext)
   const safeSrc = sanitizeMarkdownImageUrl(src)
   const explicitAspectRatio =
     width && height ? `${width} / ${height}` : undefined
@@ -1147,7 +1153,7 @@ function MarkdownImageSurface({
 
   // Reset load state when the source/aspect-ratio inputs change by adjusting
   // state during render (React's prop-change pattern) instead of in an effect.
-  const sourceResetKey = `${safeSrc} ${explicitAspectRatio ?? ""}`
+  const sourceResetKey = `${safeSrc}::${explicitAspectRatio ?? ""}`
   const [prevSourceResetKey, setPrevSourceResetKey] =
     React.useState(sourceResetKey)
   if (sourceResetKey !== prevSourceResetKey) {
@@ -1279,9 +1285,7 @@ function MarkdownVideoSurface({
   src: string
   title?: string
 }) {
-  const notifyContentReady = React.useContext(
-    MarkdownContentReadyContext
-  )
+  const notifyContentReady = React.useContext(MarkdownContentReadyContext)
   const safeSrc = sanitizeMarkdownMediaUrl(src)
   const [failed, setFailed] = React.useState(false)
   React.useLayoutEffect(() => {
@@ -1327,11 +1331,7 @@ function MarkdownVideoSurface({
   )
 }
 
-function MarkdownTabs({
-  node,
-}: {
-  node: MarkdownHastElement | null
-}) {
+function MarkdownTabs({ node }: { node: MarkdownHastElement | null }) {
   const props = readComponentProps(
     readDataProperty(node, "dataPretextComponentProps")
   )

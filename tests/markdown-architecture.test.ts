@@ -65,6 +65,8 @@ const markdownFiles = [
   "registry/new-york-v4/ui/markdown-greenfield-content.tsx",
   "registry/new-york-v4/ui/markdown-greenfield-diagram.tsx",
   "registry/new-york-v4/ui/markdown-greenfield-document.ts",
+  "registry/new-york-v4/ui/markdown-greenfield-document-store.ts",
+  "registry/new-york-v4/ui/markdown-greenfield-document.worker.ts",
   "registry/new-york-v4/ui/markdown-greenfield-layout.ts",
   "registry/new-york-v4/ui/markdown-greenfield-renderer.tsx",
   "registry/new-york-v4/ui/markdown-greenfield-virtualizer.ts",

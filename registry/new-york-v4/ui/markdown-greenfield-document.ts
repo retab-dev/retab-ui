@@ -99,7 +99,7 @@ export function createMarkdownGreenfieldDocument(
   markdown: string
 ): MarkdownGreenfieldDocument {
   const text = markdown.length ? markdown : " "
-  const cacheKey = markdownGreenfieldDocumentCacheKey(text)
+  const cacheKey = markdownGreenfieldDocumentTextKey(text)
   const cached = markdownGreenfieldDocumentCache.get(cacheKey)
   if (cached?.text === text) {
     markdownGreenfieldDocumentCache.delete(cacheKey)
@@ -127,10 +127,7 @@ function createUncachedMarkdownGreenfieldDocument(
   const unified = createMarkdownUnifiedDocument(text)
   normalizeMarkdownGreenfieldHeadingIds(unified.hast.children, unified)
   normalizeMarkdownGreenfieldTables(unified.hast.children)
-  annotateMarkdownGreenfieldSourceMetadata(
-    unified.hast.children,
-    unified
-  )
+  annotateMarkdownGreenfieldSourceMetadata(unified.hast.children, unified)
   const blocks = createMarkdownGreenfieldBlocks({ text, unified })
   const chunks = createMarkdownGreenfieldChunks({ blocks, text })
   const headings = createMarkdownGreenfieldHeadings(blocks)
@@ -201,12 +198,8 @@ export function findMarkdownGreenfieldChunkBySourceLine(
   document: MarkdownGreenfieldDocument,
   sourceLine: number
 ) {
-  const block = findMarkdownGreenfieldBlockBySourceLine(
-    document,
-    sourceLine
-  )
-  if (block)
-    return findMarkdownGreenfieldChunkByBlockId(document, block.id)
+  const block = findMarkdownGreenfieldBlockBySourceLine(document, sourceLine)
+  if (block) return findMarkdownGreenfieldChunkByBlockId(document, block.id)
 
   const line = clampSourceLine(sourceLine, document.lineCount)
   return (
@@ -237,9 +230,7 @@ export function findMarkdownGreenfieldChunkBySourceOffset(
     document,
     sourceOffset
   )
-  return block
-    ? findMarkdownGreenfieldChunkByBlockId(document, block.id)
-    : null
+  return block ? findMarkdownGreenfieldChunkByBlockId(document, block.id) : null
 }
 
 function createMarkdownGreenfieldBlocks({
@@ -259,8 +250,7 @@ function createMarkdownGreenfieldBlocks({
       sourceMap: unified.sourceMap,
     })
     const sourceRange =
-      directSourceRange ??
-      markdownSyntheticSourceRangeForNode(child, unified)
+      directSourceRange ?? markdownSyntheticSourceRangeForNode(child, unified)
     const kind = markdownBlockKindForHastChild(child)
     const sourceText = markdownSourceTextForRange({
       range: sourceRange,
@@ -585,19 +575,14 @@ function fragmentTargetAliases(id: string) {
   return Array.from(aliases).filter(Boolean)
 }
 
-function normalizeMarkdownGreenfieldTables(
-  nodes: readonly MarkdownHastNode[]
-) {
+function normalizeMarkdownGreenfieldTables(nodes: readonly MarkdownHastNode[]) {
   let tableIndex = 0
   for (const node of nodes) {
     tableIndex = normalizeTablesInNode(node, tableIndex)
   }
 }
 
-function normalizeTablesInNode(
-  node: MarkdownHastNode,
-  tableIndex: number
-) {
+function normalizeTablesInNode(node: MarkdownHastNode, tableIndex: number) {
   const element = readHastElement(node)
   if (!element) return tableIndex
 
@@ -612,10 +597,7 @@ function normalizeTablesInNode(
   return tableIndex
 }
 
-function normalizeTableElement(
-  table: MarkdownHastElement,
-  tableIndex: number
-) {
+function normalizeTableElement(table: MarkdownHastElement, tableIndex: number) {
   const rows = tableRows(table)
   const headerIds = new Map<number, string>()
 
@@ -734,8 +716,7 @@ function markdownBlockKindForHastChild(
   if (!element) return child.type === "text" ? "paragraph" : "unknown"
 
   if (element.properties?.dataFootnotes != null) return "footnotes"
-  if (element.properties?.dataMarkdownFrontmatter != null)
-    return "frontmatter"
+  if (element.properties?.dataMarkdownFrontmatter != null) return "frontmatter"
   if (/^h[1-6]$/.test(element.tagName)) return "heading"
   if (isMarkdownDiagramElement(element)) return "diagram"
   if (isMarkdownComponentElement(element)) return "component"
@@ -771,9 +752,7 @@ function isMarkdownDiagramElement(element: MarkdownHastElement) {
   )
 }
 
-function isMarkdownComponentElement(
-  element: MarkdownHastElement
-) {
+function isMarkdownComponentElement(element: MarkdownHastElement) {
   return (
     element.properties?.dataPretextComponentName != null ||
     element.properties?.dataPretextComponentFallback != null ||
@@ -949,7 +928,7 @@ function freezeMarkdownGreenfieldDocument(
   return Object.freeze(document)
 }
 
-function markdownGreenfieldDocumentCacheKey(text: string) {
+export function markdownGreenfieldDocumentTextKey(text: string) {
   let hash = 2166136261
   for (let index = 0; index < text.length; index += 1) {
     hash ^= text.charCodeAt(index)

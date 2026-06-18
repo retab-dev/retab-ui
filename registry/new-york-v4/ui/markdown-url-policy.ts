@@ -30,7 +30,7 @@ export function sanitizeMarkdownUrl(value: string) {
   try {
     const url = new URL(trimmed, "https://retab.local")
     if (ALLOWED_LINK_PROTOCOLS.has(url.protocol.slice(0, -1))) {
-      return trimmed
+      return rawScheme ? url.href : trimmed
     }
   } catch {
     return ""

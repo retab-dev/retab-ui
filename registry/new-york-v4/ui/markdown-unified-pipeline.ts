@@ -54,6 +54,7 @@ export const MARKDOWN_REMARK_PLUGINS = [
   "remark-markdown-definition-lists",
   "remark-markdown-components",
   "remark-markdown-code-metadata",
+  "remark-markdown-trusted-images",
 ] as const
 
 export const MARKDOWN_REHYPE_PLUGINS = [
@@ -121,12 +122,58 @@ const GITHUB_ALERT_LABELS = {
   warning: "Warning",
 } as const
 
+const MARKDOWN_KATEX_OPTIONS = {
+  maxExpand: 1000,
+  maxSize: 10,
+  strict: "ignore",
+  trust: false,
+} as const
+
+type MarkdownMdastProcessor = ReturnType<typeof createMarkdownMdastProcessor>
+type MarkdownHastProcessor = ReturnType<typeof createMarkdownHastProcessor>
+
+let defaultMarkdownMdastProcessor: MarkdownMdastProcessor | null = null
+let defaultMarkdownHastProcessor: MarkdownHastProcessor | null = null
+let markdownUnifiedSanitizeSchema: ReturnType<
+  typeof createUncachedMarkdownUnifiedSanitizeSchema
+> | null = null
+
 export function createMarkdownUnifiedDocument(
   markdown: string,
   options: MarkdownUnifiedOptions = {}
 ): MarkdownUnifiedDocument {
   const file = new VFile({ value: markdown })
-  const mdastProcessor = unified()
+  const mdastProcessor = getMarkdownMdastProcessor(options)
+  const parsedMdast = mdastProcessor.parse(file) as MarkdownMdastRoot
+  const mdast = mdastProcessor.runSync(
+    parsedMdast as never,
+    file
+  ) as MarkdownMdastRoot
+  const hastProcessor = getMarkdownHastProcessor()
+  const hast = hastProcessor.runSync(mdast as never, file) as MarkdownHastRoot
+  const sourceMap = createMarkdownSourceMap(markdown)
+  injectMarkdownFrontmatter(hast, sourceMap.text)
+
+  return {
+    hast,
+    mdast,
+    messages: file.messages.map(markdownUnifiedMessageFromVFileMessage),
+    sourceMap,
+  }
+}
+
+function getMarkdownMdastProcessor(
+  options: MarkdownUnifiedOptions
+): MarkdownMdastProcessor {
+  if (options.gfm) return createMarkdownMdastProcessor(options)
+  if (!defaultMarkdownMdastProcessor) {
+    defaultMarkdownMdastProcessor = createMarkdownMdastProcessor({})
+  }
+  return defaultMarkdownMdastProcessor
+}
+
+function createMarkdownMdastProcessor(options: MarkdownUnifiedOptions) {
+  return unified()
     .use(remarkParse)
     .use(remarkDirective)
     .use(remarkGfm, options.gfm)
@@ -139,32 +186,121 @@ export function createMarkdownUnifiedDocument(
     .use(remarkMarkdownDefinitionLists)
     .use(remarkMarkdownComponents)
     .use(remarkMarkdownCodeMetadata)
-  const mdast = mdastProcessor.runSync(
-    mdastProcessor.parse(file),
-    file
-  ) as MarkdownMdastRoot
-  const hast = unified()
+    .use(remarkMarkdownTrustedImages)
+}
+
+function getMarkdownHastProcessor(): MarkdownHastProcessor {
+  if (!defaultMarkdownHastProcessor) {
+    defaultMarkdownHastProcessor = createMarkdownHastProcessor()
+  }
+  return defaultMarkdownHastProcessor
+}
+
+function createMarkdownHastProcessor() {
+  return unified()
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
     .use(rehypeSlug)
-    .use(rehypeSanitize, createMarkdownUnifiedSanitizeSchema())
+    .use(rehypeSanitize, getMarkdownUnifiedSanitizeSchema())
     .use(rehypeMarkdownTrustedMetadata)
     .use(rehypeMarkdownSafeInputs)
-    .use(rehypeKatex, {
-      maxExpand: 1000,
-      maxSize: 10,
-      strict: "ignore",
-      trust: false,
-    })
-    .runSync(mdast as never, file) as MarkdownHastRoot
-  const sourceMap = createMarkdownSourceMap(markdown)
-  injectMarkdownFrontmatter(hast, sourceMap.text)
+    .use(rehypeKatex, MARKDOWN_KATEX_OPTIONS)
+}
 
+function getMarkdownUnifiedSanitizeSchema() {
+  if (!markdownUnifiedSanitizeSchema) {
+    markdownUnifiedSanitizeSchema =
+      createUncachedMarkdownUnifiedSanitizeSchema()
+  }
+  return markdownUnifiedSanitizeSchema
+}
+
+function createUncachedMarkdownUnifiedSanitizeSchema() {
   return {
-    hast,
-    mdast,
-    messages: file.messages.map(markdownUnifiedMessageFromVFileMessage),
-    sourceMap,
+    ...defaultSchema,
+    clobberPrefix: "user-content-",
+    attributes: {
+      ...defaultSchema.attributes,
+      "*": [
+        ...(defaultSchema.attributes?.["*"] ?? []),
+        "ariaDescribedBy",
+        "ariaHidden",
+        "ariaLabel",
+        "ariaLabelledBy",
+        "className",
+        "dataFootnoteBackref",
+        "dataFootnoteRef",
+        "dataFootnotes",
+        "dataPretextComponentFallback",
+        "dataPretextComponentFallbackName",
+        "dataPretextComponentFallbackReason",
+        "dataPretextComponentFallbackSource",
+        "dataPretextComponentName",
+        "dataPretextComponentProps",
+        "dataPretextMarkdownImage",
+        "dataPretextAlertKind",
+        "dataPretextAlertTitle",
+        "dataPretextCalloutKind",
+        "dataPretextCalloutTitle",
+        "id",
+      ],
+      a: [
+        ...(defaultSchema.attributes?.a ?? []),
+        "ariaDescribedBy",
+        "dataFootnoteBackref",
+        "dataFootnoteRef",
+        "href",
+        "id",
+        "title",
+      ],
+      code: [
+        ...(defaultSchema.attributes?.code ?? []),
+        "className",
+        "dataPretextCodeMeta",
+      ],
+      img: [
+        ...(defaultSchema.attributes?.img ?? []),
+        "dataPretextMarkdownImage",
+      ],
+      ins: [...(defaultSchema.attributes?.ins ?? []), "cite"],
+      input: ["checked", "disabled", "type"],
+      li: [...(defaultSchema.attributes?.li ?? []), "className"],
+      ol: [...(defaultSchema.attributes?.ol ?? []), "start"],
+      section: [
+        ...(defaultSchema.attributes?.section ?? []),
+        "className",
+        "dataFootnotes",
+      ],
+      time: [...(defaultSchema.attributes?.time ?? []), "dateTime"],
+      sup: [...(defaultSchema.attributes?.sup ?? []), "id"],
+      td: [...(defaultSchema.attributes?.td ?? []), "align"],
+      th: [...(defaultSchema.attributes?.th ?? []), "align"],
+      q: [...(defaultSchema.attributes?.q ?? []), "cite"],
+    },
+    tagNames: [
+      ...(defaultSchema.tagNames ?? []),
+      "abbr",
+      "caption",
+      "cite",
+      "dd",
+      "details",
+      "dfn",
+      "dl",
+      "dt",
+      "figcaption",
+      "figure",
+      "input",
+      "ins",
+      "kbd",
+      "mark",
+      "q",
+      "samp",
+      "section",
+      "small",
+      "summary",
+      "time",
+      "var",
+    ],
   }
 }
 
@@ -186,10 +322,7 @@ function markdownUnifiedMessageFromVFileMessage(message: {
   }
 }
 
-function injectMarkdownFrontmatter(
-  hast: MarkdownHastRoot,
-  markdown: string
-) {
+function injectMarkdownFrontmatter(hast: MarkdownHastRoot, markdown: string) {
   const frontmatter = readMarkdownFrontmatter(markdown)
   if (!frontmatter) return
   hast.children = [
@@ -353,90 +486,6 @@ function tomlFrontmatterEntries(
   return entries
 }
 
-function createMarkdownUnifiedSanitizeSchema() {
-  return {
-    ...defaultSchema,
-    clobberPrefix: "user-content-",
-    attributes: {
-      ...defaultSchema.attributes,
-      "*": [
-        ...(defaultSchema.attributes?.["*"] ?? []),
-        "ariaDescribedBy",
-        "ariaHidden",
-        "ariaLabel",
-        "ariaLabelledBy",
-        "className",
-        "dataFootnoteBackref",
-        "dataFootnoteRef",
-        "dataFootnotes",
-        "dataPretextComponentFallback",
-        "dataPretextComponentFallbackName",
-        "dataPretextComponentFallbackReason",
-        "dataPretextComponentFallbackSource",
-        "dataPretextComponentName",
-        "dataPretextComponentProps",
-        "dataPretextAlertKind",
-        "dataPretextAlertTitle",
-        "dataPretextCalloutKind",
-        "dataPretextCalloutTitle",
-        "id",
-      ],
-      a: [
-        ...(defaultSchema.attributes?.a ?? []),
-        "ariaDescribedBy",
-        "dataFootnoteBackref",
-        "dataFootnoteRef",
-        "href",
-        "id",
-        "title",
-      ],
-      code: [
-        ...(defaultSchema.attributes?.code ?? []),
-        "className",
-        "dataPretextCodeMeta",
-      ],
-      ins: [...(defaultSchema.attributes?.ins ?? []), "cite"],
-      input: ["checked", "disabled", "type"],
-      li: [...(defaultSchema.attributes?.li ?? []), "className"],
-      ol: [...(defaultSchema.attributes?.ol ?? []), "start"],
-      section: [
-        ...(defaultSchema.attributes?.section ?? []),
-        "className",
-        "dataFootnotes",
-      ],
-      time: [...(defaultSchema.attributes?.time ?? []), "dateTime"],
-      sup: [...(defaultSchema.attributes?.sup ?? []), "id"],
-      td: [...(defaultSchema.attributes?.td ?? []), "align"],
-      th: [...(defaultSchema.attributes?.th ?? []), "align"],
-      q: [...(defaultSchema.attributes?.q ?? []), "cite"],
-    },
-    tagNames: [
-      ...(defaultSchema.tagNames ?? []),
-      "abbr",
-      "caption",
-      "cite",
-      "dd",
-      "details",
-      "dfn",
-      "dl",
-      "dt",
-      "figcaption",
-      "figure",
-      "input",
-      "ins",
-      "kbd",
-      "mark",
-      "q",
-      "samp",
-      "section",
-      "small",
-      "summary",
-      "time",
-      "var",
-    ],
-  }
-}
-
 function remarkMarkdownGithubAlerts() {
   return function transform(tree: unknown) {
     for (const node of (tree as MarkdownMdastRoot).children) {
@@ -493,6 +542,21 @@ function remarkMarkdownCodeMetadata() {
   }
 }
 
+function remarkMarkdownTrustedImages() {
+  return function transform(tree: unknown) {
+    visitMarkdownMdastNodes(tree as MarkdownMdastRoot, (node) => {
+      if (node.type !== "image") return
+      node.data = {
+        ...node.data,
+        hProperties: {
+          ...(node.data?.hProperties as Record<string, unknown> | undefined),
+          dataPretextMarkdownImage: "",
+        },
+      }
+    })
+  }
+}
+
 function visitMarkdownMdastNodes(
   node: MarkdownMdastNode,
   visitor: (node: MarkdownMdastNode) => void
@@ -527,10 +591,7 @@ function readGithubAlertMarker(paragraph: MarkdownMdastParagraph) {
 
 function remarkMarkdownComponents() {
   return function transform(tree: unknown, file: VFile) {
-    transformMarkdownComponentChildren(
-      tree as MarkdownMdastRoot,
-      file
-    )
+    transformMarkdownComponentChildren(tree as MarkdownMdastRoot, file)
   }
 }
 
@@ -558,8 +619,7 @@ function markdownDefinitionListFromParagraph(
     .slice(1)
     .map(trimDefinitionLine)
     .filter(
-      (definition): definition is MarkdownMdastNode[] =>
-        definition != null
+      (definition): definition is MarkdownMdastNode[] => definition != null
     )
   if (!term.length || !definitions.length) return null
 
@@ -700,9 +760,7 @@ function trustGeneratedMarkdownMetadata(
   }
 }
 
-function hasMarkdownInternalMetadata(
-  element: MarkdownHastElement
-) {
+function hasMarkdownInternalMetadata(element: MarkdownHastElement) {
   return Object.keys(element.properties ?? {}).some((key) =>
     /^(?:dataPretextComponent|dataPretextCallout|dataFootnotes|dataFootnoteBackref|pretextComponentTrusted)/.test(
       key
@@ -710,9 +768,7 @@ function hasMarkdownInternalMetadata(
   )
 }
 
-function hasMarkdownTrustedComponentMetadata(
-  element: MarkdownHastElement
-) {
+function hasMarkdownTrustedComponentMetadata(element: MarkdownHastElement) {
   return Object.keys(element.properties ?? {}).some((key) =>
     /^(?:dataPretextComponent|dataPretextCallout|pretextComponentTrusted)/.test(
       key
@@ -720,9 +776,7 @@ function hasMarkdownTrustedComponentMetadata(
   )
 }
 
-function stripMarkdownInternalMetadata(
-  element: MarkdownHastElement
-) {
+function stripMarkdownInternalMetadata(element: MarkdownHastElement) {
   for (const key of Object.keys(element.properties ?? {})) {
     if (
       /^(?:dataPretextComponent|data-pretext-component|dataPretextCallout|data-pretext-callout|dataFootnotes|data-footnotes|dataFootnoteBackref|data-footnote-backref|pretextComponentTrusted)/.test(
@@ -889,10 +943,7 @@ function transformMarkdownComponentChildren(
   }
 }
 
-function componentSourceFromParagraph(
-  node: MarkdownMdastNode,
-  file: VFile
-) {
+function componentSourceFromParagraph(node: MarkdownMdastNode, file: VFile) {
   if (node.type !== "paragraph") return null
   const nonWhitespaceChildren = (node.children ?? []).filter(
     (child) => !(child.type === "text" && !String(child.value ?? "").trim())
@@ -1024,9 +1075,7 @@ function createMarkdownComponentFallbackNode({
   }
 }
 
-function createMarkdownCalloutNode(
-  node: MarkdownMdastNode
-): MarkdownMdastNode {
+function createMarkdownCalloutNode(node: MarkdownMdastNode): MarkdownMdastNode {
   const kind = calloutKind(readDirectiveName(node))
   const attrs = readDirectiveAttributes(node) ?? {}
   const title =
@@ -1114,9 +1163,7 @@ function parseMarkdownComponentHtml(value: string) {
   )
 }
 
-function parseMarkdownDirectiveComponent(
-  node: MarkdownMdastNode
-) {
+function parseMarkdownDirectiveComponent(node: MarkdownMdastNode) {
   const name = componentNameForDirective(readDirectiveName(node))
   if (!name) return null
   return parseMarkdownComponentProps(
