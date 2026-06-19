@@ -1,11 +1,15 @@
 import Link from "next/link"
 import {
+  Bot,
   Check,
   ChevronDown,
   CircleDot,
   Code2,
   Globe2,
   Menu,
+  Monitor,
+  Moon,
+  Sun,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -54,12 +58,19 @@ const navGroups = [
 ]
 
 const logoStrip = [
+  "BLACKBOX.AI",
+  "HH",
   "OpenAI",
-  "DoorDash",
-  "Rippling",
-  "Charles Schwab",
+  "DOORDASH",
+  "charles SCHWAB",
   "The Weather Company",
-  "Polymarket",
+  "BASEHUB",
+]
+
+const heroPillars = [
+  "For coding agents to deploy in their native language, with Vercel's API, CLI, MCP, and Skills.",
+  "To ship apps and agents in sandboxed VMs, with durable backends, powered by hundreds of models.",
+  "Automated by agents who autonomously investigate errors, plan fixes, and open PRs.",
 ]
 
 const productLanes = [
@@ -85,7 +96,7 @@ const productLanes = [
     proof: "serves over 5 million monthly website visits on Vercel.",
     features: [
       "Global delivery",
-      "Preview environments",
+      "Deployment environments",
       "Serverless functions",
       "Web application firewall",
     ],
@@ -94,9 +105,9 @@ const productLanes = [
   {
     title: "Platforms",
     description:
-      "Host multi-tenant products that isolate every customer, provision domains, and serve millions of sites.",
+      "Host multi-tenant products that isolate every customer, provision custom domains, and serve millions of sites.",
     proofAccent: "Mintlify",
-    proof: "powers documentation for thousands of companies on Vercel.",
+    proof: "powers documentation for 20,000+ companies on Vercel.",
     features: [
       "Tenant isolation",
       "Domain management",
@@ -119,14 +130,21 @@ const latestCards = [
   },
   {
     label: "Sandbox",
-    title: "The safest way to run code you did not write.",
+    title: "The safest way to run code you didn't write.",
   },
 ]
 
 const footerColumns = [
   {
     title: "Agent Stack",
-    links: ["AI SDK", "AI Gateway", "Sandbox", "Workflows", "Eve", "Connect"],
+    links: [
+      "AI SDK",
+      "AI Gateway",
+      "Sandbox",
+      "Workflows",
+      "Eve New",
+      "Connect New",
+    ],
   },
   {
     title: "Core Platform",
@@ -138,37 +156,109 @@ const footerColumns = [
   },
   {
     title: "Tools",
-    links: ["Vercel Drop", "Vercel Agent", "Vercel Plugin", "Next.js"],
+    links: [
+      "Vercel Drop New",
+      "Vercel Agent",
+      "Vercel Plugin New",
+      "Next.js",
+      "Domains",
+      "v0",
+    ],
   },
   {
     title: "Frameworks",
-    links: ["Nuxt", "SvelteKit", "Nitro", "Turborepo", "FastAPI"],
+    links: [
+      "Nuxt",
+      "SvelteKit",
+      "Nitro",
+      "Turborepo",
+      "Tanstack Start",
+      "FastAPI",
+      "xmcp",
+      "All frameworks",
+    ],
   },
   {
     title: "SDKs",
-    links: ["Vercel SDK", "Workflow SDK", "Flags SDK", "Chat SDK"],
+    links: [
+      "Vercel SDK",
+      "Workflow SDK New",
+      "Flags SDK",
+      "Chat SDK New",
+      "Queues SDK New",
+      "Streamdown",
+    ],
   },
   {
     title: "Build",
-    links: ["AI Apps", "Web Apps", "Marketing Sites", "Platforms", "Commerce"],
+    links: [
+      "AI Apps",
+      "Web Apps",
+      "Marketing Sites",
+      "Platforms",
+      "Commerce",
+      "Platform Engineers",
+      "Design Engineers",
+    ],
   },
   {
     title: "Learn",
-    links: ["Docs", "Blog", "Changelog", "Knowledge Base", "Academy"],
+    links: [
+      "Docs",
+      "Blog",
+      "Changelog",
+      "Knowledge Base",
+      "Academy",
+      "Articles",
+      "Community",
+    ],
+  },
+  {
+    title: "Explore",
+    links: [
+      "Customers",
+      "Marketplace",
+      "Templates",
+      "Partner Finder",
+      "Vercel + AWS",
+    ],
   },
   {
     title: "Company",
-    links: ["About", "Careers", "Press", "Events", "Enterprise", "Pricing"],
+    links: [
+      "About",
+      "Careers",
+      "Press",
+      "Events",
+      "Startups",
+      "Shipped on Vercel",
+      "Open Source Program",
+      "Enterprise",
+      "Pricing",
+      "Help",
+    ],
   },
   {
     title: "Legal & Trust",
-    links: ["Privacy Policy", "Terms of Service", "DPA", "Trust Center"],
+    links: [
+      "Privacy Policy",
+      "Terms of Service",
+      "Cookie Policy",
+      "DPA",
+      "Acceptable Use Policy",
+      "Legal",
+      "Trust Center",
+      "Status",
+      "Cookie Preferences",
+    ],
   },
   {
     title: "Social",
     links: ["GitHub", "X", "LinkedIn", "YouTube", "Instagram"],
   },
 ]
+
+const themeOptions = ["system", "light", "dark"] as const
 
 type ProductVisual = (typeof productLanes)[number]["visual"]
 
@@ -258,7 +348,7 @@ function MarketingHeader() {
           <VercelMark />
         </Link>
 
-        <nav className="hidden items-center gap-2 lg:flex">
+        <nav className="hidden items-center gap-2 xl:flex">
           {navGroups.map((group) => (
             <HeaderDropdown
               key={group.label}
@@ -280,7 +370,14 @@ function MarketingHeader() {
           </Link>
         </nav>
 
-        <div className="ml-auto hidden items-center gap-2 lg:flex">
+        <div className="ml-auto hidden items-center gap-2 xl:flex">
+          <Link
+            href="https://vercel.com/chat"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 text-sm font-medium text-black transition-colors hover:border-neutral-300 hover:bg-neutral-50"
+          >
+            <Bot className="size-4" />
+            Ask AI
+          </Link>
           <MarketingButton
             href="https://vercel.com/contact/sales/demo"
             variant="secondary"
@@ -293,25 +390,36 @@ function MarketingHeader() {
           <MarketingButton href="https://vercel.com/signup">
             Sign Up
           </MarketingButton>
+          <Link
+            href="https://vercel.com/dashboard"
+            className="rounded-md px-2 text-sm font-medium text-neutral-700 transition-colors hover:text-black"
+          >
+            Dashboard
+          </Link>
         </div>
 
-        <details className="group relative ml-auto lg:hidden">
+        <details className="group relative ml-auto xl:hidden">
           <summary className="flex size-10 list-none items-center justify-center rounded-full border border-transparent text-black marker:hidden">
             <Menu className="size-5" />
           </summary>
           <div className="absolute top-12 right-0 hidden w-[min(320px,calc(100vw-3rem))] rounded-md border border-neutral-200 bg-white px-5 py-5 shadow-xl shadow-black/5 group-open:block">
             <nav className="grid gap-4">
-              {["Products", "Resources", "Enterprise", "Pricing"].map(
-                (item) => (
-                  <Link
-                    key={item}
-                    href="https://vercel.com/"
-                    className="text-base font-medium text-neutral-900"
-                  >
-                    {item}
-                  </Link>
-                )
-              )}
+              {[
+                "Products",
+                "Resources",
+                "Enterprise",
+                "Pricing",
+                "Ask AI",
+                "Dashboard",
+              ].map((item) => (
+                <Link
+                  key={item}
+                  href="https://vercel.com/"
+                  className="text-base font-medium text-neutral-900"
+                >
+                  {item}
+                </Link>
+              ))}
               <div className="flex gap-2 pt-2">
                 <MarketingButton
                   href="https://vercel.com/login"
@@ -334,37 +442,28 @@ function MarketingHeader() {
 function Hero() {
   return (
     <section className="relative flex min-h-[calc(100svh-64px)] flex-col overflow-hidden border-b border-neutral-100">
-      <div className="mx-auto grid w-full max-w-[1400px] flex-1 grid-cols-1 items-center gap-12 px-6 py-16 md:py-24 lg:grid-cols-[1fr_0.8fr_1fr]">
-        <div>
-          <h1 className="max-w-[520px] text-5xl leading-none font-medium text-black sm:text-6xl md:text-7xl lg:text-[86px]">
-            Agentic Infrastructure
-          </h1>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <MarketingButton href="https://vercel.com/new">
-              Deploy Now
-            </MarketingButton>
-            <MarketingButton
-              href="https://vercel.com/contact/sales/demo"
-              variant="secondary"
-            >
-              Talk to Sales
-            </MarketingButton>
-          </div>
+      <div className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col items-center justify-center px-6 pt-6 pb-8 text-center">
+        <div className="relative mb-14 grid size-56 place-items-center sm:size-64 md:mb-16 md:size-72">
+          <div className="absolute inset-10 rounded-full bg-neutral-200/60 blur-3xl" />
+          <VercelMark className="relative border-x-[94px] border-b-[164px] drop-shadow-[0_22px_24px_rgba(0,0,0,0.2)] sm:border-x-[108px] sm:border-b-[188px] md:border-x-[122px] md:border-b-[214px]" />
         </div>
 
-        <div className="flex justify-center">
-          <div className="relative grid size-64 place-items-center md:size-72">
-            <div className="absolute inset-10 rounded-full bg-neutral-200/60 blur-3xl" />
-            <VercelMark className="relative border-x-[96px] border-b-[168px] drop-shadow-[0_22px_24px_rgba(0,0,0,0.22)] md:border-x-[112px] md:border-b-[196px]" />
-          </div>
-        </div>
-
-        <div className="justify-self-start lg:justify-self-center">
-          <div className="space-y-4 font-mono text-sm font-semibold text-black uppercase">
-            <p>For coding agents</p>
-            <p>To ship apps and agents</p>
-            <p>Automated by agents</p>
-          </div>
+        <h1 className="max-w-[620px] text-[52px] leading-[0.95] font-medium text-black sm:text-[64px] md:text-[72px]">
+          Agentic Infrastructure
+        </h1>
+        <p className="mt-6 font-mono text-sm text-neutral-700">
+          For coding agents
+        </p>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <MarketingButton href="https://vercel.com/new">
+            Deploy Now
+          </MarketingButton>
+          <MarketingButton
+            href="https://vercel.com/contact/sales/demo"
+            variant="secondary"
+          >
+            Talk to Sales
+          </MarketingButton>
         </div>
       </div>
       <LogoStrip />
@@ -374,14 +473,31 @@ function Hero() {
 
 function LogoStrip() {
   return (
-    <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center justify-between gap-x-10 gap-y-5 px-6 pb-8 text-neutral-950">
-      {logoStrip.map((logo) => (
-        <div
-          key={logo}
-          className="text-lg leading-none font-semibold opacity-90"
+    <div className="w-full overflow-hidden pb-8">
+      <div className="mx-auto flex w-max max-w-[1400px] min-w-full items-center gap-12 px-6 text-neutral-950 md:justify-between">
+        {logoStrip.map((logo) => (
+          <div
+            key={logo}
+            className="shrink-0 text-lg leading-none font-semibold opacity-90"
+          >
+            {logo}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function HeroPillars() {
+  return (
+    <div className="mx-auto grid w-full max-w-[1400px] gap-6 border-t border-neutral-100 px-6 py-8 md:grid-cols-3">
+      {heroPillars.map((pillar) => (
+        <p
+          key={pillar}
+          className="max-w-md font-mono text-sm leading-6 text-neutral-700"
         >
-          {logo}
-        </div>
+          {pillar}
+        </p>
       ))}
     </div>
   )
@@ -625,7 +741,7 @@ function LatestSection() {
     <section className="mt-40 md:mt-52">
       <SectionHeader
         title="Latest"
-        description="Recent launches, events, and updates shaping what comes next."
+        description="Recent launches, events, and updates shaping what's next on Vercel."
       />
       <div className="mt-14 grid gap-5 lg:grid-cols-2">
         <Link
@@ -654,6 +770,7 @@ function LatestSection() {
                 <h3 className="text-3xl leading-tight font-medium text-black">
                   {card.label}
                 </h3>
+                {card.label === "Workflows" ? <WorkflowMetricStrip /> : null}
                 <p className="mt-3 max-w-md font-mono text-sm leading-6 text-neutral-700">
                   {card.title}
                 </p>
@@ -663,6 +780,26 @@ function LatestSection() {
         </div>
       </div>
     </section>
+  )
+}
+
+function WorkflowMetricStrip() {
+  const metrics = [
+    ["workflow()", "420 ms"],
+    ["gen()", "252 ms"],
+    ["eval()", "168 ms"],
+    ["pub()", "168 ms"],
+  ]
+
+  return (
+    <div className="mt-6 grid max-w-md grid-cols-2 gap-2 font-mono text-xs sm:grid-cols-4">
+      {metrics.map(([label, value]) => (
+        <div key={label} className="rounded-md border border-neutral-200 p-3">
+          <div className="text-neutral-500">{label}</div>
+          <div className="mt-2 font-semibold text-black">{value}</div>
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -751,9 +888,9 @@ function FooterColumn({
           <li key={link}>
             <Link
               href="https://vercel.com/"
-              className="text-sm text-neutral-600 transition-colors hover:text-black"
+              className="inline-flex items-center gap-2 text-sm text-neutral-600 transition-colors hover:text-black"
             >
-              {link}
+              <FooterLinkLabel link={link} />
             </Link>
           </li>
         ))}
@@ -762,22 +899,88 @@ function FooterColumn({
   )
 }
 
+function FooterLinkLabel({ link }: { link: string }) {
+  const hasBadge = link.endsWith(" New")
+  const label = hasBadge ? link.slice(0, -4) : link
+
+  return (
+    <>
+      {label}
+      {hasBadge ? (
+        <span className="rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600">
+          New
+        </span>
+      ) : null}
+    </>
+  )
+}
+
+function ThemeIcon({ option }: { option: (typeof themeOptions)[number] }) {
+  if (option === "light") {
+    return <Sun className="size-4" />
+  }
+
+  if (option === "dark") {
+    return <Moon className="size-4" />
+  }
+
+  return <Monitor className="size-4" />
+}
+
 function MarketingFooter() {
   return (
     <footer className="border-t border-neutral-200 py-12">
-      <div className="mx-auto grid max-w-[1400px] gap-x-8 gap-y-10 px-6 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
-        {footerColumns.map((column) => (
-          <FooterColumn
-            key={column.title}
-            title={column.title}
-            links={column.links}
-          />
-        ))}
-        <div className="flex items-start gap-3 lg:col-span-6">
-          <VercelMark className="mt-1 border-x-[8px] border-b-[14px]" />
-          <div>
-            <div className="text-sm font-medium text-black">Vercel</div>
-            <div className="text-sm text-neutral-500">Status: Operational</div>
+      <div className="mx-auto max-w-[1400px] px-6">
+        <div className="grid gap-x-8 gap-y-10 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
+          {footerColumns.map((column) => (
+            <FooterColumn
+              key={column.title}
+              title={column.title}
+              links={column.links}
+            />
+          ))}
+        </div>
+
+        <div className="mt-12 flex flex-col gap-6 border-t border-neutral-200 pt-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-3">
+            <VercelMark className="border-x-[8px] border-b-[14px]" />
+            <span className="text-sm font-medium text-black">Vercel</span>
+          </div>
+
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between lg:flex-1 lg:justify-end">
+            <Link
+              href="https://vercel-status.com/"
+              className="inline-flex items-center gap-2 text-sm text-neutral-600 transition-colors hover:text-black"
+            >
+              <span className="size-2 rounded-full bg-emerald-500" />
+              All systems normal
+            </Link>
+
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-neutral-500">
+                Select a display theme:
+              </span>
+              <div
+                aria-label="Display theme"
+                className="inline-flex rounded-full border border-neutral-200 bg-white p-1"
+                role="group"
+              >
+                {themeOptions.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={option === "system"}
+                    className={cn(
+                      "grid size-8 place-items-center rounded-full text-neutral-500 transition-colors hover:text-black",
+                      option === "system" && "bg-neutral-100 text-black"
+                    )}
+                  >
+                    <span className="sr-only">{option}</span>
+                    <ThemeIcon option={option} />
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -791,6 +994,7 @@ export function VercelHomepage() {
       <MarketingHeader />
       <main>
         <Hero />
+        <HeroPillars />
         <div className="mx-auto max-w-[1400px] px-6">
           {productLanes.map((lane, index) => (
             <ProductLane key={lane.title} {...lane} flip={index === 1} />
