@@ -1,7 +1,6 @@
 // Web Worker that owns TIFF decode (UTIF) so it never blocks the UI thread.
 // The main thread transfers file bytes in once; the worker parses frame metadata
 // up front, decodes requested frames on demand, and transfers ImageBitmaps back.
-// @ts-expect-error utif ships no type declarations; typed via the local shape.
 import UTIF from "utif"
 
 import type {

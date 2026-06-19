@@ -65,7 +65,7 @@ export function DocxSkeleton() {
   return (
     <Skeleton
       aria-hidden
-      className="w-full rounded-sm"
+      className="w-full rounded-none shadow-sm ring-1 ring-border"
       data-slot="docx-page-skeleton"
       style={{ aspectRatio: "8.5 / 11" }}
     />

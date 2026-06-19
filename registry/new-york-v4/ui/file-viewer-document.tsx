@@ -32,7 +32,12 @@ function FileViewerDocumentContent({
     resource,
   } = useFileViewerContext()
   const fallback = (
-    <ViewerFallback resource={resource} className={className} bare={bare} />
+    <ViewerFallback
+      resource={resource}
+      className={className}
+      bare={bare}
+      controls={documentChrome === "standalone"}
+    />
   )
 
   if (!isClient) return fallback

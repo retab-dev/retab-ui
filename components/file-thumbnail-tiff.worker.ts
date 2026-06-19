@@ -3,7 +3,6 @@
 // and the PNG encode are all synchronous CPU — running them here keeps a grid of
 // TIFF thumbnails from janking the UI. We only ever touch ifds[0], so a 200-page
 // scan costs the same as a one-page one.
-// @ts-expect-error utif ships no type declarations; typed via the local Ifd shape.
 import UTIF from "utif"
 
 interface Ifd {

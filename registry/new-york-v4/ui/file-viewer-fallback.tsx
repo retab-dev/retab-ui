@@ -8,7 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ViewerDownloadButton } from "@/components/ui/viewer-download"
 import { ViewerErrorState } from "@/components/ui/viewer-error"
 
+import { DocxViewerFallback } from "./docx-viewer-chrome"
 import type { FileDescriptor } from "./file-viewer-core"
+import { ImageViewerFallback } from "./image-viewer-chrome"
+import { PdfViewerFallback } from "./pdf-viewer-states"
+import { PptxViewerFallback } from "./pptx-viewer-fallback"
 
 const TEXT_SKELETON_FONT = 12.5
 const TEXT_SKELETON_LINE_HEIGHT = 20
@@ -58,13 +62,54 @@ export function ViewerFallback({
   resource,
   className,
   bare = false,
+  controls = true,
 }: {
   resource: ViewerResource
   className?: string
   bare?: boolean
+  controls?: boolean
 }) {
   const category = resource.descriptor.category
   const url = resource.content.directUrl
+
+  // Page/slide/frame formats: render the exact per-type skeleton the viewer
+  // shows while it parses, so the SSR + chunk-loading paint is identical to the
+  // in-viewer loading state (same toolbar, same sheet frame) — no toolbar
+  // popping in and no geometry shift as one skeleton hands off to the next.
+  switch (category) {
+    case "pdf":
+      return (
+        <PdfViewerFallback
+          bare={bare}
+          className={className}
+          controls={controls}
+        />
+      )
+    case "docx":
+      return (
+        <DocxViewerFallback
+          bare={bare}
+          className={className}
+          controls={controls}
+        />
+      )
+    case "pptx":
+      return (
+        <PptxViewerFallback
+          bare={bare}
+          className={className}
+          controls={controls}
+        />
+      )
+    case "image":
+      return (
+        <ImageViewerFallback
+          bare={bare}
+          className={className}
+          controls={controls}
+        />
+      )
+  }
 
   if (
     url != null &&
@@ -95,9 +140,9 @@ export function ViewerFallback({
     )
   }
 
+  // Only xlsx (tabular) and edge cases (unsupported, raw-text sources with no
+  // direct URL) reach here; pdf/docx/pptx/image returned above.
   const tabular = category === "xlsx"
-  const pageAspect =
-    category === "pptx" || category === "image" ? "4 / 3" : "8.5 / 11"
 
   return (
     <div
@@ -115,8 +160,8 @@ export function ViewerFallback({
           <div className="flex flex-col items-center p-4">
             <Skeleton
               aria-hidden
-              className="w-full rounded-md"
-              style={{ aspectRatio: pageAspect }}
+              className="w-full rounded-none shadow-sm ring-1 ring-border"
+              style={{ aspectRatio: "8.5 / 11" }}
             />
           </div>
         </div>

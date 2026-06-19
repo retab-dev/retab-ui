@@ -10,7 +10,6 @@ import {
   waitFor,
   type RenderResult,
 } from "@testing-library/react"
-// @ts-expect-error utif ships no type declarations.
 import UTIF from "utif"
 import { afterEach, describe, expect, it, vi } from "vitest"
 

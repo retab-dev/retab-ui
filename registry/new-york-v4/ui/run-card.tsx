@@ -2,9 +2,11 @@
 
 import * as React from "react"
 import {
+  Ban,
   CheckCircle2,
   Clock,
   Loader2,
+  UserCheck,
   XCircle,
   type LucideIcon,
 } from "lucide-react"
@@ -15,18 +17,35 @@ import {
   type FileThumbnailProps,
 } from "@/components/ui/file-thumbnail"
 
-export type RunStatus = "queued" | "running" | "completed" | "failed"
+// Run lifecycle, mirroring Retab's backend `RunLifecycleKind`
+// (pending/running/completed/error/awaiting_review/cancelled). `queued` is a
+// generic pre-execution alias for `pending`; `failed` renders the backend's
+// `error` state under a clearer label.
+export type RunStatus =
+  | "queued"
+  | "pending"
+  | "running"
+  | "awaiting_review"
+  | "completed"
+  | "failed"
+  | "cancelled"
 
 const RUN_STATUS: Record<
   RunStatus,
   { label: string; icon: LucideIcon; tone: string; spin?: boolean }
 > = {
   queued: { label: "Queued", icon: Clock, tone: "text-muted-foreground" },
+  pending: { label: "Pending", icon: Clock, tone: "text-muted-foreground" },
   running: {
     label: "Running",
     icon: Loader2,
     tone: "text-amber-600 dark:text-amber-500",
     spin: true,
+  },
+  awaiting_review: {
+    label: "Awaiting review",
+    icon: UserCheck,
+    tone: "text-yellow-600 dark:text-yellow-500",
   },
   completed: {
     label: "Completed",
@@ -37,6 +56,11 @@ const RUN_STATUS: Record<
     label: "Failed",
     icon: XCircle,
     tone: "text-red-600 dark:text-red-500",
+  },
+  cancelled: {
+    label: "Cancelled",
+    icon: Ban,
+    tone: "text-orange-600 dark:text-orange-500",
   },
 }
 

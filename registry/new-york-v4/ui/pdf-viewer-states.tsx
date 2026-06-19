@@ -40,7 +40,7 @@ function PageAspectSkeleton() {
   return (
     <Skeleton
       aria-hidden
-      className="w-full rounded-md"
+      className="w-full rounded-none shadow-sm ring-1 ring-border"
       data-slot="pdf-page-skeleton"
       style={{ aspectRatio: "8.5 / 11" }}
     />

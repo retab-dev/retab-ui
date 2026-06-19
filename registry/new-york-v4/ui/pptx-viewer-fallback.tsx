@@ -44,7 +44,7 @@ function PptxSlideSkeleton({
   return (
     <Skeleton
       aria-hidden
-      className="w-full"
+      className="w-full rounded-none shadow-sm ring-1 ring-border"
       data-slot="pptx-slide-skeleton"
       style={{
         aspectRatio: `${slideSize.width} / ${slideSize.height}`,
