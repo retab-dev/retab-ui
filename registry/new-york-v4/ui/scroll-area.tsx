@@ -9,6 +9,7 @@ export function ScrollArea({
   className,
   children,
   orientation = "both",
+  nativeScrollbar = false,
   scrollFade = false,
   scrollbarGutter = false,
   scrollbarOverflowOnly = false,
@@ -18,6 +19,7 @@ export function ScrollArea({
   ...props
 }: ScrollAreaPrimitive.Root.Props & {
   orientation?: "vertical" | "horizontal" | "both"
+  nativeScrollbar?: boolean
   scrollFade?: boolean
   scrollbarGutter?: boolean
   scrollbarOverflowOnly?: boolean
@@ -45,7 +47,7 @@ export function ScrollArea({
     viewportClassName
   )
 
-  if (!canUsePrimitiveScrollArea()) {
+  if (nativeScrollbar || !canUsePrimitiveScrollArea()) {
     const { style: rootStyle, ...rootProps } = props
     const { style: viewportStyle, ...viewportHtmlProps } = resolvedViewportProps
 
