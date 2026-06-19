@@ -3,7 +3,12 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 import { featuredLatestCard, secondaryLatestCards } from "./homepage-content";
-import { type LatestMetric } from "./homepage-types";
+import {
+  type FeaturedLatestCard as FeaturedLatestCardContent,
+  type LatestMetric,
+  type SecondaryLatestCard as SecondaryLatestCardContent,
+  type SecondaryLatestCardVisual,
+} from "./homepage-types";
 import { focusRing } from "./primitives";
 import { SectionHeader } from "./section-header";
 
@@ -15,6 +20,11 @@ const latestCardClass = cn(
 const metricCardClass =
   "min-w-0 border-neutral-200 bg-white/90 p-3 sm:flex sm:h-12 sm:items-center sm:justify-between sm:rounded-md sm:border sm:px-4 sm:py-0 sm:shadow-sm";
 
+const secondaryLatestCardClass = cn(
+  latestCardClass,
+  "min-h-72 flex-col p-5 sm:p-6 md:aspect-video lg:h-homepage-latest-card lg:min-h-0 lg:aspect-auto",
+);
+
 const metricRowLayoutClasses = [
   "border-r border-b sm:border",
   "border-b sm:border sm:w-56",
@@ -25,7 +35,7 @@ const metricRowLayoutClasses = [
 export function LatestSection() {
   return (
     <section
-      className="relative z-10 mt-16 md:mt-24 lg:mt-48"
+      className="relative z-10 mt-16 md:mt-24 lg:mt-36"
       aria-label="Latest Vercel updates"
     >
       <SectionHeader
@@ -33,57 +43,76 @@ export function LatestSection() {
         description="Recent launches, events, and updates shaping what's next on Vercel."
       />
       <div className="mt-16 grid gap-5 lg:mt-20 lg:grid-cols-2 lg:items-stretch">
-        <Link
-          href={featuredLatestCard.href}
-          aria-label={`${featuredLatestCard.label}: ${featuredLatestCard.alt}`}
-          className={cn(
-            latestCardClass,
-            "aspect-video w-full items-center justify-center lg:aspect-auto lg:h-full",
-          )}
-        >
-          <img
-            src={featuredLatestCard.imageSrc}
-            width={690}
-            height={576}
-            alt=""
-            aria-hidden="true"
-            loading="lazy"
-            decoding="async"
-            className="absolute inset-0 size-full object-contain"
-          />
-        </Link>
-
-        <div className="grid gap-5 lg:grid-rows-2">
+        <FeaturedLatestCardLink card={featuredLatestCard} />
+        <div className="lg:grid-rows-homepage-latest grid gap-5">
           {secondaryLatestCards.map((card) => (
-            <Link
-              key={card.id}
-              href={card.href}
-              aria-label={`${card.label}: ${card.body}`}
-              className={cn(
-                latestCardClass,
-                "min-h-72 flex-col p-5 sm:p-6 md:aspect-video lg:aspect-auto",
-              )}
-            >
-              {card.visual.kind === "metrics" ? (
-                <WorkflowMetricStrip metrics={card.visual.metrics} />
-              ) : (
-                <SandboxGraphic />
-              )}
-
-              <header className="absolute bottom-5 left-5 z-10 flex w-full flex-col gap-1.5 pr-10">
-                <h3 className="min-w-0 text-2xl leading-tight font-medium break-words sm:text-3xl">
-                  {card.label}
-                </h3>
-                <p className="max-w-72 font-mono text-sm leading-5 break-words text-neutral-700">
-                  {card.body}
-                </p>
-              </header>
-            </Link>
+            <SecondaryLatestCardLink key={card.id} card={card} />
           ))}
         </div>
       </div>
     </section>
   );
+}
+
+function FeaturedLatestCardLink({ card }: { card: FeaturedLatestCardContent }) {
+  return (
+    <Link
+      href={card.href}
+      aria-label={`${card.label}: ${card.alt}`}
+      className={cn(
+        latestCardClass,
+        "aspect-video w-full items-center justify-center lg:aspect-auto lg:h-full",
+      )}
+    >
+      <img
+        src={card.imageSrc}
+        width={690}
+        height={576}
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+        decoding="async"
+        className="absolute inset-0 size-full object-contain"
+      />
+    </Link>
+  );
+}
+
+function SecondaryLatestCardLink({
+  card,
+}: {
+  card: SecondaryLatestCardContent;
+}) {
+  return (
+    <Link
+      href={card.href}
+      aria-label={`${card.label}: ${card.body}`}
+      className={secondaryLatestCardClass}
+    >
+      <SecondaryLatestVisual visual={card.visual} />
+      <header className="absolute bottom-5 left-5 z-10 flex w-full flex-col gap-1.5 pr-10">
+        <h3 className="min-w-0 text-2xl leading-tight font-medium break-words sm:text-3xl">
+          {card.label}
+        </h3>
+        <p className="max-w-72 font-mono text-sm leading-5 break-words text-neutral-700">
+          {card.body}
+        </p>
+      </header>
+    </Link>
+  );
+}
+
+function SecondaryLatestVisual({
+  visual,
+}: {
+  visual: SecondaryLatestCardVisual;
+}) {
+  switch (visual.kind) {
+    case "metrics":
+      return <WorkflowMetricStrip metrics={visual.metrics} />;
+    case "sandbox":
+      return <SandboxGraphic />;
+  }
 }
 
 function WorkflowMetricStrip({

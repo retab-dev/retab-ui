@@ -7,6 +7,12 @@ import {
 } from "./homepage-types";
 import { SectionHeader } from "./section-header";
 
+const productLaneSpacingClasses = [
+  "mt-40 md:mt-24 lg:mt-52",
+  "mt-16 md:mt-44 lg:mt-56",
+  "mt-16 md:mt-44 lg:mt-52",
+] as const;
+
 function ProductVisualImage({ image }: { image: ProductImageContent }) {
   return (
     <>
@@ -62,11 +68,11 @@ function FeatureList({ features }: { features: readonly string[] }) {
 }
 
 function ProductLane({
-  isFirst,
   lane,
+  spacingClass,
 }: {
-  isFirst: boolean;
   lane: ProductLaneContent;
+  spacingClass: string;
 }) {
   const {
     id,
@@ -82,12 +88,7 @@ function ProductLane({
   const sectionId = `homepage-product-${id}`;
 
   return (
-    <section
-      aria-labelledby={sectionId}
-      className={
-        isFirst ? "mt-40 md:mt-24 lg:mt-52" : "mt-16 md:mt-44 lg:mt-56"
-      }
-    >
+    <section aria-labelledby={sectionId} className={spacingClass}>
       <SectionHeader
         id={sectionId}
         title={title}
@@ -123,7 +124,13 @@ export function ProductSections() {
   return (
     <>
       {productLanes.map((lane, index) => (
-        <ProductLane key={lane.id} lane={lane} isFirst={index === 0} />
+        <ProductLane
+          key={lane.id}
+          lane={lane}
+          spacingClass={
+            productLaneSpacingClasses[index] ?? productLaneSpacingClasses[1]
+          }
+        />
       ))}
     </>
   );

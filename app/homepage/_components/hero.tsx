@@ -6,9 +6,9 @@ export function Hero() {
   return (
     <section className="w-full overflow-hidden">
       <MarketingContainer className="flex min-h-svh flex-col">
-        <div className="grid w-full flex-1 grid-cols-1 items-center gap-8 py-8 text-center md:gap-12 md:py-16 lg:grid-cols-3 lg:gap-10 lg:pt-16 lg:pb-0 lg:text-left">
+        <div className="grid w-full flex-1 grid-cols-1 items-center gap-8 py-8 text-center md:gap-12 md:py-16 lg:grid-cols-3 lg:gap-10 lg:pt-14 lg:pb-0 lg:text-left">
           <div className="order-2 mt-6 lg:order-1 lg:mt-0 lg:max-w-lg">
-            <h1 className="mx-auto max-w-xl text-5xl leading-none font-normal text-black md:text-6xl lg:mx-0 lg:max-w-lg">
+            <h1 className="md:text-homepage-hero mx-auto max-w-xl text-5xl leading-none font-normal text-black lg:mx-0 lg:max-w-lg">
               Agentic Infrastructure
             </h1>
             <p className="mt-4 font-mono text-sm text-neutral-700 md:mt-6 md:text-base lg:hidden">

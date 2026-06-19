@@ -36,6 +36,13 @@
   --breakpoint-3xl: 1600px;
   --breakpoint-4xl: 2000px;
   --container-marketing: 87.5rem;
+  --spacing-homepage-latest-card: 17.5rem;
+  --grid-template-rows-homepage-latest: var(--spacing-homepage-latest-card)
+    var(--spacing-homepage-latest-card);
+  --text-homepage-hero: 4rem;
+  --text-homepage-section: 6.875rem;
+  --text-homepage-start: 2.5rem;
+  --leading-homepage-start: 1.2;
   --font-sans: var(--font-sans);
   --font-heading: var(--font-heading);
   --font-mono: var(--font-mono);
