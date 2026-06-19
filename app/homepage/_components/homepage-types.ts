@@ -18,12 +18,6 @@ export type NavSection = {
   readonly items: readonly LinkItem[]
 }
 
-export type MobileNavGroup = {
-  readonly id: string
-  readonly label: string
-  readonly links: readonly LinkItem[]
-}
-
 export type HeaderAction = LinkItem & {
   readonly variant?: "primary" | "secondary"
 }
@@ -32,7 +26,6 @@ export type HeaderContent = {
   readonly homeHref: string
   readonly navGroups: readonly NavGroup[]
   readonly utilityLinks: readonly LinkItem[]
-  readonly mobileGroups: readonly MobileNavGroup[]
   readonly desktopActions: readonly HeaderAction[]
   readonly mobileActions: readonly HeaderAction[]
 }

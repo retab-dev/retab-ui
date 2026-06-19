@@ -66,8 +66,9 @@ export function StartBuildingPluginCommand({
           aria-label="Copy Vercel plugin install command"
           onClick={copyCommand}
           className={cn(
-            "mr-0.5 grid size-9 shrink-0 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:ring-inset focus-visible:ring-offset-0 motion-reduce:transition-none",
-            focusRing
+            "mr-0.5 grid size-9 shrink-0 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black motion-reduce:transition-none",
+            focusRing,
+            "focus-visible:ring-offset-0 focus-visible:ring-inset"
           )}
         >
           {copyState === "copied" ? (

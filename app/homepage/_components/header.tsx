@@ -230,26 +230,40 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
         tabIndex={-1}
         className="fixed inset-x-3 top-[72px] z-40 max-h-[calc(100svh-5rem)] overflow-y-auto overscroll-contain rounded-md border border-neutral-200 bg-white px-5 py-5 shadow-xl shadow-black/5"
       >
-        <nav aria-label="Mobile primary" className="grid gap-6">
-          {content.mobileGroups.map((group) => (
-            <div key={group.id}>
+        <nav aria-label="Mobile primary" className="grid gap-7">
+          {content.navGroups.map((group) => (
+            <div key={group.id} className="grid gap-5">
               <h2 className="text-2xl leading-none font-medium text-black">
                 {group.label}
               </h2>
-              <div className="mt-5 grid gap-3">
-                {group.links.map((item) => (
-                  <Link
-                    key={`${group.id}-${item.label}`}
-                    href={item.href}
-                    aria-label={getLinkAriaLabel(item)}
-                    {...getLinkProps(item)}
-                    onClick={() => setIsOpen(false)}
-                    className={`inline-flex items-center gap-2 text-base text-neutral-700 transition-[color,transform] duration-150 ease-out hover:translate-x-0.5 hover:text-black motion-reduce:transform-none motion-reduce:transition-none ${focusRing}`}
+              {group.sections.map((section) => (
+                <section
+                  key={`${group.id}-${section.title}`}
+                  aria-labelledby={`homepage-mobile-${group.id}-${section.title.toLowerCase().replaceAll(" ", "-")}`}
+                  className="grid gap-3"
+                >
+                  <h3
+                    id={`homepage-mobile-${group.id}-${section.title.toLowerCase().replaceAll(" ", "-")}`}
+                    className="font-mono text-xs leading-none font-semibold tracking-normal text-neutral-500 uppercase"
                   >
-                    <MarketingLinkLabel item={item} />
-                  </Link>
-                ))}
-              </div>
+                    {section.title}
+                  </h3>
+                  <div className="grid gap-3">
+                    {section.items.map((item) => (
+                      <Link
+                        key={`${group.id}-${section.title}-${item.label}`}
+                        href={item.href}
+                        aria-label={getLinkAriaLabel(item)}
+                        {...getLinkProps(item)}
+                        onClick={() => setIsOpen(false)}
+                        className={`inline-flex items-center gap-2 text-base text-neutral-700 transition-colors hover:text-black motion-reduce:transition-none ${focusRing}`}
+                      >
+                        <MarketingLinkLabel item={item} />
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              ))}
             </div>
           ))}
 
@@ -261,7 +275,7 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
                 aria-label={getLinkAriaLabel(item)}
                 {...getLinkProps(item)}
                 onClick={() => setIsOpen(false)}
-                className={`text-base font-medium text-neutral-900 transition-[color,transform] duration-150 ease-out hover:translate-x-0.5 hover:text-black motion-reduce:transform-none motion-reduce:transition-none ${focusRing}`}
+                className={`text-base font-medium text-neutral-900 transition-colors hover:text-black motion-reduce:transition-none ${focusRing}`}
               >
                 {item.label}
               </Link>

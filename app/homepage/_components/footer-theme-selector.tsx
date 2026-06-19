@@ -73,7 +73,7 @@ export function FooterThemeSelector({
     <div
       role="radiogroup"
       aria-label="Select a display theme"
-      className="inline-flex h-6 overflow-hidden rounded-full border border-neutral-200 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.03)]"
+      className="inline-flex h-6 rounded-full border border-neutral-200 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.03)]"
     >
       {options.map((option, index) => {
         const isSelected = selectedTheme === option.value
@@ -93,8 +93,9 @@ export function FooterThemeSelector({
             onClick={() => setTheme(option.value)}
             onKeyDown={(event) => onThemeKeyDown(event, index)}
             className={cn(
-              "relative grid size-6 place-items-center rounded-full text-neutral-500 transition-[background-color,color,transform] duration-150 ease-out hover:scale-105 hover:bg-neutral-100 hover:text-black focus-visible:z-10 active:scale-95 motion-reduce:transform-none motion-reduce:transition-none",
+              "relative grid size-6 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:z-10 motion-reduce:transition-none",
               focusRing,
+              "focus-visible:ring-offset-0 focus-visible:ring-inset",
               isSelected &&
                 "bg-black text-white hover:bg-black hover:text-white"
             )}

@@ -5,7 +5,6 @@ import {
   type HeaderContent,
   type LinkItem,
   type LogoContent,
-  type MobileNavGroup,
   type NavGroup,
   type ProductLaneContent,
   type SecondaryLatestCard,
@@ -125,40 +124,10 @@ export const utilityNavLinks = [
   pricingLink,
 ] as const satisfies readonly LinkItem[]
 
-export const mobileNavGroups = [
-  {
-    id: "products",
-    label: "Products",
-    links: [
-      vercelLink("AI SDK", "/ai-sdk"),
-      vercelLink("AI Gateway", "/ai-gateway"),
-      vercelLink("Sandbox", "/sandbox"),
-      vercelLink("Workflows", "/workflows"),
-      vercelLink("Fluid Compute", "/features/fluid-compute"),
-      vercelLink("Next.js", "/frameworks/nextjs"),
-      externalLink("v0", "https://v0.app/"),
-    ],
-  },
-  {
-    id: "resources",
-    label: "Resources",
-    links: [
-      vercelLink("Docs", "/docs"),
-      vercelLink("Blog", "/blog"),
-      vercelLink("Changelog", "/changelog"),
-      vercelLink("Customers", "/customers"),
-      vercelLink("Marketplace", "/marketplace"),
-      vercelLink("Templates", "/templates"),
-      externalLink("Community", "https://community.vercel.com/"),
-    ],
-  },
-] as const satisfies readonly MobileNavGroup[]
-
 export const homepageHeader = {
   homeHref: "/homepage",
   navGroups,
   utilityLinks: utilityNavLinks,
-  mobileGroups: mobileNavGroups,
   desktopActions: [
     { ...demoLink, variant: "secondary" },
     { ...loginLink, variant: "secondary" },
