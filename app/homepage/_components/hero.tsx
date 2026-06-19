@@ -39,17 +39,23 @@ export function Hero() {
         <div className="order-3 hidden -translate-x-2 justify-self-end min-[961px]:block">
           <div className="grid w-[348px] gap-4">
             {heroKickers.map((kicker) => (
-              <p
+              <div
                 key={kicker.label}
-                className="relative m-0 flex h-4 w-full cursor-default items-start overflow-hidden text-left font-mono text-sm leading-[1.6] font-normal text-black"
+                className="relative z-10 m-0 flex h-4 w-full cursor-default items-start overflow-hidden text-left font-mono text-sm leading-[1.6] font-normal text-pretty text-[#171717] transition-[height] duration-200 ease-out"
               >
                 <span className="block">
-                  <span className="inline shrink-0 font-mono text-sm font-semibold tracking-[1px] text-black uppercase">
+                  <span className="inline shrink-0 font-mono text-sm font-semibold tracking-[1px] text-[#171717] uppercase transition-colors duration-500 ease-out">
                     {kicker.label}
-                  </span>{" "}
-                  {kicker.body}
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="inline font-mono text-sm text-[#4d4d4d] opacity-0 transition-opacity duration-300 ease-out"
+                  >
+                    {" "}
+                    {kicker.body}
+                  </span>
                 </span>
-              </p>
+              </div>
             ))}
           </div>
         </div>
