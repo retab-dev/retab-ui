@@ -10,7 +10,7 @@ export function usePdfPageSizes(resetKey: unknown) {
 
   const emptyPageSizeByNumber = React.useMemo<ReadonlyMap<number, PdfPageSize>>(
     () => new Map(),
-    [resetKey]
+    []
   )
   const pageSizeByNumber = Object.is(state.resetKey, resetKey)
     ? state.pageSizeByNumber
@@ -24,8 +24,8 @@ export function usePdfPageSizes(resetKey: unknown) {
     )
   }, [resetKey])
 
-  const setPageSize = React.useCallback(
-    (pageNumber: number, size: PdfPageSize) => {
+  const setPageSizes = React.useCallback(
+    (pageSizes: Iterable<readonly [number, PdfPageSize]>) => {
       setState((previousState) => {
         const previousPageSizeByNumber = Object.is(
           previousState.resetKey,
@@ -33,17 +33,38 @@ export function usePdfPageSizes(resetKey: unknown) {
         )
           ? previousState.pageSizeByNumber
           : emptyPageSizeByNumber
-        const current = previousPageSizeByNumber.get(pageNumber)
-        if (current?.width === size.width && current.height === size.height) {
+
+        let nextPageSizeByNumber: Map<number, PdfPageSize> | null = null
+        for (const [pageNumber, size] of pageSizes) {
+          const current = (
+            nextPageSizeByNumber ?? previousPageSizeByNumber
+          ).get(pageNumber)
+          if (current?.width === size.width && current.height === size.height) {
+            continue
+          }
+
+          nextPageSizeByNumber ??= new Map(previousPageSizeByNumber)
+          nextPageSizeByNumber.set(pageNumber, {
+            width: size.width,
+            height: size.height,
+          })
+        }
+
+        if (!nextPageSizeByNumber) {
           return previousState
         }
-        const nextPageSizeByNumber = new Map(previousPageSizeByNumber)
-        nextPageSizeByNumber.set(pageNumber, size)
         return { resetKey, pageSizeByNumber: nextPageSizeByNumber }
       })
     },
     [emptyPageSizeByNumber, resetKey]
   )
 
-  return { pageSizeByNumber, setPageSize }
+  const setPageSize = React.useCallback(
+    (pageNumber: number, size: PdfPageSize) => {
+      setPageSizes([[pageNumber, size]])
+    },
+    [setPageSizes]
+  )
+
+  return { pageSizeByNumber, setPageSize, setPageSizes }
 }

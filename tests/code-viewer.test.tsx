@@ -23,7 +23,7 @@ import {
   CodeViewer,
   type CodeViewerHandle,
 } from "@/registry/new-york-v4/ui/code-viewer"
-import { scrollTopForLineRange } from "@/registry/new-york-v4/ui/code-viewer-layout"
+import { scrollTopForLineRangeMetrics } from "@/registry/new-york-v4/ui/code-viewer-layout"
 import { createCodeProjector } from "@/registry/new-york-v4/ui/code-viewer-projector"
 import {
   CODE_VIEWER_BASE_LINE_PX,
@@ -280,11 +280,10 @@ describe("text-viewer-ranges", () => {
 describe("code-viewer-layout", () => {
   it("centers a fitting range", () => {
     expect(
-      scrollTopForLineRange({
-        startTop: 200,
-        endBottom: 240,
-        viewportTop: 0,
-        viewportScrollTop: 0,
+      scrollTopForLineRangeMetrics({
+        startLine: 11,
+        endLine: 12,
+        lineHeight: 20,
         viewportHeight: 100,
       })
     ).toBe(170)
@@ -292,11 +291,10 @@ describe("code-viewer-layout", () => {
 
   it("top-aligns an oversized range and clamps to zero", () => {
     expect(
-      scrollTopForLineRange({
-        startTop: 30,
-        endBottom: 240,
-        viewportTop: 0,
-        viewportScrollTop: 0,
+      scrollTopForLineRangeMetrics({
+        startLine: 2,
+        endLine: 8,
+        lineHeight: 30,
         viewportHeight: 100,
       })
     ).toBe(0)
@@ -344,6 +342,50 @@ describe("code-viewer-syntax", () => {
     expect(plainSyntax.getLineTokens("plain")).toBeNull()
     expect(jsonSyntax.getLineTokens("")).toBeNull()
     expect(jsonSyntax.getLineTokens("x".repeat(2001))).toBeNull()
+  })
+
+  it("batches deferred tokenization before notifying syntax changes", () => {
+    vi.useFakeTimers()
+    vi.stubGlobal("requestIdleCallback", undefined)
+    vi.stubGlobal("cancelIdleCallback", undefined)
+
+    const resource = createViewerResource(textSource("{}", "app.json"))
+    const onTokensChanged = vi.fn()
+    const syntax = createCodeSyntax(resource, {
+      deferTokens: true,
+      onTokensChanged,
+    })
+    const lines = Array.from(
+      { length: 25 },
+      (_, index) => `{"row":${index + 1}}`
+    )
+
+    try {
+      for (const line of lines) {
+        expect(syntax.getLineTokens(line)).toBeNull()
+      }
+
+      vi.advanceTimersToNextTimer()
+
+      expect(onTokensChanged).not.toHaveBeenCalled()
+      expect(syntax.getLineTokens(lines[0]!)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ kind: "property", text: '"row"' }),
+        ])
+      )
+
+      vi.runAllTimers()
+
+      expect(onTokensChanged).toHaveBeenCalledTimes(1)
+      expect(syntax.getLineTokens(lines[24]!)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ kind: "property", text: '"row"' }),
+        ])
+      )
+    } finally {
+      syntax.destroy?.()
+      vi.useRealTimers()
+    }
   })
 })
 

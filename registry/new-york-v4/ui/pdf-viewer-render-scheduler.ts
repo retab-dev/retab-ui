@@ -11,6 +11,8 @@ type PdfPageRenderKeyInput = {
   devicePixelRatio: number
 }
 
+type PdfPageRenderRequest = PdfPageRenderKeyInput
+
 export function getPdfPageRenderKey({
   pageNumber,
   scale,
@@ -22,85 +24,139 @@ export function getPdfPageRenderKey({
 
 export function usePdfPageRenderScheduler({
   pageNumbers,
+  lowPriorityPageNumbers = [],
   scale,
   rotation,
   devicePixelRatio,
   resetKey,
   maxRunning = PDF_PAGE_RENDER_CONCURRENCY,
+  maxLowPriorityRunning = 1,
 }: {
   pageNumbers: readonly number[]
+  lowPriorityPageNumbers?: readonly number[]
   scale: number
   rotation: number
   devicePixelRatio: number
   resetKey: unknown
   maxRunning?: number
+  maxLowPriorityRunning?: number
 }) {
-  const requestedRenderKeys = React.useMemo(
+  const requestedRenders = React.useMemo<PdfPageRenderRequest[]>(
     () =>
-      pageNumbers.map((pageNumber) =>
-        getPdfPageRenderKey({
+      mergePdfPageNumbers(pageNumbers).map((pageNumber) => ({
+        pageNumber,
+        scale,
+        rotation,
+        devicePixelRatio,
+      })),
+    [devicePixelRatio, pageNumbers, rotation, scale]
+  )
+  const lowPriorityRequestedRenders = React.useMemo<PdfPageRenderRequest[]>(
+    () => {
+      const primaryPageNumberSet = new Set(pageNumbers)
+      return mergePdfPageNumbers(lowPriorityPageNumbers)
+        .filter((pageNumber) => !primaryPageNumberSet.has(pageNumber))
+        .map((pageNumber) => ({
           pageNumber,
           scale,
           rotation,
           devicePixelRatio,
-        })
-      ),
-    [devicePixelRatio, pageNumbers, rotation, scale]
+        }))
+    },
+    [devicePixelRatio, lowPriorityPageNumbers, pageNumbers, rotation, scale]
   )
-  const requestedRenderKeySet = React.useMemo(
-    () => new Set(requestedRenderKeys),
-    [requestedRenderKeys]
+  const allRequestedRenders = React.useMemo(
+    () => [...requestedRenders, ...lowPriorityRequestedRenders],
+    [lowPriorityRequestedRenders, requestedRenders]
   )
-  const requestedRenderKeySetRef = React.useRef(requestedRenderKeySet)
+  const requestedRendersRef = React.useRef(allRequestedRenders)
   const resetKeyRef = React.useRef(resetKey)
   React.useLayoutEffect(() => {
-    requestedRenderKeySetRef.current = requestedRenderKeySet
+    requestedRendersRef.current = allRequestedRenders
     resetKeyRef.current = resetKey
-  }, [requestedRenderKeySet, resetKey])
+  }, [allRequestedRenders, resetKey])
 
   const [state, setState] = React.useState<{
     resetKey: unknown
-    renderedKeys: ReadonlySet<string>
-  }>(() => ({ resetKey, renderedKeys: new Set() }))
-  const renderedKeys = Object.is(state.resetKey, resetKey)
-    ? state.renderedKeys
-    : new Set<string>()
+    renderedByKey: ReadonlyMap<string, PdfPageRenderRequest>
+  }>(() => ({ resetKey, renderedByKey: new Map() }))
+  const emptyRenderedByKey = React.useMemo<
+    ReadonlyMap<string, PdfPageRenderRequest>
+  >(() => new Map(), [])
+  const renderedByKey = Object.is(state.resetKey, resetKey)
+    ? state.renderedByKey
+    : emptyRenderedByKey
 
   React.useEffect(() => {
     setState((previousState) => {
       if (!Object.is(previousState.resetKey, resetKey)) {
-        return { resetKey, renderedKeys: new Set() }
+        return { resetKey, renderedByKey: new Map() }
       }
 
-      const renderedKeys = new Set<string>()
-      for (const key of previousState.renderedKeys) {
-        if (requestedRenderKeySet.has(key)) renderedKeys.add(key)
+      const renderedByKey = new Map<string, PdfPageRenderRequest>()
+      for (const [key, rendered] of previousState.renderedByKey) {
+        if (
+          allRequestedRenders.some((request) =>
+            doesRenderedPageSatisfyRequest(rendered, request)
+          )
+        ) {
+          renderedByKey.set(key, rendered)
+        }
       }
 
-      return areSetsEqual(previousState.renderedKeys, renderedKeys)
+      return areMapsEqual(previousState.renderedByKey, renderedByKey)
         ? previousState
-        : { resetKey, renderedKeys }
+        : { resetKey, renderedByKey }
     })
-  }, [requestedRenderKeySet, resetKey])
+  }, [allRequestedRenders, resetKey])
 
   const activePageNumbers = React.useMemo(() => {
     const renderedPageNumbers: number[] = []
     const pendingPageNumbers: number[] = []
+    const lowPriorityRenderedPageNumbers: number[] = []
+    const lowPriorityPendingPageNumbers: number[] = []
 
-    for (const [index, pageNumber] of pageNumbers.entries()) {
-      const key = requestedRenderKeys[index]
-      if (renderedKeys.has(key)) {
-        renderedPageNumbers.push(pageNumber)
+    for (const request of requestedRenders) {
+      if (isRenderRequestSatisfied(request, renderedByKey)) {
+        renderedPageNumbers.push(request.pageNumber)
       } else {
-        pendingPageNumbers.push(pageNumber)
+        pendingPageNumbers.push(request.pageNumber)
+      }
+    }
+    for (const request of lowPriorityRequestedRenders) {
+      if (isRenderRequestSatisfied(request, renderedByKey)) {
+        lowPriorityRenderedPageNumbers.push(request.pageNumber)
+      } else {
+        lowPriorityPendingPageNumbers.push(request.pageNumber)
       }
     }
 
-    return [
+    const activePrimaryPageNumbers = [
       ...renderedPageNumbers,
       ...pendingPageNumbers.slice(0, Math.max(1, maxRunning)),
-    ].sort((left, right) => left - right)
-  }, [maxRunning, pageNumbers, renderedKeys, requestedRenderKeys])
+    ]
+    const activeLowPriorityPageNumbers =
+      pendingPageNumbers.length > 0
+        ? lowPriorityRenderedPageNumbers
+        : [
+            ...lowPriorityRenderedPageNumbers,
+            ...lowPriorityPendingPageNumbers.slice(
+              0,
+              Math.max(0, maxLowPriorityRunning)
+            ),
+          ]
+
+    return mergePdfPageNumbers([
+      ...activePrimaryPageNumbers,
+      ...activeLowPriorityPageNumbers,
+    ])
+  }, [
+    lowPriorityRequestedRenders,
+    maxLowPriorityRunning,
+    maxRunning,
+    renderedByKey,
+    requestedRenders,
+  ])
 
   const onPageRenderTiming = React.useCallback(
     (timing: PdfPageRenderTiming) => {
@@ -108,23 +164,34 @@ export function usePdfPageRenderScheduler({
 
       setState((previousState) => {
         const resetKey = resetKeyRef.current
-        const previousRenderedKeys = Object.is(previousState.resetKey, resetKey)
-          ? previousState.renderedKeys
-          : new Set<string>()
-        const nextRenderedKeys = new Set(previousRenderedKeys)
+        const previousRenderedByKey = Object.is(
+          previousState.resetKey,
+          resetKey
+        )
+          ? previousState.renderedByKey
+          : new Map<string, PdfPageRenderRequest>()
+        const nextRenderedByKey = new Map(previousRenderedByKey)
+        const rendered: PdfPageRenderRequest = {
+          pageNumber: timing.pageNumber,
+          scale: timing.scale,
+          rotation: timing.rotation,
+          devicePixelRatio: timing.devicePixelRatio,
+        }
 
         if (
           timing.status === "rendered" &&
-          requestedRenderKeySetRef.current.has(key)
+          requestedRendersRef.current.some((request) =>
+            doesRenderedPageSatisfyRequest(rendered, request)
+          )
         ) {
-          nextRenderedKeys.add(key)
+          nextRenderedByKey.set(key, rendered)
         } else {
-          nextRenderedKeys.delete(key)
+          nextRenderedByKey.delete(key)
         }
 
-        return areSetsEqual(previousRenderedKeys, nextRenderedKeys)
+        return areMapsEqual(previousRenderedByKey, nextRenderedByKey)
           ? previousState
-          : { resetKey, renderedKeys: nextRenderedKeys }
+          : { resetKey, renderedByKey: nextRenderedByKey }
       })
     },
     []
@@ -133,10 +200,39 @@ export function usePdfPageRenderScheduler({
   return { activePageNumbers, onPageRenderTiming }
 }
 
-function areSetsEqual(left: ReadonlySet<string>, right: ReadonlySet<string>) {
+function mergePdfPageNumbers(pageNumbers: readonly number[]) {
+  return [...new Set(pageNumbers)].sort((left, right) => left - right)
+}
+
+function isRenderRequestSatisfied(
+  request: PdfPageRenderRequest,
+  renderedByKey: ReadonlyMap<string, PdfPageRenderRequest>
+) {
+  for (const rendered of renderedByKey.values()) {
+    if (doesRenderedPageSatisfyRequest(rendered, request)) return true
+  }
+  return false
+}
+
+function doesRenderedPageSatisfyRequest(
+  rendered: PdfPageRenderRequest,
+  request: PdfPageRenderRequest
+) {
+  return (
+    rendered.pageNumber === request.pageNumber &&
+    rendered.scale === request.scale &&
+    rendered.rotation === request.rotation &&
+    rendered.devicePixelRatio >= request.devicePixelRatio
+  )
+}
+
+function areMapsEqual(
+  left: ReadonlyMap<string, PdfPageRenderRequest>,
+  right: ReadonlyMap<string, PdfPageRenderRequest>
+) {
   if (left.size !== right.size) return false
-  for (const value of left) {
-    if (!right.has(value)) return false
+  for (const [key, value] of left) {
+    if (right.get(key) !== value) return false
   }
   return true
 }

@@ -4,6 +4,12 @@ import { readPdfPageResource } from "@/lib/pdf-document-resource"
 import type { PdfDocumentProxy } from "@/lib/pdf-document-types"
 
 import { getPdfCanvasPixelSize } from "./pdf-viewer-canvas"
+import {
+  readPdfRenderedPageCache,
+  writePdfRenderedPageCache,
+  type PdfRenderedPageCache,
+  type PdfRenderedPageSignature,
+} from "./pdf-viewer-render-cache"
 import { toPdfRenderFailedError } from "./pdf-viewer-render-error"
 import type {
   PageOverlayProps,
@@ -11,6 +17,15 @@ import type {
   PdfPageRenderTiming,
   PdfPageSize,
 } from "./pdf-viewer-types"
+
+type PdfRenderedCanvas = {
+  pageNumber: number
+  scale: number
+  rotation: number
+  devicePixelRatio: number
+  viewportWidth: number
+  viewportHeight: number
+}
 
 export function PdfPage({
   document,
@@ -21,6 +36,7 @@ export function PdfPage({
   renderOverlay,
   onRenderTiming,
   onSize,
+  renderCache,
 }: {
   document: PdfDocumentProxy
   pageNumber: number
@@ -30,6 +46,7 @@ export function PdfPage({
   renderOverlay?: (props: PageOverlayProps) => React.ReactNode
   onRenderTiming?: (timing: PdfPageRenderTiming) => void
   onSize?: (pageNumber: number, size: PdfPageSize) => void
+  renderCache?: PdfRenderedPageCache
 }) {
   const page = readPdfPageResource(document, pageNumber)
   const intrinsicViewport = React.useMemo(
@@ -55,9 +72,26 @@ export function PdfPage({
   const [renderError, setRenderError] = React.useState<unknown>(null)
   if (renderError) throw renderError
 
+  const renderedCanvasRef = React.useRef<PdfRenderedCanvas | null>(null)
+
   const canvasRef = React.useCallback(
     (canvas: HTMLCanvasElement | null) => {
       if (!canvas) return
+      const renderSignature = {
+        pageNumber,
+        scale,
+        rotation,
+        devicePixelRatio,
+        viewportWidth: viewport.width,
+        viewportHeight: viewport.height,
+      } satisfies PdfRenderedPageSignature
+      if (
+        renderedCanvasRef.current &&
+        canReuseRenderedCanvas(renderedCanvasRef.current, renderSignature)
+      ) {
+        return
+      }
+
       const startedAt = readNow()
       let didReportRenderTiming = false
       const reportRenderTiming = (status: PdfPageRenderStatus) => {
@@ -81,8 +115,24 @@ export function PdfPage({
         return
       }
 
-      canvas.width = getPdfCanvasPixelSize(viewport.width, devicePixelRatio)
-      canvas.height = getPdfCanvasPixelSize(viewport.height, devicePixelRatio)
+      const cached = readPdfRenderedPageCache(renderCache, renderSignature)
+      if (cached) {
+        canvas.width = cached.canvas.width
+        canvas.height = cached.canvas.height
+        context.drawImage(cached.canvas, 0, 0)
+        renderedCanvasRef.current = cached
+        reportRenderTiming("rendered")
+        return
+      }
+
+      canvas.width = getPdfCanvasPixelSize(
+        renderSignature.viewportWidth,
+        devicePixelRatio
+      )
+      canvas.height = getPdfCanvasPixelSize(
+        renderSignature.viewportHeight,
+        devicePixelRatio
+      )
       let renderTask: ReturnType<typeof page.render>
       try {
         renderTask = page.render({
@@ -102,6 +152,13 @@ export function PdfPage({
       let isActive = true
       renderTask.promise.then(
         () => {
+          if (!isActive) return
+          renderedCanvasRef.current = renderSignature
+          writePdfRenderedPageCache({
+            cache: renderCache,
+            rendered: renderSignature,
+            sourceCanvas: canvas,
+          })
           reportRenderTiming("rendered")
         },
         (error) => {
@@ -123,6 +180,7 @@ export function PdfPage({
       onRenderTiming,
       page,
       pageNumber,
+      renderCache,
       rotation,
       scale,
       viewport,
@@ -153,6 +211,20 @@ export function PdfPage({
         </div>
       ) : null}
     </div>
+  )
+}
+
+function canReuseRenderedCanvas(
+  rendered: PdfRenderedCanvas,
+  requested: PdfRenderedCanvas
+) {
+  return (
+    rendered.pageNumber === requested.pageNumber &&
+    rendered.scale === requested.scale &&
+    rendered.rotation === requested.rotation &&
+    rendered.viewportWidth === requested.viewportWidth &&
+    rendered.viewportHeight === requested.viewportHeight &&
+    rendered.devicePixelRatio >= requested.devicePixelRatio
   )
 }
 

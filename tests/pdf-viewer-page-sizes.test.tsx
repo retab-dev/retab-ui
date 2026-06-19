@@ -44,6 +44,41 @@ describe("usePdfPageSizes", () => {
     expect(result.current.pageSizeByNumber).toBe(previousMap)
   })
 
+  it("sets multiple page sizes while keeping map identity when unchanged", () => {
+    const { result } = renderHook(() => usePdfPageSizes("doc-a"))
+
+    act(() => {
+      result.current.setPageSizes(
+        new Map([
+          [1, { width: 100, height: 200 }],
+          [2, { width: 300, height: 400 }],
+        ])
+      )
+    })
+
+    expect(result.current.pageSizeByNumber.get(1)).toEqual({
+      width: 100,
+      height: 200,
+    })
+    expect(result.current.pageSizeByNumber.get(2)).toEqual({
+      width: 300,
+      height: 400,
+    })
+
+    const previousMap = result.current.pageSizeByNumber
+
+    act(() => {
+      result.current.setPageSizes(
+        new Map([
+          [1, { width: 100, height: 200 }],
+          [2, { width: 300, height: 400 }],
+        ])
+      )
+    })
+
+    expect(result.current.pageSizeByNumber).toBe(previousMap)
+  })
+
   it("resets when the reset key changes", () => {
     const { result, rerender } = renderHook(
       ({ resetKey }) => usePdfPageSizes(resetKey),

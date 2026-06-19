@@ -312,7 +312,6 @@ flowchart TD
     ImperativeHandle["useImperativeHandle\nscrollToLineRange(range, options)\ngetViewportElement()"]
     MetricsScroll["scrollLineRangeMetricsIntoView\nrequires viewport and scrollTo\ncomputes top from line metrics without mounted DOM nodes"]
     TopForMetrics["scrollTopForLineRangeMetrics\nrangeTop = paddingStart + (startLine - 1) * lineHeight\nrangeBottom = paddingStart + endLine * lineHeight\ncenter if range fits viewport\notherwise top minus LINE_SCROLL_HEADROOM 64\nclamp >= 0"]
-    DOMScroll["scrollLineRangeIntoView\nalternative DOM rect path\nfindLineElement(data-line-number)\nscrollTopForLineRange"]
     Viewport["ScrollArea viewportRef\nactual scroll container"]
   end
 

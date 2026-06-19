@@ -177,7 +177,7 @@ function FileCanvas({
       id={`${idPrefix}-${file.file}-panel`}
       role="tabpanel"
       aria-labelledby={`${idPrefix}-${file.file}-tab`}
-      className="h-[min(680px,calc(100svh-10rem))] min-h-[420px] w-full rounded-xl shadow-sm"
+      className="h-[min(680px,calc(100svh-10rem))] min-h-[420px] w-full overflow-hidden rounded-xl border bg-background shadow-sm"
     >
       {showFileHeader ? (
         <FileViewer key={file.file} {...fileViewerProps} />

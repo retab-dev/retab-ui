@@ -2354,6 +2354,156 @@ describe("PdfViewer", () => {
     expect(renderCall.transform).toEqual([2, 0, 0, 2, 0, 0])
   })
 
+  it("renders newly visible pages at scrolling DPR before sharpening after scroll idle", async () => {
+    const doc = makeDoc([
+      [100, 1000],
+      [100, 1000],
+      [100, 1000],
+    ])
+    pdfjsMock.docs.set("/scroll-dpr.pdf", doc)
+
+    Object.defineProperty(window, "devicePixelRatio", {
+      configurable: true,
+      value: 2,
+    })
+
+    await act(async () => {
+      render(
+        <PdfViewer source={pdfUrlSource("/scroll-dpr.pdf")} defaultScale={1} />
+      )
+    })
+
+    await waitFor(() => expect(doc.pages[0].render).toHaveBeenCalledTimes(1))
+
+    vi.useFakeTimers()
+    try {
+      const viewport = document.querySelector<HTMLElement>(
+        "[data-slot='scroll-area-viewport']"
+      )
+      expect(viewport).toBeTruthy()
+      Object.defineProperty(viewport, "scrollTop", {
+        configurable: true,
+        value: 1032,
+      })
+
+      fireEvent.scroll(viewport!)
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0)
+      })
+
+      expect(doc.pages[1].render).toHaveBeenCalledTimes(1)
+      const scrollingCall = doc.pages[1].render.mock.calls[0]?.[0]
+      const scrollingCanvas = scrollingCall.canvas as HTMLCanvasElement
+      expect(scrollingCanvas.width).toBe(100)
+      expect(scrollingCanvas.height).toBe(1000)
+      expect(scrollingCall.transform).toBeUndefined()
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(120)
+      })
+
+      expect(doc.pages[1].render).toHaveBeenCalledTimes(2)
+      const settledCall = doc.pages[1].render.mock.calls[1]?.[0]
+      const settledCanvas = settledCall.canvas as HTMLCanvasElement
+      expect(settledCanvas.width).toBe(200)
+      expect(settledCanvas.height).toBe(2000)
+      expect(settledCall.transform).toEqual([2, 0, 0, 2, 0, 0])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("pre-renders the next page after settled visible pages finish rendering", async () => {
+    const doc = makeDoc([
+      [100, 1000],
+      [100, 1000],
+      [100, 1000],
+    ])
+    doc.pages[0].render.mockImplementationOnce(() => {
+      const task = {
+        promise: Promise.resolve(),
+        cancel: vi.fn(),
+      }
+      pdfjsMock.renderTasks.push(task)
+      return task
+    })
+    pdfjsMock.docs.set("/direction-pre-render.pdf", doc)
+
+    await act(async () => {
+      render(
+        <PdfViewer
+          source={pdfUrlSource("/direction-pre-render.pdf")}
+          defaultScale={1}
+        />
+      )
+    })
+
+    await waitFor(() => expect(doc.pages[0].render).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(doc.pages[1].render).toHaveBeenCalledTimes(1))
+    expect(doc.pages[2].render).not.toHaveBeenCalled()
+  })
+
+  it("reuses cached rendered canvases when remounting pages", async () => {
+    const drawImage = vi.fn()
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      drawImage,
+    } as never)
+    const doc = makeDoc(
+      Array.from({ length: 8 }, () => [100, 1000] as [number, number])
+    )
+    doc.pages[0].render.mockImplementationOnce(() => {
+      const task = {
+        promise: Promise.resolve(),
+        cancel: vi.fn(),
+      }
+      pdfjsMock.renderTasks.push(task)
+      return task
+    })
+    pdfjsMock.docs.set("/render-cache.pdf", doc)
+
+    await act(async () => {
+      render(
+        <PdfViewer source={pdfUrlSource("/render-cache.pdf")} defaultScale={1} />
+      )
+    })
+
+    await waitFor(() => expect(doc.pages[0].render).toHaveBeenCalledTimes(1))
+
+    const viewport = document.querySelector<HTMLElement>(
+      "[data-slot='scroll-area-viewport']"
+    )
+    expect(viewport).toBeTruthy()
+    let scrollTop = 0
+    Object.defineProperty(viewport, "scrollTop", {
+      configurable: true,
+      get: () => scrollTop,
+      set: (value) => {
+        scrollTop = value
+      },
+    })
+
+    scrollTop = 5200
+    fireEvent.scroll(viewport!)
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    await waitFor(() =>
+      expect(document.querySelector("[data-page-number='1']")).toBeNull()
+    )
+
+    scrollTop = 0
+    fireEvent.scroll(viewport!)
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    await waitFor(() =>
+      expect(document.querySelector("[data-page-number='1']")).toBeTruthy()
+    )
+    expect(doc.pages[0].render).toHaveBeenCalledTimes(1)
+  })
+
   it("reports completed page render timings", async () => {
     const onPageRenderTiming = vi.fn()
     const page = makePage(100, 200)
@@ -2594,6 +2744,10 @@ describe("PdfViewer", () => {
 
     const secondTask = pdfjsMock.renderTasks[1]
     view.unmount()
+
+    await act(async () => {
+      await Promise.resolve()
+    })
 
     expect(secondTask.cancel).toHaveBeenCalledTimes(1)
   })

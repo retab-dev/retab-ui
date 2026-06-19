@@ -11,6 +11,7 @@ import type { PdfPageAreaTarget } from "./pdf-viewer-types"
 const PDF_SCROLL_TARGET_HEADROOM = 48
 const PDF_SCROLL_TARGET_INLINE_HEADROOM = 32
 const PDF_READING_MARKER_RATIO = 0.2
+const PDF_SCROLL_IDLE_MS = 120
 
 type PdfReadingAnchor =
   | {
@@ -21,6 +22,45 @@ type PdfReadingAnchor =
       pageNumber: number
       yPercent: number
     }
+
+export function usePdfScrollActivity() {
+  const [isScrolling, setIsScrolling] = React.useState(false)
+  const [scrollDirection, setScrollDirection] = React.useState(1)
+  const idleTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  )
+  const scrollTopRef = React.useRef(0)
+
+  const handleScrollActivity = React.useCallback((viewport?: HTMLElement) => {
+    const scrollTop = viewport?.scrollTop ?? scrollTopRef.current
+    const previousScrollTop = scrollTopRef.current
+    if (scrollTop > previousScrollTop) {
+      setScrollDirection(1)
+    } else if (scrollTop < previousScrollTop) {
+      setScrollDirection(-1)
+    }
+    scrollTopRef.current = scrollTop
+
+    if (idleTimeoutRef.current) {
+      clearTimeout(idleTimeoutRef.current)
+    }
+
+    setIsScrolling(true)
+    idleTimeoutRef.current = setTimeout(() => {
+      idleTimeoutRef.current = null
+      setIsScrolling(false)
+    }, PDF_SCROLL_IDLE_MS)
+  }, [])
+
+  React.useEffect(
+    () => () => {
+      if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current)
+    },
+    []
+  )
+
+  return { isScrolling, scrollDirection, handleScrollActivity }
+}
 
 export function usePdfScroll({
   pageCount,

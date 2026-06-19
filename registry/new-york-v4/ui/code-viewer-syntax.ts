@@ -42,6 +42,22 @@ export type CodeSyntaxOptions = {
 }
 
 const CODE_LINE_TOKENIZE_MAX = 2000
+const CODE_DEFERRED_TOKENIZE_BATCH_SIZE = 12
+const CODE_DEFERRED_TOKENIZE_BUDGET_MS = 6
+
+type CodeSyntaxIdleWindow = Window &
+  typeof globalThis & {
+    cancelIdleCallback?: Window["cancelIdleCallback"]
+    requestIdleCallback?: Window["requestIdleCallback"]
+  }
+
+type CodeSyntaxTaskHandle =
+  | { kind: "idle"; id: number }
+  | { kind: "timeout"; id: number }
+
+type CodeSyntaxTaskDeadline = {
+  timeRemaining?: () => number
+}
 
 // File extension -> Prism language id. The one piece of knowledge the viewer
 // owns; Prism does not map extensions to languages. This is the single seam.
@@ -160,7 +176,8 @@ export function createCodeSyntax(
 
   const tokenCache = new Map<string, readonly CodeTokenLeaf[]>()
   const pendingLines = new Set<string>()
-  let flushHandle = 0
+  let flushHandle: CodeSyntaxTaskHandle | null = null
+  let hasPendingTokenChanges = false
   let isDestroyed = false
 
   return {
@@ -168,8 +185,8 @@ export function createCodeSyntax(
       isDestroyed = true
       pendingLines.clear()
       if (flushHandle) {
-        window.clearTimeout(flushHandle)
-        flushHandle = 0
+        cancelCodeSyntaxTask(flushHandle)
+        flushHandle = null
       }
     },
     identity: languageId,
@@ -192,24 +209,100 @@ export function createCodeSyntax(
 
   function scheduleDeferredTokenization(line: string) {
     pendingLines.add(line)
+    scheduleDeferredTokenFlush()
+  }
+
+  function scheduleDeferredTokenFlush() {
     if (flushHandle || isDestroyed) return
+    flushHandle = scheduleCodeSyntaxTask(flushDeferredTokenBatch)
+  }
 
-    flushHandle = window.setTimeout(() => {
-      flushHandle = 0
-      if (isDestroyed || pendingLines.size === 0) return
+  function flushDeferredTokenBatch(deadline?: CodeSyntaxTaskDeadline) {
+    flushHandle = null
+    if (isDestroyed) return
 
-      const lines = Array.from(pendingLines)
-      pendingLines.clear()
-      for (const pendingLine of lines) {
-        if (tokenCache.has(pendingLine)) continue
+    const startedAt = codeSyntaxNow()
+    let processedLineCount = 0
+    while (pendingLines.size > 0) {
+      const pendingLine = pendingLines.values().next().value
+      if (pendingLine == null) break
+      pendingLines.delete(pendingLine)
+
+      if (!tokenCache.has(pendingLine)) {
+        hasPendingTokenChanges = true
         tokenCache.set(
           pendingLine,
           flattenCodeTokens(Prism.tokenize(pendingLine, prismGrammar))
         )
       }
+
+      processedLineCount += 1
+      if (
+        shouldYieldDeferredTokenization({
+          deadline,
+          processedLineCount,
+          startedAt,
+        })
+      ) {
+        break
+      }
+    }
+
+    if (pendingLines.size > 0) {
+      scheduleDeferredTokenFlush()
+      return
+    }
+
+    if (hasPendingTokenChanges) {
+      hasPendingTokenChanges = false
       options.onTokensChanged?.()
-    }, 0)
+    }
   }
+}
+
+function scheduleCodeSyntaxTask(
+  callback: (deadline?: CodeSyntaxTaskDeadline) => void
+): CodeSyntaxTaskHandle {
+  const browserWindow = window as CodeSyntaxIdleWindow
+  if (browserWindow.requestIdleCallback) {
+    return {
+      kind: "idle",
+      id: browserWindow.requestIdleCallback(callback, { timeout: 80 }),
+    }
+  }
+
+  return {
+    kind: "timeout",
+    id: browserWindow.setTimeout(() => callback(), 0),
+  }
+}
+
+function cancelCodeSyntaxTask(handle: CodeSyntaxTaskHandle) {
+  const browserWindow = window as CodeSyntaxIdleWindow
+  if (handle.kind === "idle") {
+    browserWindow.cancelIdleCallback?.(handle.id)
+    return
+  }
+  browserWindow.clearTimeout(handle.id)
+}
+
+function shouldYieldDeferredTokenization({
+  deadline,
+  processedLineCount,
+  startedAt,
+}: {
+  deadline?: CodeSyntaxTaskDeadline
+  processedLineCount: number
+  startedAt: number
+}) {
+  if (processedLineCount <= 0) return false
+  if (deadline?.timeRemaining && deadline.timeRemaining() <= 1) return true
+  if (processedLineCount >= CODE_DEFERRED_TOKENIZE_BATCH_SIZE) return true
+  return codeSyntaxNow() - startedAt >= CODE_DEFERRED_TOKENIZE_BUDGET_MS
+}
+
+function codeSyntaxNow() {
+  return typeof performance === "undefined" ? Date.now() : performance.now()
 }
 
 function codeLanguageId(resource: ViewerResource): string | null {

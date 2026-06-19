@@ -1,8 +1,4 @@
-import {
-  CODE_VIEWER_BLOCK_PADDING,
-  CODE_VIEWER_INITIAL_VIEWPORT_HEIGHT,
-  CODE_VIEWER_OVERSCAN,
-} from "./code-viewer-scale"
+import { CODE_VIEWER_BLOCK_PADDING } from "./code-viewer-scale"
 
 export interface CodeVirtualLine {
   index: number
@@ -18,20 +14,6 @@ export interface CodeVirtualLineWindow {
   paddingStart: number
   scrollTop: number
   viewportHeight: number
-}
-
-export function createInitialCodeVirtualLines(
-  lineCount: number,
-  lineHeight: number
-): CodeVirtualLine[] {
-  return getCodeVirtualLines({
-    lineCount,
-    lineHeight,
-    overscan: CODE_VIEWER_OVERSCAN,
-    paddingStart: CODE_VIEWER_BLOCK_PADDING,
-    scrollTop: 0,
-    viewportHeight: CODE_VIEWER_INITIAL_VIEWPORT_HEIGHT,
-  })
 }
 
 export function getCodeVirtualLines({

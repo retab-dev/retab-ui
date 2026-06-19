@@ -4,7 +4,11 @@ import * as React from "react"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
 
-import { CodeViewerControls, CodeViewerFrame } from "./code-viewer-chrome"
+import {
+  CodeViewerControls,
+  codeViewerControlsState,
+  CodeViewerFrame,
+} from "./code-viewer-chrome"
 import { scrollLineRangeMetricsIntoView } from "./code-viewer-layout"
 import { useCodeProjectionScheduler } from "./code-viewer-projection-scheduler"
 import { createCodeProjector } from "./code-viewer-projector"
@@ -22,10 +26,7 @@ import {
   readTextDocument,
   resolvedTextViewerBounds,
 } from "./plain-text-resource"
-import {
-  useViewerControlsRegistration,
-  type ViewerControlsState,
-} from "./viewer-controls"
+import { useViewerControlsRegistration } from "./viewer-controls"
 
 type CodeReadingAnchor = {
   lineIndex: number
@@ -260,18 +261,16 @@ function useCodeControlsRegistration({
   onZoomOut: () => void
 }) {
   const onControlsChange = useViewerControlsRegistration()
-  const controlsState = React.useMemo<ViewerControlsState>(
-    () => ({
-      title: `${lineCount} line${lineCount === 1 ? "" : "s"}`,
-      zoom: {
-        scale: fontScale,
-        onZoomOut,
+  const controlsState = React.useMemo(
+    () =>
+      codeViewerControlsState({
+        downloadAction,
+        fontScale,
+        lineCount,
+        onResetZoom,
         onZoomIn,
-        onFit: onResetZoom,
-        fitLabel: "Reset zoom",
-      },
-      downloads: downloadAction ? [downloadAction] : [],
-    }),
+        onZoomOut,
+      }),
     [downloadAction, fontScale, lineCount, onResetZoom, onZoomIn, onZoomOut]
   )
 
