@@ -99,6 +99,7 @@
   --color-success: var(--success);
   --color-info-foreground: var(--info-foreground);
   --color-info: var(--info);
+  --animate-homepage-logo-marquee: homepage-logo-marquee 28s linear infinite;
   --animate-skeleton: skeleton 2s -1s infinite linear;
   @keyframes skeleton {
     to {
@@ -282,7 +283,7 @@
 }
 
 @utility section-soft {
-  @apply bg-linear-to-b from-background to-surface/40 dark:bg-background 3xl:fixed:bg-none;
+  @apply from-background to-surface/40 dark:bg-background 3xl:fixed:bg-none bg-linear-to-b;
 }
 
 @utility theme-container {
@@ -290,11 +291,11 @@
 }
 
 @utility container-wrapper {
-  @apply mx-auto w-full px-2 3xl:fixed:max-w-[calc(var(--breakpoint-2xl)+2rem)];
+  @apply 3xl:fixed:max-w-[calc(var(--breakpoint-2xl)+2rem)] mx-auto w-full px-2;
 }
 
 @utility container {
-  @apply mx-auto max-w-[1400px] px-4 3xl:max-w-screen-2xl lg:px-8;
+  @apply 3xl:max-w-screen-2xl mx-auto max-w-[1400px] px-4 lg:px-8;
 }
 
 @utility no-scrollbar {
@@ -319,14 +320,14 @@
 }
 
 @utility border-ghost {
-  @apply relative after:absolute after:inset-0 after:border after:border-border after:mix-blend-darken dark:after:mix-blend-lighten;
+  @apply after:border-border relative after:absolute after:inset-0 after:border after:mix-blend-darken dark:after:mix-blend-lighten;
 }
 
 @utility step {
   counter-increment: step;
 
   &:before {
-    @apply mr-2 inline-flex size-6 items-center justify-center rounded-full border-background bg-background text-center -indent-px font-mono text-sm font-medium md:absolute md:mt-[-4px] md:ml-[-50px] md:size-9 md:border-4;
+    @apply border-background bg-background mr-2 inline-flex size-6 items-center justify-center rounded-full text-center -indent-px font-mono text-sm font-medium md:absolute md:mt-[-4px] md:ml-[-50px] md:size-9 md:border-4;
     box-shadow: inset 0 0 0 9999px var(--muted);
     content: counter(step);
   }
