@@ -85,25 +85,23 @@ function HeaderDropdown({ group }: { group: NavGroup }) {
         aria-controls={menuId}
         onClick={() => setIsOpen(true)}
         className={cn(
-          "inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm text-neutral-700 transition-[background-color,color] duration-150 ease-out hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none",
-          isOpen && "bg-neutral-100 text-black",
+          "inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm text-neutral-700 transition-colors duration-150 ease-out hover:text-black focus-visible:text-black motion-reduce:transition-none",
+          isOpen && "text-black",
           focusRing
         )}
       >
         {group.label}
-        <ChevronDown
-          className={`size-3 transition-transform duration-150 ease-out motion-reduce:transition-none ${isOpen ? "rotate-180" : ""}`}
-        />
+        <ChevronDown className="size-3 text-neutral-500" />
       </button>
       <div
         id={menuId}
         hidden={!isOpen}
-        className="fixed inset-x-0 top-16 z-40 border-b border-neutral-200 bg-white shadow-[0_16px_32px_rgba(0,0,0,0.04)]"
+        className="fixed inset-x-0 top-16 z-40 bg-[#fafafa] shadow-[0_1px_0_0_rgba(0,0,0,0.08)]"
       >
-        <div className="mx-auto grid w-[calc(100%-48px)] max-w-[1400px] grid-cols-[repeat(3,250px)] gap-x-4 py-9">
+        <div className="mx-auto flex w-[calc(100%-48px)] max-w-[1400px] flex-nowrap gap-x-4 pt-8 pb-12">
           {group.sections.map((section) => (
-            <div key={section.title}>
-              <h3 className="mb-4 text-xs leading-none font-medium text-neutral-500">
+            <div key={section.title} className="w-[250px] min-w-0">
+              <h3 className="mb-3 font-mono text-xs leading-none font-medium text-neutral-500 uppercase">
                 {section.title}
               </h3>
               <ul>
@@ -114,7 +112,7 @@ function HeaderDropdown({ group }: { group: NavGroup }) {
                       aria-label={getLinkAriaLabel(item)}
                       {...getLinkProps(item)}
                       className={cn(
-                        "inline-flex h-[34px] max-w-full items-center gap-2 rounded-sm text-base leading-6 text-black transition-colors duration-150 ease-out hover:text-neutral-600 focus-visible:text-black motion-reduce:transition-none",
+                        "inline-flex h-[34px] w-full max-w-full items-center gap-2 rounded-sm py-[3px] text-sm leading-5 text-neutral-900 transition-colors duration-150 ease-out hover:text-black focus-visible:text-black motion-reduce:transition-none",
                         focusRing
                       )}
                     >
@@ -246,9 +244,13 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
         aria-expanded={isOpen}
         aria-controls={menuId}
         onClick={() => setIsOpen((current) => !current)}
-        className={`flex size-11 items-center justify-center rounded-full border border-transparent text-black transition-[background-color,transform] duration-150 ease-out hover:bg-neutral-100 focus-visible:bg-neutral-100 active:scale-95 motion-reduce:transform-none motion-reduce:transition-none ${focusRing}`}
+        className={`flex min-h-11 min-w-11 items-center justify-end rounded-md text-black transition-colors duration-150 ease-out focus-visible:bg-neutral-100 motion-reduce:transition-none ${focusRing}`}
       >
-        {isOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+        {isOpen ? (
+          <X className="size-6 stroke-[1.5]" />
+        ) : (
+          <Menu className="size-6 stroke-[1.5]" />
+        )}
       </button>
 
       <div
@@ -259,11 +261,11 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
         aria-modal="true"
         aria-label="Mobile navigation"
         tabIndex={-1}
-        className="fixed inset-x-0 top-16 bottom-0 z-40 overflow-y-auto overscroll-contain bg-white px-6 py-8 shadow-none"
+        className="fixed inset-x-0 top-16 bottom-0 z-40 overflow-y-auto overscroll-contain bg-white px-6 py-6 shadow-none"
       >
-        <nav aria-label="Mobile primary" className="grid gap-0">
+        <nav aria-label="Mobile primary" className="grid gap-3">
           {content.navGroups.map((group) => (
-            <div key={group.id} className="border-b border-neutral-200">
+            <div key={group.id}>
               <button
                 type="button"
                 aria-expanded={openGroupId === group.id}
@@ -274,7 +276,7 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
                   )
                 }
                 className={cn(
-                  "flex h-14 w-full items-center justify-between text-left text-xl leading-none font-normal text-black transition-colors hover:text-neutral-600 focus-visible:text-black motion-reduce:transition-none",
+                  "flex w-full items-center justify-between py-2 text-left text-2xl leading-tight font-normal text-black transition-colors hover:text-neutral-600 focus-visible:text-black motion-reduce:transition-none",
                   focusRing
                 )}
               >
@@ -291,7 +293,7 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
               <div
                 id={`homepage-mobile-${group.id}-panel`}
                 hidden={openGroupId !== group.id}
-                className="grid gap-6 pb-7"
+                className="grid gap-6 py-4"
               >
                 {group.sections.map((section) => (
                   <section
@@ -314,7 +316,7 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
                           {...getLinkProps(item)}
                           onClick={closeMobileMenu}
                           className={cn(
-                            "-mx-2 inline-flex items-center gap-2 rounded-md px-2 py-1 text-base text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none",
+                            "-mx-2 inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-xl font-normal text-neutral-900 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none",
                             focusRing
                           )}
                         >
@@ -336,7 +338,7 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
               {...getLinkProps(item)}
               onClick={closeMobileMenu}
               className={cn(
-                "flex h-14 items-center border-b border-neutral-200 text-xl leading-none font-normal text-black transition-colors hover:text-neutral-600 focus-visible:text-black motion-reduce:transition-none",
+                "flex items-center py-2 text-2xl leading-tight font-normal text-black transition-colors hover:text-neutral-600 focus-visible:text-black motion-reduce:transition-none",
                 focusRing
               )}
             >
@@ -344,7 +346,7 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
             </Link>
           ))}
 
-          <div className="grid gap-3 pt-8">
+          <div className="grid gap-2 pt-5">
             {content.mobileActions.map((action) => (
               <HeaderActionButton
                 key={action.label}
@@ -377,7 +379,7 @@ export function HeaderNavigation({ content }: { content: HeaderContent }) {
             href={item.href}
             aria-label={getLinkAriaLabel(item)}
             {...getLinkProps(item)}
-            className={`rounded-md px-2 py-1 text-sm text-neutral-700 transition-[background-color,color] duration-150 ease-out hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none ${focusRing}`}
+            className={`rounded-md px-2 py-1 text-sm text-neutral-700 transition-colors duration-150 ease-out hover:text-black focus-visible:text-black motion-reduce:transition-none ${focusRing}`}
           >
             {item.label}
           </Link>

@@ -10,18 +10,9 @@ export function Hero() {
           <h1 className="mx-auto max-w-[620px] text-[48px] leading-[56px] font-normal tracking-[-0.06em] text-black min-[961px]:mx-0 min-[961px]:!max-w-[444px] min-[961px]:!text-[64px] min-[961px]:!leading-none">
             Agentic Infrastructure
           </h1>
-          <div className="mx-auto mt-4 h-6 max-w-[342px] overflow-hidden font-mono text-sm leading-6 text-neutral-700 min-[720px]:mt-6 min-[720px]:text-base min-[961px]:hidden">
-            <div className="motion-safe:animate-[homepage-kicker-cycle_9s_ease-in-out_infinite] motion-reduce:translate-y-0">
-              {heroKickers.map((kicker) => (
-                <p key={kicker.label} className="h-6 truncate">
-                  <span className="font-semibold tracking-[1px] uppercase">
-                    {kicker.label}
-                  </span>{" "}
-                  {kicker.body}
-                </p>
-              ))}
-            </div>
-          </div>
+          <p className="mt-4 font-mono text-sm text-neutral-700 min-[720px]:mt-6 min-[720px]:text-base min-[961px]:hidden">
+            {heroKickers[0].label}
+          </p>
           <div className="mx-auto mt-6 flex w-full max-w-[342px] flex-col justify-center gap-3 min-[480px]:w-auto min-[480px]:max-w-none min-[480px]:flex-row min-[720px]:mt-8 min-[961px]:mx-0 min-[961px]:justify-start">
             <MarketingButton
               href="https://vercel.com/new"
@@ -50,7 +41,7 @@ export function Hero() {
             {heroKickers.map((kicker) => (
               <div
                 key={kicker.label}
-                className="relative z-10 m-0 flex h-4 w-full cursor-default items-start overflow-hidden text-left font-mono text-sm leading-[1.6] font-normal text-pretty text-[#171717] transition-[height] duration-200 ease-out"
+                className="group relative z-10 m-0 flex h-4 w-full cursor-default items-start overflow-hidden text-left font-mono text-sm leading-[1.6] font-normal text-pretty text-[#171717] transition-[height] duration-200 ease-out hover:h-[67px] motion-reduce:transition-none"
               >
                 <span className="block">
                   <span className="inline shrink-0 font-mono text-sm font-semibold tracking-[1px] text-[#171717] uppercase transition-colors duration-500 ease-out">
@@ -58,7 +49,7 @@ export function Hero() {
                   </span>
                   <span
                     aria-hidden="true"
-                    className="inline font-mono text-sm text-[#4d4d4d] opacity-0 transition-opacity duration-300 ease-out"
+                    className="inline font-mono text-sm text-[#4d4d4d] opacity-0 transition-opacity duration-300 ease-out group-hover:opacity-100 motion-reduce:transition-none"
                   >
                     {" "}
                     {kicker.body}

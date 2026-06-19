@@ -9,7 +9,7 @@ import { StartBuildingPluginCommand } from "./start-building-plugin-command"
 
 function ActionList({ actions }: { actions: readonly StartBuildingAction[] }) {
   return (
-    <div className="mt-8 flex w-full flex-col gap-3 min-[480px]:w-auto min-[480px]:flex-row min-[480px]:flex-wrap">
+    <div className="mt-8 flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row min-[480px]:flex-wrap">
       {actions.map((action) => (
         <MarketingButton
           key={action.label}
@@ -33,7 +33,7 @@ function PluginCommand({ plugin }: { plugin: StartBuildingPlugin }) {
 function StartBuildingPanel({ panel }: { panel: StartBuildingPanelContent }) {
   return (
     <div className="col-span-12 min-w-0 md:col-span-6 lg:col-span-4">
-      <p className="max-w-md text-base leading-7 text-neutral-600">
+      <p className="max-w-md text-base leading-6 text-neutral-600">
         <span className="text-black">{panel.audience}</span> {panel.body}
       </p>
       {panel.kind === "template" ? (
@@ -48,7 +48,7 @@ function StartBuildingPanel({ panel }: { panel: StartBuildingPanelContent }) {
 export function StartBuilding({ content }: { content: StartBuildingContent }) {
   return (
     <section
-      className="pt-20 pb-16 md:pt-[120px] md:pb-20 lg:-mt-[217px] lg:pt-[168px] lg:pb-24"
+      className="relative z-10 bg-white pt-20 pb-16 md:pt-[120px] md:pb-20 lg:-mt-[217px] lg:pt-[168px] lg:pb-24"
       aria-labelledby="start-building-heading"
     >
       <div className="grid grid-cols-12 gap-x-5 gap-y-12 text-left">

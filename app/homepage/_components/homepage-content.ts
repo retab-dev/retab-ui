@@ -56,7 +56,7 @@ export const navGroups = [
           vercelLink("AI Gateway", "/ai-gateway"),
           vercelLink("Sandbox", "/sandbox"),
           vercelLink("Workflows", "/workflows"),
-          vercelLink("Eve", "/eve", "New"),
+          vercelLink("Eve", "/eve"),
         ],
       },
       {
@@ -74,7 +74,7 @@ export const navGroups = [
         items: [
           vercelLink("Next.js", "/frameworks/nextjs"),
           vercelLink("Vercel Agent", "/agent"),
-          vercelLink("Vercel Plugin", "/plugin", "New"),
+          vercelLink("Vercel Plugin", "/plugin"),
           externalLink("Domains", "https://vercel.com/domains"),
           externalLink("v0", "https://v0.app/"),
         ],
@@ -111,8 +111,8 @@ export const navGroups = [
           vercelLink("Customers", "/customers"),
           vercelLink("Marketplace", "/marketplace"),
           vercelLink("Partner Finder", "/partners/solution-partners"),
-          externalLink("Community", "https://community.vercel.com/"),
           vercelLink("AWS", "/partners/aws"),
+          externalLink("Community", "https://community.vercel.com/"),
         ],
       },
     ],

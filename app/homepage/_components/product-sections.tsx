@@ -111,13 +111,13 @@ function ProductLane({
         description={description}
         placement={isReversed ? "reversed" : "default"}
       />
-      <div className="mt-10 grid gap-8 lg:mt-14 lg:grid-cols-12 lg:items-start lg:gap-5">
+      <div className="mt-10 grid gap-8 lg:mt-11 lg:grid-cols-12 lg:items-start lg:gap-5">
         <div className={cn("lg:col-span-8", isReversed && "lg:col-start-5")}>
           <ProductVisualImage image={image} />
         </div>
         <div
           className={cn(
-            "min-w-0 space-y-8 border-t border-neutral-200 pt-6 lg:col-span-3 lg:border-t-0 lg:pt-0",
+            "hidden min-w-0 space-y-8 border-t border-neutral-200 pt-6 lg:col-span-3 lg:block lg:border-t-0 lg:pt-0",
             isReversed ? "lg:col-start-1 lg:row-start-1" : "lg:col-start-10"
           )}
         >
