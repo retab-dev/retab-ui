@@ -85,16 +85,13 @@ function StatusLink({ status }: { status: FooterContent["status"] }) {
 
 export function MarketingFooter({ content }: { content: FooterContent }) {
   return (
-    <footer
-      aria-labelledby="homepage-footer-heading"
-      className="border-t border-neutral-200 bg-white"
-    >
+    <footer aria-labelledby="homepage-footer-heading" className="bg-white">
       <h2 id="homepage-footer-heading" className="sr-only">
         Footer
       </h2>
       <MarketingContainer className="py-10">
         <nav aria-label="Footer navigation">
-          <div className="grid grid-cols-2 gap-x-7 gap-y-10 min-[520px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 lg:gap-x-9 xl:gap-x-12">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-8 min-[520px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 lg:gap-x-2 lg:gap-y-8">
             {content.columns.map((column) => (
               <FooterColumn
                 key={column.id}
@@ -106,15 +103,13 @@ export function MarketingFooter({ content }: { content: FooterContent }) {
           </div>
         </nav>
 
-        <div className="mt-10 border-t border-neutral-200 pt-5">
-          <div
-            role="group"
-            aria-label="Footer status and preferences"
-            className="flex flex-col gap-5 min-[460px]:flex-row min-[460px]:items-center min-[460px]:justify-between"
-          >
-            <StatusLink status={content.status} />
-            <FooterThemeSelector options={content.themeOptions} />
-          </div>
+        <div
+          role="group"
+          aria-label="Footer status and preferences"
+          className="mt-8 flex min-h-[34px] flex-col gap-5 min-[460px]:flex-row min-[460px]:items-center min-[460px]:justify-between"
+        >
+          <StatusLink status={content.status} />
+          <FooterThemeSelector options={content.themeOptions} />
         </div>
       </MarketingContainer>
     </footer>

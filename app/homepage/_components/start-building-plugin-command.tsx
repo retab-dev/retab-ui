@@ -1,11 +1,13 @@
 "use client"
 
-import { useState } from "react"
-import { Check, ChevronDown, Copy } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { Check, Copy } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
 import { focusRing } from "./primitives"
+
+type CopyState = "idle" | "copied" | "failed"
 
 export function StartBuildingPluginCommand({
   command,
@@ -14,26 +16,49 @@ export function StartBuildingPluginCommand({
   command: string
   label: string
 }) {
-  const [isCopied, setIsCopied] = useState(false)
+  const [copyState, setCopyState] = useState<CopyState>("idle")
+  const resetTimeoutRef = useRef<number | undefined>(undefined)
 
-  function copyCommand() {
-    void navigator.clipboard.writeText(command).then(() => {
-      setIsCopied(true)
-      window.setTimeout(() => setIsCopied(false), 1800)
-    })
+  useEffect(() => {
+    return () => {
+      if (resetTimeoutRef.current) {
+        window.clearTimeout(resetTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  function resetCopyStateSoon() {
+    if (resetTimeoutRef.current) {
+      window.clearTimeout(resetTimeoutRef.current)
+    }
+
+    resetTimeoutRef.current = window.setTimeout(() => {
+      setCopyState("idle")
+    }, 1800)
+  }
+
+  async function copyCommand() {
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error("Clipboard unavailable")
+      }
+
+      await navigator.clipboard.writeText(command)
+      setCopyState("copied")
+    } catch {
+      setCopyState("failed")
+    } finally {
+      resetCopyStateSoon()
+    }
   }
 
   return (
     <div className="mt-8 max-w-full">
-      <div className="inline-flex h-12 max-w-full items-center overflow-hidden rounded-full border border-neutral-200 bg-white text-black shadow-[0_1px_1px_rgba(0,0,0,0.03)]">
-        <span className="flex h-full shrink-0 items-center gap-1.5 border-r border-neutral-200 px-3 text-sm font-medium">
+      <div className="inline-flex h-10 max-w-full items-center rounded-full bg-white text-black shadow-[0_0_0_1px_rgba(0,0,0,0.12),0_1px_2px_rgba(0,0,0,0.06)]">
+        <span className="flex h-full shrink-0 items-center border-r border-neutral-200 px-3 text-sm font-medium">
           {label}
-          <ChevronDown
-            aria-hidden="true"
-            className="size-3.5 text-neutral-500"
-          />
         </span>
-        <code className="min-w-0 flex-1 truncate px-3 font-mono text-xs leading-5 text-neutral-800">
+        <code className="min-w-0 flex-1 overflow-x-auto px-3 font-mono text-sm leading-5 whitespace-nowrap text-neutral-800 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <span className="text-neutral-400">$</span> {command}
         </code>
         <button
@@ -41,11 +66,11 @@ export function StartBuildingPluginCommand({
           aria-label="Copy Vercel plugin install command"
           onClick={copyCommand}
           className={cn(
-            "mr-1 grid size-9 shrink-0 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black motion-reduce:transition-none",
+            "mr-0.5 grid size-9 shrink-0 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:ring-inset focus-visible:ring-offset-0 motion-reduce:transition-none",
             focusRing
           )}
         >
-          {isCopied ? (
+          {copyState === "copied" ? (
             <Check aria-hidden="true" className="size-4" />
           ) : (
             <Copy aria-hidden="true" className="size-4" />
@@ -53,7 +78,8 @@ export function StartBuildingPluginCommand({
         </button>
       </div>
       <span className="sr-only" aria-live="polite">
-        {isCopied ? "Copied command" : ""}
+        {copyState === "copied" ? "Copied command" : null}
+        {copyState === "failed" ? "Could not copy command" : null}
       </span>
     </div>
   )

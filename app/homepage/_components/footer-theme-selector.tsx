@@ -93,7 +93,7 @@ export function FooterThemeSelector({
             onClick={() => setTheme(option.value)}
             onKeyDown={(event) => onThemeKeyDown(event, index)}
             className={cn(
-              "relative grid size-6 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:z-10 motion-reduce:transition-none",
+              "relative grid size-6 place-items-center rounded-full text-neutral-500 transition-[background-color,color,transform] duration-150 ease-out hover:scale-105 hover:bg-neutral-100 hover:text-black focus-visible:z-10 active:scale-95 motion-reduce:transform-none motion-reduce:transition-none",
               focusRing,
               isSelected &&
                 "bg-black text-white hover:bg-black hover:text-white"

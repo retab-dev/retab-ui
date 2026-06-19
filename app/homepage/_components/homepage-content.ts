@@ -2,7 +2,6 @@ import {
   type FeaturedLatestCard,
   type FooterColumnContent,
   type FooterContent,
-  type FooterSocialLink,
   type HeaderContent,
   type LinkItem,
   type LogoContent,
@@ -330,29 +329,24 @@ export const footerSocialLinks = [
   {
     ...externalLink("GitHub", "https://github.com/vercel"),
     ariaLabel: "Vercel on GitHub",
-    icon: "github",
   },
   {
     ...externalLink("X", "https://x.com/vercel"),
     ariaLabel: "Vercel on X",
-    icon: "x",
   },
   {
     ...externalLink("LinkedIn", "https://www.linkedin.com/company/vercel"),
     ariaLabel: "Vercel on LinkedIn",
-    icon: "linkedin",
   },
   {
     ...externalLink("YouTube", "https://www.youtube.com/vercel"),
     ariaLabel: "Vercel on YouTube",
-    icon: "youtube",
   },
   {
     ...externalLink("Instagram", "https://www.instagram.com/vercel"),
     ariaLabel: "Vercel on Instagram",
-    icon: "instagram",
   },
-] as const satisfies readonly FooterSocialLink[]
+] as const satisfies readonly LinkItem[]
 
 export const footerNavigationColumns = [
   {
@@ -479,11 +473,6 @@ export const footerNavigationColumns = [
     ],
   },
   {
-    id: "social",
-    title: "Social",
-    links: footerSocialLinks,
-  },
-  {
     id: "legal-trust",
     title: "Legal & Trust",
     links: [
@@ -498,6 +487,11 @@ export const footerNavigationColumns = [
       cookiePreferencesButton(),
     ],
   },
+  {
+    id: "social",
+    title: "Social",
+    links: footerSocialLinks,
+  },
 ] as const satisfies readonly FooterColumnContent[]
 
 export const themeOptions = [
@@ -507,15 +501,8 @@ export const themeOptions = [
 ] as const satisfies readonly ThemeOption[]
 
 export const homepageFooter = {
-  brand: {
-    label: "Vercel",
-    href: "/homepage",
-    ariaLabel: "Vercel homepage",
-  },
-  copyright: "\u00a9 2026 Vercel Inc.",
   status: footerStatus,
   columns: footerNavigationColumns,
-  socialLinks: footerSocialLinks,
   themeOptions,
 } as const satisfies FooterContent
 
@@ -524,6 +511,7 @@ export const startBuildingContent = {
   panels: [
     {
       id: "humans",
+      kind: "template",
       audience: "For humans.",
       body: "Get started with Next.js and React in seconds.",
       actions: [
@@ -539,24 +527,16 @@ export const startBuildingContent = {
           variant: "secondary",
         },
       ],
-      rows: [
-        { label: "stack", value: "Next.js + React" },
-        { label: "deploy", value: "global edge network" },
-        { label: "preview", value: "every commit" },
-      ],
     },
     {
       id: "agents",
+      kind: "plugin",
       audience: "For agents.",
       body: "Tools to connect your agents to Vercel infrastructure.",
       plugin: {
         label: "Plugin",
-        href: vercelHref("/plugin"),
-        ariaLabel: "Open the Vercel Plugin page",
         command: "npx plugins add vercel/vercel-plugin",
-        tags: ["CLI", "MCP", "API"],
       },
-      tags: ["ship", "observe", "recover"],
     },
   ],
 } as const satisfies StartBuildingContent

@@ -1,13 +1,8 @@
-import { ArrowUpRight } from "lucide-react"
-
-import { cn } from "@/lib/utils"
-
 import {
   type StartBuildingAction,
   type StartBuildingContent,
   type StartBuildingPanel as StartBuildingPanelContent,
   type StartBuildingPlugin,
-  type StartBuildingRow,
 } from "./homepage-types"
 import { getLinkAriaLabel, getLinkProps, MarketingButton } from "./primitives"
 import { StartBuildingPluginCommand } from "./start-building-plugin-command"
@@ -22,10 +17,9 @@ function ActionList({ actions }: { actions: readonly StartBuildingAction[] }) {
           aria-label={getLinkAriaLabel(action)}
           {...getLinkProps(action)}
           variant={action.variant}
-          className="w-full gap-2 min-[480px]:w-auto"
+          className="w-full min-[480px]:w-auto"
         >
           {action.label}
-          <ArrowUpRight aria-hidden="true" className="size-4" />
         </MarketingButton>
       ))}
     </div>
@@ -38,25 +32,17 @@ function PluginCommand({ plugin }: { plugin: StartBuildingPlugin }) {
   )
 }
 
-function StartBuildingPanel({
-  isFirst,
-  panel,
-}: {
-  isFirst: boolean
-  panel: StartBuildingPanelContent
-}) {
+function StartBuildingPanel({ panel }: { panel: StartBuildingPanelContent }) {
   return (
-    <div
-      className={cn(
-        "min-w-0",
-        isFirst ? "md:border-r md:border-neutral-200 md:pr-10" : "md:pl-10"
-      )}
-    >
+    <div className="col-span-12 min-w-0 md:col-span-6 xl:col-span-4">
       <p className="max-w-md text-base leading-7 text-neutral-600">
         <span className="text-black">{panel.audience}</span> {panel.body}
       </p>
-      {panel.actions ? <ActionList actions={panel.actions} /> : null}
-      {panel.plugin ? <PluginCommand plugin={panel.plugin} /> : null}
+      {panel.kind === "template" ? (
+        <ActionList actions={panel.actions} />
+      ) : (
+        <PluginCommand plugin={panel.plugin} />
+      )}
     </div>
   )
 }
@@ -64,24 +50,20 @@ function StartBuildingPanel({
 export function StartBuilding({ content }: { content: StartBuildingContent }) {
   return (
     <section
-      className="pt-32 pb-20 md:pt-40"
+      className="pt-20 pb-16 md:pt-[120px] md:pb-20 lg:pt-[168px] lg:pb-24"
       aria-labelledby="start-building-heading"
     >
-      <div className="mx-auto max-w-[920px] text-left">
+      <div className="grid grid-cols-12 gap-x-5 gap-y-12 text-left">
         <h2
           id="start-building-heading"
-          className="max-w-[760px] text-[40px] leading-tight font-normal text-black"
+          className="col-span-12 max-w-[760px] text-[40px] leading-tight font-normal text-black lg:col-span-8"
         >
           {content.title}
         </h2>
 
-        <div className="mt-12 grid min-w-0 gap-10 text-left md:grid-cols-2 md:gap-5">
-          {content.panels.map((panel, index) => (
-            <StartBuildingPanel
-              key={panel.id}
-              panel={panel}
-              isFirst={index === 0}
-            />
+        <div className="col-span-12 grid min-w-0 grid-cols-12 gap-x-5 gap-y-10">
+          {content.panels.map((panel) => (
+            <StartBuildingPanel key={panel.id} panel={panel} />
           ))}
         </div>
       </div>

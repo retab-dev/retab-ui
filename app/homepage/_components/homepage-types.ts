@@ -114,17 +114,6 @@ export type FooterColumnContent = {
   readonly links: readonly LinkItem[]
 }
 
-export type FooterSocialIcon =
-  | "github"
-  | "x"
-  | "linkedin"
-  | "youtube"
-  | "instagram"
-
-export type FooterSocialLink = LinkItem & {
-  readonly icon: FooterSocialIcon
-}
-
 export type FooterStatusContent = LinkItem
 
 export type ThemeValue = "system" | "light" | "dark"
@@ -135,11 +124,8 @@ export type ThemeOption = {
 }
 
 export type FooterContent = {
-  readonly brand: LinkItem
-  readonly copyright: string
   readonly status: FooterStatusContent
   readonly columns: readonly FooterColumnContent[]
-  readonly socialLinks: readonly FooterSocialLink[]
   readonly themeOptions: readonly ThemeOption[]
 }
 
@@ -147,25 +133,26 @@ export type StartBuildingAction = LinkItem & {
   readonly variant?: "primary" | "secondary"
 }
 
-export type StartBuildingRow = {
+export type StartBuildingPlugin = {
   readonly label: string
-  readonly value: string
-}
-
-export type StartBuildingPlugin = LinkItem & {
   readonly command: string
-  readonly tags: readonly string[]
 }
 
-export type StartBuildingPanel = {
+type StartBuildingPanelBase = {
   readonly id: string
   readonly audience: string
   readonly body: string
-  readonly actions?: readonly StartBuildingAction[]
-  readonly rows?: readonly StartBuildingRow[]
-  readonly plugin?: StartBuildingPlugin
-  readonly tags?: readonly string[]
 }
+
+export type StartBuildingPanel =
+  | (StartBuildingPanelBase & {
+      readonly kind: "template"
+      readonly actions: readonly StartBuildingAction[]
+    })
+  | (StartBuildingPanelBase & {
+      readonly kind: "plugin"
+      readonly plugin: StartBuildingPlugin
+    })
 
 export type StartBuildingContent = {
   readonly title: string
