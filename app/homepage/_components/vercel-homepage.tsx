@@ -67,8 +67,8 @@ const productLanes = [
     title: "Agents",
     description:
       "Build systems that reason, execute code in isolation, run for hours, and recover from failure.",
-    proof:
-      "Workspace agents complete long-running work with protected execution and resumable state.",
+    proofAccent: "Notion",
+    proof: "powers millions of agent conversations daily on Vercel.",
     features: [
       "Durable orchestration",
       "Sandboxed environments",
@@ -81,8 +81,8 @@ const productLanes = [
     title: "Apps",
     description:
       "Ship marketing sites, SaaS backends, and storefronts on infrastructure that scales from zero to global traffic.",
-    proof:
-      "High-traffic product teams serve launches, dashboards, and storefronts from the same edge.",
+    proofAccent: "Zapier",
+    proof: "serves over 5 million monthly website visits on Vercel.",
     features: [
       "Global delivery",
       "Preview environments",
@@ -95,8 +95,8 @@ const productLanes = [
     title: "Platforms",
     description:
       "Host multi-tenant products that isolate every customer, provision domains, and serve millions of sites.",
-    proof:
-      "Platform teams manage tenant routing, certificates, preview URLs, and releases in one place.",
+    proofAccent: "Mintlify",
+    proof: "powers documentation for thousands of companies on Vercel.",
     features: [
       "Tenant isolation",
       "Domain management",
@@ -583,6 +583,7 @@ function FeatureList({ features }: { features: readonly string[] }) {
 function ProductLane({
   title,
   description,
+  proofAccent,
   proof,
   features,
   visual,
@@ -590,6 +591,7 @@ function ProductLane({
 }: {
   title: string
   description: string
+  proofAccent: string
   proof: string
   features: readonly string[]
   visual: ProductVisual
@@ -608,8 +610,8 @@ function ProductLane({
             flip ? "lg:col-start-1 lg:row-start-1" : "lg:col-start-10"
           )}
         >
-          <p className="text-4xl leading-tight text-black md:text-5xl">
-            {proof}
+          <p className="max-w-[360px] text-4xl leading-[1.12] text-black md:text-[40px]">
+            <span className="text-neutral-500">{proofAccent}</span> {proof}
           </p>
           <FeatureList features={features} />
         </div>
