@@ -15,7 +15,7 @@ export function VercelHomepage() {
     <div className="min-h-svh bg-white text-black">
       <a
         href="#homepage-main"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-md focus:bg-black focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
+        className="fixed top-3 left-3 z-50 -translate-y-24 rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition-transform focus:translate-y-0 focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black focus:outline-none motion-reduce:transition-none"
       >
         Skip to content
       </a>
