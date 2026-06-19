@@ -2,7 +2,7 @@ import { type Metadata } from "next"
 
 import { VercelHomepage } from "./_components/vercel-homepage"
 
-const title = "Homepage"
+const title = "Agentic Infrastructure"
 const description =
   "A Vercel-inspired homepage reproduction built from explicit marketing primitives."
 
@@ -10,7 +10,9 @@ export const dynamic = "force-static"
 export const revalidate = false
 
 export const metadata: Metadata = {
-  title,
+  title: {
+    absolute: title,
+  },
   description,
 }
 
