@@ -17,7 +17,7 @@ export function LatestSection() {
         <Link
           href={featuredLatestCard.href}
           aria-label={`${featuredLatestCard.label}: ${featuredLatestCard.alt}`}
-          className="group relative flex aspect-[690/576] items-center justify-center overflow-hidden rounded-md border border-neutral-200 bg-[#fafafa] p-6 transition-[border-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-1 hover:border-neutral-300 hover:shadow-[0_18px_60px_rgba(0,0,0,0.08)] focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transform-none motion-reduce:transition-none sm:p-10 lg:aspect-auto lg:min-h-[580px]"
+          className="group relative flex aspect-[690/576] items-center justify-center overflow-hidden rounded-md border border-neutral-200 bg-[#fafafa] p-6 transition-[border-color,background-color] duration-150 ease-out hover:border-neutral-300 hover:bg-white focus-visible:border-neutral-300 focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none active:bg-neutral-50 motion-reduce:transition-none sm:p-10 lg:aspect-auto lg:min-h-[580px]"
         >
           <img
             src={featuredLatestCard.imageSrc}
@@ -27,7 +27,7 @@ export function LatestSection() {
             aria-hidden="true"
             loading="lazy"
             decoding="async"
-            className="block h-full w-full object-contain transition-transform duration-300 ease-out group-hover:scale-[1.015] motion-reduce:transition-none"
+            className="block h-full w-full object-contain opacity-80 transition-opacity duration-300 ease-out group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
           />
         </Link>
 
@@ -37,7 +37,7 @@ export function LatestSection() {
               key={card.id}
               href={card.href}
               aria-label={`${card.label}: ${card.body}`}
-              className="group relative flex min-h-[240px] min-w-0 flex-col overflow-hidden rounded-md border border-neutral-200 bg-[#fafafa] p-5 text-black transition-[border-color,background-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-1 hover:border-neutral-300 hover:bg-white hover:shadow-[0_18px_60px_rgba(0,0,0,0.08)] focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transform-none motion-reduce:transition-none sm:p-6 lg:min-h-[280px]"
+              className="group relative flex min-h-[240px] min-w-0 flex-col overflow-hidden rounded-md border border-neutral-200 bg-[#fafafa] p-5 text-black transition-[border-color,background-color] duration-150 ease-out hover:border-neutral-300 hover:bg-white focus-visible:border-neutral-300 focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none active:bg-neutral-50 motion-reduce:transition-none sm:p-6 lg:min-h-[280px]"
             >
               {card.visual.kind === "metrics" ? (
                 <WorkflowMetricStrip metrics={card.visual.metrics} />
@@ -45,7 +45,7 @@ export function LatestSection() {
                 <SandboxGraphic />
               )}
 
-              <div className="relative z-10 mt-auto max-w-[440px] pt-28">
+              <div className="relative z-10 mt-auto max-w-[440px] pt-36">
                 <h3 className="min-w-0 text-2xl leading-tight font-medium break-words sm:text-3xl">
                   {card.label}
                 </h3>
@@ -69,7 +69,7 @@ function WorkflowMetricStrip({
   return (
     <dl
       aria-hidden="true"
-      className="absolute top-5 right-5 left-5 z-0 grid max-w-[430px] grid-cols-2 overflow-hidden rounded-md border border-neutral-200 bg-white/90 font-mono text-xs shadow-[0_1px_0_rgba(0,0,0,0.04)] backdrop-blur transition-transform duration-300 ease-out group-hover:-translate-y-1 motion-reduce:transition-none min-[520px]:left-auto min-[520px]:w-[420px] min-[520px]:grid-cols-4"
+      className="absolute top-5 right-5 left-5 z-0 grid max-w-[430px] grid-cols-2 overflow-hidden rounded-md border border-neutral-200 bg-white/90 font-mono text-xs opacity-80 shadow-[0_1px_0_rgba(0,0,0,0.04)] backdrop-blur transition-opacity duration-300 ease-out group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none min-[520px]:left-auto min-[520px]:w-[420px] min-[520px]:grid-cols-4"
     >
       {metrics.map(([label, value], index) => (
         <div
@@ -107,7 +107,7 @@ function SandboxGraphic() {
   return (
     <div
       aria-hidden="true"
-      className="absolute top-5 right-5 left-5 z-0 h-32 overflow-hidden rounded-md border border-neutral-200 bg-white/80 shadow-[0_1px_0_rgba(0,0,0,0.04)] transition-transform duration-300 ease-out group-hover:-translate-y-1 motion-reduce:transition-none"
+      className="absolute top-5 right-5 left-5 z-0 h-32 overflow-hidden rounded-md border border-neutral-200 bg-white/80 opacity-80 shadow-[0_1px_0_rgba(0,0,0,0.04)] transition-opacity duration-300 ease-out group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
     >
       <div className="flex h-8 items-center justify-between border-b border-neutral-200 px-3 font-mono text-[11px] text-neutral-500">
         <div className="flex items-center gap-1.5">

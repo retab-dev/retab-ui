@@ -93,11 +93,11 @@ export function FooterThemeSelector({
             onClick={() => setTheme(option.value)}
             onKeyDown={(event) => onThemeKeyDown(event, index)}
             className={cn(
-              "relative grid size-6 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:z-10 motion-reduce:transition-none",
+              "relative grid size-6 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:z-10 focus-visible:bg-neutral-100 focus-visible:text-black active:bg-neutral-200 motion-reduce:transition-none",
               focusRing,
               "focus-visible:ring-offset-0 focus-visible:ring-inset",
               isSelected &&
-                "bg-black text-white hover:bg-black hover:text-white"
+                "bg-black text-white hover:bg-black hover:text-white focus-visible:bg-black focus-visible:text-white active:bg-black"
             )}
           >
             <ThemeIcon value={option.value} />

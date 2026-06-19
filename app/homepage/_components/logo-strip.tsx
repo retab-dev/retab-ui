@@ -5,12 +5,6 @@ export function LogoStrip({ logos }: { logos: readonly LogoContent[] }) {
 
   return (
     <div className="w-full overflow-hidden pb-8 min-[961px]:pb-14">
-      <style>{`
-        @keyframes homepage-logo-marquee {
-          from { transform: translateX(0); }
-          to { transform: translateX(calc(-50% - 1.5rem)); }
-        }
-      `}</style>
       <ul className="sr-only">
         {logos.map((logo) => (
           <li key={logo.id}>{logo.label}</li>
