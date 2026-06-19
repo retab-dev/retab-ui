@@ -97,6 +97,11 @@
       background-position: -200% 0;
     }
   }
+  @keyframes homepage-logo-marquee {
+    to {
+      transform: translateX(calc(-50% - 1.5rem));
+    }
+  }
 }
 
 :root {

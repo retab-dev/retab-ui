@@ -37,7 +37,7 @@ export function Hero() {
         </div>
 
         <div className="order-3 hidden justify-self-center min-[961px]:block">
-          <div className="grid gap-[52px] font-mono text-[28px] leading-none font-normal tracking-normal whitespace-nowrap text-black uppercase xl:text-[30px]">
+          <div className="grid gap-9 font-mono text-xl leading-none font-normal tracking-normal whitespace-nowrap text-black uppercase xl:gap-[52px] xl:text-[28px] 2xl:text-[30px]">
             {heroKickers.map((kicker) => (
               <p key={kicker}>{kicker}</p>
             ))}
