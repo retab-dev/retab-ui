@@ -14,7 +14,7 @@ export function LatestSection() {
         title="Latest"
         description="Recent launches, events, and updates shaping what's next on Vercel."
       />
-      <div className="mt-14 grid gap-5 lg:grid-cols-2">
+      <div className="mt-14 grid gap-5 lg:grid-cols-2 lg:items-start">
         <Link
           href={featuredLatestCard.href}
           aria-label={`${featuredLatestCard.label}: ${featuredLatestCard.alt}`}
