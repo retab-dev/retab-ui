@@ -111,7 +111,7 @@ function ProductLane({
             isReversed ? "lg:col-start-1 lg:row-start-1" : "lg:col-start-10",
           )}
         >
-          <p className="max-w-sm text-3xl leading-tight tracking-tighter text-balance text-black md:text-4xl xl:text-5xl">
+          <p className="max-w-sm text-3xl leading-tight text-balance text-black md:text-4xl">
             <span className="text-neutral-500">{proofCustomer}</span> {proof}
           </p>
           <FeatureList features={features} />
