@@ -27,7 +27,7 @@ export function MarketingContainer({
   return (
     <div className="w-full px-6">
       <div
-        className={cn("mx-auto w-full max-w-marketing", className)}
+        className={cn("max-w-marketing mx-auto w-full", className)}
         {...props}
       />
     </div>
