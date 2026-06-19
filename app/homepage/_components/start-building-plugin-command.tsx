@@ -95,7 +95,7 @@ export function StartBuildingPluginCommand({
 
   return (
     <div ref={rootRef} className="relative mt-14 max-w-full">
-      <div className="inline-flex h-10 w-full max-w-full items-center gap-1 rounded-full bg-white px-2 py-1.5 text-black shadow-sm ring-1 ring-black/10">
+      <div className="inline-flex min-h-10 w-full items-center gap-1 rounded-full bg-white px-2 py-1.5 text-black shadow-sm ring-1 ring-black/10">
         <button
           type="button"
           aria-label="Command type"
@@ -104,9 +104,8 @@ export function StartBuildingPluginCommand({
           aria-controls={isMenuOpen ? menuId : undefined}
           onClick={() => setIsMenuOpen((isOpen) => !isOpen)}
           className={cn(
-            "flex h-7 shrink-0 cursor-pointer items-center rounded-l-full rounded-r-md py-1 pr-1 pl-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none",
+            "flex min-h-7 shrink-0 cursor-pointer items-center rounded-l-full rounded-r-md px-2 py-1 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-black",
             focusRing,
-            "focus-visible:ring-offset-0 focus-visible:ring-inset",
           )}
         >
           <span className="flex items-center gap-1.5">
@@ -114,15 +113,15 @@ export function StartBuildingPluginCommand({
             <ChevronDown
               aria-hidden="true"
               className={cn(
-                "size-4 text-neutral-500 transition-transform duration-150 motion-reduce:transition-none",
+                "size-4 text-neutral-500 transition-transform",
                 isMenuOpen && "rotate-180",
               )}
             />
           </span>
         </button>
-        <span aria-hidden="true" className="mx-1 h-6 w-px bg-neutral-200" />
-        <span className="block pr-1 text-neutral-400">$</span>
-        <code className="min-w-0 flex-1 overflow-x-auto px-3 font-mono text-sm leading-5 whitespace-nowrap text-neutral-800">
+        <span aria-hidden="true" className="h-6 w-px bg-neutral-200" />
+        <span className="text-neutral-400">$</span>
+        <code className="min-w-0 flex-1 overflow-x-auto font-mono text-sm leading-5 whitespace-nowrap text-neutral-800">
           {selectedOption.command}
         </code>
         <button
@@ -130,9 +129,8 @@ export function StartBuildingPluginCommand({
           aria-label={`Copy ${selectedOption.label} command`}
           onClick={copyCommand}
           className={cn(
-            "mr-0.5 grid size-9 shrink-0 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black active:bg-neutral-200 motion-reduce:transition-none",
+            "grid size-9 shrink-0 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black active:bg-neutral-200",
             focusRing,
-            "focus-visible:ring-offset-0 focus-visible:ring-inset",
           )}
         >
           {copyState === "copied" ? (
@@ -143,7 +141,7 @@ export function StartBuildingPluginCommand({
         </button>
       </div>
       {isMenuOpen ? (
-        <div className="absolute top-11 left-2 z-50 w-56 rounded-xl bg-white p-2 text-sm text-black shadow-xl ring-1 ring-black/10">
+        <div className="absolute top-full left-2 z-50 mt-1 w-56 rounded-xl bg-white p-2 text-black shadow-xl ring-1 ring-black/10">
           <ul id={menuId} role="menu" aria-label="Command type">
             {options.map((option, index) => (
               <li key={option.label} role="none">
@@ -152,7 +150,7 @@ export function StartBuildingPluginCommand({
                   role="menuitem"
                   onClick={() => selectOption(index)}
                   className={cn(
-                    "flex h-10 w-full cursor-pointer items-center rounded-md px-2 text-left text-sm text-neutral-900 transition-colors hover:bg-neutral-100 focus-visible:bg-neutral-100 motion-reduce:transition-none",
+                    "flex min-h-10 w-full cursor-pointer items-center rounded-md px-2 text-left text-sm text-neutral-900 transition-colors hover:bg-neutral-100",
                     focusRing,
                     index === selectedIndex && "bg-neutral-100",
                   )}

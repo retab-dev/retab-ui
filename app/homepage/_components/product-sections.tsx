@@ -9,7 +9,7 @@ import { SectionHeader } from "./section-header";
 
 function ProductVisualImage({ image }: { image: ProductImageContent }) {
   return (
-    <div className="block">
+    <div>
       <img
         src={image.mobileSrc}
         width={image.mobileWidth}
@@ -87,7 +87,7 @@ function ProductLane({
     <section
       aria-labelledby={sectionId}
       className={cn(
-        isFirst ? "mt-40 md:mt-24 lg:mt-48" : "mt-8 md:mt-44 lg:mt-52",
+        isFirst ? "mt-40 md:mt-24 lg:mt-48" : "mt-16 md:mt-44 lg:mt-52",
       )}
     >
       <SectionHeader
@@ -97,7 +97,12 @@ function ProductLane({
         placement={isReversed ? "reversed" : "default"}
       />
       <div className="mt-10 grid gap-8 lg:mt-11 lg:grid-cols-12 lg:items-start lg:gap-5">
-        <div className={cn("lg:col-span-8", isReversed && "lg:col-start-5")}>
+        <div
+          className={cn(
+            "min-w-0 lg:col-span-8",
+            isReversed && "lg:col-start-5",
+          )}
+        >
           <ProductVisualImage image={image} />
         </div>
         <div

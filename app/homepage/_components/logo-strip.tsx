@@ -1,4 +1,5 @@
 import { type LogoContent } from "./homepage-types";
+import styles from "./homepage.module.css";
 
 type LiveLogo = {
   readonly viewBox: string;
@@ -79,7 +80,7 @@ export function LogoStrip({ logos }: { logos: readonly LogoContent[] }) {
       </ul>
       <div
         aria-hidden="true"
-        className="flex h-11 w-max min-w-0 items-center gap-12 px-6 text-neutral-950 motion-safe:animate-[homepage-logo-marquee_28s_linear_infinite] motion-reduce:hidden xl:hidden"
+        className={`${styles.logoMarquee} flex h-11 w-max min-w-0 items-center gap-12 px-6 text-neutral-950 motion-reduce:hidden xl:hidden`}
       >
         {repeatedLogos.map((logo, index) => (
           <BrandLogo key={`${logo.id}-${index}`} logo={logo} />
