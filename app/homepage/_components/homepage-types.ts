@@ -61,9 +61,11 @@ export type ProductLaneContent = {
 
 export type ProductVisualImage = {
   readonly desktopSrc: string
+  readonly desktopDarkSrc: string
   readonly desktopWidth: number
   readonly desktopHeight: number
   readonly mobileSrc: string
+  readonly mobileDarkSrc: string
   readonly mobileWidth: number
   readonly mobileHeight: number
   readonly alt: string
@@ -89,7 +91,7 @@ export type SecondaryLatestCardVisual =
       readonly metrics: readonly LatestMetric[]
     }
   | {
-      readonly kind: "sandbox-terminal"
+      readonly kind: "sandbox"
     }
 
 export type SecondaryLatestCard = {

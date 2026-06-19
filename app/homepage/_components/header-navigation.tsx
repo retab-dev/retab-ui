@@ -38,6 +38,7 @@ function getFocusableElements(container: HTMLElement | null) {
 
 function HeaderDropdown({ group }: { group: NavGroup }) {
   const [isOpen, setIsOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const menuId = `homepage-${group.id}-menu`
 
@@ -60,9 +61,16 @@ function HeaderDropdown({ group }: { group: NavGroup }) {
 
   return (
     <div
+      ref={rootRef}
       className="relative"
       onMouseEnter={() => setIsOpen(true)}
-      onMouseLeave={() => setIsOpen(false)}
+      onMouseLeave={() => {
+        if (rootRef.current?.contains(document.activeElement)) {
+          return
+        }
+
+        setIsOpen(false)
+      }}
       onFocus={() => setIsOpen(true)}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) {
@@ -75,7 +83,7 @@ function HeaderDropdown({ group }: { group: NavGroup }) {
         type="button"
         aria-expanded={isOpen}
         aria-controls={menuId}
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={() => setIsOpen(true)}
         className={cn(
           "inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm text-neutral-700 transition-[background-color,color] duration-150 ease-out hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none",
           isOpen && "bg-neutral-100 text-black",
@@ -90,29 +98,34 @@ function HeaderDropdown({ group }: { group: NavGroup }) {
       <div
         id={menuId}
         hidden={!isOpen}
-        className="absolute top-8 left-0 z-20 grid w-[620px] grid-cols-3 gap-6 rounded-md border border-neutral-200 bg-white p-5 shadow-xl shadow-black/5"
+        className="fixed inset-x-0 top-16 z-40 border-b border-neutral-200 bg-white shadow-[0_16px_32px_rgba(0,0,0,0.04)]"
       >
-        {group.sections.map((section) => (
-          <div key={section.title}>
-            <h3 className="mb-3 text-xs font-medium text-neutral-500">
-              {section.title}
-            </h3>
-            <ul className="space-y-2">
-              {section.items.map((item) => (
-                <li key={item.label}>
-                  <Link
-                    href={item.href}
-                    aria-label={getLinkAriaLabel(item)}
-                    {...getLinkProps(item)}
-                    className={`inline-flex items-center gap-2 rounded-sm text-sm text-neutral-700 underline-offset-4 transition-colors duration-150 ease-out hover:text-black hover:underline hover:decoration-neutral-400 focus-visible:text-black focus-visible:underline focus-visible:decoration-neutral-400 motion-reduce:transition-none ${focusRing}`}
-                  >
-                    <MarketingLinkLabel item={item} />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+        <div className="mx-auto grid w-[calc(100%-48px)] max-w-[1400px] grid-cols-[repeat(3,250px)] gap-x-4 py-9">
+          {group.sections.map((section) => (
+            <div key={section.title}>
+              <h3 className="mb-4 text-xs leading-none font-medium text-neutral-500">
+                {section.title}
+              </h3>
+              <ul>
+                {section.items.map((item) => (
+                  <li key={item.label}>
+                    <Link
+                      href={item.href}
+                      aria-label={getLinkAriaLabel(item)}
+                      {...getLinkProps(item)}
+                      className={cn(
+                        "inline-flex h-[34px] max-w-full items-center gap-2 rounded-sm text-base leading-6 text-black transition-colors duration-150 ease-out hover:text-neutral-600 focus-visible:text-black motion-reduce:transition-none",
+                        focusRing
+                      )}
+                    >
+                      <MarketingLinkLabel item={item} />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -120,10 +133,16 @@ function HeaderDropdown({ group }: { group: NavGroup }) {
 
 function HeaderActionButton({
   action,
+  className,
   onClick,
+  shape = "rounded",
+  size = "compact",
 }: {
   action: HeaderAction
+  className?: string
   onClick?: () => void
+  shape?: "pill" | "rounded"
+  size?: "default" | "compact"
 }) {
   return (
     <MarketingButton
@@ -131,9 +150,10 @@ function HeaderActionButton({
       aria-label={getLinkAriaLabel(action)}
       {...getLinkProps(action)}
       variant={action.variant}
-      size="compact"
-      shape="rounded"
+      size={size}
+      shape={shape}
       onClick={onClick}
+      className={className}
     >
       {action.label}
     </MarketingButton>
@@ -142,9 +162,15 @@ function HeaderActionButton({
 
 function MobileNavigation({ content }: { content: HeaderContent }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [openGroupId, setOpenGroupId] = useState<string | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const menuId = "homepage-mobile-menu"
+
+  function closeMobileMenu() {
+    setIsOpen(false)
+    setOpenGroupId(null)
+  }
 
   useEffect(() => {
     if (!isOpen) {
@@ -154,13 +180,13 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
     const originalOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
 
-    window.requestAnimationFrame(() => {
+    const focusFrame = window.requestAnimationFrame(() => {
       const [firstFocusable] = getFocusableElements(menuRef.current)
       ;(firstFocusable ?? menuRef.current)?.focus()
     })
 
     function closeMenu() {
-      setIsOpen(false)
+      closeMobileMenu()
       triggerRef.current?.focus()
     }
 
@@ -205,6 +231,7 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
 
     window.addEventListener("keydown", onKeyDown)
     return () => {
+      window.cancelAnimationFrame(focusFrame)
       document.body.style.overflow = originalOverflow
       window.removeEventListener("keydown", onKeyDown)
     }
@@ -232,65 +259,99 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
         aria-modal="true"
         aria-label="Mobile navigation"
         tabIndex={-1}
-        className="fixed inset-x-3 top-[72px] z-40 max-h-[calc(100svh-5rem)] overflow-y-auto overscroll-contain rounded-md border border-neutral-200 bg-white px-5 py-5 shadow-xl shadow-black/5"
+        className="fixed inset-x-0 top-16 bottom-0 z-40 overflow-y-auto overscroll-contain bg-white px-6 py-8 shadow-none"
       >
-        <nav aria-label="Mobile primary" className="grid gap-7">
+        <nav aria-label="Mobile primary" className="grid gap-0">
           {content.navGroups.map((group) => (
-            <div key={group.id} className="grid gap-5">
-              <h2 className="text-2xl leading-none font-medium text-black">
+            <div key={group.id} className="border-b border-neutral-200">
+              <button
+                type="button"
+                aria-expanded={openGroupId === group.id}
+                aria-controls={`homepage-mobile-${group.id}-panel`}
+                onClick={() =>
+                  setOpenGroupId((current) =>
+                    current === group.id ? null : group.id
+                  )
+                }
+                className={cn(
+                  "flex h-14 w-full items-center justify-between text-left text-xl leading-none font-normal text-black transition-colors hover:text-neutral-600 focus-visible:text-black motion-reduce:transition-none",
+                  focusRing
+                )}
+              >
                 {group.label}
-              </h2>
-              {group.sections.map((section) => (
-                <section
-                  key={`${group.id}-${section.title}`}
-                  aria-labelledby={`homepage-mobile-${group.id}-${section.title.toLowerCase().replaceAll(" ", "-")}`}
-                  className="grid gap-3"
-                >
-                  <h3
-                    id={`homepage-mobile-${group.id}-${section.title.toLowerCase().replaceAll(" ", "-")}`}
-                    className="font-mono text-xs leading-none font-semibold tracking-normal text-neutral-500 uppercase"
+                <ChevronDown
+                  aria-hidden="true"
+                  className={cn(
+                    "size-4 transition-transform duration-150 ease-out motion-reduce:transition-none",
+                    openGroupId === group.id && "rotate-180"
+                  )}
+                />
+              </button>
+
+              <div
+                id={`homepage-mobile-${group.id}-panel`}
+                hidden={openGroupId !== group.id}
+                className="grid gap-6 pb-7"
+              >
+                {group.sections.map((section) => (
+                  <section
+                    key={`${group.id}-${section.title}`}
+                    aria-labelledby={`homepage-mobile-${group.id}-${section.title.toLowerCase().replaceAll(" ", "-")}`}
+                    className="grid gap-3"
                   >
-                    {section.title}
-                  </h3>
-                  <div className="grid gap-3">
-                    {section.items.map((item) => (
-                      <Link
-                        key={`${group.id}-${section.title}-${item.label}`}
-                        href={item.href}
-                        aria-label={getLinkAriaLabel(item)}
-                        {...getLinkProps(item)}
-                        onClick={() => setIsOpen(false)}
-                        className={`-mx-2 inline-flex items-center gap-2 rounded-md px-2 py-1 text-base text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none ${focusRing}`}
-                      >
-                        <MarketingLinkLabel item={item} />
-                      </Link>
-                    ))}
-                  </div>
-                </section>
-              ))}
+                    <h3
+                      id={`homepage-mobile-${group.id}-${section.title.toLowerCase().replaceAll(" ", "-")}`}
+                      className="font-mono text-xs leading-none font-semibold tracking-normal text-neutral-500 uppercase"
+                    >
+                      {section.title}
+                    </h3>
+                    <div className="grid gap-3">
+                      {section.items.map((item) => (
+                        <Link
+                          key={`${group.id}-${section.title}-${item.label}`}
+                          href={item.href}
+                          aria-label={getLinkAriaLabel(item)}
+                          {...getLinkProps(item)}
+                          onClick={closeMobileMenu}
+                          className={cn(
+                            "-mx-2 inline-flex items-center gap-2 rounded-md px-2 py-1 text-base text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none",
+                            focusRing
+                          )}
+                        >
+                          <MarketingLinkLabel item={item} />
+                        </Link>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
             </div>
           ))}
 
-          <div className="grid gap-3 border-t border-neutral-200 pt-5">
-            {content.utilityLinks.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                aria-label={getLinkAriaLabel(item)}
-                {...getLinkProps(item)}
-                onClick={() => setIsOpen(false)}
-                className={`-mx-2 rounded-md px-2 py-1 text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none ${focusRing}`}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </div>
-          <div className="flex gap-2 pt-1">
+          {content.utilityLinks.map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              aria-label={getLinkAriaLabel(item)}
+              {...getLinkProps(item)}
+              onClick={closeMobileMenu}
+              className={cn(
+                "flex h-14 items-center border-b border-neutral-200 text-xl leading-none font-normal text-black transition-colors hover:text-neutral-600 focus-visible:text-black motion-reduce:transition-none",
+                focusRing
+              )}
+            >
+              {item.label}
+            </Link>
+          ))}
+
+          <div className="grid gap-3 pt-8">
             {content.mobileActions.map((action) => (
               <HeaderActionButton
                 key={action.label}
                 action={action}
-                onClick={() => setIsOpen(false)}
+                className="w-full"
+                onClick={closeMobileMenu}
+                size="default"
               />
             ))}
           </div>

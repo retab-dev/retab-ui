@@ -133,7 +133,11 @@ export const homepageHeader = {
     { ...loginLink, variant: "secondary" },
     signupLink,
   ],
-  mobileActions: [{ ...loginLink, variant: "secondary" }, signupLink],
+  mobileActions: [
+    { ...demoLink, variant: "secondary" },
+    { ...loginLink, variant: "secondary" },
+    signupLink,
+  ],
 } as const satisfies HeaderContent
 
 export const logoStrip = [
@@ -193,13 +197,17 @@ export const productLanes = [
     image: {
       desktopSrc:
         "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/notion-desktop-light.webp",
+      desktopDarkSrc:
+        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/notion-desktop-dark.webp",
       desktopWidth: 2721,
       desktopHeight: 1434,
       mobileSrc:
         "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/notion-mobile-light.webp",
+      mobileDarkSrc:
+        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/notion-mobile-dark.webp",
       mobileWidth: 1284,
       mobileHeight: 1026,
-      alt: "Notion AI agent interface deployed on Vercel",
+      alt: "Agents",
     },
   },
   {
@@ -219,13 +227,17 @@ export const productLanes = [
     image: {
       desktopSrc:
         "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/zapier-desktop-light.webp",
+      desktopDarkSrc:
+        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/zapier-desktop-dark.webp",
       desktopWidth: 2784,
       desktopHeight: 1560,
       mobileSrc:
         "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/zapier-mobile-light.webp",
+      mobileDarkSrc:
+        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/zapier-mobile-dark.webp",
       mobileWidth: 1284,
       mobileHeight: 1026,
-      alt: "Zapier application interface deployed on Vercel",
+      alt: "Apps",
     },
   },
   {
@@ -245,13 +257,17 @@ export const productLanes = [
     image: {
       desktopSrc:
         "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/mintlify-desktop-light.webp",
+      desktopDarkSrc:
+        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/mintlify-desktop-dark.webp",
       desktopWidth: 2784,
       desktopHeight: 1560,
       mobileSrc:
         "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/mintlify-mobile-light.webp",
+      mobileDarkSrc:
+        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/mintlify-mobile-dark.webp",
       mobileWidth: 1284,
       mobileHeight: 1026,
-      alt: "Mintlify documentation platform interface deployed on Vercel",
+      alt: "Platforms",
     },
   },
 ] as const satisfies readonly ProductLaneContent[]
@@ -291,15 +307,15 @@ export const secondaryLatestCards = [
     href: vercelHref("/sandbox"),
     tone: "light",
     visual: {
-      kind: "sandbox-terminal",
+      kind: "sandbox",
     },
   },
 ] as const satisfies readonly SecondaryLatestCard[]
 
 const footerStatus = {
-  label: "All systems normal",
+  label: "Loading status…",
   href: "https://vercel-status.com/",
-  ariaLabel: "Vercel status: All systems normal",
+  ariaLabel: "Vercel status: Loading status",
   isExternal: true,
 } as const
 

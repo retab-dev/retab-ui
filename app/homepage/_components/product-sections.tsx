@@ -9,12 +9,24 @@ import { SectionHeader } from "./section-header"
 
 function ProductVisualImage({ image }: { image: ProductImageContent }) {
   return (
-    <picture className="block">
-      <source
-        media="(max-width: 767px)"
-        srcSet={image.mobileSrc}
+    <div className="block">
+      <img
+        src={image.mobileSrc}
         width={image.mobileWidth}
         height={image.mobileHeight}
+        alt={image.alt}
+        loading="lazy"
+        decoding="async"
+        className="pointer-events-none block h-auto w-full select-none md:hidden dark:hidden"
+      />
+      <img
+        src={image.mobileDarkSrc}
+        width={image.mobileWidth}
+        height={image.mobileHeight}
+        alt={image.alt}
+        loading="lazy"
+        decoding="async"
+        className="pointer-events-none hidden h-auto w-full select-none dark:block md:dark:hidden"
       />
       <img
         src={image.desktopSrc}
@@ -23,9 +35,18 @@ function ProductVisualImage({ image }: { image: ProductImageContent }) {
         alt={image.alt}
         loading="lazy"
         decoding="async"
-        className="block h-auto w-full"
+        className="pointer-events-none hidden h-auto w-full select-none md:block md:dark:hidden"
       />
-    </picture>
+      <img
+        src={image.desktopDarkSrc}
+        width={image.desktopWidth}
+        height={image.desktopHeight}
+        alt={image.alt}
+        loading="lazy"
+        decoding="async"
+        className="pointer-events-none hidden h-auto w-full select-none md:dark:block"
+      />
+    </div>
   )
 }
 

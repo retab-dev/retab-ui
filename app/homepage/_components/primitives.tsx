@@ -12,10 +12,11 @@ export function VercelMark({ className }: { className?: string }) {
   return (
     <svg
       aria-hidden="true"
-      viewBox="0 0 116 100"
+      viewBox="-0.15238095238095237 -0.15238095238095237 0.30476190476190473 0.30476190476190473"
       className={cn("block h-[18px] w-[20px] fill-black", className)}
+      style={{ overflow: "visible" }}
     >
-      <path d="M58 0 116 100H0z" />
+      <polygon points="0,-0.15238095238095237 -0.13196577581477162,0.07619047619047618 0.13196577581477162,0.07619047619047618" />
     </svg>
   )
 }

@@ -18,14 +18,14 @@ function isThemeValue(
 
 function ThemeIcon({ value }: { value: ThemeValue }) {
   if (value === "light") {
-    return <Sun aria-hidden="true" className="size-3.5" />
+    return <Sun aria-hidden="true" className="size-4" />
   }
 
   if (value === "dark") {
-    return <Moon aria-hidden="true" className="size-3.5" />
+    return <Moon aria-hidden="true" className="size-4" />
   }
 
-  return <Monitor aria-hidden="true" className="size-3.5" />
+  return <Monitor aria-hidden="true" className="size-4" />
 }
 
 export function FooterThemeSelector({
@@ -70,11 +70,8 @@ export function FooterThemeSelector({
   }
 
   return (
-    <div
-      role="radiogroup"
-      aria-label="Select a display theme"
-      className="inline-flex h-6 rounded-full border border-neutral-200 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.03)]"
-    >
+    <fieldset className="inline-flex h-6 w-[72px] items-center justify-between">
+      <legend className="sr-only">Select a display theme</legend>
       {options.map((option, index) => {
         const isSelected = selectedTheme === option.value
 
@@ -93,17 +90,16 @@ export function FooterThemeSelector({
             onClick={() => setTheme(option.value)}
             onKeyDown={(event) => onThemeKeyDown(event, index)}
             className={cn(
-              "relative grid size-6 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:z-10 focus-visible:bg-neutral-100 focus-visible:text-black active:bg-neutral-200 motion-reduce:transition-none",
+              "relative grid size-6 place-items-center rounded-sm text-neutral-400 transition-colors hover:text-neutral-700 focus-visible:z-10 focus-visible:text-black motion-reduce:transition-none",
               focusRing,
               "focus-visible:ring-offset-0 focus-visible:ring-inset",
-              isSelected &&
-                "bg-black text-white hover:bg-black hover:text-white focus-visible:bg-black focus-visible:text-white active:bg-black"
+              isSelected && "text-neutral-950 hover:text-neutral-950"
             )}
           >
             <ThemeIcon value={option.value} />
           </button>
         )
       })}
-    </div>
+    </fieldset>
   )
 }

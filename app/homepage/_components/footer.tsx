@@ -11,10 +11,11 @@ import {
   getLinkProps,
   MarketingContainer,
   MarketingLinkLabel,
+  VercelMark,
 } from "./primitives"
 
 const footerItemClass = cn(
-  "-mx-1 inline-flex max-w-full items-baseline gap-1.5 rounded px-1 py-0.5 text-left text-sm leading-5 text-neutral-600 underline-offset-4 transition-colors hover:text-black hover:underline hover:decoration-neutral-400 focus-visible:text-black focus-visible:underline focus-visible:decoration-neutral-400 motion-reduce:transition-none",
+  "-mx-0.5 inline-flex min-h-6 max-w-full items-center gap-1.5 rounded-sm px-0.5 py-0 text-left text-sm leading-5 text-neutral-600 transition-colors hover:text-black focus-visible:text-black motion-reduce:transition-none",
   focusRing
 )
 
@@ -33,11 +34,11 @@ function FooterColumn({
     <section aria-labelledby={headingId} className="min-w-0">
       <h2
         id={headingId}
-        className="mb-3 font-mono text-xs leading-5 font-semibold tracking-normal text-neutral-950 uppercase"
+        className="mt-3 mb-4 font-mono text-xs leading-none font-medium tracking-normal text-neutral-950 uppercase"
       >
         {title}
       </h2>
-      <ul className="grid gap-1.5">
+      <ul className="grid gap-1">
         {links.map((link) => (
           <li key={link.label}>
             {link.action === "cookie-preferences" ? (
@@ -70,15 +71,26 @@ function StatusLink({ status }: { status: FooterContent["status"] }) {
       aria-label={getLinkAriaLabel(status)}
       {...getLinkProps(status)}
       className={cn(
-        "inline-flex w-fit items-center gap-2 rounded px-1 py-0.5 text-sm text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none",
+        "inline-flex h-[34px] w-fit items-center rounded-md px-2 font-mono text-sm text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none",
         focusRing
       )}
     >
-      <span
-        aria-hidden="true"
-        className="size-2 rounded-full bg-[rgb(0,179,89)] shadow-[0_0_0_3px_rgba(0,179,89,0.14)]"
-      />
       {status.label}
+    </Link>
+  )
+}
+
+function FooterLogo() {
+  return (
+    <Link
+      href="/homepage"
+      aria-label="Vercel homepage"
+      className={cn(
+        "inline-flex h-8 w-full max-w-[199px] items-center rounded-sm text-black transition-colors hover:text-neutral-600 focus-visible:text-black motion-reduce:transition-none",
+        focusRing
+      )}
+    >
+      <VercelMark className="h-5 w-[23px]" />
     </Link>
   )
 }
@@ -103,11 +115,11 @@ export function MarketingFooter({ content }: { content: FooterContent }) {
           </div>
         </nav>
 
-        <div
-          role="group"
-          aria-label="Footer status and preferences"
-          className="mt-8 flex min-h-[34px] flex-col gap-5 min-[460px]:flex-row min-[460px]:items-center min-[460px]:justify-between"
-        >
+        <div className="mt-12">
+          <FooterLogo />
+        </div>
+
+        <div className="mt-6 flex min-h-[34px] flex-col gap-5 min-[460px]:flex-row min-[460px]:items-center min-[460px]:justify-between">
           <StatusLink status={content.status} />
           <FooterThemeSelector options={content.themeOptions} />
         </div>

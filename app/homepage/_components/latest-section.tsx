@@ -27,7 +27,7 @@ export function LatestSection() {
             aria-hidden="true"
             loading="lazy"
             decoding="async"
-            className="block !h-full w-full object-cover"
+            className="absolute inset-0 size-full object-cover"
           />
         </Link>
 
@@ -115,28 +115,12 @@ function SandboxGraphic() {
   return (
     <div
       aria-hidden="true"
-      className="absolute top-5 right-5 left-5 z-0 h-32 overflow-hidden rounded-md border border-neutral-200 bg-white/80 opacity-80 shadow-[0_1px_0_rgba(0,0,0,0.04)] transition-opacity duration-300 ease-out group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
+      className="absolute inset-0 z-0 overflow-hidden opacity-90 transition-opacity duration-300 ease-out group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
     >
-      <div className="flex h-8 items-center justify-between border-b border-neutral-200 px-3 font-mono text-[11px] text-neutral-500">
-        <div className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full bg-neutral-300" />
-          <span className="size-2 rounded-full bg-neutral-200" />
-          <span className="size-2 rounded-full bg-neutral-100" />
-        </div>
-        isolated-vm
-      </div>
-      <div className="grid gap-3 p-4 font-mono text-xs">
-        <div className="h-2 w-3/4 rounded-full bg-neutral-200" />
-        <div className="h-2 w-1/2 rounded-full bg-neutral-100" />
-        <div className="grid grid-cols-[72px_1fr] gap-3">
-          <span className="h-2 rounded-full bg-neutral-200" />
-          <span className="h-2 rounded-full bg-neutral-100" />
-        </div>
-        <div className="grid grid-cols-[72px_1fr] gap-3">
-          <span className="h-2 rounded-full bg-neutral-200" />
-          <span className="h-2 rounded-full bg-neutral-100" />
-        </div>
-      </div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_74%_22%,rgba(23,23,23,0.12),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.96),rgba(245,245,245,0.64)_52%,rgba(255,255,255,0.92))]" />
+      <div className="absolute top-8 right-8 h-24 w-40 rounded-full border border-neutral-200/80 bg-white/50 blur-[1px]" />
+      <div className="absolute top-14 right-20 h-20 w-20 rotate-45 border border-neutral-300/70 bg-white/70 shadow-[0_16px_48px_rgba(0,0,0,0.08)]" />
+      <div className="absolute right-10 bottom-8 h-px w-56 bg-gradient-to-r from-transparent via-neutral-300 to-transparent" />
     </div>
   )
 }
