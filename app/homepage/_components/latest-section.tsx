@@ -1,14 +1,14 @@
-import Link from "next/link"
+import Link from "next/link";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
-import { featuredLatestCard, secondaryLatestCards } from "./homepage-content"
-import { type LatestMetric } from "./homepage-types"
-import { SectionHeader } from "./section-header"
+import { featuredLatestCard, secondaryLatestCards } from "./homepage-content";
+import { type LatestMetric } from "./homepage-types";
+import { SectionHeader } from "./section-header";
 
 export function LatestSection() {
   return (
-    <section className="mt-40 md:mt-[168px]" aria-label="Latest Vercel updates">
+    <section className="mt-28 md:mt-[168px]" aria-label="Latest Vercel updates">
       <SectionHeader
         title="Latest"
         description="Recent launches, events, and updates shaping what's next on Vercel."
@@ -58,20 +58,20 @@ export function LatestSection() {
         </div>
       </div>
     </section>
-  )
+  );
 }
 
 function WorkflowMetricStrip({
   metrics,
 }: {
-  metrics: readonly LatestMetric[]
+  metrics: readonly LatestMetric[];
 }) {
   const desktopRows = [
     "min-[520px]:w-full",
     "min-[520px]:w-[230px]",
     "min-[520px]:ml-[154px] min-[520px]:w-[230px]",
     "min-[520px]:ml-auto min-[520px]:w-[154px]",
-  ] as const
+  ] as const;
 
   return (
     <dl
@@ -85,7 +85,7 @@ function WorkflowMetricStrip({
             "min-w-0 border-neutral-200 bg-white/90 p-3 min-[520px]:flex min-[520px]:h-12 min-[520px]:items-center min-[520px]:justify-between min-[520px]:rounded-[6px] min-[520px]:border min-[520px]:px-4 min-[520px]:py-0 min-[520px]:shadow-[0_1px_0_rgba(0,0,0,0.04)]",
             index % 2 === 0 && "border-r",
             index < 2 && "border-b",
-            desktopRows[index]
+            desktopRows[index],
           )}
         >
           <dt className="truncate text-neutral-500">{label}</dt>
@@ -95,12 +95,12 @@ function WorkflowMetricStrip({
         </div>
       ))}
     </dl>
-  )
+  );
 }
 
 function MetricValue({ value }: { value: string }) {
   if (!value.endsWith("ms")) {
-    return <span className="font-semibold">{value}</span>
+    return <span className="font-semibold">{value}</span>;
   }
 
   return (
@@ -108,7 +108,7 @@ function MetricValue({ value }: { value: string }) {
       <span className="font-semibold">{value.slice(0, -2)}</span>
       <span className="text-neutral-500">ms</span>
     </>
-  )
+  );
 }
 
 function SandboxGraphic() {
@@ -122,5 +122,5 @@ function SandboxGraphic() {
       <div className="absolute top-14 right-20 h-20 w-20 rotate-45 border border-neutral-300/40 bg-white/55 shadow-[0_16px_48px_rgba(0,0,0,0.04)]" />
       <div className="absolute right-10 bottom-8 h-px w-56 bg-gradient-to-r from-transparent via-neutral-300/60 to-transparent" />
     </div>
-  )
+  );
 }

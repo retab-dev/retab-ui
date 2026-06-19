@@ -1,11 +1,11 @@
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
-import { productLanes } from "./homepage-content"
+import { productLanes } from "./homepage-content";
 import {
   type ProductVisualImage as ProductImageContent,
   type ProductLaneContent,
-} from "./homepage-types"
-import { SectionHeader } from "./section-header"
+} from "./homepage-types";
+import { SectionHeader } from "./section-header";
 
 function ProductVisualImage({ image }: { image: ProductImageContent }) {
   return (
@@ -47,42 +47,28 @@ function ProductVisualImage({ image }: { image: ProductImageContent }) {
         className="pointer-events-none hidden h-auto w-full select-none md:dark:block"
       />
     </div>
-  )
+  );
 }
 
-function FeatureList({
-  headingId,
-  features,
-}: {
-  headingId: string
-  features: readonly string[]
-}) {
+function FeatureList({ features }: { features: readonly string[] }) {
   return (
     <div>
-      <h3
-        id={headingId}
-        className="font-mono text-sm leading-5 text-neutral-500"
-      >
-        Features
-      </h3>
-      <ul
-        aria-labelledby={headingId}
-        className="mt-3 space-y-3 font-mono text-sm leading-5 font-semibold break-words text-black uppercase"
-      >
+      <ul className="m-0 flex list-none flex-col gap-1.5 p-0 font-mono text-sm leading-5 font-semibold break-words text-black uppercase">
+        <li className="font-normal text-neutral-500 normal-case">Features</li>
         {features.map((feature) => (
           <li key={feature}>{feature}</li>
         ))}
       </ul>
     </div>
-  )
+  );
 }
 
 function ProductLane({
   isFirst,
   lane,
 }: {
-  isFirst: boolean
-  lane: ProductLaneContent
+  isFirst: boolean;
+  lane: ProductLaneContent;
 }) {
   const {
     id,
@@ -93,16 +79,15 @@ function ProductLane({
     features,
     image,
     layout,
-  } = lane
-  const isReversed = layout === "reversed"
-  const sectionId = `homepage-product-${id}`
-  const featuresHeadingId = `${sectionId}-features`
+  } = lane;
+  const isReversed = layout === "reversed";
+  const sectionId = `homepage-product-${id}`;
 
   return (
     <section
       aria-labelledby={sectionId}
       className={cn(
-        isFirst ? "mt-20 md:mt-24 lg:mt-[208px]" : "mt-32 md:mt-44 lg:mt-52"
+        isFirst ? "mt-40 md:mt-24 lg:mt-[208px]" : "mt-8 md:mt-44 lg:mt-52",
       )}
     >
       <SectionHeader
@@ -117,18 +102,18 @@ function ProductLane({
         </div>
         <div
           className={cn(
-            "hidden min-w-0 space-y-8 border-t border-neutral-200 pt-6 lg:col-span-3 lg:block lg:border-t-0 lg:pt-0",
-            isReversed ? "lg:col-start-1 lg:row-start-1" : "lg:col-start-10"
+            "mt-8 min-w-0 space-y-8 lg:col-span-3 lg:mt-0 lg:pt-[34px]",
+            isReversed ? "lg:col-start-1 lg:row-start-1" : "lg:col-start-10",
           )}
         >
-          <p className="max-w-[380px] text-[28px] leading-[1.14] break-words text-black md:text-4xl xl:text-[40px]">
+          <p className="max-w-[380px] text-[28px] leading-[1.14] tracking-[-0.05em] text-balance text-black md:text-4xl xl:text-[40px] xl:leading-[1.1]">
             <span className="text-neutral-500">{proofCustomer}</span> {proof}
           </p>
-          <FeatureList headingId={featuresHeadingId} features={features} />
+          <FeatureList features={features} />
         </div>
       </div>
     </section>
-  )
+  );
 }
 
 export function ProductSections() {
@@ -138,5 +123,5 @@ export function ProductSections() {
         <ProductLane key={lane.id} lane={lane} isFirst={index === 0} />
       ))}
     </>
-  )
+  );
 }
