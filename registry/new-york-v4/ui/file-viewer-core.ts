@@ -11,11 +11,16 @@ import {
 
 export type { FileCategory, ViewerSource }
 export type FileViewerDocumentChrome = "shell" | "standalone"
+export type FileViewerFallbackSize = { width: number; height: number }
 
 export interface FileViewerProps {
   source: ViewerSource
   as?: FileCategory
   className?: string
+  /** Intrinsic first-frame size for image/TIFF loading skeletons. */
+  fallbackFrameSize?: FileViewerFallbackSize
+  /** Intrinsic first-slide size for PPTX loading skeletons. */
+  fallbackSlideSize?: FileViewerFallbackSize
   isolateStyles?: boolean
 }
 

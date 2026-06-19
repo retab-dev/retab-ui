@@ -4,7 +4,7 @@
   "title": "Spinner",
   "description": "A compact loading spinner using Lucide.",
   "dependencies": [
-    "lucide-react"
+    "lucide-react@^0.514.0"
   ],
   "registryDependencies": [
     "@retab/utils"

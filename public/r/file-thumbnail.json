@@ -4,12 +4,12 @@
   "title": "File Thumbnail",
   "description": "Render complete file thumbnails from browser files, URLs, blobs, text sources, external images, or custom preview content.",
   "dependencies": [
-    "@e965/xlsx",
-    "dompurify",
-    "marked",
-    "pptxviewjs",
-    "utif",
-    "docx-preview@^0.3.7"
+    "@e965/xlsx@0.20.3",
+    "dompurify@^3.3.3",
+    "marked@^15.0.12",
+    "pptxviewjs@1.1.9",
+    "utif@^3.1.0",
+    "docx-preview@^0.3.5"
   ],
   "registryDependencies": [
     "@retab/file-thumbnail-frame",

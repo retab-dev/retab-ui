@@ -8,14 +8,19 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ViewerDownloadButton } from "@/components/ui/viewer-download"
 import { ViewerErrorState } from "@/components/ui/viewer-error"
 
+import { CodeViewerFallback } from "./code-viewer-chrome"
 import { DocxViewerFallback } from "./docx-viewer-chrome"
-import type { FileDescriptor } from "./file-viewer-core"
+import {
+  isProseTextDescriptor,
+  type FileDescriptor,
+  type FileViewerFallbackSize,
+} from "./file-viewer-core"
 import { ImageViewerFallback } from "./image-viewer-chrome"
 import { PdfViewerFallback } from "./pdf-viewer-states"
 import { PptxViewerFallback } from "./pptx-viewer-fallback"
-
-const TEXT_SKELETON_FONT = 12.5
-const TEXT_SKELETON_LINE_HEIGHT = 20
+import { TextViewerFallback } from "./text-viewer-chrome"
+import { ViewerControlsSkeleton } from "./viewer-controls"
+import { XlsxViewerFallback } from "./xlsx-viewer-chrome"
 
 export function UnsupportedCard({
   resource,
@@ -63,35 +68,31 @@ export function ViewerFallback({
   className,
   bare = false,
   controls = true,
+  fallbackFrameSize,
+  fallbackSlideSize,
 }: {
   resource: ViewerResource
   className?: string
   bare?: boolean
   controls?: boolean
+  fallbackFrameSize?: FileViewerFallbackSize
+  fallbackSlideSize?: FileViewerFallbackSize
 }) {
-  const category = resource.descriptor.category
-  const url = resource.content.directUrl
+  const descriptor = resource.descriptor
+  const category = descriptor.category
 
-  // Page/slide/frame formats: render the exact per-type skeleton the viewer
-  // shows while it parses, so the SSR + chunk-loading paint is identical to the
-  // in-viewer loading state (same toolbar, same sheet frame) — no toolbar
-  // popping in and no geometry shift as one skeleton hands off to the next.
+  // Render the exact per-type skeleton each viewer shows while it parses, so the
+  // SSR + chunk-loading paint is identical to the in-viewer loading state (same
+  // toolbar, same body) — no toolbar popping in and no geometry shift as one
+  // skeleton hands off to the next.
   switch (category) {
     case "pdf":
       return (
-        <PdfViewerFallback
-          bare={bare}
-          className={className}
-          controls={controls}
-        />
+        <PdfViewerFallback bare={bare} className={className} controls={controls} />
       )
     case "docx":
       return (
-        <DocxViewerFallback
-          bare={bare}
-          className={className}
-          controls={controls}
-        />
+        <DocxViewerFallback bare={bare} className={className} controls={controls} />
       )
     case "pptx":
       return (
@@ -99,6 +100,7 @@ export function ViewerFallback({
           bare={bare}
           className={className}
           controls={controls}
+          fallbackSlideSize={fallbackSlideSize}
         />
       )
     case "image":
@@ -107,43 +109,46 @@ export function ViewerFallback({
           bare={bare}
           className={className}
           controls={controls}
+          fallbackFrameSize={fallbackFrameSize}
         />
       )
-  }
-
-  if (
-    url != null &&
-    (category === "text" ||
-      category === "markdown" ||
-      category === "html" ||
-      category === "csv")
-  ) {
-    return (
-      <div
-        data-slot="file-viewer-document-fallback"
-        className={cn(
-          "flex min-h-0 flex-1 flex-col overflow-hidden bg-card",
-          bare ? "h-full" : "min-h-64",
-          className
-        )}
-      >
-        {category === "csv" ? (
+    case "xlsx":
+      return (
+        <XlsxViewerFallback bare={bare} className={className} controls={controls} />
+      )
+    case "markdown":
+      return (
+        <TextViewerFallback bare={bare} className={className} controls={controls} />
+      )
+    case "text":
+      // The "text" category fans out to a prose viewer or a code viewer; match
+      // whichever the route will pick so the body skeleton (gutter vs none) lines up.
+      return isProseTextDescriptor(descriptor) ? (
+        <TextViewerFallback bare={bare} className={className} controls={controls} />
+      ) : (
+        <CodeViewerFallback bare={bare} className={className} controls={controls} />
+      )
+    case "csv":
+      return (
+        <TextFamilyFallbackFrame bare={bare} className={className}>
+          {controls ? (
+            <ViewerControlsSkeleton title subtitle zoom download />
+          ) : null}
           <TableBodySkeleton />
-        ) : category === "text" ? (
-          <TextBodySkeleton />
-        ) : (
+        </TextFamilyFallbackFrame>
+      )
+    case "html":
+      return (
+        <TextFamilyFallbackFrame bare={bare} className={className}>
+          {controls ? <ViewerControlsSkeleton zoom /> : null}
           <div className="min-h-0 flex-1 bg-card p-4">
             <Skeleton className="size-full rounded-md" />
           </div>
-        )}
-      </div>
-    )
+        </TextFamilyFallbackFrame>
+      )
   }
 
-  // Only xlsx (tabular) and edge cases (unsupported, raw-text sources with no
-  // direct URL) reach here; pdf/docx/pptx/image returned above.
-  const tabular = category === "xlsx"
-
+  // Unsupported / unknown categories: a neutral page-sheet placeholder.
   return (
     <div
       data-slot="file-viewer-document-fallback"
@@ -153,61 +158,38 @@ export function ViewerFallback({
         className
       )}
     >
-      {tabular ? (
-        <TableBodySkeleton />
-      ) : (
-        <div className="min-h-0 flex-1 overflow-hidden">
-          <div className="flex flex-col items-center p-4">
-            <Skeleton
-              aria-hidden
-              className="w-full rounded-none shadow-sm ring-1 ring-border"
-              style={{ aspectRatio: "8.5 / 11" }}
-            />
-          </div>
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="flex flex-col items-center p-4">
+          <Skeleton
+            aria-hidden
+            className="w-full rounded-none shadow-sm ring-1 ring-border"
+            style={{ aspectRatio: "8.5 / 11" }}
+          />
         </div>
-      )}
+      </div>
     </div>
   )
 }
 
-function TextBodySkeleton() {
-  const gutter = 44
-  const widths = [
-    82, 64, 91, 48, 73, 88, 56, 79, 95, 61, 70, 85, 52, 77, 90, 67, 83, 59, 74,
-    86, 63, 80,
-  ]
+function TextFamilyFallbackFrame({
+  bare,
+  className,
+  children,
+}: {
+  bare?: boolean
+  className?: string
+  children: React.ReactNode
+}) {
   return (
     <div
-      aria-hidden
-      className="relative min-h-0 flex-1 overflow-hidden bg-card font-mono"
-      style={{
-        fontSize: TEXT_SKELETON_FONT,
-        lineHeight: `${TEXT_SKELETON_LINE_HEIGHT}px`,
-      }}
+      data-slot="file-viewer-document-fallback"
+      className={cn(
+        "flex min-h-0 flex-1 flex-col overflow-hidden bg-card",
+        bare ? "h-full" : "min-h-64",
+        className
+      )}
     >
-      <div
-        className="pointer-events-none absolute inset-y-0 left-0 bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))]"
-        style={{ width: gutter }}
-      />
-      <div className="relative">
-        {widths.map((w, i) => (
-          <div
-            key={i}
-            className="grid items-center"
-            style={{
-              gridTemplateColumns: `${gutter}px 1fr`,
-              height: TEXT_SKELETON_LINE_HEIGHT,
-            }}
-          >
-            <div className="flex justify-end pr-2">
-              <Skeleton className="h-2.5 w-3" />
-            </div>
-            <div className="px-3">
-              <Skeleton className="h-2.5" style={{ width: `${w}%` }} />
-            </div>
-          </div>
-        ))}
-      </div>
+      {children}
     </div>
   )
 }

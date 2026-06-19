@@ -328,7 +328,7 @@ export function ViewerControlButton({
   return (
     <Button
       variant="ghost"
-      size="icon-sm"
+      size="iconSm"
       className={cn("size-7", className)}
       aria-label={label}
       title={label}

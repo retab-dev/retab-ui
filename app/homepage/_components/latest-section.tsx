@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { ArrowUpRight } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -18,99 +17,44 @@ export function LatestSection() {
         <Link
           href={featuredLatestCard.href}
           aria-label={`${featuredLatestCard.label}: ${featuredLatestCard.alt}`}
-          className="group relative block min-h-[191px] overflow-hidden rounded-md border border-neutral-200 bg-neutral-50 transition-[border-color,box-shadow] hover:border-neutral-300 hover:shadow-[0_18px_60px_rgba(0,0,0,0.08)] focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none sm:min-h-[360px] lg:min-h-[580px]"
+          className="group relative flex aspect-[690/576] items-center justify-center overflow-hidden rounded-md border border-neutral-200 bg-[#fafafa] p-6 transition-[border-color,box-shadow] hover:border-neutral-300 hover:shadow-[0_18px_60px_rgba(0,0,0,0.08)] focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none sm:p-10 lg:aspect-auto lg:min-h-[580px]"
         >
           <img
             src={featuredLatestCard.imageSrc}
             width={690}
             height={576}
-            alt={featuredLatestCard.alt}
+            alt=""
+            aria-hidden="true"
             loading="lazy"
             decoding="async"
-            className="absolute inset-0 size-full object-cover"
+            className="block h-full w-full object-contain"
           />
-          <div
-            className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10 opacity-80 transition-opacity group-hover:opacity-100 motion-reduce:transition-none"
-            aria-hidden="true"
-          />
-          <div className="absolute top-5 left-5 inline-flex items-center overflow-hidden rounded-full border border-white/30 bg-black font-mono text-xs text-white shadow-lg shadow-black/20">
-            <span className="border-r border-white/20 px-3 py-1.5">
-              {featuredLatestCard.title}
-            </span>
-            <span className="px-3 py-1.5">{featuredLatestCard.badge}</span>
-          </div>
-          <div className="absolute right-5 bottom-5 inline-flex items-center gap-2 rounded-full border border-white/30 bg-white px-3 py-1.5 text-sm font-medium text-black shadow-lg shadow-black/15">
-            View release
-            <ArrowUpRight aria-hidden="true" className="size-4" />
-          </div>
         </Link>
 
         <div className="grid gap-5 lg:grid-rows-2">
-          {secondaryLatestCards.map((card) => {
-            const isDark = card.tone === "dark"
+          {secondaryLatestCards.map((card) => (
+            <Link
+              key={card.id}
+              href={card.href}
+              aria-label={`${card.label}: ${card.body}`}
+              className="group relative flex min-h-[240px] min-w-0 flex-col overflow-hidden rounded-md border border-neutral-200 bg-[#fafafa] p-5 text-black transition-[border-color,background-color,box-shadow] hover:border-neutral-300 hover:bg-white hover:shadow-[0_18px_60px_rgba(0,0,0,0.08)] focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none sm:p-6 lg:min-h-[280px]"
+            >
+              {card.visual.kind === "metrics" ? (
+                <WorkflowMetricStrip metrics={card.visual.metrics} />
+              ) : (
+                <SandboxGraphic />
+              )}
 
-            return (
-              <Link
-                key={card.label}
-                href={card.href}
-                aria-label={`${card.label}: ${card.body}`}
-                className={cn(
-                  "group relative flex min-h-[191px] flex-col justify-between overflow-hidden rounded-md border p-6 transition-[border-color,background-color,box-shadow] focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none lg:min-h-[280px]",
-                  isDark
-                    ? "border-black bg-black text-white hover:bg-neutral-950 hover:shadow-[0_18px_60px_rgba(0,0,0,0.16)]"
-                    : "border-neutral-200 bg-white text-black hover:border-neutral-300 hover:bg-neutral-50 hover:shadow-[0_18px_60px_rgba(0,0,0,0.08)]"
-                )}
-              >
-                <div>
-                  <div
-                    className={cn(
-                      "inline-flex items-center gap-2 rounded-full border px-3 py-1 font-mono text-xs",
-                      isDark
-                        ? "border-white/15 bg-white/10 text-white"
-                        : "border-neutral-200 bg-neutral-50 text-neutral-700"
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "size-1.5 rounded-full",
-                        isDark ? "bg-white" : "bg-black"
-                      )}
-                      aria-hidden="true"
-                    />
-                    {card.label}
-                  </div>
-                  {card.visual.kind === "metrics" ? (
-                    <WorkflowMetricStrip metrics={card.visual.metrics} />
-                  ) : (
-                    <SandboxTerminal />
-                  )}
-                </div>
-
-                <div className="mt-8">
-                  <div className="flex items-center justify-between gap-4">
-                    <h3 className="text-3xl leading-tight font-medium">
-                      {card.label}
-                    </h3>
-                    <ArrowUpRight
-                      aria-hidden="true"
-                      className={cn(
-                        "size-5 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0 motion-reduce:group-hover:translate-y-0",
-                        isDark ? "text-white" : "text-black"
-                      )}
-                    />
-                  </div>
-                  <p
-                    className={cn(
-                      "mt-3 max-w-md font-mono text-sm leading-6",
-                      isDark ? "text-white/70" : "text-neutral-700"
-                    )}
-                  >
-                    {card.body}
-                  </p>
-                </div>
-              </Link>
-            )
-          })}
+              <div className="relative z-10 mt-auto max-w-[440px] pt-28">
+                <h3 className="min-w-0 text-2xl leading-tight font-medium break-words sm:text-3xl">
+                  {card.label}
+                </h3>
+                <p className="mt-3 max-w-md font-mono text-sm leading-6 break-words text-neutral-700">
+                  {card.body}
+                </p>
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
     </section>
@@ -123,19 +67,26 @@ function WorkflowMetricStrip({
   metrics: readonly LatestMetric[]
 }) {
   return (
-    <div className="mt-7 grid overflow-hidden rounded-md border border-neutral-200 bg-white font-mono text-xs shadow-[0_1px_0_rgba(0,0,0,0.04)] sm:grid-cols-4">
-      {metrics.map(([label, value]) => (
+    <dl
+      aria-hidden="true"
+      className="absolute top-5 right-5 left-5 z-0 grid max-w-[430px] grid-cols-2 overflow-hidden rounded-md border border-neutral-200 bg-white/90 font-mono text-xs shadow-[0_1px_0_rgba(0,0,0,0.04)] backdrop-blur min-[520px]:left-auto min-[520px]:w-[420px] min-[520px]:grid-cols-4"
+    >
+      {metrics.map(([label, value], index) => (
         <div
           key={label}
-          className="border-b border-neutral-200 p-3 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0"
+          className={cn(
+            "min-w-0 border-neutral-200 p-3 min-[520px]:border-r min-[520px]:border-b-0 min-[520px]:last:border-r-0",
+            index % 2 === 0 && "border-r",
+            index < 2 && "border-b"
+          )}
         >
-          <div className="text-neutral-500">{label}</div>
-          <div className="mt-2 text-black">
+          <dt className="truncate text-neutral-500">{label}</dt>
+          <dd className="mt-2 text-black">
             <MetricValue value={value} />
-          </div>
+          </dd>
         </div>
       ))}
-    </div>
+    </dl>
   )
 }
 
@@ -152,32 +103,30 @@ function MetricValue({ value }: { value: string }) {
   )
 }
 
-function SandboxTerminal() {
+function SandboxGraphic() {
   return (
-    <div className="mt-7 overflow-hidden rounded-md border border-white/15 bg-neutral-950 font-mono text-xs shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-      <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-white/55">
-        <div className="flex items-center gap-1.5" aria-hidden="true">
-          <span className="size-2 rounded-full bg-white/30" />
-          <span className="size-2 rounded-full bg-white/20" />
-          <span className="size-2 rounded-full bg-white/10" />
+    <div
+      aria-hidden="true"
+      className="absolute top-5 right-5 left-5 z-0 h-32 overflow-hidden rounded-md border border-neutral-200 bg-white/80 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
+    >
+      <div className="flex h-8 items-center justify-between border-b border-neutral-200 px-3 font-mono text-[11px] text-neutral-500">
+        <div className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-neutral-300" />
+          <span className="size-2 rounded-full bg-neutral-200" />
+          <span className="size-2 rounded-full bg-neutral-100" />
         </div>
-        <span>isolated-vm</span>
+        isolated-vm
       </div>
-      <div className="space-y-3 p-4">
-        <div className="text-white">
-          <span className="text-white/40">$</span> vercel sandbox run agent.ts
+      <div className="grid gap-3 p-4 font-mono text-xs">
+        <div className="h-2 w-3/4 rounded-full bg-neutral-200" />
+        <div className="h-2 w-1/2 rounded-full bg-neutral-100" />
+        <div className="grid grid-cols-[72px_1fr] gap-3">
+          <span className="h-2 rounded-full bg-neutral-200" />
+          <span className="h-2 rounded-full bg-neutral-100" />
         </div>
-        <div className="grid grid-cols-[72px_1fr] gap-3 text-white/60">
-          <span>mount</span>
-          <span className="text-white">/workspace</span>
-        </div>
-        <div className="grid grid-cols-[72px_1fr] gap-3 text-white/60">
-          <span>network</span>
-          <span className="text-white">locked</span>
-        </div>
-        <div className="grid grid-cols-[72px_1fr] gap-3 text-white/60">
-          <span>stdout</span>
-          <span className="text-white">streaming</span>
+        <div className="grid grid-cols-[72px_1fr] gap-3">
+          <span className="h-2 rounded-full bg-neutral-200" />
+          <span className="h-2 rounded-full bg-neutral-100" />
         </div>
       </div>
     </div>

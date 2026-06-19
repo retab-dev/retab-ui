@@ -590,6 +590,9 @@ function renderViewer({
           controls={false}
           bare
           eager
+          fallbackSlideSize={
+            pptxFile ? undefined : { width: 960, height: 540 }
+          }
           onSourceLoadTiming={onPptxSourceLoadTiming}
           onSlideRenderTiming={onPptxSlideRenderTiming}
         />
@@ -605,6 +608,7 @@ function renderViewer({
           }}
           className={viewerClassName}
           controls={false}
+          fallbackFrameSize={{ width: 1275, height: 1650 }}
           onFrameRenderTiming={onImageFrameRenderTiming}
           bare
         />

@@ -181,7 +181,7 @@ export function useViewerDownloadTrigger({
 export function ViewerDownloadControl({
   actions,
   variant = "ghost",
-  size = "icon-sm",
+  size = "iconSm",
   className = "size-7",
   showLabel = false,
   onError,
@@ -218,7 +218,7 @@ export function ViewerDownloadControl({
 export function ViewerDownloadButton({
   action,
   variant = "ghost",
-  size = "icon-sm",
+  size = "iconSm",
   className = "size-7",
   showLabel = false,
   onError,
@@ -277,7 +277,7 @@ export function ViewerDownloadButton({
 export function ViewerDownloadMenu({
   actions,
   variant = "ghost",
-  size = "icon-sm",
+  size = "iconSm",
   className = "size-7",
   showLabel = false,
   onError,

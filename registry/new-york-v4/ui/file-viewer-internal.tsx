@@ -11,6 +11,7 @@ import { useIsClient } from "@/components/ui/use-is-client"
 import {
   descriptorResetKey,
   type FileDescriptor,
+  type FileViewerFallbackSize,
   type FileViewerProps as FileViewerCoreProps,
   type FileViewerDocumentChrome,
 } from "./file-viewer-core"
@@ -21,7 +22,7 @@ import {
 
 type FileViewerProviderProps = Pick<
   FileViewerCoreProps,
-  "as" | "isolateStyles" | "source"
+  "as" | "fallbackFrameSize" | "fallbackSlideSize" | "isolateStyles" | "source"
 > & {
   children: React.ReactNode
   documentChrome?: FileViewerDocumentChrome
@@ -32,6 +33,8 @@ type FileViewerContextValue = {
   descriptorKey: string
   descriptorSignal: AbortSignal
   documentChrome: FileViewerDocumentChrome
+  fallbackFrameSize?: FileViewerFallbackSize
+  fallbackSlideSize?: FileViewerFallbackSize
   isClient: boolean
   isolateStyles: boolean
   resource: ViewerResource
@@ -120,6 +123,8 @@ export function FileViewerProvider({
   as,
   children,
   documentChrome = "shell",
+  fallbackFrameSize,
+  fallbackSlideSize,
   isolateStyles = false,
   source,
 }: FileViewerProviderProps) {
@@ -155,6 +160,8 @@ export function FileViewerProvider({
       descriptorKey,
       descriptorSignal,
       documentChrome,
+      fallbackFrameSize,
+      fallbackSlideSize,
       isClient,
       isolateStyles,
       resource,
@@ -164,6 +171,8 @@ export function FileViewerProvider({
       descriptorKey,
       descriptorSignal,
       documentChrome,
+      fallbackFrameSize,
+      fallbackSlideSize,
       isClient,
       isolateStyles,
       resource,

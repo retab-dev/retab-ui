@@ -156,12 +156,14 @@ File Viewer primitives.
 
 ## API Reference
 
-| Prop        | Type           | Description                                                                                       |
-| ----------- | -------------- | ------------------------------------------------------------------------------------------------- |
-| `source`    | `ViewerSource` | Canonical file source. URL, Blob, and text sources carry file metadata with the payload identity. |
-| `as`        | `FileCategory` | Force a category, bypassing detection.                                                            |
-| `bare`      | `boolean`      | Drop the outer border/background so the viewer fills its container.                               |
-| `className` | `string`       | Optional class on the viewer root element.                                                        |
+| Prop                | Type                           | Description                                                                                       |
+| ------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------- |
+| `source`            | `ViewerSource`                 | Canonical file source. URL, Blob, and text sources carry file metadata with the payload identity. |
+| `as`                | `FileCategory`                 | Force a category, bypassing detection.                                                            |
+| `bare`              | `boolean`                      | Drop the outer border/background so the viewer fills its container.                               |
+| `className`         | `string`                       | Optional class on the viewer root element.                                                        |
+| `fallbackFrameSize` | `{ width: number; height: number }` | Intrinsic first-frame size for image and TIFF loading skeletons.                                  |
+| `fallbackSlideSize` | `{ width: number; height: number }` | Intrinsic first-slide size for PPTX loading skeletons.                                            |
 
 The `detectCategory(fileName, mimeType?)` helper is also exported if you need to
 branch on the resolved category yourself.

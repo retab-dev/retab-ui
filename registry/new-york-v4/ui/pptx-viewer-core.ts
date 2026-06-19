@@ -51,9 +51,11 @@ export interface PptxSlideRenderPriority {
   distanceFromReadingMarker: number
 }
 
+// 16:9 — the modern PowerPoint/Slides default. Used as the pre-parse skeleton
+// aspect and as a last-resort fallback when a loaded deck can't report its size.
 export const DEFAULT_PPTX_SLIDE_SIZE = {
   width: 960,
-  height: 720,
+  height: 540,
 } satisfies PptxSize
 
 export function getPptxFitScale(

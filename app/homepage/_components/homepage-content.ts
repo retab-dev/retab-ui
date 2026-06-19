@@ -1,11 +1,16 @@
 import {
   type FeaturedLatestCard,
   type FooterColumnContent,
+  type FooterContent,
+  type FooterSocialLink,
+  type HeaderContent,
   type LinkItem,
   type LogoContent,
+  type MobileNavGroup,
   type NavGroup,
   type ProductLaneContent,
   type SecondaryLatestCard,
+  type StartBuildingContent,
   type ThemeOption,
 } from "./homepage-types"
 
@@ -25,10 +30,21 @@ const externalLink = (
   label,
   href,
   badge,
+  isExternal: true,
+})
+
+const cookiePreferencesButton = (): LinkItem => ({
+  label: "Cookie Preferences",
+  href: "#cookie-preferences",
+  ariaLabel: "Open cookie preferences",
+  action: "cookie-preferences",
 })
 
 const enterpriseLink = vercelLink("Enterprise", "/enterprise")
 const pricingLink = vercelLink("Pricing", "/pricing")
+const demoLink = vercelLink("Get a Demo", "/contact/sales/demo")
+const loginLink = vercelLink("Log In", "/login")
+const signupLink = vercelLink("Sign Up", "/signup")
 
 export const navGroups = [
   {
@@ -49,10 +65,10 @@ export const navGroups = [
         title: "Core Platform",
         items: [
           vercelLink("Security", "/security"),
-          vercelLink("Content Delivery", "/features/infrastructure"),
-          vercelLink("Fluid Compute", "/features/fluid-compute"),
-          vercelLink("Observability", "/features/observability"),
-          vercelLink("CI/CD", "/features/previews"),
+          vercelLink("Content Delivery", "/cdn"),
+          vercelLink("Fluid Compute", "/fluid"),
+          vercelLink("Observability", "/products/observability"),
+          vercelLink("CI/CD", "/products/previews"),
         ],
       },
       {
@@ -61,7 +77,7 @@ export const navGroups = [
           vercelLink("Next.js", "/frameworks/nextjs"),
           vercelLink("Vercel Agent", "/agent"),
           vercelLink("Vercel Plugin", "/plugin", "New"),
-          vercelLink("Domains", "/domains"),
+          externalLink("Domains", "https://vercel.com/domains"),
           externalLink("v0", "https://v0.app/"),
         ],
       },
@@ -78,16 +94,16 @@ export const navGroups = [
           vercelLink("About", "/about"),
           vercelLink("Blog", "/blog"),
           vercelLink("Changelog", "/changelog"),
-          vercelLink("Knowledge Base", "/guides"),
+          vercelLink("Knowledge Base", "/kb"),
         ],
       },
       {
         title: "Build",
         items: [
-          vercelLink("AI Apps", "/solutions/ai"),
+          vercelLink("AI Apps", "/ai"),
           vercelLink("Web Apps", "/solutions/web-apps"),
-          vercelLink("Marketing Sites", "/solutions/marketing"),
-          vercelLink("Platforms", "/solutions/platforms"),
+          vercelLink("Marketing Sites", "/solutions/marketing-sites"),
+          vercelLink("Platforms", "/solutions/multi-tenant-saas"),
           vercelLink("Commerce", "/solutions/composable-commerce"),
         ],
       },
@@ -96,7 +112,7 @@ export const navGroups = [
         items: [
           vercelLink("Customers", "/customers"),
           vercelLink("Marketplace", "/marketplace"),
-          vercelLink("Partner Finder", "/partners"),
+          vercelLink("Partner Finder", "/partners/solution-partners"),
           externalLink("Community", "https://community.vercel.com/"),
           vercelLink("AWS", "/partners/aws"),
         ],
@@ -110,14 +126,70 @@ export const utilityNavLinks = [
   pricingLink,
 ] as const satisfies readonly LinkItem[]
 
+export const mobileNavGroups = [
+  {
+    id: "products",
+    label: "Products",
+    links: [
+      vercelLink("AI SDK", "/ai-sdk"),
+      vercelLink("AI Gateway", "/ai-gateway"),
+      vercelLink("Sandbox", "/sandbox"),
+      vercelLink("Workflows", "/workflows"),
+      vercelLink("Fluid Compute", "/features/fluid-compute"),
+      vercelLink("Next.js", "/frameworks/nextjs"),
+      externalLink("v0", "https://v0.app/"),
+    ],
+  },
+  {
+    id: "resources",
+    label: "Resources",
+    links: [
+      vercelLink("Docs", "/docs"),
+      vercelLink("Blog", "/blog"),
+      vercelLink("Changelog", "/changelog"),
+      vercelLink("Customers", "/customers"),
+      vercelLink("Marketplace", "/marketplace"),
+      vercelLink("Templates", "/templates"),
+      externalLink("Community", "https://community.vercel.com/"),
+    ],
+  },
+] as const satisfies readonly MobileNavGroup[]
+
+export const homepageHeader = {
+  homeHref: "/homepage",
+  navGroups,
+  utilityLinks: utilityNavLinks,
+  mobileGroups: mobileNavGroups,
+  desktopActions: [
+    { ...demoLink, variant: "secondary" },
+    { ...loginLink, variant: "secondary" },
+    signupLink,
+  ],
+  mobileActions: [{ ...loginLink, variant: "secondary" }, signupLink],
+} as const satisfies HeaderContent
+
 export const logoStrip = [
-  { id: "blackbox", label: "BLACKBOX.AI" },
-  { id: "hh", label: "HH" },
-  { id: "openai", label: "OpenAI" },
-  { id: "doordash", label: "DOORDASH" },
-  { id: "schwab", label: "charles SCHWAB" },
-  { id: "weather", label: "The Weather Company" },
-  { id: "polymarket", label: "Polymarket" },
+  { id: "blackbox", label: "BLACKBOX.AI", variant: "diamond-wordmark" },
+  { id: "hh", label: "HH", variant: "monogram" },
+  { id: "openai", label: "OpenAI", variant: "text" },
+  { id: "doordash", label: "DOORDASH", variant: "pill-wordmark" },
+  {
+    id: "schwab",
+    label: "charles SCHWAB",
+    variant: "stacked-serif",
+    lines: ["charles", "SCHWAB"],
+  },
+  {
+    id: "weather",
+    label: "The Weather Company",
+    variant: "stacked-bold",
+    lines: ["The", "Weather", "Company"],
+  },
+  {
+    id: "polymarket",
+    label: "Polymarket",
+    variant: "large-diamond-wordmark",
+  },
 ] as const satisfies readonly LogoContent[]
 
 export const heroKickers = [
@@ -128,9 +200,9 @@ export const heroKickers = [
 
 export const productLanes = [
   {
+    id: "agents",
     title: "Agents",
     layout: "default",
-    spacing: "first",
     description:
       "Build systems that reason, execute code in isolation, run for hours, and recover from failure.",
     proofCustomer: "Notion",
@@ -148,13 +220,15 @@ export const productLanes = [
       desktopHeight: 1434,
       mobileSrc:
         "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/notion-mobile-light.webp",
+      mobileWidth: 1284,
+      mobileHeight: 1026,
       alt: "Notion AI agent interface deployed on Vercel",
     },
   },
   {
+    id: "apps",
     title: "Apps",
     layout: "reversed",
-    spacing: "standard",
     description:
       "Ship marketing sites, SaaS backends, and storefronts on infrastructure that scales from zero to global traffic.",
     proofCustomer: "Zapier",
@@ -172,13 +246,15 @@ export const productLanes = [
       desktopHeight: 1560,
       mobileSrc:
         "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/zapier-mobile-light.webp",
+      mobileWidth: 1284,
+      mobileHeight: 1026,
       alt: "Zapier application interface deployed on Vercel",
     },
   },
   {
+    id: "platforms",
     title: "Platforms",
     layout: "default",
-    spacing: "standard",
     description:
       "Host multi-tenant products that isolate every customer, provision custom domains, and serve millions of sites.",
     proofCustomer: "Mintlify",
@@ -196,12 +272,15 @@ export const productLanes = [
       desktopHeight: 1560,
       mobileSrc:
         "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/mintlify-mobile-light.webp",
+      mobileWidth: 1284,
+      mobileHeight: 1026,
       alt: "Mintlify documentation platform interface deployed on Vercel",
     },
   },
 ] as const satisfies readonly ProductLaneContent[]
 
 export const featuredLatestCard = {
+  id: "ship-26",
   label: "Ship 26",
   title: "Ship",
   badge: "26",
@@ -213,6 +292,7 @@ export const featuredLatestCard = {
 
 export const secondaryLatestCards = [
   {
+    id: "workflows",
     label: "Workflows",
     body: "Pause for minutes or months, then resume from that exact point.",
     href: vercelHref("/workflows"),
@@ -228,19 +308,48 @@ export const secondaryLatestCards = [
     },
   },
   {
+    id: "sandbox",
     label: "Sandbox",
     body: "The safest way to run code you didn't write.",
     href: vercelHref("/sandbox"),
-    tone: "dark",
+    tone: "light",
     visual: {
       kind: "sandbox-terminal",
     },
   },
 ] as const satisfies readonly SecondaryLatestCard[]
 
-export const statusLink = externalLink("Status", "https://vercel-status.com/")
+const footerStatus = {
+  label: "All systems normal",
+  href: "https://vercel-status.com/",
+  ariaLabel: "Vercel status: All systems normal",
+  isExternal: true,
+} as const
 
-export const footerColumns = [
+export const footerSocialLinks = [
+  {
+    ...externalLink("GitHub", "https://github.com/vercel"),
+    ariaLabel: "Vercel on GitHub",
+  },
+  {
+    ...externalLink("X", "https://x.com/vercel"),
+    ariaLabel: "Vercel on X",
+  },
+  {
+    ...externalLink("LinkedIn", "https://www.linkedin.com/company/vercel"),
+    ariaLabel: "Vercel on LinkedIn",
+  },
+  {
+    ...externalLink("YouTube", "https://www.youtube.com/vercel"),
+    ariaLabel: "Vercel on YouTube",
+  },
+  {
+    ...externalLink("Instagram", "https://www.instagram.com/vercel"),
+    ariaLabel: "Vercel on Instagram",
+  },
+] as const satisfies readonly LinkItem[]
+
+export const footerNavigationColumns = [
   {
     id: "agent-stack",
     title: "Agent Stack",
@@ -257,10 +366,10 @@ export const footerColumns = [
     id: "core-platform",
     title: "Core Platform",
     links: [
-      vercelLink("CI/CD", "/features/previews"),
-      vercelLink("Content Delivery", "/features/infrastructure"),
-      vercelLink("Fluid Compute", "/features/fluid-compute"),
-      vercelLink("Observability", "/features/observability"),
+      vercelLink("CI/CD", "/products/previews"),
+      vercelLink("Content Delivery", "/cdn"),
+      vercelLink("Fluid Compute", "/fluid"),
+      vercelLink("Observability", "/products/observability"),
     ],
   },
   {
@@ -268,9 +377,9 @@ export const footerColumns = [
     title: "Security",
     links: [
       vercelLink("Platform Security", "/security"),
-      vercelLink("WAF", "/features/security"),
-      vercelLink("Bot Management", "/features/security"),
-      vercelLink("Bot ID", "/features/security"),
+      vercelLink("WAF", "/security/web-application-firewall"),
+      vercelLink("Bot Management", "/security/bot-management"),
+      vercelLink("Bot ID", "/botid"),
     ],
   },
   {
@@ -281,7 +390,7 @@ export const footerColumns = [
       vercelLink("Vercel Agent", "/agent"),
       vercelLink("Vercel Plugin", "/plugin", "New"),
       vercelLink("Next.js", "/frameworks/nextjs"),
-      vercelLink("Domains", "/domains"),
+      externalLink("Domains", "https://vercel.com/domains"),
       externalLink("v0", "https://v0.app/"),
     ],
   },
@@ -315,10 +424,10 @@ export const footerColumns = [
     id: "build",
     title: "Build",
     links: [
-      vercelLink("AI Apps", "/solutions/ai"),
+      vercelLink("AI Apps", "/solutions/ai-apps"),
       vercelLink("Web Apps", "/solutions/web-apps"),
-      vercelLink("Marketing Sites", "/solutions/marketing"),
-      vercelLink("Platforms", "/solutions/platforms"),
+      vercelLink("Marketing Sites", "/solutions/marketing-sites"),
+      vercelLink("Platforms", "/solutions/multi-tenant-saas"),
       vercelLink("Commerce", "/solutions/composable-commerce"),
       vercelLink("Platform Engineers", "/solutions/platform-engineers"),
       vercelLink("Design Engineers", "/solutions/design-engineers"),
@@ -331,7 +440,7 @@ export const footerColumns = [
       vercelLink("Docs", "/docs"),
       vercelLink("Blog", "/blog"),
       vercelLink("Changelog", "/changelog"),
-      vercelLink("Knowledge Base", "/guides"),
+      vercelLink("Knowledge Base", "/kb"),
       vercelLink("Academy", "/academy"),
       vercelLink("Articles", "/resources"),
       externalLink("Community", "https://community.vercel.com/"),
@@ -344,7 +453,7 @@ export const footerColumns = [
       vercelLink("Customers", "/customers"),
       vercelLink("Marketplace", "/marketplace"),
       vercelLink("Templates", "/templates"),
-      vercelLink("Partner Finder", "/partners"),
+      vercelLink("Partner Finder", "/partners/solution-partners"),
       vercelLink("Vercel + AWS", "/partners/aws"),
     ],
   },
@@ -372,21 +481,11 @@ export const footerColumns = [
       vercelLink("Terms of Service", "/legal/terms"),
       vercelLink("Cookie Policy", "/legal/cookie-policy"),
       vercelLink("DPA", "/legal/dpa"),
-      vercelLink("Acceptable Use Policy", "/legal/aup"),
+      vercelLink("Acceptable Use Policy", "/legal/acceptable-use-policy"),
       vercelLink("Legal (all documents)", "/legal"),
       externalLink("Trust Center", "https://security.vercel.com/"),
-      vercelLink("Cookie Preferences", "/"),
-    ],
-  },
-  {
-    id: "social",
-    title: "Social",
-    links: [
-      { label: "GitHub", href: "https://github.com/vercel" },
-      { label: "X", href: "https://x.com/vercel" },
-      { label: "LinkedIn", href: "https://www.linkedin.com/company/vercel" },
-      { label: "YouTube", href: "https://www.youtube.com/vercel" },
-      { label: "Instagram", href: "https://www.instagram.com/vercel" },
+      externalLink("Status", "https://vercel-status.com/"),
+      cookiePreferencesButton(),
     ],
   },
 ] as const satisfies readonly FooterColumnContent[]
@@ -396,3 +495,58 @@ export const themeOptions = [
   { value: "light", label: "Light" },
   { value: "dark", label: "Dark" },
 ] as const satisfies readonly ThemeOption[]
+
+export const homepageFooter = {
+  brand: {
+    label: "Vercel",
+    href: "/homepage",
+    ariaLabel: "Vercel homepage",
+  },
+  copyright: "\u00a9 2026 Vercel Inc.",
+  status: footerStatus,
+  columns: footerNavigationColumns,
+  socialLinks: footerSocialLinks,
+  themeOptions,
+} as const satisfies FooterContent
+
+export const startBuildingContent = {
+  title: "Start building with Vercel now",
+  panels: [
+    {
+      id: "humans",
+      audience: "For humans.",
+      body: "Get started with Next.js and React in seconds.",
+      actions: [
+        {
+          label: "Deploy a Next.js app",
+          href: vercelHref("/templates/next.js/nextjs-boilerplate"),
+          ariaLabel: "Deploy a Next.js app template on Vercel",
+        },
+        {
+          label: "View more templates",
+          href: vercelHref("/templates"),
+          ariaLabel: "View more Vercel templates",
+          variant: "secondary",
+        },
+      ],
+      rows: [
+        { label: "stack", value: "Next.js + React" },
+        { label: "deploy", value: "global edge network" },
+        { label: "preview", value: "every commit" },
+      ],
+    },
+    {
+      id: "agents",
+      audience: "For agents.",
+      body: "Tools to connect your agents to Vercel infrastructure.",
+      plugin: {
+        label: "Plugin",
+        href: vercelHref("/plugin"),
+        ariaLabel: "Open the Vercel Plugin page",
+        command: "npx plugins add vercel/vercel-plugin",
+        tags: ["CLI", "MCP", "API"],
+      },
+      tags: ["ship", "observe", "recover"],
+    },
+  ],
+} as const satisfies StartBuildingContent

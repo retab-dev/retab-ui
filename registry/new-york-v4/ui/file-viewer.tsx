@@ -211,11 +211,20 @@ export function FileViewerSidebarTrigger({
 
 export function FileViewer(props: FileViewerProps) {
   if (props.bare) {
-    const { as, className, isolateStyles, source } = props
+    const {
+      as,
+      className,
+      fallbackFrameSize,
+      fallbackSlideSize,
+      isolateStyles,
+      source,
+    } = props
     return (
       <FileViewerProvider
         as={as}
         documentChrome="standalone"
+        fallbackFrameSize={fallbackFrameSize}
+        fallbackSlideSize={fallbackSlideSize}
         isolateStyles={isolateStyles}
         source={source}
       >
@@ -229,6 +238,8 @@ export function FileViewer(props: FileViewerProps) {
     children,
     className,
     defaultOpen,
+    fallbackFrameSize,
+    fallbackSlideSize,
     inlineBreakpoint,
     isolateStyles,
     mode,
@@ -240,7 +251,13 @@ export function FileViewer(props: FileViewerProps) {
   } = props
 
   return (
-    <FileViewerProvider as={as} isolateStyles={isolateStyles} source={source}>
+    <FileViewerProvider
+      as={as}
+      fallbackFrameSize={fallbackFrameSize}
+      fallbackSlideSize={fallbackSlideSize}
+      isolateStyles={isolateStyles}
+      source={source}
+    >
       <ViewerRoot
         className={cn("h-full", className)}
         defaultOpen={defaultOpen}

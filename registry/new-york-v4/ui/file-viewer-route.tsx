@@ -8,6 +8,7 @@ import {
   isProseTextDescriptor,
   type FileCategory,
   type FileDescriptor,
+  type FileViewerFallbackSize,
   type FileViewerDocumentChrome,
 } from "./file-viewer-core"
 import { CsvFileContent } from "./file-viewer-csv-viewer"
@@ -61,6 +62,8 @@ export type FileViewerRouteProps = {
   documentChrome: FileViewerDocumentChrome
   descriptor: FileDescriptor
   descriptorSignal: AbortSignal
+  fallbackFrameSize?: FileViewerFallbackSize
+  fallbackSlideSize?: FileViewerFallbackSize
   isolateStyles: boolean
   resource: ViewerResource
 }
@@ -71,6 +74,8 @@ type RenderContext = {
   className?: string
   bare: boolean
   controls: boolean
+  fallbackFrameSize?: FileViewerFallbackSize
+  fallbackSlideSize?: FileViewerFallbackSize
   isolateStyles: boolean
   descriptorSignal: AbortSignal
 }
@@ -104,22 +109,24 @@ const RENDERERS: Partial<
       download
     />
   ),
-  image: ({ resource, className, bare, controls }) => (
+  image: ({ resource, className, bare, controls, fallbackFrameSize }) => (
     <ImageResourceContent
       resource={resource}
       className={className}
       bare={bare}
       controls={controls}
       download
+      fallbackFrameSize={fallbackFrameSize}
     />
   ),
-  pptx: ({ resource, className, bare, controls }) => (
+  pptx: ({ resource, className, bare, controls, fallbackSlideSize }) => (
     <PptxResourceContent
       resource={resource}
       className={className}
       bare={bare}
       controls={controls}
       download
+      fallbackSlideSize={fallbackSlideSize}
     />
   ),
   xlsx: ({ resource, className, bare, controls, isolateStyles }) => (
@@ -169,6 +176,8 @@ export function FileViewerRoute({
   bare = false,
   isolateStyles,
   descriptorSignal,
+  fallbackFrameSize,
+  fallbackSlideSize,
   resource,
 }: FileViewerRouteProps) {
   const { category } = descriptor
@@ -183,6 +192,8 @@ export function FileViewerRoute({
       className,
       bare,
       controls: standalone,
+      fallbackFrameSize,
+      fallbackSlideSize,
       isolateStyles,
       descriptorSignal,
     })

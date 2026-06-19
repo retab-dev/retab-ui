@@ -5,7 +5,7 @@
   "description": "Shared class name helper used by Retab UI registry components.",
   "dependencies": [
     "clsx@^2.1.1",
-    "tailwind-merge@^3.3.1"
+    "tailwind-merge@^2.5.5"
   ],
   "files": [
     {

@@ -1,24 +1,44 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { ChevronDown, Menu, X } from "lucide-react"
 
-import { navGroups, utilityNavLinks } from "./homepage-content"
-import { type NavGroup } from "./homepage-types"
 import {
+  type HeaderAction,
+  type HeaderContent,
+  type NavGroup,
+} from "./homepage-types"
+import {
+  focusRing,
   getLinkAriaLabel,
+  getLinkProps,
   MarketingButton,
   MarketingContainer,
   MarketingLinkLabel,
   VercelMark,
 } from "./primitives"
 
-const focusRing =
-  "focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none"
+const focusableSelector = [
+  "a[href]",
+  "button:not([disabled])",
+  "textarea:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  '[tabindex]:not([tabindex="-1"])',
+].join(",")
+
+function getFocusableElements(container: HTMLElement | null) {
+  if (!container) {
+    return []
+  }
+
+  return Array.from(container.querySelectorAll<HTMLElement>(focusableSelector))
+}
 
 function HeaderDropdown({ group }: { group: NavGroup }) {
   const [isOpen, setIsOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const menuId = `homepage-${group.id}-menu`
 
   useEffect(() => {
@@ -28,7 +48,9 @@ function HeaderDropdown({ group }: { group: NavGroup }) {
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
+        event.preventDefault()
         setIsOpen(false)
+        triggerRef.current?.focus()
       }
     }
 
@@ -49,12 +71,12 @@ function HeaderDropdown({ group }: { group: NavGroup }) {
       }}
     >
       <button
+        ref={triggerRef}
         type="button"
-        aria-haspopup="true"
         aria-expanded={isOpen}
         aria-controls={menuId}
         onClick={() => setIsOpen((current) => !current)}
-        className={`inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm text-neutral-700 transition-colors hover:text-black ${focusRing}`}
+        className={`inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm text-neutral-700 transition-colors hover:text-black motion-reduce:transition-none ${focusRing}`}
       >
         {group.label}
         <ChevronDown className="size-3" />
@@ -75,7 +97,8 @@ function HeaderDropdown({ group }: { group: NavGroup }) {
                   <Link
                     href={item.href}
                     aria-label={getLinkAriaLabel(item)}
-                    className={`inline-flex items-center gap-2 rounded-sm text-sm text-neutral-700 transition-colors hover:text-black ${focusRing}`}
+                    {...getLinkProps(item)}
+                    className={`inline-flex items-center gap-2 rounded-sm text-sm text-neutral-700 transition-colors hover:text-black motion-reduce:transition-none ${focusRing}`}
                   >
                     <MarketingLinkLabel item={item} />
                   </Link>
@@ -89,8 +112,32 @@ function HeaderDropdown({ group }: { group: NavGroup }) {
   )
 }
 
-function MobileNavigation() {
+function HeaderActionButton({
+  action,
+  onClick,
+}: {
+  action: HeaderAction
+  onClick?: () => void
+}) {
+  return (
+    <MarketingButton
+      href={action.href}
+      aria-label={getLinkAriaLabel(action)}
+      {...getLinkProps(action)}
+      variant={action.variant}
+      size="compact"
+      shape="rounded"
+      onClick={onClick}
+    >
+      {action.label}
+    </MarketingButton>
+  )
+}
+
+function MobileNavigation({ content }: { content: HeaderContent }) {
   const [isOpen, setIsOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const menuId = "homepage-mobile-menu"
 
   useEffect(() => {
@@ -98,19 +145,69 @@ function MobileNavigation() {
       return
     }
 
+    const originalOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+
+    window.requestAnimationFrame(() => {
+      const [firstFocusable] = getFocusableElements(menuRef.current)
+      ;(firstFocusable ?? menuRef.current)?.focus()
+    })
+
+    function closeMenu() {
+      setIsOpen(false)
+      triggerRef.current?.focus()
+    }
+
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setIsOpen(false)
+        event.preventDefault()
+        closeMenu()
+        return
+      }
+
+      if (event.key !== "Tab") {
+        return
+      }
+
+      const focusableElements = getFocusableElements(menuRef.current)
+      const firstElement = focusableElements[0]
+      const lastElement = focusableElements.at(-1)
+
+      if (!firstElement || !lastElement) {
+        event.preventDefault()
+        menuRef.current?.focus()
+        return
+      }
+
+      if (!menuRef.current?.contains(document.activeElement)) {
+        event.preventDefault()
+        firstElement.focus()
+        return
+      }
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault()
+        lastElement.focus()
+        return
+      }
+
+      if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault()
+        firstElement.focus()
       }
     }
 
     window.addEventListener("keydown", onKeyDown)
-    return () => window.removeEventListener("keydown", onKeyDown)
+    return () => {
+      document.body.style.overflow = originalOverflow
+      window.removeEventListener("keydown", onKeyDown)
+    }
   }, [isOpen])
 
   return (
     <div className="ml-auto min-[961px]:hidden">
       <button
+        ref={triggerRef}
         type="button"
         aria-label={isOpen ? "Close navigation" : "Open navigation"}
         aria-expanded={isOpen}
@@ -122,29 +219,35 @@ function MobileNavigation() {
       </button>
 
       <div
+        ref={menuRef}
         id={menuId}
         hidden={!isOpen}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Mobile navigation"
+        tabIndex={-1}
         className="fixed inset-x-3 top-[72px] z-40 max-h-[calc(100svh-5rem)] overflow-y-auto overscroll-contain rounded-md border border-neutral-200 bg-white px-5 py-5 shadow-xl shadow-black/5"
       >
         <nav aria-label="Mobile primary" className="grid gap-6">
-          {navGroups.map((group) => (
+          {content.navGroups.map((group) => (
             <div key={group.id}>
-              <div className="text-2xl leading-none font-medium text-black">
+              <h2 className="text-2xl leading-none font-medium text-black">
                 {group.label}
-              </div>
+              </h2>
               {group.sections.map((section) => (
                 <div key={section.title} className="mt-5">
-                  <div className="mb-3 font-mono text-xs text-neutral-500 uppercase">
+                  <h3 className="mb-3 font-mono text-xs font-normal text-neutral-500 uppercase">
                     {section.title}
-                  </div>
+                  </h3>
                   <div className="grid gap-3">
                     {section.items.map((item) => (
                       <Link
                         key={`${group.id}-${section.title}-${item.label}`}
                         href={item.href}
                         aria-label={getLinkAriaLabel(item)}
+                        {...getLinkProps(item)}
                         onClick={() => setIsOpen(false)}
-                        className={`inline-flex items-center gap-2 text-base text-neutral-600 ${focusRing}`}
+                        className={`inline-flex items-center gap-2 text-base text-neutral-600 transition-colors hover:text-black motion-reduce:transition-none ${focusRing}`}
                       >
                         <MarketingLinkLabel item={item} />
                       </Link>
@@ -156,35 +259,27 @@ function MobileNavigation() {
           ))}
 
           <div className="grid gap-3 border-t border-neutral-200 pt-5">
-            {utilityNavLinks.map((item) => (
+            {content.utilityLinks.map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
+                aria-label={getLinkAriaLabel(item)}
+                {...getLinkProps(item)}
                 onClick={() => setIsOpen(false)}
-                className={`text-base font-medium text-neutral-900 ${focusRing}`}
+                className={`text-base font-medium text-neutral-900 transition-colors hover:text-black motion-reduce:transition-none ${focusRing}`}
               >
                 {item.label}
               </Link>
             ))}
           </div>
           <div className="flex gap-2 pt-1">
-            <MarketingButton
-              href="https://vercel.com/login"
-              variant="secondary"
-              size="compact"
-              shape="rounded"
-              onClick={() => setIsOpen(false)}
-            >
-              Log In
-            </MarketingButton>
-            <MarketingButton
-              href="https://vercel.com/signup"
-              size="compact"
-              shape="rounded"
-              onClick={() => setIsOpen(false)}
-            >
-              Sign Up
-            </MarketingButton>
+            {content.mobileActions.map((action) => (
+              <HeaderActionButton
+                key={action.label}
+                action={action}
+                onClick={() => setIsOpen(false)}
+              />
+            ))}
           </div>
         </nav>
       </div>
@@ -192,13 +287,13 @@ function MobileNavigation() {
   )
 }
 
-export function MarketingHeader() {
+export function MarketingHeader({ content }: { content: HeaderContent }) {
   return (
-    <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white/95 backdrop-blur">
-      <MarketingContainer className="flex h-16 items-center gap-6">
+    <header className="sticky top-0 z-50 bg-white">
+      <MarketingContainer className="flex h-16 items-center gap-5">
         <Link
-          href="/homepage"
-          className="inline-flex size-8 items-center justify-center"
+          href={content.homeHref}
+          className="inline-flex h-8 w-5 items-center justify-center"
           aria-label="Vercel homepage"
         >
           <VercelMark />
@@ -208,14 +303,16 @@ export function MarketingHeader() {
           aria-label="Primary"
           className="hidden items-center gap-2 min-[961px]:flex"
         >
-          {navGroups.map((group) => (
+          {content.navGroups.map((group) => (
             <HeaderDropdown key={group.id} group={group} />
           ))}
-          {utilityNavLinks.map((item) => (
+          {content.utilityLinks.map((item) => (
             <Link
               key={item.label}
               href={item.href}
-              className={`rounded-md px-2 text-sm text-neutral-700 hover:text-black ${focusRing}`}
+              aria-label={getLinkAriaLabel(item)}
+              {...getLinkProps(item)}
+              className={`rounded-md px-2 text-sm text-neutral-700 transition-colors hover:text-black motion-reduce:transition-none ${focusRing}`}
             >
               {item.label}
             </Link>
@@ -223,32 +320,12 @@ export function MarketingHeader() {
         </nav>
 
         <div className="ml-auto hidden items-center gap-2 min-[961px]:flex">
-          <MarketingButton
-            href="https://vercel.com/contact/sales/demo"
-            variant="secondary"
-            size="compact"
-            shape="rounded"
-          >
-            Get a Demo
-          </MarketingButton>
-          <MarketingButton
-            href="https://vercel.com/login"
-            variant="secondary"
-            size="compact"
-            shape="rounded"
-          >
-            Log In
-          </MarketingButton>
-          <MarketingButton
-            href="https://vercel.com/signup"
-            size="compact"
-            shape="rounded"
-          >
-            Sign Up
-          </MarketingButton>
+          {content.desktopActions.map((action) => (
+            <HeaderActionButton key={action.label} action={action} />
+          ))}
         </div>
 
-        <MobileNavigation />
+        <MobileNavigation content={content} />
       </MarketingContainer>
     </header>
   )

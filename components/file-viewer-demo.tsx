@@ -13,15 +13,29 @@ import {
 type DemoFile = {
   label: string
   file: string
+  fallbackFrameSize?: { width: number; height: number }
+  fallbackSlideSize?: { width: number; height: number }
   source?: "inline-text"
 }
 
 const FILES = [
   { label: "PDF", file: "spacex-prospectus.pdf" },
-  { label: "Image", file: "an-image-is-worth-16x16-words-page-1.png" },
-  { label: "TIFF", file: "entropy.tiff" },
+  {
+    label: "Image",
+    file: "an-image-is-worth-16x16-words-page-1.png",
+    fallbackFrameSize: { width: 1224, height: 1584 },
+  },
+  {
+    label: "TIFF",
+    file: "entropy.tiff",
+    fallbackFrameSize: { width: 1275, height: 1650 },
+  },
   { label: "XLSX", file: "nvidia-financials-fy2024.xlsx" },
-  { label: "PPTX", file: "sample-presentation.pptx" },
+  {
+    label: "PPTX",
+    file: "sample-presentation.pptx",
+    fallbackSlideSize: { width: 960, height: 540 },
+  },
   { label: "DOCX", file: "quarterly-business-review.docx" },
   { label: "CSV", file: "sales.csv" },
   { label: "Markdown", file: "release-notes.md" },
@@ -169,6 +183,8 @@ function FileCanvas({
   const fileViewerProps = {
     source,
     className: "h-full",
+    fallbackFrameSize: file.fallbackFrameSize,
+    fallbackSlideSize: file.fallbackSlideSize,
     isolateStyles: true,
   } as const
 

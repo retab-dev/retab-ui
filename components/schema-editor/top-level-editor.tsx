@@ -90,7 +90,7 @@ export function TopLevelEditor({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-sm"
+                size="iconSm"
                 aria-label="Open schema actions"
                 className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100"
               >

@@ -75,7 +75,7 @@ export function MarkdownActionsMenu({
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          size="icon-sm"
+          size="iconSm"
           className="size-7"
           aria-label="More markdown actions"
           title="More markdown actions"
@@ -110,7 +110,7 @@ function CopyMarkdownButton({ text }: { text: string }) {
   return (
     <Button
       variant="ghost"
-      size="icon-sm"
+      size="iconSm"
       className="size-7"
       aria-label={copy.status === "failed" ? "Copy failed" : "Copy markdown"}
       title={copy.status === "failed" ? "Copy failed" : "Copy all markdown"}
@@ -139,7 +139,7 @@ function DownloadMarkdownButton({
   return (
     <Button
       variant="ghost"
-      size="icon-sm"
+      size="iconSm"
       className="size-7"
       aria-label="Download markdown"
       title="Download markdown"

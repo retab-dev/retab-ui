@@ -9,7 +9,7 @@
       "title": "Viewer Controls",
       "description": "A shared controls row for viewer chrome: title, position, zoom, rotate, download, loading, and extra controls.",
       "dependencies": [
-        "lucide-react",
+        "lucide-react@^0.514.0",
         "class-variance-authority@^0.7.1",
         "radix-ui@^1.5.0"
       ],
@@ -56,7 +56,7 @@
       "description": "Shared class name helper used by Retab UI registry components.",
       "dependencies": [
         "clsx@^2.1.1",
-        "tailwind-merge@^3.3.1"
+        "tailwind-merge@^2.5.5"
       ],
       "files": [
         {
@@ -716,7 +716,7 @@
       "title": "Spinner",
       "description": "A compact loading spinner using Lucide.",
       "dependencies": [
-        "lucide-react"
+        "lucide-react@^0.514.0"
       ],
       "registryDependencies": [
         "@retab/utils"
@@ -1557,9 +1557,9 @@
       "title": "PPTX Viewer",
       "description": "A canvas-backed PowerPoint viewer rendered entirely client-side (no server conversion): continuous scroll, zoom, rotate, fit-to-width, download, and a per-slide overlay slot. Slides render lazily near the viewport and renders are serialized.",
       "dependencies": [
-        "lucide-react",
+        "lucide-react@^0.514.0",
         "pptxviewjs@1.1.9",
-        "chart.js"
+        "chart.js@^4.5.0"
       ],
       "registryDependencies": [
         "@retab/utils",
@@ -3386,12 +3386,12 @@
         }
       ],
       "dependencies": [
-        "@e965/xlsx",
-        "dompurify",
-        "marked",
-        "pptxviewjs",
-        "utif",
-        "docx-preview@^0.3.7"
+        "@e965/xlsx@0.20.3",
+        "dompurify@^3.3.3",
+        "marked@^15.0.12",
+        "pptxviewjs@1.1.9",
+        "utif@^3.1.0",
+        "docx-preview@^0.3.5"
       ]
     },
     {
@@ -3400,7 +3400,7 @@
       "title": "Run Card",
       "description": "A document run card: a file thumbnail with a status pill, a heading, and a result slot. Composes file-thumbnail; the result rendering is left to its children.",
       "dependencies": [
-        "lucide-react"
+        "lucide-react@^0.514.0"
       ],
       "registryDependencies": [
         "@retab/utils",
@@ -4644,14 +4644,13 @@
       ]
     },
     {
-      "name": "primitive-cards-block",
-      "type": "registry:block",
-      "title": "Primitive Run Cards",
-      "description": "Each Retab primitive's result framed as a run card — a document thumbnail with a status pill and the primitive's output in the card body. Classification shows the page with its category and reasoning; split a mini page rail of color-keyed subdocuments; partition a keyed-chunk legend with an overlap ribbon; parse the page rendered as markdown; extract the page with each field's source box drawn over it. Composes run-card with per-primitive rendering over the shared segments model.",
+      "name": "primitive-run-cards",
+      "type": "registry:ui",
+      "title": "Primitive Run Card Components",
+      "description": "Prop-driven run cards for each Retab primitive — classify, split, partition, parse, and extract — each framing the source document with that primitive's result over the shared RunCard shell. Presentational: pass the resolved result (category, segments, markdown, or extract fields), so the same cards render a static demo or a live workflow run's per-block result.",
       "dependencies": [
-        "react-markdown",
-        "remark-gfm",
-        "lucide-react@^0.460.0"
+        "react-markdown@^10.1.0",
+        "remark-gfm@^4.0.1"
       ],
       "registryDependencies": [
         "@retab/run-card",
@@ -4662,14 +4661,28 @@
       ],
       "files": [
         {
+          "path": "registry/new-york-v4/ui/primitive-run-cards.tsx",
+          "type": "registry:ui",
+          "target": "@ui/primitive-run-cards.tsx"
+        }
+      ],
+      "categories": [
+        "primitives"
+      ]
+    },
+    {
+      "name": "primitive-cards-block",
+      "type": "registry:block",
+      "title": "Primitive Run Cards",
+      "description": "Each Retab primitive's result framed as a run card — a document thumbnail with a status pill and the primitive's output in the card body. Classification shows the page with its category and reasoning; split a mini page rail of color-keyed subdocuments; partition a keyed-chunk legend with an overlap ribbon; parse the page rendered as markdown; extract the page with each field's source box drawn over it. Composes the primitive-run-cards components over sample results.",
+      "registryDependencies": [
+        "@retab/primitive-run-cards"
+      ],
+      "files": [
+        {
           "path": "registry/new-york-v4/blocks/primitive-cards-block.tsx",
           "type": "registry:component",
           "target": "@components/blocks/primitive-cards-block.tsx"
-        },
-        {
-          "path": "registry/new-york-v4/ui/run-card.tsx",
-          "type": "registry:ui",
-          "target": "@ui/run-card.tsx"
         },
         {
           "path": "components/viewers/lib/classify-types.ts",

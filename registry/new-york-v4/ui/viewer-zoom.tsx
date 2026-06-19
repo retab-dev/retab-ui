@@ -13,7 +13,7 @@ function IconButton({
   return (
     <Button
       variant="ghost"
-      size="icon-sm"
+      size="iconSm"
       className="size-7"
       aria-label={label}
       title={label}

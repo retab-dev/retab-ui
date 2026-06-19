@@ -623,11 +623,10 @@ export function ExtractSchemaSection({
     <>
       {/* Schema Card - Clickable */}
       <div
-        className={`cursor-pointer rounded-lg p-3 transition-colors ${
-          hasNoSchema
+        className={`cursor-pointer rounded-lg p-3 transition-colors ${hasNoSchema
             ? "border-2 border-dashed border-amber-300 bg-amber-50 hover:bg-amber-100"
             : "border border-gray-200 bg-white hover:bg-gray-50"
-        }`}
+          }`}
         onClick={(e) => {
           e.stopPropagation();
           handleOpen();
@@ -635,9 +634,8 @@ export function ExtractSchemaSection({
       >
         <div className="flex items-center gap-3">
           <div
-            className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${
-              hasNoSchema ? "bg-amber-100" : "bg-violet-100"
-            }`}
+            className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${hasNoSchema ? "bg-amber-100" : "bg-violet-100"
+              }`}
           >
             <Braces
               className={`h-4 w-4 ${hasNoSchema ? "text-amber-600" : "text-violet-600"}`}
@@ -1007,9 +1005,9 @@ function ConsensusCodeAlternatives({
       ? hasLikelihoods
       : activeAlt.startsWith("alt-") && hasDetails
         ? (() => {
-            const idx = Number.parseInt(activeAlt.replace("alt-", ""), 10);
-            return !Number.isNaN(idx) && idx >= 1 && idx <= details.length;
-          })()
+          const idx = Number.parseInt(activeAlt.replace("alt-", ""), 10);
+          return !Number.isNaN(idx) && idx >= 1 && idx <= details.length;
+        })()
         : activeAlt === "";
   const resolvedActiveAlt = isActiveAltValid ? activeAlt : fallbackAltTab;
 
@@ -1062,9 +1060,9 @@ function ConsensusCodeAlternatives({
       {details.map((choice, idx) => {
         const formatted = jsonSchema
           ? autoFormatDateTimeFields(
-              (choice?.data || {}) as Record<string, unknown>,
-              jsonSchema as any,
-            )
+            (choice?.data || {}) as Record<string, unknown>,
+            jsonSchema as any,
+          )
           : choice?.data || {};
 
         return (
@@ -1436,7 +1434,7 @@ function ExtractOutputRendererContent({
                   itemIndex={0}
                   iterationIndex={iterationCount}
                   schema={displaySchema as any}
-                  setSchema={() => {}}
+                  setSchema={() => { }}
                   extractionData={output || {}}
                   similarities={
                     scalarValueType === "consensus" ? likelihoods : undefined
@@ -1460,7 +1458,7 @@ function ExtractOutputRendererContent({
                   schema={displaySchema as JSONSchema7}
                   jsonEditMode="readOnly"
                   schemaEditMode="readOnly"
-                  onUpdateDocument={async () => {}}
+                  onUpdateDocument={async () => { }}
                   cellColorState={
                     scalarValueType === "consensus" ? "consensus" : "none"
                   }
@@ -1829,7 +1827,7 @@ export function ExtractOutputEditor({
                   itemIndex={0}
                   iterationIndex={0}
                   schema={displaySchema as any}
-                  setSchema={() => {}}
+                  setSchema={() => { }}
                   extractionData={displayOutput}
                   similarities={undefined}
                   isStreamingIteration={isStreaming}
@@ -1852,7 +1850,7 @@ export function ExtractOutputEditor({
                   schema={displaySchema as JSONSchema7}
                   jsonEditMode={canEdit ? "editable" : "readOnly"}
                   schemaEditMode={canEdit ? "editable" : "readOnly"}
-                  onUpdateDocument={async () => {}}
+                  onUpdateDocument={async () => { }}
                   cellColorState="none"
                   showHoverCard={false}
                 />
@@ -2515,8 +2513,8 @@ export function ExtractPlaygroundCanvas({
   const [internalJsonSchema, setInternalJsonSchema] =
     useState<ExtendedJSONSchema7>(
       externalJsonSchema ||
-        (config.json_schema as ExtendedJSONSchema7) ||
-        EMPTY_SCHEMA,
+      (config.json_schema as ExtendedJSONSchema7) ||
+      EMPTY_SCHEMA,
     );
   const [iterationCount, setIterationCount] = useState(0);
 
@@ -2622,7 +2620,7 @@ export function ExtractPlaygroundCanvas({
     <PlaygroundCanvas
       blockType="extract"
       title="Extract"
-      description="Extract data from documents"
+      description="Extract structured data"
       icon={Layers2}
       color="#8b5cf6"
       inputs={inputs}
@@ -2727,11 +2725,11 @@ export function ExtractBlockExecutionPlaygroundV2({
 
     const hasPersistedInferenceOverrides =
       persistedConfig.model !==
-        DEFAULT_EXTRACT_PLAYGROUND_PERSISTED_CONFIG.model ||
+      DEFAULT_EXTRACT_PLAYGROUND_PERSISTED_CONFIG.model ||
       persistedConfig.image_resolution_dpi !==
-        DEFAULT_EXTRACT_PLAYGROUND_PERSISTED_CONFIG.image_resolution_dpi ||
+      DEFAULT_EXTRACT_PLAYGROUND_PERSISTED_CONFIG.image_resolution_dpi ||
       persistedConfig.n_consensus !==
-        DEFAULT_EXTRACT_PLAYGROUND_PERSISTED_CONFIG.n_consensus;
+      DEFAULT_EXTRACT_PLAYGROUND_PERSISTED_CONFIG.n_consensus;
 
     const hasPersistedSchema =
       countSchemaProperties(persistedConfig.json_schema) > 0;
@@ -2751,7 +2749,7 @@ export function ExtractBlockExecutionPlaygroundV2({
         json_schema: hasPersistedSchema
           ? (persistedConfig.json_schema as Record<string, unknown>)
           : (config.json_schema as Record<string, unknown>) ||
-            (EMPTY_SCHEMA as Record<string, unknown>),
+          (EMPTY_SCHEMA as Record<string, unknown>),
       };
 
       if (hasPersistedSchema) {
@@ -2849,7 +2847,7 @@ export function ExtractBlockExecutionPlaygroundV2({
       onOpenChange={onOpenChange}
       blockType="extract"
       title="Extract"
-      description="Extract data from documents"
+      description="Extract structured data"
       icon={Layers2}
       color="#8b5cf6"
       inputs={inputs}

@@ -86,7 +86,7 @@ export function FileSystemToolbar({
           aria-label="Back"
           disabled={!canGoBack}
           onClick={goBack}
-          size="icon-sm"
+          size="iconSm"
           variant="ghost"
         >
           <ArrowLeft className="size-4" aria-hidden />
@@ -95,7 +95,7 @@ export function FileSystemToolbar({
           aria-label="Forward"
           disabled={!canGoForward}
           onClick={goForward}
-          size="icon-sm"
+          size="iconSm"
           variant="ghost"
         >
           <ArrowRight className="size-4" aria-hidden />

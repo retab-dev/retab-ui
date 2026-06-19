@@ -34,7 +34,7 @@ export function SchemaRowActions({
         <Button
           type="button"
           variant="ghost"
-          size="icon-sm"
+          size="iconSm"
           className="m-0 shrink-0 p-0"
           aria-label={deleteLabel}
           onClick={onDelete}
@@ -49,7 +49,7 @@ export function SchemaRowActions({
             <Button
               type="button"
               variant="ghost"
-              size="icon-sm"
+              size="iconSm"
               className="m-0 shrink-0 p-0"
               aria-label={details.label}
               onClick={details.onOpen}

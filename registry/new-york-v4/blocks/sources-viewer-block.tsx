@@ -421,6 +421,7 @@ function ImageTabContent() {
         bare
         className="h-full"
         controls={false}
+        fallbackFrameSize={{ width: 1224, height: 1584 }}
         onScrollProgressChange={documentHandlers.onScrollProgressChange}
         onVisibleFrameChange={documentHandlers.onCurrentPageChange}
         renderFrameOverlay={renderFrameOverlay}

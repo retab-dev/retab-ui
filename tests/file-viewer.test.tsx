@@ -31,6 +31,7 @@ import {
   isProseTextDescriptor,
   resolveFileDescriptor,
 } from "@/registry/new-york-v4/ui/file-viewer-core"
+import { ViewerFallback } from "@/registry/new-york-v4/ui/file-viewer-fallback"
 import { createTextResourceCache } from "@/registry/new-york-v4/ui/file-viewer-text-resource"
 import { useViewerControlsRegistration } from "@/registry/new-york-v4/ui/viewer-controls"
 
@@ -527,6 +528,77 @@ describe("FileViewer detection helpers", () => {
     expect(
       (pdfRouteMock.props[0]?.resource as { fileName: string }).fileName
     ).toBe("composed.pdf")
+  })
+
+  it("uses file viewer size hints for image and pptx fallback skeletons", () => {
+    const imageResource = createViewerResource(
+      urlSource("/files/scan.png", "scan.png")
+    )
+    const slideResource = createViewerResource(
+      urlSource("/files/deck.pptx", "deck.pptx")
+    )
+    const { container, rerender } = render(
+      <ViewerFallback
+        resource={imageResource}
+        bare
+        fallbackFrameSize={{ width: 1224, height: 1584 }}
+      />
+    )
+
+    expect(
+      (
+        container.querySelector(
+          '[data-slot="image-frame-skeleton"]'
+        ) as HTMLElement
+      ).style.aspectRatio
+    ).toBe("1224 / 1584")
+
+    rerender(
+      <ViewerFallback
+        resource={slideResource}
+        bare
+        fallbackSlideSize={{ width: 960, height: 540 }}
+      />
+    )
+
+    expect(
+      (
+        container.querySelector(
+          '[data-slot="pptx-slide-skeleton"]'
+        ) as HTMLElement
+      ).style.aspectRatio
+    ).toBe("960 / 540")
+  })
+
+  it("forwards file viewer size hints to image and pptx renderers", async () => {
+    const { unmount } = render(
+      <FileViewer
+        source={urlSource("/files/scan.png", "scan.png")}
+        fallbackFrameSize={{ width: 1224, height: 1584 }}
+        bare
+      />
+    )
+
+    expect(await screen.findByText("Mock image viewer")).toBeTruthy()
+    expect(imageRouteMock.props[0]).toMatchObject({
+      fallbackFrameSize: { width: 1224, height: 1584 },
+    })
+
+    unmount()
+    imageRouteMock.props.length = 0
+
+    render(
+      <FileViewer
+        source={urlSource("/files/deck.pptx", "deck.pptx")}
+        fallbackSlideSize={{ width: 960, height: 540 }}
+        bare
+      />
+    )
+
+    expect(await screen.findByText("Mock PPTX viewer")).toBeTruthy()
+    expect(pptxRouteMock.props[0]).toMatchObject({
+      fallbackSlideSize: { width: 960, height: 540 },
+    })
   })
 
   it("renders registered file header controls without rebuilding the header", async () => {

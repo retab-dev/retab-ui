@@ -27,6 +27,8 @@ function FileViewerDocumentContent({
     descriptorKey,
     descriptorSignal,
     documentChrome,
+    fallbackFrameSize,
+    fallbackSlideSize,
     isClient,
     isolateStyles,
     resource,
@@ -37,6 +39,8 @@ function FileViewerDocumentContent({
       className={className}
       bare={bare}
       controls={documentChrome === "standalone"}
+      fallbackFrameSize={fallbackFrameSize}
+      fallbackSlideSize={fallbackSlideSize}
     />
   )
 
@@ -57,6 +61,8 @@ function FileViewerDocumentContent({
           className={className}
           descriptor={descriptor}
           descriptorSignal={descriptorSignal}
+          fallbackFrameSize={fallbackFrameSize}
+          fallbackSlideSize={fallbackSlideSize}
           isolateStyles={isolateStyles}
           resource={resource}
           documentChrome={documentChrome}

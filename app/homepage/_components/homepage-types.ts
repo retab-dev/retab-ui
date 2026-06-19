@@ -2,6 +2,9 @@ export type LinkItem = {
   readonly label: string
   readonly href: string
   readonly badge?: string
+  readonly ariaLabel?: string
+  readonly isExternal?: boolean
+  readonly action?: "cookie-preferences"
 }
 
 export type NavGroup = {
@@ -15,27 +18,47 @@ export type NavSection = {
   readonly items: readonly LinkItem[]
 }
 
-export type LogoId =
-  | "blackbox"
-  | "hh"
-  | "openai"
-  | "doordash"
-  | "schwab"
-  | "weather"
-  | "polymarket"
+export type MobileNavGroup = {
+  readonly id: string
+  readonly label: string
+  readonly links: readonly LinkItem[]
+}
+
+export type HeaderAction = LinkItem & {
+  readonly variant?: "primary" | "secondary"
+}
+
+export type HeaderContent = {
+  readonly homeHref: string
+  readonly navGroups: readonly NavGroup[]
+  readonly utilityLinks: readonly LinkItem[]
+  readonly mobileGroups: readonly MobileNavGroup[]
+  readonly desktopActions: readonly HeaderAction[]
+  readonly mobileActions: readonly HeaderAction[]
+}
+
+export type LogoVariant =
+  | "text"
+  | "monogram"
+  | "diamond-wordmark"
+  | "large-diamond-wordmark"
+  | "pill-wordmark"
+  | "stacked-serif"
+  | "stacked-bold"
 
 export type LogoContent = {
-  readonly id: LogoId
+  readonly id: string
   readonly label: string
+  readonly variant: LogoVariant
+  readonly lines?: readonly string[]
 }
 
 export type ProductLaneLayout = "default" | "reversed"
-export type ProductLaneSpacing = "first" | "standard"
 
 export type ProductLaneContent = {
+  readonly id: string
   readonly title: string
   readonly layout: ProductLaneLayout
-  readonly spacing: ProductLaneSpacing
   readonly description: string
   readonly proofCustomer: string
   readonly proof: string
@@ -48,12 +71,15 @@ export type ProductVisualImage = {
   readonly desktopWidth: number
   readonly desktopHeight: number
   readonly mobileSrc: string
+  readonly mobileWidth: number
+  readonly mobileHeight: number
   readonly alt: string
 }
 
 export type LatestMetric = readonly [label: string, value: string]
 
 export type FeaturedLatestCard = {
+  readonly id: string
   readonly label: string
   readonly title: string
   readonly badge: string
@@ -74,6 +100,7 @@ export type SecondaryLatestCardVisual =
     }
 
 export type SecondaryLatestCard = {
+  readonly id: string
   readonly label: string
   readonly body: string
   readonly href: string
@@ -87,9 +114,60 @@ export type FooterColumnContent = {
   readonly links: readonly LinkItem[]
 }
 
+export type FooterSocialIcon =
+  | "github"
+  | "x"
+  | "linkedin"
+  | "youtube"
+  | "instagram"
+
+export type FooterSocialLink = LinkItem & {
+  readonly icon: FooterSocialIcon
+}
+
+export type FooterStatusContent = LinkItem
+
 export type ThemeValue = "system" | "light" | "dark"
 
 export type ThemeOption = {
   readonly value: ThemeValue
   readonly label: string
+}
+
+export type FooterContent = {
+  readonly brand: LinkItem
+  readonly copyright: string
+  readonly status: FooterStatusContent
+  readonly columns: readonly FooterColumnContent[]
+  readonly socialLinks: readonly FooterSocialLink[]
+  readonly themeOptions: readonly ThemeOption[]
+}
+
+export type StartBuildingAction = LinkItem & {
+  readonly variant?: "primary" | "secondary"
+}
+
+export type StartBuildingRow = {
+  readonly label: string
+  readonly value: string
+}
+
+export type StartBuildingPlugin = LinkItem & {
+  readonly command: string
+  readonly tags: readonly string[]
+}
+
+export type StartBuildingPanel = {
+  readonly id: string
+  readonly audience: string
+  readonly body: string
+  readonly actions?: readonly StartBuildingAction[]
+  readonly rows?: readonly StartBuildingRow[]
+  readonly plugin?: StartBuildingPlugin
+  readonly tags?: readonly string[]
+}
+
+export type StartBuildingContent = {
+  readonly title: string
+  readonly panels: readonly StartBuildingPanel[]
 }

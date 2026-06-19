@@ -4,7 +4,7 @@
   "title": "Run Card",
   "description": "A document run card: a file thumbnail with a status pill, a heading, and a result slot. Composes file-thumbnail; the result rendering is left to its children.",
   "dependencies": [
-    "lucide-react"
+    "lucide-react@^0.514.0"
   ],
   "registryDependencies": [
     "@retab/utils",

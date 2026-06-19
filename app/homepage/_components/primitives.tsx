@@ -5,6 +5,9 @@ import { cn } from "@/lib/utils"
 
 import { type LinkItem } from "./homepage-types"
 
+export const focusRing =
+  "focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none"
+
 export function VercelMark({ className }: { className?: string }) {
   return (
     <svg
@@ -30,7 +33,21 @@ export function MarketingContainer({
 }
 
 export function getLinkAriaLabel(item: LinkItem) {
-  return item.badge ? `${item.label} ${item.badge}` : item.label
+  const label =
+    item.ariaLabel ?? (item.badge ? `${item.label} ${item.badge}` : item.label)
+
+  return item.isExternal ? `${label} (opens in a new tab)` : label
+}
+
+export function getLinkProps(item: LinkItem) {
+  if (!item.isExternal) {
+    return {}
+  }
+
+  return {
+    rel: "noopener noreferrer",
+    target: "_blank",
+  }
 }
 
 export function MarketingLinkLabel({ item }: { item: LinkItem }) {

@@ -8,7 +8,7 @@ import {
   VIEWER_CONTROLS_HEIGHT_PX,
   ViewerControlsSkeleton,
 } from "@/components/ui/viewer-controls"
-import { XlsxGridSkeleton } from "@/components/ui/xlsx-grid"
+import { XlsxGridSkeleton } from "@/components/ui/xlsx-grid-skeleton"
 import { XLSX_SHEET_TABS_HEIGHT_PX } from "@/components/ui/xlsx-sheet-tabs"
 
 export function XlsxViewerFrame({
