@@ -3,6 +3,9 @@
   "name": "xlsx-worker-protocol",
   "title": "XLSX worker protocol",
   "description": "Typed worker messages, parse limits, and error codes for the XLSX viewer.",
+  "registryDependencies": [
+    "@retab/xlsx-workbook"
+  ],
   "files": [
     {
       "path": "registry/new-york-v4/lib/xlsx-worker-protocol.ts",

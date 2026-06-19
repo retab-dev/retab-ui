@@ -2444,8 +2444,43 @@ describe("PdfViewer", () => {
     expect(doc.pages[2].render).not.toHaveBeenCalled()
   })
 
+  it("can disable direction-aware pre-render for benchmark comparisons", async () => {
+    const doc = makeDoc([
+      [100, 1000],
+      [100, 1000],
+      [100, 1000],
+    ])
+    doc.pages[0].render.mockImplementationOnce(() => {
+      const task = {
+        promise: Promise.resolve(),
+        cancel: vi.fn(),
+      }
+      pdfjsMock.renderTasks.push(task)
+      return task
+    })
+    pdfjsMock.docs.set("/direction-pre-render-disabled.pdf", doc)
+
+    await act(async () => {
+      render(
+        <PdfViewer
+          source={pdfUrlSource("/direction-pre-render-disabled.pdf")}
+          defaultScale={1}
+          performanceOptions={{ directionAwarePreRender: false }}
+        />
+      )
+    })
+
+    await waitFor(() => expect(doc.pages[0].render).toHaveBeenCalledTimes(1))
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    expect(doc.pages[1].render).not.toHaveBeenCalled()
+  })
+
   it("reuses cached rendered canvases when remounting pages", async () => {
     const drawImage = vi.fn()
+    const onPageRenderTiming = vi.fn()
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
       drawImage,
     } as never)
@@ -2464,7 +2499,11 @@ describe("PdfViewer", () => {
 
     await act(async () => {
       render(
-        <PdfViewer source={pdfUrlSource("/render-cache.pdf")} defaultScale={1} />
+        <PdfViewer
+          source={pdfUrlSource("/render-cache.pdf")}
+          defaultScale={1}
+          onPageRenderTiming={onPageRenderTiming}
+        />
       )
     })
 
@@ -2502,6 +2541,78 @@ describe("PdfViewer", () => {
       expect(document.querySelector("[data-page-number='1']")).toBeTruthy()
     )
     expect(doc.pages[0].render).toHaveBeenCalledTimes(1)
+    await waitFor(() =>
+      expect(onPageRenderTiming).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pageNumber: 1,
+          source: "cache",
+          status: "rendered",
+        })
+      )
+    )
+  })
+
+  it("can disable rendered page cache for benchmark comparisons", async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      drawImage: vi.fn(),
+    } as never)
+    const doc = makeDoc(
+      Array.from({ length: 8 }, () => [100, 1000] as [number, number])
+    )
+    doc.pages[0].render.mockImplementation(() => {
+      const task = {
+        promise: Promise.resolve(),
+        cancel: vi.fn(),
+      }
+      pdfjsMock.renderTasks.push(task)
+      return task
+    })
+    pdfjsMock.docs.set("/render-cache-disabled.pdf", doc)
+
+    await act(async () => {
+      render(
+        <PdfViewer
+          source={pdfUrlSource("/render-cache-disabled.pdf")}
+          defaultScale={1}
+          performanceOptions={{ renderedPageCache: false }}
+        />
+      )
+    })
+
+    await waitFor(() => expect(doc.pages[0].render).toHaveBeenCalledTimes(1))
+
+    const viewport = document.querySelector<HTMLElement>(
+      "[data-slot='scroll-area-viewport']"
+    )
+    expect(viewport).toBeTruthy()
+    let scrollTop = 0
+    Object.defineProperty(viewport, "scrollTop", {
+      configurable: true,
+      get: () => scrollTop,
+      set: (value) => {
+        scrollTop = value
+      },
+    })
+
+    scrollTop = 5200
+    fireEvent.scroll(viewport!)
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    await waitFor(() =>
+      expect(document.querySelector("[data-page-number='1']")).toBeNull()
+    )
+
+    scrollTop = 0
+    fireEvent.scroll(viewport!)
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    await waitFor(() =>
+      expect(document.querySelector("[data-page-number='1']")).toBeTruthy()
+    )
+    await waitFor(() => expect(doc.pages[0].render).toHaveBeenCalledTimes(2))
   })
 
   it("reports completed page render timings", async () => {

@@ -9,7 +9,8 @@
   "registryDependencies": [
     "@retab/dropzone",
     "@retab/file-thumbnail",
-    "@retab/utils"
+    "@retab/utils",
+    "@retab/file-size-format"
   ],
   "files": [
     {

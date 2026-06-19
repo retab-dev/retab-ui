@@ -3,10 +3,14 @@
   "name": "dropzone-required-packet-slots",
   "title": "Required Packet",
   "description": "Slot-level dropzones for checklist-driven packet collection.",
+  "dependencies": [
+    "lucide-react@^0.460.0"
+  ],
   "registryDependencies": [
     "@retab/dropzone",
     "@retab/file-thumbnail",
-    "@retab/utils"
+    "@retab/utils",
+    "@retab/file-size-format"
   ],
   "files": [
     {

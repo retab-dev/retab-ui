@@ -9,7 +9,9 @@
       "title": "Viewer Controls",
       "description": "A shared controls row for viewer chrome: title, position, zoom, rotate, download, loading, and extra controls.",
       "dependencies": [
-        "lucide-react"
+        "lucide-react",
+        "class-variance-authority@^0.7.1",
+        "radix-ui@^1.5.0"
       ],
       "registryDependencies": [
         "@retab/utils",
@@ -34,6 +36,16 @@
           "path": "registry/new-york-v4/lib/viewer-download-actions.ts",
           "type": "registry:lib",
           "target": "@lib/viewer-download-actions.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/button.tsx",
+          "type": "registry:ui",
+          "target": "@ui/button.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/dropdown-menu.tsx",
+          "type": "registry:ui",
+          "target": "@ui/dropdown-menu.tsx"
         }
       ]
     },
@@ -437,6 +449,10 @@
           "type": "registry:ui",
           "target": "@ui/data-cell-types.ts"
         }
+      ],
+      "dependencies": [
+        "@chenglou/pretext@^0.0.8",
+        "lucide-react@^0.460.0"
       ]
     },
     {
@@ -610,7 +626,9 @@
       "description": "A responsive application sidebar with menu, rail, and provider primitives.",
       "dependencies": [
         "@base-ui/react@^1.4.1",
-        "lucide-react"
+        "lucide-react",
+        "class-variance-authority@^0.7.1",
+        "radix-ui@^1.5.0"
       ],
       "registryDependencies": [
         "button",
@@ -620,13 +638,20 @@
         "@retab/sidebar-row",
         "@retab/skeleton",
         "@retab/use-mobile",
-        "@retab/utils"
+        "@retab/utils",
+        "sheet",
+        "tooltip"
       ],
       "files": [
         {
           "path": "registry/new-york-v4/ui/sidebar.tsx",
           "type": "registry:ui",
           "target": "@ui/sidebar.tsx"
+        },
+        {
+          "path": "hooks/use-media-query.ts",
+          "type": "registry:hook",
+          "target": "@hooks/use-media-query.ts"
         }
       ]
     },
@@ -780,8 +805,19 @@
           "path": "registry/new-york-v4/lib/viewer-resource.ts",
           "type": "registry:lib",
           "target": "@lib/viewer-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-download-actions.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-download-actions.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-source.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-source.ts"
         }
-      ]
+      ],
+      "registryDependencies": []
     },
     {
       "name": "docx-document-resource",
@@ -798,8 +834,24 @@
           "path": "registry/new-york-v4/lib/viewer-resource.ts",
           "type": "registry:lib",
           "target": "@lib/viewer-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-download-actions.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-download-actions.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-errors.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-errors.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-source.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-source.ts"
         }
-      ]
+      ],
+      "registryDependencies": []
     },
     {
       "name": "csv-viewer",
@@ -1281,6 +1333,11 @@
           "path": "registry/new-york-v4/ui/use-is-client.ts",
           "type": "registry:ui",
           "target": "@ui/use-is-client.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-error.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-error.tsx"
         }
       ]
     },
@@ -1396,6 +1453,11 @@
           "path": "registry/new-york-v4/ui/use-is-client.ts",
           "type": "registry:ui",
           "target": "@ui/use-is-client.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-error.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-error.tsx"
         }
       ]
     },
@@ -1598,6 +1660,11 @@
           "path": "registry/new-york-v4/ui/use-is-client.ts",
           "type": "registry:ui",
           "target": "@ui/use-is-client.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-errors.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-errors.ts"
         }
       ]
     },
@@ -1612,6 +1679,9 @@
           "type": "registry:lib",
           "target": "@lib/xlsx-worker-protocol.ts"
         }
+      ],
+      "registryDependencies": [
+        "@retab/xlsx-workbook"
       ]
     },
     {
@@ -1642,6 +1712,9 @@
           "type": "registry:lib",
           "target": "@lib/xlsx-sheetjs-flattener.ts"
         }
+      ],
+      "dependencies": [
+        "@e965/xlsx@0.20.3"
       ]
     },
     {
@@ -1661,7 +1734,8 @@
         "button",
         "separator",
         "@retab/skeleton",
-        "@retab/viewer-controls"
+        "@retab/viewer-controls",
+        "@retab/csv"
       ],
       "files": [
         {
@@ -1843,6 +1917,16 @@
           "path": "registry/new-york-v4/ui/xlsx-viewer-sheet.tsx",
           "type": "registry:ui",
           "target": "@ui/xlsx-viewer-sheet.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-error.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-error.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/xlsx-viewer-row-patcher.ts",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-viewer-row-patcher.ts"
         }
       ]
     },
@@ -1966,7 +2050,8 @@
       "description": "A document workspace over a flat object-store manifest with list, grid, columns, lazy folders, generated thumbnails, and FileViewer previews.",
       "dependencies": [
         "lucide-react",
-        "@tanstack/react-virtual"
+        "@tanstack/react-virtual",
+        "@pierre/trees@1.0.0-beta.4"
       ],
       "registryDependencies": [
         "@retab/utils",
@@ -2135,7 +2220,8 @@
       "title": "File System Light",
       "description": "A minimal file tree in a ViewerSidebar with FileViewer in the ViewerSurface.",
       "dependencies": [
-        "@pierre/trees"
+        "@pierre/trees",
+        "lucide-react@^0.460.0"
       ],
       "registryDependencies": [
         "@retab/utils",
@@ -2250,6 +2336,11 @@
           "path": "registry/new-york-v4/ui/segment-legend.tsx",
           "type": "registry:ui",
           "target": "@ui/segment-legend.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/segmented-document-model.ts",
+          "type": "registry:ui",
+          "target": "@ui/segmented-document-model.ts"
         }
       ]
     },
@@ -2269,6 +2360,11 @@
           "path": "registry/new-york-v4/ui/segment-sidebar.tsx",
           "type": "registry:ui",
           "target": "@ui/segment-sidebar.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/segmented-document-model.ts",
+          "type": "registry:ui",
+          "target": "@ui/segmented-document-model.ts"
         }
       ]
     },
@@ -2305,6 +2401,11 @@
           "path": "registry/new-york-v4/ui/page-ribbon.tsx",
           "type": "registry:ui",
           "target": "@ui/page-ribbon.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/segmented-document-model.ts",
+          "type": "registry:ui",
+          "target": "@ui/segmented-document-model.ts"
         }
       ]
     },
@@ -2366,14 +2467,601 @@
       "title": "Schema Builder",
       "description": "Controlled JSON Schema editor for building Retab extraction schemas — fields, types, nested objects, arrays, enums, and required flags.",
       "registryDependencies": [
-        "@retab/utils"
+        "@retab/utils",
+        "@retab/alert-dialog",
+        "@retab/form",
+        "@retab/input",
+        "@retab/label",
+        "@retab/switch",
+        "@retab/textarea",
+        "dialog",
+        "dropdown-menu",
+        "tooltip"
       ],
       "files": [
         {
           "path": "registry/new-york-v4/ui/schema-builder.tsx",
           "type": "registry:ui",
           "target": "@ui/schema-builder.tsx"
+        },
+        {
+          "path": "components/schema-editor/document-array-node-editor.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document-array-node-editor.tsx"
+        },
+        {
+          "path": "components/schema-editor/document-definitions-editor-controller.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document-definitions-editor-controller.ts"
+        },
+        {
+          "path": "components/schema-editor/document-definitions-editor.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document-definitions-editor.tsx"
+        },
+        {
+          "path": "components/schema-editor/document-enum-node-editor.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document-enum-node-editor.tsx"
+        },
+        {
+          "path": "components/schema-editor/document-node-actions.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document-node-actions.tsx"
+        },
+        {
+          "path": "components/schema-editor/document-node-description-control.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document-node-description-control.tsx"
+        },
+        {
+          "path": "components/schema-editor/document-node-editor-types.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document-node-editor-types.ts"
+        },
+        {
+          "path": "components/schema-editor/document-node-header-controller.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document-node-header-controller.ts"
+        },
+        {
+          "path": "components/schema-editor/document-node-header.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document-node-header.tsx"
+        },
+        {
+          "path": "components/schema-editor/document-node-name-control.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document-node-name-control.tsx"
+        },
+        {
+          "path": "components/schema-editor/document-node-reveal.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document-node-reveal.ts"
+        },
+        {
+          "path": "components/schema-editor/document-node-type-menu.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document-node-type-menu.tsx"
+        },
+        {
+          "path": "components/schema-editor/document-object-node-editor-controller.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document-object-node-editor-controller.ts"
+        },
+        {
+          "path": "components/schema-editor/document-object-node-editor.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document-object-node-editor.tsx"
+        },
+        {
+          "path": "components/schema-editor/document-property-add-row.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document-property-add-row.tsx"
+        },
+        {
+          "path": "components/schema-editor/document-property-row.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document-property-row.tsx"
+        },
+        {
+          "path": "components/schema-editor/document-schema-editor-controller.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document-schema-editor-controller.ts"
+        },
+        {
+          "path": "components/schema-editor/document-schema-editor.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document-schema-editor.tsx"
+        },
+        {
+          "path": "components/schema-editor/document-schema-node-editor.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document-schema-node-editor.tsx"
+        },
+        {
+          "path": "components/schema-editor/document/array.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document/array.ts"
+        },
+        {
+          "path": "components/schema-editor/document/convert.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document/convert.ts"
+        },
+        {
+          "path": "components/schema-editor/document/definition-operations.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document/definition-operations.ts"
+        },
+        {
+          "path": "components/schema-editor/document/derive.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document/derive.ts"
+        },
+        {
+          "path": "components/schema-editor/document/enum-operations.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document/enum-operations.ts"
+        },
+        {
+          "path": "components/schema-editor/document/id.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document/id.ts"
+        },
+        {
+          "path": "components/schema-editor/document/json-node.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document/json-node.ts"
+        },
+        {
+          "path": "components/schema-editor/document/json-pointer.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document/json-pointer.ts"
+        },
+        {
+          "path": "components/schema-editor/document/node-metadata.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document/node-metadata.ts"
+        },
+        {
+          "path": "components/schema-editor/document/node-selectors.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document/node-selectors.ts"
+        },
+        {
+          "path": "components/schema-editor/document/node-update.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document/node-update.ts"
+        },
+        {
+          "path": "components/schema-editor/document/property-operations.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document/property-operations.ts"
+        },
+        {
+          "path": "components/schema-editor/document/traversal.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document/traversal.ts"
+        },
+        {
+          "path": "components/schema-editor/document/type-operations.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document/type-operations.ts"
+        },
+        {
+          "path": "components/schema-editor/document/types.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document/types.ts"
+        },
+        {
+          "path": "components/schema-editor/document/view-model.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/document/view-model.ts"
+        },
+        {
+          "path": "components/schema-editor/draft/draft-node-edits.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/draft/draft-node-edits.ts"
+        },
+        {
+          "path": "components/schema-editor/enum-creation-dialog.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/enum-creation-dialog.tsx"
+        },
+        {
+          "path": "components/schema-editor/lib/configure-ajv.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/lib/configure-ajv.ts"
+        },
+        {
+          "path": "components/schema-editor/lib/json-schema-types.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/lib/json-schema-types.ts"
+        },
+        {
+          "path": "components/schema-editor/lib/json-schema-utils.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/lib/json-schema-utils.ts"
+        },
+        {
+          "path": "components/schema-editor/node-dialog.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/node-dialog.tsx"
+        },
+        {
+          "path": "components/schema-editor/object-template-type-section.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/object-template-type-section.tsx"
+        },
+        {
+          "path": "components/schema-editor/optional/import-export/import-export-menu-items.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/optional/import-export/import-export-menu-items.tsx"
+        },
+        {
+          "path": "components/schema-editor/optional/json-mode/json-mode-editor.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/optional/json-mode/json-mode-editor.tsx"
+        },
+        {
+          "path": "components/schema-editor/optional/object-templates/object-template-menu.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/optional/object-templates/object-template-menu.tsx"
+        },
+        {
+          "path": "components/schema-editor/optional/object-templates/object-template-reference.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/optional/object-templates/object-template-reference.ts"
+        },
+        {
+          "path": "components/schema-editor/optional/object-templates/template-objects.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/optional/object-templates/template-objects.ts"
+        },
+        {
+          "path": "components/schema-editor/primitives/schema-add-input-model.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/primitives/schema-add-input-model.ts"
+        },
+        {
+          "path": "components/schema-editor/primitives/schema-add-row.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/primitives/schema-add-row.tsx"
+        },
+        {
+          "path": "components/schema-editor/primitives/schema-chip-add-row.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/primitives/schema-chip-add-row.tsx"
+        },
+        {
+          "path": "components/schema-editor/primitives/schema-chip-list.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/primitives/schema-chip-list.tsx"
+        },
+        {
+          "path": "components/schema-editor/primitives/schema-field-row.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/primitives/schema-field-row.tsx"
+        },
+        {
+          "path": "components/schema-editor/primitives/schema-inline-description.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/primitives/schema-inline-description.tsx"
+        },
+        {
+          "path": "components/schema-editor/primitives/schema-inline-name.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/primitives/schema-inline-name.tsx"
+        },
+        {
+          "path": "components/schema-editor/primitives/schema-inline-text.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/primitives/schema-inline-text.tsx"
+        },
+        {
+          "path": "components/schema-editor/primitives/schema-order.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/primitives/schema-order.ts"
+        },
+        {
+          "path": "components/schema-editor/primitives/schema-row-actions.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/primitives/schema-row-actions.tsx"
+        },
+        {
+          "path": "components/schema-editor/primitives/schema-row-drag.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/primitives/schema-row-drag.ts"
+        },
+        {
+          "path": "components/schema-editor/primitives/schema-row-grip.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/primitives/schema-row-grip.tsx"
+        },
+        {
+          "path": "components/schema-editor/primitives/schema-type-menu.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/primitives/schema-type-menu.tsx"
+        },
+        {
+          "path": "components/schema-editor/primitives/schema-type-options.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/primitives/schema-type-options.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/array-items-field.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/array-items-field.tsx"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/description-field.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/description-field.tsx"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/enum-value-identity.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/enum-value-identity.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/enum-values-field.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/enum-values-field.tsx"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/name-field.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/name-field.tsx"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/nullable-field.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/nullable-field.tsx"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/object-properties-drag.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/object-properties-drag.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/object-properties-field.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/object-properties-field.tsx"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/object-properties-model.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/object-properties-model.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/object-properties-operations.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/object-properties-operations.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/object-properties-plan-field.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/object-properties-plan-field.tsx"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/object-properties-rows.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/object-properties-rows.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/object-properties-state.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/object-properties-state.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/object-property-add-input.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/object-property-add-input.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/object-property-row-identity.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/object-property-row-identity.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/object-property-row-schema-plan.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/object-property-row-schema-plan.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/object-property-row.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/object-property-row.tsx"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/property-object-template-type-field.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/property-object-template-type-field.tsx"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/property-schema-plan-field.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/property-schema-plan-field.tsx"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/property-type-field-model.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/property-type-field-model.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/fields/type-field.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/fields/type-field.tsx"
+        },
+        {
+          "path": "components/schema-editor/property-form/model/effective-node-edits.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/model/effective-node-edits.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/model/enum-values.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/model/enum-values.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/model/object-properties-view.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/model/object-properties-view.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/model/object-property-edits.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/model/object-property-edits.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/model/object-property-selectors.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/model/object-property-selectors.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/model/property-capabilities.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/model/property-capabilities.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/model/property-draft-commit.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/model/property-draft-commit.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/model/property-schema-plan.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/model/property-schema-plan.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/model/property-validation.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/model/property-validation.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/property-form-controller.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/property-form-controller.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/property-form-footer.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/property-form-footer.tsx"
+        },
+        {
+          "path": "components/schema-editor/property-form/property-form-shell.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/property-form-shell.tsx"
+        },
+        {
+          "path": "components/schema-editor/property-form/property-form-submit.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/property-form-submit.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/property-form.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/property-form.tsx"
+        },
+        {
+          "path": "components/schema-editor/property-form/reducer.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/reducer.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/types.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/types.ts"
+        },
+        {
+          "path": "components/schema-editor/property-form/validation.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/property-form/validation.ts"
+        },
+        {
+          "path": "components/schema-editor/root-dialog.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/root-dialog.tsx"
+        },
+        {
+          "path": "components/schema-editor/schema-builder-types.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/schema-builder-types.ts"
+        },
+        {
+          "path": "components/schema-editor/schema-builder.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/schema-builder.tsx"
+        },
+        {
+          "path": "components/schema-editor/schema-editor-mode.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/schema-editor-mode.ts"
+        },
+        {
+          "path": "components/schema-editor/schema-required-policy.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/schema-required-policy.ts"
+        },
+        {
+          "path": "components/schema-editor/schema-title.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/schema-title.ts"
+        },
+        {
+          "path": "components/schema-editor/schema-type-menu-sections.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/schema-type-menu-sections.tsx"
+        },
+        {
+          "path": "components/schema-editor/schema-validation.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/schema-validation.ts"
+        },
+        {
+          "path": "components/schema-editor/top-level-editor-controller.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/top-level-editor-controller.ts"
+        },
+        {
+          "path": "components/schema-editor/top-level-editor.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/top-level-editor.tsx"
+        },
+        {
+          "path": "components/schema-editor/type-icons.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/type-icons.tsx"
+        },
+        {
+          "path": "components/schema-editor/use-schema-builder-state.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/use-schema-builder-state.ts"
+        },
+        {
+          "path": "components/schema-editor/validation-error-display.tsx",
+          "type": "registry:component",
+          "target": "@components/schema-editor/validation-error-display.tsx"
+        },
+        {
+          "path": "components/schema-editor/validation.ts",
+          "type": "registry:component",
+          "target": "@components/schema-editor/validation.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/accordion.tsx",
+          "type": "registry:ui",
+          "target": "@ui/accordion.tsx"
         }
+      ],
+      "dependencies": [
+        "ajv@^8.17.1",
+        "ajv-errors@^3.0.0",
+        "ajv-formats@^3.0.1",
+        "lucide-react@^0.460.0",
+        "radix-ui@^1.5.0",
+        "sonner@^2.0.0"
       ]
     },
     {
@@ -2492,7 +3180,8 @@
         "@retab/docx-document-resource",
         "@retab/csv",
         "@retab/xlsx-worker-protocol",
-        "@retab/utils"
+        "@retab/utils",
+        "@retab/pptx-viewer"
       ],
       "files": [
         {
@@ -2674,6 +3363,16 @@
           "path": "components/file-thumbnail-xlsx.worker.ts",
           "type": "registry:component",
           "target": "@components/file-thumbnail-xlsx.worker.ts"
+        },
+        {
+          "path": "components/file-thumbnail/renderers/code-thumbnail.tsx",
+          "type": "registry:component",
+          "target": "@components/file-thumbnail/renderers/code-thumbnail.tsx"
+        },
+        {
+          "path": "components/file-thumbnail/thumbnail-code.ts",
+          "type": "registry:component",
+          "target": "@components/file-thumbnail/thumbnail-code.ts"
         }
       ],
       "dependencies": [
@@ -2681,7 +3380,8 @@
         "dompurify",
         "marked",
         "pptxviewjs",
-        "utif"
+        "utif",
+        "docx-preview@^0.3.7"
       ]
     },
     {
@@ -2963,7 +3663,8 @@
         "@retab/file-viewer",
         "@retab/scroll-area",
         "tabs",
-        "@retab/segmented-document"
+        "@retab/segmented-document",
+        "@retab/document-anchor"
       ],
       "files": [
         {
@@ -3075,7 +3776,10 @@
         "@retab/source-segmented-document",
         "@retab/utils",
         "@retab/source-field-link",
-        "@retab/source-indicator"
+        "@retab/source-indicator",
+        "@retab/data-cell",
+        "@retab/input",
+        "tooltip"
       ],
       "files": [
         {
@@ -3087,13 +3791,168 @@
           "path": "components/viewers/sample-data/extract.json",
           "type": "registry:file",
           "target": "@components/viewers/sample-data/extract.json"
+        },
+        {
+          "path": "components/json-form/array-fields.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/array-fields.tsx"
+        },
+        {
+          "path": "components/json-form/disclosure.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/disclosure.tsx"
+        },
+        {
+          "path": "components/json-form/field-renderer.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/field-renderer.ts"
+        },
+        {
+          "path": "components/json-form/form-primitives.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/form-primitives.tsx"
+        },
+        {
+          "path": "components/json-form/json-form-constants.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/json-form-constants.ts"
+        },
+        {
+          "path": "components/json-form/json-form.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/json-form.tsx"
+        },
+        {
+          "path": "components/json-form/object-fields.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/object-fields.tsx"
+        },
+        {
+          "path": "components/json-form/open-paths.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/open-paths.tsx"
+        },
+        {
+          "path": "components/json-form/path-codec.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/path-codec.ts"
+        },
+        {
+          "path": "components/json-form/scalar-control.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar-control.tsx"
+        },
+        {
+          "path": "components/json-form/scalar/boolean-control.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar/boolean-control.tsx"
+        },
+        {
+          "path": "components/json-form/scalar/date-time-control.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar/date-time-control.tsx"
+        },
+        {
+          "path": "components/json-form/scalar/enum-control.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar/enum-control.tsx"
+        },
+        {
+          "path": "components/json-form/scalar/number-control.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar/number-control.tsx"
+        },
+        {
+          "path": "components/json-form/scalar/text-control.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar/text-control.tsx"
+        },
+        {
+          "path": "components/json-form/scalar/types.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar/types.ts"
+        },
+        {
+          "path": "components/json-form/schema-model.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/schema-model.ts"
+        },
+        {
+          "path": "components/json-form/source-link-table-hover.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/source-link-table-hover.ts"
+        },
+        {
+          "path": "components/json-form/source-link.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/source-link.tsx"
+        },
+        {
+          "path": "components/json-form/table/array-table-body.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-body.tsx"
+        },
+        {
+          "path": "components/json-form/table/array-table-cell-commit.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-cell-commit.ts"
+        },
+        {
+          "path": "components/json-form/table/array-table-cell-model.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-cell-model.ts"
+        },
+        {
+          "path": "components/json-form/table/array-table-cell-props.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-cell-props.ts"
+        },
+        {
+          "path": "components/json-form/table/array-table-cell.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-cell.tsx"
+        },
+        {
+          "path": "components/json-form/table/array-table-config.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-config.ts"
+        },
+        {
+          "path": "components/json-form/table/array-table-format.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-format.ts"
+        },
+        {
+          "path": "components/json-form/table/array-table-row.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-row.tsx"
+        },
+        {
+          "path": "components/json-form/table/array-table-scroll.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-scroll.ts"
+        },
+        {
+          "path": "components/json-form/table/array-table.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table.tsx"
+        },
+        {
+          "path": "components/json-form/virtual-list.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/virtual-list.tsx"
         }
       ],
       "categories": [
         "primitives"
       ],
       "dependencies": [
-        "react-hook-form"
+        "react-hook-form",
+        "@radix-ui/react-checkbox@^1.1.3",
+        "@radix-ui/react-label@^2.1.1",
+        "@radix-ui/react-slot@^1.1.1",
+        "@tanstack/react-virtual@^3.13.12",
+        "lucide-react@^0.460.0"
       ]
     },
     {
@@ -3104,7 +3963,11 @@
       "dependencies": [
         "react-hook-form",
         "json-schema",
-        "@tanstack/react-virtual"
+        "@tanstack/react-virtual",
+        "@radix-ui/react-checkbox@^1.1.3",
+        "@radix-ui/react-label@^2.1.1",
+        "@radix-ui/react-slot@^1.1.1",
+        "lucide-react@^0.460.0"
       ],
       "registryDependencies": [
         "@retab/file-viewer",
@@ -3126,7 +3989,10 @@
         "@retab/source-segmented-document",
         "@retab/source-field-link",
         "@retab/source-indicator",
-        "@retab/utils"
+        "@retab/utils",
+        "@retab/data-cell",
+        "@retab/input",
+        "tooltip"
       ],
       "files": [
         {
@@ -3163,6 +4029,156 @@
           "path": "components/viewers/sample-data/docx-sources.json",
           "type": "registry:file",
           "target": "@components/viewers/sample-data/docx-sources.json"
+        },
+        {
+          "path": "components/json-form/array-fields.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/array-fields.tsx"
+        },
+        {
+          "path": "components/json-form/disclosure.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/disclosure.tsx"
+        },
+        {
+          "path": "components/json-form/field-renderer.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/field-renderer.ts"
+        },
+        {
+          "path": "components/json-form/form-primitives.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/form-primitives.tsx"
+        },
+        {
+          "path": "components/json-form/json-form-constants.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/json-form-constants.ts"
+        },
+        {
+          "path": "components/json-form/json-form.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/json-form.tsx"
+        },
+        {
+          "path": "components/json-form/object-fields.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/object-fields.tsx"
+        },
+        {
+          "path": "components/json-form/open-paths.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/open-paths.tsx"
+        },
+        {
+          "path": "components/json-form/path-codec.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/path-codec.ts"
+        },
+        {
+          "path": "components/json-form/scalar-control.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar-control.tsx"
+        },
+        {
+          "path": "components/json-form/scalar/boolean-control.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar/boolean-control.tsx"
+        },
+        {
+          "path": "components/json-form/scalar/date-time-control.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar/date-time-control.tsx"
+        },
+        {
+          "path": "components/json-form/scalar/enum-control.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar/enum-control.tsx"
+        },
+        {
+          "path": "components/json-form/scalar/number-control.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar/number-control.tsx"
+        },
+        {
+          "path": "components/json-form/scalar/text-control.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar/text-control.tsx"
+        },
+        {
+          "path": "components/json-form/scalar/types.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar/types.ts"
+        },
+        {
+          "path": "components/json-form/schema-model.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/schema-model.ts"
+        },
+        {
+          "path": "components/json-form/source-link-table-hover.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/source-link-table-hover.ts"
+        },
+        {
+          "path": "components/json-form/source-link.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/source-link.tsx"
+        },
+        {
+          "path": "components/json-form/table/array-table-body.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-body.tsx"
+        },
+        {
+          "path": "components/json-form/table/array-table-cell-commit.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-cell-commit.ts"
+        },
+        {
+          "path": "components/json-form/table/array-table-cell-model.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-cell-model.ts"
+        },
+        {
+          "path": "components/json-form/table/array-table-cell-props.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-cell-props.ts"
+        },
+        {
+          "path": "components/json-form/table/array-table-cell.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-cell.tsx"
+        },
+        {
+          "path": "components/json-form/table/array-table-config.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-config.ts"
+        },
+        {
+          "path": "components/json-form/table/array-table-format.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-format.ts"
+        },
+        {
+          "path": "components/json-form/table/array-table-row.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-row.tsx"
+        },
+        {
+          "path": "components/json-form/table/array-table-scroll.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-scroll.ts"
+        },
+        {
+          "path": "components/json-form/table/array-table.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table.tsx"
+        },
+        {
+          "path": "components/json-form/virtual-list.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/virtual-list.tsx"
         }
       ],
       "categories": [
@@ -3175,7 +4191,12 @@
       "title": "JSON Form Sources",
       "description": "Extraction rendered as a JSON form beside the source PDF — hover a form field to highlight where its value came from through segmented-document state.",
       "dependencies": [
-        "react-hook-form"
+        "react-hook-form",
+        "@radix-ui/react-checkbox@^1.1.3",
+        "@radix-ui/react-label@^2.1.1",
+        "@radix-ui/react-slot@^1.1.1",
+        "@tanstack/react-virtual@^3.13.12",
+        "lucide-react@^0.460.0"
       ],
       "registryDependencies": [
         "@retab/file-viewer",
@@ -3186,7 +4207,10 @@
         "@retab/source-evidence",
         "@retab/source-segmented-document",
         "@retab/source-field-link",
-        "@retab/source-indicator"
+        "@retab/source-indicator",
+        "@retab/data-cell",
+        "@retab/input",
+        "tooltip"
       ],
       "files": [
         {
@@ -3198,6 +4222,156 @@
           "path": "components/viewers/sample-data/json-form-sources.json",
           "type": "registry:file",
           "target": "@components/viewers/sample-data/json-form-sources.json"
+        },
+        {
+          "path": "components/json-form/array-fields.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/array-fields.tsx"
+        },
+        {
+          "path": "components/json-form/disclosure.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/disclosure.tsx"
+        },
+        {
+          "path": "components/json-form/field-renderer.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/field-renderer.ts"
+        },
+        {
+          "path": "components/json-form/form-primitives.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/form-primitives.tsx"
+        },
+        {
+          "path": "components/json-form/json-form-constants.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/json-form-constants.ts"
+        },
+        {
+          "path": "components/json-form/json-form.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/json-form.tsx"
+        },
+        {
+          "path": "components/json-form/object-fields.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/object-fields.tsx"
+        },
+        {
+          "path": "components/json-form/open-paths.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/open-paths.tsx"
+        },
+        {
+          "path": "components/json-form/path-codec.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/path-codec.ts"
+        },
+        {
+          "path": "components/json-form/scalar-control.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar-control.tsx"
+        },
+        {
+          "path": "components/json-form/scalar/boolean-control.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar/boolean-control.tsx"
+        },
+        {
+          "path": "components/json-form/scalar/date-time-control.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar/date-time-control.tsx"
+        },
+        {
+          "path": "components/json-form/scalar/enum-control.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar/enum-control.tsx"
+        },
+        {
+          "path": "components/json-form/scalar/number-control.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar/number-control.tsx"
+        },
+        {
+          "path": "components/json-form/scalar/text-control.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar/text-control.tsx"
+        },
+        {
+          "path": "components/json-form/scalar/types.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/scalar/types.ts"
+        },
+        {
+          "path": "components/json-form/schema-model.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/schema-model.ts"
+        },
+        {
+          "path": "components/json-form/source-link-table-hover.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/source-link-table-hover.ts"
+        },
+        {
+          "path": "components/json-form/source-link.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/source-link.tsx"
+        },
+        {
+          "path": "components/json-form/table/array-table-body.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-body.tsx"
+        },
+        {
+          "path": "components/json-form/table/array-table-cell-commit.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-cell-commit.ts"
+        },
+        {
+          "path": "components/json-form/table/array-table-cell-model.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-cell-model.ts"
+        },
+        {
+          "path": "components/json-form/table/array-table-cell-props.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-cell-props.ts"
+        },
+        {
+          "path": "components/json-form/table/array-table-cell.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-cell.tsx"
+        },
+        {
+          "path": "components/json-form/table/array-table-config.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-config.ts"
+        },
+        {
+          "path": "components/json-form/table/array-table-format.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-format.ts"
+        },
+        {
+          "path": "components/json-form/table/array-table-row.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-row.tsx"
+        },
+        {
+          "path": "components/json-form/table/array-table-scroll.ts",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table-scroll.ts"
+        },
+        {
+          "path": "components/json-form/table/array-table.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/table/array-table.tsx"
+        },
+        {
+          "path": "components/json-form/virtual-list.tsx",
+          "type": "registry:component",
+          "target": "@components/json-form/virtual-list.tsx"
         }
       ],
       "categories": [
@@ -3466,7 +4640,8 @@
       "description": "Each Retab primitive's result framed as a run card — a document thumbnail with a status pill and the primitive's output in the card body. Classification shows the page with its category and reasoning; split a mini page rail of color-keyed subdocuments; partition a keyed-chunk legend with an overlap ribbon; parse the page rendered as markdown; extract the page with each field's source box drawn over it. Composes run-card with per-primitive rendering over the shared segments model.",
       "dependencies": [
         "react-markdown",
-        "remark-gfm"
+        "remark-gfm",
+        "lucide-react@^0.460.0"
       ],
       "registryDependencies": [
         "@retab/run-card",
@@ -3910,6 +5085,9 @@
           "type": "registry:ui",
           "target": "@ui/use-is-client.ts"
         }
+      ],
+      "devDependencies": [
+        "@types/prismjs@^1.26.6"
       ]
     },
     {
@@ -4588,6 +5766,9 @@
           "type": "registry:ui",
           "target": "@ui/source-indicator.tsx"
         }
+      ],
+      "dependencies": [
+        "lucide-react@^0.460.0"
       ]
     },
     {
@@ -4603,10 +5784,18 @@
           "path": "registry/new-york-v4/blocks/dropzone-file-uploader-example.tsx",
           "type": "registry:component",
           "target": "@components/blocks/dropzone-file-uploader-example.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-example-shared.tsx",
+          "type": "registry:file",
+          "target": "registry/new-york-v4/blocks/dropzone-example-shared.tsx"
         }
       ],
       "categories": [
         "dropzone"
+      ],
+      "dependencies": [
+        "lucide-react@^0.460.0"
       ]
     },
     {
@@ -4638,6 +5827,11 @@
           "path": "registry/new-york-v4/blocks/dropzone-uploader-viewer-parts.tsx",
           "type": "registry:component",
           "target": "@components/blocks/dropzone-uploader-viewer-parts.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-example-shared.tsx",
+          "type": "registry:file",
+          "target": "registry/new-york-v4/blocks/dropzone-example-shared.tsx"
         }
       ],
       "categories": [
@@ -4771,7 +5965,8 @@
       "registryDependencies": [
         "@retab/dropzone",
         "@retab/file-thumbnail",
-        "@retab/utils"
+        "@retab/utils",
+        "@retab/file-size-format"
       ],
       "files": [
         {
@@ -4830,7 +6025,8 @@
       "registryDependencies": [
         "@retab/dropzone",
         "@retab/file-thumbnail",
-        "@retab/utils"
+        "@retab/utils",
+        "@retab/file-size-format"
       ],
       "files": [
         {
@@ -4949,7 +6145,8 @@
       "registryDependencies": [
         "@retab/dropzone",
         "@retab/file-thumbnail",
-        "@retab/utils"
+        "@retab/utils",
+        "@retab/file-size-format"
       ],
       "files": [
         {
@@ -4975,7 +6172,8 @@
       "registryDependencies": [
         "@retab/dropzone",
         "@retab/file-thumbnail",
-        "@retab/utils"
+        "@retab/utils",
+        "@retab/file-size-format"
       ],
       "files": [
         {
@@ -4991,6 +6189,9 @@
       ],
       "categories": [
         "dropzone"
+      ],
+      "dependencies": [
+        "lucide-react@^0.460.0"
       ]
     },
     {
@@ -5001,7 +6202,8 @@
       "registryDependencies": [
         "@retab/dropzone",
         "@retab/file-thumbnail",
-        "@retab/utils"
+        "@retab/utils",
+        "@retab/file-size-format"
       ],
       "files": [
         {
@@ -5017,6 +6219,9 @@
       ],
       "categories": [
         "dropzone"
+      ],
+      "dependencies": [
+        "lucide-react@^0.460.0"
       ]
     },
     {
@@ -5026,17 +6231,26 @@
       "description": "Disabled input, trigger focus, intake, and drag behavior.",
       "registryDependencies": [
         "@retab/dropzone",
-        "@retab/utils"
+        "@retab/utils",
+        "@retab/file-size-format"
       ],
       "files": [
         {
           "path": "registry/new-york-v4/blocks/dropzone-disabled-dropzone.tsx",
           "type": "registry:component",
           "target": "@components/blocks/dropzone-disabled-dropzone.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-example-shared.tsx",
+          "type": "registry:file",
+          "target": "registry/new-york-v4/blocks/dropzone-example-shared.tsx"
         }
       ],
       "categories": [
         "dropzone"
+      ],
+      "dependencies": [
+        "lucide-react@^0.460.0"
       ]
     }
   ]

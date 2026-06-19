@@ -4,7 +4,8 @@
   "title": "File System Light",
   "description": "A minimal file tree in a ViewerSidebar with FileViewer in the ViewerSurface.",
   "dependencies": [
-    "@pierre/trees"
+    "@pierre/trees",
+    "lucide-react@^0.460.0"
   ],
   "registryDependencies": [
     "@retab/utils",

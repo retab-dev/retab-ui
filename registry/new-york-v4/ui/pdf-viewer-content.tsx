@@ -35,6 +35,7 @@ import type {
   PdfPageRenderTiming,
   PdfPageSize,
   PdfViewerHandle,
+  PdfViewerPerformanceOptions,
 } from "./pdf-viewer-types"
 import { usePdfPageVirtualization } from "./pdf-viewer-virtualization"
 import { useIsClient } from "./use-is-client"
@@ -65,6 +66,8 @@ export type PdfViewerContentProps = {
   onScrollProgressChange?: (progress: number) => void
   /** Reports page render work for profiling and benchmark surfaces. */
   onPageRenderTiming?: (timing: PdfPageRenderTiming) => void
+  /** Benchmark-only switches for proving each PDF render strategy independently. */
+  performanceOptions?: PdfViewerPerformanceOptions
   /** Drop the outer border/rounded/background so the viewer fills its container. */
   bare?: boolean
 }
@@ -134,6 +137,7 @@ function PdfViewerInner({
   onVisiblePageChange,
   onScrollProgressChange,
   onPageRenderTiming,
+  performanceOptions,
   bare = false,
   forwardedRef,
 }: PdfResourceContentProps & {
@@ -206,6 +210,11 @@ function PdfViewerInner({
   const { isScrolling, scrollDirection, handleScrollActivity } =
     usePdfScrollActivity()
   const renderCache = usePdfRenderedPageCache(document)
+  const resolvedPerformanceOptions =
+    useResolvedPdfViewerPerformanceOptions(performanceOptions)
+  const activeRenderCache = resolvedPerformanceOptions.renderedPageCache
+    ? renderCache
+    : undefined
   usePdfDocumentControlsRegistration({
     currentPage,
     document,
@@ -234,14 +243,20 @@ function PdfViewerInner({
   })
   const lowPriorityRenderPageNumbers = React.useMemo(
     () =>
-      isScrolling
+      isScrolling || !resolvedPerformanceOptions.directionAwarePreRender
         ? []
         : getDirectionAwarePdfPreRenderPageNumbers({
             pageCount: document.numPages,
             renderPageNumbers,
             scrollDirection,
           }),
-    [document.numPages, isScrolling, renderPageNumbers, scrollDirection]
+    [
+      document.numPages,
+      isScrolling,
+      renderPageNumbers,
+      resolvedPerformanceOptions.directionAwarePreRender,
+      scrollDirection,
+    ]
   )
   const {
     activePageNumbers: activeRenderPageNumbers,
@@ -270,10 +285,7 @@ function PdfViewerInner({
   )
 
   React.useEffect(() => {
-    requestPageMetrics([
-      ...preloadPageNumbers,
-      ...lowPriorityRenderPageNumbers,
-    ])
+    requestPageMetrics([...preloadPageNumbers, ...lowPriorityRenderPageNumbers])
   }, [lowPriorityRenderPageNumbers, preloadPageNumbers, requestPageMetrics])
 
   React.useEffect(() => {
@@ -294,12 +306,7 @@ function PdfViewerInner({
     handleScrollActivity(viewportElement ?? undefined)
     handleScroll()
     measureVisiblePages()
-  }, [
-    handleScroll,
-    handleScrollActivity,
-    measureVisiblePages,
-    viewportElement,
-  ])
+  }, [handleScroll, handleScrollActivity, measureVisiblePages, viewportElement])
 
   React.useImperativeHandle(
     forwardedRef ?? null,
@@ -358,7 +365,10 @@ function PdfViewerInner({
                 ])}
                 renderPageNumbers={activeRenderPageNumbers}
                 renderPageOverlay={renderPageOverlay}
-                renderCache={renderCache}
+                renderCache={activeRenderCache}
+                imperativePageLayer={
+                  resolvedPerformanceOptions.imperativePageLayer
+                }
                 rotation={rotation}
                 scale={resolvedScale}
                 devicePixelRatio={pageDevicePixelRatio}
@@ -391,6 +401,24 @@ function getDirectionAwarePdfPreRenderPageNumbers({
       : renderPageNumbers[0]
   const pageNumber = edgePageNumber + (scrollDirection >= 0 ? 1 : -1)
   return pageNumber >= 1 && pageNumber <= pageCount ? [pageNumber] : []
+}
+
+function useResolvedPdfViewerPerformanceOptions(
+  performanceOptions: PdfViewerPerformanceOptions | undefined
+) {
+  const renderedPageCache = performanceOptions?.renderedPageCache ?? true
+  const directionAwarePreRender =
+    performanceOptions?.directionAwarePreRender ?? true
+  const imperativePageLayer = performanceOptions?.imperativePageLayer ?? true
+
+  return React.useMemo(
+    () => ({
+      renderedPageCache,
+      directionAwarePreRender,
+      imperativePageLayer,
+    }),
+    [directionAwarePreRender, imperativePageLayer, renderedPageCache]
+  )
 }
 
 function usePdfDocumentResourceLifecycle(
@@ -489,7 +517,36 @@ function usePdfDocumentControlsRegistration({
   }, [onControlsChange, controlsState])
 }
 
+type PdfDocumentPagesLayerProps = {
+  containerRef: React.RefCallback<HTMLDivElement>
+  document: PdfDocument
+  layout: PdfPageLayoutModel
+  pageNumbers: readonly number[]
+  renderPageNumbers: readonly number[]
+  renderPageOverlay?: (props: PageOverlayProps) => React.ReactNode
+  renderCache: ReturnType<typeof usePdfRenderedPageCache> | undefined
+  rotation: number
+  scale: number
+  devicePixelRatio: number
+  onPageRenderTiming?: (timing: PdfPageRenderTiming) => void
+  onPageRenderError: (error: unknown) => void
+  setPageSize: PdfPageSizeSetter
+}
+
 function PdfDocumentPagesLayer({
+  imperativePageLayer,
+  ...props
+}: PdfDocumentPagesLayerProps & {
+  imperativePageLayer: boolean
+}) {
+  return imperativePageLayer ? (
+    <PdfDocumentImperativePagesLayer {...props} />
+  ) : (
+    <PdfDocumentReactPagesLayer {...props} />
+  )
+}
+
+function PdfDocumentImperativePagesLayer({
   containerRef,
   document,
   layout,
@@ -503,21 +560,7 @@ function PdfDocumentPagesLayer({
   onPageRenderTiming,
   onPageRenderError,
   setPageSize,
-}: {
-  containerRef: React.RefCallback<HTMLDivElement>
-  document: PdfDocument
-  layout: PdfPageLayoutModel
-  pageNumbers: readonly number[]
-  renderPageNumbers: readonly number[]
-  renderPageOverlay?: (props: PageOverlayProps) => React.ReactNode
-  renderCache: ReturnType<typeof usePdfRenderedPageCache>
-  rotation: number
-  scale: number
-  devicePixelRatio: number
-  onPageRenderTiming?: (timing: PdfPageRenderTiming) => void
-  onPageRenderError: (error: unknown) => void
-  setPageSize: PdfPageSizeSetter
-}) {
+}: PdfDocumentPagesLayerProps) {
   const projectionCanvasRef = React.useRef<HTMLDivElement | null>(null)
   const projectionCacheRef = React.useRef<PdfPageProjectionCache>({
     pages: new Map(),
@@ -590,6 +633,100 @@ function PdfDocumentPagesLayer({
   )
 }
 
+function PdfDocumentReactPagesLayer({
+  containerRef,
+  document,
+  layout,
+  pageNumbers,
+  renderPageNumbers,
+  renderPageOverlay,
+  renderCache,
+  rotation,
+  scale,
+  devicePixelRatio,
+  onPageRenderTiming,
+  onPageRenderError,
+  setPageSize,
+}: PdfDocumentPagesLayerProps) {
+  const renderPageNumberSet = React.useMemo(
+    () => new Set(renderPageNumbers),
+    [renderPageNumbers]
+  )
+
+  return (
+    <div
+      ref={containerRef}
+      data-slot="pdf-viewer-fit-width-measure"
+      className="relative min-w-0"
+    >
+      <div
+        data-slot="pdf-viewer-document"
+        className="relative mx-auto"
+        style={{
+          height: layout.totalHeight,
+          minWidth: layout.maxPageWidth,
+        }}
+      >
+        {pageNumbers.map((pageNumber) => {
+          const page = getPdfPageLayout(layout, pageNumber)
+          if (!page) return null
+          const renderPage = renderPageNumberSet.has(pageNumber)
+          const renderKey = getPdfPageProjectionRenderKey({
+            devicePixelRatio,
+            document,
+            onPageRenderError,
+            onPageRenderTiming,
+            page,
+            renderCache,
+            renderOverlay: renderPageOverlay,
+            renderPage,
+            rotation,
+            scale,
+            setPageSize,
+          })
+
+          return (
+            <div
+              key={pageNumber}
+              className="absolute left-1/2 flex -translate-x-1/2 items-center justify-center"
+              data-slot="pdf-page-slot"
+              data-page-number={pageNumber}
+              style={{
+                top: page.offsetTop,
+                width: page.width,
+                minHeight: page.height,
+              }}
+            >
+              <PdfPageProjectionErrorBoundary
+                onError={onPageRenderError}
+                resetKey={renderKey}
+              >
+                {renderPage ? (
+                  <React.Suspense fallback={<PageSkeleton />}>
+                    <PdfPage
+                      document={document}
+                      pageNumber={page.pageNumber}
+                      scale={scale}
+                      rotation={rotation}
+                      devicePixelRatio={devicePixelRatio}
+                      renderOverlay={renderPageOverlay}
+                      onRenderTiming={onPageRenderTiming}
+                      onSize={setPageSize}
+                      renderCache={renderCache}
+                    />
+                  </React.Suspense>
+                ) : (
+                  <PageSkeleton />
+                )}
+              </PdfPageProjectionErrorBoundary>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 type PdfPageProjectionCache = {
   pages: Map<number, ProjectedPdfPage>
   resetKey: string
@@ -631,7 +768,7 @@ function projectPdfPages({
   onPageRenderTiming?: (timing: PdfPageRenderTiming) => void
   onPageRenderError: (error: unknown) => void
   pageNumbers: readonly number[]
-  renderCache: ReturnType<typeof usePdfRenderedPageCache>
+  renderCache: ReturnType<typeof usePdfRenderedPageCache> | undefined
   renderPageNumbers: readonly number[]
   renderPageOverlay?: (props: PageOverlayProps) => React.ReactNode
   resetKey: string
@@ -727,27 +864,26 @@ function renderProjectedPdfPage({
   onPageRenderError: (error: unknown) => void
   page: NonNullable<ReturnType<typeof getPdfPageLayout>>
   projectedPage: ProjectedPdfPage
-  renderCache: ReturnType<typeof usePdfRenderedPageCache>
+  renderCache: ReturnType<typeof usePdfRenderedPageCache> | undefined
   renderOverlay?: (props: PageOverlayProps) => React.ReactNode
   renderPage: boolean
   rotation: number
   scale: number
   setPageSize: PdfPageSizeSetter
 }) {
-  const renderKey = [
-    page.pageNumber,
-    renderPage ? "render" : "skeleton",
-    getPdfProjectionDocumentKey(document),
-    page.width,
-    page.height,
-    scale,
-    rotation,
+  const renderKey = getPdfPageProjectionRenderKey({
     devicePixelRatio,
-    getPdfProjectionCallbackKey(renderOverlay),
-    getPdfProjectionCallbackKey(onPageRenderTiming),
-    getPdfProjectionCallbackKey(onPageRenderError),
-    getPdfProjectionCallbackKey(setPageSize),
-  ].join("\u0000")
+    document,
+    onPageRenderError,
+    onPageRenderTiming,
+    page,
+    renderCache,
+    renderOverlay,
+    renderPage,
+    rotation,
+    scale,
+    setPageSize,
+  })
 
   if (projectedPage.renderKey === renderKey) return
   projectedPage.renderKey = renderKey
@@ -775,6 +911,48 @@ function renderProjectedPdfPage({
       )}
     </PdfPageProjectionErrorBoundary>
   )
+}
+
+function getPdfPageProjectionRenderKey({
+  devicePixelRatio,
+  document,
+  onPageRenderTiming,
+  onPageRenderError,
+  page,
+  renderCache,
+  renderOverlay,
+  renderPage,
+  rotation,
+  scale,
+  setPageSize,
+}: {
+  devicePixelRatio: number
+  document: PdfDocument
+  onPageRenderTiming?: (timing: PdfPageRenderTiming) => void
+  onPageRenderError: (error: unknown) => void
+  page: NonNullable<ReturnType<typeof getPdfPageLayout>>
+  renderCache: ReturnType<typeof usePdfRenderedPageCache> | undefined
+  renderOverlay?: (props: PageOverlayProps) => React.ReactNode
+  renderPage: boolean
+  rotation: number
+  scale: number
+  setPageSize: PdfPageSizeSetter
+}) {
+  return [
+    page.pageNumber,
+    renderPage ? "render" : "skeleton",
+    getPdfProjectionDocumentKey(document),
+    page.width,
+    page.height,
+    scale,
+    rotation,
+    devicePixelRatio,
+    getPdfProjectionCallbackKey(renderOverlay),
+    getPdfProjectionCallbackKey(onPageRenderTiming),
+    getPdfProjectionCallbackKey(onPageRenderError),
+    getPdfProjectionCallbackKey(renderCache),
+    getPdfProjectionCallbackKey(setPageSize),
+  ].join("\u0000")
 }
 
 function placeProjectedPdfPage(
@@ -823,9 +1001,7 @@ function getPdfProjectionDocumentKey(document: PdfDocument) {
   return key
 }
 
-function getPdfProjectionCallbackKey(
-  callback: object | undefined
-) {
+function getPdfProjectionCallbackKey(callback: object | undefined) {
   if (!callback) return 0
   const cached = pdfProjectionCallbackKeys.get(callback)
   if (cached) return cached

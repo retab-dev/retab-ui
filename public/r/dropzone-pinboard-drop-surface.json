@@ -3,10 +3,14 @@
   "name": "dropzone-pinboard-drop-surface",
   "title": "Pinboard Drop Surface",
   "description": "A full canvas trigger that pins dropped files as cards.",
+  "dependencies": [
+    "lucide-react@^0.460.0"
+  ],
   "registryDependencies": [
     "@retab/dropzone",
     "@retab/file-thumbnail",
-    "@retab/utils"
+    "@retab/utils",
+    "@retab/file-size-format"
   ],
   "files": [
     {

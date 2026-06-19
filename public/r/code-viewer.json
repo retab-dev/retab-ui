@@ -7,6 +7,9 @@
     "lucide-react",
     "prismjs@^1.30.0"
   ],
+  "devDependencies": [
+    "@types/prismjs@^1.26.6"
+  ],
   "registryDependencies": [
     "button",
     "dropdown-menu",

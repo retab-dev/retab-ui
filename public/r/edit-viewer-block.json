@@ -11,7 +11,8 @@
     "@retab/file-viewer",
     "@retab/scroll-area",
     "tabs",
-    "@retab/segmented-document"
+    "@retab/segmented-document",
+    "@retab/document-anchor"
   ],
   "files": [
     {

@@ -28,9 +28,11 @@ import type { PdfViewerHandle } from "./pdf-viewer-types"
 export type {
   PageOverlayProps,
   PdfPageAreaTarget,
+  PdfPageRenderSource,
   PdfPageRenderStatus,
   PdfPageRenderTiming,
   PdfViewerHandle,
+  PdfViewerPerformanceOptions,
 } from "./pdf-viewer-types"
 export {
   PdfViewerPages,

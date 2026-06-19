@@ -3,6 +3,9 @@
   "name": "xlsx-sheetjs-flattener",
   "title": "XLSX SheetJS flattener",
   "description": "Pure SheetJS-to-compact-sheet flattening helpers for the XLSX viewer worker.",
+  "dependencies": [
+    "@e965/xlsx@0.20.3"
+  ],
   "registryDependencies": [
     "@retab/xlsx-worker-protocol",
     "@retab/xlsx-workbook"

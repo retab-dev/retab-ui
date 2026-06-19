@@ -30,6 +30,7 @@ export type PdfPageSize = {
 }
 
 export type PdfPageRenderStatus = "rendered" | "cancelled" | "failed"
+export type PdfPageRenderSource = "cache" | "pdfjs"
 
 export type PdfPageRenderTiming = {
   pageNumber: number
@@ -37,5 +38,12 @@ export type PdfPageRenderTiming = {
   rotation: number
   devicePixelRatio: number
   status: PdfPageRenderStatus
+  source?: PdfPageRenderSource
   durationMs: number
+}
+
+export type PdfViewerPerformanceOptions = {
+  renderedPageCache?: boolean
+  directionAwarePreRender?: boolean
+  imperativePageLayer?: boolean
 }

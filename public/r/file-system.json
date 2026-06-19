@@ -5,7 +5,8 @@
   "description": "A document workspace over a flat object-store manifest with list, grid, columns, lazy folders, generated thumbnails, and FileViewer previews.",
   "dependencies": [
     "lucide-react",
-    "@tanstack/react-virtual"
+    "@tanstack/react-virtual",
+    "@pierre/trees@1.0.0-beta.4"
   ],
   "registryDependencies": [
     "@retab/utils",

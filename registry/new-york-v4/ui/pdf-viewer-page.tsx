@@ -94,7 +94,10 @@ export function PdfPage({
 
       const startedAt = readNow()
       let didReportRenderTiming = false
-      const reportRenderTiming = (status: PdfPageRenderStatus) => {
+      const reportRenderTiming = (
+        status: PdfPageRenderStatus,
+        source?: PdfPageRenderTiming["source"]
+      ) => {
         if (didReportRenderTiming) return
         didReportRenderTiming = true
         onRenderTiming?.({
@@ -103,11 +106,13 @@ export function PdfPage({
           rotation,
           devicePixelRatio,
           status,
+          source,
           durationMs: Math.max(0, readNow() - startedAt),
         })
       }
       const context = canvas.getContext("2d")
       if (!context) {
+        markCanvasRenderStatus(canvas, renderSignature, "failed")
         reportRenderTiming("failed")
         setRenderError(
           toPdfRenderFailedError(new Error("Canvas 2D context unavailable."))
@@ -121,10 +126,12 @@ export function PdfPage({
         canvas.height = cached.canvas.height
         context.drawImage(cached.canvas, 0, 0)
         renderedCanvasRef.current = cached
-        reportRenderTiming("rendered")
+        markCanvasRenderStatus(canvas, renderSignature, "rendered", "cache")
+        reportRenderTiming("rendered", "cache")
         return
       }
 
+      markCanvasRenderStatus(canvas, renderSignature, "pending")
       canvas.width = getPdfCanvasPixelSize(
         renderSignature.viewportWidth,
         devicePixelRatio
@@ -145,6 +152,7 @@ export function PdfPage({
               : undefined,
         })
       } catch (error) {
+        markCanvasRenderStatus(canvas, renderSignature, "failed")
         reportRenderTiming("failed")
         setRenderError(toPdfRenderFailedError(error))
         return
@@ -159,10 +167,12 @@ export function PdfPage({
             rendered: renderSignature,
             sourceCanvas: canvas,
           })
-          reportRenderTiming("rendered")
+          markCanvasRenderStatus(canvas, renderSignature, "rendered", "pdfjs")
+          reportRenderTiming("rendered", "pdfjs")
         },
         (error) => {
           if (!isActive) return
+          markCanvasRenderStatus(canvas, renderSignature, "failed")
           reportRenderTiming("failed")
           setRenderError(toPdfRenderFailedError(error))
         }
@@ -170,6 +180,7 @@ export function PdfPage({
       return () => {
         isActive = false
         if (!didReportRenderTiming) {
+          markCanvasRenderStatus(canvas, renderSignature, "cancelled")
           reportRenderTiming("cancelled")
           renderTask.cancel()
         }
@@ -212,6 +223,21 @@ export function PdfPage({
       ) : null}
     </div>
   )
+}
+
+function markCanvasRenderStatus(
+  canvas: HTMLCanvasElement,
+  rendered: PdfRenderedCanvas,
+  status: "pending" | PdfPageRenderStatus,
+  source?: PdfPageRenderTiming["source"]
+) {
+  canvas.dataset.pdfPageNumber = String(rendered.pageNumber)
+  canvas.dataset.pdfRenderStatus = status
+  if (source) {
+    canvas.dataset.pdfRenderSource = source
+  } else {
+    delete canvas.dataset.pdfRenderSource
+  }
 }
 
 function canReuseRenderedCanvas(

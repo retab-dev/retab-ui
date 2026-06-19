@@ -8,7 +8,8 @@
     "dompurify",
     "marked",
     "pptxviewjs",
-    "utif"
+    "utif",
+    "docx-preview@^0.3.7"
   ],
   "registryDependencies": [
     "@retab/file-thumbnail-frame",
@@ -16,7 +17,8 @@
     "@retab/docx-document-resource",
     "@retab/csv",
     "@retab/xlsx-worker-protocol",
-    "@retab/utils"
+    "@retab/utils",
+    "@retab/pptx-viewer"
   ],
   "files": [
     {
@@ -234,6 +236,18 @@
       "content": "// Parses the first rows of a spreadsheet's first sheet off the main thread.\n// XLSX.read is fully synchronous CPU and was the largest UI-thread block of the\n// thumbnail grid; running it here keeps the page responsive. `sheetRows` stops\n// the parser early so a 100k-row workbook costs the same as a 16-row one.\nimport * as XLSX from \"@e965/xlsx\"\n\nimport { isSpreadsheetContainer } from \"@/lib/xlsx-worker-protocol\"\n\ninterface Req {\n  id: number\n  buffer: ArrayBuffer\n  maxRows: number\n  maxCols: number\n}\n\nconst ctx = self as unknown as Worker\n\nctx.onmessage = (event: MessageEvent<Req>) => {\n  const { id, buffer, maxRows, maxCols } = event.data\n  try {\n    // SheetJS sniffs arbitrary bytes into a stub sheet; reject non-spreadsheet\n    // input so a mislabeled file yields no thumbnail rather than junk cells.\n    if (!isSpreadsheetContainer(buffer)) {\n      throw new Error(\"File is not a recognized spreadsheet (.xlsx or .xls).\")\n    }\n    const wb = XLSX.read(new Uint8Array(buffer), {\n      type: \"array\",\n      sheetRows: maxRows,\n    })\n    const ws = wb.Sheets[wb.SheetNames[0]]\n    const grid = XLSX.utils.sheet_to_json<string[]>(ws, {\n      header: 1,\n      blankrows: false,\n      defval: \"\",\n      raw: false,\n    })\n    const rows = grid\n      .slice(0, maxRows)\n      .map((r) =>\n        Array.isArray(r) ? r.slice(0, maxCols).map((c) => `${c ?? \"\"}`) : []\n      )\n    ctx.postMessage({ id, ok: true, rows })\n  } catch (err) {\n    ctx.postMessage({\n      id,\n      ok: false,\n      error: err instanceof Error ? err.message : String(err),\n    })\n  }\n}\n",
       "type": "registry:component",
       "target": "@components/file-thumbnail-xlsx.worker.ts"
+    },
+    {
+      "path": "components/file-thumbnail/renderers/code-thumbnail.tsx",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\n\nimport type { ViewerResource } from \"@/lib/viewer-resource\"\nimport { formatCodeThumbnailText } from \"@/components/file-thumbnail/thumbnail-code\"\nimport { useThumbnailResource } from \"@/components/file-thumbnail/thumbnail-resource\"\nimport {\n  getThumbnailText,\n  thumbnailFileMeta,\n} from \"@/components/file-thumbnail/thumbnail-text\"\n\nconst CODE_THUMBNAIL_MAX_LINES = 60\nconst CODE_THUMBNAIL_FONT_SIZE = 5\nconst CODE_THUMBNAIL_LINE_HEIGHT = 1.5\nconst CODE_THUMBNAIL_LINE_NUMBER_WIDTH_CLASS = \"w-2.5\"\n\nexport function CodeThumbnail({\n  resource,\n  thumbnailKey,\n}: {\n  resource: ViewerResource\n  thumbnailKey: string\n}) {\n  const raw = useThumbnailResource(\n    getThumbnailText(\n      thumbnailFileMeta(resource),\n      resource.content,\n      thumbnailKey\n    )\n  )\n  const text = React.useMemo(\n    () => formatCodeThumbnailText(raw, resource.fileName, resource.mimeType),\n    [raw, resource.fileName, resource.mimeType]\n  )\n  const lines = React.useMemo(\n    () =>\n      text\n        .replace(/\\r?\\n$/, \"\")\n        .split(/\\r\\n?|\\n/)\n        .slice(0, CODE_THUMBNAIL_MAX_LINES),\n    [text]\n  )\n\n  return (\n    <div\n      data-slot=\"code-thumbnail\"\n      className=\"absolute inset-0 overflow-hidden bg-card\"\n    >\n      <div\n        aria-hidden\n        className={`absolute inset-y-0 left-0 ${CODE_THUMBNAIL_LINE_NUMBER_WIDTH_CLASS} bg-slate-50`}\n      />\n      <div\n        className=\"relative font-mono\"\n        style={{\n          fontSize: CODE_THUMBNAIL_FONT_SIZE,\n          lineHeight: CODE_THUMBNAIL_LINE_HEIGHT,\n        }}\n      >\n        {lines.map((line, i) => (\n          <div key={i} className=\"flex\">\n            <span\n              className={`${CODE_THUMBNAIL_LINE_NUMBER_WIDTH_CLASS} shrink-0 pr-px text-right text-slate-300 select-none`}\n            >\n              {i + 1}\n            </span>\n            <span className=\"pl-0.5 whitespace-pre text-foreground/80\">\n              {line || \" \"}\n            </span>\n          </div>\n        ))}\n      </div>\n    </div>\n  )\n}\n",
+      "type": "registry:component",
+      "target": "@components/file-thumbnail/renderers/code-thumbnail.tsx"
+    },
+    {
+      "path": "components/file-thumbnail/thumbnail-code.ts",
+      "content": "import type { ViewerDescriptor } from \"@/lib/viewer-source\"\nimport { extensionOf } from \"@/lib/viewer-source\"\n\nconst CODE_THUMBNAIL_EXTENSIONS = new Set([\n  \"bash\",\n  \"c\",\n  \"cc\",\n  \"cjs\",\n  \"cpp\",\n  \"cs\",\n  \"css\",\n  \"env\",\n  \"go\",\n  \"graphql\",\n  \"h\",\n  \"ini\",\n  \"java\",\n  \"js\",\n  \"json\",\n  \"json5\",\n  \"jsonl\",\n  \"jsx\",\n  \"kt\",\n  \"less\",\n  \"log\",\n  \"lua\",\n  \"mjs\",\n  \"ndjson\",\n  \"php\",\n  \"pl\",\n  \"proto\",\n  \"py\",\n  \"r\",\n  \"rb\",\n  \"rs\",\n  \"scala\",\n  \"scss\",\n  \"sh\",\n  \"sql\",\n  \"svelte\",\n  \"swift\",\n  \"toml\",\n  \"ts\",\n  \"tsx\",\n  \"vue\",\n  \"xml\",\n  \"yaml\",\n  \"yml\",\n  \"zsh\",\n])\n\nexport function isCodeThumbnailDescriptor(\n  descriptor: ViewerDescriptor\n): boolean {\n  const extension = extensionOf(descriptor.displayName)\n  if (extension && CODE_THUMBNAIL_EXTENSIONS.has(extension)) return true\n\n  const mime = descriptor.mimeType?.toLowerCase().split(\";\")[0].trim()\n  return (\n    mime === \"application/json\" ||\n    mime === \"application/xml\" ||\n    mime === \"text/javascript\" ||\n    mime === \"application/javascript\" ||\n    Boolean(mime?.endsWith(\"+json\") || mime?.endsWith(\"+xml\"))\n  )\n}\n\nexport function formatCodeThumbnailText(\n  text: string,\n  fileName: string,\n  mimeType?: string\n) {\n  if (!isStrictJson(fileName, mimeType)) return text\n\n  try {\n    return JSON.stringify(JSON.parse(text), null, 2)\n  } catch {\n    return text\n  }\n}\n\nfunction isStrictJson(fileName: string, mimeType?: string) {\n  const extension = extensionOf(fileName)\n  if (extension === \"json\") return true\n  if (\n    extension === \"json5\" ||\n    extension === \"jsonl\" ||\n    extension === \"ndjson\"\n  ) {\n    return false\n  }\n\n  const mime = mimeType?.toLowerCase().split(\";\")[0].trim()\n  return mime === \"application/json\" || Boolean(mime?.endsWith(\"+json\"))\n}\n",
+      "type": "registry:component",
+      "target": "@components/file-thumbnail/thumbnail-code.ts"
     }
   ],
   "type": "registry:ui"

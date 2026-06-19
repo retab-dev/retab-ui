@@ -3,6 +3,10 @@
   "name": "data-cell",
   "title": "Data Cell",
   "description": "A lightweight editable cell for scalar document data: text, numbers, booleans, dates, times, and date-times.",
+  "dependencies": [
+    "@chenglou/pretext@^0.0.8",
+    "lucide-react@^0.460.0"
+  ],
   "registryDependencies": [
     "@retab/calendar",
     "@retab/input",

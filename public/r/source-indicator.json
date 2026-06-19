@@ -3,6 +3,9 @@
   "name": "source-indicator",
   "title": "Source indicator",
   "description": "A floating pill that reports active field source state over a viewer: nothing selected, a located field path, or a field with no source.",
+  "dependencies": [
+    "lucide-react@^0.460.0"
+  ],
   "registryDependencies": [
     "@retab/utils"
   ],

@@ -22,6 +22,8 @@
     "registry:build:items": "node scripts/verify-registry-file-paths.mjs && node scripts/build-registry-items.mjs",
     "registry:validate": "shadcn registry validate",
     "verify:csv-viewer-performance": "node scripts/profile-csv-scrollbench.mjs --assert",
+    "profile:pdf-viewer": "node scripts/profile-pdf-viewer-benchmark.mjs",
+    "verify:pdf-viewer-performance": "node scripts/profile-pdf-viewer-benchmark.mjs --assert",
     "profile:json-table-primitives": "node scripts/profile-json-table-primitive-interactions.mjs --assert",
     "verify:json-table-performance": "node scripts/verify-json-table-performance-budget.mjs",
     "verify:json-table-performance:fresh": "node scripts/verify-json-table-performance-budget-fresh.mjs",
