@@ -2,6 +2,34 @@ import { heroKickers, logoStrip } from "./homepage-content";
 import { LogoStrip } from "./logo-strip";
 import { MarketingButton, MarketingContainer, VercelMark } from "./primitives";
 
+function HeroKicker({
+  body,
+  label,
+}: {
+  body: string;
+  label: string;
+}) {
+  return (
+    <p
+      aria-label={`${label} ${body}`}
+      className="group/kicker relative m-0 flex max-h-4 w-full cursor-default items-start overflow-hidden text-left font-mono text-sm leading-[1.6] font-normal text-pretty text-neutral-950 transition-[max-height] duration-200 ease-out hover:max-h-20 motion-reduce:transition-none"
+    >
+      <span className="block">
+        <span className="inline shrink-0 font-mono text-sm font-semibold tracking-[0.0625rem] text-neutral-950 uppercase transition-colors duration-500 ease-out motion-reduce:transition-none">
+          {label}
+        </span>
+        <span
+          aria-hidden="true"
+          className="inline text-neutral-600 opacity-0 transition-opacity duration-300 ease-out group-hover/kicker:opacity-100 motion-reduce:transition-none"
+        >
+          {" "}
+          {body}
+        </span>
+      </span>
+    </p>
+  );
+}
+
 export function Hero() {
   return (
     <section className="w-full overflow-hidden">
@@ -37,12 +65,11 @@ export function Hero() {
           <div className="order-3 hidden justify-self-start lg:block">
             <div className="grid max-w-sm gap-5">
               {heroKickers.map((kicker) => (
-                <p
+                <HeroKicker
                   key={kicker.label}
-                  className="font-mono text-sm leading-5 font-semibold text-black uppercase"
-                >
-                  {kicker.label}
-                </p>
+                  body={kicker.body}
+                  label={kicker.label}
+                />
               ))}
             </div>
           </div>
