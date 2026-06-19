@@ -147,9 +147,17 @@ export type StartBuildingAction = LinkItem & {
   readonly variant?: "primary" | "secondary"
 }
 
+export type StartBuildingRow = {
+  readonly label: string
+  readonly value: string
+}
+
 export type StartBuildingPlugin = {
   readonly label: string
   readonly command: string
+  readonly href?: string
+  readonly ariaLabel?: string
+  readonly tags?: readonly string[]
 }
 
 export type StartBuildingPanel = {
@@ -157,7 +165,9 @@ export type StartBuildingPanel = {
   readonly audience: string
   readonly body: string
   readonly actions?: readonly StartBuildingAction[]
+  readonly rows?: readonly StartBuildingRow[]
   readonly plugin?: StartBuildingPlugin
+  readonly tags?: readonly string[]
 }
 
 export type StartBuildingContent = {

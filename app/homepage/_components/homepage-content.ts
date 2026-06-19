@@ -534,11 +534,6 @@ export const startBuildingContent = {
           variant: "secondary",
         },
       ],
-      rows: [
-        { label: "stack", value: "Next.js + React" },
-        { label: "deploy", value: "global edge network" },
-        { label: "preview", value: "every commit" },
-      ],
     },
     {
       id: "agents",
@@ -546,12 +541,8 @@ export const startBuildingContent = {
       body: "Tools to connect your agents to Vercel infrastructure.",
       plugin: {
         label: "Plugin",
-        href: vercelHref("/plugin"),
-        ariaLabel: "Open the Vercel Plugin page",
         command: "npx plugins add vercel/vercel-plugin",
-        tags: ["CLI", "MCP", "API"],
       },
-      tags: ["ship", "observe", "recover"],
     },
   ],
 } as const satisfies StartBuildingContent
