@@ -1,10 +1,10 @@
 import {
+  type FeaturedLatestCard,
   type FooterColumnContent,
   type LinkItem,
+  type LogoContent,
   type NavGroup,
   type ProductLaneContent,
-  type ProductVisual,
-  type ProductVisualImage,
   type SecondaryLatestCard,
   type ThemeOption,
 } from "./homepage-types"
@@ -17,8 +17,22 @@ const vercelLink = (label: string, path: string, badge?: string): LinkItem => ({
   badge,
 })
 
+const externalLink = (
+  label: string,
+  href: string,
+  badge?: string
+): LinkItem => ({
+  label,
+  href,
+  badge,
+})
+
+const enterpriseLink = vercelLink("Enterprise", "/enterprise")
+const pricingLink = vercelLink("Pricing", "/pricing")
+
 export const navGroups = [
   {
+    id: "products",
     label: "Products",
     sections: [
       {
@@ -46,14 +60,15 @@ export const navGroups = [
         items: [
           vercelLink("Next.js", "/frameworks/nextjs"),
           vercelLink("Vercel Agent", "/agent"),
-          vercelLink("Vercel Plugin", "/plugins", "New"),
+          vercelLink("Vercel Plugin", "/plugin", "New"),
           vercelLink("Domains", "/domains"),
-          { label: "v0", href: "https://v0.dev" },
+          externalLink("v0", "https://v0.app/"),
         ],
       },
     ],
   },
   {
+    id: "resources",
     label: "Resources",
     sections: [
       {
@@ -82,30 +97,28 @@ export const navGroups = [
           vercelLink("Customers", "/customers"),
           vercelLink("Marketplace", "/marketplace"),
           vercelLink("Partner Finder", "/partners"),
-          vercelLink("Community", "/community"),
+          externalLink("Community", "https://community.vercel.com/"),
           vercelLink("AWS", "/partners/aws"),
         ],
       },
     ],
   },
-] satisfies readonly NavGroup[]
+] as const satisfies readonly NavGroup[]
 
-export const mobileNavLinks = [
-  vercelLink("Products", "/features"),
-  vercelLink("Resources", "/resources"),
-  vercelLink("Enterprise", "/enterprise"),
-  vercelLink("Pricing", "/pricing"),
-] satisfies readonly LinkItem[]
+export const utilityNavLinks = [
+  enterpriseLink,
+  pricingLink,
+] as const satisfies readonly LinkItem[]
 
 export const logoStrip = [
-  "BLACKBOX.AI",
-  "HH",
-  "OpenAI",
-  "DOORDASH",
-  "charles SCHWAB",
-  "The Weather Company",
-  "Polymarket",
-] as const
+  { id: "blackbox", label: "BLACKBOX.AI" },
+  { id: "hh", label: "HH" },
+  { id: "openai", label: "OpenAI" },
+  { id: "doordash", label: "DOORDASH" },
+  { id: "schwab", label: "charles SCHWAB" },
+  { id: "weather", label: "The Weather Company" },
+  { id: "polymarket", label: "Polymarket" },
+] as const satisfies readonly LogoContent[]
 
 export const heroKickers = [
   "For coding agents",
@@ -113,92 +126,80 @@ export const heroKickers = [
   "Automated by agents",
 ] as const
 
-export const heroPillars = [
-  "For coding agents to deploy in their native language, with Vercel's API, CLI, MCP, and Skills.",
-  "To ship apps and agents in sandboxed VMs, with durable backends, powered by hundreds of models.",
-  "Automated by agents who autonomously investigate errors, plan fixes, and open PRs.",
-] as const
-
 export const productLanes = [
   {
     title: "Agents",
+    layout: "default",
+    spacing: "first",
     description:
       "Build systems that reason, execute code in isolation, run for hours, and recover from failure.",
     proofCustomer: "Notion",
     proof: "powers millions of agent conversations daily on Vercel.",
     features: [
-      "Durable orchestration",
-      "Sandboxed environments",
-      "AI model gateway",
-      "Fluid compute",
+      "Durable Orchestration",
+      "Sandboxed Environments",
+      "AI Model Gateway",
+      "Fluid Compute",
     ],
-    visual: "agents",
+    image: {
+      desktopSrc:
+        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/notion-desktop-light.webp",
+      desktopWidth: 2721,
+      desktopHeight: 1434,
+      mobileSrc:
+        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/notion-mobile-light.webp",
+      alt: "Notion AI agent interface deployed on Vercel",
+    },
   },
   {
     title: "Apps",
+    layout: "reversed",
+    spacing: "standard",
     description:
       "Ship marketing sites, SaaS backends, and storefronts on infrastructure that scales from zero to global traffic.",
     proofCustomer: "Zapier",
     proof: "serves over 5 million monthly website visits on Vercel.",
     features: [
-      "Global delivery",
-      "Deployment environments",
-      "Serverless functions",
-      "Web application firewall",
+      "Global Delivery",
+      "Deployment Environments",
+      "Serverless Functions",
+      "Web Application Firewall",
     ],
-    visual: "apps",
+    image: {
+      desktopSrc:
+        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/zapier-desktop-light.webp",
+      desktopWidth: 2784,
+      desktopHeight: 1560,
+      mobileSrc:
+        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/zapier-mobile-light.webp",
+      alt: "Zapier application interface deployed on Vercel",
+    },
   },
   {
     title: "Platforms",
+    layout: "default",
+    spacing: "standard",
     description:
       "Host multi-tenant products that isolate every customer, provision custom domains, and serve millions of sites.",
     proofCustomer: "Mintlify",
-    proof: "powers documentation for 20,000+ companies on Vercel.",
+    proof: "powers documentation for 20,000+ companies on Vercel",
     features: [
-      "Tenant isolation",
-      "Domain management",
-      "Custom SSL certificates",
+      "Tenant Isolation",
+      "Domain Management",
+      "Custom SSL Certificates",
       "Preview URLs",
     ],
-    visual: "platforms",
+    image: {
+      desktopSrc:
+        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/mintlify-desktop-light.webp",
+      desktopWidth: 2784,
+      desktopHeight: 1560,
+      mobileSrc:
+        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/mintlify-mobile-light.webp",
+      alt: "Mintlify documentation platform interface deployed on Vercel",
+    },
   },
-] satisfies readonly ProductLaneContent[]
-
-export const productVisualImages = {
-  agents: {
-    desktopSrc:
-      "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/notion-desktop-light.webp",
-    desktopWidth: 2721,
-    desktopHeight: 1434,
-    mobileSrc:
-      "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/notion-mobile-light.webp",
-    mobileWidth: 1284,
-    mobileHeight: 1026,
-    alt: "Agents",
-  },
-  apps: {
-    desktopSrc:
-      "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/zapier-desktop-light.webp",
-    desktopWidth: 2784,
-    desktopHeight: 1560,
-    mobileSrc:
-      "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/zapier-mobile-light.webp",
-    mobileWidth: 1284,
-    mobileHeight: 1026,
-    alt: "Apps",
-  },
-  platforms: {
-    desktopSrc:
-      "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/mintlify-desktop-light.webp",
-    desktopWidth: 2784,
-    desktopHeight: 1560,
-    mobileSrc:
-      "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/mintlify-mobile-light.webp",
-    mobileWidth: 1284,
-    mobileHeight: 1026,
-    alt: "Platforms",
-  },
-} satisfies Record<ProductVisual, ProductVisualImage>
+] as const satisfies readonly ProductLaneContent[]
 
 export const featuredLatestCard = {
   label: "Ship 26",
@@ -208,29 +209,40 @@ export const featuredLatestCard = {
   imageSrc:
     "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/ship-26-homepage.svg",
   alt: "Vercel Ship 26 conference",
-} as const
+} as const satisfies FeaturedLatestCard
 
 export const secondaryLatestCards = [
   {
     label: "Workflows",
     body: "Pause for minutes or months, then resume from that exact point.",
     href: vercelHref("/workflows"),
-    metrics: [
-      ["workflow()", "420ms"],
-      ["gen()", "252ms"],
-      ["eval()", "168ms"],
-      ["pub()", "168ms"],
-    ],
+    tone: "light",
+    visual: {
+      kind: "metrics",
+      metrics: [
+        ["workflow()", "420ms"],
+        ["gen()", "252ms"],
+        ["eval()", "168ms"],
+        ["pub()", "168ms"],
+      ],
+    },
   },
   {
     label: "Sandbox",
     body: "The safest way to run code you didn't write.",
     href: vercelHref("/sandbox"),
+    tone: "dark",
+    visual: {
+      kind: "sandbox-terminal",
+    },
   },
-] satisfies readonly SecondaryLatestCard[]
+] as const satisfies readonly SecondaryLatestCard[]
+
+export const statusLink = externalLink("Status", "https://vercel-status.com/")
 
 export const footerColumns = [
   {
+    id: "agent-stack",
     title: "Agent Stack",
     links: [
       vercelLink("AI SDK", "/ai-sdk"),
@@ -242,6 +254,7 @@ export const footerColumns = [
     ],
   },
   {
+    id: "core-platform",
     title: "Core Platform",
     links: [
       vercelLink("CI/CD", "/features/previews"),
@@ -251,6 +264,7 @@ export const footerColumns = [
     ],
   },
   {
+    id: "security",
     title: "Security",
     links: [
       vercelLink("Platform Security", "/security"),
@@ -260,17 +274,19 @@ export const footerColumns = [
     ],
   },
   {
+    id: "tools",
     title: "Tools",
     links: [
       vercelLink("Vercel Drop", "/drop", "New"),
       vercelLink("Vercel Agent", "/agent"),
-      vercelLink("Vercel Plugin", "/plugins", "New"),
+      vercelLink("Vercel Plugin", "/plugin", "New"),
       vercelLink("Next.js", "/frameworks/nextjs"),
       vercelLink("Domains", "/domains"),
-      { label: "v0", href: "https://v0.dev" },
+      externalLink("v0", "https://v0.app/"),
     ],
   },
   {
+    id: "frameworks",
     title: "Frameworks",
     links: [
       vercelLink("Nuxt", "/frameworks/nuxt"),
@@ -284,6 +300,7 @@ export const footerColumns = [
     ],
   },
   {
+    id: "sdks",
     title: "SDKs",
     links: [
       vercelLink("Vercel SDK", "/docs/sdk"),
@@ -291,10 +308,11 @@ export const footerColumns = [
       vercelLink("Flags SDK", "/docs/flags"),
       vercelLink("Chat SDK", "/docs/ai-sdk", "New"),
       vercelLink("Queues SDK", "/docs/queues", "New"),
-      vercelLink("Streamdown", "/docs/ai-sdk"),
+      externalLink("Streamdown", "https://streamdown.ai/"),
     ],
   },
   {
+    id: "build",
     title: "Build",
     links: [
       vercelLink("AI Apps", "/solutions/ai"),
@@ -307,6 +325,7 @@ export const footerColumns = [
     ],
   },
   {
+    id: "learn",
     title: "Learn",
     links: [
       vercelLink("Docs", "/docs"),
@@ -315,10 +334,11 @@ export const footerColumns = [
       vercelLink("Knowledge Base", "/guides"),
       vercelLink("Academy", "/academy"),
       vercelLink("Articles", "/resources"),
-      vercelLink("Community", "/community"),
+      externalLink("Community", "https://community.vercel.com/"),
     ],
   },
   {
+    id: "explore",
     title: "Explore",
     links: [
       vercelLink("Customers", "/customers"),
@@ -329,6 +349,7 @@ export const footerColumns = [
     ],
   },
   {
+    id: "company",
     title: "Company",
     links: [
       vercelLink("About", "/about"),
@@ -344,6 +365,7 @@ export const footerColumns = [
     ],
   },
   {
+    id: "legal-trust",
     title: "Legal & Trust",
     links: [
       vercelLink("Privacy Policy", "/legal/privacy-policy"),
@@ -352,12 +374,12 @@ export const footerColumns = [
       vercelLink("DPA", "/legal/dpa"),
       vercelLink("Acceptable Use Policy", "/legal/aup"),
       vercelLink("Legal (all documents)", "/legal"),
-      vercelLink("Trust Center", "/security"),
-      { label: "Status", href: "https://vercel-status.com/" },
+      externalLink("Trust Center", "https://security.vercel.com/"),
       vercelLink("Cookie Preferences", "/"),
     ],
   },
   {
+    id: "social",
     title: "Social",
     links: [
       { label: "GitHub", href: "https://github.com/vercel" },
@@ -367,10 +389,10 @@ export const footerColumns = [
       { label: "Instagram", href: "https://www.instagram.com/vercel" },
     ],
   },
-] satisfies readonly FooterColumnContent[]
+] as const satisfies readonly FooterColumnContent[]
 
 export const themeOptions = [
-  "system",
-  "light",
-  "dark",
-] satisfies readonly ThemeOption[]
+  { value: "system", label: "System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+] as const satisfies readonly ThemeOption[]

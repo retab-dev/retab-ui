@@ -3,6 +3,8 @@ import Link from "next/link"
 
 import { cn } from "@/lib/utils"
 
+import { type LinkItem } from "./homepage-types"
+
 export function VercelMark({ className }: { className?: string }) {
   return (
     <svg
@@ -21,9 +23,29 @@ export function MarketingContainer({
 }: ComponentProps<"div">) {
   return (
     <div
-      className={cn("mx-auto w-full max-w-[1400px] px-6", className)}
+      className={cn("mx-auto w-[calc(100%-48px)] max-w-[1400px]", className)}
       {...props}
     />
+  )
+}
+
+export function getLinkAriaLabel(item: LinkItem) {
+  return item.badge ? `${item.label} ${item.badge}` : item.label
+}
+
+export function MarketingLinkLabel({ item }: { item: LinkItem }) {
+  return (
+    <>
+      <span className="min-w-0 break-words">{item.label}</span>
+      {item.badge ? (
+        <span
+          aria-hidden="true"
+          className="shrink-0 rounded-[2px] border border-black px-1 text-[9px] leading-3 font-semibold text-black"
+        >
+          {item.badge}
+        </span>
+      ) : null}
+    </>
   )
 }
 

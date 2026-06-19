@@ -1,4 +1,5 @@
 import { logoStrip } from "./homepage-content"
+import { type LogoContent } from "./homepage-types"
 
 export function LogoStrip() {
   const repeatedLogos = [...logoStrip, ...logoStrip]
@@ -11,44 +12,56 @@ export function LogoStrip() {
           to { transform: translateX(calc(-50% - 1.5rem)); }
         }
       `}</style>
-      <div className="flex w-max min-w-0 items-center gap-12 px-6 text-neutral-950 motion-safe:animate-[homepage-logo-marquee_28s_linear_infinite] md:hidden">
+      <ul className="sr-only">
+        {logoStrip.map((logo) => (
+          <li key={logo.id}>{logo.label}</li>
+        ))}
+      </ul>
+      <div
+        aria-hidden="true"
+        className="flex w-max min-w-0 items-center gap-12 px-6 text-neutral-950 motion-safe:animate-[homepage-logo-marquee_28s_linear_infinite] md:hidden"
+      >
         {repeatedLogos.map((logo, index) => (
-          <BrandLogo key={`${logo}-${index}`} logo={logo} />
+          <BrandLogo key={`${logo.id}-${index}`} logo={logo} />
         ))}
       </div>
-      <div className="mx-auto hidden w-full max-w-[1400px] min-w-0 items-center justify-between gap-8 px-6 text-neutral-950 md:flex">
+      <div className="mx-auto hidden w-[calc(100%-48px)] max-w-[1400px] min-w-0 items-center justify-between gap-8 text-neutral-950 md:flex">
         {logoStrip.map((logo) => (
-          <BrandLogo key={logo} logo={logo} />
+          <BrandLogo key={logo.id} logo={logo} />
         ))}
       </div>
     </div>
   )
 }
 
-function BrandLogo({ logo }: { logo: string }) {
-  if (logo === "BLACKBOX.AI") {
+function BrandLogo({ logo }: { logo: LogoContent }) {
+  if (logo.id === "blackbox") {
     return (
       <div className="flex shrink-0 items-center gap-1 text-base leading-none font-bold">
         <span className="block size-4 rotate-45 border-2 border-black" />
-        BLACKBOX.AI
+        {logo.label}
       </div>
     )
   }
 
-  if (logo === "HH") {
-    return <div className="shrink-0 text-3xl leading-none font-black">HH</div>
+  if (logo.id === "hh") {
+    return (
+      <div className="shrink-0 text-3xl leading-none font-black">
+        {logo.label}
+      </div>
+    )
   }
 
-  if (logo === "DOORDASH") {
+  if (logo.id === "doordash") {
     return (
       <div className="flex shrink-0 items-center gap-2 text-base leading-none font-bold">
         <span className="block h-2.5 w-7 rounded-full bg-black" />
-        DOORDASH
+        {logo.label}
       </div>
     )
   }
 
-  if (logo === "charles SCHWAB") {
+  if (logo.id === "schwab") {
     return (
       <div className="shrink-0 text-center font-serif text-lg leading-[0.8] font-semibold">
         charles
@@ -58,7 +71,7 @@ function BrandLogo({ logo }: { logo: string }) {
     )
   }
 
-  if (logo === "The Weather Company") {
+  if (logo.id === "weather") {
     return (
       <div className="shrink-0 text-center text-sm leading-[0.9] font-black">
         The
@@ -70,18 +83,18 @@ function BrandLogo({ logo }: { logo: string }) {
     )
   }
 
-  if (logo === "Polymarket") {
+  if (logo.id === "polymarket") {
     return (
       <div className="flex shrink-0 items-center gap-2 text-lg leading-none font-semibold">
         <span className="block size-5 rotate-45 border-2 border-black" />
-        Polymarket
+        {logo.label}
       </div>
     )
   }
 
   return (
     <div className="shrink-0 text-lg leading-none font-semibold opacity-90">
-      {logo}
+      {logo.label}
     </div>
   )
 }

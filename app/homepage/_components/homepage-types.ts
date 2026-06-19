@@ -1,50 +1,95 @@
 export type LinkItem = {
-  label: string
-  href: string
-  badge?: string
+  readonly label: string
+  readonly href: string
+  readonly badge?: string
 }
 
 export type NavGroup = {
-  label: string
-  sections: readonly {
-    title: string
-    items: readonly LinkItem[]
-  }[]
+  readonly id: string
+  readonly label: string
+  readonly sections: readonly NavSection[]
 }
 
-export type ProductVisual = "agents" | "apps" | "platforms"
+export type NavSection = {
+  readonly title: string
+  readonly items: readonly LinkItem[]
+}
+
+export type LogoId =
+  | "blackbox"
+  | "hh"
+  | "openai"
+  | "doordash"
+  | "schwab"
+  | "weather"
+  | "polymarket"
+
+export type LogoContent = {
+  readonly id: LogoId
+  readonly label: string
+}
+
+export type ProductLaneLayout = "default" | "reversed"
+export type ProductLaneSpacing = "first" | "standard"
 
 export type ProductLaneContent = {
-  title: string
-  description: string
-  proofCustomer: string
-  proof: string
-  features: readonly string[]
-  visual: ProductVisual
+  readonly title: string
+  readonly layout: ProductLaneLayout
+  readonly spacing: ProductLaneSpacing
+  readonly description: string
+  readonly proofCustomer: string
+  readonly proof: string
+  readonly features: readonly string[]
+  readonly image: ProductVisualImage
 }
 
 export type ProductVisualImage = {
-  desktopSrc: string
-  desktopWidth: number
-  desktopHeight: number
-  mobileSrc: string
-  mobileWidth: number
-  mobileHeight: number
-  alt: string
+  readonly desktopSrc: string
+  readonly desktopWidth: number
+  readonly desktopHeight: number
+  readonly mobileSrc: string
+  readonly alt: string
 }
 
 export type LatestMetric = readonly [label: string, value: string]
 
+export type FeaturedLatestCard = {
+  readonly label: string
+  readonly title: string
+  readonly badge: string
+  readonly href: string
+  readonly imageSrc: string
+  readonly alt: string
+}
+
+export type SecondaryLatestCardTone = "light" | "dark"
+
+export type SecondaryLatestCardVisual =
+  | {
+      readonly kind: "metrics"
+      readonly metrics: readonly LatestMetric[]
+    }
+  | {
+      readonly kind: "sandbox-terminal"
+    }
+
 export type SecondaryLatestCard = {
-  label: string
-  body: string
-  href: string
-  metrics?: readonly LatestMetric[]
+  readonly label: string
+  readonly body: string
+  readonly href: string
+  readonly tone: SecondaryLatestCardTone
+  readonly visual: SecondaryLatestCardVisual
 }
 
 export type FooterColumnContent = {
-  title: string
-  links: readonly LinkItem[]
+  readonly id: string
+  readonly title: string
+  readonly links: readonly LinkItem[]
 }
 
-export type ThemeOption = "system" | "light" | "dark"
+export type ThemeValue = "system" | "light" | "dark"
+
+export type ThemeOption = {
+  readonly value: ThemeValue
+  readonly label: string
+}

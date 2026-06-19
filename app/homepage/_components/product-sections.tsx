@@ -1,12 +1,13 @@
 import { cn } from "@/lib/utils"
 
-import { productLanes, productVisualImages } from "./homepage-content"
-import { type ProductLaneContent, type ProductVisual } from "./homepage-types"
+import { productLanes } from "./homepage-content"
+import {
+  type ProductLaneContent,
+  type ProductVisualImage as ProductVisualImageContent,
+} from "./homepage-types"
 import { SectionHeader } from "./section-header"
 
-function ProductVisualImage({ visual }: { visual: ProductVisual }) {
-  const image = productVisualImages[visual]
-
+function ProductVisualImage({ image }: { image: ProductVisualImageContent }) {
   return (
     <picture>
       <source media="(max-width: 767px)" srcSet={image.mobileSrc} />
@@ -17,7 +18,7 @@ function ProductVisualImage({ visual }: { visual: ProductVisual }) {
         alt={image.alt}
         loading="lazy"
         decoding="async"
-        className="block min-h-[360px] w-full rounded-md border border-neutral-200 object-cover shadow-[0_20px_80px_rgba(0,0,0,0.06)] md:min-h-[420px]"
+        className="block h-auto w-full"
       />
     </picture>
   )
@@ -36,33 +37,38 @@ function FeatureList({ features }: { features: readonly string[] }) {
   )
 }
 
-function ProductLane({
-  lane,
-  flip = false,
-  isFirst = false,
-}: {
-  lane: ProductLaneContent
-  flip?: boolean
-  isFirst?: boolean
-}) {
-  const { title, description, proofCustomer, proof, features, visual } = lane
+function ProductLane({ lane }: { lane: ProductLaneContent }) {
+  const {
+    title,
+    description,
+    proofCustomer,
+    proof,
+    features,
+    image,
+    layout,
+    spacing,
+  } = lane
+  const isReversed = layout === "reversed"
+  const isFirst = spacing === "first"
 
   return (
     <section className={cn(isFirst ? "mt-24 md:mt-[72px]" : "mt-40 md:mt-52")}>
       <SectionHeader
         title={title}
         description={description}
-        titleClassName={flip ? "lg:col-span-4 lg:col-start-5" : undefined}
-        descriptionClassName={flip ? "lg:col-start-9" : undefined}
+        titleClassName={isReversed ? "lg:col-span-4 lg:col-start-5" : undefined}
+        descriptionClassName={
+          isReversed ? "lg:col-span-3 lg:col-start-9" : undefined
+        }
       />
-      <div className="mt-14 grid gap-10 lg:grid-cols-12 lg:items-start">
-        <div className={cn("lg:col-span-8", flip && "lg:col-start-5")}>
-          <ProductVisualImage visual={visual} />
+      <div className="mt-14 grid gap-5 lg:grid-cols-12 lg:items-start">
+        <div className={cn("lg:col-span-9", isReversed && "lg:col-start-4")}>
+          <ProductVisualImage image={image} />
         </div>
         <div
           className={cn(
-            "space-y-8 lg:col-span-4",
-            flip ? "lg:col-start-1 lg:row-start-1" : "lg:col-start-9"
+            "space-y-8 lg:col-span-3",
+            isReversed ? "lg:col-start-1 lg:row-start-1" : "lg:col-start-10"
           )}
         >
           <p className="max-w-[360px] text-3xl leading-[1.12] text-black md:text-4xl xl:text-[40px]">
@@ -78,13 +84,8 @@ function ProductLane({
 export function ProductSections() {
   return (
     <>
-      {productLanes.map((lane, index) => (
-        <ProductLane
-          key={lane.title}
-          lane={lane}
-          flip={index === 1}
-          isFirst={index === 0}
-        />
+      {productLanes.map((lane) => (
+        <ProductLane key={lane.title} lane={lane} />
       ))}
     </>
   )
