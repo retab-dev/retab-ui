@@ -1,33 +1,13 @@
-export type LinkItem = {
-  label: string
-  href: string
-  badge?: string
-}
-
-export type NavGroup = {
-  label: string
-  sections: {
-    title: string
-    items: LinkItem[]
-  }[]
-}
-
-export type ProductVisual = "agents" | "apps" | "platforms"
-
-export type ProductLaneContent = {
-  title: string
-  description: string
-  proofCustomer: string
-  proof: string
-  features: string[]
-  visual: ProductVisual
-}
-
-export type ProductVisualImage = {
-  desktopSrc: string
-  mobileSrc: string
-  alt: string
-}
+import {
+  type FooterColumnContent,
+  type LinkItem,
+  type NavGroup,
+  type ProductLaneContent,
+  type ProductVisual,
+  type ProductVisualImage,
+  type SecondaryLatestCard,
+  type ThemeOption,
+} from "./homepage-types"
 
 const vercelHref = (path: string) => `https://vercel.com${path}`
 
@@ -37,7 +17,7 @@ const vercelLink = (label: string, path: string, badge?: string): LinkItem => ({
   badge,
 })
 
-export const navGroups: NavGroup[] = [
+export const navGroups = [
   {
     label: "Products",
     sections: [
@@ -108,14 +88,14 @@ export const navGroups: NavGroup[] = [
       },
     ],
   },
-]
+] satisfies readonly NavGroup[]
 
 export const mobileNavLinks = [
   vercelLink("Products", "/features"),
   vercelLink("Resources", "/resources"),
   vercelLink("Enterprise", "/enterprise"),
   vercelLink("Pricing", "/pricing"),
-]
+] satisfies readonly LinkItem[]
 
 export const logoStrip = [
   "BLACKBOX.AI",
@@ -125,21 +105,21 @@ export const logoStrip = [
   "charles SCHWAB",
   "The Weather Company",
   "Polymarket",
-]
+] as const
 
 export const heroKickers = [
   "For coding agents",
   "To ship apps and agents",
   "Automated by agents",
-]
+] as const
 
 export const heroPillars = [
   "For coding agents to deploy in their native language, with Vercel's API, CLI, MCP, and Skills.",
-  "To ship apps and agents in Sandboxed VMs, with durable backends, powered by hundreds of models.",
+  "To ship apps and agents in sandboxed VMs, with durable backends, powered by hundreds of models.",
   "Automated by agents who autonomously investigate errors, plan fixes, and open PRs.",
-]
+] as const
 
-export const productLanes: ProductLaneContent[] = [
+export const productLanes = [
   {
     title: "Agents",
     description:
@@ -147,10 +127,10 @@ export const productLanes: ProductLaneContent[] = [
     proofCustomer: "Notion",
     proof: "powers millions of agent conversations daily on Vercel.",
     features: [
-      "Durable Orchestration",
-      "Sandboxed Environments",
-      "AI Model Gateway",
-      "Fluid Compute",
+      "Durable orchestration",
+      "Sandboxed environments",
+      "AI model gateway",
+      "Fluid compute",
     ],
     visual: "agents",
   },
@@ -161,10 +141,10 @@ export const productLanes: ProductLaneContent[] = [
     proofCustomer: "Zapier",
     proof: "serves over 5 million monthly website visits on Vercel.",
     features: [
-      "Global Delivery",
-      "Deployment Environments",
-      "Serverless Functions",
-      "Web Application Firewall",
+      "Global delivery",
+      "Deployment environments",
+      "Serverless functions",
+      "Web application firewall",
     ],
     visual: "apps",
   },
@@ -173,37 +153,49 @@ export const productLanes: ProductLaneContent[] = [
     description:
       "Host multi-tenant products that isolate every customer, provision custom domains, and serve millions of sites.",
     proofCustomer: "Mintlify",
-    proof: "powers documentation for 20,000+ companies on Vercel",
+    proof: "powers documentation for 20,000+ companies on Vercel.",
     features: [
-      "Tenant Isolation",
-      "Domain Management",
-      "Custom SSL Certificates",
+      "Tenant isolation",
+      "Domain management",
+      "Custom SSL certificates",
       "Preview URLs",
     ],
     visual: "platforms",
   },
-]
+] satisfies readonly ProductLaneContent[]
 
 export const productVisualImages = {
   agents: {
     desktopSrc:
       "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/notion-desktop-light.webp",
+    desktopWidth: 2721,
+    desktopHeight: 1434,
     mobileSrc:
       "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/notion-mobile-light.webp",
+    mobileWidth: 1284,
+    mobileHeight: 1026,
     alt: "Agents",
   },
   apps: {
     desktopSrc:
       "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/zapier-desktop-light.webp",
+    desktopWidth: 2784,
+    desktopHeight: 1560,
     mobileSrc:
       "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/zapier-mobile-light.webp",
+    mobileWidth: 1284,
+    mobileHeight: 1026,
     alt: "Apps",
   },
   platforms: {
     desktopSrc:
       "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/mintlify-desktop-light.webp",
+    desktopWidth: 2784,
+    desktopHeight: 1560,
     mobileSrc:
       "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/mintlify-mobile-light.webp",
+    mobileWidth: 1284,
+    mobileHeight: 1026,
     alt: "Platforms",
   },
 } satisfies Record<ProductVisual, ProductVisualImage>
@@ -216,20 +208,26 @@ export const featuredLatestCard = {
   imageSrc:
     "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/ship-26-homepage.svg",
   alt: "Vercel Ship 26 conference",
-}
+} as const
 
 export const secondaryLatestCards = [
   {
     label: "Workflows",
     body: "Pause for minutes or months, then resume from that exact point.",
     href: vercelHref("/workflows"),
+    metrics: [
+      ["workflow()", "420ms"],
+      ["gen()", "252ms"],
+      ["eval()", "168ms"],
+      ["pub()", "168ms"],
+    ],
   },
   {
     label: "Sandbox",
     body: "The safest way to run code you didn't write.",
     href: vercelHref("/sandbox"),
   },
-] as const
+] satisfies readonly SecondaryLatestCard[]
 
 export const footerColumns = [
   {
@@ -369,7 +367,10 @@ export const footerColumns = [
       { label: "Instagram", href: "https://www.instagram.com/vercel" },
     ],
   },
-] as const
+] satisfies readonly FooterColumnContent[]
 
-export const themeOptions = ["system", "light", "dark"] as const
-export type ThemeOption = (typeof themeOptions)[number]
+export const themeOptions = [
+  "system",
+  "light",
+  "dark",
+] satisfies readonly ThemeOption[]

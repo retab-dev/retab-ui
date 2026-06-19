@@ -1,11 +1,7 @@
 import { cn } from "@/lib/utils"
 
-import {
-  productLanes,
-  productVisualImages,
-  type ProductLaneContent,
-  type ProductVisual,
-} from "./data"
+import { productLanes, productVisualImages } from "./homepage-content"
+import { type ProductLaneContent, type ProductVisual } from "./homepage-types"
 import { SectionHeader } from "./section-header"
 
 function ProductVisualImage({ visual }: { visual: ProductVisual }) {
@@ -16,7 +12,11 @@ function ProductVisualImage({ visual }: { visual: ProductVisual }) {
       <source media="(max-width: 767px)" srcSet={image.mobileSrc} />
       <img
         src={image.desktopSrc}
+        width={image.desktopWidth}
+        height={image.desktopHeight}
         alt={image.alt}
+        loading="lazy"
+        decoding="async"
         className="block min-h-[360px] w-full rounded-md border border-neutral-200 object-cover shadow-[0_20px_80px_rgba(0,0,0,0.06)] md:min-h-[420px]"
       />
     </picture>
@@ -49,7 +49,12 @@ function ProductLane({
 
   return (
     <section className={cn(isFirst ? "mt-24 md:mt-[72px]" : "mt-40 md:mt-52")}>
-      <SectionHeader title={title} description={description} flip={flip} />
+      <SectionHeader
+        title={title}
+        description={description}
+        titleClassName={flip ? "lg:col-span-4 lg:col-start-5" : undefined}
+        descriptionClassName={flip ? "lg:col-start-9" : undefined}
+      />
       <div className="mt-14 grid gap-10 lg:grid-cols-12 lg:items-start">
         <div className={cn("lg:col-span-8", flip && "lg:col-start-5")}>
           <ProductVisualImage visual={visual} />

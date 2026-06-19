@@ -1,8 +1,8 @@
-import { type ReactNode } from "react"
 import Link from "next/link"
 import { ChevronDown, Menu } from "lucide-react"
 
-import { mobileNavLinks, navGroups, type LinkItem, type NavGroup } from "./data"
+import { mobileNavLinks, navGroups } from "./homepage-content"
+import { type LinkItem, type NavGroup } from "./homepage-types"
 import { MarketingButton, MarketingContainer, VercelMark } from "./primitives"
 
 const focusRing =
@@ -21,29 +21,6 @@ function LinkLabel({ item }: { item: LinkItem }) {
         </span>
       ) : null}
     </>
-  )
-}
-
-function HeaderButton({
-  href,
-  children,
-  variant = "secondary",
-}: {
-  href: string
-  children: ReactNode
-  variant?: "primary" | "secondary"
-}) {
-  return (
-    <Link
-      href={href}
-      className={`inline-flex h-8 items-center justify-center rounded-md border px-3 text-sm font-medium transition-colors ${focusRing} ${
-        variant === "primary"
-          ? "border-black bg-black text-white hover:bg-neutral-800"
-          : "border-neutral-200 bg-white text-black hover:border-neutral-300 hover:bg-neutral-50"
-      }`}
-    >
-      {children}
-    </Link>
   )
 }
 
@@ -136,19 +113,35 @@ export function MarketingHeader() {
         </nav>
 
         <div className="ml-auto hidden items-center gap-2 min-[961px]:flex">
-          <HeaderButton href="https://vercel.com/contact/sales/demo">
+          <MarketingButton
+            href="https://vercel.com/contact/sales/demo"
+            variant="secondary"
+            size="compact"
+            shape="rounded"
+          >
             Get a Demo
-          </HeaderButton>
-          <HeaderButton href="https://vercel.com/login">Log In</HeaderButton>
-          <HeaderButton href="https://vercel.com/signup" variant="primary">
+          </MarketingButton>
+          <MarketingButton
+            href="https://vercel.com/login"
+            variant="secondary"
+            size="compact"
+            shape="rounded"
+          >
+            Log In
+          </MarketingButton>
+          <MarketingButton
+            href="https://vercel.com/signup"
+            size="compact"
+            shape="rounded"
+          >
             Sign Up
-          </HeaderButton>
+          </MarketingButton>
         </div>
 
         <details className="group relative ml-auto min-[961px]:hidden">
           <summary
             aria-label="Open navigation"
-            className={`flex size-11 cursor-pointer list-none items-center justify-center rounded-full border border-transparent text-black marker:hidden ${focusRing}`}
+            className={`flex size-11 cursor-pointer list-none items-center justify-center rounded-full border border-transparent text-black marker:hidden [&::-webkit-details-marker]:hidden ${focusRing}`}
           >
             <Menu className="size-5" />
           </summary>
@@ -194,10 +187,16 @@ export function MarketingHeader() {
                 <MarketingButton
                   href="https://vercel.com/login"
                   variant="secondary"
+                  size="compact"
+                  shape="rounded"
                 >
                   Log In
                 </MarketingButton>
-                <MarketingButton href="https://vercel.com/signup">
+                <MarketingButton
+                  href="https://vercel.com/signup"
+                  size="compact"
+                  shape="rounded"
+                >
                   Sign Up
                 </MarketingButton>
               </div>

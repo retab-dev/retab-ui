@@ -3,12 +3,8 @@ import { Monitor, Moon, Sun } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-import {
-  footerColumns,
-  themeOptions,
-  type LinkItem,
-  type ThemeOption,
-} from "./data"
+import { footerColumns, themeOptions } from "./homepage-content"
+import { type LinkItem, type ThemeOption } from "./homepage-types"
 import { VercelMark } from "./primitives"
 
 function FooterColumn({

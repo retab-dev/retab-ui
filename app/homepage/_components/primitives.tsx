@@ -29,15 +29,21 @@ export function MarketingContainer({
 
 export function MarketingButton({
   variant = "primary",
+  size = "default",
+  shape = "pill",
   className,
   ...props
 }: ComponentProps<typeof Link> & {
   variant?: "primary" | "secondary"
+  size?: "default" | "compact"
+  shape?: "pill" | "rounded"
 }) {
   return (
     <Link
       className={cn(
-        "inline-flex h-10 items-center justify-center rounded-full border px-4 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none",
+        "inline-flex items-center justify-center border text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none",
+        size === "compact" ? "h-8 px-3" : "h-10 px-4",
+        shape === "rounded" ? "rounded-md" : "rounded-full",
         variant === "primary"
           ? "border-black bg-black text-white hover:bg-neutral-800"
           : "border-neutral-200 bg-white text-black hover:border-neutral-300 hover:bg-neutral-50",

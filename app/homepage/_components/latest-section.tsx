@@ -1,6 +1,7 @@
 import Link from "next/link"
 
-import { featuredLatestCard, secondaryLatestCards } from "./data"
+import { featuredLatestCard, secondaryLatestCards } from "./homepage-content"
+import { type LatestMetric } from "./homepage-types"
 import { SectionHeader } from "./section-header"
 
 export function LatestSection() {
@@ -18,7 +19,11 @@ export function LatestSection() {
         >
           <img
             src={featuredLatestCard.imageSrc}
+            width={690}
+            height={576}
             alt={featuredLatestCard.alt}
+            loading="lazy"
+            decoding="async"
             className="absolute inset-0 size-full object-cover"
           />
         </Link>
@@ -34,7 +39,9 @@ export function LatestSection() {
                 <h3 className="text-3xl leading-tight font-medium text-black">
                   {card.label}
                 </h3>
-                {card.label === "Workflows" ? <WorkflowMetricStrip /> : null}
+                {card.metrics ? (
+                  <WorkflowMetricStrip metrics={card.metrics} />
+                ) : null}
                 <p className="mt-3 max-w-md font-mono text-sm leading-6 text-neutral-700">
                   {card.body}
                 </p>
@@ -47,14 +54,11 @@ export function LatestSection() {
   )
 }
 
-function WorkflowMetricStrip() {
-  const metrics = [
-    ["workflow()", "420ms"],
-    ["gen()", "252ms"],
-    ["eval()", "168ms"],
-    ["pub()", "168ms"],
-  ]
-
+function WorkflowMetricStrip({
+  metrics,
+}: {
+  metrics: readonly LatestMetric[]
+}) {
   return (
     <div className="mt-6 grid max-w-md grid-cols-2 gap-2 font-mono text-xs sm:grid-cols-4">
       {metrics.map(([label, value]) => (
