@@ -30,9 +30,9 @@ export function Hero() {
           </div>
         </div>
 
-        <div className="order-1 flex justify-center min-[961px]:order-2 min-[961px]:translate-y-5">
+        <div className="order-1 flex justify-center min-[961px]:order-2 min-[961px]:-translate-x-[26px] min-[961px]:translate-y-5">
           <div className="relative grid size-40 place-items-center min-[720px]:size-56 min-[961px]:size-56 sm:size-64 md:size-72">
-            <VercelMark className="relative size-[195px] drop-shadow-[0_18px_28px_rgba(0,0,0,0.14)] max-[960px]:-translate-x-[18px] max-[960px]:translate-y-10 min-[961px]:!size-[222px]" />
+            <VercelMark className="relative size-[195px] drop-shadow-[0_18px_28px_rgba(0,0,0,0.14)] max-[960px]:-translate-x-[18px] max-[960px]:translate-y-10 min-[961px]:!size-[217px]" />
           </div>
         </div>
 

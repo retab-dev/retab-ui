@@ -92,7 +92,7 @@ export function StartBuildingPluginCommand({
   }
 
   return (
-    <div ref={rootRef} className="relative mt-8 max-w-full">
+    <div ref={rootRef} className="relative mt-14 max-w-full">
       <div className="inline-flex h-10 max-w-[calc(100vw-48px)] items-center gap-1 rounded-full bg-white px-2 py-1.5 text-black shadow-[0_0_0_1px_rgba(0,0,0,0.12),0_1px_2px_rgba(0,0,0,0.06)]">
         <button
           type="button"

@@ -9,7 +9,7 @@ import { StartBuildingPluginCommand } from "./start-building-plugin-command"
 
 function ActionList({ actions }: { actions: readonly StartBuildingAction[] }) {
   return (
-    <div className="mt-8 flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row min-[480px]:flex-wrap">
+    <div className="mt-14 flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row min-[480px]:flex-wrap">
       {actions.map((action) => (
         <MarketingButton
           key={action.label}
