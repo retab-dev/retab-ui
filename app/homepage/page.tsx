@@ -2,7 +2,7 @@ import { type Metadata } from "next"
 
 import { VercelHomepage } from "./_components/vercel-homepage"
 
-const title = "Homepage"
+const title = "Vercel Homepage"
 const description =
   "A Vercel-inspired homepage reproduction built from explicit marketing primitives."
 
