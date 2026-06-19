@@ -18,7 +18,7 @@ export function SectionHeader({
       <h2
         id={id}
         className={cn(
-          "text-6xl leading-none font-normal tracking-tighter text-balance text-black md:text-7xl lg:col-span-4 lg:text-8xl xl:text-9xl",
+          "text-6xl leading-none font-normal tracking-tighter text-balance text-black md:text-7xl lg:col-span-4 lg:text-8xl",
           isReversed && "lg:col-start-5",
         )}
       >

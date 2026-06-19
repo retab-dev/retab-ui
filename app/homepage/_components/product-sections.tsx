@@ -9,7 +9,7 @@ import { SectionHeader } from "./section-header";
 
 function ProductVisualImage({ image }: { image: ProductImageContent }) {
   return (
-    <div>
+    <>
       <img
         src={image.mobileSrc}
         width={image.mobileWidth}
@@ -46,20 +46,18 @@ function ProductVisualImage({ image }: { image: ProductImageContent }) {
         decoding="async"
         className="pointer-events-none hidden h-auto w-full select-none md:dark:block"
       />
-    </div>
+    </>
   );
 }
 
 function FeatureList({ features }: { features: readonly string[] }) {
   return (
-    <div>
-      <ul className="m-0 flex list-none flex-col gap-1.5 p-0 font-mono text-sm leading-5 font-semibold break-words text-black uppercase">
-        <li className="font-normal text-neutral-500 normal-case">Features</li>
-        {features.map((feature) => (
-          <li key={feature}>{feature}</li>
-        ))}
-      </ul>
-    </div>
+    <ul className="m-0 flex list-none flex-col gap-1.5 p-0 font-mono text-sm leading-5 font-semibold break-words text-black uppercase">
+      <li className="font-normal text-neutral-500 normal-case">Features</li>
+      {features.map((feature) => (
+        <li key={feature}>{feature}</li>
+      ))}
+    </ul>
   );
 }
 
@@ -86,9 +84,9 @@ function ProductLane({
   return (
     <section
       aria-labelledby={sectionId}
-      className={cn(
-        isFirst ? "mt-40 md:mt-24 lg:mt-48" : "mt-16 md:mt-44 lg:mt-52",
-      )}
+      className={
+        isFirst ? "mt-40 md:mt-24 lg:mt-52" : "mt-16 md:mt-44 lg:mt-56"
+      }
     >
       <SectionHeader
         id={sectionId}

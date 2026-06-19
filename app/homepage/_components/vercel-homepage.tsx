@@ -7,6 +7,7 @@ import {
   startBuildingContent,
 } from "./homepage-content";
 import { LatestSection } from "./latest-section";
+import { MarketingContainer } from "./primitives";
 import { ProductSections } from "./product-sections";
 import { StartBuilding } from "./start-building";
 
@@ -22,11 +23,11 @@ export function VercelHomepage() {
       <MarketingHeader content={homepageHeader} />
       <main id="homepage-main" tabIndex={-1}>
         <Hero />
-        <div className="mx-auto w-full max-w-screen-2xl px-6">
+        <MarketingContainer>
           <ProductSections />
           <LatestSection />
           <StartBuilding content={startBuildingContent} />
-        </div>
+        </MarketingContainer>
       </main>
       <MarketingFooter content={homepageFooter} />
     </div>

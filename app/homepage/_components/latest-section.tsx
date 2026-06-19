@@ -7,10 +7,18 @@ import { type LatestMetric } from "./homepage-types";
 import { focusRing } from "./primitives";
 import { SectionHeader } from "./section-header";
 
+const latestCardClass = cn(
+  "group relative flex min-w-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-50 text-black transition-colors hover:border-neutral-300 hover:bg-white active:bg-neutral-50 motion-reduce:transition-none",
+  focusRing,
+);
+
+const metricCardClass =
+  "min-w-0 border-neutral-200 bg-white/90 p-3 sm:flex sm:h-12 sm:items-center sm:justify-between sm:rounded-md sm:border sm:px-4 sm:py-0 sm:shadow-sm";
+
 export function LatestSection() {
   return (
     <section
-      className="mt-16 md:mt-24 lg:mt-32"
+      className="mt-16 md:mt-24 lg:mt-48"
       aria-label="Latest Vercel updates"
     >
       <SectionHeader
@@ -22,8 +30,8 @@ export function LatestSection() {
           href={featuredLatestCard.href}
           aria-label={`${featuredLatestCard.label}: ${featuredLatestCard.alt}`}
           className={cn(
-            "group relative flex aspect-video w-full min-w-0 items-center justify-center overflow-hidden rounded-md border border-neutral-200 bg-neutral-50 text-black transition-colors hover:border-neutral-300 hover:bg-white active:bg-neutral-50 motion-reduce:transition-none lg:aspect-auto lg:h-full",
-            focusRing,
+            latestCardClass,
+            "aspect-video w-full items-center justify-center lg:aspect-auto lg:h-full",
           )}
         >
           <img
@@ -45,8 +53,8 @@ export function LatestSection() {
               href={card.href}
               aria-label={`${card.label}: ${card.body}`}
               className={cn(
-                "group relative flex min-h-72 min-w-0 flex-col overflow-hidden rounded-md border border-neutral-200 bg-neutral-50 p-5 text-black transition-colors hover:border-neutral-300 hover:bg-white active:bg-neutral-50 motion-reduce:transition-none sm:p-6 md:aspect-video lg:aspect-auto lg:h-[17.5rem] lg:min-h-0",
-                focusRing,
+                latestCardClass,
+                "min-h-72 flex-col p-5 sm:p-6 md:aspect-video lg:aspect-auto lg:min-h-72",
               )}
             >
               {card.visual.kind === "metrics" ? (
@@ -55,14 +63,14 @@ export function LatestSection() {
                 <SandboxGraphic />
               )}
 
-              <div className="relative z-10 mt-auto max-w-md pt-24 sm:pt-32">
+              <header className="absolute bottom-5 left-5 z-10 flex w-full flex-col gap-1.5 pr-10">
                 <h3 className="min-w-0 text-2xl leading-tight font-medium break-words sm:text-3xl">
                   {card.label}
                 </h3>
-                <p className="mt-3 max-w-md font-mono text-sm leading-6 break-words text-neutral-700">
+                <p className="max-w-72 font-mono text-sm leading-5 break-words text-neutral-700">
                   {card.body}
                 </p>
-              </div>
+              </header>
             </Link>
           ))}
         </div>
@@ -85,12 +93,9 @@ function WorkflowMetricStrip({
         <div
           key={label}
           className={cn(
-            "min-w-0 border-neutral-200 bg-white/90 p-3 sm:flex sm:h-12 sm:items-center sm:justify-between sm:rounded-md sm:border sm:px-4 sm:py-0 sm:shadow-sm",
+            metricCardClass,
             index % 2 === 0 && "border-r sm:border",
             index < 2 && "border-b sm:border",
-            index === 1 && "sm:w-56",
-            index === 2 && "sm:ml-40 sm:w-56",
-            index === 3 && "sm:ml-auto sm:w-40",
           )}
         >
           <dt className="truncate text-neutral-500">{label}</dt>

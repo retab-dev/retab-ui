@@ -5,7 +5,7 @@ import { Check, ChevronDown, Copy } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { KeyedRunner } from "@/hooks/KeyedRunner";
-import { useMountEffect } from "@/hooks/use-mount-effect";
+import { useMountEffect } from "@/hooks/useMountEffect";
 
 import { type StartBuildingPluginOption } from "./homepage-types";
 import { focusRing } from "./primitives";
@@ -63,7 +63,7 @@ export function StartBuildingPluginCommand({
   }
 
   return (
-    <div ref={rootRef} className="relative mt-14 max-w-full">
+    <div ref={rootRef} className="relative mt-8 w-full max-w-lg">
       {isMenuOpen ? (
         <KeyedRunner
           key="start-building-plugin-menu-open"
@@ -79,6 +79,7 @@ export function StartBuildingPluginCommand({
 
             function closeOnEscape(event: KeyboardEvent) {
               if (event.key === "Escape") {
+                event.preventDefault();
                 setIsMenuOpen(false);
               }
             }
@@ -96,7 +97,7 @@ export function StartBuildingPluginCommand({
       <div className="inline-flex min-h-10 w-full items-center gap-1 rounded-full bg-white px-2 py-1.5 text-black shadow-sm ring-1 ring-black/10">
         <button
           type="button"
-          aria-label="Command type"
+          aria-label={`Command type: ${selectedOption.label}`}
           aria-haspopup="menu"
           aria-expanded={isMenuOpen}
           aria-controls={isMenuOpen ? menuId : undefined}
@@ -127,7 +128,7 @@ export function StartBuildingPluginCommand({
           aria-label={`Copy ${selectedOption.label} command`}
           onClick={copyCommand}
           className={cn(
-            "grid size-9 shrink-0 place-items-center rounded-full text-neutral-500 transition-colors duration-150 ease-out hover:bg-neutral-100 hover:text-black active:bg-neutral-200 motion-reduce:transition-none",
+            "grid size-7 shrink-0 place-items-center rounded-full text-neutral-500 transition-colors duration-150 ease-out hover:bg-neutral-100 hover:text-black active:bg-neutral-200 motion-reduce:transition-none",
             focusRing,
           )}
         >

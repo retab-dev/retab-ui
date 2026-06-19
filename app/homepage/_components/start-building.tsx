@@ -2,14 +2,13 @@ import {
   type StartBuildingAction,
   type StartBuildingContent,
   type StartBuildingPanel as StartBuildingPanelContent,
-  type StartBuildingPlugin,
 } from "./homepage-types";
 import { getLinkAriaLabel, getLinkProps, MarketingButton } from "./primitives";
 import { StartBuildingPluginCommand } from "./start-building-plugin-command";
 
 function ActionList({ actions }: { actions: readonly StartBuildingAction[] }) {
   return (
-    <div className="mt-14 flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+    <div className="mt-8 flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
       {actions.map((action) => (
         <MarketingButton
           key={action.label}
@@ -26,10 +25,6 @@ function ActionList({ actions }: { actions: readonly StartBuildingAction[] }) {
   );
 }
 
-function PluginCommand({ plugin }: { plugin: StartBuildingPlugin }) {
-  return <StartBuildingPluginCommand options={plugin.options} />;
-}
-
 function StartBuildingPanel({ panel }: { panel: StartBuildingPanelContent }) {
   return (
     <div className="col-span-12 min-w-0 md:col-span-6 lg:col-span-4">
@@ -39,7 +34,7 @@ function StartBuildingPanel({ panel }: { panel: StartBuildingPanelContent }) {
       {panel.kind === "template" ? (
         <ActionList actions={panel.actions} />
       ) : (
-        <PluginCommand plugin={panel.plugin} />
+        <StartBuildingPluginCommand options={panel.plugin.options} />
       )}
     </div>
   );
@@ -48,13 +43,13 @@ function StartBuildingPanel({ panel }: { panel: StartBuildingPanelContent }) {
 export function StartBuilding({ content }: { content: StartBuildingContent }) {
   return (
     <section
-      className="relative z-10 pt-20 pb-16 md:pt-32 md:pb-20 lg:pt-40 lg:pb-20"
+      className="relative z-10 pt-20 pb-16 md:pt-32 md:pb-20 lg:pt-28 lg:pb-20"
       aria-labelledby="start-building-heading"
     >
       <div className="grid grid-cols-12 gap-x-5 gap-y-12 text-left">
         <h2
           id="start-building-heading"
-          className="col-span-12 max-w-3xl text-4xl leading-tight font-normal text-black lg:col-span-8 lg:col-start-3 lg:max-w-none"
+          className="col-span-12 max-w-3xl text-4xl leading-tight font-normal text-black lg:col-span-8 lg:col-start-3 lg:max-w-none lg:text-5xl"
         >
           {content.title}
         </h2>

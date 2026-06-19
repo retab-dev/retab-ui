@@ -25,10 +25,12 @@ export function MarketingContainer({
   ...props
 }: ComponentProps<"div">) {
   return (
-    <div
-      className={cn("mx-auto w-full max-w-screen-2xl px-6", className)}
-      {...props}
-    />
+    <div className="w-full px-6">
+      <div
+        className={cn("mx-auto w-full max-w-marketing", className)}
+        {...props}
+      />
+    </div>
   );
 }
 

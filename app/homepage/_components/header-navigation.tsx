@@ -1,11 +1,10 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Menu, X } from "lucide-react";
 
+import { KeyedRunner } from "@/hooks/KeyedRunner";
 import { cn } from "@/lib/utils";
 
 import {
@@ -38,28 +37,17 @@ function getFocusableElements(container: HTMLElement | null) {
   return Array.from(container.querySelectorAll<HTMLElement>(focusableSelector));
 }
 
+function getMobileSectionId(groupId: string, sectionTitle: string) {
+  return `homepage-mobile-${groupId}-${sectionTitle
+    .toLowerCase()
+    .replaceAll(" ", "-")}`;
+}
+
 function HeaderDropdown({ group }: { group: NavGroup }) {
   const [isOpen, setIsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuId = `homepage-${group.id}-menu`;
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setIsOpen(false);
-        triggerRef.current?.focus();
-      }
-    }
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isOpen]);
 
   return (
     <div
@@ -80,12 +68,29 @@ function HeaderDropdown({ group }: { group: NavGroup }) {
         }
       }}
     >
+      {isOpen ? (
+        <KeyedRunner
+          key={`${menuId}-open`}
+          effect={() => {
+            function onKeyDown(event: KeyboardEvent) {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                setIsOpen(false);
+                triggerRef.current?.focus();
+              }
+            }
+
+            window.addEventListener("keydown", onKeyDown);
+            return () => window.removeEventListener("keydown", onKeyDown);
+          }}
+        />
+      ) : null}
       <button
         ref={triggerRef}
         type="button"
         aria-expanded={isOpen}
         aria-controls={menuId}
-        onClick={() => setIsOpen(true)}
+        onClick={() => setIsOpen((current) => !current)}
         className={cn(
           "inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm text-neutral-700 transition-colors duration-150 ease-out hover:text-black focus-visible:text-black motion-reduce:transition-none",
           isOpen && "text-black",
@@ -172,72 +177,72 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
     setOpenGroupId("products");
   }
 
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const focusFrame = window.requestAnimationFrame(() => {
-      triggerRef.current?.focus();
-    });
-
-    function closeMenu() {
-      closeMobileMenu();
-      triggerRef.current?.focus();
-    }
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        closeMenu();
-        return;
-      }
-
-      if (event.key !== "Tab") {
-        return;
-      }
-
-      const focusableElements = getFocusableElements(menuRef.current);
-      const firstElement = focusableElements[0];
-      const lastElement = focusableElements.at(-1);
-
-      if (!firstElement || !lastElement) {
-        event.preventDefault();
-        menuRef.current?.focus();
-        return;
-      }
-
-      if (!menuRef.current?.contains(document.activeElement)) {
-        event.preventDefault();
-        firstElement.focus();
-        return;
-      }
-
-      if (event.shiftKey && document.activeElement === firstElement) {
-        event.preventDefault();
-        lastElement.focus();
-        return;
-      }
-
-      if (!event.shiftKey && document.activeElement === lastElement) {
-        event.preventDefault();
-        firstElement.focus();
-      }
-    }
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.cancelAnimationFrame(focusFrame);
-      document.body.style.overflow = originalOverflow;
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [isOpen]);
-
   return (
     <div className="ml-auto lg:hidden">
+      {isOpen ? (
+        <KeyedRunner
+          key="homepage-mobile-menu-open"
+          effect={() => {
+            const originalOverflow = document.body.style.overflow;
+            document.body.style.overflow = "hidden";
+
+            const focusFrame = window.requestAnimationFrame(() => {
+              menuRef.current?.focus();
+            });
+
+            function closeMenu() {
+              closeMobileMenu();
+              triggerRef.current?.focus();
+            }
+
+            function onKeyDown(event: KeyboardEvent) {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                closeMenu();
+                return;
+              }
+
+              if (event.key !== "Tab") {
+                return;
+              }
+
+              const focusableElements = getFocusableElements(menuRef.current);
+              const firstElement = focusableElements[0];
+              const lastElement = focusableElements.at(-1);
+
+              if (!firstElement || !lastElement) {
+                event.preventDefault();
+                menuRef.current?.focus();
+                return;
+              }
+
+              if (!menuRef.current?.contains(document.activeElement)) {
+                event.preventDefault();
+                firstElement.focus();
+                return;
+              }
+
+              if (event.shiftKey && document.activeElement === firstElement) {
+                event.preventDefault();
+                lastElement.focus();
+                return;
+              }
+
+              if (!event.shiftKey && document.activeElement === lastElement) {
+                event.preventDefault();
+                firstElement.focus();
+              }
+            }
+
+            window.addEventListener("keydown", onKeyDown);
+            return () => {
+              window.cancelAnimationFrame(focusFrame);
+              document.body.style.overflow = originalOverflow;
+              window.removeEventListener("keydown", onKeyDown);
+            };
+          }}
+        />
+      ) : null}
       <button
         ref={triggerRef}
         type="button"
@@ -245,7 +250,10 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
         aria-expanded={isOpen}
         aria-controls={menuId}
         onClick={() => setIsOpen((current) => !current)}
-        className={`flex min-h-11 min-w-11 items-center justify-end rounded-md text-black transition-colors duration-150 ease-out focus-visible:bg-neutral-100 motion-reduce:transition-none ${focusRing}`}
+        className={cn(
+          "flex min-h-11 min-w-11 items-center justify-end rounded-md text-black transition-colors duration-150 ease-out focus-visible:bg-neutral-100 motion-reduce:transition-none",
+          focusRing,
+        )}
       >
         {isOpen ? (
           <X className="size-6 stroke-2" />
@@ -296,37 +304,41 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
                 hidden={openGroupId !== group.id}
                 className="grid gap-6 py-4"
               >
-                {group.sections.map((section) => (
-                  <section
-                    key={`${group.id}-${section.title}`}
-                    aria-labelledby={`homepage-mobile-${group.id}-${section.title.toLowerCase().replaceAll(" ", "-")}`}
-                    className="grid gap-3"
-                  >
-                    <h3
-                      id={`homepage-mobile-${group.id}-${section.title.toLowerCase().replaceAll(" ", "-")}`}
-                      className="font-mono text-xs leading-none font-semibold tracking-normal text-neutral-500 uppercase"
+                {group.sections.map((section) => {
+                  const headingId = getMobileSectionId(group.id, section.title);
+
+                  return (
+                    <section
+                      key={`${group.id}-${section.title}`}
+                      aria-labelledby={headingId}
+                      className="grid gap-3"
                     >
-                      {section.title}
-                    </h3>
-                    <div className="grid gap-3">
-                      {section.items.map((item) => (
-                        <Link
-                          key={`${group.id}-${section.title}-${item.label}`}
-                          href={item.href}
-                          aria-label={getLinkAriaLabel(item)}
-                          {...getLinkProps(item)}
-                          onClick={closeMobileMenu}
-                          className={cn(
-                            "-mx-2 inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-xl font-normal text-neutral-900 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none",
-                            focusRing,
-                          )}
-                        >
-                          <MarketingLinkLabel item={item} />
-                        </Link>
-                      ))}
-                    </div>
-                  </section>
-                ))}
+                      <h3
+                        id={headingId}
+                        className="font-mono text-xs leading-none font-semibold tracking-normal text-neutral-500 uppercase"
+                      >
+                        {section.title}
+                      </h3>
+                      <div className="grid gap-3">
+                        {section.items.map((item) => (
+                          <Link
+                            key={`${group.id}-${section.title}-${item.label}`}
+                            href={item.href}
+                            aria-label={getLinkAriaLabel(item)}
+                            {...getLinkProps(item)}
+                            onClick={closeMobileMenu}
+                            className={cn(
+                              "-mx-2 inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-xl font-normal text-neutral-900 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none",
+                              focusRing,
+                            )}
+                          >
+                            <MarketingLinkLabel item={item} />
+                          </Link>
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -377,7 +389,10 @@ export function HeaderNavigation({ content }: { content: HeaderContent }) {
             href={item.href}
             aria-label={getLinkAriaLabel(item)}
             {...getLinkProps(item)}
-            className={`rounded-md px-2 py-1 text-sm text-neutral-700 transition-colors duration-150 ease-out hover:text-black focus-visible:text-black motion-reduce:transition-none ${focusRing}`}
+            className={cn(
+              "rounded-md px-2 py-1 text-sm text-neutral-700 transition-colors duration-150 ease-out hover:text-black focus-visible:text-black motion-reduce:transition-none",
+              focusRing,
+            )}
           >
             {item.label}
           </Link>

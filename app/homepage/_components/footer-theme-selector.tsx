@@ -1,12 +1,11 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useRef, type KeyboardEvent } from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { cn } from "@/lib/utils";
+import { useMounted } from "@/hooks/use-mounted";
 
 import { type ThemeOption, type ThemeValue } from "./homepage-types";
 import { focusRing } from "./primitives";
@@ -35,15 +34,11 @@ export function FooterThemeSelector({
 }: {
   options: readonly ThemeOption[];
 }) {
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useMounted();
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const { setTheme, theme } = useTheme();
   const selectedTheme: ThemeValue =
     isMounted && isThemeValue(options, theme) ? theme : "system";
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   function onThemeKeyDown(
     event: KeyboardEvent<HTMLButtonElement>,

@@ -1,5 +1,5 @@
 import { type LogoContent } from "./homepage-types";
-import styles from "./homepage.module.css";
+import styles from "./logo-strip.module.css";
 
 type LiveLogo = {
   readonly viewBox: string;
