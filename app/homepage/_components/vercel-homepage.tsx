@@ -271,7 +271,7 @@ function MarketingHeader() {
           <VercelMark />
         </Link>
 
-        <nav className="hidden items-center gap-2 md:flex">
+        <nav className="hidden items-center gap-2 lg:flex">
           {navGroups.map((group) => (
             <HeaderDropdown
               key={group.label}
@@ -293,7 +293,7 @@ function MarketingHeader() {
           </Link>
         </nav>
 
-        <div className="ml-auto hidden items-center gap-2 md:flex">
+        <div className="ml-auto hidden items-center gap-2 lg:flex">
           <MarketingButton
             href="https://vercel.com/contact/sales/demo"
             variant="secondary"
@@ -308,11 +308,11 @@ function MarketingHeader() {
           </MarketingButton>
         </div>
 
-        <details className="group ml-auto md:hidden">
+        <details className="group relative ml-auto lg:hidden">
           <summary className="flex size-10 list-none items-center justify-center rounded-full border border-transparent text-black marker:hidden">
             <Menu className="size-5" />
           </summary>
-          <div className="absolute inset-x-0 top-16 border-b border-neutral-200 bg-white px-6 py-5 shadow-xl shadow-black/5">
+          <div className="absolute top-12 right-0 hidden w-[min(320px,calc(100vw-3rem))] rounded-md border border-neutral-200 bg-white px-5 py-5 shadow-xl shadow-black/5 group-open:block">
             <nav className="grid gap-4">
               {["Products", "Resources", "Enterprise", "Pricing"].map(
                 (item) => (
@@ -347,9 +347,9 @@ function MarketingHeader() {
 function Hero() {
   return (
     <section className="relative flex min-h-[calc(100svh-64px)] flex-col overflow-hidden border-b border-neutral-100">
-      <div className="mx-auto grid w-full max-w-[1400px] flex-1 grid-cols-1 items-center gap-12 px-6 py-16 md:grid-cols-[1fr_0.8fr_1fr] md:py-24">
+      <div className="mx-auto grid w-full max-w-[1400px] flex-1 grid-cols-1 items-center gap-12 px-6 py-16 md:py-24 lg:grid-cols-[1fr_0.8fr_1fr]">
         <div>
-          <h1 className="max-w-[520px] text-6xl leading-none font-medium text-black md:text-7xl lg:text-[86px]">
+          <h1 className="max-w-[520px] text-5xl leading-none font-medium text-black sm:text-6xl md:text-7xl lg:text-[86px]">
             Agentic Infrastructure
           </h1>
           <div className="mt-8 flex flex-wrap gap-3">
@@ -372,7 +372,7 @@ function Hero() {
           </div>
         </div>
 
-        <div className="justify-self-start md:justify-self-center">
+        <div className="justify-self-start lg:justify-self-center">
           <div className="space-y-4 font-mono text-sm font-semibold text-black uppercase">
             <p>For coding agents</p>
             <p>To ship apps and agents</p>
@@ -408,11 +408,11 @@ function SectionHeader({
   description: string
 }) {
   return (
-    <div className="grid gap-4 md:grid-cols-12 md:items-baseline">
-      <h2 className="text-6xl leading-none font-medium text-black md:col-span-5 md:text-7xl lg:text-[112px]">
+    <div className="grid gap-4 lg:grid-cols-12 lg:items-baseline">
+      <h2 className="text-6xl leading-none font-medium text-black md:text-7xl lg:col-span-5 lg:text-[112px]">
         {title}
       </h2>
-      <p className="font-mono text-sm leading-6 text-neutral-700 md:col-span-4 md:col-start-8">
+      <p className="font-mono text-sm leading-6 text-neutral-700 lg:col-span-4 lg:col-start-8">
         {description}
       </p>
     </div>
@@ -538,15 +538,15 @@ function AppsVisual() {
 
 function PlatformsVisual() {
   return (
-    <div className="grid min-h-[420px] gap-4 md:grid-cols-3">
+    <div className="grid min-h-[420px] gap-4 lg:grid-cols-3">
       {["acme.design", "docs.acme.com", "shop.acme.com"].map(
         (domain, index) => (
           <div
             key={domain}
             className={cn(
               "rounded-md border border-neutral-200 bg-white p-5 shadow-[0_20px_80px_rgba(0,0,0,0.05)]",
-              index === 1 && "md:translate-y-12",
-              index === 2 && "md:translate-y-24"
+              index === 1 && "lg:translate-y-12",
+              index === 2 && "lg:translate-y-24"
             )}
           >
             <div className="mb-6 flex items-center justify-between">
@@ -611,14 +611,14 @@ function ProductLane({
   return (
     <section className="mt-40 md:mt-52">
       <SectionHeader title={title} description={description} />
-      <div className="mt-14 grid gap-10 md:grid-cols-12 md:items-start">
-        <div className={cn("md:col-span-8", flip && "md:col-start-5")}>
+      <div className="mt-14 grid gap-10 lg:grid-cols-12 lg:items-start">
+        <div className={cn("lg:col-span-8", flip && "lg:col-start-5")}>
           <ProductMockup visual={visual} />
         </div>
         <div
           className={cn(
-            "space-y-8 md:col-span-3",
-            flip ? "md:col-start-1 md:row-start-1" : "md:col-start-10"
+            "space-y-8 lg:col-span-3",
+            flip ? "lg:col-start-1 lg:row-start-1" : "lg:col-start-10"
           )}
         >
           <p className="text-4xl leading-tight text-black md:text-5xl">
@@ -638,7 +638,7 @@ function LatestSection() {
         title="Latest"
         description="Recent launches, events, and updates shaping what comes next."
       />
-      <div className="mt-14 grid gap-5 md:grid-cols-3">
+      <div className="mt-14 grid gap-5 lg:grid-cols-3">
         {latestCards.map((card, index) => (
           <Link
             key={card.label}
@@ -679,11 +679,11 @@ function LatestSection() {
 function StartBuilding() {
   return (
     <section className="mt-28 border-t border-neutral-200 pt-20 pb-20">
-      <div className="grid gap-8 md:grid-cols-12">
-        <h2 className="text-5xl leading-tight font-medium md:col-span-4">
+      <div className="grid gap-8 lg:grid-cols-12">
+        <h2 className="text-5xl leading-tight font-medium lg:col-span-4">
           Start building with Vercel now
         </h2>
-        <div className="grid gap-5 md:col-span-8 md:grid-cols-2">
+        <div className="grid gap-5 lg:col-span-8 lg:grid-cols-2">
           <div className="rounded-md border border-neutral-200 p-6">
             <div className="font-mono text-xs font-semibold text-neutral-500 uppercase">
               For humans
