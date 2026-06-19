@@ -1458,6 +1458,11 @@
           "path": "registry/new-york-v4/ui/viewer-error.tsx",
           "type": "registry:ui",
           "target": "@ui/viewer-error.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/utif.d.ts",
+          "type": "registry:ui",
+          "target": "@ui/utif.d.ts"
         }
       ]
     },
@@ -3373,6 +3378,11 @@
           "path": "components/file-thumbnail/thumbnail-code.ts",
           "type": "registry:component",
           "target": "@components/file-thumbnail/thumbnail-code.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/utif.d.ts",
+          "type": "registry:ui",
+          "target": "@ui/utif.d.ts"
         }
       ],
       "dependencies": [
