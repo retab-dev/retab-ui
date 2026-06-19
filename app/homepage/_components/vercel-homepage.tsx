@@ -1,19 +1,11 @@
 import Link from "next/link"
 import {
-  Activity,
-  Boxes,
   Check,
   ChevronDown,
   CircleDot,
   Code2,
-  Cpu,
-  ExternalLink,
   Globe2,
-  LockKeyhole,
   Menu,
-  ShieldCheck,
-  Terminal,
-  Workflow,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -118,21 +110,16 @@ const productLanes = [
 const latestCards = [
   {
     label: "Ship 26",
-    title: "A new foundation for agent-driven delivery.",
-    description:
-      "A focused launch stream for agents, apps, workflow primitives, and platform infrastructure.",
+    title: "Ship",
+    badge: "26",
   },
   {
-    label: "workflow()",
-    title: "Pause work for minutes or months, then resume.",
-    description:
-      "Durable steps keep state, retries, and progress available across long-running executions.",
+    label: "Workflows",
+    title: "Pause for minutes or months, then resume from that exact point.",
   },
   {
     label: "Sandbox",
-    title: "Run code safely in clean, isolated environments.",
-    description:
-      "Spin up execution contexts for generated code, tests, previews, and agent tasks.",
+    title: "The safest way to run code you did not write.",
   },
 ]
 
@@ -638,41 +625,66 @@ function LatestSection() {
         title="Latest"
         description="Recent launches, events, and updates shaping what comes next."
       />
-      <div className="mt-14 grid gap-5 lg:grid-cols-3">
-        {latestCards.map((card, index) => (
-          <Link
-            key={card.label}
-            href="https://vercel.com/blog"
-            className={cn(
-              "group flex min-h-80 flex-col justify-between rounded-md border border-neutral-200 bg-white p-6 transition-colors hover:bg-neutral-50",
-              index === 1 && "bg-black text-white hover:bg-neutral-900"
-            )}
-          >
-            <div>
-              <div
-                className={cn(
-                  "font-mono text-xs font-semibold text-neutral-500 uppercase",
-                  index === 1 && "text-neutral-400"
-                )}
-              >
-                {card.label}
-              </div>
-              <h3 className="mt-8 text-3xl leading-tight font-medium">
-                {card.title}
-              </h3>
-            </div>
-            <p
-              className={cn(
-                "mt-10 text-sm leading-6 text-neutral-600",
-                index === 1 && "text-neutral-300"
-              )}
+      <div className="mt-14 grid gap-5 lg:grid-cols-2">
+        <Link
+          href="https://vercel.com/ship"
+          className="relative grid min-h-[360px] overflow-hidden rounded-md border border-neutral-200 bg-neutral-50 transition-colors hover:bg-white lg:min-h-[520px]"
+        >
+          <LatestPattern />
+          <div className="relative z-10 grid place-items-center">
+            <h3 className="flex items-center gap-2 text-5xl leading-none font-semibold text-black md:text-6xl">
+              {latestCards[0].title}
+              <span className="rounded-md border-2 border-black px-1.5 py-0.5 text-3xl leading-none md:text-4xl">
+                {latestCards[0].badge}
+              </span>
+            </h3>
+          </div>
+        </Link>
+
+        <div className="grid gap-5">
+          {latestCards.slice(1).map((card) => (
+            <Link
+              key={card.label}
+              href="https://vercel.com/blog"
+              className="flex min-h-[250px] items-end rounded-md border border-neutral-200 bg-white p-6 transition-colors hover:bg-neutral-50"
             >
-              {card.description}
-            </p>
-          </Link>
-        ))}
+              <div>
+                <h3 className="text-3xl leading-tight font-medium text-black">
+                  {card.label}
+                </h3>
+                <p className="mt-3 max-w-md font-mono text-sm leading-6 text-neutral-700">
+                  {card.title}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
     </section>
+  )
+}
+
+function LatestPattern() {
+  const cells = Array.from({ length: 54 }, (_, index) => index)
+
+  return (
+    <div className="absolute inset-0 opacity-45">
+      <div className="absolute inset-0 grid grid-cols-9 gap-3 p-6">
+        {cells.map((cell) => (
+          <span
+            key={cell}
+            className={cn(
+              "size-9 border border-neutral-300",
+              cell % 4 === 0 && "border-dashed",
+              cell % 5 === 0 && "bg-white",
+              cell % 7 === 0 && "rounded-full",
+              cell % 3 !== 0 && "opacity-0"
+            )}
+          />
+        ))}
+      </div>
+      <div className="absolute inset-0 bg-linear-to-b from-transparent via-white/35 to-transparent" />
+    </div>
   )
 }
 
@@ -771,34 +783,6 @@ function MarketingFooter() {
   )
 }
 
-function CapabilityRail() {
-  const items = [
-    { icon: Workflow, label: "Workflows" },
-    { icon: Boxes, label: "Sandboxes" },
-    { icon: Cpu, label: "Model Gateway" },
-    { icon: ShieldCheck, label: "Security" },
-    { icon: Activity, label: "Observability" },
-    { icon: LockKeyhole, label: "Trust" },
-    { icon: Terminal, label: "CLI" },
-    { icon: ExternalLink, label: "Previews" },
-  ]
-
-  return (
-    <section className="mt-20 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-neutral-200 bg-neutral-200 md:grid-cols-4">
-      {items.map(({ icon: Icon, label }) => (
-        <Link
-          key={label}
-          href="https://vercel.com/"
-          className="flex items-center gap-3 bg-white p-5 text-sm font-medium transition-colors hover:bg-neutral-50"
-        >
-          <Icon className="size-4 text-neutral-500" />
-          {label}
-        </Link>
-      ))}
-    </section>
-  )
-}
-
 export function VercelHomepage() {
   return (
     <div className="min-h-svh bg-white text-black dark:bg-white dark:text-black">
@@ -810,7 +794,6 @@ export function VercelHomepage() {
             <ProductLane key={lane.title} {...lane} flip={index === 1} />
           ))}
           <LatestSection />
-          <CapabilityRail />
           <StartBuilding />
         </div>
       </main>
