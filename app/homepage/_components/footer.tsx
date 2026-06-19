@@ -86,7 +86,7 @@ export function MarketingFooter() {
 
         <div className="mt-12 flex flex-col gap-6 border-t border-neutral-200 pt-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
-            <VercelMark className="border-x-[8px] border-b-[14px]" />
+            <VercelMark className="h-[14px] w-4" />
             <span className="text-sm font-medium text-black">Vercel</span>
           </div>
 

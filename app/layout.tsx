@@ -76,6 +76,7 @@ export default function RootLayout({
       <head>
         <Script
           id="theme-layout-init"
+          async
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `

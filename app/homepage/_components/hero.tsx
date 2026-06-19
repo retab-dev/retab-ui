@@ -6,7 +6,7 @@ export function Hero() {
     <section className="relative flex min-h-[calc(100svh-64px)] flex-col overflow-hidden border-b border-neutral-100">
       <div className="mx-auto grid w-full max-w-[1400px] flex-1 grid-cols-1 items-center gap-12 px-6 py-14 text-center min-[961px]:-translate-y-5 min-[961px]:grid-cols-[1fr_0.8fr_1fr] min-[961px]:gap-10 min-[961px]:py-0 min-[961px]:text-left md:py-16">
         <div className="order-2 min-[961px]:order-1">
-          <h1 className="mx-auto max-w-[620px] text-[clamp(42px,13vw,52px)] leading-[1.05] font-normal text-black min-[961px]:mx-0 min-[961px]:max-w-[390px] min-[961px]:text-[64px] sm:text-[64px] sm:leading-[0.98] md:text-[72px]">
+          <h1 className="mx-auto max-w-[620px] text-[clamp(42px,13vw,52px)] leading-[1.05] font-normal text-black min-[961px]:mx-0 min-[961px]:max-w-[390px] min-[961px]:text-[56px] sm:text-[64px] sm:leading-[0.98] md:text-[72px] xl:text-[64px]">
             Agentic Infrastructure
           </h1>
           <p className="mt-6 font-mono text-sm text-neutral-700 min-[961px]:hidden">
@@ -31,7 +31,7 @@ export function Hero() {
 
         <div className="order-1 flex justify-center min-[961px]:order-2">
           <div className="relative grid size-56 place-items-center min-[961px]:size-56 sm:size-64 md:size-72">
-            <VercelMark className="relative border-x-[94px] border-b-[164px] min-[961px]:border-x-[94px] min-[961px]:border-b-[164px] sm:border-x-[108px] sm:border-b-[188px] md:border-x-[122px] md:border-b-[214px]" />
+            <VercelMark className="relative h-[164px] w-[188px] min-[961px]:!h-[164px] min-[961px]:!w-[188px] sm:h-[188px] sm:w-[216px] md:h-[214px] md:w-[248px]" />
           </div>
         </div>
 
@@ -76,7 +76,7 @@ function LogoStrip() {
 function BrandLogo({ logo }: { logo: string }) {
   if (logo === "BLACKBOX.AI") {
     return (
-      <div className="flex shrink-0 items-center gap-1 text-base leading-none font-bold tracking-[-0.01em]">
+      <div className="flex shrink-0 items-center gap-1 text-base leading-none font-bold">
         <span className="block size-4 rotate-45 border-2 border-black" />
         BLACKBOX.AI
       </div>

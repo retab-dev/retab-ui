@@ -5,13 +5,13 @@ import { cn } from "@/lib/utils"
 
 export function VercelMark({ className }: { className?: string }) {
   return (
-    <span
+    <svg
       aria-hidden="true"
-      className={cn(
-        "block size-0 border-x-[10px] border-b-[18px] border-x-transparent border-b-black",
-        className
-      )}
-    />
+      viewBox="0 0 116 100"
+      className={cn("block h-[18px] w-[20px] fill-black", className)}
+    >
+      <path d="M58 0 116 100H0z" />
+    </svg>
   )
 }
 

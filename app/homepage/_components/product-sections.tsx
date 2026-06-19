@@ -49,18 +49,18 @@ function ProductLane({
 
   return (
     <section className={cn(isFirst ? "mt-24 md:mt-[72px]" : "mt-40 md:mt-52")}>
-      <SectionHeader title={title} description={description} />
+      <SectionHeader title={title} description={description} flip={flip} />
       <div className="mt-14 grid gap-10 lg:grid-cols-12 lg:items-start">
         <div className={cn("lg:col-span-8", flip && "lg:col-start-5")}>
           <ProductVisualImage visual={visual} />
         </div>
         <div
           className={cn(
-            "space-y-8 lg:col-span-3",
-            flip ? "lg:col-start-1 lg:row-start-1" : "lg:col-start-10"
+            "space-y-8 lg:col-span-4",
+            flip ? "lg:col-start-1 lg:row-start-1" : "lg:col-start-9"
           )}
         >
-          <p className="max-w-[360px] text-4xl leading-[1.12] text-black md:text-[40px]">
+          <p className="max-w-[360px] text-3xl leading-[1.12] text-black md:text-4xl xl:text-[40px]">
             <span className="text-neutral-500">{proofCustomer}</span> {proof}
           </p>
           <FeatureList features={features} />
