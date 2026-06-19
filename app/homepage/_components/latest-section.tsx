@@ -15,10 +15,17 @@ const latestCardClass = cn(
 const metricCardClass =
   "min-w-0 border-neutral-200 bg-white/90 p-3 sm:flex sm:h-12 sm:items-center sm:justify-between sm:rounded-md sm:border sm:px-4 sm:py-0 sm:shadow-sm";
 
+const metricRowLayoutClasses = [
+  "border-r border-b sm:border",
+  "border-b sm:border sm:w-56",
+  "border-r sm:border sm:ml-40 sm:w-56",
+  "sm:ml-auto sm:w-40",
+] as const;
+
 export function LatestSection() {
   return (
     <section
-      className="mt-16 md:mt-24 lg:mt-48"
+      className="relative z-10 mt-16 md:mt-24 lg:mt-48"
       aria-label="Latest Vercel updates"
     >
       <SectionHeader
@@ -54,7 +61,7 @@ export function LatestSection() {
               aria-label={`${card.label}: ${card.body}`}
               className={cn(
                 latestCardClass,
-                "min-h-72 flex-col p-5 sm:p-6 md:aspect-video lg:aspect-auto lg:min-h-72",
+                "min-h-72 flex-col p-5 sm:p-6 md:aspect-video lg:aspect-auto",
               )}
             >
               {card.visual.kind === "metrics" ? (
@@ -92,11 +99,7 @@ function WorkflowMetricStrip({
       {metrics.map(([label, value], index) => (
         <div
           key={label}
-          className={cn(
-            metricCardClass,
-            index % 2 === 0 && "border-r sm:border",
-            index < 2 && "border-b sm:border",
-          )}
+          className={cn(metricCardClass, metricRowLayoutClasses[index])}
         >
           <dt className="truncate text-neutral-500">{label}</dt>
           <dd className="mt-2 text-black sm:mt-0">

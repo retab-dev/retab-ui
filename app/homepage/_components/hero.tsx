@@ -28,9 +28,9 @@ export function Hero() {
             </div>
           </div>
 
-          <div className="order-1 flex justify-center lg:order-2">
+          <div className="order-1 flex justify-center lg:order-2 lg:pt-12">
             <div className="grid size-52 place-items-center sm:size-64 md:size-72">
-              <VercelMark className="size-52 md:size-56" />
+              <VercelMark className="size-52 drop-shadow-2xl md:size-56" />
             </div>
           </div>
 

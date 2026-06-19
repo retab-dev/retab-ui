@@ -5,12 +5,19 @@ import { Check, ChevronDown, Copy } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { KeyedRunner } from "@/hooks/KeyedRunner";
-import { useMountEffect } from "@/hooks/useMountEffect";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import { type StartBuildingPluginOption } from "./homepage-types";
 import { focusRing } from "./primitives";
 
 type CopyState = "idle" | "copied" | "failed";
+
+const copyResetDelayMs = 1800;
+const copyFeedbackMessage = {
+  idle: null,
+  copied: "Copied command",
+  failed: "Could not copy command",
+} satisfies Record<CopyState, string | null>;
 
 export function StartBuildingPluginCommand({
   options,
@@ -24,21 +31,24 @@ export function StartBuildingPluginCommand({
   const [copyState, setCopyState] = useState<CopyState>("idle");
   const resetTimeoutRef = useRef<number | undefined>(undefined);
   const selectedOption = options[selectedIndex] ?? options[0];
+  const feedbackMessage = copyFeedbackMessage[copyState];
 
-  useMountEffect(() => () => {
-    if (resetTimeoutRef.current) {
+  function clearResetTimeout() {
+    if (resetTimeoutRef.current !== undefined) {
       window.clearTimeout(resetTimeoutRef.current);
+      resetTimeoutRef.current = undefined;
     }
-  });
+  }
+
+  useMountEffect(() => clearResetTimeout);
 
   function resetCopyStateSoon() {
-    if (resetTimeoutRef.current) {
-      window.clearTimeout(resetTimeoutRef.current);
-    }
+    clearResetTimeout();
 
     resetTimeoutRef.current = window.setTimeout(() => {
       setCopyState("idle");
-    }, 1800);
+      resetTimeoutRef.current = undefined;
+    }, copyResetDelayMs);
   }
 
   async function copyCommand() {
@@ -162,8 +172,7 @@ export function StartBuildingPluginCommand({
         </div>
       ) : null}
       <span className="sr-only" aria-live="polite">
-        {copyState === "copied" ? "Copied command" : null}
-        {copyState === "failed" ? "Could not copy command" : null}
+        {feedbackMessage}
       </span>
     </div>
   );
