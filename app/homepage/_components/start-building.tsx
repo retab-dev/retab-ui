@@ -27,9 +27,7 @@ function ActionList({ actions }: { actions: readonly StartBuildingAction[] }) {
 }
 
 function PluginCommand({ plugin }: { plugin: StartBuildingPlugin }) {
-  return (
-    <StartBuildingPluginCommand command={plugin.command} label={plugin.label} />
-  )
+  return <StartBuildingPluginCommand options={plugin.options} />
 }
 
 function StartBuildingPanel({ panel }: { panel: StartBuildingPanelContent }) {

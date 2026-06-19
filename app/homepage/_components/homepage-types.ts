@@ -126,9 +126,16 @@ export type StartBuildingAction = LinkItem & {
   readonly variant?: "primary" | "secondary"
 }
 
-export type StartBuildingPlugin = {
+export type StartBuildingPluginOption = {
   readonly label: string
   readonly command: string
+}
+
+export type StartBuildingPlugin = {
+  readonly options: readonly [
+    StartBuildingPluginOption,
+    ...StartBuildingPluginOption[],
+  ]
 }
 
 type StartBuildingPanelBase = {

@@ -512,8 +512,20 @@ export const startBuildingContent = {
       audience: "For agents.",
       body: "Tools to connect your agents to Vercel infrastructure.",
       plugin: {
-        label: "Plugin",
-        command: "npx plugins add vercel/vercel-plugin",
+        options: [
+          {
+            label: "Plugin",
+            command: "npx plugins add vercel/vercel-plugin",
+          },
+          {
+            label: "MCP",
+            command: "npx add-mcp https://mcp.vercel.com",
+          },
+          {
+            label: "Skill",
+            command: "npx skills add vercel-labs/agent-skills",
+          },
+        ],
       },
     },
   ],
