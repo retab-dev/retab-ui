@@ -1,0 +1,997 @@
+.root {
+  min-block-size: 100svb;
+  background: white;
+  color: black;
+}
+
+.skipLink {
+  position: fixed;
+  inset-block-start: 0.75rem;
+  inset-inline-start: 0.75rem;
+  z-index: 60;
+  border-radius: 0.375rem;
+  background: black;
+  color: white;
+  padding-block: 0.5rem;
+  padding-inline: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.skipLink:not(:focus) {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.container {
+  inline-size: min(100% - 3rem, 87.5rem);
+  margin-inline: auto;
+}
+
+.contentShell {
+  inline-size: min(100% - 3rem, 87.5rem);
+  margin-inline: auto;
+}
+
+.focusRing:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px white,
+    0 0 0 4px black;
+}
+
+.vercelMark {
+  display: block;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  fill: currentcolor;
+  overflow: visible;
+}
+
+.linkLabel {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.badge {
+  flex-shrink: 0;
+  border: 1px solid black;
+  border-radius: 0.125rem;
+  padding-inline: 0.25rem;
+  color: black;
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  overflow: hidden;
+  border: 1px solid;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.buttonDefault {
+  min-block-size: 2.5rem;
+  padding-inline: 1rem;
+}
+
+.buttonCompact {
+  min-block-size: 2rem;
+  padding-inline: 0.75rem;
+}
+
+.buttonPill {
+  border-radius: 999rem;
+}
+
+.buttonRounded {
+  border-radius: 0.375rem;
+}
+
+.buttonPrimary {
+  border-color: black;
+  background: black;
+  color: white;
+}
+
+.buttonPrimary:hover,
+.buttonPrimary:focus-visible {
+  border-color: rgb(38 38 38);
+  background: rgb(38 38 38);
+}
+
+.buttonSecondary {
+  border-color: rgb(229 229 229);
+  background: white;
+  color: black;
+}
+
+.buttonSecondary:hover,
+.buttonSecondary:focus-visible {
+  border-color: rgb(212 212 212);
+  background: rgb(250 250 250);
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  min-block-size: calc(100svb - 4rem);
+  overflow: hidden;
+}
+
+.heroGrid {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 1fr;
+  align-items: center;
+  gap: 2rem;
+  padding-block: 2rem;
+  text-align: center;
+}
+
+.heroIntro {
+  order: 2;
+}
+
+.heroTitle {
+  max-inline-size: 11ch;
+  margin-inline: auto;
+  color: black;
+  font-size: clamp(3rem, 11vw, 4rem);
+  font-weight: 400;
+  letter-spacing: -0.06em;
+  line-height: 1;
+}
+
+.heroMobileKicker {
+  margin-block-start: 1rem;
+  color: rgb(64 64 64);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.875rem;
+}
+
+.heroActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  inline-size: min(100%, 24rem);
+  margin-block-start: 1.5rem;
+  margin-inline: auto;
+}
+
+.heroAction {
+  inline-size: 100%;
+}
+
+.heroMarkWrap {
+  order: 1;
+  display: grid;
+  place-items: center;
+}
+
+.heroMarkFrame {
+  display: grid;
+  place-items: center;
+  inline-size: clamp(12rem, 46vw, 18rem);
+  aspect-ratio: 1;
+}
+
+.heroMark {
+  inline-size: clamp(12rem, 40vw, 14rem);
+  block-size: auto;
+}
+
+.heroKickers {
+  display: none;
+}
+
+.heroKicker {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  block-size: 1.5em;
+  margin: 0;
+  overflow: hidden;
+  color: rgb(23 23 23);
+  cursor: default;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  text-align: start;
+  transition: block-size 200ms ease-out;
+}
+
+.heroKicker:hover {
+  block-size: 4.8em;
+}
+
+.heroKickerLabel {
+  display: inline;
+  flex-shrink: 0;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.heroKickerBody {
+  color: rgb(77 77 77);
+  opacity: 0;
+  transition: opacity 300ms ease-out;
+}
+
+.heroKicker:hover .heroKickerBody {
+  opacity: 1;
+}
+
+.sectionHeader {
+  display: grid;
+  align-items: start;
+  gap: 1.25rem;
+}
+
+.sectionTitle {
+  color: black;
+  font-size: clamp(4rem, 9vw, 6.875rem);
+  font-weight: 400;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.sectionDescription {
+  max-inline-size: 28rem;
+  color: rgb(64 64 64);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.productLane {
+  margin-block-start: clamp(4rem, 12vw, 8rem);
+}
+
+.productLaneFirst {
+  margin-block-start: clamp(8rem, 18vw, 13rem);
+}
+
+.productContent {
+  display: grid;
+  gap: 2rem;
+  margin-block-start: 2.5rem;
+}
+
+.productVisual {
+  min-inline-size: 0;
+}
+
+.productImage {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  pointer-events: none;
+  user-select: none;
+}
+
+.productImageMobileDark,
+.productImageDesktopLight,
+.productImageDesktopDark {
+  display: none;
+}
+
+:global(.dark) .productImageMobileLight {
+  display: none;
+}
+
+:global(.dark) .productImageMobileDark {
+  display: block;
+}
+
+.productAside {
+  min-inline-size: 0;
+  margin-block-start: 2rem;
+}
+
+.productProof {
+  max-inline-size: 24rem;
+  color: black;
+  font-size: clamp(1.75rem, 8vw, 2.5rem);
+  font-weight: 400;
+  letter-spacing: -0.05em;
+  line-height: 1.14;
+  text-wrap: balance;
+}
+
+.productProofCustomer {
+  color: rgb(115 115 115);
+}
+
+.featureList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0;
+  margin-block-start: 2rem;
+  padding: 0;
+  color: black;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.45;
+  list-style: none;
+  text-transform: uppercase;
+}
+
+.featureLabel {
+  color: rgb(115 115 115);
+  font-weight: 400;
+  text-transform: none;
+}
+
+.latestSection {
+  margin-block-start: clamp(5rem, 12vw, 10.5rem);
+}
+
+.latestGrid {
+  display: grid;
+  gap: 1.25rem;
+  margin-block-start: 5rem;
+}
+
+.latestCard {
+  position: relative;
+  display: flex;
+  overflow: hidden;
+  border: 1px solid rgb(229 229 229);
+  border-radius: 0.375rem;
+  background: rgb(250 250 250);
+  color: black;
+  transition:
+    border-color 150ms ease-out,
+    background-color 150ms ease-out;
+}
+
+.latestCard:hover,
+.latestCard:focus-visible {
+  border-color: rgb(212 212 212);
+  background: white;
+}
+
+.latestFeaturedCard {
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 340 / 191;
+}
+
+.latestFeaturedImage {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: contain;
+}
+
+.latestSecondaryGrid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.latestSecondaryCard {
+  min-inline-size: 0;
+  flex-direction: column;
+  aspect-ratio: 340 / 191;
+  padding: 1.25rem;
+  background-image:
+    linear-gradient(rgb(238 238 238) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(238 238 238) 1px, transparent 1px);
+  background-position: top right;
+  background-size: 4.75rem 4.75rem;
+}
+
+.latestCopy {
+  position: relative;
+  z-index: 1;
+  max-inline-size: 28rem;
+  margin-block-start: auto;
+  padding-block-start: clamp(6rem, 24vw, 9rem);
+}
+
+.latestCardTitle {
+  min-inline-size: 0;
+  font-size: clamp(1.5rem, 6vw, 1.875rem);
+  font-weight: 500;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.latestCardBody {
+  max-inline-size: 28rem;
+  margin-block-start: 0.75rem;
+  color: rgb(64 64 64);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.metricStrip {
+  position: absolute;
+  z-index: 0;
+  inset-block-start: 1.25rem;
+  inset-inline: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-inline-size: 27rem;
+  overflow: hidden;
+  border: 1px solid rgb(229 229 229);
+  border-radius: 0.375rem;
+  background: rgb(255 255 255 / 90%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.75rem;
+  opacity: 0.8;
+  box-shadow: 0 1px 0 rgb(0 0 0 / 4%);
+  backdrop-filter: blur(8px);
+  transition: opacity 300ms ease-out;
+}
+
+.latestCard:hover .metricStrip,
+.latestCard:focus-visible .metricStrip {
+  opacity: 1;
+}
+
+.metricRow {
+  min-inline-size: 0;
+  border-color: rgb(229 229 229);
+  background: rgb(255 255 255 / 90%);
+  padding: 0.75rem;
+}
+
+.metricRowSplit {
+  border-inline-end: 1px solid rgb(229 229 229);
+}
+
+.metricRowTop {
+  border-block-end: 1px solid rgb(229 229 229);
+}
+
+.metricLabel {
+  overflow: hidden;
+  color: rgb(115 115 115);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metricValue {
+  margin-block-start: 0.5rem;
+  color: black;
+}
+
+.metricNumber {
+  font-weight: 600;
+}
+
+.metricUnit {
+  color: rgb(115 115 115);
+}
+
+.sandboxGraphic {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0.7;
+  transition: opacity 300ms ease-out;
+}
+
+.latestCard:hover .sandboxGraphic,
+.latestCard:focus-visible .sandboxGraphic {
+  opacity: 0.9;
+}
+
+.sandboxBackdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 74% 22%, rgb(23 23 23 / 6%), transparent 24%),
+    linear-gradient(
+      135deg,
+      rgb(255 255 255 / 96%),
+      rgb(245 245 245 / 70%) 52%,
+      rgb(255 255 255 / 94%)
+    );
+}
+
+.sandboxOval,
+.sandboxDiamond,
+.sandboxLine {
+  position: absolute;
+}
+
+.sandboxOval {
+  inset-block-start: 2rem;
+  inset-inline-end: 2rem;
+  inline-size: 10rem;
+  block-size: 6rem;
+  border: 1px solid rgb(229 229 229 / 50%);
+  border-radius: 999rem;
+  background: rgb(255 255 255 / 40%);
+  filter: blur(1px);
+}
+
+.sandboxDiamond {
+  inset-block-start: 3.5rem;
+  inset-inline-end: 5rem;
+  inline-size: 5rem;
+  aspect-ratio: 1;
+  border: 1px solid rgb(212 212 212 / 40%);
+  background: rgb(255 255 255 / 55%);
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / 4%);
+  transform: rotate(45deg);
+}
+
+.sandboxLine {
+  inset-inline-end: 2.5rem;
+  inset-block-end: 2rem;
+  inline-size: 14rem;
+  block-size: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(212 212 212 / 60%),
+    transparent
+  );
+}
+
+.startSection {
+  position: relative;
+  z-index: 1;
+  padding-block: clamp(5rem, 12vw, 7.5rem);
+}
+
+.startGrid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 3rem 1.25rem;
+  text-align: start;
+}
+
+.startTitle {
+  grid-column: 1 / -1;
+  color: black;
+  font-size: clamp(2.5rem, 7vw, 3rem);
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.startPanels {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 2.5rem 1.25rem;
+  min-inline-size: 0;
+}
+
+.startPanel {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+.startBody {
+  max-inline-size: 28rem;
+  color: rgb(82 82 82);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.startAudience {
+  color: black;
+}
+
+.startActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  inline-size: 100%;
+  margin-block-start: 3.5rem;
+}
+
+.startAction {
+  inline-size: 100%;
+}
+
+.commandRoot {
+  position: relative;
+  max-inline-size: 100%;
+  margin-block-start: 3.5rem;
+}
+
+.commandShell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  inline-size: 100%;
+  min-block-size: 2.5rem;
+  border-radius: 999rem;
+  background: white;
+  color: black;
+  padding: 0.375rem 0.5rem;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 12%),
+    0 1px 2px rgb(0 0 0 / 6%);
+}
+
+.commandTypeButton {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  min-block-size: 1.75rem;
+  border-radius: 999rem 0.375rem 0.375rem 999rem;
+  padding-block: 0.25rem;
+  padding-inline: 0.5rem 0.25rem;
+  color: rgb(64 64 64);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.commandTypeButton:hover,
+.commandTypeButton:focus-visible {
+  background: rgb(245 245 245);
+  color: black;
+}
+
+.commandTypeLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.commandChevron {
+  inline-size: 1rem;
+  block-size: 1rem;
+  color: rgb(115 115 115);
+  transition: transform 150ms ease;
+}
+
+.commandChevronOpen {
+  transform: rotate(180deg);
+}
+
+.commandSeparator {
+  inline-size: 1px;
+  block-size: 1.5rem;
+  margin-inline: 0.25rem;
+  background: rgb(229 229 229);
+}
+
+.commandPrompt {
+  color: rgb(163 163 163);
+}
+
+.commandCode {
+  flex: 1;
+  min-inline-size: 0;
+  overflow-x: auto;
+  color: rgb(38 38 38);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+
+.commandCode::-webkit-scrollbar {
+  display: none;
+}
+
+.commandCopyButton {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  border-radius: 999rem;
+  color: rgb(115 115 115);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.commandCopyButton:hover,
+.commandCopyButton:focus-visible {
+  background: rgb(245 245 245);
+  color: black;
+}
+
+.commandCopyButton:active {
+  background: rgb(229 229 229);
+}
+
+.commandIcon {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+.commandMenu {
+  position: absolute;
+  z-index: 50;
+  inset-block-start: calc(100% + 0.25rem);
+  inset-inline-start: 0.5rem;
+  inline-size: min(14rem, calc(100vw - 3rem));
+  border-radius: 0.75rem;
+  background: white;
+  color: black;
+  padding: 0.5rem;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 8%),
+    0 0.625rem 1.875rem rgb(0 0 0 / 12%);
+}
+
+.commandMenuItem {
+  display: flex;
+  align-items: center;
+  inline-size: 100%;
+  min-block-size: 2.5rem;
+  border-radius: 0.375rem;
+  padding-inline: 0.5rem;
+  color: rgb(23 23 23);
+  cursor: pointer;
+  font-size: 0.875rem;
+  text-align: start;
+  transition: background-color 150ms ease;
+}
+
+.commandMenuItem:hover,
+.commandMenuItem:focus-visible,
+.commandMenuItemActive {
+  background: rgb(245 245 245);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .heroKicker,
+  .heroKickerBody,
+  .latestCard,
+  .metricStrip,
+  .sandboxGraphic,
+  .commandTypeButton,
+  .commandChevron,
+  .commandCopyButton,
+  .commandMenuItem {
+    transition: none;
+  }
+}
+
+@media (min-width: 30rem) {
+  .heroActions,
+  .startActions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    inline-size: auto;
+  }
+
+  .heroAction,
+  .startAction {
+    inline-size: auto;
+  }
+}
+
+@media (min-width: 48rem) {
+  .heroGrid {
+    gap: 3rem;
+    padding-block: 4rem;
+  }
+
+  .productImageMobileLight,
+  .productImageMobileDark {
+    display: none;
+  }
+
+  .productImageDesktopLight {
+    display: block;
+  }
+
+  :global(.dark) .productImageDesktopLight {
+    display: none;
+  }
+
+  :global(.dark) .productImageDesktopDark {
+    display: block;
+  }
+
+  .startPanel {
+    grid-column: span 6;
+  }
+}
+
+@media (min-width: 64rem) {
+  .heroGrid {
+    grid-template-columns: 1fr 0.8fr 1fr;
+    gap: 2.5rem;
+    padding-block: 0;
+    text-align: start;
+  }
+
+  .heroIntro {
+    order: 1;
+    max-inline-size: 28rem;
+  }
+
+  .heroTitle {
+    margin-inline: 0;
+  }
+
+  .heroMobileKicker {
+    display: none;
+  }
+
+  .heroActions {
+    justify-content: flex-start;
+    margin-inline: 0;
+  }
+
+  .heroMarkWrap {
+    order: 2;
+    transform: translateY(1.25rem);
+  }
+
+  .heroKickers {
+    order: 3;
+    display: grid;
+    gap: 1rem;
+    justify-self: end;
+    max-inline-size: 22rem;
+  }
+
+  .sectionHeader {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .sectionTitle {
+    grid-column: span 4;
+  }
+
+  .sectionTitleReversed {
+    grid-column: 5 / span 4;
+  }
+
+  .sectionDescription {
+    grid-column: 6 / span 3;
+    margin-block-start: 2.375rem;
+  }
+
+  .sectionDescriptionReversed {
+    grid-column: 10 / span 3;
+  }
+
+  .productContent {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    align-items: start;
+    gap: 1.25rem;
+    margin-block-start: 2.75rem;
+  }
+
+  .productVisual {
+    grid-column: span 8;
+  }
+
+  .productVisualReversed {
+    grid-column: 5 / span 8;
+  }
+
+  .productAside {
+    grid-column: 10 / span 3;
+    margin-block-start: 0;
+    padding-block-start: 2rem;
+  }
+
+  .productAsideReversed {
+    grid-column: 1 / span 3;
+    grid-row: 1;
+  }
+
+  .latestGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .latestFeaturedCard {
+    aspect-ratio: auto;
+    min-block-size: 36rem;
+  }
+
+  .latestSecondaryGrid {
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+
+  .latestSecondaryCard {
+    aspect-ratio: auto;
+    min-block-size: 17.5rem;
+  }
+
+  .metricStrip {
+    inset-block-start: 2.5rem;
+    inset-inline-start: auto;
+    inset-inline-end: 2.5rem;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    inline-size: 26.25rem;
+    max-inline-size: none;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .metricRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    block-size: 3rem;
+    border: 1px solid rgb(229 229 229);
+    border-radius: 0.375rem;
+    padding-block: 0;
+    padding-inline: 1rem;
+    box-shadow: 0 1px 0 rgb(0 0 0 / 4%);
+  }
+
+  .metricRowSplit,
+  .metricRowTop {
+    border: 1px solid rgb(229 229 229);
+  }
+
+  .metricValue {
+    margin-block-start: 0;
+  }
+
+  .metricRowNarrow {
+    inline-size: 14.375rem;
+  }
+
+  .metricRowOffset {
+    margin-inline-start: 9.625rem;
+  }
+
+  .metricRowEnd {
+    inline-size: 9.625rem;
+    margin-inline-start: auto;
+  }
+
+  .startGrid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .startTitle,
+  .startPanels {
+    grid-column: 3 / span 8;
+  }
+
+  .startPanels {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+
+  .startPanel {
+    grid-column: span 4;
+  }
+}

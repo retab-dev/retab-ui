@@ -9,20 +9,18 @@ import {
 import { LatestSection } from "./latest-section";
 import { ProductSections } from "./product-sections";
 import { StartBuilding } from "./start-building";
+import styles from "./homepage.module.css";
 
 export function VercelHomepage() {
   return (
-    <div className="min-h-svh bg-white text-black">
-      <a
-        href="#homepage-main"
-        className="sr-only z-50 rounded-md bg-black px-4 py-2 text-sm font-medium text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
-      >
+    <div className={styles.root}>
+      <a href="#homepage-main" className={styles.skipLink}>
         Skip to content
       </a>
       <MarketingHeader content={homepageHeader} />
       <main id="homepage-main" tabIndex={-1}>
         <Hero />
-        <div className="mx-auto w-full max-w-screen-2xl px-6">
+        <div className={styles.contentShell}>
           <ProductSections />
           <LatestSection />
           <StartBuilding content={startBuildingContent} />

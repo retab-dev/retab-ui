@@ -71,7 +71,7 @@ export function LogoStrip({ logos }: { logos: readonly LogoContent[] }) {
   const repeatedLogos = [...logos, ...logos];
 
   return (
-    <div className="relative z-10 w-full overflow-hidden pb-12 min-[720px]:pt-6 min-[720px]:pb-10">
+    <div className="relative z-10 w-full overflow-hidden pb-12 md:pt-6 md:pb-10">
       <ul className="sr-only">
         {logos.map((logo) => (
           <li key={logo.id}>{logo.label}</li>
@@ -79,7 +79,7 @@ export function LogoStrip({ logos }: { logos: readonly LogoContent[] }) {
       </ul>
       <div
         aria-hidden="true"
-        className="flex h-11 w-max min-w-0 items-center gap-12 px-6 text-neutral-950 motion-safe:animate-[homepage-logo-marquee_28s_linear_infinite] motion-reduce:hidden min-[1120px]:hidden"
+        className="flex h-11 w-max min-w-0 items-center gap-12 px-6 text-neutral-950 motion-safe:animate-[homepage-logo-marquee_28s_linear_infinite] motion-reduce:hidden xl:hidden"
       >
         {repeatedLogos.map((logo, index) => (
           <BrandLogo key={`${logo.id}-${index}`} logo={logo} />
@@ -87,13 +87,13 @@ export function LogoStrip({ logos }: { logos: readonly LogoContent[] }) {
       </div>
       <div
         aria-hidden="true"
-        className="hidden min-h-11 flex-wrap items-center justify-center gap-x-10 gap-y-6 px-6 text-neutral-950 motion-reduce:flex min-[1120px]:hidden"
+        className="hidden min-h-11 flex-wrap items-center justify-center gap-x-10 gap-y-6 px-6 text-neutral-950 motion-reduce:flex xl:hidden"
       >
         {logos.map((logo) => (
           <BrandLogo key={logo.id} logo={logo} />
         ))}
       </div>
-      <div className="hidden h-11 w-full min-w-0 items-center justify-between gap-8 text-neutral-950 min-[1120px]:flex">
+      <div className="hidden h-11 w-full min-w-0 items-center justify-between gap-8 text-neutral-950 xl:flex">
         {logos.map((logo) => (
           <BrandLogo key={logo.id} logo={logo} />
         ))}

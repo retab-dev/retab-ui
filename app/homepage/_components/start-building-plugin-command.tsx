@@ -95,7 +95,7 @@ export function StartBuildingPluginCommand({
 
   return (
     <div ref={rootRef} className="relative mt-14 max-w-full">
-      <div className="inline-flex h-10 w-full max-w-full items-center gap-1 rounded-full bg-white px-2 py-1.5 text-black shadow-[0_0_0_1px_rgba(0,0,0,0.12),0_1px_2px_rgba(0,0,0,0.06)]">
+      <div className="inline-flex h-10 w-full max-w-full items-center gap-1 rounded-full bg-white px-2 py-1.5 text-black shadow-sm ring-1 ring-black/10">
         <button
           type="button"
           aria-label="Command type"
@@ -122,7 +122,7 @@ export function StartBuildingPluginCommand({
         </button>
         <span aria-hidden="true" className="mx-1 h-6 w-px bg-neutral-200" />
         <span className="block pr-1 text-neutral-400">$</span>
-        <code className="min-w-0 flex-1 overflow-x-auto px-3 font-mono text-sm leading-5 whitespace-nowrap text-neutral-800 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <code className="min-w-0 flex-1 overflow-x-auto px-3 font-mono text-sm leading-5 whitespace-nowrap text-neutral-800">
           {selectedOption.command}
         </code>
         <button

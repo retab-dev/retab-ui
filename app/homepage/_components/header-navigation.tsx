@@ -98,7 +98,7 @@ function HeaderDropdown({ group }: { group: NavGroup }) {
       <div
         id={menuId}
         hidden={!isOpen}
-        className="fixed inset-x-0 top-16 z-50 bg-neutral-50 shadow-sm"
+        className="fixed inset-x-0 top-16 z-50 border-b border-neutral-200 bg-neutral-50 shadow-sm"
       >
         <div className="mx-auto flex w-full max-w-screen-2xl flex-nowrap gap-x-4 px-6 pt-8 pb-12">
           {group.sections.map((section) => (
@@ -237,7 +237,7 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
   }, [isOpen]);
 
   return (
-    <div className="ml-auto min-[961px]:hidden">
+    <div className="ml-auto lg:hidden">
       <button
         ref={triggerRef}
         type="button"
@@ -248,9 +248,9 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
         className={`flex min-h-11 min-w-11 items-center justify-end rounded-md text-black transition-colors duration-150 ease-out focus-visible:bg-neutral-100 motion-reduce:transition-none ${focusRing}`}
       >
         {isOpen ? (
-          <X className="size-6 stroke-[1.5]" />
+          <X className="size-6 stroke-2" />
         ) : (
-          <Menu className="size-6 stroke-[1.5]" />
+          <Menu className="size-6 stroke-2" />
         )}
       </button>
 
@@ -367,10 +367,7 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
 export function HeaderNavigation({ content }: { content: HeaderContent }) {
   return (
     <>
-      <nav
-        aria-label="Primary"
-        className="hidden items-center gap-2 min-[961px]:flex"
-      >
+      <nav aria-label="Primary" className="hidden items-center gap-2 lg:flex">
         {content.navGroups.map((group) => (
           <HeaderDropdown key={group.id} group={group} />
         ))}
@@ -387,7 +384,7 @@ export function HeaderNavigation({ content }: { content: HeaderContent }) {
         ))}
       </nav>
 
-      <div className="ml-auto hidden items-center gap-2 min-[961px]:flex">
+      <div className="ml-auto hidden items-center gap-2 lg:flex">
         {content.desktopActions.map((action) => (
           <HeaderActionButton key={action.label} action={action} />
         ))}

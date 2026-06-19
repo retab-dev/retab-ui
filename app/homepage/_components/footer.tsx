@@ -70,7 +70,7 @@ function StatusLink({ status }: { status: FooterContent["status"] }) {
       aria-label={getLinkAriaLabel(status)}
       {...getLinkProps(status)}
       className={cn(
-        "inline-flex h-[34px] w-fit items-center rounded-md px-2 font-mono text-sm text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none",
+        "inline-flex h-8 w-fit items-center rounded-md px-2 font-mono text-sm text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none",
         focusRing,
       )}
     >
@@ -85,11 +85,11 @@ function FooterLogo() {
       href="/homepage"
       aria-label="Vercel homepage"
       className={cn(
-        "inline-flex h-8 w-full max-w-[199px] items-center rounded-sm text-black transition-colors hover:text-neutral-600 focus-visible:text-black motion-reduce:transition-none",
+        "inline-flex h-8 w-full max-w-48 items-center rounded-sm text-black transition-colors hover:text-neutral-600 focus-visible:text-black motion-reduce:transition-none",
         focusRing,
       )}
     >
-      <VercelMark className="h-5 w-[23px]" />
+      <VercelMark className="size-5" />
     </Link>
   );
 }
@@ -102,7 +102,7 @@ export function MarketingFooter({ content }: { content: FooterContent }) {
       </h2>
       <MarketingContainer className="py-10">
         <nav aria-label="Footer navigation">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-8 min-[520px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 lg:gap-x-2 lg:gap-y-8">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 lg:gap-x-2 lg:gap-y-8">
             {content.columns.map((column) => (
               <FooterColumn
                 key={column.id}
@@ -118,7 +118,7 @@ export function MarketingFooter({ content }: { content: FooterContent }) {
           <FooterLogo />
         </div>
 
-        <div className="mt-6 flex min-h-[34px] flex-col gap-5 min-[460px]:flex-row min-[460px]:items-center min-[460px]:justify-between">
+        <div className="mt-6 flex min-h-8 flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <StatusLink status={content.status} />
         </div>
       </MarketingContainer>
