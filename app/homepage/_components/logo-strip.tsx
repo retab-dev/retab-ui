@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+
 import { type LogoContent } from "./homepage-types";
 import styles from "./logo-strip.module.css";
 
@@ -80,7 +82,10 @@ export function LogoStrip({ logos }: { logos: readonly LogoContent[] }) {
       </ul>
       <div
         aria-hidden="true"
-        className={`${styles.logoMarquee} flex h-11 w-max min-w-0 items-center gap-12 px-6 text-neutral-950 motion-reduce:hidden xl:hidden`}
+        className={cn(
+          styles.logoMarquee,
+          "flex h-11 w-max min-w-0 items-center gap-12 px-6 text-neutral-950 motion-reduce:hidden xl:hidden",
+        )}
       >
         {repeatedLogos.map((logo, index) => (
           <BrandLogo key={`${logo.id}-${index}`} logo={logo} />

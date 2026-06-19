@@ -1,26 +1,36 @@
+import { cn } from "@/lib/utils";
+
 import { heroKickers, logoStrip } from "./homepage-content";
 import { LogoStrip } from "./logo-strip";
-import { MarketingButton, MarketingContainer, VercelMark } from "./primitives";
+import {
+  focusRing,
+  MarketingButton,
+  MarketingContainer,
+  VercelMark,
+} from "./primitives";
 
-function HeroKicker({
-  body,
-  label,
-}: {
+type HeroKickerProps = {
   body: string;
   label: string;
-}) {
+};
+
+function HeroKicker({ body, label }: HeroKickerProps) {
   return (
     <p
       aria-label={`${label} ${body}`}
-      className="group/kicker relative m-0 flex max-h-4 w-full cursor-default items-start overflow-hidden text-left font-mono text-sm leading-[1.6] font-normal text-pretty text-neutral-950 transition-[max-height] duration-200 ease-out hover:max-h-20 motion-reduce:transition-none"
+      tabIndex={0}
+      className={cn(
+        "group/kicker relative m-0 flex max-h-5 w-full cursor-default items-start overflow-hidden rounded-sm text-left font-mono text-sm leading-5 font-normal text-pretty text-neutral-950 transition-all duration-200 ease-out hover:max-h-20 focus:max-h-20 motion-reduce:transition-none",
+        focusRing,
+      )}
     >
       <span className="block">
-        <span className="inline shrink-0 font-mono text-sm font-semibold tracking-[0.0625rem] text-neutral-950 uppercase transition-colors duration-500 ease-out motion-reduce:transition-none">
+        <span className="inline shrink-0 font-mono text-sm font-semibold tracking-wider text-neutral-950 uppercase transition-colors duration-500 ease-out motion-reduce:transition-none">
           {label}
         </span>
         <span
           aria-hidden="true"
-          className="inline text-neutral-600 opacity-0 transition-opacity duration-300 ease-out group-hover/kicker:opacity-100 motion-reduce:transition-none"
+          className="inline text-neutral-600 opacity-0 transition-opacity duration-300 ease-out group-hover/kicker:opacity-100 group-focus/kicker:opacity-100 motion-reduce:transition-none"
         >
           {" "}
           {body}
