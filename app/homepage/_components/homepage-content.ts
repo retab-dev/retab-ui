@@ -330,24 +330,29 @@ export const footerSocialLinks = [
   {
     ...externalLink("GitHub", "https://github.com/vercel"),
     ariaLabel: "Vercel on GitHub",
+    icon: "github",
   },
   {
     ...externalLink("X", "https://x.com/vercel"),
     ariaLabel: "Vercel on X",
+    icon: "x",
   },
   {
     ...externalLink("LinkedIn", "https://www.linkedin.com/company/vercel"),
     ariaLabel: "Vercel on LinkedIn",
+    icon: "linkedin",
   },
   {
     ...externalLink("YouTube", "https://www.youtube.com/vercel"),
     ariaLabel: "Vercel on YouTube",
+    icon: "youtube",
   },
   {
     ...externalLink("Instagram", "https://www.instagram.com/vercel"),
     ariaLabel: "Vercel on Instagram",
+    icon: "instagram",
   },
-] as const satisfies readonly LinkItem[]
+] as const satisfies readonly FooterSocialLink[]
 
 export const footerNavigationColumns = [
   {
