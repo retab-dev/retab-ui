@@ -104,7 +104,7 @@ export function StartBuildingPluginCommand({
           }}
         />
       ) : null}
-      <div className="inline-flex min-h-10 w-full items-center gap-1 rounded-full bg-white px-2 py-1.5 text-black shadow-sm ring-1 ring-black/10">
+      <div className="group/command inline-flex min-h-10 w-full items-center gap-1 rounded-full bg-white px-2 py-1.5 text-black shadow-sm ring-1 ring-black/10">
         <button
           type="button"
           aria-label={`Command type: ${selectedOption.label}`}
@@ -129,16 +129,28 @@ export function StartBuildingPluginCommand({
           </span>
         </button>
         <span aria-hidden="true" className="h-6 w-px shrink-0 bg-neutral-200" />
-        <span className="shrink-0 text-neutral-400">$</span>
-        <code className="min-w-0 flex-1 overflow-x-auto font-mono text-sm leading-5 whitespace-nowrap text-neutral-800">
-          {selectedOption.command}
-        </code>
+        <button
+          type="button"
+          aria-label={`Copy command: ${selectedOption.command}`}
+          onClick={copyCommand}
+          className={cn(
+            "flex min-w-0 flex-1 cursor-default items-center gap-3 rounded-md px-1 text-left transition-colors duration-150 ease-out motion-reduce:transition-none",
+            focusRing,
+          )}
+        >
+          <span aria-hidden="true" className="shrink-0 text-neutral-400">
+            $
+          </span>
+          <code className="min-w-0 overflow-x-auto font-mono text-sm leading-5 whitespace-nowrap text-neutral-800">
+            {selectedOption.command}
+          </code>
+        </button>
         <button
           type="button"
           aria-label={`Copy ${selectedOption.label} command`}
           onClick={copyCommand}
           className={cn(
-            "grid size-7 shrink-0 place-items-center rounded-full text-neutral-500 transition-colors duration-150 ease-out hover:bg-neutral-100 hover:text-black active:bg-neutral-200 motion-reduce:transition-none",
+            "grid size-7 shrink-0 place-items-center rounded-full text-neutral-500 transition-colors duration-150 ease-out group-hover/command:bg-neutral-100 hover:bg-neutral-100 hover:text-black active:bg-neutral-200 motion-reduce:transition-none",
             focusRing,
           )}
         >
