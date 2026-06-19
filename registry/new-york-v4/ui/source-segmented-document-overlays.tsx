@@ -1,53 +1,53 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import type { SegmentedSourceFieldLink } from "@/components/ui/source-field-link"
-import { rotateImageArea } from "@/components/ui/image-source"
+import type { SegmentedSourceFieldLink } from "@/components/ui/source-field-link";
+import { rotateImageArea } from "@/components/ui/image-source";
 import type {
   ImageFrameOverlayProps,
   ImageViewerHandle,
-} from "@/components/ui/image-viewer"
+} from "@/components/ui/image-viewer";
 import {
   PdfHighlight,
   type PageOverlayProps,
   type PdfViewerHandle,
-} from "@/components/ui/pdf-viewer"
-import type { SegmentAnchor } from "@/components/ui/segmented-document-model"
-import { useSegmentedDocumentViewport } from "@/components/ui/segmented-document-provider"
+} from "@/components/ui/pdf-viewer";
+import type { SegmentAnchor } from "@/components/ui/segmented-document-model";
+import { useSegmentedDocumentViewport } from "@/components/ui/segmented-document-provider";
 
 const SOURCE_HIGHLIGHT_CLASS =
-  "pointer-events-none absolute z-10 rounded-[2px] border border-primary/70 bg-primary/12 shadow-[0_4px_16px_rgb(0_0_0_/_8%)]"
+  "pointer-events-none absolute z-10 rounded-[2px] border border-primary/70 bg-primary/12 shadow-[0_4px_16px_rgb(0_0_0_/_8%)]";
 
 type AnchorWithBounds = SegmentAnchor & {
-  bounds: NonNullable<SegmentAnchor["bounds"]>
-}
+  bounds: NonNullable<SegmentAnchor["bounds"]>;
+};
 
-type SegmentedSourceLink = Pick<SegmentedSourceFieldLink, "activeAnchors">
+type SegmentedSourceLink = Pick<SegmentedSourceFieldLink, "activeAnchors">;
 
 function activeAnchorsForPage(
   anchors: readonly SegmentAnchor[],
-  pageNumber: number
+  pageNumber: number,
 ): AnchorWithBounds[] {
   return anchors.filter(
     (anchor): anchor is AnchorWithBounds =>
-      anchor.bounds != null && anchor.pageNumber === pageNumber
-  )
+      anchor.bounds != null && anchor.pageNumber === pageNumber,
+  );
 }
 
 export function useSegmentedPdfViewerHandle() {
-  const segmentedViewport = useSegmentedDocumentViewport()
+  const segmentedViewport = useSegmentedDocumentViewport();
 
   return React.useCallback(
     (handle: PdfViewerHandle | null) => {
-      segmentedViewport.documentHandlers.setDocumentHandle(handle)
+      segmentedViewport.documentHandlers.setDocumentHandle(handle);
     },
-    [segmentedViewport.documentHandlers]
-  )
+    [segmentedViewport.documentHandlers],
+  );
 }
 
 export function useSegmentedImageViewerHandle() {
-  const segmentedViewport = useSegmentedDocumentViewport()
+  const segmentedViewport = useSegmentedDocumentViewport();
 
   return React.useCallback(
     (handle: ImageViewerHandle | null) => {
@@ -56,7 +56,7 @@ export function useSegmentedImageViewerHandle() {
           ? {
               getViewportElement: handle.getViewportElement,
               scrollToPage: (pageNumber, options) => {
-                handle.scrollToFrameArea(pageNumber, { top: 0 }, options)
+                handle.scrollToFrameArea(pageNumber, { top: 0 }, options);
               },
               scrollToPageArea: (target, options) => {
                 handle.scrollToFrameArea(
@@ -67,22 +67,22 @@ export function useSegmentedImageViewerHandle() {
                     width: target.width,
                     height: target.height,
                   },
-                  options
-                )
+                  options,
+                );
               },
             }
-          : null
-      )
+          : null,
+      );
     },
-    [segmentedViewport.documentHandlers]
-  )
+    [segmentedViewport.documentHandlers],
+  );
 }
 
 export function useSegmentedPdfSourceOverlay(link: SegmentedSourceLink) {
   return React.useCallback(
     ({ pageNumber }: PageOverlayProps) => {
-      const anchors = activeAnchorsForPage(link.activeAnchors, pageNumber)
-      if (anchors.length === 0) return null
+      const anchors = activeAnchorsForPage(link.activeAnchors, pageNumber);
+      if (anchors.length === 0) return null;
 
       return (
         <>
@@ -98,17 +98,17 @@ export function useSegmentedPdfSourceOverlay(link: SegmentedSourceLink) {
             />
           ))}
         </>
-      )
+      );
     },
-    [link.activeAnchors]
-  )
+    [link.activeAnchors],
+  );
 }
 
 export function useSegmentedImageSourceOverlay(link: SegmentedSourceLink) {
   return React.useCallback(
     ({ frameNumber, rotation }: ImageFrameOverlayProps) => {
-      const anchors = activeAnchorsForPage(link.activeAnchors, frameNumber)
-      if (anchors.length === 0) return null
+      const anchors = activeAnchorsForPage(link.activeAnchors, frameNumber);
+      if (anchors.length === 0) return null;
 
       return (
         <>
@@ -120,8 +120,8 @@ export function useSegmentedImageSourceOverlay(link: SegmentedSourceLink) {
                 width: anchor.bounds.width * 100,
                 height: anchor.bounds.height * 100,
               },
-              rotation
-            )
+              rotation,
+            );
 
             return (
               <div
@@ -134,11 +134,11 @@ export function useSegmentedImageSourceOverlay(link: SegmentedSourceLink) {
                   height: `${area.height}%`,
                 }}
               />
-            )
+            );
           })}
         </>
-      )
+      );
     },
-    [link.activeAnchors]
-  )
+    [link.activeAnchors],
+  );
 }

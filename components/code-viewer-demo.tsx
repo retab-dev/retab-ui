@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { CodeViewer } from "@/components/ui/code-viewer"
+import { CodeViewer } from "@/components/ui/code-viewer";
 
 export function CodeViewerDemo() {
   return (
@@ -16,5 +16,5 @@ export function CodeViewerDemo() {
         className="h-full"
       />
     </div>
-  )
+  );
 }

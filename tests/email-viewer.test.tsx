@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import * as React from "react"
+import * as React from "react";
 import {
   cleanup,
   fireEvent,
@@ -8,10 +8,10 @@ import {
   screen,
   waitFor,
   within,
-} from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+} from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createFakeEmailMessage } from "@/components/email-viewer-demo"
+import { createFakeEmailMessage } from "@/components/email-viewer-demo";
 import {
   buildMimeTree,
   categoryForMimeNode,
@@ -27,11 +27,11 @@ import {
   getDefaultMimeSelectionPath,
   getInlineResourceScope,
   inlineResourceKeyToString,
-} from "@/registry/new-york-v4/ui/email-viewer"
+} from "@/registry/new-york-v4/ui/email-viewer";
 import type {
   EmailViewerMessage,
   MimePart,
-} from "@/registry/new-york-v4/ui/email-viewer"
+} from "@/registry/new-york-v4/ui/email-viewer";
 
 vi.mock("@/registry/new-york-v4/ui/file-viewer", () => ({
   FileViewer: ({
@@ -39,9 +39,9 @@ vi.mock("@/registry/new-york-v4/ui/file-viewer", () => ({
     as,
     className,
   }: {
-    source: { kind: string; text?: string; fileName?: string }
-    as?: string
-    className?: string
+    source: { kind: string; text?: string; fileName?: string };
+    as?: string;
+    className?: string;
   }) => (
     <div data-testid="file-viewer" data-as={as} className={className}>
       {source.kind === "text" ? (
@@ -51,13 +51,13 @@ vi.mock("@/registry/new-york-v4/ui/file-viewer", () => ({
       )}
     </div>
   ),
-}))
+}));
 
 vi.mock("@/registry/new-york-v4/ui/file-thumbnail", () => ({
   FileThumbnail: ({ source }: { source?: { fileName?: string } }) => (
     <div data-testid="file-thumbnail">{source?.fileName ?? "file"}</div>
   ),
-}))
+}));
 
 beforeEach(() => {
   Object.defineProperty(window, "matchMedia", {
@@ -72,31 +72,31 @@ beforeEach(() => {
       removeListener: vi.fn(),
       dispatchEvent: vi.fn(),
     })),
-  })
+  });
 
-  let nextObjectUrl = 0
+  let nextObjectUrl = 0;
   Object.defineProperty(URL, "createObjectURL", {
     configurable: true,
     value: vi.fn(() => {
-      nextObjectUrl += 1
-      return `blob:inline-${nextObjectUrl}`
+      nextObjectUrl += 1;
+      return `blob:inline-${nextObjectUrl}`;
     }),
-  })
+  });
   Object.defineProperty(URL, "revokeObjectURL", {
     configurable: true,
     value: vi.fn(),
-  })
-})
+  });
+});
 
 afterEach(() => {
-  cleanup()
-  vi.restoreAllMocks()
-})
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 function iframe(container: HTMLElement) {
-  const element = container.querySelector("iframe")
-  expect(element).toBeTruthy()
-  return element as HTMLIFrameElement
+  const element = container.querySelector("iframe");
+  expect(element).toBeTruthy();
+  return element as HTMLIFrameElement;
 }
 
 function htmlSource(text: string, fileName: string) {
@@ -106,7 +106,7 @@ function htmlSource(text: string, fileName: string) {
     fileName,
     mimeType: "text/html",
     identityKey: `html:${fileName}:${text.length}`,
-  }
+  };
 }
 
 function textSource(text: string, fileName: string) {
@@ -116,7 +116,7 @@ function textSource(text: string, fileName: string) {
     fileName,
     mimeType: "text/plain",
     identityKey: `text:${fileName}:${text.length}`,
-  }
+  };
 }
 
 function imageBlobSource(fileName: string) {
@@ -126,7 +126,7 @@ function imageBlobSource(fileName: string) {
     identityKey: `blob:${fileName}`,
     fileName,
     mimeType: "image/png",
-  }
+  };
 }
 
 function blobSource(fileName: string, mimeType: string) {
@@ -136,7 +136,7 @@ function blobSource(fileName: string, mimeType: string) {
     identityKey: `blob:${fileName}`,
     fileName,
     mimeType,
-  }
+  };
 }
 
 function htmlPart(id: string, html: string, fileName = `${id}.html`): MimePart {
@@ -146,7 +146,7 @@ function htmlPart(id: string, html: string, fileName = `${id}.html`): MimePart {
     fileName,
     source: htmlSource(html, fileName),
     size: html.length,
-  }
+  };
 }
 
 function textPart(id: string, text: string, fileName = `${id}.txt`): MimePart {
@@ -156,7 +156,7 @@ function textPart(id: string, text: string, fileName = `${id}.txt`): MimePart {
     fileName,
     source: textSource(text, fileName),
     size: text.length,
-  }
+  };
 }
 
 function message(root: MimePart): EmailViewerMessage {
@@ -167,7 +167,7 @@ function message(root: MimePart): EmailViewerMessage {
     to: "Avery Lee <avery@example.com>",
     sentAt: "2026-06-13T09:42:00-04:00",
     root,
-  }
+  };
 }
 
 describe("EmailViewer MIME model", () => {
@@ -179,19 +179,19 @@ describe("EmailViewer MIME model", () => {
         textPart("duplicate", "Plain body"),
         htmlPart("duplicate", "<p>HTML body</p>"),
       ],
-    })
+    });
 
     expect(tree.children.map((child) => child.path)).toEqual([
       ["root", "duplicate"],
       ["root", "duplicate~2"],
-    ])
+    ]);
     expect(findMimeNodeByPath(tree, ["root", "duplicate"])?.part.mimeType).toBe(
-      "text/plain"
-    )
+      "text/plain",
+    );
     expect(
-      findMimeNodeByPath(tree, ["root", "duplicate~2"])?.part.mimeType
-    ).toBe("text/html")
-  })
+      findMimeNodeByPath(tree, ["root", "duplicate~2"])?.part.mimeType,
+    ).toBe("text/html");
+  });
 
   it("selects HTML over text inside recursive multipart alternatives", () => {
     const tree = buildMimeTree({
@@ -221,34 +221,34 @@ describe("EmailViewer MIME model", () => {
           ],
         },
       ],
-    })
+    });
 
-    const path = getDefaultMimeSelectionPath(tree)
-    expect(path).toEqual(["root", "alternative", "related", "html"])
-    const selected = findMimeNodeByPath(tree, path)
-    expect(selected?.part.mimeType).toBe("text/html")
-    expect(getInlineResourceScope(tree, selected!).part.id).toBe("related")
-  })
+    const path = getDefaultMimeSelectionPath(tree);
+    expect(path).toEqual(["root", "alternative", "related", "html"]);
+    const selected = findMimeNodeByPath(tree, path);
+    expect(selected?.part.mimeType).toBe("text/html");
+    expect(getInlineResourceScope(tree, selected!).part.id).toBe("related");
+  });
 
   it("stores normalized node facts and parent paths without object parents", () => {
     const tree = buildMimeTree({
       id: "root",
       mimeType: "multipart/mixed",
       children: [htmlPart("", "<p>HTML body</p>")],
-    })
+    });
 
-    expect(tree.parentPath).toBeNull()
-    expect(tree.facts.kind).toBe("multipart")
-    expect(tree.children[0]?.path).toEqual(["root", "part-1"])
-    expect(tree.children[0]?.parentPath).toEqual(["root"])
-    expect("parent" in tree.children[0]!).toBe(false)
+    expect(tree.parentPath).toBeNull();
+    expect(tree.facts.kind).toBe("multipart");
+    expect(tree.children[0]?.path).toEqual(["root", "part-1"]);
+    expect(tree.children[0]?.parentPath).toEqual(["root"]);
+    expect("parent" in tree.children[0]!).toBe(false);
     expect(tree.children[0]?.facts).toMatchObject({
       kind: "body",
       mimeType: "text/html",
       isRenderable: true,
       preview: { kind: "preview", category: "html" },
-    })
-  })
+    });
+  });
 
   it("derives scoped body and attachment sections without nested message leakage", () => {
     const tree = buildMimeTree({
@@ -271,33 +271,93 @@ describe("EmailViewer MIME model", () => {
           ],
         },
       ],
-    })
-    const scope = createMimeMessageScope(message(tree.part), tree)
+    });
+    const scope = createMimeMessageScope(message(tree.part), tree);
     const sidebar = deriveEmailSidebarModel({
       scope,
       selectedPath: ["root", "html"],
-    })
-    const body = sidebar.sections.find((section) => section.id === "body")
+    });
+    const body = sidebar.sections.find((section) => section.id === "body");
     const attachments = sidebar.sections.find(
-      (section) => section.id === "attachments"
-    )
+      (section) => section.id === "attachments",
+    );
 
-    expect(sidebar.bodyCount).toBe(1)
-    expect(sidebar.attachmentCount).toBe(1)
-    expect(body?.items.map((item) => item.kind)).toEqual(["body"])
-    expect(body?.items.map((item) => item.title)).toEqual(["Body"])
-    expect(attachments?.items.map((item) => item.kind)).toEqual(["attachment"])
+    expect(sidebar.bodyCount).toBe(1);
+    expect(sidebar.attachmentCount).toBe(1);
+    expect(body?.items.map((item) => item.kind)).toEqual(["body"]);
+    expect(body?.items.map((item) => item.title)).toEqual(["Body"]);
+    expect(attachments?.items.map((item) => item.kind)).toEqual(["attachment"]);
     expect(attachments?.items.map((item) => item.title)).toEqual([
       "forwarded.eml",
-    ])
-  })
+    ]);
+  });
+
+  it("uses nested message body HTML for sidebar thumbnails", () => {
+    const tree = buildMimeTree({
+      id: "root",
+      mimeType: "multipart/mixed",
+      children: [
+        htmlPart("html", "<p>Outer body</p>", "message.html"),
+        {
+          id: "structured-forward",
+          mimeType: "message/rfc822",
+          disposition: "attachment",
+          fileName: "structured-forward.eml",
+          children: [
+            htmlPart(
+              "structured-html",
+              "<p>Structured body</p>",
+              "structured-forward.html",
+            ),
+          ],
+        },
+        {
+          id: "raw-forward",
+          mimeType: "message/rfc822",
+          disposition: "attachment",
+          fileName: "raw-forward.eml",
+          source: {
+            kind: "text",
+            text: "From: nested@example.com\n\nraw message payload",
+            fileName: "raw-forward.eml",
+            mimeType: "message/rfc822",
+            identityKey: "raw-forward:source",
+          },
+          children: [
+            htmlPart("raw-html", "<p>Raw-backed body</p>", "raw-forward.html"),
+          ],
+        },
+      ],
+    });
+    const scope = createMimeMessageScope(message(tree.part), tree);
+    const sidebar = deriveEmailSidebarModel({
+      scope,
+      selectedPath: ["root", "html"],
+    });
+    const attachmentThumbnails =
+      sidebar.sections.find((section) => section.id === "attachments")?.items ??
+      [];
+
+    expect(attachmentThumbnails).toHaveLength(2);
+    for (const [index, item] of attachmentThumbnails.entries()) {
+      expect(item.thumbnail.kind).toBe("file");
+      if (item.thumbnail.kind !== "file") return;
+      expect(item.thumbnail.source.kind).toBe("text");
+      if (item.thumbnail.source.kind !== "text") return;
+      expect(item.thumbnail.source.mimeType).toBe("text/html");
+      expect(item.thumbnail.source.text).toContain(
+        index === 0 ? "Structured body" : "Raw-backed body",
+      );
+      expect(item.thumbnail.source.text).not.toContain("raw message payload");
+    }
+  });
 
   it("derives structured email header addresses", () => {
     const header = deriveEmailHeaderModel({
       ...message(textPart("plain", "Plain body")),
       from: '"Mina Patel" <mina@example.com>',
       to: ["Avery Lee <avery@example.com>", "ops@example.com"],
-    })
+    });
 
     expect(header.from).toEqual([
       {
@@ -305,7 +365,7 @@ describe("EmailViewer MIME model", () => {
         address: "mina@example.com",
         display: '"Mina Patel" <mina@example.com>',
       },
-    ])
+    ]);
     expect(header.to).toEqual([
       {
         name: "Avery Lee",
@@ -317,8 +377,8 @@ describe("EmailViewer MIME model", () => {
         address: "ops@example.com",
         display: "ops@example.com",
       },
-    ])
-  })
+    ]);
+  });
 
   it("derives nested message content and headers in the model", () => {
     const tree = buildMimeTree({
@@ -339,24 +399,24 @@ describe("EmailViewer MIME model", () => {
           children: [htmlPart("forwarded-html", "<p>Forwarded body</p>")],
         },
       ],
-    })
-    const selected = findMimeNodeByPath(tree, ["root", "forwarded"])
-    expect(selected).toBeTruthy()
+    });
+    const selected = findMimeNodeByPath(tree, ["root", "forwarded"]);
+    expect(selected).toBeTruthy();
 
     const content = deriveEmailContentModel({
       inlineResourceUrls: new Map(),
       message: message(tree.part),
       selectedNode: selected!,
-    })
+    });
 
-    expect(content.kind).toBe("nested-message")
-    if (content.kind !== "nested-message") return
-    expect(content.message.subject).toBe("Forwarded note")
-    expect(content.message.from).toBe("Nested <nested@example.com>")
+    expect(content.kind).toBe("nested-message");
+    if (content.kind !== "nested-message") return;
+    expect(content.message.subject).toBe("Forwarded note");
+    expect(content.message.from).toBe("Nested <nested@example.com>");
     expect(deriveEmailHeaderModel(content.message).subject).toBe(
-      "Forwarded note"
-    )
-  })
+      "Forwarded note",
+    );
+  });
 
   it("enforces a nested message recursion budget in the content model", () => {
     const tree = buildMimeTree({
@@ -371,9 +431,9 @@ describe("EmailViewer MIME model", () => {
           children: [htmlPart("forwarded-html", "<p>Forwarded body</p>")],
         },
       ],
-    })
-    const selected = findMimeNodeByPath(tree, ["root", "forwarded"])
-    expect(selected).toBeTruthy()
+    });
+    const selected = findMimeNodeByPath(tree, ["root", "forwarded"]);
+    expect(selected).toBeTruthy();
 
     const content = deriveEmailContentModel({
       inlineResourceUrls: new Map(),
@@ -381,32 +441,32 @@ describe("EmailViewer MIME model", () => {
       message: message(tree.part),
       nestedMessageDepth: 1,
       selectedNode: selected!,
-    })
+    });
 
-    expect(content.kind).toBe("empty")
-    if (content.kind !== "empty") return
-    expect(content.reason).toBe("nested-depth-exceeded")
-    expect(content.message).toMatch(/too deeply nested/i)
-  })
+    expect(content.kind).toBe("empty");
+    if (content.kind !== "empty") return;
+    expect(content.reason).toBe("nested-depth-exceeded");
+    expect(content.message).toMatch(/too deeply nested/i);
+  });
 
   it("derives named empty states for security envelopes", () => {
     const tree = buildMimeTree({
       id: "encrypted",
       mimeType: "application/pgp-encrypted",
       source: textSource("Version: 1", "encrypted.asc"),
-    })
+    });
 
     const content = deriveEmailContentModel({
       inlineResourceUrls: new Map(),
       message: message(tree.part),
       selectedNode: tree,
-    })
+    });
 
-    expect(content.kind).toBe("empty")
-    if (content.kind !== "empty") return
-    expect(content.reason).toBe("security-envelope")
-    expect(content.message).toMatch(/encrypted/i)
-  })
+    expect(content.kind).toBe("empty");
+    if (content.kind !== "empty") return;
+    expect(content.reason).toBe("security-envelope");
+    expect(content.message).toMatch(/encrypted/i);
+  });
 
   it("assigns explicit preview policy for less common MIME parts", () => {
     const tree = buildMimeTree({
@@ -425,7 +485,7 @@ describe("EmailViewer MIME model", () => {
           fileName: "delivery-status.txt",
           source: textSource(
             "Final-Recipient: rfc822; a@example.com",
-            "delivery-status.txt"
+            "delivery-status.txt",
           ),
         },
         {
@@ -448,31 +508,31 @@ describe("EmailViewer MIME model", () => {
           source: blobSource("smime.p7m", "application/pkcs7-mime"),
         },
       ],
-    })
-    const [calendar, delivery, binary, inlineImage, pkcs7] = tree.children
+    });
+    const [calendar, delivery, binary, inlineImage, pkcs7] = tree.children;
 
     expect(calendar?.facts).toMatchObject({
       kind: "attachment",
       preview: { kind: "attachment", category: "text" },
-    })
-    expect(categoryForMimeNode(calendar!)).toBe("text")
+    });
+    expect(categoryForMimeNode(calendar!)).toBe("text");
     expect(delivery?.facts).toMatchObject({
       kind: "attachment",
       preview: { kind: "attachment", category: "text" },
-    })
+    });
     expect(binary?.facts).toMatchObject({
       kind: "attachment",
       preview: { kind: "attachment" },
-    })
+    });
     expect(inlineImage?.facts).toMatchObject({
       kind: "attachment",
       preview: { kind: "attachment", category: "image" },
-    })
+    });
     expect(pkcs7?.facts).toMatchObject({
       kind: "unsupported",
       preview: { kind: "security-envelope" },
-    })
-  })
+    });
+  });
 
   it("previews the body of multipart signed messages without leaking the signature as body", () => {
     const tree = buildMimeTree({
@@ -488,30 +548,30 @@ describe("EmailViewer MIME model", () => {
           source: blobSource("smime.p7s", "application/pkcs7-signature"),
         },
       ],
-    })
-    const scope = createMimeMessageScope(message(tree.part), tree)
+    });
+    const scope = createMimeMessageScope(message(tree.part), tree);
     const sidebar = deriveEmailSidebarModel({
       scope,
       selectedPath: ["signed", "html"],
-    })
+    });
     const content = deriveEmailContentModel({
       inlineResourceUrls: new Map(),
       message: message(tree.part),
       selectedNode: tree,
-    })
+    });
 
-    expect(content.kind).toBe("file")
-    if (content.kind !== "file") return
-    expect(content.node.path).toEqual(["signed", "html"])
-    expect(content.file.category).toBe("html")
-    expect(sidebar.bodyCount).toBe(1)
-    expect(sidebar.attachmentCount).toBe(1)
+    expect(content.kind).toBe("file");
+    if (content.kind !== "file") return;
+    expect(content.node.path).toEqual(["signed", "html"]);
+    expect(content.file.category).toBe("html");
+    expect(sidebar.bodyCount).toBe(1);
+    expect(sidebar.attachmentCount).toBe(1);
     expect(
       sidebar.sections
         .find((section) => section.id === "attachments")
-        ?.items.map((item) => item.title)
-    ).toEqual(["smime.p7s"])
-  })
+        ?.items.map((item) => item.title),
+    ).toEqual(["smime.p7s"]);
+  });
 
   it("keeps malformed ids and empty MIME types selectable through normalized facts", () => {
     const tree = buildMimeTree({
@@ -525,17 +585,17 @@ describe("EmailViewer MIME model", () => {
           source: blobSource("unknown.bin", "application/octet-stream"),
         },
       ],
-    })
-    const child = tree.children[0]
+    });
+    const child = tree.children[0];
 
-    expect(tree.path).toEqual(["part-1"])
-    expect(child?.path).toEqual(["part-1", "part-1"])
+    expect(tree.path).toEqual(["part-1"]);
+    expect(child?.path).toEqual(["part-1", "part-1"]);
     expect(child?.facts).toMatchObject({
       kind: "attachment",
       mimeType: "",
       preview: { kind: "attachment" },
-    })
-  })
+    });
+  });
 
   it("derives content-location inline resource keys", () => {
     const tree = buildMimeTree({
@@ -552,17 +612,17 @@ describe("EmailViewer MIME model", () => {
           source: imageBlobSource("logo.png"),
         },
       ],
-    })
-    const selected = findMimeNodeByPath(tree, ["root", "html"])
-    expect(selected).toBeTruthy()
+    });
+    const selected = findMimeNodeByPath(tree, ["root", "html"]);
+    expect(selected).toBeTruthy();
 
-    const scope = deriveEmailInlineResourceScope(tree, selected!)
+    const scope = deriveEmailInlineResourceScope(tree, selected!);
 
-    expect(scope.resources).toHaveLength(1)
+    expect(scope.resources).toHaveLength(1);
     expect(scope.resources[0]?.keys).toEqual([
       { kind: "content-location", value: "logo.png" },
-    ])
-  })
+    ]);
+  });
 
   it("rewrites HTML sidebar thumbnail sources with the same inline resources as the content surface", () => {
     const tree = buildMimeTree({
@@ -572,7 +632,7 @@ describe("EmailViewer MIME model", () => {
         htmlPart(
           "html",
           '<main><img alt="Logo" src="cid:<logo@example.com>"></main>',
-          "message.html"
+          "message.html",
         ),
         {
           id: "logo",
@@ -583,8 +643,8 @@ describe("EmailViewer MIME model", () => {
           source: imageBlobSource("logo.png"),
         },
       ],
-    })
-    const scope = createMimeMessageScope(message(tree.part), tree)
+    });
+    const scope = createMimeMessageScope(message(tree.part), tree);
     const sidebar = deriveEmailSidebarModel({
       inlineResourceUrls: new Map([
         [
@@ -597,29 +657,31 @@ describe("EmailViewer MIME model", () => {
       ]),
       scope,
       selectedPath: ["root", "html"],
-    })
-    const bodyThumbnail = sidebar.sections[0]?.items[0]?.thumbnail
+    });
+    const bodyThumbnail = sidebar.sections[0]?.items[0]?.thumbnail;
 
-    expect(bodyThumbnail?.kind).toBe("file")
-    if (bodyThumbnail?.kind !== "file") return
-    expect(bodyThumbnail.source.kind).toBe("text")
-    if (bodyThumbnail.source.kind !== "text") return
-    expect(bodyThumbnail.source.text).toContain('src="blob:inline-1"')
-    expect(bodyThumbnail.source.text).not.toContain("cid:")
-  })
-})
+    expect(bodyThumbnail?.kind).toBe("file");
+    if (bodyThumbnail?.kind !== "file") return;
+    expect(bodyThumbnail.source.kind).toBe("text");
+    if (bodyThumbnail.source.kind !== "text") return;
+    expect(bodyThumbnail.source.text).toContain('src="blob:inline-1"');
+    expect(bodyThumbnail.source.text).not.toContain("cid:");
+  });
+});
 
 describe("EmailViewer", () => {
   it("renders the easy API through viewer anatomy", () => {
     const { container } = render(
-      <EmailViewer message={message(htmlPart("html", "Hello"))} />
-    )
+      <EmailViewer message={message(htmlPart("html", "Hello"))} />,
+    );
 
-    expect(container.querySelector('[data-slot="email-viewer"]')).toBeTruthy()
-    expect(container.querySelector('[data-slot="viewer-root"]')).toBeTruthy()
-    expect(container.querySelector('[data-slot="viewer-sidebar"]')).toBeTruthy()
-    expect(screen.getByText("0 attachments")).toBeTruthy()
-  })
+    expect(container.querySelector('[data-slot="email-viewer"]')).toBeTruthy();
+    expect(container.querySelector('[data-slot="viewer-root"]')).toBeTruthy();
+    expect(
+      container.querySelector('[data-slot="viewer-sidebar"]'),
+    ).toBeTruthy();
+    expect(screen.getByText("0 attachments")).toBeTruthy();
+  });
 
   it("lets composed headers replace the default trailing sidebar trigger", () => {
     const { container } = render(
@@ -627,14 +689,14 @@ describe("EmailViewer", () => {
         <EmailViewerHeader
           trailing={<button type="button">Custom action</button>}
         />
-      </EmailViewerProvider>
-    )
+      </EmailViewerProvider>,
+    );
 
-    expect(screen.getByRole("button", { name: "Custom action" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Custom action" })).toBeTruthy();
     expect(
-      container.querySelector('[data-slot="viewer-sidebar-trigger"]')
-    ).toBeNull()
-  })
+      container.querySelector('[data-slot="viewer-sidebar-trigger"]'),
+    ).toBeNull();
+  });
 
   it("treats controlled null selection as a default body selection", async () => {
     const root: MimePart = {
@@ -646,33 +708,33 @@ describe("EmailViewer", () => {
           ...htmlPart(
             "details",
             "<article>Attachment preview</article>",
-            "details.html"
+            "details.html",
           ),
           disposition: "attachment",
         },
       ],
-    }
+    };
 
     const { container } = render(
       <EmailViewer
         message={message(root)}
         selectedPath={null}
         className="h-[600px]"
-      />
-    )
+      />,
+    );
 
     await waitFor(() => {
-      expect(iframe(container).getAttribute("srcdoc")).toContain("Email body")
-    })
+      expect(iframe(container).getAttribute("srcdoc")).toContain("Email body");
+    });
     expect(
       screen
         .getByRole("button", { name: /Body text\/html/i })
-        .getAttribute("aria-current")
-    ).toBe("page")
-  })
+        .getAttribute("aria-current"),
+    ).toBe("page");
+  });
 
   it("falls back from an invalid controlled path without firing selection callbacks", async () => {
-    const onSelectedPathChange = vi.fn()
+    const onSelectedPathChange = vi.fn();
     const root: MimePart = {
       id: "root",
       mimeType: "multipart/mixed",
@@ -683,7 +745,7 @@ describe("EmailViewer", () => {
           disposition: "attachment",
         },
       ],
-    }
+    };
 
     const { container } = render(
       <EmailViewer
@@ -691,22 +753,22 @@ describe("EmailViewer", () => {
         selectedPath={["root", "missing"]}
         onSelectedPathChange={onSelectedPathChange}
         className="h-[600px]"
-      />
-    )
+      />,
+    );
 
     await waitFor(() => {
-      expect(iframe(container).getAttribute("srcdoc")).toContain("Email body")
-    })
-    expect(onSelectedPathChange).not.toHaveBeenCalled()
+      expect(iframe(container).getAttribute("srcdoc")).toContain("Email body");
+    });
+    expect(onSelectedPathChange).not.toHaveBeenCalled();
     expect(
       screen
         .getByRole("button", { name: /Body text\/html/i })
-        .getAttribute("aria-current")
-    ).toBe("page")
-  })
+        .getAttribute("aria-current"),
+    ).toBe("page");
+  });
 
   it("emits normalized paths when duplicate MIME ids are selected", async () => {
-    const onSelectedPathChange = vi.fn()
+    const onSelectedPathChange = vi.fn();
     const root: MimePart = {
       id: "root",
       mimeType: "multipart/mixed",
@@ -716,116 +778,118 @@ describe("EmailViewer", () => {
           ...htmlPart(
             "duplicate",
             "<article>Attachment preview</article>",
-            "details.html"
+            "details.html",
           ),
           disposition: "attachment",
         },
       ],
-    }
+    };
 
     render(
       <EmailViewer
         message={message(root)}
         onSelectedPathChange={onSelectedPathChange}
         className="h-[600px]"
-      />
-    )
+      />,
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: /details\.html/i }))
+    fireEvent.click(screen.getByRole("button", { name: /details\.html/i }));
 
     await waitFor(() => {
-      expect(onSelectedPathChange).toHaveBeenCalled()
-    })
+      expect(onSelectedPathChange).toHaveBeenCalled();
+    });
     expect(onSelectedPathChange.mock.calls[0]?.[0]).toEqual([
       "root",
       "duplicate~2",
-    ])
-  })
+    ]);
+  });
 
   it("renders the fake recursive MIME fixture without duplicated part headers", async () => {
     const { container } = render(
-      <EmailViewer message={createFakeEmailMessage()} className="h-[720px]" />
-    )
+      <EmailViewer message={createFakeEmailMessage()} className="h-[720px]" />,
+    );
 
     await waitFor(() => {
       expect(iframe(container).getAttribute("srcdoc")).toContain(
-        'src="data:image/svg+xml;base64,'
-      )
-    })
+        'src="data:image/svg+xml;base64,',
+      );
+    });
     expect(iframe(container).getAttribute("srcdoc")).toContain(
-      "Contract packet ready for review"
-    )
-    expect(iframe(container).getAttribute("title")).toBe("message.html")
+      "Contract packet ready for review",
+    );
+    expect(iframe(container).getAttribute("title")).toBe("message.html");
     expect(
-      container.querySelector('[data-slot="email-message-header"]')
-    ).toBeTruthy()
+      container.querySelector('[data-slot="email-message-header"]'),
+    ).toBeTruthy();
     expect(
-      container.querySelector('[data-slot="email-part-header"]')
-    ).toBeNull()
+      container.querySelector('[data-slot="email-part-header"]'),
+    ).toBeNull();
     expect(
-      container.querySelector('[data-slot="mime-part-sidebar"]')
-    ).toBeTruthy()
+      container.querySelector('[data-slot="mime-part-sidebar"]'),
+    ).toBeTruthy();
     const emailPartsSidebar = screen.getByRole("complementary", {
       name: "Email parts",
-    })
-    const emailParts = within(emailPartsSidebar)
-    expect(emailPartsSidebar.getAttribute("data-slot")).toBe("viewer-sidebar")
+    });
+    const emailParts = within(emailPartsSidebar);
+    expect(emailPartsSidebar.getAttribute("data-slot")).toBe("viewer-sidebar");
     expect(
-      emailPartsSidebar.querySelector('[data-slot="mime-part-sidebar"]')
-    ).toBeTruthy()
-    expect(emailPartsSidebar.querySelector("[data-sidebar]")).toBeNull()
+      emailPartsSidebar.querySelector('[data-slot="mime-part-sidebar"]'),
+    ).toBeTruthy();
+    expect(emailPartsSidebar.querySelector("[data-sidebar]")).toBeNull();
     expect(
-      container.querySelectorAll('[data-slot="viewer-root"]')
-    ).toHaveLength(1)
+      container.querySelectorAll('[data-slot="viewer-root"]'),
+    ).toHaveLength(1);
     const root = container.querySelector<HTMLElement>(
-      '[data-slot="viewer-root"]'
-    )
-    expect(root?.children[0]?.getAttribute("data-slot")).toBe("viewer-header")
-    expect(root?.children[1]?.getAttribute("data-slot")).toBe("viewer-body")
-    const body = root?.querySelector<HTMLElement>('[data-slot="viewer-body"]')
+      '[data-slot="viewer-root"]',
+    );
+    expect(root?.children[0]?.getAttribute("data-slot")).toBe("viewer-header");
+    expect(root?.children[1]?.getAttribute("data-slot")).toBe("viewer-body");
+    const body = root?.querySelector<HTMLElement>('[data-slot="viewer-body"]');
     expect(
-      body?.querySelector(':scope > [data-slot="viewer-sidebar"]')
-    ).toBeTruthy()
+      body?.querySelector(':scope > [data-slot="viewer-sidebar"]'),
+    ).toBeTruthy();
     expect(
-      body?.querySelector(':scope > [data-slot="viewer-surface"]')
-    ).toBeTruthy()
+      body?.querySelector(':scope > [data-slot="viewer-surface"]'),
+    ).toBeTruthy();
     expect(
-      container.querySelector('[data-slot="attachment-sidebar"]')
-    ).toBeNull()
+      container.querySelector('[data-slot="attachment-sidebar"]'),
+    ).toBeNull();
     expect(
-      screen.getByRole("button", { name: /Body text\/html · 2\.1 KB/i })
-    ).toBeTruthy()
+      screen.getByRole("button", { name: /Body text\/html · 2\.1 KB/i }),
+    ).toBeTruthy();
     expect(
-      emailParts.getByRole("heading", { level: 3, name: "Body" })
-    ).toBeTruthy()
+      emailParts.getByRole("heading", { level: 3, name: "Body" }),
+    ).toBeTruthy();
     expect(
-      emailParts.getByRole("heading", { level: 3, name: "Attachments" })
-    ).toBeTruthy()
-    expect(screen.getAllByText("Body")).toHaveLength(2)
-    expect(screen.getByText("Attachments")).toBeTruthy()
+      emailParts.getByRole("heading", { level: 3, name: "Attachments" }),
+    ).toBeTruthy();
+    expect(screen.getAllByText("Body")).toHaveLength(2);
+    expect(screen.getByText("Attachments")).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: /Text body text\/plain/i })
-    ).toBeNull()
+      screen.queryByRole("button", { name: /Text body text\/plain/i }),
+    ).toBeNull();
     expect(
-      screen.queryByRole("button", { name: /Multipart mixed/i })
-    ).toBeNull()
+      screen.queryByRole("button", { name: /Multipart mixed/i }),
+    ).toBeNull();
     expect(
-      screen.queryByRole("button", { name: /Multipart alternative/i })
-    ).toBeNull()
+      screen.queryByRole("button", { name: /Multipart alternative/i }),
+    ).toBeNull();
     expect(
-      screen.queryByRole("button", { name: /retab-logo\.svg image\/svg\+xml/i })
-    ).toBeNull()
+      screen.queryByRole("button", {
+        name: /retab-logo\.svg image\/svg\+xml/i,
+      }),
+    ).toBeNull();
     expect(
-      screen.getByRole("button", { name: /spacex-prospectus\.pdf/i })
-    ).toBeTruthy()
-    expect(screen.getByRole("button", { name: /sales\.csv/i })).toBeTruthy()
+      screen.getByRole("button", { name: /spacex-prospectus\.pdf/i }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: /sales\.csv/i })).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: /nvidia-financials-fy2024\.xlsx/i })
-    ).toBeTruthy()
+      screen.getByRole("button", { name: /nvidia-financials-fy2024\.xlsx/i }),
+    ).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: /review-note\.html/i })
-    ).toBeTruthy()
-  })
+      screen.getByRole("button", { name: /review-note\.html/i }),
+    ).toBeTruthy();
+  });
 
   it("rewrites cid URLs from multipart/related sibling resources", async () => {
     const root: MimePart = {
@@ -835,7 +899,7 @@ describe("EmailViewer", () => {
         htmlPart(
           "html",
           '<main><p>HTML body</p><img alt="Logo" src="cid:<logo@example.com>"></main>',
-          "message.html"
+          "message.html",
         ),
         {
           id: "logo",
@@ -846,21 +910,21 @@ describe("EmailViewer", () => {
           source: imageBlobSource("logo.png"),
         },
       ],
-    }
+    };
 
     const { container } = render(
-      <EmailViewer message={message(root)} className="h-[600px]" />
-    )
+      <EmailViewer message={message(root)} className="h-[600px]" />,
+    );
 
     await waitFor(() => {
       expect(iframe(container).getAttribute("srcdoc")).toContain(
-        'src="blob:inline-1"'
-      )
-    })
-    expect(iframe(container).getAttribute("srcdoc")).toContain("HTML body")
-    expect(iframe(container).getAttribute("srcdoc")).not.toContain("cid:")
-    expect(screen.queryByRole("button", { name: /logo\.png/i })).toBeNull()
-  })
+        'src="blob:inline-1"',
+      );
+    });
+    expect(iframe(container).getAttribute("srcdoc")).toContain("HTML body");
+    expect(iframe(container).getAttribute("srcdoc")).not.toContain("cid:");
+    expect(screen.queryByRole("button", { name: /logo\.png/i })).toBeNull();
+  });
 
   it("rewrites text-backed cid resources as sandbox-safe data URLs", async () => {
     const root: MimePart = {
@@ -870,7 +934,7 @@ describe("EmailViewer", () => {
         htmlPart(
           "html",
           '<main><img alt="Logo" src="cid:logo@example.com"></main>',
-          "message.html"
+          "message.html",
         ),
         {
           id: "logo",
@@ -887,21 +951,21 @@ describe("EmailViewer", () => {
           },
         },
       ],
-    }
+    };
 
     const { container } = render(
-      <EmailViewer message={message(root)} className="h-[600px]" />
-    )
+      <EmailViewer message={message(root)} className="h-[600px]" />,
+    );
 
     await waitFor(() => {
       expect(iframe(container).getAttribute("srcdoc")).toContain(
-        'src="data:image/svg+xml;base64,'
-      )
-    })
-    expect(iframe(container).getAttribute("srcdoc")).not.toContain("cid:")
-    expect(URL.createObjectURL).not.toHaveBeenCalled()
-    expect(screen.queryByRole("button", { name: /logo\.svg/i })).toBeNull()
-  })
+        'src="data:image/svg+xml;base64,',
+      );
+    });
+    expect(iframe(container).getAttribute("srcdoc")).not.toContain("cid:");
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: /logo\.svg/i })).toBeNull();
+  });
 
   it("rewrites content-location relative URLs from multipart/related resources", async () => {
     const root: MimePart = {
@@ -911,7 +975,7 @@ describe("EmailViewer", () => {
         htmlPart(
           "html",
           '<main><img alt="Logo" src="./logo.png"><a href="https://example.com/file">external</a></main>',
-          "message.html"
+          "message.html",
         ),
         {
           id: "logo",
@@ -922,23 +986,25 @@ describe("EmailViewer", () => {
           source: imageBlobSource("logo.png"),
         },
       ],
-    }
+    };
 
     const { container } = render(
-      <EmailViewer message={message(root)} className="h-[600px]" />
-    )
+      <EmailViewer message={message(root)} className="h-[600px]" />,
+    );
 
     await waitFor(() => {
       expect(iframe(container).getAttribute("srcdoc")).toContain(
-        'src="blob:inline-1"'
-      )
-    })
+        'src="blob:inline-1"',
+      );
+    });
     expect(iframe(container).getAttribute("srcdoc")).toContain(
-      'href="https://example.com/file"'
-    )
-    expect(iframe(container).getAttribute("srcdoc")).not.toContain("./logo.png")
-    expect(screen.queryByRole("button", { name: /logo\.png/i })).toBeNull()
-  })
+      'href="https://example.com/file"',
+    );
+    expect(iframe(container).getAttribute("srcdoc")).not.toContain(
+      "./logo.png",
+    );
+    expect(screen.queryByRole("button", { name: /logo\.png/i })).toBeNull();
+  });
 
   it("gives rewritten HTML sources a stable inline-resource identity", async () => {
     const root: MimePart = {
@@ -948,7 +1014,7 @@ describe("EmailViewer", () => {
         htmlPart(
           "html",
           '<main><img alt="Logo" src="cid:logo@example.com"></main>',
-          "message.html"
+          "message.html",
         ),
         {
           id: "logo",
@@ -959,10 +1025,10 @@ describe("EmailViewer", () => {
           source: imageBlobSource("logo.png"),
         },
       ],
-    }
-    const tree = buildMimeTree(root)
-    const selected = findMimeNodeByPath(tree, ["root", "html"])
-    expect(selected).toBeTruthy()
+    };
+    const tree = buildMimeTree(root);
+    const selected = findMimeNodeByPath(tree, ["root", "html"]);
+    expect(selected).toBeTruthy();
 
     const content = deriveEmailContentModel({
       inlineResourceUrls: new Map([
@@ -976,13 +1042,13 @@ describe("EmailViewer", () => {
       ]),
       message: message(root),
       selectedNode: selected!,
-    })
+    });
 
-    expect(content.kind).toBe("file")
-    if (content.kind !== "file") return
-    expect(content.file.source.identityKey).toContain("email-inline")
-    expect(content.file.source.identityKey).toContain("content-id")
-  })
+    expect(content.kind).toBe("file");
+    if (content.kind !== "file") return;
+    expect(content.file.source.identityKey).toContain("email-inline");
+    expect(content.file.source.identityKey).toContain("content-id");
+  });
 
   it("revokes blob-backed cid object URLs when the inline scope unmounts", async () => {
     const root: MimePart = {
@@ -992,7 +1058,7 @@ describe("EmailViewer", () => {
         htmlPart(
           "html",
           '<main><img alt="Logo" src="cid:<logo@example.com>"></main>',
-          "message.html"
+          "message.html",
         ),
         {
           id: "logo",
@@ -1003,22 +1069,22 @@ describe("EmailViewer", () => {
           source: imageBlobSource("logo.png"),
         },
       ],
-    }
+    };
 
     const { container, unmount } = render(
-      <EmailViewer message={message(root)} className="h-[600px]" />
-    )
+      <EmailViewer message={message(root)} className="h-[600px]" />,
+    );
 
     await waitFor(() => {
       expect(iframe(container).getAttribute("srcdoc")).toContain(
-        'src="blob:inline-1"'
-      )
-    })
+        'src="blob:inline-1"',
+      );
+    });
 
-    unmount()
+    unmount();
 
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:inline-1")
-  })
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:inline-1");
+  });
 
   it("does not inline content-id files marked as attachments", async () => {
     const root: MimePart = {
@@ -1028,7 +1094,7 @@ describe("EmailViewer", () => {
         htmlPart(
           "html",
           '<main><img alt="Logo" src="cid:logo@example.com"></main>',
-          "message.html"
+          "message.html",
         ),
         {
           id: "logo",
@@ -1039,18 +1105,18 @@ describe("EmailViewer", () => {
           source: imageBlobSource("logo.png"),
         },
       ],
-    }
+    };
 
     const { container } = render(
-      <EmailViewer message={message(root)} className="h-[600px]" />
-    )
+      <EmailViewer message={message(root)} className="h-[600px]" />,
+    );
 
     await waitFor(() => {
-      expect(iframe(container).getAttribute("srcdoc")).not.toContain("cid:")
-    })
-    expect(URL.createObjectURL).not.toHaveBeenCalled()
-    expect(screen.getByRole("button", { name: /logo\.png/i })).toBeTruthy()
-  })
+      expect(iframe(container).getAttribute("srcdoc")).not.toContain("cid:");
+    });
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /logo\.png/i })).toBeTruthy();
+  });
 
   it("renders less common MIME attachments through the normal content surface", async () => {
     const root: MimePart = {
@@ -1070,7 +1136,7 @@ describe("EmailViewer", () => {
           fileName: "delivery-status.txt",
           source: textSource(
             "Final-Recipient: rfc822; avery@example.com",
-            "delivery-status.txt"
+            "delivery-status.txt",
           ),
         },
         {
@@ -1087,66 +1153,66 @@ describe("EmailViewer", () => {
           source: imageBlobSource("photo.png"),
         },
       ],
-    }
+    };
 
     const { container } = render(
-      <EmailViewer message={message(root)} className="h-[600px]" />
-    )
+      <EmailViewer message={message(root)} className="h-[600px]" />,
+    );
 
     await waitFor(() => {
-      expect(iframe(container).getAttribute("srcdoc")).toContain("Email body")
-    })
+      expect(iframe(container).getAttribute("srcdoc")).toContain("Email body");
+    });
 
-    fireEvent.click(screen.getByRole("button", { name: /invite\.ics/i }))
+    fireEvent.click(screen.getByRole("button", { name: /invite\.ics/i }));
     await waitFor(() => {
       expect(iframe(container).getAttribute("srcdoc")).toContain(
-        "BEGIN:VCALENDAR"
-      )
-    })
+        "BEGIN:VCALENDAR",
+      );
+    });
     expect(screen.getByTestId("file-viewer").getAttribute("data-as")).toBe(
-      "text"
-    )
+      "text",
+    );
 
     fireEvent.click(
-      screen.getByRole("button", { name: /delivery-status\.txt/i })
-    )
+      screen.getByRole("button", { name: /delivery-status\.txt/i }),
+    );
     await waitFor(() => {
       expect(iframe(container).getAttribute("srcdoc")).toContain(
-        "Final-Recipient"
-      )
-    })
+        "Final-Recipient",
+      );
+    });
 
-    fireEvent.click(screen.getByRole("button", { name: /archive\.bin/i }))
+    fireEvent.click(screen.getByRole("button", { name: /archive\.bin/i }));
     await waitFor(() => {
       expect(screen.getByTestId("file-viewer").textContent).toContain(
-        "archive.bin"
-      )
-    })
+        "archive.bin",
+      );
+    });
 
-    fireEvent.click(screen.getByRole("button", { name: /photo\.png/i }))
+    fireEvent.click(screen.getByRole("button", { name: /photo\.png/i }));
     await waitFor(() => {
       expect(screen.getByTestId("file-viewer").textContent).toContain(
-        "photo.png"
-      )
-    })
-  })
+        "photo.png",
+      );
+    });
+  });
 
   it("falls back to a text leaf when no HTML part exists", async () => {
-    const root = textPart("plain", "Plain body only", "message.txt")
+    const root = textPart("plain", "Plain body only", "message.txt");
 
     const { container } = render(
-      <EmailViewer message={message(root)} className="h-[600px]" />
-    )
+      <EmailViewer message={message(root)} className="h-[600px]" />,
+    );
 
     await waitFor(() => {
-      expect(iframe(container).getAttribute("srcdoc")).toBe("Plain body only")
-    })
-    expect(screen.getByText("Quarterly update")).toBeTruthy()
-    expect(screen.getByRole("button", { name: /Body text\/plain/i }))
+      expect(iframe(container).getAttribute("srcdoc")).toBe("Plain body only");
+    });
+    expect(screen.getByText("Quarterly update")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Body text\/plain/i }));
     expect(
-      screen.queryByRole("button", { name: /message\.txt text\/plain/i })
-    ).toBeNull()
-  })
+      screen.queryByRole("button", { name: /message\.txt text\/plain/i }),
+    ).toBeNull();
+  });
 
   it("opens attachment leaves independently from the message body", async () => {
     const root: MimePart = {
@@ -1158,34 +1224,34 @@ describe("EmailViewer", () => {
           ...htmlPart(
             "details",
             "<article>Attachment preview</article>",
-            "details.html"
+            "details.html",
           ),
           disposition: "attachment",
         },
       ],
-    }
+    };
 
     const { container } = render(
-      <EmailViewer message={message(root)} className="h-[600px]" />
-    )
+      <EmailViewer message={message(root)} className="h-[600px]" />,
+    );
 
     await waitFor(() => {
-      expect(iframe(container).getAttribute("srcdoc")).toContain("Email body")
-    })
+      expect(iframe(container).getAttribute("srcdoc")).toContain("Email body");
+    });
 
-    fireEvent.click(screen.getByRole("button", { name: /details\.html/i }))
+    fireEvent.click(screen.getByRole("button", { name: /details\.html/i }));
 
     await waitFor(() => {
       expect(iframe(container).getAttribute("srcdoc")).toContain(
-        "Attachment preview"
-      )
-    })
+        "Attachment preview",
+      );
+    });
     expect(
       screen
         .getByRole("button", { name: /details\.html/i })
-        .getAttribute("aria-current")
-    ).toBe("page")
-  })
+        .getAttribute("aria-current"),
+    ).toBe("page");
+  });
 
   it("renders message/rfc822 parts as nested MIME viewers", async () => {
     const root: MimePart = {
@@ -1205,29 +1271,29 @@ describe("EmailViewer", () => {
           children: [htmlPart("forwarded-html", "<p>Forwarded body</p>")],
         },
       ],
-    }
+    };
 
     const { container } = render(
-      <EmailViewer message={message(root)} className="h-[720px]" />
-    )
+      <EmailViewer message={message(root)} className="h-[720px]" />,
+    );
 
     await waitFor(() => {
-      expect(iframe(container).getAttribute("srcdoc")).toContain("Outer body")
-    })
+      expect(iframe(container).getAttribute("srcdoc")).toContain("Outer body");
+    });
 
-    fireEvent.click(screen.getByRole("button", { name: /forwarded\.eml/i }))
+    fireEvent.click(screen.getByRole("button", { name: /forwarded\.eml/i }));
 
     await waitFor(() => {
       expect(iframe(container).getAttribute("srcdoc")).toContain(
-        "Forwarded body"
-      )
-    })
-    expect(screen.getByText("Forwarded note")).toBeTruthy()
-    const viewerRoots = container.querySelectorAll('[data-slot="viewer-root"]')
-    expect(viewerRoots).toHaveLength(2)
-    expect(viewerRoots[1]?.className).not.toContain("rounded-xl")
-    expect(viewerRoots[1]?.className).not.toContain("border")
-  })
+        "Forwarded body",
+      );
+    });
+    expect(screen.getByText("Forwarded note")).toBeTruthy();
+    const viewerRoots = container.querySelectorAll('[data-slot="viewer-root"]');
+    expect(viewerRoots).toHaveLength(2);
+    expect(viewerRoots[1]?.className).not.toContain("rounded-xl");
+    expect(viewerRoots[1]?.className).not.toContain("border");
+  });
 
   it("renders recursive message viewers only along the selected MIME chain", async () => {
     const root: MimePart = {
@@ -1254,32 +1320,32 @@ describe("EmailViewer", () => {
           ],
         },
       ],
-    }
+    };
 
     const { container } = render(
-      <EmailViewer message={message(root)} className="h-[720px]" />
-    )
+      <EmailViewer message={message(root)} className="h-[720px]" />,
+    );
 
     await waitFor(() => {
       expect(
-        container.querySelectorAll('[data-slot="viewer-root"]')
-      ).toHaveLength(1)
-    })
+        container.querySelectorAll('[data-slot="viewer-root"]'),
+      ).toHaveLength(1);
+    });
 
-    fireEvent.click(screen.getByRole("button", { name: /level-1\.eml/i }))
+    fireEvent.click(screen.getByRole("button", { name: /level-1\.eml/i }));
     await waitFor(() => {
       expect(
-        container.querySelectorAll('[data-slot="viewer-root"]')
-      ).toHaveLength(2)
-    })
-    expect(screen.queryByText("Level 2")).toBeNull()
+        container.querySelectorAll('[data-slot="viewer-root"]'),
+      ).toHaveLength(2);
+    });
+    expect(screen.queryByText("Level 2")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: /level-2\.eml/i }))
+    fireEvent.click(screen.getByRole("button", { name: /level-2\.eml/i }));
     await waitFor(() => {
       expect(
-        container.querySelectorAll('[data-slot="viewer-root"]')
-      ).toHaveLength(3)
-    })
-    expect(screen.getByText("Level 2")).toBeTruthy()
-  })
-})
+        container.querySelectorAll('[data-slot="viewer-root"]'),
+      ).toHaveLength(3);
+    });
+    expect(screen.getByText("Level 2")).toBeTruthy();
+  });
+});

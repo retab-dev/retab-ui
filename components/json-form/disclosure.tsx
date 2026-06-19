@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { ChevronRight } from "lucide-react"
+import * as React from "react";
+import { ChevronRight } from "lucide-react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "@/components/ui/tooltip";
 
 /**
  * Wraps a label element so a field description shows as a hover tooltip on the
@@ -18,10 +18,10 @@ export function WithDescription({
   text,
   children,
 }: {
-  text?: string
-  children: React.ReactElement
+  text?: string;
+  children: React.ReactElement;
 }) {
-  if (!text) return children
+  if (!text) return children;
   return (
     <Tooltip>
       <TooltipTrigger asChild>{children}</TooltipTrigger>
@@ -29,7 +29,7 @@ export function WithDescription({
         {text}
       </TooltipContent>
     </Tooltip>
-  )
+  );
 }
 
 export function DisclosureHeader({
@@ -40,12 +40,12 @@ export function DisclosureHeader({
   description,
   actions,
 }: {
-  open: boolean
-  onToggle: () => void
-  title: string
-  summary?: string
-  description?: string
-  actions?: React.ReactNode
+  open: boolean;
+  onToggle: () => void;
+  title: string;
+  summary?: string;
+  description?: string;
+  actions?: React.ReactNode;
 }) {
   return (
     <div className="flex items-center gap-1 px-2 py-1.5">
@@ -58,20 +58,20 @@ export function DisclosureHeader({
       >
         <ChevronRight
           className={cn(
-            "size-4 shrink-0 text-muted-foreground transition-transform",
-            open && "rotate-90"
+            "text-muted-foreground size-4 shrink-0 transition-transform",
+            open && "rotate-90",
           )}
         />
         <WithDescription text={description}>
           <span className="truncate text-sm font-medium">{title}</span>
         </WithDescription>
         {summary ? (
-          <span className="shrink-0 text-xs text-muted-foreground">
+          <span className="text-muted-foreground shrink-0 text-xs">
             {summary}
           </span>
         ) : null}
       </button>
       {actions}
     </div>
-  )
+  );
 }

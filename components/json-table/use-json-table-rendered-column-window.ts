@@ -1,12 +1,12 @@
-import * as React from "react"
+import * as React from "react";
 
-import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
+import type { VisibleColumn } from "@/components/json-table/json-table-cell-types";
 import {
   jsonTableFullRenderedColumnWindow,
   jsonTableVirtualRenderedColumnWindow,
   type JsonTableRenderedColumnItem,
   type JsonTableRenderedColumnWindow,
-} from "@/components/json-table/json-table-rendered-column-window"
+} from "@/components/json-table/json-table-rendered-column-window";
 
 export function useJsonTableRenderedColumnWindow({
   isJsonEditable,
@@ -15,15 +15,15 @@ export function useJsonTableRenderedColumnWindow({
   rightPadWidthPx,
   schemaVisibleColumns,
 }: {
-  isJsonEditable: boolean
-  leftPadWidthPx: number
-  renderedBodyColumnItems: JsonTableRenderedColumnItem[]
-  rightPadWidthPx: number
-  schemaVisibleColumns: VisibleColumn[]
+  isJsonEditable: boolean;
+  leftPadWidthPx: number;
+  renderedBodyColumnItems: JsonTableRenderedColumnItem[];
+  rightPadWidthPx: number;
+  schemaVisibleColumns: VisibleColumn[];
 }): JsonTableRenderedColumnWindow {
   return React.useMemo(() => {
     if (!isJsonEditable) {
-      return jsonTableFullRenderedColumnWindow(schemaVisibleColumns)
+      return jsonTableFullRenderedColumnWindow(schemaVisibleColumns);
     }
 
     return jsonTableVirtualRenderedColumnWindow({
@@ -31,12 +31,12 @@ export function useJsonTableRenderedColumnWindow({
       leftPadWidthPx,
       rightPadWidthPx,
       schemaVisibleColumns,
-    })
+    });
   }, [
     isJsonEditable,
     leftPadWidthPx,
     renderedBodyColumnItems,
     rightPadWidthPx,
     schemaVisibleColumns,
-  ])
+  ]);
 }

@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
-import { FileThumbnailShimmer } from "./file-thumbnail-shimmer"
+import { FileThumbnailShimmer } from "./file-thumbnail-shimmer";
 
 export function FileThumbnailImage({
   url,
@@ -13,38 +13,38 @@ export function FileThumbnailImage({
   fallback,
   onError,
 }: {
-  url: string
-  alt: string
-  className?: string
-  fallback: React.ReactNode
-  onError?: () => void
+  url: string;
+  alt: string;
+  className?: string;
+  fallback: React.ReactNode;
+  onError?: () => void;
 }) {
-  const [loaded, setLoaded] = React.useState(false)
-  const [failed, setFailed] = React.useState(false)
-  const didReportErrorRef = React.useRef(false)
+  const [loaded, setLoaded] = React.useState(false);
+  const [failed, setFailed] = React.useState(false);
+  const didReportErrorRef = React.useRef(false);
 
   const reportError = React.useCallback(() => {
-    if (didReportErrorRef.current) return
-    didReportErrorRef.current = true
-    onError?.()
-  }, [onError])
+    if (didReportErrorRef.current) return;
+    didReportErrorRef.current = true;
+    onError?.();
+  }, [onError]);
 
   // A cached image can complete before React attaches `onLoad`.
   const imgRef = React.useCallback(
     (img: HTMLImageElement | null) => {
-      if (!img) return
+      if (!img) return;
       if (img.complete) {
-        if (img.naturalWidth > 0) setLoaded(true)
+        if (img.naturalWidth > 0) setLoaded(true);
         else {
-          setFailed(true)
-          reportError()
+          setFailed(true);
+          reportError();
         }
       }
     },
-    [reportError]
-  )
+    [reportError],
+  );
 
-  if (failed) return <>{fallback}</>
+  if (failed) return <>{fallback}</>;
 
   return (
     <>
@@ -56,16 +56,16 @@ export function FileThumbnailImage({
         decoding="async"
         onLoad={() => setLoaded(true)}
         onError={() => {
-          setFailed(true)
-          reportError()
+          setFailed(true);
+          reportError();
         }}
         className={cn(
           "absolute inset-0 size-full object-cover transition-opacity duration-300",
           loaded ? "opacity-100" : "opacity-0",
-          className
+          className,
         )}
       />
       {loaded ? null : <FileThumbnailShimmer />}
     </>
-  )
+  );
 }

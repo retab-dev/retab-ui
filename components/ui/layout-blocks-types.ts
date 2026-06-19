@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/ui/layout-blocks-types"
+export * from "@/registry/new-york-v4/ui/layout-blocks-types";

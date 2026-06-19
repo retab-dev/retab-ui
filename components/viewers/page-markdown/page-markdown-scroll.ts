@@ -1,13 +1,15 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
+
+import * as React from "react";
 
 import {
   findPageMarkdownPageByOffset,
   getPageMarkdownPageLayout,
   type PageMarkdownLayoutModel,
-} from "./page-markdown-layout"
-import { clamp } from "./page-markdown-scale"
+} from "./page-markdown-layout";
+import { clamp } from "./page-markdown-scale";
 
 export function usePageMarkdownScroll({
   layout,
@@ -16,145 +18,154 @@ export function usePageMarkdownScroll({
   pageCount,
   resetKey,
 }: {
-  layout: PageMarkdownLayoutModel
-  onScrollProgressChange?: (progress: number) => void
-  onVisiblePageChange?: (pageNumber: number) => void
-  pageCount: number
-  resetKey?: unknown
+  layout: PageMarkdownLayoutModel;
+  onScrollProgressChange?: (progress: number) => void;
+  onVisiblePageChange?: (pageNumber: number) => void;
+  pageCount: number;
+  resetKey?: unknown;
 }) {
-  const viewportElementRef = React.useRef<HTMLDivElement | null>(null)
-  const lastReportedPageNumberRef = React.useRef(0)
-  const scrollFrameRef = React.useRef(0)
-  const viewportResetKeyRef = React.useRef<unknown>(resetKey)
-  const didMountResetEffectRef = React.useRef(false)
+  const viewportElementRef = React.useRef<HTMLDivElement | null>(null);
+  const lastReportedPageNumberRef = React.useRef(0);
+  const scrollFrameRef = React.useRef(0);
+  const viewportResetKeyRef = React.useRef<unknown>(resetKey);
+  const didMountResetEffectRef = React.useRef(false);
   const [viewportElement, setViewportElementState] =
-    React.useState<HTMLDivElement | null>(null)
+    React.useState<HTMLDivElement | null>(null);
   const [currentPageState, setCurrentPageState] = React.useState<{
-    pageNumber: number
-    resetKey: unknown
-  }>(() => ({ pageNumber: 1, resetKey }))
+    pageNumber: number;
+    resetKey: unknown;
+  }>(() => ({ pageNumber: 1, resetKey }));
   const currentPage = Object.is(currentPageState.resetKey, resetKey)
     ? currentPageState.pageNumber
-    : 1
+    : 1;
 
   const resetViewportForKey = React.useCallback(
     (element: HTMLDivElement, key: unknown) => {
-      viewportResetKeyRef.current = key
-      element.scrollTop = 0
-      scrollViewportTo(element, 0, { behavior: "auto" })
+      viewportResetKeyRef.current = key;
+      element.scrollTop = 0;
+      scrollViewportTo(element, 0, { behavior: "auto" });
     },
-    []
-  )
+    [],
+  );
 
   const setViewportElement = React.useCallback(
     (element: HTMLDivElement | null) => {
-      viewportElementRef.current = element
+      viewportElementRef.current = element;
       if (element && !Object.is(viewportResetKeyRef.current, resetKey)) {
-        resetViewportForKey(element, resetKey)
+        resetViewportForKey(element, resetKey);
       }
-      setViewportElementState(element)
+      setViewportElementState(element);
     },
-    [resetKey, resetViewportForKey]
-  )
+    [resetKey, resetViewportForKey],
+  );
 
   const measureScroll = React.useCallback(() => {
-    scrollFrameRef.current = 0
-    const viewportElement = viewportElementRef.current
-    if (!viewportElement) return
+    scrollFrameRef.current = 0;
+    const viewportElement = viewportElementRef.current;
+    if (!viewportElement) return;
 
     const viewportHeight =
       viewportElement.clientHeight ||
-      viewportElement.getBoundingClientRect().height
+      viewportElement.getBoundingClientRect().height;
     const scrollable =
-      viewportElement.scrollHeight - viewportElement.clientHeight
+      viewportElement.scrollHeight - viewportElement.clientHeight;
     const progress =
-      scrollable > 0 ? clamp(viewportElement.scrollTop / scrollable, 0, 1) : 0
-    onScrollProgressChange?.(progress)
+      scrollable > 0 ? clamp(viewportElement.scrollTop / scrollable, 0, 1) : 0;
+    onScrollProgressChange?.(progress);
 
-    const markerOffset = viewportElement.scrollTop + viewportHeight * 0.2
-    const visiblePageNumber = findPageMarkdownPageByOffset(layout, markerOffset)
+    const markerOffset = viewportElement.scrollTop + viewportHeight * 0.2;
+    const visiblePageNumber = findPageMarkdownPageByOffset(
+      layout,
+      markerOffset,
+    );
 
     if (
       visiblePageNumber >= 1 &&
       visiblePageNumber <= pageCount &&
       visiblePageNumber !== lastReportedPageNumberRef.current
     ) {
-      lastReportedPageNumberRef.current = visiblePageNumber
+      lastReportedPageNumberRef.current = visiblePageNumber;
       setCurrentPageState((previousState) =>
         Object.is(previousState.resetKey, resetKey) &&
         previousState.pageNumber === visiblePageNumber
           ? previousState
-          : { pageNumber: visiblePageNumber, resetKey }
-      )
-      onVisiblePageChange?.(visiblePageNumber)
+          : { pageNumber: visiblePageNumber, resetKey },
+      );
+      onVisiblePageChange?.(visiblePageNumber);
     }
-  }, [layout, onScrollProgressChange, onVisiblePageChange, pageCount, resetKey])
-  const measureScrollRef = React.useRef(measureScroll)
+  }, [
+    layout,
+    onScrollProgressChange,
+    onVisiblePageChange,
+    pageCount,
+    resetKey,
+  ]);
+  const measureScrollRef = React.useRef(measureScroll);
   React.useLayoutEffect(() => {
-    measureScrollRef.current = measureScroll
-  }, [measureScroll])
+    measureScrollRef.current = measureScroll;
+  }, [measureScroll]);
 
   const handleScroll = React.useCallback(() => {
-    if (scrollFrameRef.current) return
+    if (scrollFrameRef.current) return;
     if (typeof requestAnimationFrame !== "function") {
-      measureScrollRef.current()
-      return
+      measureScrollRef.current();
+      return;
     }
-    scrollFrameRef.current = -1
+    scrollFrameRef.current = -1;
     const requestedFrame = requestAnimationFrame(() =>
-      measureScrollRef.current()
-    )
+      measureScrollRef.current(),
+    );
     if (scrollFrameRef.current === -1) {
-      scrollFrameRef.current = requestedFrame
+      scrollFrameRef.current = requestedFrame;
     }
-  }, [])
+  }, []);
 
   React.useEffect(() => {
     if (!didMountResetEffectRef.current) {
-      didMountResetEffectRef.current = true
-      return
+      didMountResetEffectRef.current = true;
+      return;
     }
-    lastReportedPageNumberRef.current = 0
+    lastReportedPageNumberRef.current = 0;
     setCurrentPageState((previousState) =>
       Object.is(previousState.resetKey, resetKey) &&
       previousState.pageNumber === 1
         ? previousState
-        : { pageNumber: 1, resetKey }
-    )
-    const viewportElement = viewportElementRef.current
-    if (viewportElement) resetViewportForKey(viewportElement, resetKey)
-  }, [resetKey, resetViewportForKey])
+        : { pageNumber: 1, resetKey },
+    );
+    const viewportElement = viewportElementRef.current;
+    if (viewportElement) resetViewportForKey(viewportElement, resetKey);
+  }, [resetKey, resetViewportForKey]);
 
   const scrollToPage = React.useCallback(
     (pageNumber: number, options?: ScrollToOptions) => {
-      const viewportElement = viewportElementRef.current
-      if (!viewportElement || pageNumber < 1 || pageNumber > pageCount) return
+      const viewportElement = viewportElementRef.current;
+      if (!viewportElement || pageNumber < 1 || pageNumber > pageCount) return;
 
-      const pageLayout = getPageMarkdownPageLayout(layout, pageNumber)
-      if (!pageLayout) return
+      const pageLayout = getPageMarkdownPageLayout(layout, pageNumber);
+      if (!pageLayout) return;
 
       scrollViewportTo(viewportElement, Math.max(0, pageLayout.offsetTop), {
         behavior: "smooth",
         ...options,
-      })
+      });
     },
-    [layout, pageCount]
-  )
+    [layout, pageCount],
+  );
 
   const getViewportElement = React.useCallback(
     () => viewportElementRef.current,
-    []
-  )
+    [],
+  );
 
   React.useEffect(() => {
     if (
       scrollFrameRef.current > 0 &&
       typeof cancelAnimationFrame === "function"
     ) {
-      cancelAnimationFrame(scrollFrameRef.current)
-      scrollFrameRef.current = 0
+      cancelAnimationFrame(scrollFrameRef.current);
+      scrollFrameRef.current = 0;
     }
-  }, [measureScroll])
+  }, [measureScroll]);
 
   React.useEffect(
     () => () => {
@@ -162,11 +173,11 @@ export function usePageMarkdownScroll({
         scrollFrameRef.current > 0 &&
         typeof cancelAnimationFrame === "function"
       ) {
-        cancelAnimationFrame(scrollFrameRef.current)
+        cancelAnimationFrame(scrollFrameRef.current);
       }
     },
-    []
-  )
+    [],
+  );
 
   return {
     currentPage,
@@ -176,17 +187,17 @@ export function usePageMarkdownScroll({
     scrollToPage,
     setViewportElement,
     viewportElement,
-  }
+  };
 }
 
 function scrollViewportTo(
   viewportElement: HTMLDivElement,
   top: number,
-  options?: ScrollToOptions
+  options?: ScrollToOptions,
 ) {
   if (typeof viewportElement.scrollTo === "function") {
-    viewportElement.scrollTo({ top, ...options })
-    return
+    viewportElement.scrollTo({ top, ...options });
+    return;
   }
-  viewportElement.scrollTop = top
+  viewportElement.scrollTop = top;
 }

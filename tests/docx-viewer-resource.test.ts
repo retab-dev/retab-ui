@@ -1,29 +1,29 @@
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   clearDocxDocumentResource,
   getDocxDocumentResource,
   resetDocxDocumentResourceCacheForTests,
-} from "@/lib/docx-document-resource"
+} from "@/lib/docx-document-resource";
 import {
   blobSource,
   clearViewerResourceRegistryForTests,
   createViewerResource,
-} from "@/registry/new-york-v4/lib/viewer-resource"
+} from "@/registry/new-york-v4/lib/viewer-resource";
 
 afterEach(() => {
-  resetDocxDocumentResourceCacheForTests()
-  clearViewerResourceRegistryForTests()
-  vi.restoreAllMocks()
-  vi.unstubAllGlobals()
-})
+  resetDocxDocumentResourceCacheForTests();
+  clearViewerResourceRegistryForTests();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 function docxUrlResource(url: string, fileName = "document.docx") {
   return createViewerResource({
     kind: "url",
     url,
     fileName,
-  })
+  });
 }
 
 function docxBlobResource(bytes: Uint8Array, identityKey: string) {
@@ -33,155 +33,155 @@ function docxBlobResource(bytes: Uint8Array, identityKey: string) {
       fileName: "document.docx",
       mimeType:
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    })
-  )
+    }),
+  );
 }
 
 function response(bytes: Uint8Array, init: ResponseInit = {}) {
-  return new Response(new Uint8Array(bytes), init)
+  return new Response(new Uint8Array(bytes), init);
 }
 
 describe("docx-document-resource", () => {
   it("deduplicates document bytes for the same resource", async () => {
     const fetchMock = vi.fn(() =>
-      Promise.resolve(response(Uint8Array.of(1, 2, 3), { status: 200 }))
-    )
-    vi.stubGlobal("fetch", fetchMock)
+      Promise.resolve(response(Uint8Array.of(1, 2, 3), { status: 200 })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
 
-    const content = docxUrlResource("/document.docx").content
-    const first = getDocxDocumentResource(content)
-    const second = getDocxDocumentResource(content)
+    const content = docxUrlResource("/document.docx").content;
+    const first = getDocxDocumentResource(content);
+    const second = getDocxDocumentResource(content);
 
-    expect(first).toBe(second)
-    await expect(first).resolves.toHaveProperty("byteLength", 3)
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(first).toBe(second);
+    await expect(first).resolves.toHaveProperty("byteLength", 3);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith("/document.docx", {
       signal: undefined,
-    })
-  })
+    });
+  });
 
   it("shares document bytes across resources with the same load key", async () => {
     const fetchMock = vi.fn(() =>
-      Promise.resolve(response(Uint8Array.of(1, 2, 3), { status: 200 }))
-    )
-    vi.stubGlobal("fetch", fetchMock)
+      Promise.resolve(response(Uint8Array.of(1, 2, 3), { status: 200 })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
 
-    const firstResource = docxUrlResource("/same-bytes.docx", "a.docx")
-    const secondResource = docxUrlResource("/same-bytes.docx", "renamed.docx")
+    const firstResource = docxUrlResource("/same-bytes.docx", "a.docx");
+    const secondResource = docxUrlResource("/same-bytes.docx", "renamed.docx");
 
-    expect(firstResource.content).toBe(secondResource.content)
+    expect(firstResource.content).toBe(secondResource.content);
 
-    const first = getDocxDocumentResource(firstResource.content)
-    const second = getDocxDocumentResource(secondResource.content)
+    const first = getDocxDocumentResource(firstResource.content);
+    const second = getDocxDocumentResource(secondResource.content);
 
-    expect(first).toBe(second)
-    await expect(first).resolves.toHaveProperty("byteLength", 3)
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-  })
+    expect(first).toBe(second);
+    await expect(first).resolves.toHaveProperty("byteLength", 3);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 
   it("removes rejected document bytes so the same resource can retry", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(response(Uint8Array.of(), { status: 500 }))
-      .mockResolvedValueOnce(response(Uint8Array.of(4, 5), { status: 200 }))
-    vi.stubGlobal("fetch", fetchMock)
+      .mockResolvedValueOnce(response(Uint8Array.of(4, 5), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
 
-    const content = docxUrlResource("/retry.docx").content
+    const content = docxUrlResource("/retry.docx").content;
 
     await expect(getDocxDocumentResource(content)).rejects.toMatchObject({
       kind: "http_error",
       status: 500,
-    })
+    });
     await expect(getDocxDocumentResource(content)).resolves.toHaveProperty(
       "byteLength",
-      2
-    )
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-  })
+      2,
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 
   it("can retain rejected document bytes for Suspense error boundaries", async () => {
     const fetchMock = vi.fn(() =>
-      Promise.resolve(response(Uint8Array.of(), { status: 500 }))
-    )
-    vi.stubGlobal("fetch", fetchMock)
+      Promise.resolve(response(Uint8Array.of(), { status: 500 })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
 
-    const content = docxUrlResource("/retained-error.docx").content
-    const first = getDocxDocumentResource(content, { retainRejected: true })
+    const content = docxUrlResource("/retained-error.docx").content;
+    const first = getDocxDocumentResource(content, { retainRejected: true });
 
     await expect(first).rejects.toMatchObject({
       kind: "http_error",
       status: 500,
-    })
+    });
 
-    const second = getDocxDocumentResource(content, { retainRejected: true })
-    expect(second).toBe(first)
+    const second = getDocxDocumentResource(content, { retainRejected: true });
+    expect(second).toBe(first);
     await expect(second).rejects.toMatchObject({
       kind: "http_error",
       status: 500,
-    })
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-  })
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 
   it("clears a retained rejected document so retry can load the same resource", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(response(Uint8Array.of(), { status: 500 }))
-      .mockResolvedValueOnce(response(Uint8Array.of(8, 9), { status: 200 }))
-    vi.stubGlobal("fetch", fetchMock)
+      .mockResolvedValueOnce(response(Uint8Array.of(8, 9), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
 
-    const content = docxUrlResource("/clear-retry.docx").content
+    const content = docxUrlResource("/clear-retry.docx").content;
 
     await expect(
-      getDocxDocumentResource(content, { retainRejected: true })
+      getDocxDocumentResource(content, { retainRejected: true }),
     ).rejects.toMatchObject({
       kind: "http_error",
       status: 500,
-    })
+    });
 
-    clearDocxDocumentResource(content)
+    clearDocxDocumentResource(content);
 
     await expect(
-      getDocxDocumentResource(content, { retainRejected: true })
-    ).resolves.toHaveProperty("byteLength", 2)
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-  })
+      getDocxDocumentResource(content, { retainRejected: true }),
+    ).resolves.toHaveProperty("byteLength", 2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 
   it("clears retained document bytes through a matching content identity", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(response(Uint8Array.of(), { status: 500 }))
-      .mockResolvedValueOnce(response(Uint8Array.of(3, 4, 5), { status: 200 }))
-    vi.stubGlobal("fetch", fetchMock)
+      .mockResolvedValueOnce(response(Uint8Array.of(3, 4, 5), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
 
-    const first = docxUrlResource("/shared-clear.docx", "first.docx")
-    const second = docxUrlResource("/shared-clear.docx", "second.docx")
+    const first = docxUrlResource("/shared-clear.docx", "first.docx");
+    const second = docxUrlResource("/shared-clear.docx", "second.docx");
 
-    expect(first.content).toBe(second.content)
+    expect(first.content).toBe(second.content);
 
     await expect(
-      getDocxDocumentResource(first.content, { retainRejected: true })
+      getDocxDocumentResource(first.content, { retainRejected: true }),
     ).rejects.toMatchObject({
       kind: "http_error",
       status: 500,
-    })
+    });
 
-    clearDocxDocumentResource(second.content)
+    clearDocxDocumentResource(second.content);
 
     await expect(
-      getDocxDocumentResource(second.content, { retainRejected: true })
-    ).resolves.toHaveProperty("byteLength", 3)
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-  })
+      getDocxDocumentResource(second.content, { retainRejected: true }),
+    ).resolves.toHaveProperty("byteLength", 3);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 
   it("loads Blob sources through the resource without fetch", async () => {
-    const fetchMock = vi.fn()
-    vi.stubGlobal("fetch", fetchMock)
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
 
     const buffer = await getDocxDocumentResource(
-      docxBlobResource(Uint8Array.of(7, 8, 9), "blob:docx").content
-    )
+      docxBlobResource(Uint8Array.of(7, 8, 9), "blob:docx").content,
+    );
 
-    expect(new Uint8Array(buffer)).toEqual(Uint8Array.of(7, 8, 9))
-    expect(fetchMock).not.toHaveBeenCalled()
-  })
-})
+    expect(new Uint8Array(buffer)).toEqual(Uint8Array.of(7, 8, 9));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});

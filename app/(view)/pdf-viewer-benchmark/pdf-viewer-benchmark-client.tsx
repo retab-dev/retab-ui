@@ -1,85 +1,87 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
+
+import * as React from "react";
 
 import {
   PdfViewer,
   type PdfPageRenderTiming,
   type PdfViewerHandle,
   type PdfViewerPerformanceOptions,
-} from "@/components/ui/pdf-viewer"
+} from "@/components/ui/pdf-viewer";
 
-const BENCHMARK_PAGE_COUNT = 585
-const BENCHMARK_PDF_SRC = "/samples/big-911-report.pdf"
+const BENCHMARK_PAGE_COUNT = 585;
+const BENCHMARK_PDF_SRC = "/samples/big-911-report.pdf";
 const BENCHMARK_JUMP_PAGES = [
   50, 56, 50, 51, 52, 200, 206, 200, 201, 400, 406, 400, 401, 585,
-] as const
+] as const;
 
 type PdfViewerBenchmarkSnapshot = {
-  canvasCount: number
-  clientHeight: number
-  currentPageText: string
-  pageSlotCount: number
-  performanceOptions: PdfViewerPerformanceOptions
-  renderSummary: PdfViewerBenchmarkRenderSummary
-  renderTimings: PdfPageRenderTiming[]
-  renderedPages: number[]
-  scrollHeight: number
-  scrollTop: number
-  slotPages: number[]
-  variant: string
-}
+  canvasCount: number;
+  clientHeight: number;
+  currentPageText: string;
+  pageSlotCount: number;
+  performanceOptions: PdfViewerPerformanceOptions;
+  renderSummary: PdfViewerBenchmarkRenderSummary;
+  renderTimings: PdfPageRenderTiming[];
+  renderedPages: number[];
+  scrollHeight: number;
+  scrollTop: number;
+  slotPages: number[];
+  variant: string;
+};
 
 type PdfViewerBenchmarkJumpResult = PdfViewerBenchmarkSnapshot & {
-  elapsedMs: number
-  pageNumber: number
-}
+  elapsedMs: number;
+  pageNumber: number;
+};
 
 type PdfViewerBenchmarkRenderSummary = {
-  cacheHitCount: number
-  cancelledCount: number
-  failedCount: number
-  pdfRenderCount: number
-  renderedCount: number
-  totalDurationMs: number
-  totalCount: number
-}
+  cacheHitCount: number;
+  cancelledCount: number;
+  failedCount: number;
+  pdfRenderCount: number;
+  renderedCount: number;
+  totalDurationMs: number;
+  totalCount: number;
+};
 
 type PdfViewerBenchmarkClientProps = {
-  performanceOptions: PdfViewerPerformanceOptions
-  variant: string
-}
+  performanceOptions: PdfViewerPerformanceOptions;
+  variant: string;
+};
 
 declare global {
   interface Window {
     __pdfViewerBenchmark?: {
-      jumpToPage: (pageNumber: number) => Promise<PdfViewerBenchmarkJumpResult>
-      jumpPages: readonly number[]
+      jumpToPage: (pageNumber: number) => Promise<PdfViewerBenchmarkJumpResult>;
+      jumpPages: readonly number[];
       runJumpSequence: (
         pageNumbers?: readonly number[],
-        options?: PdfViewerBenchmarkRunOptions
-      ) => Promise<PdfViewerBenchmarkJumpResult[]>
-      snapshot: () => PdfViewerBenchmarkSnapshot
-      variant: string
-    }
+        options?: PdfViewerBenchmarkRunOptions,
+      ) => Promise<PdfViewerBenchmarkJumpResult[]>;
+      snapshot: () => PdfViewerBenchmarkSnapshot;
+      variant: string;
+    };
   }
 }
 
-const pdfViewerBenchmarkRenderTimings: PdfPageRenderTiming[] = []
+const pdfViewerBenchmarkRenderTimings: PdfPageRenderTiming[] = [];
 
 type PdfViewerBenchmarkRunOptions = {
-  settleMs?: number
-}
+  settleMs?: number;
+};
 
 export function PdfViewerBenchmarkClient({
   performanceOptions,
   variant,
 }: PdfViewerBenchmarkClientProps) {
-  const viewerRef = React.useRef<PdfViewerHandle>(null)
-  const [resultJson, setResultJson] = React.useState("")
+  const viewerRef = React.useRef<PdfViewerHandle>(null);
+  const [resultJson, setResultJson] = React.useState("");
 
   React.useEffect(() => {
-    clearPdfViewerBenchmarkRenderTimings()
+    clearPdfViewerBenchmarkRenderTimings();
     const benchmark = {
       jumpPages: BENCHMARK_JUMP_PAGES,
       snapshot: () => readSnapshot({ performanceOptions, variant }),
@@ -90,7 +92,7 @@ export function PdfViewerBenchmarkClient({
         }),
       runJumpSequence: (
         pageNumbers: readonly number[] = BENCHMARK_JUMP_PAGES,
-        runOptions?: PdfViewerBenchmarkRunOptions
+        runOptions?: PdfViewerBenchmarkRunOptions,
       ) =>
         runJumpSequence(viewerRef.current, pageNumbers, {
           performanceOptions,
@@ -98,15 +100,15 @@ export function PdfViewerBenchmarkClient({
           variant,
         }),
       variant,
-    }
+    };
 
-    window.__pdfViewerBenchmark = benchmark
+    window.__pdfViewerBenchmark = benchmark;
     return () => {
       if (window.__pdfViewerBenchmark === benchmark) {
-        window.__pdfViewerBenchmark = undefined
+        window.__pdfViewerBenchmark = undefined;
       }
-    }
-  }, [performanceOptions, variant])
+    };
+  }, [performanceOptions, variant]);
 
   return (
     <main className="h-svh min-h-0" data-testid="pdf-viewer-benchmark">
@@ -133,7 +135,7 @@ export function PdfViewerBenchmarkClient({
           data-testid="pdf-benchmark-snapshot"
           onClick={() =>
             setResultJson(
-              JSON.stringify(readSnapshot({ performanceOptions, variant }))
+              JSON.stringify(readSnapshot({ performanceOptions, variant })),
             )
           }
         />
@@ -148,7 +150,7 @@ export function PdfViewerBenchmarkClient({
               void jumpToPage(viewerRef.current, pageNumber, {
                 performanceOptions,
                 variant,
-              }).then((result) => setResultJson(JSON.stringify(result)))
+              }).then((result) => setResultJson(JSON.stringify(result)));
             }}
           />
         ))}
@@ -159,37 +161,37 @@ export function PdfViewerBenchmarkClient({
         />
       </div>
     </main>
-  )
+  );
 }
 
 function jumpToPage(
   viewer: PdfViewerHandle | null,
   pageNumber: number,
   options: {
-    performanceOptions: PdfViewerPerformanceOptions
-    variant: string
-  }
+    performanceOptions: PdfViewerPerformanceOptions;
+    variant: string;
+  },
 ): Promise<PdfViewerBenchmarkJumpResult> {
   const targetPage = Math.min(
     BENCHMARK_PAGE_COUNT,
-    Math.max(1, Math.round(pageNumber))
-  )
-  clearPdfViewerBenchmarkRenderTimings()
-  const startedAt = performance.now()
-  viewer?.scrollToPage(targetPage, { behavior: "auto" })
+    Math.max(1, Math.round(pageNumber)),
+  );
+  clearPdfViewerBenchmarkRenderTimings();
+  const startedAt = performance.now();
+  viewer?.scrollToPage(targetPage, { behavior: "auto" });
 
   return new Promise((resolve) => {
-    const deadline = performance.now() + 10_000
+    const deadline = performance.now() + 10_000;
 
     function measure() {
-      const snapshot = readSnapshot(options)
-      const hasTargetSlot = snapshot.slotPages.includes(targetPage)
+      const snapshot = readSnapshot(options);
+      const hasTargetSlot = snapshot.slotPages.includes(targetPage);
       const hasRenderedTargetPage =
         snapshot.renderedPages.includes(targetPage) ||
         snapshot.renderTimings.some(
           (timing) =>
-            timing.pageNumber === targetPage && timing.status === "rendered"
-        )
+            timing.pageNumber === targetPage && timing.status === "rendered",
+        );
 
       if (
         (hasTargetSlot && hasRenderedTargetPage) ||
@@ -199,56 +201,56 @@ function jumpToPage(
           ...snapshot,
           elapsedMs: Math.round(performance.now() - startedAt),
           pageNumber: targetPage,
-        })
-        return
+        });
+        return;
       }
 
-      requestAnimationFrame(measure)
+      requestAnimationFrame(measure);
     }
 
-    requestAnimationFrame(measure)
-  })
+    requestAnimationFrame(measure);
+  });
 }
 
 async function runJumpSequence(
   viewer: PdfViewerHandle | null,
   pageNumbers: readonly number[],
   options: {
-    performanceOptions: PdfViewerPerformanceOptions
-    runOptions?: PdfViewerBenchmarkRunOptions
-    variant: string
-  }
+    performanceOptions: PdfViewerPerformanceOptions;
+    runOptions?: PdfViewerBenchmarkRunOptions;
+    variant: string;
+  },
 ) {
-  const results: PdfViewerBenchmarkJumpResult[] = []
+  const results: PdfViewerBenchmarkJumpResult[] = [];
   for (const pageNumber of pageNumbers) {
-    results.push(await jumpToPage(viewer, pageNumber, options))
-    const settleMs = options.runOptions?.settleMs ?? 0
+    results.push(await jumpToPage(viewer, pageNumber, options));
+    const settleMs = options.runOptions?.settleMs ?? 0;
     if (settleMs > 0) {
-      await new Promise((resolve) => window.setTimeout(resolve, settleMs))
+      await new Promise((resolve) => window.setTimeout(resolve, settleMs));
     }
   }
-  return results
+  return results;
 }
 
 function readSnapshot({
   performanceOptions,
   variant,
 }: {
-  performanceOptions: PdfViewerPerformanceOptions
-  variant: string
+  performanceOptions: PdfViewerPerformanceOptions;
+  variant: string;
 }): PdfViewerBenchmarkSnapshot {
   const viewport = document.querySelector<HTMLElement>(
-    "[data-slot='scroll-area-viewport']"
-  )
+    "[data-slot='scroll-area-viewport']",
+  );
   const slots = Array.from(
-    document.querySelectorAll<HTMLElement>("[data-slot='pdf-page-slot']")
-  )
+    document.querySelectorAll<HTMLElement>("[data-slot='pdf-page-slot']"),
+  );
   const renderedPages = Array.from(
     document.querySelectorAll<HTMLCanvasElement>(
-      "canvas[data-pdf-render-status='rendered']"
-    )
-  ).map((canvas) => Number(canvas.dataset.pdfPageNumber))
-  const currentPageText = readCurrentPageText()
+      "canvas[data-pdf-render-status='rendered']",
+    ),
+  ).map((canvas) => Number(canvas.dataset.pdfPageNumber));
+  const currentPageText = readCurrentPageText();
 
   return {
     canvasCount: document.querySelectorAll("canvas").length,
@@ -263,30 +265,30 @@ function readSnapshot({
     scrollTop: viewport?.scrollTop ?? 0,
     slotPages: slots.map((slot) => Number(slot.dataset.pageNumber)),
     variant,
-  }
+  };
 }
 
 function readCurrentPageText() {
   const controls = document.querySelector(
-    "[data-slot='viewer-controls'], [data-slot='file-viewer-controls']"
-  )
+    "[data-slot='viewer-controls'], [data-slot='file-viewer-controls']",
+  );
   const position =
     controls?.querySelector(":scope > span") ??
-    controls?.querySelector(":scope > div > span:last-child")
+    controls?.querySelector(":scope > div > span:last-child");
 
-  return (position ?? controls)?.textContent?.replace(/\s+/g, " ").trim() ?? ""
+  return (position ?? controls)?.textContent?.replace(/\s+/g, " ").trim() ?? "";
 }
 
 function recordPdfViewerBenchmarkRenderTiming(timing: PdfPageRenderTiming) {
-  pdfViewerBenchmarkRenderTimings.push(timing)
+  pdfViewerBenchmarkRenderTimings.push(timing);
 }
 
 function clearPdfViewerBenchmarkRenderTimings() {
-  pdfViewerBenchmarkRenderTimings.length = 0
+  pdfViewerBenchmarkRenderTimings.length = 0;
 }
 
 function summarizeRenderTimings(
-  timings: readonly PdfPageRenderTiming[]
+  timings: readonly PdfPageRenderTiming[],
 ): PdfViewerBenchmarkRenderSummary {
   return timings.reduce<PdfViewerBenchmarkRenderSummary>(
     (summary, timing) => ({
@@ -310,6 +312,6 @@ function summarizeRenderTimings(
       renderedCount: 0,
       totalDurationMs: 0,
       totalCount: 0,
-    }
-  )
+    },
+  );
 }

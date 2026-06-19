@@ -1,12 +1,12 @@
-import { toViewerErrorInfo, type ViewerErrorInfo } from "@/lib/viewer-errors"
-import type { ViewerResource } from "@/lib/viewer-resource"
-import type { ViewerDescriptor } from "@/lib/viewer-source"
+import { toViewerErrorInfo, type ViewerErrorInfo } from "@/lib/viewer-errors";
+import type { ViewerResource } from "@/lib/viewer-resource";
+import type { ViewerDescriptor } from "@/lib/viewer-source";
 
-import { thumbnailCategoryFormat } from "./thumbnail-errors"
+import { thumbnailCategoryFormat } from "./thumbnail-errors";
 
 export interface ThumbnailErrorState {
-  renderKey: string
-  info: ViewerErrorInfo
+  renderKey: string;
+  info: ViewerErrorInfo;
 }
 
 export function createThumbnailErrorState({
@@ -15,10 +15,10 @@ export function createThumbnailErrorState({
   resource,
   descriptor,
 }: {
-  renderKey: string
-  error: unknown
-  resource: ViewerResource
-  descriptor: ViewerDescriptor
+  renderKey: string;
+  error: unknown;
+  resource: ViewerResource;
+  descriptor: ViewerDescriptor;
 }): ThumbnailErrorState {
   return {
     renderKey,
@@ -27,5 +27,5 @@ export function createThumbnailErrorState({
       sourceKind: resource.sourceKind,
       canDownload: !resource.originalDownload.isDisabled,
     }),
-  }
+  };
 }

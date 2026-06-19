@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
 function AspectRatio({
   ratio = 1,
   style,
   ...props
 }: React.ComponentProps<"div"> & {
-  ratio?: number
+  ratio?: number;
 }): React.ReactElement {
   return (
     <div
@@ -15,7 +15,7 @@ function AspectRatio({
       style={{ aspectRatio: ratio, ...style }}
       {...props}
     />
-  )
+  );
 }
 
-export { AspectRatio }
+export { AspectRatio };

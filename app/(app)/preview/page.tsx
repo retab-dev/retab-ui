@@ -1,17 +1,17 @@
-import { type Metadata } from "next"
+import { type Metadata } from "next";
 
 import {
   PageHeader,
   PageHeaderDescription,
   PageHeaderHeading,
-} from "@/components/page-header"
-import { RetabSchemaBuilderDemo } from "@/components/retab-schema-builder-demo"
-import { CsvViewerDemo } from "@/components/csv-viewer-demo"
+} from "@/components/page-header";
+import { RetabSchemaBuilderDemo } from "@/components/retab-schema-builder-demo";
+import { CsvViewerDemo } from "@/components/csv-viewer-demo";
 
 export const metadata: Metadata = {
   title: "Components preview",
   description: "Live preview of the Retab schema builder and CSV viewer.",
-}
+};
 
 export default function PreviewPage() {
   return (
@@ -34,5 +34,5 @@ export default function PreviewPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

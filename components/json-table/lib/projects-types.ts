@@ -1,6 +1,6 @@
-export type JsonTableDocumentData = Record<string, unknown>
+export type JsonTableDocumentData = Record<string, unknown>;
 
 export interface TableDocument {
-  id: string
-  data: JsonTableDocumentData
+  id: string;
+  data: JsonTableDocumentData;
 }

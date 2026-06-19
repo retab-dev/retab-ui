@@ -1,8 +1,8 @@
 import {
   createDataCellKeyboardActivationSource,
   createDataCellPointerActivationSource,
-} from "@/registry/new-york-v4/ui/data-cell-activation"
-import { commitDataCellBooleanToggle } from "@/registry/new-york-v4/ui/data-cell-boolean-value"
+} from "@/registry/new-york-v4/ui/data-cell-activation";
+import { commitDataCellBooleanToggle } from "@/registry/new-york-v4/ui/data-cell-boolean-value";
 import {
   commandDataCellControlAction,
   editDataCellControlAction,
@@ -12,37 +12,41 @@ import {
   type DataCellControlPointerActionArgs,
   type DataCellControlState,
   type DataCellControlStateByKind,
-} from "@/registry/new-york-v4/ui/data-cell-control-contract"
-import { getDataCellTextPointerActivationSource } from "@/registry/new-york-v4/ui/data-cell-text-activation"
-import type { DataCellKind } from "@/registry/new-york-v4/ui/data-cell-types"
+} from "@/registry/new-york-v4/ui/data-cell-control-contract";
+import { getDataCellTextPointerActivationSource } from "@/registry/new-york-v4/ui/data-cell-text-activation";
+import type { DataCellKind } from "@/registry/new-york-v4/ui/data-cell-types";
 
-const dataCellOpenKeys = new Set(["Enter", "F2", " "])
-const dataCellNumberKeyPattern = /^[0-9.+-]$/
+const dataCellOpenKeys = new Set(["Enter", "F2", " "]);
+const dataCellNumberKeyPattern = /^[0-9.+-]$/;
 
-type DataCellNonBooleanKind = Exclude<DataCellKind, "boolean">
+type DataCellNonBooleanKind = Exclude<DataCellKind, "boolean">;
 
 type DataCellBooleanCommitHandler = Extract<
   DataCellControlState,
   { kind: "boolean" }
->["commitBoolean"]
+>["commitBoolean"];
+
+type DataCellNoBooleanCommitInput = Record<never, never>;
 
 type DataCellControlStateInputByKind = {
   [Kind in DataCellKind]: Omit<
     DataCellControlStateByKind[Kind],
     "commitBoolean" | "disabled"
   > &
-    (Kind extends "boolean" ? { onCommit?: DataCellBooleanCommitHandler } : {})
-}
+    (Kind extends "boolean"
+      ? { onCommit?: DataCellBooleanCommitHandler }
+      : DataCellNoBooleanCommitInput);
+};
 
-type DataCellControlStateInput = DataCellControlStateInputByKind[DataCellKind]
+type DataCellControlStateInput = DataCellControlStateInputByKind[DataCellKind];
 type DataCellNonBooleanControlStateInput =
-  DataCellControlStateInputByKind[DataCellNonBooleanKind]
+  DataCellControlStateInputByKind[DataCellNonBooleanKind];
 type DataCellNonBooleanControlState =
-  DataCellControlStateByKind[DataCellNonBooleanKind]
+  DataCellControlStateByKind[DataCellNonBooleanKind];
 
 export function createDataCellControlState(
   props: DataCellControlStateInput,
-  { disabled }: { disabled: boolean }
+  { disabled }: { disabled: boolean },
 ): DataCellControlState {
   if (props.kind === "boolean") {
     return {
@@ -50,23 +54,23 @@ export function createDataCellControlState(
       value: props.value,
       disabled,
       commitBoolean: props.onCommit,
-    }
+    };
   }
 
-  return createDataCellNonBooleanControlState(props, { disabled })
+  return createDataCellNonBooleanControlState(props, { disabled });
 }
 
 function createDataCellNonBooleanControlState(
   props: DataCellNonBooleanControlStateInput,
-  { disabled }: { disabled: boolean }
+  { disabled }: { disabled: boolean },
 ): DataCellNonBooleanControlState {
-  return { ...props, disabled }
+  return { ...props, disabled };
 }
 
 export function getDataCellPointerControlAction(
-  args: DataCellControlPointerActionArgs
+  args: DataCellControlPointerActionArgs,
 ): DataCellControlAction {
-  const { controlState } = args
+  const { controlState } = args;
   if (controlState.kind === "text") {
     return editDataCellControlAction(
       getDataCellTextPointerActivationSource({
@@ -77,29 +81,29 @@ export function getDataCellPointerControlAction(
         event: args.event,
         value: controlState.value,
       }),
-      { shouldPreventDefault: true }
-    )
+      { shouldPreventDefault: true },
+    );
   }
   if (controlState.kind === "boolean") {
     return commandDataCellControlAction(
       () =>
         commitDataCellBooleanToggle(
           controlState.value,
-          controlState.commitBoolean
+          controlState.commitBoolean,
         ),
-      { shouldPreventDefault: true }
-    )
+      { shouldPreventDefault: true },
+    );
   }
   if (controlState.kind === "select") {
-    return noneDataCellControlAction()
+    return noneDataCellControlAction();
   }
-  return createDefaultPointerEditAction(args)
+  return createDefaultPointerEditAction(args);
 }
 
 export function getDataCellClickControlAction(
-  args: DataCellControlPointerActionArgs
+  args: DataCellControlPointerActionArgs,
 ): DataCellControlAction {
-  const { controlState } = args
+  const { controlState } = args;
   if (controlState.kind === "text") {
     return editDataCellControlAction(
       getDataCellTextPointerActivationSource({
@@ -110,66 +114,66 @@ export function getDataCellClickControlAction(
         event: args.event,
         value: controlState.value,
       }),
-      { shouldPreventDefault: false }
-    )
+      { shouldPreventDefault: false },
+    );
   }
   if (controlState.kind === "boolean") {
     return commandDataCellControlAction(
       () =>
         commitDataCellBooleanToggle(
           controlState.value,
-          controlState.commitBoolean
+          controlState.commitBoolean,
         ),
-      { shouldPreventDefault: false }
-    )
+      { shouldPreventDefault: false },
+    );
   }
-  return createDefaultClickEditAction(args)
+  return createDefaultClickEditAction(args);
 }
 
 export function getDataCellKeyControlAction(
-  args: DataCellControlKeyActionArgs
+  args: DataCellControlKeyActionArgs,
 ): DataCellControlAction {
   if (!canActivateDataCellControlFromKey(args.controlState.kind, args.key)) {
-    return noneDataCellControlAction()
+    return noneDataCellControlAction();
   }
 
   if (args.controlState.kind === "boolean" && args.key === " ") {
-    const booleanState = args.controlState
+    const booleanState = args.controlState;
     return commandDataCellControlAction(
       () =>
         commitDataCellBooleanToggle(
           booleanState.value,
-          booleanState.commitBoolean
+          booleanState.commitBoolean,
         ),
-      { shouldPreventDefault: true }
-    )
+      { shouldPreventDefault: true },
+    );
   }
 
   return editDataCellControlAction(
     createDataCellKeyboardActivationSource(args.key),
-    { shouldPreventDefault: true }
-  )
+    { shouldPreventDefault: true },
+  );
 }
 
 function canActivateDataCellControlFromKey(kind: DataCellKind, key: string) {
   if (kind === "text") {
-    return key === "Enter" || key === "F2" || key.length === 1
+    return key === "Enter" || key === "F2" || key.length === 1;
   }
   if (kind === "number" || kind === "integer") {
-    return canActivateDataCellNumberFromKey(kind, key)
+    return canActivateDataCellNumberFromKey(kind, key);
   }
-  if (kind === "boolean") return key === "Enter" || key === "F2" || key === " "
-  return dataCellOpenKeys.has(key)
+  if (kind === "boolean") return key === "Enter" || key === "F2" || key === " ";
+  return dataCellOpenKeys.has(key);
 }
 
 function canActivateDataCellNumberFromKey(
   kind: "number" | "integer",
-  key: string
+  key: string,
 ) {
-  if (key === "Enter" || key === "F2") return true
-  if (key.length !== 1) return false
-  if (kind === "integer") return /^[+-]$|^\d$/.test(key)
-  return dataCellNumberKeyPattern.test(key)
+  if (key === "Enter" || key === "F2") return true;
+  if (key.length !== 1) return false;
+  if (kind === "integer") return /^[+-]$|^\d$/.test(key);
+  return dataCellNumberKeyPattern.test(key);
 }
 
 function createDefaultPointerEditAction<Kind extends DataCellKind>({
@@ -180,8 +184,8 @@ function createDefaultPointerEditAction<Kind extends DataCellKind>({
 }: DataCellControlPointerActionArgs<Kind>): DataCellControlAction {
   return editDataCellControlAction(
     createDataCellPointerActivationSource({ clientX, clientY, detail, event }),
-    { shouldPreventDefault: true }
-  )
+    { shouldPreventDefault: true },
+  );
 }
 
 function createDefaultClickEditAction<Kind extends DataCellKind>({
@@ -192,6 +196,6 @@ function createDefaultClickEditAction<Kind extends DataCellKind>({
 }: DataCellControlPointerActionArgs<Kind>): DataCellControlAction {
   return editDataCellControlAction(
     createDataCellPointerActivationSource({ clientX, clientY, detail, event }),
-    { shouldPreventDefault: false }
-  )
+    { shouldPreventDefault: false },
+  );
 }

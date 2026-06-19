@@ -1,46 +1,51 @@
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { resolveXlsxSheetChange, type XlsxSheetMeta } from "@/lib/xlsx-workbook"
+import * as React from "react";
+
+import {
+  resolveXlsxSheetChange,
+  type XlsxSheetMeta,
+} from "@/lib/xlsx-workbook";
 
 export interface PublicXlsxCellRef {
-  sheet: number
-  row: number
-  col: number
+  sheet: number;
+  row: number;
+  col: number;
 }
 
 export interface InternalXlsxCellRef {
-  sheetIndex: number
-  rowIndex: number
-  columnIndex: number
+  sheetIndex: number;
+  rowIndex: number;
+  columnIndex: number;
 }
 
 export type PendingXlsxScrollTarget = InternalXlsxCellRef & {
-  behavior: ScrollBehavior
-}
+  behavior: ScrollBehavior;
+};
 
 export type XlsxScrollRequest = PendingXlsxScrollTarget & {
-  nonce: number
-}
+  nonce: number;
+};
 
 export interface ResolvedXlsxScrollTarget {
-  sheetIndex: number
-  request: PendingXlsxScrollTarget
-  changed: boolean
+  sheetIndex: number;
+  request: PendingXlsxScrollTarget;
+  changed: boolean;
 }
 
 export function toInternalCellRef(
-  cellRef: PublicXlsxCellRef | null | undefined
+  cellRef: PublicXlsxCellRef | null | undefined,
 ): InternalXlsxCellRef | null {
-  if (!isValidPublicCellRef(cellRef)) return null
+  if (!isValidPublicCellRef(cellRef)) return null;
   return {
     sheetIndex: cellRef.sheet,
     rowIndex: cellRef.row,
     columnIndex: cellRef.col,
-  }
+  };
 }
 
 export function isValidPublicCellRef(
-  cellRef: PublicXlsxCellRef | null | undefined
+  cellRef: PublicXlsxCellRef | null | undefined,
 ): cellRef is PublicXlsxCellRef {
   return (
     cellRef != null &&
@@ -50,16 +55,16 @@ export function isValidPublicCellRef(
     cellRef.sheet >= 0 &&
     cellRef.row >= 0 &&
     cellRef.col >= 0
-  )
+  );
 }
 
 export function isValidLoadedScrollTarget(
   target: InternalXlsxCellRef,
-  sheets: XlsxSheetMeta[]
+  sheets: XlsxSheetMeta[],
 ): boolean {
-  const sheet = sheets[target.sheetIndex]
-  const rowCount = normalizeSheetDimension(sheet?.rowCount)
-  const columnCount = normalizeSheetDimension(sheet?.columnCount)
+  const sheet = sheets[target.sheetIndex];
+  const rowCount = normalizeSheetDimension(sheet?.rowCount);
+  const columnCount = normalizeSheetDimension(sheet?.columnCount);
   return (
     !!sheet &&
     Number.isSafeInteger(target.rowIndex) &&
@@ -68,7 +73,7 @@ export function isValidLoadedScrollTarget(
     target.columnIndex >= 0 &&
     target.rowIndex < rowCount &&
     target.columnIndex < columnCount
-  )
+  );
 }
 
 export function resolveLoadedScrollTarget({
@@ -76,24 +81,24 @@ export function resolveLoadedScrollTarget({
   target,
   sheets,
 }: {
-  activeSheetIndex: number
-  target: PendingXlsxScrollTarget
-  sheets: XlsxSheetMeta[]
+  activeSheetIndex: number;
+  target: PendingXlsxScrollTarget;
+  sheets: XlsxSheetMeta[];
 }): ResolvedXlsxScrollTarget | null {
-  if (!isValidLoadedScrollTarget(target, sheets)) return null
+  if (!isValidLoadedScrollTarget(target, sheets)) return null;
 
   const change = resolveXlsxSheetChange({
     activeSheet: activeSheetIndex,
     requestedSheet: target.sheetIndex,
     sheetCount: sheets.length,
-  })
-  if (!change.accepted) return null
+  });
+  if (!change.accepted) return null;
 
   return {
     sheetIndex: change.sheetIndex,
     request: target,
     changed: change.changed,
-  }
+  };
 }
 
 export function useXlsxScrollController({
@@ -101,79 +106,79 @@ export function useXlsxScrollController({
   sheets,
   activateSheet,
 }: {
-  activeSheetIndex: number
-  sheets: XlsxSheetMeta[] | null
-  activateSheet: (sheetIndex: number) => void
+  activeSheetIndex: number;
+  sheets: XlsxSheetMeta[] | null;
+  activateSheet: (sheetIndex: number) => void;
 }) {
   const [scrollRequest, setScrollRequest] =
-    React.useState<XlsxScrollRequest | null>(null)
+    React.useState<XlsxScrollRequest | null>(null);
   const [pendingScrollTarget, setPendingScrollTarget] =
-    React.useState<PendingXlsxScrollTarget | null>(null)
-  const scrollNonce = React.useRef(0)
+    React.useState<PendingXlsxScrollTarget | null>(null);
+  const scrollNonce = React.useRef(0);
 
   const issueLoadedScrollTarget = React.useCallback(
     (target: PendingXlsxScrollTarget) => {
-      if (!sheets) return false
+      if (!sheets) return false;
 
       const resolved = resolveLoadedScrollTarget({
         activeSheetIndex,
         target,
         sheets,
-      })
-      if (!resolved) return false
+      });
+      if (!resolved) return false;
 
       if (resolved.changed) {
-        activateSheet(resolved.sheetIndex)
+        activateSheet(resolved.sheetIndex);
       }
 
-      scrollNonce.current += 1
+      scrollNonce.current += 1;
       setScrollRequest({
         ...resolved.request,
         nonce: scrollNonce.current,
-      })
-      return true
+      });
+      return true;
     },
-    [activateSheet, activeSheetIndex, sheets]
-  )
+    [activateSheet, activeSheetIndex, sheets],
+  );
 
   React.useEffect(() => {
-    if (!pendingScrollTarget || !sheets) return
-    setPendingScrollTarget(null)
-    issueLoadedScrollTarget(pendingScrollTarget)
-  }, [issueLoadedScrollTarget, pendingScrollTarget, sheets])
+    if (!pendingScrollTarget || !sheets) return;
+    setPendingScrollTarget(null);
+    issueLoadedScrollTarget(pendingScrollTarget);
+  }, [issueLoadedScrollTarget, pendingScrollTarget, sheets]);
 
   const scrollToCell = React.useCallback(
     (
       sheet: number,
       row: number,
       col: number,
-      options?: { behavior?: ScrollBehavior }
+      options?: { behavior?: ScrollBehavior },
     ) => {
-      const target = toInternalCellRef({ sheet, row, col })
-      if (!target) return
+      const target = toInternalCellRef({ sheet, row, col });
+      if (!target) return;
 
       const pendingTarget = {
         ...target,
         behavior: options?.behavior ?? "smooth",
-      }
+      };
       if (!sheets) {
-        setPendingScrollTarget(pendingTarget)
-        return
+        setPendingScrollTarget(pendingTarget);
+        return;
       }
 
-      issueLoadedScrollTarget(pendingTarget)
+      issueLoadedScrollTarget(pendingTarget);
     },
-    [issueLoadedScrollTarget, sheets]
-  )
+    [issueLoadedScrollTarget, sheets],
+  );
 
   return {
     scrollRequest,
     scrollToCell,
-  }
+  };
 }
 
 function normalizeSheetDimension(value: number | undefined) {
   return value != null && Number.isFinite(value) && value > 0
     ? Math.floor(value)
-    : 0
+    : 0;
 }

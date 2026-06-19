@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { ImageViewer } from "@/components/ui/image-viewer"
+import { ImageViewer } from "@/components/ui/image-viewer";
 
 export function ImageViewerDemo() {
   return (
@@ -16,5 +16,5 @@ export function ImageViewerDemo() {
         className="h-full"
       />
     </div>
-  )
+  );
 }

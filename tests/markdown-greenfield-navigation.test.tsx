@@ -1,16 +1,16 @@
 // @vitest-environment jsdom
 
-import * as React from "react"
+import * as React from "react";
 import {
   cleanup,
   fireEvent,
   render,
   screen,
   waitFor,
-} from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+} from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MarkdownViewer } from "@/components/ui/markdown-viewer"
+import { MarkdownViewer } from "@/components/ui/markdown-viewer";
 
 function markdownSource(text: string) {
   return {
@@ -18,29 +18,29 @@ function markdownSource(text: string) {
     fileName: "navigation.md",
     mimeType: "text/markdown",
     text,
-  }
+  };
 }
 
-let scrollTo: ReturnType<typeof vi.fn>
+let scrollTo: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
-  scrollTo = vi.fn()
+  scrollTo = vi.fn();
   Object.defineProperty(HTMLElement.prototype, "scrollTo", {
     configurable: true,
     value: scrollTo,
-  })
-  window.history.replaceState(null, "", "/")
-})
+  });
+  window.history.replaceState(null, "", "/");
+});
 
 afterEach(() => {
-  cleanup()
-  vi.restoreAllMocks()
-  window.history.replaceState(null, "", "/")
-})
+  cleanup();
+  vi.restoreAllMocks();
+  window.history.replaceState(null, "", "/");
+});
 
 describe("pretext markdown greenfield navigation", () => {
   it("resolves an initial offscreen heading hash through the virtual document model", async () => {
-    window.history.replaceState(null, "", "/viewer#target-section")
+    window.history.replaceState(null, "", "/viewer#target-section");
 
     render(
       <MarkdownViewer
@@ -54,18 +54,18 @@ describe("pretext markdown greenfield navigation", () => {
             "## Target Section",
             "",
             "The target can start outside the mounted window.",
-          ].join("\n")
+          ].join("\n"),
         )}
-      />
-    )
+      />,
+    );
 
     await waitFor(() => {
-      expect(lastScrollTop()).toBeGreaterThan(0)
-    })
-  })
+      expect(lastScrollTop()).toBeGreaterThan(0);
+    });
+  });
 
   it("can ignore the initial page hash and render at the document top", async () => {
-    window.history.replaceState(null, "", "/viewer#target-section")
+    window.history.replaceState(null, "", "/viewer#target-section");
 
     render(
       <MarkdownViewer
@@ -79,21 +79,21 @@ describe("pretext markdown greenfield navigation", () => {
             "## Target Section",
             "",
             "The target should not be consumed by embedded viewers.",
-          ].join("\n")
+          ].join("\n"),
         )}
         urlFragmentNavigation={false}
-      />
-    )
+      />,
+    );
 
-    expect(await screen.findByRole("heading", { name: "Start" })).toBeTruthy()
+    expect(await screen.findByRole("heading", { name: "Start" })).toBeTruthy();
 
     await waitFor(() => {
-      expect(maxScrollTop()).toBe(0)
-    })
-  })
+      expect(maxScrollTop()).toBe(0);
+    });
+  });
 
   it("intercepts footnote reference clicks and scrolls to generated offscreen footnotes", async () => {
-    window.history.replaceState(null, "", "/viewer")
+    window.history.replaceState(null, "", "/viewer");
 
     render(
       <MarkdownViewer
@@ -107,22 +107,22 @@ describe("pretext markdown greenfield navigation", () => {
             ...Array.from({ length: 80 }, (_, index) => `Spacer ${index + 1}`),
             "",
             "[^one]: Resolved from outside the visible source chunk.",
-          ].join("\n")
+          ].join("\n"),
         )}
-      />
-    )
+      />,
+    );
 
-    scrollTo.mockClear()
-    fireEvent.click(screen.getByRole("link", { name: "Footnote 1" }))
+    scrollTo.mockClear();
+    fireEvent.click(screen.getByRole("link", { name: "Footnote 1" }));
 
     await waitFor(() => {
-      expect(window.location.hash).toBe("#user-content-fn-one")
-      expect(lastScrollTop()).toBeGreaterThan(0)
-    })
-  })
+      expect(window.location.hash).toBe("#user-content-fn-one");
+      expect(lastScrollTop()).toBeGreaterThan(0);
+    });
+  });
 
   it("intercepts generated footnote backrefs and scrolls back to offscreen references", async () => {
-    window.history.replaceState(null, "", "/viewer")
+    window.history.replaceState(null, "", "/viewer");
 
     render(
       <MarkdownViewer
@@ -136,31 +136,31 @@ describe("pretext markdown greenfield navigation", () => {
             ...Array.from({ length: 80 }, (_, index) => `Spacer ${index + 1}`),
             "",
             "[^one]: Resolved from outside the visible source chunk.",
-          ].join("\n")
+          ].join("\n"),
         )}
-      />
-    )
+      />,
+    );
 
-    fireEvent.click(screen.getByRole("link", { name: "Footnote 1" }))
+    fireEvent.click(screen.getByRole("link", { name: "Footnote 1" }));
     await waitFor(() => {
       expect(
-        screen.getByRole("link", { name: "Back to footnote reference ↩" })
-      ).toBeTruthy()
-    })
+        screen.getByRole("link", { name: "Back to footnote reference ↩" }),
+      ).toBeTruthy();
+    });
 
-    scrollTo.mockClear()
+    scrollTo.mockClear();
     fireEvent.click(
-      screen.getByRole("link", { name: "Back to footnote reference ↩" })
-    )
+      screen.getByRole("link", { name: "Back to footnote reference ↩" }),
+    );
 
     await waitFor(() => {
-      expect(window.location.hash).toBe("#user-content-fnref-one")
-      expect(lastScrollTop()).toBeLessThan(200)
-    })
-  })
+      expect(window.location.hash).toBe("#user-content-fnref-one");
+      expect(lastScrollTop()).toBeLessThan(200);
+    });
+  });
 
   it("restores fragment targets on browser history popstate", async () => {
-    window.history.replaceState(null, "", "/viewer#start")
+    window.history.replaceState(null, "", "/viewer#start");
 
     render(
       <MarkdownViewer
@@ -176,60 +176,60 @@ describe("pretext markdown greenfield navigation", () => {
             "## Later Target",
             "",
             "Later text.",
-          ].join("\n")
+          ].join("\n"),
         )}
-      />
-    )
+      />,
+    );
 
     await waitFor(() => {
-      expect(lastScrollTop()).toBeLessThan(200)
-    })
+      expect(lastScrollTop()).toBeLessThan(200);
+    });
 
-    window.history.pushState(null, "", "#later-target")
-    scrollTo.mockClear()
-    window.dispatchEvent(new PopStateEvent("popstate"))
-
-    await waitFor(() => {
-      expect(lastScrollTop()).toBeGreaterThan(0)
-    })
-
-    window.history.pushState(null, "", "#start")
-    scrollTo.mockClear()
-    window.dispatchEvent(new PopStateEvent("popstate"))
+    window.history.pushState(null, "", "#later-target");
+    scrollTo.mockClear();
+    window.dispatchEvent(new PopStateEvent("popstate"));
 
     await waitFor(() => {
-      expect(lastScrollTop()).toBeLessThan(200)
-    })
-  })
-})
+      expect(lastScrollTop()).toBeGreaterThan(0);
+    });
+
+    window.history.pushState(null, "", "#start");
+    scrollTo.mockClear();
+    window.dispatchEvent(new PopStateEvent("popstate"));
+
+    await waitFor(() => {
+      expect(lastScrollTop()).toBeLessThan(200);
+    });
+  });
+});
 
 function lastScrollTop() {
   for (const call of [...scrollTo.mock.calls].reverse()) {
-    const options = call[0]
+    const options = call[0];
     if (
       options &&
       typeof options === "object" &&
       "top" in options &&
       typeof options.top === "number"
     ) {
-      return options.top
+      return options.top;
     }
   }
-  return 0
+  return 0;
 }
 
 function maxScrollTop() {
-  return Math.max(0, ...scrollTopCalls())
+  return Math.max(0, ...scrollTopCalls());
 }
 
 function scrollTopCalls() {
   return scrollTo.mock.calls.flatMap((call) => {
-    const options = call[0]
+    const options = call[0];
     return options &&
       typeof options === "object" &&
       "top" in options &&
       typeof options.top === "number"
       ? [options.top]
-      : []
-  })
+      : [];
+  });
 }

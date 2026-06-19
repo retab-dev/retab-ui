@@ -1,28 +1,30 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import type { ViewerResource } from "@/lib/viewer-resource"
+import * as React from "react";
+
+import type { ViewerResource } from "@/lib/viewer-resource";
 import {
   useViewerControlsRegistration,
   ViewerControls,
   type ViewerControlsState,
-} from "@/components/ui/viewer-controls"
-import { XlsxSheetTabs } from "@/components/ui/xlsx-sheet-tabs"
+} from "@/components/ui/viewer-controls";
+import { XlsxSheetTabs } from "@/components/ui/xlsx-sheet-tabs";
 
 import {
   XlsxGridColumn,
   XlsxSheetTabsSkeleton,
   XlsxViewerBody,
   XlsxViewerFrame,
-} from "./xlsx-viewer-chrome"
-import { useXlsxDownloadActions } from "./xlsx-viewer-download"
-import { getXlsxSource } from "./xlsx-viewer-resource"
-import { useXlsxScale } from "./xlsx-viewer-scale"
-import { useXlsxScrollController } from "./xlsx-viewer-scroll"
-import { XlsxViewerSheet, XlsxViewerSheetSkeleton } from "./xlsx-viewer-sheet"
-import { useXlsxSheetState } from "./xlsx-viewer-sheet-state"
-import type { XlsxViewerHandle, XlsxViewerProps } from "./xlsx-viewer-types"
+} from "./xlsx-viewer-chrome";
+import { useXlsxDownloadActions } from "./xlsx-viewer-download";
+import { getXlsxSource } from "./xlsx-viewer-resource";
+import { useXlsxScale } from "./xlsx-viewer-scale";
+import { useXlsxScrollController } from "./xlsx-viewer-scroll";
+import { XlsxViewerSheet, XlsxViewerSheetSkeleton } from "./xlsx-viewer-sheet";
+import { useXlsxSheetState } from "./xlsx-viewer-sheet-state";
+import type { XlsxViewerHandle, XlsxViewerProps } from "./xlsx-viewer-types";
 
 export function XlsxViewerSession({
   resource,
@@ -37,12 +39,12 @@ export function XlsxViewerSession({
   isolateStyles = false,
   forwardedRef,
 }: Omit<XlsxViewerProps, "source"> & {
-  resource: ViewerResource
-  forwardedRef?: React.ForwardedRef<XlsxViewerHandle>
+  resource: ViewerResource;
+  forwardedRef?: React.ForwardedRef<XlsxViewerHandle>;
 }) {
-  const viewportElementRef = React.useRef<HTMLDivElement | null>(null)
-  const content = resource.content
-  const sourcePromise = React.useMemo(() => getXlsxSource(content), [content])
+  const viewportElementRef = React.useRef<HTMLDivElement | null>(null);
+  const content = resource.content;
+  const sourcePromise = React.useMemo(() => getXlsxSource(content), [content]);
   const {
     activeSheetIndex,
     activeSheet,
@@ -51,13 +53,13 @@ export function XlsxViewerSession({
     reportSource,
     selectSheet,
     activateSheet,
-  } = useXlsxSheetState({ defaultSheetIndex, onSheetChange })
-  const { scale, zoomOut, zoomIn, resetZoom } = useXlsxScale()
+  } = useXlsxSheetState({ defaultSheetIndex, onSheetChange });
+  const { scale, zoomOut, zoomIn, resetZoom } = useXlsxScale();
   const { scrollRequest, scrollToCell } = useXlsxScrollController({
     activeSheetIndex,
     sheets,
     activateSheet,
-  })
+  });
 
   React.useImperativeHandle(
     forwardedRef ?? null,
@@ -65,18 +67,18 @@ export function XlsxViewerSession({
       scrollToCell,
       getViewportElement: () => viewportElementRef.current,
     }),
-    [scrollToCell]
-  )
+    [scrollToCell],
+  );
 
-  const isReservingFallbackSheetTabs = fallbackSheetTabs && !sheets
+  const isReservingFallbackSheetTabs = fallbackSheetTabs && !sheets;
   const downloadActions = useXlsxDownloadActions({
     resource,
     activeSheet,
     activeSheetIndex,
     content,
     sheets,
-  })
-  const controlsDownloadActions = download ? downloadActions : []
+  });
+  const controlsDownloadActions = download ? downloadActions : [];
   useXlsxControlsRegistration({
     activeSheet,
     controlsDownloadActions,
@@ -85,7 +87,7 @@ export function XlsxViewerSession({
     scale,
     zoomIn,
     zoomOut,
-  })
+  });
 
   return (
     <XlsxViewerFrame className={className} bare={bare}>
@@ -141,7 +143,7 @@ export function XlsxViewerSession({
         <XlsxSheetTabsSkeleton />
       ) : null}
     </XlsxViewerFrame>
-  )
+  );
 }
 
 function useXlsxControlsRegistration({
@@ -153,15 +155,15 @@ function useXlsxControlsRegistration({
   zoomIn,
   zoomOut,
 }: {
-  activeSheet: { name: string; rowCount: number; columnCount: number } | null
-  controlsDownloadActions: ViewerControlsState["downloads"]
-  isReady: boolean
-  resetZoom: () => void
-  scale: number
-  zoomIn: () => void
-  zoomOut: () => void
+  activeSheet: { name: string; rowCount: number; columnCount: number } | null;
+  controlsDownloadActions: ViewerControlsState["downloads"];
+  isReady: boolean;
+  resetZoom: () => void;
+  scale: number;
+  zoomIn: () => void;
+  zoomOut: () => void;
 }) {
-  const onControlsChange = useViewerControlsRegistration()
+  const onControlsChange = useViewerControlsRegistration();
   const controlsState = React.useMemo<ViewerControlsState>(
     () => ({
       title: isReady ? (activeSheet?.name ?? "-") : null,
@@ -189,12 +191,12 @@ function useXlsxControlsRegistration({
       scale,
       zoomIn,
       zoomOut,
-    ]
-  )
+    ],
+  );
 
   React.useEffect(() => {
-    if (!onControlsChange) return
-    onControlsChange(controlsState)
-    return () => onControlsChange(null)
-  }, [onControlsChange, controlsState])
+    if (!onControlsChange) return;
+    onControlsChange(controlsState);
+    return () => onControlsChange(null);
+  }, [onControlsChange, controlsState]);
 }

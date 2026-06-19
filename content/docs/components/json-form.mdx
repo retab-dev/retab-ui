@@ -19,14 +19,14 @@ whole schema and owns the `<form>`.
 ## Usage
 
 ```tsx
-import { useForm } from "react-hook-form"
+import { useForm } from "react-hook-form";
 
-import { JsonForm } from "@/components/json-form/json-form"
+import { JsonForm } from "@/components/json-form/json-form";
 
 export function Example() {
   const form = useForm({
     defaultValues: { invoice_number: "INV-1024", total: 1280.5 },
-  })
+  });
   return (
     <JsonForm
       form={form}
@@ -35,19 +35,19 @@ export function Example() {
     >
       <button type="submit">Submit</button>
     </JsonForm>
-  )
+  );
 }
 ```
 
 Render a single field on its own:
 
 ```tsx
-import { JsonFormField } from "@/components/json-form/json-form"
+import { JsonFormField } from "@/components/json-form/json-form";
 
 export function VendorNameField() {
   return (
     <JsonFormField name="vendor.name" schema={{ type: "string" }} required />
-  )
+  );
 }
 ```
 

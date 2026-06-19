@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { CODE_GUTTER_BACKGROUND } from "./code-viewer-projector"
-import { CODE_VIEWER_BASE_FONT_PX } from "./code-viewer-scale"
-import { getCodeVirtualTotalSize } from "./code-viewer-virtualization"
-import { ScrollArea } from "./scroll-area"
+import { CODE_GUTTER_BACKGROUND } from "./code-viewer-projector";
+import { CODE_VIEWER_BASE_FONT_PX } from "./code-viewer-scale";
+import { getCodeVirtualTotalSize } from "./code-viewer-virtualization";
+import { ScrollArea } from "./scroll-area";
 
-const CODE_VIEWER_DEFAULT_VIEWPORT_WIDTH = 800
+const CODE_VIEWER_DEFAULT_VIEWPORT_WIDTH = 800;
 
 export function CodeViewerViewport({
   contentIdentity,
@@ -18,22 +18,22 @@ export function CodeViewerViewport({
   rowHostRef,
   viewportRef,
 }: {
-  contentIdentity: string
-  fontScale: number
-  gutterWidth: string
-  lineCount: number
-  lineHeight: number
-  rowHostRef: React.RefObject<HTMLPreElement | null>
-  viewportRef: React.RefObject<HTMLDivElement | null>
+  contentIdentity: string;
+  fontScale: number;
+  gutterWidth: string;
+  lineCount: number;
+  lineHeight: number;
+  rowHostRef: React.RefObject<HTMLPreElement | null>;
+  viewportRef: React.RefObject<HTMLDivElement | null>;
 }) {
-  const fontSize = `${CODE_VIEWER_BASE_FONT_PX * fontScale}px`
+  const fontSize = `${CODE_VIEWER_BASE_FONT_PX * fontScale}px`;
   const totalHeight = getCodeVirtualTotalSize({
     lineCount,
     lineHeight,
-  })
+  });
 
   return (
-    <div className="relative min-h-0 flex-1 bg-background">
+    <div className="bg-background relative min-h-0 flex-1">
       {/* Fixed full-height gutter rail, behind the scrolling content: the
           line-number column and its divider always reach the bottom of the
           viewport and never move while scrolling, because it lives outside the
@@ -74,5 +74,5 @@ export function CodeViewerViewport({
         </div>
       </ScrollArea>
     </div>
-  )
+  );
 }

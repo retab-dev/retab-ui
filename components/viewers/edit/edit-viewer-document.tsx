@@ -1,21 +1,21 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 import type {
   PageOverlayProps,
   PdfViewerHandle,
-} from "@/components/ui/pdf-viewer"
+} from "@/components/ui/pdf-viewer";
 
-import { EditViewerDocumentPane } from "./edit-viewer-document-pane"
-import type { EditViewerDocumentTarget } from "./edit-viewer-model"
+import { EditViewerDocumentPane } from "./edit-viewer-document-pane";
+import type { EditViewerDocumentTarget } from "./edit-viewer-model";
 
 export type EditViewerDocumentViewProps = React.ComponentProps<"div"> & {
-  target: EditViewerDocumentTarget
-  renderPageOverlay: (props: PageOverlayProps) => React.ReactNode
-  viewerRef: React.RefObject<PdfViewerHandle | null>
-}
+  target: EditViewerDocumentTarget;
+  renderPageOverlay: (props: PageOverlayProps) => React.ReactNode;
+  viewerRef: React.RefObject<PdfViewerHandle | null>;
+};
 
 export function EditViewerDocumentView({
   className,
@@ -32,5 +32,5 @@ export function EditViewerDocumentView({
         viewerRef={viewerRef}
       />
     </div>
-  )
+  );
 }

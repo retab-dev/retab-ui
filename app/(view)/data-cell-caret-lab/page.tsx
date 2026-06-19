@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import type { JSONSchema7 } from "json-schema"
+import * as React from "react";
+import type { JSONSchema7 } from "json-schema";
 
-import type { TableDocument } from "@/components/json-table/lib/projects-types"
-import { SingleFileTableView } from "@/components/json-table/single-file-table-view"
+import type { TableDocument } from "@/components/json-table/lib/projects-types";
+import { SingleFileTableView } from "@/components/json-table/single-file-table-view";
 
 const initialDocument: TableDocument = {
   id: "doc_caret_lab",
@@ -17,7 +17,7 @@ const initialDocument: TableDocument = {
     shipped_at: "2025-07-18",
     status: "draft",
   },
-}
+};
 
 const initialSchema: JSONSchema7 = {
   type: "object",
@@ -52,16 +52,17 @@ const initialSchema: JSONSchema7 = {
       title: "Status",
     },
   },
-}
+};
 
 export default function DataCellCaretLabPage() {
-  const [document, setDocument] = React.useState<TableDocument>(initialDocument)
-  const [schema, setSchema] = React.useState<JSONSchema7>(initialSchema)
+  const [document, setDocument] =
+    React.useState<TableDocument>(initialDocument);
+  const [schema, setSchema] = React.useState<JSONSchema7>(initialSchema);
 
   return (
     <main
       id="data-cell-caret-lab"
-      className="flex min-h-screen flex-col gap-4 bg-background p-6 text-foreground"
+      className="bg-background text-foreground flex min-h-screen flex-col gap-4 p-6"
     >
       <style>{`
         #data-cell-caret-lab [data-slot="data-cell"] {
@@ -77,7 +78,7 @@ export default function DataCellCaretLabPage() {
       `}</style>
       <div
         data-testid="data-cell-caret-json-table"
-        className="h-[360px] overflow-hidden border bg-background"
+        className="bg-background h-[360px] overflow-hidden border"
       >
         <SingleFileTableView
           document={document}
@@ -89,11 +90,11 @@ export default function DataCellCaretLabPage() {
           overscan={4}
           jumpOverscan={4}
           onUpdateDocument={async (patch) => {
-            if (!patch.data || typeof patch.data !== "object") return
+            if (!patch.data || typeof patch.data !== "object") return;
             setDocument((currentDocument) => ({
               ...currentDocument,
               data: patch.data as Record<string, unknown>,
-            }))
+            }));
           }}
         />
       </div>
@@ -101,5 +102,5 @@ export default function DataCellCaretLabPage() {
         {JSON.stringify(document.data)}
       </output>
     </main>
-  )
+  );
 }

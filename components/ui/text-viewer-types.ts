@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/ui/text-viewer-types"
+export * from "@/registry/new-york-v4/ui/text-viewer-types";

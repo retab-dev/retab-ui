@@ -1,16 +1,16 @@
-import { setDraftNullable } from "@/components/schema-editor/property-form/model/effective-node-edits"
+import { setDraftNullable } from "@/components/schema-editor/property-form/model/effective-node-edits";
 import type {
   PropertyDraft,
   PropertyDraftOperation,
-} from "@/components/schema-editor/property-form/types"
+} from "@/components/schema-editor/property-form/types";
 
 export function propertyDraftReducer(
   propertyDraft: PropertyDraft,
-  operation: PropertyDraftOperation
+  operation: PropertyDraftOperation,
 ): PropertyDraft {
   switch (operation.type) {
     case "renameProperty":
-      return { ...propertyDraft, name: operation.name }
+      return { ...propertyDraft, name: operation.name };
     case "setPropertyDescription":
       return {
         ...propertyDraft,
@@ -18,13 +18,13 @@ export function propertyDraftReducer(
           ...propertyDraft.schemaNode,
           description: operation.description,
         },
-      }
+      };
     case "setPropertyNullable":
-      return setDraftNullable(propertyDraft, operation.isNullable)
+      return setDraftNullable(propertyDraft, operation.isNullable);
     case "replacePropertySchemaNode":
       return {
         ...propertyDraft,
         schemaNode: operation.schemaNode,
-      }
+      };
   }
 }

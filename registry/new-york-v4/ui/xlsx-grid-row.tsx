@@ -1,16 +1,16 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
-import type { XlsxCell } from "@/lib/xlsx-workbook"
-import type { FixedGridColumn } from "@/components/ui/fixed-grid-columns"
-import { getFixedGridRowStyle } from "@/components/ui/fixed-grid-row-style"
-import type { GridCellCoordinate } from "@/components/ui/fixed-grid-selection"
+import { cn } from "@/lib/utils";
+import type { XlsxCell } from "@/lib/xlsx-workbook";
+import type { FixedGridColumn } from "@/components/ui/fixed-grid-columns";
+import { getFixedGridRowStyle } from "@/components/ui/fixed-grid-row-style";
+import type { GridCellCoordinate } from "@/components/ui/fixed-grid-selection";
 
 export type XlsxGridColumnItem = FixedGridColumn<{ columnIndex: number }> & {
-  metadata: { columnIndex: number }
-}
+  metadata: { columnIndex: number };
+};
 
 export const XlsxGridRow = React.memo(function XlsxGridRow({
   rowIndex,
@@ -24,25 +24,25 @@ export const XlsxGridRow = React.memo(function XlsxGridRow({
   hidden = false,
   activeColumnIndex,
 }: {
-  rowIndex: number
-  getCell: (rowIndex: number, columnIndex: number) => XlsxCell
-  gridTemplate: string
-  rowHeight: number
-  columnItems: XlsxGridColumnItem[]
-  leftPad: number
-  rightPad: number
-  start: number
-  hidden?: boolean
-  activeColumnIndex?: GridCellCoordinate["columnIndex"] | null
+  rowIndex: number;
+  getCell: (rowIndex: number, columnIndex: number) => XlsxCell;
+  gridTemplate: string;
+  rowHeight: number;
+  columnItems: XlsxGridColumnItem[];
+  leftPad: number;
+  rightPad: number;
+  start: number;
+  hidden?: boolean;
+  activeColumnIndex?: GridCellCoordinate["columnIndex"] | null;
 }) {
   const style = getFixedGridRowStyle({
     gridTemplate,
     rowHeight,
     top: start,
-  })
+  });
   return (
     <div
-      className="group grid border-b hover:bg-muted/40"
+      className="group hover:bg-muted/40 grid border-b"
       style={style}
       role="row"
       aria-rowindex={rowIndex + 1}
@@ -52,15 +52,15 @@ export const XlsxGridRow = React.memo(function XlsxGridRow({
       <div
         aria-hidden
         data-slot="xlsx-row-number"
-        className="sticky left-0 z-[1] flex items-center justify-end border-r bg-card px-2 text-muted-foreground tabular-nums group-hover:bg-[color-mix(in_oklab,var(--card)_97%,var(--foreground))]"
+        className="bg-card text-muted-foreground sticky left-0 z-[1] flex items-center justify-end border-r px-2 tabular-nums group-hover:bg-[color-mix(in_oklab,var(--card)_97%,var(--foreground))]"
       >
         {rowIndex + 1}
       </div>
       <Spacer width={leftPad} />
       {columnItems.map((item) => {
-        const columnIndex = item.metadata.columnIndex
-        const cell = getCell(rowIndex, columnIndex)
-        const isActive = activeColumnIndex === columnIndex
+        const columnIndex = item.metadata.columnIndex;
+        const cell = getCell(rowIndex, columnIndex);
+        const isActive = activeColumnIndex === columnIndex;
         return (
           <div
             key={item.key}
@@ -70,18 +70,18 @@ export const XlsxGridRow = React.memo(function XlsxGridRow({
             className={cn(
               "flex items-center truncate border-r px-2 last:border-r-0",
               cell.numeric ? "justify-end tabular-nums" : "justify-start",
-              isActive && "bg-primary/12 ring-1 ring-primary/50 ring-inset"
+              isActive && "bg-primary/12 ring-primary/50 ring-1 ring-inset",
             )}
           >
             <span className="truncate">{cell.text}</span>
           </div>
-        )
+        );
       })}
       <Spacer width={rightPad} />
     </div>
-  )
-})
+  );
+});
 
 export function Spacer({ width }: { width: number }) {
-  return <div aria-hidden style={{ width }} />
+  return <div aria-hidden style={{ width }} />;
 }

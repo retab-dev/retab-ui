@@ -1,6 +1,9 @@
-"use client"
+"use client";
 
-import { FileSystem, type FileSystemItem } from "@/registry/new-york-v4/ui/file-system"
+import {
+  FileSystem,
+  type FileSystemItem,
+} from "@/registry/new-york-v4/ui/file-system";
 
 const ITEMS: FileSystemItem[] = [
   {
@@ -115,12 +118,12 @@ const ITEMS: FileSystemItem[] = [
     },
     updatedAt: "2026-05-09T11:15:00Z",
   },
-]
+];
 
 export function FileSystemDemo() {
   return (
-    <div className="not-prose my-6 overflow-hidden rounded-xl border bg-card shadow-sm">
+    <div className="not-prose bg-card my-6 overflow-hidden rounded-xl border shadow-sm">
       <FileSystem className="h-[680px] rounded-none border-0" items={ITEMS} />
     </div>
-  )
+  );
 }

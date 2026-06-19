@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
-import { buttonVariants } from "@/components/ui/button"
-import { CodeHeaderCopyButton } from "@/components/copy-button"
-import { getIconForLanguageExtension } from "@/components/icons"
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
+import { CodeHeaderCopyButton } from "@/components/copy-button";
+import { getIconForLanguageExtension } from "@/components/icons";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/collapsible";
+import { Separator } from "@/components/ui/separator";
 
 export function CodeCollapsibleWrapper({
   className,
@@ -23,28 +23,28 @@ export function CodeCollapsibleWrapper({
   renderContentWhenCollapsed = true,
   ...props
 }: React.ComponentProps<typeof Collapsible> & {
-  collapsedContent?: React.ReactNode
-  copyValue?: string
-  language?: string
-  title?: string
-  renderContentWhenCollapsed?: boolean
+  collapsedContent?: React.ReactNode;
+  copyValue?: string;
+  language?: string;
+  title?: string;
+  renderContentWhenCollapsed?: boolean;
 }) {
-  const [isOpened, setIsOpened] = React.useState(false)
+  const [isOpened, setIsOpened] = React.useState(false);
   const closedContent =
-    collapsedContent ?? (renderContentWhenCollapsed ? children : null)
+    collapsedContent ?? (renderContentWhenCollapsed ? children : null);
 
   return (
     <Collapsible
       open={isOpened}
       onOpenChange={setIsOpened}
       className={cn(
-        "group/collapsible relative overflow-hidden rounded-lg bg-code md:-mx-1",
-        className
+        "group/collapsible bg-code relative overflow-hidden rounded-lg md:-mx-1",
+        className,
       )}
       {...props}
     >
-      <div className="flex min-h-10 items-center justify-between gap-3 bg-code px-3 text-code-foreground">
-        <div className="flex min-w-0 items-center gap-2 text-sm [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-code-foreground [&_svg]:opacity-70">
+      <div className="bg-code text-code-foreground flex min-h-10 items-center justify-between gap-3 px-3">
+        <div className="[&_svg]:text-code-foreground flex min-w-0 items-center gap-2 text-sm [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:opacity-70">
           {getIconForLanguageExtension(language)}
           <span className="truncate">{title}</span>
         </div>
@@ -54,16 +54,14 @@ export function CodeCollapsibleWrapper({
               type="button"
               className={cn(
                 buttonVariants({ size: "sm", variant: "ghost" }),
-                "h-7 rounded-md px-2 text-muted-foreground"
+                "text-muted-foreground h-7 rounded-md px-2",
               )}
             >
               {isOpened ? "Collapse" : "Expand"}
             </button>
           </CollapsibleTrigger>
           <Separator orientation="vertical" className="mx-1.5 h-4!" />
-          {copyValue ? (
-            <CodeHeaderCopyButton value={copyValue} />
-          ) : null}
+          {copyValue ? <CodeHeaderCopyButton value={copyValue} /> : null}
         </div>
       </div>
       {isOpened ? (
@@ -78,7 +76,7 @@ export function CodeCollapsibleWrapper({
       <CollapsibleTrigger asChild>
         <button
           type="button"
-          className="absolute inset-x-0 bottom-0 flex h-24 items-end justify-center rounded-b-lg bg-transparent pb-4 text-sm text-muted-foreground group-data-open/collapsible:hidden"
+          className="text-muted-foreground absolute inset-x-0 bottom-0 flex h-24 items-end justify-center rounded-b-lg bg-transparent pb-4 text-sm group-data-open/collapsible:hidden"
           style={{
             background:
               "linear-gradient(to top, var(--color-code), color-mix(in oklab, var(--color-code) 68%, transparent), transparent)",
@@ -88,5 +86,5 @@ export function CodeCollapsibleWrapper({
         </button>
       </CollapsibleTrigger>
     </Collapsible>
-  )
+  );
 }

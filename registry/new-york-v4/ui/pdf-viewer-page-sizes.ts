@@ -1,70 +1,72 @@
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import type { PdfPageSize } from "./pdf-viewer-types"
+import * as React from "react";
+
+import type { PdfPageSize } from "./pdf-viewer-types";
 
 export function usePdfPageSizes(resetKey: unknown) {
   const [state, setState] = React.useState<{
-    resetKey: unknown
-    pageSizeByNumber: ReadonlyMap<number, PdfPageSize>
-  }>(() => ({ resetKey, pageSizeByNumber: new Map() }))
+    resetKey: unknown;
+    pageSizeByNumber: ReadonlyMap<number, PdfPageSize>;
+  }>(() => ({ resetKey, pageSizeByNumber: new Map() }));
 
   const emptyPageSizeByNumber = React.useMemo<ReadonlyMap<number, PdfPageSize>>(
     () => new Map(),
-    []
-  )
+    [],
+  );
   const pageSizeByNumber = Object.is(state.resetKey, resetKey)
     ? state.pageSizeByNumber
-    : emptyPageSizeByNumber
+    : emptyPageSizeByNumber;
 
   React.useEffect(() => {
     setState((previousState) =>
       Object.is(previousState.resetKey, resetKey)
         ? previousState
-        : { resetKey, pageSizeByNumber: new Map() }
-    )
-  }, [resetKey])
+        : { resetKey, pageSizeByNumber: new Map() },
+    );
+  }, [resetKey]);
 
   const setPageSizes = React.useCallback(
     (pageSizes: Iterable<readonly [number, PdfPageSize]>) => {
       setState((previousState) => {
         const previousPageSizeByNumber = Object.is(
           previousState.resetKey,
-          resetKey
+          resetKey,
         )
           ? previousState.pageSizeByNumber
-          : emptyPageSizeByNumber
+          : emptyPageSizeByNumber;
 
-        let nextPageSizeByNumber: Map<number, PdfPageSize> | null = null
+        let nextPageSizeByNumber: Map<number, PdfPageSize> | null = null;
         for (const [pageNumber, size] of pageSizes) {
           const current = (
             nextPageSizeByNumber ?? previousPageSizeByNumber
-          ).get(pageNumber)
+          ).get(pageNumber);
           if (current?.width === size.width && current.height === size.height) {
-            continue
+            continue;
           }
 
-          nextPageSizeByNumber ??= new Map(previousPageSizeByNumber)
+          nextPageSizeByNumber ??= new Map(previousPageSizeByNumber);
           nextPageSizeByNumber.set(pageNumber, {
             width: size.width,
             height: size.height,
-          })
+          });
         }
 
         if (!nextPageSizeByNumber) {
-          return previousState
+          return previousState;
         }
-        return { resetKey, pageSizeByNumber: nextPageSizeByNumber }
-      })
+        return { resetKey, pageSizeByNumber: nextPageSizeByNumber };
+      });
     },
-    [emptyPageSizeByNumber, resetKey]
-  )
+    [emptyPageSizeByNumber, resetKey],
+  );
 
   const setPageSize = React.useCallback(
     (pageNumber: number, size: PdfPageSize) => {
-      setPageSizes([[pageNumber, size]])
+      setPageSizes([[pageNumber, size]]);
     },
-    [setPageSizes]
-  )
+    [setPageSizes],
+  );
 
-  return { pageSizeByNumber, setPageSize, setPageSizes }
+  return { pageSizeByNumber, setPageSize, setPageSizes };
 }

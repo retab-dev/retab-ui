@@ -1,15 +1,15 @@
-import { FileText } from "lucide-react"
+import { FileText } from "lucide-react";
 
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { EditViewerStatusBadge } from "./edit-viewer-states"
-import type { EditViewerMode, EditViewerStatus } from "./edit-viewer-types"
+import { EditViewerStatusBadge } from "./edit-viewer-states";
+import type { EditViewerMode, EditViewerStatus } from "./edit-viewer-types";
 
 const MODE_LABELS: Record<EditViewerMode, string> = {
   source: "Source",
   preview: "Preview",
   filled: "Filled",
-}
+};
 
 export function EditViewerControls({
   modes,
@@ -17,12 +17,12 @@ export function EditViewerControls({
   onModeChange,
   status,
 }: {
-  modes: readonly EditViewerMode[]
-  mode: EditViewerMode | null
-  onModeChange: (mode: EditViewerMode) => void
-  status: Exclude<EditViewerStatus, { state: "idle" }> | null
+  modes: readonly EditViewerMode[];
+  mode: EditViewerMode | null;
+  onModeChange: (mode: EditViewerMode) => void;
+  status: Exclude<EditViewerStatus, { state: "idle" }> | null;
 }) {
-  if (modes.length === 0) return null
+  if (modes.length === 0) return null;
 
   return (
     <div className="flex h-full min-w-0 items-center gap-3">
@@ -46,11 +46,11 @@ export function EditViewerControls({
         </Tabs>
       ) : (
         <div className="flex items-center gap-2 text-sm font-medium">
-          <FileText className="size-4 text-muted-foreground" />
+          <FileText className="text-muted-foreground size-4" />
           {mode ? MODE_LABELS[mode] : "Edit output"}
         </div>
       )}
       {status ? <EditViewerStatusBadge status={status} /> : null}
     </div>
-  )
+  );
 }

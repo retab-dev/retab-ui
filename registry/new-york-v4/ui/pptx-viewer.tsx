@@ -1,59 +1,59 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 import {
   createViewerResource,
   type ViewerResource,
-} from "@/lib/viewer-resource"
+} from "@/lib/viewer-resource";
 
-import { getPptxFitScale, getPptxResetKey } from "./pptx-viewer-core"
-import { PptxViewerFallback } from "./pptx-viewer-fallback"
-import { useRetainedPptxSource } from "./pptx-viewer-hooks"
-import { preloadPptxRenderer } from "./pptx-viewer-renderer"
-import { createPptxScrollActivity } from "./pptx-viewer-scroll"
+import { getPptxFitScale, getPptxResetKey } from "./pptx-viewer-core";
+import { PptxViewerFallback } from "./pptx-viewer-fallback";
+import { useRetainedPptxSource } from "./pptx-viewer-hooks";
+import { preloadPptxRenderer } from "./pptx-viewer-renderer";
+import { createPptxScrollActivity } from "./pptx-viewer-scroll";
 import {
   PPTX_SLIDE_GAP,
   PPTX_SLIDE_PADDING,
   PptxSlideScroller,
-} from "./pptx-viewer-slide"
-import { evictPptxSource } from "./pptx-viewer-source"
-import type { PptxViewerProps } from "./pptx-viewer-types"
-import { usePptxViewportWidth } from "./pptx-viewer-viewport"
+} from "./pptx-viewer-slide";
+import { evictPptxSource } from "./pptx-viewer-source";
+import type { PptxViewerProps } from "./pptx-viewer-types";
+import { usePptxViewportWidth } from "./pptx-viewer-viewport";
 import {
   createPptxSlideLayout,
   usePptxVisibleSlide,
-} from "./pptx-viewer-visible-slide"
-import { usePptxZoom } from "./pptx-viewer-zoom"
-import { useIsClient } from "./use-is-client"
-import { ViewerControls } from "./viewer-controls"
-import { ViewerErrorBoundary } from "./viewer-error"
+} from "./pptx-viewer-visible-slide";
+import { usePptxZoom } from "./pptx-viewer-zoom";
+import { useIsClient } from "./use-is-client";
+import { ViewerControls } from "./viewer-controls";
+import { ViewerErrorBoundary } from "./viewer-error";
 
-export type { PptxDocumentSource, PptxViewerProps } from "./pptx-viewer-types"
+export type { PptxDocumentSource, PptxViewerProps } from "./pptx-viewer-types";
 export type {
   PptxSourceLoadTiming,
   PptxSlideRenderTiming,
   PptxSlideOverlayProps,
-} from "./pptx-viewer-core"
+} from "./pptx-viewer-core";
 
 export function preloadPptxViewer() {
-  preloadPptxRenderer()
+  preloadPptxRenderer();
 }
 
 export type PptxResourceContentProps = Omit<PptxViewerProps, "source"> & {
-  resource: ViewerResource
-}
+  resource: ViewerResource;
+};
 
 export function PptxViewer(props: PptxViewerProps) {
-  const { source, ...resourceProps } = props
-  const resource = React.useMemo(() => createViewerResource(source), [source])
-  return <PptxResourceContent {...resourceProps} resource={resource} />
+  const { source, ...resourceProps } = props;
+  const resource = React.useMemo(() => createViewerResource(source), [source]);
+  return <PptxResourceContent {...resourceProps} resource={resource} />;
 }
 
 export function PptxResourceContent(props: PptxResourceContentProps) {
-  const isClient = useIsClient()
-  const resource = props.resource
+  const isClient = useIsClient();
+  const resource = props.resource;
 
   if (!isClient) {
     return (
@@ -63,7 +63,7 @@ export function PptxResourceContent(props: PptxResourceContentProps) {
         fallbackSlideSize={props.fallbackSlideSize}
         controls={props.controls}
       />
-    )
+    );
   }
   return (
     <ViewerErrorBoundary
@@ -101,7 +101,7 @@ export function PptxResourceContent(props: PptxResourceContentProps) {
         />
       </React.Suspense>
     </ViewerErrorBoundary>
-  )
+  );
 }
 
 function PptxViewerContent({
@@ -120,19 +120,19 @@ function PptxViewerContent({
   bare = false,
   eager = true,
 }: Omit<PptxViewerProps, "source"> & { resource: ViewerResource }) {
-  const source = useRetainedPptxSource(resource.content, onSourceLoadTiming)
-  const downloadAction = download ? resource.originalDownload : null
+  const source = useRetainedPptxSource(resource.content, onSourceLoadTiming);
+  const downloadAction = download ? resource.originalDownload : null;
 
-  const [rotation, setRotation] = React.useState(0)
-  const scrollActivity = React.useMemo(() => createPptxScrollActivity(), [])
-  const { containerRef, viewportWidth } = usePptxViewportWidth()
-  const fitScale = getPptxFitScale(viewportWidth, source.baseSize.width)
+  const [rotation, setRotation] = React.useState(0);
+  const scrollActivity = React.useMemo(() => createPptxScrollActivity(), []);
+  const { containerRef, viewportWidth } = usePptxViewportWidth();
+  const fitScale = getPptxFitScale(viewportWidth, source.baseSize.width);
   const { scaleControlsDisabled, setViewerScale, zoomScale } = usePptxZoom({
     controlledScale,
     defaultScale,
     fitScale,
     onScaleChange,
-  })
+  });
   const slideLayout = React.useMemo(
     () =>
       createPptxSlideLayout({
@@ -143,27 +143,27 @@ function PptxViewerContent({
         slideGap: PPTX_SLIDE_GAP,
         slidePadding: PPTX_SLIDE_PADDING,
       }),
-    [source.baseSize, source.slideCount, zoomScale, rotation]
-  )
+    [source.baseSize, source.slideCount, zoomScale, rotation],
+  );
   const { currentSlide, handleScroll, scrollViewportRef } = usePptxVisibleSlide(
     {
       layout: slideLayout,
       onScrollProgressChange,
       onVisibleSlideChange,
-    }
-  )
+    },
+  );
 
   const handleViewportScroll = React.useCallback(() => {
-    if (!eager) scrollActivity.handleScroll()
-    handleScroll()
-  }, [eager, handleScroll, scrollActivity])
+    if (!eager) scrollActivity.handleScroll();
+    handleScroll();
+  }, [eager, handleScroll, scrollActivity]);
 
   return (
     <div
       className={cn(
         "flex min-h-0 flex-col overflow-hidden",
-        bare ? "h-full bg-muted/20" : "rounded-xl border bg-muted/30",
-        className
+        bare ? "bg-muted/20 h-full" : "bg-muted/30 rounded-xl border",
+        className,
       )}
       data-slot="pptx-viewer"
     >
@@ -208,5 +208,5 @@ function PptxViewerContent({
         </div>
       </div>
     </div>
-  )
+  );
 }

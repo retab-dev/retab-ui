@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import { SchemaRowActions } from "@/components/schema-editor/primitives/schema-row-actions"
+import { SchemaRowActions } from "@/components/schema-editor/primitives/schema-row-actions";
 
 interface DocumentNodeActionsProps {
-  canDelete: boolean
-  mode: "descriptionOnly" | "readOnly" | "editable"
-  editable: boolean
-  hidePencilButton: boolean
-  onDelete?: () => void
-  onOpenMetadata: () => void
+  canDelete: boolean;
+  mode: "descriptionOnly" | "readOnly" | "editable";
+  editable: boolean;
+  hidePencilButton: boolean;
+  onDelete?: () => void;
+  onOpenMetadata: () => void;
 }
 
 export function DocumentNodeActions(props: DocumentNodeActionsProps) {
@@ -25,7 +25,7 @@ export function DocumentNodeActions(props: DocumentNodeActionsProps) {
             label: "Edit field properties",
             mode: "edit" as const,
             onOpen: props.onOpenMetadata,
-          }
+          };
 
   return (
     <SchemaRowActions
@@ -34,5 +34,5 @@ export function DocumentNodeActions(props: DocumentNodeActionsProps) {
       details={details}
       onDelete={props.onDelete}
     />
-  )
+  );
 }

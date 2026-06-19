@@ -1,12 +1,14 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { type SubmitHandler, type UseFormReturn } from "react-hook-form"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { cn } from "@/lib/utils"
-import { JsonFormArray } from "@/components/json-form/array-fields"
-import { WithDescription } from "@/components/json-form/disclosure"
-import type { JsonFormFieldRenderProps } from "@/components/json-form/field-renderer"
+import * as React from "react";
+import { type SubmitHandler, type UseFormReturn } from "react-hook-form";
+
+import { cn } from "@/lib/utils";
+import { JsonFormArray } from "@/components/json-form/array-fields";
+import { WithDescription } from "@/components/json-form/disclosure";
+import type { JsonFormFieldRenderProps } from "@/components/json-form/field-renderer";
 import {
   Form,
   FormControl,
@@ -14,37 +16,37 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/json-form/form-primitives"
+} from "@/components/json-form/form-primitives";
 import {
   JsonFormObject,
   JsonFormRootFields,
-} from "@/components/json-form/object-fields"
-import { JsonFormOpenPathsContext } from "@/components/json-form/open-paths"
+} from "@/components/json-form/object-fields";
+import { JsonFormOpenPathsContext } from "@/components/json-form/open-paths";
 import {
   decodeJsonFormValue,
   encodeJsonFormValue,
   schemaNeedsJsonFormPathEncoding,
-} from "@/components/json-form/path-codec"
+} from "@/components/json-form/path-codec";
 import {
   BooleanControl,
   NullableBooleanControl,
   ScalarControl,
   type JsonFormTextInput,
-} from "@/components/json-form/scalar-control"
+} from "@/components/json-form/scalar-control";
 import {
   expandRefs,
   fieldKind,
   labelFor,
   unwrapNullable,
   type Schema,
-} from "@/components/json-form/schema-model"
+} from "@/components/json-form/schema-model";
 import {
   JsonFormSourceLinkProvider,
   SourceLinkShell,
   type JsonFormSourceLink,
-} from "@/components/json-form/source-link"
+} from "@/components/json-form/source-link";
 
-export type { JsonFormTextInput } from "@/components/json-form/scalar-control"
+export type { JsonFormTextInput } from "@/components/json-form/scalar-control";
 
 /**
  * A JSON-Schema-driven form built entirely on shadcn's `FormField` abstraction.
@@ -74,7 +76,7 @@ export type { JsonFormTextInput } from "@/components/json-form/scalar-control"
 // JsonFormField — the unit of composition
 // ---------------------------------------------------------------------------
 
-export interface JsonFormFieldProps extends JsonFormFieldRenderProps {}
+export type JsonFormFieldProps = JsonFormFieldRenderProps;
 
 export function JsonFormField({
   name,
@@ -86,11 +88,14 @@ export function JsonFormField({
   className,
   depth = 0,
 }: JsonFormFieldProps) {
-  const expandedSchema = React.useMemo(() => expandRefs(rawSchema), [rawSchema])
-  const { schema, nullable } = unwrapNullable(expandedSchema)
-  const kind = fieldKind(schema)
-  const heading = labelFor(name, schema, label)
-  const resolvedSourcePath = sourcePath ?? name
+  const expandedSchema = React.useMemo(
+    () => expandRefs(rawSchema),
+    [rawSchema],
+  );
+  const { schema, nullable } = unwrapNullable(expandedSchema);
+  const kind = fieldKind(schema);
+  const heading = labelFor(name, schema, label);
+  const resolvedSourcePath = sourcePath ?? name;
 
   if (kind === "object") {
     return (
@@ -104,7 +109,7 @@ export function JsonFormField({
         depth={depth}
         renderField={renderJsonFormField}
       />
-    )
+    );
   }
 
   if (kind === "array") {
@@ -119,7 +124,7 @@ export function JsonFormField({
         depth={depth}
         renderField={renderJsonFormField}
       />
-    )
+    );
   }
 
   if (kind === "boolean") {
@@ -149,7 +154,7 @@ export function JsonFormField({
             )}
           />
         </SourceLinkShell>
-      )
+      );
     }
 
     return (
@@ -177,7 +182,7 @@ export function JsonFormField({
           )}
         />
       </SourceLinkShell>
-    )
+    );
   }
 
   return (
@@ -206,11 +211,11 @@ export function JsonFormField({
         )}
       />
     </SourceLinkShell>
-  )
+  );
 }
 
 function renderJsonFormField(props: JsonFormFieldRenderProps) {
-  return <JsonFormField {...props} />
+  return <JsonFormField {...props} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -218,25 +223,25 @@ function renderJsonFormField(props: JsonFormFieldRenderProps) {
 // ---------------------------------------------------------------------------
 
 export interface JsonFormProps {
-  form: UseFormReturn<Record<string, unknown>>
-  schema: Schema
-  onSubmit?: SubmitHandler<Record<string, unknown>>
-  className?: string
+  form: UseFormReturn<Record<string, unknown>>;
+  schema: Schema;
+  onSubmit?: SubmitHandler<Record<string, unknown>>;
+  className?: string;
   /** Force plain string fields to render as single-line inputs or textareas. */
-  textInput?: JsonFormTextInput
+  textInput?: JsonFormTextInput;
   /**
    * Opt into field-level source linking. When set, every scalar field becomes a
    * hoverable card that reports its path and highlights when active — wire it
    * straight from a source field link.
    */
-  sourceLink?: JsonFormSourceLink
+  sourceLink?: JsonFormSourceLink;
   /**
    * Source/logical paths that should start expanded. Intended for controlled
    * demos and benchmarks that need a deep virtualized body mounted immediately.
    */
-  defaultOpenPaths?: readonly string[]
+  defaultOpenPaths?: readonly string[];
   /** Rendered after the fields, e.g. a submit button. */
-  children?: React.ReactNode
+  children?: React.ReactNode;
 }
 
 export function JsonForm({
@@ -249,45 +254,45 @@ export function JsonForm({
   defaultOpenPaths,
   children,
 }: JsonFormProps) {
-  const expandedSchema = React.useMemo(() => expandRefs(schema), [schema])
+  const expandedSchema = React.useMemo(() => expandRefs(schema), [schema]);
   const usesEncodedPaths = React.useMemo(
     () => schemaNeedsJsonFormPathEncoding(expandedSchema),
-    [expandedSchema]
-  )
+    [expandedSchema],
+  );
   const defaultOpenPathSet = React.useMemo(
     () =>
       defaultOpenPaths && defaultOpenPaths.length > 0
         ? new Set(defaultOpenPaths)
         : null,
-    [defaultOpenPaths]
-  )
-  const hasEncodedInitialValuesRef = React.useRef(false)
+    [defaultOpenPaths],
+  );
+  const hasEncodedInitialValuesRef = React.useRef(false);
 
   React.useEffect(() => {
     if (!usesEncodedPaths || hasEncodedInitialValuesRef.current) {
-      return
+      return;
     }
-    hasEncodedInitialValuesRef.current = true
+    hasEncodedInitialValuesRef.current = true;
     form.reset(
       encodeJsonFormValue(expandedSchema, form.getValues()) as Record<
         string,
         unknown
-      >
-    )
-  }, [expandedSchema, form, usesEncodedPaths])
+      >,
+    );
+  }, [expandedSchema, form, usesEncodedPaths]);
 
   const handleSubmit = React.useCallback(
     (event: React.FormEvent) => {
       if (!onSubmit) {
-        event.preventDefault()
-        return
+        event.preventDefault();
+        return;
       }
-      const activeElement = event.currentTarget.ownerDocument.activeElement
+      const activeElement = event.currentTarget.ownerDocument.activeElement;
       if (
         activeElement instanceof HTMLElement &&
         event.currentTarget.contains(activeElement)
       ) {
-        activeElement.blur()
+        activeElement.blur();
       }
       return form.handleSubmit((data, submitEvent) => {
         const decoded = usesEncodedPaths
@@ -295,12 +300,12 @@ export function JsonForm({
               string,
               unknown
             >)
-          : data
-        return onSubmit(decoded, submitEvent)
-      })(event)
+          : data;
+        return onSubmit(decoded, submitEvent);
+      })(event);
     },
-    [expandedSchema, form, onSubmit, usesEncodedPaths]
-  )
+    [expandedSchema, form, onSubmit, usesEncodedPaths],
+  );
 
   return (
     <JsonFormSourceLinkProvider sourceLink={sourceLink}>
@@ -317,5 +322,5 @@ export function JsonForm({
         </Form>
       </JsonFormOpenPathsContext.Provider>
     </JsonFormSourceLinkProvider>
-  )
+  );
 }

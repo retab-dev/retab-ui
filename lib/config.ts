@@ -1,4 +1,4 @@
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://retab.com/ui"
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://retab.com/ui";
 
 export const siteConfig = {
   name: "Retab UI",
@@ -27,9 +27,9 @@ export const siteConfig = {
       label: "Blocks",
     },
   ],
-}
+};
 
 export const META_THEME_COLORS = {
   light: "#ffffff",
   dark: "#09090b",
-}
+};

@@ -1,20 +1,22 @@
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
+
+import * as React from "react";
 
 import {
   isJsonTableNoOpCommit,
   type JsonTableCellCommitHandler,
-} from "@/components/json-table/json-table-cell-commit"
-import { markJsonTableProfile } from "@/components/json-table/json-table-profiler"
-import { useRefCallback } from "@/components/json-table/path-utils"
+} from "@/components/json-table/json-table-cell-commit";
+import { markJsonTableProfile } from "@/components/json-table/json-table-profiler";
+import { useRefCallback } from "@/components/json-table/path-utils";
 
 type StructuredPendingValue = {
-  fieldPath: string
-  projectedValueAtCommit: unknown
-  value: unknown
-}
+  fieldPath: string;
+  projectedValueAtCommit: unknown;
+  value: unknown;
+};
 
 function areStructuredValuesEqual(previousValue: unknown, nextValue: unknown) {
-  return isJsonTableNoOpCommit(previousValue, nextValue)
+  return isJsonTableNoOpCommit(previousValue, nextValue);
 }
 
 export function useJsonTableStructuredCellController({
@@ -23,77 +25,77 @@ export function useJsonTableStructuredCellController({
   isEditable,
   onCellCommit,
 }: {
-  materializedFieldPath: string | undefined
-  value: unknown
-  isEditable: boolean | undefined
-  onCellCommit: JsonTableCellCommitHandler
+  materializedFieldPath: string | undefined;
+  value: unknown;
+  isEditable: boolean | undefined;
+  onCellCommit: JsonTableCellCommitHandler;
 }) {
   const [structuredPendingValue, setStructuredPendingValue] =
-    React.useState<StructuredPendingValue | null>(null)
+    React.useState<StructuredPendingValue | null>(null);
   const activeStructuredPendingValue =
     structuredPendingValue?.fieldPath === materializedFieldPath
       ? structuredPendingValue
-      : null
+      : null;
   const effectiveValue = activeStructuredPendingValue
     ? activeStructuredPendingValue.value
-    : value
+    : value;
 
   React.useEffect(() => {
-    if (!structuredPendingValue) return
+    if (!structuredPendingValue) return;
     if (structuredPendingValue.fieldPath !== materializedFieldPath) {
-      setStructuredPendingValue(null)
-      return
+      setStructuredPendingValue(null);
+      return;
     }
     if (areStructuredValuesEqual(structuredPendingValue.value, value)) {
-      setStructuredPendingValue(null)
-      return
+      setStructuredPendingValue(null);
+      return;
     }
     if (
       !areStructuredValuesEqual(
         structuredPendingValue.projectedValueAtCommit,
-        value
+        value,
       )
     ) {
-      setStructuredPendingValue(null)
+      setStructuredPendingValue(null);
     }
-  }, [materializedFieldPath, structuredPendingValue, value])
+  }, [materializedFieldPath, structuredPendingValue, value]);
 
   const commitStructuredValueChange = useRefCallback(function (
-    validatedValue: unknown
+    validatedValue: unknown,
   ) {
-    if (!materializedFieldPath || !isEditable) return
-    if (isJsonTableNoOpCommit(effectiveValue, validatedValue)) return
+    if (!materializedFieldPath || !isEditable) return;
+    if (isJsonTableNoOpCommit(effectiveValue, validatedValue)) return;
 
     markJsonTableProfile("cell-commit-local-start", {
       fieldPath: materializedFieldPath,
-    })
+    });
     setStructuredPendingValue({
       fieldPath: materializedFieldPath,
       projectedValueAtCommit: value,
       value: validatedValue,
-    })
+    });
     markJsonTableProfile("cell-commit-local-end", {
       fieldPath: materializedFieldPath,
-    })
+    });
 
     React.startTransition(() => {
       markJsonTableProfile("cell-commit-transition-start", {
         fieldPath: materializedFieldPath,
-      })
+      });
       onCellCommit({
         fieldPath: materializedFieldPath,
         value: validatedValue,
         previousValue: effectiveValue,
         visibleThrough: "projectedDocumentValue",
-      })
+      });
       markJsonTableProfile("cell-commit-transition-end", {
         fieldPath: materializedFieldPath,
-      })
-    })
-  })
+      });
+    });
+  });
 
   return {
     effectiveValue,
     commitStructuredValueChange,
-  }
+  };
 }

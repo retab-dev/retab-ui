@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import { EditViewer } from "@/components/viewers/edit/edit-viewer"
-import type { FormField } from "@/components/viewers/lib/edit-types"
-import editSample from "@/components/viewers/sample-data/edit.json"
+import { EditViewer } from "@/components/viewers/edit/edit-viewer";
+import type { FormField } from "@/components/viewers/lib/edit-types";
+import editSample from "@/components/viewers/sample-data/edit.json";
 
-const ORIGINAL_PDF_URL = "/samples/fidelity-edit/fidelity_original.pdf"
+const ORIGINAL_PDF_URL = "/samples/fidelity-edit/fidelity_original.pdf";
 
 // A template-fill of the Fidelity "Bank Wire Authorization" form: 29 detected
 // form fields across 3 pages, each with a normalized bbox and an inferred value.
-const EDIT_FIELDS = editSample as FormField[]
+const EDIT_FIELDS = editSample as FormField[];
 
 /**
  * Edit viewer block — detected fields beside the source document, linked by
@@ -18,7 +18,7 @@ const EDIT_FIELDS = editSample as FormField[]
  */
 export function EditViewerBlock() {
   return (
-    <div className="flex h-full min-h-[680px] flex-col bg-background">
+    <div className="bg-background flex h-full min-h-[680px] flex-col">
       <EditViewer
         result={{ fields: EDIT_FIELDS }}
         sourceDocument={{
@@ -28,5 +28,5 @@ export function EditViewerBlock() {
         }}
       />
     </div>
-  )
+  );
 }

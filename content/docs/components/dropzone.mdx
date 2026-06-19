@@ -132,20 +132,20 @@ pinboards. Dropzone owns intake; the surrounding component owns the workflow.
 
 ### Return Value
 
-| Field             | Type                                                        |
-| ----------------- | ----------------------------------------------------------- |
+| Field             | Type                                                      |
+| ----------------- | --------------------------------------------------------- |
 | `files`           | `DropzoneFileItem[]`                                      |
 | `lastIntake`      | `DropzoneIntake`                                          |
-| `isDragging`      | `boolean`                                                |
-| `isDisabled`      | `boolean`                                                |
+| `isDragging`      | `boolean`                                                 |
+| `isDisabled`      | `boolean`                                                 |
 | `clearFiles`      | `() => void`                                              |
 | `resetIntake`     | `() => void`                                              |
 | `reset`           | `() => void`                                              |
 | `openFileDialog`  | `() => void`                                              |
-| `removeFile`      | `(fileId: string) => void`                               |
-| `getRootProps`    | `(props?) => React.HTMLAttributes<HTMLElement>`          |
+| `removeFile`      | `(fileId: string) => void`                                |
+| `getRootProps`    | `(props?) => React.HTMLAttributes<HTMLElement>`           |
 | `getInputProps`   | `(props?) => React.InputHTMLAttributes<HTMLInputElement>` |
-| `getTriggerProps` | `(props? & { native?: boolean }) => props`               |
+| `getTriggerProps` | `(props? & { native?: boolean }) => props`                |
 
 The package also exports the public types `DropzoneFileItem`,
 `DropzoneIntake`, `DropzoneFileRejection`, `UseDropzoneProps`, and

@@ -3,18 +3,18 @@ export function moveOrderedItem<T>({
   sourceIndex,
   targetIndex,
 }: {
-  items: readonly T[]
-  sourceIndex: number
-  targetIndex: number
+  items: readonly T[];
+  sourceIndex: number;
+  targetIndex: number;
 }): T[] {
-  const nextItems = items.slice()
-  if (sourceIndex < 0 || sourceIndex >= nextItems.length) return nextItems
+  const nextItems = items.slice();
+  if (sourceIndex < 0 || sourceIndex >= nextItems.length) return nextItems;
 
-  const [movedItem] = nextItems.splice(sourceIndex, 1)
+  const [movedItem] = nextItems.splice(sourceIndex, 1);
   const clampedTargetIndex = Math.max(
     0,
-    Math.min(targetIndex, nextItems.length)
-  )
-  nextItems.splice(clampedTargetIndex, 0, movedItem)
-  return nextItems
+    Math.min(targetIndex, nextItems.length),
+  );
+  nextItems.splice(clampedTargetIndex, 0, movedItem);
+  return nextItems;
 }

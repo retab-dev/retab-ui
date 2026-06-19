@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 export {
   Tabs,
@@ -7,4 +7,4 @@ export {
   TabsPrimitive,
   TabsTrigger,
   tabsListVariants,
-} from "@/registry/new-york-v4/ui/tabs"
+} from "@/registry/new-york-v4/ui/tabs";

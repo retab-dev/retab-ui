@@ -1,26 +1,26 @@
-import { detectCategory } from "@/lib/viewer-source"
+import { detectCategory } from "@/lib/viewer-source";
 
-import { compareEntryNames } from "./file-system-index"
+import { compareEntryNames } from "./file-system-index";
 import type {
   FileSystemEntry,
   FileSystemFileEntry,
   FileSystemIndex,
   FileSystemQueryState,
   FileSystemSortState,
-} from "./file-system-types"
+} from "./file-system-types";
 
 export const DEFAULT_FILE_SYSTEM_SORT: FileSystemSortState = {
   direction: "asc",
   key: "name",
-}
+};
 
 export const DEFAULT_FILE_SYSTEM_QUERY: FileSystemQueryState = {
   search: "",
   sort: DEFAULT_FILE_SYSTEM_SORT,
-}
+};
 
 export function createFileSystemQueryState(
-  query: Partial<FileSystemQueryState> | undefined
+  query: Partial<FileSystemQueryState> | undefined,
 ): FileSystemQueryState {
   return {
     search: query?.search ?? "",
@@ -28,178 +28,178 @@ export function createFileSystemQueryState(
       direction: query?.sort?.direction ?? DEFAULT_FILE_SYSTEM_SORT.direction,
       key: query?.sort?.key ?? DEFAULT_FILE_SYSTEM_SORT.key,
     },
-  }
+  };
 }
 
 export function normalizeFileSystemSearch(value: string): string {
-  return value.trim().toLowerCase()
+  return value.trim().toLowerCase();
 }
 
 export function getFileSystemCategory(file: FileSystemFileEntry) {
-  return detectCategory(file.name, file.mimeType)
+  return detectCategory(file.name, file.mimeType);
 }
 
 export function getFileSystemCategoryLabel(category: string) {
   switch (category) {
     case "csv":
-      return "CSV"
+      return "CSV";
     case "docx":
-      return "Word"
+      return "Word";
     case "html":
-      return "HTML"
+      return "HTML";
     case "image":
-      return "Image"
+      return "Image";
     case "markdown":
-      return "Markdown"
+      return "Markdown";
     case "pdf":
-      return "PDF"
+      return "PDF";
     case "pptx":
-      return "PowerPoint"
+      return "PowerPoint";
     case "text":
-      return "Text"
+      return "Text";
     case "xlsx":
-      return "Excel"
+      return "Excel";
     default:
-      return "Unsupported"
+      return "Unsupported";
   }
 }
 
 export function fileMatchesQuery(
   file: FileSystemFileEntry,
-  query: FileSystemQueryState
+  query: FileSystemQueryState,
 ) {
-  const search = normalizeFileSystemSearch(query.search)
+  const search = normalizeFileSystemSearch(query.search);
   if (
     search &&
     !file.path.toLowerCase().includes(search) &&
     !file.name.toLowerCase().includes(search)
   ) {
-    return false
+    return false;
   }
 
-  return true
+  return true;
 }
 
 export function deriveVisibleIndex(
   index: FileSystemIndex,
   currentPath: string,
-  query: FileSystemQueryState
+  query: FileSystemQueryState,
 ): FileSystemIndex {
-  const search = normalizeFileSystemSearch(query.search)
+  const search = normalizeFileSystemSearch(query.search);
 
-  if (!search) return sortFileSystemIndex(index, query.sort)
+  if (!search) return sortFileSystemIndex(index, query.sort);
 
-  const visiblePaths = new Set<string>()
+  const visiblePaths = new Set<string>();
   const markVisible = (path: string) => {
-    let nextPath = path
+    let nextPath = path;
 
     while (
       nextPath &&
       nextPath !== currentPath &&
       !visiblePaths.has(nextPath)
     ) {
-      visiblePaths.add(nextPath)
-      const trimmed = nextPath.endsWith("/") ? nextPath.slice(0, -1) : nextPath
-      const separatorIndex = trimmed.lastIndexOf("/")
+      visiblePaths.add(nextPath);
+      const trimmed = nextPath.endsWith("/") ? nextPath.slice(0, -1) : nextPath;
+      const separatorIndex = trimmed.lastIndexOf("/");
 
       nextPath =
-        separatorIndex === -1 ? "" : `${trimmed.slice(0, separatorIndex)}/`
+        separatorIndex === -1 ? "" : `${trimmed.slice(0, separatorIndex)}/`;
     }
-  }
+  };
 
   for (const [path, file] of index.files) {
-    if (currentPath && !path.startsWith(currentPath)) continue
-    if (!fileMatchesQuery(file, query)) continue
-    visiblePaths.add(path)
-    markVisible(file.parentPath)
+    if (currentPath && !path.startsWith(currentPath)) continue;
+    if (!fileMatchesQuery(file, query)) continue;
+    visiblePaths.add(path);
+    markVisible(file.parentPath);
   }
 
   for (const [path, folder] of index.folders) {
-    if (currentPath && !path.startsWith(currentPath)) continue
+    if (currentPath && !path.startsWith(currentPath)) continue;
     if (
       !path.toLowerCase().includes(search) &&
       !folder.name.toLowerCase().includes(search)
     ) {
-      continue
+      continue;
     }
-    visiblePaths.add(path)
-    markVisible(folder.parentPath)
+    visiblePaths.add(path);
+    markVisible(folder.parentPath);
   }
 
-  const children = new Map<string, FileSystemEntry[]>()
+  const children = new Map<string, FileSystemEntry[]>();
 
   for (const [parentPath, entries] of index.children) {
     const visibleEntries = entries.filter((entry) =>
-      visiblePaths.has(entry.path)
-    )
-    if (visibleEntries.length) children.set(parentPath, visibleEntries)
+      visiblePaths.has(entry.path),
+    );
+    if (visibleEntries.length) children.set(parentPath, visibleEntries);
   }
 
-  return sortFileSystemIndex({ ...index, children }, query.sort)
+  return sortFileSystemIndex({ ...index, children }, query.sort);
 }
 
 export function sortFileSystemIndex(
   index: FileSystemIndex,
-  sort: FileSystemSortState
+  sort: FileSystemSortState,
 ) {
   if (
     sort.key === DEFAULT_FILE_SYSTEM_SORT.key &&
     sort.direction === DEFAULT_FILE_SYSTEM_SORT.direction
   ) {
-    return index
+    return index;
   }
 
-  const children = new Map<string, FileSystemEntry[]>()
+  const children = new Map<string, FileSystemEntry[]>();
 
   for (const [parentPath, entries] of index.children) {
     children.set(
       parentPath,
-      [...entries].sort((left, right) => compareEntries(left, right, sort))
-    )
+      [...entries].sort((left, right) => compareEntries(left, right, sort)),
+    );
   }
 
-  return { ...index, children } satisfies FileSystemIndex
+  return { ...index, children } satisfies FileSystemIndex;
 }
 
 export function compareEntries(
   left: FileSystemEntry,
   right: FileSystemEntry,
-  sort: FileSystemSortState
+  sort: FileSystemSortState,
 ) {
-  if (left.kind !== right.kind) return left.kind === "folder" ? -1 : 1
+  if (left.kind !== right.kind) return left.kind === "folder" ? -1 : 1;
 
-  let result = 0
+  let result = 0;
 
   switch (sort.key) {
     case "kind":
-      result = entryKindLabel(left).localeCompare(entryKindLabel(right))
-      break
+      result = entryKindLabel(left).localeCompare(entryKindLabel(right));
+      break;
     case "size":
-      result = (entrySize(left) ?? -1) - (entrySize(right) ?? -1)
-      break
+      result = (entrySize(left) ?? -1) - (entrySize(right) ?? -1);
+      break;
     case "updatedAt":
-      result = entryTime(left) - entryTime(right)
-      break
+      result = entryTime(left) - entryTime(right);
+      break;
     case "name":
-      result = compareEntryNames(left, right)
-      break
+      result = compareEntryNames(left, right);
+      break;
   }
 
-  if (result === 0) result = compareEntryNames(left, right)
-  return sort.direction === "asc" ? result : -result
+  if (result === 0) result = compareEntryNames(left, right);
+  return sort.direction === "asc" ? result : -result;
 }
 
 export function entryKindLabel(entry: FileSystemEntry) {
   return entry.kind === "folder"
     ? "Folder"
-    : getFileSystemCategoryLabel(getFileSystemCategory(entry))
+    : getFileSystemCategoryLabel(getFileSystemCategory(entry));
 }
 
 function entrySize(entry: FileSystemEntry) {
-  return entry.kind === "file" ? entry.size : undefined
+  return entry.kind === "file" ? entry.size : undefined;
 }
 
 function entryTime(entry: FileSystemEntry) {
-  const time = Date.parse(entry.updatedAt ?? entry.createdAt ?? "")
-  return Number.isNaN(time) ? Number.NEGATIVE_INFINITY : time
+  const time = Date.parse(entry.updatedAt ?? entry.createdAt ?? "");
+  return Number.isNaN(time) ? Number.NEGATIVE_INFINITY : time;
 }

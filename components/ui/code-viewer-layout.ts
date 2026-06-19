@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/ui/code-viewer-layout"
+export * from "@/registry/new-york-v4/ui/code-viewer-layout";

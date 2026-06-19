@@ -1,31 +1,31 @@
 export interface FixedGridBenchmarkViewer {
-  id: string
-  label: string
-  sample: string
-  scrollerSelector: string
+  id: string;
+  label: string;
+  sample: string;
+  scrollerSelector: string;
 }
 
 export function findFixedGridScroller({
   root,
   selector,
 }: {
-  root: HTMLElement | null
-  selector: string
+  root: HTMLElement | null;
+  selector: string;
 }) {
-  if (!root) return null
+  if (!root) return null;
 
-  let candidates: NodeListOf<HTMLElement>
+  let candidates: NodeListOf<HTMLElement>;
   try {
-    candidates = root.querySelectorAll<HTMLElement>(selector)
+    candidates = root.querySelectorAll<HTMLElement>(selector);
   } catch {
-    return null
+    return null;
   }
 
   for (const candidate of candidates) {
-    if (isScrollableViewport(candidate)) return candidate
+    if (isScrollableViewport(candidate)) return candidate;
   }
 
-  return null
+  return null;
 }
 
 export function isScrollableViewport(scroller: HTMLElement | null) {
@@ -35,5 +35,5 @@ export function isScrollableViewport(scroller: HTMLElement | null) {
     Number.isFinite(scroller.scrollHeight) &&
     scroller.clientHeight > 0 &&
     scroller.scrollHeight > scroller.clientHeight
-  )
+  );
 }

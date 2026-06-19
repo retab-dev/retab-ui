@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 export {
   SchemaBuilder,
@@ -6,4 +6,4 @@ export {
   type SchemaBuilderFeatures,
   type SchemaBuilderProps,
   type SchemaBuilderView,
-} from "@/components/schema-editor/schema-builder"
+} from "@/components/schema-editor/schema-builder";

@@ -2,12 +2,12 @@ import type {
   FileSystemItem,
   FileSystemQueryState,
   FileSystemView,
-} from "@/components/ui/file-system"
+} from "@/components/ui/file-system";
 
 export const DEFAULT_FILE_SYSTEM_DEMO_QUERY: FileSystemQueryState = {
   search: "",
   sort: { direction: "asc", key: "name" },
-}
+};
 
 export const FILE_SYSTEM_DEMO_ITEMS: FileSystemItem[] = [
   {
@@ -122,7 +122,7 @@ export const FILE_SYSTEM_DEMO_ITEMS: FileSystemItem[] = [
     },
     updatedAt: "2026-05-09T11:15:00Z",
   },
-]
+];
 
 export const LARGE_FILE_SYSTEM_DEMO_ITEMS: FileSystemItem[] = [
   {
@@ -131,7 +131,7 @@ export const LARGE_FILE_SYSTEM_DEMO_ITEMS: FileSystemItem[] = [
     updatedAt: "2026-06-01T00:00:00Z",
   },
   ...Array.from({ length: 5_000 }, (_, index): FileSystemItem => {
-    const serial = index.toString().padStart(4, "0")
+    const serial = index.toString().padStart(4, "0");
 
     return {
       kind: "file",
@@ -145,57 +145,57 @@ export const LARGE_FILE_SYSTEM_DEMO_ITEMS: FileSystemItem[] = [
         mimeType: "application/pdf",
       },
       updatedAt: "2026-06-01T00:00:00Z",
-    }
+    };
   }),
-]
+];
 
 export type FileSystemDemoState = {
-  path: string
-  query: FileSystemQueryState
-  selectedPath: string | null
-  view: FileSystemView
-}
+  path: string;
+  query: FileSystemQueryState;
+  selectedPath: string | null;
+  view: FileSystemView;
+};
 
-const VIEWS: FileSystemView[] = ["list", "grid", "columns"]
+const VIEWS: FileSystemView[] = ["list", "grid", "columns"];
 const SORT_KEYS: FileSystemQueryState["sort"]["key"][] = [
   "name",
   "kind",
   "size",
   "updatedAt",
-]
+];
 
 export function collectFileSystemDemoItemPaths(
-  items: readonly FileSystemItem[]
+  items: readonly FileSystemItem[],
 ) {
-  const paths = new Set<string>()
+  const paths = new Set<string>();
 
   for (const item of items) {
     paths.add(
-      item.kind === "folder" ? normalizeFolderPath(item.path) : item.path
-    )
+      item.kind === "folder" ? normalizeFolderPath(item.path) : item.path,
+    );
   }
 
-  return paths
+  return paths;
 }
 
 export function collectFileSystemDemoFolderPaths(
-  items: readonly FileSystemItem[]
+  items: readonly FileSystemItem[],
 ) {
-  const paths = new Set<string>([""])
+  const paths = new Set<string>([""]);
 
   for (const item of items) {
     let path =
       item.kind === "folder"
         ? normalizeFolderPath(item.path)
-        : pathParent(item.path)
+        : pathParent(item.path);
 
     while (path) {
-      paths.add(path)
-      path = pathParent(path)
+      paths.add(path);
+      path = pathParent(path);
     }
   }
 
-  return paths
+  return paths;
 }
 
 export function parseFileSystemDemoState(
@@ -205,10 +205,10 @@ export function parseFileSystemDemoState(
     folderPaths,
     itemPaths,
   }: {
-    fallbackState: FileSystemDemoState
-    folderPaths: ReadonlySet<string>
-    itemPaths: ReadonlySet<string>
-  }
+    fallbackState: FileSystemDemoState;
+    folderPaths: ReadonlySet<string>;
+    itemPaths: ReadonlySet<string>;
+  },
 ): FileSystemDemoState {
   return {
     path: parsePath(searchParams.get("path"), folderPaths, fallbackState.path),
@@ -216,101 +216,101 @@ export function parseFileSystemDemoState(
     selectedPath: parseSelectedPath(
       searchParams.get("selectedPath"),
       itemPaths,
-      fallbackState.selectedPath
+      fallbackState.selectedPath,
     ),
     view: parseView(searchParams.get("view"), fallbackState.view),
-  }
+  };
 }
 
 export function formatFileSystemDemoState(
   state: FileSystemDemoState,
-  fallbackState: FileSystemDemoState
+  fallbackState: FileSystemDemoState,
 ) {
-  const searchParams = new URLSearchParams()
-  const search = state.query.search.trim()
+  const searchParams = new URLSearchParams();
+  const search = state.query.search.trim();
 
-  if (state.path !== fallbackState.path) searchParams.set("path", state.path)
-  if (search !== fallbackState.query.search) searchParams.set("search", search)
+  if (state.path !== fallbackState.path) searchParams.set("path", state.path);
+  if (search !== fallbackState.query.search) searchParams.set("search", search);
   if (state.selectedPath && state.selectedPath !== fallbackState.selectedPath) {
-    searchParams.set("selectedPath", state.selectedPath)
+    searchParams.set("selectedPath", state.selectedPath);
   }
-  if (state.view !== fallbackState.view) searchParams.set("view", state.view)
+  if (state.view !== fallbackState.view) searchParams.set("view", state.view);
   if (state.query.sort.key !== fallbackState.query.sort.key) {
-    searchParams.set("sort.key", state.query.sort.key)
+    searchParams.set("sort.key", state.query.sort.key);
   }
   if (state.query.sort.direction !== fallbackState.query.sort.direction) {
-    searchParams.set("sort.direction", state.query.sort.direction)
+    searchParams.set("sort.direction", state.query.sort.direction);
   }
 
-  return searchParams.toString()
+  return searchParams.toString();
 }
 
 function parseQuery(
   searchParams: Pick<URLSearchParams, "get">,
-  fallbackQuery: FileSystemQueryState
+  fallbackQuery: FileSystemQueryState,
 ): FileSystemQueryState {
   return {
     search: (searchParams.get("search") ?? fallbackQuery.search).trim(),
     sort: {
       direction: parseSortDirection(
         searchParams.get("sort.direction"),
-        fallbackQuery.sort.direction
+        fallbackQuery.sort.direction,
       ),
       key: parseSortKey(searchParams.get("sort.key"), fallbackQuery.sort.key),
     },
-  }
+  };
 }
 
 function parsePath(
   value: string | null,
   folderPaths: ReadonlySet<string>,
-  fallbackPath: string
+  fallbackPath: string,
 ) {
-  if (!value) return fallbackPath
-  const path = normalizeFolderPath(value)
+  if (!value) return fallbackPath;
+  const path = normalizeFolderPath(value);
 
-  return folderPaths.has(path) ? path : fallbackPath
+  return folderPaths.has(path) ? path : fallbackPath;
 }
 
 function parseSelectedPath(
   value: string | null,
   itemPaths: ReadonlySet<string>,
-  fallbackSelectedPath: string | null
+  fallbackSelectedPath: string | null,
 ) {
-  return value && itemPaths.has(value) ? value : fallbackSelectedPath
+  return value && itemPaths.has(value) ? value : fallbackSelectedPath;
 }
 
 function parseView(value: string | null, fallbackView: FileSystemView) {
   return VIEWS.includes(value as FileSystemView)
     ? (value as FileSystemView)
-    : fallbackView
+    : fallbackView;
 }
 
 function parseSortKey(
   value: string | null,
-  fallbackSortKey: FileSystemQueryState["sort"]["key"]
+  fallbackSortKey: FileSystemQueryState["sort"]["key"],
 ) {
   return SORT_KEYS.includes(value as FileSystemQueryState["sort"]["key"])
     ? (value as FileSystemQueryState["sort"]["key"])
-    : fallbackSortKey
+    : fallbackSortKey;
 }
 
 function parseSortDirection(
   value: string | null,
-  fallbackSortDirection: FileSystemQueryState["sort"]["direction"]
+  fallbackSortDirection: FileSystemQueryState["sort"]["direction"],
 ) {
-  return value === "desc" ? "desc" : fallbackSortDirection
+  return value === "desc" ? "desc" : fallbackSortDirection;
 }
 
 function normalizeFolderPath(path: string | undefined | null): string {
-  if (!path || path === "/") return ""
-  const trimmed = path.replace(/^\/+/, "")
-  return trimmed.endsWith("/") ? trimmed : `${trimmed}/`
+  if (!path || path === "/") return "";
+  const trimmed = path.replace(/^\/+/, "");
+  return trimmed.endsWith("/") ? trimmed : `${trimmed}/`;
 }
 
 function pathParent(path: string): string {
-  const trimmed = path.endsWith("/") ? path.slice(0, -1) : path
-  const separatorIndex = trimmed.lastIndexOf("/")
+  const trimmed = path.endsWith("/") ? path.slice(0, -1) : path;
+  const separatorIndex = trimmed.lastIndexOf("/");
 
-  return separatorIndex === -1 ? "" : `${trimmed.slice(0, separatorIndex)}/`
+  return separatorIndex === -1 ? "" : `${trimmed.slice(0, separatorIndex)}/`;
 }

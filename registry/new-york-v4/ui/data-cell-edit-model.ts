@@ -1,6 +1,6 @@
-import type * as React from "react"
+import type * as React from "react";
 
-import type { DataCellActivationSource } from "@/registry/new-york-v4/ui/data-cell-activation"
+import type { DataCellActivationSource } from "@/registry/new-york-v4/ui/data-cell-activation";
 import type {
   DataCellCommitHandler,
   DataCellCommitValue,
@@ -12,38 +12,39 @@ import type {
   DataCellSelectOption,
   DataCellValueForKind,
   DataCellValueMeta,
-} from "@/registry/new-york-v4/ui/data-cell-types"
+} from "@/registry/new-york-v4/ui/data-cell-types";
 
-type DataCellPickerKind = "date" | "time" | "date-time"
-type DataCellDraftKind = "text" | "number" | "integer" | DataCellPickerKind
-type DataCellFormatKind = Exclude<DataCellKind, "boolean">
+type DataCellPickerKind = "date" | "time" | "date-time";
+type DataCellDraftKind = "text" | "number" | "integer" | DataCellPickerKind;
+type DataCellFormatKind = Exclude<DataCellKind, "boolean">;
 
 type DataCellEditShellState = {
-  disabled: boolean
-  autoFocus?: boolean
-  activationSource?: DataCellActivationSource
-  onEditingEnd?: () => void
-}
+  disabled: boolean;
+  autoFocus?: boolean;
+  activationSource?: DataCellActivationSource;
+  onEditingEnd?: () => void;
+};
 
 type DataCellResolvedShellState = Required<
   Pick<DataCellEditShellState, "disabled">
 > &
-  Omit<DataCellEditShellState, "disabled">
+  Omit<DataCellEditShellState, "disabled">;
 
-type DataCellDataAttributeValue = string | number | boolean | undefined
+type DataCellDataAttributeValue = string | number | boolean | undefined;
 type DataCellDataAttributes = {
-  [Attribute in `data-${string}`]?: DataCellDataAttributeValue
-}
+  [Attribute in `data-${string}`]?: DataCellDataAttributeValue;
+};
 type DataCellAriaAttributeName = Extract<
   keyof React.AriaAttributes,
   `aria-${string}`
->
-type DataCellDataAttributeName = keyof DataCellDataAttributes & `data-${string}`
+>;
+type DataCellDataAttributeName = keyof DataCellDataAttributes &
+  `data-${string}`;
 
 type DataCellEditorEventProps = Pick<
   React.HTMLAttributes<HTMLElement>,
   "onBlur" | "onClick" | "onDoubleClick" | "onFocus" | "onKeyDown" | "onMouseUp"
->
+>;
 
 export type DataCellEditorProps = React.AriaAttributes &
   DataCellDataAttributes &
@@ -51,196 +52,196 @@ export type DataCellEditorProps = React.AriaAttributes &
     React.HTMLAttributes<HTMLElement>,
     "id" | "role" | "tabIndex" | "title"
   > &
-  DataCellEditorEventProps
+  DataCellEditorEventProps;
 
 type DataCellDraftHandler<Kind extends DataCellDraftKind> = NonNullable<
   DataCellPropsForKind<Kind>["onDraftValueChange"]
->
+>;
 
 type DataCellTypedCommitHandler<Value extends DataCellCommitValue> = (
   value: Value,
-  meta: DataCellValueMeta
-) => void
+  meta: DataCellValueMeta,
+) => void;
 
 type DataCellCommitGuard<Kind extends DataCellKind> = (
-  value: DataCellCommitValue
-) => value is DataCellCommitValueForKind<Kind>
+  value: DataCellCommitValue,
+) => value is DataCellCommitValueForKind<Kind>;
 
 type DataCellTypedPropsForKind<Kind extends DataCellKind> =
   DataCellPropsForKind<Kind> & {
-    kind: Kind
+    kind: Kind;
     onCommit?:
       | DataCellTypedCommitHandler<DataCellCommitValueForKind<Kind>>
-      | undefined
-  }
+      | undefined;
+  };
 
 type DataCellDraftEditState<Kind extends DataCellDraftKind> = {
-  value?: string
-  onChange?: DataCellDraftHandler<Kind>
-}
+  value?: string;
+  onChange?: DataCellDraftHandler<Kind>;
+};
 
 type DataCellOpenEditState = {
-  value?: boolean
-  onChange?: (open: boolean) => void
-}
+  value?: boolean;
+  onChange?: (open: boolean) => void;
+};
 
 type DataCellFormatValue<Kind extends DataCellFormatKind> = NonNullable<
   DataCellPropsForKind<Kind>["formatValue"]
->
+>;
 
 type DataCellPickerFormatValue = (
   value: string | null | undefined,
-  meta: { kind: DataCellPickerKind }
-) => React.ReactNode
+  meta: { kind: DataCellPickerKind },
+) => React.ReactNode;
 
 export type DataCellEditModelByKind = {
-  text: DataCellTextEditModel
-  number: DataCellNumberEditModel
-  integer: DataCellIntegerEditModel
-  boolean: DataCellBooleanEditModel
-  select: DataCellSelectEditModel
-  date: DataCellDateEditModel
-  time: DataCellTimeEditModel
-  "date-time": DataCellDateTimeEditModel
-}
+  text: DataCellTextEditModel;
+  number: DataCellNumberEditModel;
+  integer: DataCellIntegerEditModel;
+  boolean: DataCellBooleanEditModel;
+  select: DataCellSelectEditModel;
+  date: DataCellDateEditModel;
+  time: DataCellTimeEditModel;
+  "date-time": DataCellDateTimeEditModel;
+};
 
 export type DataCellEditModel =
-  DataCellEditModelByKind[keyof DataCellEditModelByKind]
+  DataCellEditModelByKind[keyof DataCellEditModelByKind];
 
 type DataCellEditModelBase<Kind extends DataCellKind> = {
-  kind: Kind
-  value?: DataCellValueForKind<Kind>
-  disabled: boolean
-  name?: string
-  className?: string
-  autoFocus?: boolean
-  activationSource?: DataCellActivationSource
-  onEditingEnd?: () => void
-  onCommit?: DataCellCommitHandler
-  editorProps: DataCellEditorProps
-}
+  kind: Kind;
+  value?: DataCellValueForKind<Kind>;
+  disabled: boolean;
+  name?: string;
+  className?: string;
+  autoFocus?: boolean;
+  activationSource?: DataCellActivationSource;
+  onEditingEnd?: () => void;
+  onCommit?: DataCellCommitHandler;
+  editorProps: DataCellEditorProps;
+};
 
 export type DataCellTextEditModel = DataCellEditModelBase<"text"> & {
-  placeholder?: string
-  draft?: DataCellDraftEditState<"text">
-}
+  placeholder?: string;
+  draft?: DataCellDraftEditState<"text">;
+};
 
 type DataCellNumericEditModel<Kind extends "number" | "integer"> =
   DataCellEditModelBase<Kind> & {
-    placeholder?: string
-    draft?: DataCellDraftEditState<Kind>
-  }
+    placeholder?: string;
+    draft?: DataCellDraftEditState<Kind>;
+  };
 
-export type DataCellNumberEditModel = DataCellNumericEditModel<"number">
+export type DataCellNumberEditModel = DataCellNumericEditModel<"number">;
 
-export type DataCellIntegerEditModel = DataCellNumericEditModel<"integer">
+export type DataCellIntegerEditModel = DataCellNumericEditModel<"integer">;
 
-export type DataCellBooleanEditModel = DataCellEditModelBase<"boolean">
+export type DataCellBooleanEditModel = DataCellEditModelBase<"boolean">;
 
 export type DataCellSelectEditModel = DataCellEditModelBase<"select"> & {
-  placeholder?: string
-  formatValue?: DataCellFormatValue<"select">
-  openState?: DataCellOpenEditState
-  options: DataCellSelectOption[]
-}
+  placeholder?: string;
+  formatValue?: DataCellFormatValue<"select">;
+  openState?: DataCellOpenEditState;
+  options: DataCellSelectOption[];
+};
 
 type DataCellPickerEditModelForKind<Kind extends DataCellPickerKind> =
   DataCellEditModelBase<Kind> & {
-    placeholder?: string
-    dateTimeZone?: DataCellDateTimeZone
-    showPickerIcon?: boolean
-    formatValue?: DataCellPickerFormatValue
-    draft?: DataCellDraftEditState<Kind>
-    openState?: DataCellOpenEditState
-  }
+    placeholder?: string;
+    dateTimeZone?: DataCellDateTimeZone;
+    showPickerIcon?: boolean;
+    formatValue?: DataCellPickerFormatValue;
+    draft?: DataCellDraftEditState<Kind>;
+    openState?: DataCellOpenEditState;
+  };
 
-export type DataCellDateEditModel = DataCellPickerEditModelForKind<"date">
+export type DataCellDateEditModel = DataCellPickerEditModelForKind<"date">;
 
-export type DataCellTimeEditModel = DataCellPickerEditModelForKind<"time">
+export type DataCellTimeEditModel = DataCellPickerEditModelForKind<"time">;
 
 export type DataCellDateTimeEditModel =
-  DataCellPickerEditModelForKind<"date-time">
+  DataCellPickerEditModelForKind<"date-time">;
 
 export type DataCellPickerEditModel =
   | DataCellDateEditModel
   | DataCellTimeEditModel
-  | DataCellDateTimeEditModel
+  | DataCellDateTimeEditModel;
 
 export function createDataCellEditModel(
   props: DataCellProps,
-  shellState: DataCellEditShellState
+  shellState: DataCellEditShellState,
 ): DataCellEditModel {
   if (props.kind === "text")
-    return createDataCellTextEditModel(props, shellState)
+    return createDataCellTextEditModel(props, shellState);
   if (props.kind === "number") {
-    return createDataCellNumberEditModel(props, shellState)
+    return createDataCellNumberEditModel(props, shellState);
   }
   if (props.kind === "integer") {
-    return createDataCellIntegerEditModel(props, shellState)
+    return createDataCellIntegerEditModel(props, shellState);
   }
   if (props.kind === "boolean") {
-    return createDataCellBooleanEditModel(props, shellState)
+    return createDataCellBooleanEditModel(props, shellState);
   }
   if (props.kind === "select") {
-    return createDataCellSelectEditModel(props, shellState)
+    return createDataCellSelectEditModel(props, shellState);
   }
   if (props.kind === "date") {
-    return createDataCellDateEditModel(props, shellState)
+    return createDataCellDateEditModel(props, shellState);
   }
   if (props.kind === "time") {
-    return createDataCellTimeEditModel(props, shellState)
+    return createDataCellTimeEditModel(props, shellState);
   }
   if (props.kind === "date-time") {
-    return createDataCellDateTimeEditModel(props, shellState)
+    return createDataCellDateTimeEditModel(props, shellState);
   }
-  return unsupportedDataCellProps(props)
+  return unsupportedDataCellProps(props);
 }
 
 function unsupportedDataCellProps(_props: never): never {
-  throw new Error("Unsupported DataCell kind")
+  throw new Error("Unsupported DataCell kind");
 }
 
 function dataCellCommitHandler<Value extends DataCellCommitValue>(
   onCommit: DataCellTypedCommitHandler<Value> | undefined,
-  isValue: (value: DataCellCommitValue) => value is Value
+  isValue: (value: DataCellCommitValue) => value is Value,
 ): DataCellCommitHandler | undefined {
-  if (!onCommit) return undefined
+  if (!onCommit) return undefined;
   return (value, meta) => {
     if (!isValue(value)) {
-      throw new Error(`Invalid ${meta.kind} commit value`)
+      throw new Error(`Invalid ${meta.kind} commit value`);
     }
-    onCommit(value, meta)
-  }
+    onCommit(value, meta);
+  };
 }
 
 function isDataCellStringCommitValue(
-  value: DataCellCommitValue
+  value: DataCellCommitValue,
 ): value is string | null {
-  return typeof value === "string" || value === null
+  return typeof value === "string" || value === null;
 }
 
 function isDataCellNumberCommitValue(
-  value: DataCellCommitValue
+  value: DataCellCommitValue,
 ): value is number | null {
-  return typeof value === "number" || value === null
+  return typeof value === "number" || value === null;
 }
 
 function isDataCellBooleanCommitValue(
-  value: DataCellCommitValue
+  value: DataCellCommitValue,
 ): value is boolean {
-  return typeof value === "boolean"
+  return typeof value === "boolean";
 }
 
 function dataCellEditShellState(
   props: DataCellProps,
-  shellState: DataCellEditShellState
+  shellState: DataCellEditShellState,
 ): DataCellResolvedShellState {
   return {
     disabled: shellState.disabled,
     autoFocus: shellState.autoFocus ?? props.autoFocus,
     activationSource: shellState.activationSource,
     onEditingEnd: shellState.onEditingEnd ?? props.onEditingEnd,
-  }
+  };
 }
 
 function dataCellEditorProps(props: DataCellProps): DataCellEditorProps {
@@ -255,30 +256,30 @@ function dataCellEditorProps(props: DataCellProps): DataCellEditorProps {
     onFocus: props.onFocus,
     onKeyDown: props.onKeyDown,
     onMouseUp: props.onMouseUp,
-  }
+  };
 
   for (const propName in props) {
     if (isDataCellAriaAttributeName(propName)) {
-      assignDataCellAriaAttribute(editorProps, propName, props[propName])
+      assignDataCellAriaAttribute(editorProps, propName, props[propName]);
     }
 
     if (isDataCellDataAttributeName(propName)) {
-      const propValue = Reflect.get(props, propName)
+      const propValue = Reflect.get(props, propName);
       if (isDataCellDataAttributeValue(propValue)) {
-        assignDataCellDataAttribute(editorProps, propName, propValue)
+        assignDataCellDataAttribute(editorProps, propName, propValue);
       }
     }
   }
 
-  return editorProps
+  return editorProps;
 }
 
 function dataCellEditModelBase<Kind extends DataCellKind>(
   props: DataCellTypedPropsForKind<Kind>,
   shellState: DataCellEditShellState,
-  isCommitValue: DataCellCommitGuard<Kind>
+  isCommitValue: DataCellCommitGuard<Kind>,
 ): DataCellEditModelBase<Kind> {
-  const editState = dataCellEditShellState(props, shellState)
+  const editState = dataCellEditShellState(props, shellState);
   return {
     kind: props.kind,
     value: props.value,
@@ -290,51 +291,51 @@ function dataCellEditModelBase<Kind extends DataCellKind>(
     onCommit: dataCellCommitHandler(props.onCommit, isCommitValue),
     onEditingEnd: editState.onEditingEnd,
     editorProps: dataCellEditorProps(props),
-  }
+  };
 }
 
 function assignDataCellAriaAttribute<Name extends DataCellAriaAttributeName>(
   editorProps: React.AriaAttributes,
   propName: Name,
-  propValue: React.AriaAttributes[Name]
+  propValue: React.AriaAttributes[Name],
 ) {
-  editorProps[propName] = propValue
+  editorProps[propName] = propValue;
 }
 
 function assignDataCellDataAttribute(
   editorProps: DataCellDataAttributes,
   propName: DataCellDataAttributeName,
-  propValue: DataCellDataAttributeValue
+  propValue: DataCellDataAttributeValue,
 ) {
-  editorProps[propName] = propValue
+  editorProps[propName] = propValue;
 }
 
 function isDataCellAriaAttributeName(
-  propName: string
+  propName: string,
 ): propName is DataCellAriaAttributeName {
-  return propName.startsWith("aria-")
+  return propName.startsWith("aria-");
 }
 
 function isDataCellDataAttributeName(
-  propName: string
+  propName: string,
 ): propName is DataCellDataAttributeName {
-  return propName.startsWith("data-")
+  return propName.startsWith("data-");
 }
 
 function isDataCellDataAttributeValue(
-  value: unknown
+  value: unknown,
 ): value is DataCellDataAttributeValue {
   return (
     value === undefined ||
     typeof value === "string" ||
     typeof value === "number" ||
     typeof value === "boolean"
-  )
+  );
 }
 
 function createDataCellTextEditModel(
   props: DataCellPropsForKind<"text">,
-  shellState: DataCellEditShellState
+  shellState: DataCellEditShellState,
 ): DataCellTextEditModel {
   return {
     ...dataCellEditModelBase(props, shellState, isDataCellStringCommitValue),
@@ -343,12 +344,12 @@ function createDataCellTextEditModel(
       value: props.draftValue,
       onChange: props.onDraftValueChange,
     },
-  }
+  };
 }
 
 function createDataCellNumberEditModel(
   props: DataCellPropsForKind<"number">,
-  shellState: DataCellEditShellState
+  shellState: DataCellEditShellState,
 ): DataCellNumberEditModel {
   return {
     ...dataCellEditModelBase(props, shellState, isDataCellNumberCommitValue),
@@ -357,12 +358,12 @@ function createDataCellNumberEditModel(
       value: props.draftValue,
       onChange: props.onDraftValueChange,
     },
-  }
+  };
 }
 
 function createDataCellIntegerEditModel(
   props: DataCellPropsForKind<"integer">,
-  shellState: DataCellEditShellState
+  shellState: DataCellEditShellState,
 ): DataCellIntegerEditModel {
   return {
     ...dataCellEditModelBase(props, shellState, isDataCellNumberCommitValue),
@@ -371,19 +372,19 @@ function createDataCellIntegerEditModel(
       value: props.draftValue,
       onChange: props.onDraftValueChange,
     },
-  }
+  };
 }
 
 function createDataCellBooleanEditModel(
   props: DataCellPropsForKind<"boolean">,
-  shellState: DataCellEditShellState
+  shellState: DataCellEditShellState,
 ): DataCellBooleanEditModel {
-  return dataCellEditModelBase(props, shellState, isDataCellBooleanCommitValue)
+  return dataCellEditModelBase(props, shellState, isDataCellBooleanCommitValue);
 }
 
 function createDataCellSelectEditModel(
   props: DataCellPropsForKind<"select">,
-  shellState: DataCellEditShellState
+  shellState: DataCellEditShellState,
 ): DataCellSelectEditModel {
   return {
     ...dataCellEditModelBase(props, shellState, isDataCellStringCommitValue),
@@ -394,12 +395,12 @@ function createDataCellSelectEditModel(
       onChange: props.onOpenChange,
     },
     options: props.selectOptions,
-  }
+  };
 }
 
 function createDataCellDateEditModel(
   props: DataCellPropsForKind<"date">,
-  shellState: DataCellEditShellState
+  shellState: DataCellEditShellState,
 ): DataCellDateEditModel {
   return {
     ...dataCellEditModelBase(props, shellState, isDataCellStringCommitValue),
@@ -417,12 +418,12 @@ function createDataCellDateEditModel(
       value: props.open,
       onChange: props.onOpenChange,
     },
-  }
+  };
 }
 
 function createDataCellTimeEditModel(
   props: DataCellPropsForKind<"time">,
-  shellState: DataCellEditShellState
+  shellState: DataCellEditShellState,
 ): DataCellTimeEditModel {
   return {
     ...dataCellEditModelBase(props, shellState, isDataCellStringCommitValue),
@@ -440,12 +441,12 @@ function createDataCellTimeEditModel(
       value: props.open,
       onChange: props.onOpenChange,
     },
-  }
+  };
 }
 
 function createDataCellDateTimeEditModel(
   props: DataCellPropsForKind<"date-time">,
-  shellState: DataCellEditShellState
+  shellState: DataCellEditShellState,
 ): DataCellDateTimeEditModel {
   return {
     ...dataCellEditModelBase(props, shellState, isDataCellStringCommitValue),
@@ -463,5 +464,5 @@ function createDataCellDateTimeEditModel(
       value: props.open,
       onChange: props.onOpenChange,
     },
-  }
+  };
 }

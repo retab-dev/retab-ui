@@ -1,12 +1,12 @@
-import * as React from "react"
-import Link from "next/link"
+import * as React from "react";
+import Link from "next/link";
 
-import { siteConfig } from "@/lib/config"
-import { Button } from "@/components/ui/button"
-import { Icons } from "@/components/icons"
-import { Skeleton } from "@/components/ui/skeleton"
+import { siteConfig } from "@/lib/config";
+import { Button } from "@/components/ui/button";
+import { Icons } from "@/components/icons";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const GITHUB_REPO = "retab-dev/ui"
+const GITHUB_REPO = "retab-dev/ui";
 
 export function GitHubLink() {
   return (
@@ -23,7 +23,7 @@ export function GitHubLink() {
         </React.Suspense>
       </Link>
     </Button>
-  )
+  );
 }
 
 export async function StarsCount() {
@@ -32,32 +32,32 @@ export async function StarsCount() {
       Accept: "application/vnd.github+json",
     },
     next: { revalidate: 86400 },
-  })
+  });
 
   if (!response.ok) {
-    return <GitHubLabel />
+    return <GitHubLabel />;
   }
 
   const json = (await response.json()) as {
-    stargazers_count?: number
-  }
+    stargazers_count?: number;
+  };
 
   if (typeof json.stargazers_count !== "number") {
-    return <GitHubLabel />
+    return <GitHubLabel />;
   }
 
   const formattedCount =
     json.stargazers_count >= 1000
       ? `${Math.round(json.stargazers_count / 1000)}k`
-      : json.stargazers_count.toLocaleString()
+      : json.stargazers_count.toLocaleString();
 
   return (
-    <span className="w-fit text-xs text-muted-foreground tabular-nums">
+    <span className="text-muted-foreground w-fit text-xs tabular-nums">
       {formattedCount}
     </span>
-  )
+  );
 }
 
 function GitHubLabel() {
-  return <span className="text-xs text-muted-foreground">GitHub</span>
+  return <span className="text-muted-foreground text-xs">GitHub</span>;
 }

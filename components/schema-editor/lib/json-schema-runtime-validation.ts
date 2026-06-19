@@ -1,54 +1,54 @@
-"use client"
+"use client";
 
-import Ajv from "ajv"
-import type { AnySchema, ErrorObject, ValidateFunction } from "ajv"
+import Ajv from "ajv";
+import type { AnySchema, ErrorObject, ValidateFunction } from "ajv";
 
-import { addJsonSchemaFormats } from "@/components/schema-editor/lib/configure-ajv"
+import { addJsonSchemaFormats } from "@/components/schema-editor/lib/configure-ajv";
 
-let ajvSingleton: Ajv | null = null
-const validatorCache = new WeakMap<object, ValidateFunction>()
+let ajvSingleton: Ajv | null = null;
+const validatorCache = new WeakMap<object, ValidateFunction>();
 
 export interface RuntimeSchemaValidationResult {
-  isValid: boolean
-  errors: ErrorObject[] | null
+  isValid: boolean;
+  errors: ErrorObject[] | null;
 }
 
 function getAjv(): Ajv {
   if (!ajvSingleton) {
-    ajvSingleton = new Ajv({ allErrors: true, strict: false })
-    addJsonSchemaFormats(ajvSingleton)
+    ajvSingleton = new Ajv({ allErrors: true, strict: false });
+    addJsonSchemaFormats(ajvSingleton);
   }
 
-  return ajvSingleton
+  return ajvSingleton;
 }
 
 function getValidator(schema: AnySchema): ValidateFunction {
   if (schema && typeof schema === "object") {
-    const cachedValidator = validatorCache.get(schema as object)
+    const cachedValidator = validatorCache.get(schema as object);
     if (cachedValidator) {
-      return cachedValidator
+      return cachedValidator;
     }
 
-    const validator = getAjv().compile(schema)
-    validatorCache.set(schema as object, validator)
-    return validator
+    const validator = getAjv().compile(schema);
+    validatorCache.set(schema as object, validator);
+    return validator;
   }
 
-  return getAjv().compile(schema)
+  return getAjv().compile(schema);
 }
 
 export function validateRuntimeSchema(
   schema: AnySchema,
-  data: unknown
+  data: unknown,
 ): RuntimeSchemaValidationResult {
   try {
-    const validator = getValidator(schema)
-    const isValid = !!validator(data)
+    const validator = getValidator(schema);
+    const isValid = !!validator(data);
 
     return {
       isValid,
       errors: isValid ? null : (validator.errors ?? null),
-    }
+    };
   } catch (error) {
     return {
       isValid: false,
@@ -64,6 +64,6 @@ export function validateRuntimeSchema(
               : "Unknown schema compilation error",
         },
       ],
-    }
+    };
   }
 }

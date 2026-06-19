@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { XlsxViewer } from "@/components/ui/xlsx-viewer"
+import { XlsxViewer } from "@/components/ui/xlsx-viewer";
 
 export function XlsxViewerDemo() {
   return (
@@ -19,5 +19,5 @@ export function XlsxViewerDemo() {
         isolateStyles
       />
     </div>
-  )
+  );
 }

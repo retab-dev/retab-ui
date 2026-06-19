@@ -1,4 +1,4 @@
-import type { NodeId } from "./types"
+import type { NodeId } from "./types";
 
 /**
  * Monotonic id minting. Ids are minted exactly once per node — at creation, or at
@@ -10,9 +10,9 @@ import type { NodeId } from "./types"
  * ids never have to be reconstructed from a serialized form (JSON Schema carries
  * none — that asymmetry is the point).
  */
-let counter = 0
+let counter = 0;
 
 export function createId(prefix = "node"): NodeId {
-  counter += 1
-  return `${prefix}-${counter}`
+  counter += 1;
+  return `${prefix}-${counter}`;
 }

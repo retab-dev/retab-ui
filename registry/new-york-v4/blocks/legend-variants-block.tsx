@@ -1,31 +1,31 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { type SegmentInteraction } from "@/lib/segment-interaction"
-import { segmentsPageCount, toSegments, type Segment } from "@/lib/segments"
+import { type SegmentInteraction } from "@/lib/segment-interaction";
+import { segmentsPageCount, toSegments, type Segment } from "@/lib/segments";
 import {
   FileViewer,
   FileViewerBody,
   FileViewerSurface,
-} from "@/components/ui/file-viewer"
-import { PageRibbon } from "@/components/ui/page-ribbon"
-import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer"
+} from "@/components/ui/file-viewer";
+import { PageRibbon } from "@/components/ui/page-ribbon";
+import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer";
 import {
   SegmentLegend,
   type SegmentLegendOrientation,
   type SegmentLegendSide,
   type SegmentLegendVariant,
-} from "@/components/ui/segment-legend"
-import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
+} from "@/components/ui/segment-legend";
+import { useSegmentInteraction } from "@/components/ui/use-segment-interaction";
 import {
   ViewerBody,
   ViewerRoot,
   ViewerSidebar,
   ViewerSurface,
-} from "@/components/ui/viewer"
+} from "@/components/ui/viewer";
 
-const PDF_URL = "/samples/an-image-is-worth-16x16-words.pdf"
+const PDF_URL = "/samples/an-image-is-worth-16x16-words.pdf";
 
 // The same split result the standalone Split Viewer block uses, over the ViT paper.
 const SPLIT_OUTPUT = [
@@ -35,17 +35,17 @@ const SPLIT_OUTPUT = [
   { name: "Experiments", pages: [4, 5, 6, 7, 8] },
   { name: "Conclusion & References", pages: [9, 10, 11, 12] },
   { name: "Appendix", pages: [13, 14, 15, 16, 17, 18, 19, 20, 21, 22] },
-]
+];
 
-type LegendSlot = "top" | "overlay" | "right"
+type LegendSlot = "top" | "overlay" | "right";
 
 type Preset = {
-  label: string
-  variant: SegmentLegendVariant
-  orientation: SegmentLegendOrientation
-  side?: SegmentLegendSide
-  slot: LegendSlot
-}
+  label: string;
+  variant: SegmentLegendVariant;
+  orientation: SegmentLegendOrientation;
+  side?: SegmentLegendSide;
+  slot: LegendSlot;
+};
 
 // Every way the legend can sit on the document. The page ribbon stays the left
 // rail throughout; the legend takes the top, floats over the page, or runs down
@@ -66,7 +66,7 @@ const PRESETS: Preset[] = [
     slot: "overlay",
   },
   { label: "Rail", variant: "plain", orientation: "vertical", slot: "right" },
-]
+];
 
 /**
  * The split viewer shown with every legend variant — a 2×2 gallery over one
@@ -75,17 +75,20 @@ const PRESETS: Preset[] = [
  * shared preview dims unrelated pages across all four at once.
  */
 export function LegendVariantsBlock({ columns = 1 }: { columns?: 1 | 3 } = {}) {
-  const segments = React.useMemo(() => toSegments(SPLIT_OUTPUT), [])
-  const pageCount = React.useMemo(() => segmentsPageCount(segments), [segments])
-  const interaction = useSegmentInteraction()
+  const segments = React.useMemo(() => toSegments(SPLIT_OUTPUT), []);
+  const pageCount = React.useMemo(
+    () => segmentsPageCount(segments),
+    [segments],
+  );
+  const interaction = useSegmentInteraction();
 
   return (
-    <div className="flex h-full min-h-[680px] flex-col bg-background">
+    <div className="bg-background flex h-full min-h-[680px] flex-col">
       <div className="border-b px-6 py-3">
         <h2 className="text-base font-semibold">
           Split viewer · legend variants
         </h2>
-        <p className="mt-0.5 text-sm text-muted-foreground">
+        <p className="text-muted-foreground mt-0.5 text-sm">
           One split result, three legend placements — bar, floating, and a
           vertical rail.
         </p>
@@ -110,7 +113,7 @@ export function LegendVariantsBlock({ columns = 1 }: { columns?: 1 | 3 } = {}) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function Cell({
@@ -119,23 +122,23 @@ function Cell({
   pageCount,
   interaction,
 }: {
-  preset: Preset
-  segments: Segment[]
-  pageCount: number
-  interaction: SegmentInteraction
+  preset: Preset;
+  segments: Segment[];
+  pageCount: number;
+  interaction: SegmentInteraction;
 }) {
-  const [currentPage, setCurrentPage] = React.useState<number | null>(1)
-  const panelRef = React.useRef<HTMLDivElement | null>(null)
+  const [currentPage, setCurrentPage] = React.useState<number | null>(1);
+  const panelRef = React.useRef<HTMLDivElement | null>(null);
 
   const jumpToPage = React.useCallback((page: number) => {
     panelRef.current
       ?.querySelector<HTMLElement>(`[data-page-number="${page}"]`)
-      ?.scrollIntoView({ behavior: "smooth", block: "start" })
-  }, [])
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
   const onSelect = (segment: Segment) => {
-    if (segment.pages.length) jumpToPage(segment.pages[0])
-  }
+    if (segment.pages.length) jumpToPage(segment.pages[0]);
+  };
 
   const legend = (
     <SegmentLegend
@@ -149,10 +152,10 @@ function Cell({
       currentPage={currentPage}
       onSelect={onSelect}
     />
-  )
+  );
 
   const ribbon = (
-    <div className="h-full overflow-auto border-r border-border bg-background px-2 py-4">
+    <div className="border-border bg-background h-full overflow-auto border-r px-2 py-4">
       <PageRibbon
         orientation="vertical"
         rows={[{ id: "split", segments }]}
@@ -163,15 +166,15 @@ function Cell({
         showTicks
       />
     </div>
-  )
+  );
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col space-y-1.5">
       <div className="flex flex-wrap items-baseline gap-x-2">
-        <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+        <span className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
           {preset.label}
         </span>
-        <code className="text-[11px] text-muted-foreground">
+        <code className="text-muted-foreground text-[11px]">
           variant=&quot;{preset.variant}&quot;
           {preset.orientation === "vertical" ? " · vertical" : ""}
         </code>
@@ -183,7 +186,7 @@ function Cell({
       <div className="flex min-h-0 flex-1 justify-center">
         <div
           ref={panelRef}
-          className="aspect-[21/29.7] h-full max-w-full overflow-hidden rounded-lg border bg-card"
+          className="bg-card aspect-[21/29.7] h-full max-w-full overflow-hidden rounded-lg border"
         >
           <ViewerRoot className="h-full">
             <ViewerBody>
@@ -225,7 +228,7 @@ function Cell({
                     ) : null}
                   </div>
                   {preset.slot === "right" ? (
-                    <aside className="h-full w-40 overflow-auto border-l border-border bg-background px-2 py-4">
+                    <aside className="border-border bg-background h-full w-40 overflow-auto border-l px-2 py-4">
                       {legend}
                     </aside>
                   ) : null}
@@ -236,5 +239,5 @@ function Cell({
         </div>
       </div>
     </div>
-  )
+  );
 }

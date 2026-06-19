@@ -1,4 +1,4 @@
-import { type Components } from "react-markdown"
+import { type Components } from "react-markdown";
 
 export const markdownComponents: Components = {
   h1: ({ node: _node, ...props }) => (
@@ -37,7 +37,7 @@ export const markdownComponents: Components = {
   a: ({ node: _node, href, children, ...props }) =>
     href ? (
       <a
-        className="font-medium text-primary underline underline-offset-2"
+        className="text-primary font-medium underline underline-offset-2"
         {...props}
         href={href}
         target="_blank"
@@ -54,23 +54,23 @@ export const markdownComponents: Components = {
     <strong className="font-semibold" {...props} />
   ),
   hr: ({ node: _node, ...props }) => (
-    <hr className="my-4 border-border" {...props} />
+    <hr className="border-border my-4" {...props} />
   ),
   blockquote: ({ node: _node, ...props }) => (
     <blockquote
-      className="my-3 border-l-2 border-border pl-3 text-muted-foreground italic"
+      className="border-border text-muted-foreground my-3 border-l-2 pl-3 italic"
       {...props}
     />
   ),
   code: ({ node: _node, ...props }) => (
     <code
-      className="rounded bg-muted px-1 py-0.5 font-mono text-[0.85em]"
+      className="bg-muted rounded px-1 py-0.5 font-mono text-[0.85em]"
       {...props}
     />
   ),
   pre: ({ node: _node, ...props }) => (
     <pre
-      className="my-3 overflow-x-auto rounded-lg border bg-muted/50 p-3 font-mono text-[0.85em]"
+      className="bg-muted/50 my-3 overflow-x-auto rounded-lg border p-3 font-mono text-[0.85em]"
       {...props}
     />
   ),
@@ -84,14 +84,14 @@ export const markdownComponents: Components = {
   ),
   th: ({ node: _node, ...props }) => (
     <th
-      className="border-b border-border px-3 py-1.5 text-left font-medium [&[align=right]]:text-right"
+      className="border-border border-b px-3 py-1.5 text-left font-medium [&[align=right]]:text-right"
       {...props}
     />
   ),
   td: ({ node: _node, ...props }) => (
     <td
-      className="border-b border-border px-3 py-1.5 tabular-nums [&[align=right]]:text-right"
+      className="border-border border-b px-3 py-1.5 tabular-nums [&[align=right]]:text-right"
       {...props}
     />
   ),
-}
+};

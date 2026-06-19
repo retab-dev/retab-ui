@@ -1,4 +1,4 @@
-import { ViewerFormatError } from "@/lib/viewer-errors"
+import { ViewerFormatError } from "@/lib/viewer-errors";
 
 export function toPdfRenderFailedError(error: unknown) {
   return new ViewerFormatError({
@@ -6,5 +6,5 @@ export function toPdfRenderFailedError(error: unknown) {
     kind: "render_failed",
     message: "Failed to render PDF page.",
     cause: error,
-  })
+  });
 }

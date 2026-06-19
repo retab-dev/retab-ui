@@ -1,35 +1,35 @@
-import React, { useState } from "react"
-import dynamic from "next/dynamic"
-import type { JSONSchema7 } from "json-schema"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import React, { useState } from "react";
+import dynamic from "next/dynamic";
+import type { JSONSchema7 } from "json-schema";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { HeaderLabel } from "@/components/json-table/header-label"
-import type { JsonTableSchemaEditMode } from "@/components/json-table/json-table-edit-modes"
-import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
-import { useHeaderController } from "@/components/json-table/use-header-controller"
+import { Button } from "@/components/ui/button";
+import { HeaderLabel } from "@/components/json-table/header-label";
+import type { JsonTableSchemaEditMode } from "@/components/json-table/json-table-edit-modes";
+import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes";
+import { useHeaderController } from "@/components/json-table/use-header-controller";
 
 const EditableHeaderSchemaMenu = dynamic(
   () =>
     import("@/components/json-table/header-schema-menu").then((module) => ({
       default: module.HeaderSchemaMenu,
     })),
-  { ssr: false }
-)
+  { ssr: false },
+);
 
 interface JsonTableHeaderCellProps {
-  node: JsonTableHeaderNode
-  leafCount: number
-  schema: JSONSchema7
-  setSchema: (schema: JSONSchema7) => void
-  stopAt: string[]
-  setStopAt: (stopAt: string[]) => void
-  cellWidthPx: number
-  isPublished: boolean
-  draggedItemKeyRef: React.RefObject<string | null>
-  draggedItemParentPathRef: React.RefObject<string | null>
-  schemaEditMode: JsonTableSchemaEditMode
-  disableHeaderInteractions?: boolean
+  node: JsonTableHeaderNode;
+  leafCount: number;
+  schema: JSONSchema7;
+  setSchema: (schema: JSONSchema7) => void;
+  stopAt: string[];
+  setStopAt: (stopAt: string[]) => void;
+  cellWidthPx: number;
+  isPublished: boolean;
+  draggedItemKeyRef: React.RefObject<string | null>;
+  draggedItemParentPathRef: React.RefObject<string | null>;
+  schemaEditMode: JsonTableSchemaEditMode;
+  disableHeaderInteractions?: boolean;
 }
 
 export function JsonTableHeaderCell({
@@ -46,9 +46,9 @@ export function JsonTableHeaderCell({
   schemaEditMode,
   disableHeaderInteractions = false,
 }: JsonTableHeaderCellProps) {
-  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const disableSchemaMutationInteractions =
-    disableHeaderInteractions || schemaEditMode !== "editable"
+    disableHeaderInteractions || schemaEditMode !== "editable";
   const {
     isDraggable,
     clearDragClasses,
@@ -66,14 +66,14 @@ export function JsonTableHeaderCell({
     draggedItemKeyRef,
     draggedItemParentPathRef,
     disableHeaderInteractions: disableSchemaMutationInteractions,
-  })
+  });
 
   if (node.isArrayValuePlaceholder) {
     return (
       <Button
         variant="ghost"
         size="icon"
-        className="grow justify-start rounded-none bg-transparent px-1 text-foreground hover:bg-muted/40"
+        className="text-foreground hover:bg-muted/40 grow justify-start rounded-none bg-transparent px-1"
       >
         <HeaderLabel
           effectiveType={node.itemEffectiveType ?? node.effectiveType}
@@ -81,7 +81,7 @@ export function JsonTableHeaderCell({
           width={cellWidthPx - 20}
         />
       </Button>
-    )
+    );
   }
 
   const label = (
@@ -90,9 +90,9 @@ export function JsonTableHeaderCell({
       label={node.label}
       width={cellWidthPx - (node.canFold ? 44 : 20)}
     />
-  )
+  );
   const canOpenSchemaMenu =
-    !disableHeaderInteractions && schemaEditMode !== "readOnly"
+    !disableHeaderInteractions && schemaEditMode !== "readOnly";
 
   return (
     <div
@@ -105,7 +105,7 @@ export function JsonTableHeaderCell({
       onDragEnd={handleDragEnd}
     >
       {!canOpenSchemaMenu ? (
-        <div className="flex h-full grow items-center justify-start rounded-none bg-transparent px-1 text-foreground">
+        <div className="text-foreground flex h-full grow items-center justify-start rounded-none bg-transparent px-1">
           {label}
         </div>
       ) : (
@@ -121,7 +121,7 @@ export function JsonTableHeaderCell({
           <Button
             variant="ghost"
             size="sm"
-            className="h-full grow justify-start rounded-none border-0 bg-transparent px-1 text-foreground hover:bg-muted/40 sm:h-full"
+            className="text-foreground hover:bg-muted/40 h-full grow justify-start rounded-none border-0 bg-transparent px-1 sm:h-full"
           >
             {label}
           </Button>
@@ -132,7 +132,7 @@ export function JsonTableHeaderCell({
         <Button
           variant="ghost"
           size="icon"
-          className={`h-full sm:h-full ${node.isArray ? "w-9 sm:w-9" : "w-6 sm:w-6"} rounded-none bg-transparent text-foreground hover:bg-muted/40`}
+          className={`h-full sm:h-full ${node.isArray ? "w-9 sm:w-9" : "w-6 sm:w-6"} text-foreground hover:bg-muted/40 rounded-none bg-transparent`}
           onClick={toggleExpanded}
         >
           {stopAt.includes(node.key) ? (
@@ -143,5 +143,5 @@ export function JsonTableHeaderCell({
         </Button>
       )}
     </div>
-  )
+  );
 }

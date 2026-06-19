@@ -1,39 +1,39 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { PlusIcon } from "lucide-react"
+import * as React from "react";
+import { PlusIcon } from "lucide-react";
 
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { useDocumentDefinitionsEditorController } from "@/components/schema-editor/document-definitions-editor-controller"
-import type { SchemaEditorMode } from "@/components/schema-editor/document-node-editor-types"
+} from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useDocumentDefinitionsEditorController } from "@/components/schema-editor/document-definitions-editor-controller";
+import type { SchemaEditorMode } from "@/components/schema-editor/document-node-editor-types";
 import {
   definitionElementId,
   DEFINITIONS_SECTION_ID,
-} from "@/components/schema-editor/document-node-reveal"
-import { DocumentSchemaNodeEditor } from "@/components/schema-editor/document-schema-node-editor"
-import type { SchemaDocument } from "@/components/schema-editor/document/types"
+} from "@/components/schema-editor/document-node-reveal";
+import { DocumentSchemaNodeEditor } from "@/components/schema-editor/document-schema-node-editor";
+import type { SchemaDocument } from "@/components/schema-editor/document/types";
 import type {
   ResolvedSchemaBuilderFeatures,
   SchemaDispatch,
-} from "@/components/schema-editor/schema-builder-types"
+} from "@/components/schema-editor/schema-builder-types";
 
 interface DocumentDefinitionsEditorProps {
-  dispatch: SchemaDispatch
-  doc: SchemaDocument
-  mode: SchemaEditorMode
-  definitionsEnabled: boolean
-  features: ResolvedSchemaBuilderFeatures
-  accordionOpen: boolean
-  setAccordionOpen: (open: boolean) => void
-  draggedParentRef: React.RefObject<string | null>
-  draggedPropertyRef: React.RefObject<string | null>
+  dispatch: SchemaDispatch;
+  doc: SchemaDocument;
+  mode: SchemaEditorMode;
+  definitionsEnabled: boolean;
+  features: ResolvedSchemaBuilderFeatures;
+  accordionOpen: boolean;
+  setAccordionOpen: (open: boolean) => void;
+  draggedParentRef: React.RefObject<string | null>;
+  draggedPropertyRef: React.RefObject<string | null>;
 }
 
 export function DocumentDefinitionsEditor({
@@ -54,7 +54,7 @@ export function DocumentDefinitionsEditor({
     definitionsEnabled,
     accordionOpen,
     setAccordionOpen,
-  })
+  });
 
   if (controller.shouldShowClosedPrompt) {
     return mode === "descriptionOnly" ? null : (
@@ -76,7 +76,7 @@ export function DocumentDefinitionsEditor({
           ) : null}
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -84,12 +84,12 @@ export function DocumentDefinitionsEditor({
       type="single"
       collapsible
       id={DEFINITIONS_SECTION_ID}
-      className="mt-6 w-full rounded-lg border border-border px-4 pb-0"
+      className="border-border mt-6 w-full rounded-lg border px-4 pb-0"
       value={controller.accordionValue}
       onValueChange={(value) => setAccordionOpen(value === "defs")}
     >
       <AccordionItem value="defs" className="border-none bg-transparent">
-        <AccordionTrigger className="bg-transparent font-medium text-muted-foreground">
+        <AccordionTrigger className="text-muted-foreground bg-transparent font-medium">
           <div className="flex items-center">
             Definitions ({doc.defs.length})
           </div>
@@ -97,13 +97,13 @@ export function DocumentDefinitionsEditor({
         <AccordionContent className="bg-transparent px-1 pt-2">
           <div className="space-y-4">
             {doc.defs.length === 0 && (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Create reusable schema components to avoid duplication with a
                 new definition.
               </p>
             )}
             {controller.definitionViews.map((definitionView) => {
-              const { definition } = definitionView
+              const { definition } = definitionView;
               return (
                 <div
                   key={definition.id}
@@ -124,7 +124,7 @@ export function DocumentDefinitionsEditor({
                       controller.updateDefinition(
                         definition,
                         newName,
-                        updatedDefinition
+                        updatedDefinition,
                       )
                     }
                     path={definitionView.path}
@@ -133,7 +133,7 @@ export function DocumentDefinitionsEditor({
                     setDefsAccordionOpen={setAccordionOpen}
                   />
                 </div>
-              )
+              );
             })}
             {controller.editable && definitionsEnabled && (
               <div className="flex items-center gap-3">
@@ -161,5 +161,5 @@ export function DocumentDefinitionsEditor({
         </AccordionContent>
       </AccordionItem>
     </Accordion>
-  )
+  );
 }

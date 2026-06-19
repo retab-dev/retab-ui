@@ -1,25 +1,25 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { type ViewerDownloadAction } from "@/lib/viewer-download-actions"
+import { type ViewerDownloadAction } from "@/lib/viewer-download-actions";
 
-import { Skeleton } from "./skeleton"
-import { TextCodeViewerFrame } from "./text-code-viewer-chrome"
+import { Skeleton } from "./skeleton";
+import { TextCodeViewerFrame } from "./text-code-viewer-chrome";
 import {
   ViewerControls,
   ViewerControlsSkeleton,
   type ViewerControlsState,
-} from "./viewer-controls"
+} from "./viewer-controls";
 
 export function CodeViewerFrame({
   className,
   bare,
   children,
 }: {
-  className?: string
-  bare?: boolean
-  children: React.ReactNode
+  className?: string;
+  bare?: boolean;
+  children: React.ReactNode;
 }) {
   return (
     <TextCodeViewerFrame
@@ -31,7 +31,7 @@ export function CodeViewerFrame({
     >
       {children}
     </TextCodeViewerFrame>
-  )
+  );
 }
 
 export function CodeViewerControls({
@@ -42,12 +42,12 @@ export function CodeViewerControls({
   onZoomIn,
   onResetZoom,
 }: {
-  lineCount: number
-  fontScale: number
-  downloadAction?: ViewerDownloadAction | null
-  onZoomOut: () => void
-  onZoomIn: () => void
-  onResetZoom: () => void
+  lineCount: number;
+  fontScale: number;
+  downloadAction?: ViewerDownloadAction | null;
+  onZoomOut: () => void;
+  onZoomIn: () => void;
+  onResetZoom: () => void;
 }) {
   const controlsState = codeViewerControlsState({
     lineCount,
@@ -56,7 +56,7 @@ export function CodeViewerControls({
     onZoomOut,
     onZoomIn,
     onResetZoom,
-  })
+  });
 
   return (
     <ViewerControls
@@ -64,7 +64,7 @@ export function CodeViewerControls({
       zoom={controlsState.zoom}
       downloads={controlsState.downloads}
     />
-  )
+  );
 }
 
 export function codeViewerControlsState({
@@ -75,12 +75,12 @@ export function codeViewerControlsState({
   onZoomIn,
   onResetZoom,
 }: {
-  lineCount: number
-  fontScale: number
-  downloadAction?: ViewerDownloadAction | null
-  onZoomOut: () => void
-  onZoomIn: () => void
-  onResetZoom: () => void
+  lineCount: number;
+  fontScale: number;
+  downloadAction?: ViewerDownloadAction | null;
+  onZoomOut: () => void;
+  onZoomIn: () => void;
+  onResetZoom: () => void;
 }): ViewerControlsState {
   return {
     title: `${lineCount} line${lineCount === 1 ? "" : "s"}`,
@@ -92,7 +92,7 @@ export function codeViewerControlsState({
       fitLabel: "Reset zoom",
     },
     downloads: downloadAction ? [downloadAction] : [],
-  }
+  };
 }
 
 export function CodeViewerFallback({
@@ -101,10 +101,10 @@ export function CodeViewerFallback({
   download = true,
   bare,
 }: {
-  className?: string
-  controls?: boolean
-  download?: boolean
-  bare?: boolean
+  className?: string;
+  controls?: boolean;
+  download?: boolean;
+  bare?: boolean;
 }) {
   return (
     <CodeViewerFrame className={className} bare={bare}>
@@ -124,5 +124,5 @@ export function CodeViewerFallback({
         ))}
       </div>
     </CodeViewerFrame>
-  )
+  );
 }

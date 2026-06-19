@@ -1,40 +1,40 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import type { ViewerResource } from "@/lib/viewer-resource"
-import { useThumbnailResource } from "@/components/file-thumbnail/thumbnail-resource"
+import type { ViewerResource } from "@/lib/viewer-resource";
+import { useThumbnailResource } from "@/components/file-thumbnail/thumbnail-resource";
 import {
   getThumbnailText,
   thumbnailFileMeta,
-} from "@/components/file-thumbnail/thumbnail-text"
+} from "@/components/file-thumbnail/thumbnail-text";
 
-const TEXT_THUMBNAIL_MAX_PARAGRAPHS = 12
-const TEXT_THUMBNAIL_FONT_SIZE = 7
-const TEXT_THUMBNAIL_LINE_HEIGHT = 1.55
+const TEXT_THUMBNAIL_MAX_PARAGRAPHS = 12;
+const TEXT_THUMBNAIL_FONT_SIZE = 7;
+const TEXT_THUMBNAIL_LINE_HEIGHT = 1.55;
 
 export function TextThumbnail({
   resource,
   thumbnailKey,
 }: {
-  resource: ViewerResource
-  thumbnailKey: string
+  resource: ViewerResource;
+  thumbnailKey: string;
 }) {
   const raw = useThumbnailResource(
     getThumbnailText(
       thumbnailFileMeta(resource),
       resource.content,
-      thumbnailKey
-    )
-  )
-  const paragraphs = React.useMemo(() => proseThumbnailParagraphs(raw), [raw])
+      thumbnailKey,
+    ),
+  );
+  const paragraphs = React.useMemo(() => proseThumbnailParagraphs(raw), [raw]);
 
-  if (!paragraphs.length) return <EmptyTextThumbnail />
+  if (!paragraphs.length) return <EmptyTextThumbnail />;
 
   return (
     <div
       data-slot="text-thumbnail"
-      className="absolute inset-0 overflow-hidden bg-card p-3 font-sans text-foreground/80"
+      className="bg-card text-foreground/80 absolute inset-0 overflow-hidden p-3 font-sans"
       style={{
         fontSize: TEXT_THUMBNAIL_FONT_SIZE,
         lineHeight: TEXT_THUMBNAIL_LINE_HEIGHT,
@@ -48,7 +48,7 @@ export function TextThumbnail({
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 function EmptyTextThumbnail() {
@@ -56,9 +56,9 @@ function EmptyTextThumbnail() {
     <div
       aria-label="Empty text file"
       data-slot="text-thumbnail-empty"
-      className="absolute inset-0 bg-card"
+      className="bg-card absolute inset-0"
     />
-  )
+  );
 }
 
 function proseThumbnailParagraphs(text: string) {
@@ -68,5 +68,5 @@ function proseThumbnailParagraphs(text: string) {
     .split(/\n{2,}/)
     .map((paragraph) => paragraph.replace(/\s*\n\s*/g, " ").trim())
     .filter(Boolean)
-    .slice(0, TEXT_THUMBNAIL_MAX_PARAGRAPHS)
+    .slice(0, TEXT_THUMBNAIL_MAX_PARAGRAPHS);
 }

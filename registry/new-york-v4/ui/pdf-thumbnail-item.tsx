@@ -1,15 +1,15 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import type { PdfDocumentProxy } from "@/lib/pdf-document-types"
-import { cn } from "@/lib/utils"
+import type { PdfDocumentProxy } from "@/lib/pdf-document-types";
+import { cn } from "@/lib/utils";
 
 import {
   PdfThumbnailCanvas,
   PdfThumbnailSkeleton,
-} from "./pdf-thumbnail-canvas"
-import type { PdfThumbnailLayoutItem } from "./pdf-thumbnail-layout"
+} from "./pdf-thumbnail-canvas";
+import type { PdfThumbnailLayoutItem } from "./pdf-thumbnail-layout";
 
 export function PdfThumbnailItem({
   doc,
@@ -18,11 +18,11 @@ export function PdfThumbnailItem({
   itemId,
   onSelectPage,
 }: {
-  doc: PdfDocumentProxy
-  item: PdfThumbnailLayoutItem
-  active: boolean
-  itemId: string
-  onSelectPage?: (pageNumber: number) => void
+  doc: PdfDocumentProxy;
+  item: PdfThumbnailLayoutItem;
+  active: boolean;
+  itemId: string;
+  onSelectPage?: (pageNumber: number) => void;
 }) {
   return (
     <button
@@ -38,7 +38,7 @@ export function PdfThumbnailItem({
       <div
         className={cn(
           "overflow-hidden rounded-sm bg-white ring-2 transition-shadow",
-          active ? "ring-primary" : "ring-sidebar-border"
+          active ? "ring-primary" : "ring-sidebar-border",
         )}
         style={{ width: item.imageWidth, height: item.imageHeight }}
       >
@@ -54,12 +54,12 @@ export function PdfThumbnailItem({
         className={cn(
           "text-[10px] tabular-nums",
           active
-            ? "font-semibold text-sidebar-foreground"
-            : "text-sidebar-foreground/70"
+            ? "text-sidebar-foreground font-semibold"
+            : "text-sidebar-foreground/70",
         )}
       >
         {item.pageNumber}
       </span>
     </button>
-  )
+  );
 }

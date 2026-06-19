@@ -1,58 +1,58 @@
-"use client"
+"use client";
 
-import type { FileSystemEntry, FileSystemIndex } from "./file-system-types"
+import type { FileSystemEntry, FileSystemIndex } from "./file-system-types";
 
 export type FileSystemPierreAdapterSource = {
-  currentPath: string
+  currentPath: string;
   ensureChildren: (
     path: string,
-    options?: { retry?: boolean }
-  ) => Promise<FileSystemEntry[]>
-  folderErrors: ReadonlyMap<string, string>
-  index: FileSystemIndex
-  loadingFolders: ReadonlySet<string>
-  navigateTo: (path: string) => void
-  search: string
-  selectEntry: (entry: FileSystemEntry | null) => void
-  selectedPath: string | null
-}
+    options?: { retry?: boolean },
+  ) => Promise<FileSystemEntry[]>;
+  folderErrors: ReadonlyMap<string, string>;
+  index: FileSystemIndex;
+  loadingFolders: ReadonlySet<string>;
+  navigateTo: (path: string) => void;
+  search: string;
+  selectEntry: (entry: FileSystemEntry | null) => void;
+  selectedPath: string | null;
+};
 
 export type FileSystemPierreLoadingController = {
-  ensureChildren: FileSystemPierreAdapterSource["ensureChildren"]
-  folderErrors: ReadonlyMap<string, string>
-  loadingFolders: ReadonlySet<string>
-}
+  ensureChildren: FileSystemPierreAdapterSource["ensureChildren"];
+  folderErrors: ReadonlyMap<string, string>;
+  loadingFolders: ReadonlySet<string>;
+};
 
 export type FileSystemPierreNavigationController = {
-  currentPath: string
-  navigateTo: FileSystemPierreAdapterSource["navigateTo"]
-}
+  currentPath: string;
+  navigateTo: FileSystemPierreAdapterSource["navigateTo"];
+};
 
 export type FileSystemPierreSelectionController = {
-  selectEntry: FileSystemPierreAdapterSource["selectEntry"]
-  selectedPath: string | null
-}
+  selectEntry: FileSystemPierreAdapterSource["selectEntry"];
+  selectedPath: string | null;
+};
 
 export type FileSystemPierreQueryState = {
-  search: string
-}
+  search: string;
+};
 
 export type FileSystemPierreDecorationState = {
-  folderErrors: ReadonlyMap<string, string>
-  index: FileSystemIndex
-  loadingFolders: ReadonlySet<string>
-}
+  folderErrors: ReadonlyMap<string, string>;
+  index: FileSystemIndex;
+  loadingFolders: ReadonlySet<string>;
+};
 
 export type FileSystemPierreAdapterState = {
-  decoration: FileSystemPierreDecorationState
-  loading: FileSystemPierreLoadingController
-  navigation: FileSystemPierreNavigationController
-  query: FileSystemPierreQueryState
-  selection: FileSystemPierreSelectionController
-}
+  decoration: FileSystemPierreDecorationState;
+  loading: FileSystemPierreLoadingController;
+  navigation: FileSystemPierreNavigationController;
+  query: FileSystemPierreQueryState;
+  selection: FileSystemPierreSelectionController;
+};
 
 export function createFileSystemPierreAdapterState(
-  source: FileSystemPierreAdapterSource
+  source: FileSystemPierreAdapterSource,
 ): FileSystemPierreAdapterState {
   return {
     decoration: {
@@ -76,5 +76,5 @@ export function createFileSystemPierreAdapterState(
       selectEntry: source.selectEntry,
       selectedPath: source.selectedPath,
     },
-  }
+  };
 }

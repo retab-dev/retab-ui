@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { meanConfidence, toSegments } from "@/lib/segments"
-import { FileViewer } from "@/components/ui/file-viewer"
-import { SegmentSidebar } from "@/components/ui/segment-sidebar"
-import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
+import { meanConfidence, toSegments } from "@/lib/segments";
+import { FileViewer } from "@/components/ui/file-viewer";
+import { SegmentSidebar } from "@/components/ui/segment-sidebar";
+import { useSegmentInteraction } from "@/components/ui/use-segment-interaction";
 import {
   ViewerBody,
   ViewerHeader,
@@ -13,7 +13,7 @@ import {
   ViewerSidebar,
   ViewerSidebarTrigger,
   ViewerSurface,
-} from "@/components/ui/viewer"
+} from "@/components/ui/viewer";
 
 const documentSegments = [
   { name: "Executive summary", pages: [1] },
@@ -22,32 +22,32 @@ const documentSegments = [
   { name: "Management discussion", pages: [5, 6, 7] },
   { name: "Financial statements", pages: [8, 9, 10, 11] },
   { name: "Signatures", pages: [12] },
-]
+];
 
-const confidence = [0.98, 0.91, 0.87, 0.9, 0.84, 0.96]
+const confidence = [0.98, 0.91, 0.87, 0.9, 0.84, 0.96];
 
 export function ViewerSidebarDemo() {
-  const [currentPage, setCurrentPage] = React.useState(1)
-  const interaction = useSegmentInteraction()
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const interaction = useSegmentInteraction();
   const segments = React.useMemo(
     () =>
       toSegments(
         documentSegments,
-        confidence.map((value) => meanConfidence([value]))
+        confidence.map((value) => meanConfidence([value])),
       ),
-    []
-  )
+    [],
+  );
 
   return (
     <div
-      className="not-prose h-[640px] overflow-hidden rounded-xl border bg-background"
+      className="not-prose bg-background h-[640px] overflow-hidden rounded-xl border"
       data-demo="viewer-sidebar"
     >
       <ViewerRoot
         defaultOpen
         mode="inline"
         sidebarCollapsible="offcanvas"
-        className="h-full bg-background"
+        className="bg-background h-full"
       >
         <ViewerHeader className="flex min-h-11 items-center gap-2 px-2">
           <ViewerSidebarTrigger className="-ml-1" />
@@ -55,7 +55,7 @@ export function ViewerSidebarDemo() {
             <div className="truncate text-sm font-medium">
               Prospectus review
             </div>
-            <div className="truncate text-xs text-muted-foreground">
+            <div className="text-muted-foreground truncate text-xs">
               ViewerSidebar owns the rail; SegmentSidebar owns the rows.
             </div>
           </div>
@@ -63,7 +63,7 @@ export function ViewerSidebarDemo() {
         <ViewerBody>
           <ViewerSidebar
             aria-label="Document sections"
-            className="border-r bg-sidebar"
+            className="bg-sidebar border-r"
             width="18rem"
           >
             <SegmentSidebar
@@ -88,5 +88,5 @@ export function ViewerSidebarDemo() {
         </ViewerBody>
       </ViewerRoot>
     </div>
-  )
+  );
 }

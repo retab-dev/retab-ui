@@ -1,53 +1,53 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
 import {
   PdfViewer,
   PdfViewerPages,
   PdfViewerProvider,
-} from "@/components/ui/pdf-viewer"
-import { EmailViewerDemo } from "@/components/email-viewer-demo"
+} from "@/components/ui/pdf-viewer";
+import { EmailViewerDemo } from "@/components/email-viewer-demo";
 import {
   LargeParseViewerDemo,
   ParseViewerDemo,
-} from "@/components/parse-viewer-demo"
-import { TextViewerDemo } from "@/components/text-viewer-demo"
-import { ClassifierViewer } from "@/components/viewers/classify/classifier-viewer"
-import { EditViewer } from "@/components/viewers/edit/edit-viewer"
-import type { FormField } from "@/components/viewers/lib/edit-types"
-import type { PartitionResult } from "@/components/viewers/lib/partition-types"
-import type { SplitView } from "@/components/viewers/lib/split-types"
+} from "@/components/parse-viewer-demo";
+import { TextViewerDemo } from "@/components/text-viewer-demo";
+import { ClassifierViewer } from "@/components/viewers/classify/classifier-viewer";
+import { EditViewer } from "@/components/viewers/edit/edit-viewer";
+import type { FormField } from "@/components/viewers/lib/edit-types";
+import type { PartitionResult } from "@/components/viewers/lib/partition-types";
+import type { SplitView } from "@/components/viewers/lib/split-types";
 import {
   PartitionViewer,
   usePartitionViewerDocumentControls,
-} from "@/components/viewers/partition/partition-viewer"
-import editSample from "@/components/viewers/sample-data/edit.json"
-import partitionSample from "@/components/viewers/sample-data/partition.json"
-import splitSample from "@/components/viewers/sample-data/split.json"
+} from "@/components/viewers/partition/partition-viewer";
+import editSample from "@/components/viewers/sample-data/edit.json";
+import partitionSample from "@/components/viewers/sample-data/partition.json";
+import splitSample from "@/components/viewers/sample-data/split.json";
 import {
   SplitViewer,
   useSplitViewerDocumentControls,
-} from "@/components/viewers/split/split-viewer"
-import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block"
-import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-sources-block"
+} from "@/components/viewers/split/split-viewer";
+import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block";
+import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-sources-block";
 
 // ── Sample data ─────────────────────────────────────────────────────────────
 
 /** Real split result: Harris 2023 federal + state tax returns (51 subdocuments). */
-const SPLIT_PDF_URL = "/samples/harris_2023_federal_state_returns.pdf"
+const SPLIT_PDF_URL = "/samples/harris_2023_federal_state_returns.pdf";
 /** Real partition result: ViT paper partitioned by section (8 keyed chunks over 22 pages). */
-const PARTITION_PDF_URL = "/samples/an-image-is-worth-16x16-words.pdf"
+const PARTITION_PDF_URL = "/samples/an-image-is-worth-16x16-words.pdf";
 const splitSource = {
   kind: "url" as const,
   url: SPLIT_PDF_URL,
   fileName: "harris_2023_federal_state_returns.pdf",
-}
+};
 const partitionSource = {
   kind: "url" as const,
   url: PARTITION_PDF_URL,
   fileName: "an-image-is-worth-16x16-words.pdf",
-}
+};
 
 const partitionResult: PartitionResult = {
   output: partitionSample.output as PartitionResult["output"],
@@ -57,21 +57,21 @@ const partitionResult: PartitionResult = {
     likelihoods: null,
   },
   usage: null,
-}
+};
 
 const splitResult: SplitView = {
   output: splitSample.output as SplitView["output"],
   consensus: { choices: [] },
   usage: null,
-}
+};
 
 /**
  * Real edit result: a Fidelity "Bank Wire Authorization" form filled from a
  * saved template (29 detected fields across 3 pages, normalized bbox anchors).
  */
-const EDIT_PDF_URL = "/samples/fidelity-edit/fidelity_original.pdf"
-const EDIT_FILLED_PDF_URL = "/samples/fidelity-edit/fidelity_filled.pdf"
-const editFields = editSample as FormField[]
+const EDIT_PDF_URL = "/samples/fidelity-edit/fidelity_original.pdf";
+const EDIT_FILLED_PDF_URL = "/samples/fidelity-edit/fidelity_filled.pdf";
+const editFields = editSample as FormField[];
 
 // ── Per-viewer demos (used by the docs MDX pages) ───────────────────────────
 
@@ -87,7 +87,7 @@ export function PartitionViewerDemo() {
         document={<PartitionDemoDocument />}
       />
     </div>
-  )
+  );
 }
 
 export function ClassificationViewerDemo() {
@@ -115,11 +115,11 @@ export function ClassificationViewerDemo() {
         }
       />
     </div>
-  )
+  );
 }
 
 function PartitionDemoDocument() {
-  const controls = usePartitionViewerDocumentControls()
+  const controls = usePartitionViewerDocumentControls();
 
   return (
     <PdfViewerProvider source={partitionSource}>
@@ -131,7 +131,7 @@ function PartitionDemoDocument() {
         className="h-full"
       />
     </PdfViewerProvider>
-  )
+  );
 }
 
 export function SplitViewerDemo() {
@@ -146,11 +146,11 @@ export function SplitViewerDemo() {
         document={<SplitViewerDemoDocument />}
       />
     </div>
-  )
+  );
 }
 
 function SplitViewerDemoDocument() {
-  const controls = useSplitViewerDocumentControls()
+  const controls = useSplitViewerDocumentControls();
 
   return (
     <PdfViewerProvider source={splitSource}>
@@ -162,7 +162,7 @@ function SplitViewerDemoDocument() {
         className="h-full"
       />
     </PdfViewerProvider>
-  )
+  );
 }
 
 export function ExtractViewerDemo() {
@@ -175,7 +175,7 @@ export function ExtractViewerDemo() {
     >
       <ExtractViewerBlock />
     </div>
-  )
+  );
 }
 
 export function JsonFormSourcesDemo() {
@@ -188,7 +188,7 @@ export function JsonFormSourcesDemo() {
     >
       <JsonFormSourcesBlock />
     </div>
-  )
+  );
 }
 
 export function EditViewerDemo() {
@@ -214,7 +214,7 @@ export function EditViewerDemo() {
         }}
       />
     </div>
-  )
+  );
 }
 
 /** All viewers in one page (used by the /viewers-preview route). */
@@ -250,5 +250,5 @@ export function ViewersDemo() {
         <SplitViewerDemo />
       </section>
     </div>
-  )
+  );
 }

@@ -1,41 +1,41 @@
-import Link from "next/link"
-import { notFound } from "next/navigation"
-import { mdxComponents } from "@/mdx-components"
-import { findNeighbour } from "fumadocs-core/page-tree"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { mdxComponents } from "@/mdx-components";
+import { findNeighbour } from "fumadocs-core/page-tree";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
-import { source } from "@/lib/source"
-import { absoluteUrl } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { DocsCopyPage } from "@/components/docs-copy-page"
-import { DocsTableOfContents } from "@/components/docs-toc"
-import { MarkdownViewerDemo } from "@/components/markdown-viewer-demo"
+import { source } from "@/lib/source";
+import { absoluteUrl } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { DocsCopyPage } from "@/components/docs-copy-page";
+import { DocsTableOfContents } from "@/components/docs-toc";
+import { MarkdownViewerDemo } from "@/components/markdown-viewer-demo";
 
-export const revalidate = false
-export const dynamic = "force-static"
-export const dynamicParams = false
+export const revalidate = false;
+export const dynamic = "force-static";
+export const dynamicParams = false;
 
 const MARKDOWN_VIEWER_DOC_URL =
-  "/docs/components/file-viewer/renderers/markdown"
+  "/docs/components/file-viewer/renderers/markdown";
 
 export function generateStaticParams() {
-  return source.generateParams()
+  return source.generateParams();
 }
 
 export async function generateMetadata(props: {
-  params: Promise<{ slug: string[] }>
+  params: Promise<{ slug: string[] }>;
 }) {
-  const params = await props.params
-  const page = source.getPage(params.slug)
+  const params = await props.params;
+  const page = source.getPage(params.slug);
 
   if (!page) {
-    notFound()
+    notFound();
   }
 
-  const doc = page.data
+  const doc = page.data;
 
   if (!doc.title || !doc.description) {
-    notFound()
+    notFound();
   }
 
   return {
@@ -49,7 +49,7 @@ export async function generateMetadata(props: {
       images: [
         {
           url: `/og?title=${encodeURIComponent(
-            doc.title
+            doc.title,
           )}&description=${encodeURIComponent(doc.description)}`,
         },
       ],
@@ -61,27 +61,27 @@ export async function generateMetadata(props: {
       images: [
         {
           url: `/og?title=${encodeURIComponent(
-            doc.title
+            doc.title,
           )}&description=${encodeURIComponent(doc.description)}`,
         },
       ],
     },
-  }
+  };
 }
 
 export default async function Page(props: {
-  params: Promise<{ slug: string[] }>
+  params: Promise<{ slug: string[] }>;
 }) {
-  const params = await props.params
-  const page = source.getPage(params.slug)
+  const params = await props.params;
+  const page = source.getPage(params.slug);
   if (!page) {
-    notFound()
+    notFound();
   }
 
-  const doc = page.data
-  const MDX = doc.body
-  const neighbours = findNeighbour(source.pageTree, page.url)
-  const raw = await page.data.getText("raw")
+  const doc = page.data;
+  const MDX = doc.body;
+  const neighbours = findNeighbour(source.pageTree, page.url);
+  const raw = await page.data.getText("raw");
 
   return (
     <div
@@ -132,7 +132,7 @@ export default async function Page(props: {
                 </div>
               </div>
               {doc.description && (
-                <p className="text-[1.05rem] text-muted-foreground sm:text-base sm:text-balance md:max-w-[80%]">
+                <p className="text-muted-foreground text-[1.05rem] sm:text-base sm:text-balance md:max-w-[80%]">
                   {doc.description}
                 </p>
               )}
@@ -189,5 +189,5 @@ export default async function Page(props: {
         ) : null}
       </div>
     </div>
-  )
+  );
 }

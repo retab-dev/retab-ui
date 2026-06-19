@@ -1,49 +1,49 @@
 // @vitest-environment jsdom
 
-import * as React from "react"
+import * as React from "react";
 import {
   act,
   cleanup,
   fireEvent,
   render,
   waitFor,
-} from "@testing-library/react"
-import type { JSONSchema7 } from "json-schema"
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
+} from "@testing-library/react";
+import type { JSONSchema7 } from "json-schema";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
-import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
-import type { JsonTableProfilerState } from "@/components/json-table/json-table-profiler"
-import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
-import { projectDocumentRows } from "@/components/json-table/lib/document-projection"
-import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
-import type { TableDocument } from "@/components/json-table/lib/projects-types"
+import type { VisibleColumn } from "@/components/json-table/json-table-cell-types";
+import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store";
+import type { JsonTableProfilerState } from "@/components/json-table/json-table-profiler";
+import type { ProjectedRow } from "@/components/json-table/lib/document-projection";
+import { projectDocumentRows } from "@/components/json-table/lib/document-projection";
+import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes";
+import type { TableDocument } from "@/components/json-table/lib/projects-types";
 import {
   getFieldMetadata,
   type FieldMetadata,
-} from "@/components/json-table/lib/schema-field-metadata"
-import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
+} from "@/components/json-table/lib/schema-field-metadata";
+import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table";
 
 import {
   activatePrimitiveCell,
   clickPrimitiveCell,
   createTestCellCommitBridge,
   primitiveEventTarget,
-} from "./json-table-interaction-test-utils"
-import { installJsonTableDom } from "./json-table-test-dom"
+} from "./json-table-interaction-test-utils";
+import { installJsonTableDom } from "./json-table-test-dom";
 
 beforeAll(() => {
-  installJsonTableDom()
+  installJsonTableDom();
   Object.assign(globalThis, {
     Element: window.Element,
     Node: window.Node,
-  })
-})
+  });
+});
 afterEach(() => {
-  cleanup()
-  vi.restoreAllMocks()
-  window.__jsonTableProfiler = undefined
-})
+  cleanup();
+  vi.restoreAllMocks();
+  window.__jsonTableProfiler = undefined;
+});
 
 const schema: JSONSchema7 = {
   type: "object",
@@ -68,7 +68,7 @@ const schema: JSONSchema7 = {
       },
     },
   },
-}
+};
 
 const document: TableDocument = {
   id: "doc_1",
@@ -80,7 +80,7 @@ const document: TableDocument = {
     status: "draft",
     shipped_at: "2024-01-02",
   },
-}
+};
 
 function linesDocument(rowCount = 48): TableDocument {
   return {
@@ -94,13 +94,13 @@ function linesDocument(rowCount = 48): TableDocument {
         shipped_at: "2024-01-02",
       })),
     },
-  }
+  };
 }
 
 function requiredFieldMetadata(key: string): FieldMetadata {
-  const fieldMetadata = getFieldMetadata(schema, key)
-  if (!fieldMetadata) throw new Error(`Missing field metadata for ${key}`)
-  return fieldMetadata
+  const fieldMetadata = getFieldMetadata(schema, key);
+  if (!fieldMetadata) throw new Error(`Missing field metadata for ${key}`);
+  return fieldMetadata;
 }
 
 function visibleColumn(key: string): VisibleColumn {
@@ -108,11 +108,11 @@ function visibleColumn(key: string): VisibleColumn {
     key,
     widthPx: 180,
     fieldMetadata: requiredFieldMetadata(key),
-  }
+  };
 }
 
 function headerNode(key: string): JsonTableHeaderNode {
-  const fieldMetadata = requiredFieldMetadata(key)
+  const fieldMetadata = requiredFieldMetadata(key);
 
   return {
     key,
@@ -127,7 +127,7 @@ function headerNode(key: string): JsonTableHeaderNode {
     isArray: fieldMetadata.kind === "array",
     canFold: false,
     isExpanded: true,
-  }
+  };
 }
 
 function renderVirtualTable({
@@ -138,19 +138,19 @@ function renderVirtualTable({
   overscan = 8,
   jumpOverscan = overscan,
 }: {
-  tableDocument?: TableDocument
-  visiblePaths: string[]
-  jsonEditMode?: "editable" | "readOnly"
-  onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
-  overscan?: number
-  jumpOverscan?: number
+  tableDocument?: TableDocument;
+  visiblePaths: string[];
+  jsonEditMode?: "editable" | "readOnly";
+  onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>;
+  overscan?: number;
+  jumpOverscan?: number;
 }) {
   const projectedRows = projectDocumentRows({
     document: tableDocument,
     visiblePaths,
     includeArrayAddRows: false,
-  })
-  const primitiveEditStore = createJsonTablePrimitiveEditStore()
+  });
+  const primitiveEditStore = createJsonTablePrimitiveEditStore();
 
   return render(
     <SingleFileVirtualizedTable
@@ -177,8 +177,8 @@ function renderVirtualTable({
       columnWidth="xxl"
       overscan={overscan}
       jumpOverscan={jumpOverscan}
-    />
-  )
+    />,
+  );
 }
 
 function StatefulVirtualTable({
@@ -186,11 +186,11 @@ function StatefulVirtualTable({
   visiblePaths,
   onPatch,
 }: {
-  initialDocument: TableDocument
-  visiblePaths: string[]
-  onPatch?: (patch: Record<string, unknown>) => void
+  initialDocument: TableDocument;
+  visiblePaths: string[];
+  onPatch?: (patch: Record<string, unknown>) => void;
 }) {
-  const [tableDocument, setTableDocument] = React.useState(initialDocument)
+  const [tableDocument, setTableDocument] = React.useState(initialDocument);
   const projectedRows = React.useMemo(
     () =>
       projectDocumentRows({
@@ -198,21 +198,21 @@ function StatefulVirtualTable({
         visiblePaths,
         includeArrayAddRows: false,
       }),
-    [tableDocument, visiblePaths]
-  )
+    [tableDocument, visiblePaths],
+  );
   const primitiveEditStoreRef = React.useRef(
-    createJsonTablePrimitiveEditStore()
-  )
+    createJsonTablePrimitiveEditStore(),
+  );
   const onUpdateDocument = React.useCallback(
     async (patch: Record<string, unknown>) => {
-      onPatch?.(patch)
+      onPatch?.(patch);
       setTableDocument((currentDocument) => ({
         ...currentDocument,
         ...patch,
-      }))
+      }));
     },
-    [onPatch]
-  )
+    [onPatch],
+  );
 
   return (
     <SingleFileVirtualizedTable
@@ -240,7 +240,7 @@ function StatefulVirtualTable({
       overscan={4}
       jumpOverscan={4}
     />
-  )
+  );
 }
 
 function renderStatefulVirtualTable({
@@ -248,17 +248,17 @@ function renderStatefulVirtualTable({
   visiblePaths,
   onPatch,
 }: {
-  initialDocument: TableDocument
-  visiblePaths: string[]
-  onPatch?: (patch: Record<string, unknown>) => void
+  initialDocument: TableDocument;
+  visiblePaths: string[];
+  onPatch?: (patch: Record<string, unknown>) => void;
 }) {
   return render(
     <StatefulVirtualTable
       initialDocument={initialDocument}
       visiblePaths={visiblePaths}
       onPatch={onPatch}
-    />
-  )
+    />,
+  );
 }
 
 function installProfiler(): JsonTableProfilerState {
@@ -272,393 +272,395 @@ function installProfiler(): JsonTableProfilerState {
       changedProps: {},
     },
     snapshots: {},
-  }
-  window.__jsonTableProfiler = profiler
-  return profiler
+  };
+  window.__jsonTableProfiler = profiler;
+  return profiler;
 }
 
 function clearProfilerEvents() {
-  const profiler = window.__jsonTableProfiler
-  if (!profiler) throw new Error("Missing JSON table profiler")
-  profiler.events = []
+  const profiler = window.__jsonTableProfiler;
+  if (!profiler) throw new Error("Missing JSON table profiler");
+  profiler.events = [];
   profiler.renders = {
     total: 0,
     byComponent: {},
     byInstance: {},
     changedProps: {},
-  }
+  };
 }
 
 function editableCells(container: HTMLElement) {
   return Array.from(
     container.querySelectorAll<HTMLElement>(
-      '[data-json-table-editable-cell="true"]'
-    )
-  )
+      '[data-json-table-editable-cell="true"]',
+    ),
+  );
 }
 
 function activeCells(container: HTMLElement) {
   return Array.from(
-    container.querySelectorAll<HTMLElement>('[data-active="true"]')
-  )
+    container.querySelectorAll<HTMLElement>('[data-active="true"]'),
+  );
 }
 
 function cellByFieldPath(container: HTMLElement, fieldPath: string) {
   const cell = container.querySelector<HTMLElement>(
-    `[data-field-path="${fieldPath}"]`
-  )
-  if (!cell) throw new Error(`Missing cell ${fieldPath}`)
-  return cell
+    `[data-field-path="${fieldPath}"]`,
+  );
+  if (!cell) throw new Error(`Missing cell ${fieldPath}`);
+  return cell;
 }
 
 function rowByIndex(container: HTMLElement, index: number) {
-  const row = container.querySelector<HTMLElement>(`[data-index="${index}"]`)
-  if (!row) throw new Error(`Missing row ${index}`)
-  return row
+  const row = container.querySelector<HTMLElement>(`[data-index="${index}"]`);
+  if (!row) throw new Error(`Missing row ${index}`);
+  return row;
 }
 
 function scrollViewport(container: HTMLElement) {
   const viewport = container.querySelector<HTMLElement>(
-    '[data-slot="json-table-scroll"]'
-  )
-  if (!viewport) throw new Error("Missing JSON table scroll viewport")
-  return viewport
+    '[data-slot="json-table-scroll"]',
+  );
+  if (!viewport) throw new Error("Missing JSON table scroll viewport");
+  return viewport;
 }
 
 function activateCell(container: HTMLElement, fieldPath: string) {
-  const cell = cellByFieldPath(container, fieldPath)
-  activatePrimitiveCell(cell)
-  return cell
+  const cell = cellByFieldPath(container, fieldPath);
+  activatePrimitiveCell(cell);
+  return cell;
 }
 
 async function activateCellControl(
   view: {
-    container: HTMLElement
-    findByRole: (role: string) => Promise<HTMLElement>
+    container: HTMLElement;
+    findByRole: (role: string) => Promise<HTMLElement>;
   },
   fieldPath: string,
-  role: string
+  role: string,
 ) {
-  const cell = activateCell(view.container, fieldPath)
-  await view.findByRole(role)
-  return cell
+  const cell = activateCell(view.container, fieldPath);
+  await view.findByRole(role);
+  return cell;
 }
 
 function clickCell(container: HTMLElement, fieldPath: string) {
-  const cell = cellByFieldPath(container, fieldPath)
-  clickPrimitiveCell(cell)
-  return cell
+  const cell = cellByFieldPath(container, fieldPath);
+  clickPrimitiveCell(cell);
+  return cell;
 }
 
 async function waitForField(
   container: HTMLElement,
-  fieldPath: string
+  fieldPath: string,
 ): Promise<HTMLElement> {
   return waitFor(() => cellByFieldPath(container, fieldPath), {
     timeout: 5000,
-  })
+  });
 }
 
 function installSynchronousAnimationFrame() {
-  const previousRequestAnimationFrame = globalThis.requestAnimationFrame
-  const previousCancelAnimationFrame = globalThis.cancelAnimationFrame
-  const previousWindowRequestAnimationFrame = window.requestAnimationFrame
-  const previousWindowCancelAnimationFrame = window.cancelAnimationFrame
+  const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+  const previousCancelAnimationFrame = globalThis.cancelAnimationFrame;
+  const previousWindowRequestAnimationFrame = window.requestAnimationFrame;
+  const previousWindowCancelAnimationFrame = window.cancelAnimationFrame;
   const requestAnimationFrame = (callback: FrameRequestCallback) => {
-    callback(0)
-    return 1
-  }
-  const cancelAnimationFrame = vi.fn()
+    callback(0);
+    return 1;
+  };
+  const cancelAnimationFrame = vi.fn();
 
-  globalThis.requestAnimationFrame = requestAnimationFrame
-  globalThis.cancelAnimationFrame = cancelAnimationFrame
-  window.requestAnimationFrame = requestAnimationFrame
-  window.cancelAnimationFrame = cancelAnimationFrame
+  globalThis.requestAnimationFrame = requestAnimationFrame;
+  globalThis.cancelAnimationFrame = cancelAnimationFrame;
+  window.requestAnimationFrame = requestAnimationFrame;
+  window.cancelAnimationFrame = cancelAnimationFrame;
 
   return () => {
-    globalThis.requestAnimationFrame = previousRequestAnimationFrame
-    globalThis.cancelAnimationFrame = previousCancelAnimationFrame
-    window.requestAnimationFrame = previousWindowRequestAnimationFrame
-    window.cancelAnimationFrame = previousWindowCancelAnimationFrame
-  }
+    globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+    globalThis.cancelAnimationFrame = previousCancelAnimationFrame;
+    window.requestAnimationFrame = previousWindowRequestAnimationFrame;
+    window.cancelAnimationFrame = previousWindowCancelAnimationFrame;
+  };
 }
 
 describe("json table session and virtualization hardening", () => {
   it("attaches the body scroll listener after the JSON table viewport ref resolves", async () => {
-    const originalAddEventListener = EventTarget.prototype.addEventListener
-    const scrollListenerSlots: string[] = []
+    const originalAddEventListener = EventTarget.prototype.addEventListener;
+    const scrollListenerSlots: string[] = [];
     vi.spyOn(EventTarget.prototype, "addEventListener").mockImplementation(
       function (
         this: EventTarget,
         type: string,
         listener: EventListenerOrEventListenerObject | null,
-        options?: boolean | AddEventListenerOptions
+        options?: boolean | AddEventListenerOptions,
       ) {
         const slot =
-          this instanceof window.HTMLElement ? this.dataset.slot : undefined
+          this instanceof window.HTMLElement ? this.dataset.slot : undefined;
         if (type === "scroll" && slot === "json-table-scroll") {
-          scrollListenerSlots.push(slot)
+          scrollListenerSlots.push(slot);
         }
-        return originalAddEventListener.call(this, type, listener, options)
-      }
-    )
+        return originalAddEventListener.call(this, type, listener, options);
+      },
+    );
 
     renderVirtualTable({
       tableDocument: linesDocument(),
       visiblePaths: ["lines.*.name", "lines.*.amount"],
       jsonEditMode: "readOnly",
       overscan: 12,
-    })
+    });
 
     await waitFor(() =>
-      expect(scrollListenerSlots).toContain("json-table-scroll")
-    )
-  })
+      expect(scrollListenerSlots).toContain("json-table-scroll"),
+    );
+  });
 
   it("unhides read-only row shells after a patched scroll settles", async () => {
-    const restoreAnimationFrame = installSynchronousAnimationFrame()
+    const restoreAnimationFrame = installSynchronousAnimationFrame();
     try {
       const view = renderVirtualTable({
         tableDocument: linesDocument(120),
         visiblePaths: ["lines.*.name", "lines.*.amount"],
         jsonEditMode: "readOnly",
         overscan: 12,
-      })
-      const viewport = scrollViewport(view.container)
+      });
+      const viewport = scrollViewport(view.container);
       Object.defineProperty(viewport, "clientHeight", {
         configurable: true,
         value: 367,
-      })
+      });
       Object.defineProperty(viewport, "clientWidth", {
         configurable: true,
         value: 1000,
-      })
+      });
 
       await act(async () => {
-        viewport.scrollTop = 32 * 93
-        fireEvent.scroll(viewport, { target: { scrollTop: viewport.scrollTop } })
-        viewport.dispatchEvent(new window.Event("scroll"))
-      })
+        viewport.scrollTop = 32 * 93;
+        fireEvent.scroll(viewport, {
+          target: { scrollTop: viewport.scrollTop },
+        });
+        viewport.dispatchEvent(new window.Event("scroll"));
+      });
 
       await act(async () => {
-        await new Promise((resolve) => window.setTimeout(resolve, 100))
-      })
+        await new Promise((resolve) => window.setTimeout(resolve, 100));
+      });
 
       for (const rowIndex of [93, 94, 95, 96, 97, 98, 99, 100, 101, 102]) {
-        expect(rowByIndex(view.container, rowIndex).hidden).toBe(false)
+        expect(rowByIndex(view.container, rowIndex).hidden).toBe(false);
       }
     } finally {
-      restoreAnimationFrame()
+      restoreAnimationFrame();
     }
-  })
+  });
 
   it("keeps one primitive active cell across cell switches", async () => {
-    installProfiler()
+    installProfiler();
     const view = renderVirtualTable({
       visiblePaths: ["vendor", "amount", "status"],
-    })
+    });
 
-    await waitFor(() => expect(editableCells(view.container)).toHaveLength(3))
+    await waitFor(() => expect(editableCells(view.container)).toHaveLength(3));
 
-    await activateCellControl(view, "vendor", "textbox")
-    expect(view.getByRole("textbox")).toHaveProperty("value", "ACME")
-    expect(activeCells(view.container)).toHaveLength(1)
+    await activateCellControl(view, "vendor", "textbox");
+    expect(view.getByRole("textbox")).toHaveProperty("value", "ACME");
+    expect(activeCells(view.container)).toHaveLength(1);
     expect(cellByFieldPath(view.container, "vendor").dataset.active).toBe(
-      "true"
-    )
+      "true",
+    );
 
-    await activateCellControl(view, "amount", "spinbutton")
-    expect(view.getByRole("spinbutton")).toHaveProperty("value", "12")
-    expect(activeCells(view.container)).toHaveLength(1)
+    await activateCellControl(view, "amount", "spinbutton");
+    expect(view.getByRole("spinbutton")).toHaveProperty("value", "12");
+    expect(activeCells(view.container)).toHaveLength(1);
     expect(cellByFieldPath(view.container, "amount").dataset.active).toBe(
-      "true"
-    )
+      "true",
+    );
 
-    await activateCellControl(view, "vendor", "textbox")
-    expect(view.getByRole("textbox")).toHaveProperty("value", "ACME")
-    expect(activeCells(view.container)).toHaveLength(1)
+    await activateCellControl(view, "vendor", "textbox");
+    expect(view.getByRole("textbox")).toHaveProperty("value", "ACME");
+    expect(activeCells(view.container)).toHaveLength(1);
     expect(cellByFieldPath(view.container, "vendor").dataset.active).toBe(
-      "true"
-    )
+      "true",
+    );
 
     expect(cellByFieldPath(view.container, "amount").dataset.active).toBe(
-      undefined
-    )
-  })
+      undefined,
+    );
+  });
 
   it("opens a primitive dropdown overlay without active-cell churn", async () => {
-    installProfiler()
-    const view = renderVirtualTable({ visiblePaths: ["status"] })
+    installProfiler();
+    const view = renderVirtualTable({ visiblePaths: ["status"] });
 
-    await waitFor(() => expect(editableCells(view.container)).toHaveLength(1))
+    await waitFor(() => expect(editableCells(view.container)).toHaveLength(1));
 
-    const statusCell = clickCell(view.container, "status")
-    const combobox = await view.findByRole("combobox")
+    const statusCell = clickCell(view.container, "status");
+    const combobox = await view.findByRole("combobox");
     await waitFor(() =>
-      expect(combobox.getAttribute("aria-expanded")).toBe("true")
-    )
+      expect(combobox.getAttribute("aria-expanded")).toBe("true"),
+    );
 
-    expect(statusCell.dataset.active).toBe("true")
-    expect(activeCells(view.container)).toHaveLength(1)
+    expect(statusCell.dataset.active).toBe("true");
+    expect(activeCells(view.container)).toHaveLength(1);
     expect(view.getByRole("combobox").getAttribute("aria-expanded")).toBe(
-      "true"
-    )
-  })
+      "true",
+    );
+  });
 
   it("opens a primitive dropdown without rendering sibling cells", async () => {
-    const profiler = installProfiler()
+    const profiler = installProfiler();
     const view = renderVirtualTable({
       visiblePaths: ["vendor", "status", "amount"],
-    })
+    });
 
-    await waitFor(() => expect(editableCells(view.container)).toHaveLength(3))
-    clearProfilerEvents()
+    await waitFor(() => expect(editableCells(view.container)).toHaveLength(3));
+    clearProfilerEvents();
 
-    clickCell(view.container, "status")
-    const combobox = await view.findByRole("combobox")
+    clickCell(view.container, "status");
+    const combobox = await view.findByRole("combobox");
     await waitFor(() =>
-      expect(combobox.getAttribute("aria-expanded")).toBe("true")
-    )
+      expect(combobox.getAttribute("aria-expanded")).toBe("true"),
+    );
 
     expect(
-      profiler.renders.byInstance["EditableJsonTableCell:status"] ?? 0
-    ).toBeGreaterThan(0)
+      profiler.renders.byInstance["EditableJsonTableCell:status"] ?? 0,
+    ).toBeGreaterThan(0);
     expect(
-      profiler.renders.byInstance["EditableJsonTableCell:vendor"] ?? 0
-    ).toBe(0)
+      profiler.renders.byInstance["EditableJsonTableCell:vendor"] ?? 0,
+    ).toBe(0);
     expect(
-      profiler.renders.byInstance["EditableJsonTableCell:amount"] ?? 0
-    ).toBe(0)
-  })
+      profiler.renders.byInstance["EditableJsonTableCell:amount"] ?? 0,
+    ).toBe(0);
+  });
 
   it("elevates only the active row while scalar input is focused and clears elevation on close", async () => {
     const view = renderVirtualTable({
       tableDocument: linesDocument(),
       visiblePaths: ["lines.*.name", "lines.*.amount"],
       overscan: 3,
-    })
+    });
 
-    await waitForField(view.container, "lines.0.name")
+    await waitForField(view.container, "lines.0.name");
 
-    await activateCellControl(view, "lines.0.name", "textbox")
-    const input = view.getByRole("textbox")
-
-    await waitFor(() =>
-      expect(rowByIndex(view.container, 0).style.zIndex).toBe("20")
-    )
-    expect(rowByIndex(view.container, 1).style.zIndex).toBe("")
-    expect(activeCells(view.container)).toHaveLength(1)
-
-    input.focus()
-    fireEvent.blur(input)
+    await activateCellControl(view, "lines.0.name", "textbox");
+    const input = view.getByRole("textbox");
 
     await waitFor(() =>
-      expect(rowByIndex(view.container, 0).style.zIndex).toBe("")
-    )
-    expect(activeCells(view.container)).toHaveLength(0)
-  })
+      expect(rowByIndex(view.container, 0).style.zIndex).toBe("20"),
+    );
+    expect(rowByIndex(view.container, 1).style.zIndex).toBe("");
+    expect(activeCells(view.container)).toHaveLength(1);
+
+    input.focus();
+    fireEvent.blur(input);
+
+    await waitFor(() =>
+      expect(rowByIndex(view.container, 0).style.zIndex).toBe(""),
+    );
+    expect(activeCells(view.container)).toHaveLength(0);
+  });
 
   it("elevates the overlay row, keeps unrelated rows inert, and clears when switching rows", async () => {
     const view = renderVirtualTable({
       tableDocument: linesDocument(),
       visiblePaths: ["lines.*.status", "lines.*.name"],
       overscan: 4,
-    })
+    });
 
-    await waitForField(view.container, "lines.0.status")
+    await waitForField(view.container, "lines.0.status");
 
-    clickCell(view.container, "lines.0.status")
-    const combobox = await view.findByRole("combobox")
+    clickCell(view.container, "lines.0.status");
+    const combobox = await view.findByRole("combobox");
     await waitFor(() =>
-      expect(combobox.getAttribute("aria-expanded")).toBe("true")
-    )
+      expect(combobox.getAttribute("aria-expanded")).toBe("true"),
+    );
     await waitFor(() =>
-      expect(rowByIndex(view.container, 0).style.zIndex).toBe("20")
-    )
-    expect(rowByIndex(view.container, 1).style.zIndex).toBe("")
+      expect(rowByIndex(view.container, 0).style.zIndex).toBe("20"),
+    );
+    expect(rowByIndex(view.container, 1).style.zIndex).toBe("");
     expect(
-      cellByFieldPath(view.container, "lines.1.status").dataset.active
-    ).toBe(undefined)
+      cellByFieldPath(view.container, "lines.1.status").dataset.active,
+    ).toBe(undefined);
 
-    await activateCellControl(view, "lines.1.name", "textbox")
+    await activateCellControl(view, "lines.1.name", "textbox");
 
-    expect(view.getByRole("textbox")).toHaveProperty("value", "line 1")
+    expect(view.getByRole("textbox")).toHaveProperty("value", "line 1");
     await waitFor(() =>
-      expect(rowByIndex(view.container, 0).style.zIndex).toBe("")
-    )
-    expect(rowByIndex(view.container, 1).style.zIndex).toBe("20")
-    expect(activeCells(view.container)).toHaveLength(1)
+      expect(rowByIndex(view.container, 0).style.zIndex).toBe(""),
+    );
+    expect(rowByIndex(view.container, 1).style.zIndex).toBe("20");
+    expect(activeCells(view.container)).toHaveLength(1);
     expect(cellByFieldPath(view.container, "lines.1.name").dataset.active).toBe(
-      "true"
-    )
-  })
+      "true",
+    );
+  });
 
   it("removes active controls and row elevation when virtualization unmounts the active row", async () => {
-    const restoreAnimationFrame = installSynchronousAnimationFrame()
+    const restoreAnimationFrame = installSynchronousAnimationFrame();
     const view = renderVirtualTable({
       tableDocument: linesDocument(80),
       visiblePaths: ["lines.*.name", "lines.*.shipped_at"],
       overscan: 1,
       jumpOverscan: 1,
-    })
+    });
 
     try {
-      await waitForField(view.container, "lines.0.name")
+      await waitForField(view.container, "lines.0.name");
 
-      await activateCellControl(view, "lines.0.name", "textbox")
-      expect(view.getByRole("textbox")).toHaveProperty("value", "line 0")
+      await activateCellControl(view, "lines.0.name", "textbox");
+      expect(view.getByRole("textbox")).toHaveProperty("value", "line 0");
       await waitFor(() =>
-        expect(rowByIndex(view.container, 0).style.zIndex).toBe("20")
-      )
+        expect(rowByIndex(view.container, 0).style.zIndex).toBe("20"),
+      );
 
-      const viewport = scrollViewport(view.container)
+      const viewport = scrollViewport(view.container);
       Object.defineProperty(viewport, "clientHeight", {
         configurable: true,
         value: 64,
-      })
+      });
 
       await act(async () => {
-        viewport.scrollTop = 32 * 24
-        fireEvent.scroll(viewport)
-      })
+        viewport.scrollTop = 32 * 24;
+        fireEvent.scroll(viewport);
+      });
 
       await waitFor(() =>
-        expect(view.container.querySelector('[data-index="0"]')).toBeNull()
-      )
-      expect(view.queryByRole("textbox")).toBeNull()
-      expect(activeCells(view.container)).toHaveLength(0)
-      expect(rowByIndex(view.container, 24).style.zIndex).toBe("")
+        expect(view.container.querySelector('[data-index="0"]')).toBeNull(),
+      );
+      expect(view.queryByRole("textbox")).toBeNull();
+      expect(activeCells(view.container)).toHaveLength(0);
+      expect(rowByIndex(view.container, 24).style.zIndex).toBe("");
     } finally {
-      restoreAnimationFrame()
+      restoreAnimationFrame();
     }
-  })
+  });
 
   it("composes rapid row commits from the latest pending document data", async () => {
     const onUpdateDocument = vi.fn<
       (patch: Record<string, unknown>) => Promise<void>
-    >(async () => undefined)
-    const baseDocument = linesDocument(3)
+    >(async () => undefined);
+    const baseDocument = linesDocument(3);
     const view = renderVirtualTable({
       tableDocument: baseDocument,
       visiblePaths: ["lines.*.name", "lines.*.amount"],
       onUpdateDocument,
-    })
+    });
 
-    await waitForField(view.container, "lines.0.name")
+    await waitForField(view.container, "lines.0.name");
 
-    await activateCellControl(view, "lines.0.name", "textbox")
-    const firstInput = view.getByRole("textbox")
-    fireEvent.change(firstInput, { target: { value: "alpha" } })
-    fireEvent.blur(firstInput)
+    await activateCellControl(view, "lines.0.name", "textbox");
+    const firstInput = view.getByRole("textbox");
+    fireEvent.change(firstInput, { target: { value: "alpha" } });
+    fireEvent.blur(firstInput);
 
-    await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(1));
 
-    await activateCellControl(view, "lines.1.amount", "spinbutton")
-    const secondInput = view.getByRole("spinbutton")
-    fireEvent.change(secondInput, { target: { value: "99" } })
-    fireEvent.blur(secondInput)
+    await activateCellControl(view, "lines.1.amount", "spinbutton");
+    const secondInput = view.getByRole("spinbutton");
+    fireEvent.change(secondInput, { target: { value: "99" } });
+    fireEvent.blur(secondInput);
 
-    await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(2));
 
     expect(onUpdateDocument.mock.calls[0][0]).toEqual({
       data: {
@@ -686,7 +688,7 @@ describe("json table session and virtualization hardening", () => {
           },
         ],
       },
-    })
+    });
     expect(onUpdateDocument.mock.calls[1][0]).toEqual({
       data: {
         lines: [
@@ -713,103 +715,103 @@ describe("json table session and virtualization hardening", () => {
           },
         ],
       },
-    })
-  })
+    });
+  });
 
   it("seeds switched rows from pending data before parent state catches up", async () => {
     const onUpdateDocument = vi.fn<
       (patch: Record<string, unknown>) => Promise<void>
-    >(async () => undefined)
+    >(async () => undefined);
     const view = renderVirtualTable({
       tableDocument: linesDocument(3),
       visiblePaths: ["lines.*.name", "lines.*.amount"],
       onUpdateDocument,
-    })
+    });
 
-    await waitForField(view.container, "lines.0.name")
+    await waitForField(view.container, "lines.0.name");
 
-    await activateCellControl(view, "lines.0.name", "textbox")
+    await activateCellControl(view, "lines.0.name", "textbox");
     fireEvent.change(view.getByRole("textbox"), {
       target: { value: "pending zero" },
-    })
-    await activateCellControl(view, "lines.1.amount", "spinbutton")
-    await activateCellControl(view, "lines.0.name", "textbox")
+    });
+    await activateCellControl(view, "lines.1.amount", "spinbutton");
+    await activateCellControl(view, "lines.0.name", "textbox");
 
-    expect(view.getByRole("textbox")).toHaveProperty("value", "pending zero")
-    expect(activeCells(view.container)).toHaveLength(1)
-    expect(onUpdateDocument).toHaveBeenCalledTimes(1)
-  })
+    expect(view.getByRole("textbox")).toHaveProperty("value", "pending zero");
+    expect(activeCells(view.container)).toHaveLength(1);
+    expect(onUpdateDocument).toHaveBeenCalledTimes(1);
+  });
 
   it("seeds reopened rows from committed parent data after rerender", async () => {
-    const onPatch = vi.fn()
+    const onPatch = vi.fn();
     const view = renderStatefulVirtualTable({
       initialDocument: linesDocument(3),
       visiblePaths: ["lines.*.name", "lines.*.amount"],
       onPatch,
-    })
+    });
 
-    await waitForField(view.container, "lines.0.name")
+    await waitForField(view.container, "lines.0.name");
 
-    await activateCellControl(view, "lines.0.name", "textbox")
-    const input = view.getByRole("textbox")
-    fireEvent.change(input, { target: { value: "server zero" } })
-    fireEvent.blur(input)
+    await activateCellControl(view, "lines.0.name", "textbox");
+    const input = view.getByRole("textbox");
+    fireEvent.change(input, { target: { value: "server zero" } });
+    fireEvent.blur(input);
 
-    await waitFor(() => expect(onPatch).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(onPatch).toHaveBeenCalledTimes(1));
     await waitFor(() =>
       expect(
-        cellByFieldPath(view.container, "lines.0.name").textContent
-      ).toContain("server zero")
-    )
+        cellByFieldPath(view.container, "lines.0.name").textContent,
+      ).toContain("server zero"),
+    );
 
-    await activateCellControl(view, "lines.1.amount", "spinbutton")
-    await activateCellControl(view, "lines.0.name", "textbox")
+    await activateCellControl(view, "lines.1.amount", "spinbutton");
+    await activateCellControl(view, "lines.0.name", "textbox");
 
-    expect(view.getByRole("textbox")).toHaveProperty("value", "server zero")
-    expect(onPatch).toHaveBeenCalledTimes(1)
-  })
+    expect(view.getByRole("textbox")).toHaveProperty("value", "server zero");
+    expect(onPatch).toHaveBeenCalledTimes(1);
+  });
 
   it("keeps editable tab stops and read-only cells sharply separated", async () => {
     const editableView = renderVirtualTable({
       visiblePaths: ["vendor", "amount", "is_paid", "status", "shipped_at"],
-    })
+    });
 
     await waitFor(() =>
-      expect(editableCells(editableView.container)).toHaveLength(5)
-    )
+      expect(editableCells(editableView.container)).toHaveLength(5),
+    );
     expect(
       editableCells(editableView.container).map((cell) =>
-        cell.getAttribute("tabindex")
-      )
-    ).toEqual([null, null, null, null, null])
+        cell.getAttribute("tabindex"),
+      ),
+    ).toEqual([null, null, null, null, null]);
     expect(
       editableCells(editableView.container).map((cell) =>
-        (primitiveEventTarget(cell) as HTMLElement).getAttribute("tabindex")
-      )
-    ).toEqual(["0", "0", "0", "0", "0"])
+        (primitiveEventTarget(cell) as HTMLElement).getAttribute("tabindex"),
+      ),
+    ).toEqual(["0", "0", "0", "0", "0"]);
 
-    cleanup()
+    cleanup();
 
     const readOnlyView = renderVirtualTable({
       visiblePaths: ["vendor", "amount", "is_paid", "status", "shipped_at"],
       jsonEditMode: "readOnly",
-    })
+    });
 
     await waitFor(() =>
-      expect(readOnlyView.container.querySelectorAll("td")).toHaveLength(5)
-    )
+      expect(readOnlyView.container.querySelectorAll("td")).toHaveLength(5),
+    );
     const readOnlyCells = Array.from(
-      readOnlyView.container.querySelectorAll<HTMLElement>("td")
-    )
-    expect(editableCells(readOnlyView.container)).toHaveLength(0)
+      readOnlyView.container.querySelectorAll<HTMLElement>("td"),
+    );
+    expect(editableCells(readOnlyView.container)).toHaveLength(0);
     expect(readOnlyCells.map((cell) => cell.getAttribute("tabindex"))).toEqual([
       null,
       null,
       null,
       null,
       null,
-    ])
-  })
+    ]);
+  });
 
   it("honors keyboard activation boundaries without editing from navigation or platform shortcuts", async () => {
     const ignoredKeys = [
@@ -819,68 +821,68 @@ describe("json table session and virtualization hardening", () => {
       { key: "c", metaKey: true },
       { key: "c", ctrlKey: true },
       { key: "e", altKey: true },
-    ]
+    ];
 
     for (const keyboardEvent of ignoredKeys) {
-      const view = renderVirtualTable({ visiblePaths: ["vendor"] })
-      await waitForField(view.container, "vendor")
-      const cell = cellByFieldPath(view.container, "vendor")
-      const surface = primitiveEventTarget(cell) as HTMLElement
+      const view = renderVirtualTable({ visiblePaths: ["vendor"] });
+      await waitForField(view.container, "vendor");
+      const cell = cellByFieldPath(view.container, "vendor");
+      const surface = primitiveEventTarget(cell) as HTMLElement;
 
-      surface.focus()
-      fireEvent.keyDown(surface, keyboardEvent)
+      surface.focus();
+      fireEvent.keyDown(surface, keyboardEvent);
 
-      expect(view.queryByRole("textbox")).toBeNull()
-      expect(activeCells(view.container)).toHaveLength(0)
-      cleanup()
+      expect(view.queryByRole("textbox")).toBeNull();
+      expect(activeCells(view.container)).toHaveLength(0);
+      cleanup();
     }
 
     for (const key of ["Enter", "F2", "A"]) {
-      const view = renderVirtualTable({ visiblePaths: ["vendor"] })
-      await waitForField(view.container, "vendor")
-      const cell = cellByFieldPath(view.container, "vendor")
-      const surface = primitiveEventTarget(cell) as HTMLElement
+      const view = renderVirtualTable({ visiblePaths: ["vendor"] });
+      await waitForField(view.container, "vendor");
+      const cell = cellByFieldPath(view.container, "vendor");
+      const surface = primitiveEventTarget(cell) as HTMLElement;
 
-      surface.focus()
-      fireEvent.keyDown(surface, { key })
+      surface.focus();
+      fireEvent.keyDown(surface, { key });
 
-      expect(view.getByRole("textbox")).toBeTruthy()
-      expect(activeCells(view.container)).toHaveLength(1)
-      cleanup()
+      expect(view.getByRole("textbox")).toBeTruthy();
+      expect(activeCells(view.container)).toHaveLength(1);
+      cleanup();
     }
 
-    const booleanView = renderVirtualTable({ visiblePaths: ["is_paid"] })
-    await waitForField(booleanView.container, "is_paid")
-    const booleanCell = cellByFieldPath(booleanView.container, "is_paid")
-    const booleanSurface = primitiveEventTarget(booleanCell) as HTMLElement
-    booleanSurface.focus()
-    fireEvent.keyDown(booleanSurface, { key: " " })
+    const booleanView = renderVirtualTable({ visiblePaths: ["is_paid"] });
+    await waitForField(booleanView.container, "is_paid");
+    const booleanCell = cellByFieldPath(booleanView.container, "is_paid");
+    const booleanSurface = primitiveEventTarget(booleanCell) as HTMLElement;
+    booleanSurface.focus();
+    fireEvent.keyDown(booleanSurface, { key: " " });
     await waitFor(() =>
-      expect(activeCells(booleanView.container)).toHaveLength(0)
-    )
-  })
+      expect(activeCells(booleanView.container)).toHaveLength(0),
+    );
+  });
 
   it("does not mount active controls or activate cells for unrelated mounted rows", async () => {
-    installProfiler()
+    installProfiler();
     const view = renderVirtualTable({
       tableDocument: linesDocument(12),
       visiblePaths: ["lines.*.name", "lines.*.amount"],
       overscan: 6,
-    })
+    });
 
-    await waitForField(view.container, "lines.0.name")
-    await waitForField(view.container, "lines.5.name")
-    clearProfilerEvents()
+    await waitForField(view.container, "lines.0.name");
+    await waitForField(view.container, "lines.5.name");
+    clearProfilerEvents();
 
-    await activateCellControl(view, "lines.0.name", "textbox")
-    expect(view.getByRole("textbox")).toHaveProperty("value", "line 0")
+    await activateCellControl(view, "lines.0.name", "textbox");
+    expect(view.getByRole("textbox")).toHaveProperty("value", "line 0");
 
-    expect(activeCells(view.container)).toHaveLength(1)
+    expect(activeCells(view.container)).toHaveLength(1);
     expect(cellByFieldPath(view.container, "lines.1.name").dataset.active).toBe(
-      undefined
-    )
+      undefined,
+    );
     expect(cellByFieldPath(view.container, "lines.5.name").dataset.active).toBe(
-      undefined
-    )
-  })
-})
+      undefined,
+    );
+  });
+});

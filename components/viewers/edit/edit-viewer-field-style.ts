@@ -1,4 +1,4 @@
-import type { EditViewerField } from "./edit-viewer-types"
+import type { EditViewerField } from "./edit-viewer-types";
 
 export const EDIT_FIELD_ACCENTS: Record<
   EditViewerField["type"],
@@ -16,4 +16,4 @@ export const EDIT_FIELD_ACCENTS: Record<
     text: "var(--color-amber-600)",
     badge: "border-warning/30 bg-warning/10 text-warning-foreground",
   },
-}
+};

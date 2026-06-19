@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/ui/pptx-viewer-types"
+export * from "@/registry/new-york-v4/ui/pptx-viewer-types";

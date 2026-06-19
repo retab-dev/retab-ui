@@ -1,9 +1,11 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { useFileSystemControlledProps } from "./file-system-controlled-props"
-import { useFileSystemFolderTask } from "./file-system-folder-task"
+import * as React from "react";
+
+import { useFileSystemControlledProps } from "./file-system-controlled-props";
+import { useFileSystemFolderTask } from "./file-system-folder-task";
 import {
   createFileSystemKernelState,
   reduceFileSystemKernel,
@@ -11,27 +13,27 @@ import {
   type FileSystemKernelEvent,
   type FileSystemKernelResult,
   type FileSystemKernelState,
-} from "./file-system-kernel"
-import { useFileSystemKernelCommandEffects } from "./file-system-kernel-command-effects"
+} from "./file-system-kernel";
+import { useFileSystemKernelCommandEffects } from "./file-system-kernel-command-effects";
 import type {
   FileSystemDispatch,
   FileSystemEnsureChildren,
-} from "./file-system-kernel-selectors"
-import type { FileSystemFileEntry, FileSystemProps } from "./file-system-types"
+} from "./file-system-kernel-selectors";
+import type { FileSystemFileEntry, FileSystemProps } from "./file-system-types";
 
 type FileSystemKernelRuntimeStore = {
-  consumeCommands: () => FileSystemKernelCommand[]
-  dispatch: (event: FileSystemKernelEvent) => FileSystemKernelResult
-  getState: () => FileSystemKernelState
-  subscribe: (listener: () => void) => () => void
-}
+  consumeCommands: () => FileSystemKernelCommand[];
+  dispatch: (event: FileSystemKernelEvent) => FileSystemKernelResult;
+  getState: () => FileSystemKernelState;
+  subscribe: (listener: () => void) => () => void;
+};
 
 export type FileSystemKernelRuntime = {
-  dispatch: FileSystemDispatch
-  ensureChildren: FileSystemEnsureChildren
-  getState: () => FileSystemKernelState
-  state: FileSystemKernelState
-}
+  dispatch: FileSystemDispatch;
+  ensureChildren: FileSystemEnsureChildren;
+  getState: () => FileSystemKernelState;
+  state: FileSystemKernelState;
+};
 
 export function useFileSystemKernelRuntime({
   defaultPath,
@@ -66,10 +68,10 @@ export function useFileSystemKernelRuntime({
   | "selectedPath"
   | "view"
 > & {
-  onFileCommand: (file: FileSystemFileEntry) => void
+  onFileCommand: (file: FileSystemFileEntry) => void;
 }): FileSystemKernelRuntime {
-  const [commandFlushVersion, setCommandFlushVersion] = React.useState(0)
-  const storeRef = React.useRef<FileSystemKernelRuntimeStore | null>(null)
+  const [commandFlushVersion, setCommandFlushVersion] = React.useState(0);
+  const storeRef = React.useRef<FileSystemKernelRuntimeStore | null>(null);
 
   if (!storeRef.current) {
     storeRef.current = createFileSystemKernelRuntimeStore({
@@ -81,28 +83,28 @@ export function useFileSystemKernelRuntime({
         items,
       }),
       scheduleCommandFlush: () => {
-        setCommandFlushVersion((version) => version + 1)
+        setCommandFlushVersion((version) => version + 1);
       },
-    })
+    });
   }
 
-  const store = storeRef.current
+  const store = storeRef.current;
   const state = React.useSyncExternalStore(
     store.subscribe,
     store.getState,
-    store.getState
-  )
+    store.getState,
+  );
   const dispatch = React.useCallback<FileSystemDispatch>(
     (event) => {
-      store.dispatch(event)
+      store.dispatch(event);
     },
-    [store]
-  )
-  const getState = React.useCallback(() => store.getState(), [store])
+    [store],
+  );
+  const getState = React.useCallback(() => store.getState(), [store]);
 
   React.useEffect(() => {
-    dispatch({ items, type: "items.replaced" })
-  }, [dispatch, items])
+    dispatch({ items, type: "items.replaced" });
+  }, [dispatch, items]);
 
   useFileSystemControlledProps({
     dispatch,
@@ -110,17 +112,17 @@ export function useFileSystemKernelRuntime({
     query,
     selectedPath,
     view,
-  })
+  });
 
   const folderTask = useFileSystemFolderTask({
     dispatch,
     getState,
     loadChildren,
-  })
+  });
 
   React.useEffect(() => {
-    void folderTask.ensureChildren(state.path).catch(() => {})
-  }, [folderTask, state.path])
+    void folderTask.ensureChildren(state.path).catch(() => {});
+  }, [folderTask, state.path]);
 
   const callbacks = React.useMemo(
     () => ({
@@ -136,15 +138,15 @@ export function useFileSystemKernelRuntime({
       onQueryChange,
       onSelectionChange,
       onViewChange,
-    ]
-  )
+    ],
+  );
 
   useFileSystemKernelCommandEffects({
     callbacks,
     consumeCommands: store.consumeCommands,
     flushVersion: commandFlushVersion,
     folderTask,
-  })
+  });
 
   return React.useMemo(
     () => ({
@@ -153,49 +155,49 @@ export function useFileSystemKernelRuntime({
       getState,
       state,
     }),
-    [dispatch, folderTask.ensureChildren, getState, state]
-  )
+    [dispatch, folderTask.ensureChildren, getState, state],
+  );
 }
 
 function createFileSystemKernelRuntimeStore({
   initialState,
   scheduleCommandFlush,
 }: {
-  initialState: FileSystemKernelState
-  scheduleCommandFlush: () => void
+  initialState: FileSystemKernelState;
+  scheduleCommandFlush: () => void;
 }): FileSystemKernelRuntimeStore {
-  const listeners = new Set<() => void>()
-  let commandQueue: FileSystemKernelCommand[] = []
-  let state = initialState
+  const listeners = new Set<() => void>();
+  let commandQueue: FileSystemKernelCommand[] = [];
+  let state = initialState;
 
   return {
     consumeCommands: () => {
-      const commands = commandQueue
+      const commands = commandQueue;
 
-      commandQueue = []
-      return commands
+      commandQueue = [];
+      return commands;
     },
     dispatch: (event) => {
-      const result = reduceFileSystemKernel(state, event)
+      const result = reduceFileSystemKernel(state, event);
 
       if (result.state !== state) {
-        state = result.state
-        for (const listener of listeners) listener()
+        state = result.state;
+        for (const listener of listeners) listener();
       }
 
       if (result.commands.length) {
-        commandQueue = [...commandQueue, ...result.commands]
-        scheduleCommandFlush()
+        commandQueue = [...commandQueue, ...result.commands];
+        scheduleCommandFlush();
       }
 
-      return result
+      return result;
     },
     getState: () => state,
     subscribe: (listener) => {
-      listeners.add(listener)
+      listeners.add(listener);
       return () => {
-        listeners.delete(listener)
-      }
+        listeners.delete(listener);
+      };
     },
-  }
+  };
 }

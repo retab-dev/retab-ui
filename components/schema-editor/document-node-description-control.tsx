@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import { SchemaInlineDescription } from "@/components/schema-editor/primitives/schema-inline-description"
+import { SchemaInlineDescription } from "@/components/schema-editor/primitives/schema-inline-description";
 
 interface DocumentNodeDescriptionControlProps {
-  description: string
-  mode: "descriptionOnly" | "readOnly" | "editable"
-  onOpenMetadata: () => void
-  onSubmitDescription: (description: string) => void
+  description: string;
+  mode: "descriptionOnly" | "readOnly" | "editable";
+  onOpenMetadata: () => void;
+  onSubmitDescription: (description: string) => void;
 }
 
 export function DocumentNodeDescriptionControl({
@@ -23,5 +23,5 @@ export function DocumentNodeDescriptionControl({
       onOpenDetails={onOpenMetadata}
       onCommit={onSubmitDescription}
     />
-  )
+  );
 }

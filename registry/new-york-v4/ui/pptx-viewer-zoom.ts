@@ -1,21 +1,21 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { normalizePptxScale } from "./pptx-viewer-core"
+import { normalizePptxScale } from "./pptx-viewer-core";
 
 type PptxZoomState =
   | { mode: "fit" }
   | {
-      mode: "manual"
-      value: number
-    }
+      mode: "manual";
+      value: number;
+    };
 
 export interface PptxZoomInput {
-  controlledScale?: number
-  defaultScale?: number
-  fitScale: number
-  onScaleChange?: (scale: number | null) => void
+  controlledScale?: number;
+  defaultScale?: number;
+  fitScale: number;
+  onScaleChange?: (scale: number | null) => void;
 }
 
 export function usePptxZoom({
@@ -27,34 +27,34 @@ export function usePptxZoom({
   const [zoomState, setZoomState] = React.useState<PptxZoomState>(() =>
     defaultScale == null
       ? { mode: "fit" }
-      : { mode: "manual", value: normalizePptxScale(defaultScale) }
-  )
+      : { mode: "manual", value: normalizePptxScale(defaultScale) },
+  );
 
-  const isScaleControlled = controlledScale !== undefined
+  const isScaleControlled = controlledScale !== undefined;
   const normalizedControlledScale = isScaleControlled
     ? normalizePptxScale(controlledScale)
-    : undefined
+    : undefined;
   const zoomScale =
     normalizedControlledScale ??
-    (zoomState.mode === "manual" ? zoomState.value : fitScale)
-  const scaleControlsDisabled = isScaleControlled && !onScaleChange
+    (zoomState.mode === "manual" ? zoomState.value : fitScale);
+  const scaleControlsDisabled = isScaleControlled && !onScaleChange;
 
   const setViewerScale = React.useCallback(
     (nextScale: number | null) => {
       const normalized =
-        nextScale == null ? null : normalizePptxScale(nextScale)
+        nextScale == null ? null : normalizePptxScale(nextScale);
       if (isScaleControlled) {
-        onScaleChange?.(normalized)
-        return
+        onScaleChange?.(normalized);
+        return;
       }
       setZoomState(
         normalized == null
           ? { mode: "fit" }
-          : { mode: "manual", value: normalized }
-      )
+          : { mode: "manual", value: normalized },
+      );
     },
-    [isScaleControlled, onScaleChange]
-  )
+    [isScaleControlled, onScaleChange],
+  );
 
-  return { scaleControlsDisabled, setViewerScale, zoomScale }
+  return { scaleControlsDisabled, setViewerScale, zoomScale };
 }

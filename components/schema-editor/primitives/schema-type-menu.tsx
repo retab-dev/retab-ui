@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { ChevronDown } from "lucide-react"
+import * as React from "react";
+import { ChevronDown } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,49 +13,49 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 
-export type SchemaTypeMenuVariant = "row" | "form"
+export type SchemaTypeMenuVariant = "row" | "form";
 
 export interface SchemaTypeMenuValue {
-  id: string
-  label: string
-  icon: React.ReactNode
+  id: string;
+  label: string;
+  icon: React.ReactNode;
 }
 
 export interface SchemaTypeMenuItem {
-  id: string
-  label: string
-  icon?: React.ReactNode
-  closeOnSelect?: boolean
-  onSelect: () => void
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+  closeOnSelect?: boolean;
+  onSelect: () => void;
 }
 
 export type SchemaTypeMenuSection =
   | {
-      id: string
-      kind: "items"
-      items: SchemaTypeMenuItem[]
+      id: string;
+      kind: "items";
+      items: SchemaTypeMenuItem[];
     }
   | {
-      id: string
-      kind: "submenu"
-      label: string
-      icon?: React.ReactNode
-      items: SchemaTypeMenuItem[]
-    }
+      id: string;
+      kind: "submenu";
+      label: string;
+      icon?: React.ReactNode;
+      items: SchemaTypeMenuItem[];
+    };
 
 export type SchemaTypeMenuTrailingContent = (context: {
-  editable: boolean
-}) => React.ReactNode
+  editable: boolean;
+}) => React.ReactNode;
 
 interface SchemaTypeMenuProps {
-  ariaLabel?: string
-  editable: boolean
-  sections: SchemaTypeMenuSection[]
-  trailingContent?: SchemaTypeMenuTrailingContent
-  value: SchemaTypeMenuValue
-  variant: SchemaTypeMenuVariant
+  ariaLabel?: string;
+  editable: boolean;
+  sections: SchemaTypeMenuSection[];
+  trailingContent?: SchemaTypeMenuTrailingContent;
+  value: SchemaTypeMenuValue;
+  variant: SchemaTypeMenuVariant;
 }
 
 export function SchemaTypeMenu({
@@ -68,17 +68,17 @@ export function SchemaTypeMenu({
 }: SchemaTypeMenuProps) {
   const runMenuAction = (event: Event, item: SchemaTypeMenuItem) => {
     if (!editable) {
-      event.preventDefault()
-      return
+      event.preventDefault();
+      return;
     }
     if (item.closeOnSelect === false) {
-      event.preventDefault()
+      event.preventDefault();
     }
-    item.onSelect()
-  }
+    item.onSelect();
+  };
 
   if (!editable && variant === "row") {
-    return <div className="ml-4 w-40 text-xs">{value.label || "string"}</div>
+    return <div className="ml-4 w-40 text-xs">{value.label || "string"}</div>;
   }
 
   return (
@@ -90,7 +90,7 @@ export function SchemaTypeMenu({
           variant={variant === "row" ? "ghost" : "outline"}
           className={
             variant === "row"
-              ? "w-40 justify-between pr-1 pl-2 text-xs font-normal text-muted-foreground"
+              ? "text-muted-foreground w-40 justify-between pr-1 pl-2 text-xs font-normal"
               : "mt-2 w-full justify-between pr-1 pl-2"
           }
         >
@@ -109,7 +109,7 @@ export function SchemaTypeMenu({
           <ChevronDown
             className={
               variant === "row"
-                ? "mr-1! h-4 w-4 shrink-0 text-muted-foreground opacity-0 group-hover/row:opacity-100"
+                ? "text-muted-foreground mr-1! h-4 w-4 shrink-0 opacity-0 group-hover/row:opacity-100"
                 : "mr-1! h-4 w-4"
             }
           />
@@ -137,7 +137,7 @@ export function SchemaTypeMenu({
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
               </DropdownMenuSub>
-            )
+            );
           }
 
           return section.items.map((item) => (
@@ -147,12 +147,12 @@ export function SchemaTypeMenu({
               item={item}
               onSelect={runMenuAction}
             />
-          ))
+          ));
         })}
         {trailingContent?.({ editable })}
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }
 
 function SchemaTypeMenuDropdownItem({
@@ -160,9 +160,9 @@ function SchemaTypeMenuDropdownItem({
   item,
   onSelect,
 }: {
-  editable: boolean
-  item: SchemaTypeMenuItem
-  onSelect: (event: Event, item: SchemaTypeMenuItem) => void
+  editable: boolean;
+  item: SchemaTypeMenuItem;
+  onSelect: (event: Event, item: SchemaTypeMenuItem) => void;
 }) {
   return (
     <DropdownMenuItem
@@ -172,5 +172,5 @@ function SchemaTypeMenuDropdownItem({
       {item.icon}
       {item.label}
     </DropdownMenuItem>
-  )
+  );
 }

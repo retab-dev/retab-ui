@@ -1,4 +1,4 @@
-import type { JSONSchema7TypeName } from "json-schema"
+import type { JSONSchema7TypeName } from "json-schema";
 
 /**
  * Stable, intrinsic node identity.
@@ -8,8 +8,8 @@ import type { JSONSchema7TypeName } from "json-schema"
  * the whole reason this Document model exists instead of editing JSON Schema in
  * place.
  */
-export type NodeId = string
-export type PropertyId = string
+export type NodeId = string;
+export type PropertyId = string;
 
 /** A JSON Schema literal (enum entries, const, default, …). */
 export type JsonValue =
@@ -18,7 +18,7 @@ export type JsonValue =
   | boolean
   | null
   | JsonValue[]
-  | { [key: string]: JsonValue }
+  | { [key: string]: JsonValue };
 
 /**
  * The editor's source of truth: a Document — a total, identity-bearing,
@@ -46,39 +46,39 @@ export type JsonValue =
  *     never in the model — which is what lets the component be fully controlled.
  */
 export interface DocumentNode {
-  id: NodeId
+  id: NodeId;
 
   /**
    * Mirrors JSON Schema `type`. A single name is the common case; an array
    * encodes a type-union such as `["string", "null"]` (nullable). Absent = "any".
    */
-  type?: JSONSchema7TypeName | JSONSchema7TypeName[]
+  type?: JSONSchema7TypeName | JSONSchema7TypeName[];
 
-  title?: string
-  description?: string
+  title?: string;
+  description?: string;
 
   /** object: ordered, identity-bearing property entries. */
-  properties?: PropertyEntry[]
+  properties?: PropertyEntry[];
 
   /** Required names from the source that are not modeled as property entries. */
-  extraRequired?: string[]
+  extraRequired?: string[];
 
   /** Source order for `required[]`, used to preserve external required names. */
-  requiredOrder?: string[]
+  requiredOrder?: string[];
 
   /** array: the item schema. (Tuple `items` arrays are carried in `rest` for v1.) */
-  items?: DocumentNode
+  items?: DocumentNode;
 
   /** enum: ordered, identity-bearing values. Base type comes from `type`. */
-  enum?: EnumValue[]
+  enum?: EnumValue[];
 
   /** $ref: id of the Definition this node points at, resolved on import. */
-  ref?: NodeId
+  ref?: NodeId;
 
   /** Composition keywords, recursively modeled. */
-  anyOf?: DocumentNode[]
-  oneOf?: DocumentNode[]
-  allOf?: DocumentNode[]
+  anyOf?: DocumentNode[];
+  oneOf?: DocumentNode[];
+  allOf?: DocumentNode[];
 
   /**
    * Every keyword we don't model structurally — `const`, `default`, `format`,
@@ -86,19 +86,19 @@ export interface DocumentNode {
    * verbatim and projected straight back out. This is what makes the round-trip
    * lossless.
    */
-  rest: Record<string, unknown>
+  rest: Record<string, unknown>;
 
   /**
    * Internal: source key order, replayed on export for byte-faithful round-trips.
    * Kept off `rest` so a real keyword named `__order` can't collide with it.
    */
-  order?: string[]
+  order?: string[];
 
   /**
    * Internal: a boolean schema (`true` / `false`) has no structure to model; its
    * literal value is carried here.
    */
-  booleanSchema?: boolean
+  booleanSchema?: boolean;
 }
 
 /**
@@ -108,37 +108,37 @@ export interface DocumentNode {
  * rebuild on export).
  */
 export interface PropertyEntry {
-  id: PropertyId
-  key: string
+  id: PropertyId;
+  key: string;
   /** Empty key created by the editor while typing; omitted from projection. */
-  isTransient?: boolean
-  required: boolean
-  node: DocumentNode
+  isTransient?: boolean;
+  required: boolean;
+  node: DocumentNode;
 }
 
 /** A single enum option. `id` keeps the row stable while its value is edited. */
 export interface EnumValue {
-  id: NodeId
-  value: JsonValue
+  id: NodeId;
+  value: JsonValue;
 }
 
 /** A named definition under `$defs`. `name` is mutable; references point at `id`. */
 export interface DefinitionEntry {
-  id: NodeId
-  name: string
-  node: DocumentNode
+  id: NodeId;
+  name: string;
+  node: DocumentNode;
 }
 
 /** The whole editor document — the single source of truth held in one useState. */
 export interface SchemaDocument {
-  root: DocumentNode
+  root: DocumentNode;
   /** Named definitions ($defs / legacy definitions), ordered. */
-  defs: DefinitionEntry[]
+  defs: DefinitionEntry[];
   /**
    * Document-level round-trip metadata we don't surface structurally — which defs
    * keyword the source used, top-level `$schema`/`$id`, etc. Carried verbatim.
    */
-  rest: Record<string, unknown>
+  rest: Record<string, unknown>;
 }
 
 /**
@@ -150,4 +150,4 @@ export type SchemaKind =
   | "enum"
   | "ref"
   | "union"
-  | "any"
+  | "any";

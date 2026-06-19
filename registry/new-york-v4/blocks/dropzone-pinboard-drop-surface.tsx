@@ -1,20 +1,20 @@
-"use client"
+"use client";
 
-import { cn } from "@/lib/utils"
-import { useDropzone } from "@/components/ui/dropzone"
-import { FileThumbnail } from "@/components/ui/file-thumbnail"
+import { cn } from "@/lib/utils";
+import { useDropzone } from "@/components/ui/dropzone";
+import { FileThumbnail } from "@/components/ui/file-thumbnail";
 
 import {
   RejectionRows,
   type DropzoneExampleProps,
-} from "./dropzone-example-shared"
+} from "./dropzone-example-shared";
 
 export function PinboardDropSurface({ className }: DropzoneExampleProps) {
   const dropzone = useDropzone({
     accept: ".pdf,.png,.jpg,.jpeg,image/*,application/pdf",
     maxFiles: 8,
     multiple: true,
-  })
+  });
 
   return (
     <section
@@ -22,7 +22,7 @@ export function PinboardDropSurface({ className }: DropzoneExampleProps) {
         className: cn(
           "rounded-lg border bg-background p-4 transition-colors",
           dropzone.isDragging && "border-foreground/40 bg-accent/35",
-          className
+          className,
         ),
       })}
     >
@@ -30,7 +30,7 @@ export function PinboardDropSurface({ className }: DropzoneExampleProps) {
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <div className="text-sm font-medium">Pinboard drop surface</div>
-          <div className="mt-1 text-xs text-muted-foreground">
+          <div className="text-muted-foreground mt-1 text-xs">
             The whole canvas is the trigger.
           </div>
         </div>
@@ -55,10 +55,10 @@ export function PinboardDropSurface({ className }: DropzoneExampleProps) {
             <div
               key={item.id}
               className={cn(
-                "min-w-0 rounded-md border bg-background p-2 text-center shadow-xs",
+                "bg-background min-w-0 rounded-md border p-2 text-center shadow-xs",
                 index % 2 === 0 && "translate-y-2",
                 index % 3 === 0 && "-rotate-1",
-                index % 3 === 1 && "rotate-1"
+                index % 3 === 1 && "rotate-1",
               )}
             >
               <FileThumbnail
@@ -72,12 +72,12 @@ export function PinboardDropSurface({ className }: DropzoneExampleProps) {
             </div>
           ))
         ) : (
-          <div className="col-span-full grid min-h-60 place-items-center text-center text-xs text-muted-foreground">
+          <div className="text-muted-foreground col-span-full grid min-h-60 place-items-center text-center text-xs">
             Drop files to pin them onto the canvas.
           </div>
         )}
       </div>
       <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </section>
-  )
+  );
 }

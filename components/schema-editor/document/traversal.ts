@@ -2,90 +2,92 @@ import type {
   DefinitionEntry,
   DocumentNode,
   SchemaDocument,
-} from "@/components/schema-editor/document/types"
+} from "@/components/schema-editor/document/types";
 
 export function childNodes(node: DocumentNode): DocumentNode[] {
-  const out: DocumentNode[] = []
+  const out: DocumentNode[] = [];
   if (node.properties)
-    for (const property of node.properties) out.push(property.node)
-  if (node.items) out.push(node.items)
-  if (node.anyOf) out.push(...node.anyOf)
-  if (node.oneOf) out.push(...node.oneOf)
-  if (node.allOf) out.push(...node.allOf)
-  return out
+    for (const property of node.properties) out.push(property.node);
+  if (node.items) out.push(node.items);
+  if (node.anyOf) out.push(...node.anyOf);
+  if (node.oneOf) out.push(...node.oneOf);
+  if (node.allOf) out.push(...node.allOf);
+  return out;
 }
 
 export function getNode(doc: SchemaDocument, id: string): DocumentNode | null {
-  return findInNode(doc.root, id) ?? findInDefinitions(doc.defs, id)
+  return findInNode(doc.root, id) ?? findInDefinitions(doc.defs, id);
 }
 
 function findInDefinitions(
   definitions: DefinitionEntry[],
-  id: string
+  id: string,
 ): DocumentNode | null {
   for (const definition of definitions) {
-    const found = findInNode(definition.node, id)
-    if (found) return found
+    const found = findInNode(definition.node, id);
+    if (found) return found;
   }
-  return null
+  return null;
 }
 
 function findInNode(node: DocumentNode, id: string): DocumentNode | null {
-  if (node.id === id) return node
+  if (node.id === id) return node;
   for (const child of childNodes(node)) {
-    const found = findInNode(child, id)
-    if (found) return found
+    const found = findInNode(child, id);
+    if (found) return found;
   }
-  return null
+  return null;
 }
 
 export function findNodeByPath(
   doc: SchemaDocument,
-  path: string | readonly string[]
+  path: string | readonly string[],
 ): string | null {
   const segments =
-    typeof path === "string" ? path.split(".").filter(Boolean) : path
-  let node: DocumentNode | undefined = doc.root
+    typeof path === "string" ? path.split(".").filter(Boolean) : path;
+  let node: DocumentNode | undefined = doc.root;
   for (const segment of segments) {
-    node = unwrapContainer(doc, node)
-    const entry = node?.properties?.find((property) => property.key === segment)
-    if (!entry) return null
-    node = entry.node
+    node = unwrapContainer(doc, node);
+    const entry = node?.properties?.find(
+      (property) => property.key === segment,
+    );
+    if (!entry) return null;
+    node = entry.node;
   }
-  return node?.id ?? null
+  return node?.id ?? null;
 }
 
 function unwrapContainer(
   doc: SchemaDocument,
-  node: DocumentNode | undefined
+  node: DocumentNode | undefined,
 ): DocumentNode | undefined {
-  let current = node
-  const visited = new Set<string>()
+  let current = node;
+  const visited = new Set<string>();
   while (current) {
-    current = getEffectiveContainerNode(current)
-    if (visited.has(current.id)) return undefined
-    visited.add(current.id)
+    current = getEffectiveContainerNode(current);
+    if (visited.has(current.id)) return undefined;
+    visited.add(current.id);
     if (current.ref) {
       current = doc.defs.find(
-        (definition) => definition.id === current!.ref
-      )?.node
-      continue
+        (definition) => definition.id === current!.ref,
+      )?.node;
+      continue;
     }
     if (current.items && !current.properties) {
-      current = current.items
-      continue
+      current = current.items;
+      continue;
     }
-    break
+    break;
   }
-  return current
+  return current;
 }
 
 function getEffectiveContainerNode(node: DocumentNode): DocumentNode {
   if (node.anyOf) {
     const nonNull = node.anyOf.find(
-      (branch) => branch.type !== "null" || branch.ref
-    )
-    if (nonNull) return nonNull
+      (branch) => branch.type !== "null" || branch.ref,
+    );
+    if (nonNull) return nonNull;
   }
-  return node
+  return node;
 }

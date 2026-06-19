@@ -1,37 +1,37 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { AlertCircle, ExternalLink, FileQuestion } from "lucide-react"
+import * as React from "react";
+import { AlertCircle, ExternalLink, FileQuestion } from "lucide-react";
 
-import type { ViewerSource } from "@/lib/viewer-source"
-import { Button } from "@/components/ui/button"
+import type { ViewerSource } from "@/lib/viewer-source";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { FileViewer } from "@/components/ui/file-viewer"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Spinner } from "@/components/ui/spinner"
+} from "@/components/ui/dialog";
+import { FileViewer } from "@/components/ui/file-viewer";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Spinner } from "@/components/ui/spinner";
 
-import { useFileSystem } from "./file-system-provider"
-import type { FileSystemOpenPreviewState } from "./file-system-open-preview-state"
+import { useFileSystem } from "./file-system-provider";
+import type { FileSystemOpenPreviewState } from "./file-system-open-preview-state";
 
 export function useFileSystemOpenPreview() {
-  return useFileSystem().openPreview
+  return useFileSystem().openPreview;
 }
 
 export function FileSystemOpenPreview() {
-  const { close, state } = useFileSystemOpenPreview()
-  const file = state.status === "idle" ? null : state.file
-  const source = state.status === "open" ? state.source : null
+  const { close, state } = useFileSystemOpenPreview();
+  const file = state.status === "idle" ? null : state.file;
+  const source = state.status === "open" ? state.source : null;
 
   return (
     <Dialog
       open={state.status !== "idle"}
       onOpenChange={(open) => {
-        if (!open) close()
+        if (!open) close();
       }}
     >
       {file ? (
@@ -57,13 +57,13 @@ export function FileSystemOpenPreview() {
         </DialogContent>
       ) : null}
     </Dialog>
-  )
+  );
 }
 
 function FileSystemOpenPreviewContent({
   state,
 }: {
-  state: FileSystemOpenPreviewState
+  state: FileSystemOpenPreviewState;
 }) {
   if (state.status === "resolving") {
     return (
@@ -71,7 +71,7 @@ function FileSystemOpenPreviewContent({
         <Spinner className="size-4" />
         Opening preview
       </FileSystemOpenPreviewMessage>
-    )
+    );
   }
 
   if (state.status === "unavailable") {
@@ -80,7 +80,7 @@ function FileSystemOpenPreviewContent({
         <FileQuestion className="size-5" aria-hidden />
         Preview unavailable
       </FileSystemOpenPreviewMessage>
-    )
+    );
   }
 
   if (state.status === "failed") {
@@ -89,11 +89,11 @@ function FileSystemOpenPreviewContent({
         <AlertCircle className="size-5" aria-hidden />
         {state.error}
       </FileSystemOpenPreviewMessage>
-    )
+    );
   }
 
   if (state.status !== "open") {
-    return null
+    return null;
   }
 
   return (
@@ -102,21 +102,21 @@ function FileSystemOpenPreviewContent({
         <FileSystemOpenPreviewViewer source={state.source} />
       </div>
     </ScrollArea>
-  )
+  );
 }
 
 function FileSystemOpenPreviewMessage({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
-    <div className="flex size-full items-center justify-center gap-2 text-sm text-muted-foreground">
+    <div className="text-muted-foreground flex size-full items-center justify-center gap-2 text-sm">
       {children}
     </div>
-  )
+  );
 }
 
 function FileSystemOpenPreviewViewer({ source }: { source: ViewerSource }) {
-  return <FileViewer source={source} bare className="size-full min-h-0" />
+  return <FileViewer source={source} bare className="size-full min-h-0" />;
 }

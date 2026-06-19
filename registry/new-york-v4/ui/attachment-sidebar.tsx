@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Paperclip } from "lucide-react"
+import * as React from "react";
+import { Paperclip } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { createViewerResource } from "@/lib/viewer-resource"
-import type { ViewerSource } from "@/lib/viewer-source"
+import { cn } from "@/lib/utils";
+import { createViewerResource } from "@/lib/viewer-resource";
+import type { ViewerSource } from "@/lib/viewer-source";
 
-import { formatFileSize } from "./file-size-format"
-import { FileThumbnail } from "./file-thumbnail"
+import { formatFileSize } from "./file-size-format";
+import { FileThumbnail } from "./file-thumbnail";
 import {
   SidebarListButton,
   SidebarListContent,
@@ -20,27 +20,27 @@ import {
   SidebarListMenuItem,
   SidebarListRoot,
   SidebarListSeparator,
-} from "./sidebar-list"
+} from "./sidebar-list";
 
 export interface AttachmentSidebarItem {
-  id: string
-  source: ViewerSource
-  label?: string
-  description?: string
-  size?: number | null
-  isDisabled?: boolean
+  id: string;
+  source: ViewerSource;
+  label?: string;
+  description?: string;
+  size?: number | null;
+  isDisabled?: boolean;
 }
 
 export interface AttachmentSidebarProps {
-  items: readonly AttachmentSidebarItem[]
-  selectedId?: string | null
-  onSelect?: (id: string) => void
-  header?: React.ReactNode
-  emptyLabel?: React.ReactNode
-  children?: React.ReactNode
-  side?: "left" | "right"
-  width?: string
-  className?: string
+  items: readonly AttachmentSidebarItem[];
+  selectedId?: string | null;
+  onSelect?: (id: string) => void;
+  header?: React.ReactNode;
+  emptyLabel?: React.ReactNode;
+  children?: React.ReactNode;
+  side?: "left" | "right";
+  width?: string;
+  className?: string;
 }
 
 /**
@@ -66,7 +66,7 @@ export function AttachmentSidebar({
       className={cn(
         "border-sidebar-border bg-sidebar",
         side === "right" ? "md:border-l" : "md:border-r",
-        className
+        className,
       )}
     >
       <SidebarListHeader className="border-b px-3 py-2">
@@ -83,7 +83,7 @@ export function AttachmentSidebar({
           <SidebarListGroupLabel>Attachments</SidebarListGroupLabel>
           <SidebarListGroupContent>
             {items.length === 0 ? (
-              <p className="px-2 py-3 text-xs text-sidebar-foreground/70">
+              <p className="text-sidebar-foreground/70 px-2 py-3 text-xs">
                 {emptyLabel}
               </p>
             ) : (
@@ -102,18 +102,18 @@ export function AttachmentSidebar({
         </SidebarListGroup>
       </SidebarListContent>
     </SidebarListRoot>
-  )
+  );
 }
 
 function DefaultAttachmentSidebarHeader({ count }: { count: number }) {
   return (
-    <div className="flex h-6 items-center gap-2 text-xs font-medium text-sidebar-foreground">
-      <Paperclip className="size-3.5 text-sidebar-accent-foreground" />
+    <div className="text-sidebar-foreground flex h-6 items-center gap-2 text-xs font-medium">
+      <Paperclip className="text-sidebar-accent-foreground size-3.5" />
       <span>
         {count} attachment{count === 1 ? "" : "s"}
       </span>
     </div>
-  )
+  );
 }
 
 function AttachmentSidebarMenuItem({
@@ -121,24 +121,24 @@ function AttachmentSidebarMenuItem({
   isSelected,
   onSelect,
 }: {
-  item: AttachmentSidebarItem
-  isSelected: boolean
-  onSelect: ((id: string) => void) | undefined
+  item: AttachmentSidebarItem;
+  isSelected: boolean;
+  onSelect: ((id: string) => void) | undefined;
 }) {
-  const resource = createViewerResource(item.source)
-  const label = item.label?.trim() || resource.fileName
+  const resource = createViewerResource(item.source);
+  const label = item.label?.trim() || resource.fileName;
   const meta =
     item.description?.trim() ||
     (item.size != null
       ? formatFileSize(item.size)
-      : (resource.mimeType ?? resource.descriptor.category))
+      : (resource.mimeType ?? resource.descriptor.category));
 
   return (
     <SidebarListMenuItem>
       <SidebarListButton
         aria-current={isSelected ? "page" : undefined}
         aria-label={`${label} ${meta}`}
-        className="h-auto items-start gap-2 rounded-lg border border-transparent p-2 data-[active=true]:border-sidebar-border"
+        className="data-[active=true]:border-sidebar-border h-auto items-start gap-2 rounded-lg border border-transparent p-2"
         disabled={item.isDisabled}
         isActive={isSelected}
         onClick={() => onSelect?.(item.id)}
@@ -152,11 +152,11 @@ function AttachmentSidebarMenuItem({
         />
         <span className="flex min-w-0 flex-1 flex-col gap-1 pt-0.5">
           <span className="truncate text-sm font-medium">{label}</span>
-          <span className="truncate text-xs text-sidebar-foreground/70">
+          <span className="text-sidebar-foreground/70 truncate text-xs">
             {meta}
           </span>
         </span>
       </SidebarListButton>
     </SidebarListMenuItem>
-  )
+  );
 }

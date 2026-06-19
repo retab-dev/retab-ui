@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { PptxViewer } from "@/components/ui/pptx-viewer"
+import { PptxViewer } from "@/components/ui/pptx-viewer";
 
 // A normalized bounding box (0..1) to demonstrate the per-slide overlay slot —
 // the same shape Retab's edit fields and extraction sources use. Anchored to the
 // title bar on the first slide of the sample deck.
-const sampleBox = { slide: 1, left: 0.0, top: 0.0, width: 1.0, height: 0.187 }
+const sampleBox = { slide: 1, left: 0.0, top: 0.0, width: 1.0, height: 0.187 };
 
 export function PptxViewerDemo() {
   return (
@@ -24,7 +24,7 @@ export function PptxViewerDemo() {
         renderSlideOverlay={({ slideNumber }) =>
           slideNumber === sampleBox.slide ? (
             <div
-              className="absolute rounded-[2px] outline outline-2 outline-primary"
+              className="outline-primary absolute rounded-[2px] outline outline-2"
               style={{
                 left: `${sampleBox.left * 100}%`,
                 top: `${sampleBox.top * 100}%`,
@@ -37,5 +37,5 @@ export function PptxViewerDemo() {
         }
       />
     </div>
-  )
+  );
 }

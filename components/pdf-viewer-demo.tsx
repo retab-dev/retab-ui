@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   FileViewer,
@@ -10,18 +10,18 @@ import {
   FileViewerSidebarTrigger,
   FileViewerSurface,
   FileViewerTitle,
-} from "@/components/ui/file-viewer"
+} from "@/components/ui/file-viewer";
 import {
   PdfViewerPages,
   PdfViewerProvider,
   PdfViewerThumbnails,
-} from "@/components/ui/pdf-viewer"
+} from "@/components/ui/pdf-viewer";
 
 const PDF_SOURCE = {
   kind: "url" as const,
   url: "/samples/nvidia-10k-fy2024.pdf",
   fileName: "nvidia-10k-fy2024.pdf",
-}
+};
 
 export function PdfViewerDemo() {
   return (
@@ -55,5 +55,5 @@ export function PdfViewerDemo() {
         </PdfViewerProvider>
       </FileViewer>
     </div>
-  )
+  );
 }

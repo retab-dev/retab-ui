@@ -1,18 +1,18 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { CodeViewerFallback } from "./code-viewer-chrome"
-import { CodeViewerContent } from "./code-viewer-content"
-import type { CodeViewerHandle, CodeViewerProps } from "./code-viewer-types"
-import { PlainTextViewerFrame } from "./plain-text-viewer-frame"
+import { CodeViewerFallback } from "./code-viewer-chrome";
+import { CodeViewerContent } from "./code-viewer-content";
+import type { CodeViewerHandle, CodeViewerProps } from "./code-viewer-types";
+import { PlainTextViewerFrame } from "./plain-text-viewer-frame";
 
 export type {
   CodeDocumentSource,
   CodeLineRange,
   CodeViewerHandle,
   CodeViewerProps,
-} from "./code-viewer-types"
+} from "./code-viewer-types";
 
 export const CodeViewer = React.forwardRef<CodeViewerHandle, CodeViewerProps>(
   function CodeViewer(props, ref) {
@@ -24,6 +24,6 @@ export const CodeViewer = React.forwardRef<CodeViewerHandle, CodeViewerProps>(
         Fallback={CodeViewerFallback}
         Content={CodeViewerContent}
       />
-    )
-  }
-)
+    );
+  },
+);

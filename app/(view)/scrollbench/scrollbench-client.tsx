@@ -1,27 +1,29 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import type { JSONSchema7 } from "json-schema"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { cn } from "@/lib/utils"
-import { CodeViewer, type CodeViewerHandle } from "@/components/ui/code-viewer"
-import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
-import { DocxViewer, type DocxViewerHandle } from "@/components/ui/docx-viewer"
+import * as React from "react";
+import type { JSONSchema7 } from "json-schema";
+
+import { cn } from "@/lib/utils";
+import { CodeViewer, type CodeViewerHandle } from "@/components/ui/code-viewer";
+import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer";
+import { DocxViewer, type DocxViewerHandle } from "@/components/ui/docx-viewer";
 import {
   ImageViewer,
   type ImageFrameRenderTiming,
   type ImageViewerHandle,
-} from "@/components/ui/image-viewer"
-import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
+} from "@/components/ui/image-viewer";
+import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer";
 import {
   PptxViewer,
   type PptxSlideRenderTiming,
   type PptxSourceLoadTiming,
-} from "@/components/ui/pptx-viewer"
-import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
-import type { TableDocument } from "@/components/json-table/lib/projects-types"
-import { SingleFileTableView } from "@/components/json-table/single-file-table-view"
-import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-sources-block"
+} from "@/components/ui/pptx-viewer";
+import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer";
+import type { TableDocument } from "@/components/json-table/lib/projects-types";
+import { SingleFileTableView } from "@/components/json-table/single-file-table-view";
+import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-sources-block";
 
 import {
   normalizeViewerId,
@@ -40,14 +42,14 @@ import {
   type ScrollBenchResult,
   type SourceLoadTimingResult,
   type ViewerId,
-} from "./scrollbench-core"
+} from "./scrollbench-core";
 import {
   findScrollableViewport,
   isAbortError,
   measureScenario,
   viewportMetrics,
   waitForScroller,
-} from "./scrollbench-runner"
+} from "./scrollbench-runner";
 
 type ViewportHandle =
   | PdfViewerHandle
@@ -55,42 +57,44 @@ type ViewportHandle =
   | XlsxViewerHandle
   | CodeViewerHandle
   | DocxViewerHandle
-  | ImageViewerHandle
+  | ImageViewerHandle;
 
-type RunStatus = "idle" | "running" | "done" | "failed"
-type CsvScrollBenchVariant = "default" | "active-cell"
+type RunStatus = "idle" | "running" | "done" | "failed";
+type CsvScrollBenchVariant = "default" | "active-cell";
 
-const SCROLLBENCH_JSON_ROW_COUNT = 20_000
-const SCROLLBENCH_JSON_OVERSCAN = 12
-const SCROLLBENCH_JSON_JUMP_OVERSCAN = 4
-const SCROLLBENCH_JSON_MAX_ROW_COUNT = 100_000
-const SCROLLBENCH_JSON_MAX_OVERSCAN = 200
-const SCROLLBENCH_MAX_REPEAT_RUNS = 10
-const JSON_FORM_SOURCES_DEFAULT_OPEN_PATHS = ["transactions"] as const
-const jsonTableSchema = createScrollBenchJsonSchema()
+const SCROLLBENCH_JSON_ROW_COUNT = 20_000;
+const SCROLLBENCH_JSON_OVERSCAN = 12;
+const SCROLLBENCH_JSON_JUMP_OVERSCAN = 4;
+const SCROLLBENCH_JSON_MAX_ROW_COUNT = 100_000;
+const SCROLLBENCH_JSON_MAX_OVERSCAN = 200;
+const SCROLLBENCH_MAX_REPEAT_RUNS = 10;
+const JSON_FORM_SOURCES_DEFAULT_OPEN_PATHS = ["transactions"] as const;
+const jsonTableSchema = createScrollBenchJsonSchema();
 
 interface ScrollBenchJsonSettings {
-  rowCount: number
-  overscan: number
-  jumpOverscan: number
+  rowCount: number;
+  overscan: number;
+  jumpOverscan: number;
 }
 
 interface InitialScrollBenchJsonSettings {
-  jumpOverscan?: string
-  overscan?: string
-  rows?: string
+  jumpOverscan?: string;
+  overscan?: string;
+  rows?: string;
 }
 
 interface ScrollBenchController {
-  getScroller: () => HTMLElement | null
-  run: () => Promise<ScrollBenchResult>
-  runMany: (count?: number) => Promise<ScrollBenchRepeatResult>
-  runScenario: (scenarioId: ScenarioDefinition["id"]) => Promise<ScenarioResult>
+  getScroller: () => HTMLElement | null;
+  run: () => Promise<ScrollBenchResult>;
+  runMany: (count?: number) => Promise<ScrollBenchRepeatResult>;
+  runScenario: (
+    scenarioId: ScenarioDefinition["id"],
+  ) => Promise<ScenarioResult>;
 }
 
 declare global {
   interface Window {
-    __scrollbench?: ScrollBenchController
+    __scrollbench?: ScrollBenchController;
   }
 }
 
@@ -98,104 +102,104 @@ export function ScrollBenchClient({
   initialJsonSettings,
   initialViewer,
 }: {
-  initialJsonSettings?: InitialScrollBenchJsonSettings
-  initialViewer?: string
+  initialJsonSettings?: InitialScrollBenchJsonSettings;
+  initialViewer?: string;
 }) {
-  const rootRef = React.useRef<HTMLDivElement | null>(null)
-  const viewportHandleRef = React.useRef<ViewportHandle | null>(null)
-  const controllerRef = React.useRef<ScrollBenchController | null>(null)
-  const autorunStartedRef = React.useRef(false)
-  const runAbortRef = React.useRef<AbortController | null>(null)
-  const imageRenderTimingsRef = React.useRef<ImageRenderTiming[]>([])
-  const sourceLoadTimingRef = React.useRef<SourceLoadTimingResult | null>(null)
+  const rootRef = React.useRef<HTMLDivElement | null>(null);
+  const viewportHandleRef = React.useRef<ViewportHandle | null>(null);
+  const controllerRef = React.useRef<ScrollBenchController | null>(null);
+  const autorunStartedRef = React.useRef(false);
+  const runAbortRef = React.useRef<AbortController | null>(null);
+  const imageRenderTimingsRef = React.useRef<ImageRenderTiming[]>([]);
+  const sourceLoadTimingRef = React.useRef<SourceLoadTimingResult | null>(null);
 
   const [viewer, setViewer] = React.useState<ViewerId>(() =>
-    normalizeViewerId(initialViewer ?? null)
-  )
-  const [pptxFile, setPptxFile] = React.useState<File | null>(null)
-  const [status, setStatus] = React.useState<RunStatus>("idle")
-  const [error, setError] = React.useState<string | null>(null)
-  const [result, setResult] = React.useState<ScrollBenchResult | null>(null)
+    normalizeViewerId(initialViewer ?? null),
+  );
+  const [pptxFile, setPptxFile] = React.useState<File | null>(null);
+  const [status, setStatus] = React.useState<RunStatus>("idle");
+  const [error, setError] = React.useState<string | null>(null);
+  const [result, setResult] = React.useState<ScrollBenchResult | null>(null);
   const [repeatResult, setRepeatResult] =
-    React.useState<ScrollBenchRepeatResult | null>(null)
+    React.useState<ScrollBenchRepeatResult | null>(null);
 
-  const csvValue = React.useMemo(() => createScrollBenchCsv(), [])
-  const csvVariant = React.useMemo(readCsvScrollBenchVariant, [])
+  const csvValue = React.useMemo(() => createScrollBenchCsv(), []);
+  const csvVariant = React.useMemo(readCsvScrollBenchVariant, []);
   const jsonSettings = React.useMemo(
     () => readScrollBenchJsonSettings(initialJsonSettings),
-    [initialJsonSettings]
-  )
+    [initialJsonSettings],
+  );
   const jsonTableDocument = React.useMemo(
     () => createScrollBenchJsonDocument(jsonSettings.rowCount),
-    [jsonSettings.rowCount]
-  )
-  const textValue = React.useMemo(() => createScrollBenchText(), [])
+    [jsonSettings.rowCount],
+  );
+  const textValue = React.useMemo(() => createScrollBenchText(), []);
 
   const setViewportHandle = React.useCallback(
     (handle: ViewportHandle | null) => {
-      viewportHandleRef.current = handle
+      viewportHandleRef.current = handle;
     },
-    []
-  )
+    [],
+  );
 
   const getScroller = React.useCallback(() => {
     return (
       viewportHandleRef.current?.getViewportElement() ??
       findScrollableViewport(
         rootRef.current,
-        resolveViewer(viewer).scrollerSelector
+        resolveViewer(viewer).scrollerSelector,
       )
-    )
-  }, [viewer])
+    );
+  }, [viewer]);
   const handlePptxFileChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      setPptxFile(event.target.files?.[0] ?? null)
+      setPptxFile(event.target.files?.[0] ?? null);
     },
-    []
-  )
+    [],
+  );
   const handlePptxSlideRenderTiming = React.useCallback(
     (timing: PptxSlideRenderTiming) => {
-      imageRenderTimingsRef.current.push(timing)
+      imageRenderTimingsRef.current.push(timing);
     },
-    []
-  )
+    [],
+  );
   const handleImageFrameRenderTiming = React.useCallback(
     (timing: ImageFrameRenderTiming) => {
-      imageRenderTimingsRef.current.push(timing)
+      imageRenderTimingsRef.current.push(timing);
     },
-    []
-  )
+    [],
+  );
   const handlePptxSourceLoadTiming = React.useCallback(
     (timing: PptxSourceLoadTiming) => {
-      sourceLoadTimingRef.current = timing
+      sourceLoadTimingRef.current = timing;
     },
-    []
-  )
+    [],
+  );
 
   const runScenario = React.useCallback(
     async (scenarioId: ScenarioDefinition["id"]) => {
-      const scenario = resolveScenario(scenarioId)
-      if (!scenario) throw new Error(`Unknown scenario: ${scenarioId}`)
+      const scenario = resolveScenario(scenarioId);
+      if (!scenario) throw new Error(`Unknown scenario: ${scenarioId}`);
 
-      const scroller = await waitForScroller(getScroller)
-      return measureScenario(scroller, scenario, {})
+      const scroller = await waitForScroller(getScroller);
+      return measureScenario(scroller, scenario, {});
     },
-    [getScroller]
-  )
+    [getScroller],
+  );
 
   const measureOnce = React.useCallback(
     async (signal: AbortSignal) => {
-      imageRenderTimingsRef.current = []
+      imageRenderTimingsRef.current = [];
 
-      const scroller = await waitForScroller(getScroller, { signal })
-      const scenarios: ScenarioResult[] = []
+      const scroller = await waitForScroller(getScroller, { signal });
+      const scenarios: ScenarioResult[] = [];
 
       for (const scenario of SCENARIOS) {
         scenarios.push(
           await measureScenario(scroller, scenario, {
             signal,
-          })
-        )
+          }),
+        );
       }
 
       return {
@@ -211,103 +215,103 @@ export function ScrollBenchClient({
             : undefined,
         viewport: viewportMetrics(scroller),
         scenarios,
-      } satisfies ScrollBenchResult
+      } satisfies ScrollBenchResult;
     },
-    [getScroller, viewer]
-  )
+    [getScroller, viewer],
+  );
 
   const run = React.useCallback(async () => {
-    runAbortRef.current?.abort()
-    const abortController = new AbortController()
-    runAbortRef.current = abortController
+    runAbortRef.current?.abort();
+    const abortController = new AbortController();
+    runAbortRef.current = abortController;
 
-    setStatus("running")
-    setError(null)
-    setResult(null)
-    setRepeatResult(null)
+    setStatus("running");
+    setError(null);
+    setResult(null);
+    setRepeatResult(null);
 
     try {
-      const nextResult = await measureOnce(abortController.signal)
+      const nextResult = await measureOnce(abortController.signal);
       if (!abortController.signal.aborted) {
-        setResult(nextResult)
-        setStatus("done")
+        setResult(nextResult);
+        setStatus("done");
       }
-      return nextResult
+      return nextResult;
     } catch (caught) {
-      if (isAbortError(caught)) throw caught
+      if (isAbortError(caught)) throw caught;
 
       const message =
-        caught instanceof Error ? caught.message : "Scrollbench failed"
-      setError(message)
-      setStatus("failed")
-      throw caught
+        caught instanceof Error ? caught.message : "Scrollbench failed";
+      setError(message);
+      setStatus("failed");
+      throw caught;
     } finally {
-      if (runAbortRef.current === abortController) runAbortRef.current = null
+      if (runAbortRef.current === abortController) runAbortRef.current = null;
     }
-  }, [measureOnce])
+  }, [measureOnce]);
 
   const runMany = React.useCallback(
     async (count = 3) => {
-      runAbortRef.current?.abort()
-      const abortController = new AbortController()
-      runAbortRef.current = abortController
-      const runCount = normalizeRepeatRunCount(count)
+      runAbortRef.current?.abort();
+      const abortController = new AbortController();
+      runAbortRef.current = abortController;
+      const runCount = normalizeRepeatRunCount(count);
 
-      setStatus("running")
-      setError(null)
-      setResult(null)
-      setRepeatResult(null)
+      setStatus("running");
+      setError(null);
+      setResult(null);
+      setRepeatResult(null);
 
       try {
-        const runs: ScrollBenchResult[] = []
+        const runs: ScrollBenchResult[] = [];
 
         for (let index = 0; index < runCount; index += 1) {
-          runs.push(await measureOnce(abortController.signal))
+          runs.push(await measureOnce(abortController.signal));
         }
 
-        const nextRepeatResult = summarizeRepeatedScrollBenchRuns(runs)
+        const nextRepeatResult = summarizeRepeatedScrollBenchRuns(runs);
         if (!abortController.signal.aborted) {
-          setResult(runs[runs.length - 1] ?? null)
-          setRepeatResult(nextRepeatResult)
-          setStatus("done")
+          setResult(runs[runs.length - 1] ?? null);
+          setRepeatResult(nextRepeatResult);
+          setStatus("done");
         }
-        return nextRepeatResult
+        return nextRepeatResult;
       } catch (caught) {
-        if (isAbortError(caught)) throw caught
+        if (isAbortError(caught)) throw caught;
 
         const message =
-          caught instanceof Error ? caught.message : "Scrollbench failed"
-        setError(message)
-        setStatus("failed")
-        throw caught
+          caught instanceof Error ? caught.message : "Scrollbench failed";
+        setError(message);
+        setStatus("failed");
+        throw caught;
       } finally {
-        if (runAbortRef.current === abortController) runAbortRef.current = null
+        if (runAbortRef.current === abortController) runAbortRef.current = null;
       }
     },
-    [measureOnce]
-  )
+    [measureOnce],
+  );
 
-  controllerRef.current = { getScroller, run, runMany, runScenario }
-
-  React.useEffect(() => {
-    runAbortRef.current?.abort()
-    viewportHandleRef.current = null
-    setResult(null)
-    setRepeatResult(null)
-    setError(null)
-    setStatus("idle")
-    writeViewerToUrl(viewer)
-  }, [viewer])
+  controllerRef.current = { getScroller, run, runMany, runScenario };
 
   React.useEffect(() => {
-    if (viewer !== "pptx") return
-    runAbortRef.current?.abort()
-    sourceLoadTimingRef.current = null
-    setResult(null)
-    setRepeatResult(null)
-    setError(null)
-    setStatus("idle")
-  }, [pptxFile, viewer])
+    runAbortRef.current?.abort();
+    viewportHandleRef.current = null;
+    setResult(null);
+    setRepeatResult(null);
+    setError(null);
+    setStatus("idle");
+    writeViewerToUrl(viewer);
+  }, [viewer]);
+
+  React.useEffect(() => {
+    if (viewer !== "pptx") return;
+    runAbortRef.current?.abort();
+    sourceLoadTimingRef.current = null;
+    setResult(null);
+    setRepeatResult(null);
+    setError(null);
+    setStatus("idle");
+  }, [pptxFile, viewer]);
 
   React.useEffect(() => {
     const controller: ScrollBenchController = {
@@ -321,47 +325,47 @@ export function ScrollBenchClient({
       runScenario: (scenarioId) =>
         controllerRef.current?.runScenario(scenarioId) ??
         Promise.reject(scrollBenchControllerNotReadyError()),
-    }
+    };
 
-    window.__scrollbench = controller
+    window.__scrollbench = controller;
     return () => {
-      if (window.__scrollbench === controller) delete window.__scrollbench
-    }
-  }, [])
+      if (window.__scrollbench === controller) delete window.__scrollbench;
+    };
+  }, []);
 
   React.useEffect(() => {
-    if (autorunStartedRef.current) return
-    autorunStartedRef.current = true
+    if (autorunStartedRef.current) return;
+    autorunStartedRef.current = true;
 
-    const searchParams = new URLSearchParams(window.location.search)
+    const searchParams = new URLSearchParams(window.location.search);
     if (searchParams.get("autorun") === "1") {
-      const runCount = normalizeRepeatRunCount(searchParams.get("runs"))
-      const controller = controllerRef.current
+      const runCount = normalizeRepeatRunCount(searchParams.get("runs"));
+      const controller = controllerRef.current;
       const runPromise =
         (runCount > 1 ? controller?.runMany(runCount) : controller?.run()) ??
-        Promise.resolve()
-      void runPromise.catch(() => undefined)
+        Promise.resolve();
+      void runPromise.catch(() => undefined);
     }
-  }, [])
+  }, []);
 
   return (
     <main
-      className="flex h-svh min-h-0 flex-col bg-background text-foreground"
+      className="bg-background text-foreground flex h-svh min-h-0 flex-col"
       data-testid="scrollbench"
     >
-      <header className="flex min-h-14 flex-wrap items-center gap-3 border-b bg-background px-3 py-2">
+      <header className="bg-background flex min-h-14 flex-wrap items-center gap-3 border-b px-3 py-2">
         <div className="mr-2 min-w-0">
           <h1 className="text-sm leading-5 font-semibold">Scrollbench</h1>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Frame distribution, jank, scroll path, and DOM pressure across
             viewer scrollports.
           </p>
         </div>
 
-        <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+        <label className="text-muted-foreground ml-auto flex items-center gap-2 text-xs">
           Viewer
           <select
-            className="h-8 rounded-md border bg-background px-2 text-sm text-foreground shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="bg-background text-foreground focus-visible:ring-ring h-8 rounded-md border px-2 text-sm shadow-sm outline-none focus-visible:ring-2"
             value={viewer}
             onChange={(event) => setViewer(event.target.value as ViewerId)}
             data-testid="scrollbench-viewer-select"
@@ -376,7 +380,7 @@ export function ScrollBenchClient({
 
         <button
           type="button"
-          className="h-8 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+          className="bg-primary text-primary-foreground h-8 rounded-md px-3 text-sm font-medium shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
           disabled={status === "running"}
           onClick={() => void run().catch(() => undefined)}
           data-testid="scrollbench-run"
@@ -386,7 +390,7 @@ export function ScrollBenchClient({
 
         <button
           type="button"
-          className="h-8 rounded-md border bg-background px-3 text-sm font-medium shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+          className="bg-background h-8 rounded-md border px-3 text-sm font-medium shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
           disabled={status === "running"}
           onClick={() => void runMany(3).catch(() => undefined)}
           data-testid="scrollbench-run-many"
@@ -416,9 +420,9 @@ export function ScrollBenchClient({
           })}
         </div>
 
-        <aside className="flex min-h-0 flex-col gap-3 overflow-auto border-l bg-muted/20 p-3 max-lg:h-64 max-lg:border-t max-lg:border-l-0">
+        <aside className="bg-muted/20 flex min-h-0 flex-col gap-3 overflow-auto border-l p-3 max-lg:h-64 max-lg:border-t max-lg:border-l-0">
           <div>
-            <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            <div className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
               Fixture
             </div>
             <div className="mt-1 text-sm">
@@ -430,11 +434,11 @@ export function ScrollBenchClient({
             </div>
             {viewer === "pptx" ? (
               <label className="mt-3 block">
-                <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                   Custom deck
                 </span>
                 <input
-                  className="mt-1 block w-full text-xs text-muted-foreground file:mr-2 file:rounded-md file:border-0 file:bg-primary file:px-2 file:py-1 file:text-xs file:font-medium file:text-primary-foreground"
+                  className="text-muted-foreground file:bg-primary file:text-primary-foreground mt-1 block w-full text-xs file:mr-2 file:rounded-md file:border-0 file:px-2 file:py-1 file:text-xs file:font-medium"
                   type="file"
                   accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation"
                   onChange={handlePptxFileChange}
@@ -452,7 +456,7 @@ export function ScrollBenchClient({
         </aside>
       </section>
     </main>
-  )
+  );
 }
 
 function renderViewer({
@@ -468,19 +472,19 @@ function renderViewer({
   onPptxSlideRenderTiming,
   onImageFrameRenderTiming,
 }: {
-  viewer: ViewerId
-  csvValue: string
-  csvVariant: CsvScrollBenchVariant
-  jsonTableDocument: TableDocument
-  jsonSettings: ScrollBenchJsonSettings
-  pptxFile: File | null
-  textValue: string
-  setViewportHandle: (handle: ViewportHandle | null) => void
-  onPptxSourceLoadTiming: (timing: PptxSourceLoadTiming) => void
-  onPptxSlideRenderTiming: (timing: PptxSlideRenderTiming) => void
-  onImageFrameRenderTiming: (timing: ImageFrameRenderTiming) => void
+  viewer: ViewerId;
+  csvValue: string;
+  csvVariant: CsvScrollBenchVariant;
+  jsonTableDocument: TableDocument;
+  jsonSettings: ScrollBenchJsonSettings;
+  pptxFile: File | null;
+  textValue: string;
+  setViewportHandle: (handle: ViewportHandle | null) => void;
+  onPptxSourceLoadTiming: (timing: PptxSourceLoadTiming) => void;
+  onPptxSlideRenderTiming: (timing: PptxSlideRenderTiming) => void;
+  onImageFrameRenderTiming: (timing: ImageFrameRenderTiming) => void;
 }) {
-  const viewerClassName = "h-full rounded-none border-0"
+  const viewerClassName = "h-full rounded-none border-0";
 
   switch (viewer) {
     case "pdf":
@@ -496,7 +500,7 @@ function renderViewer({
           controls={false}
           bare
         />
-      )
+      );
     case "csv":
       return (
         <CsvViewer
@@ -516,10 +520,10 @@ function renderViewer({
           }
           isolateStyles={false}
         />
-      )
+      );
     case "json":
       return (
-        <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
+        <div className="bg-background flex h-full min-h-0 flex-col overflow-hidden">
           <SingleFileTableView
             document={jsonTableDocument}
             schema={jsonTableSchema}
@@ -529,13 +533,13 @@ function renderViewer({
             jumpOverscan={jsonSettings.jumpOverscan}
           />
         </div>
-      )
+      );
     case "json-form-sources":
       return (
         <JsonFormSourcesBlock
           defaultOpenPaths={JSON_FORM_SOURCES_DEFAULT_OPEN_PATHS}
         />
-      )
+      );
     case "xlsx":
       return (
         <XlsxViewer
@@ -550,7 +554,7 @@ function renderViewer({
           bare
           isolateStyles={false}
         />
-      )
+      );
     case "text":
       return (
         <CodeViewer
@@ -567,7 +571,7 @@ function renderViewer({
           maxBytes={4_000_000}
           maxLines={40_000}
         />
-      )
+      );
     case "docx":
       return (
         <DocxViewer
@@ -581,7 +585,7 @@ function renderViewer({
           controls={false}
           bare
         />
-      )
+      );
     case "pptx":
       return (
         <PptxViewer
@@ -590,13 +594,11 @@ function renderViewer({
           controls={false}
           bare
           eager
-          fallbackSlideSize={
-            pptxFile ? undefined : { width: 960, height: 540 }
-          }
+          fallbackSlideSize={pptxFile ? undefined : { width: 960, height: 540 }}
           onSourceLoadTiming={onPptxSourceLoadTiming}
           onSlideRenderTiming={onPptxSlideRenderTiming}
         />
-      )
+      );
     case "image":
       return (
         <ImageViewer
@@ -612,7 +614,7 @@ function renderViewer({
           onFrameRenderTiming={onImageFrameRenderTiming}
           bare
         />
-      )
+      );
   }
 }
 
@@ -622,7 +624,7 @@ function getScrollBenchPptxSource(file: File | null) {
       kind: "url" as const,
       url: "/samples/sample-presentation.pptx",
       fileName: "sample-presentation.pptx",
-    }
+    };
   }
 
   return {
@@ -638,7 +640,7 @@ function getScrollBenchPptxSource(file: File | null) {
     mimeType:
       file.type ||
       "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  }
+  };
 }
 
 function MetricPanel({
@@ -647,33 +649,33 @@ function MetricPanel({
   status,
   error,
 }: {
-  result: ScrollBenchResult | null
-  repeatResult: ScrollBenchRepeatResult | null
-  status: RunStatus
-  error: string | null
+  result: ScrollBenchResult | null;
+  repeatResult: ScrollBenchRepeatResult | null;
+  status: RunStatus;
+  error: string | null;
 }) {
   if (error) {
     return (
       <div
-        className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+        className="border-destructive/40 bg-destructive/10 text-destructive rounded-md border p-3 text-sm"
         data-testid="scrollbench-error"
       >
         {error}
       </div>
-    )
+    );
   }
 
   if (!result) {
     return (
       <div
-        className="rounded-md border bg-background p-3 text-sm text-muted-foreground"
+        className="bg-background text-muted-foreground rounded-md border p-3 text-sm"
         data-testid="scrollbench-empty"
       >
         {status === "running"
           ? "Measuring scroll frames..."
           : "Run the benchmark to record frame budget metrics."}
       </div>
-    )
+    );
   }
 
   return (
@@ -685,21 +687,21 @@ function MetricPanel({
           <div
             key={scenario.id}
             className={cn(
-              "rounded-md border bg-background p-3",
-              scenario.id === "large" ? "col-span-2" : ""
+              "bg-background rounded-md border p-3",
+              scenario.id === "large" ? "col-span-2" : "",
             )}
             data-testid={`scrollbench-${scenario.id}-summary`}
           >
-            <div className="text-xs text-muted-foreground">
+            <div className="text-muted-foreground text-xs">
               {scenario.label}
             </div>
             <div className="mt-1 text-2xl font-semibold tabular-nums">
               {formatNumber(scenario.p95FrameMs)}ms
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-muted-foreground text-xs">
               p95 · max {formatNumber(scenario.maxFrameMs)}ms
             </div>
-            <div className="mt-1 text-xs text-muted-foreground">
+            <div className="text-muted-foreground mt-1 text-xs">
               {scenario.isRafLimited
                 ? `rAF-limited at ${formatNumber(scenario.rafFps)} fps`
                 : `${formatNumber(scenario.over16)} over 16.7ms`}
@@ -814,7 +816,7 @@ function MetricPanel({
         </MetricGroup>
       ) : null}
     </div>
-  )
+  );
 }
 
 function RepeatMetricPanel({ result }: { result: ScrollBenchRepeatResult }) {
@@ -834,20 +836,20 @@ function RepeatMetricPanel({ result }: { result: ScrollBenchRepeatResult }) {
         <ScenarioRepeatMetricGroup key={scenario.id} scenario={scenario} />
       ))}
     </>
-  )
+  );
 }
 
 function ScenarioRepeatMetricGroup({
   scenario,
 }: {
-  scenario: ScenarioRepeatResult
+  scenario: ScenarioRepeatResult;
 }) {
   return (
     <MetricGroup title={`${scenario.label} repeat`}>
       <Metric
         label="rAF-limited runs"
         value={`${formatNumber(scenario.rafLimitedRuns)} / ${formatNumber(
-          scenario.runs
+          scenario.runs,
         )}`}
       />
       <Metric
@@ -940,13 +942,13 @@ function ScenarioRepeatMetricGroup({
         value={formatDistributionCount(scenario.maxViewerElementCount)}
       />
     </MetricGroup>
-  )
+  );
 }
 
 function ScenarioMetricGroup({ scenario }: { scenario: ScenarioResult }) {
   const warmup = scenario.warmupFrameMs
     .map((duration) => `${formatNumber(duration)}ms`)
-    .join(" / ")
+    .join(" / ");
 
   return (
     <MetricGroup title={scenario.label}>
@@ -1082,13 +1084,13 @@ function ScenarioMetricGroup({ scenario }: { scenario: ScenarioResult }) {
       <Metric
         label="scroll range"
         value={`${formatNumber(scenario.minScrollTop)}-${formatNumber(
-          scenario.maxScrollTop
+          scenario.maxScrollTop,
         )}px`}
       />
       <Metric
         label="targets"
         value={`${formatNumber(scenario.uniqueTargetCount)} / ${formatNumber(
-          scenario.targetCount
+          scenario.targetCount,
         )}`}
       />
       <Metric
@@ -1097,24 +1099,24 @@ function ScenarioMetricGroup({ scenario }: { scenario: ScenarioResult }) {
       />
       <Metric label="warmup" value={warmup || "0ms"} />
     </MetricGroup>
-  )
+  );
 }
 
 function MetricGroup({
   title,
   children,
 }: {
-  title: string
-  children: React.ReactNode
+  title: string;
+  children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-md border bg-background p-3">
-      <h2 className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+    <section className="bg-background rounded-md border p-3">
+      <h2 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
         {title}
       </h2>
       <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">{children}</dl>
     </section>
-  )
+  );
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
@@ -1123,29 +1125,29 @@ function Metric({ label, value }: { label: string; value: string }) {
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="text-right font-medium tabular-nums">{value}</dd>
     </>
-  )
+  );
 }
 
 function formatDistributionCount(distribution: NumberDistributionResult) {
   return `${formatNumber(distribution.average)} avg / ${formatNumber(
-    distribution.max
-  )} max`
+    distribution.max,
+  )} max`;
 }
 
 function formatDistributionMs(distribution: NumberDistributionResult) {
   return `${formatNumber(distribution.average)}ms avg / ${formatNumber(
-    distribution.max
-  )}ms max`
+    distribution.max,
+  )}ms max`;
 }
 
 function formatDistributionRatio(distribution: NumberDistributionResult) {
   return `${formatRatio(distribution.average)} avg / ${formatRatio(
-    distribution.max
-  )} max`
+    distribution.max,
+  )} max`;
 }
 
 function formatBudgetCount(count: number, ratio: number) {
-  return `${formatNumber(count)} (${formatPercent(ratio)})`
+  return `${formatNumber(count)} (${formatPercent(ratio)})`;
 }
 
 function formatNodeRange({
@@ -1153,64 +1155,64 @@ function formatNodeRange({
   initial,
   max,
 }: {
-  final: number
-  initial: number
-  max: number
+  final: number;
+  initial: number;
+  max: number;
 }) {
   return `${formatNumber(initial)} -> ${formatNumber(final)} (max ${formatNumber(
-    max
-  )})`
+    max,
+  )})`;
 }
 
 function formatPercent(value: number) {
   return new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 1,
     style: "percent",
-  }).format(Number.isFinite(value) ? value : 0)
+  }).format(Number.isFinite(value) ? value : 0);
 }
 
 function formatRatio(value: number) {
-  if (!Number.isFinite(value) || value <= 0) return "0x"
-  return `${formatNumber(value)}x`
+  if (!Number.isFinite(value) || value <= 0) return "0x";
+  return `${formatNumber(value)}x`;
 }
 
 function formatScrollSize(viewport: ScrollBenchResult["viewport"]) {
   return `${formatNumber(viewport.scrollWidth)} x ${formatNumber(
-    viewport.scrollHeight
-  )}px`
+    viewport.scrollHeight,
+  )}px`;
 }
 
 function formatSize(viewport: ScrollBenchResult["viewport"]) {
   return `${formatNumber(viewport.clientWidth)} x ${formatNumber(
-    viewport.clientHeight
-  )}px`
+    viewport.clientHeight,
+  )}px`;
 }
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("en-US", {
     maximumFractionDigits: value >= 100 ? 0 : 1,
-  }).format(value)
+  }).format(value);
 }
 
 function formatBytes(value: number) {
-  if (!Number.isFinite(value) || value <= 0) return "0 B"
-  if (value < 1024) return `${formatNumber(value)} B`
-  if (value < 1024 * 1024) return `${formatNumber(value / 1024)} KB`
-  return `${formatNumber(value / (1024 * 1024))} MB`
+  if (!Number.isFinite(value) || value <= 0) return "0 B";
+  if (value < 1024) return `${formatNumber(value)} B`;
+  if (value < 1024 * 1024) return `${formatNumber(value / 1024)} KB`;
+  return `${formatNumber(value / (1024 * 1024))} MB`;
 }
 
 function writeViewerToUrl(viewer: ViewerId) {
-  const url = new URL(window.location.href)
-  url.searchParams.set("viewer", viewer)
-  window.history.replaceState(null, "", url)
+  const url = new URL(window.location.href);
+  url.searchParams.set("viewer", viewer);
+  window.history.replaceState(null, "", url);
 }
 
 function readCsvScrollBenchVariant(): CsvScrollBenchVariant {
-  if (typeof window === "undefined") return "default"
+  if (typeof window === "undefined") return "default";
   return new URLSearchParams(window.location.search).get("csvVariant") ===
     "active-cell"
     ? "active-cell"
-    : "default"
+    : "default";
 }
 
 function normalizeRepeatRunCount(value: number | string | null | undefined) {
@@ -1219,22 +1221,22 @@ function normalizeRepeatRunCount(value: number | string | null | undefined) {
     fallback: 3,
     min: 1,
     max: SCROLLBENCH_MAX_REPEAT_RUNS,
-  })
+  });
 }
 
 function scrollBenchControllerNotReadyError() {
-  return new Error("Scrollbench controller is not ready.")
+  return new Error("Scrollbench controller is not ready.");
 }
 
 function readScrollBenchJsonSettings(
-  initialSettings: InitialScrollBenchJsonSettings | undefined
+  initialSettings: InitialScrollBenchJsonSettings | undefined,
 ): ScrollBenchJsonSettings {
   const overscan = readBoundedIntegerParam({
     rawValue: initialSettings?.overscan,
     fallback: SCROLLBENCH_JSON_OVERSCAN,
     min: 0,
     max: SCROLLBENCH_JSON_MAX_OVERSCAN,
-  })
+  });
   return {
     rowCount: readBoundedIntegerParam({
       rawValue: initialSettings?.rows,
@@ -1249,7 +1251,7 @@ function readScrollBenchJsonSettings(
       min: 0,
       max: SCROLLBENCH_JSON_MAX_OVERSCAN,
     }),
-  }
+  };
 }
 
 function readBoundedIntegerParam({
@@ -1258,41 +1260,41 @@ function readBoundedIntegerParam({
   min,
   max,
 }: {
-  rawValue: string | undefined
-  fallback: number
-  min: number
-  max: number
+  rawValue: string | undefined;
+  fallback: number;
+  min: number;
+  max: number;
 }) {
-  if (rawValue === undefined) return fallback
+  if (rawValue === undefined) return fallback;
 
-  const value = Number(rawValue)
-  if (!Number.isFinite(value)) return fallback
+  const value = Number(rawValue);
+  if (!Number.isFinite(value)) return fallback;
 
-  return Math.min(max, Math.max(min, Math.floor(value)))
+  return Math.min(max, Math.max(min, Math.floor(value)));
 }
 
 function createScrollBenchCsv() {
   const headers = Array.from(
     { length: 18 },
-    (_, index) => `metric_${index + 1}`
-  )
+    (_, index) => `metric_${index + 1}`,
+  );
   const rows = Array.from({ length: 20_000 }, (_, rowIndex) =>
     headers
       .map((_, columnIndex) =>
-        String((rowIndex + 1) * (columnIndex + 3) + (columnIndex % 7))
+        String((rowIndex + 1) * (columnIndex + 3) + (columnIndex % 7)),
       )
-      .join(",")
-  )
-  return [headers.join(","), ...rows].join("\n")
+      .join(","),
+  );
+  return [headers.join(","), ...rows].join("\n");
 }
 
 function createScrollBenchText() {
   return Array.from({ length: 30_000 }, (_, lineIndex) => {
-    const sequence = String(lineIndex + 1).padStart(5, "0")
-    const latency = 20 + ((lineIndex * 13) % 300)
-    const worker = `worker-${(lineIndex % 16) + 1}`
-    return `${sequence} ${worker} processed scrollbench event in ${latency}ms`
-  }).join("\n")
+    const sequence = String(lineIndex + 1).padStart(5, "0");
+    const latency = 20 + ((lineIndex * 13) % 300);
+    const worker = `worker-${(lineIndex % 16) + 1}`;
+    return `${sequence} ${worker} processed scrollbench event in ${latency}ms`;
+  }).join("\n");
 }
 
 function createScrollBenchJsonSchema(): JSONSchema7 {
@@ -1351,22 +1353,22 @@ function createScrollBenchJsonSchema(): JSONSchema7 {
       },
     },
     required: ["rows"],
-  }
+  };
 }
 
 function createScrollBenchJsonDocument(rowCount: number): TableDocument {
-  const merchants = ["Acme", "Globex", "Initech", "Umbrella", "Soylent"]
-  const categories = ["travel", "software", "payroll", "office", "tax"]
-  const statuses = ["posted", "pending", "reviewed", "matched"]
-  const regions = ["na", "eu", "apac", "latam"]
-  const channels = ["card", "wire", "ach", "check"]
+  const merchants = ["Acme", "Globex", "Initech", "Umbrella", "Soylent"];
+  const categories = ["travel", "software", "payroll", "office", "tax"];
+  const statuses = ["posted", "pending", "reviewed", "matched"];
+  const regions = ["na", "eu", "apac", "latam"];
+  const channels = ["card", "wire", "ach", "check"];
 
   return {
     id: "scrollbench-json",
     data: {
       rows: Array.from({ length: rowCount }, (_, rowIndex) => {
-        const sequence = rowIndex + 1
-        const amount = ((sequence * 37) % 20_000) / 100
+        const sequence = rowIndex + 1;
+        const amount = ((sequence * 37) % 20_000) / 100;
         return {
           record_id: `txn_${String(sequence).padStart(6, "0")}`,
           posted_at: `2025-${String((rowIndex % 12) + 1).padStart(2, "0")}-${String((rowIndex % 28) + 1).padStart(2, "0")}`,
@@ -1386,8 +1388,8 @@ function createScrollBenchJsonDocument(rowCount: number): TableDocument {
           batch_id: `batch_${String(Math.floor(rowIndex / 250) + 1).padStart(3, "0")}`,
           source: rowIndex % 2 === 0 ? "statement" : "api",
           confidence: ((rowIndex * 19) % 100) / 100,
-        }
+        };
       }),
     },
-  }
+  };
 }

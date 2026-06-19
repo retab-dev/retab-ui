@@ -1,21 +1,21 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
 import {
   getSegmentInteractionState,
   getSegmentSurfaceProps,
   scopeSegmentInteraction,
   type SegmentInteraction,
-} from "@/lib/segment-interaction"
+} from "@/lib/segment-interaction";
 import {
   formatPageRanges,
   segmentDisplayLabel,
   segmentPageCount,
-} from "@/lib/segments"
-import { cn } from "@/lib/utils"
+} from "@/lib/segments";
+import { cn } from "@/lib/utils";
 
-import type { DocumentSegment } from "./segmented-document-model"
+import type { DocumentSegment } from "./segmented-document-model";
 import {
   SidebarListButton,
   SidebarListContent,
@@ -25,21 +25,21 @@ import {
   SidebarListMenu,
   SidebarListMenuItem,
   SidebarListRoot,
-} from "./sidebar-list"
+} from "./sidebar-list";
 
 export interface SegmentSidebarProps {
-  segments: DocumentSegment[]
+  segments: DocumentSegment[];
   /** Shared preview state. */
-  interaction?: SegmentInteraction
+  interaction?: SegmentInteraction;
   /** Fired when a segment surface is clicked, after transient preview is cleared. */
-  onSelect?: (segment: DocumentSegment) => void
+  onSelect?: (segment: DocumentSegment) => void;
   /** 1-based current page; owning segments receive current-page state. */
-  currentPage?: number | null
+  currentPage?: number | null;
   /** Noun for a row, e.g. "chunk" (partition) or "subdocument" (split). */
-  unitLabel?: string
+  unitLabel?: string;
   /** Show segments with zero pages too. */
-  showUnused?: boolean
-  className?: string
+  showUnused?: boolean;
+  className?: string;
 }
 
 /**
@@ -59,15 +59,15 @@ export function SegmentSidebar({
 }: SegmentSidebarProps) {
   const visible = showUnused
     ? segments
-    : segments.filter((s) => segmentPageCount(s.pages) > 0)
+    : segments.filter((s) => segmentPageCount(s.pages) > 0);
   const scopedInteraction = React.useMemo(
     () =>
       scopeSegmentInteraction(
         interaction,
-        visible.map((segment) => segment.id)
+        visible.map((segment) => segment.id),
       ),
-    [interaction, visible]
-  )
+    [interaction, visible],
+  );
   const interactionState = React.useMemo(
     () =>
       getSegmentInteractionState({
@@ -75,8 +75,8 @@ export function SegmentSidebar({
         currentPage,
         interaction: scopedInteraction,
       }),
-    [currentPage, scopedInteraction, visible]
-  )
+    [currentPage, scopedInteraction, visible],
+  );
 
   return (
     <div
@@ -108,7 +108,7 @@ export function SegmentSidebar({
         </SidebarListContent>
       </SidebarListRoot>
     </div>
-  )
+  );
 }
 
 function SegmentSidebarItem({
@@ -117,19 +117,19 @@ function SegmentSidebarItem({
   interactionState,
   onSelect,
 }: {
-  segment: DocumentSegment
-  interaction: SegmentInteraction | undefined
-  interactionState: ReturnType<typeof getSegmentInteractionState>
-  onSelect: ((segment: DocumentSegment) => void) | undefined
+  segment: DocumentSegment;
+  interaction: SegmentInteraction | undefined;
+  interactionState: ReturnType<typeof getSegmentInteractionState>;
+  onSelect: ((segment: DocumentSegment) => void) | undefined;
 }) {
   const { state, eventHandlers, dataProps } = getSegmentSurfaceProps({
     segment,
     interaction,
     interactionState,
     onSelect,
-  })
-  const label = segmentDisplayLabel(segment.label)
-  const pageCount = segmentPageCount(segment.pages)
+  });
+  const label = segmentDisplayLabel(segment.label);
+  const pageCount = segmentPageCount(segment.pages);
 
   return (
     <SidebarListMenuItem>
@@ -143,7 +143,7 @@ function SegmentSidebarItem({
           state.isHighlighted
             ? "border-sidebar-border bg-sidebar-accent text-sidebar-accent-foreground"
             : "border-transparent",
-          state.isDimmed && "opacity-60"
+          state.isDimmed && "opacity-60",
         )}
         isActive={state.isHighlighted}
       >
@@ -160,7 +160,7 @@ function SegmentSidebarItem({
               <span className="text-muted-foreground italic">unnamed</span>
             )}
           </span>
-          <span className="font-mono text-xs text-muted-foreground">
+          <span className="text-muted-foreground font-mono text-xs">
             {pageCount === 0
               ? "no pages"
               : `${pageCount} page${
@@ -173,23 +173,23 @@ function SegmentSidebarItem({
         </span>
       </SidebarListButton>
     </SidebarListMenuItem>
-  )
+  );
 }
 
 function ConfidenceBar({ value }: { value: number }) {
-  const safeValue = Number.isFinite(value) ? value : 0
-  const pct = Math.round(Math.max(0, Math.min(1, safeValue)) * 100)
+  const safeValue = Number.isFinite(value) ? value : 0;
+  const pct = Math.round(Math.max(0, Math.min(1, safeValue)) * 100);
   return (
     <span className="mt-0.5 flex items-center gap-1.5">
-      <span className="h-1 w-16 overflow-hidden rounded-full bg-muted-foreground/20">
+      <span className="bg-muted-foreground/20 h-1 w-16 overflow-hidden rounded-full">
         <span
-          className="block h-full rounded-full bg-foreground/60"
+          className="bg-foreground/60 block h-full rounded-full"
           style={{ width: `${pct}%` }}
         />
       </span>
-      <span className="text-[10px] text-muted-foreground tabular-nums">
+      <span className="text-muted-foreground text-[10px] tabular-nums">
         {pct}%
       </span>
     </span>
-  )
+  );
 }

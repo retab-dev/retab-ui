@@ -38,15 +38,15 @@ Reduce a partition or split result to `Segment[]` with `toSegments`, then render
 the legend against your own interaction state:
 
 ```tsx
-import { toSegments } from "@/lib/segments"
-import { SegmentLegend } from "@/components/ui/segment-legend"
-import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
+import { toSegments } from "@/lib/segments";
+import { SegmentLegend } from "@/components/ui/segment-legend";
+import { useSegmentInteraction } from "@/components/ui/use-segment-interaction";
 
 // partition: [{ key, pages }]   split: [{ name, pages }]
-const segments = toSegments(result.output)
+const segments = toSegments(result.output);
 
 export function Example() {
-  const interaction = useSegmentInteraction()
+  const interaction = useSegmentInteraction();
   return (
     <SegmentLegend
       segments={segments}
@@ -54,7 +54,7 @@ export function Example() {
       interaction={interaction}
       currentPage={1}
     />
-  )
+  );
 }
 ```
 

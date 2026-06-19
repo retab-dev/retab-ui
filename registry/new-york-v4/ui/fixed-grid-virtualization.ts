@@ -1,51 +1,53 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
+
+import * as React from "react";
 
 const useIsomorphicLayoutEffect =
-  typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect
+  typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
 
-const MINIMUM_ROW_WINDOW = 32
-const INITIAL_COLUMN_WINDOW = 8
-const MAX_VIRTUAL_ITEMS = 10_000
-const MAX_EAGER_COLUMN_ITEMS = 10_000
+const MINIMUM_ROW_WINDOW = 32;
+const INITIAL_COLUMN_WINDOW = 8;
+const MAX_VIRTUAL_ITEMS = 10_000;
+const MAX_EAGER_COLUMN_ITEMS = 10_000;
 
 export interface FixedGridColumnItem {
-  index: number
-  widthPx: number
+  index: number;
+  widthPx: number;
 }
 
 export interface FixedGridVirtualItem {
-  index: number
-  start: number
-  size: number
-  end: number
+  index: number;
+  start: number;
+  size: number;
+  end: number;
 }
 
 export interface FixedGridRowPoolSlot {
-  slotIndex: number
-  virtualRow: FixedGridVirtualItem | null
-  isHidden: boolean
+  slotIndex: number;
+  virtualRow: FixedGridVirtualItem | null;
+  isHidden: boolean;
 }
 
 export interface FixedGridScrollTarget {
-  rowIndex: number
-  columnIndex: number
-  align?: "start" | "center" | "end" | "auto"
-  behavior?: ScrollBehavior
+  rowIndex: number;
+  columnIndex: number;
+  align?: "start" | "center" | "end" | "auto";
+  behavior?: ScrollBehavior;
 }
 
 export interface FixedRowScrollTarget {
-  rowIndex: number
-  align?: "start" | "center" | "end" | "auto"
-  behavior?: ScrollBehavior
+  rowIndex: number;
+  align?: "start" | "center" | "end" | "auto";
+  behavior?: ScrollBehavior;
 }
 
-export type FixedGridJumpViewportResult = "handled" | "pass"
+export type FixedGridJumpViewportResult = "handled" | "pass";
 
 export interface FixedGridRowScrollStrategy {
-  settleAfterMs?: number
-  handleViewport: (viewport: FixedGridViewport) => FixedGridJumpViewportResult
+  settleAfterMs?: number;
+  handleViewport: (viewport: FixedGridViewport) => FixedGridJumpViewportResult;
 }
 
 export function useFixedRowPool({
@@ -53,31 +55,31 @@ export function useFixedRowPool({
   rowCount,
   virtualRows,
 }: {
-  minimumPoolSize?: number
-  rowCount: number
-  virtualRows: FixedGridVirtualItem[]
+  minimumPoolSize?: number;
+  rowCount: number;
+  virtualRows: FixedGridVirtualItem[];
 }): FixedGridRowPoolSlot[] {
-  const poolSizeRef = React.useRef(0)
-  const safeRowCount = fixedItemCount(rowCount)
-  const safeMinimumPoolSize = fixedItemCount(minimumPoolSize)
+  const poolSizeRef = React.useRef(0);
+  const safeRowCount = fixedItemCount(rowCount);
+  const safeMinimumPoolSize = fixedItemCount(minimumPoolSize);
   const nextPoolSize = Math.min(
     safeRowCount,
-    Math.max(poolSizeRef.current, virtualRows.length, safeMinimumPoolSize)
-  )
-  poolSizeRef.current = nextPoolSize
+    Math.max(poolSizeRef.current, virtualRows.length, safeMinimumPoolSize),
+  );
+  poolSizeRef.current = nextPoolSize;
 
   return React.useMemo(
     () =>
       Array.from({ length: nextPoolSize }, (_, slotIndex) => {
-        const virtualRow = virtualRows[slotIndex] ?? null
+        const virtualRow = virtualRows[slotIndex] ?? null;
         return {
           slotIndex,
           virtualRow,
           isHidden: !virtualRow,
-        }
+        };
       }),
-    [nextPoolSize, virtualRows]
-  )
+    [nextPoolSize, virtualRows],
+  );
 }
 
 export function useFixedGridVirtualization({
@@ -95,24 +97,24 @@ export function useFixedGridVirtualization({
   scrollElement,
   virtualizeColumns = true,
 }: {
-  rowCount: number
-  columnCount: number
-  rowSize: number
-  columnSize: number
-  rowOverscan: number
-  columnOverscan: number
-  jumpRowOverscan?: number
-  jumpColumnOverscan?: number
-  minimumRenderedRows?: number
-  rowScrollStrategy?: FixedGridRowScrollStrategy
-  scrollRef: React.RefObject<HTMLElement | null>
-  scrollElement?: HTMLElement | null
-  virtualizeColumns?: boolean
+  rowCount: number;
+  columnCount: number;
+  rowSize: number;
+  columnSize: number;
+  rowOverscan: number;
+  columnOverscan: number;
+  jumpRowOverscan?: number;
+  jumpColumnOverscan?: number;
+  minimumRenderedRows?: number;
+  rowScrollStrategy?: FixedGridRowScrollStrategy;
+  scrollRef: React.RefObject<HTMLElement | null>;
+  scrollElement?: HTMLElement | null;
+  virtualizeColumns?: boolean;
 }) {
   const resolvedScrollElement = useResolvedScrollElement({
     scrollRef,
     scrollElement,
-  })
+  });
   const viewport = useFixedGridViewport(
     resolvedScrollElement,
     rowScrollStrategy,
@@ -121,18 +123,18 @@ export function useFixedGridVirtualization({
       columnCount,
       rowSize,
       columnSize,
-    }
-  )
+    },
+  );
 
-  const totalRowSize = fixedTotalSize(rowCount, rowSize)
-  const totalColumnSize = fixedTotalSize(columnCount, columnSize)
+  const totalRowSize = fixedTotalSize(rowCount, rowSize);
+  const totalColumnSize = fixedTotalSize(columnCount, columnSize);
   const activeRowOverscan = viewport.isJumpingRows
     ? jumpRowOverscan
-    : rowOverscan
+    : rowOverscan;
   const activeColumnOverscan =
     viewport.isJumpingColumns || viewport.isJumpingRows
       ? jumpColumnOverscan
-      : columnOverscan
+      : columnOverscan;
 
   const virtualRows = React.useMemo(
     () =>
@@ -151,23 +153,23 @@ export function useFixedGridVirtualization({
       viewport.clientHeight,
       activeRowOverscan,
       minimumRenderedRows,
-    ]
-  )
+    ],
+  );
 
   const columnWindow = React.useMemo<{
-    columnItems: FixedGridColumnItem[]
-    leftPad: number
-    rightPad: number
+    columnItems: FixedGridColumnItem[];
+    leftPad: number;
+    rightPad: number;
   }>(() => {
     if (!virtualizeColumns) {
-      const safeColumnCount = fixedItemCount(columnCount)
-      const safeColumnSize = fixedItemSize(columnSize)
+      const safeColumnCount = fixedItemCount(columnCount);
+      const safeColumnSize = fixedItemSize(columnSize);
       if (safeColumnCount > MAX_EAGER_COLUMN_ITEMS) {
         return {
           columnItems: [],
           leftPad: 0,
           rightPad: 0,
-        }
+        };
       }
       return {
         columnItems: Array.from({ length: safeColumnCount }, (_, index) => ({
@@ -176,7 +178,7 @@ export function useFixedGridVirtualization({
         })),
         leftPad: 0,
         rightPad: 0,
-      }
+      };
     }
 
     const virtualColumns = fixedVirtualItems({
@@ -186,7 +188,7 @@ export function useFixedGridVirtualization({
       viewportSize: viewport.clientWidth,
       overscan: activeColumnOverscan,
       minimumVisibleCount: INITIAL_COLUMN_WINDOW,
-    })
+    });
 
     return {
       columnItems: virtualColumns.map((item) => ({
@@ -197,7 +199,7 @@ export function useFixedGridVirtualization({
       rightPad: virtualColumns.length
         ? totalColumnSize - virtualColumns[virtualColumns.length - 1].end
         : 0,
-    }
+    };
   }, [
     virtualizeColumns,
     columnCount,
@@ -206,7 +208,7 @@ export function useFixedGridVirtualization({
     viewport.clientWidth,
     activeColumnOverscan,
     totalColumnSize,
-  ])
+  ]);
 
   const scrollToCell = React.useCallback(
     ({
@@ -215,8 +217,8 @@ export function useFixedGridVirtualization({
       align = "center",
       behavior = "smooth",
     }: FixedGridScrollTarget) => {
-      const scrollElement = scrollRef.current
-      if (!scrollElement) return
+      const scrollElement = scrollRef.current;
+      if (!scrollElement) return;
       scrollElement.scrollTo({
         top: fixedScrollOffset({
           index: rowIndex,
@@ -231,10 +233,10 @@ export function useFixedGridVirtualization({
           align,
         }),
         behavior,
-      })
+      });
     },
-    [columnSize, rowSize, scrollRef]
-  )
+    [columnSize, rowSize, scrollRef],
+  );
 
   return {
     virtualRows,
@@ -245,7 +247,7 @@ export function useFixedGridVirtualization({
     isJumpingColumns: viewport.isJumpingColumns,
     viewportClientHeight: viewport.clientHeight,
     ...columnWindow,
-  }
+  };
 }
 
 export function useFixedRowVirtualization({
@@ -256,14 +258,14 @@ export function useFixedRowVirtualization({
   initialViewportHeight = 0,
   scrollRef,
 }: {
-  rowCount: number
-  rowSize: number
-  rowOverscan: number
-  jumpRowOverscan?: number
-  initialViewportHeight?: number
-  scrollRef: React.RefObject<HTMLElement | null>
+  rowCount: number;
+  rowSize: number;
+  rowOverscan: number;
+  jumpRowOverscan?: number;
+  initialViewportHeight?: number;
+  scrollRef: React.RefObject<HTMLElement | null>;
 }) {
-  const resolvedScrollElement = useResolvedScrollElement({ scrollRef })
+  const resolvedScrollElement = useResolvedScrollElement({ scrollRef });
   const [range, setRange] = React.useState(() =>
     initialViewportHeight > 0
       ? fixedRowRange({
@@ -273,77 +275,80 @@ export function useFixedRowVirtualization({
           viewportHeight: initialViewportHeight,
           rowOverscan,
         })
-      : { start: 0, end: 0 }
-  )
-  const rangeRef = React.useRef(range)
-  const rafRef = React.useRef(0)
-  const totalRowSize = fixedTotalSize(rowCount, rowSize)
+      : { start: 0, end: 0 },
+  );
+  const rangeRef = React.useRef(range);
+  const rafRef = React.useRef(0);
+  const totalRowSize = fixedTotalSize(rowCount, rowSize);
 
   const setMeasuredRange = React.useCallback((next: typeof range) => {
-    const current = rangeRef.current
-    if (current.start === next.start && current.end === next.end) return
-    rangeRef.current = next
-    setRange(next)
-  }, [])
+    const current = rangeRef.current;
+    if (current.start === next.start && current.end === next.end) return;
+    rangeRef.current = next;
+    setRange(next);
+  }, []);
 
   const measure = React.useCallback(() => {
-    const scrollElement = resolvedScrollElement
-    const safeRowCount = fixedItemCount(rowCount)
-    const safeRowSize = fixedItemSize(rowSize)
+    const scrollElement = resolvedScrollElement;
+    const safeRowCount = fixedItemCount(rowCount);
+    const safeRowSize = fixedItemSize(rowSize);
     if (!scrollElement || safeRowCount <= 0 || safeRowSize <= 0) {
-      setMeasuredRange({ start: 0, end: 0 })
-      return
+      setMeasuredRange({ start: 0, end: 0 });
+      return;
     }
 
     const scrollTop =
       Number.isFinite(scrollElement.scrollTop) && scrollElement.scrollTop > 0
         ? scrollElement.scrollTop
-        : 0
+        : 0;
     const viewportHeight =
       Number.isFinite(scrollElement.clientHeight) &&
       scrollElement.clientHeight > 0
         ? scrollElement.clientHeight
-        : fixedViewportMetric(initialViewportHeight)
+        : fixedViewportMetric(initialViewportHeight);
     const firstVisibleRow = clamp(
       Math.floor(scrollTop / safeRowSize),
       0,
-      safeRowCount - 1
-    )
-    const visibleRowCount = Math.ceil(viewportHeight / safeRowSize)
-    const previous = rangeRef.current
+      safeRowCount - 1,
+    );
+    const visibleRowCount = Math.ceil(viewportHeight / safeRowSize);
+    const previous = rangeRef.current;
     const isJumping =
-      Math.abs(firstVisibleRow - previous.start) > visibleRowCount * 0.45
+      Math.abs(firstVisibleRow - previous.start) > visibleRowCount * 0.45;
     const activeOverscan = fixedOverscan(
-      isJumping ? jumpRowOverscan : rowOverscan
-    )
-    const uncappedStart = Math.max(0, firstVisibleRow - activeOverscan)
+      isJumping ? jumpRowOverscan : rowOverscan,
+    );
+    const uncappedStart = Math.max(0, firstVisibleRow - activeOverscan);
     const uncappedEnd = Math.min(
       safeRowCount,
-      firstVisibleRow + visibleRowCount + activeOverscan
-    )
+      firstVisibleRow + visibleRowCount + activeOverscan,
+    );
     const { start, end } = capVirtualRange({
       uncappedStart,
       uncappedEnd,
       visibleStart: firstVisibleRow,
       visibleEnd: Math.min(safeRowCount, firstVisibleRow + visibleRowCount),
       maxItems: MAX_VIRTUAL_ITEMS,
-    })
+    });
 
     if (previous.end > safeRowCount || previous.start >= safeRowCount) {
-      setMeasuredRange({ start, end })
-      return
+      setMeasuredRange({ start, end });
+      return;
     }
 
-    const bufferRows = Math.max(1, Math.floor(activeOverscan / 2))
-    const visibleStart = firstVisibleRow
-    const visibleEnd = Math.min(safeRowCount, firstVisibleRow + visibleRowCount)
+    const bufferRows = Math.max(1, Math.floor(activeOverscan / 2));
+    const visibleStart = firstVisibleRow;
+    const visibleEnd = Math.min(
+      safeRowCount,
+      firstVisibleRow + visibleRowCount,
+    );
     const hasBeforeBuffer =
-      previous.start === 0 || visibleStart >= previous.start + bufferRows
+      previous.start === 0 || visibleStart >= previous.start + bufferRows;
     const hasAfterBuffer =
-      previous.end === safeRowCount || visibleEnd <= previous.end - bufferRows
+      previous.end === safeRowCount || visibleEnd <= previous.end - bufferRows;
 
-    if (hasBeforeBuffer && hasAfterBuffer) return
-    setMeasuredRange({ start, end })
+    if (hasBeforeBuffer && hasAfterBuffer) return;
+    setMeasuredRange({ start, end });
   }, [
     jumpRowOverscan,
     initialViewportHeight,
@@ -352,57 +357,57 @@ export function useFixedRowVirtualization({
     rowSize,
     resolvedScrollElement,
     setMeasuredRange,
-  ])
+  ]);
 
   React.useLayoutEffect(() => {
-    measure()
-  }, [measure])
+    measure();
+  }, [measure]);
 
   React.useEffect(() => {
-    const scrollElement = resolvedScrollElement
-    if (!scrollElement) return
+    const scrollElement = resolvedScrollElement;
+    if (!scrollElement) return;
 
     const scheduleMeasure = () => {
-      if (rafRef.current) return
-      let didRun = false
+      if (rafRef.current) return;
+      let didRun = false;
       const frame = requestAnimationFrame(() => {
-        didRun = true
-        rafRef.current = 0
-        measure()
-      })
-      rafRef.current = didRun ? 0 : frame
-    }
+        didRun = true;
+        rafRef.current = 0;
+        measure();
+      });
+      rafRef.current = didRun ? 0 : frame;
+    };
 
     scrollElement.addEventListener("scroll", scheduleMeasure, {
       passive: true,
-    })
+    });
     const observer =
       typeof ResizeObserver !== "undefined"
         ? new ResizeObserver(scheduleMeasure)
-        : null
-    observer?.observe(scrollElement)
+        : null;
+    observer?.observe(scrollElement);
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current)
-      scrollElement.removeEventListener("scroll", scheduleMeasure)
-      observer?.disconnect()
-    }
-  }, [resolvedScrollElement, measure])
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      scrollElement.removeEventListener("scroll", scheduleMeasure);
+      observer?.disconnect();
+    };
+  }, [resolvedScrollElement, measure]);
 
   const virtualRows = React.useMemo(
     () =>
       Array.from({ length: range.end - range.start }, (_, offset) => {
-        const index = range.start + offset
-        const size = fixedItemSize(rowSize)
-        const start = index * size
+        const index = range.start + offset;
+        const size = fixedItemSize(rowSize);
+        const start = index * size;
         return {
           index,
           start,
           size,
           end: start + size,
-        }
+        };
       }),
-    [range, rowSize]
-  )
+    [range, rowSize],
+  );
 
   const scrollToRow = React.useCallback(
     ({
@@ -410,8 +415,8 @@ export function useFixedRowVirtualization({
       align = "center",
       behavior = "smooth",
     }: FixedRowScrollTarget) => {
-      const scrollElement = scrollRef.current
-      if (!scrollElement) return
+      const scrollElement = scrollRef.current;
+      if (!scrollElement) return;
       scrollElement.scrollTo({
         top: fixedScrollOffset({
           index: rowIndex,
@@ -420,16 +425,16 @@ export function useFixedRowVirtualization({
           align,
         }),
         behavior,
-      })
+      });
     },
-    [rowSize, scrollRef]
-  )
+    [rowSize, scrollRef],
+  );
 
   return {
     virtualRows,
     totalRowSize,
     scrollToRow,
-  }
+  };
 }
 
 function fixedRowRange({
@@ -439,70 +444,70 @@ function fixedRowRange({
   viewportHeight,
   rowOverscan,
 }: {
-  rowCount: number
-  rowSize: number
-  scrollTop: number
-  viewportHeight: number
-  rowOverscan: number
+  rowCount: number;
+  rowSize: number;
+  scrollTop: number;
+  viewportHeight: number;
+  rowOverscan: number;
 }) {
-  const safeRowCount = fixedItemCount(rowCount)
-  const safeRowSize = fixedItemSize(rowSize)
-  if (safeRowCount <= 0 || safeRowSize <= 0) return { start: 0, end: 0 }
+  const safeRowCount = fixedItemCount(rowCount);
+  const safeRowSize = fixedItemSize(rowSize);
+  if (safeRowCount <= 0 || safeRowSize <= 0) return { start: 0, end: 0 };
 
   const safeScrollTop =
-    Number.isFinite(scrollTop) && scrollTop > 0 ? scrollTop : 0
-  const safeViewportHeight = fixedViewportMetric(viewportHeight)
+    Number.isFinite(scrollTop) && scrollTop > 0 ? scrollTop : 0;
+  const safeViewportHeight = fixedViewportMetric(viewportHeight);
   const firstVisibleRow = clamp(
     Math.floor(safeScrollTop / safeRowSize),
     0,
-    safeRowCount - 1
-  )
-  const visibleRowCount = Math.ceil(safeViewportHeight / safeRowSize)
-  const activeOverscan = fixedOverscan(rowOverscan)
-  const uncappedStart = Math.max(0, firstVisibleRow - activeOverscan)
+    safeRowCount - 1,
+  );
+  const visibleRowCount = Math.ceil(safeViewportHeight / safeRowSize);
+  const activeOverscan = fixedOverscan(rowOverscan);
+  const uncappedStart = Math.max(0, firstVisibleRow - activeOverscan);
   const uncappedEnd = Math.min(
     safeRowCount,
-    firstVisibleRow + visibleRowCount + activeOverscan
-  )
+    firstVisibleRow + visibleRowCount + activeOverscan,
+  );
   return capVirtualRange({
     uncappedStart,
     uncappedEnd,
     visibleStart: firstVisibleRow,
     visibleEnd: Math.min(safeRowCount, firstVisibleRow + visibleRowCount),
     maxItems: MAX_VIRTUAL_ITEMS,
-  })
+  });
 }
 
 export interface FixedGridViewport {
-  scrollTop: number
-  scrollLeft: number
-  clientHeight: number
-  clientWidth: number
-  isJumpingRows: boolean
-  isJumpingColumns: boolean
+  scrollTop: number;
+  scrollLeft: number;
+  clientHeight: number;
+  clientWidth: number;
+  isJumpingRows: boolean;
+  isJumpingColumns: boolean;
 }
 
 interface FixedGridLayoutMetrics {
-  rowCount: number
-  columnCount: number
-  rowSize: number
-  columnSize: number
+  rowCount: number;
+  columnCount: number;
+  rowSize: number;
+  columnSize: number;
 }
 
 interface FixedGridReadingAnchor {
-  rowIndex: number
-  columnIndex: number
-  rowOffsetPx: number
-  columnOffsetPx: number
+  rowIndex: number;
+  columnIndex: number;
+  rowOffsetPx: number;
+  columnOffsetPx: number;
 }
 
 interface FixedVirtualWindow {
-  count: number
-  size: number
-  scrollOffset: number
-  viewportSize: number
-  overscan: number
-  minimumVisibleCount?: number
+  count: number;
+  size: number;
+  scrollOffset: number;
+  viewportSize: number;
+  overscan: number;
+  minimumVisibleCount?: number;
 }
 
 const emptyFixedGridViewport: FixedGridViewport = {
@@ -512,57 +517,57 @@ const emptyFixedGridViewport: FixedGridViewport = {
   clientWidth: 0,
   isJumpingRows: false,
   isJumpingColumns: false,
-}
+};
 
 function useResolvedScrollElement({
   scrollRef,
   scrollElement,
 }: {
-  scrollRef: React.RefObject<HTMLElement | null>
-  scrollElement?: HTMLElement | null
+  scrollRef: React.RefObject<HTMLElement | null>;
+  scrollElement?: HTMLElement | null;
 }) {
   const [resolvedScrollElement, setResolvedScrollElement] =
-    React.useState<HTMLElement | null>(scrollElement ?? scrollRef.current)
+    React.useState<HTMLElement | null>(scrollElement ?? scrollRef.current);
 
   useIsomorphicLayoutEffect(() => {
-    const nextScrollElement = scrollElement ?? scrollRef.current
+    const nextScrollElement = scrollElement ?? scrollRef.current;
     if (resolvedScrollElement !== nextScrollElement) {
-      setResolvedScrollElement(nextScrollElement)
+      setResolvedScrollElement(nextScrollElement);
     }
-  })
+  });
 
-  return resolvedScrollElement
+  return resolvedScrollElement;
 }
 
 function useFixedGridViewport(
   scrollElement: HTMLElement | null | undefined,
   rowScrollStrategy?: FixedGridRowScrollStrategy,
-  layoutMetrics?: FixedGridLayoutMetrics
+  layoutMetrics?: FixedGridLayoutMetrics,
 ) {
   const [viewport, setViewport] = React.useState<FixedGridViewport>(
-    emptyFixedGridViewport
-  )
+    emptyFixedGridViewport,
+  );
   const committedLayoutMetricsRef = React.useRef<FixedGridLayoutMetrics | null>(
-    layoutMetrics ?? null
-  )
+    layoutMetrics ?? null,
+  );
 
   useIsomorphicLayoutEffect(() => {
-    const previousLayoutMetrics = committedLayoutMetricsRef.current
-    committedLayoutMetricsRef.current = layoutMetrics ?? null
+    const previousLayoutMetrics = committedLayoutMetricsRef.current;
+    committedLayoutMetricsRef.current = layoutMetrics ?? null;
 
     if (!scrollElement) {
       setViewport((current) =>
         fixedGridViewportEqual(current, emptyFixedGridViewport)
           ? current
-          : emptyFixedGridViewport
-      )
-      return
+          : emptyFixedGridViewport,
+      );
+      return;
     }
 
-    let frame = 0
-    let settleTimeout = 0
-    let lastScrollTop = scrollElement.scrollTop
-    let lastScrollLeft = scrollElement.scrollLeft
+    let frame = 0;
+    let settleTimeout = 0;
+    let lastScrollTop = scrollElement.scrollTop;
+    let lastScrollLeft = scrollElement.scrollLeft;
 
     if (
       previousLayoutMetrics &&
@@ -572,21 +577,21 @@ function useFixedGridViewport(
       const anchor = captureFixedGridReadingAnchor({
         layoutMetrics: previousLayoutMetrics,
         scrollElement,
-      })
+      });
       restoreFixedGridReadingAnchor({
         anchor,
         layoutMetrics,
         scrollElement,
-      })
-      lastScrollTop = scrollElement.scrollTop
-      lastScrollLeft = scrollElement.scrollLeft
+      });
+      lastScrollTop = scrollElement.scrollTop;
+      lastScrollLeft = scrollElement.scrollLeft;
     }
 
     const commitViewport = (next: FixedGridViewport) => {
       setViewport((current) => {
-        return fixedGridViewportEqual(current, next) ? current : next
-      })
-    }
+        return fixedGridViewportEqual(current, next) ? current : next;
+      });
+    };
 
     const commitSettledViewport = () => {
       commitViewport({
@@ -596,30 +601,30 @@ function useFixedGridViewport(
         clientWidth: fixedViewportMetric(scrollElement.clientWidth),
         isJumpingRows: false,
         isJumpingColumns: false,
-      })
-    }
+      });
+    };
 
     const scheduleSettledViewport = () => {
-      if (settleTimeout) window.clearTimeout(settleTimeout)
+      if (settleTimeout) window.clearTimeout(settleTimeout);
       settleTimeout = window.setTimeout(() => {
-        settleTimeout = 0
+        settleTimeout = 0;
         // Scrolling has quiesced: re-read the live scroll metrics so the
         // canonical React window matches where the grid actually came to rest,
         // then clear jump flags so settled windows use the full overscan.
-        commitSettledViewport()
-      }, rowScrollStrategy?.settleAfterMs ?? 80)
-    }
+        commitSettledViewport();
+      }, rowScrollStrategy?.settleAfterMs ?? 80);
+    };
 
     const readViewport = () => {
-      frame = 0
-      const scrollTop = fixedViewportMetric(scrollElement.scrollTop)
-      const scrollLeft = fixedViewportMetric(scrollElement.scrollLeft)
-      const clientHeight = fixedViewportMetric(scrollElement.clientHeight)
-      const clientWidth = fixedViewportMetric(scrollElement.clientWidth)
-      const rowDelta = Math.abs(scrollTop - lastScrollTop)
-      const columnDelta = Math.abs(scrollLeft - lastScrollLeft)
-      lastScrollTop = scrollTop
-      lastScrollLeft = scrollLeft
+      frame = 0;
+      const scrollTop = fixedViewportMetric(scrollElement.scrollTop);
+      const scrollLeft = fixedViewportMetric(scrollElement.scrollLeft);
+      const clientHeight = fixedViewportMetric(scrollElement.clientHeight);
+      const clientWidth = fixedViewportMetric(scrollElement.clientWidth);
+      const rowDelta = Math.abs(scrollTop - lastScrollTop);
+      const columnDelta = Math.abs(scrollLeft - lastScrollLeft);
+      lastScrollTop = scrollTop;
+      lastScrollLeft = scrollLeft;
 
       const next: FixedGridViewport = {
         scrollTop,
@@ -628,51 +633,51 @@ function useFixedGridViewport(
         clientWidth,
         isJumpingRows: rowDelta > clientHeight * 0.45,
         isJumpingColumns: columnDelta > clientWidth * 0.45,
-      }
+      };
 
       if (
         rowDelta > 0 &&
         rowScrollStrategy?.handleViewport(next) === "handled"
       ) {
-        scheduleSettledViewport()
-        return
+        scheduleSettledViewport();
+        return;
       }
 
-      commitViewport(next)
+      commitViewport(next);
       if (next.isJumpingRows || next.isJumpingColumns) {
-        scheduleSettledViewport()
-        return
+        scheduleSettledViewport();
+        return;
       }
       if (settleTimeout) {
-        window.clearTimeout(settleTimeout)
-        settleTimeout = 0
+        window.clearTimeout(settleTimeout);
+        settleTimeout = 0;
       }
-    }
+    };
 
     const scheduleRead = () => {
-      if (frame) return
-      let didRun = false
+      if (frame) return;
+      let didRun = false;
       const nextFrame = requestAnimationFrame(() => {
-        didRun = true
-        readViewport()
-      })
-      frame = didRun ? 0 : nextFrame
-    }
+        didRun = true;
+        readViewport();
+      });
+      frame = didRun ? 0 : nextFrame;
+    };
 
-    readViewport()
-    scrollElement.addEventListener("scroll", scheduleRead, { passive: true })
+    readViewport();
+    scrollElement.addEventListener("scroll", scheduleRead, { passive: true });
     const observer =
       typeof ResizeObserver !== "undefined"
         ? new ResizeObserver(scheduleRead)
-        : null
-    observer?.observe(scrollElement)
+        : null;
+    observer?.observe(scrollElement);
 
     return () => {
-      if (frame) cancelAnimationFrame(frame)
-      if (settleTimeout) window.clearTimeout(settleTimeout)
-      scrollElement.removeEventListener("scroll", scheduleRead)
-      observer?.disconnect()
-    }
+      if (frame) cancelAnimationFrame(frame);
+      if (settleTimeout) window.clearTimeout(settleTimeout);
+      scrollElement.removeEventListener("scroll", scheduleRead);
+      observer?.disconnect();
+    };
   }, [
     scrollElement,
     rowScrollStrategy,
@@ -680,48 +685,48 @@ function useFixedGridViewport(
     layoutMetrics?.columnCount,
     layoutMetrics?.rowSize,
     layoutMetrics?.columnSize,
-  ])
+  ]);
 
-  return viewport
+  return viewport;
 }
 
 function didFixedGridItemSizeChange(
   previous: FixedGridLayoutMetrics,
-  next: FixedGridLayoutMetrics
+  next: FixedGridLayoutMetrics,
 ) {
   return (
     previous.rowSize !== next.rowSize || previous.columnSize !== next.columnSize
-  )
+  );
 }
 
 function captureFixedGridReadingAnchor({
   layoutMetrics,
   scrollElement,
 }: {
-  layoutMetrics: FixedGridLayoutMetrics
-  scrollElement: HTMLElement
+  layoutMetrics: FixedGridLayoutMetrics;
+  scrollElement: HTMLElement;
 }): FixedGridReadingAnchor {
-  const rowCount = fixedItemCount(layoutMetrics.rowCount)
-  const columnCount = fixedItemCount(layoutMetrics.columnCount)
-  const rowSize = fixedItemSize(layoutMetrics.rowSize)
-  const columnSize = fixedItemSize(layoutMetrics.columnSize)
-  const scrollTop = fixedViewportMetric(scrollElement.scrollTop)
-  const scrollLeft = fixedViewportMetric(scrollElement.scrollLeft)
+  const rowCount = fixedItemCount(layoutMetrics.rowCount);
+  const columnCount = fixedItemCount(layoutMetrics.columnCount);
+  const rowSize = fixedItemSize(layoutMetrics.rowSize);
+  const columnSize = fixedItemSize(layoutMetrics.columnSize);
+  const scrollTop = fixedViewportMetric(scrollElement.scrollTop);
+  const scrollLeft = fixedViewportMetric(scrollElement.scrollLeft);
   const rowIndex =
     rowCount > 0 && rowSize > 0
       ? clamp(Math.floor(scrollTop / rowSize), 0, rowCount - 1)
-      : 0
+      : 0;
   const columnIndex =
     columnCount > 0 && columnSize > 0
       ? clamp(Math.floor(scrollLeft / columnSize), 0, columnCount - 1)
-      : 0
+      : 0;
 
   return {
     rowIndex,
     columnIndex,
     rowOffsetPx: Math.max(0, scrollTop - rowIndex * rowSize),
     columnOffsetPx: Math.max(0, scrollLeft - columnIndex * columnSize),
-  }
+  };
 }
 
 function restoreFixedGridReadingAnchor({
@@ -729,23 +734,23 @@ function restoreFixedGridReadingAnchor({
   layoutMetrics,
   scrollElement,
 }: {
-  anchor: FixedGridReadingAnchor
-  layoutMetrics: FixedGridLayoutMetrics
-  scrollElement: HTMLElement
+  anchor: FixedGridReadingAnchor;
+  layoutMetrics: FixedGridLayoutMetrics;
+  scrollElement: HTMLElement;
 }) {
-  const rowCount = fixedItemCount(layoutMetrics.rowCount)
-  const columnCount = fixedItemCount(layoutMetrics.columnCount)
-  const rowSize = fixedItemSize(layoutMetrics.rowSize)
-  const columnSize = fixedItemSize(layoutMetrics.columnSize)
-  const rowIndex = rowCount > 0 ? clamp(anchor.rowIndex, 0, rowCount - 1) : 0
+  const rowCount = fixedItemCount(layoutMetrics.rowCount);
+  const columnCount = fixedItemCount(layoutMetrics.columnCount);
+  const rowSize = fixedItemSize(layoutMetrics.rowSize);
+  const columnSize = fixedItemSize(layoutMetrics.columnSize);
+  const rowIndex = rowCount > 0 ? clamp(anchor.rowIndex, 0, rowCount - 1) : 0;
   const columnIndex =
-    columnCount > 0 ? clamp(anchor.columnIndex, 0, columnCount - 1) : 0
+    columnCount > 0 ? clamp(anchor.columnIndex, 0, columnCount - 1) : 0;
 
   scrollElement.scrollTop =
-    rowIndex * rowSize + Math.min(anchor.rowOffsetPx, Math.max(0, rowSize - 1))
+    rowIndex * rowSize + Math.min(anchor.rowOffsetPx, Math.max(0, rowSize - 1));
   scrollElement.scrollLeft =
     columnIndex * columnSize +
-    Math.min(anchor.columnOffsetPx, Math.max(0, columnSize - 1))
+    Math.min(anchor.columnOffsetPx, Math.max(0, columnSize - 1));
 }
 
 export function fixedVirtualItems({
@@ -756,54 +761,54 @@ export function fixedVirtualItems({
   overscan,
   minimumVisibleCount = 1,
 }: FixedVirtualWindow): FixedGridVirtualItem[] {
-  if (!Number.isFinite(count) || !Number.isFinite(size)) return []
-  const itemCount = Math.floor(count)
-  if (itemCount <= 0 || size <= 0) return []
+  if (!Number.isFinite(count) || !Number.isFinite(size)) return [];
+  const itemCount = Math.floor(count);
+  if (itemCount <= 0 || size <= 0) return [];
   const safeScrollOffset =
-    Number.isFinite(scrollOffset) && scrollOffset > 0 ? scrollOffset : 0
-  const safeViewportSize = Number.isFinite(viewportSize) ? viewportSize : 0
+    Number.isFinite(scrollOffset) && scrollOffset > 0 ? scrollOffset : 0;
+  const safeViewportSize = Number.isFinite(viewportSize) ? viewportSize : 0;
   const safeOverscan =
-    Number.isFinite(overscan) && overscan > 0 ? Math.floor(overscan) : 0
+    Number.isFinite(overscan) && overscan > 0 ? Math.floor(overscan) : 0;
   const safeMinimumVisibleCount =
     Number.isFinite(minimumVisibleCount) && minimumVisibleCount > 0
       ? Math.ceil(minimumVisibleCount)
-      : 1
+      : 1;
   const effectiveViewportSize = Math.max(
     safeViewportSize,
-    size * safeMinimumVisibleCount
-  )
+    size * safeMinimumVisibleCount,
+  );
   const visibleStart = clamp(
     Math.floor(safeScrollOffset / size),
     0,
-    itemCount - 1
-  )
+    itemCount - 1,
+  );
   const visibleEnd = clamp(
     Math.ceil((safeScrollOffset + effectiveViewportSize) / size),
     visibleStart,
-    itemCount - 1
-  )
-  const uncappedStart = Math.max(0, visibleStart - safeOverscan)
+    itemCount - 1,
+  );
+  const uncappedStart = Math.max(0, visibleStart - safeOverscan);
   const uncappedEndInclusive = Math.min(
     itemCount - 1,
-    visibleEnd + safeOverscan
-  )
+    visibleEnd + safeOverscan,
+  );
   const { start, end } = capVirtualRange({
     uncappedStart,
     uncappedEnd: uncappedEndInclusive + 1,
     visibleStart,
     visibleEnd: visibleEnd + 1,
     maxItems: MAX_VIRTUAL_ITEMS,
-  })
+  });
   return Array.from({ length: end - start }, (_, offset) => {
-    const index = start + offset
-    const itemStart = index * size
+    const index = start + offset;
+    const itemStart = index * size;
     return {
       index,
       start: itemStart,
       size,
       end: itemStart + size,
-    }
-  })
+    };
+  });
 }
 
 function capVirtualRange({
@@ -813,41 +818,41 @@ function capVirtualRange({
   visibleEnd,
   maxItems,
 }: {
-  uncappedStart: number
-  uncappedEnd: number
-  visibleStart: number
-  visibleEnd: number
-  maxItems: number
+  uncappedStart: number;
+  uncappedEnd: number;
+  visibleStart: number;
+  visibleEnd: number;
+  maxItems: number;
 }) {
-  const length = uncappedEnd - uncappedStart
-  if (length <= maxItems) return { start: uncappedStart, end: uncappedEnd }
+  const length = uncappedEnd - uncappedStart;
+  if (length <= maxItems) return { start: uncappedStart, end: uncappedEnd };
 
-  const visibleLength = Math.max(0, visibleEnd - visibleStart)
+  const visibleLength = Math.max(0, visibleEnd - visibleStart);
   if (visibleLength >= maxItems) {
     return {
       start: visibleStart,
       end: visibleStart + maxItems,
-    }
+    };
   }
 
-  const remaining = maxItems - visibleLength
+  const remaining = maxItems - visibleLength;
   const before = Math.min(
     visibleStart - uncappedStart,
-    Math.floor(remaining / 2)
-  )
-  let start = visibleStart - before
-  let end = start + maxItems
+    Math.floor(remaining / 2),
+  );
+  let start = visibleStart - before;
+  let end = start + maxItems;
 
   if (end > uncappedEnd) {
-    end = uncappedEnd
-    start = Math.max(uncappedStart, end - maxItems)
+    end = uncappedEnd;
+    start = Math.max(uncappedStart, end - maxItems);
   }
 
-  return { start, end }
+  return { start, end };
 }
 
 function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value))
+  return Math.min(max, Math.max(min, value));
 }
 
 function fixedTotalSize(count: number, size: number) {
@@ -857,26 +862,26 @@ function fixedTotalSize(count: number, size: number) {
     count <= 0 ||
     size <= 0
   ) {
-    return 0
+    return 0;
   }
-  const totalSize = Math.floor(count) * size
-  return Number.isFinite(totalSize) ? totalSize : 0
+  const totalSize = Math.floor(count) * size;
+  return Number.isFinite(totalSize) ? totalSize : 0;
 }
 
 function fixedItemCount(count: number) {
-  return Number.isFinite(count) && count > 0 ? Math.floor(count) : 0
+  return Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
 }
 
 function fixedItemSize(size: number) {
-  return Number.isFinite(size) && size > 0 ? size : 0
+  return Number.isFinite(size) && size > 0 ? size : 0;
 }
 
 function fixedOverscan(overscan: number) {
-  return Number.isFinite(overscan) && overscan > 0 ? Math.floor(overscan) : 0
+  return Number.isFinite(overscan) && overscan > 0 ? Math.floor(overscan) : 0;
 }
 
 function fixedViewportMetric(value: number) {
-  return Number.isFinite(value) && value > 0 ? value : 0
+  return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
 export function fixedScrollOffset({
@@ -885,10 +890,10 @@ export function fixedScrollOffset({
   viewportSize,
   align,
 }: {
-  index: number
-  itemSize: number
-  viewportSize: number
-  align: NonNullable<FixedGridScrollTarget["align"]>
+  index: number;
+  itemSize: number;
+  viewportSize: number;
+  align: NonNullable<FixedGridScrollTarget["align"]>;
 }) {
   if (
     !Number.isSafeInteger(index) ||
@@ -898,19 +903,19 @@ export function fixedScrollOffset({
     itemSize <= 0 ||
     viewportSize < 0
   ) {
-    return 0
+    return 0;
   }
-  const start = index * itemSize
-  if (align === "end") return Math.max(0, start - viewportSize + itemSize)
+  const start = index * itemSize;
+  if (align === "end") return Math.max(0, start - viewportSize + itemSize);
   if (align === "center") {
-    return Math.max(0, start - viewportSize / 2 + itemSize / 2)
+    return Math.max(0, start - viewportSize / 2 + itemSize / 2);
   }
-  return Math.max(0, start)
+  return Math.max(0, start);
 }
 
 function fixedGridViewportEqual(
   left: FixedGridViewport,
-  right: FixedGridViewport
+  right: FixedGridViewport,
 ) {
   return (
     left.scrollTop === right.scrollTop &&
@@ -919,5 +924,5 @@ function fixedGridViewportEqual(
     left.clientWidth === right.clientWidth &&
     left.isJumpingRows === right.isJumpingRows &&
     left.isJumpingColumns === right.isJumpingColumns
-  )
+  );
 }

@@ -1,56 +1,58 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { xlsxColumnLabel, type XlsxCell } from "@/lib/xlsx-workbook"
-import { fixedGridColumnWidths } from "@/components/ui/fixed-grid-columns"
+import * as React from "react";
+
+import { xlsxColumnLabel, type XlsxCell } from "@/lib/xlsx-workbook";
+import { fixedGridColumnWidths } from "@/components/ui/fixed-grid-columns";
 import {
   getFixedGridCanvasStyle,
   getFixedGridRowWindowStyle,
-} from "@/components/ui/fixed-grid-layout"
-import type { GridCellCoordinate } from "@/components/ui/fixed-grid-selection"
-import { buildVirtualGridTemplate } from "@/components/ui/fixed-grid-template"
-import { FixedGridViewport } from "@/components/ui/fixed-grid-viewport"
+} from "@/components/ui/fixed-grid-layout";
+import type { GridCellCoordinate } from "@/components/ui/fixed-grid-selection";
+import { buildVirtualGridTemplate } from "@/components/ui/fixed-grid-template";
+import { FixedGridViewport } from "@/components/ui/fixed-grid-viewport";
 import {
   useFixedGridVirtualization,
   useFixedRowPool,
   type FixedGridRowPoolSlot,
-} from "@/components/ui/fixed-grid-virtualization"
-import { HeaderAwareScrollbar } from "@/components/ui/header-aware-scrollbar"
+} from "@/components/ui/fixed-grid-virtualization";
+import { HeaderAwareScrollbar } from "@/components/ui/header-aware-scrollbar";
 import {
   XLSX_BASE_COLUMN_WIDTH,
   XLSX_BASE_FONT_SIZE,
   XLSX_BASE_GUTTER_WIDTH,
   XLSX_BASE_ROW_HEIGHT,
-} from "@/components/ui/xlsx-grid-constants"
+} from "@/components/ui/xlsx-grid-constants";
 import {
   Spacer,
   XlsxGridRow,
   type XlsxGridColumnItem,
-} from "@/components/ui/xlsx-grid-row"
-import { XLSX_SCROLLBAR_CSS } from "@/components/ui/xlsx-grid-scrollbar"
-import { ScrollerShell } from "@/components/ui/xlsx-shadow-scope"
+} from "@/components/ui/xlsx-grid-row";
+import { XLSX_SCROLLBAR_CSS } from "@/components/ui/xlsx-grid-scrollbar";
+import { ScrollerShell } from "@/components/ui/xlsx-shadow-scope";
 import {
   useXlsxRowPatcher,
   type XlsxRowPatchState,
-} from "@/registry/new-york-v4/ui/xlsx-viewer-row-patcher"
+} from "@/registry/new-york-v4/ui/xlsx-viewer-row-patcher";
 
-export { XlsxGridSkeleton } from "@/components/ui/xlsx-grid-skeleton"
+export { XlsxGridSkeleton } from "@/components/ui/xlsx-grid-skeleton";
 
-const ROW_OVERSCAN = 4
-const JUMP_ROW_OVERSCAN = 0
-const COLUMN_OVERSCAN = 2
-const JUMP_COLUMN_OVERSCAN = 0
+const ROW_OVERSCAN = 4;
+const JUMP_ROW_OVERSCAN = 0;
+const COLUMN_OVERSCAN = 2;
+const JUMP_COLUMN_OVERSCAN = 0;
 
 export interface XlsxScrollRequest {
-  sheetIndex: number
-  rowIndex: number
-  columnIndex: number
-  behavior: ScrollBehavior
-  nonce: number
+  sheetIndex: number;
+  rowIndex: number;
+  columnIndex: number;
+  behavior: ScrollBehavior;
+  nonce: number;
 }
 
-type XlsxGridCellRef = GridCellCoordinate
+type XlsxGridCellRef = GridCellCoordinate;
 
 export function XlsxGrid({
   rowCount,
@@ -63,34 +65,34 @@ export function XlsxGrid({
   isolateStyles,
   viewportRef,
 }: {
-  rowCount: number
-  columnCount: number
-  sheetName: string
-  getCell: (rowIndex: number, columnIndex: number) => XlsxCell
-  scale: number
-  activeCell?: XlsxGridCellRef | null
-  scrollRequest?: XlsxScrollRequest | null
-  isolateStyles: boolean
-  viewportRef?: React.RefObject<HTMLDivElement | null>
+  rowCount: number;
+  columnCount: number;
+  sheetName: string;
+  getCell: (rowIndex: number, columnIndex: number) => XlsxCell;
+  scale: number;
+  activeCell?: XlsxGridCellRef | null;
+  scrollRequest?: XlsxScrollRequest | null;
+  isolateStyles: boolean;
+  viewportRef?: React.RefObject<HTMLDivElement | null>;
 }) {
-  const safeRowCount = normalizeGridCount(rowCount)
-  const safeColumnCount = normalizeGridCount(columnCount)
-  const safeScale = normalizeGridScale(scale)
-  const rowHeight = Math.round(XLSX_BASE_ROW_HEIGHT * safeScale)
-  const columnWidth = Math.round(XLSX_BASE_COLUMN_WIDTH * safeScale)
-  const gutterWidth = Math.round(XLSX_BASE_GUTTER_WIDTH * safeScale)
-  const fontSize = XLSX_BASE_FONT_SIZE * safeScale
+  const safeRowCount = normalizeGridCount(rowCount);
+  const safeColumnCount = normalizeGridCount(columnCount);
+  const safeScale = normalizeGridScale(scale);
+  const rowHeight = Math.round(XLSX_BASE_ROW_HEIGHT * safeScale);
+  const columnWidth = Math.round(XLSX_BASE_COLUMN_WIDTH * safeScale);
+  const gutterWidth = Math.round(XLSX_BASE_GUTTER_WIDTH * safeScale);
+  const fontSize = XLSX_BASE_FONT_SIZE * safeScale;
 
-  const scrollRef = React.useRef<HTMLDivElement>(null)
-  const rowWindowRef = React.useRef<HTMLDivElement>(null)
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const rowWindowRef = React.useRef<HTMLDivElement>(null);
   const setScrollElement = React.useCallback(
     (element: HTMLDivElement | null) => {
-      scrollRef.current = element
-      if (viewportRef) viewportRef.current = element
+      scrollRef.current = element;
+      if (viewportRef) viewportRef.current = element;
     },
-    [viewportRef]
-  )
-  const columnItemsRef = React.useRef<XlsxGridColumnItem[]>([])
+    [viewportRef],
+  );
+  const columnItemsRef = React.useRef<XlsxGridColumnItem[]>([]);
   const getRowPatchState = React.useCallback(
     (): XlsxRowPatchState => ({
       activeCell: activeCell ?? null,
@@ -101,16 +103,16 @@ export function XlsxGrid({
       rowHeight,
       sheetName,
     }),
-    [activeCell, getCell, rowHeight, safeColumnCount, safeRowCount, sheetName]
-  )
+    [activeCell, getCell, rowHeight, safeColumnCount, safeRowCount, sheetName],
+  );
   const rowPatcher = useXlsxRowPatcher({
     rowWindowRef,
     getState: getRowPatchState,
-  })
+  });
   const rowScrollStrategy = React.useMemo(
     () => ({ handleViewport: rowPatcher.patch }),
-    [rowPatcher]
-  )
+    [rowPatcher],
+  );
 
   const {
     virtualRows,
@@ -133,19 +135,19 @@ export function XlsxGrid({
     minimumRenderedRows: 1,
     rowScrollStrategy,
     scrollRef,
-  })
+  });
 
-  const requestNonce = scrollRequest?.nonce
+  const requestNonce = scrollRequest?.nonce;
   React.useEffect(() => {
-    if (!scrollRequest) return
+    if (!scrollRequest) return;
     scrollToCell({
       rowIndex: scrollRequest.rowIndex,
       columnIndex: scrollRequest.columnIndex,
       behavior: scrollRequest.behavior,
       align: "center",
-    })
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requestNonce])
+  }, [requestNonce]);
 
   const columnItems = React.useMemo(
     () =>
@@ -154,12 +156,12 @@ export function XlsxGrid({
         widthPx: item.widthPx,
         metadata: { columnIndex: item.index },
       })) satisfies XlsxGridColumnItem[],
-    [virtualColumnItems]
-  )
+    [virtualColumnItems],
+  );
 
   React.useLayoutEffect(() => {
-    columnItemsRef.current = columnItems
-  }, [columnItems])
+    columnItemsRef.current = columnItems;
+  }, [columnItems]);
 
   const gridTemplate = React.useMemo(
     () =>
@@ -169,19 +171,19 @@ export function XlsxGrid({
         columnWidths: fixedGridColumnWidths(columnItems),
         rightPad,
       }),
-    [gutterWidth, leftPad, columnItems, rightPad]
-  )
-  const totalWidth = gutterWidth + totalColumnSize
+    [gutterWidth, leftPad, columnItems, rightPad],
+  );
+  const totalWidth = gutterWidth + totalColumnSize;
   const minimumRowPoolSize =
-    Math.ceil(viewportClientHeight / rowHeight) + ROW_OVERSCAN * 2 + 2
+    Math.ceil(viewportClientHeight / rowHeight) + ROW_OVERSCAN * 2 + 2;
   const rowPoolSlots = useFixedRowPool({
     minimumPoolSize: minimumRowPoolSize,
     rowCount: safeRowCount,
     virtualRows,
-  })
+  });
 
   React.useLayoutEffect(() => {
-    rowPatcher.resync(virtualRows)
+    rowPatcher.resync(virtualRows);
   }, [
     rowPatcher,
     virtualRows,
@@ -192,23 +194,23 @@ export function XlsxGrid({
     sheetName,
     getCell,
     activeCell,
-  ])
+  ]);
 
   if (safeRowCount === 0 || safeColumnCount === 0) {
     return (
       <div
-        className="flex flex-1 items-center justify-center bg-card text-xs text-muted-foreground"
+        className="bg-card text-muted-foreground flex flex-1 items-center justify-center text-xs"
         role="status"
         aria-label={`${sheetName} is empty`}
       >
         Empty sheet
       </div>
-    )
+    );
   }
 
   return (
     <div
-      className="flex min-h-0 flex-1 flex-col bg-card"
+      className="bg-card flex min-h-0 flex-1 flex-col"
       style={{ fontSize }}
       data-slot="xlsx-grid"
     >
@@ -250,7 +252,7 @@ export function XlsxGrid({
               {columnItems.map((item) => (
                 <div
                   key={item.key}
-                  className="flex items-center justify-center border-r font-medium text-muted-foreground last:border-r-0"
+                  className="text-muted-foreground flex items-center justify-center border-r font-medium last:border-r-0"
                 >
                   {xlsxColumnLabel(item.metadata.columnIndex)}
                 </div>
@@ -282,7 +284,7 @@ export function XlsxGrid({
         <HeaderAwareScrollbar scrollRef={scrollRef} headerHeight={rowHeight} />
       </ScrollerShell>
     </div>
-  )
+  );
 }
 
 function XlsxGridRowSlot({
@@ -296,19 +298,19 @@ function XlsxGridRowSlot({
   rightPad,
   activeCell,
 }: {
-  slot: FixedGridRowPoolSlot
-  rowCount: number
-  getCell: (rowIndex: number, columnIndex: number) => XlsxCell
-  gridTemplate: string
-  rowHeight: number
-  columnItems: XlsxGridColumnItem[]
-  leftPad: number
-  rightPad: number
-  activeCell: XlsxGridCellRef | null
+  slot: FixedGridRowPoolSlot;
+  rowCount: number;
+  getCell: (rowIndex: number, columnIndex: number) => XlsxCell;
+  gridTemplate: string;
+  rowHeight: number;
+  columnItems: XlsxGridColumnItem[];
+  leftPad: number;
+  rightPad: number;
+  activeCell: XlsxGridCellRef | null;
 }) {
   const fallbackRowIndex =
-    rowCount > 0 ? Math.min(slot.slotIndex, rowCount - 1) : 0
-  const rowIndex = slot.virtualRow?.index ?? fallbackRowIndex
+    rowCount > 0 ? Math.min(slot.slotIndex, rowCount - 1) : 0;
+  const rowIndex = slot.virtualRow?.index ?? fallbackRowIndex;
 
   return (
     <XlsxGridRow
@@ -327,16 +329,16 @@ function XlsxGridRowSlot({
           : null
       }
     />
-  )
+  );
 }
 
 function normalizeGridCount(value: number) {
   return Number.isFinite(value) && value > 0 && value <= Number.MAX_SAFE_INTEGER
     ? Math.floor(value)
-    : 0
+    : 0;
 }
 
 function normalizeGridScale(value: number) {
-  if (!Number.isFinite(value) || value <= 0) return 1
-  return Math.min(5, Math.max(0.25, value))
+  if (!Number.isFinite(value) || value <= 0) return 1;
+  return Math.min(5, Math.max(0.25, value));
 }

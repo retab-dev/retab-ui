@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
 
-import type { ReactNode } from "react"
-import { cleanup, fireEvent, render } from "@testing-library/react"
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
+import type { ReactNode } from "react";
+import { cleanup, fireEvent, render } from "@testing-library/react";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import type * as HeaderSchemaMenuModule from "@/components/json-table/header-schema-menu"
+import type * as HeaderSchemaMenuModule from "@/components/json-table/header-schema-menu";
 
-import { installJsonTableDom } from "./json-table-test-dom"
+import { installJsonTableDom } from "./json-table-test-dom";
 
-let HeaderSchemaMenu: typeof HeaderSchemaMenuModule.HeaderSchemaMenu
+let HeaderSchemaMenu: typeof HeaderSchemaMenuModule.HeaderSchemaMenu;
 
 vi.mock("@/components/ui/dialog", () => ({
   Dialog: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -20,7 +20,7 @@ vi.mock("@/components/ui/dialog", () => ({
   ),
   DialogTitle: ({ children }: { children: ReactNode }) => <h4>{children}</h4>,
   DialogTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
-}))
+}));
 
 vi.mock("@/components/ui/popover", () => ({
   Popover: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -28,7 +28,7 @@ vi.mock("@/components/ui/popover", () => ({
     <div>{children}</div>
   ),
   PopoverTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
-}))
+}));
 
 vi.mock("@/components/schema-editor/property-dialog", () => ({
   PropertyEditor: ({ onDelete }: { onDelete?: () => void }) => (
@@ -36,20 +36,21 @@ vi.mock("@/components/schema-editor/property-dialog", () => ({
       Delete Property
     </button>
   ),
-}))
+}));
 
 beforeAll(async () => {
-  installJsonTableDom()
-  ;({ HeaderSchemaMenu } =
-    await import("@/components/json-table/header-schema-menu"))
-})
-afterEach(() => cleanup())
+  installJsonTableDom();
+  ({ HeaderSchemaMenu } = await import(
+    "@/components/json-table/header-schema-menu"
+  ));
+});
+afterEach(() => cleanup());
 
 describe("json table header schema menu", () => {
   it("deletes a property and closes the menu", () => {
-    const setSchema = vi.fn()
-    const onOpenChange = vi.fn()
-    vi.spyOn(globalThis, "confirm").mockReturnValue(true)
+    const setSchema = vi.fn();
+    const onOpenChange = vi.fn();
+    vi.spyOn(globalThis, "confirm").mockReturnValue(true);
 
     const view = render(
       <HeaderSchemaMenu
@@ -81,15 +82,15 @@ describe("json table header schema menu", () => {
         onOpenChange={onOpenChange}
       >
         <button>open</button>
-      </HeaderSchemaMenu>
-    )
+      </HeaderSchemaMenu>,
+    );
 
-    fireEvent.click(view.getByRole("button", { name: "Delete Property" }))
+    fireEvent.click(view.getByRole("button", { name: "Delete Property" }));
 
     expect(Object.keys(setSchema.mock.calls[0][0].properties ?? {})).toEqual([
       "total",
-    ])
-    expect(setSchema.mock.calls[0][0].required).toBeUndefined()
-    expect(onOpenChange).toHaveBeenCalledWith(false)
-  })
-})
+    ]);
+    expect(setSchema.mock.calls[0][0].required).toBeUndefined();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+});

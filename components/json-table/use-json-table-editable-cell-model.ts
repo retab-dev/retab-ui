@@ -1,28 +1,28 @@
-import * as React from "react"
+import * as React from "react";
 
 import {
   disabledJsonTableCellShellProps,
   editableJsonTableCellShellProps,
-} from "@/components/json-table/json-table-cell-shell"
-import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
-import { recordJsonTableRender } from "@/components/json-table/json-table-profiler"
-import { useJsonTableCellField } from "@/components/json-table/use-json-table-cell-field"
-import { useJsonTableFocusReturn } from "@/components/json-table/use-json-table-focus-return"
-import { useJsonTablePrimitiveControl } from "@/components/json-table/use-json-table-primitive-control"
-import { useJsonTableShellHandlers } from "@/components/json-table/use-json-table-shell-handlers"
+} from "@/components/json-table/json-table-cell-shell";
+import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types";
+import { recordJsonTableRender } from "@/components/json-table/json-table-profiler";
+import { useJsonTableCellField } from "@/components/json-table/use-json-table-cell-field";
+import { useJsonTableFocusReturn } from "@/components/json-table/use-json-table-focus-return";
+import { useJsonTablePrimitiveControl } from "@/components/json-table/use-json-table-primitive-control";
+import { useJsonTableShellHandlers } from "@/components/json-table/use-json-table-shell-handlers";
 
 export function useJsonTableEditableCellModel(props: JsonTableCellProps) {
-  const { cellProjection, commit, structuredEditing } = props
-  const cellField = useJsonTableCellField(props)
-  const shellRef = React.useRef<HTMLTableCellElement>(null)
-  const primitiveControl = useJsonTablePrimitiveControl({ props, cellField })
+  const { cellProjection, commit, structuredEditing } = props;
+  const cellField = useJsonTableCellField(props);
+  const shellRef = React.useRef<HTMLTableCellElement>(null);
+  const primitiveControl = useJsonTablePrimitiveControl({ props, cellField });
 
   useJsonTableFocusReturn({
     shellRef,
     isCellEditing: cellField.isCellEditing,
     primitiveActiveCell: cellField.primitiveActiveCell,
     structuredEditSession: structuredEditing.session,
-  })
+  });
 
   recordJsonTableRender(
     "EditableJsonTableCell",
@@ -37,13 +37,13 @@ export function useJsonTableEditableCellModel(props: JsonTableCellProps) {
       isEditing: cellField.isCellEditing,
       valueType:
         cellField.cellValue === null ? "null" : typeof cellField.cellValue,
-    }
-  )
+    },
+  );
 
   const shellHandlers = useJsonTableShellHandlers({
     props,
     cellField,
-  })
+  });
 
   if (!cellField.materializedFieldPath || !cellField.fieldMetadata) {
     return {
@@ -53,7 +53,7 @@ export function useJsonTableEditableCellModel(props: JsonTableCellProps) {
         cellWidth: cellField.cellWidth,
         materializedFieldPath: cellField.materializedFieldPath,
       }),
-    }
+    };
   }
 
   const shellProps = editableJsonTableCellShellProps({
@@ -64,7 +64,7 @@ export function useJsonTableEditableCellModel(props: JsonTableCellProps) {
     isPrimitiveCell: cellField.isPrimitiveCell,
     materializedFieldPath: cellField.materializedFieldPath,
     shellHandlers,
-  })
+  });
 
   if (cellField.isPrimitiveCell) {
     return {
@@ -80,7 +80,7 @@ export function useJsonTableEditableCellModel(props: JsonTableCellProps) {
       },
       shellProps,
       shellRef,
-    }
+    };
   }
 
   if (cellField.isStructuredActive && structuredEditing.session) {
@@ -99,7 +99,7 @@ export function useJsonTableEditableCellModel(props: JsonTableCellProps) {
         structuredEditSession: structuredEditing.session,
         value: cellField.cellValue,
       },
-    }
+    };
   }
 
   return {
@@ -110,5 +110,5 @@ export function useJsonTableEditableCellModel(props: JsonTableCellProps) {
     kind: "display" as const,
     shellProps,
     shellRef,
-  }
+  };
 }

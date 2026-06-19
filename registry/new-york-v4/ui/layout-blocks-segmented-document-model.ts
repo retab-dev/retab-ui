@@ -1,30 +1,30 @@
-import { buildColorMap, segmentDisplayLabel } from "@/lib/segments"
+import { buildColorMap, segmentDisplayLabel } from "@/lib/segments";
 
-import { getScrollTarget } from "./layout-blocks-geometry"
-import type { LayoutDocument, LayoutItem } from "./layout-blocks-types"
+import { getScrollTarget } from "./layout-blocks-geometry";
+import type { LayoutDocument, LayoutItem } from "./layout-blocks-types";
 import {
   createSegmentedDocumentModel,
   type DocumentSegment,
   type SegmentAnchor,
   type SegmentedDocumentModel,
-} from "./segmented-document-model"
+} from "./segmented-document-model";
 
 export function createOcrSegmentedDocumentModel({
   document,
   items,
 }: {
-  document: LayoutDocument
-  items: readonly LayoutItem[]
+  document: LayoutDocument;
+  items: readonly LayoutItem[];
 }): SegmentedDocumentModel {
-  const colors = buildColorMap(items.map(layoutItemSegmentLabel))
+  const colors = buildColorMap(items.map(layoutItemSegmentLabel));
   const pageByNumber = new Map(
-    document.pages.map((page) => [page.pageNumber, page])
-  )
-  const segments: DocumentSegment[] = []
-  const anchors: SegmentAnchor[] = []
+    document.pages.map((page) => [page.pageNumber, page]),
+  );
+  const segments: DocumentSegment[] = [];
+  const anchors: SegmentAnchor[] = [];
 
   items.forEach((item, index) => {
-    const label = layoutItemSegmentLabel(item)
+    const label = layoutItemSegmentLabel(item);
     const segment: DocumentSegment = {
       id: layoutItemSegmentId(item),
       label,
@@ -36,11 +36,11 @@ export function createOcrSegmentedDocumentModel({
       confidence: item.confidence ?? null,
       index,
       sourceId: item.id,
-    }
-    const page = pageByNumber.get(item.pageNumber)
+    };
+    const page = pageByNumber.get(item.pageNumber);
     if (page) {
-      const target = getScrollTarget(item, page)
-      segment.pages = [target.pageNumber]
+      const target = getScrollTarget(item, page);
+      segment.pages = [target.pageNumber];
       anchors.push({
         id: `${segment.id}:anchor`,
         segmentId: segment.id,
@@ -51,10 +51,10 @@ export function createOcrSegmentedDocumentModel({
           width: target.width / 100,
           height: target.height / 100,
         },
-      })
+      });
     }
-    segments.push(segment)
-  })
+    segments.push(segment);
+  });
 
   return createSegmentedDocumentModel({
     anchors,
@@ -64,13 +64,13 @@ export function createOcrSegmentedDocumentModel({
       height: page.height,
     })),
     segments,
-  })
+  });
 }
 
 function layoutItemSegmentLabel(item: LayoutItem): string {
-  return segmentDisplayLabel(item.text || item.kind || item.level)
+  return segmentDisplayLabel(item.text || item.kind || item.level);
 }
 
 function layoutItemSegmentId(item: LayoutItem): string {
-  return `layout:${item.id}`
+  return `layout:${item.id}`;
 }

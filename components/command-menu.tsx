@@ -1,20 +1,22 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { usePathname, useRouter } from "next/navigation"
-import { useDocsSearch } from "fumadocs-core/search/client"
-import { ChevronRight, CornerDownLeft, Minus } from "lucide-react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { type ColorPalette } from "@/lib/colors"
-import { trackEvent } from "@/lib/events"
-import { showMcpDocs } from "@/lib/flags"
-import { getCurrentBase, getPagesFromFolder } from "@/lib/page-tree"
-import { type source } from "@/lib/source"
-import { cn } from "@/lib/utils"
-import { getViewerBlockHrefForRegistryName } from "@/lib/viewer-blocks"
-import { useConfig } from "@/hooks/use-config"
-import { useMutationObserver } from "@/hooks/use-mutation-observer"
-import { Button } from "@/components/ui/button"
+import * as React from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useDocsSearch } from "fumadocs-core/search/client";
+import { ChevronRight, CornerDownLeft, Minus } from "lucide-react";
+
+import { type ColorPalette } from "@/lib/colors";
+import { trackEvent } from "@/lib/events";
+import { showMcpDocs } from "@/lib/flags";
+import { getCurrentBase, getPagesFromFolder } from "@/lib/page-tree";
+import { type source } from "@/lib/source";
+import { cn } from "@/lib/utils";
+import { getViewerBlockHrefForRegistryName } from "@/lib/viewer-blocks";
+import { useConfig } from "@/hooks/use-config";
+import { useMutationObserver } from "@/hooks/use-mutation-observer";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -22,7 +24,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command"
+} from "@/components/ui/command";
 import {
   DialogContent as BaseDialogContent,
   Dialog,
@@ -30,26 +32,26 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Separator } from "@/components/ui/separator"
-import { Spinner } from "@/components/ui/spinner"
-import { copyToClipboardWithMeta } from "@/components/copy-button"
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
+import { copyToClipboardWithMeta } from "@/components/copy-button";
 
 function getRegistryItemSpecifier(name: string) {
-  return `@retab/${name}`
+  return `@retab/${name}`;
 }
 
 function getShadcnAddCommand(
   packageManager: "npm" | "yarn" | "pnpm" | "bun",
-  itemName: string
+  itemName: string,
 ) {
-  const itemSpecifier = getRegistryItemSpecifier(itemName)
+  const itemSpecifier = getRegistryItemSpecifier(itemName);
 
-  if (packageManager === "npm") return `npx shadcn@latest add ${itemSpecifier}`
+  if (packageManager === "npm") return `npx shadcn@latest add ${itemSpecifier}`;
   if (packageManager === "bun")
-    return `bunx --bun shadcn@latest add ${itemSpecifier}`
+    return `bunx --bun shadcn@latest add ${itemSpecifier}`;
 
-  return `${packageManager} dlx shadcn@latest add ${itemSpecifier}`
+  return `${packageManager} dlx shadcn@latest add ${itemSpecifier}`;
 }
 
 export function CommandMenu({
@@ -59,136 +61,136 @@ export function CommandMenu({
   navItems,
   ...props
 }: React.ComponentProps<typeof Dialog> & {
-  tree: typeof source.pageTree
-  colors: ColorPalette[]
-  blocks?: { name: string; description: string; categories: string[] }[]
-  navItems?: { href: string; label: string }[]
+  tree: typeof source.pageTree;
+  colors: ColorPalette[];
+  blocks?: { name: string; description: string; categories: string[] }[];
+  navItems?: { href: string; label: string }[];
 }) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const [config] = useConfig()
-  const currentBase = getCurrentBase(pathname)
-  const [open, setOpen] = React.useState(false)
-  const [renderDelayedGroups, setRenderDelayedGroups] = React.useState(false)
+  const router = useRouter();
+  const pathname = usePathname();
+  const [config] = useConfig();
+  const currentBase = getCurrentBase(pathname);
+  const [open, setOpen] = React.useState(false);
+  const [renderDelayedGroups, setRenderDelayedGroups] = React.useState(false);
   const [selectedType, setSelectedType] = React.useState<
     "page" | "component" | "block" | null
-  >(null)
-  const [copyPayload, setCopyPayload] = React.useState("")
+  >(null);
+  const [copyPayload, setCopyPayload] = React.useState("");
 
   const { search, setSearch, query } = useDocsSearch({
     type: "fetch",
-  })
-  const packageManager = config.packageManager || "pnpm"
+  });
+  const packageManager = config.packageManager || "pnpm";
 
   // Track search queries with debouncing to avoid excessive tracking.
-  const searchTimeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined)
-  const lastTrackedQueryRef = React.useRef<string>("")
+  const searchTimeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
+  const lastTrackedQueryRef = React.useRef<string>("");
 
   const trackSearchQuery = React.useCallback((query: string) => {
-    const trimmedQuery = query.trim()
+    const trimmedQuery = query.trim();
 
     // Only track if the query is different from the last tracked query and has content.
     if (trimmedQuery && trimmedQuery !== lastTrackedQueryRef.current) {
-      lastTrackedQueryRef.current = trimmedQuery
+      lastTrackedQueryRef.current = trimmedQuery;
       trackEvent({
         name: "search_query",
         properties: {
           query: trimmedQuery,
           query_length: trimmedQuery.length,
         },
-      })
+      });
     }
-  }, [])
+  }, []);
 
   const handleSearchChange = React.useCallback(
     (value: string) => {
       // Clear existing timeout.
       if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
+        clearTimeout(searchTimeoutRef.current);
       }
 
       // Set new timeout to debounce both search and tracking.
       searchTimeoutRef.current = setTimeout(() => {
         React.startTransition(() => {
-          setSearch(value)
-          trackSearchQuery(value)
-        })
-      }, 500)
+          setSearch(value);
+          trackSearchQuery(value);
+        });
+      }, 500);
     },
-    [setSearch, trackSearchQuery]
-  )
+    [setSearch, trackSearchQuery],
+  );
 
   // Cleanup timeout on unmount.
   React.useEffect(() => {
     if (open) {
       const frame = requestAnimationFrame(() => {
-        setRenderDelayedGroups(true)
-      })
+        setRenderDelayedGroups(true);
+      });
 
       return () => {
-        cancelAnimationFrame(frame)
-      }
+        cancelAnimationFrame(frame);
+      };
     }
 
-    setRenderDelayedGroups(false)
-  }, [open])
+    setRenderDelayedGroups(false);
+  }, [open]);
 
   React.useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
+        clearTimeout(searchTimeoutRef.current);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   const commandFilter = React.useCallback(
     (value: string, searchValue: string, keywords?: string[]) => {
-      const extendValue = value + " " + (keywords?.join(" ") || "")
+      const extendValue = value + " " + (keywords?.join(" ") || "");
       if (extendValue.toLowerCase().includes(searchValue.toLowerCase())) {
-        return 1
+        return 1;
       }
-      return 0
+      return 0;
     },
-    []
-  )
+    [],
+  );
 
   const handlePageHighlight = React.useCallback(
     (isComponent: boolean, item: { url: string; name?: React.ReactNode }) => {
       if (isComponent) {
-        const componentName = item.url.split("/").pop()
-        setSelectedType("component")
+        const componentName = item.url.split("/").pop();
+        setSelectedType("component");
         setCopyPayload(
           componentName
             ? getShadcnAddCommand(packageManager, componentName)
-            : ""
-        )
+            : "",
+        );
       } else {
-        setSelectedType("page")
-        setCopyPayload("")
+        setSelectedType("page");
+        setCopyPayload("");
       }
     },
-    [packageManager, setSelectedType, setCopyPayload]
-  )
+    [packageManager, setSelectedType, setCopyPayload],
+  );
 
   const handleBlockHighlight = React.useCallback(
     (block: { name: string; description: string; categories: string[] }) => {
-      setSelectedType("block")
-      setCopyPayload(getShadcnAddCommand(packageManager, block.name))
+      setSelectedType("block");
+      setCopyPayload(getShadcnAddCommand(packageManager, block.name));
     },
-    [setSelectedType, setCopyPayload, packageManager]
-  )
+    [setSelectedType, setCopyPayload, packageManager],
+  );
 
   const runCommand = React.useCallback(
     (command: () => unknown) => {
-      setOpen(false)
-      command()
+      setOpen(false);
+      command();
     },
-    [setOpen]
-  )
+    [setOpen],
+  );
 
   const navItemsSection = React.useMemo(() => {
     if (!navItems || navItems.length === 0) {
-      return null
+      return null;
     }
 
     return (
@@ -202,11 +204,11 @@ export function CommandMenu({
             value={`Navigation ${item.label}`}
             keywords={["nav", "navigation", item.label.toLowerCase()]}
             onHighlight={() => {
-              setSelectedType("page")
-              setCopyPayload("")
+              setSelectedType("page");
+              setCopyPayload("");
             }}
             onSelect={() => {
-              runCommand(() => router.push(item.href))
+              runCommand(() => router.push(item.href));
             }}
           >
             <ChevronRight />
@@ -214,25 +216,25 @@ export function CommandMenu({
           </CommandMenuItem>
         ))}
       </CommandGroup>
-    )
-  }, [navItems, runCommand, router])
+    );
+  }, [navItems, runCommand, router]);
 
   const pageGroupsSection = React.useMemo(() => {
     return tree.children.map((group) => {
       if (group.type !== "folder") {
-        return null
+        return null;
       }
 
       const pages = getPagesFromFolder(group, currentBase).filter((item) => {
         if (!showMcpDocs && item.url.includes("/mcp")) {
-          return false
+          return false;
         }
 
-        return true
-      })
+        return true;
+      });
 
       if (pages.length === 0) {
-        return null
+        return null;
       }
 
       return (
@@ -242,7 +244,7 @@ export function CommandMenu({
           className="p-0! **:data-[slot=command-group-label]:scroll-mt-16 **:data-[slot=command-group-label]:p-3! **:data-[slot=command-group-label]:pb-1!"
         >
           {pages.map((item) => {
-            const isComponent = item.url.includes("/components/")
+            const isComponent = item.url.includes("/components/");
 
             return (
               <CommandMenuItem
@@ -253,26 +255,26 @@ export function CommandMenu({
                 keywords={isComponent ? ["component"] : undefined}
                 onHighlight={() => handlePageHighlight(isComponent, item)}
                 onSelect={() => {
-                  runCommand(() => router.push(item.url))
+                  runCommand(() => router.push(item.url));
                 }}
               >
                 {isComponent ? (
-                  <div className="aspect-square size-4 rounded-full border border-dashed border-muted-foreground" />
+                  <div className="border-muted-foreground aspect-square size-4 rounded-full border border-dashed" />
                 ) : (
                   <ChevronRight />
                 )}
                 {item.name}
               </CommandMenuItem>
-            )
+            );
           })}
         </CommandGroup>
-      )
-    })
-  }, [tree.children, currentBase, handlePageHighlight, runCommand, router])
+      );
+    });
+  }, [tree.children, currentBase, handlePageHighlight, runCommand, router]);
 
   const blocksSection = React.useMemo(() => {
     if (!blocks || blocks.length === 0) {
-      return null
+      return null;
     }
 
     return (
@@ -285,7 +287,7 @@ export function CommandMenu({
             key={block.name}
             value={block.name}
             onHighlight={() => {
-              handleBlockHighlight(block)
+              handleBlockHighlight(block);
             }}
             keywords={[
               "block",
@@ -295,20 +297,20 @@ export function CommandMenu({
             ]}
             onSelect={() => {
               runCommand(() =>
-                router.push(getViewerBlockHrefForRegistryName(block.name))
-              )
+                router.push(getViewerBlockHrefForRegistryName(block.name)),
+              );
             }}
           >
             <Minus />
             {block.description}
-            <span className="ml-auto font-mono text-xs font-normal text-muted-foreground tabular-nums">
+            <span className="text-muted-foreground ml-auto font-mono text-xs font-normal tabular-nums">
               {block.name}
             </span>
           </CommandMenuItem>
         ))}
       </CommandGroup>
-    )
-  }, [blocks, handleBlockHighlight, runCommand, router])
+    );
+  }, [blocks, handleBlockHighlight, runCommand, router]);
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -319,11 +321,11 @@ export function CommandMenu({
           e.target instanceof HTMLTextAreaElement ||
           e.target instanceof HTMLSelectElement
         ) {
-          return
+          return;
         }
 
-        e.preventDefault()
-        setOpen((open) => !open)
+        e.preventDefault();
+        setOpen((open) => !open);
       }
 
       if (e.key === "c" && (e.metaKey || e.ctrlKey)) {
@@ -332,22 +334,22 @@ export function CommandMenu({
             copyToClipboardWithMeta(copyPayload, {
               name: "copy_npm_command",
               properties: { command: copyPayload, pm: packageManager },
-            })
+            });
           }
 
           if (selectedType === "page" || selectedType === "component") {
             copyToClipboardWithMeta(copyPayload, {
               name: "copy_npm_command",
               properties: { command: copyPayload, pm: packageManager },
-            })
+            });
           }
-        })
+        });
       }
-    }
+    };
 
-    document.addEventListener("keydown", down)
-    return () => document.removeEventListener("keydown", down)
-  }, [copyPayload, runCommand, selectedType, packageManager])
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, [copyPayload, runCommand, selectedType, packageManager]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -355,7 +357,7 @@ export function CommandMenu({
         <Button
           variant="outline"
           className={cn(
-            "relative h-8 w-full justify-start rounded-lg pl-3 font-normal text-foreground shadow-none hover:bg-muted/50 sm:pr-12 md:w-48 lg:w-40 xl:w-64 dark:bg-card"
+            "text-foreground hover:bg-muted/50 dark:bg-card relative h-8 w-full justify-start rounded-lg pl-3 font-normal shadow-none sm:pr-12 md:w-48 lg:w-40 xl:w-64",
           )}
           onClick={() => setOpen(true)}
           {...props}
@@ -364,13 +366,13 @@ export function CommandMenu({
           <span className="inline-flex xl:hidden">Search...</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="rounded-xl border-none bg-popover bg-clip-padding p-2 pb-11 shadow-2xl ring-4 ring-border/80">
+      <DialogContent className="bg-popover ring-border/80 rounded-xl border-none bg-clip-padding p-2 pb-11 shadow-2xl ring-4">
         <DialogHeader className="sr-only">
           <DialogTitle>Search documentation...</DialogTitle>
           <DialogDescription>Search for a command to run...</DialogDescription>
         </DialogHeader>
         <Command
-          className="rounded-none bg-transparent **:data-[slot=command-input]:h-9! **:data-[slot=command-input]:py-0 **:data-[slot=command-input-wrapper]:mb-0 **:data-[slot=command-input-wrapper]:h-9! **:data-[slot=command-input-wrapper]:rounded-md **:data-[slot=command-input-wrapper]:border **:data-[slot=command-input-wrapper]:border-input **:data-[slot=command-input-wrapper]:bg-input/50"
+          className="**:data-[slot=command-input-wrapper]:border-input **:data-[slot=command-input-wrapper]:bg-input/50 rounded-none bg-transparent **:data-[slot=command-input]:h-9! **:data-[slot=command-input]:py-0 **:data-[slot=command-input-wrapper]:mb-0 **:data-[slot=command-input-wrapper]:h-9! **:data-[slot=command-input-wrapper]:rounded-md **:data-[slot=command-input-wrapper]:border"
           filter={commandFilter}
         >
           <div className="relative">
@@ -380,12 +382,12 @@ export function CommandMenu({
             />
             {query.isLoading && (
               <div className="pointer-events-none absolute top-1/2 right-3 z-10 flex -translate-y-1/2 items-center justify-center">
-                <Spinner className="size-4 text-muted-foreground" />
+                <Spinner className="text-muted-foreground size-4" />
               </div>
             )}
           </div>
           <CommandList className="no-scrollbar min-h-80 scroll-pt-2 scroll-pb-1.5">
-            <CommandEmpty className="py-12 text-center text-sm text-muted-foreground">
+            <CommandEmpty className="text-muted-foreground py-12 text-center text-sm">
               {query.isLoading ? "Searching..." : "No results found."}
             </CommandEmpty>
             {navItemsSection}
@@ -402,7 +404,7 @@ export function CommandMenu({
             ) : null}
           </CommandList>
         </Command>
-        <div className="absolute inset-x-0 bottom-0 z-20 flex h-10 items-center gap-2 rounded-b-xl border-t border-t-border bg-muted px-4 text-xs font-medium text-muted-foreground">
+        <div className="border-t-border bg-muted text-muted-foreground absolute inset-x-0 bottom-0 z-20 flex h-10 items-center gap-2 rounded-b-xl border-t px-4 text-xs font-medium">
           <div className="flex items-center gap-2">
             <CommandMenuKbd>
               <CornerDownLeft />
@@ -424,7 +426,7 @@ export function CommandMenu({
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 function CommandMenuItem({
@@ -433,11 +435,11 @@ function CommandMenuItem({
   onHighlight,
   ...props
 }: React.ComponentProps<typeof CommandItem> & {
-  onHighlight?: () => void
-  "data-selected"?: string
-  "aria-selected"?: string
+  onHighlight?: () => void;
+  "data-selected"?: string;
+  "aria-selected"?: string;
 }) {
-  const ref = React.useRef<HTMLDivElement>(null)
+  const ref = React.useRef<HTMLDivElement>(null);
 
   useMutationObserver(ref, (mutations) => {
     mutations.forEach((mutation) => {
@@ -448,73 +450,73 @@ function CommandMenuItem({
         (ref.current?.getAttribute("data-selected") === "true" ||
           ref.current?.getAttribute("aria-selected") === "true")
       ) {
-        onHighlight?.()
+        onHighlight?.();
       }
-    })
-  })
+    });
+  });
 
   return (
     <CommandItem
       ref={ref}
       className={cn(
-        "h-9 rounded-md border border-transparent px-3! font-medium data-[selected=true]:border-input data-[selected=true]:bg-input/50",
-        className
+        "data-[selected=true]:border-input data-[selected=true]:bg-input/50 h-9 rounded-md border border-transparent px-3! font-medium",
+        className,
       )}
       {...props}
     >
       {children}
     </CommandItem>
-  )
+  );
 }
 
 function CommandMenuKbd({ className, ...props }: React.ComponentProps<"kbd">) {
   return (
     <kbd
       className={cn(
-        "pointer-events-none flex h-5 items-center justify-center gap-1 rounded border bg-background px-1 font-sans text-[0.7rem] font-medium text-muted-foreground select-none [&_svg:not([class*='size-'])]:size-3",
-        className
+        "bg-background text-muted-foreground pointer-events-none flex h-5 items-center justify-center gap-1 rounded border px-1 font-sans text-[0.7rem] font-medium select-none [&_svg:not([class*='size-'])]:size-3",
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
-type Query = Awaited<ReturnType<typeof useDocsSearch>>["query"]
+type Query = Awaited<ReturnType<typeof useDocsSearch>>["query"];
 
 function SearchResults({
   setOpen,
   query,
   search,
 }: {
-  setOpen: (open: boolean) => void
-  query: Query
-  search: string
+  setOpen: (open: boolean) => void;
+  query: Query;
+  search: string;
 }) {
-  const router = useRouter()
+  const router = useRouter();
 
   const uniqueResults = React.useMemo(() => {
     if (!query.data || !Array.isArray(query.data)) {
-      return []
+      return [];
     }
 
     return query.data.filter(
       (item, index, self) =>
         !(
           item.type === "text" && item.content.trim().split(/\s+/).length <= 1
-        ) && index === self.findIndex((t) => t.content === item.content)
-    )
-  }, [query.data])
+        ) && index === self.findIndex((t) => t.content === item.content),
+    );
+  }, [query.data]);
 
   if (!search.trim()) {
-    return null
+    return null;
   }
 
   if (!query.data || query.data === "empty") {
-    return null
+    return null;
   }
 
   if (query.data && uniqueResults.length === 0) {
-    return null
+    return null;
   }
 
   return (
@@ -528,19 +530,19 @@ function SearchResults({
             key={item.id}
             data-type={item.type}
             onSelect={() => {
-              router.push(item.url)
-              setOpen(false)
+              router.push(item.url);
+              setOpen(false);
             }}
-            className="h-9 rounded-md border border-transparent px-3! font-normal data-[selected=true]:border-input data-[selected=true]:bg-input/50"
+            className="data-[selected=true]:border-input data-[selected=true]:bg-input/50 h-9 rounded-md border border-transparent px-3! font-normal"
             keywords={[item.content]}
             value={`${item.content} ${item.type}`}
           >
             <div className="line-clamp-1 text-sm">{item.content}</div>
           </CommandItem>
-        )
+        );
       })}
     </CommandGroup>
-  )
+  );
 }
 
 function DialogContent({
@@ -548,7 +550,7 @@ function DialogContent({
   children,
   ...props
 }: React.ComponentProps<typeof BaseDialogContent> & {
-  showCloseButton?: boolean
+  showCloseButton?: boolean;
 }) {
   return (
     <BaseDialogContent
@@ -559,5 +561,5 @@ function DialogContent({
     >
       {children}
     </BaseDialogContent>
-  )
+  );
 }

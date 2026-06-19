@@ -1,16 +1,16 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { useElementWidth } from "@/hooks/use-element-width"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ViewerControls } from "@/components/ui/viewer-controls"
+import { useElementWidth } from "@/hooks/use-element-width";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ViewerControls } from "@/components/ui/viewer-controls";
 import {
   MarkdownActionButtons,
   MarkdownActionsMenu,
-} from "@/components/viewers/page-markdown/page-markdown-actions"
-import { PAGE_MARKDOWN_COMPACT_ACTIONS_WIDTH } from "@/components/viewers/page-markdown/page-markdown-model"
-import { type PageMarkdownViewMode } from "@/components/viewers/page-markdown/page-markdown-types"
+} from "@/components/viewers/page-markdown/page-markdown-actions";
+import { PAGE_MARKDOWN_COMPACT_ACTIONS_WIDTH } from "@/components/viewers/page-markdown/page-markdown-model";
+import { type PageMarkdownViewMode } from "@/components/viewers/page-markdown/page-markdown-types";
 
 export function PageMarkdownControls({
   className,
@@ -24,21 +24,21 @@ export function PageMarkdownControls({
   onZoom,
   onFitWidth,
 }: {
-  className?: string
-  currentPage: number
-  pageCount: number
-  mode: PageMarkdownViewMode
-  scale: number
-  text: string
-  fileName: string
-  onModeChange: (mode: PageMarkdownViewMode) => void
-  onZoom: (factor: number) => void
-  onFitWidth: () => void
+  className?: string;
+  currentPage: number;
+  pageCount: number;
+  mode: PageMarkdownViewMode;
+  scale: number;
+  text: string;
+  fileName: string;
+  onModeChange: (mode: PageMarkdownViewMode) => void;
+  onZoom: (factor: number) => void;
+  onFitWidth: () => void;
 }) {
-  const [controlsRef, controlsWidth] = useElementWidth()
+  const [controlsRef, controlsWidth] = useElementWidth();
   const isCompact =
     controlsWidth !== null &&
-    controlsWidth < PAGE_MARKDOWN_COMPACT_ACTIONS_WIDTH
+    controlsWidth < PAGE_MARKDOWN_COMPACT_ACTIONS_WIDTH;
 
   return (
     <div ref={controlsRef} className="shrink-0">
@@ -65,15 +65,15 @@ export function PageMarkdownControls({
         }
       />
     </div>
-  )
+  );
 }
 
 function ModeTabs({
   mode,
   onChange,
 }: {
-  mode: PageMarkdownViewMode
-  onChange: (mode: PageMarkdownViewMode) => void
+  mode: PageMarkdownViewMode;
+  onChange: (mode: PageMarkdownViewMode) => void;
 }) {
   return (
     <Tabs
@@ -89,5 +89,5 @@ function ModeTabs({
         </TabsTrigger>
       </TabsList>
     </Tabs>
-  )
+  );
 }

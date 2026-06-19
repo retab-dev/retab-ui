@@ -2,69 +2,69 @@ import {
   materializeFieldPath,
   type FieldPath,
   type MaterializedFieldPath,
-} from "@/components/json-table/lib/document-paths"
-import type { TableDocument } from "@/components/json-table/lib/projects-types"
+} from "@/components/json-table/lib/document-paths";
+import type { TableDocument } from "@/components/json-table/lib/projects-types";
 
 export interface ProjectedCell {
-  key: FieldPath
-  value: unknown
-  displayValue?: string
-  templateFieldPath: FieldPath
-  materializedFieldPath: MaterializedFieldPath
-  arrayIndexes: number[]
-  addArrayItemAtIndex?: number
+  key: FieldPath;
+  value: unknown;
+  displayValue?: string;
+  templateFieldPath: FieldPath;
+  materializedFieldPath: MaterializedFieldPath;
+  arrayIndexes: number[];
+  addArrayItemAtIndex?: number;
 }
 
 export interface ProjectedRow {
-  rowIndex: number
-  cells: Array<ProjectedCell | undefined>
+  rowIndex: number;
+  cells: Array<ProjectedCell | undefined>;
 }
 
 function joinTemplateFieldPath(templateFieldPathParts: string[]) {
-  return templateFieldPathParts.filter(Boolean).join(".")
+  return templateFieldPathParts.filter(Boolean).join(".");
 }
 
 function getOwnObjectValue(node: unknown, property: string): unknown {
-  if (node === null || typeof node !== "object") return undefined
-  if (!Object.prototype.hasOwnProperty.call(node, property)) return undefined
-  return (node as Record<string, unknown>)[property]
+  if (node === null || typeof node !== "object") return undefined;
+  if (!Object.prototype.hasOwnProperty.call(node, property)) return undefined;
+  return (node as Record<string, unknown>)[property];
 }
 
 function countTemplateColumns(
   templateParts: string[][],
-  depth: number
+  depth: number,
 ): number {
-  let colSpan = 0
+  let colSpan = 0;
   const remainingTemplates = templateParts.filter((template) => {
-    if (template.length !== depth) return true
-    colSpan++
-    return false
-  })
+    if (template.length !== depth) return true;
+    colSpan++;
+    return false;
+  });
 
-  if (remainingTemplates.length === 0) return colSpan
+  if (remainingTemplates.length === 0) return colSpan;
 
   const topProperties = new Set(
     remainingTemplates
       .filter((template) => template.length > depth)
-      .map((template) => template[depth])
-  )
+      .map((template) => template[depth]),
+  );
 
   if (topProperties.has("*") && topProperties.size === 1) {
-    return colSpan + countTemplateColumns(remainingTemplates, depth + 1)
+    return colSpan + countTemplateColumns(remainingTemplates, depth + 1);
   }
 
   if (topProperties.has("*")) {
-    throw new Error("Wildcard '*' used along with other properties")
+    throw new Error("Wildcard '*' used along with other properties");
   }
 
   for (const property of topProperties) {
     colSpan += countTemplateColumns(
       remainingTemplates.filter((template) => template[depth] === property),
-      depth + 1
-    )
+      depth + 1,
+    );
   }
 
-  return colSpan
+  return colSpan;
 }
 
 export function projectDocumentRows({
@@ -72,20 +72,20 @@ export function projectDocumentRows({
   visiblePaths,
   includeArrayAddRows = true,
 }: {
-  document: TableDocument
-  visiblePaths: FieldPath[]
-  includeArrayAddRows?: boolean
+  document: TableDocument;
+  visiblePaths: FieldPath[];
+  includeArrayAddRows?: boolean;
 }): ProjectedRow[] {
-  const rows: ProjectedRow[] = []
+  const rows: ProjectedRow[] = [];
   const templates = visiblePaths.map((visibleFieldPath) =>
-    visibleFieldPath.split(".")
-  )
+    visibleFieldPath.split("."),
+  );
 
   function ensureRow(rowIndex: number): ProjectedRow {
     if (!rows[rowIndex]) {
-      rows[rowIndex] = { rowIndex, cells: [] }
+      rows[rowIndex] = { rowIndex, cells: [] };
     }
-    return rows[rowIndex]
+    return rows[rowIndex];
   }
 
   function compile(
@@ -95,43 +95,43 @@ export function projectDocumentRows({
     depth: number,
     rowOffset: number,
     colOffset: number,
-    addArrayItemAtIndex: number | undefined
+    addArrayItemAtIndex: number | undefined,
   ): [number, number] {
-    let rowSpan = 0
-    let colSpan = 0
+    let rowSpan = 0;
+    let colSpan = 0;
 
     templateParts = templateParts.filter((template) => {
-      if (template.length !== depth) return true
+      if (template.length !== depth) return true;
 
-      const templateFieldPath = joinTemplateFieldPath(template)
+      const templateFieldPath = joinTemplateFieldPath(template);
       ensureRow(rowOffset).cells[colOffset + colSpan] = {
         key: templateFieldPath,
         value: node,
         templateFieldPath,
         materializedFieldPath: materializeFieldPath(
           templateFieldPath,
-          arrayIndexes
+          arrayIndexes,
         ),
         arrayIndexes,
         addArrayItemAtIndex,
-      }
-      colSpan++
-      rowSpan = 1
-      return false
-    })
+      };
+      colSpan++;
+      rowSpan = 1;
+      return false;
+    });
 
     if (templateParts.length === 0) {
-      return [rowSpan, colSpan]
+      return [rowSpan, colSpan];
     }
 
     const topProperties = new Set(
       templateParts
         .filter((template) => template.length > depth)
-        .map((template) => template[depth])
-    )
+        .map((template) => template[depth]),
+    );
 
     if (topProperties.has("*") && topProperties.size === 1) {
-      const arrayValue = Array.isArray(node) ? node : []
+      const arrayValue = Array.isArray(node) ? node : [];
       for (let index = 0; index < arrayValue.length; index++) {
         const [childRows, childCols] = compile(
           arrayValue[index],
@@ -140,20 +140,20 @@ export function projectDocumentRows({
           depth + 1,
           rowOffset + rowSpan,
           colOffset,
-          addArrayItemAtIndex
-        )
-        rowSpan += childRows
-        colSpan = Math.max(colSpan, childCols)
+          addArrayItemAtIndex,
+        );
+        rowSpan += childRows;
+        colSpan = Math.max(colSpan, childCols);
       }
 
       if (!includeArrayAddRows) {
         if (rowSpan === 0) {
           colSpan = Math.max(
             colSpan,
-            countTemplateColumns(templateParts, depth + 1)
-          )
+            countTemplateColumns(templateParts, depth + 1),
+          );
         }
-        return [rowSpan, colSpan]
+        return [rowSpan, colSpan];
       }
 
       const [addRows, addCols] = compile(
@@ -163,20 +163,20 @@ export function projectDocumentRows({
         depth + 1,
         rowOffset + rowSpan,
         colOffset,
-        addArrayItemAtIndex ?? arrayIndexes.length
-      )
-      return [rowSpan + addRows, Math.max(colSpan, addCols)]
+        addArrayItemAtIndex ?? arrayIndexes.length,
+      );
+      return [rowSpan + addRows, Math.max(colSpan, addCols)];
     }
 
     if (topProperties.has("*")) {
-      throw new Error("Wildcard '*' used along with other properties")
+      throw new Error("Wildcard '*' used along with other properties");
     }
 
     for (const property of topProperties) {
       const childTemplates = templateParts.filter(
-        (template) => template[depth] === property
-      )
-      const childNode = getOwnObjectValue(node, property)
+        (template) => template[depth] === property,
+      );
+      const childNode = getOwnObjectValue(node, property);
       const [childRows, childCols] = compile(
         childNode,
         childTemplates,
@@ -184,16 +184,16 @@ export function projectDocumentRows({
         depth + 1,
         rowOffset,
         colOffset + colSpan,
-        addArrayItemAtIndex
-      )
-      rowSpan = Math.max(rowSpan, childRows)
-      colSpan += childCols
+        addArrayItemAtIndex,
+      );
+      rowSpan = Math.max(rowSpan, childRows);
+      colSpan += childCols;
     }
 
-    return [rowSpan, colSpan]
+    return [rowSpan, colSpan];
   }
 
-  compile(document.data, templates, [], 0, 0, 0, undefined)
+  compile(document.data, templates, [], 0, 0, 0, undefined);
 
-  return rows
+  return rows;
 }

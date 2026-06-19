@@ -1,16 +1,16 @@
 export type FontDefinition = {
-  name: string
-  title: string
-  type: "sans" | "mono" | "serif"
-  family: string
-  registryVariable: "--font-sans" | "--font-mono" | "--font-serif"
-  previewVariable: string
-  provider: "google"
-  import: string
-  dependency: string
-  subsets: readonly string[]
-  weight?: readonly string[]
-}
+  name: string;
+  title: string;
+  type: "sans" | "mono" | "serif";
+  family: string;
+  registryVariable: "--font-sans" | "--font-mono" | "--font-serif";
+  previewVariable: string;
+  provider: "google";
+  import: string;
+  dependency: string;
+  subsets: readonly string[];
+  weight?: readonly string[];
+};
 
 export const FONT_DEFINITIONS = [
   {
@@ -326,6 +326,6 @@ export const FONT_DEFINITIONS = [
     subsets: ["latin"],
     weight: ["400"],
   },
-] as const satisfies readonly FontDefinition[]
+] as const satisfies readonly FontDefinition[];
 
-export type FontName = (typeof FONT_DEFINITIONS)[number]["name"]
+export type FontName = (typeof FONT_DEFINITIONS)[number]["name"];

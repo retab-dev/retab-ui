@@ -1,141 +1,141 @@
-import type * as React from "react"
+import type * as React from "react";
 
 export type DataCellKindModel = {
   text: {
-    value: string | null
-    commitValue: string | null
-  }
+    value: string | null;
+    commitValue: string | null;
+  };
   number: {
-    value: number | string | null
-    commitValue: number | null
-  }
+    value: number | string | null;
+    commitValue: number | null;
+  };
   integer: {
-    value: number | string | null
-    commitValue: number | null
-  }
+    value: number | string | null;
+    commitValue: number | null;
+  };
   boolean: {
-    value: boolean | null
-    commitValue: boolean
-  }
+    value: boolean | null;
+    commitValue: boolean;
+  };
   select: {
-    value: string | null
-    commitValue: string | null
-  }
+    value: string | null;
+    commitValue: string | null;
+  };
   date: {
-    value: string | null
-    commitValue: string | null
-  }
+    value: string | null;
+    commitValue: string | null;
+  };
   time: {
-    value: string | null
-    commitValue: string | null
-  }
+    value: string | null;
+    commitValue: string | null;
+  };
   "date-time": {
-    value: string | null
-    commitValue: string | null
-  }
-}
+    value: string | null;
+    commitValue: string | null;
+  };
+};
 
-export type DataCellKind = keyof DataCellKindModel
+export type DataCellKind = keyof DataCellKindModel;
 
 export type DataCellValueForKind<Kind extends DataCellKind> =
-  DataCellKindModel[Kind]["value"]
+  DataCellKindModel[Kind]["value"];
 export type DataCellCommitValueForKind<Kind extends DataCellKind> =
-  DataCellKindModel[Kind]["commitValue"]
-export type DataCellValue = DataCellValueForKind<DataCellKind> | undefined
-export type DataCellCommitValue = DataCellCommitValueForKind<DataCellKind>
-export type DataCellDateTimeZone = "local" | "preserve" | "utc"
+  DataCellKindModel[Kind]["commitValue"];
+export type DataCellValue = DataCellValueForKind<DataCellKind> | undefined;
+export type DataCellCommitValue = DataCellCommitValueForKind<DataCellKind>;
+export type DataCellDateTimeZone = "local" | "preserve" | "utc";
 
 export type DataCellValueMeta = {
-  kind: DataCellKind
-  rawValue: string
-  isEmpty: boolean
-  isValid: boolean
-}
+  kind: DataCellKind;
+  rawValue: string;
+  isEmpty: boolean;
+  isValid: boolean;
+};
 
 export type DataCellSelectOption = {
-  value: string
-  label: React.ReactNode
-  disabled?: boolean
-  className?: string
-}
+  value: string;
+  label: React.ReactNode;
+  disabled?: boolean;
+  className?: string;
+};
 
 export type DataCellCommitHandler = (
   value: DataCellCommitValue,
-  meta: DataCellValueMeta
-) => void
+  meta: DataCellValueMeta,
+) => void;
 
 type DataCellNativeProps = Omit<
   React.HTMLAttributes<HTMLElement>,
   "children" | "defaultValue" | "onChange"
->
+>;
 
 type DataCellBaseProps<Kind extends DataCellKind> = DataCellNativeProps & {
-  kind: Kind
-  value?: DataCellValueForKind<Kind>
-  editable?: boolean
-  active?: boolean
-  disabled?: boolean
-  name?: string
-  autoFocus?: boolean
-  onEditingEnd?: () => void
-  onActiveChange?: (active: boolean) => void
-}
+  kind: Kind;
+  value?: DataCellValueForKind<Kind>;
+  editable?: boolean;
+  active?: boolean;
+  disabled?: boolean;
+  name?: string;
+  autoFocus?: boolean;
+  onEditingEnd?: () => void;
+  onActiveChange?: (active: boolean) => void;
+};
 
 type DataCellPlaceholderProps = {
-  placeholder?: string
-}
+  placeholder?: string;
+};
 
 type DataCellDraftProps = {
-  draftValue?: string
-  onDraftValueChange?: (value: string, meta: DataCellValueMeta) => void
-}
+  draftValue?: string;
+  onDraftValueChange?: (value: string, meta: DataCellValueMeta) => void;
+};
 
 type DataCellOpenProps = {
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
-}
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+};
 
 type DataCellFormatProps<Kind extends DataCellKind> = {
   formatValue?: (
     value: DataCellValueForKind<Kind> | undefined,
-    meta: { kind: Kind }
-  ) => React.ReactNode
-}
+    meta: { kind: Kind },
+  ) => React.ReactNode;
+};
 
 type DataCellCommitProps<Kind extends DataCellKind> = {
   onCommit?: (
     value: DataCellCommitValueForKind<Kind>,
-    meta: DataCellValueMeta
-  ) => void
-}
+    meta: DataCellValueMeta,
+  ) => void;
+};
 
 type DataCellTextProps = DataCellBaseProps<"text"> &
   DataCellPlaceholderProps &
   DataCellDraftProps &
   DataCellFormatProps<"text"> &
-  DataCellCommitProps<"text">
+  DataCellCommitProps<"text">;
 
 type DataCellNumberProps = DataCellBaseProps<"number"> &
   DataCellPlaceholderProps &
   DataCellDraftProps &
   DataCellFormatProps<"number"> &
-  DataCellCommitProps<"number">
+  DataCellCommitProps<"number">;
 
 type DataCellIntegerProps = DataCellBaseProps<"integer"> &
   DataCellPlaceholderProps &
   DataCellDraftProps &
   DataCellFormatProps<"integer"> &
-  DataCellCommitProps<"integer">
+  DataCellCommitProps<"integer">;
 
 type DataCellBooleanProps = DataCellBaseProps<"boolean"> &
-  DataCellCommitProps<"boolean">
+  DataCellCommitProps<"boolean">;
 
 type DataCellSelectProps = DataCellBaseProps<"select"> &
   DataCellPlaceholderProps &
   DataCellOpenProps &
   DataCellFormatProps<"select"> & {
-    selectOptions: DataCellSelectOption[]
-  } & DataCellCommitProps<"select">
+    selectOptions: DataCellSelectOption[];
+  } & DataCellCommitProps<"select">;
 
 type DataCellPickerProps<Kind extends "date" | "time" | "date-time"> =
   DataCellBaseProps<Kind> &
@@ -143,22 +143,22 @@ type DataCellPickerProps<Kind extends "date" | "time" | "date-time"> =
     DataCellDraftProps &
     DataCellOpenProps &
     DataCellFormatProps<Kind> & {
-      dateTimeZone?: DataCellDateTimeZone
-      showPickerIcon?: boolean
-    } & DataCellCommitProps<Kind>
+      dateTimeZone?: DataCellDateTimeZone;
+      showPickerIcon?: boolean;
+    } & DataCellCommitProps<Kind>;
 
 export type DataCellPropsByKind = {
-  text: DataCellTextProps
-  number: DataCellNumberProps
-  integer: DataCellIntegerProps
-  boolean: DataCellBooleanProps
-  select: DataCellSelectProps
-  date: DataCellPickerProps<"date">
-  time: DataCellPickerProps<"time">
-  "date-time": DataCellPickerProps<"date-time">
-}
+  text: DataCellTextProps;
+  number: DataCellNumberProps;
+  integer: DataCellIntegerProps;
+  boolean: DataCellBooleanProps;
+  select: DataCellSelectProps;
+  date: DataCellPickerProps<"date">;
+  time: DataCellPickerProps<"time">;
+  "date-time": DataCellPickerProps<"date-time">;
+};
 
 export type DataCellPropsForKind<Kind extends DataCellKind> =
-  DataCellPropsByKind[Kind]
+  DataCellPropsByKind[Kind];
 
-export type DataCellProps = DataCellPropsByKind[DataCellKind]
+export type DataCellProps = DataCellPropsByKind[DataCellKind];

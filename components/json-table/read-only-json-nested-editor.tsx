@@ -1,9 +1,9 @@
-import type { JSONSchema7 } from "json-schema"
+import type { JSONSchema7 } from "json-schema";
 
 import {
   ArrayEditor as JsonArrayEditor,
   ObjectEditor as JsonObjectEditor,
-} from "@/components/json-table/object-editor"
+} from "@/components/json-table/object-editor";
 
 export function ReadOnlyJsonNestedEditor({
   currentValue,
@@ -11,10 +11,10 @@ export function ReadOnlyJsonNestedEditor({
   name,
   property,
 }: {
-  currentValue: unknown
-  kind: "array" | "object"
-  name: string
-  property: JSONSchema7
+  currentValue: unknown;
+  kind: "array" | "object";
+  name: string;
+  property: JSONSchema7;
 }) {
   return kind === "array" ? (
     <JsonArrayEditor
@@ -31,5 +31,5 @@ export function ReadOnlyJsonNestedEditor({
       currentValue={currentValue}
       onSubmit={() => {}}
     />
-  )
+  );
 }

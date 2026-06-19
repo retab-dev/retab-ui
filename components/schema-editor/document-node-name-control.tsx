@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
-import { validateName } from "@/components/schema-editor/lib/json-schema-utils"
-import { SchemaInlineName } from "@/components/schema-editor/primitives/schema-inline-name"
+import { validateName } from "@/components/schema-editor/lib/json-schema-utils";
+import { SchemaInlineName } from "@/components/schema-editor/primitives/schema-inline-name";
 
 interface DocumentNodeNameControlProps {
-  editable: boolean
-  name: string
-  siblingNames: string[]
-  canRename: boolean
-  isReference: boolean
-  refName?: string
-  onNameChange?: (newName: string) => void
-  onShowDefinition: (definitionName: string) => void
+  editable: boolean;
+  name: string;
+  siblingNames: string[];
+  canRename: boolean;
+  isReference: boolean;
+  refName?: string;
+  onNameChange?: (newName: string) => void;
+  onShowDefinition: (definitionName: string) => void;
 }
 
 export function DocumentNodeNameControl({
@@ -41,5 +41,5 @@ export function DocumentNodeNameControl({
       }
       onCommit={onNameChange}
     />
-  )
+  );
 }

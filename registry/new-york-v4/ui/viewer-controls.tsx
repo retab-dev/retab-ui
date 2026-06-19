@@ -1,133 +1,133 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Download, Maximize, Minus, Plus, RotateCw } from "lucide-react"
+import * as React from "react";
+import { Download, Maximize, Minus, Plus, RotateCw } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import type { ViewerDownloadAction } from "@/lib/viewer-download-actions"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils";
+import type { ViewerDownloadAction } from "@/lib/viewer-download-actions";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   ViewerDownloadControl,
   type ViewerDownloadErrorHandler,
-} from "@/components/ui/viewer-download"
+} from "@/components/ui/viewer-download";
 
 export type ViewerControlPosition =
   | {
-      kind: "page" | "slide" | "frame"
-      current: number
-      total?: number
+      kind: "page" | "slide" | "frame";
+      current: number;
+      total?: number;
     }
   | {
-      label: React.ReactNode
-    }
+      label: React.ReactNode;
+    };
 
 export type ViewerZoomControl = {
-  scale: number | null
-  onZoomOut: () => void
-  onZoomIn: () => void
-  onFit?: () => void
-  onReset?: () => void
-  fitLabel?: string
-  isDisabled?: boolean
-}
+  scale: number | null;
+  onZoomOut: () => void;
+  onZoomIn: () => void;
+  onFit?: () => void;
+  onReset?: () => void;
+  fitLabel?: string;
+  isDisabled?: boolean;
+};
 
 export type ViewerRotateControl = {
-  onRotate: () => void
-  isDisabled?: boolean
-}
+  onRotate: () => void;
+  isDisabled?: boolean;
+};
 
 export type ViewerControlsState = {
-  title?: React.ReactNode
-  subtitle?: React.ReactNode
-  position?: ViewerControlPosition | null
-  zoom?: ViewerZoomControl | null
-  rotate?: ViewerRotateControl | null
-  downloads?: ViewerDownloadAction[]
-  loading?: boolean
-  extra?: React.ReactNode
-}
+  title?: React.ReactNode;
+  subtitle?: React.ReactNode;
+  position?: ViewerControlPosition | null;
+  zoom?: ViewerZoomControl | null;
+  rotate?: ViewerRotateControl | null;
+  downloads?: ViewerDownloadAction[];
+  loading?: boolean;
+  extra?: React.ReactNode;
+};
 
-type ViewerControlsRegistration = (state: ViewerControlsState | null) => void
+type ViewerControlsRegistration = (state: ViewerControlsState | null) => void;
 type ViewerControlsRegistrar = (
   registrationId: symbol,
-  state: ViewerControlsState | null
-) => void
+  state: ViewerControlsState | null,
+) => void;
 
 const ViewerControlsRegistrationContext =
-  React.createContext<ViewerControlsRegistrar | null>(null)
+  React.createContext<ViewerControlsRegistrar | null>(null);
 
 export function ViewerControlsRegistrationProvider({
   children,
   onControlsChange,
 }: {
-  children: React.ReactNode
-  onControlsChange: ViewerControlsRegistration
+  children: React.ReactNode;
+  onControlsChange: ViewerControlsRegistration;
 }) {
-  const activeRegistrationRef = React.useRef<symbol | null>(null)
+  const activeRegistrationRef = React.useRef<symbol | null>(null);
   const registerControls = React.useCallback<ViewerControlsRegistrar>(
     (registrationId, state) => {
       if (state) {
-        activeRegistrationRef.current = registrationId
-        onControlsChange(state)
-        return
+        activeRegistrationRef.current = registrationId;
+        onControlsChange(state);
+        return;
       }
 
-      if (activeRegistrationRef.current !== registrationId) return
-      activeRegistrationRef.current = null
-      onControlsChange(null)
+      if (activeRegistrationRef.current !== registrationId) return;
+      activeRegistrationRef.current = null;
+      onControlsChange(null);
     },
-    [onControlsChange]
-  )
+    [onControlsChange],
+  );
 
   return (
     <ViewerControlsRegistrationContext.Provider value={registerControls}>
       {children}
     </ViewerControlsRegistrationContext.Provider>
-  )
+  );
 }
 
 export function useViewerControlsRegistration(): ViewerControlsRegistration | null {
-  const registerControls = React.useContext(ViewerControlsRegistrationContext)
+  const registerControls = React.useContext(ViewerControlsRegistrationContext);
   const registrationId = React.useMemo(
     () => Symbol("viewer-controls-registration"),
-    []
-  )
+    [],
+  );
 
   return React.useMemo(() => {
-    if (!registerControls) return null
-    return (state) => registerControls(registrationId, state)
-  }, [registerControls, registrationId])
+    if (!registerControls) return null;
+    return (state) => registerControls(registrationId, state);
+  }, [registerControls, registrationId]);
 }
 
 export type ViewerControlsProps = Omit<React.ComponentProps<"div">, "title"> & {
-  title?: React.ReactNode
-  subtitle?: React.ReactNode
-  position?: ViewerControlPosition | null
-  zoom?: ViewerZoomControl | null
-  rotate?: ViewerRotateControl | null
-  downloads?: ViewerDownloadAction[]
-  onDownloadError?: ViewerDownloadErrorHandler
-  loading?: boolean
-  size?: "default" | "sm"
-  extra?: React.ReactNode
-}
+  title?: React.ReactNode;
+  subtitle?: React.ReactNode;
+  position?: ViewerControlPosition | null;
+  zoom?: ViewerZoomControl | null;
+  rotate?: ViewerRotateControl | null;
+  downloads?: ViewerDownloadAction[];
+  onDownloadError?: ViewerDownloadErrorHandler;
+  loading?: boolean;
+  size?: "default" | "sm";
+  extra?: React.ReactNode;
+};
 
 export type ViewerControlsSkeletonProps = Omit<
   React.ComponentProps<"div">,
   "title"
 > & {
-  title?: boolean
-  subtitle?: boolean
-  position?: boolean
-  zoom?: boolean
-  rotate?: boolean
-  download?: boolean
-  extra?: React.ReactNode
-}
+  title?: boolean;
+  subtitle?: boolean;
+  position?: boolean;
+  zoom?: boolean;
+  rotate?: boolean;
+  download?: boolean;
+  extra?: React.ReactNode;
+};
 
-export const VIEWER_CONTROLS_HEIGHT_PX = 40
+export const VIEWER_CONTROLS_HEIGHT_PX = 40;
 
 export function ViewerControls({
   className,
@@ -143,18 +143,18 @@ export function ViewerControls({
   extra,
   ...props
 }: ViewerControlsProps) {
-  const hasDownloads = Boolean(downloads?.length)
-  const hasControls = Boolean(zoom || rotate || hasDownloads || extra)
-  const hasPlainTitle = typeof title === "string" || typeof title === "number"
-  const hasMetadataGroup = loading || title != null || subtitle != null
+  const hasDownloads = Boolean(downloads?.length);
+  const hasControls = Boolean(zoom || rotate || hasDownloads || extra);
+  const hasPlainTitle = typeof title === "string" || typeof title === "number";
+  const hasMetadataGroup = loading || title != null || subtitle != null;
 
   return (
     <div
       data-slot="viewer-controls"
       className={cn(
-        "flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2",
+        "bg-card flex h-10 flex-shrink-0 items-center gap-1 border-b px-2",
         size === "sm" && "h-9 px-2",
-        className
+        className,
       )}
       {...props}
     >
@@ -163,32 +163,32 @@ export function ViewerControls({
           {loading ? (
             <span
               aria-hidden
-              className="size-2 flex-shrink-0 animate-pulse rounded-full bg-primary"
+              className="bg-primary size-2 flex-shrink-0 animate-pulse rounded-full"
             />
           ) : null}
           {title != null ? (
             <div
               className={cn(
                 "min-w-0 px-1",
-                hasPlainTitle && "truncate text-xs font-medium"
+                hasPlainTitle && "truncate text-xs font-medium",
               )}
             >
               {title}
             </div>
           ) : null}
           {subtitle != null ? (
-            <span className="hidden min-w-0 truncate px-1 text-xs text-muted-foreground tabular-nums sm:inline">
+            <span className="text-muted-foreground hidden min-w-0 truncate px-1 text-xs tabular-nums sm:inline">
               {subtitle}
             </span>
           ) : null}
           {position ? (
-            <span className="flex-shrink-0 px-1 text-xs text-muted-foreground tabular-nums">
+            <span className="text-muted-foreground flex-shrink-0 px-1 text-xs tabular-nums">
               {formatViewerControlPosition(position)}
             </span>
           ) : null}
         </div>
       ) : position ? (
-        <span className="flex-shrink-0 px-1 text-xs text-muted-foreground tabular-nums">
+        <span className="text-muted-foreground flex-shrink-0 px-1 text-xs tabular-nums">
           {formatViewerControlPosition(position)}
         </span>
       ) : (
@@ -214,7 +214,7 @@ export function ViewerControls({
         </div>
       ) : null}
     </div>
-  )
+  );
 }
 
 export function ViewerControlsSkeleton({
@@ -228,14 +228,14 @@ export function ViewerControlsSkeleton({
   extra,
   ...props
 }: ViewerControlsSkeletonProps) {
-  const hasControls = zoom || rotate || download || Boolean(extra)
+  const hasControls = zoom || rotate || download || Boolean(extra);
 
   return (
     <div
       data-slot="viewer-controls-skeleton"
       className={cn(
-        "flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2",
-        className
+        "bg-card flex h-10 flex-shrink-0 items-center gap-1 border-b px-2",
+        className,
       )}
       {...props}
     >
@@ -319,7 +319,7 @@ export function ViewerControlsSkeleton({
         </div>
       ) : null}
     </div>
-  )
+  );
 }
 
 export function ViewerControlButton({
@@ -339,30 +339,30 @@ export function ViewerControlButton({
     >
       {children}
     </Button>
-  )
+  );
 }
 
 export function formatViewerControlPosition(position: ViewerControlPosition) {
-  if ("label" in position) return position.label
+  if ("label" in position) return position.label;
 
   const label =
     position.kind === "page"
       ? "Page"
       : position.kind === "slide"
         ? "Slide"
-        : "Frame"
+        : "Frame";
   const current =
     position.total == null
       ? position.current
-      : Math.min(position.current, position.total)
+      : Math.min(position.current, position.total);
 
   return position.total == null
     ? `${label} ${current}`
-    : `${label} ${current} of ${position.total}`
+    : `${label} ${current} of ${position.total}`;
 }
 
 function ViewerZoomControls({ zoom }: { zoom: ViewerZoomControl }) {
-  const fitLabel = zoom.fitLabel ?? "Fit width"
+  const fitLabel = zoom.fitLabel ?? "Fit width";
 
   return (
     <>
@@ -376,7 +376,7 @@ function ViewerZoomControls({ zoom }: { zoom: ViewerZoomControl }) {
       {zoom.onReset ? (
         <button
           type="button"
-          className="w-12 text-center text-xs text-muted-foreground tabular-nums hover:text-foreground disabled:pointer-events-none disabled:opacity-64"
+          className="text-muted-foreground hover:text-foreground w-12 text-center text-xs tabular-nums disabled:pointer-events-none disabled:opacity-64"
           title="Reset zoom"
           onClick={zoom.onReset}
           disabled={zoom.isDisabled}
@@ -384,7 +384,7 @@ function ViewerZoomControls({ zoom }: { zoom: ViewerZoomControl }) {
           {zoom.scale == null ? "Fit" : `${Math.round(zoom.scale * 100)}%`}
         </button>
       ) : (
-        <span className="w-12 text-center text-xs text-muted-foreground tabular-nums">
+        <span className="text-muted-foreground w-12 text-center text-xs tabular-nums">
           {zoom.scale == null ? "Fit" : `${Math.round(zoom.scale * 100)}%`}
         </span>
       )}
@@ -405,13 +405,13 @@ function ViewerZoomControls({ zoom }: { zoom: ViewerZoomControl }) {
         </ViewerControlButton>
       ) : null}
     </>
-  )
+  );
 }
 
 function ViewerRotateControlButton({
   rotate,
 }: {
-  rotate: ViewerRotateControl
+  rotate: ViewerRotateControl;
 }) {
   return (
     <ViewerControlButton
@@ -421,9 +421,9 @@ function ViewerRotateControlButton({
     >
       <RotateCw />
     </ViewerControlButton>
-  )
+  );
 }
 
 function ViewerControlSeparator() {
-  return <Separator orientation="vertical" className="mx-1 h-4" />
+  return <Separator orientation="vertical" className="mx-1 h-4" />;
 }

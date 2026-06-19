@@ -1,89 +1,91 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import type { ViewerSource } from "@/lib/viewer-source"
+import * as React from "react";
+
+import type { ViewerSource } from "@/lib/viewer-source";
 
 import {
   inlineResourceKeyToString,
   MISSING_EMAIL_INLINE_RESOURCE_URL,
-} from "./email-viewer-model"
-import type { EmailInlineResourceScope } from "./email-viewer-types"
+} from "./email-viewer-model";
+import type { EmailInlineResourceScope } from "./email-viewer-types";
 
 export function useEmailInlineResourceUrls(scope: EmailInlineResourceScope) {
   const placeholderUrls = React.useMemo(
     () => createPlaceholderUrls(scope),
-    [scope]
-  )
+    [scope],
+  );
   const [materialized, setMaterialized] = React.useState<{
-    scope: EmailInlineResourceScope
-    urls: ReadonlyMap<string, string>
+    scope: EmailInlineResourceScope;
+    urls: ReadonlyMap<string, string>;
   }>(() => ({
     scope,
     urls: placeholderUrls,
-  }))
+  }));
 
   React.useEffect(() => {
-    const nextUrls = new Map<string, string>()
-    const objectUrls: string[] = []
+    const nextUrls = new Map<string, string>();
+    const objectUrls: string[] = [];
 
     for (const resource of scope.resources) {
-      const source = resource.node.part.source
-      if (!source) continue
+      const source = resource.node.part.source;
+      if (!source) continue;
 
-      const url = sourceToInlineUrl(source, objectUrls)
-      if (!url) continue
+      const url = sourceToInlineUrl(source, objectUrls);
+      if (!url) continue;
 
       for (const key of resource.keys) {
-        nextUrls.set(inlineResourceKeyToString(key), url)
+        nextUrls.set(inlineResourceKeyToString(key), url);
       }
     }
 
     setMaterialized({
       scope,
       urls: nextUrls,
-    })
+    });
 
     return () => {
-      for (const url of objectUrls) URL.revokeObjectURL(url)
-    }
-  }, [scope])
+      for (const url of objectUrls) URL.revokeObjectURL(url);
+    };
+  }, [scope]);
 
-  return materialized.scope === scope ? materialized.urls : placeholderUrls
+  return materialized.scope === scope ? materialized.urls : placeholderUrls;
 }
 
 function createPlaceholderUrls(scope: EmailInlineResourceScope) {
-  const urls = new Map<string, string>()
+  const urls = new Map<string, string>();
 
   for (const resource of scope.resources) {
     for (const key of resource.keys) {
       urls.set(
         inlineResourceKeyToString(key),
-        MISSING_EMAIL_INLINE_RESOURCE_URL
-      )
+        MISSING_EMAIL_INLINE_RESOURCE_URL,
+      );
     }
   }
 
-  return urls
+  return urls;
 }
 
 function sourceToInlineUrl(source: ViewerSource, objectUrls: string[]) {
-  if (source.kind === "url") return source.url
+  if (source.kind === "url") return source.url;
   if (source.kind === "blob") {
-    const url = URL.createObjectURL(source.blob)
-    objectUrls.push(url)
-    return url
+    const url = URL.createObjectURL(source.blob);
+    objectUrls.push(url);
+    return url;
   }
 
-  return textSourceToDataUrl(source.text, source.mimeType)
+  return textSourceToDataUrl(source.text, source.mimeType);
 }
 
 function textSourceToDataUrl(text: string, mimeType: string | undefined) {
-  const bytes = new TextEncoder().encode(text)
-  const chunkSize = 0x8000
-  let binary = ""
+  const bytes = new TextEncoder().encode(text);
+  const chunkSize = 0x8000;
+  let binary = "";
   for (let index = 0; index < bytes.length; index += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize))
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
   }
-  return `data:${mimeType ?? "text/plain;charset=utf-8"};base64,${btoa(binary)}`
+  return `data:${mimeType ?? "text/plain;charset=utf-8"};base64,${btoa(binary)}`;
 }

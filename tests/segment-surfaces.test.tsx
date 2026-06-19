@@ -1,5 +1,7 @@
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
+
 // @vitest-environment jsdom
-import * as React from "react"
+import * as React from "react";
 import {
   act,
   cleanup,
@@ -8,8 +10,8 @@ import {
   renderHook,
   screen,
   waitFor,
-} from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+} from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   getSegmentInteractionState,
@@ -19,7 +21,7 @@ import {
   resolvePreviewedSegmentId,
   scopeSegmentInteraction,
   type SegmentInteraction,
-} from "@/lib/segment-interaction"
+} from "@/lib/segment-interaction";
 import {
   buildColorMap,
   buildPageRuns,
@@ -33,95 +35,95 @@ import {
   segmentsPageCount,
   toSegments,
   type Segment,
-} from "@/lib/segments"
-import { PageRibbon } from "@/components/ui/page-ribbon"
-import { PageTimeline } from "@/components/ui/page-timeline"
-import { SegmentLegend } from "@/components/ui/segment-legend"
-import { SegmentSidebar } from "@/components/ui/segment-sidebar"
-import { createSegmentedDocumentModel } from "@/components/ui/segmented-document-model"
+} from "@/lib/segments";
+import { PageRibbon } from "@/components/ui/page-ribbon";
+import { PageTimeline } from "@/components/ui/page-timeline";
+import { SegmentLegend } from "@/components/ui/segment-legend";
+import { SegmentSidebar } from "@/components/ui/segment-sidebar";
+import { createSegmentedDocumentModel } from "@/components/ui/segmented-document-model";
 import {
   SegmentedDocumentProvider,
   useSegmentedDocumentModel,
   useSegmentedDocumentViewport,
-} from "@/components/ui/segmented-document-provider"
+} from "@/components/ui/segmented-document-provider";
 import {
   useControlledSegmentInteraction,
   useSegmentInteraction,
-} from "@/components/ui/use-segment-interaction"
-import { useSegmentViewportController } from "@/components/ui/use-segment-viewport-controller"
-import { ClassifierViewer } from "@/components/viewers/classify/classifier-viewer"
+} from "@/components/ui/use-segment-interaction";
+import { useSegmentViewportController } from "@/components/ui/use-segment-viewport-controller";
+import { ClassifierViewer } from "@/components/viewers/classify/classifier-viewer";
 import {
   PartitionViewer,
   PartitionViewerHeader,
   PartitionViewerProvider,
   usePartitionViewerDocumentControls,
-} from "@/components/viewers/partition/partition-viewer"
+} from "@/components/viewers/partition/partition-viewer";
 import {
   createPartitionSegmentedDocumentModel,
   createPartitionViewerModel,
-} from "@/components/viewers/partition/partition-viewer-model"
+} from "@/components/viewers/partition/partition-viewer-model";
 import {
   createSplitViewerModel,
   SplitViewer,
   SplitViewerProvider,
   useSplitViewerDocumentControls,
-} from "@/components/viewers/split/split-viewer"
+} from "@/components/viewers/split/split-viewer";
 
 vi.mock("@/components/ui/pdf-viewer", () => ({
   PdfViewer: () => (
     <div data-testid="pdf-viewer">
       {Array.from({ length: 6 }, (_, index) => {
-        const page = index + 1
+        const page = index + 1;
         return (
           <div key={page} data-page={page} data-slot="pdf-page">
             Page {page}
           </div>
-        )
+        );
       })}
     </div>
   ),
-}))
+}));
 
-afterEach(cleanup)
+afterEach(cleanup);
 
 const segments = toSegments([
   { name: "Intro", pages: [1, 2] },
   { name: "Results", pages: [3] },
   { name: "Unused", pages: [] },
-])
+]);
 
 const viewerSource = {
   kind: "url" as const,
   url: "/samples/source.pdf",
   fileName: "source.pdf",
-}
+};
 
 function PartitionScrollSpy({
   onScroll,
 }: {
-  onScroll: (page: number) => void
+  onScroll: (page: number) => void;
 }) {
-  const controls = usePartitionViewerDocumentControls()
+  const controls = usePartitionViewerDocumentControls();
 
   React.useEffect(() => {
     controls.setDocumentHandle({
       scrollToPage: onScroll,
-    })
-    return () => controls.setDocumentHandle(null)
-  }, [controls, onScroll])
+    });
+    return () => controls.setDocumentHandle(null);
+  }, [controls, onScroll]);
 
-  return null
+  return null;
 }
 
 function segment(
-  overrides: Partial<Segment> & Pick<Segment, "id" | "index" | "label">
+  overrides: Partial<Segment> & Pick<Segment, "id" | "index" | "label">,
 ): Segment {
   return {
     pages: [],
     color: "#000000",
     confidence: null,
     ...overrides,
-  }
+  };
 }
 
 function createRailGeometry({
@@ -133,34 +135,34 @@ function createRailGeometry({
   viewportHeight,
   viewportTop,
 }: {
-  markerBottom: number
-  markerOffsetHeight: number
-  markerOffsetTop: number
-  markerTop: number
-  viewportBottom: number
-  viewportHeight: number
-  viewportTop: number
+  markerBottom: number;
+  markerOffsetHeight: number;
+  markerOffsetTop: number;
+  markerTop: number;
+  viewportBottom: number;
+  viewportHeight: number;
+  viewportTop: number;
 }) {
-  const viewport = document.createElement("div")
-  const marker = document.createElement("span")
-  const scrollTo = vi.fn()
+  const viewport = document.createElement("div");
+  const marker = document.createElement("span");
+  const scrollTo = vi.fn();
 
   Object.defineProperty(viewport, "clientHeight", {
     configurable: true,
     value: viewportHeight,
-  })
+  });
   Object.defineProperty(viewport, "scrollTo", {
     configurable: true,
     value: scrollTo,
-  })
+  });
   Object.defineProperty(marker, "offsetTop", {
     configurable: true,
     value: markerOffsetTop,
-  })
+  });
   Object.defineProperty(marker, "offsetHeight", {
     configurable: true,
     value: markerOffsetHeight,
-  })
+  });
 
   viewport.getBoundingClientRect = () =>
     ({
@@ -173,7 +175,7 @@ function createRailGeometry({
       x: 0,
       y: viewportTop,
       toJSON: () => ({}),
-    }) as DOMRect
+    }) as DOMRect;
 
   marker.getBoundingClientRect = () =>
     ({
@@ -186,54 +188,54 @@ function createRailGeometry({
       x: 0,
       y: markerTop,
       toJSON: () => ({}),
-    }) as DOMRect
+    }) as DOMRect;
 
-  return { marker, scrollTo, viewport }
+  return { marker, scrollTo, viewport };
 }
 
 function createInteraction(
-  overrides: Partial<SegmentInteraction> = {}
+  overrides: Partial<SegmentInteraction> = {},
 ): SegmentInteraction {
   return {
     previewSegmentId: null,
     previewSegment: vi.fn(),
     clearPreview: vi.fn(),
     ...overrides,
-  }
+  };
 }
 
 function expectNoDuplicateKeyWarnings(renderSurface: () => void) {
-  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 
-  renderSurface()
+  renderSurface();
   const hasDuplicateKeyWarning = consoleError.mock.calls.some((call) =>
     call.some((message) =>
-      String(message).includes("Encountered two children with the same key")
-    )
-  )
-  consoleError.mockRestore()
+      String(message).includes("Encountered two children with the same key"),
+    ),
+  );
+  consoleError.mockRestore();
 
-  expect(hasDuplicateKeyWarning).toBe(false)
+  expect(hasDuplicateKeyWarning).toBe(false);
 }
 
 describe("segment interaction helpers", () => {
   it("resolves the transient preview id", () => {
-    expect(resolvePreviewedSegmentId()).toBeNull()
+    expect(resolvePreviewedSegmentId()).toBeNull();
     expect(
       resolvePreviewedSegmentId({
         previewSegmentId: "previewed",
-      })
-    ).toBe("previewed")
-  })
+      }),
+    ).toBe("previewed");
+  });
 
   it("marks current pages from normalized page ownership", () => {
-    const intro = segments[0]
+    const intro = segments[0];
 
-    expect(isSegmentCurrentPage(intro, 1)).toBe(true)
-    expect(isSegmentCurrentPage(intro, 3)).toBe(false)
-    expect(isSegmentCurrentPage(intro, null)).toBe(false)
-    expect(isSegmentCurrentPage(intro)).toBe(false)
-  })
+    expect(isSegmentCurrentPage(intro, 1)).toBe(true);
+    expect(isSegmentCurrentPage(intro, 3)).toBe(false);
+    expect(isSegmentCurrentPage(intro, null)).toBe(false);
+    expect(isSegmentCurrentPage(intro)).toBe(false);
+  });
 
   it("derives current and highlighted segment ids from one interaction state", () => {
     expect(
@@ -241,7 +243,7 @@ describe("segment interaction helpers", () => {
         segments,
         currentPage: 3,
         interaction: createInteraction(),
-      })
+      }),
     ).toMatchObject({
       currentPage: 3,
       currentSegmentId: segments[1].id,
@@ -249,14 +251,14 @@ describe("segment interaction helpers", () => {
       previewSegmentId: null,
       highlightedSegmentId: segments[1].id,
       highlightedSegmentIds: [segments[1].id],
-    })
+    });
 
     expect(
       getSegmentInteractionState({
         segments,
         currentPage: 3,
         interaction: createInteraction({ previewSegmentId: segments[0].id }),
-      })
+      }),
     ).toMatchObject({
       currentPage: 3,
       currentSegmentId: segments[1].id,
@@ -264,112 +266,112 @@ describe("segment interaction helpers", () => {
       previewSegmentId: segments[0].id,
       highlightedSegmentId: segments[0].id,
       highlightedSegmentIds: [segments[0].id],
-    })
-  })
+    });
+  });
 
   it("derives preview, current, highlighted, and dimmed state", () => {
-    const intro = segments[0]
-    const results = segments[1]
+    const intro = segments[0];
+    const results = segments[1];
     const interactionState = getSegmentInteractionState({
       segments,
       currentPage: 1,
       interaction: createInteraction({
         previewSegmentId: results.id,
       }),
-    })
+    });
 
     expect(
       getSegmentViewState({
         segment: intro,
         interactionState,
-      })
+      }),
     ).toEqual({
       isPreviewed: false,
       isCurrent: true,
       isHighlighted: false,
       isDimmed: true,
-    })
-  })
+    });
+  });
 
   it("lets explicit current state override page membership", () => {
     const interactionState = getSegmentInteractionState({
       segments,
       currentPage: 1,
       interaction: null,
-    })
+    });
     expect(
       getSegmentViewState({
         segment: segments[0],
         interactionState,
         isCurrent: false,
-      }).isCurrent
-    ).toBe(false)
-  })
+      }).isCurrent,
+    ).toBe(false);
+  });
 
   it("builds safe surface props without an interaction controller", () => {
-    const onSelect = vi.fn()
+    const onSelect = vi.fn();
     const interactionState = getSegmentInteractionState({
       segments,
       currentPage: 1,
       interaction: null,
-    })
+    });
     const { state, eventHandlers, dataProps } = getSegmentSurfaceProps({
       segment: segments[0],
       interactionState,
       onSelect,
-    })
+    });
 
-    eventHandlers.onPointerEnter()
-    eventHandlers.onPointerLeave()
-    eventHandlers.onClick()
+    eventHandlers.onPointerEnter();
+    eventHandlers.onPointerLeave();
+    eventHandlers.onClick();
 
-    expect(state.isCurrent).toBe(true)
-    expect(dataProps["data-current"]).toBe(true)
-    expect(dataProps["data-highlighted"]).toBe(true)
-    expect(onSelect).toHaveBeenCalledWith(segments[0])
-  })
+    expect(state.isCurrent).toBe(true);
+    expect(dataProps["data-current"]).toBe(true);
+    expect(dataProps["data-highlighted"]).toBe(true);
+    expect(onSelect).toHaveBeenCalledWith(segments[0]);
+  });
 
   it("notifies surface click callers without writing persistent selection", () => {
-    const calls: string[] = []
-    const interaction = createInteraction()
+    const calls: string[] = [];
+    const interaction = createInteraction();
     const interactionState = getSegmentInteractionState({
       segments,
       currentPage: null,
       interaction,
-    })
+    });
     const { eventHandlers } = getSegmentSurfaceProps({
       segment: segments[0],
       interaction,
       interactionState,
       onSelect: (selected) => calls.push(`notify:${selected.id}`),
-    })
+    });
 
-    eventHandlers.onClick()
+    eventHandlers.onClick();
 
-    expect(calls).toEqual([`notify:${segments[0].id}`])
-  })
+    expect(calls).toEqual([`notify:${segments[0].id}`]);
+  });
 
   it("scopes stale interaction ids to the rendered segment ids", () => {
     const validInteraction = createInteraction({
       previewSegmentId: segments[0].id,
-    })
+    });
     const staleInteraction = createInteraction({
       previewSegmentId: "removed#1",
-    })
+    });
 
     expect(
       scopeSegmentInteraction(validInteraction, [
         segments[0].id,
         segments[1].id,
-      ])
-    ).toBe(validInteraction)
+      ]),
+    ).toBe(validInteraction);
     expect(
-      scopeSegmentInteraction(staleInteraction, [segments[0].id])
+      scopeSegmentInteraction(staleInteraction, [segments[0].id]),
     ).toMatchObject({
       previewSegmentId: null,
-    })
-  })
-})
+    });
+  });
+});
 
 describe("segment model helpers", () => {
   it("normalizes chunk labels, ids, pages, colors, and confidences", () => {
@@ -380,35 +382,35 @@ describe("segment model helpers", () => {
         { pages: [5, 4] },
         { name: "Beta", pages: [6] },
       ],
-      [0.95, undefined, null, 0.5]
-    )
+      [0.95, undefined, null, 0.5],
+    );
 
     expect(normalized.map(({ id }) => id)).toEqual([
       "Beta#0",
       "Alpha#1",
       "#2",
       "Beta#3",
-    ])
+    ]);
     expect(normalized.map(({ label }) => label)).toEqual([
       "Beta",
       "Alpha",
       "",
       "Beta",
-    ])
+    ]);
     expect(normalized.map(({ pages }) => pages)).toEqual([
       [1, 2, 3],
       [],
       [4, 5],
       [6],
-    ])
-    expect(normalized[0].color).toBe(normalized[3].color)
+    ]);
+    expect(normalized[0].color).toBe(normalized[3].color);
     expect(normalized.map(({ confidence }) => confidence)).toEqual([
       0.95,
       null,
       null,
       0.5,
-    ])
-  })
+    ]);
+  });
 
   it("drops non-finite segment confidences during normalization", () => {
     const normalized = toSegments(
@@ -417,15 +419,15 @@ describe("segment model helpers", () => {
         { name: "Infinity", pages: [2] },
         { name: "Valid", pages: [3] },
       ],
-      [Number.NaN, Infinity, 0.8]
-    )
+      [Number.NaN, Infinity, 0.8],
+    );
 
     expect(normalized.map(({ confidence }) => confidence)).toEqual([
       null,
       null,
       0.8,
-    ])
-  })
+    ]);
+  });
 
   it("clamps finite segment confidences during normalization", () => {
     const normalized = toSegments(
@@ -433,33 +435,33 @@ describe("segment model helpers", () => {
         { name: "Low", pages: [1] },
         { name: "High", pages: [2] },
       ],
-      [-0.2, 1.4]
-    )
+      [-0.2, 1.4],
+    );
 
-    expect(normalized.map(({ confidence }) => confidence)).toEqual([0, 1])
-  })
+    expect(normalized.map(({ confidence }) => confidence)).toEqual([0, 1]);
+  });
 
   it("uses a deterministic label color map and wraps the palette", () => {
     const labels = [
       "Zulu",
       "Alpha",
       ...Array.from({ length: SEGMENT_PALETTE.length }, (_, i) => `Label ${i}`),
-    ]
-    const colors = buildColorMap(labels)
+    ];
+    const colors = buildColorMap(labels);
 
-    expect(colors.get("Alpha")).toBe(SEGMENT_PALETTE[0])
+    expect(colors.get("Alpha")).toBe(SEGMENT_PALETTE[0]);
     expect(colors.get("Zulu")).toBe(
-      SEGMENT_PALETTE[(new Set(labels).size - 1) % SEGMENT_PALETTE.length]
-    )
-  })
+      SEGMENT_PALETTE[(new Set(labels).size - 1) % SEGMENT_PALETTE.length],
+    );
+  });
 
   it("keys color maps by display label", () => {
-    const colors = buildColorMap([" Contract ", "", "   "])
+    const colors = buildColorMap([" Contract ", "", "   "]);
 
-    expect(colors.get("Contract")).toBe(SEGMENT_PALETTE[0])
-    expect(colors.get("unnamed")).toBe(SEGMENT_PALETTE[1])
-    expect(colors.get(" Contract ")).toBeUndefined()
-  })
+    expect(colors.get("Contract")).toBe(SEGMENT_PALETTE[0]);
+    expect(colors.get("unnamed")).toBe(SEGMENT_PALETTE[1]);
+    expect(colors.get(" Contract ")).toBeUndefined();
+  });
 
   it("uses display labels when assigning colors", () => {
     const normalized = toSegments([
@@ -467,19 +469,19 @@ describe("segment model helpers", () => {
       { name: " Contract ", pages: [2] },
       { name: "", pages: [3] },
       { name: "   ", pages: [4] },
-    ])
+    ]);
 
-    expect(normalized[0].color).toBe(normalized[1].color)
-    expect(normalized[2].color).toBe(normalized[3].color)
-    expect(normalized[0].id).toBe("Contract#0")
-    expect(normalized[1].id).toBe(" Contract #1")
-  })
+    expect(normalized[0].color).toBe(normalized[1].color);
+    expect(normalized[2].color).toBe(normalized[3].color);
+    expect(normalized[0].id).toBe("Contract#0");
+    expect(normalized[1].id).toBe(" Contract #1");
+  });
 
   it("supports shared color overrides", () => {
     const colors = new Map([
       ["Intro", "#111111"],
       ["Results", "#222222"],
-    ])
+    ]);
 
     expect(
       toSegments(
@@ -488,32 +490,32 @@ describe("segment model helpers", () => {
           { name: "Missing", pages: [2] },
         ],
         undefined,
-        colors
-      ).map(({ color }) => color)
-    ).toEqual(["#111111", "#888888"])
-  })
+        colors,
+      ).map(({ color }) => color),
+    ).toEqual(["#111111", "#888888"]);
+  });
 
   it("collapses invalid, duplicate, and non-contiguous pages into ranges", () => {
     expect(buildPageRuns([3, 1, 2, 2, -4, 7, 6, 2.5])).toEqual([
       [1, 3],
       [6, 7],
-    ])
-    expect(formatPageRanges([3, 1, 2, 2, -4, 7, 6, 2.5])).toBe("1–3, 6–7")
-    expect(formatPageRanges([])).toBe("—")
-  })
+    ]);
+    expect(formatPageRanges([3, 1, 2, 2, -4, 7, 6, 2.5])).toBe("1–3, 6–7");
+    expect(formatPageRanges([])).toBe("—");
+  });
 
   it("counts max pages and preserves overlapping owners by segment index", () => {
     const customSegments = [
       segment({ id: "first", index: 4, label: "First", pages: [1, 3] }),
       segment({ id: "second", index: 2, label: "Second", pages: [3, 4] }),
-    ]
-    const owners = pageOwners(customSegments)
+    ];
+    const owners = pageOwners(customSegments);
 
-    expect(segmentsPageCount(customSegments)).toBe(4)
-    expect(owners.get(1)).toEqual([4])
-    expect(owners.get(3)).toEqual([4, 2])
-    expect(owners.get(2)).toBeUndefined()
-  })
+    expect(segmentsPageCount(customSegments)).toBe(4);
+    expect(owners.get(1)).toEqual([4]);
+    expect(owners.get(3)).toEqual([4, 2]);
+    expect(owners.get(2)).toBeUndefined();
+  });
 
   it("ignores invalid pages when counting segment pages", () => {
     expect(
@@ -524,9 +526,9 @@ describe("segment model helpers", () => {
           label: "Invalid",
           pages: [Number.NaN, Infinity, -1, 2],
         }),
-      ])
-    ).toBe(2)
-  })
+      ]),
+    ).toBe(2);
+  });
 
   it("ignores invalid pages when mapping page owners", () => {
     const owners = pageOwners([
@@ -536,63 +538,63 @@ describe("segment model helpers", () => {
         label: "Invalid",
         pages: [Number.NaN, Infinity, 0, -1, 1.5, 2],
       }),
-    ])
+    ]);
 
-    expect(Array.from(owners.entries())).toEqual([[2, [0]]])
-  })
+    expect(Array.from(owners.entries())).toEqual([[2, [0]]]);
+  });
 
   it("normalizes page counts to positive finite integers", () => {
-    expect(normalizePageCount(2.9)).toBe(2)
-    expect(normalizePageCount(0)).toBe(0)
-    expect(normalizePageCount(Number.NaN)).toBe(0)
-    expect(normalizePageCount(Infinity)).toBe(0)
-  })
+    expect(normalizePageCount(2.9)).toBe(2);
+    expect(normalizePageCount(0)).toBe(0);
+    expect(normalizePageCount(Number.NaN)).toBe(0);
+    expect(normalizePageCount(Infinity)).toBe(0);
+  });
 
   it("classifies and averages confidence values without clamping", () => {
-    expect(confidenceLevel(undefined)).toBeNull()
-    expect(confidenceLevel(Number.NaN)).toBeNull()
-    expect(confidenceLevel(Infinity)).toBeNull()
-    expect(confidenceLevel(0.95)).toBe("high")
-    expect(confidenceLevel(0.75)).toBe("medium")
-    expect(confidenceLevel(0.2)).toBe("low")
-    expect(meanConfidence([])).toBeNull()
-    expect(meanConfidence([0.25, 0.5, 1])).toBeCloseTo(0.583333, 5)
-  })
+    expect(confidenceLevel(undefined)).toBeNull();
+    expect(confidenceLevel(Number.NaN)).toBeNull();
+    expect(confidenceLevel(Infinity)).toBeNull();
+    expect(confidenceLevel(0.95)).toBe("high");
+    expect(confidenceLevel(0.75)).toBe("medium");
+    expect(confidenceLevel(0.2)).toBe("low");
+    expect(meanConfidence([])).toBeNull();
+    expect(meanConfidence([0.25, 0.5, 1])).toBeCloseTo(0.583333, 5);
+  });
 
   it("ignores non-finite values when averaging confidence", () => {
-    expect(meanConfidence([0.5, Number.NaN, Infinity, 1])).toBe(0.75)
-    expect(meanConfidence([Number.NaN, Infinity])).toBeNull()
-  })
+    expect(meanConfidence([0.5, Number.NaN, Infinity, 1])).toBe(0.75);
+    expect(meanConfidence([Number.NaN, Infinity])).toBeNull();
+  });
 
   it("normalizes display labels without changing segment ids", () => {
-    expect(segmentDisplayLabel("  Contract  ")).toBe("Contract")
-    expect(segmentDisplayLabel("   ")).toBe("unnamed")
+    expect(segmentDisplayLabel("  Contract  ")).toBe("Contract");
+    expect(segmentDisplayLabel("   ")).toBe("unnamed");
     expect(toSegments([{ name: "  Contract  ", pages: [1] }])[0].id).toBe(
-      "  Contract  #0"
-    )
-  })
-})
+      "  Contract  #0",
+    );
+  });
+});
 
 describe("SegmentLegend", () => {
   it("hides zero-page segments by default and reveals them from the toggle", () => {
-    render(<SegmentLegend segments={segments} showUnusedToggle />)
+    render(<SegmentLegend segments={segments} showUnusedToggle />);
 
-    expect(screen.queryByRole("button", { name: "Unused" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Unused" })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: /show 1 unused/i }))
+    fireEvent.click(screen.getByRole("button", { name: /show 1 unused/i }));
 
-    expect(screen.getByRole("button", { name: "Unused" })).toBeTruthy()
-  })
+    expect(screen.getByRole("button", { name: "Unused" })).toBeTruthy();
+  });
 
   it("emits hover, focus, and segment click callbacks separately", () => {
-    const previewSegment = vi.fn()
-    const clearPreview = vi.fn()
-    const onSelect = vi.fn()
-    const intro = segments[0]
+    const previewSegment = vi.fn();
+    const clearPreview = vi.fn();
+    const onSelect = vi.fn();
+    const intro = segments[0];
     const interaction = createInteraction({
       previewSegment,
       clearPreview,
-    })
+    });
 
     render(
       <SegmentLegend
@@ -600,24 +602,24 @@ describe("SegmentLegend", () => {
         showUnused
         interaction={interaction}
         onSelect={onSelect}
-      />
-    )
+      />,
+    );
 
-    const button = screen.getByRole("button", { name: "Intro" })
+    const button = screen.getByRole("button", { name: "Intro" });
 
-    fireEvent.pointerEnter(button)
-    fireEvent.focus(button)
-    fireEvent.click(button)
-    fireEvent.pointerLeave(button)
-    fireEvent.blur(button)
+    fireEvent.pointerEnter(button);
+    fireEvent.focus(button);
+    fireEvent.click(button);
+    fireEvent.pointerLeave(button);
+    fireEvent.blur(button);
 
-    expect(previewSegment).toHaveBeenCalledWith(intro.id)
-    expect(clearPreview).toHaveBeenCalled()
-    expect(onSelect).toHaveBeenCalledWith(intro)
-  })
+    expect(previewSegment).toHaveBeenCalledWith(intro.id);
+    expect(clearPreview).toHaveBeenCalled();
+    expect(onSelect).toHaveBeenCalledWith(intro);
+  });
 
   it("supports controlled show-unused state", () => {
-    const onShowUnusedChange = vi.fn()
+    const onShowUnusedChange = vi.fn();
 
     render(
       <SegmentLegend
@@ -625,34 +627,34 @@ describe("SegmentLegend", () => {
         showUnused={false}
         showUnusedToggle
         onShowUnusedChange={onShowUnusedChange}
-      />
-    )
+      />,
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: /show 1 unused/i }))
+    fireEvent.click(screen.getByRole("button", { name: /show 1 unused/i }));
 
-    expect(screen.queryByRole("button", { name: "Unused" })).toBeNull()
-    expect(onShowUnusedChange).toHaveBeenCalledWith(true)
-  })
+    expect(screen.queryByRole("button", { name: "Unused" })).toBeNull();
+    expect(onShowUnusedChange).toHaveBeenCalledWith(true);
+  });
 
   it("can reveal segments when every segment is initially unused", () => {
     const unusedSegments = toSegments([
       { name: "Appendix", pages: [] },
       { name: "Notes", pages: [] },
-    ])
+    ]);
 
-    render(<SegmentLegend segments={unusedSegments} showUnusedToggle />)
+    render(<SegmentLegend segments={unusedSegments} showUnusedToggle />);
 
-    expect(screen.queryByRole("button", { name: "Appendix" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Appendix" })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: /show 2 unused/i }))
+    fireEvent.click(screen.getByRole("button", { name: /show 2 unused/i }));
 
-    expect(screen.getByRole("button", { name: "Appendix" })).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Notes" })).toBeTruthy()
-  })
+    expect(screen.getByRole("button", { name: "Appendix" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Notes" })).toBeTruthy();
+  });
 
   it("keeps all-unused visibility controlled", () => {
-    const onShowUnusedChange = vi.fn()
-    const unusedSegments = toSegments([{ name: "Appendix", pages: [] }])
+    const onShowUnusedChange = vi.fn();
+    const unusedSegments = toSegments([{ name: "Appendix", pages: [] }]);
 
     render(
       <SegmentLegend
@@ -660,20 +662,20 @@ describe("SegmentLegend", () => {
         showUnused={false}
         showUnusedToggle
         onShowUnusedChange={onShowUnusedChange}
-      />
-    )
+      />,
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: /show 1 unused/i }))
+    fireEvent.click(screen.getByRole("button", { name: /show 1 unused/i }));
 
-    expect(screen.queryByRole("button", { name: "Appendix" })).toBeNull()
-    expect(onShowUnusedChange).toHaveBeenCalledWith(true)
-  })
+    expect(screen.queryByRole("button", { name: "Appendix" })).toBeNull();
+    expect(onShowUnusedChange).toHaveBeenCalledWith(true);
+  });
 
   it("does not render an unused toggle when every segment owns pages", () => {
-    render(<SegmentLegend segments={segments.slice(0, 2)} showUnusedToggle />)
+    render(<SegmentLegend segments={segments.slice(0, 2)} showUnusedToggle />);
 
-    expect(screen.queryByRole("button", { name: /unused/i })).toBeNull()
-  })
+    expect(screen.queryByRole("button", { name: /unused/i })).toBeNull();
+  });
 
   it("treats segments with only invalid pages as unused", () => {
     render(
@@ -687,71 +689,71 @@ describe("SegmentLegend", () => {
           }),
         ]}
         showUnusedToggle
-      />
-    )
+      />,
+    );
 
-    expect(screen.queryByRole("button", { name: "Invalid" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Invalid" })).toBeNull();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Show 1 unused segments" })
-    )
+      screen.getByRole("button", { name: "Show 1 unused segments" }),
+    );
 
-    expect(screen.getByRole("button", { name: "Invalid" })).toBeTruthy()
-  })
+    expect(screen.getByRole("button", { name: "Invalid" })).toBeTruthy();
+  });
 
   it("marks current legend entries without persistent selection", () => {
-    render(<SegmentLegend segments={segments} showUnused currentPage={3} />)
+    render(<SegmentLegend segments={segments} showUnused currentPage={3} />);
 
-    const intro = screen.getByRole("button", { name: "Intro" })
-    const results = screen.getByRole("button", { name: "Results" })
+    const intro = screen.getByRole("button", { name: "Intro" });
+    const results = screen.getByRole("button", { name: "Results" });
 
-    expect(intro.hasAttribute("aria-pressed")).toBe(false)
-    expect(intro.getAttribute("data-current")).toBe("false")
-    expect(results.hasAttribute("aria-pressed")).toBe(false)
-    expect(results.getAttribute("data-current")).toBe("true")
-  })
+    expect(intro.hasAttribute("aria-pressed")).toBe(false);
+    expect(intro.getAttribute("data-current")).toBe("false");
+    expect(results.hasAttribute("aria-pressed")).toBe(false);
+    expect(results.getAttribute("data-current")).toBe("true");
+  });
 
   it("renders empty legend labels as accessible unnamed entries", () => {
-    render(<SegmentLegend segments={toSegments([{ name: "", pages: [1] }])} />)
+    render(<SegmentLegend segments={toSegments([{ name: "", pages: [1] }])} />);
 
-    expect(screen.getByRole("button", { name: "unnamed" })).toBeTruthy()
-  })
+    expect(screen.getByRole("button", { name: "unnamed" })).toBeTruthy();
+  });
 
   it("renders whitespace-only legend labels as accessible unnamed entries", () => {
     render(
-      <SegmentLegend segments={toSegments([{ name: "   ", pages: [1] }])} />
-    )
+      <SegmentLegend segments={toSegments([{ name: "   ", pages: [1] }])} />,
+    );
 
-    expect(screen.getByRole("button", { name: "unnamed" })).toBeTruthy()
-  })
+    expect(screen.getByRole("button", { name: "unnamed" })).toBeTruthy();
+  });
 
   it("does not dim all legend entries for stale interaction ids", () => {
     render(
       <SegmentLegend
         segments={segments.slice(0, 2)}
         interaction={createInteraction({ previewSegmentId: "removed#99" })}
-      />
-    )
+      />,
+    );
 
     expect(screen.getByRole("button", { name: "Intro" }).className).toContain(
-      "opacity-100"
-    )
+      "opacity-100",
+    );
     expect(screen.getByRole("button", { name: "Results" }).className).toContain(
-      "opacity-100"
-    )
-  })
+      "opacity-100",
+    );
+  });
 
   it("applies horizontal grid columns and leaves vertical legends as a column", () => {
     const { rerender } = render(
-      <SegmentLegend segments={segments} showUnused columns={3} />
-    )
+      <SegmentLegend segments={segments} showUnused columns={3} />,
+    );
 
     const horizontalEntries = screen.getByRole("button", {
       name: "Intro",
-    }).parentElement
+    }).parentElement;
     expect(horizontalEntries?.getAttribute("style")).toContain(
-      "grid-template-columns: repeat(3, minmax(0, 1fr))"
-    )
+      "grid-template-columns: repeat(3, minmax(0, 1fr))",
+    );
 
     rerender(
       <SegmentLegend
@@ -759,30 +761,30 @@ describe("SegmentLegend", () => {
         showUnused
         orientation="vertical"
         columns={3}
-      />
-    )
+      />,
+    );
 
     const verticalEntries = screen.getByRole("button", {
       name: "Intro",
-    }).parentElement
-    expect(verticalEntries?.getAttribute("style") ?? "").toBe("")
-  })
+    }).parentElement;
+    expect(verticalEntries?.getAttribute("style") ?? "").toBe("");
+  });
 
   it("ignores invalid legend column counts", () => {
     const { rerender } = render(
-      <SegmentLegend segments={segments} showUnused columns={-1} />
-    )
+      <SegmentLegend segments={segments} showUnused columns={-1} />,
+    );
 
-    let entries = screen.getByRole("button", { name: "Intro" }).parentElement
-    expect(entries?.getAttribute("style") ?? "").toBe("")
+    let entries = screen.getByRole("button", { name: "Intro" }).parentElement;
+    expect(entries?.getAttribute("style") ?? "").toBe("");
 
     rerender(
-      <SegmentLegend segments={segments} showUnused columns={Infinity} />
-    )
+      <SegmentLegend segments={segments} showUnused columns={Infinity} />,
+    );
 
-    entries = screen.getByRole("button", { name: "Intro" }).parentElement
-    expect(entries?.getAttribute("style") ?? "").toBe("")
-  })
+    entries = screen.getByRole("button", { name: "Intro" }).parentElement;
+    expect(entries?.getAttribute("style") ?? "").toBe("");
+  });
 
   it("renders duplicate segment ids without duplicate React keys", () => {
     expectNoDuplicateKeyWarnings(() => {
@@ -792,31 +794,31 @@ describe("SegmentLegend", () => {
             segment({ id: "duplicate", index: 0, label: "First", pages: [1] }),
             segment({ id: "duplicate", index: 1, label: "Second", pages: [2] }),
           ]}
-        />
-      )
-    })
+        />,
+      );
+    });
 
-    expect(screen.getByRole("button", { name: "First" })).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Second" })).toBeTruthy()
-  })
-})
+    expect(screen.getByRole("button", { name: "First" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Second" })).toBeTruthy();
+  });
+});
 
 describe("SegmentSidebar", () => {
   it("uses providerless sidebar list markup", () => {
-    const { container } = render(<SegmentSidebar segments={segments} />)
+    const { container } = render(<SegmentSidebar segments={segments} />);
 
-    expect(container.querySelector('[data-slot="sidebar-wrapper"]')).toBeNull()
+    expect(container.querySelector('[data-slot="sidebar-wrapper"]')).toBeNull();
     expect(
-      container.querySelector('[data-slot="sidebar-list-root"]')
-    ).toBeTruthy()
+      container.querySelector('[data-slot="sidebar-list-root"]'),
+    ).toBeTruthy();
     expect(
-      container.querySelectorAll('[data-slot="sidebar-list-button"]').length
-    ).toBe(segments.length)
-  })
+      container.querySelectorAll('[data-slot="sidebar-list-button"]').length,
+    ).toBe(segments.length);
+  });
 
   it("previews current page and lets hover preview another row", () => {
     function Harness() {
-      const interaction = useSegmentInteraction()
+      const interaction = useSegmentInteraction();
 
       return (
         <SegmentSidebar
@@ -824,45 +826,45 @@ describe("SegmentSidebar", () => {
           interaction={interaction}
           currentPage={1}
         />
-      )
+      );
     }
 
-    render(<Harness />)
+    render(<Harness />);
 
-    const intro = screen.getByRole("button", { name: /Intro/ })
-    const results = screen.getByRole("button", { name: /Results/ })
+    const intro = screen.getByRole("button", { name: /Intro/ });
+    const results = screen.getByRole("button", { name: /Results/ });
 
-    expect(intro.getAttribute("aria-current")).toBe("page")
-    expect(intro.hasAttribute("aria-pressed")).toBe(false)
-    expect(intro.getAttribute("data-current")).toBe("true")
+    expect(intro.getAttribute("aria-current")).toBe("page");
+    expect(intro.hasAttribute("aria-pressed")).toBe(false);
+    expect(intro.getAttribute("data-current")).toBe("true");
 
-    fireEvent.pointerEnter(results)
-    expect(results.getAttribute("data-previewed")).toBe("true")
-    expect(intro.getAttribute("data-current")).toBe("true")
+    fireEvent.pointerEnter(results);
+    expect(results.getAttribute("data-previewed")).toBe("true");
+    expect(intro.getAttribute("data-current")).toBe("true");
 
-    fireEvent.pointerLeave(results)
-    expect(results.getAttribute("data-previewed")).toBe("false")
-    expect(intro.getAttribute("data-current")).toBe("true")
-  })
+    fireEvent.pointerLeave(results);
+    expect(results.getAttribute("data-previewed")).toBe("false");
+    expect(intro.getAttribute("data-current")).toBe("true");
+  });
 
   it("marks current page without selecting the segment", () => {
-    render(<SegmentSidebar segments={segments} currentPage={3} />)
+    render(<SegmentSidebar segments={segments} currentPage={3} />);
 
-    const results = screen.getByRole("button", { name: /Results/ })
+    const results = screen.getByRole("button", { name: /Results/ });
 
-    expect(results.getAttribute("aria-current")).toBe("page")
-    expect(results.hasAttribute("aria-pressed")).toBe(false)
-  })
+    expect(results.getAttribute("aria-current")).toBe("page");
+    expect(results.hasAttribute("aria-pressed")).toBe(false);
+  });
 
   it("supports caller-owned previewed segment state", () => {
     function Harness() {
       const [previewSegmentId, setPreviewSegmentId] = React.useState<
         string | null
-      >(null)
+      >(null);
       const interaction = useControlledSegmentInteraction({
         previewSegmentId,
         setPreviewSegmentId,
-      })
+      });
 
       return (
         <>
@@ -874,31 +876,33 @@ describe("SegmentSidebar", () => {
             Preview results
           </button>
         </>
-      )
+      );
     }
 
-    render(<Harness />)
-    fireEvent.click(screen.getByRole("button", { name: "Preview results" }))
+    render(<Harness />);
+    fireEvent.click(screen.getByRole("button", { name: "Preview results" }));
 
     expect(
-      screen.getByRole("button", { name: /Intro/ }).hasAttribute("aria-pressed")
-    ).toBe(false)
+      screen
+        .getByRole("button", { name: /Intro/ })
+        .hasAttribute("aria-pressed"),
+    ).toBe(false);
     expect(
       screen
         .getByRole("button", { name: /Results/ })
-        .getAttribute("data-previewed")
-    ).toBe("true")
-  })
+        .getAttribute("data-previewed"),
+    ).toBe("true");
+  });
 
   it("clears transient preview on navigation click", () => {
     function Harness() {
       const [previewSegmentId, setPreviewSegmentId] = React.useState<
         string | null
-      >(segments[0].id)
+      >(segments[0].id);
       const interaction = useControlledSegmentInteraction({
         previewSegmentId,
         setPreviewSegmentId,
-      })
+      });
 
       return (
         <>
@@ -907,21 +911,21 @@ describe("SegmentSidebar", () => {
             {previewSegmentId ?? ""}
           </output>
         </>
-      )
+      );
     }
 
-    render(<Harness />)
-    fireEvent.click(screen.getByRole("button", { name: /Results/ }))
+    render(<Harness />);
+    fireEvent.click(screen.getByRole("button", { name: /Results/ }));
 
-    expect(screen.getByLabelText("preview-segment-id").textContent).toBe("")
-  })
+    expect(screen.getByLabelText("preview-segment-id").textContent).toBe("");
+  });
 
   it("can hide unused rows and update the visible count", () => {
-    render(<SegmentSidebar segments={segments} showUnused={false} />)
+    render(<SegmentSidebar segments={segments} showUnused={false} />);
 
-    expect(screen.getByText("2 segments")).toBeTruthy()
-    expect(screen.queryByRole("button", { name: /Unused/ })).toBeNull()
-  })
+    expect(screen.getByText("2 segments")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Unused/ })).toBeNull();
+  });
 
   it("renders empty labels as unnamed and clamps confidence bars", () => {
     const sidebarSegments = toSegments(
@@ -930,16 +934,16 @@ describe("SegmentSidebar", () => {
         { name: "Overconfident", pages: [2] },
         { name: "Underconfident", pages: [3] },
       ],
-      [0.42, 1.3, -0.4]
-    )
+      [0.42, 1.3, -0.4],
+    );
 
-    render(<SegmentSidebar segments={sidebarSegments} />)
+    render(<SegmentSidebar segments={sidebarSegments} />);
 
-    expect(screen.getByText("unnamed")).toBeTruthy()
-    expect(screen.getByText("42%")).toBeTruthy()
-    expect(screen.getByText("100%")).toBeTruthy()
-    expect(screen.getByText("0%")).toBeTruthy()
-  })
+    expect(screen.getByText("unnamed")).toBeTruthy();
+    expect(screen.getByText("42%")).toBeTruthy();
+    expect(screen.getByText("100%")).toBeTruthy();
+    expect(screen.getByText("0%")).toBeTruthy();
+  });
 
   it("does not render NaN confidence values", () => {
     render(
@@ -954,20 +958,20 @@ describe("SegmentSidebar", () => {
             confidence: Number.NaN,
           },
         ]}
-      />
-    )
+      />,
+    );
 
-    expect(screen.queryByText("NaN%")).toBeNull()
-    expect(screen.getByText("0%")).toBeTruthy()
-  })
+    expect(screen.queryByText("NaN%")).toBeNull();
+    expect(screen.getByText("0%")).toBeTruthy();
+  });
 
   it("renders whitespace-only sidebar labels as unnamed", () => {
     render(
-      <SegmentSidebar segments={toSegments([{ name: "   ", pages: [1] }])} />
-    )
+      <SegmentSidebar segments={toSegments([{ name: "   ", pages: [1] }])} />,
+    );
 
-    expect(screen.getByText("unnamed")).toBeTruthy()
-  })
+    expect(screen.getByText("unnamed")).toBeTruthy();
+  });
 
   it("counts only valid unique pages in sidebar metadata", () => {
     render(
@@ -980,28 +984,28 @@ describe("SegmentSidebar", () => {
             pages: [2, 2, Number.NaN, -1, 1.5],
           }),
         ]}
-      />
-    )
+      />,
+    );
 
-    expect(screen.getByText("1 page · 2")).toBeTruthy()
-    expect(screen.queryByText(/5 pages/)).toBeNull()
-  })
+    expect(screen.getByText("1 page · 2")).toBeTruthy();
+    expect(screen.queryByText(/5 pages/)).toBeNull();
+  });
 
   it("does not dim all sidebar rows for stale interaction ids", () => {
     render(
       <SegmentSidebar
         segments={segments}
         interaction={createInteraction({ previewSegmentId: "removed#99" })}
-      />
-    )
+      />,
+    );
 
     expect(
-      screen.getByRole("button", { name: /Intro/ }).className
-    ).not.toContain("opacity-60")
+      screen.getByRole("button", { name: /Intro/ }).className,
+    ).not.toContain("opacity-60");
     expect(
-      screen.getByRole("button", { name: /Results/ }).className
-    ).not.toContain("opacity-60")
-  })
+      screen.getByRole("button", { name: /Results/ }).className,
+    ).not.toContain("opacity-60");
+  });
 
   it("renders duplicate segment ids without duplicate sidebar keys", () => {
     expectNoDuplicateKeyWarnings(() => {
@@ -1011,50 +1015,50 @@ describe("SegmentSidebar", () => {
             segment({ id: "duplicate", index: 0, label: "First", pages: [1] }),
             segment({ id: "duplicate", index: 1, label: "Second", pages: [2] }),
           ]}
-        />
-      )
-    })
+        />,
+      );
+    });
 
-    expect(screen.getByRole("button", { name: /First/ })).toBeTruthy()
-    expect(screen.getByRole("button", { name: /Second/ })).toBeTruthy()
-  })
-})
+    expect(screen.getByRole("button", { name: /First/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Second/ })).toBeTruthy();
+  });
+});
 
 describe("PageTimeline", () => {
   it("labels empty, single-segment, and overlapping pages", () => {
     const timelineSegments = toSegments([
       { name: "Contract", pages: [1, 2] },
       { name: "Addendum", pages: [2] },
-    ])
+    ]);
 
-    render(<PageTimeline segments={timelineSegments} pageCount={3} />)
+    render(<PageTimeline segments={timelineSegments} pageCount={3} />);
 
     expect(
-      screen.getByRole("button", { name: "Page 1 · Contract" })
-    ).toBeTruthy()
+      screen.getByRole("button", { name: "Page 1 · Contract" }),
+    ).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Page 2 · 2 segments" })
-    ).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Page 3" })).toBeTruthy()
-  })
+      screen.getByRole("button", { name: "Page 2 · 2 segments" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Page 3" })).toBeTruthy();
+  });
 
   it("labels pages for unnamed timeline segments", () => {
-    render(<PageTimeline segments={toSegments([{ name: "", pages: [1] }])} />)
+    render(<PageTimeline segments={toSegments([{ name: "", pages: [1] }])} />);
 
     expect(
-      screen.getByRole("button", { name: "Page 1 · unnamed" })
-    ).toBeTruthy()
-  })
+      screen.getByRole("button", { name: "Page 1 · unnamed" }),
+    ).toBeTruthy();
+  });
 
   it("labels pages for whitespace-only timeline segments", () => {
     render(
-      <PageTimeline segments={toSegments([{ name: "   ", pages: [1] }])} />
-    )
+      <PageTimeline segments={toSegments([{ name: "   ", pages: [1] }])} />,
+    );
 
     expect(
-      screen.getByRole("button", { name: "Page 1 · unnamed" })
-    ).toBeTruthy()
-  })
+      screen.getByRole("button", { name: "Page 1 · unnamed" }),
+    ).toBeTruthy();
+  });
 
   it("does not confuse timeline segments with duplicate index fields", () => {
     const duplicateIndexSegments = [
@@ -1072,24 +1076,26 @@ describe("PageTimeline", () => {
         pages: [2],
         color: "#222222",
       }),
-    ]
+    ];
 
-    render(<PageTimeline segments={duplicateIndexSegments} />)
+    render(<PageTimeline segments={duplicateIndexSegments} />);
 
-    expect(screen.getByRole("button", { name: "Page 1 · First" })).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Page 2 · Second" })).toBeTruthy()
-  })
+    expect(screen.getByRole("button", { name: "Page 1 · First" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Page 2 · Second" }),
+    ).toBeTruthy();
+  });
 
   it("notifies the first segment for overlapping pages without dimming shared mappings", () => {
-    const onSelect = vi.fn()
-    const onSelectPage = vi.fn()
+    const onSelect = vi.fn();
+    const onSelectPage = vi.fn();
     const overlappingSegments = toSegments([
       { name: "Contract", pages: [1, 2] },
       { name: "Addendum", pages: [2] },
-    ])
+    ]);
     const interaction = createInteraction({
       previewSegmentId: overlappingSegments[1].id,
-    })
+    });
 
     render(
       <PageTimeline
@@ -1097,23 +1103,23 @@ describe("PageTimeline", () => {
         interaction={interaction}
         onSelect={onSelect}
         onSelectPage={onSelectPage}
-      />
-    )
+      />,
+    );
 
     const overlappingPage = screen.getByRole("button", {
       name: "Page 2 · 2 segments",
-    })
-    fireEvent.click(overlappingPage)
+    });
+    fireEvent.click(overlappingPage);
 
-    expect(overlappingPage.getAttribute("data-previewed")).toBe("false")
-    expect(overlappingPage.className).toContain("opacity-100")
-    expect(onSelect).toHaveBeenCalledWith(overlappingSegments[0])
-    expect(onSelectPage).toHaveBeenCalledWith(2)
-  })
+    expect(overlappingPage.getAttribute("data-previewed")).toBe("false");
+    expect(overlappingPage.className).toContain("opacity-100");
+    expect(onSelect).toHaveBeenCalledWith(overlappingSegments[0]);
+    expect(onSelectPage).toHaveBeenCalledWith(2);
+  });
 
   it("lets empty pages trigger page selection without segment selection", () => {
-    const onSelectPage = vi.fn()
-    const timelineSegments = toSegments([{ name: "Contract", pages: [1] }])
+    const onSelectPage = vi.fn();
+    const timelineSegments = toSegments([{ name: "Contract", pages: [1] }]);
 
     render(
       <PageTimeline
@@ -1121,21 +1127,21 @@ describe("PageTimeline", () => {
         pageCount={2}
         interaction={createInteraction()}
         onSelectPage={onSelectPage}
-      />
-    )
+      />,
+    );
 
-    const emptyPage = screen.getByRole("button", { name: "Page 2" })
-    fireEvent.click(emptyPage)
+    const emptyPage = screen.getByRole("button", { name: "Page 2" });
+    fireEvent.click(emptyPage);
 
-    expect(onSelectPage).toHaveBeenCalledWith(2)
-  })
+    expect(onSelectPage).toHaveBeenCalledWith(2);
+  });
 
   it("uses explicit pageCount to render trailing unmapped pages", () => {
-    render(<PageTimeline segments={segments.slice(0, 1)} pageCount={4} />)
+    render(<PageTimeline segments={segments.slice(0, 1)} pageCount={4} />);
 
-    expect(screen.getByRole("button", { name: "Page 1 · Intro" })).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Page 4" })).toBeTruthy()
-  })
+    expect(screen.getByRole("button", { name: "Page 1 · Intro" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Page 4" })).toBeTruthy();
+  });
 
   it("marks the current page even when no segment owns it", () => {
     render(
@@ -1143,51 +1149,51 @@ describe("PageTimeline", () => {
         segments={segments.slice(0, 1)}
         pageCount={3}
         currentPage={3}
-      />
-    )
+      />,
+    );
 
-    const emptyCurrentPage = screen.getByRole("button", { name: "Page 3" })
-    expect(emptyCurrentPage.getAttribute("aria-current")).toBe("page")
-    expect(emptyCurrentPage.getAttribute("data-current")).toBe("true")
-  })
+    const emptyCurrentPage = screen.getByRole("button", { name: "Page 3" });
+    expect(emptyCurrentPage.getAttribute("aria-current")).toBe("page");
+    expect(emptyCurrentPage.getAttribute("data-current")).toBe("true");
+  });
 
   it("does not dim pages for stale previewed segment ids", () => {
     render(
       <PageTimeline
         segments={segments}
         interaction={createInteraction({ previewSegmentId: "missing" })}
-      />
-    )
+      />,
+    );
 
     expect(
-      screen.getByRole("button", { name: "Page 1 · Intro" }).className
-    ).toContain("opacity-100")
+      screen.getByRole("button", { name: "Page 1 · Intro" }).className,
+    ).toContain("opacity-100");
     expect(
-      screen.getByRole("button", { name: "Page 3 · Results" }).className
-    ).toContain("opacity-100")
-  })
+      screen.getByRole("button", { name: "Page 3 · Results" }).className,
+    ).toContain("opacity-100");
+  });
 
   it("does not dim mapped pages when a zero-page segment is previewed", () => {
     render(
       <PageTimeline
         segments={segments}
         interaction={createInteraction({ previewSegmentId: segments[2].id })}
-      />
-    )
+      />,
+    );
 
     expect(
-      screen.getByRole("button", { name: "Page 1 · Intro" }).className
-    ).toContain("opacity-100")
+      screen.getByRole("button", { name: "Page 1 · Intro" }).className,
+    ).toContain("opacity-100");
     expect(
-      screen.getByRole("button", { name: "Page 3 · Results" }).className
-    ).toContain("opacity-100")
-  })
+      screen.getByRole("button", { name: "Page 3 · Results" }).className,
+    ).toContain("opacity-100");
+  });
 
   it("does not dim visible pages when the previewed segment is outside pageCount", () => {
     const timelineSegments = toSegments([
       { name: "Visible", pages: [1] },
       { name: "Outside", pages: [4] },
-    ])
+    ]);
 
     render(
       <PageTimeline
@@ -1196,16 +1202,16 @@ describe("PageTimeline", () => {
         interaction={createInteraction({
           previewSegmentId: timelineSegments[1].id,
         })}
-      />
-    )
+      />,
+    );
 
     expect(
-      screen.getByRole("button", { name: "Page 1 · Visible" }).className
-    ).toContain("opacity-100")
+      screen.getByRole("button", { name: "Page 1 · Visible" }).className,
+    ).toContain("opacity-100");
     expect(screen.getByRole("button", { name: "Page 3" }).className).toContain(
-      "opacity-100"
-    )
-  })
+      "opacity-100",
+    );
+  });
 
   it("does not dim visible pages when the previewed segment has only fractional pages", () => {
     const timelineSegments = [
@@ -1216,50 +1222,50 @@ describe("PageTimeline", () => {
         label: "Fractional",
         pages: [1.5],
       }),
-    ]
+    ];
 
     render(
       <PageTimeline
         segments={timelineSegments}
         pageCount={2}
         interaction={createInteraction({ previewSegmentId: "fractional" })}
-      />
-    )
+      />,
+    );
 
     expect(
-      screen.getByRole("button", { name: "Page 1 · Visible" }).className
-    ).toContain("opacity-100")
+      screen.getByRole("button", { name: "Page 1 · Visible" }).className,
+    ).toContain("opacity-100");
     expect(screen.getByRole("button", { name: "Page 2" }).className).toContain(
-      "opacity-100"
-    )
-  })
+      "opacity-100",
+    );
+  });
 
   it("returns no page controls when there is no implied or explicit page count", () => {
-    const { container } = render(<PageTimeline segments={[]} />)
+    const { container } = render(<PageTimeline segments={[]} />);
 
-    expect(container.firstChild).toBeNull()
-  })
+    expect(container.firstChild).toBeNull();
+  });
 
   it("returns no page controls for non-finite explicit page counts", () => {
     const { container, rerender } = render(
-      <PageTimeline segments={segments} pageCount={Number.NaN} />
-    )
+      <PageTimeline segments={segments} pageCount={Number.NaN} />,
+    );
 
-    expect(container.firstChild).toBeNull()
+    expect(container.firstChild).toBeNull();
 
-    rerender(<PageTimeline segments={segments} pageCount={Infinity} />)
+    rerender(<PageTimeline segments={segments} pageCount={Infinity} />);
 
-    expect(container.firstChild).toBeNull()
-  })
-})
+    expect(container.firstChild).toBeNull();
+  });
+});
 
 describe("PageRibbon", () => {
   it("renders one button per page run and notifies the run start page", () => {
-    const onSelectPage = vi.fn()
-    const onSelect = vi.fn()
-    const splitSegments = toSegments([{ name: "Intro", pages: [1, 2, 4] }])
-    const segment = splitSegments[0]
-    const interaction = createInteraction()
+    const onSelectPage = vi.fn();
+    const onSelect = vi.fn();
+    const splitSegments = toSegments([{ name: "Intro", pages: [1, 2, 4] }]);
+    const segment = splitSegments[0];
+    const interaction = createInteraction();
 
     render(
       <PageRibbon
@@ -1268,16 +1274,16 @@ describe("PageRibbon", () => {
         interaction={interaction}
         onSelect={onSelect}
         onSelectPage={onSelectPage}
-      />
-    )
+      />,
+    );
 
-    expect(screen.getByLabelText("Intro pages 1 to 2")).toBeTruthy()
-    const secondRun = screen.getByLabelText("Intro pages 4 to 4")
-    fireEvent.click(secondRun)
+    expect(screen.getByLabelText("Intro pages 1 to 2")).toBeTruthy();
+    const secondRun = screen.getByLabelText("Intro pages 4 to 4");
+    fireEvent.click(secondRun);
 
-    expect(onSelect).toHaveBeenCalledWith(segment)
-    expect(onSelectPage).toHaveBeenCalledWith(4)
-  })
+    expect(onSelect).toHaveBeenCalledWith(segment);
+    expect(onSelectPage).toHaveBeenCalledWith(4);
+  });
 
   it("labels unnamed ribbon runs accessibly", () => {
     render(
@@ -1286,11 +1292,11 @@ describe("PageRibbon", () => {
           { id: "split", segments: toSegments([{ name: "", pages: [1] }]) },
         ]}
         pageCount={1}
-      />
-    )
+      />,
+    );
 
-    expect(screen.getByLabelText("unnamed pages 1 to 1")).toBeTruthy()
-  })
+    expect(screen.getByLabelText("unnamed pages 1 to 1")).toBeTruthy();
+  });
 
   it("labels whitespace-only ribbon runs accessibly", () => {
     render(
@@ -1299,11 +1305,11 @@ describe("PageRibbon", () => {
           { id: "split", segments: toSegments([{ name: "   ", pages: [1] }]) },
         ]}
         pageCount={1}
-      />
-    )
+      />,
+    );
 
-    expect(screen.getByLabelText("unnamed pages 1 to 1")).toBeTruthy()
-  })
+    expect(screen.getByLabelText("unnamed pages 1 to 1")).toBeTruthy();
+  });
 
   it("renders vertical ribbons, ticks, and current-page run state", () => {
     render(
@@ -1313,14 +1319,14 @@ describe("PageRibbon", () => {
         orientation="vertical"
         currentPage={2}
         showTicks
-      />
-    )
+      />,
+    );
 
-    const ribbon = screen.getByLabelText("Intro pages 1 to 2")
-    expect(ribbon.getAttribute("data-current")).toBe("true")
-    expect(screen.getByText("1")).toBeTruthy()
-    expect(screen.getByText("3")).toBeTruthy()
-  })
+    const ribbon = screen.getByLabelText("Intro pages 1 to 2");
+    expect(ribbon.getAttribute("data-current")).toBe("true");
+    expect(screen.getByText("1")).toBeTruthy();
+    expect(screen.getByText("3")).toBeTruthy();
+  });
 
   it("falls back for invalid ribbon row thickness", () => {
     const { container, rerender } = render(
@@ -1328,14 +1334,14 @@ describe("PageRibbon", () => {
         rows={[{ id: "split", segments: segments.slice(0, 1) }]}
         pageCount={2}
         rowThickness={Number.NaN}
-      />
-    )
+      />,
+    );
 
     expect(
       container
         .querySelector('[data-slot="page-ribbon-row"]')
-        ?.getAttribute("style")
-    ).toContain("height: 10px")
+        ?.getAttribute("style"),
+    ).toContain("height: 10px");
 
     rerender(
       <PageRibbon
@@ -1343,15 +1349,15 @@ describe("PageRibbon", () => {
         pageCount={2}
         orientation="vertical"
         rowThickness={-1}
-      />
-    )
+      />,
+    );
 
     expect(
       container
         .querySelector('[data-slot="page-ribbon-row"]')
-        ?.getAttribute("style")
-    ).toContain("width: 44px")
-  })
+        ?.getAttribute("style"),
+    ).toContain("width: 44px");
+  });
 
   it("clamps horizontal scroll progress cursor", () => {
     const { container, rerender } = render(
@@ -1359,26 +1365,26 @@ describe("PageRibbon", () => {
         rows={[{ id: "split", segments: segments.slice(0, 1) }]}
         pageCount={2}
         scrollProgress={2}
-      />
-    )
+      />,
+    );
 
-    const cursor = container.querySelector(".pointer-events-none.absolute")
-    expect(cursor?.getAttribute("style")).toContain("left: 100%")
+    const cursor = container.querySelector(".pointer-events-none.absolute");
+    expect(cursor?.getAttribute("style")).toContain("left: 100%");
 
     rerender(
       <PageRibbon
         rows={[{ id: "split", segments: segments.slice(0, 1) }]}
         pageCount={2}
         scrollProgress={-1}
-      />
-    )
+      />,
+    );
 
     expect(
       container
         .querySelector(".pointer-events-none.absolute")
-        ?.getAttribute("style")
-    ).toContain("left: 0%")
-  })
+        ?.getAttribute("style"),
+    ).toContain("left: 0%");
+  });
 
   it("does not render a cursor for non-finite progress or current page", () => {
     const { container, rerender } = render(
@@ -1386,21 +1392,21 @@ describe("PageRibbon", () => {
         rows={[{ id: "split", segments: segments.slice(0, 1) }]}
         pageCount={2}
         scrollProgress={Number.NaN}
-      />
-    )
+      />,
+    );
 
-    expect(container.querySelector(".pointer-events-none.absolute")).toBeNull()
+    expect(container.querySelector(".pointer-events-none.absolute")).toBeNull();
 
     rerender(
       <PageRibbon
         rows={[{ id: "split", segments: segments.slice(0, 1) }]}
         pageCount={2}
         currentPage={Number.NaN}
-      />
-    )
+      />,
+    );
 
-    expect(container.querySelector(".pointer-events-none.absolute")).toBeNull()
-  })
+    expect(container.querySelector(".pointer-events-none.absolute")).toBeNull();
+  });
 
   it("renders a single tick for one-page ribbons", () => {
     render(
@@ -1413,11 +1419,11 @@ describe("PageRibbon", () => {
         ]}
         pageCount={1}
         showTicks
-      />
-    )
+      />,
+    );
 
-    expect(screen.getAllByText("1")).toHaveLength(1)
-  })
+    expect(screen.getAllByText("1")).toHaveLength(1);
+  });
 
   it("does not dim all ribbon runs for stale interaction ids", () => {
     render(
@@ -1425,16 +1431,16 @@ describe("PageRibbon", () => {
         rows={[{ id: "split", segments: segments.slice(0, 2) }]}
         pageCount={3}
         interaction={createInteraction({ previewSegmentId: "removed#99" })}
-      />
-    )
+      />,
+    );
 
     expect(screen.getByLabelText("Intro pages 1 to 2").className).not.toContain(
-      "opacity-30"
-    )
+      "opacity-30",
+    );
     expect(
-      screen.getByLabelText("Results pages 3 to 3").className
-    ).not.toContain("opacity-30")
-  })
+      screen.getByLabelText("Results pages 3 to 3").className,
+    ).not.toContain("opacity-30");
+  });
 
   it("does not dim all ribbon runs when a zero-page segment is previewed", () => {
     render(
@@ -1442,16 +1448,16 @@ describe("PageRibbon", () => {
         rows={[{ id: "split", segments }]}
         pageCount={3}
         interaction={createInteraction({ previewSegmentId: segments[2].id })}
-      />
-    )
+      />,
+    );
 
     expect(screen.getByLabelText("Intro pages 1 to 2").className).not.toContain(
-      "opacity-30"
-    )
+      "opacity-30",
+    );
     expect(
-      screen.getByLabelText("Results pages 3 to 3").className
-    ).not.toContain("opacity-30")
-  })
+      screen.getByLabelText("Results pages 3 to 3").className,
+    ).not.toContain("opacity-30");
+  });
 
   it("does not render ribbon runs outside pageCount", () => {
     render(
@@ -1460,11 +1466,11 @@ describe("PageRibbon", () => {
           { id: "split", segments: toSegments([{ name: "Late", pages: [4] }]) },
         ]}
         pageCount={3}
-      />
-    )
+      />,
+    );
 
-    expect(screen.queryByLabelText("Late pages 4 to 4")).toBeNull()
-  })
+    expect(screen.queryByLabelText("Late pages 4 to 4")).toBeNull();
+  });
 
   it("clips ribbon runs to the explicit pageCount", () => {
     render(
@@ -1476,34 +1482,34 @@ describe("PageRibbon", () => {
           },
         ]}
         pageCount={3}
-      />
-    )
+      />,
+    );
 
-    const run = screen.getByLabelText("Tail pages 2 to 3")
-    expect(run.getAttribute("style")).toContain("left: 33.33333333333333%")
-    expect(run.getAttribute("style")).toContain("width: 66.66666666666666%")
-    expect(screen.queryByLabelText("Tail pages 4 to 4")).toBeNull()
-  })
+    const run = screen.getByLabelText("Tail pages 2 to 3");
+    expect(run.getAttribute("style")).toContain("left: 33.33333333333333%");
+    expect(run.getAttribute("style")).toContain("width: 66.66666666666666%");
+    expect(screen.queryByLabelText("Tail pages 4 to 4")).toBeNull();
+  });
 
   it("returns no ribbon for non-finite page counts", () => {
     const { container, rerender } = render(
       <PageRibbon
         rows={[{ id: "split", segments: segments.slice(0, 1) }]}
         pageCount={Number.NaN}
-      />
-    )
+      />,
+    );
 
-    expect(container.firstChild).toBeNull()
+    expect(container.firstChild).toBeNull();
 
     rerender(
       <PageRibbon
         rows={[{ id: "split", segments: segments.slice(0, 1) }]}
         pageCount={Infinity}
-      />
-    )
+      />,
+    );
 
-    expect(container.firstChild).toBeNull()
-  })
+    expect(container.firstChild).toBeNull();
+  });
 
   it("renders duplicate ribbon row and segment ids without duplicate keys", () => {
     expectNoDuplicateKeyWarnings(() => {
@@ -1534,14 +1540,14 @@ describe("PageRibbon", () => {
             },
           ]}
           pageCount={2}
-        />
-      )
-    })
+        />,
+      );
+    });
 
-    expect(screen.getByLabelText("First pages 1 to 1")).toBeTruthy()
-    expect(screen.getByLabelText("Second pages 2 to 2")).toBeTruthy()
-  })
-})
+    expect(screen.getByLabelText("First pages 1 to 1")).toBeTruthy();
+    expect(screen.getByLabelText("Second pages 2 to 2")).toBeTruthy();
+  });
+});
 
 describe("partition segment composition", () => {
   it("groups partition legend keys by display label while preserving ribbon chunks", () => {
@@ -1556,13 +1562,13 @@ describe("partition segment composition", () => {
           consensus: { choices: [], likelihoods: null },
           usage: null,
         }}
-      />
-    )
+      />,
+    );
 
-    expect(screen.getAllByRole("button", { name: "Contract" })).toHaveLength(1)
-    expect(screen.getByLabelText("Contract pages 1 to 1")).toBeTruthy()
-    expect(screen.getByLabelText("Contract pages 2 to 2")).toBeTruthy()
-  })
+    expect(screen.getAllByRole("button", { name: "Contract" })).toHaveLength(1);
+    expect(screen.getByLabelText("Contract pages 1 to 1")).toBeTruthy();
+    expect(screen.getByLabelText("Contract pages 2 to 2")).toBeTruthy();
+  });
 
   it("renders an explicit partition document node in the viewer surface", () => {
     render(
@@ -1574,17 +1580,17 @@ describe("partition segment composition", () => {
           usage: null,
         }}
         document={<div data-testid="partition-document-pane" />}
-      />
-    )
+      />,
+    );
 
     const wrapperClassName =
       screen.getByTestId("partition-document-pane").parentElement?.className ??
-      ""
+      "";
 
-    expect(wrapperClassName).toContain("min-w-0")
-    expect(wrapperClassName).toContain("flex-1")
-    expect(screen.queryByText("No document available")).toBeNull()
-  })
+    expect(wrapperClassName).toContain("min-w-0");
+    expect(wrapperClassName).toContain("flex-1");
+    expect(screen.queryByText("No document available")).toBeNull();
+  });
 
   it("derives a pure partition viewer model from output and votes", () => {
     const model = createPartitionViewerModel({
@@ -1597,10 +1603,10 @@ describe("partition segment composition", () => {
         likelihoods: null,
       },
       usage: null,
-    })
+    });
 
-    expect(model.hasOutput).toBe(true)
-    expect(model.pageCount).toBe(9)
+    expect(model.hasOutput).toBe(true);
+    expect(model.pageCount).toBe(9);
     expect(model.legendSegments).toMatchObject([
       {
         id: "partition:Invoices",
@@ -1608,28 +1614,28 @@ describe("partition segment composition", () => {
         pages: [1, 3, 5],
         index: 0,
       },
-    ])
-    expect(model.viewportSegments).toEqual(model.legendSegments)
+    ]);
+    expect(model.viewportSegments).toEqual(model.legendSegments);
     expect(model.ribbonRows.map((row) => row.id)).toEqual([
       "output:0",
       "output:1",
       "vote:0:0",
-    ])
+    ]);
     expect(model.ribbonRows.map((row) => row.kind)).toEqual([
       "output",
       "output",
       "vote",
-    ])
-    expect(model.ribbonRows[2].voteIndex).toBe(0)
+    ]);
+    expect(model.ribbonRows[2].voteIndex).toBe(0);
     expect(model.ribbonRows[0].segments[0].color).toBe(
-      model.ribbonRows[1].segments[0].color
-    )
+      model.ribbonRows[1].segments[0].color,
+    );
 
-    const segmentedModel = createPartitionSegmentedDocumentModel(model)
-    expect(segmentedModel.segments).toBe(model.viewportSegments)
-    expect(segmentedModel.rows).toBe(model.ribbonRows)
-    expect(segmentedModel.pages).toHaveLength(9)
-  })
+    const segmentedModel = createPartitionSegmentedDocumentModel(model);
+    expect(segmentedModel.segments).toBe(model.viewportSegments);
+    expect(segmentedModel.rows).toBe(model.ribbonRows);
+    expect(segmentedModel.pages).toHaveLength(9);
+  });
 
   it("returns an empty partition viewer model without result or output", () => {
     expect(createPartitionViewerModel(null)).toEqual({
@@ -1638,24 +1644,24 @@ describe("partition segment composition", () => {
       pageCount: 0,
       ribbonRows: [],
       viewportSegments: [],
-    })
+    });
     expect(
       createPartitionViewerModel({
         output: [],
         consensus: { choices: [], likelihoods: null },
         usage: null,
-      })
+      }),
     ).toEqual({
       hasOutput: false,
       legendSegments: [],
       pageCount: 0,
       ribbonRows: [],
       viewportSegments: [],
-    })
-  })
+    });
+  });
 
   it("jumps to the earliest normalized page when a partition legend key is selected", async () => {
-    const scrolledPages: string[] = []
+    const scrolledPages: string[] = [];
 
     render(
       <PartitionViewerProvider
@@ -1669,15 +1675,15 @@ describe("partition segment composition", () => {
         <PartitionScrollSpy
           onScroll={(page) => scrolledPages.push(`${page}`)}
         />
-      </PartitionViewerProvider>
-    )
+      </PartitionViewerProvider>,
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: "Invoices" }))
+    fireEvent.click(screen.getByRole("button", { name: "Invoices" }));
 
     await waitFor(() => {
-      expect(scrolledPages).toEqual(["1"])
-    })
-  })
+      expect(scrolledPages).toEqual(["1"]);
+    });
+  });
 
   it("uses the max page, not the final input page, for unsorted partition chunks", () => {
     render(
@@ -1688,16 +1694,16 @@ describe("partition segment composition", () => {
           consensus: { choices: [], likelihoods: null },
           usage: null,
         }}
-      />
-    )
+      />,
+    );
 
-    expect(screen.getByRole("button", { name: "Invoices" })).toBeTruthy()
-    expect(screen.getByLabelText("Invoices pages 1 to 1")).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Invoices" })).toBeTruthy();
+    expect(screen.getByLabelText("Invoices pages 1 to 1")).toBeTruthy();
     expect(
-      screen.getByLabelText("Invoices pages 5 to 5").getAttribute("style")
-    ).toContain("left: 80%; width: 20%")
-  })
-})
+      screen.getByLabelText("Invoices pages 5 to 5").getAttribute("style"),
+    ).toContain("left: 80%; width: 20%");
+  });
+});
 
 describe("classifier viewer composition", () => {
   it("renders an explicit classifier document node in the viewer surface", () => {
@@ -1705,97 +1711,103 @@ describe("classifier viewer composition", () => {
       <ClassifierViewer
         result={{ category: "Loan Application", reasoning: "Matches form." }}
         document={<div data-testid="classifier-document-pane" />}
-      />
-    )
+      />,
+    );
 
     const wrapperClassName =
       screen.getByTestId("classifier-document-pane").parentElement?.className ??
-      ""
+      "";
 
-    expect(wrapperClassName).toContain("min-w-0")
-    expect(wrapperClassName).toContain("flex-1")
-    expect(screen.queryByText("No document available")).toBeNull()
-  })
-})
+    expect(wrapperClassName).toContain("min-w-0");
+    expect(wrapperClassName).toContain("flex-1");
+    expect(screen.queryByText("No document available")).toBeNull();
+  });
+});
 
 describe("segment viewport controller", () => {
   it("derives the segment viewport model from current page and preview", () => {
     const controllerSegments = toSegments([
       { name: "Title", pages: [1] },
       { name: "Results", pages: [5] },
-    ])
+    ]);
     const { result } = renderHook(() =>
-      useSegmentViewportController({ segments: controllerSegments })
-    )
+      useSegmentViewportController({ segments: controllerSegments }),
+    );
 
-    expect(result.current.model.currentPage).toBe(1)
-    expect(result.current.model.currentSegmentId).toBe(controllerSegments[0].id)
+    expect(result.current.model.currentPage).toBe(1);
+    expect(result.current.model.currentSegmentId).toBe(
+      controllerSegments[0].id,
+    );
     expect(result.current.model.highlightedSegmentId).toBe(
-      controllerSegments[0].id
-    )
+      controllerSegments[0].id,
+    );
 
     act(() => {
-      result.current.documentHandlers.onCurrentPageChange(5)
-    })
+      result.current.documentHandlers.onCurrentPageChange(5);
+    });
 
-    expect(result.current.model.currentSegmentId).toBe(controllerSegments[1].id)
+    expect(result.current.model.currentSegmentId).toBe(
+      controllerSegments[1].id,
+    );
     expect(result.current.model.highlightedSegmentId).toBe(
-      controllerSegments[1].id
-    )
+      controllerSegments[1].id,
+    );
 
     act(() => {
-      result.current.interaction.previewSegment(controllerSegments[0].id)
-    })
+      result.current.interaction.previewSegment(controllerSegments[0].id);
+    });
 
-    expect(result.current.model.previewSegmentId).toBe(controllerSegments[0].id)
+    expect(result.current.model.previewSegmentId).toBe(
+      controllerSegments[0].id,
+    );
     expect(result.current.model.highlightedSegmentId).toBe(
-      controllerSegments[0].id
-    )
+      controllerSegments[0].id,
+    );
 
     act(() => {
-      result.current.interaction.clearPreview()
-    })
+      result.current.interaction.clearPreview();
+    });
 
     expect(result.current.model.highlightedSegmentId).toBe(
-      controllerSegments[1].id
-    )
-  })
+      controllerSegments[1].id,
+    );
+  });
 
   it("requests document navigation without mutating current page", () => {
-    const controllerSegments = toSegments([{ name: "Results", pages: [5] }])
-    const scrollToPage = vi.fn()
+    const controllerSegments = toSegments([{ name: "Results", pages: [5] }]);
+    const scrollToPage = vi.fn();
     const { result } = renderHook(() =>
-      useSegmentViewportController({ segments: controllerSegments })
-    )
+      useSegmentViewportController({ segments: controllerSegments }),
+    );
 
     act(() => {
       result.current.documentHandlers.setDocumentHandle({
         scrollToPage,
-      })
-    })
+      });
+    });
 
     act(() => {
-      result.current.navigation.scrollToSegmentStart(controllerSegments[0])
-    })
+      result.current.navigation.scrollToSegmentStart(controllerSegments[0]);
+    });
 
-    expect(scrollToPage).toHaveBeenCalledWith(5)
-    expect(result.current.model.currentPage).toBe(1)
-    expect(result.current.model.currentSegmentId).toBeNull()
-  })
+    expect(scrollToPage).toHaveBeenCalledWith(5);
+    expect(result.current.model.currentPage).toBe(1);
+    expect(result.current.model.currentSegmentId).toBeNull();
+  });
 
   it("scrolls to anchors through the registered document handle", () => {
-    const controllerSegments = toSegments([{ name: "Total", pages: [2] }])
-    const scrollToPageArea = vi.fn()
+    const controllerSegments = toSegments([{ name: "Total", pages: [2] }]);
+    const scrollToPageArea = vi.fn();
     const { result } = renderHook(() =>
-      useSegmentViewportController({ segments: controllerSegments })
-    )
+      useSegmentViewportController({ segments: controllerSegments }),
+    );
 
     act(() => {
       result.current.documentHandlers.setDocumentHandle({
         scrollToPage: vi.fn(),
         scrollToPageArea,
-      })
-    })
+      });
+    });
 
     act(() => {
       result.current.navigation.scrollToAnchor({
@@ -1803,8 +1815,8 @@ describe("segment viewport controller", () => {
         segmentId: controllerSegments[0].id,
         pageNumber: 2,
         bounds: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
-      })
-    })
+      });
+    });
 
     expect(scrollToPageArea).toHaveBeenCalledWith({
       pageNumber: 2,
@@ -1812,11 +1824,11 @@ describe("segment viewport controller", () => {
       top: 20,
       width: 30,
       height: 40,
-    })
-  })
+    });
+  });
 
   it("provides the segmented document model and shared viewport", () => {
-    const controllerSegments = toSegments([{ name: "Evidence", pages: [3] }])
+    const controllerSegments = toSegments([{ name: "Evidence", pages: [3] }]);
     const model = createSegmentedDocumentModel({
       anchors: [
         {
@@ -1826,40 +1838,40 @@ describe("segment viewport controller", () => {
         },
       ],
       segments: controllerSegments,
-    })
+    });
     const wrapper = ({ children }: { children: React.ReactNode }) => (
       <SegmentedDocumentProvider model={model}>
         {children}
       </SegmentedDocumentProvider>
-    )
+    );
     const { result } = renderHook(
       () => ({
         model: useSegmentedDocumentModel(),
         viewport: useSegmentedDocumentViewport(),
       }),
-      { wrapper }
-    )
+      { wrapper },
+    );
 
     expect(result.current.model.pages.map((page) => page.pageNumber)).toEqual([
       1, 2, 3,
-    ])
-    expect(result.current.model.anchors?.[0].id).toBe("anchor:evidence")
-    expect(result.current.viewport.model.currentSegmentId).toBeNull()
+    ]);
+    expect(result.current.model.anchors?.[0].id).toBe("anchor:evidence");
+    expect(result.current.viewport.model.currentSegmentId).toBeNull();
 
     act(() => {
-      result.current.viewport.documentHandlers.onCurrentPageChange(3)
-    })
+      result.current.viewport.documentHandlers.onCurrentPageChange(3);
+    });
 
     expect(result.current.viewport.model.currentSegmentId).toBe(
-      controllerSegments[0].id
-    )
-  })
+      controllerSegments[0].id,
+    );
+  });
 
   it("keeps the rail still when the current page marker is visible", () => {
-    const controllerSegments = toSegments([{ name: "Results", pages: [2] }])
+    const controllerSegments = toSegments([{ name: "Results", pages: [2] }]);
     const { result } = renderHook(() =>
-      useSegmentViewportController({ segments: controllerSegments })
-    )
+      useSegmentViewportController({ segments: controllerSegments }),
+    );
     const { viewport, marker, scrollTo } = createRailGeometry({
       markerBottom: 48,
       markerOffsetHeight: 10,
@@ -1868,22 +1880,22 @@ describe("segment viewport controller", () => {
       viewportBottom: 100,
       viewportHeight: 100,
       viewportTop: 0,
-    })
+    });
 
     act(() => {
-      result.current.rail.setViewportElement(viewport)
-      result.current.rail.setPageElement(2, marker)
-      result.current.documentHandlers.onCurrentPageChange(2)
-    })
+      result.current.rail.setViewportElement(viewport);
+      result.current.rail.setPageElement(2, marker);
+      result.current.documentHandlers.onCurrentPageChange(2);
+    });
 
-    expect(scrollTo).not.toHaveBeenCalled()
-  })
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
 
   it("reveals the current page marker when it is outside the rail viewport", () => {
-    const controllerSegments = toSegments([{ name: "Results", pages: [5] }])
+    const controllerSegments = toSegments([{ name: "Results", pages: [5] }]);
     const { result } = renderHook(() =>
-      useSegmentViewportController({ segments: controllerSegments })
-    )
+      useSegmentViewportController({ segments: controllerSegments }),
+    );
     const { viewport, marker, scrollTo } = createRailGeometry({
       markerBottom: 230,
       markerOffsetHeight: 10,
@@ -1892,25 +1904,25 @@ describe("segment viewport controller", () => {
       viewportBottom: 100,
       viewportHeight: 100,
       viewportTop: 0,
-    })
+    });
 
     act(() => {
-      result.current.rail.setViewportElement(viewport)
-      result.current.rail.setPageElement(5, marker)
-      result.current.documentHandlers.onCurrentPageChange(5)
-    })
+      result.current.rail.setViewportElement(viewport);
+      result.current.rail.setPageElement(5, marker);
+      result.current.documentHandlers.onCurrentPageChange(5);
+    });
 
     expect(scrollTo).toHaveBeenCalledWith({
       top: 175,
       behavior: "smooth",
-    })
-  })
+    });
+  });
 
   it("suspends rail follow while the pointer is inside the rail", () => {
-    const controllerSegments = toSegments([{ name: "Results", pages: [5] }])
+    const controllerSegments = toSegments([{ name: "Results", pages: [5] }]);
     const { result } = renderHook(() =>
-      useSegmentViewportController({ segments: controllerSegments })
-    )
+      useSegmentViewportController({ segments: controllerSegments }),
+    );
     const { viewport, marker, scrollTo } = createRailGeometry({
       markerBottom: 230,
       markerOffsetHeight: 10,
@@ -1919,24 +1931,24 @@ describe("segment viewport controller", () => {
       viewportBottom: 100,
       viewportHeight: 100,
       viewportTop: 0,
-    })
+    });
 
     act(() => {
-      result.current.rail.setViewportElement(viewport)
-      result.current.rail.setPageElement(5, marker)
-      result.current.rail.onPointerEnter()
-      result.current.documentHandlers.onCurrentPageChange(5)
-    })
+      result.current.rail.setViewportElement(viewport);
+      result.current.rail.setPageElement(5, marker);
+      result.current.rail.onPointerEnter();
+      result.current.documentHandlers.onCurrentPageChange(5);
+    });
 
-    expect(scrollTo).not.toHaveBeenCalled()
-  })
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
 
   it("suspends rail follow while the user is scrolling the rail", () => {
-    const now = vi.spyOn(performance, "now").mockReturnValue(1000)
-    const controllerSegments = toSegments([{ name: "Results", pages: [5] }])
+    const now = vi.spyOn(performance, "now").mockReturnValue(1000);
+    const controllerSegments = toSegments([{ name: "Results", pages: [5] }]);
     const { result } = renderHook(() =>
-      useSegmentViewportController({ segments: controllerSegments })
-    )
+      useSegmentViewportController({ segments: controllerSegments }),
+    );
     const { viewport, marker, scrollTo } = createRailGeometry({
       markerBottom: 230,
       markerOffsetHeight: 10,
@@ -1945,19 +1957,19 @@ describe("segment viewport controller", () => {
       viewportBottom: 100,
       viewportHeight: 100,
       viewportTop: 0,
-    })
+    });
 
     act(() => {
-      result.current.rail.setViewportElement(viewport)
-      result.current.rail.setPageElement(5, marker)
-      result.current.rail.onScroll()
-      result.current.documentHandlers.onCurrentPageChange(5)
-    })
+      result.current.rail.setViewportElement(viewport);
+      result.current.rail.setPageElement(5, marker);
+      result.current.rail.onScroll();
+      result.current.documentHandlers.onCurrentPageChange(5);
+    });
 
-    expect(scrollTo).not.toHaveBeenCalled()
-    now.mockRestore()
-  })
-})
+    expect(scrollTo).not.toHaveBeenCalled();
+    now.mockRestore();
+  });
+});
 
 describe("split segment composition", () => {
   it("derives a pure split viewer model", () => {
@@ -1965,13 +1977,13 @@ describe("split segment composition", () => {
       createSplitViewerModel({
         result: null,
         isProcessing: false,
-      })
+      }),
     ).toEqual({
       hasOutput: false,
       isProcessing: false,
       pageCount: 0,
       segments: [],
-    })
+    });
 
     const model = createSplitViewerModel({
       result: {
@@ -1981,11 +1993,11 @@ describe("split segment composition", () => {
         ],
       },
       isProcessing: true,
-    })
+    });
 
-    expect(model.hasOutput).toBe(true)
-    expect(model.isProcessing).toBe(true)
-    expect(model.pageCount).toBe(5)
+    expect(model.hasOutput).toBe(true);
+    expect(model.isProcessing).toBe(true);
+    expect(model.pageCount).toBe(5);
     expect(model.segments).toMatchObject([
       {
         label: "Invoices",
@@ -1997,8 +2009,8 @@ describe("split segment composition", () => {
         pages: [3],
         index: 1,
       },
-    ])
-  })
+    ]);
+  });
 
   it("gives the rendered document pane the full flex width", () => {
     render(
@@ -2006,62 +2018,62 @@ describe("split segment composition", () => {
         source={viewerSource}
         result={{ output: [{ name: "Invoices", pages: [1] }] }}
         document={<div data-testid="split-document-pane" />}
-      />
-    )
+      />,
+    );
 
     const wrapperClassName =
-      screen.getByTestId("split-document-pane").parentElement?.className ?? ""
+      screen.getByTestId("split-document-pane").parentElement?.className ?? "";
 
-    expect(wrapperClassName).toContain("min-w-0")
-    expect(wrapperClassName).toContain("flex-1")
+    expect(wrapperClassName).toContain("min-w-0");
+    expect(wrapperClassName).toContain("flex-1");
     expect(document.querySelectorAll('[data-slot="viewer-root"]')).toHaveLength(
-      1
-    )
+      1,
+    );
     const root = document.querySelector<HTMLElement>(
-      '[data-slot="viewer-root"]'
-    )
+      '[data-slot="viewer-root"]',
+    );
     expect(root?.children[0]?.getAttribute("data-slot")).toBe(
-      "file-viewer-header"
-    )
+      "file-viewer-header",
+    );
     expect(root?.children[1]?.getAttribute("data-slot")).toBe(
-      "file-viewer-body"
-    )
+      "file-viewer-body",
+    );
     const body = root?.querySelector<HTMLElement>(
-      ':scope > [data-slot="file-viewer-body"]'
-    )
+      ':scope > [data-slot="file-viewer-body"]',
+    );
     expect(
-      body?.querySelector(':scope > [data-slot="viewer-sidebar"]')
-    ).toBeTruthy()
+      body?.querySelector(':scope > [data-slot="viewer-sidebar"]'),
+    ).toBeTruthy();
     const sidebar = body?.querySelector<HTMLElement>(
-      ':scope > [data-slot="viewer-sidebar"]'
-    )
+      ':scope > [data-slot="viewer-sidebar"]',
+    );
 
-    expect(sidebar?.getAttribute("data-viewer-sidebar-mode")).toBe("inline")
-    expect(sidebar?.className).not.toContain("bg-background")
-    expect(sidebar?.className).not.toContain("absolute")
+    expect(sidebar?.getAttribute("data-viewer-sidebar-mode")).toBe("inline");
+    expect(sidebar?.className).not.toContain("bg-background");
+    expect(sidebar?.className).not.toContain("absolute");
     const surface = body?.querySelector<HTMLElement>(
-      ':scope > [data-slot="file-viewer-surface"]'
-    )
-    expect(surface).toBeTruthy()
+      ':scope > [data-slot="file-viewer-surface"]',
+    );
+    expect(surface).toBeTruthy();
     expect(
-      surface?.querySelector(':scope > [data-slot="segment-legend"]')
-    ).toBeTruthy()
-  })
+      surface?.querySelector(':scope > [data-slot="segment-legend"]'),
+    ).toBeTruthy();
+  });
 
   it("jumps through the PDF viewer handle when a legend segment page is virtualized", () => {
-    const scrollToPage = vi.fn()
+    const scrollToPage = vi.fn();
 
     function DocumentWithHandle() {
-      const { setDocumentHandle } = useSplitViewerDocumentControls()
+      const { setDocumentHandle } = useSplitViewerDocumentControls();
 
       React.useEffect(() => {
         setDocumentHandle({
           scrollToPage,
-        })
-        return () => setDocumentHandle(null)
-      }, [setDocumentHandle])
+        });
+        return () => setDocumentHandle(null);
+      }, [setDocumentHandle]);
 
-      return <div data-testid="split-document" />
+      return <div data-testid="split-document" />;
     }
 
     render(
@@ -2069,25 +2081,25 @@ describe("split segment composition", () => {
         source={viewerSource}
         result={{ output: [{ name: "Invoices", pages: [5] }] }}
         document={<DocumentWithHandle />}
-      />
-    )
+      />,
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: "Invoices" }))
+    fireEvent.click(screen.getByRole("button", { name: "Invoices" }));
 
-    expect(scrollToPage).toHaveBeenCalledWith(5)
-  })
+    expect(scrollToPage).toHaveBeenCalledWith(5);
+  });
 
   it("clears clicked category previewing when scrolling outside its pages", () => {
     function DocumentHarness() {
       const { onCurrentPageChange, setDocumentHandle } =
-        useSplitViewerDocumentControls()
+        useSplitViewerDocumentControls();
 
       React.useEffect(() => {
         setDocumentHandle({
           scrollToPage: (page) => onCurrentPageChange(page),
-        })
-        return () => setDocumentHandle(null)
-      }, [onCurrentPageChange, setDocumentHandle])
+        });
+        return () => setDocumentHandle(null);
+      }, [onCurrentPageChange, setDocumentHandle]);
 
       return (
         <div>
@@ -2095,7 +2107,7 @@ describe("split segment composition", () => {
             Scroll to title
           </button>
         </div>
-      )
+      );
     }
 
     render(
@@ -2108,38 +2120,38 @@ describe("split segment composition", () => {
           ],
         }}
         document={<DocumentHarness />}
-      />
-    )
+      />,
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: "Results" }))
+    fireEvent.click(screen.getByRole("button", { name: "Results" }));
     expect(screen.getByRole("button", { name: "Results" }).className).toContain(
-      "opacity-100"
-    )
+      "opacity-100",
+    );
     expect(
       screen
         .getByRole("button", { name: "Results" })
-        .getAttribute("data-current")
-    ).toBe("true")
+        .getAttribute("data-current"),
+    ).toBe("true");
     expect(
       screen
         .getByRole("button", { name: "Results" })
-        .hasAttribute("data-selected")
-    ).toBe(false)
+        .hasAttribute("data-selected"),
+    ).toBe(false);
 
-    fireEvent.click(screen.getByRole("button", { name: "Scroll to title" }))
+    fireEvent.click(screen.getByRole("button", { name: "Scroll to title" }));
 
     expect(
       screen
         .getByRole("button", { name: "Results" })
-        .getAttribute("data-current")
-    ).toBe("false")
+        .getAttribute("data-current"),
+    ).toBe("false");
     expect(
       screen
         .getByRole("button", { name: "Results" })
-        .getAttribute("data-previewed")
-    ).toBe("false")
+        .getAttribute("data-previewed"),
+    ).toBe("false");
     expect(screen.getByRole("button", { name: "Results" }).className).toContain(
-      "opacity-100"
-    )
-  })
-})
+      "opacity-100",
+    );
+  });
+});

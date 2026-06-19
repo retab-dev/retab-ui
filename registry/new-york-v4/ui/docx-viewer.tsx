@@ -1,23 +1,23 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { clearDocxDocumentResource } from "@/lib/docx-document-resource"
-import { isResourceError, isViewerFormatError } from "@/lib/viewer-errors"
+import { clearDocxDocumentResource } from "@/lib/docx-document-resource";
+import { isResourceError, isViewerFormatError } from "@/lib/viewer-errors";
 import {
   createViewerResource,
   type ViewerResource,
-} from "@/lib/viewer-resource"
-import { useIsClient } from "@/components/ui/use-is-client"
-import { ViewerErrorBoundary } from "@/components/ui/viewer-error"
+} from "@/lib/viewer-resource";
+import { useIsClient } from "@/components/ui/use-is-client";
+import { ViewerErrorBoundary } from "@/components/ui/viewer-error";
 
-import { DocxViewerFallback } from "./docx-viewer-chrome"
-import { DocxViewerContent } from "./docx-viewer-content"
+import { DocxViewerFallback } from "./docx-viewer-chrome";
+import { DocxViewerContent } from "./docx-viewer-content";
 import type {
   DocxResourceContentProps,
   DocxViewerHandle,
   DocxViewerProps,
-} from "./docx-viewer-types"
+} from "./docx-viewer-types";
 
 export type {
   DocxDocumentSource,
@@ -25,28 +25,34 @@ export type {
   DocxTarget,
   DocxViewerHandle,
   DocxViewerProps,
-} from "./docx-viewer-types"
+} from "./docx-viewer-types";
 
 export type DocxViewerProviderProps = {
-  children: React.ReactNode
-  resource: ViewerResource
-}
+  children: React.ReactNode;
+  resource: ViewerResource;
+};
 
-export type DocxViewerDocumentProps = Omit<DocxResourceContentProps, "resource">
+export type DocxViewerDocumentProps = Omit<
+  DocxResourceContentProps,
+  "resource"
+>;
 
 export const DocxViewer = React.forwardRef<DocxViewerHandle, DocxViewerProps>(
   function DocxViewer(props, ref) {
-    const { source, ...resourceProps } = props
-    const resource = React.useMemo(() => createViewerResource(source), [source])
+    const { source, ...resourceProps } = props;
+    const resource = React.useMemo(
+      () => createViewerResource(source),
+      [source],
+    );
     return (
       <DocxResourceContent {...resourceProps} ref={ref} resource={resource} />
-    )
-  }
-)
+    );
+  },
+);
 
 const DocxViewerResourceContext = React.createContext<ViewerResource | null>(
-  null
-)
+  null,
+);
 
 export function DocxViewerProvider({
   children,
@@ -56,33 +62,33 @@ export function DocxViewerProvider({
     <DocxViewerResourceContext.Provider value={resource}>
       {children}
     </DocxViewerResourceContext.Provider>
-  )
+  );
 }
 
 function useDocxViewerResource(): ViewerResource {
-  const resource = React.useContext(DocxViewerResourceContext)
+  const resource = React.useContext(DocxViewerResourceContext);
   if (!resource) {
     throw new Error(
-      "DocxViewerDocument must be used within DocxViewerProvider."
-    )
+      "DocxViewerDocument must be used within DocxViewerProvider.",
+    );
   }
-  return resource
+  return resource;
 }
 
 export const DocxViewerDocument = React.forwardRef<
   DocxViewerHandle,
   DocxViewerDocumentProps
 >(function DocxViewerDocument(props, ref) {
-  const resource = useDocxViewerResource()
-  return <DocxResourceContent {...props} ref={ref} resource={resource} />
-})
+  const resource = useDocxViewerResource();
+  return <DocxResourceContent {...props} ref={ref} resource={resource} />;
+});
 
 export const DocxResourceContent = React.forwardRef<
   DocxViewerHandle,
   DocxResourceContentProps
 >(function DocxResourceContent(props, ref) {
-  const isClient = useIsClient()
-  const resource = props.resource
+  const isClient = useIsClient();
+  const resource = props.resource;
   if (!isClient) {
     return (
       <DocxViewerFallback
@@ -90,7 +96,7 @@ export const DocxResourceContent = React.forwardRef<
         className={props.className}
         controls={props.controls}
       />
-    )
+    );
   }
   return (
     <ViewerErrorBoundary
@@ -104,7 +110,7 @@ export const DocxResourceContent = React.forwardRef<
       format="docx"
       onRetry={(error) => {
         if (isResourceError(error) || !isViewerFormatError(error)) {
-          clearDocxDocumentResource(resource.content)
+          clearDocxDocumentResource(resource.content);
         }
       }}
       resetKey={resource.keys.resource}
@@ -122,5 +128,5 @@ export const DocxResourceContent = React.forwardRef<
         <DocxViewerContent {...props} forwardedRef={ref} resource={resource} />
       </React.Suspense>
     </ViewerErrorBoundary>
-  )
-})
+  );
+});

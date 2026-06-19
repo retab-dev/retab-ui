@@ -1,26 +1,26 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { RotateCcw } from "lucide-react"
+import * as React from "react";
+import { RotateCcw } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import type { ViewerDownloadAction } from "@/lib/viewer-download-actions"
+import { cn } from "@/lib/utils";
+import type { ViewerDownloadAction } from "@/lib/viewer-download-actions";
 import {
   toViewerErrorInfo,
   type ViewerErrorContext,
   type ViewerFormat,
-} from "@/lib/viewer-errors"
+} from "@/lib/viewer-errors";
 
-import { Button } from "./button"
-import { ViewerDownloadButton } from "./viewer-download"
+import { Button } from "./button";
+import { ViewerDownloadButton } from "./viewer-download";
 
 export interface ViewerErrorStateProps extends ViewerErrorContext {
-  error: unknown
-  download?: ViewerDownloadAction | null
-  className?: string
-  bare?: boolean
-  variant?: "card" | "document" | "inline"
-  onRetry?: () => void
+  error: unknown;
+  download?: ViewerDownloadAction | null;
+  className?: string;
+  bare?: boolean;
+  variant?: "card" | "document" | "inline";
+  onRetry?: () => void;
 }
 
 export function ViewerErrorState({
@@ -40,10 +40,10 @@ export function ViewerErrorState({
     sourceKind,
     canDownload: canDownload ?? Boolean(download && !download.isDisabled),
     retry,
-  })
-  const showRetry = info.isRetryable && onRetry
+  });
+  const showRetry = info.isRetryable && onRetry;
   const showDownload =
-    info.isDownloadUseful && download != null && !download.isDisabled
+    info.isDownloadUseful && download != null && !download.isDisabled;
 
   return (
     <div
@@ -76,19 +76,19 @@ export function ViewerErrorState({
         </div>
       ) : null}
     </div>
-  )
+  );
 }
 
 export interface ViewerErrorBoundaryProps extends ViewerErrorContext {
-  children: React.ReactNode
-  resetKey?: unknown
-  download?: ViewerDownloadAction | null
-  className?: string
-  bare?: boolean
-  variant?: "card" | "document" | "inline"
-  mapError?: (error: unknown) => unknown
-  onRetry?: (error: unknown) => void
-  onCaughtError?: (error: unknown, errorInfo: React.ErrorInfo) => void
+  children: React.ReactNode;
+  resetKey?: unknown;
+  download?: ViewerDownloadAction | null;
+  className?: string;
+  bare?: boolean;
+  variant?: "card" | "document" | "inline";
+  mapError?: (error: unknown) => unknown;
+  onRetry?: (error: unknown) => void;
+  onCaughtError?: (error: unknown, errorInfo: React.ErrorInfo) => void;
 }
 
 export class ViewerErrorBoundary extends React.Component<
@@ -98,30 +98,30 @@ export class ViewerErrorBoundary extends React.Component<
   state: Readonly<{ error: unknown | null; retryKey: number }> = {
     error: null,
     retryKey: 0,
-  }
+  };
 
   componentDidUpdate(previousProps: ViewerErrorBoundaryProps) {
     if (
       previousProps.resetKey !== this.props.resetKey &&
       this.state.error != null
     ) {
-      this.setState({ error: null })
+      this.setState({ error: null });
     }
   }
 
   static getDerivedStateFromError(error: unknown) {
-    return { error }
+    return { error };
   }
 
   componentDidCatch(error: unknown, errorInfo: React.ErrorInfo) {
-    this.props.onCaughtError?.(error, errorInfo)
+    this.props.onCaughtError?.(error, errorInfo);
   }
 
   render() {
     if (this.state.error != null) {
       const error = this.props.mapError
         ? this.props.mapError(this.state.error)
-        : this.state.error
+        : this.state.error;
 
       return (
         <ViewerErrorState
@@ -138,18 +138,18 @@ export class ViewerErrorBoundary extends React.Component<
             this.setState((state) => ({
               error: null,
               retryKey: state.retryKey + 1,
-            }))
-            this.props.onRetry?.(this.state.error)
+            }));
+            this.props.onRetry?.(this.state.error);
           }}
         />
-      )
+      );
     }
 
     return (
       <React.Fragment key={this.state.retryKey}>
         {this.props.children}
       </React.Fragment>
-    )
+    );
   }
 }
 
@@ -157,17 +157,17 @@ function errorStateClassName({
   bare,
   variant,
 }: {
-  bare: boolean
-  variant: "card" | "document" | "inline"
+  bare: boolean;
+  variant: "card" | "document" | "inline";
 }) {
   if (variant === "inline") {
-    return "flex h-24 flex-col items-center justify-center gap-3 px-3 text-center text-xs text-muted-foreground"
+    return "flex h-24 flex-col items-center justify-center gap-3 px-3 text-center text-xs text-muted-foreground";
   }
   return cn(
     "flex min-h-64 flex-col items-center justify-center gap-3 p-6 text-center text-sm text-muted-foreground",
     bare ? "bg-muted/20" : "rounded-xl border bg-muted/30",
-    variant === "document" && "min-h-full"
-  )
+    variant === "document" && "min-h-full",
+  );
 }
 
-export type { ViewerFormat }
+export type { ViewerFormat };

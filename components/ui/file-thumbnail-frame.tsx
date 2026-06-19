@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/ui/file-thumbnail-frame"
+export * from "@/registry/new-york-v4/ui/file-thumbnail-frame";

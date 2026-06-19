@@ -1,35 +1,35 @@
 // @vitest-environment jsdom
 
-import * as React from "react"
-import { cleanup, fireEvent, render, waitFor } from "@testing-library/react"
-import type { JSONSchema7 } from "json-schema"
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
+import * as React from "react";
+import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import type { JSONSchema7 } from "json-schema";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type {
   JsonTableCellCommit,
   JsonTableCellCommitHandler,
-} from "@/components/json-table/json-table-cell-commit"
-import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
+} from "@/components/json-table/json-table-cell-commit";
+import type { VisibleColumn } from "@/components/json-table/json-table-cell-types";
 import type {
   JsonTableActivationIntent,
   JsonTablePrimitiveActiveCell,
   JsonTableStructuredEditSession,
-} from "@/components/json-table/json-table-edit-session"
-import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
-import { createJsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
-import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
-import { jsonTableFullRenderedColumnWindow } from "@/components/json-table/json-table-rendered-column-window"
-import type { ProjectedCell } from "@/components/json-table/lib/document-projection"
-import { projectDocumentRows } from "@/components/json-table/lib/document-projection"
-import type { TableDocument } from "@/components/json-table/lib/projects-types"
-import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
-import { SingleFileFormRow } from "@/components/json-table/single-file-form-row"
+} from "@/components/json-table/json-table-edit-session";
+import { jsonTableCellId } from "@/components/json-table/json-table-edit-session";
+import { createJsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store";
+import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store";
+import { jsonTableFullRenderedColumnWindow } from "@/components/json-table/json-table-rendered-column-window";
+import type { ProjectedCell } from "@/components/json-table/lib/document-projection";
+import { projectDocumentRows } from "@/components/json-table/lib/document-projection";
+import type { TableDocument } from "@/components/json-table/lib/projects-types";
+import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata";
+import { SingleFileFormRow } from "@/components/json-table/single-file-form-row";
 
-import { primitiveEventTarget } from "./json-table-interaction-test-utils"
-import { installJsonTableDom } from "./json-table-test-dom"
+import { primitiveEventTarget } from "./json-table-interaction-test-utils";
+import { installJsonTableDom } from "./json-table-test-dom";
 
-beforeAll(() => installJsonTableDom())
-afterEach(() => cleanup())
+beforeAll(() => installJsonTableDom());
+afterEach(() => cleanup());
 
 const schema: JSONSchema7 = {
   type: "object",
@@ -59,7 +59,7 @@ const schema: JSONSchema7 = {
       enum: ["__null__", "approved"],
     },
   },
-}
+};
 
 const document: TableDocument = {
   id: "doc_1",
@@ -72,14 +72,14 @@ const document: TableDocument = {
     nullable_note: null,
     status: "__null__",
   },
-}
+};
 
 function visibleColumn(key: string): VisibleColumn {
   return {
     key,
     widthPx: 160,
     fieldMetadata: getFieldMetadata(schema, key),
-  }
+  };
 }
 
 function SingleFileFormRowHarness({
@@ -98,65 +98,65 @@ function SingleFileFormRowHarness({
   | "closeStructuredEditSession"
   | "onCellCommit"
 > & {
-  visibleColumns: VisibleColumn[]
-  onCellCommit?: JsonTableCellCommitHandler
+  visibleColumns: VisibleColumn[];
+  onCellCommit?: JsonTableCellCommitHandler;
 }) {
   const primitiveActiveCellStoreRef = React.useRef(
-    createJsonTablePrimitiveActiveCellStore()
-  )
+    createJsonTablePrimitiveActiveCellStore(),
+  );
   const primitiveEditStoreRef = React.useRef(
-    createJsonTablePrimitiveEditStore()
-  )
+    createJsonTablePrimitiveEditStore(),
+  );
   const [structuredEditSession, setStructuredEditSession] =
-    React.useState<JsonTableStructuredEditSession | null>(null)
-  const sessionIdRef = React.useRef(0)
+    React.useState<JsonTableStructuredEditSession | null>(null);
+  const sessionIdRef = React.useRef(0);
 
   const setNextPrimitiveActiveCell = React.useCallback(
     (activeCell: JsonTablePrimitiveActiveCell | null) => {
-      primitiveActiveCellStoreRef.current.setSnapshot(activeCell)
-      if (activeCell) setStructuredEditSession(null)
+      primitiveActiveCellStoreRef.current.setSnapshot(activeCell);
+      if (activeCell) setStructuredEditSession(null);
     },
-    []
-  )
+    [],
+  );
 
   const startStructuredEditSession = React.useCallback(
     (projectedCell: ProjectedCell, intent: JsonTableActivationIntent) => {
-      const nextSessionId = sessionIdRef.current + 1
-      sessionIdRef.current = nextSessionId
-      primitiveActiveCellStoreRef.current.setSnapshot(null)
+      const nextSessionId = sessionIdRef.current + 1;
+      sessionIdRef.current = nextSessionId;
+      primitiveActiveCellStoreRef.current.setSnapshot(null);
       setStructuredEditSession({
         id: nextSessionId,
         cellId: jsonTableCellId(
           props.document.id,
-          projectedCell.materializedFieldPath
+          projectedCell.materializedFieldPath,
         ),
         docId: props.document.id,
         fieldPath: projectedCell.materializedFieldPath,
         intent,
         isOverlayOpen: true,
-      })
+      });
     },
-    [props.document.id]
-  )
+    [props.document.id],
+  );
   const setStructuredEditSessionOverlayOpen = React.useCallback(
     (open: boolean) => {
       setStructuredEditSession((currentSession) =>
         currentSession && currentSession.isOverlayOpen !== open
           ? { ...currentSession, isOverlayOpen: open }
-          : currentSession
-      )
+          : currentSession,
+      );
     },
-    []
-  )
+    [],
+  );
   const closeStructuredEditSession = React.useCallback(() => {
-    setStructuredEditSession(null)
-  }, [])
+    setStructuredEditSession(null);
+  }, []);
   const handleCellCommit = React.useCallback(
     (commit: JsonTableCellCommit) => {
-      onCellCommit?.(commit)
+      onCellCommit?.(commit);
     },
-    [onCellCommit]
-  )
+    [onCellCommit],
+  );
 
   return (
     <SingleFileFormRow
@@ -171,7 +171,7 @@ function SingleFileFormRowHarness({
       closeStructuredEditSession={closeStructuredEditSession}
       onCellCommit={handleCellCommit}
     />
-  )
+  );
 }
 
 describe("json table row rendering", () => {
@@ -185,12 +185,12 @@ describe("json table row rendering", () => {
       "nullable_note",
       "status",
       "missing",
-    ]
+    ];
     const rows = projectDocumentRows({
       document,
       visiblePaths,
       includeArrayAddRows: false,
-    })
+    });
 
     const view = render(
       <table>
@@ -207,36 +207,36 @@ describe("json table row rendering", () => {
             isJsonEditable={false}
           />
         </tbody>
-      </table>
-    )
+      </table>,
+    );
 
-    expect(view.getByText("ACME")).toBeTruthy()
-    expect(view.getByText("Jan 2, 2024")).toBeTruthy()
-    expect(view.getByText("[2 items]")).toBeTruthy()
-    expect(view.getByText(JSON.stringify({ source: "upload" }))).toBeTruthy()
+    expect(view.getByText("ACME")).toBeTruthy();
+    expect(view.getByText("Jan 2, 2024")).toBeTruthy();
+    expect(view.getByText("[2 items]")).toBeTruthy();
+    expect(view.getByText(JSON.stringify({ source: "upload" }))).toBeTruthy();
     expect(view.getByRole("checkbox").getAttribute("aria-checked")).toBe(
-      "false"
-    )
+      "false",
+    );
 
-    const cells = Array.from(view.container.querySelectorAll("td"))
-    expect(cells).toHaveLength(8)
+    const cells = Array.from(view.container.querySelectorAll("td"));
+    expect(cells).toHaveLength(8);
     expect(
-      view.container.querySelectorAll('[data-slot="data-cell"]')
-    ).toHaveLength(6)
+      view.container.querySelectorAll('[data-slot="data-cell"]'),
+    ).toHaveLength(6);
     expect(
       cells[0].querySelector('[data-slot="json-table-read-only-cell-text"]')
-        ?.textContent
-    ).toBe("ACME")
-    expect(cells[0].querySelector('[data-slot="data-cell-value"]')).toBeNull()
-    expect(view.getAllByRole("button")).toHaveLength(2)
-    expect(cells[5].textContent).toBe(String.fromCharCode(8212))
-    expect(cells[6].textContent).toBe("__null__")
-    expect(cells[7].textContent).toBe("")
-    expect(cells[7].getAttribute("data-field-path")).toBe("missing")
-  })
+        ?.textContent,
+    ).toBe("ACME");
+    expect(cells[0].querySelector('[data-slot="data-cell-value"]')).toBeNull();
+    expect(view.getAllByRole("button")).toHaveLength(2);
+    expect(cells[5].textContent).toBe(String.fromCharCode(8212));
+    expect(cells[6].textContent).toBe("__null__");
+    expect(cells[7].textContent).toBe("");
+    expect(cells[7].getAttribute("data-field-path")).toBe("missing");
+  });
 
   it("keeps read-only cells aligned when an earlier array is empty", () => {
-    const visiblePaths = ["empty_lines.*.name", "lines.*.name", "vendor"]
+    const visiblePaths = ["empty_lines.*.name", "lines.*.name", "vendor"];
     const rows = projectDocumentRows({
       document: {
         id: "doc_1",
@@ -248,7 +248,7 @@ describe("json table row rendering", () => {
       },
       visiblePaths,
       includeArrayAddRows: false,
-    })
+    });
 
     const view = render(
       <table>
@@ -265,26 +265,26 @@ describe("json table row rendering", () => {
             isJsonEditable={false}
           />
         </tbody>
-      </table>
-    )
+      </table>,
+    );
 
-    const cells = Array.from(view.container.querySelectorAll("td"))
-    expect(cells).toHaveLength(3)
-    expect(cells[0].textContent).toBe("")
-    expect(cells[1].getAttribute("data-field-path")).toBe("lines.0.name")
-    expect(cells[1].textContent).toContain("one")
-    expect(cells[2].getAttribute("data-field-path")).toBe("vendor")
-    expect(cells[2].textContent).toContain("ACME")
-  })
+    const cells = Array.from(view.container.querySelectorAll("td"));
+    expect(cells).toHaveLength(3);
+    expect(cells[0].textContent).toBe("");
+    expect(cells[1].getAttribute("data-field-path")).toBe("lines.0.name");
+    expect(cells[1].textContent).toContain("one");
+    expect(cells[2].getAttribute("data-field-path")).toBe("vendor");
+    expect(cells[2].textContent).toContain("ACME");
+  });
 
   it("activates and commits edits from a hovered text cell", async () => {
-    const visiblePaths = ["vendor"]
+    const visiblePaths = ["vendor"];
     const rows = projectDocumentRows({
       document,
       visiblePaths,
       includeArrayAddRows: true,
-    })
-    const onCellCommit = vi.fn()
+    });
+    const onCellCommit = vi.fn();
 
     const view = render(
       <table>
@@ -301,45 +301,45 @@ describe("json table row rendering", () => {
             isJsonEditable
           />
         </tbody>
-      </table>
-    )
+      </table>,
+    );
 
     const cell = await waitFor(() => {
       const editableCell = view.container.querySelector(
-        '[data-json-table-editable-cell="true"]'
-      )
+        '[data-json-table-editable-cell="true"]',
+      );
       if (!(editableCell instanceof HTMLElement)) {
-        throw new Error("Expected editable vendor cell to render")
+        throw new Error("Expected editable vendor cell to render");
       }
-      return editableCell
-    })
-    fireEvent.pointerEnter(cell)
-    expect(view.queryByRole("textbox")).toBeNull()
+      return editableCell;
+    });
+    fireEvent.pointerEnter(cell);
+    expect(view.queryByRole("textbox")).toBeNull();
 
-    fireEvent.pointerDown(primitiveEventTarget(cell), { button: 0 })
+    fireEvent.pointerDown(primitiveEventTarget(cell), { button: 0 });
 
-    const input = view.getByRole("textbox")
-    expect(globalThis.document.activeElement).toBe(input)
+    const input = view.getByRole("textbox");
+    expect(globalThis.document.activeElement).toBe(input);
 
-    fireEvent.change(input, { target: { value: "Globex" } })
-    fireEvent.blur(input)
+    fireEvent.change(input, { target: { value: "Globex" } });
+    fireEvent.blur(input);
 
     expect(onCellCommit).toHaveBeenCalledWith({
       fieldPath: "vendor",
       value: "Globex",
       previousValue: "ACME",
       visibleThrough: "primitivePendingValue",
-    })
-  })
+    });
+  });
 
   it("toggles boolean cells on the first click", async () => {
-    const visiblePaths = ["is_paid"]
+    const visiblePaths = ["is_paid"];
     const rows = projectDocumentRows({
       document,
       visiblePaths,
       includeArrayAddRows: true,
-    })
-    const onCellCommit = vi.fn()
+    });
+    const onCellCommit = vi.fn();
 
     const view = render(
       <table>
@@ -356,36 +356,36 @@ describe("json table row rendering", () => {
             isJsonEditable
           />
         </tbody>
-      </table>
-    )
+      </table>,
+    );
 
     const cell = await waitFor(() => {
       const editableCell = view.container.querySelector(
-        '[data-json-table-editable-cell="true"]'
-      )
+        '[data-json-table-editable-cell="true"]',
+      );
       if (!(editableCell instanceof HTMLElement)) {
-        throw new Error("Expected editable boolean cell to render")
+        throw new Error("Expected editable boolean cell to render");
       }
-      return editableCell
-    })
+      return editableCell;
+    });
 
-    fireEvent.pointerDown(primitiveEventTarget(cell), { button: 0 })
+    fireEvent.pointerDown(primitiveEventTarget(cell), { button: 0 });
 
     expect(onCellCommit).toHaveBeenCalledWith({
       fieldPath: "is_paid",
       value: true,
       previousValue: false,
       visibleThrough: "primitivePendingValue",
-    })
-  })
+    });
+  });
 
   it("starts text edit sessions from a typeable key", async () => {
-    const visiblePaths = ["vendor"]
+    const visiblePaths = ["vendor"];
     const rows = projectDocumentRows({
       document,
       visiblePaths,
       includeArrayAddRows: true,
-    })
+    });
 
     const view = render(
       <table>
@@ -402,34 +402,34 @@ describe("json table row rendering", () => {
             isJsonEditable
           />
         </tbody>
-      </table>
-    )
+      </table>,
+    );
 
     const cell = await waitFor(() => {
       const editableCell = view.container.querySelector(
-        '[data-json-table-editable-cell="true"]'
-      )
+        '[data-json-table-editable-cell="true"]',
+      );
       if (!(editableCell instanceof HTMLElement)) {
-        throw new Error("Expected editable vendor cell to render")
+        throw new Error("Expected editable vendor cell to render");
       }
-      return editableCell
-    })
+      return editableCell;
+    });
 
-    const surface = primitiveEventTarget(cell) as HTMLElement
-    surface.focus()
-    fireEvent.keyDown(surface, { key: "Z" })
+    const surface = primitiveEventTarget(cell) as HTMLElement;
+    surface.focus();
+    fireEvent.keyDown(surface, { key: "Z" });
 
-    const input = view.getByRole("textbox")
-    expect((input as HTMLInputElement).value).toBe("Z")
-  })
+    const input = view.getByRole("textbox");
+    expect((input as HTMLInputElement).value).toBe("Z");
+  });
 
   it("opens enum selects on the first click", async () => {
-    const visiblePaths = ["status"]
+    const visiblePaths = ["status"];
     const rows = projectDocumentRows({
       document,
       visiblePaths,
       includeArrayAddRows: true,
-    })
+    });
 
     const view = render(
       <table>
@@ -446,38 +446,38 @@ describe("json table row rendering", () => {
             isJsonEditable
           />
         </tbody>
-      </table>
-    )
+      </table>,
+    );
 
     const cell = await waitFor(() => {
       const editableCell = view.container.querySelector(
-        '[data-json-table-editable-cell="true"]'
-      )
+        '[data-json-table-editable-cell="true"]',
+      );
       if (!(editableCell instanceof HTMLElement)) {
-        throw new Error("Expected editable enum cell to render")
+        throw new Error("Expected editable enum cell to render");
       }
-      return editableCell
-    })
+      return editableCell;
+    });
 
     fireEvent.click(primitiveEventTarget(cell), {
       button: 0,
       clientX: 0,
       clientY: 0,
       detail: 1,
-    })
+    });
 
     expect(
-      (await view.findByRole("combobox")).getAttribute("aria-expanded")
-    ).toBe("true")
-  })
+      (await view.findByRole("combobox")).getAttribute("aria-expanded"),
+    ).toBe("true");
+  });
 
   it("opens date pickers on the first click", async () => {
-    const visiblePaths = ["shipped_at"]
+    const visiblePaths = ["shipped_at"];
     const rows = projectDocumentRows({
       document,
       visiblePaths,
       includeArrayAddRows: true,
-    })
+    });
 
     const view = render(
       <table>
@@ -494,21 +494,21 @@ describe("json table row rendering", () => {
             isJsonEditable
           />
         </tbody>
-      </table>
-    )
+      </table>,
+    );
 
     const cell = await waitFor(() => {
       const editableCell = view.container.querySelector(
-        '[data-json-table-editable-cell="true"]'
-      )
+        '[data-json-table-editable-cell="true"]',
+      );
       if (!(editableCell instanceof HTMLElement)) {
-        throw new Error("Expected editable date cell to render")
+        throw new Error("Expected editable date cell to render");
       }
-      return editableCell
-    })
+      return editableCell;
+    });
 
-    fireEvent.pointerDown(primitiveEventTarget(cell), { button: 0 })
+    fireEvent.pointerDown(primitiveEventTarget(cell), { button: 0 });
 
-    expect(await view.findByRole("dialog")).toBeTruthy()
-  })
-})
+    expect(await view.findByRole("dialog")).toBeTruthy();
+  });
+});

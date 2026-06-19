@@ -29,63 +29,63 @@ export const SEGMENT_PALETTE = [
   "#D4A6C8",
   "#9D7660",
   "#D7B5A6",
-] as const
+] as const;
 
 export interface Segment {
   /** Stable id (label + occurrence, since a split name can repeat). */
-  id: string
+  id: string;
   /** Display label — the partition key or the subdocument name. */
-  label: string
+  label: string;
   /** Sorted, de-duplicated 1-based pages owned by this segment. */
-  pages: number[]
+  pages: number[];
   /** Deterministic color (by label, so the same label is always one color). */
-  color: string
+  color: string;
   /** Render order. */
-  index: number
+  index: number;
   /** Optional consensus confidence in [0, 1]. */
-  confidence?: number | null
+  confidence?: number | null;
 }
 
 export interface SegmentChunk {
-  key?: string
-  name?: string
-  pages: number[]
+  key?: string;
+  name?: string;
+  pages: number[];
 }
 
 export function segmentDisplayLabel(label: string): string {
-  const trimmed = typeof label === "string" ? label.trim() : ""
-  return trimmed || "unnamed"
+  const trimmed = typeof label === "string" ? label.trim() : "";
+  return trimmed || "unnamed";
 }
 
 export function normalizePageCount(value: number): number {
-  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
 }
 
 /** Assign one palette color per distinct display label, ordered by sorted label. */
 export function buildColorMap(labels: string[]): Map<string, string> {
   const distinct = Array.from(new Set(labels.map(segmentDisplayLabel))).sort(
-    (a, b) => a.localeCompare(b)
-  )
-  const map = new Map<string, string>()
+    (a, b) => a.localeCompare(b),
+  );
+  const map = new Map<string, string>();
   distinct.forEach((label, i) => {
-    map.set(label, SEGMENT_PALETTE[i % SEGMENT_PALETTE.length])
-  })
-  return map
+    map.set(label, SEGMENT_PALETTE[i % SEGMENT_PALETTE.length]);
+  });
+  return map;
 }
 
 function normalizePages(pages: number[]): number[] {
-  const rawPages = Array.isArray(pages) ? pages : []
+  const rawPages = Array.isArray(pages) ? pages : [];
   return Array.from(
-    new Set(rawPages.filter((p) => Number.isInteger(p) && p > 0))
-  ).sort((a, b) => a - b)
+    new Set(rawPages.filter((p) => Number.isInteger(p) && p > 0)),
+  ).sort((a, b) => a - b);
 }
 
 export function segmentPageCount(pages: number[]): number {
-  return normalizePages(pages).length
+  return normalizePages(pages).length;
 }
 
 export function firstSegmentPage(pages: number[]): number | null {
-  return normalizePages(pages)[0] ?? null
+  return normalizePages(pages)[0] ?? null;
 }
 
 /** Normalize partition/split output into the shared `Segment[]` model. */
@@ -93,13 +93,13 @@ export function toSegments(
   output: SegmentChunk[] | null | undefined,
   confidences?: (number | null | undefined)[],
   /** Reuse a shared color map (e.g. so partition votes match the consensus). */
-  colorOverride?: Map<string, string>
+  colorOverride?: Map<string, string>,
 ): Segment[] {
-  if (!output) return []
-  const labels = output.map((c) => c.key ?? c.name ?? "")
-  const colors = colorOverride ?? buildColorMap(labels)
+  if (!output) return [];
+  const labels = output.map((c) => c.key ?? c.name ?? "");
+  const colors = colorOverride ?? buildColorMap(labels);
   return output.map((chunk, index) => {
-    const label = labels[index]
+    const label = labels[index];
     return {
       id: `${label}#${index}`,
       label,
@@ -110,82 +110,82 @@ export function toSegments(
         "#888888",
       index,
       confidence: normalizeConfidence(confidences?.[index]),
-    }
-  })
+    };
+  });
 }
 
 function normalizeConfidence(value: number | null | undefined): number | null {
   return value != null && Number.isFinite(value)
     ? Math.max(0, Math.min(1, value))
-    : null
+    : null;
 }
 
 /** Total page count implied by a set of segments (max page seen). */
 export function segmentsPageCount(segments: Segment[]): number {
-  let max = 0
+  let max = 0;
   for (const s of segments) {
     for (const p of s.pages) {
-      if (Number.isInteger(p) && p > 0) max = Math.max(max, p)
+      if (Number.isInteger(p) && p > 0) max = Math.max(max, p);
     }
   }
-  return max
+  return max;
 }
 
 /** Map every 1-based page to the segment indexes that own it (handles overlap). */
 export function pageOwners(segments: Segment[]): Map<number, number[]> {
-  const owners = new Map<number, number[]>()
+  const owners = new Map<number, number[]>();
   segments.forEach((segment) => {
     segment.pages.forEach((page) => {
-      if (!Number.isInteger(page) || page <= 0) return
-      const list = owners.get(page) ?? []
-      list.push(segment.index)
-      owners.set(page, list)
-    })
-  })
-  return owners
+      if (!Number.isInteger(page) || page <= 0) return;
+      const list = owners.get(page) ?? [];
+      list.push(segment.index);
+      owners.set(page, list);
+    });
+  });
+  return owners;
 }
 
 /** Collapse a page list into contiguous runs, e.g. [1,2,3,5] -> [[1,3],[5,5]]. */
 export function buildPageRuns(pages: number[]): Array<[number, number]> {
-  const sorted = normalizePages(pages)
-  if (sorted.length === 0) return []
-  const runs: Array<[number, number]> = []
-  let start = sorted[0]
-  let end = sorted[0]
+  const sorted = normalizePages(pages);
+  if (sorted.length === 0) return [];
+  const runs: Array<[number, number]> = [];
+  let start = sorted[0];
+  let end = sorted[0];
   for (let i = 1; i < sorted.length; i++) {
     if (sorted[i] === end + 1) {
-      end = sorted[i]
+      end = sorted[i];
     } else {
-      runs.push([start, end])
-      start = sorted[i]
-      end = sorted[i]
+      runs.push([start, end]);
+      start = sorted[i];
+      end = sorted[i];
     }
   }
-  runs.push([start, end])
-  return runs
+  runs.push([start, end]);
+  return runs;
 }
 
 /** Format a page list as compact ranges, e.g. [1,2,3,5] -> "1–3, 5". */
 export function formatPageRanges(pages: number[]): string {
-  const runs = buildPageRuns(pages)
-  if (runs.length === 0) return "—"
-  return runs.map(([a, b]) => (a === b ? `${a}` : `${a}–${b}`)).join(", ")
+  const runs = buildPageRuns(pages);
+  if (runs.length === 0) return "—";
+  return runs.map(([a, b]) => (a === b ? `${a}` : `${a}–${b}`)).join(", ");
 }
 
-export type ConfidenceLevel = "high" | "medium" | "low"
+export type ConfidenceLevel = "high" | "medium" | "low";
 
 export function confidenceLevel(
-  value: number | null | undefined
+  value: number | null | undefined,
 ): ConfidenceLevel | null {
-  if (value == null || !Number.isFinite(value)) return null
-  if (value >= 0.9) return "high"
-  if (value >= 0.7) return "medium"
-  return "low"
+  if (value == null || !Number.isFinite(value)) return null;
+  if (value >= 0.9) return "high";
+  if (value >= 0.7) return "medium";
+  return "low";
 }
 
 /** Average a per-page likelihood array into a single segment confidence. */
 export function meanConfidence(values: number[] | undefined): number | null {
-  const finiteValues = values?.filter((value) => Number.isFinite(value)) ?? []
-  if (finiteValues.length === 0) return null
-  return finiteValues.reduce((a, b) => a + b, 0) / finiteValues.length
+  const finiteValues = values?.filter((value) => Number.isFinite(value)) ?? [];
+  if (finiteValues.length === 0) return null;
+  return finiteValues.reduce((a, b) => a + b, 0) / finiteValues.length;
 }

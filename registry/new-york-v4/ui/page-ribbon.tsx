@@ -1,48 +1,48 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
 import {
   getSegmentInteractionState,
   getSegmentSurfaceProps,
   scopeSegmentInteraction,
   type SegmentInteraction,
-} from "@/lib/segment-interaction"
+} from "@/lib/segment-interaction";
 import {
   buildPageRuns,
   normalizePageCount,
   segmentDisplayLabel,
-} from "@/lib/segments"
-import { cn } from "@/lib/utils"
+} from "@/lib/segments";
+import { cn } from "@/lib/utils";
 
-import type { DocumentSegment } from "./segmented-document-model"
+import type { DocumentSegment } from "./segmented-document-model";
 
 /** One lane of the ribbon: segments positioned by their page ranges. */
 export interface RibbonRow {
-  id: string
-  label?: string
-  segments: DocumentSegment[]
+  id: string;
+  label?: string;
+  segments: DocumentSegment[];
 }
 
 export interface PageRibbonProps {
-  rows: RibbonRow[]
-  pageCount: number
+  rows: RibbonRow[];
+  pageCount: number;
   /** "vertical" — pages run top→bottom (split sidebar). "horizontal" — left→right (partition waterfall). */
-  orientation?: "vertical" | "horizontal"
+  orientation?: "vertical" | "horizontal";
   /** 1-based current page; drawn as a cursor line + caret across the rows. */
-  currentPage?: number | null
+  currentPage?: number | null;
   /** 0..1 fine-grained scroll cursor (horizontal only); overrides the page line. */
-  scrollProgress?: number | null
+  scrollProgress?: number | null;
   /** Shared preview state. */
-  interaction?: SegmentInteraction
+  interaction?: SegmentInteraction;
   /** Click a segment → jump the document to its first page. */
-  onSelectPage?: (page: number) => void
+  onSelectPage?: (page: number) => void;
   /** Fired when a segment surface is clicked. */
-  onSelect?: (segment: DocumentSegment) => void
-  showTicks?: boolean
+  onSelect?: (segment: DocumentSegment) => void;
+  showTicks?: boolean;
   /** Thickness of each row: column width (vertical) or row height (horizontal), px. */
-  rowThickness?: number
-  className?: string
+  rowThickness?: number;
+  className?: string;
 }
 
 /**
@@ -65,30 +65,30 @@ export function PageRibbon({
   rowThickness,
   className,
 }: PageRibbonProps) {
-  const vertical = orientation === "vertical"
-  const total = normalizePageCount(pageCount)
-  const defaultThickness = vertical ? 44 : 10
+  const vertical = orientation === "vertical";
+  const total = normalizePageCount(pageCount);
+  const defaultThickness = vertical ? 44 : 10;
   const thickness =
     rowThickness != null && Number.isFinite(rowThickness) && rowThickness > 0
       ? rowThickness
-      : defaultThickness
+      : defaultThickness;
   const visibleSegments = React.useMemo(
     () =>
       rows.flatMap((row) =>
         row.segments.filter(
-          (segment) => buildVisiblePageRuns(segment.pages, total).length > 0
-        )
+          (segment) => buildVisiblePageRuns(segment.pages, total).length > 0,
+        ),
       ),
-    [rows, total]
-  )
+    [rows, total],
+  );
   const scopedInteraction = React.useMemo(
     () =>
       scopeSegmentInteraction(
         interaction,
-        visibleSegments.map((segment) => segment.id)
+        visibleSegments.map((segment) => segment.id),
       ),
-    [interaction, visibleSegments]
-  )
+    [interaction, visibleSegments],
+  );
   const interactionState = React.useMemo(
     () =>
       getSegmentInteractionState({
@@ -96,17 +96,17 @@ export function PageRibbon({
         currentPage,
         interaction: scopedInteraction,
       }),
-    [currentPage, scopedInteraction, visibleSegments]
-  )
-  if (total <= 0 || rows.length === 0) return null
+    [currentPage, scopedInteraction, visibleSegments],
+  );
+  if (total <= 0 || rows.length === 0) return null;
 
-  const ticks = showTicks ? buildTicks(total) : []
+  const ticks = showTicks ? buildTicks(total) : [];
   const cursorPct =
     scrollProgress != null && Number.isFinite(scrollProgress)
       ? clamp01(scrollProgress) * 100
       : currentPage != null && Number.isFinite(currentPage)
         ? ((clamp(currentPage, 1, total) - 0.5) / total) * 100
-        : null
+        : null;
 
   return (
     <div
@@ -116,7 +116,7 @@ export function PageRibbon({
       className={cn(
         "relative flex",
         vertical ? "h-full flex-row gap-1" : "w-full flex-col gap-px",
-        className
+        className,
       )}
     >
       {rows.map((row, rowPosition) => (
@@ -124,19 +124,19 @@ export function PageRibbon({
           key={`${row.id}-${rowPosition}`}
           data-slot="page-ribbon-row"
           title={row.label}
-          className={cn("relative overflow-hidden rounded-[3px] bg-muted")}
+          className={cn("bg-muted relative overflow-hidden rounded-[3px]")}
           style={vertical ? { width: thickness } : { height: thickness }}
         >
           {row.segments.flatMap((segment, segmentPosition) =>
             buildVisiblePageRuns(segment.pages, total).map(
               ([start, end], i) => {
-                const label = segmentDisplayLabel(segment.label)
-                const offsetPct = ((start - 1) / total) * 100
-                const sizePct = ((end - start + 1) / total) * 100
+                const label = segmentDisplayLabel(segment.label);
+                const offsetPct = ((start - 1) / total) * 100;
+                const sizePct = ((end - start + 1) / total) * 100;
                 const isCurrent =
                   currentPage != null &&
                   currentPage >= start &&
-                  currentPage <= end
+                  currentPage <= end;
                 const { state, eventHandlers, dataProps } =
                   getSegmentSurfaceProps({
                     segment,
@@ -144,7 +144,7 @@ export function PageRibbon({
                     interactionState,
                     isCurrent,
                     onSelect,
-                  })
+                  });
                 const style: React.CSSProperties = vertical
                   ? {
                       top: `${offsetPct}%`,
@@ -157,7 +157,7 @@ export function PageRibbon({
                       width: `${sizePct}%`,
                       top: 0,
                       bottom: 0,
-                    }
+                    };
                 return (
                   <button
                     key={`${segment.id}-${segmentPosition}-${i}`}
@@ -165,18 +165,18 @@ export function PageRibbon({
                     {...dataProps}
                     title={`${label} · pages ${start}${end > start ? `–${end}` : ""}`}
                     onClick={() => {
-                      eventHandlers.onClick()
-                      onSelectPage?.(start)
+                      eventHandlers.onClick();
+                      onSelectPage?.(start);
                     }}
                     onPointerEnter={eventHandlers.onPointerEnter}
                     onPointerLeave={eventHandlers.onPointerLeave}
                     className={cn(
-                      "absolute cursor-pointer transition-opacity before:absolute before:-inset-1 before:content-[''] hover:brightness-110 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                      "focus-visible:ring-ring absolute cursor-pointer transition-opacity before:absolute before:-inset-1 before:content-[''] hover:brightness-110 focus-visible:z-10 focus-visible:ring-2 focus-visible:outline-none",
                       state.isDimmed
                         ? "opacity-30"
                         : isCurrent
                           ? "opacity-100"
-                          : "opacity-85"
+                          : "opacity-85",
                     )}
                     style={{
                       ...style,
@@ -187,9 +187,9 @@ export function PageRibbon({
                     }}
                     aria-label={`${label} pages ${start} to ${end}`}
                   />
-                )
-              }
-            )
+                );
+              },
+            ),
           )}
         </div>
       ))}
@@ -198,8 +198,8 @@ export function PageRibbon({
         <div
           aria-hidden
           className={cn(
-            "pointer-events-none absolute bg-foreground",
-            vertical ? "inset-x-0 h-px" : "inset-y-0 w-px"
+            "bg-foreground pointer-events-none absolute",
+            vertical ? "inset-x-0 h-px" : "inset-y-0 w-px",
           )}
           style={
             vertical ? { top: `${cursorPct}%` } : { left: `${cursorPct}%` }
@@ -207,10 +207,10 @@ export function PageRibbon({
         >
           <span
             className={cn(
-              "absolute h-0 w-0 border-transparent border-l-foreground",
+              "border-l-foreground absolute h-0 w-0 border-transparent",
               vertical
                 ? "top-[-4px] left-[-7px] border-y-[4px] border-l-[7px]"
-                : "hidden"
+                : "hidden",
             )}
           />
         </div>
@@ -222,14 +222,14 @@ export function PageRibbon({
         <div
           aria-hidden
           className={cn(
-            "font-mono text-[9px] text-muted-foreground tabular-nums",
+            "text-muted-foreground font-mono text-[9px] tabular-nums",
             vertical
               ? "relative w-4 flex-shrink-0"
-              : "pointer-events-none absolute top-full left-0 mt-0.5 w-full"
+              : "pointer-events-none absolute top-full left-0 mt-0.5 w-full",
           )}
         >
           {ticks.map((page) => {
-            const pct = ((page - 1) / total) * 100
+            const pct = ((page - 1) / total) * 100;
             return (
               <span
                 key={page}
@@ -242,38 +242,38 @@ export function PageRibbon({
               >
                 {page}
               </span>
-            )
+            );
           })}
         </div>
       ) : null}
     </div>
-  )
+  );
 }
 
 function buildTicks(pageCount: number): number[] {
-  if (pageCount <= 0) return []
-  const step = Math.max(5, Math.round(pageCount / 10 / 5) * 5)
-  const ticks = [1]
-  for (let p = step; p < pageCount; p += step) ticks.push(p)
-  if (pageCount !== 1) ticks.push(pageCount)
-  return ticks
+  if (pageCount <= 0) return [];
+  const step = Math.max(5, Math.round(pageCount / 10 / 5) * 5);
+  const ticks = [1];
+  for (let p = step; p < pageCount; p += step) ticks.push(p);
+  if (pageCount !== 1) ticks.push(pageCount);
+  return ticks;
 }
 
 function buildVisiblePageRuns(
   pages: number[],
-  pageCount: number
+  pageCount: number,
 ): Array<[number, number]> {
-  if (pageCount <= 0) return []
+  if (pageCount <= 0) return [];
   return buildPageRuns(pages)
     .map(
-      ([start, end]) => [start, Math.min(end, pageCount)] as [number, number]
+      ([start, end]) => [start, Math.min(end, pageCount)] as [number, number],
     )
-    .filter(([start, end]) => start <= pageCount && end >= 1 && start <= end)
+    .filter(([start, end]) => start <= pageCount && end >= 1 && start <= end);
 }
 
 function clamp(v: number, lo: number, hi: number) {
-  return Math.min(hi, Math.max(lo, v))
+  return Math.min(hi, Math.max(lo, v));
 }
 function clamp01(v: number) {
-  return clamp(v, 0, 1)
+  return clamp(v, 0, 1);
 }

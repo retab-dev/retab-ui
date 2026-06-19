@@ -1,19 +1,19 @@
-import type { Metadata } from "next"
-import Script from "next/script"
-import { Analytics } from "@vercel/analytics/next"
-import { NuqsAdapter } from "nuqs/adapters/next/app"
+import type { Metadata } from "next";
+import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 
-import { META_THEME_COLORS, siteConfig } from "@/lib/config"
-import { fontVariables } from "@/lib/fonts"
-import { cn } from "@/lib/utils"
-import { withUiBasePath } from "@/lib/zone-path"
-import { LayoutProvider } from "@/hooks/use-layout"
-import { Toaster } from "@/components/ui/sonner"
-import { TooltipProvider } from "@/components/ui/tooltip"
-import { ActiveThemeProvider } from "@/components/active-theme"
-import { ThemeProvider } from "@/components/theme-provider"
+import { META_THEME_COLORS, siteConfig } from "@/lib/config";
+import { fontVariables } from "@/lib/fonts";
+import { cn } from "@/lib/utils";
+import { withUiBasePath } from "@/lib/zone-path";
+import { LayoutProvider } from "@/hooks/use-layout";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ActiveThemeProvider } from "@/components/active-theme";
+import { ThemeProvider } from "@/components/theme-provider";
 
-import "@/app/globals.css"
+import "@/app/globals.css";
 
 export const metadata: Metadata = {
   title: {
@@ -63,12 +63,12 @@ export const metadata: Metadata = {
     apple: withUiBasePath("/favicon.ico"),
   },
   manifest: withUiBasePath("/site.webmanifest"),
-}
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className={fontVariables}>
@@ -94,7 +94,7 @@ export default function RootLayout({
       </head>
       <body
         className={cn(
-          "group/body relative overscroll-none antialiased [--footer-height:calc(var(--spacing)*14)] [--header-height:calc(var(--spacing)*14)] xl:[--footer-height:calc(var(--spacing)*24)]"
+          "group/body relative overscroll-none antialiased [--footer-height:calc(var(--spacing)*14)] [--header-height:calc(var(--spacing)*14)] xl:[--footer-height:calc(var(--spacing)*24)]",
         )}
       >
         <ThemeProvider>
@@ -113,5 +113,5 @@ export default function RootLayout({
         <div id="portal" className="fixed top-0 left-0 z-40" />
       </body>
     </html>
-  )
+  );
 }

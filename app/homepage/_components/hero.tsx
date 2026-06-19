@@ -4,7 +4,7 @@ import { MarketingButton, VercelMark } from "./primitives";
 
 export function Hero() {
   return (
-    <section className="relative mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-screen-2xl flex-col overflow-hidden px-6">
+    <section className="relative mx-auto flex min-h-svh w-full max-w-screen-2xl flex-col overflow-hidden px-6">
       <div className="grid w-full flex-1 grid-cols-1 items-center gap-8 py-8 text-center md:gap-12 md:py-16 lg:grid-cols-3 lg:gap-10 lg:py-0 lg:text-left">
         <div className="order-2 mt-6 lg:order-1 lg:mt-0 lg:max-w-md">
           <h1 className="mx-auto max-w-xl text-5xl leading-none font-normal tracking-tighter text-black md:text-6xl lg:mx-0 lg:max-w-md">

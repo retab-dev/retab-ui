@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   FileViewer,
@@ -7,18 +7,18 @@ import {
   FileViewerHeader,
   FileViewerSurface,
   FileViewerTitle,
-} from "@/components/ui/file-viewer"
-import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer"
-import type { PartitionResult } from "@/components/viewers/lib/partition-types"
+} from "@/components/ui/file-viewer";
+import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer";
+import type { PartitionResult } from "@/components/viewers/lib/partition-types";
 import {
   PartitionViewerHeaderMeta,
   PartitionViewerLegend,
   PartitionViewerProvider,
   PartitionViewerRibbon,
   usePartitionViewerDocumentControls,
-} from "@/components/viewers/partition/partition-viewer"
+} from "@/components/viewers/partition/partition-viewer";
 
-const PDF_URL = "/samples/an-image-is-worth-16x16-words.pdf"
+const PDF_URL = "/samples/an-image-is-worth-16x16-words.pdf";
 
 // A partition result: keyed chunks, each owning a set of 1-indexed pages.
 const PARTITION_RESULT: PartitionResult = {
@@ -34,7 +34,7 @@ const PARTITION_RESULT: PartitionResult = {
   ],
   consensus: { choices: [], likelihoods: null },
   usage: null,
-}
+};
 
 /**
  * Partition viewer block — the file + legend + waterfall ribbon over keyed
@@ -46,15 +46,12 @@ export function PartitionViewerBlock() {
     kind: "url" as const,
     url: PDF_URL,
     fileName: "an-image-is-worth-16x16-words.pdf",
-  }
+  };
 
   return (
-    <div className="flex h-full min-h-[680px] flex-col bg-background">
+    <div className="bg-background flex h-full min-h-[680px] flex-col">
       <PartitionViewerProvider result={PARTITION_RESULT}>
-        <FileViewer
-          source={source}
-          className="h-full flex-1 bg-background"
-        >
+        <FileViewer source={source} className="bg-background h-full flex-1">
           <PdfViewerProvider>
             <FileViewerHeader>
               <FileViewerTitle />
@@ -72,11 +69,11 @@ export function PartitionViewerBlock() {
         </FileViewer>
       </PartitionViewerProvider>
     </div>
-  )
+  );
 }
 
 function PartitionSourceDocument() {
-  const controls = usePartitionViewerDocumentControls()
+  const controls = usePartitionViewerDocumentControls();
 
   return (
     <PdfViewerPages
@@ -86,5 +83,5 @@ function PartitionSourceDocument() {
       onScrollProgressChange={controls.onScrollProgressChange}
       className="h-full"
     />
-  )
+  );
 }

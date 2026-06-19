@@ -1,28 +1,33 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { createPortal } from "react-dom"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-type JsonTableStyleProbeSurface = "empty-portal" | "select-shell" | "picker-shell"
+import * as React from "react";
+import { createPortal } from "react-dom";
+
+type JsonTableStyleProbeSurface =
+  | "empty-portal"
+  | "select-shell"
+  | "picker-shell";
 
 export function JsonTableStyleProbe() {
   const [surface, setSurface] =
-    React.useState<JsonTableStyleProbeSurface | null>(null)
-  const [isMounted, setIsMounted] = React.useState(false)
+    React.useState<JsonTableStyleProbeSurface | null>(null);
+  const [isMounted, setIsMounted] = React.useState(false);
 
   React.useEffect(() => {
-    setIsMounted(true)
-  }, [])
+    setIsMounted(true);
+  }, []);
 
   React.useEffect(() => {
-    if (!surface) return
+    if (!surface) return;
 
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setSurface(null)
-    }
-    window.addEventListener("keydown", closeOnEscape)
-    return () => window.removeEventListener("keydown", closeOnEscape)
-  }, [surface])
+      if (event.key === "Escape") setSurface(null);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [surface]);
 
   return (
     <div
@@ -46,13 +51,10 @@ export function JsonTableStyleProbe() {
         setSurface={setSurface}
       />
       {isMounted && surface
-        ? createPortal(
-            <StyleProbePortal surface={surface} />,
-            document.body
-          )
+        ? createPortal(<StyleProbePortal surface={surface} />, document.body)
         : null}
     </div>
-  )
+  );
 }
 
 function ProbeButton({
@@ -60,9 +62,9 @@ function ProbeButton({
   name,
   setSurface,
 }: {
-  label: string
-  name: JsonTableStyleProbeSurface
-  setSurface: (surface: JsonTableStyleProbeSurface) => void
+  label: string;
+  name: JsonTableStyleProbeSurface;
+  setSurface: (surface: JsonTableStyleProbeSurface) => void;
 }) {
   return (
     <button
@@ -73,44 +75,44 @@ function ProbeButton({
     >
       {label}
     </button>
-  )
+  );
 }
 
 function StyleProbePortal({
   surface,
 }: {
-  surface: JsonTableStyleProbeSurface
+  surface: JsonTableStyleProbeSurface;
 }) {
   if (surface === "select-shell") {
     return (
       <div
         aria-label="Style probe select shell"
-        className="fixed top-4 left-4 z-50 min-h-10 w-48 border bg-popover p-2 text-xs text-popover-foreground shadow-md"
+        className="bg-popover text-popover-foreground fixed top-4 left-4 z-50 min-h-10 w-48 border p-2 text-xs shadow-md"
         data-json-table-style-probe-surface={surface}
         data-slot="data-cell-select-popup"
         role="listbox"
       />
-    )
+    );
   }
 
   if (surface === "picker-shell") {
     return (
       <div
         aria-label="Style probe picker shell"
-        className="fixed top-4 left-4 z-50 min-h-10 w-64 border bg-popover p-2 text-xs text-popover-foreground shadow-md"
+        className="bg-popover text-popover-foreground fixed top-4 left-4 z-50 min-h-10 w-64 border p-2 text-xs shadow-md"
         data-json-table-style-probe-surface={surface}
         data-slot="data-cell-picker-popup"
         role="dialog"
       />
-    )
+    );
   }
 
   return (
     <div
       aria-label="Style probe empty portal"
-      className="fixed top-4 left-4 z-50 min-h-10 w-48 border bg-popover p-2 text-xs text-popover-foreground shadow-md"
+      className="bg-popover text-popover-foreground fixed top-4 left-4 z-50 min-h-10 w-48 border p-2 text-xs shadow-md"
       data-json-table-style-probe-surface={surface}
       data-slot="json-table-inert-popup"
     />
-  )
+  );
 }

@@ -1,18 +1,18 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent } from "@testing-library/react"
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
+import { cleanup, fireEvent } from "@testing-library/react";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import type { JsonTableCellHarnessProps } from "./json-table-cell-test-utils"
+import type { JsonTableCellHarnessProps } from "./json-table-cell-test-utils";
 import {
   baseField,
   baseSession,
   renderEnumCell,
-} from "./json-table-cell-test-utils"
-import { installJsonTableDom } from "./json-table-test-dom"
+} from "./json-table-cell-test-utils";
+import { installJsonTableDom } from "./json-table-test-dom";
 
-beforeAll(() => installJsonTableDom())
-afterEach(() => cleanup())
+beforeAll(() => installJsonTableDom());
+afterEach(() => cleanup());
 
 function renderEnumCellForTest(overrides: JsonTableCellHarnessProps = {}) {
   return renderEnumCell({
@@ -23,12 +23,12 @@ function renderEnumCellForTest(overrides: JsonTableCellHarnessProps = {}) {
     onEditingEnd: vi.fn(),
     commitValue: vi.fn(),
     ...overrides,
-  })
+  });
 }
 
 describe("json table enum cell", () => {
   it("commits integer enum values as numbers", () => {
-    const onCommit = vi.fn()
+    const onCommit = vi.fn();
     const view = renderEnumCellForTest({
       effectiveValue: 1,
       fieldMetadata: {
@@ -41,18 +41,18 @@ describe("json table enum cell", () => {
         enumValues: [1, 2],
       },
       commitValue: onCommit,
-    })
+    });
 
-    fireEvent.click(view.getByRole("option", { name: "2" }))
+    fireEvent.click(view.getByRole("option", { name: "2" }));
 
     expect(onCommit).toHaveBeenCalledWith(
       2,
-      expect.objectContaining({ kind: "select", rawValue: "option:1" })
-    )
-  })
+      expect.objectContaining({ kind: "select", rawValue: "option:1" }),
+    );
+  });
 
   it("commits number enum values as numbers", () => {
-    const onCommit = vi.fn()
+    const onCommit = vi.fn();
     const view = renderEnumCellForTest({
       effectiveValue: 1.5,
       fieldMetadata: {
@@ -65,18 +65,18 @@ describe("json table enum cell", () => {
         enumValues: [1.5, 2.25],
       },
       commitValue: onCommit,
-    })
+    });
 
-    fireEvent.click(view.getByRole("option", { name: "2.25" }))
+    fireEvent.click(view.getByRole("option", { name: "2.25" }));
 
     expect(onCommit).toHaveBeenCalledWith(
       2.25,
-      expect.objectContaining({ kind: "select", rawValue: "option:1" })
-    )
-  })
+      expect.objectContaining({ kind: "select", rawValue: "option:1" }),
+    );
+  });
 
   it("commits boolean enum values as booleans", () => {
-    const onCommit = vi.fn()
+    const onCommit = vi.fn();
     const view = renderEnumCellForTest({
       effectiveValue: false,
       fieldMetadata: {
@@ -89,15 +89,15 @@ describe("json table enum cell", () => {
         enumValues: [false, true],
       },
       commitValue: onCommit,
-    })
+    });
 
-    fireEvent.click(view.getByRole("option", { name: "true" }))
+    fireEvent.click(view.getByRole("option", { name: "true" }));
 
     expect(onCommit).toHaveBeenCalledWith(
       true,
-      expect.objectContaining({ kind: "select", rawValue: "option:1" })
-    )
-  })
+      expect.objectContaining({ kind: "select", rawValue: "option:1" }),
+    );
+  });
 
   it("renders the selected option label in the trigger, not the internal option id", () => {
     const view = renderEnumCellForTest({
@@ -111,16 +111,16 @@ describe("json table enum cell", () => {
         kind: "enum",
         enumValues: ["CREDIT", "DEBIT"],
       },
-    })
+    });
 
     const trigger = view.container.querySelector<HTMLElement>(
-      '[data-slot="data-cell"]'
-    )
-    if (!trigger) throw new Error("Missing enum trigger")
-    expect(trigger.textContent).toContain("DEBIT")
-    expect(trigger.textContent).not.toContain("option:")
-    expect(trigger.getAttribute("aria-activedescendant")).toMatch(/option-1$/)
-  })
+      '[data-slot="data-cell"]',
+    );
+    if (!trigger) throw new Error("Missing enum trigger");
+    expect(trigger.textContent).toContain("DEBIT");
+    expect(trigger.textContent).not.toContain("option:");
+    expect(trigger.getAttribute("aria-activedescendant")).toMatch(/option-1$/);
+  });
 
   it("renders literal sentinel-like string enum values", () => {
     const view = renderEnumCellForTest({
@@ -134,14 +134,14 @@ describe("json table enum cell", () => {
         kind: "enum",
         enumValues: ["__null__", "approved"],
       },
-    })
+    });
 
-    expect(view.getAllByText("__null__")).toHaveLength(2)
-  })
+    expect(view.getAllByText("__null__")).toHaveLength(2);
+  });
 
   it("ends editing from trigger blur after primitive-owned activation", () => {
-    const onEditingEnd = vi.fn()
-    const onOpenChange = vi.fn()
+    const onEditingEnd = vi.fn();
+    const onOpenChange = vi.fn();
     const view = renderEnumCellForTest({
       onEditingEnd,
       structuredEditSession: baseSession({
@@ -149,20 +149,20 @@ describe("json table enum cell", () => {
         isOverlayOpen: false,
       }),
       onOpenChange,
-    })
+    });
 
     const trigger = view.container.querySelector<HTMLElement>(
-      '[data-slot="data-cell"]'
-    )
-    if (!trigger) throw new Error("Missing enum trigger")
-    fireEvent.blur(trigger)
+      '[data-slot="data-cell"]',
+    );
+    if (!trigger) throw new Error("Missing enum trigger");
+    fireEvent.blur(trigger);
 
-    expect(onEditingEnd).toHaveBeenCalledTimes(1)
-    expect(onOpenChange.mock.calls).toEqual([[true], [false]])
-  })
+    expect(onEditingEnd).toHaveBeenCalledTimes(1);
+    expect(onOpenChange.mock.calls).toEqual([[true], [false]]);
+  });
 
   it("distinguishes nullable null from a literal sentinel-like string option", () => {
-    const onLiteralCommit = vi.fn()
+    const onLiteralCommit = vi.fn();
     const literalView = renderEnumCellForTest({
       effectiveValue: null,
       fieldMetadata: {
@@ -175,18 +175,18 @@ describe("json table enum cell", () => {
         enumValues: ["__null__", null],
       },
       commitValue: onLiteralCommit,
-    })
+    });
 
     fireEvent.click(
-      literalView.getAllByRole("option", { name: "__null__" }).at(-1)!
-    )
+      literalView.getAllByRole("option", { name: "__null__" }).at(-1)!,
+    );
     expect(onLiteralCommit).toHaveBeenCalledWith(
       "__null__",
-      expect.objectContaining({ kind: "select", rawValue: "option:0" })
-    )
-    cleanup()
+      expect.objectContaining({ kind: "select", rawValue: "option:0" }),
+    );
+    cleanup();
 
-    const onNullCommit = vi.fn()
+    const onNullCommit = vi.fn();
     const nullView = renderEnumCellForTest({
       effectiveValue: "__null__",
       fieldMetadata: {
@@ -199,20 +199,20 @@ describe("json table enum cell", () => {
         enumValues: ["__null__", null],
       },
       commitValue: onNullCommit,
-    })
+    });
 
-    fireEvent.click(nullView.getByRole("option", { name: /no selection/i }))
+    fireEvent.click(nullView.getByRole("option", { name: /no selection/i }));
     expect(onNullCommit).toHaveBeenCalledWith(
       null,
       expect.objectContaining({
         kind: "select",
         rawValue: "__json_table_null__",
-      })
-    )
-  })
+      }),
+    );
+  });
 
   it("commits the null sentinel only for nullable enum fields", () => {
-    const onNullableCommit = vi.fn()
+    const onNullableCommit = vi.fn();
     const nullableView = renderEnumCellForTest({
       effectiveValue: null,
       fieldMetadata: {
@@ -225,21 +225,21 @@ describe("json table enum cell", () => {
         enumValues: ["approved", null],
       },
       commitValue: onNullableCommit,
-    })
+    });
 
     fireEvent.click(
-      nullableView.getAllByRole("option", { name: /no selection/i }).at(-1)!
-    )
+      nullableView.getAllByRole("option", { name: /no selection/i }).at(-1)!,
+    );
     expect(onNullableCommit).toHaveBeenCalledWith(
       null,
       expect.objectContaining({
         kind: "select",
         rawValue: "__json_table_null__",
-      })
-    )
-    cleanup()
+      }),
+    );
+    cleanup();
 
-    const onRequiredCommit = vi.fn()
+    const onRequiredCommit = vi.fn();
     const requiredView = renderEnumCellForTest({
       effectiveValue: "approved",
       fieldMetadata: {
@@ -252,12 +252,12 @@ describe("json table enum cell", () => {
         enumValues: ["approved"],
       },
       commitValue: onRequiredCommit,
-    })
+    });
 
     expect(
-      requiredView.queryByRole("option", { name: /no selection/i })
-    ).toBeNull()
-  })
+      requiredView.queryByRole("option", { name: /no selection/i }),
+    ).toBeNull();
+  });
 
   it("selects structurally equal object enum values", () => {
     const view = renderEnumCellForTest({
@@ -273,17 +273,17 @@ describe("json table enum cell", () => {
         kind: "enum",
         enumValues: [{ code: "approved" }, { code: "rejected" }],
       },
-    })
+    });
 
     const selectedOption = view.getAllByRole("option", {
       name: "[object Object]",
-    })[0]
-    expect(selectedOption?.getAttribute("aria-selected")).toBe("true")
-  })
+    })[0];
+    expect(selectedOption?.getAttribute("aria-selected")).toBe("true");
+  });
 
   it("commits a clicked option and ends editing once", () => {
-    const onEditingEnd = vi.fn()
-    const onCommit = vi.fn()
+    const onEditingEnd = vi.fn();
+    const onCommit = vi.fn();
     const view = renderEnumCellForTest({
       effectiveValue: "draft",
       fieldMetadata: {
@@ -297,24 +297,24 @@ describe("json table enum cell", () => {
       },
       onEditingEnd,
       commitValue: onCommit,
-    })
+    });
 
-    fireEvent.click(view.getByRole("option", { name: "paid" }))
+    fireEvent.click(view.getByRole("option", { name: "paid" }));
 
     expect(onCommit).toHaveBeenCalledWith(
       "paid",
-      expect.objectContaining({ kind: "select", rawValue: "option:1" })
-    )
-    expect(onEditingEnd).toHaveBeenCalledTimes(1)
-  })
+      expect.objectContaining({ kind: "select", rawValue: "option:1" }),
+    );
+    expect(onEditingEnd).toHaveBeenCalledTimes(1);
+  });
 
   it("closes immediately after a dropdown dismisses without selecting a value", () => {
-    const onEditingEnd = vi.fn()
-    const onOpenChange = vi.fn()
-    const view = renderEnumCellForTest({ onEditingEnd, onOpenChange })
+    const onEditingEnd = vi.fn();
+    const onOpenChange = vi.fn();
+    const view = renderEnumCellForTest({ onEditingEnd, onOpenChange });
 
-    fireEvent.keyDown(view.getByRole("combobox"), { key: "Escape" })
+    fireEvent.keyDown(view.getByRole("combobox"), { key: "Escape" });
 
-    expect(onEditingEnd).toHaveBeenCalledTimes(1)
-  })
-})
+    expect(onEditingEnd).toHaveBeenCalledTimes(1);
+  });
+});

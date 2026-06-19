@@ -1,6 +1,6 @@
 export function getPdfCanvasPixelSize(
   cssSize: number,
-  devicePixelRatio: number
+  devicePixelRatio: number,
 ) {
   if (
     !Number.isFinite(cssSize) ||
@@ -8,7 +8,7 @@ export function getPdfCanvasPixelSize(
     cssSize <= 0 ||
     devicePixelRatio <= 0
   ) {
-    return 1
+    return 1;
   }
-  return Math.max(1, Math.floor(cssSize * devicePixelRatio))
+  return Math.max(1, Math.floor(cssSize * devicePixelRatio));
 }

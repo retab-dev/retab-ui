@@ -21,7 +21,7 @@ npx shadcn@latest add @retab/markdown-viewer
 ## Usage
 
 ```tsx
-import { MarkdownViewer } from "@/components/ui/markdown-viewer"
+import { MarkdownViewer } from "@/components/ui/markdown-viewer";
 
 export function Example() {
   return (
@@ -33,7 +33,7 @@ export function Example() {
         mimeType: "text/markdown",
       }}
     />
-  )
+  );
 }
 ```
 
@@ -98,7 +98,7 @@ footnotes resolve before the viewer slices the HAST.
 ## Feature Matrix
 
 | Capability          | Markdown Viewer                                                                                                                         | Text Viewer Markdown mode      |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
 | Document flow       | Continuous Markdown document flow                                                                                                       | Continuous text-oriented flow  |
 | Virtualization unit | Internal Markdown chunks with no visible page model                                                                                     | Source/text rows and blocks    |
 | Markdown renderer   | Document-wide unified/GFM pipeline with visible HAST projection                                                                         | Viewer-owned Markdown subset   |
@@ -159,15 +159,15 @@ by a generic text fallback.
 ## Ref
 
 ```tsx
-import * as React from "react"
+import * as React from "react";
 
 import {
   MarkdownViewer,
   type TextViewerHandle,
-} from "@/components/ui/markdown-viewer"
+} from "@/components/ui/markdown-viewer";
 
 export function Example() {
-  const viewerRef = React.useRef<TextViewerHandle>(null)
+  const viewerRef = React.useRef<TextViewerHandle>(null);
 
   return (
     <MarkdownViewer
@@ -175,7 +175,7 @@ export function Example() {
       source={{ kind: "text", text: "# Alpha\n\n## Beta\n\nGamma" }}
       highlight={{ start: 3, end: 3 }}
     />
-  )
+  );
 }
 ```
 

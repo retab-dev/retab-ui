@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { CsvViewerDocument } from "@/components/ui/csv-viewer"
+import { CsvViewerDocument } from "@/components/ui/csv-viewer";
 
-const FIRST = ["Jane", "John", "Amara", "Liu", "Diego", "Sofia", "Noah", "Mia"]
+const FIRST = ["Jane", "John", "Amara", "Liu", "Diego", "Sofia", "Noah", "Mia"];
 const LAST = [
   "Doe",
   "Smith",
@@ -14,9 +14,9 @@ const LAST = [
   "Rossi",
   "Kim",
   "Patel",
-]
-const COUNTRY = ["US", "GB", "FR", "DE", "BR", "JP", "NG", "IN"]
-const EXTRA_COLS = 40
+];
+const COUNTRY = ["US", "GB", "FR", "DE", "BR", "JP", "NG", "IN"];
+const EXTRA_COLS = 40;
 
 function buildCsv(rows: number): string {
   const header = [
@@ -27,16 +27,16 @@ function buildCsv(rows: number): string {
     "country",
     "amount",
     ...Array.from({ length: EXTRA_COLS }, (_, i) => `metric_${i + 1}`),
-  ]
-  const lines = [header.join(",")]
+  ];
+  const lines = [header.join(",")];
   for (let i = 0; i < rows; i++) {
-    const first = FIRST[i % FIRST.length]
-    const last = LAST[(i * 3) % LAST.length]
-    const country = COUNTRY[(i * 7) % COUNTRY.length]
-    const amount = (((i * 37) % 10000) / 100).toFixed(2)
+    const first = FIRST[i % FIRST.length];
+    const last = LAST[(i * 3) % LAST.length];
+    const country = COUNTRY[(i * 7) % COUNTRY.length];
+    const amount = (((i * 37) % 10000) / 100).toFixed(2);
     const metrics = Array.from({ length: EXTRA_COLS }, (_, c) =>
-      (((i * 31 + c * 17) % 100000) / 100).toFixed(2)
-    )
+      (((i * 31 + c * 17) % 100000) / 100).toFixed(2),
+    );
     lines.push(
       [
         i + 1,
@@ -46,14 +46,14 @@ function buildCsv(rows: number): string {
         country,
         amount,
         ...metrics,
-      ].join(",")
-    )
+      ].join(","),
+    );
   }
-  return lines.join("\n")
+  return lines.join("\n");
 }
 
 export function CsvViewerDemo() {
-  const csv = React.useMemo(() => buildCsv(5000), [])
+  const csv = React.useMemo(() => buildCsv(5000), []);
   return (
     <div className="min-h-0">
       <CsvViewerDocument
@@ -62,7 +62,7 @@ export function CsvViewerDemo() {
         isolateStyles
       />
     </div>
-  )
+  );
 }
 
 export function CsvViewerStreamingDemo() {
@@ -70,8 +70,8 @@ export function CsvViewerStreamingDemo() {
   // 20 MB+ string is never re-materialized during render.
   const source = React.useMemo(
     () => new Blob([buildCsv(100_000)], { type: "text/csv" }),
-    []
-  )
+    [],
+  );
   return (
     <div className="min-h-0">
       <CsvViewerDocument
@@ -86,5 +86,5 @@ export function CsvViewerStreamingDemo() {
         isolateStyles
       />
     </div>
-  )
+  );
 }

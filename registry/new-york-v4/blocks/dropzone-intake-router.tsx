@@ -1,15 +1,15 @@
-"use client"
+"use client";
 
-import { Upload, X } from "lucide-react"
+import { Upload, X } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { useDropzone, type DropzoneFileItem } from "@/components/ui/dropzone"
-import { FileThumbnail } from "@/components/ui/file-thumbnail"
+import { cn } from "@/lib/utils";
+import { useDropzone, type DropzoneFileItem } from "@/components/ui/dropzone";
+import { FileThumbnail } from "@/components/ui/file-thumbnail";
 
 import {
   RejectionRows,
   type DropzoneExampleProps,
-} from "./dropzone-example-shared"
+} from "./dropzone-example-shared";
 
 export function IntakeRouter({ className }: DropzoneExampleProps) {
   const dropzone = useDropzone({
@@ -17,8 +17,8 @@ export function IntakeRouter({ className }: DropzoneExampleProps) {
       ".pdf,.doc,.docx,.csv,.xls,.xlsx,.png,.jpg,.jpeg,image/*,application/pdf,text/csv",
     maxFiles: 12,
     multiple: true,
-  })
-  const groups = getRoutedFiles(dropzone.files)
+  });
+  const groups = getRoutedFiles(dropzone.files);
 
   return (
     <section
@@ -26,7 +26,7 @@ export function IntakeRouter({ className }: DropzoneExampleProps) {
         className: cn(
           "rounded-lg border bg-background p-4 transition-colors",
           dropzone.isDragging && "border-foreground/40 bg-accent/35",
-          className
+          className,
         ),
       })}
     >
@@ -34,7 +34,7 @@ export function IntakeRouter({ className }: DropzoneExampleProps) {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="text-sm font-medium">Intake router</div>
-          <div className="mt-1 text-xs text-muted-foreground">
+          <div className="text-muted-foreground mt-1 text-xs">
             One target, derived lanes by file type.
           </div>
         </div>
@@ -68,7 +68,7 @@ export function IntakeRouter({ className }: DropzoneExampleProps) {
       </div>
       <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </section>
-  )
+  );
 }
 
 function getRoutedFiles(files: DropzoneFileItem[]) {
@@ -76,29 +76,29 @@ function getRoutedFiles(files: DropzoneFileItem[]) {
     documents: [] as DropzoneFileItem[],
     images: [] as DropzoneFileItem[],
     tables: [] as DropzoneFileItem[],
-  }
+  };
 
   for (const item of files) {
-    const fileName = item.file.name.toLowerCase()
-    const fileType = item.file.type
+    const fileName = item.file.name.toLowerCase();
+    const fileType = item.file.type;
 
     if (
       fileType.startsWith("image/") ||
       /\.(png|jpe?g|gif|webp|heic)$/.test(fileName)
     ) {
-      groups.images.push(item)
+      groups.images.push(item);
     } else if (
       fileType.includes("spreadsheet") ||
       fileType === "text/csv" ||
       /\.(csv|xls|xlsx)$/.test(fileName)
     ) {
-      groups.tables.push(item)
+      groups.tables.push(item);
     } else {
-      groups.documents.push(item)
+      groups.documents.push(item);
     }
   }
 
-  return groups
+  return groups;
 }
 
 function RoutedLane({
@@ -106,12 +106,12 @@ function RoutedLane({
   label,
   onRemove,
 }: {
-  files: DropzoneFileItem[]
-  label: string
-  onRemove: (fileId: string) => void
+  files: DropzoneFileItem[];
+  label: string;
+  onRemove: (fileId: string) => void;
 }) {
   return (
-    <div className="min-h-44 rounded-md border border-dashed bg-muted/20 p-2">
+    <div className="bg-muted/20 min-h-44 rounded-md border border-dashed p-2">
       <div className="mb-2 flex items-center justify-between text-xs">
         <span className="font-medium">{label}</span>
         <span className="text-muted-foreground">{files.length}</span>
@@ -121,7 +121,7 @@ function RoutedLane({
           {files.slice(0, 3).map((item) => (
             <div
               key={item.id}
-              className="flex min-w-0 items-center gap-2 rounded-md border bg-background p-2"
+              className="bg-background flex min-w-0 items-center gap-2 rounded-md border p-2"
             >
               <FileThumbnail
                 file={item.file}
@@ -135,7 +135,7 @@ function RoutedLane({
               <button
                 type="button"
                 aria-label={`Remove ${item.file.name}`}
-                className="grid size-6 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="text-muted-foreground hover:bg-muted hover:text-foreground grid size-6 shrink-0 place-items-center rounded-md"
                 onClick={() => onRemove(item.id)}
               >
                 <X className="size-3.5" aria-hidden />
@@ -143,16 +143,16 @@ function RoutedLane({
             </div>
           ))}
           {files.length > 3 ? (
-            <div className="text-center text-xs text-muted-foreground">
+            <div className="text-muted-foreground text-center text-xs">
               +{files.length - 3} more
             </div>
           ) : null}
         </div>
       ) : (
-        <div className="grid h-32 place-items-center text-center text-xs text-muted-foreground">
+        <div className="text-muted-foreground grid h-32 place-items-center text-center text-xs">
           No {label.toLowerCase()} yet.
         </div>
       )}
     </div>
-  )
+  );
 }

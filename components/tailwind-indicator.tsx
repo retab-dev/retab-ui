@@ -1,18 +1,18 @@
-const SHOW = true
+const SHOW = true;
 
 export function TailwindIndicator({
   forceMount = false,
 }: {
-  forceMount?: boolean
+  forceMount?: boolean;
 }) {
   if (process.env.NODE_ENV === "production" || (!SHOW && !forceMount)) {
-    return null
+    return null;
   }
 
   return (
     <div
       data-tailwind-indicator=""
-      className="fixed bottom-1 left-1 z-50 flex h-6 w-6 items-center justify-center rounded-full bg-primary p-3 font-mono text-xs text-primary-foreground"
+      className="bg-primary text-primary-foreground fixed bottom-1 left-1 z-50 flex h-6 w-6 items-center justify-center rounded-full p-3 font-mono text-xs"
     >
       <div className="block sm:hidden">xs</div>
       <div className="hidden sm:block md:hidden">sm</div>
@@ -21,5 +21,5 @@ export function TailwindIndicator({
       <div className="hidden xl:block 2xl:hidden">xl</div>
       <div className="hidden 2xl:block">2xl</div>
     </div>
-  )
+  );
 }

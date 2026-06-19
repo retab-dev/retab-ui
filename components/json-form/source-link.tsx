@@ -1,33 +1,33 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
-import type { SourceFieldLink } from "@/components/ui/source-field-link"
+import { cn } from "@/lib/utils";
+import type { SourceFieldLink } from "@/components/ui/source-field-link";
 import {
   useSourceTableHoverController,
   type JsonFormSourceLinkActions,
-} from "@/components/json-form/source-link-table-hover"
+} from "@/components/json-form/source-link-table-hover";
 
-export type JsonFormSourceLink = SourceFieldLink
+export type JsonFormSourceLink = SourceFieldLink;
 
-const ActiveSourcePathContext = React.createContext<string | null>(null)
+const ActiveSourcePathContext = React.createContext<string | null>(null);
 const SourceLinkActionsContext =
-  React.createContext<JsonFormSourceLinkActions | null>(null)
+  React.createContext<JsonFormSourceLinkActions | null>(null);
 
 export function JsonFormSourceLinkProvider({
   sourceLink,
   children,
 }: {
-  sourceLink?: JsonFormSourceLink
-  children: React.ReactNode
+  sourceLink?: JsonFormSourceLink;
+  children: React.ReactNode;
 }) {
-  const onSourceHover = sourceLink?.onSourceHover
-  const selectSourcePath = sourceLink?.selectSourcePath
+  const onSourceHover = sourceLink?.onSourceHover;
+  const selectSourcePath = sourceLink?.selectSourcePath;
   const sourceLinkActions = React.useMemo<JsonFormSourceLinkActions | null>(
     () => (onSourceHover ? { onSourceHover, selectSourcePath } : null),
-    [onSourceHover, selectSourcePath]
-  )
+    [onSourceHover, selectSourcePath],
+  );
 
   return (
     <SourceLinkActionsContext.Provider value={sourceLinkActions}>
@@ -37,35 +37,35 @@ export function JsonFormSourceLinkProvider({
         {children}
       </ActiveSourcePathContext.Provider>
     </SourceLinkActionsContext.Provider>
-  )
+  );
 }
 
 export function useActiveSourcePath(): string | null {
-  return React.useContext(ActiveSourcePathContext)
+  return React.useContext(ActiveSourcePathContext);
 }
 
 export function useSourceLinkActions(): JsonFormSourceLinkActions | null {
-  return React.useContext(SourceLinkActionsContext)
+  return React.useContext(SourceLinkActionsContext);
 }
 
 export function useSourceLinkedTableCells({
   tableRef,
   refreshKey,
 }: {
-  tableRef: React.RefObject<HTMLElement | null>
-  refreshKey: unknown
+  tableRef: React.RefObject<HTMLElement | null>;
+  refreshKey: unknown;
 }) {
   return useSourceTableHoverController({
     activeSourcePath: useActiveSourcePath(),
     refreshKey,
     sourceLinkActions: useSourceLinkActions(),
     tableRef,
-  })
+  });
 }
 
 function shouldSelectSourceFromKeyDown(event: React.KeyboardEvent): boolean {
-  if (event.defaultPrevented || event.key !== "Enter") return false
-  return !(event.target instanceof HTMLTextAreaElement)
+  if (event.defaultPrevented || event.key !== "Enter") return false;
+  return !(event.target instanceof HTMLTextAreaElement);
 }
 
 /**
@@ -76,13 +76,13 @@ export function SourceLinkShell({
   sourcePath,
   children,
 }: {
-  sourcePath: string
-  children: React.ReactNode
+  sourcePath: string;
+  children: React.ReactNode;
 }) {
-  const activeSourcePath = useActiveSourcePath()
-  const sourceLinkActions = useSourceLinkActions()
-  if (!sourceLinkActions) return <>{children}</>
-  const active = activeSourcePath === sourcePath
+  const activeSourcePath = useActiveSourcePath();
+  const sourceLinkActions = useSourceLinkActions();
+  if (!sourceLinkActions) return <>{children}</>;
+  const active = activeSourcePath === sourcePath;
 
   return (
     <div
@@ -93,17 +93,17 @@ export function SourceLinkShell({
       onClick={() => sourceLinkActions.selectSourcePath?.(sourcePath)}
       onKeyDownCapture={(event) => {
         if (shouldSelectSourceFromKeyDown(event)) {
-          sourceLinkActions.selectSourcePath?.(sourcePath)
+          sourceLinkActions.selectSourcePath?.(sourcePath);
         }
       }}
       className={cn(
         "rounded-md border px-3 py-2 transition-colors",
         active
           ? "border-primary/40 bg-primary/5"
-          : "border-transparent hover:bg-muted/60"
+          : "hover:bg-muted/60 border-transparent",
       )}
     >
       {children}
     </div>
-  )
+  );
 }

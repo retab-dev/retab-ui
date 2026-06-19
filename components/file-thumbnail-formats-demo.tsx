@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
-import type { FileCategory } from "@/lib/viewer-source"
-import { FileThumbnail } from "@/components/ui/file-thumbnail"
+import { cn } from "@/lib/utils";
+import type { FileCategory } from "@/lib/viewer-source";
+import { FileThumbnail } from "@/components/ui/file-thumbnail";
 
 /**
  * The hero showcase: one bordered card with a large, labeled, *square* preview
@@ -15,11 +15,11 @@ import { FileThumbnail } from "@/components/ui/file-thumbnail"
  */
 
 interface FormatSample {
-  label: string
-  url: string
-  fileName: string
-  mimeType: string
-  as?: FileCategory
+  label: string;
+  url: string;
+  fileName: string;
+  mimeType: string;
+  as?: FileCategory;
 }
 
 const SAMPLES: FormatSample[] = [
@@ -98,17 +98,17 @@ const SAMPLES: FormatSample[] = [
     fileName: "entropy.tiff",
     mimeType: "image/tiff",
   },
-]
+];
 
 /** The bare grid of real, labeled format previews — 3 rows of 4 (grid-cols-4).
  *  Reused by the docs demo (below) and the home showcase. */
 export function FileThumbnailFormatsGrid({
   className,
 }: {
-  className?: string
+  className?: string;
 }) {
   return (
-    <div className={cn("grid grid-cols-4 gap-3 bg-background p-6", className)}>
+    <div className={cn("bg-background grid grid-cols-4 gap-3 p-6", className)}>
       {SAMPLES.map((sample) => (
         <div key={sample.label} className="space-y-1.5">
           <div className="truncate text-xs font-medium">{sample.label}</div>
@@ -125,9 +125,9 @@ export function FileThumbnailFormatsGrid({
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 export function FileThumbnailFormatsDemo() {
-  return <FileThumbnailFormatsGrid />
+  return <FileThumbnailFormatsGrid />;
 }

@@ -1,23 +1,23 @@
-import * as React from "react"
+import * as React from "react";
 
-import { DataCell, DataCellDisplay } from "@/components/ui/data-cell"
-import { TableCell } from "@/components/ui/table"
-import { areEditableJsonTableCellPropsEqual } from "@/components/json-table/json-table-cell-memo"
-import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
-import { createJsonTableDataCellProps } from "@/components/json-table/json-table-data-cell-model"
-import { JsonTablePrimitiveCell } from "@/components/json-table/json-table-primitive-cell"
-import { JsonTableStructuredActiveCell } from "@/components/json-table/json-table-structured-active-cell"
-import { useJsonTableEditableCellModel } from "@/components/json-table/use-json-table-editable-cell-model"
+import { DataCell, DataCellDisplay } from "@/components/ui/data-cell";
+import { TableCell } from "@/components/ui/table";
+import { areEditableJsonTableCellPropsEqual } from "@/components/json-table/json-table-cell-memo";
+import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types";
+import { createJsonTableDataCellProps } from "@/components/json-table/json-table-data-cell-model";
+import { JsonTablePrimitiveCell } from "@/components/json-table/json-table-primitive-cell";
+import { JsonTableStructuredActiveCell } from "@/components/json-table/json-table-structured-active-cell";
+import { useJsonTableEditableCellModel } from "@/components/json-table/use-json-table-editable-cell-model";
 
 function EditableJsonTableCellContent(props: JsonTableCellProps) {
-  const cellModel = useJsonTableEditableCellModel(props)
+  const cellModel = useJsonTableEditableCellModel(props);
 
   if (cellModel.kind === "disabled") {
     return (
       <TableCell {...cellModel.shellProps}>
         <DataCellDisplay kind="text" value={null} placeholder="" />
       </TableCell>
-    )
+    );
   }
 
   return (
@@ -30,11 +30,11 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
         <DataCell {...createJsonTableDataCellProps(cellModel.displayProps)} />
       )}
     </TableCell>
-  )
+  );
 }
 
 export const EditableJsonTableCell = React.memo(
   EditableJsonTableCellContent,
-  areEditableJsonTableCellPropsEqual
-)
-EditableJsonTableCell.displayName = "EditableJsonTableCell"
+  areEditableJsonTableCellPropsEqual,
+);
+EditableJsonTableCell.displayName = "EditableJsonTableCell";

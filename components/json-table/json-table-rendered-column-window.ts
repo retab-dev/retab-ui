@@ -1,25 +1,25 @@
-import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
+import type { VisibleColumn } from "@/components/json-table/json-table-cell-types";
 
 export type JsonTableRenderedColumnItem = {
-  index: number
-}
+  index: number;
+};
 
 export type JsonTableRenderedColumnWindow = {
-  columns: VisibleColumn[]
-  projectedCellIndexes: number[]
-  leftPadWidthPx: number
-  rightPadWidthPx: number
-}
+  columns: VisibleColumn[];
+  projectedCellIndexes: number[];
+  leftPadWidthPx: number;
+  rightPadWidthPx: number;
+};
 
 export function jsonTableFullRenderedColumnWindow(
-  schemaVisibleColumns: VisibleColumn[]
+  schemaVisibleColumns: VisibleColumn[],
 ): JsonTableRenderedColumnWindow {
   return {
     columns: schemaVisibleColumns,
     projectedCellIndexes: schemaVisibleColumns.map((_, index) => index),
     leftPadWidthPx: 0,
     rightPadWidthPx: 0,
-  }
+  };
 }
 
 export function jsonTableVirtualRenderedColumnWindow({
@@ -28,15 +28,15 @@ export function jsonTableVirtualRenderedColumnWindow({
   rightPadWidthPx,
   schemaVisibleColumns,
 }: {
-  columnItems: JsonTableRenderedColumnItem[]
-  leftPadWidthPx: number
-  rightPadWidthPx: number
-  schemaVisibleColumns: VisibleColumn[]
+  columnItems: JsonTableRenderedColumnItem[];
+  leftPadWidthPx: number;
+  rightPadWidthPx: number;
+  schemaVisibleColumns: VisibleColumn[];
 }): JsonTableRenderedColumnWindow {
   return {
     columns: columnItems.map((item) => schemaVisibleColumns[item.index]!),
     projectedCellIndexes: columnItems.map((item) => item.index),
     leftPadWidthPx,
     rightPadWidthPx,
-  }
+  };
 }

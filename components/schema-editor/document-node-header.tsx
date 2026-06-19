@@ -1,34 +1,34 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { DocumentNodeActions } from "@/components/schema-editor/document-node-actions"
-import { DocumentNodeDescriptionControl } from "@/components/schema-editor/document-node-description-control"
+import { DocumentNodeActions } from "@/components/schema-editor/document-node-actions";
+import { DocumentNodeDescriptionControl } from "@/components/schema-editor/document-node-description-control";
 import type {
   DocumentSchemaNodeEditorProps,
   SchemaEditorMode,
-} from "@/components/schema-editor/document-node-editor-types"
-import { useDocumentNodeHeaderController } from "@/components/schema-editor/document-node-header-controller"
-import { DocumentNodeNameControl } from "@/components/schema-editor/document-node-name-control"
-import { DocumentNodeTypeMenu } from "@/components/schema-editor/document-node-type-menu"
-import type { SchemaDocument } from "@/components/schema-editor/document/types"
-import type { DocumentNodeView } from "@/components/schema-editor/document/view-model"
-import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { NodeDialog } from "@/components/schema-editor/node-dialog"
-import { SchemaFieldRow } from "@/components/schema-editor/primitives/schema-field-row"
+} from "@/components/schema-editor/document-node-editor-types";
+import { useDocumentNodeHeaderController } from "@/components/schema-editor/document-node-header-controller";
+import { DocumentNodeNameControl } from "@/components/schema-editor/document-node-name-control";
+import { DocumentNodeTypeMenu } from "@/components/schema-editor/document-node-type-menu";
+import type { SchemaDocument } from "@/components/schema-editor/document/types";
+import type { DocumentNodeView } from "@/components/schema-editor/document/view-model";
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
+import { NodeDialog } from "@/components/schema-editor/node-dialog";
+import { SchemaFieldRow } from "@/components/schema-editor/primitives/schema-field-row";
 
-import { EnumCreationDialog } from "./enum-creation-dialog"
+import { EnumCreationDialog } from "./enum-creation-dialog";
 
 interface DocumentNodeHeaderProps
   extends Omit<
     DocumentSchemaNodeEditorProps,
     "draggedParentRef" | "draggedPropertyRef"
   > {
-  doc: SchemaDocument
-  nodeView: DocumentNodeView
-  mode: SchemaEditorMode
-  features: NonNullable<DocumentSchemaNodeEditorProps["features"]>
-  onChange: (newNode: ExtendedJSONSchema7) => void
+  doc: SchemaDocument;
+  nodeView: DocumentNodeView;
+  mode: SchemaEditorMode;
+  features: NonNullable<DocumentSchemaNodeEditorProps["features"]>;
+  onChange: (newNode: ExtendedJSONSchema7) => void;
 }
 
 export function DocumentNodeHeader({
@@ -48,14 +48,14 @@ export function DocumentNodeHeader({
   features,
   onChange,
 }: DocumentNodeHeaderProps) {
-  const editable = mode === "editable"
+  const editable = mode === "editable";
   const controller = useDocumentNodeHeaderController({
     dispatch,
     doc,
     nodeId,
     nodeView,
     setDefsAccordionOpen,
-  })
+  });
 
   return (
     <>
@@ -119,8 +119,8 @@ export function DocumentNodeHeader({
             editable && canDelete
               ? () => {
                   if (onDelete) {
-                    onDelete()
-                    controller.setMetadataDialogOpen(false)
+                    onDelete();
+                    controller.setMetadataDialogOpen(false);
                   }
                 }
               : undefined
@@ -145,5 +145,5 @@ export function DocumentNodeHeader({
         onCancel={() => undefined}
       />
     </>
-  )
+  );
 }

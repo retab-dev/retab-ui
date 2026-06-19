@@ -1,5 +1,7 @@
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
+
 // @vitest-environment jsdom
-import * as React from "react"
+import * as React from "react";
 import {
   cleanup,
   fireEvent,
@@ -7,9 +9,9 @@ import {
   screen,
   waitFor,
   within,
-} from "@testing-library/react"
-import type { JSONSchema7 } from "json-schema"
-import { useForm, type UseFormReturn } from "react-hook-form"
+} from "@testing-library/react";
+import type { JSONSchema7 } from "json-schema";
+import { useForm, type UseFormReturn } from "react-hook-form";
 import {
   afterAll,
   afterEach,
@@ -18,71 +20,71 @@ import {
   expect,
   it,
   vi,
-} from "vitest"
+} from "vitest";
 
-import type { SourceFieldLink } from "@/components/ui/source-field-link"
-import { Form } from "@/components/json-form/form-primitives"
-import { JsonForm, JsonFormField } from "@/components/json-form/json-form"
+import type { SourceFieldLink } from "@/components/ui/source-field-link";
+import { Form } from "@/components/json-form/form-primitives";
+import { JsonForm, JsonFormField } from "@/components/json-form/json-form";
 
-const originalResizeObserver = globalThis.ResizeObserver
+const originalResizeObserver = globalThis.ResizeObserver;
 
 beforeAll(() => {
   globalThis.ResizeObserver = class ResizeObserver {
     observe() {}
     unobserve() {}
     disconnect() {}
-  }
+  };
   // Radix Select (stock shadcn) calls these jsdom-unimplemented DOM APIs when
   // the listbox opens; shim them so option items mount without throwing.
-  HTMLElement.prototype.scrollIntoView = vi.fn()
+  HTMLElement.prototype.scrollIntoView = vi.fn();
   if (!HTMLElement.prototype.hasPointerCapture) {
-    HTMLElement.prototype.hasPointerCapture = () => false
+    HTMLElement.prototype.hasPointerCapture = () => false;
   }
   if (!HTMLElement.prototype.setPointerCapture) {
-    HTMLElement.prototype.setPointerCapture = () => {}
+    HTMLElement.prototype.setPointerCapture = () => {};
   }
   if (!HTMLElement.prototype.releasePointerCapture) {
-    HTMLElement.prototype.releasePointerCapture = () => {}
+    HTMLElement.prototype.releasePointerCapture = () => {};
   }
-})
+});
 
-afterEach(cleanup)
+afterEach(cleanup);
 
 afterAll(() => {
-  globalThis.ResizeObserver = originalResizeObserver
-})
+  globalThis.ResizeObserver = originalResizeObserver;
+});
 
-type FormValues = Record<string, unknown>
+type FormValues = Record<string, unknown>;
 
 function cloneJson(value: unknown): unknown {
-  return JSON.parse(JSON.stringify(value))
+  return JSON.parse(JSON.stringify(value));
 }
 
 function queryTableDataCell(name: string): HTMLElement | null {
   return (
     Array.from(
-      document.querySelectorAll<HTMLElement>("[data-table-cell]")
+      document.querySelectorAll<HTMLElement>("[data-table-cell]"),
     ).find((cell) => cell.getAttribute("aria-label") === name) ?? null
-  )
+  );
 }
 
 function getTableDataCell(name: string): HTMLElement {
-  const cell = queryTableDataCell(name)
-  expect(cell).toBeTruthy()
-  expect(cell?.getAttribute("data-slot")).toBe("data-cell")
-  return cell as HTMLElement
+  const cell = queryTableDataCell(name);
+  expect(cell).toBeTruthy();
+  expect(cell?.getAttribute("data-slot")).toBe("data-cell");
+  return cell as HTMLElement;
 }
 
 function findAncestorWithClass(
   element: HTMLElement,
-  className: string
+  className: string,
 ): HTMLElement {
-  let current: HTMLElement | null = element
+  let current: HTMLElement | null = element;
   while (current) {
-    if (current.className.includes(className)) return current
-    current = current.parentElement
+    if (current.className.includes(className)) return current;
+    current = current.parentElement;
   }
-  throw new Error(`ancestor with class ${className} was not found`)
+  throw new Error(`ancestor with class ${className} was not found`);
 }
 
 function renderJsonForm({
@@ -91,22 +93,22 @@ function renderJsonForm({
   sourceLink,
   defaultOpenPaths,
 }: {
-  schema: JSONSchema7
-  defaultValues?: FormValues
-  sourceLink?: SourceFieldLink
-  defaultOpenPaths?: readonly string[]
+  schema: JSONSchema7;
+  defaultValues?: FormValues;
+  sourceLink?: SourceFieldLink;
+  defaultOpenPaths?: readonly string[];
 }) {
-  const submissions: FormValues[] = []
-  let formApi: UseFormReturn<FormValues> | null = null
+  const submissions: FormValues[] = [];
+  let formApi: UseFormReturn<FormValues> | null = null;
 
   function Harness() {
     const form = useForm<FormValues>({
       defaultValues,
       mode: "onBlur",
-    })
+    });
     React.useEffect(() => {
-      formApi = form
-    }, [form])
+      formApi = form;
+    }, [form]);
     return (
       <JsonForm
         form={form}
@@ -117,65 +119,67 @@ function renderJsonForm({
       >
         <button type="submit">Submit</button>
       </JsonForm>
-    )
+    );
   }
 
-  const utils = render(<Harness />)
+  const utils = render(<Harness />);
   return {
     ...utils,
     submissions,
     form: () => {
-      if (!formApi) throw new Error("form did not mount")
-      return formApi
+      if (!formApi) throw new Error("form did not mount");
+      return formApi;
     },
     submit: async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Submit" }))
-      await waitFor(() => expect(submissions).toHaveLength(1))
-      return submissions[0]
+      fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+      await waitFor(() => expect(submissions).toHaveLength(1));
+      return submissions[0];
     },
-  }
+  };
 }
 
 function closestWithClass(element: Element, className: string): HTMLElement {
-  let current: Element | null = element
+  let current: Element | null = element;
   while (current) {
     if (
       current instanceof HTMLElement &&
       current.classList.contains(className)
     ) {
-      return current
+      return current;
     }
-    current = current.parentElement
+    current = current.parentElement;
   }
-  throw new Error(`ancestor with class ${className} was not found`)
+  throw new Error(`ancestor with class ${className} was not found`);
 }
 
 async function selectOption(label: string, option: string) {
-  const trigger = screen.getByLabelText(label)
-  fireEvent.focus(trigger)
-  fireEvent.keyDown(trigger, { key: "ArrowDown" })
+  const trigger = screen.getByLabelText(label);
+  fireEvent.focus(trigger);
+  fireEvent.keyDown(trigger, { key: "ArrowDown" });
   // Radix Select mirrors the selected value into the trigger via SelectValue,
   // so scope the option lookup to the open listbox to avoid matching it twice.
-  const content = await screen.findByRole("listbox")
-  const optionElement = await within(content).findByText(option)
+  const content = await screen.findByRole("listbox");
+  const optionElement = await within(content).findByText(option);
   const optionItem = optionElement.closest<HTMLElement>(
-    '[data-slot="select-item"]'
-  )
-  expect(optionItem).toBeTruthy()
-  fireEvent.pointerEnter(optionItem!, { pointerType: "mouse" })
-  fireEvent.mouseMove(optionItem!)
-  fireEvent.pointerDown(optionItem!, { button: 0, ctrlKey: false })
-  fireEvent.pointerUp(optionItem!, { button: 0, ctrlKey: false })
-  fireEvent.click(optionItem!)
+    '[data-slot="select-item"]',
+  );
+  expect(optionItem).toBeTruthy();
+  fireEvent.pointerEnter(optionItem!, { pointerType: "mouse" });
+  fireEvent.mouseMove(optionItem!);
+  fireEvent.pointerDown(optionItem!, { button: 0, ctrlKey: false });
+  fireEvent.pointerUp(optionItem!, { button: 0, ctrlKey: false });
+  fireEvent.click(optionItem!);
 }
 
 function selectCalendarDay(day: number) {
-  const calendar = document.querySelector<HTMLElement>('[data-slot="calendar"]')
-  expect(calendar).toBeTruthy()
-  const dayLabel = within(calendar!).getByText(String(day))
-  const dayButton = dayLabel.closest("button")
-  expect(dayButton).toBeTruthy()
-  fireEvent.click(dayButton!)
+  const calendar = document.querySelector<HTMLElement>(
+    '[data-slot="calendar"]',
+  );
+  expect(calendar).toBeTruthy();
+  const dayLabel = within(calendar!).getByText(String(day));
+  const dayButton = dayLabel.closest("button");
+  expect(dayButton).toBeTruthy();
+  fireEvent.click(dayButton!);
 }
 
 describe("JsonForm scalar fields", () => {
@@ -215,30 +219,30 @@ describe("JsonForm scalar fields", () => {
         notes: "old notes",
         active: false,
       },
-    })
+    });
 
     fireEvent.change(screen.getByLabelText("Customer Name *"), {
       target: { value: "Janet" },
-    })
+    });
     fireEvent.change(screen.getByLabelText("Age"), {
       target: { value: "42" },
-    })
+    });
     fireEvent.change(screen.getByLabelText("Amount"), {
       target: { value: "18.75" },
-    })
-    fireEvent.click(screen.getByLabelText("Issued At"))
-    selectCalendarDay(20)
-    fireEvent.click(screen.getByLabelText("Start Time"))
+    });
+    fireEvent.click(screen.getByLabelText("Issued At"));
+    selectCalendarDay(20);
+    fireEvent.click(screen.getByLabelText("Start Time"));
     fireEvent.change(
       document.querySelector<HTMLInputElement>('input[type="time"]')!,
       {
         target: { value: "10:45" },
-      }
-    )
+      },
+    );
     fireEvent.change(screen.getByLabelText("Notes"), {
       target: { value: "updated notes" },
-    })
-    fireEvent.click(screen.getByRole("checkbox", { name: /Active\s*\*/ }))
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: /Active\s*\*/ }));
 
     await expect(submit()).resolves.toEqual({
       name: "Janet",
@@ -248,8 +252,8 @@ describe("JsonForm scalar fields", () => {
       start_time: "10:45",
       notes: "updated notes",
       active: true,
-    })
-  })
+    });
+  });
 
   it("submits null when nullable scalar inputs are cleared", async () => {
     const { submit } = renderJsonForm({
@@ -269,19 +273,21 @@ describe("JsonForm scalar fields", () => {
         amount: 10,
         paid_at: "2026-03-01",
       },
-    })
+    });
 
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "" } })
-    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "" } })
-    fireEvent.click(screen.getByLabelText("Paid At"))
-    fireEvent.click(screen.getByRole("button", { name: "Clear" }))
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText("Amount"), {
+      target: { value: "" },
+    });
+    fireEvent.click(screen.getByLabelText("Paid At"));
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
 
     await expect(submit()).resolves.toEqual({
       name: null,
       amount: null,
       paid_at: null,
-    })
-  })
+    });
+  });
 
   it("submits null, true, and false for nullable boolean fields", async () => {
     const { submit } = renderJsonForm({
@@ -297,22 +303,22 @@ describe("JsonForm scalar fields", () => {
       defaultValues: {
         approved: null,
       },
-    })
+    });
 
-    expect(screen.getByLabelText("Approved").textContent).toContain("No value")
+    expect(screen.getByLabelText("Approved").textContent).toContain("No value");
 
-    await selectOption("Approved", "True")
-    expect(screen.getByLabelText("Approved").textContent).toContain("True")
+    await selectOption("Approved", "True");
+    expect(screen.getByLabelText("Approved").textContent).toContain("True");
 
-    await selectOption("Approved", "False")
-    expect(screen.getByLabelText("Approved").textContent).toContain("False")
+    await selectOption("Approved", "False");
+    expect(screen.getByLabelText("Approved").textContent).toContain("False");
 
-    await selectOption("Approved", "No value")
+    await selectOption("Approved", "No value");
 
     await expect(submit()).resolves.toEqual({
       approved: null,
-    })
-  })
+    });
+  });
 
   it("clears required number inputs to undefined instead of null", () => {
     const { form } = renderJsonForm({
@@ -323,12 +329,14 @@ describe("JsonForm scalar fields", () => {
         },
       },
       defaultValues: { amount: 10 },
-    })
+    });
 
-    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "" } })
+    fireEvent.change(screen.getByLabelText("Amount"), {
+      target: { value: "" },
+    });
 
-    expect(form().getValues()).toEqual({ amount: undefined })
-  })
+    expect(form().getValues()).toEqual({ amount: undefined });
+  });
 
   it("displays ISO date-time values with timezone suffixes", async () => {
     const { submit } = renderJsonForm({
@@ -343,20 +351,20 @@ describe("JsonForm scalar fields", () => {
         },
       },
       defaultValues: { due_at: "2026-03-01T12:30:45Z" },
-    })
+    });
 
     expect(screen.getByLabelText("Due At").textContent).toContain(
-      "01/03/2026, 12:30"
-    )
-    fireEvent.click(screen.getByLabelText("Due At"))
+      "01/03/2026, 12:30",
+    );
+    fireEvent.click(screen.getByLabelText("Due At"));
     expect(
-      document.querySelector<HTMLInputElement>('input[type="time"]')?.value
-    ).toBe("12:30")
+      document.querySelector<HTMLInputElement>('input[type="time"]')?.value,
+    ).toBe("12:30");
 
     await expect(submit()).resolves.toEqual({
       due_at: "2026-03-01T12:30:45Z",
-    })
-  })
+    });
+  });
 
   it("marks required boolean labels consistently with scalar fields", () => {
     renderJsonForm({
@@ -368,11 +376,11 @@ describe("JsonForm scalar fields", () => {
         },
       },
       defaultValues: { active: false },
-    })
+    });
 
-    expect(screen.getByText("*")).toBeTruthy()
-    expect(screen.getByRole("checkbox", { name: /Active\s*\*/ })).toBeTruthy()
-  })
+    expect(screen.getByText("*")).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: /Active\s*\*/ })).toBeTruthy();
+  });
 
   it("submits enum values, including nullable null choices", async () => {
     const { submit } = renderJsonForm({
@@ -397,16 +405,16 @@ describe("JsonForm scalar fields", () => {
         status: "draft",
         decision: "approved",
       },
-    })
+    });
 
-    await selectOption("Status", "paid")
-    await selectOption("Decision", "No value")
+    await selectOption("Status", "paid");
+    await selectOption("Decision", "No value");
 
     await expect(submit()).resolves.toEqual({
       status: "paid",
       decision: null,
-    })
-  })
+    });
+  });
 
   it("does not duplicate null choices for nullable enums that already include null", async () => {
     const { submit } = renderJsonForm({
@@ -423,31 +431,31 @@ describe("JsonForm scalar fields", () => {
       defaultValues: {
         status: "draft",
       },
-    })
+    });
 
-    const trigger = screen.getByLabelText("Status")
-    fireEvent.focus(trigger)
-    fireEvent.keyDown(trigger, { key: "ArrowDown" })
+    const trigger = screen.getByLabelText("Status");
+    fireEvent.focus(trigger);
+    fireEvent.keyDown(trigger, { key: "ArrowDown" });
 
     // Scope to the open listbox so we count the rendered choice, not Radix's
     // hidden native-<option> bubble mirror it keeps for form integration.
-    const content = await screen.findByRole("listbox")
-    const nullOptions = within(content).getAllByText("No value")
-    expect(nullOptions).toHaveLength(1)
+    const content = await screen.findByRole("listbox");
+    const nullOptions = within(content).getAllByText("No value");
+    expect(nullOptions).toHaveLength(1);
     const nullOptionItem = nullOptions[0].closest<HTMLElement>(
-      '[data-slot="select-item"]'
-    )
-    expect(nullOptionItem).toBeTruthy()
-    fireEvent.pointerEnter(nullOptionItem!, { pointerType: "mouse" })
-    fireEvent.mouseMove(nullOptionItem!)
-    fireEvent.pointerDown(nullOptionItem!, { button: 0, ctrlKey: false })
-    fireEvent.pointerUp(nullOptionItem!, { button: 0, ctrlKey: false })
-    fireEvent.click(nullOptionItem!)
+      '[data-slot="select-item"]',
+    );
+    expect(nullOptionItem).toBeTruthy();
+    fireEvent.pointerEnter(nullOptionItem!, { pointerType: "mouse" });
+    fireEvent.mouseMove(nullOptionItem!);
+    fireEvent.pointerDown(nullOptionItem!, { button: 0, ctrlKey: false });
+    fireEvent.pointerUp(nullOptionItem!, { button: 0, ctrlKey: false });
+    fireEvent.click(nullOptionItem!);
 
     await expect(submit()).resolves.toEqual({
       status: null,
-    })
-  })
+    });
+  });
 
   it("preserves non-string enum value types", async () => {
     const { submit } = renderJsonForm({
@@ -470,20 +478,20 @@ describe("JsonForm scalar fields", () => {
         priority: 1,
         flag: true,
       },
-    })
+    });
 
-    await selectOption("Priority", "2")
-    await selectOption("Flag", "false")
+    await selectOption("Priority", "2");
+    await selectOption("Flag", "false");
 
     await expect(submit()).resolves.toEqual({
       priority: 2,
       flag: false,
-    })
-  })
+    });
+  });
 
   it("displays object-valued enum defaults by JSON value equality", async () => {
-    const compact = { mode: "compact", columns: 2 }
-    const detailed = { mode: "detailed", columns: 4 }
+    const compact = { mode: "compact", columns: 2 };
+    const detailed = { mode: "detailed", columns: 4 };
     const { submit } = renderJsonForm({
       schema: {
         type: "object",
@@ -497,18 +505,18 @@ describe("JsonForm scalar fields", () => {
       defaultValues: {
         layout: { mode: "compact", columns: 2 },
       },
-    })
+    });
 
     expect(screen.getByLabelText("Layout").textContent).toContain(
-      JSON.stringify(compact)
-    )
+      JSON.stringify(compact),
+    );
 
-    await selectOption("Layout", JSON.stringify(detailed))
+    await selectOption("Layout", JSON.stringify(detailed));
 
     await expect(submit()).resolves.toEqual({
       layout: detailed,
-    })
-  })
+    });
+  });
 
   it("matches object-valued enum defaults regardless of object key order", async () => {
     renderJsonForm({
@@ -524,12 +532,12 @@ describe("JsonForm scalar fields", () => {
       defaultValues: {
         layout: { columns: 2, mode: "compact" },
       },
-    })
+    });
 
     expect(screen.getByLabelText("Layout").textContent).toContain(
-      '{"mode":"compact","columns":2}'
-    )
-  })
+      '{"mode":"compact","columns":2}',
+    );
+  });
 
   it("preserves property names that contain react-hook-form path separators", async () => {
     const { submit } = renderJsonForm({
@@ -556,30 +564,30 @@ describe("JsonForm scalar fields", () => {
         "invoice.number": "INV-1",
         vendor: { "tax.id": "EU-1" },
       },
-    })
+    });
 
     await waitFor(() =>
       expect(
-        (screen.getByLabelText("Invoice Number") as HTMLInputElement).value
-      ).toBe("INV-1")
-    )
+        (screen.getByLabelText("Invoice Number") as HTMLInputElement).value,
+      ).toBe("INV-1"),
+    );
     expect((screen.getByLabelText("Tax ID") as HTMLInputElement).value).toBe(
-      "EU-1"
-    )
+      "EU-1",
+    );
 
     fireEvent.change(screen.getByLabelText("Invoice Number"), {
       target: { value: "INV-2" },
-    })
+    });
     fireEvent.change(screen.getByLabelText("Tax ID"), {
       target: { value: "EU-2" },
-    })
+    });
 
     await expect(submit()).resolves.toEqual({
       "invoice.number": "INV-2",
       vendor: { "tax.id": "EU-2" },
-    })
-  })
-})
+    });
+  });
+});
 
 describe("JsonForm objects and refs", () => {
   it("lazy-mounts nested objects and expands them on demand", () => {
@@ -606,17 +614,17 @@ describe("JsonForm objects and refs", () => {
       defaultValues: {
         vendor: { name: "Retab", address: { street: "1 Main" } },
       },
-    })
+    });
 
-    expect(screen.getByLabelText("Vendor Name")).toBeTruthy()
-    expect(screen.queryByLabelText("Street")).toBeNull()
+    expect(screen.getByLabelText("Vendor Name")).toBeTruthy();
+    expect(screen.queryByLabelText("Street")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: /Address 1 field/ }))
+    fireEvent.click(screen.getByRole("button", { name: /Address 1 field/ }));
 
     expect((screen.getByLabelText("Street") as HTMLInputElement).value).toBe(
-      "1 Main"
-    )
-  })
+      "1 Main",
+    );
+  });
 
   it("renders existing additionalProperties entries and preserves their keys", async () => {
     const { submit } = renderJsonForm({
@@ -638,36 +646,36 @@ describe("JsonForm objects and refs", () => {
           "invoice.number": "INV-1",
         },
       },
-    })
+    });
 
     const disclosure = await screen.findByRole("button", {
       name: /Metadata 2 fields/,
-    })
+    });
     if (disclosure.getAttribute("aria-expanded") !== "true") {
-      fireEvent.click(disclosure)
+      fireEvent.click(disclosure);
     }
     await waitFor(() =>
-      expect(disclosure.getAttribute("aria-expanded")).toBe("true")
-    )
+      expect(disclosure.getAttribute("aria-expanded")).toBe("true"),
+    );
 
     expect((screen.getByLabelText("source") as HTMLInputElement).value).toBe(
-      "email"
-    )
+      "email",
+    );
     expect(
-      (screen.getByLabelText("invoice.number") as HTMLInputElement).value
-    ).toBe("INV-1")
+      (screen.getByLabelText("invoice.number") as HTMLInputElement).value,
+    ).toBe("INV-1");
 
     fireEvent.change(screen.getByLabelText("invoice.number"), {
       target: { value: "INV-2" },
-    })
+    });
 
     await expect(submit()).resolves.toEqual({
       metadata: {
         source: "email",
         "invoice.number": "INV-2",
       },
-    })
-  })
+    });
+  });
 
   it("renders root additionalProperties entries and preserves their keys", async () => {
     const { submit } = renderJsonForm({
@@ -681,35 +689,35 @@ describe("JsonForm objects and refs", () => {
         source: "email",
         "invoice.number": "INV-1",
       },
-    })
+    });
 
     expect((screen.getByLabelText("source") as HTMLInputElement).value).toBe(
-      "email"
-    )
+      "email",
+    );
     expect(
-      (screen.getByLabelText("invoice.number") as HTMLInputElement).value
-    ).toBe("INV-1")
+      (screen.getByLabelText("invoice.number") as HTMLInputElement).value,
+    ).toBe("INV-1");
 
     fireEvent.change(screen.getByLabelText("invoice.number"), {
       target: { value: "INV-2" },
-    })
+    });
 
     await expect(submit()).resolves.toEqual({
       source: "email",
       "invoice.number": "INV-2",
-    })
-  })
+    });
+  });
 
   it("preserves dirty encoded-key values when an inline schema is recreated", async () => {
-    const submissions: FormValues[] = []
+    const submissions: FormValues[] = [];
 
     function Harness() {
-      const [revision, setRevision] = React.useState(0)
+      const [revision, setRevision] = React.useState(0);
       const form = useForm<FormValues>({
         defaultValues: {
           "invoice.number": "INV-1",
         },
-      })
+      });
 
       return (
         <>
@@ -730,27 +738,27 @@ describe("JsonForm objects and refs", () => {
             <button type="submit">Submit</button>
           </JsonForm>
         </>
-      )
+      );
     }
 
-    render(<Harness />)
+    render(<Harness />);
 
     const input = (await screen.findByLabelText(
-      "invoice.number"
-    )) as HTMLInputElement
-    fireEvent.change(input, { target: { value: "INV-2" } })
-    fireEvent.click(screen.getByRole("button", { name: /Rerender/ }))
+      "invoice.number",
+    )) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "INV-2" } });
+    fireEvent.click(screen.getByRole("button", { name: /Rerender/ }));
 
     await waitFor(() =>
       expect(
-        (screen.getByLabelText("invoice.number") as HTMLInputElement).value
-      ).toBe("INV-2")
-    )
+        (screen.getByLabelText("invoice.number") as HTMLInputElement).value,
+      ).toBe("INV-2"),
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: "Submit" }))
-    await waitFor(() => expect(submissions).toHaveLength(1))
-    expect(submissions[0]).toEqual({ "invoice.number": "INV-2" })
-  })
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => expect(submissions).toHaveLength(1));
+    expect(submissions[0]).toEqual({ "invoice.number": "INV-2" });
+  });
 
   it("renders patternProperties entries with their matching schema", async () => {
     const { submit } = renderJsonForm({
@@ -773,30 +781,30 @@ describe("JsonForm objects and refs", () => {
           "flag.ready": false,
         },
       },
-    })
+    });
 
     const disclosure = await screen.findByRole("button", {
       name: /Metadata 2 fields/,
-    })
+    });
     if (disclosure.getAttribute("aria-expanded") !== "true") {
-      fireEvent.click(disclosure)
+      fireEvent.click(disclosure);
     }
     await waitFor(() =>
-      expect(disclosure.getAttribute("aria-expanded")).toBe("true")
-    )
+      expect(disclosure.getAttribute("aria-expanded")).toBe("true"),
+    );
 
     fireEvent.change(screen.getByLabelText("x_score"), {
       target: { value: "7" },
-    })
-    fireEvent.click(screen.getByRole("checkbox", { name: "flag.ready" }))
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: "flag.ready" }));
 
     await expect(submit()).resolves.toEqual({
       metadata: {
         x_score: 7,
         "flag.ready": true,
       },
-    })
-  })
+    });
+  });
 
   it("renders root patternProperties entries with escaped keys", async () => {
     const { submit } = renderJsonForm({
@@ -809,20 +817,20 @@ describe("JsonForm objects and refs", () => {
       defaultValues: {
         "extra.note": "old",
       },
-    })
+    });
 
     expect(
-      (screen.getByLabelText("extra.note") as HTMLInputElement).value
-    ).toBe("old")
+      (screen.getByLabelText("extra.note") as HTMLInputElement).value,
+    ).toBe("old");
 
     fireEvent.change(screen.getByLabelText("extra.note"), {
       target: { value: "new" },
-    })
+    });
 
     await expect(submit()).resolves.toEqual({
       "extra.note": "new",
-    })
-  })
+    });
+  });
 
   it("renders fields through $defs refs and submits edited ref values", async () => {
     const { submit } = renderJsonForm({
@@ -843,19 +851,19 @@ describe("JsonForm objects and refs", () => {
         },
       },
       defaultValues: { total: { amount: 5, currency: "USD" } },
-    })
+    });
 
     fireEvent.change(screen.getByLabelText("Amount"), {
       target: { value: "9.25" },
-    })
+    });
     fireEvent.change(screen.getByLabelText("Currency"), {
       target: { value: "EUR" },
-    })
+    });
 
     await expect(submit()).resolves.toEqual({
       total: { amount: 9.25, currency: "EUR" },
-    })
-  })
+    });
+  });
 
   it("uses referenced array item schemas for table rendering", async () => {
     const { submit } = renderJsonForm({
@@ -879,22 +887,24 @@ describe("JsonForm objects and refs", () => {
         },
       },
       defaultValues: { rows: [{ code: "A", count: 1 }] },
-    })
+    });
 
-    expect(screen.getByText("Code")).toBeTruthy()
-    fireEvent.click(getTableDataCell("Code A"))
+    expect(screen.getByText("Code")).toBeTruthy();
+    fireEvent.click(getTableDataCell("Code A"));
     fireEvent.change(screen.getByDisplayValue("A"), {
       target: { value: "B" },
-    })
+    });
 
-    await expect(submit()).resolves.toEqual({ rows: [{ code: "B", count: 1 }] })
-  })
+    await expect(submit()).resolves.toEqual({
+      rows: [{ code: "B", count: 1 }],
+    });
+  });
 
   it("normalizes standalone JsonFormField composition schemas", () => {
     function Harness() {
       const form = useForm<FormValues>({
         defaultValues: { total: { amount: 5, currency: "USD" } },
-      })
+      });
       return (
         <Form {...form}>
           <JsonFormField
@@ -916,19 +926,19 @@ describe("JsonForm objects and refs", () => {
             }}
           />
         </Form>
-      )
+      );
     }
 
-    render(<Harness />)
+    render(<Harness />);
 
     expect((screen.getByLabelText("Amount") as HTMLInputElement).value).toBe(
-      "5"
-    )
+      "5",
+    );
     expect((screen.getByLabelText("Currency") as HTMLInputElement).value).toBe(
-      "USD"
-    )
-  })
-})
+      "USD",
+    );
+  });
+});
 
 describe("JsonForm arrays", () => {
   it("edits, adds, and removes rows in scalar-object table mode", async () => {
@@ -957,43 +967,43 @@ describe("JsonForm arrays", () => {
           { description: "Service", quantity: 1, taxable: false },
         ],
       },
-    })
+    });
 
-    expect(screen.getByText("Description")).toBeTruthy()
-    expect(screen.getByText("Quantity")).toBeTruthy()
-    expect(screen.getByText("Taxable")).toBeTruthy()
+    expect(screen.getByText("Description")).toBeTruthy();
+    expect(screen.getByText("Quantity")).toBeTruthy();
+    expect(screen.getByText("Taxable")).toBeTruthy();
 
-    const descriptionCell = getTableDataCell("Description Widget")
-    fireEvent.mouseEnter(descriptionCell)
-    expect(screen.queryByDisplayValue("Widget")).toBeNull()
-    fireEvent.click(descriptionCell)
+    const descriptionCell = getTableDataCell("Description Widget");
+    fireEvent.mouseEnter(descriptionCell);
+    expect(screen.queryByDisplayValue("Widget")).toBeNull();
+    fireEvent.click(descriptionCell);
     fireEvent.change(screen.getByDisplayValue("Widget"), {
       target: { value: "Hardware" },
-    })
-    const quantityCell = getTableDataCell("Quantity 2")
-    fireEvent.mouseEnter(quantityCell)
-    expect(screen.queryByRole("spinbutton")).toBeNull()
-    fireEvent.click(quantityCell)
-    const quantityInput = screen.getByDisplayValue("2")
-    expect(quantityInput.getAttribute("data-slot")).toBe("data-cell")
+    });
+    const quantityCell = getTableDataCell("Quantity 2");
+    fireEvent.mouseEnter(quantityCell);
+    expect(screen.queryByRole("spinbutton")).toBeNull();
+    fireEvent.click(quantityCell);
+    const quantityInput = screen.getByDisplayValue("2");
+    expect(quantityInput.getAttribute("data-slot")).toBe("data-cell");
     fireEvent.change(quantityInput, {
       target: { value: "3" },
-    })
-    fireEvent.click(getTableDataCell("Taxable False"))
-    fireEvent.click(screen.getByRole("checkbox", { name: "Taxable False" }))
-    fireEvent.click(screen.getAllByRole("button", { name: "Remove row" })[1])
+    });
+    fireEvent.click(getTableDataCell("Taxable False"));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Taxable False" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Remove row" })[1]);
     await waitFor(() =>
-      expect(queryTableDataCell("Description Service")).toBeNull()
-    )
-    fireEvent.click(screen.getByRole("button", { name: "Add" }))
+      expect(queryTableDataCell("Description Service")).toBeNull(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     await expect(submit()).resolves.toEqual({
       line_items: [
         { description: "Hardware", quantity: 3, taxable: true },
         { description: "", taxable: false },
       ],
-    })
-  })
+    });
+  });
 
   it("uses card mode for primitive arrays and preserves primitive values", async () => {
     const { submit } = renderJsonForm({
@@ -1008,19 +1018,19 @@ describe("JsonForm arrays", () => {
         },
       },
       defaultValues: { tags: ["alpha", "beta"] },
-    })
+    });
 
     fireEvent.change(screen.getByLabelText("Tags 1"), {
       target: { value: "first" },
-    })
-    fireEvent.click(screen.getAllByRole("button", { name: "Remove item" })[1])
-    fireEvent.click(screen.getByRole("button", { name: "Add" }))
+    });
+    fireEvent.click(screen.getAllByRole("button", { name: "Remove item" })[1]);
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
     fireEvent.change(screen.getByLabelText("Tags 2"), {
       target: { value: "second" },
-    })
+    });
 
-    await expect(submit()).resolves.toEqual({ tags: ["first", "second"] })
-  })
+    await expect(submit()).resolves.toEqual({ tags: ["first", "second"] });
+  });
 
   it("renders falsy primitive array items instead of compacting them away", async () => {
     const { submit } = renderJsonForm({
@@ -1035,16 +1045,16 @@ describe("JsonForm arrays", () => {
         },
       },
       defaultValues: { flags: [false, true] },
-    })
+    });
 
-    expect(screen.getByRole("button", { name: /Flags 2 items/ })).toBeTruthy()
-    expect(screen.getAllByRole("checkbox")).toHaveLength(2)
+    expect(screen.getByRole("button", { name: /Flags 2 items/ })).toBeTruthy();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(2);
 
-    fireEvent.click(screen.getAllByRole("checkbox")[0])
-    fireEvent.click(screen.getAllByRole("checkbox")[1])
+    fireEvent.click(screen.getAllByRole("checkbox")[0]);
+    fireEvent.click(screen.getAllByRole("checkbox")[1]);
 
-    await expect(submit()).resolves.toEqual({ flags: [true, false] })
-  })
+    await expect(submit()).resolves.toEqual({ flags: [true, false] });
+  });
 
   it("uses per-index schemas for tuple arrays", async () => {
     const { submit } = renderJsonForm({
@@ -1065,20 +1075,20 @@ describe("JsonForm arrays", () => {
       defaultValues: {
         tuple: ["fee", 1.5, false],
       },
-    })
+    });
 
     fireEvent.change(screen.getByLabelText("Tuple 1"), {
       target: { value: "service" },
-    })
+    });
     fireEvent.change(screen.getByLabelText("Tuple 2"), {
       target: { value: "2.25" },
-    })
-    fireEvent.click(screen.getByRole("checkbox", { name: "Tuple 3" }))
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Tuple 3" }));
 
     await expect(submit()).resolves.toEqual({
       tuple: ["service", 2.25, true],
-    })
-  })
+    });
+  });
 
   it("uses the next tuple schema when appending tuple items", async () => {
     const { submit } = renderJsonForm({
@@ -1096,17 +1106,17 @@ describe("JsonForm arrays", () => {
       defaultValues: {
         tuple: ["fee"],
       },
-    })
+    });
 
-    fireEvent.click(screen.getByRole("button", { name: "Add" }))
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
     fireEvent.change(screen.getByLabelText("Tuple 2"), {
       target: { value: "4.5" },
-    })
+    });
 
     await expect(submit()).resolves.toEqual({
       tuple: ["fee", 4.5],
-    })
-  })
+    });
+  });
 
   it("starts long arrays collapsed and opens them when adding an item", () => {
     renderJsonForm({
@@ -1123,26 +1133,26 @@ describe("JsonForm arrays", () => {
       defaultValues: {
         tags: Array.from({ length: 9 }, (_, index) => `tag-${index + 1}`),
       },
-    })
+    });
 
-    expect(screen.queryByLabelText("Tags 1")).toBeNull()
+    expect(screen.queryByLabelText("Tags 1")).toBeNull();
     expect(
       screen
         .getByRole("button", { name: /Tags 9 items/ })
-        .getAttribute("aria-expanded")
-    ).toBe("false")
+        .getAttribute("aria-expanded"),
+    ).toBe("false");
 
-    fireEvent.click(screen.getByRole("button", { name: "Add" }))
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     expect(
       screen
         .getByRole("button", { name: /Tags 10 items/ })
-        .getAttribute("aria-expanded")
-    ).toBe("true")
+        .getAttribute("aria-expanded"),
+    ).toBe("true");
     expect((screen.getByLabelText("Tags 10") as HTMLInputElement).value).toBe(
-      ""
-    )
-  })
+      "",
+    );
+  });
 
   it("opens configured long arrays on first render", () => {
     renderJsonForm({
@@ -1167,15 +1177,15 @@ describe("JsonForm arrays", () => {
         })),
       },
       defaultOpenPaths: ["transactions"],
-    })
+    });
 
     expect(
       screen
         .getByRole("button", { name: /Transactions 9 items/ })
-        .getAttribute("aria-expanded")
-    ).toBe("true")
-    expect(getTableDataCell("Date 2003-06-01")).toBeTruthy()
-  })
+        .getAttribute("aria-expanded"),
+    ).toBe("true");
+    expect(getTableDataCell("Date 2003-06-01")).toBeTruthy();
+  });
 
   it("shows an empty array state and appends the correct empty object", async () => {
     const { submit } = renderJsonForm({
@@ -1195,18 +1205,18 @@ describe("JsonForm arrays", () => {
         },
       },
       defaultValues: { contacts: [] },
-    })
+    });
 
-    expect(screen.getByText("No items.")).toBeTruthy()
+    expect(screen.getByText("No items.")).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Add" }))
-    fireEvent.click(getTableDataCell("Name —"))
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.click(getTableDataCell("Name —"));
     fireEvent.change(screen.getByDisplayValue(""), {
       target: { value: "Ada" },
-    })
+    });
 
-    await expect(submit()).resolves.toEqual({ contacts: [{ name: "Ada" }] })
-  })
+    await expect(submit()).resolves.toEqual({ contacts: [{ name: "Ada" }] });
+  });
 
   it("materializes missing optional arrays on first add", async () => {
     const { submit } = renderJsonForm({
@@ -1220,17 +1230,17 @@ describe("JsonForm arrays", () => {
           },
         },
       },
-    })
+    });
 
-    expect(screen.getByText("No items.")).toBeTruthy()
+    expect(screen.getByText("No items.")).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Add" }))
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
     fireEvent.change(screen.getByLabelText("Tags 1"), {
       target: { value: "first" },
-    })
+    });
 
-    await expect(submit()).resolves.toEqual({ tags: ["first"] })
-  })
+    await expect(submit()).resolves.toEqual({ tags: ["first"] });
+  });
 
   it("disables adding array items after maxItems is reached", async () => {
     const { submit } = renderJsonForm({
@@ -1246,14 +1256,14 @@ describe("JsonForm arrays", () => {
         },
       },
       defaultValues: { tags: ["first"] },
-    })
+    });
 
-    const addButton = screen.getByRole("button", { name: "Add" })
-    expect((addButton as HTMLButtonElement).disabled).toBe(true)
-    fireEvent.click(addButton)
+    const addButton = screen.getByRole("button", { name: "Add" });
+    expect((addButton as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(addButton);
 
-    await expect(submit()).resolves.toEqual({ tags: ["first"] })
-  })
+    await expect(submit()).resolves.toEqual({ tags: ["first"] });
+  });
 
   it("disables adding tuple items when additionalItems is false", async () => {
     const { submit } = renderJsonForm({
@@ -1274,16 +1284,16 @@ describe("JsonForm arrays", () => {
       defaultValues: {
         tuple: ["fee", 1.5],
       },
-    })
+    });
 
-    const addButton = screen.getByRole("button", { name: "Add" })
-    expect((addButton as HTMLButtonElement).disabled).toBe(true)
-    fireEvent.click(addButton)
+    const addButton = screen.getByRole("button", { name: "Add" });
+    expect((addButton as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(addButton);
 
     await expect(submit()).resolves.toEqual({
       tuple: ["fee", 1.5],
-    })
-  })
+    });
+  });
 
   it("disables removing array items at minItems", async () => {
     const { submit } = renderJsonForm({
@@ -1299,14 +1309,14 @@ describe("JsonForm arrays", () => {
         },
       },
       defaultValues: { tags: ["required"] },
-    })
+    });
 
-    const removeButton = screen.getByRole("button", { name: "Remove item" })
-    expect((removeButton as HTMLButtonElement).disabled).toBe(true)
-    fireEvent.click(removeButton)
+    const removeButton = screen.getByRole("button", { name: "Remove item" });
+    expect((removeButton as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(removeButton);
 
-    await expect(submit()).resolves.toEqual({ tags: ["required"] })
-  })
+    await expect(submit()).resolves.toEqual({ tags: ["required"] });
+  });
 
   it("removes the first table row, shifts values, and appends without stale child values", async () => {
     const { submit } = renderJsonForm({
@@ -1332,18 +1342,18 @@ describe("JsonForm arrays", () => {
           { code: "B", count: 2 },
         ],
       },
-    })
+    });
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Remove row" })[0])
+    fireEvent.click(screen.getAllByRole("button", { name: "Remove row" })[0]);
     await waitFor(() =>
-      expect(screen.queryByRole("button", { name: "Code A" })).toBeNull()
-    )
-    fireEvent.click(screen.getByRole("button", { name: "Add" }))
+      expect(screen.queryByRole("button", { name: "Code A" })).toBeNull(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     await expect(submit()).resolves.toEqual({
       rows: [{ code: "B", count: 2 }, { code: "" }],
-    })
-  })
+    });
+  });
 
   it("preserves typed enum values in table cells", async () => {
     const { submit } = renderJsonForm({
@@ -1370,56 +1380,56 @@ describe("JsonForm arrays", () => {
       defaultValues: {
         rows: [{ score: 1, accepted: true }],
       },
-    })
+    });
 
-    fireEvent.click(screen.getByRole("button", { name: "Score 1" }))
-    let trigger = screen.getByRole("combobox")
-    fireEvent.focus(trigger)
-    fireEvent.keyDown(trigger, { key: "ArrowDown" })
-    const scoreContent = await screen.findByRole("listbox")
-    const scoreOption = await within(scoreContent).findByText("3")
+    fireEvent.click(screen.getByRole("button", { name: "Score 1" }));
+    let trigger = screen.getByRole("combobox");
+    fireEvent.focus(trigger);
+    fireEvent.keyDown(trigger, { key: "ArrowDown" });
+    const scoreContent = await screen.findByRole("listbox");
+    const scoreOption = await within(scoreContent).findByText("3");
     const scoreOptionItem = scoreOption.closest<HTMLElement>(
-      '[data-slot="select-item"]'
-    )
-    expect(scoreOptionItem).toBeTruthy()
-    fireEvent.pointerEnter(scoreOptionItem!, { pointerType: "mouse" })
-    fireEvent.mouseMove(scoreOptionItem!)
+      '[data-slot="select-item"]',
+    );
+    expect(scoreOptionItem).toBeTruthy();
+    fireEvent.pointerEnter(scoreOptionItem!, { pointerType: "mouse" });
+    fireEvent.mouseMove(scoreOptionItem!);
     fireEvent.pointerDown(scoreOptionItem!, {
       button: 0,
       ctrlKey: false,
-    })
+    });
     fireEvent.pointerUp(scoreOptionItem!, {
       button: 0,
       ctrlKey: false,
-    })
-    fireEvent.click(scoreOptionItem!)
+    });
+    fireEvent.click(scoreOptionItem!);
 
-    fireEvent.click(screen.getByRole("button", { name: "Accepted true" }))
-    trigger = screen.getByRole("combobox")
-    fireEvent.focus(trigger)
-    fireEvent.keyDown(trigger, { key: "ArrowDown" })
-    const acceptedContent = await screen.findByRole("listbox")
-    const acceptedOption = await within(acceptedContent).findByText("false")
+    fireEvent.click(screen.getByRole("button", { name: "Accepted true" }));
+    trigger = screen.getByRole("combobox");
+    fireEvent.focus(trigger);
+    fireEvent.keyDown(trigger, { key: "ArrowDown" });
+    const acceptedContent = await screen.findByRole("listbox");
+    const acceptedOption = await within(acceptedContent).findByText("false");
     const acceptedOptionItem = acceptedOption.closest<HTMLElement>(
-      '[data-slot="select-item"]'
-    )
-    expect(acceptedOptionItem).toBeTruthy()
-    fireEvent.pointerEnter(acceptedOptionItem!, { pointerType: "mouse" })
-    fireEvent.mouseMove(acceptedOptionItem!)
+      '[data-slot="select-item"]',
+    );
+    expect(acceptedOptionItem).toBeTruthy();
+    fireEvent.pointerEnter(acceptedOptionItem!, { pointerType: "mouse" });
+    fireEvent.mouseMove(acceptedOptionItem!);
     fireEvent.pointerDown(acceptedOptionItem!, {
       button: 0,
       ctrlKey: false,
-    })
+    });
     fireEvent.pointerUp(acceptedOptionItem!, {
       button: 0,
       ctrlKey: false,
-    })
-    fireEvent.click(acceptedOptionItem!)
+    });
+    fireEvent.click(acceptedOptionItem!);
 
     await expect(submit()).resolves.toEqual({
       rows: [{ score: 3, accepted: false }],
-    })
-  })
+    });
+  });
 
   it("preserves table-row property names that contain dots", async () => {
     const { submit } = renderJsonForm({
@@ -1444,20 +1454,20 @@ describe("JsonForm arrays", () => {
       defaultValues: {
         rows: [{ "unit.price": 1.5 }],
       },
-    })
+    });
 
-    const displayCell = getTableDataCell("Unit Price 1.5")
-    fireEvent.click(displayCell)
-    const input = screen.getByDisplayValue("1.5") as HTMLInputElement
-    expect(input.type).toBe("number")
+    const displayCell = getTableDataCell("Unit Price 1.5");
+    fireEvent.click(displayCell);
+    const input = screen.getByDisplayValue("1.5") as HTMLInputElement;
+    expect(input.type).toBe("number");
     fireEvent.change(input, {
       target: { value: "2.25" },
-    })
+    });
 
     await expect(submit()).resolves.toEqual({
       rows: [{ "unit.price": 2.25 }],
-    })
-  })
+    });
+  });
 
   it("renders additionalProperties entries inside array object items", async () => {
     const { submit } = renderJsonForm({
@@ -1477,21 +1487,21 @@ describe("JsonForm arrays", () => {
       defaultValues: {
         rows: [{ "extra.key": "A" }],
       },
-    })
+    });
 
-    fireEvent.click(screen.getByRole("button", { name: /Rows 1 1 field/ }))
+    fireEvent.click(screen.getByRole("button", { name: /Rows 1 1 field/ }));
     expect((screen.getByLabelText("extra.key") as HTMLInputElement).value).toBe(
-      "A"
-    )
+      "A",
+    );
 
     fireEvent.change(screen.getByLabelText("extra.key"), {
       target: { value: "B" },
-    })
+    });
 
     await expect(submit()).resolves.toEqual({
       rows: [{ "extra.key": "B" }],
-    })
-  })
+    });
+  });
 
   it("uses card mode for array object items with declared and dynamic properties", async () => {
     const { submit } = renderJsonForm({
@@ -1516,26 +1526,26 @@ describe("JsonForm arrays", () => {
       defaultValues: {
         rows: [{ name: "Ada", "extra.score": 3 }],
       },
-    })
+    });
 
-    expect(screen.queryByRole("button", { name: "Name Ada" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Name Ada" })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: /Rows 1 2 fields/ }))
+    fireEvent.click(screen.getByRole("button", { name: /Rows 1 2 fields/ }));
     expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe(
-      "Ada"
-    )
+      "Ada",
+    );
     expect(
-      (screen.getByLabelText("extra.score") as HTMLInputElement).value
-    ).toBe("3")
+      (screen.getByLabelText("extra.score") as HTMLInputElement).value,
+    ).toBe("3");
 
     fireEvent.change(screen.getByLabelText("extra.score"), {
       target: { value: "4" },
-    })
+    });
 
     await expect(submit()).resolves.toEqual({
       rows: [{ name: "Ada", "extra.score": 4 }],
-    })
-  })
+    });
+  });
 
   it("removes and appends card-mode object rows without resurrecting nested values", async () => {
     const { submit } = renderJsonForm({
@@ -1567,19 +1577,19 @@ describe("JsonForm arrays", () => {
           { name: "Second", details: { note: "B" } },
         ],
       },
-    })
+    });
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Remove item" })[0])
-    await waitFor(() => expect(screen.queryByText("Entries 2")).toBeNull())
-    fireEvent.click(screen.getByRole("button", { name: "Add" }))
+    fireEvent.click(screen.getAllByRole("button", { name: "Remove item" })[0]);
+    await waitFor(() => expect(screen.queryByText("Entries 2")).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     await expect(submit()).resolves.toEqual({
       entries: [
         { name: "Second", details: { note: "B" } },
         { name: "", details: {} },
       ],
-    })
-  })
+    });
+  });
 
   it("appends null for nullable primitive array items", async () => {
     const { submit } = renderJsonForm({
@@ -1594,18 +1604,18 @@ describe("JsonForm arrays", () => {
         },
       },
       defaultValues: { aliases: [] },
-    })
+    });
 
-    fireEvent.click(screen.getByRole("button", { name: "Add" }))
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
-    await expect(submit()).resolves.toEqual({ aliases: [null] })
-  })
-})
+    await expect(submit()).resolves.toEqual({ aliases: [null] });
+  });
+});
 
 describe("JsonForm source linking", () => {
   it("reports scalar hover, focus, blur, and selection by field path", () => {
-    const onSourceHover = vi.fn()
-    const selectSourcePath = vi.fn()
+    const onSourceHover = vi.fn();
+    const selectSourcePath = vi.fn();
     renderJsonForm({
       schema: {
         type: "object",
@@ -1619,24 +1629,24 @@ describe("JsonForm source linking", () => {
         onSourceHover,
         selectSourcePath,
       },
-    })
+    });
 
-    const input = screen.getByLabelText("Customer Name")
-    const shell = findAncestorWithClass(input, "bg-primary/5")
-    expect(shell.className).toContain("bg-primary/5")
+    const input = screen.getByLabelText("Customer Name");
+    const shell = findAncestorWithClass(input, "bg-primary/5");
+    expect(shell.className).toContain("bg-primary/5");
 
-    fireEvent.focus(input)
-    fireEvent.blur(input)
-    fireEvent.click(input)
+    fireEvent.focus(input);
+    fireEvent.blur(input);
+    fireEvent.click(input);
 
-    expect(onSourceHover).toHaveBeenCalledWith("customer_name")
-    expect(onSourceHover).toHaveBeenCalledWith(null)
-    expect(selectSourcePath).toHaveBeenCalledWith("customer_name")
-  })
+    expect(onSourceHover).toHaveBeenCalledWith("customer_name");
+    expect(onSourceHover).toHaveBeenCalledWith(null);
+    expect(selectSourcePath).toHaveBeenCalledWith("customer_name");
+  });
 
   it("selects a focused source-linked scalar field from the keyboard", () => {
-    const onSourceHover = vi.fn()
-    const selectSourcePath = vi.fn()
+    const onSourceHover = vi.fn();
+    const selectSourcePath = vi.fn();
     renderJsonForm({
       schema: {
         type: "object",
@@ -1650,20 +1660,20 @@ describe("JsonForm source linking", () => {
         onSourceHover,
         selectSourcePath,
       },
-    })
+    });
 
-    const input = screen.getByLabelText("Customer Name")
-    fireEvent.focus(input)
-    fireEvent.keyDown(input, { key: "Enter" })
-    fireEvent.keyDown(input, { key: " " })
+    const input = screen.getByLabelText("Customer Name");
+    fireEvent.focus(input);
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.keyDown(input, { key: " " });
 
-    expect(selectSourcePath).toHaveBeenCalledTimes(1)
-    expect(selectSourcePath).toHaveBeenCalledWith("customer_name")
-  })
+    expect(selectSourcePath).toHaveBeenCalledTimes(1);
+    expect(selectSourcePath).toHaveBeenCalledWith("customer_name");
+  });
 
   it("reports table-cell source paths", () => {
-    const onSourceHover = vi.fn()
-    const selectSourcePath = vi.fn()
+    const onSourceHover = vi.fn();
+    const selectSourcePath = vi.fn();
     renderJsonForm({
       schema: {
         type: "object",
@@ -1686,24 +1696,24 @@ describe("JsonForm source linking", () => {
         onSourceHover,
         selectSourcePath,
       },
-    })
+    });
 
-    const cell = getTableDataCell("Value A")
-    expect(cell).toBeTruthy()
+    const cell = getTableDataCell("Value A");
+    expect(cell).toBeTruthy();
 
-    fireEvent.focus(cell)
-    expect(cell.getAttribute("data-source-active")).toBe("true")
-    fireEvent.blur(cell)
-    fireEvent.click(cell)
+    fireEvent.focus(cell);
+    expect(cell.getAttribute("data-source-active")).toBe("true");
+    fireEvent.blur(cell);
+    fireEvent.click(cell);
 
-    expect(onSourceHover).toHaveBeenCalledWith("rows.0.value")
-    expect(onSourceHover).toHaveBeenCalledWith(null)
-    expect(selectSourcePath).toHaveBeenCalledWith("rows.0.value")
-  })
+    expect(onSourceHover).toHaveBeenCalledWith("rows.0.value");
+    expect(onSourceHover).toHaveBeenCalledWith(null);
+    expect(selectSourcePath).toHaveBeenCalledWith("rows.0.value");
+  });
 
   it("keeps source-linked table cells in display mode on hover", async () => {
-    const onSourceHover = vi.fn()
-    const selectSourcePath = vi.fn()
+    const onSourceHover = vi.fn();
+    const selectSourcePath = vi.fn();
     renderJsonForm({
       schema: {
         type: "object",
@@ -1726,32 +1736,32 @@ describe("JsonForm source linking", () => {
         onSourceHover,
         selectSourcePath,
       },
-    })
+    });
 
-    const cell = getTableDataCell("Amount 1875.24")
-    fireEvent.pointerMove(cell)
+    const cell = getTableDataCell("Amount 1875.24");
+    fireEvent.pointerMove(cell);
 
-    expect(cell.getAttribute("data-mode")).toBe("display")
-    expect(screen.queryByRole("spinbutton")).toBeNull()
+    expect(cell.getAttribute("data-mode")).toBe("display");
+    expect(screen.queryByRole("spinbutton")).toBeNull();
     await waitFor(() =>
-      expect(onSourceHover).toHaveBeenCalledWith("rows.0.amount")
-    )
+      expect(onSourceHover).toHaveBeenCalledWith("rows.0.amount"),
+    );
 
-    fireEvent.click(cell)
+    fireEvent.click(cell);
 
-    const input = screen.getByRole("spinbutton", { name: "Amount 1875.24" })
-    expect((input as HTMLInputElement).type).toBe("number")
-    expect(input.getAttribute("data-slot")).toBe("data-cell")
-    expect(selectSourcePath).toHaveBeenCalledWith("rows.0.amount")
-  })
-})
+    const input = screen.getByRole("spinbutton", { name: "Amount 1875.24" });
+    expect((input as HTMLInputElement).type).toBe("number");
+    expect(input.getAttribute("data-slot")).toBe("data-cell");
+    expect(selectSourcePath).toHaveBeenCalledWith("rows.0.amount");
+  });
+});
 
 describe("JsonForm accessibility", () => {
   it("associates validation messages with invalid controls", async () => {
     function Harness() {
       const form = useForm<FormValues>({
         defaultValues: { name: "" },
-      })
+      });
       return (
         <JsonForm
           form={form}
@@ -1771,17 +1781,17 @@ describe("JsonForm accessibility", () => {
             Mark invalid
           </button>
         </JsonForm>
-      )
+      );
     }
 
-    render(<Harness />)
-    fireEvent.click(screen.getByRole("button", { name: "Mark invalid" }))
+    render(<Harness />);
+    fireEvent.click(screen.getByRole("button", { name: "Mark invalid" }));
 
-    await waitFor(() => expect(screen.getByText("Required")).toBeTruthy())
+    await waitFor(() => expect(screen.getByText("Required")).toBeTruthy());
     expect(screen.getByLabelText("Name").getAttribute("aria-invalid")).toBe(
-      "true"
-    )
-  })
+      "true",
+    );
+  });
 
   it("keeps table headers readable when labels have descriptions", () => {
     renderJsonForm({
@@ -1805,10 +1815,10 @@ describe("JsonForm accessibility", () => {
         },
       },
       defaultValues: { rows: [{ value: "A" }] },
-    })
+    });
 
-    const table = screen.getByText("Value").closest(".overflow-x-auto")
-    expect(table).toBeTruthy()
-    expect(within(table as HTMLElement).getByText("Value")).toBeTruthy()
-  })
-})
+    const table = screen.getByText("Value").closest(".overflow-x-auto");
+    expect(table).toBeTruthy();
+    expect(within(table as HTMLElement).getByText("Value")).toBeTruthy();
+  });
+});

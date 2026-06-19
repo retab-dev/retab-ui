@@ -1,32 +1,32 @@
-"use client"
+"use client";
 
-import type { ViewerResource } from "@/lib/viewer-resource"
-import type { ViewerDescriptor } from "@/lib/viewer-source"
+import type { ViewerResource } from "@/lib/viewer-resource";
+import type { ViewerDescriptor } from "@/lib/viewer-source";
 import {
   FileThumbnailFrame,
   type FileThumbnailFrameProps,
-} from "@/components/ui/file-thumbnail-frame"
+} from "@/components/ui/file-thumbnail-frame";
 
-import { isTiffDescriptor } from "./descriptor"
+import { isTiffDescriptor } from "./descriptor";
 import {
   createThumbnailErrorState,
   type ThumbnailErrorState,
-} from "./thumbnail-error-state"
-import { createThumbnailImageLoadError } from "./thumbnail-errors"
-import { ANCHOR_OBJECT_POSITION, type ThumbnailAnchor } from "./types"
+} from "./thumbnail-error-state";
+import { createThumbnailImageLoadError } from "./thumbnail-errors";
+import { ANCHOR_OBJECT_POSITION, type ThumbnailAnchor } from "./types";
 
 export function isDirectImageThumbnail({
   descriptor,
   directUrl,
 }: {
-  descriptor: ViewerDescriptor
-  directUrl?: string | null
+  descriptor: ViewerDescriptor;
+  directUrl?: string | null;
 }): boolean {
   return (
     descriptor.category === "image" &&
     !isTiffDescriptor(descriptor) &&
     Boolean(directUrl)
-  )
+  );
 }
 
 export function DirectImageThumbnail({
@@ -41,19 +41,19 @@ export function DirectImageThumbnail({
   thumbnailProps,
   onError,
 }: {
-  descriptor: ViewerDescriptor
-  resource: ViewerResource
-  directUrl: string
-  previewAspectRatio?: number
-  className?: string
-  anchor: ThumbnailAnchor
-  renderKey: string
-  errorState: ThumbnailErrorState | null
-  thumbnailProps?: Omit<FileThumbnailFrameProps, "file" | "onError">
-  onError?: (error: unknown, errorState: ThumbnailErrorState) => void
+  descriptor: ViewerDescriptor;
+  resource: ViewerResource;
+  directUrl: string;
+  previewAspectRatio?: number;
+  className?: string;
+  anchor: ThumbnailAnchor;
+  renderKey: string;
+  errorState: ThumbnailErrorState | null;
+  thumbnailProps?: Omit<FileThumbnailFrameProps, "file" | "onError">;
+  onError?: (error: unknown, errorState: ThumbnailErrorState) => void;
 }) {
   const failedDirectImage =
-    errorState?.info.format === "image" ? errorState : null
+    errorState?.info.format === "image" ? errorState : null;
 
   return (
     <FileThumbnailFrame
@@ -71,15 +71,15 @@ export function DirectImageThumbnail({
       data-error-kind={failedDirectImage?.info.kind}
       data-error-message={failedDirectImage?.info.message}
       onPreviewError={() => {
-        const error = createThumbnailImageLoadError()
+        const error = createThumbnailImageLoadError();
         const nextErrorState = createThumbnailErrorState({
           renderKey,
           error,
           resource,
           descriptor,
-        })
-        onError?.(error, nextErrorState)
+        });
+        onError?.(error, nextErrorState);
       }}
     />
-  )
+  );
 }

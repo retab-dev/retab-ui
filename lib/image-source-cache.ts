@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/lib/image-source-cache"
+export * from "@/registry/new-york-v4/lib/image-source-cache";

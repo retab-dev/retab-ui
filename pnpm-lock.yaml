@@ -25,6 +25,9 @@ importers:
       "@hookform/resolvers":
         specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.78.0(react@19.2.3))
+      "@kenjiuno/msgreader":
+        specifier: ^1.28.0
+        version: 1.28.0
       "@pierre/diffs":
         specifier: 1.2.7
         version: 1.2.7(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -1893,6 +1896,19 @@ packages:
       {
         integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==,
       }
+
+  "@kenjiuno/decompressrtf@0.1.4":
+    resolution:
+      {
+        integrity: sha512-v9c/iFz17jRWyd2cRnrvJg4VOg/4I/VCk+bG8JnoX2gJ9sAesPzo3uTqcmlVXdpasTI8hChpBVw00pghKe3qTQ==,
+      }
+
+  "@kenjiuno/msgreader@1.28.0":
+    resolution:
+      {
+        integrity: sha512-+iv2rWCGRHmX/3sBwXZzkThEuuywGJjnYsvxj6Kp1L/FDMICQcFrtqN+6MFrnh2d+umtfGtX904wxaYEDZ52MQ==,
+      }
+    engines: { node: ">= 10" }
 
   "@kurkle/color@0.3.4":
     resolution:
@@ -11205,6 +11221,13 @@ snapshots:
     dependencies:
       "@jridgewell/resolve-uri": 3.1.2
       "@jridgewell/sourcemap-codec": 1.5.5
+
+  "@kenjiuno/decompressrtf@0.1.4": {}
+
+  "@kenjiuno/msgreader@1.28.0":
+    dependencies:
+      "@kenjiuno/decompressrtf": 0.1.4
+      iconv-lite: 0.6.3
 
   "@kurkle/color@0.3.4": {}
 

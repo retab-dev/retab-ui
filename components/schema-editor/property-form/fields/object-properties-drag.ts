@@ -1,25 +1,25 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
 import {
   beginSchemaRowDrag,
   leaveSchemaRowDragTarget,
   resolveSchemaRowDrop,
   updateSchemaRowDragTarget,
-} from "@/components/schema-editor/primitives/schema-row-drag"
+} from "@/components/schema-editor/primitives/schema-row-drag";
 
-import type { ObjectPropertyRowModel } from "@/components/schema-editor/property-form/model/object-properties-view"
+import type { ObjectPropertyRowModel } from "@/components/schema-editor/property-form/model/object-properties-view";
 
 export function useObjectPropertiesRowDrag({
   rows,
   editable,
 }: {
-  rows: ObjectPropertyRowModel[]
-  editable: boolean
+  rows: ObjectPropertyRowModel[];
+  editable: boolean;
 }) {
-  const draggedRowIdRef = React.useRef<string | null>(null)
-  const rowIds = rows.map((row) => row.id)
+  const draggedRowIdRef = React.useRef<string | null>(null);
+  const rowIds = rows.map((row) => row.id);
 
   const getRowDragProps = (row: ObjectPropertyRowModel) => {
     if (!editable) {
@@ -29,7 +29,7 @@ export function useObjectPropertiesRowDrag({
         onDragOver: noopDragHandler,
         onDragLeave: noopDragHandler,
         onDrop: noopDragHandler,
-      }
+      };
     }
 
     return {
@@ -42,7 +42,7 @@ export function useObjectPropertiesRowDrag({
             label: row.name,
           },
           draggedRowIdRef,
-        })
+        });
       },
       onDragOver: (event: React.DragEvent<HTMLDivElement>) => {
         updateSchemaRowDragTarget({
@@ -50,7 +50,7 @@ export function useObjectPropertiesRowDrag({
           rowIds,
           targetRowId: row.id,
           draggedRowIdRef,
-        })
+        });
       },
       onDragLeave: leaveSchemaRowDragTarget,
       onDrop: (event: React.DragEvent<HTMLDivElement>) => {
@@ -59,21 +59,21 @@ export function useObjectPropertiesRowDrag({
           rowIds,
           targetRowId: row.id,
           draggedRowIdRef,
-        })
-        if (!move) return
+        });
+        if (!move) return;
 
         const sourceRow = rows.find(
-          (candidate) => candidate.id === move.sourceRowId
-        )
-        sourceRow?.reorder.move(move.targetIndex)
+          (candidate) => candidate.id === move.sourceRowId,
+        );
+        sourceRow?.reorder.move(move.targetIndex);
       },
-    }
-  }
+    };
+  };
 
   return {
     rowIds,
     getRowDragProps,
-  }
+  };
 }
 
 function noopDragHandler() {}

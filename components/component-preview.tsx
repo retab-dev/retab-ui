@@ -1,66 +1,66 @@
-import fs from "node:fs"
-import path from "node:path"
-import * as React from "react"
+import fs from "node:fs";
+import path from "node:path";
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
-import { CodeViewerDemo } from "@/components/code-viewer-demo"
+import { cn } from "@/lib/utils";
+import { CodeViewerDemo } from "@/components/code-viewer-demo";
 import {
   CsvViewerDemo,
   CsvViewerStreamingDemo,
-} from "@/components/csv-viewer-demo"
-import { DataCellDemo } from "@/components/data-cell-demo"
-import { DocsViewCodeBlock } from "@/components/docs-code-block"
-import { DocxViewerDemo } from "@/components/docx-viewer-demo"
-import { DropzoneDemo } from "@/components/dropzone-demo"
-import { EmailViewerDemo } from "@/components/email-viewer-demo"
-import { FileThumbnailDemo } from "@/components/file-thumbnail-demo"
-import { FileThumbnailFormatsDemo } from "@/components/file-thumbnail-formats-demo"
-import { FileViewerDemo } from "@/components/file-viewer-demo"
-import { HtmlViewerDemo } from "@/components/html-viewer-demo"
-import { ImageViewerDemo } from "@/components/image-viewer-demo"
-import { JsonFormDemo } from "@/components/json-form-demo"
-import { JsonTableDemo } from "@/components/json-table/json-table-demo"
+} from "@/components/csv-viewer-demo";
+import { DataCellDemo } from "@/components/data-cell-demo";
+import { DocsViewCodeBlock } from "@/components/docs-code-block";
+import { DocxViewerDemo } from "@/components/docx-viewer-demo";
+import { DropzoneDemo } from "@/components/dropzone-demo";
+import { EmailViewerDemo } from "@/components/email-viewer-demo";
+import { FileThumbnailDemo } from "@/components/file-thumbnail-demo";
+import { FileThumbnailFormatsDemo } from "@/components/file-thumbnail-formats-demo";
+import { FileViewerDemo } from "@/components/file-viewer-demo";
+import { HtmlViewerDemo } from "@/components/html-viewer-demo";
+import { ImageViewerDemo } from "@/components/image-viewer-demo";
+import { JsonFormDemo } from "@/components/json-form-demo";
+import { JsonTableDemo } from "@/components/json-table/json-table-demo";
 import {
   LargeParseViewerDemo,
   ParseViewerDemo,
-} from "@/components/parse-viewer-demo"
-import { PdfViewerDemo } from "@/components/pdf-viewer-demo"
-import { PptxViewerDemo } from "@/components/pptx-viewer-demo"
-import { MarkdownViewerDemo } from "@/components/markdown-viewer-demo"
-import { PropertyFormDemo } from "@/components/property-form-demo"
-import { RetabSchemaBuilderDemo } from "@/components/retab-schema-builder-demo"
-import { ViewerSidebarDemo } from "@/components/sidebar-demo"
-import { TextViewerDemo } from "@/components/text-viewer-demo"
-import { XlsxViewerDemo } from "@/components/xlsx-viewer-demo"
-import { AttachmentSidebarExample } from "@/registry/new-york-v4/blocks/attachment-sidebar-demo"
-import { ClassificationViewerExample } from "@/registry/new-york-v4/blocks/classification-viewer-demo"
-import { CodeViewerSyntaxDemo } from "@/registry/new-york-v4/blocks/code-viewer-syntax-demo"
-import { AvatarImageSlot } from "@/registry/new-york-v4/blocks/dropzone-avatar-image-slot"
-import { ComparisonPairUpload } from "@/registry/new-york-v4/blocks/dropzone-comparison-pair-upload"
-import { ControlledQueue } from "@/registry/new-york-v4/blocks/dropzone-controlled-queue"
-import { CustomThumbnailGrid } from "@/registry/new-york-v4/blocks/dropzone-custom-thumbnail-grid"
-import { DisabledDropzone } from "@/registry/new-york-v4/blocks/dropzone-disabled-dropzone"
-import { EvidenceTimeline } from "@/registry/new-york-v4/blocks/dropzone-evidence-timeline"
-import { DropzoneFileViewerExample } from "@/registry/new-york-v4/blocks/dropzone-file-viewer-example"
-import { IntakeRouter } from "@/registry/new-york-v4/blocks/dropzone-intake-router"
-import { MediaTranscriptQueue } from "@/registry/new-york-v4/blocks/dropzone-media-transcript-queue"
-import { NativeButtonQueue } from "@/registry/new-york-v4/blocks/dropzone-native-button-queue"
-import { NonButtonTrigger } from "@/registry/new-york-v4/blocks/dropzone-non-button-trigger"
-import { PinboardDropSurface } from "@/registry/new-york-v4/blocks/dropzone-pinboard-drop-surface"
-import { RequiredPacketSlots } from "@/registry/new-york-v4/blocks/dropzone-required-packet-slots"
-import { SpreadsheetImportCard } from "@/registry/new-york-v4/blocks/dropzone-spreadsheet-import-card"
-import { UploadProgressQueue } from "@/registry/new-york-v4/blocks/dropzone-upload-progress-queue"
-import { ValidationOnly } from "@/registry/new-york-v4/blocks/dropzone-validation-only"
-import { FileViewerHeaderExample } from "@/registry/new-york-v4/blocks/file-viewer-header-demo"
-import { PartitionViewerExample } from "@/registry/new-york-v4/blocks/partition-viewer-demo"
-import { SchemaBuilderDefinitions } from "@/registry/new-york-v4/blocks/schema-builder-definitions"
-import { SchemaBuilderReadOnly } from "@/registry/new-york-v4/blocks/schema-builder-read-only"
-import { SegmentLegendSplit } from "@/registry/new-york-v4/blocks/segment-legend-split"
-import { SegmentLegendVariants } from "@/registry/new-york-v4/blocks/segment-legend-variants"
-import { SegmentSidebarExample } from "@/registry/new-york-v4/blocks/segment-sidebar-demo"
-import { SegmentSidebarSplit } from "@/registry/new-york-v4/blocks/segment-sidebar-split"
-import { SidebarListExample } from "@/registry/new-york-v4/blocks/sidebar-list-demo"
-import { SplitViewerExample } from "@/registry/new-york-v4/blocks/split-viewer-demo"
+} from "@/components/parse-viewer-demo";
+import { PdfViewerDemo } from "@/components/pdf-viewer-demo";
+import { PptxViewerDemo } from "@/components/pptx-viewer-demo";
+import { MarkdownViewerDemo } from "@/components/markdown-viewer-demo";
+import { PropertyFormDemo } from "@/components/property-form-demo";
+import { RetabSchemaBuilderDemo } from "@/components/retab-schema-builder-demo";
+import { ViewerSidebarDemo } from "@/components/sidebar-demo";
+import { TextViewerDemo } from "@/components/text-viewer-demo";
+import { XlsxViewerDemo } from "@/components/xlsx-viewer-demo";
+import { AttachmentSidebarExample } from "@/registry/new-york-v4/blocks/attachment-sidebar-demo";
+import { ClassificationViewerExample } from "@/registry/new-york-v4/blocks/classification-viewer-demo";
+import { CodeViewerSyntaxDemo } from "@/registry/new-york-v4/blocks/code-viewer-syntax-demo";
+import { AvatarImageSlot } from "@/registry/new-york-v4/blocks/dropzone-avatar-image-slot";
+import { ComparisonPairUpload } from "@/registry/new-york-v4/blocks/dropzone-comparison-pair-upload";
+import { ControlledQueue } from "@/registry/new-york-v4/blocks/dropzone-controlled-queue";
+import { CustomThumbnailGrid } from "@/registry/new-york-v4/blocks/dropzone-custom-thumbnail-grid";
+import { DisabledDropzone } from "@/registry/new-york-v4/blocks/dropzone-disabled-dropzone";
+import { EvidenceTimeline } from "@/registry/new-york-v4/blocks/dropzone-evidence-timeline";
+import { DropzoneFileViewerExample } from "@/registry/new-york-v4/blocks/dropzone-file-viewer-example";
+import { IntakeRouter } from "@/registry/new-york-v4/blocks/dropzone-intake-router";
+import { MediaTranscriptQueue } from "@/registry/new-york-v4/blocks/dropzone-media-transcript-queue";
+import { NativeButtonQueue } from "@/registry/new-york-v4/blocks/dropzone-native-button-queue";
+import { NonButtonTrigger } from "@/registry/new-york-v4/blocks/dropzone-non-button-trigger";
+import { PinboardDropSurface } from "@/registry/new-york-v4/blocks/dropzone-pinboard-drop-surface";
+import { RequiredPacketSlots } from "@/registry/new-york-v4/blocks/dropzone-required-packet-slots";
+import { SpreadsheetImportCard } from "@/registry/new-york-v4/blocks/dropzone-spreadsheet-import-card";
+import { UploadProgressQueue } from "@/registry/new-york-v4/blocks/dropzone-upload-progress-queue";
+import { ValidationOnly } from "@/registry/new-york-v4/blocks/dropzone-validation-only";
+import { FileViewerHeaderExample } from "@/registry/new-york-v4/blocks/file-viewer-header-demo";
+import { PartitionViewerExample } from "@/registry/new-york-v4/blocks/partition-viewer-demo";
+import { SchemaBuilderDefinitions } from "@/registry/new-york-v4/blocks/schema-builder-definitions";
+import { SchemaBuilderReadOnly } from "@/registry/new-york-v4/blocks/schema-builder-read-only";
+import { SegmentLegendSplit } from "@/registry/new-york-v4/blocks/segment-legend-split";
+import { SegmentLegendVariants } from "@/registry/new-york-v4/blocks/segment-legend-variants";
+import { SegmentSidebarExample } from "@/registry/new-york-v4/blocks/segment-sidebar-demo";
+import { SegmentSidebarSplit } from "@/registry/new-york-v4/blocks/segment-sidebar-split";
+import { SidebarListExample } from "@/registry/new-york-v4/blocks/sidebar-list-demo";
+import { SplitViewerExample } from "@/registry/new-york-v4/blocks/split-viewer-demo";
 
 /**
  * The shadcn-style example shape: a live component preview in a bordered card
@@ -74,10 +74,10 @@ import { SplitViewerExample } from "@/registry/new-york-v4/blocks/split-viewer-d
  */
 
 type ComponentPreviewEntry = {
-  component: React.ComponentType
+  component: React.ComponentType;
   /** Source file path, relative to the app root. */
-  src: string
-}
+  src: string;
+};
 
 const REGISTRY = {
   "dropzone-demo": {
@@ -292,39 +292,39 @@ const REGISTRY = {
     component: SegmentSidebarSplit,
     src: "registry/new-york-v4/blocks/segment-sidebar-split.tsx",
   },
-} satisfies Record<string, ComponentPreviewEntry>
+} satisfies Record<string, ComponentPreviewEntry>;
 
-export type ComponentPreviewName = keyof typeof REGISTRY
+export type ComponentPreviewName = keyof typeof REGISTRY;
 
 export function ComponentPreview({
   name,
   className,
   contentClassName,
 }: {
-  name: ComponentPreviewName
-  className?: string
-  contentClassName?: string
+  name: ComponentPreviewName;
+  className?: string;
+  contentClassName?: string;
 }) {
-  const entry = REGISTRY[name]
+  const entry = REGISTRY[name];
 
   if (!entry) {
-    throw new Error(`ComponentPreview: unknown component "${name}".`)
+    throw new Error(`ComponentPreview: unknown component "${name}".`);
   }
 
-  const Component = entry.component
+  const Component = entry.component;
   const code = fs
     .readFileSync(path.join(process.cwd(), entry.src), "utf-8")
-    .trimEnd()
+    .trimEnd();
 
   return (
     <div
       data-slot="component-preview"
       className={cn(
         "not-prose group relative my-6 flex flex-col overflow-hidden rounded-xl border",
-        className
+        className,
       )}
     >
-      <div className={cn("flex flex-col bg-background p-6", contentClassName)}>
+      <div className={cn("bg-background flex flex-col p-6", contentClassName)}>
         <Component />
       </div>
       <DocsViewCodeBlock
@@ -333,5 +333,5 @@ export function ComponentPreview({
         language="tsx"
       />
     </div>
-  )
+  );
 }

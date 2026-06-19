@@ -1,33 +1,33 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import type {
   FileTreeDirectoryHandle,
   FileTreeItemHandle,
   FileTree as PierreFileTreeModel,
-} from "@pierre/trees"
+} from "@pierre/trees";
 
 import {
   type FileSystemListContinuity,
   type FileSystemListContinuityCommand,
-} from "./file-system-list-continuity"
-import type { FileSystemPierreLoadingController } from "./file-system-pierre-adapter"
+} from "./file-system-list-continuity";
+import type { FileSystemPierreLoadingController } from "./file-system-pierre-adapter";
 import type {
   FileSystemPierreInput,
   PierrePath,
-} from "./file-system-pierre-input"
+} from "./file-system-pierre-input";
 import {
   useFileSystemPierreLazyRetryExpansion,
   type FileSystemPierreLazyFolderCommand,
-} from "./file-system-pierre-lazy-retry"
-import type { FileSystemPierreOrder } from "./file-system-pierre-order"
-import { scrollCurrentFileSystemEntryIntoView } from "./file-system-pierre-selection"
+} from "./file-system-pierre-lazy-retry";
+import type { FileSystemPierreOrder } from "./file-system-pierre-order";
+import { scrollCurrentFileSystemEntryIntoView } from "./file-system-pierre-selection";
 
 const useIsoLayoutEffect =
-  typeof window === "undefined" ? React.useEffect : React.useLayoutEffect
+  typeof window === "undefined" ? React.useEffect : React.useLayoutEffect;
 
 export type FileSystemPierreExpansion = {
-  collectExpandedItemPaths: (itemPaths: readonly PierrePath[]) => PierrePath[]
+  collectExpandedItemPaths: (itemPaths: readonly PierrePath[]) => PierrePath[];
   runListContinuityCommand: ({
     command,
     listContinuity,
@@ -35,36 +35,36 @@ export type FileSystemPierreExpansion = {
     order,
     selectedPath,
   }: {
-    command: FileSystemListContinuityCommand<FileSystemPierreInput>
-    listContinuity: FileSystemListContinuity<FileSystemPierreInput>
-    model: PierreFileTreeModel
-    order: FileSystemPierreOrder
-    selectedPath: string | null
-  }) => void
+    command: FileSystemListContinuityCommand<FileSystemPierreInput>;
+    listContinuity: FileSystemListContinuity<FileSystemPierreInput>;
+    model: PierreFileTreeModel;
+    order: FileSystemPierreOrder;
+    selectedPath: string | null;
+  }) => void;
   runLazyFolderCommand: (
-    command: FileSystemPierreLazyFolderCommand | null
-  ) => void
-  modelRef: React.MutableRefObject<PierreFileTreeModel | null>
-}
+    command: FileSystemPierreLazyFolderCommand | null,
+  ) => void;
+  modelRef: React.MutableRefObject<PierreFileTreeModel | null>;
+};
 
 export function useFileSystemPierreExpansion({
   loading,
 }: {
-  loading: FileSystemPierreLoadingController
+  loading: FileSystemPierreLoadingController;
 }): FileSystemPierreExpansion {
-  const modelRef = React.useRef<PierreFileTreeModel | null>(null)
+  const modelRef = React.useRef<PierreFileTreeModel | null>(null);
   const runLazyFolderCommand = useFileSystemPierreLazyRetryExpansion({
     loading,
     modelRef,
-  })
+  });
   const collectExpandedItemPaths = React.useCallback(
     (itemPaths: readonly PierrePath[]) => {
-      const model = modelRef.current
+      const model = modelRef.current;
 
-      return model ? collectOpenPierrePaths(model, itemPaths) : []
+      return model ? collectOpenPierrePaths(model, itemPaths) : [];
     },
-    []
-  )
+    [],
+  );
   const runListContinuityCommand = React.useCallback(
     ({
       command,
@@ -73,18 +73,18 @@ export function useFileSystemPierreExpansion({
       order,
       selectedPath,
     }: {
-      command: FileSystemListContinuityCommand<FileSystemPierreInput>
-      listContinuity: FileSystemListContinuity<FileSystemPierreInput>
-      model: PierreFileTreeModel
-      order: FileSystemPierreOrder
-      selectedPath: string | null
+      command: FileSystemListContinuityCommand<FileSystemPierreInput>;
+      listContinuity: FileSystemListContinuity<FileSystemPierreInput>;
+      model: PierreFileTreeModel;
+      order: FileSystemPierreOrder;
+      selectedPath: string | null;
     }) => {
       if (command.type === "snapshot.capture") {
         runFileSystemPierreListContinuityCommands({
           commands: listContinuity.dispatch({
             expandedPaths: collectOpenPierrePaths(
               model,
-              command.identity.input.itemPaths
+              command.identity.input.itemPaths,
             ),
             identity: command.identity,
             type: "snapshot.captured",
@@ -94,21 +94,21 @@ export function useFileSystemPierreExpansion({
           order,
           runListContinuityCommand,
           selectedPath,
-        })
-        return
+        });
+        return;
       }
 
       if (command.type === "model.apply") {
-        order.reset(command.nextItemPaths)
+        order.reset(command.nextItemPaths);
         model.resetPaths(command.nextItemPaths, {
           initialExpandedPaths: command.expandedPaths,
           preparedInput: command.identity.input.runtimeInput.preparedInput,
-        })
+        });
         runFileSystemPierreListContinuityCommands({
           commands: listContinuity.dispatch({
             expandedPaths: collectOpenPierrePaths(
               model,
-              command.identity.input.itemPaths
+              command.identity.input.itemPaths,
             ),
             identity: command.identity,
             type: "model.applied",
@@ -118,18 +118,18 @@ export function useFileSystemPierreExpansion({
           order,
           runListContinuityCommand,
           selectedPath,
-        })
-        return
+        });
+        return;
       }
 
-      const input = listContinuity.state.identity?.input.runtimeInput
+      const input = listContinuity.state.identity?.input.runtimeInput;
 
       if (input) {
         scrollCurrentFileSystemEntryIntoView({
           input,
           model,
           selectedPath: command.path,
-        })
+        });
       }
       runFileSystemPierreListContinuityCommands({
         commands: listContinuity.dispatch({ type: "selection.revealed" }),
@@ -138,10 +138,10 @@ export function useFileSystemPierreExpansion({
         order,
         runListContinuityCommand,
         selectedPath,
-      })
+      });
     },
-    []
-  )
+    [],
+  );
 
   return React.useMemo(
     () => ({
@@ -150,8 +150,8 @@ export function useFileSystemPierreExpansion({
       runListContinuityCommand,
       runLazyFolderCommand,
     }),
-    [collectExpandedItemPaths, runListContinuityCommand, runLazyFolderCommand]
-  )
+    [collectExpandedItemPaths, runListContinuityCommand, runLazyFolderCommand],
+  );
 }
 
 export function runFileSystemPierreListContinuityCommands({
@@ -162,12 +162,12 @@ export function runFileSystemPierreListContinuityCommands({
   runListContinuityCommand,
   selectedPath,
 }: {
-  commands: FileSystemListContinuityCommand<FileSystemPierreInput>[]
-  listContinuity: FileSystemListContinuity<FileSystemPierreInput>
-  model: PierreFileTreeModel
-  order: FileSystemPierreOrder
-  runListContinuityCommand: FileSystemPierreExpansion["runListContinuityCommand"]
-  selectedPath: string | null
+  commands: FileSystemListContinuityCommand<FileSystemPierreInput>[];
+  listContinuity: FileSystemListContinuity<FileSystemPierreInput>;
+  model: PierreFileTreeModel;
+  order: FileSystemPierreOrder;
+  runListContinuityCommand: FileSystemPierreExpansion["runListContinuityCommand"];
+  selectedPath: string | null;
 }) {
   for (const command of commands) {
     runListContinuityCommand({
@@ -176,46 +176,46 @@ export function runFileSystemPierreListContinuityCommands({
       model,
       order,
       selectedPath,
-    })
+    });
   }
 }
 
 function collectOpenPierrePaths(
   model: PierreFileTreeModel,
-  pierrePaths: readonly string[]
+  pierrePaths: readonly string[],
 ): PierrePath[] {
-  const openPaths: PierrePath[] = []
+  const openPaths: PierrePath[] = [];
 
   for (const path of pierrePaths) {
-    const item = model.getItem(path)
+    const item = model.getItem(path);
 
     if (isDirectoryItem(item) && item.isExpanded()) {
-      openPaths.push(path)
+      openPaths.push(path);
     }
   }
 
-  return openPaths
+  return openPaths;
 }
 
 function isDirectoryItem(
-  item: FileTreeItemHandle | null
+  item: FileTreeItemHandle | null,
 ): item is FileTreeDirectoryHandle {
-  return item?.isDirectory() === true
+  return item?.isDirectory() === true;
 }
 
 export function useBindFileSystemPierreExpansionModel({
   expansion,
   model,
 }: {
-  expansion: FileSystemPierreExpansion
-  model: PierreFileTreeModel
+  expansion: FileSystemPierreExpansion;
+  model: PierreFileTreeModel;
 }) {
   useIsoLayoutEffect(() => {
-    expansion.modelRef.current = model
+    expansion.modelRef.current = model;
     return () => {
       if (expansion.modelRef.current === model) {
-        expansion.modelRef.current = null
+        expansion.modelRef.current = null;
       }
-    }
-  }, [expansion, model])
+    };
+  }, [expansion, model]);
 }

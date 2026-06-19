@@ -20,7 +20,7 @@ npx shadcn@latest add @retab/code-viewer
 ## Usage
 
 ```tsx
-import { CodeViewer } from "@/components/ui/code-viewer"
+import { CodeViewer } from "@/components/ui/code-viewer";
 
 export function Example() {
   return (
@@ -32,7 +32,7 @@ export function Example() {
       }}
       highlight={{ start: 12, end: 14 }}
     />
-  )
+  );
 }
 ```
 
@@ -78,12 +78,12 @@ and add a row mapping the file extension to the Prism language id:
 
 ```ts
 // in code-viewer-syntax.ts
-import "prismjs/components/prism-kotlin"
+import "prismjs/components/prism-kotlin";
 
 const LANGUAGE_BY_EXTENSION: Record<string, string> = {
   // …languages that ship by default
   kt: "kotlin",
-}
+};
 ```
 
 Token colors are CSS variables (`--cv-token-keyword`, `--cv-token-string`,
@@ -107,12 +107,12 @@ inherits the foreground color.
 ## Ref
 
 ```tsx
-import * as React from "react"
+import * as React from "react";
 
-import { CodeViewer, type CodeViewerHandle } from "@/components/ui/code-viewer"
+import { CodeViewer, type CodeViewerHandle } from "@/components/ui/code-viewer";
 
 export function Example() {
-  const viewerRef = React.useRef<CodeViewerHandle>(null)
+  const viewerRef = React.useRef<CodeViewerHandle>(null);
 
   return (
     <CodeViewer
@@ -120,7 +120,7 @@ export function Example() {
       source={{ kind: "text", text: "alpha\nbeta\ngamma" }}
       highlight={{ start: 2, end: 2 }}
     />
-  )
+  );
 }
 ```
 

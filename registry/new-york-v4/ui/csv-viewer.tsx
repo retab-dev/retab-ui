@@ -1,23 +1,25 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import type { CsvDialect, CsvTable } from "@/lib/csv"
+import * as React from "react";
+
+import type { CsvDialect, CsvTable } from "@/lib/csv";
 import {
   createViewerResource,
   type ViewerResource,
-} from "@/lib/viewer-resource"
+} from "@/lib/viewer-resource";
 
 import {
   CsvViewerFrame,
   CsvViewerHeader,
   csvViewerStatusNode,
-} from "./csv-viewer-chrome"
+} from "./csv-viewer-chrome";
 import {
   csvViewerDownloadActions,
   defaultCsvDownloadName,
-} from "./csv-viewer-download"
-import { CsvGrid, type CsvGridHandle } from "./csv-viewer-grid"
+} from "./csv-viewer-download";
+import { CsvGrid, type CsvGridHandle } from "./csv-viewer-grid";
 import {
   csvViewerExportFileName,
   csvViewerSortResetKey,
@@ -26,34 +28,34 @@ import {
   type CsvDocumentSource,
   type CsvTableSource,
   type CsvViewerSource,
-} from "./csv-viewer-resource"
-import { useCsvResourceState, type CsvCellAddress } from "./csv-viewer-state"
-import type { CsvViewerHandle, CsvViewerProps } from "./csv-viewer-types"
+} from "./csv-viewer-resource";
+import { useCsvResourceState, type CsvCellAddress } from "./csv-viewer-state";
+import type { CsvViewerHandle, CsvViewerProps } from "./csv-viewer-types";
 import {
   useViewerControlsRegistration,
   type ViewerControlsState,
-} from "./viewer-controls"
+} from "./viewer-controls";
 
 export type {
   CsvScrollOptions,
   CsvViewerHandle,
   CsvViewerProps,
-} from "./csv-viewer-types"
+} from "./csv-viewer-types";
 
 export type CsvResourceContentProps = Omit<CsvViewerProps, "source"> & {
-  resource?: ViewerResource | null
-  source?: CsvViewerSource
-}
+  resource?: ViewerResource | null;
+  source?: CsvViewerSource;
+};
 type CsvResourceContentInternalProps = CsvResourceContentProps & {
-  frame?: boolean
-}
+  frame?: boolean;
+};
 
 export type CsvViewerProviderProps = {
-  children: React.ReactNode
-  resource: ViewerResource
-}
+  children: React.ReactNode;
+  resource: ViewerResource;
+};
 
-export type CsvViewerGridProps = Omit<CsvResourceContentProps, "resource">
+export type CsvViewerGridProps = Omit<CsvResourceContentProps, "resource">;
 
 export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
   function CsvViewer({ source, ...props }, ref) {
@@ -62,8 +64,8 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
         source && isCsvDocumentSource(source)
           ? createViewerResource(source)
           : null,
-      [source]
-    )
+      [source],
+    );
     return (
       <CsvResourceContent
         {...props}
@@ -72,13 +74,13 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
         resource={resource}
         source={source}
       />
-    )
-  }
-)
+    );
+  },
+);
 
 const CsvViewerResourceContext = React.createContext<ViewerResource | null>(
-  null
-)
+  null,
+);
 
 export function CsvViewerProvider({
   children,
@@ -88,15 +90,15 @@ export function CsvViewerProvider({
     <CsvViewerResourceContext.Provider value={resource}>
       {children}
     </CsvViewerResourceContext.Provider>
-  )
+  );
 }
 
 function useCsvViewerResource(): ViewerResource {
-  const resource = React.useContext(CsvViewerResourceContext)
+  const resource = React.useContext(CsvViewerResourceContext);
   if (!resource) {
-    throw new Error("CsvViewerGrid must be used within CsvViewerProvider.")
+    throw new Error("CsvViewerGrid must be used within CsvViewerProvider.");
   }
-  return resource
+  return resource;
 }
 
 export const CsvViewerDocument = React.forwardRef<
@@ -108,8 +110,8 @@ export const CsvViewerDocument = React.forwardRef<
       source && isCsvDocumentSource(source)
         ? createViewerResource(source)
         : null,
-    [source]
-  )
+    [source],
+  );
   return (
     <CsvResourceContent
       {...props}
@@ -118,14 +120,14 @@ export const CsvViewerDocument = React.forwardRef<
       resource={resource}
       source={source}
     />
-  )
-})
+  );
+});
 
 export const CsvViewerGrid = React.forwardRef<
   CsvViewerHandle,
   CsvViewerGridProps
 >(function CsvViewerGrid(props, ref) {
-  const resource = useCsvViewerResource()
+  const resource = useCsvViewerResource();
   return (
     <CsvResourceContent
       {...props}
@@ -133,8 +135,8 @@ export const CsvViewerGrid = React.forwardRef<
       ref={ref}
       resource={resource}
     />
-  )
-})
+  );
+});
 
 export const CsvResourceContent = React.forwardRef<
   CsvViewerHandle,
@@ -152,9 +154,9 @@ export const CsvResourceContent = React.forwardRef<
     activeCell,
     isolateStyles = false,
   },
-  ref
+  ref,
 ) {
-  const [retryVersion, setRetryVersion] = React.useState(0)
+  const [retryVersion, setRetryVersion] = React.useState(0);
   const dialect = React.useMemo(
     () =>
       resolveCsvViewerDialect({
@@ -162,33 +164,33 @@ export const CsvResourceContent = React.forwardRef<
         source,
         resource,
       }),
-    [dialectProp, source, resource]
-  )
+    [dialectProp, source, resource],
+  );
   const resourceState = useCsvResourceState({
     source,
     resource,
     dialect,
     retryVersion,
-  })
-  const gridRef = React.useRef<CsvGridHandle>(null)
-  const [zoom, setZoom] = React.useState(1)
-  const columns = resourceState.columns
-  const sourceRows = resourceState.sourceRows
-  const rowStore = resourceState.rowStore
-  const rowCount = rowStore.rowCount
+  });
+  const gridRef = React.useRef<CsvGridHandle>(null);
+  const [zoom, setZoom] = React.useState(1);
+  const columns = resourceState.columns;
+  const sourceRows = resourceState.sourceRows;
+  const rowStore = resourceState.rowStore;
+  const rowCount = rowStore.rowCount;
   const canExportTable =
-    resourceState.status === "ready" || resourceState.status === "empty"
+    resourceState.status === "ready" || resourceState.status === "empty";
   const sortResetKey = csvViewerSortResetKey({
     dialect,
     source,
     resource,
-  })
+  });
   const exportFileName = csvViewerExportFileName({
     dialect,
     source,
     resource,
     fallback: defaultCsvDownloadName,
-  })
+  });
   const downloadActions = React.useMemo(() => {
     return csvViewerDownloadActions({
       resource,
@@ -197,19 +199,19 @@ export const CsvResourceContent = React.forwardRef<
       dialect,
       fileName: exportFileName,
       canExportTable,
-    })
-  }, [canExportTable, columns, dialect, exportFileName, resource, sourceRows])
+    });
+  }, [canExportTable, columns, dialect, exportFileName, resource, sourceRows]);
 
   React.useImperativeHandle(
     ref ?? null,
     () => ({
       scrollToCell: (cellAddress, options) => {
-        gridRef.current?.scrollToCell(cellAddress, options)
+        gridRef.current?.scrollToCell(cellAddress, options);
       },
       getViewportElement: () => gridRef.current?.getViewportElement() ?? null,
     }),
-    []
-  )
+    [],
+  );
 
   const statusNode = React.useMemo(
     () =>
@@ -220,17 +222,17 @@ export const CsvResourceContent = React.forwardRef<
         showDownload: controls,
         onRetry: () => setRetryVersion((version) => version + 1),
       }),
-    [controls, resource, resourceState, rowCount]
-  )
+    [controls, resource, resourceState, rowCount],
+  );
   const zoomOut = React.useCallback(
     () => setZoom((value) => clampCsvViewerZoom(value / 1.2)),
-    []
-  )
+    [],
+  );
   const zoomIn = React.useCallback(
     () => setZoom((value) => clampCsvViewerZoom(value * 1.2)),
-    []
-  )
-  const resetZoom = React.useCallback(() => setZoom(1), [])
+    [],
+  );
+  const resetZoom = React.useCallback(() => setZoom(1), []);
   useCsvControlsRegistration({
     columnCount: columns.length,
     downloadActions,
@@ -240,7 +242,7 @@ export const CsvResourceContent = React.forwardRef<
     onZoomOut: zoomOut,
     rowCount,
     zoom,
-  })
+  });
 
   return (
     <CsvViewerFrame
@@ -271,8 +273,8 @@ export const CsvResourceContent = React.forwardRef<
         statusNode={statusNode}
       />
     </CsvViewerFrame>
-  )
-})
+  );
+});
 
 export {
   type CsvCellAddress,
@@ -281,7 +283,7 @@ export {
   type CsvTableSource,
   type CsvTable,
   type CsvViewerSource,
-}
+};
 
 function useCsvControlsRegistration({
   columnCount,
@@ -293,18 +295,18 @@ function useCsvControlsRegistration({
   rowCount,
   zoom,
 }: {
-  columnCount: number
-  downloadActions: ViewerControlsState["downloads"]
-  isLoading: boolean
-  onResetZoom: () => void
-  onZoomIn: () => void
-  onZoomOut: () => void
-  rowCount: number
-  zoom: number
+  columnCount: number;
+  downloadActions: ViewerControlsState["downloads"];
+  isLoading: boolean;
+  onResetZoom: () => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  rowCount: number;
+  zoom: number;
 }) {
-  const onControlsChange = useViewerControlsRegistration()
-  const rowLabel = `${rowCount.toLocaleString()} row${rowCount === 1 ? "" : "s"}`
-  const columnLabel = `${columnCount} column${columnCount === 1 ? "" : "s"}`
+  const onControlsChange = useViewerControlsRegistration();
+  const rowLabel = `${rowCount.toLocaleString()} row${rowCount === 1 ? "" : "s"}`;
+  const columnLabel = `${columnCount} column${columnCount === 1 ? "" : "s"}`;
   const controlsState = React.useMemo<ViewerControlsState>(
     () => ({
       title: isLoading ? `${rowLabel} loading` : rowLabel,
@@ -328,16 +330,16 @@ function useCsvControlsRegistration({
       onZoomOut,
       rowLabel,
       zoom,
-    ]
-  )
+    ],
+  );
 
   React.useEffect(() => {
-    if (!onControlsChange) return
-    onControlsChange(controlsState)
-    return () => onControlsChange(null)
-  }, [onControlsChange, controlsState])
+    if (!onControlsChange) return;
+    onControlsChange(controlsState);
+    return () => onControlsChange(null);
+  }, [onControlsChange, controlsState]);
 }
 
 function clampCsvViewerZoom(zoom: number) {
-  return Math.max(0.25, Math.min(5, zoom))
+  return Math.max(0.25, Math.min(5, zoom));
 }

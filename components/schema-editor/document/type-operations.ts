@@ -1,20 +1,20 @@
-import type { JSONSchema7TypeName } from "json-schema"
+import type { JSONSchema7TypeName } from "json-schema";
 
-import { mapPreserve } from "@/components/schema-editor/document/array"
-import { createId } from "@/components/schema-editor/document/id"
-import { updateNode } from "@/components/schema-editor/document/node-update"
+import { mapPreserve } from "@/components/schema-editor/document/array";
+import { createId } from "@/components/schema-editor/document/id";
+import { updateNode } from "@/components/schema-editor/document/node-update";
 import type {
   DocumentNode,
   EnumValue,
   SchemaDocument,
-} from "@/components/schema-editor/document/types"
+} from "@/components/schema-editor/document/types";
 
 export type SchemaEditorType =
   | JSONSchema7TypeName
   | "enum"
   | "date"
   | "time"
-  | "datetime"
+  | "datetime";
 
 const STRING_REST_KEYS = new Set([
   "contentEncoding",
@@ -24,7 +24,7 @@ const STRING_REST_KEYS = new Set([
   "maxLength",
   "minLength",
   "pattern",
-])
+]);
 
 const NUMBER_REST_KEYS = new Set([
   "exclusiveMaximum",
@@ -32,7 +32,7 @@ const NUMBER_REST_KEYS = new Set([
   "maximum",
   "minimum",
   "multipleOf",
-])
+]);
 
 const ARRAY_REST_KEYS = new Set([
   "additionalItems",
@@ -45,7 +45,7 @@ const ARRAY_REST_KEYS = new Set([
   "prefixItems",
   "unevaluatedItems",
   "uniqueItems",
-])
+]);
 
 const OBJECT_REST_KEYS = new Set([
   "additionalProperties",
@@ -57,14 +57,14 @@ const OBJECT_REST_KEYS = new Set([
   "patternProperties",
   "propertyNames",
   "unevaluatedProperties",
-])
+]);
 
-const ENUM_REST_KEYS = new Set(["x-enumDescriptions"])
+const ENUM_REST_KEYS = new Set(["x-enumDescriptions"]);
 
 const ENUM_ALLOWED_REST_KEYS = new Set([
   ...STRING_REST_KEYS,
   ...ENUM_REST_KEYS,
-])
+]);
 
 const TYPE_SPECIFIC_REST_KEYS = new Set([
   ...STRING_REST_KEYS,
@@ -72,33 +72,33 @@ const TYPE_SPECIFIC_REST_KEYS = new Set([
   ...ARRAY_REST_KEYS,
   ...OBJECT_REST_KEYS,
   ...ENUM_REST_KEYS,
-])
+]);
 
 export function setNodeType(
   doc: SchemaDocument,
   id: string,
-  type: JSONSchema7TypeName | "enum"
+  type: JSONSchema7TypeName | "enum",
 ): SchemaDocument {
-  return updateNode(doc, id, (node) => normalizeNodeForType(node, type))
+  return updateNode(doc, id, (node) => normalizeNodeForType(node, type));
 }
 
 export function setNodeEditorType(
   doc: SchemaDocument,
   id: string,
-  type: SchemaEditorType
+  type: SchemaEditorType,
 ): SchemaDocument {
   return updateNode(doc, id, (node) =>
     updateEffectiveNodeShape(node, (effective) =>
-      normalizeNodeForEditorType(effective, type)
-    )
-  )
+      normalizeNodeForEditorType(effective, type),
+    ),
+  );
 }
 
 export function normalizeNodeForType(
   node: DocumentNode,
-  type: JSONSchema7TypeName | "enum"
+  type: JSONSchema7TypeName | "enum",
 ): DocumentNode {
-  const nullable = isNodeNullable(node)
+  const nullable = isNodeNullable(node);
   const base: DocumentNode = {
     ...node,
     rest: stripSchemaRestForType(node.rest, type),
@@ -112,15 +112,15 @@ export function normalizeNodeForType(
     items: undefined,
     enum: undefined,
     booleanSchema: undefined,
-  }
+  };
 
   if (type === "enum") {
-    base.type = "string"
-    base.enum = node.enum?.length ? node.enum : [createEnumValue()]
+    base.type = "string";
+    base.enum = node.enum?.length ? node.enum : [createEnumValue()];
   } else if (type === "object") {
-    base.type = "object"
-    base.extraRequired = node.extraRequired
-    base.requiredOrder = node.requiredOrder
+    base.type = "object";
+    base.extraRequired = node.extraRequired;
+    base.requiredOrder = node.requiredOrder;
     base.properties = node.properties?.length
       ? node.properties
       : [
@@ -134,20 +134,20 @@ export function normalizeNodeForType(
             required: false,
             node: createNode("string"),
           },
-        ]
+        ];
   } else if (type === "array") {
-    base.type = "array"
-    base.items = node.items ?? createNode("string")
+    base.type = "array";
+    base.items = node.items ?? createNode("string");
   } else {
-    base.type = type
+    base.type = type;
   }
 
-  return nullable ? setNodeNullable(base, true) : base
+  return nullable ? setNodeNullable(base, true) : base;
 }
 
 function normalizeNodeForEditorType(
   node: DocumentNode,
-  type: SchemaEditorType
+  type: SchemaEditorType,
 ): DocumentNode {
   const format =
     type === "date"
@@ -156,129 +156,129 @@ function normalizeNodeForEditorType(
         ? "time"
         : type === "datetime"
           ? "date-time"
-          : undefined
+          : undefined;
   const schemaType: JSONSchema7TypeName | "enum" = format
     ? "string"
-    : (type as JSONSchema7TypeName | "enum")
-  const normalized = normalizeNodeForType(node, schemaType)
+    : (type as JSONSchema7TypeName | "enum");
+  const normalized = normalizeNodeForType(node, schemaType);
 
   return {
     ...normalized,
     rest: format
       ? { ...stripSchemaFormat(normalized.rest), format }
       : stripSchemaFormat(normalized.rest),
-  }
+  };
 }
 
 export function stripSchemaFormat(
-  rest: Record<string, unknown>
+  rest: Record<string, unknown>,
 ): Record<string, unknown> {
-  if (!Object.prototype.hasOwnProperty.call(rest, "format")) return rest
-  const { format: _format, ...withoutFormat } = rest
-  return withoutFormat
+  if (!Object.prototype.hasOwnProperty.call(rest, "format")) return rest;
+  const { format: _format, ...withoutFormat } = rest;
+  return withoutFormat;
 }
 
 export function stripSchemaTypeSpecificRest(
-  rest: Record<string, unknown>
+  rest: Record<string, unknown>,
 ): Record<string, unknown> {
-  return filterSchemaRest(rest, undefined)
+  return filterSchemaRest(rest, undefined);
 }
 
 function stripSchemaRestForType(
   rest: Record<string, unknown>,
-  type: JSONSchema7TypeName | "enum"
+  type: JSONSchema7TypeName | "enum",
 ): Record<string, unknown> {
-  return filterSchemaRest(rest, getRestKeysForType(type))
+  return filterSchemaRest(rest, getRestKeysForType(type));
 }
 
 function getRestKeysForType(
-  type: JSONSchema7TypeName | "enum"
+  type: JSONSchema7TypeName | "enum",
 ): Set<string> | undefined {
-  if (type === "string") return STRING_REST_KEYS
-  if (type === "enum") return ENUM_ALLOWED_REST_KEYS
-  if (type === "number" || type === "integer") return NUMBER_REST_KEYS
-  if (type === "array") return ARRAY_REST_KEYS
-  if (type === "object") return OBJECT_REST_KEYS
-  return undefined
+  if (type === "string") return STRING_REST_KEYS;
+  if (type === "enum") return ENUM_ALLOWED_REST_KEYS;
+  if (type === "number" || type === "integer") return NUMBER_REST_KEYS;
+  if (type === "array") return ARRAY_REST_KEYS;
+  if (type === "object") return OBJECT_REST_KEYS;
+  return undefined;
 }
 
 function filterSchemaRest(
   rest: Record<string, unknown>,
-  allowedTypeSpecificKeys: Set<string> | undefined
+  allowedTypeSpecificKeys: Set<string> | undefined,
 ): Record<string, unknown> {
-  let next = rest
+  let next = rest;
 
   for (const key of Object.keys(rest)) {
     if (
       TYPE_SPECIFIC_REST_KEYS.has(key) &&
       !allowedTypeSpecificKeys?.has(key)
     ) {
-      if (next === rest) next = { ...rest }
-      delete next[key]
+      if (next === rest) next = { ...rest };
+      delete next[key];
     }
   }
 
-  return next
+  return next;
 }
 
 export function setNullable(
   doc: SchemaDocument,
   id: string,
-  nullable: boolean
+  nullable: boolean,
 ): SchemaDocument {
-  return updateNode(doc, id, (node) => setNodeNullable(node, nullable))
+  return updateNode(doc, id, (node) => setNodeNullable(node, nullable));
 }
 
 function setNodeNullable(node: DocumentNode, nullable: boolean): DocumentNode {
   if (node.anyOf) {
-    return setAnyOfNodeNullable(node, nullable)
+    return setAnyOfNodeNullable(node, nullable);
   }
 
-  const current = node.type
+  const current = node.type;
   const names = Array.isArray(current)
     ? current.filter((type) => type !== "null")
     : current
       ? [current]
-      : []
+      : [];
 
   if (nullable) {
-    if (node.enum) return wrapNodeInNullableAnyOf(node)
+    if (node.enum) return wrapNodeInNullableAnyOf(node);
     if (names.length === 0) {
-      return node.ref ? wrapNodeInNullableAnyOf(node) : node
+      return node.ref ? wrapNodeInNullableAnyOf(node) : node;
     }
-    return { ...node, type: [...names, "null"] }
+    return { ...node, type: [...names, "null"] };
   }
 
-  if (names.length <= 1) return { ...node, type: names[0] }
-  return { ...node, type: names }
+  if (names.length <= 1) return { ...node, type: names[0] };
+  return { ...node, type: names };
 }
 
 function isNodeNullable(node: DocumentNode): boolean {
-  if (Array.isArray(node.type)) return node.type.includes("null")
-  if (node.anyOf) return node.anyOf.some((branch) => branch.type === "null")
-  return node.type === "null"
+  if (Array.isArray(node.type)) return node.type.includes("null");
+  if (node.anyOf) return node.anyOf.some((branch) => branch.type === "null");
+  return node.type === "null";
 }
 
 function setAnyOfNodeNullable(
   node: DocumentNode,
-  nullable: boolean
+  nullable: boolean,
 ): DocumentNode {
-  const branches = node.anyOf ?? []
+  const branches = node.anyOf ?? [];
   const nonNullBranches = branches.filter(
-    (branch) => branch.type !== "null" || branch.ref
-  )
+    (branch) => branch.type !== "null" || branch.ref,
+  );
 
   if (nullable) {
-    if (nonNullBranches.length !== branches.length) return node
-    return { ...node, anyOf: [...branches, createNode("null")] }
+    if (nonNullBranches.length !== branches.length) return node;
+    return { ...node, anyOf: [...branches, createNode("null")] };
   }
 
-  if (nonNullBranches.length === branches.length) return node
+  if (nonNullBranches.length === branches.length) return node;
   if (nonNullBranches.length !== 1) {
-    return { ...node, anyOf: nonNullBranches }
+    return { ...node, anyOf: nonNullBranches };
   }
 
-  return mergeNullableWrapperIntoBranch(node, nonNullBranches[0])
+  return mergeNullableWrapperIntoBranch(node, nonNullBranches[0]);
 }
 
 function wrapNodeInNullableAnyOf(node: DocumentNode): DocumentNode {
@@ -289,7 +289,7 @@ function wrapNodeInNullableAnyOf(node: DocumentNode): DocumentNode {
     rest: node.rest,
     order: node.order,
     anyOf: [cloneNodeAsAnyOfBranch(node), createNode("null")],
-  }
+  };
 }
 
 function cloneNodeAsAnyOfBranch(node: DocumentNode): DocumentNode {
@@ -301,21 +301,19 @@ function cloneNodeAsAnyOfBranch(node: DocumentNode): DocumentNode {
     description: undefined,
     rest: {},
     order: undefined,
-  }
+  };
 }
 
-function nonNullType(
-  type: DocumentNode["type"]
-): DocumentNode["type"] {
-  if (!Array.isArray(type)) return type
-  const types = type.filter((entry) => entry !== "null")
-  if (types.length === 0) return undefined
-  return types.length === 1 ? types[0] : types
+function nonNullType(type: DocumentNode["type"]): DocumentNode["type"] {
+  if (!Array.isArray(type)) return type;
+  const types = type.filter((entry) => entry !== "null");
+  if (types.length === 0) return undefined;
+  return types.length === 1 ? types[0] : types;
 }
 
 function mergeNullableWrapperIntoBranch(
   wrapper: DocumentNode,
-  branch: DocumentNode
+  branch: DocumentNode,
 ): DocumentNode {
   return {
     ...branch,
@@ -324,30 +322,30 @@ function mergeNullableWrapperIntoBranch(
     description: wrapper.description ?? branch.description,
     rest: { ...branch.rest, ...wrapper.rest },
     order: wrapper.order ?? branch.order,
-  }
+  };
 }
 
 export function createNode(
-  type: JSONSchema7TypeName | "enum" = "string"
+  type: JSONSchema7TypeName | "enum" = "string",
 ): DocumentNode {
-  return normalizeNodeForType({ id: createId(), rest: {} }, type)
+  return normalizeNodeForType({ id: createId(), rest: {} }, type);
 }
 
 export function createEnumValue(): EnumValue {
-  return { id: createId("enum"), value: "" }
+  return { id: createId("enum"), value: "" };
 }
 
 export function updateEffectiveNodeShape(
   node: DocumentNode,
-  fn: (node: DocumentNode) => DocumentNode
+  fn: (node: DocumentNode) => DocumentNode,
 ): DocumentNode {
   if (node.anyOf) {
     return {
       ...node,
       anyOf: mapPreserve(node.anyOf, (branch) =>
-        branch.type === "null" && !branch.ref ? branch : fn(branch)
+        branch.type === "null" && !branch.ref ? branch : fn(branch),
       ),
-    }
+    };
   }
-  return fn(node)
+  return fn(node);
 }

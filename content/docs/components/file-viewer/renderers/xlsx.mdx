@@ -37,7 +37,7 @@ This pulls in `@e965/xlsx` (a patched, dependency-free SheetJS build on npm) and
 ## Usage
 
 ```tsx
-import { XlsxViewer } from "@/components/ui/xlsx-viewer"
+import { XlsxViewer } from "@/components/ui/xlsx-viewer";
 
 export function Example() {
   return (
@@ -45,7 +45,7 @@ export function Example() {
       source={{ kind: "url", url: "/workbook.xlsx", fileName: "workbook.xlsx" }}
       className="h-[600px]"
     />
-  )
+  );
 }
 ```
 
@@ -92,9 +92,9 @@ pixel-exact Excel clone. Merged cells show their value in the top-left cell.
 Attach a ref when source-link UI needs to drive the viewer:
 
 ```tsx
-const ref = React.useRef<XlsxViewerHandle>(null)
+const ref = React.useRef<XlsxViewerHandle>(null);
 
-ref.current?.scrollToCell(0, 4, 2, { behavior: "auto" })
+ref.current?.scrollToCell(0, 4, 2, { behavior: "auto" });
 ```
 
 | Method                 | Description                                                                                                                                                                 |

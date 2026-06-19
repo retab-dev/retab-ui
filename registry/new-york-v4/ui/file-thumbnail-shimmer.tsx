@@ -1,14 +1,16 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
+
+import * as React from "react";
 
 export function FileThumbnailShimmer() {
-  const highlightRef = React.useRef<HTMLDivElement | null>(null)
-  const prefersReducedMotion = usePrefersReducedMotion()
+  const highlightRef = React.useRef<HTMLDivElement | null>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   React.useEffect(() => {
-    const highlight = highlightRef.current
-    if (!highlight || prefersReducedMotion || !highlight.animate) return
+    const highlight = highlightRef.current;
+    if (!highlight || prefersReducedMotion || !highlight.animate) return;
 
     const animation = highlight.animate(
       [{ backgroundPosition: "200% 0" }, { backgroundPosition: "-200% 0" }],
@@ -16,17 +18,17 @@ export function FileThumbnailShimmer() {
         duration: 1600,
         iterations: Infinity,
         easing: "linear",
-      }
-    )
+      },
+    );
 
-    return () => animation.cancel()
-  }, [prefersReducedMotion])
+    return () => animation.cancel();
+  }, [prefersReducedMotion]);
 
   return (
     <div
       aria-hidden
       data-slot="file-thumbnail-shimmer"
-      className="absolute inset-0 overflow-hidden bg-muted"
+      className="bg-muted absolute inset-0 overflow-hidden"
     >
       <div
         ref={highlightRef}
@@ -41,36 +43,36 @@ export function FileThumbnailShimmer() {
         }}
       />
     </div>
-  )
+  );
 }
 
 function usePrefersReducedMotion(): boolean {
   return React.useSyncExternalStore(
     subscribeToReducedMotion,
     getReducedMotionSnapshot,
-    () => false
-  )
+    () => false,
+  );
 }
 
 function subscribeToReducedMotion(onChange: () => void) {
-  if (typeof window === "undefined" || !window.matchMedia) return () => {}
+  if (typeof window === "undefined" || !window.matchMedia) return () => {};
 
-  const query = window.matchMedia("(prefers-reduced-motion: reduce)")
+  const query = window.matchMedia("(prefers-reduced-motion: reduce)");
   if (query.addEventListener) {
-    query.addEventListener("change", onChange)
-    return () => query.removeEventListener("change", onChange)
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
   }
 
   const legacyQuery = query as MediaQueryList & {
-    addListener?: (listener: () => void) => void
-    removeListener?: (listener: () => void) => void
-  }
-  legacyQuery.addListener?.(onChange)
-  return () => legacyQuery.removeListener?.(onChange)
+    addListener?: (listener: () => void) => void;
+    removeListener?: (listener: () => void) => void;
+  };
+  legacyQuery.addListener?.(onChange);
+  return () => legacyQuery.removeListener?.(onChange);
 }
 
 function getReducedMotionSnapshot() {
-  if (typeof window === "undefined" || !window.matchMedia) return false
+  if (typeof window === "undefined" || !window.matchMedia) return false;
 
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }

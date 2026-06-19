@@ -1,33 +1,33 @@
-import * as React from "react"
-import { toast } from "sonner"
+import * as React from "react";
+import { toast } from "sonner";
 
 import type {
   DocumentSchemaNodeEditorProps,
   SchemaEditorMode,
-} from "@/components/schema-editor/document-node-editor-types"
-import { nodeFromJson } from "@/components/schema-editor/document/convert"
+} from "@/components/schema-editor/document-node-editor-types";
+import { nodeFromJson } from "@/components/schema-editor/document/convert";
 import {
   addDefinition,
   removeDefinition,
   renameDefinition,
-} from "@/components/schema-editor/document/definition-operations"
-import { isDefinitionReferenced } from "@/components/schema-editor/document/derive"
-import { replaceNodeJson } from "@/components/schema-editor/document/json-node"
-import { definitionRef } from "@/components/schema-editor/document/json-pointer"
+} from "@/components/schema-editor/document/definition-operations";
+import { isDefinitionReferenced } from "@/components/schema-editor/document/derive";
+import { replaceNodeJson } from "@/components/schema-editor/document/json-node";
+import { definitionRef } from "@/components/schema-editor/document/json-pointer";
 import type {
   DefinitionEntry,
   SchemaDocument,
-} from "@/components/schema-editor/document/types"
-import { getDocumentNodeView } from "@/components/schema-editor/document/view-model"
-import type { SchemaDispatch } from "@/components/schema-editor/schema-builder-types"
+} from "@/components/schema-editor/document/types";
+import { getDocumentNodeView } from "@/components/schema-editor/document/view-model";
+import type { SchemaDispatch } from "@/components/schema-editor/schema-builder-types";
 
 interface DocumentDefinitionsEditorControllerOptions {
-  dispatch: SchemaDispatch
-  doc: SchemaDocument
-  mode: SchemaEditorMode
-  definitionsEnabled: boolean
-  accordionOpen: boolean
-  setAccordionOpen: (open: boolean) => void
+  dispatch: SchemaDispatch;
+  doc: SchemaDocument;
+  mode: SchemaEditorMode;
+  definitionsEnabled: boolean;
+  accordionOpen: boolean;
+  setAccordionOpen: (open: boolean) => void;
 }
 
 export function useDocumentDefinitionsEditorController({
@@ -38,19 +38,19 @@ export function useDocumentDefinitionsEditorController({
   accordionOpen,
   setAccordionOpen,
 }: DocumentDefinitionsEditorControllerOptions) {
-  const [newDefinitionName, setNewDefinitionName] = React.useState("")
-  const editable = mode === "editable"
+  const [newDefinitionName, setNewDefinitionName] = React.useState("");
+  const editable = mode === "editable";
   const shouldShowClosedPrompt =
-    doc.defs.length === 0 && (!accordionOpen || !definitionsEnabled)
-  const accordionValue = accordionOpen ? "defs" : ""
+    doc.defs.length === 0 && (!accordionOpen || !definitionsEnabled);
+  const accordionValue = accordionOpen ? "defs" : "";
 
   const openDefinitions = React.useCallback(() => {
-    setAccordionOpen(true)
-  }, [setAccordionOpen])
+    setAccordionOpen(true);
+  }, [setAccordionOpen]);
 
   const addNewDefinition = React.useCallback(() => {
-    const definitionName = newDefinitionName.trim()
-    if (!definitionName) return
+    const definitionName = newDefinitionName.trim();
+    if (!definitionName) return;
 
     dispatch(
       (current) =>
@@ -58,13 +58,13 @@ export function useDocumentDefinitionsEditorController({
           name: definitionName,
           node: nodeFromJson(
             { type: "object", properties: {}, required: [] },
-            current
+            current,
           ),
-        }).doc
-    )
-    setNewDefinitionName("")
-    setAccordionOpen(true)
-  }, [dispatch, newDefinitionName, setAccordionOpen])
+        }).doc,
+    );
+    setNewDefinitionName("");
+    setAccordionOpen(true);
+  }, [dispatch, newDefinitionName, setAccordionOpen]);
 
   const deleteDefinition = React.useCallback(
     (definition: DefinitionEntry) => {
@@ -74,18 +74,18 @@ export function useDocumentDefinitionsEditorController({
         })
       ) {
         toast.error(
-          `Cannot delete "${definition.name}" because it is referenced by one or more $ref properties. Remove or update those references first.`
-        )
-        return
+          `Cannot delete "${definition.name}" because it is referenced by one or more $ref properties. Remove or update those references first.`,
+        );
+        return;
       }
 
-      dispatch((current) => removeDefinition(current, definition.id))
+      dispatch((current) => removeDefinition(current, definition.id));
       if (doc.defs.length <= 1) {
-        setAccordionOpen(false)
+        setAccordionOpen(false);
       }
     },
-    [dispatch, doc, setAccordionOpen]
-  )
+    [dispatch, doc, setAccordionOpen],
+  );
 
   const updateDefinition = React.useCallback(
     (
@@ -93,23 +93,23 @@ export function useDocumentDefinitionsEditorController({
       newName: string,
       updatedDefinition?: Parameters<
         NonNullable<DocumentSchemaNodeEditorProps["onNameChange"]>
-      >[1]
+      >[1],
     ) => {
-      if (newName === definition.name && !updatedDefinition) return
+      if (newName === definition.name && !updatedDefinition) return;
 
       dispatch((current) => {
-        let next = current
+        let next = current;
         if (newName !== definition.name) {
-          next = renameDefinition(next, definition.id, newName)
+          next = renameDefinition(next, definition.id, newName);
         }
         if (updatedDefinition) {
-          next = replaceNodeJson(next, definition.node.id, updatedDefinition)
+          next = replaceNodeJson(next, definition.node.id, updatedDefinition);
         }
-        return next
-      })
+        return next;
+      });
     },
-    [dispatch]
-  )
+    [dispatch],
+  );
 
   const definitionViews = React.useMemo(
     () =>
@@ -121,8 +121,8 @@ export function useDocumentDefinitionsEditorController({
           exceptDefId: definition.id,
         }),
       })),
-    [doc]
-  )
+    [doc],
+  );
 
   return {
     accordionValue,
@@ -135,5 +135,5 @@ export function useDocumentDefinitionsEditorController({
     addNewDefinition,
     deleteDefinition,
     updateDefinition,
-  }
+  };
 }

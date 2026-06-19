@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import type { ViewerSource } from "@/lib/viewer-source"
+import type { ViewerSource } from "@/lib/viewer-source";
 import {
   AttachmentSidebar,
   type AttachmentSidebarItem,
-} from "@/components/ui/attachment-sidebar"
+} from "@/components/ui/attachment-sidebar";
 import {
   FileViewer,
   FileViewerBody,
@@ -18,7 +18,7 @@ import {
   FileViewerSidebarTrigger,
   FileViewerSurface,
   FileViewerTitle,
-} from "@/components/ui/file-viewer"
+} from "@/components/ui/file-viewer";
 import {
   SidebarListButton,
   SidebarListGroup,
@@ -26,7 +26,7 @@ import {
   SidebarListGroupLabel,
   SidebarListMenu,
   SidebarListMenuItem,
-} from "@/components/ui/sidebar-list"
+} from "@/components/ui/sidebar-list";
 
 const attachments = [
   {
@@ -62,31 +62,31 @@ const attachments = [
     description: "Markdown",
     size: 18_400,
   },
-] satisfies readonly AttachmentSidebarItem[]
+] satisfies readonly AttachmentSidebarItem[];
 
 const messageBodySource = {
   kind: "text",
   fileName: "message-body.txt",
   mimeType: "text/plain",
   text: "Hi team,\n\nPlease review the attached statement, workbook, and notes before the closing call.\n\nThanks.",
-} satisfies ViewerSource
+} satisfies ViewerSource;
 
 export function AttachmentSidebarExample() {
-  const [selectedId, setSelectedId] = React.useState(attachments[0].id)
+  const [selectedId, setSelectedId] = React.useState(attachments[0].id);
   const selected =
     attachments.find((attachment) => attachment.id === selectedId) ??
-    attachments[0]
-  const source = selectedId === "body" ? messageBodySource : selected.source
+    attachments[0];
+  const source = selectedId === "body" ? messageBodySource : selected.source;
 
   return (
-    <div className="not-prose h-[620px] overflow-hidden rounded-xl border bg-background">
+    <div className="not-prose bg-background h-[620px] overflow-hidden rounded-xl border">
       <FileViewer
         key={selectedId}
         source={source}
         defaultOpen
         mode="inline"
         sidebarSide="right"
-        className="h-full bg-background"
+        className="bg-background h-full"
       >
         <FileViewerHeader>
           <FileViewerSidebarTrigger className="-ml-1" />
@@ -120,7 +120,7 @@ export function AttachmentSidebarExample() {
                       <SidebarListButton
                         isActive={selectedId === "body"}
                         onClick={() => {
-                          setSelectedId("body")
+                          setSelectedId("body");
                         }}
                       >
                         Body
@@ -134,5 +134,5 @@ export function AttachmentSidebarExample() {
         </FileViewerBody>
       </FileViewer>
     </div>
-  )
+  );
 }

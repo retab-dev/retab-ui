@@ -1,5 +1,5 @@
-import type { JSONSchema7 } from "json-schema"
-import { describe, expect, it } from "vitest"
+import type { JSONSchema7 } from "json-schema";
+import { describe, expect, it } from "vitest";
 
 import {
   emptyValueFor,
@@ -8,7 +8,7 @@ import {
   labelFor,
   scalarObjectColumns,
   unwrapNullable,
-} from "@/components/json-form/schema-model"
+} from "@/components/json-form/schema-model";
 
 describe("json-form schema model", () => {
   it("expands local $defs refs while preserving sibling overrides", () => {
@@ -34,16 +34,16 @@ describe("json-form schema model", () => {
           required: ["email"],
         },
       },
-    }
+    };
 
-    const expanded = expandRefs(schema)
-    const owner = expanded.properties?.owner as JSONSchema7
+    const expanded = expandRefs(schema);
+    const owner = expanded.properties?.owner as JSONSchema7;
 
-    expect(owner.$ref).toBeUndefined()
-    expect(owner.title).toBe("Owner")
-    expect(Object.keys(owner.properties ?? {})).toEqual(["name", "email"])
-    expect(owner.required).toEqual(["name", "email"])
-  })
+    expect(owner.$ref).toBeUndefined();
+    expect(owner.title).toBe("Owner");
+    expect(Object.keys(owner.properties ?? {})).toEqual(["name", "email"]);
+    expect(owner.required).toEqual(["name", "email"]);
+  });
 
   it("decodes JSON Pointer escapes in local $defs refs", () => {
     const expanded = expandRefs({
@@ -63,16 +63,16 @@ describe("json-form schema model", () => {
         total: { $ref: "#/$defs/price~1currency" },
         tax_rate: { $ref: "#/$defs/tax~0rate" },
       },
-    })
+    });
 
     expect(expanded.properties?.total).toEqual({
       type: "object",
       properties: {
         amount: { type: "number" },
       },
-    })
-    expect(expanded.properties?.tax_rate).toEqual({ type: "number" })
-  })
+    });
+    expect(expanded.properties?.tax_rate).toEqual({ type: "number" });
+  });
 
   it("expands local refs to nested schema nodes", () => {
     const expanded = expandRefs({
@@ -92,14 +92,14 @@ describe("json-form schema model", () => {
           description: "Copied from the envelope",
         },
       },
-    })
+    });
 
     expect(expanded.properties?.envelope_id).toEqual({
       type: "string",
       title: "Envelope ID",
       description: "Copied from the envelope",
-    })
-  })
+    });
+  });
 
   it("expands refs inside dictionary property schemas", () => {
     const expanded = expandRefs({
@@ -119,19 +119,19 @@ describe("json-form schema model", () => {
           },
         },
       },
-    })
-    const metadata = expanded.properties?.metadata as JSONSchema7
+    });
+    const metadata = expanded.properties?.metadata as JSONSchema7;
 
     expect(metadata.additionalProperties).toEqual({
       type: "string",
       title: "Metadata value",
-    })
+    });
     expect(metadata.patternProperties?.["^x_"]).toEqual({
       type: "string",
       title: "Metadata value",
       description: "Extension",
-    })
-  })
+    });
+  });
 
   it("merges allOf object branches", () => {
     const expanded = expandRefs({
@@ -147,14 +147,14 @@ describe("json-form schema model", () => {
           required: ["age"],
         },
       ],
-    })
+    });
 
     expect(Object.keys(expanded.properties ?? {})).toEqual([
       "first_name",
       "age",
-    ])
-    expect(expanded.required).toEqual(["first_name", "age"])
-  })
+    ]);
+    expect(expanded.required).toEqual(["first_name", "age"]);
+  });
 
   it("deep-merges overlapping object properties across allOf branches", () => {
     const expanded = expandRefs({
@@ -184,7 +184,7 @@ describe("json-form schema model", () => {
           },
         },
       ],
-    })
+    });
 
     expect(expanded.properties?.vendor).toEqual({
       type: "object",
@@ -193,8 +193,8 @@ describe("json-form schema model", () => {
         email: { type: "string", format: "email", title: "Email" },
       },
       required: ["name", "email"],
-    })
-  })
+    });
+  });
 
   it("expands sibling schema nodes after merging allOf branches", () => {
     const expanded = expandRefs({
@@ -227,26 +227,26 @@ describe("json-form schema model", () => {
           },
         },
       ],
-    })
+    });
 
     expect(expanded.properties?.status).toEqual({
       type: "string",
       title: "Code",
-    })
-    const rows = expanded.properties?.rows as JSONSchema7
+    });
+    const rows = expanded.properties?.rows as JSONSchema7;
     expect(rows.items).toEqual({
       type: "object",
       properties: {
         code: { type: "string", title: "Code" },
       },
-    })
-    const metadata = expanded.properties?.metadata as JSONSchema7
+    });
+    const metadata = expanded.properties?.metadata as JSONSchema7;
     expect(metadata.additionalProperties).toEqual({
       type: "string",
       title: "Code",
-    })
-    expect(expanded.properties?.amount).toEqual({ type: "number" })
-  })
+    });
+    expect(expanded.properties?.amount).toEqual({ type: "number" });
+  });
 
   it("unwraps nullable unions without losing top-level metadata", () => {
     expect(
@@ -254,7 +254,7 @@ describe("json-form schema model", () => {
         title: "Invoice date",
         description: "When the invoice was issued",
         anyOf: [{ type: "null" }, { type: "string", format: "date" }],
-      })
+      }),
     ).toEqual({
       nullable: true,
       schema: {
@@ -263,33 +263,33 @@ describe("json-form schema model", () => {
         title: "Invoice date",
         description: "When the invoice was issued",
       },
-    })
+    });
 
     expect(unwrapNullable({ type: ["number", "null"], minimum: 0 })).toEqual({
       nullable: true,
       schema: { type: "number", minimum: 0 },
-    })
-  })
+    });
+  });
 
   it("classifies enums before primitive schema types", () => {
-    expect(fieldKind({ type: "string", enum: ["draft", "paid"] })).toBe("enum")
-    expect(fieldKind({ type: ["integer", "null"] })).toBe("integer")
-    expect(fieldKind({})).toBe("string")
-  })
+    expect(fieldKind({ type: "string", enum: ["draft", "paid"] })).toBe("enum");
+    expect(fieldKind({ type: ["integer", "null"] })).toBe("integer");
+    expect(fieldKind({})).toBe("string");
+  });
 
   it("derives labels from title, explicit labels, and path leaves", () => {
-    expect(labelFor("vendor.name", { title: "Supplier" })).toBe("Supplier")
-    expect(labelFor("vendor.tax-id", {}, "Tax ID")).toBe("Tax ID")
-    expect(labelFor("line_items.0.unit_price", {})).toBe("Unit Price")
-  })
+    expect(labelFor("vendor.name", { title: "Supplier" })).toBe("Supplier");
+    expect(labelFor("vendor.tax-id", {}, "Tax ID")).toBe("Tax ID");
+    expect(labelFor("line_items.0.unit_price", {})).toBe("Unit Price");
+  });
 
   it("returns stable empty values for appended fields", () => {
-    expect(emptyValueFor({ type: "boolean" })).toBe(false)
-    expect(emptyValueFor({ type: "object" })).toEqual({})
-    expect(emptyValueFor({ type: "array" })).toEqual([])
-    expect(emptyValueFor({ type: "number" })).toBeUndefined()
-    expect(emptyValueFor({ type: ["string", "null"] })).toBeNull()
-  })
+    expect(emptyValueFor({ type: "boolean" })).toBe(false);
+    expect(emptyValueFor({ type: "object" })).toEqual({});
+    expect(emptyValueFor({ type: "array" })).toEqual([]);
+    expect(emptyValueFor({ type: "number" })).toBeUndefined();
+    expect(emptyValueFor({ type: ["string", "null"] })).toBeNull();
+  });
 
   it("detects table columns only for flat scalar object arrays", () => {
     expect(
@@ -301,7 +301,7 @@ describe("json-form schema model", () => {
           count: { type: ["integer", "null"] },
           active: { type: "boolean" },
         },
-      })
+      }),
     ).toEqual([
       {
         key: "name",
@@ -324,7 +324,7 @@ describe("json-form schema model", () => {
         required: false,
         nullable: false,
       },
-    ])
+    ]);
 
     expect(
       scalarObjectColumns({
@@ -335,7 +335,7 @@ describe("json-form schema model", () => {
             properties: { value: { type: "string" } },
           },
         },
-      })
-    ).toBeNull()
-  })
-})
+      }),
+    ).toBeNull();
+  });
+});

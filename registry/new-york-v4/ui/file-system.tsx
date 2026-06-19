@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { AlertCircle, FileQuestion, RefreshCw } from "lucide-react"
+import * as React from "react";
+import { AlertCircle, FileQuestion, RefreshCw } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { FileViewer } from "@/components/ui/file-viewer"
-import { Spinner } from "@/components/ui/spinner"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { FileViewer } from "@/components/ui/file-viewer";
+import { Spinner } from "@/components/ui/spinner";
 
 import {
   FileSystemOpenPreview,
   useFileSystemOpenPreview,
-} from "./file-system-open-preview-dialog"
+} from "./file-system-open-preview-dialog";
 import {
   FileSystemBrowser,
   FileSystemHeader,
@@ -22,25 +22,25 @@ import {
   useFileSystemSelectedSource,
   useFileSystemSelection,
   type FileSystemSelectionRenderState,
-} from "./file-system-parts"
+} from "./file-system-parts";
 import {
   FILE_SYSTEM_COLUMNS_SIDEBAR_WIDTH,
   FILE_SYSTEM_SIDEBAR_WIDTH,
-} from "./file-system-columns-view"
-import { FileSystemProvider, useFileSystem } from "./file-system-provider"
-import { FileSystemThumbnail } from "./file-system-thumbnail"
+} from "./file-system-columns-view";
+import { FileSystemProvider, useFileSystem } from "./file-system-provider";
+import { FileSystemThumbnail } from "./file-system-thumbnail";
 import type {
   FileSystemEntry,
   FileSystemFileItem,
   FileSystemProps,
-} from "./file-system-types"
+} from "./file-system-types";
 import {
   ViewerBody,
   ViewerHeader,
   ViewerRoot,
   ViewerSidebar,
   ViewerSurface,
-} from "./viewer"
+} from "./viewer";
 
 export {
   FileSystemOpenPreview,
@@ -55,7 +55,7 @@ export {
   useFileSystemSelectedItem,
   useFileSystemSelectedSource,
   useFileSystemSelection,
-}
+};
 
 export type {
   FileSystemFileItem,
@@ -67,29 +67,29 @@ export type {
   FileSystemQueryState,
   FileSystemResolveSourceArgs,
   FileSystemView,
-} from "./file-system-types"
-export type { FileSystemProviderProps } from "./file-system-provider"
+} from "./file-system-types";
+export type { FileSystemProviderProps } from "./file-system-provider";
 export type {
   FileSystemBrowserPartState,
   FileSystemHeaderState,
   FileSystemSelectionRenderState,
   FileSystemSelectionState,
-} from "./file-system-parts"
+} from "./file-system-parts";
 
 export function FileSystem({ className, ...providerProps }: FileSystemProps) {
   return (
     <FileSystemProvider {...providerProps}>
       <FileSystemRoot className={className} />
     </FileSystemProvider>
-  )
+  );
 }
 
 function FileSystemRoot({ className }: { className?: string }) {
-  const { browser } = useFileSystem()
+  const { browser } = useFileSystem();
   const sidebarWidth =
     browser.view === "columns"
       ? FILE_SYSTEM_COLUMNS_SIDEBAR_WIDTH
-      : FILE_SYSTEM_SIDEBAR_WIDTH
+      : FILE_SYSTEM_SIDEBAR_WIDTH;
 
   return (
     <div data-slot="file-system">
@@ -97,8 +97,8 @@ function FileSystemRoot({ className }: { className?: string }) {
         data-viewer="file-system"
         defaultOpen
         className={cn(
-          "h-[640px] rounded-md border bg-background text-foreground",
-          className
+          "bg-background text-foreground h-[640px] rounded-md border",
+          className,
         )}
       >
         <ViewerHeader className="flex flex-col">
@@ -123,13 +123,13 @@ function FileSystemRoot({ className }: { className?: string }) {
         <FileSystemOpenPreview />
       </ViewerRoot>
     </div>
-  )
+  );
 }
 
 function FileSystemDefaultSelectionContent({
   selection,
 }: {
-  selection: FileSystemSelectionRenderState
+  selection: FileSystemSelectionRenderState;
 }) {
   const {
     entry,
@@ -138,15 +138,15 @@ function FileSystemDefaultSelectionContent({
     resolveSource,
     retry,
     sourceState,
-  } = selection
+  } = selection;
 
   return (
     <div
       data-slot="file-system-default-selection"
-      className="flex size-full min-h-0 min-w-0 flex-col overflow-hidden bg-muted/20"
+      className="bg-muted/20 flex size-full min-h-0 min-w-0 flex-col overflow-hidden"
     >
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-background">
+        <div className="bg-background flex min-h-0 flex-1 items-center justify-center overflow-hidden">
           {!entry ? (
             <FileSystemDefaultSelectionMessage
               title="No file selected"
@@ -158,7 +158,7 @@ function FileSystemDefaultSelectionContent({
               description="Folders show their contents in the browser."
             />
           ) : sourceState.status === "loading" ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="text-muted-foreground flex items-center gap-2 text-sm">
               <Spinner className="size-4" />
               Loading preview
             </div>
@@ -198,7 +198,7 @@ function FileSystemDefaultSelectionContent({
         ) : null}
       </div>
     </div>
-  )
+  );
 }
 
 function FileSystemDefaultSelectionFooter({
@@ -207,15 +207,15 @@ function FileSystemDefaultSelectionFooter({
   renderMetadata,
   resolveFileSource,
 }: {
-  entry: FileSystemEntry
-  renderFileActions?: (file: FileSystemFileItem) => React.ReactNode
-  renderMetadata?: (item: FileSystemEntry) => React.ReactNode
-  resolveFileSource: FileSystemSelectionRenderState["resolveSource"]
+  entry: FileSystemEntry;
+  renderFileActions?: (file: FileSystemFileItem) => React.ReactNode;
+  renderMetadata?: (item: FileSystemEntry) => React.ReactNode;
+  resolveFileSource: FileSystemSelectionRenderState["resolveSource"];
 }) {
-  const file = entry.kind === "file" ? entry : null
+  const file = entry.kind === "file" ? entry : null;
 
   return (
-    <div className="shrink-0 border-t bg-background p-3">
+    <div className="bg-background shrink-0 border-t p-3">
       <div className="flex items-start gap-3">
         {file ? (
           <FileSystemThumbnail
@@ -224,13 +224,13 @@ function FileSystemDefaultSelectionFooter({
             className="w-12 shrink-0"
           />
         ) : (
-          <div className="flex size-12 shrink-0 items-center justify-center rounded-sm bg-muted text-lg">
+          <div className="bg-muted flex size-12 shrink-0 items-center justify-center rounded-sm text-lg">
             {folderInitial(entry.name)}
           </div>
         )}
         <div className="min-w-0 flex-1">
           <div className="text-sm font-medium break-words">{entry.name}</div>
-          <div className="mt-0.5 truncate text-xs text-muted-foreground">
+          <div className="text-muted-foreground mt-0.5 truncate text-xs">
             {entry.path}
           </div>
         </div>
@@ -240,7 +240,7 @@ function FileSystemDefaultSelectionFooter({
         <div className="mt-3">{renderMetadata(entry)}</div>
       ) : null}
     </div>
-  )
+  );
 }
 
 function FileSystemDefaultSelectionMessage({
@@ -249,21 +249,21 @@ function FileSystemDefaultSelectionMessage({
   icon,
   title,
 }: {
-  action?: React.ReactNode
-  description: string
-  icon?: React.ReactNode
-  title: string
+  action?: React.ReactNode;
+  description: string;
+  icon?: React.ReactNode;
+  title: string;
 }) {
   return (
     <div className="flex max-w-xs flex-col items-center gap-2 px-6 text-center">
       {icon ? <div className="text-muted-foreground">{icon}</div> : null}
       <div className="text-sm font-medium">{title}</div>
-      <div className="text-xs text-muted-foreground">{description}</div>
+      <div className="text-muted-foreground text-xs">{description}</div>
       {action ? <div className="pt-1">{action}</div> : null}
     </div>
-  )
+  );
 }
 
 function folderInitial(name: string) {
-  return name.trim().charAt(0).toUpperCase() || "/"
+  return name.trim().charAt(0).toUpperCase() || "/";
 }

@@ -1,16 +1,16 @@
-import type { JSONSchema7, JSONSchema7Definition } from "json-schema"
+import type { JSONSchema7, JSONSchema7Definition } from "json-schema";
 
 import {
   resolveSchema,
   unwrapSchema,
-} from "@/components/json-table/lib/schema-references"
+} from "@/components/json-table/lib/schema-references";
 
 function isObjectTraversalSchema(schema: JSONSchema7): boolean {
-  return schema.type === "object" || !!schema.properties
+  return schema.type === "object" || !!schema.properties;
 }
 
 function isArrayTraversalSchema(schema: JSONSchema7): boolean {
-  return schema.type === "array" || !!schema.items
+  return schema.type === "array" || !!schema.items;
 }
 
 export function getSchemaFlatProperties(
@@ -18,33 +18,33 @@ export function getSchemaFlatProperties(
   schemaPathParts: string[],
   context: JSONSchema7,
   opts?: {
-    seen?: WeakSet<object>
-    depth?: number
-    maxDepth?: number
-  }
+    seen?: WeakSet<object>;
+    depth?: number;
+    maxDepth?: number;
+  },
 ): { key: string; type: JSONSchema7 }[] {
-  const seen = opts?.seen ?? new WeakSet<object>()
-  const depth = opts?.depth ?? 0
-  const maxDepth = opts?.maxDepth ?? 64
+  const seen = opts?.seen ?? new WeakSet<object>();
+  const depth = opts?.depth ?? 0;
+  const maxDepth = opts?.maxDepth ?? 64;
 
-  let resolved = resolveSchema(schema, context)
-  resolved = unwrapSchema(resolved, context).schema
+  let resolved = resolveSchema(schema, context);
+  resolved = unwrapSchema(resolved, context).schema;
 
   if (depth > maxDepth) {
     console.warn(
       "[getSchemaFlatProperties] Max depth reached while flattening schema path:",
-      schemaPathParts.join(".")
-    )
-    return [{ key: schemaPathParts.join("."), type: resolved }]
+      schemaPathParts.join("."),
+    );
+    return [{ key: schemaPathParts.join("."), type: resolved }];
   }
 
-  let addedToSeen = false
+  let addedToSeen = false;
   if (resolved && typeof resolved === "object") {
     if (seen.has(resolved)) {
       console.warn(
         "[getSchemaFlatProperties] Circular schema reference detected at schema path:",
-        schemaPathParts.join(".")
-      )
+        schemaPathParts.join("."),
+      );
       return [
         {
           key: schemaPathParts.join("."),
@@ -54,13 +54,13 @@ export function getSchemaFlatProperties(
             title: resolved.title || "(circular)",
           },
         },
-      ]
+      ];
     }
-    seen.add(resolved)
-    addedToSeen = true
+    seen.add(resolved);
+    addedToSeen = true;
   }
 
-  let result: { key: string; type: JSONSchema7 }[]
+  let result: { key: string; type: JSONSchema7 }[];
 
   if (isArrayTraversalSchema(resolved)) {
     if (resolved.items) {
@@ -74,11 +74,11 @@ export function getSchemaFlatProperties(
               seen,
               depth: depth + 1,
               maxDepth,
-            }
-          )
-        )
+            },
+          ),
+        );
       } else if (typeof resolved.items === "object") {
-        const itemSchema = unwrapSchema(resolved.items, context).schema
+        const itemSchema = unwrapSchema(resolved.items, context).schema;
         result = getSchemaFlatProperties(
           itemSchema,
           [...schemaPathParts, "*"],
@@ -87,13 +87,13 @@ export function getSchemaFlatProperties(
             seen,
             depth: depth + 1,
             maxDepth,
-          }
-        )
+          },
+        );
       } else {
-        result = [{ key: schemaPathParts.join("."), type: resolved }]
+        result = [{ key: schemaPathParts.join("."), type: resolved }];
       }
     } else {
-      result = [{ key: schemaPathParts.join("."), type: resolved }]
+      result = [{ key: schemaPathParts.join("."), type: resolved }];
     }
   } else if (isObjectTraversalSchema(resolved)) {
     if (resolved.properties) {
@@ -102,18 +102,18 @@ export function getSchemaFlatProperties(
           seen,
           depth: depth + 1,
           maxDepth,
-        })
-      )
+        }),
+      );
     } else {
-      result = [{ key: schemaPathParts.join("."), type: resolved }]
+      result = [{ key: schemaPathParts.join("."), type: resolved }];
     }
   } else {
-    result = [{ key: schemaPathParts.join("."), type: resolved }]
+    result = [{ key: schemaPathParts.join("."), type: resolved }];
   }
 
   if (addedToSeen && resolved && typeof resolved === "object") {
-    seen.delete(resolved)
+    seen.delete(resolved);
   }
 
-  return result
+  return result;
 }

@@ -1,24 +1,24 @@
-"use client"
+"use client";
 
-import { Table2, X } from "lucide-react"
+import { Table2, X } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { useDropzone } from "@/components/ui/dropzone"
-import { formatFileSize } from "@/components/ui/file-size-format"
-import { FileThumbnail } from "@/components/ui/file-thumbnail"
+import { cn } from "@/lib/utils";
+import { useDropzone } from "@/components/ui/dropzone";
+import { formatFileSize } from "@/components/ui/file-size-format";
+import { FileThumbnail } from "@/components/ui/file-thumbnail";
 
 import {
   RejectionRows,
   type DropzoneExampleProps,
-} from "./dropzone-example-shared"
+} from "./dropzone-example-shared";
 
 export function SpreadsheetImportCard({ className }: DropzoneExampleProps) {
   const dropzone = useDropzone({
     accept:
       ".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     maxFiles: 1,
-  })
-  const selectedFile = dropzone.files[0]
+  });
+  const selectedFile = dropzone.files[0];
 
   return (
     <section
@@ -26,7 +26,7 @@ export function SpreadsheetImportCard({ className }: DropzoneExampleProps) {
         className: cn(
           "rounded-lg border bg-background p-4 transition-colors",
           dropzone.isDragging && "border-foreground/40 bg-accent/35",
-          className
+          className,
         ),
       })}
     >
@@ -34,10 +34,10 @@ export function SpreadsheetImportCard({ className }: DropzoneExampleProps) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-sm font-medium">
-            <Table2 className="size-4 text-muted-foreground" aria-hidden />
+            <Table2 className="text-muted-foreground size-4" aria-hidden />
             Spreadsheet mapper
           </div>
-          <div className="mt-1 text-xs text-muted-foreground">
+          <div className="text-muted-foreground mt-1 text-xs">
             A single sheet feeds a mapping workflow.
           </div>
         </div>
@@ -51,27 +51,27 @@ export function SpreadsheetImportCard({ className }: DropzoneExampleProps) {
           Choose
         </button>
       </div>
-      <div className="mt-4 rounded-md border border-dashed bg-muted/20 p-3">
+      <div className="bg-muted/20 mt-4 rounded-md border border-dashed p-3">
         {selectedFile ? (
           <div className="space-y-3">
             <div className="flex min-w-0 items-center gap-3">
               <FileThumbnail
                 file={selectedFile.file}
                 previewAspectRatio={1}
-                className="size-12 shrink-0 bg-background"
+                className="bg-background size-12 shrink-0"
               />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium">
                   {selectedFile.file.name}
                 </div>
-                <div className="text-xs text-muted-foreground">
+                <div className="text-muted-foreground text-xs">
                   {formatFileSize(selectedFile.file.size)}
                 </div>
               </div>
               <button
                 type="button"
                 aria-label={`Remove ${selectedFile.file.name}`}
-                className="grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground"
+                className="text-muted-foreground hover:bg-background hover:text-foreground grid size-7 shrink-0 place-items-center rounded-md"
                 onClick={dropzone.clearFiles}
               >
                 <X className="size-4" aria-hidden />
@@ -81,7 +81,7 @@ export function SpreadsheetImportCard({ className }: DropzoneExampleProps) {
               {["Name", "Email", "Amount"].map((column) => (
                 <div
                   key={column}
-                  className="rounded-md border bg-background px-2 py-1.5 text-center font-medium"
+                  className="bg-background rounded-md border px-2 py-1.5 text-center font-medium"
                 >
                   {column}
                 </div>
@@ -101,5 +101,5 @@ export function SpreadsheetImportCard({ className }: DropzoneExampleProps) {
       </div>
       <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </section>
-  )
+  );
 }

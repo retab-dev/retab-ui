@@ -1,80 +1,80 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
 function legacyCopyToClipboard(value: string) {
-  const textArea = document.createElement("textarea")
-  textArea.value = value
-  textArea.setAttribute("readonly", "")
-  textArea.style.position = "fixed"
-  textArea.style.opacity = "0"
-  textArea.style.pointerEvents = "none"
+  const textArea = document.createElement("textarea");
+  textArea.value = value;
+  textArea.setAttribute("readonly", "");
+  textArea.style.position = "fixed";
+  textArea.style.opacity = "0";
+  textArea.style.pointerEvents = "none";
 
-  document.body.appendChild(textArea)
-  textArea.focus()
-  textArea.select()
-  textArea.setSelectionRange(0, value.length)
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  textArea.setSelectionRange(0, value.length);
 
-  let hasCopied = false
+  let hasCopied = false;
   try {
-    hasCopied = document.execCommand("copy")
+    hasCopied = document.execCommand("copy");
   } catch {
-    hasCopied = false
+    hasCopied = false;
   }
 
-  document.body.removeChild(textArea)
-  return hasCopied
+  document.body.removeChild(textArea);
+  return hasCopied;
 }
 
 export function useCopyToClipboard({
   timeout = 2000,
   onCopy,
 }: {
-  timeout?: number
-  onCopy?: () => void
+  timeout?: number;
+  onCopy?: () => void;
 } = {}) {
-  const [isCopied, setIsCopied] = React.useState(false)
+  const [isCopied, setIsCopied] = React.useState(false);
 
   const copyToClipboard = async (value: string) => {
     if (typeof window === "undefined") {
-      return false
+      return false;
     }
 
     if (!value) {
-      return false
+      return false;
     }
 
-    let hasCopied = false
+    let hasCopied = false;
 
     if (navigator.clipboard?.writeText) {
       try {
-        await navigator.clipboard.writeText(value)
-        hasCopied = true
+        await navigator.clipboard.writeText(value);
+        hasCopied = true;
       } catch {
-        hasCopied = legacyCopyToClipboard(value)
+        hasCopied = legacyCopyToClipboard(value);
       }
     } else {
-      hasCopied = legacyCopyToClipboard(value)
+      hasCopied = legacyCopyToClipboard(value);
     }
 
     if (!hasCopied) {
-      return false
+      return false;
     }
 
-    setIsCopied(true)
+    setIsCopied(true);
 
     if (onCopy) {
-      onCopy()
+      onCopy();
     }
 
     if (timeout !== 0) {
       setTimeout(() => {
-        setIsCopied(false)
-      }, timeout)
+        setIsCopied(false);
+      }, timeout);
     }
 
-    return true
-  }
+    return true;
+  };
 
-  return { isCopied, copyToClipboard }
+  return { isCopied, copyToClipboard };
 }

@@ -1,15 +1,15 @@
-import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { moveOrderedItem } from "@/components/schema-editor/primitives/schema-order"
-import { getObjectPropertyNames } from "@/components/schema-editor/property-form/model/object-property-selectors"
-import { formatTitle } from "@/components/schema-editor/schema-title"
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
+import { moveOrderedItem } from "@/components/schema-editor/primitives/schema-order";
+import { getObjectPropertyNames } from "@/components/schema-editor/property-form/model/object-property-selectors";
+import { formatTitle } from "@/components/schema-editor/schema-title";
 
 export function createObjectPropertySchema(
-  propertyName: string
+  propertyName: string,
 ): ExtendedJSONSchema7 {
   return {
     type: "string",
     title: formatTitle(propertyName),
-  }
+  };
 }
 
 export function replaceObjectProperty({
@@ -17,9 +17,9 @@ export function replaceObjectProperty({
   propertyName,
   propertySchema,
 }: {
-  schemaNode: ExtendedJSONSchema7
-  propertyName: string
-  propertySchema: ExtendedJSONSchema7
+  schemaNode: ExtendedJSONSchema7;
+  propertyName: string;
+  propertySchema: ExtendedJSONSchema7;
 }): ExtendedJSONSchema7 {
   return {
     ...schemaNode,
@@ -30,7 +30,7 @@ export function replaceObjectProperty({
     required: getObjectPropertyNames(schemaNode).includes(propertyName)
       ? schemaNode.required
       : [...(schemaNode.required || []), propertyName],
-  }
+  };
 }
 
 export function renameObjectProperty({
@@ -38,48 +38,48 @@ export function renameObjectProperty({
   oldName,
   newName,
 }: {
-  schemaNode: ExtendedJSONSchema7
-  oldName: string
-  newName: string
+  schemaNode: ExtendedJSONSchema7;
+  oldName: string;
+  newName: string;
 }): ExtendedJSONSchema7 {
-  if (!newName || oldName === newName) return schemaNode
-  if (getObjectPropertyNames(schemaNode).includes(newName)) return schemaNode
+  if (!newName || oldName === newName) return schemaNode;
+  if (getObjectPropertyNames(schemaNode).includes(newName)) return schemaNode;
 
-  const properties = schemaNode.properties || {}
-  const nextProperties: NonNullable<ExtendedJSONSchema7["properties"]> = {}
+  const properties = schemaNode.properties || {};
+  const nextProperties: NonNullable<ExtendedJSONSchema7["properties"]> = {};
   for (const [currentName, propertySchema] of Object.entries(properties)) {
     setRecordValue(
       nextProperties,
       currentName === oldName ? newName : currentName,
-      propertySchema
-    )
+      propertySchema,
+    );
   }
 
   return {
     ...schemaNode,
     properties: nextProperties,
     required: (schemaNode.required || []).map((name) =>
-      name === oldName ? newName : name
+      name === oldName ? newName : name,
     ),
-  }
+  };
 }
 
 export function removeObjectProperty({
   schemaNode,
   propertyName,
 }: {
-  schemaNode: ExtendedJSONSchema7
-  propertyName: string
+  schemaNode: ExtendedJSONSchema7;
+  propertyName: string;
 }): ExtendedJSONSchema7 {
   const { [propertyName]: _removed, ...nextProperties } =
-    schemaNode.properties || {}
+    schemaNode.properties || {};
   return {
     ...schemaNode,
     properties: nextProperties,
     required: (schemaNode.required || []).filter(
-      (name) => name !== propertyName
+      (name) => name !== propertyName,
     ),
-  }
+  };
 }
 
 export function moveObjectProperty({
@@ -87,30 +87,30 @@ export function moveObjectProperty({
   propertyName,
   targetIndex,
 }: {
-  schemaNode: ExtendedJSONSchema7
-  propertyName: string
-  targetIndex: number
+  schemaNode: ExtendedJSONSchema7;
+  propertyName: string;
+  targetIndex: number;
 }): ExtendedJSONSchema7 {
-  const properties = schemaNode.properties || {}
-  const propertyEntries = Object.entries(properties)
+  const properties = schemaNode.properties || {};
+  const propertyEntries = Object.entries(properties);
   const sourceIndex = propertyEntries.findIndex(
-    ([name]) => name === propertyName
-  )
-  if (sourceIndex < 0) return schemaNode
+    ([name]) => name === propertyName,
+  );
+  if (sourceIndex < 0) return schemaNode;
 
-  const nextProperties: NonNullable<ExtendedJSONSchema7["properties"]> = {}
+  const nextProperties: NonNullable<ExtendedJSONSchema7["properties"]> = {};
   for (const [name, propertySchema] of moveOrderedItem({
     items: propertyEntries,
     sourceIndex,
     targetIndex,
   })) {
-    setRecordValue(nextProperties, name, propertySchema)
+    setRecordValue(nextProperties, name, propertySchema);
   }
 
   return {
     ...schemaNode,
     properties: nextProperties,
-  }
+  };
 }
 
 function setRecordValue<T>(record: Record<string, T>, key: string, value: T) {
@@ -119,5 +119,5 @@ function setRecordValue<T>(record: Record<string, T>, key: string, value: T) {
     enumerable: true,
     configurable: true,
     writable: true,
-  })
+  });
 }

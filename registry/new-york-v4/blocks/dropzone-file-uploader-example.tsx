@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { FileUploader } from "@/components/ui/file-uploader"
+import { FileUploader } from "@/components/ui/file-uploader";
 
-import { type DropzoneExampleProps } from "./dropzone-example-shared"
+import { type DropzoneExampleProps } from "./dropzone-example-shared";
 
 export function DefaultFileUploaderExample({
   className,
@@ -18,5 +18,5 @@ export function DefaultFileUploaderExample({
         title="Default file uploader"
       />
     </section>
-  )
+  );
 }

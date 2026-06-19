@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Maximize, Minus, Plus } from "lucide-react"
+import * as React from "react";
+import { Maximize, Minus, Plus } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 
 function IconButton({
   label,
@@ -21,21 +21,21 @@ function IconButton({
     >
       {children}
     </Button>
-  )
+  );
 }
 
 function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value))
+  return Math.min(max, Math.max(min, value));
 }
 
 export function useZoom() {
-  const [scale, setScale] = React.useState(1)
+  const [scale, setScale] = React.useState(1);
   const zoom = React.useCallback(
     (factor: number) => setScale((s) => clamp(s * factor, 0.25, 5)),
-    []
-  )
-  const reset = React.useCallback(() => setScale(1), [])
-  return { scale, zoom, reset }
+    [],
+  );
+  const reset = React.useCallback(() => setScale(1), []);
+  return { scale, zoom, reset };
 }
 
 export function ZoomActions({
@@ -43,16 +43,16 @@ export function ZoomActions({
   zoom,
   reset,
 }: {
-  scale: number
-  zoom: (factor: number) => void
-  reset: () => void
+  scale: number;
+  zoom: (factor: number) => void;
+  reset: () => void;
 }) {
   return (
     <>
       <IconButton label="Zoom out" onClick={() => zoom(1 / 1.2)}>
         <Minus />
       </IconButton>
-      <span className="w-12 text-center text-xs text-muted-foreground tabular-nums">
+      <span className="text-muted-foreground w-12 text-center text-xs tabular-nums">
         {Math.round(scale * 100)}%
       </span>
       <IconButton label="Zoom in" onClick={() => zoom(1.2)}>
@@ -62,5 +62,5 @@ export function ZoomActions({
         <Maximize />
       </IconButton>
     </>
-  )
+  );
 }

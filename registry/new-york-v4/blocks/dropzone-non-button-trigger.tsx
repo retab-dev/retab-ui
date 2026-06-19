@@ -1,22 +1,22 @@
-"use client"
+"use client";
 
-import { Upload } from "lucide-react"
+import { Upload } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { useDropzone } from "@/components/ui/dropzone"
+import { cn } from "@/lib/utils";
+import { useDropzone } from "@/components/ui/dropzone";
 
 import {
   InlineFileRows,
   RejectionRows,
   type DropzoneExampleProps,
-} from "./dropzone-example-shared"
+} from "./dropzone-example-shared";
 
 export function NonButtonTrigger({ className }: DropzoneExampleProps) {
   const dropzone = useDropzone({
     accept: ".pdf,.csv,.txt,text/plain,text/csv,application/pdf",
     maxFiles: 3,
     multiple: true,
-  })
+  });
 
   return (
     <section
@@ -24,7 +24,7 @@ export function NonButtonTrigger({ className }: DropzoneExampleProps) {
         className: cn(
           "rounded-lg border bg-muted/20 p-4 transition-colors",
           dropzone.isDragging && "border-foreground/40 bg-accent/35",
-          className
+          className,
         ),
       })}
     >
@@ -41,7 +41,7 @@ export function NonButtonTrigger({ className }: DropzoneExampleProps) {
         </div>
         <div className="min-w-0 text-sm">
           <div className="font-medium">Controls upload</div>
-          <div className="truncate text-xs text-muted-foreground">
+          <div className="text-muted-foreground truncate text-xs">
             {dropzone.files.length
               ? `${dropzone.files.length} attached`
               : "No files attached"}
@@ -51,5 +51,5 @@ export function NonButtonTrigger({ className }: DropzoneExampleProps) {
       <InlineFileRows files={dropzone.files} onRemove={dropzone.removeFile} />
       <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </section>
-  )
+  );
 }

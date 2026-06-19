@@ -1,12 +1,12 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
-import { siteConfig } from "@/lib/config"
+import { siteConfig } from "@/lib/config";
 
 export function cn(...inputs: ClassValue[]): string {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 export function absoluteUrl(path: string): string {
-  return `${siteConfig.url}${path}`
+  return `${siteConfig.url}${path}`;
 }

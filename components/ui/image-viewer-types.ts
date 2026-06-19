@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/ui/image-viewer-types"
+export * from "@/registry/new-york-v4/ui/image-viewer-types";

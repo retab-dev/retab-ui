@@ -1,26 +1,28 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Check, Copy } from "lucide-react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { type ViewerDownloadAction } from "@/lib/viewer-download-actions"
+import * as React from "react";
+import { Check, Copy } from "lucide-react";
 
-import { Skeleton } from "./skeleton"
-import { TextCodeViewerFrame } from "./text-code-viewer-chrome"
+import { type ViewerDownloadAction } from "@/lib/viewer-download-actions";
+
+import { Skeleton } from "./skeleton";
+import { TextCodeViewerFrame } from "./text-code-viewer-chrome";
 import {
   ViewerControls,
   ViewerControlButton,
   ViewerControlsSkeleton,
-} from "./viewer-controls"
+} from "./viewer-controls";
 
 export function TextViewerFrame({
   className,
   bare,
   children,
 }: {
-  className?: string
-  bare?: boolean
-  children: React.ReactNode
+  className?: string;
+  bare?: boolean;
+  children: React.ReactNode;
 }) {
   return (
     <TextCodeViewerFrame
@@ -32,7 +34,7 @@ export function TextViewerFrame({
     >
       {children}
     </TextCodeViewerFrame>
-  )
+  );
 }
 
 export function TextViewerFallback({
@@ -40,9 +42,9 @@ export function TextViewerFallback({
   controls = true,
   bare,
 }: {
-  className?: string
-  controls?: boolean
-  bare?: boolean
+  className?: string;
+  controls?: boolean;
+  bare?: boolean;
 }) {
   return (
     <TextViewerFrame className={className} bare={bare}>
@@ -60,7 +62,7 @@ export function TextViewerFallback({
         ))}
       </div>
     </TextViewerFrame>
-  )
+  );
 }
 
 export function TextViewerControls({
@@ -74,15 +76,15 @@ export function TextViewerControls({
   onZoomIn,
   onResetZoom,
 }: {
-  wordCount: number
-  fontScale: number
-  copyText?: string
-  copyLabel?: string
-  downloadAction: ViewerDownloadAction
-  leading?: React.ReactNode
-  onZoomOut: () => void
-  onZoomIn: () => void
-  onResetZoom: () => void
+  wordCount: number;
+  fontScale: number;
+  copyText?: string;
+  copyLabel?: string;
+  downloadAction: ViewerDownloadAction;
+  leading?: React.ReactNode;
+  onZoomOut: () => void;
+  onZoomIn: () => void;
+  onResetZoom: () => void;
 }) {
   return (
     <ViewerControls
@@ -101,42 +103,42 @@ export function TextViewerControls({
         )
       }
     />
-  )
+  );
 }
 
 function TextViewerCopyControl({
   label,
   text,
 }: {
-  label: string
-  text: string
+  label: string;
+  text: string;
 }) {
-  const [isCopied, setIsCopied] = React.useState(false)
-  const timeoutRef = React.useRef<number | null>(null)
+  const [isCopied, setIsCopied] = React.useState(false);
+  const timeoutRef = React.useRef<number | null>(null);
 
   React.useEffect(
     () => () => {
-      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
+      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
     },
-    []
-  )
+    [],
+  );
 
   const copyText = () => {
-    if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
+    if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
 
     try {
-      const result = navigator.clipboard?.writeText(text)
+      const result = navigator.clipboard?.writeText(text);
       void Promise.resolve(result).then(() => {
-        setIsCopied(true)
+        setIsCopied(true);
         timeoutRef.current = window.setTimeout(() => {
-          timeoutRef.current = null
-          setIsCopied(false)
-        }, 1200)
-      })
+          timeoutRef.current = null;
+          setIsCopied(false);
+        }, 1200);
+      });
     } catch {
-      setIsCopied(false)
+      setIsCopied(false);
     }
-  }
+  };
 
   return (
     <ViewerControlButton
@@ -146,5 +148,5 @@ function TextViewerCopyControl({
     >
       {isCopied ? <Check /> : <Copy />}
     </ViewerControlButton>
-  )
+  );
 }

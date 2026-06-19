@@ -1,27 +1,27 @@
-import * as React from "react"
+import type * as React from "react";
 
-import type { JsonTableShellHandlers } from "@/components/json-table/json-table-cell-shell"
-import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
+import type { JsonTableShellHandlers } from "@/components/json-table/json-table-cell-shell";
+import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types";
 import {
   canActivateStructuredFromShellKey,
   structuredKeyboardActivationIntent,
   structuredPointerActivationIntent,
-} from "@/components/json-table/json-table-primitive-activation"
-import { markJsonTableProfile } from "@/components/json-table/json-table-profiler"
-import { useRefCallback } from "@/components/json-table/path-utils"
-import type { JsonTableCellField } from "@/components/json-table/use-json-table-cell-field"
+} from "@/components/json-table/json-table-primitive-activation";
+import { markJsonTableProfile } from "@/components/json-table/json-table-profiler";
+import { useRefCallback } from "@/components/json-table/path-utils";
+import type { JsonTableCellField } from "@/components/json-table/use-json-table-cell-field";
 
-type ShellKeyEvent = React.KeyboardEvent<HTMLTableCellElement>
-type ShellPointerEvent = React.PointerEvent<HTMLTableCellElement>
+type ShellKeyEvent = React.KeyboardEvent<HTMLTableCellElement>;
+type ShellPointerEvent = React.PointerEvent<HTMLTableCellElement>;
 
 export function useJsonTableShellHandlers({
   props,
   cellField,
 }: {
-  props: JsonTableCellProps
-  cellField: JsonTableCellField
+  props: JsonTableCellProps;
+  cellField: JsonTableCellField;
 }): JsonTableShellHandlers {
-  const { cellProjection, hover, structuredEditing } = props
+  const { cellProjection, hover, structuredEditing } = props;
   const {
     cellId,
     fieldMetadata,
@@ -29,20 +29,20 @@ export function useJsonTableShellHandlers({
     isPrimitiveCell,
     isStructuredActive,
     materializedFieldPath,
-  } = cellField
+  } = cellField;
 
   const shellPointerEnter = useRefCallback((event: ShellPointerEvent) => {
-    if (!materializedFieldPath || !isJsonEditable) return
+    if (!materializedFieldPath || !isJsonEditable) return;
     markJsonTableProfile("pointer-enter-cell", {
       fieldPath: materializedFieldPath,
-    })
-    const target = event.currentTarget
+    });
+    const target = event.currentTarget;
     hover.onStart?.({
       docId: cellProjection.docId,
       fieldPath: materializedFieldPath,
       getRect: () => target.getBoundingClientRect(),
-    })
-  })
+    });
+  });
 
   const shellPointerDown = useRefCallback((event: ShellPointerEvent) => {
     if (
@@ -52,19 +52,19 @@ export function useJsonTableShellHandlers({
       !isJsonEditable ||
       event.button !== 0
     ) {
-      return
+      return;
     }
 
     if (isPrimitiveCell) {
-      return
+      return;
     }
 
-    if (isStructuredActive) return
+    if (isStructuredActive) return;
     structuredEditing.startSession(
       cellProjection.projectedCell,
-      structuredPointerActivationIntent(event)
-    )
-  })
+      structuredPointerActivationIntent(event),
+    );
+  });
 
   const shellKeyDown = useRefCallback((event: ShellKeyEvent) => {
     if (
@@ -73,27 +73,27 @@ export function useJsonTableShellHandlers({
       !fieldMetadata ||
       !isJsonEditable
     ) {
-      return
+      return;
     }
 
     if (isPrimitiveCell) {
-      return
+      return;
     }
 
     if (isStructuredActive || !canActivateStructuredFromShellKey(event)) {
-      return
+      return;
     }
 
-    event.preventDefault()
+    event.preventDefault();
     structuredEditing.startSession(
       cellProjection.projectedCell,
-      structuredKeyboardActivationIntent(event)
-    )
-  })
+      structuredKeyboardActivationIntent(event),
+    );
+  });
 
   const shellPointerLeave = useRefCallback(() => {
-    hover.onEnd?.()
-  })
+    hover.onEnd?.();
+  });
 
   return {
     onKeyDown: shellKeyDown,
@@ -101,5 +101,5 @@ export function useJsonTableShellHandlers({
     onPointerEnter: shellPointerEnter,
     onPointerLeave: shellPointerLeave,
     onPointerMove: shellPointerEnter,
-  }
+  };
 }

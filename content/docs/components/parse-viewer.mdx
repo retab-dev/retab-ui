@@ -38,16 +38,16 @@ The source document should tag its pages with `data-page-number` (the bundled
 as the user scrolls.
 
 ```tsx
-import * as React from "react"
+import * as React from "react";
 
-import { PdfViewer } from "@/components/ui/pdf-viewer"
-import { ViewerBody, ViewerRoot, ViewerSurface } from "@/components/ui/viewer"
+import { PdfViewer } from "@/components/ui/pdf-viewer";
+import { ViewerBody, ViewerRoot, ViewerSurface } from "@/components/ui/viewer";
 import {
   ParseViewerHeader,
   ParseViewerMarkdown,
   ParseViewerProvider,
   useParseViewerDocument,
-} from "@/components/viewers/parse/parse-viewer"
+} from "@/components/viewers/parse/parse-viewer";
 
 export function Example({ result }) {
   return (
@@ -64,21 +64,21 @@ export function Example({ result }) {
         </ViewerBody>
       </ViewerRoot>
     </ParseViewerProvider>
-  )
+  );
 }
 
 function SourceDocument() {
-  const document = useParseViewerDocument()
-  const viewerRef = React.useRef(null)
+  const document = useParseViewerDocument();
+  const viewerRef = React.useRef(null);
 
   React.useEffect(() => {
     document.setDocumentHandle({
       scrollToPage: (pageNumber, options) => {
-        viewerRef.current?.scrollToPage(pageNumber, options)
+        viewerRef.current?.scrollToPage(pageNumber, options);
       },
-    })
-    return () => document.setDocumentHandle(null)
-  }, [document])
+    });
+    return () => document.setDocumentHandle(null);
+  }, [document]);
 
   return (
     <PdfViewer
@@ -89,7 +89,7 @@ function SourceDocument() {
       onScrollProgressChange={document.onScrollProgressChange}
       className="h-full"
     />
-  )
+  );
 }
 ```
 

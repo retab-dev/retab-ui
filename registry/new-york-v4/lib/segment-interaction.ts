@@ -1,45 +1,45 @@
-import { type Segment } from "@/lib/segments"
+import { type Segment } from "@/lib/segments";
 
 export interface SegmentInteraction {
-  previewSegmentId: string | null
-  previewSegment: (segmentId: string) => void
-  clearPreview: () => void
+  previewSegmentId: string | null;
+  previewSegment: (segmentId: string) => void;
+  clearPreview: () => void;
 }
 
 export interface SegmentInteractionState {
-  currentPage: number | null
-  currentSegmentId: string | null
-  currentSegmentIds: readonly string[]
-  previewSegmentId: string | null
-  highlightedSegmentId: string | null
-  highlightedSegmentIds: readonly string[]
+  currentPage: number | null;
+  currentSegmentId: string | null;
+  currentSegmentIds: readonly string[];
+  previewSegmentId: string | null;
+  highlightedSegmentId: string | null;
+  highlightedSegmentIds: readonly string[];
 }
 
 export interface SegmentViewState {
-  isPreviewed: boolean
-  isCurrent: boolean
-  isHighlighted: boolean
-  isDimmed: boolean
+  isPreviewed: boolean;
+  isCurrent: boolean;
+  isHighlighted: boolean;
+  isDimmed: boolean;
 }
 
 export interface SegmentSurfaceProps {
-  state: SegmentViewState
+  state: SegmentViewState;
   eventHandlers: {
-    onPointerEnter: () => void
-    onPointerLeave: () => void
-    onClick: () => void
-  }
+    onPointerEnter: () => void;
+    onPointerLeave: () => void;
+    onClick: () => void;
+  };
   dataProps: {
-    "data-previewed": boolean
-    "data-current": boolean
-    "data-highlighted": boolean
-  }
+    "data-previewed": boolean;
+    "data-current": boolean;
+    "data-highlighted": boolean;
+  };
 }
 
 export function resolvePreviewedSegmentId(
-  interaction?: Partial<Pick<SegmentInteraction, "previewSegmentId">> | null
+  interaction?: Partial<Pick<SegmentInteraction, "previewSegmentId">> | null,
 ): string | null {
-  return interaction?.previewSegmentId ?? null
+  return interaction?.previewSegmentId ?? null;
 }
 
 export function getSegmentInteractionState({
@@ -47,22 +47,22 @@ export function getSegmentInteractionState({
   currentPage,
   interaction,
 }: {
-  segments: Segment[]
-  currentPage?: number | null
-  interaction?: SegmentInteraction | null
+  segments: Segment[];
+  currentPage?: number | null;
+  interaction?: SegmentInteraction | null;
 }): SegmentInteractionState {
-  const segmentIds = new Set(segments.map((segment) => segment.id))
+  const segmentIds = new Set(segments.map((segment) => segment.id));
   const previewSegmentId = knownSegmentId(
     resolvePreviewedSegmentId(interaction),
-    segmentIds
-  )
-  const resolvedCurrentPage = normalizeCurrentPage(currentPage)
+    segmentIds,
+  );
+  const resolvedCurrentPage = normalizeCurrentPage(currentPage);
   const currentSegmentIds =
     resolvedCurrentPage == null
       ? []
-      : resolveCurrentSegmentIds(segments, resolvedCurrentPage)
+      : resolveCurrentSegmentIds(segments, resolvedCurrentPage);
   const highlightedSegmentIds =
-    previewSegmentId != null ? [previewSegmentId] : currentSegmentIds
+    previewSegmentId != null ? [previewSegmentId] : currentSegmentIds;
 
   return {
     currentPage: resolvedCurrentPage,
@@ -71,41 +71,41 @@ export function getSegmentInteractionState({
     previewSegmentId,
     highlightedSegmentId: highlightedSegmentIds[0] ?? null,
     highlightedSegmentIds,
-  }
+  };
 }
 
 export function scopeSegmentInteraction(
   interaction: SegmentInteraction | null | undefined,
-  segmentIds: Iterable<string>
+  segmentIds: Iterable<string>,
 ): SegmentInteraction | null | undefined {
-  if (!interaction) return interaction
+  if (!interaction) return interaction;
 
-  const knownIds = new Set(segmentIds)
+  const knownIds = new Set(segmentIds);
   const previewSegmentId = knownSegmentId(
     interaction.previewSegmentId,
-    knownIds
-  )
+    knownIds,
+  );
 
   if (previewSegmentId === interaction.previewSegmentId) {
-    return interaction
+    return interaction;
   }
 
   return {
     ...interaction,
     previewSegmentId,
-  }
+  };
 }
 
 function knownSegmentId(
   id: string | null,
-  knownIds: ReadonlySet<string>
+  knownIds: ReadonlySet<string>,
 ): string | null {
-  return id != null && knownIds.has(id) ? id : null
+  return id != null && knownIds.has(id) ? id : null;
 }
 
 export function isSegmentCurrentPage(
   segment: Segment,
-  currentPage?: number | null
+  currentPage?: number | null,
 ): boolean {
   return (
     currentPage != null &&
@@ -113,24 +113,22 @@ export function isSegmentCurrentPage(
     currentPage > 0 &&
     Array.isArray(segment.pages) &&
     segment.pages.includes(currentPage)
-  )
+  );
 }
 
 function normalizeCurrentPage(currentPage?: number | null): number | null {
-  return currentPage != null &&
-    Number.isInteger(currentPage) &&
-    currentPage > 0
+  return currentPage != null && Number.isInteger(currentPage) && currentPage > 0
     ? currentPage
-    : null
+    : null;
 }
 
 function resolveCurrentSegmentIds(
   segments: Segment[],
-  currentPage: number
+  currentPage: number,
 ): string[] {
   return segments
     .filter((segment) => isSegmentCurrentPage(segment, currentPage))
-    .map((segment) => segment.id)
+    .map((segment) => segment.id);
 }
 
 export function getSegmentViewState({
@@ -138,25 +136,25 @@ export function getSegmentViewState({
   interactionState,
   isCurrent,
 }: {
-  segment: Segment
-  interactionState: SegmentInteractionState
-  isCurrent?: boolean
+  segment: Segment;
+  interactionState: SegmentInteractionState;
+  isCurrent?: boolean;
 }): SegmentViewState {
   const current =
     isCurrent ??
     (interactionState.currentSegmentIds.includes(segment.id) &&
-      isSegmentCurrentPage(segment, interactionState.currentPage))
-  const isPreviewed = interactionState.previewSegmentId === segment.id
+      isSegmentCurrentPage(segment, interactionState.currentPage));
+  const isPreviewed = interactionState.previewSegmentId === segment.id;
   const isHighlighted =
     interactionState.highlightedSegmentIds.includes(segment.id) &&
-    (interactionState.previewSegmentId != null ? isPreviewed : current)
+    (interactionState.previewSegmentId != null ? isPreviewed : current);
 
   return {
     isPreviewed,
     isCurrent: current,
     isHighlighted,
     isDimmed: interactionState.previewSegmentId != null && !isPreviewed,
-  }
+  };
 }
 
 export function getSegmentSurfaceProps({
@@ -166,17 +164,17 @@ export function getSegmentSurfaceProps({
   isCurrent,
   onSelect,
 }: {
-  segment: Segment
-  interaction?: SegmentInteraction | null
-  interactionState: SegmentInteractionState
-  isCurrent?: boolean
-  onSelect?: (segment: Segment) => void
+  segment: Segment;
+  interaction?: SegmentInteraction | null;
+  interactionState: SegmentInteractionState;
+  isCurrent?: boolean;
+  onSelect?: (segment: Segment) => void;
 }): SegmentSurfaceProps {
   const state = getSegmentViewState({
     segment,
     interactionState,
     isCurrent,
-  })
+  });
 
   return {
     state,
@@ -184,8 +182,8 @@ export function getSegmentSurfaceProps({
       onPointerEnter: () => interaction?.previewSegment(segment.id),
       onPointerLeave: () => interaction?.clearPreview(),
       onClick: () => {
-        interaction?.clearPreview()
-        onSelect?.(segment)
+        interaction?.clearPreview();
+        onSelect?.(segment);
       },
     },
     dataProps: {
@@ -193,5 +191,5 @@ export function getSegmentSurfaceProps({
       "data-current": state.isCurrent,
       "data-highlighted": state.isHighlighted,
     },
-  }
+  };
 }

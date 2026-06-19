@@ -1,6 +1,6 @@
-import { cn } from "@/lib/utils"
-import type { CommitArrayTableCellValue } from "@/components/json-form/table/array-table-cell-commit"
-import type { ArrayTableCellModel } from "@/components/json-form/table/array-table-cell-model"
+import { cn } from "@/lib/utils";
+import type { CommitArrayTableCellValue } from "@/components/json-form/table/array-table-cell-commit";
+import type { ArrayTableCellModel } from "@/components/json-form/table/array-table-cell-model";
 
 export function arrayTableCellClassName(model: ArrayTableCellModel): string {
   return cn(
@@ -10,8 +10,8 @@ export function arrayTableCellClassName(model: ArrayTableCellModel): string {
       : "px-1 py-0.5",
     model.sourceLinked &&
       (model.isEditing || model.isScalarEditing) &&
-      "hover:bg-muted/55"
-  )
+      "hover:bg-muted/55",
+  );
 }
 
 export function arrayTableCellProps(model: ArrayTableCellModel) {
@@ -20,7 +20,7 @@ export function arrayTableCellProps(model: ArrayTableCellModel) {
     "data-table-cell": "",
     "data-source-path": model.sourceLinked ? model.sourcePath : undefined,
     className: arrayTableCellClassName(model),
-  }
+  };
 }
 
 export function editableArrayTableCellProps({
@@ -28,9 +28,9 @@ export function editableArrayTableCellProps({
   commitValue,
   model,
 }: {
-  closeEditor: () => void
-  commitValue: CommitArrayTableCellValue
-  model: ArrayTableCellModel
+  closeEditor: () => void;
+  commitValue: CommitArrayTableCellValue;
+  model: ArrayTableCellModel;
 }) {
   return {
     active: model.isScalarEditing,
@@ -45,7 +45,7 @@ export function editableArrayTableCellProps({
     onCommit: commitValue,
     "data-table-cell-editor": model.isScalarEditing ? "true" : undefined,
     onBlur: () => {
-      if (model.isScalarEditing) closeEditor()
+      if (model.isScalarEditing) closeEditor();
     },
-  }
+  };
 }

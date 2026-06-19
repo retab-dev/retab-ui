@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { DialogFooter } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 
 export function PropertyFormFooter({
   canDelete,
@@ -11,12 +11,12 @@ export function PropertyFormFooter({
   onCancel,
   onDelete,
 }: {
-  canDelete: boolean
-  isSubmitting: boolean
-  isSubmitDisabled: boolean
-  submitLabel: string
-  onCancel?: () => void
-  onDelete?: () => void
+  canDelete: boolean;
+  isSubmitting: boolean;
+  isSubmitDisabled: boolean;
+  submitLabel: string;
+  onCancel?: () => void;
+  onDelete?: () => void;
 }) {
   return (
     <DialogFooter className="mx-0 mb-0 flex-row justify-between sm:justify-between">
@@ -56,5 +56,5 @@ export function PropertyFormFooter({
         </Button>
       </div>
     </DialogFooter>
-  )
+  );
 }

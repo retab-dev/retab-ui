@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/ui/docx-viewer-types"
+export * from "@/registry/new-york-v4/ui/docx-viewer-types";

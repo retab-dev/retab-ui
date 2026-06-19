@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 
-import * as React from "react"
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import * as React from "react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MarkdownViewer } from "@/components/ui/markdown-viewer"
+import { MarkdownViewer } from "@/components/ui/markdown-viewer";
 
 function markdownSource(text: string) {
   return {
@@ -12,28 +12,28 @@ function markdownSource(text: string) {
     fileName: "tables.md",
     mimeType: "text/markdown",
     text,
-  }
+  };
 }
 
 beforeEach(() => {
   Object.defineProperty(HTMLElement.prototype, "scrollTo", {
     configurable: true,
     value: vi.fn(),
-  })
-})
+  });
+});
 
 afterEach(() => {
-  cleanup()
-  vi.restoreAllMocks()
-})
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 describe("pretext markdown greenfield tables", () => {
   it("renders GFM tables with a visible TSV copy control", () => {
-    const writeText = vi.fn(() => Promise.resolve())
+    const writeText = vi.fn(() => Promise.resolve());
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText },
-    })
+    });
 
     const { container } = render(
       <MarkdownViewer
@@ -44,33 +44,33 @@ describe("pretext markdown greenfield tables", () => {
             "| :--- | --: | :--- |",
             "| Alpha | 2 | **ready** |",
             "| Pipe | 3 | a \\| b |",
-          ].join("\n")
+          ].join("\n"),
         )}
-      />
-    )
+      />,
+    );
 
-    const region = screen.getByRole("region", { name: "Markdown table" })
-    const table = container.querySelector("[data-markdown-table]")
+    const region = screen.getByRole("region", { name: "Markdown table" });
+    const table = container.querySelector("[data-markdown-table]");
 
-    expect(region.getAttribute("data-markdown-table-region")).toBe("")
-    expect(table?.getAttribute("aria-colcount")).toBe("3")
-    expect(table?.getAttribute("aria-rowcount")).toBe("3")
+    expect(region.getAttribute("data-markdown-table-region")).toBe("");
+    expect(table?.getAttribute("aria-colcount")).toBe("3");
+    expect(table?.getAttribute("aria-rowcount")).toBe("3");
     expect(
-      screen.getByRole("columnheader", { name: "Qty" }).getAttribute("align")
-    ).toBe("right")
+      screen.getByRole("columnheader", { name: "Qty" }).getAttribute("align"),
+    ).toBe("right");
     expect(
-      screen.getByRole("columnheader", { name: "Qty" }).getAttribute("id")
-    ).toBe("markdown-table-1-column-2")
+      screen.getByRole("columnheader", { name: "Qty" }).getAttribute("id"),
+    ).toBe("markdown-table-1-column-2");
     expect(
-      screen.getByRole("cell", { name: "2" }).getAttribute("headers")
-    ).toBe("markdown-table-1-column-2")
+      screen.getByRole("cell", { name: "2" }).getAttribute("headers"),
+    ).toBe("markdown-table-1-column-2");
 
-    fireEvent.click(screen.getByRole("button", { name: "Copy table as TSV" }))
+    fireEvent.click(screen.getByRole("button", { name: "Copy table as TSV" }));
 
     expect(writeText).toHaveBeenCalledWith(
-      ["Name\tQty\tNote", "Alpha\t2\tready", "Pipe\t3\ta | b"].join("\n")
-    )
-  })
+      ["Name\tQty\tNote", "Alpha\t2\tready", "Pipe\t3\ta | b"].join("\n"),
+    );
+  });
 
   it("reserves an inner width floor for wide tables instead of shrinking the page", () => {
     const { container } = render(
@@ -81,32 +81,30 @@ describe("pretext markdown greenfield tables", () => {
             "| Area | Status | Owner | Risk | Notes |",
             "| :--- | :---: | ---: | ---: | --- |",
             "| Layout | Ready | Platform | Low | Continuous virtual flow. |",
-          ].join("\n")
+          ].join("\n"),
         )}
-      />
-    )
+      />,
+    );
 
-    const table = container.querySelector<HTMLElement>(
-      "[data-markdown-table]"
-    )
+    const table = container.querySelector<HTMLElement>("[data-markdown-table]");
     const scroller = container.querySelector<HTMLElement>(
-      "[data-markdown-table-scroll]"
-    )
-    const region = screen.getByRole("region", { name: "Markdown table" })
+      "[data-markdown-table-scroll]",
+    );
+    const region = screen.getByRole("region", { name: "Markdown table" });
 
-    expect(table?.style.minWidth).toBe("800px")
-    expect(scroller).toBeTruthy()
+    expect(table?.style.minWidth).toBe("800px");
+    expect(scroller).toBeTruthy();
 
     Object.defineProperty(scroller, "clientWidth", {
       configurable: true,
       value: 300,
-    })
+    });
     Object.defineProperty(scroller, "scrollWidth", {
       configurable: true,
       value: 800,
-    })
-    fireEvent.keyDown(region, { key: "ArrowRight" })
+    });
+    fireEvent.keyDown(region, { key: "ArrowRight" });
 
-    expect(scroller?.scrollLeft).toBe(50)
-  })
-})
+    expect(scroller?.scrollLeft).toBe(50);
+  });
+});

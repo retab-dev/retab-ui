@@ -1,60 +1,60 @@
-import { getNode } from "@/components/schema-editor/document/traversal"
+import { getNode } from "@/components/schema-editor/document/traversal";
 import type {
   DocumentNode,
   PropertyEntry,
   SchemaDocument,
-} from "@/components/schema-editor/document/types"
+} from "@/components/schema-editor/document/types";
 
 export function getEffectiveDocNode(node: DocumentNode): DocumentNode {
   if (node.anyOf) {
     const nonNull = node.anyOf.find(
-      (branch) => branch.type !== "null" || branch.ref
-    )
-    if (nonNull) return nonNull
+      (branch) => branch.type !== "null" || branch.ref,
+    );
+    if (nonNull) return nonNull;
   }
-  return node
+  return node;
 }
 
 export function getChildPropertyId(
   doc: SchemaDocument,
   parentId: string,
-  key: string
+  key: string,
 ): string | undefined {
-  const parent = getNode(doc, parentId)
-  if (!parent) return undefined
+  const parent = getNode(doc, parentId);
+  if (!parent) return undefined;
   return getEffectiveDocNode(parent).properties?.find(
-    (entry) => entry.key === key
-  )?.id
+    (entry) => entry.key === key,
+  )?.id;
 }
 
 export function getChildNodeId(
   doc: SchemaDocument,
   parentId: string,
-  key: string
+  key: string,
 ): string | undefined {
-  const parent = getNode(doc, parentId)
-  if (!parent) return undefined
+  const parent = getNode(doc, parentId);
+  if (!parent) return undefined;
   return getEffectiveDocNode(parent).properties?.find(
-    (entry) => entry.key === key
-  )?.node.id
+    (entry) => entry.key === key,
+  )?.node.id;
 }
 
 export function getItemsNodeId(
   doc: SchemaDocument,
-  parentId: string
+  parentId: string,
 ): string | undefined {
-  const parent = getNode(doc, parentId)
-  if (!parent) return undefined
-  return getEffectiveDocNode(parent).items?.id
+  const parent = getNode(doc, parentId);
+  if (!parent) return undefined;
+  return getEffectiveDocNode(parent).items?.id;
 }
 
 export function getOwnProperty(
   doc: SchemaDocument,
   parentId: string,
-  index: number
+  index: number,
 ): PropertyEntry | null {
-  const parent = getNode(doc, parentId)
+  const parent = getNode(doc, parentId);
   return parent
     ? (getEffectiveDocNode(parent).properties?.[index] ?? null)
-    : null
+    : null;
 }

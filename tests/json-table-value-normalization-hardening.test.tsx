@@ -1,16 +1,16 @@
 // @vitest-environment jsdom
 
-import * as React from "react"
-import { cleanup, fireEvent, render, waitFor } from "@testing-library/react"
-import type { JSONSchema7 } from "json-schema"
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
+import * as React from "react";
+import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import type { JSONSchema7 } from "json-schema";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
-import { projectDocumentRows } from "@/components/json-table/lib/document-projection"
-import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
-import type { TableDocument } from "@/components/json-table/lib/projects-types"
-import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
-import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
+import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store";
+import { projectDocumentRows } from "@/components/json-table/lib/document-projection";
+import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes";
+import type { TableDocument } from "@/components/json-table/lib/projects-types";
+import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata";
+import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table";
 
 import {
   createTestCellCommitBridge,
@@ -20,17 +20,17 @@ import {
   primitiveEventTarget,
   primitivePendingCellCommit,
   renderInteractionRow,
-} from "./json-table-interaction-test-utils"
-import { installJsonTableDom } from "./json-table-test-dom"
+} from "./json-table-interaction-test-utils";
+import { installJsonTableDom } from "./json-table-test-dom";
 
 beforeAll(() => {
-  installJsonTableDom()
-  Object.assign(globalThis, { Node: window.Node })
-})
+  installJsonTableDom();
+  Object.assign(globalThis, { Node: window.Node });
+});
 afterEach(() => {
-  cleanup()
-  vi.restoreAllMocks()
-})
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 const normalizationSchema: JSONSchema7 = {
   type: "object",
@@ -52,10 +52,10 @@ const normalizationSchema: JSONSchema7 = {
     shipped_time: { type: "string", format: "time" },
     reviewed_at: { type: "string", format: "date-time" },
   },
-}
+};
 
 function normalizationDocument(
-  data: Partial<TableDocument["data"]> = {}
+  data: Partial<TableDocument["data"]> = {},
 ): TableDocument {
   return {
     id: "doc_normalize",
@@ -71,7 +71,7 @@ function normalizationDocument(
       reviewed_at: "not-a-date-time",
       ...data,
     },
-  }
+  };
 }
 
 function renderNormalizationRow({
@@ -79,9 +79,9 @@ function renderNormalizationRow({
   visiblePaths,
   onCellCommit = vi.fn(),
 }: {
-  document?: TableDocument
-  visiblePaths: string[]
-  onCellCommit?: Parameters<typeof renderInteractionRow>[0]["onCellCommit"]
+  document?: TableDocument;
+  visiblePaths: string[];
+  onCellCommit?: Parameters<typeof renderInteractionRow>[0]["onCellCommit"];
 }) {
   return {
     document,
@@ -92,19 +92,19 @@ function renderNormalizationRow({
       visiblePaths,
       onCellCommit,
     }),
-  }
+  };
 }
 
 function headerEffectiveType(fieldMetadata: FieldMetadata) {
-  if (fieldMetadata.kind === "string") return "string"
-  return fieldMetadata.kind
+  if (fieldMetadata.kind === "string") return "string";
+  return fieldMetadata.kind;
 }
 
 function headerNode(fieldPath: string): JsonTableHeaderNode {
   const fieldMetadata = getRequiredInteractionFieldMetadata(
     fieldPath,
-    normalizationSchema
-  )
+    normalizationSchema,
+  );
 
   return {
     key: fieldPath,
@@ -118,26 +118,26 @@ function headerNode(fieldPath: string): JsonTableHeaderNode {
     isArray: fieldMetadata.kind === "array",
     canFold: false,
     isExpanded: true,
-  }
+  };
 }
 
 function renderVirtualTable({
   document = normalizationDocument(),
   visiblePaths,
   onUpdateDocument = vi.fn<(patch: Record<string, unknown>) => Promise<void>>(
-    async () => undefined
+    async () => undefined,
   ),
 }: {
-  document?: TableDocument
-  visiblePaths: string[]
-  onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
+  document?: TableDocument;
+  visiblePaths: string[];
+  onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>;
 }) {
   const projectedRows = projectDocumentRows({
     document,
     visiblePaths,
     includeArrayAddRows: false,
-  })
-  const primitiveEditStore = createJsonTablePrimitiveEditStore()
+  });
+  const primitiveEditStore = createJsonTablePrimitiveEditStore();
 
   return {
     document,
@@ -157,7 +157,7 @@ function renderVirtualTable({
         schemaEditMode="readOnly"
         projectedRows={projectedRows}
         visibleColumns={visiblePaths.map((path) =>
-          interactionVisibleColumn(path, normalizationSchema)
+          interactionVisibleColumn(path, normalizationSchema),
         )}
         rowCount={projectedRows.length}
         primitiveEditStore={primitiveEditStore}
@@ -169,18 +169,18 @@ function renderVirtualTable({
         columnWidth="xxl"
         overscan={4}
         jumpOverscan={4}
-      />
+      />,
     ),
-  }
+  };
 }
 
 async function editableCell(
   view: { container: HTMLElement },
-  fieldPath: string
+  fieldPath: string,
 ) {
   return waitFor(() => findEditableCell(view.container, fieldPath), {
     timeout: 3000,
-  })
+  });
 }
 
 function pointerDown(target: HTMLElement) {
@@ -192,39 +192,39 @@ function pointerDown(target: HTMLElement) {
     detail: 1,
     pointerId: 1,
     pointerType: "mouse",
-  })
+  });
 }
 
 async function activateCell(
   view: { container: HTMLElement },
-  fieldPath: string
+  fieldPath: string,
 ) {
-  const cell = await editableCell(view, fieldPath)
-  pointerDown(cell)
-  return cell
+  const cell = await editableCell(view, fieldPath);
+  pointerDown(cell);
+  return cell;
 }
 
 async function openEnumCell(
   view: ReturnType<typeof renderNormalizationRow>,
-  fieldPath: string
+  fieldPath: string,
 ) {
-  const cell = await editableCell(view, fieldPath)
+  const cell = await editableCell(view, fieldPath);
   fireEvent.click(primitiveEventTarget(cell), {
     button: 0,
     clientX: 18,
     clientY: 12,
     detail: 1,
-  })
-  const trigger = await view.findByRole("combobox")
+  });
+  const trigger = await view.findByRole("combobox");
   await waitFor(() =>
-    expect(trigger.getAttribute("aria-expanded")).toBe("true")
-  )
-  return trigger
+    expect(trigger.getAttribute("aria-expanded")).toBe("true"),
+  );
+  return trigger;
 }
 
 async function openPickerCell(
   view: ReturnType<typeof renderNormalizationRow>,
-  fieldPath: string
+  fieldPath: string,
 ) {
   fireEvent.pointerDown(
     primitiveEventTarget(await editableCell(view, fieldPath)),
@@ -235,17 +235,17 @@ async function openPickerCell(
       detail: 1,
       pointerId: 1,
       pointerType: "mouse",
-    }
-  )
-  const cell = await editableCell(view, fieldPath)
-  cell.focus()
-  fireEvent.keyDown(cell, { key: "Enter" })
-  await view.findByRole("dialog")
+    },
+  );
+  const cell = await editableCell(view, fieldPath);
+  cell.focus();
+  fireEvent.keyDown(cell, { key: "Enter" });
+  await view.findByRole("dialog");
   const trigger = cell.querySelector<HTMLButtonElement>(
-    'button[data-slot="data-cell"][aria-haspopup="dialog"]'
-  )
-  if (!trigger) throw new Error(`Expected picker trigger for ${fieldPath}`)
-  return trigger
+    'button[data-slot="data-cell"][aria-haspopup="dialog"]',
+  );
+  if (!trigger) throw new Error(`Expected picker trigger for ${fieldPath}`);
+  return trigger;
 }
 
 describe("json table value normalization hardening", () => {
@@ -258,12 +258,12 @@ describe("json table value normalization hardening", () => {
   ])(
     "commits valid weird $fieldPath draft $rawValue as a number with JSON identity",
     async ({ fieldPath, rawValue, expectedValue }) => {
-      const view = renderNormalizationRow({ visiblePaths: [fieldPath] })
+      const view = renderNormalizationRow({ visiblePaths: [fieldPath] });
 
-      await activateCell(view, fieldPath)
-      const input = view.getByRole("spinbutton") as HTMLInputElement
-      fireEvent.change(input, { target: { value: rawValue } })
-      fireEvent.blur(input)
+      await activateCell(view, fieldPath);
+      const input = view.getByRole("spinbutton") as HTMLInputElement;
+      fireEvent.change(input, { target: { value: rawValue } });
+      fireEvent.blur(input);
 
       await waitFor(() =>
         expect(view.onCellCommit).toHaveBeenCalledWith(
@@ -271,12 +271,12 @@ describe("json table value normalization hardening", () => {
             fieldPath,
             value: expectedValue,
             previousValue: view.document.data[fieldPath],
-          })
-        )
-      )
-      expect(view.onCellCommit).toHaveBeenCalledTimes(1)
-    }
-  )
+          }),
+        ),
+      );
+      expect(view.onCellCommit).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it.each([
     { fieldPath: "amount", rawValue: "NaN" },
@@ -287,12 +287,12 @@ describe("json table value normalization hardening", () => {
   ])(
     "commits currently invalid $fieldPath draft $rawValue as null",
     async ({ fieldPath, rawValue }) => {
-      const view = renderNormalizationRow({ visiblePaths: [fieldPath] })
+      const view = renderNormalizationRow({ visiblePaths: [fieldPath] });
 
-      await activateCell(view, fieldPath)
-      const input = view.getByRole("spinbutton") as HTMLInputElement
-      fireEvent.change(input, { target: { value: rawValue } })
-      fireEvent.blur(input)
+      await activateCell(view, fieldPath);
+      const input = view.getByRole("spinbutton") as HTMLInputElement;
+      fireEvent.change(input, { target: { value: rawValue } });
+      fireEvent.blur(input);
 
       await waitFor(() =>
         expect(view.onCellCommit).toHaveBeenCalledWith(
@@ -300,38 +300,38 @@ describe("json table value normalization hardening", () => {
             fieldPath,
             value: null,
             previousValue: view.document.data[fieldPath],
-          })
-        )
-      )
-      expect(view.onCellCommit).toHaveBeenCalledTimes(1)
-    }
-  )
+          }),
+        ),
+      );
+      expect(view.onCellCommit).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it("treats null, undefined, and empty string as equivalent no-op values at the cell commit boundary", async () => {
     for (const value of [null, undefined, ""]) {
       const view = renderNormalizationRow({
         document: normalizationDocument({ note: value }),
         visiblePaths: ["note"],
-      })
+      });
 
-      await activateCell(view, "note")
-      const input = view.getByRole("textbox") as HTMLInputElement
-      expect(input.value).toBe("")
+      await activateCell(view, "note");
+      const input = view.getByRole("textbox") as HTMLInputElement;
+      expect(input.value).toBe("");
 
-      fireEvent.blur(input)
+      fireEvent.blur(input);
 
-      expect(view.onCellCommit).not.toHaveBeenCalled()
-      cleanup()
+      expect(view.onCellCommit).not.toHaveBeenCalled();
+      cleanup();
     }
-  })
+  });
 
   it("commits an empty non-nullable string as null under the current normalization rule", async () => {
-    const view = renderNormalizationRow({ visiblePaths: ["vendor"] })
+    const view = renderNormalizationRow({ visiblePaths: ["vendor"] });
 
-    await activateCell(view, "vendor")
-    const input = view.getByRole("textbox")
-    fireEvent.change(input, { target: { value: "" } })
-    fireEvent.blur(input)
+    await activateCell(view, "vendor");
+    const input = view.getByRole("textbox");
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.blur(input);
 
     await waitFor(() =>
       expect(view.onCellCommit).toHaveBeenCalledWith(
@@ -339,71 +339,71 @@ describe("json table value normalization hardening", () => {
           fieldPath: "vendor",
           value: null,
           previousValue: "ACME",
-        })
-      )
-    )
-    expect(view.onCellCommit).toHaveBeenCalledTimes(1)
-  })
+        }),
+      ),
+    );
+    expect(view.onCellCommit).toHaveBeenCalledTimes(1);
+  });
 
   it("renders non-string enum values and nullable enum null without stringifying their selection identity", async () => {
-    const view = renderNormalizationRow({ visiblePaths: ["mixed_status"] })
+    const view = renderNormalizationRow({ visiblePaths: ["mixed_status"] });
 
-    const trigger = await openEnumCell(view, "mixed_status")
+    const trigger = await openEnumCell(view, "mixed_status");
 
-    expect(trigger.textContent).toContain("0")
-    expect(await view.findByRole("option", { name: "draft" })).toBeTruthy()
-    expect(await view.findByRole("option", { name: "0" })).toBeTruthy()
-    expect(await view.findByRole("option", { name: "1" })).toBeTruthy()
-    expect(await view.findByRole("option", { name: "false" })).toBeTruthy()
-    expect(await view.findByRole("option", { name: "true" })).toBeTruthy()
+    expect(trigger.textContent).toContain("0");
+    expect(await view.findByRole("option", { name: "draft" })).toBeTruthy();
+    expect(await view.findByRole("option", { name: "0" })).toBeTruthy();
+    expect(await view.findByRole("option", { name: "1" })).toBeTruthy();
+    expect(await view.findByRole("option", { name: "false" })).toBeTruthy();
+    expect(await view.findByRole("option", { name: "true" })).toBeTruthy();
     expect(
-      await view.findByRole("option", { name: /no selection/i })
-    ).toBeTruthy()
+      await view.findByRole("option", { name: /no selection/i }),
+    ).toBeTruthy();
 
-    expect(view.onCellCommit).not.toHaveBeenCalled()
-  })
+    expect(view.onCellCommit).not.toHaveBeenCalled();
+  });
 
   it("uses structural equality for object-valued enum preselection but exposes duplicate object labels", async () => {
-    const view = renderNormalizationRow({ visiblePaths: ["object_status"] })
+    const view = renderNormalizationRow({ visiblePaths: ["object_status"] });
 
-    const trigger = await openEnumCell(view, "object_status")
+    const trigger = await openEnumCell(view, "object_status");
 
     const options = await view.findAllByRole("option", {
       name: "[object Object]",
-    })
-    expect(options).toHaveLength(2)
-    expect(trigger.textContent).toContain("[object Object]")
-    expect(trigger.getAttribute("aria-activedescendant")).toBe(options[0]?.id)
-    expect(view.onCellCommit).not.toHaveBeenCalled()
-  })
+    });
+    expect(options).toHaveLength(2);
+    expect(trigger.textContent).toContain("[object Object]");
+    expect(trigger.getAttribute("aria-activedescendant")).toBe(options[0]?.id);
+    expect(view.onCellCommit).not.toHaveBeenCalled();
+  });
 
   it("keeps malformed date and date-time values editable without display drift", async () => {
-    const dateView = renderNormalizationRow({ visiblePaths: ["shipped_at"] })
+    const dateView = renderNormalizationRow({ visiblePaths: ["shipped_at"] });
     expect((await editableCell(dateView, "shipped_at")).textContent).toContain(
-      "2024-99-99"
-    )
+      "2024-99-99",
+    );
 
-    const dateTrigger = await openPickerCell(dateView, "shipped_at")
-    expect(dateTrigger.textContent).toContain("2024-99-99")
-    expect(dateView.onCellCommit).not.toHaveBeenCalled()
-    cleanup()
+    const dateTrigger = await openPickerCell(dateView, "shipped_at");
+    expect(dateTrigger.textContent).toContain("2024-99-99");
+    expect(dateView.onCellCommit).not.toHaveBeenCalled();
+    cleanup();
 
     const dateTimeView = renderNormalizationRow({
       visiblePaths: ["reviewed_at"],
-    })
-    const dateTimeTrigger = await openPickerCell(dateTimeView, "reviewed_at")
-    expect(dateTimeTrigger.textContent).toContain("not-a-date-time")
-    expect(dateTimeView.onCellCommit).not.toHaveBeenCalled()
-  })
+    });
+    const dateTimeTrigger = await openPickerCell(dateTimeView, "reviewed_at");
+    expect(dateTimeTrigger.textContent).toContain("not-a-date-time");
+    expect(dateTimeView.onCellCommit).not.toHaveBeenCalled();
+  });
 
   it("normalizes malformed time through the time input without preserving the malformed seed", async () => {
-    const view = renderNormalizationRow({ visiblePaths: ["shipped_time"] })
+    const view = renderNormalizationRow({ visiblePaths: ["shipped_time"] });
 
-    const trigger = await openPickerCell(view, "shipped_time")
-    expect(trigger.textContent).toContain("25:99")
+    const trigger = await openPickerCell(view, "shipped_time");
+    expect(trigger.textContent).toContain("25:99");
 
-    const input = await view.findByDisplayValue("")
-    fireEvent.change(input, { target: { value: "09:30" } })
+    const input = await view.findByDisplayValue("");
+    fireEvent.change(input, { target: { value: "09:30" } });
 
     await waitFor(() =>
       expect(view.onCellCommit).toHaveBeenCalledWith(
@@ -411,62 +411,62 @@ describe("json table value normalization hardening", () => {
           fieldPath: "shipped_time",
           value: "09:30:00",
           previousValue: "25:99",
-        })
-      )
-    )
-    expect(view.onCellCommit).toHaveBeenCalledTimes(1)
-  })
+        }),
+      ),
+    );
+    expect(view.onCellCommit).toHaveBeenCalledTimes(1);
+  });
 
   it("does not commit unchanged normalized number, text, or malformed date display values", async () => {
     const view = renderNormalizationRow({
       visiblePaths: ["amount", "vendor", "shipped_at"],
-    })
+    });
 
-    await activateCell(view, "amount")
-    const amountInput = view.getByRole("spinbutton")
-    fireEvent.change(amountInput, { target: { value: "12.50" } })
-    fireEvent.blur(amountInput)
+    await activateCell(view, "amount");
+    const amountInput = view.getByRole("spinbutton");
+    fireEvent.change(amountInput, { target: { value: "12.50" } });
+    fireEvent.blur(amountInput);
 
-    await activateCell(view, "vendor")
-    fireEvent.blur(view.getByRole("textbox"))
+    await activateCell(view, "vendor");
+    fireEvent.blur(view.getByRole("textbox"));
 
-    await activateCell(view, "shipped_at")
-    pointerDown(document.body)
+    await activateCell(view, "shipped_at");
+    pointerDown(document.body);
 
-    expect(view.onCellCommit).not.toHaveBeenCalled()
-  })
+    expect(view.onCellCommit).not.toHaveBeenCalled();
+  });
 
   it("commits a dirty draft before switching cells and composes the next commit against pending document data", async () => {
     const view = renderVirtualTable({
       visiblePaths: ["vendor", "amount", "count", "note"],
-    })
+    });
 
-    await activateCell(view, "vendor")
+    await activateCell(view, "vendor");
     fireEvent.change(view.getByRole("textbox"), {
       target: { value: "Globex" },
-    })
+    });
 
-    await activateCell(view, "amount")
-    expect(view.getByRole("spinbutton")).toHaveProperty("value", "12.5")
-    await waitFor(() => expect(view.onUpdateDocument).toHaveBeenCalledTimes(1))
+    await activateCell(view, "amount");
+    expect(view.getByRole("spinbutton")).toHaveProperty("value", "12.5");
+    await waitFor(() => expect(view.onUpdateDocument).toHaveBeenCalledTimes(1));
     expect(view.onUpdateDocument).toHaveBeenNthCalledWith(1, {
       data: { ...view.document.data, vendor: "Globex" },
-    })
+    });
 
     fireEvent.change(view.getByRole("spinbutton"), {
       target: { value: "20.25" },
-    })
-    fireEvent.blur(view.getByRole("spinbutton"))
-    await waitFor(() => expect(view.onUpdateDocument).toHaveBeenCalledTimes(2))
+    });
+    fireEvent.blur(view.getByRole("spinbutton"));
+    await waitFor(() => expect(view.onUpdateDocument).toHaveBeenCalledTimes(2));
     expect(view.onUpdateDocument).toHaveBeenNthCalledWith(2, {
       data: { ...view.document.data, vendor: "Globex", amount: 20.25 },
-    })
+    });
 
-    await activateCell(view, "count")
-    fireEvent.change(view.getByRole("spinbutton"), { target: { value: "" } })
-    await activateCell(view, "note")
+    await activateCell(view, "count");
+    fireEvent.change(view.getByRole("spinbutton"), { target: { value: "" } });
+    await activateCell(view, "note");
 
-    await waitFor(() => expect(view.onUpdateDocument).toHaveBeenCalledTimes(3))
+    await waitFor(() => expect(view.onUpdateDocument).toHaveBeenCalledTimes(3));
     expect(view.onUpdateDocument).toHaveBeenNthCalledWith(3, {
       data: {
         ...view.document.data,
@@ -474,6 +474,6 @@ describe("json table value normalization hardening", () => {
         amount: 20.25,
         count: null,
       },
-    })
-  })
-})
+    });
+  });
+});

@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
 
-import * as React from "react"
-import { cleanup, render } from "@testing-library/react"
-import { afterEach, describe, expect, it } from "vitest"
+import * as React from "react";
+import { cleanup, render } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 
-import { FileThumbnail } from "@/registry/new-york-v4/ui/file-thumbnail"
+import { FileThumbnail } from "@/registry/new-york-v4/ui/file-thumbnail";
 
 afterEach(() => {
-  cleanup()
-})
+  cleanup();
+});
 
 describe("FileThumbnail accessibility presentation", () => {
   it("hides preview internals when rendered decoratively", () => {
@@ -25,11 +25,11 @@ describe("FileThumbnail accessibility presentation", () => {
             </tbody>
           </table>
         }
-      />
-    )
+      />,
+    );
 
-    const thumbnail = container.querySelector('[data-slot="file-thumbnail"]')
-    expect(thumbnail?.getAttribute("aria-hidden")).toBe("true")
-    expect(thumbnail?.getAttribute("role")).toBe("presentation")
-  })
-})
+    const thumbnail = container.querySelector('[data-slot="file-thumbnail"]');
+    expect(thumbnail?.getAttribute("aria-hidden")).toBe("true");
+    expect(thumbnail?.getAttribute("role")).toBe("presentation");
+  });
+});

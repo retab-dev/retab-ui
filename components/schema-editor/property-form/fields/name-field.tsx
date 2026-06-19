@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import { AlertCircle } from "lucide-react"
+import { AlertCircle } from "lucide-react";
 
-import type { FieldValidation } from "@/components/schema-editor/property-form/types"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import type { FieldValidation } from "@/components/schema-editor/property-form/types";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export function NameField({
   value,
@@ -12,13 +12,13 @@ export function NameField({
   validation,
   onChange,
 }: {
-  value: string
-  disabled: boolean
-  validation: FieldValidation
-  onChange: (name: string) => void
+  value: string;
+  disabled: boolean;
+  validation: FieldValidation;
+  onChange: (name: string) => void;
 }) {
   const message =
-    validation.status === "invalid" ? validation.message : undefined
+    validation.status === "invalid" ? validation.message : undefined;
 
   return (
     <div className="grid gap-2">
@@ -34,11 +34,11 @@ export function NameField({
         aria-invalid={Boolean(message)}
       />
       {message && (
-        <p className="mt-1 flex items-center gap-1 text-sm font-medium text-destructive">
+        <p className="text-destructive mt-1 flex items-center gap-1 text-sm font-medium">
           <AlertCircle className="h-3 w-3" />
           {message}
         </p>
       )}
     </div>
-  )
+  );
 }

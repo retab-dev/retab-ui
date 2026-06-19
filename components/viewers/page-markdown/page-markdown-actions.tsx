@@ -1,40 +1,42 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Check, Copy, Download, MoreHorizontal } from "lucide-react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { createTextDownloadAction } from "@/lib/viewer-download-actions"
-import { Button } from "@/components/ui/button"
+import * as React from "react";
+import { Check, Copy, Download, MoreHorizontal } from "lucide-react";
+
+import { createTextDownloadAction } from "@/lib/viewer-download-actions";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Spinner } from "@/components/ui/spinner"
+} from "@/components/ui/dropdown-menu";
+import { Spinner } from "@/components/ui/spinner";
 import {
   useViewerDownloadTrigger,
   type ViewerDownloadErrorHandler,
-} from "@/components/ui/viewer-download"
+} from "@/components/ui/viewer-download";
 
-type CopyStatus = "idle" | "copied" | "failed"
+type CopyStatus = "idle" | "copied" | "failed";
 
 function scheduleCopyStatusReset(
   timeoutRef: React.MutableRefObject<number | null>,
-  setStatus: React.Dispatch<React.SetStateAction<CopyStatus>>
+  setStatus: React.Dispatch<React.SetStateAction<CopyStatus>>,
 ) {
   timeoutRef.current = window.setTimeout(() => {
-    timeoutRef.current = null
-    setStatus("idle")
-  }, 1200)
+    timeoutRef.current = null;
+    setStatus("idle");
+  }, 1200);
 }
 
 function clearCopyStatusReset(
-  timeoutRef: React.MutableRefObject<number | null>
+  timeoutRef: React.MutableRefObject<number | null>,
 ) {
-  if (timeoutRef.current === null) return
-  window.clearTimeout(timeoutRef.current)
-  timeoutRef.current = null
+  if (timeoutRef.current === null) return;
+  window.clearTimeout(timeoutRef.current);
+  timeoutRef.current = null;
 }
 
 export function MarkdownActionButtons({
@@ -42,9 +44,9 @@ export function MarkdownActionButtons({
   fileName,
   onDownloadError,
 }: {
-  text: string
-  fileName: string
-  onDownloadError?: ViewerDownloadErrorHandler
+  text: string;
+  fileName: string;
+  onDownloadError?: ViewerDownloadErrorHandler;
 }) {
   return (
     <>
@@ -55,7 +57,7 @@ export function MarkdownActionButtons({
         onDownloadError={onDownloadError}
       />
     </>
-  )
+  );
 }
 
 export function MarkdownActionsMenu({
@@ -63,12 +65,12 @@ export function MarkdownActionsMenu({
   fileName,
   onDownloadError,
 }: {
-  text: string
-  fileName: string
-  onDownloadError?: ViewerDownloadErrorHandler
+  text: string;
+  fileName: string;
+  onDownloadError?: ViewerDownloadErrorHandler;
 }) {
-  const copy = useCopyMarkdown(text)
-  const download = useDownloadMarkdown(text, fileName, onDownloadError)
+  const copy = useCopyMarkdown(text);
+  const download = useDownloadMarkdown(text, fileName, onDownloadError);
 
   return (
     <DropdownMenu modal={false}>
@@ -101,11 +103,11 @@ export function MarkdownActionsMenu({
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }
 
 function CopyMarkdownButton({ text }: { text: string }) {
-  const copy = useCopyMarkdown(text)
+  const copy = useCopyMarkdown(text);
 
   return (
     <Button
@@ -122,7 +124,7 @@ function CopyMarkdownButton({ text }: { text: string }) {
         <Copy className={copy.status === "failed" ? "text-destructive" : ""} />
       )}
     </Button>
-  )
+  );
 }
 
 function DownloadMarkdownButton({
@@ -130,11 +132,11 @@ function DownloadMarkdownButton({
   fileName,
   onDownloadError,
 }: {
-  text: string
-  fileName: string
-  onDownloadError?: ViewerDownloadErrorHandler
+  text: string;
+  fileName: string;
+  onDownloadError?: ViewerDownloadErrorHandler;
 }) {
-  const download = useDownloadMarkdown(text, fileName, onDownloadError)
+  const download = useDownloadMarkdown(text, fileName, onDownloadError);
 
   return (
     <Button
@@ -152,97 +154,97 @@ function DownloadMarkdownButton({
         <Download />
       )}
     </Button>
-  )
+  );
 }
 
 function useCopyMarkdown(text: string) {
-  const [status, setStatus] = React.useState<CopyStatus>("idle")
-  const timeoutRef = React.useRef<number | null>(null)
-  const isMountedRef = React.useRef(true)
-  const copyAttemptRef = React.useRef(0)
+  const [status, setStatus] = React.useState<CopyStatus>("idle");
+  const timeoutRef = React.useRef<number | null>(null);
+  const isMountedRef = React.useRef(true);
+  const copyAttemptRef = React.useRef(0);
 
   React.useEffect(() => {
-    isMountedRef.current = true
+    isMountedRef.current = true;
     return () => {
-      isMountedRef.current = false
-      clearCopyStatusReset(timeoutRef)
-    }
-  }, [])
+      isMountedRef.current = false;
+      clearCopyStatusReset(timeoutRef);
+    };
+  }, []);
 
   const write = React.useCallback(() => {
-    clearCopyStatusReset(timeoutRef)
-    const copyAttempt = copyAttemptRef.current + 1
-    copyAttemptRef.current = copyAttempt
+    clearCopyStatusReset(timeoutRef);
+    const copyAttempt = copyAttemptRef.current + 1;
+    copyAttemptRef.current = copyAttempt;
 
     const isCurrentCopyAttempt = () =>
-      isMountedRef.current && copyAttemptRef.current === copyAttempt
+      isMountedRef.current && copyAttemptRef.current === copyAttempt;
 
     try {
-      const clipboard = navigator.clipboard
-      const writeText = clipboard?.writeText
+      const clipboard = navigator.clipboard;
+      const writeText = clipboard?.writeText;
       if (typeof writeText !== "function") {
-        setStatus("failed")
-        scheduleCopyStatusReset(timeoutRef, setStatus)
-        return
+        setStatus("failed");
+        scheduleCopyStatusReset(timeoutRef, setStatus);
+        return;
       }
 
       Promise.resolve(writeText.call(clipboard, text)).then(
         () => {
-          if (!isCurrentCopyAttempt()) return
-          setStatus("copied")
-          scheduleCopyStatusReset(timeoutRef, setStatus)
+          if (!isCurrentCopyAttempt()) return;
+          setStatus("copied");
+          scheduleCopyStatusReset(timeoutRef, setStatus);
         },
         () => {
-          if (!isCurrentCopyAttempt()) return
-          setStatus("failed")
-          scheduleCopyStatusReset(timeoutRef, setStatus)
-        }
-      )
+          if (!isCurrentCopyAttempt()) return;
+          setStatus("failed");
+          scheduleCopyStatusReset(timeoutRef, setStatus);
+        },
+      );
     } catch {
-      setStatus("failed")
-      scheduleCopyStatusReset(timeoutRef, setStatus)
+      setStatus("failed");
+      scheduleCopyStatusReset(timeoutRef, setStatus);
     }
-  }, [text])
+  }, [text]);
 
-  return { status, write }
+  return { status, write };
 }
 
 function useDownloadMarkdown(
   text: string,
   fileName: string | undefined,
-  onError: ViewerDownloadErrorHandler | undefined
+  onError: ViewerDownloadErrorHandler | undefined,
 ) {
   const action = React.useMemo(
     () => downloadMarkdownAction(text, fileName),
-    [fileName, text]
-  )
+    [fileName, text],
+  );
   const { pendingActionId, triggerDownload } = useViewerDownloadTrigger({
     onError,
     resetKey: action,
-  })
+  });
   const trigger = React.useCallback(() => {
-    triggerDownload(action)
-  }, [action, triggerDownload])
+    triggerDownload(action);
+  }, [action, triggerDownload]);
 
   return {
     isPending: pendingActionId === action.id,
     trigger,
-  }
+  };
 }
 
 export function normalizeMarkdownFileName(fileName?: string): string {
-  const trimmed = fileName?.trim()
-  if (!trimmed) return "document.md"
-  if (/\.(?:md|markdown)$/i.test(trimmed)) return trimmed
+  const trimmed = fileName?.trim();
+  if (!trimmed) return "document.md";
+  if (/\.(?:md|markdown)$/i.test(trimmed)) return trimmed;
 
   const slashIndex = Math.max(
     trimmed.lastIndexOf("/"),
-    trimmed.lastIndexOf("\\")
-  )
-  const dotIndex = trimmed.lastIndexOf(".")
-  if (dotIndex > slashIndex + 1) return `${trimmed.slice(0, dotIndex)}.md`
+    trimmed.lastIndexOf("\\"),
+  );
+  const dotIndex = trimmed.lastIndexOf(".");
+  if (dotIndex > slashIndex + 1) return `${trimmed.slice(0, dotIndex)}.md`;
 
-  return `${trimmed}.md`
+  return `${trimmed}.md`;
 }
 
 export function downloadMarkdownAction(text: string, fileName?: string) {
@@ -253,5 +255,5 @@ export function downloadMarkdownAction(text: string, fileName?: string) {
     fileName: normalizeMarkdownFileName(fileName),
     mimeType: "text/markdown;charset=utf-8",
     origin: "derived",
-  })
+  });
 }

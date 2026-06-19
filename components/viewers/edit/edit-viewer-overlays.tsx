@@ -1,15 +1,15 @@
-import { Check } from "lucide-react"
+import { Check } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import type { PageOverlayProps } from "@/components/ui/pdf-viewer"
+import { cn } from "@/lib/utils";
+import type { PageOverlayProps } from "@/components/ui/pdf-viewer";
 
-import { EDIT_FIELD_ACCENTS } from "./edit-viewer-field-style"
+import { EDIT_FIELD_ACCENTS } from "./edit-viewer-field-style";
 import {
   displayEditFieldValue,
   getEditViewerPdfAreaAnchor,
   isEditFieldFilled,
-} from "./edit-viewer-model"
-import type { EditViewerField, EditViewerMode } from "./edit-viewer-types"
+} from "./edit-viewer-model";
+import type { EditViewerField, EditViewerMode } from "./edit-viewer-types";
 
 export function EditFieldOverlayLayer({
   fieldsByPage,
@@ -19,14 +19,14 @@ export function EditFieldOverlayLayer({
   onFieldHover,
   onFieldSelect,
 }: Pick<PageOverlayProps, "pageNumber"> & {
-  fieldsByPage: ReadonlyMap<number, readonly EditViewerField[]>
-  mode: EditViewerMode | null
-  effectiveFieldKey: string | null
-  onFieldHover: (key: string | null) => void
-  onFieldSelect: (key: string) => void
+  fieldsByPage: ReadonlyMap<number, readonly EditViewerField[]>;
+  mode: EditViewerMode | null;
+  effectiveFieldKey: string | null;
+  onFieldHover: (key: string | null) => void;
+  onFieldSelect: (key: string) => void;
 }) {
-  const pageFields = fieldsByPage.get(pageNumber) ?? []
-  if (pageFields.length === 0) return null
+  const pageFields = fieldsByPage.get(pageNumber) ?? [];
+  if (pageFields.length === 0) return null;
 
   return (
     <>
@@ -41,7 +41,7 @@ export function EditFieldOverlayLayer({
         />
       ))}
     </>
-  )
+  );
 }
 
 function EditFieldOverlayButton({
@@ -51,20 +51,20 @@ function EditFieldOverlayButton({
   onFieldHover,
   onFieldSelect,
 }: {
-  field: EditViewerField
-  active: boolean
-  showValue: boolean
-  onFieldHover: (key: string | null) => void
-  onFieldSelect: (key: string) => void
+  field: EditViewerField;
+  active: boolean;
+  showValue: boolean;
+  onFieldHover: (key: string | null) => void;
+  onFieldSelect: (key: string) => void;
 }) {
-  const anchor = getEditViewerPdfAreaAnchor(field)
-  if (!anchor) return null
+  const anchor = getEditViewerPdfAreaAnchor(field);
+  if (!anchor) return null;
 
-  const accent = EDIT_FIELD_ACCENTS[field.type]
-  const filled = isEditFieldFilled(field)
-  const value = displayEditFieldValue(field)
-  const shouldShowValue = showValue && filled
-  const maxLength = field.maxLength
+  const accent = EDIT_FIELD_ACCENTS[field.type];
+  const filled = isEditFieldFilled(field);
+  const value = displayEditFieldValue(field);
+  const shouldShowValue = showValue && filled;
+  const maxLength = field.maxLength;
 
   return (
     <button
@@ -75,8 +75,8 @@ function EditFieldOverlayButton({
       onBlur={() => onFieldHover(null)}
       onClick={() => onFieldSelect(field.key)}
       className={cn(
-        "pointer-events-auto absolute flex items-center overflow-hidden rounded-[2px] border px-1 text-left transition-all focus-visible:ring-[3px] focus-visible:ring-ring/30 focus-visible:outline-none",
-        active ? "z-10 border-2 shadow-sm" : "border-dashed"
+        "focus-visible:ring-ring/30 pointer-events-auto absolute flex items-center overflow-hidden rounded-[2px] border px-1 text-left transition-all focus-visible:ring-[3px] focus-visible:outline-none",
+        active ? "z-10 border-2 shadow-sm" : "border-dashed",
       )}
       style={{
         left: `${anchor.left}%`,
@@ -123,5 +123,5 @@ function EditFieldOverlayButton({
         </span>
       ) : null}
     </button>
-  )
+  );
 }

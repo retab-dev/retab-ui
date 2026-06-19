@@ -1,33 +1,33 @@
-import { render } from "@testing-library/react"
-import type { JSONSchema7 } from "json-schema"
-import { vi } from "vitest"
+import { render } from "@testing-library/react";
+import type { JSONSchema7 } from "json-schema";
+import { vi } from "vitest";
 
-import { DataCell, type DataCellValueMeta } from "@/components/ui/data-cell"
-import { createJsonTableDataCellProps } from "@/components/json-table/json-table-data-cell-model"
-import type { JsonTableStructuredEditSession } from "@/components/json-table/json-table-edit-session"
-import { JsonTableStructuredCell } from "@/components/json-table/json-table-structured-cell"
+import { DataCell, type DataCellValueMeta } from "@/components/ui/data-cell";
+import { createJsonTableDataCellProps } from "@/components/json-table/json-table-data-cell-model";
+import type { JsonTableStructuredEditSession } from "@/components/json-table/json-table-edit-session";
+import { JsonTableStructuredCell } from "@/components/json-table/json-table-structured-cell";
 import type {
   FieldKind,
   FieldMetadata,
-} from "@/components/json-table/lib/schema-field-metadata"
+} from "@/components/json-table/lib/schema-field-metadata";
 
 const schema: JSONSchema7 = {
   type: "object",
   properties: {},
-}
+};
 
 export interface JsonTableCellHarnessProps {
-  fieldMetadata?: FieldMetadata
-  fieldPath?: string
-  schema?: JSONSchema7
-  value?: unknown
-  effectiveValue?: unknown
-  structuredEditSession?: JsonTableStructuredEditSession
-  setStructuredEditSessionOverlayOpen?: (open: boolean) => void
-  closeStructuredEditSession?: () => void
-  onOpenChange?: (open: boolean) => void
-  onEditingEnd?: () => void
-  commitValue?: (value: unknown, meta?: unknown) => void
+  fieldMetadata?: FieldMetadata;
+  fieldPath?: string;
+  schema?: JSONSchema7;
+  value?: unknown;
+  effectiveValue?: unknown;
+  structuredEditSession?: JsonTableStructuredEditSession;
+  setStructuredEditSessionOverlayOpen?: (open: boolean) => void;
+  closeStructuredEditSession?: () => void;
+  onOpenChange?: (open: boolean) => void;
+  onEditingEnd?: () => void;
+  commitValue?: (value: unknown, meta?: unknown) => void;
 }
 
 export function baseField(kind: FieldKind): FieldMetadata {
@@ -39,14 +39,14 @@ export function baseField(kind: FieldKind): FieldMetadata {
     isNullable: false,
     kind,
     enumValues: [],
-  }
+  };
 }
 
 export function renderDataCell(
   kind: FieldKind,
-  overrides: JsonTableCellHarnessProps = {}
+  overrides: JsonTableCellHarnessProps = {},
 ) {
-  const fieldMetadata = overrides.fieldMetadata ?? baseField(kind)
+  const fieldMetadata = overrides.fieldMetadata ?? baseField(kind);
   const dataCellProps = createJsonTableDataCellProps({
     active: true,
     autoFocus: true,
@@ -57,13 +57,13 @@ export function renderDataCell(
     onEditingEnd: overrides.onEditingEnd ?? vi.fn(),
     onOpenChange: overrides.onOpenChange ?? vi.fn(),
     value: overrides.effectiveValue ?? overrides.value ?? "value",
-  })
+  });
 
-  return render(<DataCell {...dataCellProps} />)
+  return render(<DataCell {...dataCellProps} />);
 }
 
 export function renderEnumCell(overrides: JsonTableCellHarnessProps = {}) {
-  const fieldMetadata = overrides.fieldMetadata ?? baseField("enum")
+  const fieldMetadata = overrides.fieldMetadata ?? baseField("enum");
   const dataCellProps = createJsonTableDataCellProps({
     active: true,
     autoFocus: true,
@@ -74,17 +74,17 @@ export function renderEnumCell(overrides: JsonTableCellHarnessProps = {}) {
     onEditingEnd: overrides.onEditingEnd ?? vi.fn(),
     onOpenChange: overrides.onOpenChange ?? vi.fn(),
     value: overrides.effectiveValue ?? overrides.value ?? "value",
-  })
+  });
 
-  return render(<DataCell {...dataCellProps} />)
+  return render(<DataCell {...dataCellProps} />);
 }
 
 export function renderStructuredCell(
   kind: "object" | "array",
-  overrides: JsonTableCellHarnessProps = {}
+  overrides: JsonTableCellHarnessProps = {},
 ) {
-  const fieldMetadata = overrides.fieldMetadata ?? baseField(kind)
-  const fieldPath = overrides.fieldPath ?? "field"
+  const fieldMetadata = overrides.fieldMetadata ?? baseField(kind);
+  const fieldPath = overrides.fieldPath ?? "field";
   return render(
     <JsonTableStructuredCell
       fieldPath={fieldPath}
@@ -102,12 +102,12 @@ export function renderStructuredCell(
         overrides.closeStructuredEditSession ?? vi.fn()
       }
       commitValue={overrides.commitValue ?? vi.fn()}
-    />
-  )
+    />,
+  );
 }
 
 export function baseSession(
-  overrides: Partial<JsonTableStructuredEditSession> = {}
+  overrides: Partial<JsonTableStructuredEditSession> = {},
 ): JsonTableStructuredEditSession {
   return {
     id: 1,
@@ -117,16 +117,16 @@ export function baseSession(
     intent: { type: "programmatic" },
     isOverlayOpen: false,
     ...overrides,
-  }
+  };
 }
 
 export function renderCell(
   kind: FieldKind,
-  overrides: JsonTableCellHarnessProps = {}
+  overrides: JsonTableCellHarnessProps = {},
 ) {
-  if (kind === "enum") return renderEnumCell(overrides)
+  if (kind === "enum") return renderEnumCell(overrides);
   if (kind === "object" || kind === "array") {
-    return renderStructuredCell(kind, overrides)
+    return renderStructuredCell(kind, overrides);
   }
-  return renderDataCell(kind, overrides)
+  return renderDataCell(kind, overrides);
 }

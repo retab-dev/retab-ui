@@ -1,4 +1,4 @@
-export type LayoutLevel = "block" | "paragraph" | "line" | "word"
+export type LayoutLevel = "block" | "paragraph" | "line" | "word";
 
 export type LayoutKind =
   | "title"
@@ -10,49 +10,49 @@ export type LayoutKind =
   | "header"
   | "footer"
   | "pageNumber"
-  | "other"
+  | "other";
 
 export type LayoutPoint = {
-  x: number
-  y: number
-}
+  x: number;
+  y: number;
+};
 
 export type LayoutRect = {
-  left: number
-  top: number
-  width: number
-  height: number
-}
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
 
-export type LayoutQuad = [LayoutPoint, LayoutPoint, LayoutPoint, LayoutPoint]
+export type LayoutQuad = [LayoutPoint, LayoutPoint, LayoutPoint, LayoutPoint];
 
 export type LayoutTextSpan = {
-  start: number
-  end: number
-}
+  start: number;
+  end: number;
+};
 
 export type LayoutItem = {
-  id: string
-  pageNumber: number
-  level: LayoutLevel
-  kind: LayoutKind
-  text: string
-  confidence?: number
-  rect?: LayoutRect
-  quad?: LayoutQuad
-  parentId?: string
-  span?: LayoutTextSpan
-}
+  id: string;
+  pageNumber: number;
+  level: LayoutLevel;
+  kind: LayoutKind;
+  text: string;
+  confidence?: number;
+  rect?: LayoutRect;
+  quad?: LayoutQuad;
+  parentId?: string;
+  span?: LayoutTextSpan;
+};
 
 export type LayoutPage = {
-  pageNumber: number
-  width: number
-  height: number
-  rotation: 0 | 90 | 180 | 270
-}
+  pageNumber: number;
+  width: number;
+  height: number;
+  rotation: 0 | 90 | 180 | 270;
+};
 
 export type LayoutDocument = {
-  text: string
-  pages: LayoutPage[]
-  items: LayoutItem[]
-}
+  text: string;
+  pages: LayoutPage[];
+  items: LayoutItem[];
+};

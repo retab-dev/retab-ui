@@ -1,47 +1,47 @@
 import type {
   ViewerContentIdentity,
   ViewerContentText,
-} from "@/lib/viewer-resource"
+} from "@/lib/viewer-resource";
 
-import { timed } from "./file-viewer-core"
+import { timed } from "./file-viewer-core";
 import {
   abortError,
   isAbortError,
   subscribeToAbortableRequest,
   type SharedAbortableRequest,
-} from "./viewer-abortable-request"
-import { lruGet } from "./viewer-lru-cache"
+} from "./viewer-abortable-request";
+import { lruGet } from "./viewer-lru-cache";
 
 export interface TextResourceSubscription {
-  content: ViewerContentIdentity & ViewerContentText
-  fileName: string
-  signal: AbortSignal
+  content: ViewerContentIdentity & ViewerContentText;
+  fileName: string;
+  signal: AbortSignal;
 }
 
 export interface TextResourceCache {
-  load(sub: TextResourceSubscription): Promise<string>
-  clear(): void
-  size(): number
+  load(sub: TextResourceSubscription): Promise<string>;
+  clear(): void;
+  size(): number;
 }
 
 export function createTextResourceCache(maxEntries = 12): TextResourceCache {
-  const requests = new Map<string, SharedAbortableRequest<string>>()
+  const requests = new Map<string, SharedAbortableRequest<string>>();
 
   function remove(contentKey: string) {
-    requests.delete(contentKey)
+    requests.delete(contentKey);
   }
 
   function pruneInactiveEntries() {
     while (requests.size > maxEntries) {
-      let pruned = false
+      let pruned = false;
       for (const [contentKey, entry] of requests) {
-        if (!entry.settled && entry.subscribers.size > 0) continue
-        requests.delete(contentKey)
-        if (!entry.settled) entry.controller.abort()
-        pruned = true
-        break
+        if (!entry.settled && entry.subscribers.size > 0) continue;
+        requests.delete(contentKey);
+        if (!entry.settled) entry.controller.abort();
+        pruned = true;
+        break;
       }
-      if (!pruned) break
+      if (!pruned) break;
     }
   }
 
@@ -49,25 +49,25 @@ export function createTextResourceCache(maxEntries = 12): TextResourceCache {
     content,
     fileName,
   }: TextResourceSubscription): SharedAbortableRequest<string> {
-    const contentKey = content.key
-    const existingEntry = lruGet(requests, contentKey)
-    if (existingEntry) return existingEntry
+    const contentKey = content.key;
+    const existingEntry = lruGet(requests, contentKey);
+    if (existingEntry) return existingEntry;
 
-    const controller = new AbortController()
-    let entry: SharedAbortableRequest<string> | null = null
+    const controller = new AbortController();
+    let entry: SharedAbortableRequest<string> | null = null;
     const promise = timed(`text:fetch ${fileName}`, () =>
-      content.readText({ signal: controller.signal })
+      content.readText({ signal: controller.signal }),
     )
       .catch((error: unknown) => {
-        if (!isAbortError(error)) requests.delete(contentKey)
-        throw error
+        if (!isAbortError(error)) requests.delete(contentKey);
+        throw error;
       })
       .finally(() => {
         if (entry) {
-          entry.settled = true
-          pruneInactiveEntries()
+          entry.settled = true;
+          pruneInactiveEntries();
         }
-      })
+      });
 
     entry = {
       controller,
@@ -75,38 +75,38 @@ export function createTextResourceCache(maxEntries = 12): TextResourceCache {
       subscriberPromises: new WeakMap(),
       subscribers: new Set(),
       settled: false,
-    }
+    };
 
-    requests.set(contentKey, entry)
-    return entry
+    requests.set(contentKey, entry);
+    return entry;
   }
 
   return {
     load(sub) {
-      if (sub.signal.aborted) return Promise.reject(abortError())
+      if (sub.signal.aborted) return Promise.reject(abortError());
 
-      const contentKey = sub.content.key
-      const entry = entryFor(sub)
+      const contentKey = sub.content.key;
+      const entry = entryFor(sub);
       const promise = subscribeToAbortableRequest(entry, sub.signal, () =>
-        remove(contentKey)
-      )
-      pruneInactiveEntries()
-      return promise
+        remove(contentKey),
+      );
+      pruneInactiveEntries();
+      return promise;
     },
     clear() {
-      for (const entry of requests.values()) entry.controller.abort()
-      requests.clear()
+      for (const entry of requests.values()) entry.controller.abort();
+      requests.clear();
     },
     size() {
-      return requests.size
+      return requests.size;
     },
-  }
+  };
 }
 
-export const textResource = createTextResourceCache()
+export const textResource = createTextResourceCache();
 
 export function loadTextResource(
-  sub: TextResourceSubscription
+  sub: TextResourceSubscription,
 ): Promise<string> {
-  return textResource.load(sub)
+  return textResource.load(sub);
 }

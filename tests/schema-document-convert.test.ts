@@ -1,19 +1,19 @@
-import type { JSONSchema7 } from "json-schema"
-import { describe, expect, it } from "vitest"
+import type { JSONSchema7 } from "json-schema";
+import { describe, expect, it } from "vitest";
 
 import {
   fromJsonSchema,
   toJsonSchema,
-} from "@/components/schema-editor/document/convert"
+} from "@/components/schema-editor/document/convert";
 
 /** Semantic round-trip: content is preserved (key order ignored). */
 function semantic(schema: JSONSchema7) {
-  return toJsonSchema(fromJsonSchema(schema))
+  return toJsonSchema(fromJsonSchema(schema));
 }
 
 /** Byte round-trip: exact JSON, including key order. */
 function byteExact(schema: JSONSchema7): boolean {
-  return JSON.stringify(schema) === JSON.stringify(semantic(schema))
+  return JSON.stringify(schema) === JSON.stringify(semantic(schema));
 }
 
 describe("convert: semantic round-trip", () => {
@@ -256,19 +256,19 @@ describe("convert: semantic round-trip", () => {
     [
       "property names that collide with object prototype keys",
       JSON.parse(
-        '{"type":"object","properties":{"__proto__":{"type":"string"},"constructor":{"type":"number"}},"required":["__proto__","constructor"]}'
+        '{"type":"object","properties":{"__proto__":{"type":"string"},"constructor":{"type":"number"}},"required":["__proto__","constructor"]}',
       ) as JSONSchema7,
     ],
     [
       "definition names that collide with object prototype keys",
       JSON.parse(
-        '{"type":"object","$defs":{"__proto__":{"type":"string"},"constructor":{"type":"number"}},"properties":{"a":{"$ref":"#/$defs/__proto__"},"b":{"$ref":"#/$defs/constructor"}}}'
+        '{"type":"object","$defs":{"__proto__":{"type":"string"},"constructor":{"type":"number"}},"properties":{"a":{"$ref":"#/$defs/__proto__"},"b":{"$ref":"#/$defs/constructor"}}}',
       ) as JSONSchema7,
     ],
     [
       "unmodeled keywords that collide with object prototype keys",
       JSON.parse(
-        '{"type":"object","__proto__":{"safe":true},"constructor":{"safe":true},"toString":{"safe":true},"properties":{"field":{"type":"string","__proto__":{"nested":true},"constructor":{"nested":true},"toString":{"nested":true}}}}'
+        '{"type":"object","__proto__":{"safe":true},"constructor":{"safe":true},"toString":{"safe":true},"properties":{"field":{"type":"string","__proto__":{"nested":true},"constructor":{"nested":true},"toString":{"nested":true}}}}',
       ) as JSONSchema7,
     ],
     [
@@ -302,14 +302,14 @@ describe("convert: semantic round-trip", () => {
         required: ["person"],
       },
     ],
-  ]
+  ];
 
   for (const [name, schema] of cases) {
     it(`preserves content: ${name}`, () => {
-      expect(semantic(schema)).toEqual(schema)
-    })
+      expect(semantic(schema)).toEqual(schema);
+    });
   }
-})
+});
 
 describe("convert: extension keywords", () => {
   it("preserves x-enumDescriptions on projection", () => {
@@ -325,11 +325,11 @@ describe("convert: extension keywords", () => {
           },
         } as JSONSchema7,
       },
-    }
+    };
 
-    expect(semantic(input)).toEqual(input)
-  })
-})
+    expect(semantic(input)).toEqual(input);
+  });
+});
 
 describe("convert: byte-exact round-trip (key order preserved)", () => {
   const cases: Array<[string, JSONSchema7]> = [
@@ -357,10 +357,10 @@ describe("convert: byte-exact round-trip (key order preserved)", () => {
         },
       },
     ],
-  ]
+  ];
   for (const [name, schema] of cases) {
     it(`byte-exact: ${name}`, () => {
-      expect(byteExact(schema)).toBe(true)
-    })
+      expect(byteExact(schema)).toBe(true);
+    });
   }
-})
+});

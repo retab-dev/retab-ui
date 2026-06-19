@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
 export function useFileSystemPierreDecorationVersion({
   folderErrors,
   loadingFolders,
 }: {
-  folderErrors: ReadonlyMap<string, string>
-  loadingFolders: ReadonlySet<string>
+  folderErrors: ReadonlyMap<string, string>;
+  loadingFolders: ReadonlySet<string>;
 }): string {
   return React.useMemo(
     () =>
@@ -18,6 +18,6 @@ export function useFileSystemPierreDecorationVersion({
           .map(([path, error]) => `${path}:${error}`)
           .join("|"),
       ].join("::"),
-    [folderErrors, loadingFolders]
-  )
+    [folderErrors, loadingFolders],
+  );
 }

@@ -1,9 +1,9 @@
-import type { Size } from "@/lib/image-geometry"
+import type { Size } from "@/lib/image-geometry";
 import {
   isViewerFormatError,
   ViewerFormatError,
   type ViewerFormatErrorMapperOptions,
-} from "@/lib/viewer-errors"
+} from "@/lib/viewer-errors";
 
 export class ImageLoadError extends ViewerFormatError {
   constructor(message: string, options?: ErrorOptions) {
@@ -12,8 +12,8 @@ export class ImageLoadError extends ViewerFormatError {
       kind: "load_failed",
       message,
       cause: options?.cause,
-    })
-    this.name = "ImageLoadError"
+    });
+    this.name = "ImageLoadError";
   }
 }
 
@@ -24,8 +24,8 @@ export class ImageDecodeError extends ViewerFormatError {
       kind: "decode_failed",
       message,
       cause: options?.cause,
-    })
-    this.name = "ImageDecodeError"
+    });
+    this.name = "ImageDecodeError";
   }
 }
 
@@ -36,8 +36,8 @@ export class ImageSourceDisposedError extends ViewerFormatError {
       kind: "disposed",
       message,
       cause: options?.cause,
-    })
-    this.name = "ImageSourceDisposedError"
+    });
+    this.name = "ImageSourceDisposedError";
   }
 }
 
@@ -47,143 +47,143 @@ export class ImageFrameIndexError extends ViewerFormatError {
       format: "image",
       kind: "index_out_of_range",
       message: `Invalid image frame index ${frameIndex}; expected 0-${Math.max(0, frameCount - 1)}`,
-    })
-    this.name = "ImageFrameIndexError"
+    });
+    this.name = "ImageFrameIndexError";
   }
 }
 
 export function toImageFormatError(
   error: unknown,
-  options: ViewerFormatErrorMapperOptions
+  options: ViewerFormatErrorMapperOptions,
 ): ViewerFormatError {
-  if (isViewerFormatError(error)) return error
+  if (isViewerFormatError(error)) return error;
   if (options.kind === "load_failed") {
-    return new ImageLoadError(options.message, { cause: error })
+    return new ImageLoadError(options.message, { cause: error });
   }
   if (options.kind === "decode_failed") {
-    return new ImageDecodeError(options.message, { cause: error })
+    return new ImageDecodeError(options.message, { cause: error });
   }
   if (options.kind === "disposed") {
-    return new ImageSourceDisposedError(options.message, { cause: error })
+    return new ImageSourceDisposedError(options.message, { cause: error });
   }
   return new ViewerFormatError({
     format: "image",
     kind: options.kind,
     message: options.message,
     cause: error,
-  })
+  });
 }
 
 export interface FrameDescriptor {
-  intrinsicSize: Size
+  intrinsicSize: Size;
 }
 
 export interface FrameSource {
-  kind: "native-image" | "tiff"
-  frames: readonly FrameDescriptor[]
-  acquire(frameIndex: number): Promise<ImageBitmap>
-  hasDecodedFrame(frameIndex: number): boolean
-  prefetch(frameIndexes: readonly number[]): void
-  release(frameIndex: number): void
-  dispose(reason?: Error): void
+  kind: "native-image" | "tiff";
+  frames: readonly FrameDescriptor[];
+  acquire(frameIndex: number): Promise<ImageBitmap>;
+  hasDecodedFrame(frameIndex: number): boolean;
+  prefetch(frameIndexes: readonly number[]): void;
+  release(frameIndex: number): void;
+  dispose(reason?: Error): void;
 }
 
 interface BitmapCacheOptions {
-  maxDecodedFrames: number
+  maxDecodedFrames: number;
 }
 
 export class BitmapCache {
-  private readonly bitmaps = new Map<number, ImageBitmap>()
-  private readonly pinnedFrameCounts = new Map<number, number>()
-  private readonly frameRecency: number[] = []
+  private readonly bitmaps = new Map<number, ImageBitmap>();
+  private readonly pinnedFrameCounts = new Map<number, number>();
+  private readonly frameRecency: number[] = [];
 
   constructor(private readonly options: BitmapCacheOptions) {}
 
   get(frameIndex: number): ImageBitmap | undefined {
-    const bitmap = this.bitmaps.get(frameIndex)
-    if (bitmap) this.touch(frameIndex)
-    return bitmap
+    const bitmap = this.bitmaps.get(frameIndex);
+    if (bitmap) this.touch(frameIndex);
+    return bitmap;
   }
 
   set(frameIndex: number, bitmap: ImageBitmap) {
-    const previousBitmap = this.bitmaps.get(frameIndex)
+    const previousBitmap = this.bitmaps.get(frameIndex);
     if (previousBitmap && previousBitmap !== bitmap) {
-      closeBitmap(previousBitmap)
+      closeBitmap(previousBitmap);
     }
-    this.bitmaps.set(frameIndex, bitmap)
-    this.touch(frameIndex)
-    this.evict()
+    this.bitmaps.set(frameIndex, bitmap);
+    this.touch(frameIndex);
+    this.evict();
   }
 
   pin(frameIndex: number) {
     this.pinnedFrameCounts.set(
       frameIndex,
-      (this.pinnedFrameCounts.get(frameIndex) ?? 0) + 1
-    )
-    this.touch(frameIndex)
+      (this.pinnedFrameCounts.get(frameIndex) ?? 0) + 1,
+    );
+    this.touch(frameIndex);
   }
 
   unpin(frameIndex: number) {
-    const pinCount = this.pinnedFrameCounts.get(frameIndex) ?? 0
+    const pinCount = this.pinnedFrameCounts.get(frameIndex) ?? 0;
     if (pinCount <= 1) {
-      this.pinnedFrameCounts.delete(frameIndex)
+      this.pinnedFrameCounts.delete(frameIndex);
     } else {
-      this.pinnedFrameCounts.set(frameIndex, pinCount - 1)
+      this.pinnedFrameCounts.set(frameIndex, pinCount - 1);
     }
-    this.evict()
+    this.evict();
   }
 
   has(frameIndex: number): boolean {
-    return this.bitmaps.has(frameIndex)
+    return this.bitmaps.has(frameIndex);
   }
 
   isPinned(frameIndex: number): boolean {
-    return (this.pinnedFrameCounts.get(frameIndex) ?? 0) > 0
+    return (this.pinnedFrameCounts.get(frameIndex) ?? 0) > 0;
   }
 
   dispose() {
-    for (const bitmap of this.bitmaps.values()) closeBitmap(bitmap)
-    this.bitmaps.clear()
-    this.pinnedFrameCounts.clear()
-    this.frameRecency.length = 0
+    for (const bitmap of this.bitmaps.values()) closeBitmap(bitmap);
+    this.bitmaps.clear();
+    this.pinnedFrameCounts.clear();
+    this.frameRecency.length = 0;
   }
 
   private touch(frameIndex: number) {
-    const position = this.frameRecency.indexOf(frameIndex)
-    if (position >= 0) this.frameRecency.splice(position, 1)
-    this.frameRecency.push(frameIndex)
+    const position = this.frameRecency.indexOf(frameIndex);
+    if (position >= 0) this.frameRecency.splice(position, 1);
+    this.frameRecency.push(frameIndex);
   }
 
   private evict() {
     for (const frameIndex of [...this.frameRecency]) {
-      if (this.bitmaps.size <= this.options.maxDecodedFrames) break
-      if (this.isPinned(frameIndex)) continue
-      closeBitmap(this.bitmaps.get(frameIndex))
-      this.bitmaps.delete(frameIndex)
-      this.frameRecency.splice(this.frameRecency.indexOf(frameIndex), 1)
+      if (this.bitmaps.size <= this.options.maxDecodedFrames) break;
+      if (this.isPinned(frameIndex)) continue;
+      closeBitmap(this.bitmaps.get(frameIndex));
+      this.bitmaps.delete(frameIndex);
+      this.frameRecency.splice(this.frameRecency.indexOf(frameIndex), 1);
     }
   }
 }
 
 interface CreateFrameSourceOptions {
-  kind: FrameSource["kind"]
-  frames: readonly FrameDescriptor[]
-  decode(frameIndex: number): Promise<ImageBitmap>
-  cancelDecode?: (frameIndex: number, reason: Error) => void
-  maxDecodedFrames: number
-  initialBitmaps?: readonly InitialBitmap[]
-  onDispose?: (reason: Error) => void
+  kind: FrameSource["kind"];
+  frames: readonly FrameDescriptor[];
+  decode(frameIndex: number): Promise<ImageBitmap>;
+  cancelDecode?: (frameIndex: number, reason: Error) => void;
+  maxDecodedFrames: number;
+  initialBitmaps?: readonly InitialBitmap[];
+  onDispose?: (reason: Error) => void;
 }
 
 interface InitialBitmap {
-  frameIndex: number
-  bitmap: ImageBitmap
+  frameIndex: number;
+  bitmap: ImageBitmap;
 }
 
 interface InflightFrameDecode {
-  promise: Promise<ImageBitmap>
-  reject(error: Error): void
-  pinCount: number
+  promise: Promise<ImageBitmap>;
+  reject(error: Error): void;
+  pinCount: number;
 }
 
 export function createFrameSource({
@@ -196,20 +196,20 @@ export function createFrameSource({
   onDispose,
 }: CreateFrameSourceOptions): FrameSource {
   try {
-    validateFrameDescriptors(frames)
+    validateFrameDescriptors(frames);
   } catch (error) {
-    closeInitialBitmaps(initialBitmaps)
-    throw error
+    closeInitialBitmaps(initialBitmaps);
+    throw error;
   }
-  const bitmapCache = new BitmapCache({ maxDecodedFrames })
-  const inflightDecodes = new Map<number, InflightFrameDecode>()
-  let disposed = false
+  const bitmapCache = new BitmapCache({ maxDecodedFrames });
+  const inflightDecodes = new Map<number, InflightFrameDecode>();
+  let disposed = false;
 
   for (const { frameIndex, bitmap } of initialBitmaps) {
     if (isValidFrameIndex(frameIndex, frames.length)) {
-      bitmapCache.set(frameIndex, bitmap)
+      bitmapCache.set(frameIndex, bitmap);
     } else {
-      closeBitmap(bitmap)
+      closeBitmap(bitmap);
     }
   }
 
@@ -217,209 +217,209 @@ export function createFrameSource({
     kind,
     frames,
     acquire(frameIndex) {
-      if (disposed) return Promise.reject(new ImageSourceDisposedError())
+      if (disposed) return Promise.reject(new ImageSourceDisposedError());
       if (!isValidFrameIndex(frameIndex, frames.length)) {
         return Promise.reject(
-          new ImageFrameIndexError(frameIndex, frames.length)
-        )
+          new ImageFrameIndexError(frameIndex, frames.length),
+        );
       }
-      bitmapCache.pin(frameIndex)
-      const bitmap = bitmapCache.get(frameIndex)
-      if (bitmap) return Promise.resolve(bitmap)
+      bitmapCache.pin(frameIndex);
+      const bitmap = bitmapCache.get(frameIndex);
+      if (bitmap) return Promise.resolve(bitmap);
 
-      let inflight = inflightDecodes.get(frameIndex)
+      let inflight = inflightDecodes.get(frameIndex);
       if (!inflight) {
-        let rejectInflight: (error: Error) => void = () => {}
+        let rejectInflight: (error: Error) => void = () => {};
         const currentInflight = {
           reject: rejectInflight,
           pinCount: 0,
-        } as InflightFrameDecode
+        } as InflightFrameDecode;
         const promise = new Promise<ImageBitmap>((resolve, reject) => {
-          rejectInflight = reject
-          currentInflight.reject = reject
-          let decodedPromise: Promise<ImageBitmap>
+          rejectInflight = reject;
+          currentInflight.reject = reject;
+          let decodedPromise: Promise<ImageBitmap>;
           try {
-            decodedPromise = decode(frameIndex)
+            decodedPromise = decode(frameIndex);
           } catch (error) {
-            decodedPromise = Promise.reject(error)
+            decodedPromise = Promise.reject(error);
           }
           decodedPromise
             .then((decodedBitmap) => {
               if (inflightDecodes.get(frameIndex) !== currentInflight) {
-                closeBitmap(decodedBitmap)
+                closeBitmap(decodedBitmap);
                 reject(
-                  new ImageSourceDisposedError("Image frame decode canceled")
-                )
-                return
+                  new ImageSourceDisposedError("Image frame decode canceled"),
+                );
+                return;
               }
-              inflightDecodes.delete(frameIndex)
+              inflightDecodes.delete(frameIndex);
               if (disposed) {
-                closeBitmap(decodedBitmap)
-                reject(new ImageSourceDisposedError())
-                return
+                closeBitmap(decodedBitmap);
+                reject(new ImageSourceDisposedError());
+                return;
               }
-              bitmapCache.set(frameIndex, decodedBitmap)
-              resolve(decodedBitmap)
+              bitmapCache.set(frameIndex, decodedBitmap);
+              resolve(decodedBitmap);
             })
             .catch((error) => {
               if (inflightDecodes.get(frameIndex) === currentInflight) {
-                inflightDecodes.delete(frameIndex)
+                inflightDecodes.delete(frameIndex);
                 while (currentInflight.pinCount > 0) {
-                  currentInflight.pinCount -= 1
-                  bitmapCache.unpin(frameIndex)
+                  currentInflight.pinCount -= 1;
+                  bitmapCache.unpin(frameIndex);
                 }
               }
-              reject(toImageDecodeError(error))
-            })
-        })
-        currentInflight.promise = promise
-        inflight = currentInflight
-        inflightDecodes.set(frameIndex, inflight)
+              reject(toImageDecodeError(error));
+            });
+        });
+        currentInflight.promise = promise;
+        inflight = currentInflight;
+        inflightDecodes.set(frameIndex, inflight);
       }
-      inflight.pinCount += 1
+      inflight.pinCount += 1;
 
-      return inflight.promise
+      return inflight.promise;
     },
     hasDecodedFrame(frameIndex) {
-      if (disposed) return false
-      if (!isValidFrameIndex(frameIndex, frames.length)) return false
-      return bitmapCache.has(frameIndex)
+      if (disposed) return false;
+      if (!isValidFrameIndex(frameIndex, frames.length)) return false;
+      return bitmapCache.has(frameIndex);
     },
     prefetch(frameIndexes) {
-      if (disposed) return
+      if (disposed) return;
       for (const frameIndex of frameIndexes) {
-        if (!isValidFrameIndex(frameIndex, frames.length)) continue
-        if (bitmapCache.has(frameIndex)) continue
-        if (inflightDecodes.has(frameIndex)) continue
+        if (!isValidFrameIndex(frameIndex, frames.length)) continue;
+        if (bitmapCache.has(frameIndex)) continue;
+        if (inflightDecodes.has(frameIndex)) continue;
         void this.acquire(frameIndex)
           .catch(() => undefined)
-          .finally(() => this.release(frameIndex))
+          .finally(() => this.release(frameIndex));
       }
     },
     release(frameIndex) {
-      if (!isValidFrameIndex(frameIndex, frames.length)) return
-      if (disposed) return
-      bitmapCache.unpin(frameIndex)
-      const inflight = inflightDecodes.get(frameIndex)
-      if (inflight) inflight.pinCount = Math.max(0, inflight.pinCount - 1)
+      if (!isValidFrameIndex(frameIndex, frames.length)) return;
+      if (disposed) return;
+      bitmapCache.unpin(frameIndex);
+      const inflight = inflightDecodes.get(frameIndex);
+      if (inflight) inflight.pinCount = Math.max(0, inflight.pinCount - 1);
       if (
         inflight &&
         !bitmapCache.isPinned(frameIndex) &&
         !bitmapCache.has(frameIndex)
       ) {
         const reason = new ImageSourceDisposedError(
-          "Image frame decode canceled"
-        )
-        inflight.reject(reason)
-        inflightDecodes.delete(frameIndex)
-        safeCancelDecode(cancelDecode, frameIndex, reason)
+          "Image frame decode canceled",
+        );
+        inflight.reject(reason);
+        inflightDecodes.delete(frameIndex);
+        safeCancelDecode(cancelDecode, frameIndex, reason);
       }
     },
     dispose(reason = new ImageSourceDisposedError()) {
-      if (disposed) return
-      disposed = true
-      bitmapCache.dispose()
+      if (disposed) return;
+      disposed = true;
+      bitmapCache.dispose();
       for (const [frameIndex, inflight] of inflightDecodes) {
-        inflight.reject(reason)
-        safeCancelDecode(cancelDecode, frameIndex, reason)
+        inflight.reject(reason);
+        safeCancelDecode(cancelDecode, frameIndex, reason);
       }
-      inflightDecodes.clear()
-      onDispose?.(reason)
+      inflightDecodes.clear();
+      onDispose?.(reason);
     },
-  }
+  };
 }
 
 export async function createNativeImageFrameSource(
   bytes: ArrayBuffer,
   contentType: string | null,
-  maxDecodedFrames: number
+  maxDecodedFrames: number,
 ): Promise<FrameSource> {
-  const blob = new Blob([bytes], { type: contentType ?? "" })
-  return createNativeImageFrameSourceFromBlob(blob, maxDecodedFrames)
+  const blob = new Blob([bytes], { type: contentType ?? "" });
+  return createNativeImageFrameSourceFromBlob(blob, maxDecodedFrames);
 }
 
 export async function createNativeImageFrameSourceFromBlob(
   blob: Blob,
-  maxDecodedFrames: number
+  maxDecodedFrames: number,
 ): Promise<FrameSource> {
-  let probe: ImageBitmap
+  let probe: ImageBitmap;
   try {
-    probe = await createImageBitmap(blob)
+    probe = await createImageBitmap(blob);
   } catch (error) {
     throw toImageFormatError(error, {
       kind: "decode_failed",
       message: "Failed to decode image",
-    })
+    });
   }
   const frames: FrameDescriptor[] = [
     { intrinsicSize: { width: probe.width, height: probe.height } },
-  ]
+  ];
   return createFrameSource({
     kind: "native-image",
     frames,
     maxDecodedFrames,
     initialBitmaps: [{ frameIndex: 0, bitmap: probe }],
     decode: () => createImageBitmap(blob),
-  })
+  });
 }
 
 export function isDeclaredTiff(
   src: string,
-  contentType: string | null
+  contentType: string | null,
 ): boolean {
-  return /\.tiff?($|[?#])/i.test(src) || isTiffContentType(contentType)
+  return /\.tiff?($|[?#])/i.test(src) || isTiffContentType(contentType);
 }
 
 export function isDeclaredNativeImage(
   src: string,
-  contentType: string | null
+  contentType: string | null,
 ): boolean {
-  if (isDeclaredTiff(src, contentType)) return false
+  if (isDeclaredTiff(src, contentType)) return false;
   if (!contentType)
-    return /\.(png|jpe?g|webp|gif|avif|bmp|ico)($|[?#])/i.test(src)
+    return /\.(png|jpe?g|webp|gif|avif|bmp|ico)($|[?#])/i.test(src);
   return /^image\/(png|jpe?g|webp|gif|avif|bmp|x-icon|vnd\.microsoft\.icon)(;|$)/i.test(
-    contentType
-  )
+    contentType,
+  );
 }
 
 export function isTiffBytes(
   src: string,
   contentType: string | null,
-  bytes: ArrayBuffer
+  bytes: ArrayBuffer,
 ): boolean {
-  if (isDeclaredTiff(src, contentType)) return true
-  const b = new Uint8Array(bytes, 0, Math.min(4, bytes.byteLength))
+  if (isDeclaredTiff(src, contentType)) return true;
+  const b = new Uint8Array(bytes, 0, Math.min(4, bytes.byteLength));
   return (
     (b[0] === 0x49 && b[1] === 0x49 && b[2] === 0x2a && b[3] === 0x00) ||
     (b[0] === 0x4d && b[1] === 0x4d && b[2] === 0x00 && b[3] === 0x2a)
-  )
+  );
 }
 
 export function closeBitmap(bitmap: ImageBitmap | undefined) {
   try {
-    bitmap?.close()
+    bitmap?.close();
   } catch {
     // Disposal must stay idempotent across browser edges and test doubles.
   }
 }
 
 function toImageDecodeError(error: unknown): ViewerFormatError {
-  if (error instanceof ImageSourceDisposedError) return error
+  if (error instanceof ImageSourceDisposedError) return error;
   return error instanceof ImageDecodeError
     ? error
     : toImageFormatError(error, {
         kind: "decode_failed",
         message: "Image decode failed",
-      })
+      });
 }
 
 function safeCancelDecode(
   cancelDecode: CreateFrameSourceOptions["cancelDecode"] | undefined,
   frameIndex: number,
-  reason: Error
+  reason: Error,
 ) {
   try {
-    cancelDecode?.(frameIndex, reason)
+    cancelDecode?.(frameIndex, reason);
   } catch {
     // Local lifecycle cleanup has already happened; cancellation transport is best-effort.
   }
@@ -428,19 +428,19 @@ function safeCancelDecode(
 function isValidFrameIndex(frameIndex: number, frameCount: number) {
   return (
     Number.isInteger(frameIndex) && frameIndex >= 0 && frameIndex < frameCount
-  )
+  );
 }
 
 function isTiffContentType(contentType: string | null): boolean {
-  return contentType ? /^image\/(x-)?tiff?(;|$)/i.test(contentType) : false
+  return contentType ? /^image\/(x-)?tiff?(;|$)/i.test(contentType) : false;
 }
 
 function validateFrameDescriptors(frames: readonly FrameDescriptor[]) {
   if (frames.length === 0) {
-    throw new ImageDecodeError("Image does not contain any frames")
+    throw new ImageDecodeError("Image does not contain any frames");
   }
   for (const [frameIndex, frame] of frames.entries()) {
-    const { width, height } = frame.intrinsicSize
+    const { width, height } = frame.intrinsicSize;
     if (
       !Number.isFinite(width) ||
       !Number.isFinite(height) ||
@@ -448,12 +448,12 @@ function validateFrameDescriptors(frames: readonly FrameDescriptor[]) {
       height <= 0
     ) {
       throw new ImageDecodeError(
-        `Image frame ${frameIndex + 1} has invalid dimensions`
-      )
+        `Image frame ${frameIndex + 1} has invalid dimensions`,
+      );
     }
   }
 }
 
 function closeInitialBitmaps(initialBitmaps: readonly InitialBitmap[]) {
-  for (const { bitmap } of initialBitmaps) closeBitmap(bitmap)
+  for (const { bitmap } of initialBitmaps) closeBitmap(bitmap);
 }

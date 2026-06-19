@@ -1,24 +1,24 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   NavigationMenu,
   NavigationMenuItem,
   NavigationMenuList,
-} from "@/components/ui/navigation-menu"
+} from "@/components/ui/navigation-menu";
 
 export function MainNav({
   items,
   className,
   ...props
 }: React.ComponentProps<"nav"> & {
-  items: { href: string; label: string }[]
+  items: { href: string; label: string }[];
 }) {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   return (
     <nav className={cn("items-center gap-0", className)} {...props}>
@@ -26,12 +26,7 @@ export function MainNav({
         <NavigationMenuList className="gap-0">
           {items.map((item) => (
             <NavigationMenuItem key={item.href}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="px-2.5"
-                asChild
-              >
+              <Button variant="ghost" size="sm" className="px-2.5" asChild>
                 <Link
                   href={item.href}
                   data-active={
@@ -49,5 +44,5 @@ export function MainNav({
         </NavigationMenuList>
       </NavigationMenu>
     </nav>
-  )
+  );
 }

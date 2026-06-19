@@ -1,15 +1,15 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { ChevronDown } from "lucide-react"
+import * as React from "react";
+import { ChevronDown } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { dataCellPickerTriggerClass } from "@/registry/new-york-v4/ui/data-cell-classes"
-import type { DataCellSelectControlProps } from "@/registry/new-york-v4/ui/data-cell-control-contract"
-import { useDataCellSelectActivation } from "@/registry/new-york-v4/ui/data-cell-select-activation"
-import { useDataCellSelectKeyboard } from "@/registry/new-york-v4/ui/data-cell-select-keyboard"
-import { DataCellSelectPopup } from "@/registry/new-york-v4/ui/data-cell-select-popup"
-import { useDataCellSelectState } from "@/registry/new-york-v4/ui/data-cell-select-state"
+import { cn } from "@/lib/utils";
+import { dataCellPickerTriggerClass } from "@/registry/new-york-v4/ui/data-cell-classes";
+import type { DataCellSelectControlProps } from "@/registry/new-york-v4/ui/data-cell-control-contract";
+import { useDataCellSelectActivation } from "@/registry/new-york-v4/ui/data-cell-select-activation";
+import { useDataCellSelectKeyboard } from "@/registry/new-york-v4/ui/data-cell-select-keyboard";
+import { DataCellSelectPopup } from "@/registry/new-york-v4/ui/data-cell-select-popup";
+import { useDataCellSelectState } from "@/registry/new-york-v4/ui/data-cell-select-state";
 
 export function DataCellSelectControl({
   kind,
@@ -31,8 +31,8 @@ export function DataCellSelectControl({
   onDoubleClick,
   ...props
 }: DataCellSelectControlProps) {
-  const triggerRef = React.useRef<HTMLButtonElement>(null)
-  const popupId = React.useId()
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const popupId = React.useId();
   const select = useDataCellSelectState({
     popupId,
     value,
@@ -41,10 +41,10 @@ export function DataCellSelectControl({
     openState,
     selectOptions: options,
     session,
-  })
+  });
   const openEditor = React.useCallback(() => {
-    select.openEditor(triggerRef.current)
-  }, [select.openEditor])
+    select.openEditor(triggerRef.current);
+  }, [select.openEditor]);
   const activation = useDataCellSelectActivation({
     activationSource,
     autoFocus,
@@ -52,20 +52,20 @@ export function DataCellSelectControl({
     openEditor,
     closeEditor: select.closeEditor,
     keepOpen: select.keepOpen,
-  })
+  });
   const {
     shouldCancelDismiss,
     closeEditor: closeActivatedEditor,
     openEditor: openActivatedEditor,
     release,
-  } = activation
+  } = activation;
   const commitValue = React.useCallback(
     (nextValue: string) => {
-      release()
-      select.commitValue(nextValue)
+      release();
+      select.commitValue(nextValue);
     },
-    [release, select.commitValue]
-  )
+    [release, select.commitValue],
+  );
   const selectOnKeyDown = useDataCellSelectKeyboard({
     activeOption: select.activeOption,
     open: select.open,
@@ -75,7 +75,7 @@ export function DataCellSelectControl({
     commitValue,
     setActiveOptionIndex: select.setActiveOptionIndex,
     shouldCancelDismiss,
-  })
+  });
 
   return (
     <>
@@ -96,38 +96,38 @@ export function DataCellSelectControl({
         className={cn(dataCellPickerTriggerClass, className)}
         onFocus={onFocus}
         onBlur={(event) => {
-          onBlur?.(event)
-          const nextFocusTarget = event.relatedTarget
+          onBlur?.(event);
+          const nextFocusTarget = event.relatedTarget;
           const isPopupFocus =
             nextFocusTarget instanceof Node &&
-            document.getElementById(popupId)?.contains(nextFocusTarget)
+            document.getElementById(popupId)?.contains(nextFocusTarget);
           if (!isPopupFocus && !shouldCancelDismiss("focus-out", undefined)) {
-            closeActivatedEditor()
+            closeActivatedEditor();
           }
         }}
         onClick={(event) => {
-          onClick?.(event)
-          if (event.defaultPrevented) return
+          onClick?.(event);
+          if (event.defaultPrevented) return;
           if (!select.open) {
-            openActivatedEditor()
-            return
+            openActivatedEditor();
+            return;
           }
           if (!shouldCancelDismiss("trigger-press", event.nativeEvent)) {
-            closeActivatedEditor()
+            closeActivatedEditor();
           }
         }}
         onDoubleClick={onDoubleClick}
         onKeyDown={(event) => {
-          onKeyDown?.(event)
-          if (event.defaultPrevented) return
-          selectOnKeyDown(event)
+          onKeyDown?.(event);
+          if (event.defaultPrevented) return;
+          selectOnKeyDown(event);
         }}
       >
         <span
           data-slot="select-value"
           className={cn(
             "flex-1 truncate",
-            select.isEmpty && "text-muted-foreground"
+            select.isEmpty && "text-muted-foreground",
           )}
         >
           {select.isEmpty ? select.placeholder : select.displayValue}
@@ -148,12 +148,12 @@ export function DataCellSelectControl({
           onCancel={closeActivatedEditor}
           onOutsidePointerDown={(event) => {
             if (shouldCancelDismiss("outside-pointer", event)) {
-              return
+              return;
             }
-            closeActivatedEditor()
+            closeActivatedEditor();
           }}
         />
       ) : null}
     </>
-  )
+  );
 }

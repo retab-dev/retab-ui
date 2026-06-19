@@ -1,47 +1,49 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { clearPdfDocumentResource } from "@/lib/pdf-document-resource"
-import { cn } from "@/lib/utils"
-import type { ViewerResource } from "@/lib/viewer-resource"
-import { Spinner } from "@/components/ui/spinner"
+import * as React from "react";
+
+import { clearPdfDocumentResource } from "@/lib/pdf-document-resource";
+import { cn } from "@/lib/utils";
+import type { ViewerResource } from "@/lib/viewer-resource";
+import { Spinner } from "@/components/ui/spinner";
 
 import {
   buildPdfThumbnailLayout,
   PDF_THUMBNAIL_INITIAL_VIEWPORT_HEIGHT,
   PDF_THUMBNAIL_OVERSCAN,
   type PdfThumbnailShape,
-} from "./pdf-thumbnail-layout"
-import { PdfThumbnailRailViewport } from "./pdf-thumbnail-rail"
-import { usePdfViewerThumbnails } from "./pdf-viewer-context"
-import { useIsClient } from "./use-is-client"
-import { usePdfThumbnailDocument } from "./use-pdf-thumbnail-document"
-import { usePdfThumbnailPageMetrics } from "./use-pdf-thumbnail-page-metrics"
-import { usePdfThumbnailWindow } from "./use-pdf-thumbnail-window"
-import { useThumbnailRailFollow } from "./use-thumbnail-rail-follow"
-import { ViewerErrorBoundary } from "./viewer-error"
+} from "./pdf-thumbnail-layout";
+import { PdfThumbnailRailViewport } from "./pdf-thumbnail-rail";
+import { usePdfViewerThumbnails } from "./pdf-viewer-context";
+import { useIsClient } from "./use-is-client";
+import { usePdfThumbnailDocument } from "./use-pdf-thumbnail-document";
+import { usePdfThumbnailPageMetrics } from "./use-pdf-thumbnail-page-metrics";
+import { usePdfThumbnailWindow } from "./use-pdf-thumbnail-window";
+import { useThumbnailRailFollow } from "./use-thumbnail-rail-follow";
+import { ViewerErrorBoundary } from "./viewer-error";
 
 export interface PdfViewerThumbnailsProps {
   /** Thumbnail image width in CSS pixels. The sidebar shell owns rail width. */
-  thumbnailWidth?: number
+  thumbnailWidth?: number;
   /** Preserve page aspect or crop each page preview into a square frame. */
-  thumbnailShape?: PdfThumbnailShape
-  className?: string
+  thumbnailShape?: PdfThumbnailShape;
+  className?: string;
 }
 
 export interface PdfThumbnailRailProps {
   /** Same resource object passed to PdfResourceContent. */
-  resource: ViewerResource
+  resource: ViewerResource;
   /** 1-based current page; its thumbnail is highlighted. */
-  currentPage?: number | null
+  currentPage?: number | null;
   /** Click a thumbnail to jump the document to that page. */
-  onSelectPage?: (page: number) => void
+  onSelectPage?: (page: number) => void;
   /** Thumbnail image width in CSS pixels. The sidebar shell owns rail width. */
-  thumbnailWidth?: number
+  thumbnailWidth?: number;
   /** Preserve page aspect or crop each page preview into a square frame. */
-  thumbnailShape?: PdfThumbnailShape
-  className?: string
+  thumbnailShape?: PdfThumbnailShape;
+  className?: string;
 }
 
 export function PdfViewerThumbnails({
@@ -49,7 +51,7 @@ export function PdfViewerThumbnails({
   thumbnailShape,
   thumbnailWidth,
 }: PdfViewerThumbnailsProps) {
-  const thumbnails = usePdfViewerThumbnails()
+  const thumbnails = usePdfViewerThumbnails();
 
   return (
     <PdfThumbnailRail
@@ -60,7 +62,7 @@ export function PdfViewerThumbnails({
       thumbnailShape={thumbnailShape}
       thumbnailWidth={thumbnailWidth}
     />
-  )
+  );
 }
 
 export function PdfThumbnailRail({
@@ -71,10 +73,10 @@ export function PdfThumbnailRail({
   thumbnailShape,
   thumbnailWidth,
 }: PdfThumbnailRailProps) {
-  const isClient = useIsClient()
+  const isClient = useIsClient();
 
   if (!isClient) {
-    return <ThumbnailsFallback className={className} />
+    return <ThumbnailsFallback className={className} />;
   }
 
   return (
@@ -98,7 +100,7 @@ export function PdfThumbnailRail({
         />
       </React.Suspense>
     </ViewerErrorBoundary>
-  )
+  );
 }
 
 function PdfThumbnailRailInner({
@@ -109,10 +111,10 @@ function PdfThumbnailRailInner({
   thumbnailWidth = 120,
   className,
 }: PdfThumbnailRailProps) {
-  const doc = usePdfThumbnailDocument(resource)
-  const pageMetrics = usePdfThumbnailPageMetrics(doc, doc)
-  const { metricByPageNumber, pageCount, requestPageMetrics } = pageMetrics
-  const viewportRef = React.useRef<HTMLDivElement | null>(null)
+  const doc = usePdfThumbnailDocument(resource);
+  const pageMetrics = usePdfThumbnailPageMetrics(doc, doc);
+  const { metricByPageNumber, pageCount, requestPageMetrics } = pageMetrics;
+  const viewportRef = React.useRef<HTMLDivElement | null>(null);
 
   const layout = React.useMemo(
     () =>
@@ -122,34 +124,34 @@ function PdfThumbnailRailInner({
         shape: thumbnailShape,
         metricByPageNumber,
       }),
-    [metricByPageNumber, pageCount, thumbnailShape, thumbnailWidth]
-  )
+    [metricByPageNumber, pageCount, thumbnailShape, thumbnailWidth],
+  );
   const thumbnailWindow = usePdfThumbnailWindow({
     layout,
     viewportRef,
     overscan: PDF_THUMBNAIL_OVERSCAN,
     initialViewportHeight: PDF_THUMBNAIL_INITIAL_VIEWPORT_HEIGHT,
-  })
+  });
   const follow = useThumbnailRailFollow({
     currentPage,
     layout,
     viewportRef,
     resetKey: doc,
-  })
+  });
   React.useEffect(() => {
     requestPageMetrics(
       getRequestedThumbnailMetricPages({
         currentPage,
         pageCount: layout.pageCount,
         visibleItems: thumbnailWindow.visibleItems,
-      })
-    )
+      }),
+    );
   }, [
     currentPage,
     layout.pageCount,
     requestPageMetrics,
     thumbnailWindow.visibleItems,
-  ])
+  ]);
 
   return (
     <PdfThumbnailRailViewport
@@ -165,7 +167,7 @@ function PdfThumbnailRailInner({
       onScroll={follow.onScroll}
       className={className}
     />
-  )
+  );
 }
 
 function getRequestedThumbnailMetricPages({
@@ -173,33 +175,33 @@ function getRequestedThumbnailMetricPages({
   pageCount,
   visibleItems,
 }: {
-  currentPage: number | null | undefined
-  pageCount: number
-  visibleItems: readonly { pageNumber: number }[]
+  currentPage: number | null | undefined;
+  pageCount: number;
+  visibleItems: readonly { pageNumber: number }[];
 }) {
-  const pageNumbers = new Set<number>()
-  for (const item of visibleItems) pageNumbers.add(item.pageNumber)
+  const pageNumbers = new Set<number>();
+  for (const item of visibleItems) pageNumbers.add(item.pageNumber);
   if (
     currentPage != null &&
     Number.isInteger(currentPage) &&
     currentPage >= 1 &&
     currentPage <= pageCount
   ) {
-    pageNumbers.add(currentPage)
+    pageNumbers.add(currentPage);
   }
 
-  return pageNumbers
+  return pageNumbers;
 }
 
 function ThumbnailsFallback({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "flex h-full items-center justify-center bg-muted/30",
-        className
+        "bg-muted/30 flex h-full items-center justify-center",
+        className,
       )}
     >
-      <Spinner className="size-4 text-muted-foreground" />
+      <Spinner className="text-muted-foreground size-4" />
     </div>
-  )
+  );
 }

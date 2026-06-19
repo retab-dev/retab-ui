@@ -1,22 +1,22 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, waitFor } from "@testing-library/react"
-import type { JSONSchema7 } from "json-schema"
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
+import { cleanup, fireEvent, waitFor } from "@testing-library/react";
+import type { JSONSchema7 } from "json-schema";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import type { JsonTableCellCommitHandler } from "@/components/json-table/json-table-cell-commit"
-import type { TableDocument } from "@/components/json-table/lib/projects-types"
+import type { JsonTableCellCommitHandler } from "@/components/json-table/json-table-cell-commit";
+import type { TableDocument } from "@/components/json-table/lib/projects-types";
 
 import {
   findEditableCell,
   primitiveEventTarget,
   primitivePendingCellCommit,
   renderInteractionRow,
-} from "./json-table-interaction-test-utils"
-import { installJsonTableDom } from "./json-table-test-dom"
+} from "./json-table-interaction-test-utils";
+import { installJsonTableDom } from "./json-table-test-dom";
 
-beforeAll(() => installJsonTableDom())
-afterEach(() => cleanup())
+beforeAll(() => installJsonTableDom());
+afterEach(() => cleanup());
 
 const edgeSchema: JSONSchema7 = {
   type: "object",
@@ -33,10 +33,10 @@ const edgeSchema: JSONSchema7 = {
     count: { type: "integer" },
     is_paid: { type: "boolean" },
   },
-}
+};
 
 function edgeDocument(
-  data: Partial<TableDocument["data"]> = {}
+  data: Partial<TableDocument["data"]> = {},
 ): TableDocument {
   return {
     id: "doc_1",
@@ -52,42 +52,42 @@ function edgeDocument(
       is_paid: false,
       ...data,
     },
-  }
+  };
 }
 
 async function editableCell(
   view: { container: HTMLElement },
-  fieldPath: string
+  fieldPath: string,
 ) {
   return waitFor(() => findEditableCell(view.container, fieldPath), {
     timeout: 3000,
-  })
+  });
 }
 
 async function activateCell(
   view: { container: HTMLElement },
-  fieldPath: string
+  fieldPath: string,
 ) {
-  const cell = await editableCell(view, fieldPath)
+  const cell = await editableCell(view, fieldPath);
   fireEvent.pointerDown(primitiveEventTarget(cell), {
     button: 0,
     clientX: 0,
     clientY: 0,
     detail: 1,
-  })
+  });
   fireEvent.pointerUp(primitiveEventTarget(cell), {
     button: 0,
     clientX: 0,
     clientY: 0,
     detail: 1,
-  })
+  });
   fireEvent.click(primitiveEventTarget(cell), {
     button: 0,
     clientX: 0,
     clientY: 0,
     detail: 1,
-  })
-  return cell
+  });
+  return cell;
 }
 
 async function activateEnumCell({
@@ -95,43 +95,43 @@ async function activateEnumCell({
   fieldPath,
   onCellCommit = vi.fn(),
 }: {
-  document?: TableDocument
-  fieldPath: string
-  onCellCommit?: JsonTableCellCommitHandler
+  document?: TableDocument;
+  fieldPath: string;
+  onCellCommit?: JsonTableCellCommitHandler;
 }) {
   const view = renderInteractionRow({
     document,
     schema: edgeSchema,
     visiblePaths: [fieldPath],
     onCellCommit,
-  })
+  });
 
-  await activateCell(view, fieldPath)
+  await activateCell(view, fieldPath);
 
-  const trigger = await view.findByRole("combobox")
+  const trigger = await view.findByRole("combobox");
   await waitFor(() =>
-    expect(trigger.getAttribute("aria-expanded")).toBe("true")
-  )
+    expect(trigger.getAttribute("aria-expanded")).toBe("true"),
+  );
 
-  return { ...view, document, trigger, onCellCommit }
+  return { ...view, document, trigger, onCellCommit };
 }
 
 async function chooseOption(
   view: ReturnType<typeof renderInteractionRow>,
-  optionName: string | RegExp
+  optionName: string | RegExp,
 ) {
-  const option = await view.findByRole("option", { name: optionName })
+  const option = await view.findByRole("option", { name: optionName });
   fireEvent.pointerDown(option, {
     button: 0,
     pointerId: 1,
     pointerType: "mouse",
-  })
+  });
   fireEvent.pointerUp(option, {
     button: 0,
     pointerId: 1,
     pointerType: "mouse",
-  })
-  fireEvent.click(option)
+  });
+  fireEvent.click(option);
 }
 
 describe("json table value edge interactions", () => {
@@ -151,9 +151,9 @@ describe("json table value edge interactions", () => {
   ])(
     "commits $fieldPath enum options as their original JSON value type",
     async ({ fieldPath, optionName, expectedValue }) => {
-      const view = await activateEnumCell({ fieldPath })
+      const view = await activateEnumCell({ fieldPath });
 
-      await chooseOption(view, optionName)
+      await chooseOption(view, optionName);
 
       await waitFor(() =>
         expect(view.onCellCommit).toHaveBeenCalledWith(
@@ -161,12 +161,12 @@ describe("json table value edge interactions", () => {
             fieldPath,
             previousValue: edgeDocument().data[fieldPath],
             value: expectedValue,
-          })
-        )
-      )
-      expect(view.onCellCommit).toHaveBeenCalledTimes(1)
-    }
-  )
+          }),
+        ),
+      );
+      expect(view.onCellCommit).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it.each([
     {
@@ -190,9 +190,9 @@ describe("json table value edge interactions", () => {
       const view = await activateEnumCell({
         document: edgeDocument({ sentinel_status: currentValue }),
         fieldPath: "sentinel_status",
-      })
+      });
 
-      await chooseOption(view, optionName)
+      await chooseOption(view, optionName);
 
       await waitFor(() =>
         expect(view.onCellCommit).toHaveBeenCalledWith(
@@ -200,27 +200,27 @@ describe("json table value edge interactions", () => {
             fieldPath: "sentinel_status",
             previousValue: currentValue,
             value: expectedValue,
-          })
-        )
-      )
-      expect(view.onCellCommit).toHaveBeenCalledTimes(1)
-    }
-  )
+          }),
+        ),
+      );
+      expect(view.onCellCommit).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it("keeps sentinel-like string enum options separate from nullable No selection", async () => {
     const view = await activateEnumCell({
       document: edgeDocument({ sentinel_status: "__null__" }),
       fieldPath: "sentinel_status",
-    })
+    });
 
     expect(
-      view.getByRole("option", { name: "__json_table_null__" })
-    ).toBeTruthy()
-    expect(view.getByRole("option", { name: "option:1" })).toBeTruthy()
-    expect(view.getByRole("option", { name: "__null__" })).toBeTruthy()
-    expect(view.getByRole("option", { name: /no selection/i })).toBeTruthy()
+      view.getByRole("option", { name: "__json_table_null__" }),
+    ).toBeTruthy();
+    expect(view.getByRole("option", { name: "option:1" })).toBeTruthy();
+    expect(view.getByRole("option", { name: "__null__" })).toBeTruthy();
+    expect(view.getByRole("option", { name: /no selection/i })).toBeTruthy();
 
-    await chooseOption(view, /no selection/i)
+    await chooseOption(view, /no selection/i);
 
     await waitFor(() =>
       expect(view.onCellCommit).toHaveBeenCalledWith(
@@ -228,25 +228,25 @@ describe("json table value edge interactions", () => {
           fieldPath: "sentinel_status",
           previousValue: "__null__",
           value: null,
-        })
-      )
-    )
-    expect(view.onCellCommit).toHaveBeenCalledTimes(1)
-  })
+        }),
+      ),
+    );
+    expect(view.onCellCommit).toHaveBeenCalledTimes(1);
+  });
 
   it("filters empty string enum members from the dropdown", async () => {
-    const view = await activateEnumCell({ fieldPath: "empty_status" })
+    const view = await activateEnumCell({ fieldPath: "empty_status" });
 
-    const options = await view.findAllByRole("option")
+    const options = await view.findAllByRole("option");
 
-    expect(options.map((option) => option.textContent)).toEqual(["filled"])
-    expect(view.queryByRole("option", { name: "" })).toBeNull()
-  })
+    expect(options.map((option) => option.textContent)).toEqual(["filled"]);
+    expect(view.queryByRole("option", { name: "" })).toBeNull();
+  });
 
   it("commits nullable enum No selection as null exactly once", async () => {
-    const view = await activateEnumCell({ fieldPath: "nullable_status" })
+    const view = await activateEnumCell({ fieldPath: "nullable_status" });
 
-    await chooseOption(view, /no selection/i)
+    await chooseOption(view, /no selection/i);
 
     await waitFor(() =>
       expect(view.onCellCommit).toHaveBeenCalledWith(
@@ -254,27 +254,27 @@ describe("json table value edge interactions", () => {
           fieldPath: "nullable_status",
           previousValue: "selected",
           value: null,
-        })
-      )
-    )
-    expect(view.onCellCommit).toHaveBeenCalledTimes(1)
-  })
+        }),
+      ),
+    );
+    expect(view.onCellCommit).toHaveBeenCalledTimes(1);
+  });
 
   it("commits empty text blur as null exactly once", async () => {
-    const onCellCommit = vi.fn()
+    const onCellCommit = vi.fn();
     const view = renderInteractionRow({
       document: edgeDocument(),
       schema: edgeSchema,
       visiblePaths: ["note"],
       onCellCommit,
-    })
+    });
 
-    await activateCell(view, "note")
-    const input = view.getByRole("textbox")
+    await activateCell(view, "note");
+    const input = view.getByRole("textbox");
 
-    fireEvent.change(input, { target: { value: "" } })
-    fireEvent.blur(input)
-    fireEvent.blur(input)
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.blur(input);
+    fireEvent.blur(input);
 
     await waitFor(() =>
       expect(onCellCommit).toHaveBeenCalledWith(
@@ -282,11 +282,11 @@ describe("json table value edge interactions", () => {
           fieldPath: "note",
           previousValue: "memo",
           value: null,
-        })
-      )
-    )
-    expect(onCellCommit).toHaveBeenCalledTimes(1)
-  })
+        }),
+      ),
+    );
+    expect(onCellCommit).toHaveBeenCalledTimes(1);
+  });
 
   it.each([
     { draftValue: "3.5", label: "decimal", expectedValue: null },
@@ -294,19 +294,19 @@ describe("json table value edge interactions", () => {
   ])(
     "commits $label integer drafts as the current null behavior",
     async ({ draftValue, expectedValue }) => {
-      const onCellCommit = vi.fn()
+      const onCellCommit = vi.fn();
       const view = renderInteractionRow({
         document: edgeDocument(),
         schema: edgeSchema,
         visiblePaths: ["count"],
         onCellCommit,
-      })
+      });
 
-      await activateCell(view, "count")
-      const input = view.getByRole("spinbutton")
+      await activateCell(view, "count");
+      const input = view.getByRole("spinbutton");
 
-      fireEvent.change(input, { target: { value: draftValue } })
-      fireEvent.blur(input)
+      fireEvent.change(input, { target: { value: draftValue } });
+      fireEvent.blur(input);
 
       await waitFor(() =>
         expect(onCellCommit).toHaveBeenCalledWith(
@@ -314,12 +314,12 @@ describe("json table value edge interactions", () => {
             fieldPath: "count",
             previousValue: 3,
             value: expectedValue,
-          })
-        )
-      )
-      expect(onCellCommit).toHaveBeenCalledTimes(1)
-    }
-  )
+          }),
+        ),
+      );
+      expect(onCellCommit).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it.each([
     {
@@ -328,39 +328,39 @@ describe("json table value edge interactions", () => {
         fireEvent.pointerDown(primitiveEventTarget(cell), {
           button: 0,
           detail: 1,
-        })
+        });
         fireEvent.pointerUp(primitiveEventTarget(cell), {
           button: 0,
           detail: 1,
-        })
-        fireEvent.click(primitiveEventTarget(cell))
+        });
+        fireEvent.click(primitiveEventTarget(cell));
       },
     },
     {
       activation: "Space",
       interact: async (cell: HTMLElement) => {
-        const target = primitiveEventTarget(cell)
+        const target = primitiveEventTarget(cell);
         if (!(target instanceof HTMLElement)) {
-          throw new Error("Expected primitive event target")
+          throw new Error("Expected primitive event target");
         }
-        target.focus()
-        fireEvent.keyDown(target, { key: " " })
-        fireEvent.keyUp(target, { key: " " })
+        target.focus();
+        fireEvent.keyDown(target, { key: " " });
+        fireEvent.keyUp(target, { key: " " });
       },
     },
   ])(
     "does not double-toggle booleans from $activation activation",
     async ({ interact }) => {
-      const onCellCommit = vi.fn()
+      const onCellCommit = vi.fn();
       const view = renderInteractionRow({
         document: edgeDocument(),
         schema: edgeSchema,
         visiblePaths: ["is_paid"],
         onCellCommit,
-      })
-      const cell = await editableCell(view, "is_paid")
+      });
+      const cell = await editableCell(view, "is_paid");
 
-      await interact(cell)
+      await interact(cell);
 
       await waitFor(() =>
         expect(onCellCommit).toHaveBeenCalledWith(
@@ -368,10 +368,10 @@ describe("json table value edge interactions", () => {
             fieldPath: "is_paid",
             previousValue: false,
             value: true,
-          })
-        )
-      )
-      expect(onCellCommit).toHaveBeenCalledTimes(1)
-    }
-  )
-})
+          }),
+        ),
+      );
+      expect(onCellCommit).toHaveBeenCalledTimes(1);
+    },
+  );
+});

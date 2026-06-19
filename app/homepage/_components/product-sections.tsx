@@ -87,7 +87,7 @@ function ProductLane({
     <section
       aria-labelledby={sectionId}
       className={cn(
-        isFirst ? "mt-40 md:mt-24 lg:mt-[208px]" : "mt-8 md:mt-44 lg:mt-52",
+        isFirst ? "mt-40 md:mt-24 lg:mt-48" : "mt-8 md:mt-44 lg:mt-52",
       )}
     >
       <SectionHeader
@@ -102,11 +102,11 @@ function ProductLane({
         </div>
         <div
           className={cn(
-            "mt-8 min-w-0 space-y-8 lg:col-span-3 lg:mt-0 lg:pt-[34px]",
+            "mt-8 min-w-0 space-y-8 lg:col-span-3 lg:mt-0 lg:pt-8",
             isReversed ? "lg:col-start-1 lg:row-start-1" : "lg:col-start-10",
           )}
         >
-          <p className="max-w-[380px] text-[28px] leading-[1.14] tracking-[-0.05em] text-balance text-black md:text-4xl xl:text-[40px] xl:leading-[1.1]">
+          <p className="max-w-sm text-3xl leading-tight tracking-tighter text-balance text-black md:text-4xl xl:text-5xl">
             <span className="text-neutral-500">{proofCustomer}</span> {proof}
           </p>
           <FeatureList features={features} />

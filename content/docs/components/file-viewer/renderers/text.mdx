@@ -20,7 +20,7 @@ npx shadcn@latest add @retab/text-viewer
 ## Usage
 
 ```tsx
-import { TextViewer } from "@/components/ui/text-viewer"
+import { TextViewer } from "@/components/ui/text-viewer";
 
 export function Example() {
   return (
@@ -32,7 +32,7 @@ export function Example() {
       }}
       highlight={{ start: 1, end: 1 }}
     />
-  )
+  );
 }
 ```
 
@@ -92,12 +92,12 @@ numbers, monospaced layout, syntax support, and line-oriented scrolling.
 ## Ref
 
 ```tsx
-import * as React from "react"
+import * as React from "react";
 
-import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
+import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer";
 
 export function Example() {
-  const viewerRef = React.useRef<TextViewerHandle>(null)
+  const viewerRef = React.useRef<TextViewerHandle>(null);
 
   return (
     <TextViewer
@@ -105,7 +105,7 @@ export function Example() {
       source={{ kind: "text", text: "alpha\nlong prose paragraph\nomega" }}
       highlight={{ start: 2, end: 2 }}
     />
-  )
+  );
 }
 ```
 

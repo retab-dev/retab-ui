@@ -1,8 +1,10 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { cn } from "@/lib/utils"
+import * as React from "react";
+
+import { cn } from "@/lib/utils";
 import {
   documentAiPageImages,
   OcrLayoutBlocks,
@@ -10,13 +12,13 @@ import {
   type DocumentAiDocument,
   type OcrSource,
   type TextractDocument,
-} from "@/components/ui/layout-blocks"
+} from "@/components/ui/layout-blocks";
 
-type ProviderId = OcrSource["provider"]
+type ProviderId = OcrSource["provider"];
 type ProviderSample = {
-  output: unknown
-  pageImageOutput?: DocumentAiDocument
-}
+  output: unknown;
+  pageImageOutput?: DocumentAiDocument;
+};
 
 /**
  * OCR block — a scanned document beside its detected text blocks, confidence,
@@ -27,16 +29,16 @@ type ProviderSample = {
  * ~21 MB) so they stay off the page's initial JavaScript.
  */
 const PROVIDERS: {
-  id: ProviderId
-  label: string
-  load: () => Promise<ProviderSample>
+  id: ProviderId;
+  label: string;
+  load: () => Promise<ProviderSample>;
 }[] = [
   {
     id: "google-document-ai",
     label: "Google Document AI",
     load: async () => {
-      const output = await import("@/sample/documentai-output.json")
-      return { output: output.default }
+      const output = await import("@/sample/documentai-output.json");
+      return { output: output.default };
     },
   },
   {
@@ -46,11 +48,11 @@ const PROVIDERS: {
       const [output, pageImageOutput] = await Promise.all([
         import("@/sample/textract-output.json"),
         import("@/sample/documentai-output.json"),
-      ])
+      ]);
       return {
         output: output.default,
         pageImageOutput: pageImageOutput.default as DocumentAiDocument,
-      }
+      };
     },
   },
   {
@@ -60,44 +62,44 @@ const PROVIDERS: {
       const [output, pageImageOutput] = await Promise.all([
         import("@/sample/azure-output.json"),
         import("@/sample/documentai-output.json"),
-      ])
+      ]);
       return {
         output: output.default,
         pageImageOutput: pageImageOutput.default as DocumentAiDocument,
-      }
+      };
     },
   },
-]
+];
 
 export function OcrBlock() {
   const [provider, setProvider] =
-    React.useState<ProviderId>("google-document-ai")
+    React.useState<ProviderId>("google-document-ai");
   const [outputs, setOutputs] = React.useState<
     Partial<Record<ProviderId, ProviderSample>>
-  >({})
+  >({});
 
   React.useEffect(() => {
-    if (outputs[provider]) return
-    let active = true
-    const entry = PROVIDERS.find((item) => item.id === provider)
+    if (outputs[provider]) return;
+    let active = true;
+    const entry = PROVIDERS.find((item) => item.id === provider);
     void entry?.load().then((sample) => {
       if (active) {
-        setOutputs((current) => ({ ...current, [provider]: sample }))
+        setOutputs((current) => ({ ...current, [provider]: sample }));
       }
-    })
+    });
     return () => {
-      active = false
-    }
-  }, [outputs, provider])
+      active = false;
+    };
+  }, [outputs, provider]);
 
-  const sample = outputs[provider]
+  const sample = outputs[provider];
   const source = React.useMemo<OcrSource | null>(
     () => (sample ? toOcrSource(provider, sample) : null),
-    [sample, provider]
-  )
+    [sample, provider],
+  );
 
   return (
-    <div className="flex h-full min-h-[680px] flex-col bg-background">
+    <div className="bg-background flex h-full min-h-[680px] flex-col">
       <div className="flex flex-wrap items-center gap-1.5 border-b p-2">
         {PROVIDERS.map((item) => (
           <button
@@ -108,7 +110,7 @@ export function OcrBlock() {
               "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
               provider === item.id
                 ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
             {item.label}
@@ -119,34 +121,38 @@ export function OcrBlock() {
         {source ? (
           <OcrLayoutBlocks heightClassName="h-full" source={source} />
         ) : (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+          <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
             Loading OCR sample…
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }
 
 function toOcrSource(provider: ProviderId, sample: ProviderSample): OcrSource {
   const pageImages = sample.pageImageOutput
     ? documentAiPageImages(sample.pageImageOutput)
-    : undefined
+    : undefined;
 
   switch (provider) {
     case "aws-textract":
-      return { provider, output: sample.output as TextractDocument, pageImages }
+      return {
+        provider,
+        output: sample.output as TextractDocument,
+        pageImages,
+      };
     case "azure-document-intelligence":
       return {
         provider,
         output: sample.output as AzureDocument,
         pageImages,
-      }
+      };
     case "google-document-ai":
     default:
       return {
         provider: "google-document-ai",
         output: sample.output as DocumentAiDocument,
-      }
+      };
   }
 }

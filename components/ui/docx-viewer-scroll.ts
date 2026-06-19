@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/ui/docx-viewer-scroll"
+export * from "@/registry/new-york-v4/ui/docx-viewer-scroll";

@@ -143,7 +143,7 @@ export function StartBuildingPluginCommand({
         </button>
       </div>
       {isMenuOpen ? (
-        <div className="absolute top-11 left-2 z-50 w-[220px] rounded-xl bg-white p-2 text-sm text-black shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_10px_30px_rgba(0,0,0,0.12)]">
+        <div className="absolute top-11 left-2 z-50 w-56 rounded-xl bg-white p-2 text-sm text-black shadow-xl ring-1 ring-black/10">
           <ul id={menuId} role="menu" aria-label="Command type">
             {options.map((option, index) => (
               <li key={option.label} role="none">

@@ -1,28 +1,28 @@
-"use client"
+"use client";
 
-import { X } from "lucide-react"
+import { X } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { useDropzone } from "@/components/ui/dropzone"
-import { formatFileSize } from "@/components/ui/file-size-format"
-import { FileThumbnail } from "@/components/ui/file-thumbnail"
+import { cn } from "@/lib/utils";
+import { useDropzone } from "@/components/ui/dropzone";
+import { formatFileSize } from "@/components/ui/file-size-format";
+import { FileThumbnail } from "@/components/ui/file-thumbnail";
 
 import {
   RejectionRows,
   type DropzoneExampleProps,
-} from "./dropzone-example-shared"
+} from "./dropzone-example-shared";
 
 export function ComparisonPairUpload({ className }: DropzoneExampleProps) {
   return (
-    <section className={cn("rounded-lg border bg-background p-4", className)}>
+    <section className={cn("bg-background rounded-lg border p-4", className)}>
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <div className="text-sm font-medium">Comparison pair</div>
-          <div className="mt-1 text-xs text-muted-foreground">
+          <div className="text-muted-foreground mt-1 text-xs">
             Two independent dropzones model original versus revision.
           </div>
         </div>
-        <div className="rounded-full border bg-muted/30 px-2 py-1 text-xs text-muted-foreground">
+        <div className="bg-muted/30 text-muted-foreground rounded-full border px-2 py-1 text-xs">
           2 slots
         </div>
       </div>
@@ -31,22 +31,22 @@ export function ComparisonPairUpload({ className }: DropzoneExampleProps) {
         <ComparisonSlot label="Revision" />
       </div>
     </section>
-  )
+  );
 }
 
 function ComparisonSlot({ label }: { label: string }) {
   const dropzone = useDropzone({
     accept: ".pdf,.doc,.docx,application/pdf",
     maxFiles: 1,
-  })
-  const selectedFile = dropzone.files[0]
+  });
+  const selectedFile = dropzone.files[0];
 
   return (
     <div
       {...dropzone.getRootProps({
         className: cn(
           "rounded-md border border-dashed bg-muted/20 p-3 transition-colors",
-          dropzone.isDragging && "border-foreground/40 bg-accent/35"
+          dropzone.isDragging && "border-foreground/40 bg-accent/35",
         ),
       })}
     >
@@ -64,7 +64,7 @@ function ComparisonSlot({ label }: { label: string }) {
         </button>
       </div>
       {selectedFile ? (
-        <div className="flex min-w-0 items-center gap-3 rounded-md border bg-background p-2">
+        <div className="bg-background flex min-w-0 items-center gap-3 rounded-md border p-2">
           <FileThumbnail
             file={selectedFile.file}
             thumbnailShape="square"
@@ -75,14 +75,14 @@ function ComparisonSlot({ label }: { label: string }) {
             <div className="truncate text-sm font-medium">
               {selectedFile.file.name}
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-muted-foreground text-xs">
               {formatFileSize(selectedFile.file.size)}
             </div>
           </div>
           <button
             type="button"
             aria-label={`Remove ${selectedFile.file.name}`}
-            className="grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground grid size-7 shrink-0 place-items-center rounded-md"
             onClick={dropzone.clearFiles}
           >
             <X className="size-4" aria-hidden />
@@ -100,5 +100,5 @@ function ComparisonSlot({ label }: { label: string }) {
       )}
       <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </div>
-  )
+  );
 }

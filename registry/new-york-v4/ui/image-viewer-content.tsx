@@ -1,19 +1,21 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { type FrameSource } from "@/lib/image-frame-source"
+import * as React from "react";
+
+import { type FrameSource } from "@/lib/image-frame-source";
 import {
   imageFrameSourceManager,
   type FrameSourceLease,
   type ImageSourceContent,
-} from "@/lib/image-source-cache"
-import { cn } from "@/lib/utils"
+} from "@/lib/image-source-cache";
+import { cn } from "@/lib/utils";
 import {
   type ViewerContentIdentity,
   type ViewerResource,
-} from "@/lib/viewer-resource"
-import { ImageFrameScroller } from "@/components/ui/image-viewer-frame"
+} from "@/lib/viewer-resource";
+import { ImageFrameScroller } from "@/components/ui/image-viewer-frame";
 import {
   MAX_VIEWER_SCALE,
   MIN_VIEWER_SCALE,
@@ -21,18 +23,18 @@ import {
   useImageViewerHandle,
   useImageViewerScale,
   useVisibleFrame,
-} from "@/components/ui/image-viewer-hooks"
+} from "@/components/ui/image-viewer-hooks";
 import {
   type ImageViewerHandle,
   type ImageViewerProps,
-} from "@/components/ui/image-viewer-types"
+} from "@/components/ui/image-viewer-types";
 import {
   useViewerControlsRegistration,
   ViewerControls,
   type ViewerControlsState,
-} from "@/components/ui/viewer-controls"
+} from "@/components/ui/viewer-controls";
 
-import { createImageFrameLayout } from "./image-viewer-virtualization"
+import { createImageFrameLayout } from "./image-viewer-virtualization";
 
 export function ImageViewerContent({
   resource,
@@ -49,12 +51,12 @@ export function ImageViewerContent({
   bare = false,
   forwardedRef,
 }: Omit<ImageViewerProps, "source"> & {
-  forwardedRef?: React.ForwardedRef<ImageViewerHandle>
-  resource: ViewerResource
+  forwardedRef?: React.ForwardedRef<ImageViewerHandle>;
+  resource: ViewerResource;
 }) {
-  const frameSource = React.use(getImageSource(resource.content))
-  const sourceLeaseRef = useFrameSourceLease(resource.content, frameSource)
-  const { frameListRef, frameListWidth } = useFrameListWidth()
+  const frameSource = React.use(getImageSource(resource.content));
+  const sourceLeaseRef = useFrameSourceLease(resource.content, frameSource);
+  const { frameListRef, frameListWidth } = useFrameListWidth();
   const {
     rotateClockwise,
     rotation,
@@ -66,8 +68,8 @@ export function ImageViewerContent({
     controlledScale,
     defaultScale,
     onScaleChange,
-    frameListWidth
-  )
+    frameListWidth,
+  );
   const frameLayout = React.useMemo(
     () =>
       createImageFrameLayout({
@@ -75,8 +77,8 @@ export function ImageViewerContent({
         scale,
         rotation,
       }),
-    [frameSource.frames, rotation, scale]
-  )
+    [frameSource.frames, rotation, scale],
+  );
   const {
     currentFrameNumber,
     handleScroll,
@@ -86,29 +88,29 @@ export function ImageViewerContent({
     frameLayout,
     frameSource,
     onScrollProgressChange,
-    onVisibleFrameChange
-  )
-  useImageViewerHandle(forwardedRef, scrollViewportRef, frameLayout)
+    onVisibleFrameChange,
+  );
+  useImageViewerHandle(forwardedRef, scrollViewportRef, frameLayout);
 
-  const frameCount = frameSource.frames.length
+  const frameCount = frameSource.frames.length;
   const countLabel =
     frameSource.kind === "tiff"
       ? `Page ${Math.min(currentFrameNumber, frameCount)} of ${frameCount}`
-      : `${frameCount} image${frameCount === 1 ? "" : "s"}`
+      : `${frameCount} image${frameCount === 1 ? "" : "s"}`;
   const zoomOut = React.useCallback(
     () =>
       setViewerScale(clamp(scale / 1.2, MIN_VIEWER_SCALE, MAX_VIEWER_SCALE)),
-    [scale, setViewerScale]
-  )
+    [scale, setViewerScale],
+  );
   const zoomIn = React.useCallback(
     () =>
       setViewerScale(clamp(scale * 1.2, MIN_VIEWER_SCALE, MAX_VIEWER_SCALE)),
-    [scale, setViewerScale]
-  )
+    [scale, setViewerScale],
+  );
   const fitWidth = React.useCallback(
     () => setViewerScale(null),
-    [setViewerScale]
-  )
+    [setViewerScale],
+  );
   useImageControlsRegistration({
     countLabel,
     download,
@@ -119,15 +121,15 @@ export function ImageViewerContent({
     scaleControlsDisabled,
     zoomIn,
     zoomOut,
-  })
+  });
 
   return (
     <div
       ref={sourceLeaseRef}
       className={cn(
         "flex min-h-0 flex-col overflow-hidden",
-        bare ? "h-full bg-muted/20" : "rounded-xl border bg-muted/30",
-        className
+        bare ? "bg-muted/20 h-full" : "bg-muted/30 rounded-xl border",
+        className,
       )}
       data-slot="image-viewer"
     >
@@ -164,7 +166,7 @@ export function ImageViewerContent({
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function useImageControlsRegistration({
@@ -178,17 +180,17 @@ function useImageControlsRegistration({
   zoomIn,
   zoomOut,
 }: {
-  countLabel: string
-  download: boolean
-  downloadAction: ViewerResource["originalDownload"]
-  fitWidth: () => void
-  rotateClockwise: () => void
-  scale: number
-  scaleControlsDisabled: boolean
-  zoomIn: () => void
-  zoomOut: () => void
+  countLabel: string;
+  download: boolean;
+  downloadAction: ViewerResource["originalDownload"];
+  fitWidth: () => void;
+  rotateClockwise: () => void;
+  scale: number;
+  scaleControlsDisabled: boolean;
+  zoomIn: () => void;
+  zoomOut: () => void;
 }) {
-  const onControlsChange = useViewerControlsRegistration()
+  const onControlsChange = useViewerControlsRegistration();
   const controlsState = React.useMemo<ViewerControlsState>(
     () => ({
       position: { label: countLabel },
@@ -212,53 +214,53 @@ function useImageControlsRegistration({
       scaleControlsDisabled,
       zoomIn,
       zoomOut,
-    ]
-  )
+    ],
+  );
 
   React.useEffect(() => {
-    if (!onControlsChange) return
-    onControlsChange(controlsState)
-    return () => onControlsChange(null)
-  }, [onControlsChange, controlsState])
+    if (!onControlsChange) return;
+    onControlsChange(controlsState);
+    return () => onControlsChange(null);
+  }, [onControlsChange, controlsState]);
 }
 
 export function getImageSource(
-  content: ImageSourceContent
+  content: ImageSourceContent,
 ): Promise<FrameSource> {
-  return imageFrameSourceManager.load(content, createTiffWorker)
+  return imageFrameSourceManager.load(content, createTiffWorker);
 }
 
 export function resetImageSourceCacheForTests() {
-  imageFrameSourceManager.clear()
+  imageFrameSourceManager.clear();
 }
 
 function useFrameSourceLease(
   content: ViewerContentIdentity,
-  source: FrameSource
+  source: FrameSource,
 ): React.RefCallback<HTMLDivElement> {
   return React.useCallback(
     (element: HTMLDivElement | null) => {
-      if (!element) return
-      const lease = retainImageSource(content, source)
-      return () => lease?.release()
+      if (!element) return;
+      const lease = retainImageSource(content, source);
+      return () => lease?.release();
     },
-    [content, source]
-  )
+    [content, source],
+  );
 }
 
 function retainImageSource(
   content: ViewerContentIdentity,
-  source: FrameSource
+  source: FrameSource,
 ): FrameSourceLease | null {
-  return imageFrameSourceManager.retain(content, source)
+  return imageFrameSourceManager.retain(content, source);
 }
 
 function createTiffWorker() {
   return new Worker(new URL("./image-viewer.worker", import.meta.url), {
     type: "module",
-  })
+  });
 }
 
 function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value))
+  return Math.min(max, Math.max(min, value));
 }

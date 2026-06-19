@@ -1,16 +1,16 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import type { FileTree as PierreFileTreeModel } from "@pierre/trees"
+import * as React from "react";
+import type { FileTree as PierreFileTreeModel } from "@pierre/trees";
 
-import type { FileSystemListContinuity } from "./file-system-list-continuity"
-import type { FileSystemPierreExpansion } from "./file-system-pierre-expansion"
-import type { FileSystemPierreInput } from "./file-system-pierre-input"
-import type { FileSystemPierreOrder } from "./file-system-pierre-order"
-import { createFileSystemListContinuityIdentity } from "./file-system-list-continuity"
+import type { FileSystemListContinuity } from "./file-system-list-continuity";
+import type { FileSystemPierreExpansion } from "./file-system-pierre-expansion";
+import type { FileSystemPierreInput } from "./file-system-pierre-input";
+import type { FileSystemPierreOrder } from "./file-system-pierre-order";
+import { createFileSystemListContinuityIdentity } from "./file-system-list-continuity";
 
 const useIsoLayoutEffect =
-  typeof window === "undefined" ? React.useEffect : React.useLayoutEffect
+  typeof window === "undefined" ? React.useEffect : React.useLayoutEffect;
 
 export function useResetFileSystemPierreModel({
   currentPath,
@@ -23,15 +23,15 @@ export function useResetFileSystemPierreModel({
   order,
   selectedPath,
 }: {
-  currentPath: string
-  decorationVersion: string
-  expansion: FileSystemPierreExpansion
-  hasSemanticQuery: boolean
-  input: FileSystemPierreInput
-  listContinuity: FileSystemListContinuity<FileSystemPierreInput>
-  model: PierreFileTreeModel
-  order: FileSystemPierreOrder
-  selectedPath: string | null
+  currentPath: string;
+  decorationVersion: string;
+  expansion: FileSystemPierreExpansion;
+  hasSemanticQuery: boolean;
+  input: FileSystemPierreInput;
+  listContinuity: FileSystemListContinuity<FileSystemPierreInput>;
+  model: PierreFileTreeModel;
+  order: FileSystemPierreOrder;
+  selectedPath: string | null;
 }) {
   useIsoLayoutEffect(() => {
     const identity = createFileSystemPierreListContinuityIdentity({
@@ -39,11 +39,11 @@ export function useResetFileSystemPierreModel({
       decorationVersion,
       hasSemanticQuery,
       input,
-    })
+    });
     const commands = listContinuity.dispatch({
       identity,
       type: "identity.requested",
-    })
+    });
 
     for (const command of commands) {
       expansion.runListContinuityCommand({
@@ -52,7 +52,7 @@ export function useResetFileSystemPierreModel({
         model,
         order,
         selectedPath,
-      })
+      });
     }
   }, [
     currentPath,
@@ -64,7 +64,7 @@ export function useResetFileSystemPierreModel({
     model,
     order,
     selectedPath,
-  ])
+  ]);
 }
 
 function createFileSystemPierreListContinuityIdentity({
@@ -73,10 +73,10 @@ function createFileSystemPierreListContinuityIdentity({
   hasSemanticQuery,
   input,
 }: {
-  currentPath: string
-  decorationVersion: string
-  hasSemanticQuery: boolean
-  input: FileSystemPierreInput
+  currentPath: string;
+  decorationVersion: string;
+  hasSemanticQuery: boolean;
+  input: FileSystemPierreInput;
 }) {
   return createFileSystemListContinuityIdentity({
     currentPath,
@@ -86,5 +86,5 @@ function createFileSystemPierreListContinuityIdentity({
       itemPaths: input.pierrePaths,
       runtimeInput: input,
     },
-  })
+  });
 }

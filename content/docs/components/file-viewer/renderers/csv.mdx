@@ -21,7 +21,7 @@ npx shadcn@latest add @retab/csv-viewer
 ## Usage
 
 ```tsx
-import { CsvViewer } from "@/components/ui/csv-viewer"
+import { CsvViewer } from "@/components/ui/csv-viewer";
 
 export function Example({ csv }: { csv: string }) {
   return (
@@ -29,25 +29,25 @@ export function Example({ csv }: { csv: string }) {
       source={{ kind: "text", text: csv, fileName: "data.csv" }}
       height={480}
     />
-  )
+  );
 }
 ```
 
 You can also pass already-parsed data as a table source:
 
 ```tsx
-import { parseCsv } from "@/lib/csv"
-import { CsvViewer } from "@/components/ui/csv-viewer"
+import { parseCsv } from "@/lib/csv";
+import { CsvViewer } from "@/components/ui/csv-viewer";
 
-const data = parseCsv(text, { delimiter: "\t" }) // { columns, rows }
-;<CsvViewer
+const data = parseCsv(text, { delimiter: "\t" }); // { columns, rows }
+<CsvViewer
   source={{
     kind: "table",
     table: data,
     fileName: "data.tsv",
     dialect: { delimiter: "\t", hasHeader: true },
   }}
-/>
+/>;
 ```
 
 ## Features

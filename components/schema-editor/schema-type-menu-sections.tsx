@@ -1,48 +1,48 @@
-"use client"
+"use client";
 
-import { PlusIcon } from "lucide-react"
+import { PlusIcon } from "lucide-react";
 
 import type {
   SchemaTypeMenuItem,
   SchemaTypeMenuSection,
   SchemaTypeMenuValue,
-} from "@/components/schema-editor/primitives/schema-type-menu"
+} from "@/components/schema-editor/primitives/schema-type-menu";
 import {
   schemaTypeIcon,
   schemaTypeLabel,
   schemaTypeOptions,
   type SchemaTypeOptionId,
-} from "@/components/schema-editor/primitives/schema-type-options"
+} from "@/components/schema-editor/primitives/schema-type-options";
 import {
   getTemplateIcon,
   getTypeIcon,
-} from "@/components/schema-editor/type-icons"
+} from "@/components/schema-editor/type-icons";
 
 export function createTypeMenuValue({
   type,
   refName,
 }: {
-  type: string
-  refName?: string
+  type: string;
+  refName?: string;
 }): SchemaTypeMenuValue {
   return {
     id: type,
     label: schemaTypeLabel(type, refName),
     icon: schemaTypeIcon(type, refName),
-  }
+  };
 }
 
 export function createPrimitiveTypeItems({
   onSelectType,
 }: {
-  onSelectType: (type: SchemaTypeOptionId) => void
+  onSelectType: (type: SchemaTypeOptionId) => void;
 }): SchemaTypeMenuItem[] {
   return schemaTypeOptions.map((option) => ({
     id: option.id,
     label: option.label,
     icon: option.icon,
     onSelect: () => onSelectType(option.id),
-  }))
+  }));
 }
 
 export function createDefinitionTypeSubmenu({
@@ -51,10 +51,10 @@ export function createDefinitionTypeSubmenu({
   onCreateDefinition,
   onSelectDefinition,
 }: {
-  createDefinitionLabel: string
-  definitionNames: string[]
-  onCreateDefinition: () => void
-  onSelectDefinition: (definitionName: string) => void
+  createDefinitionLabel: string;
+  definitionNames: string[];
+  onCreateDefinition: () => void;
+  onSelectDefinition: (definitionName: string) => void;
 }): SchemaTypeMenuSection {
   return {
     id: "definitions",
@@ -77,5 +77,5 @@ export function createDefinitionTypeSubmenu({
             icon: getTemplateIcon(definitionName),
             onSelect: () => onSelectDefinition(definitionName),
           })),
-  }
+  };
 }

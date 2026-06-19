@@ -1,13 +1,16 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import type { Source } from "@/lib/document-source"
-import { sourceToCsvCell, useCsvSourceTarget } from "@/components/ui/csv-source"
+import type { Source } from "@/lib/document-source";
+import {
+  sourceToCsvCell,
+  useCsvSourceTarget,
+} from "@/components/ui/csv-source";
 import {
   CsvViewerDocument,
   type CsvViewerHandle,
-} from "@/components/ui/csv-viewer"
+} from "@/components/ui/csv-viewer";
 import {
   FileViewer,
   FileViewerBody,
@@ -17,16 +20,16 @@ import {
   FileViewerSidebar,
   FileViewerSurface,
   FileViewerTitle,
-} from "@/components/ui/file-viewer"
-import { SegmentedDocumentProvider } from "@/components/ui/segmented-document-provider"
-import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
+} from "@/components/ui/file-viewer";
+import { SegmentedDocumentProvider } from "@/components/ui/segmented-document-provider";
+import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link";
 import {
   SourceFieldList,
   type SourceField,
-} from "@/components/ui/source-field-list"
-import { SourceIndicator } from "@/components/ui/source-indicator"
-import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
-import csvSample from "@/components/viewers/sample-data/csv-sources.json"
+} from "@/components/ui/source-field-list";
+import { SourceIndicator } from "@/components/ui/source-indicator";
+import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model";
+import csvSample from "@/components/viewers/sample-data/csv-sources.json";
 
 const CSV_TEXT = `region,quarter,revenue,customers,nrr
 North America,Q1,1240000,48,1.12
@@ -34,14 +37,14 @@ North America,Q2,1510000,61,1.21
 EMEA,Q1,820000,33,1.08
 EMEA,Q2,910000,39,1.15
 APAC,Q1,430000,18,1.04
-APAC,Q2,560000,24,1.11`
+APAC,Q2,560000,24,1.11`;
 const CSV_SOURCE = {
   kind: "text" as const,
   text: CSV_TEXT,
   fileName: "sales.csv",
-}
+};
 
-type CsvField = SourceField & { source: Source }
+type CsvField = SourceField & { source: Source };
 
 const FIELDS = (csvSample as CsvField[]).map((field) => ({
   ...field,
@@ -49,15 +52,15 @@ const FIELDS = (csvSample as CsvField[]).map((field) => ({
     field.source.anchor.kind === "csv_cell"
       ? `Cell ${field.source.anchor.coordinate ?? field.source.anchor.column}`
       : undefined,
-}))
-const FIELD_BY_KEY = new Map(FIELDS.map((field) => [field.key, field]))
+}));
+const FIELD_BY_KEY = new Map(FIELDS.map((field) => [field.key, field]));
 const SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel(
   FIELDS.map((field) => ({
     id: field.key,
     label: field.label,
     source: field.source,
-  }))
-)
+  })),
+);
 
 /**
  * CSV sources block — extracted values linked to the spreadsheet cells they came
@@ -66,38 +69,38 @@ const SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel(
  * cell navigation.
  */
 export function CsvSourcesBlock() {
-  const viewerRef = React.useRef<CsvViewerHandle>(null)
+  const viewerRef = React.useRef<CsvViewerHandle>(null);
 
   return (
     <SegmentedDocumentProvider model={SEGMENTED_DOCUMENT}>
       <CsvSourcesContent viewerRef={viewerRef} />
     </SegmentedDocumentProvider>
-  )
+  );
 }
 
 function CsvSourcesContent({
   viewerRef,
 }: {
-  viewerRef: React.RefObject<CsvViewerHandle | null>
+  viewerRef: React.RefObject<CsvViewerHandle | null>;
 }) {
-  const target = useCsvSourceTarget(viewerRef)
+  const target = useCsvSourceTarget(viewerRef);
   const segmentedLink = useSegmentedSourceFieldLink({
     initialSourcePath: FIELDS[0]?.key,
-  })
+  });
   const link = useTargetedSourceFieldLink({
     fieldByKey: FIELD_BY_KEY,
     link: segmentedLink,
     target,
-  })
+  });
   const activeSource = link.activeSourcePath
     ? FIELD_BY_KEY.get(link.activeSourcePath)?.source
-    : undefined
-  const activeCell = sourceToCsvCell(activeSource)
+    : undefined;
+  const activeCell = sourceToCsvCell(activeSource);
 
   return (
     <FileViewer
       source={CSV_SOURCE}
-      className="h-full min-h-[680px] bg-background"
+      className="bg-background h-full min-h-[680px]"
     >
       <FileViewerHeader>
         <FileViewerTitle />
@@ -131,7 +134,7 @@ function CsvSourcesContent({
         </FileViewerSidebar>
       </FileViewerBody>
     </FileViewer>
-  )
+  );
 }
 
 function useTargetedSourceFieldLink({
@@ -139,31 +142,31 @@ function useTargetedSourceFieldLink({
   link,
   target,
 }: {
-  fieldByKey: ReadonlyMap<string, CsvField>
-  link: ReturnType<typeof useSegmentedSourceFieldLink>
-  target: ReturnType<typeof useCsvSourceTarget>
+  fieldByKey: ReadonlyMap<string, CsvField>;
+  link: ReturnType<typeof useSegmentedSourceFieldLink>;
+  target: ReturnType<typeof useCsvSourceTarget>;
 }) {
   const scrollToField = React.useCallback(
     (path: string, behavior: ScrollBehavior) => {
-      const source = fieldByKey.get(path)?.source
-      if (source) target.scrollTo?.(source, { behavior })
+      const source = fieldByKey.get(path)?.source;
+      if (source) target.scrollTo?.(source, { behavior });
     },
-    [fieldByKey, target]
-  )
+    [fieldByKey, target],
+  );
   const onSourceHover = React.useCallback(
     (path: string | null) => {
-      link.onSourceHover(path)
-      if (path) scrollToField(path, "auto")
+      link.onSourceHover(path);
+      if (path) scrollToField(path, "auto");
     },
-    [link, scrollToField]
-  )
+    [link, scrollToField],
+  );
   const selectSourcePath = React.useCallback(
     (path: string) => {
-      link.selectSourcePath?.(path)
-      scrollToField(path, "smooth")
+      link.selectSourcePath?.(path);
+      scrollToField(path, "smooth");
     },
-    [link, scrollToField]
-  )
+    [link, scrollToField],
+  );
 
   return React.useMemo(
     () => ({
@@ -171,6 +174,6 @@ function useTargetedSourceFieldLink({
       onSourceHover,
       selectSourcePath,
     }),
-    [link, onSourceHover, selectSourcePath]
-  )
+    [link, onSourceHover, selectSourcePath],
+  );
 }

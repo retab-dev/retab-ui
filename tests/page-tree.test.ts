@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest";
 
 import {
   getAllPagesFromFolder,
@@ -8,7 +8,7 @@ import {
   getSidebarGroupsFromFolder,
   type PageTreeFolder,
   type PageTreePage,
-} from "@/lib/page-tree"
+} from "@/lib/page-tree";
 
 // ---------------------------------------------------------------------------
 // Fixture builders. The real types come from fumadocs' source.pageTree, which
@@ -17,22 +17,22 @@ import {
 // ---------------------------------------------------------------------------
 
 function page(url: string, name = url): PageTreePage {
-  return { type: "page", name, url } as unknown as PageTreePage
+  return { type: "page", name, url } as unknown as PageTreePage;
 }
 
 function folder(
   init: {
-    $id?: string
-    name?: string
-    children?: Array<PageTreePage | PageTreeFolder>
-  } = {}
+    $id?: string;
+    name?: string;
+    children?: Array<PageTreePage | PageTreeFolder>;
+  } = {},
 ): PageTreeFolder {
   return {
     type: "folder",
     $id: init.$id,
     name: init.name,
     children: init.children ?? [],
-  } as unknown as PageTreeFolder
+  } as unknown as PageTreeFolder;
 }
 
 // ---------------------------------------------------------------------------
@@ -49,23 +49,23 @@ describe("getAllPagesFromFolder", () => {
         }),
         page("/c"),
       ],
-    })
+    });
 
     expect(getAllPagesFromFolder(tree).map((p) => p.url)).toEqual([
       "/a",
       "/b/1",
       "/b/2/deep",
       "/c",
-    ])
-  })
+    ]);
+  });
 
   it("returns an empty list for a folder with no pages", () => {
-    expect(getAllPagesFromFolder(folder())).toEqual([])
+    expect(getAllPagesFromFolder(folder())).toEqual([]);
     expect(
-      getAllPagesFromFolder(folder({ children: [folder(), folder()] }))
-    ).toEqual([])
-  })
-})
+      getAllPagesFromFolder(folder({ children: [folder(), folder()] })),
+    ).toEqual([]);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // getCurrentBase
@@ -73,32 +73,32 @@ describe("getAllPagesFromFolder", () => {
 
 describe("getCurrentBase", () => {
   it("extracts radix or base from a component subpage", () => {
-    expect(getCurrentBase("/docs/components/radix/accordion")).toBe("radix")
-    expect(getCurrentBase("/docs/components/base/accordion")).toBe("base")
-  })
+    expect(getCurrentBase("/docs/components/radix/accordion")).toBe("radix");
+    expect(getCurrentBase("/docs/components/base/accordion")).toBe("base");
+  });
 
   it("defaults to radix for non-component and bare paths", () => {
-    expect(getCurrentBase("/docs")).toBe("radix")
-    expect(getCurrentBase("/docs/components")).toBe("radix")
-    expect(getCurrentBase("/docs/components/file-viewer/pdf")).toBe("radix")
-    expect(getCurrentBase("")).toBe("radix")
-  })
+    expect(getCurrentBase("/docs")).toBe("radix");
+    expect(getCurrentBase("/docs/components")).toBe("radix");
+    expect(getCurrentBase("/docs/components/file-viewer/pdf")).toBe("radix");
+    expect(getCurrentBase("")).toBe("radix");
+  });
 
   it("requires a trailing slash after the base segment", () => {
     // The regex `/\/docs\/components\/(radix|base)\//` demands a slash *after*
     // the base name, so an exact section-index path is not recognized and
     // falls back to the radix default.
-    expect(getCurrentBase("/docs/components/radix")).toBe("radix") // default masks it
+    expect(getCurrentBase("/docs/components/radix")).toBe("radix"); // default masks it
     // NOTE: this is the suspicious case — a visitor on the Base UI index would
     // be classified as "radix". Captured here as current behavior.
-    expect(getCurrentBase("/docs/components/base")).toBe("radix")
-  })
+    expect(getCurrentBase("/docs/components/base")).toBe("radix");
+  });
 
   it("only matches the components path, not arbitrary radix/base segments", () => {
-    expect(getCurrentBase("/docs/guides/base/intro")).toBe("radix")
-    expect(getCurrentBase("/blog/components/base/x")).toBe("radix")
-  })
-})
+    expect(getCurrentBase("/docs/guides/base/intro")).toBe("radix");
+    expect(getCurrentBase("/blog/components/base/x")).toBe("radix");
+  });
+});
 
 // ---------------------------------------------------------------------------
 // getPagesFromFolder — components branch
@@ -120,16 +120,16 @@ describe("getPagesFromFolder (components folder)", () => {
         children: [page("/docs/components/base/accordion")],
       }),
     ],
-  })
+  });
 
   it("returns the matching base subfolder's direct pages", () => {
     expect(getPagesFromFolder(components, "radix").map((p) => p.url)).toEqual([
       "/docs/components/radix/accordion",
-    ])
+    ]);
     expect(getPagesFromFolder(components, "base").map((p) => p.url)).toEqual([
       "/docs/components/base/accordion",
-    ])
-  })
+    ]);
+  });
 
   it("matches the components folder by name when $id is absent", () => {
     const byName = folder({
@@ -140,34 +140,34 @@ describe("getPagesFromFolder (components folder)", () => {
           children: [page("/docs/components/radix/tabs")],
         }),
       ],
-    })
+    });
 
     expect(getPagesFromFolder(byName, "radix").map((p) => p.url)).toEqual([
       "/docs/components/radix/tabs",
-    ])
-  })
+    ]);
+  });
 
   it("falls back to all nested pages (minus the index) when the base is unknown", () => {
     expect(
-      getPagesFromFolder(components, "unknown-base").map((p) => p.url)
+      getPagesFromFolder(components, "unknown-base").map((p) => p.url),
     ).toEqual([
       "/docs/components/radix/accordion",
       "/docs/components/base/accordion",
-    ])
-  })
+    ]);
+  });
 
   it("drops the components index page in the fallback list", () => {
     const withIndex = folder({
       $id: "components",
       name: "Components",
       children: [page("/docs/components"), page("/docs/components/misc")],
-    })
+    });
 
     expect(getPagesFromFolder(withIndex, "missing").map((p) => p.url)).toEqual([
       "/docs/components/misc",
-    ])
-  })
-})
+    ]);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // getPagesFromFolder — generic branch
@@ -185,13 +185,13 @@ describe("getPagesFromFolder (generic folder)", () => {
           children: [page("/docs/components/file-viewer/nested/deep")],
         }),
       ],
-    })
+    });
 
     expect(getPagesFromFolder(viewers, "radix").map((p) => p.url)).toEqual([
       "/docs/components/file-viewer/pdf",
       "/docs/components/file-viewer/image",
-    ])
-  })
+    ]);
+  });
 
   it("keeps a direct index page beside its child pages", () => {
     const section = folder({
@@ -201,14 +201,14 @@ describe("getPagesFromFolder (generic folder)", () => {
         page("/docs/api/auth"),
         page("/docs/api/users"),
       ],
-    })
+    });
 
     expect(getPagesFromFolder(section, "radix").map((p) => p.url)).toEqual([
       "/docs/api",
       "/docs/api/auth",
       "/docs/api/users",
-    ])
-  })
+    ]);
+  });
 
   it("does not treat a shared string prefix as a parent relationship", () => {
     // "/docs/api" is a string prefix of "/docs/apiv2" but not a path parent;
@@ -216,14 +216,14 @@ describe("getPagesFromFolder (generic folder)", () => {
     const section = folder({
       $id: "api",
       children: [page("/docs/api"), page("/docs/apiv2")],
-    })
+    });
 
     expect(getPagesFromFolder(section, "radix").map((p) => p.url)).toEqual([
       "/docs/api",
       "/docs/apiv2",
-    ])
-  })
-})
+    ]);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // getNestedPagesFromFolder
@@ -245,20 +245,20 @@ describe("getNestedPagesFromFolder", () => {
         children: [page("/docs/components/image-viewer/usage")],
       }),
     ],
-  })
+  });
 
   it("matches a nested folder by $id", () => {
     expect(getNestedPagesFromFolder(root, "pdf").map((p) => p.url)).toEqual([
       "/docs/components/pdf/usage",
       "/docs/components/pdf/api",
-    ])
-  })
+    ]);
+  });
 
   it("matches a nested folder by slugified name", () => {
     expect(
-      getNestedPagesFromFolder(root, "image-viewer").map((p) => p.url)
-    ).toEqual(["/docs/components/image-viewer/usage"])
-  })
+      getNestedPagesFromFolder(root, "image-viewer").map((p) => p.url),
+    ).toEqual(["/docs/components/image-viewer/usage"]);
+  });
 
   it("matches a nested folder by component-url containment", () => {
     const byUrl = folder({
@@ -269,17 +269,17 @@ describe("getNestedPagesFromFolder", () => {
           children: [page("/docs/components/tooltip/usage")],
         }),
       ],
-    })
+    });
 
     expect(
-      getNestedPagesFromFolder(byUrl, "tooltip").map((p) => p.url)
-    ).toEqual(["/docs/components/tooltip/usage"])
-  })
+      getNestedPagesFromFolder(byUrl, "tooltip").map((p) => p.url),
+    ).toEqual(["/docs/components/tooltip/usage"]);
+  });
 
   it("returns an empty list when no nested folder matches", () => {
-    expect(getNestedPagesFromFolder(root, "does-not-exist")).toEqual([])
-  })
-})
+    expect(getNestedPagesFromFolder(root, "does-not-exist")).toEqual([]);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // getSidebarGroupsFromFolder
@@ -288,7 +288,7 @@ describe("getNestedPagesFromFolder", () => {
 // Cast through PageTreePage so the fixture's children array accepts it; the
 // production code only reads `type` / `name`, both present at runtime.
 function separator(name: string): PageTreePage {
-  return { type: "separator", name } as unknown as PageTreePage
+  return { type: "separator", name } as unknown as PageTreePage;
 }
 
 describe("getSidebarGroupsFromFolder", () => {
@@ -307,18 +307,18 @@ describe("getSidebarGroupsFromFolder", () => {
           ],
         }),
       ],
-    })
+    });
 
-    const groups = getSidebarGroupsFromFolder(components, "radix")
-    const fileViewer = groups.find((g) => g.name === "File Viewer")
+    const groups = getSidebarGroupsFromFolder(components, "radix");
+    const fileViewer = groups.find((g) => g.name === "File Viewer");
 
-    expect(fileViewer?.url).toBe("/docs/components/file-viewer")
+    expect(fileViewer?.url).toBe("/docs/components/file-viewer");
     // The index page is no longer repeated as the first child entry.
     expect(fileViewer?.pages.map((p) => p.name)).toEqual([
       "Anatomy",
       "PDF Viewer",
-    ])
-  })
+    ]);
+  });
 
   it("keeps nested component folders as sidebar sections", () => {
     const components = folder({
@@ -336,11 +336,11 @@ describe("getSidebarGroupsFromFolder", () => {
                 page("/docs/components/file-viewer/anatomy", "Anatomy"),
                 page(
                   "/docs/components/file-viewer/anatomy/file-viewer",
-                  "FileViewer"
+                  "FileViewer",
                 ),
                 page(
                   "/docs/components/file-viewer/anatomy/file-viewer-header",
-                  "FileViewerHeader"
+                  "FileViewerHeader",
                 ),
               ],
             }),
@@ -354,30 +354,30 @@ describe("getSidebarGroupsFromFolder", () => {
           ],
         }),
       ],
-    })
+    });
 
-    const groups = getSidebarGroupsFromFolder(components, "radix")
-    const fileViewer = groups.find((g) => g.name === "File Viewer")
+    const groups = getSidebarGroupsFromFolder(components, "radix");
+    const fileViewer = groups.find((g) => g.name === "File Viewer");
 
-    expect(fileViewer?.url).toBeUndefined()
-    expect(fileViewer?.pages.map((p) => p.name)).toEqual(["Overview"])
+    expect(fileViewer?.url).toBeUndefined();
+    expect(fileViewer?.pages.map((p) => p.name)).toEqual(["Overview"]);
     expect(fileViewer?.sections?.map((section) => section.name)).toEqual([
       "Anatomy",
       "Renderers",
-    ])
+    ]);
     expect(fileViewer?.sections?.[0]?.url).toBe(
-      "/docs/components/file-viewer/anatomy"
-    )
+      "/docs/components/file-viewer/anatomy",
+    );
     expect(fileViewer?.sections?.[0]?.pages.map((p) => p.name)).toEqual([
       "FileViewer",
       "FileViewerHeader",
-    ])
-    expect(fileViewer?.sections?.[1]?.url).toBeUndefined()
+    ]);
+    expect(fileViewer?.sections?.[1]?.url).toBeUndefined();
     expect(fileViewer?.sections?.[1]?.pages.map((p) => p.name)).toEqual([
       "PDF",
       "Image",
-    ])
-  })
+    ]);
+  });
 
   it("leaves a separator group untouched when no nested index page shares its name", () => {
     const components = folder({
@@ -388,15 +388,15 @@ describe("getSidebarGroupsFromFolder", () => {
         page("/docs/components/classification-viewer", "Classification Viewer"),
         page("/docs/components/partition-viewer", "Partition Viewer"),
       ],
-    })
+    });
 
-    const groups = getSidebarGroupsFromFolder(components, "radix")
-    const resultViewers = groups.find((g) => g.name === "Result Viewers")
+    const groups = getSidebarGroupsFromFolder(components, "radix");
+    const resultViewers = groups.find((g) => g.name === "Result Viewers");
 
-    expect(resultViewers?.url).toBeUndefined()
+    expect(resultViewers?.url).toBeUndefined();
     expect(resultViewers?.pages.map((p) => p.name)).toEqual([
       "Classification Viewer",
       "Partition Viewer",
-    ])
-  })
-})
+    ]);
+  });
+});

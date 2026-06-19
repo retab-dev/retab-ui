@@ -1,16 +1,18 @@
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
+import * as React from "react";
+
+import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types";
 import {
   markJsonTableProfile,
   recordJsonTableRender,
-} from "@/components/json-table/json-table-profiler"
-import { JsonTableStructuredCell } from "@/components/json-table/json-table-structured-cell"
-import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
-import { formatValueForCommit } from "@/components/json-table/lib/value-normalization"
-import { useRefCallback } from "@/components/json-table/path-utils"
-import { useElevatedVirtualRow } from "@/components/json-table/use-elevated-virtual-row"
-import { useJsonTableStructuredCellController } from "@/components/json-table/use-json-table-structured-cell-controller"
+} from "@/components/json-table/json-table-profiler";
+import { JsonTableStructuredCell } from "@/components/json-table/json-table-structured-cell";
+import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata";
+import { formatValueForCommit } from "@/components/json-table/lib/value-normalization";
+import { useRefCallback } from "@/components/json-table/path-utils";
+import { useElevatedVirtualRow } from "@/components/json-table/use-elevated-virtual-row";
+import { useJsonTableStructuredCellController } from "@/components/json-table/use-json-table-structured-cell-controller";
 
 export function JsonTableStructuredActiveCell({
   fieldMetadata,
@@ -22,16 +24,16 @@ export function JsonTableStructuredActiveCell({
   onCellCommit,
   setStructuredEditSessionOverlayOpen,
 }: {
-  fieldMetadata: FieldMetadata
-  materializedFieldPath: string
-  schema: JsonTableCellProps["cellProjection"]["schema"]
+  fieldMetadata: FieldMetadata;
+  materializedFieldPath: string;
+  schema: JsonTableCellProps["cellProjection"]["schema"];
   structuredEditSession: NonNullable<
     JsonTableCellProps["structuredEditing"]["session"]
-  >
-  value: unknown
-  closeStructuredEditSession: JsonTableCellProps["structuredEditing"]["closeSession"]
-  onCellCommit: JsonTableCellProps["commit"]["onCommit"]
-  setStructuredEditSessionOverlayOpen: JsonTableCellProps["structuredEditing"]["setSessionOverlayOpen"]
+  >;
+  value: unknown;
+  closeStructuredEditSession: JsonTableCellProps["structuredEditing"]["closeSession"];
+  onCellCommit: JsonTableCellProps["commit"]["onCommit"];
+  setStructuredEditSessionOverlayOpen: JsonTableCellProps["structuredEditing"]["setSessionOverlayOpen"];
 }) {
   recordJsonTableRender(
     "JsonTableStructuredActiveCell",
@@ -41,8 +43,8 @@ export function JsonTableStructuredActiveCell({
       fieldKind: fieldMetadata.kind,
       isOverlayOpen: structuredEditSession.isOverlayOpen,
       valueType: value === null ? "null" : typeof value,
-    }
-  )
+    },
+  );
 
   const { effectiveValue, commitStructuredValueChange } =
     useJsonTableStructuredCellController({
@@ -50,9 +52,9 @@ export function JsonTableStructuredActiveCell({
       value,
       isEditable: true,
       onCellCommit,
-    })
+    });
 
-  const cellRootRef = React.useRef<HTMLDivElement>(null)
+  const cellRootRef = React.useRef<HTMLDivElement>(null);
   recordJsonTableRender(
     "JsonTableStructuredActiveControl",
     materializedFieldPath,
@@ -61,26 +63,26 @@ export function JsonTableStructuredActiveCell({
       fieldKind: fieldMetadata.kind,
       isEditable: true,
       isOverlayOpen: structuredEditSession.isOverlayOpen,
-    }
-  )
+    },
+  );
 
   useElevatedVirtualRow({
     cellRootRef,
     isElevated: true,
-  })
+  });
 
   React.useEffect(() => {
     markJsonTableProfile("active-control-mounted", {
       fieldPath: materializedFieldPath,
       fieldKind: fieldMetadata.kind,
-    })
-  }, [fieldMetadata.kind, materializedFieldPath])
+    });
+  }, [fieldMetadata.kind, materializedFieldPath]);
 
   const commitValue = useRefCallback((newValue: unknown) => {
     commitStructuredValueChange(
-      formatValueForCommit(newValue, fieldMetadata.rawSchema)
-    )
-  })
+      formatValueForCommit(newValue, fieldMetadata.rawSchema),
+    );
+  });
 
   return (
     <div
@@ -101,5 +103,5 @@ export function JsonTableStructuredActiveCell({
         commitValue={commitValue}
       />
     </div>
-  )
+  );
 }

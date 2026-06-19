@@ -1,24 +1,24 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { flushSync } from "react-dom"
+import * as React from "react";
+import { flushSync } from "react-dom";
 
 import {
   useDataCellActivationClickTail,
   type DataCellActivationSource,
-} from "@/registry/new-york-v4/ui/data-cell-activation"
-import { DataCellControl } from "@/registry/new-york-v4/ui/data-cell-control"
+} from "@/registry/new-york-v4/ui/data-cell-activation";
+import { DataCellControl } from "@/registry/new-york-v4/ui/data-cell-control";
 import {
   createDataCellControlState,
   getDataCellClickControlAction,
   getDataCellKeyControlAction,
   getDataCellPointerControlAction,
-} from "@/registry/new-york-v4/ui/data-cell-control-actions"
-import type { DataCellControlAction } from "@/registry/new-york-v4/ui/data-cell-control-contract"
-import { DataCellDisplay } from "@/registry/new-york-v4/ui/data-cell-display"
-import { createDataCellDisplayProps } from "@/registry/new-york-v4/ui/data-cell-display-model"
-import { createDataCellEditModel } from "@/registry/new-york-v4/ui/data-cell-edit-model"
-import type { DataCellProps } from "@/registry/new-york-v4/ui/data-cell-types"
+} from "@/registry/new-york-v4/ui/data-cell-control-actions";
+import type { DataCellControlAction } from "@/registry/new-york-v4/ui/data-cell-control-contract";
+import { DataCellDisplay } from "@/registry/new-york-v4/ui/data-cell-display";
+import { createDataCellDisplayProps } from "@/registry/new-york-v4/ui/data-cell-display-model";
+import { createDataCellEditModel } from "@/registry/new-york-v4/ui/data-cell-edit-model";
+import type { DataCellProps } from "@/registry/new-york-v4/ui/data-cell-types";
 
 export type {
   DataCellCommitValue,
@@ -28,26 +28,26 @@ export type {
   DataCellSelectOption,
   DataCellValue,
   DataCellValueMeta,
-} from "@/registry/new-york-v4/ui/data-cell-types"
+} from "@/registry/new-york-v4/ui/data-cell-types";
 export {
   formatDataCellDisplayValue,
   parseDataCellNumberInput,
-} from "@/registry/new-york-v4/ui/data-cell-format"
-export { DataCellDisplay }
+} from "@/registry/new-york-v4/ui/data-cell-format";
+export { DataCellDisplay };
 
 function storeDataCellActivationSource(
   sourceRef: React.MutableRefObject<DataCellActivationSource | undefined>,
   setSource: React.Dispatch<
     React.SetStateAction<DataCellActivationSource | undefined>
   >,
-  source: DataCellActivationSource
+  source: DataCellActivationSource,
 ) {
   // Activation source must be visible to the first active control render so
   // pointer caret placement and opening-event dismissal see the original event.
   flushSync(() => {
-    sourceRef.current = source
-    setSource(source)
-  })
+    sourceRef.current = source;
+    setSource(source);
+  });
 }
 
 function hasDataCellKeyboardModifier(event: React.KeyboardEvent<HTMLElement>) {
@@ -57,13 +57,13 @@ function hasDataCellKeyboardModifier(event: React.KeyboardEvent<HTMLElement>) {
     (event.ctrlKey &&
       event.altKey &&
       event.key.length === 1 &&
-      !/^[\x00-\x7F]$/.test(event.key))
+      !/^[\x00-\x7F]$/.test(event.key));
   return (
     event.metaKey ||
     (event.ctrlKey && !isAltGraph) ||
     (event.altKey && !isAltGraph) ||
     event.nativeEvent.isComposing
-  )
+  );
 }
 
 export function DataCell(props: DataCellProps) {
@@ -76,34 +76,34 @@ export function DataCell(props: DataCellProps) {
     onClick,
     onKeyDown,
     onPointerDown,
-  } = props
-  const displayRef = React.useRef<HTMLDivElement>(null)
-  const activationClickTail = useDataCellActivationClickTail()
+  } = props;
+  const displayRef = React.useRef<HTMLDivElement>(null);
+  const activationClickTail = useDataCellActivationClickTail();
   const activationSourceRef = React.useRef<
     DataCellActivationSource | undefined
-  >(undefined)
-  const [uncontrolledActive, setUncontrolledActive] = React.useState(false)
+  >(undefined);
+  const [uncontrolledActive, setUncontrolledActive] = React.useState(false);
   const [activationSource, setActivationSource] =
-    React.useState<DataCellActivationSource>()
-  const isControlledActive = active !== undefined
-  const isActive = active ?? uncontrolledActive
-  const canSelfActivate = editable && !disabled
+    React.useState<DataCellActivationSource>();
+  const isControlledActive = active !== undefined;
+  const isActive = active ?? uncontrolledActive;
+  const canSelfActivate = editable && !disabled;
 
   const setActive = React.useCallback(
     (nextActive: boolean) => {
-      if (!isControlledActive) setUncontrolledActive(nextActive)
-      onActiveChange?.(nextActive)
+      if (!isControlledActive) setUncontrolledActive(nextActive);
+      onActiveChange?.(nextActive);
     },
-    [isControlledActive, onActiveChange]
-  )
+    [isControlledActive, onActiveChange],
+  );
 
   const endEditing = React.useCallback(() => {
-    activationSourceRef.current = undefined
-    setActive(false)
-    onEditingEnd?.()
-  }, [onEditingEnd, setActive])
+    activationSourceRef.current = undefined;
+    setActive(false);
+    onEditingEnd?.();
+  }, [onEditingEnd, setActive]);
 
-  const controlState = createDataCellControlState(props, { disabled })
+  const controlState = createDataCellControlState(props, { disabled });
 
   const applyControlAction = React.useCallback(
     (
@@ -112,32 +112,32 @@ export function DataCell(props: DataCellProps) {
         | React.PointerEvent<HTMLElement>
         | React.MouseEvent<HTMLElement>
         | React.KeyboardEvent<HTMLElement>,
-      markClickTail: boolean
+      markClickTail: boolean,
     ) => {
-      if (action.kind === "none") return
-      if (action.shouldPreventDefault) event.preventDefault()
-      event.stopPropagation()
+      if (action.kind === "none") return;
+      if (action.shouldPreventDefault) event.preventDefault();
+      event.stopPropagation();
       if (action.kind === "command") {
-        action.commit()
-        if (markClickTail) activationClickTail.arm()
-        return
+        action.commit();
+        if (markClickTail) activationClickTail.arm();
+        return;
       }
       storeDataCellActivationSource(
         activationSourceRef,
         setActivationSource,
-        action.activationSource
-      )
-      if (markClickTail) activationClickTail.arm()
-      setActive(true)
+        action.activationSource,
+      );
+      if (markClickTail) activationClickTail.arm();
+      setActive(true);
     },
-    [activationClickTail, setActive]
-  )
+    [activationClickTail, setActive],
+  );
 
   const activateFromPointer = React.useCallback(
     (event: React.PointerEvent<HTMLElement>) => {
-      onPointerDown?.(event)
+      onPointerDown?.(event);
       if (event.defaultPrevented || !canSelfActivate || event.button !== 0) {
-        return
+        return;
       }
 
       applyControlAction(
@@ -150,21 +150,21 @@ export function DataCell(props: DataCellProps) {
           event: event.nativeEvent,
         }),
         event,
-        true
-      )
+        true,
+      );
     },
-    [applyControlAction, canSelfActivate, controlState, onPointerDown]
-  )
+    [applyControlAction, canSelfActivate, controlState, onPointerDown],
+  );
 
   const activateFromClick = React.useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
-      onClick?.(event)
+      onClick?.(event);
       if (activationClickTail.consume()) {
-        event.preventDefault()
-        event.stopPropagation()
-        return
+        event.preventDefault();
+        event.stopPropagation();
+        return;
       }
-      if (event.defaultPrevented || !canSelfActivate) return
+      if (event.defaultPrevented || !canSelfActivate) return;
 
       applyControlAction(
         getDataCellClickControlAction({
@@ -176,8 +176,8 @@ export function DataCell(props: DataCellProps) {
           event: event.nativeEvent,
         }),
         event,
-        false
-      )
+        false,
+      );
     },
     [
       activationClickTail,
@@ -185,15 +185,15 @@ export function DataCell(props: DataCellProps) {
       canSelfActivate,
       controlState,
       onClick,
-    ]
-  )
+    ],
+  );
 
   const activateFromKey = React.useCallback(
     (event: React.KeyboardEvent<HTMLElement>) => {
-      onKeyDown?.(event)
-      if (event.defaultPrevented || !canSelfActivate) return
+      onKeyDown?.(event);
+      if (event.defaultPrevented || !canSelfActivate) return;
 
-      if (hasDataCellKeyboardModifier(event)) return
+      if (hasDataCellKeyboardModifier(event)) return;
 
       applyControlAction(
         getDataCellKeyControlAction({
@@ -201,11 +201,11 @@ export function DataCell(props: DataCellProps) {
           key: event.key,
         }),
         event,
-        false
-      )
+        false,
+      );
     },
-    [applyControlAction, canSelfActivate, controlState, onKeyDown]
-  )
+    [applyControlAction, canSelfActivate, controlState, onKeyDown],
+  );
 
   if (isActive) {
     const editModel = createDataCellEditModel(props, {
@@ -213,8 +213,8 @@ export function DataCell(props: DataCellProps) {
       activationSource: activationSource ?? activationSourceRef.current,
       autoFocus: props.autoFocus ?? canSelfActivate,
       onEditingEnd: endEditing,
-    })
-    return <DataCellControl model={editModel} />
+    });
+    return <DataCellControl model={editModel} />;
   }
 
   return (
@@ -230,5 +230,5 @@ export function DataCell(props: DataCellProps) {
       })}
       ref={displayRef}
     />
-  )
+  );
 }

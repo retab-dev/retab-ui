@@ -1,16 +1,16 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import type { ViewerResource } from "@/lib/viewer-resource"
-import type { ViewerDescriptor } from "@/lib/viewer-source"
-import { FileThumbnailShimmer } from "@/components/ui/file-thumbnail-frame"
-import { useIsClient } from "@/components/ui/use-is-client"
+import type { ViewerResource } from "@/lib/viewer-resource";
+import type { ViewerDescriptor } from "@/lib/viewer-source";
+import { FileThumbnailShimmer } from "@/components/ui/file-thumbnail-frame";
+import { useIsClient } from "@/components/ui/use-is-client";
 
-import { ThumbnailErrorBoundary } from "./errors"
-import { FirstThumbnailUnit } from "./renderer-registry"
-import { useThumbnailInView } from "./thumbnail-in-view"
-import type { ThumbnailAnchor } from "./types"
+import { ThumbnailErrorBoundary } from "./errors";
+import { FirstThumbnailUnit } from "./renderer-registry";
+import { useThumbnailInView } from "./thumbnail-in-view";
+import type { ThumbnailAnchor } from "./types";
 
 export function ThumbnailClientPreview({
   resource,
@@ -19,14 +19,14 @@ export function ThumbnailClientPreview({
   anchor,
   onError,
 }: {
-  resource: ViewerResource
-  descriptor: ViewerDescriptor
-  thumbnailKey: string
-  anchor: ThumbnailAnchor
-  onError: (error: unknown) => void
+  resource: ViewerResource;
+  descriptor: ViewerDescriptor;
+  thumbnailKey: string;
+  anchor: ThumbnailAnchor;
+  onError: (error: unknown) => void;
 }) {
-  const isClient = useIsClient()
-  const { ref: inViewRef, seen: isSeen } = useThumbnailInView()
+  const isClient = useIsClient();
+  const { ref: inViewRef, seen: isSeen } = useThumbnailInView();
 
   return (
     <div ref={inViewRef} className="absolute inset-0">
@@ -46,5 +46,5 @@ export function ThumbnailClientPreview({
         <FileThumbnailShimmer />
       )}
     </div>
-  )
+  );
 }

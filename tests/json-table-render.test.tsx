@@ -1,59 +1,61 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent } from "@testing-library/react"
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
+import { cleanup, fireEvent } from "@testing-library/react";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { baseField, renderCell } from "./json-table-cell-test-utils"
-import { installJsonTableDom } from "./json-table-test-dom"
+import { baseField, renderCell } from "./json-table-cell-test-utils";
+import { installJsonTableDom } from "./json-table-test-dom";
 
-beforeAll(() => installJsonTableDom())
-afterEach(() => cleanup())
+beforeAll(() => installJsonTableDom());
+afterEach(() => cleanup());
 
 describe("json table active cell controls", () => {
   it("renders scalar controls through the DataCell primitive", () => {
     const view = renderCell("string", {
       effectiveValue: "0628",
-    })
+    });
 
     const inputControl = view
       .getByRole("textbox")
-      .closest('[data-slot="input-control"]')
-    expect(inputControl?.getAttribute("class")).toContain("h-full")
-    expect(inputControl?.getAttribute("class")).not.toContain("py-2")
-    expect(inputControl?.getAttribute("class")).not.toContain("items-start")
-    expect(inputControl?.getAttribute("class")).not.toContain("leading-none")
-  })
+      .closest('[data-slot="input-control"]');
+    expect(inputControl?.getAttribute("class")).toContain("h-full");
+    expect(inputControl?.getAttribute("class")).not.toContain("py-2");
+    expect(inputControl?.getAttribute("class")).not.toContain("items-start");
+    expect(inputControl?.getAttribute("class")).not.toContain("leading-none");
+  });
 
   it("commits empty text as null and closes on blur", () => {
-    const commitValue = vi.fn()
-    const onEditingEnd = vi.fn()
+    const commitValue = vi.fn();
+    const onEditingEnd = vi.fn();
     const view = renderCell("string", {
       effectiveValue: "value",
       commitValue,
       onEditingEnd,
-    })
+    });
 
-    const input = view.getByRole("textbox")
-    fireEvent.change(input, { target: { value: "" } })
-    fireEvent.blur(input)
+    const input = view.getByRole("textbox");
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.blur(input);
 
     expect(commitValue).toHaveBeenCalledWith(
       null,
-      expect.objectContaining({ kind: "text", rawValue: "", isValid: true })
-    )
-    expect(onEditingEnd).toHaveBeenCalled()
-  })
+      expect.objectContaining({ kind: "text", rawValue: "", isValid: true }),
+    );
+    expect(onEditingEnd).toHaveBeenCalled();
+  });
 
   it("renders number, boolean, and enum controls", () => {
-    let view = renderCell("number", { effectiveValue: 42 })
-    expect(view.getByRole("spinbutton")).toBeTruthy()
-    cleanup()
+    let view = renderCell("number", { effectiveValue: 42 });
+    expect(view.getByRole("spinbutton")).toBeTruthy();
+    cleanup();
 
     view = renderCell("boolean", {
       effectiveValue: true,
-    })
-    expect(view.getByRole("checkbox").getAttribute("aria-checked")).toBe("true")
-    cleanup()
+    });
+    expect(view.getByRole("checkbox").getAttribute("aria-checked")).toBe(
+      "true",
+    );
+    cleanup();
 
     view = renderCell("enum", {
       effectiveValue: "approved",
@@ -66,23 +68,23 @@ describe("json table active cell controls", () => {
         kind: "enum",
         enumValues: ["approved", "rejected"],
       },
-    })
-    const enumTrigger = view.getByRole("combobox")
-    expect(enumTrigger.getAttribute("data-slot")).toBe("data-cell")
-    expect(enumTrigger.getAttribute("data-mode")).toBe("edit")
-    expect(enumTrigger.getAttribute("data-kind")).toBe("select")
-  })
+    });
+    const enumTrigger = view.getByRole("combobox");
+    expect(enumTrigger.getAttribute("data-slot")).toBe("data-cell");
+    expect(enumTrigger.getAttribute("data-mode")).toBe("edit");
+    expect(enumTrigger.getAttribute("data-kind")).toBe("select");
+  });
 
   it("reports invalid integer inputs without lossy coercion", () => {
-    const commitValue = vi.fn()
+    const commitValue = vi.fn();
     const view = renderCell("integer", {
       effectiveValue: 12,
       commitValue,
-    })
+    });
 
-    const input = view.getByRole("spinbutton")
-    fireEvent.change(input, { target: { value: "12.7" } })
-    fireEvent.blur(input)
+    const input = view.getByRole("spinbutton");
+    fireEvent.change(input, { target: { value: "12.7" } });
+    fireEvent.blur(input);
 
     expect(commitValue).toHaveBeenCalledWith(
       null,
@@ -90,38 +92,38 @@ describe("json table active cell controls", () => {
         kind: "integer",
         rawValue: "12.7",
         isValid: false,
-      })
-    )
-  })
+      }),
+    );
+  });
 
   it("renders date, date-time, and time controls", () => {
-    let view = renderCell("date", { effectiveValue: "2024-01-02" })
-    expect(view.getByText("Jan 2, 2024")).toBeTruthy()
-    cleanup()
+    let view = renderCell("date", { effectiveValue: "2024-01-02" });
+    expect(view.getByText("Jan 2, 2024")).toBeTruthy();
+    cleanup();
 
     view = renderCell("date-time", {
       effectiveValue: "2024-01-02T03:04:00",
-    })
+    });
     const dateTimeTrigger = view.container.querySelector<HTMLElement>(
-      'button[data-slot="data-cell"]'
-    )
-    if (!dateTimeTrigger) throw new Error("Missing date-time trigger")
-    expect(dateTimeTrigger.getAttribute("data-slot")).toBe("data-cell")
-    expect(dateTimeTrigger.getAttribute("data-mode")).toBe("edit")
-    expect(dateTimeTrigger.getAttribute("data-kind")).toBe("date-time")
-    expect(dateTimeTrigger.textContent).toContain("02/01/2024, 03:04")
-    cleanup()
+      'button[data-slot="data-cell"]',
+    );
+    if (!dateTimeTrigger) throw new Error("Missing date-time trigger");
+    expect(dateTimeTrigger.getAttribute("data-slot")).toBe("data-cell");
+    expect(dateTimeTrigger.getAttribute("data-mode")).toBe("edit");
+    expect(dateTimeTrigger.getAttribute("data-kind")).toBe("date-time");
+    expect(dateTimeTrigger.textContent).toContain("02/01/2024, 03:04");
+    cleanup();
 
-    view = renderCell("time", { effectiveValue: "03:04:00" })
+    view = renderCell("time", { effectiveValue: "03:04:00" });
     const timeTrigger = view.container.querySelector<HTMLElement>(
-      'button[data-slot="data-cell"]'
-    )
-    if (!timeTrigger) throw new Error("Missing time trigger")
-    expect(timeTrigger.getAttribute("data-slot")).toBe("data-cell")
-    expect(timeTrigger.getAttribute("data-mode")).toBe("edit")
-    expect(timeTrigger.getAttribute("data-kind")).toBe("time")
-    expect(timeTrigger.textContent).toContain("03:04:00")
-  })
+      'button[data-slot="data-cell"]',
+    );
+    if (!timeTrigger) throw new Error("Missing time trigger");
+    expect(timeTrigger.getAttribute("data-slot")).toBe("data-cell");
+    expect(timeTrigger.getAttribute("data-mode")).toBe("edit");
+    expect(timeTrigger.getAttribute("data-kind")).toBe("time");
+    expect(timeTrigger.textContent).toContain("03:04:00");
+  });
 
   it("renders object and array structured triggers", () => {
     let view = renderCell("object", {
@@ -135,10 +137,10 @@ describe("json table active cell controls", () => {
         kind: "object",
         enumValues: [],
       },
-    })
-    expect(view.getByRole("button").textContent).toContain("ACME")
-    expect(view.container.querySelector('[data-slot="data-cell"]')).toBeNull()
-    cleanup()
+    });
+    expect(view.getByRole("button").textContent).toContain("ACME");
+    expect(view.container.querySelector('[data-slot="data-cell"]')).toBeNull();
+    cleanup();
 
     view = renderCell("array", {
       effectiveValue: ["one", "two"],
@@ -159,8 +161,8 @@ describe("json table active cell controls", () => {
         kind: "array",
         enumValues: [],
       },
-    })
-    expect(view.getByRole("button").textContent).toContain("[2 items]")
-    expect(view.container.querySelector('[data-slot="data-cell"]')).toBeNull()
-  })
-})
+    });
+    expect(view.getByRole("button").textContent).toContain("[2 items]");
+    expect(view.container.querySelector('[data-slot="data-cell"]')).toBeNull();
+  });
+});

@@ -1,4 +1,4 @@
-import type { FixedGridBenchmarkViewer } from "@/components/ui/fixed-grid-benchmark"
+import type { FixedGridBenchmarkViewer } from "@/components/ui/fixed-grid-benchmark";
 
 export type ViewerId =
   | "pdf"
@@ -9,206 +9,206 @@ export type ViewerId =
   | "text"
   | "docx"
   | "pptx"
-  | "image"
+  | "image";
 
 export interface ViewerOption extends Omit<FixedGridBenchmarkViewer, "id"> {
-  id: ViewerId
+  id: ViewerId;
 }
 
 export interface ScenarioDefinition {
-  id: "small" | "large"
-  label: string
-  stepRatio: number
+  id: "small" | "large";
+  label: string;
+  stepRatio: number;
 }
 
 export interface ScenarioResult {
-  id: ScenarioDefinition["id"]
-  label: string
+  id: ScenarioDefinition["id"];
+  label: string;
   /** Derived from average rAF-to-rAF frame duration. This is display-cadence limited when work stays under budget. */
-  fps: number
+  fps: number;
   /** Observed requestAnimationFrame cadence from the scenario frame samples. */
-  rafFrameMs: number
+  rafFrameMs: number;
   /** Estimated display/rAF ceiling. A measured FPS near this value means the benchmark has headroom, not equal viewer cost. */
-  rafFps: number
+  rafFps: number;
   /** True when measured frames are close to rAF cadence and no frame-budget misses were observed. */
-  isRafLimited: boolean
-  minFrameMs: number
-  averageFrameMs: number
-  totalFrameMs: number
-  frameStdDevMs: number
-  p50FrameMs: number
-  p75FrameMs: number
-  p90FrameMs: number
-  p95FrameMs: number
-  p99FrameMs: number
-  maxFrameMs: number
-  over16: number
-  over33: number
-  over50: number
-  over100: number
-  over16Ratio: number
-  over33Ratio: number
-  estimatedDroppedFrames: number
-  p95RafBudgetRatio: number
-  maxRafBudgetRatio: number
-  averageScrollMutationMs: number
-  p95ScrollMutationMs: number
-  maxScrollMutationMs: number
-  longTasks: DurationTimingResult
-  domMutation: ScrollDomMutationResult
-  slowestFrameIndex: number
-  frames: number
-  stepPx: number
-  distancePx: number
-  actualDistancePx: number
-  averageScrollDeltaPx: number
-  maxScrollDeltaPx: number
-  minScrollTop: number
-  maxScrollTop: number
-  targetCount: number
-  uniqueTargetCount: number
-  directionChanges: number
-  warmupFrameMs: number[]
-  samples: ScrollFrameSample[]
+  isRafLimited: boolean;
+  minFrameMs: number;
+  averageFrameMs: number;
+  totalFrameMs: number;
+  frameStdDevMs: number;
+  p50FrameMs: number;
+  p75FrameMs: number;
+  p90FrameMs: number;
+  p95FrameMs: number;
+  p99FrameMs: number;
+  maxFrameMs: number;
+  over16: number;
+  over33: number;
+  over50: number;
+  over100: number;
+  over16Ratio: number;
+  over33Ratio: number;
+  estimatedDroppedFrames: number;
+  p95RafBudgetRatio: number;
+  maxRafBudgetRatio: number;
+  averageScrollMutationMs: number;
+  p95ScrollMutationMs: number;
+  maxScrollMutationMs: number;
+  longTasks: DurationTimingResult;
+  domMutation: ScrollDomMutationResult;
+  slowestFrameIndex: number;
+  frames: number;
+  stepPx: number;
+  distancePx: number;
+  actualDistancePx: number;
+  averageScrollDeltaPx: number;
+  maxScrollDeltaPx: number;
+  minScrollTop: number;
+  maxScrollTop: number;
+  targetCount: number;
+  uniqueTargetCount: number;
+  directionChanges: number;
+  warmupFrameMs: number[];
+  samples: ScrollFrameSample[];
 }
 
 export interface ScrollDomMutationResult {
-  addedElements: number
-  addedNodes: number
-  attributeMutations: number
-  characterDataMutations: number
-  finalScrollportElementCount: number
-  finalViewerElementCount: number
-  initialScrollportElementCount: number
-  initialViewerElementCount: number
-  maxScrollportElementCount: number
-  maxViewerElementCount: number
-  mutationRecords: number
-  removedElements: number
-  removedNodes: number
+  addedElements: number;
+  addedNodes: number;
+  attributeMutations: number;
+  characterDataMutations: number;
+  finalScrollportElementCount: number;
+  finalViewerElementCount: number;
+  initialScrollportElementCount: number;
+  initialViewerElementCount: number;
+  maxScrollportElementCount: number;
+  maxViewerElementCount: number;
+  mutationRecords: number;
+  removedElements: number;
+  removedNodes: number;
 }
 
 export interface NumberDistributionResult {
-  average: number
-  count: number
-  max: number
-  min: number
-  p50: number
-  p95: number
-  stdDev: number
-  total: number
+  average: number;
+  count: number;
+  max: number;
+  min: number;
+  p50: number;
+  p95: number;
+  stdDev: number;
+  total: number;
 }
 
 export interface ScenarioRepeatResult {
-  id: ScenarioDefinition["id"]
-  label: string
-  runs: number
-  rafLimitedRuns: number
-  workLimitedRuns: number
-  worstRunIndex: number
-  p95FrameMs: NumberDistributionResult
-  maxFrameMs: NumberDistributionResult
-  frameStdDevMs: NumberDistributionResult
-  over16: NumberDistributionResult
-  over33: NumberDistributionResult
-  estimatedDroppedFrames: NumberDistributionResult
-  p95RafBudgetRatio: NumberDistributionResult
-  maxRafBudgetRatio: NumberDistributionResult
-  p95ScrollMutationMs: NumberDistributionResult
-  maxScrollMutationMs: NumberDistributionResult
-  longTaskCount: NumberDistributionResult
-  longTaskTotalMs: NumberDistributionResult
-  longTaskMaxMs: NumberDistributionResult
-  mutationRecords: NumberDistributionResult
-  addedElements: NumberDistributionResult
-  removedElements: NumberDistributionResult
-  attributeMutations: NumberDistributionResult
-  maxScrollportElementCount: NumberDistributionResult
-  maxViewerElementCount: NumberDistributionResult
+  id: ScenarioDefinition["id"];
+  label: string;
+  runs: number;
+  rafLimitedRuns: number;
+  workLimitedRuns: number;
+  worstRunIndex: number;
+  p95FrameMs: NumberDistributionResult;
+  maxFrameMs: NumberDistributionResult;
+  frameStdDevMs: NumberDistributionResult;
+  over16: NumberDistributionResult;
+  over33: NumberDistributionResult;
+  estimatedDroppedFrames: NumberDistributionResult;
+  p95RafBudgetRatio: NumberDistributionResult;
+  maxRafBudgetRatio: NumberDistributionResult;
+  p95ScrollMutationMs: NumberDistributionResult;
+  maxScrollMutationMs: NumberDistributionResult;
+  longTaskCount: NumberDistributionResult;
+  longTaskTotalMs: NumberDistributionResult;
+  longTaskMaxMs: NumberDistributionResult;
+  mutationRecords: NumberDistributionResult;
+  addedElements: NumberDistributionResult;
+  removedElements: NumberDistributionResult;
+  attributeMutations: NumberDistributionResult;
+  maxScrollportElementCount: NumberDistributionResult;
+  maxViewerElementCount: NumberDistributionResult;
 }
 
 export interface ScrollFrameSample {
-  index: number
-  targetScrollTop: number
-  actualScrollTop: number
-  scrollDeltaPx: number
-  frameMs: number
-  scrollMutationMs: number
-  scrollportElementCount: number
-  viewerElementCount: number
+  index: number;
+  targetScrollTop: number;
+  actualScrollTop: number;
+  scrollDeltaPx: number;
+  frameMs: number;
+  scrollMutationMs: number;
+  scrollportElementCount: number;
+  viewerElementCount: number;
 }
 
 export interface ImageRenderTiming {
-  durationMs: number
-  pixelRatio?: number
-  renderScale?: number
-  cached?: boolean
-  status?: "rendered" | "cancelled" | "failed"
+  durationMs: number;
+  pixelRatio?: number;
+  renderScale?: number;
+  cached?: boolean;
+  status?: "rendered" | "cancelled" | "failed";
 }
 
 export interface DurationTimingResult {
-  count: number
-  totalMs: number
-  averageMs: number
-  p50Ms: number
-  p95Ms: number
-  maxMs: number
+  count: number;
+  totalMs: number;
+  averageMs: number;
+  p50Ms: number;
+  p95Ms: number;
+  maxMs: number;
 }
 
 export interface ImageRenderingResult {
-  count: number
-  rendered: number
-  cached: number
-  failed: number
-  cancelled: number
-  totalMs: number
-  averageMs: number
-  firstUncachedMs: number
-  p50Ms: number
-  p95Ms: number
-  maxMs: number
-  maxPixelRatio: number
-  maxRenderScale: number
-  cachedTiming: DurationTimingResult
-  uncachedTiming: DurationTimingResult
+  count: number;
+  rendered: number;
+  cached: number;
+  failed: number;
+  cancelled: number;
+  totalMs: number;
+  averageMs: number;
+  firstUncachedMs: number;
+  p50Ms: number;
+  p95Ms: number;
+  maxMs: number;
+  maxPixelRatio: number;
+  maxRenderScale: number;
+  cachedTiming: DurationTimingResult;
+  uncachedTiming: DurationTimingResult;
 }
 
 export interface SourceLoadTimingResult {
-  byteLength: number
-  slideCount: number
-  totalMs: number
-  readBytesMs: number
-  importPptxMs: number
-  readSlideSizeMs: number
-  loadFileMs: number
-  inspectMs: number
+  byteLength: number;
+  slideCount: number;
+  totalMs: number;
+  readBytesMs: number;
+  importPptxMs: number;
+  readSlideSizeMs: number;
+  loadFileMs: number;
+  inspectMs: number;
 }
 
 export interface ScrollBenchResult {
-  viewer: ViewerId
-  measuredAt: string
+  viewer: ViewerId;
+  measuredAt: string;
   viewport: {
-    clientHeight: number
-    clientWidth: number
-    scrollHeight: number
-    scrollWidth: number
-    maxScrollTop: number
-    maxScrollLeft: number
-    scrollportElementCount: number
-    renderedElementCount: number
-  }
-  scenarios: ScenarioResult[]
-  imageRendering?: ImageRenderingResult
-  sourceLoad?: SourceLoadTimingResult
+    clientHeight: number;
+    clientWidth: number;
+    scrollHeight: number;
+    scrollWidth: number;
+    maxScrollTop: number;
+    maxScrollLeft: number;
+    scrollportElementCount: number;
+    renderedElementCount: number;
+  };
+  scenarios: ScenarioResult[];
+  imageRendering?: ImageRenderingResult;
+  sourceLoad?: SourceLoadTimingResult;
 }
 
 export interface ScrollBenchRepeatResult {
-  viewer: ViewerId
-  measuredAt: string
-  runCount: number
-  viewport: ScrollBenchResult["viewport"]
-  scenarios: ScenarioRepeatResult[]
-  runs: ScrollBenchResult[]
+  viewer: ViewerId;
+  measuredAt: string;
+  runCount: number;
+  viewport: ScrollBenchResult["viewport"];
+  scenarios: ScenarioRepeatResult[];
+  runs: ScrollBenchResult[];
 }
 
 export const VIEWERS: readonly ViewerOption[] = [
@@ -271,46 +271,46 @@ export const VIEWERS: readonly ViewerOption[] = [
     scrollerSelector:
       '[data-slot="image-viewer"] [data-slot="scroll-area-viewport"]',
   },
-]
+];
 
 export const SCENARIOS: readonly ScenarioDefinition[] = [
   { id: "small", label: "Small jump", stepRatio: 0.1 },
   { id: "large", label: "Large jump", stepRatio: 0.9 },
-]
+];
 
-export const DEFAULT_VIEWER: ViewerId = "pdf"
-export const FRAME_COUNT = 120
-export const MIN_STEP_PX = 16
-const MAX_FRAME_COUNT = 10_000
+export const DEFAULT_VIEWER: ViewerId = "pdf";
+export const FRAME_COUNT = 120;
+export const MIN_STEP_PX = 16;
+const MAX_FRAME_COUNT = 10_000;
 
 export function normalizeViewerId(value: string | null | undefined): ViewerId {
-  if (VIEWERS.some((viewer) => viewer.id === value)) return value as ViewerId
-  return DEFAULT_VIEWER
+  if (VIEWERS.some((viewer) => viewer.id === value)) return value as ViewerId;
+  return DEFAULT_VIEWER;
 }
 
 export function resolveScenario(id: ScenarioDefinition["id"]) {
-  return SCENARIOS.find((scenario) => scenario.id === id) ?? null
+  return SCENARIOS.find((scenario) => scenario.id === id) ?? null;
 }
 
 export function resolveViewer(id: ViewerId) {
-  return VIEWERS.find((viewer) => viewer.id === id) ?? VIEWERS[0]
+  return VIEWERS.find((viewer) => viewer.id === id) ?? VIEWERS[0];
 }
 
 export function getScenarioStepPx({
   clientHeight,
   scenario,
 }: {
-  clientHeight: number
-  scenario: ScenarioDefinition
+  clientHeight: number;
+  scenario: ScenarioDefinition;
 }) {
-  if (!Number.isFinite(clientHeight) || clientHeight <= 0) return MIN_STEP_PX
+  if (!Number.isFinite(clientHeight) || clientHeight <= 0) return MIN_STEP_PX;
   if (!Number.isFinite(scenario.stepRatio) || scenario.stepRatio <= 0) {
-    return MIN_STEP_PX
+    return MIN_STEP_PX;
   }
-  const stepPx = Math.round(clientHeight * scenario.stepRatio)
+  const stepPx = Math.round(clientHeight * scenario.stepRatio);
   return Number.isFinite(stepPx) && stepPx > 0
     ? Math.max(MIN_STEP_PX, stepPx)
-    : MIN_STEP_PX
+    : MIN_STEP_PX;
 }
 
 export function buildScrollTargets({
@@ -318,9 +318,9 @@ export function buildScrollTargets({
   stepPx,
   frameCount = FRAME_COUNT,
 }: {
-  maxScrollTop: number
-  stepPx: number
-  frameCount?: number
+  maxScrollTop: number;
+  stepPx: number;
+  frameCount?: number;
 }) {
   if (
     !Number.isFinite(maxScrollTop) ||
@@ -330,13 +330,13 @@ export function buildScrollTargets({
     stepPx <= 0 ||
     frameCount <= 0
   ) {
-    return []
+    return [];
   }
-  const safeFrameCount = Math.min(Math.floor(frameCount), MAX_FRAME_COUNT)
+  const safeFrameCount = Math.min(Math.floor(frameCount), MAX_FRAME_COUNT);
 
   return Array.from({ length: safeFrameCount }, (_, frameIndex) =>
-    Math.round(bouncePosition((frameIndex + 1) * stepPx, maxScrollTop))
-  )
+    Math.round(bouncePosition((frameIndex + 1) * stepPx, maxScrollTop)),
+  );
 }
 
 export function summarizeFrameDurations({
@@ -349,14 +349,14 @@ export function summarizeFrameDurations({
   domMutation,
   longTaskDurations = [],
 }: {
-  scenario: ScenarioDefinition
-  frameDurations: readonly number[]
-  samples?: readonly ScrollFrameSample[]
-  stepPx: number
-  distancePx: number
-  warmupFrameMs?: readonly number[]
-  domMutation?: Partial<ScrollDomMutationResult>
-  longTaskDurations?: readonly number[]
+  scenario: ScenarioDefinition;
+  frameDurations: readonly number[];
+  samples?: readonly ScrollFrameSample[];
+  stepPx: number;
+  distancePx: number;
+  warmupFrameMs?: readonly number[];
+  domMutation?: Partial<ScrollDomMutationResult>;
+  longTaskDurations?: readonly number[];
 }): ScenarioResult {
   const candidateSamples =
     samples ??
@@ -369,74 +369,74 @@ export function summarizeFrameDurations({
       scrollportElementCount: 0,
       targetScrollTop: 0,
       viewerElementCount: 0,
-    }))
+    }));
   const validSamples = candidateSamples.filter((sample) =>
-    isFiniteNonNegative(sample.frameMs)
-  )
-  const validFrameDurations = validSamples.map((sample) => sample.frameMs)
-  const sortedDurations = [...validFrameDurations].sort((a, b) => a - b)
+    isFiniteNonNegative(sample.frameMs),
+  );
+  const validFrameDurations = validSamples.map((sample) => sample.frameMs);
+  const sortedDurations = [...validFrameDurations].sort((a, b) => a - b);
   const totalFrameMs = validFrameDurations.reduce(
     (sum, duration) => sum + duration,
-    0
-  )
+    0,
+  );
   const averageFrameMs =
     validFrameDurations.length === 0
       ? 0
-      : totalFrameMs / validFrameDurations.length
+      : totalFrameMs / validFrameDurations.length;
   const scrollDeltas = validSamples
     .map((sample) => Math.abs(safeMetric(sample.scrollDeltaPx)))
-    .filter((delta) => delta > 0)
+    .filter((delta) => delta > 0);
   const actualScrollPositions = validSamples
     .map((sample) => safeMetric(sample.actualScrollTop))
-    .filter((scrollTop) => scrollTop >= 0)
+    .filter((scrollTop) => scrollTop >= 0);
   const targetScrollPositions = validSamples
     .map((sample) => safeMetric(sample.targetScrollTop))
-    .filter((scrollTop) => scrollTop >= 0)
+    .filter((scrollTop) => scrollTop >= 0);
   const scrollMutationDurations = validSamples
     .map((sample) => safeMetric(sample.scrollMutationMs))
     .filter(isFiniteNonNegative)
-    .sort((a, b) => a - b)
+    .sort((a, b) => a - b);
   const totalScrollMutationMs = scrollMutationDurations.reduce(
     (sum, duration) => sum + duration,
-    0
-  )
-  const directionChanges = countDirectionChanges(validSamples)
+    0,
+  );
+  const directionChanges = countDirectionChanges(validSamples);
   const scrollportElementCounts = validSamples
     .map((sample) => safeMetric(sample.scrollportElementCount))
-    .filter((count) => count >= 0)
+    .filter((count) => count >= 0);
   const viewerElementCounts = validSamples
     .map((sample) => safeMetric(sample.viewerElementCount))
-    .filter((count) => count >= 0)
+    .filter((count) => count >= 0);
   const resolvedDomMutation = normalizeDomMutation({
     ...domMutation,
     maxScrollportElementCount: Math.max(
       domMutation?.maxScrollportElementCount ?? 0,
-      ...scrollportElementCounts
+      ...scrollportElementCounts,
     ),
     maxViewerElementCount: Math.max(
       domMutation?.maxViewerElementCount ?? 0,
-      ...viewerElementCounts
+      ...viewerElementCounts,
     ),
-  })
-  const rafFrameMs = percentile(sortedDurations, 0.5)
-  const rafFps = rafFrameMs > 0 ? 1000 / rafFrameMs : 0
-  const p95FrameMs = percentile(sortedDurations, 0.95)
-  const maxFrameMs = sortedDurations[sortedDurations.length - 1] ?? 0
+  });
+  const rafFrameMs = percentile(sortedDurations, 0.5);
+  const rafFps = rafFrameMs > 0 ? 1000 / rafFrameMs : 0;
+  const p95FrameMs = percentile(sortedDurations, 0.95);
+  const maxFrameMs = sortedDurations[sortedDurations.length - 1] ?? 0;
   const over16 = validFrameDurations.filter(
-    (duration) => duration > 16.7
-  ).length
+    (duration) => duration > 16.7,
+  ).length;
   const over33 = validFrameDurations.filter(
-    (duration) => duration > 33.3
-  ).length
-  const p95RafBudgetRatio = rafFrameMs > 0 ? p95FrameMs / rafFrameMs : 0
-  const maxRafBudgetRatio = rafFrameMs > 0 ? maxFrameMs / rafFrameMs : 0
+    (duration) => duration > 33.3,
+  ).length;
+  const p95RafBudgetRatio = rafFrameMs > 0 ? p95FrameMs / rafFrameMs : 0;
+  const maxRafBudgetRatio = rafFrameMs > 0 ? maxFrameMs / rafFrameMs : 0;
   const isRafLimited =
     rafFrameMs > 0 &&
     validFrameDurations.length > 0 &&
     over16 === 0 &&
     averageFrameMs <= rafFrameMs * 1.2 &&
     p95FrameMs <= rafFrameMs * 1.35 &&
-    maxFrameMs <= rafFrameMs * 1.5
+    maxFrameMs <= rafFrameMs * 1.5;
 
   return {
     id: scenario.id,
@@ -472,7 +472,7 @@ export function summarizeFrameDurations({
     maxScrollMutationMs:
       scrollMutationDurations[scrollMutationDurations.length - 1] ?? 0,
     longTasks: summarizeDurationTimings(
-      longTaskDurations.map((durationMs) => ({ durationMs }))
+      longTaskDurations.map((durationMs) => ({ durationMs })),
     ),
     domMutation: resolvedDomMutation,
     slowestFrameIndex: slowestFrameIndex(validSamples),
@@ -499,33 +499,33 @@ export function summarizeFrameDurations({
       scrollDeltaPx: safeMetric(sample.scrollDeltaPx),
       scrollMutationMs: safeMetric(sample.scrollMutationMs),
       scrollportElementCount: Math.floor(
-        safeMetric(sample.scrollportElementCount)
+        safeMetric(sample.scrollportElementCount),
       ),
       targetScrollTop: safeMetric(sample.targetScrollTop),
       viewerElementCount: Math.floor(safeMetric(sample.viewerElementCount)),
     })),
-  }
+  };
 }
 
 export function summarizeImageRenderTimings(
-  timings: readonly ImageRenderTiming[]
+  timings: readonly ImageRenderTiming[],
 ): ImageRenderingResult {
   const validTimings = timings.filter(
-    (timing) => Number.isFinite(timing.durationMs) && timing.durationMs >= 0
-  )
+    (timing) => Number.isFinite(timing.durationMs) && timing.durationMs >= 0,
+  );
   const durations = validTimings
     .map((timing) => timing.durationMs)
-    .sort((a, b) => a - b)
-  const totalMs = durations.reduce((sum, duration) => sum + duration, 0)
-  const count = validTimings.length
+    .sort((a, b) => a - b);
+  const totalMs = durations.reduce((sum, duration) => sum + duration, 0);
+  const count = validTimings.length;
   const uncachedTimings = validTimings.filter(
-    (timing) => timing.cached !== true
-  )
+    (timing) => timing.cached !== true,
+  );
 
   return {
     count,
     rendered: validTimings.filter(
-      (timing) => timing.status === undefined || timing.status === "rendered"
+      (timing) => timing.status === undefined || timing.status === "rendered",
     ).length,
     cached: validTimings.filter((timing) => timing.cached === true).length,
     failed: validTimings.filter((timing) => timing.status === "failed").length,
@@ -540,16 +540,16 @@ export function summarizeImageRenderTimings(
     maxPixelRatio: maxFiniteMetric(validTimings, "pixelRatio"),
     maxRenderScale: maxFiniteMetric(validTimings, "renderScale"),
     cachedTiming: summarizeDurationTimings(
-      validTimings.filter((timing) => timing.cached === true)
+      validTimings.filter((timing) => timing.cached === true),
     ),
     uncachedTiming: summarizeDurationTimings(uncachedTimings),
-  }
+  };
 }
 
 export function summarizeRepeatedScrollBenchRuns(
-  runs: readonly ScrollBenchResult[]
+  runs: readonly ScrollBenchResult[],
 ): ScrollBenchRepeatResult {
-  const validRuns = runs.filter(isScrollBenchResult)
+  const validRuns = runs.filter(isScrollBenchResult);
   const fallbackViewport = {
     clientHeight: 0,
     clientWidth: 0,
@@ -559,7 +559,7 @@ export function summarizeRepeatedScrollBenchRuns(
     scrollHeight: 0,
     scrollWidth: 0,
     scrollportElementCount: 0,
-  }
+  };
 
   return {
     viewer: validRuns[0]?.viewer ?? DEFAULT_VIEWER,
@@ -567,38 +567,38 @@ export function summarizeRepeatedScrollBenchRuns(
     runCount: validRuns.length,
     viewport: validRuns[validRuns.length - 1]?.viewport ?? fallbackViewport,
     scenarios: SCENARIOS.map((scenario) =>
-      summarizeRepeatedScenario(validRuns, scenario)
+      summarizeRepeatedScenario(validRuns, scenario),
     ),
     runs: [...validRuns],
-  }
+  };
 }
 
 function maxFiniteMetric(
   timings: readonly ImageRenderTiming[],
-  key: "pixelRatio" | "renderScale"
+  key: "pixelRatio" | "renderScale",
 ) {
-  let max = 0
+  let max = 0;
   for (const timing of timings) {
-    const value = key === "pixelRatio" ? timing.pixelRatio : timing.renderScale
+    const value = key === "pixelRatio" ? timing.pixelRatio : timing.renderScale;
     if (typeof value === "number" && Number.isFinite(value) && value > max) {
-      max = value
+      max = value;
     }
   }
-  return max
+  return max;
 }
 
 function summarizeRepeatedScenario(
   runs: readonly ScrollBenchResult[],
-  scenario: ScenarioDefinition
+  scenario: ScenarioDefinition,
 ): ScenarioRepeatResult {
   const scenarioRuns = runs
     .map((run, runIndex) => ({
       runIndex,
       scenario: run.scenarios.find((item) => item.id === scenario.id) ?? null,
     }))
-    .filter(isScenarioRun)
-  const scenarios = scenarioRuns.map((item) => item.scenario)
-  const rafLimitedRuns = scenarios.filter((item) => item.isRafLimited).length
+    .filter(isScenarioRun);
+  const scenarios = scenarioRuns.map((item) => item.scenario);
+  const rafLimitedRuns = scenarios.filter((item) => item.isRafLimited).length;
 
   return {
     id: scenario.id,
@@ -610,61 +610,61 @@ function summarizeRepeatedScenario(
     p95FrameMs: summarizeNumbers(scenarios.map((item) => item.p95FrameMs)),
     maxFrameMs: summarizeNumbers(scenarios.map((item) => item.maxFrameMs)),
     frameStdDevMs: summarizeNumbers(
-      scenarios.map((item) => item.frameStdDevMs)
+      scenarios.map((item) => item.frameStdDevMs),
     ),
     over16: summarizeNumbers(scenarios.map((item) => item.over16)),
     over33: summarizeNumbers(scenarios.map((item) => item.over33)),
     estimatedDroppedFrames: summarizeNumbers(
-      scenarios.map((item) => item.estimatedDroppedFrames)
+      scenarios.map((item) => item.estimatedDroppedFrames),
     ),
     p95RafBudgetRatio: summarizeNumbers(
-      scenarios.map((item) => item.p95RafBudgetRatio)
+      scenarios.map((item) => item.p95RafBudgetRatio),
     ),
     maxRafBudgetRatio: summarizeNumbers(
-      scenarios.map((item) => item.maxRafBudgetRatio)
+      scenarios.map((item) => item.maxRafBudgetRatio),
     ),
     p95ScrollMutationMs: summarizeNumbers(
-      scenarios.map((item) => item.p95ScrollMutationMs)
+      scenarios.map((item) => item.p95ScrollMutationMs),
     ),
     maxScrollMutationMs: summarizeNumbers(
-      scenarios.map((item) => item.maxScrollMutationMs)
+      scenarios.map((item) => item.maxScrollMutationMs),
     ),
     longTaskCount: summarizeNumbers(
-      scenarios.map((item) => item.longTasks.count)
+      scenarios.map((item) => item.longTasks.count),
     ),
     longTaskTotalMs: summarizeNumbers(
-      scenarios.map((item) => item.longTasks.totalMs)
+      scenarios.map((item) => item.longTasks.totalMs),
     ),
     longTaskMaxMs: summarizeNumbers(
-      scenarios.map((item) => item.longTasks.maxMs)
+      scenarios.map((item) => item.longTasks.maxMs),
     ),
     mutationRecords: summarizeNumbers(
-      scenarios.map((item) => item.domMutation.mutationRecords)
+      scenarios.map((item) => item.domMutation.mutationRecords),
     ),
     addedElements: summarizeNumbers(
-      scenarios.map((item) => item.domMutation.addedElements)
+      scenarios.map((item) => item.domMutation.addedElements),
     ),
     removedElements: summarizeNumbers(
-      scenarios.map((item) => item.domMutation.removedElements)
+      scenarios.map((item) => item.domMutation.removedElements),
     ),
     attributeMutations: summarizeNumbers(
-      scenarios.map((item) => item.domMutation.attributeMutations)
+      scenarios.map((item) => item.domMutation.attributeMutations),
     ),
     maxScrollportElementCount: summarizeNumbers(
-      scenarios.map((item) => item.domMutation.maxScrollportElementCount)
+      scenarios.map((item) => item.domMutation.maxScrollportElementCount),
     ),
     maxViewerElementCount: summarizeNumbers(
-      scenarios.map((item) => item.domMutation.maxViewerElementCount)
+      scenarios.map((item) => item.domMutation.maxViewerElementCount),
     ),
-  }
+  };
 }
 
 function summarizeNumbers(values: readonly number[]): NumberDistributionResult {
   const sortedValues = values
     .filter((value) => Number.isFinite(value))
-    .sort((a, b) => a - b)
-  const total = sortedValues.reduce((sum, value) => sum + value, 0)
-  const average = sortedValues.length === 0 ? 0 : total / sortedValues.length
+    .sort((a, b) => a - b);
+  const total = sortedValues.reduce((sum, value) => sum + value, 0);
+  const average = sortedValues.length === 0 ? 0 : total / sortedValues.length;
 
   return {
     average,
@@ -675,18 +675,18 @@ function summarizeNumbers(values: readonly number[]): NumberDistributionResult {
     p95: percentile(sortedValues, 0.95),
     stdDev: standardDeviation(sortedValues, average),
     total,
-  }
+  };
 }
 
 function summarizeDurationTimings(
-  timings: readonly Pick<ImageRenderTiming, "durationMs">[]
+  timings: readonly Pick<ImageRenderTiming, "durationMs">[],
 ): DurationTimingResult {
   const durations = timings
     .map((timing) => timing.durationMs)
     .filter((duration) => Number.isFinite(duration) && duration >= 0)
-    .sort((a, b) => a - b)
-  const totalMs = durations.reduce((sum, duration) => sum + duration, 0)
-  const count = durations.length
+    .sort((a, b) => a - b);
+  const totalMs = durations.reduce((sum, duration) => sum + duration, 0);
+  const count = durations.length;
 
   return {
     count,
@@ -695,93 +695,94 @@ function summarizeDurationTimings(
     p50Ms: percentile(durations, 0.5),
     p95Ms: percentile(durations, 0.95),
     maxMs: durations[durations.length - 1] ?? 0,
-  }
+  };
 }
 
 function countDirectionChanges(samples: readonly ScrollFrameSample[]) {
-  let previousDirection = 0
-  let changes = 0
+  let previousDirection = 0;
+  let changes = 0;
 
   for (const sample of samples) {
-    const delta = safeMetric(sample.scrollDeltaPx)
-    const direction = delta === 0 ? 0 : delta > 0 ? 1 : -1
-    if (direction === 0) continue
-    if (previousDirection !== 0 && direction !== previousDirection) changes += 1
-    previousDirection = direction
+    const delta = safeMetric(sample.scrollDeltaPx);
+    const direction = delta === 0 ? 0 : delta > 0 ? 1 : -1;
+    if (direction === 0) continue;
+    if (previousDirection !== 0 && direction !== previousDirection)
+      changes += 1;
+    previousDirection = direction;
   }
 
-  return changes
+  return changes;
 }
 
 function estimateDroppedFrames(frameDurations: readonly number[]) {
   return frameDurations.reduce((total, duration) => {
-    if (!Number.isFinite(duration) || duration <= 16.7) return total
-    return total + Math.max(0, Math.floor(duration / 16.7) - 1)
-  }, 0)
+    if (!Number.isFinite(duration) || duration <= 16.7) return total;
+    return total + Math.max(0, Math.floor(duration / 16.7) - 1);
+  }, 0);
 }
 
 function isFiniteNonNegative(value: number) {
-  return Number.isFinite(value) && value >= 0
+  return Number.isFinite(value) && value >= 0;
 }
 
 function ratio(count: number, total: number) {
-  return total === 0 ? 0 : count / total
+  return total === 0 ? 0 : count / total;
 }
 
 function isScrollBenchResult(value: ScrollBenchResult) {
-  return value.scenarios.length > 0
+  return value.scenarios.length > 0;
 }
 
 function isScenarioRun(value: {
-  runIndex: number
-  scenario: ScenarioResult | null
+  runIndex: number;
+  scenario: ScenarioResult | null;
 }): value is { runIndex: number; scenario: ScenarioResult } {
-  return value.scenario !== null
+  return value.scenario !== null;
 }
 
 function safeMetric(value: number) {
-  return Number.isFinite(value) ? value : 0
+  return Number.isFinite(value) ? value : 0;
 }
 
 function slowestFrameIndex(samples: readonly ScrollFrameSample[]) {
-  let index = -1
-  let maxFrameMs = -1
+  let index = -1;
+  let maxFrameMs = -1;
 
   for (const sample of samples) {
     if (!Number.isFinite(sample.frameMs) || sample.frameMs < maxFrameMs)
-      continue
-    maxFrameMs = sample.frameMs
-    index = sample.index
+      continue;
+    maxFrameMs = sample.frameMs;
+    index = sample.index;
   }
 
-  return index
+  return index;
 }
 
 function worstScenarioRunIndex(
-  scenarioRuns: readonly { runIndex: number; scenario: ScenarioResult }[]
+  scenarioRuns: readonly { runIndex: number; scenario: ScenarioResult }[],
 ) {
-  let worstRunIndex = -1
-  let worstP95FrameMs = -1
+  let worstRunIndex = -1;
+  let worstP95FrameMs = -1;
 
   for (const item of scenarioRuns) {
-    if (item.scenario.p95FrameMs < worstP95FrameMs) continue
-    worstP95FrameMs = item.scenario.p95FrameMs
-    worstRunIndex = item.runIndex
+    if (item.scenario.p95FrameMs < worstP95FrameMs) continue;
+    worstP95FrameMs = item.scenario.p95FrameMs;
+    worstRunIndex = item.runIndex;
   }
 
-  return worstRunIndex
+  return worstRunIndex;
 }
 
 function standardDeviation(values: readonly number[], average: number) {
-  if (values.length === 0) return 0
+  if (values.length === 0) return 0;
   const variance =
     values.reduce((sum, value) => sum + (value - average) ** 2, 0) /
-    values.length
-  return Math.sqrt(variance)
+    values.length;
+  return Math.sqrt(variance);
 }
 
 function normalizeDomMutation(
-  value: Partial<ScrollDomMutationResult> = {}
+  value: Partial<ScrollDomMutationResult> = {},
 ): ScrollDomMutationResult {
   return {
     addedElements: nonNegativeInteger(value.addedElements),
@@ -789,60 +790,60 @@ function normalizeDomMutation(
     attributeMutations: nonNegativeInteger(value.attributeMutations),
     characterDataMutations: nonNegativeInteger(value.characterDataMutations),
     finalScrollportElementCount: nonNegativeInteger(
-      value.finalScrollportElementCount
+      value.finalScrollportElementCount,
     ),
     finalViewerElementCount: nonNegativeInteger(value.finalViewerElementCount),
     initialScrollportElementCount: nonNegativeInteger(
-      value.initialScrollportElementCount
+      value.initialScrollportElementCount,
     ),
     initialViewerElementCount: nonNegativeInteger(
-      value.initialViewerElementCount
+      value.initialViewerElementCount,
     ),
     maxScrollportElementCount: nonNegativeInteger(
-      value.maxScrollportElementCount
+      value.maxScrollportElementCount,
     ),
     maxViewerElementCount: nonNegativeInteger(value.maxViewerElementCount),
     mutationRecords: nonNegativeInteger(value.mutationRecords),
     removedElements: nonNegativeInteger(value.removedElements),
     removedNodes: nonNegativeInteger(value.removedNodes),
-  }
+  };
 }
 
 function nonNegativeInteger(value: number | undefined) {
   return typeof value === "number" && Number.isFinite(value) && value > 0
     ? Math.floor(value)
-    : 0
+    : 0;
 }
 
 export function measuredScrollDistance(targets: readonly number[]) {
-  let previous = 0
-  let distance = 0
+  let previous = 0;
+  let distance = 0;
 
   for (const target of targets) {
-    if (!Number.isFinite(target) || target < 0) continue
-    distance += Math.abs(target - previous)
-    previous = target
+    if (!Number.isFinite(target) || target < 0) continue;
+    distance += Math.abs(target - previous);
+    previous = target;
   }
 
-  return distance
+  return distance;
 }
 
 export function percentile(
   sortedValues: readonly number[],
-  percentileValue: number
+  percentileValue: number,
 ) {
-  if (sortedValues.length === 0) return 0
+  if (sortedValues.length === 0) return 0;
   const index = Math.min(
     sortedValues.length - 1,
-    Math.max(0, Math.floor((sortedValues.length - 1) * percentileValue))
-  )
-  return sortedValues[index] ?? 0
+    Math.max(0, Math.floor((sortedValues.length - 1) * percentileValue)),
+  );
+  return sortedValues[index] ?? 0;
 }
 
 function bouncePosition(distance: number, maxScrollTop: number) {
-  if (maxScrollTop <= 0) return 0
+  if (maxScrollTop <= 0) return 0;
 
-  const period = maxScrollTop * 2
-  const offset = distance % period
-  return offset <= maxScrollTop ? offset : period - offset
+  const period = maxScrollTop * 2;
+  const offset = distance % period;
+  return offset <= maxScrollTop ? offset : period - offset;
 }

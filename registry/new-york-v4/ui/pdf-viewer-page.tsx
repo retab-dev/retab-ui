@@ -1,31 +1,33 @@
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { readPdfPageResource } from "@/lib/pdf-document-resource"
-import type { PdfDocumentProxy } from "@/lib/pdf-document-types"
+import * as React from "react";
 
-import { getPdfCanvasPixelSize } from "./pdf-viewer-canvas"
+import { readPdfPageResource } from "@/lib/pdf-document-resource";
+import type { PdfDocumentProxy } from "@/lib/pdf-document-types";
+
+import { getPdfCanvasPixelSize } from "./pdf-viewer-canvas";
 import {
   readPdfRenderedPageCache,
   writePdfRenderedPageCache,
   type PdfRenderedPageCache,
   type PdfRenderedPageSignature,
-} from "./pdf-viewer-render-cache"
-import { toPdfRenderFailedError } from "./pdf-viewer-render-error"
+} from "./pdf-viewer-render-cache";
+import { toPdfRenderFailedError } from "./pdf-viewer-render-error";
 import type {
   PageOverlayProps,
   PdfPageRenderStatus,
   PdfPageRenderTiming,
   PdfPageSize,
-} from "./pdf-viewer-types"
+} from "./pdf-viewer-types";
 
 type PdfRenderedCanvas = {
-  pageNumber: number
-  scale: number
-  rotation: number
-  devicePixelRatio: number
-  viewportWidth: number
-  viewportHeight: number
-}
+  pageNumber: number;
+  scale: number;
+  rotation: number;
+  devicePixelRatio: number;
+  viewportWidth: number;
+  viewportHeight: number;
+};
 
 export function PdfPage({
   document,
@@ -38,28 +40,28 @@ export function PdfPage({
   onSize,
   renderCache,
 }: {
-  document: PdfDocumentProxy
-  pageNumber: number
-  scale: number
-  rotation: number
-  devicePixelRatio: number
-  renderOverlay?: (props: PageOverlayProps) => React.ReactNode
-  onRenderTiming?: (timing: PdfPageRenderTiming) => void
-  onSize?: (pageNumber: number, size: PdfPageSize) => void
-  renderCache?: PdfRenderedPageCache
+  document: PdfDocumentProxy;
+  pageNumber: number;
+  scale: number;
+  rotation: number;
+  devicePixelRatio: number;
+  renderOverlay?: (props: PageOverlayProps) => React.ReactNode;
+  onRenderTiming?: (timing: PdfPageRenderTiming) => void;
+  onSize?: (pageNumber: number, size: PdfPageSize) => void;
+  renderCache?: PdfRenderedPageCache;
 }) {
-  const page = readPdfPageResource(document, pageNumber)
+  const page = readPdfPageResource(document, pageNumber);
   const intrinsicViewport = React.useMemo(
     () => page.getViewport({ scale: 1, rotation: page.rotate ?? 0 }),
-    [page]
-  )
+    [page],
+  );
 
   React.useEffect(() => {
     onSize?.(pageNumber, {
       width: intrinsicViewport.width,
       height: intrinsicViewport.height,
-    })
-  }, [intrinsicViewport.height, intrinsicViewport.width, onSize, pageNumber])
+    });
+  }, [intrinsicViewport.height, intrinsicViewport.width, onSize, pageNumber]);
 
   const viewport = React.useMemo(
     () =>
@@ -67,16 +69,16 @@ export function PdfPage({
         scale,
         rotation: ((page.rotate ?? 0) + rotation) % 360,
       }),
-    [page, rotation, scale]
-  )
-  const [renderError, setRenderError] = React.useState<unknown>(null)
-  if (renderError) throw renderError
+    [page, rotation, scale],
+  );
+  const [renderError, setRenderError] = React.useState<unknown>(null);
+  if (renderError) throw renderError;
 
-  const renderedCanvasRef = React.useRef<PdfRenderedCanvas | null>(null)
+  const renderedCanvasRef = React.useRef<PdfRenderedCanvas | null>(null);
 
   const canvasRef = React.useCallback(
     (canvas: HTMLCanvasElement | null) => {
-      if (!canvas) return
+      if (!canvas) return;
       const renderSignature = {
         pageNumber,
         scale,
@@ -84,22 +86,22 @@ export function PdfPage({
         devicePixelRatio,
         viewportWidth: viewport.width,
         viewportHeight: viewport.height,
-      } satisfies PdfRenderedPageSignature
+      } satisfies PdfRenderedPageSignature;
       if (
         renderedCanvasRef.current &&
         canReuseRenderedCanvas(renderedCanvasRef.current, renderSignature)
       ) {
-        return
+        return;
       }
 
-      const startedAt = readNow()
-      let didReportRenderTiming = false
+      const startedAt = readNow();
+      let didReportRenderTiming = false;
       const reportRenderTiming = (
         status: PdfPageRenderStatus,
-        source?: PdfPageRenderTiming["source"]
+        source?: PdfPageRenderTiming["source"],
       ) => {
-        if (didReportRenderTiming) return
-        didReportRenderTiming = true
+        if (didReportRenderTiming) return;
+        didReportRenderTiming = true;
         onRenderTiming?.({
           pageNumber,
           scale,
@@ -108,39 +110,39 @@ export function PdfPage({
           status,
           source,
           durationMs: Math.max(0, readNow() - startedAt),
-        })
-      }
-      const context = canvas.getContext("2d")
+        });
+      };
+      const context = canvas.getContext("2d");
       if (!context) {
-        markCanvasRenderStatus(canvas, renderSignature, "failed")
-        reportRenderTiming("failed")
+        markCanvasRenderStatus(canvas, renderSignature, "failed");
+        reportRenderTiming("failed");
         setRenderError(
-          toPdfRenderFailedError(new Error("Canvas 2D context unavailable."))
-        )
-        return
+          toPdfRenderFailedError(new Error("Canvas 2D context unavailable.")),
+        );
+        return;
       }
 
-      const cached = readPdfRenderedPageCache(renderCache, renderSignature)
+      const cached = readPdfRenderedPageCache(renderCache, renderSignature);
       if (cached) {
-        canvas.width = cached.canvas.width
-        canvas.height = cached.canvas.height
-        context.drawImage(cached.canvas, 0, 0)
-        renderedCanvasRef.current = cached
-        markCanvasRenderStatus(canvas, renderSignature, "rendered", "cache")
-        reportRenderTiming("rendered", "cache")
-        return
+        canvas.width = cached.canvas.width;
+        canvas.height = cached.canvas.height;
+        context.drawImage(cached.canvas, 0, 0);
+        renderedCanvasRef.current = cached;
+        markCanvasRenderStatus(canvas, renderSignature, "rendered", "cache");
+        reportRenderTiming("rendered", "cache");
+        return;
       }
 
-      markCanvasRenderStatus(canvas, renderSignature, "pending")
+      markCanvasRenderStatus(canvas, renderSignature, "pending");
       canvas.width = getPdfCanvasPixelSize(
         renderSignature.viewportWidth,
-        devicePixelRatio
-      )
+        devicePixelRatio,
+      );
       canvas.height = getPdfCanvasPixelSize(
         renderSignature.viewportHeight,
-        devicePixelRatio
-      )
-      let renderTask: ReturnType<typeof page.render>
+        devicePixelRatio,
+      );
+      let renderTask: ReturnType<typeof page.render>;
       try {
         renderTask = page.render({
           canvas,
@@ -150,41 +152,41 @@ export function PdfPage({
             devicePixelRatio !== 1
               ? [devicePixelRatio, 0, 0, devicePixelRatio, 0, 0]
               : undefined,
-        })
+        });
       } catch (error) {
-        markCanvasRenderStatus(canvas, renderSignature, "failed")
-        reportRenderTiming("failed")
-        setRenderError(toPdfRenderFailedError(error))
-        return
+        markCanvasRenderStatus(canvas, renderSignature, "failed");
+        reportRenderTiming("failed");
+        setRenderError(toPdfRenderFailedError(error));
+        return;
       }
-      let isActive = true
+      let isActive = true;
       renderTask.promise.then(
         () => {
-          if (!isActive) return
-          renderedCanvasRef.current = renderSignature
+          if (!isActive) return;
+          renderedCanvasRef.current = renderSignature;
           writePdfRenderedPageCache({
             cache: renderCache,
             rendered: renderSignature,
             sourceCanvas: canvas,
-          })
-          markCanvasRenderStatus(canvas, renderSignature, "rendered", "pdfjs")
-          reportRenderTiming("rendered", "pdfjs")
+          });
+          markCanvasRenderStatus(canvas, renderSignature, "rendered", "pdfjs");
+          reportRenderTiming("rendered", "pdfjs");
         },
         (error) => {
-          if (!isActive) return
-          markCanvasRenderStatus(canvas, renderSignature, "failed")
-          reportRenderTiming("failed")
-          setRenderError(toPdfRenderFailedError(error))
-        }
-      )
+          if (!isActive) return;
+          markCanvasRenderStatus(canvas, renderSignature, "failed");
+          reportRenderTiming("failed");
+          setRenderError(toPdfRenderFailedError(error));
+        },
+      );
       return () => {
-        isActive = false
+        isActive = false;
         if (!didReportRenderTiming) {
-          markCanvasRenderStatus(canvas, renderSignature, "cancelled")
-          reportRenderTiming("cancelled")
-          renderTask.cancel()
+          markCanvasRenderStatus(canvas, renderSignature, "cancelled");
+          reportRenderTiming("cancelled");
+          renderTask.cancel();
         }
-      }
+      };
     },
     [
       devicePixelRatio,
@@ -195,12 +197,12 @@ export function PdfPage({
       rotation,
       scale,
       viewport,
-    ]
-  )
+    ],
+  );
 
   return (
     <div
-      className="relative shadow-sm ring-1 ring-border"
+      className="ring-border relative shadow-sm ring-1"
       style={{ width: viewport.width, height: viewport.height }}
       data-slot="pdf-page"
       data-page={pageNumber}
@@ -222,27 +224,27 @@ export function PdfPage({
         </div>
       ) : null}
     </div>
-  )
+  );
 }
 
 function markCanvasRenderStatus(
   canvas: HTMLCanvasElement,
   rendered: PdfRenderedCanvas,
   status: "pending" | PdfPageRenderStatus,
-  source?: PdfPageRenderTiming["source"]
+  source?: PdfPageRenderTiming["source"],
 ) {
-  canvas.dataset.pdfPageNumber = String(rendered.pageNumber)
-  canvas.dataset.pdfRenderStatus = status
+  canvas.dataset.pdfPageNumber = String(rendered.pageNumber);
+  canvas.dataset.pdfRenderStatus = status;
   if (source) {
-    canvas.dataset.pdfRenderSource = source
+    canvas.dataset.pdfRenderSource = source;
   } else {
-    delete canvas.dataset.pdfRenderSource
+    delete canvas.dataset.pdfRenderSource;
   }
 }
 
 function canReuseRenderedCanvas(
   rendered: PdfRenderedCanvas,
-  requested: PdfRenderedCanvas
+  requested: PdfRenderedCanvas,
 ) {
   return (
     rendered.pageNumber === requested.pageNumber &&
@@ -251,9 +253,9 @@ function canReuseRenderedCanvas(
     rendered.viewportWidth === requested.viewportWidth &&
     rendered.viewportHeight === requested.viewportHeight &&
     rendered.devicePixelRatio >= requested.devicePixelRatio
-  )
+  );
 }
 
 function readNow() {
-  return typeof performance !== "undefined" ? performance.now() : Date.now()
+  return typeof performance !== "undefined" ? performance.now() : Date.now();
 }

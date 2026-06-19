@@ -1,1 +1,1 @@
-export * from "./text-viewer-resource"
+export * from "./text-viewer-resource";

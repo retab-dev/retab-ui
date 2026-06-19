@@ -1,13 +1,15 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Check, Copy } from "lucide-react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { cn } from "@/lib/utils"
-import type { ViewerResource } from "@/lib/viewer-resource"
+import * as React from "react";
+import { Check, Copy } from "lucide-react";
 
-import { ScrollArea } from "./scroll-area"
-import { TextViewerControls, TextViewerFrame } from "./text-viewer-chrome"
+import { cn } from "@/lib/utils";
+import type { ViewerResource } from "@/lib/viewer-resource";
+
+import { ScrollArea } from "./scroll-area";
+import { TextViewerControls, TextViewerFrame } from "./text-viewer-chrome";
 import {
   createPreparedTextDocument,
   getCodeVisibleLineWindow,
@@ -35,42 +37,42 @@ import {
   type TextBlockFrame,
   type TextDocumentFrame,
   type TextLineWindow,
-} from "./text-viewer-layout"
-import { isLineInRange, normalizeTextLineRange } from "./text-viewer-ranges"
+} from "./text-viewer-layout";
+import { isLineInRange, normalizeTextLineRange } from "./text-viewer-ranges";
 import {
   readTextResource,
   resolvedTextViewerBounds,
-} from "./text-viewer-resource"
+} from "./text-viewer-resource";
 import {
   clampTextViewerScale,
   TEXT_VIEWER_BLOCK_PADDING,
-} from "./text-viewer-scale"
-import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types"
+} from "./text-viewer-scale";
+import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types";
 import {
   getTextFrameScrollAnchor,
   getTextFrameVirtualItems,
   useTextVirtualViewport,
   type TextFrameScrollAnchor,
-} from "./text-viewer-virtualization"
+} from "./text-viewer-virtualization";
 import {
   useViewerControlsRegistration,
   type ViewerControlsState,
-} from "./viewer-controls"
+} from "./viewer-controls";
 
-const TEXT_VIEWER_HORIZONTAL_PADDING = 16
-const TEXT_VIEWER_INITIAL_TEXT_WIDTH = 768
-const TEXT_VIEWER_OVERSCAN_PX = 320
+const TEXT_VIEWER_HORIZONTAL_PADDING = 16;
+const TEXT_VIEWER_INITIAL_TEXT_WIDTH = 768;
+const TEXT_VIEWER_OVERSCAN_PX = 320;
 const TEXT_VIEWER_HIGHLIGHT_STYLE = {
   backgroundColor:
     "color-mix(in oklab, var(--foreground) 8%, var(--background))",
   boxShadow: "inset 2px 0 0 0 var(--primary)",
-} satisfies React.CSSProperties
+} satisfies React.CSSProperties;
 
 type TextViewerContentProps = Omit<TextViewerProps, "source"> & {
-  resource: ViewerResource
-  retryVersion: number
-  forwardedRef?: React.ForwardedRef<TextViewerHandle>
-}
+  resource: ViewerResource;
+  retryVersion: number;
+  forwardedRef?: React.ForwardedRef<TextViewerHandle>;
+};
 
 export function TextViewerContent({
   resource,
@@ -87,8 +89,8 @@ export function TextViewerContent({
 }: TextViewerContentProps) {
   const bounds = React.useMemo(
     () => resolvedTextViewerBounds({ maxBytes, maxLines }),
-    [maxBytes, maxLines]
-  )
+    [maxBytes, maxLines],
+  );
   const text = React.useMemo(
     () =>
       readTextResource({
@@ -96,8 +98,8 @@ export function TextViewerContent({
         content: resource.content,
         retryVersion,
       }),
-    [bounds, resource.content, retryVersion]
-  )
+    [bounds, resource.content, retryVersion],
+  );
   const mode = React.useMemo(
     () =>
       forcedMode ??
@@ -105,22 +107,22 @@ export function TextViewerContent({
         fileName: resource.fileName,
         mimeType: resource.content.mimeType,
       }),
-    [forcedMode, resource.content.mimeType, resource.fileName]
-  )
-  const downloadAction = download ? resource.originalDownload : null
+    [forcedMode, resource.content.mimeType, resource.fileName],
+  );
+  const downloadAction = download ? resource.originalDownload : null;
 
-  const [fontScale, setFontScale] = React.useState(1)
-  const viewportRef = React.useRef<HTMLDivElement | null>(null)
+  const [fontScale, setFontScale] = React.useState(1);
+  const viewportRef = React.useRef<HTMLDivElement | null>(null);
   const pendingScrollAnchorRef = React.useRef<TextFrameScrollAnchor | null>(
-    null
-  )
-  const viewport = useTextVirtualViewport(viewportRef)
-  const viewportHeight = viewport.clientHeight || 600
-  const viewportWidth = viewport.clientWidth || 800
-  const fontEpoch = useTextViewerFontEpoch()
+    null,
+  );
+  const viewport = useTextVirtualViewport(viewportRef);
+  const viewportHeight = viewport.clientHeight || 600;
+  const viewportWidth = viewport.clientWidth || 800;
+  const fontEpoch = useTextViewerFontEpoch();
   const [contentWidth, setContentWidth] = React.useState(
-    TEXT_VIEWER_INITIAL_TEXT_WIDTH
-  )
+    TEXT_VIEWER_INITIAL_TEXT_WIDTH,
+  );
 
   const preparedDocument = React.useMemo(
     () =>
@@ -129,8 +131,8 @@ export function TextViewerContent({
         style: { fontScale: 1 },
         text,
       }),
-    [fontEpoch, mode, text]
-  )
+    [fontEpoch, mode, text],
+  );
   const frame = React.useMemo(
     () =>
       layoutTextDocument({
@@ -138,95 +140,95 @@ export function TextViewerContent({
         document: preparedDocument,
         fontScale,
       }),
-    [contentWidth, fontScale, preparedDocument]
-  )
-  const highlightStart = highlight?.start
-  const highlightEnd = highlight?.end
+    [contentWidth, fontScale, preparedDocument],
+  );
+  const highlightStart = highlight?.start;
+  const highlightEnd = highlight?.end;
   const highlightRange = React.useMemo(
     () =>
       normalizeTextLineRange(
         highlightStart == null || highlightEnd == null
           ? null
           : { end: highlightEnd, start: highlightStart },
-        preparedDocument.sourceLineCount
+        preparedDocument.sourceLineCount,
       ),
-    [highlightEnd, highlightStart, preparedDocument.sourceLineCount]
-  )
+    [highlightEnd, highlightStart, preparedDocument.sourceLineCount],
+  );
   const captureScrollAnchor = React.useCallback(() => {
     pendingScrollAnchorRef.current = getTextFrameScrollAnchor({
       frames: frame.frames,
       scrollTop: viewportRef.current?.scrollTop ?? 0,
-    })
-  }, [frame.frames])
+    });
+  }, [frame.frames]);
 
   React.useLayoutEffect(() => {
     const nextContentWidth = Math.max(
       1,
-      viewportWidth - TEXT_VIEWER_HORIZONTAL_PADDING * 2
-    )
+      viewportWidth - TEXT_VIEWER_HORIZONTAL_PADDING * 2,
+    );
     setContentWidth((current) => {
-      if (current === nextContentWidth) return current
-      captureScrollAnchor()
-      return nextContentWidth
-    })
-  }, [captureScrollAnchor, viewportWidth])
+      if (current === nextContentWidth) return current;
+      captureScrollAnchor();
+      return nextContentWidth;
+    });
+  }, [captureScrollAnchor, viewportWidth]);
 
   React.useLayoutEffect(() => {
-    const anchor = pendingScrollAnchorRef.current
-    const scrollElement = viewportRef.current
-    if (!anchor || !scrollElement) return
+    const anchor = pendingScrollAnchorRef.current;
+    const scrollElement = viewportRef.current;
+    if (!anchor || !scrollElement) return;
 
-    pendingScrollAnchorRef.current = null
-    const nextFrame = frame.frames[anchor.index]
-    if (!nextFrame) return
+    pendingScrollAnchorRef.current = null;
+    const nextFrame = frame.frames[anchor.index];
+    if (!nextFrame) return;
 
     scrollElement.scrollTop = Math.max(
       0,
       nextFrame.top +
-        Math.min(anchor.offsetWithinFrame, Math.max(0, nextFrame.height - 1))
-    )
-  }, [frame.frames])
+        Math.min(anchor.offsetWithinFrame, Math.max(0, nextFrame.height - 1)),
+    );
+  }, [frame.frames]);
 
   const scrollLineRange = React.useCallback(
     (
       range: ReturnType<typeof normalizeTextLineRange>,
-      options?: ScrollToOptions
+      options?: ScrollToOptions,
     ) => {
-      const scrollElement = viewportRef.current
-      if (!scrollElement || !range) return
+      const scrollElement = viewportRef.current;
+      if (!scrollElement || !range) return;
 
       const targetFrame =
         frame.frames.find((item) =>
-          textFrameIntersectsLineRange({ frame: item, range })
-        ) ?? frame.frames[0]
-      if (!targetFrame) return
+          textFrameIntersectsLineRange({ frame: item, range }),
+        ) ?? frame.frames[0];
+      if (!targetFrame) return;
 
       const targetTop =
         targetFrame.height <= scrollElement.clientHeight
           ? targetFrame.top -
             (scrollElement.clientHeight - targetFrame.height) / 2
-          : targetFrame.top
+          : targetFrame.top;
 
       scrollElement.scrollTo({
         behavior: "smooth",
         top: Math.max(0, targetTop),
         ...options,
-      })
+      });
     },
-    [frame.frames]
-  )
+    [frame.frames],
+  );
 
   const zoom = (factor: number) => {
-    captureScrollAnchor()
-    setFontScale((scale) => clampTextViewerScale(scale * factor))
-  }
+    captureScrollAnchor();
+    setFontScale((scale) => clampTextViewerScale(scale * factor));
+  };
 
   const resetZoom = () => {
-    captureScrollAnchor()
-    setFontScale(1)
-  }
-  const zoomOut = React.useCallback(() => zoom(1 / 1.2), [zoom])
-  const zoomIn = React.useCallback(() => zoom(1.2), [zoom])
+    captureScrollAnchor();
+    setFontScale(1);
+  };
+  const zoomOut = React.useCallback(() => zoom(1 / 1.2), [zoom]);
+  const zoomIn = React.useCallback(() => zoom(1.2), [zoom]);
   useTextControlsRegistration({
     downloadAction,
     fontScale,
@@ -234,7 +236,7 @@ export function TextViewerContent({
     onZoomIn: zoomIn,
     onZoomOut: zoomOut,
     wordCount: preparedDocument.wordCount,
-  })
+  });
 
   React.useImperativeHandle(
     forwardedRef ?? null,
@@ -243,42 +245,42 @@ export function TextViewerContent({
       scrollToLineRange: (range, options) => {
         scrollLineRange(
           normalizeTextLineRange(range, preparedDocument.sourceLineCount),
-          options
-        )
+          options,
+        );
       },
     }),
-    [preparedDocument.sourceLineCount, scrollLineRange]
-  )
+    [preparedDocument.sourceLineCount, scrollLineRange],
+  );
 
   React.useEffect(() => {
-    scrollLineRange(highlightRange)
-  }, [highlightRange, scrollLineRange])
+    scrollLineRange(highlightRange);
+  }, [highlightRange, scrollLineRange]);
 
   const scrollMarkdownFragment = React.useCallback(
     (event: React.MouseEvent) => {
-      const href = localFragmentHrefFromEventTarget(event.target)
-      if (!href) return
+      const href = localFragmentHrefFromEventTarget(event.target);
+      if (!href) return;
 
-      const targetId = decodeMarkdownFragmentHref(href)
+      const targetId = decodeMarkdownFragmentHref(href);
       const targetIndex = markdownHeadingBlockIndex(
         preparedDocument.blocks,
-        targetId
-      )
-      const targetFrame = frame.frames[targetIndex]
-      const scrollElement = viewportRef.current
-      if (!targetFrame || !scrollElement) return
+        targetId,
+      );
+      const targetFrame = frame.frames[targetIndex];
+      const scrollElement = viewportRef.current;
+      if (!targetFrame || !scrollElement) return;
 
-      event.preventDefault()
+      event.preventDefault();
       scrollElement.scrollTo({
         behavior: "smooth",
         top: Math.max(0, targetFrame.top),
-      })
+      });
       if (window.location.hash !== href) {
-        window.history.replaceState(null, "", href)
+        window.history.replaceState(null, "", href);
       }
     },
-    [frame.frames, preparedDocument.blocks]
-  )
+    [frame.frames, preparedDocument.blocks],
+  );
 
   return (
     <TextViewerFrame className={className} bare={bare}>
@@ -293,7 +295,7 @@ export function TextViewerContent({
         />
       ) : null}
       <ScrollArea
-        className="min-h-0 flex-1 bg-background"
+        className="bg-background min-h-0 flex-1"
         orientation="vertical"
         viewportClassName="bg-background"
         viewportProps={{ onClickCapture: scrollMarkdownFragment }}
@@ -310,7 +312,7 @@ export function TextViewerContent({
         />
       </ScrollArea>
     </TextViewerFrame>
-  )
+  );
 }
 
 function useTextControlsRegistration({
@@ -321,14 +323,14 @@ function useTextControlsRegistration({
   onZoomOut,
   wordCount,
 }: {
-  downloadAction: ViewerResource["originalDownload"] | null
-  fontScale: number
-  onResetZoom: () => void
-  onZoomIn: () => void
-  onZoomOut: () => void
-  wordCount: number
+  downloadAction: ViewerResource["originalDownload"] | null;
+  fontScale: number;
+  onResetZoom: () => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  wordCount: number;
 }) {
-  const onControlsChange = useViewerControlsRegistration()
+  const onControlsChange = useViewerControlsRegistration();
   const controlsState = React.useMemo<ViewerControlsState>(
     () => ({
       title: `${wordCount} word${wordCount === 1 ? "" : "s"}`,
@@ -341,30 +343,30 @@ function useTextControlsRegistration({
       },
       downloads: downloadAction ? [downloadAction] : [],
     }),
-    [downloadAction, fontScale, onResetZoom, onZoomIn, onZoomOut, wordCount]
-  )
+    [downloadAction, fontScale, onResetZoom, onZoomIn, onZoomOut, wordCount],
+  );
 
   React.useEffect(() => {
-    if (!onControlsChange) return
-    onControlsChange(controlsState)
-    return () => onControlsChange(null)
-  }, [onControlsChange, controlsState])
+    if (!onControlsChange) return;
+    onControlsChange(controlsState);
+    return () => onControlsChange(null);
+  }, [onControlsChange, controlsState]);
 }
 
 type TextVirtualCanvasProps = {
-  contentWidth: number
-  document: PreparedTextDocument
-  frame: TextDocumentFrame
-  highlightRange: ReturnType<typeof normalizeTextLineRange>
-  scrollTop: number
-  viewportHeight: number
-  viewportWidth: number
-}
+  contentWidth: number;
+  document: PreparedTextDocument;
+  frame: TextDocumentFrame;
+  highlightRange: ReturnType<typeof normalizeTextLineRange>;
+  scrollTop: number;
+  viewportHeight: number;
+  viewportWidth: number;
+};
 
 const TextVirtualCanvas = React.memo(
   TextVirtualCanvasImpl,
-  areTextVirtualCanvasPropsEqual
-)
+  areTextVirtualCanvasPropsEqual,
+);
 
 function TextVirtualCanvasImpl({
   contentWidth,
@@ -383,10 +385,10 @@ function TextVirtualCanvasImpl({
         scrollTop,
         viewportHeight,
       }),
-    [frame.frames, scrollTop, viewportHeight]
-  )
-  const viewportTop = scrollTop - TEXT_VIEWER_OVERSCAN_PX
-  const viewportBottom = scrollTop + viewportHeight + TEXT_VIEWER_OVERSCAN_PX
+    [frame.frames, scrollTop, viewportHeight],
+  );
+  const viewportTop = scrollTop - TEXT_VIEWER_OVERSCAN_PX;
+  const viewportBottom = scrollTop + viewportHeight + TEXT_VIEWER_OVERSCAN_PX;
 
   return (
     <div
@@ -398,9 +400,9 @@ function TextVirtualCanvasImpl({
       }}
     >
       {virtualItems.map((item) => {
-        const block = document.blocks[item.index]
-        const blockFrame = frame.frames[item.index]
-        if (!block || !blockFrame) return null
+        const block = document.blocks[item.index];
+        const blockFrame = frame.frames[item.index];
+        if (!block || !blockFrame) return null;
         return (
           <TextBlock
             key={item.index}
@@ -411,15 +413,15 @@ function TextVirtualCanvasImpl({
             viewportBottom={viewportBottom}
             viewportTop={viewportTop}
           />
-        )
+        );
       })}
     </div>
-  )
+  );
 }
 
 function areTextVirtualCanvasPropsEqual(
   previous: TextVirtualCanvasProps,
-  next: TextVirtualCanvasProps
+  next: TextVirtualCanvasProps,
 ) {
   return (
     previous.contentWidth === next.contentWidth &&
@@ -431,26 +433,26 @@ function areTextVirtualCanvasPropsEqual(
     textProjectionWindowKey(
       previous.frame.frames,
       previous.scrollTop,
-      previous.viewportHeight
+      previous.viewportHeight,
     ) ===
       textProjectionWindowKey(
         next.frame.frames,
         next.scrollTop,
-        next.viewportHeight
+        next.viewportHeight,
       )
-  )
+  );
 }
 
 type TextBlockProps = {
-  block: PreparedTextBlock
-  contentWidth: number
-  frame: TextBlockFrame
-  highlightRange: ReturnType<typeof normalizeTextLineRange>
-  viewportBottom: number
-  viewportTop: number
-}
+  block: PreparedTextBlock;
+  contentWidth: number;
+  frame: TextBlockFrame;
+  highlightRange: ReturnType<typeof normalizeTextLineRange>;
+  viewportBottom: number;
+  viewportTop: number;
+};
 
-const TextBlock = React.memo(TextBlockImpl, areTextBlockPropsEqual)
+const TextBlock = React.memo(TextBlockImpl, areTextBlockPropsEqual);
 
 function TextBlockImpl({
   block,
@@ -463,16 +465,16 @@ function TextBlockImpl({
   if (block.kind !== frame.kind) {
     if (process.env.NODE_ENV !== "production") {
       throw new Error(
-        `Text viewer block/frame mismatch: block=${block.kind}, frame=${frame.kind}`
-      )
+        `Text viewer block/frame mismatch: block=${block.kind}, frame=${frame.kind}`,
+      );
     }
-    return null
+    return null;
   }
 
   const isHighlighted =
     frame.sourceStartLine === frame.sourceEndLine
       ? isLineInRange(frame.sourceStartLine, highlightRange)
-      : textFrameIntersectsLineRange({ frame, range: highlightRange })
+      : textFrameIntersectsLineRange({ frame, range: highlightRange });
 
   switch (block.kind) {
     case "inline":
@@ -485,7 +487,7 @@ function TextBlockImpl({
           viewportBottom={viewportBottom}
           viewportTop={viewportTop}
         />
-      )
+      );
     case "code":
       return (
         <CodeTextBlock
@@ -496,7 +498,7 @@ function TextBlockImpl({
           viewportBottom={viewportBottom}
           viewportTop={viewportTop}
         />
-      )
+      );
     case "image":
       return (
         <ImageTextBlock
@@ -504,7 +506,7 @@ function TextBlockImpl({
           frame={frame as ImageTextBlockFrame}
           isHighlighted={isHighlighted}
         />
-      )
+      );
     case "rule":
       return (
         <RuleTextBlock
@@ -512,7 +514,7 @@ function TextBlockImpl({
           frame={frame as RuleTextBlockFrame}
           isHighlighted={isHighlighted}
         />
-      )
+      );
     case "table":
       return (
         <TableTextBlock
@@ -522,13 +524,13 @@ function TextBlockImpl({
           viewportBottom={viewportBottom}
           viewportTop={viewportTop}
         />
-      )
+      );
   }
 }
 
 function areTextBlockPropsEqual(
   previous: TextBlockProps,
-  next: TextBlockProps
+  next: TextBlockProps,
 ) {
   return (
     previous.block === next.block &&
@@ -538,33 +540,33 @@ function areTextBlockPropsEqual(
     textBlockVisibleWindowKey(
       previous.frame,
       previous.viewportTop,
-      previous.viewportBottom
+      previous.viewportBottom,
     ) ===
       textBlockVisibleWindowKey(
         next.frame,
         next.viewportTop,
-        next.viewportBottom
+        next.viewportBottom,
       )
-  )
+  );
 }
 
 function isSameHighlightRange(
   a: ReturnType<typeof normalizeTextLineRange>,
-  b: ReturnType<typeof normalizeTextLineRange>
+  b: ReturnType<typeof normalizeTextLineRange>,
 ) {
   return (
     a === b ||
     (a != null && b != null && a.start === b.start && a.end === b.end)
-  )
+  );
 }
 
 function textProjectionWindowKey(
   frames: readonly TextBlockFrame[],
   scrollTop: number,
-  viewportHeight: number
+  viewportHeight: number,
 ) {
-  const viewportTop = scrollTop - TEXT_VIEWER_OVERSCAN_PX
-  const viewportBottom = scrollTop + viewportHeight + TEXT_VIEWER_OVERSCAN_PX
+  const viewportTop = scrollTop - TEXT_VIEWER_OVERSCAN_PX;
+  const viewportBottom = scrollTop + viewportHeight + TEXT_VIEWER_OVERSCAN_PX;
   return getTextFrameVirtualItems({
     frames,
     overscanPx: TEXT_VIEWER_OVERSCAN_PX,
@@ -572,21 +574,21 @@ function textProjectionWindowKey(
     viewportHeight,
   })
     .map((item) => {
-      const frame = frames[item.index]
-      if (!frame) return `${item.index}:missing`
+      const frame = frames[item.index];
+      if (!frame) return `${item.index}:missing`;
       return `${item.index}:${textBlockVisibleWindowKey(
         frame,
         viewportTop,
-        viewportBottom
-      )}`
+        viewportBottom,
+      )}`;
     })
-    .join("|")
+    .join("|");
 }
 
 function textBlockVisibleWindowKey(
   frame: TextBlockFrame,
   viewportTop: number,
-  viewportBottom: number
+  viewportBottom: number,
 ) {
   switch (frame.kind) {
     case "inline":
@@ -595,36 +597,36 @@ function textBlockVisibleWindowKey(
           frame,
           viewportBottom,
           viewportTop,
-        })
-      )
+        }),
+      );
     case "code":
       return lineWindowKey(
         getCodeVisibleLineWindow({
           frame,
           viewportBottom,
           viewportTop,
-        })
-      )
+        }),
+      );
     case "table":
       return tableRowWindowKey(
         getTableVisibleRowWindow({
           frame,
           viewportBottom,
           viewportTop,
-        })
-      )
+        }),
+      );
     case "image":
     case "rule":
-      return "static"
+      return "static";
   }
 }
 
 function lineWindowKey(window: TextLineWindow | null) {
-  return window ? `${window.firstLine}:${window.lastLine}` : "none"
+  return window ? `${window.firstLine}:${window.lastLine}` : "none";
 }
 
 function tableRowWindowKey(window: TableRowWindow) {
-  return `${window.startIndex}:${window.endIndex}`
+  return `${window.startIndex}:${window.endIndex}`;
 }
 
 function InlineTextBlock({
@@ -635,12 +637,12 @@ function InlineTextBlock({
   viewportBottom,
   viewportTop,
 }: {
-  block: PreparedInlineTextBlock
-  contentWidth: number
-  frame: InlineTextBlockFrame
-  isHighlighted: boolean
-  viewportBottom: number
-  viewportTop: number
+  block: PreparedInlineTextBlock;
+  contentWidth: number;
+  frame: InlineTextBlockFrame;
+  isHighlighted: boolean;
+  viewportBottom: number;
+  viewportTop: number;
 }) {
   const lines = materializeInlineVisibleLines({
     block,
@@ -648,16 +650,16 @@ function InlineTextBlock({
     maxWidth: contentWidth,
     viewportBottom,
     viewportTop,
-  })
-  const headingLevel = inlineHeadingLevel(block)
+  });
+  const headingLevel = inlineHeadingLevel(block);
   const role =
     headingLevel == null && frame.markerText
       ? "listitem"
       : headingLevel == null
         ? undefined
-        : "heading"
+        : "heading";
   const ariaLevel =
-    headingLevel ?? (frame.markerText ? frame.listDepth : undefined)
+    headingLevel ?? (frame.markerText ? frame.listDepth : undefined);
 
   return (
     <div
@@ -698,9 +700,9 @@ function InlineTextBlock({
                     letterSpacing: 0,
                     marginLeft: fragment.leadingGap,
                   }
-                : { font: fragment.font, letterSpacing: 0 }
+                : { font: fragment.font, letterSpacing: 0 };
             if (fragment.href) {
-              const isFragment = isLocalFragmentHref(fragment.href)
+              const isFragment = isLocalFragmentHref(fragment.href);
               return (
                 <a
                   key={fragmentIndex}
@@ -713,7 +715,7 @@ function InlineTextBlock({
                 >
                   {fragment.text}
                 </a>
-              )
+              );
             }
             return (
               <span
@@ -723,38 +725,38 @@ function InlineTextBlock({
               >
                 {fragment.text}
               </span>
-            )
+            );
           })}
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 function useTextViewerFontEpoch() {
-  const [fontEpoch, setFontEpoch] = React.useState(0)
+  const [fontEpoch, setFontEpoch] = React.useState(0);
 
   React.useEffect(() => {
-    const fonts = document.fonts
-    if (!fonts) return
+    const fonts = document.fonts;
+    if (!fonts) return;
 
-    let isMounted = true
+    let isMounted = true;
     void fonts.ready.then(() => {
-      if (isMounted) setFontEpoch((epoch) => epoch + 1)
-    })
+      if (isMounted) setFontEpoch((epoch) => epoch + 1);
+    });
 
     return () => {
-      isMounted = false
-    }
-  }, [])
+      isMounted = false;
+    };
+  }, []);
 
-  return fontEpoch
+  return fontEpoch;
 }
 
 function inlineHeadingLevel(block: PreparedInlineTextBlock) {
-  if (block.variant === "heading-1") return 1
-  if (block.variant === "heading-2") return 2
-  return undefined
+  if (block.variant === "heading-1") return 1;
+  if (block.variant === "heading-2") return 2;
+  return undefined;
 }
 
 function CodeTextBlock({
@@ -765,12 +767,12 @@ function CodeTextBlock({
   viewportBottom,
   viewportTop,
 }: {
-  block: PreparedCodeTextBlock
-  contentWidth: number
-  frame: CodeTextBlockFrame
-  isHighlighted: boolean
-  viewportBottom: number
-  viewportTop: number
+  block: PreparedCodeTextBlock;
+  contentWidth: number;
+  frame: CodeTextBlockFrame;
+  isHighlighted: boolean;
+  viewportBottom: number;
+  viewportTop: number;
 }) {
   const lines = materializeCodeVisibleLines({
     block,
@@ -778,7 +780,7 @@ function CodeTextBlock({
     frame,
     viewportBottom,
     viewportTop,
-  })
+  });
 
   return (
     <div
@@ -799,7 +801,7 @@ function CodeTextBlock({
       <BlockChrome frame={frame} />
       <CodeBlockToolbar block={block} frame={frame} />
       <pre
-        className="absolute overflow-hidden rounded-md border bg-muted text-foreground"
+        className="bg-muted text-foreground absolute overflow-hidden rounded-md border"
         style={{
           height: frame.height,
           left: 16 + frame.contentLeft,
@@ -826,15 +828,15 @@ function CodeTextBlock({
         </code>
       </pre>
     </div>
-  )
+  );
 }
 
 function CodeBlockToolbar({
   block,
   frame,
 }: {
-  block: PreparedCodeTextBlock
-  frame: CodeTextBlockFrame
+  block: PreparedCodeTextBlock;
+  frame: CodeTextBlockFrame;
 }) {
   return (
     <div
@@ -845,28 +847,28 @@ function CodeBlockToolbar({
       }}
     >
       {block.language ? (
-        <span className="rounded bg-background/90 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground shadow-sm">
+        <span className="bg-background/90 text-muted-foreground rounded px-1.5 py-0.5 font-mono text-[10px] shadow-sm">
           {block.language}
         </span>
       ) : null}
       <CopyTextButton label="Copy code block" text={block.fallbackText} />
     </div>
-  )
+  );
 }
 
 function CopyTextButton({ label, text }: { label: string; text: string }) {
-  const [copied, setCopied] = React.useState(false)
+  const [copied, setCopied] = React.useState(false);
 
   return (
     <button
       type="button"
       aria-label={copied ? "Copied" : label}
-      className="rounded bg-background/90 p-1 text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
+      className="bg-background/90 text-muted-foreground hover:bg-muted hover:text-foreground rounded p-1 shadow-sm transition-colors"
       onClick={() => {
         void navigator.clipboard?.writeText(text).then(() => {
-          setCopied(true)
-          window.setTimeout(() => setCopied(false), 1200)
-        })
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1200);
+        });
       }}
     >
       {copied ? (
@@ -875,7 +877,7 @@ function CopyTextButton({ label, text }: { label: string; text: string }) {
         <Copy className="size-3" />
       )}
     </button>
-  )
+  );
 }
 
 function ImageTextBlock({
@@ -883,19 +885,19 @@ function ImageTextBlock({
   frame,
   isHighlighted,
 }: {
-  block: PreparedImageTextBlock
-  frame: ImageTextBlockFrame
-  isHighlighted: boolean
+  block: PreparedImageTextBlock;
+  frame: ImageTextBlockFrame;
+  isHighlighted: boolean;
 }) {
   const [imageState, setImageState] = React.useState<
     "idle" | "loaded" | "failed"
-  >(block.src ? "idle" : "failed")
+  >(block.src ? "idle" : "failed");
 
   React.useEffect(() => {
-    setImageState(block.src ? "idle" : "failed")
-  }, [block.src])
+    setImageState(block.src ? "idle" : "failed");
+  }, [block.src]);
 
-  const showImage = Boolean(block.src) && imageState !== "failed"
+  const showImage = Boolean(block.src) && imageState !== "failed";
 
   return (
     <figure
@@ -918,7 +920,7 @@ function ImageTextBlock({
         <>
           <img
             alt={block.alt}
-            className="absolute rounded-md border bg-muted object-contain"
+            className="bg-muted absolute rounded-md border object-contain"
             data-image-state={imageState}
             onError={() => setImageState("failed")}
             onLoad={() => setImageState("loaded")}
@@ -934,7 +936,7 @@ function ImageTextBlock({
           {imageState === "idle" ? (
             <div
               aria-hidden="true"
-              className="absolute rounded-md border bg-muted/70"
+              className="bg-muted/70 absolute rounded-md border"
               data-image-state="loading"
               style={{
                 height: frame.imageHeight,
@@ -946,7 +948,7 @@ function ImageTextBlock({
         </>
       ) : (
         <div
-          className="absolute flex items-center rounded-md border bg-muted px-4 text-sm text-muted-foreground"
+          className="bg-muted text-muted-foreground absolute flex items-center rounded-md border px-4 text-sm"
           role="img"
           aria-label={block.alt}
           data-image-state="failed"
@@ -960,16 +962,16 @@ function ImageTextBlock({
         </div>
       )}
     </figure>
-  )
+  );
 }
 
 function RuleTextBlock({
   frame,
   isHighlighted,
 }: {
-  block: PreparedRuleTextBlock
-  frame: RuleTextBlockFrame
-  isHighlighted: boolean
+  block: PreparedRuleTextBlock;
+  frame: RuleTextBlockFrame;
+  isHighlighted: boolean;
 }) {
   return (
     <div
@@ -989,7 +991,7 @@ function RuleTextBlock({
     >
       <BlockChrome frame={frame} />
       <div
-        className="absolute h-px bg-border"
+        className="bg-border absolute h-px"
         style={{
           left: 16 + frame.contentLeft,
           top: Math.floor(frame.height / 2),
@@ -997,7 +999,7 @@ function RuleTextBlock({
         }}
       />
     </div>
-  )
+  );
 }
 
 function TableTextBlock({
@@ -1007,19 +1009,22 @@ function TableTextBlock({
   viewportBottom,
   viewportTop,
 }: {
-  block: PreparedTableTextBlock
-  frame: TableTextBlockFrame
-  isHighlighted: boolean
-  viewportBottom: number
-  viewportTop: number
+  block: PreparedTableTextBlock;
+  frame: TableTextBlockFrame;
+  isHighlighted: boolean;
+  viewportBottom: number;
+  viewportTop: number;
 }) {
   const rowWindow = getTableVisibleRowWindow({
     frame,
     viewportBottom,
     viewportTop,
-  })
-  const visibleRows = block.rows.slice(rowWindow.startIndex, rowWindow.endIndex)
-  const headerIdPrefix = `markdown-table-${frame.sourceStartLine}-${frame.sourceEndLine}`
+  });
+  const visibleRows = block.rows.slice(
+    rowWindow.startIndex,
+    rowWindow.endIndex,
+  );
+  const headerIdPrefix = `markdown-table-${frame.sourceStartLine}-${frame.sourceEndLine}`;
 
   return (
     <div
@@ -1067,7 +1072,7 @@ function TableTextBlock({
                 {block.header.map((cell, index) => (
                   <th
                     key={index}
-                    className="border-b px-3.5 py-2 font-semibold text-foreground"
+                    className="text-foreground border-b px-3.5 py-2 font-semibold"
                     id={`${headerIdPrefix}-column-${index}`}
                     scope="col"
                     style={{ textAlign: block.alignments[index] ?? "left" }}
@@ -1100,7 +1105,7 @@ function TableTextBlock({
                   {block.header.map((_, cellIndex) => (
                     <td
                       key={cellIndex}
-                      className="border-t px-3.5 py-1.5 align-top text-foreground"
+                      className="text-foreground border-t px-3.5 py-1.5 align-top"
                       headers={`${headerIdPrefix}-column-${cellIndex}`}
                       style={{
                         textAlign: block.alignments[cellIndex] ?? "left",
@@ -1124,17 +1129,17 @@ function TableTextBlock({
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function TableCellContent({
   cell,
 }: {
-  cell: PreparedTableTextBlock["header"][number] | undefined
+  cell: PreparedTableTextBlock["header"][number] | undefined;
 }) {
-  if (!cell) return null
+  if (!cell) return null;
   if (cell.href) {
-    const isFragment = isLocalFragmentHref(cell.href)
+    const isFragment = isLocalFragmentHref(cell.href);
     return (
       <a
         className={cn("wrap-break-word", cell.className)}
@@ -1145,11 +1150,11 @@ function TableCellContent({
       >
         {cell.text}
       </a>
-    )
+    );
   }
   return (
     <span className={cn("wrap-break-word", cell.className)}>{cell.text}</span>
-  )
+  );
 }
 
 function BlockChrome({ frame }: { frame: TextBlockFrame }) {
@@ -1159,7 +1164,7 @@ function BlockChrome({ frame }: { frame: TextBlockFrame }) {
         <div
           key={index}
           aria-hidden="true"
-          className="absolute top-0 bottom-0 w-[3px] rounded-full bg-border"
+          className="bg-border absolute top-0 bottom-0 w-[3px] rounded-full"
           style={{ left: 16 + left }}
         />
       ))}
@@ -1168,7 +1173,7 @@ function BlockChrome({ frame }: { frame: TextBlockFrame }) {
           aria-hidden="true"
           className={cn(
             "absolute font-mono text-xs whitespace-pre",
-            frame.markerClassName
+            frame.markerClassName,
           )}
           style={{
             left: 16 + frame.markerLeft,
@@ -1182,33 +1187,33 @@ function BlockChrome({ frame }: { frame: TextBlockFrame }) {
         </span>
       ) : null}
     </>
-  )
+  );
 }
 
 function localFragmentHrefFromEventTarget(target: EventTarget | null) {
-  if (!(target instanceof Element)) return null
-  const link = target.closest<HTMLAnchorElement>('a[href^="#"]')
-  const href = link?.getAttribute("href") ?? null
-  return href && href.length > 1 ? href : null
+  if (!(target instanceof Element)) return null;
+  const link = target.closest<HTMLAnchorElement>('a[href^="#"]');
+  const href = link?.getAttribute("href") ?? null;
+  return href && href.length > 1 ? href : null;
 }
 
 function decodeMarkdownFragmentHref(href: string) {
   try {
-    return decodeURIComponent(href.slice(1))
+    return decodeURIComponent(href.slice(1));
   } catch {
-    return href.slice(1)
+    return href.slice(1);
   }
 }
 
 function markdownHeadingBlockIndex(
   blocks: readonly PreparedTextBlock[],
-  headingId: string
+  headingId: string,
 ) {
   return blocks.findIndex((block) => {
-    return block.kind === "inline" && block.headingId === headingId
-  })
+    return block.kind === "inline" && block.headingId === headingId;
+  });
 }
 
 function isLocalFragmentHref(href: string) {
-  return href.startsWith("#")
+  return href.startsWith("#");
 }

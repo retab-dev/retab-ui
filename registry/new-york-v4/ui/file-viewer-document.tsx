@@ -1,21 +1,21 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { FileErrorBoundary, ViewerFallback } from "./file-viewer-fallback"
-import { useFileViewerContext } from "./file-viewer-internal"
-import { FileViewerRoute } from "./file-viewer-route"
+import { FileErrorBoundary, ViewerFallback } from "./file-viewer-fallback";
+import { useFileViewerContext } from "./file-viewer-internal";
+import { FileViewerRoute } from "./file-viewer-route";
 
 export type FileViewerDocumentProps = {
-  className?: string
-}
+  className?: string;
+};
 
 type FileViewerDocumentContentProps = FileViewerDocumentProps & {
-  bare?: boolean
-}
+  bare?: boolean;
+};
 
 export function FileViewerDocument({ className }: FileViewerDocumentProps) {
-  return <FileViewerDocumentContent bare className={className} />
+  return <FileViewerDocumentContent bare className={className} />;
 }
 
 function FileViewerDocumentContent({
@@ -32,7 +32,7 @@ function FileViewerDocumentContent({
     isClient,
     isolateStyles,
     resource,
-  } = useFileViewerContext()
+  } = useFileViewerContext();
   const fallback = (
     <ViewerFallback
       resource={resource}
@@ -42,9 +42,9 @@ function FileViewerDocumentContent({
       fallbackFrameSize={fallbackFrameSize}
       fallbackSlideSize={fallbackSlideSize}
     />
-  )
+  );
 
-  if (!isClient) return fallback
+  if (!isClient) return fallback;
 
   return (
     <FileErrorBoundary
@@ -69,5 +69,5 @@ function FileViewerDocumentContent({
         />
       </React.Suspense>
     </FileErrorBoundary>
-  )
+  );
 }

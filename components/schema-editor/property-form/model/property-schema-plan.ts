@@ -1,26 +1,26 @@
-"use client"
+"use client";
 
-import { updateEffectiveNode } from "@/components/schema-editor/draft/draft-node-edits"
-import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
-import { createPropertyTypeFieldWithObjectTemplates } from "@/components/schema-editor/property-form/fields/property-object-template-type-field"
-import { getArrayItemsForDraft } from "@/components/schema-editor/property-form/model/effective-node-edits"
+import { updateEffectiveNode } from "@/components/schema-editor/draft/draft-node-edits";
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
+import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils";
+import { createPropertyTypeFieldWithObjectTemplates } from "@/components/schema-editor/property-form/fields/property-object-template-type-field";
+import { getArrayItemsForDraft } from "@/components/schema-editor/property-form/model/effective-node-edits";
 import type {
   PropertyFormMode,
   PropertyFormSchemaContext,
   PropertySchemaPlanAccess,
   PropertySchemaPlan,
   PropertySchemaPlanItem,
-} from "@/components/schema-editor/property-form/types"
+} from "@/components/schema-editor/property-form/types";
 
 interface CreatePropertySchemaPlanInput {
-  schemaNode: ExtendedJSONSchema7
-  schemaContext: PropertyFormSchemaContext
-  mode: PropertyFormMode
-  access: PropertySchemaPlanAccess
-  editable: boolean
-  showTypeSelector?: boolean
-  onChange: (schemaNode: ExtendedJSONSchema7) => void
+  schemaNode: ExtendedJSONSchema7;
+  schemaContext: PropertyFormSchemaContext;
+  mode: PropertyFormMode;
+  access: PropertySchemaPlanAccess;
+  editable: boolean;
+  showTypeSelector?: boolean;
+  onChange: (schemaNode: ExtendedJSONSchema7) => void;
 }
 
 export function createPropertySchemaPlan({
@@ -32,14 +32,16 @@ export function createPropertySchemaPlan({
   showTypeSelector = true,
   onChange,
 }: CreatePropertySchemaPlanInput): PropertySchemaPlan {
-  const effectiveSchemaNode = getEffectiveNode(schemaNode)
+  const effectiveSchemaNode = getEffectiveNode(schemaNode);
   const resetKey =
-    schemaContext.resetKey ?? schemaContext.fieldPath ?? schemaContext.originalName
-  const items: PropertySchemaPlanItem[] = []
+    schemaContext.resetKey ??
+    schemaContext.fieldPath ??
+    schemaContext.originalName;
+  const items: PropertySchemaPlanItem[] = [];
 
   const updateEffectiveSchemaNode = (nextSchemaNode: ExtendedJSONSchema7) => {
-    onChange(updateEffectiveNode(schemaNode, nextSchemaNode))
-  }
+    onChange(updateEffectiveNode(schemaNode, nextSchemaNode));
+  };
 
   if (showTypeSelector) {
     items.push({
@@ -50,7 +52,7 @@ export function createPropertySchemaPlan({
         editable: editable && access.type,
         onChange,
       }),
-    })
+    });
   }
 
   if (access.enumValues && Array.isArray(effectiveSchemaNode.enum)) {
@@ -64,10 +66,10 @@ export function createPropertySchemaPlan({
           updateEffectiveSchemaNode({
             ...effectiveSchemaNode,
             enum: values,
-          })
+          });
         },
       },
-    })
+    });
   }
 
   if (
@@ -85,7 +87,7 @@ export function createPropertySchemaPlan({
         editable: editable && access.objectProperties,
         onChange: updateEffectiveSchemaNode,
       },
-    })
+    });
   }
 
   if (access.arrayItems && effectiveSchemaNode.type === "array") {
@@ -101,11 +103,11 @@ export function createPropertySchemaPlan({
           updateEffectiveSchemaNode({
             ...effectiveSchemaNode,
             items,
-          })
+          });
         },
       }),
-    })
+    });
   }
 
-  return { items }
+  return { items };
 }

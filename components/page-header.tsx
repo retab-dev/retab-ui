@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 function PageHeader({
   className,
@@ -13,7 +13,7 @@ function PageHeader({
         </div>
       </div>
     </section>
-  )
+  );
 }
 
 function PageHeaderHeading({
@@ -23,12 +23,12 @@ function PageHeaderHeading({
   return (
     <h1
       className={cn(
-        "leading-tighter max-w-3xl text-3xl font-semibold tracking-tight text-balance text-primary lg:leading-[1.1] lg:font-semibold xl:text-5xl xl:tracking-tighter",
-        className
+        "leading-tighter text-primary max-w-3xl text-3xl font-semibold tracking-tight text-balance lg:leading-[1.1] lg:font-semibold xl:text-5xl xl:tracking-tighter",
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 function PageHeaderDescription({
@@ -38,12 +38,12 @@ function PageHeaderDescription({
   return (
     <p
       className={cn(
-        "max-w-4xl text-base text-balance text-foreground sm:text-lg",
-        className
+        "text-foreground max-w-4xl text-base text-balance sm:text-lg",
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 function PageActions({ className, ...props }: React.ComponentProps<"div">) {
@@ -51,11 +51,11 @@ function PageActions({ className, ...props }: React.ComponentProps<"div">) {
     <div
       className={cn(
         "flex w-full items-center justify-center gap-2 pt-2 **:data-[slot=button]:shadow-none",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
-export { PageActions, PageHeader, PageHeaderDescription, PageHeaderHeading }
+export { PageActions, PageHeader, PageHeaderDescription, PageHeaderHeading };

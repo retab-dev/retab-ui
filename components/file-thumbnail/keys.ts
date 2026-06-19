@@ -1,21 +1,21 @@
-import type * as React from "react"
+import type * as React from "react";
 
-import type { ViewerResource } from "@/lib/viewer-resource"
-import type { ViewerDescriptor } from "@/lib/viewer-source"
+import type { ViewerResource } from "@/lib/viewer-resource";
+import type { ViewerDescriptor } from "@/lib/viewer-source";
 
-import type { ThumbnailAnchor } from "./types"
+import type { ThumbnailAnchor } from "./types";
 
 export interface ThumbnailKeyInput {
-  resource: ViewerResource
-  descriptor: ViewerDescriptor
-  unit?: string
-  options?: readonly ThumbnailOption[]
+  resource: ViewerResource;
+  descriptor: ViewerDescriptor;
+  unit?: string;
+  options?: readonly ThumbnailOption[];
 }
 
 export interface ThumbnailRenderKeyInput {
-  thumbnailKey: string
-  anchor: ThumbnailAnchor
-  retryKey: React.Key | null
+  thumbnailKey: string;
+  anchor: ThumbnailAnchor;
+  retryKey: React.Key | null;
 }
 
 export function getThumbnailKey({
@@ -29,18 +29,18 @@ export function getThumbnailKey({
     encodePart(`category:${descriptor.category}`),
     encodePart(`unit:${unit}`),
     ...options.map((option) => encodePart(`option:${option}`)),
-  ].join("")
+  ].join("");
 }
 
 export type ThumbnailOption = string & {
-  readonly __thumbnailOption: unique symbol
-}
+  readonly __thumbnailOption: unique symbol;
+};
 
 export function thumbnailOption(
   name: string,
-  value: string | number
+  value: string | number,
 ): ThumbnailOption {
-  return `${name}:${String(value)}` as ThumbnailOption
+  return `${name}:${String(value)}` as ThumbnailOption;
 }
 
 export function getThumbnailRenderKey({
@@ -52,14 +52,14 @@ export function getThumbnailRenderKey({
     encodePart(`thumbnail:${thumbnailKey}`),
     encodePart(`anchor:${anchor}`),
     encodeRetryKey(retryKey),
-  ].join("")
+  ].join("");
 }
 
 function encodePart(value: string): string {
-  return `${value.length}:${value}`
+  return `${value.length}:${value}`;
 }
 
 function encodeRetryKey(retryKey: React.Key | null): string {
-  if (retryKey === null) return encodePart("retry:null:")
-  return encodePart(`retry:${typeof retryKey}:${String(retryKey)}`)
+  if (retryKey === null) return encodePart("retry:null:");
+  return encodePart(`retry:${typeof retryKey}:${String(retryKey)}`);
 }

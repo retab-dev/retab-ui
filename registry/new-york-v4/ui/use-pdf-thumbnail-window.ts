@@ -1,21 +1,23 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
+
+import * as React from "react";
 
 import {
   getVisiblePdfThumbnailItems,
   type PdfThumbnailLayout,
   type PdfThumbnailLayoutItem,
-} from "./pdf-thumbnail-layout"
+} from "./pdf-thumbnail-layout";
 
 interface PdfThumbnailWindowMetrics {
-  scrollTop: number
-  viewportHeight: number
+  scrollTop: number;
+  viewportHeight: number;
 }
 
 export interface PdfThumbnailWindow {
-  visibleItems: readonly PdfThumbnailLayoutItem[]
-  totalHeight: number
+  visibleItems: readonly PdfThumbnailLayoutItem[];
+  totalHeight: number;
 }
 
 export function usePdfThumbnailWindow({
@@ -24,72 +26,72 @@ export function usePdfThumbnailWindow({
   overscan,
   initialViewportHeight,
 }: {
-  layout: PdfThumbnailLayout
-  viewportRef: React.RefObject<HTMLElement | null>
-  overscan: number
-  initialViewportHeight: number
+  layout: PdfThumbnailLayout;
+  viewportRef: React.RefObject<HTMLElement | null>;
+  overscan: number;
+  initialViewportHeight: number;
 }): PdfThumbnailWindow {
   const [metrics, setMetrics] = React.useState<PdfThumbnailWindowMetrics>({
     scrollTop: 0,
     viewportHeight: initialViewportHeight,
-  })
-  const metricsRef = React.useRef(metrics)
+  });
+  const metricsRef = React.useRef(metrics);
 
   const setMeasuredMetrics = React.useCallback(
     (next: PdfThumbnailWindowMetrics) => {
-      const current = metricsRef.current
+      const current = metricsRef.current;
       if (
         current.scrollTop === next.scrollTop &&
         current.viewportHeight === next.viewportHeight
       ) {
-        return
+        return;
       }
 
-      metricsRef.current = next
-      setMetrics(next)
+      metricsRef.current = next;
+      setMetrics(next);
     },
-    []
-  )
+    [],
+  );
 
   React.useEffect(() => {
-    const viewport = viewportRef.current
-    if (!viewport) return
+    const viewport = viewportRef.current;
+    if (!viewport) return;
 
-    let frame = 0
+    let frame = 0;
     const read = () => {
       const scrollTop =
         Number.isFinite(viewport.scrollTop) && viewport.scrollTop > 0
           ? viewport.scrollTop
-          : 0
+          : 0;
       const viewportHeight =
         Number.isFinite(viewport.clientHeight) && viewport.clientHeight > 0
           ? viewport.clientHeight
-          : initialViewportHeight
+          : initialViewportHeight;
 
-      setMeasuredMetrics({ scrollTop, viewportHeight })
-    }
+      setMeasuredMetrics({ scrollTop, viewportHeight });
+    };
     const scheduleRead = () => {
-      if (frame !== 0) return
+      if (frame !== 0) return;
       frame = window.requestAnimationFrame(() => {
-        frame = 0
-        read()
-      })
-    }
+        frame = 0;
+        read();
+      });
+    };
     const observer =
       typeof ResizeObserver !== "undefined"
         ? new ResizeObserver(scheduleRead)
-        : null
+        : null;
 
-    read()
-    observer?.observe(viewport)
-    viewport.addEventListener("scroll", scheduleRead, { passive: true })
+    read();
+    observer?.observe(viewport);
+    viewport.addEventListener("scroll", scheduleRead, { passive: true });
 
     return () => {
-      viewport.removeEventListener("scroll", scheduleRead)
-      observer?.disconnect()
-      if (frame !== 0) window.cancelAnimationFrame(frame)
-    }
-  }, [initialViewportHeight, setMeasuredMetrics, viewportRef])
+      viewport.removeEventListener("scroll", scheduleRead);
+      observer?.disconnect();
+      if (frame !== 0) window.cancelAnimationFrame(frame);
+    };
+  }, [initialViewportHeight, setMeasuredMetrics, viewportRef]);
 
   return React.useMemo(
     () => ({
@@ -101,6 +103,6 @@ export function usePdfThumbnailWindow({
       }),
       totalHeight: layout.totalHeight,
     }),
-    [layout, metrics, overscan]
-  )
+    [layout, metrics, overscan],
+  );
 }

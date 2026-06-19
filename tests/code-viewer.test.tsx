@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { readFileSync } from "node:fs"
-import * as React from "react"
+import { readFileSync } from "node:fs";
+import * as React from "react";
 import {
   act,
   cleanup,
@@ -9,32 +9,32 @@ import {
   render,
   screen,
   waitFor,
-} from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+} from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ViewerFormatError } from "@/registry/new-york-v4/lib/viewer-errors"
-import type { ResourceError } from "@/registry/new-york-v4/lib/viewer-errors"
+import { ViewerFormatError } from "@/registry/new-york-v4/lib/viewer-errors";
+import type { ResourceError } from "@/registry/new-york-v4/lib/viewer-errors";
 import {
   blobSource,
   clearViewerResourceRegistryForTests,
   createViewerResource,
-} from "@/registry/new-york-v4/lib/viewer-resource"
+} from "@/registry/new-york-v4/lib/viewer-resource";
 import {
   CodeViewer,
   type CodeViewerHandle,
-} from "@/registry/new-york-v4/ui/code-viewer"
-import { scrollTopForLineRangeMetrics } from "@/registry/new-york-v4/ui/code-viewer-layout"
-import { createCodeProjector } from "@/registry/new-york-v4/ui/code-viewer-projector"
+} from "@/registry/new-york-v4/ui/code-viewer";
+import { scrollTopForLineRangeMetrics } from "@/registry/new-york-v4/ui/code-viewer-layout";
+import { createCodeProjector } from "@/registry/new-york-v4/ui/code-viewer-projector";
 import {
   CODE_VIEWER_BASE_LINE_PX,
   CODE_VIEWER_INITIAL_VIEWPORT_HEIGHT,
   CODE_VIEWER_OVERSCAN,
-} from "@/registry/new-york-v4/ui/code-viewer-scale"
-import { createCodeSyntax } from "@/registry/new-york-v4/ui/code-viewer-syntax"
+} from "@/registry/new-york-v4/ui/code-viewer-scale";
+import { createCodeSyntax } from "@/registry/new-york-v4/ui/code-viewer-syntax";
 import {
   isLineInRange,
   normalizeTextLineRange,
-} from "@/registry/new-york-v4/ui/text-viewer-ranges"
+} from "@/registry/new-york-v4/ui/text-viewer-ranges";
 import {
   assertTextWithinBounds,
   clearTextViewerResourceCacheForTests,
@@ -48,10 +48,10 @@ import {
   TextViewerInvalidBoundsError,
   TextViewerTooLargeError,
   toTextFormatError,
-} from "@/registry/new-york-v4/ui/text-viewer-resource"
+} from "@/registry/new-york-v4/ui/text-viewer-resource";
 
 function response(body: string, init: ResponseInit = {}) {
-  return new Response(body, init)
+  return new Response(body, init);
 }
 
 function streamResponse(
@@ -61,38 +61,38 @@ function streamResponse(
     closeAfterChunks = true,
     init,
   }: {
-    onCancel?: () => void
-    closeAfterChunks?: boolean
-    init?: ResponseInit
-  } = {}
+    onCancel?: () => void;
+    closeAfterChunks?: boolean;
+    init?: ResponseInit;
+  } = {},
 ) {
-  const encoder = new TextEncoder()
-  let nextChunkIndex = 0
+  const encoder = new TextEncoder();
+  let nextChunkIndex = 0;
   return new Response(
     new ReadableStream<Uint8Array>({
       pull(controller) {
-        const chunk = chunks[nextChunkIndex]
-        nextChunkIndex += 1
+        const chunk = chunks[nextChunkIndex];
+        nextChunkIndex += 1;
 
         if (chunk != null) {
-          controller.enqueue(encoder.encode(chunk))
+          controller.enqueue(encoder.encode(chunk));
         }
         if (closeAfterChunks && nextChunkIndex >= chunks.length) {
-          controller.close()
+          controller.close();
         }
       },
       cancel: onCancel,
     }),
-    init
-  )
+    init,
+  );
 }
 
 function textSource(text: string, fileName?: string) {
-  return { kind: "text" as const, text, fileName }
+  return { kind: "text" as const, text, fileName };
 }
 
 function urlSource(url: string, fileName?: string) {
-  return { kind: "url" as const, url, fileName }
+  return { kind: "url" as const, url, fileName };
 }
 
 // The code-viewer projector paints highlighted rows with an opaque inline
@@ -100,18 +100,18 @@ function urlSource(url: string, fileName?: string) {
 // not a Tailwind class, so the highlight signal is the row's inline style.
 function rowHighlightBackground(
   container: HTMLElement,
-  lineNumber: number
+  lineNumber: number,
 ): string {
   const row = container.querySelector<HTMLElement>(
-    `[data-line-number="${lineNumber}"]`
-  )
-  return row?.style.backgroundColor ?? ""
+    `[data-line-number="${lineNumber}"]`,
+  );
+  return row?.style.backgroundColor ?? "";
 }
 
 function anyRowHighlighted(container: HTMLElement): boolean {
   return Array.from(
-    container.querySelectorAll<HTMLElement>("[data-line-number]")
-  ).some((row) => row.style.backgroundColor !== "")
+    container.querySelectorAll<HTMLElement>("[data-line-number]"),
+  ).some((row) => row.style.backgroundColor !== "");
 }
 
 function downloadableUrlSource({
@@ -119,18 +119,18 @@ function downloadableUrlSource({
   fileName,
   downloadUrl,
 }: {
-  url: string
-  fileName: string
-  downloadUrl: string
+  url: string;
+  fileName: string;
+  downloadUrl: string;
 }) {
-  return { kind: "url" as const, url, fileName, downloadUrl }
+  return { kind: "url" as const, url, fileName, downloadUrl };
 }
 
 function textBlobSource(text: string, fileName: string, identityKey: string) {
   return blobSource(new Blob([text], { type: "text/plain" }), {
     fileName,
     identityKey,
-  })
+  });
 }
 
 function sharedTextBlobSource({
@@ -139,20 +139,20 @@ function sharedTextBlobSource({
   identityKey,
   downloadUrl,
 }: {
-  blob: Blob
-  fileName: string
-  identityKey: string
-  downloadUrl?: string
+  blob: Blob;
+  fileName: string;
+  identityKey: string;
+  downloadUrl?: string;
 }) {
   return blobSource(blob, {
     fileName,
     identityKey,
     downloadUrl,
-  })
+  });
 }
 
 function textResource(url: string, fileName?: string) {
-  return createViewerResource(urlSource(url, fileName))
+  return createViewerResource(urlSource(url, fileName));
 }
 
 function rect(top: number, bottom: number): DOMRect {
@@ -166,63 +166,63 @@ function rect(top: number, bottom: number): DOMRect {
     x: 0,
     y: top,
     toJSON: () => ({}),
-  } as DOMRect
+  } as DOMRect;
 }
 
 function readRegistryFile(path: string) {
-  return readFileSync(path, "utf8")
+  return readFileSync(path, "utf8");
 }
 
 function mockObjectUrls(url = "blob:download") {
-  const createObjectURL = vi.fn((_blob: Blob) => url)
-  const revokeObjectURL = vi.fn()
+  const createObjectURL = vi.fn((_blob: Blob) => url);
+  const revokeObjectURL = vi.fn();
   Object.defineProperty(URL, "createObjectURL", {
     configurable: true,
     value: createObjectURL,
-  })
+  });
   Object.defineProperty(URL, "revokeObjectURL", {
     configurable: true,
     value: revokeObjectURL,
-  })
-  return { createObjectURL, revokeObjectURL }
+  });
+  return { createObjectURL, revokeObjectURL };
 }
 
 function captureAnchorClicks() {
-  const clicks: Array<{ href: string | null; download: string }> = []
+  const clicks: Array<{ href: string | null; download: string }> = [];
   const click = vi
     .spyOn(HTMLAnchorElement.prototype, "click")
     .mockImplementation(function (this: HTMLAnchorElement) {
       clicks.push({
         href: this.getAttribute("href"),
         download: this.download,
-      })
-    })
-  return { click, clicks }
+      });
+    });
+  return { click, clicks };
 }
 
 beforeEach(() => {
-  mockObjectUrls()
-})
+  mockObjectUrls();
+});
 
 afterEach(() => {
-  cleanup()
-  clearTextViewerResourceCacheForTests()
-  clearViewerResourceRegistryForTests()
-  vi.restoreAllMocks()
-  vi.unstubAllGlobals()
-})
+  cleanup();
+  clearTextViewerResourceCacheForTests();
+  clearViewerResourceRegistryForTests();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 async function readResourceAfterSuspense(
-  args: Parameters<typeof readTextResource>[0]
+  args: Parameters<typeof readTextResource>[0],
 ) {
   try {
-    return readTextResource(args)
+    return readTextResource(args);
   } catch (thrown) {
     if (thrown instanceof Promise) {
-      await thrown.catch(() => undefined)
-      return readTextResource(args)
+      await thrown.catch(() => undefined);
+      return readTextResource(args);
     }
-    throw thrown
+    throw thrown;
   }
 }
 
@@ -231,51 +231,53 @@ describe("text-viewer-ranges", () => {
     expect(normalizeTextLineRange({ start: 12, end: 3 }, 10)).toMatchObject({
       start: 3,
       end: 10,
-    })
+    });
     expect(normalizeTextLineRange({ start: -4, end: 2 }, 10)).toMatchObject({
       start: 1,
       end: 2,
-    })
-  })
+    });
+  });
 
   it("rejects non-finite and fully out-of-document ranges", () => {
-    expect(normalizeTextLineRange({ start: Number.NaN, end: 2 }, 10)).toBeNull()
-    expect(normalizeTextLineRange({ start: 20, end: 30 }, 10)).toBeNull()
-    expect(normalizeTextLineRange({ start: 1, end: 2 }, 0)).toBeNull()
-  })
+    expect(
+      normalizeTextLineRange({ start: Number.NaN, end: 2 }, 10),
+    ).toBeNull();
+    expect(normalizeTextLineRange({ start: 20, end: 30 }, 10)).toBeNull();
+    expect(normalizeTextLineRange({ start: 1, end: 2 }, 0)).toBeNull();
+  });
 
   it("checks line membership only for normalized ranges", () => {
-    const range = normalizeTextLineRange({ start: 2, end: 3 }, 5)
+    const range = normalizeTextLineRange({ start: 2, end: 3 }, 5);
 
-    expect(isLineInRange(1, range)).toBe(false)
-    expect(isLineInRange(2, range)).toBe(true)
-    expect(isLineInRange(3, range)).toBe(true)
-    expect(isLineInRange(4, range)).toBe(false)
-    expect(isLineInRange(2, null)).toBe(false)
-  })
+    expect(isLineInRange(1, range)).toBe(false);
+    expect(isLineInRange(2, range)).toBe(true);
+    expect(isLineInRange(3, range)).toBe(true);
+    expect(isLineInRange(4, range)).toBe(false);
+    expect(isLineInRange(2, null)).toBe(false);
+  });
 
   it("normalizes fractional ranges by truncating before clamping", () => {
     expect(normalizeTextLineRange({ start: 3.9, end: 2.1 }, 5)).toMatchObject({
       start: 2,
       end: 3,
-    })
+    });
     expect(normalizeTextLineRange({ start: 0.9, end: 1.9 }, 5)).toMatchObject({
       start: 1,
       end: 1,
-    })
-  })
+    });
+  });
 
   it("floors fractional document lengths before clamping", () => {
     expect(normalizeTextLineRange({ start: 1, end: 10 }, 2.9)).toMatchObject({
       start: 1,
       end: 2,
-    })
-  })
+    });
+  });
 
   it("rejects non-finite document lengths", () => {
-    expect(normalizeTextLineRange({ start: 1, end: 2 }, Infinity)).toBeNull()
-  })
-})
+    expect(normalizeTextLineRange({ start: 1, end: 2 }, Infinity)).toBeNull();
+  });
+});
 
 describe("code-viewer-layout", () => {
   it("centers a fitting range", () => {
@@ -285,9 +287,9 @@ describe("code-viewer-layout", () => {
         endLine: 12,
         lineHeight: 20,
         viewportHeight: 100,
-      })
-    ).toBe(170)
-  })
+      }),
+    ).toBe(170);
+  });
 
   it("top-aligns an oversized range and clamps to zero", () => {
     expect(
@@ -296,110 +298,112 @@ describe("code-viewer-layout", () => {
         endLine: 8,
         lineHeight: 30,
         viewportHeight: 100,
-      })
-    ).toBe(0)
-  })
-})
+      }),
+    ).toBe(0);
+  });
+});
 
 describe("code-viewer-syntax", () => {
   it("detects JSON from the file name and returns stable cached tokens", () => {
     const resource = createViewerResource(
-      textSource('{"name":"retab"}', "app.json")
-    )
-    const syntax = createCodeSyntax(resource)
-    const firstTokens = syntax.getLineTokens('{"name":"retab"}')
-    const secondTokens = syntax.getLineTokens('{"name":"retab"}')
+      textSource('{"name":"retab"}', "app.json"),
+    );
+    const syntax = createCodeSyntax(resource);
+    const firstTokens = syntax.getLineTokens('{"name":"retab"}');
+    const secondTokens = syntax.getLineTokens('{"name":"retab"}');
 
-    expect(syntax.identity).toBe("json")
-    expect(firstTokens).toBe(secondTokens)
+    expect(syntax.identity).toBe("json");
+    expect(firstTokens).toBe(secondTokens);
     expect(firstTokens).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ kind: "property", text: '"name"' }),
         expect.objectContaining({ kind: "string", text: '"retab"' }),
-      ])
-    )
-  })
+      ]),
+    );
+  });
 
   it("creates a fresh token cache for each syntax instance", () => {
     const resource = createViewerResource(
-      textSource('{"name":"retab"}', "app.json")
-    )
-    const firstSyntax = createCodeSyntax(resource)
-    const secondSyntax = createCodeSyntax(resource)
+      textSource('{"name":"retab"}', "app.json"),
+    );
+    const firstSyntax = createCodeSyntax(resource);
+    const secondSyntax = createCodeSyntax(resource);
 
     expect(firstSyntax.getLineTokens('{"name":"retab"}')).not.toBe(
-      secondSyntax.getLineTokens('{"name":"retab"}')
-    )
-  })
+      secondSyntax.getLineTokens('{"name":"retab"}'),
+    );
+  });
 
   it("skips plain, empty, and over-limit lines", () => {
-    const plainResource = createViewerResource(textSource("plain", "notes.txt"))
-    const jsonResource = createViewerResource(textSource("{}", "app.json"))
-    const plainSyntax = createCodeSyntax(plainResource)
-    const jsonSyntax = createCodeSyntax(jsonResource)
+    const plainResource = createViewerResource(
+      textSource("plain", "notes.txt"),
+    );
+    const jsonResource = createViewerResource(textSource("{}", "app.json"));
+    const plainSyntax = createCodeSyntax(plainResource);
+    const jsonSyntax = createCodeSyntax(jsonResource);
 
-    expect(plainSyntax.identity).toBe("plain")
-    expect(plainSyntax.getLineTokens("plain")).toBeNull()
-    expect(jsonSyntax.getLineTokens("")).toBeNull()
-    expect(jsonSyntax.getLineTokens("x".repeat(2001))).toBeNull()
-  })
+    expect(plainSyntax.identity).toBe("plain");
+    expect(plainSyntax.getLineTokens("plain")).toBeNull();
+    expect(jsonSyntax.getLineTokens("")).toBeNull();
+    expect(jsonSyntax.getLineTokens("x".repeat(2001))).toBeNull();
+  });
 
   it("batches deferred tokenization before notifying syntax changes", () => {
-    vi.useFakeTimers()
-    vi.stubGlobal("requestIdleCallback", undefined)
-    vi.stubGlobal("cancelIdleCallback", undefined)
+    vi.useFakeTimers();
+    vi.stubGlobal("requestIdleCallback", undefined);
+    vi.stubGlobal("cancelIdleCallback", undefined);
 
-    const resource = createViewerResource(textSource("{}", "app.json"))
-    const onTokensChanged = vi.fn()
+    const resource = createViewerResource(textSource("{}", "app.json"));
+    const onTokensChanged = vi.fn();
     const syntax = createCodeSyntax(resource, {
       deferTokens: true,
       onTokensChanged,
-    })
+    });
     const lines = Array.from(
       { length: 25 },
-      (_, index) => `{"row":${index + 1}}`
-    )
+      (_, index) => `{"row":${index + 1}}`,
+    );
 
     try {
       for (const line of lines) {
-        expect(syntax.getLineTokens(line)).toBeNull()
+        expect(syntax.getLineTokens(line)).toBeNull();
       }
 
-      vi.advanceTimersToNextTimer()
+      vi.advanceTimersToNextTimer();
 
-      expect(onTokensChanged).not.toHaveBeenCalled()
+      expect(onTokensChanged).not.toHaveBeenCalled();
       expect(syntax.getLineTokens(lines[0]!)).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ kind: "property", text: '"row"' }),
-        ])
-      )
+        ]),
+      );
 
-      vi.runAllTimers()
+      vi.runAllTimers();
 
-      expect(onTokensChanged).toHaveBeenCalledTimes(1)
+      expect(onTokensChanged).toHaveBeenCalledTimes(1);
       expect(syntax.getLineTokens(lines[24]!)).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ kind: "property", text: '"row"' }),
-        ])
-      )
+        ]),
+      );
     } finally {
-      syntax.destroy?.()
-      vi.useRealTimers()
+      syntax.destroy?.();
+      vi.useRealTimers();
     }
-  })
-})
+  });
+});
 
 describe("code-viewer-projector", () => {
   function createProjectionElements() {
-    const rowHost = document.createElement("pre")
-    const viewport = document.createElement("div")
+    const rowHost = document.createElement("pre");
+    const viewport = document.createElement("div");
 
     Object.defineProperty(viewport, "clientHeight", {
       configurable: true,
       value: 20,
-    })
+    });
 
-    return { rowHost, viewport }
+    return { rowHost, viewport };
   }
 
   function project({
@@ -416,22 +420,22 @@ describe("code-viewer-projector", () => {
     textLines,
     viewport,
   }: {
-    contentIdentity?: string
-    gutterWidth?: string
-    highlightRange?: ReturnType<typeof normalizeTextLineRange>
-    layoutIdentity?: string
-    lineHeight?: number
-    rowHost: HTMLPreElement
+    contentIdentity?: string;
+    gutterWidth?: string;
+    highlightRange?: ReturnType<typeof normalizeTextLineRange>;
+    layoutIdentity?: string;
+    lineHeight?: number;
+    rowHost: HTMLPreElement;
     syntax?: {
-      identity: string
+      identity: string;
       getLineTokens(
-        line: string
-      ): readonly { kind: string; text: string }[] | null
-    }
-    textLines: string[]
-    viewport: HTMLDivElement
+        line: string,
+      ): readonly { kind: string; text: string }[] | null;
+    };
+    textLines: string[];
+    viewport: HTMLDivElement;
   }) {
-    const projector = createCodeProjector()
+    const projector = createCodeProjector();
     projector.project({
       contentIdentity,
       gutterWidth,
@@ -443,8 +447,8 @@ describe("code-viewer-projector", () => {
       syntaxIdentity: syntax.identity,
       textLines,
       viewport,
-    })
-    return projector
+    });
+    return projector;
   }
 
   function projectAgain({
@@ -462,21 +466,21 @@ describe("code-viewer-projector", () => {
     textLines,
     viewport,
   }: {
-    contentIdentity?: string
-    gutterWidth?: string
-    highlightRange?: ReturnType<typeof normalizeTextLineRange>
-    layoutIdentity?: string
-    lineHeight?: number
-    projector: ReturnType<typeof createCodeProjector>
-    rowHost: HTMLPreElement
+    contentIdentity?: string;
+    gutterWidth?: string;
+    highlightRange?: ReturnType<typeof normalizeTextLineRange>;
+    layoutIdentity?: string;
+    lineHeight?: number;
+    projector: ReturnType<typeof createCodeProjector>;
+    rowHost: HTMLPreElement;
     syntax?: {
-      identity: string
+      identity: string;
       getLineTokens(
-        line: string
-      ): readonly { kind: string; text: string }[] | null
-    }
-    textLines: string[]
-    viewport: HTMLDivElement
+        line: string,
+      ): readonly { kind: string; text: string }[] | null;
+    };
+    textLines: string[];
+    viewport: HTMLDivElement;
   }) {
     projector.project({
       contentIdentity,
@@ -489,47 +493,47 @@ describe("code-viewer-projector", () => {
       syntaxIdentity: syntax.identity,
       textLines,
       viewport,
-    })
+    });
   }
 
   it("creates only the visible virtual rows and does not duplicate repeated projection", () => {
-    const { rowHost, viewport } = createProjectionElements()
+    const { rowHost, viewport } = createProjectionElements();
     const textLines = Array.from(
       { length: 100 },
-      (_, index) => `line ${index + 1}`
-    )
-    const projector = project({ rowHost, textLines, viewport })
-    const firstRows = Array.from(rowHost.children)
+      (_, index) => `line ${index + 1}`,
+    );
+    const projector = project({ rowHost, textLines, viewport });
+    const firstRows = Array.from(rowHost.children);
 
-    projectAgain({ projector, rowHost, textLines, viewport })
+    projectAgain({ projector, rowHost, textLines, viewport });
 
-    expect(firstRows).toHaveLength(49)
-    expect(Array.from(rowHost.children)).toEqual(firstRows)
-  })
+    expect(firstRows).toHaveLength(49);
+    expect(Array.from(rowHost.children)).toEqual(firstRows);
+  });
 
   it("removes rows that leave the visible range", () => {
-    const { rowHost, viewport } = createProjectionElements()
+    const { rowHost, viewport } = createProjectionElements();
     const textLines = Array.from(
       { length: 100 },
-      (_, index) => `line ${index + 1}`
-    )
-    const projector = project({ rowHost, textLines, viewport })
+      (_, index) => `line ${index + 1}`,
+    );
+    const projector = project({ rowHost, textLines, viewport });
 
-    viewport.scrollTop = 80 * 20
-    projectAgain({ projector, rowHost, textLines, viewport })
+    viewport.scrollTop = 80 * 20;
+    projectAgain({ projector, rowHost, textLines, viewport });
 
-    expect(rowHost.querySelector('[data-line-number="1"]')).toBeNull()
-    expect(rowHost.querySelector('[data-line-number="80"]')).toBeTruthy()
-  })
+    expect(rowHost.querySelector('[data-line-number="1"]')).toBeNull();
+    expect(rowHost.querySelector('[data-line-number="80"]')).toBeTruthy();
+  });
 
   it("resets rows when content identity changes", () => {
-    const { rowHost, viewport } = createProjectionElements()
+    const { rowHost, viewport } = createProjectionElements();
     const projector = project({
       contentIdentity: "long",
       rowHost,
       textLines: Array.from({ length: 80 }, (_, index) => `old ${index + 1}`),
       viewport,
-    })
+    });
 
     projectAgain({
       contentIdentity: "short",
@@ -537,15 +541,15 @@ describe("code-viewer-projector", () => {
       rowHost,
       textLines: ["new"],
       viewport,
-    })
+    });
 
-    expect(rowHost.querySelectorAll("[data-line-number]")).toHaveLength(1)
-    expect(rowHost.textContent).toContain("new")
-    expect(rowHost.textContent).not.toContain("old")
-  })
+    expect(rowHost.querySelectorAll("[data-line-number]")).toHaveLength(1);
+    expect(rowHost.textContent).toContain("new");
+    expect(rowHost.textContent).not.toContain("old");
+  });
 
   it("patches token spans through the syntax boundary", () => {
-    const { rowHost, viewport } = createProjectionElements()
+    const { rowHost, viewport } = createProjectionElements();
 
     project({
       rowHost,
@@ -555,105 +559,105 @@ describe("code-viewer-projector", () => {
       },
       textLines: ['"value"'],
       viewport,
-    })
+    });
 
     expect(rowHost.querySelector(".cv-token-string")?.textContent).toBe(
-      '"value"'
-    )
-  })
+      '"value"',
+    );
+  });
 
   it("marks line number gutters as presentational and non-copy content", () => {
-    const { rowHost, viewport } = createProjectionElements()
+    const { rowHost, viewport } = createProjectionElements();
 
     project({
       rowHost,
       textLines: ["copy me"],
       viewport,
-    })
+    });
 
-    const gutter = rowHost.querySelector("[data-code-gutter]")
-    expect(gutter?.getAttribute("aria-hidden")).toBe("true")
-    expect(gutter?.className).toContain("select-none")
-  })
+    const gutter = rowHost.querySelector("[data-code-gutter]");
+    expect(gutter?.getAttribute("aria-hidden")).toBe("true");
+    expect(gutter?.className).toContain("select-none");
+  });
 
   it("does no stable-projection DOM rewrites", () => {
-    const { rowHost, viewport } = createProjectionElements()
-    const textLines = ["stable"]
-    const projector = project({ rowHost, textLines, viewport })
-    const replaceChildren = vi.spyOn(Element.prototype, "replaceChildren")
-    const insertBefore = vi.spyOn(Node.prototype, "insertBefore")
-    const textContent = vi.spyOn(Node.prototype, "textContent", "set")
+    const { rowHost, viewport } = createProjectionElements();
+    const textLines = ["stable"];
+    const projector = project({ rowHost, textLines, viewport });
+    const replaceChildren = vi.spyOn(Element.prototype, "replaceChildren");
+    const insertBefore = vi.spyOn(Node.prototype, "insertBefore");
+    const textContent = vi.spyOn(Node.prototype, "textContent", "set");
 
-    projectAgain({ projector, rowHost, textLines, viewport })
+    projectAgain({ projector, rowHost, textLines, viewport });
 
-    expect(replaceChildren).not.toHaveBeenCalled()
-    expect(insertBefore).not.toHaveBeenCalled()
-    expect(textContent).not.toHaveBeenCalled()
-  })
+    expect(replaceChildren).not.toHaveBeenCalled();
+    expect(insertBefore).not.toHaveBeenCalled();
+    expect(textContent).not.toHaveBeenCalled();
+  });
 
   it("does no row work when scrolling inside the same virtual window", () => {
-    const { rowHost, viewport } = createProjectionElements()
+    const { rowHost, viewport } = createProjectionElements();
     const textLines = Array.from(
       { length: 100 },
-      (_, index) => `line ${index + 1}`
-    )
-    const projector = project({ rowHost, textLines, viewport })
-    const insertBefore = vi.spyOn(Node.prototype, "insertBefore")
-    const removeChild = vi.spyOn(Node.prototype, "removeChild")
-    const textContent = vi.spyOn(Node.prototype, "textContent", "set")
+      (_, index) => `line ${index + 1}`,
+    );
+    const projector = project({ rowHost, textLines, viewport });
+    const insertBefore = vi.spyOn(Node.prototype, "insertBefore");
+    const removeChild = vi.spyOn(Node.prototype, "removeChild");
+    const textContent = vi.spyOn(Node.prototype, "textContent", "set");
 
-    viewport.scrollTop = 1
-    projectAgain({ projector, rowHost, textLines, viewport })
+    viewport.scrollTop = 1;
+    projectAgain({ projector, rowHost, textLines, viewport });
 
-    expect(insertBefore).not.toHaveBeenCalled()
-    expect(removeChild).not.toHaveBeenCalled()
-    expect(textContent).not.toHaveBeenCalled()
-  })
+    expect(insertBefore).not.toHaveBeenCalled();
+    expect(removeChild).not.toHaveBeenCalled();
+    expect(textContent).not.toHaveBeenCalled();
+  });
 
   it("still patches rows when scrolling to a different virtual window", () => {
-    const { rowHost, viewport } = createProjectionElements()
+    const { rowHost, viewport } = createProjectionElements();
     const textLines = Array.from(
       { length: 100 },
-      (_, index) => `line ${index + 1}`
-    )
-    const projector = project({ rowHost, textLines, viewport })
-    const insertBefore = vi.spyOn(Node.prototype, "insertBefore")
+      (_, index) => `line ${index + 1}`,
+    );
+    const projector = project({ rowHost, textLines, viewport });
+    const insertBefore = vi.spyOn(Node.prototype, "insertBefore");
 
-    viewport.scrollTop = 80 * 20
-    projectAgain({ projector, rowHost, textLines, viewport })
+    viewport.scrollTop = 80 * 20;
+    projectAgain({ projector, rowHost, textLines, viewport });
 
-    expect(insertBefore).toHaveBeenCalled()
-    expect(rowHost.querySelector('[data-line-number="80"]')).toBeTruthy()
-  })
+    expect(insertBefore).toHaveBeenCalled();
+    expect(rowHost.querySelector('[data-line-number="80"]')).toBeTruthy();
+  });
 
   it("reuses detached row nodes when jumping to a new virtual window", () => {
-    const { rowHost, viewport } = createProjectionElements()
+    const { rowHost, viewport } = createProjectionElements();
     const textLines = Array.from(
       { length: 100 },
-      (_, index) => `line ${index + 1}`
-    )
-    const projector = project({ rowHost, textLines, viewport })
-    const createElement = vi.spyOn(document, "createElement")
+      (_, index) => `line ${index + 1}`,
+    );
+    const projector = project({ rowHost, textLines, viewport });
+    const createElement = vi.spyOn(document, "createElement");
 
-    viewport.scrollTop = 80 * 20
-    projectAgain({ projector, rowHost, textLines, viewport })
+    viewport.scrollTop = 80 * 20;
+    projectAgain({ projector, rowHost, textLines, viewport });
 
-    expect(createElement).not.toHaveBeenCalled()
-    expect(rowHost.querySelector('[data-line-number="1"]')).toBeNull()
-    expect(rowHost.querySelector('[data-line-number="80"]')).toBeTruthy()
-    expect(rowHost.textContent).toContain("line 80")
-  })
+    expect(createElement).not.toHaveBeenCalled();
+    expect(rowHost.querySelector('[data-line-number="1"]')).toBeNull();
+    expect(rowHost.querySelector('[data-line-number="80"]')).toBeTruthy();
+    expect(rowHost.textContent).toContain("line 80");
+  });
 
   it("does not rebuild token content for highlight or layout changes", () => {
-    const { rowHost, viewport } = createProjectionElements()
-    const textLines = ['"value"']
+    const { rowHost, viewport } = createProjectionElements();
+    const textLines = ['"value"'];
     const syntax = {
       identity: "json",
       getLineTokens: () => [{ kind: "string", text: '"value"' }],
-    }
-    const projector = project({ rowHost, syntax, textLines, viewport })
-    const token = rowHost.querySelector(".cv-token-string")
-    const replaceChildren = vi.spyOn(Element.prototype, "replaceChildren")
+    };
+    const projector = project({ rowHost, syntax, textLines, viewport });
+    const token = rowHost.querySelector(".cv-token-string");
+    const replaceChildren = vi.spyOn(Element.prototype, "replaceChildren");
 
     projectAgain({
       highlightRange: normalizeTextLineRange({ start: 1, end: 1 }, 1),
@@ -662,7 +666,7 @@ describe("code-viewer-projector", () => {
       syntax,
       textLines,
       viewport,
-    })
+    });
     projectAgain({
       gutterWidth: "5ch",
       layoutIdentity: "24\u00005ch",
@@ -672,15 +676,15 @@ describe("code-viewer-projector", () => {
       syntax,
       textLines,
       viewport,
-    })
+    });
 
-    expect(rowHost.querySelector(".cv-token-string")).toBe(token)
-    expect(replaceChildren).not.toHaveBeenCalled()
-  })
+    expect(rowHost.querySelector(".cv-token-string")).toBe(token);
+    expect(replaceChildren).not.toHaveBeenCalled();
+  });
 
   it("rebuilds token content when syntax identity changes", () => {
-    const { rowHost, viewport } = createProjectionElements()
-    const textLines = ['"value"']
+    const { rowHost, viewport } = createProjectionElements();
+    const textLines = ['"value"'];
     const projector = project({
       rowHost,
       syntax: {
@@ -689,8 +693,8 @@ describe("code-viewer-projector", () => {
       },
       textLines,
       viewport,
-    })
-    const replaceChildren = vi.spyOn(Element.prototype, "replaceChildren")
+    });
+    const replaceChildren = vi.spyOn(Element.prototype, "replaceChildren");
 
     projectAgain({
       projector,
@@ -701,23 +705,23 @@ describe("code-viewer-projector", () => {
       },
       textLines,
       viewport,
-    })
+    });
 
-    expect(replaceChildren).toHaveBeenCalledTimes(1)
+    expect(replaceChildren).toHaveBeenCalledTimes(1);
     expect(rowHost.querySelector(".cv-token-string")?.textContent).toBe(
-      '"value"'
-    )
-  })
+      '"value"',
+    );
+  });
 
   it("clears rows once when content identity changes", () => {
-    const { rowHost, viewport } = createProjectionElements()
+    const { rowHost, viewport } = createProjectionElements();
     const projector = project({
       contentIdentity: "first",
       rowHost,
       textLines: ["first"],
       viewport,
-    })
-    const replaceChildren = vi.spyOn(Element.prototype, "replaceChildren")
+    });
+    const replaceChildren = vi.spyOn(Element.prototype, "replaceChildren");
 
     projectAgain({
       contentIdentity: "second",
@@ -725,12 +729,12 @@ describe("code-viewer-projector", () => {
       rowHost,
       textLines: ["second"],
       viewport,
-    })
+    });
 
-    expect(replaceChildren).toHaveBeenCalledTimes(1)
-    expect(rowHost.textContent).toContain("second")
-  })
-})
+    expect(replaceChildren).toHaveBeenCalledTimes(1);
+    expect(rowHost.textContent).toContain("second");
+  });
+});
 
 describe("text-viewer-resource", () => {
   it("splits every supported line ending and preserves blank terminal lines", () => {
@@ -740,29 +744,29 @@ describe("text-viewer-resource", () => {
       "three",
       "four",
       "",
-    ])
-  })
+    ]);
+  });
 
   it("caches prepared inline text documents by content identity and bounds", () => {
-    const content = createViewerResource(textSource("one\ntwo")).content
-    const bounds = resolvedTextViewerBounds()
-    const first = readTextDocument({ content, retryVersion: 0, bounds })
-    const second = readTextDocument({ content, retryVersion: 0, bounds })
+    const content = createViewerResource(textSource("one\ntwo")).content;
+    const bounds = resolvedTextViewerBounds();
+    const first = readTextDocument({ content, retryVersion: 0, bounds });
+    const second = readTextDocument({ content, retryVersion: 0, bounds });
 
-    expect(second).toBe(first)
-    expect(first.text).toBe("one\ntwo")
-    expect(first.lines).toEqual(["one", "two"])
-    expect(first.lineCount).toBe(2)
-  })
+    expect(second).toBe(first);
+    expect(first.text).toBe("one\ntwo");
+    expect(first.lines).toEqual(["one", "two"]);
+    expect(first.lineCount).toBe(2);
+  });
 
   it("keeps large inline text resource keys bounded", () => {
-    const text = "x".repeat(50_000)
-    const resource = createViewerResource(textSource(text, "large.txt"))
+    const text = "x".repeat(50_000);
+    const resource = createViewerResource(textSource(text, "large.txt"));
 
-    expect(resource.content.key.length).toBeLessThan(128)
-    expect(resource.content.key).not.toContain(text)
-    expect(resource.keys.resource).not.toContain(text)
-  })
+    expect(resource.content.key.length).toBeLessThan(128);
+    expect(resource.content.key).not.toContain(text);
+    expect(resource.keys.resource).not.toContain(text);
+  });
 
   it("models text bounds failures as format errors", () => {
     expect(() =>
@@ -770,21 +774,21 @@ describe("text-viewer-resource", () => {
         content: createViewerResource(textSource("too large")).content,
         retryVersion: 0,
         bounds: { maxBytes: 1, maxLines: 10 },
-      })
-    ).toThrow(TextViewerTooLargeError)
+      }),
+    ).toThrow(TextViewerTooLargeError);
     expect(() =>
       readTextResource({
         content: createViewerResource(textSource("too large")).content,
         retryVersion: 0,
         bounds: { maxBytes: 1, maxLines: 10 },
-      })
-    ).toThrow(ViewerFormatError)
-  })
+      }),
+    ).toThrow(ViewerFormatError);
+  });
 
   it("preserves structurally equivalent resource too-large errors at the load boundary", async () => {
     const resource = createViewerResource(
-      urlSource("/structural-too-large.txt")
-    )
+      urlSource("/structural-too-large.txt"),
+    );
     const content = {
       ...resource.content,
       readText: vi.fn(() =>
@@ -794,114 +798,114 @@ describe("text-viewer-resource", () => {
           kind: "too_large",
           tooLargeReason: "lines",
           message: "Resource exceeds lines limit.",
-        })
+        }),
       ),
-    }
+    };
 
     await expect(
       readResourceAfterSuspense({
         content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds(),
-      })
+      }),
     ).rejects.toMatchObject({
       name: "ResourceError",
       domain: "resource",
       kind: "too_large",
       tooLargeReason: "lines",
-    })
-  })
+    });
+  });
 
   it("maps text boundary failures through the canonical text mapper", () => {
     const loadError = toTextFormatError(new Error("decode failed"), {
       kind: "load_failed",
       message: "Failed to load text.",
-    })
+    });
 
-    expect(loadError).toBeInstanceOf(ViewerFormatError)
+    expect(loadError).toBeInstanceOf(ViewerFormatError);
     expect(loadError).toMatchObject({
       format: "text",
       kind: "load_failed",
-    })
-    expect(loadError.cause).toBeInstanceOf(Error)
+    });
+    expect(loadError.cause).toBeInstanceOf(Error);
 
-    const existing = new TextViewerInvalidBoundsError("maxBytes")
+    const existing = new TextViewerInvalidBoundsError("maxBytes");
     expect(
       toTextFormatError(existing, {
         kind: "load_failed",
         message: "ignored",
-      })
-    ).toBe(existing)
-  })
+      }),
+    ).toBe(existing);
+  });
 
   it("loads and caches successful text by source and retry version", async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(response("cached text")))
-    vi.stubGlobal("fetch", fetchMock)
-    const bounds = resolvedTextViewerBounds()
+    const fetchMock = vi.fn(() => Promise.resolve(response("cached text")));
+    vi.stubGlobal("fetch", fetchMock);
+    const bounds = resolvedTextViewerBounds();
 
     await expect(
       readResourceAfterSuspense({
         content: textResource("/cached.txt").content,
         retryVersion: 0,
         bounds,
-      })
-    ).resolves.toBe("cached text")
+      }),
+    ).resolves.toBe("cached text");
     expect(
       readTextResource({
         content: textResource("/cached.txt").content,
         retryVersion: 0,
         bounds,
-      })
-    ).toBe("cached text")
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-  })
+      }),
+    ).toBe("cached text");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 
   it("keeps URL cache entries separate when bounds differ", async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(response("same url")))
-    vi.stubGlobal("fetch", fetchMock)
-    const content = textResource("/same-bounds.txt").content
+    const fetchMock = vi.fn(() => Promise.resolve(response("same url")));
+    vi.stubGlobal("fetch", fetchMock);
+    const content = textResource("/same-bounds.txt").content;
 
     await expect(
       readResourceAfterSuspense({
         content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxBytes: 8 }),
-      })
-    ).resolves.toBe("same url")
+      }),
+    ).resolves.toBe("same url");
     await expect(
       readResourceAfterSuspense({
         content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxBytes: 9 }),
-      })
-    ).resolves.toBe("same url")
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-  })
+      }),
+    ).resolves.toBe("same url");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 
   it("uses retry versions for same-source retry", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(response("", { status: 500 }))
-      .mockResolvedValueOnce(response("retried"))
-    vi.stubGlobal("fetch", fetchMock)
-    const bounds = resolvedTextViewerBounds()
+      .mockResolvedValueOnce(response("retried"));
+    vi.stubGlobal("fetch", fetchMock);
+    const bounds = resolvedTextViewerBounds();
 
     await expect(
       readResourceAfterSuspense({
         content: textResource("/retry.txt").content,
         retryVersion: 0,
         bounds,
-      })
-    ).rejects.toThrow("Failed to load")
+      }),
+    ).rejects.toThrow("Failed to load");
     await expect(
       readResourceAfterSuspense({
         content: textResource("/retry.txt").content,
         retryVersion: 1,
         bounds,
-      })
-    ).resolves.toBe("retried")
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-  })
+      }),
+    ).resolves.toBe("retried");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 
   it("rejects by content length and line limit", async () => {
     vi.stubGlobal(
@@ -911,28 +915,28 @@ describe("text-viewer-resource", () => {
         .mockResolvedValueOnce(
           response("", {
             headers: { "content-length": "5" },
-          })
+          }),
         )
-        .mockResolvedValueOnce(response("one\ntwo\nthree"))
-    )
-    const byteBounds = resolvedTextViewerBounds({ maxBytes: 4 })
+        .mockResolvedValueOnce(response("one\ntwo\nthree")),
+    );
+    const byteBounds = resolvedTextViewerBounds({ maxBytes: 4 });
     await expect(
       readResourceAfterSuspense({
         content: textResource("/too-large-bytes.txt").content,
         retryVersion: 0,
         bounds: byteBounds,
-      })
-    ).rejects.toThrow("bytes limit")
+      }),
+    ).rejects.toThrow("bytes limit");
 
-    const lineBounds = resolvedTextViewerBounds({ maxLines: 2 })
+    const lineBounds = resolvedTextViewerBounds({ maxLines: 2 });
     await expect(
       readResourceAfterSuspense({
         content: textResource("/too-large-lines.txt").content,
         retryVersion: 0,
         bounds: lineBounds,
-      })
-    ).rejects.toThrow("lines limit")
-  })
+      }),
+    ).rejects.toThrow("lines limit");
+  });
 
   it("allows content-length exactly at the byte limit", async () => {
     vi.stubGlobal(
@@ -941,19 +945,19 @@ describe("text-viewer-resource", () => {
         Promise.resolve(
           response("éx", {
             headers: { "content-length": "3" },
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    );
 
     await expect(
       readResourceAfterSuspense({
         content: textResource("/exact-bytes.txt").content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxBytes: 3 }),
-      })
-    ).resolves.toBe("éx")
-  })
+      }),
+    ).resolves.toBe("éx");
+  });
 
   it("still enforces byte limits when content-length is malformed", async () => {
     vi.stubGlobal(
@@ -962,63 +966,63 @@ describe("text-viewer-resource", () => {
         Promise.resolve(
           response("abcd", {
             headers: { "content-length": "not-a-number" },
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    );
 
     await expect(
       readResourceAfterSuspense({
         content: textResource("/malformed-content-length.txt").content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxBytes: 3 }),
-      })
-    ).rejects.toThrow("bytes limit")
-  })
+      }),
+    ).rejects.toThrow("bytes limit");
+  });
 
   it("rejects invalid bounds", () => {
-    expect(() => resolvedTextViewerBounds({ maxBytes: 0 })).toThrow("maxBytes")
+    expect(() => resolvedTextViewerBounds({ maxBytes: 0 })).toThrow("maxBytes");
     expect(() => resolvedTextViewerBounds({ maxLines: Infinity })).toThrow(
-      "maxLines"
-    )
+      "maxLines",
+    );
     expect(() => resolvedTextViewerBounds({ maxBytes: 1.5 })).toThrow(
-      TextViewerInvalidBoundsError
-    )
+      TextViewerInvalidBoundsError,
+    );
     expect(() =>
-      resolvedTextViewerBounds({ maxLines: Number.MAX_SAFE_INTEGER + 1 })
-    ).toThrow(TextViewerInvalidBoundsError)
-  })
+      resolvedTextViewerBounds({ maxLines: Number.MAX_SAFE_INTEGER + 1 }),
+    ).toThrow(TextViewerInvalidBoundsError);
+  });
 
   it("accepts text exactly at byte and line limits", () => {
     expect(() =>
-      assertTextWithinBounds("é\nx", { maxBytes: 4, maxLines: 2 })
-    ).not.toThrow()
-  })
+      assertTextWithinBounds("é\nx", { maxBytes: 4, maxLines: 2 }),
+    ).not.toThrow();
+  });
 
   it("counts a trailing newline as an additional blank line for bounds", () => {
     expect(() =>
-      assertTextWithinBounds("one\n", { maxBytes: 10, maxLines: 1 })
-    ).toThrow("lines limit")
-  })
+      assertTextWithinBounds("one\n", { maxBytes: 10, maxLines: 1 }),
+    ).toThrow("lines limit");
+  });
 
   it("counts bytes rather than UTF-16 code units for inline text", () => {
-    const resource = createViewerResource(textSource("é"))
+    const resource = createViewerResource(textSource("é"));
 
     expect(() =>
       readTextResource({
         content: resource.content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxBytes: 1 }),
-      })
-    ).toThrow("bytes limit")
+      }),
+    ).toThrow("bytes limit");
     expect(
       readTextResource({
         content: resource.content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxBytes: 2 }),
-      })
-    ).toBe("é")
-  })
+      }),
+    ).toBe("é");
+  });
 
   it("counts CR-only newlines toward the line limit", () => {
     expect(() =>
@@ -1026,27 +1030,27 @@ describe("text-viewer-resource", () => {
         content: createViewerResource(textSource("one\rtwo")).content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxLines: 1 }),
-      })
-    ).toThrow("lines limit")
-  })
+      }),
+    ).toThrow("lines limit");
+  });
 
   it("counts CR-only newlines loaded from URLs toward the line limit", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => Promise.resolve(response("one\rtwo")))
-    )
+      vi.fn(() => Promise.resolve(response("one\rtwo"))),
+    );
 
     await expect(
       readResourceAfterSuspense({
         content: textResource("/classic-newlines.txt").content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxLines: 1 }),
-      })
-    ).rejects.toThrow("lines limit")
-  })
+      }),
+    ).rejects.toThrow("lines limit");
+  });
 
   it("cancels streamed URL reads when the byte limit is crossed mid-stream", async () => {
-    const cancel = vi.fn()
+    const cancel = vi.fn();
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>
@@ -1054,25 +1058,25 @@ describe("text-viewer-resource", () => {
           streamResponse(["ab", "cd"], {
             closeAfterChunks: false,
             onCancel: cancel,
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    );
 
     await expect(
       readResourceAfterSuspense({
         content: textResource("/stream-too-large.txt").content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxBytes: 3 }),
-      })
-    ).rejects.toThrow("bytes limit")
-    expect(cancel).toHaveBeenCalledTimes(1)
-  })
+      }),
+    ).rejects.toThrow("bytes limit");
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
 
   it("preserves byte-limit errors when stream cancellation fails", async () => {
     const cancel = vi.fn(() => {
-      throw new Error("cancel transport failed")
-    })
+      throw new Error("cancel transport failed");
+    });
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>
@@ -1080,23 +1084,23 @@ describe("text-viewer-resource", () => {
           streamResponse(["ab", "cd"], {
             closeAfterChunks: false,
             onCancel: cancel,
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    );
 
     await expect(
       readResourceAfterSuspense({
         content: textResource("/stream-cancel-fails-bytes.txt").content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxBytes: 3 }),
-      })
-    ).rejects.toThrow("bytes limit")
-    expect(cancel).toHaveBeenCalledTimes(1)
-  })
+      }),
+    ).rejects.toThrow("bytes limit");
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
 
   it("cancels streamed URL reads when the line limit is crossed mid-stream", async () => {
-    const cancel = vi.fn()
+    const cancel = vi.fn();
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>
@@ -1104,25 +1108,25 @@ describe("text-viewer-resource", () => {
           streamResponse(["one\n", "two"], {
             closeAfterChunks: false,
             onCancel: cancel,
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    );
 
     await expect(
       readResourceAfterSuspense({
         content: textResource("/stream-too-many-lines.txt").content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxLines: 1 }),
-      })
-    ).rejects.toThrow("lines limit")
-    expect(cancel).toHaveBeenCalledTimes(1)
-  })
+      }),
+    ).rejects.toThrow("lines limit");
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
 
   it("preserves line-limit errors when stream cancellation fails", async () => {
     const cancel = vi.fn(() => {
-      throw new Error("cancel transport failed")
-    })
+      throw new Error("cancel transport failed");
+    });
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>
@@ -1130,38 +1134,38 @@ describe("text-viewer-resource", () => {
           streamResponse(["one\n", "two"], {
             closeAfterChunks: false,
             onCancel: cancel,
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    );
 
     await expect(
       readResourceAfterSuspense({
         content: textResource("/stream-cancel-fails-lines.txt").content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxLines: 1 }),
-      })
-    ).rejects.toThrow("lines limit")
-    expect(cancel).toHaveBeenCalledTimes(1)
-  })
+      }),
+    ).rejects.toThrow("lines limit");
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
 
   it("does not double-count CRLF line breaks split across streamed chunks", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => Promise.resolve(streamResponse(["one\r", "\ntwo"])))
-    )
+      vi.fn(() => Promise.resolve(streamResponse(["one\r", "\ntwo"]))),
+    );
 
     await expect(
       readResourceAfterSuspense({
         content: textResource("/split-crlf.txt").content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxLines: 2 }),
-      })
-    ).resolves.toBe("one\r\ntwo")
-  })
+      }),
+    ).resolves.toBe("one\r\ntwo");
+  });
 
   it("decodes UTF-8 characters split across streamed response chunks", async () => {
-    const encoded = new TextEncoder().encode("a🙂b")
+    const encoded = new TextEncoder().encode("a🙂b");
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>
@@ -1169,24 +1173,24 @@ describe("text-viewer-resource", () => {
           new Response(
             new ReadableStream<Uint8Array>({
               start(controller) {
-                controller.enqueue(encoded.slice(0, 3))
-                controller.enqueue(encoded.slice(3))
-                controller.close()
+                controller.enqueue(encoded.slice(0, 3));
+                controller.enqueue(encoded.slice(3));
+                controller.close();
               },
-            })
-          )
-        )
-      )
-    )
+            }),
+          ),
+        ),
+      ),
+    );
 
     await expect(
       readResourceAfterSuspense({
         content: textResource("/split-utf8.txt").content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds(),
-      })
-    ).resolves.toBe("a🙂b")
-  })
+      }),
+    ).resolves.toBe("a🙂b");
+  });
 
   it("normalizes abort errors thrown while reading a streamed URL response", async () => {
     vi.stubGlobal(
@@ -1196,24 +1200,24 @@ describe("text-viewer-resource", () => {
           new Response(
             new ReadableStream<Uint8Array>({
               pull() {
-                throw new DOMException("Aborted", "AbortError")
+                throw new DOMException("Aborted", "AbortError");
               },
-            })
-          )
-        )
-      )
-    )
+            }),
+          ),
+        ),
+      ),
+    );
 
     await expect(
       readResourceAfterSuspense({
         content: textResource("/stream-aborted.txt").content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds(),
-      })
+      }),
     ).rejects.toMatchObject({
       kind: "aborted",
-    } satisfies Partial<ResourceError>)
-  })
+    } satisfies Partial<ResourceError>);
+  });
 
   it("rejects partial-content URL responses for full text reads", async () => {
     vi.stubGlobal(
@@ -1223,22 +1227,22 @@ describe("text-viewer-resource", () => {
           response("part", {
             status: 206,
             headers: { "content-range": "bytes 0-3/100" },
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    );
 
     await expect(
       readResourceAfterSuspense({
         content: textResource("/partial.txt").content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds(),
-      })
+      }),
     ).rejects.toMatchObject({
       kind: "partial_content",
       status: 206,
-    } satisfies Partial<ResourceError>)
-  })
+    } satisfies Partial<ResourceError>);
+  });
 
   it("accepts complete partial-content URL responses for full text reads", async () => {
     vi.stubGlobal(
@@ -1248,19 +1252,19 @@ describe("text-viewer-resource", () => {
           response("full", {
             status: 206,
             headers: { "content-range": "bytes 0-3/4" },
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    );
 
     await expect(
       readResourceAfterSuspense({
         content: textResource("/complete-partial.txt").content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds(),
-      })
-    ).resolves.toBe("full")
-  })
+      }),
+    ).resolves.toBe("full");
+  });
 
   it("rejects partial-content URL responses for full byte reads", async () => {
     vi.stubGlobal(
@@ -1270,18 +1274,18 @@ describe("text-viewer-resource", () => {
           response("part", {
             status: 206,
             headers: { "content-range": "bytes 0-3/100" },
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    );
 
     await expect(
-      textResource("/partial-bytes.txt").content.readBytes()
+      textResource("/partial-bytes.txt").content.readBytes(),
     ).rejects.toMatchObject({
       kind: "partial_content",
       status: 206,
-    } satisfies Partial<ResourceError>)
-  })
+    } satisfies Partial<ResourceError>);
+  });
 
   it("rejects partial-content URL responses for full stream reads", async () => {
     vi.stubGlobal(
@@ -1291,99 +1295,101 @@ describe("text-viewer-resource", () => {
           response("part", {
             status: 206,
             headers: { "content-range": "bytes 0-3/100" },
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    );
 
     await expect(
-      textResource("/partial-stream.txt").content.readStream()
+      textResource("/partial-stream.txt").content.readStream(),
     ).rejects.toMatchObject({
       kind: "partial_content",
       status: 206,
-    } satisfies Partial<ResourceError>)
-  })
+    } satisfies Partial<ResourceError>);
+  });
 
   it("does not refetch a rejected URL resource until retry version changes", async () => {
     const fetchMock = vi.fn(() =>
-      Promise.resolve(response("", { status: 500 }))
-    )
-    vi.stubGlobal("fetch", fetchMock)
-    const content = textResource("/cached-error.txt").content
-    const bounds = resolvedTextViewerBounds()
+      Promise.resolve(response("", { status: 500 })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const content = textResource("/cached-error.txt").content;
+    const bounds = resolvedTextViewerBounds();
 
     await expect(
-      readResourceAfterSuspense({ content, retryVersion: 0, bounds })
-    ).rejects.toThrow("Failed to load")
+      readResourceAfterSuspense({ content, retryVersion: 0, bounds }),
+    ).rejects.toThrow("Failed to load");
     await expect(
-      readResourceAfterSuspense({ content, retryVersion: 0, bounds })
-    ).rejects.toThrow("Failed to load")
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-  })
+      readResourceAfterSuspense({ content, retryVersion: 0, bounds }),
+    ).rejects.toThrow("Failed to load");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 
   it("caps the resource cache", async () => {
-    const fetchMock = vi.fn((src: string) => Promise.resolve(response(src)))
-    vi.stubGlobal("fetch", fetchMock)
-    const bounds = resolvedTextViewerBounds()
+    const fetchMock = vi.fn((src: string) => Promise.resolve(response(src)));
+    vi.stubGlobal("fetch", fetchMock);
+    const bounds = resolvedTextViewerBounds();
 
     for (let index = 0; index < MAX_TEXT_RESOURCE_CACHE_ENTRIES + 2; index++) {
-      const src = `/cached-${index}.txt`
+      const src = `/cached-${index}.txt`;
       await expect(
         readResourceAfterSuspense({
           content: textResource(src).content,
           retryVersion: 0,
           bounds,
-        })
-      ).resolves.toBe(src)
+        }),
+      ).resolves.toBe(src);
     }
 
-    const firstSrc = "/cached-0.txt"
+    const firstSrc = "/cached-0.txt";
     await expect(
       readResourceAfterSuspense({
         content: textResource(firstSrc).content,
         retryVersion: 0,
         bounds,
-      })
-    ).resolves.toBe(firstSrc)
-    expect(fetchMock).toHaveBeenCalledTimes(MAX_TEXT_RESOURCE_CACHE_ENTRIES + 3)
-  })
+      }),
+    ).resolves.toBe(firstSrc);
+    expect(fetchMock).toHaveBeenCalledTimes(
+      MAX_TEXT_RESOURCE_CACHE_ENTRIES + 3,
+    );
+  });
 
   it("loads blob text through the same resource cache", async () => {
-    const bounds = resolvedTextViewerBounds()
+    const bounds = resolvedTextViewerBounds();
 
     await expect(
       readResourceAfterSuspense({
         content: createViewerResource(
-          textBlobSource("blob text", "blob.txt", "blob:one")
+          textBlobSource("blob text", "blob.txt", "blob:one"),
         ).content,
         retryVersion: 0,
         bounds,
-      })
-    ).resolves.toBe("blob text")
-  })
+      }),
+    ).resolves.toBe("blob text");
+  });
 
   it("keys blob text by identity instead of size and MIME only", async () => {
-    const bounds = resolvedTextViewerBounds()
+    const bounds = resolvedTextViewerBounds();
 
     await expect(
       readResourceAfterSuspense({
         content: createViewerResource(
-          textBlobSource("same-size-a", "same.txt", "blob:a")
+          textBlobSource("same-size-a", "same.txt", "blob:a"),
         ).content,
         retryVersion: 0,
         bounds,
-      })
-    ).resolves.toBe("same-size-a")
+      }),
+    ).resolves.toBe("same-size-a");
     await expect(
       readResourceAfterSuspense({
         content: createViewerResource(
-          textBlobSource("same-size-b", "same.txt", "blob:b")
+          textBlobSource("same-size-b", "same.txt", "blob:b"),
         ).content,
         retryVersion: 0,
         bounds,
-      })
-    ).resolves.toBe("same-size-b")
-  })
+      }),
+    ).resolves.toBe("same-size-b");
+  });
 
   it("normalizes abort errors thrown while reading a URL byte range body", async () => {
     vi.stubGlobal(
@@ -1395,19 +1401,19 @@ describe("text-viewer-resource", () => {
           headers: new Headers({ "content-range": "bytes 0-1/10" }),
           arrayBuffer: () =>
             Promise.reject(new DOMException("Aborted", "AbortError")),
-        } as Response)
-      )
-    )
+        } as Response),
+      ),
+    );
 
     await expect(
       textResource("/range-body-aborted.txt").content.readRange({
         start: 0,
         end: 1,
-      })
+      }),
     ).rejects.toMatchObject({
       kind: "aborted",
-    } satisfies Partial<ResourceError>)
-  })
+    } satisfies Partial<ResourceError>);
+  });
 
   it("normalizes abort errors thrown while reading a URL blob body", async () => {
     vi.stubGlobal(
@@ -1417,16 +1423,16 @@ describe("text-viewer-resource", () => {
           ok: true,
           status: 200,
           blob: () => Promise.reject(new DOMException("Aborted", "AbortError")),
-        } as Response)
-      )
-    )
+        } as Response),
+      ),
+    );
 
     await expect(
-      textResource("/blob-body-aborted.txt").content.readBlob()
+      textResource("/blob-body-aborted.txt").content.readBlob(),
     ).rejects.toMatchObject({
       kind: "aborted",
-    } satisfies Partial<ResourceError>)
-  })
+    } satisfies Partial<ResourceError>);
+  });
 
   it("marks URL byte ranges complete when a 206 response reaches EOF", async () => {
     const fetchMock = vi.fn(() =>
@@ -1434,24 +1440,24 @@ describe("text-viewer-resource", () => {
         response("cde", {
           status: 206,
           headers: { "content-range": "bytes 2-4/5" },
-        })
-      )
-    )
-    vi.stubGlobal("fetch", fetchMock)
+        }),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
 
     const result = await textResource("/range.txt").content.readRange({
       start: 2,
       end: 4,
-    })
+    });
 
     expect(fetchMock).toHaveBeenCalledWith("/range.txt", {
       headers: { Range: "bytes=2-4" },
       signal: undefined,
-    })
-    expect(new TextDecoder().decode(result.buffer)).toBe("cde")
-    expect(result.contentRange).toEqual({ start: 2, end: 4, total: 5 })
-    expect(result.isComplete).toBe(true)
-  })
+    });
+    expect(new TextDecoder().decode(result.buffer)).toBe("cde");
+    expect(result.contentRange).toEqual({ start: 2, end: 4, total: 5 });
+    expect(result.isComplete).toBe(true);
+  });
 
   it("keeps non-final URL byte ranges incomplete when the server returns the full requested span", async () => {
     vi.stubGlobal(
@@ -1461,18 +1467,18 @@ describe("text-viewer-resource", () => {
           response("abc", {
             status: 206,
             headers: { "content-range": "bytes 0-2/5" },
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    );
 
     await expect(
-      textResource("/range.txt").content.readRange({ start: 0, end: 2 })
+      textResource("/range.txt").content.readRange({ start: 0, end: 2 }),
     ).resolves.toMatchObject({
       contentRange: { start: 0, end: 2, total: 5 },
       isComplete: false,
-    })
-  })
+    });
+  });
 
   it("keeps short URL byte ranges incomplete when the total size is unknown", async () => {
     vi.stubGlobal(
@@ -1482,21 +1488,21 @@ describe("text-viewer-resource", () => {
           response("ab", {
             status: 206,
             headers: { "content-range": "bytes 0-1/*" },
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    );
 
     await expect(
       textResource("/range-unknown-total.txt").content.readRange({
         start: 0,
         end: 9,
-      })
+      }),
     ).resolves.toMatchObject({
       contentRange: { start: 0, end: 1, total: null },
       isComplete: false,
-    })
-  })
+    });
+  });
 
   it("rejects URL byte ranges when Content-Range starts before the requested range", async () => {
     vi.stubGlobal(
@@ -1506,20 +1512,20 @@ describe("text-viewer-resource", () => {
           response("abc", {
             status: 206,
             headers: { "content-range": "bytes 0-2/5" },
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    );
 
     await expect(
       textResource("/range-mismatch.txt").content.readRange({
         start: 2,
         end: 4,
-      })
+      }),
     ).rejects.toMatchObject({
       kind: "invalid_range",
-    } satisfies Partial<ResourceError>)
-  })
+    } satisfies Partial<ResourceError>);
+  });
 
   it("rejects URL byte ranges when Content-Range length disagrees with the body", async () => {
     vi.stubGlobal(
@@ -1529,36 +1535,36 @@ describe("text-viewer-resource", () => {
           response("ab", {
             status: 206,
             headers: { "content-range": "bytes 0-2/5" },
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    );
 
     await expect(
       textResource("/range-length-mismatch.txt").content.readRange({
         start: 0,
         end: 2,
-      })
+      }),
     ).rejects.toMatchObject({
       kind: "invalid_range",
-    } satisfies Partial<ResourceError>)
-  })
+    } satisfies Partial<ResourceError>);
+  });
 
   it("rejects partial URL byte ranges without Content-Range metadata", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => Promise.resolve(response("abc", { status: 206 })))
-    )
+      vi.fn(() => Promise.resolve(response("abc", { status: 206 }))),
+    );
 
     await expect(
       textResource("/range-missing-content-range.txt").content.readRange({
         start: 0,
         end: 2,
-      })
+      }),
     ).rejects.toMatchObject({
       kind: "invalid_range",
-    } satisfies Partial<ResourceError>)
-  })
+    } satisfies Partial<ResourceError>);
+  });
 
   it("rejects partial URL byte ranges with malformed Content-Range metadata", async () => {
     vi.stubGlobal(
@@ -1568,20 +1574,20 @@ describe("text-viewer-resource", () => {
           response("abc", {
             status: 206,
             headers: { "content-range": "bytes abc" },
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    );
 
     await expect(
       textResource("/range-malformed-content-range.txt").content.readRange({
         start: 0,
         end: 2,
-      })
+      }),
     ).rejects.toMatchObject({
       kind: "invalid_range",
-    } satisfies Partial<ResourceError>)
-  })
+    } satisfies Partial<ResourceError>);
+  });
 
   it("rejects partial URL byte ranges with trailing junk in Content-Range metadata", async () => {
     vi.stubGlobal(
@@ -1591,20 +1597,20 @@ describe("text-viewer-resource", () => {
           response("abc", {
             status: 206,
             headers: { "content-range": "bytes 0-2/5 trailing" },
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    );
 
     await expect(
       textResource("/range-junk-content-range.txt").content.readRange({
         start: 0,
         end: 2,
-      })
+      }),
     ).rejects.toMatchObject({
       kind: "invalid_range",
-    } satisfies Partial<ResourceError>)
-  })
+    } satisfies Partial<ResourceError>);
+  });
 
   it("rejects partial URL byte ranges with unsafe Content-Range numbers", async () => {
     vi.stubGlobal(
@@ -1614,386 +1620,386 @@ describe("text-viewer-resource", () => {
           response("ab", {
             status: 206,
             headers: { "content-range": "bytes 0-1/9007199254740993" },
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    );
 
     await expect(
       textResource("/range-unsafe-content-range.txt").content.readRange({
         start: 0,
         end: 1,
-      })
+      }),
     ).rejects.toMatchObject({
       kind: "invalid_range",
-    } satisfies Partial<ResourceError>)
-  })
+    } satisfies Partial<ResourceError>);
+  });
 
   it("treats full URL range responses as complete even without Content-Range", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => Promise.resolve(response("whole", { status: 200 })))
-    )
+      vi.fn(() => Promise.resolve(response("whole", { status: 200 }))),
+    );
 
     await expect(
-      textResource("/range.txt").content.readRange({ start: 0, end: 99 })
-    ).resolves.toMatchObject({ contentRange: undefined, isComplete: true })
-  })
+      textResource("/range.txt").content.readRange({ start: 0, end: 99 }),
+    ).resolves.toMatchObject({ contentRange: undefined, isComplete: true });
+  });
 
   it("rejects full URL range responses for non-zero requested starts", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => Promise.resolve(response("abcdef", { status: 200 })))
-    )
+      vi.fn(() => Promise.resolve(response("abcdef", { status: 200 }))),
+    );
 
     await expect(
       textResource("/ignored-nonzero-range.txt").content.readRange({
         start: 2,
         end: 4,
-      })
+      }),
     ).rejects.toMatchObject({
       kind: "invalid_range",
-    } satisfies Partial<ResourceError>)
-  })
+    } satisfies Partial<ResourceError>);
+  });
 
   it("rejects full URL range responses longer than a zero-start requested range", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => Promise.resolve(response("abcdef", { status: 200 })))
-    )
+      vi.fn(() => Promise.resolve(response("abcdef", { status: 200 }))),
+    );
 
     await expect(
       textResource("/ignored-short-range.txt").content.readRange({
         start: 0,
         end: 2,
-      })
+      }),
     ).rejects.toMatchObject({
       kind: "invalid_range",
-    } satisfies Partial<ResourceError>)
-  })
+    } satisfies Partial<ResourceError>);
+  });
 
   it("rejects successful URL byte range responses with unsupported statuses", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => Promise.resolve(new Response(null, { status: 204 })))
-    )
+      vi.fn(() => Promise.resolve(new Response(null, { status: 204 }))),
+    );
 
     await expect(
       textResource("/range-empty-success.txt").content.readRange({
         start: 0,
         end: 2,
-      })
+      }),
     ).rejects.toMatchObject({
       kind: "invalid_range",
-    } satisfies Partial<ResourceError>)
-  })
+    } satisfies Partial<ResourceError>);
+  });
 
   it("rejects invalid URL byte ranges before sending a request", async () => {
-    const fetchMock = vi.fn()
-    vi.stubGlobal("fetch", fetchMock)
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
 
     await expect(
-      textResource("/range.txt").content.readRange({ start: -1, end: 2 })
+      textResource("/range.txt").content.readRange({ start: -1, end: 2 }),
     ).rejects.toMatchObject({
       kind: "invalid_range",
-    } satisfies Partial<ResourceError>)
+    } satisfies Partial<ResourceError>);
     await expect(
-      textResource("/range.txt").content.readRange({ start: 4, end: 3 })
+      textResource("/range.txt").content.readRange({ start: 4, end: 3 }),
     ).rejects.toMatchObject({
       kind: "invalid_range",
-    } satisfies Partial<ResourceError>)
-    expect(fetchMock).not.toHaveBeenCalled()
-  })
+    } satisfies Partial<ResourceError>);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 
   it("rejects invalid local byte ranges", async () => {
     await expect(
       createViewerResource(textSource("abc")).content.readRange({
         start: 2.5,
         end: 3,
-      })
+      }),
     ).rejects.toMatchObject({
       kind: "invalid_range",
-    } satisfies Partial<ResourceError>)
+    } satisfies Partial<ResourceError>);
 
     await expect(
       createViewerResource(
-        textBlobSource("abc", "abc.txt", "blob:abc")
-      ).content.readRange({ start: 3, end: 2 })
+        textBlobSource("abc", "abc.txt", "blob:abc"),
+      ).content.readRange({ start: 3, end: 2 }),
     ).rejects.toMatchObject({
       kind: "invalid_range",
-    } satisfies Partial<ResourceError>)
-  })
+    } satisfies Partial<ResourceError>);
+  });
 
   it("rejects local byte ranges that start past the available payload", async () => {
     await expect(
       createViewerResource(textSource("abc")).content.readRange({
         start: 3,
         end: 4,
-      })
+      }),
     ).rejects.toMatchObject({
       kind: "invalid_range",
-    } satisfies Partial<ResourceError>)
+    } satisfies Partial<ResourceError>);
 
     await expect(
       createViewerResource(
-        textBlobSource("abc", "abc.txt", "blob:range")
-      ).content.readRange({ start: 4, end: 5 })
+        textBlobSource("abc", "abc.txt", "blob:range"),
+      ).content.readRange({ start: 4, end: 5 }),
     ).rejects.toMatchObject({
       kind: "invalid_range",
-    } satisfies Partial<ResourceError>)
-  })
+    } satisfies Partial<ResourceError>);
+  });
 
   it("returns a complete truncated range when a local byte range overreaches", async () => {
     const result = await createViewerResource(
-      textSource("abc")
+      textSource("abc"),
     ).content.readRange({
       start: 1,
       end: 99,
-    })
+    });
 
-    expect(new TextDecoder().decode(result.buffer)).toBe("bc")
-    expect(result.contentRange).toEqual({ start: 1, end: 2, total: 3 })
-    expect(result.isComplete).toBe(true)
-  })
+    expect(new TextDecoder().decode(result.buffer)).toBe("bc");
+    expect(result.contentRange).toEqual({ start: 1, end: 2, total: 3 });
+    expect(result.isComplete).toBe(true);
+  });
 
   it("returns a coherent empty range for empty local payloads", async () => {
     await expect(
       createViewerResource(textSource("")).content.readRange({
         start: 0,
         end: 0,
-      })
+      }),
     ).resolves.toMatchObject({
       contentRange: { start: 0, end: -1, total: 0 },
       isComplete: true,
-    })
+    });
 
     await expect(
       createViewerResource(
-        textBlobSource("", "empty.txt", "blob:empty")
-      ).content.readRange({ start: 0, end: 0 })
+        textBlobSource("", "empty.txt", "blob:empty"),
+      ).content.readRange({ start: 0, end: 0 }),
     ).resolves.toMatchObject({
       contentRange: { start: 0, end: -1, total: 0 },
       isComplete: true,
-    })
-  })
+    });
+  });
 
   it("reads text byte ranges over encoded UTF-8 bytes", async () => {
     const result = await createViewerResource(
-      textSource("éx")
+      textSource("éx"),
     ).content.readRange({
       start: 0,
       end: 1,
-    })
+    });
 
-    expect(new TextDecoder().decode(result.buffer)).toBe("é")
-    expect(result.contentRange).toEqual({ start: 0, end: 1, total: 3 })
-    expect(result.isComplete).toBe(false)
-  })
+    expect(new TextDecoder().decode(result.buffer)).toBe("é");
+    expect(result.contentRange).toEqual({ start: 0, end: 1, total: 3 });
+    expect(result.isComplete).toBe(false);
+  });
 
   it("reports blob range completion against the full blob size", async () => {
     const resource = createViewerResource(
-      textBlobSource("abcdef", "letters.txt", "blob:letters")
-    )
+      textBlobSource("abcdef", "letters.txt", "blob:letters"),
+    );
 
     await expect(
-      resource.content.readRange({ start: 0, end: 2 })
+      resource.content.readRange({ start: 0, end: 2 }),
     ).resolves.toMatchObject({
       contentRange: { start: 0, end: 2, total: 6 },
       isComplete: false,
-    })
+    });
     await expect(
-      resource.content.readRange({ start: 3, end: 5 })
+      resource.content.readRange({ start: 3, end: 5 }),
     ).resolves.toMatchObject({
       contentRange: { start: 3, end: 5, total: 6 },
       isComplete: true,
-    })
-  })
+    });
+  });
 
   it("shares URL text payload cache across metadata-only resource changes", async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(response("same payload")))
-    vi.stubGlobal("fetch", fetchMock)
-    const bounds = resolvedTextViewerBounds()
+    const fetchMock = vi.fn(() => Promise.resolve(response("same payload")));
+    vi.stubGlobal("fetch", fetchMock);
+    const bounds = resolvedTextViewerBounds();
 
     await expect(
       readResourceAfterSuspense({
         content: textResource("/same.txt", "first.txt").content,
         retryVersion: 0,
         bounds,
-      })
-    ).resolves.toBe("same payload")
+      }),
+    ).resolves.toBe("same payload");
     await expect(
       readResourceAfterSuspense({
         content: textResource("/same.txt", "second.txt").content,
         retryVersion: 0,
         bounds,
-      })
-    ).resolves.toBe("same payload")
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(textResource("/same.txt", "second.txt").fileName).toBe("second.txt")
-  })
+      }),
+    ).resolves.toBe("same payload");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(textResource("/same.txt", "second.txt").fileName).toBe("second.txt");
+  });
 
   it("does not reuse cached blob text when a new Blob reuses the same identity", async () => {
-    const bounds = resolvedTextViewerBounds()
+    const bounds = resolvedTextViewerBounds();
 
     await expect(
       readResourceAfterSuspense({
         content: createViewerResource(
-          textBlobSource("first blob", "same.txt", "blob:reused")
+          textBlobSource("first blob", "same.txt", "blob:reused"),
         ).content,
         retryVersion: 0,
         bounds,
-      })
-    ).resolves.toBe("first blob")
+      }),
+    ).resolves.toBe("first blob");
     await expect(
       readResourceAfterSuspense({
         content: createViewerResource(
-          textBlobSource("second blob", "same.txt", "blob:reused")
+          textBlobSource("second blob", "same.txt", "blob:reused"),
         ).content,
         retryVersion: 0,
         bounds,
-      })
-    ).resolves.toBe("second blob")
-  })
-})
+      }),
+    ).resolves.toBe("second blob");
+  });
+});
 
 describe("CodeViewer", () => {
   it("renders inline value with line numbers", () => {
-    render(<CodeViewer source={textSource("alpha\nbeta")} />)
+    render(<CodeViewer source={textSource("alpha\nbeta")} />);
 
-    expect(screen.getByText("2 lines")).toBeTruthy()
-    expect(screen.getByText("alpha")).toBeTruthy()
-    expect(screen.getByText("beta")).toBeTruthy()
-  })
+    expect(screen.getByText("2 lines")).toBeTruthy();
+    expect(screen.getByText("alpha")).toBeTruthy();
+    expect(screen.getByText("beta")).toBeTruthy();
+  });
 
   it("highlights JSON tokens without changing line text", () => {
     const { container } = render(
       <CodeViewer
         source={textSource(
           '{"enabled":true,"rollout":25,"owner":"viewer"}',
-          "config.json"
+          "config.json",
         )}
-      />
-    )
+      />,
+    );
 
-    const line = container.querySelector('[data-line-number="1"]')
+    const line = container.querySelector('[data-line-number="1"]');
     expect(line?.textContent).toContain(
-      '{"enabled":true,"rollout":25,"owner":"viewer"}'
-    )
+      '{"enabled":true,"rollout":25,"owner":"viewer"}',
+    );
     expect(line?.querySelector(".cv-token-property")?.textContent).toBe(
-      '"enabled"'
-    )
-    expect(line?.querySelector(".cv-token-boolean")?.textContent).toBe("true")
-    expect(line?.querySelector(".cv-token-number")?.textContent).toBe("25")
+      '"enabled"',
+    );
+    expect(line?.querySelector(".cv-token-boolean")?.textContent).toBe("true");
+    expect(line?.querySelector(".cv-token-number")?.textContent).toBe("25");
     expect(line?.querySelector(".cv-token-string")?.textContent).toBe(
-      '"viewer"'
-    )
-  })
+      '"viewer"',
+    );
+  });
 
   it("defers syntax tokenization for large highlighted files", async () => {
     const text = Array.from(
       { length: 600 },
-      (_, index) => `{"row":${index + 1},"enabled":true}`
-    ).join("\n")
+      (_, index) => `{"row":${index + 1},"enabled":true}`,
+    ).join("\n");
     const { container } = render(
-      <CodeViewer source={textSource(text, "large.json")} controls={false} />
-    )
+      <CodeViewer source={textSource(text, "large.json")} controls={false} />,
+    );
 
-    expect(screen.getByText('{"row":1,"enabled":true}')).toBeTruthy()
-    expect(container.querySelector(".cv-token-property")).toBeNull()
+    expect(screen.getByText('{"row":1,"enabled":true}')).toBeTruthy();
+    expect(container.querySelector(".cv-token-property")).toBeNull();
 
     await waitFor(() => {
       expect(container.querySelector(".cv-token-property")?.textContent).toBe(
-        '"row"'
-      )
-    })
-  })
+        '"row"',
+      );
+    });
+  });
 
   it("installs syntax styles once for every code viewer instance", () => {
     render(
       <>
         <CodeViewer source={textSource('{"one":1}', "one.json")} />
         <CodeViewer source={textSource('{"two":2}', "two.json")} />
-      </>
-    )
+      </>,
+    );
 
     expect(
-      document.head.querySelectorAll("#retab-code-viewer-syntax-style")
-    ).toHaveLength(1)
-  })
+      document.head.querySelectorAll("#retab-code-viewer-syntax-style"),
+    ).toHaveLength(1);
+  });
 
   it("renders unmapped file types as plain fixed-line code without syntax tokens", () => {
     const { container } = render(
-      <CodeViewer source={textSource("const value = true", "notes.txt")} />
-    )
+      <CodeViewer source={textSource("const value = true", "notes.txt")} />,
+    );
 
-    expect(screen.getByText("const value = true")).toBeTruthy()
+    expect(screen.getByText("const value = true")).toBeTruthy();
     expect(
       container.querySelector(
-        ".cv-token-string,.cv-token-property,.cv-token-keyword,.cv-token-number,.cv-token-punctuation"
-      )
-    ).toBeNull()
-  })
+        ".cv-token-string,.cv-token-property,.cv-token-keyword,.cv-token-number,.cv-token-punctuation",
+      ),
+    ).toBeNull();
+  });
 
   it("keeps controls accessible by name", () => {
-    render(<CodeViewer source={textSource("alpha")} />)
+    render(<CodeViewer source={textSource("alpha")} />);
 
-    expect(screen.getByLabelText("Zoom out")).toBeTruthy()
-    expect(screen.getByLabelText("Zoom in")).toBeTruthy()
-    expect(screen.getByLabelText("Reset zoom")).toBeTruthy()
-    expect(screen.getByLabelText("Download")).toBeTruthy()
-  })
+    expect(screen.getByLabelText("Zoom out")).toBeTruthy();
+    expect(screen.getByLabelText("Zoom in")).toBeTruthy();
+    expect(screen.getByLabelText("Reset zoom")).toBeTruthy();
+    expect(screen.getByLabelText("Download")).toBeTruthy();
+  });
 
   it("renders empty text as a single blank line", () => {
-    const { container } = render(<CodeViewer source={textSource("")} />)
+    const { container } = render(<CodeViewer source={textSource("")} />);
 
-    expect(screen.getByText("1 line")).toBeTruthy()
-    expect(container.querySelector('[data-line-number="1"]')).toBeTruthy()
-    expect(container.querySelector('[data-line-number="2"]')).toBeNull()
-  })
+    expect(screen.getByText("1 line")).toBeTruthy();
+    expect(container.querySelector('[data-line-number="1"]')).toBeTruthy();
+    expect(container.querySelector('[data-line-number="2"]')).toBeNull();
+  });
 
   it("renders trailing newlines as blank final lines", () => {
-    const { container } = render(<CodeViewer source={textSource("alpha\n")} />)
+    const { container } = render(<CodeViewer source={textSource("alpha\n")} />);
 
-    expect(screen.getByText("2 lines")).toBeTruthy()
-    expect(container.querySelector('[data-line-number="1"]')).toBeTruthy()
-    expect(container.querySelector('[data-line-number="2"]')).toBeTruthy()
-  })
+    expect(screen.getByText("2 lines")).toBeTruthy();
+    expect(container.querySelector('[data-line-number="1"]')).toBeTruthy();
+    expect(container.querySelector('[data-line-number="2"]')).toBeTruthy();
+  });
 
   it("renders CRLF and CR newline variants without leaking carriage returns", () => {
     const { container } = render(
-      <CodeViewer source={textSource("alpha\r\nbeta\rgamma")} />
-    )
+      <CodeViewer source={textSource("alpha\r\nbeta\rgamma")} />,
+    );
 
-    expect(screen.getByText("3 lines")).toBeTruthy()
+    expect(screen.getByText("3 lines")).toBeTruthy();
     expect(
       container.querySelector('[data-line-number="1"] span:last-child')
-        ?.textContent
-    ).toBe("alpha")
+        ?.textContent,
+    ).toBe("alpha");
     expect(
       container.querySelector('[data-line-number="2"] span:last-child')
-        ?.textContent
-    ).toBe("beta")
+        ?.textContent,
+    ).toBe("beta");
     expect(
       container.querySelector('[data-line-number="3"] span:last-child')
-        ?.textContent
-    ).toBe("gamma")
-  })
+        ?.textContent,
+    ).toBe("gamma");
+  });
 
   it("updates rendered line count and rows when the inline source changes", () => {
     const { container, rerender } = render(
-      <CodeViewer source={textSource("one\ntwo")} />
-    )
+      <CodeViewer source={textSource("one\ntwo")} />,
+    );
 
-    expect(screen.getByText("2 lines")).toBeTruthy()
-    expect(container.querySelector('[data-line-number="2"]')).toBeTruthy()
+    expect(screen.getByText("2 lines")).toBeTruthy();
+    expect(container.querySelector('[data-line-number="2"]')).toBeTruthy();
 
-    rerender(<CodeViewer source={textSource("solo")} />)
+    rerender(<CodeViewer source={textSource("solo")} />);
 
-    expect(screen.getByText("1 line")).toBeTruthy()
-    expect(screen.getByText("solo")).toBeTruthy()
-    expect(screen.queryByText("two")).toBeNull()
-    expect(container.querySelector('[data-line-number="2"]')).toBeNull()
-  })
+    expect(screen.getByText("1 line")).toBeTruthy();
+    expect(screen.getByText("solo")).toBeTruthy();
+    expect(screen.queryByText("two")).toBeNull();
+    expect(container.querySelector('[data-line-number="2"]')).toBeNull();
+  });
 
   it("drops stale virtual rows when a large source shrinks", () => {
     const { container, rerender } = render(
@@ -2001,293 +2007,293 @@ describe("CodeViewer", () => {
         source={textSource(
           Array.from(
             { length: 10_000 },
-            (_, index) => `line ${index + 1}`
-          ).join("\n")
+            (_, index) => `line ${index + 1}`,
+          ).join("\n"),
         )}
         controls={false}
-      />
-    )
+      />,
+    );
 
     expect(
-      container.querySelectorAll("[data-line-number]").length
-    ).toBeGreaterThan(1)
+      container.querySelectorAll("[data-line-number]").length,
+    ).toBeGreaterThan(1);
 
-    rerender(<CodeViewer source={textSource("single")} controls={false} />)
+    rerender(<CodeViewer source={textSource("single")} controls={false} />);
 
-    expect(screen.getByText("single")).toBeTruthy()
-    expect(container.querySelectorAll("[data-line-number]")).toHaveLength(1)
-    expect(container.querySelector('[data-line-number="2"]')).toBeNull()
-  })
+    expect(screen.getByText("single")).toBeTruthy();
+    expect(container.querySelectorAll("[data-line-number]")).toHaveLength(1);
+    expect(container.querySelector('[data-line-number="2"]')).toBeNull();
+  });
 
   it("does not keep previous text visible while a new URL source is pending", () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => new Promise<Response>(() => {}))
-    )
-    const { rerender } = render(<CodeViewer source={textSource("old text")} />)
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    const { rerender } = render(<CodeViewer source={textSource("old text")} />);
 
-    expect(screen.getByText("old text")).toBeTruthy()
+    expect(screen.getByText("old text")).toBeTruthy();
 
-    rerender(<CodeViewer source={urlSource("/pending-new-source.txt")} />)
+    rerender(<CodeViewer source={urlSource("/pending-new-source.txt")} />);
 
-    expect(screen.queryByText("old text")).toBeNull()
-  })
+    expect(screen.queryByText("old text")).toBeNull();
+  });
 
   it("hides controls chrome when controls is false", () => {
-    render(<CodeViewer source={textSource("alpha")} controls={false} />)
+    render(<CodeViewer source={textSource("alpha")} controls={false} />);
 
-    expect(screen.queryByText("1 line")).toBeNull()
-    expect(screen.queryByLabelText("Zoom in")).toBeNull()
-    expect(screen.queryByLabelText("Download")).toBeNull()
-  })
+    expect(screen.queryByText("1 line")).toBeNull();
+    expect(screen.queryByLabelText("Zoom in")).toBeNull();
+    expect(screen.queryByLabelText("Download")).toBeNull();
+  });
 
   it("hides fallback controls chrome when controls is false", () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => new Promise<Response>(() => {}))
-    )
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
 
-    render(<CodeViewer source={urlSource("/pending.txt")} controls={false} />)
+    render(<CodeViewer source={urlSource("/pending.txt")} controls={false} />);
 
-    expect(screen.queryByLabelText("Zoom in")).toBeNull()
-    expect(screen.queryByLabelText("Download")).toBeNull()
-  })
+    expect(screen.queryByLabelText("Zoom in")).toBeNull();
+    expect(screen.queryByLabelText("Download")).toBeNull();
+  });
 
   it("hides error-state download chrome when controls is false", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.spyOn(console, "error").mockImplementation(() => {});
 
     render(
       <CodeViewer
         source={textSource("one\ntwo")}
         maxLines={1}
         controls={false}
-      />
-    )
+      />,
+    );
 
     expect(
-      await screen.findByText("This text file has too many lines to preview.")
-    ).toBeTruthy()
-    expect(screen.queryByLabelText("Download")).toBeNull()
-  })
+      await screen.findByText("This text file has too many lines to preview."),
+    ).toBeTruthy();
+    expect(screen.queryByLabelText("Download")).toBeNull();
+  });
 
   it("highlights every line in a normalized multi-line range", () => {
     const { container } = render(
       <CodeViewer
         source={textSource("one\ntwo\nthree\nfour")}
         highlight={{ start: 3, end: 2 }}
-      />
-    )
+      />,
+    );
 
-    expect(rowHighlightBackground(container, 1)).toBe("")
-    expect(rowHighlightBackground(container, 2)).not.toBe("")
-    expect(rowHighlightBackground(container, 3)).not.toBe("")
-    expect(rowHighlightBackground(container, 4)).toBe("")
-  })
+    expect(rowHighlightBackground(container, 1)).toBe("");
+    expect(rowHighlightBackground(container, 2)).not.toBe("");
+    expect(rowHighlightBackground(container, 3)).not.toBe("");
+    expect(rowHighlightBackground(container, 4)).toBe("");
+  });
 
   it("clamps highlight ranges that partly overlap the document", () => {
     const { container } = render(
       <CodeViewer
         source={textSource("one\ntwo\nthree")}
         highlight={{ start: -20, end: 2 }}
-      />
-    )
+      />,
+    );
 
-    expect(rowHighlightBackground(container, 1)).not.toBe("")
-    expect(rowHighlightBackground(container, 2)).not.toBe("")
-    expect(rowHighlightBackground(container, 3)).toBe("")
-  })
+    expect(rowHighlightBackground(container, 1)).not.toBe("");
+    expect(rowHighlightBackground(container, 2)).not.toBe("");
+    expect(rowHighlightBackground(container, 3)).toBe("");
+  });
 
   it("does not highlight invalid ranges", () => {
     const { container } = render(
       <CodeViewer
         source={textSource("one\ntwo")}
         highlight={{ start: 10, end: 20 }}
-      />
-    )
+      />,
+    );
 
-    expect(anyRowHighlighted(container)).toBe(false)
-  })
+    expect(anyRowHighlighted(container)).toBe(false);
+  });
 
   it("updates highlighted rows when the highlight prop changes", () => {
     const { container, rerender } = render(
-      <CodeViewer source={textSource("one\ntwo\nthree")} highlight={null} />
-    )
+      <CodeViewer source={textSource("one\ntwo\nthree")} highlight={null} />,
+    );
 
-    expect(anyRowHighlighted(container)).toBe(false)
+    expect(anyRowHighlighted(container)).toBe(false);
 
     rerender(
       <CodeViewer
         source={textSource("one\ntwo\nthree")}
         highlight={{ start: 2, end: 2 }}
-      />
-    )
+      />,
+    );
 
-    expect(rowHighlightBackground(container, 1)).toBe("")
-    expect(rowHighlightBackground(container, 2)).not.toBe("")
-    expect(rowHighlightBackground(container, 3)).toBe("")
-  })
+    expect(rowHighlightBackground(container, 1)).toBe("");
+    expect(rowHighlightBackground(container, 2)).not.toBe("");
+    expect(rowHighlightBackground(container, 3)).toBe("");
+  });
 
   it("scrolls to reveal the full requested range", () => {
-    const viewerRef = React.createRef<CodeViewerHandle>()
+    const viewerRef = React.createRef<CodeViewerHandle>();
     render(
       <CodeViewer
         ref={viewerRef}
         source={textSource(
           Array.from({ length: 20 }, (_, index) => `line ${index + 1}`).join(
-            "\n"
-          )
+            "\n",
+          ),
         )}
-      />
-    )
+      />,
+    );
 
-    const viewportElement = viewerRef.current?.getViewportElement()
-    expect(viewportElement).not.toBeNull()
-    if (!viewportElement) return
+    const viewportElement = viewerRef.current?.getViewportElement();
+    expect(viewportElement).not.toBeNull();
+    if (!viewportElement) return;
 
     Object.defineProperty(viewportElement, "clientHeight", {
       configurable: true,
       value: 100,
-    })
+    });
     Object.defineProperty(viewportElement, "scrollTop", {
       configurable: true,
       value: 0,
       writable: true,
-    })
-    viewportElement.getBoundingClientRect = () => rect(0, 100)
-    const scrollTo = vi.fn()
-    viewportElement.scrollTo = scrollTo
+    });
+    viewportElement.getBoundingClientRect = () => rect(0, 100);
+    const scrollTo = vi.fn();
+    viewportElement.scrollTo = scrollTo;
 
     act(() => {
       viewerRef.current?.scrollToLineRange(
         { start: 10, end: 11 },
-        { behavior: "auto" }
-      )
-    })
+        { behavior: "auto" },
+      );
+    });
 
-    expect(scrollTo).toHaveBeenCalledWith({ top: 158, behavior: "auto" })
-  })
+    expect(scrollTo).toHaveBeenCalledWith({ top: 158, behavior: "auto" });
+  });
 
   it("ignores imperative scroll requests for invalid ranges", () => {
-    const viewerRef = React.createRef<CodeViewerHandle>()
-    render(<CodeViewer ref={viewerRef} source={textSource("one\ntwo")} />)
+    const viewerRef = React.createRef<CodeViewerHandle>();
+    render(<CodeViewer ref={viewerRef} source={textSource("one\ntwo")} />);
 
-    const viewportElement = viewerRef.current?.getViewportElement()
-    expect(viewportElement).not.toBeNull()
-    if (!viewportElement) return
+    const viewportElement = viewerRef.current?.getViewportElement();
+    expect(viewportElement).not.toBeNull();
+    if (!viewportElement) return;
 
-    const scrollTo = vi.fn()
-    viewportElement.scrollTo = scrollTo
+    const scrollTo = vi.fn();
+    viewportElement.scrollTo = scrollTo;
 
     act(() => {
       viewerRef.current?.scrollToLineRange(
         { start: 10, end: 12 },
-        { behavior: "auto" }
-      )
-    })
+        { behavior: "auto" },
+      );
+    });
 
-    expect(scrollTo).not.toHaveBeenCalled()
-  })
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
 
   it("uses the current zoom level for imperative scroll offsets", () => {
-    const viewerRef = React.createRef<CodeViewerHandle>()
+    const viewerRef = React.createRef<CodeViewerHandle>();
     render(
       <CodeViewer
         ref={viewerRef}
         source={textSource(
           Array.from({ length: 20 }, (_, index) => `line ${index + 1}`).join(
-            "\n"
-          )
+            "\n",
+          ),
         )}
-      />
-    )
+      />,
+    );
 
-    const viewportElement = viewerRef.current?.getViewportElement()
-    expect(viewportElement).not.toBeNull()
-    if (!viewportElement) return
+    const viewportElement = viewerRef.current?.getViewportElement();
+    expect(viewportElement).not.toBeNull();
+    if (!viewportElement) return;
 
     Object.defineProperty(viewportElement, "clientHeight", {
       configurable: true,
       value: 100,
-    })
-    const scrollTo = vi.fn()
-    viewportElement.scrollTo = scrollTo
+    });
+    const scrollTo = vi.fn();
+    viewportElement.scrollTo = scrollTo;
 
-    fireEvent.click(screen.getByLabelText("Zoom in"))
-    expect(screen.getByText("120%")).toBeTruthy()
+    fireEvent.click(screen.getByLabelText("Zoom in"));
+    expect(screen.getByText("120%")).toBeTruthy();
 
     act(() => {
       viewerRef.current?.scrollToLineRange(
         { start: 10, end: 10 },
-        { behavior: "auto" }
-      )
-    })
+        { behavior: "auto" },
+      );
+    });
 
-    expect(scrollTo).toHaveBeenCalledWith({ top: 186, behavior: "auto" })
-  })
+    expect(scrollTo).toHaveBeenCalledWith({ top: 186, behavior: "auto" });
+  });
 
   it("preserves the visible line when manual zoom changes the layout", () => {
-    const viewerRef = React.createRef<CodeViewerHandle>()
+    const viewerRef = React.createRef<CodeViewerHandle>();
     render(
       <CodeViewer
         ref={viewerRef}
         source={textSource(
           Array.from({ length: 200 }, (_, index) => `line ${index + 1}`).join(
-            "\n"
-          )
+            "\n",
+          ),
         )}
-      />
-    )
+      />,
+    );
 
-    const viewportElement = viewerRef.current?.getViewportElement()
-    expect(viewportElement).not.toBeNull()
-    if (!viewportElement) return
+    const viewportElement = viewerRef.current?.getViewportElement();
+    expect(viewportElement).not.toBeNull();
+    if (!viewportElement) return;
 
     Object.defineProperty(viewportElement, "scrollTop", {
       configurable: true,
       value: 1608,
       writable: true,
-    })
+    });
 
-    fireEvent.click(screen.getByLabelText("Zoom in"))
+    fireEvent.click(screen.getByLabelText("Zoom in"));
 
-    expect(screen.getByText("120%")).toBeTruthy()
-    expect(viewportElement.scrollTop).toBe(1928)
-  })
+    expect(screen.getByText("120%")).toBeTruthy();
+    expect(viewportElement.scrollTop).toBe(1928);
+  });
 
   it("applies zoom changes to the rendered text metrics", () => {
-    const { container } = render(<CodeViewer source={textSource("alpha")} />)
-    const pre = container.querySelector("pre")
+    const { container } = render(<CodeViewer source={textSource("alpha")} />);
+    const pre = container.querySelector("pre");
 
-    expect(pre?.style.fontSize).toBe("12px")
-    expect(pre?.style.lineHeight).toBe("20px")
+    expect(pre?.style.fontSize).toBe("12px");
+    expect(pre?.style.lineHeight).toBe("20px");
 
-    fireEvent.click(screen.getByLabelText("Zoom in"))
+    fireEvent.click(screen.getByLabelText("Zoom in"));
 
-    expect(pre?.style.fontSize).toBe("14.399999999999999px")
-    expect(pre?.style.lineHeight).toBe("24px")
+    expect(pre?.style.fontSize).toBe("14.399999999999999px");
+    expect(pre?.style.lineHeight).toBe("24px");
 
-    fireEvent.click(screen.getByLabelText("Reset zoom"))
+    fireEvent.click(screen.getByLabelText("Reset zoom"));
 
-    expect(pre?.style.fontSize).toBe("12px")
-    expect(pre?.style.lineHeight).toBe("20px")
-  })
+    expect(pre?.style.fontSize).toBe("12px");
+    expect(pre?.style.lineHeight).toBe("20px");
+  });
 
   it("clamps zoom controls to the supported scale range", () => {
-    render(<CodeViewer source={textSource("alpha")} />)
+    render(<CodeViewer source={textSource("alpha")} />);
 
     for (let index = 0; index < 20; index++) {
-      fireEvent.click(screen.getByLabelText("Zoom in"))
+      fireEvent.click(screen.getByLabelText("Zoom in"));
     }
-    expect(screen.getByText("500%")).toBeTruthy()
+    expect(screen.getByText("500%")).toBeTruthy();
 
     for (let index = 0; index < 40; index++) {
-      fireEvent.click(screen.getByLabelText("Zoom out"))
+      fireEvent.click(screen.getByLabelText("Zoom out"));
     }
-    expect(screen.getByText("25%")).toBeTruthy()
+    expect(screen.getByText("25%")).toBeTruthy();
 
-    fireEvent.click(screen.getByLabelText("Reset zoom"))
-    expect(screen.getByText("100%")).toBeTruthy()
-  })
+    fireEvent.click(screen.getByLabelText("Reset zoom"));
+    expect(screen.getByText("100%")).toBeTruthy();
+  });
 
   it("does not mount every line in a large text file", () => {
     const { container } = render(
@@ -2295,351 +2301,351 @@ describe("CodeViewer", () => {
         source={textSource(
           Array.from(
             { length: 10_000 },
-            (_, index) => `line ${index + 1}`
-          ).join("\n")
+            (_, index) => `line ${index + 1}`,
+          ).join("\n"),
         )}
         controls={false}
-      />
-    )
+      />,
+    );
 
     const expectedInitialWindow =
       Math.ceil(
-        CODE_VIEWER_INITIAL_VIEWPORT_HEIGHT / CODE_VIEWER_BASE_LINE_PX
+        CODE_VIEWER_INITIAL_VIEWPORT_HEIGHT / CODE_VIEWER_BASE_LINE_PX,
       ) +
-      CODE_VIEWER_OVERSCAN * 2
+      CODE_VIEWER_OVERSCAN * 2;
 
     expect(container.querySelectorAll("[data-line-number]")).toHaveLength(
-      expectedInitialWindow
-    )
-  })
+      expectedInitialWindow,
+    );
+  });
 
   it("scrolls to a virtualized line that is not currently mounted", () => {
-    const viewerRef = React.createRef<CodeViewerHandle>()
+    const viewerRef = React.createRef<CodeViewerHandle>();
     const { container } = render(
       <CodeViewer
         ref={viewerRef}
         source={textSource(
           Array.from(
             { length: 10_000 },
-            (_, index) => `line ${index + 1}`
-          ).join("\n")
+            (_, index) => `line ${index + 1}`,
+          ).join("\n"),
         )}
         controls={false}
-      />
-    )
+      />,
+    );
 
-    expect(container.querySelector('[data-line-number="5000"]')).toBeNull()
+    expect(container.querySelector('[data-line-number="5000"]')).toBeNull();
 
-    const viewportElement = viewerRef.current?.getViewportElement()
-    expect(viewportElement).not.toBeNull()
-    if (!viewportElement) return
+    const viewportElement = viewerRef.current?.getViewportElement();
+    expect(viewportElement).not.toBeNull();
+    if (!viewportElement) return;
 
     Object.defineProperty(viewportElement, "clientHeight", {
       configurable: true,
       value: 100,
-    })
-    const scrollTo = vi.fn()
-    viewportElement.scrollTo = scrollTo
+    });
+    const scrollTo = vi.fn();
+    viewportElement.scrollTo = scrollTo;
 
     act(() => {
       viewerRef.current?.scrollToLineRange(
         { start: 5000, end: 5000 },
-        { behavior: "auto" }
-      )
-    })
+        { behavior: "auto" },
+      );
+    });
 
-    expect(scrollTo).toHaveBeenCalledWith({ top: 99948, behavior: "auto" })
-  })
+    expect(scrollTo).toHaveBeenCalledWith({ top: 99948, behavior: "auto" });
+  });
 
   it("renders a local error and retries the same URL source", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.spyOn(console, "error").mockImplementation(() => {});
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(response("", { status: 500 }))
-      .mockResolvedValueOnce(response("loaded text", { status: 200 }))
-    vi.stubGlobal("fetch", fetchMock)
+      .mockResolvedValueOnce(response("loaded text", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
 
-    render(<CodeViewer source={urlSource("/same.txt")} />)
-    expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy()
+    render(<CodeViewer source={urlSource("/same.txt")} />);
+    expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }))
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
 
     await waitFor(() => {
-      expect(screen.getByText("loaded text")).toBeTruthy()
-    })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-  })
+      expect(screen.getByText("loaded text")).toBeTruthy();
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 
   it("recovers from a fetch error when the URL source changes", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.spyOn(console, "error").mockImplementation(() => {});
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(response("", { status: 500 }))
-      .mockResolvedValueOnce(response("next file", { status: 200 }))
-    vi.stubGlobal("fetch", fetchMock)
+      .mockResolvedValueOnce(response("next file", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
 
     const { rerender } = render(
-      <CodeViewer source={urlSource("/broken.txt")} />
-    )
-    expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy()
+      <CodeViewer source={urlSource("/broken.txt")} />,
+    );
+    expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy();
 
-    rerender(<CodeViewer source={urlSource("/next.txt")} />)
+    rerender(<CodeViewer source={urlSource("/next.txt")} />);
 
     await waitFor(() => {
-      expect(screen.getByText("next file")).toBeTruthy()
-    })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-  })
+      expect(screen.getByText("next file")).toBeTruthy();
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 
   it("resets retry versions when switching between payload identities", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.spyOn(console, "error").mockImplementation(() => {});
     const fetchMock = vi.fn().mockImplementation((url: string) => {
       if (url === "/cached-before-retry.txt") {
-        return Promise.resolve(response("cached before retry"))
+        return Promise.resolve(response("cached before retry"));
       }
       if (url === "/retry-reset.txt") {
-        return Promise.resolve(response("", { status: 500 }))
+        return Promise.resolve(response("", { status: 500 }));
       }
-      return Promise.reject(new Error(`unexpected fetch: ${url}`))
-    })
-    vi.stubGlobal("fetch", fetchMock)
+      return Promise.reject(new Error(`unexpected fetch: ${url}`));
+    });
+    vi.stubGlobal("fetch", fetchMock);
 
     const { rerender } = render(
-      <CodeViewer source={urlSource("/cached-before-retry.txt")} />
-    )
+      <CodeViewer source={urlSource("/cached-before-retry.txt")} />,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText("cached before retry")).toBeTruthy()
-    })
+      expect(screen.getByText("cached before retry")).toBeTruthy();
+    });
 
-    rerender(<CodeViewer source={urlSource("/retry-reset.txt")} />)
-    expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy()
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }))
-    expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy()
+    rerender(<CodeViewer source={urlSource("/retry-reset.txt")} />);
+    expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy();
 
-    rerender(<CodeViewer source={urlSource("/cached-before-retry.txt")} />)
+    rerender(<CodeViewer source={urlSource("/cached-before-retry.txt")} />);
 
     await waitFor(() => {
-      expect(screen.getByText("cached before retry")).toBeTruthy()
-    })
-    expect(fetchMock).toHaveBeenCalledTimes(3)
-  })
+      expect(screen.getByText("cached before retry")).toBeTruthy();
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
 
   it("ignores a stale pending URL load after the source changes", async () => {
-    let resolveSlow: ((response: Response) => void) | null = null
+    let resolveSlow: ((response: Response) => void) | null = null;
     const fetchMock = vi.fn((url: string) => {
       if (url === "/slow.txt") {
         return new Promise<Response>((resolve) => {
-          resolveSlow = resolve
-        })
+          resolveSlow = resolve;
+        });
       }
-      return Promise.resolve(response("fast file"))
-    })
-    vi.stubGlobal("fetch", fetchMock)
+      return Promise.resolve(response("fast file"));
+    });
+    vi.stubGlobal("fetch", fetchMock);
 
-    const { rerender } = render(<CodeViewer source={urlSource("/slow.txt")} />)
-    rerender(<CodeViewer source={urlSource("/fast.txt")} />)
+    const { rerender } = render(<CodeViewer source={urlSource("/slow.txt")} />);
+    rerender(<CodeViewer source={urlSource("/fast.txt")} />);
 
     await waitFor(() => {
-      expect(screen.getByText("fast file")).toBeTruthy()
-    })
+      expect(screen.getByText("fast file")).toBeTruthy();
+    });
 
     await act(async () => {
-      resolveSlow?.(response("slow file"))
-      await Promise.resolve()
-    })
+      resolveSlow?.(response("slow file"));
+      await Promise.resolve();
+    });
 
-    expect(screen.getByText("fast file")).toBeTruthy()
-    expect(screen.queryByText("slow file")).toBeNull()
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-  })
+    expect(screen.getByText("fast file")).toBeTruthy();
+    expect(screen.queryByText("slow file")).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 
   it("keeps a shared pending URL load to one fetch across rerenders", async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(response("shared text")))
-    vi.stubGlobal("fetch", fetchMock)
+    const fetchMock = vi.fn(() => Promise.resolve(response("shared text")));
+    vi.stubGlobal("fetch", fetchMock);
 
     const { rerender } = render(
-      <CodeViewer source={urlSource("/shared.txt")} />
-    )
-    rerender(<CodeViewer source={urlSource("/shared.txt")} />)
+      <CodeViewer source={urlSource("/shared.txt")} />,
+    );
+    rerender(<CodeViewer source={urlSource("/shared.txt")} />);
 
     await waitFor(() => {
-      expect(screen.getByText("shared text")).toBeTruthy()
-    })
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-  })
+      expect(screen.getByText("shared text")).toBeTruthy();
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 
   it("renders a too-large state locally", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.spyOn(console, "error").mockImplementation(() => {});
 
-    render(<CodeViewer source={textSource("one\ntwo\nthree")} maxLines={2} />)
+    render(<CodeViewer source={textSource("one\ntwo\nthree")} maxLines={2} />);
 
     expect(
-      await screen.findByText("This text file has too many lines to preview.")
-    ).toBeTruthy()
-  })
+      await screen.findByText("This text file has too many lines to preview."),
+    ).toBeTruthy();
+  });
 
   it("recovers when an inline value becomes valid after a local error", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.spyOn(console, "error").mockImplementation(() => {});
 
     const { rerender } = render(
-      <CodeViewer source={textSource("one\ntwo\nthree")} maxLines={2} />
-    )
+      <CodeViewer source={textSource("one\ntwo\nthree")} maxLines={2} />,
+    );
 
     expect(
-      await screen.findByText("This text file has too many lines to preview.")
-    ).toBeTruthy()
+      await screen.findByText("This text file has too many lines to preview."),
+    ).toBeTruthy();
 
-    rerender(<CodeViewer source={textSource("one\ntwo")} maxLines={2} />)
+    rerender(<CodeViewer source={textSource("one\ntwo")} maxLines={2} />);
 
     await waitFor(() => {
-      expect(screen.getByText("2 lines")).toBeTruthy()
-      expect(screen.getByText("one")).toBeTruthy()
-      expect(screen.getByText("two")).toBeTruthy()
-    })
+      expect(screen.getByText("2 lines")).toBeTruthy();
+      expect(screen.getByText("one")).toBeTruthy();
+      expect(screen.getByText("two")).toBeTruthy();
+    });
     expect(
-      screen.queryByText("This text file has too many lines to preview.")
-    ).toBeNull()
-  })
+      screen.queryByText("This text file has too many lines to preview."),
+    ).toBeNull();
+  });
 
   it("recovers when bounds become valid after a local error", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.spyOn(console, "error").mockImplementation(() => {});
 
     const { rerender } = render(
-      <CodeViewer source={textSource("one")} maxLines={0} />
-    )
+      <CodeViewer source={textSource("one")} maxLines={0} />,
+    );
 
     expect(
-      await screen.findByText("Text viewer bounds are invalid.")
-    ).toBeTruthy()
-    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull()
+      await screen.findByText("Text viewer bounds are invalid."),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
 
-    rerender(<CodeViewer source={textSource("one")} maxLines={1} />)
+    rerender(<CodeViewer source={textSource("one")} maxLines={1} />);
 
     await waitFor(() => {
-      expect(screen.getByText("1 line")).toBeTruthy()
-      expect(screen.getByText("one")).toBeTruthy()
-    })
-    expect(screen.queryByText("Text viewer bounds are invalid.")).toBeNull()
-  })
+      expect(screen.getByText("1 line")).toBeTruthy();
+      expect(screen.getByText("one")).toBeTruthy();
+    });
+    expect(screen.queryByText("Text viewer bounds are invalid.")).toBeNull();
+  });
 
   it("recovers when nullable runtime bounds are removed", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.spyOn(console, "error").mockImplementation(() => {});
 
     const { rerender } = render(
       <CodeViewer
         source={textSource("one")}
         maxLines={null as unknown as number}
-      />
-    )
+      />,
+    );
 
     expect(
-      await screen.findByText("Text viewer bounds are invalid.")
-    ).toBeTruthy()
+      await screen.findByText("Text viewer bounds are invalid."),
+    ).toBeTruthy();
 
-    rerender(<CodeViewer source={textSource("one")} />)
+    rerender(<CodeViewer source={textSource("one")} />);
 
     await waitFor(() => {
-      expect(screen.getByText("1 line")).toBeTruthy()
-      expect(screen.getByText("one")).toBeTruthy()
-    })
-    expect(screen.queryByText("Text viewer bounds are invalid.")).toBeNull()
-  })
+      expect(screen.getByText("1 line")).toBeTruthy();
+      expect(screen.getByText("one")).toBeTruthy();
+    });
+    expect(screen.queryByText("Text viewer bounds are invalid.")).toBeNull();
+  });
 
   it("recovers from a URL line-limit error when the limit is raised", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {})
-    const fetchMock = vi.fn(() => Promise.resolve(response("one\ntwo\nthree")))
-    vi.stubGlobal("fetch", fetchMock)
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const fetchMock = vi.fn(() => Promise.resolve(response("one\ntwo\nthree")));
+    vi.stubGlobal("fetch", fetchMock);
 
     const { rerender } = render(
-      <CodeViewer source={urlSource("/bounded.txt")} maxLines={2} />
-    )
+      <CodeViewer source={urlSource("/bounded.txt")} maxLines={2} />,
+    );
 
     expect(
-      await screen.findByText("This file has too many lines to preview.")
-    ).toBeTruthy()
+      await screen.findByText("This file has too many lines to preview."),
+    ).toBeTruthy();
 
-    rerender(<CodeViewer source={urlSource("/bounded.txt")} maxLines={3} />)
+    rerender(<CodeViewer source={urlSource("/bounded.txt")} maxLines={3} />);
 
     await waitFor(() => {
-      expect(screen.getByText("3 lines")).toBeTruthy()
-      expect(screen.getByText("three")).toBeTruthy()
-    })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-  })
+      expect(screen.getByText("3 lines")).toBeTruthy();
+      expect(screen.getByText("three")).toBeTruthy();
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 
   it("downloads URL, Blob, and inline text sources", async () => {
-    const { createObjectURL, revokeObjectURL } = mockObjectUrls()
-    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {})
+    const { createObjectURL, revokeObjectURL } = mockObjectUrls();
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => Promise.resolve(response("alpha")))
-    )
+      vi.fn(() => Promise.resolve(response("alpha"))),
+    );
 
     const { rerender } = render(
-      <CodeViewer source={textSource("inline text", "inline.txt")} />
-    )
+      <CodeViewer source={textSource("inline text", "inline.txt")} />,
+    );
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Download" })).toBeTruthy()
-    })
-    fireEvent.click(screen.getByRole("button", { name: "Download" }))
-    await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(1))
+      expect(screen.getByRole("button", { name: "Download" })).toBeTruthy();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Download" }));
+    await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(1));
 
     rerender(
       <CodeViewer
         source={textBlobSource("blob text", "blob.txt", "blob:download")}
-      />
-    )
+      />,
+    );
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Download" })).toBeTruthy()
-    })
-    fireEvent.click(screen.getByRole("button", { name: "Download" }))
-    await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(2))
+      expect(screen.getByRole("button", { name: "Download" })).toBeTruthy();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Download" }));
+    await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(2));
 
-    rerender(<CodeViewer source={urlSource("/alpha.txt", "alpha.txt")} />)
+    rerender(<CodeViewer source={urlSource("/alpha.txt", "alpha.txt")} />);
 
     await waitFor(() => {
-      expect(screen.getByText("alpha")).toBeTruthy()
-      const link = screen.getByRole("link", { name: "Download" })
-      expect(link.getAttribute("href")).toBe("/alpha.txt")
-      expect(link.getAttribute("download")).toBe("alpha.txt")
-    })
-    expect(createObjectURL).toHaveBeenCalledTimes(2)
-    expect(revokeObjectURL).toHaveBeenCalledWith("blob:download")
-  })
+      expect(screen.getByText("alpha")).toBeTruthy();
+      const link = screen.getByRole("link", { name: "Download" });
+      expect(link.getAttribute("href")).toBe("/alpha.txt");
+      expect(link.getAttribute("download")).toBe("alpha.txt");
+    });
+    expect(createObjectURL).toHaveBeenCalledTimes(2);
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:download");
+  });
 
   it("uses the latest inline text and file name when downloading after a source change", async () => {
-    const { createObjectURL } = mockObjectUrls("blob:inline-latest")
-    const { click, clicks } = captureAnchorClicks()
+    const { createObjectURL } = mockObjectUrls("blob:inline-latest");
+    const { click, clicks } = captureAnchorClicks();
     const { rerender } = render(
-      <CodeViewer source={textSource("first text", "first.txt")} />
-    )
+      <CodeViewer source={textSource("first text", "first.txt")} />,
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: "Download" }))
-    await waitFor(() => expect(click).toHaveBeenCalledTimes(1))
+    fireEvent.click(screen.getByRole("button", { name: "Download" }));
+    await waitFor(() => expect(click).toHaveBeenCalledTimes(1));
 
-    rerender(<CodeViewer source={textSource("second text", "second.txt")} />)
+    rerender(<CodeViewer source={textSource("second text", "second.txt")} />);
 
     await waitFor(() => {
-      expect(screen.getByText("second text")).toBeTruthy()
-    })
-    fireEvent.click(screen.getByRole("button", { name: "Download" }))
-    await waitFor(() => expect(click).toHaveBeenCalledTimes(2))
+      expect(screen.getByText("second text")).toBeTruthy();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Download" }));
+    await waitFor(() => expect(click).toHaveBeenCalledTimes(2));
 
-    const firstBlob = createObjectURL.mock.calls[0]?.[0] as Blob
-    const secondBlob = createObjectURL.mock.calls[1]?.[0] as Blob
-    await expect(firstBlob.text()).resolves.toBe("first text")
-    await expect(secondBlob.text()).resolves.toBe("second text")
+    const firstBlob = createObjectURL.mock.calls[0]?.[0] as Blob;
+    const secondBlob = createObjectURL.mock.calls[1]?.[0] as Blob;
+    await expect(firstBlob.text()).resolves.toBe("first text");
+    await expect(secondBlob.text()).resolves.toBe("second text");
     expect(clicks).toEqual([
       { href: "blob:inline-latest", download: "first.txt" },
       { href: "blob:inline-latest", download: "second.txt" },
-    ])
-  })
+    ]);
+  });
 
   it("uses a Blob source downloadUrl as a direct href without object URLs", async () => {
-    const { createObjectURL } = mockObjectUrls("blob:should-not-be-created")
+    const { createObjectURL } = mockObjectUrls("blob:should-not-be-created");
 
     render(
       <CodeViewer
@@ -2649,24 +2655,24 @@ describe("CodeViewer", () => {
           identityKey: "blob:href",
           downloadUrl: "/download/blob-href.txt",
         })}
-      />
-    )
+      />,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText("blob href text")).toBeTruthy()
-      const link = screen.getByRole("link", { name: "Download" })
-      expect(link.getAttribute("href")).toBe("/download/blob-href.txt")
-      expect(link.getAttribute("download")).toBe("href.txt")
-    })
-    expect(createObjectURL).not.toHaveBeenCalled()
-  })
+      expect(screen.getByText("blob href text")).toBeTruthy();
+      const link = screen.getByRole("link", { name: "Download" });
+      expect(link.getAttribute("href")).toBe("/download/blob-href.txt");
+      expect(link.getAttribute("download")).toBe("href.txt");
+    });
+    expect(createObjectURL).not.toHaveBeenCalled();
+  });
 
   it("keeps URL download metadata available from a load error state", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.spyOn(console, "error").mockImplementation(() => {});
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => Promise.resolve(response("", { status: 500 })))
-    )
+      vi.fn(() => Promise.resolve(response("", { status: 500 }))),
+    );
 
     render(
       <CodeViewer
@@ -2675,105 +2681,105 @@ describe("CodeViewer", () => {
           fileName: "original.txt",
           downloadUrl: "/download/original.txt",
         })}
-      />
-    )
+      />,
+    );
 
-    expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy()
+    expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
 
-    const link = screen.getByRole("link", { name: "Download" })
-    expect(link.getAttribute("href")).toBe("/download/original.txt")
-    expect(link.getAttribute("download")).toBe("original.txt")
-  })
+    const link = screen.getByRole("link", { name: "Download" });
+    expect(link.getAttribute("href")).toBe("/download/original.txt");
+    expect(link.getAttribute("download")).toBe("original.txt");
+  });
 
   it("updates URL download metadata without refetching the same text payload", async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(response("cached url text")))
-    vi.stubGlobal("fetch", fetchMock)
+    const fetchMock = vi.fn(() => Promise.resolve(response("cached url text")));
+    vi.stubGlobal("fetch", fetchMock);
 
     const { rerender } = render(
-      <CodeViewer source={urlSource("/metadata.txt", "first.txt")} />
-    )
+      <CodeViewer source={urlSource("/metadata.txt", "first.txt")} />,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText("cached url text")).toBeTruthy()
+      expect(screen.getByText("cached url text")).toBeTruthy();
       expect(
-        screen.getByRole("link", { name: "Download" }).getAttribute("download")
-      ).toBe("first.txt")
-    })
+        screen.getByRole("link", { name: "Download" }).getAttribute("download"),
+      ).toBe("first.txt");
+    });
 
-    rerender(<CodeViewer source={urlSource("/metadata.txt", "second.txt")} />)
+    rerender(<CodeViewer source={urlSource("/metadata.txt", "second.txt")} />);
 
     await waitFor(() => {
-      expect(screen.getByText("cached url text")).toBeTruthy()
+      expect(screen.getByText("cached url text")).toBeTruthy();
       expect(
-        screen.getByRole("link", { name: "Download" }).getAttribute("download")
-      ).toBe("second.txt")
-    })
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-  })
+        screen.getByRole("link", { name: "Download" }).getAttribute("download"),
+      ).toBe("second.txt");
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 
   it("preserves zoom across URL metadata-only source changes", async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(response("zoomed url text")))
-    vi.stubGlobal("fetch", fetchMock)
+    const fetchMock = vi.fn(() => Promise.resolve(response("zoomed url text")));
+    vi.stubGlobal("fetch", fetchMock);
 
     const { rerender } = render(
-      <CodeViewer source={urlSource("/zoom-metadata.txt", "first.txt")} />
-    )
+      <CodeViewer source={urlSource("/zoom-metadata.txt", "first.txt")} />,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText("zoomed url text")).toBeTruthy()
-    })
-    fireEvent.click(screen.getByLabelText("Zoom in"))
-    expect(screen.getByText("120%")).toBeTruthy()
+      expect(screen.getByText("zoomed url text")).toBeTruthy();
+    });
+    fireEvent.click(screen.getByLabelText("Zoom in"));
+    expect(screen.getByText("120%")).toBeTruthy();
 
     rerender(
-      <CodeViewer source={urlSource("/zoom-metadata.txt", "second.txt")} />
-    )
+      <CodeViewer source={urlSource("/zoom-metadata.txt", "second.txt")} />,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText("zoomed url text")).toBeTruthy()
-      expect(screen.getByText("120%")).toBeTruthy()
+      expect(screen.getByText("zoomed url text")).toBeTruthy();
+      expect(screen.getByText("120%")).toBeTruthy();
       expect(
-        screen.getByRole("link", { name: "Download" }).getAttribute("download")
-      ).toBe("second.txt")
-    })
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-  })
+        screen.getByRole("link", { name: "Download" }).getAttribute("download"),
+      ).toBe("second.txt");
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 
   it("preserves zoom and cache when omitted bounds become explicit defaults", async () => {
     const fetchMock = vi.fn(() =>
-      Promise.resolve(response("default bounds text"))
-    )
-    vi.stubGlobal("fetch", fetchMock)
+      Promise.resolve(response("default bounds text")),
+    );
+    vi.stubGlobal("fetch", fetchMock);
 
     const { rerender } = render(
-      <CodeViewer source={urlSource("/default-bounds.txt")} />
-    )
+      <CodeViewer source={urlSource("/default-bounds.txt")} />,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText("default bounds text")).toBeTruthy()
-    })
-    fireEvent.click(screen.getByLabelText("Zoom in"))
-    expect(screen.getByText("120%")).toBeTruthy()
+      expect(screen.getByText("default bounds text")).toBeTruthy();
+    });
+    fireEvent.click(screen.getByLabelText("Zoom in"));
+    expect(screen.getByText("120%")).toBeTruthy();
 
     rerender(
       <CodeViewer
         source={urlSource("/default-bounds.txt")}
         maxBytes={DEFAULT_MAX_BYTES}
         maxLines={DEFAULT_MAX_LINES}
-      />
-    )
+      />,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText("default bounds text")).toBeTruthy()
-      expect(screen.getByText("120%")).toBeTruthy()
-    })
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-  })
+      expect(screen.getByText("default bounds text")).toBeTruthy();
+      expect(screen.getByText("120%")).toBeTruthy();
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 
   it("updates URL download hrefs without refetching the same text payload", async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(response("download source")))
-    vi.stubGlobal("fetch", fetchMock)
+    const fetchMock = vi.fn(() => Promise.resolve(response("download source")));
+    vi.stubGlobal("fetch", fetchMock);
 
     const { rerender } = render(
       <CodeViewer
@@ -2782,15 +2788,15 @@ describe("CodeViewer", () => {
           fileName: "first.txt",
           downloadUrl: "/download/first.txt",
         })}
-      />
-    )
+      />,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText("download source")).toBeTruthy()
-      const link = screen.getByRole("link", { name: "Download" })
-      expect(link.getAttribute("href")).toBe("/download/first.txt")
-      expect(link.getAttribute("download")).toBe("first.txt")
-    })
+      expect(screen.getByText("download source")).toBeTruthy();
+      const link = screen.getByRole("link", { name: "Download" });
+      expect(link.getAttribute("href")).toBe("/download/first.txt");
+      expect(link.getAttribute("download")).toBe("first.txt");
+    });
 
     rerender(
       <CodeViewer
@@ -2799,23 +2805,23 @@ describe("CodeViewer", () => {
           fileName: "second.txt",
           downloadUrl: "/download/second.txt",
         })}
-      />
-    )
+      />,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText("download source")).toBeTruthy()
-      const link = screen.getByRole("link", { name: "Download" })
-      expect(link.getAttribute("href")).toBe("/download/second.txt")
-      expect(link.getAttribute("download")).toBe("second.txt")
-    })
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-  })
+      expect(screen.getByText("download source")).toBeTruthy();
+      const link = screen.getByRole("link", { name: "Download" });
+      expect(link.getAttribute("href")).toBe("/download/second.txt");
+      expect(link.getAttribute("download")).toBe("second.txt");
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 
   it("preserves zoom across URL download href changes", async () => {
     const fetchMock = vi.fn(() =>
-      Promise.resolve(response("download zoom text"))
-    )
-    vi.stubGlobal("fetch", fetchMock)
+      Promise.resolve(response("download zoom text")),
+    );
+    vi.stubGlobal("fetch", fetchMock);
 
     const { rerender } = render(
       <CodeViewer
@@ -2824,14 +2830,14 @@ describe("CodeViewer", () => {
           fileName: "download-zoom.txt",
           downloadUrl: "/download/zoom-a.txt",
         })}
-      />
-    )
+      />,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText("download zoom text")).toBeTruthy()
-    })
-    fireEvent.click(screen.getByLabelText("Zoom in"))
-    expect(screen.getByText("120%")).toBeTruthy()
+      expect(screen.getByText("download zoom text")).toBeTruthy();
+    });
+    fireEvent.click(screen.getByLabelText("Zoom in"));
+    expect(screen.getByText("120%")).toBeTruthy();
 
     rerender(
       <CodeViewer
@@ -2840,22 +2846,22 @@ describe("CodeViewer", () => {
           fileName: "download-zoom.txt",
           downloadUrl: "/download/zoom-b.txt",
         })}
-      />
-    )
+      />,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText("120%")).toBeTruthy()
+      expect(screen.getByText("120%")).toBeTruthy();
       expect(
-        screen.getByRole("link", { name: "Download" }).getAttribute("href")
-      ).toBe("/download/zoom-b.txt")
-    })
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-  })
+        screen.getByRole("link", { name: "Download" }).getAttribute("href"),
+      ).toBe("/download/zoom-b.txt");
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 
   it("updates Blob download metadata while reusing the same Blob payload", async () => {
-    const { createObjectURL } = mockObjectUrls("blob:shared-text")
-    const { click, clicks } = captureAnchorClicks()
-    const sharedBlob = new Blob(["shared blob text"], { type: "text/plain" })
+    const { createObjectURL } = mockObjectUrls("blob:shared-text");
+    const { click, clicks } = captureAnchorClicks();
+    const sharedBlob = new Blob(["shared blob text"], { type: "text/plain" });
 
     const { rerender } = render(
       <CodeViewer
@@ -2864,16 +2870,16 @@ describe("CodeViewer", () => {
           fileName: "first.txt",
           identityKey: "blob:shared",
         })}
-      />
-    )
+      />,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText("shared blob text")).toBeTruthy()
-    })
-    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+      expect(screen.getByText("shared blob text")).toBeTruthy();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Download" }));
     await waitFor(() => {
-      expect(click).toHaveBeenCalledTimes(1)
-    })
+      expect(click).toHaveBeenCalledTimes(1);
+    });
 
     rerender(
       <CodeViewer
@@ -2882,67 +2888,67 @@ describe("CodeViewer", () => {
           fileName: "second.txt",
           identityKey: "blob:shared",
         })}
-      />
-    )
+      />,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText("shared blob text")).toBeTruthy()
-    })
-    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+      expect(screen.getByText("shared blob text")).toBeTruthy();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Download" }));
 
-    await waitFor(() => expect(click).toHaveBeenCalledTimes(2))
-    expect(createObjectURL).toHaveBeenCalledTimes(2)
+    await waitFor(() => expect(click).toHaveBeenCalledTimes(2));
+    expect(createObjectURL).toHaveBeenCalledTimes(2);
     expect(clicks).toEqual([
       { href: "blob:shared-text", download: "first.txt" },
       { href: "blob:shared-text", download: "second.txt" },
-    ])
-  })
+    ]);
+  });
 
   it("lets a retry after a metadata-only URL change refetch the same payload identity", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.spyOn(console, "error").mockImplementation(() => {});
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(response("", { status: 500 }))
-      .mockResolvedValueOnce(response("retried after metadata change"))
-    vi.stubGlobal("fetch", fetchMock)
+      .mockResolvedValueOnce(response("retried after metadata change"));
+    vi.stubGlobal("fetch", fetchMock);
 
     const { rerender } = render(
-      <CodeViewer source={urlSource("/retry-metadata.txt", "first.txt")} />
-    )
+      <CodeViewer source={urlSource("/retry-metadata.txt", "first.txt")} />,
+    );
 
-    expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy()
+    expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy();
 
     rerender(
-      <CodeViewer source={urlSource("/retry-metadata.txt", "second.txt")} />
-    )
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }))
+      <CodeViewer source={urlSource("/retry-metadata.txt", "second.txt")} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
 
     await waitFor(() => {
-      expect(screen.getByText("retried after metadata change")).toBeTruthy()
+      expect(screen.getByText("retried after metadata change")).toBeTruthy();
       expect(
-        screen.getByRole("link", { name: "Download" }).getAttribute("download")
-      ).toBe("second.txt")
-    })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-  })
+        screen.getByRole("link", { name: "Download" }).getAttribute("download"),
+      ).toBe("second.txt");
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 
   it("renders Blob sources and treats bounds errors as local non-retryable states", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.spyOn(console, "error").mockImplementation(() => {});
     render(
       <CodeViewer
         source={textBlobSource("one\ntwo\nthree", "blob.txt", "blob:bounds")}
         maxLines={2}
-      />
-    )
+      />,
+    );
 
     expect(
-      await screen.findByText("This file has too many lines to preview.")
-    ).toBeTruthy()
-    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull()
-  })
+      await screen.findByText("This file has too many lines to preview."),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+  });
 
   it("supports explicit text and URL source descriptors", async () => {
-    mockObjectUrls("blob:descriptor")
+    mockObjectUrls("blob:descriptor");
     const { rerender } = render(
       <CodeViewer
         source={{
@@ -2950,17 +2956,17 @@ describe("CodeViewer", () => {
           text: "descriptor text",
           fileName: "descriptor.txt",
         }}
-      />
-    )
-    expect(screen.getByText("descriptor text")).toBeTruthy()
+      />,
+    );
+    expect(screen.getByText("descriptor text")).toBeTruthy();
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Download" })).toBeTruthy()
-    })
+      expect(screen.getByRole("button", { name: "Download" })).toBeTruthy();
+    });
 
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => Promise.resolve(response("descriptor url")))
-    )
+      vi.fn(() => Promise.resolve(response("descriptor url"))),
+    );
     rerender(
       <CodeViewer
         source={{
@@ -2968,153 +2974,153 @@ describe("CodeViewer", () => {
           url: "/descriptor.txt",
           fileName: "descriptor.txt",
         }}
-      />
-    )
+      />,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText("descriptor url")).toBeTruthy()
-    })
+      expect(screen.getByText("descriptor url")).toBeTruthy();
+    });
     expect(
-      screen.getByRole("link", { name: "Download" }).getAttribute("download")
-    ).toBe("descriptor.txt")
-  })
-})
+      screen.getByRole("link", { name: "Download" }).getAttribute("download"),
+    ).toBe("descriptor.txt");
+  });
+});
 
 describe("code-viewer implementation boundaries", () => {
   it("keeps terminal code viewer responsibilities in exact modules", () => {
     const contentSource = readRegistryFile(
-      "registry/new-york-v4/ui/code-viewer-content.tsx"
-    )
+      "registry/new-york-v4/ui/code-viewer-content.tsx",
+    );
     const syntaxSource = readRegistryFile(
-      "registry/new-york-v4/ui/code-viewer-syntax.ts"
-    )
+      "registry/new-york-v4/ui/code-viewer-syntax.ts",
+    );
     const projectorSource = readRegistryFile(
-      "registry/new-york-v4/ui/code-viewer-projector.ts"
-    )
+      "registry/new-york-v4/ui/code-viewer-projector.ts",
+    );
     const viewportSource = readRegistryFile(
-      "registry/new-york-v4/ui/code-viewer-viewport.tsx"
-    )
+      "registry/new-york-v4/ui/code-viewer-viewport.tsx",
+    );
     const syntaxStyleSource = readRegistryFile(
-      "registry/new-york-v4/ui/code-viewer-syntax-style.tsx"
-    )
+      "registry/new-york-v4/ui/code-viewer-syntax-style.tsx",
+    );
     const schedulerSource = readRegistryFile(
-      "registry/new-york-v4/ui/code-viewer-projection-scheduler.ts"
-    )
+      "registry/new-york-v4/ui/code-viewer-projection-scheduler.ts",
+    );
 
-    expect(contentSource).not.toContain("Prism")
-    expect(contentSource).not.toContain("document.createElement")
-    expect(contentSource).not.toContain("replaceChildren")
-    expect(contentSource).not.toContain("ResizeObserver")
-    expect(contentSource).not.toContain("<style")
-    expect(contentSource).not.toContain("CODE_VIEWER_SYNTAX_STYLE")
-    expect(contentSource).toContain("createCodeSyntax")
-    expect(contentSource).toContain("createCodeProjector")
-    expect(contentSource).toContain("CodeViewerViewport")
-    expect(contentSource).toContain("useCodeProjectionScheduler")
-    expect(contentSource).toContain("useCodeViewerSyntaxStyle")
+    expect(contentSource).not.toContain("Prism");
+    expect(contentSource).not.toContain("document.createElement");
+    expect(contentSource).not.toContain("replaceChildren");
+    expect(contentSource).not.toContain("ResizeObserver");
+    expect(contentSource).not.toContain("<style");
+    expect(contentSource).not.toContain("CODE_VIEWER_SYNTAX_STYLE");
+    expect(contentSource).toContain("createCodeSyntax");
+    expect(contentSource).toContain("createCodeProjector");
+    expect(contentSource).toContain("CodeViewerViewport");
+    expect(contentSource).toContain("useCodeProjectionScheduler");
+    expect(contentSource).toContain("useCodeViewerSyntaxStyle");
 
-    expect(syntaxSource).toContain("Prism")
-    expect(syntaxSource).toContain("createCodeSyntax")
-    expect(syntaxSource).toContain("kind:")
+    expect(syntaxSource).toContain("Prism");
+    expect(syntaxSource).toContain("createCodeSyntax");
+    expect(syntaxSource).toContain("kind:");
 
-    expect(projectorSource).toContain("createCodeProjector")
-    expect(projectorSource).toContain("document.createElement")
-    expect(projectorSource).toContain("contentIdentity")
-    expect(projectorSource).toContain("layoutIdentity")
-    expect(projectorSource).toContain("syncVisibleRowOrder")
-    expect(projectorSource).not.toContain("visibleRows")
-    expect(projectorSource).not.toContain("reset(")
-    expect(projectorSource).not.toContain("React")
+    expect(projectorSource).toContain("createCodeProjector");
+    expect(projectorSource).toContain("document.createElement");
+    expect(projectorSource).toContain("contentIdentity");
+    expect(projectorSource).toContain("layoutIdentity");
+    expect(projectorSource).toContain("syncVisibleRowOrder");
+    expect(projectorSource).not.toContain("visibleRows");
+    expect(projectorSource).not.toContain("reset(");
+    expect(projectorSource).not.toContain("React");
 
-    expect(viewportSource).toContain("<pre")
-    expect(viewportSource).toContain("ref={rowHostRef}")
-    expect(viewportSource).not.toContain("createCodeSyntax")
-    expect(viewportSource).not.toContain("createCodeProjector")
+    expect(viewportSource).toContain("<pre");
+    expect(viewportSource).toContain("ref={rowHostRef}");
+    expect(viewportSource).not.toContain("createCodeSyntax");
+    expect(viewportSource).not.toContain("createCodeProjector");
 
-    expect(syntaxStyleSource).toContain("retab-code-viewer-syntax-style")
-    expect(syntaxStyleSource).toContain("document.head.append")
+    expect(syntaxStyleSource).toContain("retab-code-viewer-syntax-style");
+    expect(syntaxStyleSource).toContain("document.head.append");
 
-    expect(schedulerSource).toContain("requestAnimationFrame")
-    expect(schedulerSource).toContain("ResizeObserver")
-  })
+    expect(schedulerSource).toContain("requestAnimationFrame");
+    expect(schedulerSource).toContain("ResizeObserver");
+  });
 
   it("keeps resource cache keys private to the resource module", () => {
     const viewerModuleSource = readRegistryFile(
-      "registry/new-york-v4/ui/code-viewer.tsx"
-    )
-    const testSource = readRegistryFile("tests/code-viewer.test.tsx")
-    const resourceKeyName = ["textViewer", "Resource", "Key"].join("")
+      "registry/new-york-v4/ui/code-viewer.tsx",
+    );
+    const testSource = readRegistryFile("tests/code-viewer.test.tsx");
+    const resourceKeyName = ["textViewer", "Resource", "Key"].join("");
 
-    expect(viewerModuleSource).not.toContain(resourceKeyName)
-    expect(testSource).not.toContain(resourceKeyName)
-  })
+    expect(viewerModuleSource).not.toContain(resourceKeyName);
+    expect(testSource).not.toContain(resourceKeyName);
+  });
 
   it("does not expose cache size just for tests", () => {
     const resourceSource = readRegistryFile(
-      "registry/new-york-v4/ui/text-viewer-resource.ts"
-    )
-    const testSource = readRegistryFile("tests/code-viewer.test.tsx")
-    const cacheSizeName = ["Resource", "Cache", "Size"].join("")
+      "registry/new-york-v4/ui/text-viewer-resource.ts",
+    );
+    const testSource = readRegistryFile("tests/code-viewer.test.tsx");
+    const cacheSizeName = ["Resource", "Cache", "Size"].join("");
 
-    expect(resourceSource).not.toContain(cacheSizeName)
-    expect(testSource).not.toContain(cacheSizeName)
-  })
+    expect(resourceSource).not.toContain(cacheSizeName);
+    expect(testSource).not.toContain(cacheSizeName);
+  });
 
   it("uses exact reset keys instead of fingerprints", () => {
     const shellModuleSource = readRegistryFile(
-      "registry/new-york-v4/ui/plain-text-viewer-frame.tsx"
-    )
+      "registry/new-york-v4/ui/plain-text-viewer-frame.tsx",
+    );
 
-    expect(shellModuleSource).toContain("plainTextViewerResetKey")
-    expect(shellModuleSource).not.toContain("fingerprint")
-    expect(shellModuleSource).not.toContain("resourceVersion")
-  })
+    expect(shellModuleSource).toContain("plainTextViewerResetKey");
+    expect(shellModuleSource).not.toContain("fingerprint");
+    expect(shellModuleSource).not.toContain("resourceVersion");
+  });
 
   it("keeps source IO out of the component module", () => {
     const viewerModuleSource = readRegistryFile(
-      "registry/new-york-v4/ui/code-viewer.tsx"
-    )
+      "registry/new-york-v4/ui/code-viewer.tsx",
+    );
 
-    expect(viewerModuleSource).not.toContain("fetch(")
-    expect(viewerModuleSource).not.toContain("createObjectURL")
-  })
+    expect(viewerModuleSource).not.toContain("fetch(");
+    expect(viewerModuleSource).not.toContain("createObjectURL");
+  });
 
   it("keeps the shared resource layer independent from viewer components", () => {
     const resourceModuleSource = readRegistryFile(
-      "registry/new-york-v4/lib/viewer-resource.ts"
-    )
+      "registry/new-york-v4/lib/viewer-resource.ts",
+    );
 
-    expect(resourceModuleSource).not.toContain("React")
-    expect(resourceModuleSource).not.toContain("useDownloadHref")
-    expect(resourceModuleSource).not.toContain("createObjectURL")
-    expect(resourceModuleSource).not.toContain("@/components/ui/code-viewer")
-    expect(resourceModuleSource).not.toContain("@/components/ui/pdf-viewer")
-    expect(resourceModuleSource).not.toContain("@/components/ui/image-viewer")
-  })
+    expect(resourceModuleSource).not.toContain("React");
+    expect(resourceModuleSource).not.toContain("useDownloadHref");
+    expect(resourceModuleSource).not.toContain("createObjectURL");
+    expect(resourceModuleSource).not.toContain("@/components/ui/code-viewer");
+    expect(resourceModuleSource).not.toContain("@/components/ui/pdf-viewer");
+    expect(resourceModuleSource).not.toContain("@/components/ui/image-viewer");
+  });
 
   it("uses structured resource errors instead of parsing messages", () => {
     const resourceModuleSource = readRegistryFile(
-      "registry/new-york-v4/lib/viewer-resource.ts"
-    )
+      "registry/new-york-v4/lib/viewer-resource.ts",
+    );
     const textResourceSource = readRegistryFile(
-      "registry/new-york-v4/ui/text-viewer-resource.ts"
-    )
+      "registry/new-york-v4/ui/text-viewer-resource.ts",
+    );
 
-    expect(resourceModuleSource).toContain("tooLargeReason")
-    expect(textResourceSource).toContain("isResourceError")
-    expect(textResourceSource).not.toContain('includes("lines")')
-  })
+    expect(resourceModuleSource).toContain("tooLargeReason");
+    expect(textResourceSource).toContain("isResourceError");
+    expect(textResourceSource).not.toContain('includes("lines")');
+  });
 
   it("keeps Blob source identity explicit", () => {
     const sourceModuleSource = readRegistryFile(
-      "registry/new-york-v4/lib/viewer-source.ts"
-    )
+      "registry/new-york-v4/lib/viewer-source.ts",
+    );
     const resourceModuleSource = readRegistryFile(
-      "registry/new-york-v4/lib/viewer-resource.ts"
-    )
+      "registry/new-york-v4/lib/viewer-resource.ts",
+    );
 
-    expect(sourceModuleSource).toContain("identityKey: string")
-    expect(sourceModuleSource).not.toContain("blob:${")
-    expect(resourceModuleSource).toContain("identityKey: string")
-  })
-})
+    expect(sourceModuleSource).toContain("identityKey: string");
+    expect(sourceModuleSource).not.toContain("blob:${");
+    expect(resourceModuleSource).toContain("identityKey: string");
+  });
+});

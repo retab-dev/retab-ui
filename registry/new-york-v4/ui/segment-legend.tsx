@@ -1,26 +1,26 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
 import {
   getSegmentInteractionState,
   getSegmentSurfaceProps,
   scopeSegmentInteraction,
   type SegmentInteraction,
-} from "@/lib/segment-interaction"
-import { segmentDisplayLabel, segmentPageCount } from "@/lib/segments"
-import { cn } from "@/lib/utils"
+} from "@/lib/segment-interaction";
+import { segmentDisplayLabel, segmentPageCount } from "@/lib/segments";
+import { cn } from "@/lib/utils";
 
-import type { DocumentSegment } from "./segmented-document-model"
+import type { DocumentSegment } from "./segmented-document-model";
 
 /** How the legend attaches to the document surface. */
-export type SegmentLegendVariant = "bar" | "floating" | "plain"
-export type SegmentLegendOrientation = "horizontal" | "vertical"
-export type SegmentLegendSide = "top" | "bottom" | "left" | "right"
-export type SegmentLegendDensity = "comfortable" | "compact"
+export type SegmentLegendVariant = "bar" | "floating" | "plain";
+export type SegmentLegendOrientation = "horizontal" | "vertical";
+export type SegmentLegendSide = "top" | "bottom" | "left" | "right";
+export type SegmentLegendDensity = "comfortable" | "compact";
 
 export interface SegmentLegendProps {
-  segments: DocumentSegment[]
+  segments: DocumentSegment[];
   /**
    * How the legend attaches to the document surface:
    * - `bar` — flush, full-width, bordered on its docking side (default).
@@ -28,51 +28,51 @@ export interface SegmentLegendProps {
    * - `plain` — raw entries, no chrome (compose your own container).
    * @default "bar"
    */
-  variant?: SegmentLegendVariant
+  variant?: SegmentLegendVariant;
   /** Lay entries out horizontally (wrap/grid) or vertically (rail). @default "horizontal" */
-  orientation?: SegmentLegendOrientation
+  orientation?: SegmentLegendOrientation;
   /** Edge the legend docks to — drives the border (`bar`) or anchor (`floating`). */
-  side?: SegmentLegendSide
+  side?: SegmentLegendSide;
   /** Swatch + label scale. @default "comfortable" */
-  density?: SegmentLegendDensity
+  density?: SegmentLegendDensity;
   /** Shared preview state. */
-  interaction?: SegmentInteraction
+  interaction?: SegmentInteraction;
   /** Fired when a segment surface is clicked, after transient preview is cleared. */
-  onSelect?: (segment: DocumentSegment) => void
+  onSelect?: (segment: DocumentSegment) => void;
   /** 1-based current page; owning segments receive current-page styling. */
-  currentPage?: number | null
+  currentPage?: number | null;
   /** Lay entries out on a grid of N columns instead of wrapping inline (horizontal only). */
-  columns?: number
+  columns?: number;
   /** Render a "Show all / Hide unused" toggle when some segments own no pages. */
-  showUnusedToggle?: boolean
+  showUnusedToggle?: boolean;
   /** Controlled visibility of zero-page segments. */
-  showUnused?: boolean
+  showUnused?: boolean;
   /** Initial visibility of zero-page segments when `showUnused` is uncontrolled. */
-  defaultShowUnused?: boolean
-  onShowUnusedChange?: (showUnused: boolean) => void
+  defaultShowUnused?: boolean;
+  onShowUnusedChange?: (showUnused: boolean) => void;
   /** A muted caption rendered under the entries (e.g. a classification's reasoning). */
-  caption?: React.ReactNode
-  className?: string
+  caption?: React.ReactNode;
+  className?: string;
 }
 
 const DENSITY = {
   comfortable: { swatch: "h-3 w-5", text: "text-xs", gap: "gap-x-4 gap-y-1.5" },
   compact: { swatch: "h-2.5 w-4", text: "text-[11px]", gap: "gap-x-3 gap-y-1" },
-} as const
+} as const;
 
 const DOCK_BORDER: Record<SegmentLegendSide, string> = {
   top: "border-b",
   bottom: "border-t",
   left: "border-r",
   right: "border-l",
-}
+};
 
 const FLOAT_ANCHOR: Record<SegmentLegendSide, string> = {
   top: "absolute left-3 top-3",
   bottom: "absolute bottom-3 left-3",
   left: "absolute left-3 top-3",
   right: "absolute right-3 top-3",
-}
+};
 
 /**
  * Compact color legend: one swatch + label per segment. Hovering previews that
@@ -102,26 +102,26 @@ export function SegmentLegend({
   className,
 }: SegmentLegendProps) {
   const [uncontrolledShowUnused, setUncontrolledShowUnused] =
-    React.useState(defaultShowUnused)
+    React.useState(defaultShowUnused);
   const hasCaption =
     caption !== null &&
     caption !== undefined &&
     typeof caption !== "boolean" &&
-    caption !== ""
-  const reveal = showUnused ?? uncontrolledShowUnused
+    caption !== "";
+  const reveal = showUnused ?? uncontrolledShowUnused;
   const visible = reveal
     ? segments
-    : segments.filter((s) => segmentPageCount(s.pages) > 0)
-  const hasHidden = segments.some((s) => segmentPageCount(s.pages) === 0)
-  const canToggleUnused = showUnusedToggle && hasHidden
+    : segments.filter((s) => segmentPageCount(s.pages) > 0);
+  const hasHidden = segments.some((s) => segmentPageCount(s.pages) === 0);
+  const canToggleUnused = showUnusedToggle && hasHidden;
   const scopedInteraction = React.useMemo(
     () =>
       scopeSegmentInteraction(
         interaction,
-        visible.map((segment) => segment.id)
+        visible.map((segment) => segment.id),
       ),
-    [interaction, visible]
-  )
+    [interaction, visible],
+  );
   const interactionState = React.useMemo(
     () =>
       getSegmentInteractionState({
@@ -129,14 +129,14 @@ export function SegmentLegend({
         currentPage,
         interaction: scopedInteraction,
       }),
-    [currentPage, scopedInteraction, visible]
-  )
+    [currentPage, scopedInteraction, visible],
+  );
 
-  if (visible.length === 0 && !canToggleUnused) return null
+  if (visible.length === 0 && !canToggleUnused) return null;
 
-  const d = DENSITY[density]
-  const dockSide = side ?? (orientation === "vertical" ? "left" : "top")
-  const isVertical = orientation === "vertical"
+  const d = DENSITY[density];
+  const dockSide = side ?? (orientation === "vertical" ? "left" : "top");
+  const isVertical = orientation === "vertical";
   // Only a positive integer column count drives the grid; anything else
   // (0, negative, fractional, Infinity, NaN) would emit invalid
   // `grid-template-columns` and silently collapse the row into one column,
@@ -144,24 +144,24 @@ export function SegmentLegend({
   const gridColumns =
     !isVertical && columns != null && Number.isInteger(columns) && columns > 0
       ? columns
-      : null
+      : null;
 
   const chrome = {
     bar: cn("bg-background px-3 py-2", DOCK_BORDER[dockSide]),
     floating: cn(
       "z-10 rounded-lg border bg-background/90 px-3 py-2 shadow-md backdrop-blur",
-      FLOAT_ANCHOR[dockSide]
+      FLOAT_ANCHOR[dockSide],
     ),
     plain: "",
-  }[variant]
+  }[variant];
 
   const toggleUnused = () => {
-    const next = !reveal
+    const next = !reveal;
     if (showUnused === undefined) {
-      setUncontrolledShowUnused(next)
+      setUncontrolledShowUnused(next);
     }
-    onShowUnusedChange?.(next)
-  }
+    onShowUnusedChange?.(next);
+  };
 
   return (
     <div
@@ -178,7 +178,7 @@ export function SegmentLegend({
               ? "flex flex-col"
               : gridColumns
                 ? "grid"
-                : "flex flex-wrap items-center"
+                : "flex flex-wrap items-center",
           )}
           style={
             gridColumns
@@ -194,11 +194,11 @@ export function SegmentLegend({
               interaction: scopedInteraction,
               interactionState,
               onSelect,
-            })
-            const label = segmentDisplayLabel(segment.label)
+            });
+            const label = segmentDisplayLabel(segment.label);
             const hasExplicitLabel =
               typeof segment.label === "string" &&
-              segment.label.trim().length > 0
+              segment.label.trim().length > 0;
             return (
               <button
                 key={`${segment.id}-${segmentPosition}`}
@@ -208,9 +208,9 @@ export function SegmentLegend({
                 aria-current={state.isCurrent ? "page" : undefined}
                 title={label}
                 className={cn(
-                  "flex min-w-0 items-center gap-2 rounded-[3px] transition-opacity focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                  "focus-visible:ring-ring flex min-w-0 items-center gap-2 rounded-[3px] transition-opacity focus-visible:ring-2 focus-visible:outline-none",
                   d.text,
-                  state.isDimmed ? "opacity-40" : "opacity-100"
+                  state.isDimmed ? "opacity-40" : "opacity-100",
                 )}
               >
                 <span
@@ -233,15 +233,15 @@ export function SegmentLegend({
                       "col-start-1 row-start-1 truncate",
                       !hasExplicitLabel && "italic",
                       state.isHighlighted
-                        ? "font-semibold text-foreground"
-                        : "font-normal text-muted-foreground"
+                        ? "text-foreground font-semibold"
+                        : "text-muted-foreground font-normal",
                     )}
                   >
                     {label}
                   </span>
                 </span>
               </button>
-            )
+            );
           })}
         </div>
       ) : null}
@@ -254,16 +254,16 @@ export function SegmentLegend({
               : `Show ${segments.length - visible.length} unused segments`
           }
           onClick={toggleUnused}
-          className="mt-2 text-[10px] font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+          className="text-muted-foreground hover:text-foreground mt-2 text-[10px] font-medium underline-offset-2 hover:underline"
         >
           {reveal ? "Hide unused" : "Show all"}
         </button>
       ) : null}
       {hasCaption ? (
-        <div className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+        <div className="text-muted-foreground mt-1.5 line-clamp-2 text-xs leading-relaxed">
           {caption}
         </div>
       ) : null}
     </div>
-  )
+  );
 }

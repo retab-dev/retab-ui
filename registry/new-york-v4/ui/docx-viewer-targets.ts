@@ -1,21 +1,21 @@
-import type { DocxTarget } from "./docx-viewer-types"
+import type { DocxTarget } from "./docx-viewer-types";
 
 export interface DocxRenderIndex {
-  root: HTMLElement
-  text: DocxTextIndex | null
-  cells: Map<string, HTMLElement> | null
+  root: HTMLElement;
+  text: DocxTextIndex | null;
+  cells: Map<string, HTMLElement> | null;
 }
 
 interface DocxTextIndex {
-  text: string
-  spans: DocxTextSpan[]
+  text: string;
+  spans: DocxTextSpan[];
 }
 
 interface DocxTextSpan {
-  start: number
-  end: number
-  node: Text
-  sourceStartOffset: number
+  start: number;
+  end: number;
+  node: Text;
+  sourceStartOffset: number;
 }
 
 const INLINE_TAGS = new Set([
@@ -50,180 +50,180 @@ const INLINE_TAGS = new Set([
   "KBD",
   "TT",
   "NOBR",
-])
+]);
 
 export function buildDocxRenderIndex(root: HTMLElement): DocxRenderIndex {
   return {
     root,
     text: null,
     cells: null,
-  }
+  };
 }
 
 export function resolveDocxTarget(
   index: DocxRenderIndex,
-  target: DocxTarget
+  target: DocxTarget,
 ): Range | null {
   if (target.kind === "cell") {
-    const cells = index.cells ?? (index.cells = buildDocxCellIndex(index.root))
-    const cell = cells.get(cellKey(target.table, target.row, target.column))
-    if (!cell) return null
-    const range = document.createRange()
-    range.selectNodeContents(cell)
-    return range
+    const cells = index.cells ?? (index.cells = buildDocxCellIndex(index.root));
+    const cell = cells.get(cellKey(target.table, target.row, target.column));
+    if (!cell) return null;
+    const range = document.createRange();
+    range.selectNodeContents(cell);
+    return range;
   }
 
-  const needle = normalizeTextTarget(target.text)
-  if (!needle) return null
-  const textIndex = index.text ?? (index.text = buildDocxTextIndex(index.root))
-  const idx = textIndex.text.indexOf(needle)
-  if (idx === -1) return null
-  const start = findTextPoint(textIndex, idx)
-  const end = findTextPoint(textIndex, idx + needle.length - 1)
-  if (!start || !end) return null
-  const range = document.createRange()
-  range.setStart(start.node, start.offset)
-  range.setEnd(end.node, end.offset + 1)
-  return range
+  const needle = normalizeTextTarget(target.text);
+  if (!needle) return null;
+  const textIndex = index.text ?? (index.text = buildDocxTextIndex(index.root));
+  const idx = textIndex.text.indexOf(needle);
+  if (idx === -1) return null;
+  const start = findTextPoint(textIndex, idx);
+  const end = findTextPoint(textIndex, idx + needle.length - 1);
+  if (!start || !end) return null;
+  const range = document.createRange();
+  range.setStart(start.node, start.offset);
+  range.setEnd(end.node, end.offset + 1);
+  return range;
 }
 
 export function targetKey(
-  target: DocxTarget | null | undefined
+  target: DocxTarget | null | undefined,
 ): string | null {
-  if (!target) return null
+  if (!target) return null;
   return target.kind === "cell"
     ? `cell:${target.table}:${target.row}:${target.column}`
-    : `text:${normalizeTextTarget(target.text)}`
+    : `text:${normalizeTextTarget(target.text)}`;
 }
 
 export function normalizeTextTarget(text: string) {
-  return text.replace(/\s+/g, " ").trim()
+  return text.replace(/\s+/g, " ").trim();
 }
 
 function buildDocxCellIndex(root: HTMLElement) {
-  const cells = new Map<string, HTMLElement>()
-  const tables = root.querySelectorAll(".docx-wrapper > section.docx table")
+  const cells = new Map<string, HTMLElement>();
+  const tables = root.querySelectorAll(".docx-wrapper > section.docx table");
   tables.forEach((table, tableIndex) => {
     Array.from((table as HTMLTableElement).rows).forEach((row, rowIndex) => {
       Array.from(row.cells).forEach((cell, columnIndex) => {
         if (!hasHiddenAncestor(cell, root)) {
-          cells.set(cellKey(tableIndex, rowIndex, columnIndex), cell)
+          cells.set(cellKey(tableIndex, rowIndex, columnIndex), cell);
         }
-      })
-    })
-  })
-  return cells
+      });
+    });
+  });
+  return cells;
 }
 
 function buildDocxTextIndex(root: HTMLElement) {
   const walker = document.createTreeWalker(
     root,
-    NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT
-  )
-  let normalized = ""
-  const spans: DocxTextSpan[] = []
-  let prevSpace = false
-  let prevBlock: HTMLElement | null = null
-  let pendingBreak = false
+    NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+  );
+  let normalized = "";
+  const spans: DocxTextSpan[] = [];
+  let prevSpace = false;
+  let prevBlock: HTMLElement | null = null;
+  let pendingBreak = false;
 
   const append = (text: string, node: Text, sourceStartOffset: number) => {
-    if (!text) return
-    const start = normalized.length
-    normalized += text
+    if (!text) return;
+    const start = normalized.length;
+    normalized += text;
     spans.push({
       start,
       end: start + text.length,
       node,
       sourceStartOffset,
-    })
-  }
+    });
+  };
 
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
     if (n.nodeType === Node.ELEMENT_NODE) {
-      const tag = (n as HTMLElement).tagName
+      const tag = (n as HTMLElement).tagName;
       if (
         (tag === "BR" || tag === "HR") &&
         isDocumentBreakElement(root, n as HTMLElement)
       ) {
-        pendingBreak = true
+        pendingBreak = true;
       }
-      continue
+      continue;
     }
-    if (!isDocumentTextNode(root, n as Text)) continue
-    const block = blockContainer((n as Text).parentElement, root)
-    const broke = pendingBreak || (prevBlock !== null && block !== prevBlock)
-    pendingBreak = false
+    if (!isDocumentTextNode(root, n as Text)) continue;
+    const block = blockContainer((n as Text).parentElement, root);
+    const broke = pendingBreak || (prevBlock !== null && block !== prevBlock);
+    pendingBreak = false;
     if (broke && !prevSpace && normalized) {
-      prevSpace = true
-      append(" ", n as Text, 0)
+      prevSpace = true;
+      append(" ", n as Text, 0);
     }
-    prevBlock = block
-    const data = (n as Text).data
+    prevBlock = block;
+    const data = (n as Text).data;
     for (let i = 0; i < data.length; i++) {
       if (/\s/.test(data[i])) {
-        if (prevSpace) continue
-        prevSpace = true
-        append(" ", n as Text, i)
+        if (prevSpace) continue;
+        prevSpace = true;
+        append(" ", n as Text, i);
       } else {
-        const start = i
-        i += 1
-        while (i < data.length && !/\s/.test(data[i])) i += 1
-        append(data.slice(start, i), n as Text, start)
-        i -= 1
-        prevSpace = false
+        const start = i;
+        i += 1;
+        while (i < data.length && !/\s/.test(data[i])) i += 1;
+        append(data.slice(start, i), n as Text, start);
+        i -= 1;
+        prevSpace = false;
       }
     }
   }
-  return { text: normalized, spans }
+  return { text: normalized, spans };
 }
 
 function findTextPoint(index: DocxTextIndex, offset: number) {
-  let low = 0
-  let high = index.spans.length - 1
+  let low = 0;
+  let high = index.spans.length - 1;
   while (low <= high) {
-    const mid = Math.floor((low + high) / 2)
-    const span = index.spans[mid]!
+    const mid = Math.floor((low + high) / 2);
+    const span = index.spans[mid]!;
     if (offset < span.start) {
-      high = mid - 1
+      high = mid - 1;
     } else if (offset >= span.end) {
-      low = mid + 1
+      low = mid + 1;
     } else {
       return {
         node: span.node,
         offset: span.sourceStartOffset + offset - span.start,
-      }
+      };
     }
   }
-  return null
+  return null;
 }
 
 function cellKey(table: number, row: number, column: number) {
-  return `${table}:${row}:${column}`
+  return `${table}:${row}:${column}`;
 }
 
 function blockContainer(
   el: HTMLElement | null,
-  root: HTMLElement
+  root: HTMLElement,
 ): HTMLElement {
-  let cur = el
+  let cur = el;
   while (cur && cur !== root && INLINE_TAGS.has(cur.tagName)) {
-    cur = cur.parentElement
+    cur = cur.parentElement;
   }
-  return cur ?? root
+  return cur ?? root;
 }
 
 function isDocumentTextNode(root: HTMLElement, node: Text) {
-  const parent = node.parentElement
-  if (!parent || !root.contains(parent)) return false
-  if (!parent.closest(".docx-wrapper > section.docx")) return false
-  if (parent.closest("style, script, noscript, template")) return false
-  return !hasHiddenAncestor(parent, root)
+  const parent = node.parentElement;
+  if (!parent || !root.contains(parent)) return false;
+  if (!parent.closest(".docx-wrapper > section.docx")) return false;
+  if (parent.closest("style, script, noscript, template")) return false;
+  return !hasHiddenAncestor(parent, root);
 }
 
 function isDocumentBreakElement(root: HTMLElement, el: HTMLElement) {
-  if (!root.contains(el)) return false
-  if (!el.closest(".docx-wrapper > section.docx")) return false
-  return !hasHiddenAncestor(el, root)
+  if (!root.contains(el)) return false;
+  if (!el.closest(".docx-wrapper > section.docx")) return false;
+  return !hasHiddenAncestor(el, root);
 }
 
 function hasHiddenAncestor(element: HTMLElement, root: HTMLElement) {
@@ -232,19 +232,19 @@ function hasHiddenAncestor(element: HTMLElement, root: HTMLElement) {
       el.hidden ||
       el.getAttribute("aria-hidden")?.trim().toLowerCase() === "true"
     ) {
-      return true
+      return true;
     }
     const style =
-      typeof window !== "undefined" ? window.getComputedStyle(el) : el.style
+      typeof window !== "undefined" ? window.getComputedStyle(el) : el.style;
     if (
       style.display === "none" ||
       style.visibility === "hidden" ||
       style.visibility === "collapse" ||
       style.getPropertyValue("content-visibility") === "hidden"
     ) {
-      return true
+      return true;
     }
-    if (el === root) break
+    if (el === root) break;
   }
-  return false
+  return false;
 }

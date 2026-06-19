@@ -1,21 +1,21 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
 import {
   createViewerResource,
   type ViewerResource,
-} from "@/lib/viewer-resource"
-import { useIsClient } from "@/components/ui/use-is-client"
-import { ViewerErrorBoundary } from "@/components/ui/viewer-error"
+} from "@/lib/viewer-resource";
+import { useIsClient } from "@/components/ui/use-is-client";
+import { ViewerErrorBoundary } from "@/components/ui/viewer-error";
 
-import { XlsxViewerFallback } from "./xlsx-viewer-chrome"
-import { XlsxViewerSession } from "./xlsx-viewer-session"
+import { XlsxViewerFallback } from "./xlsx-viewer-chrome";
+import { XlsxViewerSession } from "./xlsx-viewer-session";
 import type {
   XlsxResourceContentProps,
   XlsxViewerHandle,
   XlsxViewerProps,
-} from "./xlsx-viewer-types"
+} from "./xlsx-viewer-types";
 
 export type {
   XlsxCellRef,
@@ -23,28 +23,34 @@ export type {
   XlsxResourceContentProps,
   XlsxViewerHandle,
   XlsxViewerProps,
-} from "./xlsx-viewer-types"
+} from "./xlsx-viewer-types";
 
 export type XlsxViewerProviderProps = {
-  children: React.ReactNode
-  resource: ViewerResource
-}
+  children: React.ReactNode;
+  resource: ViewerResource;
+};
 
-export type XlsxViewerWorkbookProps = Omit<XlsxResourceContentProps, "resource">
+export type XlsxViewerWorkbookProps = Omit<
+  XlsxResourceContentProps,
+  "resource"
+>;
 
 export const XlsxViewer = React.forwardRef<XlsxViewerHandle, XlsxViewerProps>(
   function XlsxViewer(props, ref) {
-    const { source, ...resourceProps } = props
-    const resource = React.useMemo(() => createViewerResource(source), [source])
+    const { source, ...resourceProps } = props;
+    const resource = React.useMemo(
+      () => createViewerResource(source),
+      [source],
+    );
     return (
       <XlsxResourceContent {...resourceProps} ref={ref} resource={resource} />
-    )
-  }
-)
+    );
+  },
+);
 
 const XlsxViewerResourceContext = React.createContext<ViewerResource | null>(
-  null
-)
+  null,
+);
 
 export function XlsxViewerProvider({
   children,
@@ -54,33 +60,33 @@ export function XlsxViewerProvider({
     <XlsxViewerResourceContext.Provider value={resource}>
       {children}
     </XlsxViewerResourceContext.Provider>
-  )
+  );
 }
 
 function useXlsxViewerResource(): ViewerResource {
-  const resource = React.useContext(XlsxViewerResourceContext)
+  const resource = React.useContext(XlsxViewerResourceContext);
   if (!resource) {
     throw new Error(
-      "XlsxViewerWorkbook must be used within XlsxViewerProvider."
-    )
+      "XlsxViewerWorkbook must be used within XlsxViewerProvider.",
+    );
   }
-  return resource
+  return resource;
 }
 
 export const XlsxViewerWorkbook = React.forwardRef<
   XlsxViewerHandle,
   XlsxViewerWorkbookProps
 >(function XlsxViewerWorkbook(props, ref) {
-  const resource = useXlsxViewerResource()
-  return <XlsxResourceContent {...props} ref={ref} resource={resource} />
-})
+  const resource = useXlsxViewerResource();
+  return <XlsxResourceContent {...props} ref={ref} resource={resource} />;
+});
 
 export const XlsxResourceContent = React.forwardRef<
   XlsxViewerHandle,
   XlsxResourceContentProps
 >(function XlsxResourceContent(props, ref) {
-  const isClient = useIsClient()
-  const resource = props.resource
+  const isClient = useIsClient();
+  const resource = props.resource;
   if (!isClient) {
     return (
       <XlsxViewerFallback
@@ -89,7 +95,7 @@ export const XlsxResourceContent = React.forwardRef<
         controls={props.controls}
         bare={props.bare}
       />
-    )
+    );
   }
   return (
     <ViewerErrorBoundary
@@ -121,5 +127,5 @@ export const XlsxResourceContent = React.forwardRef<
         />
       </React.Suspense>
     </ViewerErrorBoundary>
-  )
-})
+  );
+});

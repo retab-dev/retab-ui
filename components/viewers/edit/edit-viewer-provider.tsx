@@ -1,13 +1,15 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
+
+import * as React from "react";
 
 import type {
   PageOverlayProps,
   PdfViewerHandle,
-} from "@/components/ui/pdf-viewer"
-import { SegmentedDocumentProvider } from "@/components/ui/segmented-document-provider"
-import { useSegmentedItemLink } from "@/components/ui/segmented-item-link"
+} from "@/components/ui/pdf-viewer";
+import { SegmentedDocumentProvider } from "@/components/ui/segmented-document-provider";
+import { useSegmentedItemLink } from "@/components/ui/segmented-item-link";
 
 import {
   createEditViewerFieldProjection,
@@ -21,8 +23,8 @@ import {
   type EditViewerFieldGroup,
   type EditViewerFieldProjection,
   type EditViewerFilter,
-} from "./edit-viewer-model"
-import { EditFieldOverlayLayer } from "./edit-viewer-overlays"
+} from "./edit-viewer-model";
+import { EditFieldOverlayLayer } from "./edit-viewer-overlays";
 import {
   EditStoreProvider,
   type EditStore,
@@ -31,7 +33,7 @@ import {
   type EditViewerModeState,
   type EditViewerProviderState,
   type EditViewerSelectionState,
-} from "./edit-viewer-store"
+} from "./edit-viewer-store";
 import type {
   EditViewerDocumentSource,
   EditViewerField,
@@ -40,11 +42,11 @@ import type {
   EditViewerProps,
   EditViewerResult,
   EditViewerStatus,
-} from "./edit-viewer-types"
+} from "./edit-viewer-types";
 
 export type EditViewerProviderProps = Omit<EditViewerProps, "className"> & {
-  children: React.ReactNode
-}
+  children: React.ReactNode;
+};
 
 export function EditViewerProvider({
   result,
@@ -58,17 +60,17 @@ export function EditViewerProvider({
   options,
   children,
 }: EditViewerProviderProps) {
-  const viewerRef = React.useRef<PdfViewerHandle>(null)
+  const viewerRef = React.useRef<PdfViewerHandle>(null);
   const resolvedOptions = React.useMemo(
     () => resolveEditViewerOptions(options),
-    [options]
-  )
+    [options],
+  );
   const editResult = React.useMemo(
     () => normalizeEditViewerResult(result),
-    [result]
-  )
-  const [query, setQuery] = React.useState("")
-  const [filter, setFilter] = React.useState<EditViewerFilter>("all")
+    [result],
+  );
+  const [query, setQuery] = React.useState("");
+  const [filter, setFilter] = React.useState<EditViewerFilter>("all");
   const fieldProjection = React.useMemo(
     () =>
       createEditViewerFieldProjection({
@@ -76,8 +78,8 @@ export function EditViewerProvider({
         query,
         filter,
       }),
-    [editResult.fields, filter, query]
-  )
+    [editResult.fields, filter, query],
+  );
   const modeState = useEditViewerModeState({
     fields: fieldProjection.fields,
     sourceDocument,
@@ -85,7 +87,7 @@ export function EditViewerProvider({
     options: resolvedOptions,
     mode,
     onModeChange,
-  })
+  });
   const documentTarget = React.useMemo(
     () =>
       resolveEditViewerDocumentTarget({
@@ -94,12 +96,12 @@ export function EditViewerProvider({
         sourceDocument,
         status,
       }),
-    [filledDocument, modeState.mode, sourceDocument, status]
-  )
+    [filledDocument, modeState.mode, sourceDocument, status],
+  );
   const segmentedDocument = React.useMemo(
     () => createEditViewerSegmentedDocumentModel(fieldProjection.fields),
-    [fieldProjection.fields]
-  )
+    [fieldProjection.fields],
+  );
 
   return (
     <SegmentedDocumentProvider model={segmentedDocument}>
@@ -123,7 +125,7 @@ export function EditViewerProvider({
         {children}
       </EditViewerResolvedProvider>
     </SegmentedDocumentProvider>
-  )
+  );
 }
 
 function useEditViewerModeState({
@@ -134,12 +136,12 @@ function useEditViewerModeState({
   options,
   sourceDocument,
 }: {
-  fields: readonly EditViewerField[]
-  filledDocument: EditViewerDocumentSource | null
-  mode?: EditViewerMode | null
-  onModeChange?: EditViewerProps["onModeChange"]
-  options: Required<EditViewerOptions>
-  sourceDocument: EditViewerDocumentSource | null
+  fields: readonly EditViewerField[];
+  filledDocument: EditViewerDocumentSource | null;
+  mode?: EditViewerMode | null;
+  onModeChange?: EditViewerProps["onModeChange"];
+  options: Required<EditViewerOptions>;
+  sourceDocument: EditViewerDocumentSource | null;
 }): EditViewerModeState {
   const modes = React.useMemo(
     () =>
@@ -149,32 +151,32 @@ function useEditViewerModeState({
         filledDocument,
         options,
       }),
-    [fields, filledDocument, options, sourceDocument]
-  )
-  const isModeControlled = mode !== undefined
+    [fields, filledDocument, options, sourceDocument],
+  );
+  const isModeControlled = mode !== undefined;
   const [uncontrolledMode, setUncontrolledMode] =
-    React.useState<EditViewerMode | null>(null)
+    React.useState<EditViewerMode | null>(null);
   const resolvedMode = resolveEditViewerMode({
     availableModes: modes,
     requestedMode: mode,
     currentMode: isModeControlled ? null : uncontrolledMode,
-  })
+  });
 
   React.useEffect(() => {
-    if (isModeControlled || uncontrolledMode === resolvedMode) return
-    setUncontrolledMode(resolvedMode)
-  }, [isModeControlled, resolvedMode, uncontrolledMode])
+    if (isModeControlled || uncontrolledMode === resolvedMode) return;
+    setUncontrolledMode(resolvedMode);
+  }, [isModeControlled, resolvedMode, uncontrolledMode]);
 
   const setMode = React.useCallback(
     (nextMode: EditViewerMode) => {
-      if (!modes.includes(nextMode)) return
+      if (!modes.includes(nextMode)) return;
       if (!isModeControlled) {
-        setUncontrolledMode(nextMode)
+        setUncontrolledMode(nextMode);
       }
-      onModeChange?.(nextMode)
+      onModeChange?.(nextMode);
     },
-    [isModeControlled, modes, onModeChange]
-  )
+    [isModeControlled, modes, onModeChange],
+  );
 
   return React.useMemo(
     () => ({
@@ -182,8 +184,8 @@ function useEditViewerModeState({
       modes,
       setMode,
     }),
-    [modes, resolvedMode, setMode]
-  )
+    [modes, resolvedMode, setMode],
+  );
 }
 
 function EditViewerResolvedProvider({
@@ -204,22 +206,22 @@ function EditViewerResolvedProvider({
   status,
   viewerRef,
 }: {
-  children: React.ReactNode
-  documentTarget: EditViewerDocumentTarget
-  editResult: EditViewerResult
-  fieldProjection: EditViewerFieldProjection
-  filledDocument: EditViewerDocumentSource | null
-  filter: EditViewerFilter
-  modeState: EditViewerModeState
-  onSelectedFieldKeyChange?: EditViewerProps["onSelectedFieldKeyChange"]
-  options: Required<EditViewerOptions>
-  query: string
-  selectedFieldKey?: string | null
-  setFilter: (filter: EditViewerFilter) => void
-  setQuery: (query: string) => void
-  sourceDocument: EditViewerDocumentSource | null
-  status: EditViewerStatus
-  viewerRef: React.RefObject<PdfViewerHandle | null>
+  children: React.ReactNode;
+  documentTarget: EditViewerDocumentTarget;
+  editResult: EditViewerResult;
+  fieldProjection: EditViewerFieldProjection;
+  filledDocument: EditViewerDocumentSource | null;
+  filter: EditViewerFilter;
+  modeState: EditViewerModeState;
+  onSelectedFieldKeyChange?: EditViewerProps["onSelectedFieldKeyChange"];
+  options: Required<EditViewerOptions>;
+  query: string;
+  selectedFieldKey?: string | null;
+  setFilter: (filter: EditViewerFilter) => void;
+  setQuery: (query: string) => void;
+  sourceDocument: EditViewerDocumentSource | null;
+  status: EditViewerStatus;
+  viewerRef: React.RefObject<PdfViewerHandle | null>;
 }) {
   const {
     fieldByKey,
@@ -230,19 +232,19 @@ function EditViewerResolvedProvider({
     locatedFields,
     unlocatedFields,
     visibleFields,
-  } = fieldProjection
+  } = fieldProjection;
   const selection = useEditViewerSelectionBridge({
     fieldByKey,
     onSelectedFieldKeyChange,
     selectedFieldKey,
-  })
+  });
   const renderPageOverlay = useEditViewerPageOverlay({
     activeFieldKey: selection.activeFieldKey,
     fieldsByPage,
     mode: modeState.mode,
     previewField: selection.previewField,
     selectField: selection.selectField,
-  })
+  });
   const state = React.useMemo<EditViewerProviderState>(
     () => ({
       status,
@@ -264,8 +266,8 @@ function EditViewerResolvedProvider({
       filledCount,
       modeState.modes.length,
       status,
-    ]
-  )
+    ],
+  );
   const fieldsState = React.useMemo<EditViewerFieldsState>(
     () => ({
       fields,
@@ -298,12 +300,12 @@ function EditViewerResolvedProvider({
       setQuery,
       unlocatedFields,
       visibleFields,
-    ]
-  )
+    ],
+  );
   const selectionState = React.useMemo<EditViewerSelectionState>(
     () => selection,
-    [selection]
-  )
+    [selection],
+  );
   const documentState = React.useMemo<EditViewerDocumentState>(
     () => ({
       target: documentTarget,
@@ -320,8 +322,8 @@ function EditViewerResolvedProvider({
       renderPageOverlay,
       sourceDocument,
       viewerRef,
-    ]
-  )
+    ],
+  );
   const value = React.useMemo<EditStore>(
     () => ({
       state,
@@ -331,10 +333,10 @@ function EditViewerResolvedProvider({
       document: documentState,
       options,
     }),
-    [documentState, fieldsState, modeState, options, selectionState, state]
-  )
+    [documentState, fieldsState, modeState, options, selectionState, state],
+  );
 
-  return <EditStoreProvider value={value}>{children}</EditStoreProvider>
+  return <EditStoreProvider value={value}>{children}</EditStoreProvider>;
 }
 
 function useEditViewerSelectionBridge({
@@ -342,9 +344,9 @@ function useEditViewerSelectionBridge({
   onSelectedFieldKeyChange,
   selectedFieldKey,
 }: {
-  fieldByKey: ReadonlyMap<string, EditViewerField>
-  onSelectedFieldKeyChange?: EditViewerProps["onSelectedFieldKeyChange"]
-  selectedFieldKey?: string | null
+  fieldByKey: ReadonlyMap<string, EditViewerField>;
+  onSelectedFieldKeyChange?: EditViewerProps["onSelectedFieldKeyChange"];
+  selectedFieldKey?: string | null;
 }): EditViewerSelectionState {
   const {
     activeItemId,
@@ -352,41 +354,41 @@ function useEditViewerSelectionBridge({
     previewItem,
     selectItem,
     selectedItemId,
-  } = useSegmentedItemLink({ initialItemId: selectedFieldKey })
+  } = useSegmentedItemLink({ initialItemId: selectedFieldKey });
 
   React.useEffect(() => {
-    if (selectedFieldKey === undefined) return
+    if (selectedFieldKey === undefined) return;
     if (selectedFieldKey && !fieldByKey.has(selectedFieldKey)) {
-      selectItem(null)
-      onSelectedFieldKeyChange?.(null)
-      return
+      selectItem(null);
+      onSelectedFieldKeyChange?.(null);
+      return;
     }
-    selectItem(selectedFieldKey ?? null)
-  }, [fieldByKey, onSelectedFieldKeyChange, selectItem, selectedFieldKey])
+    selectItem(selectedFieldKey ?? null);
+  }, [fieldByKey, onSelectedFieldKeyChange, selectItem, selectedFieldKey]);
 
   const selectField = React.useCallback(
     (fieldKey: string) => {
-      if (!fieldByKey.has(fieldKey)) return
-      selectItem(fieldKey)
-      navigateItem(fieldKey, { behavior: "smooth" })
-      onSelectedFieldKeyChange?.(fieldKey)
+      if (!fieldByKey.has(fieldKey)) return;
+      selectItem(fieldKey);
+      navigateItem(fieldKey, { behavior: "smooth" });
+      onSelectedFieldKeyChange?.(fieldKey);
     },
-    [fieldByKey, navigateItem, onSelectedFieldKeyChange, selectItem]
-  )
+    [fieldByKey, navigateItem, onSelectedFieldKeyChange, selectItem],
+  );
   const clearFieldSelection = React.useCallback(() => {
-    selectItem(null)
-    onSelectedFieldKeyChange?.(null)
-  }, [onSelectedFieldKeyChange, selectItem])
+    selectItem(null);
+    onSelectedFieldKeyChange?.(null);
+  }, [onSelectedFieldKeyChange, selectItem]);
   const previewField = React.useCallback(
     (fieldKey: string | null) => {
-      if (fieldKey && !fieldByKey.has(fieldKey)) return
-      previewItem(fieldKey)
+      if (fieldKey && !fieldByKey.has(fieldKey)) return;
+      previewItem(fieldKey);
       if (fieldKey) {
-        navigateItem(fieldKey, { behavior: "auto", clearPreview: false })
+        navigateItem(fieldKey, { behavior: "auto", clearPreview: false });
       }
     },
-    [fieldByKey, navigateItem, previewItem]
-  )
+    [fieldByKey, navigateItem, previewItem],
+  );
 
   return React.useMemo(
     () => ({
@@ -402,8 +404,8 @@ function useEditViewerSelectionBridge({
       previewField,
       selectField,
       selectedItemId,
-    ]
-  )
+    ],
+  );
 }
 
 function useEditViewerPageOverlay({
@@ -413,11 +415,11 @@ function useEditViewerPageOverlay({
   previewField,
   selectField,
 }: {
-  activeFieldKey: string | null
-  fieldsByPage: ReadonlyMap<number, readonly EditViewerField[]>
-  mode: EditViewerMode | null
-  previewField: (fieldKey: string | null) => void
-  selectField: (fieldKey: string) => void
+  activeFieldKey: string | null;
+  fieldsByPage: ReadonlyMap<number, readonly EditViewerField[]>;
+  mode: EditViewerMode | null;
+  previewField: (fieldKey: string | null) => void;
+  selectField: (fieldKey: string) => void;
 }) {
   return React.useCallback(
     ({ pageNumber }: PageOverlayProps) => (
@@ -430,6 +432,6 @@ function useEditViewerPageOverlay({
         onFieldSelect={selectField}
       />
     ),
-    [activeFieldKey, fieldsByPage, mode, previewField, selectField]
-  )
+    [activeFieldKey, fieldsByPage, mode, previewField, selectField],
+  );
 }

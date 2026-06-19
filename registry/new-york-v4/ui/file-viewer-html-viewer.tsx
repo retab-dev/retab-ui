@@ -1,23 +1,25 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { cn } from "@/lib/utils"
+import * as React from "react";
+
+import { cn } from "@/lib/utils";
 import {
   viewerContentRenderKey,
   type ViewerResource,
-} from "@/lib/viewer-resource"
+} from "@/lib/viewer-resource";
 
-import { ViewerFallback } from "./file-viewer-fallback"
-import { loadTextResource } from "./file-viewer-text-resource"
-import { isAbortError } from "./viewer-abortable-request"
-import { useViewerControlsRegistration } from "./viewer-controls"
-import { useZoom, ZoomActions } from "./viewer-zoom"
+import { ViewerFallback } from "./file-viewer-fallback";
+import { loadTextResource } from "./file-viewer-text-resource";
+import { isAbortError } from "./viewer-abortable-request";
+import { useViewerControlsRegistration } from "./viewer-controls";
+import { useZoom, ZoomActions } from "./viewer-zoom";
 
 type HtmlLoadState =
   | { status: "loading"; key: unknown }
   | { status: "loaded"; key: unknown; html: string }
-  | { status: "error"; key: unknown; error: unknown }
+  | { status: "error"; key: unknown; error: unknown };
 
 const HTML_VIEWER_DOCUMENT_STYLE = `<style data-retab-html-viewer-padding>
 html {
@@ -35,25 +37,25 @@ body > :first-child {
 body > :last-child {
   margin-block-end: 0;
 }
-</style>`
+</style>`;
 
 function createHtmlViewerSrcDoc(html: string) {
-  const headOpenTag = /<head(?:\s[^>]*)?>/i
-  const htmlOpenTag = /<html(?:\s[^>]*)?>/i
+  const headOpenTag = /<head(?:\s[^>]*)?>/i;
+  const htmlOpenTag = /<html(?:\s[^>]*)?>/i;
 
   if (headOpenTag.test(html)) {
     return html.replace(
       headOpenTag,
-      (tag) => `${tag}${HTML_VIEWER_DOCUMENT_STYLE}`
-    )
+      (tag) => `${tag}${HTML_VIEWER_DOCUMENT_STYLE}`,
+    );
   }
   if (htmlOpenTag.test(html)) {
     return html.replace(
       htmlOpenTag,
-      (tag) => `${tag}<head>${HTML_VIEWER_DOCUMENT_STYLE}</head>`
-    )
+      (tag) => `${tag}<head>${HTML_VIEWER_DOCUMENT_STYLE}</head>`,
+    );
   }
-  return `${HTML_VIEWER_DOCUMENT_STYLE}${html}`
+  return `${HTML_VIEWER_DOCUMENT_STYLE}${html}`;
 }
 
 export function HtmlFileContent({
@@ -63,11 +65,11 @@ export function HtmlFileContent({
   controls = true,
   descriptorSignal,
 }: {
-  resource: ViewerResource
-  className?: string
-  bare?: boolean
-  controls?: boolean
-  descriptorSignal: AbortSignal
+  resource: ViewerResource;
+  className?: string;
+  bare?: boolean;
+  controls?: boolean;
+  descriptorSignal: AbortSignal;
 }) {
   if (resource.content.payload.kind === "text") {
     return (
@@ -79,7 +81,7 @@ export function HtmlFileContent({
         bare={bare}
         controls={controls}
       />
-    )
+    );
   }
   return (
     <HtmlFileResource
@@ -89,7 +91,7 @@ export function HtmlFileContent({
       controls={controls}
       descriptorSignal={descriptorSignal}
     />
-  )
+  );
 }
 
 function HtmlFileResource({
@@ -99,29 +101,29 @@ function HtmlFileResource({
   controls,
   descriptorSignal,
 }: {
-  resource: ViewerResource
-  className?: string
-  bare?: boolean
-  controls: boolean
-  descriptorSignal: AbortSignal
+  resource: ViewerResource;
+  className?: string;
+  bare?: boolean;
+  controls: boolean;
+  descriptorSignal: AbortSignal;
 }) {
-  const content = resource.content
-  const contentKey = content.key
+  const content = resource.content;
+  const contentKey = content.key;
   const [state, setState] = React.useState<HtmlLoadState>({
     status: "loading",
     key: contentKey,
-  })
+  });
 
   React.useEffect(() => {
-    let active = true
-    const controller = new AbortController()
-    const abortLocal = () => controller.abort()
-    setState({ status: "loading", key: contentKey })
+    let active = true;
+    const controller = new AbortController();
+    const abortLocal = () => controller.abort();
+    setState({ status: "loading", key: contentKey });
 
     if (descriptorSignal.aborted) {
-      abortLocal()
+      abortLocal();
     } else {
-      descriptorSignal.addEventListener("abort", abortLocal, { once: true })
+      descriptorSignal.addEventListener("abort", abortLocal, { once: true });
     }
 
     loadTextResource({
@@ -131,37 +133,37 @@ function HtmlFileResource({
     }).then(
       (html) => {
         if (active && !controller.signal.aborted) {
-          setState({ status: "loaded", key: contentKey, html })
+          setState({ status: "loaded", key: contentKey, html });
         }
       },
       (error: unknown) => {
-        if (!active || isAbortError(error)) return
-        setState({ status: "error", key: contentKey, error })
-      }
-    )
+        if (!active || isAbortError(error)) return;
+        setState({ status: "error", key: contentKey, error });
+      },
+    );
 
     return () => {
-      active = false
-      descriptorSignal.removeEventListener("abort", abortLocal)
-      abortLocal()
-    }
-  }, [content, contentKey, descriptorSignal, resource.fileName])
+      active = false;
+      descriptorSignal.removeEventListener("abort", abortLocal);
+      abortLocal();
+    };
+  }, [content, contentKey, descriptorSignal, resource.fileName]);
 
   if (state.key !== contentKey) {
     return (
       <ViewerFallback resource={resource} className={className} bare={bare} />
-    )
+    );
   }
   if (state.status === "error") {
-    throw state.error
+    throw state.error;
   }
   if (state.status === "loading") {
     return (
       <ViewerFallback resource={resource} className={className} bare={bare} />
-    )
+    );
   }
 
-  const { html } = state
+  const { html } = state;
   return (
     <HtmlFileContentFrame
       key={contentKey}
@@ -171,7 +173,7 @@ function HtmlFileResource({
       bare={bare}
       controls={controls}
     />
-  )
+  );
 }
 
 function HtmlFileContentFrame({
@@ -181,23 +183,23 @@ function HtmlFileContentFrame({
   bare,
   controls,
 }: {
-  resource: ViewerResource
-  html: string
-  className?: string
-  bare?: boolean
-  controls: boolean
+  resource: ViewerResource;
+  html: string;
+  className?: string;
+  bare?: boolean;
+  controls: boolean;
 }) {
-  const fileName = resource.fileName
-  const { scale, zoom, reset } = useZoom()
-  useHtmlControlsRegistration({ reset, scale, zoom })
+  const fileName = resource.fileName;
+  const { scale, zoom, reset } = useZoom();
+  useHtmlControlsRegistration({ reset, scale, zoom });
 
   return (
     <div
       data-slot="html-file-viewer-content"
       className={cn(
-        "flex min-h-0 flex-1 flex-col overflow-hidden bg-card",
+        "bg-card flex min-h-0 flex-1 flex-col overflow-hidden",
         bare ? "h-full" : "min-h-64",
-        className
+        className,
       )}
     >
       {controls ? (
@@ -205,7 +207,7 @@ function HtmlFileContentFrame({
       ) : null}
       <SandboxedDoc html={html} title={fileName} scale={scale} />
     </div>
-  )
+  );
 }
 
 function useHtmlControlsRegistration({
@@ -213,14 +215,14 @@ function useHtmlControlsRegistration({
   scale,
   zoom,
 }: {
-  reset: () => void
-  scale: number
-  zoom: (factor: number) => void
+  reset: () => void;
+  scale: number;
+  zoom: (factor: number) => void;
 }) {
-  const onControlsChange = useViewerControlsRegistration()
+  const onControlsChange = useViewerControlsRegistration();
 
   React.useEffect(() => {
-    if (!onControlsChange) return
+    if (!onControlsChange) return;
 
     onControlsChange({
       zoom: {
@@ -229,10 +231,10 @@ function useHtmlControlsRegistration({
         onZoomIn: () => zoom(1.2),
         onReset: reset,
       },
-    })
+    });
 
-    return () => onControlsChange(null)
-  }, [onControlsChange, reset, scale, zoom])
+    return () => onControlsChange(null);
+  }, [onControlsChange, reset, scale, zoom]);
 }
 
 function HtmlContentToolbar({
@@ -240,15 +242,15 @@ function HtmlContentToolbar({
   zoom,
   reset,
 }: {
-  scale: number
-  zoom: (factor: number) => void
-  reset: () => void
+  scale: number;
+  zoom: (factor: number) => void;
+  reset: () => void;
 }) {
   return (
-    <div className="flex h-10 shrink-0 items-center justify-end gap-1 border-b bg-card px-2">
+    <div className="bg-card flex h-10 shrink-0 items-center justify-end gap-1 border-b px-2">
       <ZoomActions scale={scale} zoom={zoom} reset={reset} />
     </div>
-  )
+  );
 }
 
 function SandboxedDoc({
@@ -256,9 +258,9 @@ function SandboxedDoc({
   title,
   scale = 1,
 }: {
-  html: string
-  title: string
-  scale?: number
+  html: string;
+  title: string;
+  scale?: number;
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-auto bg-white">
@@ -270,5 +272,5 @@ function SandboxedDoc({
         style={{ zoom: scale }}
       />
     </div>
-  )
+  );
 }

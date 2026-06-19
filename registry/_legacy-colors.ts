@@ -2068,7 +2068,7 @@ export const colors = {
       oklch: "oklch(0.27,0.10,12)",
     },
   ],
-}
+};
 
 export const colorMapping = {
   light: {
@@ -2123,4 +2123,4 @@ export const colorMapping = {
     "chart-4": "280 65% 60%",
     "chart-5": "340 75% 55%",
   },
-} as const
+} as const;

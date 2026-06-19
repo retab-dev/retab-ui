@@ -1,21 +1,21 @@
-import { type Metadata } from "next"
-import Link from "next/link"
+import { type Metadata } from "next";
+import Link from "next/link";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   PageActions,
   PageHeader,
   PageHeaderDescription,
   PageHeaderHeading,
-} from "@/components/page-header"
-import { HomeShowcase } from "./showcase"
+} from "@/components/page-header";
+import { HomeShowcase } from "./showcase";
 
-const title = "The Foundation for your Document Workflows"
+const title = "The Foundation for your Document Workflows";
 const description =
-  "Lightweight, virtualized React viewers for documents and structured data. Fast by default, built for scale, copy and paste into your apps."
+  "Lightweight, virtualized React viewers for documents and structured data. Fast by default, built for scale, copy and paste into your apps.";
 
-export const dynamic = "force-static"
-export const revalidate = false
+export const dynamic = "force-static";
+export const revalidate = false;
 
 export const metadata: Metadata = {
   title,
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     images: [
       {
         url: `/og?title=${encodeURIComponent(
-          title
+          title,
         )}&description=${encodeURIComponent(description)}`,
       },
     ],
@@ -34,12 +34,12 @@ export const metadata: Metadata = {
     images: [
       {
         url: `/og?title=${encodeURIComponent(
-          title
+          title,
         )}&description=${encodeURIComponent(description)}`,
       },
     ],
   },
-}
+};
 
 export default function IndexPage() {
   return (
@@ -49,7 +49,7 @@ export default function IndexPage() {
           viewBox="0 0 210 216"
           role="img"
           aria-label="Retab"
-          className="mb-1 h-8 w-auto text-foreground"
+          className="text-foreground mb-1 h-8 w-auto"
           fill="currentColor"
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -73,5 +73,5 @@ export default function IndexPage() {
       </PageHeader>
       <HomeShowcase />
     </div>
-  )
+  );
 }

@@ -1,21 +1,21 @@
-"use client"
+"use client";
 
-import { EyeIcon } from "lucide-react"
+import { EyeIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { SchemaInlineText } from "@/components/schema-editor/primitives/schema-inline-text"
+import { Button } from "@/components/ui/button";
+import { SchemaInlineText } from "@/components/schema-editor/primitives/schema-inline-text";
 
 interface SchemaInlineNameProps {
-  ariaLabel: string
-  editable: boolean
-  value: string
-  canRename?: boolean
+  ariaLabel: string;
+  editable: boolean;
+  value: string;
+  canRename?: boolean;
   reference?: {
-    label: string
-    onReveal: () => void
-  }
-  validate?: (value: string) => string | null
-  onCommit?: (value: string) => void
+    label: string;
+    onReveal: () => void;
+  };
+  validate?: (value: string) => string | null;
+  onCommit?: (value: string) => void;
 }
 
 export function SchemaInlineName({
@@ -27,7 +27,7 @@ export function SchemaInlineName({
   validate = () => null,
   onCommit,
 }: SchemaInlineNameProps) {
-  const canEditName = editable && canRename
+  const canEditName = editable && canRename;
 
   return (
     <span className="flex min-w-0 items-center">
@@ -35,11 +35,11 @@ export function SchemaInlineName({
         ariaLabel={ariaLabel}
         editable={canEditName}
         value={value}
-        className="m-0 h-6 w-36 rounded-sm border-none bg-transparent px-1 text-sm font-medium text-foreground shadow-none outline-none focus-visible:ring-0"
+        className="text-foreground m-0 h-6 w-36 rounded-sm border-none bg-transparent px-1 text-sm font-medium shadow-none outline-none focus-visible:ring-0"
         readOnlyClassName="mr-1 truncate text-sm font-medium whitespace-nowrap text-foreground"
         validate={validate}
         onCommit={(nextValue) => {
-          if (nextValue) onCommit?.(nextValue)
+          if (nextValue) onCommit?.(nextValue);
         }}
       />
       {reference && (
@@ -51,9 +51,9 @@ export function SchemaInlineName({
           aria-label={`Show ${reference.label} definition`}
           onClick={reference.onReveal}
         >
-          <EyeIcon className="h-4 w-4 text-muted-foreground" />
+          <EyeIcon className="text-muted-foreground h-4 w-4" />
         </Button>
       )}
     </span>
-  )
+  );
 }

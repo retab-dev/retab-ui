@@ -1,16 +1,16 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
-import type { ViewerDownloadAction } from "@/lib/viewer-download-actions"
-import type { ViewerResource } from "@/lib/viewer-resource"
+import { cn } from "@/lib/utils";
+import type { ViewerDownloadAction } from "@/lib/viewer-download-actions";
+import type { ViewerResource } from "@/lib/viewer-resource";
 
-import type { CsvResourceState } from "./csv-viewer-state"
-import { ViewerErrorState } from "./viewer-error"
-import { ViewerControls } from "./viewer-controls"
+import type { CsvResourceState } from "./csv-viewer-state";
+import { ViewerErrorState } from "./viewer-error";
+import { ViewerControls } from "./viewer-controls";
 
-export const CSV_VIEWER_BASE_FONT_SIZE = 13
+export const CSV_VIEWER_BASE_FONT_SIZE = 13;
 
 export function CsvViewerFrame({
   className,
@@ -19,26 +19,26 @@ export function CsvViewerFrame({
   zoom,
   children,
 }: {
-  className?: string
-  frame: boolean
-  fillHeight: boolean
-  zoom: number
-  children: React.ReactNode
+  className?: string;
+  frame: boolean;
+  fillHeight: boolean;
+  zoom: number;
+  children: React.ReactNode;
 }) {
   return (
     <div
       data-slot="csv-viewer"
       className={cn(
-        "flex flex-col overflow-hidden bg-card",
+        "bg-card flex flex-col overflow-hidden",
         frame && "rounded-xl border",
         fillHeight && "h-full min-h-0 flex-1",
-        className
+        className,
       )}
       style={{ fontSize: CSV_VIEWER_BASE_FONT_SIZE * zoom }}
     >
       {children}
     </div>
-  )
+  );
 }
 
 export function CsvViewerHeader({
@@ -50,16 +50,16 @@ export function CsvViewerHeader({
   downloadActions,
   onZoomChange,
 }: {
-  controls: boolean
-  rowCount: number
-  columnCount: number
-  isLoading: boolean
-  zoom: number
-  downloadActions: ViewerDownloadAction[]
-  onZoomChange: (zoom: number) => void
+  controls: boolean;
+  rowCount: number;
+  columnCount: number;
+  isLoading: boolean;
+  zoom: number;
+  downloadActions: ViewerDownloadAction[];
+  onZoomChange: (zoom: number) => void;
 }) {
-  const rowLabel = `${rowCount.toLocaleString()} row${rowCount === 1 ? "" : "s"}`
-  const columnLabel = `${columnCount} column${columnCount === 1 ? "" : "s"}`
+  const rowLabel = `${rowCount.toLocaleString()} row${rowCount === 1 ? "" : "s"}`;
+  const columnLabel = `${columnCount} column${columnCount === 1 ? "" : "s"}`;
 
   return controls ? (
     <ViewerControls
@@ -75,11 +75,11 @@ export function CsvViewerHeader({
       }}
       downloads={downloadActions}
     />
-  ) : null
+  ) : null;
 }
 
 function clampCsvZoom(zoom: number) {
-  return Math.max(0.25, Math.min(5, zoom))
+  return Math.max(0.25, Math.min(5, zoom));
 }
 
 export function csvViewerStatusNode({
@@ -89,11 +89,11 @@ export function csvViewerStatusNode({
   showDownload,
   onRetry,
 }: {
-  resourceState: CsvResourceState
-  resource: ViewerResource | null
-  rowCount: number
-  showDownload: boolean
-  onRetry: () => void
+  resourceState: CsvResourceState;
+  resource: ViewerResource | null;
+  rowCount: number;
+  showDownload: boolean;
+  onRetry: () => void;
 }): React.ReactNode {
   if (resourceState.status === "error") {
     return (
@@ -105,16 +105,16 @@ export function csvViewerStatusNode({
         variant="inline"
         onRetry={onRetry}
       />
-    )
+    );
   }
 
   if (rowCount === 0 && resourceState.status !== "loading") {
     return (
-      <div className="flex h-24 items-center justify-center text-xs text-muted-foreground">
+      <div className="text-muted-foreground flex h-24 items-center justify-center text-xs">
         No rows
       </div>
-    )
+    );
   }
 
-  return null
+  return null;
 }

@@ -1,19 +1,19 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Search } from "lucide-react"
+import * as React from "react";
+import { Search } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-import { EDIT_FIELD_ACCENTS } from "./edit-viewer-field-style"
+import { EDIT_FIELD_ACCENTS } from "./edit-viewer-field-style";
 import {
   displayEditFieldValue,
   isEditFieldFilled,
   type EditViewerFieldGroup,
   type EditViewerFilter,
-} from "./edit-viewer-model"
-import type { EditViewerField } from "./edit-viewer-types"
+} from "./edit-viewer-model";
+import type { EditViewerField } from "./edit-viewer-types";
 
 export function EditViewerFieldPanel({
   className,
@@ -33,30 +33,30 @@ export function EditViewerFieldPanel({
   showFilters,
   ...props
 }: {
-  fieldGroups: readonly EditViewerFieldGroup[]
-  fieldCount: number
-  filledCount: number
-  visibleFieldCount: number
-  effectiveFieldKey: string | null
-  selectedFieldKey: string | null
-  query: string
-  onQueryChange: (query: string) => void
-  filter: EditViewerFilter
-  onFilterChange: (filter: EditViewerFilter) => void
-  onFieldHover: (key: string | null) => void
-  onFieldSelect: (key: string) => void
-  showSearch: boolean
-  showFilters: boolean
+  fieldGroups: readonly EditViewerFieldGroup[];
+  fieldCount: number;
+  filledCount: number;
+  visibleFieldCount: number;
+  effectiveFieldKey: string | null;
+  selectedFieldKey: string | null;
+  query: string;
+  onQueryChange: (query: string) => void;
+  filter: EditViewerFilter;
+  onFilterChange: (filter: EditViewerFilter) => void;
+  onFieldHover: (key: string | null) => void;
+  onFieldSelect: (key: string) => void;
+  showSearch: boolean;
+  showFilters: boolean;
 } & React.ComponentProps<"div">) {
   return (
     <div
       {...props}
       data-edit-viewer-fields-panel
-      className={cn("flex h-full min-h-0 flex-col bg-background", className)}
+      className={cn("bg-background flex h-full min-h-0 flex-col", className)}
     >
       <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-3">
         <h2 className="px-1 text-sm font-medium">Form fields</h2>
-        <span className="ml-auto pr-1 text-xs text-muted-foreground tabular-nums">
+        <span className="text-muted-foreground ml-auto pr-1 text-xs tabular-nums">
           <span className="text-success-foreground">{filledCount}</span>
           {" / "}
           {fieldCount} filled
@@ -68,12 +68,12 @@ export function EditViewerFieldPanel({
           {showSearch ? (
             <label className="relative block">
               <span className="sr-only">Search form fields</span>
-              <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
               <input
                 value={query}
                 onChange={(event) => onQueryChange(event.target.value)}
                 placeholder="Search key, description, value..."
-                className="h-7 w-full rounded-md border bg-transparent pr-2 pl-8 text-xs outline-none placeholder:text-muted-foreground/70 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/20"
+                className="placeholder:text-muted-foreground/70 focus-visible:border-ring focus-visible:ring-ring/20 h-7 w-full rounded-md border bg-transparent pr-2 pl-8 text-xs outline-none focus-visible:ring-[3px]"
               />
             </label>
           ) : null}
@@ -90,7 +90,7 @@ export function EditViewerFieldPanel({
                     "rounded px-2 py-0.5 text-[11px] font-medium transition-colors",
                     filter === value
                       ? "bg-muted text-foreground"
-                      : "text-muted-foreground hover:bg-muted/60"
+                      : "text-muted-foreground hover:bg-muted/60",
                   )}
                 >
                   {label}
@@ -103,13 +103,13 @@ export function EditViewerFieldPanel({
 
       <ScrollArea className="min-h-0 flex-1">
         {visibleFieldCount === 0 ? (
-          <p className="px-4 py-6 text-center text-xs text-muted-foreground">
+          <p className="text-muted-foreground px-4 py-6 text-center text-xs">
             No fields match.
           </p>
         ) : (
           fieldGroups.map((fieldGroup) => (
             <div key={fieldGroup.key}>
-              <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-background/95 px-4 py-1 text-[10px] font-medium tracking-wide text-muted-foreground uppercase backdrop-blur">
+              <div className="bg-background/95 text-muted-foreground sticky top-0 z-10 flex items-center justify-between border-b px-4 py-1 text-[10px] font-medium tracking-wide uppercase backdrop-blur">
                 <span>{fieldGroup.label}</span>
                 <span className="tabular-nums">{fieldGroup.fields.length}</span>
               </div>
@@ -128,12 +128,12 @@ export function EditViewerFieldPanel({
         )}
       </ScrollArea>
     </div>
-  )
+  );
 }
 
 const EDIT_VIEWER_FILTER_OPTIONS: Array<{
-  value: EditViewerFilter
-  label: string
+  value: EditViewerFilter;
+  label: string;
 }> = [
   { value: "all", label: "All" },
   { value: "filled", label: "Filled" },
@@ -141,7 +141,7 @@ const EDIT_VIEWER_FILTER_OPTIONS: Array<{
   { value: "text", label: "Text" },
   { value: "checkbox", label: "Checkbox" },
   { value: "no_location", label: "No location" },
-]
+];
 
 function EditViewerFieldRow({
   field,
@@ -150,15 +150,15 @@ function EditViewerFieldRow({
   onFieldHover,
   onFieldSelect,
 }: {
-  field: EditViewerField
-  active: boolean
-  selected: boolean
-  onFieldHover: (key: string | null) => void
-  onFieldSelect: (key: string) => void
+  field: EditViewerField;
+  active: boolean;
+  selected: boolean;
+  onFieldHover: (key: string | null) => void;
+  onFieldSelect: (key: string) => void;
 }) {
-  const accent = EDIT_FIELD_ACCENTS[field.type]
-  const filled = isEditFieldFilled(field)
-  const value = displayEditFieldValue(field)
+  const accent = EDIT_FIELD_ACCENTS[field.type];
+  const filled = isEditFieldFilled(field);
+  const value = displayEditFieldValue(field);
 
   return (
     <button
@@ -170,43 +170,45 @@ function EditViewerFieldRow({
       onClick={() => onFieldSelect(field.key)}
       aria-current={selected ? "true" : undefined}
       className={cn(
-        "flex w-full flex-col items-start gap-1 border-b border-border/60 px-4 py-2.5 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/20 focus-visible:outline-none",
-        active ? "bg-muted" : "hover:bg-muted/50"
+        "border-border/60 focus-visible:ring-ring/20 flex w-full flex-col items-start gap-1 border-b px-4 py-2.5 text-left transition-colors focus-visible:ring-[3px] focus-visible:outline-none",
+        active ? "bg-muted" : "hover:bg-muted/50",
       )}
     >
       <div className="flex w-full items-center gap-2">
         <span
           className={cn(
             "h-3 w-0.5 flex-shrink-0 rounded-full transition-opacity",
-            selected ? "opacity-100" : "opacity-0"
+            selected ? "opacity-100" : "opacity-0",
           )}
           style={{ backgroundColor: accent.line }}
         />
-        <span className="truncate font-mono text-[11px] text-foreground">
+        <span className="text-foreground truncate font-mono text-[11px]">
           {field.key}
         </span>
         <span
           className={cn(
             "ml-auto flex-shrink-0 rounded border px-1.5 py-0 text-[9px] font-medium tracking-wide uppercase",
-            accent.badge
+            accent.badge,
           )}
         >
           {field.type}
         </span>
       </div>
       {field.description ? (
-        <span className="line-clamp-1 text-[11px] text-muted-foreground">
+        <span className="text-muted-foreground line-clamp-1 text-[11px]">
           {field.description}
         </span>
       ) : null}
       <span
         className={cn(
           "w-full truncate font-mono text-[11px]",
-          filled ? "text-success-foreground" : "text-muted-foreground/50 italic"
+          filled
+            ? "text-success-foreground"
+            : "text-muted-foreground/50 italic",
         )}
       >
         {filled ? value : "- empty -"}
       </span>
     </button>
-  )
+  );
 }

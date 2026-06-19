@@ -1,73 +1,78 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
-import { DataCellBooleanIndicator } from "@/registry/new-york-v4/ui/data-cell-boolean-control"
+import { cn } from "@/lib/utils";
+import { DataCellBooleanIndicator } from "@/registry/new-york-v4/ui/data-cell-boolean-control";
 import {
   dataCellBooleanDisplayClass,
   dataCellCheckboxDisplayClass,
   dataCellDisplayClass,
   dataCellDisplayValueClass,
   dataCellPickerTriggerClass,
-} from "@/registry/new-york-v4/ui/data-cell-classes"
-import { formatDataCellDisplayValue } from "@/registry/new-york-v4/ui/data-cell-format"
-import { DataCellPickerIcon } from "@/registry/new-york-v4/ui/data-cell-picker-icon"
+} from "@/registry/new-york-v4/ui/data-cell-classes";
+import { formatDataCellDisplayValue } from "@/registry/new-york-v4/ui/data-cell-format";
+import { DataCellPickerIcon } from "@/registry/new-york-v4/ui/data-cell-picker-icon";
 import type {
   DataCellKind,
   DataCellValueForKind,
-} from "@/registry/new-york-v4/ui/data-cell-types"
+} from "@/registry/new-york-v4/ui/data-cell-types";
 
 type DataCellDisplayNativeProps = Omit<
   React.HTMLAttributes<HTMLDivElement>,
   "children" | "defaultValue" | "onChange"
->
+>;
 
 type DataCellDisplayFormatValue<Kind extends DataCellKind> = (
   value: DataCellValueForKind<Kind> | undefined,
-  meta: { kind: Kind }
-) => React.ReactNode
+  meta: { kind: Kind },
+) => React.ReactNode;
 
 type DataCellDisplayBaseProps<Kind extends DataCellKind> =
   DataCellDisplayNativeProps & {
-    kind: Kind
-    value?: DataCellValueForKind<Kind>
-    editable?: boolean
-    disabled?: boolean
-    className?: string
-  }
+    kind: Kind;
+    value?: DataCellValueForKind<Kind>;
+    editable?: boolean;
+    disabled?: boolean;
+    className?: string;
+  };
 
 type DataCellDisplayPlaceholderProps = {
-  placeholder?: string
-}
+  placeholder?: string;
+};
 
 type DataCellDisplayPickerProps = {
-  showPickerIcon?: boolean
-}
+  showPickerIcon?: boolean;
+};
 
 type DataCellDisplayFormatProps<Kind extends DataCellKind> = {
-  formatValue?: DataCellDisplayFormatValue<Kind>
-}
+  formatValue?: DataCellDisplayFormatValue<Kind>;
+};
 
-type DataCellPickerKind = "date" | "time" | "date-time"
-type DataCellScalarKind = "text" | "number" | "integer" | "select"
+type DataCellPickerKind = "date" | "time" | "date-time";
+type DataCellScalarKind = "text" | "number" | "integer" | "select";
+type DataCellNoExtraDisplayProps = Record<never, never>;
 
 type DataCellDisplayPropsForKind<Kind extends DataCellKind> =
   DataCellDisplayBaseProps<Kind> &
     (Kind extends "boolean"
-      ? {}
+      ? DataCellNoExtraDisplayProps
       : DataCellDisplayPlaceholderProps & DataCellDisplayFormatProps<Kind>) &
-    (Kind extends DataCellPickerKind ? DataCellDisplayPickerProps : {})
+    (Kind extends DataCellPickerKind
+      ? DataCellDisplayPickerProps
+      : DataCellNoExtraDisplayProps);
 
 export type DataCellDisplayPropsByKind = {
-  [Kind in DataCellKind]: DataCellDisplayPropsForKind<Kind>
-}
+  [Kind in DataCellKind]: DataCellDisplayPropsForKind<Kind>;
+};
 
-type DataCellScalarDisplayProps = DataCellDisplayPropsByKind[DataCellScalarKind]
+type DataCellScalarDisplayProps =
+  DataCellDisplayPropsByKind[DataCellScalarKind];
 
-type DataCellPickerDisplayProps = DataCellDisplayPropsByKind[DataCellPickerKind]
+type DataCellPickerDisplayProps =
+  DataCellDisplayPropsByKind[DataCellPickerKind];
 
-export type DataCellDisplayProps = DataCellDisplayPropsByKind[DataCellKind]
+export type DataCellDisplayProps = DataCellDisplayPropsByKind[DataCellKind];
 
 export const DataCellDisplay = React.forwardRef<
   HTMLDivElement,
@@ -81,7 +86,7 @@ export const DataCellDisplay = React.forwardRef<
       disabled = false,
       className,
       ...props
-    } = displayProps
+    } = displayProps;
 
     return (
       <div
@@ -97,7 +102,7 @@ export const DataCellDisplay = React.forwardRef<
           "justify-center px-1",
           disabled && "pointer-events-none opacity-64",
           editable && !disabled && "cursor-pointer",
-          className
+          className,
         )}
       >
         <span
@@ -108,13 +113,13 @@ export const DataCellDisplay = React.forwardRef<
           aria-label={Boolean(value) ? "true" : "false"}
           className={cn(
             dataCellCheckboxDisplayClass,
-            "pointer-events-none flex items-center justify-center"
+            "pointer-events-none flex items-center justify-center",
           )}
         >
           <DataCellBooleanIndicator checked={Boolean(value)} />
         </span>
       </div>
-    )
+    );
   }
 
   if (
@@ -122,11 +127,11 @@ export const DataCellDisplay = React.forwardRef<
     displayProps.kind === "time" ||
     displayProps.kind === "date-time"
   ) {
-    return <DataCellPickerDisplay {...displayProps} ref={ref} />
+    return <DataCellPickerDisplay {...displayProps} ref={ref} />;
   }
 
   if (!isDataCellScalarDisplayProps(displayProps)) {
-    return null
+    return null;
   }
 
   const {
@@ -138,9 +143,9 @@ export const DataCellDisplay = React.forwardRef<
     className,
     formatValue: _formatValue,
     ...props
-  } = displayProps
-  const content = dataCellScalarDisplayContent(displayProps)
-  const isEmpty = content === ""
+  } = displayProps;
+  const content = dataCellScalarDisplayContent(displayProps);
+  const isEmpty = content === "";
 
   return (
     <div
@@ -157,7 +162,7 @@ export const DataCellDisplay = React.forwardRef<
         editable &&
           !disabled &&
           (kind === "select" ? "cursor-pointer" : "cursor-text"),
-        className
+        className,
       )}
     >
       <span className={dataCellDisplayValueClass}>
@@ -169,54 +174,54 @@ export const DataCellDisplay = React.forwardRef<
         </span>
       </span>
     </div>
-  )
-})
-DataCellDisplay.displayName = "DataCellDisplay"
+  );
+});
+DataCellDisplay.displayName = "DataCellDisplay";
 
 function dataCellScalarDisplayContent(props: DataCellScalarDisplayProps) {
   if (props.kind === "text") {
     return (
       props.formatValue?.(props.value, { kind: props.kind }) ??
       formatDataCellDisplayValue(props.kind, props.value)
-    )
+    );
   }
 
   if (props.kind === "select") {
     return (
       props.formatValue?.(props.value, { kind: props.kind }) ??
       formatDataCellDisplayValue(props.kind, props.value)
-    )
+    );
   }
 
   if (props.kind === "number") {
     return (
       props.formatValue?.(props.value, { kind: props.kind }) ??
       formatDataCellDisplayValue(props.kind, props.value)
-    )
+    );
   }
 
   return (
     props.formatValue?.(props.value, { kind: props.kind }) ??
     formatDataCellDisplayValue(props.kind, props.value)
-  )
+  );
 }
 
 function isDataCellScalarDisplayProps(
-  props: DataCellDisplayProps
+  props: DataCellDisplayProps,
 ): props is DataCellScalarDisplayProps {
   return (
     props.kind === "text" ||
     props.kind === "number" ||
     props.kind === "integer" ||
     props.kind === "select"
-  )
+  );
 }
 
 const DataCellPickerDisplay = React.forwardRef<
   HTMLDivElement,
   DataCellPickerDisplayProps
 >(function DataCellPickerDisplay(pickerProps, ref) {
-  const content = dataCellPickerDisplayContent(pickerProps)
+  const content = dataCellPickerDisplayContent(pickerProps);
   const {
     kind,
     value,
@@ -227,8 +232,8 @@ const DataCellPickerDisplay = React.forwardRef<
     showPickerIcon = true,
     className,
     ...props
-  } = pickerProps
-  const isEmpty = content === ""
+  } = pickerProps;
+  const isEmpty = content === "";
 
   return (
     <div
@@ -243,7 +248,7 @@ const DataCellPickerDisplay = React.forwardRef<
         dataCellPickerTriggerClass,
         disabled && "pointer-events-none opacity-64",
         editable && !disabled && "cursor-pointer",
-        className
+        className,
       )}
     >
       <span
@@ -254,24 +259,24 @@ const DataCellPickerDisplay = React.forwardRef<
       </span>
       {showPickerIcon ? <DataCellPickerIcon kind={kind} /> : null}
     </div>
-  )
-})
+  );
+});
 
 function dataCellPickerDisplayContent(props: DataCellPickerDisplayProps) {
   if (props.kind === "date") {
     return (
       props.formatValue?.(props.value, { kind: props.kind }) ??
       formatDataCellDisplayValue(props.kind, props.value)
-    )
+    );
   }
   if (props.kind === "time") {
     return (
       props.formatValue?.(props.value, { kind: props.kind }) ??
       formatDataCellDisplayValue(props.kind, props.value)
-    )
+    );
   }
   return (
     props.formatValue?.(props.value, { kind: props.kind }) ??
     formatDataCellDisplayValue(props.kind, props.value)
-  )
+  );
 }

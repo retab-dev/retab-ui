@@ -1,149 +1,149 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Upload, X } from "lucide-react"
+import * as React from "react";
+import { Upload, X } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { blobSource } from "@/lib/viewer-resource"
-import type { BlobViewerSource } from "@/lib/viewer-source"
+import { cn } from "@/lib/utils";
+import { blobSource } from "@/lib/viewer-resource";
+import type { BlobViewerSource } from "@/lib/viewer-source";
 import {
   useDropzone,
   type DropzoneFileItem,
   type DropzoneFileRejection,
   type DropzoneIntake,
   type UseDropzoneReturn,
-} from "@/components/ui/dropzone"
-import { formatFileSize } from "@/components/ui/file-size-format"
-import { FileThumbnail } from "@/components/ui/file-thumbnail"
-import { FileViewer } from "@/components/ui/file-viewer"
+} from "@/components/ui/dropzone";
+import { formatFileSize } from "@/components/ui/file-size-format";
+import { FileThumbnail } from "@/components/ui/file-thumbnail";
+import { FileViewer } from "@/components/ui/file-viewer";
 import {
   ViewerHeader,
   ViewerRoot,
   ViewerSidebar,
   ViewerSidebarTrigger,
   ViewerSurface,
-} from "@/components/ui/viewer"
+} from "@/components/ui/viewer";
 
 const DEFAULT_FILE_INTAKE_VIEWER_ACCEPT =
-  ".pdf,.png,.jpg,.jpeg,.csv,.txt,.md,.json,application/pdf,image/*,text/*,text/csv,application/json"
+  ".pdf,.png,.jpg,.jpeg,.csv,.txt,.md,.json,application/pdf,image/*,text/*,text/csv,application/json";
 
 export interface FileIntakeViewerProviderProps {
-  accept?: string
-  defaultFiles?: DropzoneFileItem[]
-  disabled?: boolean
-  files?: DropzoneFileItem[]
-  maxSize?: number
-  onFilesChange?: (files: DropzoneFileItem[]) => void
-  onIntake?: (intake: DropzoneIntake) => void
-  children: React.ReactNode
+  accept?: string;
+  defaultFiles?: DropzoneFileItem[];
+  disabled?: boolean;
+  files?: DropzoneFileItem[];
+  maxSize?: number;
+  onFilesChange?: (files: DropzoneFileItem[]) => void;
+  onIntake?: (intake: DropzoneIntake) => void;
+  children: React.ReactNode;
 }
 
 type FileIntakeViewerModel = {
-  canClear: boolean
-  hasFile: boolean
-  isDragging: boolean
-  rejection: FileIntakeViewerRejection | null
-  selectedFile: DropzoneFileItem | null
-  selectedFileSummary: FileIntakeSummary | null
-  viewerSource: BlobViewerSource | null
-}
+  canClear: boolean;
+  hasFile: boolean;
+  isDragging: boolean;
+  rejection: FileIntakeViewerRejection | null;
+  selectedFile: DropzoneFileItem | null;
+  selectedFileSummary: FileIntakeSummary | null;
+  viewerSource: BlobViewerSource | null;
+};
 
 type FileIntakeSummary = {
-  file: File
-  fileName: string
-  fileSizeLabel: string
-  fileTypeLabel: string
-}
+  file: File;
+  fileName: string;
+  fileSizeLabel: string;
+  fileTypeLabel: string;
+};
 
 export type FileIntakeViewerRejection = {
-  title: string
-  description: string
-}
+  title: string;
+  description: string;
+};
 
 type FileIntakeViewerActions = {
-  clearFile: () => void
-  getRootDropProps: UseDropzoneReturn["getRootProps"]
-  getFileInputProps: UseDropzoneReturn["getInputProps"]
-  getUploadButtonProps: UseDropzoneReturn["getTriggerProps"]
-  getEmptySurfaceProps: UseDropzoneReturn["getTriggerProps"]
-}
+  clearFile: () => void;
+  getRootDropProps: UseDropzoneReturn["getRootProps"];
+  getFileInputProps: UseDropzoneReturn["getInputProps"];
+  getUploadButtonProps: UseDropzoneReturn["getTriggerProps"];
+  getEmptySurfaceProps: UseDropzoneReturn["getTriggerProps"];
+};
 
 type FileIntakeViewerContextValue = {
-  actions: FileIntakeViewerActions
-  model: FileIntakeViewerModel
-}
+  actions: FileIntakeViewerActions;
+  model: FileIntakeViewerModel;
+};
 
 type FileIntakeViewerDropTargetState = {
-  getFileInputProps: FileIntakeViewerActions["getFileInputProps"]
-  getRootDropProps: FileIntakeViewerActions["getRootDropProps"]
-  isDragging: boolean
-}
+  getFileInputProps: FileIntakeViewerActions["getFileInputProps"];
+  getRootDropProps: FileIntakeViewerActions["getRootDropProps"];
+  isDragging: boolean;
+};
 
 type FileIntakeViewerHeaderState = {
-  canClear: boolean
-  clearFile: FileIntakeViewerActions["clearFile"]
-  getUploadButtonProps: FileIntakeViewerActions["getUploadButtonProps"]
-  selectedFileSummary: FileIntakeSummary | null
-}
+  canClear: boolean;
+  clearFile: FileIntakeViewerActions["clearFile"];
+  getUploadButtonProps: FileIntakeViewerActions["getUploadButtonProps"];
+  selectedFileSummary: FileIntakeSummary | null;
+};
 
 type FileIntakeViewerSidebarState = {
-  getUploadButtonProps: FileIntakeViewerActions["getUploadButtonProps"]
-  selectedFileSummary: FileIntakeSummary | null
-}
+  getUploadButtonProps: FileIntakeViewerActions["getUploadButtonProps"];
+  selectedFileSummary: FileIntakeSummary | null;
+};
 
 export type FileIntakeViewerSurfaceState = {
-  getEmptySurfaceProps: UseDropzoneReturn["getTriggerProps"]
-  rejection: FileIntakeViewerRejection | null
-  viewerSource: BlobViewerSource | null
-}
+  getEmptySurfaceProps: UseDropzoneReturn["getTriggerProps"];
+  rejection: FileIntakeViewerRejection | null;
+  viewerSource: BlobViewerSource | null;
+};
 
 const FileIntakeViewerContext =
-  React.createContext<FileIntakeViewerContextValue | null>(null)
+  React.createContext<FileIntakeViewerContextValue | null>(null);
 
 function useFileIntakeViewerContext(): FileIntakeViewerContextValue {
-  const context = React.useContext(FileIntakeViewerContext)
+  const context = React.useContext(FileIntakeViewerContext);
   if (!context) {
     throw new Error(
-      "useFileIntakeViewer must be used within FileIntakeViewerProvider."
-    )
+      "useFileIntakeViewer must be used within FileIntakeViewerProvider.",
+    );
   }
-  return context
+  return context;
 }
 
 function useFileIntakeViewerDropTarget(): FileIntakeViewerDropTargetState {
-  const { actions, model } = useFileIntakeViewerContext()
+  const { actions, model } = useFileIntakeViewerContext();
   return {
     getFileInputProps: actions.getFileInputProps,
     getRootDropProps: actions.getRootDropProps,
     isDragging: model.isDragging,
-  }
+  };
 }
 
 function useFileIntakeViewerHeader(): FileIntakeViewerHeaderState {
-  const { actions, model } = useFileIntakeViewerContext()
+  const { actions, model } = useFileIntakeViewerContext();
   return {
     canClear: model.canClear,
     clearFile: actions.clearFile,
     getUploadButtonProps: actions.getUploadButtonProps,
     selectedFileSummary: model.selectedFileSummary,
-  }
+  };
 }
 
 function useFileIntakeViewerSidebar(): FileIntakeViewerSidebarState {
-  const { actions, model } = useFileIntakeViewerContext()
+  const { actions, model } = useFileIntakeViewerContext();
   return {
     getUploadButtonProps: actions.getUploadButtonProps,
     selectedFileSummary: model.selectedFileSummary,
-  }
+  };
 }
 
 export function useFileIntakeViewerSurface(): FileIntakeViewerSurfaceState {
-  const { actions, model } = useFileIntakeViewerContext()
+  const { actions, model } = useFileIntakeViewerContext();
   return {
     getEmptySurfaceProps: actions.getEmptySurfaceProps,
     rejection: model.rejection,
     viewerSource: model.viewerSource,
-  }
+  };
 }
 
 export function FileIntakeViewerProvider({
@@ -166,8 +166,8 @@ export function FileIntakeViewerProvider({
     multiple: false,
     onFilesChange,
     onIntake,
-  })
-  const { clearFiles, getInputProps, getRootProps, getTriggerProps } = dropzone
+  });
+  const { clearFiles, getInputProps, getRootProps, getTriggerProps } = dropzone;
   const model = React.useMemo<FileIntakeViewerModel>(
     () =>
       createFileIntakeViewerModel({
@@ -181,8 +181,8 @@ export function FileIntakeViewerProvider({
       dropzone.isDisabled,
       dropzone.isDragging,
       dropzone.lastIntake,
-    ]
-  )
+    ],
+  );
   const actions = React.useMemo<FileIntakeViewerActions>(
     () => ({
       clearFile: clearFiles,
@@ -192,32 +192,32 @@ export function FileIntakeViewerProvider({
         getTriggerProps({ ...props, native: true }),
       getEmptySurfaceProps: getTriggerProps,
     }),
-    [clearFiles, getInputProps, getRootProps, getTriggerProps]
-  )
+    [clearFiles, getInputProps, getRootProps, getTriggerProps],
+  );
   const value = React.useMemo<FileIntakeViewerContextValue>(
     () => ({
       actions,
       model,
     }),
-    [actions, model]
-  )
+    [actions, model],
+  );
 
   return (
     <FileIntakeViewerContext.Provider value={value}>
       {children}
     </FileIntakeViewerContext.Provider>
-  )
+  );
 }
 
 export function FileIntakeViewerDropTarget({
   children,
   className,
 }: {
-  children: React.ReactNode
-  className?: string
+  children: React.ReactNode;
+  className?: string;
 }) {
   const { getFileInputProps, getRootDropProps } =
-    useFileIntakeViewerDropTarget()
+    useFileIntakeViewerDropTarget();
 
   return (
     <section
@@ -228,34 +228,34 @@ export function FileIntakeViewerDropTarget({
       <input {...getFileInputProps({ className: "hidden" })} />
       {children}
     </section>
-  )
+  );
 }
 
 export function FileIntakeViewerRoot({
   children,
   className,
 }: {
-  children: React.ReactNode
-  className?: string
+  children: React.ReactNode;
+  className?: string;
 }) {
   return (
     <ViewerRoot
       defaultOpen
       mode="inline"
       className={cn(
-        "min-h-[30rem] rounded-lg border bg-background text-foreground transition-colors",
+        "bg-background text-foreground min-h-[30rem] rounded-lg border transition-colors",
         "group-data-[dragging]/file-intake-drop:border-foreground/40 group-data-[dragging]/file-intake-drop:bg-accent/35",
-        className
+        className,
       )}
     >
       {children}
     </ViewerRoot>
-  )
+  );
 }
 
 export function FileIntakeViewerHeader() {
   const { canClear, clearFile, getUploadButtonProps, selectedFileSummary } =
-    useFileIntakeViewerHeader()
+    useFileIntakeViewerHeader();
 
   return (
     <ViewerHeader className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
@@ -264,7 +264,7 @@ export function FileIntakeViewerHeader() {
         <div className="min-w-0">
           <div className="text-sm font-medium">File preview</div>
           {selectedFileSummary ? (
-            <div className="mt-1 truncate text-xs text-muted-foreground">
+            <div className="text-muted-foreground mt-1 truncate text-xs">
               {selectedFileSummary.fileName}
             </div>
           ) : null}
@@ -274,7 +274,7 @@ export function FileIntakeViewerHeader() {
         {selectedFileSummary && canClear ? (
           <button
             type="button"
-            className="grid size-8 place-items-center rounded-md border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="bg-background text-muted-foreground hover:bg-muted hover:text-foreground grid size-8 place-items-center rounded-md border"
             aria-label={`Remove ${selectedFileSummary.fileName}`}
             onClick={clearFile}
           >
@@ -295,18 +295,18 @@ export function FileIntakeViewerHeader() {
         </button>
       </div>
     </ViewerHeader>
-  )
+  );
 }
 
 export function FileIntakeViewerSidebar() {
   const { getUploadButtonProps, selectedFileSummary } =
-    useFileIntakeViewerSidebar()
+    useFileIntakeViewerSidebar();
 
   return (
     <ViewerSidebar
       aria-label="Selected file"
       width="12rem"
-      className="border-b bg-background p-3 md:border-r md:border-b-0"
+      className="bg-background border-b p-3 md:border-r md:border-b-0"
     >
       {selectedFileSummary ? (
         <FileIntakeViewerFileCard fileSummary={selectedFileSummary} />
@@ -326,12 +326,12 @@ export function FileIntakeViewerSidebar() {
         </button>
       ) : null}
     </ViewerSidebar>
-  )
+  );
 }
 
 export function FileIntakeViewerSurface() {
   const { getEmptySurfaceProps, rejection, viewerSource } =
-    useFileIntakeViewerSurface()
+    useFileIntakeViewerSurface();
 
   return (
     <ViewerSurface className="min-h-[24rem]">
@@ -344,13 +344,13 @@ export function FileIntakeViewerSurface() {
         />
       )}
     </ViewerSurface>
-  )
+  );
 }
 
 function FileIntakeViewerFileCard({
   fileSummary,
 }: {
-  fileSummary: FileIntakeSummary
+  fileSummary: FileIntakeSummary;
 }) {
   return (
     <div className="space-y-3">
@@ -364,34 +364,34 @@ function FileIntakeViewerFileCard({
         <div className="line-clamp-3 text-sm leading-snug font-medium break-words">
           {fileSummary.fileName}
         </div>
-        <div className="mt-1 text-xs text-muted-foreground">
+        <div className="text-muted-foreground mt-1 text-xs">
           {fileSummary.fileSizeLabel}
         </div>
       </div>
-      <div className="rounded-md border bg-background p-2 text-xs text-muted-foreground">
+      <div className="bg-background text-muted-foreground rounded-md border p-2 text-xs">
         {fileSummary.fileTypeLabel}
       </div>
     </div>
-  )
+  );
 }
 
 function FileIntakeViewerNoFile() {
   return (
     <div>
       <div className="text-sm font-medium">No file selected</div>
-      <div className="mt-1 text-xs text-muted-foreground">
+      <div className="text-muted-foreground mt-1 text-xs">
         PDF, image, CSV, text, Markdown, or JSON.
       </div>
     </div>
-  )
+  );
 }
 
 function FileIntakeViewerEmptyState({
   getEmptySurfaceProps,
   rejection,
 }: {
-  getEmptySurfaceProps: FileIntakeViewerActions["getEmptySurfaceProps"]
-  rejection: FileIntakeViewerRejection | null
+  getEmptySurfaceProps: FileIntakeViewerActions["getEmptySurfaceProps"];
+  rejection: FileIntakeViewerRejection | null;
 }) {
   return (
     <div
@@ -402,64 +402,64 @@ function FileIntakeViewerEmptyState({
       })}
     >
       <div>
-        <div className="mx-auto grid size-12 place-items-center rounded-md border bg-muted/30 text-muted-foreground">
+        <div className="bg-muted/30 text-muted-foreground mx-auto grid size-12 place-items-center rounded-md border">
           <Upload className="size-5" aria-hidden />
         </div>
         <div className="mt-4 text-sm font-medium">Upload file</div>
-        <div className="mt-1 text-xs text-muted-foreground">
+        <div className="text-muted-foreground mt-1 text-xs">
           Drop a file here to open it in the viewer.
         </div>
         {rejection ? (
-          <div className="mt-4 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+          <div className="border-destructive/30 bg-destructive/5 text-destructive mt-4 rounded-md border px-3 py-2 text-xs">
             <div className="font-medium">{rejection.title}</div>
-            <div className="mt-1 text-destructive/80">
+            <div className="text-destructive/80 mt-1">
               {rejection.description}
             </div>
           </div>
         ) : null}
       </div>
     </div>
-  )
+  );
 }
 
 function getSelectedFileIntakeFile(files: DropzoneFileItem[]) {
-  return files[0] ?? null
+  return files[0] ?? null;
 }
 
 function createFileIntakeSummary(
-  fileItem: DropzoneFileItem | null
+  fileItem: DropzoneFileItem | null,
 ): FileIntakeSummary | null {
-  if (!fileItem) return null
+  if (!fileItem) return null;
 
   return {
     file: fileItem.file,
     fileName: fileItem.file.name,
     fileSizeLabel: formatFileSize(fileItem.file.size),
     fileTypeLabel: fileItem.file.type || "Unknown type",
-  }
+  };
 }
 
 function createFileIntakeViewerSource(
-  fileItem: DropzoneFileItem
+  fileItem: DropzoneFileItem,
 ): BlobViewerSource {
   return blobSource(fileItem.file, {
     fileName: fileItem.file.name,
     identityKey: fileItem.id,
     mimeType: fileItem.file.type || undefined,
-  })
+  });
 }
 
 function createFileIntakeViewerModel(
   dropzone: Pick<
     UseDropzoneReturn,
     "files" | "isDragging" | "isDisabled" | "lastIntake"
-  >
+  >,
 ): FileIntakeViewerModel {
-  const selectedFile = getSelectedFileIntakeFile(dropzone.files)
-  const selectedFileSummary = createFileIntakeSummary(selectedFile)
+  const selectedFile = getSelectedFileIntakeFile(dropzone.files);
+  const selectedFileSummary = createFileIntakeSummary(selectedFile);
   const viewerSource = selectedFile
     ? createFileIntakeViewerSource(selectedFile)
-    : null
+    : null;
 
   return {
     canClear: selectedFile !== null && !dropzone.isDisabled,
@@ -469,40 +469,40 @@ function createFileIntakeViewerModel(
     selectedFile,
     selectedFileSummary,
     viewerSource,
-  }
+  };
 }
 
 function createFileIntakeViewerRejection(
-  intake: DropzoneIntake
+  intake: DropzoneIntake,
 ): FileIntakeViewerRejection | null {
   if (intake.acceptedFiles.length > 0 || intake.fileRejections.length === 0) {
-    return null
+    return null;
   }
 
-  return describeFileIntakeRejection(intake.fileRejections[0])
+  return describeFileIntakeRejection(intake.fileRejections[0]);
 }
 
 function describeFileIntakeRejection(
-  rejection: DropzoneFileRejection
+  rejection: DropzoneFileRejection,
 ): FileIntakeViewerRejection {
   if (rejection.reason === "file-invalid-type") {
     return {
       title: "Unsupported file type",
       description: `${rejection.file.name} cannot be opened here.`,
-    }
+    };
   }
 
   if (rejection.reason === "file-too-large") {
     return {
       title: "File is too large",
       description: `${rejection.file.name} must be ${formatFileSize(
-        rejection.maxSize
+        rejection.maxSize,
       )} or smaller.`,
-    }
+    };
   }
 
   return {
     title: "Only one file can be previewed",
     description: `${rejection.file.name} was not added.`,
-  }
+  };
 }

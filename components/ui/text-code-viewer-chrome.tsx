@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 export function TextCodeViewerFrame({
   bare,
@@ -12,23 +12,23 @@ export function TextCodeViewerFrame({
   dataSlot,
   framedClassName,
 }: {
-  bare?: boolean
-  bareClassName: string
-  children: React.ReactNode
-  className?: string
-  dataSlot: string
-  framedClassName: string
+  bare?: boolean;
+  bareClassName: string;
+  children: React.ReactNode;
+  className?: string;
+  dataSlot: string;
+  framedClassName: string;
 }) {
   return (
     <div
       className={cn(
         "flex min-h-0 flex-col overflow-hidden",
         bare ? bareClassName : framedClassName,
-        className
+        className,
       )}
       data-slot={dataSlot}
     >
       {children}
     </div>
-  )
+  );
 }

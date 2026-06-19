@@ -1,40 +1,43 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import type { ViewerResource } from "@/lib/viewer-resource"
+import type { ViewerResource } from "@/lib/viewer-resource";
 
-import { MarkdownGreenfieldContent } from "./markdown-greenfield-content"
-import { PlainTextViewerFrame } from "./plain-text-viewer-frame"
-import { ChenglouTextViewerContent } from "./text-viewer-chenglou-content"
-import { TextViewerFallback } from "./text-viewer-chrome"
-import { resolveTextViewerMode } from "./text-viewer-layout"
-import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types"
+import { MarkdownGreenfieldContent } from "./markdown-greenfield-content";
+import { PlainTextViewerFrame } from "./plain-text-viewer-frame";
+import { ChenglouTextViewerContent } from "./text-viewer-chenglou-content";
+import { TextViewerFallback } from "./text-viewer-chrome";
+import { resolveTextViewerMode } from "./text-viewer-layout";
+import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types";
 
 export type {
   TextDocumentSource,
   TextLineRange,
   TextViewerHandle,
   TextViewerProps,
-} from "./text-viewer-types"
+} from "./text-viewer-types";
 
 export type TextResourceContentProps = Omit<TextViewerProps, "source"> & {
-  resource: ViewerResource
-}
+  resource: ViewerResource;
+};
 
 type RoutedTextViewerContentProps = Omit<TextViewerProps, "source"> & {
-  source?: TextViewerProps["source"]
-  resource: ViewerResource
-  retryVersion: number
-  forwardedRef?: React.ForwardedRef<TextViewerHandle>
-}
+  source?: TextViewerProps["source"];
+  resource: ViewerResource;
+  retryVersion: number;
+  forwardedRef?: React.ForwardedRef<TextViewerHandle>;
+};
 
 export type TextViewerProviderProps = {
-  children: React.ReactNode
-  resource: ViewerResource
-}
+  children: React.ReactNode;
+  resource: ViewerResource;
+};
 
-export type TextViewerDocumentProps = Omit<TextResourceContentProps, "resource">
+export type TextViewerDocumentProps = Omit<
+  TextResourceContentProps,
+  "resource"
+>;
 
 export const TextViewer = React.forwardRef<TextViewerHandle, TextViewerProps>(
   function TextViewer(props, ref) {
@@ -46,13 +49,13 @@ export const TextViewer = React.forwardRef<TextViewerHandle, TextViewerProps>(
         Fallback={TextViewerFallback}
         Content={TextViewerRoutedContent}
       />
-    )
-  }
-)
+    );
+  },
+);
 
 const TextViewerResourceContext = React.createContext<ViewerResource | null>(
-  null
-)
+  null,
+);
 
 export function TextViewerProvider({
   children,
@@ -62,26 +65,26 @@ export function TextViewerProvider({
     <TextViewerResourceContext.Provider value={resource}>
       {children}
     </TextViewerResourceContext.Provider>
-  )
+  );
 }
 
 function useTextViewerResource(): ViewerResource {
-  const resource = React.useContext(TextViewerResourceContext)
+  const resource = React.useContext(TextViewerResourceContext);
   if (!resource) {
     throw new Error(
-      "TextViewerDocument must be used within TextViewerProvider."
-    )
+      "TextViewerDocument must be used within TextViewerProvider.",
+    );
   }
-  return resource
+  return resource;
 }
 
 export const TextViewerDocument = React.forwardRef<
   TextViewerHandle,
   TextViewerDocumentProps
 >(function TextViewerDocument(props, ref) {
-  const resource = useTextViewerResource()
-  return <TextResourceContent {...props} ref={ref} resource={resource} />
-})
+  const resource = useTextViewerResource();
+  return <TextResourceContent {...props} ref={ref} resource={resource} />;
+});
 
 export const TextResourceContent = React.forwardRef<
   TextViewerHandle,
@@ -96,8 +99,8 @@ export const TextResourceContent = React.forwardRef<
       Fallback={TextViewerFallback}
       Content={TextViewerRoutedContent}
     />
-  )
-})
+  );
+});
 
 function TextViewerRoutedContent(props: RoutedTextViewerContentProps) {
   const mode =
@@ -105,14 +108,14 @@ function TextViewerRoutedContent(props: RoutedTextViewerContentProps) {
     resolveTextViewerMode({
       fileName: props.resource.fileName,
       mimeType: props.resource.content.mimeType,
-    })
+    });
   const source =
     props.source ??
-    (props.resource.descriptor.source as TextViewerProps["source"])
+    (props.resource.descriptor.source as TextViewerProps["source"]);
 
   if (mode === "markdown") {
-    return <MarkdownGreenfieldContent {...props} source={source} />
+    return <MarkdownGreenfieldContent {...props} source={source} />;
   }
 
-  return <ChenglouTextViewerContent {...props} mode="text" source={source} />
+  return <ChenglouTextViewerContent {...props} mode="text" source={source} />;
 }

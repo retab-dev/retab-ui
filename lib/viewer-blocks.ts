@@ -7,29 +7,29 @@ type ViewerBlockCategoryId =
   | "primitives"
   | "dropzone"
   | "file-system"
-  | "run-cards"
+  | "run-cards";
 
 type ViewerBlockConfig = {
-  id: string
+  id: string;
   /** Registry item name — `pnpm dlx shadcn@latest add @retab/<registryName>`. */
-  registryName: string
-  title: string
-  badge?: string
-  description: string
-  command: string
-  docsHref: string
-  viewHref: string
-  previewHeightClassName?: string
+  registryName: string;
+  title: string;
+  badge?: string;
+  description: string;
+  command: string;
+  docsHref: string;
+  viewHref: string;
+  previewHeightClassName?: string;
   /** Surfaced under the "Featured" tab. */
-  featured?: boolean
+  featured?: boolean;
   /** Category tabs this block appears under. */
-  categories: ViewerBlockCategoryId[]
+  categories: ViewerBlockCategoryId[];
   /** Hide examples that are already composed inside another component block. */
-  isStandaloneTab?: boolean
-}
+  isStandaloneTab?: boolean;
+};
 
 function getRegistryAddCommand(name: string) {
-  return `pnpm dlx shadcn@latest add @retab/${name}`
+  return `pnpm dlx shadcn@latest add @retab/${name}`;
 }
 
 export const VIEWER_BLOCKS = [
@@ -458,40 +458,42 @@ export const VIEWER_BLOCKS = [
     featured: true,
     categories: [],
   },
-] as const satisfies readonly ViewerBlockConfig[]
+] as const satisfies readonly ViewerBlockConfig[];
 
-export type ViewerBlockId = (typeof VIEWER_BLOCKS)[number]["id"]
-export type ViewerBlockMetadata = ViewerBlockConfig & { id: ViewerBlockId }
+export type ViewerBlockId = (typeof VIEWER_BLOCKS)[number]["id"];
+export type ViewerBlockMetadata = ViewerBlockConfig & { id: ViewerBlockId };
 
 function isStandaloneViewerBlockTab(block: ViewerBlockConfig) {
-  return block.isStandaloneTab !== false
+  return block.isStandaloneTab !== false;
 }
 
 export const VIEWER_BLOCK_TABS = VIEWER_BLOCKS.filter(
   (block): block is (typeof VIEWER_BLOCKS)[number] =>
-    isStandaloneViewerBlockTab(block)
-)
+    isStandaloneViewerBlockTab(block),
+);
 
-export const DEFAULT_VIEWER_BLOCK_TAB_ID = VIEWER_BLOCK_TABS[0]!.id
+export const DEFAULT_VIEWER_BLOCK_TAB_ID = VIEWER_BLOCK_TABS[0]!.id;
 
 export function getViewerBlock(
-  blockId: string
+  blockId: string,
 ): ViewerBlockMetadata | undefined {
-  return VIEWER_BLOCKS.find((block) => block.id === blockId)
+  return VIEWER_BLOCKS.find((block) => block.id === blockId);
 }
 
 export function getViewerBlockTab(
-  blockId: string
+  blockId: string,
 ): ViewerBlockMetadata | undefined {
-  return VIEWER_BLOCK_TABS.find((block) => block.id === blockId)
+  return VIEWER_BLOCK_TABS.find((block) => block.id === blockId);
 }
 
 export function getViewerBlockHrefForRegistryName(registryName: string) {
-  const block = VIEWER_BLOCKS.find((item) => item.registryName === registryName)
-  if (!block) return "/blocks"
-  const metadata: ViewerBlockConfig = block
+  const block = VIEWER_BLOCKS.find(
+    (item) => item.registryName === registryName,
+  );
+  if (!block) return "/blocks";
+  const metadata: ViewerBlockConfig = block;
   if (metadata.isStandaloneTab === false) {
-    return metadata.docsHref
+    return metadata.docsHref;
   }
-  return `/blocks/${block.id}`
+  return `/blocks/${block.id}`;
 }

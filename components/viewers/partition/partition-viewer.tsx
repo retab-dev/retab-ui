@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Key, Loader2 } from "lucide-react"
+import * as React from "react";
+import { Key, Loader2 } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import type { ViewerSource } from "@/lib/viewer-source"
+import { cn } from "@/lib/utils";
+import type { ViewerSource } from "@/lib/viewer-source";
 import {
   FileViewer,
   FileViewerBody,
@@ -12,95 +12,95 @@ import {
   FileViewerHeader,
   FileViewerSurface,
   FileViewerTitle,
-} from "@/components/ui/file-viewer"
-import { PageRibbon } from "@/components/ui/page-ribbon"
-import { SegmentLegend } from "@/components/ui/segment-legend"
+} from "@/components/ui/file-viewer";
+import { PageRibbon } from "@/components/ui/page-ribbon";
+import { SegmentLegend } from "@/components/ui/segment-legend";
 import {
   SegmentedDocumentProvider,
   useSegmentedDocumentViewport,
-} from "@/components/ui/segmented-document-provider"
-import { type SegmentViewportController } from "@/components/ui/use-segment-viewport-controller"
-import { ViewerHeader } from "@/components/ui/viewer"
-import type { PartitionResult } from "@/components/viewers/lib/partition-types"
+} from "@/components/ui/segmented-document-provider";
+import { type SegmentViewportController } from "@/components/ui/use-segment-viewport-controller";
+import { ViewerHeader } from "@/components/ui/viewer";
+import type { PartitionResult } from "@/components/viewers/lib/partition-types";
 
 import {
   createPartitionSegmentedDocumentModel,
   createPartitionViewerModel,
   type PartitionViewerModel,
-} from "./partition-viewer-model"
+} from "./partition-viewer-model";
 
 export type PartitionDocumentControls =
-  SegmentViewportController["documentHandlers"]
+  SegmentViewportController["documentHandlers"];
 
 type PartitionViewerContextValue = {
-  isProcessing: boolean
-  model: PartitionViewerModel
-  viewport: SegmentViewportController
-}
+  isProcessing: boolean;
+  model: PartitionViewerModel;
+  viewport: SegmentViewportController;
+};
 
 type PartitionViewerHeaderState = {
-  currentPage: SegmentViewportController["model"]["currentPage"]
-  interaction: SegmentViewportController["interaction"]
-  legendSegments: PartitionViewerModel["legendSegments"]
-  navigation: SegmentViewportController["navigation"]
-}
+  currentPage: SegmentViewportController["model"]["currentPage"];
+  interaction: SegmentViewportController["interaction"];
+  legendSegments: PartitionViewerModel["legendSegments"];
+  navigation: SegmentViewportController["navigation"];
+};
 
 type PartitionViewerRibbonState = {
-  currentPage: SegmentViewportController["model"]["currentPage"]
-  interaction: SegmentViewportController["interaction"]
-  navigation: SegmentViewportController["navigation"]
-  pageCount: number
-  rows: PartitionViewerModel["ribbonRows"]
-  scrollProgress: SegmentViewportController["model"]["scrollProgress"]
-}
+  currentPage: SegmentViewportController["model"]["currentPage"];
+  interaction: SegmentViewportController["interaction"];
+  navigation: SegmentViewportController["navigation"];
+  pageCount: number;
+  rows: PartitionViewerModel["ribbonRows"];
+  scrollProgress: SegmentViewportController["model"]["scrollProgress"];
+};
 
 type PartitionViewerDocumentState = {
-  hasOutput: boolean
-}
+  hasOutput: boolean;
+};
 
 type PartitionViewerEmptyStatusState = {
-  isProcessing: boolean
-}
+  isProcessing: boolean;
+};
 
 const PartitionViewerContext =
-  React.createContext<PartitionViewerContextValue | null>(null)
+  React.createContext<PartitionViewerContextValue | null>(null);
 
 export interface PartitionViewerProviderProps {
-  result: PartitionResult | null
-  isProcessing?: boolean
-  children: React.ReactNode
+  result: PartitionResult | null;
+  isProcessing?: boolean;
+  children: React.ReactNode;
 }
 
 export interface PartitionViewerProps {
-  result: PartitionResult | null
-  source: ViewerSource
-  isProcessing?: boolean
-  document?: React.ReactNode
+  result: PartitionResult | null;
+  source: ViewerSource;
+  isProcessing?: boolean;
+  document?: React.ReactNode;
 }
 
 function usePartitionViewerContext(): PartitionViewerContextValue {
-  const context = React.useContext(PartitionViewerContext)
+  const context = React.useContext(PartitionViewerContext);
   if (!context) {
     throw new Error(
-      "usePartitionViewer must be used within PartitionViewerProvider."
-    )
+      "usePartitionViewer must be used within PartitionViewerProvider.",
+    );
   }
-  return context
+  return context;
 }
 
 function usePartitionViewerHeader(): PartitionViewerHeaderState {
-  const { model, viewport } = usePartitionViewerContext()
+  const { model, viewport } = usePartitionViewerContext();
 
   return {
     currentPage: viewport.model.currentPage,
     interaction: viewport.interaction,
     legendSegments: model.legendSegments,
     navigation: viewport.navigation,
-  }
+  };
 }
 
 function usePartitionViewerRibbon(): PartitionViewerRibbonState {
-  const { model, viewport } = usePartitionViewerContext()
+  const { model, viewport } = usePartitionViewerContext();
 
   return {
     currentPage: viewport.model.currentPage,
@@ -109,23 +109,23 @@ function usePartitionViewerRibbon(): PartitionViewerRibbonState {
     pageCount: model.pageCount,
     rows: model.ribbonRows,
     scrollProgress: viewport.model.scrollProgress,
-  }
+  };
 }
 
 export function usePartitionViewerDocumentControls(): PartitionDocumentControls {
-  return usePartitionViewerContext().viewport.documentHandlers
+  return usePartitionViewerContext().viewport.documentHandlers;
 }
 
 function usePartitionViewerDocument(): PartitionViewerDocumentState {
   return {
     hasOutput: usePartitionViewerContext().model.hasOutput,
-  }
+  };
 }
 
 function usePartitionViewerEmpty(): PartitionViewerEmptyStatusState {
   return {
     isProcessing: usePartitionViewerContext().isProcessing,
-  }
+  };
 }
 
 export function PartitionViewerProvider({
@@ -135,12 +135,12 @@ export function PartitionViewerProvider({
 }: PartitionViewerProviderProps) {
   const model = React.useMemo(
     () => createPartitionViewerModel(result),
-    [result]
-  )
+    [result],
+  );
   const segmentedDocumentModel = React.useMemo(
     () => createPartitionSegmentedDocumentModel(model),
-    [model]
-  )
+    [model],
+  );
 
   return (
     <SegmentedDocumentProvider model={segmentedDocumentModel}>
@@ -148,7 +148,7 @@ export function PartitionViewerProvider({
         {children}
       </PartitionViewerContextProvider>
     </SegmentedDocumentProvider>
-  )
+  );
 }
 
 function PartitionViewerContextProvider({
@@ -156,11 +156,11 @@ function PartitionViewerContextProvider({
   isProcessing,
   model,
 }: {
-  children: React.ReactNode
-  isProcessing: boolean
-  model: PartitionViewerModel
+  children: React.ReactNode;
+  isProcessing: boolean;
+  model: PartitionViewerModel;
 }) {
-  const viewport = useSegmentedDocumentViewport()
+  const viewport = useSegmentedDocumentViewport();
 
   const value = React.useMemo<PartitionViewerContextValue>(
     () => ({
@@ -168,30 +168,30 @@ function PartitionViewerContextProvider({
       model,
       viewport,
     }),
-    [isProcessing, model, viewport]
-  )
+    [isProcessing, model, viewport],
+  );
 
   return (
     <PartitionViewerContext.Provider value={value}>
       {children}
     </PartitionViewerContext.Provider>
-  )
+  );
 }
 
 export function PartitionViewerHeader({
   className,
   trailing,
 }: {
-  className?: string
-  trailing?: React.ReactNode
+  className?: string;
+  trailing?: React.ReactNode;
 }) {
   const { currentPage, interaction, legendSegments, navigation } =
-    usePartitionViewerHeader()
+    usePartitionViewerHeader();
 
-  if (legendSegments.length === 0) return null
+  if (legendSegments.length === 0) return null;
 
   return (
-    <ViewerHeader className={className ?? "space-y-2 bg-background px-3 py-2"}>
+    <ViewerHeader className={className ?? "bg-background space-y-2 px-3 py-2"}>
       <SegmentLegend
         variant="plain"
         segments={legendSegments}
@@ -202,31 +202,31 @@ export function PartitionViewerHeader({
       />
       {trailing}
     </ViewerHeader>
-  )
+  );
 }
 
 export function PartitionViewerHeaderMeta({
   className,
 }: {
-  className?: string
+  className?: string;
 }) {
-  const { legendSegments } = usePartitionViewerHeader()
+  const { legendSegments } = usePartitionViewerHeader();
 
-  if (legendSegments.length === 0) return null
+  if (legendSegments.length === 0) return null;
 
   return (
-    <span className={cn("shrink-0 text-xs text-muted-foreground", className)}>
+    <span className={cn("text-muted-foreground shrink-0 text-xs", className)}>
       {legendSegments.length} segment
       {legendSegments.length === 1 ? "" : "s"}
     </span>
-  )
+  );
 }
 
 export function PartitionViewerLegend({ className }: { className?: string }) {
   const { currentPage, interaction, legendSegments, navigation } =
-    usePartitionViewerHeader()
+    usePartitionViewerHeader();
 
-  if (legendSegments.length === 0) return null
+  if (legendSegments.length === 0) return null;
 
   return (
     <SegmentLegend
@@ -238,7 +238,7 @@ export function PartitionViewerLegend({ className }: { className?: string }) {
       columns={4}
       className={className}
     />
-  )
+  );
 }
 
 export function PartitionViewerRibbon({ className }: { className?: string }) {
@@ -249,12 +249,12 @@ export function PartitionViewerRibbon({ className }: { className?: string }) {
     pageCount,
     rows,
     scrollProgress,
-  } = usePartitionViewerRibbon()
+  } = usePartitionViewerRibbon();
 
-  if (rows.length === 0) return null
+  if (rows.length === 0) return null;
 
   return (
-    <div className={className ?? "border-b bg-background px-3 py-2"}>
+    <div className={className ?? "bg-background border-b px-3 py-2"}>
       <PageRibbon
         orientation="horizontal"
         rows={rows}
@@ -265,55 +265,55 @@ export function PartitionViewerRibbon({ className }: { className?: string }) {
         onSelectPage={navigation.scrollToPage}
       />
     </div>
-  )
+  );
 }
 
 export function PartitionViewerDocument({
   document,
 }: {
-  document?: React.ReactNode
+  document?: React.ReactNode;
 }) {
-  const { hasOutput } = usePartitionViewerDocument()
+  const { hasOutput } = usePartitionViewerDocument();
 
-  if (!hasOutput) return <PartitionViewerEmptyState />
+  if (!hasOutput) return <PartitionViewerEmptyState />;
 
   return document ? (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">{document}</div>
   ) : (
     <div className="flex h-full flex-1 items-center justify-center">
-      <span className="text-sm text-muted-foreground">
+      <span className="text-muted-foreground text-sm">
         No document available
       </span>
     </div>
-  )
+  );
 }
 
 export function PartitionViewerEmptyState() {
-  const { isProcessing } = usePartitionViewerEmpty()
+  const { isProcessing } = usePartitionViewerEmpty();
 
   return (
-    <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 bg-background px-8 text-muted-foreground">
+    <div className="bg-background text-muted-foreground flex h-full flex-1 flex-col items-center justify-center gap-4 px-8">
       {isProcessing ? (
         <>
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-center text-base text-muted-foreground">
+          <Loader2 className="text-primary h-12 w-12 animate-spin" />
+          <p className="text-muted-foreground text-center text-base">
             Partitioning...
           </p>
         </>
       ) : (
         <>
-          <Key className="h-16 w-16 text-muted-foreground" />
-          <p className="text-center text-base text-muted-foreground">
+          <Key className="text-muted-foreground h-16 w-16" />
+          <p className="text-muted-foreground text-center text-base">
             Run partition to see output
           </p>
-          <p className="max-w-sm text-center text-sm text-muted-foreground">
+          <p className="text-muted-foreground max-w-sm text-center text-sm">
             Upload a document, set a key and instructions, then click Run
             Partition
           </p>
         </>
       )}
     </div>
-  )
+  );
 }
 
 export function PartitionViewer({
@@ -324,7 +324,7 @@ export function PartitionViewer({
 }: PartitionViewerProps) {
   return (
     <PartitionViewerProvider result={result} isProcessing={isProcessing}>
-      <FileViewer source={source} className="h-full flex-1 bg-background">
+      <FileViewer source={source} className="bg-background h-full flex-1">
         <FileViewerHeader>
           <FileViewerTitle />
           <PartitionViewerHeaderMeta />
@@ -339,5 +339,5 @@ export function PartitionViewer({
         </FileViewerBody>
       </FileViewer>
     </PartitionViewerProvider>
-  )
+  );
 }

@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import type { JSONSchema7 } from "json-schema"
-import { useForm } from "react-hook-form"
+import type { JSONSchema7 } from "json-schema";
+import { useForm } from "react-hook-form";
 
-import { extractionSourcesToSourceMap } from "@/lib/document-source"
+import { extractionSourcesToSourceMap } from "@/lib/document-source";
 import {
   FileViewer,
   FileViewerBody,
@@ -12,49 +12,49 @@ import {
   FileViewerMeta,
   FileViewerSurface,
   FileViewerTitle,
-} from "@/components/ui/file-viewer"
-import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer"
-import { ScrollArea } from "@/components/ui/scroll-area"
+} from "@/components/ui/file-viewer";
+import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   SegmentedDocumentProvider,
   useSegmentedDocumentViewport,
-} from "@/components/ui/segmented-document-provider"
-import { sourceMapToEvidenceModel } from "@/components/ui/source-evidence"
-import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
-import { SourceIndicator } from "@/components/ui/source-indicator"
-import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
+} from "@/components/ui/segmented-document-provider";
+import { sourceMapToEvidenceModel } from "@/components/ui/source-evidence";
+import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link";
+import { SourceIndicator } from "@/components/ui/source-indicator";
+import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model";
 import {
   useSegmentedPdfSourceOverlay,
   useSegmentedPdfViewerHandle,
-} from "@/components/ui/source-segmented-document-overlays"
+} from "@/components/ui/source-segmented-document-overlays";
 import {
   ViewerBody,
   ViewerRoot,
   ViewerSidebar,
   ViewerSurface,
-} from "@/components/ui/viewer"
-import { JsonForm } from "@/components/json-form/json-form"
-import sourcesSample from "@/components/viewers/sample-data/json-form-sources.json"
+} from "@/components/ui/viewer";
+import { JsonForm } from "@/components/json-form/json-form";
+import sourcesSample from "@/components/viewers/sample-data/json-form-sources.json";
 
-const PDF_URL = "/samples/jane-doe-bank-statement-5-pages.pdf"
+const PDF_URL = "/samples/jane-doe-bank-statement-5-pages.pdf";
 
 // An extraction of the bank-statement sample shaped like the
 // `GET /v1/extractions/{id}/sources` response: a JSON Schema, the extracted
 // values, and a parallel `sources` tree (leaves `{ value, source }`).
-const schema = sourcesSample.schema as JSONSchema7
-const extraction = sourcesSample.extraction as Record<string, unknown>
-const SOURCES = extractionSourcesToSourceMap(sourcesSample.sources)
+const schema = sourcesSample.schema as JSONSchema7;
+const extraction = sourcesSample.extraction as Record<string, unknown>;
+const SOURCES = extractionSourcesToSourceMap(sourcesSample.sources);
 const EVIDENCE = sourceMapToEvidenceModel({
   sourceMap: SOURCES,
   values: extraction,
   schema,
-})
+});
 const SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel({
   labels: Object.fromEntries(
-    EVIDENCE.evidenceItems.map((item) => [item.id, item.payload.label])
+    EVIDENCE.evidenceItems.map((item) => [item.id, item.payload.label]),
   ),
   sourceMap: SOURCES,
-})
+});
 
 /**
  * JSON Form ⨯ PDF sources block — extraction rendered as a form beside the source
@@ -69,28 +69,28 @@ const SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel({
 export function JsonFormSourcesBlock({
   defaultOpenPaths,
 }: {
-  defaultOpenPaths?: readonly string[]
+  defaultOpenPaths?: readonly string[];
 } = {}) {
   return (
     <SegmentedDocumentProvider model={SEGMENTED_DOCUMENT}>
       <JsonFormSourcesContent defaultOpenPaths={defaultOpenPaths} />
     </SegmentedDocumentProvider>
-  )
+  );
 }
 
 function JsonFormSourcesContent({
   defaultOpenPaths,
 }: {
-  defaultOpenPaths?: readonly string[]
+  defaultOpenPaths?: readonly string[];
 }) {
-  const link = useSegmentedSourceFieldLink()
-  const { documentHandlers } = useSegmentedDocumentViewport()
-  const renderPageOverlay = useSegmentedPdfSourceOverlay(link)
-  const setPdfViewerHandle = useSegmentedPdfViewerHandle()
-  const form = useForm<Record<string, unknown>>({ defaultValues: extraction })
+  const link = useSegmentedSourceFieldLink();
+  const { documentHandlers } = useSegmentedDocumentViewport();
+  const renderPageOverlay = useSegmentedPdfSourceOverlay(link);
+  const setPdfViewerHandle = useSegmentedPdfViewerHandle();
+  const form = useForm<Record<string, unknown>>({ defaultValues: extraction });
 
   return (
-    <ViewerRoot className="h-full min-h-[680px] bg-background">
+    <ViewerRoot className="bg-background h-full min-h-[680px]">
       <ViewerBody>
         <ViewerSurface className="relative">
           <FileViewer
@@ -137,7 +137,7 @@ function JsonFormSourcesContent({
         >
           <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">
             <h2 className="text-sm font-medium">Extracted data</h2>
-            <span className="ml-auto text-xs text-muted-foreground">
+            <span className="text-muted-foreground ml-auto text-xs">
               Hover a field to see its source
             </span>
           </div>
@@ -154,5 +154,5 @@ function JsonFormSourcesContent({
         </ViewerSidebar>
       </ViewerBody>
     </ViewerRoot>
-  )
+  );
 }

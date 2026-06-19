@@ -1,33 +1,35 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { type FrameDescriptor } from "@/lib/image-frame-source"
+import * as React from "react";
+
+import { type FrameDescriptor } from "@/lib/image-frame-source";
 import {
   frameCssSize,
   frameIndexToNumber,
   type QuarterTurn,
-} from "@/lib/image-geometry"
+} from "@/lib/image-geometry";
 
-export const IMAGE_FRAME_GAP = 16
-export const IMAGE_FRAME_PADDING = 16
+export const IMAGE_FRAME_GAP = 16;
+export const IMAGE_FRAME_PADDING = 16;
 
 export type ImageFrameLayout = {
-  frameIndex: number
-  frameNumber: number
-  width: number
-  height: number
-  offsetTop: number
-}
+  frameIndex: number;
+  frameNumber: number;
+  width: number;
+  height: number;
+  offsetTop: number;
+};
 
 export type ImageFrameLayoutModel = {
-  frameCount: number
-  gap: number
-  padding: number
-  totalHeight: number
-  maxFrameWidth: number
-  frames: readonly ImageFrameLayout[]
-}
+  frameCount: number;
+  gap: number;
+  padding: number;
+  totalHeight: number;
+  maxFrameWidth: number;
+  frames: readonly ImageFrameLayout[];
+};
 
 export function createImageFrameLayout({
   frames,
@@ -36,27 +38,27 @@ export function createImageFrameLayout({
   gap = IMAGE_FRAME_GAP,
   padding = IMAGE_FRAME_PADDING,
 }: {
-  frames: readonly FrameDescriptor[]
-  scale: number
-  rotation: QuarterTurn
-  gap?: number
-  padding?: number
+  frames: readonly FrameDescriptor[];
+  scale: number;
+  rotation: QuarterTurn;
+  gap?: number;
+  padding?: number;
 }): ImageFrameLayoutModel {
-  let offsetTop = padding
-  let maxFrameWidth = 0
+  let offsetTop = padding;
+  let maxFrameWidth = 0;
   const frameLayouts = frames.map((frame, frameIndex) => {
-    const frameRect = frameCssSize(frame.intrinsicSize, scale, rotation)
+    const frameRect = frameCssSize(frame.intrinsicSize, scale, rotation);
     const layout = {
       frameIndex,
       frameNumber: frameIndexToNumber(frameIndex),
       width: frameRect.width,
       height: frameRect.height,
       offsetTop,
-    }
-    offsetTop += frameRect.height + gap
-    maxFrameWidth = Math.max(maxFrameWidth, frameRect.width)
-    return layout
-  })
+    };
+    offsetTop += frameRect.height + gap;
+    maxFrameWidth = Math.max(maxFrameWidth, frameRect.width);
+    return layout;
+  });
 
   return {
     frameCount: frames.length,
@@ -65,38 +67,38 @@ export function createImageFrameLayout({
     totalHeight: frames.length === 0 ? 0 : offsetTop - gap + padding,
     maxFrameWidth,
     frames: frameLayouts,
-  }
+  };
 }
 
 export function getImageFrameLayout(
   layout: ImageFrameLayoutModel,
-  frameNumber: number
+  frameNumber: number,
 ): ImageFrameLayout | undefined {
-  if (!Number.isInteger(frameNumber)) return undefined
-  return layout.frames[frameNumber - 1]
+  if (!Number.isInteger(frameNumber)) return undefined;
+  return layout.frames[frameNumber - 1];
 }
 
 export function findImageFrameByOffset(
   layout: ImageFrameLayoutModel,
-  offset: number
+  offset: number,
 ): number {
-  if (layout.frameCount === 0) return 1
+  if (layout.frameCount === 0) return 1;
 
-  let low = 0
-  let high = layout.frames.length - 1
-  let match = 0
+  let low = 0;
+  let high = layout.frames.length - 1;
+  let match = 0;
 
   while (low <= high) {
-    const mid = Math.floor((low + high) / 2)
+    const mid = Math.floor((low + high) / 2);
     if (layout.frames[mid].offsetTop <= offset) {
-      match = mid
-      low = mid + 1
+      match = mid;
+      low = mid + 1;
     } else {
-      high = mid - 1
+      high = mid - 1;
     }
   }
 
-  return layout.frames[match].frameNumber
+  return layout.frames[match].frameNumber;
 }
 
 export function getVisibleImageFrameNumbers({
@@ -105,28 +107,28 @@ export function getVisibleImageFrameNumbers({
   viewportHeight,
   overscanFrames = 2,
 }: {
-  layout: ImageFrameLayoutModel
-  scrollTop: number
-  viewportHeight: number
-  overscanFrames?: number
+  layout: ImageFrameLayoutModel;
+  scrollTop: number;
+  viewportHeight: number;
+  overscanFrames?: number;
 }): readonly number[] {
-  if (layout.frameCount === 0) return []
+  if (layout.frameCount === 0) return [];
 
-  const measurementHeight = Math.max(1, viewportHeight)
-  const startOffset = Math.max(0, scrollTop - measurementHeight)
-  const endOffset = scrollTop + measurementHeight * 2
-  const firstVisibleFrame = findImageFrameByOffset(layout, startOffset)
-  const lastVisibleFrame = findImageFrameByOffset(layout, endOffset)
-  const firstFrame = Math.max(1, firstVisibleFrame - overscanFrames)
+  const measurementHeight = Math.max(1, viewportHeight);
+  const startOffset = Math.max(0, scrollTop - measurementHeight);
+  const endOffset = scrollTop + measurementHeight * 2;
+  const firstVisibleFrame = findImageFrameByOffset(layout, startOffset);
+  const lastVisibleFrame = findImageFrameByOffset(layout, endOffset);
+  const firstFrame = Math.max(1, firstVisibleFrame - overscanFrames);
   const lastFrame = Math.min(
     layout.frameCount,
-    lastVisibleFrame + overscanFrames
-  )
+    lastVisibleFrame + overscanFrames,
+  );
 
   return Array.from(
     { length: lastFrame - firstFrame + 1 },
-    (_, index) => firstFrame + index
-  )
+    (_, index) => firstFrame + index,
+  );
 }
 
 export function getCurrentImageFrameNumber({
@@ -134,11 +136,11 @@ export function getCurrentImageFrameNumber({
   scrollTop,
   viewportHeight,
 }: {
-  layout: ImageFrameLayoutModel
-  scrollTop: number
-  viewportHeight: number
+  layout: ImageFrameLayoutModel;
+  scrollTop: number;
+  viewportHeight: number;
 }): number {
-  return findImageFrameByOffset(layout, scrollTop + viewportHeight * 0.2)
+  return findImageFrameByOffset(layout, scrollTop + viewportHeight * 0.2);
 }
 
 export function useImageFrameVirtualization({
@@ -146,12 +148,12 @@ export function useImageFrameVirtualization({
   resetKey,
   viewportElement,
 }: {
-  layout: ImageFrameLayoutModel
-  resetKey?: unknown
-  viewportElement: HTMLDivElement | null
+  layout: ImageFrameLayoutModel;
+  resetKey?: unknown;
+  viewportElement: HTMLDivElement | null;
 }) {
-  const measureFrameRef = React.useRef(0)
-  const lastMeasuredResetKeyRef = React.useRef<unknown>(resetKey)
+  const measureFrameRef = React.useRef(0);
+  const lastMeasuredResetKeyRef = React.useRef<unknown>(resetKey);
   const getCurrentVisibleFrameNumbers = React.useCallback(
     () =>
       getVisibleImageFrameNumbers({
@@ -161,12 +163,12 @@ export function useImageFrameVirtualization({
           : 0,
         viewportHeight: viewportElement?.clientHeight ?? 0,
       }),
-    [layout, resetKey, viewportElement]
-  )
+    [layout, resetKey, viewportElement],
+  );
   const [state, setState] = React.useState<{
-    layout: ImageFrameLayoutModel
-    resetKey: unknown
-    visibleFrameNumbers: readonly number[]
+    layout: ImageFrameLayoutModel;
+    resetKey: unknown;
+    visibleFrameNumbers: readonly number[];
   }>(() => ({
     layout,
     resetKey,
@@ -175,7 +177,7 @@ export function useImageFrameVirtualization({
       scrollTop: viewportElement?.scrollTop ?? 0,
       viewportHeight: viewportElement?.clientHeight ?? 0,
     }),
-  }))
+  }));
   const visibleFrameNumbers =
     Object.is(state.layout, layout) && Object.is(state.resetKey, resetKey)
       ? state.visibleFrameNumbers
@@ -185,59 +187,59 @@ export function useImageFrameVirtualization({
             ? (viewportElement?.scrollTop ?? 0)
             : 0,
           viewportHeight: viewportElement?.clientHeight ?? 0,
-        })
+        });
 
   const measureVisibleFramesNow = React.useCallback(() => {
-    measureFrameRef.current = 0
-    const nextFrameNumbers = getCurrentVisibleFrameNumbers()
-    lastMeasuredResetKeyRef.current = resetKey
+    measureFrameRef.current = 0;
+    const nextFrameNumbers = getCurrentVisibleFrameNumbers();
+    lastMeasuredResetKeyRef.current = resetKey;
     setState((previousState) =>
       Object.is(previousState.layout, layout) &&
       Object.is(previousState.resetKey, resetKey) &&
       areFrameNumbersEqual(previousState.visibleFrameNumbers, nextFrameNumbers)
         ? previousState
-        : { layout, resetKey, visibleFrameNumbers: nextFrameNumbers }
-    )
-  }, [getCurrentVisibleFrameNumbers, layout, resetKey])
-  const measureVisibleFramesNowRef = React.useRef(measureVisibleFramesNow)
+        : { layout, resetKey, visibleFrameNumbers: nextFrameNumbers },
+    );
+  }, [getCurrentVisibleFrameNumbers, layout, resetKey]);
+  const measureVisibleFramesNowRef = React.useRef(measureVisibleFramesNow);
 
   React.useLayoutEffect(() => {
-    measureVisibleFramesNowRef.current = measureVisibleFramesNow
-  }, [measureVisibleFramesNow])
+    measureVisibleFramesNowRef.current = measureVisibleFramesNow;
+  }, [measureVisibleFramesNow]);
 
   const measureVisibleFrames = React.useCallback(() => {
-    if (measureFrameRef.current) return
+    if (measureFrameRef.current) return;
     measureFrameRef.current = requestAnimationFrame(() =>
-      measureVisibleFramesNowRef.current()
-    )
-  }, [])
+      measureVisibleFramesNowRef.current(),
+    );
+  }, []);
 
   React.useEffect(() => {
     if (measureFrameRef.current) {
-      cancelAnimationFrame(measureFrameRef.current)
-      measureFrameRef.current = 0
+      cancelAnimationFrame(measureFrameRef.current);
+      measureFrameRef.current = 0;
     }
-    measureVisibleFramesNow()
-  }, [measureVisibleFramesNow])
+    measureVisibleFramesNow();
+  }, [measureVisibleFramesNow]);
 
   React.useEffect(
     () => () => {
       if (measureFrameRef.current) {
-        cancelAnimationFrame(measureFrameRef.current)
+        cancelAnimationFrame(measureFrameRef.current);
       }
     },
-    []
-  )
+    [],
+  );
 
-  return { visibleFrameNumbers, measureVisibleFrames }
+  return { visibleFrameNumbers, measureVisibleFrames };
 }
 
 function areFrameNumbersEqual(
   previousFrameNumbers: readonly number[],
-  nextFrameNumbers: readonly number[]
+  nextFrameNumbers: readonly number[],
 ): boolean {
-  if (previousFrameNumbers.length !== nextFrameNumbers.length) return false
+  if (previousFrameNumbers.length !== nextFrameNumbers.length) return false;
   return previousFrameNumbers.every(
-    (frameNumber, index) => frameNumber === nextFrameNumbers[index]
-  )
+    (frameNumber, index) => frameNumber === nextFrameNumbers[index],
+  );
 }

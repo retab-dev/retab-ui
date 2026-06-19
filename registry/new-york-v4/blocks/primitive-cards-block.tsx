@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { toSegments } from "@/lib/segments"
+import { toSegments } from "@/lib/segments";
 import {
   ClassificationRunCard,
   ExtractRunCard,
@@ -8,12 +8,12 @@ import {
   PartitionRunCard,
   SplitRunCard,
   type ExtractRunCardField,
-} from "@/components/ui/primitive-run-cards"
-import type { ClassifyResult } from "@/components/viewers/lib/classify-types"
-import type { PartitionResult } from "@/components/viewers/lib/partition-types"
-import type { SplitView } from "@/components/viewers/lib/split-types"
-import extractSample from "@/components/viewers/sample-data/extract.json"
-import parseSample from "@/components/viewers/sample-data/parse.json"
+} from "@/components/ui/primitive-run-cards";
+import type { ClassifyResult } from "@/components/viewers/lib/classify-types";
+import type { PartitionResult } from "@/components/viewers/lib/partition-types";
+import type { SplitView } from "@/components/viewers/lib/split-types";
+import extractSample from "@/components/viewers/sample-data/extract.json";
+import parseSample from "@/components/viewers/sample-data/parse.json";
 
 // ── Per-primitive sample results, each framed as a completed "run". ───────────
 
@@ -25,7 +25,7 @@ const CLASSIFICATION = {
     reasoning:
       "A Uniform Residential Loan Application (Form 1003): borrower, employment, and property details for a mortgage request.",
   } satisfies ClassifyResult,
-}
+};
 
 const SPLIT = {
   file: { name: "an-image-is-worth-16x16-words.pdf", type: "application/pdf" },
@@ -40,7 +40,7 @@ const SPLIT = {
       { name: "Appendix", pages: [13, 14, 15, 16, 17, 18, 19, 20, 21, 22] },
     ],
   } satisfies SplitView,
-}
+};
 
 const PARTITION = {
   file: { name: "an-image-is-worth-16x16-words.pdf", type: "application/pdf" },
@@ -57,7 +57,7 @@ const PARTITION = {
       { key: "appendix", pages: [13, 14, 15, 16, 17, 18, 19, 20, 21, 22] },
     ],
   } satisfies Pick<PartitionResult, "output">,
-}
+};
 
 const PARSE = {
   file: { name: "bank-statement.pdf", type: "application/pdf" },
@@ -65,7 +65,7 @@ const PARSE = {
     .split("\n")
     .slice(0, 18)
     .join("\n"),
-}
+};
 
 const EXTRACT = {
   file: { name: "bank-statement.pdf", type: "application/pdf" },
@@ -73,7 +73,7 @@ const EXTRACT = {
   // The sample carries a `Source` per value (normalized pdf_bbox anchors); the
   // card tints each field and draws its source box.
   fields: extractSample as ExtractRunCardField[],
-}
+};
 
 /**
  * Primitive run cards — each Retab primitive's result framed as a run card,
@@ -84,7 +84,7 @@ const EXTRACT = {
  */
 export function PrimitiveCardsBlock() {
   return (
-    <div className="flex h-full min-h-[680px] flex-col bg-background">
+    <div className="bg-background flex h-full min-h-[680px] flex-col">
       <div className="min-h-0 flex-1 overflow-auto p-6">
         <div className="mx-auto grid max-w-5xl grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <ClassificationRunCard
@@ -112,5 +112,5 @@ export function PrimitiveCardsBlock() {
         </div>
       </div>
     </div>
-  )
+  );
 }

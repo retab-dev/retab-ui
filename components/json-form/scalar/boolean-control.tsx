@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   Select,
@@ -6,20 +6,20 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Checkbox } from "@/components/json-form/form-primitives"
-import { NULL_SELECT_VALUE } from "@/components/json-form/scalar/enum-control"
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/json-form/form-primitives";
+import { NULL_SELECT_VALUE } from "@/components/json-form/scalar/enum-control";
 import {
   type ControlFieldApi,
   type ScalarControlDomProps,
-} from "@/components/json-form/scalar/types"
+} from "@/components/json-form/scalar/types";
 
 export function BooleanControl({
   field,
   label,
 }: {
-  field: ControlFieldApi
-  label: string
+  field: ControlFieldApi;
+  label: string;
 }) {
   return (
     <Checkbox
@@ -28,7 +28,7 @@ export function BooleanControl({
       onCheckedChange={(value) => field.onChange(value === true)}
       onBlur={field.onBlur}
     />
-  )
+  );
 }
 
 export function NullableBooleanControl({
@@ -36,31 +36,35 @@ export function NullableBooleanControl({
   label,
   ...controlProps
 }: {
-  field: ControlFieldApi
-  label: string
+  field: ControlFieldApi;
+  label: string;
 } & ScalarControlDomProps) {
   const selectValue =
     field.value === true
       ? "true"
       : field.value === false
         ? "false"
-        : NULL_SELECT_VALUE
+        : NULL_SELECT_VALUE;
   const displayValue =
-    field.value === true ? "True" : field.value === false ? "False" : "No value"
+    field.value === true
+      ? "True"
+      : field.value === false
+        ? "False"
+        : "No value";
 
   return (
     <Select
       value={selectValue}
       onValueChange={(value) => {
         if (value === "true") {
-          field.onChange(true)
-          return
+          field.onChange(true);
+          return;
         }
         if (value === "false") {
-          field.onChange(false)
-          return
+          field.onChange(false);
+          return;
         }
-        field.onChange(null)
+        field.onChange(null);
       }}
     >
       <SelectTrigger {...controlProps} aria-label={label}>
@@ -72,5 +76,5 @@ export function NullableBooleanControl({
         <SelectItem value="false">False</SelectItem>
       </SelectContent>
     </Select>
-  )
+  );
 }

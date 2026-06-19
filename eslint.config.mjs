@@ -1,6 +1,11 @@
 import nextVitals from "eslint-config-next/core-web-vitals"
 import tseslint from "typescript-eslint"
 
+const directEffectMessage =
+  "Do not call useEffect directly. Use useMountEffect or one of the Rule 1-5 replacements (see no-use-effect.md)."
+const directLayoutEffectMessage =
+  "Do not call useLayoutEffect directly. For ref mirrors use inline render-time assignment; for reactive side effects use <KeyedRunner>; for DOM text measurement use @chenglou/pretext. See no-use-effect.md."
+
 const eslintConfig = tseslint.config(
   // Remove the @typescript-eslint plugin from next/typescript to prevent
   // duplicate registration with tseslint.configs.recommended.
@@ -40,6 +45,27 @@ const eslintConfig = tseslint.config(
         {
           prefer: "type-imports",
           fixStyle: "inline-type-imports",
+        },
+      ],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.name='useEffect']",
+          message: directEffectMessage,
+        },
+        {
+          selector:
+            "CallExpression[callee.object.name='React'][callee.property.name='useEffect']",
+          message: directEffectMessage,
+        },
+        {
+          selector: "CallExpression[callee.name='useLayoutEffect']",
+          message: directLayoutEffectMessage,
+        },
+        {
+          selector:
+            "CallExpression[callee.object.name='React'][callee.property.name='useLayoutEffect']",
+          message: directLayoutEffectMessage,
         },
       ],
     },

@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { type ViewerResource } from "@/lib/viewer-resource"
+import { type ViewerResource } from "@/lib/viewer-resource";
 
 import {
   isProseTextDescriptor,
@@ -10,75 +10,75 @@ import {
   type FileDescriptor,
   type FileViewerDocumentChrome,
   type FileViewerFallbackSize,
-} from "./file-viewer-core"
-import { CsvFileContent } from "./file-viewer-csv-viewer"
-import { UnsupportedCard } from "./file-viewer-fallback"
-import { HtmlFileContent } from "./file-viewer-html-viewer"
+} from "./file-viewer-core";
+import { CsvFileContent } from "./file-viewer-csv-viewer";
+import { UnsupportedCard } from "./file-viewer-fallback";
+import { HtmlFileContent } from "./file-viewer-html-viewer";
 
 const PdfResourceContent = React.lazy(() =>
   import("@/components/ui/pdf-viewer").then((m) => ({
     default: m.PdfResourceContent,
-  }))
-)
+  })),
+);
 const DocxResourceContent = React.lazy(() =>
   import("@/components/ui/docx-viewer").then((m) => ({
     default: m.DocxResourceContent,
-  }))
-)
+  })),
+);
 const ImageResourceContent = React.lazy(() =>
   import("@/components/ui/image-viewer").then((m) => ({
     default: m.ImageResourceContent,
-  }))
-)
+  })),
+);
 const PptxResourceContent = React.lazy(() =>
   import("@/components/ui/pptx-viewer").then((m) => ({
     default: m.PptxResourceContent,
-  }))
-)
+  })),
+);
 const XlsxResourceContent = React.lazy(() =>
   import("@/components/ui/xlsx-viewer").then((m) => ({
     default: m.XlsxResourceContent,
-  }))
-)
+  })),
+);
 const ProseTextViewer = React.lazy(() =>
   import("@/components/ui/text-viewer-chenglou").then((m) => ({
     default: m.ChenglouTextViewer,
-  }))
-)
+  })),
+);
 const MarkdownViewer = React.lazy(() =>
   import("@/components/ui/markdown-viewer").then((m) => ({
     default: m.MarkdownViewer,
-  }))
-)
+  })),
+);
 const CodeTextViewer = React.lazy(() =>
   import("@/components/ui/code-viewer").then((m) => ({
     default: m.CodeViewer,
-  }))
-)
+  })),
+);
 
 export type FileViewerRouteProps = {
-  bare?: boolean
-  className?: string
-  documentChrome: FileViewerDocumentChrome
-  descriptor: FileDescriptor
-  descriptorSignal: AbortSignal
-  fallbackFrameSize?: FileViewerFallbackSize
-  fallbackSlideSize?: FileViewerFallbackSize
-  isolateStyles: boolean
-  resource: ViewerResource
-}
+  bare?: boolean;
+  className?: string;
+  documentChrome: FileViewerDocumentChrome;
+  descriptor: FileDescriptor;
+  descriptorSignal: AbortSignal;
+  fallbackFrameSize?: FileViewerFallbackSize;
+  fallbackSlideSize?: FileViewerFallbackSize;
+  isolateStyles: boolean;
+  resource: ViewerResource;
+};
 
 type RenderContext = {
-  descriptor: FileDescriptor
-  resource: ViewerResource
-  className?: string
-  bare: boolean
-  controls: boolean
-  fallbackFrameSize?: FileViewerFallbackSize
-  fallbackSlideSize?: FileViewerFallbackSize
-  isolateStyles: boolean
-  descriptorSignal: AbortSignal
-}
+  descriptor: FileDescriptor;
+  resource: ViewerResource;
+  className?: string;
+  bare: boolean;
+  controls: boolean;
+  fallbackFrameSize?: FileViewerFallbackSize;
+  fallbackSlideSize?: FileViewerFallbackSize;
+  isolateStyles: boolean;
+  descriptorSignal: AbortSignal;
+};
 
 // Categories a text-kind source (raw text, no blob/url backing) can render.
 const TEXT_SOURCE_CATEGORIES = new Set<FileCategory>([
@@ -86,7 +86,7 @@ const TEXT_SOURCE_CATEGORIES = new Set<FileCategory>([
   "markdown",
   "html",
   "text",
-])
+]);
 
 const RENDERERS: Partial<
   Record<FileCategory, (ctx: RenderContext) => React.ReactNode>
@@ -168,7 +168,7 @@ const RENDERERS: Partial<
     />
   ),
   text: renderTextViewer,
-}
+};
 
 export function FileViewerRoute({
   descriptor,
@@ -181,11 +181,11 @@ export function FileViewerRoute({
   fallbackSlideSize,
   resource,
 }: FileViewerRouteProps) {
-  const { category } = descriptor
-  const standalone = documentChrome === "standalone"
-  const isTextSource = descriptor.source.kind === "text"
+  const { category } = descriptor;
+  const standalone = documentChrome === "standalone";
+  const isTextSource = descriptor.source.kind === "text";
 
-  const renderer = RENDERERS[category]
+  const renderer = RENDERERS[category];
   if (renderer && (!isTextSource || TEXT_SOURCE_CATEGORIES.has(category))) {
     return renderer({
       descriptor,
@@ -197,7 +197,7 @@ export function FileViewerRoute({
       fallbackSlideSize,
       isolateStyles,
       descriptorSignal,
-    })
+    });
   }
 
   return (
@@ -207,7 +207,7 @@ export function FileViewerRoute({
       bare={bare}
       showDownload={standalone}
     />
-  )
+  );
 }
 
 function renderTextViewer({
@@ -217,7 +217,7 @@ function renderTextViewer({
   bare,
   controls,
 }: RenderContext): React.ReactNode {
-  const source = resource.descriptor.source
+  const source = resource.descriptor.source;
   if (isProseTextDescriptor(descriptor)) {
     return (
       <ProseTextViewer
@@ -228,7 +228,7 @@ function renderTextViewer({
         bare={bare}
         mode="text"
       />
-    )
+    );
   }
   return (
     <CodeTextViewer
@@ -238,5 +238,5 @@ function renderTextViewer({
       download
       bare={bare}
     />
-  )
+  );
 }

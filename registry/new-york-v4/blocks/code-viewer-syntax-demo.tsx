@@ -1,18 +1,18 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
-import { CodeViewer } from "@/components/ui/code-viewer"
-import type { CodeLineRange } from "@/components/ui/code-viewer"
+import { cn } from "@/lib/utils";
+import { CodeViewer } from "@/components/ui/code-viewer";
+import type { CodeLineRange } from "@/components/ui/code-viewer";
 
 type Sample = {
-  id: string
-  label: string
-  fileName: string
-  highlight: CodeLineRange
-  code: string
-}
+  id: string;
+  label: string;
+  fileName: string;
+  highlight: CodeLineRange;
+  code: string;
+};
 
 // One sample per language. Each is short and uses single-line comments and
 // inline strings so it reads cleanly under the viewer's per-line tokenizer.
@@ -122,11 +122,11 @@ version=$(node -p "require('./package.json').version")
 echo "Publishing retab-ui@\${version}"
 npm publish --access public --tag latest`,
   },
-]
+];
 
 export function CodeViewerSyntaxDemo() {
-  const [activeId, setActiveId] = React.useState(SAMPLES[0].id)
-  const active = SAMPLES.find((sample) => sample.id === activeId) ?? SAMPLES[0]
+  const [activeId, setActiveId] = React.useState(SAMPLES[0].id);
+  const active = SAMPLES.find((sample) => sample.id === activeId) ?? SAMPLES[0];
 
   return (
     <div className="flex flex-col gap-3">
@@ -136,7 +136,7 @@ export function CodeViewerSyntaxDemo() {
         className="flex flex-wrap gap-1"
       >
         {SAMPLES.map((sample) => {
-          const selected = sample.id === active.id
+          const selected = sample.id === active.id;
           return (
             <button
               key={sample.id}
@@ -148,12 +148,12 @@ export function CodeViewerSyntaxDemo() {
                 "rounded-md px-2.5 py-1 text-sm font-medium transition-colors",
                 selected
                   ? "bg-foreground text-background"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
               {sample.label}
             </button>
-          )
+          );
         })}
       </div>
       <div className="h-[360px] min-h-0">
@@ -170,5 +170,5 @@ export function CodeViewerSyntaxDemo() {
         />
       </div>
     </div>
-  )
+  );
 }

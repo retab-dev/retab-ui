@@ -1,30 +1,30 @@
-import * as React from "react"
-import type { JSONSchema7Definition } from "json-schema"
+import * as React from "react";
+import type { JSONSchema7Definition } from "json-schema";
 
 import {
   revealDefinitionElement,
   revealDefinitionsSection,
-} from "@/components/schema-editor/document-node-reveal"
-import { projectNode } from "@/components/schema-editor/document/convert"
-import { setRefByName } from "@/components/schema-editor/document/definition-operations"
-import { setEnumValues } from "@/components/schema-editor/document/enum-operations"
-import { setNodeDescription } from "@/components/schema-editor/document/node-metadata"
+} from "@/components/schema-editor/document-node-reveal";
+import { projectNode } from "@/components/schema-editor/document/convert";
+import { setRefByName } from "@/components/schema-editor/document/definition-operations";
+import { setEnumValues } from "@/components/schema-editor/document/enum-operations";
+import { setNodeDescription } from "@/components/schema-editor/document/node-metadata";
 import {
   setNodeEditorType,
   type SchemaEditorType,
-} from "@/components/schema-editor/document/type-operations"
-import type { SchemaDocument } from "@/components/schema-editor/document/types"
-import type { DocumentNodeView } from "@/components/schema-editor/document/view-model"
-import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import type { PropertyFormCommand } from "@/components/schema-editor/property-form/types"
-import type { SchemaDispatch } from "@/components/schema-editor/schema-builder-types"
+} from "@/components/schema-editor/document/type-operations";
+import type { SchemaDocument } from "@/components/schema-editor/document/types";
+import type { DocumentNodeView } from "@/components/schema-editor/document/view-model";
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
+import type { PropertyFormCommand } from "@/components/schema-editor/property-form/types";
+import type { SchemaDispatch } from "@/components/schema-editor/schema-builder-types";
 
 interface DocumentNodeHeaderControllerOptions {
-  dispatch: SchemaDispatch
-  doc: SchemaDocument
-  nodeId: string
-  nodeView: DocumentNodeView
-  setDefsAccordionOpen: (open: boolean) => void
+  dispatch: SchemaDispatch;
+  doc: SchemaDocument;
+  nodeId: string;
+  nodeView: DocumentNodeView;
+  setDefsAccordionOpen: (open: boolean) => void;
 }
 
 export function useDocumentNodeHeaderController({
@@ -34,75 +34,75 @@ export function useDocumentNodeHeaderController({
   nodeView,
   setDefsAccordionOpen,
 }: DocumentNodeHeaderControllerOptions) {
-  const schemaNode = projectNode(doc, nodeView.docNode) as ExtendedJSONSchema7
+  const schemaNode = projectNode(doc, nodeView.docNode) as ExtendedJSONSchema7;
   const defs = React.useMemo(() => {
-    const next: Record<string, JSONSchema7Definition> = {}
+    const next: Record<string, JSONSchema7Definition> = {};
     for (const definition of doc.defs) {
-      setRecordValue(next, definition.name, projectNode(doc, definition.node))
+      setRecordValue(next, definition.name, projectNode(doc, definition.node));
     }
-    return next
-  }, [doc])
-  const localType = nodeView.type
-  const description = nodeView.description || ""
-  const refName = localType === "$ref" ? nodeView.refName : undefined
+    return next;
+  }, [doc]);
+  const localType = nodeView.type;
+  const description = nodeView.description || "";
+  const refName = localType === "$ref" ? nodeView.refName : undefined;
 
-  const [metadataDialogOpen, setMetadataDialogOpen] = React.useState(false)
+  const [metadataDialogOpen, setMetadataDialogOpen] = React.useState(false);
   const [enumCreationDialogOpen, setEnumCreationDialogOpen] =
-    React.useState(false)
+    React.useState(false);
 
   const showDefinition = React.useCallback(
     (definitionName: string) => {
-      setDefsAccordionOpen(true)
-      const definition = doc.defs.find((def) => def.name === definitionName)
+      setDefsAccordionOpen(true);
+      const definition = doc.defs.find((def) => def.name === definitionName);
       if (definition) {
-        revealDefinitionElement(definition.id)
+        revealDefinitionElement(definition.id);
       }
     },
-    [doc.defs, setDefsAccordionOpen]
-  )
+    [doc.defs, setDefsAccordionOpen],
+  );
 
   const showDefinitionsSection = React.useCallback(() => {
-    setDefsAccordionOpen(true)
-    revealDefinitionsSection()
-  }, [setDefsAccordionOpen])
+    setDefsAccordionOpen(true);
+    revealDefinitionsSection();
+  }, [setDefsAccordionOpen]);
 
   const selectType = React.useCallback(
     (newType: SchemaEditorType | "enum") => {
       if (newType === "enum") {
         if (localType !== "enum") {
-          setEnumCreationDialogOpen(true)
+          setEnumCreationDialogOpen(true);
         }
-        return
+        return;
       }
       dispatch((current) =>
-        setNodeEditorType(current, nodeId, newType as SchemaEditorType)
-      )
+        setNodeEditorType(current, nodeId, newType as SchemaEditorType),
+      );
     },
-    [dispatch, localType, nodeId]
-  )
+    [dispatch, localType, nodeId],
+  );
 
   const confirmEnumValues = React.useCallback(
     (enumValues: string[]) => {
-      dispatch((current) => setEnumValues(current, nodeId, enumValues))
+      dispatch((current) => setEnumValues(current, nodeId, enumValues));
     },
-    [dispatch, nodeId]
-  )
+    [dispatch, nodeId],
+  );
 
   const submitDescription = React.useCallback(
     (nextDescription: string) => {
       dispatch((current) =>
-        setNodeDescription(current, nodeId, nextDescription || undefined)
-      )
+        setNodeDescription(current, nodeId, nextDescription || undefined),
+      );
     },
-    [dispatch, nodeId]
-  )
+    [dispatch, nodeId],
+  );
 
   const selectDefinition = React.useCallback(
     (definitionName: string) => {
-      dispatch((current) => setRefByName(current, nodeId, definitionName))
+      dispatch((current) => setRefByName(current, nodeId, definitionName));
     },
-    [dispatch, nodeId]
-  )
+    [dispatch, nodeId],
+  );
 
   const selectObjectTemplate = React.useCallback(
     (templateName: string) => {
@@ -112,32 +112,33 @@ export function useDocumentNodeHeaderController({
             applyObjectTemplateReferenceToDocument(
               current,
               nodeId,
-              templateName
-            )
-          )
-        }
-      )
+              templateName,
+            ),
+          );
+        },
+      );
     },
-    [dispatch, nodeId]
-  )
+    [dispatch, nodeId],
+  );
 
   const handlePropertyFormCommand = React.useCallback(
     async (command: PropertyFormCommand) => {
       if (command.type === "createDefinition") {
-        showDefinitionsSection()
-        return
+        showDefinitionsSection();
+        return;
       }
 
       if (command.type === "installObjectTemplate") {
-        const { addObjectTemplateDefinitionsToDocument } =
-          await import("./optional/object-templates/object-template-reference")
+        const { addObjectTemplateDefinitionsToDocument } = await import(
+          "./optional/object-templates/object-template-reference"
+        );
         dispatch((current) =>
-          addObjectTemplateDefinitionsToDocument(current, command.templateName)
-        )
+          addObjectTemplateDefinitionsToDocument(current, command.templateName),
+        );
       }
     },
-    [dispatch, showDefinitionsSection]
-  )
+    [dispatch, showDefinitionsSection],
+  );
 
   return {
     schemaNode,
@@ -157,18 +158,14 @@ export function useDocumentNodeHeaderController({
     selectDefinition,
     selectObjectTemplate,
     handlePropertyFormCommand,
-  }
+  };
 }
 
-function setRecordValue<T>(
-  record: Record<string, T>,
-  key: string,
-  value: T
-) {
+function setRecordValue<T>(record: Record<string, T>, key: string, value: T) {
   Object.defineProperty(record, key, {
     value,
     enumerable: true,
     configurable: true,
     writable: true,
-  })
+  });
 }

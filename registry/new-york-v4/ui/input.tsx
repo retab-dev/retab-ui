@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
-import type * as React from "react"
+import type * as React from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 export type InputProps = Omit<
   React.ComponentProps<"input"> & React.RefAttributes<HTMLInputElement>,
   "size"
 > & {
-  size?: "sm" | "default" | "lg" | number
-  unstyled?: boolean
-  nativeInput?: boolean
-}
+  size?: "sm" | "default" | "lg" | number;
+  unstyled?: boolean;
+  nativeInput?: boolean;
+};
 
 export function Input({
   className,
@@ -21,10 +21,10 @@ export function Input({
   style,
   ...props
 }: InputProps): React.ReactElement {
-  const inputPaddingClass = unstyled ? "px-3" : "px-[calc(--spacing(3)-1px)]"
+  const inputPaddingClass = unstyled ? "px-3" : "px-[calc(--spacing(3)-1px)]";
   const smallInputPaddingClass = unstyled
     ? "px-2.5"
-    : "px-[calc(--spacing(2.5)-1px)]"
+    : "px-[calc(--spacing(2.5)-1px)]";
   const inputClassName = cn(
     "h-8.5 w-full min-w-0 rounded-[inherit] leading-8.5 outline-none [transition:background-color_5000000s_ease-in-out_0s] placeholder:text-muted-foreground/72 sm:h-7.5 sm:leading-7.5",
     inputPaddingClass,
@@ -34,16 +34,16 @@ export function Input({
     props.type === "search" &&
       "[&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none [&::-webkit-search-results-button]:appearance-none [&::-webkit-search-results-decoration]:appearance-none",
     props.type === "file" &&
-      "text-muted-foreground file:me-3 file:bg-transparent file:text-sm file:font-medium file:text-foreground"
-  )
+      "text-muted-foreground file:me-3 file:bg-transparent file:text-sm file:font-medium file:text-foreground",
+  );
 
   return (
     <span
       className={
         cn(
           !unstyled &&
-            "relative inline-flex w-full rounded-lg border border-input bg-background text-base text-foreground shadow-xs/5 ring-ring/24 transition-shadow not-dark:bg-clip-padding before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-lg)-1px)] not-has-disabled:not-has-focus-visible:not-has-aria-invalid:before:shadow-[0_1px_--theme(--color-black/4%)] has-autofill:bg-foreground/4 has-focus-visible:border-ring has-focus-visible:ring-[3px] has-disabled:opacity-64 has-aria-invalid:border-destructive/36 has-focus-visible:has-aria-invalid:border-destructive/64 has-focus-visible:has-aria-invalid:ring-destructive/16 has-[:disabled,:focus-visible,[aria-invalid]]:shadow-none sm:text-sm dark:bg-input/32 dark:not-has-disabled:not-has-focus-visible:not-has-aria-invalid:before:shadow-[0_-1px_--theme(--color-white/6%)] dark:has-autofill:bg-foreground/8 dark:has-aria-invalid:ring-destructive/24",
-          className
+            "border-input bg-background text-foreground ring-ring/24 has-autofill:bg-foreground/4 has-focus-visible:border-ring has-aria-invalid:border-destructive/36 has-focus-visible:has-aria-invalid:border-destructive/64 has-focus-visible:has-aria-invalid:ring-destructive/16 dark:bg-input/32 dark:has-autofill:bg-foreground/8 dark:has-aria-invalid:ring-destructive/24 relative inline-flex w-full rounded-lg border text-base shadow-xs/5 transition-shadow not-dark:bg-clip-padding before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-lg)-1px)] not-has-disabled:not-has-focus-visible:not-has-aria-invalid:before:shadow-[0_1px_--theme(--color-black/4%)] has-focus-visible:ring-[3px] has-disabled:opacity-64 has-[:disabled,:focus-visible,[aria-invalid]]:shadow-none sm:text-sm dark:not-has-disabled:not-has-focus-visible:not-has-aria-invalid:before:shadow-[0_-1px_--theme(--color-white/6%)]",
+          className,
         ) || undefined
       }
       data-size={size}
@@ -57,5 +57,5 @@ export function Input({
         {...props}
       />
     </span>
-  )
+  );
 }

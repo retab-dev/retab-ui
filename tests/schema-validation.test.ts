@@ -1,10 +1,10 @@
-import type { JSONSchema7 } from "json-schema"
-import { describe, expect, it } from "vitest"
+import type { JSONSchema7 } from "json-schema";
+import { describe, expect, it } from "vitest";
 
 import {
   countSchemaProperties,
   validateProjectedSchema,
-} from "@/components/schema-editor/validation"
+} from "@/components/schema-editor/validation";
 
 describe("schema validation property counting", () => {
   it("does not recurse forever on self-referential local refs", () => {
@@ -24,11 +24,11 @@ describe("schema validation property counting", () => {
       properties: {
         root: { $ref: "#/$defs/Node" },
       },
-    }
+    };
 
-    expect(countSchemaProperties(schema)).toBe(2)
-    expect(() => validateProjectedSchema(schema)).not.toThrow()
-  })
+    expect(countSchemaProperties(schema)).toBe(2);
+    expect(() => validateProjectedSchema(schema)).not.toThrow();
+  });
 
   it("does not over-count recursive refs that use encoded aliases", () => {
     const schema: JSONSchema7 = {
@@ -47,11 +47,11 @@ describe("schema validation property counting", () => {
       properties: {
         root: { $ref: "#/$defs/Node X" },
       },
-    }
+    };
 
-    expect(countSchemaProperties(schema)).toBe(2)
-    expect(() => validateProjectedSchema(schema)).not.toThrow()
-  })
+    expect(countSchemaProperties(schema)).toBe(2);
+    expect(() => validateProjectedSchema(schema)).not.toThrow();
+  });
 
   it("does not recurse forever on mutually recursive local refs", () => {
     const schema: JSONSchema7 = {
@@ -73,11 +73,11 @@ describe("schema validation property counting", () => {
       properties: {
         entry: { $ref: "#/$defs/A" },
       },
-    }
+    };
 
-    expect(countSchemaProperties(schema)).toBe(3)
-    expect(() => validateProjectedSchema(schema)).not.toThrow()
-  })
+    expect(countSchemaProperties(schema)).toBe(3);
+    expect(() => validateProjectedSchema(schema)).not.toThrow();
+  });
 
   it("counts repeated refs to the same local schema once", () => {
     const schema: JSONSchema7 = {
@@ -92,10 +92,10 @@ describe("schema validation property counting", () => {
         first: { $ref: "#/$defs/Shared" },
         second: { $ref: "#/$defs/Shared" },
       },
-    }
+    };
 
-    expect(countSchemaProperties(schema)).toBe(3)
-  })
+    expect(countSchemaProperties(schema)).toBe(3);
+  });
 
   it("counts properties inside unreferenced definitions", () => {
     const schema: JSONSchema7 = {
@@ -115,10 +115,10 @@ describe("schema validation property counting", () => {
       properties: {
         visible: { type: "string" },
       },
-    }
+    };
 
-    expect(countSchemaProperties(schema)).toBe(3)
-  })
+    expect(countSchemaProperties(schema)).toBe(3);
+  });
 
   it("counts local refs with escaped JSON Pointer segments", () => {
     const schema: JSONSchema7 = {
@@ -134,10 +134,10 @@ describe("schema validation property counting", () => {
       properties: {
         escaped: { $ref: "#/$defs/A~1B~0C" },
       },
-    }
+    };
 
-    expect(countSchemaProperties(schema)).toBe(2)
-  })
+    expect(countSchemaProperties(schema)).toBe(2);
+  });
 
   it("counts local refs with URI-encoded JSON Pointer segments", () => {
     const schema: JSONSchema7 = {
@@ -153,10 +153,10 @@ describe("schema validation property counting", () => {
       properties: {
         item: { $ref: "#/$defs/Line%20Item" },
       },
-    }
+    };
 
-    expect(countSchemaProperties(schema)).toBe(2)
-  })
+    expect(countSchemaProperties(schema)).toBe(2);
+  });
 
   it("counts ambiguous refs using JSON Pointer semantics before encoded-name tolerance", () => {
     const schema: JSONSchema7 = {
@@ -171,10 +171,10 @@ describe("schema validation property counting", () => {
       properties: {
         item: { $ref: "#/$defs/A~1B" },
       },
-    }
+    };
 
-    expect(countSchemaProperties(schema)).toBe(2)
-  })
+    expect(countSchemaProperties(schema)).toBe(2);
+  });
 
   it("does not resolve local refs through inherited object properties", () => {
     Object.defineProperty(Object.prototype, "__schemaEditorLeakedSchema", {
@@ -183,7 +183,7 @@ describe("schema validation property counting", () => {
         properties: { leaked: { type: "string" } },
       },
       configurable: true,
-    })
+    });
 
     try {
       const schema: JSONSchema7 = {
@@ -191,14 +191,14 @@ describe("schema validation property counting", () => {
         properties: {
           ref: { $ref: "#/__schemaEditorLeakedSchema" },
         },
-      }
+      };
 
-      expect(countSchemaProperties(schema)).toBe(1)
+      expect(countSchemaProperties(schema)).toBe(1);
     } finally {
       delete (Object.prototype as Record<string, unknown>)
-        .__schemaEditorLeakedSchema
+        .__schemaEditorLeakedSchema;
     }
-  })
+  });
 
   it("counts properties inside schema-bearing object keywords", () => {
     const schema: JSONSchema7 = {
@@ -225,10 +225,10 @@ describe("schema validation property counting", () => {
           },
         },
       },
-    }
+    };
 
-    expect(countSchemaProperties(schema)).toBe(4)
-  })
+    expect(countSchemaProperties(schema)).toBe(4);
+  });
 
   it("counts properties inside items even when type is omitted", () => {
     const schema: JSONSchema7 = {
@@ -236,10 +236,10 @@ describe("schema validation property counting", () => {
         type: "object",
         properties: { row_id: { type: "string" } },
       },
-    } as JSONSchema7
+    } as JSONSchema7;
 
-    expect(countSchemaProperties(schema)).toBe(1)
-  })
+    expect(countSchemaProperties(schema)).toBe(1);
+  });
 
   it("counts properties inside conditional schemas", () => {
     const schema: JSONSchema7 = {
@@ -259,8 +259,8 @@ describe("schema validation property counting", () => {
         type: "object",
         properties: { reason: { type: "string" } },
       },
-    }
+    };
 
-    expect(countSchemaProperties(schema)).toBe(4)
-  })
-})
+    expect(countSchemaProperties(schema)).toBe(4);
+  });
+});

@@ -4,12 +4,12 @@ export function buildVirtualGridTemplate({
   columnWidths,
   rightPad,
 }: {
-  leadingWidth: number
-  leftPad: number
-  columnWidths: readonly number[]
-  rightPad: number
+  leadingWidth: number;
+  leftPad: number;
+  columnWidths: readonly number[];
+  rightPad: number;
 }) {
-  const columns = columnWidths.map(formatTemplateWidth).join(" ")
+  const columns = columnWidths.map(formatTemplateWidth).join(" ");
   return [
     formatTemplateWidth(leadingWidth),
     formatTemplateWidth(leftPad),
@@ -17,9 +17,9 @@ export function buildVirtualGridTemplate({
     formatTemplateWidth(rightPad),
   ]
     .filter(Boolean)
-    .join(" ")
+    .join(" ");
 }
 
 function formatTemplateWidth(width: number) {
-  return `${Number.isFinite(width) && width > 0 ? width : 0}px`
+  return `${Number.isFinite(width) && width > 0 ? width : 0}px`;
 }

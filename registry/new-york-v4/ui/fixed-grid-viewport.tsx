@@ -1,16 +1,16 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
 export interface FixedGridViewportRefs {
-  scrollElement: HTMLDivElement | null
+  scrollElement: HTMLDivElement | null;
 }
 
 export interface FixedGridViewportProps
   extends Omit<React.HTMLAttributes<HTMLDivElement>, "children"> {
-  scrollRef: React.Ref<HTMLDivElement>
-  dataSlot: string
-  children: React.ReactNode
+  scrollRef: React.Ref<HTMLDivElement>;
+  dataSlot: string;
+  children: React.ReactNode;
 }
 
 export function FixedGridViewport({
@@ -24,5 +24,5 @@ export function FixedGridViewport({
     <div ref={scrollRef} data-slot={dataSlot} className={className} {...props}>
       {children}
     </div>
-  )
+  );
 }

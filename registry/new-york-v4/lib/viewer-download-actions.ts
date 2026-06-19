@@ -1,32 +1,32 @@
-export type ViewerDownloadOrigin = "original" | "derived"
+export type ViewerDownloadOrigin = "original" | "derived";
 
 export type ViewerDownloadPayload =
   | { kind: "href"; href: string }
   | { kind: "blob"; blob: Blob }
   | { kind: "text"; text: string; mimeType?: string }
-  | { kind: "none" }
+  | { kind: "none" };
 
 export interface ViewerDownloadAction {
-  id: string
-  label: string
-  fileName: string
-  origin: ViewerDownloadOrigin
-  isDisabled?: boolean
+  id: string;
+  label: string;
+  fileName: string;
+  origin: ViewerDownloadOrigin;
+  isDisabled?: boolean;
   getPayload: (options?: {
-    signal?: AbortSignal
-  }) => ViewerDownloadPayload | Promise<ViewerDownloadPayload>
+    signal?: AbortSignal;
+  }) => ViewerDownloadPayload | Promise<ViewerDownloadPayload>;
 }
 
 export type ViewerDownloadErrorKind =
   | "disabled"
   | "aborted"
   | "payload_failed"
-  | "unsupported"
+  | "unsupported";
 
 export class ViewerDownloadError extends Error {
-  readonly kind: ViewerDownloadErrorKind
-  readonly actionId: string
-  override readonly cause?: unknown
+  readonly kind: ViewerDownloadErrorKind;
+  readonly actionId: string;
+  override readonly cause?: unknown;
 
   constructor({
     actionId,
@@ -34,16 +34,16 @@ export class ViewerDownloadError extends Error {
     message,
     cause,
   }: {
-    actionId: string
-    kind: ViewerDownloadErrorKind
-    message: string
-    cause?: unknown
+    actionId: string;
+    kind: ViewerDownloadErrorKind;
+    message: string;
+    cause?: unknown;
   }) {
-    super(message)
-    this.name = "ViewerDownloadError"
-    this.actionId = actionId
-    this.kind = kind
-    this.cause = cause
+    super(message);
+    this.name = "ViewerDownloadError";
+    this.actionId = actionId;
+    this.kind = kind;
+    this.cause = cause;
   }
 }
 
@@ -54,11 +54,11 @@ export function createHrefDownloadAction({
   fileName,
   origin = "original",
 }: {
-  id: string
-  label?: string
-  href: string
-  fileName: string
-  origin?: ViewerDownloadOrigin
+  id: string;
+  label?: string;
+  href: string;
+  fileName: string;
+  origin?: ViewerDownloadOrigin;
 }): ViewerDownloadAction {
   return {
     id,
@@ -66,7 +66,7 @@ export function createHrefDownloadAction({
     fileName,
     origin,
     getPayload: () => ({ kind: "href", href }),
-  }
+  };
 }
 
 export function createBlobDownloadAction({
@@ -76,11 +76,11 @@ export function createBlobDownloadAction({
   fileName,
   origin = "original",
 }: {
-  id: string
-  label?: string
-  blob: Blob
-  fileName: string
-  origin?: ViewerDownloadOrigin
+  id: string;
+  label?: string;
+  blob: Blob;
+  fileName: string;
+  origin?: ViewerDownloadOrigin;
 }): ViewerDownloadAction {
   return {
     id,
@@ -88,7 +88,7 @@ export function createBlobDownloadAction({
     fileName,
     origin,
     getPayload: () => ({ kind: "blob", blob }),
-  }
+  };
 }
 
 export function createTextDownloadAction({
@@ -99,12 +99,12 @@ export function createTextDownloadAction({
   mimeType,
   origin = "original",
 }: {
-  id: string
-  label?: string
-  text: string
-  fileName: string
-  mimeType?: string
-  origin?: ViewerDownloadOrigin
+  id: string;
+  label?: string;
+  text: string;
+  fileName: string;
+  mimeType?: string;
+  origin?: ViewerDownloadOrigin;
 }): ViewerDownloadAction {
   return {
     id,
@@ -112,7 +112,7 @@ export function createTextDownloadAction({
     fileName,
     origin,
     getPayload: () => ({ kind: "text", text, mimeType }),
-  }
+  };
 }
 
 export function createDisabledDownloadAction({
@@ -121,10 +121,10 @@ export function createDisabledDownloadAction({
   fileName,
   origin = "original",
 }: {
-  id: string
-  label?: string
-  fileName: string
-  origin?: ViewerDownloadOrigin
+  id: string;
+  label?: string;
+  fileName: string;
+  origin?: ViewerDownloadOrigin;
 }): ViewerDownloadAction {
   return {
     id,
@@ -133,5 +133,5 @@ export function createDisabledDownloadAction({
     origin,
     isDisabled: true,
     getPayload: () => ({ kind: "none" }),
-  }
+  };
 }

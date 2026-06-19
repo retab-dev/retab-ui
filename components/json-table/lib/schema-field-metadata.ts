@@ -1,8 +1,8 @@
-import type { JSONSchema7 } from "json-schema"
+import type { JSONSchema7 } from "json-schema";
 
-import type { FieldPath } from "@/components/json-table/lib/schema-paths"
-import { getSchemaPropertyType } from "@/components/json-table/lib/schema-paths"
-import { unwrapSchema } from "@/components/json-table/lib/schema-references"
+import type { FieldPath } from "@/components/json-table/lib/schema-paths";
+import { getSchemaPropertyType } from "@/components/json-table/lib/schema-paths";
+import { unwrapSchema } from "@/components/json-table/lib/schema-references";
 
 export type FieldKind =
   | "string"
@@ -15,33 +15,33 @@ export type FieldKind =
   | "enum"
   | "object"
   | "array"
-  | "unknown"
+  | "unknown";
 
 export interface FieldMetadata {
-  fieldPath: FieldPath
-  rawSchema: JSONSchema7
-  schema: JSONSchema7
-  effectiveSchema: JSONSchema7
-  isNullable: boolean
-  kind: FieldKind
-  enumValues: unknown[]
+  fieldPath: FieldPath;
+  rawSchema: JSONSchema7;
+  schema: JSONSchema7;
+  effectiveSchema: JSONSchema7;
+  isNullable: boolean;
+  kind: FieldKind;
+  enumValues: unknown[];
 }
 
 export function getFieldMetadata(
   rootSchema: JSONSchema7,
-  fieldPath: FieldPath
+  fieldPath: FieldPath,
 ): FieldMetadata | undefined {
-  if (!fieldPath) return undefined
+  if (!fieldPath) return undefined;
 
-  const rawSchema = getSchemaPropertyType(rootSchema, fieldPath)
-  if (!rawSchema) return undefined
+  const rawSchema = getSchemaPropertyType(rootSchema, fieldPath);
+  if (!rawSchema) return undefined;
 
-  const { schema, nullable } = unwrapSchema(rawSchema, rootSchema)
+  const { schema, nullable } = unwrapSchema(rawSchema, rootSchema);
   const type = Array.isArray(schema.type)
     ? schema.type.find((item) => item !== "null")
     : schema.type ||
-      (schema.properties ? "object" : schema.items ? "array" : undefined)
-  const format = schema.format
+      (schema.properties ? "object" : schema.items ? "array" : undefined);
+  const format = schema.format;
   const kind: FieldKind = Array.isArray(schema.enum)
     ? "enum"
     : format === "date"
@@ -57,7 +57,7 @@ export function getFieldMetadata(
               type === "object" ||
               type === "array"
             ? type
-            : "unknown"
+            : "unknown";
 
   return {
     fieldPath,
@@ -67,5 +67,5 @@ export function getFieldMetadata(
     isNullable: nullable,
     kind,
     enumValues: schema.enum ?? [],
-  }
+  };
 }

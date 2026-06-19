@@ -1,15 +1,15 @@
-"use client"
+"use client";
 
-import { DataCell } from "@/components/ui/data-cell"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/json-form/form-primitives"
+import { DataCell } from "@/components/ui/data-cell";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/json-form/form-primitives";
 import {
   compactJsonFormDataCellClass,
   type ControlFieldApi,
   type JsonFormTextInput,
   type ScalarControlDomProps,
-} from "@/components/json-form/scalar/types"
-import type { Schema } from "@/components/json-form/schema-model"
+} from "@/components/json-form/scalar/types";
+import type { Schema } from "@/components/json-form/schema-model";
 
 export function TextControl({
   schema,
@@ -19,13 +19,13 @@ export function TextControl({
   nullable,
   ...controlProps
 }: {
-  schema: Schema
-  field: ControlFieldApi
-  textInput?: JsonFormTextInput
-  compact: boolean
-  nullable: boolean
+  schema: Schema;
+  field: ControlFieldApi;
+  textInput?: JsonFormTextInput;
+  compact: boolean;
+  nullable: boolean;
 } & ScalarControlDomProps) {
-  const value = field.value == null ? "" : String(field.value)
+  const value = field.value == null ? "" : String(field.value);
 
   if (!compact && shouldRenderTextarea(schema, textInput)) {
     return (
@@ -34,13 +34,13 @@ export function TextControl({
         value={value}
         onChange={(event) =>
           field.onChange(
-            event.target.value === "" && nullable ? null : event.target.value
+            event.target.value === "" && nullable ? null : event.target.value,
           )
         }
         onBlur={field.onBlur}
         name={field.name}
       />
-    )
+    );
   }
 
   if (!compact) {
@@ -49,13 +49,13 @@ export function TextControl({
         {...controlProps}
         value={value}
         onChange={(event) => {
-          const nextValue = event.currentTarget.value
-          field.onChange(nextValue === "" && nullable ? null : nextValue)
+          const nextValue = event.currentTarget.value;
+          field.onChange(nextValue === "" && nullable ? null : nextValue);
         }}
         onBlur={field.onBlur}
         name={field.name}
       />
-    )
+    );
   }
 
   return (
@@ -75,18 +75,18 @@ export function TextControl({
       onBlur={field.onBlur}
       name={field.name}
     />
-  )
+  );
 }
 
 function shouldRenderTextarea(
   schema: Schema,
-  textInput: JsonFormTextInput | undefined
+  textInput: JsonFormTextInput | undefined,
 ): boolean {
-  if (textInput === "input") return false
-  if (textInput === "textarea") return true
-  return schema.format === "textarea" || (schema.maxLength ?? 0) > 120
+  if (textInput === "input") return false;
+  if (textInput === "textarea") return true;
+  return schema.format === "textarea" || (schema.maxLength ?? 0) > 120;
 }
 
 export function dataCellTextValue(value: unknown): string | null {
-  return value === null || value === undefined ? null : String(value)
+  return value === null || value === undefined ? null : String(value);
 }

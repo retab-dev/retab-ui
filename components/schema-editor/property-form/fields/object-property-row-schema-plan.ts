@@ -1,11 +1,11 @@
-import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { createPropertySchemaPlan } from "@/components/schema-editor/property-form/model/property-schema-plan"
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
+import { createPropertySchemaPlan } from "@/components/schema-editor/property-form/model/property-schema-plan";
 import type {
   PropertyFormMode,
   PropertyFormSchemaContext,
   PropertySchemaPlanAccess,
   PropertySchemaPlan,
-} from "@/components/schema-editor/property-form/types"
+} from "@/components/schema-editor/property-form/types";
 
 export function createObjectPropertyRowSchemaPlan({
   access,
@@ -15,12 +15,12 @@ export function createObjectPropertyRowSchemaPlan({
   schemaNode,
   onChange,
 }: {
-  access: PropertySchemaPlanAccess
-  editable: boolean
-  mode: PropertyFormMode
-  schemaContext: PropertyFormSchemaContext
-  schemaNode: ExtendedJSONSchema7
-  onChange: (schemaNode: ExtendedJSONSchema7) => void
+  access: PropertySchemaPlanAccess;
+  editable: boolean;
+  mode: PropertyFormMode;
+  schemaContext: PropertyFormSchemaContext;
+  schemaNode: ExtendedJSONSchema7;
+  onChange: (schemaNode: ExtendedJSONSchema7) => void;
 }): PropertySchemaPlan {
   return createPropertySchemaPlan({
     schemaNode,
@@ -30,5 +30,5 @@ export function createObjectPropertyRowSchemaPlan({
     editable,
     showTypeSelector: false,
     onChange,
-  })
+  });
 }

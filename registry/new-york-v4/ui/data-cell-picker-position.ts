@@ -1,18 +1,18 @@
-import type * as React from "react"
+import type * as React from "react";
 
 export function getDataCellPickerPopupStyleFromAnchor({
   anchor,
   kind,
 }: {
-  anchor: HTMLElement
-  kind: "date" | "time" | "date-time"
+  anchor: HTMLElement;
+  kind: "date" | "time" | "date-time";
 }): React.CSSProperties {
   return getDataCellPickerPopupStyle({
     kind,
     rect: anchor.getBoundingClientRect(),
     viewportWidth: window.innerWidth,
     viewportHeight: window.innerHeight,
-  })
+  });
 }
 
 export function getDataCellPickerPopupStyle({
@@ -21,22 +21,22 @@ export function getDataCellPickerPopupStyle({
   viewportWidth,
   viewportHeight,
 }: {
-  kind: "date" | "time" | "date-time"
-  rect: DOMRect
-  viewportWidth: number
-  viewportHeight: number
+  kind: "date" | "time" | "date-time";
+  rect: DOMRect;
+  viewportWidth: number;
+  viewportHeight: number;
 }): React.CSSProperties {
-  const margin = 8
-  const estimatedWidth = kind === "time" ? 220 : 330
-  const estimatedHeight = kind === "time" ? 80 : kind === "date" ? 330 : 390
+  const margin = 8;
+  const estimatedWidth = kind === "time" ? 220 : 330;
+  const estimatedHeight = kind === "time" ? 80 : kind === "date" ? 330 : 390;
   const left = Math.min(
     Math.max(margin, rect.left),
-    Math.max(margin, viewportWidth - estimatedWidth - margin)
-  )
+    Math.max(margin, viewportWidth - estimatedWidth - margin),
+  );
   const top =
     rect.bottom + margin + estimatedHeight > viewportHeight
       ? Math.max(margin, rect.top - estimatedHeight - 4)
-      : rect.bottom + 4
+      : rect.bottom + 4;
 
-  return { position: "fixed", top, left, zIndex: 50 }
+  return { position: "fixed", top, left, zIndex: 50 };
 }

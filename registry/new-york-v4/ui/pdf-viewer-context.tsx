@@ -1,78 +1,80 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
 import {
   createViewerResource,
   type ViewerResource,
-} from "@/lib/viewer-resource"
-import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source"
+} from "@/lib/viewer-resource";
+import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source";
 
-import { useOptionalFileViewerResource } from "./file-viewer-internal"
+import { useOptionalFileViewerResource } from "./file-viewer-internal";
 import {
   PdfResourceContent,
   type PdfViewerContentProps,
-} from "./pdf-viewer-content"
-import type { PdfViewerHandle } from "./pdf-viewer-types"
+} from "./pdf-viewer-content";
+import type { PdfViewerHandle } from "./pdf-viewer-types";
 
-export type PdfDocumentSource = UrlViewerSource | BlobViewerSource
+export type PdfDocumentSource = UrlViewerSource | BlobViewerSource;
 
 export type PdfViewerThumbnailsState = {
-  currentPage: number | null
-  onSelectPage: ((page: number) => void) | undefined
-  resource: ViewerResource
-}
+  currentPage: number | null;
+  onSelectPage: ((page: number) => void) | undefined;
+  resource: ViewerResource;
+};
 
 export interface PdfViewerProviderProps {
-  source?: PdfDocumentSource
-  children: React.ReactNode
+  source?: PdfDocumentSource;
+  children: React.ReactNode;
 }
 
 type PdfViewerContextValue = {
-  currentPage: number | null
-  resource: ViewerResource
-  setCurrentPage: (page: number | null) => void
-  setViewerHandle: (handle: PdfViewerHandle | null) => void
-  viewerHandle: PdfViewerHandle | null
-}
+  currentPage: number | null;
+  resource: ViewerResource;
+  setCurrentPage: (page: number | null) => void;
+  setViewerHandle: (handle: PdfViewerHandle | null) => void;
+  viewerHandle: PdfViewerHandle | null;
+};
 
 type PdfDocumentPagesState = {
-  resource: ViewerResource
-  setCurrentPage: (page: number | null) => void
-  setViewerHandle: (handle: PdfViewerHandle | null) => void
-}
+  resource: ViewerResource;
+  setCurrentPage: (page: number | null) => void;
+  setViewerHandle: (handle: PdfViewerHandle | null) => void;
+};
 
-const PdfViewerContext = React.createContext<PdfViewerContextValue | null>(null)
+const PdfViewerContext = React.createContext<PdfViewerContextValue | null>(
+  null,
+);
 
 function usePdfViewerContext(
-  consumer = "PdfViewer parts"
+  consumer = "PdfViewer parts",
 ): PdfViewerContextValue {
-  const context = React.useContext(PdfViewerContext)
+  const context = React.useContext(PdfViewerContext);
   if (!context) {
-    throw new Error(`${consumer} must be used within PdfViewerProvider.`)
+    throw new Error(`${consumer} must be used within PdfViewerProvider.`);
   }
-  return context
+  return context;
 }
 
 export function usePdfViewerThumbnails(): PdfViewerThumbnailsState {
   const { currentPage, resource, viewerHandle } = usePdfViewerContext(
-    "usePdfViewerThumbnails"
-  )
+    "usePdfViewerThumbnails",
+  );
   const onSelectPage = React.useCallback(
     (page: number) => viewerHandle?.scrollToPage(page),
-    [viewerHandle]
-  )
+    [viewerHandle],
+  );
 
   return {
     currentPage,
     onSelectPage: viewerHandle ? onSelectPage : undefined,
     resource,
-  }
+  };
 }
 
 function usePdfDocumentPagesState(): PdfDocumentPagesState {
-  const { resource, setCurrentPage, setViewerHandle } = usePdfViewerContext()
-  return { resource, setCurrentPage, setViewerHandle }
+  const { resource, setCurrentPage, setViewerHandle } = usePdfViewerContext();
+  return { resource, setCurrentPage, setViewerHandle };
 }
 
 export const PdfViewerPages = React.forwardRef<
@@ -80,26 +82,26 @@ export const PdfViewerPages = React.forwardRef<
   PdfViewerContentProps
 >(function PdfViewerPages(props, ref) {
   const { resource, setCurrentPage, setViewerHandle } =
-    usePdfDocumentPagesState()
-  const { onVisiblePageChange } = props
+    usePdfDocumentPagesState();
+  const { onVisiblePageChange } = props;
   const handleVisiblePageChange = React.useCallback(
     (page: number) => {
-      setCurrentPage(page)
-      onVisiblePageChange?.(page)
+      setCurrentPage(page);
+      onVisiblePageChange?.(page);
     },
-    [onVisiblePageChange, setCurrentPage]
-  )
+    [onVisiblePageChange, setCurrentPage],
+  );
   const handleRef = React.useCallback(
     (handle: PdfViewerHandle | null) => {
-      setViewerHandle(handle)
+      setViewerHandle(handle);
       if (typeof ref === "function") {
-        ref(handle)
-        return
+        ref(handle);
+        return;
       }
-      if (ref) ref.current = handle
+      if (ref) ref.current = handle;
     },
-    [ref, setViewerHandle]
-  )
+    [ref, setViewerHandle],
+  );
 
   return (
     <PdfResourceContent
@@ -109,24 +111,24 @@ export const PdfViewerPages = React.forwardRef<
       controls={false}
       onVisiblePageChange={handleVisiblePageChange}
     />
-  )
-})
+  );
+});
 
 export function PdfViewerProvider({
   source,
   children,
 }: PdfViewerProviderProps) {
-  const fileViewerResource = useOptionalFileViewerResource()
+  const fileViewerResource = useOptionalFileViewerResource();
   const resource = React.useMemo(() => {
-    if (source) return createViewerResource(source)
-    if (fileViewerResource) return fileViewerResource
+    if (source) return createViewerResource(source);
+    if (fileViewerResource) return fileViewerResource;
     throw new Error(
-      "PdfViewerProvider requires a source or enclosing FileViewer."
-    )
-  }, [fileViewerResource, source])
-  const [currentPage, setCurrentPage] = React.useState<number | null>(null)
+      "PdfViewerProvider requires a source or enclosing FileViewer.",
+    );
+  }, [fileViewerResource, source]);
+  const [currentPage, setCurrentPage] = React.useState<number | null>(null);
   const [viewerHandle, setViewerHandle] =
-    React.useState<PdfViewerHandle | null>(null)
+    React.useState<PdfViewerHandle | null>(null);
   const value = React.useMemo<PdfViewerContextValue>(
     () => ({
       currentPage,
@@ -135,12 +137,12 @@ export function PdfViewerProvider({
       setViewerHandle,
       viewerHandle,
     }),
-    [currentPage, resource, viewerHandle]
-  )
+    [currentPage, resource, viewerHandle],
+  );
 
   return (
     <PdfViewerContext.Provider value={value}>
       {children}
     </PdfViewerContext.Provider>
-  )
+  );
 }

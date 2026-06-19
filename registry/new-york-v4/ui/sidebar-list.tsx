@@ -1,57 +1,57 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { mergeProps } from "@base-ui/react/merge-props"
-import { useRender } from "@base-ui/react/use-render"
+import * as React from "react";
+import { mergeProps } from "@base-ui/react/merge-props";
+import { useRender } from "@base-ui/react/use-render";
 
-import { cn } from "@/lib/utils"
-import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
 
 import {
   sidebarRowButtonVariants,
   type SidebarRowButtonVariantProps,
-} from "./sidebar-row"
+} from "./sidebar-row";
 
 function getSidebarListButtonType({
   defaultElement = "button",
   render,
 }: {
-  defaultElement?: "a" | "button"
-  render: unknown
+  defaultElement?: "a" | "button";
+  render: unknown;
 }): React.ButtonHTMLAttributes<HTMLButtonElement>["type"] | undefined {
   if (
     (!render && defaultElement === "button") ||
     (React.isValidElement(render) && render.type === "button")
   ) {
-    return "button"
+    return "button";
   }
 
-  return undefined
+  return undefined;
 }
 
 function getSidebarListRender(
-  render: useRender.RenderProp | undefined
+  render: useRender.RenderProp | undefined,
 ): useRender.RenderProp | undefined {
-  if (typeof render !== "function") return render
+  if (typeof render !== "function") return render;
 
   return (
     props: React.HTMLAttributes<HTMLElement>,
-    state: Record<string, unknown>
+    state: Record<string, unknown>,
   ): React.ReactElement<unknown> => {
-    const element = render(props, state)
+    const element = render(props, state);
 
     if (
       React.isValidElement<React.ButtonHTMLAttributes<HTMLButtonElement>>(
-        element
+        element,
       ) &&
       element.type === "button" &&
       element.props.type == null
     ) {
-      return React.cloneElement(element, { type: "button" })
+      return React.cloneElement(element, { type: "button" });
     }
 
-    return element
-  }
+    return element;
+  };
 }
 
 export function SidebarListRoot({
@@ -60,13 +60,13 @@ export function SidebarListRoot({
   style,
   ...props
 }: React.ComponentProps<"div"> & {
-  width?: string
+  width?: string;
 }): React.ReactElement {
   return (
     <div
       className={cn(
-        "flex h-full min-h-0 w-(--sidebar-width) flex-col bg-sidebar text-sidebar-foreground",
-        className
+        "bg-sidebar text-sidebar-foreground flex h-full min-h-0 w-(--sidebar-width) flex-col",
+        className,
       )}
       data-sidebar-list=""
       data-slot="sidebar-list-root"
@@ -78,7 +78,7 @@ export function SidebarListRoot({
       }
       {...props}
     />
-  )
+  );
 }
 
 export function SidebarListHeader({
@@ -91,7 +91,7 @@ export function SidebarListHeader({
       data-slot="sidebar-list-header"
       {...props}
     />
-  )
+  );
 }
 
 export function SidebarListContent({
@@ -102,12 +102,12 @@ export function SidebarListContent({
     <div
       className={cn(
         "flex min-h-0 flex-1 flex-col gap-2 overflow-auto",
-        className
+        className,
       )}
       data-slot="sidebar-list-content"
       {...props}
     />
-  )
+  );
 }
 
 export function SidebarListGroup({
@@ -120,7 +120,7 @@ export function SidebarListGroup({
       data-slot="sidebar-list-group"
       {...props}
     />
-  )
+  );
 }
 
 export function SidebarListGroupLabel({
@@ -130,13 +130,13 @@ export function SidebarListGroupLabel({
   return (
     <div
       className={cn(
-        "flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70 ring-sidebar-ring outline-hidden transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
-        className
+        "text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium outline-hidden transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+        className,
       )}
       data-slot="sidebar-list-group-label"
       {...props}
     />
-  )
+  );
 }
 
 export function SidebarListGroupContent({
@@ -149,7 +149,7 @@ export function SidebarListGroupContent({
       data-slot="sidebar-list-group-content"
       {...props}
     />
-  )
+  );
 }
 
 export function SidebarListMenu({
@@ -162,7 +162,7 @@ export function SidebarListMenu({
       data-slot="sidebar-list-menu"
       {...props}
     />
-  )
+  );
 }
 
 export function SidebarListMenuItem({
@@ -175,7 +175,7 @@ export function SidebarListMenuItem({
       data-slot="sidebar-list-menu-item"
       {...props}
     />
-  )
+  );
 }
 
 export function SidebarListButton({
@@ -188,14 +188,14 @@ export function SidebarListButton({
   children,
   ...props
 }: useRender.ComponentProps<"button"> & {
-  isActive?: boolean
-  asChild?: boolean
+  isActive?: boolean;
+  asChild?: boolean;
 } & SidebarRowButtonVariantProps): React.ReactElement {
   const renderValue =
     render ??
     (asChild && React.isValidElement(children)
       ? (children as React.ReactElement<Record<string, unknown>>)
-      : undefined)
+      : undefined);
 
   const defaultProps = {
     children: asChild && React.isValidElement(children) ? undefined : children,
@@ -204,13 +204,13 @@ export function SidebarListButton({
     "data-size": size,
     "data-slot": "sidebar-list-button",
     type: getSidebarListButtonType({ render: renderValue }),
-  }
+  };
 
   return useRender({
     defaultTagName: "button",
     props: mergeProps<"button">(defaultProps, props),
     render: getSidebarListRender(renderValue),
-  })
+  });
 }
 
 export function SidebarListSeparator({
@@ -219,9 +219,9 @@ export function SidebarListSeparator({
 }: React.ComponentProps<typeof Separator>): React.ReactElement {
   return (
     <Separator
-      className={cn("mx-2 w-auto bg-sidebar-border", className)}
+      className={cn("bg-sidebar-border mx-2 w-auto", className)}
       data-slot="sidebar-list-separator"
       {...props}
     />
-  )
+  );
 }

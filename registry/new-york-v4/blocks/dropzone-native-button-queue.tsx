@@ -1,22 +1,22 @@
-"use client"
+"use client";
 
-import { Paperclip } from "lucide-react"
+import { Paperclip } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { useDropzone } from "@/components/ui/dropzone"
+import { cn } from "@/lib/utils";
+import { useDropzone } from "@/components/ui/dropzone";
 
 import {
   InlineFileRows,
   RejectionRows,
   type DropzoneExampleProps,
-} from "./dropzone-example-shared"
+} from "./dropzone-example-shared";
 
 export function NativeButtonQueue({ className }: DropzoneExampleProps) {
   const dropzone = useDropzone({
     accept: "image/*,.pdf",
     maxFiles: 2,
     multiple: true,
-  })
+  });
 
   return (
     <section
@@ -24,7 +24,7 @@ export function NativeButtonQueue({ className }: DropzoneExampleProps) {
         className: cn(
           "rounded-lg border bg-background p-4 transition-colors",
           dropzone.isDragging && "border-foreground/40 bg-accent/35",
-          className
+          className,
         ),
       })}
     >
@@ -32,7 +32,7 @@ export function NativeButtonQueue({ className }: DropzoneExampleProps) {
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-sm font-medium">Native button trigger</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             A real button uses browser button semantics.
           </div>
         </div>
@@ -50,5 +50,5 @@ export function NativeButtonQueue({ className }: DropzoneExampleProps) {
       <InlineFileRows files={dropzone.files} onRemove={dropzone.removeFile} />
       <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </section>
-  )
+  );
 }

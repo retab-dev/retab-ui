@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/ui/pptx-viewer-hooks"
+export * from "@/registry/new-york-v4/ui/pptx-viewer-hooks";

@@ -1,25 +1,25 @@
-"use client"
+"use client";
 
-import { cn } from "@/lib/utils"
-import { useDropzone } from "@/components/ui/dropzone"
-import { FileThumbnail } from "@/components/ui/file-thumbnail"
+import { cn } from "@/lib/utils";
+import { useDropzone } from "@/components/ui/dropzone";
+import { FileThumbnail } from "@/components/ui/file-thumbnail";
 
 import {
   RejectionRows,
   type DropzoneExampleProps,
-} from "./dropzone-example-shared"
+} from "./dropzone-example-shared";
 
 export function RequiredPacketSlots({ className }: DropzoneExampleProps) {
   return (
-    <section className={cn("rounded-lg border bg-background p-4", className)}>
+    <section className={cn("bg-background rounded-lg border p-4", className)}>
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <div className="text-sm font-medium">Required packet</div>
-          <div className="mt-1 text-xs text-muted-foreground">
+          <div className="text-muted-foreground mt-1 text-xs">
             Slot-level dropzones for checklist-driven uploads.
           </div>
         </div>
-        <div className="rounded-full border bg-muted/30 px-2 py-1 text-xs text-muted-foreground">
+        <div className="bg-muted/30 text-muted-foreground rounded-full border px-2 py-1 text-xs">
           checklist
         </div>
       </div>
@@ -29,22 +29,22 @@ export function RequiredPacketSlots({ className }: DropzoneExampleProps) {
         ))}
       </div>
     </section>
-  )
+  );
 }
 
 function PacketSlot({ label }: { label: string }) {
   const dropzone = useDropzone({
     accept: ".pdf,.png,.jpg,.jpeg,image/*,application/pdf",
     maxFiles: 1,
-  })
-  const selectedFile = dropzone.files[0]
+  });
+  const selectedFile = dropzone.files[0];
 
   return (
     <div
       {...dropzone.getRootProps({
         className: cn(
           "min-h-44 rounded-md border border-dashed bg-muted/20 p-3 transition-colors",
-          dropzone.isDragging && "border-foreground/40 bg-accent/35"
+          dropzone.isDragging && "border-foreground/40 bg-accent/35",
         ),
       })}
     >
@@ -56,7 +56,7 @@ function PacketSlot({ label }: { label: string }) {
             "rounded-full px-2 py-0.5 text-[11px]",
             selectedFile
               ? "bg-foreground text-background"
-              : "bg-background text-muted-foreground"
+              : "bg-background text-muted-foreground",
           )}
         >
           {selectedFile ? "done" : "open"}
@@ -68,14 +68,14 @@ function PacketSlot({ label }: { label: string }) {
             file={selectedFile.file}
             thumbnailShape="square"
             thumbnailSize="lg"
-            className="mx-auto bg-background"
+            className="bg-background mx-auto"
           />
           <div className="mt-2 line-clamp-2 text-xs font-medium break-words">
             {selectedFile.file.name}
           </div>
           <button
             type="button"
-            className="mt-3 h-7 rounded-md border bg-background px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="bg-background text-muted-foreground hover:bg-muted hover:text-foreground mt-3 h-7 rounded-md border px-2 text-xs"
             onClick={dropzone.clearFiles}
           >
             Clear
@@ -93,5 +93,5 @@ function PacketSlot({ label }: { label: string }) {
       )}
       <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </div>
-  )
+  );
 }

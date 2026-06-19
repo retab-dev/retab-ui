@@ -66,7 +66,7 @@ export function RootDialog({
               <Label htmlFor={`${path}-title`}>Schema Title</Label>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="size-4 text-muted-foreground" />
+                  <Info className="text-muted-foreground size-4" />
                 </TooltipTrigger>
                 <TooltipContent>
                   This title is used by the model to understand what is being

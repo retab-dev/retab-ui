@@ -1,9 +1,11 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { FileSystem } from "@/components/ui/file-system"
+import * as React from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
+import { FileSystem } from "@/components/ui/file-system";
 
 import {
   collectFileSystemDemoFolderPaths,
@@ -14,29 +16,29 @@ import {
   LARGE_FILE_SYSTEM_DEMO_ITEMS,
   parseFileSystemDemoState,
   type FileSystemDemoState,
-} from "./file-system-demo-state"
+} from "./file-system-demo-state";
 
 const DEFAULT_FILE_SYSTEM_DEMO_STATE: FileSystemDemoState = {
   path: "",
   query: DEFAULT_FILE_SYSTEM_DEMO_QUERY,
   selectedPath: null,
   view: "list",
-}
+};
 
 export function FileSystemBlock() {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const isLarge = searchParams.get("large") === "true"
-  const items = isLarge ? LARGE_FILE_SYSTEM_DEMO_ITEMS : FILE_SYSTEM_DEMO_ITEMS
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const isLarge = searchParams.get("large") === "true";
+  const items = isLarge ? LARGE_FILE_SYSTEM_DEMO_ITEMS : FILE_SYSTEM_DEMO_ITEMS;
   const folderPaths = React.useMemo(
     () => collectFileSystemDemoFolderPaths(items),
-    [items]
-  )
+    [items],
+  );
   const itemPaths = React.useMemo(
     () => collectFileSystemDemoItemPaths(items),
-    [items]
-  )
+    [items],
+  );
   const parsedState = React.useMemo(
     () =>
       parseFileSystemDemoState(searchParams, {
@@ -44,32 +46,32 @@ export function FileSystemBlock() {
         folderPaths,
         itemPaths,
       }),
-    [folderPaths, itemPaths, searchParams]
-  )
-  const [state, setState] = React.useState(parsedState)
-  const stateRef = React.useRef(parsedState)
+    [folderPaths, itemPaths, searchParams],
+  );
+  const [state, setState] = React.useState(parsedState);
+  const stateRef = React.useRef(parsedState);
 
   React.useEffect(() => {
-    stateRef.current = parsedState
-    setState(parsedState)
-  }, [parsedState])
+    stateRef.current = parsedState;
+    setState(parsedState);
+  }, [parsedState]);
 
   const replaceState = React.useCallback(
     (patch: Partial<FileSystemDemoState>) => {
-      const nextState = { ...stateRef.current, ...patch }
+      const nextState = { ...stateRef.current, ...patch };
       const nextParams = new URLSearchParams(
-        formatFileSystemDemoState(nextState, DEFAULT_FILE_SYSTEM_DEMO_STATE)
-      )
+        formatFileSystemDemoState(nextState, DEFAULT_FILE_SYSTEM_DEMO_STATE),
+      );
 
-      if (isLarge) nextParams.set("large", "true")
-      stateRef.current = nextState
-      setState(nextState)
+      if (isLarge) nextParams.set("large", "true");
+      stateRef.current = nextState;
+      setState(nextState);
       router.replace(`${pathname}?${nextParams.toString()}`, {
         scroll: false,
-      })
+      });
     },
-    [isLarge, pathname, router]
-  )
+    [isLarge, pathname, router],
+  );
 
   return (
     <FileSystem
@@ -86,5 +88,5 @@ export function FileSystemBlock() {
       selectedPath={state.selectedPath}
       view={state.view}
     />
-  )
+  );
 }

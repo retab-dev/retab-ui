@@ -1,41 +1,41 @@
-"use client"
+"use client";
 
-import type * as React from "react"
+import type * as React from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 import type {
   DocumentSchemaNodeEditorProps,
   RenderDocumentNodeEditor,
   SchemaEditorMode,
-} from "@/components/schema-editor/document-node-editor-types"
-import type { SchemaDocument } from "@/components/schema-editor/document/types"
-import type { DocumentNodeView } from "@/components/schema-editor/document/view-model"
-import type { ResolvedSchemaBuilderFeatures } from "@/components/schema-editor/schema-builder-types"
+} from "@/components/schema-editor/document-node-editor-types";
+import type { SchemaDocument } from "@/components/schema-editor/document/types";
+import type { DocumentNodeView } from "@/components/schema-editor/document/view-model";
+import type { ResolvedSchemaBuilderFeatures } from "@/components/schema-editor/schema-builder-types";
 
 interface DocumentPropertyRowProps {
-  propertyId: string
-  dispatch: DocumentSchemaNodeEditorProps["dispatch"]
-  doc: SchemaDocument
-  propertyName: string
-  nodeView: DocumentNodeView
-  rootLayout: boolean
-  path: string
-  setDefsAccordionOpen: (open: boolean) => void
-  draggedParentRef: DocumentSchemaNodeEditorProps["draggedParentRef"]
-  draggedPropertyRef: DocumentSchemaNodeEditorProps["draggedPropertyRef"]
-  mode: SchemaEditorMode
-  features: ResolvedSchemaBuilderFeatures
-  editable: boolean
-  isRequired: boolean
-  siblingNames: string[]
-  renderNode: RenderDocumentNodeEditor
-  onRequiredChange: (required: boolean) => void
-  onNameChange: DocumentSchemaNodeEditorProps["onNameChange"]
-  onDelete: () => void
-  onDragStart: React.DragEventHandler<HTMLDivElement>
-  onDragOver: React.DragEventHandler<HTMLDivElement>
-  onDragLeave: React.DragEventHandler<HTMLDivElement>
-  onDrop: React.DragEventHandler<HTMLDivElement>
+  propertyId: string;
+  dispatch: DocumentSchemaNodeEditorProps["dispatch"];
+  doc: SchemaDocument;
+  propertyName: string;
+  nodeView: DocumentNodeView;
+  rootLayout: boolean;
+  path: string;
+  setDefsAccordionOpen: (open: boolean) => void;
+  draggedParentRef: DocumentSchemaNodeEditorProps["draggedParentRef"];
+  draggedPropertyRef: DocumentSchemaNodeEditorProps["draggedPropertyRef"];
+  mode: SchemaEditorMode;
+  features: ResolvedSchemaBuilderFeatures;
+  editable: boolean;
+  isRequired: boolean;
+  siblingNames: string[];
+  renderNode: RenderDocumentNodeEditor;
+  onRequiredChange: (required: boolean) => void;
+  onNameChange: DocumentSchemaNodeEditorProps["onNameChange"];
+  onDelete: () => void;
+  onDragStart: React.DragEventHandler<HTMLDivElement>;
+  onDragOver: React.DragEventHandler<HTMLDivElement>;
+  onDragLeave: React.DragEventHandler<HTMLDivElement>;
+  onDrop: React.DragEventHandler<HTMLDivElement>;
 }
 
 export function DocumentPropertyRow({
@@ -66,8 +66,8 @@ export function DocumentPropertyRow({
   return (
     <div
       className={cn(
-        rootLayout ? "" : "ml-4 border-l border-border",
-        editable && "cursor-grab"
+        rootLayout ? "" : "border-border ml-4 border-l",
+        editable && "cursor-grab",
       )}
       draggable={editable}
       onDragStart={onDragStart}
@@ -97,5 +97,5 @@ export function DocumentPropertyRow({
         setDefsAccordionOpen,
       })}
     </div>
-  )
+  );
 }

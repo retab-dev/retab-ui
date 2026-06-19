@@ -1,9 +1,9 @@
-import { FileThumbnailFormatsGrid } from "@/components/file-thumbnail-formats-demo"
-import { FileViewerShowcase } from "@/components/file-viewer-demo"
-import { JsonFormDemo } from "@/components/json-form-demo"
-import { JsonTableDemo } from "@/components/json-table/json-table-demo"
-import { RetabSchemaBuilderDemo } from "@/components/retab-schema-builder-demo"
-import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-sources-block"
+import { FileThumbnailFormatsGrid } from "@/components/file-thumbnail-formats-demo";
+import { FileViewerShowcase } from "@/components/file-viewer-demo";
+import { JsonFormDemo } from "@/components/json-form-demo";
+import { JsonTableDemo } from "@/components/json-table/json-table-demo";
+import { RetabSchemaBuilderDemo } from "@/components/retab-schema-builder-demo";
+import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-sources-block";
 
 function ShowcaseItem({
   title,
@@ -12,24 +12,24 @@ function ShowcaseItem({
   headerClassName,
   children,
 }: {
-  title: string
-  description: string
-  className?: string
+  title: string;
+  description: string;
+  className?: string;
   /** Extra classes on the title/description header block (e.g. a fixed height). */
-  headerClassName?: string
-  children: React.ReactNode
+  headerClassName?: string;
+  children: React.ReactNode;
 }) {
   return (
     <div className={`flex flex-col gap-3 ${className ?? ""}`}>
       <div className={`space-y-1 ${headerClassName ?? ""}`}>
-        <h3 className="text-sm font-medium text-foreground">{title}</h3>
-        <p className="text-sm text-pretty text-muted-foreground">
+        <h3 className="text-foreground text-sm font-medium">{title}</h3>
+        <p className="text-muted-foreground text-sm text-pretty">
           {description}
         </p>
       </div>
       {children}
     </div>
-  )
+  );
 }
 
 /**
@@ -48,7 +48,7 @@ export function HomeShowcase() {
     <div className="container-wrapper flex-1 p-0">
       <div className="container overflow-hidden px-0 lg:max-w-none">
         {/* Floating island — the demos sit in the same muted gray wash as shadcn/ui. */}
-        <div className="theme-neutral relative flex w-full max-w-none flex-col gap-(--gap) overflow-hidden bg-muted/30 p-12 pb-0! [--gap:--spacing(8)] 3xl:[--gap:--spacing(8)] min-[1900px]:p-12 min-[1900px]:[--gap:--spacing(10)]! lg:p-6 lg:[--gap:--spacing(6)] dark:bg-background">
+        <div className="theme-neutral bg-muted/30 3xl:[--gap:--spacing(8)] dark:bg-background relative flex w-full max-w-none flex-col gap-(--gap) overflow-hidden p-12 pb-0! [--gap:--spacing(8)] min-[1900px]:p-12 min-[1900px]:[--gap:--spacing(10)]! lg:p-6 lg:[--gap:--spacing(6)]">
           <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-(--gap)">
             <div
               className="grid items-start gap-(--gap) md:grid-cols-2"
@@ -104,10 +104,10 @@ export function HomeShowcase() {
           </div>
 
           {/* Soft edges — match the shadcn/ui homepage gray gradient. */}
-          <div className="absolute inset-x-0 top-0 z-1 h-120 bg-linear-to-b from-background via-muted/30 to-transparent dark:hidden" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-[80px] bg-linear-to-t from-background via-muted/20 to-transparent dark:via-background/80" />
+          <div className="from-background via-muted/30 absolute inset-x-0 top-0 z-1 h-120 bg-linear-to-b to-transparent dark:hidden" />
+          <div className="from-background via-muted/20 dark:via-background/80 pointer-events-none absolute inset-x-0 bottom-0 z-20 h-[80px] bg-linear-to-t to-transparent" />
         </div>
       </div>
     </div>
-  )
+  );
 }

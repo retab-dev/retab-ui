@@ -1,55 +1,55 @@
-import { resolveCsvDialect, type CsvDialect, type CsvTable } from "@/lib/csv"
+import { resolveCsvDialect, type CsvDialect, type CsvTable } from "@/lib/csv";
 import type {
   ViewerContentPayload,
   ViewerContentBlob,
   ViewerContentStream,
   ViewerResource,
-} from "@/lib/viewer-resource"
-import { viewerContentRenderKey } from "@/lib/viewer-resource"
+} from "@/lib/viewer-resource";
+import { viewerContentRenderKey } from "@/lib/viewer-resource";
 import type {
   BlobViewerSource,
   TextSource,
   UrlViewerSource,
-} from "@/lib/viewer-source"
-import { textPayloadKey } from "@/lib/viewer-source"
+} from "@/lib/viewer-source";
+import { textPayloadKey } from "@/lib/viewer-source";
 
 export type CsvContent = ViewerContentPayload &
   ViewerContentBlob &
-  ViewerContentStream
+  ViewerContentStream;
 
 export type CsvResource =
   | { kind: "resource"; content: CsvContent }
   | { kind: "text"; text: string }
   | { kind: "table"; table: CsvTable; fileName?: string }
-  | { kind: "empty" }
+  | { kind: "empty" };
 
-export type CsvDocumentSource = UrlViewerSource | BlobViewerSource | TextSource
+export type CsvDocumentSource = UrlViewerSource | BlobViewerSource | TextSource;
 
 export interface CsvTableSource {
-  kind: "table"
-  table: CsvTable
-  fileName?: string
-  identityKey?: string
-  dialect?: CsvDialect
+  kind: "table";
+  table: CsvTable;
+  fileName?: string;
+  identityKey?: string;
+  dialect?: CsvDialect;
 }
 
-export type CsvViewerSource = CsvDocumentSource | CsvTableSource
+export type CsvViewerSource = CsvDocumentSource | CsvTableSource;
 
 export interface CsvResourceInput {
-  source?: CsvViewerSource
-  resource?: ViewerResource | null
+  source?: CsvViewerSource;
+  resource?: ViewerResource | null;
 }
 
 export interface CsvViewerDialectInput {
-  dialect?: CsvDialect
-  source?: CsvViewerSource
-  resource?: ViewerResource | null
+  dialect?: CsvDialect;
+  source?: CsvViewerSource;
+  resource?: ViewerResource | null;
 }
 
 export function isCsvDocumentSource(
-  source: CsvViewerSource
+  source: CsvViewerSource,
 ): source is CsvDocumentSource {
-  return source.kind !== "table"
+  return source.kind !== "table";
 }
 
 export function resolveCsvResource({
@@ -61,15 +61,15 @@ export function resolveCsvResource({
       kind: "table",
       table: source.table,
       fileName: source.fileName,
-    }
+    };
   }
   if (resource) {
     if (resource.content.payload.kind === "text") {
-      return { kind: "text", text: resource.content.payload.text }
+      return { kind: "text", text: resource.content.payload.text };
     }
-    return { kind: "resource", content: resource.content }
+    return { kind: "resource", content: resource.content };
   }
-  return { kind: "empty" }
+  return { kind: "empty" };
 }
 
 export function resolveCsvViewerDialect({
@@ -77,8 +77,8 @@ export function resolveCsvViewerDialect({
   source,
   resource,
 }: CsvViewerDialectInput): CsvDialect {
-  const tableDialect = source?.kind === "table" ? source.dialect : undefined
-  const tableFileName = source?.kind === "table" ? source.fileName : undefined
+  const tableDialect = source?.kind === "table" ? source.dialect : undefined;
+  const tableFileName = source?.kind === "table" ? source.fileName : undefined;
   return resolveCsvDialect({
     dialect: dialect ?? tableDialect,
     descriptor: {
@@ -86,7 +86,7 @@ export function resolveCsvViewerDialect({
       fileName: resource?.fileName ?? tableFileName,
       mimeType: resource?.mimeType,
     },
-  })
+  });
 }
 
 export function csvViewerSortResetKey({
@@ -94,19 +94,19 @@ export function csvViewerSortResetKey({
   source,
   resource,
 }: {
-  dialect: CsvDialect
-  source?: CsvViewerSource
-  resource?: ViewerResource | null
+  dialect: CsvDialect;
+  source?: CsvViewerSource;
+  resource?: ViewerResource | null;
 }): unknown {
-  const dialectKey = `${dialect.delimiter}\u0000${dialect.hasHeader}`
+  const dialectKey = `${dialect.delimiter}\u0000${dialect.hasHeader}`;
   if (source?.kind === "text") {
-    return `${source.identityKey ?? ""}\u0000${textPayloadKey(source.text)}\u0000${dialectKey}`
+    return `${source.identityKey ?? ""}\u0000${textPayloadKey(source.text)}\u0000${dialectKey}`;
   }
   if (resource) {
-    return `${resource.keys.load}\u0000${viewerContentRenderKey(resource.content)}\u0000${dialectKey}`
+    return `${resource.keys.load}\u0000${viewerContentRenderKey(resource.content)}\u0000${dialectKey}`;
   }
-  if (source?.kind === "table") return source.identityKey ?? source.table
-  return "empty"
+  if (source?.kind === "table") return source.identityKey ?? source.table;
+  return "empty";
 }
 
 export function csvViewerExportFileName({
@@ -115,11 +115,11 @@ export function csvViewerExportFileName({
   resource,
   fallback,
 }: {
-  dialect: CsvDialect
-  source?: CsvViewerSource
-  resource?: ViewerResource | null
-  fallback: (dialect: CsvDialect) => string
+  dialect: CsvDialect;
+  source?: CsvViewerSource;
+  resource?: ViewerResource | null;
+  fallback: (dialect: CsvDialect) => string;
 }): string {
-  const tableFileName = source?.kind === "table" ? source.fileName : undefined
-  return resource?.fileName ?? tableFileName ?? fallback(dialect)
+  const tableFileName = source?.kind === "table" ? source.fileName : undefined;
+  return resource?.fileName ?? tableFileName ?? fallback(dialect);
 }

@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/ui/fixed-grid-benchmark"
+export * from "@/registry/new-york-v4/ui/fixed-grid-benchmark";

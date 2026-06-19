@@ -1,14 +1,14 @@
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
+
+import * as React from "react";
 
 import type {
   JsonTablePrimitiveActiveCell,
   JsonTableStructuredEditSession,
-} from "@/components/json-table/json-table-edit-session"
+} from "@/components/json-table/json-table-edit-session";
 
 function jsonTableFocusReturnTarget(shell: HTMLTableCellElement | null) {
-  return (
-    shell?.querySelector<HTMLElement>('[data-slot="data-cell"]') ?? shell
-  )
+  return shell?.querySelector<HTMLElement>('[data-slot="data-cell"]') ?? shell;
 }
 
 export function useJsonTableFocusReturn({
@@ -17,12 +17,12 @@ export function useJsonTableFocusReturn({
   primitiveActiveCell,
   structuredEditSession,
 }: {
-  shellRef: React.RefObject<HTMLTableCellElement | null>
-  isCellEditing: boolean
-  primitiveActiveCell: JsonTablePrimitiveActiveCell | null
-  structuredEditSession: JsonTableStructuredEditSession | null
+  shellRef: React.RefObject<HTMLTableCellElement | null>;
+  isCellEditing: boolean;
+  primitiveActiveCell: JsonTablePrimitiveActiveCell | null;
+  structuredEditSession: JsonTableStructuredEditSession | null;
 }) {
-  const wasEditingRef = React.useRef(isCellEditing)
+  const wasEditingRef = React.useRef(isCellEditing);
 
   React.useLayoutEffect(() => {
     if (
@@ -33,8 +33,8 @@ export function useJsonTableFocusReturn({
     ) {
       jsonTableFocusReturnTarget(shellRef.current)?.focus({
         preventScroll: true,
-      })
+      });
     }
-    wasEditingRef.current = isCellEditing
-  }, [isCellEditing, primitiveActiveCell, shellRef, structuredEditSession])
+    wasEditingRef.current = isCellEditing;
+  }, [isCellEditing, primitiveActiveCell, shellRef, structuredEditSession]);
 }

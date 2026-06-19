@@ -1,57 +1,57 @@
 // @vitest-environment jsdom
 
-import * as React from "react"
+import * as React from "react";
 import {
   act,
   cleanup,
   fireEvent,
   render,
   waitFor,
-} from "@testing-library/react"
-import type { JSONSchema7 } from "json-schema"
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
+} from "@testing-library/react";
+import type { JSONSchema7 } from "json-schema";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type {
   JsonTableCellCommit,
   JsonTableCellCommitHandler,
-} from "@/components/json-table/json-table-cell-commit"
-import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
+} from "@/components/json-table/json-table-cell-commit";
+import type { VisibleColumn } from "@/components/json-table/json-table-cell-types";
 import type {
   JsonTableActivationIntent,
   JsonTablePrimitiveActiveCell,
   JsonTableStructuredEditSession,
-} from "@/components/json-table/json-table-edit-session"
-import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
-import { createJsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
-import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
-import { jsonTableFullRenderedColumnWindow } from "@/components/json-table/json-table-rendered-column-window"
+} from "@/components/json-table/json-table-edit-session";
+import { jsonTableCellId } from "@/components/json-table/json-table-edit-session";
+import { createJsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store";
+import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store";
+import { jsonTableFullRenderedColumnWindow } from "@/components/json-table/json-table-rendered-column-window";
 import type {
   ProjectedCell,
   ProjectedRow,
-} from "@/components/json-table/lib/document-projection"
-import { projectDocumentRows } from "@/components/json-table/lib/document-projection"
-import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
-import type { TableDocument } from "@/components/json-table/lib/projects-types"
+} from "@/components/json-table/lib/document-projection";
+import { projectDocumentRows } from "@/components/json-table/lib/document-projection";
+import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes";
+import type { TableDocument } from "@/components/json-table/lib/projects-types";
 import {
   getFieldMetadata,
   type FieldMetadata,
-} from "@/components/json-table/lib/schema-field-metadata"
-import { SingleFileFormRow } from "@/components/json-table/single-file-form-row"
-import { SingleFileTableView } from "@/components/json-table/single-file-table-view"
-import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
+} from "@/components/json-table/lib/schema-field-metadata";
+import { SingleFileFormRow } from "@/components/json-table/single-file-form-row";
+import { SingleFileTableView } from "@/components/json-table/single-file-table-view";
+import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table";
 
 import {
   activatePrimitiveCell,
   createTestCellCommitBridge,
   primitiveEventTarget,
-} from "./json-table-interaction-test-utils"
-import { installJsonTableDom } from "./json-table-test-dom"
+} from "./json-table-interaction-test-utils";
+import { installJsonTableDom } from "./json-table-test-dom";
 
-beforeAll(() => installJsonTableDom())
+beforeAll(() => installJsonTableDom());
 afterEach(() => {
-  cleanup()
-  vi.restoreAllMocks()
-})
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 const schema: JSONSchema7 = {
   type: "object",
@@ -75,7 +75,7 @@ const schema: JSONSchema7 = {
       },
     },
   },
-}
+};
 
 const document: TableDocument = {
   id: "doc_1",
@@ -88,12 +88,12 @@ const document: TableDocument = {
     status: "draft",
     shipped_at: "2024-01-02",
   },
-}
+};
 
 function requireFieldMetadata(key: string): FieldMetadata {
-  const fieldMetadata = getFieldMetadata(schema, key)
-  if (!fieldMetadata) throw new Error(`Missing field metadata for ${key}`)
-  return fieldMetadata
+  const fieldMetadata = getFieldMetadata(schema, key);
+  if (!fieldMetadata) throw new Error(`Missing field metadata for ${key}`);
+  return fieldMetadata;
 }
 
 function visibleColumn(key: string): VisibleColumn {
@@ -101,11 +101,11 @@ function visibleColumn(key: string): VisibleColumn {
     key,
     widthPx: 160,
     fieldMetadata: requireFieldMetadata(key),
-  }
+  };
 }
 
 function headerNode(key: string): JsonTableHeaderNode {
-  const fieldMetadata = requireFieldMetadata(key)
+  const fieldMetadata = requireFieldMetadata(key);
 
   return {
     key,
@@ -119,34 +119,34 @@ function headerNode(key: string): JsonTableHeaderNode {
     isArray: fieldMetadata.kind === "array",
     canFold: false,
     isExpanded: true,
-  }
+  };
 }
 
 function headerEffectiveType(fieldMetadata: FieldMetadata) {
-  if (fieldMetadata.kind === "string") return "string"
-  return fieldMetadata.kind
+  if (fieldMetadata.kind === "string") return "string";
+  return fieldMetadata.kind;
 }
 
 function editableCells(container: HTMLElement) {
   return Array.from(
     container.querySelectorAll<HTMLElement>(
-      '[data-json-table-editable-cell="true"]'
-    )
-  )
+      '[data-json-table-editable-cell="true"]',
+    ),
+  );
 }
 
 function cellByFieldPath(container: HTMLElement, fieldPath: string) {
   const cell = container.querySelector<HTMLElement>(
-    `[data-field-path="${fieldPath}"]`
-  )
-  if (!cell) throw new Error(`Missing cell ${fieldPath}`)
-  return cell
+    `[data-field-path="${fieldPath}"]`,
+  );
+  if (!cell) throw new Error(`Missing cell ${fieldPath}`);
+  return cell;
 }
 
 function rowByIndex(container: HTMLElement, index: number) {
-  const row = container.querySelector<HTMLElement>(`[data-index="${index}"]`)
-  if (!row) throw new Error(`Missing row ${index}`)
-  return row
+  const row = container.querySelector<HTMLElement>(`[data-index="${index}"]`);
+  if (!row) throw new Error(`Missing row ${index}`);
+  return row;
 }
 
 function SingleFileFormRowHarness({
@@ -165,65 +165,65 @@ function SingleFileFormRowHarness({
   | "closeStructuredEditSession"
   | "onCellCommit"
 > & {
-  visibleColumns: VisibleColumn[]
-  onCellCommit?: JsonTableCellCommitHandler
+  visibleColumns: VisibleColumn[];
+  onCellCommit?: JsonTableCellCommitHandler;
 }) {
   const primitiveActiveCellStoreRef = React.useRef(
-    createJsonTablePrimitiveActiveCellStore()
-  )
+    createJsonTablePrimitiveActiveCellStore(),
+  );
   const primitiveEditStoreRef = React.useRef(
-    createJsonTablePrimitiveEditStore()
-  )
+    createJsonTablePrimitiveEditStore(),
+  );
   const [structuredEditSession, setStructuredEditSession] =
-    React.useState<JsonTableStructuredEditSession | null>(null)
-  const sessionIdRef = React.useRef(0)
+    React.useState<JsonTableStructuredEditSession | null>(null);
+  const sessionIdRef = React.useRef(0);
 
   const setNextPrimitiveActiveCell = React.useCallback(
     (activeCell: JsonTablePrimitiveActiveCell | null) => {
-      primitiveActiveCellStoreRef.current.setSnapshot(activeCell)
-      if (activeCell) setStructuredEditSession(null)
+      primitiveActiveCellStoreRef.current.setSnapshot(activeCell);
+      if (activeCell) setStructuredEditSession(null);
     },
-    []
-  )
+    [],
+  );
 
   const startStructuredEditSession = React.useCallback(
     (projectedCell: ProjectedCell, intent: JsonTableActivationIntent) => {
-      const nextSessionId = sessionIdRef.current + 1
-      sessionIdRef.current = nextSessionId
-      primitiveActiveCellStoreRef.current.setSnapshot(null)
+      const nextSessionId = sessionIdRef.current + 1;
+      sessionIdRef.current = nextSessionId;
+      primitiveActiveCellStoreRef.current.setSnapshot(null);
       setStructuredEditSession({
         id: nextSessionId,
         cellId: jsonTableCellId(
           props.document.id,
-          projectedCell.materializedFieldPath
+          projectedCell.materializedFieldPath,
         ),
         docId: props.document.id,
         fieldPath: projectedCell.materializedFieldPath,
         intent,
         isOverlayOpen: true,
-      })
+      });
     },
-    [props.document.id]
-  )
+    [props.document.id],
+  );
   const setStructuredEditSessionOverlayOpen = React.useCallback(
     (open: boolean) => {
       setStructuredEditSession((currentSession) =>
         currentSession && currentSession.isOverlayOpen !== open
           ? { ...currentSession, isOverlayOpen: open }
-          : currentSession
-      )
+          : currentSession,
+      );
     },
-    []
-  )
+    [],
+  );
   const closeStructuredEditSession = React.useCallback(() => {
-    setStructuredEditSession(null)
-  }, [])
+    setStructuredEditSession(null);
+  }, []);
   const handleCellCommit = React.useCallback(
     (commit: JsonTableCellCommit) => {
-      onCellCommit?.(commit)
+      onCellCommit?.(commit);
     },
-    [onCellCommit]
-  )
+    [onCellCommit],
+  );
 
   return (
     <SingleFileFormRow
@@ -238,7 +238,7 @@ function SingleFileFormRowHarness({
       closeStructuredEditSession={closeStructuredEditSession}
       onCellCommit={handleCellCommit}
     />
-  )
+  );
 }
 
 function renderRow({
@@ -246,15 +246,15 @@ function renderRow({
   onCellCommit = vi.fn(),
   visiblePaths,
 }: {
-  isJsonEditable?: boolean
-  onCellCommit?: JsonTableCellCommitHandler
-  visiblePaths: string[]
+  isJsonEditable?: boolean;
+  onCellCommit?: JsonTableCellCommitHandler;
+  visiblePaths: string[];
 }) {
   const rows = projectDocumentRows({
     document,
     visiblePaths,
     includeArrayAddRows: true,
-  })
+  });
 
   return render(
     <table>
@@ -271,8 +271,8 @@ function renderRow({
           isJsonEditable={isJsonEditable}
         />
       </tbody>
-    </table>
-  )
+    </table>,
+  );
 }
 
 function renderVirtualTable({
@@ -282,18 +282,18 @@ function renderVirtualTable({
   jsonEditMode = "editable",
   overscan = 12,
 }: {
-  tableDocument: TableDocument
-  visiblePaths: string[]
-  onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
-  jsonEditMode?: "editable" | "readOnly"
-  overscan?: number
+  tableDocument: TableDocument;
+  visiblePaths: string[];
+  onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>;
+  jsonEditMode?: "editable" | "readOnly";
+  overscan?: number;
 }) {
   const projectedRows = projectDocumentRows({
     document: tableDocument,
     visiblePaths,
     includeArrayAddRows: false,
-  })
-  const primitiveEditStore = createJsonTablePrimitiveEditStore()
+  });
+  const primitiveEditStore = createJsonTablePrimitiveEditStore();
 
   return render(
     <SingleFileVirtualizedTable
@@ -320,8 +320,8 @@ function renderVirtualTable({
       columnWidth="xxl"
       overscan={overscan}
       jumpOverscan={overscan}
-    />
-  )
+    />,
+  );
 }
 
 function StatefulVirtualTableHarness({
@@ -329,11 +329,11 @@ function StatefulVirtualTableHarness({
   visiblePaths,
   onPatch,
 }: {
-  initialDocument: TableDocument
-  visiblePaths: string[]
-  onPatch?: (patch: Record<string, unknown>) => void
+  initialDocument: TableDocument;
+  visiblePaths: string[];
+  onPatch?: (patch: Record<string, unknown>) => void;
 }) {
-  const [tableDocument, setTableDocument] = React.useState(initialDocument)
+  const [tableDocument, setTableDocument] = React.useState(initialDocument);
   const projectedRows = React.useMemo(
     () =>
       projectDocumentRows({
@@ -341,21 +341,21 @@ function StatefulVirtualTableHarness({
         visiblePaths,
         includeArrayAddRows: false,
       }),
-    [tableDocument, visiblePaths]
-  )
+    [tableDocument, visiblePaths],
+  );
   const primitiveEditStoreRef = React.useRef(
-    createJsonTablePrimitiveEditStore()
-  )
+    createJsonTablePrimitiveEditStore(),
+  );
   const onUpdateDocument = React.useCallback(
     async (patch: Record<string, unknown>) => {
-      onPatch?.(patch)
+      onPatch?.(patch);
       setTableDocument((currentDocument) => ({
         ...currentDocument,
         ...patch,
-      }))
+      }));
     },
-    [onPatch]
-  )
+    [onPatch],
+  );
 
   return (
     <SingleFileVirtualizedTable
@@ -381,7 +381,7 @@ function StatefulVirtualTableHarness({
       })}
       columnWidth="xxl"
     />
-  )
+  );
 }
 
 function renderStatefulVirtualTable({
@@ -389,331 +389,331 @@ function renderStatefulVirtualTable({
   visiblePaths,
   onPatch,
 }: {
-  initialDocument: TableDocument
-  visiblePaths: string[]
-  onPatch?: (patch: Record<string, unknown>) => void
+  initialDocument: TableDocument;
+  visiblePaths: string[];
+  onPatch?: (patch: Record<string, unknown>) => void;
 }) {
   return render(
     <StatefulVirtualTableHarness
       initialDocument={initialDocument}
       visiblePaths={visiblePaths}
       onPatch={onPatch}
-    />
-  )
+    />,
+  );
 }
 
 function installSynchronousAnimationFrame() {
-  const previousRequestAnimationFrame = globalThis.requestAnimationFrame
-  const previousCancelAnimationFrame = globalThis.cancelAnimationFrame
-  const previousWindowRequestAnimationFrame = window.requestAnimationFrame
-  const previousWindowCancelAnimationFrame = window.cancelAnimationFrame
+  const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+  const previousCancelAnimationFrame = globalThis.cancelAnimationFrame;
+  const previousWindowRequestAnimationFrame = window.requestAnimationFrame;
+  const previousWindowCancelAnimationFrame = window.cancelAnimationFrame;
 
   const requestAnimationFrame = (callback: FrameRequestCallback) => {
-    callback(0)
-    return 1
-  }
-  const cancelAnimationFrame = vi.fn()
+    callback(0);
+    return 1;
+  };
+  const cancelAnimationFrame = vi.fn();
 
-  globalThis.requestAnimationFrame = requestAnimationFrame
-  globalThis.cancelAnimationFrame = cancelAnimationFrame
-  window.requestAnimationFrame = requestAnimationFrame
-  window.cancelAnimationFrame = cancelAnimationFrame
+  globalThis.requestAnimationFrame = requestAnimationFrame;
+  globalThis.cancelAnimationFrame = cancelAnimationFrame;
+  window.requestAnimationFrame = requestAnimationFrame;
+  window.cancelAnimationFrame = cancelAnimationFrame;
 
   return () => {
-    globalThis.requestAnimationFrame = previousRequestAnimationFrame
-    globalThis.cancelAnimationFrame = previousCancelAnimationFrame
-    window.requestAnimationFrame = previousWindowRequestAnimationFrame
-    window.cancelAnimationFrame = previousWindowCancelAnimationFrame
-  }
+    globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+    globalThis.cancelAnimationFrame = previousCancelAnimationFrame;
+    window.requestAnimationFrame = previousWindowRequestAnimationFrame;
+    window.cancelAnimationFrame = previousWindowCancelAnimationFrame;
+  };
 }
 
 async function chooseOption(
   view: ReturnType<typeof renderVirtualTable>,
-  optionName: string
+  optionName: string,
 ) {
-  const option = await view.findByRole("option", { name: optionName })
+  const option = await view.findByRole("option", { name: optionName });
   fireEvent.pointerDown(option, {
     button: 0,
     pointerId: 1,
     pointerType: "mouse",
-  })
+  });
   fireEvent.pointerUp(option, {
     button: 0,
     pointerId: 1,
     pointerType: "mouse",
-  })
-  fireEvent.click(option)
+  });
+  fireEvent.click(option);
 }
 
 function dayButton(day: string) {
   const button = globalThis.document.querySelector<HTMLButtonElement>(
-    `button[data-day="${day}"]`
-  )
-  if (!button) throw new Error(`Expected day button ${day}`)
-  return button
+    `button[data-day="${day}"]`,
+  );
+  if (!button) throw new Error(`Expected day button ${day}`);
+  return button;
 }
 
 function activateCell(
   view: {
-    container: HTMLElement
+    container: HTMLElement;
   },
-  fieldPath: string
+  fieldPath: string,
 ) {
-  const cell = cellByFieldPath(view.container, fieldPath)
-  activatePrimitiveCell(cell)
-  return cell
+  const cell = cellByFieldPath(view.container, fieldPath);
+  activatePrimitiveCell(cell);
+  return cell;
 }
 
 async function activateCellControl(
   view: {
-    container: HTMLElement
-    findByRole: (role: string) => Promise<HTMLElement>
+    container: HTMLElement;
+    findByRole: (role: string) => Promise<HTMLElement>;
   },
   fieldPath: string,
-  role: string
+  role: string,
 ) {
-  const cell = activateCell(view, fieldPath)
-  await view.findByRole(role)
-  return cell
+  const cell = activateCell(view, fieldPath);
+  await view.findByRole(role);
+  return cell;
 }
 
 describe("json table edit-session interactions", () => {
   it("commits a dirty text draft before switching cells", async () => {
     const onUpdateDocument = vi.fn<
       (patch: Record<string, unknown>) => Promise<void>
-    >(async () => undefined)
+    >(async () => undefined);
     const view = renderVirtualTable({
       tableDocument: document,
       visiblePaths: ["vendor", "amount"],
       onUpdateDocument,
-    })
+    });
 
-    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
+    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2));
 
-    activateCell(view, "vendor")
-    const vendorInput = view.getByRole("textbox") as HTMLInputElement
-    fireEvent.change(vendorInput, { target: { value: "Globex" } })
+    activateCell(view, "vendor");
+    const vendorInput = view.getByRole("textbox") as HTMLInputElement;
+    fireEvent.change(vendorInput, { target: { value: "Globex" } });
 
     expect(
-      view.container.querySelectorAll('[data-active="true"]')
-    ).toHaveLength(1)
+      view.container.querySelectorAll('[data-active="true"]'),
+    ).toHaveLength(1);
 
-    await activateCellControl(view, "amount", "spinbutton")
+    await activateCellControl(view, "amount", "spinbutton");
 
-    const amountInput = view.getByRole("spinbutton") as HTMLInputElement
-    expect(amountInput.value).toBe("12")
+    const amountInput = view.getByRole("spinbutton") as HTMLInputElement;
+    expect(amountInput.value).toBe("12");
     expect(
-      view.container.querySelectorAll('[data-active="true"]')
-    ).toHaveLength(1)
+      view.container.querySelectorAll('[data-active="true"]'),
+    ).toHaveLength(1);
     expect(cellByFieldPath(view.container, "amount").dataset.active).toBe(
-      "true"
-    )
+      "true",
+    );
     expect(onUpdateDocument).toHaveBeenCalledWith({
       data: { ...document.data, vendor: "Globex" },
-    })
-    expect(onUpdateDocument).toHaveBeenCalledTimes(1)
-  })
+    });
+    expect(onUpdateDocument).toHaveBeenCalledTimes(1);
+  });
 
   it("commits a dirty number draft as a number before switching cells", async () => {
     const onUpdateDocument = vi.fn<
       (patch: Record<string, unknown>) => Promise<void>
-    >(async () => undefined)
+    >(async () => undefined);
     const view = renderVirtualTable({
       tableDocument: document,
       visiblePaths: ["vendor", "amount"],
       onUpdateDocument,
-    })
+    });
 
-    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
+    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2));
 
-    activateCell(view, "amount")
-    const amountInput = view.getByRole("spinbutton") as HTMLInputElement
-    fireEvent.change(amountInput, { target: { value: "15.5" } })
+    activateCell(view, "amount");
+    const amountInput = view.getByRole("spinbutton") as HTMLInputElement;
+    fireEvent.change(amountInput, { target: { value: "15.5" } });
 
-    await activateCellControl(view, "vendor", "textbox")
+    await activateCellControl(view, "vendor", "textbox");
 
-    expect(view.getByRole("textbox")).toBeTruthy()
+    expect(view.getByRole("textbox")).toBeTruthy();
     expect(onUpdateDocument).toHaveBeenCalledWith({
       data: { ...document.data, amount: 15.5 },
-    })
-    expect(onUpdateDocument).toHaveBeenCalledTimes(1)
-  })
+    });
+    expect(onUpdateDocument).toHaveBeenCalledTimes(1);
+  });
 
   it("commits an invalid integer draft as null before switching cells", async () => {
     const onUpdateDocument = vi.fn<
       (patch: Record<string, unknown>) => Promise<void>
-    >(async () => undefined)
+    >(async () => undefined);
     const view = renderVirtualTable({
       tableDocument: document,
       visiblePaths: ["count", "vendor"],
       onUpdateDocument,
-    })
+    });
 
-    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
+    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2));
 
-    await activateCellControl(view, "count", "spinbutton")
+    await activateCellControl(view, "count", "spinbutton");
     fireEvent.change(view.getByRole("spinbutton"), {
       target: { value: "3.5" },
-    })
-    await activateCellControl(view, "vendor", "textbox")
+    });
+    await activateCellControl(view, "vendor", "textbox");
 
-    expect(view.getByRole("textbox")).toBeTruthy()
+    expect(view.getByRole("textbox")).toBeTruthy();
     expect(onUpdateDocument).toHaveBeenCalledWith({
       data: { ...document.data, count: null },
-    })
-    expect(onUpdateDocument).toHaveBeenCalledTimes(1)
-  })
+    });
+    expect(onUpdateDocument).toHaveBeenCalledTimes(1);
+  });
 
   it("commits an empty text draft as null before switching cells", async () => {
     const onUpdateDocument = vi.fn<
       (patch: Record<string, unknown>) => Promise<void>
-    >(async () => undefined)
+    >(async () => undefined);
     const view = renderVirtualTable({
       tableDocument: document,
       visiblePaths: ["note", "amount"],
       onUpdateDocument,
-    })
+    });
 
-    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
+    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2));
 
-    activateCell(view, "note")
+    activateCell(view, "note");
     fireEvent.change(view.getByRole("textbox"), {
       target: { value: "" },
-    })
-    activateCell(view, "amount")
+    });
+    activateCell(view, "amount");
 
-    expect(view.getByRole("spinbutton")).toBeTruthy()
+    expect(view.getByRole("spinbutton")).toBeTruthy();
     expect(onUpdateDocument).toHaveBeenCalledWith({
       data: { ...document.data, note: null },
-    })
-    expect(onUpdateDocument).toHaveBeenCalledTimes(1)
-  })
+    });
+    expect(onUpdateDocument).toHaveBeenCalledTimes(1);
+  });
 
   it("seeds reopened cells from pending document data before parent rerender", async () => {
     const onUpdateDocument = vi.fn<
       (patch: Record<string, unknown>) => Promise<void>
-    >(async () => undefined)
+    >(async () => undefined);
     const view = renderVirtualTable({
       tableDocument: document,
       visiblePaths: ["vendor", "amount"],
       onUpdateDocument,
-    })
+    });
 
-    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
+    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2));
 
-    await activateCellControl(view, "vendor", "textbox")
+    await activateCellControl(view, "vendor", "textbox");
     fireEvent.change(view.getByRole("textbox"), {
       target: { value: "Globex" },
-    })
-    await activateCellControl(view, "amount", "spinbutton")
-    await activateCellControl(view, "vendor", "textbox")
+    });
+    await activateCellControl(view, "amount", "spinbutton");
+    await activateCellControl(view, "vendor", "textbox");
 
-    expect(view.getByRole("textbox")).toHaveProperty("value", "Globex")
-    expect(onUpdateDocument).toHaveBeenCalledTimes(1)
-  })
+    expect(view.getByRole("textbox")).toHaveProperty("value", "Globex");
+    expect(onUpdateDocument).toHaveBeenCalledTimes(1);
+  });
 
   it("seeds reopened cells from committed parent data after rerender", async () => {
-    const onPatch = vi.fn()
+    const onPatch = vi.fn();
     const view = renderStatefulVirtualTable({
       initialDocument: document,
       visiblePaths: ["vendor", "amount"],
       onPatch,
-    })
+    });
 
-    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
+    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2));
 
-    await activateCellControl(view, "vendor", "textbox")
+    await activateCellControl(view, "vendor", "textbox");
     fireEvent.change(view.getByRole("textbox"), {
       target: { value: "ServerCo" },
-    })
-    fireEvent.blur(view.getByRole("textbox"))
+    });
+    fireEvent.blur(view.getByRole("textbox"));
 
-    await waitFor(() => expect(onPatch).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(onPatch).toHaveBeenCalledTimes(1));
     await waitFor(() =>
       expect(cellByFieldPath(view.container, "vendor").textContent).toContain(
-        "ServerCo"
-      )
-    )
+        "ServerCo",
+      ),
+    );
 
-    await activateCellControl(view, "amount", "spinbutton")
-    await activateCellControl(view, "vendor", "textbox")
+    await activateCellControl(view, "amount", "spinbutton");
+    await activateCellControl(view, "vendor", "textbox");
 
-    expect(view.getByRole("textbox")).toHaveProperty("value", "ServerCo")
-    expect(onPatch).toHaveBeenCalledTimes(1)
-  })
+    expect(view.getByRole("textbox")).toHaveProperty("value", "ServerCo");
+    expect(onPatch).toHaveBeenCalledTimes(1);
+  });
 
   it("does not commit unchanged drafts when switching cells", async () => {
     const onUpdateDocument = vi.fn<
       (patch: Record<string, unknown>) => Promise<void>
-    >(async () => undefined)
+    >(async () => undefined);
     const view = renderVirtualTable({
       tableDocument: document,
       visiblePaths: ["vendor", "amount"],
       onUpdateDocument,
-    })
+    });
 
-    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
+    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2));
 
-    activateCell(view, "vendor")
-    activateCell(view, "amount")
+    activateCell(view, "vendor");
+    activateCell(view, "amount");
 
-    expect(view.getByRole("spinbutton")).toHaveProperty("value", "12")
-    expect(onUpdateDocument).not.toHaveBeenCalled()
-  })
+    expect(view.getByRole("spinbutton")).toHaveProperty("value", "12");
+    expect(onUpdateDocument).not.toHaveBeenCalled();
+  });
 
   it("seeds full-table type-to-edit from printable keyboard input", async () => {
     const textView = renderVirtualTable({
       tableDocument: document,
       visiblePaths: ["vendor"],
-    })
+    });
 
     await waitFor(() =>
-      expect(editableCells(textView.container)).toHaveLength(1)
-    )
+      expect(editableCells(textView.container)).toHaveLength(1),
+    );
 
-    const vendorCell = cellByFieldPath(textView.container, "vendor")
-    const vendorTarget = primitiveEventTarget(vendorCell)
+    const vendorCell = cellByFieldPath(textView.container, "vendor");
+    const vendorTarget = primitiveEventTarget(vendorCell);
     if (!(vendorTarget instanceof HTMLElement)) {
-      throw new Error("Expected primitive event target")
+      throw new Error("Expected primitive event target");
     }
-    vendorTarget.focus()
-    fireEvent.keyDown(vendorTarget, { key: "Z" })
-    expect(textView.getByRole("textbox")).toHaveProperty("value", "Z")
+    vendorTarget.focus();
+    fireEvent.keyDown(vendorTarget, { key: "Z" });
+    expect(textView.getByRole("textbox")).toHaveProperty("value", "Z");
 
-    cleanup()
+    cleanup();
 
     const numberView = renderVirtualTable({
       tableDocument: document,
       visiblePaths: ["amount"],
-    })
+    });
     await waitFor(() =>
-      expect(editableCells(numberView.container)).toHaveLength(1)
-    )
+      expect(editableCells(numberView.container)).toHaveLength(1),
+    );
 
-    const amountCell = cellByFieldPath(numberView.container, "amount")
-    const amountTarget = primitiveEventTarget(amountCell)
+    const amountCell = cellByFieldPath(numberView.container, "amount");
+    const amountTarget = primitiveEventTarget(amountCell);
     if (!(amountTarget instanceof HTMLElement)) {
-      throw new Error("Expected primitive event target")
+      throw new Error("Expected primitive event target");
     }
-    amountTarget.focus()
-    fireEvent.keyDown(amountTarget, { key: "8" })
-    expect(numberView.getByRole("spinbutton")).toHaveProperty("value", "8")
-  })
+    amountTarget.focus();
+    fireEvent.keyDown(amountTarget, { key: "8" });
+    expect(numberView.getByRole("spinbutton")).toHaveProperty("value", "8");
+  });
 
   it("keeps the full virtual table inert in read-only JSON mode", async () => {
     const onUpdateDocument = vi.fn<
       (patch: Record<string, unknown>) => Promise<void>
-    >(async () => undefined)
+    >(async () => undefined);
     const view = renderVirtualTable({
       tableDocument: document,
       visiblePaths: ["vendor", "amount", "is_paid", "status", "shipped_at"],
       jsonEditMode: "readOnly",
       onUpdateDocument,
-    })
+    });
 
     await waitFor(() =>
-      expect(view.container.querySelectorAll("td")).toHaveLength(5)
-    )
+      expect(view.container.querySelectorAll("td")).toHaveLength(5),
+    );
 
     for (const fieldPath of [
       "vendor",
@@ -722,98 +722,98 @@ describe("json table edit-session interactions", () => {
       "status",
       "shipped_at",
     ]) {
-      const cell = cellByFieldPath(view.container, fieldPath)
-      const target = primitiveEventTarget(cell)
-      fireEvent.pointerDown(target, { button: 0 })
-      fireEvent.keyDown(target, { key: "Enter" })
-      fireEvent.keyDown(target, { key: " " })
+      const cell = cellByFieldPath(view.container, fieldPath);
+      const target = primitiveEventTarget(cell);
+      fireEvent.pointerDown(target, { button: 0 });
+      fireEvent.keyDown(target, { key: "Enter" });
+      fireEvent.keyDown(target, { key: " " });
     }
 
-    expect(editableCells(view.container)).toHaveLength(0)
-    expect(view.queryByRole("textbox")).toBeNull()
-    expect(view.queryByRole("spinbutton")).toBeNull()
-    expect(view.queryByRole("combobox")).toBeNull()
-    expect(view.queryByRole("dialog")).toBeNull()
-    expect(onUpdateDocument).not.toHaveBeenCalled()
-  })
+    expect(editableCells(view.container)).toHaveLength(0);
+    expect(view.queryByRole("textbox")).toBeNull();
+    expect(view.queryByRole("spinbutton")).toBeNull();
+    expect(view.queryByRole("combobox")).toBeNull();
+    expect(view.queryByRole("dialog")).toBeNull();
+    expect(onUpdateDocument).not.toHaveBeenCalled();
+  });
 
   it("cancels scalar drafts through Escape in the full virtual table", async () => {
     const onUpdateDocument = vi.fn<
       (patch: Record<string, unknown>) => Promise<void>
-    >(async () => undefined)
+    >(async () => undefined);
     const view = renderVirtualTable({
       tableDocument: document,
       visiblePaths: ["vendor"],
       onUpdateDocument,
-    })
+    });
 
-    await waitFor(() => expect(editableCells(view.container)).toHaveLength(1))
+    await waitFor(() => expect(editableCells(view.container)).toHaveLength(1));
 
-    activateCell(view, "vendor")
+    activateCell(view, "vendor");
     fireEvent.change(view.getByRole("textbox"), {
       target: { value: "EscapeCo" },
-    })
-    fireEvent.keyDown(view.getByRole("textbox"), { key: "Escape" })
+    });
+    fireEvent.keyDown(view.getByRole("textbox"), { key: "Escape" });
 
-    expect(onUpdateDocument).not.toHaveBeenCalled()
+    expect(onUpdateDocument).not.toHaveBeenCalled();
     await waitFor(() =>
       expect(cellByFieldPath(view.container, "vendor").dataset.active).toBe(
-        undefined
-      )
-    )
-  })
+        undefined,
+      ),
+    );
+  });
 
   it("composes a dirty draft commit with a later boolean toggle", async () => {
     const onUpdateDocument = vi.fn<
       (patch: Record<string, unknown>) => Promise<void>
-    >(async () => undefined)
+    >(async () => undefined);
     const view = renderVirtualTable({
       tableDocument: document,
       visiblePaths: ["vendor", "is_paid"],
       onUpdateDocument,
-    })
+    });
 
-    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
+    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2));
 
-    activateCell(view, "vendor")
+    activateCell(view, "vendor");
     fireEvent.change(view.getByRole("textbox"), {
       target: { value: "Globex" },
-    })
-    fireEvent.blur(view.getByRole("textbox"))
-    await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(1))
+    });
+    fireEvent.blur(view.getByRole("textbox"));
+    await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(1));
 
-    activateCell(view, "is_paid")
+    activateCell(view, "is_paid");
 
-    await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(2));
     expect(onUpdateDocument).toHaveBeenNthCalledWith(1, {
       data: { ...document.data, vendor: "Globex" },
-    })
+    });
     expect(onUpdateDocument).toHaveBeenNthCalledWith(2, {
       data: { ...document.data, vendor: "Globex", is_paid: true },
-    })
+    });
     await waitFor(() =>
       expect(cellByFieldPath(view.container, "is_paid").dataset.active).toBe(
-        undefined
-      )
-    )
-  })
+        undefined,
+      ),
+    );
+  });
 
   it("composes a dirty draft commit with a later enum selection", async () => {
     const onUpdateDocument = vi.fn<
       (patch: Record<string, unknown>) => Promise<void>
-    >(async () => undefined)
+    >(async () => undefined);
     const view = renderVirtualTable({
       tableDocument: document,
       visiblePaths: ["vendor", "status"],
       onUpdateDocument,
-    })
+    });
 
-    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
+    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2));
 
-    activateCell(view, "vendor")
+    activateCell(view, "vendor");
     fireEvent.change(view.getByRole("textbox"), {
       target: { value: "Globex" },
-    })
+    });
     fireEvent.click(
       primitiveEventTarget(cellByFieldPath(view.container, "status")),
       {
@@ -821,18 +821,18 @@ describe("json table edit-session interactions", () => {
         clientX: 0,
         clientY: 0,
         detail: 1,
-      }
-    )
-    await chooseOption(view, "paid")
+      },
+    );
+    await chooseOption(view, "paid");
 
-    await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(2));
     expect(onUpdateDocument).toHaveBeenNthCalledWith(1, {
       data: { ...document.data, vendor: "Globex" },
-    })
+    });
     expect(onUpdateDocument).toHaveBeenNthCalledWith(2, {
       data: { ...document.data, vendor: "Globex", status: "paid" },
-    })
-  })
+    });
+  });
 
   it("opens and commits nested array enum dropdowns from a full browser click", async () => {
     const tableDocument: TableDocument = {
@@ -840,195 +840,197 @@ describe("json table edit-session interactions", () => {
       data: {
         lines: [{ name: "line 0", transaction_type: "CREDIT" }],
       },
-    }
+    };
     const onUpdateDocument = vi.fn<
       (patch: Record<string, unknown>) => Promise<void>
-    >(async () => undefined)
+    >(async () => undefined);
     const view = renderVirtualTable({
       tableDocument,
       visiblePaths: ["lines.*.transaction_type", "lines.*.name"],
       onUpdateDocument,
-    })
+    });
 
     await waitFor(() =>
       expect(
-        cellByFieldPath(view.container, "lines.0.transaction_type")
-      ).toBeTruthy()
-    )
+        cellByFieldPath(view.container, "lines.0.transaction_type"),
+      ).toBeTruthy(),
+    );
 
-    const cell = cellByFieldPath(view.container, "lines.0.transaction_type")
+    const cell = cellByFieldPath(view.container, "lines.0.transaction_type");
     fireEvent.click(primitiveEventTarget(cell), {
       button: 0,
       clientX: 0,
       clientY: 0,
       detail: 1,
-    })
+    });
 
-    const trigger = await view.findByRole("combobox")
+    const trigger = await view.findByRole("combobox");
     await waitFor(() =>
-      expect(trigger.getAttribute("aria-expanded")).toBe("true")
-    )
-    await chooseOption(view, "DEBIT")
+      expect(trigger.getAttribute("aria-expanded")).toBe("true"),
+    );
+    await chooseOption(view, "DEBIT");
 
-    await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(1));
     expect(onUpdateDocument).toHaveBeenCalledWith({
       data: {
         lines: [{ name: "line 0", transaction_type: "DEBIT" }],
       },
-    })
-  })
+    });
+  });
 
   it("composes a dirty draft commit with a later date picker selection", async () => {
     const onUpdateDocument = vi.fn<
       (patch: Record<string, unknown>) => Promise<void>
-    >(async () => undefined)
+    >(async () => undefined);
     const view = renderVirtualTable({
       tableDocument: document,
       visiblePaths: ["vendor", "shipped_at"],
       onUpdateDocument,
-    })
+    });
 
-    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
+    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2));
 
-    activateCell(view, "vendor")
+    activateCell(view, "vendor");
     fireEvent.change(view.getByRole("textbox"), {
       target: { value: "Globex" },
-    })
-    activateCell(view, "shipped_at")
-    expect(await view.findByRole("dialog")).toBeTruthy()
+    });
+    activateCell(view, "shipped_at");
+    expect(await view.findByRole("dialog")).toBeTruthy();
 
-    fireEvent.click(dayButton("1/15/2024"))
+    fireEvent.click(dayButton("1/15/2024"));
 
-    await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(2));
     expect(onUpdateDocument).toHaveBeenNthCalledWith(1, {
       data: { ...document.data, vendor: "Globex" },
-    })
+    });
     expect(onUpdateDocument).toHaveBeenNthCalledWith(2, {
       data: {
         ...document.data,
         vendor: "Globex",
         shipped_at: "2024-01-15",
       },
-    })
-    expect(view.queryByRole("dialog")).toBeNull()
-  })
+    });
+    expect(view.queryByRole("dialog")).toBeNull();
+  });
 
   it("removes an open picker overlay when switching cells", async () => {
-    const view = renderRow({ visiblePaths: ["shipped_at", "vendor"] })
+    const view = renderRow({ visiblePaths: ["shipped_at", "vendor"] });
 
-    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
+    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2));
 
-    activateCell(view, "shipped_at")
+    activateCell(view, "shipped_at");
 
-    expect(await view.findByRole("dialog")).toBeTruthy()
+    expect(await view.findByRole("dialog")).toBeTruthy();
 
-    activateCell(view, "vendor")
+    activateCell(view, "vendor");
 
-    await waitFor(() => expect(view.queryByRole("dialog")).toBeNull())
-    expect(view.getByRole("textbox")).toBeTruthy()
-  })
+    await waitFor(() => expect(view.queryByRole("dialog")).toBeNull());
+    expect(view.getByRole("textbox")).toBeTruthy();
+  });
 
   it("sets tabIndex only for editable cells", async () => {
-    const editableView = renderRow({ visiblePaths: ["vendor", "note"] })
+    const editableView = renderRow({ visiblePaths: ["vendor", "note"] });
     await waitFor(() =>
-      expect(editableCells(editableView.container)).toHaveLength(2)
-    )
+      expect(editableCells(editableView.container)).toHaveLength(2),
+    );
     expect(
       editableCells(editableView.container).map((cell) => {
-        const target = primitiveEventTarget(cell)
+        const target = primitiveEventTarget(cell);
         return target instanceof HTMLElement
           ? target.getAttribute("tabindex")
-          : null
-      })
-    ).toEqual(["0", "0"])
+          : null;
+      }),
+    ).toEqual(["0", "0"]);
 
-    cleanup()
+    cleanup();
 
     const readOnlyView = renderRow({
       visiblePaths: ["vendor", "note"],
       isJsonEditable: false,
-    })
+    });
     const readOnlyCells = Array.from(
-      readOnlyView.container.querySelectorAll<HTMLElement>("td")
-    )
+      readOnlyView.container.querySelectorAll<HTMLElement>("td"),
+    );
 
-    expect(readOnlyCells).toHaveLength(2)
+    expect(readOnlyCells).toHaveLength(2);
     expect(readOnlyCells.map((cell) => cell.getAttribute("tabindex"))).toEqual([
       null,
       null,
-    ])
-  })
+    ]);
+  });
 
   it("ignores IME process keydown without starting or committing an edit", async () => {
-    const onCellCommit = vi.fn()
+    const onCellCommit = vi.fn();
     const view = renderRow({
       visiblePaths: ["vendor"],
       onCellCommit,
-    })
+    });
 
-    await waitFor(() => expect(editableCells(view.container)).toHaveLength(1))
+    await waitFor(() => expect(editableCells(view.container)).toHaveLength(1));
 
-    const cell = cellByFieldPath(view.container, "vendor")
-    const target = primitiveEventTarget(cell) as HTMLElement
-    target.focus()
-    fireEvent.compositionStart(target)
-    fireEvent.keyDown(target, { key: "Process", isComposing: true })
-    fireEvent.compositionEnd(target)
+    const cell = cellByFieldPath(view.container, "vendor");
+    const target = primitiveEventTarget(cell) as HTMLElement;
+    target.focus();
+    fireEvent.compositionStart(target);
+    fireEvent.keyDown(target, { key: "Process", isComposing: true });
+    fireEvent.compositionEnd(target);
 
-    expect(view.queryByRole("textbox")).toBeNull()
-    expect(onCellCommit).not.toHaveBeenCalled()
-  })
+    expect(view.queryByRole("textbox")).toBeNull();
+    expect(onCellCommit).not.toHaveBeenCalled();
+  });
 
   it("composes rapid commits against the latest pending document data", async () => {
     const onUpdateDocument = vi.fn<
       (patch: Record<string, unknown>) => Promise<void>
-    >(async () => undefined)
+    >(async () => undefined);
     const view = renderVirtualTable({
       tableDocument: document,
       visiblePaths: ["vendor", "amount"],
       onUpdateDocument,
-    })
+    });
 
-    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2))
+    await waitFor(() => expect(editableCells(view.container)).toHaveLength(2));
 
-    activateCell(view, "vendor")
-    const vendorInput = view.getByRole("textbox")
-    fireEvent.change(vendorInput, { target: { value: "Globex" } })
-    fireEvent.blur(vendorInput)
+    activateCell(view, "vendor");
+    const vendorInput = view.getByRole("textbox");
+    fireEvent.change(vendorInput, { target: { value: "Globex" } });
+    fireEvent.blur(vendorInput);
 
-    await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(1));
 
-    activateCell(view, "amount")
-    const amountInput = view.getByRole("spinbutton")
-    fireEvent.change(amountInput, { target: { value: "24" } })
-    fireEvent.blur(amountInput)
+    activateCell(view, "amount");
+    const amountInput = view.getByRole("spinbutton");
+    fireEvent.change(amountInput, { target: { value: "24" } });
+    fireEvent.blur(amountInput);
 
-    await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(2));
 
     expect(onUpdateDocument.mock.calls[0][0]).toEqual({
       data: { ...document.data, vendor: "Globex" },
-    })
+    });
     expect(onUpdateDocument.mock.calls[1][0]).toEqual({
       data: { ...document.data, vendor: "Globex", amount: 24 },
-    })
-  })
+    });
+  });
 
   it("reconciles parent primitive echoes outside the render phase", async () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
 
     function Harness() {
-      const [currentDocument, setCurrentDocument] = React.useState(document)
+      const [currentDocument, setCurrentDocument] = React.useState(document);
       const updateDocument = React.useCallback(
         async (patch: Record<string, unknown>) => {
           if (patch.data && typeof patch.data === "object") {
             setCurrentDocument((current) => ({
               ...current,
               data: patch.data as Record<string, unknown>,
-            }))
+            }));
           }
         },
-        []
-      )
+        [],
+      );
 
       return (
         <SingleFileTableView
@@ -1038,40 +1040,40 @@ describe("json table edit-session interactions", () => {
           jsonEditMode="editable"
           schemaEditMode="readOnly"
         />
-      )
+      );
     }
 
     const view = render(
       <div style={{ height: 240, width: 480 }}>
         <Harness />
-      </div>
-    )
+      </div>,
+    );
 
     await waitFor(() =>
-      expect(cellByFieldPath(view.container, "vendor")).toBeTruthy()
-    )
+      expect(cellByFieldPath(view.container, "vendor")).toBeTruthy(),
+    );
 
-    activateCell(view, "vendor")
-    const input = view.getByRole("textbox")
-    fireEvent.change(input, { target: { value: "Globex" } })
-    fireEvent.blur(input)
+    activateCell(view, "vendor");
+    const input = view.getByRole("textbox");
+    fireEvent.change(input, { target: { value: "Globex" } });
+    fireEvent.blur(input);
 
     await waitFor(() =>
       expect(cellByFieldPath(view.container, "vendor").textContent).toContain(
-        "Globex"
-      )
-    )
+        "Globex",
+      ),
+    );
 
     expect(
       consoleError.mock.calls.some((call) =>
         call.some((value) =>
           String(value).includes(
-            "Cannot update a component (`EditableJsonTableCellContent`) while rendering a different component (`SingleFileTableView`)"
-          )
-        )
-      )
-    ).toBe(false)
-  })
+            "Cannot update a component (`EditableJsonTableCellContent`) while rendering a different component (`SingleFileTableView`)",
+          ),
+        ),
+      ),
+    ).toBe(false);
+  });
 
   it("elevates the active virtual row while an overlay is mounted", async () => {
     const tableDocument: TableDocument = {
@@ -1082,27 +1084,29 @@ describe("json table edit-session interactions", () => {
           shipped_at: "2024-01-02",
         })),
       },
-    }
+    };
     const view = renderVirtualTable({
       tableDocument,
       visiblePaths: ["lines.*.shipped_at", "lines.*.name"],
       overscan: 2,
-    })
+    });
 
     await waitFor(() =>
-      expect(cellByFieldPath(view.container, "lines.0.shipped_at")).toBeTruthy()
-    )
+      expect(
+        cellByFieldPath(view.container, "lines.0.shipped_at"),
+      ).toBeTruthy(),
+    );
 
-    activateCell(view, "lines.0.shipped_at")
+    activateCell(view, "lines.0.shipped_at");
 
-    expect(await view.findByRole("dialog")).toBeTruthy()
+    expect(await view.findByRole("dialog")).toBeTruthy();
     await waitFor(() =>
-      expect(rowByIndex(view.container, 0).style.zIndex).toBe("20")
-    )
-  })
+      expect(rowByIndex(view.container, 0).style.zIndex).toBe("20"),
+    );
+  });
 
   it("drops the elevated active row when virtualization scrolls it out", async () => {
-    const restoreAnimationFrame = installSynchronousAnimationFrame()
+    const restoreAnimationFrame = installSynchronousAnimationFrame();
     const tableDocument: TableDocument = {
       id: "doc_lines",
       data: {
@@ -1111,44 +1115,44 @@ describe("json table edit-session interactions", () => {
           shipped_at: "2024-01-02",
         })),
       },
-    }
+    };
     const view = renderVirtualTable({
       tableDocument,
       visiblePaths: ["lines.*.shipped_at", "lines.*.name"],
       overscan: 1,
-    })
+    });
 
     try {
       await waitFor(() =>
         expect(
-          cellByFieldPath(view.container, "lines.0.shipped_at")
-        ).toBeTruthy()
-      )
+          cellByFieldPath(view.container, "lines.0.shipped_at"),
+        ).toBeTruthy(),
+      );
 
-      activateCell(view, "lines.0.shipped_at")
-      expect(await view.findByRole("dialog")).toBeTruthy()
+      activateCell(view, "lines.0.shipped_at");
+      expect(await view.findByRole("dialog")).toBeTruthy();
 
       const viewport = view.container.querySelector<HTMLElement>(
-        '[data-slot="json-table-scroll"]'
-      )
-      if (!viewport) throw new Error("Missing json table viewport")
+        '[data-slot="json-table-scroll"]',
+      );
+      if (!viewport) throw new Error("Missing json table viewport");
       Object.defineProperty(viewport, "clientHeight", {
         configurable: true,
         value: 64,
-      })
+      });
 
       await act(async () => {
-        viewport.scrollTop = 32 * 12
-        fireEvent.scroll(viewport)
-      })
+        viewport.scrollTop = 32 * 12;
+        fireEvent.scroll(viewport);
+      });
 
       await waitFor(() =>
-        expect(view.container.querySelector('[data-index="0"]')).toBeNull()
-      )
-      await waitFor(() => expect(view.queryByRole("dialog")).toBeNull())
-      expect(rowByIndex(view.container, 12).style.zIndex).toBe("")
+        expect(view.container.querySelector('[data-index="0"]')).toBeNull(),
+      );
+      await waitFor(() => expect(view.queryByRole("dialog")).toBeNull());
+      expect(rowByIndex(view.container, 12).style.zIndex).toBe("");
     } finally {
-      restoreAnimationFrame()
+      restoreAnimationFrame();
     }
-  })
-})
+  });
+});

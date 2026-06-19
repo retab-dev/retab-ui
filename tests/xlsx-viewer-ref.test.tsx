@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import * as React from "react"
+import * as React from "react";
 import {
   act,
   cleanup,
@@ -8,33 +8,33 @@ import {
   render,
   screen,
   waitFor,
-} from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+} from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   blobSource,
   clearViewerResourceRegistryForTests,
-} from "@/registry/new-york-v4/lib/viewer-resource"
-import { createCompactSheet } from "@/registry/new-york-v4/lib/xlsx-workbook"
+} from "@/registry/new-york-v4/lib/viewer-resource";
+import { createCompactSheet } from "@/registry/new-york-v4/lib/xlsx-workbook";
 import {
   XlsxViewer,
   type XlsxViewerHandle,
-} from "@/registry/new-york-v4/ui/xlsx-viewer"
+} from "@/registry/new-york-v4/ui/xlsx-viewer";
 
 vi.mock("@/components/ui/xlsx-grid", async () => {
-  const React = await import("react")
+  const React = await import("react");
   return {
     XlsxGrid: ({
       sheetName,
       scrollRequest,
     }: {
-      sheetName: string
+      sheetName: string;
       scrollRequest?: {
-        sheetIndex: number
-        rowIndex: number
-        columnIndex: number
-        behavior: ScrollBehavior
-      } | null
+        sheetIndex: number;
+        rowIndex: number;
+        columnIndex: number;
+        behavior: ScrollBehavior;
+      } | null;
     }) =>
       React.createElement(
         "div",
@@ -45,111 +45,111 @@ vi.mock("@/components/ui/xlsx-grid", async () => {
             ? `${scrollRequest.sheetIndex}:${scrollRequest.rowIndex}:${scrollRequest.columnIndex}:${scrollRequest.behavior}`
             : "",
         },
-        sheetName
+        sheetName,
       ),
     XlsxGridSkeleton: () =>
       React.createElement("div", { role: "status" }, "Loading grid"),
-  }
-})
+  };
+});
 
 // Stock Radix DropdownMenu relies on pointer capture and scrollIntoView, which
 // jsdom does not implement; these shims keep the menu openable under jsdom.
 if (typeof Element !== "undefined" && !Element.prototype.hasPointerCapture) {
-  Element.prototype.hasPointerCapture = () => false
-  Element.prototype.setPointerCapture = () => {}
-  Element.prototype.releasePointerCapture = () => {}
+  Element.prototype.hasPointerCapture = () => false;
+  Element.prototype.setPointerCapture = () => {};
+  Element.prototype.releasePointerCapture = () => {};
 }
 if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {
-  Element.prototype.scrollIntoView = () => {}
+  Element.prototype.scrollIntoView = () => {};
 }
 
-const originalFetch = globalThis.fetch
-const originalWorker = globalThis.Worker
+const originalFetch = globalThis.fetch;
+const originalWorker = globalThis.Worker;
 
 class FakeXlsxWorker {
-  static instances: FakeXlsxWorker[] = []
+  static instances: FakeXlsxWorker[] = [];
 
-  onmessage: ((event: MessageEvent) => void) | null = null
-  onerror: ((event: ErrorEvent) => void) | null = null
-  postMessage = vi.fn()
-  terminate = vi.fn()
+  onmessage: ((event: MessageEvent) => void) | null = null;
+  onerror: ((event: ErrorEvent) => void) | null = null;
+  postMessage = vi.fn();
+  terminate = vi.fn();
 
   constructor() {
-    FakeXlsxWorker.instances.push(this)
+    FakeXlsxWorker.instances.push(this);
   }
 }
 
 function mockObjectUrls(url = "blob:xlsx-export") {
-  const createObjectURL = vi.fn((_blob: Blob) => url)
-  const revokeObjectURL = vi.fn()
+  const createObjectURL = vi.fn((_blob: Blob) => url);
+  const revokeObjectURL = vi.fn();
   Object.defineProperty(URL, "createObjectURL", {
     configurable: true,
     value: createObjectURL,
-  })
+  });
   Object.defineProperty(URL, "revokeObjectURL", {
     configurable: true,
     value: revokeObjectURL,
-  })
-  return { createObjectURL, revokeObjectURL }
+  });
+  return { createObjectURL, revokeObjectURL };
 }
 
 function captureAnchorClicks() {
-  const clicks: Array<{ href: string | null; download: string }> = []
+  const clicks: Array<{ href: string | null; download: string }> = [];
   vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
-    this: HTMLAnchorElement
+    this: HTMLAnchorElement,
   ) {
     clicks.push({
       href: this.getAttribute("href"),
       download: this.download,
-    })
-  })
-  return clicks
+    });
+  });
+  return clicks;
 }
 
 function openDownloadMenu() {
   // Stock Radix DropdownMenuTrigger opens on pointerdown (not click); base-ui
   // opened on click, so drive both events to open the menu under jsdom.
-  const trigger = screen.getByRole("button", { name: "Download" })
+  const trigger = screen.getByRole("button", { name: "Download" });
   fireEvent.pointerDown(trigger, {
     button: 0,
     ctrlKey: false,
     pointerType: "mouse",
-  })
-  fireEvent.click(trigger)
+  });
+  fireEvent.click(trigger);
 }
 
 beforeEach(() => {
-  clearViewerResourceRegistryForTests()
-  FakeXlsxWorker.instances = []
+  clearViewerResourceRegistryForTests();
+  FakeXlsxWorker.instances = [];
   globalThis.fetch = vi.fn(async () => ({
     ok: true,
     arrayBuffer: async () => new ArrayBuffer(8),
-  })) as unknown as typeof fetch
-  globalThis.Worker = FakeXlsxWorker as unknown as typeof Worker
-})
+  })) as unknown as typeof fetch;
+  globalThis.Worker = FakeXlsxWorker as unknown as typeof Worker;
+});
 
 afterEach(() => {
-  cleanup()
-  vi.restoreAllMocks()
-  globalThis.fetch = originalFetch
-  globalThis.Worker = originalWorker
-})
+  cleanup();
+  vi.restoreAllMocks();
+  globalThis.fetch = originalFetch;
+  globalThis.Worker = originalWorker;
+});
 
 function uniqueXlsxUrl(label: string) {
-  return `/test-${label}-${crypto.randomUUID()}.xlsx`
+  return `/test-${label}-${crypto.randomUUID()}.xlsx`;
 }
 
 async function waitForWorker(index = 0) {
   await waitFor(() => {
-    expect(FakeXlsxWorker.instances.length).toBeGreaterThan(index)
-    expect(FakeXlsxWorker.instances[index].onmessage).not.toBeNull()
-  })
-  return FakeXlsxWorker.instances[index]
+    expect(FakeXlsxWorker.instances.length).toBeGreaterThan(index);
+    expect(FakeXlsxWorker.instances[index].onmessage).not.toBeNull();
+  });
+  return FakeXlsxWorker.instances[index];
 }
 
 async function emitWorkbook(
   worker: FakeXlsxWorker,
-  sheets: Parameters<typeof createCompactSheet>[0][]
+  sheets: Parameters<typeof createCompactSheet>[0][],
 ) {
   await act(async () => {
     worker.onmessage?.({
@@ -157,15 +157,15 @@ async function emitWorkbook(
         type: "workbook",
         sheets: sheets.map(createCompactSheet),
       },
-    } as MessageEvent)
-    await new Promise((resolve) => setTimeout(resolve, 0))
-  })
+    } as MessageEvent);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 }
 
 describe("XlsxViewer imperative ref", () => {
   it("replays a pre-load scrollToCell call after workbook metadata is reported", async () => {
-    const viewerRef = React.createRef<XlsxViewerHandle>()
-    const onSheetChange = vi.fn()
+    const viewerRef = React.createRef<XlsxViewerHandle>();
+    const onSheetChange = vi.fn();
 
     await act(async () => {
       render(
@@ -178,20 +178,20 @@ describe("XlsxViewer imperative ref", () => {
           }}
           controls={false}
           onSheetChange={onSheetChange}
-        />
-      )
-    })
+        />,
+      );
+    });
 
-    await waitFor(() => expect(viewerRef.current).not.toBeNull())
+    await waitFor(() => expect(viewerRef.current).not.toBeNull());
 
     await act(async () => {
-      viewerRef.current?.scrollToCell(1, 2, 3, { behavior: "auto" })
-    })
+      viewerRef.current?.scrollToCell(1, 2, 3, { behavior: "auto" });
+    });
 
     await waitFor(() => {
-      expect(FakeXlsxWorker.instances.length).toBe(1)
-      expect(FakeXlsxWorker.instances[0].onmessage).not.toBeNull()
-    })
+      expect(FakeXlsxWorker.instances.length).toBe(1);
+      expect(FakeXlsxWorker.instances[0].onmessage).not.toBeNull();
+    });
 
     const sheets = [
       createCompactSheet({
@@ -206,21 +206,21 @@ describe("XlsxViewer imperative ref", () => {
         columnCount: 5,
         entries: [{ cellIndex: 2 * 5 + 3, text: "target" }],
       }),
-    ]
+    ];
 
     await act(async () => {
       FakeXlsxWorker.instances[0].onmessage?.({
         data: { type: "workbook", sheets },
-      } as MessageEvent)
-      await new Promise((resolve) => setTimeout(resolve, 0))
-    })
+      } as MessageEvent);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
-    const detailGrid = await screen.findByRole("grid", { name: "Detail" })
+    const detailGrid = await screen.findByRole("grid", { name: "Detail" });
     await waitFor(() =>
-      expect(detailGrid.getAttribute("data-scroll-target")).toBe("1:2:3:auto")
-    )
-    expect(onSheetChange).toHaveBeenCalledWith(1)
-  })
+      expect(detailGrid.getAttribute("data-scroll-target")).toBe("1:2:3:auto"),
+    );
+    expect(onSheetChange).toHaveBeenCalledWith(1);
+  });
 
   it("loads Blob sources without fetching a URL", async () => {
     await act(async () => {
@@ -231,14 +231,14 @@ describe("XlsxViewer imperative ref", () => {
             fileName: "local.xlsx",
           })}
           controls={false}
-        />
-      )
-    })
+        />,
+      );
+    });
 
     await waitFor(() => {
-      expect(FakeXlsxWorker.instances.length).toBe(1)
-      expect(FakeXlsxWorker.instances[0].onmessage).not.toBeNull()
-    })
+      expect(FakeXlsxWorker.instances.length).toBe(1);
+      expect(FakeXlsxWorker.instances[0].onmessage).not.toBeNull();
+    });
 
     await act(async () => {
       FakeXlsxWorker.instances[0].onmessage?.({
@@ -253,17 +253,17 @@ describe("XlsxViewer imperative ref", () => {
             }),
           ],
         },
-      } as MessageEvent)
-      await new Promise((resolve) => setTimeout(resolve, 0))
-    })
+      } as MessageEvent);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
-    expect(await screen.findByRole("grid", { name: "Local" })).toBeTruthy()
-    expect(globalThis.fetch).not.toHaveBeenCalled()
-  })
+    expect(await screen.findByRole("grid", { name: "Local" })).toBeTruthy();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
 
   it("exports the active sheet as a derived CSV download", async () => {
-    const { createObjectURL, revokeObjectURL } = mockObjectUrls()
-    const clicks = captureAnchorClicks()
+    const { createObjectURL, revokeObjectURL } = mockObjectUrls();
+    const clicks = captureAnchorClicks();
 
     await act(async () => {
       render(
@@ -273,14 +273,14 @@ describe("XlsxViewer imperative ref", () => {
             fileName: "book.xlsx",
           })}
           defaultSheetIndex={1}
-        />
-      )
-    })
+        />,
+      );
+    });
 
     await waitFor(() => {
-      expect(FakeXlsxWorker.instances.length).toBe(1)
-      expect(FakeXlsxWorker.instances[0].onmessage).not.toBeNull()
-    })
+      expect(FakeXlsxWorker.instances.length).toBe(1);
+      expect(FakeXlsxWorker.instances[0].onmessage).not.toBeNull();
+    });
 
     await act(async () => {
       FakeXlsxWorker.instances[0].onmessage?.({
@@ -304,24 +304,24 @@ describe("XlsxViewer imperative ref", () => {
             }),
           ],
         },
-      } as MessageEvent)
-      await new Promise((resolve) => setTimeout(resolve, 0))
-    })
+      } as MessageEvent);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
-    expect(await screen.findByRole("grid", { name: "Detail" })).toBeTruthy()
-    expect(createObjectURL).not.toHaveBeenCalled()
+    expect(await screen.findByRole("grid", { name: "Detail" })).toBeTruthy();
+    expect(createObjectURL).not.toHaveBeenCalled();
 
-    openDownloadMenu()
-    fireEvent.click(await screen.findByText("Export sheet"))
+    openDownloadMenu();
+    fireEvent.click(await screen.findByText("Export sheet"));
 
-    await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(1))
-    const blob = createObjectURL.mock.calls[0]?.[0] as unknown as Blob
-    expect(await blob.text()).toBe("A,B\r\nname,\r\n,42")
+    await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(1));
+    const blob = createObjectURL.mock.calls[0]?.[0] as unknown as Blob;
+    expect(await blob.text()).toBe("A,B\r\nname,\r\n,42");
     expect(clicks).toEqual([
       { href: "blob:xlsx-export", download: "book.Detail.csv" },
-    ])
-    expect(revokeObjectURL).toHaveBeenCalledWith("blob:xlsx-export")
-  })
+    ]);
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:xlsx-export");
+  });
 
   it("offers original and active-sheet export actions when ready", async () => {
     await act(async () => {
@@ -333,14 +333,14 @@ describe("XlsxViewer imperative ref", () => {
             fileName: "book.xlsx",
             downloadUrl: "/download/book.xlsx",
           }}
-        />
-      )
-    })
+        />,
+      );
+    });
 
     await waitFor(() => {
-      expect(FakeXlsxWorker.instances.length).toBe(1)
-      expect(FakeXlsxWorker.instances[0].onmessage).not.toBeNull()
-    })
+      expect(FakeXlsxWorker.instances.length).toBe(1);
+      expect(FakeXlsxWorker.instances[0].onmessage).not.toBeNull();
+    });
 
     await act(async () => {
       FakeXlsxWorker.instances[0].onmessage?.({
@@ -355,20 +355,20 @@ describe("XlsxViewer imperative ref", () => {
             }),
           ],
         },
-      } as MessageEvent)
-      await new Promise((resolve) => setTimeout(resolve, 0))
-    })
+      } as MessageEvent);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
-    expect(await screen.findByRole("grid", { name: "Only" })).toBeTruthy()
+    expect(await screen.findByRole("grid", { name: "Only" })).toBeTruthy();
 
-    openDownloadMenu()
+    openDownloadMenu();
 
-    expect(await screen.findByText("Download original")).toBeTruthy()
-    expect(await screen.findByText("Export sheet")).toBeTruthy()
-  })
+    expect(await screen.findByText("Download original")).toBeTruthy();
+    expect(await screen.findByText("Export sheet")).toBeTruthy();
+  });
 
   it("sends workbook bytes to the worker with a transferable buffer", async () => {
-    const bytes = new Uint8Array([9, 8, 7, 6])
+    const bytes = new Uint8Array([9, 8, 7, 6]);
 
     await act(async () => {
       render(
@@ -378,31 +378,31 @@ describe("XlsxViewer imperative ref", () => {
             fileName: "transfer-request.xlsx",
           })}
           controls={false}
-        />
-      )
-    })
+        />,
+      );
+    });
 
-    const worker = await waitForWorker()
-    expect(worker.postMessage).toHaveBeenCalledTimes(1)
+    const worker = await waitForWorker();
+    expect(worker.postMessage).toHaveBeenCalledTimes(1);
 
-    const [request, transfer] = worker.postMessage.mock.calls[0] ?? []
-    expect(request).toMatchObject({ type: "parse_workbook" })
-    expect(request.buffer).toBeInstanceOf(ArrayBuffer)
-    expect(request.buffer.byteLength).toBe(bytes.byteLength)
-    expect(transfer).toEqual([request.buffer])
-  })
+    const [request, transfer] = worker.postMessage.mock.calls[0] ?? [];
+    expect(request).toMatchObject({ type: "parse_workbook" });
+    expect(request.buffer).toBeInstanceOf(ArrayBuffer);
+    expect(request.buffer.byteLength).toBe(bytes.byteLength);
+    expect(transfer).toEqual([request.buffer]);
+  });
 
   it("reuses a resolved workbook source across remounts without starting another worker", async () => {
     const source = {
       kind: "url" as const,
       url: uniqueXlsxUrl("cache-remount"),
       fileName: "cache-remount.xlsx",
-    }
+    };
 
-    let first!: ReturnType<typeof render>
+    let first!: ReturnType<typeof render>;
     await act(async () => {
-      first = render(<XlsxViewer source={source} controls={false} />)
-    })
+      first = render(<XlsxViewer source={source} controls={false} />);
+    });
     await emitWorkbook(await waitForWorker(), [
       {
         name: "Cached",
@@ -410,26 +410,26 @@ describe("XlsxViewer imperative ref", () => {
         columnCount: 1,
         entries: [{ cellIndex: 0, text: "cached" }],
       },
-    ])
+    ]);
 
-    expect(await screen.findByRole("grid", { name: "Cached" })).toBeTruthy()
+    expect(await screen.findByRole("grid", { name: "Cached" })).toBeTruthy();
     await act(async () => {
-      first.unmount()
-    })
+      first.unmount();
+    });
 
     await act(async () => {
-      render(<XlsxViewer source={source} controls={false} />)
-      await Promise.resolve()
-    })
+      render(<XlsxViewer source={source} controls={false} />);
+      await Promise.resolve();
+    });
 
-    expect(await screen.findByRole("grid", { name: "Cached" })).toBeTruthy()
-    expect(FakeXlsxWorker.instances).toHaveLength(1)
-    expect(globalThis.fetch).toHaveBeenCalledTimes(1)
-  })
+    expect(await screen.findByRole("grid", { name: "Cached" })).toBeTruthy();
+    expect(FakeXlsxWorker.instances).toHaveLength(1);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
 
   it("reuses the workbook source across metadata-only source changes", async () => {
-    const url = uniqueXlsxUrl("metadata-cache")
-    let rerender!: ReturnType<typeof render>["rerender"]
+    const url = uniqueXlsxUrl("metadata-cache");
+    let rerender!: ReturnType<typeof render>["rerender"];
 
     await act(async () => {
       const rendered = render(
@@ -440,10 +440,10 @@ describe("XlsxViewer imperative ref", () => {
             fileName: "first-name.xlsx",
           }}
           controls={false}
-        />
-      )
-      rerender = rendered.rerender
-    })
+        />,
+      );
+      rerender = rendered.rerender;
+    });
 
     await emitWorkbook(await waitForWorker(), [
       {
@@ -452,9 +452,9 @@ describe("XlsxViewer imperative ref", () => {
         columnCount: 1,
         entries: [{ cellIndex: 0, text: "same workbook" }],
       },
-    ])
+    ]);
 
-    expect(await screen.findByRole("grid", { name: "Metadata" })).toBeTruthy()
+    expect(await screen.findByRole("grid", { name: "Metadata" })).toBeTruthy();
 
     await act(async () => {
       rerender(
@@ -465,15 +465,15 @@ describe("XlsxViewer imperative ref", () => {
             fileName: "second-name.xlsx",
           }}
           controls={false}
-        />
-      )
-      await Promise.resolve()
-    })
+        />,
+      );
+      await Promise.resolve();
+    });
 
-    expect(await screen.findByRole("grid", { name: "Metadata" })).toBeTruthy()
-    expect(FakeXlsxWorker.instances).toHaveLength(1)
-    expect(globalThis.fetch).toHaveBeenCalledTimes(1)
-  })
+    expect(await screen.findByRole("grid", { name: "Metadata" })).toBeTruthy();
+    expect(FakeXlsxWorker.instances).toHaveLength(1);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
 
   it("renders an empty workbook as an empty synthetic first sheet", async () => {
     await act(async () => {
@@ -484,16 +484,16 @@ describe("XlsxViewer imperative ref", () => {
             url: uniqueXlsxUrl("empty-workbook"),
             fileName: "empty-workbook.xlsx",
           }}
-        />
-      )
-    })
+        />,
+      );
+    });
 
-    await emitWorkbook(await waitForWorker(), [])
+    await emitWorkbook(await waitForWorker(), []);
 
-    expect(await screen.findByRole("grid", { name: "Sheet 1" })).toBeTruthy()
-    expect(screen.getByText("-")).toBeTruthy()
-    expect(screen.queryByRole("tablist")).toBeNull()
-  })
+    expect(await screen.findByRole("grid", { name: "Sheet 1" })).toBeTruthy();
+    expect(screen.getByText("-")).toBeTruthy();
+    expect(screen.queryByRole("tablist")).toBeNull();
+  });
 
   it("does not render controls chrome while a controls-free workbook is pending on the client", async () => {
     await act(async () => {
@@ -505,19 +505,19 @@ describe("XlsxViewer imperative ref", () => {
             fileName: "pending-toolbarless.xlsx",
           }}
           controls={false}
-        />
-      )
-    })
+        />,
+      );
+    });
 
-    await waitForWorker()
+    await waitForWorker();
 
-    expect(screen.getByRole("status").textContent).toBe("Loading grid")
-    expect(screen.queryByLabelText("Zoom in")).toBeNull()
-    expect(screen.queryByLabelText("Download")).toBeNull()
-  })
+    expect(screen.getByRole("status").textContent).toBe("Loading grid");
+    expect(screen.queryByLabelText("Zoom in")).toBeNull();
+    expect(screen.queryByLabelText("Download")).toBeNull();
+  });
 
   it("changes sheets through tabs, updates the grid, and ignores same-tab clicks", async () => {
-    const onSheetChange = vi.fn()
+    const onSheetChange = vi.fn();
 
     await act(async () => {
       render(
@@ -529,9 +529,9 @@ describe("XlsxViewer imperative ref", () => {
           }}
           controls={false}
           onSheetChange={onSheetChange}
-        />
-      )
-    })
+        />,
+      );
+    });
 
     await emitWorkbook(await waitForWorker(), [
       {
@@ -552,24 +552,24 @@ describe("XlsxViewer imperative ref", () => {
         columnCount: 3,
         entries: [{ cellIndex: 0, text: "archive" }],
       },
-    ])
+    ]);
 
-    expect(await screen.findByRole("grid", { name: "Summary" })).toBeTruthy()
+    expect(await screen.findByRole("grid", { name: "Summary" })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("tab", { name: "Detail" }))
-    expect(await screen.findByRole("grid", { name: "Detail" })).toBeTruthy()
-    expect(onSheetChange).toHaveBeenCalledTimes(1)
-    expect(onSheetChange).toHaveBeenLastCalledWith(1)
+    fireEvent.click(screen.getByRole("tab", { name: "Detail" }));
+    expect(await screen.findByRole("grid", { name: "Detail" })).toBeTruthy();
+    expect(onSheetChange).toHaveBeenCalledTimes(1);
+    expect(onSheetChange).toHaveBeenLastCalledWith(1);
     expect(
-      screen.getByRole("tab", { name: "Detail" }).getAttribute("aria-selected")
-    ).toBe("true")
+      screen.getByRole("tab", { name: "Detail" }).getAttribute("aria-selected"),
+    ).toBe("true");
 
-    fireEvent.click(screen.getByRole("tab", { name: "Detail" }))
-    expect(onSheetChange).toHaveBeenCalledTimes(1)
-  })
+    fireEvent.click(screen.getByRole("tab", { name: "Detail" }));
+    expect(onSheetChange).toHaveBeenCalledTimes(1);
+  });
 
   it("clamps an out-of-range default sheet to the last available sheet", async () => {
-    const onSheetChange = vi.fn()
+    const onSheetChange = vi.fn();
 
     await act(async () => {
       render(
@@ -582,9 +582,9 @@ describe("XlsxViewer imperative ref", () => {
           defaultSheetIndex={99}
           controls={false}
           onSheetChange={onSheetChange}
-        />
-      )
-    })
+        />,
+      );
+    });
 
     await emitWorkbook(await waitForWorker(), [
       {
@@ -599,14 +599,14 @@ describe("XlsxViewer imperative ref", () => {
         columnCount: 1,
         entries: [{ cellIndex: 0, text: "last" }],
       },
-    ])
+    ]);
 
-    expect(await screen.findByRole("grid", { name: "Last" })).toBeTruthy()
+    expect(await screen.findByRole("grid", { name: "Last" })).toBeTruthy();
     expect(
-      screen.getByRole("tab", { name: "Last" }).getAttribute("aria-selected")
-    ).toBe("true")
-    expect(onSheetChange).not.toHaveBeenCalled()
-  })
+      screen.getByRole("tab", { name: "Last" }).getAttribute("aria-selected"),
+    ).toBe("true");
+    expect(onSheetChange).not.toHaveBeenCalled();
+  });
 
   it("falls back to the first sheet for invalid default sheet indexes", async () => {
     await act(async () => {
@@ -619,9 +619,9 @@ describe("XlsxViewer imperative ref", () => {
           }}
           defaultSheetIndex={Number.NaN}
           controls={false}
-        />
-      )
-    })
+        />,
+      );
+    });
 
     await emitWorkbook(await waitForWorker(), [
       {
@@ -636,13 +636,13 @@ describe("XlsxViewer imperative ref", () => {
         columnCount: 1,
         entries: [{ cellIndex: 0, text: "second" }],
       },
-    ])
+    ]);
 
-    expect(await screen.findByRole("grid", { name: "First" })).toBeTruthy()
-    expect(screen.queryByRole("grid", { name: /NaN/ })).toBeNull()
+    expect(await screen.findByRole("grid", { name: "First" })).toBeTruthy();
+    expect(screen.queryByRole("grid", { name: /NaN/ })).toBeNull();
 
-    cleanup()
-    FakeXlsxWorker.instances = []
+    cleanup();
+    FakeXlsxWorker.instances = [];
 
     await act(async () => {
       render(
@@ -654,9 +654,9 @@ describe("XlsxViewer imperative ref", () => {
           }}
           defaultSheetIndex={0.5}
           controls={false}
-        />
-      )
-    })
+        />,
+      );
+    });
 
     await emitWorkbook(await waitForWorker(), [
       {
@@ -671,15 +671,15 @@ describe("XlsxViewer imperative ref", () => {
         columnCount: 1,
         entries: [{ cellIndex: 0, text: "second" }],
       },
-    ])
+    ]);
 
     expect(
-      await screen.findByRole("grid", { name: "Fraction First" })
-    ).toBeTruthy()
-    expect(screen.queryByRole("grid", { name: /0\.5/ })).toBeNull()
+      await screen.findByRole("grid", { name: "Fraction First" }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("grid", { name: /0\.5/ })).toBeNull();
 
-    cleanup()
-    FakeXlsxWorker.instances = []
+    cleanup();
+    FakeXlsxWorker.instances = [];
 
     await act(async () => {
       render(
@@ -691,9 +691,9 @@ describe("XlsxViewer imperative ref", () => {
           }}
           defaultSheetIndex={Number.MAX_SAFE_INTEGER + 1}
           controls={false}
-        />
-      )
-    })
+        />,
+      );
+    });
 
     await emitWorkbook(await waitForWorker(), [
       {
@@ -708,16 +708,16 @@ describe("XlsxViewer imperative ref", () => {
         columnCount: 1,
         entries: [{ cellIndex: 0, text: "second" }],
       },
-    ])
+    ]);
 
     expect(
-      await screen.findByRole("grid", { name: "Unsafe First" })
-    ).toBeTruthy()
-  })
+      await screen.findByRole("grid", { name: "Unsafe First" }),
+    ).toBeTruthy();
+  });
 
   it("keeps only the latest pre-load imperative scroll target", async () => {
-    const viewerRef = React.createRef<XlsxViewerHandle>()
-    const onSheetChange = vi.fn()
+    const viewerRef = React.createRef<XlsxViewerHandle>();
+    const onSheetChange = vi.fn();
 
     await act(async () => {
       render(
@@ -730,16 +730,16 @@ describe("XlsxViewer imperative ref", () => {
           }}
           controls={false}
           onSheetChange={onSheetChange}
-        />
-      )
-    })
+        />,
+      );
+    });
 
-    await waitFor(() => expect(viewerRef.current).not.toBeNull())
+    await waitFor(() => expect(viewerRef.current).not.toBeNull());
 
     await act(async () => {
-      viewerRef.current?.scrollToCell(0, 0, 0, { behavior: "auto" })
-      viewerRef.current?.scrollToCell(1, 2, 3)
-    })
+      viewerRef.current?.scrollToCell(0, 0, 0, { behavior: "auto" });
+      viewerRef.current?.scrollToCell(1, 2, 3);
+    });
 
     await emitWorkbook(await waitForWorker(), [
       {
@@ -754,19 +754,21 @@ describe("XlsxViewer imperative ref", () => {
         columnCount: 5,
         entries: [{ cellIndex: 2 * 5 + 3, text: "target" }],
       },
-    ])
+    ]);
 
-    const detailGrid = await screen.findByRole("grid", { name: "Detail" })
+    const detailGrid = await screen.findByRole("grid", { name: "Detail" });
     await waitFor(() =>
-      expect(detailGrid.getAttribute("data-scroll-target")).toBe("1:2:3:smooth")
-    )
-    expect(onSheetChange).toHaveBeenCalledTimes(1)
-    expect(onSheetChange).toHaveBeenLastCalledWith(1)
-  })
+      expect(detailGrid.getAttribute("data-scroll-target")).toBe(
+        "1:2:3:smooth",
+      ),
+    );
+    expect(onSheetChange).toHaveBeenCalledTimes(1);
+    expect(onSheetChange).toHaveBeenLastCalledWith(1);
+  });
 
   it("ignores invalid post-load imperative scroll targets", async () => {
-    const viewerRef = React.createRef<XlsxViewerHandle>()
-    const onSheetChange = vi.fn()
+    const viewerRef = React.createRef<XlsxViewerHandle>();
+    const onSheetChange = vi.fn();
 
     await act(async () => {
       render(
@@ -779,9 +781,9 @@ describe("XlsxViewer imperative ref", () => {
           }}
           controls={false}
           onSheetChange={onSheetChange}
-        />
-      )
-    })
+        />,
+      );
+    });
 
     await emitWorkbook(await waitForWorker(), [
       {
@@ -796,25 +798,25 @@ describe("XlsxViewer imperative ref", () => {
         columnCount: 2,
         entries: [{ cellIndex: 0, text: "detail" }],
       },
-    ])
+    ]);
 
-    const summaryGrid = await screen.findByRole("grid", { name: "Summary" })
+    const summaryGrid = await screen.findByRole("grid", { name: "Summary" });
 
     await act(async () => {
-      viewerRef.current?.scrollToCell(1, 9, 0)
-      viewerRef.current?.scrollToCell(1, 0, -1)
-      viewerRef.current?.scrollToCell(-1, 0, 0)
-    })
+      viewerRef.current?.scrollToCell(1, 9, 0);
+      viewerRef.current?.scrollToCell(1, 0, -1);
+      viewerRef.current?.scrollToCell(-1, 0, 0);
+    });
 
     expect(await screen.findByRole("grid", { name: "Summary" })).toBe(
-      summaryGrid
-    )
-    expect(summaryGrid.getAttribute("data-scroll-target")).toBe("")
-    expect(onSheetChange).not.toHaveBeenCalled()
-  })
+      summaryGrid,
+    );
+    expect(summaryGrid.getAttribute("data-scroll-target")).toBe("");
+    expect(onSheetChange).not.toHaveBeenCalled();
+  });
 
   it("does not let a stale source load replace a newer source", async () => {
-    let rerender!: ReturnType<typeof render>["rerender"]
+    let rerender!: ReturnType<typeof render>["rerender"];
 
     await act(async () => {
       const rendered = render(
@@ -825,12 +827,12 @@ describe("XlsxViewer imperative ref", () => {
             fileName: "stale-a.xlsx",
           }}
           controls={false}
-        />
-      )
-      rerender = rendered.rerender
-    })
+        />,
+      );
+      rerender = rendered.rerender;
+    });
 
-    const firstWorker = await waitForWorker(0)
+    const firstWorker = await waitForWorker(0);
 
     await act(async () => {
       rerender(
@@ -841,11 +843,11 @@ describe("XlsxViewer imperative ref", () => {
             fileName: "stale-b.xlsx",
           }}
           controls={false}
-        />
-      )
-    })
+        />,
+      );
+    });
 
-    const secondWorker = await waitForWorker(1)
+    const secondWorker = await waitForWorker(1);
     await emitWorkbook(secondWorker, [
       {
         name: "Second",
@@ -853,9 +855,9 @@ describe("XlsxViewer imperative ref", () => {
         columnCount: 1,
         entries: [{ cellIndex: 0, text: "second" }],
       },
-    ])
+    ]);
 
-    expect(await screen.findByRole("grid", { name: "Second" })).toBeTruthy()
+    expect(await screen.findByRole("grid", { name: "Second" })).toBeTruthy();
 
     await emitWorkbook(firstWorker, [
       {
@@ -864,14 +866,14 @@ describe("XlsxViewer imperative ref", () => {
         columnCount: 1,
         entries: [{ cellIndex: 0, text: "first" }],
       },
-    ])
+    ]);
 
-    expect(screen.getByRole("grid", { name: "Second" })).toBeTruthy()
-    expect(screen.queryByRole("grid", { name: "First" })).toBeNull()
-  })
+    expect(screen.getByRole("grid", { name: "Second" })).toBeTruthy();
+    expect(screen.queryByRole("grid", { name: "First" })).toBeNull();
+  });
 
   it("renders a spreadsheet parse error from the worker", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.spyOn(console, "error").mockImplementation(() => {});
 
     await act(async () => {
       render(
@@ -881,27 +883,27 @@ describe("XlsxViewer imperative ref", () => {
             url: uniqueXlsxUrl("worker-error"),
             fileName: "worker-error.xlsx",
           }}
-        />
-      )
-    })
+        />,
+      );
+    });
 
-    const worker = await waitForWorker()
+    const worker = await waitForWorker();
     await act(async () => {
       worker.onmessage?.({
         data: { type: "error", message: "bad workbook" },
-      } as MessageEvent)
-      await new Promise((resolve) => setTimeout(resolve, 0))
-    })
+      } as MessageEvent);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
-    const alert = await screen.findByRole("alert")
-    expect(alert.textContent).toContain("Couldn't parse this spreadsheet.")
-    expect(alert.getAttribute("data-error-domain")).toBe("format")
-    expect(alert.getAttribute("data-error-kind")).toBe("parse_failed")
-    expect(worker.terminate).toHaveBeenCalledTimes(1)
-  })
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Couldn't parse this spreadsheet.");
+    expect(alert.getAttribute("data-error-domain")).toBe("format");
+    expect(alert.getAttribute("data-error-kind")).toBe("parse_failed");
+    expect(worker.terminate).toHaveBeenCalledTimes(1);
+  });
 
   it("renders a spreadsheet parse error for malformed worker messages", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.spyOn(console, "error").mockImplementation(() => {});
 
     await act(async () => {
       render(
@@ -911,25 +913,25 @@ describe("XlsxViewer imperative ref", () => {
             url: uniqueXlsxUrl("worker-malformed"),
             fileName: "worker-malformed.xlsx",
           }}
-        />
-      )
-    })
+        />,
+      );
+    });
 
-    const worker = await waitForWorker()
+    const worker = await waitForWorker();
     await act(async () => {
-      worker.onmessage?.({ data: null } as MessageEvent)
-      await new Promise((resolve) => setTimeout(resolve, 0))
-    })
+      worker.onmessage?.({ data: null } as MessageEvent);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
-    const alert = await screen.findByRole("alert")
-    expect(alert.textContent).toContain("Couldn't parse this spreadsheet.")
-    expect(alert.getAttribute("data-error-domain")).toBe("format")
-    expect(alert.getAttribute("data-error-kind")).toBe("parse_failed")
-    expect(worker.terminate).toHaveBeenCalledTimes(1)
-  })
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Couldn't parse this spreadsheet.");
+    expect(alert.getAttribute("data-error-domain")).toBe("format");
+    expect(alert.getAttribute("data-error-kind")).toBe("parse_failed");
+    expect(worker.terminate).toHaveBeenCalledTimes(1);
+  });
 
   it("renders a spreadsheet worker error when the worker crashes", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.spyOn(console, "error").mockImplementation(() => {});
 
     await act(async () => {
       render(
@@ -939,20 +941,20 @@ describe("XlsxViewer imperative ref", () => {
             url: uniqueXlsxUrl("worker-crash"),
             fileName: "worker-crash.xlsx",
           }}
-        />
-      )
-    })
+        />,
+      );
+    });
 
-    const worker = await waitForWorker()
+    const worker = await waitForWorker();
     await act(async () => {
-      worker.onerror?.({ message: "worker exploded" } as ErrorEvent)
-      await new Promise((resolve) => setTimeout(resolve, 0))
-    })
+      worker.onerror?.({ message: "worker exploded" } as ErrorEvent);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
-    const alert = await screen.findByRole("alert")
-    expect(alert.textContent).toContain("Couldn't parse this spreadsheet.")
-    expect(alert.getAttribute("data-error-domain")).toBe("format")
-    expect(alert.getAttribute("data-error-kind")).toBe("worker_failed")
-    expect(worker.terminate).toHaveBeenCalledTimes(1)
-  })
-})
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Couldn't parse this spreadsheet.");
+    expect(alert.getAttribute("data-error-domain")).toBe("format");
+    expect(alert.getAttribute("data-error-kind")).toBe("worker_failed");
+    expect(worker.terminate).toHaveBeenCalledTimes(1);
+  });
+});

@@ -1,21 +1,21 @@
-"use client"
+"use client";
 
-import { X } from "lucide-react"
+import { X } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 
 export interface SchemaChipItem {
-  id: string
-  inputLabel: string
-  removeLabel: string
-  value: string
+  id: string;
+  inputLabel: string;
+  removeLabel: string;
+  value: string;
 }
 
 export interface SchemaChipListProps {
-  editable: boolean
-  items: SchemaChipItem[]
-  onRemove: (id: string) => void
-  onReplace: (id: string, value: string) => void
+  editable: boolean;
+  items: SchemaChipItem[];
+  onRemove: (id: string) => void;
+  onReplace: (id: string, value: string) => void;
 }
 
 export function SchemaChipList({
@@ -33,7 +33,7 @@ export function SchemaChipList({
               <div
                 key={item.id}
                 data-slot="schema-chip"
-                className="flex items-center gap-1 rounded-md border border-border bg-muted px-1 shadow-none"
+                className="border-border bg-muted flex items-center gap-1 rounded-md border px-1 shadow-none"
               >
                 <input
                   aria-label={item.inputLabel}
@@ -41,14 +41,14 @@ export function SchemaChipList({
                   disabled={!editable}
                   value={item.value}
                   onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                    onReplace(item.id, event.target.value)
+                    onReplace(item.id, event.target.value);
                   }}
                   onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
                     if (event.key === "Enter") {
-                      event.stopPropagation()
+                      event.stopPropagation();
                     }
                   }}
-                  className="h-6 w-24 min-w-0 rounded-[inherit] border-0 bg-transparent px-1 text-sm leading-6 outline-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-64"
+                  className="h-6 w-24 min-w-0 rounded-[inherit] border-0 bg-transparent px-1 text-sm leading-6 shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-64"
                 />
                 <Button
                   type="button"
@@ -62,10 +62,10 @@ export function SchemaChipList({
                   <X className="h-3 w-3" />
                 </Button>
               </div>
-            )
+            );
           })}
         </div>
       ) : null}
     </div>
-  )
+  );
 }

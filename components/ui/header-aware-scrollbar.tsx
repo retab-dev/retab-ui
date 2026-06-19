@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/ui/header-aware-scrollbar"
+export * from "@/registry/new-york-v4/ui/header-aware-scrollbar";

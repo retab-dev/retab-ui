@@ -1,25 +1,25 @@
-import { preparePresortedFileTreeInput } from "@pierre/trees"
-import { describe, expect, it } from "vitest"
+import { preparePresortedFileTreeInput } from "@pierre/trees";
+import { describe, expect, it } from "vitest";
 
 import type {
   FileSystemListContinuityIdentity,
   FileSystemListExpansionSnapshot,
-} from "@/registry/new-york-v4/ui/file-system-list-continuity"
+} from "@/registry/new-york-v4/ui/file-system-list-continuity";
 import {
   classifyFileSystemListContinuityTransition,
   createFileSystemListContinuityPlan,
   createFileSystemListContinuityState,
   reduceFileSystemListContinuity,
-} from "@/registry/new-york-v4/ui/file-system-list-continuity"
-import type { FileSystemPierreInput } from "@/registry/new-york-v4/ui/file-system-pierre-input"
+} from "@/registry/new-york-v4/ui/file-system-list-continuity";
+import type { FileSystemPierreInput } from "@/registry/new-york-v4/ui/file-system-pierre-input";
 import {
   createFileSystemPierreLazyFolderCommand,
   createFileSystemPierreLazyRetryCommand,
-} from "@/registry/new-york-v4/ui/file-system-pierre-lazy-retry"
-import type { FileSystemEntry } from "@/registry/new-york-v4/ui/file-system-types"
+} from "@/registry/new-york-v4/ui/file-system-pierre-lazy-retry";
+import type { FileSystemEntry } from "@/registry/new-york-v4/ui/file-system-types";
 
 type FileSystemListIdentity =
-  FileSystemListContinuityIdentity<FileSystemPierreInput>
+  FileSystemListContinuityIdentity<FileSystemPierreInput>;
 
 function input(pierrePaths: string[]): FileSystemPierreInput {
   return {
@@ -30,11 +30,11 @@ function input(pierrePaths: string[]): FileSystemPierreInput {
           kind: path.endsWith("/") ? "folder" : "file",
           path,
         } as FileSystemEntry,
-      ])
+      ]),
     ),
     pierrePaths,
     preparedInput: preparePresortedFileTreeInput(pierrePaths),
-  }
+  };
 }
 
 function identity({
@@ -43,12 +43,12 @@ function identity({
   hasSemanticQuery = false,
   pierrePaths = ["reports/", "reports/report.pdf"],
 }: {
-  currentPath?: string
-  decorationVersion?: string
-  hasSemanticQuery?: boolean
-  pierrePaths?: string[]
+  currentPath?: string;
+  decorationVersion?: string;
+  hasSemanticQuery?: boolean;
+  pierrePaths?: string[];
 } = {}): FileSystemListIdentity {
-  const runtimeInput = input(pierrePaths)
+  const runtimeInput = input(pierrePaths);
 
   return {
     currentPath,
@@ -58,82 +58,82 @@ function identity({
       itemPaths: runtimeInput.pierrePaths,
       runtimeInput,
     },
-  }
+  };
 }
 
 function snapshots(entries: Array<[string, FileSystemListExpansionSnapshot]>) {
-  return new Map(entries)
+  return new Map(entries);
 }
 
 describe("file-system Pierre lifecycle", () => {
   it("classifies unchanged identity as same", () => {
-    const previous = identity()
+    const previous = identity();
 
     expect(
-      classifyFileSystemListContinuityTransition(previous, previous)
-    ).toMatchObject({ kind: "same" })
-  })
+      classifyFileSystemListContinuityTransition(previous, previous),
+    ).toMatchObject({ kind: "same" });
+  });
 
   it("classifies path, query, decoration, and input transitions by semantic priority", () => {
-    const previous = identity()
-    const nextInput = identity({ pierrePaths: ["archive/", "archive/a.pdf"] })
+    const previous = identity();
+    const nextInput = identity({ pierrePaths: ["archive/", "archive/a.pdf"] });
 
     expect(
       classifyFileSystemListContinuityTransition(
         previous,
-        identity({ currentPath: "archive/" })
-      ).kind
-    ).toBe("path")
+        identity({ currentPath: "archive/" }),
+      ).kind,
+    ).toBe("path");
     expect(
       classifyFileSystemListContinuityTransition(
         previous,
-        identity({ hasSemanticQuery: true })
-      ).kind
-    ).toBe("query-enter")
+        identity({ hasSemanticQuery: true }),
+      ).kind,
+    ).toBe("query-enter");
     expect(
       classifyFileSystemListContinuityTransition(
         identity({ hasSemanticQuery: true }),
-        identity({ hasSemanticQuery: true, pierrePaths: ["reports/"] })
-      ).kind
-    ).toBe("query-update")
+        identity({ hasSemanticQuery: true, pierrePaths: ["reports/"] }),
+      ).kind,
+    ).toBe("query-update");
     expect(
       classifyFileSystemListContinuityTransition(
         identity({ hasSemanticQuery: true }),
-        identity({ hasSemanticQuery: false })
-      ).kind
-    ).toBe("query-exit")
+        identity({ hasSemanticQuery: false }),
+      ).kind,
+    ).toBe("query-exit");
     expect(
       classifyFileSystemListContinuityTransition(
         previous,
-        identity({ decorationVersion: "loading" })
-      ).kind
-    ).toBe("decoration")
+        identity({ decorationVersion: "loading" }),
+      ).kind,
+    ).toBe("decoration");
     expect(
-      classifyFileSystemListContinuityTransition(previous, nextInput).kind
-    ).toBe("input")
-  })
+      classifyFileSystemListContinuityTransition(previous, nextInput).kind,
+    ).toBe("input");
+  });
 
   it("creates no continuity plan for an unchanged lifecycle", () => {
-    const previous = identity()
+    const previous = identity();
     const transition = classifyFileSystemListContinuityTransition(
       previous,
-      previous
-    )
+      previous,
+    );
 
     expect(
       createFileSystemListContinuityPlan({
         pendingRevealPath: null,
         snapshotsByCurrentPath: snapshots([]),
         transition,
-      })
-    ).toEqual({ kind: "none" })
-  })
+      }),
+    ).toEqual({ kind: "none" });
+  });
 
   it("restores compatible normal expansion for path, input, query-exit, and decoration transitions", () => {
     const currentSnapshot: FileSystemListExpansionSnapshot = {
       expandedItemPaths: new Set(["reports/", "removed/"]),
       mode: "normal",
-    }
+    };
     const cases = [
       {
         next: identity({ currentPath: "archive/" }),
@@ -155,24 +155,24 @@ describe("file-system Pierre lifecycle", () => {
         previous: identity({ hasSemanticQuery: true }),
         snapshotKey: "",
       },
-    ]
+    ];
 
     for (const { next, previous, snapshotKey } of cases) {
       const transition = classifyFileSystemListContinuityTransition(
         previous,
-        next
-      )
+        next,
+      );
       const plan = createFileSystemListContinuityPlan({
         pendingRevealPath: null,
         snapshotsByCurrentPath: snapshots([[snapshotKey, currentSnapshot]]),
         transition,
-      })
+      });
 
       if (plan.kind === "apply") {
-        expect(plan.expandedPaths).toEqual(["reports/"])
+        expect(plan.expandedPaths).toEqual(["reports/"]);
       }
     }
-  })
+  });
 
   it("opens all directories while semantic query is active without needing a normal snapshot", () => {
     const transition = classifyFileSystemListContinuityTransition(
@@ -180,46 +180,46 @@ describe("file-system Pierre lifecycle", () => {
       identity({
         hasSemanticQuery: true,
         pierrePaths: ["reports/", "reports/report.pdf", "archive/"],
-      })
-    )
+      }),
+    );
 
     expect(
       createFileSystemListContinuityPlan({
         pendingRevealPath: null,
         snapshotsByCurrentPath: snapshots([]),
         transition,
-      })
+      }),
     ).toMatchObject({
       expandedPaths: ["reports/", "archive/"],
       kind: "apply",
-    })
-  })
+    });
+  });
 
   it("reduces the continuity phase graph directly", () => {
-    const previous = identity()
-    const next = identity({ pierrePaths: ["reports/", "reports/next.pdf"] })
+    const previous = identity();
+    const next = identity({ pierrePaths: ["reports/", "reports/next.pdf"] });
     const initial = {
       ...createFileSystemListContinuityState<FileSystemPierreInput>(),
       identity: previous,
       pendingRevealPath: "reports/next.pdf",
-    }
+    };
     const capturing = reduceFileSystemListContinuity(initial, {
       identity: next,
       type: "identity.requested",
-    })
+    });
 
-    expect(capturing.state.phase).toBe("capturing")
+    expect(capturing.state.phase).toBe("capturing");
     expect(capturing.commands).toEqual([
       { identity: previous, type: "snapshot.capture" },
-    ])
+    ]);
 
     const applying = reduceFileSystemListContinuity(capturing.state, {
       expandedPaths: ["reports/"],
       identity: previous,
       type: "snapshot.captured",
-    })
+    });
 
-    expect(applying.state.phase).toBe("applying")
+    expect(applying.state.phase).toBe("applying");
     expect(applying.commands).toEqual([
       {
         expandedPaths: ["reports/"],
@@ -228,60 +228,60 @@ describe("file-system Pierre lifecycle", () => {
         revealPath: "reports/next.pdf",
         type: "model.apply",
       },
-    ])
+    ]);
 
     const revealing = reduceFileSystemListContinuity(applying.state, {
       expandedPaths: ["reports/"],
       identity: next,
       type: "model.applied",
-    })
+    });
 
-    expect(revealing.state.phase).toBe("revealing")
+    expect(revealing.state.phase).toBe("revealing");
     expect(revealing.commands).toEqual([
       { path: "reports/next.pdf", type: "selection.reveal" },
-    ])
+    ]);
 
     const stable = reduceFileSystemListContinuity(revealing.state, {
       type: "selection.revealed",
-    })
+    });
 
-    expect(stable.state.phase).toBe("stable")
-    expect(stable.state.pendingRevealPath).toBeNull()
-  })
+    expect(stable.state.phase).toBe("stable");
+    expect(stable.state.pendingRevealPath).toBeNull();
+  });
 
   it("creates lazy retry commands only for failed folder selections", () => {
     const folderSelection = {
       entry: { kind: "folder", path: "lazy/" } as FileSystemEntry,
       pierrePath: "lazy/",
-    }
+    };
     const fileSelection = {
       entry: { kind: "file", path: "lazy/file.pdf" } as FileSystemEntry,
       pierrePath: "lazy/file.pdf",
-    }
+    };
 
     expect(
       createFileSystemPierreLazyRetryCommand({
         folderErrors: new Map([["lazy/", "failed"]]),
         selection: folderSelection,
-      })
+      }),
     ).toEqual({
       entryPath: "lazy/",
       kind: "retry-and-expand",
       pierrePath: "lazy/",
-    })
+    });
     expect(
       createFileSystemPierreLazyRetryCommand({
         folderErrors: new Map(),
         selection: folderSelection,
-      })
-    ).toBeNull()
+      }),
+    ).toBeNull();
     expect(
       createFileSystemPierreLazyRetryCommand({
         folderErrors: new Map([["lazy/", "failed"]]),
         selection: fileSelection,
-      })
-    ).toBeNull()
-  })
+      }),
+    ).toBeNull();
+  });
 
   it("creates normal lazy load commands for folders without errors", () => {
     expect(
@@ -291,7 +291,7 @@ describe("file-system Pierre lifecycle", () => {
           entry: { kind: "folder", path: "lazy/" } as FileSystemEntry,
           pierrePath: "lazy/",
         },
-      })
-    ).toEqual({ entryPath: "lazy/", kind: "load" })
-  })
-})
+      }),
+    ).toEqual({ entryPath: "lazy/", kind: "load" });
+  });
+});

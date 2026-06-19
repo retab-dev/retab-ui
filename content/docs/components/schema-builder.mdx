@@ -19,19 +19,19 @@ Give the component your schema state and handle every edit through
 `onValueChange`:
 
 ```tsx
-import { useState } from "react"
+import { useState } from "react";
 import {
   SchemaBuilder,
   type ExtendedJSONSchema7,
-} from "@/components/ui/schema-builder"
+} from "@/components/ui/schema-builder";
 
 export function Example() {
   const [schema, setSchema] = useState<ExtendedJSONSchema7>({
     type: "object",
     properties: {},
     required: [],
-  })
-  return <SchemaBuilder value={schema} onValueChange={setSchema} />
+  });
+  return <SchemaBuilder value={schema} onValueChange={setSchema} />;
 }
 ```
 
@@ -55,15 +55,16 @@ reference one `address` definition.
 <ComponentPreview name="schema-builder-definitions" />
 
 ## API Reference
-| Prop | Type | Description |
-| --- | --- | --- |
-| `value` | `ExtendedJSONSchema7` | The schema state. |
-| `onValueChange` | `(schema: ExtendedJSONSchema7) => void` | Called with the next schema whenever the user edits it. |
-| `className` | `string` | Optional wrapper class name. |
-| `readOnly` | `boolean` | Renders the current schema without allowing edits. |
-| `view` | `"fields" \| "json"` | Controls the active view when JSON mode is enabled. |
-| `onViewChange` | `(view: "fields" \| "json") => void` | Called when the user switches between fields and JSON mode. |
-| `features` | `SchemaBuilderFeatures` | Enables optional surfaces: `definitions`, `objectTemplates`, `jsonMode`, and `importExport`. |
+
+| Prop            | Type                                    | Description                                                                                  |
+| --------------- | --------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `value`         | `ExtendedJSONSchema7`                   | The schema state.                                                                            |
+| `onValueChange` | `(schema: ExtendedJSONSchema7) => void` | Called with the next schema whenever the user edits it.                                      |
+| `className`     | `string`                                | Optional wrapper class name.                                                                 |
+| `readOnly`      | `boolean`                               | Renders the current schema without allowing edits.                                           |
+| `view`          | `"fields" \| "json"`                    | Controls the active view when JSON mode is enabled.                                          |
+| `onViewChange`  | `(view: "fields" \| "json") => void`    | Called when the user switches between fields and JSON mode.                                  |
+| `features`      | `SchemaBuilderFeatures`                 | Enables optional surfaces: `definitions`, `objectTemplates`, `jsonMode`, and `importExport`. |
 
 Optional feature defaults are intentionally small: `definitions` is enabled,
 while `objectTemplates`, `jsonMode`, and `importExport` are disabled unless you
@@ -90,16 +91,16 @@ through `propertyDraft`, parent-local schema context through `schemaContext`, an
 persist changes in `onCommitPropertyDraft`.
 
 ```tsx
-import { useState } from "react"
+import { useState } from "react";
 
-import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { PropertyForm } from "@/components/schema-editor/property-form/property-form"
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
+import { PropertyForm } from "@/components/schema-editor/property-form/property-form";
 
 export function Example() {
   const [property, setProperty] = useState<ExtendedJSONSchema7>({
     type: "string",
-  })
-  const [name, setName] = useState("currency")
+  });
+  const [name, setName] = useState("currency");
   return (
     <PropertyForm
       propertyDraft={{ name, schemaNode: property }}
@@ -110,13 +111,13 @@ export function Example() {
       }}
       submitLabel="Save"
       onCommitPropertyDraft={(next) => {
-        setName(next.name)
-        setProperty(next.schemaNode)
+        setName(next.name);
+        setProperty(next.schemaNode);
       }}
       onCancel={() => {}}
       onDelete={() => {}}
     />
-  )
+  );
 }
 ```
 

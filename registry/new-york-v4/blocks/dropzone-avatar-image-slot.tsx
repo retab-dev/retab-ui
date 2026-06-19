@@ -1,22 +1,22 @@
-"use client"
+"use client";
 
-import { ImagePlus } from "lucide-react"
+import { ImagePlus } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { useDropzone } from "@/components/ui/dropzone"
-import { FileThumbnail } from "@/components/ui/file-thumbnail"
+import { cn } from "@/lib/utils";
+import { useDropzone } from "@/components/ui/dropzone";
+import { FileThumbnail } from "@/components/ui/file-thumbnail";
 
 import {
   RejectionRows,
   type DropzoneExampleProps,
-} from "./dropzone-example-shared"
+} from "./dropzone-example-shared";
 
 export function AvatarImageSlot({ className }: DropzoneExampleProps) {
   const dropzone = useDropzone({
     accept: "image/*,.png,.jpg,.jpeg,.webp",
     maxFiles: 1,
-  })
-  const selectedFile = dropzone.files[0]
+  });
+  const selectedFile = dropzone.files[0];
 
   return (
     <section
@@ -24,7 +24,7 @@ export function AvatarImageSlot({ className }: DropzoneExampleProps) {
         className: cn(
           "rounded-lg border bg-muted/20 p-4 transition-colors",
           dropzone.isDragging && "border-foreground/40 bg-accent/35",
-          className
+          className,
         ),
       })}
     >
@@ -32,16 +32,16 @@ export function AvatarImageSlot({ className }: DropzoneExampleProps) {
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-sm font-medium">
-            <ImagePlus className="size-4 text-muted-foreground" aria-hidden />
+            <ImagePlus className="text-muted-foreground size-4" aria-hidden />
             Avatar image slot
           </div>
-          <div className="mt-1 text-xs text-muted-foreground">
+          <div className="text-muted-foreground mt-1 text-xs">
             One image, replaceable by design.
           </div>
         </div>
         {selectedFile ? (
           <button
-            className="h-8 rounded-md border bg-background px-3 text-xs font-medium hover:bg-muted"
+            className="bg-background hover:bg-muted h-8 rounded-md border px-3 text-xs font-medium"
             onClick={dropzone.clearFiles}
             type="button"
           >
@@ -65,15 +65,15 @@ export function AvatarImageSlot({ className }: DropzoneExampleProps) {
             <div className="mt-3 line-clamp-1 max-w-48 text-sm font-medium">
               {selectedFile.file.name}
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-muted-foreground text-xs">
               Click or drop to replace.
             </div>
           </div>
         ) : (
           <div>
-            <ImagePlus className="mx-auto size-8 text-muted-foreground" />
+            <ImagePlus className="text-muted-foreground mx-auto size-8" />
             <div className="mt-3 text-sm font-medium">Drop profile image</div>
-            <div className="mt-1 text-xs text-muted-foreground">
+            <div className="text-muted-foreground mt-1 text-xs">
               PNG, JPG, or WebP.
             </div>
           </div>
@@ -81,5 +81,5 @@ export function AvatarImageSlot({ className }: DropzoneExampleProps) {
       </div>
       <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </section>
-  )
+  );
 }

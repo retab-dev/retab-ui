@@ -1,39 +1,39 @@
-"use client"
+"use client";
 
 import {
   BooleanControl,
   NullableBooleanControl,
-} from "@/components/json-form/scalar/boolean-control"
+} from "@/components/json-form/scalar/boolean-control";
 import {
   datetimeLocalInputValue,
   DateTimeScalarControl,
-} from "@/components/json-form/scalar/date-time-control"
+} from "@/components/json-form/scalar/date-time-control";
 import {
   EnumControl,
   enumLabel,
   enumValueEquals,
-} from "@/components/json-form/scalar/enum-control"
+} from "@/components/json-form/scalar/enum-control";
 import {
   dataCellNumberValue,
   NumberControl,
-} from "@/components/json-form/scalar/number-control"
+} from "@/components/json-form/scalar/number-control";
 import {
   dataCellTextValue,
   TextControl,
-} from "@/components/json-form/scalar/text-control"
+} from "@/components/json-form/scalar/text-control";
 import type {
   ControlFieldApi,
   DateTimeControlKind,
   JsonFormTextInput,
   ScalarControlDomProps,
-} from "@/components/json-form/scalar/types"
-import type { FieldKind, Schema } from "@/components/json-form/schema-model"
+} from "@/components/json-form/scalar/types";
+import type { FieldKind, Schema } from "@/components/json-form/schema-model";
 
 export type {
   ControlFieldApi,
   JsonFormTextInput,
   ScalarControlDomProps,
-} from "@/components/json-form/scalar/types"
+} from "@/components/json-form/scalar/types";
 export {
   BooleanControl,
   dataCellNumberValue,
@@ -42,7 +42,7 @@ export {
   enumLabel,
   enumValueEquals,
   NullableBooleanControl,
-}
+};
 
 export function ScalarControl({
   kind,
@@ -53,13 +53,13 @@ export function ScalarControl({
   nullable = false,
   ...controlProps
 }: {
-  kind: FieldKind
-  schema: Schema
-  field: ControlFieldApi
-  textInput?: JsonFormTextInput
+  kind: FieldKind;
+  schema: Schema;
+  field: ControlFieldApi;
+  textInput?: JsonFormTextInput;
   /** Dense, single-line variant for table cells. */
-  compact?: boolean
-  nullable?: boolean
+  compact?: boolean;
+  nullable?: boolean;
 } & ScalarControlDomProps) {
   if (kind === "enum") {
     return (
@@ -70,7 +70,7 @@ export function ScalarControl({
         compact={compact}
         nullable={nullable}
       />
-    )
+    );
   }
 
   if (kind === "number" || kind === "integer") {
@@ -82,7 +82,7 @@ export function ScalarControl({
         compact={compact}
         nullable={nullable}
       />
-    )
+    );
   }
 
   if (
@@ -98,7 +98,7 @@ export function ScalarControl({
         compact={compact}
         nullable={nullable}
       />
-    )
+    );
   }
 
   return (
@@ -110,5 +110,5 @@ export function ScalarControl({
       compact={compact}
       nullable={nullable}
     />
-  )
+  );
 }

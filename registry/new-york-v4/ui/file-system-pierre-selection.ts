@@ -1,62 +1,62 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import type { FileTree as PierreFileTreeModel } from "@pierre/trees"
+import * as React from "react";
+import type { FileTree as PierreFileTreeModel } from "@pierre/trees";
 
-import type { FileSystemPierreSelectionController } from "./file-system-pierre-adapter"
+import type { FileSystemPierreSelectionController } from "./file-system-pierre-adapter";
 import {
   pierrePathToFileSystemEntry,
   type FileSystemPierreInput,
   type PierrePath,
-} from "./file-system-pierre-input"
-import type { FileSystemEntry } from "./file-system-types"
+} from "./file-system-pierre-input";
+import type { FileSystemEntry } from "./file-system-types";
 
 const useIsoLayoutEffect =
-  typeof window === "undefined" ? React.useEffect : React.useLayoutEffect
+  typeof window === "undefined" ? React.useEffect : React.useLayoutEffect;
 
 export type FileSystemPierreSelectionState = {
-  input: FileSystemPierreInput
-  selection: FileSystemPierreSelectionController
-}
+  input: FileSystemPierreInput;
+  selection: FileSystemPierreSelectionController;
+};
 
 export type FileSystemPierreSelectedEntry = {
-  entry: FileSystemEntry
-  pierrePath: PierrePath
-}
+  entry: FileSystemEntry;
+  pierrePath: PierrePath;
+};
 
 export function useLatestFileSystemPierreSelectionState(
-  state: FileSystemPierreSelectionState
+  state: FileSystemPierreSelectionState,
 ) {
-  const stateRef = React.useRef(state)
+  const stateRef = React.useRef(state);
 
   useIsoLayoutEffect(() => {
-    stateRef.current = state
-  })
+    stateRef.current = state;
+  });
 
-  return React.useCallback(() => stateRef.current, [])
+  return React.useCallback(() => stateRef.current, []);
 }
 
 export function useFileSystemPierreSelectionHandler(
-  getLatestState: () => FileSystemPierreSelectionState
+  getLatestState: () => FileSystemPierreSelectionState,
 ) {
   return React.useCallback(
     ([pierrePath]: readonly string[]): FileSystemPierreSelectedEntry | null => {
-      const { input, selection } = getLatestState()
-      const entry = pierrePathToFileSystemEntry(pierrePath, input)
+      const { input, selection } = getLatestState();
+      const entry = pierrePathToFileSystemEntry(pierrePath, input);
 
       if (!entry || !pierrePath) {
-        return null
+        return null;
       }
 
-      selection.selectEntry(entry)
+      selection.selectEntry(entry);
 
       return {
         entry,
         pierrePath: selectedPathToPierrePath(entry.path, input) ?? pierrePath,
-      }
+      };
     },
-    [getLatestState]
-  )
+    [getLatestState],
+  );
 }
 
 export function useSyncFileSystemPierreSelection({
@@ -64,27 +64,27 @@ export function useSyncFileSystemPierreSelection({
   model,
   selection,
 }: FileSystemPierreSelectionState & {
-  model: PierreFileTreeModel
+  model: PierreFileTreeModel;
 }) {
   useIsoLayoutEffect(() => {
     const selectedPierrePath = selectedPathToPierrePath(
       selection.selectedPath,
-      input
-    )
+      input,
+    );
 
     if (!selectedPierrePath) {
-      return
+      return;
     }
 
-    const item = model.getItem(selectedPierrePath)
+    const item = model.getItem(selectedPierrePath);
 
     if (!item || item.isSelected()) {
-      return
+      return;
     }
 
-    item.select()
-    model.scrollToPath(selectedPierrePath)
-  }, [input, model, selection.selectedPath])
+    item.select();
+    model.scrollToPath(selectedPierrePath);
+  }, [input, model, selection.selectedPath]);
 }
 
 export function scrollCurrentFileSystemEntryIntoView({
@@ -92,33 +92,33 @@ export function scrollCurrentFileSystemEntryIntoView({
   model,
   selectedPath,
 }: {
-  input: FileSystemPierreInput
-  model: PierreFileTreeModel
-  selectedPath: string | null
+  input: FileSystemPierreInput;
+  model: PierreFileTreeModel;
+  selectedPath: string | null;
 }) {
-  const selectedPierrePath = selectedPathToPierrePath(selectedPath, input)
+  const selectedPierrePath = selectedPathToPierrePath(selectedPath, input);
 
   if (!selectedPierrePath) {
-    return
+    return;
   }
 
-  model.getItem(selectedPierrePath)?.select()
-  model.scrollToPath(selectedPierrePath)
+  model.getItem(selectedPierrePath)?.select();
+  model.scrollToPath(selectedPierrePath);
 }
 
 export function selectedPathToPierrePath(
   selectedPath: string | null,
-  input: FileSystemPierreInput
+  input: FileSystemPierreInput,
 ): PierrePath | null {
   if (!selectedPath) {
-    return null
+    return null;
   }
 
   for (const [pierrePath, entry] of input.entriesByPierrePath.entries()) {
     if (entry.path === selectedPath) {
-      return pierrePath
+      return pierrePath;
     }
   }
 
-  return null
+  return null;
 }

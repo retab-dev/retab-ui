@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 export {
   Form,
@@ -9,4 +9,4 @@ export {
   FormLabel,
   FormMessage,
   useFormField,
-} from "@/registry/new-york-v4/ui/form"
+} from "@/registry/new-york-v4/ui/form";

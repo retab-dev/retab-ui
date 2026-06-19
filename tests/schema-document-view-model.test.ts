@@ -1,11 +1,11 @@
-import type { JSONSchema7 } from "json-schema"
-import { describe, expect, it } from "vitest"
+import type { JSONSchema7 } from "json-schema";
+import { describe, expect, it } from "vitest";
 
-import { fromJsonSchema } from "@/components/schema-editor/document/convert"
+import { fromJsonSchema } from "@/components/schema-editor/document/convert";
 import {
   getDocumentNodeView,
   getSchemaDocumentView,
-} from "@/components/schema-editor/document/view-model"
+} from "@/components/schema-editor/document/view-model";
 
 describe("schema document view model", () => {
   it("projects object properties with stable property ids", () => {
@@ -16,19 +16,19 @@ describe("schema document view model", () => {
         total: { type: "number" },
       },
       required: ["invoice_number"],
-    })
+    });
 
-    const view = getDocumentNodeView(doc, doc.root)
+    const view = getDocumentNodeView(doc, doc.root);
 
-    expect(view.type).toBe("object")
+    expect(view.type).toBe("object");
     expect(view.properties.map((property) => property.propertyName)).toEqual([
       "invoice_number",
       "total",
-    ])
-    expect(view.properties[0].propertyId).toMatch(/^prop-/)
-    expect(view.properties[0].isRequired).toBe(true)
-    expect(view.properties[1].isRequired).toBe(false)
-  })
+    ]);
+    expect(view.properties[0].propertyId).toMatch(/^prop-/);
+    expect(view.properties[0].isRequired).toBe(true);
+    expect(view.properties[1].isRequired).toBe(false);
+  });
 
   it("imports the same schema with deterministic property ids", () => {
     const schema = {
@@ -37,17 +37,17 @@ describe("schema document view model", () => {
         invoice_number: { type: "string" },
         total: { type: "number" },
       },
-    } satisfies JSONSchema7
+    } satisfies JSONSchema7;
 
-    const firstDoc = fromJsonSchema(schema)
-    const first = getDocumentNodeView(firstDoc, firstDoc.root)
-    const secondDoc = fromJsonSchema(schema)
-    const second = getDocumentNodeView(secondDoc, secondDoc.root)
+    const firstDoc = fromJsonSchema(schema);
+    const first = getDocumentNodeView(firstDoc, firstDoc.root);
+    const secondDoc = fromJsonSchema(schema);
+    const second = getDocumentNodeView(secondDoc, secondDoc.root);
 
     expect(first.properties.map((property) => property.propertyId)).toEqual(
-      second.properties.map((property) => property.propertyId)
-    )
-  })
+      second.properties.map((property) => property.propertyId),
+    );
+  });
 
   it("derives arrays, enum entries, nullable state, and formatted strings", () => {
     const doc = fromJsonSchema({
@@ -57,29 +57,29 @@ describe("schema document view model", () => {
         tags: { type: "array", items: { type: "string", enum: ["a", "b"] } },
         note: { type: ["string", "null"] },
       },
-    })
+    });
 
-    const view = getDocumentNodeView(doc, doc.root)
+    const view = getDocumentNodeView(doc, doc.root);
     const issuedAt = view.properties.find(
-      (property) => property.propertyName === "issued_at"
-    )!.nodeView
+      (property) => property.propertyName === "issued_at",
+    )!.nodeView;
     const tags = view.properties.find(
-      (property) => property.propertyName === "tags"
-    )!.nodeView
+      (property) => property.propertyName === "tags",
+    )!.nodeView;
     const note = view.properties.find(
-      (property) => property.propertyName === "note"
-    )!.nodeView
+      (property) => property.propertyName === "note",
+    )!.nodeView;
 
-    expect(issuedAt.type).toBe("datetime")
-    expect(tags.type).toBe("array")
-    expect(tags.items?.type).toBe("enum")
+    expect(issuedAt.type).toBe("datetime");
+    expect(tags.type).toBe("array");
+    expect(tags.items?.type).toBe("enum");
     expect(tags.items?.enumEntries.map((entry) => entry.value)).toEqual([
       "a",
       "b",
-    ])
-    expect(note.type).toBe("string")
-    expect(note.isNullable).toBe(true)
-  })
+    ]);
+    expect(note.type).toBe("string");
+    expect(note.isNullable).toBe(true);
+  });
 
   it("resolves ref display names from definition identity", () => {
     const doc = fromJsonSchema({
@@ -93,16 +93,16 @@ describe("schema document view model", () => {
       properties: {
         billing_address: { $ref: "#/$defs/Address" },
       },
-    })
+    });
 
-    const view = getSchemaDocumentView(doc)
-    const address = view.root.properties[0].nodeView
+    const view = getSchemaDocumentView(doc);
+    const address = view.root.properties[0].nodeView;
 
-    expect(view.definitions).toHaveLength(1)
-    expect(view.definitions[0].definitionName).toBe("Address")
-    expect(address.type).toBe("$ref")
-    expect(address.refName).toBe("Address")
-  })
+    expect(view.definitions).toHaveLength(1);
+    expect(view.definitions[0].definitionName).toBe("Address");
+    expect(address.type).toBe("$ref");
+    expect(address.refName).toBe("Address");
+  });
 
   it("builds a large object view within an interactive budget", () => {
     const properties: NonNullable<JSONSchema7["properties"]> =
@@ -110,15 +110,15 @@ describe("schema document view model", () => {
         Array.from({ length: 750 }, (_, index) => [
           `field_${index}`,
           { type: index % 2 === 0 ? "string" : "number" } satisfies JSONSchema7,
-        ])
-      )
-    const doc = fromJsonSchema({ type: "object", properties })
+        ]),
+      );
+    const doc = fromJsonSchema({ type: "object", properties });
 
-    const startedAt = performance.now()
-    const view = getDocumentNodeView(doc, doc.root)
-    const elapsedMs = performance.now() - startedAt
+    const startedAt = performance.now();
+    const view = getDocumentNodeView(doc, doc.root);
+    const elapsedMs = performance.now() - startedAt;
 
-    expect(view.properties).toHaveLength(750)
-    expect(elapsedMs).toBeLessThan(100)
-  })
-})
+    expect(view.properties).toHaveLength(750);
+    expect(elapsedMs).toBeLessThan(100);
+  });
+});

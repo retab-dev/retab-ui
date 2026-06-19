@@ -1,67 +1,67 @@
-import type { source } from "@/lib/source"
+import type { source } from "@/lib/source";
 
-export type PageTreeNode = (typeof source.pageTree)["children"][number]
-export type PageTreeFolder = Extract<PageTreeNode, { type: "folder" }>
-export type PageTreePage = Extract<PageTreeNode, { type: "page" }>
-export type PageTreeFolderChild = PageTreeFolder["children"][number]
+export type PageTreeNode = (typeof source.pageTree)["children"][number];
+export type PageTreeFolder = Extract<PageTreeNode, { type: "folder" }>;
+export type PageTreePage = Extract<PageTreeNode, { type: "page" }>;
+export type PageTreeFolderChild = PageTreeFolder["children"][number];
 export type PageTreeSeparator = Extract<
   PageTreeFolderChild,
   { type: "separator" }
->
+>;
 export type PageTreeSidebarSection = {
-  id: string
-  name: PageTreeFolder["name"]
-  url?: string
-  pages: PageTreePage[]
-}
+  id: string;
+  name: PageTreeFolder["name"];
+  url?: string;
+  pages: PageTreePage[];
+};
 export type PageTreeSidebarGroup = {
-  id: string
-  name: PageTreeFolder["name"]
+  id: string;
+  name: PageTreeFolder["name"];
   /**
    * Optional link target for the group label itself. Set when a nested folder
    * exposes an index page whose title matches the group separator, so the label
    * doubles as a link instead of repeating the name as a child entry.
    */
-  url?: string
-  pages: PageTreePage[]
-  sections?: PageTreeSidebarSection[]
-}
+  url?: string;
+  pages: PageTreePage[];
+  sections?: PageTreeSidebarSection[];
+};
 
 // Recursively find all pages in a folder tree.
 export function getAllPagesFromFolder(folder: PageTreeFolder): PageTreePage[] {
-  const pages: PageTreePage[] = []
+  const pages: PageTreePage[] = [];
 
   for (const child of folder.children) {
     if (child.type === "page") {
-      pages.push(child)
+      pages.push(child);
     } else if (child.type === "folder") {
-      pages.push(...getAllPagesFromFolder(child))
+      pages.push(...getAllPagesFromFolder(child));
     }
   }
 
-  return pages
+  return pages;
 }
 
 // Get the pages from a folder, handling nested base folders (radix/base).
 export function getPagesFromFolder(
   folder: PageTreeFolder,
-  currentBase: string
+  currentBase: string,
 ): PageTreePage[] {
   // For the components folder, find the base subfolder.
   if (folder.$id === "components" || folder.name === "Components") {
     for (const child of folder.children) {
       if (child.type === "folder") {
         // Match by $id or by name.
-        const isRadix = child.$id === "radix" || child.name === "Radix UI"
-        const isBase = child.$id === "base" || child.name === "Base UI"
+        const isRadix = child.$id === "radix" || child.name === "Radix UI";
+        const isBase = child.$id === "base" || child.name === "Base UI";
 
         if (
           (currentBase === "radix" && isRadix) ||
           (currentBase === "base" && isBase)
         ) {
           return child.children.filter(
-            (c): c is PageTreePage => c.type === "page"
-          )
+            (c): c is PageTreePage => c.type === "page",
+          );
         }
       }
     }
@@ -69,8 +69,8 @@ export function getPagesFromFolder(
     // Fallback: include nested component pages so the components index can act
     // as the complete jump list, including PDF Viewer subpages.
     return getAllPagesFromFolder(folder).filter(
-      (page) => !page.url.endsWith("/components")
-    )
+      (page) => !page.url.endsWith("/components"),
+    );
   }
 
   // For other folders, return direct page children. Nested component categories
@@ -78,15 +78,15 @@ export function getPagesFromFolder(
   // renderer pages.
   const directPages = folder.children.filter(
     (child): child is PageTreePage =>
-      child.type === "page" && !child.url.endsWith("/components")
-  )
+      child.type === "page" && !child.url.endsWith("/components"),
+  );
 
-  return directPages
+  return directPages;
 }
 
 export function getSidebarGroupsFromFolder(
   folder: PageTreeFolder,
-  currentBase: string
+  currentBase: string,
 ): PageTreeSidebarGroup[] {
   if (folder.$id !== "components" && folder.name !== "Components") {
     return [
@@ -95,7 +95,7 @@ export function getSidebarGroupsFromFolder(
         name: folder.name,
         pages: getPagesFromFolder(folder, currentBase),
       },
-    ]
+    ];
   }
 
   const groups: PageTreeSidebarGroup[] = [
@@ -104,7 +104,7 @@ export function getSidebarGroupsFromFolder(
       name: folder.name,
       pages: [],
     },
-  ]
+  ];
 
   for (const child of folder.children) {
     if (child.type === "separator") {
@@ -112,25 +112,25 @@ export function getSidebarGroupsFromFolder(
         id: child.$id ?? `${folder.$id ?? "components"}-${groups.length}`,
         name: child.name ?? folder.name,
         pages: [],
-      })
-      continue
+      });
+      continue;
     }
 
     if (child.type === "page" && !child.url.endsWith("/components")) {
-      groups[groups.length - 1]?.pages.push(child)
-      continue
+      groups[groups.length - 1]?.pages.push(child);
+      continue;
     }
 
     if (child.type === "folder") {
-      const currentGroup = groups[groups.length - 1]
-      const folderPages = getPagesFromFolder(child, currentBase)
+      const currentGroup = groups[groups.length - 1];
+      const folderPages = getPagesFromFolder(child, currentBase);
       const sections = child.children
         .filter((nested): nested is PageTreeFolder => nested.type === "folder")
         .map((nested) => {
-          const sectionPages = getPagesFromFolder(nested, currentBase)
+          const sectionPages = getPagesFromFolder(nested, currentBase);
           const sectionIndexPage = sectionPages.find(
-            (page) => page.name === nested.name
-          )
+            (page) => page.name === nested.name,
+          );
 
           return {
             id:
@@ -139,9 +139,9 @@ export function getSidebarGroupsFromFolder(
             name: nested.name,
             url: sectionIndexPage?.url,
             pages: sectionPages.filter((page) => page !== sectionIndexPage),
-          }
+          };
         })
-        .filter((section) => section.pages.length > 0 || section.url)
+        .filter((section) => section.pages.length > 0 || section.url);
 
       // When the nested folder's index page shares the current separator's
       // name (e.g. the "File Viewer" separator + the file-viewer folder index),
@@ -149,27 +149,27 @@ export function getSidebarGroupsFromFolder(
       // the first child — otherwise "File Viewer" appears twice in a row.
       const indexPage = currentGroup
         ? folderPages.find((page) => page.name === currentGroup.name)
-        : undefined
+        : undefined;
       if (currentGroup && indexPage) {
-        currentGroup.url = indexPage.url
+        currentGroup.url = indexPage.url;
       }
       currentGroup?.pages.push(
-        ...folderPages.filter((page) => page !== indexPage)
-      )
+        ...folderPages.filter((page) => page !== indexPage),
+      );
       if (currentGroup && sections.length > 0) {
-        currentGroup.sections = [...(currentGroup.sections ?? []), ...sections]
+        currentGroup.sections = [...(currentGroup.sections ?? []), ...sections];
       }
     }
   }
 
   return groups.filter(
-    (group) => group.pages.length > 0 || (group.sections?.length ?? 0) > 0
-  )
+    (group) => group.pages.length > 0 || (group.sections?.length ?? 0) > 0,
+  );
 }
 
 export function getNestedPagesFromFolder(
   folder: PageTreeFolder,
-  folderId: string
+  folderId: string,
 ): PageTreePage[] {
   const nestedFolder = folder.children.find(
     (child): child is PageTreeFolder =>
@@ -179,21 +179,21 @@ export function getNestedPagesFromFolder(
         (typeof child.name === "string" &&
           child.name.toLowerCase().replaceAll(" ", "-") === folderId) ||
         getAllPagesFromFolder(child).some((page) =>
-          page.url.includes(`/components/${folderId}/`)
-        ))
-  )
+          page.url.includes(`/components/${folderId}/`),
+        )),
+  );
 
   if (!nestedFolder) {
-    return []
+    return [];
   }
 
   return getAllPagesFromFolder(nestedFolder).filter(
-    (page) => !page.url.endsWith("/components")
-  )
+    (page) => !page.url.endsWith("/components"),
+  );
 }
 
 // Get current base (radix or base) from pathname.
 export function getCurrentBase(pathname: string): string {
-  const baseMatch = pathname.match(/\/docs\/components\/(radix|base)\//)
-  return baseMatch ? baseMatch[1] : "radix" // Default to radix.
+  const baseMatch = pathname.match(/\/docs\/components\/(radix|base)\//);
+  return baseMatch ? baseMatch[1] : "radix"; // Default to radix.
 }

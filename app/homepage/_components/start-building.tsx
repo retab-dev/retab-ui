@@ -48,13 +48,13 @@ function StartBuildingPanel({ panel }: { panel: StartBuildingPanelContent }) {
 export function StartBuilding({ content }: { content: StartBuildingContent }) {
   return (
     <section
-      className="relative z-10 pt-20 pb-16 md:pt-[120px] md:pb-20 lg:-mt-[207px] lg:pt-[168px] lg:pb-[70px]"
+      className="relative z-10 pt-20 pb-16 md:pt-32 md:pb-20 lg:-mt-48 lg:pt-40 lg:pb-20"
       aria-labelledby="start-building-heading"
     >
       <div className="grid grid-cols-12 gap-x-5 gap-y-12 text-left">
         <h2
           id="start-building-heading"
-          className="col-span-12 max-w-[760px] text-[40px] leading-tight font-normal text-black lg:col-span-8 lg:col-start-3 lg:max-w-none"
+          className="col-span-12 max-w-3xl text-4xl leading-tight font-normal text-black lg:col-span-8 lg:col-start-3 lg:max-w-none"
         >
           {content.title}
         </h2>

@@ -35,14 +35,14 @@ and `@chenglou/pretext` for the wrapped Text and Markdown surfaces.
 ## Usage
 
 ```tsx
-import { FileViewer } from "@/components/ui/file-viewer"
+import { FileViewer } from "@/components/ui/file-viewer";
 
 export function Example() {
   return (
     <FileViewer
       source={{ kind: "url", url: "/report.pdf", fileName: "report.pdf" }}
     />
-  )
+  );
 }
 ```
 
@@ -117,18 +117,18 @@ already owns the surrounding surface:
 
 ## Supported types
 
-| Category     | Extensions                                                                      | Rendered by             |
-| ------------ | ------------------------------------------------------------------------------- | ----------------------- |
-| PDF          | `pdf`                                                                           | PDF Viewer              |
-| Word         | `docx`                                                                          | DOCX Viewer             |
-| Spreadsheet  | `xlsx`, `xls`, `xlsm`                                                           | XLSX Viewer             |
-| Presentation | `pptx`                                                                          | PPTX Viewer             |
-| Tabular      | `csv`, `tsv`                                                                    | CSV Viewer              |
-| Image        | `png`, `jpg`, `jpeg`, `gif`, `webp`, `avif`, `svg`, `bmp`, `ico`, `tif`, `tiff` | Image Viewer            |
-| Markdown     | `md`, `markdown`, `text/markdown`                                               | Markdown Viewer |
-| HTML         | `html`, `htm`                                                                   | sandboxed iframe        |
-| Text         | `txt`, `text`                                                                   | Pretext Text Viewer     |
-| Code & logs  | `log`, `json`, `xml`, `yaml`, `mdx`, `ts`, `py`, `go`, …                        | Code Viewer             |
+| Category     | Extensions                                                                      | Rendered by         |
+| ------------ | ------------------------------------------------------------------------------- | ------------------- |
+| PDF          | `pdf`                                                                           | PDF Viewer          |
+| Word         | `docx`                                                                          | DOCX Viewer         |
+| Spreadsheet  | `xlsx`, `xls`, `xlsm`                                                           | XLSX Viewer         |
+| Presentation | `pptx`                                                                          | PPTX Viewer         |
+| Tabular      | `csv`, `tsv`                                                                    | CSV Viewer          |
+| Image        | `png`, `jpg`, `jpeg`, `gif`, `webp`, `avif`, `svg`, `bmp`, `ico`, `tif`, `tiff` | Image Viewer        |
+| Markdown     | `md`, `markdown`, `text/markdown`                                               | Markdown Viewer     |
+| HTML         | `html`, `htm`                                                                   | sandboxed iframe    |
+| Text         | `txt`, `text`                                                                   | Pretext Text Viewer |
+| Code & logs  | `log`, `json`, `xml`, `yaml`, `mdx`, `ts`, `py`, `go`, …                        | Code Viewer         |
 
 Anything unrecognized falls back to a download card.
 
@@ -156,12 +156,12 @@ File Viewer primitives.
 
 ## API Reference
 
-| Prop                | Type                           | Description                                                                                       |
-| ------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------- |
-| `source`            | `ViewerSource`                 | Canonical file source. URL, Blob, and text sources carry file metadata with the payload identity. |
-| `as`                | `FileCategory`                 | Force a category, bypassing detection.                                                            |
-| `bare`              | `boolean`                      | Drop the outer border/background so the viewer fills its container.                               |
-| `className`         | `string`                       | Optional class on the viewer root element.                                                        |
+| Prop                | Type                                | Description                                                                                       |
+| ------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `source`            | `ViewerSource`                      | Canonical file source. URL, Blob, and text sources carry file metadata with the payload identity. |
+| `as`                | `FileCategory`                      | Force a category, bypassing detection.                                                            |
+| `bare`              | `boolean`                           | Drop the outer border/background so the viewer fills its container.                               |
+| `className`         | `string`                            | Optional class on the viewer root element.                                                        |
 | `fallbackFrameSize` | `{ width: number; height: number }` | Intrinsic first-frame size for image and TIFF loading skeletons.                                  |
 | `fallbackSlideSize` | `{ width: number; height: number }` | Intrinsic first-slide size for PPTX loading skeletons.                                            |
 

@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { validateName } from "@/components/schema-editor/lib/json-schema-utils"
-import { SchemaAddRow } from "@/components/schema-editor/primitives/schema-add-row"
+import { validateName } from "@/components/schema-editor/lib/json-schema-utils";
+import { SchemaAddRow } from "@/components/schema-editor/primitives/schema-add-row";
 
 interface DocumentPropertyAddRowProps {
-  rootLayout: boolean
-  siblingNames: string[]
-  onAddProperty: (propertyName: string) => void
+  rootLayout: boolean;
+  siblingNames: string[];
+  onAddProperty: (propertyName: string) => void;
 }
 
 export function DocumentPropertyAddRow({
@@ -16,34 +16,34 @@ export function DocumentPropertyAddRow({
   siblingNames,
   onAddProperty,
 }: DocumentPropertyAddRowProps) {
-  const [propertyName, setPropertyName] = React.useState("")
+  const [propertyName, setPropertyName] = React.useState("");
   const [propertyNameError, setPropertyNameError] = React.useState<
     string | null
-  >(null)
+  >(null);
 
   const validatePropertyName = React.useCallback(
     (value: string) => validateName(value, siblingNames, undefined, "property"),
-    [siblingNames]
-  )
+    [siblingNames],
+  );
 
   const addProperty = () => {
-    const key = propertyName.trim()
-    const error = validatePropertyName(key)
+    const key = propertyName.trim();
+    const error = validatePropertyName(key);
     if (error) {
-      setPropertyNameError(error)
-      return
+      setPropertyNameError(error);
+      return;
     }
-    if (!key) return
+    if (!key) return;
 
-    onAddProperty(key)
-    setPropertyName("")
-    setPropertyNameError(null)
-  }
+    onAddProperty(key);
+    setPropertyName("");
+    setPropertyNameError(null);
+  };
 
   return (
     <SchemaAddRow
       className={
-        rootLayout ? "mt-3 ml-4" : "mt-2 ml-4 border-l border-border pl-4"
+        rootLayout ? "mt-3 ml-4" : "border-border mt-2 ml-4 border-l pl-4"
       }
       disabled={false}
       error={propertyNameError}
@@ -52,10 +52,10 @@ export function DocumentPropertyAddRow({
       submitLabel="Add"
       value={propertyName}
       onChange={(value) => {
-        setPropertyName(value)
-        setPropertyNameError(value ? validatePropertyName(value) : null)
+        setPropertyName(value);
+        setPropertyNameError(value ? validatePropertyName(value) : null);
       }}
       onSubmit={addProperty}
     />
-  )
+  );
 }

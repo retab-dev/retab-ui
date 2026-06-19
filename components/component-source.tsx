@@ -1,7 +1,7 @@
-import fs from "node:fs"
-import path from "node:path"
+import fs from "node:fs";
+import path from "node:path";
 
-import { DocsSourceCodeBlock } from "@/components/docs-code-block"
+import { DocsSourceCodeBlock } from "@/components/docs-code-block";
 
 /**
  * Reads a source file from the repo at build time and renders it in the
@@ -16,12 +16,14 @@ export function ComponentSource({
   language = "tsx",
   className,
 }: {
-  src: string
-  title?: string
-  language?: string
-  className?: string
+  src: string;
+  title?: string;
+  language?: string;
+  className?: string;
 }) {
-  const code = fs.readFileSync(path.join(process.cwd(), src), "utf-8").trimEnd()
+  const code = fs
+    .readFileSync(path.join(process.cwd(), src), "utf-8")
+    .trimEnd();
 
   return (
     <DocsSourceCodeBlock
@@ -30,5 +32,5 @@ export function ComponentSource({
       fileName={title ?? src.split("/").pop()}
       language={language}
     />
-  )
+  );
 }

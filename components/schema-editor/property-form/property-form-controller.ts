@@ -1,31 +1,33 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { getEffectiveType } from "@/components/schema-editor/draft/draft-node-edits"
-import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { createPropertyTypeFieldWithObjectTemplates } from "@/components/schema-editor/property-form/fields/property-object-template-type-field"
-import { resolvePropertyCapabilities } from "@/components/schema-editor/property-form/model/property-capabilities"
-import { createPropertySchemaPlan } from "@/components/schema-editor/property-form/model/property-schema-plan"
-import { normalizeValidationForCapabilities } from "@/components/schema-editor/property-form/model/property-validation"
-import { propertyDraftReducer } from "@/components/schema-editor/property-form/reducer"
-import { usePropertyFormSubmit } from "@/components/schema-editor/property-form/property-form-submit"
+import * as React from "react";
+
+import { getEffectiveType } from "@/components/schema-editor/draft/draft-node-edits";
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
+import { createPropertyTypeFieldWithObjectTemplates } from "@/components/schema-editor/property-form/fields/property-object-template-type-field";
+import { resolvePropertyCapabilities } from "@/components/schema-editor/property-form/model/property-capabilities";
+import { createPropertySchemaPlan } from "@/components/schema-editor/property-form/model/property-schema-plan";
+import { normalizeValidationForCapabilities } from "@/components/schema-editor/property-form/model/property-validation";
+import { propertyDraftReducer } from "@/components/schema-editor/property-form/reducer";
+import { usePropertyFormSubmit } from "@/components/schema-editor/property-form/property-form-submit";
 import type {
   PropertyDraftOperation,
   PropertyFormMode,
   PropertyFormProps,
   PropertyFormViewModel,
-} from "@/components/schema-editor/property-form/types"
-import { validatePropertyDraft } from "@/components/schema-editor/property-form/validation"
+} from "@/components/schema-editor/property-form/types";
+import { validatePropertyDraft } from "@/components/schema-editor/property-form/validation";
 
 type PropertyFormControllerInput = Omit<
   PropertyFormProps,
   "mode" | "submitLabel"
 > & {
-  mode: PropertyFormMode
-  submitLabel: string
-  canDelete: boolean
-}
+  mode: PropertyFormMode;
+  submitLabel: string;
+  canDelete: boolean;
+};
 
 export function usePropertyFormController({
   propertyDraft: initialPropertyDraft,
@@ -40,22 +42,23 @@ export function usePropertyFormController({
   onCancel,
   onDelete,
 }: PropertyFormControllerInput): PropertyFormViewModel {
-  const [propertyDraft, setPropertyDraft] = React.useState(initialPropertyDraft)
-  const propertyDraftRef = React.useRef(initialPropertyDraft)
-  const [draftResetVersion, setDraftResetVersion] = React.useState(0)
+  const [propertyDraft, setPropertyDraft] =
+    React.useState(initialPropertyDraft);
+  const propertyDraftRef = React.useRef(initialPropertyDraft);
+  const [draftResetVersion, setDraftResetVersion] = React.useState(0);
 
   React.useEffect(() => {
-    propertyDraftRef.current = initialPropertyDraft
-    setPropertyDraft(initialPropertyDraft)
-    setDraftResetVersion((version) => version + 1)
-  }, [initialPropertyDraft])
+    propertyDraftRef.current = initialPropertyDraft;
+    setPropertyDraft(initialPropertyDraft);
+    setDraftResetVersion((version) => version + 1);
+  }, [initialPropertyDraft]);
 
   const capabilities = React.useMemo(() => {
     if (mode !== "editable") {
       return resolvePropertyCapabilities({
         mode,
         canDelete,
-      })
+      });
     }
 
     const nextCapabilities =
@@ -63,13 +66,13 @@ export function usePropertyFormController({
       resolvePropertyCapabilities({
         mode,
         canDelete,
-      })
+      });
 
     return {
       ...nextCapabilities,
       mode,
-    }
-  }, [canDelete, capabilitiesProp, mode])
+    };
+  }, [canDelete, capabilitiesProp, mode]);
 
   const validation = normalizeValidationForCapabilities({
     validation:
@@ -79,8 +82,8 @@ export function usePropertyFormController({
         schemaContext,
       }),
     capabilities,
-  })
-  const effectiveType = getEffectiveType(propertyDraft.schemaNode)
+  });
+  const effectiveType = getEffectiveType(propertyDraft.schemaNode);
   const schemaPlanContext = React.useMemo(
     () => ({
       ...schemaContext,
@@ -91,21 +94,21 @@ export function usePropertyFormController({
         draftResetVersion,
       ].join(":"),
     }),
-    [draftResetVersion, schemaContext]
-  )
+    [draftResetVersion, schemaContext],
+  );
 
   const updatePropertyDraft = React.useCallback(
     (operation: PropertyDraftOperation) => {
       const nextPropertyDraft = propertyDraftReducer(
         propertyDraftRef.current,
-        operation
-      )
-      propertyDraftRef.current = nextPropertyDraft
-      setPropertyDraft(nextPropertyDraft)
-      onPropertyDraftChange?.(nextPropertyDraft)
+        operation,
+      );
+      propertyDraftRef.current = nextPropertyDraft;
+      setPropertyDraft(nextPropertyDraft);
+      onPropertyDraftChange?.(nextPropertyDraft);
     },
-    [onPropertyDraftChange]
-  )
+    [onPropertyDraftChange],
+  );
 
   const { commitPropertyDraft, isSubmitting } = usePropertyFormSubmit({
     capabilities,
@@ -113,25 +116,25 @@ export function usePropertyFormController({
     schemaContext,
     validation: validationProp,
     onCommitPropertyDraft,
-  })
+  });
 
   const keyDown = React.useCallback(
     (event: React.KeyboardEvent) => {
-      if (event.key !== "Enter" || event.shiftKey) return
-      if (event.nativeEvent.isComposing) return
-      if (event.target instanceof HTMLButtonElement) return
+      if (event.key !== "Enter" || event.shiftKey) return;
+      if (event.nativeEvent.isComposing) return;
+      if (event.target instanceof HTMLButtonElement) return;
       if (event.target instanceof HTMLTextAreaElement) {
         if (event.ctrlKey || event.metaKey) {
-          event.preventDefault()
-          void commitPropertyDraft()
+          event.preventDefault();
+          void commitPropertyDraft();
         }
-        return
+        return;
       }
-      event.preventDefault()
-      void commitPropertyDraft()
+      event.preventDefault();
+      void commitPropertyDraft();
     },
-    [commitPropertyDraft]
-  )
+    [commitPropertyDraft],
+  );
 
   const schemaPlan = createPropertySchemaPlan({
     schemaNode: propertyDraft.schemaNode,
@@ -153,9 +156,9 @@ export function usePropertyFormController({
         type: "replacePropertySchemaNode",
         schemaNode,
       }),
-  })
-  const hasSchemaPlan = schemaPlan.items.length > 0
-  const { description } = propertyDraft.schemaNode
+  });
+  const hasSchemaPlan = schemaPlan.items.length > 0;
+  const { description } = propertyDraft.schemaNode;
 
   return {
     validation,
@@ -213,5 +216,5 @@ export function usePropertyFormController({
       submit: commitPropertyDraft,
       keyDown,
     },
-  }
+  };
 }

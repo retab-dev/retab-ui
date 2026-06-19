@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import type { ViewerSource } from "@/lib/viewer-source"
-import { GeneratedFileThumbnail } from "@/components/file-thumbnail/generated-preview"
+import type { ViewerSource } from "@/lib/viewer-source";
+import { GeneratedFileThumbnail } from "@/components/file-thumbnail/generated-preview";
 
 import {
   FileThumbnailFrame,
   FileThumbnailShimmer,
   hasRenderablePreviewContent,
   resolveFileThumbnailState,
-} from "./file-thumbnail-frame"
+} from "./file-thumbnail-frame";
 import type {
   FileThumbnailFrameProps,
   FileThumbnailProps,
@@ -17,14 +17,14 @@ import type {
   FileThumbnailSource,
   FileThumbnailState,
   ThumbnailFile,
-} from "./file-thumbnail-types"
+} from "./file-thumbnail-types";
 
 export {
   FileThumbnailFrame,
   FileThumbnailShimmer,
   hasRenderablePreviewContent,
   resolveFileThumbnailState,
-}
+};
 export type {
   FileThumbnailFrameProps,
   FileThumbnailProps,
@@ -33,7 +33,7 @@ export type {
   FileThumbnailSource,
   FileThumbnailState,
   ThumbnailFile,
-}
+};
 
 /**
  * Render a complete file thumbnail from a browser File, a viewer source, an
@@ -49,14 +49,14 @@ export function FileThumbnail({
   onError,
   ...frameProps
 }: FileThumbnailProps) {
-  const resolvedSource = resolveFileThumbnailSource(source, file)
+  const resolvedSource = resolveFileThumbnailSource(source, file);
   const accessibilityProps =
     presentation === "decorative"
       ? ({
           "aria-hidden": true,
           role: "presentation",
         } as const)
-      : {}
+      : {};
   const {
     previewClassName: _previewClassName,
     previewContent: _previewContent,
@@ -64,7 +64,7 @@ export function FileThumbnail({
     onPreviewError: _onPreviewError,
     state: _state,
     ...thumbnailProps
-  } = frameProps
+  } = frameProps;
 
   if (shouldUseFrame(frameProps) || !resolvedSource) {
     return (
@@ -73,7 +73,7 @@ export function FileThumbnail({
         {...accessibilityProps}
         file={file ?? fileFromSource(resolvedSource)}
       />
-    )
+    );
   }
 
   return (
@@ -86,7 +86,7 @@ export function FileThumbnail({
       retryKey={retryKey}
       onError={onError}
     />
-  )
+  );
 }
 
 function shouldUseFrame({
@@ -101,21 +101,21 @@ function shouldUseFrame({
     hasRenderablePreviewContent(previewContent) ||
     Boolean(previewImageUrl) ||
     state !== undefined
-  )
+  );
 }
 
 function resolveFileThumbnailSource(
   source: FileThumbnailProps["source"],
-  file: FileThumbnailProps["file"]
+  file: FileThumbnailProps["file"],
 ): ViewerSource | null {
-  if (isFile(source)) return fileSource(source)
-  if (source) return source
-  if (isFile(file)) return fileSource(file)
-  return null
+  if (isFile(source)) return fileSource(source);
+  if (source) return source;
+  if (isFile(file)) return fileSource(file);
+  return null;
 }
 
 function isFile(value: unknown): value is File {
-  return typeof File !== "undefined" && value instanceof File
+  return typeof File !== "undefined" && value instanceof File;
 }
 
 function fileSource(file: File): ViewerSource {
@@ -125,13 +125,13 @@ function fileSource(file: File): ViewerSource {
     identityKey: `${file.name}-${file.size}-${file.lastModified}`,
     fileName: file.name,
     mimeType: file.type,
-  }
+  };
 }
 
 function fileFromSource(source: ViewerSource | null): ThumbnailFile {
-  if (!source) return { name: "file", type: "" }
+  if (!source) return { name: "file", type: "" };
   return {
     name: source.fileName ?? "file",
     type: source.mimeType ?? "",
-  }
+  };
 }

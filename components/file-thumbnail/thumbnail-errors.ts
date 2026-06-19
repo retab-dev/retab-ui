@@ -2,8 +2,8 @@ import {
   isResourceError,
   ViewerFormatError,
   type ViewerFormat,
-} from "@/lib/viewer-errors"
-import type { FileCategory } from "@/lib/viewer-source"
+} from "@/lib/viewer-errors";
+import type { FileCategory } from "@/lib/viewer-source";
 
 export async function withThumbnailFormatError<T>(
   category: FileCategory,
@@ -15,18 +15,18 @@ export async function withThumbnailFormatError<T>(
     | "unknown",
   fileName: string,
   message: string,
-  load: () => Promise<T>
+  load: () => Promise<T>,
 ): Promise<T> {
   try {
-    return await load()
+    return await load();
   } catch (error) {
-    if (isResourceError(error)) throw error
+    if (isResourceError(error)) throw error;
     throw new ViewerFormatError({
       format: thumbnailCategoryFormat(category),
       kind,
       message: `${message}: ${fileName}`,
       cause: error,
-    })
+    });
   }
 }
 
@@ -35,11 +35,13 @@ export function createThumbnailImageLoadError(): ViewerFormatError {
     format: "image",
     kind: "load_failed",
     message: "Could not load image preview.",
-  })
+  });
 }
 
 export function thumbnailCategoryFormat(category: FileCategory): ViewerFormat {
-  if (category === "markdown" || category === "html") return "text"
-  if (category === "unsupported") return "file"
-  return category
+  if (category === "markdown" || category === "html" || category === "email") {
+    return "text";
+  }
+  if (category === "unsupported") return "file";
+  return category;
 }

@@ -2,13 +2,13 @@ import {
   PageHeader,
   PageHeaderDescription,
   PageHeaderHeading,
-} from "@/components/page-header"
-import { ViewerBlockTabs } from "@/components/viewer-blocks"
+} from "@/components/page-header";
+import { ViewerBlockTabs } from "@/components/viewer-blocks";
 
 export default function BlocksLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <div className="flex flex-1 flex-col">
@@ -29,5 +29,5 @@ export default function BlocksLayout({
         </div>
       </div>
     </div>
-  )
+  );
 }

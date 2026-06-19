@@ -1,23 +1,23 @@
-"use client"
+"use client";
 
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   XLSX_BASE_COLUMN_WIDTH,
   XLSX_BASE_GUTTER_WIDTH,
   XLSX_BASE_ROW_HEIGHT,
-} from "@/components/ui/xlsx-grid-constants"
+} from "@/components/ui/xlsx-grid-constants";
 
 export function XlsxGridSkeleton() {
-  const skeletonColumnCount = 6
-  const skeletonRowCount = 18
-  const widths = [70, 45, 88, 56, 62, 78]
+  const skeletonColumnCount = 6;
+  const skeletonRowCount = 18;
+  const widths = [70, 45, 88, 56, 62, 78];
   return (
     <div
-      className="flex h-full max-h-full min-h-0 flex-1 flex-col overflow-hidden bg-card"
+      className="bg-card flex h-full max-h-full min-h-0 flex-1 flex-col overflow-hidden"
       data-slot="xlsx-grid"
       aria-hidden
     >
-      <div className="flex border-b bg-muted/60">
+      <div className="bg-muted/60 flex border-b">
         <div
           className="shrink-0 border-r"
           style={{
@@ -69,5 +69,5 @@ export function XlsxGridSkeleton() {
         ))}
       </div>
     </div>
-  )
+  );
 }

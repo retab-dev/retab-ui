@@ -1,19 +1,19 @@
 // @vitest-environment jsdom
 
-import { cleanup, screen } from "@testing-library/react"
-import type { JSONSchema7 } from "json-schema"
-import { afterEach, beforeAll, describe, expect, it } from "vitest"
+import { cleanup, screen } from "@testing-library/react";
+import type { JSONSchema7 } from "json-schema";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
+import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata";
 
 import {
   baseSession,
   renderStructuredCell,
-} from "./json-table-cell-test-utils"
-import { installJsonTableDom } from "./json-table-test-dom"
+} from "./json-table-cell-test-utils";
+import { installJsonTableDom } from "./json-table-test-dom";
 
-beforeAll(() => installJsonTableDom())
-afterEach(() => cleanup())
+beforeAll(() => installJsonTableDom());
+afterEach(() => cleanup());
 
 function objectField(schema: JSONSchema7): FieldMetadata {
   return {
@@ -24,7 +24,7 @@ function objectField(schema: JSONSchema7): FieldMetadata {
     isNullable: false,
     kind: "object",
     enumValues: [],
-  }
+  };
 }
 
 describe("json table structured cell", () => {
@@ -35,7 +35,7 @@ describe("json table structured cell", () => {
         "^priority$": { type: "number" },
       },
       additionalProperties: { type: "string" },
-    }
+    };
 
     renderStructuredCell("object", {
       effectiveValue: {
@@ -48,14 +48,14 @@ describe("json table structured cell", () => {
         fieldPath: "profile_far_details",
         isOverlayOpen: true,
       }),
-    })
+    });
 
-    const reviewer = screen.getByLabelText("reviewer") as HTMLInputElement
-    const priority = screen.getByLabelText("priority") as HTMLInputElement
+    const reviewer = screen.getByLabelText("reviewer") as HTMLInputElement;
+    const priority = screen.getByLabelText("priority") as HTMLInputElement;
 
-    expect(reviewer.value).toBe("reviewer-0")
-    expect(reviewer.type).toBe("text")
-    expect(priority.value).toBe("1")
-    expect(priority.type).toBe("number")
-  })
-})
+    expect(reviewer.value).toBe("reviewer-0");
+    expect(reviewer.type).toBe("text");
+    expect(priority.value).toBe("1");
+    expect(priority.type).toBe("number");
+  });
+});

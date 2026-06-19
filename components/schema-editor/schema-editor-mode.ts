@@ -1,1 +1,1 @@
-export type SchemaEditorMode = "descriptionOnly" | "readOnly" | "editable"
+export type SchemaEditorMode = "descriptionOnly" | "readOnly" | "editable";

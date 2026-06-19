@@ -1,40 +1,42 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { cn } from "@/lib/utils"
-import type { ViewerSource } from "@/lib/viewer-source"
+import * as React from "react";
+
+import { cn } from "@/lib/utils";
+import type { ViewerSource } from "@/lib/viewer-source";
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { FileViewer } from "@/components/ui/file-viewer"
+} from "@/components/ui/breadcrumb";
+import { FileViewer } from "@/components/ui/file-viewer";
 import {
   ViewerBody,
   ViewerHeader,
   ViewerRoot,
   ViewerSidebar,
   ViewerSurface,
-} from "@/components/ui/viewer"
+} from "@/components/ui/viewer";
 
-import { FileSystemLightTree } from "./file-system-light-tree"
+import { FileSystemLightTree } from "./file-system-light-tree";
 
 export type FileSystemLightFile = {
-  path: string
-  source: ViewerSource
-}
+  path: string;
+  source: ViewerSource;
+};
 
 export type FileSystemLightProps = {
-  files: FileSystemLightFile[]
-  className?: string
-  defaultSelectedPath?: string | null
-  onSelectedPathChange?: (path: string | null) => void
-  selectedPath?: string | null
-  title?: string
-}
+  files: FileSystemLightFile[];
+  className?: string;
+  defaultSelectedPath?: string | null;
+  onSelectedPathChange?: (path: string | null) => void;
+  selectedPath?: string | null;
+  title?: string;
+};
 
 export function FileSystemLight({
   files,
@@ -50,55 +52,55 @@ export function FileSystemLight({
         ...file,
         path: normalizeFileSystemLightPath(file.path),
       })),
-    [files]
-  )
+    [files],
+  );
   const paths = React.useMemo(
     () => normalizedFiles.map((file) => file.path),
-    [normalizedFiles]
-  )
+    [normalizedFiles],
+  );
   const filesByPath = React.useMemo(
     () => new Map(normalizedFiles.map((file) => [file.path, file])),
-    [normalizedFiles]
-  )
-  const onSelectedPathChangeRef = React.useRef(onSelectedPathChange)
-  const isSelectionControlledRef = React.useRef(selectedPathProp !== undefined)
+    [normalizedFiles],
+  );
+  const onSelectedPathChangeRef = React.useRef(onSelectedPathChange);
+  const isSelectionControlledRef = React.useRef(selectedPathProp !== undefined);
   const initialSelectedPath =
-    normalizeOptionalFileSystemLightPath(defaultSelectedPath)
+    normalizeOptionalFileSystemLightPath(defaultSelectedPath);
   const [internalSelectedPath, setInternalSelectedPath] = React.useState<
     string | null
   >(() =>
     initialSelectedPath && filesByPath.has(initialSelectedPath)
       ? initialSelectedPath
-      : (paths[0] ?? null)
-  )
-  const isSelectionControlled = selectedPathProp !== undefined
+      : (paths[0] ?? null),
+  );
+  const isSelectionControlled = selectedPathProp !== undefined;
   const selectedPath = normalizeOptionalFileSystemLightPath(
-    selectedPathProp ?? internalSelectedPath
-  )
-  const selectedFile = selectedPath ? filesByPath.get(selectedPath) : undefined
+    selectedPathProp ?? internalSelectedPath,
+  );
+  const selectedFile = selectedPath ? filesByPath.get(selectedPath) : undefined;
   const selectedTreePaths = React.useMemo(
     () => (selectedPath && filesByPath.has(selectedPath) ? [selectedPath] : []),
-    [filesByPath, selectedPath]
-  )
+    [filesByPath, selectedPath],
+  );
   const selectedPathSegments = React.useMemo(
     () => getFileSystemLightPathSegments(selectedPath),
-    [selectedPath]
-  )
+    [selectedPath],
+  );
 
   React.useEffect(() => {
-    onSelectedPathChangeRef.current = onSelectedPathChange
-  }, [onSelectedPathChange])
+    onSelectedPathChangeRef.current = onSelectedPathChange;
+  }, [onSelectedPathChange]);
 
   React.useEffect(() => {
-    isSelectionControlledRef.current = isSelectionControlled
-  }, [isSelectionControlled])
+    isSelectionControlledRef.current = isSelectionControlled;
+  }, [isSelectionControlled]);
 
   return (
     <ViewerRoot
       data-viewer="file-system-light"
       className={cn(
-        "h-[640px] overflow-hidden rounded-md border bg-background text-foreground",
-        className
+        "bg-background text-foreground h-[640px] overflow-hidden rounded-md border",
+        className,
       )}
     >
       <ViewerHeader>
@@ -106,7 +108,7 @@ export function FileSystemLight({
           <Breadcrumb className="min-w-0">
             <BreadcrumbList className="min-w-0 flex-nowrap gap-1 overflow-hidden text-sm sm:gap-1.5">
               {selectedPathSegments.map((segment, index) => {
-                const isLast = index === selectedPathSegments.length - 1
+                const isLast = index === selectedPathSegments.length - 1;
 
                 return (
                   <React.Fragment key={`${segment}-${index}`}>
@@ -123,11 +125,11 @@ export function FileSystemLight({
                     </BreadcrumbItem>
                     {!isLast ? <BreadcrumbSeparator /> : null}
                   </React.Fragment>
-                )
+                );
               })}
             </BreadcrumbList>
           </Breadcrumb>
-          <div className="shrink-0 text-xs text-muted-foreground">
+          <div className="text-muted-foreground shrink-0 text-xs">
             {paths.length} files
           </div>
         </div>
@@ -143,12 +145,12 @@ export function FileSystemLight({
             aria-label={title}
             className="block min-h-0 flex-1"
             onSelectedPathsChange={(selectedPaths) => {
-              const nextPath = selectedPaths.at(-1) ?? null
+              const nextPath = selectedPaths.at(-1) ?? null;
 
               if (!isSelectionControlledRef.current) {
-                setInternalSelectedPath(nextPath)
+                setInternalSelectedPath(nextPath);
               }
-              onSelectedPathChangeRef.current?.(nextPath)
+              onSelectedPathChangeRef.current?.(nextPath);
             }}
             paths={paths}
             selectedPaths={selectedTreePaths}
@@ -177,24 +179,24 @@ export function FileSystemLight({
               className="size-full min-h-0"
             />
           ) : (
-            <div className="flex size-full items-center justify-center text-sm text-muted-foreground">
+            <div className="text-muted-foreground flex size-full items-center justify-center text-sm">
               Select a file
             </div>
           )}
         </ViewerSurface>
       </ViewerBody>
     </ViewerRoot>
-  )
+  );
 }
 
 function normalizeFileSystemLightPath(path: string) {
-  return path.replace(/^\/+/, "").replace(/\/+$/, "")
+  return path.replace(/^\/+/, "").replace(/\/+$/, "");
 }
 
 function normalizeOptionalFileSystemLightPath(path: string | null | undefined) {
-  return path ? normalizeFileSystemLightPath(path) : null
+  return path ? normalizeFileSystemLightPath(path) : null;
 }
 
 function getFileSystemLightPathSegments(path: string | null) {
-  return path ? path.split("/").filter(Boolean) : ["/"]
+  return path ? path.split("/").filter(Boolean) : ["/"];
 }

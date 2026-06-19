@@ -1,27 +1,27 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest";
 
 import {
   createMarkdownUnifiedDocument,
   MARKDOWN_REHYPE_PLUGINS,
   MARKDOWN_REMARK_PLUGINS,
   type MarkdownUnifiedOptions,
-} from "@/registry/new-york-v4/ui/markdown-unified-pipeline"
+} from "@/registry/new-york-v4/ui/markdown-unified-pipeline";
 
 type MdastNode = {
-  align?: Array<string | null>
-  checked?: boolean | null
-  children?: MdastNode[]
-  title?: string | null
-  type: string
-  url?: string
-  value?: string
-}
+  align?: Array<string | null>;
+  checked?: boolean | null;
+  children?: MdastNode[];
+  title?: string | null;
+  type: string;
+  url?: string;
+  value?: string;
+};
 
 type FixtureCase = {
-  input: string
-  name: string
-  options?: MarkdownUnifiedOptions
-}
+  input: string;
+  name: string;
+  options?: MarkdownUnifiedOptions;
+};
 
 // Mirrored from remark-gfm's MIT-licensed fixture names and Markdown inputs:
 // /private/tmp/retab-markdown-research/remark-gfm/test/fixtures/**
@@ -126,7 +126,7 @@ const UPSTREAM_REMARK_GFM_FIXTURES = {
     name: "tasklist",
     input: ["* [x] done", "* [ ] to do", "* other"].join("\n"),
   },
-} satisfies Record<string, FixtureCase>
+} satisfies Record<string, FixtureCase>;
 
 describe("pretext markdown unified GFM fixtures", () => {
   it("exports the unified plugin policy order", () => {
@@ -144,7 +144,7 @@ describe("pretext markdown unified GFM fixtures", () => {
       "remark-markdown-components",
       "remark-markdown-code-metadata",
       "remark-markdown-trusted-images",
-    ])
+    ]);
     expect(MARKDOWN_REHYPE_PLUGINS).toEqual([
       "remark-rehype",
       "rehype-raw",
@@ -153,98 +153,98 @@ describe("pretext markdown unified GFM fixtures", () => {
       "rehype-markdown-trusted-metadata",
       "rehype-markdown-safe-inputs",
       "rehype-katex",
-    ])
-  })
+    ]);
+  });
 
   it("mirrors upstream autolink literal recognition", () => {
-    const document = parseFixture(UPSTREAM_REMARK_GFM_FIXTURES.autolinkLiteral)
+    const document = parseFixture(UPSTREAM_REMARK_GFM_FIXTURES.autolinkLiteral);
     const urls = collectMdastNodes(document.mdast, "link").map(
-      (node) => node.url
-    )
+      (node) => node.url,
+    );
 
-    expect(urls).toContain("http://www.commonmark.org")
-    expect(urls).toContain("http://WWW.COMMONMARK.ORG")
-    expect(urls).toContain("http://www.commonmark.org/help")
-    expect(urls).toContain("http://www.google.com/search?q=Markup+(business)")
-    expect(urls).toContain("https://example.com")
+    expect(urls).toContain("http://www.commonmark.org");
+    expect(urls).toContain("http://WWW.COMMONMARK.ORG");
+    expect(urls).toContain("http://www.commonmark.org/help");
+    expect(urls).toContain("http://www.google.com/search?q=Markup+(business)");
+    expect(urls).toContain("https://example.com");
     expect(urls).toContain(
-      "https://encrypted.google.com/search?q=Markup+(business)"
-    )
-    expect(urls).toContain("mailto:foo@bar.baz")
-    expect(urls).toContain("mailto:hello+xyz@mail.example")
-    expect(urls).toContain("mailto:a.b-c_d@a.b")
-    expect(urls).toContain("mailto:a@a-b.c")
-    expect(urls).toContain("mailto:a@a_b.c")
-    expect(urls).not.toContain("mailto:foo@barbaz")
-    expect(urls).not.toContain("mailto:a.b-c_d@a.b-")
-    expect(urls).not.toContain("mailto:a.b-c_d@a.b_")
-  })
+      "https://encrypted.google.com/search?q=Markup+(business)",
+    );
+    expect(urls).toContain("mailto:foo@bar.baz");
+    expect(urls).toContain("mailto:hello+xyz@mail.example");
+    expect(urls).toContain("mailto:a.b-c_d@a.b");
+    expect(urls).toContain("mailto:a@a-b.c");
+    expect(urls).toContain("mailto:a@a_b.c");
+    expect(urls).not.toContain("mailto:foo@barbaz");
+    expect(urls).not.toContain("mailto:a.b-c_d@a.b-");
+    expect(urls).not.toContain("mailto:a.b-c_d@a.b_");
+  });
 
   it("mirrors upstream strikethrough defaults", () => {
     const document = parseFixture(
-      UPSTREAM_REMARK_GFM_FIXTURES.strikethroughDefault
-    )
+      UPSTREAM_REMARK_GFM_FIXTURES.strikethroughDefault,
+    );
 
-    expect(collectDeleteText(document.mdast)).toEqual(["one", "two"])
-  })
+    expect(collectDeleteText(document.mdast)).toEqual(["one", "two"]);
+  });
 
   it("mirrors upstream singleTilde=false strikethrough behavior", () => {
     const document = parseFixture(
-      UPSTREAM_REMARK_GFM_FIXTURES.strikethroughNotOne
-    )
+      UPSTREAM_REMARK_GFM_FIXTURES.strikethroughNotOne,
+    );
 
-    expect(collectDeleteText(document.mdast)).toEqual(["two"])
-  })
+    expect(collectDeleteText(document.mdast)).toEqual(["two"]);
+  });
 
   it.each([
     UPSTREAM_REMARK_GFM_FIXTURES.table,
     UPSTREAM_REMARK_GFM_FIXTURES.tableNoAlign,
     UPSTREAM_REMARK_GFM_FIXTURES.tableNoPadding,
   ])("mirrors upstream table alignment for $name", (fixture) => {
-    const document = parseFixture(fixture)
-    const table = collectMdastNodes(document.mdast, "table")[0]
-    const renderedTable = findHastElement(document.hast, "table")
-    const renderedHeaderCells = collectHastElements(document.hast, "th")
+    const document = parseFixture(fixture);
+    const table = collectMdastNodes(document.mdast, "table")[0];
+    const renderedTable = findHastElement(document.hast, "table");
+    const renderedHeaderCells = collectHastElements(document.hast, "th");
 
-    expect(table?.align).toEqual([null, "left", "right", "center"])
-    expect(renderedTable).toBeTruthy()
+    expect(table?.align).toEqual([null, "left", "right", "center"]);
+    expect(renderedTable).toBeTruthy();
     expect(renderedHeaderCells.map((cell) => cell.properties?.align)).toEqual([
       undefined,
       "left",
       "right",
       "center",
-    ])
-  })
+    ]);
+  });
 
   it("mirrors upstream table string-length fixture as table semantics", () => {
     const document = parseFixture(
-      UPSTREAM_REMARK_GFM_FIXTURES.tableStringLength
-    )
-    const table = collectMdastNodes(document.mdast, "table")[0]
+      UPSTREAM_REMARK_GFM_FIXTURES.tableStringLength,
+    );
+    const table = collectMdastNodes(document.mdast, "table")[0];
 
-    expect(table?.align).toEqual([null, null, null])
-    expect(collectText(table).join(" ")).toBe("a 古 🤔")
-  })
+    expect(table?.align).toEqual([null, null, null]);
+    expect(collectText(table).join(" ")).toBe("a 古 🤔");
+  });
 
   it("mirrors upstream task list item state", () => {
-    const document = parseFixture(UPSTREAM_REMARK_GFM_FIXTURES.tasklist)
-    const items = collectMdastNodes(document.mdast, "listItem")
-    const checkboxes = collectHastElements(document.hast, "input")
+    const document = parseFixture(UPSTREAM_REMARK_GFM_FIXTURES.tasklist);
+    const items = collectMdastNodes(document.mdast, "listItem");
+    const checkboxes = collectHastElements(document.hast, "input");
 
     expect(items.map((item) => item.checked ?? null)).toEqual([
       true,
       false,
       null,
-    ])
+    ]);
     expect(
-      checkboxes.map((input) => input.properties?.checked === true)
-    ).toEqual([true, false])
-  })
+      checkboxes.map((input) => input.properties?.checked === true),
+    ).toEqual([true, false]);
+  });
 
   it("returns recoverable unified messages for component fallbacks", () => {
     const document = createMarkdownUnifiedDocument(
-      '<Metric label="Accuracy" value="99%" onClick="steal" />'
-    )
+      '<Metric label="Accuracy" value="99%" onClick="steal" />',
+    );
 
     expect(document.messages).toEqual([
       expect.objectContaining({
@@ -254,65 +254,65 @@ describe("pretext markdown unified GFM fixtures", () => {
         ruleId: "component-fallback",
         source: "markdown",
       }),
-    ])
-  })
-})
+    ]);
+  });
+});
 
 function parseFixture(fixture: FixtureCase) {
-  return createMarkdownUnifiedDocument(fixture.input, fixture.options)
+  return createMarkdownUnifiedDocument(fixture.input, fixture.options);
 }
 
 function collectMdastNodes(node: MdastNode, type: string): MdastNode[] {
   return [
     ...(node.type === type ? [node] : []),
     ...(node.children ?? []).flatMap((child) => collectMdastNodes(child, type)),
-  ]
+  ];
 }
 
 function collectDeleteText(node: MdastNode) {
   return collectMdastNodes(node, "delete").map((deleteNode) =>
-    collectText(deleteNode).join("")
-  )
+    collectText(deleteNode).join(""),
+  );
 }
 
 function collectText(node: MdastNode | undefined): string[] {
-  if (!node) return []
+  if (!node) return [];
   return [
     typeof node.value === "string" ? node.value : "",
     ...(node.children ?? []).flatMap(collectText),
-  ].filter(Boolean)
+  ].filter(Boolean);
 }
 
 function collectHastElements(
   node: {
-    children?: Array<any>
-    tagName?: string
-    type: string
+    children?: Array<any>;
+    tagName?: string;
+    type: string;
   },
-  tagName: string
+  tagName: string,
 ): Array<{ properties?: Record<string, unknown>; tagName: string }> {
   return [
     node.type === "element" && node.tagName === tagName
       ? (node as { properties?: Record<string, unknown>; tagName: string })
       : null,
     ...(node.children ?? []).flatMap((child) =>
-      collectHastElements(child, tagName)
+      collectHastElements(child, tagName),
     ),
   ].filter(
     (
-      element
+      element,
     ): element is { properties?: Record<string, unknown>; tagName: string } =>
-      Boolean(element)
-  )
+      Boolean(element),
+  );
 }
 
 function findHastElement(
   node: {
-    children?: Array<any>
-    tagName?: string
-    type: string
+    children?: Array<any>;
+    tagName?: string;
+    type: string;
   },
-  tagName: string
+  tagName: string,
 ) {
-  return collectHastElements(node, tagName)[0] ?? null
+  return collectHastElements(node, tagName)[0] ?? null;
 }

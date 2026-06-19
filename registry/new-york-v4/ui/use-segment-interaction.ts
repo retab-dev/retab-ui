@@ -1,29 +1,29 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { type SegmentInteraction } from "@/lib/segment-interaction"
+import { type SegmentInteraction } from "@/lib/segment-interaction";
 
 export interface ControlledSegmentInteractionOptions {
-  previewSegmentId: string | null
-  setPreviewSegmentId: (segmentId: string | null) => void
+  previewSegmentId: string | null;
+  setPreviewSegmentId: (segmentId: string | null) => void;
 }
 
 export function useSegmentInteraction(): SegmentInteraction {
   const [previewSegmentId, setPreviewSegmentId] = React.useState<string | null>(
-    null
-  )
+    null,
+  );
 
   return useSegmentInteractionObject({
     previewSegmentId,
     setPreviewSegmentId,
-  })
+  });
 }
 
 export function useControlledSegmentInteraction(
-  options: ControlledSegmentInteractionOptions
+  options: ControlledSegmentInteractionOptions,
 ): SegmentInteraction {
-  return useSegmentInteractionObject(options)
+  return useSegmentInteractionObject(options);
 }
 
 function useSegmentInteractionObject({
@@ -32,12 +32,12 @@ function useSegmentInteractionObject({
 }: ControlledSegmentInteractionOptions): SegmentInteraction {
   const previewSegment = React.useCallback(
     (segmentId: string) => setPreviewSegmentId(segmentId),
-    [setPreviewSegmentId]
-  )
+    [setPreviewSegmentId],
+  );
   const clearPreview = React.useCallback(
     () => setPreviewSegmentId(null),
-    [setPreviewSegmentId]
-  )
+    [setPreviewSegmentId],
+  );
 
   return React.useMemo(
     () => ({
@@ -45,6 +45,6 @@ function useSegmentInteractionObject({
       previewSegment,
       clearPreview,
     }),
-    [clearPreview, previewSegment, previewSegmentId]
-  )
+    [clearPreview, previewSegment, previewSegmentId],
+  );
 }

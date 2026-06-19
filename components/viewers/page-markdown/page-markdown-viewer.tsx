@@ -1,89 +1,91 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
+
+import * as React from "react";
 
 import {
   ViewerBody,
   ViewerHeader,
   ViewerRoot,
   ViewerSurface,
-} from "@/components/ui/viewer"
-import { PageMarkdownEmptyState } from "@/components/viewers/page-markdown/page-markdown-empty-state"
-import { PAGE_MARKDOWN_PAGE_WIDTH } from "@/components/viewers/page-markdown/page-markdown-layout"
-import { joinMarkdownPages } from "@/components/viewers/page-markdown/page-markdown-model"
+} from "@/components/ui/viewer";
+import { PageMarkdownEmptyState } from "@/components/viewers/page-markdown/page-markdown-empty-state";
+import { PAGE_MARKDOWN_PAGE_WIDTH } from "@/components/viewers/page-markdown/page-markdown-layout";
+import { joinMarkdownPages } from "@/components/viewers/page-markdown/page-markdown-model";
 import {
   PageMarkdownPane,
   type PageMarkdownPaneHandle,
-} from "@/components/viewers/page-markdown/page-markdown-pane"
+} from "@/components/viewers/page-markdown/page-markdown-pane";
 import {
   usePageMarkdownScale,
   zoomPageScale,
-} from "@/components/viewers/page-markdown/page-markdown-scale"
-import { usePageMarkdownSync } from "@/components/viewers/page-markdown/page-markdown-sync"
-import { PageMarkdownControls } from "@/components/viewers/page-markdown/page-markdown-controls"
+} from "@/components/viewers/page-markdown/page-markdown-scale";
+import { usePageMarkdownSync } from "@/components/viewers/page-markdown/page-markdown-sync";
+import { PageMarkdownControls } from "@/components/viewers/page-markdown/page-markdown-controls";
 import {
   type PageMarkdownDocumentHandle,
   type PageMarkdownDocumentState,
   type PageMarkdownViewerProps,
   type PageMarkdownViewMode,
-} from "@/components/viewers/page-markdown/page-markdown-types"
+} from "@/components/viewers/page-markdown/page-markdown-types";
 
 type PageMarkdownViewerContextValue = {
-  content: PageMarkdownViewerContentState
-  document: PageMarkdownDocumentState
-  header: PageMarkdownViewerHeaderState
-}
+  content: PageMarkdownViewerContentState;
+  document: PageMarkdownDocumentState;
+  header: PageMarkdownViewerHeaderState;
+};
 
 type PageMarkdownViewerContentState = {
-  hasPages: boolean
-  isMarkdownScaleReady: boolean
-  isProcessing: boolean
-  markdownPaneRef: React.RefObject<PageMarkdownPaneHandle | null>
-  mode: PageMarkdownViewMode
-  onMarkdownVisiblePageChange: (pageNumber: number) => void
-  pages: string[]
-  processingLabel: string
-  resetKey?: string
-  scale: number
-  setMarkdownContainerWidth: (width: number | null) => void
-  text: string
-}
+  hasPages: boolean;
+  isMarkdownScaleReady: boolean;
+  isProcessing: boolean;
+  markdownPaneRef: React.RefObject<PageMarkdownPaneHandle | null>;
+  mode: PageMarkdownViewMode;
+  onMarkdownVisiblePageChange: (pageNumber: number) => void;
+  pages: string[];
+  processingLabel: string;
+  resetKey?: string;
+  scale: number;
+  setMarkdownContainerWidth: (width: number | null) => void;
+  text: string;
+};
 
 type PageMarkdownViewerHeaderState = {
-  currentPage: number
-  fileName: string
-  fitWidth: () => void
-  mode: PageMarkdownViewMode
-  pageCount: number
-  scale: number
-  setMode: (mode: PageMarkdownViewMode) => void
-  setViewerScale: (scale: number | null) => void
-  text: string
-}
+  currentPage: number;
+  fileName: string;
+  fitWidth: () => void;
+  mode: PageMarkdownViewMode;
+  pageCount: number;
+  scale: number;
+  setMode: (mode: PageMarkdownViewMode) => void;
+  setViewerScale: (scale: number | null) => void;
+  text: string;
+};
 
 const PageMarkdownViewerContext =
-  React.createContext<PageMarkdownViewerContextValue | null>(null)
+  React.createContext<PageMarkdownViewerContextValue | null>(null);
 
 function usePageMarkdownViewerContext(): PageMarkdownViewerContextValue {
-  const context = React.useContext(PageMarkdownViewerContext)
+  const context = React.useContext(PageMarkdownViewerContext);
   if (!context) {
     throw new Error(
-      "usePageMarkdownViewer must be used within PageMarkdownViewerProvider."
-    )
+      "usePageMarkdownViewer must be used within PageMarkdownViewerProvider.",
+    );
   }
-  return context
+  return context;
 }
 
 function usePageMarkdownViewerContent(): PageMarkdownViewerContentState {
-  return usePageMarkdownViewerContext().content
+  return usePageMarkdownViewerContext().content;
 }
 
 export function usePageMarkdownViewerDocument(): PageMarkdownDocumentState {
-  return usePageMarkdownViewerContext().document
+  return usePageMarkdownViewerContext().document;
 }
 
 function usePageMarkdownViewerHeader(): PageMarkdownViewerHeaderState {
-  return usePageMarkdownViewerContext().header
+  return usePageMarkdownViewerContext().header;
 }
 
 export function PageMarkdownViewerProvider({
@@ -96,73 +98,73 @@ export function PageMarkdownViewerProvider({
   resetKey,
   processingLabel = "Preparing document...",
 }: PageMarkdownViewerProps & { children: React.ReactNode }) {
-  const hasPages = pages.length > 0
-  const [mode, setMode] = React.useState<PageMarkdownViewMode>("rendered")
+  const hasPages = pages.length > 0;
+  const [mode, setMode] = React.useState<PageMarkdownViewMode>("rendered");
   const [markdownContainerWidth, setMarkdownContainerWidth] = React.useState<
     number | null
-  >(null)
-  const markdownPaneRef = React.useRef<PageMarkdownPaneHandle | null>(null)
+  >(null);
+  const markdownPaneRef = React.useRef<PageMarkdownPaneHandle | null>(null);
   const documentHandleRef = React.useRef<PageMarkdownDocumentHandle | null>(
-    null
-  )
-  const pagePaneResetKey = hasPages ? `pages:${resetKey ?? ""}` : "empty"
+    null,
+  );
+  const pagePaneResetKey = hasPages ? `pages:${resetKey ?? ""}` : "empty";
   const { currentPage, reportDocumentPage, reportMarkdownPage } =
     usePageMarkdownSync({
       onMarkdownPageChange: onVisiblePageChange,
       pageCount: pages.length,
       resetKey: pagePaneResetKey,
-    })
+    });
 
   React.useEffect(() => {
-    setMode("rendered")
-  }, [resetKey])
+    setMode("rendered");
+  }, [resetKey]);
 
   const handleDocumentPageChange = React.useCallback(
     (pageNumber: number) => {
       const normalizedPage = Number.isFinite(pageNumber)
         ? Math.floor(pageNumber)
-        : 1
-      const pageCount = Math.max(1, pages.length)
+        : 1;
+      const pageCount = Math.max(1, pages.length);
       const target = reportDocumentPage(
-        Math.min(pageCount, Math.max(1, normalizedPage))
-      )
+        Math.min(pageCount, Math.max(1, normalizedPage)),
+      );
       if (target?.pane === "markdown") {
-        markdownPaneRef.current?.scrollToPage(target.pageNumber)
+        markdownPaneRef.current?.scrollToPage(target.pageNumber);
       }
     },
-    [pages.length, reportDocumentPage]
-  )
+    [pages.length, reportDocumentPage],
+  );
 
   const handleDocumentScrollProgressChange = React.useCallback(
     (progress: number) => {
-      void progress
+      void progress;
     },
-    []
-  )
+    [],
+  );
 
   const handleMarkdownPageChange = React.useCallback(
     (pageNumber: number) => {
-      const target = reportMarkdownPage(pageNumber)
+      const target = reportMarkdownPage(pageNumber);
       if (target?.pane === "document") {
-        documentHandleRef.current?.scrollToPage(target.pageNumber)
+        documentHandleRef.current?.scrollToPage(target.pageNumber);
       }
     },
-    [reportMarkdownPage]
-  )
+    [reportMarkdownPage],
+  );
 
   const setDocumentHandle = React.useCallback(
     (handle: PageMarkdownDocumentHandle | null) => {
-      documentHandleRef.current = handle
+      documentHandleRef.current = handle;
     },
-    []
-  )
+    [],
+  );
 
   const { fitWidth, scale, setViewerScale } = usePageMarkdownScale({
     containerWidth: markdownContainerWidth,
     pageWidth: PAGE_MARKDOWN_PAGE_WIDTH,
     resetKey,
-  })
-  const isMarkdownScaleReady = markdownContainerWidth !== null
+  });
+  const isMarkdownScaleReady = markdownContainerWidth !== null;
 
   const document = React.useMemo<PageMarkdownDocumentState>(
     () => ({
@@ -174,8 +176,8 @@ export function PageMarkdownViewerProvider({
       handleDocumentPageChange,
       handleDocumentScrollProgressChange,
       setDocumentHandle,
-    ]
-  )
+    ],
+  );
 
   const content = React.useMemo<PageMarkdownViewerContentState>(
     () => ({
@@ -205,8 +207,8 @@ export function PageMarkdownViewerProvider({
       scale,
       setMarkdownContainerWidth,
       text,
-    ]
-  )
+    ],
+  );
 
   const header = React.useMemo<PageMarkdownViewerHeaderState>(
     () => ({
@@ -230,8 +232,8 @@ export function PageMarkdownViewerProvider({
       setMode,
       setViewerScale,
       text,
-    ]
-  )
+    ],
+  );
 
   const value = React.useMemo<PageMarkdownViewerContextValue>(
     () => ({
@@ -239,14 +241,14 @@ export function PageMarkdownViewerProvider({
       document,
       header,
     }),
-    [content, document, header]
-  )
+    [content, document, header],
+  );
 
   return (
     <PageMarkdownViewerContext.Provider value={value}>
       {children}
     </PageMarkdownViewerContext.Provider>
-  )
+  );
 }
 
 export function PageMarkdownViewerContent() {
@@ -263,7 +265,7 @@ export function PageMarkdownViewerContent() {
     scale,
     setMarkdownContainerWidth,
     text,
-  } = usePageMarkdownViewerContent()
+  } = usePageMarkdownViewerContent();
 
   if (!hasPages) {
     return (
@@ -271,7 +273,7 @@ export function PageMarkdownViewerContent() {
         isProcessing={isProcessing}
         processingLabel={processingLabel}
       />
-    )
+    );
   }
 
   return (
@@ -286,13 +288,13 @@ export function PageMarkdownViewerContent() {
       onContainerWidthChange={setMarkdownContainerWidth}
       onVisiblePageChange={onMarkdownVisiblePageChange}
     />
-  )
+  );
 }
 
 export function PageMarkdownViewerHeader({
   className,
 }: {
-  className?: string
+  className?: string;
 }) {
   const {
     currentPage,
@@ -304,7 +306,7 @@ export function PageMarkdownViewerHeader({
     setMode,
     setViewerScale,
     text,
-  } = usePageMarkdownViewerHeader()
+  } = usePageMarkdownViewerHeader();
 
   return (
     <ViewerHeader className={className}>
@@ -321,13 +323,13 @@ export function PageMarkdownViewerHeader({
         onFitWidth={fitWidth}
       />
     </ViewerHeader>
-  )
+  );
 }
 
 export function PageMarkdownViewer(props: PageMarkdownViewerProps) {
   return (
     <PageMarkdownViewerProvider {...props}>
-      <ViewerRoot className="h-full flex-1 bg-background">
+      <ViewerRoot className="bg-background h-full flex-1">
         <PageMarkdownViewerHeader />
         <ViewerBody>
           <ViewerSurface>
@@ -336,5 +338,5 @@ export function PageMarkdownViewer(props: PageMarkdownViewerProps) {
         </ViewerBody>
       </ViewerRoot>
     </PageMarkdownViewerProvider>
-  )
+  );
 }

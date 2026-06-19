@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/ui/layout-blocks-document-ai-pdf"
+export * from "@/registry/new-york-v4/ui/layout-blocks-document-ai-pdf";

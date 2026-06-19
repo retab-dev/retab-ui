@@ -1,33 +1,33 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { TextViewer } from "@/components/ui/text-viewer"
-import { ChenglouTextViewer } from "@/components/ui/text-viewer-chenglou"
-import { VanillaChengTextViewer } from "@/components/ui/text-viewer-vanillacheng"
+import { TextViewer } from "@/components/ui/text-viewer";
+import { ChenglouTextViewer } from "@/components/ui/text-viewer-chenglou";
+import { VanillaChengTextViewer } from "@/components/ui/text-viewer-vanillacheng";
 
-type ProfileVariant = "chenglou" | "current" | "vanillacheng"
+type ProfileVariant = "chenglou" | "current" | "vanillacheng";
 
-const PROFILE_TEXT = createProfileMarkdown()
+const PROFILE_TEXT = createProfileMarkdown();
 
 export function TextViewerProfileClient({
   variant,
 }: {
-  variant: ProfileVariant
+  variant: ProfileVariant;
 }) {
   const Viewer =
     variant === "vanillacheng"
       ? VanillaChengTextViewer
       : variant === "chenglou"
         ? ChenglouTextViewer
-        : TextViewer
+        : TextViewer;
   return (
-    <main className="h-screen bg-background p-4 text-foreground">
+    <main className="bg-background text-foreground h-screen p-4">
       <div className="mb-3 flex items-center justify-between">
         <h1 className="text-sm font-medium">Text Viewer Profile</h1>
         <span
           data-profile-variant={variant}
-          className="text-xs text-muted-foreground"
+          className="text-muted-foreground text-xs"
         >
           {variant}
         </span>
@@ -46,11 +46,11 @@ export function TextViewerProfileClient({
         />
       </section>
     </main>
-  )
+  );
 }
 
 function createProfileMarkdown() {
-  const blocks: string[] = []
+  const blocks: string[] = [];
   for (let index = 0; index < 700; index++) {
     blocks.push(
       `## Release note ${index + 1}`,
@@ -63,8 +63,8 @@ function createProfileMarkdown() {
       "```ts",
       `const profile_${index} = ${index} * 2`,
       `console.log(profile_${index})`,
-      "```"
-    )
+      "```",
+    );
   }
-  return blocks.join("\n")
+  return blocks.join("\n");
 }

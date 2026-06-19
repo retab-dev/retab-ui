@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 export {
   Table,
@@ -9,4 +9,4 @@ export {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/registry/new-york-v4/ui/table"
+} from "@/registry/new-york-v4/ui/table";

@@ -1,8 +1,8 @@
-export const TABLE_MAX_HEIGHT = 420
-export const TABLE_ROW_HEIGHT = 44
+export const TABLE_MAX_HEIGHT = 420;
+export const TABLE_ROW_HEIGHT = 44;
 export const TABLE_SCROLL_THRESHOLD = Math.floor(
-  TABLE_MAX_HEIGHT / TABLE_ROW_HEIGHT
-)
-export const TABLE_VIRTUALIZE_THRESHOLD = 500
-export const TABLE_ROW_OVERSCAN = 3
-export const TABLE_JUMP_ROW_OVERSCAN = 6
+  TABLE_MAX_HEIGHT / TABLE_ROW_HEIGHT,
+);
+export const TABLE_VIRTUALIZE_THRESHOLD = 500;
+export const TABLE_ROW_OVERSCAN = 3;
+export const TABLE_JUMP_ROW_OVERSCAN = 6;

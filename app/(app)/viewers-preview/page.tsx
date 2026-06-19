@@ -1,17 +1,18 @@
-import { type Metadata } from "next"
+import { type Metadata } from "next";
 
 import {
   PageHeader,
   PageHeaderDescription,
   PageHeaderHeading,
-} from "@/components/page-header"
-import { ViewersDemo } from "@/components/viewers/viewers-demo"
-import { JsonTableDemo } from "@/components/json-table/json-table-demo"
+} from "@/components/page-header";
+import { ViewersDemo } from "@/components/viewers/viewers-demo";
+import { JsonTableDemo } from "@/components/json-table/json-table-demo";
 
 export const metadata: Metadata = {
   title: "Viewers preview",
-  description: "Live preview of the Retab primitive viewers, ported from the dashboard.",
-}
+  description:
+    "Live preview of the Retab primitive viewers, ported from the dashboard.",
+};
 
 export default function ViewersPreviewPage() {
   return (
@@ -21,7 +22,8 @@ export default function ViewersPreviewPage() {
           Primitive viewers
         </PageHeaderHeading>
         <PageHeaderDescription>
-          The Retab result viewers, ported verbatim from the dashboard playground.
+          The Retab result viewers, ported verbatim from the dashboard
+          playground.
         </PageHeaderDescription>
       </PageHeader>
       <div className="container-wrapper flex-1">
@@ -34,5 +36,5 @@ export default function ViewersPreviewPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

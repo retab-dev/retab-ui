@@ -1,26 +1,26 @@
-import type { JSONSchema7 } from "json-schema"
-import { describe, expect, it } from "vitest"
+import type { JSONSchema7 } from "json-schema";
+import { describe, expect, it } from "vitest";
 
 import {
   fromJsonSchema,
   toJsonSchema,
-} from "@/components/schema-editor/document/convert"
-import { renameDefinition } from "@/components/schema-editor/document/definition-operations"
+} from "@/components/schema-editor/document/convert";
+import { renameDefinition } from "@/components/schema-editor/document/definition-operations";
 import {
   getChildNodeId,
   getChildPropertyId,
-} from "@/components/schema-editor/document/node-selectors"
-import { moveProperty } from "@/components/schema-editor/document/property-operations"
-import { getNode } from "@/components/schema-editor/document/traversal"
-import { setNodeType } from "@/components/schema-editor/document/type-operations"
-import type { SchemaDocument } from "@/components/schema-editor/document/types"
-import { requireAllProperties } from "@/components/schema-editor/schema-required-policy"
+} from "@/components/schema-editor/document/node-selectors";
+import { moveProperty } from "@/components/schema-editor/document/property-operations";
+import { getNode } from "@/components/schema-editor/document/traversal";
+import { setNodeType } from "@/components/schema-editor/document/type-operations";
+import type { SchemaDocument } from "@/components/schema-editor/document/types";
+import { requireAllProperties } from "@/components/schema-editor/schema-required-policy";
 
 function rt(schema: JSONSchema7) {
-  return toJsonSchema(fromJsonSchema(schema))
+  return toJsonSchema(fromJsonSchema(schema));
 }
 function json(d: SchemaDocument) {
-  return toJsonSchema(d) as JSONSchema7 & Record<string, unknown>
+  return toJsonSchema(d) as JSONSchema7 & Record<string, unknown>;
 }
 
 describe("adversarial round-trip", () => {
@@ -30,9 +30,9 @@ describe("adversarial round-trip", () => {
       $id: "https://example.com/s.json",
       type: "object",
       properties: { a: { type: "string" } },
-    }
-    expect(rt(schema)).toEqual(schema)
-  })
+    };
+    expect(rt(schema)).toEqual(schema);
+  });
 
   it("a $ref node with sibling description/title round-trips", () => {
     const schema: JSONSchema7 = {
@@ -45,27 +45,27 @@ describe("adversarial round-trip", () => {
           title: "Money",
         } as JSONSchema7,
       },
-    }
-    expect(rt(schema)).toEqual(schema)
-  })
+    };
+    expect(rt(schema)).toEqual(schema);
+  });
 
   it("enum with mixed scalar values (string/number/boolean/null)", () => {
     const schema: JSONSchema7 = {
       type: "object",
       properties: { e: { enum: ["a", 1, true, null] } as JSONSchema7 },
-    }
-    expect(rt(schema)).toEqual(schema)
-  })
+    };
+    expect(rt(schema)).toEqual(schema);
+  });
 
   it("a property literally named __order does not corrupt the schema", () => {
     const schema: JSONSchema7 = {
       type: "object",
       properties: { __order: { type: "string" }, real: { type: "number" } },
-    }
-    const out = rt(schema)
-    expect(Object.keys(out.properties!)).toEqual(["__order", "real"])
-    expect((out.properties!.__order as JSONSchema7).type).toBe("string")
-  })
+    };
+    const out = rt(schema);
+    expect(Object.keys(out.properties!)).toEqual(["__order", "real"]);
+    expect((out.properties!.__order as JSONSchema7).type).toBe("string");
+  });
 
   it("a node carrying an `__order` keyword value does not collide with the order marker", () => {
     // Extremely unlikely, but the internal marker must not eat real data.
@@ -73,18 +73,18 @@ describe("adversarial round-trip", () => {
       type: "object",
       properties: { a: { type: "string" } },
       __order: "real-value",
-    } as unknown as JSONSchema7
-    const out = rt(schema) as Record<string, unknown>
-    expect(out.__order).toBe("real-value")
-  })
+    } as unknown as JSONSchema7;
+    const out = rt(schema) as Record<string, unknown>;
+    expect(out.__order).toBe("real-value");
+  });
 
   it("empty enum array is preserved", () => {
     const schema: JSONSchema7 = {
       type: "object",
       properties: { e: { type: "string", enum: [] } },
-    }
-    expect(rt(schema)).toEqual(schema)
-  })
+    };
+    expect(rt(schema)).toEqual(schema);
+  });
 
   it("array of arrays round-trips", () => {
     const schema: JSONSchema7 = {
@@ -95,24 +95,24 @@ describe("adversarial round-trip", () => {
           items: { type: "array", items: { type: "number" } },
         },
       },
-    }
-    expect(rt(schema)).toEqual(schema)
-  })
-})
+    };
+    expect(rt(schema)).toEqual(schema);
+  });
+});
 
 describe("type changes preserve nullability + metadata", () => {
   it("setNodeType keeps a type-array nullable field nullable", () => {
     let d = fromJsonSchema({
       type: "object",
       properties: { a: { type: ["string", "null"] } },
-    })
-    const aId = getChildNodeId(d, d.root.id, "a")!
-    d = setNodeType(d, aId, "number")
+    });
+    const aId = getChildNodeId(d, d.root.id, "a")!;
+    d = setNodeType(d, aId, "number");
     expect((json(d).properties!.a as JSONSchema7).type).toEqual([
       "number",
       "null",
-    ])
-  })
+    ]);
+  });
 
   it("setNodeType preserves title and description", () => {
     let d = fromJsonSchema({
@@ -120,28 +120,28 @@ describe("type changes preserve nullability + metadata", () => {
       properties: {
         a: { type: "string", title: "A", description: "desc" } as JSONSchema7,
       },
-    })
-    const aId = getChildNodeId(d, d.root.id, "a")!
-    d = setNodeType(d, aId, "object")
-    const a = json(d).properties!.a as JSONSchema7
-    expect(a.title).toBe("A")
-    expect(a.description).toBe("desc")
-  })
-})
+    });
+    const aId = getChildNodeId(d, d.root.id, "a")!;
+    d = setNodeType(d, aId, "object");
+    const a = json(d).properties!.a as JSONSchema7;
+    expect(a.title).toBe("A");
+    expect(a.description).toBe("desc");
+  });
+});
 
 describe("moveProperty edge cases", () => {
   it("moving to the same index is a no-op", () => {
     const base: JSONSchema7 = {
       type: "object",
       properties: { a: { type: "string" }, b: { type: "string" } },
-    }
-    const d = fromJsonSchema(base)
-    const aPropertyId = getChildPropertyId(d, d.root.id, "a")!
-    const before = json(d)
-    const d2 = moveProperty(d, aPropertyId, d.root.id, 0)
-    expect(json(d2)).toEqual(before)
-  })
-})
+    };
+    const d = fromJsonSchema(base);
+    const aPropertyId = getChildPropertyId(d, d.root.id, "a")!;
+    const before = json(d);
+    const d2 = moveProperty(d, aPropertyId, d.root.id, 0);
+    expect(json(d2)).toEqual(before);
+  });
+});
 
 describe("definition rename collisions", () => {
   it("renaming a def onto an existing def name does not silently merge both into one", () => {
@@ -152,23 +152,23 @@ describe("definition rename collisions", () => {
         B: { type: "object", properties: { y: { type: "number" } } },
       },
       properties: { a: { $ref: "#/$defs/A" }, b: { $ref: "#/$defs/B" } },
-    }
-    const d = fromJsonSchema(schema)
-    const aId = d.defs.find((x) => x.name === "A")!.id
-    const out = json(renameDefinition(d, aId, "B")) // collide A -> B
+    };
+    const d = fromJsonSchema(schema);
+    const aId = d.defs.find((x) => x.name === "A")!.id;
+    const out = json(renameDefinition(d, aId, "B")); // collide A -> B
     // Whatever the policy, we must not lose a definition's content.
-    const defs = out.$defs as Record<string, JSONSchema7>
-    const names = Object.keys(defs)
+    const defs = out.$defs as Record<string, JSONSchema7>;
+    const names = Object.keys(defs);
     // both original shapes must still be represented somewhere
-    const shapes = Object.values(defs).map((s) => JSON.stringify(s.properties))
-    expect(shapes).toContain(JSON.stringify({ x: { type: "string" } }))
-    expect(shapes).toContain(JSON.stringify({ y: { type: "number" } }))
-    expect(names.length).toBe(2)
-  })
-})
+    const shapes = Object.values(defs).map((s) => JSON.stringify(s.properties));
+    expect(shapes).toContain(JSON.stringify({ x: { type: "string" } }));
+    expect(shapes).toContain(JSON.stringify({ y: { type: "number" } }));
+    expect(names.length).toBe(2);
+  });
+});
 
 describe("requireAllProperties (every field required policy)", () => {
-  const req = (s: JSONSchema7) => requireAllProperties(s) as JSONSchema7
+  const req = (s: JSONSchema7) => requireAllProperties(s) as JSONSchema7;
 
   it("sets required to all keys for a flat object, overriding partial required", () => {
     expect(
@@ -176,9 +176,9 @@ describe("requireAllProperties (every field required policy)", () => {
         type: "object",
         properties: { a: { type: "string" }, b: { type: "number" } },
         required: ["a"],
-      }).required
-    ).toEqual(["a", "b"])
-  })
+      }).required,
+    ).toEqual(["a", "b"]);
+  });
 
   it("preserves required names that are not declared properties", () => {
     expect(
@@ -186,32 +186,33 @@ describe("requireAllProperties (every field required policy)", () => {
         type: "object",
         properties: { a: { type: "string" }, b: { type: "number" } },
         required: ["external", "a"],
-      }).required
-    ).toEqual(["external", "a", "b"])
-  })
+      }).required,
+    ).toEqual(["external", "a", "b"]);
+  });
 
   it("treats an empty-string property name as a required property", () => {
     const out = req({
       type: "object",
       properties: { "": { type: "string" }, named: { type: "number" } },
-    })
+    });
 
-    expect(Object.keys(out.properties!)).toEqual(["", "named"])
-    expect(out.required).toEqual(["", "named"])
-  })
+    expect(Object.keys(out.properties!)).toEqual(["", "named"]);
+    expect(out.required).toEqual(["", "named"]);
+  });
 
   it("preserves properties whose names collide with object prototype keys", () => {
     const out = req(
       JSON.parse(
-        '{"type":"object","properties":{"__proto__":{"type":"string"},"constructor":{"type":"number"}}}'
-      ) as JSONSchema7
-    )
+        '{"type":"object","properties":{"__proto__":{"type":"string"},"constructor":{"type":"number"}}}',
+      ) as JSONSchema7,
+    );
 
-    expect(Object.prototype.hasOwnProperty.call(out.properties, "__proto__"))
-      .toBe(true)
-    expect(Object.keys(out.properties!)).toEqual(["__proto__", "constructor"])
-    expect(out.required).toEqual(["__proto__", "constructor"])
-  })
+    expect(
+      Object.prototype.hasOwnProperty.call(out.properties, "__proto__"),
+    ).toBe(true);
+    expect(Object.keys(out.properties!)).toEqual(["__proto__", "constructor"]);
+    expect(out.required).toEqual(["__proto__", "constructor"]);
+  });
 
   it("recurses into nested objects, array items and $defs", () => {
     const out = req({
@@ -227,14 +228,14 @@ describe("requireAllProperties (every field required policy)", () => {
           items: { type: "object", properties: { sku: { type: "string" } } },
         },
       },
-    })
-    expect(out.required).toEqual(["obj", "rows"])
-    expect((out.properties!.obj as JSONSchema7).required).toEqual(["x", "y"])
+    });
+    expect(out.required).toEqual(["obj", "rows"]);
+    expect((out.properties!.obj as JSONSchema7).required).toEqual(["x", "y"]);
     expect(
-      ((out.properties!.rows as JSONSchema7).items as JSONSchema7).required
-    ).toEqual(["sku"])
-    expect((out.$defs!.D as JSONSchema7).required).toEqual(["d1"])
-  })
+      ((out.properties!.rows as JSONSchema7).items as JSONSchema7).required,
+    ).toEqual(["sku"]);
+    expect((out.$defs!.D as JSONSchema7).required).toEqual(["d1"]);
+  });
 
   it("recurses into anyOf branches and leaves nullability untouched", () => {
     const out = req({
@@ -247,16 +248,16 @@ describe("requireAllProperties (every field required policy)", () => {
           ],
         },
       },
-    })
-    const v = out.properties!.v as JSONSchema7
+    });
+    const v = out.properties!.v as JSONSchema7;
     // still nullable via anyOf
-    expect(v.anyOf).toHaveLength(2)
-    expect((v.anyOf![1] as JSONSchema7).type).toBe("null")
+    expect(v.anyOf).toHaveLength(2);
+    expect((v.anyOf![1] as JSONSchema7).type).toBe("null");
     // the object branch's child is now required
-    expect((v.anyOf![0] as JSONSchema7).required).toEqual(["x"])
+    expect((v.anyOf![0] as JSONSchema7).required).toEqual(["x"]);
     // the field stays required at the parent level
-    expect(out.required).toEqual(["v"])
-  })
+    expect(out.required).toEqual(["v"]);
+  });
 
   it("recurses into schema-bearing object keywords", () => {
     const out = req({
@@ -283,22 +284,22 @@ describe("requireAllProperties (every field required policy)", () => {
           },
         } as JSONSchema7,
       },
-    })
-    const bag = out.properties!.bag as JSONSchema7
-    const additional = bag.additionalProperties as JSONSchema7
-    const pattern = bag.patternProperties!["^meta_"] as JSONSchema7
+    });
+    const bag = out.properties!.bag as JSONSchema7;
+    const additional = bag.additionalProperties as JSONSchema7;
+    const pattern = bag.patternProperties!["^meta_"] as JSONSchema7;
     const dependency = (
       bag.dependencies as Record<string, JSONSchema7 | string[]>
-    ).tag as JSONSchema7
+    ).tag as JSONSchema7;
 
-    expect(out.required).toEqual(["bag"])
-    expect(additional.required).toEqual(["x"])
-    expect(pattern.required).toEqual(["value"])
-    expect(dependency.required).toEqual(["dependent"])
+    expect(out.required).toEqual(["bag"]);
+    expect(additional.required).toEqual(["x"]);
+    expect(pattern.required).toEqual(["value"]);
+    expect(dependency.required).toEqual(["dependent"]);
     expect(
-      (bag.dependencies as Record<string, JSONSchema7 | string[]>).code
-    ).toEqual(["tag"])
-  })
+      (bag.dependencies as Record<string, JSONSchema7 | string[]>).code,
+    ).toEqual(["tag"]);
+  });
 
   it("recurses into conditional and negated schemas", () => {
     const out = req({
@@ -322,22 +323,22 @@ describe("requireAllProperties (every field required policy)", () => {
         type: "object",
         properties: { deprecated: { type: "boolean" } },
       },
-    } as JSONSchema7)
+    } as JSONSchema7);
 
-    expect((out.if as JSONSchema7).required).toEqual(["mode"])
-    expect((out.then as JSONSchema7).required).toEqual(["approver"])
-    expect((out.else as JSONSchema7).required).toEqual(["auto_reason"])
-    expect((out.not as JSONSchema7).required).toEqual(["deprecated"])
-  })
+    expect((out.if as JSONSchema7).required).toEqual(["mode"]);
+    expect((out.then as JSONSchema7).required).toEqual(["approver"]);
+    expect((out.else as JSONSchema7).required).toEqual(["auto_reason"]);
+    expect((out.not as JSONSchema7).required).toEqual(["deprecated"]);
+  });
 
   it("does not add `required` to objects without properties or to scalars", () => {
     const out = req({
       type: "object",
       properties: { s: { type: "string" }, bag: { type: "object" } },
-    })
-    expect((out.properties!.s as JSONSchema7).required).toBeUndefined()
-    expect((out.properties!.bag as JSONSchema7).required).toBeUndefined()
-  })
+    });
+    expect((out.properties!.s as JSONSchema7).required).toBeUndefined();
+    expect((out.properties!.bag as JSONSchema7).required).toBeUndefined();
+  });
 
   it("is idempotent", () => {
     const schema: JSONSchema7 = {
@@ -345,10 +346,10 @@ describe("requireAllProperties (every field required policy)", () => {
       properties: {
         o: { type: "object", properties: { a: { type: "string" } } },
       },
-    }
-    expect(req(req(schema))).toEqual(req(schema))
-  })
-})
+    };
+    expect(req(req(schema))).toEqual(req(schema));
+  });
+});
 
 describe("ref integrity through node identity", () => {
   it("getNode finds nodes nested inside definitions", () => {
@@ -358,10 +359,10 @@ describe("ref integrity through node identity", () => {
         M: { type: "object", properties: { amount: { type: "number" } } },
       },
       properties: { total: { $ref: "#/$defs/M" } },
-    })
-    const defNode = d.defs.find((x) => x.name === "M")!.node
-    const amountId = getChildNodeId(d, defNode.id, "amount")!
-    expect(getNode(d, amountId)).toBeTruthy()
-    expect(getNode(d, amountId)!.type).toBe("number")
-  })
-})
+    });
+    const defNode = d.defs.find((x) => x.name === "M")!.node;
+    const amountId = getChildNodeId(d, defNode.id, "amount")!;
+    expect(getNode(d, amountId)).toBeTruthy();
+    expect(getNode(d, amountId)!.type).toBe("number");
+  });
+});

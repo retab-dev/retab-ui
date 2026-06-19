@@ -1,4 +1,4 @@
-import { Shapes } from "lucide-react"
+import { Shapes } from "lucide-react";
 
 import {
   DropdownMenuItem,
@@ -6,15 +6,15 @@ import {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
-} from "@/components/ui/dropdown-menu"
-import { getTemplateIcon } from "@/components/schema-editor/type-icons"
+} from "@/components/ui/dropdown-menu";
+import { getTemplateIcon } from "@/components/schema-editor/type-icons";
 
-import { templateObjects } from "./template-objects"
+import { templateObjects } from "./template-objects";
 
 export function ObjectTemplateSubmenu({
   onSelectTemplate,
 }: {
-  onSelectTemplate: (name: string) => void
+  onSelectTemplate: (name: string) => void;
 }) {
   return (
     <DropdownMenuSub>
@@ -37,5 +37,5 @@ export function ObjectTemplateSubmenu({
         </DropdownMenuSubContent>
       </DropdownMenuPortal>
     </DropdownMenuSub>
-  )
+  );
 }

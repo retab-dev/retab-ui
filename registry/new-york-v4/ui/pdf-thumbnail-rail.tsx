@@ -1,19 +1,19 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import type { PdfDocumentProxy } from "@/lib/pdf-document-types"
-import { cn } from "@/lib/utils"
+import type { PdfDocumentProxy } from "@/lib/pdf-document-types";
+import { cn } from "@/lib/utils";
 
-import { PdfThumbnailItem } from "./pdf-thumbnail-item"
+import { PdfThumbnailItem } from "./pdf-thumbnail-item";
 import {
   normalizeThumbnailPage,
   type PdfThumbnailLayout,
   type PdfThumbnailLayoutItem,
-} from "./pdf-thumbnail-layout"
+} from "./pdf-thumbnail-layout";
 
 export function getPdfThumbnailItemId(pageNumber: number) {
-  return `pdf-thumbnail-page-${pageNumber}`
+  return `pdf-thumbnail-page-${pageNumber}`;
 }
 
 export function PdfThumbnailRailViewport({
@@ -29,42 +29,42 @@ export function PdfThumbnailRailViewport({
   onScroll,
   className,
 }: {
-  doc: PdfDocumentProxy
-  layout: PdfThumbnailLayout
-  visibleItems: readonly PdfThumbnailLayoutItem[]
-  currentPage: number | null | undefined
-  viewportRef: React.RefObject<HTMLDivElement | null>
-  onSelectPage?: (pageNumber: number) => void
-  onPageActivate?: (pageNumber: number) => void
-  onPointerEnter?: () => void
-  onPointerLeave?: () => void
-  onScroll?: () => void
-  className?: string
+  doc: PdfDocumentProxy;
+  layout: PdfThumbnailLayout;
+  visibleItems: readonly PdfThumbnailLayoutItem[];
+  currentPage: number | null | undefined;
+  viewportRef: React.RefObject<HTMLDivElement | null>;
+  onSelectPage?: (pageNumber: number) => void;
+  onPageActivate?: (pageNumber: number) => void;
+  onPointerEnter?: () => void;
+  onPointerLeave?: () => void;
+  onScroll?: () => void;
+  className?: string;
 }) {
-  const activePage = normalizeThumbnailPage(currentPage, layout.pageCount)
+  const activePage = normalizeThumbnailPage(currentPage, layout.pageCount);
   const handleKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLElement>) => {
-      const page = activePage ?? 1
+      const page = activePage ?? 1;
       const nextPage = getKeyboardTargetPage({
         key: event.key,
         page,
         pageCount: layout.pageCount,
-      })
+      });
 
-      if (nextPage == null) return
-      event.preventDefault()
-      onPageActivate?.(nextPage)
-      onSelectPage?.(nextPage)
+      if (nextPage == null) return;
+      event.preventDefault();
+      onPageActivate?.(nextPage);
+      onSelectPage?.(nextPage);
     },
-    [activePage, layout.pageCount, onPageActivate, onSelectPage]
-  )
+    [activePage, layout.pageCount, onPageActivate, onSelectPage],
+  );
   const handleSelectPage = React.useCallback(
     (pageNumber: number) => {
-      onPageActivate?.(pageNumber)
-      onSelectPage?.(pageNumber)
+      onPageActivate?.(pageNumber);
+      onSelectPage?.(pageNumber);
     },
-    [onPageActivate, onSelectPage]
-  )
+    [onPageActivate, onSelectPage],
+  );
 
   return (
     <nav
@@ -77,8 +77,8 @@ export function PdfThumbnailRailViewport({
       onPointerLeave={onPointerLeave}
       onScroll={onScroll}
       className={cn(
-        "h-full overflow-auto bg-sidebar p-2 text-sidebar-foreground",
-        className
+        "bg-sidebar text-sidebar-foreground h-full overflow-auto p-2",
+        className,
       )}
     >
       <ol className="relative w-full" style={{ height: layout.totalHeight }}>
@@ -103,7 +103,7 @@ export function PdfThumbnailRailViewport({
         ))}
       </ol>
     </nav>
-  )
+  );
 }
 
 function getKeyboardTargetPage({
@@ -111,20 +111,20 @@ function getKeyboardTargetPage({
   page,
   pageCount,
 }: {
-  key: string
-  page: number
-  pageCount: number
+  key: string;
+  page: number;
+  pageCount: number;
 }) {
   switch (key) {
     case "ArrowUp":
-      return Math.max(1, page - 1)
+      return Math.max(1, page - 1);
     case "ArrowDown":
-      return Math.min(pageCount, page + 1)
+      return Math.min(pageCount, page + 1);
     case "Home":
-      return 1
+      return 1;
     case "End":
-      return pageCount
+      return pageCount;
     default:
-      return null
+      return null;
   }
 }

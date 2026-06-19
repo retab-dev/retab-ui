@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/lib/pdf-document-resource"
+export * from "@/registry/new-york-v4/lib/pdf-document-resource";

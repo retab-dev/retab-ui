@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 export {
   AlertDialog,
@@ -13,4 +13,4 @@ export {
   AlertDialogPortal,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/registry/new-york-v4/ui/alert-dialog"
+} from "@/registry/new-york-v4/ui/alert-dialog";

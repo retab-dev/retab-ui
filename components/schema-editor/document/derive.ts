@@ -1,12 +1,12 @@
-import type { JSONSchema7TypeName } from "json-schema"
+import type { JSONSchema7TypeName } from "json-schema";
 
-import { definitionRefAliases } from "@/components/schema-editor/document/json-pointer"
+import { definitionRefAliases } from "@/components/schema-editor/document/json-pointer";
 import type {
   DefinitionEntry,
   DocumentNode,
   SchemaDocument,
   SchemaKind,
-} from "./types"
+} from "./types";
 
 const SCHEMA_VALUE_REST_KEYS = new Set([
   "additionalItems",
@@ -24,7 +24,7 @@ const SCHEMA_VALUE_REST_KEYS = new Set([
   "then",
   "unevaluatedItems",
   "unevaluatedProperties",
-])
+]);
 
 const SCHEMA_MAP_REST_KEYS = new Set([
   "$defs",
@@ -33,7 +33,7 @@ const SCHEMA_MAP_REST_KEYS = new Set([
   "dependencies",
   "patternProperties",
   "properties",
-])
+]);
 
 /**
  * Pure projections of a node for rendering. NONE of these are stored — there is
@@ -44,189 +44,184 @@ const SCHEMA_MAP_REST_KEYS = new Set([
 
 /** The effective UI "kind" of a node. */
 export function getEffectiveKind(node: DocumentNode): SchemaKind {
-  if (node.ref) return "ref"
-  if (node.enum) return "enum"
-  if (node.anyOf || node.oneOf) return "union"
+  if (node.ref) return "ref";
+  if (node.enum) return "enum";
+  if (node.anyOf || node.oneOf) return "union";
 
   if (Array.isArray(node.type)) {
-    const real = node.type.filter((t) => t !== "null")
-    return real.length === 1 ? (real[0] as SchemaKind) : "union"
+    const real = node.type.filter((t) => t !== "null");
+    return real.length === 1 ? (real[0] as SchemaKind) : "union";
   }
-  if (node.type) return node.type
-  return "any"
+  if (node.type) return node.type;
+  return "any";
 }
 
 export function isNullable(node: DocumentNode): boolean {
-  if (Array.isArray(node.type)) return node.type.includes("null")
-  if (node.type === "null") return true
-  if (node.anyOf) return node.anyOf.some((sub) => sub.type === "null")
-  return false
+  if (Array.isArray(node.type)) return node.type.includes("null");
+  if (node.type === "null") return true;
+  if (node.anyOf) return node.anyOf.some((sub) => sub.type === "null");
+  return false;
 }
 
 /** Base scalar type backing an enum (enums are `{ type, enum: [...] }`). */
 export function getEnumBaseType(node: DocumentNode): JSONSchema7TypeName {
   const type = Array.isArray(node.type)
     ? node.type.find((t) => t !== "null")
-    : node.type
-  return (type as JSONSchema7TypeName) ?? "string"
+    : node.type;
+  return (type as JSONSchema7TypeName) ?? "string";
 }
 
 /** Resolve a `$ref` node to the definition it points at (by id). */
 export function resolveRef(
   doc: SchemaDocument,
-  node: DocumentNode
+  node: DocumentNode,
 ): DefinitionEntry | null {
-  if (!node.ref) return null
-  return doc.defs.find((def) => def.id === node.ref) ?? null
+  if (!node.ref) return null;
+  return doc.defs.find((def) => def.id === node.ref) ?? null;
 }
 
 /** True when a `$ref` points at a definition that no longer exists. */
 export function isDanglingRef(
   doc: SchemaDocument,
-  node: DocumentNode
+  node: DocumentNode,
 ): boolean {
-  return Boolean(node.ref) && !resolveRef(doc, node)
+  return Boolean(node.ref) && !resolveRef(doc, node);
 }
 
 export function isDefinitionReferenced(
   doc: SchemaDocument,
   defId: string,
-  options: { exceptDefId?: string } = {}
+  options: { exceptDefId?: string } = {},
 ): boolean {
-  const referenced = doc.defs.find((definition) => definition.id === defId)
-  if (!referenced) return false
+  const referenced = doc.defs.find((definition) => definition.id === defId);
+  if (!referenced) return false;
 
-  const refs = getReferenceRefOptions(doc)
+  const refs = getReferenceRefOptions(doc);
 
-  if (nodeReferencesDefinition(doc.root, referenced, refs))
-    return true
+  if (nodeReferencesDefinition(doc.root, referenced, refs)) return true;
 
   for (const definition of doc.defs) {
-    if (definition.id === options.exceptDefId) continue
+    if (definition.id === options.exceptDefId) continue;
     if (nodeReferencesDefinition(definition.node, referenced, refs))
-      return true
+      return true;
   }
 
-  return false
+  return false;
 }
 
 function nodeReferencesDefinition(
   node: DocumentNode,
   definition: DefinitionEntry,
-  refs: ReferenceRefOptions
+  refs: ReferenceRefOptions,
 ): boolean {
-  if (node.ref === definition.id) return true
-  if (restReferencesDefinition(node.rest, definition, refs)) return true
+  if (node.ref === definition.id) return true;
+  if (restReferencesDefinition(node.rest, definition, refs)) return true;
 
   if (node.properties) {
     for (const property of node.properties) {
       if (nodeReferencesDefinition(property.node, definition, refs))
-        return true
+        return true;
     }
   }
 
   if (node.items && nodeReferencesDefinition(node.items, definition, refs))
-    return true
+    return true;
 
   for (const key of ["anyOf", "oneOf", "allOf"] as const) {
-    const children = node[key]
-    if (!children) continue
+    const children = node[key];
+    if (!children) continue;
     for (const child of children) {
-      if (nodeReferencesDefinition(child, definition, refs)) return true
+      if (nodeReferencesDefinition(child, definition, refs)) return true;
     }
   }
 
-  return false
+  return false;
 }
 
 function restReferencesDefinition(
   rest: Record<string, unknown>,
   definition: DefinitionEntry,
-  refs: ReferenceRefOptions
+  refs: ReferenceRefOptions,
 ): boolean {
   for (const [key, value] of Object.entries(rest)) {
     if (SCHEMA_MAP_REST_KEYS.has(key)) {
-      if (schemaMapReferencesDefinition(value, definition, refs))
-        return true
+      if (schemaMapReferencesDefinition(value, definition, refs)) return true;
     } else if (SCHEMA_VALUE_REST_KEYS.has(key)) {
-      if (schemaReferencesDefinition(value, definition, refs))
-        return true
+      if (schemaReferencesDefinition(value, definition, refs)) return true;
     }
   }
-  return false
+  return false;
 }
 
 function schemaMapReferencesDefinition(
   value: unknown,
   definition: DefinitionEntry,
-  refs: ReferenceRefOptions
+  refs: ReferenceRefOptions,
 ): boolean {
-  if (!isPlainObject(value)) return false
+  if (!isPlainObject(value)) return false;
   return Object.values(value).some((child) =>
-    schemaReferencesDefinition(child, definition, refs)
-  )
+    schemaReferencesDefinition(child, definition, refs),
+  );
 }
 
 function schemaReferencesDefinition(
   value: unknown,
   definition: DefinitionEntry,
-  refs: ReferenceRefOptions
+  refs: ReferenceRefOptions,
 ): boolean {
   if (Array.isArray(value)) {
     return value.some((child) =>
-      schemaReferencesDefinition(child, definition, refs)
-    )
+      schemaReferencesDefinition(child, definition, refs),
+    );
   }
-  if (!isPlainObject(value)) return false
+  if (!isPlainObject(value)) return false;
 
-  const ref = value.$ref
+  const ref = value.$ref;
   if (
     definitionRefAliases(refs.primaryKeyword, definition.name).includes(
-      ref as string
+      ref as string,
     )
   )
-    return true
+    return true;
   if (
     refs.allowOtherKeywordAlias &&
     definitionRefAliases(refs.otherKeyword, definition.name).includes(
-      ref as string
+      ref as string,
     )
   )
-    return true
+    return true;
 
   for (const [key, child] of Object.entries(value)) {
     if (SCHEMA_MAP_REST_KEYS.has(key)) {
-      if (schemaMapReferencesDefinition(child, definition, refs))
-        return true
+      if (schemaMapReferencesDefinition(child, definition, refs)) return true;
     } else if (SCHEMA_VALUE_REST_KEYS.has(key)) {
-      if (schemaReferencesDefinition(child, definition, refs))
-        return true
+      if (schemaReferencesDefinition(child, definition, refs)) return true;
     }
   }
 
-  return false
+  return false;
 }
 
 interface ReferenceRefOptions {
-  primaryKeyword: "$defs" | "definitions"
-  otherKeyword: "$defs" | "definitions"
-  allowOtherKeywordAlias: boolean
+  primaryKeyword: "$defs" | "definitions";
+  otherKeyword: "$defs" | "definitions";
+  allowOtherKeywordAlias: boolean;
 }
 
 function getReferenceRefOptions(doc: SchemaDocument): ReferenceRefOptions {
   const primaryKeyword =
-    doc.rest.defsKeyword === "definitions" ? "definitions" : "$defs"
-  const otherKeyword = primaryKeyword === "$defs" ? "definitions" : "$defs"
+    doc.rest.defsKeyword === "definitions" ? "definitions" : "$defs";
+  const otherKeyword = primaryKeyword === "$defs" ? "definitions" : "$defs";
   return {
     primaryKeyword,
     otherKeyword,
     allowOtherKeywordAlias: !Object.prototype.hasOwnProperty.call(
       doc.root.rest,
-      otherKeyword
+      otherKeyword,
     ),
-  }
+  };
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

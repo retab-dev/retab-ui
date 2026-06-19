@@ -1,17 +1,19 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import type { XlsxSource } from "@/lib/xlsx-workbook"
-import { XlsxGrid, XlsxGridSkeleton } from "@/components/ui/xlsx-grid"
+import * as React from "react";
+
+import type { XlsxSource } from "@/lib/xlsx-workbook";
+import { XlsxGrid, XlsxGridSkeleton } from "@/components/ui/xlsx-grid";
 
 import {
   resolveXlsxActiveCell,
   resolveXlsxScrollRequestForSheet,
-} from "./xlsx-viewer-active-cell"
-import type { XlsxCellRef } from "./xlsx-viewer-types"
-import type { XlsxScrollRequest } from "./xlsx-viewer-scroll"
-import { clampSheetIndex } from "./xlsx-viewer-sheet-state"
+} from "./xlsx-viewer-active-cell";
+import type { XlsxCellRef } from "./xlsx-viewer-types";
+import type { XlsxScrollRequest } from "./xlsx-viewer-scroll";
+import { clampSheetIndex } from "./xlsx-viewer-sheet-state";
 
 export function XlsxViewerSheet({
   sourcePromise,
@@ -23,28 +25,28 @@ export function XlsxViewerSheet({
   isolateStyles,
   viewportRef,
 }: {
-  sourcePromise: Promise<XlsxSource>
-  activeSheetIndex: number
-  scale: number
-  onReportSource: (source: XlsxSource) => void
-  activeCell?: XlsxCellRef | null
-  scrollRequest?: XlsxScrollRequest | null
-  isolateStyles: boolean
-  viewportRef?: React.RefObject<HTMLDivElement | null>
+  sourcePromise: Promise<XlsxSource>;
+  activeSheetIndex: number;
+  scale: number;
+  onReportSource: (source: XlsxSource) => void;
+  activeCell?: XlsxCellRef | null;
+  scrollRequest?: XlsxScrollRequest | null;
+  isolateStyles: boolean;
+  viewportRef?: React.RefObject<HTMLDivElement | null>;
 }) {
-  const source = React.use(sourcePromise)
+  const source = React.use(sourcePromise);
 
   React.useEffect(() => {
-    onReportSource(source)
-  }, [source, onReportSource])
+    onReportSource(source);
+  }, [source, onReportSource]);
 
-  const sheetIndex = clampSheetIndex(activeSheetIndex, source.sheets.length)
-  const sheet = source.sheets[sheetIndex]
+  const sheetIndex = clampSheetIndex(activeSheetIndex, source.sheets.length);
+  const sheet = source.sheets[sheetIndex];
   const getCell = React.useCallback(
     (rowIndex: number, columnIndex: number) =>
       source.getCell(sheetIndex, rowIndex, columnIndex),
-    [source, sheetIndex]
-  )
+    [source, sheetIndex],
+  );
 
   return (
     <XlsxGrid
@@ -57,14 +59,14 @@ export function XlsxViewerSheet({
       activeCell={resolveXlsxActiveCell(activeCell, sheetIndex)}
       scrollRequest={resolveXlsxScrollRequestForSheet(
         scrollRequest,
-        sheetIndex
+        sheetIndex,
       )}
       isolateStyles={isolateStyles}
       viewportRef={viewportRef}
     />
-  )
+  );
 }
 
 export function XlsxViewerSheetSkeleton() {
-  return <XlsxGridSkeleton />
+  return <XlsxGridSkeleton />;
 }

@@ -1,20 +1,20 @@
-import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
-import { cmp } from "@/components/json-table/path-utils"
+import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types";
+import { cmp } from "@/components/json-table/path-utils";
 
 function editableJsonTableCellMemoVariables(props: JsonTableCellProps) {
   const { cellProjection, commit, hover, primitiveEditing, structuredEditing } =
-    props
+    props;
   const materializedFieldPath =
-    cellProjection.projectedCell?.materializedFieldPath
+    cellProjection.projectedCell?.materializedFieldPath;
   const isStructuredSessionCell =
     Boolean(materializedFieldPath) &&
-    structuredEditing.session?.fieldPath === materializedFieldPath
+    structuredEditing.session?.fieldPath === materializedFieldPath;
   const structuredEditSessionId = isStructuredSessionCell
     ? (structuredEditing.session?.id ?? null)
-    : null
+    : null;
   const structuredEditSessionOverlayOpen = isStructuredSessionCell
     ? (structuredEditing.session?.isOverlayOpen ?? false)
-    : false
+    : false;
 
   return {
     ariaColumnIndex: cellProjection.ariaColumnIndex,
@@ -34,16 +34,16 @@ function editableJsonTableCellMemoVariables(props: JsonTableCellProps) {
       structuredEditing.setSessionOverlayOpen,
     structuredEditSessionId,
     structuredEditSessionOverlayOpen,
-  }
+  };
 }
 
 export function areEditableJsonTableCellPropsEqual(
   previousProps: JsonTableCellProps,
-  nextProps: JsonTableCellProps
+  nextProps: JsonTableCellProps,
 ) {
   return cmp(
     editableJsonTableCellMemoVariables(previousProps),
     editableJsonTableCellMemoVariables(nextProps),
-    { deep: ["projectedCell.arrayIndexes"] }
-  )
+    { deep: ["projectedCell.arrayIndexes"] },
+  );
 }

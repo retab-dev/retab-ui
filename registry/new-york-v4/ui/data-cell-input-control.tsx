@@ -1,35 +1,37 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { cn } from "@/lib/utils"
-import { Input } from "@/components/ui/input"
+import * as React from "react";
+
+import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 import {
   useDataCellOpeningContext,
   type DataCellActivationSource,
-} from "@/registry/new-york-v4/ui/data-cell-activation"
-import { dataCellDisplayClass } from "@/registry/new-york-v4/ui/data-cell-classes"
-import type { DataCellInputControlProps } from "@/registry/new-york-v4/ui/data-cell-control-contract"
+} from "@/registry/new-york-v4/ui/data-cell-activation";
+import { dataCellDisplayClass } from "@/registry/new-york-v4/ui/data-cell-classes";
+import type { DataCellInputControlProps } from "@/registry/new-york-v4/ui/data-cell-control-contract";
 import {
   formatDataCellEditValue,
   getDataCellValueMeta,
   parseDataCellInputValue,
-} from "@/registry/new-york-v4/ui/data-cell-format"
-import { getDataCellTextSelectionOffset } from "@/registry/new-york-v4/ui/data-cell-text-hit-test"
+} from "@/registry/new-york-v4/ui/data-cell-format";
+import { getDataCellTextSelectionOffset } from "@/registry/new-york-v4/ui/data-cell-text-hit-test";
 import type {
   DataCellKind,
   DataCellValue,
   DataCellValueMeta,
-} from "@/registry/new-york-v4/ui/data-cell-types"
+} from "@/registry/new-york-v4/ui/data-cell-types";
 
 function focusDataCellTextInput(
   input: HTMLInputElement | null,
-  activationSource: DataCellActivationSource | undefined
+  activationSource: DataCellActivationSource | undefined,
 ) {
-  if (!input) return null
-  input.focus({ preventScroll: true })
+  if (!input) return null;
+  input.focus({ preventScroll: true });
 
-  if (input.type !== "text" && input.type !== "search") return
+  if (input.type !== "text" && input.type !== "search") return;
 
   const selectionIndex =
     activationSource?.kind === "pointer"
@@ -39,8 +41,8 @@ function focusDataCellTextInput(
           input,
           value: input.value,
         }))
-      : input.value.length
-  input.setSelectionRange(selectionIndex, selectionIndex)
+      : input.value.length;
+  input.setSelectionRange(selectionIndex, selectionIndex);
 }
 
 function initialInputValueForActivation({
@@ -48,24 +50,24 @@ function initialInputValueForActivation({
   kind,
   value,
 }: {
-  activationSource: DataCellActivationSource | undefined
-  kind: DataCellKind
-  value: DataCellValue
+  activationSource: DataCellActivationSource | undefined;
+  kind: DataCellKind;
+  value: DataCellValue;
 }) {
   if (
     activationSource?.kind !== "keyboard" ||
     activationSource.key.length !== 1
   ) {
-    return formatDataCellEditValue(kind, value)
+    return formatDataCellEditValue(kind, value);
   }
-  if (kind === "text") return activationSource.key
+  if (kind === "text") return activationSource.key;
   if (
     (kind === "number" || kind === "integer") &&
     /^[0-9.+-]$/.test(activationSource.key)
   ) {
-    return activationSource.key
+    return activationSource.key;
   }
-  return formatDataCellEditValue(kind, value)
+  return formatDataCellEditValue(kind, value);
 }
 
 export function DataCellInputControl({
@@ -91,41 +93,41 @@ export function DataCellInputControl({
     activationSource,
     kind,
     value,
-  })
+  });
   const [uncontrolledDraftValue, setUncontrolledDraftValue] =
-    React.useState(initialInputValue)
-  const inputRef = React.useRef<HTMLInputElement>(null)
-  const initialInputValueRef = React.useRef(initialInputValue)
-  const lastInputValueRef = React.useRef(initialInputValue)
-  const inputValue = draft?.value ?? uncontrolledDraftValue
+    React.useState(initialInputValue);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const initialInputValueRef = React.useRef(initialInputValue);
+  const lastInputValueRef = React.useRef(initialInputValue);
+  const inputValue = draft?.value ?? uncontrolledDraftValue;
   const openingContext = useDataCellOpeningContext(activationSource, {
     enabled: activationSource?.kind === "pointer",
     releaseAfterMicrotask: true,
-  })
+  });
   const isDirty = React.useCallback(
     () => lastInputValueRef.current !== initialInputValueRef.current,
-    []
-  )
+    [],
+  );
 
   React.useEffect(() => {
-    if (draft?.value !== undefined) return
+    if (draft?.value !== undefined) return;
     setUncontrolledDraftValue(
       initialInputValueForActivation({
         activationSource,
         kind,
         value,
-      })
-    )
-  }, [activationSource, draft?.value, kind, value])
+      }),
+    );
+  }, [activationSource, draft?.value, kind, value]);
 
   React.useEffect(() => {
-    lastInputValueRef.current = inputValue
-  }, [inputValue])
+    lastInputValueRef.current = inputValue;
+  }, [inputValue]);
 
   React.useLayoutEffect(() => {
-    if (!autoFocus && !activationSource) return
-    focusDataCellTextInput(inputRef.current, activationSource)
-  }, [activationSource, autoFocus])
+    if (!autoFocus && !activationSource) return;
+    focusDataCellTextInput(inputRef.current, activationSource);
+  }, [activationSource, autoFocus]);
 
   const commitCurrentInputValue = React.useCallback(
     (
@@ -135,18 +137,18 @@ export function DataCellInputControl({
         markFinished = true,
         onlyIfChanged = false,
       }: {
-        endEditing?: boolean
-        markFinished?: boolean
-        onlyIfChanged?: boolean
-      } = {}
+        endEditing?: boolean;
+        markFinished?: boolean;
+        onlyIfChanged?: boolean;
+      } = {},
     ) => {
-      const rawValue = input?.value ?? lastInputValueRef.current
+      const rawValue = input?.value ?? lastInputValueRef.current;
       const commitValue = parseDataCellInputValue({
         kind,
         value: rawValue,
         dateTimeZone: "local",
         previousValue: value,
-      })
+      });
       session.commit(
         commitValue,
         getDataCellValueMeta({
@@ -158,16 +160,16 @@ export function DataCellInputControl({
           endEditing,
           markFinished,
           shouldCommit: onlyIfChanged ? isDirty : undefined,
-        }
-      )
+        },
+      );
     },
-    [isDirty, kind, session, value]
-  )
-  const commitCurrentInputValueRef = React.useRef(commitCurrentInputValue)
+    [isDirty, kind, session, value],
+  );
+  const commitCurrentInputValueRef = React.useRef(commitCurrentInputValue);
 
   React.useEffect(() => {
-    commitCurrentInputValueRef.current = commitCurrentInputValue
-  }, [commitCurrentInputValue])
+    commitCurrentInputValueRef.current = commitCurrentInputValue;
+  }, [commitCurrentInputValue]);
 
   React.useEffect(
     () => () => {
@@ -175,19 +177,19 @@ export function DataCellInputControl({
         endEditing: false,
         markFinished: false,
         onlyIfChanged: true,
-      })
+      });
     },
-    []
-  )
+    [],
+  );
 
-  const inputType = inputTypeForDataCell(kind)
+  const inputType = inputTypeForDataCell(kind);
   const {
     id,
     "aria-label": ariaLabel,
     "aria-describedby": ariaDescribedBy,
     "aria-invalid": ariaInvalid,
     ...rootProps
-  } = props
+  } = props;
 
   return (
     <Input
@@ -197,7 +199,7 @@ export function DataCellInputControl({
       className={cn(
         dataCellDisplayClass,
         disabled && "pointer-events-none opacity-64",
-        className
+        className,
       )}
       id={id}
       name={name}
@@ -220,61 +222,61 @@ export function DataCellInputControl({
       step={kind === "integer" ? 1 : kind === "number" ? "any" : undefined}
       placeholder={placeholder}
       onChange={(event) => {
-        const nextValue = event.currentTarget.value
-        lastInputValueRef.current = nextValue
-        if (draft?.value === undefined) setUncontrolledDraftValue(nextValue)
+        const nextValue = event.currentTarget.value;
+        lastInputValueRef.current = nextValue;
+        if (draft?.value === undefined) setUncontrolledDraftValue(nextValue);
         draft?.onChange?.(
           nextValue,
           getDataCellValueMeta({
             kind,
             value: nextValue,
             isBadInput: event.currentTarget.validity.badInput,
-          })
-        )
+          }),
+        );
       }}
       onFocus={onFocus}
       onBlur={(event) => {
-        const rawValue = event.currentTarget.value
+        const rawValue = event.currentTarget.value;
         if (
           openingContext.shouldCancelDismiss({ kind: "focus-out" }) &&
           rawValue === initialInputValueRef.current
         ) {
-          onBlur?.(event)
-          return
+          onBlur?.(event);
+          return;
         }
-        commitCurrentInputValue(event.currentTarget)
-        onBlur?.(event)
+        commitCurrentInputValue(event.currentTarget);
+        onBlur?.(event);
       }}
       onKeyDown={(event) => {
-        onKeyDown?.(event)
-        if (event.defaultPrevented) return
+        onKeyDown?.(event);
+        if (event.defaultPrevented) return;
         if (event.key === "Enter") {
-          commitCurrentInputValue(event.currentTarget)
-          event.currentTarget.blur()
-          event.preventDefault()
-          return
+          commitCurrentInputValue(event.currentTarget);
+          event.currentTarget.blur();
+          event.preventDefault();
+          return;
         }
         if (event.key === "Escape") {
-          session.cancel()
-          event.currentTarget.blur()
-          event.preventDefault()
-          return
+          session.cancel();
+          event.currentTarget.blur();
+          event.preventDefault();
+          return;
         }
       }}
       onMouseUp={(event) => {
-        onMouseUp?.(event)
+        onMouseUp?.(event);
       }}
       onClick={(event) => {
-        onClick?.(event)
+        onClick?.(event);
       }}
       onDoubleClick={onDoubleClick}
     />
-  )
+  );
 }
 
 function inputTypeForDataCell(
-  kind: DataCellKind
+  kind: DataCellKind,
 ): React.HTMLInputTypeAttribute {
-  if (kind === "number" || kind === "integer") return "number"
-  return "text"
+  if (kind === "number" || kind === "integer") return "number";
+  return "text";
 }

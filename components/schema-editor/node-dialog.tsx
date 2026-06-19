@@ -1,31 +1,31 @@
-import * as React from "react"
+import * as React from "react";
 
-import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { PropertyForm } from "@/components/schema-editor/property-form/property-form"
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
+import { PropertyForm } from "@/components/schema-editor/property-form/property-form";
 import type {
   PropertyDraft,
   PropertyFormMode,
   PropertyFormSchemaContext,
-} from "@/components/schema-editor/property-form/types"
+} from "@/components/schema-editor/property-form/types";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 
 interface NodeDialogProps {
-  isOpen: boolean
-  onClose: () => void
-  onChange: (newNode: ExtendedJSONSchema7) => void
-  onNameChange?: (newName: string, updatedNode?: ExtendedJSONSchema7) => void
-  onDelete?: () => void
-  node: ExtendedJSONSchema7
-  name: string
-  mode: PropertyFormMode
-  siblingNames: string[]
-  formContext: Omit<PropertyFormSchemaContext, "siblingNames" | "originalName">
+  isOpen: boolean;
+  onClose: () => void;
+  onChange: (newNode: ExtendedJSONSchema7) => void;
+  onNameChange?: (newName: string, updatedNode?: ExtendedJSONSchema7) => void;
+  onDelete?: () => void;
+  node: ExtendedJSONSchema7;
+  name: string;
+  mode: PropertyFormMode;
+  siblingNames: string[];
+  formContext: Omit<PropertyFormSchemaContext, "siblingNames" | "originalName">;
 }
 
 export function NodeDialog({
@@ -42,13 +42,13 @@ export function NodeDialog({
 }: NodeDialogProps) {
   const handleCommit = async (next: PropertyDraft) => {
     if (next.name !== name && onNameChange) {
-      onNameChange(next.name, next.schemaNode)
+      onNameChange(next.name, next.schemaNode);
     } else {
-      onChange(next.schemaNode)
+      onChange(next.schemaNode);
     }
 
-    onClose()
-  }
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -79,5 +79,5 @@ export function NodeDialog({
         />
       </DialogContent>
     </Dialog>
-  )
+  );
 }

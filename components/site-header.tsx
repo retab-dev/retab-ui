@@ -1,26 +1,26 @@
-import Link from "next/link"
+import Link from "next/link";
 
-import { getColors } from "@/lib/colors"
-import { siteConfig } from "@/lib/config"
-import { source } from "@/lib/source"
-import { Button } from "@/components/ui/button"
-import { CommandMenu } from "@/components/command-menu"
-import { GitHubLink } from "@/components/github-link"
-import { Icons } from "@/components/icons"
-import { MainNav } from "@/components/main-nav"
-import { MobileNav } from "@/components/mobile-nav"
-import { ModeSwitcher } from "@/components/mode-switcher"
-import { SiteConfig } from "@/components/site-config"
-import { Separator } from "@/components/ui/separator"
+import { getColors } from "@/lib/colors";
+import { siteConfig } from "@/lib/config";
+import { source } from "@/lib/source";
+import { Button } from "@/components/ui/button";
+import { CommandMenu } from "@/components/command-menu";
+import { GitHubLink } from "@/components/github-link";
+import { Icons } from "@/components/icons";
+import { MainNav } from "@/components/main-nav";
+import { MobileNav } from "@/components/mobile-nav";
+import { ModeSwitcher } from "@/components/mode-switcher";
+import { SiteConfig } from "@/components/site-config";
+import { Separator } from "@/components/ui/separator";
 
 export function SiteHeader() {
-  const colors = getColors()
-  const pageTree = source.pageTree
+  const colors = getColors();
+  const pageTree = source.pageTree;
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-background">
-      <div className="container-wrapper px-6 group-has-data-[slot=designer]/layout:max-w-none 3xl:fixed:px-0">
-        <div className="flex h-(--header-height) items-center **:data-[slot=separator]:h-4! group-has-data-[slot=designer]/layout:fixed:max-w-none 3xl:fixed:container">
+    <header className="bg-background sticky top-0 z-50 w-full">
+      <div className="container-wrapper 3xl:fixed:px-0 px-6 group-has-data-[slot=designer]/layout:max-w-none">
+        <div className="group-has-data-[slot=designer]/layout:fixed:max-w-none 3xl:fixed:container flex h-(--header-height) items-center **:data-[slot=separator]:h-4!">
           <MobileNav
             tree={pageTree}
             items={siteConfig.navItems}
@@ -33,7 +33,7 @@ export function SiteHeader() {
             className="hidden size-8 lg:flex"
           >
             <Link href="/">
-              <Icons.logo className="size-5 text-foreground" />
+              <Icons.logo className="text-foreground size-5" />
               <span className="sr-only">{siteConfig.name}</span>
             </Link>
           </Button>
@@ -46,7 +46,7 @@ export function SiteHeader() {
               className="hidden h-8 shadow-none md:flex"
             >
               <Link href="https://retab.com" target="_blank" rel="noreferrer">
-                <span className="whitespace-nowrap text-xs text-muted-foreground">
+                <span className="text-muted-foreground text-xs whitespace-nowrap">
                   Built by Retab
                 </span>
               </Link>
@@ -69,14 +69,14 @@ export function SiteHeader() {
             <GitHubLink />
             <Separator
               orientation="vertical"
-              className="hidden h-4 self-center group-has-data-[slot=designer]/layout:hidden 3xl:flex"
+              className="3xl:flex hidden h-4 self-center group-has-data-[slot=designer]/layout:hidden"
             />
-            <SiteConfig className="hidden 3xl:flex 3xl:group-has-data-[slot=designer]/layout:hidden" />
+            <SiteConfig className="3xl:flex 3xl:group-has-data-[slot=designer]/layout:hidden hidden" />
             <Separator orientation="vertical" className="h-4 self-center" />
             <ModeSwitcher />
           </div>
         </div>
       </div>
     </header>
-  )
+  );
 }

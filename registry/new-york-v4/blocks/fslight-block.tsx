@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
 import {
   FileSystemLight,
   type FileSystemLightFile,
-} from "@/components/ui/file-system-light"
+} from "@/components/ui/file-system-light";
 
 const FILE_SYSTEM_LIGHT_FILES: FileSystemLightFile[] = [
   {
@@ -51,7 +51,7 @@ const FILE_SYSTEM_LIGHT_FILES: FileSystemLightFile[] = [
       mimeType: "application/json",
     },
   },
-]
+];
 
 export function FsLightBlock() {
   return (
@@ -60,5 +60,5 @@ export function FsLightBlock() {
       files={FILE_SYSTEM_LIGHT_FILES}
       title="File System Light"
     />
-  )
+  );
 }

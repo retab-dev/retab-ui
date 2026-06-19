@@ -1,23 +1,23 @@
 // @vitest-environment jsdom
 
-import { act, renderHook } from "@testing-library/react"
-import type { JSONSchema7 } from "json-schema"
-import { beforeAll, describe, expect, it, vi } from "vitest"
+import { act, renderHook } from "@testing-library/react";
+import type { JSONSchema7 } from "json-schema";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
+import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store";
 import {
   buildHeaderDropSchema,
   getHeaderDropSide,
-} from "@/components/json-table/lib/header-drag-model"
-import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
-import { useHeaderController } from "@/components/json-table/use-header-controller"
-import { useJsonTablePrimitiveCommitController } from "@/components/json-table/use-json-table-primitive-control"
-import { useJsonTableStructuredCellController } from "@/components/json-table/use-json-table-structured-cell-controller"
-import { useSingleFileTableDocumentModel } from "@/components/json-table/use-single-file-table-document-model"
+} from "@/components/json-table/lib/header-drag-model";
+import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes";
+import { useHeaderController } from "@/components/json-table/use-header-controller";
+import { useJsonTablePrimitiveCommitController } from "@/components/json-table/use-json-table-primitive-control";
+import { useJsonTableStructuredCellController } from "@/components/json-table/use-json-table-structured-cell-controller";
+import { useSingleFileTableDocumentModel } from "@/components/json-table/use-single-file-table-document-model";
 
-import { installJsonTableDom } from "./json-table-test-dom"
+import { installJsonTableDom } from "./json-table-test-dom";
 
-beforeAll(() => installJsonTableDom())
+beforeAll(() => installJsonTableDom());
 
 const document = {
   id: "doc_1",
@@ -25,7 +25,7 @@ const document = {
     vendor: "ACME",
     total: 10,
   },
-}
+};
 
 const schema: JSONSchema7 = {
   type: "object",
@@ -34,7 +34,7 @@ const schema: JSONSchema7 = {
     total: { type: "number" },
     status: { type: "string" },
   },
-}
+};
 
 const vendorNode: JsonTableHeaderNode = {
   key: "vendor",
@@ -48,7 +48,7 @@ const vendorNode: JsonTableHeaderNode = {
   isArray: false,
   canFold: false,
   isExpanded: false,
-}
+};
 
 const totalNode: JsonTableHeaderNode = {
   ...vendorNode,
@@ -58,7 +58,7 @@ const totalNode: JsonTableHeaderNode = {
   rawSchema: { type: "number" },
   schema: { type: "number" },
   effectiveType: "number",
-}
+};
 
 const allOfSchema: JSONSchema7 = {
   type: "object",
@@ -82,7 +82,7 @@ const allOfSchema: JSONSchema7 = {
       ],
     },
   },
-}
+};
 
 const anyOfSchema: JSONSchema7 = {
   type: "object",
@@ -105,7 +105,7 @@ const anyOfSchema: JSONSchema7 = {
       ],
     },
   },
-}
+};
 
 const vendorNameNode: JsonTableHeaderNode = {
   ...vendorNode,
@@ -113,7 +113,7 @@ const vendorNameNode: JsonTableHeaderNode = {
   label: "Name",
   propName: "name",
   parentPath: "vendor",
-}
+};
 
 const vendorRatingNode: JsonTableHeaderNode = {
   ...vendorNode,
@@ -124,7 +124,7 @@ const vendorRatingNode: JsonTableHeaderNode = {
   rawSchema: { type: "number" },
   schema: { type: "number" },
   effectiveType: "number",
-}
+};
 
 const missingParentNode: JsonTableHeaderNode = {
   ...vendorNode,
@@ -132,7 +132,7 @@ const missingParentNode: JsonTableHeaderNode = {
   label: "Name",
   propName: "name",
   parentPath: "missing",
-}
+};
 
 const paymentBankNameNode: JsonTableHeaderNode = {
   ...vendorNode,
@@ -140,12 +140,12 @@ const paymentBankNameNode: JsonTableHeaderNode = {
   label: "Bank Name",
   propName: "bank_name",
   parentPath: "payment",
-}
+};
 
 describe("json table primitive cell controller", () => {
   it("skips no-op commits", () => {
-    const onCellCommit = vi.fn()
-    const primitiveEditStore = createJsonTablePrimitiveEditStore()
+    const onCellCommit = vi.fn();
+    const primitiveEditStore = createJsonTablePrimitiveEditStore();
     const { result } = renderHook(() =>
       useJsonTablePrimitiveCommitController({
         document,
@@ -154,19 +154,19 @@ describe("json table primitive cell controller", () => {
         isEditable: true,
         onCellCommit,
         primitiveEditStore,
-      })
-    )
+      }),
+    );
 
-    act(() => result.current.commitValidatedValue("ACME"))
+    act(() => result.current.commitValidatedValue("ACME"));
 
-    expect(onCellCommit).not.toHaveBeenCalled()
-    expect(result.current.effectiveValue).toBe("ACME")
-  })
+    expect(onCellCommit).not.toHaveBeenCalled();
+    expect(result.current.effectiveValue).toBe("ACME");
+  });
 
   it("emits one primitive commit after one local edit-store write", () => {
-    const onCellCommit = vi.fn()
-    const primitiveEditStore = createJsonTablePrimitiveEditStore()
-    const commitValue = vi.spyOn(primitiveEditStore, "commitValue")
+    const onCellCommit = vi.fn();
+    const primitiveEditStore = createJsonTablePrimitiveEditStore();
+    const commitValue = vi.spyOn(primitiveEditStore, "commitValue");
     const { result } = renderHook(() =>
       useJsonTablePrimitiveCommitController({
         document,
@@ -175,26 +175,26 @@ describe("json table primitive cell controller", () => {
         isEditable: true,
         onCellCommit,
         primitiveEditStore,
-      })
-    )
+      }),
+    );
 
-    act(() => result.current.commitValidatedValue("Globex"))
+    act(() => result.current.commitValidatedValue("Globex"));
 
-    expect(commitValue).toHaveBeenCalledTimes(1)
-    expect(commitValue).toHaveBeenCalledWith("vendor", "Globex", "ACME")
-    expect(onCellCommit).toHaveBeenCalledTimes(1)
+    expect(commitValue).toHaveBeenCalledTimes(1);
+    expect(commitValue).toHaveBeenCalledWith("vendor", "Globex", "ACME");
+    expect(onCellCommit).toHaveBeenCalledTimes(1);
     expect(onCellCommit).toHaveBeenCalledWith({
       fieldPath: "vendor",
       value: "Globex",
       previousValue: "ACME",
       visibleThrough: "primitivePendingValue",
-    })
-    expect(result.current.effectiveValue).toBe("Globex")
-  })
+    });
+    expect(result.current.effectiveValue).toBe("Globex");
+  });
 
   it("commits when projected value is stale but document data differs", () => {
-    const onCellCommit = vi.fn()
-    const primitiveEditStore = createJsonTablePrimitiveEditStore()
+    const onCellCommit = vi.fn();
+    const primitiveEditStore = createJsonTablePrimitiveEditStore();
     const { result } = renderHook(() =>
       useJsonTablePrimitiveCommitController({
         document,
@@ -203,18 +203,18 @@ describe("json table primitive cell controller", () => {
         isEditable: true,
         onCellCommit,
         primitiveEditStore,
-      })
-    )
+      }),
+    );
 
-    act(() => result.current.commitValidatedValue("Globex"))
+    act(() => result.current.commitValidatedValue("Globex"));
 
     expect(onCellCommit).toHaveBeenCalledWith({
       fieldPath: "vendor",
       value: "Globex",
       previousValue: "ACME",
       visibleThrough: "primitivePendingValue",
-    })
-  })
+    });
+  });
 
   it("commits nested array values as primitive commits", () => {
     const nestedDocument = {
@@ -223,9 +223,9 @@ describe("json table primitive cell controller", () => {
         ...document.data,
         lines: [{ name: "old", quantity: 1 }],
       },
-    }
-    const onCellCommit = vi.fn()
-    const primitiveEditStore = createJsonTablePrimitiveEditStore()
+    };
+    const onCellCommit = vi.fn();
+    const primitiveEditStore = createJsonTablePrimitiveEditStore();
     const { result } = renderHook(() =>
       useJsonTablePrimitiveCommitController({
         document: nestedDocument,
@@ -234,23 +234,23 @@ describe("json table primitive cell controller", () => {
         isEditable: true,
         onCellCommit,
         primitiveEditStore,
-      })
-    )
+      }),
+    );
 
-    act(() => result.current.commitValidatedValue(2))
+    act(() => result.current.commitValidatedValue(2));
 
     expect(onCellCommit).toHaveBeenCalledWith({
       fieldPath: "lines.0.quantity",
       value: 2,
       previousValue: 1,
       visibleThrough: "primitivePendingValue",
-    })
-    expect(result.current.effectiveValue).toBe(2)
-  })
+    });
+    expect(result.current.effectiveValue).toBe(2);
+  });
 
   it("clears local edit state when authoritative field data changes", () => {
-    const onCellCommit = vi.fn()
-    const primitiveEditStore = createJsonTablePrimitiveEditStore()
+    const onCellCommit = vi.fn();
+    const primitiveEditStore = createJsonTablePrimitiveEditStore();
     const { result, rerender } = renderHook(
       ({ currentDocument, currentValue }) =>
         useJsonTablePrimitiveCommitController({
@@ -266,30 +266,30 @@ describe("json table primitive cell controller", () => {
           currentDocument: document,
           currentValue: "ACME",
         },
-      }
-    )
+      },
+    );
 
-    act(() => result.current.commitValidatedValue("Globex"))
-    expect(result.current.effectiveValue).toBe("Globex")
+    act(() => result.current.commitValidatedValue("Globex"));
+    expect(result.current.effectiveValue).toBe("Globex");
 
     const nextDocument = {
       ...document,
       data: { ...document.data, vendor: "Initech" },
-    }
+    };
     act(() => {
-      primitiveEditStore.reconcileDocumentData(nextDocument.data)
-    })
+      primitiveEditStore.reconcileDocumentData(nextDocument.data);
+    });
     rerender({
       currentDocument: nextDocument,
       currentValue: "Initech",
-    })
+    });
 
-    expect(result.current.effectiveValue).toBe("Initech")
-  })
+    expect(result.current.effectiveValue).toBe("Initech");
+  });
 
   it("treats null and empty strings as equivalent no-op commits", () => {
-    const onCellCommit = vi.fn()
-    const primitiveEditStore = createJsonTablePrimitiveEditStore()
+    const onCellCommit = vi.fn();
+    const primitiveEditStore = createJsonTablePrimitiveEditStore();
     const { result } = renderHook(() =>
       useJsonTablePrimitiveCommitController({
         document: {
@@ -301,18 +301,18 @@ describe("json table primitive cell controller", () => {
         isEditable: true,
         onCellCommit,
         primitiveEditStore,
-      })
-    )
+      }),
+    );
 
-    act(() => result.current.commitValidatedValue(""))
+    act(() => result.current.commitValidatedValue(""));
 
-    expect(onCellCommit).not.toHaveBeenCalled()
-    expect(result.current.effectiveValue).toBeNull()
-  })
+    expect(onCellCommit).not.toHaveBeenCalled();
+    expect(result.current.effectiveValue).toBeNull();
+  });
 
   it("does not commit when disabled", () => {
-    const onCellCommit = vi.fn()
-    const primitiveEditStore = createJsonTablePrimitiveEditStore()
+    const onCellCommit = vi.fn();
+    const primitiveEditStore = createJsonTablePrimitiveEditStore();
     const { result } = renderHook(() =>
       useJsonTablePrimitiveCommitController({
         document,
@@ -321,17 +321,17 @@ describe("json table primitive cell controller", () => {
         isEditable: false,
         onCellCommit,
         primitiveEditStore,
-      })
-    )
+      }),
+    );
 
-    act(() => result.current.commitValidatedValue("Globex"))
+    act(() => result.current.commitValidatedValue("Globex"));
 
-    expect(onCellCommit).not.toHaveBeenCalled()
-  })
+    expect(onCellCommit).not.toHaveBeenCalled();
+  });
 
   it("does not commit when the projected cell has no materialized path", () => {
-    const onCellCommit = vi.fn()
-    const primitiveEditStore = createJsonTablePrimitiveEditStore()
+    const onCellCommit = vi.fn();
+    const primitiveEditStore = createJsonTablePrimitiveEditStore();
     const { result } = renderHook(() =>
       useJsonTablePrimitiveCommitController({
         document,
@@ -340,42 +340,42 @@ describe("json table primitive cell controller", () => {
         isEditable: true,
         onCellCommit,
         primitiveEditStore,
-      })
-    )
+      }),
+    );
 
-    act(() => result.current.commitValidatedValue("Globex"))
+    act(() => result.current.commitValidatedValue("Globex"));
 
-    expect(onCellCommit).not.toHaveBeenCalled()
-  })
-})
+    expect(onCellCommit).not.toHaveBeenCalled();
+  });
+});
 
 describe("json table structured cell controller", () => {
   it("commits changed values to document data without primitive lifecycle", () => {
-    const onCellCommit = vi.fn()
+    const onCellCommit = vi.fn();
     const { result } = renderHook(() =>
       useJsonTableStructuredCellController({
         materializedFieldPath: "vendor",
         value: "ACME",
         isEditable: true,
         onCellCommit,
-      })
-    )
+      }),
+    );
 
-    act(() => result.current.commitStructuredValueChange("Globex"))
+    act(() => result.current.commitStructuredValueChange("Globex"));
 
     expect(onCellCommit).toHaveBeenCalledWith({
       fieldPath: "vendor",
       value: "Globex",
       previousValue: "ACME",
       visibleThrough: "projectedDocumentValue",
-    })
-    expect(result.current.effectiveValue).toBe("Globex")
-  })
+    });
+    expect(result.current.effectiveValue).toBe("Globex");
+  });
 
   it("keeps structured pending values visible before the parent echo", () => {
-    const onCellCommit = vi.fn()
-    const baseValue = { amount: 12, currency: "EUR" }
-    const committedValue = { amount: 13, currency: "EUR" }
+    const onCellCommit = vi.fn();
+    const baseValue = { amount: 12, currency: "EUR" };
+    const committedValue = { amount: 13, currency: "EUR" };
     const { result, rerender } = renderHook(
       ({ value }) =>
         useJsonTableStructuredCellController({
@@ -384,18 +384,18 @@ describe("json table structured cell controller", () => {
           isEditable: true,
           onCellCommit,
         }),
-      { initialProps: { value: baseValue } }
-    )
+      { initialProps: { value: baseValue } },
+    );
 
-    act(() => result.current.commitStructuredValueChange(committedValue))
-    act(() => rerender({ value: { amount: 12, currency: "EUR" } }))
+    act(() => result.current.commitStructuredValueChange(committedValue));
+    act(() => rerender({ value: { amount: 12, currency: "EUR" } }));
 
-    expect(result.current.effectiveValue).toEqual(committedValue)
-  })
+    expect(result.current.effectiveValue).toEqual(committedValue);
+  });
 
   it("clears structured pending values when a cloned parent echo arrives", () => {
-    const onCellCommit = vi.fn()
-    const committedValue = { amount: 13, currency: "EUR" }
+    const onCellCommit = vi.fn();
+    const committedValue = { amount: 13, currency: "EUR" };
     const { result, rerender } = renderHook(
       ({ value }) =>
         useJsonTableStructuredCellController({
@@ -404,21 +404,21 @@ describe("json table structured cell controller", () => {
           isEditable: true,
           onCellCommit,
         }),
-      { initialProps: { value: { amount: 12, currency: "EUR" } } }
-    )
+      { initialProps: { value: { amount: 12, currency: "EUR" } } },
+    );
 
-    act(() => result.current.commitStructuredValueChange(committedValue))
-    act(() => rerender({ value: { currency: "EUR", amount: 13 } }))
-    act(() => rerender({ value: { amount: 14, currency: "EUR" } }))
+    act(() => result.current.commitStructuredValueChange(committedValue));
+    act(() => rerender({ value: { currency: "EUR", amount: 13 } }));
+    act(() => rerender({ value: { amount: 14, currency: "EUR" } }));
 
     expect(result.current.effectiveValue).toEqual({
       amount: 14,
       currency: "EUR",
-    })
-  })
+    });
+  });
 
   it("lets divergent parent values replace structured pending values", () => {
-    const onCellCommit = vi.fn()
+    const onCellCommit = vi.fn();
     const { result, rerender } = renderHook(
       ({ value }) =>
         useJsonTableStructuredCellController({
@@ -427,62 +427,62 @@ describe("json table structured cell controller", () => {
           isEditable: true,
           onCellCommit,
         }),
-      { initialProps: { value: { amount: 12, currency: "EUR" } } }
-    )
+      { initialProps: { value: { amount: 12, currency: "EUR" } } },
+    );
 
     act(() =>
       result.current.commitStructuredValueChange({
         amount: 13,
         currency: "EUR",
-      })
-    )
-    act(() => rerender({ value: { amount: 99, currency: "USD" } }))
+      }),
+    );
+    act(() => rerender({ value: { amount: 99, currency: "USD" } }));
 
     expect(result.current.effectiveValue).toEqual({
       amount: 99,
       currency: "USD",
-    })
-  })
+    });
+  });
 
   it("skips structured no-op commits", () => {
-    const onCellCommit = vi.fn()
+    const onCellCommit = vi.fn();
     const { result } = renderHook(() =>
       useJsonTableStructuredCellController({
         materializedFieldPath: "vendor",
         value: "ACME",
         isEditable: true,
         onCellCommit,
-      })
-    )
+      }),
+    );
 
-    act(() => result.current.commitStructuredValueChange("ACME"))
+    act(() => result.current.commitStructuredValueChange("ACME"));
 
-    expect(onCellCommit).not.toHaveBeenCalled()
-  })
+    expect(onCellCommit).not.toHaveBeenCalled();
+  });
 
   it("skips structured no-op commits when object keys are reordered", () => {
-    const onCellCommit = vi.fn()
+    const onCellCommit = vi.fn();
     const { result } = renderHook(() =>
       useJsonTableStructuredCellController({
         materializedFieldPath: "payment",
         value: { amount: 12, currency: "EUR" },
         isEditable: true,
         onCellCommit,
-      })
-    )
+      }),
+    );
 
     act(() =>
       result.current.commitStructuredValueChange({
         currency: "EUR",
         amount: 12,
-      })
-    )
+      }),
+    );
 
-    expect(onCellCommit).not.toHaveBeenCalled()
-  })
+    expect(onCellCommit).not.toHaveBeenCalled();
+  });
 
   it("does not commit structured values when disabled or pathless", () => {
-    const onCellCommit = vi.fn()
+    const onCellCommit = vi.fn();
     const { result, rerender } = renderHook(
       ({ materializedFieldPath, isEditable }) =>
         useJsonTableStructuredCellController({
@@ -496,64 +496,64 @@ describe("json table structured cell controller", () => {
           materializedFieldPath: "vendor" as string | undefined,
           isEditable: false,
         },
-      }
-    )
+      },
+    );
 
-    act(() => result.current.commitStructuredValueChange("Globex"))
-    rerender({ materializedFieldPath: undefined, isEditable: true })
-    act(() => result.current.commitStructuredValueChange("Initech"))
+    act(() => result.current.commitStructuredValueChange("Globex"));
+    rerender({ materializedFieldPath: undefined, isEditable: true });
+    act(() => result.current.commitStructuredValueChange("Initech"));
 
-    expect(onCellCommit).not.toHaveBeenCalled()
-  })
-})
+    expect(onCellCommit).not.toHaveBeenCalled();
+  });
+});
 
 describe("single file table document model", () => {
   it("keeps primitive pending values visible through the edit store until parent echo", () => {
-    const onUpdateDocument = vi.fn(async () => undefined)
+    const onUpdateDocument = vi.fn(async () => undefined);
     const { result, rerender } = renderHook(
       ({ sourceDocument }) =>
         useSingleFileTableDocumentModel({
           sourceDocument,
           onUpdateDocument,
         }),
-      { initialProps: { sourceDocument: document } }
-    )
+      { initialProps: { sourceDocument: document } },
+    );
 
-    const originalProjectionDocument = result.current.projectionDocument
+    const originalProjectionDocument = result.current.projectionDocument;
 
     act(() => {
-      result.current.primitiveEditStore.commitValue("vendor", "Globex", "ACME")
+      result.current.primitiveEditStore.commitValue("vendor", "Globex", "ACME");
       result.current.onCellCommit({
         fieldPath: "vendor",
         value: "Globex",
         previousValue: "ACME",
         visibleThrough: "primitivePendingValue",
-      })
-    })
+      });
+    });
 
     expect(result.current.primitiveEditStore.getSnapshot("vendor")).toEqual({
       status: "pending",
       hasValue: true,
       value: "Globex",
-    })
+    });
     expect(onUpdateDocument).toHaveBeenCalledWith({
       data: { ...document.data, vendor: "Globex" },
-    })
+    });
 
     rerender({
       sourceDocument: {
         ...document,
         data: { ...document.data, vendor: "Globex" },
       },
-    })
+    });
 
-    expect(result.current.projectionDocument).toBe(originalProjectionDocument)
+    expect(result.current.projectionDocument).toBe(originalProjectionDocument);
     expect(result.current.primitiveEditStore.getSnapshot("vendor")).toEqual({
       status: "confirmed",
       hasValue: true,
       value: "Globex",
-    })
-  })
+    });
+  });
 
   it("replaces the projection document for authoritative same-id parent data", () => {
     const { result, rerender } = renderHook(
@@ -562,58 +562,58 @@ describe("single file table document model", () => {
           sourceDocument,
           onUpdateDocument: vi.fn(async () => undefined),
         }),
-      { initialProps: { sourceDocument: document } }
-    )
+      { initialProps: { sourceDocument: document } },
+    );
     const authoritativeDocument = {
       ...document,
       data: { ...document.data, vendor: "Initech" },
-    }
+    };
 
-    rerender({ sourceDocument: authoritativeDocument })
+    rerender({ sourceDocument: authoritativeDocument });
 
-    expect(result.current.projectionDocument).toBe(authoritativeDocument)
-  })
+    expect(result.current.projectionDocument).toBe(authoritativeDocument);
+  });
 
   it("resets primitive edits and projection for a new source document id", () => {
-    const onUpdateDocument = vi.fn(async () => undefined)
+    const onUpdateDocument = vi.fn(async () => undefined);
     const { result, rerender } = renderHook(
       ({ sourceDocument }) =>
         useSingleFileTableDocumentModel({
           sourceDocument,
           onUpdateDocument,
         }),
-      { initialProps: { sourceDocument: document } }
-    )
+      { initialProps: { sourceDocument: document } },
+    );
     const nextDocument = {
       ...document,
       id: "doc_2",
       data: { ...document.data, vendor: "Initech" },
-    }
+    };
 
     act(() => {
-      result.current.primitiveEditStore.commitValue("vendor", "Globex", "ACME")
-    })
+      result.current.primitiveEditStore.commitValue("vendor", "Globex", "ACME");
+    });
     expect(result.current.primitiveEditStore.getSnapshot("vendor").status).toBe(
-      "pending"
-    )
+      "pending",
+    );
 
-    rerender({ sourceDocument: nextDocument })
+    rerender({ sourceDocument: nextDocument });
 
-    expect(result.current.projectionDocument).toBe(nextDocument)
+    expect(result.current.projectionDocument).toBe(nextDocument);
     expect(result.current.primitiveEditStore.getSnapshot("vendor")).toEqual({
       status: "idle",
       hasValue: false,
       value: undefined,
-    })
-  })
+    });
+  });
 
   it("exposes a no-op commit handler when document updates are unavailable", () => {
     const { result } = renderHook(() =>
       useSingleFileTableDocumentModel({
         sourceDocument: document,
-      })
-    )
-    const originalProjectionDocument = result.current.projectionDocument
+      }),
+    );
+    const originalProjectionDocument = result.current.projectionDocument;
 
     act(() => {
       result.current.onCellCommit({
@@ -621,21 +621,21 @@ describe("single file table document model", () => {
         value: 12,
         previousValue: 10,
         visibleThrough: "projectedDocumentValue",
-      })
-    })
+      });
+    });
 
-    expect(result.current.canCommitDocument).toBe(false)
-    expect(result.current.projectionDocument).toBe(originalProjectionDocument)
-  })
+    expect(result.current.canCommitDocument).toBe(false);
+    expect(result.current.projectionDocument).toBe(originalProjectionDocument);
+  });
 
   it("patches structured commits from the confirmed document data", () => {
-    const onUpdateDocument = vi.fn(async () => undefined)
+    const onUpdateDocument = vi.fn(async () => undefined);
     const { result } = renderHook(() =>
       useSingleFileTableDocumentModel({
         sourceDocument: document,
         onUpdateDocument,
-      })
-    )
+      }),
+    );
 
     act(() => {
       result.current.onCellCommit({
@@ -643,24 +643,24 @@ describe("single file table document model", () => {
         value: 12,
         previousValue: 10,
         visibleThrough: "projectedDocumentValue",
-      })
-    })
+      });
+    });
 
     expect(onUpdateDocument).toHaveBeenCalledWith({
       data: { ...document.data, total: 12 },
-    })
-  })
+    });
+  });
 
   it("keeps optimistic document state when the update promise rejects", async () => {
     const onUpdateDocument = vi.fn(async () => {
-      throw new Error("persistence failed")
-    })
+      throw new Error("persistence failed");
+    });
     const { result } = renderHook(() =>
       useSingleFileTableDocumentModel({
         sourceDocument: document,
         onUpdateDocument,
-      })
-    )
+      }),
+    );
 
     await act(async () => {
       result.current.onCellCommit({
@@ -668,9 +668,9 @@ describe("single file table document model", () => {
         value: 12,
         previousValue: 10,
         visibleThrough: "projectedDocumentValue",
-      })
-      await Promise.resolve()
-    })
+      });
+      await Promise.resolve();
+    });
 
     act(() => {
       result.current.onCellCommit({
@@ -678,21 +678,21 @@ describe("single file table document model", () => {
         value: "Globex",
         previousValue: "ACME",
         visibleThrough: "projectedDocumentValue",
-      })
-    })
+      });
+    });
 
     expect(onUpdateDocument).toHaveBeenNthCalledWith(1, {
       data: { ...document.data, total: 12 },
-    })
+    });
     expect(onUpdateDocument).toHaveBeenNthCalledWith(2, {
       data: { ...document.data, total: 12, vendor: "Globex" },
-    })
-  })
-})
+    });
+  });
+});
 
 describe("json table header controller", () => {
   it("toggles folded paths", () => {
-    const setStopAt = vi.fn()
+    const setStopAt = vi.fn();
     const { result, rerender } = renderHook(
       ({ stopAt }) =>
         useHeaderController({
@@ -705,20 +705,20 @@ describe("json table header controller", () => {
           draggedItemParentPathRef: { current: null },
           disableHeaderInteractions: false,
         }),
-      { initialProps: { stopAt: [] as string[] } }
-    )
+      { initialProps: { stopAt: [] as string[] } },
+    );
 
-    act(() => result.current.toggleExpanded())
-    expect(setStopAt).toHaveBeenLastCalledWith(["vendor"])
+    act(() => result.current.toggleExpanded());
+    expect(setStopAt).toHaveBeenLastCalledWith(["vendor"]);
 
-    rerender({ stopAt: ["vendor"] })
-    act(() => result.current.toggleExpanded())
-    expect(setStopAt).toHaveBeenLastCalledWith([])
-  })
+    rerender({ stopAt: ["vendor"] });
+    act(() => result.current.toggleExpanded());
+    expect(setStopAt).toHaveBeenLastCalledWith([]);
+  });
 
   it("cleans up drag refs", () => {
-    const draggedItemKeyRef = { current: "vendor" }
-    const draggedItemParentPathRef = { current: "" }
+    const draggedItemKeyRef = { current: "vendor" };
+    const draggedItemParentPathRef = { current: "" };
     const { result } = renderHook(() =>
       useHeaderController({
         node: vendorNode,
@@ -729,14 +729,14 @@ describe("json table header controller", () => {
         draggedItemKeyRef,
         draggedItemParentPathRef,
         disableHeaderInteractions: false,
-      })
-    )
+      }),
+    );
 
-    act(() => result.current.handleDragEnd())
+    act(() => result.current.handleDragEnd());
 
-    expect(draggedItemKeyRef.current).toBeNull()
-    expect(draggedItemParentPathRef.current).toBeNull()
-  })
+    expect(draggedItemKeyRef.current).toBeNull();
+    expect(draggedItemParentPathRef.current).toBeNull();
+  });
 
   it("marks headers as non-draggable while header interactions are disabled", () => {
     const { result } = renderHook(() =>
@@ -749,11 +749,11 @@ describe("json table header controller", () => {
         draggedItemKeyRef: { current: null },
         draggedItemParentPathRef: { current: null },
         disableHeaderInteractions: true,
-      })
-    )
+      }),
+    );
 
-    expect(result.current.isDraggable).toBe(false)
-  })
+    expect(result.current.isDraggable).toBe(false);
+  });
 
   it("marks allOf child headers as draggable when their parent branch is mutable", () => {
     const { result } = renderHook(() =>
@@ -766,11 +766,11 @@ describe("json table header controller", () => {
         draggedItemKeyRef: { current: null },
         draggedItemParentPathRef: { current: null },
         disableHeaderInteractions: false,
-      })
-    )
+      }),
+    );
 
-    expect(result.current.isDraggable).toBe(true)
-  })
+    expect(result.current.isDraggable).toBe(true);
+  });
 
   it("does not treat missing header parent paths as root-level draggable objects", () => {
     const { result } = renderHook(() =>
@@ -783,19 +783,19 @@ describe("json table header controller", () => {
         draggedItemKeyRef: { current: null },
         draggedItemParentPathRef: { current: null },
         disableHeaderInteractions: false,
-      })
-    )
+      }),
+    );
 
-    expect(result.current.isDraggable).toBe(false)
+    expect(result.current.isDraggable).toBe(false);
     expect(
       getHeaderDropSide({
         node: missingParentNode,
         schema,
         sourcePropName: "vendor",
-      })
-    ).toBeUndefined()
-  })
-})
+      }),
+    ).toBeUndefined();
+  });
+});
 
 describe("json table header drag model", () => {
   it("builds a reordered schema for valid drops", () => {
@@ -804,17 +804,17 @@ describe("json table header drag model", () => {
       schema,
       sourcePropName: "total",
       sourceParentPath: "",
-    })
+    });
 
     expect(Object.keys(nextSchema?.properties ?? {})).toEqual([
       "total",
       "vendor",
       "status",
-    ])
+    ]);
     expect(
-      getHeaderDropSide({ node: totalNode, schema, sourcePropName: "vendor" })
-    ).toBe("after")
-  })
+      getHeaderDropSide({ node: totalNode, schema, sourcePropName: "vendor" }),
+    ).toBe("after");
+  });
 
   it("ignores invalid drops", () => {
     expect(
@@ -823,28 +823,28 @@ describe("json table header drag model", () => {
         schema,
         sourcePropName: "vendor",
         sourceParentPath: "",
-      })
-    ).toBeUndefined()
+      }),
+    ).toBeUndefined();
     expect(
       buildHeaderDropSchema({
         node: vendorNode,
         schema,
         sourcePropName: "total",
         sourceParentPath: "other",
-      })
-    ).toBeUndefined()
+      }),
+    ).toBeUndefined();
     expect(
       buildHeaderDropSchema({
         node: vendorNode,
         schema,
         sourcePropName: "missing",
         sourceParentPath: "",
-      })
-    ).toBeUndefined()
+      }),
+    ).toBeUndefined();
     expect(
-      getHeaderDropSide({ node: totalNode, schema, sourcePropName: "missing" })
-    ).toBeUndefined()
-  })
+      getHeaderDropSide({ node: totalNode, schema, sourcePropName: "missing" }),
+    ).toBeUndefined();
+  });
 
   it("ignores allOf drops across different schema branches", () => {
     expect(
@@ -852,17 +852,17 @@ describe("json table header drag model", () => {
         node: vendorNameNode,
         schema: allOfSchema,
         sourcePropName: "tier",
-      })
-    ).toBeUndefined()
+      }),
+    ).toBeUndefined();
     expect(
       buildHeaderDropSchema({
         node: vendorNameNode,
         schema: allOfSchema,
         sourcePropName: "tier",
         sourceParentPath: "vendor",
-      })
-    ).toBeUndefined()
-  })
+      }),
+    ).toBeUndefined();
+  });
 
   it("allows allOf drops inside the same schema branch", () => {
     expect(
@@ -870,8 +870,8 @@ describe("json table header drag model", () => {
         node: vendorRatingNode,
         schema: allOfSchema,
         sourcePropName: "tier",
-      })
-    ).toBe("before")
+      }),
+    ).toBe("before");
     expect(
       (
         (
@@ -882,12 +882,12 @@ describe("json table header drag model", () => {
             sourceParentPath: "vendor",
           })?.properties?.vendor as JSONSchema7
         ).allOf?.[1] as JSONSchema7
-      ).properties
+      ).properties,
     ).toEqual({
       tier: { type: "string" },
       rating: { type: "number" },
-    })
-  })
+    });
+  });
 
   it("allows anyOf drops inside the matching schema branch", () => {
     expect(
@@ -895,8 +895,8 @@ describe("json table header drag model", () => {
         node: paymentBankNameNode,
         schema: anyOfSchema,
         sourcePropName: "account_last4",
-      })
-    ).toBe("before")
+      }),
+    ).toBe("before");
     expect(
       (
         (
@@ -907,10 +907,10 @@ describe("json table header drag model", () => {
             sourceParentPath: "payment",
           })?.properties?.payment as JSONSchema7
         ).anyOf?.[1] as JSONSchema7
-      ).properties
+      ).properties,
     ).toEqual({
       account_last4: { type: "string" },
       bank_name: { type: "string" },
-    })
-  })
-})
+    });
+  });
+});

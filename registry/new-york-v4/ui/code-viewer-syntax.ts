@@ -1,6 +1,6 @@
-import Prism from "prismjs"
+import Prism from "prismjs";
 
-import type { ViewerResource } from "@/lib/viewer-resource"
+import type { ViewerResource } from "@/lib/viewer-resource";
 
 // A curated set of common languages ships by default. Add another by importing
 // its Prism component here (or at your app entry) and adding a row to
@@ -10,54 +10,54 @@ import type { ViewerResource } from "@/lib/viewer-resource"
 //
 // markup (html/xml), css, and javascript are part of Prism core. The order of
 // these imports matters: tsx extends jsx + typescript, so both load first.
-import "prismjs/components/prism-json"
-import "prismjs/components/prism-typescript"
-import "prismjs/components/prism-jsx"
-import "prismjs/components/prism-tsx"
-import "prismjs/components/prism-python"
-import "prismjs/components/prism-yaml"
-import "prismjs/components/prism-bash"
-import "prismjs/components/prism-sql"
-import "prismjs/components/prism-go"
-import "prismjs/components/prism-rust"
-import "prismjs/components/prism-java"
-import "prismjs/components/prism-markdown"
+import "prismjs/components/prism-json";
+import "prismjs/components/prism-typescript";
+import "prismjs/components/prism-jsx";
+import "prismjs/components/prism-tsx";
+import "prismjs/components/prism-python";
+import "prismjs/components/prism-yaml";
+import "prismjs/components/prism-bash";
+import "prismjs/components/prism-sql";
+import "prismjs/components/prism-go";
+import "prismjs/components/prism-rust";
+import "prismjs/components/prism-java";
+import "prismjs/components/prism-markdown";
 
-Prism.manual = true
+Prism.manual = true;
 
 export type CodeTokenLeaf = {
-  kind: string
-  text: string
-}
+  kind: string;
+  text: string;
+};
 
 export type CodeSyntax = {
-  identity: string
-  destroy?: () => void
-  getLineTokens(line: string): readonly CodeTokenLeaf[] | null
-}
+  identity: string;
+  destroy?: () => void;
+  getLineTokens(line: string): readonly CodeTokenLeaf[] | null;
+};
 
 export type CodeSyntaxOptions = {
-  deferTokens?: boolean
-  onTokensChanged?: () => void
-}
+  deferTokens?: boolean;
+  onTokensChanged?: () => void;
+};
 
-const CODE_LINE_TOKENIZE_MAX = 2000
-const CODE_DEFERRED_TOKENIZE_BATCH_SIZE = 12
-const CODE_DEFERRED_TOKENIZE_BUDGET_MS = 6
+const CODE_LINE_TOKENIZE_MAX = 2000;
+const CODE_DEFERRED_TOKENIZE_BATCH_SIZE = 12;
+const CODE_DEFERRED_TOKENIZE_BUDGET_MS = 6;
 
 type CodeSyntaxIdleWindow = Window &
   typeof globalThis & {
-    cancelIdleCallback?: Window["cancelIdleCallback"]
-    requestIdleCallback?: Window["requestIdleCallback"]
-  }
+    cancelIdleCallback?: Window["cancelIdleCallback"];
+    requestIdleCallback?: Window["requestIdleCallback"];
+  };
 
 type CodeSyntaxTaskHandle =
   | { kind: "idle"; id: number }
-  | { kind: "timeout"; id: number }
+  | { kind: "timeout"; id: number };
 
 type CodeSyntaxTaskDeadline = {
-  timeRemaining?: () => number
-}
+  timeRemaining?: () => number;
+};
 
 // File extension -> Prism language id. The one piece of knowledge the viewer
 // owns; Prism does not map extensions to languages. This is the single seam.
@@ -89,7 +89,7 @@ const LANGUAGE_BY_EXTENSION: Record<string, string> = {
   htm: "markup",
   xml: "markup",
   svg: "markup",
-}
+};
 
 // MIME -> Prism language id, used only for inline sources with no extension.
 const LANGUAGE_BY_MIME: Record<string, string> = {
@@ -111,7 +111,7 @@ const LANGUAGE_BY_MIME: Record<string, string> = {
   "text/html": "markup",
   "application/xml": "markup",
   "text/xml": "markup",
-}
+};
 
 export const CODE_VIEWER_SYNTAX_STYLE = `
 .cv-token-comment { color: var(--cv-token-comment, #6e7781); font-style: italic; }
@@ -158,85 +158,86 @@ export const CODE_VIEWER_SYNTAX_STYLE = `
 .dark .cv-token-class-name,
 .dark .cv-token-builtin { color: var(--cv-token-function, #d2a8ff); }
 .dark .cv-token-variable { color: var(--cv-token-variable, #ffa657); }
-`
+`;
 
 export function createCodeSyntax(
   resource: ViewerResource,
-  options: CodeSyntaxOptions = {}
+  options: CodeSyntaxOptions = {},
 ): CodeSyntax {
-  const languageId = codeLanguageId(resource)
-  const grammar = languageId ? (Prism.languages[languageId] ?? null) : null
+  const languageId = codeLanguageId(resource);
+  const grammar = languageId ? (Prism.languages[languageId] ?? null) : null;
   if (!languageId || !grammar) {
     return {
       identity: "plain",
       getLineTokens: () => null,
-    }
+    };
   }
-  const prismGrammar = grammar
+  const prismGrammar = grammar;
 
-  const tokenCache = new Map<string, readonly CodeTokenLeaf[]>()
-  const pendingLines = new Set<string>()
-  let flushHandle: CodeSyntaxTaskHandle | null = null
-  let hasPendingTokenChanges = false
-  let isDestroyed = false
+  const tokenCache = new Map<string, readonly CodeTokenLeaf[]>();
+  const pendingLines = new Set<string>();
+  let flushHandle: CodeSyntaxTaskHandle | null = null;
+  let hasPendingTokenChanges = false;
+  let isDestroyed = false;
 
   return {
     destroy: () => {
-      isDestroyed = true
-      pendingLines.clear()
+      isDestroyed = true;
+      pendingLines.clear();
       if (flushHandle) {
-        cancelCodeSyntaxTask(flushHandle)
-        flushHandle = null
+        cancelCodeSyntaxTask(flushHandle);
+        flushHandle = null;
       }
     },
     identity: languageId,
     getLineTokens: (line) => {
-      if (line.length === 0 || line.length > CODE_LINE_TOKENIZE_MAX) return null
+      if (line.length === 0 || line.length > CODE_LINE_TOKENIZE_MAX)
+        return null;
 
-      const cachedTokens = tokenCache.get(line)
-      if (cachedTokens) return cachedTokens
+      const cachedTokens = tokenCache.get(line);
+      if (cachedTokens) return cachedTokens;
 
       if (options.deferTokens) {
-        scheduleDeferredTokenization(line)
-        return null
+        scheduleDeferredTokenization(line);
+        return null;
       }
 
-      const tokens = flattenCodeTokens(Prism.tokenize(line, prismGrammar))
-      tokenCache.set(line, tokens)
-      return tokens
+      const tokens = flattenCodeTokens(Prism.tokenize(line, prismGrammar));
+      tokenCache.set(line, tokens);
+      return tokens;
     },
-  }
+  };
 
   function scheduleDeferredTokenization(line: string) {
-    pendingLines.add(line)
-    scheduleDeferredTokenFlush()
+    pendingLines.add(line);
+    scheduleDeferredTokenFlush();
   }
 
   function scheduleDeferredTokenFlush() {
-    if (flushHandle || isDestroyed) return
-    flushHandle = scheduleCodeSyntaxTask(flushDeferredTokenBatch)
+    if (flushHandle || isDestroyed) return;
+    flushHandle = scheduleCodeSyntaxTask(flushDeferredTokenBatch);
   }
 
   function flushDeferredTokenBatch(deadline?: CodeSyntaxTaskDeadline) {
-    flushHandle = null
-    if (isDestroyed) return
+    flushHandle = null;
+    if (isDestroyed) return;
 
-    const startedAt = codeSyntaxNow()
-    let processedLineCount = 0
+    const startedAt = codeSyntaxNow();
+    let processedLineCount = 0;
     while (pendingLines.size > 0) {
-      const pendingLine = pendingLines.values().next().value
-      if (pendingLine == null) break
-      pendingLines.delete(pendingLine)
+      const pendingLine = pendingLines.values().next().value;
+      if (pendingLine == null) break;
+      pendingLines.delete(pendingLine);
 
       if (!tokenCache.has(pendingLine)) {
-        hasPendingTokenChanges = true
+        hasPendingTokenChanges = true;
         tokenCache.set(
           pendingLine,
-          flattenCodeTokens(Prism.tokenize(pendingLine, prismGrammar))
-        )
+          flattenCodeTokens(Prism.tokenize(pendingLine, prismGrammar)),
+        );
       }
 
-      processedLineCount += 1
+      processedLineCount += 1;
       if (
         shouldYieldDeferredTokenization({
           deadline,
@@ -244,46 +245,46 @@ export function createCodeSyntax(
           startedAt,
         })
       ) {
-        break
+        break;
       }
     }
 
     if (pendingLines.size > 0) {
-      scheduleDeferredTokenFlush()
-      return
+      scheduleDeferredTokenFlush();
+      return;
     }
 
     if (hasPendingTokenChanges) {
-      hasPendingTokenChanges = false
-      options.onTokensChanged?.()
+      hasPendingTokenChanges = false;
+      options.onTokensChanged?.();
     }
   }
 }
 
 function scheduleCodeSyntaxTask(
-  callback: (deadline?: CodeSyntaxTaskDeadline) => void
+  callback: (deadline?: CodeSyntaxTaskDeadline) => void,
 ): CodeSyntaxTaskHandle {
-  const browserWindow = window as CodeSyntaxIdleWindow
+  const browserWindow = window as CodeSyntaxIdleWindow;
   if (browserWindow.requestIdleCallback) {
     return {
       kind: "idle",
       id: browserWindow.requestIdleCallback(callback, { timeout: 80 }),
-    }
+    };
   }
 
   return {
     kind: "timeout",
     id: browserWindow.setTimeout(() => callback(), 0),
-  }
+  };
 }
 
 function cancelCodeSyntaxTask(handle: CodeSyntaxTaskHandle) {
-  const browserWindow = window as CodeSyntaxIdleWindow
+  const browserWindow = window as CodeSyntaxIdleWindow;
   if (handle.kind === "idle") {
-    browserWindow.cancelIdleCallback?.(handle.id)
-    return
+    browserWindow.cancelIdleCallback?.(handle.id);
+    return;
   }
-  browserWindow.clearTimeout(handle.id)
+  browserWindow.clearTimeout(handle.id);
 }
 
 function shouldYieldDeferredTokenization({
@@ -291,48 +292,51 @@ function shouldYieldDeferredTokenization({
   processedLineCount,
   startedAt,
 }: {
-  deadline?: CodeSyntaxTaskDeadline
-  processedLineCount: number
-  startedAt: number
+  deadline?: CodeSyntaxTaskDeadline;
+  processedLineCount: number;
+  startedAt: number;
 }) {
-  if (processedLineCount <= 0) return false
-  if (deadline?.timeRemaining && deadline.timeRemaining() <= 1) return true
-  if (processedLineCount >= CODE_DEFERRED_TOKENIZE_BATCH_SIZE) return true
-  return codeSyntaxNow() - startedAt >= CODE_DEFERRED_TOKENIZE_BUDGET_MS
+  if (processedLineCount <= 0) return false;
+  if (deadline?.timeRemaining && deadline.timeRemaining() <= 1) return true;
+  if (processedLineCount >= CODE_DEFERRED_TOKENIZE_BATCH_SIZE) return true;
+  return codeSyntaxNow() - startedAt >= CODE_DEFERRED_TOKENIZE_BUDGET_MS;
 }
 
 function codeSyntaxNow() {
-  return typeof performance === "undefined" ? Date.now() : performance.now()
+  return typeof performance === "undefined" ? Date.now() : performance.now();
 }
 
 function codeLanguageId(resource: ViewerResource): string | null {
-  const extension = resource.fileName.toLowerCase().split(".").pop()
-  const byExtension = extension ? LANGUAGE_BY_EXTENSION[extension] : undefined
-  if (byExtension) return byExtension
+  const extension = resource.fileName.toLowerCase().split(".").pop();
+  const byExtension = extension ? LANGUAGE_BY_EXTENSION[extension] : undefined;
+  if (byExtension) return byExtension;
 
-  const mimeType = resource.content.mimeType?.toLowerCase().split(";")[0].trim()
-  return (mimeType && LANGUAGE_BY_MIME[mimeType]) ?? null
+  const mimeType = resource.content.mimeType
+    ?.toLowerCase()
+    .split(";")[0]
+    .trim();
+  return (mimeType && LANGUAGE_BY_MIME[mimeType]) ?? null;
 }
 
 function flattenCodeTokens(
   tokens: Array<string | Prism.Token>,
   parentKind = "",
-  leaves: CodeTokenLeaf[] = []
+  leaves: CodeTokenLeaf[] = [],
 ): readonly CodeTokenLeaf[] {
   for (const token of tokens) {
     if (typeof token === "string") {
-      leaves.push({ kind: parentKind, text: token })
+      leaves.push({ kind: parentKind, text: token });
     } else if (Array.isArray(token.content)) {
       flattenCodeTokens(
         token.content as Array<string | Prism.Token>,
         token.type,
-        leaves
-      )
+        leaves,
+      );
     } else if (typeof token.content === "string") {
-      leaves.push({ kind: token.type, text: token.content })
+      leaves.push({ kind: token.type, text: token.content });
     } else {
-      flattenCodeTokens([token.content as Prism.Token], token.type, leaves)
+      flattenCodeTokens([token.content as Prism.Token], token.type, leaves);
     }
   }
-  return leaves
+  return leaves;
 }

@@ -1,3 +1,3 @@
-"use client"
+"use client";
 
-export * from "@/registry/new-york-v4/ui/csv-viewer-chrome"
+export * from "@/registry/new-york-v4/ui/csv-viewer-chrome";

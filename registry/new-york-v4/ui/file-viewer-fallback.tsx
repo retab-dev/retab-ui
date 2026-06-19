@@ -1,26 +1,26 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
-import type { ViewerResource } from "@/lib/viewer-resource"
-import { Skeleton } from "@/components/ui/skeleton"
-import { ViewerDownloadButton } from "@/components/ui/viewer-download"
-import { ViewerErrorState } from "@/components/ui/viewer-error"
+import { cn } from "@/lib/utils";
+import type { ViewerResource } from "@/lib/viewer-resource";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ViewerDownloadButton } from "@/components/ui/viewer-download";
+import { ViewerErrorState } from "@/components/ui/viewer-error";
 
-import { CodeViewerFallback } from "./code-viewer-chrome"
-import { DocxViewerFallback } from "./docx-viewer-chrome"
+import { CodeViewerFallback } from "./code-viewer-chrome";
+import { DocxViewerFallback } from "./docx-viewer-chrome";
 import {
   isProseTextDescriptor,
   type FileDescriptor,
   type FileViewerFallbackSize,
-} from "./file-viewer-core"
-import { ImageViewerFallback } from "./image-viewer-chrome"
-import { PdfViewerFallback } from "./pdf-viewer-states"
-import { PptxViewerFallback } from "./pptx-viewer-fallback"
-import { TextViewerFallback } from "./text-viewer-chrome"
-import { ViewerControlsSkeleton } from "./viewer-controls"
-import { XlsxViewerFallback } from "./xlsx-viewer-chrome"
+} from "./file-viewer-core";
+import { ImageViewerFallback } from "./image-viewer-chrome";
+import { PdfViewerFallback } from "./pdf-viewer-states";
+import { PptxViewerFallback } from "./pptx-viewer-fallback";
+import { TextViewerFallback } from "./text-viewer-chrome";
+import { ViewerControlsSkeleton } from "./viewer-controls";
+import { XlsxViewerFallback } from "./xlsx-viewer-chrome";
 
 export function UnsupportedCard({
   resource,
@@ -29,24 +29,24 @@ export function UnsupportedCard({
   message = "No preview for",
   showDownload = true,
 }: {
-  resource: ViewerResource
-  className?: string
-  bare?: boolean
-  message?: string
-  showDownload?: boolean
+  resource: ViewerResource;
+  className?: string;
+  bare?: boolean;
+  message?: string;
+  showDownload?: boolean;
 }) {
   return (
     <div
       className={cn(
         "flex flex-col items-center justify-center gap-3 p-8 text-center",
-        bare ? "h-full bg-muted/20" : "min-h-64 rounded-xl border bg-muted/30",
-        className
+        bare ? "bg-muted/20 h-full" : "bg-muted/30 min-h-64 rounded-xl border",
+        className,
       )}
       data-slot="file-viewer"
     >
-      <p className="text-sm text-muted-foreground">
+      <p className="text-muted-foreground text-sm">
         {message}{" "}
-        <span className="font-medium text-foreground">
+        <span className="text-foreground font-medium">
           {resource.fileName}.
         </span>
       </p>
@@ -60,7 +60,7 @@ export function UnsupportedCard({
         />
       ) : null}
     </div>
-  )
+  );
 }
 
 export function ViewerFallback({
@@ -71,15 +71,15 @@ export function ViewerFallback({
   fallbackFrameSize,
   fallbackSlideSize,
 }: {
-  resource: ViewerResource
-  className?: string
-  bare?: boolean
-  controls?: boolean
-  fallbackFrameSize?: FileViewerFallbackSize
-  fallbackSlideSize?: FileViewerFallbackSize
+  resource: ViewerResource;
+  className?: string;
+  bare?: boolean;
+  controls?: boolean;
+  fallbackFrameSize?: FileViewerFallbackSize;
+  fallbackSlideSize?: FileViewerFallbackSize;
 }) {
-  const descriptor = resource.descriptor
-  const category = descriptor.category
+  const descriptor = resource.descriptor;
+  const category = descriptor.category;
 
   // Render the exact per-type skeleton each viewer shows while it parses, so the
   // SSR + chunk-loading paint is identical to the in-viewer loading state (same
@@ -88,12 +88,20 @@ export function ViewerFallback({
   switch (category) {
     case "pdf":
       return (
-        <PdfViewerFallback bare={bare} className={className} controls={controls} />
-      )
+        <PdfViewerFallback
+          bare={bare}
+          className={className}
+          controls={controls}
+        />
+      );
     case "docx":
       return (
-        <DocxViewerFallback bare={bare} className={className} controls={controls} />
-      )
+        <DocxViewerFallback
+          bare={bare}
+          className={className}
+          controls={controls}
+        />
+      );
     case "pptx":
       return (
         <PptxViewerFallback
@@ -102,7 +110,7 @@ export function ViewerFallback({
           controls={controls}
           fallbackSlideSize={fallbackSlideSize}
         />
-      )
+      );
     case "image":
       return (
         <ImageViewerFallback
@@ -111,23 +119,39 @@ export function ViewerFallback({
           controls={controls}
           fallbackFrameSize={fallbackFrameSize}
         />
-      )
+      );
     case "xlsx":
       return (
-        <XlsxViewerFallback bare={bare} className={className} controls={controls} />
-      )
+        <XlsxViewerFallback
+          bare={bare}
+          className={className}
+          controls={controls}
+        />
+      );
     case "markdown":
       return (
-        <TextViewerFallback bare={bare} className={className} controls={controls} />
-      )
+        <TextViewerFallback
+          bare={bare}
+          className={className}
+          controls={controls}
+        />
+      );
     case "text":
       // The "text" category fans out to a prose viewer or a code viewer; match
       // whichever the route will pick so the body skeleton (gutter vs none) lines up.
       return isProseTextDescriptor(descriptor) ? (
-        <TextViewerFallback bare={bare} className={className} controls={controls} />
+        <TextViewerFallback
+          bare={bare}
+          className={className}
+          controls={controls}
+        />
       ) : (
-        <CodeViewerFallback bare={bare} className={className} controls={controls} />
-      )
+        <CodeViewerFallback
+          bare={bare}
+          className={className}
+          controls={controls}
+        />
+      );
     case "csv":
       return (
         <TextFamilyFallbackFrame bare={bare} className={className}>
@@ -136,16 +160,16 @@ export function ViewerFallback({
           ) : null}
           <TableBodySkeleton />
         </TextFamilyFallbackFrame>
-      )
+      );
     case "html":
       return (
         <TextFamilyFallbackFrame bare={bare} className={className}>
           {controls ? <ViewerControlsSkeleton zoom /> : null}
-          <div className="min-h-0 flex-1 bg-card p-4">
+          <div className="bg-card min-h-0 flex-1 p-4">
             <Skeleton className="size-full rounded-md" />
           </div>
         </TextFamilyFallbackFrame>
-      )
+      );
   }
 
   // Unsupported / unknown categories: a neutral page-sheet placeholder.
@@ -154,21 +178,21 @@ export function ViewerFallback({
       data-slot="file-viewer-document-fallback"
       className={cn(
         "flex min-h-0 flex-col overflow-hidden",
-        bare ? "h-full bg-muted/20" : "min-h-64 bg-muted/20",
-        className
+        bare ? "bg-muted/20 h-full" : "bg-muted/20 min-h-64",
+        className,
       )}
     >
       <div className="min-h-0 flex-1 overflow-hidden">
         <div className="flex flex-col items-center p-4">
           <Skeleton
             aria-hidden
-            className="w-full rounded-none shadow-sm ring-1 ring-border"
+            className="ring-border w-full rounded-none shadow-sm ring-1"
             style={{ aspectRatio: "8.5 / 11" }}
           />
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function TextFamilyFallbackFrame({
@@ -176,36 +200,36 @@ function TextFamilyFallbackFrame({
   className,
   children,
 }: {
-  bare?: boolean
-  className?: string
-  children: React.ReactNode
+  bare?: boolean;
+  className?: string;
+  children: React.ReactNode;
 }) {
   return (
     <div
       data-slot="file-viewer-document-fallback"
       className={cn(
-        "flex min-h-0 flex-1 flex-col overflow-hidden bg-card",
+        "bg-card flex min-h-0 flex-1 flex-col overflow-hidden",
         bare ? "h-full" : "min-h-64",
-        className
+        className,
       )}
     >
       {children}
     </div>
-  )
+  );
 }
 
 function TableBodySkeleton() {
-  const gutter = 52
-  const colWidth = 150
-  const cols = 6
-  const rows = 14
-  const widths = [70, 45, 88, 56, 62, 78]
+  const gutter = 52;
+  const colWidth = 150;
+  const cols = 6;
+  const rows = 14;
+  const widths = [70, 45, 88, 56, 62, 78];
   return (
     <div
       aria-hidden
-      className="flex min-h-0 flex-1 flex-col overflow-hidden bg-card text-sm"
+      className="bg-card flex min-h-0 flex-1 flex-col overflow-hidden text-sm"
     >
-      <div className="flex border-b bg-muted/60">
+      <div className="bg-muted/60 flex border-b">
         <div
           className="shrink-0 border-r"
           style={{ width: gutter, height: 33 }}
@@ -245,30 +269,30 @@ function TableBodySkeleton() {
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 export class FileErrorBoundary extends React.Component<
   {
-    children: React.ReactNode
-    descriptor: FileDescriptor
-    resource: ViewerResource
-    className?: string
-    resetKey?: unknown
-    showDownload?: boolean
+    children: React.ReactNode;
+    descriptor: FileDescriptor;
+    resource: ViewerResource;
+    className?: string;
+    resetKey?: unknown;
+    showDownload?: boolean;
   },
   { error: unknown | null }
 > {
-  state: Readonly<{ error: unknown | null }> = { error: null }
+  state: Readonly<{ error: unknown | null }> = { error: null };
 
   componentDidUpdate(prev: { resetKey?: unknown }) {
     if (prev.resetKey !== this.props.resetKey && this.state.error) {
-      this.setState({ error: null })
+      this.setState({ error: null });
     }
   }
 
   static getDerivedStateFromError(error: unknown) {
-    return { error }
+    return { error };
   }
 
   render() {
@@ -285,8 +309,8 @@ export class FileErrorBoundary extends React.Component<
           }
           className={this.props.className}
         />
-      )
+      );
     }
-    return this.props.children
+    return this.props.children;
   }
 }

@@ -2,40 +2,40 @@ import {
   missingEvidenceAnchor,
   resolvedEvidenceAnchor,
   type EvidenceItem,
-} from "./document-evidence"
-import { getScrollTarget } from "./layout-blocks-geometry"
+} from "./document-evidence";
+import { getScrollTarget } from "./layout-blocks-geometry";
 import {
   createLayoutItemIndex as createLayoutItemIndexForItems,
   type LayoutItemIndex,
-} from "./layout-blocks-index"
+} from "./layout-blocks-index";
 import type {
   LayoutDocument,
   LayoutItem,
   LayoutLevel,
-} from "./layout-blocks-types"
+} from "./layout-blocks-types";
 
 export type LayoutEvidencePayload = {
-  item: LayoutItem
-  level: LayoutLevel
-  kind: string
-  text: string
-  confidence?: number
-  pageNumber: number
-}
+  item: LayoutItem;
+  level: LayoutLevel;
+  kind: string;
+  text: string;
+  confidence?: number;
+  pageNumber: number;
+};
 
-export type LayoutEvidenceItem = EvidenceItem<LayoutEvidencePayload>
+export type LayoutEvidenceItem = EvidenceItem<LayoutEvidencePayload>;
 
 export type LayoutBlocksFilter = {
-  levels: readonly LayoutLevel[]
-  lowConfidenceOnly?: boolean
-  threshold: number
-}
+  levels: readonly LayoutLevel[];
+  lowConfidenceOnly?: boolean;
+  threshold: number;
+};
 
 export type LayoutBlocksViewerModel = {
-  evidenceItems: LayoutEvidenceItem[]
-  index: LayoutItemIndex
-  visibleItems: LayoutItem[]
-}
+  evidenceItems: LayoutEvidenceItem[];
+  index: LayoutItemIndex;
+  visibleItems: LayoutItem[];
+};
 
 export function createLayoutBlocksViewerModel({
   document,
@@ -43,64 +43,64 @@ export function createLayoutBlocksViewerModel({
   lowConfidenceOnly = false,
   threshold,
 }: {
-  document: LayoutDocument
-  levels: readonly LayoutLevel[]
-  lowConfidenceOnly?: boolean
-  threshold: number
+  document: LayoutDocument;
+  levels: readonly LayoutLevel[];
+  lowConfidenceOnly?: boolean;
+  threshold: number;
 }): LayoutBlocksViewerModel {
-  const index = createLayoutItemIndex(document)
+  const index = createLayoutItemIndex(document);
   const visibleItems = filterLayoutItems(document.items, {
     levels,
     lowConfidenceOnly,
     threshold,
-  })
+  });
 
   return {
     ...layoutItemsToEvidenceModel(visibleItems, index),
     index,
     visibleItems,
-  }
+  };
 }
 
 export function createLayoutItemIndex(
-  document: LayoutDocument
+  document: LayoutDocument,
 ): LayoutItemIndex {
   return createLayoutItemIndexForItems({
     items: document.items,
     pages: document.pages,
-  })
+  });
 }
 
 export function filterLayoutItems(
   items: readonly LayoutItem[],
-  { levels, lowConfidenceOnly = false, threshold }: LayoutBlocksFilter
+  { levels, lowConfidenceOnly = false, threshold }: LayoutBlocksFilter,
 ): LayoutItem[] {
-  const levelSet = new Set(levels)
+  const levelSet = new Set(levels);
   return items.filter((item) => {
-    if (!levelSet.has(item.level)) return false
-    if (!lowConfidenceOnly) return true
-    return item.confidence != null && item.confidence < threshold
-  })
+    if (!levelSet.has(item.level)) return false;
+    if (!lowConfidenceOnly) return true;
+    return item.confidence != null && item.confidence < threshold;
+  });
 }
 
 export function layoutItemsToEvidenceModel(
   items: readonly LayoutItem[],
-  index: LayoutItemIndex
+  index: LayoutItemIndex,
 ) {
   const evidenceItems = items.map((item) =>
-    layoutItemToEvidenceItem(item, index)
-  )
+    layoutItemToEvidenceItem(item, index),
+  );
   return {
     evidenceItems,
-  }
+  };
 }
 
 export function layoutItemToEvidenceItem(
   item: LayoutItem,
-  index: LayoutItemIndex
+  index: LayoutItemIndex,
 ): LayoutEvidenceItem {
-  const page = index.pagesByNumber.get(item.pageNumber)
-  const target = page ? getScrollTarget(item, page) : null
+  const page = index.pagesByNumber.get(item.pageNumber);
+  const target = page ? getScrollTarget(item, page) : null;
 
   return {
     id: item.id,
@@ -122,12 +122,12 @@ export function layoutItemToEvidenceItem(
       confidence: item.confidence,
       pageNumber: item.pageNumber,
     },
-  }
+  };
 }
 
 export function layoutLevelLabel(level: LayoutLevel) {
-  if (level === "block") return "Block"
-  if (level === "paragraph") return "Paragraph"
-  if (level === "line") return "Line"
-  return "Word"
+  if (level === "block") return "Block";
+  if (level === "paragraph") return "Paragraph";
+  if (level === "line") return "Line";
+  return "Word";
 }

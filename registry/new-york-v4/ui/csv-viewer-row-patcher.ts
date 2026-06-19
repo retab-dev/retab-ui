@@ -1,69 +1,69 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import type { CsvCellAddress } from "./csv-viewer-state"
-import { csvCellClassName } from "./csv-viewer-cell-classes"
-import type { CsvRowStore } from "./csv-row-store"
+import type { CsvCellAddress } from "./csv-viewer-state";
+import { csvCellClassName } from "./csv-viewer-cell-classes";
+import type { CsvRowStore } from "./csv-row-store";
 import {
   fixedVirtualItems,
   type FixedGridColumnItem,
   type FixedGridJumpViewportResult,
   type FixedGridViewport,
   type FixedGridVirtualItem,
-} from "./fixed-grid-virtualization"
+} from "./fixed-grid-virtualization";
 
 export interface CsvRowPatchState {
-  activeCell: CsvCellAddress | null
-  columnItems: FixedGridColumnItem[]
-  effectiveRowHeight: number
-  rowOrder: number[] | null
-  shouldVirtualizeRows: boolean
-  rowStore: CsvRowStore
+  activeCell: CsvCellAddress | null;
+  columnItems: FixedGridColumnItem[];
+  effectiveRowHeight: number;
+  rowOrder: number[] | null;
+  shouldVirtualizeRows: boolean;
+  rowStore: CsvRowStore;
 }
 
 export interface CsvRowPatcher {
-  patch: (viewport: FixedGridViewport) => FixedGridJumpViewportResult
-  resync: (virtualRows: FixedGridVirtualItem[]) => void
-  invalidate: () => void
+  patch: (viewport: FixedGridViewport) => FixedGridJumpViewportResult;
+  resync: (virtualRows: FixedGridVirtualItem[]) => void;
+  invalidate: () => void;
 }
 
 interface CsvCellHandle {
-  element: HTMLElement
-  className: string
-  textNode: Text | null
+  element: HTMLElement;
+  className: string;
+  textNode: Text | null;
 }
 
 interface CsvRowHandle {
-  element: HTMLElement
-  rowNumberTextNode: Text | null
-  cells: CsvCellHandle[]
-  isHidden: boolean
-  sourceRowIndex: number | null
-  transform: string
+  element: HTMLElement;
+  rowNumberTextNode: Text | null;
+  cells: CsvCellHandle[];
+  isHidden: boolean;
+  sourceRowIndex: number | null;
+  transform: string;
 }
 
 interface CsvRowHandleCache {
-  rowWindow: HTMLDivElement
-  rows: CsvRowHandle[]
+  rowWindow: HTMLDivElement;
+  rows: CsvRowHandle[];
 }
 
-const PATCH_ROW_OVERSCAN = 0
-const MINIMUM_PATCH_VISIBLE_ROWS = 1
-const TEXT_NODE = 3
+const PATCH_ROW_OVERSCAN = 0;
+const MINIMUM_PATCH_VISIBLE_ROWS = 1;
+const TEXT_NODE = 3;
 
 export function useCsvRowPatcher({
   rowWindowRef,
   getState,
 }: {
-  rowWindowRef: React.RefObject<HTMLDivElement | null>
-  getState: () => CsvRowPatchState
+  rowWindowRef: React.RefObject<HTMLDivElement | null>;
+  getState: () => CsvRowPatchState;
 }): CsvRowPatcher {
-  const rowHandleCacheRef = React.useRef<CsvRowHandleCache | null>(null)
+  const rowHandleCacheRef = React.useRef<CsvRowHandleCache | null>(null);
 
   const invalidate = React.useCallback(() => {
-    rowHandleCacheRef.current = null
-  }, [])
+    rowHandleCacheRef.current = null;
+  }, []);
 
   // Re-assert the canonical (React-owned) row state onto every pooled row after
   // a canonical commit. During active scroll the imperative patcher mutates
@@ -80,31 +80,31 @@ export function useCsvRowPatcher({
   // once scrolling settles. This runs only on canonical commits, not per frame.
   const resync = React.useCallback(
     (virtualRows: FixedGridVirtualItem[]) => {
-      const rowWindow = rowWindowRef.current
-      if (!rowWindow) return
-      const cache = readRowHandles(rowWindow)
-      rowHandleCacheRef.current = cache
-      if (cache.rows.length === 0) return
-      patchRows(cache.rows, virtualRows, getState())
+      const rowWindow = rowWindowRef.current;
+      if (!rowWindow) return;
+      const cache = readRowHandles(rowWindow);
+      rowHandleCacheRef.current = cache;
+      if (cache.rows.length === 0) return;
+      patchRows(cache.rows, virtualRows, getState());
     },
-    [getState, rowWindowRef]
-  )
+    [getState, rowWindowRef],
+  );
 
   const patch = React.useCallback(
     (viewport: FixedGridViewport): FixedGridJumpViewportResult => {
-      const state = getState()
-      if (!canPatchRows(viewport, state)) return "pass"
+      const state = getState();
+      if (!canPatchRows(viewport, state)) return "pass";
 
-      const rowWindow = rowWindowRef.current
-      if (!rowWindow) return "pass"
+      const rowWindow = rowWindowRef.current;
+      if (!rowWindow) return "pass";
 
       const cache =
         rowHandleCacheRef.current?.rowWindow === rowWindow
           ? rowHandleCacheRef.current
-          : readRowHandles(rowWindow)
-      rowHandleCacheRef.current = cache
+          : readRowHandles(rowWindow);
+      rowHandleCacheRef.current = cache;
 
-      if (cache.rows.length === 0) return "pass"
+      if (cache.rows.length === 0) return "pass";
 
       const nextRows = fixedVirtualItems({
         count: state.rowStore.rowCount,
@@ -113,63 +113,63 @@ export function useCsvRowPatcher({
         viewportSize: viewport.clientHeight,
         overscan: PATCH_ROW_OVERSCAN,
         minimumVisibleCount: MINIMUM_PATCH_VISIBLE_ROWS,
-      })
+      });
       if (nextRows.length === 0 || nextRows.length > cache.rows.length) {
-        return "pass"
+        return "pass";
       }
 
       if (
         !canPatchRowHandles(
           cache.rows,
           nextRows.length,
-          state.columnItems.length
+          state.columnItems.length,
         )
       ) {
-        return "pass"
+        return "pass";
       }
 
-      patchRows(cache.rows, nextRows, state)
+      patchRows(cache.rows, nextRows, state);
 
-      return "handled"
+      return "handled";
     },
-    [getState, rowWindowRef]
-  )
+    [getState, rowWindowRef],
+  );
 
   return React.useMemo(
     () => ({ invalidate, patch, resync }),
-    [invalidate, patch, resync]
-  )
+    [invalidate, patch, resync],
+  );
 }
 
 function patchRows(
   rowHandles: CsvRowHandle[],
   virtualRows: ReturnType<typeof fixedVirtualItems>,
-  state: CsvRowPatchState
+  state: CsvRowPatchState,
 ) {
   for (let handleIndex = 0; handleIndex < rowHandles.length; handleIndex++) {
-    const rowHandle = rowHandles[handleIndex]
-    const virtualRow = virtualRows[handleIndex]
+    const rowHandle = rowHandles[handleIndex];
+    const virtualRow = virtualRows[handleIndex];
     if (!virtualRow) {
-      setRowHidden(rowHandle, true)
-      continue
+      setRowHidden(rowHandle, true);
+      continue;
     }
 
-    const displayRowIndex = virtualRow.index
+    const displayRowIndex = virtualRow.index;
     const sourceRowIndex = state.rowOrder
       ? state.rowOrder[displayRowIndex]
-      : displayRowIndex
-    const sourceRow = state.rowStore.getRow(sourceRowIndex)
-    const transform = `translate3d(0, ${virtualRow.start}px, 0)`
+      : displayRowIndex;
+    const sourceRow = state.rowStore.getRow(sourceRowIndex);
+    const transform = `translate3d(0, ${virtualRow.start}px, 0)`;
 
-    setRowHidden(rowHandle, false)
-    setRowTransform(rowHandle, transform)
+    setRowHidden(rowHandle, false);
+    setRowTransform(rowHandle, transform);
 
     if (rowHandle.sourceRowIndex !== sourceRowIndex) {
-      rowHandle.sourceRowIndex = sourceRowIndex
-      setTextNodeValue(rowHandle.rowNumberTextNode, String(sourceRowIndex + 1))
-      patchCells(rowHandle, sourceRow, sourceRowIndex, state)
+      rowHandle.sourceRowIndex = sourceRowIndex;
+      setTextNodeValue(rowHandle.rowNumberTextNode, String(sourceRowIndex + 1));
+      patchCells(rowHandle, sourceRow, sourceRowIndex, state);
     } else {
-      patchCellActiveState(rowHandle, sourceRowIndex, state)
+      patchCellActiveState(rowHandle, sourceRowIndex, state);
     }
   }
 }
@@ -178,72 +178,69 @@ function patchCells(
   rowHandle: CsvRowHandle,
   sourceRow: string[] | undefined,
   sourceRowIndex: number,
-  state: CsvRowPatchState
+  state: CsvRowPatchState,
 ) {
   for (let cellIndex = 0; cellIndex < state.columnItems.length; cellIndex++) {
-    const columnIndex = state.columnItems[cellIndex]?.index
+    const columnIndex = state.columnItems[cellIndex]?.index;
     const text =
-      typeof columnIndex === "number" ? (sourceRow?.[columnIndex] ?? "") : ""
-    setTextNodeValue(rowHandle.cells[cellIndex]?.textNode ?? null, text)
+      typeof columnIndex === "number" ? (sourceRow?.[columnIndex] ?? "") : "";
+    setTextNodeValue(rowHandle.cells[cellIndex]?.textNode ?? null, text);
     setCellActive(
       rowHandle.cells[cellIndex],
       state.activeCell?.rowIndex === sourceRowIndex &&
-        state.activeCell.columnIndex === columnIndex
-    )
+        state.activeCell.columnIndex === columnIndex,
+    );
   }
 }
 
 function patchCellActiveState(
   rowHandle: CsvRowHandle,
   sourceRowIndex: number,
-  state: CsvRowPatchState
+  state: CsvRowPatchState,
 ) {
   for (let cellIndex = 0; cellIndex < state.columnItems.length; cellIndex++) {
-    const columnIndex = state.columnItems[cellIndex]?.index
+    const columnIndex = state.columnItems[cellIndex]?.index;
     setCellActive(
       rowHandle.cells[cellIndex],
       state.activeCell?.rowIndex === sourceRowIndex &&
-        state.activeCell.columnIndex === columnIndex
-    )
+        state.activeCell.columnIndex === columnIndex,
+    );
   }
 }
 
 function canPatchRows(viewport: FixedGridViewport, state: CsvRowPatchState) {
-  return (
-    state.shouldVirtualizeRows &&
-    !viewport.isJumpingColumns
-  )
+  return state.shouldVirtualizeRows && !viewport.isJumpingColumns;
 }
 
 function canPatchRowHandles(
   rowHandles: CsvRowHandle[],
   visibleRowCount: number,
-  cellCount: number
+  cellCount: number,
 ) {
   for (let handleIndex = 0; handleIndex < visibleRowCount; handleIndex++) {
-    const rowHandle = rowHandles[handleIndex]
-    if (!rowHandle?.rowNumberTextNode) return false
+    const rowHandle = rowHandles[handleIndex];
+    if (!rowHandle?.rowNumberTextNode) return false;
     for (let cellIndex = 0; cellIndex < cellCount; cellIndex++) {
-      if (!rowHandle.cells[cellIndex]?.textNode) return false
+      if (!rowHandle.cells[cellIndex]?.textNode) return false;
     }
   }
-  return true
+  return true;
 }
 
 function readRowHandles(rowWindow: HTMLDivElement): CsvRowHandleCache {
   const rows = Array.from(
-    rowWindow.querySelectorAll<HTMLElement>('[data-slot="csv-row"]')
+    rowWindow.querySelectorAll<HTMLElement>('[data-slot="csv-row"]'),
   ).map((element) => {
     const rowNumber = element.querySelector<HTMLElement>(
-      '[data-slot="csv-row-number"]'
-    )
+      '[data-slot="csv-row-number"]',
+    );
     const cells = Array.from(
-      element.querySelectorAll<HTMLElement>('[data-slot="csv-cell"]')
+      element.querySelectorAll<HTMLElement>('[data-slot="csv-cell"]'),
     ).map((cell) => ({
       element: cell,
       className: cell.className,
       textNode: firstTextNode(cell.firstElementChild ?? cell),
-    }))
+    }));
 
     return {
       element,
@@ -252,37 +249,37 @@ function readRowHandles(rowWindow: HTMLDivElement): CsvRowHandleCache {
       isHidden: element.hidden,
       sourceRowIndex: null,
       transform: element.style.transform,
-    }
-  })
+    };
+  });
 
-  return { rowWindow, rows }
+  return { rowWindow, rows };
 }
 
 function firstTextNode(element: Element | null): Text | null {
-  const node = element?.firstChild
-  return node?.nodeType === TEXT_NODE ? (node as Text) : null
+  const node = element?.firstChild;
+  return node?.nodeType === TEXT_NODE ? (node as Text) : null;
 }
 
 function setTextNodeValue(textNode: Text | null, value: string) {
-  if (textNode && textNode.nodeValue !== value) textNode.nodeValue = value
+  if (textNode && textNode.nodeValue !== value) textNode.nodeValue = value;
 }
 
 function setCellActive(cell: CsvCellHandle | undefined, isActive: boolean) {
-  if (!cell) return
-  const className = csvCellClassName(isActive)
-  if (cell.className === className) return
-  cell.element.className = className
-  cell.className = className
+  if (!cell) return;
+  const className = csvCellClassName(isActive);
+  if (cell.className === className) return;
+  cell.element.className = className;
+  cell.className = className;
 }
 
 function setRowTransform(row: CsvRowHandle, transform: string) {
-  if (row.transform === transform) return
-  row.element.style.transform = transform
-  row.transform = transform
+  if (row.transform === transform) return;
+  row.element.style.transform = transform;
+  row.transform = transform;
 }
 
 function setRowHidden(row: CsvRowHandle, isHidden: boolean) {
-  if (row.isHidden === isHidden) return
-  row.element.hidden = isHidden
-  row.isHidden = isHidden
+  if (row.isHidden === isHidden) return;
+  row.element.hidden = isHidden;
+  row.isHidden = isHidden;
 }

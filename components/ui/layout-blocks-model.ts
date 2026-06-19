@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/ui/layout-blocks-model"
+export * from "@/registry/new-york-v4/ui/layout-blocks-model";

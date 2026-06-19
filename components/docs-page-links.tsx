@@ -1,29 +1,29 @@
-"use client"
+"use client";
 
-import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
-import { Button } from "@/components/ui/button"
-import { CopyButtonIcon } from "@/components/copy-button"
+import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
+import { Button } from "@/components/ui/button";
+import { CopyButtonIcon } from "@/components/copy-button";
 
 function getPromptUrl(baseURL: string, url: string) {
   return `${baseURL}?q=${encodeURIComponent(
     `I'm looking at this Retab UI documentation: ${url}.
 Help me understand how to use it. Be ready to explain concepts, give examples, or help debug based on it.
-  `
-  )}`
+  `,
+  )}`;
 }
 
 export function DocsPageLinks({ page, url }: { page: string; url: string }) {
-  const { copyToClipboard, isCopied } = useCopyToClipboard()
+  const { copyToClipboard, isCopied } = useCopyToClipboard();
 
   return (
     <div className="flex flex-col gap-3 px-6">
-      <ul className="flex flex-col gap-2 text-[0.8rem] text-muted-foreground">
+      <ul className="text-muted-foreground flex flex-col gap-2 text-[0.8rem]">
         <li>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => copyToClipboard(page)}
-            className="h-auto justify-start gap-2 px-1 py-0 text-[0.8rem] text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground h-auto justify-start gap-2 px-1 py-0 text-[0.8rem]"
           >
             <CopyButtonIcon copied={isCopied} />
             Copy page
@@ -34,7 +34,7 @@ export function DocsPageLinks({ page, url }: { page: string; url: string }) {
             href={`${url}.md`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 transition-colors hover:text-foreground"
+            className="hover:text-foreground inline-flex items-center gap-2 transition-colors"
           >
             <svg strokeLinejoin="round" viewBox="0 0 22 16" className="size-4">
               <path
@@ -52,7 +52,7 @@ export function DocsPageLinks({ page, url }: { page: string; url: string }) {
             href={getPromptUrl("https://v0.dev", url)}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 transition-colors hover:text-foreground"
+            className="hover:text-foreground inline-flex items-center gap-2 transition-colors"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -70,7 +70,7 @@ export function DocsPageLinks({ page, url }: { page: string; url: string }) {
             href={getPromptUrl("https://chatgpt.com", url)}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 transition-colors hover:text-foreground"
+            className="hover:text-foreground inline-flex items-center gap-2 transition-colors"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -90,7 +90,7 @@ export function DocsPageLinks({ page, url }: { page: string; url: string }) {
             href={getPromptUrl("https://claude.ai/new", url)}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 transition-colors hover:text-foreground"
+            className="hover:text-foreground inline-flex items-center gap-2 transition-colors"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -110,7 +110,7 @@ export function DocsPageLinks({ page, url }: { page: string; url: string }) {
             href={getPromptUrl("https://scira.ai/", url)}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 transition-colors hover:text-foreground"
+            className="hover:text-foreground inline-flex items-center gap-2 transition-colors"
           >
             <svg
               width="910"
@@ -173,5 +173,5 @@ export function DocsPageLinks({ page, url }: { page: string; url: string }) {
         </li>
       </ul>
     </div>
-  )
+  );
 }

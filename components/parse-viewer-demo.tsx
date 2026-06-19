@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import type { ParseResponse } from "@/components/viewers/lib/parse-types"
-import { ParseViewer } from "@/components/viewers/parse/parse-viewer"
+import type { ParseResponse } from "@/components/viewers/lib/parse-types";
+import { ParseViewer } from "@/components/viewers/parse/parse-viewer";
 
-const multiPageParsePageCount = 36
+const multiPageParsePageCount = 36;
 const multiPageParsePages = Array.from(
   { length: multiPageParsePageCount },
-  (_, index) => createParseDemoPage(index + 1, multiPageParsePageCount)
-)
+  (_, index) => createParseDemoPage(index + 1, multiPageParsePageCount),
+);
 
 const multiPageParseResult: ParseResponse = {
   output: {
@@ -15,13 +15,13 @@ const multiPageParseResult: ParseResponse = {
     text: multiPageParsePages.join("\n\n"),
   },
   usage: { credits: 4 },
-}
+};
 
-const largeParsePageCount = 1000
+const largeParsePageCount = 1000;
 const largeParsePages = Array.from(
   { length: largeParsePageCount },
-  (_, index) => createParseDemoPage(index + 1, largeParsePageCount)
-)
+  (_, index) => createParseDemoPage(index + 1, largeParsePageCount),
+);
 
 const largeParseResult: ParseResponse = {
   document: { id: "large-parse-demo" },
@@ -30,14 +30,14 @@ const largeParseResult: ParseResponse = {
     text: largeParsePages.join("\n\n"),
   },
   usage: { credits: 100 },
-}
+};
 
 export function ParseViewerDemo() {
   return (
     <div className="flex h-[680px] min-h-0 flex-col overflow-hidden">
       <ParseViewer result={multiPageParseResult} />
     </div>
-  )
+  );
 }
 
 export function LargeParseViewerDemo() {
@@ -48,26 +48,26 @@ export function LargeParseViewerDemo() {
     >
       <ParseViewer result={largeParseResult} />
     </div>
-  )
+  );
 }
 
 function createParseDemoPage(pageNumber: number, pageCount: number) {
-  const invoiceNumber = String(2400 + pageNumber).padStart(5, "0")
-  const subtotal = 1200 + pageNumber * 47
-  const tax = Math.round(subtotal * 0.0825)
-  const total = subtotal + tax
+  const invoiceNumber = String(2400 + pageNumber).padStart(5, "0");
+  const subtotal = 1200 + pageNumber * 47;
+  const tax = Math.round(subtotal * 0.0825);
+  const total = subtotal + tax;
   const status =
     pageNumber % 5 === 0
       ? "Needs review"
       : pageNumber % 3 === 0
         ? "Exception noted"
-        : "Matched"
+        : "Matched";
   const rows = Array.from({ length: 8 }, (_, rowIndex) => {
-    const quantity = 1 + ((pageNumber + rowIndex) % 4)
-    const unitPrice = 42 + pageNumber + rowIndex * 9
-    const amount = quantity * unitPrice
-    return `| SKU-${pageNumber}-${rowIndex + 1} | Service line ${rowIndex + 1} | ${quantity} | $${unitPrice.toFixed(2)} | $${amount.toFixed(2)} |`
-  })
+    const quantity = 1 + ((pageNumber + rowIndex) % 4);
+    const unitPrice = 42 + pageNumber + rowIndex * 9;
+    const amount = quantity * unitPrice;
+    return `| SKU-${pageNumber}-${rowIndex + 1} | Service line ${rowIndex + 1} | ${quantity} | $${unitPrice.toFixed(2)} | $${amount.toFixed(2)} |`;
+  });
 
   return [
     `# Parsed Invoice ${invoiceNumber}`,
@@ -118,12 +118,12 @@ function createParseDemoPage(pageNumber: number, pageCount: number) {
         total,
       },
       null,
-      2
+      2,
     ),
     "```",
-  ].join("\n")
+  ].join("\n");
 }
 
 function formatConfidence(base: number, pageNumber: number) {
-  return `${Math.min(0.99, base + (pageNumber % 5) * 0.007).toFixed(3)}`
+  return `${Math.min(0.99, base + (pageNumber % 5) * 0.007).toFixed(3)}`;
 }

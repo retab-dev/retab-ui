@@ -1,7 +1,7 @@
-import type * as React from "react"
+import type * as React from "react";
 
-import type { DataCellDisplayProps } from "@/registry/new-york-v4/ui/data-cell-display"
-import type { DataCellProps } from "@/registry/new-york-v4/ui/data-cell-types"
+import type { DataCellDisplayProps } from "@/registry/new-york-v4/ui/data-cell-display";
+import type { DataCellProps } from "@/registry/new-york-v4/ui/data-cell-types";
 
 export type DataCellDisplayShellProps = Pick<
   DataCellDisplayProps,
@@ -11,11 +11,11 @@ export type DataCellDisplayShellProps = Pick<
   | "onKeyDown"
   | "onPointerDown"
   | "tabIndex"
->
+>;
 
 export function createDataCellDisplayProps(
   props: DataCellProps,
-  shellProps: DataCellDisplayShellProps
+  shellProps: DataCellDisplayShellProps,
 ): DataCellDisplayProps {
   switch (props.kind) {
     case "text": {
@@ -39,7 +39,7 @@ export function createDataCellDisplayProps(
         onKeyDown,
         onPointerDown,
         ...surfaceDomProps
-      } = props
+      } = props;
       return {
         ...surfaceDomProps,
         ...shellProps,
@@ -48,7 +48,7 @@ export function createDataCellDisplayProps(
         placeholder,
         className,
         formatValue,
-      }
+      };
     }
     case "number": {
       const {
@@ -71,7 +71,7 @@ export function createDataCellDisplayProps(
         onKeyDown,
         onPointerDown,
         ...surfaceDomProps
-      } = props
+      } = props;
       return {
         ...surfaceDomProps,
         ...shellProps,
@@ -80,7 +80,7 @@ export function createDataCellDisplayProps(
         placeholder,
         className,
         formatValue,
-      }
+      };
     }
     case "integer": {
       const {
@@ -103,7 +103,7 @@ export function createDataCellDisplayProps(
         onKeyDown,
         onPointerDown,
         ...surfaceDomProps
-      } = props
+      } = props;
       return {
         ...surfaceDomProps,
         ...shellProps,
@@ -112,7 +112,7 @@ export function createDataCellDisplayProps(
         placeholder,
         className,
         formatValue,
-      }
+      };
     }
     case "boolean": {
       const {
@@ -131,14 +131,14 @@ export function createDataCellDisplayProps(
         onKeyDown,
         onPointerDown,
         ...surfaceDomProps
-      } = props
+      } = props;
       return {
         ...surfaceDomProps,
         ...shellProps,
         kind,
         value,
         className,
-      }
+      };
     }
     case "select": {
       const {
@@ -162,7 +162,7 @@ export function createDataCellDisplayProps(
         onKeyDown,
         onPointerDown,
         ...surfaceDomProps
-      } = props
+      } = props;
       return {
         ...surfaceDomProps,
         ...shellProps,
@@ -171,7 +171,7 @@ export function createDataCellDisplayProps(
         placeholder,
         className,
         formatValue,
-      }
+      };
     }
     case "date": {
       const {
@@ -198,7 +198,7 @@ export function createDataCellDisplayProps(
         onKeyDown,
         onPointerDown,
         ...surfaceDomProps
-      } = props
+      } = props;
       return {
         ...surfaceDomProps,
         ...shellProps,
@@ -208,7 +208,7 @@ export function createDataCellDisplayProps(
         className,
         formatValue,
         showPickerIcon: showPickerIcon ?? true,
-      }
+      };
     }
     case "time": {
       const {
@@ -235,7 +235,7 @@ export function createDataCellDisplayProps(
         onKeyDown,
         onPointerDown,
         ...surfaceDomProps
-      } = props
+      } = props;
       return {
         ...surfaceDomProps,
         ...shellProps,
@@ -245,7 +245,7 @@ export function createDataCellDisplayProps(
         className,
         formatValue,
         showPickerIcon: showPickerIcon ?? true,
-      }
+      };
     }
     case "date-time": {
       const {
@@ -272,7 +272,7 @@ export function createDataCellDisplayProps(
         onKeyDown,
         onPointerDown,
         ...surfaceDomProps
-      } = props
+      } = props;
       return {
         ...surfaceDomProps,
         ...shellProps,
@@ -282,7 +282,7 @@ export function createDataCellDisplayProps(
         className,
         formatValue,
         showPickerIcon: showPickerIcon ?? true,
-      }
+      };
     }
   }
 }

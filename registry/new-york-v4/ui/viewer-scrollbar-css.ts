@@ -12,5 +12,5 @@ export function viewerScrollbarCss(slotName: string) {
 [data-slot="${slotName}"]::-webkit-scrollbar-thumb:hover {
   background-color: color-mix(in oklab, var(--foreground) 38%, transparent);
 }
-`
+`;
 }

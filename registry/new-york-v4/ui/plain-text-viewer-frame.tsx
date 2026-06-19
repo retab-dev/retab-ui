@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
 import {
   isResourceError,
@@ -8,61 +8,61 @@ import {
   isViewerStateError,
   isViewerUnsupportedError,
   ViewerFormatError,
-} from "@/lib/viewer-errors"
+} from "@/lib/viewer-errors";
 import {
   createViewerResource,
   viewerContentRenderKey,
   viewerResourceRenderKey,
   type ViewerResource,
-} from "@/lib/viewer-resource"
+} from "@/lib/viewer-resource";
 import type {
   BlobViewerSource,
   TextSource,
   UrlViewerSource,
-} from "@/lib/viewer-source"
+} from "@/lib/viewer-source";
 
 import {
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
   type TextViewerBounds,
-} from "./plain-text-resource"
-import { useIsClient } from "./use-is-client"
-import { ViewerErrorBoundary } from "./viewer-error"
+} from "./plain-text-resource";
+import { useIsClient } from "./use-is-client";
+import { ViewerErrorBoundary } from "./viewer-error";
 
-type TextResourceSource = UrlViewerSource | BlobViewerSource | TextSource
-type ClientFallbackPolicy = "always" | "non-inline-source"
+type TextResourceSource = UrlViewerSource | BlobViewerSource | TextSource;
+type ClientFallbackPolicy = "always" | "non-inline-source";
 
 export interface PlainTextViewerFrameProps<
   THandle,
   TProps extends PlainTextViewerFramePublicProps,
 > {
-  props: TProps
-  resource?: ViewerResource
-  forwardedRef: React.ForwardedRef<THandle>
-  clientFallbackPolicy: ClientFallbackPolicy
-  Fallback: React.ComponentType<PlainTextViewerFallbackProps>
+  props: TProps;
+  resource?: ViewerResource;
+  forwardedRef: React.ForwardedRef<THandle>;
+  clientFallbackPolicy: ClientFallbackPolicy;
+  Fallback: React.ComponentType<PlainTextViewerFallbackProps>;
   Content: React.ComponentType<
     TProps & {
-      resource: ViewerResource
-      retryVersion: number
-      forwardedRef?: React.ForwardedRef<THandle>
+      resource: ViewerResource;
+      retryVersion: number;
+      forwardedRef?: React.ForwardedRef<THandle>;
     }
-  >
+  >;
 }
 
 export interface PlainTextViewerFramePublicProps extends TextViewerBounds {
-  source?: TextResourceSource
-  className?: string
-  controls?: boolean
-  download?: boolean
-  bare?: boolean
+  source?: TextResourceSource;
+  className?: string;
+  controls?: boolean;
+  download?: boolean;
+  bare?: boolean;
 }
 
 export interface PlainTextViewerFallbackProps {
-  className?: string
-  controls?: boolean
-  download?: boolean
-  bare?: boolean
+  className?: string;
+  controls?: boolean;
+  download?: boolean;
+  bare?: boolean;
 }
 
 export function PlainTextViewerFrame<
@@ -79,25 +79,25 @@ export function PlainTextViewerFrame<
   const [retryState, setRetryState] = React.useState({
     contentKey: "",
     version: 0,
-  })
-  const isClient = useIsClient()
-  const { source } = props
+  });
+  const isClient = useIsClient();
+  const { source } = props;
   const createdResource = React.useMemo(
     () => (source ? createViewerResource(source) : null),
-    [source]
-  )
-  const resource = resourceProp ?? createdResource
+    [source],
+  );
+  const resource = resourceProp ?? createdResource;
   if (!resource) {
-    throw new Error("PlainTextViewerFrame requires a source or resource.")
+    throw new Error("PlainTextViewerFrame requires a source or resource.");
   }
-  const contentBaseKey = plainTextViewerContentBaseKey(resource, props)
+  const contentBaseKey = plainTextViewerContentBaseKey(resource, props);
   const retryVersion =
-    retryState.contentKey === contentBaseKey ? retryState.version : 0
-  const resetKey = plainTextViewerResetKey(resource, props, retryVersion)
+    retryState.contentKey === contentBaseKey ? retryState.version : 0;
+  const resetKey = plainTextViewerResetKey(resource, props, retryVersion);
   const contentResetKey = plainTextViewerContentResetKey(
     contentBaseKey,
-    retryVersion
-  )
+    retryVersion,
+  );
 
   if (
     !isClient &&
@@ -110,7 +110,7 @@ export function PlainTextViewerFrame<
         download={props.download}
         bare={props.bare}
       />
-    )
+    );
   }
 
   return (
@@ -152,11 +152,11 @@ export function PlainTextViewerFrame<
         />
       </React.Suspense>
     </ViewerErrorBoundary>
-  )
+  );
 }
 
 function plainTextViewerDownloadAction(resource: ViewerResource) {
-  return resource.originalDownload
+  return resource.originalDownload;
 }
 
 function plainTextViewerBoundaryError(error: unknown) {
@@ -166,7 +166,7 @@ function plainTextViewerBoundaryError(error: unknown) {
     isViewerStateError(error) ||
     isViewerUnsupportedError(error)
   ) {
-    return error
+    return error;
   }
 
   return new ViewerFormatError({
@@ -174,61 +174,61 @@ function plainTextViewerBoundaryError(error: unknown) {
     kind: "render_failed",
     message: "Failed to render text.",
     cause: error,
-  })
+  });
 }
 
 function plainTextViewerResetKey(
   resource: ViewerResource,
   props: Pick<PlainTextViewerFramePublicProps, "maxBytes" | "maxLines">,
-  retryVersion: number
+  retryVersion: number,
 ): string {
-  const [maxBytesKey, maxLinesKey] = plainTextViewerBoundsResetKey(props)
+  const [maxBytesKey, maxLinesKey] = plainTextViewerBoundsResetKey(props);
   return [
     viewerResourceRenderKey(resource),
     retryVersion,
     maxBytesKey,
     maxLinesKey,
-  ].join("\u0000")
+  ].join("\u0000");
 }
 
 function plainTextViewerContentResetKey(
   contentBaseKey: string,
-  retryVersion: number
+  retryVersion: number,
 ): string {
-  return [contentBaseKey, retryVersion].join("\u0000")
+  return [contentBaseKey, retryVersion].join("\u0000");
 }
 
 function plainTextViewerContentBaseKey(
   resource: ViewerResource,
-  props: Pick<PlainTextViewerFramePublicProps, "maxBytes" | "maxLines">
+  props: Pick<PlainTextViewerFramePublicProps, "maxBytes" | "maxLines">,
 ): string {
-  const [maxBytesKey, maxLinesKey] = plainTextViewerBoundsResetKey(props)
+  const [maxBytesKey, maxLinesKey] = plainTextViewerBoundsResetKey(props);
   return [
     viewerContentRenderKey(resource.content),
     maxBytesKey,
     maxLinesKey,
-  ].join("\u0000")
+  ].join("\u0000");
 }
 
 function plainTextViewerBoundsResetKey(
-  props: Pick<PlainTextViewerFramePublicProps, "maxBytes" | "maxLines">
+  props: Pick<PlainTextViewerFramePublicProps, "maxBytes" | "maxLines">,
 ) {
   return [
     plainTextViewerBoundResetKeyPart(props.maxBytes, DEFAULT_MAX_BYTES),
     plainTextViewerBoundResetKeyPart(props.maxLines, DEFAULT_MAX_LINES),
-  ] as const
+  ] as const;
 }
 
 function plainTextViewerBoundResetKeyPart(
   value: number | undefined,
-  defaultValue: number
+  defaultValue: number,
 ) {
-  return String(value === undefined ? defaultValue : value)
+  return String(value === undefined ? defaultValue : value);
 }
 
 function shouldRenderClientFallback(
   policy: ClientFallbackPolicy,
-  sourceKind: TextResourceSource["kind"]
+  sourceKind: TextResourceSource["kind"],
 ) {
-  return policy === "always" || sourceKind !== "text"
+  return policy === "always" || sourceKind !== "text";
 }

@@ -1,31 +1,31 @@
-import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { isSchemaNode } from "@/components/schema-editor/property-form/model/object-property-selectors"
-import type { ObjectPropertyRowModel } from "@/components/schema-editor/property-form/model/object-properties-view"
-import type { PropertyObjectPropertiesPlan } from "@/components/schema-editor/property-form/types"
-import { validatePropertyFormName } from "@/components/schema-editor/property-form/validation"
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
+import { isSchemaNode } from "@/components/schema-editor/property-form/model/object-property-selectors";
+import type { ObjectPropertyRowModel } from "@/components/schema-editor/property-form/model/object-properties-view";
+import type { PropertyObjectPropertiesPlan } from "@/components/schema-editor/property-form/types";
+import { validatePropertyFormName } from "@/components/schema-editor/property-form/validation";
 
-import { createObjectPropertyRowSchemaPlan } from "./object-property-row-schema-plan"
-import type { ObjectPropertyOperations } from "./object-properties-operations"
-import type { ObjectPropertiesState } from "./object-properties-state"
-import { createPropertyTypeFieldWithObjectTemplates } from "./property-object-template-type-field"
+import { createObjectPropertyRowSchemaPlan } from "./object-property-row-schema-plan";
+import type { ObjectPropertyOperations } from "./object-properties-operations";
+import type { ObjectPropertiesState } from "./object-properties-state";
+import { createPropertyTypeFieldWithObjectTemplates } from "./property-object-template-type-field";
 
 export function createObjectPropertyRows({
   operations,
   plan,
   state,
 }: {
-  operations: ObjectPropertyOperations
-  plan: PropertyObjectPropertiesPlan
-  state: ObjectPropertiesState
+  operations: ObjectPropertyOperations;
+  plan: PropertyObjectPropertiesPlan;
+  state: ObjectPropertiesState;
 }): ObjectPropertyRowModel[] {
   return state.propertyNames.flatMap((name, index) => {
-    const propertySchema = plan.schemaNode.properties?.[name]
-    if (!isSchemaNode(propertySchema)) return []
+    const propertySchema = plan.schemaNode.properties?.[name];
+    if (!isSchemaNode(propertySchema)) return [];
 
-    const id = state.rowIdentity.getRowId(name)
+    const id = state.rowIdentity.getRowId(name);
     const replaceSchemaNode = (nextSchemaNode: ExtendedJSONSchema7) => {
-      operations.replacePropertySchemaNode(name, nextSchemaNode)
-    }
+      operations.replacePropertySchemaNode(name, nextSchemaNode);
+    };
     const rowSchemaContext = {
       ...plan.schemaContext,
       siblingNames: state.propertyNames,
@@ -40,7 +40,7 @@ export function createObjectPropertyRows({
           plan.schemaContext.originalName,
         id,
       ].join("."),
-    }
+    };
 
     return [
       {
@@ -65,7 +65,7 @@ export function createObjectPropertyRows({
               originalName: name,
             }),
           onCommit: (nextName: string) => {
-            operations.renameProperty(name, nextName)
+            operations.renameProperty(name, nextName);
           },
         },
         descriptionField: {
@@ -76,7 +76,7 @@ export function createObjectPropertyRows({
             replaceSchemaNode({
               ...propertySchema,
               description: description || undefined,
-            })
+            });
           },
         },
         reorder: {
@@ -85,7 +85,7 @@ export function createObjectPropertyRows({
               propertyName: name,
               sourceIndex: index,
               targetIndex,
-            })
+            });
           },
         },
         typeField: createPropertyTypeFieldWithObjectTemplates({
@@ -99,6 +99,6 @@ export function createObjectPropertyRows({
           onDelete: () => operations.removeProperty(name),
         },
       },
-    ]
-  })
+    ];
+  });
 }

@@ -1,67 +1,69 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Check, Copy, type LucideIcon } from "lucide-react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { trackEvent, type Event } from "@/lib/events"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import * as React from "react";
+import { Check, Copy, type LucideIcon } from "lucide-react";
+
+import { trackEvent, type Event } from "@/lib/events";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 function legacyCopyToClipboard(value: string) {
-  const textArea = document.createElement("textarea")
-  textArea.value = value
-  textArea.setAttribute("readonly", "")
-  textArea.style.position = "fixed"
-  textArea.style.opacity = "0"
-  textArea.style.pointerEvents = "none"
+  const textArea = document.createElement("textarea");
+  textArea.value = value;
+  textArea.setAttribute("readonly", "");
+  textArea.style.position = "fixed";
+  textArea.style.opacity = "0";
+  textArea.style.pointerEvents = "none";
 
-  document.body.appendChild(textArea)
-  textArea.focus()
-  textArea.select()
-  textArea.setSelectionRange(0, value.length)
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  textArea.setSelectionRange(0, value.length);
 
-  let hasCopied = false
+  let hasCopied = false;
   try {
-    hasCopied = document.execCommand("copy")
+    hasCopied = document.execCommand("copy");
   } catch {
-    hasCopied = false
+    hasCopied = false;
   }
 
-  document.body.removeChild(textArea)
-  return hasCopied
+  document.body.removeChild(textArea);
+  return hasCopied;
 }
 
 export async function copyToClipboardWithMeta(value: string, event?: Event) {
   if (typeof window === "undefined") {
-    return false
+    return false;
   }
 
   if (!value) {
-    return false
+    return false;
   }
 
-  let hasCopied = false
+  let hasCopied = false;
 
   if (navigator.clipboard?.writeText) {
     try {
-      await navigator.clipboard.writeText(value)
-      hasCopied = true
+      await navigator.clipboard.writeText(value);
+      hasCopied = true;
     } catch {
-      hasCopied = legacyCopyToClipboard(value)
+      hasCopied = legacyCopyToClipboard(value);
     }
   } else {
-    hasCopied = legacyCopyToClipboard(value)
+    hasCopied = legacyCopyToClipboard(value);
   }
 
   if (!hasCopied) {
-    return false
+    return false;
   }
 
   if (event) {
-    trackEvent(event)
+    trackEvent(event);
   }
 
-  return true
+  return true;
 }
 
 export function CopyButtonIcon({
@@ -69,17 +71,17 @@ export function CopyButtonIcon({
   className,
   icon = Copy,
 }: {
-  copied: boolean
-  className?: string
-  icon?: LucideIcon
+  copied: boolean;
+  className?: string;
+  icon?: LucideIcon;
 }) {
-  const Icon = icon
+  const Icon = icon;
   return (
     <span
       aria-hidden="true"
       className={cn(
         "relative inline-flex size-4 items-center justify-center",
-        className
+        className,
       )}
     >
       <span
@@ -87,7 +89,7 @@ export function CopyButtonIcon({
           "inline-flex transition-all duration-200 ease-out",
           copied
             ? "scale-100 opacity-100 blur-none"
-            : "scale-70 opacity-0 blur-[2px]"
+            : "scale-70 opacity-0 blur-[2px]",
         )}
       >
         <Check className="size-4" />
@@ -97,17 +99,17 @@ export function CopyButtonIcon({
           "absolute inline-flex transition-all duration-200 ease-out",
           copied
             ? "scale-0 opacity-0 blur-[2px]"
-            : "scale-100 opacity-100 blur-none"
+            : "scale-100 opacity-100 blur-none",
         )}
       >
         <Icon className="size-4" />
       </span>
     </span>
-  )
+  );
 }
 
 export const codeHeaderCopyButtonClassName =
-  "static z-auto shrink-0 bg-transparent"
+  "static z-auto shrink-0 bg-transparent";
 
 export function CopyButton({
   value,
@@ -118,21 +120,21 @@ export function CopyButton({
   onClick,
   ...props
 }: React.ComponentProps<typeof Button> & {
-  value: string
-  src?: string
-  event?: Event["name"]
-  tooltip?: string
-  copied?: boolean
+  value: string;
+  src?: string;
+  event?: Event["name"];
+  tooltip?: string;
+  copied?: boolean;
 }) {
-  const [hasCopied, setHasCopied] = React.useState(false)
-  const isCopied = copied ?? hasCopied
+  const [hasCopied, setHasCopied] = React.useState(false);
+  const isCopied = copied ?? hasCopied;
 
   React.useEffect(() => {
     if (hasCopied) {
-      const timer = setTimeout(() => setHasCopied(false), 2000)
-      return () => clearTimeout(timer)
+      const timer = setTimeout(() => setHasCopied(false), 2000);
+      return () => clearTimeout(timer);
     }
-  }, [hasCopied])
+  }, [hasCopied]);
 
   return (
     <Button
@@ -143,13 +145,13 @@ export function CopyButton({
       size="icon"
       variant={variant}
       className={cn(
-        "absolute top-3 right-2 z-10 size-7 bg-code opacity-70 transition-all duration-200 ease-out hover:opacity-100 focus-visible:opacity-100 active:scale-[0.97] disabled:opacity-100",
-        className
+        "bg-code absolute top-3 right-2 z-10 size-7 opacity-70 transition-all duration-200 ease-out hover:opacity-100 focus-visible:opacity-100 active:scale-[0.97] disabled:opacity-100",
+        className,
       )}
       onClick={async (event_) => {
         if (onClick) {
-          onClick(event_)
-          return
+          onClick(event_);
+          return;
         }
 
         const hasCopied = await copyToClipboardWithMeta(
@@ -161,11 +163,11 @@ export function CopyButton({
                   code: value,
                 },
               }
-            : undefined
-        )
+            : undefined,
+        );
 
         if (hasCopied) {
-          setHasCopied(true)
+          setHasCopied(true);
         }
       }}
       {...props}
@@ -173,7 +175,7 @@ export function CopyButton({
       <span className="sr-only">{isCopied ? "Copied" : "Copy"}</span>
       <CopyButtonIcon copied={isCopied} />
     </Button>
-  )
+  );
 }
 
 export function CodeHeaderCopyButton({
@@ -185,5 +187,5 @@ export function CodeHeaderCopyButton({
       className={cn(codeHeaderCopyButtonClassName, className)}
       {...props}
     />
-  )
+  );
 }

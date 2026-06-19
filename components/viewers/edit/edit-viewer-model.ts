@@ -1,14 +1,14 @@
 import type {
   DocumentAnchor,
   PdfAreaAnchor,
-} from "@/components/ui/document-anchor"
+} from "@/components/ui/document-anchor";
 import {
   createSegmentedDocumentModel,
   type DocumentSegment,
   type SegmentAnchor,
   type SegmentedDocumentModel,
-} from "@/components/ui/segmented-document-model"
-import type { BBox } from "@/components/viewers/lib/edit-types"
+} from "@/components/ui/segmented-document-model";
+import type { BBox } from "@/components/viewers/lib/edit-types";
 
 import type {
   EditViewerDocumentSource,
@@ -20,7 +20,7 @@ import type {
   EditViewerOptions,
   EditViewerResult,
   EditViewerStatus,
-} from "./edit-viewer-types"
+} from "./edit-viewer-types";
 
 export type EditViewerFilter =
   | "all"
@@ -28,13 +28,13 @@ export type EditViewerFilter =
   | "empty"
   | "text"
   | "checkbox"
-  | "no_location"
+  | "no_location";
 
 export interface EditViewerModeInput {
-  fields: readonly EditViewerField[]
-  sourceDocument?: EditViewerDocumentSource | null
-  filledDocument?: EditViewerDocumentSource | null
-  options: Required<EditViewerOptions>
+  fields: readonly EditViewerField[];
+  sourceDocument?: EditViewerDocumentSource | null;
+  filledDocument?: EditViewerDocumentSource | null;
+  options: Required<EditViewerOptions>;
 }
 
 export type EditViewerDocumentTarget =
@@ -42,7 +42,7 @@ export type EditViewerDocumentTarget =
   | { kind: "empty"; message: string }
   | { kind: "source"; document: EditViewerDocumentSource; showOverlay: false }
   | { kind: "preview"; document: EditViewerDocumentSource; showOverlay: true }
-  | { kind: "filled"; document: EditViewerDocumentSource; showOverlay: false }
+  | { kind: "filled"; document: EditViewerDocumentSource; showOverlay: false };
 
 const DEFAULT_OPTIONS: Required<EditViewerOptions> = {
   fieldPanel: true,
@@ -50,34 +50,34 @@ const DEFAULT_OPTIONS: Required<EditViewerOptions> = {
   filters: true,
   preview: true,
   filledOutput: true,
-}
+};
 
-const MODE_FALLBACK_ORDER: EditViewerMode[] = ["filled", "preview", "source"]
+const MODE_FALLBACK_ORDER: EditViewerMode[] = ["filled", "preview", "source"];
 
-const MODE_DISPLAY_ORDER: EditViewerMode[] = ["source", "preview", "filled"]
+const MODE_DISPLAY_ORDER: EditViewerMode[] = ["source", "preview", "filled"];
 
 export function resolveEditViewerOptions(
-  options: EditViewerOptions | undefined
+  options: EditViewerOptions | undefined,
 ): Required<EditViewerOptions> {
-  return { ...DEFAULT_OPTIONS, ...options }
+  return { ...DEFAULT_OPTIONS, ...options };
 }
 
 export function normalizeEditViewerResult(
-  result: EditViewerInputResult | null | undefined
+  result: EditViewerInputResult | null | undefined,
 ): EditViewerResult {
-  const fields = result?.fields ?? []
+  const fields = result?.fields ?? [];
   return {
     fields: fields.map(normalizeEditViewerField),
     editType: result?.editType,
-  }
+  };
 }
 
 function normalizeEditViewerField(
   field: EditViewerInputField,
-  index: number
+  index: number,
 ): EditViewerField {
-  const key = field.key || `field_${index}`
-  const location = normalizeEditViewerFieldLocation(field)
+  const key = field.key || `field_${index}`;
+  const location = normalizeEditViewerFieldLocation(field);
   return {
     key,
     description: field.description || key || `Field ${index + 1}`,
@@ -88,44 +88,44 @@ function normalizeEditViewerField(
     bbox: location.bbox,
     combing: field.combing,
     maxLength: normalizeMaxLength(field),
-  }
+  };
 }
 
 function normalizeEditViewerFieldLocation(field: EditViewerInputField): {
-  bbox?: BBox
-  target: DocumentAnchor | null
-  targetStatus: EditViewerFieldTargetStatus
+  bbox?: BBox;
+  target: DocumentAnchor | null;
+  targetStatus: EditViewerFieldTargetStatus;
 } {
   if (field.target !== undefined) {
     return {
       target: field.target,
       targetStatus: field.target ? { state: "resolved" } : { state: "missing" },
-    }
+    };
   }
 
   if (!field.bbox) {
-    return { target: null, targetStatus: { state: "missing" } }
+    return { target: null, targetStatus: { state: "missing" } };
   }
 
-  const bbox = normalizeBBox(field.bbox)
+  const bbox = normalizeBBox(field.bbox);
   if (!bbox) {
     return {
       target: null,
       targetStatus: { state: "invalid", reason: "Invalid field bbox" },
-    }
+    };
   }
 
   return {
     bbox,
     target: editFieldTargetFromBBox(bbox),
     targetStatus: { state: "resolved" },
-  }
+  };
 }
 
 export function editFieldTargetFromBBox(
-  bbox: BBox | null | undefined
+  bbox: BBox | null | undefined,
 ): DocumentAnchor | null {
-  if (!bbox) return null
+  if (!bbox) return null;
   return {
     kind: "pdf-area",
     pageNumber: bbox.page,
@@ -133,31 +133,31 @@ export function editFieldTargetFromBBox(
     top: bbox.top * 100,
     width: bbox.width * 100,
     height: bbox.height * 100,
-  }
+  };
 }
 
 function normalizeFieldValue(value: string | boolean | null | undefined) {
-  if (typeof value === "boolean") return value
-  if (value === null || value === undefined) return null
-  return String(value)
+  if (typeof value === "boolean") return value;
+  if (value === null || value === undefined) return null;
+  return String(value);
 }
 
 function normalizeMaxLength(field: EditViewerInputField) {
   if ("maxLength" in field && typeof field.maxLength === "number") {
-    return field.maxLength
+    return field.maxLength;
   }
   if ("max_length" in field && typeof field.max_length === "number") {
-    return field.max_length
+    return field.max_length;
   }
-  return undefined
+  return undefined;
 }
 
 function normalizeBBox(bbox: BBox): BBox | undefined {
-  const page = Number(bbox.page)
-  const left = Number(bbox.left)
-  const top = Number(bbox.top)
-  const width = Number(bbox.width)
-  const height = Number(bbox.height)
+  const page = Number(bbox.page);
+  const left = Number(bbox.left);
+  const top = Number(bbox.top);
+  const width = Number(bbox.width);
+  const height = Number(bbox.height);
 
   if (
     !Number.isFinite(page) ||
@@ -169,15 +169,15 @@ function normalizeBBox(bbox: BBox): BBox | undefined {
     width <= 0 ||
     height <= 0
   ) {
-    return undefined
+    return undefined;
   }
 
-  const normalizedLeft = clamp01(left)
-  const normalizedTop = clamp01(top)
-  const normalizedWidth = Math.min(clamp01(width), 1 - normalizedLeft)
-  const normalizedHeight = Math.min(clamp01(height), 1 - normalizedTop)
+  const normalizedLeft = clamp01(left);
+  const normalizedTop = clamp01(top);
+  const normalizedWidth = Math.min(clamp01(width), 1 - normalizedLeft);
+  const normalizedHeight = Math.min(clamp01(height), 1 - normalizedTop);
 
-  if (normalizedWidth <= 0 || normalizedHeight <= 0) return undefined
+  if (normalizedWidth <= 0 || normalizedHeight <= 0) return undefined;
 
   return {
     page: Math.round(page),
@@ -185,50 +185,50 @@ function normalizeBBox(bbox: BBox): BBox | undefined {
     top: normalizedTop,
     width: normalizedWidth,
     height: normalizedHeight,
-  }
+  };
 }
 
 function clamp01(value: number) {
-  if (!Number.isFinite(value)) return 0
-  return Math.max(0, Math.min(1, value))
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, value));
 }
 
 export function isEditFieldChecked(field: EditViewerField) {
-  if (typeof field.value === "boolean") return field.value
-  if (typeof field.value !== "string") return false
-  const value = field.value.trim().toLowerCase()
+  if (typeof field.value === "boolean") return field.value;
+  if (typeof field.value !== "string") return false;
+  const value = field.value.trim().toLowerCase();
   return (
     value === "true" || value === "checked" || value === "yes" || value === "1"
-  )
+  );
 }
 
 export function isEditFieldFilled(field: EditViewerField) {
-  if (field.type === "checkbox") return isEditFieldChecked(field)
+  if (field.type === "checkbox") return isEditFieldChecked(field);
   return Boolean(
     typeof field.value === "string"
       ? field.value.trim().length > 0
-      : field.value !== null && field.value !== undefined
-  )
+      : field.value !== null && field.value !== undefined,
+  );
 }
 
 export function displayEditFieldValue(field: EditViewerField): string {
   if (field.type === "checkbox") {
-    return isEditFieldChecked(field) ? "Checked" : "Unchecked"
+    return isEditFieldChecked(field) ? "Checked" : "Unchecked";
   }
-  if (field.value === null || field.value === undefined) return ""
-  return String(field.value).trim()
+  if (field.value === null || field.value === undefined) return "";
+  return String(field.value).trim();
 }
 
 export function deriveEditViewerModes(input: EditViewerModeInput) {
   const hasPreviewTargets = input.fields.some((field) =>
-    Boolean(getEditViewerPdfAreaAnchor(field))
-  )
-  const hasSource = Boolean(input.sourceDocument)
-  const filledOutputAvailable = Boolean(input.filledDocument)
-  const modes: EditViewerMode[] = []
+    Boolean(getEditViewerPdfAreaAnchor(field)),
+  );
+  const hasSource = Boolean(input.sourceDocument);
+  const filledOutputAvailable = Boolean(input.filledDocument);
+  const modes: EditViewerMode[] = [];
 
   if (hasSource) {
-    modes.push("source")
+    modes.push("source");
   }
 
   if (
@@ -238,21 +238,21 @@ export function deriveEditViewerModes(input: EditViewerModeInput) {
     input.sourceDocument &&
     canPreviewEditViewerDocument(input.sourceDocument)
   ) {
-    modes.push("preview")
+    modes.push("preview");
   }
 
   if (input.options.filledOutput && filledOutputAvailable) {
-    modes.push("filled")
+    modes.push("filled");
   }
 
-  return sortModes(modes)
+  return sortModes(modes);
 }
 
 function sortModes(modes: EditViewerMode[]) {
-  const rank = new Map(MODE_DISPLAY_ORDER.map((mode, index) => [mode, index]))
+  const rank = new Map(MODE_DISPLAY_ORDER.map((mode, index) => [mode, index]));
   return Array.from(new Set(modes)).sort(
-    (a, b) => (rank.get(a) ?? 99) - (rank.get(b) ?? 99)
-  )
+    (a, b) => (rank.get(a) ?? 99) - (rank.get(b) ?? 99),
+  );
 }
 
 export function resolveEditViewerMode({
@@ -260,19 +260,19 @@ export function resolveEditViewerMode({
   requestedMode,
   currentMode,
 }: {
-  availableModes: readonly EditViewerMode[]
-  requestedMode?: EditViewerMode | null
-  currentMode?: EditViewerMode | null
+  availableModes: readonly EditViewerMode[];
+  requestedMode?: EditViewerMode | null;
+  currentMode?: EditViewerMode | null;
 }): EditViewerMode | null {
   if (requestedMode && availableModes.includes(requestedMode)) {
-    return requestedMode
+    return requestedMode;
   }
   if (currentMode && availableModes.includes(currentMode)) {
-    return currentMode
+    return currentMode;
   }
   return (
     MODE_FALLBACK_ORDER.find((mode) => availableModes.includes(mode)) ?? null
-  )
+  );
 }
 
 export function filterEditViewerFields({
@@ -280,60 +280,60 @@ export function filterEditViewerFields({
   query,
   filter,
 }: {
-  fields: readonly EditViewerField[]
-  query?: string
-  filter?: EditViewerFilter
+  fields: readonly EditViewerField[];
+  query?: string;
+  filter?: EditViewerFilter;
 }) {
-  const normalizedQuery = (query ?? "").trim().toLowerCase()
-  const resolvedFilter = filter ?? "all"
+  const normalizedQuery = (query ?? "").trim().toLowerCase();
+  const resolvedFilter = filter ?? "all";
 
   return fields.filter((field) => {
-    if (resolvedFilter === "filled" && !isEditFieldFilled(field)) return false
-    if (resolvedFilter === "empty" && isEditFieldFilled(field)) return false
-    if (resolvedFilter === "text" && field.type !== "text") return false
+    if (resolvedFilter === "filled" && !isEditFieldFilled(field)) return false;
+    if (resolvedFilter === "empty" && isEditFieldFilled(field)) return false;
+    if (resolvedFilter === "text" && field.type !== "text") return false;
     if (resolvedFilter === "checkbox" && field.type !== "checkbox") {
-      return false
+      return false;
     }
-    if (resolvedFilter === "no_location" && field.target) return false
-    if (!normalizedQuery) return true
+    if (resolvedFilter === "no_location" && field.target) return false;
+    if (!normalizedQuery) return true;
     return (
       field.key.toLowerCase().includes(normalizedQuery) ||
       (field.description ?? "").toLowerCase().includes(normalizedQuery) ||
       displayEditFieldValue(field).toLowerCase().includes(normalizedQuery)
-    )
-  })
+    );
+  });
 }
 
 export interface EditViewerFieldGroup {
-  key: string
-  label: string
-  page: number | null
-  fields: EditViewerField[]
+  key: string;
+  label: string;
+  page: number | null;
+  fields: EditViewerField[];
 }
 
 export type EditViewerFieldProjection = {
-  fields: readonly EditViewerField[]
-  fieldByKey: ReadonlyMap<string, EditViewerField>
-  fieldsByPage: ReadonlyMap<number, readonly EditViewerField[]>
-  locatedFields: readonly EditViewerField[]
-  unlocatedFields: readonly EditViewerField[]
-  visibleFields: readonly EditViewerField[]
-  fieldGroups: readonly EditViewerFieldGroup[]
-  fieldCount: number
-  visibleFieldCount: number
-  filledCount: number
-}
+  fields: readonly EditViewerField[];
+  fieldByKey: ReadonlyMap<string, EditViewerField>;
+  fieldsByPage: ReadonlyMap<number, readonly EditViewerField[]>;
+  locatedFields: readonly EditViewerField[];
+  unlocatedFields: readonly EditViewerField[];
+  visibleFields: readonly EditViewerField[];
+  fieldGroups: readonly EditViewerFieldGroup[];
+  fieldCount: number;
+  visibleFieldCount: number;
+  filledCount: number;
+};
 
 export function createEditViewerFieldProjection({
   fields,
   query,
   filter,
 }: {
-  fields: readonly EditViewerField[]
-  query: string
-  filter: EditViewerFilter
+  fields: readonly EditViewerField[];
+  query: string;
+  filter: EditViewerFilter;
 }): EditViewerFieldProjection {
-  const visibleFields = filterEditViewerFields({ fields, query, filter })
+  const visibleFields = filterEditViewerFields({ fields, query, filter });
   return {
     fields,
     fieldByKey: createEditViewerFieldMap(fields),
@@ -345,27 +345,27 @@ export function createEditViewerFieldProjection({
     fieldCount: fields.length,
     visibleFieldCount: visibleFields.length,
     filledCount: fields.filter(isEditFieldFilled).length,
-  }
+  };
 }
 
 export function createEditViewerFieldMap(fields: readonly EditViewerField[]) {
-  const fieldByKey = new Map<string, EditViewerField>()
+  const fieldByKey = new Map<string, EditViewerField>();
   for (const field of fields) {
     if (!fieldByKey.has(field.key)) {
-      fieldByKey.set(field.key, field)
+      fieldByKey.set(field.key, field);
     }
   }
-  return fieldByKey
+  return fieldByKey;
 }
 
 export function createEditViewerSegmentedDocumentModel(
-  fields: readonly EditViewerField[]
+  fields: readonly EditViewerField[],
 ): SegmentedDocumentModel {
-  const segments: DocumentSegment[] = []
-  const anchors: SegmentAnchor[] = []
+  const segments: DocumentSegment[] = [];
+  const anchors: SegmentAnchor[] = [];
 
   fields.forEach((field, index) => {
-    const pdfAnchor = getEditViewerPdfAreaAnchor(field)
+    const pdfAnchor = getEditViewerPdfAreaAnchor(field);
     const segment: DocumentSegment = {
       id: editViewerSegmentId(field.key, index),
       label: field.description || field.key,
@@ -373,25 +373,25 @@ export function createEditViewerSegmentedDocumentModel(
       color: field.type === "checkbox" ? "var(--chart-2)" : "var(--chart-1)",
       index,
       sourceId: field.key,
-    }
+    };
 
     if (pdfAnchor) {
-      anchors.push(editViewerPdfAnchorToSegmentAnchor(pdfAnchor, segment.id))
+      anchors.push(editViewerPdfAnchorToSegmentAnchor(pdfAnchor, segment.id));
     }
 
-    segments.push(segment)
-  })
+    segments.push(segment);
+  });
 
-  return createSegmentedDocumentModel({ anchors, segments })
+  return createSegmentedDocumentModel({ anchors, segments });
 }
 
 function editViewerSegmentId(fieldKey: string, index: number) {
-  return `edit:${fieldKey || "field"}:${index}`
+  return `edit:${fieldKey || "field"}:${index}`;
 }
 
 function editViewerPdfAnchorToSegmentAnchor(
   anchor: PdfAreaAnchor,
-  segmentId: string
+  segmentId: string,
 ): SegmentAnchor {
   return {
     id: `${segmentId}:anchor`,
@@ -403,23 +403,23 @@ function editViewerPdfAnchorToSegmentAnchor(
       width: pdfPercentToUnit(anchor.width),
       height: pdfPercentToUnit(anchor.height),
     },
-  }
+  };
 }
 
 function pdfPercentToUnit(value: number) {
-  if (!Number.isFinite(value)) return 0
-  return value > 1 ? value / 100 : value
+  if (!Number.isFinite(value)) return 0;
+  return value > 1 ? value / 100 : value;
 }
 
 export function groupEditViewerFieldsByPage(
-  fields: readonly EditViewerField[]
+  fields: readonly EditViewerField[],
 ): EditViewerFieldGroup[] {
-  const pageGroups = groupLocatedEditViewerFieldsByPage(fields)
-  const unlocatedFields: EditViewerField[] = []
+  const pageGroups = groupLocatedEditViewerFieldsByPage(fields);
+  const unlocatedFields: EditViewerField[] = [];
 
   for (const field of fields) {
     if (!field.target) {
-      unlocatedFields.push(field)
+      unlocatedFields.push(field);
     }
   }
 
@@ -430,7 +430,7 @@ export function groupEditViewerFieldsByPage(
       label: `Page ${page}`,
       page,
       fields: pageFields,
-    }))
+    }));
 
   if (unlocatedFields.length > 0) {
     groups.push({
@@ -438,32 +438,32 @@ export function groupEditViewerFieldsByPage(
       label: "No location",
       page: null,
       fields: unlocatedFields,
-    })
+    });
   }
 
-  return groups
+  return groups;
 }
 
 export function groupLocatedEditViewerFieldsByPage(
-  fields: readonly EditViewerField[]
+  fields: readonly EditViewerField[],
 ): Map<number, EditViewerField[]> {
-  const pageGroups = new Map<number, EditViewerField[]>()
+  const pageGroups = new Map<number, EditViewerField[]>();
 
   for (const field of fields) {
-    const anchor = getEditViewerPdfAreaAnchor(field)
-    if (!anchor) continue
-    const pageFields = pageGroups.get(anchor.pageNumber) ?? []
-    pageFields.push(field)
-    pageGroups.set(anchor.pageNumber, pageFields)
+    const anchor = getEditViewerPdfAreaAnchor(field);
+    if (!anchor) continue;
+    const pageFields = pageGroups.get(anchor.pageNumber) ?? [];
+    pageFields.push(field);
+    pageGroups.set(anchor.pageNumber, pageFields);
   }
 
-  return pageGroups
+  return pageGroups;
 }
 
 export function getEditViewerPdfAreaAnchor(
-  field: EditViewerField
+  field: EditViewerField,
 ): PdfAreaAnchor | null {
-  return field.target?.kind === "pdf-area" ? field.target : null
+  return field.target?.kind === "pdf-area" ? field.target : null;
 }
 
 export function resolveEditViewerDocumentTarget({
@@ -472,40 +472,40 @@ export function resolveEditViewerDocumentTarget({
   sourceDocument,
   status,
 }: {
-  filledDocument: EditViewerDocumentSource | null
-  mode: EditViewerMode | null
-  sourceDocument: EditViewerDocumentSource | null
-  status: EditViewerStatus
+  filledDocument: EditViewerDocumentSource | null;
+  mode: EditViewerMode | null;
+  sourceDocument: EditViewerDocumentSource | null;
+  status: EditViewerStatus;
 }): EditViewerDocumentTarget {
   if (status.state === "error") {
-    return { kind: "error", message: status.message }
+    return { kind: "error", message: status.message };
   }
 
   if (mode === "filled" && filledDocument) {
-    return { kind: "filled", document: filledDocument, showOverlay: false }
+    return { kind: "filled", document: filledDocument, showOverlay: false };
   }
 
   if (mode === "preview" && sourceDocument) {
-    return { kind: "preview", document: sourceDocument, showOverlay: true }
+    return { kind: "preview", document: sourceDocument, showOverlay: true };
   }
 
   if (mode === "source" && sourceDocument) {
-    return { kind: "source", document: sourceDocument, showOverlay: false }
+    return { kind: "source", document: sourceDocument, showOverlay: false };
   }
 
   if (!mode) {
-    return { kind: "empty", message: "No edit view is available." }
+    return { kind: "empty", message: "No edit view is available." };
   }
 
-  return { kind: "empty", message: "Document preview is unavailable." }
+  return { kind: "empty", message: "Document preview is unavailable." };
 }
 
 export function canPreviewEditViewerDocument(
-  document: EditViewerDocumentSource
+  document: EditViewerDocumentSource,
 ) {
-  const filename = document.filename ?? ""
+  const filename = document.filename ?? "";
   return (
     document.mimeType.toLowerCase().includes("application/pdf") ||
     filename.toLowerCase().endsWith(".pdf")
-  )
+  );
 }

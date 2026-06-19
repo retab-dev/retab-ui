@@ -1,7 +1,7 @@
 export function FileThumbnailFallback({
   extension,
 }: {
-  extension: string | null
+  extension: string | null;
 }) {
   return (
     <div
@@ -25,5 +25,5 @@ export function FileThumbnailFallback({
         </span>
       ) : null}
     </div>
-  )
+  );
 }

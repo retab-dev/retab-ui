@@ -1,26 +1,26 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { DocumentArrayNodeEditor } from "@/components/schema-editor/document-array-node-editor"
-import { DocumentEnumNodeEditor } from "@/components/schema-editor/document-enum-node-editor"
+import { DocumentArrayNodeEditor } from "@/components/schema-editor/document-array-node-editor";
+import { DocumentEnumNodeEditor } from "@/components/schema-editor/document-enum-node-editor";
 import type {
   DocumentSchemaNodeEditorProps,
   RenderDocumentNodeEditor,
-} from "@/components/schema-editor/document-node-editor-types"
-import { DocumentNodeHeader } from "@/components/schema-editor/document-node-header"
-import { DocumentObjectNodeEditor } from "@/components/schema-editor/document-object-node-editor"
-import { replaceNodeJson } from "@/components/schema-editor/document/json-node"
-import type { SchemaDocument } from "@/components/schema-editor/document/types"
-import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { resolveSchemaBuilderFeatures } from "@/components/schema-editor/schema-builder-types"
+} from "@/components/schema-editor/document-node-editor-types";
+import { DocumentNodeHeader } from "@/components/schema-editor/document-node-header";
+import { DocumentObjectNodeEditor } from "@/components/schema-editor/document-object-node-editor";
+import { replaceNodeJson } from "@/components/schema-editor/document/json-node";
+import type { SchemaDocument } from "@/components/schema-editor/document/types";
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
+import { resolveSchemaBuilderFeatures } from "@/components/schema-editor/schema-builder-types";
 
 function changeNodeJson(
   doc: SchemaDocument,
   nodeId: string,
-  nextNode: ExtendedJSONSchema7
+  nextNode: ExtendedJSONSchema7,
 ) {
-  return replaceNodeJson(doc, nodeId, nextNode)
+  return replaceNodeJson(doc, nodeId, nextNode);
 }
 
 export function DocumentSchemaNodeEditor({
@@ -50,20 +50,20 @@ export function DocumentSchemaNodeEditor({
       objectTemplates: true,
       jsonMode: true,
       importExport: true,
-    })
+    });
   const onChange = React.useCallback(
     (newNode: ExtendedJSONSchema7) => {
-      dispatch((current) => changeNodeJson(current, nodeId, newNode))
+      dispatch((current) => changeNodeJson(current, nodeId, newNode));
     },
-    [dispatch, nodeId]
-  )
+    [dispatch, nodeId],
+  );
 
   const renderNode = React.useCallback<RenderDocumentNodeEditor>(
     (props) => <DocumentSchemaNodeEditor {...props} />,
-    []
-  )
+    [],
+  );
 
-  const localType = nodeView.type
+  const localType = nodeView.type;
 
   return (
     <div>
@@ -128,5 +128,5 @@ export function DocumentSchemaNodeEditor({
         />
       )}
     </div>
-  )
+  );
 }

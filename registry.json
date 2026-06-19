@@ -3330,6 +3330,11 @@
           "target": "@components/file-thumbnail/renderers/markdown-thumbnail.tsx"
         },
         {
+          "path": "components/file-thumbnail/renderers/msg-thumbnail.tsx",
+          "type": "registry:component",
+          "target": "@components/file-thumbnail/renderers/msg-thumbnail.tsx"
+        },
+        {
           "path": "components/file-thumbnail/renderers/pdf-thumbnail.tsx",
           "type": "registry:component",
           "target": "@components/file-thumbnail/renderers/pdf-thumbnail.tsx"
@@ -3389,9 +3394,10 @@
         "@e965/xlsx@0.20.3",
         "dompurify@^3.3.3",
         "marked@^15.0.12",
+        "@kenjiuno/msgreader@^1.28.0",
         "pptxviewjs@1.1.9",
         "utif@^3.1.0",
-        "docx-preview@^0.3.5"
+        "docx-preview@^0.3.7"
       ]
     },
     {

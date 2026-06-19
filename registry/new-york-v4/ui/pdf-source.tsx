@@ -1,20 +1,20 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
 import type {
   Source,
   SourceAnchor,
   SourceLocation,
-} from "@/lib/document-source"
+} from "@/lib/document-source";
 import {
   PdfHighlight,
   type PageOverlayProps,
   type PdfViewerHandle,
-} from "@/components/ui/pdf-viewer"
+} from "@/components/ui/pdf-viewer";
 
 export interface SourceTarget {
-  scrollTo?: (source: Source, options: { behavior: ScrollBehavior }) => void
+  scrollTo?: (source: Source, options: { behavior: ScrollBehavior }) => void;
 }
 
 /**
@@ -24,11 +24,11 @@ export interface SourceTarget {
  * lands on the single page 1.
  */
 export function pdfAnchorToTarget(
-  anchor: SourceAnchor
+  anchor: SourceAnchor,
 ): SourceLocation | undefined {
   if (anchor.kind === "pdf_bbox") {
     if (!isPositiveInteger(anchor.page) || !isValidNormalizedBox(anchor)) {
-      return undefined
+      return undefined;
     }
     return {
       page: anchor.page,
@@ -38,13 +38,13 @@ export function pdfAnchorToTarget(
         width: anchor.width * 100,
         height: anchor.height * 100,
       },
-    }
+    };
   }
   if (anchor.kind === "image_bbox") {
     if (anchor.page != null && !isPositiveInteger(anchor.page)) {
-      return undefined
+      return undefined;
     }
-    if (!isValidNormalizedBox(anchor)) return undefined
+    if (!isValidNormalizedBox(anchor)) return undefined;
     return {
       page: 1,
       area: {
@@ -53,13 +53,13 @@ export function pdfAnchorToTarget(
         width: anchor.width * 100,
         height: anchor.height * 100,
       },
-    }
+    };
   }
-  return undefined
+  return undefined;
 }
 
 function isPositiveInteger(value: number): boolean {
-  return Number.isInteger(value) && value >= 1
+  return Number.isInteger(value) && value >= 1;
 }
 
 function isValidNormalizedBox({
@@ -68,10 +68,10 @@ function isValidNormalizedBox({
   width,
   height,
 }: {
-  left: number
-  top: number
-  width: number
-  height: number
+  left: number;
+  top: number;
+  width: number;
+  height: number;
 }): boolean {
   return (
     Number.isFinite(left) &&
@@ -84,7 +84,7 @@ function isValidNormalizedBox({
     height > 0 &&
     left + width <= 1 &&
     top + height <= 1
-  )
+  );
 }
 
 /**
@@ -92,12 +92,12 @@ function isValidNormalizedBox({
  * is just the bridge from source anchors to the viewer's imperative handle.
  */
 export function usePdfSourceTarget(
-  viewerRef: React.RefObject<PdfViewerHandle | null>
+  viewerRef: React.RefObject<PdfViewerHandle | null>,
 ): SourceTarget {
   return React.useMemo<SourceTarget>(
     () => ({
       scrollTo: (source: Source, options) => {
-        const target = pdfAnchorToTarget(source.anchor)
+        const target = pdfAnchorToTarget(source.anchor);
         if (target) {
           viewerRef.current?.scrollToPageArea(
             {
@@ -107,13 +107,13 @@ export function usePdfSourceTarget(
               width: target.area.width,
               height: target.area.height,
             },
-            options
-          )
+            options,
+          );
         }
       },
     }),
-    [viewerRef]
-  )
+    [viewerRef],
+  );
 }
 
 /**
@@ -121,12 +121,12 @@ export function usePdfSourceTarget(
  * page.
  */
 export function renderPdfSourceOverlay(
-  source: Source | undefined
+  source: Source | undefined,
 ): (props: PageOverlayProps) => React.ReactNode {
-  const target = source ? pdfAnchorToTarget(source.anchor) : undefined
+  const target = source ? pdfAnchorToTarget(source.anchor) : undefined;
   return function PdfSourceOverlay({ pageNumber }: PageOverlayProps) {
     return target && target.page === pageNumber ? (
       <PdfHighlight area={target.area} />
-    ) : null
-  }
+    ) : null;
+  };
 }

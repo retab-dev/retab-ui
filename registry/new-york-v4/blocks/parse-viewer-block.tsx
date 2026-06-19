@@ -1,39 +1,41 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
+
+import * as React from "react";
 
 import {
   FileViewer,
   FileViewerBody,
   FileViewerSurface,
-} from "@/components/ui/file-viewer"
+} from "@/components/ui/file-viewer";
 import {
   PdfViewerPages,
   PdfViewerProvider,
   type PdfViewerHandle,
-} from "@/components/ui/pdf-viewer"
+} from "@/components/ui/pdf-viewer";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
-} from "@/components/ui/resizable"
-import { ViewerBody, ViewerRoot, ViewerSurface } from "@/components/ui/viewer"
-import type { ParseResponse } from "@/components/viewers/lib/parse-types"
+} from "@/components/ui/resizable";
+import { ViewerBody, ViewerRoot, ViewerSurface } from "@/components/ui/viewer";
+import type { ParseResponse } from "@/components/viewers/lib/parse-types";
 import {
   ParseViewerMarkdown,
   ParseViewerProvider,
   useParseViewerDocument,
-} from "@/components/viewers/parse/parse-viewer"
-import parseSample from "@/components/viewers/sample-data/parse.json"
+} from "@/components/viewers/parse/parse-viewer";
+import parseSample from "@/components/viewers/sample-data/parse.json";
 
-const PDF_URL = "/samples/bank-statement-x4uhhi7t.pdf"
+const PDF_URL = "/samples/bank-statement-x4uhhi7t.pdf";
 
 // A parse of the bank-statement sample: per-page, LLM-ready markdown with the
 // transactions reconstructed as a table.
 const PARSE_RESULT: ParseResponse = {
   output: parseSample.output as ParseResponse["output"],
   usage: parseSample.usage as ParseResponse["usage"],
-}
+};
 
 /**
  * Parse viewer block — the source document beside its extracted markdown, kept
@@ -42,9 +44,9 @@ const PARSE_RESULT: ParseResponse = {
  */
 export function ParseViewerBlock() {
   return (
-    <div className="flex h-full min-h-[680px] flex-col bg-background">
+    <div className="bg-background flex h-full min-h-[680px] flex-col">
       <ParseViewerProvider result={PARSE_RESULT}>
-        <ViewerRoot className="h-full flex-1 bg-background">
+        <ViewerRoot className="bg-background h-full flex-1">
           <ViewerBody>
             <ResizablePanelGroup
               orientation="horizontal"
@@ -66,21 +68,21 @@ export function ParseViewerBlock() {
         </ViewerRoot>
       </ParseViewerProvider>
     </div>
-  )
+  );
 }
 
 function ParseSourceDocument() {
-  const document = useParseViewerDocument()
-  const viewerRef = React.useRef<PdfViewerHandle | null>(null)
+  const document = useParseViewerDocument();
+  const viewerRef = React.useRef<PdfViewerHandle | null>(null);
 
   React.useEffect(() => {
     document.setDocumentHandle({
       scrollToPage: (pageNumber, options) => {
-        viewerRef.current?.scrollToPage(pageNumber, options)
+        viewerRef.current?.scrollToPage(pageNumber, options);
       },
-    })
-    return () => document.setDocumentHandle(null)
-  }, [document])
+    });
+    return () => document.setDocumentHandle(null);
+  }, [document]);
 
   return (
     <FileViewer
@@ -105,5 +107,5 @@ function ParseSourceDocument() {
         </FileViewerBody>
       </PdfViewerProvider>
     </FileViewer>
-  )
+  );
 }

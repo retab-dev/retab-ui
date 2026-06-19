@@ -1,21 +1,22 @@
-import { readFileSync } from "node:fs"
-import { join } from "node:path"
-import { describe, expect, it } from "vitest"
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
 
-const repoRoot = process.cwd()
+const repoRoot = process.cwd();
 
 describe("JSON-table profiler architecture", () => {
   it("keeps primitive interaction profiling repeatable", () => {
-    const profilerFile = "scripts/profile-json-table-primitive-interactions.mjs"
-    const reportSummaryFile = "scripts/json-table-profiler/report-summary.mjs"
-    const verifierFile = "scripts/verify-json-table-performance-budget.mjs"
-    const content = readFileSync(join(repoRoot, profilerFile), "utf8")
+    const profilerFile =
+      "scripts/profile-json-table-primitive-interactions.mjs";
+    const reportSummaryFile = "scripts/json-table-profiler/report-summary.mjs";
+    const verifierFile = "scripts/verify-json-table-performance-budget.mjs";
+    const content = readFileSync(join(repoRoot, profilerFile), "utf8");
     const reportSummaryContent = readFileSync(
       join(repoRoot, reportSummaryFile),
-      "utf8"
-    )
-    const profilerContractContent = `${content}\n${reportSummaryContent}`
-    const verifierContent = readFileSync(join(repoRoot, verifierFile), "utf8")
+      "utf8",
+    );
+    const profilerContractContent = `${content}\n${reportSummaryContent}`;
+    const verifierContent = readFileSync(join(repoRoot, verifierFile), "utf8");
 
     for (const requiredToken of [
       "JSON_TABLE_PROFILE_REPEAT",
@@ -47,8 +48,8 @@ describe("JSON-table profiler architecture", () => {
     ]) {
       expect(
         profilerContractContent.includes(requiredToken),
-        `${profilerFile} and ${reportSummaryFile} keep ${requiredToken}`
-      ).toBe(true)
+        `${profilerFile} and ${reportSummaryFile} keep ${requiredToken}`,
+      ).toBe(true);
     }
 
     for (const helperToken of [
@@ -61,8 +62,8 @@ describe("JSON-table profiler architecture", () => {
     ]) {
       expect(
         reportSummaryContent.includes(helperToken),
-        `${reportSummaryFile} keeps profiler summary helper ${helperToken}`
-      ).toBe(true)
+        `${reportSummaryFile} keeps profiler summary helper ${helperToken}`,
+      ).toBe(true);
     }
 
     for (const requiredToken of [
@@ -75,26 +76,27 @@ describe("JSON-table profiler architecture", () => {
     ]) {
       expect(
         verifierContent.includes(requiredToken),
-        `${verifierFile} keeps target-filtered repeated profile support ${requiredToken}`
-      ).toBe(true)
+        `${verifierFile} keeps target-filtered repeated profile support ${requiredToken}`,
+      ).toBe(true);
     }
-  })
+  });
 
   it("keeps primitive interaction profiling surface-attributed", () => {
-    const profilerFile = "scripts/profile-json-table-primitive-interactions.mjs"
-    const verifierFile = "scripts/verify-json-table-performance-budget.mjs"
-    const profileRouteFile = "app/(app)/json-table-profile/page.tsx"
-    const profileProbeFile = "components/json-table/json-table-style-probe.tsx"
-    const profilerContent = readFileSync(join(repoRoot, profilerFile), "utf8")
-    const verifierContent = readFileSync(join(repoRoot, verifierFile), "utf8")
+    const profilerFile =
+      "scripts/profile-json-table-primitive-interactions.mjs";
+    const verifierFile = "scripts/verify-json-table-performance-budget.mjs";
+    const profileRouteFile = "app/(app)/json-table-profile/page.tsx";
+    const profileProbeFile = "components/json-table/json-table-style-probe.tsx";
+    const profilerContent = readFileSync(join(repoRoot, profilerFile), "utf8");
+    const verifierContent = readFileSync(join(repoRoot, verifierFile), "utf8");
     const profileRouteContent = readFileSync(
       join(repoRoot, profileRouteFile),
-      "utf8"
-    )
+      "utf8",
+    );
     const profileProbeContent = readFileSync(
       join(repoRoot, profileProbeFile),
-      "utf8"
-    )
+      "utf8",
+    );
 
     for (const requiredToken of [
       "mountedSurfaceSnapshot",
@@ -131,8 +133,8 @@ describe("JSON-table profiler architecture", () => {
     ]) {
       expect(
         profilerContent.includes(requiredToken),
-        `${profilerFile} keeps ${requiredToken}`
-      ).toBe(true)
+        `${profilerFile} keeps ${requiredToken}`,
+      ).toBe(true);
     }
 
     for (const requiredToken of [
@@ -154,15 +156,15 @@ describe("JSON-table profiler architecture", () => {
     ]) {
       expect(
         verifierContent.includes(requiredToken),
-        `${verifierFile} keeps ${requiredToken}`
-      ).toBe(true)
+        `${verifierFile} keeps ${requiredToken}`,
+      ).toBe(true);
     }
 
     for (const requiredToken of ["JsonTableStyleProbe"]) {
       expect(
         profileRouteContent.includes(requiredToken),
-        `${profileRouteFile} keeps ${requiredToken}`
-      ).toBe(true)
+        `${profileRouteFile} keeps ${requiredToken}`,
+      ).toBe(true);
     }
 
     for (const requiredToken of [
@@ -173,14 +175,15 @@ describe("JSON-table profiler architecture", () => {
     ]) {
       expect(
         profileProbeContent.includes(requiredToken),
-        `${profileProbeFile} keeps ${requiredToken}`
-      ).toBe(true)
+        `${profileProbeFile} keeps ${requiredToken}`,
+      ).toBe(true);
     }
-  })
+  });
 
   it("keeps primitive interaction profiling date commits stable", () => {
-    const profilerFile = "scripts/profile-json-table-primitive-interactions.mjs"
-    const content = readFileSync(join(repoRoot, profilerFile), "utf8")
+    const profilerFile =
+      "scripts/profile-json-table-primitive-interactions.mjs";
+    const content = readFileSync(join(repoRoot, profilerFile), "utf8");
 
     for (const requiredToken of [
       "calendarCommitDatePoint",
@@ -191,22 +194,24 @@ describe("JSON-table profiler architecture", () => {
     ]) {
       expect(
         content.includes(requiredToken),
-        `${profilerFile} keeps ${requiredToken}`
-      ).toBe(true)
+        `${profilerFile} keeps ${requiredToken}`,
+      ).toBe(true);
     }
 
-    expect(content.includes('className.includes("outside")')).toBe(false)
-  })
+    expect(content.includes('className.includes("outside")')).toBe(false);
+  });
 
   it("keeps primitive interaction profiling lifecycle stable", () => {
-    const profilerFile = "scripts/profile-json-table-primitive-interactions.mjs"
-    const browserSessionFile = "scripts/json-table-profiler/browser-session.mjs"
-    const content = readFileSync(join(repoRoot, profilerFile), "utf8")
+    const profilerFile =
+      "scripts/profile-json-table-primitive-interactions.mjs";
+    const browserSessionFile =
+      "scripts/json-table-profiler/browser-session.mjs";
+    const content = readFileSync(join(repoRoot, profilerFile), "utf8");
     const browserSessionContent = readFileSync(
       join(repoRoot, browserSessionFile),
-      "utf8"
-    )
-    const profilerContractContent = `${content}\n${browserSessionContent}`
+      "utf8",
+    );
+    const profilerContractContent = `${content}\n${browserSessionContent}`;
 
     for (const requiredToken of [
       "activateEditableProfile",
@@ -221,8 +226,8 @@ describe("JSON-table profiler architecture", () => {
     ]) {
       expect(
         profilerContractContent.includes(requiredToken),
-        `${profilerFile} and ${browserSessionFile} keep ${requiredToken}`
-      ).toBe(true)
+        `${profilerFile} and ${browserSessionFile} keep ${requiredToken}`,
+      ).toBe(true);
     }
 
     for (const helperToken of [
@@ -233,8 +238,8 @@ describe("JSON-table profiler architecture", () => {
     ]) {
       expect(
         browserSessionContent.includes(helperToken),
-        `${browserSessionFile} keeps browser session helper ${helperToken}`
-      ).toBe(true)
+        `${browserSessionFile} keeps browser session helper ${helperToken}`,
+      ).toBe(true);
     }
-  })
-})
+  });
+});

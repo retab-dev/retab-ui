@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/ui/xlsx-grid-skeleton"
+export * from "@/registry/new-york-v4/ui/xlsx-grid-skeleton";

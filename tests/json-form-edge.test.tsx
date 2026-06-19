@@ -1,51 +1,53 @@
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
+
 // @vitest-environment jsdom
-import * as React from "react"
+import * as React from "react";
 import {
   cleanup,
   fireEvent,
   render,
   screen,
   waitFor,
-} from "@testing-library/react"
-import type { JSONSchema7 } from "json-schema"
-import { useForm, type UseFormReturn } from "react-hook-form"
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"
+} from "@testing-library/react";
+import type { JSONSchema7 } from "json-schema";
+import { useForm, type UseFormReturn } from "react-hook-form";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import {
   JsonForm,
   type JsonFormTextInput,
-} from "@/components/json-form/json-form"
+} from "@/components/json-form/json-form";
 
-const originalResizeObserver = globalThis.ResizeObserver
+const originalResizeObserver = globalThis.ResizeObserver;
 
 beforeAll(() => {
   globalThis.ResizeObserver = class ResizeObserver {
     observe() {}
     unobserve() {}
     disconnect() {}
-  }
-})
+  };
+});
 
-afterEach(cleanup)
+afterEach(cleanup);
 
 afterAll(() => {
-  globalThis.ResizeObserver = originalResizeObserver
-})
+  globalThis.ResizeObserver = originalResizeObserver;
+});
 
-type FormValues = Record<string, unknown>
+type FormValues = Record<string, unknown>;
 
 function cloneJson(value: unknown): unknown {
-  return JSON.parse(JSON.stringify(value))
+  return JSON.parse(JSON.stringify(value));
 }
 
 function getTableDataCell(name: string): HTMLElement {
   const cell =
     Array.from(
-      document.querySelectorAll<HTMLElement>("[data-table-cell]")
-    ).find((element) => element.getAttribute("aria-label") === name) ?? null
-  expect(cell).toBeTruthy()
-  expect(cell?.getAttribute("data-slot")).toBe("data-cell")
-  return cell as HTMLElement
+      document.querySelectorAll<HTMLElement>("[data-table-cell]"),
+    ).find((element) => element.getAttribute("aria-label") === name) ?? null;
+  expect(cell).toBeTruthy();
+  expect(cell?.getAttribute("data-slot")).toBe("data-cell");
+  return cell as HTMLElement;
 }
 
 function renderJsonForm({
@@ -53,18 +55,18 @@ function renderJsonForm({
   defaultValues = {},
   textInput,
 }: {
-  schema: JSONSchema7
-  defaultValues?: FormValues
-  textInput?: JsonFormTextInput
+  schema: JSONSchema7;
+  defaultValues?: FormValues;
+  textInput?: JsonFormTextInput;
 }) {
-  const submissions: FormValues[] = []
-  let formApi: UseFormReturn<FormValues> | null = null
+  const submissions: FormValues[] = [];
+  let formApi: UseFormReturn<FormValues> | null = null;
 
   function Harness() {
-    const form = useForm<FormValues>({ defaultValues, mode: "onBlur" })
+    const form = useForm<FormValues>({ defaultValues, mode: "onBlur" });
     React.useEffect(() => {
-      formApi = form
-    }, [form])
+      formApi = form;
+    }, [form]);
     return (
       <JsonForm
         form={form}
@@ -74,23 +76,23 @@ function renderJsonForm({
       >
         <button type="submit">Submit</button>
       </JsonForm>
-    )
+    );
   }
 
-  const utils = render(<Harness />)
+  const utils = render(<Harness />);
   return {
     ...utils,
     submissions,
     form: () => {
-      if (!formApi) throw new Error("form did not mount")
-      return formApi
+      if (!formApi) throw new Error("form did not mount");
+      return formApi;
     },
     submit: async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Submit" }))
-      await waitFor(() => expect(submissions).toHaveLength(1))
-      return submissions[0]
+      fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+      await waitFor(() => expect(submissions).toHaveLength(1));
+      return submissions[0];
     },
-  }
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -108,19 +110,19 @@ describe("JsonForm scalar edge cases", () => {
         },
       },
       defaultValues: { balance: 0, delta: 5 },
-    })
+    });
 
     // A stored 0 must render as "0", not as a blank input.
     expect((screen.getByLabelText("Balance") as HTMLInputElement).value).toBe(
-      "0"
-    )
+      "0",
+    );
 
     fireEvent.change(screen.getByLabelText("Delta"), {
       target: { value: "-3" },
-    })
+    });
 
-    await expect(submit()).resolves.toEqual({ balance: 0, delta: -3 })
-  })
+    await expect(submit()).resolves.toEqual({ balance: 0, delta: -3 });
+  });
 
   it("renders a textarea for long-maxLength strings and for format=textarea", () => {
     renderJsonForm({
@@ -133,12 +135,12 @@ describe("JsonForm scalar edge cases", () => {
         },
       },
       defaultValues: { summary: "", body: "", short: "" },
-    })
+    });
 
-    expect(screen.getByLabelText("Summary").tagName).toBe("TEXTAREA")
-    expect(screen.getByLabelText("Body").tagName).toBe("TEXTAREA")
-    expect(screen.getByLabelText("Short").tagName).toBe("INPUT")
-  })
+    expect(screen.getByLabelText("Summary").tagName).toBe("TEXTAREA");
+    expect(screen.getByLabelText("Body").tagName).toBe("TEXTAREA");
+    expect(screen.getByLabelText("Short").tagName).toBe("INPUT");
+  });
 
   it("uses textInput to force plain string controls to input or textarea", () => {
     const schema: JSONSchema7 = {
@@ -149,32 +151,32 @@ describe("JsonForm scalar edge cases", () => {
         short: { type: "string", title: "Short", maxLength: 40 },
         issued_at: { type: "string", title: "Issued At", format: "date" },
       },
-    }
+    };
 
     const inputRender = renderJsonForm({
       schema,
       textInput: "input",
       defaultValues: { summary: "", body: "", short: "", issued_at: "" },
-    })
+    });
 
-    expect(screen.getByLabelText("Summary").tagName).toBe("INPUT")
-    expect(screen.getByLabelText("Body").tagName).toBe("INPUT")
-    expect(screen.getByLabelText("Short").tagName).toBe("INPUT")
-    expect(screen.getByLabelText("Issued At").tagName).toBe("BUTTON")
+    expect(screen.getByLabelText("Summary").tagName).toBe("INPUT");
+    expect(screen.getByLabelText("Body").tagName).toBe("INPUT");
+    expect(screen.getByLabelText("Short").tagName).toBe("INPUT");
+    expect(screen.getByLabelText("Issued At").tagName).toBe("BUTTON");
 
-    inputRender.unmount()
+    inputRender.unmount();
 
     renderJsonForm({
       schema,
       textInput: "textarea",
       defaultValues: { summary: "", body: "", short: "", issued_at: "" },
-    })
+    });
 
-    expect(screen.getByLabelText("Summary").tagName).toBe("TEXTAREA")
-    expect(screen.getByLabelText("Body").tagName).toBe("TEXTAREA")
-    expect(screen.getByLabelText("Short").tagName).toBe("TEXTAREA")
-    expect(screen.getByLabelText("Issued At").tagName).toBe("BUTTON")
-  })
+    expect(screen.getByLabelText("Summary").tagName).toBe("TEXTAREA");
+    expect(screen.getByLabelText("Body").tagName).toBe("TEXTAREA");
+    expect(screen.getByLabelText("Short").tagName).toBe("TEXTAREA");
+    expect(screen.getByLabelText("Issued At").tagName).toBe("BUTTON");
+  });
 
   it("marks required nested-object fields with an asterisk", () => {
     renderJsonForm({
@@ -193,12 +195,12 @@ describe("JsonForm scalar edge cases", () => {
         },
       },
       defaultValues: { vendor: { name: "Acme", note: "" } },
-    })
+    });
 
-    expect(screen.getByLabelText("Vendor Name *")).toBeTruthy()
-    expect(screen.queryByLabelText("Note *")).toBeNull()
-  })
-})
+    expect(screen.getByLabelText("Vendor Name *")).toBeTruthy();
+    expect(screen.queryByLabelText("Note *")).toBeNull();
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Schema composition — anyOf / allOf / recursive refs
@@ -224,14 +226,14 @@ describe("JsonForm schema composition", () => {
         },
       },
       defaultValues: { money: { amount: 5 } },
-    })
+    });
 
     fireEvent.change(screen.getByLabelText("Amount"), {
       target: { value: "12.5" },
-    })
+    });
 
-    await expect(submit()).resolves.toEqual({ money: { amount: 12.5 } })
-  })
+    await expect(submit()).resolves.toEqual({ money: { amount: 12.5 } });
+  });
 
   it("merges allOf branches into a single object with all properties", async () => {
     const { submit } = renderJsonForm({
@@ -256,22 +258,22 @@ describe("JsonForm schema composition", () => {
         },
       },
       defaultValues: { total: { amount: 5, currency: "USD" } },
-    })
+    });
 
-    expect(screen.getByLabelText("Amount")).toBeTruthy()
-    expect(screen.getByLabelText("Currency")).toBeTruthy()
+    expect(screen.getByLabelText("Amount")).toBeTruthy();
+    expect(screen.getByLabelText("Currency")).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText("Amount"), {
       target: { value: "9.25" },
-    })
+    });
     fireEvent.change(screen.getByLabelText("Currency"), {
       target: { value: "EUR" },
-    })
+    });
 
     await expect(submit()).resolves.toEqual({
       total: { amount: 9.25, currency: "EUR" },
-    })
-  })
+    });
+  });
 
   it("renders a self-referential $ref schema without infinite recursion", () => {
     renderJsonForm({
@@ -292,13 +294,13 @@ describe("JsonForm schema composition", () => {
         },
       },
       defaultValues: { root: { label: "top" } },
-    })
+    });
 
     expect((screen.getByLabelText("Label") as HTMLInputElement).value).toBe(
-      "top"
-    )
-  })
-})
+      "top",
+    );
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Dynamic properties — pattern/additional precedence, special-character keys
@@ -319,21 +321,21 @@ describe("JsonForm dynamic properties", () => {
         },
       },
       defaultValues: { metadata: { x_score: 5, note: "hi" } },
-    })
+    });
 
     // Pattern-matched key gets the number control, the rest get the string one.
-    const numberInput = screen.getByLabelText("x_score") as HTMLInputElement
-    const stringInput = screen.getByLabelText("note") as HTMLInputElement
-    expect(numberInput.type).toBe("number")
-    expect(stringInput.type).not.toBe("number")
+    const numberInput = screen.getByLabelText("x_score") as HTMLInputElement;
+    const stringInput = screen.getByLabelText("note") as HTMLInputElement;
+    expect(numberInput.type).toBe("number");
+    expect(stringInput.type).not.toBe("number");
 
-    fireEvent.change(numberInput, { target: { value: "7" } })
-    fireEvent.change(stringInput, { target: { value: "world" } })
+    fireEvent.change(numberInput, { target: { value: "7" } });
+    fireEvent.change(stringInput, { target: { value: "world" } });
 
     await expect(submit()).resolves.toEqual({
       metadata: { x_score: 7, note: "world" },
-    })
-  })
+    });
+  });
 
   it("round-trips additionalProperties keys containing brackets and quotes", async () => {
     const { submit } = renderJsonForm({
@@ -342,23 +344,23 @@ describe("JsonForm dynamic properties", () => {
         additionalProperties: { type: "string" },
       },
       defaultValues: { "a[0]": "x", 'say"hi"': "y" },
-    })
+    });
 
-    expect((screen.getByLabelText("a[0]") as HTMLInputElement).value).toBe("x")
+    expect((screen.getByLabelText("a[0]") as HTMLInputElement).value).toBe("x");
     expect((screen.getByLabelText('say"hi"') as HTMLInputElement).value).toBe(
-      "y"
-    )
+      "y",
+    );
 
     fireEvent.change(screen.getByLabelText("a[0]"), {
       target: { value: "z" },
-    })
+    });
 
     await expect(submit()).resolves.toEqual({
       "a[0]": "z",
       'say"hi"': "y",
-    })
-  })
-})
+    });
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Array edge cases
@@ -390,20 +392,20 @@ describe("JsonForm array edge cases", () => {
           { code: "C", count: 3 },
         ],
       },
-    })
+    });
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Remove row" })[1])
+    fireEvent.click(screen.getAllByRole("button", { name: "Remove row" })[1]);
     await waitFor(() =>
-      expect(screen.queryByRole("button", { name: "Code B" })).toBeNull()
-    )
+      expect(screen.queryByRole("button", { name: "Code B" })).toBeNull(),
+    );
 
     await expect(submit()).resolves.toEqual({
       rows: [
         { code: "A", count: 1 },
         { code: "C", count: 3 },
       ],
-    })
-  })
+    });
+  });
 
   it("ignores invalid numeric table-cell input and keeps the prior value", async () => {
     const { submit } = renderJsonForm({
@@ -421,15 +423,15 @@ describe("JsonForm array edge cases", () => {
         },
       },
       defaultValues: { rows: [{ price: 1.5 }] },
-    })
+    });
 
-    fireEvent.click(getTableDataCell("Price 1.5"))
-    const input = screen.getByDisplayValue("1.5") as HTMLInputElement
-    fireEvent.change(input, { target: { value: "not-a-number" } })
-    fireEvent.blur(input)
+    fireEvent.click(getTableDataCell("Price 1.5"));
+    const input = screen.getByDisplayValue("1.5") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "not-a-number" } });
+    fireEvent.blur(input);
 
-    await expect(submit()).resolves.toEqual({ rows: [{ price: 1.5 }] })
-  })
+    await expect(submit()).resolves.toEqual({ rows: [{ price: 1.5 }] });
+  });
 
   it("clears a nullable numeric table cell to null", async () => {
     const { submit } = renderJsonForm({
@@ -452,15 +454,15 @@ describe("JsonForm array edge cases", () => {
         },
       },
       defaultValues: { rows: [{ price: 2 }] },
-    })
+    });
 
-    fireEvent.click(getTableDataCell("Price 2"))
-    const input = screen.getByDisplayValue("2") as HTMLInputElement
-    fireEvent.change(input, { target: { value: "" } })
-    fireEvent.blur(input)
+    fireEvent.click(getTableDataCell("Price 2"));
+    const input = screen.getByDisplayValue("2") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.blur(input);
 
-    await expect(submit()).resolves.toEqual({ rows: [{ price: null }] })
-  })
+    await expect(submit()).resolves.toEqual({ rows: [{ price: null }] });
+  });
 
   it("edits a date-time table cell through the picker", async () => {
     const { submit } = renderJsonForm({
@@ -480,22 +482,22 @@ describe("JsonForm array edge cases", () => {
         },
       },
       defaultValues: { rows: [{ due: "2026-03-01T12:30:45Z" }] },
-    })
+    });
 
-    fireEvent.click(getTableDataCell("Due 2026-03-01T12:30:45Z"))
+    fireEvent.click(getTableDataCell("Due 2026-03-01T12:30:45Z"));
     const input = await waitFor(() => {
       const timeInput =
-        document.querySelector<HTMLInputElement>('input[type="time"]')
-      expect(timeInput).toBeTruthy()
-      return timeInput!
-    })
-    expect(["12:30", "12:30:45"]).toContain(input.value)
-    fireEvent.change(input, { target: { value: "08:15" } })
+        document.querySelector<HTMLInputElement>('input[type="time"]');
+      expect(timeInput).toBeTruthy();
+      return timeInput!;
+    });
+    expect(["12:30", "12:30:45"]).toContain(input.value);
+    fireEvent.change(input, { target: { value: "08:15" } });
 
     await expect(submit()).resolves.toEqual({
       rows: [{ due: "2026-03-01T08:15" }],
-    })
-  })
+    });
+  });
 
   it("preserves an unedited date-time table cell on blur", async () => {
     const { submit } = renderJsonForm({
@@ -515,19 +517,19 @@ describe("JsonForm array edge cases", () => {
         },
       },
       defaultValues: { rows: [{ due: "2026-03-01T12:30:45Z" }] },
-    })
+    });
 
     // Open the editor and blur without changing anything. The stored value
     // should be untouched — matching how the non-table date-time control
     // preserves the original ISO string with its seconds and timezone.
-    const cell = getTableDataCell("Due 2026-03-01T12:30:45Z")
-    fireEvent.click(cell)
-    fireEvent.blur(cell)
+    const cell = getTableDataCell("Due 2026-03-01T12:30:45Z");
+    fireEvent.click(cell);
+    fireEvent.blur(cell);
 
     await expect(submit()).resolves.toEqual({
       rows: [{ due: "2026-03-01T12:30:45Z" }],
-    })
-  })
+    });
+  });
 
   it("renders arrays of objects with nested arrays in card mode", async () => {
     const { submit } = renderJsonForm({
@@ -552,23 +554,25 @@ describe("JsonForm array edge cases", () => {
         },
       },
       defaultValues: { groups: [{ name: "G1", tags: ["a"] }] },
-    })
+    });
 
     // A nested-array item is not a flat scalar object, so it must use card
     // mode (collapsible cards), not table mode.
-    expect(screen.queryByRole("button", { name: /Name G1/ })).toBeNull()
+    expect(screen.queryByRole("button", { name: /Name G1/ })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Groups 1 2 fields" }))
-    expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("G1")
+    fireEvent.click(screen.getByRole("button", { name: "Groups 1 2 fields" }));
+    expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe(
+      "G1",
+    );
 
     fireEvent.change(screen.getByLabelText("Name"), {
       target: { value: "Group One" },
-    })
+    });
 
     await expect(submit()).resolves.toEqual({
       groups: [{ name: "Group One", tags: ["a"] }],
-    })
-  })
+    });
+  });
 
   it("appends a deep empty object for arrays of nested objects", async () => {
     const { submit } = renderJsonForm({
@@ -595,12 +599,12 @@ describe("JsonForm array edge cases", () => {
         },
       },
       defaultValues: { people: [] },
-    })
+    });
 
-    fireEvent.click(screen.getByRole("button", { name: "Add" }))
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     await expect(submit()).resolves.toEqual({
       people: [{ name: "", address: {} }],
-    })
-  })
-})
+    });
+  });
+});

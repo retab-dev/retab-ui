@@ -1,33 +1,33 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { type SegmentInteraction } from "@/lib/segment-interaction"
-import { normalizePageCount } from "@/lib/segments"
-import { cn } from "@/lib/utils"
+import { type SegmentInteraction } from "@/lib/segment-interaction";
+import { normalizePageCount } from "@/lib/segments";
+import { cn } from "@/lib/utils";
 
-import { PageRibbon } from "./page-ribbon"
-import type { DocumentSegment } from "./segmented-document-model"
+import { PageRibbon } from "./page-ribbon";
+import type { DocumentSegment } from "./segmented-document-model";
 
 export type SegmentPageRailApi = {
-  setViewportElement: (element: HTMLElement | null) => void
-  setPageElement: (page: number, element: HTMLElement | null) => void
-  onPointerEnter: () => void
-  onPointerLeave: () => void
-  onScroll: () => void
-}
+  setViewportElement: (element: HTMLElement | null) => void;
+  setPageElement: (page: number, element: HTMLElement | null) => void;
+  onPointerEnter: () => void;
+  onPointerLeave: () => void;
+  onScroll: () => void;
+};
 
 export interface SegmentPageRailProps {
-  segments: DocumentSegment[]
-  pageCount: number
-  currentPage?: number | null
-  scrollProgress?: number | null
-  interaction?: SegmentInteraction
-  railApi: SegmentPageRailApi
-  onSelectPage?: (page: number) => void
-  onSelect?: (segment: DocumentSegment) => void
-  showTicks?: boolean
-  className?: string
+  segments: DocumentSegment[];
+  pageCount: number;
+  currentPage?: number | null;
+  scrollProgress?: number | null;
+  interaction?: SegmentInteraction;
+  railApi: SegmentPageRailApi;
+  onSelectPage?: (page: number) => void;
+  onSelect?: (segment: DocumentSegment) => void;
+  showTicks?: boolean;
+  className?: string;
 }
 
 export function SegmentPageRail({
@@ -42,8 +42,8 @@ export function SegmentPageRail({
   showTicks = true,
   className,
 }: SegmentPageRailProps) {
-  const total = normalizePageCount(pageCount)
-  if (total <= 0) return null
+  const total = normalizePageCount(pageCount);
+  if (total <= 0) return null;
 
   const {
     onPointerEnter,
@@ -51,7 +51,7 @@ export function SegmentPageRail({
     onScroll,
     setPageElement,
     setViewportElement,
-  } = railApi
+  } = railApi;
 
   return (
     <div
@@ -61,8 +61,8 @@ export function SegmentPageRail({
       onPointerLeave={onPointerLeave}
       onScroll={onScroll}
       className={cn(
-        "flex h-full min-h-0 flex-col overflow-hidden border-r border-border bg-background px-3 py-6",
-        className
+        "border-border bg-background flex h-full min-h-0 flex-col overflow-hidden border-r px-3 py-6",
+        className,
       )}
     >
       <div
@@ -82,8 +82,8 @@ export function SegmentPageRail({
           className="h-full min-h-0"
         />
         {Array.from({ length: total }, (_, index) => {
-          const page = index + 1
-          const topPct = ((page - 0.5) / total) * 100
+          const page = index + 1;
+          const topPct = ((page - 0.5) / total) * 100;
 
           return (
             <span
@@ -95,9 +95,9 @@ export function SegmentPageRail({
               className="pointer-events-none absolute left-0 h-px w-px opacity-0"
               style={{ top: `${topPct}%` }}
             />
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }

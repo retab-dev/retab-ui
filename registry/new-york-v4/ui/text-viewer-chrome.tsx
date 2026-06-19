@@ -1,29 +1,31 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { AlertCircle, Check, Copy } from "lucide-react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { type ViewerDownloadAction } from "@/lib/viewer-download-actions"
+import * as React from "react";
+import { AlertCircle, Check, Copy } from "lucide-react";
 
-import { Skeleton } from "./skeleton"
-import { TextCodeViewerFrame } from "./text-code-viewer-chrome"
-import type { ViewerDownloadErrorHandler } from "./viewer-download"
+import { type ViewerDownloadAction } from "@/lib/viewer-download-actions";
+
+import { Skeleton } from "./skeleton";
+import { TextCodeViewerFrame } from "./text-code-viewer-chrome";
+import type { ViewerDownloadErrorHandler } from "./viewer-download";
 import {
   ViewerControls,
   ViewerControlButton,
   ViewerControlsSkeleton,
-} from "./viewer-controls"
+} from "./viewer-controls";
 
-export type ViewerClipboardCopyStatus = "copied" | "failed" | "idle"
+export type ViewerClipboardCopyStatus = "copied" | "failed" | "idle";
 
 export function TextViewerFrame({
   className,
   bare,
   children,
 }: {
-  className?: string
-  bare?: boolean
-  children: React.ReactNode
+  className?: string;
+  bare?: boolean;
+  children: React.ReactNode;
 }) {
   return (
     <TextCodeViewerFrame
@@ -35,7 +37,7 @@ export function TextViewerFrame({
     >
       {children}
     </TextCodeViewerFrame>
-  )
+  );
 }
 
 export function TextViewerFallback({
@@ -44,10 +46,10 @@ export function TextViewerFallback({
   download = true,
   bare,
 }: {
-  className?: string
-  controls?: boolean
-  download?: boolean
-  bare?: boolean
+  className?: string;
+  controls?: boolean;
+  download?: boolean;
+  bare?: boolean;
 }) {
   return (
     <TextViewerFrame className={className} bare={bare}>
@@ -67,7 +69,7 @@ export function TextViewerFallback({
         ))}
       </div>
     </TextViewerFrame>
-  )
+  );
 }
 
 export function TextViewerControls({
@@ -83,22 +85,22 @@ export function TextViewerControls({
   onZoomIn,
   onResetZoom,
 }: {
-  wordCount: number
-  fontScale: number
-  copyText?: string
-  copyLabel?: string
-  downloadAction?: ViewerDownloadAction | null
-  extra?: React.ReactNode
-  leading?: React.ReactNode
-  onDownloadError?: ViewerDownloadErrorHandler
-  onZoomOut: () => void
-  onZoomIn: () => void
-  onResetZoom: () => void
+  wordCount: number;
+  fontScale: number;
+  copyText?: string;
+  copyLabel?: string;
+  downloadAction?: ViewerDownloadAction | null;
+  extra?: React.ReactNode;
+  leading?: React.ReactNode;
+  onDownloadError?: ViewerDownloadErrorHandler;
+  onZoomOut: () => void;
+  onZoomIn: () => void;
+  onResetZoom: () => void;
 }) {
   const copyControl =
     copyText == null ? null : (
       <TextViewerCopyControl label={copyLabel} text={copyText} />
-    )
+    );
 
   return (
     <ViewerControls
@@ -121,24 +123,28 @@ export function TextViewerControls({
         )
       }
     />
-  )
+  );
 }
 
 function TextViewerCopyControl({
   label,
   text,
 }: {
-  label: string
-  text: string
+  label: string;
+  text: string;
 }) {
-  const { copy, status } = useViewerClipboardCopy()
+  const { copy, status } = useViewerClipboardCopy();
 
   const copyText = () => {
-    copy(text)
-  }
+    copy(text);
+  };
 
   const buttonLabel =
-    status === "copied" ? "Copied" : status === "failed" ? "Copy failed" : label
+    status === "copied"
+      ? "Copied"
+      : status === "failed"
+        ? "Copy failed"
+        : label;
 
   return (
     <ViewerControlButton label={buttonLabel} onClick={copyText} type="button">
@@ -150,79 +156,79 @@ function TextViewerCopyControl({
         <Copy />
       )}
     </ViewerControlButton>
-  )
+  );
 }
 
 export function useViewerClipboardCopy({
   resetDelay = 1200,
 }: {
-  resetDelay?: number
+  resetDelay?: number;
 } = {}) {
-  const [status, setStatus] = React.useState<ViewerClipboardCopyStatus>("idle")
-  const timeoutRef = React.useRef<number | null>(null)
-  const isMountedRef = React.useRef(true)
-  const copyAttemptRef = React.useRef(0)
+  const [status, setStatus] = React.useState<ViewerClipboardCopyStatus>("idle");
+  const timeoutRef = React.useRef<number | null>(null);
+  const isMountedRef = React.useRef(true);
+  const copyAttemptRef = React.useRef(0);
 
   React.useEffect(() => {
-    isMountedRef.current = true
+    isMountedRef.current = true;
     return () => {
-      isMountedRef.current = false
-      clearViewerClipboardCopyReset(timeoutRef)
-    }
-  }, [])
+      isMountedRef.current = false;
+      clearViewerClipboardCopyReset(timeoutRef);
+    };
+  }, []);
 
   const scheduleReset = React.useCallback(() => {
-    clearViewerClipboardCopyReset(timeoutRef)
+    clearViewerClipboardCopyReset(timeoutRef);
     timeoutRef.current = window.setTimeout(() => {
-      timeoutRef.current = null
-      if (isMountedRef.current) setStatus("idle")
-    }, resetDelay)
-  }, [resetDelay])
+      timeoutRef.current = null;
+      if (isMountedRef.current) setStatus("idle");
+    }, resetDelay);
+  }, [resetDelay]);
 
   const copy = React.useCallback(
     (text: string) => {
-      clearViewerClipboardCopyReset(timeoutRef)
-      const copyAttempt = copyAttemptRef.current + 1
-      copyAttemptRef.current = copyAttempt
+      clearViewerClipboardCopyReset(timeoutRef);
+      const copyAttempt = copyAttemptRef.current + 1;
+      copyAttemptRef.current = copyAttempt;
       const isCurrentAttempt = () =>
-        isMountedRef.current && copyAttemptRef.current === copyAttempt
+        isMountedRef.current && copyAttemptRef.current === copyAttempt;
 
       try {
-        const clipboard = navigator.clipboard
-        const writeText = clipboard?.writeText
+        const clipboard = navigator.clipboard;
+        const writeText = clipboard?.writeText;
         if (typeof writeText !== "function") {
-          setStatus("failed")
-          scheduleReset()
-          return
+          setStatus("failed");
+          scheduleReset();
+          return;
         }
 
         void Promise.resolve(writeText.call(clipboard, text)).then(
           () => {
-            if (!isCurrentAttempt()) return
-            setStatus("copied")
-            scheduleReset()
+            if (!isCurrentAttempt()) return;
+            setStatus("copied");
+            scheduleReset();
           },
           () => {
-            if (!isCurrentAttempt()) return
-            setStatus("failed")
-            scheduleReset()
-          }
-        )
+            if (!isCurrentAttempt()) return;
+            setStatus("failed");
+            scheduleReset();
+          },
+        );
       } catch {
-        setStatus("failed")
-        scheduleReset()
+        setStatus("failed");
+        scheduleReset();
       }
     },
-    [scheduleReset]
-  )
+    [scheduleReset],
+  );
 
-  return { copy, status }
+  return { copy, status };
 }
 
 function clearViewerClipboardCopyReset(
-  timeoutRef: React.MutableRefObject<number | null>
+  timeoutRef: React.MutableRefObject<number | null>,
 ) {
-  if (timeoutRef.current === null) return
-  window.clearTimeout(timeoutRef.current)
-  timeoutRef.current = null
+  if (timeoutRef.current === null) return;
+  window.clearTimeout(timeoutRef.current);
+  timeoutRef.current = null;
 }

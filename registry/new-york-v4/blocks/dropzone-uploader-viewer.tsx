@@ -1,9 +1,12 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import type { DropzoneFileItem, DropzoneIntake } from "@/components/ui/dropzone"
-import { ViewerBody } from "@/components/ui/viewer"
+import type {
+  DropzoneFileItem,
+  DropzoneIntake,
+} from "@/components/ui/dropzone";
+import { ViewerBody } from "@/components/ui/viewer";
 
 import {
   FileIntakeViewerDropTarget,
@@ -12,18 +15,18 @@ import {
   FileIntakeViewerRoot,
   FileIntakeViewerSidebar,
   FileIntakeViewerSurface,
-} from "./dropzone-uploader-viewer-parts"
+} from "./dropzone-uploader-viewer-parts";
 
 export type FileIntakeViewerProps = {
-  accept?: string
-  className?: string
-  defaultFiles?: DropzoneFileItem[]
-  disabled?: boolean
-  files?: DropzoneFileItem[]
-  maxSize?: number
-  onFilesChange?: (files: DropzoneFileItem[]) => void
-  onIntake?: (intake: DropzoneIntake) => void
-}
+  accept?: string;
+  className?: string;
+  defaultFiles?: DropzoneFileItem[];
+  disabled?: boolean;
+  files?: DropzoneFileItem[];
+  maxSize?: number;
+  onFilesChange?: (files: DropzoneFileItem[]) => void;
+  onIntake?: (intake: DropzoneIntake) => void;
+};
 
 export function FileIntakeViewer({
   accept,
@@ -55,5 +58,5 @@ export function FileIntakeViewer({
         </FileIntakeViewerRoot>
       </FileIntakeViewerDropTarget>
     </FileIntakeViewerProvider>
-  )
+  );
 }

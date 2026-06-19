@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
 import {
   DataCell,
   parseDataCellNumberInput,
   type DataCellCommitValue,
   type DataCellValueMeta,
-} from "@/components/ui/data-cell"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/data-cell";
+import { Input } from "@/components/ui/input";
 import {
   compactJsonFormDataCellClass,
   type ControlFieldApi,
   type ScalarControlDomProps,
-} from "@/components/json-form/scalar/types"
+} from "@/components/json-form/scalar/types";
 
 export function NumberControl({
   kind,
@@ -20,10 +20,10 @@ export function NumberControl({
   nullable,
   ...controlProps
 }: {
-  kind: "number" | "integer"
-  field: ControlFieldApi
-  compact: boolean
-  nullable: boolean
+  kind: "number" | "integer";
+  field: ControlFieldApi;
+  compact: boolean;
+  nullable: boolean;
 } & ScalarControlDomProps) {
   if (!compact) {
     return (
@@ -45,7 +45,7 @@ export function NumberControl({
         onBlur={field.onBlur}
         name={field.name}
       />
-    )
+    );
   }
 
   return (
@@ -65,7 +65,7 @@ export function NumberControl({
       onBlur={field.onBlur}
       name={field.name}
     />
-  )
+  );
 }
 
 function updateNumberValue({
@@ -75,23 +75,23 @@ function updateNumberValue({
   nullable,
   field,
 }: {
-  kind: "number" | "integer"
-  value: DataCellCommitValue | string
-  meta?: DataCellValueMeta
-  nullable: boolean
-  field: ControlFieldApi
+  kind: "number" | "integer";
+  value: DataCellCommitValue | string;
+  meta?: DataCellValueMeta;
+  nullable: boolean;
+  field: ControlFieldApi;
 }) {
-  const rawValue = meta?.rawValue ?? (typeof value === "string" ? value : "")
-  const parsed = parseDataCellNumberInput({ kind, value: rawValue })
+  const rawValue = meta?.rawValue ?? (typeof value === "string" ? value : "");
+  const parsed = parseDataCellNumberInput({ kind, value: rawValue });
 
-  if (!parsed.isValid) return
+  if (!parsed.isValid) return;
   if (parsed.isEmpty) {
-    field.onChange(nullable ? null : undefined)
-    return
+    field.onChange(nullable ? null : undefined);
+    return;
   }
-  field.onChange(parsed.value)
+  field.onChange(parsed.value);
 }
 
 export function dataCellNumberValue(value: unknown): string | number | null {
-  return typeof value === "number" || typeof value === "string" ? value : null
+  return typeof value === "number" || typeof value === "string" ? value : null;
 }

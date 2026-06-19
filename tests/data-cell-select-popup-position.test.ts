@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest";
 
-import { getDataCellSelectPopupPosition } from "@/registry/new-york-v4/ui/data-cell-select-popup-position"
+import { getDataCellSelectPopupPosition } from "@/registry/new-york-v4/ui/data-cell-select-popup-position";
 
 describe("DataCell select popup position", () => {
   it("places the popup below the anchor when space is available", () => {
@@ -13,14 +13,14 @@ describe("DataCell select popup position", () => {
           width: 160,
         },
         viewport: { width: 800, height: 600 },
-      })
+      }),
     ).toEqual({
       left: 40,
       top: 124,
       width: 160,
       maxHeight: 468,
-    })
-  })
+    });
+  });
 
   it("places the popup above the anchor when below space is too small", () => {
     expect(
@@ -32,14 +32,14 @@ describe("DataCell select popup position", () => {
           width: 160,
         },
         viewport: { width: 800, height: 600 },
-      })
+      }),
     ).toEqual({
       left: 40,
       top: 8,
       width: 160,
       maxHeight: 538,
-    })
-  })
+    });
+  });
 
   it("clamps the left edge inside the viewport", () => {
     expect(
@@ -51,9 +51,9 @@ describe("DataCell select popup position", () => {
           width: 80,
         },
         viewport: { width: 800, height: 600 },
-      }).left
-    ).toBe(712)
-  })
+      }).left,
+    ).toBe(712);
+  });
 
   it("keeps a minimum popup height", () => {
     expect(
@@ -65,7 +65,7 @@ describe("DataCell select popup position", () => {
           width: 160,
         },
         viewport: { width: 800, height: 130 },
-      }).maxHeight
-    ).toBe(64)
-  })
-})
+      }).maxHeight,
+    ).toBe(64);
+  });
+});

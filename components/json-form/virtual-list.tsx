@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useVirtualizer } from "@tanstack/react-virtual"
+import * as React from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 export function VirtualList({
   fields,
@@ -10,19 +10,19 @@ export function VirtualList({
   maxHeight = 480,
   gap = 0,
 }: {
-  fields: { id: string }[]
-  estimateSize: number
-  renderItem: (index: number) => React.ReactNode
-  maxHeight?: number
-  gap?: number
+  fields: { id: string }[];
+  estimateSize: number;
+  renderItem: (index: number) => React.ReactNode;
+  maxHeight?: number;
+  gap?: number;
 }) {
-  const parentRef = React.useRef<HTMLDivElement>(null)
+  const parentRef = React.useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
     count: fields.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => estimateSize + gap,
     overscan: 8,
-  })
+  });
 
   return (
     <div ref={parentRef} style={{ maxHeight }} className="overflow-y-auto">
@@ -46,5 +46,5 @@ export function VirtualList({
         ))}
       </div>
     </div>
-  )
+  );
 }

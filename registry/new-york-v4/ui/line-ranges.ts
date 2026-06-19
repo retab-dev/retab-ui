@@ -1,1 +1,1 @@
-export * from "./text-viewer-ranges"
+export * from "./text-viewer-ranges";

@@ -1,50 +1,52 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Menu } from "lucide-react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import * as React from "react";
+import { Menu } from "lucide-react";
+
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 
 function useActiveItem(itemIds: string[]) {
-  const [activeId, setActiveId] = React.useState<string | null>(null)
+  const [activeId, setActiveId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) {
-            setActiveId(entry.target.id)
+            setActiveId(entry.target.id);
           }
         }
       },
-      { rootMargin: "0% 0% -80% 0%" }
-    )
+      { rootMargin: "0% 0% -80% 0%" },
+    );
 
     for (const id of itemIds ?? []) {
-      const element = document.getElementById(id)
+      const element = document.getElementById(id);
       if (element) {
-        observer.observe(element)
+        observer.observe(element);
       }
     }
 
     return () => {
       for (const id of itemIds ?? []) {
-        const element = document.getElementById(id)
+        const element = document.getElementById(id);
         if (element) {
-          observer.unobserve(element)
+          observer.unobserve(element);
         }
       }
-    }
-  }, [itemIds])
+    };
+  }, [itemIds]);
 
-  return activeId
+  return activeId;
 }
 
 export function DocsTableOfContents({
@@ -53,22 +55,22 @@ export function DocsTableOfContents({
   className,
 }: {
   toc: {
-    title?: React.ReactNode
-    url: string
-    depth: number
-  }[]
-  variant?: "dropdown" | "list"
-  className?: string
+    title?: React.ReactNode;
+    url: string;
+    depth: number;
+  }[];
+  variant?: "dropdown" | "list";
+  className?: string;
 }) {
-  const [open, setOpen] = React.useState(false)
+  const [open, setOpen] = React.useState(false);
   const itemIds = React.useMemo(
     () => toc.map((item) => item.url.replace("#", "")),
-    [toc]
-  )
-  const activeHeading = useActiveItem(itemIds)
+    [toc],
+  );
+  const activeHeading = useActiveItem(itemIds);
 
   if (!toc?.length) {
-    return null
+    return null;
   }
 
   if (variant === "dropdown") {
@@ -92,7 +94,7 @@ export function DocsTableOfContents({
               key={item.url}
               asChild
               onClick={() => {
-                setOpen(false)
+                setOpen(false);
               }}
               data-depth={item.depth}
               className="data-[depth=3]:pl-6 data-[depth=4]:pl-8"
@@ -102,19 +104,19 @@ export function DocsTableOfContents({
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-    )
+    );
   }
 
   return (
     <div className={cn("flex flex-col gap-2 p-4 pt-0 text-sm", className)}>
-      <p className="sticky top-0 h-6 bg-background text-xs font-medium text-muted-foreground">
+      <p className="bg-background text-muted-foreground sticky top-0 h-6 text-xs font-medium">
         On This Page
       </p>
       {toc.map((item) => (
         <a
           key={item.url}
           href={item.url}
-          className="text-[0.8rem] text-muted-foreground no-underline transition-colors hover:text-foreground data-[active=true]:font-medium data-[active=true]:text-foreground data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+          className="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[active=true]:font-medium data-[depth=3]:pl-4 data-[depth=4]:pl-6"
           data-active={item.url === `#${activeHeading}`}
           data-depth={item.depth}
         >
@@ -122,5 +124,5 @@ export function DocsTableOfContents({
         </a>
       ))}
     </div>
-  )
+  );
 }

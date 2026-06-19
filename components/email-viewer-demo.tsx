@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
 import {
   EmailViewer,
   type EmailViewerMessage,
-} from "@/components/ui/email-viewer"
+} from "@/components/ui/email-viewer";
 
-const INLINE_LOGO_CONTENT_ID = "retab-logo@fake-email.local"
+const INLINE_LOGO_CONTENT_ID = "retab-logo@fake-email.local";
 
 const INLINE_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="96" viewBox="0 0 320 96" role="img" aria-label="Retab">
   <rect width="320" height="96" rx="18" fill="#111827"/>
@@ -15,7 +15,7 @@ const INLINE_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="320" hei
   <path d="M43 37h18c8 0 13 4 13 11 0 5-3 9-8 10l10 15H62L53 60h-9v13H32V37h11Zm1 10v4h15c2 0 4-1 4-3s-2-3-4-3H44Z" fill="white"/>
   <text x="96" y="56" fill="white" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="700">Retab</text>
   <text x="96" y="75" fill="#d1d5db" font-family="Inter, Arial, sans-serif" font-size="13">sample inbound email</text>
-</svg>`
+</svg>`;
 
 const BODY_HTML = `<!doctype html>
 <html>
@@ -92,7 +92,7 @@ const BODY_HTML = `<!doctype html>
       <p>Thanks,<br />Mina</p>
     </main>
   </body>
-</html>`
+</html>`;
 
 const TEXT_FALLBACK = `Contract packet ready for review
 
@@ -107,7 +107,7 @@ Attachments:
 - review-note.html
 
 Thanks,
-Mina`
+Mina`;
 
 const REVIEW_NOTE_HTML = `<!doctype html>
 <html>
@@ -120,7 +120,7 @@ const REVIEW_NOTE_HTML = `<!doctype html>
       <li>Archive the original PDF after approval.</li>
     </ul>
   </body>
-</html>`
+</html>`;
 
 export function createFakeEmailMessage(): EmailViewerMessage {
   return {
@@ -241,15 +241,15 @@ export function createFakeEmailMessage(): EmailViewerMessage {
         },
       ],
     },
-  }
+  };
 }
 
 export function EmailViewerDemo() {
-  const message = React.useMemo(() => createFakeEmailMessage(), [])
+  const message = React.useMemo(() => createFakeEmailMessage(), []);
 
   return (
     <div className="h-[720px] min-h-0">
       <EmailViewer message={message} mode="inline" className="h-full" />
     </div>
-  )
+  );
 }

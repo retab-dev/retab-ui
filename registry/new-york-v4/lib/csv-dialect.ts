@@ -1,23 +1,23 @@
 export interface CsvDialect {
-  delimiter: string
-  hasHeader: boolean
+  delimiter: string;
+  hasHeader: boolean;
 }
 
 export interface CsvDialectDescriptor {
-  src?: string
-  fileName?: string
-  mimeType?: string
+  src?: string;
+  fileName?: string;
+  mimeType?: string;
 }
 
 export const DEFAULT_CSV_DIALECT: CsvDialect = {
   delimiter: ",",
   hasHeader: true,
-}
+};
 
 export function normalizeCsvDelimiter(
-  delimiter: string | undefined
+  delimiter: string | undefined,
 ): string | undefined {
-  return delimiter === "\\t" ? "\t" : delimiter
+  return delimiter === "\\t" ? "\t" : delimiter;
 }
 
 /**
@@ -32,15 +32,15 @@ export function normalizeCsvDelimiter(
  * character is discarded here and resolution falls back to the inferred dialect.
  */
 function usableDelimiter(delimiter: string | undefined): string | undefined {
-  const normalized = normalizeCsvDelimiter(delimiter)
-  return normalized && normalized.length === 1 ? normalized : undefined
+  const normalized = normalizeCsvDelimiter(delimiter);
+  return normalized && normalized.length === 1 ? normalized : undefined;
 }
 
 export function extensionOfDelimitedName(name: string): string | null {
-  const clean = name.split(/[?#]/)[0]
-  const base = clean.split("/").pop() ?? clean
-  const dot = base.lastIndexOf(".")
-  return dot > 0 ? base.slice(dot + 1).toLowerCase() : null
+  const clean = name.split(/[?#]/)[0];
+  const base = clean.split("/").pop() ?? clean;
+  const dot = base.lastIndexOf(".");
+  return dot > 0 ? base.slice(dot + 1).toLowerCase() : null;
 }
 
 export function inferCsvDialect({
@@ -48,16 +48,16 @@ export function inferCsvDialect({
   fileName,
   mimeType,
 }: CsvDialectDescriptor): CsvDialect {
-  const name = fileName ?? src ?? ""
-  const ext = extensionOfDelimitedName(name)
-  if (ext === "tsv") return { delimiter: "\t", hasHeader: true }
-  if (ext === "csv") return DEFAULT_CSV_DIALECT
+  const name = fileName ?? src ?? "";
+  const ext = extensionOfDelimitedName(name);
+  if (ext === "tsv") return { delimiter: "\t", hasHeader: true };
+  if (ext === "csv") return DEFAULT_CSV_DIALECT;
 
-  const normalizedMime = mimeType?.toLowerCase().split(";")[0].trim()
+  const normalizedMime = mimeType?.toLowerCase().split(";")[0].trim();
   if (normalizedMime === "text/tab-separated-values") {
-    return { delimiter: "\t", hasHeader: true }
+    return { delimiter: "\t", hasHeader: true };
   }
-  return DEFAULT_CSV_DIALECT
+  return DEFAULT_CSV_DIALECT;
 }
 
 export function resolveCsvDialect({
@@ -66,21 +66,21 @@ export function resolveCsvDialect({
   hasHeader,
   descriptor,
 }: {
-  dialect?: CsvDialect
-  delimiter?: string
-  hasHeader?: boolean
-  descriptor: CsvDialectDescriptor
+  dialect?: CsvDialect;
+  delimiter?: string;
+  hasHeader?: boolean;
+  descriptor: CsvDialectDescriptor;
 }): CsvDialect {
-  const inferred = dialect ?? inferCsvDialect(descriptor)
+  const inferred = dialect ?? inferCsvDialect(descriptor);
   return {
     delimiter:
       usableDelimiter(delimiter) ??
       usableDelimiter(inferred.delimiter) ??
       DEFAULT_CSV_DIALECT.delimiter,
     hasHeader: hasHeader ?? inferred.hasHeader,
-  }
+  };
 }
 
 export function isTabDelimited(dialect: CsvDialect): boolean {
-  return normalizeCsvDelimiter(dialect.delimiter) === "\t"
+  return normalizeCsvDelimiter(dialect.delimiter) === "\t";
 }

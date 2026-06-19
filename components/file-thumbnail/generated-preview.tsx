@@ -1,36 +1,36 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import type { ViewerErrorInfo } from "@/lib/viewer-errors"
-import { createViewerResource } from "@/lib/viewer-resource"
-import type { FileCategory, ViewerSource } from "@/lib/viewer-source"
+import type { ViewerErrorInfo } from "@/lib/viewer-errors";
+import { createViewerResource } from "@/lib/viewer-resource";
+import type { FileCategory, ViewerSource } from "@/lib/viewer-source";
 import {
   FileThumbnailFrame,
   type FileThumbnailFrameProps,
-} from "@/components/ui/file-thumbnail-frame"
+} from "@/components/ui/file-thumbnail-frame";
 
-import { resolveThumbnailDescriptor } from "./descriptor"
-import { getThumbnailKey, getThumbnailRenderKey } from "./keys"
-import { ThumbnailClientPreview } from "./thumbnail-client-preview"
+import { resolveThumbnailDescriptor } from "./descriptor";
+import { getThumbnailKey, getThumbnailRenderKey } from "./keys";
+import { ThumbnailClientPreview } from "./thumbnail-client-preview";
 import {
   DirectImageThumbnail,
   isDirectImageThumbnail,
-} from "./thumbnail-direct-image"
+} from "./thumbnail-direct-image";
 import {
   createThumbnailErrorState,
   type ThumbnailErrorState,
-} from "./thumbnail-error-state"
-import { getThumbnailOptions } from "./thumbnail-options"
-import type { ThumbnailAnchor } from "./types"
+} from "./thumbnail-error-state";
+import { getThumbnailOptions } from "./thumbnail-options";
+import type { ThumbnailAnchor } from "./types";
 
 export interface GeneratedFileThumbnailProps
   extends Omit<FileThumbnailFrameProps, "file" | "onError"> {
-  source: ViewerSource
-  as?: FileCategory
-  anchor: ThumbnailAnchor
-  retryKey?: React.Key
-  onError?: (error: unknown, info: ViewerErrorInfo) => void
+  source: ViewerSource;
+  as?: FileCategory;
+  anchor: ThumbnailAnchor;
+  retryKey?: React.Key;
+  onError?: (error: unknown, info: ViewerErrorInfo) => void;
 }
 
 export function GeneratedFileThumbnail({
@@ -43,23 +43,23 @@ export function GeneratedFileThumbnail({
   onError,
   ...props
 }: GeneratedFileThumbnailProps) {
-  const descriptor = resolveThumbnailDescriptor({ source, as })
-  const resource = React.useMemo(() => createViewerResource(source), [source])
+  const descriptor = resolveThumbnailDescriptor({ source, as });
+  const resource = React.useMemo(() => createViewerResource(source), [source]);
   const thumbnailKey = getThumbnailKey({
     resource,
     descriptor,
     options: getThumbnailOptions(descriptor),
-  })
+  });
   const renderKey = getThumbnailRenderKey({
     thumbnailKey,
     anchor,
     retryKey: retryKey ?? null,
-  })
+  });
   const [errorState, setErrorState] =
-    React.useState<ThumbnailErrorState | null>(null)
+    React.useState<ThumbnailErrorState | null>(null);
   const currentErrorState =
-    errorState?.renderKey === renderKey ? errorState : null
-  const directUrl = resource.content.directUrl
+    errorState?.renderKey === renderKey ? errorState : null;
+  const directUrl = resource.content.directUrl;
 
   if (descriptor.category === "unsupported") {
     return (
@@ -69,7 +69,7 @@ export function GeneratedFileThumbnail({
         previewAspectRatio={previewAspectRatio}
         className={className}
       />
-    )
+    );
   }
 
   if (isDirectImageThumbnail({ descriptor, directUrl })) {
@@ -85,11 +85,11 @@ export function GeneratedFileThumbnail({
         errorState={currentErrorState}
         thumbnailProps={props}
         onError={(error, nextErrorState) => {
-          setErrorState(nextErrorState)
-          onError?.(error, nextErrorState.info)
+          setErrorState(nextErrorState);
+          onError?.(error, nextErrorState.info);
         }}
       />
-    )
+    );
   }
 
   return (
@@ -118,12 +118,12 @@ export function GeneratedFileThumbnail({
               error,
               resource,
               descriptor,
-            })
-            setErrorState(nextErrorState)
-            onError?.(error, nextErrorState.info)
+            });
+            setErrorState(nextErrorState);
+            onError?.(error, nextErrorState.info);
           }}
         />
       }
     />
-  )
+  );
 }

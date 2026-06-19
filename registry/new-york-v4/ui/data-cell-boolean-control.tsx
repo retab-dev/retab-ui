@@ -1,18 +1,18 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { CheckIcon, XIcon } from "lucide-react"
+import * as React from "react";
+import { CheckIcon, XIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 import {
   dataCellBooleanDisplayClass,
   dataCellCheckboxDisplayClass,
-} from "@/registry/new-york-v4/ui/data-cell-classes"
+} from "@/registry/new-york-v4/ui/data-cell-classes";
 import {
   dataCellBooleanValueMeta,
   nextDataCellBooleanValue,
-} from "@/registry/new-york-v4/ui/data-cell-boolean-value"
-import type { DataCellBooleanControlProps } from "@/registry/new-york-v4/ui/data-cell-control-contract"
+} from "@/registry/new-york-v4/ui/data-cell-boolean-value";
+import type { DataCellBooleanControlProps } from "@/registry/new-york-v4/ui/data-cell-control-contract";
 
 export function DataCellBooleanIndicator({ checked }: { checked: boolean }) {
   return (
@@ -20,7 +20,7 @@ export function DataCellBooleanIndicator({ checked }: { checked: boolean }) {
       data-slot="checkbox-indicator"
       className={cn(
         "flex items-center justify-center transition-none",
-        checked ? "text-current" : "text-muted-foreground/72"
+        checked ? "text-current" : "text-muted-foreground/72",
       )}
     >
       {checked ? (
@@ -29,7 +29,7 @@ export function DataCellBooleanIndicator({ checked }: { checked: boolean }) {
         <XIcon className="size-3.5" />
       )}
     </span>
-  )
+  );
 }
 
 export function DataCellBooleanControl({
@@ -47,14 +47,14 @@ export function DataCellBooleanControl({
   onDoubleClick,
   ...props
 }: DataCellBooleanControlProps) {
-  const checked = Boolean(value)
+  const checked = Boolean(value);
   const {
     id,
     "aria-label": ariaLabel,
     "aria-describedby": ariaDescribedBy,
     "aria-invalid": ariaInvalid,
     ...rootProps
-  } = props
+  } = props;
 
   return (
     <div
@@ -65,7 +65,7 @@ export function DataCellBooleanControl({
       className={cn(
         dataCellBooleanDisplayClass,
         "justify-center px-1",
-        className
+        className,
       )}
     >
       <button
@@ -82,34 +82,34 @@ export function DataCellBooleanControl({
         autoFocus={autoFocus}
         className={cn(
           dataCellCheckboxDisplayClass,
-          "flex items-center justify-center"
+          "flex items-center justify-center",
         )}
         onClick={(event) => {
-          event.stopPropagation()
-          if (disabled) return
-          const nextValue = nextDataCellBooleanValue(value)
+          event.stopPropagation();
+          if (disabled) return;
+          const nextValue = nextDataCellBooleanValue(value);
           session.commit(nextValue, dataCellBooleanValueMeta(nextValue), {
             endEditing: false,
             markFinished: false,
-          })
-          onClick?.(event)
+          });
+          onClick?.(event);
         }}
         onFocus={onFocus}
         onBlur={(event) => {
-          session.end()
-          onBlur?.(event)
+          session.end();
+          onBlur?.(event);
         }}
         onKeyDown={(event) => {
-          onKeyDown?.(event)
-          if (event.defaultPrevented || event.key !== "Escape") return
-          session.end()
-          event.currentTarget.blur()
-          event.preventDefault()
+          onKeyDown?.(event);
+          if (event.defaultPrevented || event.key !== "Escape") return;
+          session.end();
+          event.currentTarget.blur();
+          event.preventDefault();
         }}
         onDoubleClick={onDoubleClick}
       >
         <DataCellBooleanIndicator checked={checked} />
       </button>
     </div>
-  )
+  );
 }

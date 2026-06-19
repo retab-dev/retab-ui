@@ -1,16 +1,16 @@
-import type * as React from "react"
+import type * as React from "react";
 
-import { DataCellBooleanControl } from "@/registry/new-york-v4/ui/data-cell-boolean-control"
-import type { DataCellControlPropsByKind } from "@/registry/new-york-v4/ui/data-cell-control-contract"
-import { DataCellPickerControl } from "@/registry/new-york-v4/ui/data-cell-picker-control"
-import { DataCellSelectControl } from "@/registry/new-york-v4/ui/data-cell-select-control"
-import { DataCellInputControl } from "@/registry/new-york-v4/ui/data-cell-input-control"
+import { DataCellBooleanControl } from "@/registry/new-york-v4/ui/data-cell-boolean-control";
+import type { DataCellControlPropsByKind } from "@/registry/new-york-v4/ui/data-cell-control-contract";
+import { DataCellPickerControl } from "@/registry/new-york-v4/ui/data-cell-picker-control";
+import { DataCellSelectControl } from "@/registry/new-york-v4/ui/data-cell-select-control";
+import { DataCellInputControl } from "@/registry/new-york-v4/ui/data-cell-input-control";
 
 type DataCellControlComponentByKind = {
   [Kind in keyof DataCellControlPropsByKind]: React.ComponentType<
     DataCellControlPropsByKind[Kind]
-  >
-}
+  >;
+};
 
 export const dataCellControlByKind = {
   text: DataCellInputControl,
@@ -21,4 +21,4 @@ export const dataCellControlByKind = {
   date: DataCellPickerControl,
   time: DataCellPickerControl,
   "date-time": DataCellPickerControl,
-} satisfies DataCellControlComponentByKind
+} satisfies DataCellControlComponentByKind;

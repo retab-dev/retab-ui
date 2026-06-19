@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/lib/image-geometry"
+export * from "@/registry/new-york-v4/lib/image-geometry";

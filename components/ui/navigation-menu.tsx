@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 export {
   NavigationMenu,
@@ -10,4 +10,4 @@ export {
   NavigationMenuTrigger,
   NavigationMenuViewport,
   navigationMenuTriggerStyle,
-} from "@/registry/new-york-v4/ui/navigation-menu"
+} from "@/registry/new-york-v4/ui/navigation-menu";

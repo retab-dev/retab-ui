@@ -1,35 +1,35 @@
-"use client"
+"use client";
 
-import { AlertCircle } from "lucide-react"
+import { AlertCircle } from "lucide-react";
 
-import { DescriptionField } from "@/components/schema-editor/property-form/fields/description-field"
-import { NameField } from "@/components/schema-editor/property-form/fields/name-field"
-import { NullableField } from "@/components/schema-editor/property-form/fields/nullable-field"
-import { PropertySchemaPlanField } from "@/components/schema-editor/property-form/fields/property-schema-plan-field"
-import { TypeField } from "@/components/schema-editor/property-form/fields/type-field"
-import { PropertyFormFooter } from "@/components/schema-editor/property-form/property-form-footer"
-import type { PropertyFormViewModel } from "@/components/schema-editor/property-form/types"
-import { Label } from "@/components/ui/label"
+import { DescriptionField } from "@/components/schema-editor/property-form/fields/description-field";
+import { NameField } from "@/components/schema-editor/property-form/fields/name-field";
+import { NullableField } from "@/components/schema-editor/property-form/fields/nullable-field";
+import { PropertySchemaPlanField } from "@/components/schema-editor/property-form/fields/property-schema-plan-field";
+import { TypeField } from "@/components/schema-editor/property-form/fields/type-field";
+import { PropertyFormFooter } from "@/components/schema-editor/property-form/property-form-footer";
+import type { PropertyFormViewModel } from "@/components/schema-editor/property-form/types";
+import { Label } from "@/components/ui/label";
 
 export function PropertyFormShell({
   viewModel,
 }: {
-  viewModel: PropertyFormViewModel
+  viewModel: PropertyFormViewModel;
 }) {
-  const { fields, footer, capabilities, events, validation } = viewModel
-  const isReadOnly = capabilities.mode === "readOnly"
+  const { fields, footer, capabilities, events, validation } = viewModel;
+  const isReadOnly = capabilities.mode === "readOnly";
 
   return (
     <form
       onSubmit={(event) => {
-        event.preventDefault()
-        void events.submit()
+        event.preventDefault();
+        void events.submit();
       }}
       onKeyDown={events.keyDown}
       className="flex h-full flex-col"
     >
       <div className="max-h-[60vh] flex-1 overflow-y-auto">
-        <div className="space-y-4 border-b border-border p-4">
+        <div className="border-border space-y-4 border-b p-4">
           <NameField {...fields.name} />
 
           <div>
@@ -43,7 +43,7 @@ export function PropertyFormShell({
             </div>
             <TypeField field={fields.type} />
             {validation.schemaNode.message && (
-              <p className="mt-2 flex items-center gap-1 text-sm font-medium text-destructive">
+              <p className="text-destructive mt-2 flex items-center gap-1 text-sm font-medium">
                 <AlertCircle className="h-3 w-3" />
                 {validation.schemaNode.message}
               </p>
@@ -70,5 +70,5 @@ export function PropertyFormShell({
         />
       )}
     </form>
-  )
+  );
 }

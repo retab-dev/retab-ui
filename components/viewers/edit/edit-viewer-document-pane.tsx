@@ -1,39 +1,41 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source"
-import { FileViewer } from "@/components/ui/file-viewer"
+import * as React from "react";
+
+import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source";
+import { FileViewer } from "@/components/ui/file-viewer";
 import {
   PdfViewerPages,
   PdfViewerProvider,
   type PageOverlayProps,
   type PdfViewerHandle,
-} from "@/components/ui/pdf-viewer"
-import { useSegmentedDocumentViewport } from "@/components/ui/segmented-document-provider"
+} from "@/components/ui/pdf-viewer";
+import { useSegmentedDocumentViewport } from "@/components/ui/segmented-document-provider";
 
 import {
   canPreviewEditViewerDocument,
   type EditViewerDocumentTarget,
-} from "./edit-viewer-model"
-import { EditViewerErrorState, NoDocumentState } from "./edit-viewer-states"
-import type { EditViewerDocumentSource } from "./edit-viewer-types"
+} from "./edit-viewer-model";
+import { EditViewerErrorState, NoDocumentState } from "./edit-viewer-states";
+import type { EditViewerDocumentSource } from "./edit-viewer-types";
 
 export function EditViewerDocumentPane({
   target,
   renderPageOverlay,
   viewerRef,
 }: {
-  target: EditViewerDocumentTarget
-  renderPageOverlay: (props: PageOverlayProps) => React.ReactNode
-  viewerRef: React.RefObject<PdfViewerHandle | null>
+  target: EditViewerDocumentTarget;
+  renderPageOverlay: (props: PageOverlayProps) => React.ReactNode;
+  viewerRef: React.RefObject<PdfViewerHandle | null>;
 }) {
   if (target.kind === "error") {
-    return <EditViewerErrorState message={target.message} />
+    return <EditViewerErrorState message={target.message} />;
   }
 
   if (target.kind === "filled") {
-    return <FilledDocumentRenderer document={target.document} />
+    return <FilledDocumentRenderer document={target.document} />;
   }
 
   if (target.kind === "source" || target.kind === "preview") {
@@ -44,10 +46,10 @@ export function EditViewerDocumentPane({
         viewerRef={viewerRef}
         showPreview={target.showOverlay}
       />
-    )
+    );
   }
 
-  return <NoDocumentState message={target.message} />
+  return <NoDocumentState message={target.message} />;
 }
 
 function SourceDocumentRenderer({
@@ -56,28 +58,28 @@ function SourceDocumentRenderer({
   viewerRef,
   showPreview,
 }: {
-  document: EditViewerDocumentSource
-  renderPageOverlay: (props: PageOverlayProps) => React.ReactNode
-  viewerRef: React.RefObject<PdfViewerHandle | null>
-  showPreview: boolean
+  document: EditViewerDocumentSource;
+  renderPageOverlay: (props: PageOverlayProps) => React.ReactNode;
+  viewerRef: React.RefObject<PdfViewerHandle | null>;
+  showPreview: boolean;
 }) {
-  const { documentHandlers } = useSegmentedDocumentViewport()
-  const source = useDocumentViewerSource(document)
+  const { documentHandlers } = useSegmentedDocumentViewport();
+  const source = useDocumentViewerSource(document);
   const setPdfViewerHandle = React.useCallback(
     (handle: PdfViewerHandle | null) => {
-      viewerRef.current = handle
-      documentHandlers.setDocumentHandle(handle)
+      viewerRef.current = handle;
+      documentHandlers.setDocumentHandle(handle);
     },
-    [documentHandlers, viewerRef]
-  )
+    [documentHandlers, viewerRef],
+  );
 
   React.useEffect(
     () => () => documentHandlers.setDocumentHandle(null),
-    [documentHandlers]
-  )
+    [documentHandlers],
+  );
 
   if (!source) {
-    return <NoDocumentState message="Document preview is unavailable." />
+    return <NoDocumentState message="Document preview is unavailable." />;
   }
 
   if (canPreviewEditViewerDocument(document)) {
@@ -94,43 +96,45 @@ function SourceDocumentRenderer({
           />
         </PdfViewerProvider>
       </FileViewer>
-    )
+    );
   }
 
   if (showPreview) {
-    return <NoDocumentState message="Preview requires a PDF source document." />
+    return (
+      <NoDocumentState message="Preview requires a PDF source document." />
+    );
   }
 
-  return <FileViewer source={source} bare className="h-full" />
+  return <FileViewer source={source} bare className="h-full" />;
 }
 
 function FilledDocumentRenderer({
   document,
 }: {
-  document: EditViewerDocumentSource
+  document: EditViewerDocumentSource;
 }) {
-  const source = useDocumentViewerSource(document)
+  const source = useDocumentViewerSource(document);
   if (!source) {
-    return <NoDocumentState message="Document preview is unavailable." />
+    return <NoDocumentState message="Document preview is unavailable." />;
   }
 
-  return <FileViewer source={source} bare className="h-full" />
+  return <FileViewer source={source} bare className="h-full" />;
 }
 
 function useDocumentViewerSource(
-  document: EditViewerDocumentSource
+  document: EditViewerDocumentSource,
 ): UrlViewerSource | BlobViewerSource | null {
   return React.useMemo(() => {
-    const fileName = document.filename ?? "document"
+    const fileName = document.filename ?? "document";
     if (document.src) {
       return {
         kind: "url",
         url: document.src,
         fileName,
         mimeType: document.mimeType,
-      }
+      };
     }
-    if (!document.buffer) return null
+    if (!document.buffer) return null;
 
     return {
       kind: "blob",
@@ -138,19 +142,19 @@ function useDocumentViewerSource(
       identityKey: editViewerBufferIdentityKey(document.buffer),
       fileName,
       mimeType: document.mimeType,
-    }
-  }, [document.buffer, document.filename, document.mimeType, document.src])
+    };
+  }, [document.buffer, document.filename, document.mimeType, document.src]);
 }
 
-const editViewerBufferKeys = new WeakMap<ArrayBuffer, string>()
-let nextEditViewerBufferKey = 0
+const editViewerBufferKeys = new WeakMap<ArrayBuffer, string>();
+let nextEditViewerBufferKey = 0;
 
 function editViewerBufferIdentityKey(buffer: ArrayBuffer): string {
-  let key = editViewerBufferKeys.get(buffer)
+  let key = editViewerBufferKeys.get(buffer);
   if (!key) {
-    nextEditViewerBufferKey += 1
-    key = `edit-viewer-buffer:${nextEditViewerBufferKey}`
-    editViewerBufferKeys.set(buffer, key)
+    nextEditViewerBufferKey += 1;
+    key = `edit-viewer-buffer:${nextEditViewerBufferKey}`;
+    editViewerBufferKeys.set(buffer, key);
   }
-  return key
+  return key;
 }

@@ -1,20 +1,20 @@
-"use client"
+"use client";
 
-import { PdfViewer } from "@/components/ui/pdf-viewer"
-import type { PartitionResult } from "@/components/viewers/lib/partition-types"
+import { PdfViewer } from "@/components/ui/pdf-viewer";
+import type { PartitionResult } from "@/components/viewers/lib/partition-types";
 import {
   PartitionViewer,
   usePartitionViewerDocumentControls,
-} from "@/components/viewers/partition/partition-viewer"
-import partitionSample from "@/components/viewers/sample-data/partition.json"
+} from "@/components/viewers/partition/partition-viewer";
+import partitionSample from "@/components/viewers/sample-data/partition.json";
 
 /** Real partition result: ViT paper partitioned by section (8 keyed chunks over 22 pages). */
-const PARTITION_PDF_URL = "/samples/an-image-is-worth-16x16-words.pdf"
+const PARTITION_PDF_URL = "/samples/an-image-is-worth-16x16-words.pdf";
 const partitionSource = {
   kind: "url" as const,
   url: PARTITION_PDF_URL,
   fileName: "an-image-is-worth-16x16-words.pdf",
-}
+};
 
 const partitionResult: PartitionResult = {
   output: partitionSample.output as PartitionResult["output"],
@@ -24,10 +24,10 @@ const partitionResult: PartitionResult = {
     likelihoods: null,
   },
   usage: null,
-}
+};
 
 function PartitionDemoDocument() {
-  const controls = usePartitionViewerDocumentControls()
+  const controls = usePartitionViewerDocumentControls();
 
   return (
     <PdfViewer
@@ -38,7 +38,7 @@ function PartitionDemoDocument() {
       onScrollProgressChange={controls.onScrollProgressChange}
       className="h-full"
     />
-  )
+  );
 }
 
 export function PartitionViewerExample() {
@@ -53,5 +53,5 @@ export function PartitionViewerExample() {
         document={<PartitionDemoDocument />}
       />
     </div>
-  )
+  );
 }

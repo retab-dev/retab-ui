@@ -1,27 +1,27 @@
-import * as React from "react"
+import * as React from "react";
 
-import { replaceNodeJson } from "@/components/schema-editor/document/json-node"
+import { replaceNodeJson } from "@/components/schema-editor/document/json-node";
 import {
   setNodeDescription,
   setNodeTitle,
   stripDescriptions,
-} from "@/components/schema-editor/document/node-metadata"
-import type { SchemaDocument } from "@/components/schema-editor/document/types"
-import { getDocumentNodeView } from "@/components/schema-editor/document/view-model"
-import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
+} from "@/components/schema-editor/document/node-metadata";
+import type { SchemaDocument } from "@/components/schema-editor/document/types";
+import { getDocumentNodeView } from "@/components/schema-editor/document/view-model";
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
 import type {
   ResolvedSchemaBuilderFeatures,
   SchemaDispatch,
   SchemaValidationResult,
-} from "@/components/schema-editor/schema-builder-types"
-import { resolveSchemaBuilderFeatures } from "@/components/schema-editor/schema-builder-types"
-import { validationErrorsText } from "@/components/schema-editor/validation"
+} from "@/components/schema-editor/schema-builder-types";
+import { resolveSchemaBuilderFeatures } from "@/components/schema-editor/schema-builder-types";
+import { validationErrorsText } from "@/components/schema-editor/validation";
 
 interface DocumentSchemaEditorControllerOptions {
-  doc: SchemaDocument
-  validation: SchemaValidationResult
-  dispatch: SchemaDispatch
-  features?: ResolvedSchemaBuilderFeatures
+  doc: SchemaDocument;
+  validation: SchemaValidationResult;
+  dispatch: SchemaDispatch;
+  features?: ResolvedSchemaBuilderFeatures;
 }
 
 export function useDocumentSchemaEditorController({
@@ -30,36 +30,36 @@ export function useDocumentSchemaEditorController({
   dispatch,
   features: featuresProp,
 }: DocumentSchemaEditorControllerOptions) {
-  const features = featuresProp ?? resolveSchemaBuilderFeatures()
+  const features = featuresProp ?? resolveSchemaBuilderFeatures();
   const [defsAccordionOpen, setDefsAccordionOpen] = React.useState(
-    () => doc.defs.length > 0
-  )
-  const draggedParentRef = React.useRef<string | null>(null)
-  const draggedPropertyRef = React.useRef<string | null>(null)
+    () => doc.defs.length > 0,
+  );
+  const draggedParentRef = React.useRef<string | null>(null);
+  const draggedPropertyRef = React.useRef<string | null>(null);
   const validationErrors = React.useMemo(
     () => validationErrorsText(validation),
-    [validation]
-  )
+    [validation],
+  );
   const rootNodeView = React.useMemo(
     () => getDocumentNodeView(doc, doc.root),
-    [doc]
-  )
+    [doc],
+  );
 
   const setRootTitle = React.useCallback(
     (title: string) => {
-      dispatch((current) => setNodeTitle(current, current.root.id, title))
+      dispatch((current) => setNodeTitle(current, current.root.id, title));
     },
-    [dispatch]
-  )
+    [dispatch],
+  );
 
   const setRootDescription = React.useCallback(
     (description: string) => {
       dispatch((current) =>
-        setNodeDescription(current, current.root.id, description)
-      )
+        setNodeDescription(current, current.root.id, description),
+      );
     },
-    [dispatch]
-  )
+    [dispatch],
+  );
 
   const eraseRootSchema = React.useCallback(() => {
     dispatch((current) =>
@@ -67,20 +67,20 @@ export function useDocumentSchemaEditorController({
         title: "",
         type: "object",
         properties: {},
-      })
-    )
-  }, [dispatch])
+      }),
+    );
+  }, [dispatch]);
 
   const eraseDescriptions = React.useCallback(() => {
-    dispatch((current) => stripDescriptions(current))
-  }, [dispatch])
+    dispatch((current) => stripDescriptions(current));
+  }, [dispatch]);
 
   const replaceRoot = React.useCallback(
     (newNode: ExtendedJSONSchema7) => {
-      dispatch((current) => replaceNodeJson(current, current.root.id, newNode))
+      dispatch((current) => replaceNodeJson(current, current.root.id, newNode));
     },
-    [dispatch]
-  )
+    [dispatch],
+  );
 
   return {
     features,
@@ -95,5 +95,5 @@ export function useDocumentSchemaEditorController({
     eraseRootSchema,
     eraseDescriptions,
     replaceRoot,
-  }
+  };
 }

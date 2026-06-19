@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { PdfViewer } from "@/components/ui/pdf-viewer"
-import { ClassifierViewer } from "@/components/viewers/classify/classifier-viewer"
+import { PdfViewer } from "@/components/ui/pdf-viewer";
+import { ClassifierViewer } from "@/components/viewers/classify/classifier-viewer";
 
 export function ClassificationViewerExample() {
   return (
@@ -28,5 +28,5 @@ export function ClassificationViewerExample() {
         }
       />
     </div>
-  )
+  );
 }

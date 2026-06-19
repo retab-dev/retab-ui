@@ -1,12 +1,11 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import type { FileSystemDispatch } from "./file-system-kernel-selectors"
-import type {
-  FileSystemQueryState,
-  FileSystemView,
-} from "./file-system-types"
+import * as React from "react";
+
+import type { FileSystemDispatch } from "./file-system-kernel-selectors";
+import type { FileSystemQueryState, FileSystemView } from "./file-system-types";
 
 export function useFileSystemControlledProps({
   dispatch,
@@ -15,29 +14,29 @@ export function useFileSystemControlledProps({
   selectedPath,
   view,
 }: {
-  dispatch: FileSystemDispatch
-  path?: string
-  query?: FileSystemQueryState
-  selectedPath?: string | null
-  view?: FileSystemView
+  dispatch: FileSystemDispatch;
+  path?: string;
+  query?: FileSystemQueryState;
+  selectedPath?: string | null;
+  view?: FileSystemView;
 }) {
   React.useEffect(() => {
     if (path !== undefined) {
-      dispatch({ path, source: "controlled-prop", type: "path.changed" })
+      dispatch({ path, source: "controlled-prop", type: "path.changed" });
     }
-  }, [dispatch, path])
+  }, [dispatch, path]);
 
   React.useEffect(() => {
     if (query !== undefined) {
-      dispatch({ query, source: "controlled-prop", type: "query.changed" })
+      dispatch({ query, source: "controlled-prop", type: "query.changed" });
     }
-  }, [dispatch, query])
+  }, [dispatch, query]);
 
   React.useEffect(() => {
     if (view !== undefined) {
-      dispatch({ source: "controlled-prop", type: "view.changed", view })
+      dispatch({ source: "controlled-prop", type: "view.changed", view });
     }
-  }, [dispatch, view])
+  }, [dispatch, view]);
 
   React.useEffect(() => {
     if (selectedPath !== undefined) {
@@ -45,7 +44,7 @@ export function useFileSystemControlledProps({
         path: selectedPath,
         source: "controlled-prop",
         type: "entry.selected",
-      })
+      });
     }
-  }, [dispatch, selectedPath])
+  }, [dispatch, selectedPath]);
 }

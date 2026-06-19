@@ -1,22 +1,22 @@
-"use client"
+"use client";
 
-import { FormItem } from "@/components/ui/form"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
+import { FormItem } from "@/components/ui/form";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "@/components/ui/tooltip";
 
 export function NullableField({
   checked,
   disabled,
   onChange,
 }: {
-  checked: boolean
-  disabled: boolean
-  onChange: (checked: boolean) => void
+  checked: boolean;
+  disabled: boolean;
+  onChange: (checked: boolean) => void;
 }) {
   return (
     <FormItem className="flex flex-row items-center space-y-0 space-x-2">
@@ -41,5 +41,5 @@ export function NullableField({
         </TooltipContent>
       </Tooltip>
     </FormItem>
-  )
+  );
 }

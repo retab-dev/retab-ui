@@ -1,23 +1,23 @@
 import {
   JsonTableDemo,
   type JsonTableDemoProfileVariant,
-} from "@/components/json-table/json-table-demo"
-import { JsonTableStyleProbe } from "@/components/json-table/json-table-style-probe"
+} from "@/components/json-table/json-table-demo";
+import { JsonTableStyleProbe } from "@/components/json-table/json-table-style-probe";
 
 export default async function JsonTableProfilePage({
   searchParams,
 }: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const params = await searchParams
-  const variant = jsonTableProfileVariant(params?.variant)
-  const rowCount = jsonTableProfileInteger(params?.rows)
-  const extraColumnCount = jsonTableProfileInteger(params?.extraColumns)
-  const overscan = jsonTableProfileInteger(params?.overscan)
-  const jumpOverscan = jsonTableProfileInteger(params?.jumpOverscan)
+  const params = await searchParams;
+  const variant = jsonTableProfileVariant(params?.variant);
+  const rowCount = jsonTableProfileInteger(params?.rows);
+  const extraColumnCount = jsonTableProfileInteger(params?.extraColumns);
+  const overscan = jsonTableProfileInteger(params?.overscan);
+  const jumpOverscan = jsonTableProfileInteger(params?.jumpOverscan);
 
   return (
-    <main className="flex min-h-screen flex-col bg-background p-6">
+    <main className="bg-background flex min-h-screen flex-col p-6">
       <section className="flex flex-col gap-3">
         <h1 className="text-lg font-semibold">JSON table</h1>
         <JsonTableDemo
@@ -30,19 +30,19 @@ export default async function JsonTableProfilePage({
         <JsonTableStyleProbe />
       </section>
     </main>
-  )
+  );
 }
 
 function jsonTableProfileVariant(
-  value: string | string[] | undefined
+  value: string | string[] | undefined,
 ): JsonTableDemoProfileVariant {
-  return value === "large" ? "large" : "default"
+  return value === "large" ? "large" : "default";
 }
 
 function jsonTableProfileInteger(value: string | string[] | undefined) {
-  const rawValue = Array.isArray(value) ? value[0] : value
-  if (rawValue === undefined) return undefined
-  const parsed = Number(rawValue)
-  if (!Number.isFinite(parsed)) return undefined
-  return Math.max(0, Math.floor(parsed))
+  const rawValue = Array.isArray(value) ? value[0] : value;
+  if (rawValue === undefined) return undefined;
+  const parsed = Number(rawValue);
+  if (!Number.isFinite(parsed)) return undefined;
+  return Math.max(0, Math.floor(parsed));
 }

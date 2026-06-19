@@ -1,22 +1,24 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { AlertCircle } from "lucide-react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { AlertCircle } from "lucide-react";
+
+import { cn } from "@/lib/utils";
 
 interface SchemaInlineTextProps {
-  ariaLabel: string
-  editable: boolean
-  value: string
-  className?: string
-  errorClassName?: string
-  placeholder?: string
-  readOnlyClassName?: string
-  trimOnCommit?: boolean
-  validate?: (value: string) => string | null
-  onCommit: (value: string) => void
-  onOpenReadOnly?: () => void
+  ariaLabel: string;
+  editable: boolean;
+  value: string;
+  className?: string;
+  errorClassName?: string;
+  placeholder?: string;
+  readOnlyClassName?: string;
+  trimOnCommit?: boolean;
+  validate?: (value: string) => string | null;
+  onCommit: (value: string) => void;
+  onOpenReadOnly?: () => void;
 }
 
 export function SchemaInlineText({
@@ -32,49 +34,46 @@ export function SchemaInlineText({
   onCommit,
   onOpenReadOnly,
 }: SchemaInlineTextProps) {
-  const isFocusedRef = React.useRef(false)
-  const draftValueRef = React.useRef(value)
-  const [inputResetVersion, setInputResetVersion] = React.useState(0)
-  const [error, setError] = React.useState<string | null>(null)
+  const isFocusedRef = React.useRef(false);
+  const draftValueRef = React.useRef(value);
+  const [inputResetVersion, setInputResetVersion] = React.useState(0);
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (isFocusedRef.current || draftValueRef.current === value) return
-    draftValueRef.current = value
-    setInputResetVersion((version) => version + 1)
-  }, [value])
+    if (isFocusedRef.current || draftValueRef.current === value) return;
+    draftValueRef.current = value;
+    setInputResetVersion((version) => version + 1);
+  }, [value]);
 
   const normalizeValue = (nextValue: string) =>
-    trimOnCommit ? nextValue.trim() : nextValue
+    trimOnCommit ? nextValue.trim() : nextValue;
 
   const commitValue = (input: HTMLInputElement) => {
-    const nextValue = normalizeValue(input.value)
-    const nextError = validate(nextValue)
+    const nextValue = normalizeValue(input.value);
+    const nextError = validate(nextValue);
     if (nextError) {
-      setError(nextError)
-      return false
+      setError(nextError);
+      return false;
     }
 
-    setError(null)
-    isFocusedRef.current = false
-    draftValueRef.current = nextValue
-    input.value = nextValue
+    setError(null);
+    isFocusedRef.current = false;
+    draftValueRef.current = nextValue;
+    input.value = nextValue;
     if (nextValue !== normalizeValue(value)) {
-      onCommit(nextValue)
+      onCommit(nextValue);
     }
-    return true
-  }
+    return true;
+  };
 
   if (!editable) {
     return (
-      <span
-        className={readOnlyClassName}
-        onClick={onOpenReadOnly}
-      >
+      <span className={readOnlyClassName} onClick={onOpenReadOnly}>
         {value || (
           <span className="text-muted-foreground/70">{placeholder}</span>
         )}
       </span>
-    )
+    );
   }
 
   return (
@@ -88,42 +87,42 @@ export function SchemaInlineText({
         placeholder={placeholder}
         defaultValue={value}
         onFocus={() => {
-          isFocusedRef.current = true
+          isFocusedRef.current = true;
         }}
         onChange={(event) => {
-          const nextValue = event.target.value
-          draftValueRef.current = nextValue
-          setError(nextValue ? validate(normalizeValue(nextValue)) : null)
+          const nextValue = event.target.value;
+          draftValueRef.current = nextValue;
+          setError(nextValue ? validate(normalizeValue(nextValue)) : null);
         }}
         onBlur={(event) => {
-          commitValue(event.currentTarget)
+          commitValue(event.currentTarget);
         }}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
-            event.preventDefault()
-            event.stopPropagation()
-            if (commitValue(event.currentTarget)) event.currentTarget.blur()
+            event.preventDefault();
+            event.stopPropagation();
+            if (commitValue(event.currentTarget)) event.currentTarget.blur();
           } else if (event.key === "Escape") {
-            event.preventDefault()
-            event.stopPropagation()
-            draftValueRef.current = value
-            event.currentTarget.value = value
-            setError(null)
-            isFocusedRef.current = false
-            event.currentTarget.blur()
+            event.preventDefault();
+            event.stopPropagation();
+            draftValueRef.current = value;
+            event.currentTarget.value = value;
+            setError(null);
+            isFocusedRef.current = false;
+            event.currentTarget.blur();
           }
         }}
       />
       {error && (
         <p
           className={cn(
-            "absolute top-7 left-1 z-10 flex min-w-56 items-center gap-1 rounded-sm border bg-background px-2 py-1 text-xs text-destructive shadow-sm",
-            errorClassName
+            "bg-background text-destructive absolute top-7 left-1 z-10 flex min-w-56 items-center gap-1 rounded-sm border px-2 py-1 text-xs shadow-sm",
+            errorClassName,
           )}
         >
           <AlertCircle className="h-3 w-3" /> {error}
         </p>
       )}
     </span>
-  )
+  );
 }

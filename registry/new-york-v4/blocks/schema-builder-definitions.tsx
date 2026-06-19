@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
 import {
   SchemaBuilder,
   type ExtendedJSONSchema7,
-} from "@/components/ui/schema-builder"
+} from "@/components/ui/schema-builder";
 
 const orderSchema: ExtendedJSONSchema7 = {
   type: "object",
@@ -29,13 +29,13 @@ const orderSchema: ExtendedJSONSchema7 = {
     total: { type: "number" },
   },
   required: ["order_id"],
-}
+};
 
 export function SchemaBuilderDefinitions() {
-  const [schema, setSchema] = React.useState<ExtendedJSONSchema7>(orderSchema)
+  const [schema, setSchema] = React.useState<ExtendedJSONSchema7>(orderSchema);
 
   return (
-    <div className="rounded-xl border bg-card p-3 shadow-sm">
+    <div className="bg-card rounded-xl border p-3 shadow-sm">
       <SchemaBuilder
         value={schema}
         onValueChange={setSchema}
@@ -47,5 +47,5 @@ export function SchemaBuilderDefinitions() {
         }}
       />
     </div>
-  )
+  );
 }

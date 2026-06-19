@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { usePropertyFormController } from "@/components/schema-editor/property-form/property-form-controller"
-import { PropertyFormShell } from "@/components/schema-editor/property-form/property-form-shell"
-import type { PropertyFormProps } from "@/components/schema-editor/property-form/types"
+import { usePropertyFormController } from "@/components/schema-editor/property-form/property-form-controller";
+import { PropertyFormShell } from "@/components/schema-editor/property-form/property-form-shell";
+import type { PropertyFormProps } from "@/components/schema-editor/property-form/types";
 
 export function PropertyForm(props: PropertyFormProps) {
-  const mode = props.mode ?? "editable"
+  const mode = props.mode ?? "editable";
 
   const viewModel = usePropertyFormController({
     propertyDraft: props.propertyDraft,
@@ -19,7 +19,7 @@ export function PropertyForm(props: PropertyFormProps) {
     onCommitPropertyDraft: props.onCommitPropertyDraft,
     onCancel: props.onCancel,
     onDelete: props.onDelete,
-  })
+  });
 
-  return <PropertyFormShell viewModel={viewModel} />
+  return <PropertyFormShell viewModel={viewModel} />;
 }

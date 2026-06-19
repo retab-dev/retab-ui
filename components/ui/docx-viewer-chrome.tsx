@@ -1,33 +1,33 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
-import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
-import { ViewerControlsSkeleton } from "./viewer-controls"
+import { ViewerControlsSkeleton } from "./viewer-controls";
 
 export function DocxViewerFrame({
   bare = false,
   children,
   className,
 }: {
-  bare?: boolean
-  children: React.ReactNode
-  className?: string
+  bare?: boolean;
+  children: React.ReactNode;
+  className?: string;
 }) {
   return (
     <div
       className={cn(
         "flex min-h-0 flex-col overflow-hidden",
-        bare ? "h-full bg-muted/20" : "rounded-xl border bg-muted/30",
-        className
+        bare ? "bg-muted/20 h-full" : "bg-muted/30 rounded-xl border",
+        className,
       )}
       data-slot="docx-viewer"
     >
       {children}
     </div>
-  )
+  );
 }
 
 export function DocxViewerBody({ children }: { children: React.ReactNode }) {
@@ -35,7 +35,7 @@ export function DocxViewerBody({ children }: { children: React.ReactNode }) {
     <div className="relative flex min-h-0 flex-1">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
     </div>
-  )
+  );
 }
 
 export function DocxViewerFallback({
@@ -43,9 +43,9 @@ export function DocxViewerFallback({
   className,
   controls = true,
 }: {
-  bare?: boolean
-  className?: string
-  controls?: boolean
+  bare?: boolean;
+  className?: string;
+  controls?: boolean;
 }) {
   return (
     <DocxViewerFrame bare={bare} className={className}>
@@ -58,7 +58,7 @@ export function DocxViewerFallback({
         </div>
       </DocxViewerBody>
     </DocxViewerFrame>
-  )
+  );
 }
 
 export function DocxSkeleton() {
@@ -69,5 +69,5 @@ export function DocxSkeleton() {
       data-slot="docx-page-skeleton"
       style={{ aspectRatio: "8.5 / 11" }}
     />
-  )
+  );
 }

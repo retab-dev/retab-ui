@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { FileViewer } from "@/components/ui/file-viewer"
+import { FileViewer } from "@/components/ui/file-viewer";
 
 export function HtmlViewerDemo() {
   return (
@@ -17,5 +17,5 @@ export function HtmlViewerDemo() {
         isolateStyles
       />
     </div>
-  )
+  );
 }

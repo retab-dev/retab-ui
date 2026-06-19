@@ -1,34 +1,34 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import type { Source, SourceAnchor, SourceArea } from "@/lib/document-source"
-import { normalizeRotation, rotateNormalizedBox } from "@/lib/image-geometry"
+import type { Source, SourceAnchor, SourceArea } from "@/lib/document-source";
+import { normalizeRotation, rotateNormalizedBox } from "@/lib/image-geometry";
 import {
   type ImageFrameOverlayProps,
   type ImageViewerHandle,
-} from "@/components/ui/image-viewer-types"
+} from "@/components/ui/image-viewer-types";
 
 const HIGHLIGHT_CLASS =
-  "pointer-events-none absolute z-10 rounded-[2px] border border-primary/70 bg-primary/12 shadow-[0_4px_16px_rgb(0_0_0_/_8%)]"
+  "pointer-events-none absolute z-10 rounded-[2px] border border-primary/70 bg-primary/12 shadow-[0_4px_16px_rgb(0_0_0_/_8%)]";
 
 export interface SourceTarget {
-  scrollTo?: (source: Source, options: { behavior: ScrollBehavior }) => void
+  scrollTo?: (source: Source, options: { behavior: ScrollBehavior }) => void;
 }
 
 export interface ImageSourceTarget {
-  frame: number
-  area: SourceArea
+  frame: number;
+  area: SourceArea;
 }
 
 /** A normalized image/pdf bbox anchor → the frame and percentage box to target. */
 export function imageAnchorToTarget(
-  anchor: SourceAnchor
+  anchor: SourceAnchor,
 ): ImageSourceTarget | undefined {
   if (anchor.kind === "image_bbox" || anchor.kind === "pdf_bbox") {
-    const frame = imageAnchorFrame(anchor)
-    if (!isValidNormalizedBox(anchor)) return undefined
-    if (frame === undefined) return undefined
+    const frame = imageAnchorFrame(anchor);
+    if (!isValidNormalizedBox(anchor)) return undefined;
+    if (frame === undefined) return undefined;
     return {
       frame,
       area: {
@@ -37,9 +37,9 @@ export function imageAnchorToTarget(
         width: anchor.width * 100,
         height: anchor.height * 100,
       },
-    }
+    };
   }
-  return undefined
+  return undefined;
 }
 
 /**
@@ -49,17 +49,17 @@ export function imageAnchorToTarget(
  */
 function imageAnchorFrame(anchor: SourceAnchor): number | undefined {
   if (anchor.kind === "image_bbox") {
-    const frame = anchor.page ?? 1
-    return isPositiveInteger(frame) ? frame : undefined
+    const frame = anchor.page ?? 1;
+    return isPositiveInteger(frame) ? frame : undefined;
   }
   if (anchor.kind === "pdf_bbox") {
-    return isPositiveInteger(anchor.page) ? anchor.page : undefined
+    return isPositiveInteger(anchor.page) ? anchor.page : undefined;
   }
-  return undefined
+  return undefined;
 }
 
 function isPositiveInteger(value: number): boolean {
-  return Number.isInteger(value) && value >= 1
+  return Number.isInteger(value) && value >= 1;
 }
 
 function isValidNormalizedBox({
@@ -68,10 +68,10 @@ function isValidNormalizedBox({
   width,
   height,
 }: {
-  left: number
-  top: number
-  width: number
-  height: number
+  left: number;
+  top: number;
+  width: number;
+  height: number;
 }): boolean {
   return (
     Number.isFinite(left) &&
@@ -84,12 +84,12 @@ function isValidNormalizedBox({
     height > 0 &&
     left + width <= 1 &&
     top + height <= 1
-  )
+  );
 }
 
 export function rotateImageArea(
   area: SourceArea,
-  rotation: number
+  rotation: number,
 ): SourceArea {
   const rotated = rotateNormalizedBox(
     {
@@ -98,39 +98,39 @@ export function rotateImageArea(
       width: area.width / 100,
       height: area.height / 100,
     },
-    normalizeRotation(rotation)
-  )
+    normalizeRotation(rotation),
+  );
   return {
     left: toPercent(rotated.left),
     top: toPercent(rotated.top),
     width: toPercent(rotated.width),
     height: toPercent(rotated.height),
-  }
+  };
 }
 
 function toPercent(value: number): number {
-  return Math.round(value * 100 * 1e10) / 1e10
+  return Math.round(value * 100 * 1e10) / 1e10;
 }
 
 /** A stable source target over an `ImageViewer` ref. */
 export function useImageSourceTarget(
-  viewerRef: React.RefObject<ImageViewerHandle | null>
+  viewerRef: React.RefObject<ImageViewerHandle | null>,
 ): SourceTarget {
   return React.useMemo<SourceTarget>(
     () => ({
       scrollTo: (source: Source, options) => {
-        const target = imageAnchorToTarget(source.anchor)
+        const target = imageAnchorToTarget(source.anchor);
         if (target) {
           viewerRef.current?.scrollToFrameArea(
             target.frame,
             target.area,
-            options
-          )
+            options,
+          );
         }
       },
     }),
-    [viewerRef]
-  )
+    [viewerRef],
+  );
 }
 
 /**
@@ -138,15 +138,15 @@ export function useImageSourceTarget(
  * image.
  */
 export function renderImageSourceOverlay(
-  source: Source | undefined
+  source: Source | undefined,
 ): (props: ImageFrameOverlayProps) => React.ReactNode {
-  const target = source ? imageAnchorToTarget(source.anchor) : undefined
+  const target = source ? imageAnchorToTarget(source.anchor) : undefined;
   return function ImageSourceOverlay({
     frameNumber,
     rotation,
   }: ImageFrameOverlayProps) {
-    if (!target || frameNumber !== target.frame) return null
-    const renderedArea = rotateImageArea(target.area, rotation)
+    if (!target || frameNumber !== target.frame) return null;
+    const renderedArea = rotateImageArea(target.area, rotation);
     return (
       <div
         className={HIGHLIGHT_CLASS}
@@ -157,6 +157,6 @@ export function renderImageSourceOverlay(
           height: `${renderedArea.height}%`,
         }}
       />
-    )
-  }
+    );
+  };
 }

@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
 import {
   SchemaBuilder,
   type ExtendedJSONSchema7,
-} from "@/components/ui/schema-builder"
+} from "@/components/ui/schema-builder";
 
 const invoiceSchema: ExtendedJSONSchema7 = {
   type: "object",
@@ -16,12 +16,12 @@ const invoiceSchema: ExtendedJSONSchema7 = {
     paid: { type: "boolean" },
   },
   required: ["invoice_number", "total"],
-}
+};
 
 export function SchemaBuilderReadOnly() {
   return (
-    <div className="rounded-xl border bg-card p-3 shadow-sm">
+    <div className="bg-card rounded-xl border p-3 shadow-sm">
       <SchemaBuilder value={invoiceSchema} readOnly onValueChange={() => {}} />
     </div>
-  )
+  );
 }

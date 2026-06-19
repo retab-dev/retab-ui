@@ -1,32 +1,36 @@
-import type { LayoutItem, LayoutLevel, LayoutPage } from "./layout-blocks-types"
+import type {
+  LayoutItem,
+  LayoutLevel,
+  LayoutPage,
+} from "./layout-blocks-types";
 
 export type LayoutItemIndex = {
-  itemsById: Map<string, LayoutItem>
-  itemsByPage: Map<number, LayoutItem[]>
-  itemsByLevel: Map<LayoutLevel, LayoutItem[]>
-  pagesByNumber: Map<number, LayoutPage>
-}
+  itemsById: Map<string, LayoutItem>;
+  itemsByPage: Map<number, LayoutItem[]>;
+  itemsByLevel: Map<LayoutLevel, LayoutItem[]>;
+  pagesByNumber: Map<number, LayoutPage>;
+};
 
 export function createLayoutItemIndex({
   items,
   pages,
 }: {
-  items: LayoutItem[]
-  pages: LayoutPage[]
+  items: LayoutItem[];
+  pages: LayoutPage[];
 }): LayoutItemIndex {
-  const itemsById = new Map<string, LayoutItem>()
-  const itemsByPage = new Map<number, LayoutItem[]>()
-  const itemsByLevel = new Map<LayoutLevel, LayoutItem[]>()
-  const pagesByNumber = new Map<number, LayoutPage>()
+  const itemsById = new Map<string, LayoutItem>();
+  const itemsByPage = new Map<number, LayoutItem[]>();
+  const itemsByLevel = new Map<LayoutLevel, LayoutItem[]>();
+  const pagesByNumber = new Map<number, LayoutPage>();
 
   for (const page of pages) {
-    pagesByNumber.set(page.pageNumber, page)
+    pagesByNumber.set(page.pageNumber, page);
   }
 
   for (const item of items) {
-    itemsById.set(item.id, item)
-    appendMapValue(itemsByPage, item.pageNumber, item)
-    appendMapValue(itemsByLevel, item.level, item)
+    itemsById.set(item.id, item);
+    appendMapValue(itemsByPage, item.pageNumber, item);
+    appendMapValue(itemsByLevel, item.level, item);
   }
 
   return {
@@ -34,20 +38,20 @@ export function createLayoutItemIndex({
     itemsByPage,
     itemsByLevel,
     pagesByNumber,
-  }
+  };
 }
 
 function appendMapValue<Key, Value>(
   map: Map<Key, Value[]>,
   key: Key,
-  value: Value
+  value: Value,
 ) {
-  const values = map.get(key)
+  const values = map.get(key);
   if (values) {
-    values.push(value)
-    return
+    values.push(value);
+    return;
   }
-  map.set(key, [value])
+  map.set(key, [value]);
 }
 
 export function getLayoutItemsForPage({
@@ -55,12 +59,12 @@ export function getLayoutItemsForPage({
   pageNumber,
   levels,
 }: {
-  index: LayoutItemIndex
-  pageNumber: number
-  levels?: readonly LayoutLevel[]
+  index: LayoutItemIndex;
+  pageNumber: number;
+  levels?: readonly LayoutLevel[];
 }) {
-  const pageItems = index.itemsByPage.get(pageNumber) ?? []
-  if (!levels?.length) return pageItems
-  const levelSet = new Set(levels)
-  return pageItems.filter((item) => levelSet.has(item.level))
+  const pageItems = index.itemsByPage.get(pageNumber) ?? [];
+  if (!levels?.length) return pageItems;
+  const levelSet = new Set(levels);
+  return pageItems.filter((item) => levelSet.has(item.level));
 }

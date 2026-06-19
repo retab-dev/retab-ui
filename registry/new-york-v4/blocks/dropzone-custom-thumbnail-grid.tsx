@@ -1,21 +1,21 @@
-"use client"
+"use client";
 
-import { Upload } from "lucide-react"
+import { Upload } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { useDropzone } from "@/components/ui/dropzone"
-import { FileThumbnail } from "@/components/ui/file-thumbnail"
+import { cn } from "@/lib/utils";
+import { useDropzone } from "@/components/ui/dropzone";
+import { FileThumbnail } from "@/components/ui/file-thumbnail";
 
 import {
   RejectionRows,
   type DropzoneExampleProps,
-} from "./dropzone-example-shared"
+} from "./dropzone-example-shared";
 
 export function CustomThumbnailGrid({ className }: DropzoneExampleProps) {
   const dropzone = useDropzone({
     accept: ".pdf,.png,.jpg,.jpeg,image/*,application/pdf",
     multiple: true,
-  })
+  });
 
   return (
     <section
@@ -23,14 +23,14 @@ export function CustomThumbnailGrid({ className }: DropzoneExampleProps) {
         className: cn(
           "rounded-lg border bg-background p-4 transition-colors",
           dropzone.isDragging && "border-foreground/40 bg-accent/35",
-          className
+          className,
         ),
       })}
     >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="text-sm font-medium">Custom thumbnail grid</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             Direct useDropzone composition with FileThumbnail.
           </div>
         </div>
@@ -46,14 +46,14 @@ export function CustomThumbnailGrid({ className }: DropzoneExampleProps) {
         </button>
       </div>
       <input {...dropzone.getInputProps({ className: "hidden" })} />
-      <div className="grid min-h-36 grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-3 rounded-md border border-dashed bg-muted/20 p-3">
+      <div className="bg-muted/20 grid min-h-36 grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-3 rounded-md border border-dashed p-3">
         {dropzone.files.length ? (
           dropzone.files.map((item) => (
             <div key={item.id} className="min-w-0 text-center">
               <FileThumbnail
                 file={item.file}
                 previewAspectRatio={1}
-                className="mx-auto size-16 bg-background shadow-sm"
+                className="bg-background mx-auto size-16 shadow-sm"
               />
               <div className="mt-2 line-clamp-2 text-xs leading-tight break-words">
                 {item.file.name}
@@ -61,12 +61,12 @@ export function CustomThumbnailGrid({ className }: DropzoneExampleProps) {
             </div>
           ))
         ) : (
-          <div className="col-span-full grid place-items-center text-xs text-muted-foreground">
+          <div className="text-muted-foreground col-span-full grid place-items-center text-xs">
             Drop PDFs or images here.
           </div>
         )}
       </div>
       <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </section>
-  )
+  );
 }

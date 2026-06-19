@@ -1,25 +1,25 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Plus, X } from "lucide-react"
-import { useFieldArray, useFormContext, useWatch } from "react-hook-form"
+import * as React from "react";
+import { Plus, X } from "lucide-react";
+import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { DisclosureHeader } from "@/components/json-form/disclosure"
-import type { RenderJsonFormField } from "@/components/json-form/field-renderer"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { DisclosureHeader } from "@/components/json-form/disclosure";
+import type { RenderJsonFormField } from "@/components/json-form/field-renderer";
 import {
   AUTO_COLLAPSE_DEPTH,
   CARD_VIRTUALIZE_THRESHOLD,
   LONG_ARRAY_THRESHOLD,
-} from "@/components/json-form/json-form-constants"
-import { useJsonFormStartsOpen } from "@/components/json-form/open-paths"
+} from "@/components/json-form/json-form-constants";
+import { useJsonFormStartsOpen } from "@/components/json-form/open-paths";
 import {
   emptyArrayItemFormValue,
   joinJsonFormPath,
   joinJsonSourcePath,
-} from "@/components/json-form/path-codec"
-import type { JsonFormTextInput } from "@/components/json-form/scalar-control"
+} from "@/components/json-form/path-codec";
+import type { JsonFormTextInput } from "@/components/json-form/scalar-control";
 import {
   arrayItemSchemaAt,
   canAppendArrayItem,
@@ -27,9 +27,9 @@ import {
   hasDynamicObjectProperties,
   scalarObjectColumns,
   type Schema,
-} from "@/components/json-form/schema-model"
-import { ArrayTable } from "@/components/json-form/table/array-table"
-import { VirtualList } from "@/components/json-form/virtual-list"
+} from "@/components/json-form/schema-model";
+import { ArrayTable } from "@/components/json-form/table/array-table";
+import { VirtualList } from "@/components/json-form/virtual-list";
 
 export function JsonFormArray({
   name,
@@ -41,79 +41,83 @@ export function JsonFormArray({
   depth,
   renderField,
 }: {
-  name: string
-  sourcePath: string
-  schema: Schema
-  label: string
-  textInput?: JsonFormTextInput
-  className?: string
-  depth: number
-  renderField: RenderJsonFormField
+  name: string;
+  sourcePath: string;
+  schema: Schema;
+  label: string;
+  textInput?: JsonFormTextInput;
+  className?: string;
+  depth: number;
+  renderField: RenderJsonFormField;
 }) {
-  const { control, getValues, setValue, unregister } = useFormContext()
-  const { fields, append, remove } = useFieldArray({ control, name })
-  const arrayValue = useWatch({ control, name })
+  const { control, getValues, setValue, unregister } = useFormContext();
+  const { fields, append, remove } = useFieldArray({ control, name });
+  const arrayValue = useWatch({ control, name });
   const renderedFields = React.useMemo(() => {
-    if (!Array.isArray(arrayValue)) return fields
+    if (!Array.isArray(arrayValue)) return fields;
     return arrayValue.map((_, index) => ({
       id: fields[index]?.id ?? `${name}.${index}`,
-    }))
-  }, [arrayValue, fields, name])
-  const itemSchema = React.useMemo(() => arrayItemSchemaAt(schema, 0), [schema])
-  const isTupleArray = Array.isArray(schema.items)
+    }));
+  }, [arrayValue, fields, name]);
+  const itemSchema = React.useMemo(
+    () => arrayItemSchemaAt(schema, 0),
+    [schema],
+  );
+  const isTupleArray = Array.isArray(schema.items);
   const hasDynamicItemProperties = React.useMemo(
     () => hasDynamicObjectProperties(itemSchema),
-    [itemSchema]
-  )
+    [itemSchema],
+  );
   const itemSchemaForIndex = React.useCallback(
     (index: number) => arrayItemSchemaAt(schema, index),
-    [schema]
-  )
+    [schema],
+  );
 
   const columns = React.useMemo(
     () =>
       isTupleArray || hasDynamicItemProperties
         ? null
         : scalarObjectColumns(itemSchema),
-    [hasDynamicItemProperties, isTupleArray, itemSchema]
-  )
+    [hasDynamicItemProperties, isTupleArray, itemSchema],
+  );
 
   const startsOpen = useJsonFormStartsOpen(
     sourcePath,
-    depth < AUTO_COLLAPSE_DEPTH && renderedFields.length <= LONG_ARRAY_THRESHOLD
-  )
-  const [open, setOpen] = React.useState(startsOpen)
-  const canAddItem = canAppendArrayItem(schema, renderedFields.length)
-  const canRemoveItem = canRemoveArrayItem(schema, renderedFields.length)
+    depth < AUTO_COLLAPSE_DEPTH &&
+      renderedFields.length <= LONG_ARRAY_THRESHOLD,
+  );
+  const [open, setOpen] = React.useState(startsOpen);
+  const canAddItem = canAppendArrayItem(schema, renderedFields.length);
+  const canRemoveItem = canRemoveArrayItem(schema, renderedFields.length);
 
   const add = React.useCallback(() => {
-    const current = getValues(name)
+    const current = getValues(name);
     const nextIndex = Array.isArray(current)
       ? current.length
-      : renderedFields.length
-    if (!canAppendArrayItem(schema, nextIndex)) return
-    const nextSchema = arrayItemSchemaAt(schema, nextIndex)
-    const nextItem = emptyArrayItemFormValue(nextSchema)
-    append(nextItem as never)
+      : renderedFields.length;
+    if (!canAppendArrayItem(schema, nextIndex)) return;
+    const nextSchema = arrayItemSchemaAt(schema, nextIndex);
+    const nextItem = emptyArrayItemFormValue(nextSchema);
+    append(nextItem as never);
     if (Array.isArray(current)) {
-      setValue(name, [...current, nextItem], { shouldDirty: true })
+      setValue(name, [...current, nextItem], { shouldDirty: true });
     }
-    setOpen(true)
-  }, [append, getValues, name, renderedFields.length, schema, setValue])
+    setOpen(true);
+  }, [append, getValues, name, renderedFields.length, schema, setValue]);
   const removeAt = React.useCallback(
     (index: number) => {
-      const current = getValues(name)
+      const current = getValues(name);
       if (Array.isArray(current)) {
-        if (!canRemoveArrayItem(schema, current.length)) return
-        const next = current.slice()
-        next.splice(index, 1)
-        remove(index)
-        setValue(name, next, { shouldDirty: true })
-        unregister(`${name}.${next.length}`)
-        return
+        if (!canRemoveArrayItem(schema, current.length)) return;
+        const next = current.slice();
+        next.splice(index, 1);
+        remove(index);
+        setValue(name, next, { shouldDirty: true });
+        unregister(`${name}.${next.length}`);
+        return;
       }
-      if (!canRemoveArrayItem(schema, renderedFields.length)) return
-      remove(index)
+      if (!canRemoveArrayItem(schema, renderedFields.length)) return;
+      remove(index);
     },
     [
       getValues,
@@ -123,14 +127,14 @@ export function JsonFormArray({
       schema,
       setValue,
       unregister,
-    ]
-  )
+    ],
+  );
 
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-lg border bg-background shadow-sm",
-        className
+        "bg-background overflow-hidden rounded-lg border shadow-sm",
+        className,
       )}
     >
       <DisclosureHeader
@@ -155,7 +159,7 @@ export function JsonFormArray({
       {open ? (
         <div className={cn("border-t", columns ? "" : "p-3")}>
           {renderedFields.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No items.</p>
+            <p className="text-muted-foreground text-sm">No items.</p>
           ) : columns ? (
             <ArrayTable
               name={name}
@@ -182,20 +186,20 @@ export function JsonFormArray({
         </div>
       ) : null}
     </div>
-  )
+  );
 }
 
 interface ArrayCardsProps {
-  name: string
-  sourcePath: string
-  fields: { id: string }[]
-  remove: (index: number) => void
-  canRemove: boolean
-  itemSchemaForIndex: (index: number) => Schema
-  label: string
-  textInput?: JsonFormTextInput
-  depth: number
-  renderField: RenderJsonFormField
+  name: string;
+  sourcePath: string;
+  fields: { id: string }[];
+  remove: (index: number) => void;
+  canRemove: boolean;
+  itemSchemaForIndex: (index: number) => Schema;
+  label: string;
+  textInput?: JsonFormTextInput;
+  depth: number;
+  renderField: RenderJsonFormField;
 }
 
 function ArrayCards({
@@ -235,8 +239,8 @@ function ArrayCards({
       textInput,
       depth,
       renderField,
-    ]
-  )
+    ],
+  );
 
   if (fields.length > CARD_VIRTUALIZE_THRESHOLD) {
     return (
@@ -246,7 +250,7 @@ function ArrayCards({
         renderItem={renderCard}
         gap={8}
       />
-    )
+    );
   }
 
   return (
@@ -255,7 +259,7 @@ function ArrayCards({
         <React.Fragment key={entry.id}>{renderCard(index)}</React.Fragment>
       ))}
     </div>
-  )
+  );
 }
 
 const ArrayCard = React.memo(function ArrayCard({
@@ -270,16 +274,16 @@ const ArrayCard = React.memo(function ArrayCard({
   depth,
   renderField,
 }: {
-  name: string
-  sourcePath: string
-  index: number
-  remove: (index: number) => void
-  canRemove: boolean
-  itemSchema: Schema
-  label: string
-  textInput?: JsonFormTextInput
-  depth: number
-  renderField: RenderJsonFormField
+  name: string;
+  sourcePath: string;
+  index: number;
+  remove: (index: number) => void;
+  canRemove: boolean;
+  itemSchema: Schema;
+  label: string;
+  textInput?: JsonFormTextInput;
+  depth: number;
+  renderField: RenderJsonFormField;
 }) {
   return (
     <div className="flex items-start gap-2">
@@ -297,7 +301,7 @@ const ArrayCard = React.memo(function ArrayCard({
         type="button"
         size="icon"
         variant="ghost"
-        className="mt-1 border-transparent text-muted-foreground hover:border-border hover:bg-transparent hover:text-destructive"
+        className="text-muted-foreground hover:border-border hover:text-destructive mt-1 border-transparent hover:bg-transparent"
         onClick={() => remove(index)}
         aria-label="Remove item"
         disabled={!canRemove}
@@ -305,5 +309,5 @@ const ArrayCard = React.memo(function ArrayCard({
         <X className="size-4" />
       </Button>
     </div>
-  )
-})
+  );
+});

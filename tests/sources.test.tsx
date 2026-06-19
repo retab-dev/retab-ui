@@ -1,56 +1,58 @@
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
+
 // @vitest-environment jsdom
 
-import * as React from "react"
+import * as React from "react";
 import {
   cleanup,
   fireEvent,
   render,
   screen,
   waitFor,
-} from "@testing-library/react"
-import type { JSONSchema7 } from "json-schema"
-import { useForm } from "react-hook-form"
-import { afterEach, describe, expect, it, vi } from "vitest"
+} from "@testing-library/react";
+import type { JSONSchema7 } from "json-schema";
+import { useForm } from "react-hook-form";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { Source, SourceAnchor, SourceMap } from "@/lib/document-source"
+import type { Source, SourceAnchor, SourceMap } from "@/lib/document-source";
 import {
   createSegmentedDocumentModel,
   type SegmentedDocumentModel,
-} from "@/components/ui/segmented-document-model"
+} from "@/components/ui/segmented-document-model";
 import {
   SegmentedDocumentProvider,
   useSegmentedDocumentViewport,
-} from "@/components/ui/segmented-document-provider"
-import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
+} from "@/components/ui/segmented-document-provider";
+import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link";
 import {
   createSourcesSegmentedDocumentModel,
   sourceToSegmentAnchor,
-} from "@/components/ui/source-segmented-document-model"
-import { useSegmentedPdfSourceOverlay } from "@/components/ui/source-segmented-document-overlays"
-import { JsonForm } from "@/components/json-form/json-form"
-import csvSample from "@/components/viewers/sample-data/csv-sources.json"
-import docxSample from "@/components/viewers/sample-data/docx-sources.json"
-import imageSample from "@/components/viewers/sample-data/image-sources.json"
-import jsonFormSourcesSample from "@/components/viewers/sample-data/json-form-sources.json"
-import textSample from "@/components/viewers/sample-data/text-sources.json"
-import xlsxSample from "@/components/viewers/sample-data/xlsx-sources.json"
+} from "@/components/ui/source-segmented-document-model";
+import { useSegmentedPdfSourceOverlay } from "@/components/ui/source-segmented-document-overlays";
+import { JsonForm } from "@/components/json-form/json-form";
+import csvSample from "@/components/viewers/sample-data/csv-sources.json";
+import docxSample from "@/components/viewers/sample-data/docx-sources.json";
+import imageSample from "@/components/viewers/sample-data/image-sources.json";
+import jsonFormSourcesSample from "@/components/viewers/sample-data/json-form-sources.json";
+import textSample from "@/components/viewers/sample-data/text-sources.json";
+import xlsxSample from "@/components/viewers/sample-data/xlsx-sources.json";
 import {
   extractionSourcesToSourceMap,
   sourceLocationKey,
-} from "@/registry/new-york-v4/lib/document-source"
+} from "@/registry/new-york-v4/lib/document-source";
 import {
   columnLetterToIndex,
   csvAnchorToTarget,
   sourceToCsvCell,
   useCsvSourceTarget,
-} from "@/registry/new-york-v4/ui/csv-source"
-import type { CsvViewerHandle } from "@/registry/new-york-v4/ui/csv-viewer"
+} from "@/registry/new-york-v4/ui/csv-source";
+import type { CsvViewerHandle } from "@/registry/new-york-v4/ui/csv-viewer";
 import {
   docxAnchorToTarget,
   sourceToDocxHighlight,
   useDocxSourceTarget,
-} from "@/registry/new-york-v4/ui/docx-source"
-import type { DocxViewerHandle } from "@/registry/new-york-v4/ui/docx-viewer"
+} from "@/registry/new-york-v4/ui/docx-source";
+import type { DocxViewerHandle } from "@/registry/new-york-v4/ui/docx-viewer";
 import {
   FileViewer,
   FileViewerBody,
@@ -61,47 +63,47 @@ import {
   FileViewerSidebarTrigger,
   FileViewerSurface,
   FileViewerTitle,
-} from "@/registry/new-york-v4/ui/file-viewer"
+} from "@/registry/new-york-v4/ui/file-viewer";
 import {
   imageAnchorToTarget,
   renderImageSourceOverlay,
   rotateImageArea,
   useImageSourceTarget,
-} from "@/registry/new-york-v4/ui/image-source"
-import type { ImageViewerHandle } from "@/registry/new-york-v4/ui/image-viewer-types"
+} from "@/registry/new-york-v4/ui/image-source";
+import type { ImageViewerHandle } from "@/registry/new-york-v4/ui/image-viewer-types";
 import {
   pdfAnchorToTarget,
   renderPdfSourceOverlay,
   usePdfSourceTarget,
-} from "@/registry/new-york-v4/ui/pdf-source"
-import type { PdfViewerHandle } from "@/registry/new-york-v4/ui/pdf-viewer"
-import { sourceToDocumentAnchor } from "@/registry/new-york-v4/ui/source-anchor"
+} from "@/registry/new-york-v4/ui/pdf-source";
+import type { PdfViewerHandle } from "@/registry/new-york-v4/ui/pdf-viewer";
+import { sourceToDocumentAnchor } from "@/registry/new-york-v4/ui/source-anchor";
 import {
   sourceFieldsToEvidenceModel,
   sourceMapToEvidenceModel,
   sourceToDocumentAnchor as sourceToEvidenceAnchor,
-} from "@/registry/new-york-v4/ui/source-evidence"
-import { SourceFieldList } from "@/registry/new-york-v4/ui/source-field-list"
-import { SourceIndicator } from "@/registry/new-york-v4/ui/source-indicator"
+} from "@/registry/new-york-v4/ui/source-evidence";
+import { SourceFieldList } from "@/registry/new-york-v4/ui/source-field-list";
+import { SourceIndicator } from "@/registry/new-york-v4/ui/source-indicator";
 import {
   sourceToTextHighlight,
   textAnchorToTarget,
   useTextSourceTarget,
-} from "@/registry/new-york-v4/ui/text-source"
-import type { TextViewerHandle } from "@/registry/new-york-v4/ui/text-viewer"
+} from "@/registry/new-york-v4/ui/text-source";
+import type { TextViewerHandle } from "@/registry/new-york-v4/ui/text-viewer";
 import {
   sourceToXlsxCell,
   spreadsheetColumnToIndex,
   useXlsxSourceTarget,
   xlsxAnchorToTarget,
-} from "@/registry/new-york-v4/ui/xlsx-source"
-import type { XlsxViewerHandle } from "@/registry/new-york-v4/ui/xlsx-viewer"
+} from "@/registry/new-york-v4/ui/xlsx-source";
+import type { XlsxViewerHandle } from "@/registry/new-york-v4/ui/xlsx-viewer";
 
 vi.mock("@/components/ui/pdf-viewer", () => ({
   PdfHighlight: ({
     area,
   }: {
-    area: { left: number; top: number; width: number; height: number }
+    area: { left: number; top: number; width: number; height: number };
   }) => (
     <div
       data-testid="pdf-highlight"
@@ -113,15 +115,15 @@ vi.mock("@/components/ui/pdf-viewer", () => ({
       }}
     />
   ),
-}))
+}));
 
 afterEach(() => {
-  cleanup()
-  vi.restoreAllMocks()
-})
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 function source(anchor: SourceAnchor, content = "quoted content"): Source {
-  return { content, anchor }
+  return { content, anchor };
 }
 
 const pdfSource = source({
@@ -131,7 +133,7 @@ const pdfSource = source({
   top: 0.2,
   width: 0.3,
   height: 0.4,
-})
+});
 
 const imageSource = source({
   kind: "image_bbox",
@@ -140,14 +142,14 @@ const imageSource = source({
   top: 0.25,
   width: 0.35,
   height: 0.45,
-})
+});
 
 const csvSource = source({
   kind: "csv_cell",
   row: 4,
   column: "AA",
   coordinate: "AA4",
-})
+});
 
 const xlsxSource = source({
   kind: "spreadsheet_cell",
@@ -156,13 +158,13 @@ const xlsxSource = source({
   row: 8,
   column: "AZ",
   coordinate: "AZ8",
-})
+});
 
 const textSource = source({
   kind: "text_span",
   line_start: 12,
   line_end: 14,
-})
+});
 
 const docxTextSource = source(
   {
@@ -171,23 +173,23 @@ const docxTextSource = source(
     char_start: 3,
     char_end: 18,
   },
-  "ACME Corp"
-)
+  "ACME Corp",
+);
 
 const docxCellSource = source({
   kind: "docx_table_cell",
   table: 1,
   row: 2,
   column: 3,
-})
+});
 
-const oversizedColumn = "A".repeat(1000)
+const oversizedColumn = "A".repeat(1000);
 
 interface SampleSourceField {
-  key: string
-  label: string
-  value: unknown
-  source: Source
+  key: string;
+  label: string;
+  value: unknown;
+  source: Source;
 }
 
 const sourceFieldSamples = [
@@ -196,14 +198,14 @@ const sourceFieldSamples = [
   { name: "image", fields: imageSample as SampleSourceField[] },
   { name: "text", fields: textSample as SampleSourceField[] },
   { name: "xlsx", fields: xlsxSample as SampleSourceField[] },
-]
+];
 
 function SegmentedFieldLinkProbe({
   initialSourcePath,
 }: {
-  initialSourcePath: string | null
+  initialSourcePath: string | null;
 }) {
-  const link = useSegmentedSourceFieldLink({ initialSourcePath })
+  const link = useSegmentedSourceFieldLink({ initialSourcePath });
 
   return (
     <output
@@ -213,16 +215,16 @@ function SegmentedFieldLinkProbe({
     >
       {link.activeSourcePath ?? "none"}
     </output>
-  )
+  );
 }
 
 function SegmentedPdfOverlayProbe({
   initialSourcePath,
 }: {
-  initialSourcePath: string
+  initialSourcePath: string;
 }) {
-  const link = useSegmentedSourceFieldLink({ initialSourcePath })
-  const renderOverlay = useSegmentedPdfSourceOverlay(link)
+  const link = useSegmentedSourceFieldLink({ initialSourcePath });
+  const renderOverlay = useSegmentedPdfSourceOverlay(link);
 
   return (
     <div
@@ -237,7 +239,7 @@ function SegmentedPdfOverlayProbe({
         rotation: 0,
       })}
     </div>
-  )
+  );
 }
 
 function SegmentedFieldLinkNavigationProbe({
@@ -245,26 +247,26 @@ function SegmentedFieldLinkNavigationProbe({
 }: {
   onScroll: (
     target: {
-      pageNumber: number
-      top: number
-      left?: number
-      width?: number
-      height?: number
+      pageNumber: number;
+      top: number;
+      left?: number;
+      width?: number;
+      height?: number;
     },
-    options?: ScrollToOptions
-  ) => void
+    options?: ScrollToOptions,
+  ) => void;
 }) {
-  const link = useSegmentedSourceFieldLink()
-  const viewport = useSegmentedDocumentViewport()
+  const link = useSegmentedSourceFieldLink();
+  const viewport = useSegmentedDocumentViewport();
 
   React.useEffect(() => {
     viewport.documentHandlers.setDocumentHandle({
       scrollToPage: () => {},
       scrollToPageArea: onScroll,
-    })
+    });
 
-    return () => viewport.documentHandlers.setDocumentHandle(null)
-  }, [onScroll, viewport.documentHandlers])
+    return () => viewport.documentHandlers.setDocumentHandle(null);
+  }, [onScroll, viewport.documentHandlers]);
 
   return (
     <>
@@ -283,7 +285,7 @@ function SegmentedFieldLinkNavigationProbe({
         {link.activeSourcePath ?? "none"}
       </output>
     </>
-  )
+  );
 }
 
 function SourcesViewerSidebarProbe() {
@@ -317,20 +319,20 @@ function SourcesViewerSidebarProbe() {
         </FileViewerSidebar>
       </FileViewerBody>
     </FileViewer>
-  )
+  );
 }
 
 function SourceLinkedJsonFormProbe({
   onScroll,
 }: {
-  onScroll: (source: Source, options: { behavior: ScrollBehavior }) => void
+  onScroll: (source: Source, options: { behavior: ScrollBehavior }) => void;
 }) {
   const form = useForm<Record<string, unknown>>({
     defaultValues: {
       title: "An Image is Worth 16x16 Words",
       missing: "No source",
     },
-  })
+  });
   const schema: JSONSchema7 = {
     type: "object",
     required: ["title"],
@@ -338,35 +340,35 @@ function SourceLinkedJsonFormProbe({
       title: { type: "string", title: "Title" },
       missing: { type: "string", title: "Missing" },
     },
-  }
+  };
   const sources: SourceMap = React.useMemo(
     () => ({
       title: imageSource,
     }),
-    []
-  )
-  const link = useSegmentedSourceFieldLink()
+    [],
+  );
+  const link = useSegmentedSourceFieldLink();
   const scrollToPath = React.useCallback(
     (path: string, behavior: ScrollBehavior) => {
-      const fieldSource = sources[path]
-      if (fieldSource) onScroll(fieldSource, { behavior })
+      const fieldSource = sources[path];
+      if (fieldSource) onScroll(fieldSource, { behavior });
     },
-    [onScroll, sources]
-  )
+    [onScroll, sources],
+  );
   const sourceLink = React.useMemo(
     () => ({
       ...link,
       onSourceHover: (path: string | null) => {
-        link.onSourceHover(path)
-        if (path) scrollToPath(path, "auto")
+        link.onSourceHover(path);
+        if (path) scrollToPath(path, "auto");
       },
       selectSourcePath: (path: string) => {
-        link.selectSourcePath?.(path)
-        scrollToPath(path, "smooth")
+        link.selectSourcePath?.(path);
+        scrollToPath(path, "smooth");
       },
     }),
-    [link, scrollToPath]
-  )
+    [link, scrollToPath],
+  );
 
   return (
     <>
@@ -376,31 +378,31 @@ function SourceLinkedJsonFormProbe({
       />
       <JsonForm form={form} schema={schema} sourceLink={sourceLink} />
     </>
-  )
+  );
 }
 
 function expectSourceToResolve(source: Source) {
   switch (source.anchor.kind) {
     case "pdf_bbox":
-      expect(pdfAnchorToTarget(source.anchor)).toBeDefined()
-      expect(imageAnchorToTarget(source.anchor)).toBeDefined()
-      return
+      expect(pdfAnchorToTarget(source.anchor)).toBeDefined();
+      expect(imageAnchorToTarget(source.anchor)).toBeDefined();
+      return;
     case "image_bbox":
-      expect(imageAnchorToTarget(source.anchor)).toBeDefined()
-      return
+      expect(imageAnchorToTarget(source.anchor)).toBeDefined();
+      return;
     case "csv_cell":
-      expect(csvAnchorToTarget(source.anchor)).not.toBeNull()
-      return
+      expect(csvAnchorToTarget(source.anchor)).not.toBeNull();
+      return;
     case "spreadsheet_cell":
-      expect(xlsxAnchorToTarget(source.anchor)).toBeDefined()
-      return
+      expect(xlsxAnchorToTarget(source.anchor)).toBeDefined();
+      return;
     case "docx_text_span":
     case "docx_table_cell":
-      expect(docxAnchorToTarget(source.anchor, source)).not.toBeNull()
-      return
+      expect(docxAnchorToTarget(source.anchor, source)).not.toBeNull();
+      return;
     case "text_span":
-      expect(textAnchorToTarget(source.anchor)).toBeDefined()
-      return
+      expect(textAnchorToTarget(source.anchor)).toBeDefined();
+      return;
   }
 }
 
@@ -416,19 +418,19 @@ describe("document source model", () => {
           { amount: { value: 1200, source: csvSource } },
           { amount: { value: 900, source: xlsxSource } },
         ],
-      })
+      }),
     ).toEqual({
       "owner.name": pdfSource,
       "line_items.0.amount": csvSource,
       "line_items.1.amount": xlsxSource,
-    })
-  })
+    });
+  });
 
   it("supports a root scalar source with the empty path key", () => {
     expect(
-      extractionSourcesToSourceMap({ value: "standalone", source: textSource })
-    ).toEqual({ "": textSource })
-  })
+      extractionSourcesToSourceMap({ value: "standalone", source: textSource }),
+    ).toEqual({ "": textSource });
+  });
 
   it("descends through unsourced value wrappers around nested objects", () => {
     expect(
@@ -446,12 +448,12 @@ describe("document source model", () => {
           },
         },
         source: null,
-      })
+      }),
     ).toEqual({
       "owner.name": pdfSource,
       "items.0.amount": csvSource,
-    })
-  })
+    });
+  });
 
   it("does not mistake schema fields named value and source for a source wrapper", () => {
     expect(
@@ -462,14 +464,14 @@ describe("document source model", () => {
           value: { value: "nested value", source: textSource },
           source: { value: "nested system", source: docxTextSource },
         },
-      })
+      }),
     ).toEqual({
       value: pdfSource,
       source: csvSource,
       "metadata.value": textSource,
       "metadata.source": docxTextSource,
-    })
-  })
+    });
+  });
 
   it("skips malformed source leaves instead of leaking invalid runtime sources", () => {
     expect(
@@ -494,11 +496,11 @@ describe("document source model", () => {
           value: "bad",
           source: "not a source",
         },
-      })
+      }),
     ).toEqual({
       valid: pdfSource,
-    })
-  })
+    });
+  });
 
   it("skips source leaves with invalid known anchor payloads", () => {
     expect(
@@ -571,22 +573,22 @@ describe("document source model", () => {
             anchor: { kind: "text_span", line_start: 2, line_end: 1 },
           },
         },
-      })
+      }),
     ).toEqual({
       valid_pdf: pdfSource,
-    })
-  })
+    });
+  });
 
   it("builds stable location keys from the full page and box geometry", () => {
     expect(
       sourceLocationKey({
         page: 2,
         area: { left: 10, top: 20, width: 30, height: 40 },
-      })
-    ).toBe("2:10:20:30:40")
-    expect(sourceLocationKey(undefined)).toBeNull()
-  })
-})
+      }),
+    ).toBe("2:10:20:30:40");
+    expect(sourceLocationKey(undefined)).toBeNull();
+  });
+});
 
 describe("source evidence projection", () => {
   it("converts sources to document anchors without viewer adapters", () => {
@@ -597,7 +599,7 @@ describe("source evidence projection", () => {
       top: 20,
       width: 30,
       height: 40,
-    })
+    });
     expect(sourceToDocumentAnchor(imageSource)).toEqual({
       kind: "image-area",
       frameNumber: 2,
@@ -605,11 +607,13 @@ describe("source evidence projection", () => {
       top: 25,
       width: 35,
       height: 45,
-    })
+    });
     expect(
-      sourceToDocumentAnchor(source({ kind: "csv_cell", row: -1, column: "A" }))
-    ).toBeNull()
-  })
+      sourceToDocumentAnchor(
+        source({ kind: "csv_cell", row: -1, column: "A" }),
+      ),
+    ).toBeNull();
+  });
 
   it("projects every source adapter kind to a document anchor", () => {
     expect(sourceToEvidenceAnchor(pdfSource)).toEqual({
@@ -622,7 +626,7 @@ describe("source evidence projection", () => {
         width: 30,
         height: 40,
       },
-    })
+    });
     expect(sourceToEvidenceAnchor(imageSource)).toEqual({
       status: "resolved",
       anchor: {
@@ -633,11 +637,11 @@ describe("source evidence projection", () => {
         width: 35,
         height: 45,
       },
-    })
+    });
     expect(sourceToEvidenceAnchor(csvSource)).toEqual({
       status: "resolved",
       anchor: { kind: "csv-cell", rowIndex: 3, columnIndex: 26 },
-    })
+    });
     expect(sourceToEvidenceAnchor(xlsxSource)).toEqual({
       status: "resolved",
       anchor: {
@@ -646,32 +650,32 @@ describe("source evidence projection", () => {
         rowIndex: 7,
         columnIndex: 51,
       },
-    })
+    });
     expect(sourceToEvidenceAnchor(textSource)).toEqual({
       status: "resolved",
       anchor: { kind: "text-range", startLine: 12, endLine: 14 },
-    })
+    });
     expect(sourceToEvidenceAnchor(docxCellSource)).toEqual({
       status: "resolved",
       anchor: {
         kind: "docx-target",
         target: { kind: "cell", table: 1, row: 2, column: 3 },
       },
-    })
-  })
+    });
+  });
 
   it("keeps missing and invalid evidence anchors distinct", () => {
-    const missing = sourceToEvidenceAnchor(null)
+    const missing = sourceToEvidenceAnchor(null);
     const invalid = sourceToEvidenceAnchor(
-      source({ kind: "csv_cell", row: -1, column: "A" })
-    )
+      source({ kind: "csv_cell", row: -1, column: "A" }),
+    );
 
-    expect(missing).toEqual({ status: "missing" })
+    expect(missing).toEqual({ status: "missing" });
     expect(invalid).toEqual({
       status: "invalid",
       reason: "Unsupported or invalid csv_cell",
-    })
-  })
+    });
+  });
 
   it("projects source fields to evidence rows", () => {
     const model = sourceFieldsToEvidenceModel([
@@ -688,7 +692,7 @@ describe("source evidence projection", () => {
         value: "Morgan Lee",
         source: null,
       },
-    ])
+    ]);
 
     expect(model.evidenceItems).toMatchObject([
       {
@@ -710,8 +714,8 @@ describe("source evidence projection", () => {
         },
         anchor: { status: "missing" },
       },
-    ])
-  })
+    ]);
+  });
 
   it("projects source maps with dotted and indexed paths without changing ids", () => {
     const model = sourceMapToEvidenceModel({
@@ -729,21 +733,21 @@ describe("source evidence projection", () => {
           owner: { title: "Owner", type: "object" },
         },
       },
-    })
+    });
 
     expect(model.evidenceItems.map((item) => item.id)).toEqual([
       "owner.name",
       "line_items.0.amount",
-    ])
+    ]);
     expect(model.evidenceItems.map((item) => item.payload.value)).toEqual([
       "ACME",
       1200,
-    ])
+    ]);
     expect(model.evidenceItems.map((item) => item.payload.label)).toEqual([
       "owner.name",
       "line_items.0.amount",
-    ])
-  })
+    ]);
+  });
 
   it("projects page-local sources to segmented document segments and anchors", () => {
     const model = createSourcesSegmentedDocumentModel([
@@ -762,7 +766,7 @@ describe("source evidence projection", () => {
         label: "Amount",
         source: csvSource,
       },
-    ])
+    ]);
 
     expect(model.segments).toMatchObject([
       {
@@ -783,7 +787,7 @@ describe("source evidence projection", () => {
         pages: [],
         sourceId: "line_items.0.amount",
       },
-    ])
+    ]);
     expect(model.anchors).toEqual([
       {
         id: "source:invoice.total:0:anchor",
@@ -797,9 +801,9 @@ describe("source evidence projection", () => {
         pageNumber: 2,
         bounds: { x: 0.15, y: 0.25, width: 0.35, height: 0.45 },
       },
-    ])
-    expect(model.pages.map((page) => page.pageNumber)).toEqual([1, 2, 3])
-  })
+    ]);
+    expect(model.pages.map((page) => page.pageNumber)).toEqual([1, 2, 3]);
+  });
 
   it("keeps invalid and non-page-local source anchors out of segmented anchors", () => {
     for (const [label, nonPageSource] of [
@@ -809,7 +813,7 @@ describe("source evidence projection", () => {
       ["docx-text", docxTextSource],
       ["docx-cell", docxCellSource],
     ] as const) {
-      expect(sourceToSegmentAnchor(nonPageSource, label)).toBeNull()
+      expect(sourceToSegmentAnchor(nonPageSource, label)).toBeNull();
     }
     expect(
       sourceToSegmentAnchor(
@@ -821,9 +825,9 @@ describe("source evidence projection", () => {
           width: 0.3,
           height: 0.4,
         }),
-        "bad-pdf"
-      )
-    ).toBeNull()
+        "bad-pdf",
+      ),
+    ).toBeNull();
 
     const model = createSourcesSegmentedDocumentModel({
       labels: { "": "Root value" },
@@ -831,36 +835,36 @@ describe("source evidence projection", () => {
         "": pdfSource,
         amount: csvSource,
       },
-    })
+    });
 
     expect(model.segments.map((segment) => segment.label)).toEqual([
       "Root value",
       "amount",
-    ])
-    expect(model.anchors).toHaveLength(1)
-  })
+    ]);
+    expect(model.anchors).toHaveLength(1);
+  });
 
   it("activates an initial segmented source path with its page anchor", async () => {
     const sourceMap = extractionSourcesToSourceMap(
-      jsonFormSourcesSample.sources
-    )
+      jsonFormSourcesSample.sources,
+    );
     const model = createSourcesSegmentedDocumentModel({
       sourceMap,
-    })
+    });
 
     render(
       <SegmentedDocumentProvider model={model}>
         <SegmentedFieldLinkProbe initialSourcePath="statement_date" />
-      </SegmentedDocumentProvider>
-    )
+      </SegmentedDocumentProvider>,
+    );
 
     await waitFor(() => {
-      const probe = screen.getByTestId("segmented-link-probe")
-      expect(probe.textContent).toBe("statement_date")
-      expect(probe.getAttribute("data-active-anchor")).toBe("true")
-      expect(probe.getAttribute("data-active-anchor-count")).toBe("1")
-    })
-  })
+      const probe = screen.getByTestId("segmented-link-probe");
+      expect(probe.textContent).toBe("statement_date");
+      expect(probe.getAttribute("data-active-anchor")).toBe("true");
+      expect(probe.getAttribute("data-active-anchor-count")).toBe("1");
+    });
+  });
 
   it("keeps every segmented source anchor active for one selected field", async () => {
     const model: SegmentedDocumentModel = createSegmentedDocumentModel({
@@ -889,20 +893,20 @@ describe("source evidence projection", () => {
           bounds: { x: 0.55, y: 0.2, width: 0.2, height: 0.04 },
         },
       ],
-    })
+    });
 
     render(
       <SegmentedDocumentProvider model={model}>
         <SegmentedPdfOverlayProbe initialSourcePath="invoice.amount" />
-      </SegmentedDocumentProvider>
-    )
+      </SegmentedDocumentProvider>,
+    );
 
     await waitFor(() => {
-      const probe = screen.getByTestId("segmented-pdf-overlay-probe")
-      expect(probe.getAttribute("data-active-anchor-count")).toBe("2")
-      expect(screen.getAllByTestId("pdf-highlight")).toHaveLength(2)
-    })
-  })
+      const probe = screen.getByTestId("segmented-pdf-overlay-probe");
+      expect(probe.getAttribute("data-active-anchor-count")).toBe("2");
+      expect(screen.getAllByTestId("pdf-highlight")).toHaveLength(2);
+    });
+  });
 
   it("keeps segmented hover active while navigating to the source", async () => {
     const model = createSourcesSegmentedDocumentModel([
@@ -911,108 +915,108 @@ describe("source evidence projection", () => {
         label: "Logo",
         source: imageSource,
       },
-    ])
-    const scrollToPageArea = vi.fn()
+    ]);
+    const scrollToPageArea = vi.fn();
 
     render(
       <SegmentedDocumentProvider model={model}>
         <SegmentedFieldLinkNavigationProbe onScroll={scrollToPageArea} />
-      </SegmentedDocumentProvider>
-    )
+      </SegmentedDocumentProvider>,
+    );
 
-    fireEvent.mouseEnter(screen.getByRole("button", { name: "logo source" }))
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "logo source" }));
 
     await waitFor(() => {
-      const probe = screen.getByTestId("segmented-navigation-probe")
-      expect(probe.textContent).toBe("logo")
-      expect(probe.getAttribute("data-active-anchor")).toBe("true")
-    })
+      const probe = screen.getByTestId("segmented-navigation-probe");
+      expect(probe.textContent).toBe("logo");
+      expect(probe.getAttribute("data-active-anchor")).toBe("true");
+    });
     expect(scrollToPageArea).toHaveBeenLastCalledWith(
       { pageNumber: 2, left: 15, top: 25, width: 35, height: 45 },
-      { behavior: "auto" }
-    )
+      { behavior: "auto" },
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: "logo source" }))
+    fireEvent.click(screen.getByRole("button", { name: "logo source" }));
 
     expect(scrollToPageArea).toHaveBeenLastCalledWith(
       { pageNumber: 2, left: 15, top: 25, width: 35, height: 45 },
-      { behavior: "smooth" }
-    )
-  })
-})
+      { behavior: "smooth" },
+    );
+  });
+});
 
 describe("source sample fixtures", () => {
   it("keeps every source-block sample keyed uniquely and adapter-resolvable", () => {
     for (const sample of sourceFieldSamples) {
-      const keys = sample.fields.map((field) => field.key)
+      const keys = sample.fields.map((field) => field.key);
       expect(new Set(keys).size, `${sample.name} duplicate keys`).toBe(
-        keys.length
-      )
+        keys.length,
+      );
 
       for (const field of sample.fields) {
-        expect(field.key, `${sample.name} empty key`).not.toBe("")
+        expect(field.key, `${sample.name} empty key`).not.toBe("");
         expect(
           field.label,
-          `${sample.name}.${field.key} missing label`
-        ).not.toBe("")
+          `${sample.name}.${field.key} missing label`,
+        ).not.toBe("");
         expect(
           field.source.content,
-          `${sample.name}.${field.key} missing source content`
-        ).not.toBe("")
+          `${sample.name}.${field.key} missing source content`,
+        ).not.toBe("");
         expect(
           extractionSourcesToSourceMap({
             [field.key]: { value: field.value, source: field.source },
           }),
-          `${sample.name}.${field.key} invalid source shape`
-        ).toEqual({ [field.key]: field.source })
-        expectSourceToResolve(field.source)
+          `${sample.name}.${field.key} invalid source shape`,
+        ).toEqual({ [field.key]: field.source });
+        expectSourceToResolve(field.source);
       }
     }
-  })
+  });
 
   it("keeps the JSON-form sample flattened to resolvable PDF sources", () => {
     const response = jsonFormSourcesSample as {
-      document_type: string
-      file: { filename?: string }
-      sources: unknown
-    }
+      document_type: string;
+      file: { filename?: string };
+      sources: unknown;
+    };
 
-    expect(response.document_type).toBe("pdf")
-    expect(response.file.filename).toBe("jane-doe-bank-statement-5-pages.pdf")
+    expect(response.document_type).toBe("pdf");
+    expect(response.file.filename).toBe("jane-doe-bank-statement-5-pages.pdf");
 
-    const sourceMap = extractionSourcesToSourceMap(response.sources)
-    const paths = Object.keys(sourceMap)
-    expect(paths).toHaveLength(392)
+    const sourceMap = extractionSourcesToSourceMap(response.sources);
+    const paths = Object.keys(sourceMap);
+    expect(paths).toHaveLength(392);
     expect(paths.slice(0, 5)).toEqual([
       "account_number",
       "statement_date",
       "transactions.0.date",
       "transactions.0.description",
       "transactions.0.amount",
-    ])
+    ]);
     expect(paths.slice(-3)).toEqual([
       "transactions.129.date",
       "transactions.129.description",
       "transactions.129.amount",
-    ])
+    ]);
 
     for (const [path, mappedSource] of Object.entries(sourceMap)) {
       expect(
         mappedSource.anchor.kind,
-        `${path} should stay backed by a PDF bbox`
-      ).toBe("pdf_bbox")
-      expectSourceToResolve(mappedSource)
+        `${path} should stay backed by a PDF bbox`,
+      ).toBe("pdf_bbox");
+      expectSourceToResolve(mappedSource);
     }
-  })
-})
+  });
+});
 
 describe("source adapters", () => {
   it("converts PDF and image anchors into viewer percentage regions", () => {
     expect(pdfAnchorToTarget(pdfSource.anchor)).toEqual({
       page: 3,
       area: { left: 10, top: 20, width: 30, height: 40 },
-    })
-    expect(pdfAnchorToTarget(csvSource.anchor)).toBeUndefined()
+    });
+    expect(pdfAnchorToTarget(csvSource.anchor)).toBeUndefined();
 
     expect(imageAnchorToTarget(imageSource.anchor)).toEqual({
       frame: 2,
@@ -1022,7 +1026,7 @@ describe("source adapters", () => {
         width: 35,
         height: 45,
       },
-    })
+    });
     expect(
       imageAnchorToTarget(
         source({
@@ -1031,10 +1035,10 @@ describe("source adapters", () => {
           top: 0,
           width: 1,
           height: 1,
-        }).anchor
-      )?.frame
-    ).toBe(1)
-  })
+        }).anchor,
+      )?.frame,
+    ).toBe(1);
+  });
 
   it("rejects invalid PDF and image geometry instead of rendering impossible boxes", () => {
     expect(
@@ -1045,8 +1049,8 @@ describe("source adapters", () => {
         top: 0.1,
         width: 0.2,
         height: 0.2,
-      })
-    ).toBeUndefined()
+      }),
+    ).toBeUndefined();
     expect(
       pdfAnchorToTarget({
         kind: "pdf_bbox",
@@ -1055,8 +1059,8 @@ describe("source adapters", () => {
         top: 0.1,
         width: 0.2,
         height: 0.2,
-      })
-    ).toBeUndefined()
+      }),
+    ).toBeUndefined();
     expect(
       imageAnchorToTarget({
         kind: "image_bbox",
@@ -1064,8 +1068,8 @@ describe("source adapters", () => {
         top: 0.1,
         width: 0,
         height: 0.2,
-      })
-    ).toBeUndefined()
+      }),
+    ).toBeUndefined();
     expect(
       imageAnchorToTarget({
         kind: "image_bbox",
@@ -1073,8 +1077,8 @@ describe("source adapters", () => {
         top: 0.1,
         width: 0.2,
         height: 0.2,
-      })
-    ).toBeUndefined()
+      }),
+    ).toBeUndefined();
     expect(
       imageAnchorToTarget({
         kind: "image_bbox",
@@ -1082,8 +1086,8 @@ describe("source adapters", () => {
         top: 0.1,
         width: 0.2,
         height: 0.2,
-      })
-    ).toBeUndefined()
+      }),
+    ).toBeUndefined();
     expect(
       imageAnchorToTarget({
         kind: "image_bbox",
@@ -1092,8 +1096,8 @@ describe("source adapters", () => {
         top: 0.1,
         width: 0.2,
         height: 0.2,
-      })
-    ).toBeUndefined()
+      }),
+    ).toBeUndefined();
     expect(
       pdfAnchorToTarget({
         kind: "image_bbox",
@@ -1102,36 +1106,36 @@ describe("source adapters", () => {
         top: 0.1,
         width: 0.2,
         height: 0.2,
-      })
-    ).toBeUndefined()
-  })
+      }),
+    ).toBeUndefined();
+  });
 
   it("rotates image source areas around the rendered frame", () => {
-    const area = { left: 10, top: 20, width: 30, height: 40 }
+    const area = { left: 10, top: 20, width: 30, height: 40 };
 
-    expect(rotateImageArea(area, 0)).toEqual(area)
+    expect(rotateImageArea(area, 0)).toEqual(area);
     expect(rotateImageArea(area, 90)).toEqual({
       left: 40,
       top: 10,
       width: 40,
       height: 30,
-    })
+    });
     expect(rotateImageArea(area, 180)).toEqual({
       left: 60,
       top: 40,
       width: 30,
       height: 40,
-    })
+    });
     expect(rotateImageArea(area, 270)).toEqual({
       left: 20,
       top: 60,
       width: 40,
       height: 30,
-    })
-  })
+    });
+  });
 
   it("renders PDF and image overlays only on the anchored page or frame", () => {
-    const pdfOverlay = renderPdfSourceOverlay(pdfSource)
+    const pdfOverlay = renderPdfSourceOverlay(pdfSource);
     const { container, rerender } = render(
       <>
         {pdfOverlay({
@@ -1141,9 +1145,9 @@ describe("source adapters", () => {
           scale: 1,
           rotation: 0,
         })}
-      </>
-    )
-    expect(container.firstChild).toBeNull()
+      </>,
+    );
+    expect(container.firstChild).toBeNull();
 
     rerender(
       <>
@@ -1154,16 +1158,18 @@ describe("source adapters", () => {
           scale: 1,
           rotation: 0,
         })}
-      </>
-    )
-    expect((container.firstElementChild as HTMLElement).style.left).toBe("10%")
-    expect((container.firstElementChild as HTMLElement).style.top).toBe("20%")
-    expect((container.firstElementChild as HTMLElement).style.width).toBe("30%")
+      </>,
+    );
+    expect((container.firstElementChild as HTMLElement).style.left).toBe("10%");
+    expect((container.firstElementChild as HTMLElement).style.top).toBe("20%");
+    expect((container.firstElementChild as HTMLElement).style.width).toBe(
+      "30%",
+    );
     expect((container.firstElementChild as HTMLElement).style.height).toBe(
-      "40%"
-    )
+      "40%",
+    );
 
-    const imageOverlay = renderImageSourceOverlay(imageSource)
+    const imageOverlay = renderImageSourceOverlay(imageSource);
     rerender(
       <>
         {imageOverlay({
@@ -1173,9 +1179,9 @@ describe("source adapters", () => {
           scale: 1,
           rotation: 0,
         })}
-      </>
-    )
-    expect(container.firstChild).toBeNull()
+      </>,
+    );
+    expect(container.firstChild).toBeNull();
 
     rerender(
       <>
@@ -1186,122 +1192,124 @@ describe("source adapters", () => {
           scale: 1,
           rotation: 90,
         })}
-      </>
-    )
-    expect((container.firstElementChild as HTMLElement).style.left).toBe("30%")
-    expect((container.firstElementChild as HTMLElement).style.top).toBe("15%")
-    expect((container.firstElementChild as HTMLElement).style.width).toBe("45%")
+      </>,
+    );
+    expect((container.firstElementChild as HTMLElement).style.left).toBe("30%");
+    expect((container.firstElementChild as HTMLElement).style.top).toBe("15%");
+    expect((container.firstElementChild as HTMLElement).style.width).toBe(
+      "45%",
+    );
     expect((container.firstElementChild as HTMLElement).style.height).toBe(
-      "35%"
-    )
-  })
+      "35%",
+    );
+  });
 
   it("converts CSV and spreadsheet columns to zero-based viewer cells", () => {
-    expect(columnLetterToIndex("A")).toBe(0)
-    expect(columnLetterToIndex("Z")).toBe(25)
-    expect(columnLetterToIndex("AA")).toBe(26)
-    expect(columnLetterToIndex("az")).toBe(51)
+    expect(columnLetterToIndex("A")).toBe(0);
+    expect(columnLetterToIndex("Z")).toBe(25);
+    expect(columnLetterToIndex("AA")).toBe(26);
+    expect(columnLetterToIndex("az")).toBe(51);
 
     expect(csvAnchorToTarget(csvSource.anchor)).toEqual({
       rowIndex: 3,
       columnIndex: 26,
-    })
-    expect(sourceToCsvCell(textSource)).toBeNull()
+    });
+    expect(sourceToCsvCell(textSource)).toBeNull();
 
-    expect(spreadsheetColumnToIndex("AZ")).toBe(51)
+    expect(spreadsheetColumnToIndex("AZ")).toBe(51);
     expect(xlsxAnchorToTarget(xlsxSource.anchor)).toEqual({
       sheet: 2,
       row: 7,
       col: 51,
-    })
-    expect(sourceToXlsxCell(xlsxSource)).toEqual({ sheet: 2, row: 7, col: 51 })
-    expect(sourceToXlsxCell(csvSource)).toBeNull()
-  })
+    });
+    expect(sourceToXlsxCell(xlsxSource)).toEqual({ sheet: 2, row: 7, col: 51 });
+    expect(sourceToXlsxCell(csvSource)).toBeNull();
+  });
 
   it("rejects invalid CSV and spreadsheet coordinates instead of producing impossible viewer cells", () => {
-    expect(columnLetterToIndex("")).toBeNull()
-    expect(columnLetterToIndex("A1")).toBeNull()
-    expect(columnLetterToIndex("a-z")).toBeNull()
-    expect(columnLetterToIndex(oversizedColumn)).toBeNull()
-    expect(spreadsheetColumnToIndex("")).toBeNull()
-    expect(spreadsheetColumnToIndex("1")).toBeNull()
-    expect(spreadsheetColumnToIndex(oversizedColumn)).toBeNull()
+    expect(columnLetterToIndex("")).toBeNull();
+    expect(columnLetterToIndex("A1")).toBeNull();
+    expect(columnLetterToIndex("a-z")).toBeNull();
+    expect(columnLetterToIndex(oversizedColumn)).toBeNull();
+    expect(spreadsheetColumnToIndex("")).toBeNull();
+    expect(spreadsheetColumnToIndex("1")).toBeNull();
+    expect(spreadsheetColumnToIndex(oversizedColumn)).toBeNull();
 
     expect(
       csvAnchorToTarget({
         kind: "csv_cell",
         row: 0,
         column: "A",
-      })
-    ).toBeNull()
+      }),
+    ).toBeNull();
     expect(
       csvAnchorToTarget({
         kind: "csv_cell",
         row: 1,
         column: "",
-      })
-    ).toBeNull()
+      }),
+    ).toBeNull();
     expect(
       csvAnchorToTarget({
         kind: "csv_cell",
         row: 1,
         column: oversizedColumn,
-      })
-    ).toBeNull()
+      }),
+    ).toBeNull();
     expect(
       xlsxAnchorToTarget({
         kind: "spreadsheet_cell",
         sheet_index: -1,
         row: 1,
         column: "A",
-      })
-    ).toBeUndefined()
+      }),
+    ).toBeUndefined();
     expect(
       xlsxAnchorToTarget({
         kind: "spreadsheet_cell",
         sheet_index: 0,
         row: 0,
         column: "A",
-      })
-    ).toBeUndefined()
+      }),
+    ).toBeUndefined();
     expect(
       xlsxAnchorToTarget({
         kind: "spreadsheet_cell",
         sheet_index: 0,
         row: 1,
         column: "A1",
-      })
-    ).toBeUndefined()
+      }),
+    ).toBeUndefined();
     expect(
       xlsxAnchorToTarget({
         kind: "spreadsheet_cell",
         sheet_index: 0,
         row: 1,
         column: oversizedColumn,
-      })
-    ).toBeUndefined()
-  })
+      }),
+    ).toBeUndefined();
+  });
 
   it("converts text and docx anchors into viewer-native targets", () => {
     expect(textAnchorToTarget(textSource.anchor)).toEqual({
       start: 12,
       end: 14,
-    })
-    expect(sourceToTextHighlight(textSource)).toEqual({ start: 12, end: 14 })
-    expect(sourceToTextHighlight(csvSource)).toBeNull()
+    });
+    expect(sourceToTextHighlight(textSource)).toEqual({ start: 12, end: 14 });
+    expect(sourceToTextHighlight(csvSource)).toBeNull();
 
     expect(docxAnchorToTarget(docxTextSource.anchor, docxTextSource)).toEqual({
       kind: "text",
       text: "ACME Corp",
-    })
+    });
     expect(docxAnchorToTarget(docxCellSource.anchor, docxCellSource)).toEqual({
       kind: "cell",
       table: 1,
       row: 2,
       column: 3,
-    })
-    expect(sourceToDocxHighlight(csvSource)).toBeNull()
-  })
+    });
+    expect(sourceToDocxHighlight(csvSource)).toBeNull();
+  });
 
   it("rejects invalid text spans instead of producing impossible line ranges", () => {
     expect(
@@ -1309,30 +1317,30 @@ describe("source adapters", () => {
         kind: "text_span",
         line_start: 0,
         line_end: 2,
-      })
-    ).toBeUndefined()
+      }),
+    ).toBeUndefined();
     expect(
       textAnchorToTarget({
         kind: "text_span",
         line_start: 3,
         line_end: 2,
-      })
-    ).toBeUndefined()
+      }),
+    ).toBeUndefined();
     expect(
       textAnchorToTarget({
         kind: "text_span",
         line_start: 1.5,
         line_end: 2,
-      })
-    ).toBeUndefined()
+      }),
+    ).toBeUndefined();
     expect(
       textAnchorToTarget({
         kind: "text_span",
         line_start: 1,
         line_end: 2,
         char_start: 4,
-      })
-    ).toBeUndefined()
+      }),
+    ).toBeUndefined();
     expect(
       textAnchorToTarget({
         kind: "text_span",
@@ -1340,9 +1348,9 @@ describe("source adapters", () => {
         line_end: 2,
         char_start: 4,
         char_end: 2,
-      })
-    ).toBeUndefined()
-  })
+      }),
+    ).toBeUndefined();
+  });
 
   it("rejects invalid docx anchors instead of producing impossible viewer targets", () => {
     const invalidSources = [
@@ -1363,7 +1371,7 @@ describe("source adapters", () => {
           char_start: 0,
           char_end: 0,
         },
-        "   "
+        "   ",
       ),
       source({ kind: "docx_text_span", paragraph: -1 }, "ACME"),
       source({ kind: "docx_text_span", paragraph: 1.5 }, "ACME"),
@@ -1374,48 +1382,50 @@ describe("source adapters", () => {
           char_start: 4,
           char_end: 2,
         },
-        "ACME"
+        "ACME",
       ),
-    ]
+    ];
 
     for (const invalidSource of invalidSources) {
-      expect(docxAnchorToTarget(invalidSource.anchor, invalidSource)).toBeNull()
+      expect(
+        docxAnchorToTarget(invalidSource.anchor, invalidSource),
+      ).toBeNull();
     }
-  })
+  });
 
   it("bridges docx sources to the viewer imperative target", () => {
-    const scrollToTarget = vi.fn()
+    const scrollToTarget = vi.fn();
     const { rerender } = render(
       <DocxSourceTargetHarness
         source={docxTextSource}
         onScroll={scrollToTarget}
-      />
-    )
+      />,
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: "scroll docx source" }))
+    fireEvent.click(screen.getByRole("button", { name: "scroll docx source" }));
     expect(scrollToTarget).toHaveBeenCalledWith(
       { kind: "text", text: "ACME Corp" },
-      { behavior: "smooth" }
-    )
+      { behavior: "smooth" },
+    );
 
     rerender(
       <DocxSourceTargetHarness
         source={docxCellSource}
         onScroll={scrollToTarget}
-      />
-    )
-    fireEvent.click(screen.getByRole("button", { name: "scroll docx source" }))
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "scroll docx source" }));
     expect(scrollToTarget).toHaveBeenLastCalledWith(
       { kind: "cell", table: 1, row: 2, column: 3 },
-      { behavior: "smooth" }
-    )
+      { behavior: "smooth" },
+    );
 
-    scrollToTarget.mockClear()
+    scrollToTarget.mockClear();
     rerender(
-      <DocxSourceTargetHarness source={csvSource} onScroll={scrollToTarget} />
-    )
-    fireEvent.click(screen.getByRole("button", { name: "scroll docx source" }))
-    expect(scrollToTarget).not.toHaveBeenCalled()
+      <DocxSourceTargetHarness source={csvSource} onScroll={scrollToTarget} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "scroll docx source" }));
+    expect(scrollToTarget).not.toHaveBeenCalled();
 
     rerender(
       <DocxSourceTargetHarness
@@ -1424,33 +1434,33 @@ describe("source adapters", () => {
             kind: "docx_text_span",
             paragraph: -1,
           },
-          "ACME"
+          "ACME",
         )}
         onScroll={scrollToTarget}
-      />
-    )
-    fireEvent.click(screen.getByRole("button", { name: "scroll docx source" }))
-    expect(scrollToTarget).not.toHaveBeenCalled()
-  })
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "scroll docx source" }));
+    expect(scrollToTarget).not.toHaveBeenCalled();
+  });
 
   it("bridges PDF sources to the viewer imperative target", () => {
-    const scrollToPageArea = vi.fn()
+    const scrollToPageArea = vi.fn();
     const { rerender } = render(
-      <PdfSourceTargetHarness source={pdfSource} onScroll={scrollToPageArea} />
-    )
+      <PdfSourceTargetHarness source={pdfSource} onScroll={scrollToPageArea} />,
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: "scroll pdf source" }))
+    fireEvent.click(screen.getByRole("button", { name: "scroll pdf source" }));
     expect(scrollToPageArea).toHaveBeenCalledWith(
       { pageNumber: 3, left: 10, top: 20, width: 30, height: 40 },
-      { behavior: "smooth" }
-    )
+      { behavior: "smooth" },
+    );
 
-    scrollToPageArea.mockClear()
+    scrollToPageArea.mockClear();
     rerender(
-      <PdfSourceTargetHarness source={csvSource} onScroll={scrollToPageArea} />
-    )
-    fireEvent.click(screen.getByRole("button", { name: "scroll pdf source" }))
-    expect(scrollToPageArea).not.toHaveBeenCalled()
+      <PdfSourceTargetHarness source={csvSource} onScroll={scrollToPageArea} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "scroll pdf source" }));
+    expect(scrollToPageArea).not.toHaveBeenCalled();
 
     rerender(
       <PdfSourceTargetHarness
@@ -1463,135 +1473,144 @@ describe("source adapters", () => {
           height: 0.4,
         })}
         onScroll={scrollToPageArea}
-      />
-    )
-    fireEvent.click(screen.getByRole("button", { name: "scroll pdf source" }))
-    expect(scrollToPageArea).not.toHaveBeenCalled()
-  })
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "scroll pdf source" }));
+    expect(scrollToPageArea).not.toHaveBeenCalled();
+  });
 
   it("bridges image sources to the viewer imperative target", () => {
-    const scrollToFrameArea = vi.fn()
+    const scrollToFrameArea = vi.fn();
     const { rerender } = render(
       <ImageSourceTargetHarness
         source={imageSource}
         onScroll={scrollToFrameArea}
-      />
-    )
+      />,
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: "scroll image source" }))
+    fireEvent.click(
+      screen.getByRole("button", { name: "scroll image source" }),
+    );
     expect(scrollToFrameArea).toHaveBeenCalledWith(
       2,
       { left: 15, top: 25, width: 35, height: 45 },
-      { behavior: "smooth" }
-    )
+      { behavior: "smooth" },
+    );
 
     rerender(
       <ImageSourceTargetHarness
         source={pdfSource}
         onScroll={scrollToFrameArea}
-      />
-    )
-    fireEvent.click(screen.getByRole("button", { name: "scroll image source" }))
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "scroll image source" }),
+    );
     expect(scrollToFrameArea).toHaveBeenLastCalledWith(
       3,
       { left: 10, top: 20, width: 30, height: 40 },
-      { behavior: "smooth" }
-    )
+      { behavior: "smooth" },
+    );
 
-    scrollToFrameArea.mockClear()
+    scrollToFrameArea.mockClear();
     rerender(
       <ImageSourceTargetHarness
         source={csvSource}
         onScroll={scrollToFrameArea}
-      />
-    )
-    fireEvent.click(screen.getByRole("button", { name: "scroll image source" }))
-    expect(scrollToFrameArea).not.toHaveBeenCalled()
-  })
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "scroll image source" }),
+    );
+    expect(scrollToFrameArea).not.toHaveBeenCalled();
+  });
 
   it("bridges CSV and XLSX sources to viewer imperative targets", () => {
-    const scrollToCsvCell = vi.fn()
+    const scrollToCsvCell = vi.fn();
     const { rerender: rerenderCsv } = render(
-      <CsvSourceTargetHarness source={csvSource} onScroll={scrollToCsvCell} />
-    )
+      <CsvSourceTargetHarness source={csvSource} onScroll={scrollToCsvCell} />,
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: "scroll csv source" }))
+    fireEvent.click(screen.getByRole("button", { name: "scroll csv source" }));
     expect(scrollToCsvCell).toHaveBeenCalledWith(
       { rowIndex: 3, columnIndex: 26 },
-      { behavior: "smooth" }
-    )
+      { behavior: "smooth" },
+    );
 
-    scrollToCsvCell.mockClear()
+    scrollToCsvCell.mockClear();
     rerenderCsv(
-      <CsvSourceTargetHarness source={xlsxSource} onScroll={scrollToCsvCell} />
-    )
-    fireEvent.click(screen.getByRole("button", { name: "scroll csv source" }))
-    expect(scrollToCsvCell).not.toHaveBeenCalled()
+      <CsvSourceTargetHarness source={xlsxSource} onScroll={scrollToCsvCell} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "scroll csv source" }));
+    expect(scrollToCsvCell).not.toHaveBeenCalled();
 
-    const scrollToXlsxCell = vi.fn()
+    const scrollToXlsxCell = vi.fn();
     const { rerender: rerenderXlsx } = render(
       <XlsxSourceTargetHarness
         source={xlsxSource}
         onScroll={scrollToXlsxCell}
-      />
-    )
+      />,
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: "scroll xlsx source" }))
+    fireEvent.click(screen.getByRole("button", { name: "scroll xlsx source" }));
     expect(scrollToXlsxCell).toHaveBeenCalledWith(2, 7, 51, {
       behavior: "smooth",
-    })
+    });
 
-    scrollToXlsxCell.mockClear()
+    scrollToXlsxCell.mockClear();
     rerenderXlsx(
-      <XlsxSourceTargetHarness source={csvSource} onScroll={scrollToXlsxCell} />
-    )
-    fireEvent.click(screen.getByRole("button", { name: "scroll xlsx source" }))
-    expect(scrollToXlsxCell).not.toHaveBeenCalled()
-  })
+      <XlsxSourceTargetHarness
+        source={csvSource}
+        onScroll={scrollToXlsxCell}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "scroll xlsx source" }));
+    expect(scrollToXlsxCell).not.toHaveBeenCalled();
+  });
 
   it("bridges text sources to the viewer imperative target", () => {
-    const scrollToLineRange = vi.fn()
+    const scrollToLineRange = vi.fn();
     const { rerender } = render(
       <TextSourceTargetHarness
         source={textSource}
         onScroll={scrollToLineRange}
-      />
-    )
+      />,
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: "scroll text source" }))
+    fireEvent.click(screen.getByRole("button", { name: "scroll text source" }));
     expect(scrollToLineRange).toHaveBeenCalledWith(
       { start: 12, end: 14 },
-      { behavior: "smooth" }
-    )
+      { behavior: "smooth" },
+    );
 
-    scrollToLineRange.mockClear()
+    scrollToLineRange.mockClear();
     rerender(
       <TextSourceTargetHarness
         source={csvSource}
         onScroll={scrollToLineRange}
-      />
-    )
-    fireEvent.click(screen.getByRole("button", { name: "scroll text source" }))
-    expect(scrollToLineRange).not.toHaveBeenCalled()
-  })
-})
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "scroll text source" }));
+    expect(scrollToLineRange).not.toHaveBeenCalled();
+  });
+});
 
 function DocxSourceTargetHarness({
   source,
   onScroll,
 }: {
-  source: Source
-  onScroll: DocxViewerHandle["scrollToTarget"]
+  source: Source;
+  onScroll: DocxViewerHandle["scrollToTarget"];
 }) {
   const handle = React.useMemo<DocxViewerHandle>(
     () => ({
       scrollToTarget: onScroll,
       getViewportElement: () => null,
     }),
-    [onScroll]
-  )
-  const viewerRef = useLatestTestRef<DocxViewerHandle>(handle)
-  const target = useDocxSourceTarget(viewerRef)
+    [onScroll],
+  );
+  const viewerRef = useLatestTestRef<DocxViewerHandle>(handle);
+  const target = useDocxSourceTarget(viewerRef);
 
   return (
     <button
@@ -1600,15 +1619,15 @@ function DocxSourceTargetHarness({
     >
       scroll docx source
     </button>
-  )
+  );
 }
 
 function PdfSourceTargetHarness({
   source,
   onScroll,
 }: {
-  source: Source
-  onScroll: PdfViewerHandle["scrollToPageArea"]
+  source: Source;
+  onScroll: PdfViewerHandle["scrollToPageArea"];
 }) {
   const handle = React.useMemo<PdfViewerHandle>(
     () => ({
@@ -1616,10 +1635,10 @@ function PdfSourceTargetHarness({
       scrollToPageArea: onScroll,
       getViewportElement: () => null,
     }),
-    [onScroll]
-  )
-  const viewerRef = useLatestTestRef<PdfViewerHandle>(handle)
-  const target = usePdfSourceTarget(viewerRef)
+    [onScroll],
+  );
+  const viewerRef = useLatestTestRef<PdfViewerHandle>(handle);
+  const target = usePdfSourceTarget(viewerRef);
 
   return (
     <button
@@ -1628,25 +1647,25 @@ function PdfSourceTargetHarness({
     >
       scroll pdf source
     </button>
-  )
+  );
 }
 
 function ImageSourceTargetHarness({
   source,
   onScroll,
 }: {
-  source: Source
-  onScroll: ImageViewerHandle["scrollToFrameArea"]
+  source: Source;
+  onScroll: ImageViewerHandle["scrollToFrameArea"];
 }) {
   const handle = React.useMemo<ImageViewerHandle>(
     () => ({
       scrollToFrameArea: onScroll,
       getViewportElement: () => null,
     }),
-    [onScroll]
-  )
-  const viewerRef = useLatestTestRef<ImageViewerHandle>(handle)
-  const target = useImageSourceTarget(viewerRef)
+    [onScroll],
+  );
+  const viewerRef = useLatestTestRef<ImageViewerHandle>(handle);
+  const target = useImageSourceTarget(viewerRef);
 
   return (
     <button
@@ -1655,25 +1674,25 @@ function ImageSourceTargetHarness({
     >
       scroll image source
     </button>
-  )
+  );
 }
 
 function CsvSourceTargetHarness({
   source,
   onScroll,
 }: {
-  source: Source
-  onScroll: CsvViewerHandle["scrollToCell"]
+  source: Source;
+  onScroll: CsvViewerHandle["scrollToCell"];
 }) {
   const handle = React.useMemo<CsvViewerHandle>(
     () => ({
       scrollToCell: onScroll,
       getViewportElement: () => null,
     }),
-    [onScroll]
-  )
-  const viewerRef = useLatestTestRef<CsvViewerHandle>(handle)
-  const target = useCsvSourceTarget(viewerRef)
+    [onScroll],
+  );
+  const viewerRef = useLatestTestRef<CsvViewerHandle>(handle);
+  const target = useCsvSourceTarget(viewerRef);
 
   return (
     <button
@@ -1682,25 +1701,25 @@ function CsvSourceTargetHarness({
     >
       scroll csv source
     </button>
-  )
+  );
 }
 
 function XlsxSourceTargetHarness({
   source,
   onScroll,
 }: {
-  source: Source
-  onScroll: XlsxViewerHandle["scrollToCell"]
+  source: Source;
+  onScroll: XlsxViewerHandle["scrollToCell"];
 }) {
   const handle = React.useMemo<XlsxViewerHandle>(
     () => ({
       scrollToCell: onScroll,
       getViewportElement: () => null,
     }),
-    [onScroll]
-  )
-  const viewerRef = useLatestTestRef<XlsxViewerHandle>(handle)
-  const target = useXlsxSourceTarget(viewerRef)
+    [onScroll],
+  );
+  const viewerRef = useLatestTestRef<XlsxViewerHandle>(handle);
+  const target = useXlsxSourceTarget(viewerRef);
 
   return (
     <button
@@ -1709,25 +1728,25 @@ function XlsxSourceTargetHarness({
     >
       scroll xlsx source
     </button>
-  )
+  );
 }
 
 function TextSourceTargetHarness({
   source,
   onScroll,
 }: {
-  source: Source
-  onScroll: TextViewerHandle["scrollToLineRange"]
+  source: Source;
+  onScroll: TextViewerHandle["scrollToLineRange"];
 }) {
   const handle = React.useMemo<TextViewerHandle>(
     () => ({
       scrollToLineRange: onScroll,
       getViewportElement: () => null,
     }),
-    [onScroll]
-  )
-  const viewerRef = useLatestTestRef<TextViewerHandle>(handle)
-  const target = useTextSourceTarget(viewerRef)
+    [onScroll],
+  );
+  const viewerRef = useLatestTestRef<TextViewerHandle>(handle);
+  const target = useTextSourceTarget(viewerRef);
 
   return (
     <button
@@ -1736,15 +1755,15 @@ function TextSourceTargetHarness({
     >
       scroll text source
     </button>
-  )
+  );
 }
 
 function useLatestTestRef<T>(value: T): React.RefObject<T | null> {
-  const ref = React.useRef<T | null>(value)
+  const ref = React.useRef<T | null>(value);
   React.useLayoutEffect(() => {
-    ref.current = value
-  }, [value])
-  return ref
+    ref.current = value;
+  }, [value]);
+  return ref;
 }
 
 describe("source UI components", () => {
@@ -1753,92 +1772,94 @@ describe("source UI components", () => {
     { key: "date", label: "Date", value: "2026-06-12", hint: "AA4" },
     { key: "missing", label: "Approver", value: "Morgan Lee" },
     { key: "", label: "Root value", value: "standalone" },
-  ]
+  ];
 
   it("keeps the source-data sidebar trigger live inside the file header row", async () => {
-    render(<SourcesViewerSidebarProbe />)
+    render(<SourcesViewerSidebarProbe />);
 
-    const trigger = screen.getByTestId("source-sidebar-trigger")
-    const sidebar = screen.getByTestId("source-sidebar")
+    const trigger = screen.getByTestId("source-sidebar-trigger");
+    const sidebar = screen.getByTestId("source-sidebar");
 
     await waitFor(() => {
-      expect(trigger.hasAttribute("disabled")).toBe(false)
-      expect(trigger.getAttribute("aria-controls")).toBe(sidebar.id)
-      expect(trigger.getAttribute("aria-expanded")).toBe("true")
-      expect(trigger.getAttribute("data-side")).toBe("right")
-    })
+      expect(trigger.hasAttribute("disabled")).toBe(false);
+      expect(trigger.getAttribute("aria-controls")).toBe(sidebar.id);
+      expect(trigger.getAttribute("aria-expanded")).toBe("true");
+      expect(trigger.getAttribute("data-side")).toBe("right");
+    });
 
     expect(screen.getByTestId("source-document-surface").textContent).toContain(
-      "Document"
-    )
-    expect(sidebar.textContent).toContain("Source-linked data")
+      "Document",
+    );
+    expect(sidebar.textContent).toContain("Source-linked data");
 
-    fireEvent.click(trigger)
+    fireEvent.click(trigger);
 
-    expect(trigger.getAttribute("aria-expanded")).toBe("false")
-    expect(sidebar.getAttribute("aria-hidden")).toBe("true")
-    expect(sidebar.hasAttribute("inert")).toBe(true)
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(sidebar.getAttribute("aria-hidden")).toBe("true");
+    expect(sidebar.hasAttribute("inert")).toBe(true);
 
-    fireEvent.click(trigger)
+    fireEvent.click(trigger);
 
-    expect(trigger.getAttribute("aria-expanded")).toBe("true")
-    expect(sidebar.hasAttribute("aria-hidden")).toBe(false)
-    expect(sidebar.hasAttribute("inert")).toBe(false)
-  })
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(sidebar.hasAttribute("aria-hidden")).toBe(false);
+    expect(sidebar.hasAttribute("inert")).toBe(false);
+  });
 
   it("drives source indicator and source scrolling from JSON form hover and click", async () => {
-    const onScroll = vi.fn()
+    const onScroll = vi.fn();
     const model = createSourcesSegmentedDocumentModel([
       {
         id: "title",
         label: "Title",
         source: imageSource,
       },
-    ])
+    ]);
 
     const { container } = render(
       <SegmentedDocumentProvider model={model}>
         <div className="relative">
           <SourceLinkedJsonFormProbe onScroll={onScroll} />
         </div>
-      </SegmentedDocumentProvider>
-    )
+      </SegmentedDocumentProvider>,
+    );
 
-    const titleInput = screen.getByDisplayValue("An Image is Worth 16x16 Words")
-    const titleField = titleInput.closest('div[class*="rounded-md"]')
-    expect(titleField).not.toBeNull()
+    const titleInput = screen.getByDisplayValue(
+      "An Image is Worth 16x16 Words",
+    );
+    const titleField = titleInput.closest('div[class*="rounded-md"]');
+    expect(titleField).not.toBeNull();
 
-    fireEvent.mouseEnter(titleField!)
+    fireEvent.mouseEnter(titleField!);
 
     await waitFor(() => {
-      expect(screen.getByText("title").textContent).toBe("title")
+      expect(screen.getByText("title").textContent).toBe("title");
       expect(onScroll).toHaveBeenLastCalledWith(imageSource, {
         behavior: "auto",
-      })
-    })
+      });
+    });
 
-    const activeShell = container.querySelector(".border-primary\\/40")
-    expect(activeShell?.textContent).toContain("Title")
+    const activeShell = container.querySelector(".border-primary\\/40");
+    expect(activeShell?.textContent).toContain("Title");
 
-    fireEvent.click(titleField!)
+    fireEvent.click(titleField!);
 
     expect(onScroll).toHaveBeenLastCalledWith(imageSource, {
       behavior: "smooth",
-    })
+    });
 
-    fireEvent.mouseLeave(titleField!)
+    fireEvent.mouseLeave(titleField!);
 
     await waitFor(() => {
-      expect(screen.getByText("title").textContent).toBe("title")
-    })
-  })
+      expect(screen.getByText("title").textContent).toBe("title");
+    });
+  });
 
   it("SourceFieldList renders fields and forwards hover, focus, blur, and click events", () => {
     const link = {
       activeSourcePath: "total",
       onSourceHover: vi.fn(),
       selectSourcePath: vi.fn(),
-    }
+    };
 
     render(
       <SourceFieldList
@@ -1853,40 +1874,40 @@ describe("source UI components", () => {
           { key: "date", label: "Date", value: "2026-06-12" },
         ]}
         link={link}
-      />
-    )
+      />,
+    );
 
     expect(
-      screen.getByRole("heading", { name: "Invoice fields" }).textContent
-    ).toBe("Invoice fields")
-    expect(screen.getByText("2 fields").textContent).toBe("2 fields")
-    expect(screen.getByText("$120.00").textContent).toBe("$120.00")
-    expect(screen.getByText("Page 2").textContent).toBe("Page 2")
+      screen.getByRole("heading", { name: "Invoice fields" }).textContent,
+    ).toBe("Invoice fields");
+    expect(screen.getByText("2 fields").textContent).toBe("2 fields");
+    expect(screen.getByText("$120.00").textContent).toBe("$120.00");
+    expect(screen.getByText("Page 2").textContent).toBe("Page 2");
 
-    const total = screen.getByRole("option", { name: /total/i })
-    expect(total.getAttribute("data-active")).toBe("true")
+    const total = screen.getByRole("option", { name: /total/i });
+    expect(total.getAttribute("data-active")).toBe("true");
 
-    fireEvent.mouseEnter(total)
-    fireEvent.focus(total)
-    fireEvent.mouseLeave(total)
-    fireEvent.blur(total)
-    fireEvent.click(total)
+    fireEvent.mouseEnter(total);
+    fireEvent.focus(total);
+    fireEvent.mouseLeave(total);
+    fireEvent.blur(total);
+    fireEvent.click(total);
 
     expect(link.onSourceHover.mock.calls).toEqual([
       ["total"],
       ["total"],
       [null],
       [null],
-    ])
-    expect(link.selectSourcePath).toHaveBeenCalledWith("total")
-  })
+    ]);
+    expect(link.selectSourcePath).toHaveBeenCalledWith("total");
+  });
 
   it("SourceFieldList marks only the exact active path", () => {
     const link = {
       activeSourcePath: "total.tax",
       onSourceHover: vi.fn(),
       selectSourcePath: vi.fn(),
-    }
+    };
 
     const { rerender } = render(
       <SourceFieldList
@@ -1895,13 +1916,13 @@ describe("source UI components", () => {
           { key: "total.tax", label: "Tax", value: "$8.00" },
         ]}
         link={link}
-      />
-    )
+      />,
+    );
 
-    const total = screen.getByRole("option", { name: /total/i })
-    const tax = screen.getByRole("option", { name: /tax/i })
-    expect(total.getAttribute("data-active")).toBe("false")
-    expect(tax.getAttribute("data-active")).toBe("true")
+    const total = screen.getByRole("option", { name: /total/i });
+    const tax = screen.getByRole("option", { name: /tax/i });
+    expect(total.getAttribute("data-active")).toBe("false");
+    expect(tax.getAttribute("data-active")).toBe("true");
 
     rerender(
       <SourceFieldList
@@ -1910,16 +1931,18 @@ describe("source UI components", () => {
           { key: "total.tax", label: "Tax", value: "$8.00" },
         ]}
         link={{ ...link, activeSourcePath: "total" }}
-      />
-    )
+      />,
+    );
 
     expect(
-      screen.getByRole("option", { name: /total/i }).getAttribute("data-active")
-    ).toBe("true")
+      screen
+        .getByRole("option", { name: /total/i })
+        .getAttribute("data-active"),
+    ).toBe("true");
     expect(
-      screen.getByRole("option", { name: /tax/i }).getAttribute("data-active")
-    ).toBe("false")
-  })
+      screen.getByRole("option", { name: /tax/i }).getAttribute("data-active"),
+    ).toBe("false");
+  });
 
   it("SourceFieldList renders an empty state without interactive rows", () => {
     const { container } = render(
@@ -1932,24 +1955,24 @@ describe("source UI components", () => {
           onSourceHover: vi.fn(),
           selectSourcePath: vi.fn(),
         }}
-      />
-    )
+      />,
+    );
 
-    expect(screen.getByRole("heading", { name: "No fields" })).toBeTruthy()
-    expect(screen.getByText("0 fields").textContent).toBe("0 fields")
-    expect(screen.getByText("No fields.")).toBeTruthy()
-    expect(screen.queryAllByRole("option")).toHaveLength(0)
+    expect(screen.getByRole("heading", { name: "No fields" })).toBeTruthy();
+    expect(screen.getByText("0 fields").textContent).toBe("0 fields");
+    expect(screen.getByText("No fields.")).toBeTruthy();
+    expect(screen.queryAllByRole("option")).toHaveLength(0);
     expect(
-      container.querySelector('[data-slot="source-field-list"]')?.className
-    ).toContain("custom-source-list")
-  })
+      container.querySelector('[data-slot="source-field-list"]')?.className,
+    ).toContain("custom-source-list");
+  });
 
   it("SourceFieldList handles dynamic field rows without keeping removed controls", () => {
     const link = {
       activeSourcePath: "date",
       onSourceHover: vi.fn(),
       selectSourcePath: vi.fn(),
-    }
+    };
     const { rerender } = render(
       <SourceFieldList
         fields={[
@@ -1957,13 +1980,13 @@ describe("source UI components", () => {
           { key: "date", label: "Date", value: "2026-06-12" },
         ]}
         link={link}
-      />
-    )
+      />,
+    );
 
-    expect(screen.getByText("2 fields").textContent).toBe("2 fields")
+    expect(screen.getByText("2 fields").textContent).toBe("2 fields");
     expect(
-      screen.getByRole("option", { name: /date/i }).getAttribute("data-active")
-    ).toBe("true")
+      screen.getByRole("option", { name: /date/i }).getAttribute("data-active"),
+    ).toBe("true");
 
     rerender(
       <SourceFieldList
@@ -1972,45 +1995,45 @@ describe("source UI components", () => {
           { key: "status", label: "Status", value: "Approved" },
         ]}
         link={link}
-      />
-    )
+      />,
+    );
 
-    expect(screen.getByText("2 fields").textContent).toBe("2 fields")
-    expect(screen.queryByRole("option", { name: /date/i })).toBeNull()
+    expect(screen.getByText("2 fields").textContent).toBe("2 fields");
+    expect(screen.queryByRole("option", { name: /date/i })).toBeNull();
     expect(
       screen
         .getByRole("option", { name: /status/i })
-        .getAttribute("data-active")
-    ).toBe("false")
-  })
+        .getAttribute("data-active"),
+    ).toBe("false");
+  });
 
   it("SourceIndicator renders empty, found, and missing-source states", () => {
     const { container, rerender } = render(
-      <SourceIndicator path={null} found={false} emptyHint="Pick a field" />
-    )
-    expect(container.firstElementChild?.className).toContain("top-12")
-    expect(container.firstElementChild?.className).not.toContain("top-3")
-    expect(screen.getByText("Pick a field").textContent).toBe("Pick a field")
+      <SourceIndicator path={null} found={false} emptyHint="Pick a field" />,
+    );
+    expect(container.firstElementChild?.className).toContain("top-12");
+    expect(container.firstElementChild?.className).not.toContain("top-3");
+    expect(screen.getByText("Pick a field").textContent).toBe("Pick a field");
 
-    rerender(<SourceIndicator path="owner.name" found label="Field source" />)
-    expect(screen.getByText("Field source").textContent).toBe("Field source")
-    expect(screen.getByText("owner.name").textContent).toBe("owner.name")
+    rerender(<SourceIndicator path="owner.name" found label="Field source" />);
+    expect(screen.getByText("Field source").textContent).toBe("Field source");
+    expect(screen.getByText("owner.name").textContent).toBe("owner.name");
 
-    rerender(<SourceIndicator path="owner.email" found={false} />)
-    expect(screen.getByText("owner.email").textContent).toBe("owner.email")
-    expect(screen.getByText("· no source").textContent).toBe("· no source")
-  })
+    rerender(<SourceIndicator path="owner.email" found={false} />);
+    expect(screen.getByText("owner.email").textContent).toBe("owner.email");
+    expect(screen.getByText("· no source").textContent).toBe("· no source");
+  });
 
   it("SourceIndicator treats an empty string path as an active root source", () => {
     const { rerender } = render(
-      <SourceIndicator path="" found label="Root source" />
-    )
+      <SourceIndicator path="" found label="Root source" />,
+    );
 
-    expect(screen.getByText("Root source").textContent).toBe("Root source")
-    expect(screen.queryByText("Hover a field to view its source")).toBeNull()
-    expect(screen.queryByText("· no source")).toBeNull()
+    expect(screen.getByText("Root source").textContent).toBe("Root source");
+    expect(screen.queryByText("Hover a field to view its source")).toBeNull();
+    expect(screen.queryByText("· no source")).toBeNull();
 
-    rerender(<SourceIndicator path="" found={false} />)
-    expect(screen.getByText("· no source").textContent).toBe("· no source")
-  })
-})
+    rerender(<SourceIndicator path="" found={false} />);
+    expect(screen.getByText("· no source").textContent).toBe("· no source");
+  });
+});

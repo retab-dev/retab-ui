@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 /** Centered, clipped white surface that hosts a rendered first unit. */
 export function Surface({ children }: { children: React.ReactNode }) {
@@ -10,36 +10,36 @@ export function Surface({ children }: { children: React.ReactNode }) {
     <div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-white">
       {children}
     </div>
-  )
+  );
 }
 
 export function useElementWidth() {
-  const [width, setWidth] = React.useState<number | null>(null)
+  const [width, setWidth] = React.useState<number | null>(null);
   const ref = React.useCallback((el: HTMLElement | null) => {
-    if (!el) return
-    setWidth(el.clientWidth)
+    if (!el) return;
+    setWidth(el.clientWidth);
     const observer = new ResizeObserver((entries) => {
-      const nextWidth = entries[0]?.contentRect.width
-      if (nextWidth) setWidth(nextWidth)
-    })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
+      const nextWidth = entries[0]?.contentRect.width;
+      if (nextWidth) setWidth(nextWidth);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
-  return { ref, width }
+  return { ref, width };
 }
 
-const GRID_COL_W = 46
+const GRID_COL_W = 46;
 
 /** Internal-gridline table shared by the XLSX and CSV previews. */
 export function GridTable({
   rows,
   headerRow,
 }: {
-  rows: string[][]
-  headerRow?: boolean
+  rows: string[][];
+  headerRow?: boolean;
 }) {
-  const colCount = Math.max(1, ...rows.map((r) => r.length))
+  const colCount = Math.max(1, ...rows.map((r) => r.length));
   return (
     <div className="absolute inset-0 overflow-hidden bg-white">
       <table
@@ -59,8 +59,8 @@ export function GridTable({
                   className={cn(
                     "truncate border-r border-b border-slate-200 px-1 py-0.5 last:border-r-0",
                     headerRow && r === 0
-                      ? "bg-slate-50 font-semibold text-foreground"
-                      : "text-foreground/80"
+                      ? "text-foreground bg-slate-50 font-semibold"
+                      : "text-foreground/80",
                   )}
                 >
                   {row[c] ?? ""}
@@ -71,7 +71,7 @@ export function GridTable({
         </tbody>
       </table>
     </div>
-  )
+  );
 }
 
 /**
@@ -80,10 +80,10 @@ export function GridTable({
  * iframe is inert (no scripts, no pointer events).
  */
 export function IframeDoc({ html }: { html: string }) {
-  const { ref, width } = useElementWidth()
+  const { ref, width } = useElementWidth();
 
-  const BASE = 820
-  const scale = width ? width / BASE : null
+  const BASE = 820;
+  const scale = width ? width / BASE : null;
 
   return (
     <div ref={ref} className="absolute inset-0 overflow-hidden bg-white">
@@ -103,5 +103,5 @@ export function IframeDoc({ html }: { html: string }) {
         }}
       />
     </div>
-  )
+  );
 }

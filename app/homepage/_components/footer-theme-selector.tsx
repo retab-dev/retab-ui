@@ -1,72 +1,74 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react"
-import { Monitor, Moon, Sun } from "lucide-react"
-import { useTheme } from "next-themes"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { cn } from "@/lib/utils"
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { Monitor, Moon, Sun } from "lucide-react";
+import { useTheme } from "next-themes";
 
-import { type ThemeOption, type ThemeValue } from "./homepage-types"
-import { focusRing } from "./primitives"
+import { cn } from "@/lib/utils";
+
+import { type ThemeOption, type ThemeValue } from "./homepage-types";
+import { focusRing } from "./primitives";
 
 function isThemeValue(
   options: readonly ThemeOption[],
-  value: string | undefined
+  value: string | undefined,
 ): value is ThemeValue {
-  return options.some((option) => option.value === value)
+  return options.some((option) => option.value === value);
 }
 
 function ThemeIcon({ value }: { value: ThemeValue }) {
   if (value === "light") {
-    return <Sun aria-hidden="true" className="size-4" />
+    return <Sun aria-hidden="true" className="size-4" />;
   }
 
   if (value === "dark") {
-    return <Moon aria-hidden="true" className="size-4" />
+    return <Moon aria-hidden="true" className="size-4" />;
   }
 
-  return <Monitor aria-hidden="true" className="size-4" />
+  return <Monitor aria-hidden="true" className="size-4" />;
 }
 
 export function FooterThemeSelector({
   options,
 }: {
-  options: readonly ThemeOption[]
+  options: readonly ThemeOption[];
 }) {
-  const [isMounted, setIsMounted] = useState(false)
-  const optionRefs = useRef<Array<HTMLButtonElement | null>>([])
-  const { setTheme, theme } = useTheme()
+  const [isMounted, setIsMounted] = useState(false);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const { setTheme, theme } = useTheme();
   const selectedTheme: ThemeValue =
-    isMounted && isThemeValue(options, theme) ? theme : "system"
+    isMounted && isThemeValue(options, theme) ? theme : "system";
 
   useEffect(() => {
-    setIsMounted(true)
-  }, [])
+    setIsMounted(true);
+  }, []);
 
   function onThemeKeyDown(
     event: KeyboardEvent<HTMLButtonElement>,
-    index: number
+    index: number,
   ) {
-    const lastIndex = options.length - 1
-    let nextIndex: number | undefined
+    const lastIndex = options.length - 1;
+    let nextIndex: number | undefined;
 
     if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-      nextIndex = index === lastIndex ? 0 : index + 1
+      nextIndex = index === lastIndex ? 0 : index + 1;
     } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-      nextIndex = index === 0 ? lastIndex : index - 1
+      nextIndex = index === 0 ? lastIndex : index - 1;
     } else if (event.key === "Home") {
-      nextIndex = 0
+      nextIndex = 0;
     } else if (event.key === "End") {
-      nextIndex = lastIndex
+      nextIndex = lastIndex;
     }
 
     if (nextIndex === undefined) {
-      return
+      return;
     }
 
-    event.preventDefault()
-    setTheme(options[nextIndex].value)
-    optionRefs.current[nextIndex]?.focus()
+    event.preventDefault();
+    setTheme(options[nextIndex].value);
+    optionRefs.current[nextIndex]?.focus();
   }
 
   return (
@@ -77,13 +79,13 @@ export function FooterThemeSelector({
     >
       <legend className="sr-only">Select a display theme</legend>
       {options.map((option, index) => {
-        const isSelected = selectedTheme === option.value
+        const isSelected = selectedTheme === option.value;
 
         return (
           <button
             key={option.value}
             ref={(element) => {
-              optionRefs.current[index] = element
+              optionRefs.current[index] = element;
             }}
             type="button"
             role="radio"
@@ -98,13 +100,13 @@ export function FooterThemeSelector({
               focusRing,
               "focus-visible:ring-offset-0 focus-visible:ring-inset",
               isSelected &&
-                "bg-black text-white hover:bg-black hover:text-white focus-visible:bg-black focus-visible:text-white active:bg-black"
+                "bg-black text-white hover:bg-black hover:text-white focus-visible:bg-black focus-visible:text-white active:bg-black",
             )}
           >
             <ThemeIcon value={option.value} />
           </button>
-        )
+        );
       })}
     </fieldset>
-  )
+  );
 }

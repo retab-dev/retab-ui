@@ -1,5 +1,5 @@
-import type { ViewerDescriptor } from "@/lib/viewer-source"
-import { extensionOf } from "@/lib/viewer-source"
+import type { ViewerDescriptor } from "@/lib/viewer-source";
+import { extensionOf } from "@/lib/viewer-source";
 
 const CODE_THUMBNAIL_EXTENSIONS = new Set([
   "bash",
@@ -47,49 +47,49 @@ const CODE_THUMBNAIL_EXTENSIONS = new Set([
   "yaml",
   "yml",
   "zsh",
-])
+]);
 
 export function isCodeThumbnailDescriptor(
-  descriptor: ViewerDescriptor
+  descriptor: ViewerDescriptor,
 ): boolean {
-  const extension = extensionOf(descriptor.displayName)
-  if (extension && CODE_THUMBNAIL_EXTENSIONS.has(extension)) return true
+  const extension = extensionOf(descriptor.displayName);
+  if (extension && CODE_THUMBNAIL_EXTENSIONS.has(extension)) return true;
 
-  const mime = descriptor.mimeType?.toLowerCase().split(";")[0].trim()
+  const mime = descriptor.mimeType?.toLowerCase().split(";")[0].trim();
   return (
     mime === "application/json" ||
     mime === "application/xml" ||
     mime === "text/javascript" ||
     mime === "application/javascript" ||
     Boolean(mime?.endsWith("+json") || mime?.endsWith("+xml"))
-  )
+  );
 }
 
 export function formatCodeThumbnailText(
   text: string,
   fileName: string,
-  mimeType?: string
+  mimeType?: string,
 ) {
-  if (!isStrictJson(fileName, mimeType)) return text
+  if (!isStrictJson(fileName, mimeType)) return text;
 
   try {
-    return JSON.stringify(JSON.parse(text), null, 2)
+    return JSON.stringify(JSON.parse(text), null, 2);
   } catch {
-    return text
+    return text;
   }
 }
 
 function isStrictJson(fileName: string, mimeType?: string) {
-  const extension = extensionOf(fileName)
-  if (extension === "json") return true
+  const extension = extensionOf(fileName);
+  if (extension === "json") return true;
   if (
     extension === "json5" ||
     extension === "jsonl" ||
     extension === "ndjson"
   ) {
-    return false
+    return false;
   }
 
-  const mime = mimeType?.toLowerCase().split(";")[0].trim()
-  return mime === "application/json" || Boolean(mime?.endsWith("+json"))
+  const mime = mimeType?.toLowerCase().split(";")[0].trim();
+  return mime === "application/json" || Boolean(mime?.endsWith("+json"));
 }

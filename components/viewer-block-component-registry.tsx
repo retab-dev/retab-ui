@@ -1,47 +1,47 @@
-"use client"
+"use client";
 
-import type { ComponentType } from "react"
+import type { ComponentType } from "react";
 
-import type { ViewerBlockId, ViewerBlockMetadata } from "@/lib/viewer-blocks"
-import { CsvSourcesBlock } from "@/registry/new-york-v4/blocks/csv-sources-block"
-import { DocxSourcesBlock } from "@/registry/new-york-v4/blocks/docx-sources-block"
-import { AvatarImageSlot } from "@/registry/new-york-v4/blocks/dropzone-avatar-image-slot"
-import { DropzoneBlock } from "@/registry/new-york-v4/blocks/dropzone-block"
-import { ComparisonPairUpload } from "@/registry/new-york-v4/blocks/dropzone-comparison-pair-upload"
-import { ControlledQueue } from "@/registry/new-york-v4/blocks/dropzone-controlled-queue"
-import { CustomThumbnailGrid } from "@/registry/new-york-v4/blocks/dropzone-custom-thumbnail-grid"
-import { DisabledDropzone } from "@/registry/new-york-v4/blocks/dropzone-disabled-dropzone"
-import { EvidenceTimeline } from "@/registry/new-york-v4/blocks/dropzone-evidence-timeline"
-import { DefaultFileUploaderExample } from "@/registry/new-york-v4/blocks/dropzone-file-uploader-example"
-import { DropzoneFileViewerExample } from "@/registry/new-york-v4/blocks/dropzone-file-viewer-example"
-import { IntakeRouter } from "@/registry/new-york-v4/blocks/dropzone-intake-router"
-import { MediaTranscriptQueue } from "@/registry/new-york-v4/blocks/dropzone-media-transcript-queue"
-import { NativeButtonQueue } from "@/registry/new-york-v4/blocks/dropzone-native-button-queue"
-import { NonButtonTrigger } from "@/registry/new-york-v4/blocks/dropzone-non-button-trigger"
-import { PinboardDropSurface } from "@/registry/new-york-v4/blocks/dropzone-pinboard-drop-surface"
-import { RequiredPacketSlots } from "@/registry/new-york-v4/blocks/dropzone-required-packet-slots"
-import { SpreadsheetImportCard } from "@/registry/new-york-v4/blocks/dropzone-spreadsheet-import-card"
-import { ValidationOnly } from "@/registry/new-york-v4/blocks/dropzone-validation-only"
-import { EditViewerBlock } from "@/registry/new-york-v4/blocks/edit-viewer-block"
-import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block"
-import { FileSystemBlock } from "@/registry/new-york-v4/blocks/file-system-block"
-import { FsLightBlock } from "@/registry/new-york-v4/blocks/fslight-block"
-import { ImageSourcesBlock } from "@/registry/new-york-v4/blocks/image-sources-block"
-import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-sources-block"
-import { OcrBlock } from "@/registry/new-york-v4/blocks/ocr-block"
-import { ParseViewerBlock } from "@/registry/new-york-v4/blocks/parse-viewer-block"
-import { PartitionViewerBlock } from "@/registry/new-york-v4/blocks/partition-viewer-block"
-import { PdfThumbnailsBlock } from "@/registry/new-york-v4/blocks/pdf-thumbnails-block"
-import { PrimitiveCardsBlock } from "@/registry/new-york-v4/blocks/primitive-cards-block"
-import { SourcesViewerBlock } from "@/registry/new-york-v4/blocks/sources-viewer-block"
-import { SplitViewerBlock } from "@/registry/new-york-v4/blocks/split-viewer-block"
-import { TextSourcesBlock } from "@/registry/new-york-v4/blocks/text-sources-block"
-import { XlsxSourcesBlock } from "@/registry/new-york-v4/blocks/xlsx-sources-block"
+import type { ViewerBlockId, ViewerBlockMetadata } from "@/lib/viewer-blocks";
+import { CsvSourcesBlock } from "@/registry/new-york-v4/blocks/csv-sources-block";
+import { DocxSourcesBlock } from "@/registry/new-york-v4/blocks/docx-sources-block";
+import { AvatarImageSlot } from "@/registry/new-york-v4/blocks/dropzone-avatar-image-slot";
+import { DropzoneBlock } from "@/registry/new-york-v4/blocks/dropzone-block";
+import { ComparisonPairUpload } from "@/registry/new-york-v4/blocks/dropzone-comparison-pair-upload";
+import { ControlledQueue } from "@/registry/new-york-v4/blocks/dropzone-controlled-queue";
+import { CustomThumbnailGrid } from "@/registry/new-york-v4/blocks/dropzone-custom-thumbnail-grid";
+import { DisabledDropzone } from "@/registry/new-york-v4/blocks/dropzone-disabled-dropzone";
+import { EvidenceTimeline } from "@/registry/new-york-v4/blocks/dropzone-evidence-timeline";
+import { DefaultFileUploaderExample } from "@/registry/new-york-v4/blocks/dropzone-file-uploader-example";
+import { DropzoneFileViewerExample } from "@/registry/new-york-v4/blocks/dropzone-file-viewer-example";
+import { IntakeRouter } from "@/registry/new-york-v4/blocks/dropzone-intake-router";
+import { MediaTranscriptQueue } from "@/registry/new-york-v4/blocks/dropzone-media-transcript-queue";
+import { NativeButtonQueue } from "@/registry/new-york-v4/blocks/dropzone-native-button-queue";
+import { NonButtonTrigger } from "@/registry/new-york-v4/blocks/dropzone-non-button-trigger";
+import { PinboardDropSurface } from "@/registry/new-york-v4/blocks/dropzone-pinboard-drop-surface";
+import { RequiredPacketSlots } from "@/registry/new-york-v4/blocks/dropzone-required-packet-slots";
+import { SpreadsheetImportCard } from "@/registry/new-york-v4/blocks/dropzone-spreadsheet-import-card";
+import { ValidationOnly } from "@/registry/new-york-v4/blocks/dropzone-validation-only";
+import { EditViewerBlock } from "@/registry/new-york-v4/blocks/edit-viewer-block";
+import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block";
+import { FileSystemBlock } from "@/registry/new-york-v4/blocks/file-system-block";
+import { FsLightBlock } from "@/registry/new-york-v4/blocks/fslight-block";
+import { ImageSourcesBlock } from "@/registry/new-york-v4/blocks/image-sources-block";
+import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-sources-block";
+import { OcrBlock } from "@/registry/new-york-v4/blocks/ocr-block";
+import { ParseViewerBlock } from "@/registry/new-york-v4/blocks/parse-viewer-block";
+import { PartitionViewerBlock } from "@/registry/new-york-v4/blocks/partition-viewer-block";
+import { PdfThumbnailsBlock } from "@/registry/new-york-v4/blocks/pdf-thumbnails-block";
+import { PrimitiveCardsBlock } from "@/registry/new-york-v4/blocks/primitive-cards-block";
+import { SourcesViewerBlock } from "@/registry/new-york-v4/blocks/sources-viewer-block";
+import { SplitViewerBlock } from "@/registry/new-york-v4/blocks/split-viewer-block";
+import { TextSourcesBlock } from "@/registry/new-york-v4/blocks/text-sources-block";
+import { XlsxSourcesBlock } from "@/registry/new-york-v4/blocks/xlsx-sources-block";
 
-export type ViewerBlockComponent = ComponentType
+export type ViewerBlockComponent = ComponentType;
 export type ViewerBlockWithComponent = ViewerBlockMetadata & {
-  component: ViewerBlockComponent
-}
+  component: ViewerBlockComponent;
+};
 
 export const VIEWER_BLOCK_COMPONENTS = {
   ocr: OcrBlock,
@@ -78,17 +78,17 @@ export const VIEWER_BLOCK_COMPONENTS = {
   fslight: FsLightBlock,
   "primitive-cards": PrimitiveCardsBlock,
   "pdf-thumbnails": PdfThumbnailsBlock,
-} satisfies Record<ViewerBlockId, ViewerBlockComponent>
+} satisfies Record<ViewerBlockId, ViewerBlockComponent>;
 
 export function getViewerBlockComponent(blockId: ViewerBlockId) {
-  return VIEWER_BLOCK_COMPONENTS[blockId]
+  return VIEWER_BLOCK_COMPONENTS[blockId];
 }
 
 export function withViewerBlockComponent(
-  block: ViewerBlockMetadata
+  block: ViewerBlockMetadata,
 ): ViewerBlockWithComponent {
   return {
     ...block,
     component: getViewerBlockComponent(block.id),
-  }
+  };
 }

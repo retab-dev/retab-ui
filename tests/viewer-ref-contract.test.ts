@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs"
-import { describe, expect, it } from "vitest"
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
 
 const imperativeHandleFiles = [
   "components/viewers/page-markdown/page-markdown-pane.tsx",
@@ -13,16 +13,16 @@ const imperativeHandleFiles = [
   "registry/new-york-v4/ui/text-viewer-chenglou-content.tsx",
   "registry/new-york-v4/ui/text-viewer-content.tsx",
   "registry/new-york-v4/ui/xlsx-viewer-session.tsx",
-]
+];
 
 describe("viewer ref contract", () => {
   it("normalizes optional imperative refs before exposing viewer handles", () => {
     for (const file of imperativeHandleFiles) {
-      const source = readFileSync(file, "utf8")
+      const source = readFileSync(file, "utf8");
 
       expect(source, file).not.toMatch(
-        /useImperativeHandle\(\s*(?:forwardedRef|ref)\s*,/
-      )
+        /useImperativeHandle\(\s*(?:forwardedRef|ref)\s*,/,
+      );
     }
-  })
-})
+  });
+});

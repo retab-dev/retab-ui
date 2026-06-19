@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
 import {
   Select,
@@ -8,51 +8,54 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   compactJsonFormSelectDataCellClass,
   type ControlFieldApi,
   type ScalarControlDomProps,
-} from "@/components/json-form/scalar/types"
-import { isRecordValue, type Schema } from "@/components/json-form/schema-model"
+} from "@/components/json-form/scalar/types";
+import {
+  isRecordValue,
+  type Schema,
+} from "@/components/json-form/schema-model";
 
-export const NULL_SELECT_VALUE = "__json-form-null__"
+export const NULL_SELECT_VALUE = "__json-form-null__";
 
 function enumOptionValue(index: number): string {
-  return `enum:${index}`
+  return `enum:${index}`;
 }
 
 export function enumLabel(value: unknown): string {
-  if (value === null) return "No value"
-  if (typeof value === "string") return value
-  return JSON.stringify(value)
+  if (value === null) return "No value";
+  if (typeof value === "string") return value;
+  return JSON.stringify(value);
 }
 
 function hasOwnRecordValue(
   value: Record<string, unknown>,
-  key: string
+  key: string,
 ): boolean {
-  return Object.prototype.hasOwnProperty.call(value, key)
+  return Object.prototype.hasOwnProperty.call(value, key);
 }
 
 export function enumValueEquals(a: unknown, b: unknown): boolean {
-  if (Object.is(a, b)) return true
+  if (Object.is(a, b)) return true;
   if (Array.isArray(a) || Array.isArray(b)) {
     if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
-      return false
+      return false;
     }
-    return a.every((item, index) => enumValueEquals(item, b[index]))
+    return a.every((item, index) => enumValueEquals(item, b[index]));
   }
   if (!isRecordValue(a) || !isRecordValue(b)) {
-    return false
+    return false;
   }
 
-  const aKeys = Object.keys(a)
-  const bKeys = Object.keys(b)
-  if (aKeys.length !== bKeys.length) return false
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
   return aKeys.every(
-    (key) => hasOwnRecordValue(b, key) && enumValueEquals(a[key], b[key])
-  )
+    (key) => hasOwnRecordValue(b, key) && enumValueEquals(a[key], b[key]),
+  );
 }
 
 export function EnumControl({
@@ -62,40 +65,40 @@ export function EnumControl({
   nullable,
   ...controlProps
 }: {
-  schema: Schema
-  field: ControlFieldApi
-  compact: boolean
-  nullable: boolean
+  schema: Schema;
+  field: ControlFieldApi;
+  compact: boolean;
+  nullable: boolean;
 } & ScalarControlDomProps) {
-  const enumValues = schema.enum ?? []
-  const hasNullEnumValue = enumValues.some((value) => value === null)
+  const enumValues = schema.enum ?? [];
+  const hasNullEnumValue = enumValues.some((value) => value === null);
   const currentIndex = enumValues.findIndex((value) =>
-    enumValueEquals(value, field.value)
-  )
+    enumValueEquals(value, field.value),
+  );
   const selectValue =
     currentIndex >= 0
       ? enumOptionValue(currentIndex)
       : field.value === null && nullable
         ? NULL_SELECT_VALUE
-        : undefined
+        : undefined;
   const displayValue =
     currentIndex >= 0
       ? enumLabel(enumValues[currentIndex])
       : field.value === null && nullable
         ? "No value"
-        : undefined
+        : undefined;
 
   return (
     <Select
       value={selectValue}
       onValueChange={(value) => {
-        if (typeof value !== "string") return
+        if (typeof value !== "string") return;
         if (value === NULL_SELECT_VALUE) {
-          field.onChange(null)
-          return
+          field.onChange(null);
+          return;
         }
-        const index = Number(value.replace("enum:", ""))
-        field.onChange(enumValues[index])
+        const index = Number(value.replace("enum:", ""));
+        field.onChange(enumValues[index]);
       }}
     >
       <SelectTrigger
@@ -125,5 +128,5 @@ export function EnumControl({
         ))}
       </SelectContent>
     </Select>
-  )
+  );
 }

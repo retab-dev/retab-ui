@@ -1,59 +1,59 @@
-import type * as React from "react"
+import type * as React from "react";
 
 export interface SchemaRowDragItem {
-  id: string
-  label: string
+  id: string;
+  label: string;
 }
 
-export type SchemaRowDropPlacement = "before" | "after"
-export type SchemaRowDropIndicator = SchemaRowDropPlacement | null
+export type SchemaRowDropPlacement = "before" | "after";
+export type SchemaRowDropIndicator = SchemaRowDropPlacement | null;
 
 interface SchemaRowDropTargetRect {
-  height: number
-  top: number
+  height: number;
+  top: number;
 }
 
-const ROW_DRAG_FORMAT = "text/plain"
+const ROW_DRAG_FORMAT = "text/plain";
 const DROP_CLASSES = [
   "border-t-2",
   "border-b-2",
   "border-grey-700",
   "border-dashed",
-] as const
+] as const;
 
 export function getSchemaRowDropPlacement({
   clientY,
   targetRect,
 }: {
-  clientY: number
-  targetRect: SchemaRowDropTargetRect
+  clientY: number;
+  targetRect: SchemaRowDropTargetRect;
 }): SchemaRowDropPlacement {
-  return clientY < targetRect.top + targetRect.height / 2 ? "before" : "after"
+  return clientY < targetRect.top + targetRect.height / 2 ? "before" : "after";
 }
 
 export function getSchemaRowDropClasses(
-  indicator: SchemaRowDropIndicator
+  indicator: SchemaRowDropIndicator,
 ): string[] {
-  if (!indicator) return []
+  if (!indicator) return [];
   return [
     indicator === "before" ? "border-t-2" : "border-b-2",
     "border-grey-700",
     "border-dashed",
-  ]
+  ];
 }
 
 export function clearSchemaRowDropClasses(element: HTMLElement) {
-  element.classList.remove(...DROP_CLASSES)
+  element.classList.remove(...DROP_CLASSES);
 }
 
 export function applySchemaRowDropClasses(
   element: HTMLElement,
-  indicator: SchemaRowDropIndicator
+  indicator: SchemaRowDropIndicator,
 ) {
   // Native dragover fires continuously; keep the drop indicator out of React state.
-  clearSchemaRowDropClasses(element)
-  const classes = getSchemaRowDropClasses(indicator)
-  if (classes.length) element.classList.add(...classes)
+  clearSchemaRowDropClasses(element);
+  const classes = getSchemaRowDropClasses(indicator);
+  if (classes.length) element.classList.add(...classes);
 }
 
 export function getSchemaRowDropTargetIndex({
@@ -62,19 +62,19 @@ export function getSchemaRowDropTargetIndex({
   sourceRowId,
   targetRowId,
 }: {
-  placement: SchemaRowDropPlacement
-  rowIds: string[]
-  sourceRowId: string
-  targetRowId: string
+  placement: SchemaRowDropPlacement;
+  rowIds: string[];
+  sourceRowId: string;
+  targetRowId: string;
 }) {
-  const sourceIndex = rowIds.indexOf(sourceRowId)
-  if (sourceIndex < 0 || sourceRowId === targetRowId) return -1
+  const sourceIndex = rowIds.indexOf(sourceRowId);
+  if (sourceIndex < 0 || sourceRowId === targetRowId) return -1;
 
-  const remainingRowIds = rowIds.filter((rowId) => rowId !== sourceRowId)
-  const targetIndex = remainingRowIds.indexOf(targetRowId)
-  if (targetIndex < 0) return -1
+  const remainingRowIds = rowIds.filter((rowId) => rowId !== sourceRowId);
+  const targetIndex = remainingRowIds.indexOf(targetRowId);
+  if (targetIndex < 0) return -1;
 
-  return placement === "after" ? targetIndex + 1 : targetIndex
+  return placement === "after" ? targetIndex + 1 : targetIndex;
 }
 
 export function beginSchemaRowDrag({
@@ -82,21 +82,21 @@ export function beginSchemaRowDrag({
   item,
   draggedRowIdRef,
 }: {
-  event: React.DragEvent<HTMLElement>
-  item: SchemaRowDragItem
-  draggedRowIdRef: React.RefObject<string | null>
+  event: React.DragEvent<HTMLElement>;
+  item: SchemaRowDragItem;
+  draggedRowIdRef: React.RefObject<string | null>;
 }) {
-  event.stopPropagation()
-  event.dataTransfer.setData(ROW_DRAG_FORMAT, item.id)
-  event.dataTransfer.effectAllowed = "move"
-  draggedRowIdRef.current = item.id
+  event.stopPropagation();
+  event.dataTransfer.setData(ROW_DRAG_FORMAT, item.id);
+  event.dataTransfer.effectAllowed = "move";
+  draggedRowIdRef.current = item.id;
 
   const dragElement = createSchemaRowDragPreview({
     sourceElement: event.currentTarget,
     label: item.label,
-  })
-  event.dataTransfer.setDragImage(dragElement, 10, 10)
-  removeSchemaRowDragPreviewAfterFrame(dragElement)
+  });
+  event.dataTransfer.setDragImage(dragElement, 10, 10);
+  removeSchemaRowDragPreviewAfterFrame(dragElement);
 }
 
 export function updateSchemaRowDragTarget({
@@ -105,12 +105,12 @@ export function updateSchemaRowDragTarget({
   targetRowId,
   draggedRowIdRef,
 }: {
-  event: React.DragEvent<HTMLElement>
-  rowIds: string[]
-  targetRowId: string
-  draggedRowIdRef: React.RefObject<string | null>
+  event: React.DragEvent<HTMLElement>;
+  rowIds: string[];
+  targetRowId: string;
+  draggedRowIdRef: React.RefObject<string | null>;
 }) {
-  event.preventDefault()
+  event.preventDefault();
   const indicator =
     draggedRowIdRef.current &&
     draggedRowIdRef.current !== targetRowId &&
@@ -120,17 +120,20 @@ export function updateSchemaRowDragTarget({
           clientY: event.clientY,
           targetRect: event.currentTarget.getBoundingClientRect(),
         })
-      : null
+      : null;
 
-  event.dataTransfer.dropEffect = "move"
-  applySchemaRowDropClasses(event.currentTarget, indicator)
+  event.dataTransfer.dropEffect = "move";
+  applySchemaRowDropClasses(event.currentTarget, indicator);
 }
 
 export function leaveSchemaRowDragTarget(
-  event: Pick<React.DragEvent<HTMLElement>, "currentTarget" | "stopPropagation">
+  event: Pick<
+    React.DragEvent<HTMLElement>,
+    "currentTarget" | "stopPropagation"
+  >,
 ) {
-  event.stopPropagation()
-  clearSchemaRowDropClasses(event.currentTarget)
+  event.stopPropagation();
+  clearSchemaRowDropClasses(event.currentTarget);
 }
 
 export function resolveSchemaRowDrop({
@@ -139,20 +142,20 @@ export function resolveSchemaRowDrop({
   targetRowId,
   draggedRowIdRef,
 }: {
-  event: React.DragEvent<HTMLElement>
-  rowIds: string[]
-  targetRowId: string
-  draggedRowIdRef: React.RefObject<string | null>
+  event: React.DragEvent<HTMLElement>;
+  rowIds: string[];
+  targetRowId: string;
+  draggedRowIdRef: React.RefObject<string | null>;
 }): {
-  placement: SchemaRowDropPlacement
-  sourceRowId: string
-  targetRowId: string
-  targetIndex: number
+  placement: SchemaRowDropPlacement;
+  sourceRowId: string;
+  targetRowId: string;
+  targetIndex: number;
 } | null {
-  event.stopPropagation()
-  event.preventDefault()
-  const sourceRowId = event.dataTransfer.getData(ROW_DRAG_FORMAT)
-  clearSchemaRowDropClasses(event.currentTarget)
+  event.stopPropagation();
+  event.preventDefault();
+  const sourceRowId = event.dataTransfer.getData(ROW_DRAG_FORMAT);
+  clearSchemaRowDropClasses(event.currentTarget);
 
   if (
     !sourceRowId ||
@@ -161,38 +164,38 @@ export function resolveSchemaRowDrop({
     !rowIds.includes(sourceRowId) ||
     !rowIds.includes(targetRowId)
   ) {
-    return null
+    return null;
   }
 
   const placement = getSchemaRowDropPlacement({
     clientY: event.clientY,
     targetRect: event.currentTarget.getBoundingClientRect(),
-  })
+  });
   const targetIndex = getSchemaRowDropTargetIndex({
     placement,
     rowIds,
     sourceRowId,
     targetRowId,
-  })
-  if (targetIndex < 0) return null
+  });
+  if (targetIndex < 0) return null;
 
   return {
     placement,
     sourceRowId,
     targetRowId,
     targetIndex,
-  }
+  };
 }
 
 function createSchemaRowDragPreview({
   sourceElement,
   label,
 }: {
-  sourceElement: HTMLElement
-  label: string
+  sourceElement: HTMLElement;
+  label: string;
 }) {
-  const dragElement = document.createElement("div")
-  const rect = sourceElement.getBoundingClientRect()
+  const dragElement = document.createElement("div");
+  const rect = sourceElement.getBoundingClientRect();
 
   Object.assign(dragElement.style, {
     width: `${rect.width}px`,
@@ -205,15 +208,15 @@ function createSchemaRowDragPreview({
     position: "fixed",
     zIndex: "9999",
     pointerEvents: "none",
-  })
-  dragElement.textContent = label
-  document.body.appendChild(dragElement)
+  });
+  dragElement.textContent = label;
+  document.body.appendChild(dragElement);
 
-  return dragElement
+  return dragElement;
 }
 
 function removeSchemaRowDragPreviewAfterFrame(dragElement: HTMLElement) {
   window.requestAnimationFrame(() => {
-    dragElement.remove()
-  })
+    dragElement.remove();
+  });
 }

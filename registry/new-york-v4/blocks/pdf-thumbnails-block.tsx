@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   FileViewer,
@@ -10,19 +10,19 @@ import {
   FileViewerSidebarTrigger,
   FileViewerSurface,
   FileViewerTitle,
-} from "@/components/ui/file-viewer"
+} from "@/components/ui/file-viewer";
 import {
   PdfViewerPages,
   PdfViewerProvider,
   PdfViewerThumbnails,
-} from "@/components/ui/pdf-viewer"
+} from "@/components/ui/pdf-viewer";
 
-const PDF_URL = "/samples/nvidia-10k-fy2024.pdf"
+const PDF_URL = "/samples/nvidia-10k-fy2024.pdf";
 const PDF_SOURCE = {
   kind: "url" as const,
   url: PDF_URL,
   fileName: "nvidia-10k-fy2024.pdf",
-}
+};
 
 /**
  * PDF viewer with page thumbnails in a navigation rail.
@@ -32,7 +32,7 @@ const PDF_SOURCE = {
  */
 export function PdfThumbnailsBlock() {
   return (
-    <div className="h-full min-h-[680px] bg-background">
+    <div className="bg-background h-full min-h-[680px]">
       <FileViewer source={PDF_SOURCE} defaultOpen className="h-full">
         <PdfViewerProvider>
           <FileViewerHeader>
@@ -56,5 +56,5 @@ export function PdfThumbnailsBlock() {
         </PdfViewerProvider>
       </FileViewer>
     </div>
-  )
+  );
 }

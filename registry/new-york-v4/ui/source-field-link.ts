@@ -1,54 +1,57 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import type { DocumentSegment, SegmentAnchor } from "./segmented-document-model"
-import { useSegmentedItemLink } from "./segmented-item-link"
+import type {
+  DocumentSegment,
+  SegmentAnchor,
+} from "./segmented-document-model";
+import { useSegmentedItemLink } from "./segmented-item-link";
 
 export type SourceFieldLink = {
-  activeSourcePath: string | null
-  onSourceHover: (path: string | null) => void
-  selectSourcePath?: (path: string) => void
-}
+  activeSourcePath: string | null;
+  onSourceHover: (path: string | null) => void;
+  selectSourcePath?: (path: string) => void;
+};
 
 export type SegmentedSourceFieldLink = SourceFieldLink & {
-  activeAnchor: SegmentAnchor | null
-  activeAnchors: readonly SegmentAnchor[]
-  activeSegment: DocumentSegment | null
-  selectedSourcePath: string | null
-}
+  activeAnchor: SegmentAnchor | null;
+  activeAnchors: readonly SegmentAnchor[];
+  activeSegment: DocumentSegment | null;
+  selectedSourcePath: string | null;
+};
 
 export type SegmentedSourceFieldLinkOptions = {
-  initialSourcePath?: string | null
-}
+  initialSourcePath?: string | null;
+};
 
 export function useSegmentedSourceFieldLink(
-  options: SegmentedSourceFieldLinkOptions = {}
+  options: SegmentedSourceFieldLinkOptions = {},
 ): SegmentedSourceFieldLink {
   const link = useSegmentedItemLink({
     initialItemId: options.initialSourcePath,
-  })
+  });
 
   const onSourceHover = React.useCallback(
     (path: string | null) => {
       if (!path) {
-        link.previewItem(null)
-        return
+        link.previewItem(null);
+        return;
       }
 
-      link.previewItem(path)
-      link.navigateItem(path, { behavior: "auto", clearPreview: false })
+      link.previewItem(path);
+      link.navigateItem(path, { behavior: "auto", clearPreview: false });
     },
-    [link]
-  )
+    [link],
+  );
 
   const selectSourcePath = React.useCallback(
     (path: string) => {
-      link.selectItem(path)
-      link.navigateItem(path, { behavior: "smooth", clearPreview: false })
+      link.selectItem(path);
+      link.navigateItem(path, { behavior: "smooth", clearPreview: false });
     },
-    [link]
-  )
+    [link],
+  );
 
   return React.useMemo(
     () => ({
@@ -68,6 +71,6 @@ export function useSegmentedSourceFieldLink(
       link.selectedItemId,
       onSourceHover,
       selectSourcePath,
-    ]
-  )
+    ],
+  );
 }

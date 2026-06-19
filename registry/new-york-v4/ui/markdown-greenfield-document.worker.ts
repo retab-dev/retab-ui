@@ -1,39 +1,39 @@
-import { createMarkdownGreenfieldDocument } from "./markdown-greenfield-document"
+import { createMarkdownGreenfieldDocument } from "./markdown-greenfield-document";
 
 type MarkdownDocumentWorkerRequest = {
-  id: number
-  text: string
-}
+  id: number;
+  text: string;
+};
 
 type MarkdownDocumentWorkerResponse =
   | {
-      type: "ready"
+      type: "ready";
     }
   | {
-      document: ReturnType<typeof createMarkdownGreenfieldDocument>
-      id: number
-      ok: true
-      type: "result"
+      document: ReturnType<typeof createMarkdownGreenfieldDocument>;
+      id: number;
+      ok: true;
+      type: "result";
     }
   | {
-      id: number
-      message: string
-      ok: false
-      type: "result"
-    }
+      id: number;
+      message: string;
+      ok: false;
+      type: "result";
+    };
 
-self.postMessage({ type: "ready" } satisfies MarkdownDocumentWorkerResponse)
+self.postMessage({ type: "ready" } satisfies MarkdownDocumentWorkerResponse);
 
 self.onmessage = (event: MessageEvent<MarkdownDocumentWorkerRequest>) => {
-  const { id, text } = event.data
+  const { id, text } = event.data;
   try {
-    const document = createMarkdownGreenfieldDocument(text)
+    const document = createMarkdownGreenfieldDocument(text);
     self.postMessage({
       document,
       id,
       ok: true,
       type: "result",
-    } satisfies MarkdownDocumentWorkerResponse)
+    } satisfies MarkdownDocumentWorkerResponse);
   } catch (error) {
     self.postMessage({
       id,
@@ -41,6 +41,6 @@ self.onmessage = (event: MessageEvent<MarkdownDocumentWorkerRequest>) => {
         error instanceof Error ? error.message : "Could not parse Markdown.",
       ok: false,
       type: "result",
-    } satisfies MarkdownDocumentWorkerResponse)
+    } satisfies MarkdownDocumentWorkerResponse);
   }
-}
+};

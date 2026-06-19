@@ -1,23 +1,23 @@
-"use client"
+"use client";
 
-import { Clock3, Paperclip, X } from "lucide-react"
+import { Clock3, Paperclip, X } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { useDropzone } from "@/components/ui/dropzone"
-import { formatFileSize } from "@/components/ui/file-size-format"
-import { FileThumbnail } from "@/components/ui/file-thumbnail"
+import { cn } from "@/lib/utils";
+import { useDropzone } from "@/components/ui/dropzone";
+import { formatFileSize } from "@/components/ui/file-size-format";
+import { FileThumbnail } from "@/components/ui/file-thumbnail";
 
 import {
   RejectionRows,
   type DropzoneExampleProps,
-} from "./dropzone-example-shared"
+} from "./dropzone-example-shared";
 
 export function EvidenceTimeline({ className }: DropzoneExampleProps) {
   const dropzone = useDropzone({
     accept: ".pdf,.png,.jpg,.jpeg,image/*,application/pdf",
     maxFiles: 6,
     multiple: true,
-  })
+  });
 
   return (
     <section
@@ -25,7 +25,7 @@ export function EvidenceTimeline({ className }: DropzoneExampleProps) {
         className: cn(
           "rounded-lg border bg-background p-4 transition-colors",
           dropzone.isDragging && "border-foreground/40 bg-accent/35",
-          className
+          className,
         ),
       })}
     >
@@ -33,10 +33,10 @@ export function EvidenceTimeline({ className }: DropzoneExampleProps) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-sm font-medium">
-            <Clock3 className="size-4 text-muted-foreground" aria-hidden />
+            <Clock3 className="text-muted-foreground size-4" aria-hidden />
             Evidence timeline
           </div>
-          <div className="mt-1 text-xs text-muted-foreground">
+          <div className="text-muted-foreground mt-1 text-xs">
             Files become ordered events inside a custom surface.
           </div>
         </div>
@@ -51,12 +51,12 @@ export function EvidenceTimeline({ className }: DropzoneExampleProps) {
           Add evidence
         </button>
       </div>
-      <div className="mt-4 grid min-h-44 auto-rows-min content-start items-start gap-3 rounded-md border border-dashed bg-muted/20 p-3 md:grid-cols-2">
+      <div className="bg-muted/20 mt-4 grid min-h-44 auto-rows-min content-start items-start gap-3 rounded-md border border-dashed p-3 md:grid-cols-2">
         {dropzone.files.length ? (
           dropzone.files.map((item) => (
             <div
               key={item.id}
-              className="flex h-16 min-w-0 items-center gap-3 rounded-md border bg-background p-2"
+              className="bg-background flex h-16 min-w-0 items-center gap-3 rounded-md border p-2"
             >
               <FileThumbnail
                 file={item.file}
@@ -68,14 +68,14 @@ export function EvidenceTimeline({ className }: DropzoneExampleProps) {
                 <div className="truncate text-sm font-medium">
                   {item.file.name}
                 </div>
-                <div className="text-xs text-muted-foreground">
+                <div className="text-muted-foreground text-xs">
                   {formatFileSize(item.file.size)}
                 </div>
               </div>
               <button
                 type="button"
                 aria-label={`Remove ${item.file.name}`}
-                className="grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="text-muted-foreground hover:bg-muted hover:text-foreground grid size-7 shrink-0 place-items-center rounded-md"
                 onClick={() => dropzone.removeFile(item.id)}
               >
                 <X className="size-4" aria-hidden />
@@ -95,5 +95,5 @@ export function EvidenceTimeline({ className }: DropzoneExampleProps) {
       </div>
       <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </section>
-  )
+  );
 }

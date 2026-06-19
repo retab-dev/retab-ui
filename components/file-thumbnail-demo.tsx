@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { FileThumbnail } from "@/components/ui/file-thumbnail"
+import { FileThumbnail } from "@/components/ui/file-thumbnail";
 
 // A self-contained "rendered page" image so the demo works offline.
 const pagePreview =
@@ -19,12 +19,12 @@ const pagePreview =
       <rect x='24' y='176' width='110' height='8' rx='3' fill='#e2e8f0'/>
       <rect x='24' y='220' width='192' height='8' rx='3' fill='#e2e8f0'/>
       <rect x='24' y='238' width='168' height='8' rx='3' fill='#e2e8f0'/>
-    </svg>`
-  )
+    </svg>`,
+  );
 
 export function FileThumbnailDemo() {
   return (
-    <div className="rounded-xl border bg-card p-6 sm:p-8">
+    <div className="bg-card rounded-xl border p-6 sm:p-8">
       <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4 sm:gap-x-8">
         <Cell label="Loaded" hint="previewImageUrl">
           <FileThumbnail
@@ -67,7 +67,7 @@ export function FileThumbnailDemo() {
         </Cell>
       </div>
     </div>
-  )
+  );
 }
 
 function Cell({
@@ -75,19 +75,19 @@ function Cell({
   hint,
   children,
 }: {
-  label: string
-  hint: string
-  children: React.ReactNode
+  label: string;
+  hint: string;
+  children: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-0.5">
-        <span className="text-base font-semibold tracking-tight text-foreground">
+        <span className="text-foreground text-base font-semibold tracking-tight">
           {label}
         </span>
-        <code className="text-xs text-muted-foreground">{hint}</code>
+        <code className="text-muted-foreground text-xs">{hint}</code>
       </div>
       {children}
     </div>
-  )
+  );
 }

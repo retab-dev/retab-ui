@@ -9,7 +9,7 @@
   "files": [
     {
       "path": "registry/new-york-v4/ui/document-evidence.ts",
-      "content": "import type { DocumentAnchor } from \"./document-anchor\"\n\nexport type AnchorResolution =\n  | { status: \"resolved\"; anchor: DocumentAnchor }\n  | { status: \"missing\" }\n  | { status: \"invalid\"; reason: string }\n\nexport type EvidenceAnchor = {\n  id: string\n  anchor: AnchorResolution\n}\n\nexport type EvidenceItem<Payload> = EvidenceAnchor & {\n  payload: Payload\n}\n\nexport function resolvedEvidenceAnchor(\n  anchor: DocumentAnchor\n): AnchorResolution {\n  return { status: \"resolved\", anchor }\n}\n\nexport function missingEvidenceAnchor(): AnchorResolution {\n  return { status: \"missing\" }\n}\n\nexport function invalidEvidenceAnchor(reason: string): AnchorResolution {\n  return { status: \"invalid\", reason }\n}\n",
+      "content": "import type { DocumentAnchor } from \"./document-anchor\";\n\nexport type AnchorResolution =\n  | { status: \"resolved\"; anchor: DocumentAnchor }\n  | { status: \"missing\" }\n  | { status: \"invalid\"; reason: string };\n\nexport type EvidenceAnchor = {\n  id: string;\n  anchor: AnchorResolution;\n};\n\nexport type EvidenceItem<Payload> = EvidenceAnchor & {\n  payload: Payload;\n};\n\nexport function resolvedEvidenceAnchor(\n  anchor: DocumentAnchor,\n): AnchorResolution {\n  return { status: \"resolved\", anchor };\n}\n\nexport function missingEvidenceAnchor(): AnchorResolution {\n  return { status: \"missing\" };\n}\n\nexport function invalidEvidenceAnchor(reason: string): AnchorResolution {\n  return { status: \"invalid\", reason };\n}\n",
       "type": "registry:ui",
       "target": "@ui/document-evidence.ts"
     }

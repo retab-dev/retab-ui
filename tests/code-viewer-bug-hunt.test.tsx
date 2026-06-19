@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import * as React from "react"
+import * as React from "react";
 import {
   act,
   cleanup,
@@ -8,114 +8,114 @@ import {
   render,
   screen,
   waitFor,
-} from "@testing-library/react"
-import { renderToString } from "react-dom/server"
-import { afterEach, describe, expect, it, vi } from "vitest"
+} from "@testing-library/react";
+import { renderToString } from "react-dom/server";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   clearViewerResourceRegistryForTests,
   createViewerResource,
-} from "@/registry/new-york-v4/lib/viewer-resource"
+} from "@/registry/new-york-v4/lib/viewer-resource";
 import {
   CodeViewer,
   type CodeViewerHandle,
-} from "@/registry/new-york-v4/ui/code-viewer"
+} from "@/registry/new-york-v4/ui/code-viewer";
 import {
   clearTextViewerResourceCacheForTests,
   readTextResource,
   resolvedTextViewerBounds,
   splitTextLines,
-} from "@/registry/new-york-v4/ui/text-viewer-resource"
+} from "@/registry/new-york-v4/ui/text-viewer-resource";
 
 function response(body: BodyInit | null, init: ResponseInit = {}) {
-  return new Response(body, init)
+  return new Response(body, init);
 }
 
 function textSource(text: string, fileName?: string) {
-  return { kind: "text" as const, text, fileName }
+  return { kind: "text" as const, text, fileName };
 }
 
 function urlSource(url: string, fileName?: string) {
-  return { kind: "url" as const, url, fileName }
+  return { kind: "url" as const, url, fileName };
 }
 
 function textResource(url: string) {
-  return createViewerResource(urlSource(url))
+  return createViewerResource(urlSource(url));
 }
 
 function manyLines(count: number) {
   return Array.from({ length: count }, (_, index) => `line ${index + 1}`).join(
-    "\n"
-  )
+    "\n",
+  );
 }
 
 function streamResponse(chunks: string[], init: ResponseInit = {}) {
-  const encoder = new TextEncoder()
-  let chunkIndex = 0
+  const encoder = new TextEncoder();
+  let chunkIndex = 0;
   return new Response(
     new ReadableStream<Uint8Array>({
       pull(controller) {
-        const chunk = chunks[chunkIndex]
-        chunkIndex += 1
+        const chunk = chunks[chunkIndex];
+        chunkIndex += 1;
         if (chunk == null) {
-          controller.close()
-          return
+          controller.close();
+          return;
         }
-        controller.enqueue(encoder.encode(chunk))
+        controller.enqueue(encoder.encode(chunk));
       },
     }),
-    init
-  )
+    init,
+  );
 }
 
 async function readResourceAfterSuspense(
-  args: Parameters<typeof readTextResource>[0]
+  args: Parameters<typeof readTextResource>[0],
 ) {
   try {
-    return readTextResource(args)
+    return readTextResource(args);
   } catch (thrown) {
     if (thrown instanceof Promise) {
-      await thrown.catch(() => undefined)
-      return readTextResource(args)
+      await thrown.catch(() => undefined);
+      return readTextResource(args);
     }
-    throw thrown
+    throw thrown;
   }
 }
 
 afterEach(() => {
-  cleanup()
-  clearTextViewerResourceCacheForTests()
-  clearViewerResourceRegistryForTests()
-  vi.restoreAllMocks()
-  vi.unstubAllGlobals()
-})
+  cleanup();
+  clearTextViewerResourceCacheForTests();
+  clearViewerResourceRegistryForTests();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe("code viewer resource bug hunt", () => {
   it("rejects syntactically valid oversized Content-Length values before reading the body", async () => {
     const body = new ReadableStream<Uint8Array>({
       pull() {
-        throw new Error("body should not be read")
+        throw new Error("body should not be read");
       },
-    })
+    });
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>
         Promise.resolve(
           response(body, {
             headers: { "content-length": "0000000000000004" },
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    );
 
     await expect(
       readResourceAfterSuspense({
         content: textResource("/valid-oversized-content-length.txt").content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxBytes: 3 }),
-      })
-    ).rejects.toThrow("bytes limit")
-  })
+      }),
+    ).rejects.toThrow("bytes limit");
+  });
 
   it("ignores fractional Content-Length values and accepts a body within the byte limit", async () => {
     vi.stubGlobal(
@@ -124,19 +124,19 @@ describe("code viewer resource bug hunt", () => {
         Promise.resolve(
           response("abc", {
             headers: { "content-length": "3.5" },
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    );
 
     await expect(
       readResourceAfterSuspense({
         content: textResource("/fractional-content-length.txt").content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxBytes: 3 }),
-      })
-    ).resolves.toBe("abc")
-  })
+      }),
+    ).resolves.toBe("abc");
+  });
 
   it("still enforces actual streamed bytes when Content-Length is malformed and too small", async () => {
     vi.stubGlobal(
@@ -145,10 +145,10 @@ describe("code viewer resource bug hunt", () => {
         Promise.resolve(
           response("abcd", {
             headers: { "content-length": "1.5" },
-          })
-        )
-      )
-    )
+          }),
+        ),
+      ),
+    );
 
     await expect(
       readResourceAfterSuspense({
@@ -156,9 +156,9 @@ describe("code viewer resource bug hunt", () => {
           .content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxBytes: 3 }),
-      })
-    ).rejects.toThrow("bytes limit")
-  })
+      }),
+    ).rejects.toThrow("bytes limit");
+  });
 
   it("matches splitTextLines for streamed line-limit enforcement across chunk boundaries", async () => {
     const texts = [
@@ -167,7 +167,7 @@ describe("code viewer resource bug hunt", () => {
       "one\u2028two\u2029three",
       "one\r\n\u2028two",
       "\nleading\nand\ntrailing\n",
-    ]
+    ];
 
     for (const [index, text] of texts.entries()) {
       const chunkings = [
@@ -175,14 +175,14 @@ describe("code viewer resource bug hunt", () => {
         Array.from(text),
         [text.slice(0, 1), text.slice(1, -1), text.slice(-1)],
         [text.slice(0, 4), text.slice(4)],
-      ]
-      const lineCount = splitTextLines(text).length
+      ];
+      const lineCount = splitTextLines(text).length;
 
       for (const [chunkIndex, chunks] of chunkings.entries()) {
         vi.stubGlobal(
           "fetch",
-          vi.fn(() => Promise.resolve(streamResponse(chunks)))
-        )
+          vi.fn(() => Promise.resolve(streamResponse(chunks))),
+        );
 
         await expect(
           readResourceAfterSuspense({
@@ -190,119 +190,119 @@ describe("code viewer resource bug hunt", () => {
               .content,
             retryVersion: 0,
             bounds: resolvedTextViewerBounds({ maxLines: lineCount }),
-          })
-        ).resolves.toBe(text)
+          }),
+        ).resolves.toBe(text);
 
-        clearTextViewerResourceCacheForTests()
-        clearViewerResourceRegistryForTests()
-        vi.unstubAllGlobals()
+        clearTextViewerResourceCacheForTests();
+        clearViewerResourceRegistryForTests();
+        vi.unstubAllGlobals();
 
         if (lineCount > 1) {
           vi.stubGlobal(
             "fetch",
-            vi.fn(() => Promise.resolve(streamResponse(chunks)))
-          )
+            vi.fn(() => Promise.resolve(streamResponse(chunks))),
+          );
 
           await expect(
             readResourceAfterSuspense({
               content: textResource(
-                `/stream-lines-${index}-${chunkIndex}-too-many.txt`
+                `/stream-lines-${index}-${chunkIndex}-too-many.txt`,
               ).content,
               retryVersion: 0,
               bounds: resolvedTextViewerBounds({ maxLines: lineCount - 1 }),
-            })
-          ).rejects.toThrow("lines limit")
+            }),
+          ).rejects.toThrow("lines limit");
 
-          clearTextViewerResourceCacheForTests()
-          clearViewerResourceRegistryForTests()
-          vi.unstubAllGlobals()
+          clearTextViewerResourceCacheForTests();
+          clearViewerResourceRegistryForTests();
+          vi.unstubAllGlobals();
         }
       }
     }
-  })
+  });
 
   it("keeps stale imperative handles unavailable while a replacement URL source is pending", () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => new Promise<Response>(() => {}))
-    )
-    const viewerRef = React.createRef<CodeViewerHandle>()
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    const viewerRef = React.createRef<CodeViewerHandle>();
     const { rerender } = render(
-      <CodeViewer ref={viewerRef} source={textSource("old text")} />
-    )
+      <CodeViewer ref={viewerRef} source={textSource("old text")} />,
+    );
 
-    expect(viewerRef.current?.getViewportElement()).toBeInstanceOf(HTMLElement)
+    expect(viewerRef.current?.getViewportElement()).toBeInstanceOf(HTMLElement);
 
     rerender(
-      <CodeViewer ref={viewerRef} source={urlSource("/pending-source.txt")} />
-    )
+      <CodeViewer ref={viewerRef} source={urlSource("/pending-source.txt")} />,
+    );
 
-    expect(screen.queryByText("old text")).toBeNull()
-    expect(viewerRef.current).toBeNull()
-  })
+    expect(screen.queryByText("old text")).toBeNull();
+    expect(viewerRef.current).toBeNull();
+  });
 
   it("replaces a pending fallback with a ref-backed viewport after the URL text resolves", async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(response("loaded url text")))
-    vi.stubGlobal("fetch", fetchMock)
-    const viewerRef = React.createRef<CodeViewerHandle>()
+    const fetchMock = vi.fn(() => Promise.resolve(response("loaded url text")));
+    vi.stubGlobal("fetch", fetchMock);
+    const viewerRef = React.createRef<CodeViewerHandle>();
 
-    render(<CodeViewer ref={viewerRef} source={urlSource("/loaded.txt")} />)
+    render(<CodeViewer ref={viewerRef} source={urlSource("/loaded.txt")} />);
 
-    expect(viewerRef.current).toBeNull()
-    expect(await screen.findByText("loaded url text")).toBeTruthy()
+    expect(viewerRef.current).toBeNull();
+    expect(await screen.findByText("loaded url text")).toBeTruthy();
     await waitFor(() => {
       expect(viewerRef.current?.getViewportElement()).toBeInstanceOf(
-        HTMLElement
-      )
-    })
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-  })
+        HTMLElement,
+      );
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 
   it("server-renders URL sources as a non-fetching skeleton", () => {
-    const fetchMock = vi.fn()
-    vi.stubGlobal("fetch", fetchMock)
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
 
     const html = renderToString(
-      <CodeViewer source={urlSource("/server-only.txt")} />
-    )
+      <CodeViewer source={urlSource("/server-only.txt")} />,
+    );
 
-    expect(fetchMock).not.toHaveBeenCalled()
-    expect(html).toContain('data-slot="code-viewer"')
-    expect(html).toContain('data-slot="code-body-skeleton"')
-    expect(html).not.toContain("server-only")
-  })
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(html).toContain('data-slot="code-viewer"');
+    expect(html).toContain('data-slot="code-body-skeleton"');
+    expect(html).not.toContain("server-only");
+  });
 
   it("server-renders inline text as a non-fetching skeleton", () => {
     const html = renderToString(
-      <CodeViewer source={textSource("server inline\nsecond line")} />
-    )
+      <CodeViewer source={textSource("server inline\nsecond line")} />,
+    );
 
-    expect(html).toContain('data-slot="code-viewer"')
-    expect(html).toContain('data-slot="code-body-skeleton"')
-    expect(html).not.toContain("server inline")
-    expect(html).not.toContain("second line")
-  })
+    expect(html).toContain('data-slot="code-viewer"');
+    expect(html).toContain('data-slot="code-body-skeleton"');
+    expect(html).not.toContain("server inline");
+    expect(html).not.toContain("second line");
+  });
 
   it("scrolls a newly highlighted virtual line into view", async () => {
-    const viewerRef = React.createRef<CodeViewerHandle>()
+    const viewerRef = React.createRef<CodeViewerHandle>();
     const { rerender } = render(
       <CodeViewer
         ref={viewerRef}
         source={textSource(manyLines(10_000))}
         controls={false}
-      />
-    )
+      />,
+    );
 
-    const viewportElement = viewerRef.current?.getViewportElement()
-    expect(viewportElement).toBeInstanceOf(HTMLElement)
-    if (!viewportElement) return
+    const viewportElement = viewerRef.current?.getViewportElement();
+    expect(viewportElement).toBeInstanceOf(HTMLElement);
+    if (!viewportElement) return;
 
     Object.defineProperty(viewportElement, "clientHeight", {
       configurable: true,
       value: 100,
-    })
-    const scrollTo = vi.fn()
-    viewportElement.scrollTo = scrollTo
+    });
+    const scrollTo = vi.fn();
+    viewportElement.scrollTo = scrollTo;
 
     await act(async () => {
       rerender(
@@ -311,25 +311,25 @@ describe("code viewer resource bug hunt", () => {
           source={textSource(manyLines(10_000))}
           controls={false}
           highlight={{ start: 5000, end: 5000 }}
-        />
-      )
-    })
+        />,
+      );
+    });
 
-    expect(scrollTo).toHaveBeenCalledWith({ top: 99948, behavior: "smooth" })
-  })
+    expect(scrollTo).toHaveBeenCalledWith({ top: 99948, behavior: "smooth" });
+  });
 
   it("does not auto-scroll when a highlight range is outside the document", async () => {
-    const viewerRef = React.createRef<CodeViewerHandle>()
+    const viewerRef = React.createRef<CodeViewerHandle>();
     const { rerender } = render(
-      <CodeViewer ref={viewerRef} source={textSource("one\ntwo")} />
-    )
+      <CodeViewer ref={viewerRef} source={textSource("one\ntwo")} />,
+    );
 
-    const viewportElement = viewerRef.current?.getViewportElement()
-    expect(viewportElement).toBeInstanceOf(HTMLElement)
-    if (!viewportElement) return
+    const viewportElement = viewerRef.current?.getViewportElement();
+    expect(viewportElement).toBeInstanceOf(HTMLElement);
+    if (!viewportElement) return;
 
-    const scrollTo = vi.fn()
-    viewportElement.scrollTo = scrollTo
+    const scrollTo = vi.fn();
+    viewportElement.scrollTo = scrollTo;
 
     await act(async () => {
       rerender(
@@ -337,29 +337,29 @@ describe("code viewer resource bug hunt", () => {
           ref={viewerRef}
           source={textSource("one\ntwo")}
           highlight={{ start: 30, end: 40 }}
-        />
-      )
-    })
+        />,
+      );
+    });
 
-    expect(scrollTo).not.toHaveBeenCalled()
-  })
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
 
   it("does not auto-scroll again for equivalent highlight coordinates", async () => {
-    const viewerRef = React.createRef<CodeViewerHandle>()
+    const viewerRef = React.createRef<CodeViewerHandle>();
     const { rerender } = render(
-      <CodeViewer ref={viewerRef} source={textSource(manyLines(100))} />
-    )
+      <CodeViewer ref={viewerRef} source={textSource(manyLines(100))} />,
+    );
 
-    const viewportElement = viewerRef.current?.getViewportElement()
-    expect(viewportElement).toBeInstanceOf(HTMLElement)
-    if (!viewportElement) return
+    const viewportElement = viewerRef.current?.getViewportElement();
+    expect(viewportElement).toBeInstanceOf(HTMLElement);
+    if (!viewportElement) return;
 
     Object.defineProperty(viewportElement, "clientHeight", {
       configurable: true,
       value: 100,
-    })
-    const scrollTo = vi.fn()
-    viewportElement.scrollTo = scrollTo
+    });
+    const scrollTo = vi.fn();
+    viewportElement.scrollTo = scrollTo;
 
     await act(async () => {
       rerender(
@@ -367,10 +367,10 @@ describe("code viewer resource bug hunt", () => {
           ref={viewerRef}
           source={textSource(manyLines(100))}
           highlight={{ start: 10, end: 10 }}
-        />
-      )
-    })
-    expect(scrollTo).toHaveBeenCalledTimes(1)
+        />,
+      );
+    });
+    expect(scrollTo).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       rerender(
@@ -378,29 +378,29 @@ describe("code viewer resource bug hunt", () => {
           ref={viewerRef}
           source={textSource(manyLines(100))}
           highlight={{ start: 10, end: 10 }}
-        />
-      )
-    })
+        />,
+      );
+    });
 
-    expect(scrollTo).toHaveBeenCalledTimes(1)
-  })
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+  });
 
   it("uses the current zoom level when keeping a highlight in view", async () => {
-    const viewerRef = React.createRef<CodeViewerHandle>()
+    const viewerRef = React.createRef<CodeViewerHandle>();
     const { rerender } = render(
-      <CodeViewer ref={viewerRef} source={textSource(manyLines(100))} />
-    )
+      <CodeViewer ref={viewerRef} source={textSource(manyLines(100))} />,
+    );
 
-    const viewportElement = viewerRef.current?.getViewportElement()
-    expect(viewportElement).toBeInstanceOf(HTMLElement)
-    if (!viewportElement) return
+    const viewportElement = viewerRef.current?.getViewportElement();
+    expect(viewportElement).toBeInstanceOf(HTMLElement);
+    if (!viewportElement) return;
 
     Object.defineProperty(viewportElement, "clientHeight", {
       configurable: true,
       value: 100,
-    })
-    const scrollTo = vi.fn()
-    viewportElement.scrollTo = scrollTo
+    });
+    const scrollTo = vi.fn();
+    viewportElement.scrollTo = scrollTo;
 
     await act(async () => {
       rerender(
@@ -408,19 +408,19 @@ describe("code viewer resource bug hunt", () => {
           ref={viewerRef}
           source={textSource(manyLines(100))}
           highlight={{ start: 10, end: 10 }}
-        />
-      )
-    })
+        />,
+      );
+    });
     expect(scrollTo).toHaveBeenLastCalledWith({
       top: 148,
       behavior: "smooth",
-    })
+    });
 
-    fireEvent.click(screen.getByLabelText("Zoom in"))
+    fireEvent.click(screen.getByLabelText("Zoom in"));
 
     expect(scrollTo).toHaveBeenLastCalledWith({
       top: 186,
       behavior: "smooth",
-    })
-  })
-})
+    });
+  });
+});

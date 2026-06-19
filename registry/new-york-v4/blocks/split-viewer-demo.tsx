@@ -1,29 +1,29 @@
-"use client"
+"use client";
 
-import { PdfViewer } from "@/components/ui/pdf-viewer"
-import type { SplitView } from "@/components/viewers/lib/split-types"
-import splitSample from "@/components/viewers/sample-data/split.json"
+import { PdfViewer } from "@/components/ui/pdf-viewer";
+import type { SplitView } from "@/components/viewers/lib/split-types";
+import splitSample from "@/components/viewers/sample-data/split.json";
 import {
   SplitViewer,
   useSplitViewerDocumentControls,
-} from "@/components/viewers/split/split-viewer"
+} from "@/components/viewers/split/split-viewer";
 
 /** Real split result: Harris 2023 federal + state tax returns (51 subdocuments). */
-const SPLIT_PDF_URL = "/samples/harris_2023_federal_state_returns.pdf"
+const SPLIT_PDF_URL = "/samples/harris_2023_federal_state_returns.pdf";
 const splitSource = {
   kind: "url" as const,
   url: SPLIT_PDF_URL,
   fileName: "harris_2023_federal_state_returns.pdf",
-}
+};
 
 const splitResult: SplitView = {
   output: splitSample.output as SplitView["output"],
   consensus: { choices: [] },
   usage: null,
-}
+};
 
 function SplitViewerDemoDocument() {
-  const controls = useSplitViewerDocumentControls()
+  const controls = useSplitViewerDocumentControls();
 
   return (
     <PdfViewer
@@ -34,7 +34,7 @@ function SplitViewerDemoDocument() {
       onScrollProgressChange={controls.onScrollProgressChange}
       className="h-full"
     />
-  )
+  );
 }
 
 export function SplitViewerExample() {
@@ -49,5 +49,5 @@ export function SplitViewerExample() {
         document={<SplitViewerDemoDocument />}
       />
     </div>
-  )
+  );
 }

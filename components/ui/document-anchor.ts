@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/ui/document-anchor"
+export * from "@/registry/new-york-v4/ui/document-anchor";

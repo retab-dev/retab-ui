@@ -1,55 +1,55 @@
 // @vitest-environment jsdom
-import * as React from "react"
+import * as React from "react";
 import {
   cleanup,
   fireEvent,
   render,
   screen,
   within,
-} from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+} from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { type SegmentInteraction } from "@/lib/segment-interaction"
-import { toSegments, type Segment } from "@/lib/segments"
-import { SegmentLegend } from "@/components/ui/segment-legend"
+import { type SegmentInteraction } from "@/lib/segment-interaction";
+import { toSegments, type Segment } from "@/lib/segments";
+import { SegmentLegend } from "@/components/ui/segment-legend";
 
-afterEach(cleanup)
+afterEach(cleanup);
 
 /** [Intro: pages 1,2] [Results: page 3] [Unused: no pages] */
 const segments = toSegments([
   { name: "Intro", pages: [1, 2] },
   { name: "Results", pages: [3] },
   { name: "Unused", pages: [] },
-])
+]);
 
 function segment(
-  overrides: Partial<Segment> & Pick<Segment, "id" | "index" | "label">
+  overrides: Partial<Segment> & Pick<Segment, "id" | "index" | "label">,
 ): Segment {
-  return { pages: [], color: "#000000", confidence: null, ...overrides }
+  return { pages: [], color: "#000000", confidence: null, ...overrides };
 }
 
 function createInteraction(
-  overrides: Partial<SegmentInteraction> = {}
+  overrides: Partial<SegmentInteraction> = {},
 ): SegmentInteraction {
   return {
     previewSegmentId: null,
     previewSegment: vi.fn(),
     clearPreview: vi.fn(),
     ...overrides,
-  }
+  };
 }
 
 function root(): HTMLElement {
-  return document.querySelector('[data-slot="segment-legend"]') as HTMLElement
+  return document.querySelector('[data-slot="segment-legend"]') as HTMLElement;
 }
 
 function entriesContainer(): HTMLElement | null | undefined {
-  return screen.getByRole("button", { name: "Intro" }).parentElement
+  return screen.getByRole("button", { name: "Intro" }).parentElement;
 }
 
 function legendButton(name: string): HTMLElement {
   // Segment buttons live inside the entries grid; the toggle/caption do not.
-  return screen.getByRole("button", { name })
+  return screen.getByRole("button", { name });
 }
 
 // ---------------------------------------------------------------------------
@@ -58,17 +58,17 @@ function legendButton(name: string): HTMLElement {
 
 describe("SegmentLegend — chrome & variants", () => {
   it("defaults to the bar variant with a bottom border when docked to the top", () => {
-    render(<SegmentLegend segments={segments} />)
-    const el = root()
-    expect(el.getAttribute("data-variant")).toBe("bar")
-    expect(el.className).toContain("border-b")
-    expect(el.className).toContain("bg-background")
-  })
+    render(<SegmentLegend segments={segments} />);
+    const el = root();
+    expect(el.getAttribute("data-variant")).toBe("bar");
+    expect(el.className).toContain("border-b");
+    expect(el.className).toContain("bg-background");
+  });
 
   it("docks a vertical bar to the left edge (border-r) by default", () => {
-    render(<SegmentLegend segments={segments} orientation="vertical" />)
-    expect(root().className).toContain("border-r")
-  })
+    render(<SegmentLegend segments={segments} orientation="vertical" />);
+    expect(root().className).toContain("border-r");
+  });
 
   it.each([
     ["top", "border-b"],
@@ -76,18 +76,18 @@ describe("SegmentLegend — chrome & variants", () => {
     ["left", "border-r"],
     ["right", "border-l"],
   ] as const)("honours an explicit side=%s on the bar (%s)", (side, border) => {
-    render(<SegmentLegend segments={segments} side={side} />)
-    expect(root().className).toContain(border)
-  })
+    render(<SegmentLegend segments={segments} side={side} />);
+    expect(root().className).toContain(border);
+  });
 
   it("renders the floating variant as an anchored, elevated overlay", () => {
-    render(<SegmentLegend segments={segments} variant="floating" />)
-    const el = root()
-    expect(el.getAttribute("data-variant")).toBe("floating")
-    expect(el.className).toContain("absolute")
-    expect(el.className).toContain("shadow-md")
-    expect(el.className).toContain("z-10")
-  })
+    render(<SegmentLegend segments={segments} variant="floating" />);
+    const el = root();
+    expect(el.getAttribute("data-variant")).toBe("floating");
+    expect(el.className).toContain("absolute");
+    expect(el.className).toContain("shadow-md");
+    expect(el.className).toContain("z-10");
+  });
 
   it.each([
     ["top", "left-3 top-3"],
@@ -95,26 +95,28 @@ describe("SegmentLegend — chrome & variants", () => {
     ["left", "left-3 top-3"],
     ["right", "right-3 top-3"],
   ] as const)("anchors a floating legend for side=%s", (side, anchor) => {
-    render(<SegmentLegend segments={segments} variant="floating" side={side} />)
+    render(
+      <SegmentLegend segments={segments} variant="floating" side={side} />,
+    );
     for (const token of anchor.split(" ")) {
-      expect(root().className).toContain(token)
+      expect(root().className).toContain(token);
     }
-  })
+  });
 
   it("renders the plain variant with no border or background chrome", () => {
-    render(<SegmentLegend segments={segments} variant="plain" />)
-    const el = root()
-    expect(el.getAttribute("data-variant")).toBe("plain")
-    expect(el.className).not.toContain("border")
-    expect(el.className).not.toContain("bg-background")
-    expect(el.className).not.toContain("shadow")
-  })
+    render(<SegmentLegend segments={segments} variant="plain" />);
+    const el = root();
+    expect(el.getAttribute("data-variant")).toBe("plain");
+    expect(el.className).not.toContain("border");
+    expect(el.className).not.toContain("bg-background");
+    expect(el.className).not.toContain("shadow");
+  });
 
   it("forwards a custom className onto the legend root", () => {
-    render(<SegmentLegend segments={segments} className="my-custom-cls" />)
-    expect(root().className).toContain("my-custom-cls")
-  })
-})
+    render(<SegmentLegend segments={segments} className="my-custom-cls" />);
+    expect(root().className).toContain("my-custom-cls");
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Layout: orientation / columns / density
@@ -122,30 +124,30 @@ describe("SegmentLegend — chrome & variants", () => {
 
 describe("SegmentLegend — layout", () => {
   it("lays horizontal entries out as a wrapping flex row by default", () => {
-    render(<SegmentLegend segments={segments} showUnused />)
-    const cls = entriesContainer()?.className ?? ""
-    expect(cls).toContain("flex")
-    expect(cls).toContain("flex-wrap")
-    expect(cls).not.toContain("grid")
-  })
+    render(<SegmentLegend segments={segments} showUnused />);
+    const cls = entriesContainer()?.className ?? "";
+    expect(cls).toContain("flex");
+    expect(cls).toContain("flex-wrap");
+    expect(cls).not.toContain("grid");
+  });
 
   it("lays vertical entries out as a column rail", () => {
     render(
-      <SegmentLegend segments={segments} showUnused orientation="vertical" />
-    )
-    const cls = entriesContainer()?.className ?? ""
-    expect(cls).toContain("flex-col")
-    expect(cls).not.toContain("grid")
-  })
+      <SegmentLegend segments={segments} showUnused orientation="vertical" />,
+    );
+    const cls = entriesContainer()?.className ?? "";
+    expect(cls).toContain("flex-col");
+    expect(cls).not.toContain("grid");
+  });
 
   it("renders a fixed-column grid for horizontal columns", () => {
-    render(<SegmentLegend segments={segments} showUnused columns={3} />)
-    const el = entriesContainer()
-    expect(el?.className).toContain("grid")
+    render(<SegmentLegend segments={segments} showUnused columns={3} />);
+    const el = entriesContainer();
+    expect(el?.className).toContain("grid");
     expect(el?.getAttribute("style")).toContain(
-      "grid-template-columns: repeat(3, minmax(0, 1fr))"
-    )
-  })
+      "grid-template-columns: repeat(3, minmax(0, 1fr))",
+    );
+  });
 
   it("ignores columns for vertical orientation (stays a column, no grid style)", () => {
     render(
@@ -154,19 +156,19 @@ describe("SegmentLegend — layout", () => {
         showUnused
         orientation="vertical"
         columns={3}
-      />
-    )
-    const el = entriesContainer()
-    expect(el?.className).toContain("flex-col")
-    expect(el?.getAttribute("style") ?? "").toBe("")
-  })
+      />,
+    );
+    const el = entriesContainer();
+    expect(el?.className).toContain("flex-col");
+    expect(el?.getAttribute("style") ?? "").toBe("");
+  });
 
   it("treats columns={0} as 'no grid' (falls back to wrapping flex)", () => {
-    render(<SegmentLegend segments={segments} showUnused columns={0} />)
-    const el = entriesContainer()
-    expect(el?.className).toContain("flex-wrap")
-    expect(el?.getAttribute("style") ?? "").toBe("")
-  })
+    render(<SegmentLegend segments={segments} showUnused columns={0} />);
+    const el = entriesContainer();
+    expect(el?.className).toContain("flex-wrap");
+    expect(el?.getAttribute("style") ?? "").toBe("");
+  });
 
   // Regression: a bare truthiness guard let -1 / 1.5 / Infinity through, which
   // emitted `display: grid` with an invalid `grid-template-columns` that a real
@@ -175,22 +177,22 @@ describe("SegmentLegend — layout", () => {
   it.each([-1, 1.5, 2.5, Infinity, Number.NaN])(
     "falls back to wrapping flex (not a broken grid) for invalid columns=%s",
     (cols) => {
-      render(<SegmentLegend segments={segments} showUnused columns={cols} />)
-      const el = entriesContainer()
-      expect(el?.className).toContain("flex-wrap")
-      expect(el?.className).not.toContain("grid")
-      expect(el?.getAttribute("style") ?? "").toBe("")
-    }
-  )
+      render(<SegmentLegend segments={segments} showUnused columns={cols} />);
+      const el = entriesContainer();
+      expect(el?.className).toContain("flex-wrap");
+      expect(el?.className).not.toContain("grid");
+      expect(el?.getAttribute("style") ?? "").toBe("");
+    },
+  );
 
   it("accepts columns={1} as a valid single-column grid", () => {
-    render(<SegmentLegend segments={segments} showUnused columns={1} />)
-    const el = entriesContainer()
-    expect(el?.className).toContain("grid")
+    render(<SegmentLegend segments={segments} showUnused columns={1} />);
+    const el = entriesContainer();
+    expect(el?.className).toContain("grid");
     expect(el?.getAttribute("style")).toContain(
-      "grid-template-columns: repeat(1, minmax(0, 1fr))"
-    )
-  })
+      "grid-template-columns: repeat(1, minmax(0, 1fr))",
+    );
+  });
 
   it.each([
     ["comfortable", "h-3", "w-5", "text-xs"],
@@ -198,15 +200,15 @@ describe("SegmentLegend — layout", () => {
   ] as const)(
     "applies %s density swatch and text scale",
     (density, h, w, text) => {
-      render(<SegmentLegend segments={segments} density={density} />)
-      const button = legendButton("Intro")
-      expect(button.className).toContain(text)
-      const swatch = button.querySelector("span[aria-hidden]") as HTMLElement
-      expect(swatch.className).toContain(h)
-      expect(swatch.className).toContain(w)
-    }
-  )
-})
+      render(<SegmentLegend segments={segments} density={density} />);
+      const button = legendButton("Intro");
+      expect(button.className).toContain(text);
+      const swatch = button.querySelector("span[aria-hidden]") as HTMLElement;
+      expect(swatch.className).toContain(h);
+      expect(swatch.className).toContain(w);
+    },
+  );
+});
 
 // ---------------------------------------------------------------------------
 // Swatches & labels
@@ -217,39 +219,39 @@ describe("SegmentLegend — swatches & labels", () => {
     const colored = [
       segment({ id: "a", index: 0, label: "A", pages: [1], color: "#ff0000" }),
       segment({ id: "b", index: 1, label: "B", pages: [2], color: "#00ff00" }),
-    ]
-    render(<SegmentLegend segments={colored} />)
+    ];
+    render(<SegmentLegend segments={colored} />);
     const swatchA = legendButton("A").querySelector(
-      "span[aria-hidden]"
-    ) as HTMLElement
-    expect(swatchA.style.backgroundColor).toBe("rgb(255, 0, 0)")
-  })
+      "span[aria-hidden]",
+    ) as HTMLElement;
+    expect(swatchA.style.backgroundColor).toBe("rgb(255, 0, 0)");
+  });
 
   it("sets the title attribute to the display label", () => {
-    render(<SegmentLegend segments={segments} />)
-    expect(legendButton("Intro").getAttribute("title")).toBe("Intro")
-  })
+    render(<SegmentLegend segments={segments} />);
+    expect(legendButton("Intro").getAttribute("title")).toBe("Intro");
+  });
 
   it("renders a hidden semibold sizer alongside the visible label to prevent reflow", () => {
-    render(<SegmentLegend segments={segments} />)
-    const button = legendButton("Intro")
+    render(<SegmentLegend segments={segments} />);
+    const button = legendButton("Intro");
     // Two copies of the label: one visible, one invisible width-reservation sizer.
-    const labels = within(button).getAllByText("Intro")
-    expect(labels.length).toBe(2)
-    const sizer = labels.find((n) => n.className.includes("invisible"))
-    expect(sizer).toBeTruthy()
-    expect(sizer?.className).toContain("font-semibold")
-  })
+    const labels = within(button).getAllByText("Intro");
+    expect(labels.length).toBe(2);
+    const sizer = labels.find((n) => n.className.includes("invisible"));
+    expect(sizer).toBeTruthy();
+    expect(sizer?.className).toContain("font-semibold");
+  });
 
   it("shows empty labels as an italic 'unnamed' entry", () => {
-    render(<SegmentLegend segments={toSegments([{ name: "", pages: [1] }])} />)
-    const button = screen.getByRole("button", { name: "unnamed" })
+    render(<SegmentLegend segments={toSegments([{ name: "", pages: [1] }])} />);
+    const button = screen.getByRole("button", { name: "unnamed" });
     const visible = within(button)
       .getAllByText("unnamed")
-      .find((n) => !n.className.includes("invisible"))
-    expect(visible?.className).toContain("italic")
-  })
-})
+      .find((n) => !n.className.includes("invisible"));
+    expect(visible?.className).toContain("italic");
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Empty / unused handling
@@ -257,32 +259,32 @@ describe("SegmentLegend — swatches & labels", () => {
 
 describe("SegmentLegend — empty & unused", () => {
   it("renders nothing for an empty segment list", () => {
-    const { container } = render(<SegmentLegend segments={[]} />)
-    expect(container.firstChild).toBeNull()
-  })
+    const { container } = render(<SegmentLegend segments={[]} />);
+    expect(container.firstChild).toBeNull();
+  });
 
   it("renders nothing when every segment is unused and no toggle is offered", () => {
     const { container } = render(
-      <SegmentLegend segments={toSegments([{ name: "Only", pages: [] }])} />
-    )
-    expect(container.firstChild).toBeNull()
-  })
+      <SegmentLegend segments={toSegments([{ name: "Only", pages: [] }])} />,
+    );
+    expect(container.firstChild).toBeNull();
+  });
 
   it("renders only the toggle (no entries) when every segment is unused", () => {
     render(
       <SegmentLegend
         segments={toSegments([{ name: "Only", pages: [] }])}
         showUnusedToggle
-      />
-    )
-    expect(screen.queryByRole("button", { name: "Only" })).toBeNull()
-    expect(screen.getByRole("button", { name: /show 1 unused/i })).toBeTruthy()
-  })
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Only" })).toBeNull();
+    expect(screen.getByRole("button", { name: /show 1 unused/i })).toBeTruthy();
+  });
 
   it("hides zero-page segments by default", () => {
-    render(<SegmentLegend segments={segments} showUnusedToggle />)
-    expect(screen.queryByRole("button", { name: "Unused" })).toBeNull()
-  })
+    render(<SegmentLegend segments={segments} showUnusedToggle />);
+    expect(screen.queryByRole("button", { name: "Unused" })).toBeNull();
+  });
 
   it("counts every hidden segment in the toggle label", () => {
     render(
@@ -293,66 +295,66 @@ describe("SegmentLegend — empty & unused", () => {
           { name: "U2", pages: [] },
         ])}
         showUnusedToggle
-      />
-    )
+      />,
+    );
     expect(
-      screen.getByRole("button", { name: "Show 2 unused segments" })
-    ).toBeTruthy()
-  })
+      screen.getByRole("button", { name: "Show 2 unused segments" }),
+    ).toBeTruthy();
+  });
 
   it("round-trips the uncontrolled toggle: reveal then hide", () => {
-    render(<SegmentLegend segments={segments} showUnusedToggle />)
+    render(<SegmentLegend segments={segments} showUnusedToggle />);
 
-    fireEvent.click(screen.getByRole("button", { name: /show 1 unused/i }))
-    expect(screen.getByRole("button", { name: "Unused" })).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: /show 1 unused/i }));
+    expect(screen.getByRole("button", { name: "Unused" })).toBeTruthy();
 
-    const hide = screen.getByRole("button", { name: /hide unused/i })
-    fireEvent.click(hide)
-    expect(screen.queryByRole("button", { name: "Unused" })).toBeNull()
-  })
+    const hide = screen.getByRole("button", { name: /hide unused/i });
+    fireEvent.click(hide);
+    expect(screen.queryByRole("button", { name: "Unused" })).toBeNull();
+  });
 
   it("respects defaultShowUnused for the initial uncontrolled state", () => {
     render(
-      <SegmentLegend segments={segments} showUnusedToggle defaultShowUnused />
-    )
-    expect(screen.getByRole("button", { name: "Unused" })).toBeTruthy()
-    expect(screen.getByRole("button", { name: /hide unused/i })).toBeTruthy()
-  })
+      <SegmentLegend segments={segments} showUnusedToggle defaultShowUnused />,
+    );
+    expect(screen.getByRole("button", { name: "Unused" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /hide unused/i })).toBeTruthy();
+  });
 
   it("does not render a toggle when every segment owns pages", () => {
-    render(<SegmentLegend segments={segments.slice(0, 2)} showUnusedToggle />)
-    expect(screen.queryByRole("button", { name: /unused/i })).toBeNull()
-  })
+    render(<SegmentLegend segments={segments.slice(0, 2)} showUnusedToggle />);
+    expect(screen.queryByRole("button", { name: /unused/i })).toBeNull();
+  });
 
   it("keeps a controlled showUnused authoritative and emits change requests", () => {
-    const onShowUnusedChange = vi.fn()
+    const onShowUnusedChange = vi.fn();
     render(
       <SegmentLegend
         segments={segments}
         showUnused={false}
         showUnusedToggle
         onShowUnusedChange={onShowUnusedChange}
-      />
-    )
-    fireEvent.click(screen.getByRole("button", { name: /show 1 unused/i }))
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /show 1 unused/i }));
     // Controlled: visibility must not change on its own.
-    expect(screen.queryByRole("button", { name: "Unused" })).toBeNull()
-    expect(onShowUnusedChange).toHaveBeenCalledWith(true)
-  })
+    expect(screen.queryByRole("button", { name: "Unused" })).toBeNull();
+    expect(onShowUnusedChange).toHaveBeenCalledWith(true);
+  });
 
   it("emits the inverse value from a controlled, already-revealed toggle", () => {
-    const onShowUnusedChange = vi.fn()
+    const onShowUnusedChange = vi.fn();
     render(
       <SegmentLegend
         segments={segments}
         showUnused
         showUnusedToggle
         onShowUnusedChange={onShowUnusedChange}
-      />
-    )
-    fireEvent.click(screen.getByRole("button", { name: /hide unused/i }))
-    expect(onShowUnusedChange).toHaveBeenCalledWith(false)
-  })
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /hide unused/i }));
+    expect(onShowUnusedChange).toHaveBeenCalledWith(false);
+  });
 
   it("treats only-invalid-page segments as unused", () => {
     render(
@@ -366,12 +368,12 @@ describe("SegmentLegend — empty & unused", () => {
           }),
         ]}
         showUnusedToggle
-      />
-    )
-    expect(screen.queryByRole("button", { name: "Bad" })).toBeNull()
-    fireEvent.click(screen.getByRole("button", { name: /show 1 unused/i }))
-    expect(screen.getByRole("button", { name: "Bad" })).toBeTruthy()
-  })
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Bad" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /show 1 unused/i }));
+    expect(screen.getByRole("button", { name: "Bad" })).toBeTruthy();
+  });
 
   it("treats mixed valid and invalid pages as used", () => {
     render(
@@ -385,11 +387,11 @@ describe("SegmentLegend — empty & unused", () => {
           }),
         ]}
         showUnusedToggle
-      />
-    )
-    expect(screen.getByRole("button", { name: "Mixed" })).toBeTruthy()
-    expect(screen.queryByRole("button", { name: /unused/i })).toBeNull()
-  })
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Mixed" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /unused/i })).toBeNull();
+  });
 
   it("updates the hidden count when the segment list changes", () => {
     const { rerender } = render(
@@ -399,11 +401,11 @@ describe("SegmentLegend — empty & unused", () => {
           { name: "Unused", pages: [] },
         ])}
         showUnusedToggle
-      />
-    )
+      />,
+    );
     expect(
-      screen.getByRole("button", { name: "Show 1 unused segments" })
-    ).toBeTruthy()
+      screen.getByRole("button", { name: "Show 1 unused segments" }),
+    ).toBeTruthy();
 
     rerender(
       <SegmentLegend
@@ -413,28 +415,28 @@ describe("SegmentLegend — empty & unused", () => {
           { name: "Also unused", pages: [] },
         ])}
         showUnusedToggle
-      />
-    )
+      />,
+    );
 
     expect(
-      screen.getByRole("button", { name: "Show 2 unused segments" })
-    ).toBeTruthy()
-  })
+      screen.getByRole("button", { name: "Show 2 unused segments" }),
+    ).toBeTruthy();
+  });
 
   it("lets controlled showUnused change from hidden to revealed and back", () => {
     const { rerender } = render(
-      <SegmentLegend segments={segments} showUnused={false} showUnusedToggle />
-    )
-    expect(screen.queryByRole("button", { name: "Unused" })).toBeNull()
+      <SegmentLegend segments={segments} showUnused={false} showUnusedToggle />,
+    );
+    expect(screen.queryByRole("button", { name: "Unused" })).toBeNull();
 
-    rerender(<SegmentLegend segments={segments} showUnused showUnusedToggle />)
-    expect(screen.getByRole("button", { name: "Unused" })).toBeTruthy()
+    rerender(<SegmentLegend segments={segments} showUnused showUnusedToggle />);
+    expect(screen.getByRole("button", { name: "Unused" })).toBeTruthy();
 
     rerender(
-      <SegmentLegend segments={segments} showUnused={false} showUnusedToggle />
-    )
-    expect(screen.queryByRole("button", { name: "Unused" })).toBeNull()
-  })
+      <SegmentLegend segments={segments} showUnused={false} showUnusedToggle />,
+    );
+    expect(screen.queryByRole("button", { name: "Unused" })).toBeNull();
+  });
 
   it("keeps uncontrolled reveal active for newly-added unused segments", () => {
     const { rerender } = render(
@@ -444,9 +446,9 @@ describe("SegmentLegend — empty & unused", () => {
           { name: "Unused", pages: [] },
         ])}
         showUnusedToggle
-      />
-    )
-    fireEvent.click(screen.getByRole("button", { name: /show 1 unused/i }))
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /show 1 unused/i }));
 
     rerender(
       <SegmentLegend
@@ -456,14 +458,14 @@ describe("SegmentLegend — empty & unused", () => {
           { name: "Also unused", pages: [] },
         ])}
         showUnusedToggle
-      />
-    )
+      />,
+    );
 
-    expect(screen.getByRole("button", { name: "Unused" })).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Also unused" })).toBeTruthy()
-    expect(screen.getByRole("button", { name: /hide unused/i })).toBeTruthy()
-  })
-})
+    expect(screen.getByRole("button", { name: "Unused" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Also unused" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /hide unused/i })).toBeTruthy();
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Interaction wiring
@@ -471,10 +473,10 @@ describe("SegmentLegend — empty & unused", () => {
 
 describe("SegmentLegend — interaction", () => {
   it("routes preview and click events without persistent selection", () => {
-    const previewSegment = vi.fn()
-    const clearPreview = vi.fn()
-    const onSelect = vi.fn()
-    const intro = segments[0]
+    const previewSegment = vi.fn();
+    const clearPreview = vi.fn();
+    const onSelect = vi.fn();
+    const intro = segments[0];
     render(
       <SegmentLegend
         segments={segments}
@@ -484,33 +486,33 @@ describe("SegmentLegend — interaction", () => {
           clearPreview,
         })}
         onSelect={onSelect}
-      />
-    )
-    const button = legendButton("Intro")
-    fireEvent.pointerEnter(button)
-    fireEvent.focus(button)
-    fireEvent.click(button)
-    fireEvent.pointerLeave(button)
-    fireEvent.blur(button)
+      />,
+    );
+    const button = legendButton("Intro");
+    fireEvent.pointerEnter(button);
+    fireEvent.focus(button);
+    fireEvent.click(button);
+    fireEvent.pointerLeave(button);
+    fireEvent.blur(button);
 
-    expect(previewSegment).toHaveBeenCalledWith(intro.id)
-    expect(clearPreview).toHaveBeenCalled()
-    expect(onSelect).toHaveBeenCalledWith(intro)
-    expect(button.hasAttribute("aria-pressed")).toBe(false)
-    expect(button.hasAttribute("data-selected")).toBe(false)
-  })
+    expect(previewSegment).toHaveBeenCalledWith(intro.id);
+    expect(clearPreview).toHaveBeenCalled();
+    expect(onSelect).toHaveBeenCalledWith(intro);
+    expect(button.hasAttribute("aria-pressed")).toBe(false);
+    expect(button.hasAttribute("data-selected")).toBe(false);
+  });
 
   it("fires onSelect even without an interaction controller", () => {
-    const onSelect = vi.fn()
-    render(<SegmentLegend segments={segments} onSelect={onSelect} />)
-    fireEvent.click(legendButton("Intro"))
-    expect(onSelect).toHaveBeenCalledWith(segments[0])
-  })
+    const onSelect = vi.fn();
+    render(<SegmentLegend segments={segments} onSelect={onSelect} />);
+    fireEvent.click(legendButton("Intro"));
+    expect(onSelect).toHaveBeenCalledWith(segments[0]);
+  });
 
   it("does not throw when clicked as a static legend (no interaction/onSelect)", () => {
-    render(<SegmentLegend segments={segments} />)
-    expect(() => fireEvent.click(legendButton("Intro"))).not.toThrow()
-  })
+    render(<SegmentLegend segments={segments} />);
+    expect(() => fireEvent.click(legendButton("Intro"))).not.toThrow();
+  });
 
   it("dims the non-previewed entries when one is previewed", () => {
     render(
@@ -518,33 +520,33 @@ describe("SegmentLegend — interaction", () => {
         segments={segments}
         showUnused
         interaction={createInteraction({ previewSegmentId: segments[0].id })}
-      />
-    )
-    expect(legendButton("Intro").className).toContain("opacity-100")
-    expect(legendButton("Results").className).toContain("opacity-40")
-  })
+      />,
+    );
+    expect(legendButton("Intro").className).toContain("opacity-100");
+    expect(legendButton("Results").className).toContain("opacity-40");
+  });
 
   it("does not dim anything when a previewed id is not visible (scoped out)", () => {
     render(
       <SegmentLegend
         segments={segments}
         interaction={createInteraction({ previewSegmentId: segments[2].id })}
-      />
-    )
-    expect(legendButton("Intro").className).toContain("opacity-100")
-    expect(legendButton("Results").className).toContain("opacity-100")
-  })
+      />,
+    );
+    expect(legendButton("Intro").className).toContain("opacity-100");
+    expect(legendButton("Results").className).toContain("opacity-100");
+  });
 
   it("does not dim every entry for an unknown/stale interaction id", () => {
     render(
       <SegmentLegend
         segments={segments.slice(0, 2)}
         interaction={createInteraction({ previewSegmentId: "removed#99" })}
-      />
-    )
-    expect(legendButton("Intro").className).toContain("opacity-100")
-    expect(legendButton("Results").className).toContain("opacity-100")
-  })
+      />,
+    );
+    expect(legendButton("Intro").className).toContain("opacity-100");
+    expect(legendButton("Results").className).toContain("opacity-100");
+  });
 
   it("scopes previewed segment ids when hidden segments are revealed via the toggle", () => {
     render(
@@ -552,25 +554,25 @@ describe("SegmentLegend — interaction", () => {
         segments={segments}
         showUnusedToggle
         interaction={createInteraction({ previewSegmentId: segments[2].id })}
-      />
-    )
-    expect(legendButton("Intro").className).toContain("opacity-100")
+      />,
+    );
+    expect(legendButton("Intro").className).toContain("opacity-100");
 
-    fireEvent.click(screen.getByRole("button", { name: /show 1 unused/i }))
+    fireEvent.click(screen.getByRole("button", { name: /show 1 unused/i }));
 
-    expect(legendButton("Unused").getAttribute("data-previewed")).toBe("true")
-    expect(legendButton("Unused").className).toContain("opacity-100")
-    expect(legendButton("Intro").className).toContain("opacity-40")
-    expect(legendButton("Results").className).toContain("opacity-40")
-  })
+    expect(legendButton("Unused").getAttribute("data-previewed")).toBe("true");
+    expect(legendButton("Unused").className).toContain("opacity-100");
+    expect(legendButton("Intro").className).toContain("opacity-40");
+    expect(legendButton("Results").className).toContain("opacity-40");
+  });
 
   it("does not expose segment buttons as pressed or selected controls", () => {
-    render(<SegmentLegend segments={segments} showUnused />)
-    const intro = legendButton("Intro")
-    expect(intro.hasAttribute("aria-pressed")).toBe(false)
-    expect(intro.hasAttribute("data-selected")).toBe(false)
-    expect(legendButton("Results").hasAttribute("aria-pressed")).toBe(false)
-  })
+    render(<SegmentLegend segments={segments} showUnused />);
+    const intro = legendButton("Intro");
+    expect(intro.hasAttribute("aria-pressed")).toBe(false);
+    expect(intro.hasAttribute("data-selected")).toBe(false);
+    expect(legendButton("Results").hasAttribute("aria-pressed")).toBe(false);
+  });
 
   it("uses preview state as the only interaction highlight", () => {
     render(
@@ -580,22 +582,22 @@ describe("SegmentLegend — interaction", () => {
         interaction={createInteraction({
           previewSegmentId: segments[1].id,
         })}
-      />
-    )
+      />,
+    );
 
-    expect(legendButton("Results").getAttribute("data-previewed")).toBe("true")
-    expect(legendButton("Intro").getAttribute("data-previewed")).toBe("false")
-    expect(legendButton("Unused").getAttribute("data-previewed")).toBe("false")
-    expect(legendButton("Results").className).toContain("opacity-100")
-    expect(legendButton("Intro").className).toContain("opacity-40")
-    expect(legendButton("Unused").className).toContain("opacity-40")
-  })
+    expect(legendButton("Results").getAttribute("data-previewed")).toBe("true");
+    expect(legendButton("Intro").getAttribute("data-previewed")).toBe("false");
+    expect(legendButton("Unused").getAttribute("data-previewed")).toBe("false");
+    expect(legendButton("Results").className).toContain("opacity-100");
+    expect(legendButton("Intro").className).toContain("opacity-40");
+    expect(legendButton("Unused").className).toContain("opacity-40");
+  });
 
   it("clears hover preview after hover leaves", () => {
     function Harness() {
       const [previewSegmentId, setPreviewSegmentId] = React.useState<
         string | null
-      >(null)
+      >(null);
       return (
         <SegmentLegend
           segments={segments}
@@ -605,46 +607,48 @@ describe("SegmentLegend — interaction", () => {
             clearPreview: () => setPreviewSegmentId(null),
           })}
         />
-      )
+      );
     }
 
-    render(<Harness />)
-    const results = legendButton("Results")
+    render(<Harness />);
+    const results = legendButton("Results");
 
-    fireEvent.pointerEnter(results)
-    expect(results.getAttribute("data-previewed")).toBe("true")
-    expect(legendButton("Intro").getAttribute("data-previewed")).toBe("false")
-    expect(legendButton("Intro").className).toContain("opacity-40")
+    fireEvent.pointerEnter(results);
+    expect(results.getAttribute("data-previewed")).toBe("true");
+    expect(legendButton("Intro").getAttribute("data-previewed")).toBe("false");
+    expect(legendButton("Intro").className).toContain("opacity-40");
 
-    fireEvent.pointerLeave(results)
-    expect(legendButton("Intro").getAttribute("data-previewed")).toBe("false")
-    expect(legendButton("Intro").className).toContain("opacity-100")
-    expect(results.className).toContain("opacity-100")
-  })
+    fireEvent.pointerLeave(results);
+    expect(legendButton("Intro").getAttribute("data-previewed")).toBe("false");
+    expect(legendButton("Intro").className).toContain("opacity-100");
+    expect(results.className).toContain("opacity-100");
+  });
 
   it("scopes previewed segment ids after segments are removed", () => {
     const { rerender } = render(
       <SegmentLegend
         segments={segments}
         interaction={createInteraction({ previewSegmentId: segments[0].id })}
-      />
-    )
-    expect(legendButton("Intro").getAttribute("data-previewed")).toBe("true")
-    expect(legendButton("Results").className).toContain("opacity-40")
+      />,
+    );
+    expect(legendButton("Intro").getAttribute("data-previewed")).toBe("true");
+    expect(legendButton("Results").className).toContain("opacity-40");
 
     rerender(
       <SegmentLegend
         segments={segments.slice(1, 2)}
         interaction={createInteraction({ previewSegmentId: segments[0].id })}
-      />
-    )
+      />,
+    );
 
-    expect(legendButton("Results").className).toContain("opacity-100")
-    expect(legendButton("Results").getAttribute("data-previewed")).toBe("false")
-  })
+    expect(legendButton("Results").className).toContain("opacity-100");
+    expect(legendButton("Results").getAttribute("data-previewed")).toBe(
+      "false",
+    );
+  });
 
   it("clears transient preview on pointer leave", () => {
-    const clearPreview = vi.fn()
+    const clearPreview = vi.fn();
     render(
       <SegmentLegend
         segments={segments}
@@ -652,14 +656,14 @@ describe("SegmentLegend — interaction", () => {
           previewSegmentId: segments[1].id,
           clearPreview,
         })}
-      />
-    )
+      />,
+    );
 
-    fireEvent.pointerLeave(legendButton("Intro"))
+    fireEvent.pointerLeave(legendButton("Intro"));
 
-    expect(clearPreview).toHaveBeenCalled()
-  })
-})
+    expect(clearPreview).toHaveBeenCalled();
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Current page
@@ -667,11 +671,11 @@ describe("SegmentLegend — interaction", () => {
 
 describe("SegmentLegend — current page", () => {
   it("marks the segment owning the current page and bolds its label", () => {
-    render(<SegmentLegend segments={segments} showUnused currentPage={3} />)
-    const results = legendButton("Results")
-    expect(results.getAttribute("data-current")).toBe("true")
-    expect(legendButton("Intro").getAttribute("data-current")).toBe("false")
-  })
+    render(<SegmentLegend segments={segments} showUnused currentPage={3} />);
+    const results = legendButton("Results");
+    expect(results.getAttribute("data-current")).toBe("true");
+    expect(legendButton("Intro").getAttribute("data-current")).toBe("false");
+  });
 
   it("treats current as independent from previewed segment state", () => {
     render(
@@ -680,31 +684,31 @@ describe("SegmentLegend — current page", () => {
         showUnused
         currentPage={3}
         interaction={createInteraction({ previewSegmentId: segments[0].id })}
-      />
-    )
-    const intro = legendButton("Intro")
-    const results = legendButton("Results")
-    expect(intro.getAttribute("data-current")).toBe("false")
-    expect(results.getAttribute("data-current")).toBe("true")
-    expect(intro.getAttribute("data-previewed")).toBe("true")
-    expect(results.getAttribute("data-previewed")).toBe("false")
-  })
+      />,
+    );
+    const intro = legendButton("Intro");
+    const results = legendButton("Results");
+    expect(intro.getAttribute("data-current")).toBe("false");
+    expect(results.getAttribute("data-current")).toBe("true");
+    expect(intro.getAttribute("data-previewed")).toBe("true");
+    expect(results.getAttribute("data-previewed")).toBe("false");
+  });
 
   it("marks every overlapping owner of the current page", () => {
     const overlapping = [
       segment({ id: "a", index: 0, label: "A", pages: [1, 2] }),
       segment({ id: "b", index: 1, label: "B", pages: [2, 3] }),
-    ]
-    render(<SegmentLegend segments={overlapping} currentPage={2} />)
-    expect(legendButton("A").getAttribute("data-current")).toBe("true")
-    expect(legendButton("B").getAttribute("data-current")).toBe("true")
-  })
+    ];
+    render(<SegmentLegend segments={overlapping} currentPage={2} />);
+    expect(legendButton("A").getAttribute("data-current")).toBe("true");
+    expect(legendButton("B").getAttribute("data-current")).toBe("true");
+  });
 
   it("ignores a null current page", () => {
-    render(<SegmentLegend segments={segments} currentPage={null} />)
-    expect(legendButton("Intro").getAttribute("data-current")).toBe("false")
-    expect(legendButton("Results").getAttribute("data-current")).toBe("false")
-  })
+    render(<SegmentLegend segments={segments} currentPage={null} />);
+    expect(legendButton("Intro").getAttribute("data-current")).toBe("false");
+    expect(legendButton("Results").getAttribute("data-current")).toBe("false");
+  });
 
   it.each([0, -1, 1.5, Infinity, Number.NaN])(
     "ignores invalid currentPage=%s even if it appears in raw segment pages",
@@ -720,11 +724,11 @@ describe("SegmentLegend — current page", () => {
             }),
           ]}
           currentPage={currentPage}
-        />
-      )
-      expect(legendButton("Dirty").getAttribute("data-current")).toBe("false")
-    }
-  )
+        />,
+      );
+      expect(legendButton("Dirty").getAttribute("data-current")).toBe("false");
+    },
+  );
 
   it("does not mark a revealed invalid-page segment as current", () => {
     render(
@@ -739,10 +743,10 @@ describe("SegmentLegend — current page", () => {
         ]}
         showUnused
         currentPage={Number.NaN}
-      />
-    )
-    expect(legendButton("Invalid").getAttribute("data-current")).toBe("false")
-  })
+      />,
+    );
+    expect(legendButton("Invalid").getAttribute("data-current")).toBe("false");
+  });
 
   it("does not crash when a revealed segment is missing its pages array", () => {
     const broken = segment({
@@ -750,14 +754,14 @@ describe("SegmentLegend — current page", () => {
       index: 0,
       label: "Broken",
       pages: undefined as unknown as number[],
-    })
+    });
 
     expect(() => {
-      render(<SegmentLegend segments={[broken]} showUnused currentPage={1} />)
-    }).not.toThrow()
-    expect(legendButton("Broken").getAttribute("data-current")).toBe("false")
-  })
-})
+      render(<SegmentLegend segments={[broken]} showUnused currentPage={1} />);
+    }).not.toThrow();
+    expect(legendButton("Broken").getAttribute("data-current")).toBe("false");
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Caption
@@ -766,10 +770,10 @@ describe("SegmentLegend — current page", () => {
 describe("SegmentLegend — caption", () => {
   it("renders a caption beneath the entries", () => {
     render(
-      <SegmentLegend segments={segments} caption="why this split happened" />
-    )
-    expect(screen.getByText("why this split happened")).toBeTruthy()
-  })
+      <SegmentLegend segments={segments} caption="why this split happened" />,
+    );
+    expect(screen.getByText("why this split happened")).toBeTruthy();
+  });
 
   it("renders the caption even when only the toggle is visible (all unused)", () => {
     render(
@@ -777,37 +781,37 @@ describe("SegmentLegend — caption", () => {
         segments={toSegments([{ name: "Only", pages: [] }])}
         showUnusedToggle
         caption="all empty"
-      />
-    )
-    expect(screen.getByText("all empty")).toBeTruthy()
-  })
+      />,
+    );
+    expect(screen.getByText("all empty")).toBeTruthy();
+  });
 
   it("does not render a caption container when caption is omitted", () => {
-    render(<SegmentLegend segments={segments} />)
-    expect(screen.queryByText(/./, { selector: ".line-clamp-2" })).toBeNull()
-  })
+    render(<SegmentLegend segments={segments} />);
+    expect(screen.queryByText(/./, { selector: ".line-clamp-2" })).toBeNull();
+  });
 
   it("does not render an empty caption container for an empty string", () => {
     const { container } = render(
-      <SegmentLegend segments={segments} caption="" />
-    )
-    expect(container.querySelector(".line-clamp-2")).toBeNull()
-  })
+      <SegmentLegend segments={segments} caption="" />,
+    );
+    expect(container.querySelector(".line-clamp-2")).toBeNull();
+  });
 
   it("does not render a caption container for boolean captions", () => {
     const { container, rerender } = render(
-      <SegmentLegend segments={segments} caption={false} />
-    )
-    expect(container.querySelector(".line-clamp-2")).toBeNull()
+      <SegmentLegend segments={segments} caption={false} />,
+    );
+    expect(container.querySelector(".line-clamp-2")).toBeNull();
 
-    rerender(<SegmentLegend segments={segments} caption />)
-    expect(container.querySelector(".line-clamp-2")).toBeNull()
-  })
+    rerender(<SegmentLegend segments={segments} caption />);
+    expect(container.querySelector(".line-clamp-2")).toBeNull();
+  });
 
   it("renders numeric zero as a valid React caption", () => {
-    render(<SegmentLegend segments={segments} caption={0} />)
-    expect(screen.getByText("0", { selector: ".line-clamp-2" })).toBeTruthy()
-  })
+    render(<SegmentLegend segments={segments} caption={0} />);
+    expect(screen.getByText("0", { selector: ".line-clamp-2" })).toBeTruthy();
+  });
 
   it("renders caption content when entries are hidden but the toggle remains", () => {
     render(
@@ -816,12 +820,12 @@ describe("SegmentLegend — caption", () => {
         showUnused={false}
         showUnusedToggle
         caption={<strong>pending labels</strong>}
-      />
-    )
-    expect(screen.queryByRole("button", { name: "Only" })).toBeNull()
-    expect(screen.getByText("pending labels")).toBeTruthy()
-  })
-})
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Only" })).toBeNull();
+    expect(screen.getByText("pending labels")).toBeTruthy();
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Robustness
@@ -829,25 +833,27 @@ describe("SegmentLegend — caption", () => {
 
 describe("SegmentLegend — robustness", () => {
   it("renders duplicate ids without React duplicate-key warnings", () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
     render(
       <SegmentLegend
         segments={[
           segment({ id: "dup", index: 0, label: "First", pages: [1] }),
           segment({ id: "dup", index: 1, label: "Second", pages: [2] }),
         ]}
-      />
-    )
+      />,
+    );
     const hadDupKeyWarning = consoleError.mock.calls.some((call) =>
       call.some((m) =>
-        String(m).includes("Encountered two children with the same key")
-      )
-    )
-    consoleError.mockRestore()
-    expect(hadDupKeyWarning).toBe(false)
-    expect(screen.getByRole("button", { name: "First" })).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Second" })).toBeTruthy()
-  })
+        String(m).includes("Encountered two children with the same key"),
+      ),
+    );
+    consoleError.mockRestore();
+    expect(hadDupKeyWarning).toBe(false);
+    expect(screen.getByRole("button", { name: "First" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Second" })).toBeTruthy();
+  });
 
   it("renders duplicate labels as separate buttons", () => {
     render(
@@ -856,10 +862,10 @@ describe("SegmentLegend — robustness", () => {
           segment({ id: "a#0", index: 0, label: "Same", pages: [1] }),
           segment({ id: "a#1", index: 1, label: "Same", pages: [2] }),
         ]}
-      />
-    )
-    expect(screen.getAllByRole("button", { name: "Same" }).length).toBe(2)
-  })
+      />,
+    );
+    expect(screen.getAllByRole("button", { name: "Same" }).length).toBe(2);
+  });
 
   it("renders malformed missing labels as unnamed instead of crashing", () => {
     render(
@@ -872,11 +878,11 @@ describe("SegmentLegend — robustness", () => {
             pages: [1],
           }),
         ]}
-      />
-    )
+      />,
+    );
 
-    expect(screen.getByRole("button", { name: "unnamed" })).toBeTruthy()
-  })
+    expect(screen.getByRole("button", { name: "unnamed" })).toBeTruthy();
+  });
 
   it("treats malformed non-array pages as unused instead of crashing", () => {
     render(
@@ -890,21 +896,21 @@ describe("SegmentLegend — robustness", () => {
           }),
         ]}
         showUnusedToggle
-      />
-    )
+      />,
+    );
 
-    expect(screen.queryByRole("button", { name: "Bad pages" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Bad pages" })).toBeNull();
     expect(
-      screen.getByRole("button", { name: "Show 1 unused segments" })
-    ).toBeTruthy()
-  })
+      screen.getByRole("button", { name: "Show 1 unused segments" }),
+    ).toBeTruthy();
+  });
 
   it("renders a large segment list without error", () => {
     const many = Array.from({ length: 200 }, (_, i) =>
-      segment({ id: `s#${i}`, index: i, label: `S${i}`, pages: [i + 1] })
-    )
-    render(<SegmentLegend segments={many} columns={4} />)
-    expect(screen.getByRole("button", { name: "S0" })).toBeTruthy()
-    expect(screen.getByRole("button", { name: "S199" })).toBeTruthy()
-  })
-})
+      segment({ id: `s#${i}`, index: i, label: `S${i}`, pages: [i + 1] }),
+    );
+    render(<SegmentLegend segments={many} columns={4} />);
+    expect(screen.getByRole("button", { name: "S0" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "S199" })).toBeTruthy();
+  });
+});

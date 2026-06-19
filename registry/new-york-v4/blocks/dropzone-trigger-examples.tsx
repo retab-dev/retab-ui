@@ -1,5 +1,5 @@
-export { ControlledQueue } from "./dropzone-controlled-queue"
-export { DisabledDropzone } from "./dropzone-disabled-dropzone"
-export { NativeButtonQueue } from "./dropzone-native-button-queue"
-export { NonButtonTrigger } from "./dropzone-non-button-trigger"
-export { ValidationOnly } from "./dropzone-validation-only"
+export { ControlledQueue } from "./dropzone-controlled-queue";
+export { DisabledDropzone } from "./dropzone-disabled-dropzone";
+export { NativeButtonQueue } from "./dropzone-native-button-queue";
+export { NonButtonTrigger } from "./dropzone-non-button-trigger";
+export { ValidationOnly } from "./dropzone-validation-only";

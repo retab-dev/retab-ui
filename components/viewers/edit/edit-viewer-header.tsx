@@ -1,22 +1,22 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
-import { ViewerHeader, ViewerSidebarTrigger } from "@/components/ui/viewer"
+import { cn } from "@/lib/utils";
+import { ViewerHeader, ViewerSidebarTrigger } from "@/components/ui/viewer";
 
-import { EditViewerControls } from "./edit-viewer-controls"
-import type { EditViewerMode, EditViewerStatus } from "./edit-viewer-types"
+import { EditViewerControls } from "./edit-viewer-controls";
+import type { EditViewerMode, EditViewerStatus } from "./edit-viewer-types";
 
 export type EditViewerHeaderViewProps = React.ComponentProps<
   typeof ViewerHeader
 > & {
-  hasFieldPanel: boolean
-  mode: EditViewerMode | null
-  modes: readonly EditViewerMode[]
-  onModeChange: (mode: EditViewerMode) => void
-  status: Exclude<EditViewerStatus, { state: "idle" }> | null
-}
+  hasFieldPanel: boolean;
+  mode: EditViewerMode | null;
+  modes: readonly EditViewerMode[];
+  onModeChange: (mode: EditViewerMode) => void;
+  status: Exclude<EditViewerStatus, { state: "idle" }> | null;
+};
 
 export function EditViewerHeaderView({
   hasFieldPanel,
@@ -27,11 +27,11 @@ export function EditViewerHeaderView({
   className,
   ...props
 }: EditViewerHeaderViewProps) {
-  if (modes.length === 0) return null
+  if (modes.length === 0) return null;
 
   return (
     <ViewerHeader
-      className={cn("flex h-11 items-center bg-background px-2", className)}
+      className={cn("bg-background flex h-11 items-center px-2", className)}
       {...props}
     >
       <div className="flex h-full min-w-0 items-center gap-2">
@@ -44,5 +44,5 @@ export function EditViewerHeaderView({
         />
       </div>
     </ViewerHeader>
-  )
+  );
 }

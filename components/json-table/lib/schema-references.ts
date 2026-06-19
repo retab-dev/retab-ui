@@ -1,29 +1,29 @@
-import type { JSONSchema7, JSONSchema7Definition } from "json-schema"
+import type { JSONSchema7, JSONSchema7Definition } from "json-schema";
 
 type SchemaWithCombinations = JSONSchema7 & {
-  anyOf?: JSONSchema7Definition[]
-  oneOf?: JSONSchema7Definition[]
-  allOf?: JSONSchema7Definition[]
-}
+  anyOf?: JSONSchema7Definition[];
+  oneOf?: JSONSchema7Definition[];
+  allOf?: JSONSchema7Definition[];
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object"
+  return value !== null && typeof value === "object";
 }
 
 function decodeJsonPointerSegment(segment: string): string {
-  return segment.replace(/~1/g, "/").replace(/~0/g, "~")
+  return segment.replace(/~1/g, "/").replace(/~0/g, "~");
 }
 
 function schemaEnumIncludesNull(schema: JSONSchema7): boolean {
-  return Array.isArray(schema.enum) && schema.enum.includes(null)
+  return Array.isArray(schema.enum) && schema.enum.includes(null);
 }
 
 function unwrapNullableType(schema: JSONSchema7): {
-  schema: JSONSchema7
-  nullable: boolean
+  schema: JSONSchema7;
+  nullable: boolean;
 } {
   if (!Array.isArray(schema.type) || !schema.type.includes("null")) {
-    return { schema, nullable: false }
+    return { schema, nullable: false };
   }
 
   return {
@@ -32,76 +32,76 @@ function unwrapNullableType(schema: JSONSchema7): {
       type: schema.type.find((type) => type !== "null"),
     },
     nullable: true,
-  }
+  };
 }
 
 export function resolveSchema(
   schemaDef: JSONSchema7Definition | null | undefined,
-  context: JSONSchema7
+  context: JSONSchema7,
 ): JSONSchema7 {
-  if (schemaDef === true) return {}
-  if (schemaDef === false) return { not: {} }
+  if (schemaDef === true) return {};
+  if (schemaDef === false) return { not: {} };
   if (schemaDef == null || typeof schemaDef !== "object") {
-    return context
+    return context;
   }
 
-  let current = schemaDef as JSONSchema7
-  const seenRefs = new Set<string>()
+  let current = schemaDef as JSONSchema7;
+  const seenRefs = new Set<string>();
   while (current.$ref && typeof current.$ref === "string") {
-    const refPath = current.$ref
+    const refPath = current.$ref;
     if (seenRefs.has(refPath)) {
       console.warn(
-        `[resolveSchema] Circular $ref detected while resolving "${refPath}"`
-      )
-      return { type: "object" }
+        `[resolveSchema] Circular $ref detected while resolving "${refPath}"`,
+      );
+      return { type: "object" };
     }
-    seenRefs.add(refPath)
+    seenRefs.add(refPath);
 
-    const segments = refPath.split("/")
+    const segments = refPath.split("/");
     if (segments[0] !== "#") {
-      throw new Error("Only internal references are supported")
+      throw new Error("Only internal references are supported");
     }
 
-    let next: unknown = context
+    let next: unknown = context;
     for (let i = 1; i < segments.length; i++) {
-      const segment = decodeJsonPointerSegment(segments[i])
+      const segment = decodeJsonPointerSegment(segments[i]);
       if (!isRecord(next)) {
         console.warn(
-          `[resolveSchema] Could not resolve $ref "${refPath}": path segment "${segment}" not found at index ${i}`
-        )
-        return { type: "object" }
+          `[resolveSchema] Could not resolve $ref "${refPath}": path segment "${segment}" not found at index ${i}`,
+        );
+        return { type: "object" };
       }
-      next = next[segment]
+      next = next[segment];
     }
 
     if (!isRecord(next)) {
       console.warn(
-        `[resolveSchema] Could not resolve $ref "${refPath}": target is null or not an object`
-      )
-      return { type: "object" }
+        `[resolveSchema] Could not resolve $ref "${refPath}": target is null or not an object`,
+      );
+      return { type: "object" };
     }
-    current = next as JSONSchema7
+    current = next as JSONSchema7;
   }
-  return current
+  return current;
 }
 
 function mergeAllOfBranches(
   branches: JSONSchema7Definition[],
-  root: JSONSchema7
+  root: JSONSchema7,
 ): JSONSchema7 | undefined {
   const resolvedBranches = branches
     .map((branch) => resolveSchema(branch, root))
     .filter((branch) => {
       const type = Array.isArray(branch.type)
         ? branch.type.find((item) => item !== "null")
-        : branch.type
+        : branch.type;
       return (
         type !== "null" &&
         (type || branch.properties || branch.items || branch.enum)
-      )
-    })
+      );
+    });
 
-  if (resolvedBranches.length === 0) return undefined
+  if (resolvedBranches.length === 0) return undefined;
 
   return resolvedBranches.reduce<JSONSchema7>((merged, branch) => {
     const {
@@ -112,7 +112,7 @@ function mergeAllOfBranches(
       required,
       $defs,
       ...rest
-    } = branch as SchemaWithCombinations
+    } = branch as SchemaWithCombinations;
 
     return {
       ...merged,
@@ -128,7 +128,7 @@ function mergeAllOfBranches(
       ...(merged.required || required
         ? {
             required: Array.from(
-              new Set([...(merged.required ?? []), ...(required ?? [])])
+              new Set([...(merged.required ?? []), ...(required ?? [])]),
             ),
           }
         : undefined),
@@ -140,32 +140,32 @@ function mergeAllOfBranches(
             },
           }
         : undefined),
-    }
-  }, {})
+    };
+  }, {});
 }
 
 export function unwrapSchema(
   schemaDef: JSONSchema7Definition | undefined,
-  root: JSONSchema7
+  root: JSONSchema7,
 ): { schema: JSONSchema7; nullable: boolean } {
-  let schema = resolveSchema(schemaDef, root)
-  let nullable = false
+  let schema = resolveSchema(schemaDef, root);
+  let nullable = false;
 
-  const nullableType = unwrapNullableType(schema)
+  const nullableType = unwrapNullableType(schema);
   if (nullableType.nullable) {
-    nullable = true
-    schema = nullableType.schema
+    nullable = true;
+    schema = nullableType.schema;
   }
 
   if (schemaEnumIncludesNull(schema)) {
-    nullable = true
+    nullable = true;
   }
 
-  const schemaWithCombinations = schema as SchemaWithCombinations
+  const schemaWithCombinations = schema as SchemaWithCombinations;
   const branches =
     schemaWithCombinations.anyOf ||
     schemaWithCombinations.oneOf ||
-    schemaWithCombinations.allOf
+    schemaWithCombinations.allOf;
 
   if (Array.isArray(branches) && branches.length > 0) {
     if (
@@ -173,48 +173,48 @@ export function unwrapSchema(
         (branch) =>
           typeof branch === "object" &&
           branch !== null &&
-          (branch as JSONSchema7).type === "null"
+          (branch as JSONSchema7).type === "null",
       )
     ) {
-      nullable = true
+      nullable = true;
     }
 
     if (schemaWithCombinations.allOf) {
-      schema = mergeAllOfBranches(schemaWithCombinations.allOf, root) ?? schema
+      schema = mergeAllOfBranches(schemaWithCombinations.allOf, root) ?? schema;
     } else {
       const nonNull = branches.find((branch) => {
-        const resolved = resolveSchema(branch, root)
+        const resolved = resolveSchema(branch, root);
         const type = Array.isArray(resolved.type)
           ? resolved.type.find((item) => item !== "null")
-          : resolved.type
+          : resolved.type;
         return (
           type !== "null" &&
           (type || resolved.properties || resolved.items || resolved.enum)
-        )
-      })
+        );
+      });
 
       if (nonNull) {
-        const resolved = resolveSchema(nonNull, root)
+        const resolved = resolveSchema(nonNull, root);
         const {
           anyOf: _anyOf,
           oneOf: _oneOf,
           allOf: _allOf,
           ...rest
-        } = resolved as SchemaWithCombinations
-        schema = rest as JSONSchema7
+        } = resolved as SchemaWithCombinations;
+        schema = rest as JSONSchema7;
       }
     }
   }
 
-  const effectiveNullableType = unwrapNullableType(schema)
+  const effectiveNullableType = unwrapNullableType(schema);
   if (effectiveNullableType.nullable) {
-    nullable = true
-    schema = effectiveNullableType.schema
+    nullable = true;
+    schema = effectiveNullableType.schema;
   }
 
   if (schemaEnumIncludesNull(schema)) {
-    nullable = true
+    nullable = true;
   }
 
-  return { schema, nullable }
+  return { schema, nullable };
 }

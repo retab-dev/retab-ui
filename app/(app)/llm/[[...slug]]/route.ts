@@ -1,31 +1,31 @@
-import { notFound } from "next/navigation"
-import { NextResponse, type NextRequest } from "next/server"
+import { notFound } from "next/navigation";
+import { NextResponse, type NextRequest } from "next/server";
 
-import { processMdxForLLMs } from "@/lib/llm"
-import { source } from "@/lib/source"
+import { processMdxForLLMs } from "@/lib/llm";
+import { source } from "@/lib/source";
 
-export const revalidate = false
+export const revalidate = false;
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: Promise<{ slug?: string[] }> }
+  { params }: { params: Promise<{ slug?: string[] }> },
 ) {
-  const { slug } = await params
-  const page = source.getPage(slug)
+  const { slug } = await params;
+  const page = source.getPage(slug);
 
   if (!page) {
-    notFound()
+    notFound();
   }
 
-  const content = processMdxForLLMs(await page.data.getText("raw"))
+  const content = processMdxForLLMs(await page.data.getText("raw"));
 
   return new NextResponse(content, {
     headers: {
       "Content-Type": "text/markdown; charset=utf-8",
     },
-  })
+  });
 }
 
 export function generateStaticParams() {
-  return source.generateParams()
+  return source.generateParams();
 }

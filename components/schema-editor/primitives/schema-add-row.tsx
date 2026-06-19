@@ -1,15 +1,15 @@
-"use client"
+"use client";
 
-import { AlertCircle, PlusIcon } from "lucide-react"
+import { AlertCircle, PlusIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import type { SchemaAddInputModel } from "@/components/schema-editor/primitives/schema-add-input-model"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import type { SchemaAddInputModel } from "@/components/schema-editor/primitives/schema-add-input-model";
 
 interface SchemaAddRowProps extends SchemaAddInputModel {
-  className?: string
-  disabled: boolean
+  className?: string;
+  disabled: boolean;
 }
 
 export function SchemaAddRow({
@@ -23,7 +23,7 @@ export function SchemaAddRow({
   onChange,
   onSubmit,
 }: SchemaAddRowProps) {
-  const isSubmitDisabled = disabled || !value.trim() || Boolean(error)
+  const isSubmitDisabled = disabled || !value.trim() || Boolean(error);
 
   return (
     <div
@@ -39,9 +39,9 @@ export function SchemaAddRow({
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
-              event.preventDefault()
-              event.stopPropagation()
-              if (!isSubmitDisabled) onSubmit()
+              event.preventDefault();
+              event.stopPropagation();
+              if (!isSubmitDisabled) onSubmit();
             }
           }}
           className={`h-8 w-40 ${error ? "border-destructive" : ""}`}
@@ -60,10 +60,10 @@ export function SchemaAddRow({
       </div>
 
       {error && (
-        <p className="flex items-center gap-1 text-xs text-destructive">
+        <p className="text-destructive flex items-center gap-1 text-xs">
           <AlertCircle className="h-3 w-3" /> {error}
         </p>
       )}
     </div>
-  )
+  );
 }

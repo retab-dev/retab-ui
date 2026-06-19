@@ -1,42 +1,42 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import type { JSONSchema7 } from "json-schema"
+import * as React from "react";
+import type { JSONSchema7 } from "json-schema";
 
-import type { TableDocument } from "@/components/json-table/lib/projects-types"
-import sampleData from "@/components/json-table/sample/data.json"
-import sampleSchema from "@/components/json-table/sample/schema.json"
+import type { TableDocument } from "@/components/json-table/lib/projects-types";
+import sampleData from "@/components/json-table/sample/data.json";
+import sampleSchema from "@/components/json-table/sample/schema.json";
 import {
   SingleFileTableView,
   type JsonTableJsonEditMode,
   type JsonTableSchemaEditMode,
-} from "@/components/json-table/single-file-table-view"
+} from "@/components/json-table/single-file-table-view";
 
 const jsonEditModes: Array<{ value: JsonTableJsonEditMode; label: string }> = [
   { value: "readOnly", label: "Read only" },
   { value: "editable", label: "Editable" },
-]
+];
 
 const schemaEditModes: Array<{
-  value: JsonTableSchemaEditMode
-  label: string
+  value: JsonTableSchemaEditMode;
+  label: string;
 }> = [
   { value: "readOnly", label: "Read only" },
   { value: "editable", label: "Editable" },
   { value: "descriptionOnly", label: "Descriptions" },
-]
+];
 
-const data = sampleData as Record<string, unknown>
-const schema = sampleSchema as unknown as JSONSchema7
-export type JsonTableDemoProfileVariant = "default" | "large"
+const data = sampleData as Record<string, unknown>;
+const schema = sampleSchema as unknown as JSONSchema7;
+export type JsonTableDemoProfileVariant = "default" | "large";
 
 export type JsonTableDemoProfileOptions = {
-  extraColumnCount?: number
-  jumpOverscan?: number
-  overscan?: number
-  rowCount?: number
-  variant: JsonTableDemoProfileVariant
-}
+  extraColumnCount?: number;
+  jumpOverscan?: number;
+  overscan?: number;
+  rowCount?: number;
+  variant: JsonTableDemoProfileVariant;
+};
 
 const demoSchema = {
   ...schema,
@@ -61,14 +61,14 @@ const demoSchema = {
       },
     },
   },
-} as JSONSchema7
+} as JSONSchema7;
 
 const largeTransactionEnumValues = [
   "CREDIT",
   "DEBIT",
   "REVERSAL_PENDING_MANUAL_REVIEW_WITH_A_VERY_LONG_LABEL",
   "LEGACY_DISABLED_TRANSACTION_TYPE_DO_NOT_USE",
-]
+];
 
 const largeReviewStatusValues = [
   "ready",
@@ -76,9 +76,9 @@ const largeReviewStatusValues = [
   "blocked_by_missing_source",
   "legacy_disabled_status",
   null,
-]
+];
 
-const maxLargeTransactionExtraColumnCount = 18
+const maxLargeTransactionExtraColumnCount = 18;
 
 function largeTransactionExtraProperties(extraColumnCount: number) {
   return Object.fromEntries(
@@ -89,42 +89,43 @@ function largeTransactionExtraProperties(extraColumnCount: number) {
           index % 3 === 0 ? "number" : index % 3 === 1 ? "string" : "boolean",
         title: `Profile Extra ${index}`,
       },
-    ])
-  )
+    ]),
+  );
 }
 
 function largeTransactionExtraValues({
   extraColumnCount,
   index,
 }: {
-  extraColumnCount: number
-  index: number
+  extraColumnCount: number;
+  index: number;
 }) {
   return Object.fromEntries(
     Array.from({ length: extraColumnCount }, (_, extraIndex) => {
-      const key = `profile_extra_${String(extraIndex).padStart(2, "0")}`
-      if ((index + extraIndex) % 13 === 0) return [key, undefined]
-      if (extraIndex % 3 === 0) return [key, index * (extraIndex + 1)]
+      const key = `profile_extra_${String(extraIndex).padStart(2, "0")}`;
+      if ((index + extraIndex) % 13 === 0) return [key, undefined];
+      if (extraIndex % 3 === 0) return [key, index * (extraIndex + 1)];
       if (extraIndex % 3 === 1) {
-        return [key, `extra-${extraIndex}-${index}-${"x".repeat(index % 12)}`]
+        return [key, `extra-${extraIndex}-${index}-${"x".repeat(index % 12)}`];
       }
-      return [key, (index + extraIndex) % 2 === 0]
-    })
-  )
+      return [key, (index + extraIndex) % 2 === 0];
+    }),
+  );
 }
 
 function normalizedExtraColumnCount({
   extraColumnCount,
   variant,
 }: Pick<JsonTableDemoProfileOptions, "extraColumnCount" | "variant">) {
-  if (variant === "default") return 0
-  if (extraColumnCount === undefined) return maxLargeTransactionExtraColumnCount
+  if (variant === "default") return 0;
+  if (extraColumnCount === undefined)
+    return maxLargeTransactionExtraColumnCount;
   if (!Number.isFinite(extraColumnCount))
-    return maxLargeTransactionExtraColumnCount
+    return maxLargeTransactionExtraColumnCount;
   return Math.max(
     0,
-    Math.min(maxLargeTransactionExtraColumnCount, Math.floor(extraColumnCount))
-  )
+    Math.min(maxLargeTransactionExtraColumnCount, Math.floor(extraColumnCount)),
+  );
 }
 
 function normalizedRowCount({
@@ -132,27 +133,27 @@ function normalizedRowCount({
   sampleRowCount,
   variant,
 }: Pick<JsonTableDemoProfileOptions, "rowCount" | "variant"> & {
-  sampleRowCount: number
+  sampleRowCount: number;
 }) {
   if (rowCount !== undefined && Number.isFinite(rowCount)) {
-    return Math.max(1, Math.floor(rowCount))
+    return Math.max(1, Math.floor(rowCount));
   }
-  return variant === "large" ? 720 : sampleRowCount
+  return variant === "large" ? 720 : sampleRowCount;
 }
 
 function createDemoSchema(profileOptions: JsonTableDemoProfileOptions) {
-  if (profileOptions.variant === "default") return demoSchema
-  const extraColumnCount = normalizedExtraColumnCount(profileOptions)
+  if (profileOptions.variant === "default") return demoSchema;
+  const extraColumnCount = normalizedExtraColumnCount(profileOptions);
 
   const transactions = demoSchema.properties?.transactions as
     | Record<string, unknown>
-    | undefined
+    | undefined;
   const transactionItems = transactions?.items as
     | Record<string, unknown>
-    | undefined
+    | undefined;
   const transactionProperties = transactionItems?.properties as
     | Record<string, unknown>
-    | undefined
+    | undefined;
 
   return {
     ...demoSchema,
@@ -261,13 +262,13 @@ function createDemoSchema(profileOptions: JsonTableDemoProfileOptions) {
         },
       },
     },
-  } as JSONSchema7
+  } as JSONSchema7;
 }
 
 function createDemoDocument(profileOptions: JsonTableDemoProfileOptions) {
   const transactions = Array.isArray(data.transactions)
     ? demoTransactions(profileOptions)
-    : data.transactions
+    : data.transactions;
 
   return {
     id: "doc_1",
@@ -275,28 +276,28 @@ function createDemoDocument(profileOptions: JsonTableDemoProfileOptions) {
       ...data,
       transactions,
     },
-  } satisfies TableDocument
+  } satisfies TableDocument;
 }
 
 function demoTransactions(profileOptions: JsonTableDemoProfileOptions) {
   const sampleTransactions = Array.isArray(data.transactions)
     ? data.transactions
-    : []
+    : [];
   const rowCount = normalizedRowCount({
     ...profileOptions,
     sampleRowCount: sampleTransactions.length,
-  })
-  const extraColumnCount = normalizedExtraColumnCount(profileOptions)
+  });
+  const extraColumnCount = normalizedExtraColumnCount(profileOptions);
 
   return Array.from({ length: rowCount }, (_, index) => {
-    const source = sampleTransactions[index % sampleTransactions.length]
+    const source = sampleTransactions[index % sampleTransactions.length];
     const base =
       source && typeof source === "object"
         ? (source as Record<string, unknown>)
-        : {}
+        : {};
 
     if (profileOptions.variant === "default") {
-      return { ...base, is_reconciled: index % 3 === 0 }
+      return { ...base, is_reconciled: index % 3 === 0 };
     }
 
     return {
@@ -349,8 +350,8 @@ function demoTransactions(profileOptions: JsonTableDemoProfileOptions) {
         priority: (index % 4) + 1,
       },
       profile_far_tags: [`tag-${index % 3}`, `queue-${index % 5}`],
-    }
-  })
+    };
+  });
 }
 
 export function JsonTableDemo({
@@ -360,11 +361,11 @@ export function JsonTableDemo({
   profileRowCount,
   profileVariant = "default",
 }: {
-  profileExtraColumnCount?: number
-  profileJumpOverscan?: number
-  profileOverscan?: number
-  profileRowCount?: number
-  profileVariant?: JsonTableDemoProfileVariant
+  profileExtraColumnCount?: number;
+  profileJumpOverscan?: number;
+  profileOverscan?: number;
+  profileRowCount?: number;
+  profileVariant?: JsonTableDemoProfileVariant;
 }) {
   const profileOptions = React.useMemo<JsonTableDemoProfileOptions>(
     () => ({
@@ -380,30 +381,30 @@ export function JsonTableDemo({
       profileOverscan,
       profileRowCount,
       profileVariant,
-    ]
-  )
+    ],
+  );
   const [document, setDocument] = React.useState<TableDocument>(() =>
-    createDemoDocument(profileOptions)
-  )
+    createDemoDocument(profileOptions),
+  );
   const [currentSchema, setSchema] = React.useState<JSONSchema7>(() =>
-    createDemoSchema(profileOptions)
-  )
+    createDemoSchema(profileOptions),
+  );
   const [jsonEditMode, setJsonEditMode] =
-    React.useState<JsonTableJsonEditMode>("readOnly")
+    React.useState<JsonTableJsonEditMode>("readOnly");
   const [schemaEditMode, setSchemaEditMode] =
-    React.useState<JsonTableSchemaEditMode>("descriptionOnly")
-  const [profileCallbackVersion, setProfileCallbackVersion] = React.useState(0)
+    React.useState<JsonTableSchemaEditMode>("descriptionOnly");
+  const [profileCallbackVersion, setProfileCallbackVersion] = React.useState(0);
   const updateDocument = React.useCallback(
     async (patch: Record<string, unknown>) => {
       if (patch.data && typeof patch.data === "object") {
         setDocument((currentDocument) => ({
           ...currentDocument,
           data: patch.data as Record<string, unknown>,
-        }))
+        }));
       }
     },
-    [profileCallbackVersion]
-  )
+    [profileCallbackVersion],
+  );
 
   return (
     <div className="not-prose flex flex-col gap-2">
@@ -431,7 +432,7 @@ export function JsonTableDemo({
           Callback churn
         </button>
       </div>
-      <div className="flex h-[480px] flex-col overflow-hidden rounded-xl border bg-background shadow-sm">
+      <div className="bg-background flex h-[480px] flex-col overflow-hidden rounded-xl border shadow-sm">
         <SingleFileTableView
           document={document}
           schema={currentSchema}
@@ -444,7 +445,7 @@ export function JsonTableDemo({
         />
       </div>
     </div>
-  )
+  );
 }
 
 function ModeSwitch<TMode extends string>({
@@ -454,22 +455,22 @@ function ModeSwitch<TMode extends string>({
   value,
   onChange,
 }: {
-  label: string
-  ariaLabel: string
-  modes: Array<{ value: TMode; label: string }>
-  value: TMode
-  onChange: (value: TMode) => void
+  label: string;
+  ariaLabel: string;
+  modes: Array<{ value: TMode; label: string }>;
+  value: TMode;
+  onChange: (value: TMode) => void;
 }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <span className="text-muted-foreground text-xs font-medium">{label}</span>
       <div
         role="group"
         aria-label={ariaLabel}
-        className="inline-flex items-center justify-between overflow-hidden rounded-md border bg-background p-0.5"
+        className="bg-background inline-flex items-center justify-between overflow-hidden rounded-md border p-0.5"
       >
         {modes.map((mode) => {
-          const isSelected = value === mode.value
+          const isSelected = value === mode.value;
 
           return (
             <button
@@ -486,9 +487,9 @@ function ModeSwitch<TMode extends string>({
             >
               {mode.label}
             </button>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }

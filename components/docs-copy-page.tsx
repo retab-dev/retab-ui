@@ -1,30 +1,30 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { ChevronDown } from "lucide-react"
+import * as React from "react";
+import { ChevronDown } from "lucide-react";
 
-import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
-import { Button } from "@/components/ui/button"
-import { Group, GroupSeparator } from "@/components/ui/group"
-import { CopyButtonIcon } from "@/components/copy-button"
+import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
+import { Button } from "@/components/ui/button";
+import { Group, GroupSeparator } from "@/components/ui/group";
+import { CopyButtonIcon } from "@/components/copy-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from "@/components/ui/popover";
 
 function getPromptUrl(baseURL: string, url: string) {
   return `${baseURL}?q=${encodeURIComponent(
     `I’m looking at this Retab UI documentation: ${url}.
 Help me understand how to use it. Be ready to explain concepts, give examples, or help debug based on it.
-  `
-  )}`
+  `,
+  )}`;
 }
 
 const menuItems = {
@@ -152,14 +152,14 @@ const menuItems = {
       Open in Scira
     </a>
   ),
-}
+};
 
 export function DocsCopyPage({ page, url }: { page: string; url: string }) {
-  const { copyToClipboard, isCopied } = useCopyToClipboard()
+  const { copyToClipboard, isCopied } = useCopyToClipboard();
 
   const handleCopyPage = React.useCallback(() => {
-    copyToClipboard(page)
-  }, [copyToClipboard, page])
+    copyToClipboard(page);
+  }, [copyToClipboard, page]);
 
   const renderTrigger = (mobile = false) => (
     <Button
@@ -170,7 +170,7 @@ export function DocsCopyPage({ page, url }: { page: string; url: string }) {
     >
       <ChevronDown className={mobile ? "rotate-180" : undefined} />
     </Button>
-  )
+  );
 
   return (
     <>
@@ -184,7 +184,7 @@ export function DocsCopyPage({ page, url }: { page: string; url: string }) {
           <CopyButtonIcon copied={isCopied} />
           Copy Page
         </Button>
-        <GroupSeparator className="h-8! bg-foreground/5! md:h-7!" />
+        <GroupSeparator className="bg-foreground/5! h-8! md:h-7!" />
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>{renderTrigger()}</DropdownMenuTrigger>
           <DropdownMenuContent
@@ -211,15 +211,15 @@ export function DocsCopyPage({ page, url }: { page: string; url: string }) {
             <CopyButtonIcon copied={isCopied} />
             Copy Page
           </Button>
-          <GroupSeparator className="h-8! bg-foreground/5!" />
+          <GroupSeparator className="bg-foreground/5! h-8!" />
           <PopoverTrigger asChild>{renderTrigger(true)}</PopoverTrigger>
         </Group>
         <PopoverContent
-          className="w-52 origin-center! rounded-lg bg-background/70 p-1 shadow-none backdrop-blur-sm dark:bg-background/60"
+          className="bg-background/70 dark:bg-background/60 w-52 origin-center! rounded-lg p-1 shadow-none backdrop-blur-sm"
           align="start"
         >
           {Object.entries(menuItems).map(([key, value]) => {
-            const item = value(url)
+            const item = value(url);
 
             return (
               <Button
@@ -227,14 +227,14 @@ export function DocsCopyPage({ page, url }: { page: string; url: string }) {
                 variant="ghost"
                 size="lg"
                 key={key}
-                className="w-full justify-start text-base font-normal *:[svg]:text-muted-foreground"
+                className="*:[svg]:text-muted-foreground w-full justify-start text-base font-normal"
               >
                 {item}
               </Button>
-            )
+            );
           })}
         </PopoverContent>
       </Popover>
     </>
-  )
+  );
 }

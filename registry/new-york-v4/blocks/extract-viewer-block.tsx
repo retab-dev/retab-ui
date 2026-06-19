@@ -1,31 +1,31 @@
-"use client"
+"use client";
 
-import type { JSONSchema7 } from "json-schema"
-import { useForm } from "react-hook-form"
+import type { JSONSchema7 } from "json-schema";
+import { useForm } from "react-hook-form";
 
-import type { Source } from "@/lib/document-source"
+import type { Source } from "@/lib/document-source";
 import {
   FileViewer,
   FileViewerBody,
   FileViewerSurface,
-} from "@/components/ui/file-viewer"
+} from "@/components/ui/file-viewer";
 import {
   PdfViewerPages,
   PdfViewerProvider,
   type PdfDocumentSource,
-} from "@/components/ui/pdf-viewer"
-import { ScrollArea } from "@/components/ui/scroll-area"
+} from "@/components/ui/pdf-viewer";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   SegmentedDocumentProvider,
   useSegmentedDocumentViewport,
-} from "@/components/ui/segmented-document-provider"
-import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
-import { SourceIndicator } from "@/components/ui/source-indicator"
-import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
+} from "@/components/ui/segmented-document-provider";
+import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link";
+import { SourceIndicator } from "@/components/ui/source-indicator";
+import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model";
 import {
   useSegmentedPdfSourceOverlay,
   useSegmentedPdfViewerHandle,
-} from "@/components/ui/source-segmented-document-overlays"
+} from "@/components/ui/source-segmented-document-overlays";
 import {
   ViewerBody,
   ViewerHeader,
@@ -33,23 +33,23 @@ import {
   ViewerSidebar,
   ViewerSidebarTrigger,
   ViewerSurface,
-} from "@/components/ui/viewer"
-import { JsonForm } from "@/components/json-form/json-form"
-import extractSample from "@/components/viewers/sample-data/extract.json"
+} from "@/components/ui/viewer";
+import { JsonForm } from "@/components/json-form/json-form";
+import extractSample from "@/components/viewers/sample-data/extract.json";
 
-const PDF_URL = "/samples/jane-doe-bank-statement-5-pages.pdf"
+const PDF_URL = "/samples/jane-doe-bank-statement-5-pages.pdf";
 
 type ExtractField = {
-  key: string
-  label: string
-  value: string
+  key: string;
+  label: string;
+  value: string;
   /** Where this value was found in the document (its source). */
-  source: Source
-}
+  source: Source;
+};
 
 // Extracted values from the bank-statement sample with true text coordinates
 // (normalized pdf_bbox anchors), so each field's source highlight lands on the page.
-const FIELDS = extractSample as ExtractField[]
+const FIELDS = extractSample as ExtractField[];
 const schema: JSONSchema7 = {
   type: "object",
   properties: Object.fromEntries(
@@ -59,23 +59,23 @@ const schema: JSONSchema7 = {
         type: "string",
         title: field.label,
       },
-    ])
+    ]),
   ),
-}
+};
 const defaultValues = Object.fromEntries(
-  FIELDS.map((field) => [field.key, field.value])
-) as Record<string, unknown>
+  FIELDS.map((field) => [field.key, field.value]),
+) as Record<string, unknown>;
 const PDF_SOURCE: PdfDocumentSource = {
   kind: "url",
   url: PDF_URL,
   fileName: "jane-doe-bank-statement-5-pages.pdf",
-}
+};
 const SOURCE_FIELDS = FIELDS.map((field) => ({
   id: field.key,
   label: field.label,
   source: field.source,
-}))
-const SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel(SOURCE_FIELDS)
+}));
+const SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel(SOURCE_FIELDS);
 
 /**
  * Extract viewer block — extracted fields beside the source document, linked by
@@ -91,24 +91,24 @@ export function ExtractViewerBlock() {
     <SegmentedDocumentProvider model={SEGMENTED_DOCUMENT}>
       <ExtractViewerContent />
     </SegmentedDocumentProvider>
-  )
+  );
 }
 
 function ExtractViewerContent() {
   const link = useSegmentedSourceFieldLink({
     initialSourcePath: FIELDS[0]?.key,
-  })
-  const setPdfViewerHandle = useSegmentedPdfViewerHandle()
-  const renderPageOverlay = useSegmentedPdfSourceOverlay(link)
-  const { documentHandlers } = useSegmentedDocumentViewport()
-  const form = useForm<Record<string, unknown>>({ defaultValues })
+  });
+  const setPdfViewerHandle = useSegmentedPdfViewerHandle();
+  const renderPageOverlay = useSegmentedPdfSourceOverlay(link);
+  const { documentHandlers } = useSegmentedDocumentViewport();
+  const form = useForm<Record<string, unknown>>({ defaultValues });
 
   return (
-    <ViewerRoot defaultOpen className="h-full min-h-[680px] bg-background">
+    <ViewerRoot defaultOpen className="bg-background h-full min-h-[680px]">
       <ViewerHeader className="flex min-h-10 items-center gap-2 px-2">
         <ViewerSidebarTrigger />
         <h2 className="min-w-0 truncate text-sm font-medium">Extracted data</h2>
-        <span className="ml-auto text-xs text-muted-foreground">
+        <span className="text-muted-foreground ml-auto text-xs">
           {FIELDS.length} fields
         </span>
       </ViewerHeader>
@@ -151,5 +151,5 @@ function ExtractViewerContent() {
         </ViewerSidebar>
       </ViewerBody>
     </ViewerRoot>
-  )
+  );
 }

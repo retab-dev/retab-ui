@@ -1,24 +1,24 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { buildCommittedDraft } from "@/components/schema-editor/property-form/model/property-draft-commit"
-import { normalizeValidationForCapabilities } from "@/components/schema-editor/property-form/model/property-validation"
+import { buildCommittedDraft } from "@/components/schema-editor/property-form/model/property-draft-commit";
+import { normalizeValidationForCapabilities } from "@/components/schema-editor/property-form/model/property-validation";
 import type {
   PropertyCapabilities,
   PropertyDraft,
   PropertyFormProps,
   PropertyFormSchemaContext,
   PropertyValidation,
-} from "@/components/schema-editor/property-form/types"
-import { validatePropertyDraft } from "@/components/schema-editor/property-form/validation"
+} from "@/components/schema-editor/property-form/types";
+import { validatePropertyDraft } from "@/components/schema-editor/property-form/validation";
 
 interface UsePropertyFormSubmitInput {
-  capabilities: PropertyCapabilities
-  propertyDraftRef: React.MutableRefObject<PropertyDraft>
-  schemaContext: PropertyFormSchemaContext
-  validation?: PropertyValidation
-  onCommitPropertyDraft: PropertyFormProps["onCommitPropertyDraft"]
+  capabilities: PropertyCapabilities;
+  propertyDraftRef: React.MutableRefObject<PropertyDraft>;
+  schemaContext: PropertyFormSchemaContext;
+  validation?: PropertyValidation;
+  onCommitPropertyDraft: PropertyFormProps["onCommitPropertyDraft"];
 }
 
 export function usePropertyFormSubmit({
@@ -28,14 +28,14 @@ export function usePropertyFormSubmit({
   validation,
   onCommitPropertyDraft,
 }: UsePropertyFormSubmitInput) {
-  const [isSubmitting, setIsSubmitting] = React.useState(false)
-  const isSubmittingRef = React.useRef(false)
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const isSubmittingRef = React.useRef(false);
 
   const commitPropertyDraft = React.useCallback(async () => {
-    if (isSubmittingRef.current) return false
-    if (capabilities.mode === "readOnly") return false
+    if (isSubmittingRef.current) return false;
+    if (capabilities.mode === "readOnly") return false;
 
-    const currentPropertyDraft = propertyDraftRef.current
+    const currentPropertyDraft = propertyDraftRef.current;
     const currentValidation = normalizeValidationForCapabilities({
       validation:
         validation ??
@@ -44,20 +44,20 @@ export function usePropertyFormSubmit({
           schemaContext,
         }),
       capabilities,
-    })
-    if (!currentValidation.canCommit) return false
+    });
+    if (!currentValidation.canCommit) return false;
 
-    isSubmittingRef.current = true
-    setIsSubmitting(true)
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
 
     try {
-      await onCommitPropertyDraft(buildCommittedDraft(currentPropertyDraft))
-      return true
+      await onCommitPropertyDraft(buildCommittedDraft(currentPropertyDraft));
+      return true;
     } catch {
-      return false
+      return false;
     } finally {
-      isSubmittingRef.current = false
-      setIsSubmitting(false)
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
   }, [
     capabilities,
@@ -65,10 +65,10 @@ export function usePropertyFormSubmit({
     propertyDraftRef,
     schemaContext,
     validation,
-  ])
+  ]);
 
   return {
     commitPropertyDraft,
     isSubmitting,
-  }
+  };
 }

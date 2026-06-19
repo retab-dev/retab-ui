@@ -1,49 +1,49 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import type { ViewerResource } from "@/lib/viewer-resource"
-import { GridTable } from "@/components/file-thumbnail/renderers/layout"
+import type { ViewerResource } from "@/lib/viewer-resource";
+import { GridTable } from "@/components/file-thumbnail/renderers/layout";
 import {
   cachedThumbnailResource,
   createThumbnailArtifactCache,
-} from "@/components/file-thumbnail/thumbnail-cache"
-import { withThumbnailDecodeSlot } from "@/components/file-thumbnail/thumbnail-decode-queue"
-import { withThumbnailFormatError } from "@/components/file-thumbnail/thumbnail-errors"
+} from "@/components/file-thumbnail/thumbnail-cache";
+import { withThumbnailDecodeSlot } from "@/components/file-thumbnail/thumbnail-decode-queue";
+import { withThumbnailFormatError } from "@/components/file-thumbnail/thumbnail-errors";
 import {
   XLSX_THUMBNAIL_MAX_COLUMNS,
   XLSX_THUMBNAIL_MAX_ROWS,
-} from "@/components/file-thumbnail/thumbnail-limits"
+} from "@/components/file-thumbnail/thumbnail-limits";
 import {
   shortName,
   timedThumbnail,
-} from "@/components/file-thumbnail/thumbnail-profile"
-import { useThumbnailResource } from "@/components/file-thumbnail/thumbnail-resource"
+} from "@/components/file-thumbnail/thumbnail-profile";
+import { useThumbnailResource } from "@/components/file-thumbnail/thumbnail-resource";
 import {
   thumbnailFileMeta,
   type ThumbnailBytesContent,
   type ThumbnailFileMeta,
-} from "@/components/file-thumbnail/thumbnail-text"
+} from "@/components/file-thumbnail/thumbnail-text";
 import {
   createThumbnailWorkerClient,
   type ThumbnailWorkerMessage,
-} from "@/components/file-thumbnail/thumbnail-worker-client"
+} from "@/components/file-thumbnail/thumbnail-worker-client";
 
 interface XlsxPreview {
-  rows: string[][]
+  rows: string[][];
 }
 
 interface XlsxWorkerRequest extends ThumbnailWorkerMessage {
-  buffer: ArrayBuffer
-  maxRows: number
-  maxCols: number
+  buffer: ArrayBuffer;
+  maxRows: number;
+  maxCols: number;
 }
 
 interface XlsxWorkerReply extends ThumbnailWorkerMessage {
-  id: number
-  ok: boolean
-  rows?: string[][]
-  error?: string
+  id: number;
+  ok: boolean;
+  rows?: string[][];
+  error?: string;
 }
 
 const xlsxWorkerClient = createThumbnailWorkerClient<
@@ -55,7 +55,7 @@ const xlsxWorkerClient = createThumbnailWorkerClient<
   resolve: (response) =>
     response.ok && response.rows ? response.rows : undefined,
   reject: (response) => response.error ?? "XLSX parse failed",
-})
+});
 
 function parseXlsxInWorker(buffer: ArrayBuffer): Promise<string[][]> {
   return xlsxWorkerClient.request<string[][]>({
@@ -65,17 +65,17 @@ function parseXlsxInWorker(buffer: ArrayBuffer): Promise<string[][]> {
       maxCols: XLSX_THUMBNAIL_MAX_COLUMNS,
     },
     transfer: [buffer],
-  })
+  });
 }
 
 const xlsxCache = createThumbnailArtifactCache<XlsxPreview>({
   maxEntries: 64,
-})
+});
 
 function getXlsxPreview(
   meta: ThumbnailFileMeta,
   content: ThumbnailBytesContent,
-  thumbnailKey: string
+  thumbnailKey: string,
 ): Promise<XlsxPreview> {
   return cachedThumbnailResource(xlsxCache, thumbnailKey, () =>
     withThumbnailDecodeSlot(() =>
@@ -86,27 +86,27 @@ function getXlsxPreview(
           meta.fileName,
           "Failed to parse spreadsheet thumbnail",
           async () => {
-            const buf = await content.readBytes()
+            const buf = await content.readBytes();
             return timedThumbnail("xlsx:worker-parse", () =>
-              parseXlsxInWorker(buf)
-            )
-          }
-        )
-        return { rows }
-      })
-    )
-  )
+              parseXlsxInWorker(buf),
+            );
+          },
+        );
+        return { rows };
+      }),
+    ),
+  );
 }
 
 export function XlsxFirstSheet({
   resource,
   thumbnailKey,
 }: {
-  resource: ViewerResource
-  thumbnailKey: string
+  resource: ViewerResource;
+  thumbnailKey: string;
 }) {
   const { rows } = useThumbnailResource(
-    getXlsxPreview(thumbnailFileMeta(resource), resource.content, thumbnailKey)
-  )
-  return <GridTable rows={rows} />
+    getXlsxPreview(thumbnailFileMeta(resource), resource.content, thumbnailKey),
+  );
+  return <GridTable rows={rows} />;
 }

@@ -1,17 +1,19 @@
-import { useEffect } from "react"
-import { ajvResolver } from "@hookform/resolvers/ajv"
-import type { JSONSchemaType } from "ajv"
-import type { JSONSchema7 } from "json-schema"
-import { useForm, type UseFormReturn } from "react-hook-form"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { JsonForm } from "@/components/json-form/json-form"
+import { useEffect } from "react";
+import { ajvResolver } from "@hookform/resolvers/ajv";
+import type { JSONSchemaType } from "ajv";
+import type { JSONSchema7 } from "json-schema";
+import { useForm, type UseFormReturn } from "react-hook-form";
 
-type FormValues = Record<string, unknown>
+import { JsonForm } from "@/components/json-form/json-form";
+
+type FormValues = Record<string, unknown>;
 
 function objectValue(value: unknown): FormValues {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as FormValues)
-    : {}
+    : {};
 }
 
 export function ObjectEditor({
@@ -20,10 +22,10 @@ export function ObjectEditor({
   onSubmit,
   disabled = false,
 }: {
-  property: JSONSchema7
-  currentValue: unknown
-  onSubmit: (values: unknown) => void
-  disabled?: boolean
+  property: JSONSchema7;
+  currentValue: unknown;
+  onSubmit: (values: unknown) => void;
+  disabled?: boolean;
 }) {
   const form = useForm<FormValues>({
     defaultValues: objectValue(currentValue),
@@ -31,12 +33,12 @@ export function ObjectEditor({
       strictSchema: false,
       allErrors: true,
     }),
-  })
+  });
 
   useEffect(() => {
-    const sub = form.watch((values) => onSubmit(values))
-    return () => sub.unsubscribe()
-  }, [form, onSubmit])
+    const sub = form.watch((values) => onSubmit(values));
+    return () => sub.unsubscribe();
+  }, [form, onSubmit]);
 
   return (
     <div className="flex max-h-[60vh] flex-col space-y-4 overflow-y-auto">
@@ -45,11 +47,11 @@ export function ObjectEditor({
           form={form as UseFormReturn<Record<string, unknown>>}
           schema={property}
           onSubmit={(values) => onSubmit(values)}
-          className="rounded-sm border border-border bg-background text-xs text-muted-foreground"
+          className="border-border bg-background text-muted-foreground rounded-sm border text-xs"
         />
       </fieldset>
     </div>
-  )
+  );
 }
 
 export function ArrayEditor({
@@ -59,13 +61,13 @@ export function ArrayEditor({
   onSubmit,
   disabled = false,
 }: {
-  name: string
-  property: JSONSchema7
-  currentValue: unknown
-  onSubmit: (values: unknown) => void
-  disabled?: boolean
+  name: string;
+  property: JSONSchema7;
+  currentValue: unknown;
+  onSubmit: (values: unknown) => void;
+  disabled?: boolean;
 }) {
-  const { $defs, ...restProperty } = property
+  const { $defs, ...restProperty } = property;
   const wrapperSchema: JSONSchema7 = {
     type: "object",
     $defs,
@@ -73,7 +75,7 @@ export function ArrayEditor({
       [name]: restProperty,
     },
     required: [name],
-  }
+  };
 
   const form = useForm<FormValues>({
     defaultValues: {
@@ -83,12 +85,12 @@ export function ArrayEditor({
       strictSchema: false,
       allErrors: true,
     }),
-  })
+  });
 
   useEffect(() => {
-    const sub = form.watch((values) => onSubmit(values[name]))
-    return () => sub.unsubscribe()
-  }, [form, onSubmit, name])
+    const sub = form.watch((values) => onSubmit(values[name]));
+    return () => sub.unsubscribe();
+  }, [form, onSubmit, name]);
 
   return (
     <div className="flex max-h-[60vh] flex-col space-y-4 overflow-y-auto">
@@ -97,9 +99,9 @@ export function ArrayEditor({
           form={form as UseFormReturn<Record<string, unknown>>}
           schema={wrapperSchema}
           onSubmit={(values) => onSubmit(values[name])}
-          className="rounded-sm border border-border bg-background text-xs text-muted-foreground"
+          className="border-border bg-background text-muted-foreground rounded-sm border text-xs"
         />
       </fieldset>
     </div>
-  )
+  );
 }

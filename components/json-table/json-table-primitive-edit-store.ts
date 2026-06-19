@@ -1,75 +1,75 @@
-import * as React from "react"
+import * as React from "react";
 
-import { getValueAtPath } from "@/components/json-table/lib/document-paths"
-import type { JsonTableDocumentData } from "@/components/json-table/lib/projects-types"
+import { getValueAtPath } from "@/components/json-table/lib/document-paths";
+import type { JsonTableDocumentData } from "@/components/json-table/lib/projects-types";
 
 export type JsonTablePrimitiveEditSnapshot =
   | {
-      status: "idle"
-      hasValue: false
-      value: undefined
+      status: "idle";
+      hasValue: false;
+      value: undefined;
     }
   | {
-      status: "pending" | "confirmed"
-      hasValue: true
-      value: unknown
+      status: "pending" | "confirmed";
+      hasValue: true;
+      value: unknown;
     }
   | {
-      status: "stale"
-      hasValue: false
-      value: undefined
-      documentValue: unknown
-      previousValue: unknown
-    }
+      status: "stale";
+      hasValue: false;
+      value: undefined;
+      documentValue: unknown;
+      previousValue: unknown;
+    };
 
 type PrimitiveEditEntry = {
-  snapshot: JsonTablePrimitiveEditSnapshot
-  baseValue: unknown
-  supersededValues: unknown[]
-  version: number
-  listeners: Set<() => void>
-}
+  snapshot: JsonTablePrimitiveEditSnapshot;
+  baseValue: unknown;
+  supersededValues: unknown[];
+  version: number;
+  listeners: Set<() => void>;
+};
 
 type PrimitiveDocumentEchoSignature = {
-  data: JsonTableDocumentData
-  fieldPath: string
-  value: unknown
-}
+  data: JsonTableDocumentData;
+  fieldPath: string;
+  value: unknown;
+};
 
-export type JsonTablePrimitiveDocumentEcho = PrimitiveDocumentEchoSignature
+export type JsonTablePrimitiveDocumentEcho = PrimitiveDocumentEchoSignature;
 
 export type JsonTablePrimitiveEditReconciliation = {
-  isPrimitiveDocumentEcho: boolean
-  confirmedFieldPaths: string[]
-  staleFieldPaths: string[]
-}
+  isPrimitiveDocumentEcho: boolean;
+  confirmedFieldPaths: string[];
+  staleFieldPaths: string[];
+};
 
 const idlePrimitiveEditSnapshot: JsonTablePrimitiveEditSnapshot = {
   status: "idle",
   hasValue: false,
   value: undefined,
-}
+};
 
 const unresolvedPrimitiveEditBaseValue = Symbol(
-  "unresolvedPrimitiveEditBaseValue"
-)
+  "unresolvedPrimitiveEditBaseValue",
+);
 
-const maxPrimitiveDocumentEchoSignatures = 32
+const maxPrimitiveDocumentEchoSignatures = 32;
 
 export type JsonTablePrimitiveEditStore = ReturnType<
   typeof createJsonTablePrimitiveEditStore
->
+>;
 
 export function createJsonTablePrimitiveEditStore() {
-  const entries = new Map<string, PrimitiveEditEntry>()
+  const entries = new Map<string, PrimitiveEditEntry>();
   let primitiveDocumentEchoes = new WeakMap<
     JsonTableDocumentData,
     PrimitiveDocumentEchoSignature[]
-  >()
-  let primitiveDocumentEchoSignatures: PrimitiveDocumentEchoSignature[] = []
+  >();
+  let primitiveDocumentEchoSignatures: PrimitiveDocumentEchoSignature[] = [];
 
   function entryForPath(fieldPath: string) {
-    let entry = entries.get(fieldPath)
+    let entry = entries.get(fieldPath);
     if (!entry) {
       entry = {
         snapshot: idlePrimitiveEditSnapshot,
@@ -77,38 +77,38 @@ export function createJsonTablePrimitiveEditStore() {
         supersededValues: [],
         version: 0,
         listeners: new Set(),
-      }
-      entries.set(fieldPath, entry)
+      };
+      entries.set(fieldPath, entry);
     }
-    return entry
+    return entry;
   }
 
   function notify(entry: PrimitiveEditEntry) {
-    entry.version += 1
-    for (const listener of entry.listeners) listener()
+    entry.version += 1;
+    for (const listener of entry.listeners) listener();
   }
 
   function clearEntry(entry: PrimitiveEditEntry) {
-    entry.snapshot = idlePrimitiveEditSnapshot
-    entry.baseValue = unresolvedPrimitiveEditBaseValue
-    entry.supersededValues = []
+    entry.snapshot = idlePrimitiveEditSnapshot;
+    entry.baseValue = unresolvedPrimitiveEditBaseValue;
+    entry.supersededValues = [];
   }
 
   function hasSupersededValue(entry: PrimitiveEditEntry, value: unknown) {
-    return entry.supersededValues.some((item) => Object.is(item, value))
+    return entry.supersededValues.some((item) => Object.is(item, value));
   }
 
   function childValue(node: unknown, segment: string) {
-    if (node === null || typeof node !== "object") return undefined
+    if (node === null || typeof node !== "object") return undefined;
     if (Array.isArray(node) && /^\d+$/.test(segment)) {
-      return node[Number(segment)]
+      return node[Number(segment)];
     }
-    if (!Object.prototype.hasOwnProperty.call(node, segment)) return undefined
-    return (node as Record<string, unknown>)[segment]
+    if (!Object.prototype.hasOwnProperty.call(node, segment)) return undefined;
+    return (node as Record<string, unknown>)[segment];
   }
 
   function enumerableKeys(node: unknown) {
-    return node !== null && typeof node === "object" ? Object.keys(node) : []
+    return node !== null && typeof node === "object" ? Object.keys(node) : [];
   }
 
   function haveSameUneditedSiblings({
@@ -117,12 +117,12 @@ export function createJsonTablePrimitiveEditStore() {
     segments,
     segmentIndex,
   }: {
-    candidateNode: unknown
-    recordedNode: unknown
-    segments: string[]
-    segmentIndex: number
+    candidateNode: unknown;
+    recordedNode: unknown;
+    segments: string[];
+    segmentIndex: number;
   }): boolean {
-    if (segmentIndex >= segments.length) return true
+    if (segmentIndex >= segments.length) return true;
     if (
       recordedNode === null ||
       candidateNode === null ||
@@ -130,7 +130,7 @@ export function createJsonTablePrimitiveEditStore() {
       typeof candidateNode !== "object" ||
       Array.isArray(recordedNode) !== Array.isArray(candidateNode)
     ) {
-      return false
+      return false;
     }
 
     if (
@@ -138,31 +138,31 @@ export function createJsonTablePrimitiveEditStore() {
       Array.isArray(candidateNode) &&
       recordedNode.length !== candidateNode.length
     ) {
-      return false
+      return false;
     }
 
-    const editedSegment = segments[segmentIndex]
+    const editedSegment = segments[segmentIndex];
     const recordedSiblingKeys = enumerableKeys(recordedNode).filter(
-      (key) => key !== editedSegment
-    )
+      (key) => key !== editedSegment,
+    );
     const candidateSiblingKeys = enumerableKeys(candidateNode).filter(
-      (key) => key !== editedSegment
-    )
+      (key) => key !== editedSegment,
+    );
 
     if (recordedSiblingKeys.length !== candidateSiblingKeys.length) {
-      return false
+      return false;
     }
 
-    const recordedSiblingKeySet = new Set(recordedSiblingKeys)
+    const recordedSiblingKeySet = new Set(recordedSiblingKeys);
     for (const key of candidateSiblingKeys) {
-      if (!recordedSiblingKeySet.has(key)) return false
+      if (!recordedSiblingKeySet.has(key)) return false;
       if (
         !Object.is(
           childValue(recordedNode, key),
-          childValue(candidateNode, key)
+          childValue(candidateNode, key),
         )
       ) {
-        return false
+        return false;
       }
     }
 
@@ -171,198 +171,198 @@ export function createJsonTablePrimitiveEditStore() {
       recordedNode: childValue(recordedNode, editedSegment),
       segments,
       segmentIndex: segmentIndex + 1,
-    })
+    });
   }
 
   function matchesPrimitiveDocumentEchoSignature(
     data: JsonTableDocumentData,
-    signature: PrimitiveDocumentEchoSignature
+    signature: PrimitiveDocumentEchoSignature,
   ) {
     if (
       !Object.is(getValueAtPath(data, signature.fieldPath), signature.value)
     ) {
-      return false
+      return false;
     }
 
-    const segments = signature.fieldPath ? signature.fieldPath.split(".") : []
+    const segments = signature.fieldPath ? signature.fieldPath.split(".") : [];
     return haveSameUneditedSiblings({
       candidateNode: data,
       recordedNode: signature.data,
       segments,
       segmentIndex: 0,
-    })
+    });
   }
 
   function recordPrimitiveDocumentEchoSignature(
-    signature: PrimitiveDocumentEchoSignature
+    signature: PrimitiveDocumentEchoSignature,
   ) {
-    const signaturesForData = primitiveDocumentEchoes.get(signature.data) ?? []
-    signaturesForData.push(signature)
-    primitiveDocumentEchoes.set(signature.data, signaturesForData)
+    const signaturesForData = primitiveDocumentEchoes.get(signature.data) ?? [];
+    signaturesForData.push(signature);
+    primitiveDocumentEchoes.set(signature.data, signaturesForData);
 
-    primitiveDocumentEchoSignatures.push(signature)
+    primitiveDocumentEchoSignatures.push(signature);
     if (
       primitiveDocumentEchoSignatures.length <=
       maxPrimitiveDocumentEchoSignatures
     ) {
-      return
+      return;
     }
 
     primitiveDocumentEchoSignatures = primitiveDocumentEchoSignatures.slice(
-      -maxPrimitiveDocumentEchoSignatures
-    )
+      -maxPrimitiveDocumentEchoSignatures,
+    );
   }
 
   function consumePrimitiveDocumentEcho(data: JsonTableDocumentData) {
-    const identityEchoSignatures = primitiveDocumentEchoes.get(data)
+    const identityEchoSignatures = primitiveDocumentEchoes.get(data);
     if (identityEchoSignatures) {
-      primitiveDocumentEchoes.delete(data)
+      primitiveDocumentEchoes.delete(data);
       primitiveDocumentEchoSignatures = primitiveDocumentEchoSignatures.filter(
-        (signature) => !identityEchoSignatures.includes(signature)
-      )
-      return true
+        (signature) => !identityEchoSignatures.includes(signature),
+      );
+      return true;
     }
 
     const signatureIndex = primitiveDocumentEchoSignatures.findIndex(
-      (signature) => matchesPrimitiveDocumentEchoSignature(data, signature)
-    )
-    if (signatureIndex === -1) return false
+      (signature) => matchesPrimitiveDocumentEchoSignature(data, signature),
+    );
+    if (signatureIndex === -1) return false;
 
-    primitiveDocumentEchoSignatures.splice(signatureIndex, 1)
-    return true
+    primitiveDocumentEchoSignatures.splice(signatureIndex, 1);
+    return true;
   }
 
   return {
     getSnapshot(fieldPath: string | undefined): JsonTablePrimitiveEditSnapshot {
-      if (!fieldPath) return idlePrimitiveEditSnapshot
-      return entries.get(fieldPath)?.snapshot ?? idlePrimitiveEditSnapshot
+      if (!fieldPath) return idlePrimitiveEditSnapshot;
+      return entries.get(fieldPath)?.snapshot ?? idlePrimitiveEditSnapshot;
     },
     getVersion(fieldPath: string | undefined) {
-      if (!fieldPath) return 0
-      return entries.get(fieldPath)?.version ?? 0
+      if (!fieldPath) return 0;
+      return entries.get(fieldPath)?.version ?? 0;
     },
     commitValue(fieldPath: string, value: unknown, baseValue?: unknown) {
-      const entry = entryForPath(fieldPath)
+      const entry = entryForPath(fieldPath);
       if (entry.snapshot.hasValue && Object.is(entry.snapshot.value, value)) {
-        return
+        return;
       }
 
       if (entry.snapshot.status === "pending") {
-        entry.supersededValues.push(entry.snapshot.value)
+        entry.supersededValues.push(entry.snapshot.value);
       } else {
-        entry.baseValue = baseValue ?? unresolvedPrimitiveEditBaseValue
-        entry.supersededValues = []
+        entry.baseValue = baseValue ?? unresolvedPrimitiveEditBaseValue;
+        entry.supersededValues = [];
       }
 
-      entry.snapshot = { status: "pending", hasValue: true, value }
-      notify(entry)
+      entry.snapshot = { status: "pending", hasValue: true, value };
+      notify(entry);
     },
     recordDocumentEcho(signature: JsonTablePrimitiveDocumentEcho) {
-      recordPrimitiveDocumentEchoSignature(signature)
+      recordPrimitiveDocumentEchoSignature(signature);
     },
     reconcileDocumentData(
-      data: JsonTableDocumentData
+      data: JsonTableDocumentData,
     ): JsonTablePrimitiveEditReconciliation {
-      const isRecordedPrimitiveEcho = consumePrimitiveDocumentEcho(data)
+      const isRecordedPrimitiveEcho = consumePrimitiveDocumentEcho(data);
 
       const reconciliation: JsonTablePrimitiveEditReconciliation = {
         isPrimitiveDocumentEcho: isRecordedPrimitiveEcho,
         confirmedFieldPaths: [],
         staleFieldPaths: [],
-      }
+      };
 
       for (const [fieldPath, entry] of entries) {
-        if (entry.snapshot.status !== "pending") continue
+        if (entry.snapshot.status !== "pending") continue;
 
-        const documentValue = getValueAtPath(data, fieldPath)
+        const documentValue = getValueAtPath(data, fieldPath);
         if (Object.is(documentValue, entry.snapshot.value)) {
           entry.snapshot = {
             status: "confirmed",
             hasValue: true,
             value: entry.snapshot.value,
-          }
-          entry.supersededValues = []
-          reconciliation.confirmedFieldPaths.push(fieldPath)
-          notify(entry)
-          continue
+          };
+          entry.supersededValues = [];
+          reconciliation.confirmedFieldPaths.push(fieldPath);
+          notify(entry);
+          continue;
         }
 
         if (hasSupersededValue(entry, documentValue)) {
           entry.supersededValues = entry.supersededValues.filter(
-            (item) => !Object.is(item, documentValue)
-          )
-          continue
+            (item) => !Object.is(item, documentValue),
+          );
+          continue;
         }
 
         const hasAuthoritativeChange =
           entry.baseValue !== unresolvedPrimitiveEditBaseValue &&
-          !Object.is(documentValue, entry.baseValue)
-        if (!hasAuthoritativeChange) continue
+          !Object.is(documentValue, entry.baseValue);
+        if (!hasAuthoritativeChange) continue;
 
-        const previousValue = entry.snapshot.value
+        const previousValue = entry.snapshot.value;
         entry.snapshot = {
           status: "stale",
           hasValue: false,
           value: undefined,
           documentValue,
           previousValue,
-        }
-        entry.baseValue = unresolvedPrimitiveEditBaseValue
-        entry.supersededValues = []
-        reconciliation.staleFieldPaths.push(fieldPath)
-        notify(entry)
+        };
+        entry.baseValue = unresolvedPrimitiveEditBaseValue;
+        entry.supersededValues = [];
+        reconciliation.staleFieldPaths.push(fieldPath);
+        notify(entry);
       }
 
-      return reconciliation
+      return reconciliation;
     },
     reconcileProjectedValue(fieldPath: string | undefined, value: unknown) {
-      if (!fieldPath) return
-      const entry = entries.get(fieldPath)
-      if (!entry) return
+      if (!fieldPath) return;
+      const entry = entries.get(fieldPath);
+      if (!entry) return;
 
       const shouldClear =
         (entry.snapshot.status === "confirmed" &&
           Object.is(entry.snapshot.value, value)) ||
-        entry.snapshot.status === "stale"
-      if (!shouldClear) return
+        entry.snapshot.status === "stale";
+      if (!shouldClear) return;
 
-      clearEntry(entry)
-      notify(entry)
+      clearEntry(entry);
+      notify(entry);
     },
     reset() {
-      primitiveDocumentEchoes = new WeakMap()
-      primitiveDocumentEchoSignatures = []
+      primitiveDocumentEchoes = new WeakMap();
+      primitiveDocumentEchoSignatures = [];
       for (const entry of entries.values()) {
-        clearEntry(entry)
-        notify(entry)
+        clearEntry(entry);
+        notify(entry);
       }
     },
     subscribe(fieldPath: string | undefined, listener: () => void) {
-      if (!fieldPath) return () => {}
-      const entry = entryForPath(fieldPath)
-      entry.listeners.add(listener)
+      if (!fieldPath) return () => {};
+      const entry = entryForPath(fieldPath);
+      entry.listeners.add(listener);
       return () => {
-        entry.listeners.delete(listener)
-      }
+        entry.listeners.delete(listener);
+      };
     },
-  }
+  };
 }
 
 export function useJsonTablePrimitiveEditSnapshot({
   fieldPath,
   store,
 }: {
-  fieldPath: string | undefined
-  store: JsonTablePrimitiveEditStore
+  fieldPath: string | undefined;
+  store: JsonTablePrimitiveEditStore;
 }) {
   React.useSyncExternalStore(
     React.useCallback(
       (listener) => store.subscribe(fieldPath, listener),
-      [fieldPath, store]
+      [fieldPath, store],
     ),
     React.useCallback(() => store.getVersion(fieldPath), [fieldPath, store]),
-    () => 0
-  )
+    () => 0,
+  );
 
-  return store.getSnapshot(fieldPath)
+  return store.getSnapshot(fieldPath);
 }

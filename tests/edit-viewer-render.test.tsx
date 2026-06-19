@@ -1,61 +1,63 @@
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
+
 // @vitest-environment jsdom
-import * as React from "react"
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import * as React from "react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   ViewerBody,
   ViewerRoot,
   ViewerSidebar,
   ViewerSurface,
-} from "@/components/ui/viewer"
+} from "@/components/ui/viewer";
 import {
   EditViewer,
   EditViewerDocument,
   EditViewerFields,
   EditViewerHeader,
   EditViewerProvider,
-} from "@/components/viewers/edit/edit-viewer"
-import type { EditViewerField } from "@/components/viewers/edit/edit-viewer-types"
+} from "@/components/viewers/edit/edit-viewer";
+import type { EditViewerField } from "@/components/viewers/edit/edit-viewer-types";
 
 const viewerMocks = vi.hoisted(() => ({
   currentFileViewerSource: null as {
-    kind: "url"
-    url: string
-    fileName?: string
+    kind: "url";
+    url: string;
+    fileName?: string;
   } | null,
   pdfViewerMounts: vi.fn(),
   pdfViewerRenders: vi.fn(),
   scrollToPageArea: vi.fn(),
-}))
+}));
 
 vi.mock("@/components/ui/pdf-viewer", () => ({
   PdfViewer: React.forwardRef(function PdfViewerMock(
     props: {
-      source: { kind: "url"; url: string; fileName?: string }
+      source: { kind: "url"; url: string; fileName?: string };
       renderPageOverlay?: (props: {
-        pageNumber: number
-        width: number
-        height: number
-        scale: number
-        rotation: number
-      }) => React.ReactNode
+        pageNumber: number;
+        width: number;
+        height: number;
+        scale: number;
+        rotation: number;
+      }) => React.ReactNode;
     },
     ref: React.ForwardedRef<{
-      scrollToPage: (pageNumber: number, options?: ScrollToOptions) => void
-      scrollToPageArea: typeof viewerMocks.scrollToPageArea
-      getViewportElement: () => HTMLDivElement | null
-    }>
+      scrollToPage: (pageNumber: number, options?: ScrollToOptions) => void;
+      scrollToPageArea: typeof viewerMocks.scrollToPageArea;
+      getViewportElement: () => HTMLDivElement | null;
+    }>,
   ) {
-    viewerMocks.pdfViewerRenders(props.source.url)
+    viewerMocks.pdfViewerRenders(props.source.url);
     React.useEffect(() => {
-      viewerMocks.pdfViewerMounts(props.source.url)
-    }, [props.source.url])
+      viewerMocks.pdfViewerMounts(props.source.url);
+    }, [props.source.url]);
     React.useImperativeHandle(ref, () => ({
       scrollToPage: vi.fn(),
       scrollToPageArea: viewerMocks.scrollToPageArea,
       getViewportElement: () => null,
-    }))
+    }));
     return (
       <div data-testid="pdf-viewer" data-src={props.source.url}>
         {props.renderPageOverlay?.({
@@ -66,7 +68,7 @@ vi.mock("@/components/ui/pdf-viewer", () => ({
           rotation: 0,
         })}
       </div>
-    )
+    );
   }),
   PdfViewerProvider: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
@@ -74,29 +76,29 @@ vi.mock("@/components/ui/pdf-viewer", () => ({
   PdfViewerPages: React.forwardRef(function PdfViewerPagesMock(
     props: {
       renderPageOverlay?: (props: {
-        pageNumber: number
-        width: number
-        height: number
-        scale: number
-        rotation: number
-      }) => React.ReactNode
+        pageNumber: number;
+        width: number;
+        height: number;
+        scale: number;
+        rotation: number;
+      }) => React.ReactNode;
     },
     ref: React.ForwardedRef<{
-      scrollToPage: (pageNumber: number, options?: ScrollToOptions) => void
-      scrollToPageArea: typeof viewerMocks.scrollToPageArea
-      getViewportElement: () => HTMLDivElement | null
-    }>
+      scrollToPage: (pageNumber: number, options?: ScrollToOptions) => void;
+      scrollToPageArea: typeof viewerMocks.scrollToPageArea;
+      getViewportElement: () => HTMLDivElement | null;
+    }>,
   ) {
-    const source = viewerMocks.currentFileViewerSource
-    viewerMocks.pdfViewerRenders(source?.url)
+    const source = viewerMocks.currentFileViewerSource;
+    viewerMocks.pdfViewerRenders(source?.url);
     React.useEffect(() => {
-      viewerMocks.pdfViewerMounts(source?.url)
-    }, [source?.url])
+      viewerMocks.pdfViewerMounts(source?.url);
+    }, [source?.url]);
     React.useImperativeHandle(ref, () => ({
       scrollToPage: vi.fn(),
       scrollToPageArea: viewerMocks.scrollToPageArea,
       getViewportElement: () => null,
-    }))
+    }));
     return (
       <div data-testid="pdf-viewer" data-src={source?.url}>
         {props.renderPageOverlay?.({
@@ -107,30 +109,30 @@ vi.mock("@/components/ui/pdf-viewer", () => ({
           rotation: 0,
         })}
       </div>
-    )
+    );
   }),
-}))
+}));
 
 vi.mock("@/components/ui/file-viewer", () => ({
   FileViewer: (props: {
-    source: { kind: "url"; url: string; fileName?: string }
-    children?: React.ReactNode
+    source: { kind: "url"; url: string; fileName?: string };
+    children?: React.ReactNode;
   }) => {
-    viewerMocks.currentFileViewerSource = props.source
+    viewerMocks.currentFileViewerSource = props.source;
     return (
       <div data-testid="file-viewer" data-src={props.source.url}>
         {props.children ?? props.source.fileName}
       </div>
-    )
+    );
   },
-}))
+}));
 
 afterEach(() => {
-  cleanup()
-  viewerMocks.pdfViewerMounts.mockClear()
-  viewerMocks.pdfViewerRenders.mockClear()
-  viewerMocks.scrollToPageArea.mockClear()
-})
+  cleanup();
+  viewerMocks.pdfViewerMounts.mockClear();
+  viewerMocks.pdfViewerRenders.mockClear();
+  viewerMocks.scrollToPageArea.mockClear();
+});
 
 const fields: EditViewerField[] = [
   {
@@ -173,25 +175,25 @@ const fields: EditViewerField[] = [
     target: null,
     targetStatus: { state: "missing" },
   },
-]
+];
 
 const sourceDocument = {
   src: "/original.pdf",
   mimeType: "application/pdf",
   filename: "original.pdf",
-}
+};
 
 const filledDocument = {
   src: "/filled.pdf",
   mimeType: "application/pdf",
   filename: "filled.pdf",
-}
+};
 
 const filledTextDocument = {
   src: "/filled.txt",
   mimeType: "text/plain",
   filename: "filled.txt",
-}
+};
 
 describe("EditViewer", () => {
   it("defaults to the actual filled document when it exists", () => {
@@ -200,13 +202,13 @@ describe("EditViewer", () => {
         result={{ fields }}
         sourceDocument={sourceDocument}
         filledDocument={filledDocument}
-      />
-    )
+      />,
+    );
 
-    expect(screen.getByTestId("file-viewer").dataset.src).toBe("/filled.pdf")
-    expect(screen.getByRole("tab", { name: "Filled view" })).toBeTruthy()
-    expect(screen.getByRole("tab", { name: "Preview view" })).toBeTruthy()
-  })
+    expect(screen.getByTestId("file-viewer").dataset.src).toBe("/filled.pdf");
+    expect(screen.getByRole("tab", { name: "Filled view" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Preview view" })).toBeTruthy();
+  });
 
   it("renders non-PDF filled output through the file viewer", () => {
     render(
@@ -214,12 +216,12 @@ describe("EditViewer", () => {
         result={{ fields }}
         sourceDocument={sourceDocument}
         filledDocument={filledTextDocument}
-      />
-    )
+      />,
+    );
 
-    expect(screen.getByTestId("file-viewer").dataset.src).toBe("/filled.txt")
-    expect(screen.getByText("filled.txt")).toBeTruthy()
-  })
+    expect(screen.getByTestId("file-viewer").dataset.src).toBe("/filled.txt");
+    expect(screen.getByText("filled.txt")).toBeTruthy();
+  });
 
   it("uses preview instead of filled when only source overlay data exists", () => {
     render(
@@ -227,13 +229,13 @@ describe("EditViewer", () => {
         result={{ fields }}
         sourceDocument={sourceDocument}
         mode="preview"
-      />
-    )
+      />,
+    );
 
-    expect(screen.queryByRole("tab", { name: "Filled view" })).toBeNull()
-    expect(screen.getByRole("tab", { name: "Preview view" })).toBeTruthy()
-    expect(screen.getByLabelText("name, text, Ada Lovelace")).toBeTruthy()
-  })
+    expect(screen.queryByRole("tab", { name: "Filled view" })).toBeNull();
+    expect(screen.getByRole("tab", { name: "Preview view" })).toBeTruthy();
+    expect(screen.getByLabelText("name, text, Ada Lovelace")).toBeTruthy();
+  });
 
   it("renders source mode without value overlays", () => {
     render(
@@ -241,13 +243,13 @@ describe("EditViewer", () => {
         result={{ fields }}
         sourceDocument={sourceDocument}
         mode="source"
-      />
-    )
+      />,
+    );
 
-    expect(screen.getByTestId("pdf-viewer").dataset.src).toBe("/original.pdf")
-    expect(screen.queryByLabelText("name, text, Ada Lovelace")).toBeNull()
-    expect(screen.getByRole("tab", { name: "Source view" })).toBeTruthy()
-  })
+    expect(screen.getByTestId("pdf-viewer").dataset.src).toBe("/original.pdf");
+    expect(screen.queryByLabelText("name, text, Ada Lovelace")).toBeNull();
+    expect(screen.getByRole("tab", { name: "Source view" })).toBeTruthy();
+  });
 
   it("omits the filled summary from the header controls", () => {
     render(
@@ -256,14 +258,14 @@ describe("EditViewer", () => {
         sourceDocument={sourceDocument}
         mode="preview"
         options={{ fieldPanel: false }}
-      />
-    )
+      />,
+    );
 
-    expect(screen.queryByText(/2\s*\/\s*3 filled/)).toBeNull()
-  })
+    expect(screen.queryByText(/2\s*\/\s*3 filled/)).toBeNull();
+  });
 
   it("treats null controlled mode as best available display mode", () => {
-    const onModeChange = vi.fn()
+    const onModeChange = vi.fn();
 
     render(
       <EditViewer
@@ -271,75 +273,75 @@ describe("EditViewer", () => {
         sourceDocument={sourceDocument}
         mode={null}
         onModeChange={onModeChange}
-      />
-    )
+      />,
+    );
 
-    expect(screen.getByRole("tab", { name: "Preview view" })).toBeTruthy()
-    expect(screen.getByLabelText("name, text, Ada Lovelace")).toBeTruthy()
-    expect(onModeChange).not.toHaveBeenCalled()
-  })
+    expect(screen.getByRole("tab", { name: "Preview view" })).toBeTruthy();
+    expect(screen.getByLabelText("name, text, Ada Lovelace")).toBeTruthy();
+    expect(onModeChange).not.toHaveBeenCalled();
+  });
 
   it("searches and filters the field panel", () => {
-    render(<EditViewer result={{ fields }} sourceDocument={sourceDocument} />)
+    render(<EditViewer result={{ fields }} sourceDocument={sourceDocument} />);
 
     fireEvent.change(screen.getByLabelText("Search form fields"), {
       target: { value: "wire" },
-    })
-    expect(screen.getByText("send_wire")).toBeTruthy()
-    expect(screen.queryByText("name")).toBeNull()
+    });
+    expect(screen.getByText("send_wire")).toBeTruthy();
+    expect(screen.queryByText("name")).toBeNull();
 
     fireEvent.change(screen.getByLabelText("Search form fields"), {
       target: { value: "" },
-    })
-    fireEvent.click(screen.getByRole("button", { name: "Empty" }))
-    expect(screen.getByText("memo")).toBeTruthy()
-    expect(screen.queryByText("send_wire")).toBeNull()
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Empty" }));
+    expect(screen.getByText("memo")).toBeTruthy();
+    expect(screen.queryByText("send_wire")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "No location" }))
-    expect(screen.getByText("memo")).toBeTruthy()
-    expect(screen.queryByText("name")).toBeNull()
-  })
+    fireEvent.click(screen.getByRole("button", { name: "No location" }));
+    expect(screen.getByText("memo")).toBeTruthy();
+    expect(screen.queryByText("name")).toBeNull();
+  });
 
   it("keeps the document renderer mounted across hover and search churn", () => {
-    render(<EditViewer result={{ fields }} sourceDocument={sourceDocument} />)
+    render(<EditViewer result={{ fields }} sourceDocument={sourceDocument} />);
 
-    expect(viewerMocks.pdfViewerMounts).toHaveBeenCalledTimes(1)
+    expect(viewerMocks.pdfViewerMounts).toHaveBeenCalledTimes(1);
     const initialDocumentRenders =
-      viewerMocks.pdfViewerRenders.mock.calls.length
+      viewerMocks.pdfViewerRenders.mock.calls.length;
 
-    fireEvent.mouseEnter(screen.getByLabelText("name, text, Ada Lovelace"))
+    fireEvent.mouseEnter(screen.getByLabelText("name, text, Ada Lovelace"));
     expect(viewerMocks.pdfViewerRenders.mock.calls.length).toBeGreaterThan(
-      initialDocumentRenders
-    )
-    expect(viewerMocks.pdfViewerMounts).toHaveBeenCalledTimes(1)
+      initialDocumentRenders,
+    );
+    expect(viewerMocks.pdfViewerMounts).toHaveBeenCalledTimes(1);
 
     fireEvent.change(screen.getByLabelText("Search form fields"), {
       target: { value: "wire" },
-    })
+    });
 
-    expect(screen.getByText("send_wire")).toBeTruthy()
-    expect(screen.queryByText("name")).toBeNull()
-    expect(viewerMocks.pdfViewerMounts).toHaveBeenCalledTimes(1)
-  })
+    expect(screen.getByText("send_wire")).toBeTruthy();
+    expect(screen.queryByText("name")).toBeNull();
+    expect(viewerMocks.pdfViewerMounts).toHaveBeenCalledTimes(1);
+  });
 
   it("keeps composed document and field panel mounted across field-panel churn", () => {
     const counts = {
       documentMounts: 0,
       fieldsMounts: 0,
-    }
+    };
 
     function CountingDocument() {
       React.useEffect(() => {
-        counts.documentMounts += 1
-      }, [])
-      return <EditViewerDocument />
+        counts.documentMounts += 1;
+      }, []);
+      return <EditViewerDocument />;
     }
 
     function CountingFields() {
       React.useEffect(() => {
-        counts.fieldsMounts += 1
-      }, [])
-      return <EditViewerFields />
+        counts.fieldsMounts += 1;
+      }, []);
+      return <EditViewerFields />;
     }
 
     render(
@@ -355,32 +357,32 @@ describe("EditViewer", () => {
             </ViewerSidebar>
           </ViewerBody>
         </ViewerRoot>
-      </EditViewerProvider>
-    )
+      </EditViewerProvider>,
+    );
 
-    const fieldsSidebar = screen.getByLabelText("Document fields")
-    expect(counts.documentMounts).toBe(1)
-    expect(counts.fieldsMounts).toBe(1)
-    expect(viewerMocks.pdfViewerMounts).toHaveBeenCalledTimes(1)
+    const fieldsSidebar = screen.getByLabelText("Document fields");
+    expect(counts.documentMounts).toBe(1);
+    expect(counts.fieldsMounts).toBe(1);
+    expect(viewerMocks.pdfViewerMounts).toHaveBeenCalledTimes(1);
 
     fireEvent.change(screen.getByLabelText("Search form fields"), {
       target: { value: "wire" },
-    })
-    expect(screen.getByText("send_wire")).toBeTruthy()
-    expect(screen.queryByText("name")).toBeNull()
+    });
+    expect(screen.getByText("send_wire")).toBeTruthy();
+    expect(screen.queryByText("name")).toBeNull();
 
-    fireEvent.mouseEnter(screen.getByText("send_wire").closest("button")!)
+    fireEvent.mouseEnter(screen.getByText("send_wire").closest("button")!);
     fireEvent.change(screen.getByLabelText("Search form fields"), {
       target: { value: "" },
-    })
-    fireEvent.click(screen.getByRole("button", { name: "Empty" }))
-    expect(screen.getByText("memo")).toBeTruthy()
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Empty" }));
+    expect(screen.getByText("memo")).toBeTruthy();
 
-    expect(screen.getByLabelText("Document fields")).toBe(fieldsSidebar)
-    expect(counts.documentMounts).toBe(1)
-    expect(counts.fieldsMounts).toBe(1)
-    expect(viewerMocks.pdfViewerMounts).toHaveBeenCalledTimes(1)
-  })
+    expect(screen.getByLabelText("Document fields")).toBe(fieldsSidebar);
+    expect(counts.documentMounts).toBe(1);
+    expect(counts.fieldsMounts).toBe(1);
+    expect(viewerMocks.pdfViewerMounts).toHaveBeenCalledTimes(1);
+  });
 
   it("exposes the expected accessibility contract", () => {
     render(
@@ -388,24 +390,24 @@ describe("EditViewer", () => {
         result={{ fields }}
         sourceDocument={sourceDocument}
         status={{ state: "detecting", message: "Reading fields" }}
-      />
-    )
+      />,
+    );
 
-    expect(screen.getByLabelText("Document fields")).toBeTruthy()
-    expect(screen.getByLabelText("Toggle sidebar")).toBeTruthy()
-    expect(screen.getByRole("tab", { name: "Preview view" })).toBeTruthy()
-    expect(screen.getByRole("status").textContent).toContain("Reading fields")
+    expect(screen.getByLabelText("Document fields")).toBeTruthy();
+    expect(screen.getByLabelText("Toggle sidebar")).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Preview view" })).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain("Reading fields");
 
-    const memoRow = screen.getByText("memo").closest("button")
-    expect(memoRow?.tagName).toBe("BUTTON")
-    fireEvent.click(screen.getByText("memo"))
-    expect(memoRow?.getAttribute("aria-current")).toBe("true")
+    const memoRow = screen.getByText("memo").closest("button");
+    expect(memoRow?.tagName).toBe("BUTTON");
+    fireEvent.click(screen.getByText("memo"));
+    expect(memoRow?.getAttribute("aria-current")).toBe("true");
 
-    const emptyFilter = screen.getByRole("button", { name: "Empty" })
-    expect(emptyFilter.getAttribute("aria-pressed")).toBe("false")
-    fireEvent.click(emptyFilter)
-    expect(emptyFilter.getAttribute("aria-pressed")).toBe("true")
-  })
+    const emptyFilter = screen.getByRole("button", { name: "Empty" });
+    expect(emptyFilter.getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(emptyFilter);
+    expect(emptyFilter.getAttribute("aria-pressed")).toBe("true");
+  });
 
   it("applies constrained viewer options", () => {
     render(
@@ -413,13 +415,13 @@ describe("EditViewer", () => {
         result={{ fields }}
         sourceDocument={sourceDocument}
         options={{ preview: false, search: false, filters: false }}
-      />
-    )
+      />,
+    );
 
-    expect(screen.queryByRole("tab", { name: "Preview view" })).toBeNull()
-    expect(screen.queryByLabelText("Search form fields")).toBeNull()
-    expect(screen.queryByRole("button", { name: "Empty" })).toBeNull()
-  })
+    expect(screen.queryByRole("tab", { name: "Preview view" })).toBeNull();
+    expect(screen.queryByLabelText("Search form fields")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Empty" })).toBeNull();
+  });
 
   it("omits the sidebar trigger and sidebar when the field panel is disabled", () => {
     render(
@@ -427,25 +429,25 @@ describe("EditViewer", () => {
         result={{ fields }}
         sourceDocument={sourceDocument}
         options={{ fieldPanel: false }}
-      />
-    )
+      />,
+    );
 
-    expect(screen.queryByLabelText("Toggle sidebar")).toBeNull()
-    expect(screen.queryByLabelText("Document fields")).toBeNull()
-  })
+    expect(screen.queryByLabelText("Toggle sidebar")).toBeNull();
+    expect(screen.queryByLabelText("Document fields")).toBeNull();
+  });
 
   it("hides the header when no document modes are available", () => {
-    render(<EditViewer result={{ fields }} />)
+    render(<EditViewer result={{ fields }} />);
 
-    expect(screen.queryByRole("tab")).toBeNull()
-    expect(screen.getByText("No edit view is available.")).toBeTruthy()
-    expect(screen.getByText("Form fields")).toBeTruthy()
-  })
+    expect(screen.queryByRole("tab")).toBeNull();
+    expect(screen.getByText("No edit view is available.")).toBeTruthy();
+    expect(screen.getByText("Form fields")).toBeTruthy();
+  });
 
   it("scrolls to a selected field with normalized percentages", () => {
-    render(<EditViewer result={{ fields }} sourceDocument={sourceDocument} />)
+    render(<EditViewer result={{ fields }} sourceDocument={sourceDocument} />);
 
-    fireEvent.click(screen.getByText("name"))
+    fireEvent.click(screen.getByText("name"));
 
     expect(viewerMocks.scrollToPageArea).toHaveBeenCalledWith(
       {
@@ -455,12 +457,12 @@ describe("EditViewer", () => {
         top: 20,
         width: 30,
       },
-      { behavior: "smooth" }
-    )
-  })
+      { behavior: "smooth" },
+    );
+  });
 
   it("clears a stale controlled selected field", () => {
-    const onSelectedFieldKeyChange = vi.fn()
+    const onSelectedFieldKeyChange = vi.fn();
 
     render(
       <EditViewer
@@ -468,14 +470,14 @@ describe("EditViewer", () => {
         sourceDocument={sourceDocument}
         selectedFieldKey="missing"
         onSelectedFieldKeyChange={onSelectedFieldKeyChange}
-      />
-    )
+      />,
+    );
 
-    expect(onSelectedFieldKeyChange).toHaveBeenCalledWith(null)
-  })
+    expect(onSelectedFieldKeyChange).toHaveBeenCalledWith(null);
+  });
 
   it("notifies controlled selection from sidebar rows and overlay buttons", () => {
-    const onSelectedFieldKeyChange = vi.fn()
+    const onSelectedFieldKeyChange = vi.fn();
 
     render(
       <EditViewer
@@ -483,21 +485,21 @@ describe("EditViewer", () => {
         sourceDocument={sourceDocument}
         mode="preview"
         onSelectedFieldKeyChange={onSelectedFieldKeyChange}
-      />
-    )
+      />,
+    );
 
-    fireEvent.click(screen.getByText("memo"))
-    expect(onSelectedFieldKeyChange).toHaveBeenLastCalledWith("memo")
+    fireEvent.click(screen.getByText("memo"));
+    expect(onSelectedFieldKeyChange).toHaveBeenLastCalledWith("memo");
     expect(
-      screen.getByText("memo").closest("button")?.getAttribute("aria-current")
-    ).toBe("true")
+      screen.getByText("memo").closest("button")?.getAttribute("aria-current"),
+    ).toBe("true");
 
-    fireEvent.click(screen.getByLabelText("name, text, Ada Lovelace"))
-    expect(onSelectedFieldKeyChange).toHaveBeenLastCalledWith("name")
-  })
+    fireEvent.click(screen.getByLabelText("name, text, Ada Lovelace"));
+    expect(onSelectedFieldKeyChange).toHaveBeenLastCalledWith("name");
+  });
 
   it("previews field hover without committing controlled selection", () => {
-    const onSelectedFieldKeyChange = vi.fn()
+    const onSelectedFieldKeyChange = vi.fn();
 
     render(
       <EditViewer
@@ -505,12 +507,12 @@ describe("EditViewer", () => {
         sourceDocument={sourceDocument}
         mode="preview"
         onSelectedFieldKeyChange={onSelectedFieldKeyChange}
-      />
-    )
+      />,
+    );
 
-    fireEvent.mouseEnter(screen.getByLabelText("name, text, Ada Lovelace"))
-    expect(onSelectedFieldKeyChange).not.toHaveBeenCalled()
-  })
+    fireEvent.mouseEnter(screen.getByLabelText("name, text, Ada Lovelace"));
+    expect(onSelectedFieldKeyChange).not.toHaveBeenCalled();
+  });
 
   it("restores the committed field highlight after hover preview leaves", () => {
     render(
@@ -518,21 +520,21 @@ describe("EditViewer", () => {
         result={{ fields }}
         sourceDocument={sourceDocument}
         mode="preview"
-      />
-    )
+      />,
+    );
 
-    const memoRow = screen.getByText("memo").closest("button")
-    const nameOverlay = screen.getByLabelText("name, text, Ada Lovelace")
+    const memoRow = screen.getByText("memo").closest("button");
+    const nameOverlay = screen.getByLabelText("name, text, Ada Lovelace");
 
-    fireEvent.click(screen.getByText("memo"))
-    expect(memoRow?.classList.contains("bg-muted")).toBe(true)
+    fireEvent.click(screen.getByText("memo"));
+    expect(memoRow?.classList.contains("bg-muted")).toBe(true);
 
-    fireEvent.mouseEnter(nameOverlay)
-    expect(memoRow?.classList.contains("bg-muted")).toBe(false)
+    fireEvent.mouseEnter(nameOverlay);
+    expect(memoRow?.classList.contains("bg-muted")).toBe(false);
 
-    fireEvent.mouseLeave(nameOverlay)
-    expect(memoRow?.classList.contains("bg-muted")).toBe(true)
-  })
+    fireEvent.mouseLeave(nameOverlay);
+    expect(memoRow?.classList.contains("bg-muted")).toBe(true);
+  });
 
   it("shows status messages without changing mode semantics", () => {
     render(
@@ -540,14 +542,14 @@ describe("EditViewer", () => {
         result={{ fields }}
         sourceDocument={sourceDocument}
         status={{ state: "filling", message: "Generating filled PDF" }}
-      />
-    )
+      />,
+    );
 
     expect(screen.getAllByText("Generating filled PDF").length).toBeGreaterThan(
-      0
-    )
-    expect(screen.getByRole("tab", { name: "Preview view" })).toBeTruthy()
-  })
+      0,
+    );
+    expect(screen.getByRole("tab", { name: "Preview view" })).toBeTruthy();
+  });
 
   it("shows detecting status as an accessible overlay", () => {
     render(
@@ -555,12 +557,12 @@ describe("EditViewer", () => {
         result={{ fields }}
         sourceDocument={sourceDocument}
         status={{ state: "detecting", message: "Reading fields" }}
-      />
-    )
+      />,
+    );
 
-    expect(screen.getByRole("status")).toBeTruthy()
-    expect(screen.getAllByText("Reading fields").length).toBeGreaterThan(0)
-  })
+    expect(screen.getByRole("status")).toBeTruthy();
+    expect(screen.getAllByText("Reading fields").length).toBeGreaterThan(0);
+  });
 
   it("shows errors as a first-class document state", () => {
     render(
@@ -568,14 +570,14 @@ describe("EditViewer", () => {
         result={{ fields }}
         sourceDocument={sourceDocument}
         status={{ state: "error", message: "Could not fill document" }}
-      />
-    )
+      />,
+    );
 
     expect(screen.getByRole("alert").textContent).toContain(
-      "Could not fill document"
-    )
-    expect(screen.queryByTestId("pdf-viewer")).toBeNull()
-  })
+      "Could not fill document",
+    );
+    expect(screen.queryByTestId("pdf-viewer")).toBeNull();
+  });
 
   it("does not overlay or scroll to malformed field locations", () => {
     render(
@@ -593,13 +595,13 @@ describe("EditViewer", () => {
         }}
         sourceDocument={sourceDocument}
         mode="preview"
-      />
-    )
+      />,
+    );
 
-    expect(screen.queryByLabelText("bad_location, text, Ignored")).toBeNull()
-    fireEvent.click(screen.getByText("bad_location"))
-    expect(viewerMocks.scrollToPageArea).not.toHaveBeenCalled()
-  })
+    expect(screen.queryByLabelText("bad_location, text, Ignored")).toBeNull();
+    fireEvent.click(screen.getByText("bad_location"));
+    expect(viewerMocks.scrollToPageArea).not.toHaveBeenCalled();
+  });
 
   it("renders the same viewer from provider and named parts", () => {
     render(
@@ -615,23 +617,23 @@ describe("EditViewer", () => {
             </ViewerSidebar>
           </ViewerBody>
         </ViewerRoot>
-      </EditViewerProvider>
-    )
+      </EditViewerProvider>,
+    );
 
-    expect(screen.getByRole("tab", { name: "Preview view" })).toBeTruthy()
-    expect(screen.getByLabelText("Document fields")).toBeTruthy()
-    expect(screen.getByText("name")).toBeTruthy()
-    expect(screen.getByTestId("pdf-viewer").dataset.src).toBe("/original.pdf")
-  })
+    expect(screen.getByRole("tab", { name: "Preview view" })).toBeTruthy();
+    expect(screen.getByLabelText("Document fields")).toBeTruthy();
+    expect(screen.getByText("name")).toBeTruthy();
+    expect(screen.getByTestId("pdf-viewer").dataset.src).toBe("/original.pdf");
+  });
 
   it("keeps EditViewerFields content-only", () => {
     const { container } = render(
       <EditViewerProvider result={{ fields }} sourceDocument={sourceDocument}>
         <EditViewerFields />
-      </EditViewerProvider>
-    )
+      </EditViewerProvider>,
+    );
 
-    expect(screen.getByText("Form fields")).toBeTruthy()
-    expect(container.querySelector("aside")).toBeNull()
-  })
-})
+    expect(screen.getByText("Form fields")).toBeTruthy();
+    expect(container.querySelector("aside")).toBeNull();
+  });
+});

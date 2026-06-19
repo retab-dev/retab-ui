@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { DocxViewer } from "@/components/ui/docx-viewer"
+import { DocxViewer } from "@/components/ui/docx-viewer";
 
 export function DocxViewerDemo() {
   return (
@@ -19,5 +19,5 @@ export function DocxViewerDemo() {
         className="h-full"
       />
     </div>
-  )
+  );
 }

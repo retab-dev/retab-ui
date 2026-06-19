@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/ui/pdf-viewer-page-sizes"
+export * from "@/registry/new-york-v4/ui/pdf-viewer-page-sizes";

@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, waitFor } from "@testing-library/react"
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
+import { cleanup, fireEvent, waitFor } from "@testing-library/react";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import type { JsonTableActiveCell } from "@/components/json-table/json-table-edit-session"
+import type { JsonTableActiveCell } from "@/components/json-table/json-table-edit-session";
 
 import {
   findEditableCell,
@@ -11,32 +11,32 @@ import {
   primitiveEventTarget,
   primitivePendingCellCommit,
   renderInteractionRow,
-} from "./json-table-interaction-test-utils"
-import { installJsonTableDom } from "./json-table-test-dom"
+} from "./json-table-interaction-test-utils";
+import { installJsonTableDom } from "./json-table-test-dom";
 
-beforeAll(() => installJsonTableDom())
+beforeAll(() => installJsonTableDom());
 afterEach(() => {
-  cleanup()
-  vi.restoreAllMocks()
-})
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 async function editableCell(
   view: { container: HTMLElement },
-  fieldPath = "status"
+  fieldPath = "status",
 ) {
   return waitFor(() => findEditableCell(view.container, fieldPath), {
     timeout: 3000,
-  })
+  });
 }
 
 function latestSession(sessions: Array<JsonTableActiveCell | null>) {
-  return sessions[sessions.length - 1]
+  return sessions[sessions.length - 1];
 }
 
 function optionNames(view: {
-  getAllByRole: (role: "option") => HTMLElement[]
+  getAllByRole: (role: "option") => HTMLElement[];
 }) {
-  return view.getAllByRole("option").map((option) => option.textContent)
+  return view.getAllByRole("option").map((option) => option.textContent);
 }
 
 async function openEnumFromClick({
@@ -44,30 +44,30 @@ async function openEnumFromClick({
   onCellCommit = vi.fn(),
   onEditSessionChange = vi.fn(),
 }: {
-  fieldPath?: string
-  onCellCommit?: ReturnType<typeof vi.fn>
-  onEditSessionChange?: (activeCell: JsonTableActiveCell | null) => void
+  fieldPath?: string;
+  onCellCommit?: ReturnType<typeof vi.fn>;
+  onEditSessionChange?: (activeCell: JsonTableActiveCell | null) => void;
 } = {}) {
   const view = renderInteractionRow({
     visiblePaths: [fieldPath],
     onCellCommit,
     onEditSessionChange,
-  })
-  const cell = await editableCell(view, fieldPath)
+  });
+  const cell = await editableCell(view, fieldPath);
 
   fireEvent.click(primitiveEventTarget(cell), {
     button: 0,
     clientX: 0,
     clientY: 0,
     detail: 1,
-  })
+  });
 
-  const trigger = await view.findByRole("combobox")
+  const trigger = await view.findByRole("combobox");
   await waitFor(() =>
-    expect(trigger.getAttribute("aria-expanded")).toBe("true")
-  )
+    expect(trigger.getAttribute("aria-expanded")).toBe("true"),
+  );
 
-  return { ...view, cell, trigger, onCellCommit }
+  return { ...view, cell, trigger, onCellCommit };
 }
 
 async function chooseOption(option: HTMLElement) {
@@ -75,98 +75,98 @@ async function chooseOption(option: HTMLElement) {
     button: 0,
     pointerId: 1,
     pointerType: "mouse",
-  })
+  });
   fireEvent.pointerUp(option, {
     button: 0,
     pointerId: 1,
     pointerType: "mouse",
-  })
-  fireEvent.click(option)
+  });
+  fireEvent.click(option);
 }
 
 describe("json table enum accessibility interactions", () => {
   it("focuses the combobox and opens options on the first click activation", async () => {
-    const focusSpy = vi.spyOn(HTMLElement.prototype, "focus")
-    const view = await openEnumFromClick()
+    const focusSpy = vi.spyOn(HTMLElement.prototype, "focus");
+    const view = await openEnumFromClick();
 
-    expect(view.trigger.getAttribute("role")).toBe("combobox")
-    expect(focusSpy.mock.contexts).toContain(view.trigger)
-    expect(view.cell.getAttribute("data-active")).toBe("true")
-    expect(optionNames(view)).toEqual(["draft", "approved", "option:1"])
-  })
+    expect(view.trigger.getAttribute("role")).toBe("combobox");
+    expect(focusSpy.mock.contexts).toContain(view.trigger);
+    expect(view.cell.getAttribute("data-active")).toBe("true");
+    expect(optionNames(view)).toEqual(["draft", "approved", "option:1"]);
+  });
 
   it("exposes combobox and option roles while open", async () => {
-    const view = await openEnumFromClick()
+    const view = await openEnumFromClick();
 
-    expect(view.trigger.getAttribute("role")).toBe("combobox")
-    expect(view.trigger.getAttribute("aria-expanded")).toBe("true")
-    expect(view.trigger.getAttribute("aria-haspopup")).toBe("listbox")
-    expect(view.getByRole("option", { name: "draft" })).toBeTruthy()
-    expect(view.getByRole("option", { name: "approved" })).toBeTruthy()
-    expect(view.getByRole("option", { name: "option:1" })).toBeTruthy()
-  })
+    expect(view.trigger.getAttribute("role")).toBe("combobox");
+    expect(view.trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(view.trigger.getAttribute("aria-haspopup")).toBe("listbox");
+    expect(view.getByRole("option", { name: "draft" })).toBeTruthy();
+    expect(view.getByRole("option", { name: "approved" })).toBeTruthy();
+    expect(view.getByRole("option", { name: "option:1" })).toBeTruthy();
+  });
 
   it("closes on Escape without committing and removes the active session", async () => {
-    const sessions: Array<JsonTableActiveCell | null> = []
-    const onCellCommit = vi.fn()
+    const sessions: Array<JsonTableActiveCell | null> = [];
+    const onCellCommit = vi.fn();
     const view = await openEnumFromClick({
       onCellCommit,
       onEditSessionChange: (editSession) => sessions.push(editSession),
-    })
+    });
 
-    fireEvent.keyDown(view.trigger, { key: "Escape" })
+    fireEvent.keyDown(view.trigger, { key: "Escape" });
 
-    await waitFor(() => expect(view.queryByRole("combobox")).toBeNull())
-    expect(onCellCommit).not.toHaveBeenCalled()
-    expect(view.cell.getAttribute("data-active")).toBeNull()
-    expect(latestSession(sessions)).toBeNull()
-  })
+    await waitFor(() => expect(view.queryByRole("combobox")).toBeNull());
+    expect(onCellCommit).not.toHaveBeenCalled();
+    expect(view.cell.getAttribute("data-active")).toBeNull();
+    expect(latestSession(sessions)).toBeNull();
+  });
 
   it("closes on outside pointer without committing and removes the active session", async () => {
-    const sessions: Array<JsonTableActiveCell | null> = []
-    const onCellCommit = vi.fn()
+    const sessions: Array<JsonTableActiveCell | null> = [];
+    const onCellCommit = vi.fn();
     const view = await openEnumFromClick({
       onCellCommit,
       onEditSessionChange: (editSession) => sessions.push(editSession),
-    })
+    });
 
-    fireEvent.pointerDown(document.body)
+    fireEvent.pointerDown(document.body);
 
-    await waitFor(() => expect(view.queryByRole("combobox")).toBeNull())
-    expect(onCellCommit).not.toHaveBeenCalled()
-    expect(view.cell.getAttribute("data-active")).toBeNull()
-    expect(latestSession(sessions)).toBeNull()
-  })
+    await waitFor(() => expect(view.queryByRole("combobox")).toBeNull());
+    expect(onCellCommit).not.toHaveBeenCalled();
+    expect(view.cell.getAttribute("data-active")).toBeNull();
+    expect(latestSession(sessions)).toBeNull();
+  });
 
   it.each(["Enter", "F2", " "] as const)(
     "opens enum options from %s keyboard activation",
     async (key) => {
-      const view = renderInteractionRow({ visiblePaths: ["status"] })
-      const cell = await editableCell(view)
-      const focusSpy = vi.spyOn(HTMLElement.prototype, "focus")
-      const surface = primitiveEventTarget(cell) as HTMLElement
+      const view = renderInteractionRow({ visiblePaths: ["status"] });
+      const cell = await editableCell(view);
+      const focusSpy = vi.spyOn(HTMLElement.prototype, "focus");
+      const surface = primitiveEventTarget(cell) as HTMLElement;
 
-      surface.focus()
-      fireEvent.keyDown(surface, { key })
+      surface.focus();
+      fireEvent.keyDown(surface, { key });
 
-      const trigger = await view.findByRole("combobox")
+      const trigger = await view.findByRole("combobox");
       await waitFor(() =>
-        expect(trigger.getAttribute("aria-expanded")).toBe("true")
-      )
-      expect(focusSpy.mock.contexts).toContain(trigger)
-      expect(view.getByRole("option", { name: "approved" })).toBeTruthy()
-    }
-  )
+        expect(trigger.getAttribute("aria-expanded")).toBe("true"),
+      );
+      expect(focusSpy.mock.contexts).toContain(trigger);
+      expect(view.getByRole("option", { name: "approved" })).toBeTruthy();
+    },
+  );
 
   it("commits a selected option exactly once and closes", async () => {
-    const sessions: Array<JsonTableActiveCell | null> = []
-    const onCellCommit = vi.fn()
+    const sessions: Array<JsonTableActiveCell | null> = [];
+    const onCellCommit = vi.fn();
     const view = await openEnumFromClick({
       onCellCommit,
       onEditSessionChange: (editSession) => sessions.push(editSession),
-    })
+    });
 
-    await chooseOption(view.getByRole("option", { name: "approved" }))
+    await chooseOption(view.getByRole("option", { name: "approved" }));
 
     await waitFor(() =>
       expect(onCellCommit).toHaveBeenCalledWith(
@@ -174,28 +174,28 @@ describe("json table enum accessibility interactions", () => {
           fieldPath: "status",
           value: "approved",
           previousValue: "draft",
-        })
-      )
-    )
-    expect(onCellCommit).toHaveBeenCalledTimes(1)
-    await waitFor(() => expect(view.queryByRole("combobox")).toBeNull())
-    expect(view.cell.getAttribute("data-active")).toBeNull()
-    expect(latestSession(sessions)).toBeNull()
-  })
+        }),
+      ),
+    );
+    expect(onCellCommit).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(view.queryByRole("combobox")).toBeNull());
+    expect(view.cell.getAttribute("data-active")).toBeNull();
+    expect(latestSession(sessions)).toBeNull();
+  });
 
   it("closes without committing when reselecting the current option", async () => {
-    const sessions: Array<JsonTableActiveCell | null> = []
-    const onCellCommit = vi.fn()
+    const sessions: Array<JsonTableActiveCell | null> = [];
+    const onCellCommit = vi.fn();
     const view = await openEnumFromClick({
       onCellCommit,
       onEditSessionChange: (editSession) => sessions.push(editSession),
-    })
+    });
 
-    await chooseOption(view.getByRole("option", { name: "draft" }))
+    await chooseOption(view.getByRole("option", { name: "draft" }));
 
-    await waitFor(() => expect(view.queryByRole("combobox")).toBeNull())
-    expect(onCellCommit).not.toHaveBeenCalled()
-    expect(view.cell.getAttribute("data-active")).toBeNull()
-    expect(latestSession(sessions)).toBeNull()
-  })
-})
+    await waitFor(() => expect(view.queryByRole("combobox")).toBeNull());
+    expect(onCellCommit).not.toHaveBeenCalled();
+    expect(view.cell.getAttribute("data-active")).toBeNull();
+    expect(latestSession(sessions)).toBeNull();
+  });
+});

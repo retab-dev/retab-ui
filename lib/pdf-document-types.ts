@@ -1,2 +1,1 @@
-export * from "@/registry/new-york-v4/lib/pdf-document-types"
-
+export * from "@/registry/new-york-v4/lib/pdf-document-types";

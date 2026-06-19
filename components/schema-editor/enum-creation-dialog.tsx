@@ -1,8 +1,10 @@
-import * as React from "react"
-import { useState } from "react"
-import { PlusIcon, X } from "lucide-react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { Button } from "@/components/ui/button"
+import * as React from "react";
+import { useState } from "react";
+import { PlusIcon, X } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,21 +12,21 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface EnumCreationDialogProps {
-  isOpen: boolean
-  onClose: () => void
-  onConfirm: (enumValues: string[]) => void
-  onCancel: () => void
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (enumValues: string[]) => void;
+  onCancel: () => void;
 }
 
 interface EnumCreationDialogContentProps {
-  onClose: () => void
-  onConfirm: (enumValues: string[]) => void
-  onCancel: () => void
+  onClose: () => void;
+  onConfirm: (enumValues: string[]) => void;
+  onCancel: () => void;
 }
 
 function EnumCreationDialogContent({
@@ -32,55 +34,55 @@ function EnumCreationDialogContent({
   onConfirm,
   onCancel,
 }: EnumCreationDialogContentProps) {
-  const [enumValues, setEnumValues] = useState<string[]>([]) // Start with no values
-  const [newValue, setNewValue] = useState("")
+  const [enumValues, setEnumValues] = useState<string[]>([]); // Start with no values
+  const [newValue, setNewValue] = useState("");
   const [pendingFocusIndex, setPendingFocusIndex] = useState<number | null>(
-    null
-  )
-  const enumInputRefs = React.useRef<Array<HTMLInputElement | null>>([])
+    null,
+  );
+  const enumInputRefs = React.useRef<Array<HTMLInputElement | null>>([]);
 
   React.useEffect(() => {
-    if (pendingFocusIndex === null) return
+    if (pendingFocusIndex === null) return;
 
-    enumInputRefs.current[pendingFocusIndex]?.focus()
-    setPendingFocusIndex(null)
-  }, [enumValues, pendingFocusIndex])
+    enumInputRefs.current[pendingFocusIndex]?.focus();
+    setPendingFocusIndex(null);
+  }, [enumValues, pendingFocusIndex]);
 
   const handleAddValue = () => {
     if (newValue.trim()) {
-      setEnumValues((prev) => [...prev, newValue.trim()])
-      setNewValue("")
+      setEnumValues((prev) => [...prev, newValue.trim()]);
+      setNewValue("");
     }
-  }
+  };
 
   const handleAddFromEmpty = () => {
-    setPendingFocusIndex(enumValues.length)
-    setEnumValues((prev) => [...prev, ""])
-  }
+    setPendingFocusIndex(enumValues.length);
+    setEnumValues((prev) => [...prev, ""]);
+  };
 
   const handleRemoveValue = (index: number) => {
-    setEnumValues((prev) => prev.filter((_, i) => i !== index))
-  }
+    setEnumValues((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleEditValue = (index: number, value: string) => {
-    setEnumValues((prev) => prev.map((val, i) => (i === index ? value : val)))
-  }
+    setEnumValues((prev) => prev.map((val, i) => (i === index ? value : val)));
+  };
 
   const handleConfirm = () => {
     // Filter out empty values
-    const validValues = enumValues.filter((val) => val.trim() !== "")
+    const validValues = enumValues.filter((val) => val.trim() !== "");
     if (validValues.length > 0) {
-      onConfirm(validValues)
-      onClose()
+      onConfirm(validValues);
+      onClose();
     }
-  }
+  };
 
   const handleCancel = () => {
-    onCancel()
-    onClose()
-  }
+    onCancel();
+    onClose();
+  };
 
-  const validValuesCount = enumValues.filter((val) => val.trim() !== "").length
+  const validValuesCount = enumValues.filter((val) => val.trim() !== "").length;
 
   return (
     <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
@@ -102,15 +104,15 @@ function EnumCreationDialogContent({
                   <Input
                     value={value}
                     ref={(input) => {
-                      enumInputRefs.current[index] = input
+                      enumInputRefs.current[index] = input;
                     }}
                     onChange={(e) => handleEditValue(index, e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && value.trim()) {
                         if (index === enumValues.length - 1) {
-                          handleAddFromEmpty()
+                          handleAddFromEmpty();
                         } else {
-                          enumInputRefs.current[index + 1]?.focus()
+                          enumInputRefs.current[index + 1]?.focus();
                         }
                       }
                     }}
@@ -138,7 +140,7 @@ function EnumCreationDialogContent({
               onChange={(e) => setNewValue(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && newValue.trim()) {
-                  handleAddValue()
+                  handleAddValue();
                 }
               }}
               className="flex-1"
@@ -156,7 +158,7 @@ function EnumCreationDialogContent({
             </Button>
           </div>
 
-          <p className="mt-2 text-xs text-muted-foreground">
+          <p className="text-muted-foreground mt-2 text-xs">
             {validValuesCount} value{validValuesCount !== 1 ? "s" : ""} defined.
           </p>
         </div>
@@ -177,7 +179,7 @@ function EnumCreationDialogContent({
         </Button>
       </DialogFooter>
     </DialogContent>
-  )
+  );
 }
 
 export function EnumCreationDialog({
@@ -188,10 +190,10 @@ export function EnumCreationDialog({
 }: EnumCreationDialogProps) {
   const handleOpenChange = (open: boolean) => {
     if (!open) {
-      onCancel()
-      onClose()
+      onCancel();
+      onClose();
     }
-  }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -204,5 +206,5 @@ export function EnumCreationDialog({
         />
       ) : null}
     </Dialog>
-  )
+  );
 }

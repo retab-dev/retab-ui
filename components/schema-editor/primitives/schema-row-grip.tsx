@@ -1,19 +1,19 @@
-"use client"
+"use client";
 
-import { GripVertical } from "lucide-react"
+import { GripVertical } from "lucide-react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
-export type SchemaRowGripMode = "drag" | "static" | "empty"
+export type SchemaRowGripMode = "drag" | "static" | "empty";
 
 interface SchemaRowGripProps {
-  mode: SchemaRowGripMode
-  className?: string
+  mode: SchemaRowGripMode;
+  className?: string;
 }
 
 export function SchemaRowGrip({ mode, className }: SchemaRowGripProps) {
   if (mode === "empty") {
-    return <div className={cn("h-12 w-6 px-1 py-4", className)} />
+    return <div className={cn("h-12 w-6 px-1 py-4", className)} />;
   }
 
   return (
@@ -22,10 +22,10 @@ export function SchemaRowGrip({ mode, className }: SchemaRowGripProps) {
       className={cn(
         "h-12 w-6 px-1 py-4",
         mode === "drag"
-          ? "cursor-grab text-transparent group-hover/row:text-muted-foreground"
+          ? "group-hover/row:text-muted-foreground cursor-grab text-transparent"
           : "text-muted-foreground",
-        className
+        className,
       )}
     />
-  )
+  );
 }

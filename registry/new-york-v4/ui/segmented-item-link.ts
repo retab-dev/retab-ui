@@ -1,157 +1,162 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import type { DocumentSegment, SegmentAnchor } from "./segmented-document-model"
+import * as React from "react";
+
+import type {
+  DocumentSegment,
+  SegmentAnchor,
+} from "./segmented-document-model";
 import {
   useSegmentedDocumentModel,
   useSegmentedDocumentViewport,
-} from "./segmented-document-provider"
+} from "./segmented-document-provider";
 
 export type SegmentedItemNavigationOptions = {
-  behavior?: ScrollBehavior
-  clearPreview?: boolean
-}
+  behavior?: ScrollBehavior;
+  clearPreview?: boolean;
+};
 
 export type SegmentedItemLink = {
-  activeAnchor: SegmentAnchor | null
-  activeAnchors: readonly SegmentAnchor[]
-  activeItemId: string | null
-  activeSegment: DocumentSegment | null
-  clearPreview: () => void
+  activeAnchor: SegmentAnchor | null;
+  activeAnchors: readonly SegmentAnchor[];
+  activeItemId: string | null;
+  activeSegment: DocumentSegment | null;
+  clearPreview: () => void;
   navigateItem: (
     itemId: string,
-    options?: SegmentedItemNavigationOptions
-  ) => void
-  previewItem: (itemId: string | null) => void
-  selectItem: (itemId: string | null) => void
-  selectedItemId: string | null
-}
+    options?: SegmentedItemNavigationOptions,
+  ) => void;
+  previewItem: (itemId: string | null) => void;
+  selectItem: (itemId: string | null) => void;
+  selectedItemId: string | null;
+};
 
 export type SegmentedItemLinkOptions = {
-  initialItemId?: string | null
-}
+  initialItemId?: string | null;
+};
 
-const EMPTY_SEGMENT_ANCHORS: readonly SegmentAnchor[] = []
+const EMPTY_SEGMENT_ANCHORS: readonly SegmentAnchor[] = [];
 
 export function useSegmentedItemLink(
-  options: SegmentedItemLinkOptions = {}
+  options: SegmentedItemLinkOptions = {},
 ): SegmentedItemLink {
-  const model = useSegmentedDocumentModel()
-  const viewport = useSegmentedDocumentViewport()
+  const model = useSegmentedDocumentModel();
+  const viewport = useSegmentedDocumentViewport();
   const [selectedItemId, setSelectedItemId] = React.useState<string | null>(
-    null
-  )
+    null,
+  );
   const segmentByItemId = React.useMemo(
     () =>
       new Map(
         model.segments.map((segment) => [
           segment.sourceId ?? segment.id,
           segment,
-        ])
+        ]),
       ),
-    [model.segments]
-  )
+    [model.segments],
+  );
   const anchorsBySegmentId = React.useMemo(
     () =>
       (model.anchors ?? []).reduce((anchorsBySegmentId, anchor) => {
-        const anchors = anchorsBySegmentId.get(anchor.segmentId)
+        const anchors = anchorsBySegmentId.get(anchor.segmentId);
         if (anchors) {
-          anchors.push(anchor)
+          anchors.push(anchor);
         } else {
-          anchorsBySegmentId.set(anchor.segmentId, [anchor])
+          anchorsBySegmentId.set(anchor.segmentId, [anchor]);
         }
-        return anchorsBySegmentId
+        return anchorsBySegmentId;
       }, new Map<string, SegmentAnchor[]>()),
-    [model.anchors]
-  )
+    [model.anchors],
+  );
   const previewSegment =
     model.segments.find(
-      (segment) => segment.id === viewport.model.previewSegmentId
-    ) ?? null
+      (segment) => segment.id === viewport.model.previewSegmentId,
+    ) ?? null;
   const selectedSegment = selectedItemId
     ? (segmentByItemId.get(selectedItemId) ?? null)
-    : null
-  const activeSegment = previewSegment ?? selectedSegment
+    : null;
+  const activeSegment = previewSegment ?? selectedSegment;
   const activeItemId = activeSegment
     ? (activeSegment.sourceId ?? activeSegment.id)
-    : selectedItemId
+    : selectedItemId;
   const activeAnchors = activeSegment
     ? (anchorsBySegmentId.get(activeSegment.id) ?? EMPTY_SEGMENT_ANCHORS)
-    : EMPTY_SEGMENT_ANCHORS
-  const activeAnchor = activeAnchors[0] ?? null
+    : EMPTY_SEGMENT_ANCHORS;
+  const activeAnchor = activeAnchors[0] ?? null;
 
   React.useEffect(() => {
     if (selectedItemId && !segmentByItemId.has(selectedItemId)) {
-      setSelectedItemId(null)
+      setSelectedItemId(null);
     }
-  }, [segmentByItemId, selectedItemId])
+  }, [segmentByItemId, selectedItemId]);
 
   React.useEffect(() => {
-    const initialItemId = options.initialItemId ?? null
+    const initialItemId = options.initialItemId ?? null;
     if (
       !initialItemId ||
       selectedItemId != null ||
       !segmentByItemId.has(initialItemId)
     ) {
-      return
+      return;
     }
-    setSelectedItemId(initialItemId)
-  }, [options.initialItemId, segmentByItemId, selectedItemId])
+    setSelectedItemId(initialItemId);
+  }, [options.initialItemId, segmentByItemId, selectedItemId]);
 
-  const clearPreview = viewport.interaction.clearPreview
+  const clearPreview = viewport.interaction.clearPreview;
 
   const navigateSegment = React.useCallback(
     (segment: DocumentSegment, options?: SegmentedItemNavigationOptions) => {
-      const anchor = anchorsBySegmentId.get(segment.id)?.[0]
+      const anchor = anchorsBySegmentId.get(segment.id)?.[0];
       if (anchor) {
-        viewport.navigation.scrollToAnchor(anchor, options)
-        return
+        viewport.navigation.scrollToAnchor(anchor, options);
+        return;
       }
-      viewport.navigation.scrollToSegmentStart(segment, options)
+      viewport.navigation.scrollToSegmentStart(segment, options);
     },
-    [anchorsBySegmentId, viewport.navigation]
-  )
+    [anchorsBySegmentId, viewport.navigation],
+  );
 
   const navigateItem = React.useCallback(
     (itemId: string, options?: SegmentedItemNavigationOptions) => {
-      const segment = segmentByItemId.get(itemId)
-      if (!segment) return
+      const segment = segmentByItemId.get(itemId);
+      if (!segment) return;
 
-      navigateSegment(segment, options)
+      navigateSegment(segment, options);
     },
-    [navigateSegment, segmentByItemId]
-  )
+    [navigateSegment, segmentByItemId],
+  );
 
   const previewItem = React.useCallback(
     (itemId: string | null) => {
       if (!itemId) {
-        viewport.interaction.clearPreview()
-        return
+        viewport.interaction.clearPreview();
+        return;
       }
 
-      const segment = segmentByItemId.get(itemId)
-      if (!segment) return
+      const segment = segmentByItemId.get(itemId);
+      if (!segment) return;
 
-      viewport.interaction.previewSegment(segment.id)
+      viewport.interaction.previewSegment(segment.id);
     },
-    [segmentByItemId, viewport.interaction]
-  )
+    [segmentByItemId, viewport.interaction],
+  );
 
   const selectItem = React.useCallback(
     (itemId: string | null) => {
       if (!itemId) {
-        setSelectedItemId(null)
-        return
+        setSelectedItemId(null);
+        return;
       }
 
-      if (!segmentByItemId.has(itemId)) return
+      if (!segmentByItemId.has(itemId)) return;
 
-      setSelectedItemId(itemId)
-      viewport.interaction.clearPreview()
+      setSelectedItemId(itemId);
+      viewport.interaction.clearPreview();
     },
-    [segmentByItemId, viewport.interaction]
-  )
+    [segmentByItemId, viewport.interaction],
+  );
 
   return React.useMemo(
     () => ({
@@ -175,6 +180,6 @@ export function useSegmentedItemLink(
       previewItem,
       selectItem,
       selectedItemId,
-    ]
-  )
+    ],
+  );
 }

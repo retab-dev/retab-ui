@@ -1,24 +1,24 @@
-"use client"
+"use client";
 
-import { Eye, Pencil, Trash2 } from "lucide-react"
+import { Eye, Pencil, Trash2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "@/components/ui/tooltip";
 
 interface SchemaRowActionsProps {
-  canDelete: boolean
-  deleteLabel?: string
+  canDelete: boolean;
+  deleteLabel?: string;
   details?: {
-    label: string
-    mode: "edit" | "view"
-    onOpen: () => void
-  }
-  editable: boolean
-  onDelete?: () => void
+    label: string;
+    mode: "edit" | "view";
+    onOpen: () => void;
+  };
+  editable: boolean;
+  onDelete?: () => void;
 }
 
 export function SchemaRowActions({
@@ -39,7 +39,7 @@ export function SchemaRowActions({
           aria-label={deleteLabel}
           onClick={onDelete}
         >
-          <Trash2 className="size-4 text-primary-foreground group-hover/row:text-muted-foreground" />
+          <Trash2 className="text-primary-foreground group-hover/row:text-muted-foreground size-4" />
         </Button>
       )}
 
@@ -55,9 +55,9 @@ export function SchemaRowActions({
               onClick={details.onOpen}
             >
               {details.mode === "edit" ? (
-                <Pencil className="size-4 text-muted-foreground opacity-0 group-hover/row:opacity-100" />
+                <Pencil className="text-muted-foreground size-4 opacity-0 group-hover/row:opacity-100" />
               ) : (
-                <Eye className="size-4 text-muted-foreground opacity-0 group-hover/row:opacity-100" />
+                <Eye className="text-muted-foreground size-4 opacity-0 group-hover/row:opacity-100" />
               )}
             </Button>
           </TooltipTrigger>
@@ -67,5 +67,5 @@ export function SchemaRowActions({
         </Tooltip>
       )}
     </>
-  )
+  );
 }

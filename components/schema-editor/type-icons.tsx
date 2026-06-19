@@ -1,6 +1,23 @@
 "use client";
 
-import { Type, Hash, ToggleLeft, List, Braces, Brackets, Calendar, Clock, CalendarClock, Link, Shapes, MapPin, DollarSign, User, Building2, CalendarDays } from "lucide-react";
+import {
+  Type,
+  Hash,
+  ToggleLeft,
+  List,
+  Braces,
+  Brackets,
+  Calendar,
+  Clock,
+  CalendarClock,
+  Link,
+  Shapes,
+  MapPin,
+  DollarSign,
+  User,
+  Building2,
+  CalendarDays,
+} from "lucide-react";
 
 // Get icon for data type
 export const getTypeIcon = (type: string) => {

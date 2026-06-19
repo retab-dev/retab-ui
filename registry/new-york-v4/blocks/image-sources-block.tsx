@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import type { Source } from "@/lib/document-source"
+import type { Source } from "@/lib/document-source";
 import {
   FileViewer,
   FileViewerBody,
@@ -10,43 +10,43 @@ import {
   FileViewerSidebar,
   FileViewerSurface,
   FileViewerTitle,
-} from "@/components/ui/file-viewer"
-import { ImageViewer } from "@/components/ui/image-viewer"
+} from "@/components/ui/file-viewer";
+import { ImageViewer } from "@/components/ui/image-viewer";
 import {
   SegmentedDocumentProvider,
   useSegmentedDocumentViewport,
-} from "@/components/ui/segmented-document-provider"
-import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
+} from "@/components/ui/segmented-document-provider";
+import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link";
 import {
   SourceFieldList,
   type SourceField,
-} from "@/components/ui/source-field-list"
-import { SourceIndicator } from "@/components/ui/source-indicator"
-import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
+} from "@/components/ui/source-field-list";
+import { SourceIndicator } from "@/components/ui/source-indicator";
+import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model";
 import {
   useSegmentedImageSourceOverlay,
   useSegmentedImageViewerHandle,
-} from "@/components/ui/source-segmented-document-overlays"
-import imageSample from "@/components/viewers/sample-data/image-sources.json"
+} from "@/components/ui/source-segmented-document-overlays";
+import imageSample from "@/components/viewers/sample-data/image-sources.json";
 
-const IMAGE_URL = "/samples/an-image-is-worth-16x16-words-page-1.png"
+const IMAGE_URL = "/samples/an-image-is-worth-16x16-words-page-1.png";
 const IMAGE_SOURCE = {
   kind: "url" as const,
   url: IMAGE_URL,
   fileName: "an-image-is-worth-16x16-words-page-1.png",
-}
+};
 
-type ImageField = SourceField & { source: Source }
+type ImageField = SourceField & { source: Source };
 
 // Real values read off the scanned page with normalized image_bbox anchors.
-const FIELDS = imageSample as ImageField[]
+const FIELDS = imageSample as ImageField[];
 const SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel(
   FIELDS.map((field) => ({
     id: field.key,
     label: field.label,
     source: field.source,
-  }))
-)
+  })),
+);
 
 /**
  * Image sources block — extracted fields beside a scanned page image. Hovering a
@@ -58,21 +58,21 @@ export function ImageSourcesBlock() {
     <SegmentedDocumentProvider model={SEGMENTED_DOCUMENT}>
       <ImageSourcesContent />
     </SegmentedDocumentProvider>
-  )
+  );
 }
 
 function ImageSourcesContent() {
   const link = useSegmentedSourceFieldLink({
     initialSourcePath: FIELDS[0]?.key,
-  })
-  const { documentHandlers } = useSegmentedDocumentViewport()
-  const renderFrameOverlay = useSegmentedImageSourceOverlay(link)
-  const setImageViewerHandle = useSegmentedImageViewerHandle()
+  });
+  const { documentHandlers } = useSegmentedDocumentViewport();
+  const renderFrameOverlay = useSegmentedImageSourceOverlay(link);
+  const setImageViewerHandle = useSegmentedImageViewerHandle();
 
   return (
     <FileViewer
       source={IMAGE_SOURCE}
-      className="h-full min-h-[680px] bg-background"
+      className="bg-background h-full min-h-[680px]"
     >
       <FileViewerHeader>
         <FileViewerTitle />
@@ -108,5 +108,5 @@ function ImageSourcesContent() {
         </FileViewerSidebar>
       </FileViewerBody>
     </FileViewer>
-  )
+  );
 }

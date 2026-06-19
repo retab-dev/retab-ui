@@ -2,7 +2,7 @@ import {
   detectCategory,
   type FileCategory,
   type ViewerSource,
-} from "@/lib/viewer-source"
+} from "@/lib/viewer-source";
 
 import type {
   EmailAddress,
@@ -26,21 +26,21 @@ import type {
   MimePartNode,
   MimePartPath,
   MimePreviewPolicy,
-} from "./email-viewer-types"
-import { formatFileSize } from "./file-size-format"
+} from "./email-viewer-types";
+import { formatFileSize } from "./file-size-format";
 
 const DEFAULT_EMPTY_CONTENT_MESSAGE =
-  "This MIME part does not have a previewable body."
-const DEFAULT_MAX_NESTED_MESSAGE_DEPTH = 8
-const EMPTY_INLINE_RESOURCE_URLS = new Map<string, string>()
+  "This MIME part does not have a previewable body.";
+const DEFAULT_MAX_NESTED_MESSAGE_DEPTH = 8;
+const EMPTY_INLINE_RESOURCE_URLS = new Map<string, string>();
 export const MISSING_EMAIL_INLINE_RESOURCE_URL =
-  "data:image/gif;base64,R0lGODlhAQABAAAAACw="
+  "data:image/gif;base64,R0lGODlhAQABAAAAACw=";
 
 export const DEFAULT_EMAIL_BODY_SELECTION_POLICY = {
   preferredMimeTypes: ["text/html", "text/plain", "text/markdown"],
   includeInlineBodyParts: true,
   includeAttachments: false,
-} satisfies EmailBodySelectionPolicy
+} satisfies EmailBodySelectionPolicy;
 
 export function buildMimeTree(root: MimePart): MimePartNode {
   return buildMimeNode({
@@ -48,23 +48,23 @@ export function buildMimeTree(root: MimePart): MimePartNode {
     parentPath: null,
     depth: 0,
     pathPart: normalizePathPart(root.id, 0),
-  })
+  });
 }
 
 export function findMimeNodeByPath(
   root: MimePartNode,
-  path: MimePartPath
+  path: MimePartPath,
 ): MimePartNode | null {
-  if (pathsEqual(root.path, path)) return root
+  if (pathsEqual(root.path, path)) return root;
   for (const child of root.children) {
-    const match = findMimeNodeByPath(child, path)
-    if (match) return match
+    const match = findMimeNodeByPath(child, path);
+    if (match) return match;
   }
-  return null
+  return null;
 }
 
 export function getDefaultMimeSelectionPath(root: MimePartNode): MimePartPath {
-  return (selectMimeScopeBodyNode(root) ?? root).path
+  return (selectMimeScopeBodyNode(root) ?? root).path;
 }
 
 export function deriveEmailViewerModel({
@@ -75,15 +75,15 @@ export function deriveEmailViewerModel({
   rootNode,
   selectedNode,
 }: {
-  inlineResourceUrls: ReadonlyMap<string, string>
-  maxNestedMessageDepth?: number
-  message: EmailViewerMessage
-  nestedMessageDepth?: number
-  rootNode: MimePartNode
-  selectedNode: MimePartNode
+  inlineResourceUrls: ReadonlyMap<string, string>;
+  maxNestedMessageDepth?: number;
+  message: EmailViewerMessage;
+  nestedMessageDepth?: number;
+  rootNode: MimePartNode;
+  selectedNode: MimePartNode;
 }): EmailViewerModel {
-  const scope = createMimeMessageScope(message, rootNode)
-  const selectedPath = selectedNode.path
+  const scope = createMimeMessageScope(message, rootNode);
+  const selectedPath = selectedNode.path;
 
   return {
     message,
@@ -104,23 +104,23 @@ export function deriveEmailViewerModel({
       nestedMessageDepth,
       selectedNode,
     }),
-  }
+  };
 }
 
 export function createMimeMessageScope(
   message: EmailViewerMessage,
-  root: MimePartNode
+  root: MimePartNode,
 ): MimeMessageScope {
   return {
     message,
     root,
     path: root.path,
     descendants: collectCurrentMessageNodes(root),
-  }
+  };
 }
 
 export function deriveEmailHeaderModel(
-  message: EmailViewerMessage
+  message: EmailViewerMessage,
 ): EmailHeaderModel {
   return {
     subject: message.subject?.trim() || "(no subject)",
@@ -129,7 +129,7 @@ export function deriveEmailHeaderModel(
     cc: normalizeAddressList(message.cc),
     bcc: normalizeAddressList(message.bcc),
     sentAt: formatSentAt(message.sentAt),
-  }
+  };
 }
 
 export function deriveEmailSidebarModel({
@@ -137,11 +137,11 @@ export function deriveEmailSidebarModel({
   scope,
   selectedPath,
 }: {
-  inlineResourceUrls?: ReadonlyMap<string, string>
-  scope: MimeMessageScope
-  selectedPath: MimePartPath
+  inlineResourceUrls?: ReadonlyMap<string, string>;
+  scope: MimeMessageScope;
+  selectedPath: MimePartPath;
 }): EmailSidebarModel {
-  const bodyNode = selectMimeScopeBodyNode(scope.root)
+  const bodyNode = selectMimeScopeBodyNode(scope.root);
   const bodyItems: readonly EmailSidebarItem[] = [
     createSidebarItem({
       inlineResourceUrls,
@@ -149,7 +149,7 @@ export function deriveEmailSidebarModel({
       node: bodyNode ?? scope.root,
       selectedPath,
     }),
-  ]
+  ];
   const attachmentItems = scope.descendants
     .filter((node) => isEmailAttachmentSidebarNode(node, bodyNode))
     .map((node) =>
@@ -158,8 +158,8 @@ export function deriveEmailSidebarModel({
         kind: "attachment",
         node,
         selectedPath,
-      })
-    )
+      }),
+    );
   const sections = [
     {
       id: "body" as const,
@@ -172,13 +172,13 @@ export function deriveEmailSidebarModel({
       items: attachmentItems,
       emptyLabel: "No attachments.",
     },
-  ]
+  ];
 
   return {
     bodyCount: bodyItems.length,
     attachmentCount: attachmentItems.length,
     sections,
-  }
+  };
 }
 
 export function deriveEmailContentModel({
@@ -188,11 +188,11 @@ export function deriveEmailContentModel({
   nestedMessageDepth = 0,
   selectedNode,
 }: {
-  inlineResourceUrls: ReadonlyMap<string, string>
-  maxNestedMessageDepth?: number
-  message: EmailViewerMessage
-  nestedMessageDepth?: number
-  selectedNode: MimePartNode
+  inlineResourceUrls: ReadonlyMap<string, string>;
+  maxNestedMessageDepth?: number;
+  message: EmailViewerMessage;
+  nestedMessageDepth?: number;
+  selectedNode: MimePartNode;
 }): EmailContentModel {
   if (isMessageNode(selectedNode) && selectedNode.children.length > 0) {
     if (nestedMessageDepth >= maxNestedMessageDepth) {
@@ -200,7 +200,7 @@ export function deriveEmailContentModel({
         message: "This nested message is too deeply nested to preview.",
         node: selectedNode,
         reason: "nested-depth-exceeded",
-      })
+      });
     }
 
     return {
@@ -209,7 +209,7 @@ export function deriveEmailContentModel({
       node: selectedNode,
       message: deriveNestedEmailMessage(message, selectedNode),
       nestedMessageDepth: nestedMessageDepth + 1,
-    }
+    };
   }
 
   if (selectedNode.facts.preview.kind === "security-envelope") {
@@ -217,12 +217,12 @@ export function deriveEmailContentModel({
       message: `${selectedNode.facts.preview.label} cannot be previewed in this viewer.`,
       node: selectedNode,
       reason: "security-envelope",
-    })
+    });
   }
 
   const fileNode = selectDefaultPreviewNode(selectedNode, {
     stopAtNestedMessages: false,
-  })
+  });
 
   if (!fileNode) {
     return createEmptyContent({
@@ -232,7 +232,7 @@ export function deriveEmailContentModel({
         selectedNode.facts.preview.kind === "unsupported"
           ? selectedNode.facts.preview.reason
           : "no-previewable-body",
-    })
+    });
   }
 
   if (fileNode.facts.preview.kind === "security-envelope") {
@@ -240,7 +240,7 @@ export function deriveEmailContentModel({
       message: `${fileNode.facts.preview.label} cannot be previewed in this viewer.`,
       node: fileNode,
       reason: "security-envelope",
-    })
+    });
   }
 
   if (!fileNode.part.source) {
@@ -248,7 +248,7 @@ export function deriveEmailContentModel({
       message: "This MIME part is missing a preview source.",
       node: fileNode,
       reason: "missing-source",
-    })
+    });
   }
 
   return {
@@ -258,117 +258,117 @@ export function deriveEmailContentModel({
       category: categoryForMimeNode(fileNode),
       source: resolveEmailPreviewSource(fileNode, inlineResourceUrls),
     },
-  }
+  };
 }
 
 export function deriveEmailInlineResourceScope(
   rootNode: MimePartNode,
-  selectedNode: MimePartNode
+  selectedNode: MimePartNode,
 ): EmailInlineResourceScope {
   if (isMessageNode(selectedNode)) {
     return {
       root: selectedNode,
       resources: [],
-    }
+    };
   }
 
   const displayNode = selectDefaultPreviewNode(selectedNode, {
     stopAtNestedMessages: true,
-  })
+  });
   const root = displayNode
     ? getInlineResourceScope(rootNode, displayNode)
-    : selectedNode
+    : selectedNode;
 
   return {
     root,
     resources: collectInlineResourceParts(root),
-  }
+  };
 }
 
 export function collectInlineResourceParts(
-  node: MimePartNode
+  node: MimePartNode,
 ): readonly EmailInlineResource[] {
-  const resources: EmailInlineResource[] = []
+  const resources: EmailInlineResource[] = [];
 
   walkMimeTree(node, (current) => {
-    if (!isInlineResourceNode(current) || !current.part.source) return
+    if (!isInlineResourceNode(current) || !current.part.source) return;
 
-    const keys = inlineResourceKeysForNode(current)
-    if (keys.length > 0) resources.push({ node: current, keys })
-  })
+    const keys = inlineResourceKeysForNode(current);
+    if (keys.length > 0) resources.push({ node: current, keys });
+  });
 
-  return resources
+  return resources;
 }
 
 export function getInlineResourceScope(
   rootNode: MimePartNode,
-  node: MimePartNode
+  node: MimePartNode,
 ): MimePartNode {
-  let current: MimePartNode | null = node
+  let current: MimePartNode | null = node;
   while (current) {
-    if (isRelatedMultipart(current.facts.mimeType)) return current
-    current = getParentMimeNode(rootNode, current)
+    if (isRelatedMultipart(current.facts.mimeType)) return current;
+    current = getParentMimeNode(rootNode, current);
   }
-  return node
+  return node;
 }
 
 export function normalizeContentId(contentId: string | null | undefined) {
-  const trimmed = contentId?.trim()
-  if (!trimmed) return null
-  return trimmed.replace(/^<|>$/g, "").toLowerCase()
+  const trimmed = contentId?.trim();
+  if (!trimmed) return null;
+  return trimmed.replace(/^<|>$/g, "").toLowerCase();
 }
 
 export function normalizeContentLocation(
-  contentLocation: string | null | undefined
+  contentLocation: string | null | undefined,
 ) {
-  const trimmed = contentLocation?.trim()
-  if (!trimmed) return null
-  return normalizeRelativeReference(trimmed)
+  const trimmed = contentLocation?.trim();
+  if (!trimmed) return null;
+  return normalizeRelativeReference(trimmed);
 }
 
 export function inlineResourceKeyToString(key: EmailInlineResourceKey) {
-  return `${key.kind}:${key.value}`
+  return `${key.kind}:${key.value}`;
 }
 
 export function replaceInlineResourceUrls(
   html: string,
-  inlineUrls: ReadonlyMap<string, string>
+  inlineUrls: ReadonlyMap<string, string>,
 ) {
   return replaceContentLocationUrls(
     replaceCidUrls(html, inlineUrls),
-    inlineUrls
-  )
+    inlineUrls,
+  );
 }
 
 export function replaceCidUrls(
   html: string,
-  inlineUrls: ReadonlyMap<string, string>
+  inlineUrls: ReadonlyMap<string, string>,
 ) {
   return html.replace(
     /\bcid:(?:<([^>"'\s)]+)>|([^"'\s>)]+))/gi,
     (match, bracketedContentId, plainContentId) => {
-      const rawContentId = bracketedContentId ?? plainContentId
-      const cid = normalizeContentId(decodeCid(rawContentId))
-      if (!cid) return match
+      const rawContentId = bracketedContentId ?? plainContentId;
+      const cid = normalizeContentId(decodeCid(rawContentId));
+      if (!cid) return match;
       return (
         inlineUrls.get(
-          inlineResourceKeyToString({ kind: "content-id", value: cid })
+          inlineResourceKeyToString({ kind: "content-id", value: cid }),
         ) ?? MISSING_EMAIL_INLINE_RESOURCE_URL
-      )
-    }
-  )
+      );
+    },
+  );
 }
 
 export function mimePartLabel(part: MimePart): string {
-  const fileName = part.fileName?.trim()
-  if (fileName) return fileName
-  if (isMultipartMime(part.mimeType)) return multipartLabel(part.mimeType)
-  if (isMessageMime(part.mimeType)) return "Message"
-  if (normalizedMimeType(part.mimeType) === "text/html") return "HTML body"
-  if (normalizedMimeType(part.mimeType) === "text/plain") return "Text body"
+  const fileName = part.fileName?.trim();
+  if (fileName) return fileName;
+  if (isMultipartMime(part.mimeType)) return multipartLabel(part.mimeType);
+  if (isMessageMime(part.mimeType)) return "Message";
+  if (normalizedMimeType(part.mimeType) === "text/html") return "HTML body";
+  if (normalizedMimeType(part.mimeType) === "text/plain") return "Text body";
   if (isSecurityEnvelopeMime(part.mimeType))
-    return securityEnvelopeLabel(part.mimeType)
-  return part.mimeType || "MIME part"
+    return securityEnvelopeLabel(part.mimeType);
+  return part.mimeType || "MIME part";
 }
 
 export function mimePartDescription(part: MimePart): string {
@@ -379,60 +379,60 @@ export function mimePartDescription(part: MimePart): string {
     contentLocationForPart(part)
       ? `location:${contentLocationForPart(part)}`
       : null,
-  ].filter(Boolean)
-  return pieces.join(" · ")
+  ].filter(Boolean);
+  return pieces.join(" · ");
 }
 
 export function categoryForMimePart(part: MimePart): FileCategory | undefined {
-  const mime = normalizedMimeType(part.mimeType)
-  if (mime === "text/calendar" || mime === "application/ics") return "text"
-  if (mime === "message/delivery-status") return "text"
-  if (mime === "message/disposition-notification") return "text"
+  const mime = normalizedMimeType(part.mimeType);
+  if (mime === "text/calendar" || mime === "application/ics") return "text";
+  if (mime === "message/delivery-status") return "text";
+  if (mime === "message/disposition-notification") return "text";
 
-  const fileName = part.fileName?.trim() || part.source?.fileName || mime
-  const sourceMimeType = part.source?.mimeType || part.mimeType || undefined
-  const category = detectCategory(fileName, sourceMimeType)
+  const fileName = part.fileName?.trim() || part.source?.fileName || mime;
+  const sourceMimeType = part.source?.mimeType || part.mimeType || undefined;
+  const category = detectCategory(fileName, sourceMimeType);
 
-  return category === "unsupported" ? undefined : category
+  return category === "unsupported" ? undefined : category;
 }
 
 export function categoryForMimeNode(
-  node: MimePartNode
+  node: MimePartNode,
 ): FileCategory | undefined {
-  const policy = node.facts.preview
+  const policy = node.facts.preview;
   if (policy.kind === "preview" || policy.kind === "attachment") {
-    return policy.category
+    return policy.category;
   }
-  return categoryForMimePart(node.part)
+  return categoryForMimePart(node.part);
 }
 
 export function messageIdentity(message: MimeMessage): string {
-  return message.id ?? message.root.id
+  return message.id ?? message.root.id;
 }
 
 export function pathsEqual(left: MimePartPath, right: MimePartPath) {
-  if (left.length !== right.length) return false
-  return left.every((part, index) => part === right[index])
+  if (left.length !== right.length) return false;
+  return left.every((part, index) => part === right[index]);
 }
 
 export function isMultipartNode(node: MimePartNode) {
-  return node.facts.kind === "multipart"
+  return node.facts.kind === "multipart";
 }
 
 export function isMessageNode(node: MimePartNode) {
-  return node.facts.kind === "message"
+  return node.facts.kind === "message";
 }
 
 export function isRenderableNode(node: MimePartNode) {
-  return node.facts.isRenderable
+  return node.facts.isRenderable;
 }
 
 export function isAttachmentNode(node: MimePartNode) {
-  return node.facts.kind === "attachment"
+  return node.facts.kind === "attachment";
 }
 
 export function isInlineResourceNode(node: MimePartNode) {
-  return node.facts.kind === "inline-resource"
+  return node.facts.kind === "inline-resource";
 }
 
 function buildMimeNode({
@@ -441,14 +441,14 @@ function buildMimeNode({
   depth,
   pathPart,
 }: {
-  part: MimePart
-  parentPath: MimePartPath | null
-  depth: number
-  pathPart: string
+  part: MimePart;
+  parentPath: MimePartPath | null;
+  depth: number;
+  pathPart: string;
 }): MimePartNode {
-  const path = [...(parentPath ?? []), pathPart]
-  const facts = deriveMimePartFacts(part)
-  const childIds = new Map<string, number>()
+  const path = [...(parentPath ?? []), pathPart];
+  const facts = deriveMimePartFacts(part);
+  const childIds = new Map<string, number>();
 
   return {
     depth,
@@ -457,23 +457,23 @@ function buildMimeNode({
     part,
     path,
     children: (part.children ?? []).map((child) => {
-      const childPathPart = uniqueChildPathPart(child.id, childIds)
+      const childPathPart = uniqueChildPathPart(child.id, childIds);
       return buildMimeNode({
         part: child,
         parentPath: path,
         depth: depth + 1,
         pathPart: childPathPart,
-      })
+      });
     }),
-  }
+  };
 }
 
 function deriveMimePartFacts(part: MimePart): MimePartFacts {
-  const mimeType = normalizedMimeType(part.mimeType)
-  const disposition = part.disposition?.toLowerCase().trim() ?? null
-  const contentId = normalizeContentId(part.contentId)
-  const contentLocation = contentLocationForPart(part)
-  const isRenderable = Boolean(part.source)
+  const mimeType = normalizedMimeType(part.mimeType);
+  const disposition = part.disposition?.toLowerCase().trim() ?? null;
+  const contentId = normalizeContentId(part.contentId);
+  const contentLocation = contentLocationForPart(part);
+  const isRenderable = Boolean(part.source);
   const kind = deriveMimePartKind({
     contentId,
     contentLocation,
@@ -481,7 +481,7 @@ function deriveMimePartFacts(part: MimePart): MimePartFacts {
     isRenderable,
     mimeType,
     part,
-  })
+  });
 
   return {
     contentId,
@@ -491,7 +491,7 @@ function deriveMimePartFacts(part: MimePart): MimePartFacts {
     kind,
     mimeType,
     preview: deriveMimePreviewPolicy({ isRenderable, kind, mimeType, part }),
-  }
+  };
 }
 
 function deriveMimePartKind({
@@ -502,30 +502,30 @@ function deriveMimePartKind({
   mimeType,
   part,
 }: {
-  contentId: string | null
-  contentLocation: string | null
-  disposition: string | null
-  isRenderable: boolean
-  mimeType: string
-  part: MimePart
+  contentId: string | null;
+  contentLocation: string | null;
+  disposition: string | null;
+  isRenderable: boolean;
+  mimeType: string;
+  part: MimePart;
 }): MimePartKind {
-  if (isMultipartMime(mimeType)) return "multipart"
-  if (isMessageMime(mimeType)) return "message"
+  if (isMultipartMime(mimeType)) return "multipart";
+  if (isMessageMime(mimeType)) return "message";
   if (
     isRenderable &&
     disposition !== "attachment" &&
     !isBodyMime(mimeType) &&
     Boolean(contentId || contentLocation)
   ) {
-    return "inline-resource"
+    return "inline-resource";
   }
-  if (disposition === "attachment") return "attachment"
-  if (isRenderable && isBodyMime(mimeType)) return "body"
+  if (disposition === "attachment") return "attachment";
+  if (isRenderable && isBodyMime(mimeType)) return "body";
   if (isRenderable && part.fileName && disposition === "inline") {
-    return "attachment"
+    return "attachment";
   }
-  if (isRenderable && !isSecurityEnvelopeMime(mimeType)) return "attachment"
-  return "unsupported"
+  if (isRenderable && !isSecurityEnvelopeMime(mimeType)) return "attachment";
+  return "unsupported";
 }
 
 function deriveMimePreviewPolicy({
@@ -534,68 +534,68 @@ function deriveMimePreviewPolicy({
   mimeType,
   part,
 }: {
-  isRenderable: boolean
-  kind: MimePartKind
-  mimeType: string
-  part: MimePart
+  isRenderable: boolean;
+  kind: MimePartKind;
+  mimeType: string;
+  part: MimePart;
 }): MimePreviewPolicy {
   if (isSecurityEnvelopeMime(mimeType)) {
     return {
       kind: "security-envelope",
       label: securityEnvelopeLabel(mimeType),
-    }
+    };
   }
-  if (kind === "message") return { kind: "nested-message" }
+  if (kind === "message") return { kind: "nested-message" };
   if (kind === "attachment") {
-    return { kind: "attachment", category: categoryForMimePart(part) }
+    return { kind: "attachment", category: categoryForMimePart(part) };
   }
   if (isRenderable && kind === "body") {
-    return { kind: "preview", category: categoryForMimePart(part) }
+    return { kind: "preview", category: categoryForMimePart(part) };
   }
   if (isDeliveryStatusMime(mimeType)) {
-    return { kind: "unsupported", reason: "unsupported-part" }
+    return { kind: "unsupported", reason: "unsupported-part" };
   }
   return {
     kind: "unsupported",
     reason: isRenderable ? "unsupported-part" : "missing-source",
-  }
+  };
 }
 
 function uniqueChildPathPart(id: string, siblingCounts: Map<string, number>) {
-  const base = normalizePathPart(id, siblingCounts.size)
-  const count = siblingCounts.get(base) ?? 0
-  siblingCounts.set(base, count + 1)
-  return count === 0 ? base : `${base}~${count + 1}`
+  const base = normalizePathPart(id, siblingCounts.size);
+  const count = siblingCounts.get(base) ?? 0;
+  siblingCounts.set(base, count + 1);
+  return count === 0 ? base : `${base}~${count + 1}`;
 }
 
 function normalizePathPart(id: string, fallbackIndex: number) {
-  const trimmed = id.trim()
-  return trimmed || `part-${fallbackIndex + 1}`
+  const trimmed = id.trim();
+  return trimmed || `part-${fallbackIndex + 1}`;
 }
 
 function selectMimeScopeBodyNode(
   root: MimePartNode,
-  policy: EmailBodySelectionPolicy = DEFAULT_EMAIL_BODY_SELECTION_POLICY
+  policy: EmailBodySelectionPolicy = DEFAULT_EMAIL_BODY_SELECTION_POLICY,
 ): MimePartNode | null {
-  const candidates: MimePartNode[] = []
+  const candidates: MimePartNode[] = [];
 
   walkCurrentMessageNodes(root, (node) => {
-    if (!isRenderableNode(node)) return
-    if (!policy.includeInlineBodyParts && isInlineResourceNode(node)) return
-    if (!policy.includeAttachments && isAttachmentNode(node)) return
-    if (isInlineResourceNode(node) || isMessageNode(node)) return
-    candidates.push(node)
-  })
+    if (!isRenderableNode(node)) return;
+    if (!policy.includeInlineBodyParts && isInlineResourceNode(node)) return;
+    if (!policy.includeAttachments && isAttachmentNode(node)) return;
+    if (isInlineResourceNode(node) || isMessageNode(node)) return;
+    candidates.push(node);
+  });
 
   for (const mimeType of policy.preferredMimeTypes) {
-    const match = candidates.find((node) => node.facts.mimeType === mimeType)
-    if (match) return match
+    const match = candidates.find((node) => node.facts.mimeType === mimeType);
+    if (match) return match;
   }
 
   return (
     candidates[0] ??
     selectDefaultPreviewNode(root, { stopAtNestedMessages: true })
-  )
+  );
 }
 
 function selectDefaultPreviewNode(
@@ -603,12 +603,12 @@ function selectDefaultPreviewNode(
   {
     stopAtNestedMessages,
   }: {
-    stopAtNestedMessages: boolean
-  }
+    stopAtNestedMessages: boolean;
+  },
 ): MimePartNode | null {
-  if (isMessageNode(node) && stopAtNestedMessages) return null
-  if (isPreviewLeafNode(node)) return node
-  if (!node.children.length) return null
+  if (isMessageNode(node) && stopAtNestedMessages) return null;
+  if (isPreviewLeafNode(node)) return node;
+  if (!node.children.length) return null;
 
   if (
     node.facts.mimeType === "multipart/alternative" ||
@@ -620,83 +620,83 @@ function selectDefaultPreviewNode(
         stopAtNestedMessages,
       }) ??
       findFirstRenderableChild(node, { stopAtNestedMessages })
-    )
+    );
   }
 
-  return findFirstRenderableChild(node, { stopAtNestedMessages })
+  return findFirstRenderableChild(node, { stopAtNestedMessages });
 }
 
 function findFirstRenderableOfMime(
   node: MimePartNode,
   mimeType: string,
-  options: { stopAtNestedMessages: boolean }
+  options: { stopAtNestedMessages: boolean },
 ): MimePartNode | null {
   for (const child of node.children) {
-    if (isMessageNode(child) && options.stopAtNestedMessages) continue
+    if (isMessageNode(child) && options.stopAtNestedMessages) continue;
     if (
       child.facts.mimeType === mimeType &&
       isRenderableNode(child) &&
       !isInlineResourceNode(child)
     ) {
-      return child
+      return child;
     }
-    const match = findFirstRenderableOfMime(child, mimeType, options)
-    if (match) return match
+    const match = findFirstRenderableOfMime(child, mimeType, options);
+    if (match) return match;
   }
-  return null
+  return null;
 }
 
 function findFirstRenderableChild(
   node: MimePartNode,
-  options: { stopAtNestedMessages: boolean }
+  options: { stopAtNestedMessages: boolean },
 ): MimePartNode | null {
   for (const child of node.children) {
-    const match = selectDefaultPreviewNode(child, options)
-    if (match) return match
+    const match = selectDefaultPreviewNode(child, options);
+    if (match) return match;
   }
-  return null
+  return null;
 }
 
 function isPreviewLeafNode(node: MimePartNode) {
-  if (!isRenderableNode(node) || isInlineResourceNode(node)) return false
+  if (!isRenderableNode(node) || isInlineResourceNode(node)) return false;
   return (
     node.facts.preview.kind === "preview" ||
     node.facts.preview.kind === "attachment"
-  )
+  );
 }
 
 function collectCurrentMessageNodes(root: MimePartNode) {
-  const nodes: MimePartNode[] = []
-  walkCurrentMessageNodes(root, (node) => nodes.push(node))
-  return nodes
+  const nodes: MimePartNode[] = [];
+  walkCurrentMessageNodes(root, (node) => nodes.push(node));
+  return nodes;
 }
 
 function walkCurrentMessageNodes(
   root: MimePartNode,
-  visit: (node: MimePartNode) => void
+  visit: (node: MimePartNode) => void,
 ) {
   function walk(node: MimePartNode) {
-    visit(node)
-    if (!pathsEqual(node.path, root.path) && isMessageNode(node)) return
-    for (const child of node.children) walk(child)
+    visit(node);
+    if (!pathsEqual(node.path, root.path) && isMessageNode(node)) return;
+    for (const child of node.children) walk(child);
   }
 
-  walk(root)
+  walk(root);
 }
 
 function walkMimeTree(node: MimePartNode, visit: (node: MimePartNode) => void) {
-  visit(node)
-  for (const child of node.children) walkMimeTree(child, visit)
+  visit(node);
+  for (const child of node.children) walkMimeTree(child, visit);
 }
 
 function isEmailAttachmentSidebarNode(
   node: MimePartNode,
-  bodyNode: MimePartNode | null
+  bodyNode: MimePartNode | null,
 ) {
-  if (node === bodyNode) return false
-  if (isMultipartNode(node) || isInlineResourceNode(node)) return false
-  if (isMessageNode(node) || isAttachmentNode(node)) return true
-  return isRenderableNode(node) && !isBodyMime(node.facts.mimeType)
+  if (node === bodyNode) return false;
+  if (isMultipartNode(node) || isInlineResourceNode(node)) return false;
+  if (isMessageNode(node) || isAttachmentNode(node)) return true;
+  return isRenderableNode(node) && !isBodyMime(node.facts.mimeType);
 }
 
 function createSidebarItem({
@@ -705,10 +705,10 @@ function createSidebarItem({
   node,
   selectedPath,
 }: {
-  inlineResourceUrls: ReadonlyMap<string, string>
-  kind: "body" | "attachment"
-  node: MimePartNode
-  selectedPath: MimePartPath
+  inlineResourceUrls: ReadonlyMap<string, string>;
+  kind: "body" | "attachment";
+  node: MimePartNode;
+  selectedPath: MimePartPath;
 }): EmailSidebarItem {
   const common = {
     id: node.path.join("/"),
@@ -717,53 +717,57 @@ function createSidebarItem({
     description: describeEmailSidebarNode(node),
     thumbnail: deriveEmailSidebarThumbnail(node, inlineResourceUrls),
     isSelected: pathsEqual(node.path, selectedPath),
-  }
+  };
 
   if (kind === "body") {
     return {
       ...common,
       kind,
       title: "Body",
-    }
+    };
   }
 
   return {
     ...common,
     kind,
     title: mimePartLabel(node.part),
-  }
+  };
 }
 
 function deriveEmailSidebarThumbnail(
   node: MimePartNode,
-  inlineResourceUrls: ReadonlyMap<string, string>
+  inlineResourceUrls: ReadonlyMap<string, string>,
 ): EmailSidebarThumbnailModel {
-  if (node.part.source && !isInlineResourceNode(node)) {
+  const thumbnailNode = isMessageNode(node)
+    ? selectMimeScopeBodyNode(node)
+    : node;
+
+  if (thumbnailNode?.part.source && !isInlineResourceNode(thumbnailNode)) {
     return {
       kind: "file",
-      source: resolveEmailPreviewSource(node, inlineResourceUrls),
+      source: resolveEmailPreviewSource(thumbnailNode, inlineResourceUrls),
       aspectRatio: 1,
-    }
+    };
   }
 
-  if (isMessageNode(node)) return { kind: "icon", icon: "mail" }
-  if (isMultipartNode(node)) return { kind: "icon", icon: "layers" }
-  if (isAttachmentNode(node)) return { kind: "icon", icon: "paperclip" }
-  return { kind: "icon", icon: "file" }
+  if (isMessageNode(node)) return { kind: "icon", icon: "mail" };
+  if (isMultipartNode(node)) return { kind: "icon", icon: "layers" };
+  if (isAttachmentNode(node)) return { kind: "icon", icon: "paperclip" };
+  return { kind: "icon", icon: "file" };
 }
 
 function describeEmailSidebarNode(node: MimePartNode) {
   if (node.part.size != null) {
-    return `${node.part.mimeType} · ${formatFileSize(node.part.size)}`
+    return `${node.part.mimeType} · ${formatFileSize(node.part.size)}`;
   }
-  if (isInlineResourceNode(node)) return `${node.part.mimeType} · inline`
-  if (isAttachmentNode(node)) return `${node.part.mimeType} · attachment`
-  return node.part.mimeType
+  if (isInlineResourceNode(node)) return `${node.part.mimeType} · inline`;
+  if (isAttachmentNode(node)) return `${node.part.mimeType} · attachment`;
+  return node.part.mimeType;
 }
 
 function deriveNestedEmailMessage(
   message: EmailViewerMessage,
-  node: MimePartNode
+  node: MimePartNode,
 ): EmailViewerMessage {
   return {
     id: `${messageIdentity(message)}:${node.path.join("/")}`,
@@ -775,17 +779,17 @@ function deriveNestedEmailMessage(
     bcc: headerValue(node.part.headers, "bcc"),
     sentAt: headerValue(node.part.headers, "date"),
     root: node.part,
-  }
+  };
 }
 
 function resolveEmailPreviewSource(
   node: MimePartNode,
-  inlineResourceUrls: ReadonlyMap<string, string>
+  inlineResourceUrls: ReadonlyMap<string, string>,
 ): ViewerSource {
-  const source = node.part.source
+  const source = node.part.source;
   if (source?.kind === "text" && isHtmlMime(node.part)) {
-    const text = replaceInlineResourceUrls(source.text, inlineResourceUrls)
-    if (text === source.text) return source
+    const text = replaceInlineResourceUrls(source.text, inlineResourceUrls);
+    if (text === source.text) return source;
 
     return {
       ...source,
@@ -795,10 +799,10 @@ function resolveEmailPreviewSource(
         inlineResourceIdentity(inlineResourceUrls),
       ].join(":"),
       text,
-    }
+    };
   }
 
-  return source!
+  return source!;
 }
 
 function createEmptyContent({
@@ -806,126 +810,126 @@ function createEmptyContent({
   node,
   reason,
 }: {
-  message: string
-  node: MimePartNode
-  reason: EmailContentEmptyReason
+  message: string;
+  node: MimePartNode;
+  reason: EmailContentEmptyReason;
 }): EmailContentModel {
   return {
     kind: "empty",
     message,
     node,
     reason,
-  }
+  };
 }
 
 function normalizeAddressList(
-  value: string | readonly string[] | null | undefined
+  value: string | readonly string[] | null | undefined,
 ): readonly EmailAddress[] {
-  if (typeof value === "string") return parseAddressList(value)
-  if (!value) return []
-  return value.flatMap((address) => parseAddressList(address))
+  if (typeof value === "string") return parseAddressList(value);
+  if (!value) return [];
+  return value.flatMap((address) => parseAddressList(address));
 }
 
 function parseAddressList(value: string): readonly EmailAddress[] {
   return value
     .split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
     .map((address) => parseEmailAddress(address))
-    .filter((address) => address.display.length > 0)
+    .filter((address) => address.display.length > 0);
 }
 
 function parseEmailAddress(value: string): EmailAddress {
-  const display = value.trim()
-  const match = display.match(/^(.*?)<([^>]+)>$/)
+  const display = value.trim();
+  const match = display.match(/^(.*?)<([^>]+)>$/);
   if (!match) {
     return {
       name: null,
       address: display.includes("@") ? display : null,
       display,
-    }
+    };
   }
 
-  const name = cleanAddressName(match[1])
-  const address = match[2]?.trim() || null
+  const name = cleanAddressName(match[1]);
+  const address = match[2]?.trim() || null;
   return {
     name,
     address,
     display,
-  }
+  };
 }
 
 function cleanAddressName(value: string | undefined) {
-  const trimmed = value?.trim().replace(/^"|"$/g, "") ?? ""
-  return trimmed || null
+  const trimmed = value?.trim().replace(/^"|"$/g, "") ?? "";
+  return trimmed || null;
 }
 
 function formatSentAt(value: string | Date | null | undefined) {
-  if (!value) return null
-  const date = value instanceof Date ? value : new Date(value)
-  if (Number.isNaN(date.getTime())) return null
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(date)
+  }).format(date);
 }
 
 function headerValue(
   headers: readonly { name: string; value: string }[] | undefined,
-  name: string
+  name: string,
 ) {
   return (
     headers?.find((header) => header.name.toLowerCase() === name.toLowerCase())
       ?.value ?? null
-  )
+  );
 }
 
 function contentLocationForPart(part: MimePart) {
   return normalizeContentLocation(
-    part.contentLocation ?? headerValue(part.headers, "content-location")
-  )
+    part.contentLocation ?? headerValue(part.headers, "content-location"),
+  );
 }
 
 function inlineResourceKeysForNode(
-  node: MimePartNode
+  node: MimePartNode,
 ): readonly EmailInlineResourceKey[] {
-  const keys: EmailInlineResourceKey[] = []
+  const keys: EmailInlineResourceKey[] = [];
   if (node.facts.contentId) {
-    keys.push({ kind: "content-id", value: node.facts.contentId })
+    keys.push({ kind: "content-id", value: node.facts.contentId });
   }
   if (node.facts.contentLocation) {
-    keys.push({ kind: "content-location", value: node.facts.contentLocation })
+    keys.push({ kind: "content-location", value: node.facts.contentLocation });
   }
-  return keys
+  return keys;
 }
 
 function replaceContentLocationUrls(
   html: string,
-  inlineUrls: ReadonlyMap<string, string>
+  inlineUrls: ReadonlyMap<string, string>,
 ) {
   return html.replace(
     /\b(src|href)=(["'])([^"']+)\2/gi,
     (match, attribute, quote, rawUrl) => {
-      if (!isRelativeInlineReference(rawUrl)) return match
+      if (!isRelativeInlineReference(rawUrl)) return match;
 
-      const normalized = normalizeRelativeReference(rawUrl)
+      const normalized = normalizeRelativeReference(rawUrl);
       const url = inlineUrls.get(
         inlineResourceKeyToString({
           kind: "content-location",
           value: normalized,
-        })
-      )
-      return url ? `${attribute}=${quote}${url}${quote}` : match
-    }
-  )
+        }),
+      );
+      return url ? `${attribute}=${quote}${url}${quote}` : match;
+    },
+  );
 }
 
 function isRelativeInlineReference(value: string) {
-  const lower = value.trim().toLowerCase()
-  if (!lower) return false
-  if (lower.startsWith("#")) return false
-  if (lower.startsWith("/")) return false
-  if (lower.startsWith("cid:")) return false
-  if (lower.startsWith("data:")) return false
-  return !/^[a-z][a-z0-9+.-]*:/i.test(lower)
+  const lower = value.trim().toLowerCase();
+  if (!lower) return false;
+  if (lower.startsWith("#")) return false;
+  if (lower.startsWith("/")) return false;
+  if (lower.startsWith("cid:")) return false;
+  if (lower.startsWith("data:")) return false;
+  return !/^[a-z][a-z0-9+.-]*:/i.test(lower);
 }
 
 function normalizeRelativeReference(value: string) {
@@ -933,32 +937,32 @@ function normalizeRelativeReference(value: string) {
     .trim()
     .replace(/^\.\/+/, "")
     .replace(/\\/g, "/")
-    .toLowerCase()
+    .toLowerCase();
 }
 
 function getParentMimeNode(rootNode: MimePartNode, node: MimePartNode) {
-  return node.parentPath ? findMimeNodeByPath(rootNode, node.parentPath) : null
+  return node.parentPath ? findMimeNodeByPath(rootNode, node.parentPath) : null;
 }
 
 function inlineResourceIdentity(
-  inlineResourceUrls: ReadonlyMap<string, string>
+  inlineResourceUrls: ReadonlyMap<string, string>,
 ) {
   return Array.from(inlineResourceUrls.entries())
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([key, url]) => `${key}=${url}`)
-    .join("|")
+    .join("|");
 }
 
 function decodeCid(value: string) {
   try {
-    return decodeURIComponent(value)
+    return decodeURIComponent(value);
   } catch {
-    return value
+    return value;
   }
 }
 
 function isHtmlMime(part: MimePart) {
-  return normalizedMimeType(part.mimeType) === "text/html"
+  return normalizedMimeType(part.mimeType) === "text/html";
 }
 
 function isBodyMime(mimeType: string) {
@@ -966,52 +970,52 @@ function isBodyMime(mimeType: string) {
     mimeType === "text/html" ||
     mimeType === "text/plain" ||
     mimeType === "text/markdown"
-  )
+  );
 }
 
 function isMultipartMime(mimeType: string) {
-  return normalizedMimeType(mimeType).startsWith("multipart/")
+  return normalizedMimeType(mimeType).startsWith("multipart/");
 }
 
 function isRelatedMultipart(mimeType: string) {
-  return normalizedMimeType(mimeType) === "multipart/related"
+  return normalizedMimeType(mimeType) === "multipart/related";
 }
 
 function isMessageMime(mimeType: string) {
-  const mime = normalizedMimeType(mimeType)
-  return mime === "message/rfc822" || mime === "message/global"
+  const mime = normalizedMimeType(mimeType);
+  return mime === "message/rfc822" || mime === "message/global";
 }
 
 function isDeliveryStatusMime(mimeType: string) {
-  const mime = normalizedMimeType(mimeType)
+  const mime = normalizedMimeType(mimeType);
   return (
     mime === "message/delivery-status" ||
     mime === "message/disposition-notification"
-  )
+  );
 }
 
 function isSecurityEnvelopeMime(mimeType: string) {
-  const mime = normalizedMimeType(mimeType)
+  const mime = normalizedMimeType(mimeType);
   return (
     mime === "application/pkcs7-mime" ||
     mime === "application/pgp-encrypted" ||
     mime === "multipart/encrypted"
-  )
+  );
 }
 
 function securityEnvelopeLabel(mimeType: string) {
-  const mime = normalizedMimeType(mimeType)
-  if (mime.includes("encrypted")) return "Encrypted message"
-  if (mime.includes("pkcs7")) return "Signed or encrypted message"
-  return "Security envelope"
+  const mime = normalizedMimeType(mimeType);
+  if (mime.includes("encrypted")) return "Encrypted message";
+  if (mime.includes("pkcs7")) return "Signed or encrypted message";
+  return "Security envelope";
 }
 
 function normalizedMimeType(mimeType: string) {
-  return mimeType.toLowerCase().split(";")[0].trim()
+  return mimeType.toLowerCase().split(";")[0].trim();
 }
 
 function multipartLabel(mimeType: string) {
-  const subtype = normalizedMimeType(mimeType).split("/")[1]
-  if (!subtype) return "Multipart"
-  return `Multipart ${subtype}`
+  const subtype = normalizedMimeType(mimeType).split("/")[1];
+  if (!subtype) return "Multipart";
+  return `Multipart ${subtype}`;
 }

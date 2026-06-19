@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "zod";
 
 const eventSchema = z.object({
   name: z.enum([
@@ -25,10 +25,10 @@ const eventSchema = z.object({
   properties: z
     .record(z.union([z.string(), z.number(), z.boolean(), z.null()]))
     .optional(),
-})
+});
 
-export type Event = z.infer<typeof eventSchema>
+export type Event = z.infer<typeof eventSchema>;
 
 export function trackEvent(input: Event): void {
-  eventSchema.parse(input)
+  eventSchema.parse(input);
 }

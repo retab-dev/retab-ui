@@ -1,71 +1,76 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { ChevronDown, ChevronUp } from "lucide-react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+
+import { cn } from "@/lib/utils";
 
 import {
   useCsvRowPatcher,
   type CsvRowPatchState,
-} from "./csv-viewer-row-patcher"
-import { csvCellClassName } from "./csv-viewer-cell-classes"
-import type { CsvRowStore } from "./csv-row-store"
-import { CSV_SCROLLBAR_CSS, HeaderAwareScrollbar } from "./csv-viewer-scrollbar"
+} from "./csv-viewer-row-patcher";
+import { csvCellClassName } from "./csv-viewer-cell-classes";
+import type { CsvRowStore } from "./csv-row-store";
+import {
+  CSV_SCROLLBAR_CSS,
+  HeaderAwareScrollbar,
+} from "./csv-viewer-scrollbar";
 import {
   sortCsvRowsInWorker,
   sortCsvRowsOnMainThread,
-} from "./csv-viewer-sort-worker"
-import type { CsvCellAddress } from "./csv-viewer-state"
-import { CsvStyleScope } from "./csv-viewer-style-scope"
-import { fixedGridColumnWidths } from "./fixed-grid-columns"
+} from "./csv-viewer-sort-worker";
+import type { CsvCellAddress } from "./csv-viewer-state";
+import { CsvStyleScope } from "./csv-viewer-style-scope";
+import { fixedGridColumnWidths } from "./fixed-grid-columns";
 import {
   getFixedGridCanvasStyle,
   getFixedGridRowWindowStyle,
-} from "./fixed-grid-layout"
-import { getFixedGridRowStyle } from "./fixed-grid-row-style"
-import { buildVirtualGridTemplate } from "./fixed-grid-template"
-import { FixedGridViewport } from "./fixed-grid-viewport"
+} from "./fixed-grid-layout";
+import { getFixedGridRowStyle } from "./fixed-grid-row-style";
+import { buildVirtualGridTemplate } from "./fixed-grid-template";
+import { FixedGridViewport } from "./fixed-grid-viewport";
 import {
   useFixedGridVirtualization,
   useFixedRowPool,
   type FixedGridColumnItem,
   type FixedGridRowPoolSlot,
-} from "./fixed-grid-virtualization"
+} from "./fixed-grid-virtualization";
 
-type Row = string[] | undefined
+type Row = string[] | undefined;
 
 export interface CsvGridHandle {
   scrollToCell: (
     cellAddress: CsvCellAddress,
-    options?: { behavior?: ScrollBehavior }
-  ) => void
-  getViewportElement: () => HTMLDivElement | null
+    options?: { behavior?: ScrollBehavior },
+  ) => void;
+  getViewportElement: () => HTMLDivElement | null;
 }
 
 export interface CsvGridProps {
-  columns: string[]
-  rowStore: CsvRowStore
-  activeCell: CsvCellAddress | null
-  height: number
-  fillHeight: boolean
-  isolateStyles: boolean
-  scale: number
-  sortResetKey: unknown
-  statusNode: React.ReactNode
+  columns: string[];
+  rowStore: CsvRowStore;
+  activeCell: CsvCellAddress | null;
+  height: number;
+  fillHeight: boolean;
+  isolateStyles: boolean;
+  scale: number;
+  sortResetKey: unknown;
+  statusNode: React.ReactNode;
 }
 
-const CSV_TABLE_LABEL = "CSV data"
-const COLUMN_WIDTH = 180
-const COLUMN_OVERSCAN = 2
-const JUMP_COLUMN_OVERSCAN = 0
-const ROW_HEIGHT = 33
-const ROW_NUMBER_WIDTH = 56
-const ROW_OVERSCAN = 4
-const JUMP_ROW_OVERSCAN = 0
-const SMALL_TABLE_ROW_LIMIT = 200
-const SMALL_TABLE_COLUMN_LIMIT = 8
-const WORKER_SORT_ROW_THRESHOLD = 20_000
+const CSV_TABLE_LABEL = "CSV data";
+const COLUMN_WIDTH = 180;
+const COLUMN_OVERSCAN = 2;
+const JUMP_COLUMN_OVERSCAN = 0;
+const ROW_HEIGHT = 33;
+const ROW_NUMBER_WIDTH = 56;
+const ROW_OVERSCAN = 4;
+const JUMP_ROW_OVERSCAN = 0;
+const SMALL_TABLE_ROW_LIMIT = 200;
+const SMALL_TABLE_COLUMN_LIMIT = 8;
+const WORKER_SORT_ROW_THRESHOLD = 20_000;
 
 export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
   function CsvGrid(
@@ -80,20 +85,20 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       sortResetKey,
       statusNode,
     },
-    ref
+    ref,
   ) {
     const [sort, setSort] = React.useState<{
-      columnIndex: number
-      descending: boolean
-    } | null>(null)
+      columnIndex: number;
+      descending: boolean;
+    } | null>(null);
     const columnShapeKey = React.useMemo(
       () => columns.join("\u0000"),
-      [columns]
-    )
+      [columns],
+    );
 
     React.useLayoutEffect(() => {
-      setSort(null)
-    }, [columnShapeKey, sortResetKey])
+      setSort(null);
+    }, [columnShapeKey, sortResetKey]);
 
     const toggleSort = React.useCallback((columnIndex: number) => {
       setSort((current) =>
@@ -101,55 +106,55 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
           ? { columnIndex, descending: false }
           : current.descending
             ? null
-            : { columnIndex, descending: true }
-      )
-    }, [])
+            : { columnIndex, descending: true },
+      );
+    }, []);
 
-    const rowOrder = useCsvSortedRowOrder({ rowStore, sort })
+    const rowOrder = useCsvSortedRowOrder({ rowStore, sort });
 
     const displayIndexByRowIndex = React.useMemo<Map<
       number,
       number
     > | null>(() => {
-      if (!rowOrder) return null
-      const map = new Map<number, number>()
+      if (!rowOrder) return null;
+      const map = new Map<number, number>();
       rowOrder.forEach((rowIndex, displayRowIndex) => {
-        map.set(rowIndex, displayRowIndex)
-      })
-      return map
-    }, [rowOrder])
+        map.set(rowIndex, displayRowIndex);
+      });
+      return map;
+    }, [rowOrder]);
 
     const rowAt = React.useCallback(
       (displayRowIndex: number): Row => {
-        const sourceRowIndex = rowOrder?.[displayRowIndex] ?? displayRowIndex
-        return rowStore.getRow(sourceRowIndex)
+        const sourceRowIndex = rowOrder?.[displayRowIndex] ?? displayRowIndex;
+        return rowStore.getRow(sourceRowIndex);
       },
-      [rowStore, rowOrder]
-    )
+      [rowStore, rowOrder],
+    );
 
     const rowIndexAt = React.useCallback(
       (displayRowIndex: number): number =>
         rowOrder?.[displayRowIndex] ?? displayRowIndex,
-      [rowOrder]
-    )
+      [rowOrder],
+    );
 
-    const viewportRef = React.useRef<HTMLDivElement>(null)
-    const rowWindowRef = React.useRef<HTMLDivElement>(null)
+    const viewportRef = React.useRef<HTMLDivElement>(null);
+    const rowWindowRef = React.useRef<HTMLDivElement>(null);
     const [viewportElement, setViewportElement] =
-      React.useState<HTMLDivElement | null>(null)
+      React.useState<HTMLDivElement | null>(null);
     const setViewportRef = React.useCallback((node: HTMLDivElement | null) => {
-      viewportRef.current = node
-      setViewportElement((current) => (current === node ? current : node))
-    }, [])
-    const columnCount = columns.length
-    const rowCount = rowStore.rowCount
-    const columnOffset = 1
-    const shouldVirtualizeRows = rowCount > SMALL_TABLE_ROW_LIMIT
-    const shouldVirtualizeColumns = columnCount > SMALL_TABLE_COLUMN_LIMIT
-    const effectiveRowHeight = Math.max(1, Math.round(ROW_HEIGHT * scale))
-    const effectiveColumnWidth = Math.max(1, Math.round(COLUMN_WIDTH * scale))
-    const effectiveRowNumberWidth = Math.round(ROW_NUMBER_WIDTH * scale)
-    const columnItemsRef = React.useRef<FixedGridColumnItem[]>([])
+      viewportRef.current = node;
+      setViewportElement((current) => (current === node ? current : node));
+    }, []);
+    const columnCount = columns.length;
+    const rowCount = rowStore.rowCount;
+    const columnOffset = 1;
+    const shouldVirtualizeRows = rowCount > SMALL_TABLE_ROW_LIMIT;
+    const shouldVirtualizeColumns = columnCount > SMALL_TABLE_COLUMN_LIMIT;
+    const effectiveRowHeight = Math.max(1, Math.round(ROW_HEIGHT * scale));
+    const effectiveColumnWidth = Math.max(1, Math.round(COLUMN_WIDTH * scale));
+    const effectiveRowNumberWidth = Math.round(ROW_NUMBER_WIDTH * scale);
+    const columnItemsRef = React.useRef<FixedGridColumnItem[]>([]);
     const getRowPatchState = React.useCallback(
       (): CsvRowPatchState => ({
         activeCell: activeCell ?? null,
@@ -165,16 +170,16 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
         rowStore,
         rowOrder,
         shouldVirtualizeRows,
-      ]
-    )
+      ],
+    );
     const rowPatcher = useCsvRowPatcher({
       rowWindowRef,
       getState: getRowPatchState,
-    })
+    });
     const rowScrollStrategy = React.useMemo(
       () => ({ handleViewport: rowPatcher.patch }),
-      [rowPatcher]
-    )
+      [rowPatcher],
+    );
 
     const {
       virtualRows,
@@ -199,31 +204,31 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       scrollRef: viewportRef,
       scrollElement: viewportElement,
       virtualizeColumns: shouldVirtualizeColumns,
-    })
+    });
 
     React.useLayoutEffect(() => {
-      columnItemsRef.current = columnItems
-    }, [columnItems])
+      columnItemsRef.current = columnItems;
+    }, [columnItems]);
 
     React.useImperativeHandle(
       ref ?? null,
       () => ({
         scrollToCell: (cellAddress, options) => {
-          const behavior = options?.behavior ?? "smooth"
+          const behavior = options?.behavior ?? "smooth";
           const displayRowIndex =
             displayIndexByRowIndex?.get(cellAddress.rowIndex) ??
-            cellAddress.rowIndex
+            cellAddress.rowIndex;
           scrollToCell({
             rowIndex: displayRowIndex,
             columnIndex: cellAddress.columnIndex,
             behavior,
             align: "center",
-          })
+          });
         },
         getViewportElement: () => viewportRef.current,
       }),
-      [displayIndexByRowIndex, scrollToCell]
-    )
+      [displayIndexByRowIndex, scrollToCell],
+    );
 
     const gridTemplate = React.useMemo(
       () =>
@@ -233,18 +238,18 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
           columnWidths: fixedGridColumnWidths(columnItems),
           rightPad,
         }),
-      [effectiveRowNumberWidth, leftPad, columnItems, rightPad]
-    )
-    const totalWidth = effectiveRowNumberWidth + totalColumnSize
+      [effectiveRowNumberWidth, leftPad, columnItems, rightPad],
+    );
+    const totalWidth = effectiveRowNumberWidth + totalColumnSize;
     const minimumRowPoolSize =
       Math.ceil(viewportClientHeight / effectiveRowHeight) +
       ROW_OVERSCAN * 2 +
-      2
+      2;
     const rowPoolSlots = useFixedRowPool({
       minimumPoolSize: minimumRowPoolSize,
       rowCount,
       virtualRows,
-    })
+    });
 
     React.useLayoutEffect(() => {
       // After React commits the canonical row window, push that window's
@@ -254,11 +259,11 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       // is cleared. Falls back to a plain cache invalidation when row
       // virtualization is inactive.
       if (shouldVirtualizeRows) {
-        rowPatcher.resync(virtualRows)
+        rowPatcher.resync(virtualRows);
       } else {
-        rowPatcher.invalidate()
+        rowPatcher.invalidate();
       }
-    }, [rowPatcher, virtualRows, columnItems, shouldVirtualizeRows])
+    }, [rowPatcher, virtualRows, columnItems, shouldVirtualizeRows]);
 
     return (
       <div
@@ -376,35 +381,35 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
           />
         </CsvStyleScope>
       </div>
-    )
-  }
-)
+    );
+  },
+);
 
 function useCsvSortedRowOrder({
   rowStore,
   sort,
 }: {
-  rowStore: CsvRowStore
-  sort: { columnIndex: number; descending: boolean } | null
+  rowStore: CsvRowStore;
+  sort: { columnIndex: number; descending: boolean } | null;
 }): number[] | null {
   const [workerRowOrder, setWorkerRowOrder] = React.useState<number[] | null>(
-    null
-  )
+    null,
+  );
   const sourceRows = React.useMemo(
     () => (sort ? rowStore.materializeRows() : null),
-    [rowStore, sort]
-  )
+    [rowStore, sort],
+  );
   const shouldUseWorker =
     !!sort &&
     !!sourceRows &&
     sourceRows.length >= WORKER_SORT_ROW_THRESHOLD &&
-    typeof Worker !== "undefined"
+    typeof Worker !== "undefined";
 
   React.useEffect(() => {
-    setWorkerRowOrder(null)
-    if (!sort || !sourceRows || !shouldUseWorker) return
+    setWorkerRowOrder(null);
+    if (!sort || !sourceRows || !shouldUseWorker) return;
 
-    const controller = new AbortController()
+    const controller = new AbortController();
     void sortCsvRowsInWorker({
       sourceRows,
       columnIndex: sort.columnIndex,
@@ -413,33 +418,33 @@ function useCsvSortedRowOrder({
     }).then(
       (rowOrder) => setWorkerRowOrder(rowOrder),
       (error) => {
-        if (controller.signal.aborted) return
+        if (controller.signal.aborted) return;
         setWorkerRowOrder(
           sortCsvRowsOnMainThread({
             sourceRows,
             columnIndex: sort.columnIndex,
             descending: sort.descending,
-          })
-        )
-      }
-    )
+          }),
+        );
+      },
+    );
 
-    return () => controller.abort()
-  }, [shouldUseWorker, sort, sourceRows])
+    return () => controller.abort();
+  }, [shouldUseWorker, sort, sourceRows]);
 
   return React.useMemo(() => {
-    if (!sort || !sourceRows) return null
-    if (shouldUseWorker) return workerRowOrder
+    if (!sort || !sourceRows) return null;
+    if (shouldUseWorker) return workerRowOrder;
     return sortCsvRowsOnMainThread({
       sourceRows,
       columnIndex: sort.columnIndex,
       descending: sort.descending,
-    })
-  }, [shouldUseWorker, sort, sourceRows, workerRowOrder])
+    });
+  }, [shouldUseWorker, sort, sourceRows, workerRowOrder]);
 }
 
 function Spacer({ width }: { width: number }) {
-  return <div role="presentation" aria-hidden style={{ width }} />
+  return <div role="presentation" aria-hidden style={{ width }} />;
 }
 
 function HeaderCell({
@@ -449,11 +454,11 @@ function HeaderCell({
   sorted,
   onToggle,
 }: {
-  name: string
-  columnIndex: number
-  height: number
-  sorted: "asc" | "desc" | false
-  onToggle: () => void
+  name: string;
+  columnIndex: number;
+  height: number;
+  sorted: "asc" | "desc" | false;
+  onToggle: () => void;
 }) {
   return (
     <div
@@ -472,7 +477,7 @@ function HeaderCell({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center gap-1 px-3 text-left font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:outline-none"
+        className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:bg-muted flex w-full items-center gap-1 px-3 text-left font-medium transition-colors focus-visible:outline-none"
         style={{ height }}
         title={`Sort by ${name}`}
       >
@@ -480,19 +485,19 @@ function HeaderCell({
         {sorted ? (
           sorted === "asc" ? (
             <ChevronUp
-              className="size-3.5 shrink-0 text-muted-foreground"
+              className="text-muted-foreground size-3.5 shrink-0"
               aria-hidden
             />
           ) : (
             <ChevronDown
-              className="size-3.5 shrink-0 text-muted-foreground"
+              className="text-muted-foreground size-3.5 shrink-0"
               aria-hidden
             />
           )
         ) : null}
       </button>
     </div>
-  )
+  );
 }
 
 function CsvRowSlot({
@@ -508,22 +513,22 @@ function CsvRowSlot({
   rightPad,
   activeCell,
 }: {
-  slot: FixedGridRowPoolSlot
-  sourceRowCount: number
-  rowAt: (displayRowIndex: number) => Row
-  rowIndexAt: (displayRowIndex: number) => number
-  gridTemplate: string
-  rowHeight: number
-  columnOffset: number
-  columnItems: FixedGridColumnItem[]
-  leftPad: number
-  rightPad: number
-  activeCell: CsvCellAddress | null
+  slot: FixedGridRowPoolSlot;
+  sourceRowCount: number;
+  rowAt: (displayRowIndex: number) => Row;
+  rowIndexAt: (displayRowIndex: number) => number;
+  gridTemplate: string;
+  rowHeight: number;
+  columnOffset: number;
+  columnItems: FixedGridColumnItem[];
+  leftPad: number;
+  rightPad: number;
+  activeCell: CsvCellAddress | null;
 }) {
   const fallbackDisplayRowIndex =
-    sourceRowCount > 0 ? Math.min(slot.slotIndex, sourceRowCount - 1) : 0
-  const displayRowIndex = slot.virtualRow?.index ?? fallbackDisplayRowIndex
-  const rowIndex = rowIndexAt(displayRowIndex)
+    sourceRowCount > 0 ? Math.min(slot.slotIndex, sourceRowCount - 1) : 0;
+  const displayRowIndex = slot.virtualRow?.index ?? fallbackDisplayRowIndex;
+  const rowIndex = rowIndexAt(displayRowIndex);
 
   return (
     <CsvRow
@@ -544,7 +549,7 @@ function CsvRowSlot({
           : null
       }
     />
-  )
+  );
 }
 
 const CsvRow = React.memo(function CsvRow({
@@ -561,27 +566,27 @@ const CsvRow = React.memo(function CsvRow({
   hidden = false,
   activeColumnIndex,
 }: {
-  cells: Row | undefined
-  displayRowIndex: number
-  rowIndex: number
-  gridTemplate: string
-  rowHeight: number
-  columnOffset: number
-  columnItems: FixedGridColumnItem[]
-  leftPad: number
-  rightPad: number
-  start?: number
-  hidden?: boolean
-  activeColumnIndex?: number | null
+  cells: Row | undefined;
+  displayRowIndex: number;
+  rowIndex: number;
+  gridTemplate: string;
+  rowHeight: number;
+  columnOffset: number;
+  columnItems: FixedGridColumnItem[];
+  leftPad: number;
+  rightPad: number;
+  start?: number;
+  hidden?: boolean;
+  activeColumnIndex?: number | null;
 }) {
-  const isVirtualized = start !== undefined
+  const isVirtualized = start !== undefined;
   const style: React.CSSProperties = !isVirtualized
     ? { gridTemplateColumns: gridTemplate, height: rowHeight }
     : getFixedGridRowStyle({
         gridTemplate,
         rowHeight,
         top: start,
-      })
+      });
   return (
     <div
       role="row"
@@ -590,7 +595,7 @@ const CsvRow = React.memo(function CsvRow({
       data-slot="csv-row"
       className={cn(
         "grid border-b",
-        !isVirtualized && "group hover:bg-muted/40"
+        !isVirtualized && "group hover:bg-muted/40",
       )}
       style={style}
     >
@@ -599,17 +604,17 @@ const CsvRow = React.memo(function CsvRow({
         aria-colindex={1}
         data-slot="csv-row-number"
         className={cn(
-          "sticky left-0 z-[1] flex items-center justify-end border-r bg-card px-2 text-muted-foreground tabular-nums",
+          "bg-card text-muted-foreground sticky left-0 z-[1] flex items-center justify-end border-r px-2 tabular-nums",
           !isVirtualized &&
-            "group-hover:bg-[color-mix(in_oklab,var(--card)_97%,var(--foreground))]"
+            "group-hover:bg-[color-mix(in_oklab,var(--card)_97%,var(--foreground))]",
         )}
       >
         {rowIndex + 1}
       </div>
       <Spacer width={leftPad} />
       {columnItems.map((item) => {
-        const text = cells?.[item.index] ?? ""
-        const isActive = activeColumnIndex === item.index
+        const text = cells?.[item.index] ?? "";
+        const isActive = activeColumnIndex === item.index;
         return (
           <div
             key={item.index}
@@ -621,9 +626,9 @@ const CsvRow = React.memo(function CsvRow({
           >
             <span className="truncate">{text}</span>
           </div>
-        )
+        );
       })}
       <Spacer width={rightPad} />
     </div>
-  )
-})
+  );
+});

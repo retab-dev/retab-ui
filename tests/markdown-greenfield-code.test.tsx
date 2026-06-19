@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 
-import * as React from "react"
-import { cleanup, render, screen, waitFor } from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import * as React from "react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MarkdownViewer } from "@/components/ui/markdown-viewer"
+import { MarkdownViewer } from "@/components/ui/markdown-viewer";
 
 function markdownSource(text: string) {
   return {
@@ -12,20 +12,20 @@ function markdownSource(text: string) {
     fileName: "code.md",
     mimeType: "text/markdown",
     text,
-  }
+  };
 }
 
 beforeEach(() => {
   Object.defineProperty(HTMLElement.prototype, "scrollTo", {
     configurable: true,
     value: vi.fn(),
-  })
-})
+  });
+});
 
 afterEach(() => {
-  cleanup()
-  vi.restoreAllMocks()
-})
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 describe("pretext markdown greenfield code blocks", () => {
   it("renders Shiki syntax tokens without changing the source lines", async () => {
@@ -38,30 +38,32 @@ describe("pretext markdown greenfield code blocks", () => {
             "const answer = 42",
             "// stable comment",
             "```",
-          ].join("\n")
+          ].join("\n"),
         )}
-      />
-    )
+      />,
+    );
 
-    expect(screen.getByRole("group", { name: "ts code block" })).toBeTruthy()
+    expect(screen.getByRole("group", { name: "ts code block" })).toBeTruthy();
     await waitFor(() => {
-      expect(container.querySelector("[data-shiki-token]")).toBeTruthy()
-    })
+      expect(container.querySelector("[data-shiki-token]")).toBeTruthy();
+    });
 
     const shikiTokens = Array.from(
-      container.querySelectorAll<HTMLElement>("[data-shiki-token]")
-    )
+      container.querySelectorAll<HTMLElement>("[data-shiki-token]"),
+    );
     expect(shikiTokens.map((token) => token.textContent).join("")).toContain(
-      "const answer = 42"
-    )
-    expect(shikiTokens[0]?.getAttribute("style")).toContain("--shiki-light")
-    expect(shikiTokens[0]?.className).toContain("dark:text-[var(--shiki-dark)]")
+      "const answer = 42",
+    );
+    expect(shikiTokens[0]?.getAttribute("style")).toContain("--shiki-light");
+    expect(shikiTokens[0]?.className).toContain(
+      "dark:text-[var(--shiki-dark)]",
+    );
     expect(
       Array.from(container.querySelectorAll("[data-line]")).map((line) =>
-        line.textContent?.trimEnd()
-      )
-    ).toEqual(["const answer = 42", "// stable comment"])
-  })
+        line.textContent?.trimEnd(),
+      ),
+    ).toEqual(["const answer = 42", "// stable comment"]);
+  });
 
   it("keeps metadata highlighted lines and highlighted characters", async () => {
     const { container } = render(
@@ -72,26 +74,26 @@ describe("pretext markdown greenfield code blocks", () => {
             "```ts showLineNumbers{5} {1} /answer/",
             "const answer = 42",
             "```",
-          ].join("\n")
+          ].join("\n"),
         )}
-      />
-    )
+      />,
+    );
 
     await waitFor(() => {
-      expect(container.querySelector("[data-shiki-token]")).toBeTruthy()
-    })
+      expect(container.querySelector("[data-shiki-token]")).toBeTruthy();
+    });
     expect(
-      container.querySelector("[data-highlighted-line]")?.textContent
-    ).toBe("const answer = 42")
+      container.querySelector("[data-highlighted-line]")?.textContent,
+    ).toBe("const answer = 42");
     expect(
-      container.querySelector("[data-highlighted-chars]")?.textContent
-    ).toBe("answer")
+      container.querySelector("[data-highlighted-chars]")?.textContent,
+    ).toBe("answer");
     expect(
       container
         .querySelector("[data-pretext-code-line-number]")
-        ?.getAttribute("data-pretext-code-line-number")
-    ).toBe("5")
-  })
+        ?.getAttribute("data-pretext-code-line-number"),
+    ).toBe("5");
+  });
 
   it("supports highlighted code line ranges in fence metadata", async () => {
     const { container } = render(
@@ -106,18 +108,18 @@ describe("pretext markdown greenfield code blocks", () => {
             "const four = 4",
             "const five = 5",
             "```",
-          ].join("\n")
+          ].join("\n"),
         )}
-      />
-    )
+      />,
+    );
 
     await waitFor(() => {
-      expect(container.querySelector("[data-shiki-token]")).toBeTruthy()
-    })
+      expect(container.querySelector("[data-shiki-token]")).toBeTruthy();
+    });
     expect(
       Array.from(container.querySelectorAll("[data-highlighted-line]")).map(
-        (line) => line.textContent?.trimEnd()
-      )
-    ).toEqual(["const two = 2", "const three = 3", "const five = 5"])
-  })
-})
+        (line) => line.textContent?.trimEnd(),
+      ),
+    ).toEqual(["const two = 2", "const three = 3", "const five = 5"]);
+  });
+});

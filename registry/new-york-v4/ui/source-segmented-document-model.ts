@@ -1,32 +1,32 @@
-import type { Source, SourceAnchor, SourceMap } from "@/lib/document-source"
+import type { Source, SourceAnchor, SourceMap } from "@/lib/document-source";
 import {
   buildColorMap,
   segmentDisplayLabel,
   segmentsPageCount,
-} from "@/lib/segments"
+} from "@/lib/segments";
 
 import {
   createSegmentedDocumentModel,
   type DocumentSegment,
   type SegmentAnchor,
   type SegmentedDocumentModel,
-} from "./segmented-document-model"
+} from "./segmented-document-model";
 
 export type SegmentedSourceField = {
-  id: string
-  label: string
-  source?: Source | null
-}
+  id: string;
+  label: string;
+  source?: Source | null;
+};
 
 export type SourcesSegmentedDocumentInput =
   | readonly SegmentedSourceField[]
   | {
-      labels?: Record<string, string>
-      sourceMap: SourceMap
-    }
+      labels?: Record<string, string>;
+      sourceMap: SourceMap;
+    };
 
 export function createSourcesSegmentedDocumentModel(
-  input: SourcesSegmentedDocumentInput
+  input: SourcesSegmentedDocumentInput,
 ): SegmentedDocumentModel {
   const fields = isSegmentedSourceFieldList(input)
     ? input
@@ -34,13 +34,13 @@ export function createSourcesSegmentedDocumentModel(
         id,
         label: input.labels?.[id] ?? (id || "Value"),
         source,
-      }))
-  const colors = buildColorMap(fields.map((field) => field.label))
-  const segments: DocumentSegment[] = []
-  const anchors: SegmentAnchor[] = []
+      }));
+  const colors = buildColorMap(fields.map((field) => field.label));
+  const segments: DocumentSegment[] = [];
+  const anchors: SegmentAnchor[] = [];
 
   fields.forEach((field, index) => {
-    const label = sourceSegmentLabel(field)
+    const label = sourceSegmentLabel(field);
     const segment: DocumentSegment = {
       id: sourceSegmentId(field.id, index),
       label,
@@ -51,33 +51,33 @@ export function createSourcesSegmentedDocumentModel(
         "var(--color-muted-foreground)",
       index,
       sourceId: field.id,
-    }
-    const anchor = sourceToSegmentAnchor(field.source, segment.id)
+    };
+    const anchor = sourceToSegmentAnchor(field.source, segment.id);
     if (anchor) {
-      segment.pages = [anchor.pageNumber]
-      anchors.push(anchor)
+      segment.pages = [anchor.pageNumber];
+      anchors.push(anchor);
     }
-    segments.push(segment)
-  })
+    segments.push(segment);
+  });
 
   return createSegmentedDocumentModel({
     anchors,
     pageCount: segmentsPageCount(segments),
     segments,
-  })
+  });
 }
 
 function isSegmentedSourceFieldList(
-  input: SourcesSegmentedDocumentInput
+  input: SourcesSegmentedDocumentInput,
 ): input is readonly SegmentedSourceField[] {
-  return Array.isArray(input)
+  return Array.isArray(input);
 }
 
 export function sourceToSegmentAnchor(
   source: Source | null | undefined,
-  segmentId: string
+  segmentId: string,
 ): SegmentAnchor | null {
-  if (!source) return null
+  if (!source) return null;
 
   switch (source.anchor.kind) {
     case "pdf_bbox":
@@ -85,19 +85,19 @@ export function sourceToSegmentAnchor(
         anchor: source.anchor,
         pageNumber: source.anchor.page,
         segmentId,
-      })
+      });
     case "image_bbox":
       return bboxSourceAnchorToSegmentAnchor({
         anchor: source.anchor,
         pageNumber: source.anchor.page ?? 1,
         segmentId,
-      })
+      });
     case "csv_cell":
     case "spreadsheet_cell":
     case "docx_text_span":
     case "docx_table_cell":
     case "text_span":
-      return null
+      return null;
   }
 }
 
@@ -106,12 +106,12 @@ function bboxSourceAnchorToSegmentAnchor({
   pageNumber,
   segmentId,
 }: {
-  anchor: Extract<SourceAnchor, { kind: "pdf_bbox" | "image_bbox" }>
-  pageNumber: number
-  segmentId: string
+  anchor: Extract<SourceAnchor, { kind: "pdf_bbox" | "image_bbox" }>;
+  pageNumber: number;
+  segmentId: string;
 }): SegmentAnchor | null {
-  if (!Number.isInteger(pageNumber) || pageNumber < 1) return null
-  if (!isValidNormalizedBox(anchor)) return null
+  if (!Number.isInteger(pageNumber) || pageNumber < 1) return null;
+  if (!isValidNormalizedBox(anchor)) return null;
 
   return {
     id: `${segmentId}:anchor`,
@@ -123,15 +123,15 @@ function bboxSourceAnchorToSegmentAnchor({
       width: anchor.width,
       height: anchor.height,
     },
-  }
+  };
 }
 
 function sourceSegmentLabel(field: SegmentedSourceField): string {
-  return segmentDisplayLabel(field.label || field.id)
+  return segmentDisplayLabel(field.label || field.id);
 }
 
 function sourceSegmentId(id: string, index: number): string {
-  return `source:${id || "value"}:${index}`
+  return `source:${id || "value"}:${index}`;
 }
 
 function isValidNormalizedBox({
@@ -140,10 +140,10 @@ function isValidNormalizedBox({
   width,
   height,
 }: {
-  left: number
-  top: number
-  width: number
-  height: number
+  left: number;
+  top: number;
+  width: number;
+  height: number;
 }) {
   return (
     Number.isFinite(left) &&
@@ -156,5 +156,5 @@ function isValidNormalizedBox({
     height > 0 &&
     left + width <= 1 &&
     top + height <= 1
-  )
+  );
 }

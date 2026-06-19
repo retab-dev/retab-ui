@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import { FileThumbnail } from "@/components/ui/file-thumbnail"
+import { FileThumbnail } from "@/components/ui/file-thumbnail";
 
 import {
   useFileSystemSelectionSourceTask,
   type FileSystemSourceResolver,
-} from "./file-system-selection-source-task"
-import type { FileSystemFileEntry } from "./file-system-types"
+} from "./file-system-selection-source-task";
+import type { FileSystemFileEntry } from "./file-system-types";
 
 export function FileSystemThumbnail({
   file,
@@ -14,16 +14,16 @@ export function FileSystemThumbnail({
   presentation,
   resolveFileSource,
 }: {
-  file: FileSystemFileEntry
-  className?: string
-  presentation?: "document" | "decorative"
-  resolveFileSource?: FileSystemSourceResolver
+  file: FileSystemFileEntry;
+  className?: string;
+  presentation?: "document" | "decorative";
+  resolveFileSource?: FileSystemSourceResolver;
 }) {
   const sourceState = useFileSystemSelectionSourceTask(
     file.previewImageUrl ? null : file,
-    resolveFileSource
-  )
-  const source = file.previewSource ?? file.source ?? sourceState.source
+    resolveFileSource,
+  );
+  const source = file.previewSource ?? file.source ?? sourceState.source;
 
   if (file.previewImageUrl) {
     return (
@@ -34,7 +34,7 @@ export function FileSystemThumbnail({
         previewImageUrl={file.previewImageUrl}
         className={className}
       />
-    )
+    );
   }
 
   if (source) {
@@ -45,7 +45,7 @@ export function FileSystemThumbnail({
         previewAspectRatio={1}
         className={className}
       />
-    )
+    );
   }
 
   return (
@@ -56,5 +56,5 @@ export function FileSystemThumbnail({
       className={className}
       state={sourceState.status === "loading" ? "loading" : undefined}
     />
-  )
+  );
 }

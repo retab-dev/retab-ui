@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   Ban,
   CheckCircle2,
@@ -9,13 +9,13 @@ import {
   UserCheck,
   XCircle,
   type LucideIcon,
-} from "lucide-react"
+} from "lucide-react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 import {
   FileThumbnail,
   type FileThumbnailProps,
-} from "@/components/ui/file-thumbnail"
+} from "@/components/ui/file-thumbnail";
 
 // Run lifecycle, mirroring Retab's backend `RunLifecycleKind`
 // (pending/running/completed/error/awaiting_review/cancelled). `queued` is a
@@ -28,7 +28,7 @@ export type RunStatus =
   | "awaiting_review"
   | "completed"
   | "failed"
-  | "cancelled"
+  | "cancelled";
 
 const RUN_STATUS: Record<
   RunStatus,
@@ -62,7 +62,7 @@ const RUN_STATUS: Record<
     icon: Ban,
     tone: "text-orange-600 dark:text-orange-500",
   },
-}
+};
 
 export interface RunCardProps
   extends Pick<
@@ -73,24 +73,24 @@ export interface RunCardProps
     | "previewClassName"
     | "state"
   > {
-  file: NonNullable<FileThumbnailProps["file"]>
+  file: NonNullable<FileThumbnailProps["file"]>;
   /**
    * Replaces the single `FileThumbnail` with custom media in the same framed,
    * status-pilled slot — e.g. a bundle of per-subdocument thumbnails. The frame
    * still honors `previewAspectRatio`.
    */
-  media?: React.ReactNode
+  media?: React.ReactNode;
   /** Lifecycle of the run — shown as a pill over the thumbnail. */
-  status?: RunStatus
+  status?: RunStatus;
   /** Heading line; defaults to the file name. */
-  title?: React.ReactNode
+  title?: React.ReactNode;
   /** Right-aligned metadata in the heading (e.g. the run kind or a timestamp). */
-  meta?: React.ReactNode
+  meta?: React.ReactNode;
   /** The run's result, rendered in the card body. */
-  children?: React.ReactNode
+  children?: React.ReactNode;
   /** Makes the whole card a button. */
-  onClick?: () => void
-  className?: string
+  onClick?: () => void;
+  className?: string;
 }
 
 /**
@@ -116,9 +116,9 @@ export function RunCard({
   onClick,
   className,
 }: RunCardProps) {
-  const interactive = typeof onClick === "function"
+  const interactive = typeof onClick === "function";
   // The body is optional — a card can be just media + overlays.
-  const hasFooter = title != null || meta != null || children != null
+  const hasFooter = title != null || meta != null || children != null;
 
   return (
     <div
@@ -130,17 +130,17 @@ export function RunCard({
         interactive
           ? (event) => {
               if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault()
-                onClick?.()
+                event.preventDefault();
+                onClick?.();
               }
             }
           : undefined
       }
       className={cn(
-        "group/run-card flex flex-col overflow-hidden rounded-xl border bg-card text-card-foreground transition-colors",
+        "group/run-card bg-card text-card-foreground flex flex-col overflow-hidden rounded-xl border transition-colors",
         interactive &&
-          "cursor-pointer outline-none hover:border-foreground/20 focus-visible:ring-2 focus-visible:ring-ring",
-        className
+          "hover:border-foreground/20 focus-visible:ring-ring cursor-pointer outline-none focus-visible:ring-2",
+        className,
       )}
     >
       <div className="relative">
@@ -177,7 +177,7 @@ export function RunCard({
                 {title ?? file.name}
               </span>
               {meta ? (
-                <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
                   {meta}
                 </span>
               ) : null}
@@ -187,7 +187,7 @@ export function RunCard({
         </div>
       ) : null}
     </div>
-  )
+  );
 }
 
 /** The status pill used in the corner of a {@link RunCard}. */
@@ -195,20 +195,20 @@ export function RunStatusBadge({
   status,
   className,
 }: {
-  status: RunStatus
-  className?: string
+  status: RunStatus;
+  className?: string;
 }) {
-  const { label, icon: Icon, tone, spin } = RUN_STATUS[status]
+  const { label, icon: Icon, tone, spin } = RUN_STATUS[status];
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border bg-background/85 px-2 py-0.5 text-[11px] font-medium backdrop-blur",
+        "bg-background/85 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium backdrop-blur",
         tone,
-        className
+        className,
       )}
     >
       <Icon className={cn("size-3", spin && "animate-spin")} aria-hidden />
       {label}
     </span>
-  )
+  );
 }

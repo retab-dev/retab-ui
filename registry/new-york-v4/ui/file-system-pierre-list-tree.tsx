@@ -1,25 +1,25 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { FileTree as PierreFileTree } from "@pierre/trees/react"
+import * as React from "react";
+import { FileTree as PierreFileTree } from "@pierre/trees/react";
 
 import {
   createFileSystemPierreAdapterState,
   type FileSystemPierreAdapterSource,
-} from "./file-system-pierre-adapter"
-import { useFileSystemPierreDecorationVersion } from "./file-system-pierre-decoration-version"
+} from "./file-system-pierre-adapter";
+import { useFileSystemPierreDecorationVersion } from "./file-system-pierre-decoration-version";
 import {
   buildFileSystemPierreInput,
   pierrePathToFileSystemEntry,
   type FileSystemPierreInput,
-} from "./file-system-pierre-input"
-import { useFileSystemListContinuity } from "./file-system-list-continuity"
-import { useFileSystemPierreModel } from "./file-system-pierre-model"
-import type { FileSystemFileEntry } from "./file-system-types"
+} from "./file-system-pierre-input";
+import { useFileSystemListContinuity } from "./file-system-list-continuity";
+import { useFileSystemPierreModel } from "./file-system-pierre-model";
+import type { FileSystemFileEntry } from "./file-system-types";
 
 export type FileSystemListTreeProps = FileSystemPierreAdapterSource & {
-  onOpenFile: (file: FileSystemFileEntry) => void
-}
+  onOpenFile: (file: FileSystemFileEntry) => void;
+};
 
 export function FileSystemListTree({
   onOpenFile,
@@ -29,23 +29,23 @@ export function FileSystemListTree({
     currentPath: source.currentPath,
     search: source.search,
     selectedPath: source.selectedPath,
-  })
+  });
   const input = React.useMemo(
     () =>
       buildFileSystemPierreInput({
         currentPath: source.currentPath,
         index: source.index,
       }),
-    [source.currentPath, source.index]
-  )
+    [source.currentPath, source.index],
+  );
   const pierre = React.useMemo(
     () => createFileSystemPierreAdapterState(source),
-    [source]
-  )
+    [source],
+  );
   const decorationVersion = useFileSystemPierreDecorationVersion({
     folderErrors: pierre.decoration.folderErrors,
     loadingFolders: pierre.decoration.loadingFolders,
-  })
+  });
   const { model } = useFileSystemPierreModel({
     decoration: pierre.decoration,
     decorationVersion,
@@ -55,45 +55,45 @@ export function FileSystemListTree({
     navigation: pierre.navigation,
     query: pierre.query,
     selection: pierre.selection,
-  })
+  });
 
   const openPierrePath = React.useCallback(
     (path: string | null) => {
-      const entry = pierrePathToFileSystemEntry(path, input)
+      const entry = pierrePathToFileSystemEntry(path, input);
 
-      if (!entry) return
+      if (!entry) return;
 
       if (entry.kind === "folder") {
         if (source.folderErrors.has(entry.path)) {
-          void source.ensureChildren(entry.path, { retry: true })
+          void source.ensureChildren(entry.path, { retry: true });
         }
-        source.navigateTo(entry.path)
-        return
+        source.navigateTo(entry.path);
+        return;
       }
 
-      onOpenFile(entry)
+      onOpenFile(entry);
     },
-    [input, onOpenFile, source]
-  )
+    [input, onOpenFile, source],
+  );
 
   const handleDoubleClick = React.useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
-      openPierrePath(pierrePathFromEvent(event))
+      openPierrePath(pierrePathFromEvent(event));
     },
-    [openPierrePath]
-  )
+    [openPierrePath],
+  );
 
   const handleKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLElement>) => {
-      if (event.key !== "Enter") return
+      if (event.key !== "Enter") return;
 
       openPierrePath(
-        model.getFocusedPath() ?? model.getSelectedPaths().at(-1) ?? null
-      )
-      event.preventDefault()
+        model.getFocusedPath() ?? model.getSelectedPaths().at(-1) ?? null,
+      );
+      event.preventDefault();
     },
-    [model, openPierrePath]
-  )
+    [model, openPierrePath],
+  );
 
   return (
     <PierreFileTree
@@ -105,7 +105,7 @@ export function FileSystemListTree({
       onDoubleClick={handleDoubleClick}
       onKeyDown={handleKeyDown}
     />
-  )
+  );
 }
 
 function pierrePathFromEvent(event: React.SyntheticEvent<HTMLElement>) {
@@ -115,13 +115,13 @@ function pierrePathFromEvent(event: React.SyntheticEvent<HTMLElement>) {
       target.dataset.type === "item" &&
       target.dataset.itemPath
     ) {
-      return target.dataset.itemPath
+      return target.dataset.itemPath;
     }
   }
 
-  const target = event.target
+  const target = event.target;
 
-  if (!(target instanceof HTMLElement)) return null
+  if (!(target instanceof HTMLElement)) return null;
 
-  return target.closest<HTMLElement>("[data-path]")?.dataset.path ?? null
+  return target.closest<HTMLElement>("[data-path]")?.dataset.path ?? null;
 }

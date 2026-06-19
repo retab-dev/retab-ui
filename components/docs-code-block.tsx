@@ -1,20 +1,20 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { CodeCollapsibleWrapper } from "@/components/code-collapsible-wrapper"
-import { HighlightedCodeBlock } from "@/components/highlighted-code-block"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { CodeCollapsibleWrapper } from "@/components/code-collapsible-wrapper";
+import { HighlightedCodeBlock } from "@/components/highlighted-code-block";
 
 function DocsSourceCodePreview({
   code,
   fileName,
   language,
 }: {
-  code: string
-  fileName: string
-  language: string
+  code: string;
+  fileName: string;
+  language: string;
 }) {
   return (
     <HighlightedCodeBlock
@@ -28,7 +28,7 @@ function DocsSourceCodePreview({
       renderFallbackCode
       showCopy={false}
     />
-  )
+  );
 }
 
 export function DocsSourceCodeBlock({
@@ -37,10 +37,10 @@ export function DocsSourceCodeBlock({
   fileName = "components/ui/component.tsx",
   language = "tsx",
 }: {
-  code: string
-  className?: string
-  fileName?: string
-  language?: string
+  code: string;
+  className?: string;
+  fileName?: string;
+  language?: string;
 }) {
   return (
     <CodeCollapsibleWrapper
@@ -66,7 +66,7 @@ export function DocsSourceCodeBlock({
         showCopy={false}
       />
     </CodeCollapsibleWrapper>
-  )
+  );
 }
 
 export function DocsViewCodeBlock({
@@ -75,13 +75,13 @@ export function DocsViewCodeBlock({
   fileName,
   language,
 }: {
-  code: string
-  className?: string
-  fileName?: string
-  language?: string
+  code: string;
+  className?: string;
+  fileName?: string;
+  language?: string;
 }) {
-  const [isCodeVisible, setIsCodeVisible] = React.useState(false)
-  const isExpanded = isCodeVisible
+  const [isCodeVisible, setIsCodeVisible] = React.useState(false);
+  const isExpanded = isCodeVisible;
 
   return (
     <div
@@ -89,7 +89,7 @@ export function DocsViewCodeBlock({
       data-mobile-code-visible={isExpanded}
       className={cn(
         "relative overflow-hidden **:data-[slot=copy-button]:right-4 **:data-[slot=copy-button]:hidden data-[mobile-code-visible=true]:**:data-[slot=copy-button]:flex [&_[data-rehype-pretty-code-figure]]:m-0! [&_[data-rehype-pretty-code-figure]]:rounded-t-none [&_[data-rehype-pretty-code-figure]]:border-t [&_pre]:max-h-72",
-        className
+        className,
       )}
     >
       {isExpanded ? (
@@ -133,7 +133,7 @@ export function DocsViewCodeBlock({
         </div>
       )}
     </div>
-  )
+  );
 }
 
 export function DocsMdxCodeBlock({
@@ -143,11 +143,11 @@ export function DocsMdxCodeBlock({
   fileName,
   language = "tsx",
 }: {
-  code: string
-  className?: string
-  copyButtonClassName?: string
-  fileName?: string
-  language?: string
+  code: string;
+  className?: string;
+  copyButtonClassName?: string;
+  fileName?: string;
+  language?: string;
 }) {
   return (
     <HighlightedCodeBlock
@@ -159,5 +159,5 @@ export function DocsMdxCodeBlock({
       lazy={false}
       maxHeightClassName="max-h-72"
     />
-  )
+  );
 }

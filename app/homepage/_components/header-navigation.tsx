@@ -98,11 +98,11 @@ function HeaderDropdown({ group }: { group: NavGroup }) {
       <div
         id={menuId}
         hidden={!isOpen}
-        className="fixed inset-x-0 top-16 z-[75] bg-[#fafafa] shadow-[0_1px_0_0_rgba(0,0,0,0.08)]"
+        className="fixed inset-x-0 top-16 z-50 bg-neutral-50 shadow-sm"
       >
-        <div className="mx-auto flex w-[calc(100%-48px)] max-w-[1400px] flex-nowrap gap-x-4 pt-8 pb-12">
+        <div className="mx-auto flex w-full max-w-screen-2xl flex-nowrap gap-x-4 px-6 pt-8 pb-12">
           {group.sections.map((section) => (
-            <div key={section.title} className="w-[250px] min-w-0">
+            <div key={section.title} className="w-64 min-w-0">
               <h3 className="mb-3 font-mono text-xs leading-none font-medium text-neutral-500 uppercase">
                 {section.title}
               </h3>
@@ -114,7 +114,7 @@ function HeaderDropdown({ group }: { group: NavGroup }) {
                       aria-label={getLinkAriaLabel(item)}
                       {...getLinkProps(item)}
                       className={cn(
-                        "inline-flex h-[34px] w-full max-w-full items-center gap-2 rounded-sm py-[3px] text-sm leading-5 text-neutral-900 transition-colors duration-150 ease-out hover:text-black focus-visible:text-black motion-reduce:transition-none",
+                        "inline-flex h-8 w-full max-w-full items-center gap-2 rounded-sm py-1 text-sm leading-5 text-neutral-900 transition-colors duration-150 ease-out hover:text-black focus-visible:text-black motion-reduce:transition-none",
                         focusRing,
                       )}
                     >

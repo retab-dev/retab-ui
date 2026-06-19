@@ -1,78 +1,80 @@
-"use client"
+"use client";
 
-import React from "react"
-import type { JSONSchema7 } from "json-schema"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { getFixedGridRowStyle } from "@/components/ui/fixed-grid-row-style"
-import { TableRow } from "@/components/ui/table"
-import { EditableJsonTableCell } from "@/components/json-table/editable-json-table-cell"
-import type { JsonTableCellCommitHandler } from "@/components/json-table/json-table-cell-commit"
+import React from "react";
+import type { JSONSchema7 } from "json-schema";
+
+import { getFixedGridRowStyle } from "@/components/ui/fixed-grid-row-style";
+import { TableRow } from "@/components/ui/table";
+import { EditableJsonTableCell } from "@/components/json-table/editable-json-table-cell";
+import type { JsonTableCellCommitHandler } from "@/components/json-table/json-table-cell-commit";
 import type {
   JsonTableCellCommitProps,
   JsonTableCellHoverProps,
   JsonTableCellProps,
   JsonTablePrimitiveEditingProps,
   JsonTableStructuredEditingProps,
-} from "@/components/json-table/json-table-cell-types"
-import type { JsonTableStructuredEditSession } from "@/components/json-table/json-table-edit-session"
-import type { JsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
-import type { JsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
-import { recordJsonTableRender } from "@/components/json-table/json-table-profiler"
-import type { JsonTableRenderedColumnWindow } from "@/components/json-table/json-table-rendered-column-window"
-import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
-import type { TableDocument } from "@/components/json-table/lib/projects-types"
-import { ReadOnlyJsonTableCell } from "@/components/json-table/read-only-json-table-cell"
+} from "@/components/json-table/json-table-cell-types";
+import type { JsonTableStructuredEditSession } from "@/components/json-table/json-table-edit-session";
+import type { JsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store";
+import type { JsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store";
+import { recordJsonTableRender } from "@/components/json-table/json-table-profiler";
+import type { JsonTableRenderedColumnWindow } from "@/components/json-table/json-table-rendered-column-window";
+import type { ProjectedRow } from "@/components/json-table/lib/document-projection";
+import type { TableDocument } from "@/components/json-table/lib/projects-types";
+import { ReadOnlyJsonTableCell } from "@/components/json-table/read-only-json-table-cell";
 
 interface SingleFileFormRowProps {
-  document: TableDocument
-  schema: JSONSchema7
-  projectedRow?: ProjectedRow
-  renderedColumnWindow: JsonTableRenderedColumnWindow
+  document: TableDocument;
+  schema: JSONSchema7;
+  projectedRow?: ProjectedRow;
+  renderedColumnWindow: JsonTableRenderedColumnWindow;
   /** Which sub-row of the document this renders (set by the row virtualizer). */
-  rowIdx: number
-  rowTopPx: number
-  rowHeightPx: number
-  primitiveActiveCellStore: JsonTablePrimitiveActiveCellStore
-  primitiveEditStore: JsonTablePrimitiveEditStore
-  setPrimitiveActiveCell?: JsonTablePrimitiveEditingProps["setActiveCell"]
-  structuredEditSession?: JsonTableStructuredEditSession | null
-  startStructuredEditSession?: JsonTableStructuredEditingProps["startSession"]
-  setStructuredEditSessionOverlayOpen?: JsonTableStructuredEditingProps["setSessionOverlayOpen"]
-  closeStructuredEditSession?: JsonTableStructuredEditingProps["closeSession"]
-  onCellHoverStart?: JsonTableCellHoverProps["onStart"]
-  onCellHoverEnd?: JsonTableCellHoverProps["onEnd"]
-  onCellCommit: JsonTableCellCommitHandler
-  isJsonEditable: boolean
+  rowIdx: number;
+  rowTopPx: number;
+  rowHeightPx: number;
+  primitiveActiveCellStore: JsonTablePrimitiveActiveCellStore;
+  primitiveEditStore: JsonTablePrimitiveEditStore;
+  setPrimitiveActiveCell?: JsonTablePrimitiveEditingProps["setActiveCell"];
+  structuredEditSession?: JsonTableStructuredEditSession | null;
+  startStructuredEditSession?: JsonTableStructuredEditingProps["startSession"];
+  setStructuredEditSessionOverlayOpen?: JsonTableStructuredEditingProps["setSessionOverlayOpen"];
+  closeStructuredEditSession?: JsonTableStructuredEditingProps["closeSession"];
+  onCellHoverStart?: JsonTableCellHoverProps["onStart"];
+  onCellHoverEnd?: JsonTableCellHoverProps["onEnd"];
+  onCellCommit: JsonTableCellCommitHandler;
+  isJsonEditable: boolean;
 }
 
 function rowHasFieldPath(
   row: ProjectedRow | undefined,
-  path: string | null | undefined
+  path: string | null | undefined,
 ) {
   return Boolean(
-    path && row?.cells.some((cell) => cell?.materializedFieldPath === path)
-  )
+    path && row?.cells.some((cell) => cell?.materializedFieldPath === path),
+  );
 }
 
 function interactionPathsAffectRow(
   prev: SingleFileFormRowProps,
-  next: SingleFileFormRowProps
+  next: SingleFileFormRowProps,
 ) {
   const paths = [
     prev.structuredEditSession?.fieldPath,
     next.structuredEditSession?.fieldPath,
-  ]
+  ];
 
   return paths.some(
     (path) =>
       rowHasFieldPath(prev.projectedRow, path) ||
-      rowHasFieldPath(next.projectedRow, path)
-  )
+      rowHasFieldPath(next.projectedRow, path),
+  );
 }
 
 function areSingleFileFormRowPropsEqual(
   prev: SingleFileFormRowProps,
-  next: SingleFileFormRowProps
+  next: SingleFileFormRowProps,
 ) {
   if (
     prev.document.id !== next.document.id ||
@@ -94,10 +96,10 @@ function areSingleFileFormRowPropsEqual(
     prev.onCellCommit !== next.onCellCommit ||
     prev.isJsonEditable !== next.isJsonEditable
   ) {
-    return false
+    return false;
   }
 
-  return !interactionPathsAffectRow(prev, next)
+  return !interactionPathsAffectRow(prev, next);
 }
 
 export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
@@ -121,7 +123,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     onCellCommit,
     isJsonEditable,
   }) => {
-    const documentId = document.id
+    const documentId = document.id;
     recordJsonTableRender("SingleFileFormRow", String(rowIdx), {
       cellCount: projectedRow?.cells.length ?? 0,
       primitiveActiveFieldPath:
@@ -130,12 +132,12 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
       isJsonEditable,
       rowIdx,
       rowTopPx,
-    })
-    const rowRef = React.useRef<HTMLTableRowElement>(null)
+    });
+    const rowRef = React.useRef<HTMLTableRowElement>(null);
     React.useLayoutEffect(() => {
-      const rowElement = rowRef.current
-      if (rowElement?.hidden) rowElement.hidden = false
-    }, [rowIdx, rowTopPx])
+      const rowElement = rowRef.current;
+      if (rowElement?.hidden) rowElement.hidden = false;
+    }, [rowIdx, rowTopPx]);
 
     // Render a single sub-row (one of the document's `rowCount` rows). Which
     // rows are mounted is decided by the row virtualizer in the parent.
@@ -150,16 +152,16 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
           rowHeight: rowHeightPx,
           top: rowTopPx,
         }),
-      [rowTopPx, rowHeightPx]
-    )
+      [rowTopPx, rowHeightPx],
+    );
     const primitiveEditing = React.useMemo<JsonTablePrimitiveEditingProps>(
       () => ({
         activeCellStore: primitiveActiveCellStore,
         editStore: primitiveEditStore,
         setActiveCell: setPrimitiveActiveCell,
       }),
-      [primitiveActiveCellStore, primitiveEditStore, setPrimitiveActiveCell]
-    )
+      [primitiveActiveCellStore, primitiveEditStore, setPrimitiveActiveCell],
+    );
     const structuredEditing = React.useMemo<JsonTableStructuredEditingProps>(
       () => ({
         session: structuredEditSession,
@@ -172,16 +174,16 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
         setStructuredEditSessionOverlayOpen,
         startStructuredEditSession,
         structuredEditSession,
-      ]
-    )
+      ],
+    );
     const commit = React.useMemo<JsonTableCellCommitProps>(
       () => ({ onCommit: onCellCommit }),
-      [onCellCommit]
-    )
+      [onCellCommit],
+    );
     const hover = React.useMemo<JsonTableCellHoverProps>(
       () => ({ onStart: onCellHoverStart, onEnd: onCellHoverEnd }),
-      [onCellHoverEnd, onCellHoverStart]
-    )
+      [onCellHoverEnd, onCellHoverStart],
+    );
 
     return (
       <TableRow
@@ -189,18 +191,18 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
         aria-rowindex={rowIdx + 1}
         data-index={rowIdx}
         data-slot="json-table-row"
-        className="flex w-full border-b-0 border-border bg-transparent hover:bg-muted/50"
+        className="border-border hover:bg-muted/50 flex w-full border-b-0 bg-transparent"
         style={rowStyle}
       >
         {/* Data cells */}
         <ColumnSpacer widthPx={renderedColumnWindow.leftPadWidthPx} />
         {renderedColumnWindow.columns.map((column, colIdx) => {
           const projectedCellIndex =
-            renderedColumnWindow.projectedCellIndexes[colIdx]
+            renderedColumnWindow.projectedCellIndexes[colIdx];
           const projectedCell =
             projectedCellIndex === undefined
               ? undefined
-              : projectedRow?.cells[projectedCellIndex]
+              : projectedRow?.cells[projectedCellIndex];
 
           const cellProps: JsonTableCellProps = {
             cellProjection: {
@@ -216,24 +218,24 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
             structuredEditing,
             commit,
             hover,
-          }
+          };
 
           return isJsonEditable ? (
             <EditableJsonTableCell key={column.key} {...cellProps} />
           ) : (
             <ReadOnlyJsonTableCell key={column.key} {...cellProps} />
-          )
+          );
         })}
         <ColumnSpacer widthPx={renderedColumnWindow.rightPadWidthPx} />
       </TableRow>
-    )
+    );
   },
-  areSingleFileFormRowPropsEqual
-)
-SingleFileFormRow.displayName = "SingleFileFormRow"
+  areSingleFileFormRowPropsEqual,
+);
+SingleFileFormRow.displayName = "SingleFileFormRow";
 
 function ColumnSpacer({ widthPx }: { widthPx: number }) {
-  if (!Number.isFinite(widthPx) || widthPx <= 0) return null
+  if (!Number.isFinite(widthPx) || widthPx <= 0) return null;
 
   return (
     <td
@@ -243,5 +245,5 @@ function ColumnSpacer({ widthPx }: { widthPx: number }) {
       role="presentation"
       style={{ width: widthPx, minWidth: widthPx }}
     />
-  )
+  );
 }

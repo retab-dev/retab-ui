@@ -1,34 +1,34 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { getFixedGridRowWindowStyle } from "@/components/ui/fixed-grid-layout"
-import { useFixedRowVirtualization } from "@/components/ui/fixed-grid-virtualization"
-import { joinJsonFormPath } from "@/components/json-form/path-codec"
+import { getFixedGridRowWindowStyle } from "@/components/ui/fixed-grid-layout";
+import { useFixedRowVirtualization } from "@/components/ui/fixed-grid-virtualization";
+import { joinJsonFormPath } from "@/components/json-form/path-codec";
 import {
   TABLE_JUMP_ROW_OVERSCAN,
   TABLE_MAX_HEIGHT,
   TABLE_ROW_HEIGHT,
   TABLE_ROW_OVERSCAN,
-} from "@/components/json-form/table/array-table-config"
+} from "@/components/json-form/table/array-table-config";
 import {
   useArrayTableScrollActivity,
   type ArrayTableScrollHandlers,
-} from "@/components/json-form/table/array-table-scroll"
+} from "@/components/json-form/table/array-table-scroll";
 
-type ArrayTableField = { id: string }
+type ArrayTableField = { id: string };
 
 export function StaticArrayTableBody({
   fields,
   scrollHandlers,
   renderItem,
 }: {
-  fields: ArrayTableField[]
-  scrollHandlers: ArrayTableScrollHandlers
-  renderItem: (index: number) => React.ReactNode
+  fields: ArrayTableField[];
+  scrollHandlers: ArrayTableScrollHandlers;
+  renderItem: (index: number) => React.ReactNode;
 }) {
-  const scrollRef = React.useRef<HTMLDivElement>(null)
-  useArrayTableScrollActivity(scrollRef, scrollHandlers)
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  useArrayTableScrollActivity(scrollRef, scrollHandlers);
 
   return (
     <div
@@ -43,7 +43,7 @@ export function StaticArrayTableBody({
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 export function FixedArrayTableBody({
@@ -53,21 +53,21 @@ export function FixedArrayTableBody({
   scrollHandlers,
   renderItem,
 }: {
-  name: string
-  fields: ArrayTableField[]
-  activeEditorPath: string | null
-  scrollHandlers: ArrayTableScrollHandlers
-  renderItem: (index: number, rowTopPx: number) => React.ReactNode
+  name: string;
+  fields: ArrayTableField[];
+  activeEditorPath: string | null;
+  scrollHandlers: ArrayTableScrollHandlers;
+  renderItem: (index: number, rowTopPx: number) => React.ReactNode;
 }) {
-  const scrollRef = React.useRef<HTMLDivElement>(null)
+  const scrollRef = React.useRef<HTMLDivElement>(null);
   const { virtualRows, totalRowSize } = useFixedRowVirtualization({
     rowCount: fields.length,
     rowSize: TABLE_ROW_HEIGHT,
     rowOverscan: TABLE_ROW_OVERSCAN,
     jumpRowOverscan: TABLE_JUMP_ROW_OVERSCAN,
     scrollRef,
-  })
-  useArrayTableScrollActivity(scrollRef, scrollHandlers)
+  });
+  useArrayTableScrollActivity(scrollRef, scrollHandlers);
 
   return (
     <div
@@ -85,8 +85,8 @@ export function FixedArrayTableBody({
       >
         {virtualRows.map((virtualRow, slotIndex) => {
           const isEditingRow = activeEditorPath?.startsWith(
-            `${joinJsonFormPath(name, virtualRow.index)}.`
-          )
+            `${joinJsonFormPath(name, virtualRow.index)}.`,
+          );
           return (
             <React.Fragment
               key={
@@ -95,9 +95,9 @@ export function FixedArrayTableBody({
             >
               {renderItem(virtualRow.index, virtualRow.start)}
             </React.Fragment>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }

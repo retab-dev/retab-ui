@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/ui/fixed-grid-columns"
+export * from "@/registry/new-york-v4/ui/fixed-grid-columns";

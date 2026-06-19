@@ -1,22 +1,20 @@
-import type { DataCellValueMeta } from "@/registry/new-york-v4/ui/data-cell-types"
+import type { DataCellValueMeta } from "@/registry/new-york-v4/ui/data-cell-types";
 
 export type DataCellBooleanCommitHandler = (
   value: boolean,
-  meta: DataCellValueMeta
-) => void
+  meta: DataCellValueMeta,
+) => void;
 
 export function commitDataCellBooleanToggle(
   value: boolean | null | undefined,
-  onCommit: DataCellBooleanCommitHandler | undefined
+  onCommit: DataCellBooleanCommitHandler | undefined,
 ) {
-  const nextValue = nextDataCellBooleanValue(value)
-  onCommit?.(nextValue, dataCellBooleanValueMeta(nextValue))
+  const nextValue = nextDataCellBooleanValue(value);
+  onCommit?.(nextValue, dataCellBooleanValueMeta(nextValue));
 }
 
-export function nextDataCellBooleanValue(
-  value: boolean | null | undefined
-) {
-  return !Boolean(value)
+export function nextDataCellBooleanValue(value: boolean | null | undefined) {
+  return !Boolean(value);
 }
 
 export function dataCellBooleanValueMeta(value: boolean): DataCellValueMeta {
@@ -25,5 +23,5 @@ export function dataCellBooleanValueMeta(value: boolean): DataCellValueMeta {
     rawValue: String(value),
     isEmpty: false,
     isValid: true,
-  }
+  };
 }

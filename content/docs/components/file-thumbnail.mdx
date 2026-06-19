@@ -21,12 +21,12 @@ npx shadcn@latest add @retab/file-thumbnail
 ## Usage
 
 ```tsx
-import { FileThumbnail } from "@/components/ui/file-thumbnail"
+import { FileThumbnail } from "@/components/ui/file-thumbnail";
 
 export function PdfThumbnail({ file }: { file: File }) {
   return (
     <FileThumbnail file={file} thumbnailShape="square" thumbnailSize="md" />
-  )
+  );
 }
 
 export function UrlThumbnail() {
@@ -41,7 +41,7 @@ export function UrlThumbnail() {
       thumbnailShape="square"
       thumbnailSize="md"
     />
-  )
+  );
 }
 ```
 
@@ -49,8 +49,9 @@ export function UrlThumbnail() {
 
 `FileThumbnail` renders supported documents to their first unit: page 1 for PDF
 and DOCX, the first sheet for XLSX, the first slide for PPTX, the first TIFF
-frame, or the head of CSV, text, markdown, and HTML files. Images render
-directly. Unsupported files fall back to the compact extension surface.
+frame, the HTML body for MSG emails, or the head of CSV, text, markdown, and
+HTML files. Images render directly. Unsupported files fall back to the compact
+extension surface.
 
 <ComponentPreview name="file-thumbnail-demo" />
 

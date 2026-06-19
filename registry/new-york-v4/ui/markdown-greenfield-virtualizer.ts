@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import type { MarkdownGreenfieldChunk } from "./markdown-greenfield-document"
-import type { MarkdownGreenfieldChunkFrame } from "./markdown-greenfield-layout"
+import type { MarkdownGreenfieldChunk } from "./markdown-greenfield-document";
+import type { MarkdownGreenfieldChunkFrame } from "./markdown-greenfield-layout";
 
 export type MarkdownGreenfieldScrollAnchor = {
-  chunkId: string
+  chunkId: string;
   /** Negative when the viewport is in document padding before the chunk. */
-  offsetWithinChunkPx: number
-  chunkHeightPx: number
-}
+  offsetWithinChunkPx: number;
+  chunkHeightPx: number;
+};
 
 export function getMarkdownGreenfieldVisibleFrames({
   frames,
@@ -16,55 +16,55 @@ export function getMarkdownGreenfieldVisibleFrames({
   scrollTop,
   viewportHeight,
 }: {
-  frames: readonly MarkdownGreenfieldChunkFrame[]
-  overscanPx: number
-  scrollTop: number
-  viewportHeight: number
+  frames: readonly MarkdownGreenfieldChunkFrame[];
+  overscanPx: number;
+  scrollTop: number;
+  viewportHeight: number;
 }) {
-  if (!frames.length) return []
+  if (!frames.length) return [];
   const start = firstFrameWithBottomAfter(
     frames,
-    Math.max(0, scrollTop - overscanPx)
-  )
+    Math.max(0, scrollTop - overscanPx),
+  );
   const end = firstFrameWithTopAtOrAfter(
     frames,
-    scrollTop + viewportHeight + overscanPx
-  )
-  return frames.slice(start, Math.max(start + 1, end))
+    scrollTop + viewportHeight + overscanPx,
+  );
+  return frames.slice(start, Math.max(start + 1, end));
 }
 
 export function getMarkdownGreenfieldScrollAnchor({
   frames,
   scrollTop,
 }: {
-  frames: readonly MarkdownGreenfieldChunkFrame[]
-  scrollTop: number
+  frames: readonly MarkdownGreenfieldChunkFrame[];
+  scrollTop: number;
 }): MarkdownGreenfieldScrollAnchor | null {
-  if (!frames.length) return null
+  if (!frames.length) return null;
   const frame =
     frames[
       Math.min(firstFrameWithBottomAfter(frames, scrollTop), frames.length - 1)
-    ]
-  if (!frame) return null
+    ];
+  if (!frame) return null;
 
   return {
     chunkId: frame.id,
     chunkHeightPx: frame.height,
     offsetWithinChunkPx: scrollTop - frame.top,
-  }
+  };
 }
 
 export function resolveMarkdownGreenfieldScrollAnchor({
   anchor,
   frames,
 }: {
-  anchor: MarkdownGreenfieldScrollAnchor
-  frames: readonly MarkdownGreenfieldChunkFrame[]
+  anchor: MarkdownGreenfieldScrollAnchor;
+  frames: readonly MarkdownGreenfieldChunkFrame[];
 }) {
-  const frame = frames.find((item) => item.id === anchor.chunkId)
-  if (!frame) return null
+  const frame = frames.find((item) => item.id === anchor.chunkId);
+  if (!frame) return null;
   if (anchor.offsetWithinChunkPx < 0) {
-    return Math.max(0, frame.top + anchor.offsetWithinChunkPx)
+    return Math.max(0, frame.top + anchor.offsetWithinChunkPx);
   }
   // Preserve the position *within* the anchored chunk proportionally. When the
   // chunk keeps its height this reduces to the original pixel offset; when an
@@ -75,10 +75,10 @@ export function resolveMarkdownGreenfieldScrollAnchor({
     anchor.chunkHeightPx > 0
       ? Math.min(
           1,
-          Math.max(0, anchor.offsetWithinChunkPx / anchor.chunkHeightPx)
+          Math.max(0, anchor.offsetWithinChunkPx / anchor.chunkHeightPx),
         )
-      : 0
-  return frame.top + fraction * frame.height
+      : 0;
+  return frame.top + fraction * frame.height;
 }
 
 export function getMarkdownGreenfieldScrollTopForLineRange({
@@ -91,34 +91,38 @@ export function getMarkdownGreenfieldScrollTopForLineRange({
   chunks: readonly Pick<
     MarkdownGreenfieldChunk,
     "id" | "index" | "sourceEndLine" | "sourceStartLine"
-  >[]
-  frames: readonly MarkdownGreenfieldChunkFrame[]
-  preferredChunkId?: string | null
-  range: { end: number; start: number } | null
-  viewportHeight: number
+  >[];
+  frames: readonly MarkdownGreenfieldChunkFrame[];
+  preferredChunkId?: string | null;
+  range: { end: number; start: number } | null;
+  viewportHeight: number;
 }) {
-  if (!range) return null
+  if (!range) return null;
   const preferredChunk =
     preferredChunkId == null
       ? null
-      : chunks.find((item) => item.id === preferredChunkId)
+      : chunks.find((item) => item.id === preferredChunkId);
   const chunk =
     preferredChunk ??
     chunks.find(
       (item) =>
-        item.sourceStartLine <= range.start && item.sourceEndLine >= range.start
+        item.sourceStartLine <= range.start &&
+        item.sourceEndLine >= range.start,
     ) ??
-    chunks[0]
+    chunks[0];
   const frame = chunk
     ? frames.find((candidate) => candidate.index === chunk.index)
-    : null
-  if (!frame) return null
+    : null;
+  if (!frame) return null;
 
-  const lineCount = Math.max(1, frame.sourceEndLine - frame.sourceStartLine + 1)
+  const lineCount = Math.max(
+    1,
+    frame.sourceEndLine - frame.sourceStartLine + 1,
+  );
   const lineOffset =
     (Math.max(0, range.start - frame.sourceStartLine) / lineCount) *
-      frame.height || 0
-  return Math.max(0, frame.top + lineOffset - viewportHeight * 0.25)
+      frame.height || 0;
+  return Math.max(0, frame.top + lineOffset - viewportHeight * 0.25);
 }
 
 export function getMarkdownGreenfieldSourceLineForScrollTop({
@@ -129,50 +133,56 @@ export function getMarkdownGreenfieldSourceLineForScrollTop({
   chunks: readonly Pick<
     MarkdownGreenfieldChunk,
     "index" | "sourceEndLine" | "sourceStartLine"
-  >[]
-  frames: readonly MarkdownGreenfieldChunkFrame[]
-  scrollTop: number
+  >[];
+  frames: readonly MarkdownGreenfieldChunkFrame[];
+  scrollTop: number;
 }) {
-  if (!frames.length) return 1
+  if (!frames.length) return 1;
   const frame =
     frames[
       Math.min(firstFrameWithBottomAfter(frames, scrollTop), frames.length - 1)
-    ]
-  if (!frame) return 1
-  const chunk = chunks.find((item) => item.index === frame.index)
-  if (!chunk) return frame.sourceStartLine
-  const lineCount = Math.max(1, chunk.sourceEndLine - chunk.sourceStartLine + 1)
-  const ratio = Math.max(0, Math.min(1, (scrollTop - frame.top) / frame.height))
+    ];
+  if (!frame) return 1;
+  const chunk = chunks.find((item) => item.index === frame.index);
+  if (!chunk) return frame.sourceStartLine;
+  const lineCount = Math.max(
+    1,
+    chunk.sourceEndLine - chunk.sourceStartLine + 1,
+  );
+  const ratio = Math.max(
+    0,
+    Math.min(1, (scrollTop - frame.top) / frame.height),
+  );
   return (
     chunk.sourceStartLine +
     Math.min(lineCount - 1, Math.floor(ratio * lineCount))
-  )
+  );
 }
 
 function firstFrameWithBottomAfter(
   frames: readonly MarkdownGreenfieldChunkFrame[],
-  y: number
+  y: number,
 ) {
-  let low = 0
-  let high = frames.length
+  let low = 0;
+  let high = frames.length;
   while (low < high) {
-    const mid = Math.floor((low + high) / 2)
-    if (frames[mid]!.bottom > y) high = mid
-    else low = mid + 1
+    const mid = Math.floor((low + high) / 2);
+    if (frames[mid]!.bottom > y) high = mid;
+    else low = mid + 1;
   }
-  return low
+  return low;
 }
 
 function firstFrameWithTopAtOrAfter(
   frames: readonly MarkdownGreenfieldChunkFrame[],
-  y: number
+  y: number,
 ) {
-  let low = 0
-  let high = frames.length
+  let low = 0;
+  let high = frames.length;
   while (low < high) {
-    const mid = Math.floor((low + high) / 2)
-    if (frames[mid]!.top >= y) high = mid
-    else low = mid + 1
+    const mid = Math.floor((low + high) / 2);
+    if (frames[mid]!.top >= y) high = mid;
+    else low = mid + 1;
   }
-  return low
+  return low;
 }

@@ -1,43 +1,43 @@
-import type * as React from "react"
+import type * as React from "react";
 
 import {
   type DataCellProps,
   type DataCellValueMeta,
-} from "@/components/ui/data-cell"
-import { jsonTableCommitValue } from "@/components/json-table/json-table-commit-value"
+} from "@/components/ui/data-cell";
+import { jsonTableCommitValue } from "@/components/json-table/json-table-commit-value";
 import {
   jsonTableDataCellClass,
   jsonTableSelectDataCellClass,
-} from "@/components/json-table/json-table-data-cell-classes"
+} from "@/components/json-table/json-table-data-cell-classes";
 import {
   jsonTableBooleanDataCellValue,
   jsonTableJsonText,
   jsonTableNumberDataCellValue,
   jsonTableTextDataCellValue,
-} from "@/components/json-table/json-table-data-cell-value"
-import { jsonTableDateDisplayText } from "@/components/json-table/json-table-display-value"
-import { jsonTablePrimitiveKind } from "@/components/json-table/json-table-primitive-kind"
+} from "@/components/json-table/json-table-data-cell-value";
+import { jsonTableDateDisplayText } from "@/components/json-table/json-table-display-value";
+import { jsonTablePrimitiveKind } from "@/components/json-table/json-table-primitive-kind";
 import {
   jsonTableSelectDisplayText,
   jsonTableSelectOptions,
   jsonTableSelectValue,
-} from "@/components/json-table/json-table-select-options"
-import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
+} from "@/components/json-table/json-table-select-options";
+import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata";
 
-type TextDataCellKind = "text" | "date" | "time" | "date-time"
+type TextDataCellKind = "text" | "date" | "time" | "date-time";
 
 type ShellProps = {
-  active?: boolean
-  autoFocus?: boolean
-  editable: boolean
-  onActiveChange?: (active: boolean) => void
-  onEditingEnd?: () => void
-  onKeyDown?: React.KeyboardEventHandler<HTMLElement>
-}
+  active?: boolean;
+  autoFocus?: boolean;
+  editable: boolean;
+  onActiveChange?: (active: boolean) => void;
+  onEditingEnd?: () => void;
+  onKeyDown?: React.KeyboardEventHandler<HTMLElement>;
+};
 
-type CommitJsonValue = (value: unknown, meta: DataCellValueMeta) => void
+type CommitJsonValue = (value: unknown, meta: DataCellValueMeta) => void;
 
-type JsonCommitValue = string | number | boolean | null
+type JsonCommitValue = string | number | boolean | null;
 
 export function createJsonTableDataCellProps({
   active,
@@ -51,16 +51,16 @@ export function createJsonTableDataCellProps({
   onOpenChange,
   value,
 }: {
-  active?: boolean
-  autoFocus?: boolean
-  fieldMetadata: FieldMetadata
-  isEditable?: boolean
-  onActiveChange?: (active: boolean) => void
-  onCommit?: CommitJsonValue
-  onEditingEnd?: () => void
-  onKeyDown?: React.KeyboardEventHandler<HTMLElement>
-  onOpenChange?: (open: boolean) => void
-  value: unknown
+  active?: boolean;
+  autoFocus?: boolean;
+  fieldMetadata: FieldMetadata;
+  isEditable?: boolean;
+  onActiveChange?: (active: boolean) => void;
+  onCommit?: CommitJsonValue;
+  onEditingEnd?: () => void;
+  onKeyDown?: React.KeyboardEventHandler<HTMLElement>;
+  onOpenChange?: (open: boolean) => void;
+  value: unknown;
 }): DataCellProps {
   const shellProps: ShellProps = {
     editable: isEditable,
@@ -69,9 +69,9 @@ export function createJsonTableDataCellProps({
     onEditingEnd,
     onActiveChange,
     onKeyDown,
-  }
+  };
 
-  const primitiveKind = jsonTablePrimitiveKind(fieldMetadata)
+  const primitiveKind = jsonTablePrimitiveKind(fieldMetadata);
 
   if (primitiveKind === "select") {
     return selectDataCellProps({
@@ -80,7 +80,7 @@ export function createJsonTableDataCellProps({
       onCommit,
       onOpenChange,
       shellProps,
-    })
+    });
   }
 
   if (primitiveKind === "number" || primitiveKind === "integer") {
@@ -89,7 +89,7 @@ export function createJsonTableDataCellProps({
       kind: primitiveKind,
       onCommit,
       shellProps,
-    })
+    });
   }
 
   if (primitiveKind === "boolean") {
@@ -98,7 +98,7 @@ export function createJsonTableDataCellProps({
       jsonValue: value,
       onCommit,
       shellProps,
-    })
+    });
   }
 
   if (primitiveKind) {
@@ -109,7 +109,7 @@ export function createJsonTableDataCellProps({
       onCommit,
       onOpenChange,
       shellProps,
-    })
+    });
   }
 
   return fallbackTextDataCellProps({
@@ -117,16 +117,16 @@ export function createJsonTableDataCellProps({
     jsonValue: value,
     onCommit,
     shellProps,
-  })
+  });
 }
 
 function jsonTableDataCellCommitHandler<CommitValue>(
   toJsonValue: (dataCellValue: CommitValue) => unknown,
-  onCommit?: CommitJsonValue
+  onCommit?: CommitJsonValue,
 ) {
   return (dataCellValue: CommitValue, meta: DataCellValueMeta) => {
-    onCommit?.(toJsonValue(dataCellValue), meta)
-  }
+    onCommit?.(toJsonValue(dataCellValue), meta);
+  };
 }
 
 function jsonTableDataCellJsonCommitHandler<
@@ -135,8 +135,8 @@ function jsonTableDataCellJsonCommitHandler<
   return jsonTableDataCellCommitHandler(
     (commitValue: CommitValue) =>
       jsonTableCommitValue({ fieldMetadata, commitValue }),
-    onCommit
-  )
+    onCommit,
+  );
 }
 
 function selectDataCellProps({
@@ -146,11 +146,11 @@ function selectDataCellProps({
   onOpenChange,
   shellProps,
 }: {
-  fieldMetadata: FieldMetadata
-  jsonValue: unknown
-  onCommit?: CommitJsonValue
-  onOpenChange?: (open: boolean) => void
-  shellProps: ShellProps
+  fieldMetadata: FieldMetadata;
+  jsonValue: unknown;
+  onCommit?: CommitJsonValue;
+  onOpenChange?: (open: boolean) => void;
+  shellProps: ShellProps;
 }): DataCellProps {
   return {
     ...shellProps,
@@ -173,9 +173,9 @@ function selectDataCellProps({
         dataCellValue === null
           ? null
           : jsonTableCommitValue({ fieldMetadata, commitValue: dataCellValue }),
-      onCommit
+      onCommit,
     ),
-  }
+  };
 }
 
 function numberDataCellProps({
@@ -184,10 +184,10 @@ function numberDataCellProps({
   onCommit,
   shellProps,
 }: {
-  jsonValue: unknown
-  kind: "number" | "integer"
-  onCommit?: CommitJsonValue
-  shellProps: ShellProps
+  jsonValue: unknown;
+  kind: "number" | "integer";
+  onCommit?: CommitJsonValue;
+  shellProps: ShellProps;
 }): DataCellProps {
   return {
     ...shellProps,
@@ -196,9 +196,9 @@ function numberDataCellProps({
     className: jsonTableDataCellClass,
     onCommit: jsonTableDataCellCommitHandler(
       (dataCellValue) => dataCellValue,
-      onCommit
+      onCommit,
     ),
-  }
+  };
 }
 
 function booleanDataCellProps({
@@ -207,10 +207,10 @@ function booleanDataCellProps({
   onCommit,
   shellProps,
 }: {
-  fieldMetadata: FieldMetadata
-  jsonValue: unknown
-  onCommit?: CommitJsonValue
-  shellProps: ShellProps
+  fieldMetadata: FieldMetadata;
+  jsonValue: unknown;
+  onCommit?: CommitJsonValue;
+  shellProps: ShellProps;
 }): DataCellProps {
   return {
     ...shellProps,
@@ -218,7 +218,7 @@ function booleanDataCellProps({
     value: jsonTableBooleanDataCellValue(jsonValue),
     className: jsonTableDataCellClass,
     onCommit: jsonTableDataCellJsonCommitHandler(fieldMetadata, onCommit),
-  }
+  };
 }
 
 function textDataCellProps({
@@ -229,12 +229,12 @@ function textDataCellProps({
   onOpenChange,
   shellProps,
 }: {
-  fieldMetadata: FieldMetadata
-  jsonValue: unknown
-  kind: TextDataCellKind
-  onCommit?: CommitJsonValue
-  onOpenChange?: (open: boolean) => void
-  shellProps: ShellProps
+  fieldMetadata: FieldMetadata;
+  jsonValue: unknown;
+  kind: TextDataCellKind;
+  onCommit?: CommitJsonValue;
+  onOpenChange?: (open: boolean) => void;
+  shellProps: ShellProps;
 }): DataCellProps {
   if (kind === "text") {
     return {
@@ -243,7 +243,7 @@ function textDataCellProps({
       value: jsonTableTextDataCellValue(jsonValue),
       className: jsonTableDataCellClass,
       onCommit: jsonTableDataCellJsonCommitHandler(fieldMetadata, onCommit),
-    }
+    };
   }
 
   return {
@@ -259,7 +259,7 @@ function textDataCellProps({
     showPickerIcon: false,
     onOpenChange,
     onCommit: jsonTableDataCellJsonCommitHandler(fieldMetadata, onCommit),
-  }
+  };
 }
 
 function fallbackTextDataCellProps({
@@ -268,10 +268,10 @@ function fallbackTextDataCellProps({
   onCommit,
   shellProps,
 }: {
-  fieldMetadata: FieldMetadata
-  jsonValue: unknown
-  onCommit?: CommitJsonValue
-  shellProps: ShellProps
+  fieldMetadata: FieldMetadata;
+  jsonValue: unknown;
+  onCommit?: CommitJsonValue;
+  shellProps: ShellProps;
 }): DataCellProps {
   return {
     ...shellProps,
@@ -279,5 +279,5 @@ function fallbackTextDataCellProps({
     value: jsonTableJsonText(jsonValue),
     className: jsonTableDataCellClass,
     onCommit: jsonTableDataCellJsonCommitHandler(fieldMetadata, onCommit),
-  }
+  };
 }

@@ -1,8 +1,10 @@
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
+
 // @vitest-environment jsdom
 
-import { existsSync } from "node:fs"
-import { join } from "node:path"
-import * as React from "react"
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import * as React from "react";
 import {
   act,
   cleanup,
@@ -10,8 +12,8 @@ import {
   render,
   screen,
   waitFor,
-} from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+} from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   useViewerSidebar,
@@ -22,17 +24,17 @@ import {
   ViewerSidebar,
   ViewerSidebarTrigger,
   ViewerSurface,
-} from "@/registry/new-york-v4/ui/viewer"
+} from "@/registry/new-york-v4/ui/viewer";
 
 afterEach(() => {
-  cleanup()
-})
+  cleanup();
+});
 
-const repoRoot = process.cwd()
+const repoRoot = process.cwd();
 
 function mockElementRect(
   element: Element,
-  rect: Pick<DOMRect, "bottom" | "height" | "left" | "right" | "top" | "width">
+  rect: Pick<DOMRect, "bottom" | "height" | "left" | "right" | "top" | "width">,
 ) {
   element.getBoundingClientRect = vi.fn(
     () =>
@@ -41,8 +43,8 @@ function mockElementRect(
         x: rect.left,
         y: rect.top,
         toJSON: () => ({}),
-      }) as DOMRect
-  )
+      }) as DOMRect,
+  );
 }
 
 describe("viewer primitives", () => {
@@ -54,47 +56,47 @@ describe("viewer primitives", () => {
           <ViewerSidebar>Sidebar</ViewerSidebar>
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
-    expect(container.querySelector('[data-slot="viewer-root"]')).toBeTruthy()
+    expect(container.querySelector('[data-slot="viewer-root"]')).toBeTruthy();
     expect(
-      container.querySelector('[data-slot="viewer-header"]')?.textContent
-    ).toBe("Header")
-    expect(container.querySelector('[data-slot="viewer-body"]')).toBeTruthy()
+      container.querySelector('[data-slot="viewer-header"]')?.textContent,
+    ).toBe("Header");
+    expect(container.querySelector('[data-slot="viewer-body"]')).toBeTruthy();
     expect(
-      container.querySelector('[data-slot="viewer-sidebar"]')?.textContent
-    ).toBe("Sidebar")
+      container.querySelector('[data-slot="viewer-sidebar"]')?.textContent,
+    ).toBe("Sidebar");
     expect(
       container
         .querySelector('[data-slot="viewer-sidebar"]')
-        ?.getAttribute("data-viewer-sidebar-mode")
-    ).toBe("overlay")
+        ?.getAttribute("data-viewer-sidebar-mode"),
+    ).toBe("overlay");
     expect(
-      container.querySelector('[data-slot="viewer-surface"]')?.textContent
-    ).toBe("Surface")
-  })
+      container.querySelector('[data-slot="viewer-surface"]')?.textContent,
+    ).toBe("Surface");
+  });
 
   it("defaults the sidebar mode to responsive auto", async () => {
-    const originalResizeObserver = globalThis.ResizeObserver
-    const originalWindowResizeObserver = window.ResizeObserver
+    const originalResizeObserver = globalThis.ResizeObserver;
+    const originalWindowResizeObserver = window.ResizeObserver;
     const originalGetBoundingClientRect =
-      HTMLElement.prototype.getBoundingClientRect
-    const callbacks: ResizeObserverCallback[] = []
-    let width = 1024
+      HTMLElement.prototype.getBoundingClientRect;
+    const callbacks: ResizeObserverCallback[] = [];
+    let width = 1024;
 
     class MockResizeObserver {
       constructor(callback: ResizeObserverCallback) {
-        callbacks.push(callback)
+        callbacks.push(callback);
       }
       observe() {}
       disconnect() {}
     }
 
     globalThis.ResizeObserver =
-      MockResizeObserver as unknown as typeof ResizeObserver
+      MockResizeObserver as unknown as typeof ResizeObserver;
     window.ResizeObserver =
-      MockResizeObserver as unknown as typeof ResizeObserver
+      MockResizeObserver as unknown as typeof ResizeObserver;
     HTMLElement.prototype.getBoundingClientRect = function () {
       return {
         bottom: 0,
@@ -106,12 +108,12 @@ describe("viewer primitives", () => {
         width,
         x: 0,
         y: 0,
-      }
-    }
+      };
+    };
 
     function ModeProbe() {
-      const sidebar = useViewerSidebar()
-      return <div data-testid="mode">{sidebar.mode}</div>
+      const sidebar = useViewerSidebar();
+      return <div data-testid="mode">{sidebar.mode}</div>;
     }
 
     try {
@@ -122,26 +124,26 @@ describe("viewer primitives", () => {
             <ViewerSidebar>Sidebar</ViewerSidebar>
             <ViewerSurface>Surface</ViewerSurface>
           </ViewerBody>
-        </ViewerRoot>
-      )
+        </ViewerRoot>,
+      );
 
       await waitFor(() => {
-        expect(screen.getByTestId("mode").textContent).toBe("inline")
-      })
+        expect(screen.getByTestId("mode").textContent).toBe("inline");
+      });
 
-      width = 320
+      width = 320;
       act(() => {
-        callbacks.forEach((callback) => callback([], {} as ResizeObserver))
-      })
+        callbacks.forEach((callback) => callback([], {} as ResizeObserver));
+      });
 
-      expect(screen.getByTestId("mode").textContent).toBe("overlay")
+      expect(screen.getByTestId("mode").textContent).toBe("overlay");
     } finally {
-      globalThis.ResizeObserver = originalResizeObserver
-      window.ResizeObserver = originalWindowResizeObserver
+      globalThis.ResizeObserver = originalResizeObserver;
+      window.ResizeObserver = originalWindowResizeObserver;
       HTMLElement.prototype.getBoundingClientRect =
-        originalGetBoundingClientRect
+        originalGetBoundingClientRect;
     }
-  })
+  });
 
   it("keeps ViewerRoot unframed and exposes ViewerFrame for visible chrome", () => {
     render(
@@ -149,14 +151,14 @@ describe("viewer primitives", () => {
         <ViewerBody>
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
-    expect(screen.getByTestId("root").className).not.toContain("rounded-xl")
-    expect(screen.getByTestId("root").className).not.toContain("border")
-    expect(screen.getByTestId("root").className).not.toContain("bg-muted")
+    expect(screen.getByTestId("root").className).not.toContain("rounded-xl");
+    expect(screen.getByTestId("root").className).not.toContain("border");
+    expect(screen.getByTestId("root").className).not.toContain("bg-muted");
 
-    cleanup()
+    cleanup();
 
     render(
       <ViewerFrame data-testid="frame">
@@ -165,14 +167,14 @@ describe("viewer primitives", () => {
             <ViewerSurface>Surface</ViewerSurface>
           </ViewerBody>
         </ViewerRoot>
-      </ViewerFrame>
-    )
+      </ViewerFrame>,
+    );
 
-    expect(screen.getByTestId("frame").className).toContain("rounded-xl")
-    expect(screen.getByTestId("frame").className).toContain("border")
-    expect(screen.getByTestId("frame").className).toContain("bg-background")
-    expect(screen.getByTestId("root").className).not.toContain("rounded-xl")
-  })
+    expect(screen.getByTestId("frame").className).toContain("rounded-xl");
+    expect(screen.getByTestId("frame").className).toContain("border");
+    expect(screen.getByTestId("frame").className).toContain("bg-background");
+    expect(screen.getByTestId("root").className).not.toContain("rounded-xl");
+  });
 
   it("does not bake domain semantics into the primitive sidebar or surface", () => {
     const { container } = render(
@@ -181,23 +183,23 @@ describe("viewer primitives", () => {
           <ViewerSidebar>Pages</ViewerSidebar>
           <ViewerSurface>Document</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
     expect(
       container
         .querySelector('[data-slot="viewer-sidebar"]')
-        ?.getAttribute("data-viewer-purpose")
-    ).toBeNull()
+        ?.getAttribute("data-viewer-purpose"),
+    ).toBeNull();
     expect(
       container
         .querySelector('[data-slot="viewer-surface"]')
-        ?.getAttribute("data-viewer-role")
-    ).toBeNull()
+        ?.getAttribute("data-viewer-role"),
+    ).toBeNull();
     expect(
-      container.querySelector('[data-slot="viewer-sidebar"]')?.className
-    ).not.toContain("bg-background")
-  })
+      container.querySelector('[data-slot="viewer-sidebar"]')?.className,
+    ).not.toContain("bg-background");
+  });
 
   it("uses explicit side on the base sidebar", () => {
     const { container } = render(
@@ -206,12 +208,12 @@ describe("viewer primitives", () => {
           <ViewerSurface>Document</ViewerSurface>
           <ViewerSidebar side="right">Fields</ViewerSidebar>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
-    const sidebar = container.querySelector('[data-slot="viewer-sidebar"]')
-    expect(sidebar?.getAttribute("data-side")).toBe("right")
-  })
+    const sidebar = container.querySelector('[data-slot="viewer-sidebar"]');
+    expect(sidebar?.getAttribute("data-side")).toBe("right");
+  });
 
   it("scopes overlay sidebar layout to the body below the header", () => {
     const { container } = render(
@@ -224,15 +226,15 @@ describe("viewer primitives", () => {
             <div>Document</div>
           </ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
-    const root = container.querySelector('[data-slot="viewer-root"]')!
-    const header = screen.getByTestId("header")
-    const body = screen.getByTestId("body")
-    const sidebar = screen.getByTestId("sidebar")
-    const surface = screen.getByTestId("surface")
-    const legend = screen.getByTestId("legend")
+    const root = container.querySelector('[data-slot="viewer-root"]')!;
+    const header = screen.getByTestId("header");
+    const body = screen.getByTestId("body");
+    const sidebar = screen.getByTestId("sidebar");
+    const surface = screen.getByTestId("surface");
+    const legend = screen.getByTestId("legend");
 
     mockElementRect(root, {
       top: 0,
@@ -241,7 +243,7 @@ describe("viewer primitives", () => {
       right: 640,
       width: 640,
       height: 360,
-    })
+    });
     mockElementRect(header, {
       top: 0,
       bottom: 48,
@@ -249,7 +251,7 @@ describe("viewer primitives", () => {
       right: 640,
       width: 640,
       height: 48,
-    })
+    });
     mockElementRect(body, {
       top: 48,
       bottom: 360,
@@ -257,7 +259,7 @@ describe("viewer primitives", () => {
       right: 640,
       width: 640,
       height: 312,
-    })
+    });
     mockElementRect(sidebar, {
       top: 48,
       bottom: 360,
@@ -265,7 +267,7 @@ describe("viewer primitives", () => {
       right: 160,
       width: 160,
       height: 312,
-    })
+    });
     mockElementRect(surface, {
       top: 48,
       bottom: 360,
@@ -273,7 +275,7 @@ describe("viewer primitives", () => {
       right: 640,
       width: 480,
       height: 312,
-    })
+    });
     mockElementRect(legend, {
       top: 48,
       bottom: 96,
@@ -281,29 +283,29 @@ describe("viewer primitives", () => {
       right: 640,
       width: 480,
       height: 48,
-    })
+    });
 
     expect(
-      Array.from(root.children).map((child) => child.getAttribute("data-slot"))
-    ).toEqual(["viewer-header", "viewer-body"])
-    expect(sidebar.parentElement).toBe(body)
-    expect(legend.closest('[data-slot="viewer-surface"]')).toBe(surface)
-    expect(body.className).toContain("relative")
-    expect(sidebar.className).toContain("absolute")
-    expect(sidebar.className).toContain("inset-y-0")
+      Array.from(root.children).map((child) => child.getAttribute("data-slot")),
+    ).toEqual(["viewer-header", "viewer-body"]);
+    expect(sidebar.parentElement).toBe(body);
+    expect(legend.closest('[data-slot="viewer-surface"]')).toBe(surface);
+    expect(body.className).toContain("relative");
+    expect(sidebar.className).toContain("absolute");
+    expect(sidebar.className).toContain("inset-y-0");
 
-    const headerRect = header.getBoundingClientRect()
-    const bodyRect = body.getBoundingClientRect()
-    const sidebarRect = sidebar.getBoundingClientRect()
-    const surfaceRect = surface.getBoundingClientRect()
-    const legendRect = legend.getBoundingClientRect()
+    const headerRect = header.getBoundingClientRect();
+    const bodyRect = body.getBoundingClientRect();
+    const sidebarRect = sidebar.getBoundingClientRect();
+    const surfaceRect = surface.getBoundingClientRect();
+    const legendRect = legend.getBoundingClientRect();
 
-    expect(sidebarRect.top).toBe(bodyRect.top)
-    expect(sidebarRect.bottom).toBe(bodyRect.bottom)
-    expect(sidebarRect.top).toBeGreaterThanOrEqual(headerRect.bottom)
-    expect(legendRect.top).toBeGreaterThanOrEqual(bodyRect.top)
-    expect(legendRect.left).toBeGreaterThanOrEqual(surfaceRect.left)
-  })
+    expect(sidebarRect.top).toBe(bodyRect.top);
+    expect(sidebarRect.bottom).toBe(bodyRect.bottom);
+    expect(sidebarRect.top).toBeGreaterThanOrEqual(headerRect.bottom);
+    expect(legendRect.top).toBeGreaterThanOrEqual(bodyRect.top);
+    expect(legendRect.left).toBeGreaterThanOrEqual(surfaceRect.left);
+  });
 
   it("keeps inline sidebar in body flow beside the document surface", () => {
     render(
@@ -313,13 +315,13 @@ describe("viewer primitives", () => {
           <ViewerSidebar data-testid="sidebar">Pages</ViewerSidebar>
           <ViewerSurface data-testid="surface">Document</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
-    const header = screen.getByTestId("header")
-    const body = screen.getByTestId("body")
-    const sidebar = screen.getByTestId("sidebar")
-    const surface = screen.getByTestId("surface")
+    const header = screen.getByTestId("header");
+    const body = screen.getByTestId("body");
+    const sidebar = screen.getByTestId("sidebar");
+    const surface = screen.getByTestId("surface");
 
     mockElementRect(header, {
       top: 0,
@@ -328,7 +330,7 @@ describe("viewer primitives", () => {
       right: 800,
       width: 800,
       height: 52,
-    })
+    });
     mockElementRect(body, {
       top: 52,
       bottom: 420,
@@ -336,7 +338,7 @@ describe("viewer primitives", () => {
       right: 800,
       width: 800,
       height: 368,
-    })
+    });
     mockElementRect(sidebar, {
       top: 52,
       bottom: 420,
@@ -344,7 +346,7 @@ describe("viewer primitives", () => {
       right: 160,
       width: 160,
       height: 368,
-    })
+    });
     mockElementRect(surface, {
       top: 52,
       bottom: 420,
@@ -352,33 +354,33 @@ describe("viewer primitives", () => {
       right: 800,
       width: 640,
       height: 368,
-    })
+    });
 
-    expect(sidebar.parentElement).toBe(body)
-    expect(surface.parentElement).toBe(body)
-    expect(sidebar.className).toContain("relative")
-    expect(sidebar.className).not.toContain("absolute")
+    expect(sidebar.parentElement).toBe(body);
+    expect(surface.parentElement).toBe(body);
+    expect(sidebar.className).toContain("relative");
+    expect(sidebar.className).not.toContain("absolute");
 
-    const headerRect = header.getBoundingClientRect()
-    const bodyRect = body.getBoundingClientRect()
-    const sidebarRect = sidebar.getBoundingClientRect()
-    const surfaceRect = surface.getBoundingClientRect()
+    const headerRect = header.getBoundingClientRect();
+    const bodyRect = body.getBoundingClientRect();
+    const sidebarRect = sidebar.getBoundingClientRect();
+    const surfaceRect = surface.getBoundingClientRect();
 
-    expect(sidebarRect.top).toBe(bodyRect.top)
-    expect(sidebarRect.bottom).toBe(bodyRect.bottom)
-    expect(sidebarRect.top).toBeGreaterThanOrEqual(headerRect.bottom)
-    expect(surfaceRect.left).toBe(sidebarRect.right)
-  })
+    expect(sidebarRect.top).toBe(bodyRect.top);
+    expect(sidebarRect.bottom).toBe(bodyRect.bottom);
+    expect(sidebarRect.top).toBeGreaterThanOrEqual(headerRect.bottom);
+    expect(surfaceRect.left).toBe(sidebarRect.right);
+  });
 
   it("keeps private sidebar registration fields out of the public hook value", () => {
-    let keys: string[] = []
+    let keys: string[] = [];
 
     function Probe() {
-      const sidebar = useViewerSidebar()
+      const sidebar = useViewerSidebar();
       React.useEffect(() => {
-        keys = Object.keys(sidebar).sort()
-      }, [sidebar])
-      return null
+        keys = Object.keys(sidebar).sort();
+      }, [sidebar]);
+      return null;
     }
 
     render(
@@ -388,8 +390,8 @@ describe("viewer primitives", () => {
           <ViewerSidebar>Sidebar</ViewerSidebar>
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
     expect(keys).toEqual(
       [
@@ -399,17 +401,17 @@ describe("viewer primitives", () => {
         "setOpen",
         "state",
         "toggleSidebar",
-      ].sort()
-    )
-  })
+      ].sort(),
+    );
+  });
 
   it("keeps the public sidebar context stable across unrelated root rerenders", async () => {
-    const values: ReturnType<typeof useViewerSidebar>[] = []
+    const values: ReturnType<typeof useViewerSidebar>[] = [];
 
     function Probe() {
-      const sidebar = useViewerSidebar()
-      values.push(sidebar)
-      return null
+      const sidebar = useViewerSidebar();
+      values.push(sidebar);
+      return null;
     }
 
     const tree = (className: string) => (
@@ -420,27 +422,27 @@ describe("viewer primitives", () => {
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
       </ViewerRoot>
-    )
-    const { rerender } = render(tree("first"))
+    );
+    const { rerender } = render(tree("first"));
 
     await waitFor(() => {
-      expect(values.at(-1)?.canToggleSidebar).toBe(true)
-    })
+      expect(values.at(-1)?.canToggleSidebar).toBe(true);
+    });
 
-    const stableValue = values.at(-1)
-    rerender(tree("second"))
+    const stableValue = values.at(-1);
+    rerender(tree("second"));
 
-    expect(values.at(-1)).toBe(stableValue)
-  })
+    expect(values.at(-1)).toBe(stableValue);
+  });
 
   it("does not ship the removed slot-object shell modules", () => {
     expect(
-      existsSync(join(repoRoot, "registry/new-york-v4/ui/viewer-shell.tsx"))
-    ).toBe(false)
+      existsSync(join(repoRoot, "registry/new-york-v4/ui/viewer-shell.tsx")),
+    ).toBe(false);
     expect(
-      existsSync(join(repoRoot, "registry/new-york-v4/ui/viewer-slots.ts"))
-    ).toBe(false)
-  })
+      existsSync(join(repoRoot, "registry/new-york-v4/ui/viewer-slots.ts")),
+    ).toBe(false);
+  });
 
   it("lets a trigger toggle the nearest root sidebar", () => {
     render(
@@ -452,35 +454,35 @@ describe("viewer primitives", () => {
           <ViewerSidebar data-testid="sidebar">Sidebar</ViewerSidebar>
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
-    const trigger = screen.getByTestId("trigger")
-    const sidebar = screen.getByTestId("sidebar")
+    const trigger = screen.getByTestId("trigger");
+    const sidebar = screen.getByTestId("sidebar");
 
-    expect(trigger.getAttribute("aria-expanded")).toBe("false")
-    expect(trigger.getAttribute("aria-controls")).toBe(sidebar.id)
-    expect(sidebar.getAttribute("aria-hidden")).toBe("true")
-    expect(sidebar.hasAttribute("inert")).toBe(true)
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(trigger.getAttribute("aria-controls")).toBe(sidebar.id);
+    expect(sidebar.getAttribute("aria-hidden")).toBe("true");
+    expect(sidebar.hasAttribute("inert")).toBe(true);
 
-    fireEvent.click(trigger)
+    fireEvent.click(trigger);
 
-    expect(trigger.getAttribute("aria-expanded")).toBe("true")
-    expect(sidebar.hasAttribute("aria-hidden")).toBe(false)
-    expect(sidebar.hasAttribute("inert")).toBe(false)
-  })
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(sidebar.hasAttribute("aria-hidden")).toBe(false);
+    expect(sidebar.hasAttribute("inert")).toBe(false);
+  });
 
   it("supports controlled sidebar state", () => {
-    const onOpenChange = vi.fn()
+    const onOpenChange = vi.fn();
 
     function ControlledViewer() {
-      const [open, setOpen] = React.useState(false)
+      const [open, setOpen] = React.useState(false);
       return (
         <ViewerRoot
           open={open}
           onOpenChange={(nextOpen) => {
-            onOpenChange(nextOpen)
-            setOpen(nextOpen)
+            onOpenChange(nextOpen);
+            setOpen(nextOpen);
           }}
         >
           <ViewerSidebarTrigger data-testid="trigger" />
@@ -489,26 +491,26 @@ describe("viewer primitives", () => {
             <ViewerSurface>Surface</ViewerSurface>
           </ViewerBody>
         </ViewerRoot>
-      )
+      );
     }
 
-    render(<ControlledViewer />)
+    render(<ControlledViewer />);
 
-    fireEvent.click(screen.getByTestId("trigger"))
+    fireEvent.click(screen.getByTestId("trigger"));
 
-    expect(onOpenChange).toHaveBeenCalledWith(true)
+    expect(onOpenChange).toHaveBeenCalledWith(true);
     expect(screen.getByTestId("trigger").getAttribute("aria-expanded")).toBe(
-      "true"
-    )
+      "true",
+    );
     expect(screen.getByTestId("sidebar").hasAttribute("aria-hidden")).toBe(
-      false
-    )
-  })
+      false,
+    );
+  });
 
   it("respects prevented trigger clicks and disabled states", () => {
     const onClick = vi.fn((event: React.MouseEvent<HTMLButtonElement>) => {
-      event.preventDefault()
-    })
+      event.preventDefault();
+    });
 
     render(
       <ViewerRoot>
@@ -518,20 +520,20 @@ describe("viewer primitives", () => {
           <ViewerSidebar data-testid="sidebar">Sidebar</ViewerSidebar>
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
-    fireEvent.click(screen.getByTestId("prevented"))
-    expect(onClick).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByTestId("prevented"));
+    expect(onClick).toHaveBeenCalledTimes(1);
     expect(
-      screen.getByTestId("sidebar").getAttribute("data-viewer-sidebar-state")
-    ).toBe("collapsed")
+      screen.getByTestId("sidebar").getAttribute("data-viewer-sidebar-state"),
+    ).toBe("collapsed");
 
-    fireEvent.click(screen.getByTestId("disabled"))
+    fireEvent.click(screen.getByTestId("disabled"));
     expect(
-      screen.getByTestId("sidebar").getAttribute("data-viewer-sidebar-state")
-    ).toBe("collapsed")
-  })
+      screen.getByTestId("sidebar").getAttribute("data-viewer-sidebar-state"),
+    ).toBe("collapsed");
+  });
 
   it("uses real DOM disabled semantics for disabled, loading, and aria-disabled triggers", () => {
     render(
@@ -543,22 +545,22 @@ describe("viewer primitives", () => {
           <ViewerSidebar data-testid="sidebar">Sidebar</ViewerSidebar>
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
     expect((screen.getByTestId("disabled") as HTMLButtonElement).disabled).toBe(
-      true
-    )
+      true,
+    );
     expect((screen.getByTestId("loading") as HTMLButtonElement).disabled).toBe(
-      true
-    )
+      true,
+    );
     expect(
-      (screen.getByTestId("aria-disabled") as HTMLButtonElement).disabled
-    ).toBe(true)
+      (screen.getByTestId("aria-disabled") as HTMLButtonElement).disabled,
+    ).toBe(true);
     expect(
-      screen.getByTestId("sidebar").getAttribute("data-viewer-sidebar-state")
-    ).toBe("collapsed")
-  })
+      screen.getByTestId("sidebar").getAttribute("data-viewer-sidebar-state"),
+    ).toBe("collapsed");
+  });
 
   it("keeps nested viewer sidebar state isolated", () => {
     render(
@@ -576,35 +578,35 @@ describe("viewer primitives", () => {
             </ViewerRoot>
           </ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
-    fireEvent.click(screen.getByTestId("inner-trigger"))
-
-    expect(
-      screen
-        .getByTestId("outer-sidebar")
-        .getAttribute("data-viewer-sidebar-state")
-    ).toBe("expanded")
-    expect(
-      screen
-        .getByTestId("inner-sidebar")
-        .getAttribute("data-viewer-sidebar-state")
-    ).toBe("expanded")
-
-    fireEvent.click(screen.getByTestId("outer-trigger"))
+    fireEvent.click(screen.getByTestId("inner-trigger"));
 
     expect(
       screen
         .getByTestId("outer-sidebar")
-        .getAttribute("data-viewer-sidebar-state")
-    ).toBe("collapsed")
+        .getAttribute("data-viewer-sidebar-state"),
+    ).toBe("expanded");
     expect(
       screen
         .getByTestId("inner-sidebar")
-        .getAttribute("data-viewer-sidebar-state")
-    ).toBe("expanded")
-  })
+        .getAttribute("data-viewer-sidebar-state"),
+    ).toBe("expanded");
+
+    fireEvent.click(screen.getByTestId("outer-trigger"));
+
+    expect(
+      screen
+        .getByTestId("outer-sidebar")
+        .getAttribute("data-viewer-sidebar-state"),
+    ).toBe("collapsed");
+    expect(
+      screen
+        .getByTestId("inner-sidebar")
+        .getAttribute("data-viewer-sidebar-state"),
+    ).toBe("expanded");
+  });
 
   it("infers trigger side from the registered sidebar", async () => {
     render(
@@ -618,21 +620,21 @@ describe("viewer primitives", () => {
             Sidebar
           </ViewerSidebar>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
     await waitFor(() => {
       expect(screen.getByTestId("trigger").getAttribute("data-side")).toBe(
-        "right"
-      )
-    })
+        "right",
+      );
+    });
     expect(screen.getByTestId("trigger").getAttribute("aria-controls")).toBe(
-      screen.getByTestId("sidebar").id
-    )
+      screen.getByTestId("sidebar").id,
+    );
     expect(
-      screen.getByTestId("trigger").querySelector("svg")?.getAttribute("class")
-    ).toContain("lucide-panel-right")
-  })
+      screen.getByTestId("trigger").querySelector("svg")?.getAttribute("class"),
+    ).toContain("lucide-panel-right");
+  });
 
   it("lets ViewerRoot provide the default sidebar side", async () => {
     render(
@@ -644,18 +646,18 @@ describe("viewer primitives", () => {
           <ViewerSurface>Surface</ViewerSurface>
           <ViewerSidebar data-testid="sidebar">Sidebar</ViewerSidebar>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
     await waitFor(() => {
       expect(screen.getByTestId("sidebar").getAttribute("data-side")).toBe(
-        "right"
-      )
+        "right",
+      );
       expect(screen.getByTestId("trigger").getAttribute("data-side")).toBe(
-        "right"
-      )
-    })
-  })
+        "right",
+      );
+    });
+  });
 
   it("lets ViewerRoot provide the default sidebar collapsibility", async () => {
     render(
@@ -667,19 +669,21 @@ describe("viewer primitives", () => {
           <ViewerSidebar data-testid="sidebar">Sidebar</ViewerSidebar>
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
     await waitFor(() => {
       expect(
-        screen.getByTestId("sidebar").getAttribute("data-collapsible")
-      ).toBe("none")
-    })
-    expect(screen.getByTestId("sidebar").getAttribute("aria-hidden")).toBeNull()
+        screen.getByTestId("sidebar").getAttribute("data-collapsible"),
+      ).toBe("none");
+    });
+    expect(
+      screen.getByTestId("sidebar").getAttribute("aria-hidden"),
+    ).toBeNull();
     expect(screen.getByTestId("trigger").getAttribute("aria-disabled")).toBe(
-      "true"
-    )
-  })
+      "true",
+    );
+  });
 
   it("uses left trigger icon semantics for a left registered sidebar", async () => {
     render(
@@ -691,18 +695,18 @@ describe("viewer primitives", () => {
           <ViewerSidebar data-testid="sidebar">Sidebar</ViewerSidebar>
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
     await waitFor(() => {
       expect(screen.getByTestId("trigger").getAttribute("data-side")).toBe(
-        "left"
-      )
-    })
+        "left",
+      );
+    });
     expect(
-      screen.getByTestId("trigger").querySelector("svg")?.getAttribute("class")
-    ).toContain("lucide-panel-left")
-  })
+      screen.getByTestId("trigger").querySelector("svg")?.getAttribute("class"),
+    ).toContain("lucide-panel-left");
+  });
 
   it("uses a caller-provided sidebar id for trigger aria-controls", async () => {
     render(
@@ -714,16 +718,16 @@ describe("viewer primitives", () => {
           </ViewerSidebar>
           <ViewerSurface>Document</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
     await waitFor(() => {
       expect(screen.getByTestId("trigger").getAttribute("aria-controls")).toBe(
-        "pages-sidebar"
-      )
-    })
-    expect(screen.getByTestId("sidebar").id).toBe("pages-sidebar")
-  })
+        "pages-sidebar",
+      );
+    });
+    expect(screen.getByTestId("sidebar").id).toBe("pages-sidebar");
+  });
 
   it("lets custom trigger children override the default icon", async () => {
     render(
@@ -735,49 +739,49 @@ describe("viewer primitives", () => {
           <ViewerSidebar>Sidebar</ViewerSidebar>
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
     await waitFor(() => {
       expect(screen.getByTestId("trigger").getAttribute("aria-disabled")).toBe(
-        null
-      )
-    })
-    expect(screen.getByTestId("trigger").textContent).toBe("Custom trigger")
-  })
+        null,
+      );
+    });
+    expect(screen.getByTestId("trigger").textContent).toBe("Custom trigger");
+  });
 
   it("prevents trigger actions when no sidebar is registered", () => {
-    const onClick = vi.fn()
+    const onClick = vi.fn();
 
     render(
       <ViewerRoot>
         <ViewerSidebarTrigger data-testid="trigger" onClick={onClick} />
         <ViewerSurface>Surface</ViewerSurface>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
-    const trigger = screen.getByTestId("trigger")
+    const trigger = screen.getByTestId("trigger");
 
-    expect(trigger.getAttribute("aria-disabled")).toBe("true")
-    expect((trigger as HTMLButtonElement).disabled).toBe(true)
-    expect(trigger.getAttribute("aria-controls")).toBeNull()
-    expect(trigger.getAttribute("aria-expanded")).toBeNull()
+    expect(trigger.getAttribute("aria-disabled")).toBe("true");
+    expect((trigger as HTMLButtonElement).disabled).toBe(true);
+    expect(trigger.getAttribute("aria-controls")).toBeNull();
+    expect(trigger.getAttribute("aria-expanded")).toBeNull();
     expect(
-      screen.getByTestId("trigger").querySelector("svg")?.getAttribute("class")
-    ).toContain("lucide-panel-left")
-    fireEvent.click(trigger)
-    expect(onClick).not.toHaveBeenCalled()
-  })
+      screen.getByTestId("trigger").querySelector("svg")?.getAttribute("class"),
+    ).toContain("lucide-panel-left");
+    fireEvent.click(trigger);
+    expect(onClick).not.toHaveBeenCalled();
+  });
 
   it("reports non-collapsible sidebars as open and non-toggleable", async () => {
     function Probe() {
-      const sidebar = useViewerSidebar()
+      const sidebar = useViewerSidebar();
       return (
         <div data-testid="sidebar-state">
           {sidebar.open ? "open" : "closed"}:{sidebar.state}:
           {sidebar.canToggleSidebar ? "toggleable" : "fixed"}
         </div>
-      )
+      );
     }
 
     render(
@@ -792,24 +796,24 @@ describe("viewer primitives", () => {
           </ViewerSidebar>
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
     await waitFor(() => {
       expect(screen.getByTestId("sidebar-state").textContent).toBe(
-        "open:expanded:fixed"
-      )
-    })
+        "open:expanded:fixed",
+      );
+    });
     expect(
-      screen.getByTestId("sidebar").getAttribute("data-viewer-sidebar-open")
-    ).toBe("true")
+      screen.getByTestId("sidebar").getAttribute("data-viewer-sidebar-open"),
+    ).toBe("true");
     expect(screen.getByTestId("trigger").getAttribute("aria-disabled")).toBe(
-      "true"
-    )
+      "true",
+    );
     expect((screen.getByTestId("trigger") as HTMLButtonElement).disabled).toBe(
-      true
-    )
-  })
+      true,
+    );
+  });
 
   it("enforces collapsed sidebar accessibility props over caller props", () => {
     render(
@@ -824,15 +828,15 @@ describe("viewer primitives", () => {
           </ViewerSidebar>
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
-    const sidebar = screen.getByTestId("sidebar")
+    const sidebar = screen.getByTestId("sidebar");
 
-    expect(sidebar.getAttribute("data-viewer-sidebar-state")).toBe("collapsed")
-    expect(sidebar.getAttribute("aria-hidden")).toBe("true")
-    expect(sidebar.hasAttribute("inert")).toBe(true)
-  })
+    expect(sidebar.getAttribute("data-viewer-sidebar-state")).toBe("collapsed");
+    expect(sidebar.getAttribute("aria-hidden")).toBe("true");
+    expect(sidebar.hasAttribute("inert")).toBe(true);
+  });
 
   it("uses the sidebar width prop as the collapse width token", async () => {
     render(
@@ -848,31 +852,31 @@ describe("viewer primitives", () => {
           </ViewerSidebar>
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
     await waitFor(() => {
       expect(
         screen
           .getByTestId("root")
-          .style.getPropertyValue("--viewer-sidebar-width")
-      ).toBe("14rem")
-    })
+          .style.getPropertyValue("--viewer-sidebar-width"),
+      ).toBe("14rem");
+    });
 
-    const sidebar = screen.getByTestId("sidebar")
+    const sidebar = screen.getByTestId("sidebar");
 
     expect(sidebar.style.getPropertyValue("--viewer-sidebar-width")).toBe(
-      "14rem"
-    )
-    expect(sidebar.style.width).toBe("")
-    expect(sidebar.style.backgroundColor).toBe("red")
-    expect(sidebar.className).toContain("w-(--viewer-sidebar-width)")
-    expect(sidebar.className).not.toContain("w-36")
-  })
+      "14rem",
+    );
+    expect(sidebar.style.width).toBe("");
+    expect(sidebar.style.backgroundColor).toBe("red");
+    expect(sidebar.className).toContain("w-(--viewer-sidebar-width)");
+    expect(sidebar.className).not.toContain("w-36");
+  });
 
   it("activates a conditional trigger when a sidebar later registers", async () => {
     function ConditionalViewer() {
-      const [showSidebar, setShowSidebar] = React.useState(false)
+      const [showSidebar, setShowSidebar] = React.useState(false);
       return (
         <ViewerRoot>
           <ViewerSidebarTrigger data-testid="trigger" />
@@ -886,33 +890,33 @@ describe("viewer primitives", () => {
             <ViewerSurface>Surface</ViewerSurface>
           </ViewerBody>
         </ViewerRoot>
-      )
+      );
     }
 
-    render(<ConditionalViewer />)
+    render(<ConditionalViewer />);
 
     expect(screen.getByTestId("trigger").getAttribute("aria-disabled")).toBe(
-      "true"
-    )
+      "true",
+    );
     expect((screen.getByTestId("trigger") as HTMLButtonElement).disabled).toBe(
-      true
-    )
-    fireEvent.click(screen.getByRole("button", { name: "Show sidebar" }))
+      true,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Show sidebar" }));
 
     await waitFor(() => {
       expect(screen.getByTestId("trigger").getAttribute("aria-disabled")).toBe(
-        null
-      )
+        null,
+      );
       expect(
-        (screen.getByTestId("trigger") as HTMLButtonElement).disabled
-      ).toBe(false)
-    })
+        (screen.getByTestId("trigger") as HTMLButtonElement).disabled,
+      ).toBe(false);
+    });
 
-    fireEvent.click(screen.getByTestId("trigger"))
+    fireEvent.click(screen.getByTestId("trigger"));
     expect(
-      screen.getByTestId("sidebar").getAttribute("data-viewer-sidebar-state")
-    ).toBe("expanded")
-  })
+      screen.getByTestId("sidebar").getAttribute("data-viewer-sidebar-state"),
+    ).toBe("expanded");
+  });
 
   it("rejects multiple sidebars in one root", () => {
     expect(() =>
@@ -923,21 +927,21 @@ describe("viewer primitives", () => {
             <ViewerSurface>Surface</ViewerSurface>
             <ViewerSidebar>Second</ViewerSidebar>
           </ViewerBody>
-        </ViewerRoot>
-      )
-    ).toThrow("ViewerRoot supports one primary ViewerSidebar")
-  })
+        </ViewerRoot>,
+      ),
+    ).toThrow("ViewerRoot supports one primary ViewerSidebar");
+  });
 
   it("does not emit controlled changes when open state is unchanged", () => {
-    const onOpenChange = vi.fn()
+    const onOpenChange = vi.fn();
 
     function CloseAgain() {
-      const sidebar = useViewerSidebar()
+      const sidebar = useViewerSidebar();
       return (
         <button type="button" onClick={() => sidebar.setOpen(false)}>
           Close again
         </button>
-      )
+      );
     }
 
     render(
@@ -947,23 +951,23 @@ describe("viewer primitives", () => {
           <ViewerSidebar>Sidebar</ViewerSidebar>
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: "Close again" }))
-    expect(onOpenChange).not.toHaveBeenCalled()
-  })
+    fireEvent.click(screen.getByRole("button", { name: "Close again" }));
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
 
   it("does not emit controlled changes when opening an already open sidebar", () => {
-    const onOpenChange = vi.fn()
+    const onOpenChange = vi.fn();
 
     function OpenAgain() {
-      const sidebar = useViewerSidebar()
+      const sidebar = useViewerSidebar();
       return (
         <button type="button" onClick={() => sidebar.setOpen(true)}>
           Open again
         </button>
-      )
+      );
     }
 
     render(
@@ -973,18 +977,18 @@ describe("viewer primitives", () => {
           <ViewerSidebar>Sidebar</ViewerSidebar>
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: "Open again" }))
-    expect(onOpenChange).not.toHaveBeenCalled()
-  })
+    fireEvent.click(screen.getByRole("button", { name: "Open again" }));
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
 
   it("does not emit controlled changes for disabled or prevented trigger clicks", () => {
-    const onOpenChange = vi.fn()
+    const onOpenChange = vi.fn();
     const onClick = vi.fn((event: React.MouseEvent<HTMLButtonElement>) => {
-      event.preventDefault()
-    })
+      event.preventDefault();
+    });
 
     render(
       <ViewerRoot open={false} onOpenChange={onOpenChange}>
@@ -994,15 +998,15 @@ describe("viewer primitives", () => {
           <ViewerSidebar>Sidebar</ViewerSidebar>
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
-    fireEvent.click(screen.getByTestId("prevented"))
-    fireEvent.click(screen.getByTestId("disabled"))
+    fireEvent.click(screen.getByTestId("prevented"));
+    fireEvent.click(screen.getByTestId("disabled"));
 
-    expect(onClick).toHaveBeenCalledTimes(1)
-    expect(onOpenChange).not.toHaveBeenCalled()
-  })
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
 
   it("closes an open overlay sidebar on Escape", () => {
     render(
@@ -1012,20 +1016,22 @@ describe("viewer primitives", () => {
           <ViewerSidebar data-testid="sidebar">Sidebar</ViewerSidebar>
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
-    expect(screen.getByTestId("sidebar").getAttribute("aria-hidden")).toBeNull()
+    expect(
+      screen.getByTestId("sidebar").getAttribute("aria-hidden"),
+    ).toBeNull();
 
-    fireEvent.keyDown(document, { key: "Escape" })
+    fireEvent.keyDown(document, { key: "Escape" });
 
     expect(screen.getByTestId("trigger").getAttribute("aria-expanded")).toBe(
-      "false"
-    )
+      "false",
+    );
     expect(screen.getByTestId("sidebar").getAttribute("aria-hidden")).toBe(
-      "true"
-    )
-  })
+      "true",
+    );
+  });
 
   it("returns focus to the trigger when Escape closes an overlay sidebar", () => {
     render(
@@ -1037,19 +1043,19 @@ describe("viewer primitives", () => {
             <button type="button">Surface action</button>
           </ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
-    screen.getByRole("button", { name: "Surface action" }).focus()
-    expect(document.activeElement).not.toBe(screen.getByTestId("trigger"))
+    screen.getByRole("button", { name: "Surface action" }).focus();
+    expect(document.activeElement).not.toBe(screen.getByTestId("trigger"));
 
-    fireEvent.keyDown(document, { key: "Escape" })
+    fireEvent.keyDown(document, { key: "Escape" });
 
-    expect(document.activeElement).toBe(screen.getByTestId("trigger"))
+    expect(document.activeElement).toBe(screen.getByTestId("trigger"));
     expect(screen.getByTestId("sidebar").getAttribute("aria-hidden")).toBe(
-      "true"
-    )
-  })
+      "true",
+    );
+  });
 
   it("does not trap focus inside an open overlay sidebar", () => {
     render(
@@ -1062,19 +1068,19 @@ describe("viewer primitives", () => {
             <button type="button">Surface action</button>
           </ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
-    screen.getByRole("button", { name: "Sidebar action" }).focus()
+    screen.getByRole("button", { name: "Sidebar action" }).focus();
     expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: "Sidebar action" })
-    )
+      screen.getByRole("button", { name: "Sidebar action" }),
+    );
 
-    screen.getByRole("button", { name: "Surface action" }).focus()
+    screen.getByRole("button", { name: "Surface action" }).focus();
     expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: "Surface action" })
-    )
-  })
+      screen.getByRole("button", { name: "Surface action" }),
+    );
+  });
 
   it("classifies open overlay sidebars as non-modal", () => {
     render(
@@ -1087,17 +1093,17 @@ describe("viewer primitives", () => {
             <button type="button">Surface action</button>
           </ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
-    expect(screen.getByTestId("sidebar").getAttribute("aria-modal")).toBeNull()
-    expect(screen.getByTestId("surface").hasAttribute("inert")).toBe(false)
+    expect(screen.getByTestId("sidebar").getAttribute("aria-modal")).toBeNull();
+    expect(screen.getByTestId("surface").hasAttribute("inert")).toBe(false);
     expect(
       screen
         .getByRole("button", { name: "Surface action" })
-        .closest('[aria-hidden="true"]')
-    ).toBeNull()
-  })
+        .closest('[aria-hidden="true"]'),
+    ).toBeNull();
+  });
 
   it("does not close an inline sidebar on Escape", () => {
     render(
@@ -1107,16 +1113,18 @@ describe("viewer primitives", () => {
           <ViewerSidebar data-testid="sidebar">Sidebar</ViewerSidebar>
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
-    fireEvent.keyDown(document, { key: "Escape" })
+    fireEvent.keyDown(document, { key: "Escape" });
 
     expect(screen.getByTestId("trigger").getAttribute("aria-expanded")).toBe(
-      "true"
-    )
-    expect(screen.getByTestId("sidebar").getAttribute("aria-hidden")).toBeNull()
-  })
+      "true",
+    );
+    expect(
+      screen.getByTestId("sidebar").getAttribute("aria-hidden"),
+    ).toBeNull();
+  });
 
   it("lets the root trigger close an open overlay sidebar", () => {
     render(
@@ -1126,19 +1134,19 @@ describe("viewer primitives", () => {
           <ViewerSidebar data-testid="sidebar">Sidebar</ViewerSidebar>
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
-    const trigger = screen.getByTestId("trigger")
+    const trigger = screen.getByTestId("trigger");
 
-    fireEvent.pointerDown(trigger)
-    fireEvent.click(trigger)
+    fireEvent.pointerDown(trigger);
+    fireEvent.click(trigger);
 
-    expect(trigger.getAttribute("aria-expanded")).toBe("false")
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
     expect(screen.getByTestId("sidebar").getAttribute("aria-hidden")).toBe(
-      "true"
-    )
-  })
+      "true",
+    );
+  });
 
   it("does not close an open overlay sidebar on inside pointer down", () => {
     render(
@@ -1149,15 +1157,17 @@ describe("viewer primitives", () => {
           </ViewerSidebar>
           <ViewerSurface>Surface</ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
     fireEvent.pointerDown(
-      screen.getByRole("button", { name: "Sidebar action" })
-    )
+      screen.getByRole("button", { name: "Sidebar action" }),
+    );
 
-    expect(screen.getByTestId("sidebar").getAttribute("aria-hidden")).toBeNull()
-  })
+    expect(
+      screen.getByTestId("sidebar").getAttribute("aria-hidden"),
+    ).toBeNull();
+  });
 
   it("closes an open overlay sidebar on outside pointer down", () => {
     render(
@@ -1168,40 +1178,42 @@ describe("viewer primitives", () => {
             <button type="button">Surface action</button>
           </ViewerSurface>
         </ViewerBody>
-      </ViewerRoot>
-    )
+      </ViewerRoot>,
+    );
 
-    expect(screen.getByTestId("sidebar").getAttribute("aria-hidden")).toBeNull()
+    expect(
+      screen.getByTestId("sidebar").getAttribute("aria-hidden"),
+    ).toBeNull();
 
     fireEvent.pointerDown(
-      screen.getByRole("button", { name: "Surface action" })
-    )
+      screen.getByRole("button", { name: "Surface action" }),
+    );
 
     expect(screen.getByTestId("sidebar").getAttribute("aria-hidden")).toBe(
-      "true"
-    )
-  })
+      "true",
+    );
+  });
 
   it("derives sidebar mode from measured root width without exposing width", async () => {
-    const originalResizeObserver = globalThis.ResizeObserver
-    const originalWindowResizeObserver = window.ResizeObserver
+    const originalResizeObserver = globalThis.ResizeObserver;
+    const originalWindowResizeObserver = window.ResizeObserver;
     const originalGetBoundingClientRect =
-      HTMLElement.prototype.getBoundingClientRect
-    const callbacks: ResizeObserverCallback[] = []
-    let width = 320
+      HTMLElement.prototype.getBoundingClientRect;
+    const callbacks: ResizeObserverCallback[] = [];
+    let width = 320;
 
     class MockResizeObserver {
       constructor(callback: ResizeObserverCallback) {
-        callbacks.push(callback)
+        callbacks.push(callback);
       }
       observe() {}
       disconnect() {}
     }
 
     globalThis.ResizeObserver =
-      MockResizeObserver as unknown as typeof ResizeObserver
+      MockResizeObserver as unknown as typeof ResizeObserver;
     window.ResizeObserver =
-      MockResizeObserver as unknown as typeof ResizeObserver
+      MockResizeObserver as unknown as typeof ResizeObserver;
     HTMLElement.prototype.getBoundingClientRect = function () {
       return {
         bottom: 0,
@@ -1213,12 +1225,12 @@ describe("viewer primitives", () => {
         width,
         x: 0,
         y: 0,
-      }
-    }
+      };
+    };
 
     function ModeProbe() {
-      const sidebar = useViewerSidebar()
-      return <div data-testid="mode">{sidebar.mode}</div>
+      const sidebar = useViewerSidebar();
+      return <div data-testid="mode">{sidebar.mode}</div>;
     }
 
     try {
@@ -1229,37 +1241,37 @@ describe("viewer primitives", () => {
             <ViewerSidebar>Sidebar</ViewerSidebar>
             <ViewerSurface>Surface</ViewerSurface>
           </ViewerBody>
-        </ViewerRoot>
-      )
+        </ViewerRoot>,
+      );
 
       await waitFor(() => {
-        expect(screen.getByTestId("mode").textContent).toBe("overlay")
-      })
+        expect(screen.getByTestId("mode").textContent).toBe("overlay");
+      });
 
-      width = 1024
+      width = 1024;
       act(() => {
-        callbacks.forEach((callback) => callback([], {} as ResizeObserver))
-      })
+        callbacks.forEach((callback) => callback([], {} as ResizeObserver));
+      });
 
-      expect(screen.getByTestId("mode").textContent).toBe("inline")
+      expect(screen.getByTestId("mode").textContent).toBe("inline");
     } finally {
-      globalThis.ResizeObserver = originalResizeObserver
-      window.ResizeObserver = originalWindowResizeObserver
+      globalThis.ResizeObserver = originalResizeObserver;
+      window.ResizeObserver = originalWindowResizeObserver;
       HTMLElement.prototype.getBoundingClientRect =
-        originalGetBoundingClientRect
+        originalGetBoundingClientRect;
     }
-  })
+  });
 
   it("keeps auto mode overlay when ResizeObserver is unavailable", () => {
-    const originalResizeObserver = globalThis.ResizeObserver
-    const originalWindowResizeObserver = window.ResizeObserver
+    const originalResizeObserver = globalThis.ResizeObserver;
+    const originalWindowResizeObserver = window.ResizeObserver;
 
-    globalThis.ResizeObserver = undefined as unknown as typeof ResizeObserver
-    window.ResizeObserver = undefined as unknown as typeof ResizeObserver
+    globalThis.ResizeObserver = undefined as unknown as typeof ResizeObserver;
+    window.ResizeObserver = undefined as unknown as typeof ResizeObserver;
 
     function ModeProbe() {
-      const sidebar = useViewerSidebar()
-      return <div data-testid="mode">{sidebar.mode}</div>
+      const sidebar = useViewerSidebar();
+      return <div data-testid="mode">{sidebar.mode}</div>;
     }
 
     try {
@@ -1270,36 +1282,36 @@ describe("viewer primitives", () => {
             <ViewerSidebar>Sidebar</ViewerSidebar>
             <ViewerSurface>Surface</ViewerSurface>
           </ViewerBody>
-        </ViewerRoot>
-      )
+        </ViewerRoot>,
+      );
 
-      expect(screen.getByTestId("mode").textContent).toBe("overlay")
+      expect(screen.getByTestId("mode").textContent).toBe("overlay");
     } finally {
-      globalThis.ResizeObserver = originalResizeObserver
-      window.ResizeObserver = originalWindowResizeObserver
+      globalThis.ResizeObserver = originalResizeObserver;
+      window.ResizeObserver = originalWindowResizeObserver;
     }
-  })
+  });
 
   it("ignores zero-width auto measurements", async () => {
-    const originalResizeObserver = globalThis.ResizeObserver
-    const originalWindowResizeObserver = window.ResizeObserver
+    const originalResizeObserver = globalThis.ResizeObserver;
+    const originalWindowResizeObserver = window.ResizeObserver;
     const originalGetBoundingClientRect =
-      HTMLElement.prototype.getBoundingClientRect
-    const callbacks: ResizeObserverCallback[] = []
-    let width = 0
+      HTMLElement.prototype.getBoundingClientRect;
+    const callbacks: ResizeObserverCallback[] = [];
+    let width = 0;
 
     class MockResizeObserver {
       constructor(callback: ResizeObserverCallback) {
-        callbacks.push(callback)
+        callbacks.push(callback);
       }
       observe() {}
       disconnect() {}
     }
 
     globalThis.ResizeObserver =
-      MockResizeObserver as unknown as typeof ResizeObserver
+      MockResizeObserver as unknown as typeof ResizeObserver;
     window.ResizeObserver =
-      MockResizeObserver as unknown as typeof ResizeObserver
+      MockResizeObserver as unknown as typeof ResizeObserver;
     HTMLElement.prototype.getBoundingClientRect = function () {
       return {
         bottom: 0,
@@ -1311,12 +1323,12 @@ describe("viewer primitives", () => {
         width,
         x: 0,
         y: 0,
-      }
-    }
+      };
+    };
 
     function ModeProbe() {
-      const sidebar = useViewerSidebar()
-      return <div data-testid="mode">{sidebar.mode}</div>
+      const sidebar = useViewerSidebar();
+      return <div data-testid="mode">{sidebar.mode}</div>;
     }
 
     try {
@@ -1327,51 +1339,51 @@ describe("viewer primitives", () => {
             <ViewerSidebar>Sidebar</ViewerSidebar>
             <ViewerSurface>Surface</ViewerSurface>
           </ViewerBody>
-        </ViewerRoot>
-      )
+        </ViewerRoot>,
+      );
 
       act(() => {
-        callbacks.forEach((callback) => callback([], {} as ResizeObserver))
-      })
+        callbacks.forEach((callback) => callback([], {} as ResizeObserver));
+      });
 
-      expect(screen.getByTestId("mode").textContent).toBe("overlay")
+      expect(screen.getByTestId("mode").textContent).toBe("overlay");
 
-      width = 1024
+      width = 1024;
       act(() => {
-        callbacks.forEach((callback) => callback([], {} as ResizeObserver))
-      })
+        callbacks.forEach((callback) => callback([], {} as ResizeObserver));
+      });
 
       await waitFor(() => {
-        expect(screen.getByTestId("mode").textContent).toBe("inline")
-      })
+        expect(screen.getByTestId("mode").textContent).toBe("inline");
+      });
     } finally {
-      globalThis.ResizeObserver = originalResizeObserver
-      window.ResizeObserver = originalWindowResizeObserver
+      globalThis.ResizeObserver = originalResizeObserver;
+      window.ResizeObserver = originalWindowResizeObserver;
       HTMLElement.prototype.getBoundingClientRect =
-        originalGetBoundingClientRect
+        originalGetBoundingClientRect;
     }
-  })
+  });
 
   it("does not thrash auto mode around the breakpoint", async () => {
-    const originalResizeObserver = globalThis.ResizeObserver
-    const originalWindowResizeObserver = window.ResizeObserver
+    const originalResizeObserver = globalThis.ResizeObserver;
+    const originalWindowResizeObserver = window.ResizeObserver;
     const originalGetBoundingClientRect =
-      HTMLElement.prototype.getBoundingClientRect
-    const callbacks: ResizeObserverCallback[] = []
-    let width = 800
+      HTMLElement.prototype.getBoundingClientRect;
+    const callbacks: ResizeObserverCallback[] = [];
+    let width = 800;
 
     class MockResizeObserver {
       constructor(callback: ResizeObserverCallback) {
-        callbacks.push(callback)
+        callbacks.push(callback);
       }
       observe() {}
       disconnect() {}
     }
 
     globalThis.ResizeObserver =
-      MockResizeObserver as unknown as typeof ResizeObserver
+      MockResizeObserver as unknown as typeof ResizeObserver;
     window.ResizeObserver =
-      MockResizeObserver as unknown as typeof ResizeObserver
+      MockResizeObserver as unknown as typeof ResizeObserver;
     HTMLElement.prototype.getBoundingClientRect = function () {
       return {
         bottom: 0,
@@ -1383,12 +1395,12 @@ describe("viewer primitives", () => {
         width,
         x: 0,
         y: 0,
-      }
-    }
+      };
+    };
 
     function ModeProbe() {
-      const sidebar = useViewerSidebar()
-      return <div data-testid="mode">{sidebar.mode}</div>
+      const sidebar = useViewerSidebar();
+      return <div data-testid="mode">{sidebar.mode}</div>;
     }
 
     try {
@@ -1399,54 +1411,54 @@ describe("viewer primitives", () => {
             <ViewerSidebar>Sidebar</ViewerSidebar>
             <ViewerSurface>Surface</ViewerSurface>
           </ViewerBody>
-        </ViewerRoot>
-      )
+        </ViewerRoot>,
+      );
 
       await waitFor(() => {
-        expect(screen.getByTestId("mode").textContent).toBe("inline")
-      })
+        expect(screen.getByTestId("mode").textContent).toBe("inline");
+      });
 
-      width = 760
+      width = 760;
       act(() => {
-        callbacks.forEach((callback) => callback([], {} as ResizeObserver))
-      })
-      expect(screen.getByTestId("mode").textContent).toBe("inline")
+        callbacks.forEach((callback) => callback([], {} as ResizeObserver));
+      });
+      expect(screen.getByTestId("mode").textContent).toBe("inline");
 
-      width = 740
+      width = 740;
       act(() => {
-        callbacks.forEach((callback) => callback([], {} as ResizeObserver))
-      })
-      expect(screen.getByTestId("mode").textContent).toBe("overlay")
+        callbacks.forEach((callback) => callback([], {} as ResizeObserver));
+      });
+      expect(screen.getByTestId("mode").textContent).toBe("overlay");
 
-      width = 776
+      width = 776;
       act(() => {
-        callbacks.forEach((callback) => callback([], {} as ResizeObserver))
-      })
-      expect(screen.getByTestId("mode").textContent).toBe("overlay")
+        callbacks.forEach((callback) => callback([], {} as ResizeObserver));
+      });
+      expect(screen.getByTestId("mode").textContent).toBe("overlay");
 
-      width = 790
+      width = 790;
       act(() => {
-        callbacks.forEach((callback) => callback([], {} as ResizeObserver))
-      })
-      expect(screen.getByTestId("mode").textContent).toBe("inline")
+        callbacks.forEach((callback) => callback([], {} as ResizeObserver));
+      });
+      expect(screen.getByTestId("mode").textContent).toBe("inline");
     } finally {
-      globalThis.ResizeObserver = originalResizeObserver
-      window.ResizeObserver = originalWindowResizeObserver
+      globalThis.ResizeObserver = originalResizeObserver;
+      window.ResizeObserver = originalWindowResizeObserver;
       HTMLElement.prototype.getBoundingClientRect =
-        originalGetBoundingClientRect
+        originalGetBoundingClientRect;
     }
-  })
+  });
 
   it("marks sidebar transitions ready after two animation frames", () => {
-    const originalRequestAnimationFrame = window.requestAnimationFrame
-    const originalCancelAnimationFrame = window.cancelAnimationFrame
-    const frameCallbacks: FrameRequestCallback[] = []
+    const originalRequestAnimationFrame = window.requestAnimationFrame;
+    const originalCancelAnimationFrame = window.cancelAnimationFrame;
+    const frameCallbacks: FrameRequestCallback[] = [];
 
     window.requestAnimationFrame = vi.fn((callback: FrameRequestCallback) => {
-      frameCallbacks.push(callback)
-      return frameCallbacks.length
-    })
-    window.cancelAnimationFrame = vi.fn()
+      frameCallbacks.push(callback);
+      return frameCallbacks.length;
+    });
+    window.cancelAnimationFrame = vi.fn();
 
     try {
       render(
@@ -1455,43 +1467,43 @@ describe("viewer primitives", () => {
             <ViewerSidebar data-testid="sidebar">Sidebar</ViewerSidebar>
             <ViewerSurface>Surface</ViewerSurface>
           </ViewerBody>
-        </ViewerRoot>
-      )
+        </ViewerRoot>,
+      );
 
-      const sidebar = screen.getByTestId("sidebar")
+      const sidebar = screen.getByTestId("sidebar");
       expect(sidebar.hasAttribute("data-viewer-sidebar-transitions")).toBe(
-        false
-      )
+        false,
+      );
 
       act(() => {
-        frameCallbacks.shift()?.(0)
-      })
+        frameCallbacks.shift()?.(0);
+      });
       expect(sidebar.hasAttribute("data-viewer-sidebar-transitions")).toBe(
-        false
-      )
+        false,
+      );
 
       act(() => {
-        frameCallbacks.shift()?.(16)
-      })
+        frameCallbacks.shift()?.(16);
+      });
       expect(sidebar.getAttribute("data-viewer-sidebar-transitions")).toBe(
-        "ready"
-      )
+        "ready",
+      );
     } finally {
-      window.requestAnimationFrame = originalRequestAnimationFrame
-      window.cancelAnimationFrame = originalCancelAnimationFrame
+      window.requestAnimationFrame = originalRequestAnimationFrame;
+      window.cancelAnimationFrame = originalCancelAnimationFrame;
     }
-  })
+  });
 
   it("does not enable transition classes before a collapsed initial sidebar is ready", () => {
-    const originalRequestAnimationFrame = window.requestAnimationFrame
-    const originalCancelAnimationFrame = window.cancelAnimationFrame
-    const frameCallbacks: FrameRequestCallback[] = []
+    const originalRequestAnimationFrame = window.requestAnimationFrame;
+    const originalCancelAnimationFrame = window.cancelAnimationFrame;
+    const frameCallbacks: FrameRequestCallback[] = [];
 
     window.requestAnimationFrame = vi.fn((callback: FrameRequestCallback) => {
-      frameCallbacks.push(callback)
-      return frameCallbacks.length
-    })
-    window.cancelAnimationFrame = vi.fn()
+      frameCallbacks.push(callback);
+      return frameCallbacks.length;
+    });
+    window.cancelAnimationFrame = vi.fn();
 
     try {
       render(
@@ -1500,35 +1512,35 @@ describe("viewer primitives", () => {
             <ViewerSidebar data-testid="sidebar">Sidebar</ViewerSidebar>
             <ViewerSurface>Surface</ViewerSurface>
           </ViewerBody>
-        </ViewerRoot>
-      )
+        </ViewerRoot>,
+      );
 
-      const sidebar = screen.getByTestId("sidebar")
+      const sidebar = screen.getByTestId("sidebar");
       expect(sidebar.getAttribute("data-viewer-sidebar-state")).toBe(
-        "collapsed"
-      )
+        "collapsed",
+      );
       expect(sidebar.hasAttribute("data-viewer-sidebar-transitions")).toBe(
-        false
-      )
-      expect(sidebar.className).toContain("transition-none")
+        false,
+      );
+      expect(sidebar.className).toContain("transition-none");
       expect(sidebar.className).toContain(
-        "data-[viewer-sidebar-transitions=ready]:transition-[translate,margin-left,margin-right,border-color]"
-      )
+        "data-[viewer-sidebar-transitions=ready]:transition-[translate,margin-left,margin-right,border-color]",
+      );
     } finally {
-      window.requestAnimationFrame = originalRequestAnimationFrame
-      window.cancelAnimationFrame = originalCancelAnimationFrame
+      window.requestAnimationFrame = originalRequestAnimationFrame;
+      window.cancelAnimationFrame = originalCancelAnimationFrame;
     }
-  })
+  });
 
   it("throws when the trigger is rendered outside ViewerRoot", () => {
     expect(() => render(<ViewerSidebarTrigger />)).toThrow(
-      "ViewerSidebarTrigger must be used within a ViewerRoot."
-    )
-  })
+      "ViewerSidebarTrigger must be used within a ViewerRoot.",
+    );
+  });
 
   it("throws when the sidebar is rendered outside ViewerRoot", () => {
     expect(() => render(<ViewerSidebar />)).toThrow(
-      "ViewerSidebar must be used within a ViewerRoot."
-    )
-  })
-})
+      "ViewerSidebar must be used within a ViewerRoot.",
+    );
+  });
+});

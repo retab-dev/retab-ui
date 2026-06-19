@@ -1,26 +1,26 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import type { Source } from "@/lib/document-source"
-import { cn } from "@/lib/utils"
-import type { SourceFieldLink } from "@/components/ui/source-field-link"
+import type { Source } from "@/lib/document-source";
+import { cn } from "@/lib/utils";
+import type { SourceFieldLink } from "@/components/ui/source-field-link";
 
-import { InteractiveItemList } from "./interactive-item-list"
+import { InteractiveItemList } from "./interactive-item-list";
 import {
   sourceFieldToEvidenceItem,
   type SourceEvidenceField,
   type SourceEvidenceItem,
-} from "./source-evidence"
+} from "./source-evidence";
 
 export interface SourceField extends Omit<SourceEvidenceField, "source"> {
   /** Join key used by the source field link for hover, selection, and navigation. */
-  key: string
-  label: string
-  value: React.ReactNode
+  key: string;
+  label: string;
+  value: React.ReactNode;
   /** Optional small hint under the value (e.g. "Page 2", "Line 14", "Sheet 1 · B7"). */
-  hint?: string
-  source?: Source | null
+  hint?: string;
+  source?: Source | null;
 }
 
 /**
@@ -33,16 +33,16 @@ export function SourceFieldList({
   title = "Extracted fields",
   className,
 }: {
-  fields: SourceField[]
-  link: SourceFieldLink
-  title?: string
-  className?: string
+  fields: SourceField[];
+  link: SourceFieldLink;
+  title?: string;
+  className?: string;
 }) {
-  const titleId = React.useId()
+  const titleId = React.useId();
   const evidenceItems = React.useMemo(
     () => fields.map(sourceFieldToEvidenceItem),
-    [fields]
-  )
+    [fields],
+  );
 
   return (
     <div
@@ -54,7 +54,7 @@ export function SourceFieldList({
         <h2 id={titleId} className="text-sm font-medium">
           {title}
         </h2>
-        <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+        <span className="text-muted-foreground ml-auto text-xs tabular-nums">
           {fields.length} fields
         </span>
       </div>
@@ -75,7 +75,7 @@ export function SourceFieldList({
         )}
       />
     </div>
-  )
+  );
 }
 
 function SourceFieldRow({
@@ -83,11 +83,11 @@ function SourceFieldRow({
   isDisabled,
   item,
 }: {
-  isActive: boolean
-  isDisabled: boolean
-  item: SourceEvidenceItem
+  isActive: boolean;
+  isDisabled: boolean;
+  item: SourceEvidenceItem;
 }) {
-  const { hint, label, value } = item.payload
+  const { hint, label, value } = item.payload;
 
   return (
     <span
@@ -95,20 +95,20 @@ function SourceFieldRow({
         "flex flex-col gap-0.5 rounded-md border px-3 py-2 text-left transition-colors",
         isActive
           ? "border-primary/40 bg-primary/5"
-          : "border-transparent hover:bg-muted/60",
-        isDisabled && "hover:bg-transparent"
+          : "hover:bg-muted/60 border-transparent",
+        isDisabled && "hover:bg-transparent",
       )}
     >
-      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-muted-foreground text-xs">{label}</span>
       <span className="text-sm tabular-nums">{value}</span>
       {hint ? (
-        <span className="text-[11px] text-muted-foreground/70">{hint}</span>
+        <span className="text-muted-foreground/70 text-[11px]">{hint}</span>
       ) : null}
       {item.anchor.status === "invalid" ? (
-        <span className="text-[11px] text-destructive">
+        <span className="text-destructive text-[11px]">
           {item.anchor.reason}
         </span>
       ) : null}
     </span>
-  )
+  );
 }

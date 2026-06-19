@@ -1,40 +1,40 @@
-export const PDF_THUMBNAIL_OVERSCAN = 16
-export const PDF_THUMBNAIL_INITIAL_VIEWPORT_HEIGHT = 680
-export const PDF_THUMBNAIL_DEFAULT_ASPECT = 4 / 3
-export const PDF_THUMBNAIL_LABEL_AND_GAP_HEIGHT = 22
+export const PDF_THUMBNAIL_OVERSCAN = 16;
+export const PDF_THUMBNAIL_INITIAL_VIEWPORT_HEIGHT = 680;
+export const PDF_THUMBNAIL_DEFAULT_ASPECT = 4 / 3;
+export const PDF_THUMBNAIL_LABEL_AND_GAP_HEIGHT = 22;
 
-export type PdfThumbnailShape = "page" | "square"
+export type PdfThumbnailShape = "page" | "square";
 
 export interface PdfThumbnailPageMetric {
-  pageNumber: number
-  width: number
-  height: number
+  pageNumber: number;
+  width: number;
+  height: number;
 }
 
 export interface PdfThumbnailLayoutItem {
-  pageNumber: number
-  pageIndex: number
-  top: number
-  height: number
-  imageWidth: number
-  imageHeight: number
+  pageNumber: number;
+  pageIndex: number;
+  top: number;
+  height: number;
+  imageWidth: number;
+  imageHeight: number;
 }
 
 export interface PdfThumbnailLayout {
-  pageCount: number
-  width: number
-  shape: PdfThumbnailShape
-  estimatedImageHeight: number
-  estimatedItemHeight: number
-  labelAndGapHeight: number
-  metricByPageNumber: ReadonlyMap<number, PdfThumbnailPageMetric>
-  prefixHeightDeltas: readonly PdfThumbnailHeightDelta[]
-  totalHeight: number
+  pageCount: number;
+  width: number;
+  shape: PdfThumbnailShape;
+  estimatedImageHeight: number;
+  estimatedItemHeight: number;
+  labelAndGapHeight: number;
+  metricByPageNumber: ReadonlyMap<number, PdfThumbnailPageMetric>;
+  prefixHeightDeltas: readonly PdfThumbnailHeightDelta[];
+  totalHeight: number;
 }
 
 interface PdfThumbnailHeightDelta {
-  pageNumber: number
-  prefixDeltaAfterPage: number
+  pageNumber: number;
+  prefixDeltaAfterPage: number;
 }
 
 export function buildPdfThumbnailLayout({
@@ -44,23 +44,23 @@ export function buildPdfThumbnailLayout({
   labelAndGapHeight = PDF_THUMBNAIL_LABEL_AND_GAP_HEIGHT,
   shape = "page",
 }: {
-  pageCount: number
-  width: number
-  metricByPageNumber?: ReadonlyMap<number, PdfThumbnailPageMetric>
-  labelAndGapHeight?: number
-  shape?: PdfThumbnailShape
+  pageCount: number;
+  width: number;
+  metricByPageNumber?: ReadonlyMap<number, PdfThumbnailPageMetric>;
+  labelAndGapHeight?: number;
+  shape?: PdfThumbnailShape;
 }): PdfThumbnailLayout {
-  const safePageCount = normalizePageCount(pageCount)
-  const safeWidth = normalizeWidth(width)
-  const safeLabelAndGapHeight = normalizeSize(labelAndGapHeight, 0)
-  const safeMetricByPageNumber = metricByPageNumber ?? new Map()
+  const safePageCount = normalizePageCount(pageCount);
+  const safeWidth = normalizeWidth(width);
+  const safeLabelAndGapHeight = normalizeSize(labelAndGapHeight, 0);
+  const safeMetricByPageNumber = metricByPageNumber ?? new Map();
   const estimatedImageHeight = getThumbnailImageHeight({
     width: safeWidth,
     metric: safeMetricByPageNumber.get(1),
     shape,
-  })
+  });
   const estimatedItemHeight =
-    Math.ceil(estimatedImageHeight) + safeLabelAndGapHeight
+    Math.ceil(estimatedImageHeight) + safeLabelAndGapHeight;
   const prefixHeightDeltas = buildPrefixHeightDeltas({
     pageCount: safePageCount,
     width: safeWidth,
@@ -68,10 +68,10 @@ export function buildPdfThumbnailLayout({
     estimatedItemHeight,
     metricByPageNumber: safeMetricByPageNumber,
     labelAndGapHeight: safeLabelAndGapHeight,
-  })
+  });
   const totalHeight =
     safePageCount * estimatedItemHeight +
-    (prefixHeightDeltas.at(-1)?.prefixDeltaAfterPage ?? 0)
+    (prefixHeightDeltas.at(-1)?.prefixDeltaAfterPage ?? 0);
 
   return {
     pageCount: safePageCount,
@@ -83,23 +83,23 @@ export function buildPdfThumbnailLayout({
     metricByPageNumber: safeMetricByPageNumber,
     prefixHeightDeltas,
     totalHeight,
-  }
+  };
 }
 
 export function getPdfThumbnailLayoutItem(
   layout: PdfThumbnailLayout,
-  pageNumber: number
+  pageNumber: number,
 ): PdfThumbnailLayoutItem | null {
-  const normalizedPage = normalizeThumbnailPage(pageNumber, layout.pageCount)
-  if (normalizedPage == null) return null
+  const normalizedPage = normalizeThumbnailPage(pageNumber, layout.pageCount);
+  if (normalizedPage == null) return null;
 
-  const metric = layout.metricByPageNumber.get(normalizedPage)
+  const metric = layout.metricByPageNumber.get(normalizedPage);
   const imageHeight = getThumbnailImageHeight({
     width: layout.width,
     metric,
     shape: layout.shape,
-  })
-  const height = Math.ceil(imageHeight) + layout.labelAndGapHeight
+  });
+  const height = Math.ceil(imageHeight) + layout.labelAndGapHeight;
 
   return {
     pageNumber: normalizedPage,
@@ -110,7 +110,7 @@ export function getPdfThumbnailLayoutItem(
     height,
     imageWidth: layout.width,
     imageHeight,
-  }
+  };
 }
 
 export function getVisiblePdfThumbnailItems({
@@ -119,64 +119,64 @@ export function getVisiblePdfThumbnailItems({
   viewportHeight,
   overscan,
 }: {
-  layout: PdfThumbnailLayout
-  scrollTop: number
-  viewportHeight: number
-  overscan: number
+  layout: PdfThumbnailLayout;
+  scrollTop: number;
+  viewportHeight: number;
+  overscan: number;
 }) {
-  if (layout.pageCount === 0) return []
+  if (layout.pageCount === 0) return [];
 
-  const visibleStart = Math.max(0, scrollTop)
-  const visibleEnd = Math.max(visibleStart, visibleStart + viewportHeight)
-  const firstVisiblePage = findPdfThumbnailPageByOffset(layout, visibleStart)
-  const lastVisiblePage = findPdfThumbnailPageByOffset(layout, visibleEnd)
-  const startPage = Math.max(1, firstVisiblePage - overscan)
-  const endPage = Math.min(layout.pageCount, lastVisiblePage + overscan)
-  const items: PdfThumbnailLayoutItem[] = []
+  const visibleStart = Math.max(0, scrollTop);
+  const visibleEnd = Math.max(visibleStart, visibleStart + viewportHeight);
+  const firstVisiblePage = findPdfThumbnailPageByOffset(layout, visibleStart);
+  const lastVisiblePage = findPdfThumbnailPageByOffset(layout, visibleEnd);
+  const startPage = Math.max(1, firstVisiblePage - overscan);
+  const endPage = Math.min(layout.pageCount, lastVisiblePage + overscan);
+  const items: PdfThumbnailLayoutItem[] = [];
 
   for (let pageNumber = startPage; pageNumber <= endPage; pageNumber += 1) {
-    const item = getPdfThumbnailLayoutItem(layout, pageNumber)
-    if (item) items.push(item)
+    const item = getPdfThumbnailLayoutItem(layout, pageNumber);
+    if (item) items.push(item);
   }
 
-  return items
+  return items;
 }
 
 export function findPdfThumbnailPageByOffset(
   layout: PdfThumbnailLayout,
-  offset: number
+  offset: number,
 ) {
-  const safeOffset = Math.max(0, offset)
-  let low = 1
-  let high = layout.pageCount
-  let result = 1
+  const safeOffset = Math.max(0, offset);
+  let low = 1;
+  let high = layout.pageCount;
+  let result = 1;
 
   while (low <= high) {
-    const pageNumber = Math.floor((low + high) / 2)
-    const item = getPdfThumbnailLayoutItem(layout, pageNumber)
-    if (!item) break
+    const pageNumber = Math.floor((low + high) / 2);
+    const item = getPdfThumbnailLayoutItem(layout, pageNumber);
+    if (!item) break;
 
     if (item.top + item.height >= safeOffset) {
-      result = pageNumber
-      high = pageNumber - 1
+      result = pageNumber;
+      high = pageNumber - 1;
     } else {
-      low = pageNumber + 1
+      low = pageNumber + 1;
     }
   }
 
-  return result
+  return result;
 }
 
 export function normalizeThumbnailPage(
   page: number | null | undefined,
-  pageCount: number
+  pageCount: number,
 ): number | null {
   return page != null &&
     Number.isInteger(page) &&
     page >= 1 &&
     page <= pageCount
     ? page
-    : null
+    : null;
 }
 
 function getThumbnailImageHeight({
@@ -184,11 +184,11 @@ function getThumbnailImageHeight({
   metric,
   shape,
 }: {
-  width: number
-  metric: PdfThumbnailPageMetric | undefined
-  shape: PdfThumbnailShape
+  width: number;
+  metric: PdfThumbnailPageMetric | undefined;
+  shape: PdfThumbnailShape;
 }) {
-  if (shape === "square") return width
+  if (shape === "square") return width;
 
   if (
     metric &&
@@ -197,10 +197,10 @@ function getThumbnailImageHeight({
     metric.width > 0 &&
     metric.height > 0
   ) {
-    return width * (metric.height / metric.width)
+    return width * (metric.height / metric.width);
   }
 
-  return width * PDF_THUMBNAIL_DEFAULT_ASPECT
+  return width * PDF_THUMBNAIL_DEFAULT_ASPECT;
 }
 
 function buildPrefixHeightDeltas({
@@ -211,65 +211,65 @@ function buildPrefixHeightDeltas({
   metricByPageNumber,
   labelAndGapHeight,
 }: {
-  pageCount: number
-  width: number
-  shape: PdfThumbnailShape
-  estimatedItemHeight: number
-  metricByPageNumber: ReadonlyMap<number, PdfThumbnailPageMetric>
-  labelAndGapHeight: number
+  pageCount: number;
+  width: number;
+  shape: PdfThumbnailShape;
+  estimatedItemHeight: number;
+  metricByPageNumber: ReadonlyMap<number, PdfThumbnailPageMetric>;
+  labelAndGapHeight: number;
 }) {
-  let prefixDeltaAfterPage = 0
-  const prefixHeightDeltas: PdfThumbnailHeightDelta[] = []
+  let prefixDeltaAfterPage = 0;
+  const prefixHeightDeltas: PdfThumbnailHeightDelta[] = [];
 
   for (const [pageNumber, metric] of [...metricByPageNumber.entries()].sort(
-    ([left], [right]) => left - right
+    ([left], [right]) => left - right,
   )) {
-    if (normalizeThumbnailPage(pageNumber, pageCount) == null) continue
+    if (normalizeThumbnailPage(pageNumber, pageCount) == null) continue;
 
     const measuredItemHeight =
       Math.ceil(getThumbnailImageHeight({ width, metric, shape })) +
-      labelAndGapHeight
-    const delta = measuredItemHeight - estimatedItemHeight
-    if (delta === 0) continue
+      labelAndGapHeight;
+    const delta = measuredItemHeight - estimatedItemHeight;
+    if (delta === 0) continue;
 
-    prefixDeltaAfterPage += delta
-    prefixHeightDeltas.push({ pageNumber, prefixDeltaAfterPage })
+    prefixDeltaAfterPage += delta;
+    prefixHeightDeltas.push({ pageNumber, prefixDeltaAfterPage });
   }
 
-  return prefixHeightDeltas
+  return prefixHeightDeltas;
 }
 
 function getPrefixHeightDeltaBeforePage(
   layout: PdfThumbnailLayout,
-  pageNumber: number
+  pageNumber: number,
 ) {
-  let low = 0
-  let high = layout.prefixHeightDeltas.length - 1
-  let result = 0
+  let low = 0;
+  let high = layout.prefixHeightDeltas.length - 1;
+  let result = 0;
 
   while (low <= high) {
-    const mid = Math.floor((low + high) / 2)
-    const delta = layout.prefixHeightDeltas[mid]
+    const mid = Math.floor((low + high) / 2);
+    const delta = layout.prefixHeightDeltas[mid];
 
     if (delta.pageNumber < pageNumber) {
-      result = delta.prefixDeltaAfterPage
-      low = mid + 1
+      result = delta.prefixDeltaAfterPage;
+      low = mid + 1;
     } else {
-      high = mid - 1
+      high = mid - 1;
     }
   }
 
-  return result
+  return result;
 }
 
 function normalizePageCount(pageCount: number) {
-  return Number.isInteger(pageCount) && pageCount > 0 ? pageCount : 0
+  return Number.isInteger(pageCount) && pageCount > 0 ? pageCount : 0;
 }
 
 function normalizeWidth(width: number) {
-  return normalizeSize(width, 0)
+  return normalizeSize(width, 0);
 }
 
 function normalizeSize(value: number, fallback: number) {
-  return Number.isFinite(value) && value > 0 ? value : fallback
+  return Number.isFinite(value) && value > 0 ? value : fallback;
 }

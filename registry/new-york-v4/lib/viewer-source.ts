@@ -7,44 +7,45 @@ export type FileCategory =
   | "image"
   | "markdown"
   | "html"
+  | "email"
   | "text"
-  | "unsupported"
+  | "unsupported";
 
-export type ViewerSource = UrlViewerSource | TextSource | BlobViewerSource
+export type ViewerSource = UrlViewerSource | TextSource | BlobViewerSource;
 
 export interface UrlViewerSource {
-  kind: "url"
-  url: string
-  fileName?: string
-  mimeType?: string
-  downloadUrl?: string
-  identityKey?: string
+  kind: "url";
+  url: string;
+  fileName?: string;
+  mimeType?: string;
+  downloadUrl?: string;
+  identityKey?: string;
 }
 
 export interface TextSource {
-  kind: "text"
-  text: string
-  fileName?: string
-  mimeType?: string
-  identityKey?: string
+  kind: "text";
+  text: string;
+  fileName?: string;
+  mimeType?: string;
+  identityKey?: string;
 }
 
 export interface BlobViewerSource {
-  kind: "blob"
-  blob: Blob
-  identityKey: string
-  fileName?: string
-  mimeType?: string
-  downloadUrl?: string
+  kind: "blob";
+  blob: Blob;
+  identityKey: string;
+  fileName?: string;
+  mimeType?: string;
+  downloadUrl?: string;
 }
 
 export interface ViewerDescriptor {
-  source: ViewerSource
-  category: FileCategory
-  identityKey: string
-  displayName: string
-  fileName: string
-  mimeType?: string
+  source: ViewerSource;
+  category: FileCategory;
+  identityKey: string;
+  displayName: string;
+  fileName: string;
+  mimeType?: string;
 }
 
 const EXTENSION_CATEGORY: Record<string, FileCategory> = {
@@ -72,6 +73,7 @@ const EXTENSION_CATEGORY: Record<string, FileCategory> = {
   mdx: "text",
   html: "html",
   htm: "html",
+  msg: "email",
   txt: "text",
   text: "text",
   log: "text",
@@ -119,47 +121,47 @@ const EXTENSION_CATEGORY: Record<string, FileCategory> = {
   pl: "text",
   vue: "text",
   svelte: "text",
-}
+};
 
 export function extensionOf(name: string): string | null {
-  const clean = name.split(/[?#]/)[0]
-  const base = clean.split("/").pop() ?? clean
-  const dot = base.lastIndexOf(".")
-  return dot > 0 ? base.slice(dot + 1).toLowerCase() : null
+  const clean = name.split(/[?#]/)[0];
+  const base = clean.split("/").pop() ?? clean;
+  const dot = base.lastIndexOf(".");
+  return dot > 0 ? base.slice(dot + 1).toLowerCase() : null;
 }
 
 export function extractName(url: string): string {
-  const clean = url.split(/[?#]/)[0]
-  return clean.split("/").pop() || "file"
+  const clean = url.split(/[?#]/)[0];
+  return clean.split("/").pop() || "file";
 }
 
 export function detectCategory(
   fileName: string,
-  mimeType?: string
+  mimeType?: string,
 ): FileCategory {
-  const ext = extensionOf(fileName)
-  if (ext && EXTENSION_CATEGORY[ext]) return EXTENSION_CATEGORY[ext]
+  const ext = extensionOf(fileName);
+  if (ext && EXTENSION_CATEGORY[ext]) return EXTENSION_CATEGORY[ext];
   if (mimeType) {
-    const fromMime = categoryFromMime(mimeType)
-    if (fromMime) return fromMime
+    const fromMime = categoryFromMime(mimeType);
+    if (fromMime) return fromMime;
   }
-  return "unsupported"
+  return "unsupported";
 }
 
 export function resolveViewerDescriptor({
   source,
   category,
 }: {
-  source: ViewerSource
-  category?: FileCategory
+  source: ViewerSource;
+  category?: FileCategory;
 }): ViewerDescriptor {
   const resolvedMimeType =
     source.mimeType ??
-    (source.kind === "blob" && source.blob.type ? source.blob.type : undefined)
-  const displayName = source.fileName ?? defaultDisplayName(source)
-  const fileName = source.fileName ?? defaultFileName(source)
+    (source.kind === "blob" && source.blob.type ? source.blob.type : undefined);
+  const displayName = source.fileName ?? defaultDisplayName(source);
+  const fileName = source.fileName ?? defaultFileName(source);
   const resolvedCategory =
-    category ?? detectCategory(displayName, resolvedMimeType)
+    category ?? detectCategory(displayName, resolvedMimeType);
 
   return {
     source,
@@ -168,57 +170,64 @@ export function resolveViewerDescriptor({
     displayName,
     fileName,
     mimeType: resolvedMimeType,
-  }
+  };
 }
 
 function categoryFromMime(mimeType: string): FileCategory | null {
-  const mime = mimeType.toLowerCase().split(";")[0].trim()
-  if (mime === "application/pdf") return "pdf"
-  if (mime.includes("wordprocessingml")) return "docx"
-  if (mime.includes("spreadsheet") || mime.includes("ms-excel")) return "xlsx"
+  const mime = mimeType.toLowerCase().split(";")[0].trim();
+  if (mime === "application/pdf") return "pdf";
+  if (mime.includes("wordprocessingml")) return "docx";
+  if (mime.includes("spreadsheet") || mime.includes("ms-excel")) return "xlsx";
   if (mime.includes("presentation") || mime.includes("ms-powerpoint")) {
-    return "pptx"
+    return "pptx";
   }
-  if (mime === "text/csv" || mime === "text/tab-separated-values") return "csv"
-  if (mime === "text/markdown") return "markdown"
-  if (mime === "text/html") return "html"
-  if (mime.startsWith("image/")) return "image"
-  if (mime === "application/json" || mime === "application/xml") return "text"
-  if (mime.startsWith("text/")) return "text"
-  return null
+  if (mime === "text/csv" || mime === "text/tab-separated-values") return "csv";
+  if (mime === "text/markdown") return "markdown";
+  if (mime === "text/html") return "html";
+  if (
+    mime === "application/vnd.ms-outlook" ||
+    mime === "application/msoutlook" ||
+    mime === "application/x-msg"
+  ) {
+    return "email";
+  }
+  if (mime.startsWith("image/")) return "image";
+  if (mime === "application/json" || mime === "application/xml") return "text";
+  if (mime.startsWith("text/")) return "text";
+  return null;
 }
 
 function defaultDisplayName(source: ViewerSource) {
-  if (source.kind === "url") return source.url
-  if (source.kind === "text") return "text.txt"
-  return "file"
+  if (source.kind === "url") return source.url;
+  if (source.kind === "text") return "text.txt";
+  return "file";
 }
 
 function defaultFileName(source: ViewerSource) {
-  if (source.kind === "url") return extractName(source.url)
-  if (source.kind === "text") return "text.txt"
-  return "file"
+  if (source.kind === "url") return extractName(source.url);
+  if (source.kind === "text") return "text.txt";
+  return "file";
 }
 
 function defaultIdentityKey(source: ViewerSource) {
-  if (source.kind === "url") return `url:${source.url}`
-  if (source.kind === "text") return textPayloadIdentityKey(source.text)
-  return source.identityKey
+  if (source.kind === "url") return `url:${source.url}`;
+  if (source.kind === "text") return textPayloadIdentityKey(source.text);
+  return source.identityKey;
 }
 
 export function textPayloadIdentityKey(text: string) {
-  return textPayloadKey(text)
+  return textPayloadKey(text);
 }
 
 export function textPayloadKey(text: string) {
-  return `text:${text.length}:${hashString(text)}`
+  return `text:${text.length}:${hashString(text)}`;
 }
 
 function hashString(text: string) {
-  let hash = 0x811c9dc5
+  let hash = 0x811c9dc5;
   for (let index = 0; index < text.length; index += 1) {
-    hash ^= text.charCodeAt(index)
-    hash = Math.imul(hash, 0x01000193)
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
   }
-  return (hash >>> 0).toString(36)
+  return (hash >>> 0).toString(36);
 }

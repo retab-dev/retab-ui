@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 export function PageNav({
   children,
@@ -11,5 +11,5 @@ export function PageNav({
         {children}
       </div>
     </div>
-  )
+  );
 }

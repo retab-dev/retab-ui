@@ -1,24 +1,24 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
-import { useDropzone, type DropzoneFileItem } from "@/components/ui/dropzone"
+import { cn } from "@/lib/utils";
+import { useDropzone, type DropzoneFileItem } from "@/components/ui/dropzone";
 
 import {
   InlineFileRows,
   RejectionRows,
   type DropzoneExampleProps,
-} from "./dropzone-example-shared"
+} from "./dropzone-example-shared";
 
 export function ControlledQueue({ className }: DropzoneExampleProps) {
-  const [files, setFiles] = React.useState<DropzoneFileItem[]>([])
+  const [files, setFiles] = React.useState<DropzoneFileItem[]>([]);
   const dropzone = useDropzone({
     files,
     maxFiles: 4,
     multiple: true,
     onFilesChange: setFiles,
-  })
+  });
 
   return (
     <section
@@ -26,7 +26,7 @@ export function ControlledQueue({ className }: DropzoneExampleProps) {
         className: cn(
           "rounded-lg border bg-muted/20 p-4 transition-colors",
           dropzone.isDragging && "border-foreground/40 bg-accent/35",
-          className
+          className,
         ),
       })}
     >
@@ -34,13 +34,13 @@ export function ControlledQueue({ className }: DropzoneExampleProps) {
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-sm font-medium">Controlled queue</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             Parent-owned file state.
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button
-            className="h-8 rounded-md border px-2 text-xs text-muted-foreground hover:bg-muted"
+            className="text-muted-foreground hover:bg-muted h-8 rounded-md border px-2 text-xs"
             onClick={dropzone.clearFiles}
             type="button"
           >
@@ -60,5 +60,5 @@ export function ControlledQueue({ className }: DropzoneExampleProps) {
       <InlineFileRows files={files} onRemove={dropzone.removeFile} />
       <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </section>
-  )
+  );
 }

@@ -9,6 +9,6 @@ import { useEffect } from "react";
  * widget lifecycles, browser API subscriptions, stable singleton dependencies).
  */
 export function useMountEffect(effect: () => void | (() => void)) {
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps, no-restricted-syntax
   useEffect(effect, []);
 }

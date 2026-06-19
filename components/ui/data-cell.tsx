@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 export {
   DataCell,
@@ -12,4 +12,4 @@ export {
   type DataCellSelectOption,
   type DataCellValue,
   type DataCellValueMeta,
-} from "@/registry/new-york-v4/ui/data-cell"
+} from "@/registry/new-york-v4/ui/data-cell";

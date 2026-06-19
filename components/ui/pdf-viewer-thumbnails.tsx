@@ -1,3 +1,3 @@
-"use client"
+"use client";
 
-export * from "@/registry/new-york-v4/ui/pdf-viewer-thumbnails"
+export * from "@/registry/new-york-v4/ui/pdf-viewer-thumbnails";

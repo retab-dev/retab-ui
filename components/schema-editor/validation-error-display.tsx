@@ -30,7 +30,7 @@ export function ValidationErrorDisplay({
       type="button"
       variant="ghost"
       onClick={() => setIsExpanded(!isExpanded)}
-      className="h-auto w-full justify-start gap-2 px-2 py-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+      className="text-destructive hover:bg-destructive/10 hover:text-destructive h-auto w-full justify-start gap-2 px-2 py-1.5"
       title={isExpanded ? "Collapse error details" : "Expand error details"}
     >
       {isExpanded ? (
@@ -48,11 +48,11 @@ export function ValidationErrorDisplay({
   );
 
   const errorList = isExpanded ? (
-    <div className="space-y-2 border-t border-destructive/30 px-3 py-2">
+    <div className="border-destructive/30 space-y-2 border-t px-3 py-2">
       {errorItems.map((error, index) => (
         <p
           key={index}
-          className="text-sm leading-relaxed break-words whitespace-pre-wrap text-destructive"
+          className="text-destructive text-sm leading-relaxed break-words whitespace-pre-wrap"
         >
           {error}
         </p>
@@ -62,7 +62,7 @@ export function ValidationErrorDisplay({
 
   if (variant === "compact") {
     return (
-      <div className={cn("border-l-2 border-destructive", className)}>
+      <div className={cn("border-destructive border-l-2", className)}>
         {toggle}
         {errorList}
       </div>
@@ -72,7 +72,7 @@ export function ValidationErrorDisplay({
   return (
     <div
       className={cn(
-        "rounded-md border border-destructive bg-destructive/10",
+        "border-destructive bg-destructive/10 rounded-md border",
         className,
       )}
     >

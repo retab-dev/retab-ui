@@ -76,10 +76,7 @@ export function countSchemaProperties(schema?: ExtendedJSONSchema7): number {
   const resolveLocalRef = (ref: string): ExtendedJSONSchema7 | undefined => {
     if (!ref.startsWith("#/")) return undefined;
 
-    const segments = ref
-      .substring(2)
-      .split("/")
-      .map(decodeJsonPointerSegment);
+    const segments = ref.substring(2).split("/").map(decodeJsonPointerSegment);
     let refSchema: unknown = schema;
     for (const segment of segments) {
       if (refSchema && typeof refSchema === "object") {
@@ -263,7 +260,8 @@ export function processValidationErrors(
         instancePath: error.instancePath,
         schemaPath: error.schemaPath,
         params: error.params,
-        message: "`additionalProperties` are forbidden, if present they MUST be false.",
+        message:
+          "`additionalProperties` are forbidden, if present they MUST be false.",
         data: error.data,
         schema: error.schema,
       });
@@ -324,7 +322,6 @@ export function isJsonSchemaDefinition(
   value: unknown,
 ): value is JSONSchema7Definition {
   return (
-    typeof value === "boolean" ||
-    (typeof value === "object" && value !== null)
+    typeof value === "boolean" || (typeof value === "object" && value !== null)
   );
 }

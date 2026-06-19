@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { type ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { PropertyForm } from "@/components/schema-editor/property-form/property-form"
+import { type ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
+import { PropertyForm } from "@/components/schema-editor/property-form/property-form";
 
 export function PropertyFormDemo() {
   const [property, setProperty] = React.useState<ExtendedJSONSchema7>({
@@ -14,11 +14,11 @@ export function PropertyFormDemo() {
       city: { type: "string" },
     },
     required: ["street"],
-  })
-  const [name, setName] = React.useState("address")
+  });
+  const [name, setName] = React.useState("address");
 
   return (
-    <div className="not-prose max-w-xl overflow-hidden rounded-xl border bg-card">
+    <div className="not-prose bg-card max-w-xl overflow-hidden rounded-xl border">
       <PropertyForm
         propertyDraft={{ name, schemaNode: property }}
         schemaContext={{
@@ -28,12 +28,12 @@ export function PropertyFormDemo() {
         }}
         submitLabel="Save"
         onCommitPropertyDraft={(next) => {
-          setName(next.name)
-          setProperty(next.schemaNode)
+          setName(next.name);
+          setProperty(next.schemaNode);
         }}
         onCancel={() => {}}
         onDelete={() => {}}
       />
     </div>
-  )
+  );
 }

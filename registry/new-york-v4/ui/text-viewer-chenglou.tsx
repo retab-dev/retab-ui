@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { PlainTextViewerFrame } from "./plain-text-viewer-frame"
-import { ChenglouTextViewerContent } from "./text-viewer-chenglou-content"
-import { TextViewerFallback } from "./text-viewer-chrome"
-import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types"
+import { PlainTextViewerFrame } from "./plain-text-viewer-frame";
+import { ChenglouTextViewerContent } from "./text-viewer-chenglou-content";
+import { TextViewerFallback } from "./text-viewer-chrome";
+import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types";
 
 export const ChenglouTextViewer = React.forwardRef<
   TextViewerHandle,
@@ -19,5 +19,5 @@ export const ChenglouTextViewer = React.forwardRef<
       Fallback={TextViewerFallback}
       Content={ChenglouTextViewerContent}
     />
-  )
-})
+  );
+});

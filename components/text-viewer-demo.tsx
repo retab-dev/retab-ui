@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { TextViewer } from "@/components/ui/text-viewer"
+import { TextViewer } from "@/components/ui/text-viewer";
 import {
   LONG_TEXT_SAMPLE,
   LONG_TEXT_SAMPLE_FILE_NAME,
   LONG_TEXT_SAMPLE_MIME_TYPE,
-} from "@/components/long-text-sample"
+} from "@/components/long-text-sample";
 
 export function TextViewerDemo() {
   return (
@@ -22,5 +22,5 @@ export function TextViewerDemo() {
         highlight={{ start: 1, end: 3 }}
       />
     </div>
-  )
+  );
 }

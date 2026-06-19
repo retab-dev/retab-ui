@@ -1,39 +1,39 @@
-import * as React from "react"
-import dynamic from "next/dynamic"
-import type { JSONSchema7, JSONSchema7Definition } from "json-schema"
+import * as React from "react";
+import dynamic from "next/dynamic";
+import type { JSONSchema7, JSONSchema7Definition } from "json-schema";
 
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { TableCell } from "@/components/ui/table"
+} from "@/components/ui/popover";
+import { TableCell } from "@/components/ui/table";
 import {
   getCellWidthStyle,
   getSelectableCellWidthStyle,
-} from "@/components/json-table/cell-style"
-import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
-import { jsonTableDisplayText } from "@/components/json-table/json-table-display-value"
-import { jsonTablePrimitiveKind } from "@/components/json-table/json-table-primitive-kind"
-import { JsonTableReadOnlyPrimitiveDisplayCell } from "@/components/json-table/json-table-read-only-primitive-cell"
-import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
-import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
+} from "@/components/json-table/cell-style";
+import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types";
+import { jsonTableDisplayText } from "@/components/json-table/json-table-display-value";
+import { jsonTablePrimitiveKind } from "@/components/json-table/json-table-primitive-kind";
+import { JsonTableReadOnlyPrimitiveDisplayCell } from "@/components/json-table/json-table-read-only-primitive-cell";
+import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata";
+import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata";
 
 type SchemaWithDefs = JSONSchema7 & {
-  $defs?: Record<string, JSONSchema7Definition>
-}
+  $defs?: Record<string, JSONSchema7Definition>;
+};
 
 const ReadOnlyJsonNestedEditor = dynamic(
   () =>
     import("./read-only-json-nested-editor").then((module) => ({
       default: module.ReadOnlyJsonNestedEditor,
     })),
-  { ssr: false }
-)
+  { ssr: false },
+);
 
 function transferContext(type: JSONSchema7, context: JSONSchema7): JSONSchema7 {
-  const contextDefs = (context as SchemaWithDefs).$defs || {}
-  const typeDefs = (type as SchemaWithDefs).$defs || {}
+  const contextDefs = (context as SchemaWithDefs).$defs || {};
+  const typeDefs = (type as SchemaWithDefs).$defs || {};
 
   return {
     ...type,
@@ -41,17 +41,17 @@ function transferContext(type: JSONSchema7, context: JSONSchema7): JSONSchema7 {
       ...contextDefs,
       ...typeDefs,
     },
-  }
+  };
 }
 
 function formatNestedValue(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.length} items]`
-  if (value === null || value === undefined) return ""
-  if (typeof value !== "object") return String(value)
+  if (Array.isArray(value)) return `[${value.length} items]`;
+  if (value === null || value === undefined) return "";
+  if (typeof value !== "object") return String(value);
   try {
-    return JSON.stringify(value)
+    return JSON.stringify(value);
   } catch {
-    return String(value)
+    return String(value);
   }
 }
 
@@ -61,19 +61,19 @@ function ReadOnlyJsonFormCell({
   rootSchema,
   value,
 }: {
-  displayValue: string
-  fieldMetadata: FieldMetadata
-  rootSchema: JsonTableCellProps["cellProjection"]["schema"]
-  value: unknown
+  displayValue: string;
+  fieldMetadata: FieldMetadata;
+  rootSchema: JsonTableCellProps["cellProjection"]["schema"];
+  value: unknown;
 }) {
-  const [open, setOpen] = React.useState(false)
-  const property = fieldMetadata.rawSchema
-  const title = property.title || fieldMetadata.fieldPath
+  const [open, setOpen] = React.useState(false);
+  const property = fieldMetadata.rawSchema;
+  const title = property.title || fieldMetadata.fieldPath;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button className="h-full w-full justify-start overflow-hidden px-1 text-xs leading-none text-inherit select-none hover:bg-accent/50 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none">
+        <button className="hover:bg-accent/50 focus-visible:ring-ring h-full w-full justify-start overflow-hidden px-1 text-xs leading-none text-inherit select-none focus-visible:ring-1 focus-visible:outline-none">
           {displayValue ? (
             <div
               data-slot="json-table-read-only-cell-text"
@@ -84,7 +84,7 @@ function ReadOnlyJsonFormCell({
           ) : (
             <div
               data-slot="json-table-read-only-cell-text"
-              className="max-w-[80px] truncate text-left text-muted-foreground"
+              className="text-muted-foreground max-w-[80px] truncate text-left"
             >
               {title}
             </div>
@@ -118,20 +118,20 @@ function ReadOnlyJsonFormCell({
         ) : null}
       </PopoverContent>
     </Popover>
-  )
+  );
 }
 
 function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
-  const { cellProjection } = props
+  const { cellProjection } = props;
   const materializedFieldPath =
-    cellProjection.projectedCell?.materializedFieldPath
+    cellProjection.projectedCell?.materializedFieldPath;
   const fieldMetadata =
     cellProjection.column.fieldMetadata ??
     (materializedFieldPath
       ? getFieldMetadata(cellProjection.schema, materializedFieldPath)
-      : undefined)
-  const value = cellProjection.projectedCell?.value
-  const cellWidth = cellProjection.column.widthPx
+      : undefined);
+  const value = cellProjection.projectedCell?.value;
+  const cellWidth = cellProjection.column.widthPx;
 
   if (!materializedFieldPath || !fieldMetadata) {
     return (
@@ -139,20 +139,20 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
         aria-colindex={cellProjection.ariaColumnIndex}
         data-field-path={materializedFieldPath}
         data-slot="json-table-read-only-cell"
-        className="relative cursor-not-allowed bg-muted/60 p-0"
+        className="bg-muted/60 relative cursor-not-allowed p-0"
         style={getCellWidthStyle(cellWidth)}
       >
         <div data-slot="data-cell" className="h-full w-full" />
       </TableCell>
-    )
+    );
   }
 
   const isJsonFormCell =
-    fieldMetadata.kind === "object" || fieldMetadata.kind === "array"
-  const primitiveKind = jsonTablePrimitiveKind(fieldMetadata)
+    fieldMetadata.kind === "object" || fieldMetadata.kind === "array";
+  const primitiveKind = jsonTablePrimitiveKind(fieldMetadata);
   const displayValue =
     cellProjection.projectedCell?.displayValue ??
-    jsonTableDisplayText({ fieldMetadata, jsonValue: value })
+    jsonTableDisplayText({ fieldMetadata, jsonValue: value });
 
   return (
     <TableCell
@@ -176,7 +176,7 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
         />
       )}
     </TableCell>
-  )
+  );
 }
 
 export const ReadOnlyJsonTableCell = React.memo(
@@ -190,11 +190,11 @@ export const ReadOnlyJsonTableCell = React.memo(
       next.cellProjection.projectedCell?.materializedFieldPath &&
     Object.is(
       prev.cellProjection.projectedCell?.value,
-      next.cellProjection.projectedCell?.value
+      next.cellProjection.projectedCell?.value,
     ) &&
     prev.cellProjection.projectedCell?.displayValue ===
       next.cellProjection.projectedCell?.displayValue &&
     prev.cellProjection.schema === next.cellProjection.schema &&
-    prev.cellProjection.ariaColumnIndex === next.cellProjection.ariaColumnIndex
-)
-ReadOnlyJsonTableCell.displayName = "ReadOnlyJsonTableCell"
+    prev.cellProjection.ariaColumnIndex === next.cellProjection.ariaColumnIndex,
+);
+ReadOnlyJsonTableCell.displayName = "ReadOnlyJsonTableCell";

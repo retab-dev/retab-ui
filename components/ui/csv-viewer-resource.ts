@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/ui/csv-viewer-resource"
+export * from "@/registry/new-york-v4/ui/csv-viewer-resource";

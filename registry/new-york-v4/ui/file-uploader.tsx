@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   FileImage,
   FileSpreadsheet,
@@ -8,44 +8,44 @@ import {
   Upload,
   X,
   type LucideIcon,
-} from "lucide-react"
+} from "lucide-react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 import {
   useDropzone,
   type DropzoneFileItem,
   type DropzoneFileRejection,
   type UseDropzoneProps,
-} from "@/components/ui/dropzone"
-import { formatFileSize } from "@/components/ui/file-size-format"
-import { FileThumbnail } from "@/components/ui/file-thumbnail"
+} from "@/components/ui/dropzone";
+import { formatFileSize } from "@/components/ui/file-size-format";
+import { FileThumbnail } from "@/components/ui/file-thumbnail";
 
 export type FileUploaderAcceptedFileType = {
-  label: string
-  icon: LucideIcon
-}
+  label: string;
+  icon: LucideIcon;
+};
 
 export type FileUploaderProps = UseDropzoneProps &
   Omit<React.ComponentPropsWithoutRef<"div">, "children" | "onDrop"> & {
-    acceptedFileTypes?: FileUploaderAcceptedFileType[]
-    browseLabel?: React.ReactNode
-    description?: React.ReactNode
-    draggingLabel?: React.ReactNode
-    showFileList?: boolean
-    title?: React.ReactNode
-  }
+    acceptedFileTypes?: FileUploaderAcceptedFileType[];
+    browseLabel?: React.ReactNode;
+    description?: React.ReactNode;
+    draggingLabel?: React.ReactNode;
+    showFileList?: boolean;
+    title?: React.ReactNode;
+  };
 
 const ACCEPTED_FILE_TYPES: FileUploaderAcceptedFileType[] = [
   { label: "Image", icon: FileImage },
   { label: "PDF", icon: FileText },
   { label: "Sheet", icon: FileSpreadsheet },
-]
+];
 
 const STATIC_ICON_OFFSETS = [
   "translate(-78%, -50%) rotate(-8deg)",
   "translate(-50%, -50%)",
   "translate(-22%, -50%) rotate(8deg)",
-]
+];
 
 export function FileUploader({
   accept,
@@ -76,11 +76,11 @@ export function FileUploader({
     multiple,
     onFilesChange,
     onIntake,
-  })
+  });
   const rejectionMessage = dropzone.lastIntake.fileRejections[0]
     ? getDropzoneRejectionMessage(dropzone.lastIntake.fileRejections[0])
-    : null
-  const titleText = typeof title === "string" ? title : "Upload files"
+    : null;
+  const titleText = typeof title === "string" ? title : "Upload files";
   const triggerProps = dropzone.getTriggerProps<HTMLDivElement>({
     ...props,
     className: cn(
@@ -91,9 +91,9 @@ export function FileUploader({
         : "border-foreground/20 hover:border-foreground/35 hover:bg-muted/35 dark:border-foreground/25 dark:hover:border-foreground/40",
       disabled &&
         "pointer-events-none cursor-not-allowed opacity-60 hover:border-foreground/20 hover:bg-background",
-      className
+      className,
     ),
-  })
+  });
 
   return (
     <div
@@ -105,12 +105,12 @@ export function FileUploader({
       />
       <div className="space-y-1">
         <div className="text-sm font-medium">{title}</div>
-        <div className="text-xs text-muted-foreground">{description}</div>
+        <div className="text-muted-foreground text-xs">{description}</div>
         {rejectionMessage ? (
-          <div className="text-xs text-destructive">{rejectionMessage}</div>
+          <div className="text-destructive text-xs">{rejectionMessage}</div>
         ) : null}
       </div>
-      <div className="inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground">
+      <div className="bg-background text-muted-foreground inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs">
         <Upload className="size-3.5" aria-hidden />
         <span>{dropzone.isDragging ? draggingLabel : browseLabel}</span>
       </div>
@@ -127,28 +127,28 @@ export function FileUploader({
         })}
       />
     </div>
-  )
+  );
 }
 
 function FileUploaderFileList({
   files,
   onRemoveFile,
 }: {
-  files: DropzoneFileItem[]
-  onRemoveFile: (fileId: string) => void
+  files: DropzoneFileItem[];
+  onRemoveFile: (fileId: string) => void;
 }) {
   return (
     <div
       data-slot="file-uploader-file-list"
-      className="w-full max-w-xl rounded-lg border bg-background/80 p-3 text-left shadow-xs"
+      className="bg-background/80 w-full max-w-xl rounded-lg border p-3 text-left shadow-xs"
     >
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="text-sm font-medium">
           {files.length} file{files.length === 1 ? "" : "s"} ready
         </div>
-        <div className="text-xs text-muted-foreground">
+        <div className="text-muted-foreground text-xs">
           {formatFileSize(
-            files.reduce((totalSize, item) => totalSize + item.file.size, 0)
+            files.reduce((totalSize, item) => totalSize + item.file.size, 0),
           )}
         </div>
       </div>
@@ -162,15 +162,15 @@ function FileUploaderFileList({
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 function FileUploaderFileTile({
   item,
   onRemoveFile,
 }: {
-  item: DropzoneFileItem
-  onRemoveFile: (fileId: string) => void
+  item: DropzoneFileItem;
+  onRemoveFile: (fileId: string) => void;
 }) {
   return (
     <div
@@ -182,58 +182,58 @@ function FileUploaderFileTile({
           file={item.file}
           thumbnailShape="square"
           thumbnailSize="lg"
-          className="shrink-0 bg-background shadow-sm ring-1 ring-black/5"
+          className="bg-background shrink-0 shadow-sm ring-1 ring-black/5"
         />
         <button
           type="button"
           aria-label={`Remove ${item.file.name}`}
-          className="absolute -top-1 -right-1 grid size-5 place-items-center rounded-[4px] border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/24 focus-visible:outline-none"
+          className="bg-background text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/24 absolute -top-1 -right-1 grid size-5 place-items-center rounded-[4px] border shadow-sm transition-colors focus-visible:ring-[3px] focus-visible:outline-none"
           onClick={(event) => {
-            event.preventDefault()
-            event.stopPropagation()
-            onRemoveFile(item.id)
+            event.preventDefault();
+            event.stopPropagation();
+            onRemoveFile(item.id);
           }}
           onKeyDown={(event) => {
-            event.stopPropagation()
+            event.stopPropagation();
           }}
         >
           <X className="size-3" aria-hidden />
         </button>
       </div>
       <div className="max-w-full text-center">
-        <div className="line-clamp-2 text-xs leading-tight break-words text-foreground">
+        <div className="text-foreground line-clamp-2 text-xs leading-tight break-words">
           {item.file.name}
         </div>
-        <div className="mt-0.5 truncate text-[0.6875rem] leading-none text-muted-foreground">
+        <div className="text-muted-foreground mt-0.5 truncate text-[0.6875rem] leading-none">
           {formatFileSize(item.file.size)}
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function FileUploaderIconCluster({
   acceptedFileTypes,
   isDragging,
 }: {
-  acceptedFileTypes: FileUploaderAcceptedFileType[]
-  isDragging: boolean
+  acceptedFileTypes: FileUploaderAcceptedFileType[];
+  isDragging: boolean;
 }) {
-  const visibleTypes = acceptedFileTypes.slice(0, 3)
+  const visibleTypes = acceptedFileTypes.slice(0, 3);
 
   return (
     <div className="relative h-14 w-36" aria-hidden>
       {visibleTypes.map((item, index) => {
-        const Icon = item.icon
+        const Icon = item.icon;
 
         return (
           <div
             key={item.label}
             className={cn(
-              "absolute top-1/2 left-1/2 grid size-12 place-items-center rounded-lg border bg-background text-muted-foreground shadow-xs",
+              "bg-background text-muted-foreground absolute top-1/2 left-1/2 grid size-12 place-items-center rounded-lg border shadow-xs",
               index === 1 && "z-10",
               isDragging &&
-                "bg-popover text-foreground shadow-md shadow-black/10 dark:shadow-black/25"
+                "bg-popover text-foreground shadow-md shadow-black/10 dark:shadow-black/25",
             )}
             style={{
               transform:
@@ -244,20 +244,20 @@ function FileUploaderIconCluster({
           >
             <Icon className="size-5" />
           </div>
-        )
+        );
       })}
     </div>
-  )
+  );
 }
 
 function getDropzoneRejectionMessage(rejection: DropzoneFileRejection): string {
   if (rejection.reason === "file-invalid-type") {
-    return "This file type is not supported here."
+    return "This file type is not supported here.";
   }
   if (rejection.reason === "file-too-large") {
-    return `File must be ${formatFileSize(rejection.maxSize)} or smaller.`
+    return `File must be ${formatFileSize(rejection.maxSize)} or smaller.`;
   }
   return rejection.maxFiles === 1
     ? "Only one file can be selected."
-    : `Only ${rejection.maxFiles} files can be selected.`
+    : `Only ${rejection.maxFiles} files can be selected.`;
 }

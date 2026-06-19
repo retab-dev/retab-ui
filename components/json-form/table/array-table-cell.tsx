@@ -1,27 +1,27 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useController, useFormContext } from "react-hook-form"
+import * as React from "react";
+import { useController, useFormContext } from "react-hook-form";
 
-import { cn } from "@/lib/utils"
-import { DataCell } from "@/components/ui/data-cell"
+import { cn } from "@/lib/utils";
+import { DataCell } from "@/components/ui/data-cell";
 import {
   dataCellNumberValue,
   dataCellTextValue,
   ScalarControl,
-} from "@/components/json-form/scalar-control"
-import type { Column } from "@/components/json-form/schema-model"
+} from "@/components/json-form/scalar-control";
+import type { Column } from "@/components/json-form/schema-model";
 import {
   commitArrayTableCellValue,
   type CommitArrayTableCellValue,
   type SetArrayTableCellValue,
-} from "@/components/json-form/table/array-table-cell-commit"
-import type { ArrayTableCellModel } from "@/components/json-form/table/array-table-cell-model"
+} from "@/components/json-form/table/array-table-cell-commit";
+import type { ArrayTableCellModel } from "@/components/json-form/table/array-table-cell-model";
 import {
   arrayTableCellClassName,
   arrayTableCellProps,
   editableArrayTableCellProps,
-} from "@/components/json-form/table/array-table-cell-props"
+} from "@/components/json-form/table/array-table-cell-props";
 
 export function ArrayTableCell({
   model,
@@ -29,13 +29,13 @@ export function ArrayTableCell({
   setValue,
   closeEditor,
 }: {
-  model: ArrayTableCellModel
-  column: Column
-  setValue: SetArrayTableCellValue
-  closeEditor: () => void
+  model: ArrayTableCellModel;
+  column: Column;
+  setValue: SetArrayTableCellValue;
+  closeEditor: () => void;
 }) {
-  const cellClassName = arrayTableCellClassName(model)
-  const cellProps = arrayTableCellProps(model)
+  const cellClassName = arrayTableCellClassName(model);
+  const cellProps = arrayTableCellProps(model);
   const commitValue = React.useCallback<CommitArrayTableCellValue>(
     (nextValue, meta) => {
       commitArrayTableCellValue({
@@ -45,15 +45,15 @@ export function ArrayTableCell({
         nextValue,
         path: model.path,
         setValue,
-      })
+      });
     },
-    [column, model.path, model.value, setValue]
-  )
+    [column, model.path, model.value, setValue],
+  );
   const editableProps = editableArrayTableCellProps({
     model,
     commitValue,
     closeEditor,
-  })
+  });
 
   if (model.isEditing) {
     return (
@@ -63,7 +63,7 @@ export function ArrayTableCell({
         onClose={closeEditor}
         cellProps={cellProps}
       />
-    )
+    );
   }
 
   if (model.isEnum) {
@@ -81,7 +81,7 @@ export function ArrayTableCell({
         data-table-cell-path={model.path}
         className={cn(cellClassName, "text-sm")}
       />
-    )
+    );
   }
 
   if (model.kind === "number" || model.kind === "integer") {
@@ -95,7 +95,7 @@ export function ArrayTableCell({
         placeholder=""
         className={cn(cellClassName, "text-sm")}
       />
-    )
+    );
   }
 
   if (model.kind === "boolean") {
@@ -107,7 +107,7 @@ export function ArrayTableCell({
         value={Boolean(model.value)}
         className={cn(cellClassName, "text-sm")}
       />
-    )
+    );
   }
 
   return (
@@ -120,7 +120,7 @@ export function ArrayTableCell({
       placeholder=""
       className={cn(cellClassName, "text-sm")}
     />
-  )
+  );
 }
 
 function ArrayTableCellEditor({
@@ -129,10 +129,10 @@ function ArrayTableCellEditor({
   onClose,
   cellProps,
 }: {
-  path: string
-  column: Column
-  onClose: () => void
-  cellProps: React.HTMLAttributes<HTMLElement>
+  path: string;
+  column: Column;
+  onClose: () => void;
+  cellProps: React.HTMLAttributes<HTMLElement>;
 }) {
   return (
     <ArrayTableSelectCellEditor
@@ -141,7 +141,7 @@ function ArrayTableCellEditor({
       onClose={onClose}
       cellProps={cellProps}
     />
-  )
+  );
 }
 
 function ArrayTableSelectCellEditor({
@@ -150,21 +150,21 @@ function ArrayTableSelectCellEditor({
   onClose,
   cellProps,
 }: {
-  path: string
-  column: Column
-  onClose: () => void
-  cellProps: React.HTMLAttributes<HTMLElement>
+  path: string;
+  column: Column;
+  onClose: () => void;
+  cellProps: React.HTMLAttributes<HTMLElement>;
 }) {
-  const { control } = useFormContext()
-  const { field } = useController({ control, name: path })
+  const { control } = useFormContext();
+  const { field } = useController({ control, name: path });
 
   return (
     <div
       {...cellProps}
       onKeyDown={(event) => {
         if (event.key === "Escape" || event.key === "Enter") {
-          event.preventDefault()
-          onClose()
+          event.preventDefault();
+          onClose();
         }
       }}
     >
@@ -174,13 +174,13 @@ function ArrayTableSelectCellEditor({
         field={{
           ...field,
           onBlur: () => {
-            field.onBlur()
-            onClose()
+            field.onBlur();
+            onClose();
           },
         }}
         compact
         nullable={column.nullable}
       />
     </div>
-  )
+  );
 }

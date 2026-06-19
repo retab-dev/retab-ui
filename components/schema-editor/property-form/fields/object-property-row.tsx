@@ -1,31 +1,31 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
-import { SchemaFieldRow } from "@/components/schema-editor/primitives/schema-field-row"
-import { SchemaInlineDescription } from "@/components/schema-editor/primitives/schema-inline-description"
-import { SchemaInlineName } from "@/components/schema-editor/primitives/schema-inline-name"
-import { SchemaRowActions } from "@/components/schema-editor/primitives/schema-row-actions"
+import { cn } from "@/lib/utils";
+import { SchemaFieldRow } from "@/components/schema-editor/primitives/schema-field-row";
+import { SchemaInlineDescription } from "@/components/schema-editor/primitives/schema-inline-description";
+import { SchemaInlineName } from "@/components/schema-editor/primitives/schema-inline-name";
+import { SchemaRowActions } from "@/components/schema-editor/primitives/schema-row-actions";
 import type {
   ObjectPropertyRowModel,
   PropertyObjectPropertiesFieldModel,
-} from "@/components/schema-editor/property-form/model/object-properties-view"
-import type { PropertySchemaPlan } from "@/components/schema-editor/property-form/types"
+} from "@/components/schema-editor/property-form/model/object-properties-view";
+import type { PropertySchemaPlan } from "@/components/schema-editor/property-form/types";
 
-import { useObjectPropertiesRowDrag } from "./object-properties-drag"
-import { TypeField } from "./type-field"
+import { useObjectPropertiesRowDrag } from "./object-properties-drag";
+import { TypeField } from "./type-field";
 
 interface ObjectPropertyRowsProps {
-  model: PropertyObjectPropertiesFieldModel
-  renderPlan: (plan: PropertySchemaPlan) => React.ReactNode
+  model: PropertyObjectPropertiesFieldModel;
+  renderPlan: (plan: PropertySchemaPlan) => React.ReactNode;
 }
 
 interface ObjectPropertyRowProps {
-  editable: boolean
-  row: ObjectPropertyRowModel
-  rowDragProps: React.HTMLAttributes<HTMLDivElement>
-  renderPlan: (plan: PropertySchemaPlan) => React.ReactNode
+  editable: boolean;
+  row: ObjectPropertyRowModel;
+  rowDragProps: React.HTMLAttributes<HTMLDivElement>;
+  renderPlan: (plan: PropertySchemaPlan) => React.ReactNode;
 }
 
 export function ObjectPropertyRows({
@@ -35,7 +35,7 @@ export function ObjectPropertyRows({
   const rowDrag = useObjectPropertiesRowDrag({
     rows: model.rows,
     editable: model.editable,
-  })
+  });
 
   return (
     <div className="space-y-2">
@@ -49,7 +49,7 @@ export function ObjectPropertyRows({
         />
       ))}
     </div>
-  )
+  );
 }
 
 export function ObjectPropertyRow({
@@ -60,7 +60,7 @@ export function ObjectPropertyRow({
 }: ObjectPropertyRowProps) {
   return (
     <div
-      className={cn("ml-4 border-l border-border", editable && "cursor-grab")}
+      className={cn("border-border ml-4 border-l", editable && "cursor-grab")}
       data-property-form-row-id={row.id}
       data-property-form-property-name={row.name}
       {...rowDragProps}
@@ -96,5 +96,5 @@ export function ObjectPropertyRow({
       />
       {renderPlan(row.schemaPlan)}
     </div>
-  )
+  );
 }

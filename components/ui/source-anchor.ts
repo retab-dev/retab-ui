@@ -1,1 +1,1 @@
-export * from "@/registry/new-york-v4/ui/source-anchor"
+export * from "@/registry/new-york-v4/ui/source-anchor";

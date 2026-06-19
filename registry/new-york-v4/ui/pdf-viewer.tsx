@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 import {
   FileViewer,
@@ -12,18 +12,18 @@ import {
   FileViewerMeta,
   FileViewerSurface,
   FileViewerTitle,
-} from "./file-viewer"
+} from "./file-viewer";
 import {
   PdfResourceContent,
   type PdfResourceContentProps,
   type PdfViewerContentProps,
-} from "./pdf-viewer-content"
+} from "./pdf-viewer-content";
 import {
   PdfViewerPages,
   PdfViewerProvider,
   type PdfDocumentSource,
-} from "./pdf-viewer-context"
-import type { PdfViewerHandle } from "./pdf-viewer-types"
+} from "./pdf-viewer-context";
+import type { PdfViewerHandle } from "./pdf-viewer-types";
 
 export type {
   PageOverlayProps,
@@ -33,28 +33,28 @@ export type {
   PdfPageRenderTiming,
   PdfViewerHandle,
   PdfViewerPerformanceOptions,
-} from "./pdf-viewer-types"
+} from "./pdf-viewer-types";
 export {
   PdfViewerPages,
   PdfViewerProvider,
   usePdfViewerThumbnails,
   type PdfDocumentSource,
-} from "./pdf-viewer-context"
+} from "./pdf-viewer-context";
 export {
   PdfResourceContent,
   type PdfResourceContentProps,
   type PdfViewerContentProps,
-} from "./pdf-viewer-content"
+} from "./pdf-viewer-content";
 export {
   PdfThumbnailRail,
   PdfViewerThumbnails,
   type PdfThumbnailRailProps,
   type PdfViewerThumbnailsProps,
-} from "./pdf-viewer-thumbnails"
+} from "./pdf-viewer-thumbnails";
 
 export interface PdfHighlightProps extends React.ComponentProps<"div"> {
   /** Normalized box, each field a percentage [0, 100] of the page. */
-  area: { left: number; top: number; width: number; height: number }
+  area: { left: number; top: number; width: number; height: number };
 }
 
 export function PdfHighlight({
@@ -67,8 +67,8 @@ export function PdfHighlight({
     <div
       data-slot="pdf-highlight"
       className={cn(
-        "pointer-events-none absolute z-10 rounded-[2px] border border-primary/70 bg-primary/12 shadow-[0_4px_16px_rgb(0_0_0_/_8%)]",
-        className
+        "border-primary/70 bg-primary/12 pointer-events-none absolute z-10 rounded-[2px] border shadow-[0_4px_16px_rgb(0_0_0_/_8%)]",
+        className,
       )}
       style={{
         left: `${area.left}%`,
@@ -79,12 +79,12 @@ export function PdfHighlight({
       }}
       {...props}
     />
-  )
+  );
 }
 
 export interface PdfViewerProps extends PdfViewerContentProps {
   /** Canonical PDF source. URL sources preserve PDF.js range-loading behavior. */
-  source: PdfDocumentSource
+  source: PdfDocumentSource;
 }
 
 export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
@@ -96,14 +96,14 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
       controls = true,
       download = true,
       ...pagesProps
-    } = props
+    } = props;
     return (
       <FileViewer
         source={source}
         className={cn(
           "h-full",
           bare && "rounded-none border-0 bg-transparent",
-          className
+          className,
         )}
       >
         <PdfViewerProvider>
@@ -125,6 +125,6 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
           </FileViewerBody>
         </PdfViewerProvider>
       </FileViewer>
-    )
-  }
-)
+    );
+  },
+);

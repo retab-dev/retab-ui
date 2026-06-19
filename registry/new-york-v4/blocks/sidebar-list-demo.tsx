@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   FileText,
   FolderOpen,
   Inbox,
   Lock,
   type LucideIcon,
-} from "lucide-react"
+} from "lucide-react";
 
 import {
   SidebarListButton,
@@ -20,19 +20,19 @@ import {
   SidebarListMenuItem,
   SidebarListRoot,
   SidebarListSeparator,
-} from "@/components/ui/sidebar-list"
+} from "@/components/ui/sidebar-list";
 
 type SidebarListDemoItem = {
-  id: string
-  label: string
-  icon: LucideIcon
-  disabled?: boolean
-}
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  disabled?: boolean;
+};
 
 type SidebarListDemoGroup = {
-  label: string
-  items: readonly SidebarListDemoItem[]
-}
+  label: string;
+  items: readonly SidebarListDemoItem[];
+};
 
 const groups: readonly SidebarListDemoGroup[] = [
   {
@@ -49,17 +49,17 @@ const groups: readonly SidebarListDemoGroup[] = [
       { id: "locked", label: "Locked packet", icon: Lock, disabled: true },
     ],
   },
-]
+];
 
 export function SidebarListExample() {
-  const [activeId, setActiveId] = React.useState("statements")
+  const [activeId, setActiveId] = React.useState("statements");
 
   return (
-    <div className="not-prose h-[420px] max-w-sm overflow-hidden rounded-xl border bg-background">
+    <div className="not-prose bg-background h-[420px] max-w-sm overflow-hidden rounded-xl border">
       <SidebarListRoot width="20rem">
         <SidebarListHeader className="border-b px-3 py-2">
           <div className="text-sm font-medium">Document workspace</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             Providerless grouped rows for embedded rails.
           </div>
         </SidebarListHeader>
@@ -72,7 +72,7 @@ export function SidebarListExample() {
                 <SidebarListGroupContent>
                   <SidebarListMenu>
                     {group.items.map((item) => {
-                      const Icon = item.icon
+                      const Icon = item.icon;
 
                       return (
                         <SidebarListMenuItem key={item.id}>
@@ -85,7 +85,7 @@ export function SidebarListExample() {
                             <span>{item.label}</span>
                           </SidebarListButton>
                         </SidebarListMenuItem>
-                      )
+                      );
                     })}
                   </SidebarListMenu>
                 </SidebarListGroupContent>
@@ -95,5 +95,5 @@ export function SidebarListExample() {
         </SidebarListContent>
       </SidebarListRoot>
     </div>
-  )
+  );
 }

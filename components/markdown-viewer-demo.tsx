@@ -1,8 +1,10 @@
-"use client"
+"use client";
 
-import * as React from "react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { MarkdownViewer } from "@/components/ui/markdown-viewer"
+import * as React from "react";
+
+import { MarkdownViewer } from "@/components/ui/markdown-viewer";
 
 const MARKDOWN_VIEWER_DEMO_TEXT = [
   "# Markdown Viewer",
@@ -223,8 +225,8 @@ const MARKDOWN_VIEWER_DEMO_TEXT = [
   "| # | Scenario | Input | Expected behavior | Verification |",
   "| ---: | --- | --- | --- | --- |",
   ...Array.from({ length: 18 }, (_, index) => {
-    const rowNumber = index + 1
-    return `| ${rowNumber} | Scenario ${rowNumber} | Markdown, HTML, math, or component syntax | Render safely without horizontal page growth | Browser smoke and focused tests |`
+    const rowNumber = index + 1;
+    return `| ${rowNumber} | Scenario ${rowNumber} | Markdown, HTML, math, or component syntax | Render safely without horizontal page growth | Browser smoke and focused tests |`;
   }),
   "",
   "## Hostile Blocks",
@@ -234,21 +236,21 @@ const MARKDOWN_VIEWER_DEMO_TEXT = [
   '```ts title="huge-generated.ts"',
   ...Array.from(
     { length: 460 },
-    (_, index) => `export const generatedLine${index + 1} = ${index + 1}`
+    (_, index) => `export const generatedLine${index + 1} = ${index + 1}`,
   ),
   "```",
   "",
   "| Row | A | B | C | D | E | F | G |",
   "| ---: | --- | --- | --- | --- | --- | --- | --- |",
   ...Array.from({ length: 252 }, (_, rowIndex) => {
-    const rowNumber = rowIndex + 1
-    return `| ${rowNumber} | alpha-${rowNumber} | beta-${rowNumber} | gamma-${rowNumber} | delta-${rowNumber} | epsilon-${rowNumber} | zeta-${rowNumber} | eta-${rowNumber} |`
+    const rowNumber = rowIndex + 1;
+    return `| ${rowNumber} | alpha-${rowNumber} | beta-${rowNumber} | gamma-${rowNumber} | delta-${rowNumber} | epsilon-${rowNumber} | zeta-${rowNumber} | eta-${rowNumber} |`;
   }),
   "",
   "---",
   "",
   ...Array.from({ length: 36 }, (_, index) => {
-    const section = index + 1
+    const section = index + 1;
     return [
       `## Long Report Section ${section}`,
       "",
@@ -269,16 +271,16 @@ const MARKDOWN_VIEWER_DEMO_TEXT = [
       "",
       "> [!NOTE]",
       `> Repeated section ${section} keeps alert rendering common across the long document.`,
-    ].join("\n")
+    ].join("\n");
   }),
-].join("\n")
+].join("\n");
 
 export function MarkdownViewerDemo() {
-  const [isMounted, setIsMounted] = React.useState(false)
+  const [isMounted, setIsMounted] = React.useState(false);
 
   React.useEffect(() => {
-    setIsMounted(true)
-  }, [])
+    setIsMounted(true);
+  }, []);
 
   return (
     <div className="h-[620px] min-h-0">
@@ -294,5 +296,5 @@ export function MarkdownViewerDemo() {
         />
       ) : null}
     </div>
-  )
+  );
 }

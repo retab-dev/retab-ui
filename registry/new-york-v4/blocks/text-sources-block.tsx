@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import type { Source } from "@/lib/document-source"
+import type { Source } from "@/lib/document-source";
 import {
   FileViewer,
   FileViewerBody,
@@ -12,30 +12,30 @@ import {
   FileViewerSidebar,
   FileViewerSurface,
   FileViewerTitle,
-} from "@/components/ui/file-viewer"
-import { SegmentedDocumentProvider } from "@/components/ui/segmented-document-provider"
-import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link"
+} from "@/components/ui/file-viewer";
+import { SegmentedDocumentProvider } from "@/components/ui/segmented-document-provider";
+import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link";
 import {
   SourceFieldList,
   type SourceField,
-} from "@/components/ui/source-field-list"
-import { SourceIndicator } from "@/components/ui/source-indicator"
-import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
+} from "@/components/ui/source-field-list";
+import { SourceIndicator } from "@/components/ui/source-indicator";
+import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model";
 import {
   sourceToTextHighlight,
   useTextSourceTarget,
-} from "@/components/ui/text-source"
-import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
-import textSample from "@/components/viewers/sample-data/text-sources.json"
+} from "@/components/ui/text-source";
+import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer";
+import textSample from "@/components/viewers/sample-data/text-sources.json";
 
-const TEXT_URL = "/samples/extraction-run.log"
+const TEXT_URL = "/samples/extraction-run.log";
 const TEXT_SOURCE = {
   kind: "url" as const,
   url: TEXT_URL,
   fileName: "extraction-run.log",
-}
+};
 
-type TextField = SourceField & { source: Source }
+type TextField = SourceField & { source: Source };
 
 const FIELDS = (textSample as TextField[]).map((field) => ({
   ...field,
@@ -43,15 +43,15 @@ const FIELDS = (textSample as TextField[]).map((field) => ({
     field.source.anchor.kind === "text_span"
       ? `Line ${field.source.anchor.line_start}`
       : undefined,
-}))
-const FIELD_BY_KEY = new Map(FIELDS.map((field) => [field.key, field]))
+}));
+const FIELD_BY_KEY = new Map(FIELDS.map((field) => [field.key, field]));
 const SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel(
   FIELDS.map((field) => ({
     id: field.key,
     label: field.label,
     source: field.source,
-  }))
-)
+  })),
+);
 
 /**
  * Text sources block — values extracted from a log file, linked to the lines
@@ -60,38 +60,38 @@ const SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel(
  * source adapter owns line-range scrolling and highlighting.
  */
 export function TextSourcesBlock() {
-  const viewerRef = React.useRef<TextViewerHandle>(null)
+  const viewerRef = React.useRef<TextViewerHandle>(null);
 
   return (
     <SegmentedDocumentProvider model={SEGMENTED_DOCUMENT}>
       <TextSourcesContent viewerRef={viewerRef} />
     </SegmentedDocumentProvider>
-  )
+  );
 }
 
 function TextSourcesContent({
   viewerRef,
 }: {
-  viewerRef: React.RefObject<TextViewerHandle | null>
+  viewerRef: React.RefObject<TextViewerHandle | null>;
 }) {
-  const target = useTextSourceTarget(viewerRef)
+  const target = useTextSourceTarget(viewerRef);
   const segmentedLink = useSegmentedSourceFieldLink({
     initialSourcePath: FIELDS[0]?.key,
-  })
+  });
   const link = useTargetedSourceFieldLink({
     fieldByKey: FIELD_BY_KEY,
     link: segmentedLink,
     target,
-  })
+  });
   const activeSource = link.activeSourcePath
     ? FIELD_BY_KEY.get(link.activeSourcePath)?.source
-    : undefined
-  const highlight = sourceToTextHighlight(activeSource)
+    : undefined;
+  const highlight = sourceToTextHighlight(activeSource);
 
   return (
     <FileViewer
       source={TEXT_SOURCE}
-      className="h-full min-h-[680px] bg-background"
+      className="bg-background h-full min-h-[680px]"
     >
       <FileViewerHeader>
         <FileViewerTitle />
@@ -125,7 +125,7 @@ function TextSourcesContent({
         </FileViewerSidebar>
       </FileViewerBody>
     </FileViewer>
-  )
+  );
 }
 
 function useTargetedSourceFieldLink({
@@ -133,31 +133,31 @@ function useTargetedSourceFieldLink({
   link,
   target,
 }: {
-  fieldByKey: ReadonlyMap<string, TextField>
-  link: ReturnType<typeof useSegmentedSourceFieldLink>
-  target: ReturnType<typeof useTextSourceTarget>
+  fieldByKey: ReadonlyMap<string, TextField>;
+  link: ReturnType<typeof useSegmentedSourceFieldLink>;
+  target: ReturnType<typeof useTextSourceTarget>;
 }) {
   const scrollToField = React.useCallback(
     (path: string, behavior: ScrollBehavior) => {
-      const source = fieldByKey.get(path)?.source
-      if (source) target.scrollTo?.(source, { behavior })
+      const source = fieldByKey.get(path)?.source;
+      if (source) target.scrollTo?.(source, { behavior });
     },
-    [fieldByKey, target]
-  )
+    [fieldByKey, target],
+  );
   const onSourceHover = React.useCallback(
     (path: string | null) => {
-      link.onSourceHover(path)
-      if (path) scrollToField(path, "auto")
+      link.onSourceHover(path);
+      if (path) scrollToField(path, "auto");
     },
-    [link, scrollToField]
-  )
+    [link, scrollToField],
+  );
   const selectSourcePath = React.useCallback(
     (path: string) => {
-      link.selectSourcePath?.(path)
-      scrollToField(path, "smooth")
+      link.selectSourcePath?.(path);
+      scrollToField(path, "smooth");
     },
-    [link, scrollToField]
-  )
+    [link, scrollToField],
+  );
 
   return React.useMemo(
     () => ({
@@ -165,6 +165,6 @@ function useTargetedSourceFieldLink({
       onSourceHover,
       selectSourcePath,
     }),
-    [link, onSourceHover, selectSourcePath]
-  )
+    [link, onSourceHover, selectSourcePath],
+  );
 }
