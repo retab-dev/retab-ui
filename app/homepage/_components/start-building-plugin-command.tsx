@@ -1,11 +1,11 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { Check, ChevronDown, Copy } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { KeyedRunner } from "@/hooks/KeyedRunner";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import { type StartBuildingPluginOption } from "./homepage-types";
 import { focusRing } from "./primitives";
@@ -25,42 +25,11 @@ export function StartBuildingPluginCommand({
   const resetTimeoutRef = useRef<number | undefined>(undefined);
   const selectedOption = options[selectedIndex] ?? options[0];
 
-  useEffect(() => {
-    return () => {
-      if (resetTimeoutRef.current) {
-        window.clearTimeout(resetTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isMenuOpen) {
-      return;
+  useMountEffect(() => () => {
+    if (resetTimeoutRef.current) {
+      window.clearTimeout(resetTimeoutRef.current);
     }
-
-    function closeOnOutsidePress(event: PointerEvent) {
-      if (
-        event.target instanceof Node &&
-        !rootRef.current?.contains(event.target)
-      ) {
-        setIsMenuOpen(false);
-      }
-    }
-
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsMenuOpen(false);
-      }
-    }
-
-    document.addEventListener("pointerdown", closeOnOutsidePress);
-    document.addEventListener("keydown", closeOnEscape);
-
-    return () => {
-      document.removeEventListener("pointerdown", closeOnOutsidePress);
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [isMenuOpen]);
+  });
 
   function resetCopyStateSoon() {
     if (resetTimeoutRef.current) {
@@ -95,6 +64,35 @@ export function StartBuildingPluginCommand({
 
   return (
     <div ref={rootRef} className="relative mt-14 max-w-full">
+      {isMenuOpen ? (
+        <KeyedRunner
+          key="start-building-plugin-menu-open"
+          effect={() => {
+            function closeOnOutsidePress(event: PointerEvent) {
+              if (
+                event.target instanceof Node &&
+                !rootRef.current?.contains(event.target)
+              ) {
+                setIsMenuOpen(false);
+              }
+            }
+
+            function closeOnEscape(event: KeyboardEvent) {
+              if (event.key === "Escape") {
+                setIsMenuOpen(false);
+              }
+            }
+
+            document.addEventListener("pointerdown", closeOnOutsidePress);
+            document.addEventListener("keydown", closeOnEscape);
+
+            return () => {
+              document.removeEventListener("pointerdown", closeOnOutsidePress);
+              document.removeEventListener("keydown", closeOnEscape);
+            };
+          }}
+        />
+      ) : null}
       <div className="inline-flex min-h-10 w-full items-center gap-1 rounded-full bg-white px-2 py-1.5 text-black shadow-sm ring-1 ring-black/10">
         <button
           type="button"
@@ -104,7 +102,7 @@ export function StartBuildingPluginCommand({
           aria-controls={isMenuOpen ? menuId : undefined}
           onClick={() => setIsMenuOpen((isOpen) => !isOpen)}
           className={cn(
-            "flex min-h-7 shrink-0 cursor-pointer items-center rounded-l-full rounded-r-md px-2 py-1 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-black",
+            "flex min-h-7 shrink-0 cursor-pointer items-center rounded-l-full rounded-r-md px-2 py-1 text-sm font-medium text-neutral-700 transition-colors duration-150 ease-out hover:bg-neutral-100 hover:text-black motion-reduce:transition-none",
             focusRing,
           )}
         >
@@ -113,14 +111,14 @@ export function StartBuildingPluginCommand({
             <ChevronDown
               aria-hidden="true"
               className={cn(
-                "size-4 text-neutral-500 transition-transform",
+                "size-4 text-neutral-500 transition-transform duration-150 ease-out motion-reduce:transition-none",
                 isMenuOpen && "rotate-180",
               )}
             />
           </span>
         </button>
-        <span aria-hidden="true" className="h-6 w-px bg-neutral-200" />
-        <span className="text-neutral-400">$</span>
+        <span aria-hidden="true" className="h-6 w-px shrink-0 bg-neutral-200" />
+        <span className="shrink-0 text-neutral-400">$</span>
         <code className="min-w-0 flex-1 overflow-x-auto font-mono text-sm leading-5 whitespace-nowrap text-neutral-800">
           {selectedOption.command}
         </code>
@@ -129,7 +127,7 @@ export function StartBuildingPluginCommand({
           aria-label={`Copy ${selectedOption.label} command`}
           onClick={copyCommand}
           className={cn(
-            "grid size-9 shrink-0 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black active:bg-neutral-200",
+            "grid size-9 shrink-0 place-items-center rounded-full text-neutral-500 transition-colors duration-150 ease-out hover:bg-neutral-100 hover:text-black active:bg-neutral-200 motion-reduce:transition-none",
             focusRing,
           )}
         >
@@ -150,7 +148,7 @@ export function StartBuildingPluginCommand({
                   role="menuitem"
                   onClick={() => selectOption(index)}
                   className={cn(
-                    "flex min-h-10 w-full cursor-pointer items-center rounded-md px-2 text-left text-sm text-neutral-900 transition-colors hover:bg-neutral-100",
+                    "flex min-h-10 w-full cursor-pointer items-center rounded-md px-2 text-left text-sm text-neutral-900 transition-colors duration-150 ease-out hover:bg-neutral-100 motion-reduce:transition-none",
                     focusRing,
                     index === selectedIndex && "bg-neutral-100",
                   )}
