@@ -79,7 +79,7 @@ export function LogoStrip({ logos }: { logos: readonly LogoContent[] }) {
       </ul>
       <div
         aria-hidden="true"
-        className="animate-homepage-logo-marquee flex h-11 w-max min-w-0 items-center gap-12 px-6 text-neutral-950 motion-reduce:hidden xl:hidden"
+        className="animate-homepage-logo-marquee text-foreground flex h-11 w-max min-w-0 items-center gap-12 px-6 motion-reduce:hidden xl:hidden"
       >
         {repeatedLogos.map((logo, index) => (
           <BrandLogo key={`${logo.id}-${index}`} logo={logo} />
@@ -87,13 +87,13 @@ export function LogoStrip({ logos }: { logos: readonly LogoContent[] }) {
       </div>
       <div
         aria-hidden="true"
-        className="hidden min-h-11 flex-wrap items-center justify-center gap-x-10 gap-y-6 px-6 text-neutral-950 motion-reduce:flex xl:hidden"
+        className="text-foreground hidden min-h-11 flex-wrap items-center justify-center gap-x-10 gap-y-6 px-6 motion-reduce:flex xl:hidden"
       >
         {logos.map((logo) => (
           <BrandLogo key={logo.id} logo={logo} />
         ))}
       </div>
-      <div className="hidden h-11 w-full min-w-0 items-center justify-between gap-8 text-neutral-950 xl:flex">
+      <div className="text-foreground hidden h-11 w-full min-w-0 items-center justify-between gap-8 xl:flex">
         {logos.map((logo) => (
           <BrandLogo key={logo.id} logo={logo} />
         ))}

@@ -58,8 +58,10 @@ function ProductVisualImage({ image }: { image: ProductImageContent }) {
 
 function FeatureList({ features }: { features: readonly string[] }) {
   return (
-    <ul className="m-0 flex list-none flex-col gap-1.5 p-0 font-mono text-sm leading-5 font-semibold break-words text-black uppercase">
-      <li className="font-normal text-neutral-500 normal-case">Features</li>
+    <ul className="text-foreground m-0 flex list-none flex-col gap-1.5 p-0 font-mono text-sm leading-5 font-semibold break-words uppercase">
+      <li className="text-muted-foreground font-normal normal-case">
+        Features
+      </li>
       {features.map((feature) => (
         <li key={feature}>{feature}</li>
       ))}
@@ -110,8 +112,9 @@ function ProductLane({
             isReversed ? "lg:col-start-1 lg:row-start-1" : "lg:col-start-10",
           )}
         >
-          <p className="max-w-sm text-3xl leading-tight text-balance text-black md:text-4xl">
-            <span className="text-neutral-500">{proofCustomer}</span> {proof}
+          <p className="text-foreground max-w-sm text-3xl leading-tight text-balance md:text-4xl">
+            <span className="text-muted-foreground">{proofCustomer}</span>{" "}
+            {proof}
           </p>
           <FeatureList features={features} />
         </div>

@@ -13,12 +13,12 @@ import { focusRing } from "./primitives";
 import { SectionHeader } from "./section-header";
 
 const latestCardClass = cn(
-  "group relative flex min-w-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-50 text-black transition-colors hover:border-neutral-300 hover:bg-white active:bg-neutral-50 motion-reduce:transition-none",
+  "group relative flex min-w-0 overflow-hidden rounded-md border border-border bg-card text-card-foreground transition-colors hover:bg-background active:bg-card motion-reduce:transition-none",
   focusRing,
 );
 
 const metricCardClass =
-  "min-w-0 border-neutral-200 bg-white/90 p-3 sm:flex sm:h-12 sm:items-center sm:justify-between sm:rounded-md sm:border sm:px-4 sm:py-0 sm:shadow-sm";
+  "min-w-0 border-border bg-card/90 p-3 sm:flex sm:h-12 sm:items-center sm:justify-between sm:rounded-md sm:border sm:px-4 sm:py-0 sm:shadow-sm";
 
 const secondaryLatestCardClass = cn(
   latestCardClass,
@@ -94,7 +94,7 @@ function SecondaryLatestCardLink({
         <h3 className="min-w-0 text-2xl leading-tight font-medium break-words sm:text-3xl">
           {card.label}
         </h3>
-        <p className="max-w-72 font-mono text-sm leading-5 break-words text-neutral-700">
+        <p className="text-muted-foreground max-w-72 font-mono text-sm leading-5 break-words">
           {card.body}
         </p>
       </header>
@@ -123,15 +123,15 @@ function WorkflowMetricStrip({
   return (
     <dl
       aria-hidden="true"
-      className="absolute top-5 right-5 left-5 z-0 grid max-w-md grid-cols-2 overflow-hidden rounded-md border border-neutral-200 bg-white/90 font-mono text-xs opacity-80 shadow-sm backdrop-blur transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none sm:top-10 sm:right-10 sm:left-auto sm:w-96 sm:grid-cols-1 sm:gap-4 sm:overflow-visible sm:border-0 sm:bg-transparent sm:shadow-none sm:backdrop-blur-none"
+      className="border-border bg-card/90 absolute top-5 right-5 left-5 z-0 grid max-w-md grid-cols-2 overflow-hidden rounded-md border font-mono text-xs opacity-80 shadow-sm backdrop-blur transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none sm:top-10 sm:right-10 sm:left-auto sm:w-96 sm:grid-cols-1 sm:gap-4 sm:overflow-visible sm:border-0 sm:bg-transparent sm:shadow-none sm:backdrop-blur-none"
     >
       {metrics.map(([label, value], index) => (
         <div
           key={label}
           className={cn(metricCardClass, metricRowLayoutClasses[index])}
         >
-          <dt className="truncate text-neutral-500">{label}</dt>
-          <dd className="mt-2 text-black sm:mt-0">
+          <dt className="text-muted-foreground truncate">{label}</dt>
+          <dd className="text-foreground mt-2 sm:mt-0">
             <MetricValue value={value} />
           </dd>
         </div>
@@ -148,7 +148,7 @@ function MetricValue({ value }: { value: string }) {
   return (
     <>
       <span className="font-semibold">{value.slice(0, -2)}</span>
-      <span className="text-neutral-500">ms</span>
+      <span className="text-muted-foreground">ms</span>
     </>
   );
 }
@@ -159,10 +159,10 @@ function SandboxGraphic() {
       aria-hidden="true"
       className="absolute inset-0 z-0 overflow-hidden opacity-70 transition-opacity duration-300 group-hover:opacity-90 group-focus-visible:opacity-90 motion-reduce:transition-none"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-white via-neutral-100 to-white" />
-      <div className="absolute top-8 right-8 h-24 w-40 rounded-full border border-neutral-200/50 bg-white/40 blur-sm" />
-      <div className="absolute top-14 right-20 h-20 w-20 rotate-45 border border-neutral-300/40 bg-white/55 shadow-xl" />
-      <div className="absolute right-10 bottom-8 h-px w-56 bg-gradient-to-r from-transparent via-neutral-300/60 to-transparent" />
+      <div className="from-background via-muted to-background absolute inset-0 bg-gradient-to-br" />
+      <div className="border-border/50 bg-card/40 absolute top-8 right-8 h-24 w-40 rounded-full border blur-sm" />
+      <div className="border-border/60 bg-card/55 absolute top-14 right-20 h-20 w-20 rotate-45 border shadow-xl" />
+      <div className="via-border absolute right-10 bottom-8 h-px w-56 bg-gradient-to-r from-transparent to-transparent" />
     </div>
   );
 }

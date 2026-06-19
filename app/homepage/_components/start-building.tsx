@@ -28,8 +28,8 @@ function ActionList({ actions }: { actions: readonly StartBuildingAction[] }) {
 function StartBuildingPanel({ panel }: { panel: StartBuildingPanelContent }) {
   return (
     <div className="col-span-12 min-w-0 md:col-span-6 lg:col-span-4">
-      <p className="max-w-md text-base leading-6 text-neutral-600">
-        <span className="text-black">{panel.audience}</span> {panel.body}
+      <p className="text-muted-foreground max-w-md text-base leading-6">
+        <span className="text-foreground">{panel.audience}</span> {panel.body}
       </p>
       {panel.kind === "template" ? (
         <ActionList actions={panel.actions} />
@@ -49,7 +49,7 @@ export function StartBuilding({ content }: { content: StartBuildingContent }) {
       <div className="grid grid-cols-12 gap-x-5 gap-y-12 text-left">
         <h2
           id="start-building-heading"
-          className="lg:text-homepage-start lg:leading-homepage-start col-span-12 max-w-3xl text-4xl leading-tight font-normal text-black lg:col-span-8 lg:col-start-3 lg:max-w-none"
+          className="lg:text-homepage-start lg:leading-homepage-start text-foreground col-span-12 max-w-3xl text-4xl leading-tight font-normal lg:col-span-8 lg:col-start-3 lg:max-w-none"
         >
           {content.title}
         </h2>

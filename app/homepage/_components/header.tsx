@@ -13,7 +13,7 @@ export function MarketingHeader({ content }: { content: HeaderContent }) {
         <Link
           href={content.homeHref}
           className={cn(
-            "-ml-2 inline-flex size-9 items-center justify-center rounded-md transition-colors hover:bg-neutral-100 focus-visible:bg-neutral-100 motion-reduce:transition-none",
+            "hover:bg-accent focus-visible:bg-accent -ml-2 inline-flex size-9 items-center justify-center rounded-md transition-colors motion-reduce:transition-none",
             focusRing,
           )}
           aria-label="Vercel"

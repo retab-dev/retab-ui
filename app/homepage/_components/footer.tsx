@@ -14,7 +14,7 @@ import {
 } from "./primitives";
 
 const footerItemClass = cn(
-  "-mx-0.5 inline-flex min-h-6 max-w-full items-center gap-1.5 rounded-sm px-0.5 py-0 text-left text-sm leading-5 text-neutral-600 transition-colors hover:text-black focus-visible:text-black motion-reduce:transition-none",
+  "-mx-0.5 inline-flex min-h-6 max-w-full items-center gap-1.5 rounded-sm px-0.5 py-0 text-left text-sm leading-5 text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground motion-reduce:transition-none",
   focusRing,
 );
 
@@ -33,7 +33,7 @@ function FooterColumn({
     <section aria-labelledby={headingId} className="min-w-0">
       <h2
         id={headingId}
-        className="mt-3 mb-4 font-mono text-xs leading-none font-medium tracking-normal text-neutral-950 uppercase"
+        className="text-foreground mt-3 mb-4 font-mono text-xs leading-none font-medium tracking-normal uppercase"
       >
         {title}
       </h2>
@@ -70,7 +70,7 @@ function StatusLink({ status }: { status: FooterContent["status"] }) {
       aria-label={getLinkAriaLabel(status)}
       {...getLinkProps(status)}
       className={cn(
-        "inline-flex h-8 w-fit items-center rounded-md px-2 font-mono text-sm text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none",
+        "text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground inline-flex h-8 w-fit items-center rounded-md px-2 font-mono text-sm transition-colors motion-reduce:transition-none",
         focusRing,
       )}
     >
@@ -85,7 +85,7 @@ function FooterLogo() {
       href="/homepage"
       aria-label="Vercel homepage"
       className={cn(
-        "inline-flex h-8 w-full max-w-48 items-center rounded-sm text-black transition-colors hover:text-neutral-600 focus-visible:text-black motion-reduce:transition-none",
+        "text-foreground hover:text-muted-foreground focus-visible:text-foreground inline-flex h-8 w-full max-w-48 items-center rounded-sm transition-colors motion-reduce:transition-none",
         focusRing,
       )}
     >
@@ -96,7 +96,7 @@ function FooterLogo() {
 
 export function MarketingFooter({ content }: { content: FooterContent }) {
   return (
-    <footer aria-labelledby="homepage-footer-heading" className="bg-gray-50">
+    <footer aria-labelledby="homepage-footer-heading" className="bg-muted/30">
       <h2 id="homepage-footer-heading" className="sr-only">
         Footer
       </h2>

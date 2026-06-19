@@ -13,10 +13,10 @@ import { StartBuilding } from "./start-building";
 
 export function VercelHomepage() {
   return (
-    <div className="bg-background/50 min-h-svh text-black">
+    <div className="bg-background text-foreground min-h-svh">
       <a
         href="#homepage-main"
-        className="fixed top-3 left-3 z-50 -translate-y-24 rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition-transform focus:translate-y-0 focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black focus:outline-none motion-reduce:transition-none"
+        className="bg-primary text-primary-foreground focus:ring-ring focus:ring-offset-background fixed top-3 left-3 z-50 -translate-y-24 rounded-md px-4 py-2 text-sm font-medium transition-transform focus:translate-y-0 focus:ring-2 focus:ring-offset-2 focus:outline-none motion-reduce:transition-none"
       >
         Skip to content
       </a>

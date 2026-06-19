@@ -18,7 +18,7 @@ export function SectionHeader({
       <h2
         id={id}
         className={cn(
-          "lg:text-homepage-section text-6xl leading-none font-normal tracking-tighter text-balance text-black md:text-7xl lg:col-span-4",
+          "lg:text-homepage-section text-foreground text-6xl leading-none font-normal tracking-tighter text-balance md:text-7xl lg:col-span-4",
           isReversed && "lg:col-start-5",
         )}
       >
@@ -26,7 +26,7 @@ export function SectionHeader({
       </h2>
       <p
         className={cn(
-          "max-w-md font-mono text-sm leading-5 text-pretty text-neutral-700 lg:col-span-3 lg:col-start-6 lg:mt-10",
+          "text-muted-foreground max-w-md font-mono text-sm leading-5 text-pretty lg:col-span-3 lg:col-start-6 lg:mt-10",
           isReversed && "lg:col-start-10",
         )}
       >

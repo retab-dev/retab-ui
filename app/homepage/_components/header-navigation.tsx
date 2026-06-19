@@ -22,7 +22,7 @@ export function HeaderNavigation({ content }: { content: HeaderContent }) {
             aria-label={getLinkAriaLabel(item)}
             {...getLinkProps(item)}
             className={cn(
-              "rounded-md px-2 py-1 text-sm text-neutral-700 transition-colors duration-150 ease-out hover:text-black focus-visible:text-black motion-reduce:transition-none",
+              "text-muted-foreground hover:text-foreground focus-visible:text-foreground rounded-md px-2 py-1 text-sm transition-colors duration-150 ease-out motion-reduce:transition-none",
               focusRing,
             )}
           >

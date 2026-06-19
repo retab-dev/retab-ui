@@ -20,17 +20,17 @@ function HeroKicker({ body, label }: HeroKickerProps) {
       aria-label={`${label} ${body}`}
       tabIndex={0}
       className={cn(
-        "group/kicker relative m-0 flex max-h-5 w-full cursor-default items-start overflow-hidden rounded-sm text-left font-mono text-sm leading-5 font-normal text-pretty text-neutral-950 transition-all duration-200 ease-out hover:max-h-20 focus:max-h-20 motion-reduce:transition-none",
+        "group/kicker text-foreground relative m-0 flex max-h-5 w-full cursor-default items-start overflow-hidden rounded-sm text-left font-mono text-sm leading-5 font-normal text-pretty transition-all duration-200 ease-out hover:max-h-20 focus:max-h-20 motion-reduce:transition-none",
         focusRing,
       )}
     >
       <span className="block">
-        <span className="inline shrink-0 font-mono text-sm font-semibold tracking-wider text-neutral-950 uppercase transition-colors duration-500 ease-out motion-reduce:transition-none">
+        <span className="text-foreground inline shrink-0 font-mono text-sm font-semibold tracking-wider uppercase transition-colors duration-500 ease-out motion-reduce:transition-none">
           {label}
         </span>
         <span
           aria-hidden="true"
-          className="inline text-neutral-600 opacity-0 transition-opacity duration-300 ease-out group-hover/kicker:opacity-100 group-focus/kicker:opacity-100 motion-reduce:transition-none"
+          className="text-muted-foreground inline opacity-0 transition-opacity duration-300 ease-out group-hover/kicker:opacity-100 group-focus/kicker:opacity-100 motion-reduce:transition-none"
         >
           {" "}
           {body}
@@ -46,10 +46,10 @@ export function Hero() {
       <MarketingContainer className="flex min-h-svh flex-col">
         <div className="grid w-full flex-1 grid-cols-1 items-center gap-8 py-8 text-center md:gap-12 md:py-16 lg:grid-cols-3 lg:gap-10 lg:pt-14 lg:pb-0 lg:text-left">
           <div className="order-2 mt-6 lg:order-1 lg:mt-0 lg:max-w-lg">
-            <h1 className="md:text-homepage-hero mx-auto max-w-xl text-5xl leading-none font-normal text-black lg:mx-0 lg:max-w-lg">
+            <h1 className="md:text-homepage-hero text-foreground mx-auto max-w-xl text-5xl leading-none font-normal lg:mx-0 lg:max-w-lg">
               Agentic Infrastructure
             </h1>
-            <p className="mt-4 font-mono text-sm text-neutral-700 md:mt-6 md:text-base lg:hidden">
+            <p className="text-muted-foreground mt-4 font-mono text-sm md:mt-6 md:text-base lg:hidden">
               {heroKickers[0].label}
             </p>
             <div className="mx-auto mt-6 flex w-full max-w-sm flex-col justify-center gap-3 sm:w-auto sm:max-w-none sm:flex-row md:mt-8 lg:mx-0 lg:justify-start">

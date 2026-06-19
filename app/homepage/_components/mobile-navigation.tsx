@@ -125,7 +125,7 @@ export function MobileNavigation({ content }: { content: HeaderContent }) {
         aria-controls={menuId}
         onClick={() => setIsOpen((current) => !current)}
         className={cn(
-          "flex min-h-11 min-w-11 items-center justify-end rounded-md text-black transition-colors duration-150 ease-out focus-visible:bg-neutral-100 motion-reduce:transition-none",
+          "text-foreground focus-visible:bg-accent flex min-h-11 min-w-11 items-center justify-end rounded-md transition-colors duration-150 ease-out motion-reduce:transition-none",
           focusRing,
         )}
       >
@@ -144,7 +144,7 @@ export function MobileNavigation({ content }: { content: HeaderContent }) {
         aria-modal="true"
         aria-label="Navigation menu"
         tabIndex={-1}
-        className="fixed inset-x-0 top-16 bottom-0 z-40 overflow-y-auto overscroll-contain bg-white px-6 py-6 shadow-none"
+        className="bg-background fixed inset-x-0 top-16 bottom-0 z-40 overflow-y-auto overscroll-contain px-6 py-6 shadow-none"
       >
         <nav aria-label="Mobile primary" className="grid gap-3">
           {content.navGroups.map((group) => (
@@ -159,7 +159,7 @@ export function MobileNavigation({ content }: { content: HeaderContent }) {
                   )
                 }
                 className={cn(
-                  "flex w-full items-center justify-between py-2 text-left text-2xl leading-tight font-normal text-black transition-colors hover:text-neutral-600 focus-visible:text-black motion-reduce:transition-none",
+                  "text-foreground hover:text-muted-foreground focus-visible:text-foreground flex w-full items-center justify-between py-2 text-left text-2xl leading-tight font-normal transition-colors motion-reduce:transition-none",
                   focusRing,
                 )}
               >
@@ -189,7 +189,7 @@ export function MobileNavigation({ content }: { content: HeaderContent }) {
                     >
                       <h3
                         id={headingId}
-                        className="font-mono text-xs leading-none font-semibold tracking-normal text-neutral-500 uppercase"
+                        className="text-muted-foreground font-mono text-xs leading-none font-semibold tracking-normal uppercase"
                       >
                         {section.title}
                       </h3>
@@ -202,7 +202,7 @@ export function MobileNavigation({ content }: { content: HeaderContent }) {
                             {...getLinkProps(item)}
                             onClick={closeMobileMenu}
                             className={cn(
-                              "-mx-2 inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-xl font-normal text-neutral-900 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none",
+                              "text-foreground hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground -mx-2 inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-xl font-normal transition-colors motion-reduce:transition-none",
                               focusRing,
                             )}
                           >
@@ -225,7 +225,7 @@ export function MobileNavigation({ content }: { content: HeaderContent }) {
               {...getLinkProps(item)}
               onClick={closeMobileMenu}
               className={cn(
-                "flex items-center py-2 text-2xl leading-tight font-normal text-black transition-colors hover:text-neutral-600 focus-visible:text-black motion-reduce:transition-none",
+                "text-foreground hover:text-muted-foreground focus-visible:text-foreground flex items-center py-2 text-2xl leading-tight font-normal transition-colors motion-reduce:transition-none",
                 focusRing,
               )}
             >

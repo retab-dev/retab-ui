@@ -104,7 +104,7 @@ export function StartBuildingPluginCommand({
           }}
         />
       ) : null}
-      <div className="group/command inline-flex min-h-10 w-full items-center gap-1 rounded-full bg-white px-2 py-1.5 text-black shadow-sm ring-1 ring-black/10">
+      <div className="group/command bg-card text-card-foreground ring-border inline-flex min-h-10 w-full items-center gap-1 rounded-full px-2 py-1.5 shadow-sm ring-1">
         <button
           type="button"
           aria-label={`Command type: ${selectedOption.label}`}
@@ -113,7 +113,7 @@ export function StartBuildingPluginCommand({
           aria-controls={isMenuOpen ? menuId : undefined}
           onClick={() => setIsMenuOpen((isOpen) => !isOpen)}
           className={cn(
-            "flex min-h-7 shrink-0 cursor-pointer items-center rounded-l-full rounded-r-md px-2 py-1 text-sm font-medium text-neutral-700 transition-colors duration-150 ease-out hover:bg-neutral-100 hover:text-black motion-reduce:transition-none",
+            "text-muted-foreground hover:bg-accent hover:text-accent-foreground flex min-h-7 shrink-0 cursor-pointer items-center rounded-l-full rounded-r-md px-2 py-1 text-sm font-medium transition-colors duration-150 ease-out motion-reduce:transition-none",
             focusRing,
           )}
         >
@@ -122,13 +122,13 @@ export function StartBuildingPluginCommand({
             <ChevronDown
               aria-hidden="true"
               className={cn(
-                "size-4 text-neutral-500 transition-transform duration-150 ease-out motion-reduce:transition-none",
+                "text-muted-foreground size-4 transition-transform duration-150 ease-out motion-reduce:transition-none",
                 isMenuOpen && "rotate-180",
               )}
             />
           </span>
         </button>
-        <span aria-hidden="true" className="h-6 w-px shrink-0 bg-neutral-200" />
+        <span aria-hidden="true" className="bg-border h-6 w-px shrink-0" />
         <button
           type="button"
           aria-label={`Copy command: ${selectedOption.command}`}
@@ -138,10 +138,10 @@ export function StartBuildingPluginCommand({
             focusRing,
           )}
         >
-          <span aria-hidden="true" className="shrink-0 text-neutral-400">
+          <span aria-hidden="true" className="text-muted-foreground shrink-0">
             $
           </span>
-          <code className="min-w-0 overflow-x-auto font-mono text-sm leading-5 whitespace-nowrap text-neutral-800">
+          <code className="text-foreground min-w-0 overflow-x-auto font-mono text-sm leading-5 whitespace-nowrap">
             {selectedOption.command}
           </code>
         </button>
@@ -150,7 +150,7 @@ export function StartBuildingPluginCommand({
           aria-label={`Copy ${selectedOption.label} command`}
           onClick={copyCommand}
           className={cn(
-            "grid size-7 shrink-0 place-items-center rounded-full text-neutral-500 transition-colors duration-150 ease-out group-hover/command:bg-neutral-100 hover:bg-neutral-100 hover:text-black active:bg-neutral-200 motion-reduce:transition-none",
+            "text-muted-foreground group-hover/command:bg-accent hover:bg-accent hover:text-accent-foreground active:bg-accent/80 grid size-7 shrink-0 place-items-center rounded-full transition-colors duration-150 ease-out motion-reduce:transition-none",
             focusRing,
           )}
         >
@@ -162,7 +162,7 @@ export function StartBuildingPluginCommand({
         </button>
       </div>
       {isMenuOpen ? (
-        <div className="absolute top-full left-2 z-50 mt-1 w-56 rounded-xl bg-white p-2 text-black shadow-xl ring-1 ring-black/10">
+        <div className="bg-popover text-popover-foreground ring-border absolute top-full left-2 z-50 mt-1 w-56 rounded-xl p-2 shadow-xl ring-1">
           <ul id={menuId} role="menu" aria-label="Command type">
             {options.map((option, index) => (
               <li key={option.label} role="none">
@@ -171,9 +171,10 @@ export function StartBuildingPluginCommand({
                   role="menuitem"
                   onClick={() => selectOption(index)}
                   className={cn(
-                    "flex min-h-10 w-full cursor-pointer items-center rounded-md px-2 text-left text-sm text-neutral-900 transition-colors duration-150 ease-out hover:bg-neutral-100 motion-reduce:transition-none",
+                    "text-popover-foreground hover:bg-accent hover:text-accent-foreground flex min-h-10 w-full cursor-pointer items-center rounded-md px-2 text-left text-sm transition-colors duration-150 ease-out motion-reduce:transition-none",
                     focusRing,
-                    index === selectedIndex && "bg-neutral-100",
+                    index === selectedIndex &&
+                      "bg-accent text-accent-foreground",
                   )}
                 >
                   {option.label}

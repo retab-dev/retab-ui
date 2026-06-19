@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { type LinkItem } from "./homepage-types";
 
 export const focusRing =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:ring-offset-white";
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 export function VercelMark({ className }: { className?: string }) {
   return (
@@ -59,7 +59,7 @@ export function MarketingLinkLabel({ item }: { item: LinkItem }) {
       {item.badge ? (
         <span
           aria-hidden="true"
-          className="shrink-0 rounded-sm border border-black px-1 text-xs leading-none font-semibold text-black"
+          className="border-border text-foreground shrink-0 rounded-sm border px-1 text-xs leading-none font-semibold"
         >
           {item.badge}
         </span>
@@ -87,8 +87,8 @@ export function MarketingButton({
         size === "compact" ? "min-h-8 px-3" : "min-h-10 px-4",
         shape === "rounded" ? "rounded-md" : "rounded-full",
         variant === "primary"
-          ? "border-black bg-black text-white hover:border-neutral-800 hover:bg-neutral-800"
-          : "border-neutral-200 bg-white text-black hover:border-neutral-300 hover:bg-neutral-50",
+          ? "border-primary bg-primary text-primary-foreground hover:border-primary/90 hover:bg-primary/90"
+          : "border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground",
         className,
       )}
       {...props}
