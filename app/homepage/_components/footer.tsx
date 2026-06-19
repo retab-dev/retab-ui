@@ -14,7 +14,7 @@ import {
 } from "./primitives"
 
 const footerItemClass = cn(
-  "-mx-1 inline-flex max-w-full items-baseline gap-1.5 rounded px-1 py-0.5 text-left text-sm leading-5 text-neutral-600 underline-offset-4 transition-colors hover:text-black hover:underline hover:decoration-neutral-400 focus-visible:text-black motion-reduce:transition-none",
+  "-mx-1 inline-flex max-w-full items-baseline gap-1.5 rounded px-1 py-0.5 text-left text-sm leading-5 text-neutral-600 underline-offset-4 transition-colors hover:text-black hover:underline hover:decoration-neutral-400 focus-visible:text-black focus-visible:underline focus-visible:decoration-neutral-400 motion-reduce:transition-none",
   focusRing
 )
 
@@ -70,7 +70,7 @@ function StatusLink({ status }: { status: FooterContent["status"] }) {
       aria-label={getLinkAriaLabel(status)}
       {...getLinkProps(status)}
       className={cn(
-        "inline-flex w-fit items-center gap-2 rounded px-1 py-0.5 text-sm text-neutral-600 transition-colors hover:text-black focus-visible:text-black motion-reduce:transition-none",
+        "inline-flex w-fit items-center gap-2 rounded px-1 py-0.5 text-sm text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none",
         focusRing
       )}
     >
