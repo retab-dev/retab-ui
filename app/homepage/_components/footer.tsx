@@ -96,7 +96,7 @@ function FooterLogo() {
 
 export function MarketingFooter({ content }: { content: FooterContent }) {
   return (
-    <footer aria-labelledby="homepage-footer-heading" className="bg-white">
+    <footer aria-labelledby="homepage-footer-heading" className="bg-gray-50">
       <h2 id="homepage-footer-heading" className="sr-only">
         Footer
       </h2>

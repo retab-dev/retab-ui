@@ -12,7 +12,7 @@ import { StartBuilding } from "./start-building";
 
 export function VercelHomepage() {
   return (
-    <div className="min-h-svh bg-white text-black">
+    <div className="min-h-svh bg-gray-50 text-black">
       <a
         href="#homepage-main"
         className="fixed top-3 left-3 z-50 -translate-y-24 rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition-transform focus:translate-y-0 focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black focus:outline-none motion-reduce:transition-none"
