@@ -4,9 +4,9 @@ import { MarketingButton, VercelMark } from "./primitives"
 export function Hero() {
   return (
     <section className="relative flex min-h-[calc(100svh-64px)] flex-col overflow-hidden border-b border-neutral-100">
-      <div className="mx-auto grid w-full max-w-[1400px] flex-1 grid-cols-1 items-center gap-12 px-6 py-14 text-center md:py-16 min-[961px]:-translate-y-5 min-[961px]:grid-cols-[1fr_0.8fr_1fr] min-[961px]:gap-10 min-[961px]:py-0 min-[961px]:text-left">
+      <div className="mx-auto grid w-full max-w-[1400px] flex-1 grid-cols-1 items-center gap-12 px-6 py-14 text-center min-[961px]:-translate-y-5 min-[961px]:grid-cols-[1fr_0.8fr_1fr] min-[961px]:gap-10 min-[961px]:py-0 min-[961px]:text-left md:py-16">
         <div className="order-2 min-[961px]:order-1">
-          <h1 className="mx-auto max-w-[620px] text-[clamp(42px,13vw,52px)] leading-[1.05] font-normal tracking-[-0.04em] text-black sm:text-[64px] sm:leading-[0.98] md:text-[72px] min-[961px]:mx-0 min-[961px]:max-w-[390px] min-[961px]:text-[64px]">
+          <h1 className="mx-auto max-w-[620px] text-[clamp(42px,13vw,52px)] leading-[1.05] font-normal text-black min-[961px]:mx-0 min-[961px]:max-w-[390px] min-[961px]:text-[64px] sm:text-[64px] sm:leading-[0.98] md:text-[72px]">
             Agentic Infrastructure
           </h1>
           <p className="mt-6 font-mono text-sm text-neutral-700 min-[961px]:hidden">
@@ -30,8 +30,8 @@ export function Hero() {
         </div>
 
         <div className="order-1 flex justify-center min-[961px]:order-2">
-          <div className="relative grid size-56 place-items-center sm:size-64 md:size-72 min-[961px]:size-56">
-            <VercelMark className="relative border-x-[94px] border-b-[164px] sm:border-x-[108px] sm:border-b-[188px] md:border-x-[122px] md:border-b-[214px] min-[961px]:border-x-[94px] min-[961px]:border-b-[164px]" />
+          <div className="relative grid size-56 place-items-center min-[961px]:size-56 sm:size-64 md:size-72">
+            <VercelMark className="relative border-x-[94px] border-b-[164px] min-[961px]:border-x-[94px] min-[961px]:border-b-[164px] sm:border-x-[108px] sm:border-b-[188px] md:border-x-[122px] md:border-b-[214px]" />
           </div>
         </div>
 
@@ -59,7 +59,7 @@ function LogoStrip() {
           to { transform: translateX(calc(-50% - 1.5rem)); }
         }
       `}</style>
-      <div className="motion-safe:animate-[homepage-logo-marquee_28s_linear_infinite] flex w-max min-w-0 items-center gap-12 px-6 text-neutral-950 md:hidden">
+      <div className="flex w-max min-w-0 items-center gap-12 px-6 text-neutral-950 motion-safe:animate-[homepage-logo-marquee_28s_linear_infinite] md:hidden">
         {repeatedLogos.map((logo, index) => (
           <BrandLogo key={`${logo}-${index}`} logo={logo} />
         ))}
@@ -84,16 +84,12 @@ function BrandLogo({ logo }: { logo: string }) {
   }
 
   if (logo === "HH") {
-    return (
-      <div className="shrink-0 text-3xl leading-none font-black tracking-[-0.08em]">
-        HH
-      </div>
-    )
+    return <div className="shrink-0 text-3xl leading-none font-black">HH</div>
   }
 
   if (logo === "DOORDASH") {
     return (
-      <div className="flex shrink-0 items-center gap-2 text-base leading-none font-bold tracking-[0.08em]">
+      <div className="flex shrink-0 items-center gap-2 text-base leading-none font-bold">
         <span className="block h-2.5 w-7 rounded-full bg-black" />
         DOORDASH
       </div>
@@ -105,7 +101,7 @@ function BrandLogo({ logo }: { logo: string }) {
       <div className="shrink-0 text-center font-serif text-lg leading-[0.8] font-semibold">
         charles
         <br />
-        <span className="font-sans text-sm tracking-[0.08em]">SCHWAB</span>
+        <span className="font-sans text-sm">SCHWAB</span>
       </div>
     )
   }

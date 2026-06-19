@@ -20,13 +20,18 @@ function FooterColumn({
 }) {
   return (
     <div>
-      <h2 className="mb-3 text-sm font-semibold text-black">{title}</h2>
+      <h2 className="mb-3 font-mono text-xs font-semibold text-black uppercase">
+        {title}
+      </h2>
       <ul className="space-y-2">
         {links.map((link) => (
           <li key={link.label}>
             <Link
               href={link.href}
-              className="inline-flex items-center gap-2 text-sm text-neutral-600 transition-colors hover:text-black"
+              aria-label={
+                link.badge ? `${link.label} ${link.badge}` : link.label
+              }
+              className="inline-flex items-center gap-2 rounded-sm text-sm text-neutral-600 transition-colors hover:text-black focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
             >
               <FooterLinkLabel link={link} />
             </Link>
@@ -42,7 +47,10 @@ function FooterLinkLabel({ link }: { link: LinkItem }) {
     <>
       {link.label}
       {link.badge ? (
-        <span className="rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600">
+        <span
+          aria-hidden="true"
+          className="rounded-[2px] border border-black px-1 text-[9px] leading-3 font-semibold text-black"
+        >
           {link.badge}
         </span>
       ) : null}
@@ -85,34 +93,28 @@ export function MarketingFooter() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between lg:flex-1 lg:justify-end">
             <Link
               href="https://vercel-status.com/"
-              className="inline-flex items-center gap-2 text-sm text-neutral-600 transition-colors hover:text-black"
+              className="inline-flex items-center gap-2 rounded-sm font-mono text-xs text-neutral-600 uppercase transition-colors hover:text-black focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
             >
-              <span className="size-2 rounded-full bg-emerald-500" />
-              All systems normal
+              <span className="size-2 rounded-full bg-neutral-500" />
+              Loading status...
             </Link>
 
             <div className="flex items-center gap-3">
-              <span className="text-sm text-neutral-500">
-                Select a display theme:
-              </span>
+              <span className="text-sm text-neutral-500">Display theme:</span>
               <div
-                aria-label="Display theme"
+                aria-hidden="true"
                 className="inline-flex rounded-full border border-neutral-200 bg-white p-1"
-                role="group"
               >
                 {themeOptions.map((option) => (
-                  <button
+                  <span
                     key={option}
-                    type="button"
-                    aria-pressed={option === "system"}
                     className={cn(
-                      "grid size-8 place-items-center rounded-full text-neutral-500 transition-colors hover:text-black",
+                      "grid size-8 place-items-center rounded-full text-neutral-500",
                       option === "system" && "bg-neutral-100 text-black"
                     )}
                   >
-                    <span className="sr-only">{option}</span>
                     <ThemeIcon option={option} />
-                  </button>
+                  </span>
                 ))}
               </div>
             </div>

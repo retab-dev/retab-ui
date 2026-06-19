@@ -1,3 +1,4 @@
+import { type ReactNode } from "react"
 import Link from "next/link"
 import { ChevronDown, Menu } from "lucide-react"
 
@@ -29,7 +30,7 @@ function HeaderButton({
   variant = "secondary",
 }: {
   href: string
-  children: React.ReactNode
+  children: ReactNode
   variant?: "primary" | "secondary"
 }) {
   return (
@@ -68,7 +69,7 @@ function HeaderDropdown({
       </button>
       <div
         id={menuId}
-        className="invisible pointer-events-none absolute top-9 left-0 z-20 grid w-[620px] grid-cols-3 gap-6 rounded-md border border-neutral-200 bg-white p-5 opacity-0 shadow-xl shadow-black/5 transition-opacity group-hover:visible group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:visible group-focus-within:pointer-events-auto group-focus-within:opacity-100 motion-reduce:transition-none"
+        className="pointer-events-none invisible absolute top-9 left-0 z-20 grid w-[620px] grid-cols-3 gap-6 rounded-md border border-neutral-200 bg-white p-5 opacity-0 shadow-xl shadow-black/5 transition-opacity group-focus-within:pointer-events-auto group-focus-within:visible group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:visible group-hover:opacity-100 motion-reduce:transition-none"
       >
         {sections.map((section) => (
           <div key={section.title}>
@@ -100,7 +101,7 @@ function HeaderDropdown({
 export function MarketingHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-6 px-6">
+      <MarketingContainer className="flex h-16 items-center gap-6">
         <Link
           href="/homepage"
           className="inline-flex size-8 items-center justify-center"
@@ -109,7 +110,10 @@ export function MarketingHeader() {
           <VercelMark />
         </Link>
 
-        <nav className="hidden items-center gap-2 min-[961px]:flex">
+        <nav
+          aria-label="Primary"
+          className="hidden items-center gap-2 min-[961px]:flex"
+        >
           {navGroups.map((group) => (
             <HeaderDropdown
               key={group.label}
@@ -132,13 +136,6 @@ export function MarketingHeader() {
         </nav>
 
         <div className="ml-auto hidden items-center gap-2 min-[961px]:flex">
-          <Link
-            href="https://vercel.com/chat"
-            className={`hidden h-8 items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-3 text-sm font-medium text-black transition-colors hover:border-neutral-300 hover:bg-neutral-50 2xl:inline-flex ${focusRing}`}
-          >
-            <Bot className="size-4" />
-            Ask AI
-          </Link>
           <HeaderButton href="https://vercel.com/contact/sales/demo">
             Get a Demo
           </HeaderButton>
@@ -146,12 +143,6 @@ export function MarketingHeader() {
           <HeaderButton href="https://vercel.com/signup" variant="primary">
             Sign Up
           </HeaderButton>
-          <Link
-            href="https://vercel.com/dashboard"
-            className={`hidden rounded-md px-2 text-sm font-medium text-neutral-700 transition-colors hover:text-black 2xl:block ${focusRing}`}
-          >
-            Dashboard
-          </Link>
         </div>
 
         <details className="group relative ml-auto min-[961px]:hidden">
@@ -162,7 +153,7 @@ export function MarketingHeader() {
             <Menu className="size-5" />
           </summary>
           <div className="absolute top-12 right-0 hidden w-[min(360px,calc(100vw-3rem))] rounded-md border border-neutral-200 bg-white px-5 py-5 shadow-xl shadow-black/5 group-open:block">
-            <nav className="grid gap-5">
+            <nav aria-label="Mobile primary" className="grid gap-5">
               {navGroups.map((group) => (
                 <div key={group.label}>
                   <div className="text-2xl leading-none font-medium text-black">
@@ -213,7 +204,7 @@ export function MarketingHeader() {
             </nav>
           </div>
         </details>
-      </div>
+      </MarketingContainer>
     </header>
   )
 }
