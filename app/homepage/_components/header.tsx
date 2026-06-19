@@ -6,7 +6,7 @@ import { focusRing, MarketingContainer, VercelMark } from "./primitives";
 
 export function MarketingHeader({ content }: { content: HeaderContent }) {
   return (
-    <header className="fixed inset-x-0 top-0 z-50 bg-gray-50/90 backdrop-blur">
+    <header className="bg-background/50 fixed inset-x-0 top-0 z-50 backdrop-blur">
       <MarketingContainer className="flex h-16 items-center gap-5">
         <Link
           href={content.homeHref}
