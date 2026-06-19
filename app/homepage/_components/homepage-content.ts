@@ -161,9 +161,18 @@ export const logoStrip = [
 ] as const satisfies readonly LogoContent[]
 
 export const heroKickers = [
-  "For coding agents",
-  "To ship apps and agents",
-  "Automated by agents",
+  {
+    label: "For coding agents",
+    body: "to deploy in their native language, with Vercel's API, CLI, MCP, and Skills.",
+  },
+  {
+    label: "To ship apps and agents",
+    body: "in Sandboxed VMs, with durable backends, powered by hundreds of models.",
+  },
+  {
+    label: "Automated by agents",
+    body: "who autonomously investigate errors, plan fixes, and open PRs.",
+  },
 ] as const
 
 export const productLanes = [

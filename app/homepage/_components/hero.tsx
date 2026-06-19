@@ -5,9 +5,9 @@ import { MarketingButton, VercelMark } from "./primitives"
 export function Hero() {
   return (
     <section className="relative flex min-h-[calc(100svh-64px)] flex-col overflow-hidden min-[961px]:min-h-[calc(100svh-100px)]">
-      <div className="mx-auto grid w-[calc(100%-48px)] max-w-[1400px] flex-1 grid-cols-1 items-center gap-8 py-8 text-center min-[720px]:gap-12 min-[720px]:py-14 min-[961px]:-translate-y-5 min-[961px]:grid-cols-[1fr_0.8fr_1fr] min-[961px]:gap-10 min-[961px]:py-0 min-[961px]:text-left md:py-16">
+      <div className="mx-auto grid w-[calc(100%-48px)] max-w-[1400px] flex-1 grid-cols-1 items-center gap-8 py-8 text-center min-[720px]:gap-12 min-[720px]:py-14 min-[961px]:translate-y-2.5 min-[961px]:grid-cols-[1fr_0.8fr_1fr] min-[961px]:gap-10 min-[961px]:py-0 min-[961px]:text-left md:py-16">
         <div className="order-2 min-[961px]:order-1">
-          <h1 className="mx-auto max-w-[620px] text-[clamp(42px,13vw,52px)] leading-[1.05] font-normal text-black min-[961px]:mx-0 min-[961px]:max-w-[390px] min-[961px]:!text-[48px] sm:text-[64px] sm:leading-[0.98] md:text-[72px] xl:!max-w-[430px] xl:!text-[64px]">
+          <h1 className="mx-auto max-w-[620px] text-[clamp(42px,13vw,52px)] leading-[1.05] font-normal text-black min-[961px]:mx-0 min-[961px]:max-w-[390px] min-[961px]:!text-[48px] sm:text-[64px] sm:leading-[0.98] md:text-[72px] xl:!max-w-[444px] xl:!text-[64px] xl:!leading-none">
             Agentic Infrastructure
           </h1>
           <p className="mt-4 font-mono text-sm text-neutral-700 min-[720px]:mt-6 min-[720px]:text-base min-[961px]:hidden">
@@ -36,10 +36,20 @@ export function Hero() {
           </div>
         </div>
 
-        <div className="order-3 hidden justify-self-center min-[961px]:block">
-          <div className="grid gap-9 font-mono text-xl leading-none font-normal tracking-normal whitespace-nowrap text-black uppercase xl:gap-[52px] xl:text-[28px] 2xl:text-[30px]">
+        <div className="order-3 hidden -translate-x-2 justify-self-end min-[961px]:block">
+          <div className="grid w-[348px] gap-4">
             {heroKickers.map((kicker) => (
-              <p key={kicker}>{kicker}</p>
+              <p
+                key={kicker.label}
+                className="relative m-0 flex h-4 w-full cursor-default items-start overflow-hidden text-left font-mono text-sm leading-[1.6] font-normal text-black"
+              >
+                <span className="block">
+                  <span className="inline shrink-0 font-mono text-sm font-semibold tracking-[1px] text-black uppercase">
+                    {kicker.label}
+                  </span>{" "}
+                  {kicker.body}
+                </span>
+              </p>
             ))}
           </div>
         </div>
