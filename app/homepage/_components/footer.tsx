@@ -1,10 +1,9 @@
-import Link from "next/link"
+import Link from "next/link";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
-import { FooterCookiePreferencesButton } from "./footer-cookie-preferences-button"
-import { FooterThemeSelector } from "./footer-theme-selector"
-import { type FooterContent, type LinkItem } from "./homepage-types"
+import { FooterCookiePreferencesButton } from "./footer-cookie-preferences-button";
+import { type FooterContent, type LinkItem } from "./homepage-types";
 import {
   focusRing,
   getLinkAriaLabel,
@@ -12,23 +11,23 @@ import {
   MarketingContainer,
   MarketingLinkLabel,
   VercelMark,
-} from "./primitives"
+} from "./primitives";
 
 const footerItemClass = cn(
   "-mx-0.5 inline-flex min-h-6 max-w-full items-center gap-1.5 rounded-sm px-0.5 py-0 text-left text-sm leading-5 text-neutral-600 transition-colors hover:text-black focus-visible:text-black motion-reduce:transition-none",
-  focusRing
-)
+  focusRing,
+);
 
 function FooterColumn({
   id,
   title,
   links,
 }: {
-  id: string
-  title: string
-  links: readonly LinkItem[]
+  id: string;
+  title: string;
+  links: readonly LinkItem[];
 }) {
-  const headingId = `homepage-footer-${id}`
+  const headingId = `homepage-footer-${id}`;
 
   return (
     <section aria-labelledby={headingId} className="min-w-0">
@@ -61,7 +60,7 @@ function FooterColumn({
         ))}
       </ul>
     </section>
-  )
+  );
 }
 
 function StatusLink({ status }: { status: FooterContent["status"] }) {
@@ -72,12 +71,12 @@ function StatusLink({ status }: { status: FooterContent["status"] }) {
       {...getLinkProps(status)}
       className={cn(
         "inline-flex h-[34px] w-fit items-center rounded-md px-2 font-mono text-sm text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none",
-        focusRing
+        focusRing,
       )}
     >
       {status.label}
     </Link>
-  )
+  );
 }
 
 function FooterLogo() {
@@ -87,12 +86,12 @@ function FooterLogo() {
       aria-label="Vercel homepage"
       className={cn(
         "inline-flex h-8 w-full max-w-[199px] items-center rounded-sm text-black transition-colors hover:text-neutral-600 focus-visible:text-black motion-reduce:transition-none",
-        focusRing
+        focusRing,
       )}
     >
       <VercelMark className="h-5 w-[23px]" />
     </Link>
-  )
+  );
 }
 
 export function MarketingFooter({ content }: { content: FooterContent }) {
@@ -121,9 +120,8 @@ export function MarketingFooter({ content }: { content: FooterContent }) {
 
         <div className="mt-6 flex min-h-[34px] flex-col gap-5 min-[460px]:flex-row min-[460px]:items-center min-[460px]:justify-between">
           <StatusLink status={content.status} />
-          <FooterThemeSelector options={content.themeOptions} />
         </div>
       </MarketingContainer>
     </footer>
-  )
+  );
 }

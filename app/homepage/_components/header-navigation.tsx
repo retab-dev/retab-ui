@@ -1,23 +1,25 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState } from "react"
-import Link from "next/link"
-import { ChevronDown, Menu, X } from "lucide-react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { cn } from "@/lib/utils"
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { ChevronDown, Menu, X } from "lucide-react";
+
+import { cn } from "@/lib/utils";
 
 import {
   type HeaderAction,
   type HeaderContent,
   type NavGroup,
-} from "./homepage-types"
+} from "./homepage-types";
 import {
   focusRing,
   getLinkAriaLabel,
   getLinkProps,
   MarketingButton,
   MarketingLinkLabel,
-} from "./primitives"
+} from "./primitives";
 
 const focusableSelector = [
   "a[href]",
@@ -26,38 +28,38 @@ const focusableSelector = [
   "input:not([disabled])",
   "select:not([disabled])",
   '[tabindex]:not([tabindex="-1"])',
-].join(",")
+].join(",");
 
 function getFocusableElements(container: HTMLElement | null) {
   if (!container) {
-    return []
+    return [];
   }
 
-  return Array.from(container.querySelectorAll<HTMLElement>(focusableSelector))
+  return Array.from(container.querySelectorAll<HTMLElement>(focusableSelector));
 }
 
 function HeaderDropdown({ group }: { group: NavGroup }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const rootRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const menuId = `homepage-${group.id}-menu`
+  const [isOpen, setIsOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuId = `homepage-${group.id}-menu`;
 
   useEffect(() => {
     if (!isOpen) {
-      return
+      return;
     }
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        event.preventDefault()
-        setIsOpen(false)
-        triggerRef.current?.focus()
+        event.preventDefault();
+        setIsOpen(false);
+        triggerRef.current?.focus();
       }
     }
 
-    window.addEventListener("keydown", onKeyDown)
-    return () => window.removeEventListener("keydown", onKeyDown)
-  }, [isOpen])
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen]);
 
   return (
     <div
@@ -66,15 +68,15 @@ function HeaderDropdown({ group }: { group: NavGroup }) {
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => {
         if (rootRef.current?.contains(document.activeElement)) {
-          return
+          return;
         }
 
-        setIsOpen(false)
+        setIsOpen(false);
       }}
       onFocus={() => setIsOpen(true)}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) {
-          setIsOpen(false)
+          setIsOpen(false);
         }
       }}
     >
@@ -87,7 +89,7 @@ function HeaderDropdown({ group }: { group: NavGroup }) {
         className={cn(
           "inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm text-neutral-700 transition-colors duration-150 ease-out hover:text-black focus-visible:text-black motion-reduce:transition-none",
           isOpen && "text-black",
-          focusRing
+          focusRing,
         )}
       >
         {group.label}
@@ -96,7 +98,7 @@ function HeaderDropdown({ group }: { group: NavGroup }) {
       <div
         id={menuId}
         hidden={!isOpen}
-        className="fixed inset-x-0 top-16 z-40 bg-[#fafafa] shadow-[0_1px_0_0_rgba(0,0,0,0.08)]"
+        className="fixed inset-x-0 top-16 z-[75] bg-[#fafafa] shadow-[0_1px_0_0_rgba(0,0,0,0.08)]"
       >
         <div className="mx-auto flex w-[calc(100%-48px)] max-w-[1400px] flex-nowrap gap-x-4 pt-8 pb-12">
           {group.sections.map((section) => (
@@ -113,7 +115,7 @@ function HeaderDropdown({ group }: { group: NavGroup }) {
                       {...getLinkProps(item)}
                       className={cn(
                         "inline-flex h-[34px] w-full max-w-full items-center gap-2 rounded-sm py-[3px] text-sm leading-5 text-neutral-900 transition-colors duration-150 ease-out hover:text-black focus-visible:text-black motion-reduce:transition-none",
-                        focusRing
+                        focusRing,
                       )}
                     >
                       <MarketingLinkLabel item={item} />
@@ -126,7 +128,7 @@ function HeaderDropdown({ group }: { group: NavGroup }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function HeaderActionButton({
@@ -136,11 +138,11 @@ function HeaderActionButton({
   shape = "rounded",
   size = "compact",
 }: {
-  action: HeaderAction
-  className?: string
-  onClick?: () => void
-  shape?: "pill" | "rounded"
-  size?: "default" | "compact"
+  action: HeaderAction;
+  className?: string;
+  onClick?: () => void;
+  shape?: "pill" | "rounded";
+  size?: "default" | "compact";
 }) {
   return (
     <MarketingButton
@@ -155,92 +157,91 @@ function HeaderActionButton({
     >
       {action.label}
     </MarketingButton>
-  )
+  );
 }
 
 function MobileNavigation({ content }: { content: HeaderContent }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [openGroupId, setOpenGroupId] = useState<string | null>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
-  const menuId = "homepage-mobile-menu"
+  const [isOpen, setIsOpen] = useState(false);
+  const [openGroupId, setOpenGroupId] = useState<string | null>("products");
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuId = "homepage-mobile-menu";
 
   function closeMobileMenu() {
-    setIsOpen(false)
-    setOpenGroupId(null)
+    setIsOpen(false);
+    setOpenGroupId("products");
   }
 
   useEffect(() => {
     if (!isOpen) {
-      return
+      return;
     }
 
-    const originalOverflow = document.body.style.overflow
-    document.body.style.overflow = "hidden"
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
     const focusFrame = window.requestAnimationFrame(() => {
-      const [firstFocusable] = getFocusableElements(menuRef.current)
-      ;(firstFocusable ?? menuRef.current)?.focus()
-    })
+      triggerRef.current?.focus();
+    });
 
     function closeMenu() {
-      closeMobileMenu()
-      triggerRef.current?.focus()
+      closeMobileMenu();
+      triggerRef.current?.focus();
     }
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        event.preventDefault()
-        closeMenu()
-        return
+        event.preventDefault();
+        closeMenu();
+        return;
       }
 
       if (event.key !== "Tab") {
-        return
+        return;
       }
 
-      const focusableElements = getFocusableElements(menuRef.current)
-      const firstElement = focusableElements[0]
-      const lastElement = focusableElements.at(-1)
+      const focusableElements = getFocusableElements(menuRef.current);
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements.at(-1);
 
       if (!firstElement || !lastElement) {
-        event.preventDefault()
-        menuRef.current?.focus()
-        return
+        event.preventDefault();
+        menuRef.current?.focus();
+        return;
       }
 
       if (!menuRef.current?.contains(document.activeElement)) {
-        event.preventDefault()
-        firstElement.focus()
-        return
+        event.preventDefault();
+        firstElement.focus();
+        return;
       }
 
       if (event.shiftKey && document.activeElement === firstElement) {
-        event.preventDefault()
-        lastElement.focus()
-        return
+        event.preventDefault();
+        lastElement.focus();
+        return;
       }
 
       if (!event.shiftKey && document.activeElement === lastElement) {
-        event.preventDefault()
-        firstElement.focus()
+        event.preventDefault();
+        firstElement.focus();
       }
     }
 
-    window.addEventListener("keydown", onKeyDown)
+    window.addEventListener("keydown", onKeyDown);
     return () => {
-      window.cancelAnimationFrame(focusFrame)
-      document.body.style.overflow = originalOverflow
-      window.removeEventListener("keydown", onKeyDown)
-    }
-  }, [isOpen])
+      window.cancelAnimationFrame(focusFrame);
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isOpen]);
 
   return (
     <div className="ml-auto min-[961px]:hidden">
       <button
         ref={triggerRef}
         type="button"
-        aria-label={isOpen ? "Close navigation" : "Open navigation"}
+        aria-label={isOpen ? "Close menu" : "Open menu"}
         aria-expanded={isOpen}
         aria-controls={menuId}
         onClick={() => setIsOpen((current) => !current)}
@@ -259,7 +260,7 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
         hidden={!isOpen}
         role="dialog"
         aria-modal="true"
-        aria-label="Mobile navigation"
+        aria-label="Navigation menu"
         tabIndex={-1}
         className="fixed inset-x-0 top-16 bottom-0 z-40 overflow-y-auto overscroll-contain bg-white px-6 py-6 shadow-none"
       >
@@ -272,12 +273,12 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
                 aria-controls={`homepage-mobile-${group.id}-panel`}
                 onClick={() =>
                   setOpenGroupId((current) =>
-                    current === group.id ? null : group.id
+                    current === group.id ? null : group.id,
                   )
                 }
                 className={cn(
                   "flex w-full items-center justify-between py-2 text-left text-2xl leading-tight font-normal text-black transition-colors hover:text-neutral-600 focus-visible:text-black motion-reduce:transition-none",
-                  focusRing
+                  focusRing,
                 )}
               >
                 {group.label}
@@ -285,7 +286,7 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
                   aria-hidden="true"
                   className={cn(
                     "size-4 transition-transform duration-150 ease-out motion-reduce:transition-none",
-                    openGroupId === group.id && "rotate-180"
+                    openGroupId === group.id && "rotate-180",
                   )}
                 />
               </button>
@@ -317,7 +318,7 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
                           onClick={closeMobileMenu}
                           className={cn(
                             "-mx-2 inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-xl font-normal text-neutral-900 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none",
-                            focusRing
+                            focusRing,
                           )}
                         >
                           <MarketingLinkLabel item={item} />
@@ -339,7 +340,7 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
               onClick={closeMobileMenu}
               className={cn(
                 "flex items-center py-2 text-2xl leading-tight font-normal text-black transition-colors hover:text-neutral-600 focus-visible:text-black motion-reduce:transition-none",
-                focusRing
+                focusRing,
               )}
             >
               {item.label}
@@ -360,7 +361,7 @@ function MobileNavigation({ content }: { content: HeaderContent }) {
         </nav>
       </div>
     </div>
-  )
+  );
 }
 
 export function HeaderNavigation({ content }: { content: HeaderContent }) {
@@ -394,5 +395,5 @@ export function HeaderNavigation({ content }: { content: HeaderContent }) {
 
       <MobileNavigation content={content} />
     </>
-  )
+  );
 }

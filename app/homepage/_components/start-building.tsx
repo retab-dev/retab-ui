@@ -3,9 +3,9 @@ import {
   type StartBuildingContent,
   type StartBuildingPanel as StartBuildingPanelContent,
   type StartBuildingPlugin,
-} from "./homepage-types"
-import { getLinkAriaLabel, getLinkProps, MarketingButton } from "./primitives"
-import { StartBuildingPluginCommand } from "./start-building-plugin-command"
+} from "./homepage-types";
+import { getLinkAriaLabel, getLinkProps, MarketingButton } from "./primitives";
+import { StartBuildingPluginCommand } from "./start-building-plugin-command";
 
 function ActionList({ actions }: { actions: readonly StartBuildingAction[] }) {
   return (
@@ -23,11 +23,11 @@ function ActionList({ actions }: { actions: readonly StartBuildingAction[] }) {
         </MarketingButton>
       ))}
     </div>
-  )
+  );
 }
 
 function PluginCommand({ plugin }: { plugin: StartBuildingPlugin }) {
-  return <StartBuildingPluginCommand options={plugin.options} />
+  return <StartBuildingPluginCommand options={plugin.options} />;
 }
 
 function StartBuildingPanel({ panel }: { panel: StartBuildingPanelContent }) {
@@ -42,7 +42,7 @@ function StartBuildingPanel({ panel }: { panel: StartBuildingPanelContent }) {
         <PluginCommand plugin={panel.plugin} />
       )}
     </div>
-  )
+  );
 }
 
 export function StartBuilding({ content }: { content: StartBuildingContent }) {
@@ -66,5 +66,5 @@ export function StartBuilding({ content }: { content: StartBuildingContent }) {
         </div>
       </div>
     </section>
-  )
+  );
 }

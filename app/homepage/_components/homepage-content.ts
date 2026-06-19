@@ -10,39 +10,39 @@ import {
   type SecondaryLatestCard,
   type StartBuildingContent,
   type ThemeOption,
-} from "./homepage-types"
+} from "./homepage-types";
 
-const vercelHref = (path: string) => `https://vercel.com${path}`
+const vercelHref = (path: string) => path;
 
 const vercelLink = (label: string, path: string, badge?: string): LinkItem => ({
   label,
   href: vercelHref(path),
   badge,
-})
+});
 
 const externalLink = (
   label: string,
   href: string,
-  badge?: string
+  badge?: string,
 ): LinkItem => ({
   label,
   href,
   badge,
   isExternal: true,
-})
+});
 
 const cookiePreferencesButton = (): LinkItem => ({
   label: "Cookie Preferences",
   href: "#cookie-preferences",
   ariaLabel: "Open cookie preferences",
   action: "cookie-preferences",
-})
+});
 
-const enterpriseLink = vercelLink("Enterprise", "/enterprise")
-const pricingLink = vercelLink("Pricing", "/pricing")
-const demoLink = vercelLink("Get a Demo", "/contact/sales/demo")
-const loginLink = vercelLink("Log In", "/login")
-const signupLink = vercelLink("Sign Up", "/signup")
+const enterpriseLink = vercelLink("Enterprise", "/enterprise");
+const pricingLink = vercelLink("Pricing", "/pricing");
+const demoLink = vercelLink("Get a Demo", "/contact/sales/demo");
+const loginLink = vercelLink("Log In", "/login");
+const signupLink = vercelLink("Sign Up", "/signup");
 
 export const navGroups = [
   {
@@ -117,15 +117,15 @@ export const navGroups = [
       },
     ],
   },
-] as const satisfies readonly NavGroup[]
+] as const satisfies readonly NavGroup[];
 
 export const utilityNavLinks = [
   enterpriseLink,
   pricingLink,
-] as const satisfies readonly LinkItem[]
+] as const satisfies readonly LinkItem[];
 
 export const homepageHeader = {
-  homeHref: "/homepage",
+  homeHref: "/home",
   navGroups,
   utilityLinks: utilityNavLinks,
   desktopActions: [
@@ -138,7 +138,7 @@ export const homepageHeader = {
     { ...loginLink, variant: "secondary" },
     signupLink,
   ],
-} as const satisfies HeaderContent
+} as const satisfies HeaderContent;
 
 export const logoStrip = [
   { id: "blackbox", label: "BLACKBOX.AI", variant: "diamond-wordmark" },
@@ -162,7 +162,7 @@ export const logoStrip = [
     label: "Polymarket",
     variant: "large-diamond-wordmark",
   },
-] as const satisfies readonly LogoContent[]
+] as const satisfies readonly LogoContent[];
 
 export const heroKickers = [
   {
@@ -177,7 +177,7 @@ export const heroKickers = [
     label: "Automated by agents",
     body: "who autonomously investigate errors, plan fixes, and open PRs.",
   },
-] as const
+] as const;
 
 export const productLanes = [
   {
@@ -270,7 +270,7 @@ export const productLanes = [
       alt: "Platforms",
     },
   },
-] as const satisfies readonly ProductLaneContent[]
+] as const satisfies readonly ProductLaneContent[];
 
 export const featuredLatestCard = {
   id: "ship-26",
@@ -281,7 +281,7 @@ export const featuredLatestCard = {
   imageSrc:
     "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/ship-26-homepage.svg",
   alt: "Vercel Ship 26 conference",
-} as const satisfies FeaturedLatestCard
+} as const satisfies FeaturedLatestCard;
 
 export const secondaryLatestCards = [
   {
@@ -310,14 +310,14 @@ export const secondaryLatestCards = [
       kind: "sandbox",
     },
   },
-] as const satisfies readonly SecondaryLatestCard[]
+] as const satisfies readonly SecondaryLatestCard[];
 
 const footerStatus = {
   label: "Loading status…",
   href: "https://vercel-status.com/",
   ariaLabel: "Vercel status: Loading status",
   isExternal: true,
-} as const
+} as const;
 
 export const footerSocialLinks = [
   {
@@ -340,7 +340,7 @@ export const footerSocialLinks = [
     ...externalLink("Instagram", "https://www.instagram.com/vercel"),
     ariaLabel: "Vercel on Instagram",
   },
-] as const satisfies readonly LinkItem[]
+] as const satisfies readonly LinkItem[];
 
 export const footerNavigationColumns = [
   {
@@ -486,19 +486,19 @@ export const footerNavigationColumns = [
     title: "Social",
     links: footerSocialLinks,
   },
-] as const satisfies readonly FooterColumnContent[]
+] as const satisfies readonly FooterColumnContent[];
 
 export const themeOptions = [
   { value: "system", label: "System" },
   { value: "light", label: "Light" },
   { value: "dark", label: "Dark" },
-] as const satisfies readonly ThemeOption[]
+] as const satisfies readonly ThemeOption[];
 
 export const homepageFooter = {
   status: footerStatus,
   columns: footerNavigationColumns,
   themeOptions,
-} as const satisfies FooterContent
+} as const satisfies FooterContent;
 
 export const startBuildingContent = {
   title: "Start building with Vercel now",
@@ -545,4 +545,4 @@ export const startBuildingContent = {
       },
     },
   ],
-} as const satisfies StartBuildingContent
+} as const satisfies StartBuildingContent;

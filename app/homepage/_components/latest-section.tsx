@@ -8,7 +8,10 @@ import { SectionHeader } from "./section-header";
 
 export function LatestSection() {
   return (
-    <section className="mt-28 md:mt-[168px]" aria-label="Latest Vercel updates">
+    <section
+      className="-mt-14 md:mt-[226px]"
+      aria-label="Latest Vercel updates"
+    >
       <SectionHeader
         title="Latest"
         description="Recent launches, events, and updates shaping what's next on Vercel."

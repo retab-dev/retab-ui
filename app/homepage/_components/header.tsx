@@ -1,8 +1,8 @@
-import Link from "next/link"
+import Link from "next/link";
 
-import { HeaderNavigation } from "./header-navigation"
-import { type HeaderContent } from "./homepage-types"
-import { focusRing, MarketingContainer, VercelMark } from "./primitives"
+import { HeaderNavigation } from "./header-navigation";
+import { type HeaderContent } from "./homepage-types";
+import { focusRing, MarketingContainer, VercelMark } from "./primitives";
 
 export function MarketingHeader({ content }: { content: HeaderContent }) {
   return (
@@ -11,12 +11,12 @@ export function MarketingHeader({ content }: { content: HeaderContent }) {
         <Link
           href={content.homeHref}
           className={`-ml-2 inline-flex size-9 items-center justify-center rounded-md transition-colors hover:bg-neutral-100 focus-visible:bg-neutral-100 motion-reduce:transition-none ${focusRing}`}
-          aria-label="Vercel homepage"
+          aria-label="Vercel"
         >
           <VercelMark />
         </Link>
         <HeaderNavigation content={content} />
       </MarketingContainer>
     </header>
-  )
+  );
 }

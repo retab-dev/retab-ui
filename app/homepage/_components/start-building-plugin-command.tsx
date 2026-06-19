@@ -1,39 +1,41 @@
-"use client"
+"use client";
 
-import { useEffect, useId, useRef, useState } from "react"
-import { Check, ChevronDown, Copy } from "lucide-react"
+/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
 
-import { cn } from "@/lib/utils"
+import { useEffect, useId, useRef, useState } from "react";
+import { Check, ChevronDown, Copy } from "lucide-react";
 
-import { type StartBuildingPluginOption } from "./homepage-types"
-import { focusRing } from "./primitives"
+import { cn } from "@/lib/utils";
 
-type CopyState = "idle" | "copied" | "failed"
+import { type StartBuildingPluginOption } from "./homepage-types";
+import { focusRing } from "./primitives";
+
+type CopyState = "idle" | "copied" | "failed";
 
 export function StartBuildingPluginCommand({
   options,
 }: {
-  options: readonly [StartBuildingPluginOption, ...StartBuildingPluginOption[]]
+  options: readonly [StartBuildingPluginOption, ...StartBuildingPluginOption[]];
 }) {
-  const menuId = useId()
-  const rootRef = useRef<HTMLDivElement>(null)
-  const [selectedIndex, setSelectedIndex] = useState(0)
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [copyState, setCopyState] = useState<CopyState>("idle")
-  const resetTimeoutRef = useRef<number | undefined>(undefined)
-  const selectedOption = options[selectedIndex] ?? options[0]
+  const menuId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [copyState, setCopyState] = useState<CopyState>("idle");
+  const resetTimeoutRef = useRef<number | undefined>(undefined);
+  const selectedOption = options[selectedIndex] ?? options[0];
 
   useEffect(() => {
     return () => {
       if (resetTimeoutRef.current) {
-        window.clearTimeout(resetTimeoutRef.current)
+        window.clearTimeout(resetTimeoutRef.current);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   useEffect(() => {
     if (!isMenuOpen) {
-      return
+      return;
     }
 
     function closeOnOutsidePress(event: PointerEvent) {
@@ -41,59 +43,59 @@ export function StartBuildingPluginCommand({
         event.target instanceof Node &&
         !rootRef.current?.contains(event.target)
       ) {
-        setIsMenuOpen(false)
+        setIsMenuOpen(false);
       }
     }
 
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setIsMenuOpen(false)
+        setIsMenuOpen(false);
       }
     }
 
-    document.addEventListener("pointerdown", closeOnOutsidePress)
-    document.addEventListener("keydown", closeOnEscape)
+    document.addEventListener("pointerdown", closeOnOutsidePress);
+    document.addEventListener("keydown", closeOnEscape);
 
     return () => {
-      document.removeEventListener("pointerdown", closeOnOutsidePress)
-      document.removeEventListener("keydown", closeOnEscape)
-    }
-  }, [isMenuOpen])
+      document.removeEventListener("pointerdown", closeOnOutsidePress);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isMenuOpen]);
 
   function resetCopyStateSoon() {
     if (resetTimeoutRef.current) {
-      window.clearTimeout(resetTimeoutRef.current)
+      window.clearTimeout(resetTimeoutRef.current);
     }
 
     resetTimeoutRef.current = window.setTimeout(() => {
-      setCopyState("idle")
-    }, 1800)
+      setCopyState("idle");
+    }, 1800);
   }
 
   async function copyCommand() {
     try {
       if (!navigator.clipboard?.writeText) {
-        throw new Error("Clipboard unavailable")
+        throw new Error("Clipboard unavailable");
       }
 
-      await navigator.clipboard.writeText(selectedOption.command)
-      setCopyState("copied")
+      await navigator.clipboard.writeText(selectedOption.command);
+      setCopyState("copied");
     } catch {
-      setCopyState("failed")
+      setCopyState("failed");
     } finally {
-      resetCopyStateSoon()
+      resetCopyStateSoon();
     }
   }
 
   function selectOption(index: number) {
-    setSelectedIndex(index)
-    setIsMenuOpen(false)
-    setCopyState("idle")
+    setSelectedIndex(index);
+    setIsMenuOpen(false);
+    setCopyState("idle");
   }
 
   return (
     <div ref={rootRef} className="relative mt-14 max-w-full">
-      <div className="inline-flex h-10 max-w-[calc(100vw-48px)] items-center gap-1 rounded-full bg-white px-2 py-1.5 text-black shadow-[0_0_0_1px_rgba(0,0,0,0.12),0_1px_2px_rgba(0,0,0,0.06)]">
+      <div className="inline-flex h-10 w-full max-w-full items-center gap-1 rounded-full bg-white px-2 py-1.5 text-black shadow-[0_0_0_1px_rgba(0,0,0,0.12),0_1px_2px_rgba(0,0,0,0.06)]">
         <button
           type="button"
           aria-label="Command type"
@@ -104,7 +106,7 @@ export function StartBuildingPluginCommand({
           className={cn(
             "flex h-7 shrink-0 cursor-pointer items-center rounded-l-full rounded-r-md py-1 pr-1 pl-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black motion-reduce:transition-none",
             focusRing,
-            "focus-visible:ring-offset-0 focus-visible:ring-inset"
+            "focus-visible:ring-offset-0 focus-visible:ring-inset",
           )}
         >
           <span className="flex items-center gap-1.5">
@@ -113,7 +115,7 @@ export function StartBuildingPluginCommand({
               aria-hidden="true"
               className={cn(
                 "size-4 text-neutral-500 transition-transform duration-150 motion-reduce:transition-none",
-                isMenuOpen && "rotate-180"
+                isMenuOpen && "rotate-180",
               )}
             />
           </span>
@@ -130,7 +132,7 @@ export function StartBuildingPluginCommand({
           className={cn(
             "mr-0.5 grid size-9 shrink-0 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-black focus-visible:bg-neutral-100 focus-visible:text-black active:bg-neutral-200 motion-reduce:transition-none",
             focusRing,
-            "focus-visible:ring-offset-0 focus-visible:ring-inset"
+            "focus-visible:ring-offset-0 focus-visible:ring-inset",
           )}
         >
           {copyState === "copied" ? (
@@ -152,7 +154,7 @@ export function StartBuildingPluginCommand({
                   className={cn(
                     "flex h-10 w-full cursor-pointer items-center rounded-md px-2 text-left text-sm text-neutral-900 transition-colors hover:bg-neutral-100 focus-visible:bg-neutral-100 motion-reduce:transition-none",
                     focusRing,
-                    index === selectedIndex && "bg-neutral-100"
+                    index === selectedIndex && "bg-neutral-100",
                   )}
                 >
                   {option.label}
@@ -167,5 +169,5 @@ export function StartBuildingPluginCommand({
         {copyState === "failed" ? "Could not copy command" : null}
       </span>
     </div>
-  )
+  );
 }
