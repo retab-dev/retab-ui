@@ -37,7 +37,7 @@ export function LatestSection() {
               key={card.id}
               href={card.href}
               aria-label={`${card.label}: ${card.body}`}
-              className="group relative flex min-h-[240px] min-w-0 flex-col overflow-hidden rounded-md border border-neutral-200 bg-[#fafafa] p-5 text-black transition-[border-color,background-color] duration-150 ease-out hover:border-neutral-300 hover:bg-white focus-visible:border-neutral-300 focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none active:bg-neutral-50 motion-reduce:transition-none sm:p-6 lg:min-h-[280px]"
+              className="group relative flex min-h-[240px] min-w-0 flex-col overflow-hidden rounded-md border border-neutral-200 bg-[#fafafa] p-5 text-black transition-[border-color,background-color] duration-150 ease-out hover:border-neutral-300 hover:bg-white focus-visible:border-neutral-300 focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none active:bg-neutral-50 motion-reduce:transition-none sm:p-6 lg:h-[280px] lg:min-h-0"
             >
               {card.visual.kind === "metrics" ? (
                 <WorkflowMetricStrip metrics={card.visual.metrics} />

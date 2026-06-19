@@ -64,6 +64,34 @@ describe("pretext markdown greenfield navigation", () => {
     })
   })
 
+  it("can ignore the initial page hash and render at the document top", async () => {
+    window.history.replaceState(null, "", "/viewer#target-section")
+
+    render(
+      <MarkdownViewer
+        controls={false}
+        source={markdownSource(
+          [
+            "# Start",
+            "",
+            ...Array.from({ length: 90 }, (_, index) => `Spacer ${index + 1}`),
+            "",
+            "## Target Section",
+            "",
+            "The target should not be consumed by embedded viewers.",
+          ].join("\n")
+        )}
+        urlFragmentNavigation={false}
+      />
+    )
+
+    expect(await screen.findByRole("heading", { name: "Start" })).toBeTruthy()
+
+    await waitFor(() => {
+      expect(maxScrollTop()).toBe(0)
+    })
+  })
+
   it("intercepts footnote reference clicks and scrolls to generated offscreen footnotes", async () => {
     window.history.replaceState(null, "", "/viewer")
 
@@ -188,4 +216,20 @@ function lastScrollTop() {
     }
   }
   return 0
+}
+
+function maxScrollTop() {
+  return Math.max(0, ...scrollTopCalls())
+}
+
+function scrollTopCalls() {
+  return scrollTo.mock.calls.flatMap((call) => {
+    const options = call[0]
+    return options &&
+      typeof options === "object" &&
+      "top" in options &&
+      typeof options.top === "number"
+      ? [options.top]
+      : []
+  })
 }

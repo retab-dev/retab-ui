@@ -67,6 +67,11 @@ type MarkdownScrollToLineOptions = ScrollToOptions & {
   preferredChunkId?: string | null
 }
 
+export type MarkdownViewerProps = TextViewerProps & {
+  /** Bind document fragment IDs to window.location.hash. Disable for embedded previews. */
+  urlFragmentNavigation?: boolean
+}
+
 export function MarkdownGreenfieldContent({
   resource,
   className,
@@ -78,7 +83,8 @@ export function MarkdownGreenfieldContent({
   maxLines,
   retryVersion,
   forwardedRef,
-}: TextViewerProps & {
+  urlFragmentNavigation = true,
+}: MarkdownViewerProps & {
   resource: ViewerResource
   retryVersion: number
   forwardedRef?: React.ForwardedRef<TextViewerHandle>
@@ -410,6 +416,8 @@ export function MarkdownGreenfieldContent({
   // Subscribes to the browser's hash/history (a non-React external source) and
   // scrolls the matching fragment into view before paint.
   React.useLayoutEffect(() => {
+    if (!urlFragmentNavigation) return
+
     const scrollToCurrentHash = () => {
       const hash = window.location.hash
       if (!hash) return
@@ -435,7 +443,7 @@ export function MarkdownGreenfieldContent({
       window.removeEventListener("hashchange", scrollToCurrentHash)
       window.removeEventListener("popstate", scrollToCurrentHash)
     }
-  }, [document])
+  }, [document, urlFragmentNavigation])
 
   const recordMeasuredHeight = React.useCallback(
     (chunk: MarkdownGreenfieldChunk, height: number) => {
@@ -561,6 +569,7 @@ export function MarkdownGreenfieldContent({
                   <MarkdownGreenfieldChunkRenderer
                     chunk={chunk}
                     fontScale={fontScale}
+                    urlFragmentNavigation={urlFragmentNavigation}
                   />
                 </ChunkFrame>
               )

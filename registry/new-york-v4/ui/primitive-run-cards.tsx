@@ -43,7 +43,15 @@ interface PrimitiveRunCardBase {
 
 export interface ClassificationRunCardProps extends PrimitiveRunCardBase {
   /** Page image rendered behind the result. */
-  previewImageUrl: string
+  previewImageUrl?: string
+  /**
+   * Custom media rendered in the shared RunCard frame. Use this when a consumer
+   * owns document loading/cropping behavior but still wants the shared
+   * classification footer and run-card shell.
+   */
+  media?: React.ReactNode
+  /** Aspect ratio for custom media; defaults to the RunCard media frame. */
+  mediaAspectRatio?: number
   category: string
   reasoning?: string
 }
@@ -51,17 +59,24 @@ export interface ClassificationRunCardProps extends PrimitiveRunCardBase {
 export function ClassificationRunCard({
   file,
   previewImageUrl,
+  media,
+  mediaAspectRatio,
   category,
   reasoning,
   status = "completed",
   onClick,
 }: ClassificationRunCardProps) {
+  const defaultMedia = previewImageUrl ? (
+    <FillThumbnail file={file} src={previewImageUrl} />
+  ) : undefined
+
   return (
     <RunCard
       file={file}
       status={status ?? undefined}
       onClick={onClick}
-      media={<FillThumbnail file={file} src={previewImageUrl} />}
+      previewAspectRatio={mediaAspectRatio}
+      media={media ?? defaultMedia}
     >
       <div className="space-y-2 p-3">
         <div className="inline-flex min-h-7 max-w-full items-center rounded-md border bg-background px-2.5 text-sm font-medium">
@@ -297,6 +312,7 @@ export interface ExtractRunCardProps extends PrimitiveRunCardBase {
   fieldCount?: number
   /** How many labeled fields to list; the rest collapse to "+N more". */
   maxFields?: number
+  className?: string
 }
 
 export function ExtractRunCard({
@@ -309,6 +325,7 @@ export function ExtractRunCard({
   maxFields = 3,
   status = "completed",
   onClick,
+  className,
 }: ExtractRunCardProps) {
   const tinted = fields.map((field, i) => ({
     ...field,
@@ -318,8 +335,8 @@ export function ExtractRunCard({
   // chip (the dashboard's canvas-card style — geometry known, names not).
   const labeled = tinted.filter((field) => field.label != null)
   const shown = labeled.slice(0, maxFields)
-  const rest = labeled.length - shown.length
   const count = fieldCount ?? tinted.length
+  const rest = Math.max(0, count - shown.length)
   const defaultMedia = previewImageUrl ? (
     <div className="relative size-full overflow-hidden">
       {/* The page sits on a full-page-aspect layer so each field's source
@@ -369,6 +386,7 @@ export function ExtractRunCard({
       onClick={onClick}
       previewAspectRatio={mediaAspectRatio}
       media={media ?? defaultMedia}
+      className={className}
     >
       {shown.length > 0 ? (
         <div className="flex flex-col gap-1">

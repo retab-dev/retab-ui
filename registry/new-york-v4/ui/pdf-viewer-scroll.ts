@@ -12,6 +12,7 @@ const PDF_SCROLL_TARGET_HEADROOM = 48
 const PDF_SCROLL_TARGET_INLINE_HEADROOM = 32
 const PDF_READING_MARKER_RATIO = 0.2
 const PDF_SCROLL_IDLE_MS = 120
+const PDF_SCROLL_POSITION_EPSILON = 1
 
 type PdfReadingAnchor =
   | {
@@ -22,6 +23,27 @@ type PdfReadingAnchor =
       pageNumber: number
       yPercent: number
     }
+
+type PdfScrollIntent =
+  | {
+      kind: "idle"
+    }
+  | {
+      kind: "user"
+    }
+  | {
+      kind: "programmatic"
+      behavior: ScrollBehavior
+      sequence: number
+      target: PdfPageAreaTarget
+      targetTop: number
+      targetLeft?: number
+    }
+
+type PdfResolvedPageAreaTarget = {
+  top: number
+  left?: number
+}
 
 export function usePdfScrollActivity() {
   const [isScrolling, setIsScrolling] = React.useState(false)
@@ -80,6 +102,11 @@ export function usePdfScroll({
   const scrollFrameRef = React.useRef(0)
   const viewportResetKeyRef = React.useRef<unknown>(resetKey)
   const didMountResetEffectRef = React.useRef(false)
+  const scrollIntentRef = React.useRef<PdfScrollIntent>({ kind: "idle" })
+  const scrollIntentSequenceRef = React.useRef(0)
+  const programmaticScrollIdleTimeoutRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null)
   const [viewportElement, setViewportElementState] =
     React.useState<HTMLDivElement | null>(null)
   const [currentPageState, setCurrentPageState] = React.useState<{
@@ -90,13 +117,50 @@ export function usePdfScroll({
     ? currentPageState.page
     : 1
 
+  const clearProgrammaticScrollIdleTimeout = React.useCallback(() => {
+    if (programmaticScrollIdleTimeoutRef.current) {
+      clearTimeout(programmaticScrollIdleTimeoutRef.current)
+      programmaticScrollIdleTimeoutRef.current = null
+    }
+  }, [])
+
+  const completeProgrammaticScroll = React.useCallback(
+    (sequence: number) => {
+      if (
+        scrollIntentRef.current.kind === "programmatic" &&
+        scrollIntentRef.current.sequence === sequence
+      ) {
+        scrollIntentRef.current = { kind: "idle" }
+      }
+      clearProgrammaticScrollIdleTimeout()
+    },
+    [clearProgrammaticScrollIdleTimeout]
+  )
+
+  const scheduleProgrammaticScrollCompletion = React.useCallback(
+    (sequence: number) => {
+      clearProgrammaticScrollIdleTimeout()
+      programmaticScrollIdleTimeoutRef.current = setTimeout(() => {
+        completeProgrammaticScroll(sequence)
+      }, PDF_SCROLL_IDLE_MS)
+    },
+    [clearProgrammaticScrollIdleTimeout, completeProgrammaticScroll]
+  )
+
+  const markUserScrollIntent = React.useCallback(() => {
+    clearProgrammaticScrollIdleTimeout()
+    scrollIntentRef.current = { kind: "user" }
+  }, [clearProgrammaticScrollIdleTimeout])
+
   const resetViewportForKey = React.useCallback(
     (element: HTMLDivElement, key: unknown) => {
       viewportResetKeyRef.current = key
-      element.scrollTop = 0
+      clearProgrammaticScrollIdleTimeout()
+      scrollIntentRef.current = { kind: "idle" }
+      setViewportScrollTop(element, 0)
       element.scrollTo?.({ top: 0, behavior: "auto" })
     },
-    []
+    [clearProgrammaticScrollIdleTimeout]
   )
 
   const setViewportElement = React.useCallback(
@@ -161,18 +225,52 @@ export function usePdfScroll({
     const viewportElement = viewportElementRef.current
     if (!viewportElement) return
 
+    const scrollIntent = scrollIntentRef.current
+    if (scrollIntent.kind === "programmatic") {
+      const target = getPdfPageAreaScrollTarget(
+        viewportElement,
+        layout,
+        pageCount,
+        scrollIntent.target
+      )
+      if (!target) return
+
+      const targetChanged =
+        Math.abs(scrollIntent.targetTop - target.top) >
+          PDF_SCROLL_POSITION_EPSILON ||
+        Math.abs((scrollIntent.targetLeft ?? 0) - (target.left ?? 0)) >
+          PDF_SCROLL_POSITION_EPSILON
+
+      scrollIntent.targetTop = target.top
+      scrollIntent.targetLeft = target.left
+      if (targetChanged) {
+        scrollViewportToPageAreaTarget(viewportElement, target, {
+          behavior: scrollIntent.behavior,
+        })
+        scheduleProgrammaticScrollCompletion(scrollIntent.sequence)
+      }
+      return
+    }
+
     const anchor = capturePdfReadingAnchor(previousLayout, viewportElement)
     if (!anchor) return
 
     restorePdfReadingAnchor(layout, viewportElement, anchor)
-  }, [layout, resetKey])
+  }, [layout, pageCount, resetKey, scheduleProgrammaticScrollCompletion])
 
   const handleScroll = React.useCallback(() => {
+    const scrollIntent = scrollIntentRef.current
+    if (scrollIntent.kind === "programmatic") {
+      scheduleProgrammaticScrollCompletion(scrollIntent.sequence)
+    } else {
+      scrollIntentRef.current = { kind: "user" }
+    }
+
     if (scrollFrameRef.current) return
     scrollFrameRef.current = requestAnimationFrame(() =>
       measureScrollRef.current()
     )
-  }, [])
+  }, [scheduleProgrammaticScrollCompletion])
 
   React.useEffect(() => {
     if (!didMountResetEffectRef.current) {
@@ -191,52 +289,70 @@ export function usePdfScroll({
     }
   }, [resetKey, resetViewportForKey])
 
+  React.useEffect(() => {
+    const viewportElement = viewportElementRef.current
+    if (!viewportElement) return
+
+    const handleScrollEnd = () => {
+      const scrollIntent = scrollIntentRef.current
+      if (scrollIntent.kind === "programmatic") {
+        completeProgrammaticScroll(scrollIntent.sequence)
+      } else {
+        scrollIntentRef.current = { kind: "idle" }
+      }
+    }
+
+    viewportElement.addEventListener?.("wheel", markUserScrollIntent, {
+      passive: true,
+    })
+    viewportElement.addEventListener?.("touchstart", markUserScrollIntent, {
+      passive: true,
+    })
+    viewportElement.addEventListener?.("pointerdown", markUserScrollIntent)
+    viewportElement.addEventListener?.("keydown", markUserScrollIntent)
+    viewportElement.addEventListener?.("scrollend", handleScrollEnd)
+
+    return () => {
+      viewportElement.removeEventListener?.("wheel", markUserScrollIntent)
+      viewportElement.removeEventListener?.("touchstart", markUserScrollIntent)
+      viewportElement.removeEventListener?.("pointerdown", markUserScrollIntent)
+      viewportElement.removeEventListener?.("keydown", markUserScrollIntent)
+      viewportElement.removeEventListener?.("scrollend", handleScrollEnd)
+    }
+  }, [completeProgrammaticScroll, markUserScrollIntent, viewportElement])
+
   const scrollToPageArea = React.useCallback(
     (target: PdfPageAreaTarget, options?: ScrollToOptions) => {
       const viewportElement = viewportElementRef.current
-      const pageNumber = target.pageNumber
-      if (!viewportElement || pageNumber < 1 || pageNumber > pageCount) return
+      const pageAreaTarget = viewportElement
+        ? getPdfPageAreaScrollTarget(viewportElement, layout, pageCount, target)
+        : null
+      if (!viewportElement || !pageAreaTarget) return
 
-      const pageLayout = getPdfPageLayout(layout, pageNumber)
-      if (!pageLayout) return
-
-      const requestedTop = Number.isNaN(target.top) ? 0 : target.top
-      const targetTopPercent = clamp(requestedTop, 0, 100)
-      const targetHeightPercent = normalizeOptionalPercent(target.height)
-      const areaTop =
-        pageLayout.offsetTop + (targetTopPercent / 100) * pageLayout.height
-      const areaBottom =
-        areaTop + ((targetHeightPercent ?? 0) / 100) * pageLayout.height
-      const visibleTop = viewportElement.scrollTop + PDF_SCROLL_TARGET_HEADROOM
-      const visibleBottom =
-        viewportElement.scrollTop +
-        viewportElement.clientHeight -
-        PDF_SCROLL_TARGET_HEADROOM
-      let targetTop = areaTop - PDF_SCROLL_TARGET_HEADROOM
-
-      if (targetHeightPercent != null && areaTop >= visibleTop) {
-        targetTop =
-          areaBottom > visibleBottom
-            ? areaBottom -
-              viewportElement.clientHeight +
-              PDF_SCROLL_TARGET_HEADROOM
-            : viewportElement.scrollTop
+      const behavior = options?.behavior ?? "smooth"
+      const sequence = scrollIntentSequenceRef.current + 1
+      scrollIntentSequenceRef.current = sequence
+      clearProgrammaticScrollIdleTimeout()
+      scrollIntentRef.current = {
+        kind: "programmatic",
+        behavior,
+        sequence,
+        target: copyPdfPageAreaTarget(target),
+        targetTop: pageAreaTarget.top,
+        targetLeft: pageAreaTarget.left,
       }
-
-      const targetLeft = getPdfPageAreaScrollLeft(viewportElement, layout, {
-        pageLayout,
-        left: target.left,
-        width: target.width,
-      })
-
-      viewportElement.scrollTo({
-        top: Math.max(0, targetTop),
-        ...(targetLeft == null ? null : { left: targetLeft }),
+      scrollViewportToPageAreaTarget(viewportElement, pageAreaTarget, {
         behavior: "smooth",
         ...options,
       })
+      scheduleProgrammaticScrollCompletion(sequence)
     },
-    [layout, pageCount]
+    [
+      clearProgrammaticScrollIdleTimeout,
+      layout,
+      pageCount,
+      scheduleProgrammaticScrollCompletion,
+    ]
   )
   const scrollToPage = React.useCallback(
     (pageNumber: number, options?: ScrollToOptions) => {
@@ -259,8 +375,9 @@ export function usePdfScroll({
   React.useEffect(
     () => () => {
       if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current)
+      clearProgrammaticScrollIdleTimeout()
     },
-    []
+    [clearProgrammaticScrollIdleTimeout]
   )
 
   return {
@@ -272,6 +389,83 @@ export function usePdfScroll({
     scrollToPage,
     scrollToPageArea,
     getViewportElement,
+  }
+}
+
+function getPdfPageAreaScrollTarget(
+  viewportElement: HTMLDivElement,
+  layout: PdfPageLayoutModel,
+  pageCount: number,
+  target: PdfPageAreaTarget
+): PdfResolvedPageAreaTarget | null {
+  const pageNumber = target.pageNumber
+  if (pageNumber < 1 || pageNumber > pageCount) return null
+
+  const pageLayout = getPdfPageLayout(layout, pageNumber)
+  if (!pageLayout) return null
+
+  const requestedTop = Number.isNaN(target.top) ? 0 : target.top
+  const targetTopPercent = clamp(requestedTop, 0, 100)
+  const targetHeightPercent = normalizeOptionalPercent(target.height)
+  const areaTop =
+    pageLayout.offsetTop + (targetTopPercent / 100) * pageLayout.height
+  const areaBottom =
+    areaTop + ((targetHeightPercent ?? 0) / 100) * pageLayout.height
+  const visibleTop = viewportElement.scrollTop + PDF_SCROLL_TARGET_HEADROOM
+  const visibleBottom =
+    viewportElement.scrollTop +
+    viewportElement.clientHeight -
+    PDF_SCROLL_TARGET_HEADROOM
+  let targetTop = areaTop - PDF_SCROLL_TARGET_HEADROOM
+
+  if (targetHeightPercent != null && areaTop >= visibleTop) {
+    targetTop =
+      areaBottom > visibleBottom
+        ? areaBottom - viewportElement.clientHeight + PDF_SCROLL_TARGET_HEADROOM
+        : viewportElement.scrollTop
+  }
+
+  const targetLeft = getPdfPageAreaScrollLeft(viewportElement, layout, {
+    pageLayout,
+    left: target.left,
+    width: target.width,
+  })
+
+  return {
+    top: Math.max(0, targetTop),
+    ...(targetLeft == null ? null : { left: targetLeft }),
+  }
+}
+
+function scrollViewportToPageAreaTarget(
+  viewportElement: HTMLDivElement,
+  target: PdfResolvedPageAreaTarget,
+  options: ScrollToOptions
+) {
+  const hasTopChange =
+    Math.abs(viewportElement.scrollTop - target.top) >
+    PDF_SCROLL_POSITION_EPSILON
+  const hasLeftChange =
+    target.left != null &&
+    Math.abs(viewportElement.scrollLeft - target.left) >
+      PDF_SCROLL_POSITION_EPSILON
+
+  if (!hasTopChange && !hasLeftChange) return
+
+  viewportElement.scrollTo({
+    top: target.top,
+    ...(target.left == null ? null : { left: target.left }),
+    ...options,
+  })
+}
+
+function copyPdfPageAreaTarget(target: PdfPageAreaTarget): PdfPageAreaTarget {
+  return {
+    pageNumber: target.pageNumber,
+    top: target.top,
+    left: target.left,
+    width: target.width,
+    height: target.height,
   }
 }
 
@@ -355,7 +549,7 @@ function restorePdfReadingAnchor(
   anchor: PdfReadingAnchor
 ) {
   if (anchor.kind === "top") {
-    viewportElement.scrollTop = 0
+    setViewportScrollTop(viewportElement, 0)
     return
   }
 
@@ -371,5 +565,19 @@ function restorePdfReadingAnchor(
     0,
     layout.totalHeight - viewportElement.clientHeight
   )
-  viewportElement.scrollTop = clamp(targetTop, 0, maxScrollTop)
+  setViewportScrollTop(viewportElement, clamp(targetTop, 0, maxScrollTop))
+}
+
+function setViewportScrollTop(
+  viewportElement: HTMLDivElement,
+  targetTop: number
+) {
+  if (
+    Math.abs(viewportElement.scrollTop - targetTop) <=
+    PDF_SCROLL_POSITION_EPSILON
+  ) {
+    return
+  }
+
+  viewportElement.scrollTop = targetTop
 }

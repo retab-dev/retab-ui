@@ -59,6 +59,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
+  window.history.replaceState(null, "", "/")
 })
 
 describe("Markdown/Text viewer contract", () => {
@@ -204,6 +205,40 @@ describe("Markdown/Text viewer contract", () => {
     expect(viewport!.scrollTop).toBeGreaterThan(0)
   })
 
+  it("keeps FileViewer Markdown at the top when the page already has a hash", async () => {
+    window.history.replaceState(null, "", "/viewer#target-section")
+    const filler = Array.from(
+      { length: 90 },
+      (_, index) => `Paragraph ${index}`
+    )
+    const { container } = render(
+      <FileViewer
+        source={textSource(
+          ["# Start", "", ...filler, "", "## Target Section"].join("\n"),
+          "ambient-hash.md",
+          "text/markdown"
+        )}
+        bare
+      />
+    )
+
+    const heading = await screen.findByRole(
+      "heading",
+      { name: "Start" },
+      { timeout: 5_000 }
+    )
+    const viewport = container.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )
+
+    expect(viewport).toBeTruthy()
+    await waitFor(() => {
+      expect(viewport!.scrollTop).toBe(0)
+    })
+    expect(maxScrollTop()).toBe(0)
+    expect(heading.id).toBe("")
+  })
+
   it("copies complete FileViewer Markdown tables from the document projection", async () => {
     render(
       <FileViewer
@@ -299,3 +334,21 @@ describe("Markdown/Text viewer contract", () => {
     expect(code.container.querySelector("pre")).toBeTruthy()
   })
 })
+
+function maxScrollTop() {
+  const scrollTo = HTMLElement.prototype.scrollTo as unknown as ReturnType<
+    typeof vi.fn
+  >
+  return Math.max(
+    0,
+    ...scrollTo.mock.calls.flatMap((call) => {
+      const options = call[0]
+      return options &&
+        typeof options === "object" &&
+        "top" in options &&
+        typeof options.top === "number"
+        ? [options.top]
+        : []
+    })
+  )
+}

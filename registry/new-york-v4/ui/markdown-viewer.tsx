@@ -2,11 +2,15 @@
 
 import * as React from "react"
 
+import {
+  MarkdownGreenfieldContent,
+  type MarkdownViewerProps,
+} from "./markdown-greenfield-content"
 import { PlainTextViewerFrame } from "./plain-text-viewer-frame"
-import { MarkdownGreenfieldContent } from "./markdown-greenfield-content"
 import { TextViewerFallback } from "./text-viewer-chrome"
-import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types"
+import type { TextViewerHandle } from "./text-viewer-types"
 
+export type { MarkdownViewerProps } from "./markdown-greenfield-content"
 export type {
   TextDocumentSource,
   TextLineRange,
@@ -16,7 +20,7 @@ export type {
 
 export const MarkdownViewer = React.forwardRef<
   TextViewerHandle,
-  TextViewerProps
+  MarkdownViewerProps
 >(function MarkdownViewer(props, ref) {
   return (
     <PlainTextViewerFrame

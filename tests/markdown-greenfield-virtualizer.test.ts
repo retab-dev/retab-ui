@@ -100,6 +100,24 @@ describe("pretext markdown greenfield virtualizer", () => {
     expect(restored).toBe(300)
   })
 
+  it("keeps document-top padding at scrollTop zero across reflow", () => {
+    const anchor = getMarkdownGreenfieldScrollAnchor({
+      frames: [frame("chunk-a", 0, 32, 200, 1, 10)],
+      scrollTop: 0,
+    })
+    const restored = resolveMarkdownGreenfieldScrollAnchor({
+      anchor: anchor!,
+      frames: [frame("chunk-a", 0, 32, 300, 1, 10)],
+    })
+
+    expect(anchor).toEqual({
+      chunkId: "chunk-a",
+      chunkHeightPx: 200,
+      offsetWithinChunkPx: -32,
+    })
+    expect(restored).toBe(0)
+  })
+
   it("uses preferred chunk identity for ambiguous source-line targeting", () => {
     const frames = [
       frame("chunk-a", 0, 0, 100, 1, 20),

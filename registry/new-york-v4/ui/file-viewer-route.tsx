@@ -8,8 +8,8 @@ import {
   isProseTextDescriptor,
   type FileCategory,
   type FileDescriptor,
-  type FileViewerFallbackSize,
   type FileViewerDocumentChrome,
+  type FileViewerFallbackSize,
 } from "./file-viewer-core"
 import { CsvFileContent } from "./file-viewer-csv-viewer"
 import { UnsupportedCard } from "./file-viewer-fallback"
@@ -164,6 +164,7 @@ const RENDERERS: Partial<
       controls={controls}
       download
       bare={bare}
+      urlFragmentNavigation={false}
     />
   ),
   text: renderTextViewer,

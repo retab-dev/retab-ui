@@ -54,12 +54,14 @@ export const MarkdownGreenfieldChunkRenderer = React.memo(
     fontScale = 1,
     onContentReady,
     searchQuery,
+    urlFragmentNavigation = true,
   }: {
     activeMatchOccurrence?: number
     chunk: MarkdownGreenfieldChunk
     fontScale?: number
     onContentReady?: () => void
     searchQuery?: string
+    urlFragmentNavigation?: boolean
   }) {
     const ref = React.useRef<HTMLDivElement | null>(null)
     const notifyContentReady = React.useCallback(() => {
@@ -70,9 +72,15 @@ export const MarkdownGreenfieldChunkRenderer = React.memo(
         renderHastChildren(
           chunk.hastChildren,
           searchQuery,
-          activeMatchOccurrence
+          activeMatchOccurrence,
+          { urlFragmentNavigation }
         ),
-      [activeMatchOccurrence, chunk.hastChildren, searchQuery]
+      [
+        activeMatchOccurrence,
+        chunk.hastChildren,
+        searchQuery,
+        urlFragmentNavigation,
+      ]
     )
 
     React.useLayoutEffect(() => {
@@ -115,11 +123,17 @@ export const MarkdownGreenfieldChunkRenderer = React.memo(
 function renderHastChildren(
   children: readonly MarkdownHastNode[],
   searchQuery?: string,
-  activeMatchOccurrence?: number
+  activeMatchOccurrence?: number,
+  options: { urlFragmentNavigation: boolean } = {
+    urlFragmentNavigation: true,
+  }
 ) {
   const root: MarkdownHastRoot = {
     type: "root",
     children: children.map(cloneHastNode),
+  }
+  if (!options.urlFragmentNavigation) {
+    suppressDomFragmentIds(root.children)
   }
 
   const normalizedQuery = searchQuery?.trim().toLowerCase()
@@ -805,9 +819,14 @@ function headingComponent(
   textClassName: string
 ) {
   return function Heading({ children, node, ...props }: any) {
-    const id = typeof props.id === "string" ? props.id : ""
+    const id =
+      typeof props.id === "string"
+        ? props.id
+        : readDataProperty(node, "dataPretextFragmentId")
     const text =
       extractHastText(readHastElement(node)) || reactNodeText(children)
+    delete props.dataPretextFragmentId
+    delete props["data-pretext-fragment-id"]
     if (!id) {
       return (
         <Tag {...props} className={`${blockClassName} ${textClassName}`}>
@@ -1503,6 +1522,32 @@ function cloneHastNode<T extends MarkdownHastNode>(node: T): T {
       ? { ...readHastElement(node)!.properties }
       : undefined,
   } as T
+}
+
+function suppressDomFragmentIds(nodes: MarkdownHastNode[]) {
+  for (const node of nodes) {
+    const element = readHastElement(node)
+    if (!element) continue
+
+    const id = element.properties?.id
+    if (
+      typeof id === "string" &&
+      id &&
+      shouldSuppressDomFragmentId(element, id)
+    ) {
+      element.properties = {
+        ...element.properties,
+        dataPretextFragmentId: id,
+      }
+      delete element.properties.id
+    }
+
+    suppressDomFragmentIds(element.children)
+  }
+}
+
+function shouldSuppressDomFragmentId(element: MarkdownHastElement, id: string) {
+  return /^h[1-6]$/.test(element.tagName) || /^user-content-fn/.test(id)
 }
 
 function readDataProperty(node: unknown, property: string) {

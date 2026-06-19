@@ -268,4 +268,168 @@ describe("usePdfScroll", () => {
 
     await waitFor(() => expect(viewport.scrollTop).toBe(0))
   })
+
+  it("does not cancel an active smooth page jump during a passive layout change", async () => {
+    const initialLayout = createPdfPageLayout({
+      pageCount: 20,
+      defaultPageSize: { width: 100, height: 200 },
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    })
+    const nextLayout = createPdfPageLayout({
+      pageCount: 20,
+      defaultPageSize: { width: 100, height: 200 },
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    })
+    const viewport = createControlledViewport({
+      scrollTop: getPdfPageLayout(initialLayout, 8)!.offsetTop,
+    })
+    const expectedTargetTop =
+      getPdfPageLayout(initialLayout, 13)!.offsetTop - 48
+    const harnessState = {
+      scrollToPage: null as ((pageNumber: number) => void) | null,
+    }
+
+    function Harness({ layout }: { layout: typeof initialLayout }) {
+      const result = usePdfScroll({
+        pageCount: 20,
+        layout,
+        resetKey: "same-document",
+      })
+
+      React.useEffect(() => {
+        harnessState.scrollToPage = result.scrollToPage
+        result.setViewportElement(viewport.element)
+        return () => result.setViewportElement(null)
+      }, [result])
+
+      return <output data-testid="page">{result.currentPage}</output>
+    }
+
+    const view = render(<Harness layout={initialLayout} />)
+
+    await waitFor(() => expect(screen.getByTestId("page")).toBeTruthy())
+
+    act(() => {
+      harnessState.scrollToPage?.(13)
+    })
+
+    expect(viewport.scrollTo).toHaveBeenCalledWith({
+      top: expectedTargetTop,
+      behavior: "smooth",
+    })
+
+    viewport.scrollTo.mockClear()
+    viewport.scrollTopWrites.mockClear()
+    viewport.setScrollTop(getPdfPageLayout(initialLayout, 8)!.offsetTop + 150)
+
+    view.rerender(<Harness layout={nextLayout} />)
+
+    expect(viewport.scrollTopWrites).not.toHaveBeenCalled()
+    expect(viewport.scrollTo).not.toHaveBeenCalled()
+  })
+
+  it("retargets an active page jump when the layout changes materially", async () => {
+    const initialLayout = createPdfPageLayout({
+      pageCount: 20,
+      defaultPageSize: { width: 100, height: 200 },
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    })
+    const nextLayout = createPdfPageLayout({
+      pageCount: 20,
+      defaultPageSize: { width: 100, height: 300 },
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    })
+    const viewport = createControlledViewport({
+      scrollTop: getPdfPageLayout(initialLayout, 8)!.offsetTop,
+    })
+    const expectedInitialTargetTop =
+      getPdfPageLayout(initialLayout, 13)!.offsetTop - 48
+    const expectedNextTargetTop =
+      getPdfPageLayout(nextLayout, 13)!.offsetTop - 48
+    const harnessState = {
+      scrollToPage: null as ((pageNumber: number) => void) | null,
+    }
+
+    function Harness({ layout }: { layout: typeof initialLayout }) {
+      const result = usePdfScroll({
+        pageCount: 20,
+        layout,
+        resetKey: "same-document",
+      })
+
+      React.useEffect(() => {
+        harnessState.scrollToPage = result.scrollToPage
+        result.setViewportElement(viewport.element)
+        return () => result.setViewportElement(null)
+      }, [result])
+
+      return <output data-testid="page">{result.currentPage}</output>
+    }
+
+    const view = render(<Harness layout={initialLayout} />)
+
+    await waitFor(() => expect(screen.getByTestId("page")).toBeTruthy())
+
+    act(() => {
+      harnessState.scrollToPage?.(13)
+    })
+
+    expect(viewport.scrollTo).toHaveBeenCalledWith({
+      top: expectedInitialTargetTop,
+      behavior: "smooth",
+    })
+
+    viewport.scrollTo.mockClear()
+    viewport.scrollTopWrites.mockClear()
+    viewport.setScrollTop(getPdfPageLayout(initialLayout, 8)!.offsetTop + 150)
+
+    view.rerender(<Harness layout={nextLayout} />)
+
+    expect(viewport.scrollTopWrites).not.toHaveBeenCalled()
+    expect(viewport.scrollTo).toHaveBeenCalledWith({
+      top: expectedNextTargetTop,
+      behavior: "smooth",
+    })
+  })
 })
+
+function createControlledViewport({ scrollTop }: { scrollTop: number }) {
+  let currentScrollTop = scrollTop
+  const scrollTo = vi.fn()
+  const scrollTopWrites = vi.fn((value: number) => {
+    currentScrollTop = value
+  })
+  const element = {
+    clientHeight: 200,
+    clientWidth: 500,
+    scrollHeight: 10_000,
+    scrollLeft: 0,
+    scrollTo,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    get scrollTop() {
+      return currentScrollTop
+    },
+    set scrollTop(value: number) {
+      scrollTopWrites(value)
+    },
+    getBoundingClientRect: () => ({ top: 0, height: 200 }) as DOMRect,
+  } as unknown as HTMLDivElement
+
+  return {
+    element,
+    scrollTo,
+    scrollTopWrites,
+    setScrollTop(value: number) {
+      currentScrollTop = value
+    },
+  }
+}

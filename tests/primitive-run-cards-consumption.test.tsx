@@ -12,18 +12,15 @@ import type { RunStatus } from "@/components/ui/run-card"
 import type { Source } from "@/lib/document-source"
 
 /**
- * Proof that the Retab dashboard's per-step extract data flows through retab-ui's
- * shared `ExtractRunCard` — with NO change to the dashboard's view-model. Models
- * the dashboard contract verbatim from
+ * Proof that the Retab dashboard's per-step extract data flows through
+ * retab-ui's shared `ExtractRunCard`. Models the dashboard contract from
  *   frontend/.../runs/projection/step-card-view-model.ts  (ExtractCardViewModel)
  *   frontend/.../runs/utils/extract-run.ts                (NormalizedBbox)
  *   frontend/.../shared/workflows/types/workflows.ts      (RunLifecycleKind)
  *
- * The dashboard deliberately renders count + source boxes (not a field list):
- * its `sourceBboxes` are walked by value with field keys discarded, so there is
- * no per-box (label, value) to project. `ExtractRunCard` now supports that
- * boxes-only shape directly, so the adapter is a pure mapping — no matcher
- * rework, no synthesized labels.
+ * The dashboard now carries rich first-page field summaries when the matcher
+ * returns labels/values, while still supporting the older boxes-only fallback.
+ * `ExtractRunCard` supports both shapes directly.
  */
 
 // ── dashboard contract (mirrored) ─────────────────────────────────────────────
@@ -42,6 +39,13 @@ interface NormalizedBbox {
   height: number
 }
 
+interface ExtractFieldSummary {
+  key: string
+  label: string
+  value: string
+  sourceBbox: NormalizedBbox
+}
+
 interface RunCardThumbnailDocument {
   id: string
   mimeType?: string
@@ -51,6 +55,7 @@ interface ExtractCardViewModel {
   kind: "extract"
   fieldCount: number
   inputDocument?: RunCardThumbnailDocument
+  fields?: ExtractFieldSummary[]
   sourceBboxes?: NormalizedBbox[]
 }
 
@@ -70,6 +75,15 @@ function bboxToSource(box: NormalizedBbox): Source {
   return { content: "", anchor: { kind: "pdf_bbox", page: 1, ...box } }
 }
 
+function fieldSummaryToField(field: ExtractFieldSummary): ExtractRunCardField {
+  return {
+    key: field.key,
+    label: field.label,
+    value: field.value,
+    source: bboxToSource(field.sourceBbox),
+  }
+}
+
 interface ExtractRunCardContext {
   fileName: string
   fileType: string
@@ -81,11 +95,14 @@ function extractCardViewModelToProps(
   vm: ExtractCardViewModel,
   ctx: ExtractRunCardContext
 ): ExtractRunCardProps {
-  // The vm carries geometry + a count, not field names — so each box becomes a
-  // label-less field and the card shows the count chip.
-  const fields: ExtractRunCardField[] = (vm.sourceBboxes ?? []).map(
-    (box, i) => ({ key: `field-${i}`, source: bboxToSource(box) })
-  )
+  const richFields = (vm.fields ?? []).map(fieldSummaryToField)
+  const fields: ExtractRunCardField[] =
+    richFields.length > 0
+      ? richFields
+      : (vm.sourceBboxes ?? []).map((box, i) => ({
+          key: `field-${i}`,
+          source: bboxToSource(box),
+        }))
   return {
     file: { name: ctx.fileName, type: ctx.fileType },
     previewImageUrl: ctx.previewImageUrl,
@@ -119,6 +136,20 @@ const VM: ExtractCardViewModel = {
   kind: "extract",
   fieldCount: 5,
   inputDocument: { id: "doc_1", mimeType: "application/pdf" },
+  fields: [
+    {
+      key: "account_number",
+      label: "Account number",
+      value: "000009752",
+      sourceBbox: { left: 0.1, top: 0.1, width: 0.2, height: 0.05 },
+    },
+    {
+      key: "statement_date",
+      label: "Statement date",
+      value: "July 8, 2003",
+      sourceBbox: { left: 0.5, top: 0.3, width: 0.15, height: 0.04 },
+    },
+  ],
   sourceBboxes: [
     { left: 0.1, top: 0.1, width: 0.2, height: 0.05 },
     { left: 0.5, top: 0.3, width: 0.15, height: 0.04 },
@@ -140,7 +171,7 @@ describe("ExtractCardViewModel → ExtractRunCard", () => {
     expect(toRunStatus("cancelled")).toBe("cancelled")
   })
 
-  it("turns vm bboxes into normalized pdf_bbox source anchors", () => {
+  it("turns rich vm fields into labeled source anchors", () => {
     const props = extractCardViewModelToProps(VM, { ...CTX, status: "completed" })
     expect(props.fields).toHaveLength(2)
     expect(props.fields[0]!.source.anchor).toMatchObject({
@@ -151,41 +182,43 @@ describe("ExtractCardViewModel → ExtractRunCard", () => {
       width: 0.2,
       height: 0.05,
     })
-    // No field names in the vm → no labels; the card falls back to the count.
-    expect(props.fields.every((f) => f.label === undefined)).toBe(true)
+    expect(props.fields[0]!.label).toBe("Account number")
+    expect(props.fields[0]!.value).toBe("000009752")
     expect(props.fieldCount).toBe(5)
   })
 
-  it("renders the boxes-only extract step through the shared component", () => {
+  it("renders the rich extract step through the shared component", () => {
     const props = extractCardViewModelToProps(VM, CTX)
-    const { container } = render(<ExtractRunCard {...props} />)
+    const { container } = render(
+      <ExtractRunCard {...props} className="rounded-none border-0" />
+    )
 
     // status pill from the mapped lifecycle
     expect(screen.getByText("Awaiting review")).toBeTruthy()
-    // count chip (vm.fieldCount), not a field list
-    expect(screen.getByText("5")).toBeTruthy()
-    expect(container.textContent).toContain("fields extracted")
-    // one source box per bbox, drawn over the page
-    expect(container.querySelector('[title="field-0"]')).toBeTruthy()
-    expect(container.querySelector('[title="field-1"]')).toBeTruthy()
-  })
-
-  it("still lists labeled fields when a caller provides them (the rich demo)", () => {
-    render(
-      <ExtractRunCard
-        file={{ name: "x.pdf", type: "application/pdf" }}
-        previewImageUrl="/x.png"
-        fields={[
-          {
-            key: "account",
-            label: "Account number",
-            value: "000009752",
-            source: bboxToSource(VM.sourceBboxes![0]!),
-          },
-        ]}
-      />
-    )
     expect(screen.getByText("Account number")).toBeTruthy()
     expect(screen.getByText("000009752")).toBeTruthy()
+    expect(screen.getByText("Statement date")).toBeTruthy()
+    expect(screen.getByText("July 8, 2003")).toBeTruthy()
+    expect(container.textContent).toContain("+3 more fields")
+    // one source box per bbox, drawn over the page
+    expect(
+      container.querySelector('[title="Account number: 000009752"]')
+    ).toBeTruthy()
+    expect(
+      container.querySelector('[title="Statement date: July 8, 2003"]')
+    ).toBeTruthy()
+    const runCard = container.querySelector('[data-slot="run-card"]')
+    expect(runCard?.className).toContain("rounded-none")
+    expect(runCard?.className).toContain("border-0")
+  })
+
+  it("falls back to the boxes-only count when no field summaries are available", () => {
+    const props = extractCardViewModelToProps({ ...VM, fields: undefined }, CTX)
+    const { container } = render(<ExtractRunCard {...props} />)
+
+    expect(screen.getByText("5")).toBeTruthy()
+    expect(container.textContent).toContain("fields extracted")
+    expect(container.querySelector('[title="field-0"]')).toBeTruthy()
+    expect(container.querySelector('[title="field-1"]')).toBeTruthy()
   })
 })

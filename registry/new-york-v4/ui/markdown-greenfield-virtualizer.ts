@@ -5,6 +5,7 @@ import type { MarkdownGreenfieldChunkFrame } from "./markdown-greenfield-layout"
 
 export type MarkdownGreenfieldScrollAnchor = {
   chunkId: string
+  /** Negative when the viewport is in document padding before the chunk. */
   offsetWithinChunkPx: number
   chunkHeightPx: number
 }
@@ -49,7 +50,7 @@ export function getMarkdownGreenfieldScrollAnchor({
   return {
     chunkId: frame.id,
     chunkHeightPx: frame.height,
-    offsetWithinChunkPx: Math.max(0, scrollTop - frame.top),
+    offsetWithinChunkPx: scrollTop - frame.top,
   }
 }
 
@@ -62,6 +63,9 @@ export function resolveMarkdownGreenfieldScrollAnchor({
 }) {
   const frame = frames.find((item) => item.id === anchor.chunkId)
   if (!frame) return null
+  if (anchor.offsetWithinChunkPx < 0) {
+    return Math.max(0, frame.top + anchor.offsetWithinChunkPx)
+  }
   // Preserve the position *within* the anchored chunk proportionally. When the
   // chunk keeps its height this reduces to the original pixel offset; when an
   // over-estimated chunk shrinks after measurement, the viewport stays at the

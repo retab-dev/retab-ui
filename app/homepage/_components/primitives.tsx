@@ -81,7 +81,7 @@ export function MarketingButton({
     <Link
       className={cn(
         "inline-flex max-w-full min-w-0 items-center justify-center overflow-hidden border text-sm font-medium text-ellipsis whitespace-nowrap transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-in-out focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transform-none motion-reduce:transition-none",
-        size === "compact" ? "h-8 px-3" : "h-10 px-4",
+        size === "compact" ? "h-8 px-3" : "h-10 px-[17px]",
         shape === "rounded" ? "rounded-md" : "rounded-full",
         variant === "primary"
           ? "border-black bg-black text-white hover:border-neutral-800 hover:bg-neutral-800 focus-visible:border-neutral-800 focus-visible:bg-neutral-800"

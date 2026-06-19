@@ -4,7 +4,7 @@ export function LogoStrip({ logos }: { logos: readonly LogoContent[] }) {
   const repeatedLogos = [...logos, ...logos]
 
   return (
-    <div className="w-full overflow-hidden pb-8 min-[961px]:pb-14">
+    <div className="w-full overflow-hidden pb-8 min-[961px]:pb-[70px]">
       <ul className="sr-only">
         {logos.map((logo) => (
           <li key={logo.id}>{logo.label}</li>
@@ -26,7 +26,7 @@ export function LogoStrip({ logos }: { logos: readonly LogoContent[] }) {
           <BrandLogo key={logo.id} logo={logo} />
         ))}
       </div>
-      <div className="mx-auto hidden w-[calc(100%-48px)] max-w-[1400px] min-w-0 items-center justify-between gap-8 text-neutral-950 md:flex">
+      <div className="hidden w-full min-w-0 items-center justify-between gap-8 text-neutral-950 md:flex">
         {logos.map((logo) => (
           <BrandLogo key={logo.id} logo={logo} />
         ))}
