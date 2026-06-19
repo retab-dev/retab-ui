@@ -479,6 +479,11 @@ export const footerNavigationColumns = [
     ],
   },
   {
+    id: "social",
+    title: "Social",
+    links: footerSocialLinks,
+  },
+  {
     id: "legal-trust",
     title: "Legal & Trust",
     links: [

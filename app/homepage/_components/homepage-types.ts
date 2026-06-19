@@ -152,12 +152,9 @@ export type StartBuildingRow = {
   readonly value: string
 }
 
-export type StartBuildingPlugin = {
-  readonly label: string
+export type StartBuildingPlugin = LinkItem & {
   readonly command: string
-  readonly href?: string
-  readonly ariaLabel?: string
-  readonly tags?: readonly string[]
+  readonly tags: readonly string[]
 }
 
 export type StartBuildingPanel = {

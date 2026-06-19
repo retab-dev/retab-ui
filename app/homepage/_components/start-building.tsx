@@ -7,6 +7,7 @@ import {
   type StartBuildingContent,
   type StartBuildingPanel as StartBuildingPanelContent,
   type StartBuildingPlugin,
+  type StartBuildingRow,
 } from "./homepage-types"
 import { getLinkAriaLabel, getLinkProps, MarketingButton } from "./primitives"
 import { StartBuildingPluginCommand } from "./start-building-plugin-command"

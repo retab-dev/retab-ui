@@ -106,19 +106,14 @@ export function MarketingFooter({ content }: { content: FooterContent }) {
           </div>
         </nav>
 
-        <div
-          role="group"
-          aria-label="Footer status and preferences"
-          className="mt-10 border-t border-neutral-200 pt-5"
-        >
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <StatusLink status={content.status} />
-            </div>
-
-            <div className="shrink-0">
-              <FooterThemeSelector options={content.themeOptions} />
-            </div>
+        <div className="mt-10 border-t border-neutral-200 pt-5">
+          <div
+            role="group"
+            aria-label="Footer status and preferences"
+            className="flex flex-col gap-5 min-[460px]:flex-row min-[460px]:items-center min-[460px]:justify-between"
+          >
+            <StatusLink status={content.status} />
+            <FooterThemeSelector options={content.themeOptions} />
           </div>
         </div>
       </MarketingContainer>
