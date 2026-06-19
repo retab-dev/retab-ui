@@ -17,12 +17,12 @@ export function LatestSection() {
         title="Latest"
         description="Recent launches, events, and updates shaping what's next on Vercel."
       />
-      <div className="mt-16 grid gap-5 lg:mt-20 lg:grid-cols-2 lg:items-start">
+      <div className="mt-16 grid gap-5 lg:mt-20 lg:grid-cols-2 lg:items-stretch">
         <Link
           href={featuredLatestCard.href}
           aria-label={`${featuredLatestCard.label}: ${featuredLatestCard.alt}`}
           className={cn(
-            "group relative flex aspect-video items-center justify-center overflow-hidden rounded-md border border-neutral-200 bg-neutral-50 text-black transition-colors hover:border-neutral-300 hover:bg-white active:bg-neutral-50 motion-reduce:transition-none lg:min-h-96",
+            "group relative flex aspect-video w-full min-w-0 items-center justify-center overflow-hidden rounded-md border border-neutral-200 bg-neutral-50 text-black transition-colors hover:border-neutral-300 hover:bg-white active:bg-neutral-50 motion-reduce:transition-none lg:aspect-auto lg:h-full",
             focusRing,
           )}
         >
@@ -45,7 +45,7 @@ export function LatestSection() {
               href={card.href}
               aria-label={`${card.label}: ${card.body}`}
               className={cn(
-                "group relative flex aspect-video min-w-0 flex-col overflow-hidden rounded-md border border-neutral-200 bg-neutral-50 p-5 text-black transition-colors hover:border-neutral-300 hover:bg-white active:bg-neutral-50 motion-reduce:transition-none sm:p-6 lg:min-h-72",
+                "group relative flex min-h-72 min-w-0 flex-col overflow-hidden rounded-md border border-neutral-200 bg-neutral-50 p-5 text-black transition-colors hover:border-neutral-300 hover:bg-white active:bg-neutral-50 motion-reduce:transition-none sm:p-6 md:aspect-video lg:aspect-auto lg:h-[17.5rem] lg:min-h-0",
                 focusRing,
               )}
             >
