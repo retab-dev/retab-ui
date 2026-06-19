@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import {
   type ViewerContentBytes,
   type ViewerContentIdentity,
@@ -16,6 +15,9 @@ import {
   type PptxSource,
 } from "./pptx-viewer-source";
 
+const pptxHookSourceKeys = new WeakMap<PptxSource, string>();
+let nextPptxHookSourceKey = 1;
+
 /** Retains the cached source for the mounted lifetime of the viewer. */
 export function useRetainedPptxSource(
   content: ViewerContentBytes & ViewerContentIdentity,
@@ -23,10 +25,25 @@ export function useRetainedPptxSource(
 ): PptxSource {
   const sourcePromise = React.useMemo(() => getPptxSource(content), [content]);
   const source = React.use(sourcePromise);
-  React.useEffect(() => source.retain(), [source]);
-  React.useEffect(() => {
-    if (!onLoadTiming) return;
-    return subscribePptxSourceLoadTiming(content, onLoadTiming);
-  }, [onLoadTiming, content]);
+  const onLoadTimingRef = React.useRef(onLoadTiming);
+  onLoadTimingRef.current = onLoadTiming;
+
+  useKeyedMountEffect(getPptxHookSourceKey(source), () => source.retain());
+  useKeyedMountEffect(
+    onLoadTiming ? `timing:${content.sourceKind}:${content.key}` : null,
+    () =>
+      subscribePptxSourceLoadTiming(content, (timing) => {
+        onLoadTimingRef.current?.(timing);
+      }),
+  );
   return source;
+}
+
+function getPptxHookSourceKey(source: PptxSource) {
+  const existingKey = pptxHookSourceKeys.get(source);
+  if (existingKey) return existingKey;
+  const key = String(nextPptxHookSourceKey);
+  nextPptxHookSourceKey += 1;
+  pptxHookSourceKeys.set(source, key);
+  return key;
 }

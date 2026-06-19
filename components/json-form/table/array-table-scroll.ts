@@ -1,8 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 export type ArrayTableScrollHandlers = {
   onScrollStart: () => void;
@@ -21,10 +21,7 @@ export function useArrayTableScrollActivity(
     onScrollMove,
     onScrollEnd,
   });
-
-  React.useLayoutEffect(() => {
-    callbacksRef.current = { onScrollStart, onScrollMove, onScrollEnd };
-  }, [onScrollEnd, onScrollMove, onScrollStart]);
+  callbacksRef.current = { onScrollStart, onScrollMove, onScrollEnd };
 
   const handleScroll = React.useCallback(() => {
     if (!isScrollingRef.current) {
@@ -39,7 +36,7 @@ export function useArrayTableScrollActivity(
     }, 120);
   }, []);
 
-  React.useEffect(() => {
+  useMountEffect(() => {
     const scrollElement = scrollRef.current;
     if (!scrollElement) return;
     scrollElement.addEventListener("scroll", handleScroll, { passive: true });
@@ -47,5 +44,5 @@ export function useArrayTableScrollActivity(
       window.clearTimeout(scrollEndTimeoutRef.current);
       scrollElement.removeEventListener("scroll", handleScroll);
     };
-  }, [handleScroll, scrollRef]);
+  });
 }

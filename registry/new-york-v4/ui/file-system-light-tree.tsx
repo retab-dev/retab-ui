@@ -1,9 +1,9 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { FileTree as PierreFileTree, useFileTree } from "@pierre/trees/react";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export type FileSystemLightTreeProps = Omit<
   React.ComponentProps<typeof PierreFileTree>,
@@ -22,9 +22,9 @@ export function FileSystemLightTree({
 }: FileSystemLightTreeProps) {
   const onSelectedPathsChangeRef = React.useRef(onSelectedPathsChange);
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([onSelectedPathsChange]), () => {
     onSelectedPathsChangeRef.current = onSelectedPathsChange;
-  }, [onSelectedPathsChange]);
+  });
 
   const { model } = useFileTree({
     flattenEmptyDirectories: false,
@@ -41,11 +41,11 @@ export function FileSystemLightTree({
     stickyFolders: false,
   });
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([model, paths]), () => {
     model.resetPaths(paths);
-  }, [model, paths]);
+  });
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([model, selectedPaths]), () => {
     const selectedPathSet = new Set(selectedPaths);
 
     for (const path of model.getSelectedPaths()) {
@@ -58,7 +58,7 @@ export function FileSystemLightTree({
         model.getItem(path)?.select();
       }
     }
-  }, [model, selectedPaths]);
+  });
 
   return <PierreFileTree {...props} model={model} />;
 }

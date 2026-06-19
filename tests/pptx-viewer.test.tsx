@@ -20,6 +20,7 @@ import {
 } from "@/registry/new-york-v4/lib/viewer-resource";
 import { PptxViewer } from "@/registry/new-york-v4/ui/pptx-viewer";
 import {
+  DEFAULT_PPTX_SLIDE_SIZE,
   getPptxBitmapCacheKey,
   getPptxFitScale,
   getPptxResetKey,
@@ -427,7 +428,7 @@ describe("PptxViewer helpers", () => {
     await expect(
       getPptxSource(pptxUrlResource("/unknown-size.pptx")),
     ).resolves.toMatchObject({
-      baseSize: { width: 960, height: 720 },
+      baseSize: DEFAULT_PPTX_SLIDE_SIZE,
       slideCount: 1,
     });
   });

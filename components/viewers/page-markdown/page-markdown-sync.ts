@@ -1,8 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 
 export type PageMarkdownSyncPane = "markdown" | "document";
 
@@ -117,15 +117,16 @@ export function usePageMarkdownSync({
   const stateRef = React.useRef(state);
   const pendingRef = React.useRef<PendingPageMarkdownScroll | null>(null);
   const pageCountLimit = Math.max(1, pageCount ?? 1);
+  stateRef.current = state;
 
-  React.useEffect(() => {
+  useKeyedMountEffect(`page-markdown-sync:${resetKey ?? ""}`, () => {
     const nextState = initialPageMarkdownSyncState();
     stateRef.current = nextState;
     pendingRef.current = null;
     setState(nextState);
-  }, [resetKey]);
+  });
 
-  React.useEffect(() => {
+  useKeyedMountEffect(`page-markdown-sync-page-count:${pageCountLimit}`, () => {
     const currentState = stateRef.current;
     const nextPageNumber = Math.min(currentState.pageNumber, pageCountLimit);
     const nextState =
@@ -143,11 +144,7 @@ export function usePageMarkdownSync({
         ? currentPending
         : null;
     setState(nextState);
-  }, [pageCountLimit]);
-
-  React.useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
+  });
 
   const reportPage = React.useCallback(
     (pane: PageMarkdownSyncPane, pageNumber: number) => {

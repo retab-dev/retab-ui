@@ -1,16 +1,15 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/schema-builder-types";
 import { Button } from "@/components/ui/button";
 
-type JsonModeState =
-  | { status: "synced"; text: string }
+type JsonModeDraftState =
   | { status: "dirty-valid"; text: string; parsed: ExtendedJSONSchema7 }
   | { status: "dirty-invalid"; text: string; error: string };
+
+type JsonModeState = { status: "synced"; text: string } | JsonModeDraftState;
 
 export function JsonModeEditor({
   schema,
@@ -25,25 +24,24 @@ export function JsonModeEditor({
     () => JSON.stringify(schema, null, 2),
     [schema],
   );
-  const [jsonState, setJsonState] = React.useState<JsonModeState>({
-    status: "synced",
-    text: schemaText,
-  });
-
-  React.useEffect(() => {
-    setJsonState((current) =>
-      current.status === "synced"
-        ? { status: "synced", text: schemaText }
-        : current,
-    );
-  }, [schemaText]);
+  const [jsonDraft, setJsonDraft] = React.useState<JsonModeDraftState | null>(
+    null,
+  );
+  const jsonState = React.useMemo<JsonModeState>(
+    () =>
+      jsonDraft ?? {
+        status: "synced",
+        text: schemaText,
+      },
+    [jsonDraft, schemaText],
+  );
 
   const handleJsonChange = React.useCallback((text: string) => {
     try {
       const parsed = JSON.parse(text) as ExtendedJSONSchema7;
-      setJsonState({ status: "dirty-valid", text, parsed });
+      setJsonDraft({ status: "dirty-valid", text, parsed });
     } catch (error) {
-      setJsonState({
+      setJsonDraft({
         status: "dirty-invalid",
         text,
         error: error instanceof Error ? error.message : "Invalid JSON",
@@ -54,15 +52,12 @@ export function JsonModeEditor({
   const applyJson = React.useCallback(() => {
     if (readOnly || jsonState.status !== "dirty-valid") return;
     void replaceSchema(jsonState.parsed);
-    setJsonState({
-      status: "synced",
-      text: JSON.stringify(jsonState.parsed, null, 2),
-    });
+    setJsonDraft(null);
   }, [jsonState, readOnly, replaceSchema]);
 
   const discardJson = React.useCallback(() => {
-    setJsonState({ status: "synced", text: schemaText });
-  }, [schemaText]);
+    setJsonDraft(null);
+  }, []);
 
   return (
     <div className="flex min-h-[420px] flex-col gap-3">

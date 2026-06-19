@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 // @vitest-environment jsdom
 import * as React from "react";
 import {
@@ -42,6 +40,8 @@ import type {
   PropertyValidation,
 } from "@/components/schema-editor/property-form/types";
 import { validatePropertyFormName } from "@/components/schema-editor/property-form/validation";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const originalResizeObserver = globalThis.ResizeObserver;
 
@@ -430,9 +430,9 @@ describe("property form models", () => {
         },
         onChange,
       });
-      React.useEffect(() => {
+      useKeyedMountEffect(joinEffectKey([nextModel]), () => {
         captureModel(nextModel);
-      }, [nextModel]);
+      });
       return null;
     }
 
@@ -519,9 +519,9 @@ describe("property form models", () => {
         },
         onChange: () => {},
       });
-      React.useEffect(() => {
+      useKeyedMountEffect(joinEffectKey([nextModel]), () => {
         captureModel(nextModel);
-      }, [nextModel]);
+      });
       return null;
     }
 

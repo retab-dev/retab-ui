@@ -19,7 +19,9 @@
         "separator",
         "@retab/skeleton",
         "@retab/spinner",
-        "dropdown-menu"
+        "dropdown-menu",
+        "@retab/effect-key",
+        "@retab/use-keyed-mount-effect"
       ],
       "files": [
         {
@@ -67,6 +69,19 @@
       ]
     },
     {
+      "name": "effect-key",
+      "type": "registry:lib",
+      "title": "Effect Key",
+      "description": "Dependency-array key helpers for keyed effect lifecycles.",
+      "files": [
+        {
+          "path": "lib/effect-key.ts",
+          "type": "registry:lib",
+          "target": "@lib/effect-key.ts"
+        }
+      ]
+    },
+    {
       "name": "use-mobile",
       "type": "registry:hook",
       "title": "Use Mobile",
@@ -76,6 +91,48 @@
           "path": "registry/new-york-v4/hooks/use-mobile.ts",
           "type": "registry:hook",
           "target": "@hooks/use-mobile.ts"
+        }
+      ],
+      "registryDependencies": [
+        "@retab/use-mount-effect"
+      ]
+    },
+    {
+      "name": "use-mount-effect",
+      "type": "registry:hook",
+      "title": "Use Mount Effect",
+      "description": "A mount-only effect hook for explicit lifecycle escape hatches.",
+      "files": [
+        {
+          "path": "hooks/use-mount-effect.ts",
+          "type": "registry:hook",
+          "target": "@hooks/use-mount-effect.ts"
+        }
+      ]
+    },
+    {
+      "name": "use-keyed-mount-effect",
+      "type": "registry:hook",
+      "title": "Use Keyed Mount Effect",
+      "description": "A key-driven post-commit effect hook for library internals.",
+      "files": [
+        {
+          "path": "hooks/use-keyed-mount-effect.ts",
+          "type": "registry:hook",
+          "target": "@hooks/use-keyed-mount-effect.ts"
+        }
+      ]
+    },
+    {
+      "name": "use-keyed-layout-effect",
+      "type": "registry:hook",
+      "title": "Use Keyed Layout Effect",
+      "description": "A key-driven layout-timed effect hook for DOM measurement and scroll/focus lifecycles.",
+      "files": [
+        {
+          "path": "hooks/use-keyed-layout-effect.ts",
+          "type": "registry:hook",
+          "target": "@hooks/use-keyed-layout-effect.ts"
         }
       ]
     },
@@ -190,6 +247,9 @@
           "type": "registry:ui",
           "target": "@ui/dropzone-core.ts"
         }
+      ],
+      "registryDependencies": [
+        "@retab/use-keyed-mount-effect"
       ]
     },
     {
@@ -296,7 +356,9 @@
         "@retab/input",
         "popover",
         "select",
-        "@retab/utils"
+        "@retab/utils",
+        "@retab/use-keyed-layout-effect",
+        "@retab/use-mount-effect"
       ],
       "files": [
         {
@@ -466,7 +528,9 @@
       ],
       "registryDependencies": [
         "button",
-        "@retab/utils"
+        "@retab/utils",
+        "@retab/effect-key",
+        "@retab/use-keyed-mount-effect"
       ],
       "files": [
         {
@@ -507,7 +571,10 @@
       ],
       "registryDependencies": [
         "@retab/scroll-area",
-        "@retab/utils"
+        "@retab/utils",
+        "@retab/effect-key",
+        "@retab/use-keyed-layout-effect",
+        "@retab/use-keyed-mount-effect"
       ],
       "files": [
         {
@@ -640,7 +707,9 @@
         "@retab/use-mobile",
         "@retab/utils",
         "sheet",
-        "tooltip"
+        "tooltip",
+        "@retab/effect-key",
+        "@retab/use-keyed-mount-effect"
       ],
       "files": [
         {
@@ -866,7 +935,9 @@
         "@retab/utils",
         "button",
         "dropdown-menu",
-        "@retab/viewer-controls"
+        "@retab/viewer-controls",
+        "@retab/use-keyed-layout-effect",
+        "@retab/use-mount-effect"
       ],
       "files": [
         {
@@ -1236,7 +1307,9 @@
         "separator",
         "@retab/skeleton",
         "dropdown-menu",
-        "@retab/viewer-controls"
+        "@retab/viewer-controls",
+        "@retab/use-mount-effect",
+        "@retab/use-keyed-layout-effect"
       ],
       "files": [
         {
@@ -1356,7 +1429,9 @@
         "@retab/scroll-area",
         "separator",
         "@retab/skeleton",
-        "@retab/viewer-controls"
+        "@retab/viewer-controls",
+        "@retab/use-mount-effect",
+        "@retab/use-keyed-layout-effect"
       ],
       "files": [
         {
@@ -1568,7 +1643,9 @@
         "separator",
         "@retab/skeleton",
         "dropdown-menu",
-        "@retab/viewer-controls"
+        "@retab/viewer-controls",
+        "@retab/use-keyed-layout-effect",
+        "@retab/use-mount-effect"
       ],
       "files": [
         {
@@ -1740,7 +1817,9 @@
         "separator",
         "@retab/skeleton",
         "@retab/viewer-controls",
-        "@retab/csv"
+        "@retab/csv",
+        "@retab/use-keyed-layout-effect",
+        "@retab/use-mount-effect"
       ],
       "files": [
         {
@@ -2441,7 +2520,11 @@
       "registryDependencies": [
         "@retab/segments",
         "@retab/segment-interaction",
-        "@retab/use-segment-interaction"
+        "@retab/use-segment-interaction",
+        "@retab/effect-key",
+        "@retab/use-keyed-layout-effect",
+        "@retab/use-keyed-mount-effect",
+        "@retab/use-mount-effect"
       ],
       "files": [
         {
@@ -2481,7 +2564,10 @@
         "@retab/textarea",
         "dialog",
         "dropdown-menu",
-        "tooltip"
+        "tooltip",
+        "@retab/effect-key",
+        "@retab/use-keyed-layout-effect",
+        "@retab/use-keyed-mount-effect"
       ],
       "files": [
         {
@@ -3139,7 +3225,9 @@
       "title": "File Thumbnail Frame",
       "description": "Dependency-free thumbnail frame with a loading shimmer, fade-in, and muted fallback surface.",
       "registryDependencies": [
-        "@retab/utils"
+        "@retab/utils",
+        "@retab/effect-key",
+        "@retab/use-keyed-mount-effect"
       ],
       "files": [
         {
@@ -4986,7 +5074,8 @@
         "@retab/scroll-area",
         "@retab/skeleton",
         "@retab/utils",
-        "@retab/viewer-controls"
+        "@retab/viewer-controls",
+        "@retab/use-mount-effect"
       ],
       "files": [
         {
@@ -5153,7 +5242,9 @@
         "@retab/scroll-area",
         "@retab/skeleton",
         "@retab/utils",
-        "@retab/viewer-controls"
+        "@retab/viewer-controls",
+        "@retab/use-keyed-layout-effect",
+        "@retab/use-mount-effect"
       ],
       "files": [
         {
@@ -5394,7 +5485,9 @@
         "@retab/skeleton",
         "@retab/spinner",
         "@retab/utils",
-        "@retab/viewer-controls"
+        "@retab/viewer-controls",
+        "@retab/use-keyed-layout-effect",
+        "@retab/use-mount-effect"
       ],
       "files": [
         {

@@ -1,11 +1,12 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { getPdfPageResource } from "@/lib/pdf-document-resource";
 import type { PdfDocumentProxy } from "@/lib/pdf-document-types";
+
+import { joinEffectKey } from "@/lib/effect-key";
 
 export const PDF_PAGE_METRIC_CONCURRENCY = 4;
 
@@ -62,14 +63,15 @@ export function usePdfPageMetrics(
       ? "loading"
       : "idle";
 
-  React.useEffect(() => {
+  const resetEffectKey = joinEffectKey(["reset", document, resetKey]);
+  useKeyedMountEffect(resetEffectKey, () => {
     workerSequenceRef.current += 1;
     dispatch({
       type: "reset",
       documentKey: resetKey,
       pageCount: document.numPages,
     });
-  }, [document, resetKey]);
+  });
 
   const requestPageMetrics = React.useCallback(
     (pageNumbers: Iterable<number>) => {
@@ -91,7 +93,16 @@ export function usePdfPageMetrics(
     [document.numPages, resetKey],
   );
 
-  React.useEffect(() => {
+  const loadEffectKey = joinEffectKey([
+    "load",
+    document,
+    resetKey,
+    state.documentKey,
+    state.error,
+    state.loadingPageNumbers,
+    state.queuedPageNumbers,
+  ]);
+  useKeyedMountEffect(loadEffectKey, () => {
     if (!Object.is(state.documentKey, resetKey)) return;
     if (state.error) return;
 
@@ -137,14 +148,7 @@ export function usePdfPageMetrics(
           dispatch({ type: "reject", documentKey: resetKey, error });
         });
     }
-  }, [
-    document,
-    resetKey,
-    state.documentKey,
-    state.error,
-    state.loadingPageNumbers,
-    state.queuedPageNumbers,
-  ]);
+  });
 
   if (visibleState.error) throw visibleState.error;
 

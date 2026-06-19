@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 // @vitest-environment jsdom
 
 import * as React from "react";
@@ -14,6 +12,7 @@ import type { JSONSchema7 } from "json-schema";
 import { useForm } from "react-hook-form";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import type { Source, SourceAnchor, SourceMap } from "@/lib/document-source";
 import {
   createSegmentedDocumentModel,
@@ -98,6 +97,8 @@ import {
   xlsxAnchorToTarget,
 } from "@/registry/new-york-v4/ui/xlsx-source";
 import type { XlsxViewerHandle } from "@/registry/new-york-v4/ui/xlsx-viewer";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 vi.mock("@/components/ui/pdf-viewer", () => ({
   PdfHighlight: ({
@@ -259,14 +260,14 @@ function SegmentedFieldLinkNavigationProbe({
   const link = useSegmentedSourceFieldLink();
   const viewport = useSegmentedDocumentViewport();
 
-  React.useEffect(() => {
+  useMountEffect(() => {
     viewport.documentHandlers.setDocumentHandle({
       scrollToPage: () => {},
       scrollToPageArea: onScroll,
     });
 
     return () => viewport.documentHandlers.setDocumentHandle(null);
-  }, [onScroll, viewport.documentHandlers]);
+  });
 
   return (
     <>
@@ -1760,9 +1761,9 @@ function TextSourceTargetHarness({
 
 function useLatestTestRef<T>(value: T): React.RefObject<T | null> {
   const ref = React.useRef<T | null>(value);
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([value]), () => {
     ref.current = value;
-  }, [value]);
+  });
   return ref;
 }
 

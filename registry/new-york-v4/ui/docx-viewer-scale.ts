@@ -1,12 +1,13 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 
 import {
   clampDocxScale,
   DOCX_ZOOM_STEP,
   normalizeDocxScale,
 } from "./docx-viewer-core";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export function useDocxViewerScale({
   containerWidth,
@@ -30,9 +31,12 @@ export function useDocxViewerScale({
     normalizedDefaultScale,
   );
 
-  React.useEffect(() => {
-    setManualScale(normalizedDefaultScale);
-  }, [normalizedDefaultScale, resetKey]);
+  useKeyedMountEffect(
+    joinEffectKey(["docx-scale-reset", normalizedDefaultScale, resetKey]),
+    () => {
+      setManualScale(normalizedDefaultScale);
+    },
+  );
 
   const fitScale =
     containerWidth && pageWidth

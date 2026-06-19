@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 // @vitest-environment jsdom
 import * as React from "react";
 import {
@@ -13,6 +11,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import {
   getSegmentInteractionState,
   getSegmentSurfaceProps,
@@ -105,12 +104,12 @@ function PartitionScrollSpy({
 }) {
   const controls = usePartitionViewerDocumentControls();
 
-  React.useEffect(() => {
+  useMountEffect(() => {
     controls.setDocumentHandle({
       scrollToPage: onScroll,
     });
     return () => controls.setDocumentHandle(null);
-  }, [controls, onScroll]);
+  });
 
   return null;
 }
@@ -2066,12 +2065,12 @@ describe("split segment composition", () => {
     function DocumentWithHandle() {
       const { setDocumentHandle } = useSplitViewerDocumentControls();
 
-      React.useEffect(() => {
+      useMountEffect(() => {
         setDocumentHandle({
           scrollToPage,
         });
         return () => setDocumentHandle(null);
-      }, [setDocumentHandle]);
+      });
 
       return <div data-testid="split-document" />;
     }
@@ -2094,12 +2093,12 @@ describe("split segment composition", () => {
       const { onCurrentPageChange, setDocumentHandle } =
         useSplitViewerDocumentControls();
 
-      React.useEffect(() => {
+      useMountEffect(() => {
         setDocumentHandle({
           scrollToPage: (page) => onCurrentPageChange(page),
         });
         return () => setDocumentHandle(null);
-      }, [onCurrentPageChange, setDocumentHandle]);
+      });
 
       return (
         <div>

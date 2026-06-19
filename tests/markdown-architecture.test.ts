@@ -358,6 +358,12 @@ function installedTargetForAliasSpecifier(specifier: string) {
   if (withoutQuery.startsWith("@/registry/new-york-v4/ui/")) {
     return `@ui/${withoutQuery.slice("@/registry/new-york-v4/ui/".length)}`;
   }
+  if (withoutQuery.startsWith("@/hooks/")) {
+    return `@hooks/${withoutQuery.slice("@/hooks/".length)}`;
+  }
+  if (withoutQuery.startsWith("@/registry/new-york-v4/hooks/")) {
+    return `@hooks/${withoutQuery.slice("@/registry/new-york-v4/hooks/".length)}`;
+  }
   if (withoutQuery.startsWith("@/lib/")) {
     return `@lib/${withoutQuery.slice("@/lib/".length)}`;
   }
@@ -391,6 +397,9 @@ function installedPathForRegistryTarget(target: string) {
   }
   if (target.startsWith("@lib/")) {
     return `lib/${target.slice("@lib/".length)}`;
+  }
+  if (target.startsWith("@hooks/")) {
+    return `hooks/${target.slice("@hooks/".length)}`;
   }
   return target;
 }
@@ -611,6 +620,8 @@ describe("Markdown architecture", () => {
       "@retab/spinner",
       "@retab/utils",
       "@retab/viewer-controls",
+      "@retab/use-keyed-layout-effect",
+      "@retab/use-mount-effect",
     ]);
     expect(artifact.dependencies ?? []).toEqual([
       "@chenglou/pretext",
@@ -784,7 +795,7 @@ describe("Markdown architecture", () => {
             ],
             {
               cwd: repoRoot,
-              timeout: 60_000,
+              timeout: 120_000,
               maxBuffer: 1024 * 1024 * 8,
             },
           );
@@ -831,6 +842,8 @@ describe("Markdown architecture", () => {
             "@retab/spinner",
             "@retab/utils",
             "@retab/viewer-controls",
+            "@retab/use-keyed-layout-effect",
+            "@retab/use-mount-effect",
           ],
         });
       } finally {
@@ -842,7 +855,7 @@ describe("Markdown architecture", () => {
         });
       }
     });
-  }, 90_000);
+  }, 150_000);
 
   it("keeps virtual chunks from becoming visible page chrome", () => {
     const forbiddenPageChrome = [

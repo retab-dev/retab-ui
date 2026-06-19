@@ -1378,7 +1378,9 @@ describe("Dropzone registry split", () => {
       "This file type is not supported here.",
     );
     expect(dropzone?.dependencies ?? []).toEqual([]);
-    expect(dropzone?.registryDependencies ?? []).toEqual([]);
+    expect(dropzone?.registryDependencies ?? []).toEqual([
+      "@retab/use-keyed-mount-effect",
+    ]);
     expect(dropzone?.files.map((file) => file.path)).toEqual([
       "registry/new-york-v4/ui/dropzone.tsx",
       "registry/new-york-v4/ui/dropzone-core.ts",

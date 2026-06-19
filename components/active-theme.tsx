@@ -1,14 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
+import { createContext, useContext, useState, type ReactNode } from "react";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { KeyedRunner } from "@/hooks/KeyedRunner";
 
 const DEFAULT_THEME = "default";
 
@@ -30,20 +24,22 @@ export function ActiveThemeProvider({
     () => initialTheme || DEFAULT_THEME,
   );
 
-  useEffect(() => {
-    Array.from(document.body.classList)
-      .filter((className) => className.startsWith("theme-"))
-      .forEach((className) => {
-        document.body.classList.remove(className);
-      });
-    document.body.classList.add(`theme-${activeTheme}`);
-    if (activeTheme.endsWith("-scaled")) {
-      document.body.classList.add("theme-scaled");
-    }
-  }, [activeTheme]);
-
   return (
     <ThemeContext.Provider value={{ activeTheme, setActiveTheme }}>
+      <KeyedRunner
+        key={`active-theme:${activeTheme}`}
+        effect={() => {
+          Array.from(document.body.classList)
+            .filter((className) => className.startsWith("theme-"))
+            .forEach((className) => {
+              document.body.classList.remove(className);
+            });
+          document.body.classList.add(`theme-${activeTheme}`);
+          if (activeTheme.endsWith("-scaled")) {
+            document.body.classList.add("theme-scaled");
+          }
+        }}
+      />
       {children}
     </ThemeContext.Provider>
   );

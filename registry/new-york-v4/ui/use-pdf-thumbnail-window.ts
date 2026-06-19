@@ -1,14 +1,15 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 
 import {
   getVisiblePdfThumbnailItems,
   type PdfThumbnailLayout,
   type PdfThumbnailLayoutItem,
 } from "./pdf-thumbnail-layout";
+import { joinEffectKey } from "@/lib/effect-key";
 
 interface PdfThumbnailWindowMetrics {
   scrollTop: number;
@@ -53,7 +54,12 @@ export function usePdfThumbnailWindow({
     [],
   );
 
-  React.useEffect(() => {
+  const viewportEffectKey = joinEffectKey([
+    "pdf-thumbnail-window",
+    initialViewportHeight,
+    viewportRef,
+  ]);
+  useKeyedMountEffect(viewportEffectKey, () => {
     const viewport = viewportRef.current;
     if (!viewport) return;
 
@@ -91,7 +97,7 @@ export function usePdfThumbnailWindow({
       observer?.disconnect();
       if (frame !== 0) window.cancelAnimationFrame(frame);
     };
-  }, [initialViewportHeight, setMeasuredMetrics, viewportRef]);
+  });
 
   return React.useMemo(
     () => ({

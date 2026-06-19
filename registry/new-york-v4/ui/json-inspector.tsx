@@ -1,12 +1,13 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { Check, Copy } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const SMALL_JSON_LINE_LIMIT = 500;
 const VIRTUAL_LINE_HEIGHT = 20;
@@ -230,11 +231,11 @@ function VirtualJsonInspectorLines({ lines }: { lines: string[] }) {
     frameRef.current = didRun ? 0 : frame;
   }, [measure]);
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([measure]), () => {
     measure();
-  }, [measure]);
+  });
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([scheduleMeasure]), () => {
     const viewport = viewportRef.current;
     if (!viewport) return;
 
@@ -250,7 +251,7 @@ function VirtualJsonInspectorLines({ lines }: { lines: string[] }) {
       viewport.removeEventListener("scroll", scheduleMeasure);
       observer?.disconnect();
     };
-  }, [scheduleMeasure]);
+  });
 
   const visibleLines = lines.slice(windowRange.start, windowRange.end);
 

@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import { useFileSystemControlledProps } from "./file-system-controlled-props";
@@ -20,6 +18,8 @@ import type {
   FileSystemEnsureChildren,
 } from "./file-system-kernel-selectors";
 import type { FileSystemFileEntry, FileSystemProps } from "./file-system-types";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 type FileSystemKernelRuntimeStore = {
   consumeCommands: () => FileSystemKernelCommand[];
@@ -102,9 +102,9 @@ export function useFileSystemKernelRuntime({
   );
   const getState = React.useCallback(() => store.getState(), [store]);
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([dispatch, items]), () => {
     dispatch({ items, type: "items.replaced" });
-  }, [dispatch, items]);
+  });
 
   useFileSystemControlledProps({
     dispatch,
@@ -120,9 +120,9 @@ export function useFileSystemKernelRuntime({
     loadChildren,
   });
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([folderTask, state.path]), () => {
     void folderTask.ensureChildren(state.path).catch(() => {});
-  }, [folderTask, state.path]);
+  });
 
   const callbacks = React.useMemo(
     () => ({

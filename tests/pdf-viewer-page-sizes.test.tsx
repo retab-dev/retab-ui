@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 // @vitest-environment jsdom
 import * as React from "react";
 import {
@@ -12,6 +10,8 @@ import {
 import { afterEach, describe, expect, it } from "vitest";
 
 import { usePdfPageSizes } from "@/registry/new-york-v4/ui/pdf-viewer-page-sizes";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 describe("usePdfPageSizes", () => {
   afterEach(() => cleanup());
@@ -104,11 +104,14 @@ describe("usePdfPageSizes", () => {
       const { pageSizeByNumber, setPageSize } = usePdfPageSizes(resetKey);
       snapshots.push({ resetKey, size: pageSizeByNumber.size });
 
-      React.useEffect(() => {
-        if (resetKey === "doc-a" && pageSizeByNumber.size === 0) {
-          setPageSize(1, { width: 100, height: 200 });
-        }
-      }, [pageSizeByNumber.size, resetKey, setPageSize]);
+      useKeyedMountEffect(
+        joinEffectKey([pageSizeByNumber.size, resetKey, setPageSize]),
+        () => {
+          if (resetKey === "doc-a" && pageSizeByNumber.size === 0) {
+            setPageSize(1, { width: 100, height: 200 });
+          }
+        },
+      );
 
       return null;
     }

@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import type { JSONSchema7Type } from "json-schema";
 
@@ -26,12 +24,17 @@ export function EnumValuesField({
   disabled: boolean;
   onChange: (values: JSONSchema7Type[]) => void;
 }) {
-  const [nextValue, setNextValue] = React.useState("");
+  const [nextValueState, setNextValueState] = React.useState({
+    resetKey,
+    value: "",
+  });
+  const nextValue =
+    nextValueState.resetKey === resetKey ? nextValueState.value : "";
+  const setNextValue = React.useCallback(
+    (value: string) => setNextValueState({ resetKey, value }),
+    [resetKey],
+  );
   const valueIdentity = useEnumValueIdentity({ resetKey, values });
-
-  React.useEffect(() => {
-    setNextValue("");
-  }, [resetKey]);
 
   const items = values.map((value, index) => {
     const inputValue = formatEnumValueInput(value);
@@ -52,7 +55,7 @@ export function EnumValuesField({
     onChange: setNextValue,
     onSubmit: () => {
       onChange([...values, parseEnumValueInput(nextValue)]);
-      setNextValue("");
+      setNextValueState({ resetKey, value: "" });
     },
   };
 

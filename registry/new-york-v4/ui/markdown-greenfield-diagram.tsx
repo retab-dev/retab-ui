@@ -1,9 +1,9 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { Check, Clipboard } from "lucide-react";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const MERMAID_MAX_LINES = 160;
 const MERMAID_MAX_SOURCE_LENGTH = 12_000;
@@ -113,9 +113,12 @@ export function MarkdownGreenfieldDiagram({
     ? { status: "failed", message: limitMessage }
     : (resolvedState ?? { status: "loading" });
 
-  React.useLayoutEffect(() => {
-    onContentReady?.();
-  }, [bodyHeight, onContentReady, state.status]);
+  useKeyedLayoutEffect(
+    joinEffectKey([bodyHeight, onContentReady, state.status]),
+    () => {
+      onContentReady?.();
+    },
+  );
 
   return (
     <figure

@@ -1,8 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import { normalizeFolderPath } from "./file-system-index";
 import type {
@@ -259,7 +259,7 @@ export function useFileSystemFolderTask({
     }
   }, [abortRequest]);
 
-  React.useEffect(() => abortAll, [abortAll]);
+  useMountEffect(() => abortAll);
 
   return React.useMemo(
     () => ({ abortAll, ensureChildren, runFolderCommand }),

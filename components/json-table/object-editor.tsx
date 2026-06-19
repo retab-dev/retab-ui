@@ -1,12 +1,11 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
-import { useEffect } from "react";
+import * as React from "react";
 import { ajvResolver } from "@hookform/resolvers/ajv";
 import type { JSONSchemaType } from "ajv";
 import type { JSONSchema7 } from "json-schema";
 import { useForm, type UseFormReturn } from "react-hook-form";
 
 import { JsonForm } from "@/components/json-form/json-form";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 type FormValues = Record<string, unknown>;
 
@@ -34,11 +33,13 @@ export function ObjectEditor({
       allErrors: true,
     }),
   });
+  const onSubmitRef = React.useRef(onSubmit);
+  onSubmitRef.current = onSubmit;
 
-  useEffect(() => {
-    const sub = form.watch((values) => onSubmit(values));
+  useMountEffect(() => {
+    const sub = form.watch((values) => onSubmitRef.current(values));
     return () => sub.unsubscribe();
-  }, [form, onSubmit]);
+  });
 
   return (
     <div className="flex max-h-[60vh] flex-col space-y-4 overflow-y-auto">
@@ -86,11 +87,17 @@ export function ArrayEditor({
       allErrors: true,
     }),
   });
+  const nameRef = React.useRef(name);
+  nameRef.current = name;
+  const onSubmitRef = React.useRef(onSubmit);
+  onSubmitRef.current = onSubmit;
 
-  useEffect(() => {
-    const sub = form.watch((values) => onSubmit(values[name]));
+  useMountEffect(() => {
+    const sub = form.watch((values) => {
+      onSubmitRef.current(values[nameRef.current]);
+    });
     return () => sub.unsubscribe();
-  }, [form, onSubmit, name]);
+  });
 
   return (
     <div className="flex max-h-[60vh] flex-col space-y-4 overflow-y-auto">

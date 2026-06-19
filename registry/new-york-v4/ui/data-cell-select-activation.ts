@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import {
@@ -9,6 +7,8 @@ import {
   type DataCellActivationSource,
   type DataCellDismissCause,
 } from "@/registry/new-york-v4/ui/data-cell-activation";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export function useDataCellSelectActivation({
   activationSource,
@@ -55,11 +55,14 @@ export function useDataCellSelectActivation({
     openEditor();
   }, [openEditor]);
 
-  React.useLayoutEffect(() => {
-    if (!autoFocus) return;
-    triggerRef.current?.focus({ preventScroll: true });
-    openActivatedEditor();
-  }, [autoFocus, openActivatedEditor, triggerRef]);
+  useKeyedLayoutEffect(
+    joinEffectKey([autoFocus, openActivatedEditor, triggerRef]),
+    () => {
+      if (!autoFocus) return;
+      triggerRef.current?.focus({ preventScroll: true });
+      openActivatedEditor();
+    },
+  );
 
   return {
     shouldCancelDismiss,

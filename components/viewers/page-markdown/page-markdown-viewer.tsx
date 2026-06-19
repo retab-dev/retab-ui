@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import {
   ViewerBody,
   ViewerHeader,
@@ -115,9 +114,9 @@ export function PageMarkdownViewerProvider({
       resetKey: pagePaneResetKey,
     });
 
-  React.useEffect(() => {
+  useKeyedMountEffect(`page-markdown-viewer-mode:${resetKey ?? ""}`, () => {
     setMode("rendered");
-  }, [resetKey]);
+  });
 
   const handleDocumentPageChange = React.useCallback(
     (pageNumber: number) => {

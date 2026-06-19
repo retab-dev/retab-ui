@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import type {
@@ -16,6 +14,8 @@ import type {
   JsonTableDocumentData,
   TableDocument,
 } from "@/components/json-table/lib/projects-types";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export type SingleFileTableDocumentPatch = { data: JsonTableDocumentData };
 
@@ -154,9 +154,9 @@ export function useSingleFileTableDocumentModel({
   // - primitive commit: patch from confirmed data and record a primitive echo
   // - structured commit: patch from confirmed data; structured local state owns render state
   // - missing updater: expose a no-op commit handler
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([onUpdateDocument]), () => {
     onUpdateDocumentRef.current = onUpdateDocument;
-  }, [onUpdateDocument]);
+  });
 
   const resetForSourceDocument = React.useCallback(
     (nextSourceDocument: TableDocument) => {
@@ -216,14 +216,21 @@ export function useSingleFileTableDocumentModel({
     [],
   );
 
-  React.useLayoutEffect(() => {
-    if (isNewSourceDocument(documentStateRef.current, sourceDocument)) {
-      resetForSourceDocument(sourceDocument);
-      return;
-    }
+  useKeyedLayoutEffect(
+    joinEffectKey([
+      reconcileSourceDocument,
+      resetForSourceDocument,
+      sourceDocument,
+    ]),
+    () => {
+      if (isNewSourceDocument(documentStateRef.current, sourceDocument)) {
+        resetForSourceDocument(sourceDocument);
+        return;
+      }
 
-    reconcileSourceDocument(sourceDocument);
-  }, [reconcileSourceDocument, resetForSourceDocument, sourceDocument]);
+      reconcileSourceDocument(sourceDocument);
+    },
+  );
 
   const currentProjectionDocument = projectionDocumentForRender({
     documentState: documentStateRef.current,

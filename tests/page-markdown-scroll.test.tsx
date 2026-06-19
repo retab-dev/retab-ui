@@ -1,11 +1,10 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 // @vitest-environment jsdom
 
 import * as React from "react";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import {
   createPageMarkdownLayout,
   getPageMarkdownPageLayout,
@@ -61,11 +60,11 @@ describe("usePageMarkdownScroll", () => {
         pageCount: 20,
       });
 
-      React.useEffect(() => {
+      useMountEffect(() => {
         result.setViewportElement(viewport);
         result.measureScroll();
         return () => result.setViewportElement(null);
-      }, [result, viewport]);
+      });
 
       return <output data-testid="page">{result.currentPage}</output>;
     }
@@ -94,13 +93,13 @@ describe("usePageMarkdownScroll", () => {
         layout,
         pageCount: 20,
       });
+      harnessState.scrollToPage = result.scrollToPage;
+      harnessState.viewport = viewport;
 
-      React.useEffect(() => {
-        harnessState.scrollToPage = result.scrollToPage;
-        harnessState.viewport = viewport;
+      useMountEffect(() => {
         result.setViewportElement(viewport);
         return () => result.setViewportElement(null);
-      }, [result, viewport]);
+      });
 
       return <output data-testid="page">{result.currentPage}</output>;
     }
@@ -134,11 +133,11 @@ describe("usePageMarkdownScroll", () => {
         resetKey,
       });
 
-      React.useEffect(() => {
+      useMountEffect(() => {
         result.setViewportElement(viewport);
         result.measureScroll();
         return () => result.setViewportElement(null);
-      }, [result, viewport]);
+      });
 
       return <output data-testid="page">{result.currentPage}</output>;
     }
@@ -171,13 +170,13 @@ describe("usePageMarkdownScroll", () => {
         onVisiblePageChange,
         pageCount: 20,
       });
+      harnessState.handleScroll = result.handleScroll;
+      harnessState.viewport = viewport;
 
-      React.useEffect(() => {
-        harnessState.handleScroll = result.handleScroll;
-        harnessState.viewport = viewport;
+      useMountEffect(() => {
         result.setViewportElement(viewport);
         return () => result.setViewportElement(null);
-      }, [result, viewport]);
+      });
 
       return <output data-testid="page">{result.currentPage}</output>;
     }

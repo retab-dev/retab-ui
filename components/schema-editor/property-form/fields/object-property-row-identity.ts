@@ -1,8 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export interface ObjectPropertyRowIdentity {
   addRowId: (propertyName: string) => void;
@@ -28,13 +28,16 @@ export function useObjectPropertyRowIdentity({
   );
   const nextRowIdRef = React.useRef(propertyNames.length);
 
-  React.useEffect(() => {
-    if (localPropertyNamesKeyRef.current === propertyNamesKey) {
-      localPropertyNamesKeyRef.current = null;
-      return;
-    }
-    onExternalPropertyNamesChange();
-  }, [onExternalPropertyNamesChange, propertyNamesKey, resetKey]);
+  useKeyedMountEffect(
+    joinEffectKey([onExternalPropertyNamesChange, propertyNamesKey, resetKey]),
+    () => {
+      if (localPropertyNamesKeyRef.current === propertyNamesKey) {
+        localPropertyNamesKeyRef.current = null;
+        return;
+      }
+      onExternalPropertyNamesChange();
+    },
+  );
 
   const createRowId = React.useCallback(() => {
     const rowId = `draft-property-${nextRowIdRef.current}`;

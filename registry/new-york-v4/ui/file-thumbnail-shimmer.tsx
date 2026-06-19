@@ -1,14 +1,14 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export function FileThumbnailShimmer() {
   const highlightRef = React.useRef<HTMLDivElement | null>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([prefersReducedMotion]), () => {
     const highlight = highlightRef.current;
     if (!highlight || prefersReducedMotion || !highlight.animate) return;
 
@@ -22,7 +22,7 @@ export function FileThumbnailShimmer() {
     );
 
     return () => animation.cancel();
-  }, [prefersReducedMotion]);
+  });
 
   return (
     <div

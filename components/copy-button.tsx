@@ -1,12 +1,11 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { Check, Copy, type LucideIcon } from "lucide-react";
 
 import { trackEvent, type Event } from "@/lib/events";
 import { cn } from "@/lib/utils";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import { Button } from "@/components/ui/button";
 
 function legacyCopyToClipboard(value: string) {
@@ -127,14 +126,28 @@ export function CopyButton({
   copied?: boolean;
 }) {
   const [hasCopied, setHasCopied] = React.useState(false);
+  const resetCopiedTimerRef = React.useRef<
+    ReturnType<typeof setTimeout> | undefined
+  >(undefined);
   const isCopied = copied ?? hasCopied;
 
-  React.useEffect(() => {
-    if (hasCopied) {
-      const timer = setTimeout(() => setHasCopied(false), 2000);
-      return () => clearTimeout(timer);
+  const showCopiedState = React.useCallback(() => {
+    if (resetCopiedTimerRef.current) {
+      clearTimeout(resetCopiedTimerRef.current);
     }
-  }, [hasCopied]);
+
+    setHasCopied(true);
+    resetCopiedTimerRef.current = setTimeout(() => {
+      setHasCopied(false);
+      resetCopiedTimerRef.current = undefined;
+    }, 2000);
+  }, []);
+
+  useMountEffect(() => () => {
+    if (resetCopiedTimerRef.current) {
+      clearTimeout(resetCopiedTimerRef.current);
+    }
+  });
 
   return (
     <Button
@@ -167,7 +180,7 @@ export function CopyButton({
         );
 
         if (hasCopied) {
-          setHasCopied(true);
+          showCopiedState();
         }
       }}
       {...props}

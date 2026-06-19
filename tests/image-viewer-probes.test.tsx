@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 // @vitest-environment jsdom
 //
 // Probing tests for the image viewer. These deliberately target permutations
@@ -19,6 +17,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import type { Source } from "@/registry/new-york-v4/lib/document-source";
 import {
   BitmapCache,
@@ -600,9 +599,9 @@ describe("useImageSourceTarget", () => {
   }) {
     const ref = React.useRef(handle as never);
     const target = useImageSourceTarget(ref);
-    React.useEffect(() => {
+    useMountEffect(() => {
       target.scrollTo?.(source, { behavior: "auto" });
-    }, [target, source]);
+    });
     return null;
   }
 

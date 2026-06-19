@@ -593,8 +593,8 @@ describe("schema builder architecture", () => {
       ),
     ).toBe(true);
     expect(
-      defaultSource.includes(
-        'import("@/components/schema-editor/optional/import-export/import-export-menu-items")',
+      /import\(\s*["']@\/components\/schema-editor\/optional\/import-export\/import-export-menu-items["']\s*\)/.test(
+        defaultSource,
       ),
     ).toBe(true);
     expect(

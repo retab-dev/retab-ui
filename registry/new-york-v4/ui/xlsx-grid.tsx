@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { xlsxColumnLabel, type XlsxCell } from "@/lib/xlsx-workbook";
 import { fixedGridColumnWidths } from "@/components/ui/fixed-grid-columns";
 import {
@@ -36,6 +35,8 @@ import {
   useXlsxRowPatcher,
   type XlsxRowPatchState,
 } from "@/registry/new-york-v4/ui/xlsx-viewer-row-patcher";
+
+import { joinEffectKey } from "@/lib/effect-key";
 
 export { XlsxGridSkeleton } from "@/components/ui/xlsx-grid-skeleton";
 
@@ -138,16 +139,18 @@ export function XlsxGrid({
   });
 
   const requestNonce = scrollRequest?.nonce;
-  React.useEffect(() => {
-    if (!scrollRequest) return;
-    scrollToCell({
-      rowIndex: scrollRequest.rowIndex,
-      columnIndex: scrollRequest.columnIndex,
-      behavior: scrollRequest.behavior,
-      align: "center",
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requestNonce]);
+  useKeyedMountEffect(
+    scrollRequest ? joinEffectKey(["xlsx-scroll-request", requestNonce]) : null,
+    () => {
+      if (!scrollRequest) return;
+      scrollToCell({
+        rowIndex: scrollRequest.rowIndex,
+        columnIndex: scrollRequest.columnIndex,
+        behavior: scrollRequest.behavior,
+        align: "center",
+      });
+    },
+  );
 
   const columnItems = React.useMemo(
     () =>
@@ -159,9 +162,7 @@ export function XlsxGrid({
     [virtualColumnItems],
   );
 
-  React.useLayoutEffect(() => {
-    columnItemsRef.current = columnItems;
-  }, [columnItems]);
+  columnItemsRef.current = columnItems;
 
   const gridTemplate = React.useMemo(
     () =>
@@ -182,19 +183,23 @@ export function XlsxGrid({
     virtualRows,
   });
 
-  React.useLayoutEffect(() => {
-    rowPatcher.resync(virtualRows);
-  }, [
-    rowPatcher,
-    virtualRows,
-    columnItems,
-    rowHeight,
-    safeRowCount,
-    safeColumnCount,
-    sheetName,
-    getCell,
-    activeCell,
-  ]);
+  useKeyedMountEffect(
+    joinEffectKey([
+      "xlsx-row-patcher",
+      rowPatcher,
+      virtualRows,
+      columnItems,
+      rowHeight,
+      safeRowCount,
+      safeColumnCount,
+      sheetName,
+      getCell,
+      activeCell,
+    ]),
+    () => {
+      rowPatcher.resync(virtualRows);
+    },
+  );
 
   if (safeRowCount === 0 || safeColumnCount === 0) {
     return (

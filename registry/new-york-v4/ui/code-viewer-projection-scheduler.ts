@@ -1,8 +1,10 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+
+import { joinEffectKey } from "@/lib/effect-key";
 
 export function useCodeProjectionScheduler({
   project,
@@ -21,32 +23,39 @@ export function useCodeProjectionScheduler({
     });
   }, [project]);
 
-  React.useLayoutEffect(() => {
+  useKeyedMountEffect(joinEffectKey(["code-project", project]), () => {
     project();
     return () => {
-      if (!scheduledProjectionRef.current) return;
-      cancelAnimationFrame(scheduledProjectionRef.current);
-      scheduledProjectionRef.current = 0;
+      cancelScheduledProjection(scheduledProjectionRef);
     };
-  }, [project]);
+  });
 
-  React.useLayoutEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
+  useKeyedMountEffect(
+    joinEffectKey(["code-project-listeners", scheduleProjection, viewportRef]),
+    () => {
+      const viewport = viewportRef.current;
+      if (!viewport) return;
 
-    viewport.addEventListener("scroll", scheduleProjection, { passive: true });
-    const observer =
-      typeof ResizeObserver === "undefined"
-        ? null
-        : new ResizeObserver(scheduleProjection);
-    observer?.observe(viewport);
+      viewport.addEventListener("scroll", scheduleProjection, {
+        passive: true,
+      });
+      const observer =
+        typeof ResizeObserver === "undefined"
+          ? null
+          : new ResizeObserver(scheduleProjection);
+      observer?.observe(viewport);
 
-    return () => {
-      viewport.removeEventListener("scroll", scheduleProjection);
-      observer?.disconnect();
-      if (!scheduledProjectionRef.current) return;
-      cancelAnimationFrame(scheduledProjectionRef.current);
-      scheduledProjectionRef.current = 0;
-    };
-  }, [scheduleProjection, viewportRef]);
+      return () => {
+        viewport.removeEventListener("scroll", scheduleProjection);
+        observer?.disconnect();
+        cancelScheduledProjection(scheduledProjectionRef);
+      };
+    },
+  );
+}
+
+function cancelScheduledProjection(ref: React.MutableRefObject<number>) {
+  if (!ref.current) return;
+  cancelAnimationFrame(ref.current);
+  ref.current = 0;
 }

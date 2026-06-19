@@ -1,8 +1,7 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import { DocxViewer } from "@/components/ui/docx-viewer";
 import { ImageViewer } from "@/components/ui/image-viewer";
@@ -58,7 +57,7 @@ export function ViewerSkeletonVerifierClient({
   fixture: VerifierFixture;
   runId?: string;
 }) {
-  React.useEffect(() => {
+  useMountEffect(() => {
     const verifier = { snapshot: readSnapshot };
     window.__viewerSkeletonVerifier = verifier;
     return () => {
@@ -66,7 +65,7 @@ export function ViewerSkeletonVerifierClient({
         window.__viewerSkeletonVerifier = undefined;
       }
     };
-  }, []);
+  });
 
   return (
     <main

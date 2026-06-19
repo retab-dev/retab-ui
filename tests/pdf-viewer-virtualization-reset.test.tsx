@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 // @vitest-environment jsdom
 import * as React from "react";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
@@ -10,6 +8,8 @@ import {
   getPdfPageLayout,
 } from "@/registry/new-york-v4/ui/pdf-viewer-layout";
 import { usePdfPageVirtualization } from "@/registry/new-york-v4/ui/pdf-viewer-virtualization";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 /**
  * These tests target the seam between the deferred (requestAnimationFrame)
@@ -62,9 +62,9 @@ describe("usePdfPageVirtualization — reset-key vs deferred measurement", () =>
         resetKey,
         viewportElement: viewport,
       });
-      React.useLayoutEffect(() => {
+      useKeyedLayoutEffect(joinEffectKey([result.measureVisiblePages]), () => {
         harness.measureVisiblePages = result.measureVisiblePages;
-      }, [result.measureVisiblePages]);
+      });
       return (
         <output data-testid="pages">
           {result.visiblePageNumbers.join(",")}
@@ -103,9 +103,9 @@ describe("usePdfPageVirtualization — reset-key vs deferred measurement", () =>
         resetKey,
         viewportElement: viewport,
       });
-      React.useLayoutEffect(() => {
+      useKeyedLayoutEffect(joinEffectKey([result.measureVisiblePages]), () => {
         harness.measureVisiblePages = result.measureVisiblePages;
-      }, [result.measureVisiblePages]);
+      });
       return (
         <output data-testid="pages">
           {result.visiblePageNumbers.join(",")}
@@ -149,9 +149,9 @@ describe("usePdfPageVirtualization — reset-key vs deferred measurement", () =>
         resetKey,
         viewportElement: viewport,
       });
-      React.useLayoutEffect(() => {
+      useKeyedLayoutEffect(joinEffectKey([result.measureVisiblePages]), () => {
         harness.measureVisiblePages = result.measureVisiblePages;
-      }, [result.measureVisiblePages]);
+      });
       return (
         <output data-testid="pages">
           {result.visiblePageNumbers.join(",")}

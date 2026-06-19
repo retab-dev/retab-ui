@@ -1,8 +1,9 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 let dataCellActivationTokenId = 0;
 
@@ -167,24 +168,31 @@ export function useDataCellOpeningContext(
     releaseOpeningRef.current = null;
   }, []);
 
-  React.useLayoutEffect(() => {
-    release();
-    if (!enabled || !activationSource || activationSource.kind === "keyboard") {
-      return;
-    }
+  useKeyedLayoutEffect(
+    joinEffectKey([activationSource, enabled, release, releaseAfterMicrotask]),
+    () => {
+      release();
+      if (
+        !enabled ||
+        !activationSource ||
+        activationSource.kind === "keyboard"
+      ) {
+        return;
+      }
 
-    openingSourceRef.current = activationSource;
-    releaseOpeningRef.current = holdDataCellActivationThroughOpeningEvent(
-      activationSource,
-      {
-        releaseAfterMicrotask:
-          releaseAfterMicrotask ||
-          shouldReleaseDataCellOpeningAfterMicrotask(activationSource),
-      },
-    );
-  }, [activationSource, enabled, release, releaseAfterMicrotask]);
+      openingSourceRef.current = activationSource;
+      releaseOpeningRef.current = holdDataCellActivationThroughOpeningEvent(
+        activationSource,
+        {
+          releaseAfterMicrotask:
+            releaseAfterMicrotask ||
+            shouldReleaseDataCellOpeningAfterMicrotask(activationSource),
+        },
+      );
+    },
+  );
 
-  React.useEffect(() => release, [release]);
+  useKeyedMountEffect(joinEffectKey([release]), () => release);
 
   return React.useMemo(
     () => ({

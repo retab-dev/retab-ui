@@ -1,0 +1,15 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "use-keyed-mount-effect",
+  "title": "Use Keyed Mount Effect",
+  "description": "A key-driven post-commit effect hook for library internals.",
+  "files": [
+    {
+      "path": "hooks/use-keyed-mount-effect.ts",
+      "content": "\"use client\";\n\nimport { useEffect } from \"react\";\n\n/**\n * Hook variant of <KeyedRunner>. Runs `effect` each time `key` changes\n * (including the first mount). Returned cleanup runs before the next run\n * and on unmount. No-ops when `key` is `null`.\n *\n * This exists ONLY for library hooks whose internals need reactive\n * post-commit side effects. Prefer <KeyedRunner> in component code.\n */\nexport function useKeyedMountEffect(\n  key: string | null,\n  effect: () => void | (() => void),\n) {\n  // eslint-disable-next-line no-restricted-syntax\n  useEffect(() => {\n    if (key === null) return;\n    return effect();\n    // The effect closure is intentionally captured at each key change;\n    // eslint's exhaustive-deps would demand we include `effect`, but\n    // the semantics are key-driven, not effect-identity-driven.\n    // eslint-disable-next-line react-hooks/exhaustive-deps\n  }, [key]);\n}\n",
+      "type": "registry:hook",
+      "target": "@hooks/use-keyed-mount-effect.ts"
+    }
+  ],
+  "type": "registry:hook"
+}

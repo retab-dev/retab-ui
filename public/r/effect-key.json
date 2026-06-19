@@ -1,0 +1,15 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "effect-key",
+  "title": "Effect Key",
+  "description": "Dependency-array key helpers for keyed effect lifecycles.",
+  "files": [
+    {
+      "path": "lib/effect-key.ts",
+      "content": "const objectEffectKeys = new WeakMap<object, string>();\nlet nextObjectEffectKey = 1;\n\nexport function effectKey(value: unknown): string {\n  if (value === null) return \"null\";\n\n  const valueType = typeof value;\n  if (valueType === \"object\" || valueType === \"function\") {\n    return objectEffectKey(value as object);\n  }\n  if (typeof value === \"string\") return `string:${value.length}:${value}`;\n  if (typeof value === \"symbol\") {\n    return `symbol:${String((value as symbol).description)}`;\n  }\n  return `${valueType}:${String(value)}`;\n}\n\nexport function joinEffectKey(parts: readonly unknown[]): string {\n  return parts.map(effectKey).join(\"\\u0000\");\n}\n\nfunction objectEffectKey(value: object): string {\n  const existingKey = objectEffectKeys.get(value);\n  if (existingKey) return existingKey;\n\n  const key = `object:${nextObjectEffectKey}`;\n  nextObjectEffectKey += 1;\n  objectEffectKeys.set(value, key);\n  return key;\n}\n",
+      "type": "registry:lib",
+      "target": "@lib/effect-key.ts"
+    }
+  ],
+  "type": "registry:lib"
+}

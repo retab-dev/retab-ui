@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -26,6 +24,8 @@ import {
   withViewerBlockComponent,
   type ViewerBlockWithComponent,
 } from "@/components/viewer-block-component-registry";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 type BlockCodeSample = {
   sourcePath: string;
@@ -140,13 +140,13 @@ function ViewerBlockPreview({ block }: { block: ViewerBlockWithComponent }) {
     setView(nextView);
   }
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([isCommandCopied]), () => {
     if (!isCommandCopied) return;
     const timer = window.setTimeout(() => setIsCommandCopied(false), 2000);
     return () => window.clearTimeout(timer);
-  }, [isCommandCopied]);
+  });
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([block.id, codeRequestKey]), () => {
     if (codeRequestKey === 0) return;
 
     const controller = new AbortController();
@@ -182,9 +182,9 @@ function ViewerBlockPreview({ block }: { block: ViewerBlockWithComponent }) {
 
     void loadCodeSamples();
     return () => controller.abort();
-  }, [block.id, codeRequestKey]);
+  });
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([activeFile, codeSamples]), () => {
     if (!codeSamples.length) {
       setActiveFile(null);
       return;
@@ -195,7 +195,7 @@ function ViewerBlockPreview({ block }: { block: ViewerBlockWithComponent }) {
     ) {
       setActiveFile(codeSamples[0]?.targetPath ?? null);
     }
-  }, [activeFile, codeSamples]);
+  });
 
   async function copyInstallCommand() {
     const copied = await copyToClipboardWithMeta(block.command);
@@ -328,7 +328,7 @@ function useLazyBlockPreview() {
   const [node, setNode] = React.useState<HTMLElement | null>(null);
   const [shouldMountPreview, setShouldMountPreview] = React.useState(false);
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([node, shouldMountPreview]), () => {
     if (shouldMountPreview) return;
     if (!node) return;
     if (!("IntersectionObserver" in window)) {
@@ -345,7 +345,7 @@ function useLazyBlockPreview() {
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [node, shouldMountPreview]);
+  });
 
   return [setNode, shouldMountPreview] as const;
 }

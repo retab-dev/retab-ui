@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { createPortal } from "react-dom";
 
@@ -26,6 +24,9 @@ import {
 } from "@/registry/new-york-v4/ui/data-cell-format";
 import { DataCellPickerIcon } from "@/registry/new-york-v4/ui/data-cell-picker-icon";
 import { getDataCellPickerPopupStyleFromAnchor } from "@/registry/new-york-v4/ui/data-cell-picker-position";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 function dataCellOutsidePointerDismissCause(
   event: PointerEvent,
@@ -108,10 +109,10 @@ export function DataCellPickerControl({
     [controlledOpen, openState],
   );
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([draft?.value, kind, value]), () => {
     if (draft?.value !== undefined) return;
     setUncontrolledDraftValue(formatDataCellEditValue(kind, value));
-  }, [draft?.value, kind, value]);
+  });
 
   const closePopup = React.useCallback(() => {
     openingContext.release();
@@ -139,19 +140,19 @@ export function DataCellPickerControl({
     setOpen(true);
   }, [measurePopupStyle, setOpen]);
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([autoFocus, openPopup]), () => {
     if (!autoFocus) return;
     triggerRef.current?.focus({ preventScroll: true });
     openPopup();
-  }, [autoFocus, openPopup]);
+  });
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([measurePopupStyle, open]), () => {
     if (!open || popupStyleRef.current) return;
     popupStyleRef.current = measurePopupStyle();
     if (popupStyleRef.current) setPopupStyle(popupStyleRef.current);
-  }, [measurePopupStyle, open]);
+  });
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([closePopup, open, openingContext]), () => {
     if (!open) return;
 
     const handlePointerDown = (event: PointerEvent) => {
@@ -189,7 +190,7 @@ export function DataCellPickerControl({
       window.removeEventListener("resize", handleViewportChange);
       window.removeEventListener("scroll", handleViewportChange, true);
     };
-  }, [closePopup, open, openingContext]);
+  });
 
   const updatePickerValue = (nextValue: string, commit = false) => {
     if (draft?.value === undefined) setUncontrolledDraftValue(nextValue);

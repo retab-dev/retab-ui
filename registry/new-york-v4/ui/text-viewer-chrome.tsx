@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { AlertCircle, Check, Copy } from "lucide-react";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import { type ViewerDownloadAction } from "@/lib/viewer-download-actions";
 
@@ -169,13 +168,13 @@ export function useViewerClipboardCopy({
   const isMountedRef = React.useRef(true);
   const copyAttemptRef = React.useRef(0);
 
-  React.useEffect(() => {
+  useMountEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
       clearViewerClipboardCopyReset(timeoutRef);
     };
-  }, []);
+  });
 
   const scheduleReset = React.useCallback(() => {
     clearViewerClipboardCopyReset(timeoutRef);

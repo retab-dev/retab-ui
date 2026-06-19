@@ -1,13 +1,15 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { PanelLeft, PanelRight } from "lucide-react";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 // Stock Button no longer exports ButtonProps or a `loading` prop. ViewerSidebarTrigger
 // keeps its own `loading` API, so we define ButtonProps locally as the stock Button's
@@ -114,9 +116,6 @@ function resolveMeasuredSidebarMode({
     : "overlay";
 }
 
-const useIsoLayoutEffect =
-  typeof window === "undefined" ? React.useEffect : React.useLayoutEffect;
-
 function isAriaDisabled(value: unknown): boolean {
   return value === true || value === "true";
 }
@@ -163,6 +162,7 @@ export function ViewerRoot({
   const [internalOpen, setInternalOpen] = React.useState(defaultOpen);
   const open = openProp ?? internalOpen;
   const openRef = React.useRef(open);
+  openRef.current = open;
   const hasMeasuredSidebarWidthRef = React.useRef(false);
   const lastTriggerElementRef = React.useRef<HTMLElement | null>(null);
   const registeredSidebarRef = React.useRef<ViewerSidebarRegistration | null>(
@@ -179,26 +179,17 @@ export function ViewerRoot({
       }),
     );
 
-  React.useEffect(() => {
-    openRef.current = open;
-  }, [open]);
+  useKeyedLayoutEffect(joinEffectKey([inlineBreakpoint, mode]), () => {
+    if (mode !== "auto") {
+      setResolvedSidebarMode((currentMode) =>
+        currentMode === mode ? currentMode : mode,
+      );
+      return;
+    }
 
-  React.useEffect(() => {
-    if (mode === "auto") return;
-    setResolvedSidebarMode((currentMode) => {
-      const nextMode = mode;
-      return currentMode === nextMode ? currentMode : nextMode;
-    });
-  }, [mode]);
-
-  useIsoLayoutEffect(() => {
     const element = rootRef.current;
     const ResizeObserverConstructor = globalThis.ResizeObserver;
     if (!element || typeof ResizeObserverConstructor === "undefined") return;
-    if (mode !== "auto") {
-      setResolvedSidebarMode(mode);
-      return;
-    }
 
     const updateMode = () => {
       const nextWidth = element.getBoundingClientRect().width;
@@ -224,7 +215,7 @@ export function ViewerRoot({
     observer.observe(element);
 
     return () => observer.disconnect();
-  }, [inlineBreakpoint, mode]);
+  });
 
   const setOpen = React.useCallback(
     (value: boolean | ((open: boolean) => boolean)) => {
@@ -294,65 +285,68 @@ export function ViewerRoot({
     [],
   );
 
-  React.useEffect(() => {
-    if (
-      !open ||
-      !canToggleSidebar ||
-      resolvedSidebarMode !== "overlay" ||
-      typeof document === "undefined"
-    ) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-        const triggerElement =
-          lastTriggerElementRef.current?.isConnected === true
-            ? lastTriggerElementRef.current
-            : rootRef.current?.querySelector<HTMLElement>(
-                "[data-viewer-sidebar-trigger]",
-              );
-        triggerElement?.focus();
-      }
-    };
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target;
-
+  useKeyedMountEffect(
+    joinEffectKey([
+      canToggleSidebar,
+      open,
+      registeredSidebar,
+      resolvedSidebarMode,
+      rootId,
+      setOpen,
+    ]),
+    () => {
       if (
-        target instanceof Node &&
-        registeredSidebar?.element.contains(target)
+        !open ||
+        !canToggleSidebar ||
+        resolvedSidebarMode !== "overlay" ||
+        typeof document === "undefined"
       ) {
         return;
       }
 
-      if (target instanceof Element) {
-        const triggerElement = target.closest<HTMLElement>(
-          "[data-viewer-sidebar-trigger]",
-        );
-        if (triggerElement?.dataset.viewerRootId === rootId) {
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === "Escape") {
+          setOpen(false);
+          const triggerElement =
+            lastTriggerElementRef.current?.isConnected === true
+              ? lastTriggerElementRef.current
+              : rootRef.current?.querySelector<HTMLElement>(
+                  "[data-viewer-sidebar-trigger]",
+                );
+          triggerElement?.focus();
+        }
+      };
+      const handlePointerDown = (event: PointerEvent) => {
+        const target = event.target;
+
+        if (
+          target instanceof Node &&
+          registeredSidebar?.element.contains(target)
+        ) {
           return;
         }
-      }
 
-      setOpen(false);
-    };
+        if (target instanceof Element) {
+          const triggerElement = target.closest<HTMLElement>(
+            "[data-viewer-sidebar-trigger]",
+          );
+          if (triggerElement?.dataset.viewerRootId === rootId) {
+            return;
+          }
+        }
 
-    document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("pointerdown", handlePointerDown);
+        setOpen(false);
+      };
 
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [
-    canToggleSidebar,
-    open,
-    registeredSidebar,
-    resolvedSidebarMode,
-    rootId,
-    setOpen,
-  ]);
+      document.addEventListener("keydown", handleKeyDown);
+      document.addEventListener("pointerdown", handlePointerDown);
+
+      return () => {
+        document.removeEventListener("keydown", handleKeyDown);
+        document.removeEventListener("pointerdown", handlePointerDown);
+      };
+    },
+  );
 
   const sidebarStateContext = React.useMemo<ViewerSidebarContextValue>(
     () => ({
@@ -501,7 +495,7 @@ export function ViewerSidebar({
   const styleWithoutWidth: React.CSSProperties = { ...style };
   delete styleWithoutWidth.width;
 
-  React.useEffect(() => {
+  useMountEffect(() => {
     if (
       typeof window === "undefined" ||
       typeof window.requestAnimationFrame !== "function"
@@ -526,24 +520,34 @@ export function ViewerSidebar({
       window.cancelAnimationFrame(firstFrame);
       window.cancelAnimationFrame(secondFrame);
     };
-  }, []);
+  });
 
-  useIsoLayoutEffect(() => {
-    const element = sidebarRef.current;
-
-    if (!element) {
-      return;
-    }
-
-    return registerSidebar({
+  useKeyedLayoutEffect(
+    joinEffectKey([
       collapsible,
-      element,
-      id: sidebarId,
       instanceId,
+      registerSidebar,
       side,
+      sidebarId,
       width,
-    });
-  }, [collapsible, instanceId, registerSidebar, side, sidebarId, width]);
+    ]),
+    () => {
+      const element = sidebarRef.current;
+
+      if (!element) {
+        return;
+      }
+
+      return registerSidebar({
+        collapsible,
+        element,
+        id: sidebarId,
+        instanceId,
+        side,
+        width,
+      });
+    },
+  );
 
   const hiddenProps = isCollapsed
     ? ({

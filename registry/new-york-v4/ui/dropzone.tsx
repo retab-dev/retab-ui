@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import {
   parseDropzoneAccept,
   validateDropzoneFiles,
@@ -102,8 +101,9 @@ export function useDropzone({
     React.useState<DropzoneFileItem[]>(defaultFiles);
   const [lastIntake, setLastIntake] =
     React.useState<DropzoneIntake>(EMPTY_INTAKE);
-  const [isDragging, setIsDragging] = React.useState(false);
+  const [rawIsDragging, setIsDragging] = React.useState(false);
   const currentItems = files ?? uncontrolledItems;
+  const isDragging = disabled ? false : rawIsDragging;
 
   // itemsRef.current is the latest committed items. The effect mirrors the
   // source of truth into it after every render; internal commits update it
@@ -112,9 +112,7 @@ export function useDropzone({
   // the truth: the eager write is optimistic and the effect reconciles it on
   // the parent's next render.
   const itemsRef = React.useRef(currentItems);
-  React.useEffect(() => {
-    itemsRef.current = currentItems;
-  }, [currentItems]);
+  itemsRef.current = currentItems;
 
   const commitFileTransition = React.useCallback(
     (transition: (items: DropzoneFileItem[]) => DropzoneFileItem[]) => {
@@ -204,9 +202,9 @@ export function useDropzone({
     if (!disabled) inputRef.current?.click();
   }, [disabled]);
 
-  React.useEffect(() => {
+  useKeyedMountEffect(disabled ? "disabled" : null, () => {
     if (disabled) resetDragState();
-  }, [disabled, resetDragState]);
+  });
 
   const getRootProps = React.useCallback(
     <T extends HTMLElement>(

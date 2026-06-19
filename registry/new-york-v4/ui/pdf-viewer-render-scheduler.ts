@@ -1,8 +1,9 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import type { PdfPageRenderTiming } from "./pdf-viewer-types";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export const PDF_PAGE_RENDER_CONCURRENCY = 2;
 
@@ -72,10 +73,10 @@ export function usePdfPageRenderScheduler({
   );
   const requestedRendersRef = React.useRef(allRequestedRenders);
   const resetKeyRef = React.useRef(resetKey);
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([allRequestedRenders, resetKey]), () => {
     requestedRendersRef.current = allRequestedRenders;
     resetKeyRef.current = resetKey;
-  }, [allRequestedRenders, resetKey]);
+  });
 
   const [state, setState] = React.useState<{
     resetKey: unknown;
@@ -88,7 +89,7 @@ export function usePdfPageRenderScheduler({
     ? state.renderedByKey
     : emptyRenderedByKey;
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([allRequestedRenders, resetKey]), () => {
     setState((previousState) => {
       if (!Object.is(previousState.resetKey, resetKey)) {
         return { resetKey, renderedByKey: new Map() };
@@ -109,7 +110,7 @@ export function usePdfPageRenderScheduler({
         ? previousState
         : { resetKey, renderedByKey };
     });
-  }, [allRequestedRenders, resetKey]);
+  });
 
   const activePageNumbers = React.useMemo(() => {
     const renderedPageNumbers: number[] = [];

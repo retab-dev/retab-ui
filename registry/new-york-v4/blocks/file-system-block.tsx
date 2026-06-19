@@ -1,10 +1,9 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { FileSystem } from "@/components/ui/file-system";
 
 import {
@@ -50,11 +49,18 @@ export function FileSystemBlock() {
   );
   const [state, setState] = React.useState(parsedState);
   const stateRef = React.useRef(parsedState);
+  const parsedStateKey = React.useMemo(
+    () =>
+      JSON.stringify(
+        formatFileSystemDemoState(parsedState, DEFAULT_FILE_SYSTEM_DEMO_STATE),
+      ),
+    [parsedState],
+  );
 
-  React.useEffect(() => {
+  useKeyedMountEffect(parsedStateKey, () => {
     stateRef.current = parsedState;
     setState(parsedState);
-  }, [parsedState]);
+  });
 
   const replaceState = React.useCallback(
     (patch: Partial<FileSystemDemoState>) => {

@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { createRoot, type Root } from "react-dom/client";
 
@@ -21,6 +19,9 @@ import {
 import { PageMarkdownPageFrame } from "@/components/viewers/page-markdown/page-markdown-page-frame";
 import { usePageMarkdownScroll } from "@/components/viewers/page-markdown/page-markdown-scroll";
 import { type PageMarkdownViewMode } from "@/components/viewers/page-markdown/page-markdown-types";
+import { useMountEffect } from "@/hooks/use-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export interface PageMarkdownPaneHandle {
   scrollToPage: (pageNumber: number, options?: ScrollToOptions) => void;
@@ -100,9 +101,12 @@ export const PageMarkdownPane = React.forwardRef<
     resetKey: pagesSignature,
   });
 
-  React.useLayoutEffect(() => {
-    onContainerWidthChange(viewportWidth);
-  }, [onContainerWidthChange, viewportWidth]);
+  useKeyedLayoutEffect(
+    joinEffectKey([onContainerWidthChange, viewportWidth]),
+    () => {
+      onContainerWidthChange(viewportWidth);
+    },
+  );
 
   const { captureScrollAnchor } = usePageMarkdownScrollAnchor({
     layout,
@@ -155,9 +159,9 @@ export const PageMarkdownPane = React.forwardRef<
     pagesSignature,
     scale,
   ]);
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([projectPages]), () => {
     projectPagesRef.current = projectPages;
-  }, [projectPages]);
+  });
 
   const schedulePageProjection = React.useCallback(() => {
     if (projectionFrameRef.current !== null) return;
@@ -180,22 +184,19 @@ export const PageMarkdownPane = React.forwardRef<
     [measureScroll, projectPages, scrollToPage],
   );
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([projectPages, viewportElement]), () => {
     projectPages();
-  }, [projectPages, viewportElement]);
+  });
 
-  React.useEffect(
-    () => () => {
-      if (
-        projectionFrameRef.current !== null &&
-        typeof cancelAnimationFrame === "function"
-      ) {
-        cancelAnimationFrame(projectionFrameRef.current);
-      }
-      disposePageMarkdownProjectionCache(projectionCacheRef.current);
-    },
-    [],
-  );
+  useMountEffect(() => () => {
+    if (
+      projectionFrameRef.current !== null &&
+      typeof cancelAnimationFrame === "function"
+    ) {
+      cancelAnimationFrame(projectionFrameRef.current);
+    }
+    disposePageMarkdownProjectionCache(projectionCacheRef.current);
+  });
 
   const handleViewportScroll = React.useCallback(() => {
     handleScroll();

@@ -1,8 +1,7 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import type { ViewerResource } from "@/lib/viewer-resource";
 
@@ -42,6 +41,9 @@ import {
 import { clampTextViewerScale } from "./text-viewer-scale";
 import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types";
 import type { ViewerDownloadErrorHandler } from "./viewer-download";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const DEFAULT_VIEWPORT_HEIGHT = 640;
 const DEFAULT_VIEWPORT_WIDTH = 900;
@@ -246,32 +248,29 @@ export function MarkdownGreenfieldContent({
       requestAnimationFrame(flushMeasuredHeights);
   }, [flushMeasuredHeights]);
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([commitScrollTop, document]), () => {
     setMeasuredHeights(new Map());
     setMeasuredHeightsRevision((revision) => revision + 1);
     commitScrollTop(0);
     viewportRef.current?.scrollTo({ left: 0, top: 0 });
-  }, [commitScrollTop, document]);
+  });
 
-  React.useEffect(
-    () => () => {
-      if (
-        scrollFrameRef.current !== null &&
-        typeof cancelAnimationFrame === "function"
-      ) {
-        cancelAnimationFrame(scrollFrameRef.current);
-      }
-      if (
-        measuredHeightFrameRef.current !== null &&
-        typeof cancelAnimationFrame === "function"
-      ) {
-        cancelAnimationFrame(measuredHeightFrameRef.current);
-      }
-    },
-    [],
-  );
+  useMountEffect(() => () => {
+    if (
+      scrollFrameRef.current !== null &&
+      typeof cancelAnimationFrame === "function"
+    ) {
+      cancelAnimationFrame(scrollFrameRef.current);
+    }
+    if (
+      measuredHeightFrameRef.current !== null &&
+      typeof cancelAnimationFrame === "function"
+    ) {
+      cancelAnimationFrame(measuredHeightFrameRef.current);
+    }
+  });
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect("mount", () => {
     const viewport = viewportRef.current;
     if (!viewport) return;
 
@@ -294,9 +293,9 @@ export function MarkdownGreenfieldContent({
         : new ResizeObserver(readSize);
     observer?.observe(viewport);
     return () => observer?.disconnect();
-  }, []);
+  });
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([captureAnchor, viewportWidth]), () => {
     const nextWidth = Math.max(
       1,
       viewportWidth - VIEWER_HORIZONTAL_PADDING * 2,
@@ -306,9 +305,9 @@ export function MarkdownGreenfieldContent({
       captureAnchor();
       return nextWidth;
     });
-  }, [captureAnchor, viewportWidth]);
+  });
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([commitScrollTop, frame.chunks]), () => {
     const viewport = viewportRef.current;
     const previousChunks = prevFrameChunksRef.current;
     prevFrameChunksRef.current = frame.chunks;
@@ -357,7 +356,7 @@ export function MarkdownGreenfieldContent({
     const nextScrollTop = Math.max(0, liveScrollTop + delta);
     viewport.scrollTop = nextScrollTop;
     commitScrollTop(nextScrollTop);
-  }, [commitScrollTop, frame.chunks]);
+  });
 
   const scrollToLineRange = React.useCallback(
     (
@@ -394,9 +393,9 @@ export function MarkdownGreenfieldContent({
   // directly — otherwise each measurement re-runs them and yanks the viewport
   // back to the highlight/search/hash target while the reader is scrolling.
   const scrollToLineRangeRef = React.useRef(scrollToLineRange);
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([scrollToLineRange]), () => {
     scrollToLineRangeRef.current = scrollToLineRange;
-  }, [scrollToLineRange]);
+  });
 
   React.useImperativeHandle(
     forwardedRef ?? null,
@@ -414,15 +413,15 @@ export function MarkdownGreenfieldContent({
 
   // Scrolling is an imperative DOM mutation that must run before paint to avoid
   // a visible jump, so these reactions to a changed target line/range live in
-  // layout effects, not useEffect.
-  React.useLayoutEffect(() => {
+  // layout-timed reactions.
+  useKeyedLayoutEffect(joinEffectKey([highlightRange]), () => {
     if (!highlightRange) return;
     scrollToLineRangeRef.current(highlightRange);
-  }, [highlightRange]);
+  });
 
   // Subscribes to the browser's hash/history (a non-React external source) and
   // scrolls the matching fragment into view before paint.
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([document, urlFragmentNavigation]), () => {
     if (!urlFragmentNavigation) return;
 
     const scrollToCurrentHash = () => {
@@ -450,7 +449,7 @@ export function MarkdownGreenfieldContent({
       window.removeEventListener("hashchange", scrollToCurrentHash);
       window.removeEventListener("popstate", scrollToCurrentHash);
     };
-  }, [document, urlFragmentNavigation]);
+  });
 
   const recordMeasuredHeight = React.useCallback(
     (chunk: MarkdownGreenfieldChunk, height: number) => {
@@ -611,7 +610,7 @@ function DeferredNativeFindIndex({
 }) {
   const [isReady, setIsReady] = React.useState(false);
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([chunks]), () => {
     setIsReady(false);
     const show = () => setIsReady(true);
     if (typeof window === "undefined") return;
@@ -622,7 +621,7 @@ function DeferredNativeFindIndex({
     }
     const timeoutId = browserWindow.setTimeout(show, 80);
     return () => browserWindow.clearTimeout(timeoutId);
-  }, [chunks]);
+  });
 
   if (!isReady) return null;
   return (
@@ -679,38 +678,41 @@ function NativeFindEntry({
   const ref = React.useRef<HTMLSpanElement | null>(null);
   const text = nativeFindTextForChunk(chunk);
 
-  React.useLayoutEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-    element.setAttribute("hidden", "until-found");
+  useKeyedLayoutEffect(
+    joinEffectKey([
+      chunk.id,
+      chunk.sourceEndLine,
+      chunk.sourceStartLine,
+      lineCount,
+      scrollToLineRange,
+    ]),
+    () => {
+      const element = ref.current;
+      if (!element) return;
+      element.setAttribute("hidden", "until-found");
 
-    const handleBeforeMatch = () => {
-      scrollToLineRange(
-        normalizeTextLineRange(
-          {
-            end: chunk.sourceEndLine,
-            start: chunk.sourceStartLine,
-          },
-          lineCount,
-        ),
-        { behavior: "auto", preferredChunkId: chunk.id },
-      );
-      requestAnimationFrame(() => {
-        element.setAttribute("hidden", "until-found");
-      });
-    };
+      const handleBeforeMatch = () => {
+        scrollToLineRange(
+          normalizeTextLineRange(
+            {
+              end: chunk.sourceEndLine,
+              start: chunk.sourceStartLine,
+            },
+            lineCount,
+          ),
+          { behavior: "auto", preferredChunkId: chunk.id },
+        );
+        requestAnimationFrame(() => {
+          element.setAttribute("hidden", "until-found");
+        });
+      };
 
-    element.addEventListener("beforematch", handleBeforeMatch);
-    return () => {
-      element.removeEventListener("beforematch", handleBeforeMatch);
-    };
-  }, [
-    chunk.id,
-    chunk.sourceEndLine,
-    chunk.sourceStartLine,
-    lineCount,
-    scrollToLineRange,
-  ]);
+      element.addEventListener("beforematch", handleBeforeMatch);
+      return () => {
+        element.removeEventListener("beforematch", handleBeforeMatch);
+      };
+    },
+  );
 
   return (
     <span
@@ -770,7 +772,7 @@ function ChunkFrame({
 }) {
   const ref = React.useRef<HTMLDivElement | null>(null);
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([chunk, onMeasuredHeight]), () => {
     measure();
     const element = ref.current;
     if (!element || typeof ResizeObserver === "undefined") return;
@@ -783,7 +785,7 @@ function ChunkFrame({
       if (!element) return;
       onMeasuredHeight(chunk, element.getBoundingClientRect().height);
     }
-  }, [chunk, onMeasuredHeight]);
+  });
 
   return (
     <section

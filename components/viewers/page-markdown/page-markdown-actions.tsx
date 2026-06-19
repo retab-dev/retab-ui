@@ -1,10 +1,9 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { Check, Copy, Download, MoreHorizontal } from "lucide-react";
 
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import { createTextDownloadAction } from "@/lib/viewer-download-actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -163,13 +162,13 @@ function useCopyMarkdown(text: string) {
   const isMountedRef = React.useRef(true);
   const copyAttemptRef = React.useRef(0);
 
-  React.useEffect(() => {
+  useMountEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
       clearCopyStatusReset(timeoutRef);
     };
-  }, []);
+  });
 
   const write = React.useCallback(() => {
     clearCopyStatusReset(timeoutRef);

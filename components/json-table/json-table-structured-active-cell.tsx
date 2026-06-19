@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types";
@@ -13,6 +11,8 @@ import { formatValueForCommit } from "@/components/json-table/lib/value-normaliz
 import { useRefCallback } from "@/components/json-table/path-utils";
 import { useElevatedVirtualRow } from "@/components/json-table/use-elevated-virtual-row";
 import { useJsonTableStructuredCellController } from "@/components/json-table/use-json-table-structured-cell-controller";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export function JsonTableStructuredActiveCell({
   fieldMetadata,
@@ -71,12 +71,15 @@ export function JsonTableStructuredActiveCell({
     isElevated: true,
   });
 
-  React.useEffect(() => {
-    markJsonTableProfile("active-control-mounted", {
-      fieldPath: materializedFieldPath,
-      fieldKind: fieldMetadata.kind,
-    });
-  }, [fieldMetadata.kind, materializedFieldPath]);
+  useKeyedMountEffect(
+    joinEffectKey([fieldMetadata.kind, materializedFieldPath]),
+    () => {
+      markJsonTableProfile("active-control-mounted", {
+        fieldPath: materializedFieldPath,
+        fieldKind: fieldMetadata.kind,
+      });
+    },
+  );
 
   const commitValue = useRefCallback((newValue: unknown) => {
     commitStructuredValueChange(

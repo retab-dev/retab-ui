@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { Virtualizer as DiffsVirtualizer } from "@pierre/diffs";
 import {
@@ -20,6 +18,10 @@ import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CopyButton } from "@/components/copy-button";
+import { useMountEffect } from "@/hooks/use-mount-effect";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const CODE_FILE_THEME = {
   "--diffs-light-bg": "var(--color-code)",
@@ -126,9 +128,9 @@ function ScrollAreaVirtualizer({
     [syncVirtualizer],
   );
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([virtualizer]), () => {
     return () => virtualizer?.cleanUp();
-  }, [virtualizer]);
+  });
 
   return (
     <VirtualizerContext.Provider value={virtualizer}>
@@ -154,9 +156,9 @@ function useCodeThemeType(): CodeThemeType {
   const { resolvedTheme } = useTheme();
   const [isMounted, setIsMounted] = React.useState(false);
 
-  React.useEffect(() => {
+  useMountEffect(() => {
     setIsMounted(true);
-  }, []);
+  });
 
   return isMounted && resolvedTheme === "dark" ? "dark" : "light";
 }
@@ -377,7 +379,7 @@ export function HighlightedCodeBlock({
   const shouldShowFallback =
     renderFallbackCode && isVisible && !hasRenderedCode;
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([codeRenderKey]), () => {
     setRenderedCodeKey(null);
     pendingScrollResetKeyRef.current = codeRenderKey;
 
@@ -389,9 +391,9 @@ export function HighlightedCodeBlock({
     });
 
     return () => window.cancelAnimationFrame(frameId);
-  }, [codeRenderKey]);
+  });
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([scrollResetKey]), () => {
     if (scrollResetKey === undefined) return;
 
     const container = containerRef.current;
@@ -402,7 +404,7 @@ export function HighlightedCodeBlock({
     });
 
     return () => window.cancelAnimationFrame(frameId);
-  }, [scrollResetKey]);
+  });
 
   const fileOptions = React.useMemo(
     () => ({
@@ -429,7 +431,7 @@ export function HighlightedCodeBlock({
     [codeRenderKey, codeThemeType, lastRenderableLineIndex],
   );
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([lazy]), () => {
     if (!lazy) {
       setIsVisible(true);
       return;
@@ -456,9 +458,9 @@ export function HighlightedCodeBlock({
     observer.observe(container);
 
     return () => observer.disconnect();
-  }, [lazy]);
+  });
 
-  React.useEffect(() => {
+  useMountEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
@@ -474,7 +476,7 @@ export function HighlightedCodeBlock({
     return () => {
       container.removeEventListener("wheel", onWheel, { capture: true });
     };
-  }, []);
+  });
 
   return (
     <div

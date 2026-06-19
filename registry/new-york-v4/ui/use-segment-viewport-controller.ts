@@ -1,8 +1,7 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import {
   getSegmentInteractionState,
@@ -16,6 +15,9 @@ import type {
   SegmentAnchor,
 } from "./segmented-document-model";
 import { useSegmentInteraction } from "./use-segment-interaction";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const RAIL_VISIBILITY_MARGIN = 24;
 const PROGRAMMATIC_SCROLL_WINDOW_MS = 120;
@@ -225,23 +227,23 @@ export function useSegmentViewportController({
     });
   }, []);
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([currentPage, followCurrentPage]), () => {
     followCurrentPage(currentPage);
-  }, [currentPage, followCurrentPage]);
+  });
 
-  React.useEffect(() => {
+  useMountEffect(() => {
     const state = railFollowStateRef.current;
     return () => {
       const timer = state.idleTimer;
       if (timer != null) window.clearTimeout(timer);
     };
-  }, []);
+  });
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([clearPreview, segments]), () => {
     setCurrentPage(1);
     setScrollProgress(0);
     clearPreview();
-  }, [clearPreview, segments]);
+  });
 
   const setPageElement = React.useCallback(
     (page: number, element: HTMLElement | null) => {

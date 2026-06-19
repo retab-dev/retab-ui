@@ -1,6 +1,6 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 /**
  * Returns a debounced copy of `value` that only updates after `delayMs` has
@@ -10,10 +10,10 @@ import * as React from "react";
 export function useDebouncedValue<T>(value: T, delayMs = 300): T {
   const [debounced, setDebounced] = React.useState(value);
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([value, delayMs]), () => {
     const timer = window.setTimeout(() => setDebounced(value), delayMs);
     return () => window.clearTimeout(timer);
-  }, [value, delayMs]);
+  });
 
   return debounced;
 }

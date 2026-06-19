@@ -1,11 +1,12 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { cn } from "@/lib/utils";
 import type { XlsxSheetMeta } from "@/lib/xlsx-workbook";
+
+import { joinEffectKey } from "@/lib/effect-key";
 
 export const XLSX_SHEET_TABS_HEIGHT_PX = 36;
 const TAB_HEIGHT_PX = 28;
@@ -238,60 +239,78 @@ export function XlsxSheetTabs({
     [scrollTabsBy],
   );
 
-  React.useLayoutEffect(() => {
-    updateScrollState();
+  useKeyedMountEffect(
+    joinEffectKey([
+      "xlsx-tabs-listeners",
+      onTabsWheel,
+      sheets.length,
+      updateScrollState,
+    ]),
+    () => {
+      updateScrollState();
 
-    const scrollElement = scrollRef.current;
-    const listElement = listRef.current;
-    if (!scrollElement) return;
+      const scrollElement = scrollRef.current;
+      const listElement = listRef.current;
+      if (!scrollElement) return;
 
-    const ResizeObserverCtor = globalThis.ResizeObserver;
-    const resizeObserver =
-      typeof ResizeObserverCtor === "function"
-        ? new ResizeObserverCtor(updateScrollState)
-        : null;
-    resizeObserver?.observe(scrollElement);
-    if (listElement) resizeObserver?.observe(listElement);
+      const ResizeObserverCtor = globalThis.ResizeObserver;
+      const resizeObserver =
+        typeof ResizeObserverCtor === "function"
+          ? new ResizeObserverCtor(updateScrollState)
+          : null;
+      resizeObserver?.observe(scrollElement);
+      if (listElement) resizeObserver?.observe(listElement);
 
-    scrollElement.addEventListener("scroll", updateScrollState, {
-      passive: true,
-    });
-    scrollElement.addEventListener("wheel", onTabsWheel, { passive: false });
-    return () => {
-      resizeObserver?.disconnect();
-      scrollElement.removeEventListener("scroll", updateScrollState);
-      scrollElement.removeEventListener("wheel", onTabsWheel);
-    };
-  }, [onTabsWheel, sheets.length, updateScrollState]);
+      scrollElement.addEventListener("scroll", updateScrollState, {
+        passive: true,
+      });
+      scrollElement.addEventListener("wheel", onTabsWheel, { passive: false });
+      return () => {
+        resizeObserver?.disconnect();
+        scrollElement.removeEventListener("scroll", updateScrollState);
+        scrollElement.removeEventListener("wheel", onTabsWheel);
+      };
+    },
+  );
 
-  React.useLayoutEffect(() => {
-    const scrollElement = scrollRef.current;
-    const activeTab = tabRefs.current[activeSheetIndex];
-    if (!scrollElement || !activeTab) return;
+  useKeyedMountEffect(
+    joinEffectKey([
+      "xlsx-tabs-active",
+      activeSheetIndex,
+      sheets.length,
+      tabWidth,
+      updateScrollState,
+    ]),
+    () => {
+      const scrollElement = scrollRef.current;
+      const activeTab = tabRefs.current[activeSheetIndex];
+      if (!scrollElement || !activeTab) return;
 
-    const nextLeft = resolveTabRevealScrollLeft({
-      activeIndex: activeSheetIndex,
-      activeLeft: activeTab.offsetLeft,
-      activeWidth: activeTab.offsetWidth,
-      scrollLeft: scrollElement.scrollLeft,
-      scrollWidth: scrollElement.scrollWidth,
-      sheetCount: sheets.length,
-      viewportWidth: scrollElement.clientWidth,
-    });
+      const nextLeft = resolveTabRevealScrollLeft({
+        activeIndex: activeSheetIndex,
+        activeLeft: activeTab.offsetLeft,
+        activeWidth: activeTab.offsetWidth,
+        scrollLeft: scrollElement.scrollLeft,
+        scrollWidth: scrollElement.scrollWidth,
+        sheetCount: sheets.length,
+        viewportWidth: scrollElement.clientWidth,
+      });
 
-    if (Math.abs(nextLeft - scrollElement.scrollLeft) > SCROLL_EPSILON_PX) {
-      const distance = Math.abs(nextLeft - scrollElement.scrollLeft);
-      scrollTabsTo(
-        scrollElement,
-        nextLeft,
-        distance > scrollElement.clientWidth * LARGE_REVEAL_DISTANCE_MULTIPLIER
-          ? "auto"
-          : "smooth",
-      );
-    }
+      if (Math.abs(nextLeft - scrollElement.scrollLeft) > SCROLL_EPSILON_PX) {
+        const distance = Math.abs(nextLeft - scrollElement.scrollLeft);
+        scrollTabsTo(
+          scrollElement,
+          nextLeft,
+          distance >
+            scrollElement.clientWidth * LARGE_REVEAL_DISTANCE_MULTIPLIER
+            ? "auto"
+            : "smooth",
+        );
+      }
 
-    window.requestAnimationFrame(updateScrollState);
-  }, [activeSheetIndex, sheets.length, tabWidth, updateScrollState]);
+      window.requestAnimationFrame(updateScrollState);
+    },
+  );
 
   if (sheets.length <= 1) return null;
 

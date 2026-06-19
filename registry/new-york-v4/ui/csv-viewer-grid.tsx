@@ -1,10 +1,9 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { cn } from "@/lib/utils";
 
 import {
@@ -37,6 +36,7 @@ import {
   type FixedGridColumnItem,
   type FixedGridRowPoolSlot,
 } from "./fixed-grid-virtualization";
+import { joinEffectKey } from "@/lib/effect-key";
 
 type Row = string[] | undefined;
 
@@ -96,9 +96,12 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       [columns],
     );
 
-    React.useLayoutEffect(() => {
-      setSort(null);
-    }, [columnShapeKey, sortResetKey]);
+    useKeyedMountEffect(
+      joinEffectKey(["csv-sort-reset", columnShapeKey, sortResetKey]),
+      () => {
+        setSort(null);
+      },
+    );
 
     const toggleSort = React.useCallback((columnIndex: number) => {
       setSort((current) =>
@@ -206,9 +209,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       virtualizeColumns: shouldVirtualizeColumns,
     });
 
-    React.useLayoutEffect(() => {
-      columnItemsRef.current = columnItems;
-    }, [columnItems]);
+    columnItemsRef.current = columnItems;
 
     React.useImperativeHandle(
       ref ?? null,
@@ -251,19 +252,28 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       virtualRows,
     });
 
-    React.useLayoutEffect(() => {
-      // After React commits the canonical row window, push that window's
-      // visibility, position, and text back onto the pooled DOM so any stale
-      // state left by the imperative scroll patcher (a `hidden` row React's
-      // reconciler never re-showed, or a cyclic-column cell it never rewrote)
-      // is cleared. Falls back to a plain cache invalidation when row
-      // virtualization is inactive.
-      if (shouldVirtualizeRows) {
-        rowPatcher.resync(virtualRows);
-      } else {
-        rowPatcher.invalidate();
-      }
-    }, [rowPatcher, virtualRows, columnItems, shouldVirtualizeRows]);
+    useKeyedMountEffect(
+      joinEffectKey([
+        "csv-row-patcher",
+        rowPatcher,
+        virtualRows,
+        columnItems,
+        shouldVirtualizeRows,
+      ]),
+      () => {
+        // After React commits the canonical row window, push that window's
+        // visibility, position, and text back onto the pooled DOM so any stale
+        // state left by the imperative scroll patcher (a `hidden` row React's
+        // reconciler never re-showed, or a cyclic-column cell it never rewrote)
+        // is cleared. Falls back to a plain cache invalidation when row
+        // virtualization is inactive.
+        if (shouldVirtualizeRows) {
+          rowPatcher.resync(virtualRows);
+        } else {
+          rowPatcher.invalidate();
+        }
+      },
+    );
 
     return (
       <div
@@ -405,9 +415,16 @@ function useCsvSortedRowOrder({
     sourceRows.length >= WORKER_SORT_ROW_THRESHOLD &&
     typeof Worker !== "undefined";
 
-  React.useEffect(() => {
+  const workerSortKey =
+    sort && sourceRows && shouldUseWorker
+      ? joinEffectKey(["csv-worker-sort", shouldUseWorker, sort, sourceRows])
+      : null;
+  useKeyedMountEffect(workerSortKey, () => {
+    if (!sort || !sourceRows || !shouldUseWorker) {
+      setWorkerRowOrder(null);
+      return;
+    }
     setWorkerRowOrder(null);
-    if (!sort || !sourceRows || !shouldUseWorker) return;
 
     const controller = new AbortController();
     void sortCsvRowsInWorker({
@@ -430,7 +447,7 @@ function useCsvSortedRowOrder({
     );
 
     return () => controller.abort();
-  }, [shouldUseWorker, sort, sourceRows]);
+  });
 
   return React.useMemo(() => {
     if (!sort || !sourceRows) return null;

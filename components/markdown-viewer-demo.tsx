@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useMounted } from "@/hooks/use-mounted";
 import { MarkdownViewer } from "@/components/ui/markdown-viewer";
 
 const MARKDOWN_VIEWER_DEMO_TEXT = [
@@ -276,11 +275,7 @@ const MARKDOWN_VIEWER_DEMO_TEXT = [
 ].join("\n");
 
 export function MarkdownViewerDemo() {
-  const [isMounted, setIsMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const isMounted = useMounted();
 
   return (
     <div className="h-[620px] min-h-0">

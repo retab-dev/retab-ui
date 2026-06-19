@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { getDocxDocumentResource } from "@/lib/docx-document-resource";
 import { isAbortError, isResourceError } from "@/lib/viewer-errors";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -38,6 +37,7 @@ import {
   ViewerControlsSkeleton,
   type ViewerControlsState,
 } from "./viewer-controls";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export function DocxViewerContent({
   bare = false,
@@ -98,9 +98,7 @@ export function DocxViewerContent({
     scale,
   });
   const scaleRef = React.useRef(scale);
-  React.useEffect(() => {
-    scaleRef.current = scale;
-  });
+  scaleRef.current = scale;
 
   const containerRef = React.useCallback((el: HTMLDivElement | null) => {
     if (!el) return;
@@ -135,57 +133,61 @@ export function DocxViewerContent({
 
   const hostRef = React.useRef<HTMLDivElement | null>(null);
   const renderIndexRef = React.useRef<DocxRenderIndex | null>(null);
-  React.useEffect(() => {
-    const host = hostRef.current;
-    if (!host) return;
-    let cancelled = false;
-    setReady(false);
-    setNumPages(0);
-    setRenderIndex(null);
-    setPageLayout(null);
-    renderIndexRef.current = null;
-    resetScroll();
-    host.replaceChildren();
-    renderDocxPreview(buffer, docxPreviewPromise)
-      .then((renderHost) => {
-        if (cancelled) return;
-        const result = commitDocxRender({
-          host,
-          renderHost,
-          scale: scaleRef.current,
+  useKeyedMountEffect(
+    joinEffectKey(["docx-render", buffer, docxPreviewPromise, resetScroll]),
+    () => {
+      const host = hostRef.current;
+      if (!host) return;
+      let cancelled = false;
+      setReady(false);
+      setNumPages(0);
+      setRenderIndex(null);
+      setPageLayout(null);
+      renderIndexRef.current = null;
+      resetScroll();
+      host.replaceChildren();
+      renderDocxPreview(buffer, docxPreviewPromise)
+        .then((renderHost) => {
+          if (cancelled) return;
+          const result = commitDocxRender({
+            host,
+            renderHost,
+            scale: scaleRef.current,
+          });
+          const nextRenderIndex = buildDocxRenderIndex(host);
+          renderIndexRef.current = nextRenderIndex;
+          setRenderIndex(nextRenderIndex);
+          setNumPages(result.numPages);
+          setPageWidth(result.pageWidth);
+          setPageLayout(result.pageLayout);
+          setReady(true);
+        })
+        .catch((err) => {
+          if (!cancelled) {
+            setRenderError(
+              isResourceError(err) || isAbortError(err)
+                ? err
+                : toDocxFormatError(err, {
+                    kind: "render_failed",
+                    message: "Failed to render DOCX.",
+                  }),
+            );
+          }
         });
-        const nextRenderIndex = buildDocxRenderIndex(host);
-        renderIndexRef.current = nextRenderIndex;
-        setRenderIndex(nextRenderIndex);
-        setNumPages(result.numPages);
-        setPageWidth(result.pageWidth);
-        setPageLayout(result.pageLayout);
-        setReady(true);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setRenderError(
-            isResourceError(err) || isAbortError(err)
-              ? err
-              : toDocxFormatError(err, {
-                  kind: "render_failed",
-                  message: "Failed to render DOCX.",
-                }),
-          );
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [buffer, docxPreviewPromise, resetScroll]);
+      return () => {
+        cancelled = true;
+      };
+    },
+  );
 
-  React.useEffect(() => {
-    if (ready) measureScroll();
-  }, [measureScroll, ready, scale]);
+  useKeyedMountEffect(
+    joinEffectKey(["docx-content-measure", measureScroll, ready, scale]),
+    () => {
+      if (ready) measureScroll();
+    },
+  );
 
-  React.useEffect(() => {
-    renderIndexRef.current = renderIndex;
-  }, [renderIndex]);
+  renderIndexRef.current = renderIndex;
 
   const highlightName = useDocxHighlight({
     highlight,
@@ -334,9 +336,12 @@ function useDocxControlsRegistration({
     ],
   );
 
-  React.useEffect(() => {
-    if (!onControlsChange) return;
-    onControlsChange(controlsState);
-    return () => onControlsChange(null);
-  }, [onControlsChange, controlsState]);
+  useKeyedMountEffect(
+    joinEffectKey(["docx-controls", onControlsChange, controlsState]),
+    () => {
+      if (!onControlsChange) return;
+      onControlsChange(controlsState);
+      return () => onControlsChange(null);
+    },
+  );
 }

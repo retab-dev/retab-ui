@@ -3,10 +3,7 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 
-// useLayoutEffect on the server logs a warning; fall back to useEffect there. The
-// shadow root only exists on the client, so the effect is a no-op during SSR.
-const useIsomorphicLayoutEffect =
-  typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 // Drop every `:has()` style rule from a constructed sheet (recursing into
 // @media/@supports/@layer blocks). The grid's own markup uses no `has-*`
@@ -68,7 +65,7 @@ function ShadowScope({
   const hostRef = React.useRef<HTMLDivElement>(null);
   const [root, setRoot] = React.useState<ShadowRoot | null>(null);
 
-  useIsomorphicLayoutEffect(() => {
+  useMountEffect(() => {
     const host = hostRef.current;
     if (!host) return;
     const shadowRoot = host.shadowRoot ?? host.attachShadow({ mode: "open" });
@@ -86,7 +83,7 @@ function ShadowScope({
       }
     }
     setRoot(shadowRoot);
-  }, []);
+  });
 
   return (
     <div ref={hostRef} className={className} style={style}>

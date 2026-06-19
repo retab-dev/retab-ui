@@ -1,11 +1,11 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import type { FileSystemDispatch } from "./file-system-kernel-selectors";
 import type { FileSystemQueryState, FileSystemView } from "./file-system-types";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export function useFileSystemControlledProps({
   dispatch,
@@ -20,25 +20,25 @@ export function useFileSystemControlledProps({
   selectedPath?: string | null;
   view?: FileSystemView;
 }) {
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([dispatch, path]), () => {
     if (path !== undefined) {
       dispatch({ path, source: "controlled-prop", type: "path.changed" });
     }
-  }, [dispatch, path]);
+  });
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([dispatch, query]), () => {
     if (query !== undefined) {
       dispatch({ query, source: "controlled-prop", type: "query.changed" });
     }
-  }, [dispatch, query]);
+  });
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([dispatch, view]), () => {
     if (view !== undefined) {
       dispatch({ source: "controlled-prop", type: "view.changed", view });
     }
-  }, [dispatch, view]);
+  });
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([dispatch, selectedPath]), () => {
     if (selectedPath !== undefined) {
       dispatch({
         path: selectedPath,
@@ -46,5 +46,5 @@ export function useFileSystemControlledProps({
         type: "entry.selected",
       });
     }
-  }, [dispatch, selectedPath]);
+  });
 }

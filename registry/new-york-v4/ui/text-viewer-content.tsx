@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { Check, Copy } from "lucide-react";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import { cn } from "@/lib/utils";
 import type { ViewerResource } from "@/lib/viewer-resource";
@@ -58,6 +57,9 @@ import {
   useViewerControlsRegistration,
   type ViewerControlsState,
 } from "./viewer-controls";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const TEXT_VIEWER_HORIZONTAL_PADDING = 16;
 const TEXT_VIEWER_INITIAL_TEXT_WIDTH = 768;
@@ -161,19 +163,22 @@ export function TextViewerContent({
     });
   }, [frame.frames]);
 
-  React.useLayoutEffect(() => {
-    const nextContentWidth = Math.max(
-      1,
-      viewportWidth - TEXT_VIEWER_HORIZONTAL_PADDING * 2,
-    );
-    setContentWidth((current) => {
-      if (current === nextContentWidth) return current;
-      captureScrollAnchor();
-      return nextContentWidth;
-    });
-  }, [captureScrollAnchor, viewportWidth]);
+  useKeyedLayoutEffect(
+    joinEffectKey([captureScrollAnchor, viewportWidth]),
+    () => {
+      const nextContentWidth = Math.max(
+        1,
+        viewportWidth - TEXT_VIEWER_HORIZONTAL_PADDING * 2,
+      );
+      setContentWidth((current) => {
+        if (current === nextContentWidth) return current;
+        captureScrollAnchor();
+        return nextContentWidth;
+      });
+    },
+  );
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([frame.frames]), () => {
     const anchor = pendingScrollAnchorRef.current;
     const scrollElement = viewportRef.current;
     if (!anchor || !scrollElement) return;
@@ -187,7 +192,7 @@ export function TextViewerContent({
       nextFrame.top +
         Math.min(anchor.offsetWithinFrame, Math.max(0, nextFrame.height - 1)),
     );
-  }, [frame.frames]);
+  });
 
   const scrollLineRange = React.useCallback(
     (
@@ -252,9 +257,9 @@ export function TextViewerContent({
     [preparedDocument.sourceLineCount, scrollLineRange],
   );
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([highlightRange, scrollLineRange]), () => {
     scrollLineRange(highlightRange);
-  }, [highlightRange, scrollLineRange]);
+  });
 
   const scrollMarkdownFragment = React.useCallback(
     (event: React.MouseEvent) => {
@@ -346,11 +351,11 @@ function useTextControlsRegistration({
     [downloadAction, fontScale, onResetZoom, onZoomIn, onZoomOut, wordCount],
   );
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([onControlsChange, controlsState]), () => {
     if (!onControlsChange) return;
     onControlsChange(controlsState);
     return () => onControlsChange(null);
-  }, [onControlsChange, controlsState]);
+  });
 }
 
 type TextVirtualCanvasProps = {
@@ -736,7 +741,7 @@ function InlineTextBlock({
 function useTextViewerFontEpoch() {
   const [fontEpoch, setFontEpoch] = React.useState(0);
 
-  React.useEffect(() => {
+  useMountEffect(() => {
     const fonts = document.fonts;
     if (!fonts) return;
 
@@ -748,7 +753,7 @@ function useTextViewerFontEpoch() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  });
 
   return fontEpoch;
 }
@@ -893,9 +898,9 @@ function ImageTextBlock({
     "idle" | "loaded" | "failed"
   >(block.src ? "idle" : "failed");
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([block.src]), () => {
     setImageState(block.src ? "idle" : "failed");
-  }, [block.src]);
+  });
 
   const showImage = Boolean(block.src) && imageState !== "failed";
 

@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import {
   createPageMeasurementKey,
   findPageMarkdownPageByOffset,
@@ -105,10 +104,7 @@ export function usePageMarkdownScrollAnchor({
     null,
   );
   const viewportElementRef = React.useRef<HTMLDivElement | null>(null);
-
-  React.useLayoutEffect(() => {
-    viewportElementRef.current = viewportElement;
-  }, [viewportElement]);
+  viewportElementRef.current = viewportElement;
 
   const captureScrollAnchor = React.useCallback(() => {
     const currentViewportElement = viewportElementRef.current;
@@ -127,7 +123,7 @@ export function usePageMarkdownScrollAnchor({
     };
   }, [layout]);
 
-  React.useLayoutEffect(() => {
+  useKeyedMountEffect(createPageMarkdownAnchorRestoreKey(layout), () => {
     const anchor = pendingScrollAnchorRef.current;
     const currentViewportElement = viewportElementRef.current;
     if (!anchor || !currentViewportElement) return;
@@ -144,7 +140,18 @@ export function usePageMarkdownScrollAnchor({
       currentViewportElement.scrollTop = nextScrollTop;
     }
     onRestore?.();
-  }, [layout, onRestore]);
+  });
 
   return { captureScrollAnchor };
+}
+
+function createPageMarkdownAnchorRestoreKey(layout: PageMarkdownLayoutModel) {
+  return [
+    layout.pageCount,
+    layout.totalHeight,
+    layout.width,
+    ...layout.measuredPages.map(
+      (page) => `${page.pageNumber}:${page.height}:${page.heightDelta}`,
+    ),
+  ].join("|");
 }

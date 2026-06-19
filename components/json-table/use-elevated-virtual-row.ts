@@ -1,6 +1,6 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
+import type * as React from "react";
 
-import * as React from "react";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 
 export function useElevatedVirtualRow({
   cellRootRef,
@@ -9,12 +9,13 @@ export function useElevatedVirtualRow({
   cellRootRef: React.RefObject<HTMLDivElement | null>;
   isElevated: boolean;
 }) {
-  React.useEffect(() => {
+  const rowElevationKey = isElevated ? "elevated" : "normal";
+  useKeyedMountEffect(rowElevationKey, () => {
     const rowEl = cellRootRef.current?.closest<HTMLElement>("[data-index]");
     if (!rowEl) return;
     rowEl.style.zIndex = isElevated ? "20" : "";
     return () => {
       rowEl.style.zIndex = "";
     };
-  }, [cellRootRef, isElevated]);
+  });
 }

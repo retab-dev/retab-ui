@@ -128,7 +128,7 @@ describe("pptx-viewer-core geometry", () => {
   });
 
   it("exposes the documented default slide size", () => {
-    expect(DEFAULT_PPTX_SLIDE_SIZE).toEqual({ width: 960, height: 720 });
+    expect(DEFAULT_PPTX_SLIDE_SIZE).toEqual({ width: 960, height: 540 });
   });
 });
 
@@ -346,7 +346,7 @@ describe("PptxViewerFallback", () => {
       '[data-slot="pptx-slide-skeleton"]',
     );
     expect(skeleton).toBeTruthy();
-    expect(skeleton?.style.aspectRatio).toBe("960 / 720");
+    expect(skeleton?.style.aspectRatio).toBe("960 / 540");
     // Controls skeleton shows disabled, non-focusable icon placeholders.
     expect(screen.queryByRole("button", { name: "Zoom in" })).toBeNull();
   });

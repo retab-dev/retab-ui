@@ -1,7 +1,6 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import {
   parseCsv,
   streamCsv,
@@ -31,6 +30,7 @@ import {
   toCsvFormatError,
 } from "./csv-viewer-worker";
 import type { GridCellCoordinate } from "./fixed-grid-selection";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const CSV_STREAM_BATCH_SIZE = 5000;
 const SYNC_TEXT_PARSE_MAX_BYTES = 256 * 1024;
@@ -139,7 +139,12 @@ export function useCsvResourceState({
     rowStore: emptyCsvRowStore(),
   });
 
-  React.useEffect(() => {
+  const resourceEffectKey =
+    syncState ||
+    (csvResource.kind !== "resource" && csvResource.kind !== "text")
+      ? null
+      : joinEffectKey(["csv-resource", csvResource, csvDialect, retryVersion]);
+  useKeyedMountEffect(resourceEffectKey, () => {
     if (syncState) return;
     if (csvResource.kind !== "resource" && csvResource.kind !== "text") return;
 
@@ -308,7 +313,7 @@ export function useCsvResourceState({
       cancelled = true;
       controller.abort();
     };
-  }, [csvResource, csvDialect, retryVersion, syncState]);
+  });
 
   return syncState ?? state;
 }

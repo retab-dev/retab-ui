@@ -1,6 +1,6 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 export const PDF_RENDERED_PAGE_CACHE_MAX_ENTRIES = 6;
 export const PDF_RENDERED_PAGE_CACHE_MAX_PIXELS = 24_000_000;
@@ -37,15 +37,7 @@ export function usePdfRenderedPageCache(resetKey: unknown) {
     cacheRef.current.resetKey = resetKey;
   }
 
-  React.useEffect(() => {
-    const cache = cacheRef.current;
-    if (!Object.is(cache.resetKey, resetKey)) {
-      clearPdfRenderedPageCache(cache);
-      cache.resetKey = resetKey;
-    }
-  }, [resetKey]);
-
-  React.useEffect(() => () => clearPdfRenderedPageCache(cacheRef.current), []);
+  useMountEffect(() => () => clearPdfRenderedPageCache(cacheRef.current));
 
   return cacheRef.current;
 }

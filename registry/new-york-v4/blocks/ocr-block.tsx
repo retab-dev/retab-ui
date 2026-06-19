@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { cn } from "@/lib/utils";
 import {
   documentAiPageImages,
@@ -78,7 +77,7 @@ export function OcrBlock() {
     Partial<Record<ProviderId, ProviderSample>>
   >({});
 
-  React.useEffect(() => {
+  useKeyedMountEffect(`ocr-provider:${provider}`, () => {
     if (outputs[provider]) return;
     let active = true;
     const entry = PROVIDERS.find((item) => item.id === provider);
@@ -90,7 +89,7 @@ export function OcrBlock() {
     return () => {
       active = false;
     };
-  }, [outputs, provider]);
+  });
 
   const sample = outputs[provider];
   const source = React.useMemo<OcrSource | null>(

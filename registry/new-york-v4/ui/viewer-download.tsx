@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { Download } from "lucide-react";
 
@@ -21,6 +19,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./dropdown-menu";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export interface TriggerViewerDownloadOptions {
   signal?: AbortSignal;
@@ -150,12 +150,12 @@ export function useViewerDownloadTrigger({
   );
   const abortControllerRef = React.useRef<AbortController | null>(null);
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([resetKey]), () => {
     return () => {
       abortControllerRef.current?.abort();
       abortControllerRef.current = null;
     };
-  }, [resetKey]);
+  });
 
   const triggerDownload = React.useCallback(
     (action: ViewerDownloadAction) => {

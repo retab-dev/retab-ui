@@ -1,8 +1,7 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import { cn } from "@/lib/utils";
 import type { ViewerResource } from "@/lib/viewer-resource";
@@ -96,7 +95,7 @@ export function PptxFirstSlide({
   thumbnailKey: string;
   anchor: ThumbnailAnchor;
 }) {
-  React.useEffect(() => {
+  useMountEffect(() => {
     const preload = () => {
       void import("@/components/ui/pptx-viewer").then((module) => {
         module.preloadPptxViewer();
@@ -108,7 +107,7 @@ export function PptxFirstSlide({
     }
     const id = window.setTimeout(preload, 0);
     return () => window.clearTimeout(id);
-  }, []);
+  });
 
   const source = useThumbnailResource(
     getPptxFirstSlide(

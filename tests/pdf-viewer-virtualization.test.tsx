@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 // @vitest-environment jsdom
 import * as React from "react";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
@@ -10,6 +8,8 @@ import {
   getPdfPageLayout,
 } from "@/registry/new-york-v4/ui/pdf-viewer-layout";
 import { usePdfPageVirtualization } from "@/registry/new-york-v4/ui/pdf-viewer-virtualization";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 describe("usePdfPageVirtualization", () => {
   afterEach(() => {
@@ -79,10 +79,13 @@ describe("usePdfPageVirtualization", () => {
         viewportElement: viewport,
       });
 
-      React.useLayoutEffect(() => {
-        harnessState.viewportElement = viewport;
-        harnessState.measureVisiblePages = result.measureVisiblePages;
-      }, [result.measureVisiblePages, viewport]);
+      useKeyedLayoutEffect(
+        joinEffectKey([result.measureVisiblePages, viewport]),
+        () => {
+          harnessState.viewportElement = viewport;
+          harnessState.measureVisiblePages = result.measureVisiblePages;
+        },
+      );
 
       return (
         <output data-testid="pages">
@@ -162,10 +165,13 @@ describe("usePdfPageVirtualization", () => {
         viewportElement: viewport,
       });
 
-      React.useLayoutEffect(() => {
-        harnessState.viewportElement = viewport;
-        harnessState.measureVisiblePages = result.measureVisiblePages;
-      }, [result.measureVisiblePages, viewport]);
+      useKeyedLayoutEffect(
+        joinEffectKey([result.measureVisiblePages, viewport]),
+        () => {
+          harnessState.viewportElement = viewport;
+          harnessState.measureVisiblePages = result.measureVisiblePages;
+        },
+      );
 
       return (
         <output data-testid="pages">

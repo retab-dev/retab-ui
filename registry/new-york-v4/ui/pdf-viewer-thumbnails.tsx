@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import { clearPdfDocumentResource } from "@/lib/pdf-document-resource";
@@ -23,6 +21,8 @@ import { usePdfThumbnailPageMetrics } from "./use-pdf-thumbnail-page-metrics";
 import { usePdfThumbnailWindow } from "./use-pdf-thumbnail-window";
 import { useThumbnailRailFollow } from "./use-thumbnail-rail-follow";
 import { ViewerErrorBoundary } from "./viewer-error";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export interface PdfViewerThumbnailsProps {
   /** Thumbnail image width in CSS pixels. The sidebar shell owns rail width. */
@@ -138,20 +138,23 @@ function PdfThumbnailRailInner({
     viewportRef,
     resetKey: doc,
   });
-  React.useEffect(() => {
-    requestPageMetrics(
-      getRequestedThumbnailMetricPages({
-        currentPage,
-        pageCount: layout.pageCount,
-        visibleItems: thumbnailWindow.visibleItems,
-      }),
-    );
-  }, [
-    currentPage,
-    layout.pageCount,
-    requestPageMetrics,
-    thumbnailWindow.visibleItems,
-  ]);
+  useKeyedMountEffect(
+    joinEffectKey([
+      currentPage,
+      layout.pageCount,
+      requestPageMetrics,
+      thumbnailWindow.visibleItems,
+    ]),
+    () => {
+      requestPageMetrics(
+        getRequestedThumbnailMetricPages({
+          currentPage,
+          pageCount: layout.pageCount,
+          visibleItems: thumbnailWindow.visibleItems,
+        }),
+      );
+    },
+  );
 
   return (
     <PdfThumbnailRailViewport

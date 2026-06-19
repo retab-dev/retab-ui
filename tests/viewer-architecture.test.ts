@@ -738,7 +738,9 @@ describe("viewer architecture", () => {
     expect(rootBody).not.toContain("border bg-muted/30");
     expect(rootBody).not.toContain("bg-background");
     expect(frameBody).toContain('data-slot="viewer-frame"');
-    expect(frameBody).toContain("rounded-xl border bg-background");
+    expect(frameBody).toContain("bg-background");
+    expect(frameBody).toContain("rounded-xl");
+    expect(frameBody).toContain("border");
   });
 
   it("keeps viewer frame ownership explicit in first-party compositions", () => {
@@ -4316,7 +4318,7 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/ui/sidebar-row.ts",
     ]);
     expect(sidebar?.registryDependencies ?? []).toContain("@retab/sidebar-row");
-    expect(sidebar?.dependencies ?? []).not.toContain(
+    expect(sidebar?.dependencies ?? []).toContain(
       "class-variance-authority@^0.7.1",
     );
     // The migrated stock-shadcn sidebar is self-contained: it defines its

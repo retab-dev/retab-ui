@@ -1,8 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const DEFAULT_VIEWPORT_HEIGHT = 600;
 const DEFAULT_VIEWPORT_WIDTH = 800;
@@ -313,7 +313,7 @@ export function useTextVirtualViewport(
     clientWidth: 0,
   });
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([scrollRef]), () => {
     const scrollElement = scrollRef.current;
     if (!scrollElement) return;
 
@@ -351,7 +351,7 @@ export function useTextVirtualViewport(
       scrollElement.removeEventListener("scroll", scheduleRead);
       observer?.disconnect();
     };
-  }, [scrollRef]);
+  });
 
   return viewport;
 }

@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { Menu } from "lucide-react";
 
@@ -13,11 +11,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 function useActiveItem(itemIds: string[]) {
   const [activeId, setActiveId] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([itemIds]), () => {
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -44,7 +44,7 @@ function useActiveItem(itemIds: string[]) {
         }
       }
     };
-  }, [itemIds]);
+  });
 
   return activeId;
 }

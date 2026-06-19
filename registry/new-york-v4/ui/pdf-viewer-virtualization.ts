@@ -1,6 +1,5 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import {
   getPdfPreloadPageNumbers,
@@ -8,6 +7,9 @@ import {
   getPdfVisiblePageNumbers,
   type PdfPageLayoutModel,
 } from "./pdf-viewer-layout";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 type PdfPageWindow = {
   visiblePageNumbers: readonly number[];
@@ -99,9 +101,9 @@ export function usePdfPageVirtualization({
     );
   }, [getCurrentVisiblePageNumbers, layout, resetKey]);
   const measureVisiblePagesNowRef = React.useRef(measureVisiblePagesNow);
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([measureVisiblePagesNow]), () => {
     measureVisiblePagesNowRef.current = measureVisiblePagesNow;
-  }, [measureVisiblePagesNow]);
+  });
 
   const measureVisiblePages = React.useCallback(() => {
     if (measureFrameRef.current) return;
@@ -110,22 +112,19 @@ export function usePdfPageVirtualization({
     );
   }, []);
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([measureVisiblePagesNow]), () => {
     if (measureFrameRef.current) {
       cancelAnimationFrame(measureFrameRef.current);
       measureFrameRef.current = 0;
     }
     measureVisiblePagesNow();
-  }, [measureVisiblePagesNow]);
+  });
 
-  React.useEffect(
-    () => () => {
-      if (measureFrameRef.current) {
-        cancelAnimationFrame(measureFrameRef.current);
-      }
-    },
-    [],
-  );
+  useMountEffect(() => () => {
+    if (measureFrameRef.current) {
+      cancelAnimationFrame(measureFrameRef.current);
+    }
+  });
 
   return {
     visiblePageNumbers: pageWindow.visiblePageNumbers,

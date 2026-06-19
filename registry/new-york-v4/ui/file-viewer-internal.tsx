@@ -7,6 +7,8 @@ import {
   type ViewerResource,
 } from "@/lib/viewer-resource";
 import { useIsClient } from "@/components/ui/use-is-client";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 import {
   descriptorResetKey,
@@ -50,9 +52,6 @@ const FileViewerContext = React.createContext<FileViewerContextValue | null>(
 const FileViewerControlsContext =
   React.createContext<FileViewerControlsContextValue | null>(null);
 
-const useIsomorphicLayoutEffect =
-  typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
-
 // Per-descriptor cancellation signal. Aborting is deferred a macrotask so a
 // keyed remount (or StrictMode's mount/unmount/mount) can cancel the pending
 // abort and keep reusing the shared resource request instead of tearing it down
@@ -68,7 +67,7 @@ function useDescriptorSignal(descriptorKey: string): AbortSignal {
     timer: ReturnType<typeof setTimeout>;
   } | null>(null);
 
-  useIsomorphicLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([controller]), () => {
     if (abortTimerRef.current?.controller === controller) {
       clearTimeout(abortTimerRef.current.timer);
       abortTimerRef.current = null;
@@ -86,7 +85,7 @@ function useDescriptorSignal(descriptorKey: string): AbortSignal {
       };
       abortTimerRef.current = abortTimer;
     };
-  }, [controller]);
+  });
 
   return controller.signal;
 }

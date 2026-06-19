@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 import { toJsxRuntime } from "hast-util-to-jsx-runtime";
@@ -36,6 +34,8 @@ import {
   sanitizeMarkdownMediaUrl,
   sanitizeMarkdownUrl,
 } from "./markdown-url-policy";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const MarkdownContentReadyContext = React.createContext<(() => void) | null>(
   null,
@@ -85,14 +85,14 @@ export const MarkdownGreenfieldChunkRenderer = React.memo(
       ],
     );
 
-    React.useLayoutEffect(() => {
+    useKeyedLayoutEffect(joinEffectKey([chunk.id, notifyContentReady]), () => {
       notifyContentReady();
       const element = ref.current;
       if (!element || typeof ResizeObserver === "undefined") return;
       const observer = new ResizeObserver(notifyContentReady);
       observer.observe(element);
       return () => observer.disconnect();
-    }, [chunk.id, notifyContentReady]);
+    });
 
     if (chunk.isHostile) {
       return <MarkdownGreenfieldHostileChunk chunk={chunk} />;
@@ -1183,9 +1183,12 @@ function MarkdownImageSurface({
     setAspectRatio(explicitAspectRatio ?? "");
   }
 
-  React.useLayoutEffect(() => {
-    notifyContentReady?.();
-  }, [aspectRatio, notifyContentReady, state]);
+  useKeyedLayoutEffect(
+    joinEffectKey([aspectRatio, notifyContentReady, state]),
+    () => {
+      notifyContentReady?.();
+    },
+  );
 
   return (
     <figure
@@ -1309,9 +1312,12 @@ function MarkdownVideoSurface({
   const notifyContentReady = React.useContext(MarkdownContentReadyContext);
   const safeSrc = sanitizeMarkdownMediaUrl(src);
   const [failed, setFailed] = React.useState(false);
-  React.useLayoutEffect(() => {
-    notifyContentReady?.();
-  }, [failed, notifyContentReady, safeSrc]);
+  useKeyedLayoutEffect(
+    joinEffectKey([failed, notifyContentReady, safeSrc]),
+    () => {
+      notifyContentReady?.();
+    },
+  );
   if (!safeSrc) {
     return (
       <div

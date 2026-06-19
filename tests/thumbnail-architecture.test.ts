@@ -167,7 +167,11 @@ describe("thumbnail architecture", () => {
     );
 
     expect(item).toBeTruthy();
-    expect(item!.registryDependencies).toEqual(["@retab/utils"]);
+    expect(item!.registryDependencies).toEqual([
+      "@retab/utils",
+      "@retab/effect-key",
+      "@retab/use-keyed-mount-effect",
+    ]);
     expect(item!.files.map((file) => file.path)).toEqual([
       "registry/new-york-v4/ui/file-thumbnail-frame.tsx",
       "registry/new-york-v4/ui/file-thumbnail-frame-types.ts",

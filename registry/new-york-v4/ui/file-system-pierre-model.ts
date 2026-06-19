@@ -28,12 +28,12 @@ import {
   useLatestFileSystemPierreSelectionState,
   useSyncFileSystemPierreSelection,
 } from "./file-system-pierre-selection";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export const FILE_SYSTEM_PIERRE_ROW_HEIGHT = 36;
 
 const INITIAL_VISIBLE_ROW_COUNT = 24;
-const useIsoLayoutEffect =
-  typeof window === "undefined" ? React.useEffect : React.useLayoutEffect;
 
 export function useFileSystemPierreModel({
   decoration,
@@ -56,6 +56,8 @@ export function useFileSystemPierreModel({
 }) {
   const decorationRef = React.useRef(decoration);
   const loadingRef = React.useRef(loading);
+  decorationRef.current = decoration;
+  loadingRef.current = loading;
   const hasSemanticQuery = query.search.length > 0;
   const order = useFileSystemPierreOrder(input.pierrePaths);
   const expansion = useFileSystemPierreExpansion({ loading });
@@ -66,11 +68,6 @@ export function useFileSystemPierreModel({
   const handleSelectionChange = useFileSystemPierreSelectionHandler(
     getLatestSelectionState,
   );
-
-  useIsoLayoutEffect(() => {
-    decorationRef.current = decoration;
-    loadingRef.current = loading;
-  }, [decoration, loading]);
 
   const initialSelectedPaths = React.useMemo(() => {
     const selected = input.pierrePaths.find(
@@ -141,11 +138,11 @@ function useRepaintFileSystemPierreDecoration({
   decorationVersion: string;
   model: ReturnType<typeof useFileTree>["model"];
 }) {
-  useIsoLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([decorationVersion, model]), () => {
     if (!model.getFileTreeContainer()) {
       return;
     }
 
     model.render({});
-  }, [decorationVersion, model]);
+  });
 }

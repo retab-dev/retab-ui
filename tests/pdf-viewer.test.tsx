@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 // @vitest-environment jsdom
 import * as React from "react";
 import {
@@ -11,6 +9,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import {
   getPdfDocumentResource,
@@ -61,6 +60,8 @@ import {
   ViewerSidebar,
   ViewerSurface,
 } from "@/registry/new-york-v4/ui/viewer";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const pdfjsMock = vi.hoisted(() => {
   type Deferred<T> = {
@@ -412,9 +413,9 @@ describe("PdfViewer", () => {
       const { metricByPageNumber, requestPageMetrics, status } =
         usePdfThumbnailPageMetrics(metricDoc, doc);
 
-      React.useEffect(() => {
+      useMountEffect(() => {
         requestPageMetrics(pageNumbers);
-      }, [requestPageMetrics]);
+      });
 
       return <div data-loaded={metricByPageNumber.size} data-status={status} />;
     }
@@ -455,9 +456,9 @@ describe("PdfViewer", () => {
         doc,
       );
 
-      React.useEffect(() => {
+      useMountEffect(() => {
         requestPageMetrics([0, -1, 1.5, 4]);
-      }, [requestPageMetrics]);
+      });
 
       return <div data-status={status} />;
     }
@@ -486,10 +487,10 @@ describe("PdfViewer", () => {
       const { metricByPageNumber, requestPageMetrics } =
         usePdfThumbnailPageMetrics(doc as unknown as PdfMetricDocument, doc);
 
-      React.useEffect(() => {
+      useMountEffect(() => {
         requestPageMetrics([1, 1, 2, 3, 4, 5, 5, 6, 6]);
         requestPageMetrics([1, 2, 5, 6]);
-      }, [requestPageMetrics]);
+      });
 
       return <div data-loaded={metricByPageNumber.size} />;
     }
@@ -548,9 +549,9 @@ describe("PdfViewer", () => {
       const { metricByPageNumber, requestPageMetrics } =
         usePdfThumbnailPageMetrics(doc as unknown as PdfMetricDocument, doc);
 
-      React.useEffect(() => {
+      useKeyedMountEffect(joinEffectKey([requestPageMetrics]), () => {
         requestPageMetrics([1]);
-      }, [requestPageMetrics]);
+      });
 
       return (
         <div
@@ -598,9 +599,9 @@ describe("PdfViewer", () => {
         doc,
       );
 
-      React.useEffect(() => {
+      useMountEffect(() => {
         requestPageMetrics([1]);
-      }, [requestPageMetrics]);
+      });
 
       return <div />;
     }
@@ -632,12 +633,12 @@ describe("PdfViewer", () => {
       const { metricByPageNumber, requestPageMetrics } =
         usePdfThumbnailPageMetrics(doc as unknown as PdfMetricDocument, doc);
 
-      React.useEffect(() => {
+      useKeyedMountEffect(joinEffectKey([metricByPageNumber]), () => {
         metricMaps.push(metricByPageNumber);
-      }, [metricByPageNumber]);
-      React.useEffect(() => {
+      });
+      useMountEffect(() => {
         requestPageMetrics([1, 2]);
-      }, [requestPageMetrics]);
+      });
 
       return <div data-loaded={metricByPageNumber.size} />;
     }
@@ -690,9 +691,9 @@ describe("PdfViewer", () => {
       const { metricByPageNumber, requestPageMetrics, status } =
         usePdfPageMetrics(doc as unknown as PdfPageMetricDocument, doc);
 
-      React.useEffect(() => {
+      useMountEffect(() => {
         requestPageMetrics(pageNumbers);
-      }, [requestPageMetrics]);
+      });
 
       return (
         <div
@@ -2125,9 +2126,9 @@ describe("PdfViewer", () => {
     };
 
     function CountingThumbnails() {
-      React.useEffect(() => {
+      useMountEffect(() => {
         counts.thumbnailMounts += 1;
-      }, []);
+      });
       return <PdfViewerThumbnails thumbnailWidth={64} />;
     }
 
@@ -2178,9 +2179,9 @@ describe("PdfViewer", () => {
     };
 
     function CountingThumbnails() {
-      React.useEffect(() => {
+      useMountEffect(() => {
         counts.thumbnailMounts += 1;
-      }, []);
+      });
       return <PdfViewerThumbnails thumbnailWidth={64} />;
     }
 

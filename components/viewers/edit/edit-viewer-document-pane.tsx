@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source";
 import { FileViewer } from "@/components/ui/file-viewer";
 import {
@@ -64,7 +63,9 @@ function SourceDocumentRenderer({
   showPreview: boolean;
 }) {
   const { documentHandlers } = useSegmentedDocumentViewport();
+  const documentHandlersRef = React.useRef(documentHandlers);
   const source = useDocumentViewerSource(document);
+  documentHandlersRef.current = documentHandlers;
   const setPdfViewerHandle = React.useCallback(
     (handle: PdfViewerHandle | null) => {
       viewerRef.current = handle;
@@ -73,10 +74,9 @@ function SourceDocumentRenderer({
     [documentHandlers, viewerRef],
   );
 
-  React.useEffect(
-    () => () => documentHandlers.setDocumentHandle(null),
-    [documentHandlers],
-  );
+  useMountEffect(() => () => {
+    documentHandlersRef.current.setDocumentHandle(null);
+  });
 
   if (!source) {
     return <NoDocumentState message="Document preview is unavailable." />;

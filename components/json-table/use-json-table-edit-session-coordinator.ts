@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import type {
@@ -14,6 +12,8 @@ import {
   type SetJsonTablePrimitiveActiveCell,
 } from "@/components/json-table/json-table-primitive-active-cell-store";
 import type { ProjectedCell } from "@/components/json-table/lib/document-projection";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export type JsonTableEditSessionCoordinator = {
   primitiveActiveCellStore: JsonTablePrimitiveActiveCellStore;
@@ -40,14 +40,14 @@ export function useJsonTableEditSessionCoordinator({
   const structuredEditSessionIdRef = React.useRef(0);
   const documentIdRef = React.useRef(documentId);
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([documentId]), () => {
     if (documentIdRef.current === documentId) return;
 
     documentIdRef.current = documentId;
     structuredEditSessionIdRef.current = 0;
     primitiveActiveCellStoreRef.current.setSnapshot(null);
     setStructuredEditSession(null);
-  }, [documentId]);
+  });
 
   const setPrimitiveActiveCell = React.useCallback(
     (activeCell: JsonTablePrimitiveActiveCell | null) => {

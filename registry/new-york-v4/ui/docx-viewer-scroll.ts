@@ -1,6 +1,8 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import { clamp } from "./docx-viewer-core";
 import {
@@ -10,6 +12,7 @@ import {
   type DocxPageLayout,
   type DocxReadingAnchor,
 } from "./docx-viewer-layout";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export function useDocxViewerScroll({
   layoutKey,
@@ -75,40 +78,52 @@ export function useDocxViewerScroll({
     if (scrollFrame.current === -1) scrollFrame.current = requestedFrame;
   }, [measureScroll]);
 
-  React.useEffect(() => {
-    if (ready) measureScroll();
-  }, [measureScroll, ready]);
-
-  React.useLayoutEffect(() => {
-    const previousLayoutKey = committedLayoutKeyRef.current;
-    committedLayoutKeyRef.current = layoutKey;
-    if (!ready) return;
-    if (Object.is(previousLayoutKey, layoutKey)) return;
-
-    const viewport = scrollViewportRef.current;
-    if (!viewport) return;
-
-    const maxScrollTop = Math.max(
-      0,
-      viewport.scrollHeight - viewport.clientHeight,
-    );
-    const restored = restoreDocxReadingAnchorFromLayout({
-      anchor: latestAnchorRef.current,
-      layout: pageLayout,
-      maxScrollTop,
-      scale,
-      viewportHeight: viewport.clientHeight,
-    });
-    if (restored != null) viewport.scrollTop = restored;
-    measureScroll();
-  }, [layoutKey, measureScroll, pageLayout, ready, scale]);
-
-  React.useEffect(
-    () => () => {
-      if (scrollFrame.current > 0) cancelAnimationFrame(scrollFrame.current);
+  useKeyedMountEffect(
+    joinEffectKey(["docx-measure", measureScroll, ready]),
+    () => {
+      if (ready) measureScroll();
     },
-    [],
   );
+
+  useKeyedLayoutEffect(
+    joinEffectKey([
+      "docx-layout",
+      layoutKey,
+      measureScroll,
+      pageLayout,
+      ready,
+      scale,
+    ]),
+    () => {
+      const previousLayoutKey = committedLayoutKeyRef.current;
+      committedLayoutKeyRef.current = layoutKey;
+      if (!ready) return;
+      if (Object.is(previousLayoutKey, layoutKey)) return;
+
+      const viewport = scrollViewportRef.current;
+      if (!viewport) return;
+
+      const maxScrollTop = Math.max(
+        0,
+        viewport.scrollHeight - viewport.clientHeight,
+      );
+      const restored = restoreDocxReadingAnchorFromLayout({
+        anchor: latestAnchorRef.current,
+        layout: pageLayout,
+        maxScrollTop,
+        scale,
+        viewportHeight: viewport.clientHeight,
+      });
+      if (restored != null) viewport.scrollTop = restored;
+      measureScroll();
+    },
+  );
+
+  useMountEffect(() => {
+    return () => {
+      if (scrollFrame.current > 0) cancelAnimationFrame(scrollFrame.current);
+    };
+  });
 
   return {
     currentPage,

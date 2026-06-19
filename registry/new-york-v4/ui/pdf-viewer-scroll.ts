@@ -1,6 +1,5 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import {
   findPdfPageByOffset,
@@ -9,6 +8,9 @@ import {
 } from "./pdf-viewer-layout";
 import { clamp } from "./pdf-viewer-scale";
 import type { PdfPageAreaTarget } from "./pdf-viewer-types";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const PDF_SCROLL_TARGET_HEADROOM = 48;
 const PDF_SCROLL_TARGET_INLINE_HEADROOM = 32;
@@ -76,12 +78,9 @@ export function usePdfScrollActivity() {
     }, PDF_SCROLL_IDLE_MS);
   }, []);
 
-  React.useEffect(
-    () => () => {
-      if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
-    },
-    [],
-  );
+  useMountEffect(() => () => {
+    if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
+  });
 
   return { isScrolling, scrollDirection, handleScrollActivity };
 }
@@ -181,11 +180,11 @@ function usePdfScrollIntentController() {
     [],
   );
 
-  React.useEffect(
+  useKeyedMountEffect(
+    joinEffectKey([clearProgrammaticScrollIdleTimeout]),
     () => () => {
       clearProgrammaticScrollIdleTimeout();
     },
-    [clearProgrammaticScrollIdleTimeout],
   );
 
   return React.useMemo(
@@ -297,54 +296,57 @@ export function usePdfScroll({
     resetKey,
   ]);
   const measureScrollRef = React.useRef(measureScroll);
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([measureScroll]), () => {
     measureScrollRef.current = measureScroll;
-  }, [measureScroll]);
+  });
 
   const committedLayoutRef = React.useRef(layout);
   const committedResetKeyRef = React.useRef<unknown>(resetKey);
 
-  React.useLayoutEffect(() => {
-    const previousLayout = committedLayoutRef.current;
-    const previousResetKey = committedResetKeyRef.current;
-    committedLayoutRef.current = layout;
-    committedResetKeyRef.current = resetKey;
+  useKeyedLayoutEffect(
+    joinEffectKey([layout, pageCount, resetKey, scrollIntent]),
+    () => {
+      const previousLayout = committedLayoutRef.current;
+      const previousResetKey = committedResetKeyRef.current;
+      committedLayoutRef.current = layout;
+      committedResetKeyRef.current = resetKey;
 
-    if (!Object.is(previousResetKey, resetKey)) return;
-    if (Object.is(previousLayout, layout)) return;
+      if (!Object.is(previousResetKey, resetKey)) return;
+      if (Object.is(previousLayout, layout)) return;
 
-    const viewportElement = viewportElementRef.current;
-    if (!viewportElement) return;
+      const viewportElement = viewportElementRef.current;
+      if (!viewportElement) return;
 
-    const activeIntent = scrollIntent.current();
-    if (activeIntent.kind === "programmatic") {
-      const target = getPdfPageAreaScrollTarget(
-        viewportElement,
-        layout,
-        pageCount,
-        activeIntent.target,
-      );
-      if (!target) return;
+      const activeIntent = scrollIntent.current();
+      if (activeIntent.kind === "programmatic") {
+        const target = getPdfPageAreaScrollTarget(
+          viewportElement,
+          layout,
+          pageCount,
+          activeIntent.target,
+        );
+        if (!target) return;
 
-      const { intent, targetChanged } = scrollIntent.updateProgrammaticTarget(
-        activeIntent,
-        target,
-      );
+        const { intent, targetChanged } = scrollIntent.updateProgrammaticTarget(
+          activeIntent,
+          target,
+        );
 
-      if (targetChanged) {
-        scrollViewportToPageAreaTarget(viewportElement, target, {
-          behavior: intent.behavior,
-        });
-        scrollIntent.scheduleProgrammaticCompletion(intent.sequence);
+        if (targetChanged) {
+          scrollViewportToPageAreaTarget(viewportElement, target, {
+            behavior: intent.behavior,
+          });
+          scrollIntent.scheduleProgrammaticCompletion(intent.sequence);
+        }
+        return;
       }
-      return;
-    }
 
-    const anchor = capturePdfReadingAnchor(previousLayout, viewportElement);
-    if (!anchor) return;
+      const anchor = capturePdfReadingAnchor(previousLayout, viewportElement);
+      if (!anchor) return;
 
-    restorePdfReadingAnchor(layout, viewportElement, anchor);
-  }, [layout, pageCount, resetKey, scrollIntent]);
+      restorePdfReadingAnchor(layout, viewportElement, anchor);
+    },
+  );
 
   const handleScroll = React.useCallback(() => {
     const activeIntent = scrollIntent.current();
@@ -360,7 +362,7 @@ export function usePdfScroll({
     );
   }, [scrollIntent]);
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([resetKey, resetViewportForKey]), () => {
     if (!didMountResetEffectRef.current) {
       didMountResetEffectRef.current = true;
       return;
@@ -375,9 +377,9 @@ export function usePdfScroll({
     if (viewportElement) {
       resetViewportForKey(viewportElement, resetKey);
     }
-  }, [resetKey, resetViewportForKey]);
+  });
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([scrollIntent, viewportElement]), () => {
     const viewportElement = viewportElementRef.current;
     if (!viewportElement) return;
 
@@ -413,7 +415,7 @@ export function usePdfScroll({
       viewportElement.removeEventListener?.("keydown", scrollIntent.markUser);
       viewportElement.removeEventListener?.("scrollend", handleScrollEnd);
     };
-  }, [scrollIntent, viewportElement]);
+  });
 
   const scrollToPageArea = React.useCallback(
     (target: PdfPageAreaTarget, options?: ScrollToOptions) => {
@@ -448,19 +450,16 @@ export function usePdfScroll({
     [],
   );
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([measureScroll]), () => {
     if (scrollFrameRef.current) {
       cancelAnimationFrame(scrollFrameRef.current);
       scrollFrameRef.current = 0;
     }
-  }, [measureScroll]);
+  });
 
-  React.useEffect(
-    () => () => {
-      if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
-    },
-    [],
-  );
+  useMountEffect(() => () => {
+    if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
+  });
 
   return {
     currentPage,

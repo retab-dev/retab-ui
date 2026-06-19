@@ -1,15 +1,17 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import { type FrameDescriptor } from "@/lib/image-frame-source";
 import {
   frameCssSize,
   frameIndexToNumber,
   type QuarterTurn,
 } from "@/lib/image-geometry";
+
+import { joinEffectKey } from "@/lib/effect-key";
 
 export const IMAGE_FRAME_GAP = 16;
 export const IMAGE_FRAME_PADDING = 16;
@@ -202,10 +204,7 @@ export function useImageFrameVirtualization({
     );
   }, [getCurrentVisibleFrameNumbers, layout, resetKey]);
   const measureVisibleFramesNowRef = React.useRef(measureVisibleFramesNow);
-
-  React.useLayoutEffect(() => {
-    measureVisibleFramesNowRef.current = measureVisibleFramesNow;
-  }, [measureVisibleFramesNow]);
+  measureVisibleFramesNowRef.current = measureVisibleFramesNow;
 
   const measureVisibleFrames = React.useCallback(() => {
     if (measureFrameRef.current) return;
@@ -214,22 +213,24 @@ export function useImageFrameVirtualization({
     );
   }, []);
 
-  React.useEffect(() => {
-    if (measureFrameRef.current) {
-      cancelAnimationFrame(measureFrameRef.current);
-      measureFrameRef.current = 0;
-    }
-    measureVisibleFramesNow();
-  }, [measureVisibleFramesNow]);
+  useKeyedMountEffect(
+    joinEffectKey(["image-virtualization-measure", measureVisibleFramesNow]),
+    () => {
+      if (measureFrameRef.current) {
+        cancelAnimationFrame(measureFrameRef.current);
+        measureFrameRef.current = 0;
+      }
+      measureVisibleFramesNow();
+    },
+  );
 
-  React.useEffect(
-    () => () => {
+  useMountEffect(() => {
+    return () => {
       if (measureFrameRef.current) {
         cancelAnimationFrame(measureFrameRef.current);
       }
-    },
-    [],
-  );
+    };
+  });
 
   return { visibleFrameNumbers, measureVisibleFrames };
 }

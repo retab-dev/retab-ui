@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { type FrameSource } from "@/lib/image-frame-source";
 import { normalizeRotation, rotatedSize } from "@/lib/image-geometry";
 import {
@@ -16,6 +15,7 @@ import {
   getImageFrameLayout,
   type ImageFrameLayoutModel,
 } from "./image-viewer-virtualization";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const IMAGE_SCROLL_HEADROOM = 48;
 const IMAGE_READING_MARKER_RATIO = 0.2;
@@ -59,12 +59,15 @@ export function useImageViewerScale(
   );
   const [rawRotation, setRawRotation] = React.useState(0);
 
-  React.useLayoutEffect(() => {
-    setRawRotation(0);
-    setUncontrolledScale(
-      defaultScale === undefined ? null : normalizeViewerScale(defaultScale),
-    );
-  }, [defaultScale, source]);
+  useKeyedMountEffect(
+    joinEffectKey(["image-scale-reset", defaultScale, source]),
+    () => {
+      setRawRotation(0);
+      setUncontrolledScale(
+        defaultScale === undefined ? null : normalizeViewerScale(defaultScale),
+      );
+    },
+  );
 
   const rotation = normalizeRotation(rawRotation);
   const widestFrameWidth = Math.max(
@@ -148,17 +151,10 @@ export function useVisibleFrame(
   const committedLayoutRef = React.useRef(layout);
   const committedResetKeyRef = React.useRef<unknown>(resetKey);
 
-  // Swapping the displayed document remounts the frame DOM and resets the
-  // scroll position, but this hook's state survives because the content
-  // component updates in place. Reset to the first frame when the source
-  // changes so the page indicator tracks the new document instead of carrying
-  // over a stale page number. (The "of N" clamp hid this when swapping to a
-  // shorter document.) A layout effect resets before paint, so the stale page
-  // never flashes.
-  React.useLayoutEffect(() => {
+  useKeyedMountEffect(joinEffectKey(["image-visible-reset", resetKey]), () => {
     lastReportedFrameNumber.current = 0;
     setCurrentFrameNumber(1);
-  }, [resetKey]);
+  });
 
   const setScrollViewportRef = React.useCallback(
     (element: HTMLDivElement | null) => {
@@ -168,7 +164,7 @@ export function useVisibleFrame(
     [],
   );
 
-  React.useLayoutEffect(() => {
+  useKeyedMountEffect(joinEffectKey(["image-anchor", layout, resetKey]), () => {
     const previousLayout = committedLayoutRef.current;
     const previousResetKey = committedResetKeyRef.current;
     committedLayoutRef.current = layout;
@@ -184,7 +180,7 @@ export function useVisibleFrame(
     if (!anchor) return;
 
     restoreImageReadingAnchor(layout, viewport, anchor);
-  }, [layout, resetKey]);
+  });
 
   const handleScroll = React.useCallback(() => {
     const viewport = scrollViewportRef.current;

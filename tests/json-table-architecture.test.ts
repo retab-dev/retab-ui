@@ -880,7 +880,13 @@ describe("json table and DataCell architecture", () => {
     });
 
     const sourceReconciliationEffectIndex = documentModelContent.indexOf(
-      "React.useLayoutEffect(() => {\n    if (isNewSourceDocument",
+      [
+        "useKeyedLayoutEffect(",
+        "    joinEffectKey([",
+        "      reconcileSourceDocument,",
+        "      resetForSourceDocument,",
+        "      sourceDocument,",
+      ].join("\n"),
     );
     const sourceReconciliationCallIndex = documentModelContent.indexOf(
       "reconcileSourceDocument(sourceDocument)",

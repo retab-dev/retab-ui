@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import {
   clearPdfDocumentResource,
@@ -48,6 +47,9 @@ import {
   type ViewerControlsState,
 } from "./viewer-controls";
 import { ViewerErrorBoundary } from "./viewer-error";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export type PdfViewerContentProps = {
   className?: string;
@@ -287,26 +289,36 @@ function PdfViewerInner({
     [document],
   );
 
-  React.useEffect(() => {
-    requestPageMetrics([
-      ...preloadPageNumbers,
-      ...lowPriorityRenderPageNumbers,
-    ]);
-  }, [lowPriorityRenderPageNumbers, preloadPageNumbers, requestPageMetrics]);
+  useKeyedMountEffect(
+    joinEffectKey([
+      lowPriorityRenderPageNumbers,
+      preloadPageNumbers,
+      requestPageMetrics,
+    ]),
+    () => {
+      requestPageMetrics([
+        ...preloadPageNumbers,
+        ...lowPriorityRenderPageNumbers,
+      ]);
+    },
+  );
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([metricByPageNumber, setPageSizes]), () => {
     setPageSizes(metricByPageNumber);
-  }, [metricByPageNumber, setPageSizes]);
+  });
 
-  React.useEffect(() => {
-    measureScroll();
-  }, [
-    document.numPages,
-    measureScroll,
-    rotation,
-    resolvedScale,
-    viewportElement,
-  ]);
+  useKeyedMountEffect(
+    joinEffectKey([
+      document.numPages,
+      measureScroll,
+      rotation,
+      resolvedScale,
+      viewportElement,
+    ]),
+    () => {
+      measureScroll();
+    },
+  );
 
   const handleViewportScroll = React.useCallback(() => {
     handleScrollActivity(viewportElement ?? undefined);
@@ -436,10 +448,10 @@ function usePdfDocumentResourceLifecycle(
   content: PdfDocumentContent,
   document: PdfDocument,
 ) {
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([content, document]), () => {
     retainPdfDocumentResource(content, document);
     return () => releasePdfDocumentResource(content, document);
-  }, [content, document]);
+  });
 }
 
 function usePdfFirstPageSize(document: PdfDocument): PdfPageSize {
@@ -521,11 +533,11 @@ function usePdfDocumentControlsRegistration({
     ],
   );
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([onControlsChange, controlsState]), () => {
     if (!onControlsChange) return;
     onControlsChange(controlsState);
     return () => onControlsChange(null);
-  }, [onControlsChange, controlsState]);
+  });
 }
 
 type PdfDocumentPagesLayerProps = {
@@ -586,43 +598,45 @@ function PdfDocumentImperativePagesLayer({
     [],
   );
 
-  React.useLayoutEffect(() => {
-    projectPdfPages({
-      cache: projectionCacheRef.current,
-      canvas: projectionCanvasRef.current,
+  useKeyedLayoutEffect(
+    joinEffectKey([
       devicePixelRatio,
       document,
       layout,
       onPageRenderError,
       onPageRenderTiming,
       pageNumbers,
+      projectionResetKey,
       renderCache,
       renderPageNumbers,
       renderPageOverlay,
-      resetKey: projectionResetKey,
       rotation,
       scale,
       setPageSize,
-    });
-  }, [
-    devicePixelRatio,
-    document,
-    layout,
-    onPageRenderError,
-    onPageRenderTiming,
-    pageNumbers,
-    projectionResetKey,
-    renderCache,
-    renderPageNumbers,
-    renderPageOverlay,
-    rotation,
-    scale,
-    setPageSize,
-  ]);
+    ]),
+    () => {
+      projectPdfPages({
+        cache: projectionCacheRef.current,
+        canvas: projectionCanvasRef.current,
+        devicePixelRatio,
+        document,
+        layout,
+        onPageRenderError,
+        onPageRenderTiming,
+        pageNumbers,
+        renderCache,
+        renderPageNumbers,
+        renderPageOverlay,
+        resetKey: projectionResetKey,
+        rotation,
+        scale,
+        setPageSize,
+      });
+    },
+  );
 
-  React.useEffect(
+  useMountEffect(
     () => () => disposePdfPageProjectionCache(projectionCacheRef.current),
-    [],
   );
 
   return (

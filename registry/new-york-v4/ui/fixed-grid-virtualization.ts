@@ -1,11 +1,9 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
-
-const useIsomorphicLayoutEffect =
-  typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const MINIMUM_ROW_WINDOW = 32;
 const INITIAL_COLUMN_WINDOW = 8;
@@ -359,11 +357,11 @@ export function useFixedRowVirtualization({
     setMeasuredRange,
   ]);
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([measure]), () => {
     measure();
-  }, [measure]);
+  });
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([resolvedScrollElement, measure]), () => {
     const scrollElement = resolvedScrollElement;
     if (!scrollElement) return;
 
@@ -391,7 +389,7 @@ export function useFixedRowVirtualization({
       scrollElement.removeEventListener("scroll", scheduleMeasure);
       observer?.disconnect();
     };
-  }, [resolvedScrollElement, measure]);
+  });
 
   const virtualRows = React.useMemo(
     () =>
@@ -529,12 +527,20 @@ function useResolvedScrollElement({
   const [resolvedScrollElement, setResolvedScrollElement] =
     React.useState<HTMLElement | null>(scrollElement ?? scrollRef.current);
 
-  useIsomorphicLayoutEffect(() => {
-    const nextScrollElement = scrollElement ?? scrollRef.current;
-    if (resolvedScrollElement !== nextScrollElement) {
-      setResolvedScrollElement(nextScrollElement);
-    }
-  });
+  useKeyedLayoutEffect(
+    joinEffectKey([
+      scrollRef,
+      scrollRef.current,
+      scrollElement,
+      resolvedScrollElement,
+    ]),
+    () => {
+      const nextScrollElement = scrollElement ?? scrollRef.current;
+      if (resolvedScrollElement !== nextScrollElement) {
+        setResolvedScrollElement(nextScrollElement);
+      }
+    },
+  );
 
   return resolvedScrollElement;
 }
@@ -551,141 +557,144 @@ function useFixedGridViewport(
     layoutMetrics ?? null,
   );
 
-  useIsomorphicLayoutEffect(() => {
-    const previousLayoutMetrics = committedLayoutMetricsRef.current;
-    committedLayoutMetricsRef.current = layoutMetrics ?? null;
+  useKeyedLayoutEffect(
+    joinEffectKey([
+      scrollElement,
+      rowScrollStrategy,
+      layoutMetrics?.rowCount,
+      layoutMetrics?.columnCount,
+      layoutMetrics?.rowSize,
+      layoutMetrics?.columnSize,
+    ]),
+    () => {
+      const previousLayoutMetrics = committedLayoutMetricsRef.current;
+      committedLayoutMetricsRef.current = layoutMetrics ?? null;
 
-    if (!scrollElement) {
-      setViewport((current) =>
-        fixedGridViewportEqual(current, emptyFixedGridViewport)
-          ? current
-          : emptyFixedGridViewport,
-      );
-      return;
-    }
+      if (!scrollElement) {
+        setViewport((current) =>
+          fixedGridViewportEqual(current, emptyFixedGridViewport)
+            ? current
+            : emptyFixedGridViewport,
+        );
+        return;
+      }
 
-    let frame = 0;
-    let settleTimeout = 0;
-    let lastScrollTop = scrollElement.scrollTop;
-    let lastScrollLeft = scrollElement.scrollLeft;
-
-    if (
-      previousLayoutMetrics &&
-      layoutMetrics &&
-      didFixedGridItemSizeChange(previousLayoutMetrics, layoutMetrics)
-    ) {
-      const anchor = captureFixedGridReadingAnchor({
-        layoutMetrics: previousLayoutMetrics,
-        scrollElement,
-      });
-      restoreFixedGridReadingAnchor({
-        anchor,
-        layoutMetrics,
-        scrollElement,
-      });
-      lastScrollTop = scrollElement.scrollTop;
-      lastScrollLeft = scrollElement.scrollLeft;
-    }
-
-    const commitViewport = (next: FixedGridViewport) => {
-      setViewport((current) => {
-        return fixedGridViewportEqual(current, next) ? current : next;
-      });
-    };
-
-    const commitSettledViewport = () => {
-      commitViewport({
-        scrollTop: fixedViewportMetric(scrollElement.scrollTop),
-        scrollLeft: fixedViewportMetric(scrollElement.scrollLeft),
-        clientHeight: fixedViewportMetric(scrollElement.clientHeight),
-        clientWidth: fixedViewportMetric(scrollElement.clientWidth),
-        isJumpingRows: false,
-        isJumpingColumns: false,
-      });
-    };
-
-    const scheduleSettledViewport = () => {
-      if (settleTimeout) window.clearTimeout(settleTimeout);
-      settleTimeout = window.setTimeout(() => {
-        settleTimeout = 0;
-        // Scrolling has quiesced: re-read the live scroll metrics so the
-        // canonical React window matches where the grid actually came to rest,
-        // then clear jump flags so settled windows use the full overscan.
-        commitSettledViewport();
-      }, rowScrollStrategy?.settleAfterMs ?? 80);
-    };
-
-    const readViewport = () => {
-      frame = 0;
-      const scrollTop = fixedViewportMetric(scrollElement.scrollTop);
-      const scrollLeft = fixedViewportMetric(scrollElement.scrollLeft);
-      const clientHeight = fixedViewportMetric(scrollElement.clientHeight);
-      const clientWidth = fixedViewportMetric(scrollElement.clientWidth);
-      const rowDelta = Math.abs(scrollTop - lastScrollTop);
-      const columnDelta = Math.abs(scrollLeft - lastScrollLeft);
-      lastScrollTop = scrollTop;
-      lastScrollLeft = scrollLeft;
-
-      const next: FixedGridViewport = {
-        scrollTop,
-        scrollLeft,
-        clientHeight,
-        clientWidth,
-        isJumpingRows: rowDelta > clientHeight * 0.45,
-        isJumpingColumns: columnDelta > clientWidth * 0.45,
-      };
+      let frame = 0;
+      let settleTimeout = 0;
+      let lastScrollTop = scrollElement.scrollTop;
+      let lastScrollLeft = scrollElement.scrollLeft;
 
       if (
-        rowDelta > 0 &&
-        rowScrollStrategy?.handleViewport(next) === "handled"
+        previousLayoutMetrics &&
+        layoutMetrics &&
+        didFixedGridItemSizeChange(previousLayoutMetrics, layoutMetrics)
       ) {
-        scheduleSettledViewport();
-        return;
+        const anchor = captureFixedGridReadingAnchor({
+          layoutMetrics: previousLayoutMetrics,
+          scrollElement,
+        });
+        restoreFixedGridReadingAnchor({
+          anchor,
+          layoutMetrics,
+          scrollElement,
+        });
+        lastScrollTop = scrollElement.scrollTop;
+        lastScrollLeft = scrollElement.scrollLeft;
       }
 
-      commitViewport(next);
-      if (next.isJumpingRows || next.isJumpingColumns) {
-        scheduleSettledViewport();
-        return;
-      }
-      if (settleTimeout) {
-        window.clearTimeout(settleTimeout);
-        settleTimeout = 0;
-      }
-    };
+      const commitViewport = (next: FixedGridViewport) => {
+        setViewport((current) => {
+          return fixedGridViewportEqual(current, next) ? current : next;
+        });
+      };
 
-    const scheduleRead = () => {
-      if (frame) return;
-      let didRun = false;
-      const nextFrame = requestAnimationFrame(() => {
-        didRun = true;
-        readViewport();
-      });
-      frame = didRun ? 0 : nextFrame;
-    };
+      const commitSettledViewport = () => {
+        commitViewport({
+          scrollTop: fixedViewportMetric(scrollElement.scrollTop),
+          scrollLeft: fixedViewportMetric(scrollElement.scrollLeft),
+          clientHeight: fixedViewportMetric(scrollElement.clientHeight),
+          clientWidth: fixedViewportMetric(scrollElement.clientWidth),
+          isJumpingRows: false,
+          isJumpingColumns: false,
+        });
+      };
 
-    readViewport();
-    scrollElement.addEventListener("scroll", scheduleRead, { passive: true });
-    const observer =
-      typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(scheduleRead)
-        : null;
-    observer?.observe(scrollElement);
+      const scheduleSettledViewport = () => {
+        if (settleTimeout) window.clearTimeout(settleTimeout);
+        settleTimeout = window.setTimeout(() => {
+          settleTimeout = 0;
+          // Scrolling has quiesced: re-read the live scroll metrics so the
+          // canonical React window matches where the grid actually came to rest,
+          // then clear jump flags so settled windows use the full overscan.
+          commitSettledViewport();
+        }, rowScrollStrategy?.settleAfterMs ?? 80);
+      };
 
-    return () => {
-      if (frame) cancelAnimationFrame(frame);
-      if (settleTimeout) window.clearTimeout(settleTimeout);
-      scrollElement.removeEventListener("scroll", scheduleRead);
-      observer?.disconnect();
-    };
-  }, [
-    scrollElement,
-    rowScrollStrategy,
-    layoutMetrics?.rowCount,
-    layoutMetrics?.columnCount,
-    layoutMetrics?.rowSize,
-    layoutMetrics?.columnSize,
-  ]);
+      const readViewport = () => {
+        frame = 0;
+        const scrollTop = fixedViewportMetric(scrollElement.scrollTop);
+        const scrollLeft = fixedViewportMetric(scrollElement.scrollLeft);
+        const clientHeight = fixedViewportMetric(scrollElement.clientHeight);
+        const clientWidth = fixedViewportMetric(scrollElement.clientWidth);
+        const rowDelta = Math.abs(scrollTop - lastScrollTop);
+        const columnDelta = Math.abs(scrollLeft - lastScrollLeft);
+        lastScrollTop = scrollTop;
+        lastScrollLeft = scrollLeft;
+
+        const next: FixedGridViewport = {
+          scrollTop,
+          scrollLeft,
+          clientHeight,
+          clientWidth,
+          isJumpingRows: rowDelta > clientHeight * 0.45,
+          isJumpingColumns: columnDelta > clientWidth * 0.45,
+        };
+
+        if (
+          rowDelta > 0 &&
+          rowScrollStrategy?.handleViewport(next) === "handled"
+        ) {
+          scheduleSettledViewport();
+          return;
+        }
+
+        commitViewport(next);
+        if (next.isJumpingRows || next.isJumpingColumns) {
+          scheduleSettledViewport();
+          return;
+        }
+        if (settleTimeout) {
+          window.clearTimeout(settleTimeout);
+          settleTimeout = 0;
+        }
+      };
+
+      const scheduleRead = () => {
+        if (frame) return;
+        let didRun = false;
+        const nextFrame = requestAnimationFrame(() => {
+          didRun = true;
+          readViewport();
+        });
+        frame = didRun ? 0 : nextFrame;
+      };
+
+      readViewport();
+      scrollElement.addEventListener("scroll", scheduleRead, { passive: true });
+      const observer =
+        typeof ResizeObserver !== "undefined"
+          ? new ResizeObserver(scheduleRead)
+          : null;
+      observer?.observe(scrollElement);
+
+      return () => {
+        if (frame) cancelAnimationFrame(frame);
+        if (settleTimeout) window.clearTimeout(settleTimeout);
+        scrollElement.removeEventListener("scroll", scheduleRead);
+        observer?.disconnect();
+      };
+    },
+  );
 
   return viewport;
 }

@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import React, { useCallback, useRef, useState } from "react";
 import type { JSONSchema7 } from "json-schema";
 
@@ -43,6 +41,8 @@ import {
   useSheetOptionsStore,
   type ColumnWidth,
 } from "./table-options-store";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 interface SingleFileVirtualizedTableProps {
   headerNodes: JsonTableHeaderNode[];
@@ -286,9 +286,17 @@ export const SingleFileVirtualizedTable =
           scrollRef,
         });
 
-      React.useLayoutEffect(() => {
-        rowPolicy.invalidateRows();
-      }, [rowPolicy, virtualRows, renderedColumnWindow, projectedRows]);
+      useKeyedLayoutEffect(
+        joinEffectKey([
+          rowPolicy,
+          virtualRows,
+          renderedColumnWindow,
+          projectedRows,
+        ]),
+        () => {
+          rowPolicy.invalidateRows();
+        },
+      );
       recordJsonTableRender("SingleFileVirtualizedTable", document.id, {
         columnCount: schemaVisibleColumns.length,
         primitiveActiveFieldPath:

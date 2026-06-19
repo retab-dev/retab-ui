@@ -8,9 +8,8 @@ import type { FileSystemPierreExpansion } from "./file-system-pierre-expansion";
 import type { FileSystemPierreInput } from "./file-system-pierre-input";
 import type { FileSystemPierreOrder } from "./file-system-pierre-order";
 import { createFileSystemListContinuityIdentity } from "./file-system-list-continuity";
-
-const useIsoLayoutEffect =
-  typeof window === "undefined" ? React.useEffect : React.useLayoutEffect;
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export function useResetFileSystemPierreModel({
   currentPath,
@@ -33,38 +32,41 @@ export function useResetFileSystemPierreModel({
   order: FileSystemPierreOrder;
   selectedPath: string | null;
 }) {
-  useIsoLayoutEffect(() => {
-    const identity = createFileSystemPierreListContinuityIdentity({
+  useKeyedLayoutEffect(
+    joinEffectKey([
       currentPath,
       decorationVersion,
+      expansion,
       hasSemanticQuery,
       input,
-    });
-    const commands = listContinuity.dispatch({
-      identity,
-      type: "identity.requested",
-    });
-
-    for (const command of commands) {
-      expansion.runListContinuityCommand({
-        command,
-        listContinuity,
-        model,
-        order,
-        selectedPath,
+      listContinuity,
+      model,
+      order,
+      selectedPath,
+    ]),
+    () => {
+      const identity = createFileSystemPierreListContinuityIdentity({
+        currentPath,
+        decorationVersion,
+        hasSemanticQuery,
+        input,
       });
-    }
-  }, [
-    currentPath,
-    decorationVersion,
-    expansion,
-    hasSemanticQuery,
-    input,
-    listContinuity,
-    model,
-    order,
-    selectedPath,
-  ]);
+      const commands = listContinuity.dispatch({
+        identity,
+        type: "identity.requested",
+      });
+
+      for (const command of commands) {
+        expansion.runListContinuityCommand({
+          command,
+          listContinuity,
+          model,
+          order,
+          selectedPath,
+        });
+      }
+    },
+  );
 }
 
 function createFileSystemPierreListContinuityIdentity({

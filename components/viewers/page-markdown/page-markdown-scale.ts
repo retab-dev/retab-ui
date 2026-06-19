@@ -1,8 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 
 import { PAGE_MARKDOWN_PAGE_WIDTH } from "./page-markdown-layout";
 
@@ -56,9 +56,12 @@ export function usePageMarkdownScale({
     normalizedDefaultScale,
   );
 
-  React.useEffect(() => {
-    setManualScale(normalizedDefaultScale);
-  }, [normalizedDefaultScale, resetKey]);
+  useKeyedMountEffect(
+    `page-markdown-scale:${resetKey ?? ""}:${normalizedDefaultScale ?? "fit"}`,
+    () => {
+      setManualScale(normalizedDefaultScale);
+    },
+  );
 
   const fitScale =
     containerWidth && Number.isFinite(containerWidth)

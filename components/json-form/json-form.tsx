@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { type SubmitHandler, type UseFormReturn } from "react-hook-form";
 
@@ -45,6 +43,8 @@ import {
   SourceLinkShell,
   type JsonFormSourceLink,
 } from "@/components/json-form/source-link";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export type { JsonFormTextInput } from "@/components/json-form/scalar-control";
 
@@ -268,18 +268,21 @@ export function JsonForm({
   );
   const hasEncodedInitialValuesRef = React.useRef(false);
 
-  React.useEffect(() => {
-    if (!usesEncodedPaths || hasEncodedInitialValuesRef.current) {
-      return;
-    }
-    hasEncodedInitialValuesRef.current = true;
-    form.reset(
-      encodeJsonFormValue(expandedSchema, form.getValues()) as Record<
-        string,
-        unknown
-      >,
-    );
-  }, [expandedSchema, form, usesEncodedPaths]);
+  useKeyedMountEffect(
+    joinEffectKey([expandedSchema, form, usesEncodedPaths]),
+    () => {
+      if (!usesEncodedPaths || hasEncodedInitialValuesRef.current) {
+        return;
+      }
+      hasEncodedInitialValuesRef.current = true;
+      form.reset(
+        encodeJsonFormValue(expandedSchema, form.getValues()) as Record<
+          string,
+          unknown
+        >,
+      );
+    },
+  );
 
   const handleSubmit = React.useCallback(
     (event: React.FormEvent) => {

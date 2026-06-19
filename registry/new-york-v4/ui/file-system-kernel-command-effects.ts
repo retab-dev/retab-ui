@@ -1,12 +1,12 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import type { FileSystemFolderTask } from "./file-system-folder-task";
 import type { FileSystemKernelCommand } from "./file-system-kernel";
 import type { FileSystemFileEntry, FileSystemProps } from "./file-system-types";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export type FileSystemKernelCallbacks = {
   onFileCommand: (file: FileSystemFileEntry) => void;
@@ -27,32 +27,35 @@ export function useFileSystemKernelCommandEffects({
   flushVersion: number;
   folderTask: FileSystemFolderTask;
 }) {
-  React.useEffect(() => {
-    const commands = consumeCommands();
+  useKeyedMountEffect(
+    joinEffectKey([callbacks, consumeCommands, flushVersion, folderTask]),
+    () => {
+      const commands = consumeCommands();
 
-    if (!commands.length) return;
+      if (!commands.length) return;
 
-    for (const command of commands) {
-      switch (command.type) {
-        case "callback.pathChanged":
-          callbacks.onPathChange?.(command.path);
-          break;
-        case "callback.queryChanged":
-          callbacks.onQueryChange?.(command.query);
-          break;
-        case "callback.viewChanged":
-          callbacks.onViewChange?.(command.view);
-          break;
-        case "callback.selectionChanged":
-          callbacks.onSelectionChange?.(command.entry);
-          break;
-        case "file.open":
-          callbacks.onFileCommand(command.file);
-          break;
-        case "folder.ensure":
-          folderTask.runFolderCommand(command);
-          break;
+      for (const command of commands) {
+        switch (command.type) {
+          case "callback.pathChanged":
+            callbacks.onPathChange?.(command.path);
+            break;
+          case "callback.queryChanged":
+            callbacks.onQueryChange?.(command.query);
+            break;
+          case "callback.viewChanged":
+            callbacks.onViewChange?.(command.view);
+            break;
+          case "callback.selectionChanged":
+            callbacks.onSelectionChange?.(command.entry);
+            break;
+          case "file.open":
+            callbacks.onFileCommand(command.file);
+            break;
+          case "folder.ensure":
+            folderTask.runFolderCommand(command);
+            break;
+        }
       }
-    }
-  }, [callbacks, consumeCommands, flushVersion, folderTask]);
+    },
+  );
 }

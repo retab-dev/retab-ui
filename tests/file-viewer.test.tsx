@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs";
 import * as React from "react";
@@ -13,6 +11,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import { inferCsvDialect } from "@/lib/csv";
 import { createViewerResource } from "@/lib/viewer-resource";
 import * as FileViewerModule from "@/registry/new-york-v4/ui/file-viewer";
@@ -36,6 +35,8 @@ import {
 import { ViewerFallback } from "@/registry/new-york-v4/ui/file-viewer-fallback";
 import { createTextResourceCache } from "@/registry/new-york-v4/ui/file-viewer-text-resource";
 import { useViewerControlsRegistration } from "@/registry/new-york-v4/ui/viewer-controls";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const docxRouteMock = vi.hoisted(() => ({
   props: [] as Array<Record<string, unknown>>,
@@ -611,13 +612,13 @@ describe("FileViewer detection helpers", () => {
     function RegisterControls() {
       const registerControls = useViewerControlsRegistration();
 
-      React.useEffect(() => {
+      useMountEffect(() => {
         registerControls?.({
           position: { kind: "page", current: 2, total: 5 },
           downloads: [],
         });
         return () => registerControls?.(null);
-      }, [registerControls]);
+      });
 
       return null;
     }
@@ -642,7 +643,7 @@ describe("FileViewer detection helpers", () => {
     function RegisterControls() {
       const registerControls = useViewerControlsRegistration();
 
-      React.useEffect(() => {
+      useMountEffect(() => {
         registerControls?.({
           title: "Renderer title",
           subtitle: "Renderer subtitle",
@@ -650,7 +651,7 @@ describe("FileViewer detection helpers", () => {
           downloads: [],
         });
         return () => registerControls?.(null);
-      }, [registerControls]);
+      });
 
       return null;
     }
@@ -677,13 +678,13 @@ describe("FileViewer detection helpers", () => {
     function RegisterControls() {
       const registerControls = useViewerControlsRegistration();
 
-      React.useEffect(() => {
+      useMountEffect(() => {
         registerControls?.({
           position: { kind: "page", current: 2, total: 5 },
           downloads: [],
         });
         return () => registerControls?.(null);
-      }, [registerControls]);
+      });
 
       return null;
     }
@@ -717,13 +718,13 @@ describe("FileViewer detection helpers", () => {
       const [current, setCurrent] = React.useState(1);
       const registerControls = useViewerControlsRegistration();
 
-      React.useEffect(() => {
+      useKeyedMountEffect(joinEffectKey([current, registerControls]), () => {
         registerControls?.({
           position: { kind: "page", current, total: 5 },
           downloads: [],
         });
         return () => registerControls?.(null);
-      }, [current, registerControls]);
+      });
 
       return <button onClick={() => setCurrent(2)}>Next page</button>;
     }
@@ -752,13 +753,13 @@ describe("FileViewer detection helpers", () => {
     function RegisterControls({ current }: { current: number }) {
       const registerControls = useViewerControlsRegistration();
 
-      React.useEffect(() => {
+      useKeyedMountEffect(joinEffectKey([current, registerControls]), () => {
         registerControls?.({
           position: { kind: "page", current, total: 5 },
           downloads: [],
         });
         return () => registerControls?.(null);
-      }, [current, registerControls]);
+      });
 
       return null;
     }
@@ -789,13 +790,13 @@ describe("FileViewer detection helpers", () => {
     function RegisterControls() {
       const registerControls = useViewerControlsRegistration();
 
-      React.useEffect(() => {
+      useMountEffect(() => {
         registerControls?.({
           position: { kind: "page", current: 2, total: 5 },
           downloads: [],
         });
         return () => registerControls?.(null);
-      }, [registerControls]);
+      });
 
       return null;
     }

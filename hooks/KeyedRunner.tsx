@@ -1,6 +1,6 @@
 "use client";
 
-import { useMountEffect } from "@/hooks/useMountEffect";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 /**
  * Runs `effect` exactly once per mount. Parent supplies a `key` that changes

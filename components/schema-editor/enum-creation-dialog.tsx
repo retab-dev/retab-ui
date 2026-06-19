@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { useState } from "react";
 import { PlusIcon, X } from "lucide-react";
@@ -36,17 +34,19 @@ function EnumCreationDialogContent({
 }: EnumCreationDialogContentProps) {
   const [enumValues, setEnumValues] = useState<string[]>([]); // Start with no values
   const [newValue, setNewValue] = useState("");
-  const [pendingFocusIndex, setPendingFocusIndex] = useState<number | null>(
-    null,
-  );
   const enumInputRefs = React.useRef<Array<HTMLInputElement | null>>([]);
+  const pendingFocusIndexRef = React.useRef<number | null>(null);
 
-  React.useEffect(() => {
-    if (pendingFocusIndex === null) return;
-
-    enumInputRefs.current[pendingFocusIndex]?.focus();
-    setPendingFocusIndex(null);
-  }, [enumValues, pendingFocusIndex]);
+  const setEnumInputRef = React.useCallback(
+    (index: number, input: HTMLInputElement | null) => {
+      enumInputRefs.current[index] = input;
+      if (input && pendingFocusIndexRef.current === index) {
+        pendingFocusIndexRef.current = null;
+        input.focus();
+      }
+    },
+    [],
+  );
 
   const handleAddValue = () => {
     if (newValue.trim()) {
@@ -56,7 +56,7 @@ function EnumCreationDialogContent({
   };
 
   const handleAddFromEmpty = () => {
-    setPendingFocusIndex(enumValues.length);
+    pendingFocusIndexRef.current = enumValues.length;
     setEnumValues((prev) => [...prev, ""]);
   };
 
@@ -104,7 +104,7 @@ function EnumCreationDialogContent({
                   <Input
                     value={value}
                     ref={(input) => {
-                      enumInputRefs.current[index] = input;
+                      setEnumInputRef(index, input);
                     }}
                     onChange={(e) => handleEditValue(index, e.target.value)}
                     onKeyDown={(e) => {

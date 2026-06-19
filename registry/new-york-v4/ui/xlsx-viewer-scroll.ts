@@ -1,11 +1,12 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import {
   resolveXlsxSheetChange,
   type XlsxSheetMeta,
 } from "@/lib/xlsx-workbook";
+
+import { joinEffectKey } from "@/lib/effect-key";
 
 export interface PublicXlsxCellRef {
   sheet: number;
@@ -141,11 +142,20 @@ export function useXlsxScrollController({
     [activateSheet, activeSheetIndex, sheets],
   );
 
-  React.useEffect(() => {
+  const pendingScrollKey =
+    pendingScrollTarget && sheets
+      ? joinEffectKey([
+          "xlsx-pending-scroll",
+          issueLoadedScrollTarget,
+          pendingScrollTarget,
+          sheets,
+        ])
+      : null;
+  useKeyedMountEffect(pendingScrollKey, () => {
     if (!pendingScrollTarget || !sheets) return;
     setPendingScrollTarget(null);
     issueLoadedScrollTarget(pendingScrollTarget);
-  }, [issueLoadedScrollTarget, pendingScrollTarget, sheets]);
+  });
 
   const scrollToCell = React.useCallback(
     (

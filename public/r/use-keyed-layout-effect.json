@@ -1,0 +1,15 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "use-keyed-layout-effect",
+  "title": "Use Keyed Layout Effect",
+  "description": "A key-driven layout-timed effect hook for DOM measurement and scroll/focus lifecycles.",
+  "files": [
+    {
+      "path": "hooks/use-keyed-layout-effect.ts",
+      "content": "\"use client\";\n\nimport { useEffect, useLayoutEffect } from \"react\";\n\nconst useIsomorphicLayoutEffect =\n  typeof window === \"undefined\" ? useEffect : useLayoutEffect;\n\n/**\n * Layout-timed variant for DOM measurement/scroll/focus lifecycles that must\n * run before paint. Prefer `use-keyed-mount-effect` for ordinary post-commit\n * effects.\n */\nexport function useKeyedLayoutEffect(\n  key: string | null,\n  effect: () => void | (() => void),\n) {\n  useIsomorphicLayoutEffect(() => {\n    if (key === null) return;\n    return effect();\n    // The effect closure is intentionally captured at each key change.\n  }, [key]);\n}\n",
+      "type": "registry:hook",
+      "target": "@hooks/use-keyed-layout-effect.ts"
+    }
+  ],
+  "type": "registry:hook"
+}

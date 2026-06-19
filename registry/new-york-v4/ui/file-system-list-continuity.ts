@@ -1,8 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export type FileSystemListContinuityPhase =
   | "applying"
@@ -360,17 +360,17 @@ export function useFileSystemListContinuity<TRuntimeInput = unknown>({
     [],
   );
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([currentPath, dispatch]), () => {
     dispatch({ path: currentPath, type: "domain.pathChanged" });
-  }, [currentPath, dispatch]);
+  });
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([dispatch, search]), () => {
     dispatch({ search, type: "domain.queryChanged" });
-  }, [dispatch, search]);
+  });
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([dispatch, selectedPath]), () => {
     dispatch({ path: selectedPath, type: "domain.selectionChanged" });
-  }, [dispatch, selectedPath]);
+  });
 
   return React.useMemo(() => ({ dispatch, state }), [dispatch, state]);
 }

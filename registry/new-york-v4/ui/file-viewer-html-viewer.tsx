@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -15,6 +13,8 @@ import { loadTextResource } from "./file-viewer-text-resource";
 import { isAbortError } from "./viewer-abortable-request";
 import { useViewerControlsRegistration } from "./viewer-controls";
 import { useZoom, ZoomActions } from "./viewer-zoom";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 type HtmlLoadState =
   | { status: "loading"; key: unknown }
@@ -114,40 +114,43 @@ function HtmlFileResource({
     key: contentKey,
   });
 
-  React.useEffect(() => {
-    let active = true;
-    const controller = new AbortController();
-    const abortLocal = () => controller.abort();
-    setState({ status: "loading", key: contentKey });
+  useKeyedMountEffect(
+    joinEffectKey([content, contentKey, descriptorSignal, resource.fileName]),
+    () => {
+      let active = true;
+      const controller = new AbortController();
+      const abortLocal = () => controller.abort();
+      setState({ status: "loading", key: contentKey });
 
-    if (descriptorSignal.aborted) {
-      abortLocal();
-    } else {
-      descriptorSignal.addEventListener("abort", abortLocal, { once: true });
-    }
+      if (descriptorSignal.aborted) {
+        abortLocal();
+      } else {
+        descriptorSignal.addEventListener("abort", abortLocal, { once: true });
+      }
 
-    loadTextResource({
-      content,
-      fileName: resource.fileName,
-      signal: controller.signal,
-    }).then(
-      (html) => {
-        if (active && !controller.signal.aborted) {
-          setState({ status: "loaded", key: contentKey, html });
-        }
-      },
-      (error: unknown) => {
-        if (!active || isAbortError(error)) return;
-        setState({ status: "error", key: contentKey, error });
-      },
-    );
+      loadTextResource({
+        content,
+        fileName: resource.fileName,
+        signal: controller.signal,
+      }).then(
+        (html) => {
+          if (active && !controller.signal.aborted) {
+            setState({ status: "loaded", key: contentKey, html });
+          }
+        },
+        (error: unknown) => {
+          if (!active || isAbortError(error)) return;
+          setState({ status: "error", key: contentKey, error });
+        },
+      );
 
-    return () => {
-      active = false;
-      descriptorSignal.removeEventListener("abort", abortLocal);
-      abortLocal();
-    };
-  }, [content, contentKey, descriptorSignal, resource.fileName]);
+      return () => {
+        active = false;
+        descriptorSignal.removeEventListener("abort", abortLocal);
+        abortLocal();
+      };
+    },
+  );
 
   if (state.key !== contentKey) {
     return (
@@ -221,20 +224,23 @@ function useHtmlControlsRegistration({
 }) {
   const onControlsChange = useViewerControlsRegistration();
 
-  React.useEffect(() => {
-    if (!onControlsChange) return;
+  useKeyedMountEffect(
+    joinEffectKey([onControlsChange, reset, scale, zoom]),
+    () => {
+      if (!onControlsChange) return;
 
-    onControlsChange({
-      zoom: {
-        scale,
-        onZoomOut: () => zoom(1 / 1.2),
-        onZoomIn: () => zoom(1.2),
-        onReset: reset,
-      },
-    });
+      onControlsChange({
+        zoom: {
+          scale,
+          onZoomOut: () => zoom(1 / 1.2),
+          onZoomIn: () => zoom(1.2),
+          onReset: reset,
+        },
+      });
 
-    return () => onControlsChange(null);
-  }, [onControlsChange, reset, scale, zoom]);
+      return () => onControlsChange(null);
+    },
+  );
 }
 
 function HtmlContentToolbar({

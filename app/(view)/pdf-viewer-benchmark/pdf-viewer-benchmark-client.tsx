@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import {
@@ -10,6 +8,8 @@ import {
   type PdfViewerHandle,
   type PdfViewerPerformanceOptions,
 } from "@/components/ui/pdf-viewer";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const BENCHMARK_PAGE_COUNT = 585;
 const BENCHMARK_PDF_SRC = "/samples/big-911-report.pdf";
@@ -80,7 +80,7 @@ export function PdfViewerBenchmarkClient({
   const viewerRef = React.useRef<PdfViewerHandle>(null);
   const [resultJson, setResultJson] = React.useState("");
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([performanceOptions, variant]), () => {
     clearPdfViewerBenchmarkRenderTimings();
     const benchmark = {
       jumpPages: BENCHMARK_JUMP_PAGES,
@@ -108,7 +108,7 @@ export function PdfViewerBenchmarkClient({
         window.__pdfViewerBenchmark = undefined;
       }
     };
-  }, [performanceOptions, variant]);
+  });
 
   return (
     <main className="h-svh min-h-0" data-testid="pdf-viewer-benchmark">

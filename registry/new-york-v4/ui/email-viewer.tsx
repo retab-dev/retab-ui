@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { FileText, Layers3, Mail, Paperclip } from "lucide-react";
 
@@ -38,6 +36,8 @@ import {
   ViewerSidebarTrigger,
   ViewerSurface,
 } from "./viewer";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export type {
   EmailAddress,
@@ -193,11 +193,14 @@ function EmailViewerProviderInternal({
   );
   const inlineResourceUrls = useEmailInlineResourceUrls(inlineResourceScope);
 
-  React.useEffect(() => {
-    if (controlled) return;
-    if (findMimeNodeByPath(rootNode, internalSelectedPath)) return;
-    setInternalSelectedPath(defaultPath);
-  }, [controlled, defaultPath, internalSelectedPath, rootNode]);
+  useKeyedMountEffect(
+    joinEffectKey([controlled, defaultPath, internalSelectedPath, rootNode]),
+    () => {
+      if (controlled) return;
+      if (findMimeNodeByPath(rootNode, internalSelectedPath)) return;
+      setInternalSelectedPath(defaultPath);
+    },
+  );
 
   const selectPart = React.useCallback(
     (node: MimePartNode) => {

@@ -1,13 +1,13 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import type { ViewerSource } from "@/lib/viewer-source";
 
 import { createFileSystemAsyncTaskRuntime } from "./file-system-async-task";
 import type { FileSystemFileEntry } from "./file-system-types";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export type FileSystemSourceResolver = (
   file: FileSystemFileEntry,
@@ -57,49 +57,53 @@ export function useFileSystemSelectionSourceTask(
   );
   const retry = React.useCallback(() => setRetryKey((key) => key + 1), []);
 
-  React.useEffect(() => {
-    if (!file) {
-      setState({ source: null, status: "idle" });
-      return;
-    }
-    if (file.source) {
-      setState({ source: file.source, status: "ready" });
-      return;
-    }
-    if (!resolveFileSource) {
-      setState({ source: null, status: "unavailable" });
-      return;
-    }
+  useKeyedMountEffect(
+    joinEffectKey([file, resolveFileSource, retryKey]),
+    () => {
+      if (!file) {
+        setState({ source: null, status: "idle" });
+        return;
+      }
+      if (file.source) {
+        setState({ source: file.source, status: "ready" });
+        return;
+      }
+      if (!resolveFileSource) {
+        setState({ source: null, status: "unavailable" });
+        return;
+      }
 
-    const taskRuntime = taskRuntimeRef.current;
-    const { promise, task } = taskRuntime.start({ file, retryKey });
+      const taskRuntime = taskRuntimeRef.current;
+      const { promise, task } = taskRuntime.start({ file, retryKey });
 
-    setState({ source: null, status: "loading" });
-    void resolveFileSource(file, task.abortController.signal)
-      .then((source) => taskRuntime.succeed(task, source))
-      .catch((error) => taskRuntime.fail(task, error));
+      setState({ source: null, status: "loading" });
+      void resolveFileSource(file, task.abortController.signal)
+        .then((source) => taskRuntime.succeed(task, source))
+        .catch((error) => taskRuntime.fail(task, error));
 
-    void promise
-      .then((source) => {
-        if (task.abortController.signal.aborted) return;
-        setState(
-          source
-            ? { source, status: "ready" }
-            : { source: null, status: "unavailable" },
-        );
-      })
-      .catch((error) => {
-        if (task.abortController.signal.aborted) return;
+      void promise
+        .then((source) => {
+          if (task.abortController.signal.aborted) return;
+          setState(
+            source
+              ? { source, status: "ready" }
+              : { source: null, status: "unavailable" },
+          );
+        })
+        .catch((error) => {
+          if (task.abortController.signal.aborted) return;
 
-        setState({
-          error: selectionSourceErrorMessage(error),
-          source: null,
-          status: "error",
+          setState({
+            error: selectionSourceErrorMessage(error),
+            source: null,
+            status: "error",
+          });
         });
-      });
 
-    return () => taskRuntime.abort(task.key, "preview source task superseded");
-  }, [file, resolveFileSource, retryKey]);
+      return () =>
+        taskRuntime.abort(task.key, "preview source task superseded");
+    },
+  );
 
   return { ...state, retry };
 }

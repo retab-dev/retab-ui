@@ -1,8 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 
 import {
   clamp,
@@ -180,13 +180,14 @@ export function usePptxVisibleSlide({
   const lastReportedSlide = React.useRef(0);
   const lastVisibleSlideCallback = React.useRef(onVisibleSlideChange);
   const committedLayoutRef = React.useRef(layout);
+  const layoutEffectKey = getPptxSlideLayoutKey(layout);
 
   if (lastVisibleSlideCallback.current !== onVisibleSlideChange) {
     lastVisibleSlideCallback.current = onVisibleSlideChange;
     lastReportedSlide.current = 0;
   }
 
-  React.useLayoutEffect(() => {
+  useKeyedMountEffect(layoutEffectKey, () => {
     const previousLayout = committedLayoutRef.current;
     committedLayoutRef.current = layout;
 
@@ -199,7 +200,7 @@ export function usePptxVisibleSlide({
     if (!anchor) return;
 
     restorePptxReadingAnchor(layout, viewport, anchor);
-  }, [layout]);
+  });
 
   const handleScroll = React.useCallback(() => {
     const viewport = scrollViewportRef.current;
@@ -222,6 +223,18 @@ export function usePptxVisibleSlide({
   }, [layout, onScrollProgressChange, onVisibleSlideChange]);
 
   return { currentSlide, handleScroll, scrollViewportRef };
+}
+
+function getPptxSlideLayoutKey(layout: PptxSlideLayout) {
+  return [
+    layout.slideCount,
+    layout.slideTopPadding,
+    layout.slideGap,
+    layout.slideHeight,
+    layout.slideWidth,
+    layout.slideStride,
+    layout.totalHeight,
+  ].join("\u0000");
 }
 
 function capturePptxReadingAnchor(

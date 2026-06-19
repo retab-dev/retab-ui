@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import type { JSONSchema7 } from "json-schema";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import { cn } from "@/lib/utils";
 import { CodeViewer, type CodeViewerHandle } from "@/components/ui/code-viewer";
@@ -50,6 +49,8 @@ import {
   viewportMetrics,
   waitForScroller,
 } from "./scrollbench-runner";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 type ViewportHandle =
   | PdfViewerHandle
@@ -293,7 +294,7 @@ export function ScrollBenchClient({
 
   controllerRef.current = { getScroller, run, runMany, runScenario };
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([viewer]), () => {
     runAbortRef.current?.abort();
     viewportHandleRef.current = null;
     setResult(null);
@@ -301,9 +302,9 @@ export function ScrollBenchClient({
     setError(null);
     setStatus("idle");
     writeViewerToUrl(viewer);
-  }, [viewer]);
+  });
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([pptxFile, viewer]), () => {
     if (viewer !== "pptx") return;
     runAbortRef.current?.abort();
     sourceLoadTimingRef.current = null;
@@ -311,9 +312,9 @@ export function ScrollBenchClient({
     setRepeatResult(null);
     setError(null);
     setStatus("idle");
-  }, [pptxFile, viewer]);
+  });
 
-  React.useEffect(() => {
+  useMountEffect(() => {
     const controller: ScrollBenchController = {
       getScroller: () => controllerRef.current?.getScroller() ?? null,
       run: () =>
@@ -331,9 +332,9 @@ export function ScrollBenchClient({
     return () => {
       if (window.__scrollbench === controller) delete window.__scrollbench;
     };
-  }, []);
+  });
 
-  React.useEffect(() => {
+  useMountEffect(() => {
     if (autorunStartedRef.current) return;
     autorunStartedRef.current = true;
 
@@ -346,7 +347,7 @@ export function ScrollBenchClient({
         Promise.resolve();
       void runPromise.catch(() => undefined);
     }
-  }, []);
+  });
 
   return (
     <main

@@ -1,14 +1,10 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useRef } from "react";
 
 export function useRefCallback<TArgs extends unknown[], TResult>(
   callback: (...args: TArgs) => TResult,
 ): (...args: TArgs) => TResult {
   const ref = useRef(callback);
-  useEffect(() => {
-    ref.current = callback;
-  }, [callback]);
+  ref.current = callback;
   return useCallback((...args: TArgs) => ref.current(...args), []);
 }
 

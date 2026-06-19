@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import { getEffectiveType } from "@/components/schema-editor/draft/draft-node-edits";
@@ -19,6 +17,8 @@ import type {
   PropertyFormViewModel,
 } from "@/components/schema-editor/property-form/types";
 import { validatePropertyDraft } from "@/components/schema-editor/property-form/validation";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 type PropertyFormControllerInput = Omit<
   PropertyFormProps,
@@ -47,11 +47,11 @@ export function usePropertyFormController({
   const propertyDraftRef = React.useRef(initialPropertyDraft);
   const [draftResetVersion, setDraftResetVersion] = React.useState(0);
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([initialPropertyDraft]), () => {
     propertyDraftRef.current = initialPropertyDraft;
     setPropertyDraft(initialPropertyDraft);
     setDraftResetVersion((version) => version + 1);
-  }, [initialPropertyDraft]);
+  });
 
   const capabilities = React.useMemo(() => {
     if (mode !== "editable") {

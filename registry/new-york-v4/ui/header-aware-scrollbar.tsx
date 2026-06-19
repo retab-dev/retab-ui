@@ -1,8 +1,9 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export function HeaderAwareScrollbar({
   scrollRef,
@@ -56,30 +57,33 @@ export function HeaderAwareScrollbar({
     frame.current = requestAnimationFrame(measure);
   }, [measure]);
 
-  React.useEffect(() => {
-    if (!scrollElement) {
-      hideThumb(setIsVisible);
-      return;
-    }
-    measure();
-    scrollElement.addEventListener("scroll", scheduleMeasure, {
-      passive: true,
-    });
-    const observer =
-      typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(scheduleMeasure)
-        : null;
-    observer?.observe(scrollElement);
-    return () => {
-      if (frame.current) cancelAnimationFrame(frame.current);
-      scrollElement.removeEventListener("scroll", scheduleMeasure);
-      observer?.disconnect();
-    };
-  }, [scrollElement, measure, scheduleMeasure]);
+  useKeyedMountEffect(
+    joinEffectKey([scrollElement, measure, scheduleMeasure]),
+    () => {
+      if (!scrollElement) {
+        hideThumb(setIsVisible);
+        return;
+      }
+      measure();
+      scrollElement.addEventListener("scroll", scheduleMeasure, {
+        passive: true,
+      });
+      const observer =
+        typeof ResizeObserver !== "undefined"
+          ? new ResizeObserver(scheduleMeasure)
+          : null;
+      observer?.observe(scrollElement);
+      return () => {
+        if (frame.current) cancelAnimationFrame(frame.current);
+        scrollElement.removeEventListener("scroll", scheduleMeasure);
+        observer?.disconnect();
+      };
+    },
+  );
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([isVisible]), () => {
     applyThumbStyle(thumbRef.current, thumbMetrics.current);
-  }, [isVisible]);
+  });
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!scrollElement) return;
@@ -140,12 +144,15 @@ function useResolvedScrollbarElement(
 ) {
   const [scrollElement, setScrollElement] = React.useState(scrollRef.current);
 
-  React.useLayoutEffect(() => {
-    const nextScrollElement = scrollRef.current;
-    if (scrollElement !== nextScrollElement) {
-      setScrollElement(nextScrollElement);
-    }
-  });
+  useKeyedLayoutEffect(
+    joinEffectKey([scrollRef, scrollRef.current, scrollElement]),
+    () => {
+      const nextScrollElement = scrollRef.current;
+      if (scrollElement !== nextScrollElement) {
+        setScrollElement(nextScrollElement);
+      }
+    },
+  );
 
   return scrollElement;
 }

@@ -1,7 +1,7 @@
 import React, { useContext, useState } from "react";
 import type { JSONSchema7 } from "json-schema";
 
-import { useMountEffect } from "@/hooks/useMountEffect";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import type { JsonTableSchemaEditMode } from "@/components/json-table/json-table-edit-modes";
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes";
 import { deleteSchemaProperty } from "@/components/json-table/lib/schema-mutations";

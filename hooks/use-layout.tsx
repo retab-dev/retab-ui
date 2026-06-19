@@ -1,8 +1,9 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+import { useMountEffect } from "@/hooks/use-mount-effect";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 type Layout = "fixed" | "full";
 
@@ -111,32 +112,38 @@ const Layout = ({
   );
 
   // localStorage event handling
-  React.useEffect(() => {
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key !== storageKey) return;
+  useKeyedMountEffect(
+    joinEffectKey([setLayout, storageKey, defaultLayout]),
+    () => {
+      const handleStorage = (e: StorageEvent) => {
+        if (e.key !== storageKey) return;
 
-      if (!e.newValue) {
-        setLayout(defaultLayout);
-      } else if (e.newValue === "fixed" || e.newValue === "full") {
-        setLayoutState(e.newValue);
-      }
-    };
+        if (!e.newValue) {
+          setLayout(defaultLayout);
+        } else if (e.newValue === "fixed" || e.newValue === "full") {
+          setLayoutState(e.newValue);
+        }
+      };
 
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, [setLayout, storageKey, defaultLayout]);
+      window.addEventListener("storage", handleStorage);
+      return () => window.removeEventListener("storage", handleStorage);
+    },
+  );
 
   // Apply layout on mount and when it changes
-  React.useEffect(() => {
-    const currentLayout = forcedLayout ?? layout;
-    applyLayout(currentLayout);
-  }, [forcedLayout, layout, applyLayout]);
+  useKeyedMountEffect(
+    joinEffectKey([forcedLayout, layout, applyLayout]),
+    () => {
+      const currentLayout = forcedLayout ?? layout;
+      applyLayout(currentLayout);
+    },
+  );
 
   // Prevent layout changes during hydration
   const [isHydrated, setIsHydrated] = React.useState(false);
-  React.useEffect(() => {
+  useMountEffect(() => {
     setIsHydrated(true);
-  }, []);
+  });
 
   const providerValue = React.useMemo(
     () => ({

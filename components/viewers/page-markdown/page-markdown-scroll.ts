@@ -1,8 +1,9 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import {
   findPageMarkdownPageByOffset,
@@ -22,7 +23,7 @@ export function usePageMarkdownScroll({
   onScrollProgressChange?: (progress: number) => void;
   onVisiblePageChange?: (pageNumber: number) => void;
   pageCount: number;
-  resetKey?: unknown;
+  resetKey?: string;
 }) {
   const viewportElementRef = React.useRef<HTMLDivElement | null>(null);
   const lastReportedPageNumberRef = React.useRef(0);
@@ -101,9 +102,7 @@ export function usePageMarkdownScroll({
     resetKey,
   ]);
   const measureScrollRef = React.useRef(measureScroll);
-  React.useLayoutEffect(() => {
-    measureScrollRef.current = measureScroll;
-  }, [measureScroll]);
+  measureScrollRef.current = measureScroll;
 
   const handleScroll = React.useCallback(() => {
     if (scrollFrameRef.current) return;
@@ -120,7 +119,7 @@ export function usePageMarkdownScroll({
     }
   }, []);
 
-  React.useEffect(() => {
+  useKeyedMountEffect(createPageMarkdownScrollResetEffectKey(resetKey), () => {
     if (!didMountResetEffectRef.current) {
       didMountResetEffectRef.current = true;
       return;
@@ -134,7 +133,7 @@ export function usePageMarkdownScroll({
     );
     const viewportElement = viewportElementRef.current;
     if (viewportElement) resetViewportForKey(viewportElement, resetKey);
-  }, [resetKey, resetViewportForKey]);
+  });
 
   const scrollToPage = React.useCallback(
     (pageNumber: number, options?: ScrollToOptions) => {
@@ -157,27 +156,14 @@ export function usePageMarkdownScroll({
     [],
   );
 
-  React.useEffect(() => {
+  useMountEffect(() => () => {
     if (
       scrollFrameRef.current > 0 &&
       typeof cancelAnimationFrame === "function"
     ) {
       cancelAnimationFrame(scrollFrameRef.current);
-      scrollFrameRef.current = 0;
     }
-  }, [measureScroll]);
-
-  React.useEffect(
-    () => () => {
-      if (
-        scrollFrameRef.current > 0 &&
-        typeof cancelAnimationFrame === "function"
-      ) {
-        cancelAnimationFrame(scrollFrameRef.current);
-      }
-    },
-    [],
-  );
+  });
 
   return {
     currentPage,
@@ -188,6 +174,10 @@ export function usePageMarkdownScroll({
     setViewportElement,
     viewportElement,
   };
+}
+
+function createPageMarkdownScrollResetEffectKey(resetKey: string | undefined) {
+  return resetKey === undefined ? "unset:" : `value:${resetKey}`;
 }
 
 function scrollViewportTo(

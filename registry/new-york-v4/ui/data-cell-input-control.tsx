@@ -1,8 +1,7 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -23,6 +22,9 @@ import type {
   DataCellValue,
   DataCellValueMeta,
 } from "@/registry/new-york-v4/ui/data-cell-types";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 function focusDataCellTextInput(
   input: HTMLInputElement | null,
@@ -109,25 +111,28 @@ export function DataCellInputControl({
     [],
   );
 
-  React.useEffect(() => {
-    if (draft?.value !== undefined) return;
-    setUncontrolledDraftValue(
-      initialInputValueForActivation({
-        activationSource,
-        kind,
-        value,
-      }),
-    );
-  }, [activationSource, draft?.value, kind, value]);
+  useKeyedMountEffect(
+    joinEffectKey([activationSource, draft?.value, kind, value]),
+    () => {
+      if (draft?.value !== undefined) return;
+      setUncontrolledDraftValue(
+        initialInputValueForActivation({
+          activationSource,
+          kind,
+          value,
+        }),
+      );
+    },
+  );
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([inputValue]), () => {
     lastInputValueRef.current = inputValue;
-  }, [inputValue]);
+  });
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([activationSource, autoFocus]), () => {
     if (!autoFocus && !activationSource) return;
     focusDataCellTextInput(inputRef.current, activationSource);
-  }, [activationSource, autoFocus]);
+  });
 
   const commitCurrentInputValue = React.useCallback(
     (
@@ -167,20 +172,17 @@ export function DataCellInputControl({
   );
   const commitCurrentInputValueRef = React.useRef(commitCurrentInputValue);
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([commitCurrentInputValue]), () => {
     commitCurrentInputValueRef.current = commitCurrentInputValue;
-  }, [commitCurrentInputValue]);
+  });
 
-  React.useEffect(
-    () => () => {
-      commitCurrentInputValueRef.current(inputRef.current, {
-        endEditing: false,
-        markFinished: false,
-        onlyIfChanged: true,
-      });
-    },
-    [],
-  );
+  useMountEffect(() => () => {
+    commitCurrentInputValueRef.current(inputRef.current, {
+      endEditing: false,
+      markFinished: false,
+      onlyIfChanged: true,
+    });
+  });
 
   const inputType = inputTypeForDataCell(kind);
   const {

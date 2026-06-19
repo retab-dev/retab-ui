@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import type {
@@ -12,6 +10,8 @@ import {
   useSegmentedDocumentModel,
   useSegmentedDocumentViewport,
 } from "./segmented-document-provider";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export type SegmentedItemNavigationOptions = {
   behavior?: ScrollBehavior;
@@ -86,23 +86,26 @@ export function useSegmentedItemLink(
     : EMPTY_SEGMENT_ANCHORS;
   const activeAnchor = activeAnchors[0] ?? null;
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([segmentByItemId, selectedItemId]), () => {
     if (selectedItemId && !segmentByItemId.has(selectedItemId)) {
       setSelectedItemId(null);
     }
-  }, [segmentByItemId, selectedItemId]);
+  });
 
-  React.useEffect(() => {
-    const initialItemId = options.initialItemId ?? null;
-    if (
-      !initialItemId ||
-      selectedItemId != null ||
-      !segmentByItemId.has(initialItemId)
-    ) {
-      return;
-    }
-    setSelectedItemId(initialItemId);
-  }, [options.initialItemId, segmentByItemId, selectedItemId]);
+  useKeyedMountEffect(
+    joinEffectKey([options.initialItemId, segmentByItemId, selectedItemId]),
+    () => {
+      const initialItemId = options.initialItemId ?? null;
+      if (
+        !initialItemId ||
+        selectedItemId != null ||
+        !segmentByItemId.has(initialItemId)
+      ) {
+        return;
+      }
+      setSelectedItemId(initialItemId);
+    },
+  );
 
   const clearPreview = viewport.interaction.clearPreview;
 

@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -24,6 +23,9 @@ import {
   type PptxSlideLayout,
   type PptxVirtualSlide,
 } from "./pptx-viewer-visible-slide";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 type SlideRenderState = "idle" | "rendering" | "rendered" | "failed";
 
@@ -118,22 +120,19 @@ export function PptxSlideScroller({
     projectionFrameRef.current = requestAnimationFrame(projectSlides);
   }, [projectSlides]);
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([projectSlides]), () => {
     projectSlides();
-  }, [projectSlides]);
+  });
 
-  React.useEffect(
-    () => () => {
-      if (
-        projectionFrameRef.current !== null &&
-        typeof cancelAnimationFrame === "function"
-      ) {
-        cancelAnimationFrame(projectionFrameRef.current);
-      }
-      disposePptxSlideProjectionCache(projectionCacheRef.current);
-    },
-    [],
-  );
+  useMountEffect(() => () => {
+    if (
+      projectionFrameRef.current !== null &&
+      typeof cancelAnimationFrame === "function"
+    ) {
+      cancelAnimationFrame(projectionFrameRef.current);
+    }
+    disposePptxSlideProjectionCache(projectionCacheRef.current);
+  });
 
   const setViewportRef = React.useCallback(
     (element: HTMLDivElement | null) => {
@@ -275,85 +274,88 @@ function PptxSlideCanvas({
     canvasElementRef.current = canvas;
   }, []);
 
-  React.useEffect(() => {
-    const canvas = canvasElementRef.current;
-    if (!canvas) return;
+  useKeyedMountEffect(
+    joinEffectKey([
+      activity,
+      eager,
+      getSlideRenderTiming,
+      isProjectedLive,
+      pixelRatio,
+      priority,
+      shouldRenderImmediately,
+      zoomScale,
+      slideIndex,
+      source,
+    ]),
+    () => {
+      const canvas = canvasElementRef.current;
+      if (!canvas) return;
 
-    let cancelled = false;
-    const renderScale = zoomScale * pixelRatio;
-    const immediateCached = source.hasBitmap({ slideIndex, renderScale });
-    setRenderState("rendering");
+      let cancelled = false;
+      const renderScale = zoomScale * pixelRatio;
+      const immediateCached = source.hasBitmap({ slideIndex, renderScale });
+      setRenderState("rendering");
 
-    const start = () => {
-      if (isProjectedLive && !isProjectedLive()) return;
-      const startedAt = now();
-      const startedCached = source.hasBitmap({ slideIndex, renderScale });
-      source
-        .renderSlide({
-          slideIndex,
-          canvas,
-          renderScale,
-          isLive: () => !cancelled,
-          priority,
-        })
-        .then((result) => {
-          if (cancelled || (isProjectedLive && !isProjectedLive())) return;
-          notifySlideRenderTiming(getSlideRenderTiming?.(), {
-            cached: startedCached,
-            durationMs: now() - startedAt,
-            pixelRatio,
+      const start = () => {
+        if (isProjectedLive && !isProjectedLive()) return;
+        const startedAt = now();
+        const startedCached = source.hasBitmap({ slideIndex, renderScale });
+        source
+          .renderSlide({
+            slideIndex,
+            canvas,
             renderScale,
-            slideNumber: slideIndex + 1,
-            status: result.status,
+            isLive: () => !cancelled,
+            priority,
+          })
+          .then((result) => {
+            if (cancelled || (isProjectedLive && !isProjectedLive())) return;
+            notifySlideRenderTiming(getSlideRenderTiming?.(), {
+              cached: startedCached,
+              durationMs: now() - startedAt,
+              pixelRatio,
+              renderScale,
+              slideNumber: slideIndex + 1,
+              status: result.status,
+            });
+            if (result.status === "cancelled") return;
+            setRenderState(result.status === "failed" ? "failed" : "rendered");
+          })
+          .catch(() => {
+            if (cancelled || (isProjectedLive && !isProjectedLive())) return;
+            notifySlideRenderTiming(getSlideRenderTiming?.(), {
+              cached: startedCached,
+              durationMs: now() - startedAt,
+              pixelRatio,
+              renderScale,
+              slideNumber: slideIndex + 1,
+              status: "failed",
+            });
+            setRenderState("failed");
           });
-          if (result.status === "cancelled") return;
-          setRenderState(result.status === "failed" ? "failed" : "rendered");
-        })
-        .catch(() => {
-          if (cancelled || (isProjectedLive && !isProjectedLive())) return;
-          notifySlideRenderTiming(getSlideRenderTiming?.(), {
-            cached: startedCached,
-            durationMs: now() - startedAt,
-            pixelRatio,
-            renderScale,
-            slideNumber: slideIndex + 1,
-            status: "failed",
-          });
-          setRenderState("failed");
-        });
-    };
+      };
 
-    if (
-      shouldRenderImmediately ||
-      eager ||
-      immediateCached ||
-      !activity.isScrolling()
-    ) {
-      start();
+      if (
+        shouldRenderImmediately ||
+        eager ||
+        immediateCached ||
+        !activity.isScrolling()
+      ) {
+        start();
+        return () => {
+          cancelled = true;
+        };
+      }
+
+      const off = activity.onIdle(() => {
+        if (!cancelled && (!isProjectedLive || isProjectedLive())) start();
+      });
       return () => {
         cancelled = true;
+        off();
       };
-    }
-
-    const off = activity.onIdle(() => {
-      if (!cancelled && (!isProjectedLive || isProjectedLive())) start();
-    });
-    return () => {
-      cancelled = true;
-      off();
-    };
-  }, [
-    activity,
-    eager,
-    getSlideRenderTiming,
-    isProjectedLive,
-    pixelRatio,
-    priority,
-    shouldRenderImmediately,
-    zoomScale,
-    slideIndex,
-    source,
-  ]);
+    },
+  );
 
   return (
     <>

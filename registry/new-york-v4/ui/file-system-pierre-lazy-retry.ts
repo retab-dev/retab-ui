@@ -11,9 +11,6 @@ import type { FileSystemPierreLoadingController } from "./file-system-pierre-ada
 import type { PierrePath } from "./file-system-pierre-input";
 import type { FileSystemEntry } from "./file-system-types";
 
-const useIsoLayoutEffect =
-  typeof window === "undefined" ? React.useEffect : React.useLayoutEffect;
-
 export type FileSystemPierreLazyRetrySelection = {
   entry: FileSystemEntry | null;
   pierrePath: PierrePath | null | undefined;
@@ -89,10 +86,7 @@ export function useFileSystemPierreLazyRetryExpansion({
   modelRef: React.MutableRefObject<PierreFileTreeModel | null>;
 }) {
   const loadingRef = React.useRef(loading);
-
-  useIsoLayoutEffect(() => {
-    loadingRef.current = loading;
-  }, [loading]);
+  loadingRef.current = loading;
 
   return React.useCallback(
     (command: FileSystemPierreLazyFolderCommand | null) => {

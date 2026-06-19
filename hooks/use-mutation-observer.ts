@@ -1,6 +1,6 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
-import * as React from "react";
+import type * as React from "react";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export const useMutationObserver = (
   ref: React.RefObject<HTMLElement | null>,
@@ -12,11 +12,11 @@ export const useMutationObserver = (
     subtree: true,
   },
 ) => {
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([ref, callback, options]), () => {
     if (ref.current) {
       const observer = new MutationObserver(callback);
       observer.observe(ref.current, options);
       return () => observer.disconnect();
     }
-  }, [ref, callback, options]);
+  });
 };

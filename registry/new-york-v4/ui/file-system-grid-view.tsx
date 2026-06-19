@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Folder } from "lucide-react";
@@ -13,6 +11,7 @@ import type { FileSystemBrowserController } from "./file-system-browser-controll
 import { FileSystemThumbnail } from "./file-system-thumbnail";
 import type { FileSystemEntry } from "./file-system-types";
 import { useFileSystemRovingFocus } from "./use-file-system-roving-focus";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 
 const TILE_MIN_WIDTH = 124;
 const TILE_HEIGHT = 132;
@@ -28,7 +27,7 @@ export function FileSystemGridView({
   const { browser, fileActions } = controller;
   const entries = browser.entries;
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect("mount", () => {
     const viewport = viewportRef.current;
     if (!viewport || typeof ResizeObserver === "undefined") return;
 
@@ -41,7 +40,7 @@ export function FileSystemGridView({
     update();
     observer.observe(viewport);
     return () => observer.disconnect();
-  }, []);
+  });
 
   const rowCount = Math.ceil(entries.length / columnCount);
   const virtualizer = useVirtualizer({

@@ -1,8 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export function useThumbnailInView() {
   const [seen, setSeen] = React.useState(false);
@@ -10,7 +10,7 @@ export function useThumbnailInView() {
   const seenRef = React.useRef(false);
   const ref = React.useCallback((el: HTMLElement | null) => setNode(el), []);
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([node]), () => {
     if (!node || seenRef.current) return;
     if (typeof IntersectionObserver === "undefined") {
       seenRef.current = true;
@@ -29,7 +29,7 @@ export function useThumbnailInView() {
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [node]);
+  });
 
   return { ref, seen };
 }

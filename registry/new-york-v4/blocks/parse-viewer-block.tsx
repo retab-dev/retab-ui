@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import {
   FileViewer,
   FileViewerBody,
@@ -74,15 +73,16 @@ export function ParseViewerBlock() {
 function ParseSourceDocument() {
   const document = useParseViewerDocument();
   const viewerRef = React.useRef<PdfViewerHandle | null>(null);
+  const documentKey = useObjectDependencyKey(document);
 
-  React.useEffect(() => {
+  useKeyedMountEffect(documentKey, () => {
     document.setDocumentHandle({
       scrollToPage: (pageNumber, options) => {
         viewerRef.current?.scrollToPage(pageNumber, options);
       },
     });
     return () => document.setDocumentHandle(null);
-  }, [document]);
+  });
 
   return (
     <FileViewer
@@ -108,4 +108,16 @@ function ParseSourceDocument() {
       </PdfViewerProvider>
     </FileViewer>
   );
+}
+
+function useObjectDependencyKey(value: object): string {
+  const keyRef = React.useRef(0);
+  const valueRef = React.useRef<object | null>(null);
+
+  if (valueRef.current !== value) {
+    valueRef.current = value;
+    keyRef.current += 1;
+  }
+
+  return `object:${keyRef.current}`;
 }

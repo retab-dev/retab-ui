@@ -1,9 +1,8 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 // @vitest-environment jsdom
 import * as React from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import {
   ViewerBody,
@@ -19,6 +18,8 @@ import {
   EditViewerProvider,
 } from "@/components/viewers/edit/edit-viewer";
 import type { EditViewerField } from "@/components/viewers/edit/edit-viewer-types";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const viewerMocks = vi.hoisted(() => ({
   currentFileViewerSource: null as {
@@ -50,9 +51,9 @@ vi.mock("@/components/ui/pdf-viewer", () => ({
     }>,
   ) {
     viewerMocks.pdfViewerRenders(props.source.url);
-    React.useEffect(() => {
+    useKeyedMountEffect(joinEffectKey([props.source.url]), () => {
       viewerMocks.pdfViewerMounts(props.source.url);
-    }, [props.source.url]);
+    });
     React.useImperativeHandle(ref, () => ({
       scrollToPage: vi.fn(),
       scrollToPageArea: viewerMocks.scrollToPageArea,
@@ -91,9 +92,9 @@ vi.mock("@/components/ui/pdf-viewer", () => ({
   ) {
     const source = viewerMocks.currentFileViewerSource;
     viewerMocks.pdfViewerRenders(source?.url);
-    React.useEffect(() => {
+    useKeyedMountEffect(joinEffectKey([source?.url]), () => {
       viewerMocks.pdfViewerMounts(source?.url);
-    }, [source?.url]);
+    });
     React.useImperativeHandle(ref, () => ({
       scrollToPage: vi.fn(),
       scrollToPageArea: viewerMocks.scrollToPageArea,
@@ -331,16 +332,16 @@ describe("EditViewer", () => {
     };
 
     function CountingDocument() {
-      React.useEffect(() => {
+      useMountEffect(() => {
         counts.documentMounts += 1;
-      }, []);
+      });
       return <EditViewerDocument />;
     }
 
     function CountingFields() {
-      React.useEffect(() => {
+      useMountEffect(() => {
         counts.fieldsMounts += 1;
-      }, []);
+      });
       return <EditViewerFields />;
     }
 

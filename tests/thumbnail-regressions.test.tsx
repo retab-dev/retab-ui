@@ -1489,7 +1489,11 @@ describe("thumbnail generated registry regressions", () => {
       readFileSync("public/r/file-thumbnail-frame.json", "utf8"),
     );
 
-    expect(item.registryDependencies).toEqual(["@retab/utils"]);
+    expect(item.registryDependencies).toEqual([
+      "@retab/utils",
+      "@retab/effect-key",
+      "@retab/use-keyed-mount-effect",
+    ]);
     expect(item.dependencies ?? []).toEqual([]);
     expect(JSON.stringify(item)).not.toMatch(
       /pdfjs-dist|docx-preview|pptxviewjs|@e965\/xlsx|@kenjiuno\/msgreader|utif|marked|dompurify/,

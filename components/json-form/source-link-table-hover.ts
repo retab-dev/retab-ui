@@ -1,10 +1,10 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import type { SourceFieldLink } from "@/components/ui/source-field-link";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export type JsonFormSourceLinkActions = Omit<
   SourceFieldLink,
@@ -61,35 +61,38 @@ export function useSourceTableHoverController({
     [],
   );
 
-  React.useEffect(() => {
-    if (!sourceLinked || !activeSourcePath) {
-      setActiveSourceCell(null);
-      return;
-    }
-    if (
-      hoverStateRef.current.sourcePath === activeSourcePath &&
-      activeSourceCellRef.current?.getAttribute(SOURCE_PATH_ATTRIBUTE) ===
-        activeSourcePath
-    ) {
-      return;
-    }
-
-    const table = tableRef.current;
-    if (!table) return;
-    for (const cell of table.querySelectorAll(SOURCE_CELL_SELECTOR)) {
-      if (cell.getAttribute(SOURCE_PATH_ATTRIBUTE) === activeSourcePath) {
-        setActiveSourceCell(cell);
+  useKeyedMountEffect(
+    joinEffectKey([
+      activeSourcePath,
+      sourceLinked,
+      refreshKey,
+      setActiveSourceCell,
+      tableRef,
+    ]),
+    () => {
+      if (!sourceLinked || !activeSourcePath) {
+        setActiveSourceCell(null);
         return;
       }
-    }
-    setActiveSourceCell(null);
-  }, [
-    activeSourcePath,
-    sourceLinked,
-    refreshKey,
-    setActiveSourceCell,
-    tableRef,
-  ]);
+      if (
+        hoverStateRef.current.sourcePath === activeSourcePath &&
+        activeSourceCellRef.current?.getAttribute(SOURCE_PATH_ATTRIBUTE) ===
+          activeSourcePath
+      ) {
+        return;
+      }
+
+      const table = tableRef.current;
+      if (!table) return;
+      for (const cell of table.querySelectorAll(SOURCE_CELL_SELECTOR)) {
+        if (cell.getAttribute(SOURCE_PATH_ATTRIBUTE) === activeSourcePath) {
+          setActiveSourceCell(cell);
+          return;
+        }
+      }
+      setActiveSourceCell(null);
+    },
+  );
 
   const getCellFromTarget = React.useCallback(
     (target: EventTarget | null): SourceTableCell | null => {
@@ -146,12 +149,12 @@ export function useSourceTableHoverController({
     [sourceLinkActions, reportHoverSourcePath, setActiveSourceCell],
   );
 
-  React.useEffect(
+  useKeyedMountEffect(
+    joinEffectKey([cancelPendingHover, cancelPendingScrollHover]),
     () => () => {
       cancelPendingHover();
       cancelPendingScrollHover();
     },
-    [cancelPendingHover, cancelPendingScrollHover],
   );
 
   const selectCellSource = React.useCallback(

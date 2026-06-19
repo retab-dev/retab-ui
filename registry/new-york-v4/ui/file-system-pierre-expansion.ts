@@ -22,9 +22,8 @@ import {
 } from "./file-system-pierre-lazy-retry";
 import type { FileSystemPierreOrder } from "./file-system-pierre-order";
 import { scrollCurrentFileSystemEntryIntoView } from "./file-system-pierre-selection";
-
-const useIsoLayoutEffect =
-  typeof window === "undefined" ? React.useEffect : React.useLayoutEffect;
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export type FileSystemPierreExpansion = {
   collectExpandedItemPaths: (itemPaths: readonly PierrePath[]) => PierrePath[];
@@ -210,12 +209,12 @@ export function useBindFileSystemPierreExpansionModel({
   expansion: FileSystemPierreExpansion;
   model: PierreFileTreeModel;
 }) {
-  useIsoLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([expansion, model]), () => {
     expansion.modelRef.current = model;
     return () => {
       if (expansion.modelRef.current === model) {
         expansion.modelRef.current = null;
       }
     };
-  }, [expansion, model]);
+  });
 }

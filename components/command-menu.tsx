@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useDocsSearch } from "fumadocs-core/search/client";
@@ -36,6 +34,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { copyToClipboardWithMeta } from "@/components/copy-button";
+import { useMountEffect } from "@/hooks/use-mount-effect";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 function getRegistryItemSpecifier(name: string) {
   return `@retab/${name}`;
@@ -121,7 +122,7 @@ export function CommandMenu({
   );
 
   // Cleanup timeout on unmount.
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([open]), () => {
     if (open) {
       const frame = requestAnimationFrame(() => {
         setRenderDelayedGroups(true);
@@ -133,15 +134,15 @@ export function CommandMenu({
     }
 
     setRenderDelayedGroups(false);
-  }, [open]);
+  });
 
-  React.useEffect(() => {
+  useMountEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, []);
+  });
 
   const commandFilter = React.useCallback(
     (value: string, searchValue: string, keywords?: string[]) => {
@@ -312,44 +313,47 @@ export function CommandMenu({
     );
   }, [blocks, handleBlockHighlight, runCommand, router]);
 
-  React.useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if ((e.key === "k" && (e.metaKey || e.ctrlKey)) || e.key === "/") {
-        if (
-          (e.target instanceof HTMLElement && e.target.isContentEditable) ||
-          e.target instanceof HTMLInputElement ||
-          e.target instanceof HTMLTextAreaElement ||
-          e.target instanceof HTMLSelectElement
-        ) {
-          return;
+  useKeyedMountEffect(
+    joinEffectKey([copyPayload, runCommand, selectedType, packageManager]),
+    () => {
+      const down = (e: KeyboardEvent) => {
+        if ((e.key === "k" && (e.metaKey || e.ctrlKey)) || e.key === "/") {
+          if (
+            (e.target instanceof HTMLElement && e.target.isContentEditable) ||
+            e.target instanceof HTMLInputElement ||
+            e.target instanceof HTMLTextAreaElement ||
+            e.target instanceof HTMLSelectElement
+          ) {
+            return;
+          }
+
+          e.preventDefault();
+          setOpen((open) => !open);
         }
 
-        e.preventDefault();
-        setOpen((open) => !open);
-      }
+        if (e.key === "c" && (e.metaKey || e.ctrlKey)) {
+          runCommand(() => {
+            if (selectedType === "block") {
+              copyToClipboardWithMeta(copyPayload, {
+                name: "copy_npm_command",
+                properties: { command: copyPayload, pm: packageManager },
+              });
+            }
 
-      if (e.key === "c" && (e.metaKey || e.ctrlKey)) {
-        runCommand(() => {
-          if (selectedType === "block") {
-            copyToClipboardWithMeta(copyPayload, {
-              name: "copy_npm_command",
-              properties: { command: copyPayload, pm: packageManager },
-            });
-          }
+            if (selectedType === "page" || selectedType === "component") {
+              copyToClipboardWithMeta(copyPayload, {
+                name: "copy_npm_command",
+                properties: { command: copyPayload, pm: packageManager },
+              });
+            }
+          });
+        }
+      };
 
-          if (selectedType === "page" || selectedType === "component") {
-            copyToClipboardWithMeta(copyPayload, {
-              name: "copy_npm_command",
-              properties: { command: copyPayload, pm: packageManager },
-            });
-          }
-        });
-      }
-    };
-
-    document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
-  }, [copyPayload, runCommand, selectedType, packageManager]);
+      document.addEventListener("keydown", down);
+      return () => document.removeEventListener("keydown", down);
+    },
+  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

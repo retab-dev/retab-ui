@@ -1,10 +1,10 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { createRoot, type Root } from "react-dom/client";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import {
   ImageSourceDisposedError,
   toImageFormatError,
@@ -29,6 +29,7 @@ import {
   type ImageFrameLayout,
   type ImageFrameLayoutModel,
 } from "./image-viewer-virtualization";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const IMAGE_SCROLL_IDLE_MS = 120;
 const IMAGE_PREFETCH_AHEAD_FRAMES = 2;
@@ -299,12 +300,12 @@ export function ImageFrameScroller({
     projectionFrameRef.current = requestAnimationFrame(projectFrames);
   }, [projectFrames]);
 
-  React.useLayoutEffect(() => {
+  useKeyedMountEffect(joinEffectKey(["image-project", projectFrames]), () => {
     projectFrames();
-  }, [projectFrames]);
+  });
 
-  React.useEffect(
-    () => () => {
+  useMountEffect(() => {
+    return () => {
       if (
         projectionFrameRef.current !== null &&
         typeof cancelAnimationFrame === "function"
@@ -315,9 +316,8 @@ export function ImageFrameScroller({
         window.clearTimeout(idleTimerRef.current);
       }
       disposeImageFrameProjectionCache(projectionCacheRef.current);
-    },
-    [],
-  );
+    };
+  });
 
   const setViewportRef = React.useCallback(
     (element: HTMLDivElement | null) => {

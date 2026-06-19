@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import type { ViewerResource } from "@/lib/viewer-resource";
 import {
   useViewerControlsRegistration,
@@ -25,6 +24,7 @@ import { useXlsxScrollController } from "./xlsx-viewer-scroll";
 import { XlsxViewerSheet, XlsxViewerSheetSkeleton } from "./xlsx-viewer-sheet";
 import { useXlsxSheetState } from "./xlsx-viewer-sheet-state";
 import type { XlsxViewerHandle, XlsxViewerProps } from "./xlsx-viewer-types";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export function XlsxViewerSession({
   resource,
@@ -194,9 +194,12 @@ function useXlsxControlsRegistration({
     ],
   );
 
-  React.useEffect(() => {
-    if (!onControlsChange) return;
-    onControlsChange(controlsState);
-    return () => onControlsChange(null);
-  }, [onControlsChange, controlsState]);
+  useKeyedMountEffect(
+    joinEffectKey(["xlsx-controls", onControlsChange, controlsState]),
+    () => {
+      if (!onControlsChange) return;
+      onControlsChange(controlsState);
+      return () => onControlsChange(null);
+    },
+  );
 }

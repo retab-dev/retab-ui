@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 // @vitest-environment jsdom
 
 import * as React from "react";
@@ -12,6 +10,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import { type ParseResponse } from "@/components/viewers/lib/parse-types";
 import {
   createPageMarkdownLayout,
@@ -24,6 +23,8 @@ import {
   ParseViewerProvider,
   useParseViewerDocument,
 } from "@/components/viewers/parse/parse-viewer";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const PAGES = [
   "# Invoice\n\nTotal: **$42.00**",
@@ -87,9 +88,9 @@ function ParseDocumentStateProbe({
 }) {
   const document = useParseViewerDocument();
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([document, onProbe]), () => {
     onProbe(document);
-  }, [document, onProbe]);
+  });
 
   return <div>Source document</div>;
 }
@@ -103,10 +104,10 @@ function ParseDocumentScrollSpy({
 }) {
   const document = useParseViewerDocument();
 
-  React.useLayoutEffect(() => {
+  useMountEffect(() => {
     document.setDocumentHandle({ scrollToPage: onScroll });
     return () => document.setDocumentHandle(null);
-  }, [document, onScroll]);
+  });
 
   return <>{children}</>;
 }

@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import type { CsvDialect, CsvTable } from "@/lib/csv";
 import {
   createViewerResource,
@@ -35,6 +34,7 @@ import {
   useViewerControlsRegistration,
   type ViewerControlsState,
 } from "./viewer-controls";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export type {
   CsvScrollOptions,
@@ -333,11 +333,14 @@ function useCsvControlsRegistration({
     ],
   );
 
-  React.useEffect(() => {
-    if (!onControlsChange) return;
-    onControlsChange(controlsState);
-    return () => onControlsChange(null);
-  }, [onControlsChange, controlsState]);
+  useKeyedMountEffect(
+    joinEffectKey(["csv-controls", onControlsChange, controlsState]),
+    () => {
+      if (!onControlsChange) return;
+      onControlsChange(controlsState);
+      return () => onControlsChange(null);
+    },
+  );
 }
 
 function clampCsvViewerZoom(zoom: number) {

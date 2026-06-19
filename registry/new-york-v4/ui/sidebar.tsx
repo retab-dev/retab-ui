@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
@@ -27,6 +25,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
@@ -161,9 +161,9 @@ function SidebarProvider({
   const isControlled = openProp !== undefined;
   const openRef = React.useRef(open);
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([open]), () => {
     openRef.current = open;
-  }, [open]);
+  });
 
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
@@ -190,14 +190,14 @@ function SidebarProvider({
 
   // Reset the mobile drawer flag whenever we leave the mobile breakpoint (or a
   // consumer sets it while on desktop), so it never leaks across viewports.
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([isMobile, openMobile]), () => {
     if (!isMobile && openMobile) {
       setOpenMobile(false);
     }
-  }, [isMobile, openMobile]);
+  });
 
   // Adds a keyboard shortcut to toggle the sidebar.
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([keyboardShortcut, toggleSidebar]), () => {
     if (!keyboardShortcut) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -217,7 +217,7 @@ function SidebarProvider({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [keyboardShortcut, toggleSidebar]);
+  });
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
   // This makes it easier to style the sidebar with Tailwind classes.

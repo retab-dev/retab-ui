@@ -1,11 +1,11 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { AlertCircle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 interface SchemaInlineTextProps {
   ariaLabel: string;
@@ -39,11 +39,11 @@ export function SchemaInlineText({
   const [inputResetVersion, setInputResetVersion] = React.useState(0);
   const [error, setError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([value]), () => {
     if (isFocusedRef.current || draftValueRef.current === value) return;
     draftValueRef.current = value;
     setInputResetVersion((version) => version + 1);
-  }, [value]);
+  });
 
   const normalizeValue = (nextValue: string) =>
     trimOnCommit ? nextValue.trim() : nextValue;

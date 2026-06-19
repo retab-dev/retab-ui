@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { type FrameSource } from "@/lib/image-frame-source";
 import {
   imageFrameSourceManager,
@@ -35,6 +34,7 @@ import {
 } from "@/components/ui/viewer-controls";
 
 import { createImageFrameLayout } from "./image-viewer-virtualization";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export function ImageViewerContent({
   resource,
@@ -217,11 +217,14 @@ function useImageControlsRegistration({
     ],
   );
 
-  React.useEffect(() => {
-    if (!onControlsChange) return;
-    onControlsChange(controlsState);
-    return () => onControlsChange(null);
-  }, [onControlsChange, controlsState]);
+  useKeyedMountEffect(
+    joinEffectKey(["image-controls", onControlsChange, controlsState]),
+    () => {
+      if (!onControlsChange) return;
+      onControlsChange(controlsState);
+      return () => onControlsChange(null);
+    },
+  );
 }
 
 export function getImageSource(

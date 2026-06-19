@@ -1,8 +1,9 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+
 import type { PdfPageSize } from "./pdf-viewer-types";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export function usePdfPageSizes(resetKey: unknown) {
   const [state, setState] = React.useState<{
@@ -18,13 +19,13 @@ export function usePdfPageSizes(resetKey: unknown) {
     ? state.pageSizeByNumber
     : emptyPageSizeByNumber;
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey(["pdf-page-sizes", resetKey]), () => {
     setState((previousState) =>
       Object.is(previousState.resetKey, resetKey)
         ? previousState
         : { resetKey, pageSizeByNumber: new Map() },
     );
-  }, [resetKey]);
+  });
 
   const setPageSizes = React.useCallback(
     (pageSizes: Iterable<readonly [number, PdfPageSize]>) => {

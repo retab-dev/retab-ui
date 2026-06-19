@@ -1,8 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 export function useElementWidth<T extends HTMLElement = HTMLDivElement>(): [
   React.RefCallback<T>,
@@ -81,7 +81,7 @@ export function useElementWidth<T extends HTMLElement = HTMLDivElement>(): [
     };
   }, []);
 
-  React.useEffect(() => () => cleanupRef.current?.(), []);
+  useMountEffect(() => () => cleanupRef.current?.());
 
   return [ref, width];
 }

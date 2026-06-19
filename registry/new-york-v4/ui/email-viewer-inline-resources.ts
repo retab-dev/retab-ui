@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import type { ViewerSource } from "@/lib/viewer-source";
@@ -11,6 +9,8 @@ import {
   MISSING_EMAIL_INLINE_RESOURCE_URL,
 } from "./email-viewer-model";
 import type { EmailInlineResourceScope } from "./email-viewer-types";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export function useEmailInlineResourceUrls(scope: EmailInlineResourceScope) {
   const placeholderUrls = React.useMemo(
@@ -25,7 +25,7 @@ export function useEmailInlineResourceUrls(scope: EmailInlineResourceScope) {
     urls: placeholderUrls,
   }));
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([scope]), () => {
     const nextUrls = new Map<string, string>();
     const objectUrls: string[] = [];
 
@@ -49,7 +49,7 @@ export function useEmailInlineResourceUrls(scope: EmailInlineResourceScope) {
     return () => {
       for (const url of objectUrls) URL.revokeObjectURL(url);
     };
-  }, [scope]);
+  });
 
   return materialized.scope === scope ? materialized.urls : placeholderUrls;
 }

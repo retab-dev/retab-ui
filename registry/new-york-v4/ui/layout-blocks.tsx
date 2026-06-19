@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -45,6 +43,8 @@ import {
 } from "./layout-blocks-textract";
 import type { LayoutDocument, LayoutLevel } from "./layout-blocks-types";
 import { LayoutOverlayLayer } from "./layout-overlay-layer";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const LOW_CONFIDENCE_THRESHOLD = 0.9;
 const LEVEL_ORDER: LayoutLevel[] = ["block", "paragraph", "line", "word"];
@@ -373,7 +373,7 @@ function useLayoutPdfSource(
     source?: PdfDocumentSource;
   }>({});
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([document, pageImages]), () => {
     let isCurrent = true;
     setState({});
 
@@ -403,7 +403,7 @@ function useLayoutPdfSource(
     return () => {
       isCurrent = false;
     };
-  }, [document, pageImages]);
+  });
 
   return state;
 }

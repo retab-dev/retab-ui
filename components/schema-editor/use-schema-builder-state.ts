@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import {
@@ -15,6 +13,8 @@ import type {
 } from "@/components/schema-editor/schema-builder-types";
 import { requireAllProperties } from "@/components/schema-editor/schema-required-policy";
 import { validateProjectedSchema } from "@/components/schema-editor/validation";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export interface UseSchemaBuilderStateOptions {
   value: ExtendedJSONSchema7;
@@ -49,7 +49,7 @@ export function useSchemaBuilderState({
 
   const propSignature = React.useMemo(() => schemaSignature(value), [value]);
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([propSignature, value]), () => {
     if (propSignature === lastEmittedSignatureRef.current) {
       lastImportedSignatureRef.current = propSignature;
       return;
@@ -59,7 +59,7 @@ export function useSchemaBuilderState({
       lastImportedSignatureRef.current = propSignature;
       setDoc(fromJsonSchema(value));
     }
-  }, [propSignature, value]);
+  });
 
   const schema = React.useMemo(() => projectSchemaDocument(doc), [doc]);
   const validation = React.useMemo(
@@ -68,14 +68,14 @@ export function useSchemaBuilderState({
   );
 
   const docRef = React.useRef(doc);
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([doc]), () => {
     docRef.current = doc;
-  }, [doc]);
+  });
 
   const schemaRef = React.useRef(schema);
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([schema]), () => {
     schemaRef.current = schema;
-  }, [schema]);
+  });
 
   const emitSchema = React.useCallback(
     (nextDoc: SchemaDocument, persist: boolean | undefined) => {

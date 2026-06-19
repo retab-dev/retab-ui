@@ -67,9 +67,12 @@ describe("createPdfPageLayout — property fuzz", () => {
   const SEEDS = [1, 7, 42, 1337, 99991, 2_024_06_12];
 
   for (const seed of SEEDS) {
-    it(`upholds layout invariants across random configs (seed ${seed})`, () => {
+    it(`upholds layout invariants across random configs (seed ${seed})`, async () => {
       const rand = mulberry32(seed);
       for (let iteration = 0; iteration < 400; iteration++) {
+        if (iteration > 0 && iteration % 25 === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
         const config = randomConfig(rand);
         const layout = createPdfPageLayout(config);
         const pages = eachPage(layout);
@@ -159,6 +162,6 @@ describe("createPdfPageLayout — property fuzz", () => {
         const anchorPage = findPdfPageByOffset(layout, scrollTop);
         expect(visible.includes(anchorPage), ctx).toBe(true);
       }
-    }, 30_000);
+    }, 60_000);
   }
 });

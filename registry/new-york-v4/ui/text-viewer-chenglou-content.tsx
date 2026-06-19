@@ -1,8 +1,7 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import type { ViewerResource } from "@/lib/viewer-resource";
 
@@ -46,6 +45,9 @@ import {
   getTextFrameVirtualItems,
   type TextFrameScrollAnchor,
 } from "./text-viewer-virtualization";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const TEXT_VIEWER_HORIZONTAL_PADDING = 16;
 const TEXT_VIEWER_DEFAULT_VIEWPORT_HEIGHT = 600;
@@ -220,7 +222,7 @@ export function ChenglouTextViewerContent({
     );
   }, [projectCurrentRows]);
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect("mount", () => {
     const scrollElement = viewportRef.current;
     if (!scrollElement) return;
 
@@ -244,9 +246,9 @@ export function ChenglouTextViewerContent({
     return () => {
       resizeObserver?.disconnect();
     };
-  }, []);
+  });
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([scheduleProjectRows]), () => {
     const scrollElement = viewportRef.current;
     if (!scrollElement) return;
 
@@ -257,21 +259,24 @@ export function ChenglouTextViewerContent({
     return () => {
       scrollElement.removeEventListener("scroll", scheduleProjectRows);
     };
-  }, [scheduleProjectRows]);
+  });
 
-  React.useLayoutEffect(() => {
-    const nextContentWidth = Math.max(
-      1,
-      viewportWidth - TEXT_VIEWER_HORIZONTAL_PADDING * 2,
-    );
-    setContentWidth((current) => {
-      if (current === nextContentWidth) return current;
-      captureScrollAnchor();
-      return nextContentWidth;
-    });
-  }, [captureScrollAnchor, viewportWidth]);
+  useKeyedLayoutEffect(
+    joinEffectKey([captureScrollAnchor, viewportWidth]),
+    () => {
+      const nextContentWidth = Math.max(
+        1,
+        viewportWidth - TEXT_VIEWER_HORIZONTAL_PADDING * 2,
+      );
+      setContentWidth((current) => {
+        if (current === nextContentWidth) return current;
+        captureScrollAnchor();
+        return nextContentWidth;
+      });
+    },
+  );
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([frame.frames]), () => {
     const anchor = pendingScrollAnchorRef.current;
     const scrollElement = viewportRef.current;
     if (!anchor || !scrollElement) return;
@@ -285,36 +290,36 @@ export function ChenglouTextViewerContent({
       nextFrame.top +
         Math.min(anchor.offsetWithinFrame, Math.max(0, nextFrame.height - 1)),
     );
-  }, [frame.frames]);
+  });
 
-  React.useLayoutEffect(() => {
-    projectionStateRef.current = {
-      cache: projectionCacheRef.current,
-      canvas: canvasRef.current,
+  useKeyedLayoutEffect(
+    joinEffectKey([
       contentWidth,
       frame,
       highlightRange,
+      projectCurrentRows,
       preparedDocument,
       viewportHeight,
-    };
-    projectCurrentRows();
-  }, [
-    contentWidth,
-    frame,
-    highlightRange,
-    projectCurrentRows,
-    preparedDocument,
-    viewportHeight,
-  ]);
-
-  React.useEffect(
-    () => () => {
-      if (scheduledRenderRef.current !== null) {
-        cancelAnimationFrame(scheduledRenderRef.current);
-      }
+    ]),
+    () => {
+      projectionStateRef.current = {
+        cache: projectionCacheRef.current,
+        canvas: canvasRef.current,
+        contentWidth,
+        frame,
+        highlightRange,
+        preparedDocument,
+        viewportHeight,
+      };
+      projectCurrentRows();
     },
-    [],
   );
+
+  useMountEffect(() => () => {
+    if (scheduledRenderRef.current !== null) {
+      cancelAnimationFrame(scheduledRenderRef.current);
+    }
+  });
 
   const scrollLineRange = React.useCallback(
     (
@@ -369,9 +374,9 @@ export function ChenglouTextViewerContent({
     [preparedDocument.sourceLineCount, scrollLineRange],
   );
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([highlightRange, scrollLineRange]), () => {
     scrollLineRange(highlightRange);
-  }, [highlightRange, scrollLineRange]);
+  });
 
   const scrollMarkdownFragment = React.useCallback(
     (event: React.MouseEvent) => {
@@ -1255,7 +1260,7 @@ function blockVisibleWindowKey(
 function useTextViewerFontEpoch() {
   const [fontEpoch, setFontEpoch] = React.useState(0);
 
-  React.useEffect(() => {
+  useMountEffect(() => {
     const fonts = document.fonts;
     if (!fonts) return;
 
@@ -1267,7 +1272,7 @@ function useTextViewerFontEpoch() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  });
 
   return fontEpoch;
 }

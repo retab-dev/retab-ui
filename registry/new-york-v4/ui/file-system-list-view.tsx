@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import {
   createFileTreeIconResolver,
@@ -9,6 +7,8 @@ import {
 } from "@pierre/trees";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { AlertCircle, ChevronDown, ChevronRight, Folder } from "lucide-react";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -118,9 +118,9 @@ export function FileSystemListView({
     (row) => row.entry.path === (focusedPath ?? browser.selectedPath),
   );
 
-  React.useEffect(() => {
+  useKeyedMountEffect(`selected:${browser.selectedPath ?? "null"}`, () => {
     setFocusedPath(browser.selectedPath);
-  }, [browser.selectedPath]);
+  });
 
   const toggleFolder = React.useCallback(
     (entry: FileSystemEntry, options?: { retry?: boolean }) => {
@@ -396,7 +396,7 @@ function FileSystemListEntryRow({
 }
 
 function PierreFileIconSprite() {
-  React.useEffect(() => {
+  useMountEffect(() => {
     if (document.getElementById(PIERRE_ICON_SPRITE_ROOT_ID)) return;
 
     const root = document.createElement("div");
@@ -404,7 +404,7 @@ function PierreFileIconSprite() {
     root.hidden = true;
     root.innerHTML = getBuiltInSpriteSheet("complete");
     document.body.appendChild(root);
-  }, []);
+  });
 
   return null;
 }

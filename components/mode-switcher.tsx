@@ -1,12 +1,11 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import Script from "next/script";
 import { useTheme } from "next-themes";
 
 import { cn } from "@/lib/utils";
+import { KeyedRunner } from "@/hooks/KeyedRunner";
 import { useMetaColor } from "@/hooks/use-meta-color";
 import { Button } from "@/components/ui/button";
 
@@ -22,42 +21,44 @@ export function ModeSwitcher({
   const { setTheme, resolvedTheme } = useTheme();
   const { setMetaColor, metaColor } = useMetaColor();
 
-  React.useEffect(() => {
-    setMetaColor(metaColor);
-  }, [metaColor, setMetaColor]);
-
   const toggleTheme = React.useCallback(() => {
     setTheme(resolvedTheme === "dark" ? "light" : "dark");
   }, [resolvedTheme, setTheme]);
 
   return (
-    <Button
-      variant={variant}
-      size="icon"
-      className={cn("group/toggle extend-touch-target size-8", className)}
-      onClick={toggleTheme}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="size-4.5"
+    <>
+      <KeyedRunner
+        key={`meta-color:${metaColor}`}
+        effect={() => setMetaColor(metaColor)}
+      />
+      <Button
+        variant={variant}
+        size="icon"
+        className={cn("group/toggle extend-touch-target size-8", className)}
+        onClick={toggleTheme}
       >
-        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-        <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
-        <path d="M12 3l0 18" />
-        <path d="M12 9l4.65 -4.65" />
-        <path d="M12 14.3l7.37 -7.37" />
-        <path d="M12 19.6l8.85 -8.85" />
-      </svg>
-      <span className="sr-only">Toggle theme</span>
-    </Button>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="size-4.5"
+        >
+          <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+          <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
+          <path d="M12 3l0 18" />
+          <path d="M12 9l4.65 -4.65" />
+          <path d="M12 14.3l7.37 -7.37" />
+          <path d="M12 19.6l8.85 -8.85" />
+        </svg>
+        <span className="sr-only">Toggle theme</span>
+      </Button>
+    </>
   );
 }
 

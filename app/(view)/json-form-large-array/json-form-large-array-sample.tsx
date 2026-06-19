@@ -1,13 +1,13 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import type { JSONSchema7 } from "json-schema";
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { JsonForm } from "@/components/json-form/json-form";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 const DEFAULT_ROW_COUNT = 50_000;
 const ROW_COUNT_OPTIONS = [10_000, 50_000, 100_000] as const;
@@ -69,9 +69,9 @@ export function JsonFormLargeArraySample() {
     mode: "onBlur",
   });
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([defaultValues, form]), () => {
     form.reset(defaultValues as unknown as Record<string, unknown>);
-  }, [defaultValues, form]);
+  });
 
   return (
     <main className="bg-background text-foreground flex h-svh min-h-0 flex-col">

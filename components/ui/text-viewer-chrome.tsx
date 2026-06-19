@@ -1,10 +1,9 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { Check, Copy } from "lucide-react";
 
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import { type ViewerDownloadAction } from "@/lib/viewer-download-actions";
 
 import { Skeleton } from "./skeleton";
@@ -116,12 +115,9 @@ function TextViewerCopyControl({
   const [isCopied, setIsCopied] = React.useState(false);
   const timeoutRef = React.useRef<number | null>(null);
 
-  React.useEffect(
-    () => () => {
-      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
-    },
-    [],
-  );
+  useMountEffect(() => () => {
+    if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
+  });
 
   const copyText = () => {
     if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);

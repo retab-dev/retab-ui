@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 // @vitest-environment jsdom
 import * as React from "react";
 import { act, cleanup, render } from "@testing-library/react";
@@ -20,6 +18,8 @@ import {
 } from "@/components/schema-editor/document/property-operations";
 import { requireAllProperties } from "@/components/schema-editor/schema-required-policy";
 import { useSchemaBuilderState } from "@/components/schema-editor/use-schema-builder-state";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 afterEach(cleanup);
 
@@ -44,9 +44,7 @@ function Capture({
     onPersist: onPersist ? (next) => onPersist(next as JSONSchema7) : undefined,
     readOnly,
   });
-  React.useEffect(() => {
-    apiRef.current = ctx;
-  });
+  apiRef.current = ctx;
   return null;
 }
 
@@ -95,9 +93,9 @@ function HeaderControllerCapture({
     nodeView,
     setDefsAccordionOpen: () => {},
   });
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([controller.defs, onDefs]), () => {
     onDefs(controller.defs);
-  }, [controller.defs, onDefs]);
+  });
   return null;
 }
 
@@ -117,9 +115,12 @@ function DefinitionsControllerCapture({
     accordionOpen: true,
     setAccordionOpen: () => {},
   });
-  React.useEffect(() => {
-    onPaths(controller.definitionViews.map((view) => view.path));
-  }, [controller.definitionViews, onPaths]);
+  useKeyedMountEffect(
+    joinEffectKey([controller.definitionViews, onPaths]),
+    () => {
+      onPaths(controller.definitionViews.map((view) => view.path));
+    },
+  );
   return null;
 }
 

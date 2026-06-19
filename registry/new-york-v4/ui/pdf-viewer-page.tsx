@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import { readPdfPageResource } from "@/lib/pdf-document-resource";
@@ -19,6 +17,8 @@ import type {
   PdfPageRenderTiming,
   PdfPageSize,
 } from "./pdf-viewer-types";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 type PdfRenderedCanvas = {
   pageNumber: number;
@@ -56,12 +56,20 @@ export function PdfPage({
     [page],
   );
 
-  React.useEffect(() => {
-    onSize?.(pageNumber, {
-      width: intrinsicViewport.width,
-      height: intrinsicViewport.height,
-    });
-  }, [intrinsicViewport.height, intrinsicViewport.width, onSize, pageNumber]);
+  useKeyedMountEffect(
+    joinEffectKey([
+      intrinsicViewport.height,
+      intrinsicViewport.width,
+      onSize,
+      pageNumber,
+    ]),
+    () => {
+      onSize?.(pageNumber, {
+        width: intrinsicViewport.width,
+        height: intrinsicViewport.height,
+      });
+    },
+  );
 
   const viewport = React.useMemo(
     () =>

@@ -10,9 +10,8 @@ import {
   type PierrePath,
 } from "./file-system-pierre-input";
 import type { FileSystemEntry } from "./file-system-types";
-
-const useIsoLayoutEffect =
-  typeof window === "undefined" ? React.useEffect : React.useLayoutEffect;
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export type FileSystemPierreSelectionState = {
   input: FileSystemPierreInput;
@@ -28,10 +27,7 @@ export function useLatestFileSystemPierreSelectionState(
   state: FileSystemPierreSelectionState,
 ) {
   const stateRef = React.useRef(state);
-
-  useIsoLayoutEffect(() => {
-    stateRef.current = state;
-  });
+  stateRef.current = state;
 
   return React.useCallback(() => stateRef.current, []);
 }
@@ -66,25 +62,28 @@ export function useSyncFileSystemPierreSelection({
 }: FileSystemPierreSelectionState & {
   model: PierreFileTreeModel;
 }) {
-  useIsoLayoutEffect(() => {
-    const selectedPierrePath = selectedPathToPierrePath(
-      selection.selectedPath,
-      input,
-    );
+  useKeyedLayoutEffect(
+    joinEffectKey([input, model, selection.selectedPath]),
+    () => {
+      const selectedPierrePath = selectedPathToPierrePath(
+        selection.selectedPath,
+        input,
+      );
 
-    if (!selectedPierrePath) {
-      return;
-    }
+      if (!selectedPierrePath) {
+        return;
+      }
 
-    const item = model.getItem(selectedPierrePath);
+      const item = model.getItem(selectedPierrePath);
 
-    if (!item || item.isSelected()) {
-      return;
-    }
+      if (!item || item.isSelected()) {
+        return;
+      }
 
-    item.select();
-    model.scrollToPath(selectedPierrePath);
-  }, [input, model, selection.selectedPath]);
+      item.select();
+      model.scrollToPath(selectedPierrePath);
+    },
+  );
 }
 
 export function scrollCurrentFileSystemEntryIntoView({

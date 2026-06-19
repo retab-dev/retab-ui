@@ -1,10 +1,10 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 type MermaidApi = {
   initialize: (config: Record<string, unknown>) => void;
@@ -81,7 +81,7 @@ export function MermaidDiagram({
   const [svg, setSvg] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([chart, reactId]), () => {
     let cancelled = false;
     const renderId = `mermaid-${reactId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
 
@@ -126,7 +126,7 @@ export function MermaidDiagram({
     return () => {
       cancelled = true;
     };
-  }, [chart, reactId]);
+  });
 
   return (
     <div

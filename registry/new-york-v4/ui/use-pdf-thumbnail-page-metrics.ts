@@ -1,13 +1,13 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
-import type { PdfDocumentProxy } from "@/lib/pdf-document-types";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { getPdfPageResource } from "@/lib/pdf-document-resource";
+import type { PdfDocumentProxy } from "@/lib/pdf-document-types";
 
 import { normalizeThumbnailPage } from "./pdf-thumbnail-layout";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export const PDF_THUMBNAIL_PAGE_METRIC_CONCURRENCY = 4;
 
@@ -60,14 +60,15 @@ export function usePdfThumbnailPageMetrics(
     : createMetricControllerState(resetKey, doc.numPages);
   const status = getMetricStatus(visibleState);
 
-  React.useEffect(() => {
+  const resetEffectKey = joinEffectKey(["reset", doc, resetKey]);
+  useKeyedMountEffect(resetEffectKey, () => {
     workerSequenceRef.current += 1;
     dispatch({
       type: "reset",
       documentKey: resetKey,
       pageCount: doc.numPages,
     });
-  }, [doc, resetKey]);
+  });
 
   const requestPageMetrics = React.useCallback(
     (pageNumbers: Iterable<number>) => {
@@ -87,7 +88,16 @@ export function usePdfThumbnailPageMetrics(
     [doc.numPages, resetKey],
   );
 
-  React.useEffect(() => {
+  const loadEffectKey = joinEffectKey([
+    "load",
+    doc,
+    resetKey,
+    state.documentKey,
+    state.error,
+    state.loadingPageNumbers,
+    state.queuedPageNumbers,
+  ]);
+  useKeyedMountEffect(loadEffectKey, () => {
     if (!Object.is(state.documentKey, resetKey)) return;
     if (state.error) return;
 
@@ -129,14 +139,7 @@ export function usePdfThumbnailPageMetrics(
           dispatch({ type: "reject", documentKey: resetKey, error });
         });
     }
-  }, [
-    doc,
-    resetKey,
-    state.documentKey,
-    state.error,
-    state.loadingPageNumbers,
-    state.queuedPageNumbers,
-  ]);
+  });
 
   if (visibleState.error) throw visibleState.error;
 

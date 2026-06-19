@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import {
   ChevronDownIcon,
@@ -13,6 +11,8 @@ import type { DayButton } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 function Calendar({
   className,
@@ -177,9 +177,9 @@ function CalendarDayButton({
   const defaultClassNames = getDefaultClassNames();
   const ref = React.useRef<HTMLButtonElement>(null);
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([modifiers.focused]), () => {
     if (modifiers.focused) ref.current?.focus();
-  }, [modifiers.focused]);
+  });
 
   return (
     <Button

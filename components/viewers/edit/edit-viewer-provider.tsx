@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import type {
@@ -43,6 +41,8 @@ import type {
   EditViewerResult,
   EditViewerStatus,
 } from "./edit-viewer-types";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export type EditViewerProviderProps = Omit<EditViewerProps, "className"> & {
   children: React.ReactNode;
@@ -162,10 +162,13 @@ function useEditViewerModeState({
     currentMode: isModeControlled ? null : uncontrolledMode,
   });
 
-  React.useEffect(() => {
-    if (isModeControlled || uncontrolledMode === resolvedMode) return;
-    setUncontrolledMode(resolvedMode);
-  }, [isModeControlled, resolvedMode, uncontrolledMode]);
+  useKeyedMountEffect(
+    joinEffectKey([isModeControlled, resolvedMode, uncontrolledMode]),
+    () => {
+      if (isModeControlled || uncontrolledMode === resolvedMode) return;
+      setUncontrolledMode(resolvedMode);
+    },
+  );
 
   const setMode = React.useCallback(
     (nextMode: EditViewerMode) => {
@@ -356,15 +359,23 @@ function useEditViewerSelectionBridge({
     selectedItemId,
   } = useSegmentedItemLink({ initialItemId: selectedFieldKey });
 
-  React.useEffect(() => {
-    if (selectedFieldKey === undefined) return;
-    if (selectedFieldKey && !fieldByKey.has(selectedFieldKey)) {
-      selectItem(null);
-      onSelectedFieldKeyChange?.(null);
-      return;
-    }
-    selectItem(selectedFieldKey ?? null);
-  }, [fieldByKey, onSelectedFieldKeyChange, selectItem, selectedFieldKey]);
+  useKeyedMountEffect(
+    joinEffectKey([
+      fieldByKey,
+      onSelectedFieldKeyChange,
+      selectItem,
+      selectedFieldKey,
+    ]),
+    () => {
+      if (selectedFieldKey === undefined) return;
+      if (selectedFieldKey && !fieldByKey.has(selectedFieldKey)) {
+        selectItem(null);
+        onSelectedFieldKeyChange?.(null);
+        return;
+      }
+      selectItem(selectedFieldKey ?? null);
+    },
+  );
 
   const selectField = React.useCallback(
     (fieldKey: string) => {

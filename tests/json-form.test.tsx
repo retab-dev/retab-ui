@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 // @vitest-environment jsdom
 import * as React from "react";
 import {
@@ -22,6 +20,7 @@ import {
   vi,
 } from "vitest";
 
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import type { SourceFieldLink } from "@/components/ui/source-field-link";
 import { Form } from "@/components/json-form/form-primitives";
 import { JsonForm, JsonFormField } from "@/components/json-form/json-form";
@@ -106,9 +105,9 @@ function renderJsonForm({
       defaultValues,
       mode: "onBlur",
     });
-    React.useEffect(() => {
+    useMountEffect(() => {
       formApi = form;
-    }, [form]);
+    });
     return (
       <JsonForm
         form={form}

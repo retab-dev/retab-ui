@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 // @vitest-environment jsdom
 
 import { existsSync } from "node:fs";
@@ -15,6 +13,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import {
   useViewerSidebar,
   ViewerBody,
@@ -377,9 +376,9 @@ describe("viewer primitives", () => {
 
     function Probe() {
       const sidebar = useViewerSidebar();
-      React.useEffect(() => {
+      useMountEffect(() => {
         keys = Object.keys(sidebar).sort();
-      }, [sidebar]);
+      });
       return null;
     }
 

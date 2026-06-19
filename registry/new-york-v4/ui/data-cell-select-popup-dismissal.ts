@@ -1,8 +1,8 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
-import * as React from "react";
+import type * as React from "react";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export function useDataCellSelectPopupDismissal({
   anchor,
@@ -15,21 +15,25 @@ export function useDataCellSelectPopupDismissal({
   onCancel: () => void;
   onOutsidePointerDown: (event: PointerEvent) => void;
 }) {
-  React.useEffect(() => {
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (anchor.contains(target) || popupRef.current?.contains(target)) return;
+  useKeyedMountEffect(
+    joinEffectKey([anchor, onOutsidePointerDown, popupRef]),
+    () => {
+      const handlePointerDown = (event: PointerEvent) => {
+        const target = event.target;
+        if (!(target instanceof Node)) return;
+        if (anchor.contains(target) || popupRef.current?.contains(target))
+          return;
 
-      onOutsidePointerDown(event);
-    };
+        onOutsidePointerDown(event);
+      };
 
-    document.addEventListener("pointerdown", handlePointerDown, true);
-    return () =>
-      document.removeEventListener("pointerdown", handlePointerDown, true);
-  }, [anchor, onOutsidePointerDown, popupRef]);
+      document.addEventListener("pointerdown", handlePointerDown, true);
+      return () =>
+        document.removeEventListener("pointerdown", handlePointerDown, true);
+    },
+  );
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([onCancel, popupRef]), () => {
     const handleViewportChange = (event: Event) => {
       const target = event.target;
       if (target instanceof Node && popupRef.current?.contains(target)) return;
@@ -42,5 +46,5 @@ export function useDataCellSelectPopupDismissal({
       window.removeEventListener("resize", handleViewportChange);
       window.removeEventListener("scroll", handleViewportChange, true);
     };
-  }, [onCancel, popupRef]);
+  });
 }

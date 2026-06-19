@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 // @vitest-environment jsdom
 
 // Tests for the docx source adapter (registry/new-york-v4/ui/docx-source.tsx),
@@ -19,6 +17,8 @@ import {
   useDocxSourceTarget,
 } from "@/registry/new-york-v4/ui/docx-source";
 import type { DocxViewerHandle } from "@/registry/new-york-v4/ui/docx-viewer";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 afterEach(() => {
   cleanup();
@@ -203,9 +203,9 @@ describe("useDocxSourceTarget", () => {
     } = { current: null };
     function Harness() {
       const target = useDocxSourceTarget(ref);
-      React.useEffect(() => {
+      useKeyedMountEffect(joinEffectKey([target]), () => {
         targetRef.current = target;
-      }, [target]);
+      });
       return null;
     }
     const view = render(<Harness />);
@@ -278,9 +278,7 @@ describe("useDocxSourceTarget", () => {
     const seen: ReturnType<typeof useDocxSourceTarget>[] = [];
     function Harness() {
       const target = useDocxSourceTarget(ref);
-      React.useEffect(() => {
-        seen.push(target);
-      });
+      seen.push(target);
       return null;
     }
     const view = render(<Harness />);

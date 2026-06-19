@@ -1,9 +1,9 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { CheckCircle2, FileText, UploadCloud, X } from "lucide-react";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import { cn } from "@/lib/utils";
 import { useDropzone } from "@/components/ui/dropzone";
@@ -30,10 +30,14 @@ export function UploadProgressQueue({ className }: DropzoneExampleProps) {
   const timers = React.useRef<Record<string, ReturnType<typeof setInterval>>>(
     {},
   );
+  const dropzoneFilesKey = React.useMemo(
+    () => dropzone.files.map((item) => item.id).join("\0"),
+    [dropzone.files],
+  );
 
   // Start a simulated upload for every file the dropzone admits that we have
   // not seen yet. The dropzone owns the canonical file id, so we key off it.
-  React.useEffect(() => {
+  useKeyedMountEffect(dropzoneFilesKey, () => {
     dropzone.files.forEach((item) => {
       if (timers.current[item.id] !== undefined) return;
 
@@ -61,14 +65,14 @@ export function UploadProgressQueue({ className }: DropzoneExampleProps) {
         });
       }, 280);
     });
-  }, [dropzone.files]);
+  });
 
-  React.useEffect(() => {
+  useMountEffect(() => {
     const pending = timers.current;
     return () => {
       Object.values(pending).forEach((timer) => clearInterval(timer));
     };
-  }, []);
+  });
 
   const handleRemove = (id: string) => {
     if (timers.current[id] !== undefined) {

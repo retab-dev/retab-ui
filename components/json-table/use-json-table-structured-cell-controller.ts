@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import {
@@ -8,6 +6,8 @@ import {
 } from "@/components/json-table/json-table-cell-commit";
 import { markJsonTableProfile } from "@/components/json-table/json-table-profiler";
 import { useRefCallback } from "@/components/json-table/path-utils";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 type StructuredPendingValue = {
   fieldPath: string;
@@ -40,25 +40,28 @@ export function useJsonTableStructuredCellController({
     ? activeStructuredPendingValue.value
     : value;
 
-  React.useEffect(() => {
-    if (!structuredPendingValue) return;
-    if (structuredPendingValue.fieldPath !== materializedFieldPath) {
-      setStructuredPendingValue(null);
-      return;
-    }
-    if (areStructuredValuesEqual(structuredPendingValue.value, value)) {
-      setStructuredPendingValue(null);
-      return;
-    }
-    if (
-      !areStructuredValuesEqual(
-        structuredPendingValue.projectedValueAtCommit,
-        value,
-      )
-    ) {
-      setStructuredPendingValue(null);
-    }
-  }, [materializedFieldPath, structuredPendingValue, value]);
+  useKeyedMountEffect(
+    joinEffectKey([materializedFieldPath, structuredPendingValue, value]),
+    () => {
+      if (!structuredPendingValue) return;
+      if (structuredPendingValue.fieldPath !== materializedFieldPath) {
+        setStructuredPendingValue(null);
+        return;
+      }
+      if (areStructuredValuesEqual(structuredPendingValue.value, value)) {
+        setStructuredPendingValue(null);
+        return;
+      }
+      if (
+        !areStructuredValuesEqual(
+          structuredPendingValue.projectedValueAtCommit,
+          value,
+        )
+      ) {
+        setStructuredPendingValue(null);
+      }
+    },
+  );
 
   const commitStructuredValueChange = useRefCallback(function (
     validatedValue: unknown,

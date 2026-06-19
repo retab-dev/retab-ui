@@ -1,9 +1,9 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import type { ViewerResource } from "@/lib/viewer-resource";
 
 import {
@@ -29,6 +29,7 @@ import {
   resolvedTextViewerBounds,
 } from "./plain-text-resource";
 import { useViewerControlsRegistration } from "./viewer-controls";
+import { joinEffectKey } from "@/lib/effect-key";
 
 type CodeReadingAnchor = {
   lineIndex: number;
@@ -134,18 +135,21 @@ export function CodeViewerContent({
     [commitFontScale],
   );
 
-  React.useLayoutEffect(() => {
-    const anchor = pendingScrollAnchorRef.current;
-    const viewportElement = viewportRef.current;
-    if (!anchor || !viewportElement) return;
+  useKeyedMountEffect(
+    joinEffectKey(["code-anchor", lineHeight, textLines.length]),
+    () => {
+      const anchor = pendingScrollAnchorRef.current;
+      const viewportElement = viewportRef.current;
+      if (!anchor || !viewportElement) return;
 
-    pendingScrollAnchorRef.current = null;
-    viewportElement.scrollTop = restoreCodeReadingAnchor({
-      anchor,
-      lineCount: textLines.length,
-      lineHeight,
-    });
-  }, [lineHeight, textLines.length]);
+      pendingScrollAnchorRef.current = null;
+      viewportElement.scrollTop = restoreCodeReadingAnchor({
+        anchor,
+        lineCount: textLines.length,
+        lineHeight,
+      });
+    },
+  );
 
   React.useImperativeHandle(
     forwardedRef ?? null,
@@ -164,14 +168,17 @@ export function CodeViewerContent({
     [lineHeight, textLines.length],
   );
 
-  React.useEffect(() => {
-    scrollLineRangeMetricsIntoView({
-      viewportElement: viewportRef.current,
-      range: highlightRange,
-      lineHeight,
-      paddingStart: CODE_VIEWER_BLOCK_PADDING,
-    });
-  }, [highlightRange, lineHeight]);
+  useKeyedMountEffect(
+    joinEffectKey(["code-highlight-scroll", highlightRange, lineHeight]),
+    () => {
+      scrollLineRangeMetricsIntoView({
+        viewportElement: viewportRef.current,
+        range: highlightRange,
+        lineHeight,
+        paddingStart: CODE_VIEWER_BLOCK_PADDING,
+      });
+    },
+  );
 
   const project = React.useCallback(() => {
     const rowHost = rowHostRef.current;
@@ -207,11 +214,11 @@ export function CodeViewerContent({
     viewportRef,
   });
 
-  React.useEffect(() => () => projector.destroy(), [projector]);
-  React.useEffect(() => {
+  useMountEffect(() => () => projector.destroy());
+  useKeyedMountEffect(joinEffectKey(["code-syntax", syntax]), () => {
     setSyntaxVersion(0);
     return () => syntax.destroy?.();
-  }, [syntax]);
+  });
 
   useCodeControlsRegistration({
     downloadAction,
@@ -276,11 +283,14 @@ function useCodeControlsRegistration({
     [downloadAction, fontScale, lineCount, onResetZoom, onZoomIn, onZoomOut],
   );
 
-  React.useEffect(() => {
-    if (!onControlsChange) return;
-    onControlsChange(controlsState);
-    return () => onControlsChange(null);
-  }, [onControlsChange, controlsState]);
+  useKeyedMountEffect(
+    joinEffectKey(["code-controls", onControlsChange, controlsState]),
+    () => {
+      if (!onControlsChange) return;
+      onControlsChange(controlsState);
+      return () => onControlsChange(null);
+    },
+  );
 }
 
 function captureCodeReadingAnchor({

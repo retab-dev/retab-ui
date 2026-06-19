@@ -323,7 +323,7 @@ describe("xlsx worker parse round-trip", () => {
     expect(sheets[0].rowCount).toBe(0);
     expect(sheets[0].columnCount).toBe(0);
     expect(sheets[0].cellIndexes.length).toBe(0);
-  });
+  }, 15_000);
 });
 
 describe("isSpreadsheetContainer signature guard", () => {

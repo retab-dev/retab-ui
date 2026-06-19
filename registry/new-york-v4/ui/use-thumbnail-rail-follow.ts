@@ -1,14 +1,16 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
+
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import {
   getPdfThumbnailLayoutItem,
   normalizeThumbnailPage,
   type PdfThumbnailLayout,
 } from "./pdf-thumbnail-layout";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export const THUMBNAIL_FOLLOW_MARGIN = 24;
 export const THUMBNAIL_PROGRAMMATIC_SCROLL_WINDOW_MS = 120;
@@ -85,7 +87,7 @@ export function useThumbnailRailFollow({
     scrollPageIntoView(page);
   }, [currentPage, layout.pageCount, scrollPageIntoView]);
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey(["thumbnail-reset", resetKey]), () => {
     const state = stateRef.current;
     state.suspension = "none";
     state.lastProgrammaticScrollAt = 0;
@@ -93,18 +95,21 @@ export function useThumbnailRailFollow({
       window.clearTimeout(state.idleTimer);
       state.idleTimer = null;
     }
-  }, [resetKey]);
+  });
 
-  React.useEffect(() => {
-    followNow();
-  }, [followNow, resetKey]);
+  useKeyedMountEffect(
+    joinEffectKey(["thumbnail-follow", followNow, resetKey]),
+    () => {
+      followNow();
+    },
+  );
 
-  React.useEffect(() => {
+  useMountEffect(() => {
     const state = stateRef.current;
     return () => {
       if (state.idleTimer != null) window.clearTimeout(state.idleTimer);
     };
-  }, []);
+  });
 
   const onPointerEnter = React.useCallback(() => {
     stateRef.current.suspension = "pointer";
@@ -113,7 +118,7 @@ export function useThumbnailRailFollow({
   const onPointerLeave = React.useCallback(() => {
     stateRef.current.suspension = "none";
     followNow();
-  }, [followNow]);
+  }, [followNow, resetKey]);
 
   const onPageActivate = React.useCallback(
     (pageNumber: number) => {

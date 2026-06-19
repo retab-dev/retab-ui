@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -23,6 +21,8 @@ import {
 } from "@/components/ui/viewer";
 
 import { FileSystemLightTree } from "./file-system-light-tree";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export type FileSystemLightFile = {
   path: string;
@@ -87,13 +87,13 @@ export function FileSystemLight({
     [selectedPath],
   );
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([onSelectedPathChange]), () => {
     onSelectedPathChangeRef.current = onSelectedPathChange;
-  }, [onSelectedPathChange]);
+  });
 
-  React.useEffect(() => {
+  useKeyedMountEffect(joinEffectKey([isSelectionControlled]), () => {
     isSelectionControlledRef.current = isSelectionControlled;
-  }, [isSelectionControlled]);
+  });
 
   return (
     <ViewerRoot

@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import React from "react";
 import type { JSONSchema7 } from "json-schema";
 
@@ -24,6 +22,8 @@ import type { JsonTableRenderedColumnWindow } from "@/components/json-table/json
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection";
 import type { TableDocument } from "@/components/json-table/lib/projects-types";
 import { ReadOnlyJsonTableCell } from "@/components/json-table/read-only-json-table-cell";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 interface SingleFileFormRowProps {
   document: TableDocument;
@@ -134,10 +134,10 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
       rowTopPx,
     });
     const rowRef = React.useRef<HTMLTableRowElement>(null);
-    React.useLayoutEffect(() => {
+    useKeyedLayoutEffect(joinEffectKey([rowIdx, rowTopPx]), () => {
       const rowElement = rowRef.current;
       if (rowElement?.hidden) rowElement.hidden = false;
-    }, [rowIdx, rowTopPx]);
+    });
 
     // Render a single sub-row (one of the document's `rowCount` rows). Which
     // rows are mounted is decided by the row virtualizer in the parent.

@@ -1,10 +1,9 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { Terminal } from "lucide-react";
 
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import { useConfig } from "@/hooks/use-config";
 import {
   CodeHeaderCopyButton,
@@ -25,13 +24,27 @@ export function CodeBlockCommand({
 }) {
   const [config, setConfig] = useConfig();
   const [hasCopied, setHasCopied] = React.useState(false);
+  const resetCopiedTimerRef = React.useRef<
+    ReturnType<typeof setTimeout> | undefined
+  >(undefined);
 
-  React.useEffect(() => {
-    if (hasCopied) {
-      const timer = setTimeout(() => setHasCopied(false), 2000);
-      return () => clearTimeout(timer);
+  const showCopiedState = React.useCallback(() => {
+    if (resetCopiedTimerRef.current) {
+      clearTimeout(resetCopiedTimerRef.current);
     }
-  }, [hasCopied]);
+
+    setHasCopied(true);
+    resetCopiedTimerRef.current = setTimeout(() => {
+      setHasCopied(false);
+      resetCopiedTimerRef.current = undefined;
+    }, 2000);
+  }, []);
+
+  useMountEffect(() => () => {
+    if (resetCopiedTimerRef.current) {
+      clearTimeout(resetCopiedTimerRef.current);
+    }
+  });
 
   const packageManager = config.packageManager || "pnpm";
   const tabs = React.useMemo(() => {
@@ -57,8 +70,8 @@ export function CodeBlockCommand({
         pm: packageManager,
       },
     });
-    setHasCopied(true);
-  }, [packageManager, tabs]);
+    showCopiedState();
+  }, [packageManager, showCopiedState, tabs]);
 
   return (
     <div className="overflow-x-auto">

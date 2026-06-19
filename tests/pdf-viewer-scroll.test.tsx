@@ -1,10 +1,9 @@
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 // @vitest-environment jsdom
 import * as React from "react";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import {
   createPdfPageLayout,
   getPdfPageLayout,
@@ -43,11 +42,11 @@ describe("usePdfScroll", () => {
         resetKey,
       });
 
-      React.useEffect(() => {
+      useMountEffect(() => {
         result.setViewportElement(viewport);
         result.measureScroll();
         return () => result.setViewportElement(null);
-      }, [result, viewport]);
+      });
 
       return <output data-testid="page">{result.currentPage}</output>;
     }
@@ -120,13 +119,13 @@ describe("usePdfScroll", () => {
         onVisiblePageChange,
         onScrollProgressChange,
       });
+      harnessState.handleScroll = result.handleScroll;
 
-      React.useEffect(() => {
-        harnessState.handleScroll = result.handleScroll;
+      useMountEffect(() => {
         result.setViewportElement(viewport);
         result.measureScroll();
         return () => result.setViewportElement(null);
-      }, [result, viewport]);
+      });
 
       return <output data-testid="page">{result.currentPage}</output>;
     }
@@ -208,10 +207,10 @@ describe("usePdfScroll", () => {
         resetKey: "same-document",
       });
 
-      React.useEffect(() => {
+      useMountEffect(() => {
         result.setViewportElement(viewport);
         return () => result.setViewportElement(null);
-      }, [result]);
+      });
 
       return <output data-testid="page">{result.currentPage}</output>;
     }
@@ -254,10 +253,10 @@ describe("usePdfScroll", () => {
         resetKey: "same-document",
       });
 
-      React.useEffect(() => {
+      useMountEffect(() => {
         result.setViewportElement(viewport);
         return () => result.setViewportElement(null);
-      }, [result]);
+      });
 
       return <output data-testid="page">{result.currentPage}</output>;
     }
@@ -301,12 +300,12 @@ describe("usePdfScroll", () => {
         layout,
         resetKey: "same-document",
       });
+      harnessState.scrollToPage = result.scrollToPage;
 
-      React.useEffect(() => {
-        harnessState.scrollToPage = result.scrollToPage;
+      useMountEffect(() => {
         result.setViewportElement(viewport.element);
         return () => result.setViewportElement(null);
-      }, [result]);
+      });
 
       return <output data-testid="page">{result.currentPage}</output>;
     }
@@ -366,12 +365,12 @@ describe("usePdfScroll", () => {
         layout,
         resetKey: "same-document",
       });
+      harnessState.scrollToPage = result.scrollToPage;
 
-      React.useEffect(() => {
-        harnessState.scrollToPage = result.scrollToPage;
+      useMountEffect(() => {
         result.setViewportElement(viewport.element);
         return () => result.setViewportElement(null);
-      }, [result]);
+      });
 
       return <output data-testid="page">{result.currentPage}</output>;
     }

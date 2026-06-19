@@ -1,9 +1,10 @@
 "use client";
 
-/* eslint-disable no-restricted-syntax -- TODO(no-useEffect): existing direct React effect usage; migrate to useMountEffect or a Rule 1-5 replacement. */
-
 import * as React from "react";
 import { createPortal } from "react-dom";
+
+import { KeyedRunner } from "@/hooks/KeyedRunner";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 type JsonTableStyleProbeSurface =
   | "empty-portal"
@@ -15,19 +16,9 @@ export function JsonTableStyleProbe() {
     React.useState<JsonTableStyleProbeSurface | null>(null);
   const [isMounted, setIsMounted] = React.useState(false);
 
-  React.useEffect(() => {
+  useMountEffect(() => {
     setIsMounted(true);
-  }, []);
-
-  React.useEffect(() => {
-    if (!surface) return;
-
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setSurface(null);
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [surface]);
+  });
 
   return (
     <div
@@ -49,6 +40,18 @@ export function JsonTableStyleProbe() {
         label="Picker shell"
         name="picker-shell"
         setSurface={setSurface}
+      />
+      <KeyedRunner
+        key={`style-probe:${surface ?? "closed"}`}
+        effect={() => {
+          if (!surface) return;
+
+          const closeOnEscape = (event: KeyboardEvent) => {
+            if (event.key === "Escape") setSurface(null);
+          };
+          window.addEventListener("keydown", closeOnEscape);
+          return () => window.removeEventListener("keydown", closeOnEscape);
+        }}
       />
       {isMounted && surface
         ? createPortal(<StyleProbePortal surface={surface} />, document.body)
