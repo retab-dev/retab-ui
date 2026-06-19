@@ -11,7 +11,6 @@ import { LayoutProvider } from "@/hooks/use-layout"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { ActiveThemeProvider } from "@/components/active-theme"
-import { TailwindIndicator } from "@/components/tailwind-indicator"
 import { ThemeProvider } from "@/components/theme-provider"
 
 import "@/app/globals.css"
@@ -107,7 +106,6 @@ export default function RootLayout({
                   <Toaster position="top-center" />
                 </TooltipProvider>
               </NuqsAdapter>
-              <TailwindIndicator />
             </ActiveThemeProvider>
           </LayoutProvider>
         </ThemeProvider>
