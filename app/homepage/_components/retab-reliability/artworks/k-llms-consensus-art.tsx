@@ -59,6 +59,13 @@ const K_LLMS_CONSENSUS_PALETTE = buildTonePalette(
   DEFAULT_K_LLMS_CONSENSUS_PALETTE,
 );
 
+const SOURCE_NODE_LEFT = 24;
+const COMPACT_SOURCE_NODE_WIDTH = 220;
+const SOURCE_NODE_PADDING = 10;
+const SOURCE_JSON_RIGHT_X =
+  SOURCE_NODE_LEFT + COMPACT_SOURCE_NODE_WIDTH - SOURCE_NODE_PADDING;
+const CONSENSUS_NODE_LEFT = 396;
+
 const SCHEMA_FIELDS = [
   "loan_amount",
   "applicant_name",
@@ -184,7 +191,9 @@ function SourceNode({ data }: { data: SourceNodeData }) {
     <div className="relative">
       <div
         className={palette.sourceNodeClassName}
-        style={{ width: data.isCompact ? 220 : undefined }}
+        style={{
+          width: data.isCompact ? COMPACT_SOURCE_NODE_WIDTH : undefined,
+        }}
       >
         <div className={palette.sourceTitleClassName}>
           <span>{data.title}</span>
@@ -276,7 +285,7 @@ function ConsensusStaticCanvas({
         </defs>
         <path
           className={palette.edgeClassName}
-          d="M268 112 C336 112 344 306 396 334"
+          d={`M${SOURCE_JSON_RIGHT_X} 112 C336 112 344 306 ${CONSENSUS_NODE_LEFT} 334`}
           fill="none"
           markerEnd={`url(#${markerId})`}
           stroke="currentColor"
@@ -287,7 +296,7 @@ function ConsensusStaticCanvas({
         />
         <path
           className={palette.edgeClassName}
-          d="M268 366 C326 366 346 398 396 398"
+          d={`M${SOURCE_JSON_RIGHT_X} 366 C326 366 346 398 ${CONSENSUS_NODE_LEFT} 398`}
           fill="none"
           markerEnd={`url(#${markerId})`}
           stroke="currentColor"
@@ -298,7 +307,7 @@ function ConsensusStaticCanvas({
         />
         <path
           className={palette.edgeClassName}
-          d="M268 620 C336 620 344 492 396 462"
+          d={`M${SOURCE_JSON_RIGHT_X} 620 C336 620 344 492 ${CONSENSUS_NODE_LEFT} 462`}
           fill="none"
           markerEnd={`url(#${markerId})`}
           stroke="currentColor"
@@ -313,7 +322,7 @@ function ConsensusStaticCanvas({
         <div
           className="absolute"
           key={sourceNode.title}
-          style={{ top: sourceNode.y, left: 24 }}
+          style={{ top: sourceNode.y, left: SOURCE_NODE_LEFT }}
         >
           <SourceNode
             data={{
@@ -326,7 +335,10 @@ function ConsensusStaticCanvas({
         </div>
       ))}
 
-      <div className="absolute top-[285px] left-[396px]">
+      <div
+        className="absolute top-[285px]"
+        style={{ left: CONSENSUS_NODE_LEFT }}
+      >
         <ConsensusNode data={{ title: "Likelihoods", tone, isCompact: true }} />
       </div>
     </div>
