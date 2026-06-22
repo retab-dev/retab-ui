@@ -23,10 +23,25 @@ const reliabilityCards = [
 ] satisfies readonly CardItem[];
 
 const cardClassName =
-  "h-full min-h-64 border border-border/70 shadow-sm sm:min-h-0";
-const fullHeightCardClassName = `${cardClassName} sm:row-span-2`;
+  "h-full min-h-64 border border-border shadow-sm sm:min-h-0";
+const evalsCardClassName = `${cardClassName} bg-card`;
+const consensusCardClassName = `${cardClassName} bg-card sm:row-span-2`;
+const validationCardClassName = `${cardClassName} bg-card`;
 const titleClassName =
   "max-w-[98%] text-base leading-[1.02] font-normal tracking-normal text-foreground sm:text-lg";
+
+function getCardClassName(card: CardItem) {
+  if (card.id === "k_llms_consensus") {
+    return consensusCardClassName;
+  }
+  if (card.id === "studio_evals") {
+    return evalsCardClassName;
+  }
+  if (card.id === "human_in_loop") {
+    return validationCardClassName;
+  }
+  return cardClassName;
+}
 
 export function RetabReliabilityGrid() {
   return (
@@ -38,11 +53,7 @@ export function RetabReliabilityGrid() {
         <DrawerCardTile
           key={card.id}
           card={card}
-          cardClassName={
-            card.id === "k_llms_consensus"
-              ? fullHeightCardClassName
-              : cardClassName
-          }
+          cardClassName={getCardClassName(card)}
           titleClassName={titleClassName}
           tone="warm"
         />

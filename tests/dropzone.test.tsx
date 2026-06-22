@@ -27,6 +27,7 @@ import {
 import type { BlobViewerSource } from "@/registry/new-york-v4/lib/viewer-source";
 import {
   DropzoneProvider,
+  DropzoneInput,
   DropzoneRoot,
   DropzoneTrigger,
   formatDropzoneAccept,
@@ -134,13 +135,14 @@ function CustomFileIntakeSurface({
 
 describe("Dropzone primitive", () => {
   it("parses and matches MIME types, wildcard MIME types, and extensions", () => {
-    expect(parseDropzoneAccept(" .PDF, image/*, application/json ,, ")).toEqual(
-      [
-        { type: "extension", value: ".pdf" },
-        { type: "mime-prefix", value: "image/" },
-        { type: "mime", value: "application/json" },
-      ],
-    );
+    expect(
+      parseDropzoneAccept(" .PDF, image/*, application/json, */* ,, "),
+    ).toEqual([
+      { type: "extension", value: ".pdf" },
+      { type: "mime-prefix", value: "image/" },
+      { type: "mime", value: "application/json" },
+      { type: "any", value: "*/*" },
+    ]);
     expect(
       matchesDropzoneAccept(file("statement.pdf", "application/pdf"), ".pdf"),
     ).toBe(true);
@@ -160,6 +162,7 @@ describe("Dropzone primitive", () => {
         "image/jpeg,.png",
       ),
     ).toBe(true);
+    expect(matchesDropzoneAccept(file("archive.bin", ""), "*/*")).toBe(true);
   });
 
   it("validates single files with structured rejection-specific facts", () => {
@@ -264,8 +267,9 @@ describe("Dropzone primitive", () => {
         { type: "extension", value: ".pdf" },
         { type: "mime-prefix", value: "image/" },
         { type: "mime", value: "application/json" },
+        { type: "any", value: "*/*" },
       ]),
-    ).toBe(".pdf,image/*,application/json");
+    ).toBe(".pdf,image/*,application/json,*/*");
 
     function Probe() {
       const dropzone = useDropzone({
@@ -281,6 +285,83 @@ describe("Dropzone primitive", () => {
     const input = container.querySelector('[data-slot="dropzone-input"]');
 
     expect(input?.getAttribute("accept")).toBe(".pdf,application/json");
+  });
+
+  it("lets native input accept hints differ from validation accept rules", async () => {
+    const onIntake = vi.fn();
+
+    render(
+      <DropzoneProvider
+        accept="application/json"
+        inputAccept=".json,.jsonl"
+        onIntake={onIntake}
+      >
+        <DropzoneInput data-testid="file-input" />
+        <DropzoneRoot data-testid="dropzone">Drop files</DropzoneRoot>
+      </DropzoneProvider>,
+    );
+
+    const input = screen.getByTestId("file-input") as HTMLInputElement;
+    const root = screen.getByTestId("dropzone");
+
+    expect(input.accept).toBe(".json,.jsonl");
+
+    fireEvent.drop(
+      root,
+      dropData([file("events.jsonl", "application/x-ndjson")]),
+    );
+
+    await waitFor(() => {
+      expect(onIntake).toHaveBeenCalledWith(
+        {
+          acceptedFiles: [],
+          fileRejections: [
+            expect.objectContaining({
+              acceptRules: [{ type: "mime", value: "application/json" }],
+              file: expect.objectContaining({ name: "events.jsonl" }),
+              reason: "file-invalid-type",
+            }),
+          ],
+        },
+        { source: "drop" },
+      );
+    });
+  });
+
+  it("detects dragged files when only dataTransfer.files is populated", async () => {
+    const onIntake = vi.fn();
+    const pdf = file("statement.pdf", "application/pdf");
+    const filesOnlyData = {
+      dataTransfer: {
+        files: [pdf],
+        items: [],
+        types: [],
+      },
+    };
+
+    render(
+      <DropzoneProvider onIntake={onIntake}>
+        <DropzoneRoot data-testid="dropzone">Drop files</DropzoneRoot>
+      </DropzoneProvider>,
+    );
+
+    const root = screen.getByTestId("dropzone");
+
+    fireEvent.dragEnter(root, filesOnlyData);
+    expect(root.getAttribute("data-dragging")).toBe("");
+
+    fireEvent.drop(root, filesOnlyData);
+
+    await waitFor(() => {
+      expect(onIntake).toHaveBeenCalledWith(
+        {
+          acceptedFiles: [pdf],
+          fileRejections: [],
+        },
+        { source: "drop" },
+      );
+    });
+    expect(root.hasAttribute("data-dragging")).toBe(false);
   });
 
   it("supports intake-only mode with an externally owned file count", () => {
@@ -316,16 +397,19 @@ describe("Dropzone primitive", () => {
 
     expect(root!.textContent).toContain("files:0");
     expect(onFilesChange).not.toHaveBeenCalled();
-    expect(onIntake).toHaveBeenCalledWith({
-      acceptedFiles: [expect.objectContaining({ name: "first.pdf" })],
-      fileRejections: [
-        expect.objectContaining({
-          file: expect.objectContaining({ name: "second.pdf" }),
-          maxFiles: 3,
-          reason: "too-many-files",
-        }),
-      ],
-    });
+    expect(onIntake).toHaveBeenCalledWith(
+      {
+        acceptedFiles: [expect.objectContaining({ name: "first.pdf" })],
+        fileRejections: [
+          expect.objectContaining({
+            file: expect.objectContaining({ name: "second.pdf" }),
+            maxFiles: 3,
+            reason: "too-many-files",
+          }),
+        ],
+      },
+      { source: "drop" },
+    );
   });
 
   it("runs async validation before committing accepted files", async () => {
@@ -381,16 +465,19 @@ describe("Dropzone primitive", () => {
         currentCount: 0,
       }),
     );
-    expect(onIntake).toHaveBeenCalledWith({
-      acceptedFiles: [expect.objectContaining({ name: "accepted.pdf" })],
-      fileRejections: [
-        expect.objectContaining({
-          code: "server-rejected",
-          file: expect.objectContaining({ name: "rejected.pdf" }),
-          reason: "custom",
-        }),
-      ],
-    });
+    expect(onIntake).toHaveBeenCalledWith(
+      {
+        acceptedFiles: [expect.objectContaining({ name: "accepted.pdf" })],
+        fileRejections: [
+          expect.objectContaining({
+            code: "server-rejected",
+            file: expect.objectContaining({ name: "rejected.pdf" }),
+            reason: "custom",
+          }),
+        ],
+      },
+      { source: "drop" },
+    );
   });
 
   it("applies maxFiles after async validation removes rejected files", async () => {
@@ -429,21 +516,26 @@ describe("Dropzone primitive", () => {
       expect(root!.textContent).toContain("files:accepted.pdf");
     });
 
-    expect(onIntake).toHaveBeenCalledWith({
-      acceptedFiles: [acceptedFile],
-      fileRejections: [
-        {
-          code: "server-rejected",
-          file: blockedFile,
-          reason: "custom",
-        },
-      ],
-    });
+    expect(onIntake).toHaveBeenCalledWith(
+      {
+        acceptedFiles: [acceptedFile],
+        fileRejections: [
+          {
+            code: "server-rejected",
+            file: blockedFile,
+            reason: "custom",
+          },
+        ],
+      },
+      { source: "drop" },
+    );
   });
 
-  it("can track document-level drag state for external overlays", () => {
+  it("can track and commit document-level file drops for external overlays", async () => {
+    const onIntake = vi.fn();
+
     function Probe() {
-      const dropzone = useDropzone({ dragScope: "document" });
+      const dropzone = useDropzone({ dragScope: "document", onIntake });
       return (
         <div {...dropzone.getRootProps()}>
           dragging:{dropzone.isDragging ? "yes" : "no"}
@@ -461,12 +553,18 @@ describe("Dropzone primitive", () => {
 
     expect(root!.textContent).toContain("dragging:yes");
 
-    fireEvent.dragLeave(
-      document,
-      dropData([file("first.pdf", "application/pdf")]),
-    );
+    fireEvent.drop(document, dropData([file("first.pdf", "application/pdf")]));
 
-    expect(root!.textContent).toContain("dragging:no");
+    await waitFor(() => {
+      expect(root!.textContent).toContain("dragging:no");
+    });
+    expect(onIntake).toHaveBeenCalledWith(
+      {
+        acceptedFiles: [expect.objectContaining({ name: "first.pdf" })],
+        fileRejections: [],
+      },
+      { source: "drop" },
+    );
   });
 
   it("provider shares one dropzone instance with descendants", () => {
@@ -498,16 +596,19 @@ describe("Dropzone primitive", () => {
     );
 
     expect(root!.textContent).toContain("files:first.pdf");
-    expect(onIntake).toHaveBeenCalledWith({
-      acceptedFiles: [expect.objectContaining({ name: "first.pdf" })],
-      fileRejections: [
-        expect.objectContaining({
-          file: expect.objectContaining({ name: "second.pdf" }),
-          maxFiles: 1,
-          reason: "too-many-files",
-        }),
-      ],
-    });
+    expect(onIntake).toHaveBeenCalledWith(
+      {
+        acceptedFiles: [expect.objectContaining({ name: "first.pdf" })],
+        fileRejections: [
+          expect.objectContaining({
+            file: expect.objectContaining({ name: "second.pdf" }),
+            maxFiles: 1,
+            reason: "too-many-files",
+          }),
+        ],
+      },
+      { source: "drop" },
+    );
   });
 
   it("compound parts bind root and trigger props from provider context", () => {
@@ -901,10 +1002,19 @@ describe("Dropzone primitive", () => {
 
     expect(root!.textContent).toContain("first.pdf");
     expect(root!.textContent).not.toContain("second.pdf");
-    expect(onIntake).toHaveBeenCalledWith({
-      acceptedFiles: [expect.objectContaining({ name: "first.pdf" })],
-      fileRejections: [],
-    });
+    expect(onIntake).toHaveBeenCalledWith(
+      {
+        acceptedFiles: [expect.objectContaining({ name: "first.pdf" })],
+        fileRejections: [
+          expect.objectContaining({
+            file: expect.objectContaining({ name: "second.pdf" }),
+            maxFiles: 1,
+            reason: "too-many-files",
+          }),
+        ],
+      },
+      { source: "drop" },
+    );
   });
 
   it("replaces existing selected files when multiple is false", () => {
@@ -1035,12 +1145,15 @@ describe("Dropzone primitive", () => {
     );
 
     expect(onIntake).toHaveBeenCalledOnce();
-    expect(onIntake).toHaveBeenCalledWith({
-      acceptedFiles: [expect.objectContaining({ name: "first.pdf" })],
-      fileRejections: [
-        expect.objectContaining({ reason: "file-invalid-type" }),
-      ],
-    });
+    expect(onIntake).toHaveBeenCalledWith(
+      {
+        acceptedFiles: [expect.objectContaining({ name: "first.pdf" })],
+        fileRejections: [
+          expect.objectContaining({ reason: "file-invalid-type" }),
+        ],
+      },
+      { source: "drop" },
+    );
     expect(onFilesChange).toHaveBeenCalledOnce();
     expect(root!.textContent).toContain("rejections:1");
   });
@@ -1512,6 +1625,7 @@ describe("DropzoneBlock", () => {
           }),
         ],
       }),
+      { source: "input" },
     );
     expect(
       within(viewerSection).getByText("Unsupported file type"),
@@ -1618,7 +1732,7 @@ describe("Dropzone registry split", () => {
     expect(dropzoneSource).not.toContain("onFilesAccepted");
     expect(dropzoneSource).not.toContain("onFilesRejected");
     expect(dropzoneSource).not.toContain("hasFiles");
-    expect(dropzoneSource).not.toContain("DropzoneState");
+    expect(dropzoneSource).toContain("export function DropzoneState");
     expect(dropzoneSource).not.toContain(
       "fileRejections: lastIntake.fileRejections",
     );
@@ -1681,7 +1795,9 @@ describe("Dropzone registry split", () => {
     expect(fileUploaderSource).toContain(
       "This file type is not supported here.",
     );
-    expect(dropzone?.dependencies ?? []).toEqual([]);
+    expect(dropzone?.dependencies ?? []).toEqual([
+      "@radix-ui/react-slot@^1.1.1",
+    ]);
     expect(dropzone?.registryDependencies ?? []).toEqual([
       "@retab/use-keyed-mount-effect",
     ]);

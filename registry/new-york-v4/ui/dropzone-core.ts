@@ -1,4 +1,5 @@
 export type DropzoneAcceptRule =
+  | { type: "any"; value: "*/*" }
   | { type: "extension"; value: string }
   | { type: "mime"; value: string }
   | { type: "mime-prefix"; value: string };
@@ -39,6 +40,9 @@ export function parseDropzoneAccept(accept?: string): DropzoneAcceptRule[] {
     .map((rawToken) => rawToken.trim().toLowerCase())
     .filter(Boolean)
     .map((token): DropzoneAcceptRule => {
+      if (token === "*/*") {
+        return { type: "any", value: "*/*" };
+      }
       if (token.startsWith(".")) {
         return { type: "extension", value: token };
       }
@@ -56,6 +60,7 @@ export function formatDropzoneAccept(
 
   return accept
     .map((rule) => {
+      if (rule.type === "any") return rule.value;
       if (rule.type === "mime-prefix") return `${rule.value}*`;
       return rule.value;
     })
@@ -75,6 +80,7 @@ export function matchesDropzoneAccept(
   const fileType = file.type.toLowerCase();
 
   return acceptRules.some((rule) => {
+    if (rule.type === "any") return true;
     if (rule.type === "extension") return fileName.endsWith(rule.value);
     if (rule.type === "mime-prefix") return fileType.startsWith(rule.value);
     return fileType === rule.value;

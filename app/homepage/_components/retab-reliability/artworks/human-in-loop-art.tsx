@@ -30,7 +30,7 @@ export function HumanInLoopArt({
       <div className="absolute inset-0">
         <div className="absolute inset-x-3 top-2 bottom-2 flex flex-col gap-2">
           {/* Flagged extraction */}
-          <div className="border-border bg-card rounded-sm border p-3">
+          <div className="bg-card rounded-sm p-3">
             <div className="mb-2">
               <span className="text-foreground/75 text-[11px] font-semibold">
                 Extraction result

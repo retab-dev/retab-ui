@@ -151,15 +151,9 @@ export function StudioEvalsArt({
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-b-sm">
       <div className="absolute inset-0">
-        <div className="border-border bg-card absolute top-[2%] left-[5%] w-[90%] rounded-sm border px-2.5 pt-2 pb-2.5 md:top-[4%]">
-          <div className="mb-2 flex items-center justify-between">
-            <div
-              className="leading-none font-medium tracking-[-0.02em] text-[#6f6b69]"
-              style={{ fontSize: "17px" }}
-            >
-              Accuracy
-            </div>
-            <div className="flex flex-col items-end gap-1">
+        <div className="bg-card absolute top-[2%] right-1.5 left-1.5 rounded-sm px-2.5 pt-2 pb-2.5 sm:right-3.5 sm:left-3.5 md:top-[4%]">
+          <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3">
+            <div className="col-start-2 row-start-1 flex flex-col items-end gap-1">
               <div className="flex items-center gap-1.5">
                 <div className="bg-accent/80 h-2 w-[40px] rounded-sm" />
                 <div className="bg-accent/80 h-2 w-[62px] rounded-sm" />
@@ -167,29 +161,32 @@ export function StudioEvalsArt({
               <div className="bg-accent/80 h-2 w-[70px] rounded-sm" />
               <div className="bg-accent/80 h-2 w-[56px] rounded-sm" />
             </div>
+            <div className="col-start-1 row-start-1 flex items-end gap-1.5 self-start pt-2">
+              <div
+                className="text-foreground leading-[0.86] font-semibold tracking-[-0.03em]"
+                style={{ fontSize: "27px" }}
+              >
+                {averageValue.toFixed(1)}%
+              </div>
+              <div
+                className="text-muted-foreground pb-1 leading-none font-normal"
+                style={{ fontSize: "14px" }}
+              >
+                (avg)
+              </div>
+              <div
+                className="bg-success/15 text-success rounded-sm px-1.5 py-1 leading-none font-medium"
+                style={{ fontSize: "14px" }}
+              >
+                {confidenceValue.toFixed(2)}%
+              </div>
+            </div>
           </div>
-          <div className="mb-2.5 flex items-end gap-1.5">
-            <div
-              className="text-foreground leading-[0.86] font-semibold tracking-[-0.03em]"
-              style={{ fontSize: "27px" }}
-            >
-              {averageValue.toFixed(1)}%
+          <div className="relative h-[138px] py-1.5 pr-1.5 pl-8">
+            <div className="text-muted-foreground absolute top-1/2 left-0 w-20 -translate-x-[35px] -translate-y-1/2 -rotate-90 text-center text-[10px] leading-none font-medium">
+              Accuracy
             </div>
-            <div
-              className="text-muted-foreground pb-1 leading-none font-normal"
-              style={{ fontSize: "14px" }}
-            >
-              (avg)
-            </div>
-            <div
-              className="bg-success/15 text-success rounded-sm px-1.5 py-1 leading-none font-medium"
-              style={{ fontSize: "14px" }}
-            >
-              {confidenceValue.toFixed(2)}%
-            </div>
-          </div>
-          <div className="relative h-[138px] px-1.5 py-1.5">
-            <div className="text-muted-foreground absolute inset-y-2 left-1 flex w-[42px] flex-col justify-between text-[10px] leading-none">
+            <div className="text-muted-foreground absolute inset-y-2 left-8 flex w-[42px] flex-col justify-between text-[10px] leading-none">
               <span>100%</span>
               <span>91%</span>
               <span>85%</span>

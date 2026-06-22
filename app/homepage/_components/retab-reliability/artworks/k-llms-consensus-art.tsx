@@ -1,17 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import {
-  type Edge,
-  Handle,
-  MarkerType,
-  Position,
-  ReactFlow,
-  ReactFlowProvider,
-  type Node,
-  useReactFlow,
-} from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
+import { useId, useRef, useState } from "react";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import type { CardTone } from "../types";
@@ -47,8 +36,7 @@ type KLlmsConsensusPalette = {
 };
 
 const DEFAULT_K_LLMS_CONSENSUS_PALETTE: KLlmsConsensusPalette = {
-  sourceNodeClassName:
-    "relative w-72 rounded-sm border border-border bg-card/95 p-2.5",
+  sourceNodeClassName: "relative w-72 rounded-sm bg-card/95 p-2.5",
   sourceTitleClassName: "mb-1.5 text-[13px] font-medium text-foreground/85",
   sourceCodeClassName:
     "overflow-hidden rounded-sm border border-border bg-muted/50 px-2 py-2 text-[11px] leading-5 whitespace-pre text-foreground/75 font-mono",
@@ -198,13 +186,6 @@ function SourceNode({ data }: { data: SourceNodeData }) {
         className={palette.sourceNodeClassName}
         style={{ width: data.isCompact ? 220 : undefined }}
       >
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="output-json-0"
-          className="!pointer-events-none !h-2 !w-2 !border-0 !bg-transparent !opacity-0"
-          style={{ right: -3, top: "50%" }}
-        />
         <div className={palette.sourceTitleClassName}>
           <span>{data.title}</span>
         </div>
@@ -225,27 +206,6 @@ function ConsensusNode({ data }: { data: ConsensusNodeData }) {
         className={palette.consensusNodeClassName}
         style={{ width: data.isCompact ? 185 : undefined }}
       >
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="input-json-0"
-          className="!pointer-events-none !h-2 !w-2 !border-0 !bg-transparent !opacity-0"
-          style={{ left: -3, top: "24%" }}
-        />
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="input-json-1"
-          className="!pointer-events-none !h-2 !w-2 !border-0 !bg-transparent !opacity-0"
-          style={{ left: -3, top: "50%" }}
-        />
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="input-json-2"
-          className="!pointer-events-none !h-2 !w-2 !border-0 !bg-transparent !opacity-0"
-          style={{ left: -3, top: "76%" }}
-        />
         <div className={palette.consensusTitleClassName}>
           <span>{data.title}</span>
         </div>
@@ -264,219 +224,164 @@ function ConsensusNode({ data }: { data: ConsensusNodeData }) {
   );
 }
 
-const nodeTypes = {
-  source: SourceNode,
-  consensus: ConsensusNode,
-};
+const CANVAS_WIDTH = 640;
+const CANVAS_HEIGHT = 760;
 
-function ConsensusFitViewRunner({
-  fitView,
-  isMobile,
-}: {
-  fitView: ReturnType<typeof useReactFlow>["fitView"];
-  isMobile: boolean;
-}) {
-  useMountEffect(() => {
-    const timer = setTimeout(() => {
-      fitView({ padding: isMobile ? 0.13 : 0.1, duration: 220 });
-    }, 60);
+const sourceNodes = [
+  { title: "Extraction A", code: SOURCE_EXAMPLES.a, y: 24 },
+  { title: "Extraction B", code: SOURCE_EXAMPLES.b, y: 278 },
+  { title: "Extraction C", code: SOURCE_EXAMPLES.c, y: 532 },
+] as const;
 
-    return () => clearTimeout(timer);
-  });
-
-  return null;
-}
-
-function ConsensusWorkflowCanvas({
-  containerWidth,
+function ConsensusStaticCanvas({
+  height,
+  markerId,
+  scale,
   tone,
 }: {
-  containerWidth: number;
+  height: number;
+  markerId: string;
+  scale: number;
   tone: CardTone;
 }) {
-  const { fitView } = useReactFlow();
   const palette = K_LLMS_CONSENSUS_PALETTE[tone];
-  const isMobile = containerWidth < 520;
-  const canvasWidth = Math.max(containerWidth, isMobile ? 660 : 760);
-  const sourceStartY = isMobile ? 32 : 24;
-  const sourceGapY = isMobile ? 252 : 232;
-  const sourceX = canvasWidth * (isMobile ? 0.05 : 0.04);
-  const consensusX = canvasWidth * (isMobile ? 0.61 : 0.62);
-
-  const nodes: Node[] = useMemo(
-    () => [
-      {
-        id: "extract-a",
-        type: "source",
-        position: { x: sourceX, y: sourceStartY },
-        sourcePosition: Position.Right,
-        data: {
-          title: "Extraction A",
-          code: SOURCE_EXAMPLES.a,
-          tone,
-          isCompact: isMobile,
-        },
-        draggable: false,
-      },
-      {
-        id: "extract-b",
-        type: "source",
-        position: { x: sourceX, y: sourceStartY + sourceGapY },
-        sourcePosition: Position.Right,
-        data: {
-          title: "Extraction B",
-          code: SOURCE_EXAMPLES.b,
-          tone,
-          isCompact: isMobile,
-        },
-        draggable: false,
-      },
-      {
-        id: "extract-c",
-        type: "source",
-        position: { x: sourceX, y: sourceStartY + sourceGapY * 2 },
-        sourcePosition: Position.Right,
-        data: {
-          title: "Extraction C",
-          code: SOURCE_EXAMPLES.c,
-          tone,
-          isCompact: isMobile,
-        },
-        draggable: false,
-      },
-      {
-        id: "consensus",
-        type: "consensus",
-        position: { x: consensusX, y: sourceStartY + sourceGapY },
-        targetPosition: Position.Left,
-        data: { title: "Likelihoods", tone, isCompact: isMobile },
-        draggable: false,
-      },
-    ],
-    [consensusX, isMobile, sourceGapY, sourceStartY, sourceX, tone],
-  );
-
-  const edges: Edge[] = useMemo(
-    () => [
-      {
-        id: "a-to-consensus",
-        source: "extract-a",
-        target: "consensus",
-        sourceHandle: "output-json-0",
-        targetHandle: "input-json-0",
-        type: "bezier",
-        className: palette.edgeClassName,
-        animated: true,
-        style: {
-          strokeWidth: 2,
-          strokeDasharray: "8 7",
-          strokeOpacity: 0.5,
-          strokeLinecap: "round" as const,
-        },
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          color: "currentColor",
-        },
-      },
-      {
-        id: "b-to-consensus",
-        source: "extract-b",
-        target: "consensus",
-        sourceHandle: "output-json-0",
-        targetHandle: "input-json-1",
-        type: "bezier",
-        className: palette.edgeClassName,
-        animated: true,
-        style: {
-          strokeWidth: 2,
-          strokeDasharray: "8 7",
-          strokeOpacity: 0.5,
-          strokeLinecap: "round" as const,
-        },
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          color: "currentColor",
-        },
-      },
-      {
-        id: "c-to-consensus",
-        source: "extract-c",
-        target: "consensus",
-        sourceHandle: "output-json-0",
-        targetHandle: "input-json-2",
-        type: "bezier",
-        className: palette.edgeClassName,
-        animated: true,
-        style: {
-          strokeWidth: 2,
-          strokeDasharray: "8 7",
-          strokeOpacity: 0.5,
-          strokeLinecap: "round" as const,
-        },
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          color: "currentColor",
-        },
-      },
-    ],
-    [palette.edgeClassName],
-  );
 
   return (
-    <>
-      <ConsensusFitViewRunner
-        key={`${canvasWidth}:${isMobile ? "mobile" : "desktop"}`}
-        fitView={fitView}
-        isMobile={isMobile}
-      />
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        nodesDraggable={false}
-        nodesConnectable={false}
-        elementsSelectable={false}
-        panOnDrag={false}
-        zoomOnScroll={false}
-        zoomOnPinch={false}
-        zoomOnDoubleClick={false}
-        preventScrolling={false}
-        fitView
-        fitViewOptions={{ padding: isMobile ? 0.13 : 0.1 }}
-        minZoom={0.2}
-        maxZoom={1.8}
-        className="pointer-events-none"
-        proOptions={{ hideAttribution: true }}
-      />
-    </>
+    <div
+      data-consensus-canvas
+      className="absolute top-1/2 left-1/2 origin-center"
+      style={{
+        width: CANVAS_WIDTH,
+        height,
+        transform: `translate(-50%, -50%) scale(${scale})`,
+      }}
+    >
+      <svg
+        aria-hidden="true"
+        className="text-muted-foreground/55 pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+        viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`}
+      >
+        <defs>
+          <marker
+            id={markerId}
+            markerHeight="8"
+            markerWidth="8"
+            orient="auto"
+            refX="7"
+            refY="4"
+            viewBox="0 0 8 8"
+          >
+            <path d="M0 0 L8 4 L0 8 z" fill="currentColor" />
+          </marker>
+        </defs>
+        <path
+          className={palette.edgeClassName}
+          d="M268 112 C336 112 344 306 396 334"
+          fill="none"
+          markerEnd={`url(#${markerId})`}
+          stroke="currentColor"
+          strokeDasharray="8 7"
+          strokeLinecap="round"
+          strokeOpacity="0.5"
+          strokeWidth="2"
+        />
+        <path
+          className={palette.edgeClassName}
+          d="M268 366 C326 366 346 398 396 398"
+          fill="none"
+          markerEnd={`url(#${markerId})`}
+          stroke="currentColor"
+          strokeDasharray="8 7"
+          strokeLinecap="round"
+          strokeOpacity="0.5"
+          strokeWidth="2"
+        />
+        <path
+          className={palette.edgeClassName}
+          d="M268 620 C336 620 344 492 396 462"
+          fill="none"
+          markerEnd={`url(#${markerId})`}
+          stroke="currentColor"
+          strokeDasharray="8 7"
+          strokeLinecap="round"
+          strokeOpacity="0.5"
+          strokeWidth="2"
+        />
+      </svg>
+
+      {sourceNodes.map((sourceNode) => (
+        <div
+          className="absolute"
+          key={sourceNode.title}
+          style={{ top: sourceNode.y, left: 24 }}
+        >
+          <SourceNode
+            data={{
+              title: sourceNode.title,
+              code: sourceNode.code,
+              tone,
+              isCompact: true,
+            }}
+          />
+        </div>
+      ))}
+
+      <div className="absolute top-[285px] left-[396px]">
+        <ConsensusNode data={{ title: "Likelihoods", tone, isCompact: true }} />
+      </div>
+    </div>
   );
 }
 
 export function KLlmsConsensusArt({ tone = "default" }: { tone?: CardTone }) {
   const palette = K_LLMS_CONSENSUS_PALETTE[tone];
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState(860);
+  const markerId = useId();
+  const [containerSize, setContainerSize] = useState({
+    width: 360,
+    height: CANVAS_HEIGHT,
+  });
 
   useMountEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
+    const updateContainerSize = () => {
+      if (container.offsetWidth > 0 && container.offsetHeight > 0) {
+        setContainerSize({
+          width: container.offsetWidth,
+          height: container.offsetHeight,
+        });
+      }
+    };
+
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const width = entry.contentRect.width;
-        if (width > 0) {
-          setContainerWidth(width);
+        const height = entry.contentRect.height;
+        if (width > 0 && height > 0) {
+          setContainerSize({ width, height });
         }
       }
     });
 
     resizeObserver.observe(container);
-    setContainerWidth(container.offsetWidth || 860);
+    updateContainerSize();
+    const animationFrame = window.requestAnimationFrame(updateContainerSize);
+    const timer = window.setTimeout(updateContainerSize, 250);
 
     return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.clearTimeout(timer);
       resizeObserver.disconnect();
     };
   });
+
+  const canvasScale = Math.min(
+    Math.max(containerSize.width - 32, 1) / CANVAS_WIDTH,
+    Math.max(containerSize.height - 32, 1) / CANVAS_HEIGHT,
+    1,
+  );
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -491,12 +396,12 @@ export function KLlmsConsensusArt({ tone = "default" }: { tone?: CardTone }) {
           ref={containerRef}
           className="absolute inset-0 overflow-hidden rounded-sm"
         >
-          <ReactFlowProvider>
-            <ConsensusWorkflowCanvas
-              containerWidth={containerWidth}
-              tone={tone}
-            />
-          </ReactFlowProvider>
+          <ConsensusStaticCanvas
+            height={CANVAS_HEIGHT}
+            markerId={markerId}
+            scale={canvasScale}
+            tone={tone}
+          />
         </div>
       </div>
     </div>

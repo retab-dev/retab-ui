@@ -116,7 +116,10 @@ function FooterBrand({ content }: { content: FooterContent }) {
 
 export function MarketingFooter({ content }: { content: FooterContent }) {
   return (
-    <footer aria-labelledby="homepage-footer-heading" className="bg-muted/30">
+    <footer
+      aria-labelledby="homepage-footer-heading"
+      className="relative z-20 -mt-px bg-muted/30"
+    >
       <h2 id="homepage-footer-heading" className="sr-only">
         Footer
       </h2>

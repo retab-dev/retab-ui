@@ -23,6 +23,12 @@ export function DrawerCardTile({
     tone === "warm"
       ? "group relative gap-0 overflow-hidden rounded-sm border-0 bg-muted/40 p-0 shadow-none transition-all duration-300 ease-out before:shadow-none dark:bg-muted/20 dark:before:shadow-none"
       : "group relative gap-0 overflow-hidden rounded-sm border-0 bg-muted/30 p-0 shadow-none transition-all duration-300 ease-out before:shadow-none dark:bg-muted/15 dark:before:shadow-none";
+  const headerClassName =
+    card.id === "studio_evals" ||
+    card.id === "k_llms_consensus" ||
+    card.id === "human_in_loop"
+      ? "relative z-10 shrink-0 px-3 pt-4 pb-0 sm:px-4 sm:pt-6 sm:pb-0"
+      : "relative z-10 shrink-0 p-3 pb-0 sm:p-4 sm:pb-0";
 
   return (
     <Card
@@ -33,7 +39,7 @@ export function DrawerCardTile({
         card.isWide ? wideSpanClassName : undefined,
       )}
     >
-      <CardHeader className="relative z-10 shrink-0 p-3 pb-0 sm:p-4 sm:pb-0">
+      <CardHeader className={headerClassName}>
         <div className="flex flex-col gap-1 pl-1 sm:pl-2">
           <CardTitle className={cn(titleClassName)}>{card.title}</CardTitle>
           {card.subtitle && (
