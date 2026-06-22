@@ -2,9 +2,9 @@ import { type Metadata } from "next";
 
 import { VercelHomepage } from "./_components/vercel-homepage";
 
-const title = "Agentic Infrastructure";
+const title = "Document Automation Infrastructure";
 const description =
-  "A Vercel-inspired homepage reproduction built from explicit marketing primitives.";
+  "Retab turns PDFs, emails, images, and spreadsheets into reliable document automation workflows with schemas, citations, confidence, and human review.";
 
 export const dynamic = "force-static";
 export const revalidate = false;

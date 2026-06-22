@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 import { HeaderNavigation } from "./header-navigation";
 import { type HeaderContent } from "./homepage-types";
-import { focusRing, MarketingContainer, VercelMark } from "./primitives";
+import { focusRing, MarketingContainer, RetabMark } from "./primitives";
 
 export function MarketingHeader({ content }: { content: HeaderContent }) {
   return (
@@ -18,7 +18,7 @@ export function MarketingHeader({ content }: { content: HeaderContent }) {
           )}
           aria-label="Retab"
         >
-          <VercelMark />
+          <RetabMark />
         </Link>
         <HeaderNavigation content={content} />
       </MarketingContainer>

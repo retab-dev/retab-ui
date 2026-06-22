@@ -40,20 +40,15 @@ export type HeaderContent = {
   readonly mobileActions: readonly HeaderAction[];
 };
 
-export type LogoVariant =
-  | "text"
-  | "monogram"
-  | "diamond-wordmark"
-  | "large-diamond-wordmark"
-  | "pill-wordmark"
-  | "stacked-serif"
-  | "stacked-bold";
-
 export type LogoContent = {
   readonly id: string;
   readonly label: string;
-  readonly variant: LogoVariant;
-  readonly lines?: readonly string[];
+  readonly image: {
+    readonly src: string;
+    readonly width: number;
+    readonly height: number;
+    readonly className?: string;
+  };
 };
 
 export type ProductLaneLayout = "default" | "reversed";
@@ -66,19 +61,16 @@ export type ProductLaneContent = {
   readonly proofCustomer: string;
   readonly proof: string;
   readonly features: readonly string[];
-  readonly image: ProductVisualImage;
+  readonly visual: ProductVisualContent;
 };
 
-export type ProductVisualImage = {
-  readonly desktopSrc: string;
-  readonly desktopDarkSrc: string;
-  readonly desktopWidth: number;
-  readonly desktopHeight: number;
-  readonly mobileSrc: string;
-  readonly mobileDarkSrc: string;
-  readonly mobileWidth: number;
-  readonly mobileHeight: number;
-  readonly alt: string;
+export type ProductVisualContent = {
+  readonly kind:
+    | "workflow"
+    | "extraction"
+    | "reliability"
+    | "agents"
+    | "enterprise";
 };
 
 export type LatestMetric = readonly [label: string, value: string];

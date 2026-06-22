@@ -169,134 +169,128 @@ export const homepageHeader = {
 } as const satisfies HeaderContent;
 
 export const logoStrip = [
-  { id: "blackbox", label: "BLACKBOX.AI", variant: "diamond-wordmark" },
-  { id: "hh", label: "HH", variant: "monogram" },
-  { id: "openai", label: "OpenAI", variant: "text" },
-  { id: "doordash", label: "DOORDASH", variant: "pill-wordmark" },
   {
-    id: "schwab",
-    label: "charles SCHWAB",
-    variant: "stacked-serif",
-    lines: ["charles", "SCHWAB"],
+    id: "harvard",
+    label: "Harvard University",
+    image: {
+      src: "/clients/harvard-logo.svg",
+      width: 600,
+      height: 165,
+      className: "h-8 md:h-9",
+    },
   },
   {
-    id: "weather",
-    label: "The Weather Company",
-    variant: "stacked-bold",
-    lines: ["The", "Weather", "Company"],
+    id: "sinari",
+    label: "Sinari",
+    image: {
+      src: "/clients/logo-sinari.svg",
+      width: 118,
+      height: 32,
+      className: "h-7 md:h-8",
+    },
   },
   {
-    id: "polymarket",
-    label: "Polymarket",
-    variant: "large-diamond-wordmark",
+    id: "carmoola",
+    label: "Carmoola",
+    image: {
+      src: "/clients/carmoola-logo.svg",
+      width: 182,
+      height: 32,
+      className: "h-7 md:h-8",
+    },
+  },
+  {
+    id: "maersk",
+    label: "Maersk",
+    image: {
+      src: "/clients/maersk-logo.svg",
+      width: 135,
+      height: 31,
+      className: "h-7 md:h-8",
+    },
   },
 ] as const satisfies readonly LogoContent[];
 
 export const heroKickers = [
   {
-    label: "For coding agents",
-    body: "to deploy in their native language, with Vercel's API, CLI, MCP, and Skills.",
+    label: "For document workflows",
+    body: "that parse, split, classify, extract, validate, and route every file through one reliable pipeline.",
   },
   {
-    label: "To ship apps and agents",
-    body: "in Sandboxed VMs, with durable backends, powered by hundreds of models.",
+    label: "To turn files into data",
+    body: "with schemas, citations, confidence scores, and review queues built for production.",
   },
   {
     label: "Automated by agents",
-    body: "who autonomously investigate errors, plan fixes, and open PRs.",
+    body: "with MCP context for run inspection, failure tracing, and workflow debugging.",
   },
 ] as const;
 
 export const productLanes = [
   {
-    id: "agents",
-    title: "Agents",
+    id: "workflows",
+    title: "Workflows",
     layout: "default",
     description:
-      "Build systems that reason, execute code in isolation, run for hours, and recover from failure.",
-    proofCustomer: "Notion",
-    proof: "powers millions of agent conversations daily on Vercel.",
+      "Build durable document pipelines that keep every parse, split, extraction, validation, and review step in one place.",
+    proofCustomer: "Retab",
+    proof:
+      "orchestrates the full document lifecycle without stitching brittle tools together.",
     features: [
-      "Durable Orchestration",
-      "Sandboxed Environments",
-      "AI Model Gateway",
-      "Fluid Compute",
+      "Workflow Builder",
+      "Human Review",
+      "Schema Versioning",
+      "Run Inspection",
     ],
-    image: {
-      desktopSrc:
-        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/notion-desktop-light.webp",
-      desktopDarkSrc:
-        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/notion-desktop-dark.webp",
-      desktopWidth: 2721,
-      desktopHeight: 1434,
-      mobileSrc:
-        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/notion-mobile-light.webp",
-      mobileDarkSrc:
-        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/notion-mobile-dark.webp",
-      mobileWidth: 1284,
-      mobileHeight: 1026,
-      alt: "Agents",
-    },
+    visual: { kind: "workflow" },
   },
   {
-    id: "apps",
-    title: "Apps",
+    id: "document-apis",
+    title: "Document APIs",
     layout: "reversed",
     description:
-      "Ship marketing sites, SaaS backends, and storefronts on infrastructure that scales from zero to global traffic.",
-    proofCustomer: "Zapier",
-    proof: "serves over 5 million monthly website visits on Vercel.",
-    features: [
-      "Global Delivery",
-      "Deployment Environments",
-      "Serverless Functions",
-      "Web Application Firewall",
-    ],
-    image: {
-      desktopSrc:
-        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/zapier-desktop-light.webp",
-      desktopDarkSrc:
-        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/zapier-desktop-dark.webp",
-      desktopWidth: 2784,
-      desktopHeight: 1560,
-      mobileSrc:
-        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/zapier-mobile-light.webp",
-      mobileDarkSrc:
-        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/zapier-mobile-dark.webp",
-      mobileWidth: 1284,
-      mobileHeight: 1026,
-      alt: "Apps",
-    },
+      "Turn PDFs, scans, spreadsheets, and emails into typed data with APIs that understand layout, tables, sources, and schemas.",
+    proofCustomer: "Developers",
+    proof:
+      "ship structured extraction with citations instead of maintaining OCR and prompt glue.",
+    features: ["Parse", "Split", "Classify", "Extract", "Edit"],
+    visual: { kind: "extraction" },
   },
   {
-    id: "platforms",
-    title: "Platforms",
+    id: "reliability",
+    title: "Reliability",
     layout: "default",
     description:
-      "Host multi-tenant products that isolate every customer, provision custom domains, and serve millions of sites.",
-    proofCustomer: "Mintlify",
-    proof: "powers documentation for 20,000+ companies on Vercel",
-    features: [
-      "Tenant Isolation",
-      "Domain Management",
-      "Custom SSL Certificates",
-      "Preview URLs",
-    ],
-    image: {
-      desktopSrc:
-        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/mintlify-desktop-light.webp",
-      desktopDarkSrc:
-        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/mintlify-desktop-dark.webp",
-      desktopWidth: 2784,
-      desktopHeight: 1560,
-      mobileSrc:
-        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/mintlify-mobile-light.webp",
-      mobileDarkSrc:
-        "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/mintlify-mobile-dark.webp",
-      mobileWidth: 1284,
-      mobileHeight: 1026,
-      alt: "Platforms",
-    },
+      "Know when automation can run straight through, when it needs review, and exactly where every answer came from.",
+    proofCustomer: "Operations teams",
+    proof:
+      "approve exceptions with confidence scores, source grounding, evals, and audit-ready traces.",
+    features: ["Confidence Scoring", "Source Grounding", "Evals", "Audit Logs"],
+    visual: { kind: "reliability" },
+  },
+  {
+    id: "agents",
+    title: "Agents",
+    layout: "reversed",
+    description:
+      "Retab exposes the full document workflow context, letting agents inspect runs, trace failures, and fix automations without leaving their loop.",
+    proofCustomer: "Agents",
+    proof:
+      "can create workflows, inspect source files, wire blocks, run drafts, and diagnose failures autonomously.",
+    features: ["MCP", "CLI", "SDKs", "Agent Skills"],
+    visual: { kind: "agents" },
+  },
+  {
+    id: "enterprise",
+    title: "Enterprise",
+    layout: "default",
+    description:
+      "Run document automation with the security, privacy, and deployment controls enterprise teams need before production.",
+    proofCustomer: "Enterprise teams",
+    proof:
+      "can scale sensitive document workflows with compliance controls, audit trails, uptime commitments, and private deployment options.",
+    features: ["SOC2", "HIPAA", "GDPR", "Audit Logs", "Self-hosting"],
+    visual: { kind: "enterprise" },
   },
 ] as const satisfies readonly ProductLaneContent[];
 

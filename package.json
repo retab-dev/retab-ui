@@ -64,6 +64,7 @@
     "@shikijs/themes": "3.23.0",
     "@tanstack/react-virtual": "^3.13.12",
     "@vercel/analytics": "^2.0.1",
+    "@xyflow/react": "^12.7.0",
     "ajv": "^8.17.1",
     "ajv-errors": "^3.0.0",
     "ajv-formats": "^3.0.1",

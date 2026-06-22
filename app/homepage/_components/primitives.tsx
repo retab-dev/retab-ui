@@ -20,6 +20,18 @@ export function VercelMark({ className }: { className?: string }) {
   );
 }
 
+export function RetabMark({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 210 216"
+      className={cn("block size-5 overflow-visible fill-current", className)}
+    >
+      <path d="M0 108h58v54H0zM0 0h58v54H0zM58 54h152v54H58zM58 162h152v54H58z" />
+    </svg>
+  );
+}
+
 export function MarketingContainer({
   className,
   ...props

@@ -6,7 +6,7 @@ import {
   focusRing,
   MarketingButton,
   MarketingContainer,
-  VercelMark,
+  RetabMark,
 } from "./primitives";
 
 type HeroKickerProps = {
@@ -47,28 +47,31 @@ export function Hero() {
         <div className="grid w-full flex-1 grid-cols-1 items-center gap-8 py-8 text-center md:gap-12 md:py-16 lg:grid-cols-3 lg:gap-10 lg:pt-14 lg:pb-0 lg:text-left">
           <div className="order-2 mt-6 lg:order-1 lg:mt-0 lg:max-w-lg">
             <h1 className="md:text-homepage-hero text-foreground mx-auto max-w-xl text-5xl leading-none font-normal lg:mx-0 lg:max-w-lg">
-              Agentic Infrastructure
+              Document Automation Infrastructure
             </h1>
             <p className="text-muted-foreground mt-4 font-mono text-sm md:mt-6 md:text-base lg:hidden">
               {heroKickers[0].label}
             </p>
             <div className="mx-auto mt-6 flex w-full max-w-sm flex-col justify-center gap-3 sm:w-auto sm:max-w-none sm:flex-row md:mt-8 lg:mx-0 lg:justify-start">
-              <MarketingButton href="/new" className="w-full sm:w-auto">
-                Deploy Now
+              <MarketingButton
+                href="/dashboard/production"
+                className="w-full sm:w-auto"
+              >
+                Start free
               </MarketingButton>
               <MarketingButton
-                href="/contact/sales/demo"
+                href="https://calendar.app.google/1PTAx2rZjEWiH28n6"
                 variant="secondary"
                 className="w-full sm:w-auto"
               >
-                Talk to Sales
+                Get a demo
               </MarketingButton>
             </div>
           </div>
 
           <div className="order-1 flex justify-center lg:order-2 lg:pt-12">
             <div className="grid size-52 place-items-center sm:size-64 md:size-72">
-              <VercelMark className="size-52 md:size-56" />
+              <RetabMark className="size-40 md:size-48" />
             </div>
           </div>
 

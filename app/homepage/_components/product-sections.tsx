@@ -1,58 +1,168 @@
+import { LockKeyhole } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 import { productLanes } from "./homepage-content";
 import {
-  type ProductVisualImage as ProductImageContent,
   type ProductLaneContent,
+  type ProductVisualContent,
 } from "./homepage-types";
+import { HeroTerminal } from "./mcp-hero-terminal";
+import { RetabDocumentApisGrid } from "./retab-reliability/document-apis-grid";
+import { RetabReliabilityGrid } from "./retab-reliability/reliability-grid";
 import { SectionHeader } from "./section-header";
+import { RetabWorkflowDemo } from "./workflow-demo/retab-workflow-demo";
 
 const productLaneSpacingClasses = [
   "mt-40 md:mt-24 lg:mt-52",
   "mt-16 md:mt-44 lg:mt-56",
   "mt-16 md:mt-44 lg:mt-52",
+  "mt-16 md:mt-44 lg:mt-56",
+  "mt-16 md:mt-44 lg:mt-52",
 ] as const;
 
-function ProductVisualImage({ image }: { image: ProductImageContent }) {
+const enterpriseCertifications = ["SOC2 Type II", "HIPAA", "CCPA", "GDPR"];
+
+const enterpriseControls = [
+  ["Data controls", "privacy by design"],
+  ["Deployment", "cloud or self-hosted"],
+  ["Governance", "audit-ready traces"],
+] as const;
+
+function ProductVisual({ visual }: { visual: ProductVisualContent }) {
+  if (visual.kind === "workflow") {
+    return <WorkflowVisual />;
+  }
+  if (visual.kind === "extraction") {
+    return <ExtractionVisual />;
+  }
+  if (visual.kind === "agents") {
+    return <AgentsVisual />;
+  }
+  if (visual.kind === "enterprise") {
+    return <EnterpriseVisual />;
+  }
+  return <ReliabilityVisual />;
+}
+
+function WorkflowVisual() {
   return (
-    <>
-      <img
-        src={image.mobileSrc}
-        width={image.mobileWidth}
-        height={image.mobileHeight}
-        alt={image.alt}
-        loading="lazy"
-        decoding="async"
-        className="pointer-events-none block h-auto w-full select-none md:hidden dark:hidden"
-      />
-      <img
-        src={image.mobileDarkSrc}
-        width={image.mobileWidth}
-        height={image.mobileHeight}
-        alt={image.alt}
-        loading="lazy"
-        decoding="async"
-        className="pointer-events-none hidden h-auto w-full select-none dark:block md:dark:hidden"
-      />
-      <img
-        src={image.desktopSrc}
-        width={image.desktopWidth}
-        height={image.desktopHeight}
-        alt={image.alt}
-        loading="lazy"
-        decoding="async"
-        className="pointer-events-none hidden h-auto w-full select-none md:block md:dark:hidden"
-      />
-      <img
-        src={image.desktopDarkSrc}
-        width={image.desktopWidth}
-        height={image.desktopHeight}
-        alt={image.alt}
-        loading="lazy"
-        decoding="async"
-        className="pointer-events-none hidden h-auto w-full select-none md:dark:block"
-      />
-    </>
+    <div
+      aria-label="Interactive workflow demo"
+      className="border-border bg-card relative aspect-[16/11] w-full overflow-hidden rounded-md border shadow-sm"
+      role="group"
+    >
+      <RetabWorkflowDemo className="absolute inset-0" />
+    </div>
+  );
+}
+
+function ExtractionVisual() {
+  return <RetabDocumentApisGrid />;
+}
+
+function ReliabilityVisual() {
+  return <RetabReliabilityGrid />;
+}
+
+function AgentsVisual() {
+  return (
+    <div
+      aria-hidden="true"
+      className="mcp-product-terminal aspect-[16/9] w-full min-w-0 overflow-hidden"
+    >
+      <HeroTerminal />
+      <style>{`
+        .mcp-product-terminal .mcp-hero-panel {
+          display: flex;
+          height: 100%;
+          width: 100%;
+          flex-direction: column;
+        }
+
+        .mcp-product-terminal .mcp-hero-body {
+          min-height: 0;
+          flex: 1 1 0;
+          height: auto;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function EnterpriseVisual() {
+  return (
+    <div
+      aria-hidden="true"
+      className="border-border bg-card relative aspect-[16/11] w-full overflow-hidden rounded-md border shadow-sm"
+    >
+      <div className="bg-muted/30 absolute inset-0" />
+      <div className="relative flex h-full w-full flex-col items-center justify-center gap-6 px-5 py-7 text-center sm:px-8 md:gap-8">
+        <svg
+          viewBox="0 0 928 928"
+          className="text-muted-foreground/20 pointer-events-none absolute top-1/2 left-1/2 w-[42rem] max-w-none -translate-x-1/2 -translate-y-1/2"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1"
+          style={{
+            mask: "conic-gradient(transparent 15%, black 25%, transparent 35%, transparent 65%, black 75%, transparent 85%)",
+            WebkitMask:
+              "conic-gradient(transparent 15%, black 25%, transparent 35%, transparent 65%, black 75%, transparent 85%)",
+          }}
+        >
+          <circle cx="464" cy="464" r="448" className="max-lg:hidden" />
+          <circle cx="464" cy="464" r="384" className="max-lg:hidden" />
+          <circle cx="464" cy="464" r="320" className="max-md:hidden" />
+          <circle cx="464" cy="464" r="256" />
+          <circle cx="464" cy="464" r="192" />
+          <circle cx="464" cy="464" r="128" />
+          <circle cx="464" cy="464" r="64" />
+        </svg>
+
+        <div className="relative z-10 flex flex-col items-center gap-4">
+          <div className="border-border bg-background flex size-16 items-center justify-center rounded-full border shadow-sm md:size-20">
+            <LockKeyhole
+              aria-hidden="true"
+              className="text-foreground size-7 md:size-9"
+              strokeWidth={1.75}
+            />
+          </div>
+          <div className="space-y-2">
+            <p className="text-foreground text-xl leading-tight font-medium text-balance md:text-2xl">
+              Secure, private, and compliant.
+            </p>
+            <p className="text-muted-foreground mx-auto max-w-md text-sm leading-6 text-balance">
+              Industry-leading document processing without compromising trust.
+            </p>
+          </div>
+        </div>
+
+        <div className="relative z-10 flex max-w-xl flex-wrap items-center justify-center gap-2.5">
+          {enterpriseCertifications.map((certification) => (
+            <span
+              className="border-border bg-background/80 text-foreground rounded-md border px-3 py-2 font-mono text-xs leading-none font-semibold shadow-sm"
+              key={certification}
+            >
+              {certification}
+            </span>
+          ))}
+        </div>
+
+        <div className="relative z-10 hidden w-full max-w-2xl grid-cols-3 gap-3 md:grid">
+          {enterpriseControls.map(([label, detail]) => (
+            <div
+              className="border-border bg-card/80 rounded-md border p-3 text-left shadow-sm"
+              key={label}
+            >
+              <p className="text-foreground text-sm font-medium">{label}</p>
+              <p className="text-muted-foreground mt-1 font-mono text-xs leading-4">
+                {detail}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -83,7 +193,7 @@ function ProductLane({
     proofCustomer,
     proof,
     features,
-    image,
+    visual,
     layout,
   } = lane;
   const isReversed = layout === "reversed";
@@ -104,7 +214,7 @@ function ProductLane({
             isReversed && "lg:col-start-5",
           )}
         >
-          <ProductVisualImage image={image} />
+          <ProductVisual visual={visual} />
         </div>
         <div
           className={cn(
