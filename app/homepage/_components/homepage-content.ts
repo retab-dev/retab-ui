@@ -138,26 +138,6 @@ export const developersNavGroup = {
   ],
 } as const;
 
-export const linksNavGroup = {
-  id: "links",
-  label: "Links",
-  sections: [
-    {
-      title: "Links",
-      items: [
-        externalLink("X (Twitter)", "https://x.com/retabdev"),
-        externalLink("Discord", "https://discord.gg/vc5tWRPqag"),
-        externalLink("GitHub", "https://github.com/retab-dev/retab"),
-        externalLink(
-          "YouTube",
-          "https://www.youtube.com/channel/UCaquZxGEjTt3_rRZHDhlsUA",
-        ),
-        retabLink("Careers", "/careers"),
-      ],
-    },
-  ],
-} as const;
-
 export const navItems = [
   {
     kind: "group",
@@ -174,10 +154,6 @@ export const navItems = [
   {
     kind: "link",
     item: pricingLink,
-  },
-  {
-    kind: "group",
-    group: linksNavGroup,
   },
   {
     kind: "link",
@@ -381,6 +357,13 @@ export const footerSocialLinks = [
   {
     ...externalLink("GitHub", "https://github.com/retab-dev/retab"),
     ariaLabel: "Retab on GitHub",
+  },
+  {
+    ...externalLink(
+      "YouTube",
+      "https://www.youtube.com/channel/UCaquZxGEjTt3_rRZHDhlsUA",
+    ),
+    ariaLabel: "Retab on YouTube",
   },
   {
     label: "Contact Us",
