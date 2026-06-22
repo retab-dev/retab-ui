@@ -58,11 +58,9 @@ export function EditOverlay() {
         </span>
       </div>
 
-      {/* tiny "edited" chip pinned to the field's top-right corner */}
-      <Chip
-        bg={ACCENT}
-        style={{ right: `${PAD - 1.4}%`, top: `${BAND.total - 7.5}%` }}
-      >
+      {/* tiny "edited" chip pinned just above the field's left edge, where the
+          space is empty — keeps it off the Tax value on the row above */}
+      <Chip bg={ACCENT} style={{ left: "46%", top: `${BAND.total - 6}%` }}>
         edited
       </Chip>
     </>

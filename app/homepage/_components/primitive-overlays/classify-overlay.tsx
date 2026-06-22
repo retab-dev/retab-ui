@@ -148,10 +148,10 @@ export function ClassifyOverlay() {
               <span
                 style={{
                   position: "relative",
-                  width: "28px",
+                  width: "34px",
                   height: "3px",
                   borderRadius: "2px",
-                  background: "#eee",
+                  background: "#e3e3e3",
                   overflow: "hidden",
                 }}
               >
@@ -159,8 +159,11 @@ export function ClassifyOverlay() {
                   style={{
                     position: "absolute",
                     inset: 0,
-                    width: `${confidence}%`,
-                    background: matched ? ACCENT : "#cfcfcf",
+                    // give any nonzero confidence a perceptible nub so 1–3%
+                    // reads as "low" rather than as an empty track
+                    width:
+                      confidence === 0 ? "0%" : `max(${confidence}%, 9%)`,
+                    background: matched ? ACCENT : "#c4c4c4",
                   }}
                 />
               </span>

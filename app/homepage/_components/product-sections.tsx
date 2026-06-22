@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 
 import { CopyableFeatureItem } from "./copyable-feature-item";
 import { DocumentApiPrimitiveGrid } from "./document-api-primitive-grid";
+import { EnterpriseFlowingLines } from "./enterprise-flowing-lines";
 import { productLanes } from "./homepage-content";
 import {
   type ProductFeatureContent,
@@ -30,8 +31,6 @@ const enterpriseControls = [
   ["Deployment", "cloud or self-hosted"],
   ["Governance", "audit-ready traces"],
 ] as const;
-
-const enterpriseRibbonLines = [0, 1, 2, 3, 4, 5, 6, 7] as const;
 
 function ProductVisual({ visual }: { visual: ProductVisualContent }) {
   if (visual.kind === "workflow") {
@@ -95,58 +94,7 @@ function EnterpriseVisual() {
     >
       <div className="bg-card absolute inset-0" />
       <div className="absolute inset-4 overflow-hidden rounded-sm md:inset-6">
-        <svg
-          aria-hidden="true"
-          className="text-muted-foreground/28 absolute inset-0 size-full"
-          fill="none"
-          viewBox="0 0 960 660"
-        >
-          <g
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeWidth="0.95"
-            vectorEffect="non-scaling-stroke"
-          >
-            {enterpriseRibbonLines.map((line) => (
-              <path
-                d={`M -72 ${118 + line * 10} C 72 ${56 + line * 4} 188 ${
-                  74 + line * 7
-                } 306 ${152 + line * 7} S 532 ${238 + line * 5} 670 ${
-                  126 + line * 8
-                }`}
-                key={`enterprise-wave-top-${line}`}
-              />
-            ))}
-            {enterpriseRibbonLines.map((line) => (
-              <path
-                d={`M ${604 + line * 12} ${126 + line * 9} C ${
-                  722 + line * 16
-                } ${78 + line * 6} ${812 + line * 18} ${
-                  122 + line * 8
-                } ${1034 + line * 12} ${54 + line * 9}`}
-                key={`enterprise-wave-right-${line}`}
-              />
-            ))}
-            {enterpriseRibbonLines.map((line) => (
-              <path
-                d={`M ${14 + line * 10} ${552 + line * 12} L ${
-                  354 + line * 12
-                } ${406 + line * 7}`}
-                key={`enterprise-diagonal-left-${line}`}
-              />
-            ))}
-            {enterpriseRibbonLines.slice(0, 6).map((line) => (
-              <path
-                d={`M ${578 + line * 22} ${560 + line * 8} C ${
-                  666 + line * 18
-                } ${498 - line * 4} ${756 + line * 18} ${
-                  610 + line * 2
-                } 966 ${486 + line * 10}`}
-                key={`enterprise-wave-bottom-${line}`}
-              />
-            ))}
-          </g>
-        </svg>
+        <EnterpriseFlowingLines />
 
         <div className="border-border/80 bg-card absolute top-1/2 left-1/2 z-10 flex w-[min(90%,32rem)] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3 rounded-md border p-4 text-center shadow-sm sm:w-[30rem] md:top-[43%] md:gap-4 md:p-6">
           <div className="border-border bg-background flex size-12 items-center justify-center rounded-md border shadow-sm sm:size-14">

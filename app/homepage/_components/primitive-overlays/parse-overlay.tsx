@@ -32,8 +32,10 @@ export function ParseOverlay() {
 
   return (
     <>
-      {/* Dim the rendered (left) side just slightly so the parsed panel on the
-          right reads as the brighter "source of truth". */}
+      {/* Fade the rendered (left) side into the seam so it reads as dissolving
+          into the parsed panel — and, crucially, so the document's
+          right-aligned totals block (whose labels cross the 50% mark) dissolves
+          rather than leaving orphaned "S / T / T" letters stranded at the seam. */}
       <div
         style={{
           position: "absolute",
@@ -42,7 +44,7 @@ export function ParseOverlay() {
           left: 0,
           width: `${seam}%`,
           background:
-            "linear-gradient(90deg, rgba(23,23,23,0) 55%, rgba(23,23,23,0.05))",
+            "linear-gradient(90deg, rgba(250,250,250,0) 84%, rgba(250,250,250,0.92) 96%, rgb(250,250,250) 100%)",
         }}
       />
 

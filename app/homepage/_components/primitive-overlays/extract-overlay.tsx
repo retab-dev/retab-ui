@@ -37,7 +37,6 @@ function FieldBox({
         border: `1px solid ${color}`,
         borderRadius: "3px",
         background: `${color}0a`,
-        boxShadow: `inset 0 0 0 2px #ffffff`,
       }}
     />
   );
@@ -116,9 +115,10 @@ export function ExtractOverlay() {
         amount
       </KeyTag>
 
-      {/* total — the Total $691 line */}
+      {/* total — the Total $691 line; tag sits above the box's left edge so it
+          stays clear of the captured-JSON panel docked bottom-left */}
       <FieldBox top={BAND.total - 1.6} height={4.6} right={PAD - 2} width="42%" />
-      <KeyTag top={BAND.total - 0.4} right={PAD + 42.5}>
+      <KeyTag top={BAND.total - 6.8} left={52}>
         total
       </KeyTag>
 
@@ -128,7 +128,7 @@ export function ExtractOverlay() {
           position: "absolute",
           left: `${PAD - 1}%`,
           bottom: "3.5%",
-          width: "56%",
+          width: "46%",
           background: "#fbfbfb",
           border: "1px solid #e7e7e7",
           borderRadius: "5px",

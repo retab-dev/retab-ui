@@ -2,9 +2,11 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { BAND, Chip, items, mono, PAD } from "./kit";
 
-// Each line-item record is wrapped in its own chunk, keyed by a unique id and
-// stamped with a "n of 3" count badge, so the grouping reads as
-// "repeated records → chunks keyed by id".
+// Repeated records → chunks keyed by id. Each line-item row is wrapped in its
+// own grouping band; the id column it is keyed on (already visible as A-1/A-2/
+// A-3) is highlighted in place, and a muted "n of N" index sits in the empty
+// middle of each row. Labels live INSIDE their band so nothing collides with
+// the table header or the neighbouring rows.
 const ROW_TOPS = [BAND.row1, BAND.row2, BAND.row3] as const;
 const CHUNK_H = 4.6; // chunk band height, % of page
 const ROW_OFFSET = 1.1; // lift band so the row text sits centered inside it
@@ -28,26 +30,28 @@ export function PartitionOverlay() {
             borderRadius: "5px",
           }}
         />
-        {/* unique id key, pinned to the chunk's left edge */}
+        {/* highlight the id cell this record is keyed on (sits over the
+            document's own "A-n" column, centered in the band) */}
         <div
-          style={mono(6.5, "#171717", {
+          style={{
             position: "absolute",
-            left: `${PAD + 0.5}%`,
-            top: `${bandTop - 0.2}%`,
-            transform: "translateY(-100%)",
-            fontWeight: 600,
-            letterSpacing: "0.02em",
-          } as CSSProperties)}
-        >
-          id: {id}
-        </div>
-        {/* count badge, "n of 3" */}
+            left: `${PAD - 0.5}%`,
+            top: `${bandTop + CHUNK_H / 2}%`,
+            transform: "translateY(-50%)",
+            width: "7.5%",
+            height: "3.1%",
+            background: "rgba(23,23,23,0.07)",
+            border: "1px solid rgba(23,23,23,0.16)",
+            borderRadius: "3px",
+          }}
+        />
+        {/* "n of N" index, dropped into the empty middle of the row */}
         <div
-          style={mono(6, "#525252", {
+          style={mono(6, "#9a9a9a", {
             position: "absolute",
-            right: `${PAD + 0.5}%`,
-            top: `${bandTop - 0.2}%`,
-            transform: "translateY(-100%)",
+            right: `${PAD + 11}%`,
+            top: `${bandTop + CHUNK_H / 2}%`,
+            transform: "translateY(-50%)",
             letterSpacing: "0.04em",
           } as CSSProperties)}
         >
