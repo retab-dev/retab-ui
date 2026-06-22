@@ -250,6 +250,9 @@
       ],
       "registryDependencies": [
         "@retab/use-keyed-mount-effect"
+      ],
+      "dependencies": [
+        "@radix-ui/react-slot@^1.1.1"
       ]
     },
     {

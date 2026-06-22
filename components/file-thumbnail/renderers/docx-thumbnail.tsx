@@ -24,6 +24,11 @@ function loadDocxPreview() {
 }
 
 const DOCX_PAGE_W = 816; // US Letter at 96dpi
+const DOCX_THUMBNAIL_PAGE_STYLE = {
+  backgroundColor: "white",
+  color: "black",
+  colorScheme: "light",
+} satisfies React.CSSProperties;
 
 export function DocxFirstPage({ resource }: { resource: ViewerResource }) {
   const bytes = useThumbnailResource(getDocxDocumentResource(resource.content));
@@ -72,8 +77,9 @@ export function DocxFirstPage({ resource }: { resource: ViewerResource }) {
     <Surface>
       <div ref={frameRef} className="absolute inset-0 overflow-hidden bg-white">
         <div
-          className="absolute top-0 left-0 origin-top-left [&_.docx-wrapper]:!bg-transparent [&_.docx-wrapper]:!p-0 [&_section.docx]:!mb-0 [&_section.docx]:!shadow-none"
+          className="absolute top-0 left-0 origin-top-left [&_.docx-wrapper]:!bg-transparent [&_.docx-wrapper]:!p-0 [&_section.docx]:!mb-0 [&_section.docx]:!bg-white [&_section.docx]:!text-black [&_section.docx]:!shadow-none"
           style={{
+            ...DOCX_THUMBNAIL_PAGE_STYLE,
             width: DOCX_PAGE_W,
             transform: scale ? `scale(${scale})` : undefined,
             visibility: scale ? "visible" : "hidden",

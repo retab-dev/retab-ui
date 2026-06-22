@@ -8,6 +8,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -25,12 +26,19 @@ import {
 } from "@/registry/new-york-v4/blocks/dropzone-uploader-viewer-parts";
 import type { BlobViewerSource } from "@/registry/new-york-v4/lib/viewer-source";
 import {
+  DropzoneProvider,
+  DropzoneRoot,
+  DropzoneTrigger,
+  formatDropzoneAccept,
   matchesDropzoneAccept,
   parseDropzoneAccept,
   useDropzone,
+  useDropzoneContext,
   validateDropzoneFile,
   validateDropzoneFiles,
   type DropzoneFileItem,
+  type DropzoneRootProps,
+  type DropzoneTriggerProps,
 } from "@/registry/new-york-v4/ui/dropzone";
 import { formatFileSize } from "@/registry/new-york-v4/ui/file-size-format";
 import { FileUploader } from "@/registry/new-york-v4/ui/file-uploader";
@@ -248,6 +256,299 @@ describe("Dropzone primitive", () => {
         reason: "too-many-files",
       }),
     ]);
+  });
+
+  it("formats structured accept rules for native file inputs", () => {
+    expect(
+      formatDropzoneAccept([
+        { type: "extension", value: ".pdf" },
+        { type: "mime-prefix", value: "image/" },
+        { type: "mime", value: "application/json" },
+      ]),
+    ).toBe(".pdf,image/*,application/json");
+
+    function Probe() {
+      const dropzone = useDropzone({
+        accept: [
+          { type: "extension", value: ".pdf" },
+          { type: "mime", value: "application/json" },
+        ],
+      });
+      return <input {...dropzone.getInputProps()} />;
+    }
+
+    const { container } = render(<Probe />);
+    const input = container.querySelector('[data-slot="dropzone-input"]');
+
+    expect(input?.getAttribute("accept")).toBe(".pdf,application/json");
+  });
+
+  it("supports intake-only mode with an externally owned file count", () => {
+    const onFilesChange = vi.fn();
+    const onIntake = vi.fn();
+
+    function Probe() {
+      const dropzone = useDropzone({
+        currentFileCount: 2,
+        maxFiles: 3,
+        onFilesChange,
+        onIntake,
+        storeFiles: false,
+      });
+      return (
+        <div {...dropzone.getRootProps()}>
+          <input {...dropzone.getInputProps()} />
+          files:{dropzone.files.length}
+        </div>
+      );
+    }
+
+    const { container } = render(<Probe />);
+    const root = container.querySelector('[data-slot="dropzone"]');
+
+    fireEvent.drop(
+      root!,
+      dropData([
+        file("first.pdf", "application/pdf"),
+        file("second.pdf", "application/pdf"),
+      ]),
+    );
+
+    expect(root!.textContent).toContain("files:0");
+    expect(onFilesChange).not.toHaveBeenCalled();
+    expect(onIntake).toHaveBeenCalledWith({
+      acceptedFiles: [expect.objectContaining({ name: "first.pdf" })],
+      fileRejections: [
+        expect.objectContaining({
+          file: expect.objectContaining({ name: "second.pdf" }),
+          maxFiles: 3,
+          reason: "too-many-files",
+        }),
+      ],
+    });
+  });
+
+  it("runs async validation before committing accepted files", async () => {
+    const validateFiles = vi.fn(async (files: File[]) => [
+      {
+        code: "server-rejected",
+        file: files[1],
+        reason: "custom" as const,
+      },
+    ]);
+    const onIntake = vi.fn();
+
+    function Probe() {
+      const dropzone = useDropzone({ onIntake, validateFiles });
+      return (
+        <div {...dropzone.getRootProps()}>
+          <input {...dropzone.getInputProps()} />
+          files:{dropzone.files.map((item) => item.file.name).join(",")}
+          validating:{dropzone.isValidating ? "yes" : "no"}
+        </div>
+      );
+    }
+
+    const { container } = render(<Probe />);
+    const root = container.querySelector('[data-slot="dropzone"]');
+
+    fireEvent.drop(
+      root!,
+      dropData([
+        file("accepted.pdf", "application/pdf"),
+        file("rejected.pdf", "application/pdf"),
+      ]),
+    );
+
+    expect(root!.textContent).toContain("validating:yes");
+
+    await waitFor(() => {
+      expect(root!.textContent).toContain("files:accepted.pdf");
+    });
+
+    expect(root!.textContent).not.toContain("rejected.pdf");
+    expect(root!.textContent).toContain("validating:no");
+    expect(validateFiles).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({ name: "accepted.pdf" }),
+        expect.objectContaining({ name: "rejected.pdf" }),
+      ],
+      expect.objectContaining({
+        acceptedFiles: [
+          expect.objectContaining({ name: "accepted.pdf" }),
+          expect.objectContaining({ name: "rejected.pdf" }),
+        ],
+        currentCount: 0,
+      }),
+    );
+    expect(onIntake).toHaveBeenCalledWith({
+      acceptedFiles: [expect.objectContaining({ name: "accepted.pdf" })],
+      fileRejections: [
+        expect.objectContaining({
+          code: "server-rejected",
+          file: expect.objectContaining({ name: "rejected.pdf" }),
+          reason: "custom",
+        }),
+      ],
+    });
+  });
+
+  it("applies maxFiles after async validation removes rejected files", async () => {
+    const blockedFile = file("blocked.pdf", "application/pdf");
+    const acceptedFile = file("accepted.pdf", "application/pdf");
+    const validateFiles = vi.fn(async () => [
+      {
+        code: "server-rejected",
+        file: blockedFile,
+        reason: "custom" as const,
+      },
+    ]);
+    const onIntake = vi.fn();
+
+    function Probe() {
+      const dropzone = useDropzone({
+        currentFileCount: 2,
+        maxFiles: 3,
+        onIntake,
+        validateFiles,
+      });
+      return (
+        <div {...dropzone.getRootProps()}>
+          <input {...dropzone.getInputProps()} />
+          files:{dropzone.files.map((item) => item.file.name).join(",")}
+        </div>
+      );
+    }
+
+    const { container } = render(<Probe />);
+    const root = container.querySelector('[data-slot="dropzone"]');
+
+    fireEvent.drop(root!, dropData([blockedFile, acceptedFile]));
+
+    await waitFor(() => {
+      expect(root!.textContent).toContain("files:accepted.pdf");
+    });
+
+    expect(onIntake).toHaveBeenCalledWith({
+      acceptedFiles: [acceptedFile],
+      fileRejections: [
+        {
+          code: "server-rejected",
+          file: blockedFile,
+          reason: "custom",
+        },
+      ],
+    });
+  });
+
+  it("can track document-level drag state for external overlays", () => {
+    function Probe() {
+      const dropzone = useDropzone({ dragScope: "document" });
+      return (
+        <div {...dropzone.getRootProps()}>
+          dragging:{dropzone.isDragging ? "yes" : "no"}
+        </div>
+      );
+    }
+
+    const { container } = render(<Probe />);
+    const root = container.querySelector('[data-slot="dropzone"]');
+
+    fireEvent.dragEnter(
+      document,
+      dropData([file("first.pdf", "application/pdf")]),
+    );
+
+    expect(root!.textContent).toContain("dragging:yes");
+
+    fireEvent.dragLeave(
+      document,
+      dropData([file("first.pdf", "application/pdf")]),
+    );
+
+    expect(root!.textContent).toContain("dragging:no");
+  });
+
+  it("provider shares one dropzone instance with descendants", () => {
+    const onIntake = vi.fn();
+
+    function Probe() {
+      const dropzone = useDropzoneContext("Probe");
+      return (
+        <div {...dropzone.getRootProps()}>
+          <input {...dropzone.getInputProps()} />
+          files:{dropzone.files.map((item) => item.file.name).join(",")}
+        </div>
+      );
+    }
+
+    const { container } = render(
+      <DropzoneProvider maxFiles={1} onIntake={onIntake}>
+        <Probe />
+      </DropzoneProvider>,
+    );
+    const root = container.querySelector('[data-slot="dropzone"]');
+
+    fireEvent.drop(
+      root!,
+      dropData([
+        file("first.pdf", "application/pdf"),
+        file("second.pdf", "application/pdf"),
+      ]),
+    );
+
+    expect(root!.textContent).toContain("files:first.pdf");
+    expect(onIntake).toHaveBeenCalledWith({
+      acceptedFiles: [expect.objectContaining({ name: "first.pdf" })],
+      fileRejections: [
+        expect.objectContaining({
+          file: expect.objectContaining({ name: "second.pdf" }),
+          maxFiles: 1,
+          reason: "too-many-files",
+        }),
+      ],
+    });
+  });
+
+  it("compound parts bind root and trigger props from provider context", () => {
+    const captured: {
+      rootProps?: DropzoneRootProps;
+      triggerProps?: DropzoneTriggerProps;
+    } = {};
+
+    const RootProbe = React.forwardRef<HTMLDivElement, DropzoneRootProps>(
+      function RootProbe(props, _ref) {
+        captured.rootProps = props;
+        return null;
+      },
+    );
+    const TriggerProbe = React.forwardRef<
+      HTMLButtonElement,
+      DropzoneTriggerProps
+    >(function TriggerProbe(props, _ref) {
+      captured.triggerProps = props;
+      return null;
+    });
+
+    render(
+      <DropzoneProvider disabled>
+        <DropzoneRoot asChild className="surface">
+          <RootProbe />
+        </DropzoneRoot>
+        <DropzoneTrigger asChild native className="trigger">
+          <TriggerProbe />
+        </DropzoneTrigger>
+      </DropzoneProvider>,
+    );
+
+    expect(captured.rootProps?.["aria-disabled"]).toBe(true);
+    expect(captured.rootProps?.["data-slot"]).toBe("dropzone");
+    expect(captured.rootProps?.className).toBe("surface");
+    expect(typeof captured.rootProps?.onDrop).toBe("function");
+    expect(captured.triggerProps?.disabled).toBe(true);
+    expect(captured.triggerProps?.type).toBe("button");
+    expect(captured.triggerProps?.["data-slot"]).toBe("dropzone-trigger");
+    expect(captured.triggerProps?.className).toBe("trigger");
   });
 
   it("updates lastIntake and supports explicit reset semantics", () => {
@@ -1337,8 +1638,11 @@ describe("Dropzone registry split", () => {
     expect(dropzoneSource).not.toContain("getButtonProps");
     expect(dropzoneSource).not.toContain("isFocused");
     expect(dropzoneSource).not.toContain("data-focused");
-    expect(dropzoneSource).not.toContain("export function DropzoneRoot");
-    expect(dropzoneSource).not.toContain("DropzoneContext");
+    expect(dropzoneSource).toContain("export function DropzoneProvider");
+    expect(dropzoneSource).toContain("export function useDropzoneContext");
+    expect(dropzoneSource).toContain("export const DropzoneRoot");
+    expect(dropzoneSource).toContain("export const DropzoneInput");
+    expect(dropzoneSource).toContain("export const DropzoneTrigger");
     expect(dropzoneCoreSource).not.toContain("message:");
     expect(dropzoneCoreSource).not.toContain("formatDropzoneBytes");
     expect(dropzoneUploaderViewerSource).not.toContain(

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, Tags } from "lucide-react";
+import { CheckCircle2, Loader2, Tags } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -10,10 +10,14 @@ import {
   ViewerRoot,
   ViewerSurface,
 } from "@/components/ui/viewer";
-import type { ClassifyResult } from "@/components/viewers/lib/classify-types";
+import type {
+  ClassifyCandidate,
+  ClassifyResult,
+} from "@/components/viewers/lib/classify-types";
 
 type ClassifierViewerContextValue = {
   category: string | null;
+  candidates: readonly ClassifyCandidate[];
   emptyDescription: string;
   emptyTitle: string;
   isProcessing: boolean;
@@ -22,6 +26,11 @@ type ClassifierViewerContextValue = {
 };
 
 type ClassifierViewerHeaderState = {
+  category: string | null;
+};
+
+type ClassifierViewerLegendState = {
+  candidates: readonly ClassifyCandidate[];
   category: string | null;
   reasoning: string | null;
 };
@@ -38,6 +47,7 @@ type ClassifierViewerDocumentState = {
 
 const ClassifierViewerContext =
   React.createContext<ClassifierViewerContextValue | null>(null);
+const EMPTY_CLASSIFY_CANDIDATES: readonly ClassifyCandidate[] = [];
 
 export interface ClassifierViewerProviderProps {
   result: ClassifyResult | null;
@@ -66,9 +76,18 @@ function useClassifierViewerContext(): ClassifierViewerContextValue {
 }
 
 function useClassifierViewerHeader(): ClassifierViewerHeaderState {
-  const { category, reasoning } = useClassifierViewerContext();
+  const { category } = useClassifierViewerContext();
 
   return {
+    category,
+  };
+}
+
+function useClassifierViewerLegend(): ClassifierViewerLegendState {
+  const { candidates, category, reasoning } = useClassifierViewerContext();
+
+  return {
+    candidates,
     category,
     reasoning,
   };
@@ -98,17 +117,27 @@ export function ClassifierViewerProvider({
   children,
 }: ClassifierViewerProviderProps) {
   const category = result?.category ?? null;
+  const candidates = result?.candidates ?? EMPTY_CLASSIFY_CANDIDATES;
   const reasoning = result?.reasoning?.trim() || null;
   const value = React.useMemo<ClassifierViewerContextValue>(
     () => ({
       category,
+      candidates,
       emptyDescription,
       emptyTitle,
       isProcessing,
       reasoning,
       result,
     }),
-    [category, emptyDescription, emptyTitle, isProcessing, reasoning, result],
+    [
+      category,
+      candidates,
+      emptyDescription,
+      emptyTitle,
+      isProcessing,
+      reasoning,
+      result,
+    ],
   );
 
   return (
@@ -119,7 +148,7 @@ export function ClassifierViewerProvider({
 }
 
 export function ClassifierViewerHeader({ className }: { className?: string }) {
-  const { category, reasoning } = useClassifierViewerHeader();
+  const { category } = useClassifierViewerHeader();
 
   if (!category) return null;
 
@@ -141,15 +170,65 @@ export function ClassifierViewerHeader({ className }: { className?: string }) {
         <span className="shrink-0 text-sm font-medium">Classification</span>
         <span className="min-w-0">{categoryNode}</span>
       </div>
-      {reasoning ? (
-        <span
-          className="text-muted-foreground max-w-[50%] min-w-0 truncate text-xs"
-          title={reasoning}
-        >
-          {reasoning}
-        </span>
-      ) : null}
     </ViewerHeader>
+  );
+}
+
+export function ClassifierViewerLegend({ className }: { className?: string }) {
+  const { candidates, category, reasoning } = useClassifierViewerLegend();
+
+  if (!category) return null;
+
+  const normalizedCandidates = normalizeClassifierCandidates({
+    candidates,
+    category,
+  });
+
+  if (normalizedCandidates.length === 0 && !reasoning) return null;
+
+  return (
+    <div
+      className={cn(
+        "bg-background flex flex-shrink-0 flex-col gap-2 border-b px-3 py-2",
+        className,
+      )}
+    >
+      {normalizedCandidates.length > 0 ? (
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          {normalizedCandidates.map((candidate) => {
+            const isActive = candidate.category === category;
+            return (
+              <div
+                className={cn(
+                  "flex min-w-0 items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs",
+                  isActive
+                    ? "border-emerald-300 bg-emerald-500/10 text-emerald-950"
+                    : "border-border bg-muted/30 text-muted-foreground",
+                )}
+                key={candidate.category}
+                title={candidate.description}
+              >
+                {isActive ? (
+                  <CheckCircle2
+                    aria-hidden="true"
+                    className="size-3.5 shrink-0"
+                  />
+                ) : null}
+                <span className="min-w-0 truncate font-medium">
+                  {candidate.category}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {reasoning ? (
+        <p className="text-muted-foreground max-h-10 overflow-hidden text-xs leading-5">
+          {reasoning}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -216,7 +295,6 @@ export function ClassifierViewer({
       emptyDescription={emptyDescription}
     >
       <ViewerRoot className="bg-background h-full flex-1">
-        <ClassifierViewerHeader />
         <ViewerBody>
           <ViewerSurface>
             <ClassifierViewerDocument document={document} />
@@ -225,4 +303,22 @@ export function ClassifierViewer({
       </ViewerRoot>
     </ClassifierViewerProvider>
   );
+}
+
+function normalizeClassifierCandidates({
+  candidates,
+  category,
+}: {
+  candidates: readonly ClassifyCandidate[];
+  category: string;
+}): readonly ClassifyCandidate[] {
+  if (candidates.length === 0) {
+    return [{ category }];
+  }
+
+  if (candidates.some((candidate) => candidate.category === category)) {
+    return candidates;
+  }
+
+  return [{ category }, ...candidates];
 }

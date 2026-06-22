@@ -1868,7 +1868,6 @@ describe("viewer architecture", () => {
         symbols: [
           "<ClassifierViewerProvider",
           "<ViewerRoot",
-          "<ClassifierViewerHeader",
           "<ViewerBody",
           "<ViewerSurface",
           "<ClassifierViewerDocument",
@@ -2869,11 +2868,11 @@ describe("viewer architecture", () => {
     expectJsxTagsInOrder("registry/new-york-v4/blocks/parse-viewer-block.tsx", [
       "<ParseViewerProvider",
       "<ViewerRoot",
+      "<ParseViewerBlockHeader",
       "<ViewerBody",
-      "<ResizablePanelGroup",
       "<ViewerSurface",
       "<ParseSourceDocument",
-      "<ViewerSurface",
+      "<ViewerSidebar",
       "<ParseViewerMarkdown",
     ]);
     expectJsxTagsInOrder(

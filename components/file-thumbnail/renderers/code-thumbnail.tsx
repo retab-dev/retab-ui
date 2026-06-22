@@ -45,11 +45,11 @@ export function CodeThumbnail({
   return (
     <div
       data-slot="code-thumbnail"
-      className="bg-card absolute inset-0 overflow-hidden"
+      className="bg-code text-code-foreground absolute inset-0 overflow-hidden"
     >
       <div
         aria-hidden
-        className={`absolute inset-y-0 left-0 ${CODE_THUMBNAIL_LINE_NUMBER_WIDTH_CLASS} bg-slate-50`}
+        className={`absolute inset-y-0 left-0 ${CODE_THUMBNAIL_LINE_NUMBER_WIDTH_CLASS} bg-code-highlight`}
       />
       <div
         className="relative font-mono"
@@ -61,13 +61,11 @@ export function CodeThumbnail({
         {lines.map((line, i) => (
           <div key={i} className="flex">
             <span
-              className={`${CODE_THUMBNAIL_LINE_NUMBER_WIDTH_CLASS} shrink-0 pr-px text-right text-slate-300 select-none`}
+              className={`${CODE_THUMBNAIL_LINE_NUMBER_WIDTH_CLASS} text-code-number shrink-0 pr-px text-right select-none`}
             >
               {i + 1}
             </span>
-            <span className="text-foreground/80 pl-0.5 whitespace-pre">
-              {line || " "}
-            </span>
+            <span className="pl-0.5 whitespace-pre">{line || " "}</span>
           </div>
         ))}
       </div>

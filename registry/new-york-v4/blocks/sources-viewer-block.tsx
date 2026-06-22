@@ -730,3 +730,11 @@ export function SourcesViewerBlock() {
     </div>
   );
 }
+
+export function SourcesViewerPdfBlock() {
+  return (
+    <div className="bg-background flex h-full min-h-[680px] flex-col">
+      <PdfTab />
+    </div>
+  );
+}

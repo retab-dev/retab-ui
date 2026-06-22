@@ -18,6 +18,12 @@ export type DropzoneFileRejection =
       file: File;
       reason: "too-many-files";
       maxFiles: number;
+    }
+  | {
+      file: File;
+      reason: "custom";
+      code: string;
+      details?: unknown;
     };
 
 export type DropzoneIntake = {
@@ -41,6 +47,19 @@ export function parseDropzoneAccept(accept?: string): DropzoneAcceptRule[] {
       }
       return { type: "mime", value: token };
     });
+}
+
+export function formatDropzoneAccept(
+  accept?: string | DropzoneAcceptRule[],
+): string | undefined {
+  if (!Array.isArray(accept)) return accept;
+
+  return accept
+    .map((rule) => {
+      if (rule.type === "mime-prefix") return `${rule.value}*`;
+      return rule.value;
+    })
+    .join(",");
 }
 
 export function matchesDropzoneAccept(

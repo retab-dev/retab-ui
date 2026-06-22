@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-sources-block";
 
 import { CopyableFeatureItem } from "./copyable-feature-item";
+import { DocumentApiPrimitiveTabs } from "./document-api-primitive-tabs";
 import { productLanes } from "./homepage-content";
 import {
   type ProductFeatureContent,
@@ -206,16 +207,7 @@ function ProductLane({
   lane: ProductLaneContent;
   spacingClass: string;
 }) {
-  const {
-    id,
-    title,
-    description,
-    proofCustomer,
-    proof,
-    features,
-    visual,
-    layout,
-  } = lane;
+  const { id, title, description, proofCustomer, proof, visual, layout } = lane;
   const isReversed = layout === "reversed";
   const sectionId = `homepage-product-${id}`;
 
@@ -227,28 +219,32 @@ function ProductLane({
         description={description}
         placement={isReversed ? "reversed" : "default"}
       />
-      <div className="mt-10 grid gap-8 lg:mt-11 lg:grid-cols-12 lg:items-start lg:gap-5">
-        <div
-          className={cn(
-            "min-w-0 lg:col-span-8",
-            isReversed && "lg:col-start-5",
-          )}
-        >
-          <ProductVisual visual={visual} />
+      {visual.kind === "extraction" ? (
+        <DocumentApiPrimitiveTabs proof={proof} proofCustomer={proofCustomer} />
+      ) : (
+        <div className="mt-10 grid gap-8 lg:mt-11 lg:grid-cols-12 lg:items-start lg:gap-5">
+          <div
+            className={cn(
+              "min-w-0 lg:col-span-8",
+              isReversed && "lg:col-start-5",
+            )}
+          >
+            <ProductVisual visual={visual} />
+          </div>
+          <div
+            className={cn(
+              "mt-8 min-w-0 space-y-8 lg:col-span-3 lg:mt-0 lg:pt-8",
+              isReversed ? "lg:col-start-1 lg:row-start-1" : "lg:col-start-10",
+            )}
+          >
+            <p className="text-foreground max-w-sm text-3xl leading-tight text-balance md:text-4xl">
+              <span className="text-muted-foreground">{proofCustomer}</span>{" "}
+              {proof}
+            </p>
+            <FeatureList features={lane.features} />
+          </div>
         </div>
-        <div
-          className={cn(
-            "mt-8 min-w-0 space-y-8 lg:col-span-3 lg:mt-0 lg:pt-8",
-            isReversed ? "lg:col-start-1 lg:row-start-1" : "lg:col-start-10",
-          )}
-        >
-          <p className="text-foreground max-w-sm text-3xl leading-tight text-balance md:text-4xl">
-            <span className="text-muted-foreground">{proofCustomer}</span>{" "}
-            {proof}
-          </p>
-          <FeatureList features={features} />
-        </div>
-      </div>
+      )}
     </section>
   );
 }

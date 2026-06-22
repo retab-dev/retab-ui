@@ -8,7 +8,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ViewerResource } from "@/lib/viewer-resource";
 import { FileThumbnail } from "@/components/ui/file-thumbnail";
 import { DocxFirstPage } from "@/components/file-thumbnail/renderers/docx-thumbnail";
-import { IframeDoc } from "@/components/file-thumbnail/renderers/layout";
+import {
+  GridTable,
+  IframeDoc,
+} from "@/components/file-thumbnail/renderers/layout";
 import { MarkdownFirstPage } from "@/components/file-thumbnail/renderers/markdown-thumbnail";
 import {
   decodeMsgHtmlBytes,
@@ -317,10 +320,77 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  document.documentElement.classList.remove("dark");
   clearThumbnailCachesForTests();
   while (restoreCallbacks.length) restoreCallbacks.pop()?.();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+});
+
+describe("thumbnail table styling", () => {
+  it("keeps CSV and XLSX table text readable inside dark UI", () => {
+    const { container } = render(
+      <div className="dark">
+        <GridTable
+          headerRow
+          rows={[
+            ["date", "order_id"],
+            ["2024-11-23", "ORD-100"],
+          ]}
+        />
+      </div>,
+    );
+
+    const cells = Array.from(container.querySelectorAll("td"));
+    expect(cells).toHaveLength(4);
+    expect(cells[0].className).toContain("text-slate-900");
+    expect(cells[0].className).not.toContain("text-foreground");
+    expect(cells[2].className).toContain("text-slate-700");
+    expect(cells[2].className).not.toContain("text-foreground");
+  });
+});
+
+describe("markdown thumbnail styling", () => {
+  it("uses the resolved dark palette without reparsing markdown", async () => {
+    document.documentElement.classList.add("dark");
+    const resource = textThumbnailResource({
+      fileName: "release-notes.md",
+      key: "markdown-dark-mode",
+      mimeType: "text/markdown",
+      readRange: vi.fn(async () =>
+        encodedRange("Dark app chrome should theme markdown thumbnails."),
+      ),
+    });
+
+    const { view } = renderWithBoundary(
+      <MarkdownFirstPage
+        resource={resource}
+        thumbnailKey="markdown-dark-mode"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(view.container.querySelector("iframe")?.srcdoc).toContain(
+        'data-color-scheme="dark"',
+      );
+    });
+
+    const iframe = view.container.querySelector("iframe");
+    expect(iframe?.srcdoc).toContain("--md-bg:#111113");
+    expect(iframe?.srcdoc).toContain("--md-fg:#e4e4e7");
+    expect(rendererMocks.markdown.parse).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      document.documentElement.classList.remove("dark");
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(iframe?.srcdoc).toContain('data-color-scheme="light"');
+    });
+    expect(iframe?.srcdoc).toContain("--md-bg:#ffffff");
+    expect(rendererMocks.markdown.parse).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("thumbnail stale async regressions", () => {

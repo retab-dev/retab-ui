@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import type * as DOMPurify from "dompurify";
 import type * as Marked from "marked";
 
@@ -31,16 +32,18 @@ function loadMarkdown() {
 
 const MARKDOWN_THUMBNAIL_CACHE_MAX_ENTRIES = 64;
 
-const markdownCache = createThumbnailArtifactCache<string>({
+const markdownBodyCache = createThumbnailArtifactCache<string>({
   maxEntries: MARKDOWN_THUMBNAIL_CACHE_MAX_ENTRIES,
 });
 
-function getMarkdownDoc(
+type MarkdownThumbnailColorScheme = "light" | "dark";
+
+function getMarkdownBody(
   meta: ThumbnailFileMeta,
   content: ThumbnailTextContent,
   thumbnailKey: string,
 ): Promise<string> {
-  return cachedThumbnailResource(markdownCache, thumbnailKey, () =>
+  return cachedThumbnailResource(markdownBodyCache, thumbnailKey, () =>
     withThumbnailFormatError(
       "markdown",
       "render_failed",
@@ -58,21 +61,64 @@ function getMarkdownDoc(
           };
           const sanitize = purifier.default?.sanitize ?? purifier.sanitize;
           if (!sanitize) throw new Error("DOMPurify sanitize unavailable");
-          const body = sanitize(await marked.parse(text));
-          return `<!doctype html><html><head><meta charset="utf-8"><style>
-        body{margin:0;padding:18px;font:14px/1.6 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;color:#0f172a}
-        h1{font-size:1.6em;margin:.1em 0 .5em;border-bottom:1px solid #e2e8f0;padding-bottom:.25em}
-        h2{font-size:1.3em;margin:1em 0 .4em;border-bottom:1px solid #e2e8f0;padding-bottom:.25em}
-        h3{font-size:1.1em;margin:1em 0 .3em}
-        p,ul,ol{margin:0 0 .8em}ul,ol{padding-left:1.4em}
-        code{font-family:ui-monospace,SFMono-Regular,monospace;background:#f1f5f9;padding:.1em .35em;border-radius:4px;font-size:.85em}
-        pre{background:#f1f5f9;padding:12px;border-radius:8px;overflow:hidden}pre code{background:none;padding:0}
-        table{border-collapse:collapse;width:100%}td,th{border:1px solid #e2e8f0;padding:4px 8px;text-align:left}
-        a{color:#4f46e5}blockquote{margin:0 0 .8em;padding-left:12px;border-left:3px solid #e2e8f0;color:#475569}
-      </style></head><body>${body}</body></html>`;
+          return sanitize(await marked.parse(text));
         }),
     ),
   );
+}
+
+function createMarkdownDoc(
+  body: string,
+  colorScheme: MarkdownThumbnailColorScheme,
+) {
+  return `<!doctype html><html data-color-scheme="${colorScheme}"><head><meta charset="utf-8"><style>
+        :root{color-scheme:light;--md-bg:#ffffff;--md-fg:#0f172a;--md-muted:#f1f5f9;--md-border:#e2e8f0;--md-quote:#475569;--md-link:#4f46e5}
+        :root[data-color-scheme="dark"]{color-scheme:dark;--md-bg:#111113;--md-fg:#e4e4e7;--md-muted:#1f2937;--md-border:#3f3f46;--md-quote:#a1a1aa;--md-link:#a5b4fc}
+        html,body{min-height:100%;background:var(--md-bg)}
+        body{margin:0;padding:18px;font:14px/1.6 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;color:var(--md-fg)}
+        h1{font-size:1.6em;margin:.1em 0 .5em;border-bottom:1px solid var(--md-border);padding-bottom:.25em}
+        h2{font-size:1.3em;margin:1em 0 .4em;border-bottom:1px solid var(--md-border);padding-bottom:.25em}
+        h3{font-size:1.1em;margin:1em 0 .3em}
+        p,ul,ol{margin:0 0 .8em}ul,ol{padding-left:1.4em}
+        code{font-family:ui-monospace,SFMono-Regular,monospace;background:var(--md-muted);padding:.1em .35em;border-radius:4px;font-size:.85em}
+        pre{background:var(--md-muted);padding:12px;border-radius:8px;overflow:hidden}pre code{background:none;padding:0}
+        table{border-collapse:collapse;width:100%}td,th{border:1px solid var(--md-border);padding:4px 8px;text-align:left}
+        a{color:var(--md-link)}blockquote{margin:0 0 .8em;padding-left:12px;border-left:3px solid var(--md-border);color:var(--md-quote)}
+      </style></head><body>${body}</body></html>`;
+}
+
+function useMarkdownThumbnailColorScheme(): MarkdownThumbnailColorScheme {
+  return React.useSyncExternalStore(
+    subscribeMarkdownThumbnailColorScheme,
+    getMarkdownThumbnailColorScheme,
+    () => "light",
+  );
+}
+
+function subscribeMarkdownThumbnailColorScheme(onChange: () => void) {
+  if (
+    typeof document === "undefined" ||
+    typeof MutationObserver === "undefined"
+  ) {
+    return () => {};
+  }
+
+  const observer = new MutationObserver(onChange);
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
+  return () => observer.disconnect();
+}
+
+function getMarkdownThumbnailColorScheme(): MarkdownThumbnailColorScheme {
+  if (
+    typeof document !== "undefined" &&
+    document.documentElement.classList.contains("dark")
+  ) {
+    return "dark";
+  }
+  return "light";
 }
 
 export function MarkdownFirstPage({
@@ -82,8 +128,13 @@ export function MarkdownFirstPage({
   resource: ViewerResource;
   thumbnailKey: string;
 }) {
-  const html = useThumbnailResource(
-    getMarkdownDoc(thumbnailFileMeta(resource), resource.content, thumbnailKey),
+  const colorScheme = useMarkdownThumbnailColorScheme();
+  const body = useThumbnailResource(
+    getMarkdownBody(
+      thumbnailFileMeta(resource),
+      resource.content,
+      thumbnailKey,
+    ),
   );
-  return <IframeDoc html={html} />;
+  return <IframeDoc html={createMarkdownDoc(body, colorScheme)} />;
 }

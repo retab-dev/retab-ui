@@ -3,17 +3,25 @@
 import * as React from "react";
 
 import {
-  PdfViewer,
-  PdfViewerPages,
-  PdfViewerProvider,
-} from "@/components/ui/pdf-viewer";
+  FileViewer,
+  FileViewerBody,
+  FileViewerControls,
+  FileViewerHeader,
+  FileViewerMeta,
+  FileViewerSurface,
+  FileViewerTitle,
+} from "@/components/ui/file-viewer";
+import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer";
 import { EmailViewerDemo } from "@/components/email-viewer-demo";
 import {
   LargeParseViewerDemo,
   ParseViewerDemo,
 } from "@/components/parse-viewer-demo";
 import { TextViewerDemo } from "@/components/text-viewer-demo";
-import { ClassifierViewer } from "@/components/viewers/classify/classifier-viewer";
+import {
+  ClassifierViewer,
+  ClassifierViewerLegend,
+} from "@/components/viewers/classify/classifier-viewer";
 import { EditViewer } from "@/components/viewers/edit/edit-viewer";
 import type { FormField } from "@/components/viewers/lib/edit-types";
 import type { PartitionResult } from "@/components/viewers/lib/partition-types";
@@ -47,6 +55,11 @@ const partitionSource = {
   kind: "url" as const,
   url: PARTITION_PDF_URL,
   fileName: "an-image-is-worth-16x16-words.pdf",
+};
+const loanApplicationSource = {
+  kind: "url" as const,
+  url: "/samples/loan-application.pdf",
+  fileName: "loan-application.pdf",
 };
 
 const partitionResult: PartitionResult = {
@@ -99,22 +112,49 @@ export function ClassificationViewerDemo() {
       <ClassifierViewer
         result={{
           category: "Loan Application",
+          candidates: [
+            {
+              category: "Loan Application",
+              description: "Uniform Residential Loan Application Form 1003.",
+            },
+            {
+              category: "Tax Form",
+              description: "Structured form, but no IRS tax identifiers.",
+            },
+            {
+              category: "Bank Statement",
+              description: "Financial fields are present, but no transactions.",
+            },
+          ],
           reasoning:
             "The document is a Uniform Residential Loan Application (Form 1003): it collects borrower, employment, and property details for a mortgage request, which matches the Loan Application category.",
         }}
-        document={
-          <PdfViewer
-            source={{
-              kind: "url",
-              url: "/samples/loan-application.pdf",
-              fileName: "loan-application.pdf",
-            }}
-            bare
-            className="h-full"
-          />
-        }
+        document={<ClassificationPdfDocument />}
       />
     </div>
+  );
+}
+
+function ClassificationPdfDocument() {
+  return (
+    <FileViewer
+      source={loanApplicationSource}
+      className="h-full rounded-none border-0 bg-transparent"
+    >
+      <PdfViewerProvider>
+        <FileViewerHeader>
+          <FileViewerTitle />
+          <FileViewerMeta />
+          <FileViewerControls />
+        </FileViewerHeader>
+        <ClassifierViewerLegend />
+        <FileViewerBody>
+          <FileViewerSurface>
+            <PdfViewerPages bare className="h-full" />
+          </FileViewerSurface>
+        </FileViewerBody>
+      </PdfViewerProvider>
+    </FileViewer>
   );
 }
 

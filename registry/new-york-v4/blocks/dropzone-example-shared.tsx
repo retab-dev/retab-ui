@@ -72,6 +72,9 @@ function getDropzoneRejectionMessage(rejection: DropzoneFileRejection): string {
   if (rejection.reason === "file-too-large") {
     return `File must be ${formatFileSize(rejection.maxSize)} or smaller.`;
   }
+  if (rejection.reason === "custom") {
+    return rejection.code;
+  }
   return rejection.maxFiles === 1
     ? "Only one file can be selected."
     : `Only ${rejection.maxFiles} files can be selected.`;

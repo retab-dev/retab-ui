@@ -185,6 +185,31 @@ describe("DocxFirstPage", () => {
     expect(scaled!.style.visibility).toBe("visible");
   });
 
+  it("keeps the rendered page light inside a dark themed thumbnail frame", async () => {
+    await act(async () => {
+      render(
+        <div className="dark text-white">
+          <ErrorBoundary onError={() => {}}>
+            <React.Suspense fallback={<div data-testid="suspense" />}>
+              <DocxFirstPage resource={docxResource("/dark.docx")} />
+            </React.Suspense>
+          </ErrorBoundary>
+        </div>,
+      );
+    });
+    await screen.findByText("First page body");
+
+    const pageHost = document.querySelector<HTMLElement>(
+      '[style*="color-scheme: light"]',
+    );
+    expect(pageHost).toBeTruthy();
+    expect(pageHost!.style.backgroundColor).toBe("white");
+    expect(pageHost!.style.color).toBe("black");
+    expect(pageHost!.style.colorScheme).toBe("light");
+    expect(pageHost!.className).toContain("[&_section.docx]:!bg-white");
+    expect(pageHost!.className).toContain("[&_section.docx]:!text-black");
+  });
+
   it("surfaces a render failure as a docx ViewerFormatError", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     docxMock.renderAsync.mockReset();

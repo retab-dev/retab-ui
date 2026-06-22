@@ -94,9 +94,34 @@ describe("text and code thumbnails", () => {
     const prose = await screen.findByText(
       "Text and code want different surfaces.",
     );
+    const thumbnail = prose.closest('[data-slot="text-thumbnail"]');
 
-    expect(prose.closest('[data-slot="text-thumbnail"]')).not.toBeNull();
+    expect(thumbnail).not.toBeNull();
     expect(view.queryByText("1")).toBeNull();
+  });
+
+  it("keeps text thumbnails on a light paper surface in dark mode", async () => {
+    const resource = textResource({
+      fileName: "dark-mode-notes.txt",
+      key: "text-dark-mode",
+      text: "Dark app chrome should not invert the thumbnail page.",
+    });
+
+    renderThumbnail(
+      <div className="dark">
+        <TextThumbnail resource={resource} thumbnailKey="text-dark-mode" />
+      </div>,
+    );
+
+    const prose = await screen.findByText(
+      "Dark app chrome should not invert the thumbnail page.",
+    );
+    const thumbnail = prose.closest('[data-slot="text-thumbnail"]');
+
+    expect(thumbnail?.classList.contains("bg-white")).toBe(true);
+    expect(thumbnail?.classList.contains("text-slate-700")).toBe(true);
+    expect(thumbnail?.classList.contains("bg-card")).toBe(false);
+    expect(thumbnail?.classList.contains("text-foreground/80")).toBe(false);
   });
 
   it("normalizes CRLF prose in text thumbnails", async () => {

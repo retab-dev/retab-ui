@@ -257,7 +257,7 @@ export const productLanes = [
     proofCustomer: "Developers",
     proof:
       "unlock mission-critical data from documents that were previously too complex to automate.",
-    features: ["Parse", "Split", "Classify", "Extract", "Edit"],
+    features: ["Extract", "Split", "Edit", "Parse", "Classify"],
     visual: { kind: "extraction" },
   },
   {

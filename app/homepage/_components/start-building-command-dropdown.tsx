@@ -170,7 +170,7 @@ export function StartBuildingCommandDropdown({
             </span>
           </button>
         ) : (
-          <span className="text-muted-foreground flex min-h-7 shrink-0 items-center rounded-l-full rounded-r-md px-2 py-1 text-sm font-medium select-none">
+          <span className="text-foreground flex min-h-7 shrink-0 items-center rounded-l-full rounded-r-md px-2 py-1 text-sm font-medium select-none">
             <span className="flex items-center gap-2">
               <CommandIcon option={selectedOption} />
               {selectedOption.label}

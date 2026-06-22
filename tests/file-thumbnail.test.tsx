@@ -1393,6 +1393,41 @@ describe("FileThumbnail", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("uses code theme tokens for generated code thumbnail gutters", async () => {
+    await renderAsync(
+      <FileThumbnail
+        source={{
+          kind: "text",
+          text: '{"enabled":true}',
+          fileName: "app.json",
+          mimeType: "application/json",
+        }}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/enabled/)).toBeTruthy();
+    });
+
+    const thumbnail = document.querySelector<HTMLElement>(
+      '[data-slot="code-thumbnail"]',
+    );
+    const gutter = thumbnail?.querySelector<HTMLElement>(
+      '[aria-hidden="true"]',
+    );
+    const lineNumber =
+      thumbnail?.querySelector<HTMLElement>("span.select-none");
+    const codeText = thumbnail?.querySelector<HTMLElement>(
+      "span.whitespace-pre",
+    );
+
+    expect(thumbnail?.className).toContain("bg-code");
+    expect(thumbnail?.className).toContain("text-code-foreground");
+    expect(gutter?.className).toContain("bg-code-highlight");
+    expect(lineNumber?.className).toContain("text-code-number");
+    expect(codeText?.className).not.toContain("text-foreground");
+  });
+
   it("renders large inline text sources as a prefix instead of an error", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

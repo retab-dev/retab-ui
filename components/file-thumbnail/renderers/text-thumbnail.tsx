@@ -34,7 +34,7 @@ export function TextThumbnail({
   return (
     <div
       data-slot="text-thumbnail"
-      className="bg-card text-foreground/80 absolute inset-0 overflow-hidden p-3 font-sans"
+      className="absolute inset-0 overflow-hidden bg-white p-3 font-sans text-slate-700"
       style={{
         fontSize: TEXT_THUMBNAIL_FONT_SIZE,
         lineHeight: TEXT_THUMBNAIL_LINE_HEIGHT,
@@ -56,7 +56,7 @@ function EmptyTextThumbnail() {
     <div
       aria-label="Empty text file"
       data-slot="text-thumbnail-empty"
-      className="bg-card absolute inset-0"
+      className="absolute inset-0 bg-white"
     />
   );
 }
