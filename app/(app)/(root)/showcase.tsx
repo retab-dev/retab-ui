@@ -59,7 +59,9 @@ export function HomeShowcase() {
                 description="Visual JSON Schema editor for shaping the structure your extractions follow."
                 headerClassName="min-h-(--showcase-header-h)"
               >
-                <RetabSchemaBuilderDemo showJsonTab={false} />
+                <div className="bg-card max-h-[640px] overflow-auto rounded-xl border p-4 shadow-sm">
+                  <RetabSchemaBuilderDemo showJsonTab={false} />
+                </div>
               </ShowcaseItem>
 
               <FileViewerShowcase />
