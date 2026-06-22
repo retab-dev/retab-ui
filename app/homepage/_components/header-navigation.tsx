@@ -12,23 +12,30 @@ export function HeaderNavigation({ content }: { content: HeaderContent }) {
   return (
     <>
       <nav aria-label="Primary" className="hidden items-center gap-2 lg:flex">
-        {content.navGroups.map((group) => (
-          <HeaderDropdown key={group.id} group={group} />
-        ))}
-        {content.utilityLinks.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            aria-label={getLinkAriaLabel(item)}
-            {...getLinkProps(item)}
-            className={cn(
-              "text-muted-foreground hover:text-foreground focus-visible:text-foreground rounded-md px-2 py-1 text-sm transition-colors duration-150 ease-out motion-reduce:transition-none",
-              focusRing,
-            )}
-          >
-            {item.label}
-          </Link>
-        ))}
+        {content.navItems.map((navItem) => {
+          if (navItem.kind === "group") {
+            return (
+              <HeaderDropdown key={navItem.group.id} group={navItem.group} />
+            );
+          }
+
+          const { item } = navItem;
+
+          return (
+            <Link
+              key={item.label}
+              href={item.href}
+              aria-label={getLinkAriaLabel(item)}
+              {...getLinkProps(item)}
+              className={cn(
+                "text-muted-foreground hover:text-foreground focus-visible:text-foreground rounded-md px-2 py-1 text-sm transition-colors duration-150 ease-out motion-reduce:transition-none",
+                focusRing,
+              )}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="ml-auto hidden items-center gap-2 lg:flex">

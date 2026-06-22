@@ -91,11 +91,18 @@ export function HeaderDropdown({ group }: { group: NavGroup }) {
                       aria-label={getLinkAriaLabel(item)}
                       {...getLinkProps(item)}
                       className={cn(
-                        "text-foreground hover:text-foreground focus-visible:text-foreground inline-flex h-8 w-full max-w-full items-center gap-2 rounded-sm py-1 text-sm leading-5 transition-colors duration-150 ease-out motion-reduce:transition-none",
+                        "text-foreground hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground block min-h-8 w-full max-w-full rounded-sm px-1 py-1.5 text-sm leading-5 transition-colors duration-150 ease-out motion-reduce:transition-none",
                         focusRing,
                       )}
                     >
-                      <MarketingLinkLabel item={item} />
+                      <span className="flex min-w-0 items-center gap-2">
+                        <MarketingLinkLabel item={item} />
+                      </span>
+                      {item.description ? (
+                        <span className="text-muted-foreground mt-0.5 block text-xs leading-4">
+                          {item.description}
+                        </span>
+                      ) : null}
                     </Link>
                   </li>
                 ))}

@@ -63,27 +63,22 @@ function FooterColumn({
   );
 }
 
-function StatusLink({ status }: { status: FooterContent["status"] }) {
+function StatusIndicator({ status }: { status: FooterContent["status"] }) {
   return (
-    <Link
-      href={status.href}
-      aria-label={getLinkAriaLabel(status)}
-      {...getLinkProps(status)}
-      className={cn(
-        "text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground inline-flex h-8 w-fit items-center rounded-md px-2 font-mono text-sm transition-colors motion-reduce:transition-none",
-        focusRing,
-      )}
+    <div
+      aria-label={status.ariaLabel}
+      className="text-muted-foreground inline-flex h-8 w-fit items-center rounded-md px-2 font-mono text-sm"
     >
       {status.label}
-    </Link>
+    </div>
   );
 }
 
 function FooterLogo() {
   return (
     <Link
-      href="/homepage"
-      aria-label="Vercel homepage"
+      href="/"
+      aria-label="Retab homepage"
       className={cn(
         "text-foreground hover:text-muted-foreground focus-visible:text-foreground inline-flex h-8 w-full max-w-48 items-center rounded-sm transition-colors motion-reduce:transition-none",
         focusRing,
@@ -119,7 +114,7 @@ export function MarketingFooter({ content }: { content: FooterContent }) {
         </div>
 
         <div className="mt-6 flex min-h-8 flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <StatusLink status={content.status} />
+          <StatusIndicator status={content.status} />
         </div>
       </MarketingContainer>
     </footer>

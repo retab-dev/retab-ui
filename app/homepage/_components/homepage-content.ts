@@ -2,10 +2,10 @@ import {
   type FeaturedLatestCard,
   type FooterColumnContent,
   type FooterContent,
+  type HeaderNavItem,
   type HeaderContent,
   type LinkItem,
   type LogoContent,
-  type NavGroup,
   type ProductLaneContent,
   type SecondaryLatestCard,
   type StartBuildingContent,
@@ -14,130 +14,182 @@ import {
 
 const vercelHref = (path: string) => path;
 
-const vercelLink = (label: string, path: string, badge?: string): LinkItem => ({
+const retabLink = (
+  label: string,
+  path: string,
+  description?: string,
+): LinkItem => ({
   label,
-  href: vercelHref(path),
-  badge,
+  href: path,
+  description,
 });
 
 const externalLink = (
   label: string,
   href: string,
-  badge?: string,
+  description?: string,
 ): LinkItem => ({
   label,
   href,
-  badge,
+  description,
   isExternal: true,
 });
 
-const cookiePreferencesButton = (): LinkItem => ({
-  label: "Cookie Preferences",
-  href: "#cookie-preferences",
-  ariaLabel: "Open cookie preferences",
-  action: "cookie-preferences",
-});
+const blogLink = retabLink("Blog", "/blog");
+const pricingLink = retabLink("Pricing", "/product/pricing");
+const docsLink = externalLink("Docs", "https://docs.retab.com");
+const loginLink = retabLink("Log in", "/dashboard/production");
+const demoLink = externalLink(
+  "Get a demo",
+  "https://calendar.app.google/1PTAx2rZjEWiH28n6",
+);
 
-const enterpriseLink = vercelLink("Enterprise", "/enterprise");
-const pricingLink = vercelLink("Pricing", "/pricing");
-const demoLink = vercelLink("Get a Demo", "/contact/sales/demo");
-const loginLink = vercelLink("Log In", "/login");
-const signupLink = vercelLink("Sign Up", "/signup");
+export const solutionsNavGroup = {
+  id: "solutions",
+  label: "Solutions",
+  sections: [
+    {
+      title: "Industry",
+      items: [
+        retabLink(
+          "Insurance",
+          "/solutions/industries/insurance",
+          "Automate claims and underwriting",
+        ),
+        retabLink(
+          "Finance",
+          "/solutions/industries/finance",
+          "Power financial research",
+        ),
+        retabLink(
+          "Oil & Gas",
+          "/solutions/industries/oil-and-gas",
+          "Scale field and compliance workflows",
+        ),
+        retabLink(
+          "Manufacturing",
+          "/solutions/industries/logistics",
+          "Optimize system uptime",
+        ),
+        retabLink(
+          "Healthcare & Pharma",
+          "/solutions/industries/healthcare",
+          "Accelerate clinical research",
+        ),
+      ],
+    },
+    {
+      title: "Use Cases",
+      items: [
+        retabLink(
+          "Financial Due Diligence",
+          "/solutions/use-cases/due-diligence",
+          "Speed up compliance reviews",
+        ),
+        retabLink(
+          "Invoice Processing",
+          "/solutions/use-cases/invoice-processing",
+          "Automate manual review",
+        ),
+        retabLink(
+          "Technical Document Search",
+          "/solutions/use-cases/technical-document-search",
+          "Find answers in complex docs",
+        ),
+        retabLink(
+          "Customer Support",
+          "/solutions/use-cases/customer-support",
+          "Instant, accurate responses",
+        ),
+      ],
+    },
+  ],
+} as const;
 
-export const navGroups = [
+export const developersNavGroup = {
+  id: "developers",
+  label: "Developers",
+  sections: [
+    {
+      title: "Developers",
+      items: [
+        externalLink(
+          "Documentation",
+          "https://docs.retab.com",
+          "Documentation and guides with examples and tutorials",
+        ),
+        retabLink(
+          "k-LLMs",
+          "/k-llms",
+          "Open-source consensus and alignment for structured LLM outputs",
+        ),
+        retabLink(
+          "MCP",
+          "/mcp",
+          "Agent infrastructure for document automation",
+        ),
+        retabLink(
+          "Benchmark",
+          "/benchmark",
+          "Retab's leaderboard for document processing",
+        ),
+      ],
+    },
+  ],
+} as const;
+
+export const linksNavGroup = {
+  id: "links",
+  label: "Links",
+  sections: [
+    {
+      title: "Links",
+      items: [
+        externalLink("X (Twitter)", "https://x.com/retabdev"),
+        externalLink("Discord", "https://discord.gg/vc5tWRPqag"),
+        externalLink("GitHub", "https://github.com/retab-dev/retab"),
+        externalLink(
+          "YouTube",
+          "https://www.youtube.com/channel/UCaquZxGEjTt3_rRZHDhlsUA",
+        ),
+        retabLink("Careers", "/careers"),
+      ],
+    },
+  ],
+} as const;
+
+export const navItems = [
   {
-    id: "products",
-    label: "Products",
-    sections: [
-      {
-        title: "Agent Stack",
-        items: [
-          vercelLink("AI SDK", "/ai-sdk"),
-          vercelLink("AI Gateway", "/ai-gateway"),
-          vercelLink("Sandbox", "/sandbox"),
-          vercelLink("Workflows", "/workflows"),
-          vercelLink("Eve", "/eve"),
-        ],
-      },
-      {
-        title: "Core Platform",
-        items: [
-          vercelLink("Security", "/security"),
-          vercelLink("Content Delivery", "/cdn"),
-          vercelLink("Fluid Compute", "/fluid"),
-          vercelLink("Observability", "/products/observability"),
-          vercelLink("CI/CD", "/products/previews"),
-        ],
-      },
-      {
-        title: "Tools",
-        items: [
-          vercelLink("Next.js", "/frameworks/nextjs"),
-          vercelLink("Vercel Agent", "/agent"),
-          vercelLink("Vercel Plugin", "/plugin"),
-          externalLink("Domains", "https://vercel.com/domains"),
-          externalLink("v0", "https://v0.app/"),
-        ],
-      },
-    ],
+    kind: "group",
+    group: solutionsNavGroup,
   },
   {
-    id: "resources",
-    label: "Resources",
-    sections: [
-      {
-        title: "Learn",
-        items: [
-          vercelLink("Docs", "/docs"),
-          vercelLink("About", "/about"),
-          vercelLink("Blog", "/blog"),
-          vercelLink("Changelog", "/changelog"),
-          vercelLink("Knowledge Base", "/kb"),
-        ],
-      },
-      {
-        title: "Build",
-        items: [
-          vercelLink("AI Apps", "/ai"),
-          vercelLink("Web Apps", "/solutions/web-apps"),
-          vercelLink("Marketing Sites", "/solutions/marketing-sites"),
-          vercelLink("Platforms", "/solutions/multi-tenant-saas"),
-          vercelLink("Commerce", "/solutions/composable-commerce"),
-        ],
-      },
-      {
-        title: "Explore",
-        items: [
-          vercelLink("Customers", "/customers"),
-          vercelLink("Marketplace", "/marketplace"),
-          vercelLink("Partner Finder", "/partners/solution-partners"),
-          vercelLink("AWS", "/partners/aws"),
-          externalLink("Community", "https://community.vercel.com/"),
-        ],
-      },
-    ],
+    kind: "group",
+    group: developersNavGroup,
   },
-] as const satisfies readonly NavGroup[];
-
-export const utilityNavLinks = [
-  enterpriseLink,
-  pricingLink,
-] as const satisfies readonly LinkItem[];
+  {
+    kind: "link",
+    item: blogLink,
+  },
+  {
+    kind: "link",
+    item: pricingLink,
+  },
+  {
+    kind: "group",
+    group: linksNavGroup,
+  },
+  {
+    kind: "link",
+    item: docsLink,
+  },
+] as const satisfies readonly HeaderNavItem[];
 
 export const homepageHeader = {
-  homeHref: "/home",
-  navGroups,
-  utilityLinks: utilityNavLinks,
-  desktopActions: [
-    { ...demoLink, variant: "secondary" },
-    { ...loginLink, variant: "secondary" },
-    signupLink,
-  ],
-  mobileActions: [
-    { ...demoLink, variant: "secondary" },
-    { ...loginLink, variant: "secondary" },
-    signupLink,
-  ],
+  homeHref: "/",
+  navItems,
+  desktopActions: [{ ...loginLink, variant: "secondary" }, demoLink],
+  mobileActions: [{ ...loginLink, variant: "secondary" }, demoLink],
 } as const satisfies HeaderContent;
 
 export const logoStrip = [
@@ -313,177 +365,79 @@ export const secondaryLatestCards = [
 ] as const satisfies readonly SecondaryLatestCard[];
 
 const footerStatus = {
-  label: "Loading status…",
-  href: "https://vercel-status.com/",
-  ariaLabel: "Vercel status: Loading status",
-  isExternal: true,
+  label: "All systems operational",
+  ariaLabel: "Status: All systems operational",
 } as const;
 
 export const footerSocialLinks = [
   {
-    ...externalLink("GitHub", "https://github.com/vercel"),
-    ariaLabel: "Vercel on GitHub",
+    ...externalLink("X (Twitter)", "https://x.com/retabdev"),
+    ariaLabel: "Retab on X",
   },
   {
-    ...externalLink("X", "https://x.com/vercel"),
-    ariaLabel: "Vercel on X",
+    ...externalLink("Discord", "https://discord.gg/vc5tWRPqag"),
+    ariaLabel: "Retab Discord",
   },
   {
-    ...externalLink("LinkedIn", "https://www.linkedin.com/company/vercel"),
-    ariaLabel: "Vercel on LinkedIn",
+    ...externalLink("GitHub", "https://github.com/retab-dev/retab"),
+    ariaLabel: "Retab on GitHub",
   },
   {
-    ...externalLink("YouTube", "https://www.youtube.com/vercel"),
-    ariaLabel: "Vercel on YouTube",
-  },
-  {
-    ...externalLink("Instagram", "https://www.instagram.com/vercel"),
-    ariaLabel: "Vercel on Instagram",
+    label: "Contact Us",
+    href: "mailto:contact@retab.com",
+    ariaLabel: "Contact Retab",
   },
 ] as const satisfies readonly LinkItem[];
 
 export const footerNavigationColumns = [
   {
-    id: "agent-stack",
-    title: "Agent Stack",
+    id: "industry",
+    title: "Industry",
     links: [
-      vercelLink("AI SDK", "/ai-sdk"),
-      vercelLink("AI Gateway", "/ai-gateway"),
-      vercelLink("Sandbox", "/sandbox"),
-      vercelLink("Workflows", "/workflows"),
-      vercelLink("Eve", "/eve", "New"),
-      vercelLink("Connect", "/connect", "New"),
+      retabLink("Insurance", "/solutions/industries/insurance"),
+      retabLink("Finance", "/solutions/industries/finance"),
+      retabLink("Manufacturing", "/solutions/industries/logistics"),
+      retabLink("Healthcare", "/solutions/industries/healthcare"),
     ],
   },
   {
-    id: "core-platform",
-    title: "Core Platform",
+    id: "use-cases",
+    title: "Use Cases",
     links: [
-      vercelLink("CI/CD", "/products/previews"),
-      vercelLink("Content Delivery", "/cdn"),
-      vercelLink("Fluid Compute", "/fluid"),
-      vercelLink("Observability", "/products/observability"),
+      retabLink("Due Diligence", "/solutions/use-cases/due-diligence"),
+      retabLink(
+        "Invoice Processing",
+        "/solutions/use-cases/invoice-processing",
+      ),
+      retabLink(
+        "Document Search",
+        "/solutions/use-cases/technical-document-search",
+      ),
+      retabLink("Customer Support", "/solutions/use-cases/customer-support"),
     ],
   },
   {
-    id: "security",
-    title: "Security",
+    id: "developers",
+    title: "Developers",
     links: [
-      vercelLink("Platform Security", "/security"),
-      vercelLink("WAF", "/security/web-application-firewall"),
-      vercelLink("Bot Management", "/security/bot-management"),
-      vercelLink("Bot ID", "/botid"),
+      docsLink,
+      retabLink("k-LLMs", "/k-llms"),
+      retabLink("Blog", "/blog"),
+      pricingLink,
     ],
   },
   {
-    id: "tools",
-    title: "Tools",
+    id: "legal",
+    title: "Legal",
     links: [
-      vercelLink("Vercel Drop", "/drop", "New"),
-      vercelLink("Vercel Agent", "/agent"),
-      vercelLink("Vercel Plugin", "/plugin", "New"),
-      vercelLink("Next.js", "/frameworks/nextjs"),
-      externalLink("Domains", "https://vercel.com/domains"),
-      externalLink("v0", "https://v0.app/"),
+      retabLink("Privacy", "/privacy"),
+      retabLink("Terms", "/terms"),
+      retabLink("Careers", "/careers"),
     ],
   },
   {
-    id: "frameworks",
-    title: "Frameworks",
-    links: [
-      vercelLink("Nuxt", "/frameworks/nuxt"),
-      vercelLink("SvelteKit", "/frameworks/sveltekit"),
-      vercelLink("Nitro", "/frameworks/nitro"),
-      vercelLink("Turborepo", "/docs/monorepos/turborepo"),
-      vercelLink("Tanstack Start", "/frameworks/tanstack-start"),
-      vercelLink("FastAPI", "/frameworks/fastapi"),
-      vercelLink("xmcp", "/frameworks/xmcp"),
-      vercelLink("All frameworks", "/frameworks"),
-    ],
-  },
-  {
-    id: "sdks",
-    title: "SDKs",
-    links: [
-      vercelLink("Vercel SDK", "/docs/sdk"),
-      vercelLink("Workflow SDK", "/docs/workflows", "New"),
-      vercelLink("Flags SDK", "/docs/flags"),
-      vercelLink("Chat SDK", "/docs/ai-sdk", "New"),
-      vercelLink("Queues SDK", "/docs/queues", "New"),
-      externalLink("Streamdown", "https://streamdown.ai/"),
-    ],
-  },
-  {
-    id: "build",
-    title: "Build",
-    links: [
-      vercelLink("AI Apps", "/solutions/ai-apps"),
-      vercelLink("Web Apps", "/solutions/web-apps"),
-      vercelLink("Marketing Sites", "/solutions/marketing-sites"),
-      vercelLink("Platforms", "/solutions/multi-tenant-saas"),
-      vercelLink("Commerce", "/solutions/composable-commerce"),
-      vercelLink("Platform Engineers", "/solutions/platform-engineers"),
-      vercelLink("Design Engineers", "/solutions/design-engineers"),
-    ],
-  },
-  {
-    id: "learn",
-    title: "Learn",
-    links: [
-      vercelLink("Docs", "/docs"),
-      vercelLink("Blog", "/blog"),
-      vercelLink("Changelog", "/changelog"),
-      vercelLink("Knowledge Base", "/kb"),
-      vercelLink("Academy", "/academy"),
-      vercelLink("Articles", "/resources"),
-      externalLink("Community", "https://community.vercel.com/"),
-    ],
-  },
-  {
-    id: "explore",
-    title: "Explore",
-    links: [
-      vercelLink("Customers", "/customers"),
-      vercelLink("Marketplace", "/marketplace"),
-      vercelLink("Templates", "/templates"),
-      vercelLink("Partner Finder", "/partners/solution-partners"),
-      vercelLink("Vercel + AWS", "/partners/aws"),
-    ],
-  },
-  {
-    id: "company",
-    title: "Company",
-    links: [
-      vercelLink("About", "/about"),
-      vercelLink("Careers", "/careers"),
-      vercelLink("Press", "/press"),
-      vercelLink("Events", "/events"),
-      vercelLink("Startups", "/startups"),
-      vercelLink("Shipped on Vercel", "/customers"),
-      vercelLink("Open Source Program", "/oss"),
-      vercelLink("Enterprise", "/enterprise"),
-      vercelLink("Pricing", "/pricing"),
-      vercelLink("Help", "/help"),
-    ],
-  },
-  {
-    id: "legal-trust",
-    title: "Legal & Trust",
-    links: [
-      vercelLink("Privacy Policy", "/legal/privacy-policy"),
-      vercelLink("Terms of Service", "/legal/terms"),
-      vercelLink("Cookie Policy", "/legal/cookie-policy"),
-      vercelLink("DPA", "/legal/dpa"),
-      vercelLink("Acceptable Use Policy", "/legal/acceptable-use-policy"),
-      vercelLink("Legal (all documents)", "/legal"),
-      externalLink("Trust Center", "https://security.vercel.com/"),
-      externalLink("Status", "https://vercel-status.com/"),
-      cookiePreferencesButton(),
-    ],
-  },
-  {
-    id: "social",
-    title: "Social",
+    id: "community",
+    title: "Community",
     links: footerSocialLinks,
   },
 ] as const satisfies readonly FooterColumnContent[];

@@ -2,10 +2,21 @@ export type LinkItem = {
   readonly label: string;
   readonly href: string;
   readonly badge?: string;
+  readonly description?: string;
   readonly ariaLabel?: string;
   readonly isExternal?: boolean;
   readonly action?: "cookie-preferences";
 };
+
+export type HeaderNavItem =
+  | {
+      readonly kind: "group";
+      readonly group: NavGroup;
+    }
+  | {
+      readonly kind: "link";
+      readonly item: LinkItem;
+    };
 
 export type NavGroup = {
   readonly id: string;
@@ -24,8 +35,7 @@ export type HeaderAction = LinkItem & {
 
 export type HeaderContent = {
   readonly homeHref: string;
-  readonly navGroups: readonly NavGroup[];
-  readonly utilityLinks: readonly LinkItem[];
+  readonly navItems: readonly HeaderNavItem[];
   readonly desktopActions: readonly HeaderAction[];
   readonly mobileActions: readonly HeaderAction[];
 };
@@ -109,7 +119,10 @@ export type FooterColumnContent = {
   readonly links: readonly LinkItem[];
 };
 
-export type FooterStatusContent = LinkItem;
+export type FooterStatusContent = {
+  readonly label: string;
+  readonly ariaLabel?: string;
+};
 
 export type ThemeValue = "system" | "light" | "dark";
 
