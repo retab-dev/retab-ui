@@ -1369,7 +1369,7 @@ export function DocumentApiPrimitiveGrid() {
   return (
     <div
       aria-hidden="true"
-      className="grid grid-cols-1 gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-3"
+      className="grid grid-cols-1 gap-x-16 gap-y-10 sm:grid-cols-2 lg:grid-cols-3"
     >
       {primitives.map((primitive) => (
         <PrimitiveCard key={primitive.name} {...primitive} />
