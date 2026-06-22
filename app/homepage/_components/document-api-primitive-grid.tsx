@@ -41,7 +41,7 @@ function PrimitiveCard({ name, description, Art }: Primitive) {
           {description}
         </p>
       </div>
-      <div className="border-border relative h-[416px] w-full overflow-hidden rounded-[10px] border">
+      <div className="border-border relative aspect-[210/297] w-full overflow-hidden rounded-[10px] border">
         <Art />
       </div>
     </div>
