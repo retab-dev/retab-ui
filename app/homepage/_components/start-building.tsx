@@ -4,7 +4,7 @@ import {
   type StartBuildingPanel as StartBuildingPanelContent,
 } from "./homepage-types";
 import { getLinkAriaLabel, getLinkProps, MarketingButton } from "./primitives";
-import { StartBuildingPluginCommand } from "./start-building-plugin-command";
+import { StartBuildingCommandDropdown } from "./start-building-command-dropdown";
 
 function ActionList({ actions }: { actions: readonly StartBuildingAction[] }) {
   return (
@@ -34,7 +34,11 @@ function StartBuildingPanel({ panel }: { panel: StartBuildingPanelContent }) {
       {panel.kind === "template" ? (
         <ActionList actions={panel.actions} />
       ) : (
-        <StartBuildingPluginCommand options={panel.plugin.options} />
+        <div className="mt-8 flex w-full flex-col gap-2">
+          {panel.commandGroups.map((group) => (
+            <StartBuildingCommandDropdown key={group.id} group={group} />
+          ))}
+        </div>
       )}
     </div>
   );

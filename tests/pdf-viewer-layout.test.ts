@@ -4,9 +4,11 @@ import {
   createPdfPageLayout,
   findPdfPageByOffset,
   getPdfPageLayout,
+  getPdfRenderPageNumbers,
   getPdfVisiblePageNumbers,
   PDF_PAGE_GAP,
   PDF_PAGE_PADDING,
+  PDF_RENDER_PAGE_OVERSCAN,
 } from "@/registry/new-york-v4/ui/pdf-viewer-layout";
 
 const pageSize = { width: 100, height: 200 };
@@ -200,6 +202,27 @@ describe("pdf viewer layout", () => {
         overscanPages: 2,
       }),
     ).toEqual([397, 398, 399, 400, 401, 402, 403]);
+  });
+
+  it("renders two pages of lookahead by default", () => {
+    const layout = createPdfPageLayout({
+      pageCount: 585,
+      defaultPageSize: pageSize,
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    });
+    const page400 = getPdfPageLayout(layout, 400);
+    expect(page400).toBeTruthy();
+
+    expect(
+      getPdfRenderPageNumbers({
+        layout,
+        scrollTop: page400!.offsetTop,
+        viewportHeight: 200,
+      }),
+    ).toEqual([398, 399, 400, 401, 402]);
+    expect(PDF_RENDER_PAGE_OVERSCAN).toBe(2);
   });
 
   it("clips the visible page window at document edges", () => {

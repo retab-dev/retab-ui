@@ -2375,7 +2375,19 @@ describe("PdfViewer", () => {
       [100, 1000],
       [100, 1000],
       [100, 1000],
+      [100, 1000],
     ]);
+    const makeResolvedRenderTask = () => {
+      const task = {
+        promise: Promise.resolve(),
+        cancel: vi.fn(),
+      };
+      pdfjsMock.renderTasks.push(task);
+      return task;
+    };
+    doc.pages[0].render.mockImplementationOnce(makeResolvedRenderTask);
+    doc.pages[1].render.mockImplementationOnce(makeResolvedRenderTask);
+    doc.pages[2].render.mockImplementationOnce(makeResolvedRenderTask);
     pdfjsMock.docs.set("/scroll-dpr.pdf", doc);
 
     Object.defineProperty(window, "devicePixelRatio", {
@@ -2385,11 +2397,18 @@ describe("PdfViewer", () => {
 
     await act(async () => {
       render(
-        <PdfViewer source={pdfUrlSource("/scroll-dpr.pdf")} defaultScale={1} />,
+        <PdfViewer
+          source={pdfUrlSource("/scroll-dpr.pdf")}
+          defaultScale={1}
+          performanceOptions={{ directionAwarePreRender: false }}
+        />,
       );
     });
 
     await waitFor(() => expect(doc.pages[0].render).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(doc.pages[1].render).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(doc.pages[2].render).toHaveBeenCalledTimes(1));
+    expect(doc.pages[3].render).not.toHaveBeenCalled();
 
     vi.useFakeTimers();
     try {
@@ -2408,8 +2427,8 @@ describe("PdfViewer", () => {
         await vi.advanceTimersByTimeAsync(0);
       });
 
-      expect(doc.pages[1].render).toHaveBeenCalledTimes(1);
-      const scrollingCall = doc.pages[1].render.mock.calls[0]?.[0];
+      expect(doc.pages[3].render).toHaveBeenCalledTimes(1);
+      const scrollingCall = doc.pages[3].render.mock.calls[0]?.[0];
       const scrollingCanvas = scrollingCall.canvas as HTMLCanvasElement;
       expect(scrollingCanvas.width).toBe(100);
       expect(scrollingCanvas.height).toBe(1000);
@@ -2419,8 +2438,8 @@ describe("PdfViewer", () => {
         await vi.advanceTimersByTimeAsync(120);
       });
 
-      expect(doc.pages[1].render).toHaveBeenCalledTimes(2);
-      const settledCall = doc.pages[1].render.mock.calls[1]?.[0];
+      expect(doc.pages[3].render).toHaveBeenCalledTimes(2);
+      const settledCall = doc.pages[3].render.mock.calls[1]?.[0];
       const settledCanvas = settledCall.canvas as HTMLCanvasElement;
       expect(settledCanvas.width).toBe(200);
       expect(settledCanvas.height).toBe(2000);
@@ -2430,20 +2449,24 @@ describe("PdfViewer", () => {
     }
   });
 
-  it("pre-renders the next page after settled visible pages finish rendering", async () => {
+  it("pre-renders past the settled render window after it finishes", async () => {
     const doc = makeDoc([
       [100, 1000],
       [100, 1000],
       [100, 1000],
+      [100, 1000],
     ]);
-    doc.pages[0].render.mockImplementationOnce(() => {
+    const makeResolvedRenderTask = () => {
       const task = {
         promise: Promise.resolve(),
         cancel: vi.fn(),
       };
       pdfjsMock.renderTasks.push(task);
       return task;
-    });
+    };
+    doc.pages[0].render.mockImplementationOnce(makeResolvedRenderTask);
+    doc.pages[1].render.mockImplementationOnce(makeResolvedRenderTask);
+    doc.pages[2].render.mockImplementationOnce(makeResolvedRenderTask);
     pdfjsMock.docs.set("/direction-pre-render.pdf", doc);
 
     await act(async () => {
@@ -2457,7 +2480,8 @@ describe("PdfViewer", () => {
 
     await waitFor(() => expect(doc.pages[0].render).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(doc.pages[1].render).toHaveBeenCalledTimes(1));
-    expect(doc.pages[2].render).not.toHaveBeenCalled();
+    await waitFor(() => expect(doc.pages[2].render).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(doc.pages[3].render).toHaveBeenCalledTimes(1));
   });
 
   it("can disable direction-aware pre-render for benchmark comparisons", async () => {
@@ -2465,15 +2489,19 @@ describe("PdfViewer", () => {
       [100, 1000],
       [100, 1000],
       [100, 1000],
+      [100, 1000],
     ]);
-    doc.pages[0].render.mockImplementationOnce(() => {
+    const makeResolvedRenderTask = () => {
       const task = {
         promise: Promise.resolve(),
         cancel: vi.fn(),
       };
       pdfjsMock.renderTasks.push(task);
       return task;
-    });
+    };
+    doc.pages[0].render.mockImplementationOnce(makeResolvedRenderTask);
+    doc.pages[1].render.mockImplementationOnce(makeResolvedRenderTask);
+    doc.pages[2].render.mockImplementationOnce(makeResolvedRenderTask);
     pdfjsMock.docs.set("/direction-pre-render-disabled.pdf", doc);
 
     await act(async () => {
@@ -2487,11 +2515,13 @@ describe("PdfViewer", () => {
     });
 
     await waitFor(() => expect(doc.pages[0].render).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(doc.pages[1].render).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(doc.pages[2].render).toHaveBeenCalledTimes(1));
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    expect(doc.pages[1].render).not.toHaveBeenCalled();
+    expect(doc.pages[3].render).not.toHaveBeenCalled();
   });
 
   it("reuses cached rendered canvases when remounting pages", async () => {
@@ -2678,8 +2708,9 @@ describe("PdfViewer", () => {
     );
   });
 
-  it("preloads overscan page metrics without rendering overscan canvases", async () => {
+  it("preloads page metrics beyond render lookahead without rendering those canvases", async () => {
     const doc = makeDoc([
+      [100, 200],
       [100, 200],
       [400, 500],
       [100, 200],
@@ -2694,18 +2725,19 @@ describe("PdfViewer", () => {
         />,
       );
     });
-    await findByTextContent("Page 1 of 3");
+    await findByTextContent("Page 1 of 4");
 
-    await waitFor(() => expect(doc.getPage).toHaveBeenCalledWith(2));
+    await waitFor(() => expect(doc.getPage).toHaveBeenCalledWith(3));
     await waitFor(() =>
       expect(
-        document.querySelector<HTMLElement>("[data-page-number='2']")?.style
+        document.querySelector<HTMLElement>("[data-page-number='3']")?.style
           .width,
       ).toBe("2000px"),
     );
 
     expect(doc.pages[0].render).toHaveBeenCalledTimes(1);
-    expect(doc.pages[1].render).not.toHaveBeenCalled();
+    expect(doc.pages[1].render).toHaveBeenCalledTimes(1);
+    expect(doc.pages[2].render).not.toHaveBeenCalled();
   });
 
   it("bounds simultaneous visible page canvas renders", async () => {

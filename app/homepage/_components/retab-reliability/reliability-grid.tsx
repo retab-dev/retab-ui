@@ -4,14 +4,8 @@ import type { CardItem } from "./types";
 const reliabilityCards = [
   {
     id: "k_llms_consensus",
-    title: "Confidence scoring",
+    title: "k-LLMs Consensus",
     theme: "k_llms_consensus",
-    row: 9,
-  },
-  {
-    id: "visualize_sources",
-    title: "Source grounding",
-    theme: "visualize_sources",
     row: 9,
   },
   {
@@ -28,7 +22,9 @@ const reliabilityCards = [
   },
 ] satisfies readonly CardItem[];
 
-const cardClassName = "h-full min-h-0";
+const cardClassName =
+  "h-full min-h-64 border border-border/70 shadow-sm sm:min-h-0";
+const fullHeightCardClassName = `${cardClassName} sm:row-span-2`;
 const titleClassName =
   "max-w-[98%] text-base leading-[1.02] font-normal tracking-normal text-foreground sm:text-lg";
 
@@ -36,13 +32,17 @@ export function RetabReliabilityGrid() {
   return (
     <div
       aria-hidden="true"
-      className="grid aspect-[16/11] w-full grid-cols-2 gap-3 sm:gap-4"
+      className="grid w-full grid-cols-1 gap-3 sm:aspect-[16/11] sm:grid-cols-2 sm:grid-rows-2 sm:gap-4"
     >
       {reliabilityCards.map((card) => (
         <DrawerCardTile
           key={card.id}
           card={card}
-          cardClassName={cardClassName}
+          cardClassName={
+            card.id === "k_llms_consensus"
+              ? fullHeightCardClassName
+              : cardClassName
+          }
           titleClassName={titleClassName}
           tone="warm"
         />

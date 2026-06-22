@@ -76,27 +76,115 @@ const SCHEMA_FIELDS = [
   "applicant_name",
   "debt_to_income",
   "term_months",
-];
+  "annual_income",
+  "credit_score",
+  "property_value",
+  "down_payment",
+] as const;
+
+const SIMILARITY_BY_FIELD = {
+  loan_amount: "96%",
+  applicant_name: "99%",
+  debt_to_income: "91%",
+  term_months: "94%",
+  annual_income: "93%",
+  credit_score: "98%",
+  property_value: "95%",
+  down_payment: "97%",
+} satisfies Record<(typeof SCHEMA_FIELDS)[number], string>;
+
 const SOURCE_EXAMPLES = {
   a: `{
   "loan_amount": 250000,
   "applicant_name": "Jane M. Doe",
   "debt_to_income": 0.34,
-  "term_months": 360
+  "term_months": 360,
+  "annual_income": 184000,
+  "credit_score": 742,
+  "property_value": 325000,
+  "down_payment": 75000
 }`,
   b: `{
   "loan_amount": 249500,
   "applicant_name": "Jane Marie Doe",
   "debt_to_income": 0.35,
-  "term_months": 360
+  "term_months": 360,
+  "annual_income": 181500,
+  "credit_score": 739,
+  "property_value": 324500,
+  "down_payment": 75000
 }`,
   c: `{
   "loan_amount": 250000,
   "applicant_name": "J. M. Doe",
   "debt_to_income": 0.33,
-  "term_months": 359
+  "term_months": 359,
+  "annual_income": 184000,
+  "credit_score": 741,
+  "property_value": 325000,
+  "down_payment": 76000
 }`,
 } as const;
+
+const JSON_TOKEN_PATTERN =
+  /"(?:[^"\\]|\\.)*"\s*:|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|[{}[\],:]/g;
+
+function HighlightedJson({ code }: { code: string }) {
+  const nodes = [];
+  let cursor = 0;
+  let key = 0;
+
+  for (const match of code.matchAll(JSON_TOKEN_PATTERN)) {
+    const token = match[0];
+    const index = match.index ?? 0;
+
+    if (index > cursor) {
+      nodes.push(code.slice(cursor, index));
+    }
+
+    if (token.trimEnd().endsWith(":") && token.startsWith('"')) {
+      const keyToken = token.slice(0, token.lastIndexOf(":"));
+      nodes.push(
+        <span key={`key-${key}`} className="text-foreground font-medium">
+          {keyToken}
+        </span>,
+        <span
+          key={`key-punctuation-${key}`}
+          className="text-muted-foreground/70"
+        >
+          :
+        </span>,
+      );
+    } else if (token.startsWith('"')) {
+      nodes.push(
+        <span key={`string-${key}`} className="text-success">
+          {token}
+        </span>,
+      );
+    } else if (/^-?\d/.test(token)) {
+      nodes.push(
+        <span key={`number-${key}`} className="text-warning">
+          {token}
+        </span>,
+      );
+    } else {
+      nodes.push(
+        <span key={`punctuation-${key}`} className="text-muted-foreground/70">
+          {token}
+        </span>,
+      );
+    }
+
+    key += 1;
+    cursor = index + token.length;
+  }
+
+  if (cursor < code.length) {
+    nodes.push(code.slice(cursor));
+  }
+
+  return <>{nodes}</>;
+}
 
 function SourceNode({ data }: { data: SourceNodeData }) {
   const palette = K_LLMS_CONSENSUS_PALETTE[data.tone ?? "default"];
@@ -120,7 +208,9 @@ function SourceNode({ data }: { data: SourceNodeData }) {
         <div className={palette.sourceTitleClassName}>
           <span>{data.title}</span>
         </div>
-        <pre className={sourceCodeClassName}>{data.code}</pre>
+        <pre className={sourceCodeClassName}>
+          <HighlightedJson code={data.code} />
+        </pre>
       </div>
     </div>
   );
@@ -128,12 +218,6 @@ function SourceNode({ data }: { data: SourceNodeData }) {
 
 function ConsensusNode({ data }: { data: ConsensusNodeData }) {
   const palette = K_LLMS_CONSENSUS_PALETTE[data.tone ?? "default"];
-  const similarityByField: Record<string, string> = {
-    loan_amount: "96%",
-    applicant_name: "99%",
-    debt_to_income: "91%",
-    term_months: "94%",
-  };
 
   return (
     <div className="relative">
@@ -170,7 +254,7 @@ function ConsensusNode({ data }: { data: ConsensusNodeData }) {
             <div key={field} className={palette.consensusRowClassName}>
               <span className={palette.consensusFieldClassName}>{field}</span>
               <span className={palette.consensusScoreClassName}>
-                {similarityByField[field]}
+                {SIMILARITY_BY_FIELD[field]}
               </span>
             </div>
           ))}
@@ -194,7 +278,7 @@ function ConsensusFitViewRunner({
 }) {
   useMountEffect(() => {
     const timer = setTimeout(() => {
-      fitView({ padding: isMobile ? 0.02 : 0.04, duration: 220 });
+      fitView({ padding: isMobile ? 0.13 : 0.1, duration: 220 });
     }, 60);
 
     return () => clearTimeout(timer);
@@ -213,16 +297,18 @@ function ConsensusWorkflowCanvas({
   const { fitView } = useReactFlow();
   const palette = K_LLMS_CONSENSUS_PALETTE[tone];
   const isMobile = containerWidth < 520;
-  const canvasWidth = Math.max(containerWidth, isMobile ? 520 : 640);
-  const sourceStartY = 0;
-  const sourceGapY = isMobile ? 108 : 142;
+  const canvasWidth = Math.max(containerWidth, isMobile ? 660 : 760);
+  const sourceStartY = isMobile ? 32 : 24;
+  const sourceGapY = isMobile ? 252 : 232;
+  const sourceX = canvasWidth * (isMobile ? 0.05 : 0.04);
+  const consensusX = canvasWidth * (isMobile ? 0.61 : 0.62);
 
   const nodes: Node[] = useMemo(
     () => [
       {
         id: "extract-a",
         type: "source",
-        position: { x: canvasWidth * 0.02, y: sourceStartY },
+        position: { x: sourceX, y: sourceStartY },
         sourcePosition: Position.Right,
         data: {
           title: "Extraction A",
@@ -235,7 +321,7 @@ function ConsensusWorkflowCanvas({
       {
         id: "extract-b",
         type: "source",
-        position: { x: canvasWidth * 0.02, y: sourceStartY + sourceGapY },
+        position: { x: sourceX, y: sourceStartY + sourceGapY },
         sourcePosition: Position.Right,
         data: {
           title: "Extraction B",
@@ -248,7 +334,7 @@ function ConsensusWorkflowCanvas({
       {
         id: "extract-c",
         type: "source",
-        position: { x: canvasWidth * 0.02, y: sourceStartY + sourceGapY * 2 },
+        position: { x: sourceX, y: sourceStartY + sourceGapY * 2 },
         sourcePosition: Position.Right,
         data: {
           title: "Extraction C",
@@ -261,13 +347,13 @@ function ConsensusWorkflowCanvas({
       {
         id: "consensus",
         type: "consensus",
-        position: { x: canvasWidth * 0.62, y: sourceStartY + sourceGapY },
+        position: { x: consensusX, y: sourceStartY + sourceGapY },
         targetPosition: Position.Left,
         data: { title: "Likelihoods", tone, isCompact: isMobile },
         draggable: false,
       },
     ],
-    [canvasWidth, isMobile, sourceGapY, sourceStartY, tone],
+    [consensusX, isMobile, sourceGapY, sourceStartY, sourceX, tone],
   );
 
   const edges: Edge[] = useMemo(
@@ -356,7 +442,7 @@ function ConsensusWorkflowCanvas({
         zoomOnDoubleClick={false}
         preventScrolling={false}
         fitView
-        fitViewOptions={{ padding: isMobile ? 0.02 : 0.04 }}
+        fitViewOptions={{ padding: isMobile ? 0.13 : 0.1 }}
         minZoom={0.2}
         maxZoom={1.8}
         className="pointer-events-none"

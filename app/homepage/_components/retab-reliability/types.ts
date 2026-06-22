@@ -8,12 +8,10 @@ export type CardTheme =
   | "billing"
   | "embedded"
   | "confidence"
-  | "fast_mode"
   | "composer_agent"
   | "document_workflows"
   | "studio_evals"
-  | "k_llms_consensus"
-  | "visualize_sources";
+  | "k_llms_consensus";
 
 export type CardRow = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 export type CardTone = "default" | "warm";

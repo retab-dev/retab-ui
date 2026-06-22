@@ -6,6 +6,7 @@ import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 import { joinEffectKey } from "@/lib/effect-key";
 
 export const PDF_PAGE_RENDER_CONCURRENCY = 2;
+export const PDF_SCROLLING_PAGE_RENDER_CONCURRENCY = 4;
 
 type PdfPageRenderKeyInput = {
   pageNumber: number;

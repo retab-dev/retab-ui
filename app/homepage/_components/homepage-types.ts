@@ -53,6 +53,14 @@ export type LogoContent = {
 
 export type ProductLaneLayout = "default" | "reversed";
 
+export type ProductFeatureContent =
+  | string
+  | {
+      readonly label: string;
+      readonly command: string;
+      readonly copyLabel?: string;
+    };
+
 export type ProductLaneContent = {
   readonly id: string;
   readonly title: string;
@@ -60,7 +68,7 @@ export type ProductLaneContent = {
   readonly description: string;
   readonly proofCustomer: string;
   readonly proof: string;
-  readonly features: readonly string[];
+  readonly features: readonly ProductFeatureContent[];
   readonly visual: ProductVisualContent;
 };
 
@@ -124,6 +132,7 @@ export type ThemeOption = {
 };
 
 export type FooterContent = {
+  readonly message: string;
   readonly status: FooterStatusContent;
   readonly columns: readonly FooterColumnContent[];
   readonly themeOptions: readonly ThemeOption[];
@@ -133,17 +142,46 @@ export type StartBuildingAction = LinkItem & {
   readonly variant?: "primary" | "secondary";
 };
 
-export type StartBuildingPluginOption = {
+export type StartBuildingCommandOption = {
+  readonly id: string;
   readonly label: string;
   readonly command: string;
+  readonly prompt?: string;
+  readonly icon:
+    | {
+        readonly kind?: "image";
+        readonly src: string;
+        readonly width: number;
+        readonly height: number;
+        readonly className?: string;
+      }
+    | {
+        readonly kind: "skills";
+        readonly className?: string;
+      }
+    | {
+        readonly kind: "square-terminal";
+        readonly className?: string;
+      };
 };
 
-export type StartBuildingPlugin = {
-  readonly options: readonly [
-    StartBuildingPluginOption,
-    ...StartBuildingPluginOption[],
-  ];
-};
+export type StartBuildingCommandGroup = {
+  readonly id: string;
+  readonly label: string;
+  readonly copyLabel: string;
+} & (
+  | {
+      readonly kind: "select";
+      readonly options: readonly [
+        StartBuildingCommandOption,
+        ...StartBuildingCommandOption[],
+      ];
+    }
+  | {
+      readonly kind: "fixed";
+      readonly option: StartBuildingCommandOption;
+    }
+);
 
 type StartBuildingPanelBase = {
   readonly id: string;
@@ -157,8 +195,11 @@ export type StartBuildingPanel =
       readonly actions: readonly StartBuildingAction[];
     })
   | (StartBuildingPanelBase & {
-      readonly kind: "plugin";
-      readonly plugin: StartBuildingPlugin;
+      readonly kind: "commands";
+      readonly commandGroups: readonly [
+        StartBuildingCommandGroup,
+        ...StartBuildingCommandGroup[],
+      ];
     });
 
 export type StartBuildingContent = {

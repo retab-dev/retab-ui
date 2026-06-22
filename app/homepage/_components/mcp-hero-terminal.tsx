@@ -581,11 +581,11 @@ function generateRowKeyframes(): string {
       const flashEnd = Math.min(row.at + HERO_FLASH_DUR_S, HERO_CURTAIN_AT_S);
       const flashColor =
         row.kind === "result" && row.marker === "err"
-          ? "rgba(244, 63, 94, 0.09)"
+          ? "var(--mcp-hero-flash-error)"
           : row.kind === "result" && row.marker === "ok"
-            ? "rgba(22, 163, 74, 0.09)"
+            ? "var(--mcp-hero-flash-ok)"
             : row.kind === "result" && row.marker === "info"
-              ? "rgba(217, 119, 87, 0.10)"
+              ? "var(--mcp-hero-flash-info)"
               : "transparent";
 
       return `
@@ -938,6 +938,9 @@ export function HeroTerminal() {
           --mcp-hero-accent: #d97757;
           --mcp-hero-ok: #168044;
           --mcp-hero-error: #dc2626;
+          --mcp-hero-flash-error: rgba(244, 63, 94, 0.09);
+          --mcp-hero-flash-ok: rgba(22, 163, 74, 0.09);
+          --mcp-hero-flash-info: rgba(217, 119, 87, 0.10);
 
           color: var(--mcp-hero-text);
           background: var(--mcp-hero-surface);
@@ -945,6 +948,28 @@ export function HeroTerminal() {
           box-shadow:
             0 1px 2px rgba(24, 24, 27, 0.04),
             0 18px 48px rgba(24, 24, 27, 0.08);
+        }
+
+        .dark .mcp-hero-panel {
+          --mcp-hero-surface: #282826;
+          --mcp-hero-titlebar: #232321;
+          --mcp-hero-border: rgba(255, 255, 255, 0.08);
+          --mcp-hero-separator: rgba(255, 255, 255, 0.06);
+          --mcp-hero-strong: #d6d4cf;
+          --mcp-hero-text: #aaa9a5;
+          --mcp-hero-muted: #777571;
+          --mcp-hero-faint: #6e6d69;
+          --mcp-hero-tool: #e0835e;
+          --mcp-hero-accent: #d97757;
+          --mcp-hero-ok: #74b98f;
+          --mcp-hero-error: #fb7185;
+          --mcp-hero-flash-error: rgba(244, 63, 94, 0.18);
+          --mcp-hero-flash-ok: rgba(16, 185, 129, 0.18);
+          --mcp-hero-flash-info: rgba(245, 158, 11, 0.16);
+
+          box-shadow:
+            0 1px 1px rgba(0, 0, 0, 0.22),
+            0 18px 48px rgba(0, 0, 0, 0.24);
         }
 
         .mcp-hero-titlebar {

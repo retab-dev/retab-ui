@@ -1,14 +1,16 @@
 import { LockKeyhole } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-sources-block";
 
+import { CopyableFeatureItem } from "./copyable-feature-item";
 import { productLanes } from "./homepage-content";
 import {
+  type ProductFeatureContent,
   type ProductLaneContent,
   type ProductVisualContent,
 } from "./homepage-types";
 import { HeroTerminal } from "./mcp-hero-terminal";
-import { RetabDocumentApisGrid } from "./retab-reliability/document-apis-grid";
 import { RetabReliabilityGrid } from "./retab-reliability/reliability-grid";
 import { SectionHeader } from "./section-header";
 import { RetabWorkflowDemo } from "./workflow-demo/retab-workflow-demo";
@@ -58,7 +60,11 @@ function WorkflowVisual() {
 }
 
 function ExtractionVisual() {
-  return <RetabDocumentApisGrid />;
+  return (
+    <div className="h-[680px] overflow-hidden rounded-xl border shadow-sm">
+      <JsonFormSourcesBlock />
+    </div>
+  );
 }
 
 function ReliabilityVisual() {
@@ -166,15 +172,29 @@ function EnterpriseVisual() {
   );
 }
 
-function FeatureList({ features }: { features: readonly string[] }) {
+function isCopyableFeature(
+  feature: ProductFeatureContent,
+): feature is Extract<ProductFeatureContent, { command: string }> {
+  return typeof feature !== "string";
+}
+
+function FeatureList({
+  features,
+}: {
+  features: readonly ProductFeatureContent[];
+}) {
   return (
     <ul className="text-foreground m-0 flex list-none flex-col gap-1.5 p-0 font-mono text-sm leading-5 font-semibold break-words uppercase">
       <li className="text-muted-foreground font-normal normal-case">
         Features
       </li>
-      {features.map((feature) => (
-        <li key={feature}>{feature}</li>
-      ))}
+      {features.map((feature) =>
+        isCopyableFeature(feature) ? (
+          <CopyableFeatureItem feature={feature} key={feature.label} />
+        ) : (
+          <li key={feature}>{feature}</li>
+        ),
+      )}
     </ul>
   );
 }

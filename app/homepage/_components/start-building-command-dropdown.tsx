@@ -1,28 +1,58 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import { Check, ChevronDown, Copy } from "lucide-react";
+import Image from "next/image";
+import { Check, ChevronDown, Copy, SquareTerminal } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { KeyedRunner } from "@/hooks/KeyedRunner";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 
-import { type StartBuildingPluginOption } from "./homepage-types";
+import {
+  type StartBuildingCommandGroup,
+  type StartBuildingCommandOption,
+} from "./homepage-types";
 import { focusRing } from "./primitives";
+import { SkillsIcon } from "./skills-icon";
 
 type CopyState = "idle" | "copied" | "failed";
 
 const copyResetDelayMs = 1800;
-const copyFeedbackMessage = {
-  idle: null,
-  copied: "Copied command",
-  failed: "Could not copy command",
-} satisfies Record<CopyState, string | null>;
+function CommandIcon({ option }: { option: StartBuildingCommandOption }) {
+  if (option.icon.kind === "skills") {
+    return (
+      <SkillsIcon
+        aria-hidden="true"
+        className={cn("size-4 shrink-0", option.icon.className)}
+      />
+    );
+  }
 
-export function StartBuildingPluginCommand({
-  options,
+  if (option.icon.kind === "square-terminal") {
+    return (
+      <SquareTerminal
+        aria-hidden="true"
+        className={cn("size-4 shrink-0", option.icon.className)}
+      />
+    );
+  }
+
+  return (
+    <Image
+      alt=""
+      aria-hidden="true"
+      className={cn("size-4 shrink-0 object-contain", option.icon.className)}
+      height={option.icon.height}
+      src={option.icon.src}
+      width={option.icon.width}
+    />
+  );
+}
+
+export function StartBuildingCommandDropdown({
+  group,
 }: {
-  options: readonly [StartBuildingPluginOption, ...StartBuildingPluginOption[]];
+  group: StartBuildingCommandGroup;
 }) {
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -30,8 +60,17 @@ export function StartBuildingPluginCommand({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [copyState, setCopyState] = useState<CopyState>("idle");
   const resetTimeoutRef = useRef<number | undefined>(undefined);
-  const selectedOption = options[selectedIndex] ?? options[0];
-  const feedbackMessage = copyFeedbackMessage[copyState];
+  const selectedOption =
+    group.kind === "select"
+      ? (group.options[selectedIndex] ?? group.options[0])
+      : group.option;
+  const commandPrompt = selectedOption.prompt ?? "$";
+  const feedbackMessage =
+    copyState === "copied"
+      ? `Copied ${group.copyLabel}`
+      : copyState === "failed"
+        ? `Could not copy ${group.copyLabel}`
+        : null;
 
   function clearResetTimeout() {
     if (resetTimeoutRef.current !== undefined) {
@@ -73,10 +112,10 @@ export function StartBuildingPluginCommand({
   }
 
   return (
-    <div ref={rootRef} className="relative mt-8 w-full max-w-lg">
+    <div ref={rootRef} className="relative w-full max-w-lg">
       {isMenuOpen ? (
         <KeyedRunner
-          key="start-building-plugin-menu-open"
+          key={`start-building-${group.id}-menu-open`}
           effect={() => {
             function closeOnOutsidePress(event: PointerEvent) {
               if (
@@ -105,33 +144,43 @@ export function StartBuildingPluginCommand({
         />
       ) : null}
       <div className="group/command bg-card text-card-foreground ring-border inline-flex min-h-10 w-full items-center gap-1 rounded-full px-2 py-1.5 shadow-sm ring-1">
-        <button
-          type="button"
-          aria-label={`Command type: ${selectedOption.label}`}
-          aria-haspopup="menu"
-          aria-expanded={isMenuOpen}
-          aria-controls={isMenuOpen ? menuId : undefined}
-          onClick={() => setIsMenuOpen((isOpen) => !isOpen)}
-          className={cn(
-            "text-muted-foreground hover:bg-accent hover:text-accent-foreground flex min-h-7 shrink-0 cursor-pointer items-center rounded-l-full rounded-r-md px-2 py-1 text-sm font-medium transition-colors duration-150 ease-out motion-reduce:transition-none",
-            focusRing,
-          )}
-        >
-          <span className="flex items-center gap-1.5">
-            {selectedOption.label}
-            <ChevronDown
-              aria-hidden="true"
-              className={cn(
-                "text-muted-foreground size-4 transition-transform duration-150 ease-out motion-reduce:transition-none",
-                isMenuOpen && "rotate-180",
-              )}
-            />
+        {group.kind === "select" ? (
+          <button
+            type="button"
+            aria-label={`${group.label}: ${selectedOption.label}`}
+            aria-haspopup="menu"
+            aria-expanded={isMenuOpen}
+            aria-controls={isMenuOpen ? menuId : undefined}
+            onClick={() => setIsMenuOpen((isOpen) => !isOpen)}
+            className={cn(
+              "text-muted-foreground hover:bg-accent hover:text-accent-foreground flex min-h-7 shrink-0 cursor-pointer items-center rounded-l-full rounded-r-md px-2 py-1 text-sm font-medium transition-colors duration-150 ease-out motion-reduce:transition-none",
+              focusRing,
+            )}
+          >
+            <span className="flex items-center gap-2">
+              <CommandIcon option={selectedOption} />
+              {selectedOption.label}
+              <ChevronDown
+                aria-hidden="true"
+                className={cn(
+                  "text-muted-foreground size-4 transition-transform duration-150 ease-out motion-reduce:transition-none",
+                  isMenuOpen && "rotate-180",
+                )}
+              />
+            </span>
+          </button>
+        ) : (
+          <span className="text-muted-foreground flex min-h-7 shrink-0 items-center rounded-l-full rounded-r-md px-2 py-1 text-sm font-medium select-none">
+            <span className="flex items-center gap-2">
+              <CommandIcon option={selectedOption} />
+              {selectedOption.label}
+            </span>
           </span>
-        </button>
+        )}
         <span aria-hidden="true" className="bg-border h-6 w-px shrink-0" />
         <button
           type="button"
-          aria-label={`Copy command: ${selectedOption.command}`}
+          aria-label={`Copy ${selectedOption.label} ${group.copyLabel}: ${selectedOption.command}`}
           onClick={copyCommand}
           className={cn(
             "flex min-w-0 flex-1 cursor-default items-center gap-3 rounded-md px-1 text-left transition-colors duration-150 ease-out motion-reduce:transition-none",
@@ -139,7 +188,7 @@ export function StartBuildingPluginCommand({
           )}
         >
           <span aria-hidden="true" className="text-muted-foreground shrink-0">
-            $
+            {commandPrompt}
           </span>
           <code className="text-foreground min-w-0 overflow-x-auto font-mono text-sm leading-5 whitespace-nowrap">
             {selectedOption.command}
@@ -147,7 +196,7 @@ export function StartBuildingPluginCommand({
         </button>
         <button
           type="button"
-          aria-label={`Copy ${selectedOption.label} command`}
+          aria-label={`Copy ${selectedOption.label} ${group.copyLabel}`}
           onClick={copyCommand}
           className={cn(
             "text-muted-foreground group-hover/command:bg-accent hover:bg-accent hover:text-accent-foreground active:bg-accent/80 grid size-7 shrink-0 place-items-center rounded-full transition-colors duration-150 ease-out motion-reduce:transition-none",
@@ -161,11 +210,11 @@ export function StartBuildingPluginCommand({
           )}
         </button>
       </div>
-      {isMenuOpen ? (
+      {group.kind === "select" && isMenuOpen ? (
         <div className="bg-popover text-popover-foreground ring-border absolute top-full left-2 z-50 mt-1 w-56 rounded-xl p-2 shadow-xl ring-1">
-          <ul id={menuId} role="menu" aria-label="Command type">
-            {options.map((option, index) => (
-              <li key={option.label} role="none">
+          <ul id={menuId} role="menu" aria-label={group.label}>
+            {group.options.map((option, index) => (
+              <li key={option.id} role="none">
                 <button
                   type="button"
                   role="menuitem"
@@ -177,6 +226,9 @@ export function StartBuildingPluginCommand({
                       "bg-accent text-accent-foreground",
                   )}
                 >
+                  <span className="mr-2 grid size-6 shrink-0 place-items-center">
+                    <CommandIcon option={option} />
+                  </span>
                   {option.label}
                 </button>
               </li>

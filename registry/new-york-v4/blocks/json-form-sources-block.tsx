@@ -37,6 +37,7 @@ import { JsonForm } from "@/components/json-form/json-form";
 import sourcesSample from "@/components/viewers/sample-data/json-form-sources.json";
 
 const PDF_URL = "/samples/jane-doe-bank-statement-5-pages.pdf";
+const JSON_FORM_SOURCES_DEFAULT_OPEN_PATHS = ["transactions"] as const;
 
 // An extraction of the bank-statement sample shaped like the
 // `GET /v1/extractions/{id}/sources` response: a JSON Schema, the extracted
@@ -67,7 +68,7 @@ const SEGMENTED_DOCUMENT = createSourcesSegmentedDocumentModel({
  * and viewer.
  */
 export function JsonFormSourcesBlock({
-  defaultOpenPaths,
+  defaultOpenPaths = JSON_FORM_SOURCES_DEFAULT_OPEN_PATHS,
 }: {
   defaultOpenPaths?: readonly string[];
 } = {}) {
@@ -126,6 +127,7 @@ function JsonFormSourcesContent({
           <SourceIndicator
             path={link.activeSourcePath}
             found={!!link.activeAnchor}
+            className="top-12"
           />
         </ViewerSurface>
         <ViewerSidebar

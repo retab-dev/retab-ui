@@ -2,6 +2,9 @@ import type { PdfPageSize } from "./pdf-viewer-types";
 
 export const PDF_PAGE_GAP = 16;
 export const PDF_PAGE_PADDING = 16;
+export const PDF_RENDER_PAGE_OVERSCAN = 2;
+export const PDF_VISIBLE_PAGE_OVERSCAN = 2;
+export const PDF_PRELOAD_PAGE_OVERSCAN = 4;
 
 export type PdfPageLayout = {
   pageNumber: number;
@@ -133,7 +136,7 @@ export function getPdfVisiblePageNumbers({
   layout,
   scrollTop,
   viewportHeight,
-  overscanPages = 2,
+  overscanPages = PDF_VISIBLE_PAGE_OVERSCAN,
 }: {
   layout: PdfPageLayoutModel;
   scrollTop: number;
@@ -154,7 +157,7 @@ export function getPdfRenderPageNumbers({
   layout,
   scrollTop,
   viewportHeight,
-  overscanPages = 0,
+  overscanPages = PDF_RENDER_PAGE_OVERSCAN,
 }: {
   layout: PdfPageLayoutModel;
   scrollTop: number;
@@ -174,7 +177,7 @@ export function getPdfRenderPageNumbers({
 export function getPdfPreloadPageNumbers({
   layout,
   renderPageNumbers,
-  overscanPages = 4,
+  overscanPages = PDF_PRELOAD_PAGE_OVERSCAN,
 }: {
   layout: PdfPageLayoutModel;
   renderPageNumbers: readonly number[];

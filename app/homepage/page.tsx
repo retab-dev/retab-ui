@@ -2,7 +2,7 @@ import { type Metadata } from "next";
 
 import { VercelHomepage } from "./_components/vercel-homepage";
 
-const title = "Document Automation Infrastructure";
+const title = "End-to-end automation for your hardest document workflows.";
 const description =
   "Retab turns PDFs, emails, images, and spreadsheets into reliable document automation workflows with schemas, citations, confidence, and human review.";
 

@@ -43,6 +43,10 @@ const demoLink = externalLink(
   "Get a demo",
   "https://calendar.app.google/1PTAx2rZjEWiH28n6",
 );
+const retabCliInstallCommand = "curl -fsSL https://retab.com/install.sh | sh";
+const codexMcpInstallCommand = `codex mcp add retab --url https://mcp.retab.com/mcp && ${retabCliInstallCommand}`;
+const claudeCodeMcpInstallCommand = `claude mcp add --transport http retab https://mcp.retab.com/mcp && ${retabCliInstallCommand}`;
+const agentSkillsInstallCommand = `npx skills add https://github.com/retab-dev/retab --skill retab && ${retabCliInstallCommand}`;
 
 export const solutionsNavGroup = {
   id: "solutions",
@@ -246,13 +250,13 @@ export const productLanes = [
   },
   {
     id: "document-apis",
-    title: "Document APIs",
+    title: "Features",
     layout: "reversed",
     description:
       "Turn PDFs, scans, spreadsheets, and emails into typed data with APIs that understand layout, tables, sources, and schemas.",
     proofCustomer: "Developers",
     proof:
-      "ship structured extraction with citations instead of maintaining OCR and prompt glue.",
+      "unlock mission-critical data from documents that were previously too complex to automate.",
     features: ["Parse", "Split", "Classify", "Extract", "Edit"],
     visual: { kind: "extraction" },
   },
@@ -265,7 +269,7 @@ export const productLanes = [
     proofCustomer: "Operations teams",
     proof:
       "approve exceptions with confidence scores, source grounding, evals, and audit-ready traces.",
-    features: ["Confidence Scoring", "Source Grounding", "Evals", "Audit Logs"],
+    features: ["Confidence Scoring", "Source Grounding", "Evals", "Reviews"],
     visual: { kind: "reliability" },
   },
   {
@@ -276,8 +280,25 @@ export const productLanes = [
       "Retab exposes the full document workflow context, letting agents inspect runs, trace failures, and fix automations without leaving their loop.",
     proofCustomer: "Agents",
     proof:
-      "can create workflows, inspect source files, wire blocks, run drafts, and diagnose failures autonomously.",
-    features: ["MCP", "CLI", "SDKs", "Agent Skills"],
+      "can create workflows, inspect source files, create runs, and diagnose failures autonomously.",
+    features: [
+      {
+        label: "MCP",
+        command: codexMcpInstallCommand,
+      },
+      {
+        label: "CLI",
+        command: retabCliInstallCommand,
+      },
+      {
+        label: "SDKs",
+        command: "npm install @retab/node",
+      },
+      {
+        label: "Agent Skills",
+        command: agentSkillsInstallCommand,
+      },
+    ],
     visual: { kind: "agents" },
   },
   {
@@ -288,7 +309,7 @@ export const productLanes = [
       "Run document automation with the security, privacy, and deployment controls enterprise teams need before production.",
     proofCustomer: "Enterprise teams",
     proof:
-      "can scale sensitive document workflows with compliance controls, audit trails, uptime commitments, and private deployment options.",
+      "scale sensitive document workflows with fine-grained access controls, SOC2 compliance, and private deployment.",
     features: ["SOC2", "HIPAA", "GDPR", "Audit Logs", "Self-hosting"],
     visual: { kind: "enterprise" },
   },
@@ -426,54 +447,211 @@ export const themeOptions = [
 ] as const satisfies readonly ThemeOption[];
 
 export const homepageFooter = {
+  message:
+    "Retab helps leading AI teams transform unstructured documents into structured, reliable data that can power production pipelines with industry-leading accuracy.",
   status: footerStatus,
   columns: footerNavigationColumns,
   themeOptions,
 } as const satisfies FooterContent;
 
 export const startBuildingContent = {
-  title: "Start building with Vercel now",
+  title: "Start building with Retab now",
   panels: [
     {
       id: "humans",
       kind: "template",
-      audience: "For humans.",
-      body: "Get started with Next.js and React in seconds.",
+      audience: "For teams.",
+      body: "Launch document workflows with parsing, extraction, validation, review, and audit trails in one place.",
       actions: [
         {
-          label: "Deploy a Next.js app",
-          href: vercelHref("/templates/next.js/nextjs-boilerplate"),
-          ariaLabel: "Deploy a Next.js app template on Vercel",
+          label: "Get a demo",
+          href: demoLink.href,
+          ariaLabel: "Get a Retab demo",
+          isExternal: true,
         },
         {
-          label: "View more templates",
-          href: vercelHref("/templates"),
-          ariaLabel: "View more Vercel templates",
+          label: "Read the docs",
+          href: docsLink.href,
+          ariaLabel: "Read the Retab docs",
+          isExternal: true,
           variant: "secondary",
         },
       ],
     },
     {
-      id: "agents",
-      kind: "plugin",
-      audience: "For agents.",
-      body: "Tools to connect your agents to Vercel infrastructure.",
-      plugin: {
-        options: [
-          {
-            label: "Plugin",
-            command: "npx plugins add vercel/vercel-plugin",
+      id: "developers",
+      kind: "commands",
+      audience: "For developers.",
+      body: "Install a Retab SDK or connect Retab MCP to your agent runtime.",
+      commandGroups: [
+        {
+          id: "sdk",
+          label: "SDK language",
+          copyLabel: "SDK install command",
+          kind: "select",
+          options: [
+            {
+              id: "python",
+              label: "Python",
+              command: "pip install retab",
+              icon: {
+                src: "/logos/python_logo_2.svg",
+                width: 32,
+                height: 32,
+              },
+            },
+            {
+              id: "typescript",
+              label: "TypeScript",
+              command: "npm install @retab/node",
+              icon: {
+                src: "/logos/typescript_logo.svg",
+                width: 32,
+                height: 32,
+              },
+            },
+            {
+              id: "go",
+              label: "Go",
+              command: "go get github.com/retab-dev/retab/clients/go",
+              icon: {
+                src: "/logos/go_logo.svg",
+                width: 32,
+                height: 32,
+              },
+            },
+            {
+              id: "php",
+              label: "PHP",
+              command: "composer require retab/retab",
+              icon: {
+                src: "/logos/php_logo.svg",
+                width: 32,
+                height: 32,
+              },
+            },
+            {
+              id: "dotnet",
+              label: ".NET",
+              command: "dotnet add package Retab",
+              icon: {
+                src: "/logos/dotnet_logo.svg",
+                width: 32,
+                height: 32,
+              },
+            },
+            {
+              id: "ruby",
+              label: "Ruby",
+              command: "gem install retab",
+              icon: {
+                src: "/logos/ruby_logo.svg",
+                width: 32,
+                height: 32,
+              },
+            },
+            {
+              id: "rust",
+              label: "Rust",
+              command: "cargo add retab",
+              icon: {
+                src: "/logos/rust_logo.svg",
+                width: 32,
+                height: 32,
+              },
+            },
+            {
+              id: "java",
+              label: "Java",
+              command: "mvn dependency:get -Dartifact=com.retab:retab:0.0.11",
+              icon: {
+                src: "/logos/java_logo.svg",
+                width: 32,
+                height: 32,
+              },
+            },
+          ],
+        },
+        {
+          id: "mcp",
+          label: "MCP client",
+          copyLabel: "MCP setup value",
+          kind: "select",
+          options: [
+            {
+              id: "codex",
+              label: "Codex",
+              command: codexMcpInstallCommand,
+              icon: {
+                src: "/logos/codex-color.svg",
+                width: 32,
+                height: 32,
+              },
+            },
+            {
+              id: "claude-code",
+              label: "Claude Code",
+              command: claudeCodeMcpInstallCommand,
+              icon: {
+                src: "/logos/claude_code_logo.svg",
+                width: 32,
+                height: 32,
+              },
+            },
+            {
+              id: "claude",
+              label: "Claude",
+              command: "https://mcp.retab.com/mcp",
+              prompt: "url",
+              icon: {
+                src: "/logos/claude_logo.svg",
+                width: 32,
+                height: 32,
+              },
+            },
+            {
+              id: "grok",
+              label: "Grok",
+              command: "https://mcp.retab.com/mcp",
+              prompt: "url",
+              icon: {
+                src: "/logos/grok_logo.svg",
+                width: 32,
+                height: 32,
+                className: "dark:invert",
+              },
+            },
+          ],
+        },
+        {
+          id: "cli",
+          label: "CLI",
+          copyLabel: "install command",
+          kind: "fixed",
+          option: {
+            id: "cli",
+            label: "CLI",
+            command: retabCliInstallCommand,
+            icon: {
+              kind: "square-terminal",
+            },
           },
-          {
-            label: "MCP",
-            command: "npx add-mcp https://mcp.vercel.com",
+        },
+        {
+          id: "agent-skills",
+          label: "Agent Skills",
+          copyLabel: "install command",
+          kind: "fixed",
+          option: {
+            id: "agent-skills",
+            label: "Agent Skills",
+            command: agentSkillsInstallCommand,
+            icon: {
+              kind: "skills",
+            },
           },
-          {
-            label: "Skill",
-            command: "npx skills add vercel-labs/agent-skills",
-          },
-        ],
-      },
+        },
+      ],
     },
   ],
 } as const satisfies StartBuildingContent;

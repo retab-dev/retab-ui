@@ -150,8 +150,6 @@ export function StudioEvalsArt({
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-b-sm">
-      <div className="bg-muted/50 absolute inset-0" />
-
       <div className="absolute inset-0">
         <div className="border-border bg-card absolute top-[2%] left-[5%] w-[90%] rounded-sm border px-2.5 pt-2 pb-2.5 md:top-[4%]">
           <div className="mb-2 flex items-center justify-between">

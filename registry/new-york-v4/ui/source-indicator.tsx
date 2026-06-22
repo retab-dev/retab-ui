@@ -30,7 +30,7 @@ export function SourceIndicator({
   return (
     <div
       className={cn(
-        "pointer-events-none absolute top-12 left-3 z-20 max-w-[calc(100%-1.5rem)]",
+        "pointer-events-none absolute top-3 left-3 z-20 max-w-[calc(100%-1.5rem)]",
         className,
       )}
     >

@@ -2012,8 +2012,8 @@ describe("source UI components", () => {
     const { container, rerender } = render(
       <SourceIndicator path={null} found={false} emptyHint="Pick a field" />,
     );
-    expect(container.firstElementChild?.className).toContain("top-12");
-    expect(container.firstElementChild?.className).not.toContain("top-3");
+    expect(container.firstElementChild?.className).toContain("top-3");
+    expect(container.firstElementChild?.className).not.toContain("top-12");
     expect(screen.getByText("Pick a field").textContent).toBe("Pick a field");
 
     rerender(<SourceIndicator path="owner.name" found label="Field source" />);

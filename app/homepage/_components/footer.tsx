@@ -10,7 +10,6 @@ import {
   getLinkProps,
   MarketingContainer,
   MarketingLinkLabel,
-  VercelMark,
 } from "./primitives";
 
 const footerItemClass = cn(
@@ -67,25 +66,51 @@ function StatusIndicator({ status }: { status: FooterContent["status"] }) {
   return (
     <div
       aria-label={status.ariaLabel}
-      className="text-muted-foreground inline-flex h-8 w-fit items-center rounded-md px-2 font-mono text-sm"
+      className="text-muted-foreground inline-flex h-8 w-fit items-center gap-2 rounded-md px-2 font-mono text-sm"
     >
+      <span
+        aria-hidden="true"
+        className="bg-info size-1.5 rounded-full motion-safe:animate-pulse"
+      />
       {status.label}
     </div>
   );
 }
 
-function FooterLogo() {
+function RetabLogoMark({ className }: { className?: string }) {
   return (
-    <Link
-      href="/"
-      aria-label="Retab homepage"
-      className={cn(
-        "text-foreground hover:text-muted-foreground focus-visible:text-foreground inline-flex h-8 w-full max-w-48 items-center rounded-sm transition-colors motion-reduce:transition-none",
-        focusRing,
-      )}
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      focusable="false"
+      viewBox="0 0 210 216"
     >
-      <VercelMark className="size-5" />
-    </Link>
+      <rect y="108" width="58" height="54" fill="currentColor" />
+      <rect width="58" height="54" fill="currentColor" />
+      <rect x="58" y="54" width="152" height="54" fill="currentColor" />
+      <rect x="58" y="162" width="152" height="54" fill="currentColor" />
+    </svg>
+  );
+}
+
+function FooterBrand({ content }: { content: FooterContent }) {
+  return (
+    <div className="mt-12 max-w-xl">
+      <Link
+        href="/"
+        aria-label="Retab homepage"
+        className={cn(
+          "text-foreground hover:text-muted-foreground focus-visible:text-foreground inline-flex h-8 w-fit items-center rounded-sm transition-colors motion-reduce:transition-none",
+          focusRing,
+        )}
+      >
+        <RetabLogoMark className="size-5" />
+      </Link>
+      <p className="text-muted-foreground mt-6 max-w-md text-sm leading-6">
+        {content.message}
+      </p>
+    </div>
   );
 }
 
@@ -109,9 +134,7 @@ export function MarketingFooter({ content }: { content: FooterContent }) {
           </div>
         </nav>
 
-        <div className="mt-12">
-          <FooterLogo />
-        </div>
+        <FooterBrand content={content} />
 
         <div className="mt-6 flex min-h-8 flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <StatusIndicator status={content.status} />

@@ -23,7 +23,10 @@ import {
 import { PdfPage } from "./pdf-viewer-page";
 import { usePdfPageSizes } from "./pdf-viewer-page-sizes";
 import { usePdfRenderedPageCache } from "./pdf-viewer-render-cache";
-import { usePdfPageRenderScheduler } from "./pdf-viewer-render-scheduler";
+import {
+  PDF_SCROLLING_PAGE_RENDER_CONCURRENCY,
+  usePdfPageRenderScheduler,
+} from "./pdf-viewer-render-scheduler";
 import {
   getPdfPageDevicePixelRatio,
   useMeasuredElementWidth,
@@ -273,7 +276,7 @@ function PdfViewerInner({
     rotation,
     devicePixelRatio: pageDevicePixelRatio,
     resetKey: document,
-    maxRunning: isScrolling ? 1 : undefined,
+    maxRunning: isScrolling ? PDF_SCROLLING_PAGE_RENDER_CONCURRENCY : undefined,
   });
   const handlePageRenderTiming = React.useCallback(
     (timing: PdfPageRenderTiming) => {
