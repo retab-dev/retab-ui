@@ -75,7 +75,7 @@ export function HeaderDropdown({ group }: { group: NavGroup }) {
       <div
         id={menuId}
         hidden={!isOpen}
-        className="bg-background/95 border-border fixed inset-x-0 top-16 z-50 border-b shadow-sm"
+        className="border-border bg-background fixed inset-x-0 top-16 z-50 border-b shadow-sm"
       >
         <div className="mx-auto flex w-full max-w-screen-2xl flex-nowrap gap-x-4 px-6 pt-8 pb-12">
           {group.sections.map((section) => (
