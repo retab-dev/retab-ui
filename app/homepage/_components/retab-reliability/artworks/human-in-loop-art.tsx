@@ -68,7 +68,7 @@ export function HumanInLoopArt({
           </div>
 
           {/* Action */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 px-3">
             <button
               type="button"
               className="border-border bg-card text-muted-foreground flex flex-1 items-center justify-center gap-1.5 rounded-sm border py-2 text-[10px] font-semibold"
