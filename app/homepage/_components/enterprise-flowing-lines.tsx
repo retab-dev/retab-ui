@@ -12,7 +12,10 @@ import { cn } from "@/lib/utils";
 
 type Rgb = [number, number, number];
 
-const LINES = 46;
+const MAX_LINES = 46;
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
 
 // Lighter -> slightly darker gray gives the bundle depth while staying neutral
 // enough to read over either theme.
@@ -51,6 +54,8 @@ export function EnterpriseFlowingLines({ className }: { className?: string }) {
     let w = 0;
     let h = 0;
     let dpr = 1;
+    let base = 0;
+    let lines = MAX_LINES;
 
     const reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
@@ -63,6 +68,11 @@ export function EnterpriseFlowingLines({ className }: { className?: string }) {
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // Proportion the bundle to the shorter side so it stays a balanced
+      // horizontal band on tall/narrow (mobile) canvases instead of blowing up
+      // with height, and thin the line count on small widths.
+      base = Math.min(h, w * 0.82);
+      lines = Math.round(clamp(w / 15, 24, MAX_LINES));
     };
     resize();
 
@@ -78,18 +88,19 @@ export function EnterpriseFlowingLines({ className }: { className?: string }) {
       // The bundle pivots around the right edge; lines fan from a tight knot on
       // the left to a wide spray sweeping past both edges.
       const knotY = h * 0.5;
-      const knotSpread = h * 0.42;
+      const knotSpread = base * 0.42;
       const x0 = -w * 0.25;
       const x1 = w * 1.15;
 
-      for (let i = 0; i < LINES; i++) {
-        const u = i / (LINES - 1);
+      for (let i = 0; i < lines; i++) {
+        const u = i / (lines - 1);
         const phase = t * 0.18 + u * 2.4;
         const spread = u - 0.5;
         const amp =
-          h * (0.1 + 0.34 * Math.abs(spread) + 0.05 * Math.sin(t * 0.4 + u * 6));
+          base *
+          (0.1 + 0.34 * Math.abs(spread) + 0.05 * Math.sin(t * 0.4 + u * 6));
         const freq = 1.1 + u * 1.4;
-        const baseTilt = spread * h * 0.34;
+        const baseTilt = spread * base * 0.34;
 
         ctx.beginPath();
         const steps = 90;
@@ -102,7 +113,7 @@ export function EnterpriseFlowingLines({ className }: { className?: string }) {
             startY +
             baseTilt * env +
             Math.sin(p * Math.PI * freq + phase) * amp * env +
-            Math.sin(p * Math.PI * 0.6 + t * 0.25 + u) * h * 0.04 * env;
+            Math.sin(p * Math.PI * 0.6 + t * 0.25 + u) * base * 0.04 * env;
           if (s === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }

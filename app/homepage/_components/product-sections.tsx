@@ -93,7 +93,7 @@ function EnterpriseVisual() {
       className="border-border bg-card relative aspect-[4/5] w-full overflow-hidden rounded-md border shadow-sm sm:aspect-[16/11]"
     >
       <div className="bg-card absolute inset-0" />
-      <div className="absolute inset-4 overflow-hidden rounded-sm md:inset-6">
+      <div className="absolute inset-0 overflow-hidden">
         <EnterpriseFlowingLines />
 
         <div className="border-border/80 bg-card absolute top-1/2 left-1/2 z-10 flex w-[min(90%,32rem)] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3 rounded-md border p-4 text-center shadow-sm sm:w-[30rem] md:top-[43%] md:gap-4 md:p-6">
