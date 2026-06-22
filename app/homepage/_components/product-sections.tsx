@@ -31,31 +31,7 @@ const enterpriseControls = [
   ["Governance", "audit-ready traces"],
 ] as const;
 
-const enterpriseStripeGroups = [
-  {
-    className: "left-[7%] top-[16%] w-60 -rotate-6",
-    stripes: ["w-28", "w-48", "w-36", "w-56", "w-40"],
-  },
-  {
-    className: "right-[8%] top-[18%] w-56 rotate-6",
-    stripes: ["ml-auto w-32", "ml-auto w-52", "ml-auto w-40", "ml-auto w-48"],
-  },
-  {
-    className: "left-[11%] bottom-[22%] w-52 rotate-[-10deg]",
-    stripes: ["w-44", "w-32", "w-52", "w-24"],
-  },
-  {
-    className: "right-[12%] bottom-[21%] w-64 rotate-[9deg]",
-    stripes: ["ml-auto w-48", "ml-auto w-28", "ml-auto w-60", "ml-auto w-36"],
-  },
-  {
-    className: "left-1/2 top-[9%] hidden w-72 -translate-x-1/2 md:flex",
-    stripes: ["mx-auto w-44", "mx-auto w-72", "mx-auto w-56"],
-  },
-] as const satisfies readonly {
-  className: string;
-  stripes: readonly string[];
-}[];
+const enterpriseRibbonLines = [0, 1, 2, 3, 4, 5, 6, 7] as const;
 
 function ProductVisual({ visual }: { visual: ProductVisualContent }) {
   if (visual.kind === "workflow") {
@@ -119,30 +95,66 @@ function EnterpriseVisual() {
     >
       <div className="bg-card absolute inset-0" />
       <div className="absolute inset-4 overflow-hidden rounded-sm md:inset-6">
-        <div className="bg-muted-foreground/10 absolute inset-x-[8%] top-[46%] h-px" />
-        <div className="bg-muted-foreground/10 absolute inset-y-[14%] left-1/2 w-px" />
-
-        {enterpriseStripeGroups.map((group) => (
-          <EnterpriseStripeGroup
-            className={group.className}
-            key={group.className}
-            stripes={group.stripes}
-          />
-        ))}
+        <svg
+          aria-hidden="true"
+          className="text-muted-foreground/28 absolute inset-0 size-full"
+          fill="none"
+          viewBox="0 0 960 660"
+        >
+          <g
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeWidth="0.95"
+            vectorEffect="non-scaling-stroke"
+          >
+            {enterpriseRibbonLines.map((line) => (
+              <path
+                d={`M -72 ${118 + line * 10} C 72 ${56 + line * 4} 188 ${
+                  74 + line * 7
+                } 306 ${152 + line * 7} S 532 ${238 + line * 5} 670 ${
+                  126 + line * 8
+                }`}
+                key={`enterprise-wave-top-${line}`}
+              />
+            ))}
+            {enterpriseRibbonLines.map((line) => (
+              <path
+                d={`M ${604 + line * 12} ${126 + line * 9} C ${
+                  722 + line * 16
+                } ${78 + line * 6} ${812 + line * 18} ${
+                  122 + line * 8
+                } ${1034 + line * 12} ${54 + line * 9}`}
+                key={`enterprise-wave-right-${line}`}
+              />
+            ))}
+            {enterpriseRibbonLines.map((line) => (
+              <path
+                d={`M ${14 + line * 10} ${552 + line * 12} L ${
+                  354 + line * 12
+                } ${406 + line * 7}`}
+                key={`enterprise-diagonal-left-${line}`}
+              />
+            ))}
+            {enterpriseRibbonLines.slice(0, 6).map((line) => (
+              <path
+                d={`M ${578 + line * 22} ${560 + line * 8} C ${
+                  666 + line * 18
+                } ${498 - line * 4} ${756 + line * 18} ${
+                  610 + line * 2
+                } 966 ${486 + line * 10}`}
+                key={`enterprise-wave-bottom-${line}`}
+              />
+            ))}
+          </g>
+        </svg>
 
         <div className="border-border/80 bg-card absolute top-1/2 left-1/2 z-10 flex w-[min(90%,32rem)] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3 rounded-md border p-4 text-center shadow-sm sm:w-[30rem] md:top-[43%] md:gap-4 md:p-6">
-          <div className="flex items-center gap-3">
-            <span className="bg-muted-foreground/15 h-1.5 w-14 rounded-full" />
-            <span className="bg-muted-foreground/10 h-1.5 w-7 rounded-full" />
-            <div className="border-border bg-background flex size-12 items-center justify-center rounded-md border shadow-sm sm:size-14">
-              <LockKeyhole
-                aria-hidden="true"
-                className="text-foreground size-6 sm:size-7"
-                strokeWidth={1.8}
-              />
-            </div>
-            <span className="bg-muted-foreground/10 h-1.5 w-7 rounded-full" />
-            <span className="bg-muted-foreground/15 h-1.5 w-14 rounded-full" />
+          <div className="border-border bg-background flex size-12 items-center justify-center rounded-md border shadow-sm sm:size-14">
+            <LockKeyhole
+              aria-hidden="true"
+              className="text-foreground size-6 sm:size-7"
+              strokeWidth={1.8}
+            />
           </div>
           <div className="space-y-2">
             <p className="text-foreground text-lg leading-tight font-medium text-balance sm:text-xl md:text-2xl">
@@ -180,29 +192,6 @@ function EnterpriseVisual() {
           ))}
         </div>
       </div>
-    </div>
-  );
-}
-
-function EnterpriseStripeGroup({
-  className,
-  stripes,
-}: {
-  className: string;
-  stripes: readonly string[];
-}) {
-  return (
-    <div className={cn("absolute flex flex-col gap-2.5", className)}>
-      {stripes.map((stripe, index) => (
-        <span
-          className={cn(
-            "bg-muted-foreground/15 block h-2 rounded-full shadow-[0_1px_0_rgba(0,0,0,0.03)]",
-            index % 2 === 0 && "bg-muted-foreground/20",
-            stripe,
-          )}
-          key={`${stripe}-${index}`}
-        />
-      ))}
     </div>
   );
 }
