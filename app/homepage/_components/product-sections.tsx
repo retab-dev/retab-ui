@@ -128,7 +128,7 @@ function EnterpriseVisual() {
   return (
     <div
       aria-hidden="true"
-      className="border-border bg-card relative aspect-[16/11] w-full overflow-hidden rounded-md border shadow-sm"
+      className="border-border bg-card relative aspect-[4/5] w-full overflow-hidden rounded-md border shadow-sm sm:aspect-[16/11]"
     >
       <div className="bg-card absolute inset-0" />
       <div className="absolute inset-4 overflow-hidden rounded-sm md:inset-6">
@@ -160,19 +160,19 @@ function EnterpriseVisual() {
           />
         ))}
 
-        <div className="border-border/80 bg-card absolute top-[46%] left-1/2 z-10 flex w-[min(84%,34rem)] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3 rounded-md border p-4 text-center shadow-sm sm:w-[30rem] md:top-[43%] md:gap-4 md:p-6">
-          <div className="border-border bg-background flex size-14 items-center justify-center rounded-md border shadow-sm">
+        <div className="border-border/80 bg-card absolute top-1/2 left-1/2 z-10 flex w-[min(90%,32rem)] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3 rounded-md border p-4 text-center shadow-sm sm:w-[30rem] md:top-[43%] md:gap-4 md:p-6">
+          <div className="border-border bg-background flex size-12 items-center justify-center rounded-md border shadow-sm sm:size-14">
             <LockKeyhole
               aria-hidden="true"
-              className="text-foreground size-7"
+              className="text-foreground size-6 sm:size-7"
               strokeWidth={1.8}
             />
           </div>
           <div className="space-y-2">
-            <p className="text-foreground text-xl leading-tight font-medium text-balance md:text-2xl">
+            <p className="text-foreground text-lg leading-tight font-medium text-balance sm:text-xl md:text-2xl">
               Secure, private, and compliant.
             </p>
-            <p className="text-muted-foreground mx-auto max-w-sm text-sm leading-6 text-balance">
+            <p className="text-muted-foreground mx-auto max-w-[17rem] text-xs leading-5 text-balance sm:max-w-sm sm:text-sm sm:leading-6">
               Document automation with policies, traces, and deployment controls
               built in.
             </p>
@@ -181,7 +181,7 @@ function EnterpriseVisual() {
           <div className="flex max-w-full flex-wrap items-center justify-center gap-2">
             {enterpriseCertifications.map((certification) => (
               <span
-                className="border-border bg-background text-foreground rounded-md border px-3 py-2 font-mono text-xs leading-none font-semibold shadow-sm"
+                className="border-border bg-background text-foreground rounded-md border px-2.5 py-1.5 font-mono text-[11px] leading-none font-semibold shadow-sm sm:px-3 sm:py-2 sm:text-xs"
                 key={certification}
               >
                 {certification}
