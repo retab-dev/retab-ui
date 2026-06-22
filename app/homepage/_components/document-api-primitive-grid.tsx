@@ -25,21 +25,17 @@ const bar = (width: string, color = "#ededed"): CSSProperties => ({
 
 type Primitive = {
   name: string;
-  description: string;
   Art: () => ReactNode;
 };
 
-function PrimitiveCard({ name, description, Art }: Primitive) {
+function PrimitiveCard({ name, Art }: Primitive) {
   return (
     <div className="flex flex-col">
-      <div className="mb-4 min-h-[50px]">
+      <div className="mb-4">
         <div className="text-foreground font-mono text-base leading-none font-medium">
           <span className="text-muted-foreground/50">/</span>
           {name}
         </div>
-        <p className="text-muted-foreground mt-1.5 text-[13.5px] leading-[1.4]">
-          {description}
-        </p>
       </div>
       <div className="border-border relative aspect-[210/297] w-full overflow-hidden rounded-[10px] border">
         <Art />
@@ -1333,36 +1329,12 @@ function ClassifyArt() {
 }
 
 const primitives: readonly Primitive[] = [
-  {
-    name: "parse",
-    description: "Convert any file into clean, LLM-ready markdown.",
-    Art: ParseArt,
-  },
-  {
-    name: "extract",
-    description: "Pull structured JSON from documents using your schema.",
-    Art: ExtractArt,
-  },
-  {
-    name: "edit",
-    description: "Modify document content while preserving formatting.",
-    Art: EditArt,
-  },
-  {
-    name: "split",
-    description: "Split a multi-document file into individual documents.",
-    Art: SplitArt,
-  },
-  {
-    name: "partition",
-    description: "Group repeated records into chunks by a unique id.",
-    Art: PartitionArt,
-  },
-  {
-    name: "classify",
-    description: "Categorize documents based on content and type.",
-    Art: ClassifyArt,
-  },
+  { name: "parse", Art: ParseArt },
+  { name: "extract", Art: ExtractArt },
+  { name: "edit", Art: EditArt },
+  { name: "split", Art: SplitArt },
+  { name: "partition", Art: PartitionArt },
+  { name: "classify", Art: ClassifyArt },
 ];
 
 export function DocumentApiPrimitiveGrid() {

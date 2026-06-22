@@ -31,44 +31,31 @@ const enterpriseControls = [
   ["Governance", "audit-ready traces"],
 ] as const;
 
-const enterpriseFrames = [
-  "left-[6%] top-[10%] h-[22%] w-[13%]",
-  "left-[22%] top-[11%] h-[9%] w-[6%]",
-  "left-[31%] top-[9%] h-[15%] w-[11%]",
-  "right-[8%] top-[13%] h-[12%] w-[7%]",
-  "left-[8%] bottom-[18%] h-[12%] w-[7%]",
-  "left-[22%] bottom-[9%] h-[10%] w-[8%]",
-  "right-[23%] bottom-[11%] h-[11%] w-[7%]",
-  "right-[7%] bottom-[16%] h-[18%] w-[8%]",
-] as const;
-
-const enterpriseSignalClusters = [
+const enterpriseStripeGroups = [
   {
-    className: "left-[8%] top-[37%]",
-    shapes: ["triangle", "square", "circle", "triangle", "circle", "square"],
+    className: "left-[7%] top-[16%] w-60 -rotate-6",
+    stripes: ["w-28", "w-48", "w-36", "w-56", "w-40"],
   },
   {
-    className: "left-[25%] top-[31%]",
-    shapes: ["square", "circle", "triangle", "square", "circle", "triangle"],
+    className: "right-[8%] top-[18%] w-56 rotate-6",
+    stripes: ["ml-auto w-32", "ml-auto w-52", "ml-auto w-40", "ml-auto w-48"],
   },
   {
-    className: "right-[16%] top-[30%]",
-    shapes: ["circle", "square", "triangle", "circle", "triangle", "square"],
+    className: "left-[11%] bottom-[22%] w-52 rotate-[-10deg]",
+    stripes: ["w-44", "w-32", "w-52", "w-24"],
   },
   {
-    className: "left-[14%] bottom-[9%]",
-    shapes: ["square", "triangle", "circle", "square", "circle", "triangle"],
+    className: "right-[12%] bottom-[21%] w-64 rotate-[9deg]",
+    stripes: ["ml-auto w-48", "ml-auto w-28", "ml-auto w-60", "ml-auto w-36"],
   },
   {
-    className: "right-[12%] bottom-[8%]",
-    shapes: ["triangle", "circle", "square", "triangle", "square", "circle"],
+    className: "left-1/2 top-[9%] hidden w-72 -translate-x-1/2 md:flex",
+    stripes: ["mx-auto w-44", "mx-auto w-72", "mx-auto w-56"],
   },
 ] as const satisfies readonly {
   className: string;
-  shapes: readonly EnterpriseSignalShape[];
+  stripes: readonly string[];
 }[];
-
-type EnterpriseSignalShape = "circle" | "square" | "triangle";
 
 function ProductVisual({ visual }: { visual: ProductVisualContent }) {
   if (visual.kind === "workflow") {
@@ -132,41 +119,30 @@ function EnterpriseVisual() {
     >
       <div className="bg-card absolute inset-0" />
       <div className="absolute inset-4 overflow-hidden rounded-sm md:inset-6">
-        <svg
-          viewBox="0 0 960 660"
-          className="text-muted-foreground/25 absolute inset-0 size-full"
-          fill="none"
-          stroke="currentColor"
-          strokeDasharray="9 11"
-          strokeLinecap="round"
-          strokeWidth="1.5"
-        >
-          <path d="M122 196 C258 224 312 316 454 320" />
-          <path d="M838 186 C694 218 650 314 506 320" />
-          <path d="M148 506 C278 458 320 392 454 366" />
-          <path d="M812 512 C680 458 632 394 506 366" />
-          <path d="M480 182 V474" strokeDasharray="4 16" />
-        </svg>
+        <div className="bg-muted-foreground/10 absolute inset-x-[8%] top-[46%] h-px" />
+        <div className="bg-muted-foreground/10 absolute inset-y-[14%] left-1/2 w-px" />
 
-        {enterpriseFrames.map((className) => (
-          <EnterpriseFrame className={className} key={className} />
-        ))}
-
-        {enterpriseSignalClusters.map((cluster) => (
-          <EnterpriseSignalCluster
-            className={cluster.className}
-            key={cluster.className}
-            shapes={cluster.shapes}
+        {enterpriseStripeGroups.map((group) => (
+          <EnterpriseStripeGroup
+            className={group.className}
+            key={group.className}
+            stripes={group.stripes}
           />
         ))}
 
         <div className="border-border/80 bg-card absolute top-1/2 left-1/2 z-10 flex w-[min(90%,32rem)] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3 rounded-md border p-4 text-center shadow-sm sm:w-[30rem] md:top-[43%] md:gap-4 md:p-6">
-          <div className="border-border bg-background flex size-12 items-center justify-center rounded-md border shadow-sm sm:size-14">
-            <LockKeyhole
-              aria-hidden="true"
-              className="text-foreground size-6 sm:size-7"
-              strokeWidth={1.8}
-            />
+          <div className="flex items-center gap-3">
+            <span className="bg-muted-foreground/15 h-1.5 w-14 rounded-full" />
+            <span className="bg-muted-foreground/10 h-1.5 w-7 rounded-full" />
+            <div className="border-border bg-background flex size-12 items-center justify-center rounded-md border shadow-sm sm:size-14">
+              <LockKeyhole
+                aria-hidden="true"
+                className="text-foreground size-6 sm:size-7"
+                strokeWidth={1.8}
+              />
+            </div>
+            <span className="bg-muted-foreground/10 h-1.5 w-7 rounded-full" />
+            <span className="bg-muted-foreground/15 h-1.5 w-14 rounded-full" />
           </div>
           <div className="space-y-2">
             <p className="text-foreground text-lg leading-tight font-medium text-balance sm:text-xl md:text-2xl">
@@ -208,49 +184,27 @@ function EnterpriseVisual() {
   );
 }
 
-function EnterpriseFrame({ className }: { className: string }) {
-  return (
-    <div
-      className={cn(
-        "border-muted-foreground/25 absolute rounded-[2px] border border-dashed",
-        className,
-      )}
-    />
-  );
-}
-
-function EnterpriseSignalCluster({
+function EnterpriseStripeGroup({
   className,
-  shapes,
+  stripes,
 }: {
   className: string;
-  shapes: readonly EnterpriseSignalShape[];
+  stripes: readonly string[];
 }) {
   return (
-    <div className={cn("absolute grid grid-cols-3 gap-2", className)}>
-      {shapes.map((shape, index) => (
-        <EnterpriseSignalShapeMark key={`${shape}-${index}`} shape={shape} />
+    <div className={cn("absolute flex flex-col gap-2.5", className)}>
+      {stripes.map((stripe, index) => (
+        <span
+          className={cn(
+            "bg-muted-foreground/15 block h-2 rounded-full shadow-[0_1px_0_rgba(0,0,0,0.03)]",
+            index % 2 === 0 && "bg-muted-foreground/20",
+            stripe,
+          )}
+          key={`${stripe}-${index}`}
+        />
       ))}
     </div>
   );
-}
-
-function EnterpriseSignalShapeMark({
-  shape,
-}: {
-  shape: EnterpriseSignalShape;
-}) {
-  if (shape === "triangle") {
-    return (
-      <span className="border-b-muted-foreground/30 block size-0 border-x-[5px] border-b-[9px] border-x-transparent" />
-    );
-  }
-  if (shape === "circle") {
-    return (
-      <span className="bg-muted-foreground/30 block size-2.5 rounded-full" />
-    );
-  }
-  return <span className="bg-muted-foreground/30 block size-2.5" />;
 }
 
 function isCopyableFeature(

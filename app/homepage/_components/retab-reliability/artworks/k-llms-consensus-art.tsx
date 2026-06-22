@@ -60,7 +60,7 @@ const K_LLMS_CONSENSUS_PALETTE = buildTonePalette(
 );
 
 const SOURCE_NODE_LEFT = 24;
-const COMPACT_SOURCE_NODE_WIDTH = 220;
+const COMPACT_SOURCE_NODE_WIDTH = 270;
 const SOURCE_NODE_PADDING = 10;
 const SOURCE_JSON_RIGHT_X =
   SOURCE_NODE_LEFT + COMPACT_SOURCE_NODE_WIDTH - SOURCE_NODE_PADDING;
@@ -183,8 +183,11 @@ function HighlightedJson({ code }: { code: string }) {
 
 function SourceNode({ data }: { data: SourceNodeData }) {
   const palette = K_LLMS_CONSENSUS_PALETTE[data.tone ?? "default"];
+  const sourceTitleClassName = data.isCompact
+    ? "mb-2 text-[15px] font-medium text-foreground/85"
+    : palette.sourceTitleClassName;
   const sourceCodeClassName = data.isCompact
-    ? "overflow-hidden rounded-sm border border-border bg-muted/50 px-2 py-1.5 text-[9px] leading-3 whitespace-pre text-foreground/75 font-mono"
+    ? "overflow-hidden rounded-sm border border-border bg-muted/50 px-2 py-2 text-[10px] leading-[13px] whitespace-pre text-foreground/75 font-mono"
     : palette.sourceCodeClassName;
 
   return (
@@ -195,7 +198,7 @@ function SourceNode({ data }: { data: SourceNodeData }) {
           width: data.isCompact ? COMPACT_SOURCE_NODE_WIDTH : undefined,
         }}
       >
-        <div className={palette.sourceTitleClassName}>
+        <div className={sourceTitleClassName}>
           <span>{data.title}</span>
         </div>
         <pre className={sourceCodeClassName}>
