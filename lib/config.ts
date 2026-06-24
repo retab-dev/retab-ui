@@ -11,10 +11,6 @@ export const siteConfig = {
   },
   navItems: [
     {
-      href: "/homepage",
-      label: "Homepage",
-    },
-    {
       href: "/docs",
       label: "Docs",
     },
