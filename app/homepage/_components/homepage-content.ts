@@ -331,7 +331,7 @@ export const secondaryLatestCards = [
     id: "retab-ui",
     label: "@retab/ui",
     body: "Open-source UI components for your document workflows",
-    href: vercelHref("/docs/components"),
+    href: "https://ui.retab.com",
     tone: "light",
     visual: {
       kind: "retab-ui",

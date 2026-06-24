@@ -15,7 +15,7 @@ import { focusRing } from "./primitives";
 import { SectionHeader } from "./section-header";
 
 const latestCardClass = cn(
-  "group relative flex min-w-0 overflow-hidden rounded-md border border-border bg-card text-card-foreground transition-colors hover:bg-background active:bg-card motion-reduce:transition-none",
+  "group relative flex min-w-0 overflow-hidden rounded-md border border-border bg-card text-card-foreground transition-colors hover:border-foreground/30 hover:bg-background focus-visible:border-foreground/40 active:bg-card motion-reduce:transition-none",
   focusRing,
 );
 
