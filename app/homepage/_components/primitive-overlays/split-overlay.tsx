@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 
-import { mono, PAD } from "./kit";
+import { mono, PAD, primitive } from "./kit";
 
 // One file → several documents. The shared invoice is carved into three
 // distinct pieces along natural seams. Because the underlying document is a
@@ -9,7 +9,7 @@ import { mono, PAD } from "./kit";
 // the three read as separated, fanned documents rather than dashed lines drawn
 // across one page. A scissors affordance sits on the primary cut line.
 
-const SEAM_INK = "#171717";
+const SEAM_INK = primitive.ink;
 
 // A resulting document drawn as its own sheet: rounded outline + shadow, nudged
 // sideways so the stack reads as several pages, not one.
@@ -30,9 +30,9 @@ function Sheet({
         height: `${height}%`,
         left: `${2 + (shift > 0 ? shift : 0)}%`,
         right: `${2 + (shift < 0 ? -shift : 0)}%`,
-        border: "1px solid rgba(23,23,23,0.13)",
+        border: `1px solid ${primitive.sheetBorder}`,
         borderRadius: "7px",
-        boxShadow: "0 3px 11px -4px rgba(23,23,23,0.16)",
+        boxShadow: primitive.splitShadow,
       }}
     />
   );
@@ -57,11 +57,11 @@ function Tag({
         display: "flex",
         alignItems: "center",
         gap: "4px",
-        background: "#fff",
+        background: primitive.panel,
         padding: "2px 6px",
         borderRadius: "4px",
-        border: "1px solid #e4e4e4",
-        boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
+        border: `1px solid ${primitive.lineStrong}`,
+        boxShadow: primitive.tagShadow,
       }}
     >
       <span
@@ -72,12 +72,12 @@ function Tag({
       >
         {type}
       </span>
-      <span style={mono(6, "#9a9a9a")}>{range}</span>
+      <span style={mono(6, primitive.muted)}>{range}</span>
     </div>
   );
 }
 
-// The primary cut line: a dashed rule with a scissors riding on it.
+// A cut line: a dashed rule with scissors riding on it.
 function Cut({ top }: { top: number }): ReactNode {
   const line: CSSProperties = {
     position: "absolute",
@@ -124,7 +124,7 @@ export function SplitOverlay() {
         style={{
           position: "absolute",
           inset: 0,
-          background: "rgba(255,255,255,0.22)",
+          background: primitive.overlayDim,
         }}
       />
 
@@ -133,13 +133,14 @@ export function SplitOverlay() {
       <Sheet top={33} height={50.5} shift={-1.6} />
       <Sheet top={86.5} height={12} shift={1.6} />
 
-      {/* primary cut between the parties block and the line-item table */}
+      {/* cuts between the three resulting documents */}
       <Cut top={31.5} />
+      <Cut top={85} />
 
       {/* one tag per resulting document, each in a clear zone of its sheet */}
       <Tag top={13.5} type="Invoice" range="p.1" />
       <Tag top={35.5} type="Statement" range="p.2" />
-      <Tag top={95} type="Receipt" range="p.3" />
+      <Tag top={91.8} type="Receipt" range="p.3" />
     </>
   );
 }

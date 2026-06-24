@@ -1,14 +1,14 @@
 import type { CSSProperties } from "react";
 
-import { BAND, mono, PAD } from "./kit";
+import { BAND, mono, PAD, primitive, transparent } from "./kit";
 
 // /extract — pull structured JSON from the document using a schema.
 // We draw crisp highlight rectangles exactly on real fields, tag each with
 // its schema key, and dock a compact JSON snippet in the corner to show the
 // captured output.
 
-const INK = "#171717";
-const MID = "#525252";
+const INK = primitive.ink;
+const MID = primitive.text;
 
 function FieldBox({
   top,
@@ -17,6 +17,7 @@ function FieldBox({
   right,
   width,
   color = INK,
+  radius = 3,
 }: {
   top: number;
   height: number;
@@ -24,6 +25,7 @@ function FieldBox({
   right?: number;
   width: string;
   color?: string;
+  radius?: number;
 }) {
   return (
     <div
@@ -35,8 +37,9 @@ function FieldBox({
         ...(left !== undefined ? { left: `${left}%` } : {}),
         ...(right !== undefined ? { right: `${right}%` } : {}),
         border: `1px solid ${color}`,
-        borderRadius: "3px",
-        background: `${color}0a`,
+        borderRadius: `${radius}px`,
+        background: transparent(color, 4),
+        zIndex: 1,
       }}
     />
   );
@@ -47,26 +50,30 @@ function KeyTag({
   top,
   left,
   right,
+  style,
 }: {
   children: string;
   top: number;
   left?: number;
   right?: number;
+  style?: CSSProperties;
 }) {
   return (
     <div
-      style={mono(7, "#fafafa", {
+      style={mono(7, primitive.chipFg, {
         position: "absolute",
         top: `${top}%`,
         ...(left !== undefined ? { left: `${left}%` } : {}),
         ...(right !== undefined ? { right: `${right}%` } : {}),
         fontWeight: 600,
-        background: INK,
+        background: primitive.chipBg,
         padding: "1.5px 4px",
         borderRadius: "3px",
         lineHeight: 1.1,
         whiteSpace: "nowrap",
         letterSpacing: "0.01em",
+        zIndex: 2,
+        ...style,
       })}
     >
       {children}
@@ -75,71 +82,158 @@ function KeyTag({
 }
 
 export function ExtractOverlay() {
+  const sources: ReadonlyArray<{
+    key: string;
+    value: string;
+    box: {
+      top: number;
+      height: number;
+      left?: number;
+      right?: number;
+      width: string;
+      color?: string;
+      radius?: number;
+    };
+    tag: { top: number; left?: number; right?: number; style?: CSSProperties };
+    valueColor: string;
+  }> = [
+    {
+      key: "invoice_id",
+      value: "#2042",
+      box: {
+        top: BAND.header + 2.1,
+        height: 3,
+        right: PAD - 1.2,
+        width: "8.8%",
+        color: MID,
+      },
+      tag: { top: BAND.header + 2.25, right: PAD + 8.7 },
+      valueColor: primitive.muted,
+    },
+    {
+      key: "bill_to",
+      value: "Northwind",
+      box: {
+        top: BAND.parties - 2.5,
+        height: 12.5,
+        left: PAD - 2,
+        width: "44%",
+      },
+      tag: { top: BAND.parties - 6.3, left: PAD - 2 },
+      valueColor: primitive.muted,
+    },
+    {
+      key: "issued_at",
+      value: "Mar 4",
+      box: {
+        top: BAND.parties - 0.2,
+        height: 2.2,
+        right: PAD - 1,
+        width: "13.5%",
+        color: MID,
+      },
+      tag: { top: BAND.parties - 0.15, right: PAD + 13.8 },
+      valueColor: primitive.muted,
+    },
+    {
+      key: "due_date",
+      value: "Apr 3",
+      box: {
+        top: BAND.parties + 2.1,
+        height: 2.2,
+        right: PAD - 1,
+        width: "13.5%",
+        color: MID,
+      },
+      tag: { top: BAND.parties + 2.15, right: PAD + 13.8 },
+      valueColor: primitive.muted,
+    },
+    {
+      key: "terms",
+      value: "Net 30",
+      box: {
+        top: BAND.parties + 4.4,
+        height: 2.2,
+        right: PAD - 1,
+        width: "8.5%",
+        color: MID,
+      },
+      tag: { top: BAND.parties + 4.45, right: PAD + 8.8 },
+      valueColor: primitive.muted,
+    },
+    {
+      key: "line_item",
+      value: "USB-C cable",
+      box: {
+        top: BAND.row2 - 0.5,
+        height: 2.6,
+        left: PAD + 7.1,
+        width: "15.5%",
+        color: MID,
+      },
+      tag: { top: BAND.row2 - 2.35, left: PAD + 7.1 },
+      valueColor: primitive.muted,
+    },
+    {
+      key: "amount",
+      value: "$96",
+      box: {
+        top: BAND.row2 - 0.5,
+        height: 2.6,
+        right: PAD - 1.2,
+        width: "7.4%",
+        color: MID,
+      },
+      tag: { top: BAND.row2 - 0.45, right: PAD + 7.8 },
+      valueColor: primitive.muted,
+    },
+    {
+      key: "total",
+      value: "$691",
+      box: {
+        top: BAND.total + 0.1,
+        height: 2.8,
+        right: PAD - 1.2,
+        width: "8.6%",
+      },
+      tag: { top: BAND.total + 0.15, right: PAD + 9 },
+      valueColor: INK,
+    },
+  ];
+
   // JSON output panel — compact captured-data card docked low-left.
-  const pairs: ReadonlyArray<[string, string, string]> = [
-    ["bill_to", "Northwind", "#9a9a9a"],
-    ["due_date", "Apr 3", "#9a9a9a"],
-    ["amount", "$96", "#9a9a9a"],
-    ["total", "$691", INK],
+  const pairs: ReadonlyArray<readonly [string, string, string]> = [
+    ...sources.map(({ key, value, valueColor }) => [key, value, valueColor] as const),
   ];
 
   return (
     <>
-      {/* bill_to — wraps the BILL TO label + name + address */}
-      <FieldBox top={BAND.parties - 2.5} height={12.5} left={PAD - 2} width="44%" />
-      <KeyTag top={BAND.parties - 7} left={PAD - 2}>
-        bill_to
-      </KeyTag>
-
-      {/* due_date — the "Apr 3, 2024" value (right column, middle row) */}
-      <FieldBox
-        top={BAND.parties + 3.4}
-        height={3.6}
-        right={PAD - 1.5}
-        width="20%"
-        color={MID}
-      />
-      <KeyTag top={BAND.parties + 2.6} right={PAD + 20}>
-        due_date
-      </KeyTag>
-
-      {/* amount — far-right amount cell on a line item (row 2: $96) */}
-      <FieldBox
-        top={BAND.row2 - 1.8}
-        height={3.6}
-        right={PAD - 1.5}
-        width="14%"
-        color={MID}
-      />
-      <KeyTag top={BAND.row2 - 1.6} right={PAD + 14.5}>
-        amount
-      </KeyTag>
-
-      {/* total — the Total $691 line; tag sits above the box's left edge so it
-          stays clear of the captured-JSON panel docked bottom-left */}
-      <FieldBox top={BAND.total - 1.6} height={4.6} right={PAD - 2} width="42%" />
-      <KeyTag top={BAND.total - 6.8} left={52}>
-        total
-      </KeyTag>
+      {sources.map(({ key, box, tag }) => (
+        <div key={key}>
+          <FieldBox {...box} />
+          <KeyTag {...tag}>{key}</KeyTag>
+        </div>
+      ))}
 
       {/* captured JSON output panel */}
       <div
         style={{
           position: "absolute",
           left: `${PAD - 1}%`,
-          bottom: "3.5%",
-          width: "46%",
-          background: "#fbfbfb",
-          border: "1px solid #e7e7e7",
+          bottom: "3.2%",
+          width: "48%",
+          background: primitive.panel,
+          border: `1px solid ${primitive.lineStrong}`,
           borderRadius: "5px",
-          padding: "5px 6px",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+          padding: "4.5px 6px",
+          boxShadow: primitive.softShadow,
+          zIndex: 3,
         }}
       >
         <div
-          style={mono(6, "#9a9a9a", {
+          style={mono(5.8, primitive.muted, {
             letterSpacing: "0.06em",
-            marginBottom: "3px",
+            marginBottom: "2px",
           })}
         >
           {"{ extracted }"}
@@ -150,13 +244,13 @@ export function ExtractOverlay() {
             style={{
               display: "flex",
               justifyContent: "space-between",
-              gap: "8px",
-              lineHeight: 1.5,
+              gap: "7px",
+              lineHeight: 1.32,
             }}
           >
-            <span style={mono(6.5, MID)}>{`"${k}"`}</span>
+            <span style={mono(5.9, MID)}>{`"${k}"`}</span>
             <span
-              style={mono(6.5, vColor, {
+              style={mono(5.9, vColor, {
                 fontWeight: vColor === INK ? 600 : 400,
               })}
             >

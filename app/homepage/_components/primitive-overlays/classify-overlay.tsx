@@ -1,12 +1,12 @@
 import type { CSSProperties } from "react";
 
-import { mono } from "./kit";
+import { mono, primitive, transparent } from "./kit";
 
 // Classifier result: the document is categorized among candidate types, with
 // the matched type selected + a confidence value, the rest dimmed — a labeled
 // model prediction rather than a rubber stamp. The faded document backdrop
 // keeps the verdict on top.
-const ACCENT = "#16a34a"; // single restrained accent (matched check)
+const ACCENT = primitive.success; // single restrained accent (matched check)
 
 type Candidate = {
   label: string;
@@ -35,7 +35,7 @@ export function ClassifyOverlay() {
         style={{
           position: "absolute",
           inset: 0,
-          background: "rgba(255,255,255,0.6)",
+          background: primitive.overlayFade,
           backdropFilter: "saturate(0.9)",
         }}
       />
@@ -48,10 +48,10 @@ export function ClassifyOverlay() {
           left: "50%",
           transform: "translate(-50%,-50%)",
           width: "70%",
-          background: "rgba(255,255,255,0.97)",
-          border: "1px solid #e4e4e4",
+          background: primitive.panel,
+          border: `1px solid ${primitive.lineStrong}`,
           borderRadius: "10px",
-          boxShadow: "0 10px 30px rgba(23,23,23,0.13)",
+          boxShadow: primitive.panelShadow,
           overflow: "hidden",
         }}
       >
@@ -62,10 +62,10 @@ export function ClassifyOverlay() {
             alignItems: "center",
             justifyContent: "space-between",
             padding: "7px 9px",
-            borderBottom: "1px solid #f0f0f0",
+            borderBottom: `1px solid ${primitive.lineSoft}`,
           }}
         >
-          <span style={mono(6.5, "#9a9a9a", { letterSpacing: "0.1em" })}>
+          <span style={mono(6.5, primitive.muted, { letterSpacing: "0.1em" })}>
             CLASSIFY
           </span>
           <span
@@ -83,7 +83,7 @@ export function ClassifyOverlay() {
                 background: ACCENT,
               }}
             />
-            <span style={mono(6, "#737373", { letterSpacing: "0.06em" })}>
+            <span style={mono(6, primitive.mid, { letterSpacing: "0.06em" })}>
               4 types
             </span>
           </span>
@@ -107,9 +107,9 @@ export function ClassifyOverlay() {
                 gap: "7px",
                 padding: "4px 6px",
                 borderRadius: "6px",
-                background: matched ? "rgba(22,163,74,0.07)" : "transparent",
+                background: matched ? transparent(ACCENT, 9) : "transparent",
                 border: matched
-                  ? "1px solid rgba(22,163,74,0.32)"
+                  ? `1px solid ${transparent(ACCENT, 36)}`
                   : "1px solid transparent",
               }}
             >
@@ -130,16 +130,20 @@ export function ClassifyOverlay() {
                   style={{
                     ...CHECK,
                     borderRadius: "50%",
-                    border: "1.5px solid #d8d8d8",
+                    border: `1.5px solid ${primitive.lineStrong}`,
                   }}
                 />
               )}
 
               <span
-                style={mono(matched ? 9 : 8, matched ? "#171717" : "#a3a3a3", {
-                  fontWeight: matched ? 700 : 400,
-                  flex: 1,
-                })}
+                style={mono(
+                  matched ? 9 : 8,
+                  matched ? primitive.ink : primitive.muted,
+                  {
+                    fontWeight: matched ? 700 : 400,
+                    flex: 1,
+                  },
+                )}
               >
                 {label}
               </span>
@@ -151,7 +155,7 @@ export function ClassifyOverlay() {
                   width: "34px",
                   height: "3px",
                   borderRadius: "2px",
-                  background: "#e3e3e3",
+                  background: primitive.lineStrong,
                   overflow: "hidden",
                 }}
               >
@@ -161,15 +165,14 @@ export function ClassifyOverlay() {
                     inset: 0,
                     // give any nonzero confidence a perceptible nub so 1–3%
                     // reads as "low" rather than as an empty track
-                    width:
-                      confidence === 0 ? "0%" : `max(${confidence}%, 9%)`,
-                    background: matched ? ACCENT : "#c4c4c4",
+                    width: confidence === 0 ? "0%" : `max(${confidence}%, 9%)`,
+                    background: matched ? ACCENT : primitive.faint,
                   }}
                 />
               </span>
 
               <span
-                style={mono(7.5, matched ? "#171717" : "#a3a3a3", {
+                style={mono(7.5, matched ? primitive.ink : primitive.muted, {
                   fontWeight: matched ? 700 : 400,
                   width: "22px",
                   textAlign: "right",

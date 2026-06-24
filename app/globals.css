@@ -242,6 +242,94 @@
   --feature-foreground: var(--color-zinc-950);
 }
 
+.homepage-primitive-card {
+  --homepage-primitive-paper: #ffffff;
+  --homepage-primitive-panel: #fbfbfb;
+  --homepage-primitive-panel-muted: #fafafa;
+  --homepage-primitive-ink: #171717;
+  --homepage-primitive-ink-strong: #1a1a1a;
+  --homepage-primitive-text-secondary: #3f3f46;
+  --homepage-primitive-text: #525252;
+  --homepage-primitive-mid: #777777;
+  --homepage-primitive-muted: #9a9a9a;
+  --homepage-primitive-faint: #b0b0b0;
+  --homepage-primitive-line: #eeeeee;
+  --homepage-primitive-line-soft: #f0f0f0;
+  --homepage-primitive-line-strong: #e4e4e4;
+  --homepage-primitive-line-faint: #efefef;
+  --homepage-primitive-chip-bg: #171717;
+  --homepage-primitive-chip-fg: #fafafa;
+  --homepage-primitive-seam: #171717;
+  --homepage-primitive-seam-handle: #171717;
+  --homepage-primitive-seam-dot: #fafafa;
+  --homepage-primitive-focus: #2563eb;
+  --homepage-primitive-focus-fg: #ffffff;
+  --homepage-primitive-success: #16a34a;
+  --homepage-primitive-overlay-fade: rgba(255, 255, 255, 0.6);
+  --homepage-primitive-overlay-dim: rgba(255, 255, 255, 0.22);
+  --homepage-primitive-parse-fade: linear-gradient(
+    90deg,
+    rgba(250, 250, 250, 0) 84%,
+    rgba(250, 250, 250, 0.92) 96%,
+    rgb(250, 250, 250) 100%
+  );
+  --homepage-primitive-partition-band: rgba(23, 23, 23, 0.02);
+  --homepage-primitive-partition-band-alt: rgba(23, 23, 23, 0.04);
+  --homepage-primitive-partition-border: rgba(23, 23, 23, 0.1);
+  --homepage-primitive-partition-cell: rgba(23, 23, 23, 0.07);
+  --homepage-primitive-partition-cell-border: rgba(23, 23, 23, 0.16);
+  --homepage-primitive-sheet-border: rgba(23, 23, 23, 0.13);
+  --homepage-primitive-panel-shadow: 0 10px 30px rgba(23, 23, 23, 0.13);
+  --homepage-primitive-soft-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --homepage-primitive-tag-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --homepage-primitive-split-shadow: 0 3px 11px -4px rgba(23, 23, 23, 0.16);
+  --homepage-primitive-parse-shadow: -10px 0 22px -16px rgba(0, 0, 0, 0.35);
+}
+
+.dark .homepage-primitive-card {
+  --homepage-primitive-paper: #18181b;
+  --homepage-primitive-panel: #26272c;
+  --homepage-primitive-panel-muted: #222329;
+  --homepage-primitive-ink: #f4f4f5;
+  --homepage-primitive-ink-strong: #fafafa;
+  --homepage-primitive-text-secondary: #d4d4d8;
+  --homepage-primitive-text: #c4c4c7;
+  --homepage-primitive-mid: #a1a1aa;
+  --homepage-primitive-muted: #a1a1aa;
+  --homepage-primitive-faint: #71717a;
+  --homepage-primitive-line: rgba(255, 255, 255, 0.12);
+  --homepage-primitive-line-soft: rgba(255, 255, 255, 0.09);
+  --homepage-primitive-line-strong: rgba(255, 255, 255, 0.2);
+  --homepage-primitive-line-faint: rgba(255, 255, 255, 0.1);
+  --homepage-primitive-chip-bg: #e4e4e7;
+  --homepage-primitive-chip-fg: #18181b;
+  --homepage-primitive-seam: rgba(255, 255, 255, 0.42);
+  --homepage-primitive-seam-handle: #2a2b30;
+  --homepage-primitive-seam-dot: #d4d4d8;
+  --homepage-primitive-focus: #60a5fa;
+  --homepage-primitive-focus-fg: #020617;
+  --homepage-primitive-success: #4ade80;
+  --homepage-primitive-overlay-fade: rgba(24, 24, 27, 0.48);
+  --homepage-primitive-overlay-dim: rgba(0, 0, 0, 0.22);
+  --homepage-primitive-parse-fade: linear-gradient(
+    90deg,
+    rgba(24, 24, 27, 0) 84%,
+    rgba(24, 24, 27, 0.92) 96%,
+    #222329 100%
+  );
+  --homepage-primitive-partition-band: rgba(255, 255, 255, 0.05);
+  --homepage-primitive-partition-band-alt: rgba(255, 255, 255, 0.08);
+  --homepage-primitive-partition-border: rgba(255, 255, 255, 0.16);
+  --homepage-primitive-partition-cell: rgba(255, 255, 255, 0.1);
+  --homepage-primitive-partition-cell-border: rgba(255, 255, 255, 0.18);
+  --homepage-primitive-sheet-border: rgba(255, 255, 255, 0.18);
+  --homepage-primitive-panel-shadow: 0 18px 36px rgba(0, 0, 0, 0.36);
+  --homepage-primitive-soft-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+  --homepage-primitive-tag-shadow: 0 1px 2px rgba(0, 0, 0, 0.32);
+  --homepage-primitive-split-shadow: 0 4px 14px -4px rgba(0, 0, 0, 0.5);
+  --homepage-primitive-parse-shadow: -10px 0 22px -16px rgba(0, 0, 0, 0.85);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

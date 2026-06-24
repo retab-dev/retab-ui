@@ -8,7 +8,7 @@ import { StartBuildingCommandDropdown } from "./start-building-command-dropdown"
 
 function ActionList({ actions }: { actions: readonly StartBuildingAction[] }) {
   return (
-    <div className="mt-8 flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+    <div className="mt-8 flex w-full gap-2 sm:w-auto sm:flex-wrap">
       {actions.map((action) => (
         <MarketingButton
           key={action.label}
@@ -16,7 +16,7 @@ function ActionList({ actions }: { actions: readonly StartBuildingAction[] }) {
           aria-label={getLinkAriaLabel(action)}
           {...getLinkProps(action)}
           variant={action.variant}
-          className="w-full sm:w-auto"
+          className="flex-1 sm:flex-none"
         >
           {action.label}
         </MarketingButton>

@@ -63,17 +63,17 @@ export function Hero() {
               Process documents at scale — with configurable business rules,
               cross-document checks, and human review for exceptions.
             </p>
-            <div className="mx-auto mt-6 flex w-full max-w-sm flex-col gap-3 sm:max-w-2xl sm:flex-row sm:items-center md:mt-8 lg:mx-0">
+            <div className="mx-auto mt-6 flex w-full max-w-sm items-center gap-3 sm:max-w-2xl md:mt-8 lg:mx-0">
               <MarketingButton
                 href="/dashboard/production"
-                className="w-full sm:w-44"
+                className="flex-1 sm:w-44 sm:flex-none"
               >
                 Start free
               </MarketingButton>
               <MarketingButton
                 href="https://calendar.app.google/1PTAx2rZjEWiH28n6"
                 variant="secondary"
-                className="w-full sm:w-44"
+                className="flex-1 sm:w-44 sm:flex-none"
               >
                 Get a demo
               </MarketingButton>

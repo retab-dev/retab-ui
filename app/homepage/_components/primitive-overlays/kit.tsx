@@ -3,9 +3,51 @@ import type { CSSProperties, ReactNode } from "react";
 // Shared building blocks for the primitive overlays. One "universal document"
 // (the Acme invoice) is rendered identically in every primitive card; each
 // primitive is expressed purely as an overlay annotation layer on top of this
-// same document. The document is decorative (aria-hidden) and lives on a fixed
-// light "paper" surface — intentional, since a rendered document is light in
-// any theme — while the card chrome uses theme tokens.
+// same document. The drawing uses scoped homepage CSS variables so the paper,
+// text, and annotation chrome can adapt with the page theme.
+
+export const primitive = {
+  paper: "var(--homepage-primitive-paper)",
+  panel: "var(--homepage-primitive-panel)",
+  panelMuted: "var(--homepage-primitive-panel-muted)",
+  ink: "var(--homepage-primitive-ink)",
+  inkStrong: "var(--homepage-primitive-ink-strong)",
+  textSecondary: "var(--homepage-primitive-text-secondary)",
+  text: "var(--homepage-primitive-text)",
+  mid: "var(--homepage-primitive-mid)",
+  muted: "var(--homepage-primitive-muted)",
+  faint: "var(--homepage-primitive-faint)",
+  line: "var(--homepage-primitive-line)",
+  lineSoft: "var(--homepage-primitive-line-soft)",
+  lineStrong: "var(--homepage-primitive-line-strong)",
+  lineFaint: "var(--homepage-primitive-line-faint)",
+  chipBg: "var(--homepage-primitive-chip-bg)",
+  chipFg: "var(--homepage-primitive-chip-fg)",
+  seam: "var(--homepage-primitive-seam)",
+  seamHandle: "var(--homepage-primitive-seam-handle)",
+  seamDot: "var(--homepage-primitive-seam-dot)",
+  focus: "var(--homepage-primitive-focus)",
+  focusFg: "var(--homepage-primitive-focus-fg)",
+  success: "var(--homepage-primitive-success)",
+  overlayFade: "var(--homepage-primitive-overlay-fade)",
+  overlayDim: "var(--homepage-primitive-overlay-dim)",
+  parseFade: "var(--homepage-primitive-parse-fade)",
+  partitionBand: "var(--homepage-primitive-partition-band)",
+  partitionBandAlt: "var(--homepage-primitive-partition-band-alt)",
+  partitionBorder: "var(--homepage-primitive-partition-border)",
+  partitionCell: "var(--homepage-primitive-partition-cell)",
+  partitionCellBorder: "var(--homepage-primitive-partition-cell-border)",
+  sheetBorder: "var(--homepage-primitive-sheet-border)",
+  panelShadow: "var(--homepage-primitive-panel-shadow)",
+  softShadow: "var(--homepage-primitive-soft-shadow)",
+  tagShadow: "var(--homepage-primitive-tag-shadow)",
+  splitShadow: "var(--homepage-primitive-split-shadow)",
+  parseShadow: "var(--homepage-primitive-parse-shadow)",
+} as const;
+
+export function transparent(color: string, amount: number): string {
+  return `color-mix(in srgb, ${color} ${amount}%, transparent)`;
+}
 
 export const mono = (
   size: number,
@@ -66,16 +108,18 @@ export const items: ReadonlyArray<[string, string, string]> = [
 
 export function Chip({
   children,
-  bg = "#171717",
+  bg = primitive.chipBg,
+  fg = primitive.chipFg,
   style,
 }: {
   children: ReactNode;
   bg?: string;
+  fg?: string;
   style?: CSSProperties;
 }) {
   return (
     <div
-      style={mono(8, "#fafafa", {
+      style={mono(8, fg, {
         position: "absolute",
         fontWeight: 600,
         background: bg,
@@ -92,7 +136,9 @@ export function Chip({
 
 export function UniversalDocument() {
   return (
-    <div style={{ position: "absolute", inset: 0, background: "#fff" }}>
+    <div
+      style={{ position: "absolute", inset: 0, background: primitive.paper }}
+    >
       {/* header */}
       <Row top={BAND.header}>
         <div
@@ -108,7 +154,7 @@ export function UniversalDocument() {
                 width: "17px",
                 height: "17px",
                 borderRadius: "4px",
-                background: "#171717",
+                background: primitive.ink,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -119,7 +165,7 @@ export function UniversalDocument() {
                   width: "7px",
                   height: "7px",
                   borderRadius: "50%",
-                  border: "1.5px solid #fff",
+                  border: `1.5px solid ${primitive.paper}`,
                 }}
               />
             </div>
@@ -130,14 +176,16 @@ export function UniversalDocument() {
                 style={{
                   fontSize: "10px",
                   fontWeight: 700,
-                  color: "#1a1a1a",
+                  color: primitive.inkStrong,
                   whiteSpace: "nowrap",
                   lineHeight: 1,
                 }}
               >
                 Acme Corp
               </span>
-              <span style={mono(6, "#b0b0b0", { letterSpacing: "0.04em" })}>
+              <span
+                style={mono(6, primitive.faint, { letterSpacing: "0.04em" })}
+              >
                 12 Market St, Boston MA
               </span>
             </div>
@@ -147,14 +195,16 @@ export function UniversalDocument() {
               style={{
                 fontSize: "12px",
                 fontWeight: 700,
-                color: "#1a1a1a",
+                color: primitive.inkStrong,
                 lineHeight: 1,
                 letterSpacing: "0.05em",
               }}
             >
               INVOICE
             </div>
-            <div style={mono(7, "#b0b0b0", { marginTop: "3px" })}>#2042</div>
+            <div style={mono(7, primitive.faint, { marginTop: "3px" })}>
+              #2042
+            </div>
           </div>
         </div>
       </Row>
@@ -176,15 +226,21 @@ export function UniversalDocument() {
               flex: 1,
             }}
           >
-            <span style={mono(6, "#9a9a9a", { letterSpacing: "0.08em" })}>
+            <span style={mono(6, primitive.muted, { letterSpacing: "0.08em" })}>
               BILL TO
             </span>
             <span
-              style={{ fontSize: "8px", fontWeight: 600, color: "#3f3f46" }}
+              style={{
+                fontSize: "8px",
+                fontWeight: 600,
+                color: primitive.textSecondary,
+              }}
             >
               Northwind Trading Co.
             </span>
-            <span style={mono(6.5, "#9a9a9a")}>88 Harbor Rd, Seattle WA</span>
+            <span style={mono(6.5, primitive.muted)}>
+              88 Harbor Rd, Seattle WA
+            </span>
           </div>
           <div
             style={{
@@ -203,8 +259,8 @@ export function UniversalDocument() {
                 key={k}
                 style={{ display: "flex", justifyContent: "space-between" }}
               >
-                <span style={mono(6.5, "#9a9a9a")}>{k}</span>
-                <span style={mono(6.5, "#777")}>{v}</span>
+                <span style={mono(6.5, primitive.muted)}>{k}</span>
+                <span style={mono(6.5, primitive.mid)}>{v}</span>
               </div>
             ))}
           </div>
@@ -218,24 +274,29 @@ export function UniversalDocument() {
             display: "flex",
             gap: "7px",
             alignItems: "center",
-            borderTop: "1px solid #eee",
-            borderBottom: "1px solid #eee",
+            borderTop: `1px solid ${primitive.line}`,
+            borderBottom: `1px solid ${primitive.line}`,
             padding: "4px 0",
           }}
         >
           <span
-            style={mono(6, "#9a9a9a", {
+            style={mono(6, primitive.muted, {
               width: "26px",
               letterSpacing: "0.06em",
             })}
           >
             ITEM
           </span>
-          <span style={mono(6, "#9a9a9a", { flex: 1, letterSpacing: "0.06em" })}>
+          <span
+            style={mono(6, primitive.muted, {
+              flex: 1,
+              letterSpacing: "0.06em",
+            })}
+          >
             DESCRIPTION
           </span>
           <span
-            style={mono(6, "#9a9a9a", {
+            style={mono(6, primitive.muted, {
               width: "32px",
               textAlign: "right",
               letterSpacing: "0.06em",
@@ -250,9 +311,14 @@ export function UniversalDocument() {
       {items.map(([id, desc, amt], i) => (
         <Row key={id} top={[BAND.row1, BAND.row2, BAND.row3][i]}>
           <div style={{ display: "flex", gap: "7px", alignItems: "center" }}>
-            <span style={mono(7, "#777", { width: "26px" })}>{id}</span>
-            <span style={mono(7, "#525252", { flex: 1 })}>{desc}</span>
-            <span style={mono(7, "#777", { width: "32px", textAlign: "right" })}>
+            <span style={mono(7, primitive.mid, { width: "26px" })}>{id}</span>
+            <span style={mono(7, primitive.text, { flex: 1 })}>{desc}</span>
+            <span
+              style={mono(7, primitive.mid, {
+                width: "32px",
+                textAlign: "right",
+              })}
+            >
               {amt}
             </span>
           </div>
@@ -273,21 +339,32 @@ export function UniversalDocument() {
               width: "52%",
               marginLeft: "auto",
               ...(strong
-                ? { borderTop: "1px solid #eee", paddingTop: "3px" }
+                ? {
+                    borderTop: `1px solid ${primitive.line}`,
+                    paddingTop: "3px",
+                  }
                 : {}),
             }}
           >
             <span
-              style={mono(strong ? 7 : 6.5, strong ? "#171717" : "#9a9a9a", {
-                fontWeight: strong ? 600 : 400,
-              })}
+              style={mono(
+                strong ? 7 : 6.5,
+                strong ? primitive.ink : primitive.muted,
+                {
+                  fontWeight: strong ? 600 : 400,
+                },
+              )}
             >
               {label as string}
             </span>
             <span
-              style={mono(strong ? 7.5 : 6.5, strong ? "#171717" : "#777", {
-                fontWeight: strong ? 600 : 400,
-              })}
+              style={mono(
+                strong ? 7.5 : 6.5,
+                strong ? primitive.ink : primitive.mid,
+                {
+                  fontWeight: strong ? 600 : 400,
+                },
+              )}
             >
               {value as string}
             </span>
@@ -306,8 +383,13 @@ export function UniversalDocument() {
               flex: 1,
             }}
           >
-            <span style={mono(5.5, "#9a9a9a")}>Authorized signature</span>
-            <div style={{ height: "12px", borderBottom: "1px solid #efefef" }} />
+            <span style={mono(5.5, primitive.muted)}>Authorized signature</span>
+            <div
+              style={{
+                height: "12px",
+                borderBottom: `1px solid ${primitive.lineFaint}`,
+              }}
+            />
           </div>
           <div
             style={{
@@ -317,8 +399,13 @@ export function UniversalDocument() {
               width: "34%",
             }}
           >
-            <span style={mono(5.5, "#9a9a9a")}>Date</span>
-            <div style={{ height: "12px", borderBottom: "1px solid #efefef" }} />
+            <span style={mono(5.5, primitive.muted)}>Date</span>
+            <div
+              style={{
+                height: "12px",
+                borderBottom: `1px solid ${primitive.lineFaint}`,
+              }}
+            />
           </div>
         </div>
       </Row>

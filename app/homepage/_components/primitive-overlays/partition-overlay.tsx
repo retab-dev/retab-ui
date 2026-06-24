@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 
-import { BAND, Chip, items, mono, PAD } from "./kit";
+import { BAND, Chip, items, mono, PAD, primitive } from "./kit";
 
 // Repeated records → chunks keyed by id. Each line-item row is wrapped in its
 // own grouping band; the id column it is keyed on (already visible as A-1/A-2/
@@ -25,8 +25,10 @@ export function PartitionOverlay() {
             right: `${PAD - 1}%`,
             top: `${bandTop}%`,
             height: `${CHUNK_H}%`,
-            background: alt ? "rgba(23,23,23,0.04)" : "rgba(23,23,23,0.02)",
-            border: "1px solid rgba(23,23,23,0.10)",
+            background: alt
+              ? primitive.partitionBandAlt
+              : primitive.partitionBand,
+            border: `1px solid ${primitive.partitionBorder}`,
             borderRadius: "5px",
           }}
         />
@@ -40,14 +42,14 @@ export function PartitionOverlay() {
             transform: "translateY(-50%)",
             width: "7.5%",
             height: "3.1%",
-            background: "rgba(23,23,23,0.07)",
-            border: "1px solid rgba(23,23,23,0.16)",
+            background: primitive.partitionCell,
+            border: `1px solid ${primitive.partitionCellBorder}`,
             borderRadius: "3px",
           }}
         />
         {/* "n of N" index, dropped into the empty middle of the row */}
         <div
-          style={mono(6, "#9a9a9a", {
+          style={mono(6, primitive.muted, {
             position: "absolute",
             right: `${PAD + 11}%`,
             top: `${bandTop + CHUNK_H / 2}%`,
@@ -76,9 +78,9 @@ export function PartitionOverlay() {
           top: `${BAND.row1 - ROW_OFFSET}%`,
           height: `${BAND.row3 - BAND.row1 + CHUNK_H}%`,
           width: "7px",
-          borderLeft: "1.5px solid #171717",
-          borderTop: "1.5px solid #171717",
-          borderBottom: "1.5px solid #171717",
+          borderLeft: `1.5px solid ${primitive.ink}`,
+          borderTop: `1.5px solid ${primitive.ink}`,
+          borderBottom: `1.5px solid ${primitive.ink}`,
           borderTopLeftRadius: "5px",
           borderBottomLeftRadius: "5px",
         }}

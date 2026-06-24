@@ -1,15 +1,15 @@
 import type { CSSProperties } from "react";
 
-import { Chip, mono, PAD } from "./kit";
+import { Chip, mono, PAD, primitive } from "./kit";
 
 // Token colors for the markdown source — restrained, monochrome ink with a
 // single subtle accent for inline-code so the snippet reads as real,
 // syntax-tinted markdown rather than placeholder text.
-const SYNTAX = "#171717"; // markers: #, **, |, -
-const KEY = "#3f3f46"; // bold-key / heading text
-const TEXT = "#525252"; // plain text
-const MUTED = "#9a9a9a"; // dim text / table rule
-const NUM = "#525252"; // numbers
+const SYNTAX = primitive.ink; // markers: #, **, |, -
+const KEY = primitive.textSecondary; // bold-key / heading text
+const TEXT = primitive.text; // plain text
+const MUTED = primitive.muted; // dim text / table rule
+const NUM = primitive.text; // numbers
 
 // The parsed markdown source for THIS invoice. Rendered as discrete tinted
 // tokens so each markdown construct reads correctly.
@@ -43,8 +43,7 @@ export function ParseOverlay() {
           bottom: 0,
           left: 0,
           width: `${seam}%`,
-          background:
-            "linear-gradient(90deg, rgba(250,250,250,0) 84%, rgba(250,250,250,0.92) 96%, rgb(250,250,250) 100%)",
+          background: primitive.parseFade,
         }}
       />
 
@@ -56,9 +55,9 @@ export function ParseOverlay() {
           bottom: 0,
           left: `${seam}%`,
           right: 0,
-          background: "#fafafa",
-          borderLeft: "1px solid #e7e7e7",
-          boxShadow: "-10px 0 22px -16px rgba(0,0,0,0.35)",
+          background: primitive.panelMuted,
+          borderLeft: `1px solid ${primitive.lineStrong}`,
+          boxShadow: primitive.parseShadow,
         }}
       />
 
@@ -71,7 +70,7 @@ export function ParseOverlay() {
           left: `${seam}%`,
           width: "1.5px",
           marginLeft: "-0.75px",
-          background: "#171717",
+          background: primitive.seam,
         }}
       />
       <div
@@ -83,8 +82,9 @@ export function ParseOverlay() {
           width: "16px",
           height: "26px",
           borderRadius: "5px",
-          background: "#171717",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+          background: primitive.seamHandle,
+          border: `1px solid ${primitive.lineStrong}`,
+          boxShadow: primitive.tagShadow,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -99,7 +99,7 @@ export function ParseOverlay() {
               width: "2px",
               height: "2px",
               borderRadius: "50%",
-              background: "#fafafa",
+              background: primitive.seamDot,
             }}
           />
         ))}
@@ -107,8 +107,11 @@ export function ParseOverlay() {
 
       {/* "→ markdown" label anchored to the seam, top. */}
       <Chip
-        bg="#171717"
-        style={{ top: `${PAD}%`, left: `${seam}%`, transform: "translateX(6px)" }}
+        style={{
+          top: `${PAD}%`,
+          left: `${seam}%`,
+          transform: "translateX(6px)",
+        }}
       >
         → markdown
       </Chip>

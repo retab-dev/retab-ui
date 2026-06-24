@@ -18,14 +18,14 @@ type Primitive = {
 
 function PrimitiveCard({ name, Overlay }: Primitive) {
   return (
-    <div className="flex flex-col">
+    <div className="homepage-primitive-card flex flex-col">
       <div className="mb-4">
         <div className="text-foreground font-mono text-base leading-none font-medium">
           <span className="text-muted-foreground/50">/</span>
           {name}
         </div>
       </div>
-      <div className="border-border relative aspect-[210/297] w-full overflow-hidden rounded-[10px] border">
+      <div className="border-border bg-card relative aspect-[210/297] w-full overflow-hidden rounded-[10px] border shadow-sm dark:shadow-black/30">
         <UniversalDocument />
         <div style={{ position: "absolute", inset: 0 }}>
           <Overlay />
