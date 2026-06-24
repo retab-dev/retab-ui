@@ -11,25 +11,32 @@ import { mono, PAD, primitive } from "./kit";
 
 const SEAM_INK = primitive.ink;
 
+function GapMask({ top, height }: { top: number; height: number }): ReactNode {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: `${top}%`,
+        left: 0,
+        right: 0,
+        height: `${height}%`,
+        background: primitive.paper,
+      }}
+    />
+  );
+}
+
 // A resulting document drawn as its own sheet: rounded outline + shadow, nudged
 // sideways so the stack reads as several pages, not one.
-function Sheet({
-  top,
-  height,
-  shift,
-}: {
-  top: number;
-  height: number;
-  shift: number; // +right / -left, in %
-}): ReactNode {
+function Sheet({ top, height }: { top: number; height: number }): ReactNode {
   return (
     <div
       style={{
         position: "absolute",
         top: `${top}%`,
         height: `${height}%`,
-        left: `${2 + (shift > 0 ? shift : 0)}%`,
-        right: `${2 + (shift < 0 ? -shift : 0)}%`,
+        left: "2%",
+        right: "2%",
         border: `1px solid ${primitive.sheetBorder}`,
         borderRadius: "7px",
         boxShadow: primitive.splitShadow,
@@ -91,8 +98,8 @@ function Cut({ top }: { top: number }): ReactNode {
       <div style={line} />
       <svg
         viewBox="0 0 24 24"
-        width="13"
-        height="13"
+        width="10"
+        height="10"
         style={{
           position: "absolute",
           left: `${PAD - 3}%`,
@@ -128,19 +135,22 @@ export function SplitOverlay() {
         }}
       />
 
+      <GapMask top={30} height={3.8} />
+      <GapMask top={83.5} height={3.8} />
+
       {/* three resulting documents, each its own offset sheet */}
-      <Sheet top={1.5} height={28.5} shift={1.6} />
-      <Sheet top={33} height={50.5} shift={-1.6} />
-      <Sheet top={86.5} height={12} shift={1.6} />
+      <Sheet top={1.5} height={28.5} />
+      <Sheet top={33.8} height={49.7} />
+      <Sheet top={87.3} height={12.7} />
 
       {/* cuts between the three resulting documents */}
-      <Cut top={31.5} />
-      <Cut top={85} />
+      <Cut top={31.9} />
+      <Cut top={85.4} />
 
       {/* one tag per resulting document, each in a clear zone of its sheet */}
       <Tag top={13.5} type="Invoice" range="p.1" />
-      <Tag top={35.5} type="Statement" range="p.2" />
-      <Tag top={91.8} type="Receipt" range="p.3" />
+      <Tag top={36.3} type="Statement" range="p.2" />
+      <Tag top={92.6} type="Receipt" range="p.3" />
     </>
   );
 }

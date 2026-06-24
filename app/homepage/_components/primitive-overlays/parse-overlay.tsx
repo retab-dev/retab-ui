@@ -1,92 +1,81 @@
-import type { CSSProperties } from "react";
+import { mono, PAD, primitive } from "./kit";
 
-import { Chip, mono, PAD, primitive } from "./kit";
+const SYNTAX = primitive.ink;
+const KEY = primitive.textSecondary;
+const TEXT = primitive.text;
+const MUTED = primitive.muted;
+const NUM = primitive.text;
 
-// Token colors for the markdown source — restrained, monochrome ink with a
-// single subtle accent for inline-code so the snippet reads as real,
-// syntax-tinted markdown rather than placeholder text.
-const SYNTAX = primitive.ink; // markers: #, **, |, -
-const KEY = primitive.textSecondary; // bold-key / heading text
-const TEXT = primitive.text; // plain text
-const MUTED = primitive.muted; // dim text / table rule
-const NUM = primitive.text; // numbers
+const LINE_ITEMS = [
+  ["A-1", "Widget assembly", "$480"],
+  ["A-2", "USB-C cable", "$96"],
+  ["A-3", "Mount bracket", "$58"],
+] as const;
 
-// The parsed markdown source for THIS invoice. Rendered as discrete tinted
-// tokens so each markdown construct reads correctly.
-function MdHeading({ level, children }: { level: 1 | 2; children: string }) {
-  return (
-    <div style={{ display: "flex", gap: "4px" }}>
-      <span style={{ color: SYNTAX, fontWeight: 700 }}>
-        {"#".repeat(level)}
-      </span>
-      <span style={{ color: KEY, fontWeight: level === 1 ? 700 : 600 }}>
-        {children}
-      </span>
-    </div>
-  );
-}
+const TOTALS = [
+  ["Subtotal", "$634", false],
+  ["Tax", "$57", false],
+  ["Total", "$691", true],
+] as const;
 
 export function ParseOverlay() {
-  // The reveal seam: left of it = rendered document, right = markdown source.
-  const seam = 50; // %
+  // The reveal seam: above it = rendered document, below it = parsed source.
+  const seam = 47; // %
+  const parseFade = `linear-gradient(180deg, transparent 76%, color-mix(in srgb, ${primitive.panelMuted} 92%, transparent) 94%, ${primitive.panelMuted} 100%)`;
+  const parseShadow =
+    "0 -10px 22px -16px color-mix(in srgb, var(--homepage-primitive-ink) 35%, transparent)";
 
   return (
     <>
-      {/* Fade the rendered (left) side into the seam so it reads as dissolving
-          into the parsed panel — and, crucially, so the document's
-          right-aligned totals block (whose labels cross the 50% mark) dissolves
-          rather than leaving orphaned "S / T / T" letters stranded at the seam. */}
       <div
         style={{
           position: "absolute",
+          left: 0,
+          right: 0,
           top: 0,
+          height: `${seam}%`,
+          background: parseFade,
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          top: `${seam}%`,
           bottom: 0,
           left: 0,
-          width: `${seam}%`,
-          background: primitive.parseFade,
-        }}
-      />
-
-      {/* The parsed markdown source panel covering the right half. */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          bottom: 0,
-          left: `${seam}%`,
           right: 0,
           background: primitive.panelMuted,
-          borderLeft: `1px solid ${primitive.lineStrong}`,
-          boxShadow: primitive.parseShadow,
+          borderTop: `1px solid ${primitive.lineStrong}`,
+          boxShadow: parseShadow,
         }}
       />
 
-      {/* Vertical reveal seam + handle straddling the split. */}
       <div
         style={{
           position: "absolute",
-          top: 0,
-          bottom: 0,
-          left: `${seam}%`,
-          width: "1.5px",
-          marginLeft: "-0.75px",
+          left: 0,
+          right: 0,
+          top: `${seam}%`,
+          height: "1.5px",
+          marginTop: "-0.75px",
           background: primitive.seam,
         }}
       />
       <div
         style={{
           position: "absolute",
-          top: "50%",
-          left: `${seam}%`,
+          top: `${seam}%`,
+          left: "50%",
           transform: "translate(-50%,-50%)",
-          width: "16px",
-          height: "26px",
+          width: "26px",
+          height: "16px",
           borderRadius: "5px",
           background: primitive.seamHandle,
           border: `1px solid ${primitive.lineStrong}`,
           boxShadow: primitive.tagShadow,
           display: "flex",
-          flexDirection: "column",
+          flexDirection: "row",
           alignItems: "center",
           justifyContent: "center",
           gap: "2.5px",
@@ -105,88 +94,82 @@ export function ParseOverlay() {
         ))}
       </div>
 
-      {/* "→ markdown" label anchored to the seam, top. */}
-      <Chip
-        style={{
-          top: `${PAD}%`,
-          left: `${seam}%`,
-          transform: "translateX(6px)",
-        }}
-      >
-        → markdown
-      </Chip>
-
-      {/* The markdown source itself, laid out down the right panel. */}
       <div
         style={{
           position: "absolute",
-          top: "17%",
-          left: `${seam}%`,
-          right: 0,
-          paddingLeft: "9px",
-          paddingRight: "8px",
+          top: `calc(${seam}% + 12px)`,
+          left: `${PAD}%`,
+          right: `${PAD}%`,
           display: "flex",
           flexDirection: "column",
-          gap: "4px",
+          gap: "3px",
           ...mono(7, TEXT, { lineHeight: 1.35 }),
         }}
       >
-        <MdHeading level={1}>Invoice #2042</MdHeading>
-
-        <div>
-          <span style={{ color: SYNTAX, fontWeight: 700 }}>**</span>
-          <span style={{ color: KEY, fontWeight: 600 }}>Bill to</span>
-          <span style={{ color: SYNTAX, fontWeight: 700 }}>**</span>
-          <span style={{ color: TEXT }}> Northwind Trading Co.</span>
-        </div>
-
-        <MdHeading level={2}>Line items</MdHeading>
-
-        {/* a small pipe table */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5px" }}>
           <div>
             <span style={{ color: SYNTAX }}>| </span>
             <span style={{ color: MUTED }}>Item </span>
             <span style={{ color: SYNTAX }}>| </span>
+            <span style={{ color: MUTED }}>Description </span>
+            <span style={{ color: SYNTAX }}>| </span>
             <span style={{ color: MUTED }}>Amt </span>
             <span style={{ color: SYNTAX }}>|</span>
           </div>
-          <div style={{ color: MUTED }}>|---|---|</div>
-          {[
-            ["Widget assembly", "$480"],
-            ["USB-C cable", "$96"],
-            ["Mount bracket", "$58"],
-          ].map(([desc, amt]) => (
-            <div key={desc}>
+          <div style={{ color: MUTED }}>|---|---|---:|</div>
+          {LINE_ITEMS.map(([item, description, amount]) => (
+            <div key={item}>
               <span style={{ color: SYNTAX }}>| </span>
-              <span style={{ color: TEXT }}>{desc} </span>
+              <span style={{ color: TEXT }}>{item} </span>
               <span style={{ color: SYNTAX }}>| </span>
-              <span style={{ color: NUM }}>{amt} </span>
+              <span style={{ color: TEXT }}>{description} </span>
+              <span style={{ color: SYNTAX }}>| </span>
+              <span style={{ color: NUM }}>{amount} </span>
               <span style={{ color: SYNTAX }}>|</span>
             </div>
           ))}
         </div>
 
-        <div style={{ marginTop: "1px" }}>
-          <span style={{ color: SYNTAX, fontWeight: 700 }}>**</span>
-          <span style={{ color: KEY, fontWeight: 600 }}>Total</span>
-          <span style={{ color: SYNTAX, fontWeight: 700 }}>**</span>
-          <span style={{ color: NUM }}> $691</span>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "1.5px",
+            marginTop: "3px",
+          }}
+        >
+          {TOTALS.map(([label, value, strong]) => (
+            <div key={label}>
+              <span style={{ color: SYNTAX }}>| </span>
+              <span
+                style={{
+                  color: strong ? KEY : MUTED,
+                  fontWeight: strong ? 600 : 400,
+                }}
+              >
+                {label}{" "}
+              </span>
+              <span style={{ color: SYNTAX }}>| </span>
+              <span
+                style={{
+                  color: strong ? NUM : MUTED,
+                  fontWeight: strong ? 600 : 400,
+                }}
+              >
+                {value}{" "}
+              </span>
+              <span style={{ color: SYNTAX }}>|</span>
+            </div>
+          ))}
         </div>
-      </div>
 
-      {/* Tiny status caption bottom-left over the rendered side. */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: "5%",
-          left: `${PAD}%`,
-          ...(mono(6, MUTED, {
-            letterSpacing: "0.06em",
-          }) as CSSProperties),
-        }}
-      >
-        scanned → parsed
+        <div style={{ marginTop: "3px" }}>
+          <span style={{ color: SYNTAX }}>| </span>
+          <span style={{ color: MUTED }}>Authorized signature </span>
+          <span style={{ color: SYNTAX }}>| </span>
+          <span style={{ color: MUTED }}>Date </span>
+          <span style={{ color: SYNTAX }}>|</span>
+        </div>
       </div>
     </>
   );

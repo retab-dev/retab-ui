@@ -75,7 +75,7 @@ const ROW_INDENT: Record<HeroRow["kind"], number> = {
   cursor: 0,
 };
 
-type HeroScriptId = "invoice-review" | "bank-statement-workflow";
+type HeroScriptId = "invoice-review" | "claims-packet-workflow";
 
 type HeroScript = {
   sessionLead: string;
@@ -84,7 +84,7 @@ type HeroScript = {
 
 // Global script toggle. Switch this value to "invoice-review" to show the
 // paused-invoice review script.
-const ACTIVE_HERO_SCRIPT_ID: HeroScriptId = "bank-statement-workflow";
+const ACTIVE_HERO_SCRIPT_ID: HeroScriptId = "claims-packet-workflow";
 
 const invoiceReviewRows: HeroRow[] = [
   {
@@ -258,171 +258,171 @@ const invoiceReviewRows: HeroRow[] = [
   },
 ];
 
-const bankStatementWorkflowRows: HeroRow[] = [
+const claimsPacketWorkflowRows: HeroRow[] = [
   {
     kind: "thought",
     at: 0.5,
-    text: "Let's inspect this bank statement and turn the repeatable parts into a workflow.",
+    text: "Let's inspect the claims packet workflow before publishing this draft.",
   },
   {
     kind: "call",
     at: 1.4,
-    tool: "files_inspect",
-    args: '{ "file_id": "stmt_042", "args": { "kind": "pdf_image", "pages": [1] } }',
+    tool: "workflows_get",
+    args: '{ "workflow_id": "wf_claims_packet", "version": "draft" }',
   },
   {
     kind: "result",
     at: 2.4,
     marker: "info",
-    text: "3-page statement · checking account · May 2026 · two-column transaction table",
+    text: "5 blocks · split packet · extract ACORD · extract reports · review exceptions",
   },
 
   {
     kind: "thought",
     at: 3.3,
-    text: "I need the stable anchors first: account holder, statement period, balances, and transaction rows.",
+    text: "The graph shape is right. I want a cross-document check before clean claims go straight through.",
     beatStart: true,
   },
   {
     kind: "call",
     at: 3.9,
-    tool: "files_grep",
-    args: '{ "file_id": "stmt_042", "pattern": "Opening balance|Closing balance|Deposits|Withdrawals" }',
+    tool: "workflows_blocks_create",
+    args: '{ "workflow_id": "wf_claims_packet", "type": "conditional", "label": "policy_match" }',
   },
   {
     kind: "result",
     at: 5.0,
     marker: "ok",
-    text: "anchors found · opening balance · deposits · withdrawals · closing balance",
+    text: "policy_match · ACORD policy number must match police report",
   },
 
   {
     kind: "thought",
     at: 6.0,
-    text: "The layout is consistent. I'll create a workflow, then add an extract node for the fields and transaction rows.",
+    text: "Wiring the guard after the ACORD and police report extractions.",
     beatStart: true,
   },
   {
     kind: "call",
     at: 6.8,
-    tool: "workflows_create",
-    args: '{ "name": "bank_statement_reconciliation" }',
+    tool: "workflows_edges_create",
+    args: '{ "source": "extract_acord", "target": "policy_match" }',
   },
   {
     kind: "result",
     at: 7.8,
     marker: "ok",
-    text: "workflow_id: wf_bank_stmt · draft created",
+    text: "extract_acord -> policy_match",
   },
   {
     kind: "call",
     at: 8.5,
-    tool: "workflows_blocks_create",
-    args: '{ "workflow_id": "wf_bank_stmt", "type": "extract", "label": "extract_transactions", "config": { "json_schema": "bank_statement_v1" } }',
+    tool: "workflows_edges_create",
+    args: '{ "source": "extract_police_report", "target": "policy_match" }',
   },
   {
     kind: "result",
     at: 9.5,
     marker: "ok",
-    text: "extract_transactions · account fields and transactions[] configured",
+    text: "extract_police_report -> policy_match",
   },
 
   {
     kind: "thought",
     at: 10.4,
-    text: "Next I need a function node to reconcile running balances and flag missing dates.",
+    text: "Running the recent packet through the draft to see whether the guard catches the known mismatch.",
     beatStart: true,
   },
   {
     kind: "call",
     at: 11.2,
-    tool: "workflows_blocks_create",
-    args: '{ "workflow_id": "wf_bank_stmt", "type": "function", "label": "balance_check" }',
+    tool: "workflows_runs_create",
+    args: '{ "workflow_id": "wf_claims_packet", "version": "draft", "inputs": { "start": "claim_203.pdf" } }',
   },
   {
     kind: "result",
     at: 12.2,
-    marker: "ok",
-    text: "balance_check · duplicate transaction guard · required date guard",
+    marker: "info",
+    text: "run_42c9 · split complete · 3 extraction branches running",
   },
   {
     kind: "call",
     at: 13.0,
-    tool: "workflows_edges_create",
-    args: '{ "workflow_id": "wf_bank_stmt", "source": "extract_transactions", "target": "balance_check" }',
+    tool: "workflows_runs_get",
+    args: '{ "run_id": "run_42c9" }',
   },
   {
     kind: "result",
     at: 14.0,
-    marker: "ok",
-    text: "extract_transactions -> balance_check",
+    marker: "err",
+    text: "awaiting_review · policy mismatch · ACORD P-8947 · police P-8941",
   },
 
   {
     kind: "thought",
     at: 15.0,
-    text: "Let's run the sample through the draft workflow and see if the validation catches anything.",
+    text: "Good catch. Source boxes show the police report value is handwritten, so this should route to review.",
     beatStart: true,
   },
   {
     kind: "call",
     at: 15.8,
-    tool: "workflows_runs_create",
-    args: '{ "workflow_id": "wf_bank_stmt", "version": "draft", "inputs": { "start": "stmt_042" } }',
+    tool: "files_get_sources",
+    args: '{ "extraction_id": "ext_police_203", "path": "policy_number" }',
   },
   {
     kind: "result",
     at: 16.8,
-    marker: "info",
-    text: "run_91bd · extracting transactions · running balance function",
+    marker: "ok",
+    text: "pdf_bbox { page: 2, left: 0.58, top: 0.21, width: 0.12 }",
   },
   {
     kind: "call",
     at: 17.7,
-    tool: "workflows_runs_get",
-    args: '{ "run_id": "run_91bd" }',
+    tool: "workflows_blocks_update",
+    args: '{ "block_id": "policy_match", "on_fail": "claims_review" }',
   },
   {
     kind: "result",
     at: 18.7,
     marker: "ok",
-    text: "status: completed · 143 transactions · balance_check passed",
+    text: "policy_match failures route to claims_review · clean packets continue",
   },
 
   {
     kind: "thought",
     at: 19.7,
-    text: "Good. I'll add a review gate only for balance mismatches or rows with missing dates.",
+    text: "One clean dry run before publish.",
     beatStart: true,
   },
   {
     kind: "call",
     at: 20.5,
-    tool: "workflows_blocks_update",
-    args: '{ "block_id": "balance_check", "config": { "review": { "predicate": { "kind": "validation_failed" } } } }',
+    tool: "workflows_runs_create",
+    args: '{ "workflow_id": "wf_claims_packet", "version": "draft", "inputs": { "start": "claim_clean.pdf" } }',
   },
   {
     kind: "result",
     at: 21.5,
     marker: "ok",
-    text: "config.review · triggers only on reconciliation failures",
+    text: "status: completed · 3 docs · 27 fields · no review required",
+  },
+  {
+    kind: "call",
+    at: 22.3,
+    tool: "workflows_versions_publish",
+    args: '{ "workflow_id": "wf_claims_packet", "version": "draft" }',
+  },
+  {
+    kind: "result",
+    at: 23.3,
+    marker: "ok",
+    text: "version v12 published · production traffic 10%",
   },
   {
     kind: "final",
-    at: 22.8,
-    text: "Workflow drafted: bank statement reconciliation.",
-    diagram: [
-      "[PDF bank statement]",
-      "        |",
-      "        v",
-      "[extract fields + transactions]",
-      "        |",
-      "        v",
-      "[function node: balance check] ----fail----> [review gate]",
-      "        | pass",
-      "        v",
-      "[clean transaction JSON]",
-    ],
+    at: 24.4,
+    text: "Published the claims packet workflow with policy checks and targeted review.",
     beatStart: true,
   },
 ];
@@ -433,9 +433,9 @@ const HERO_SCRIPTS: Record<HeroScriptId, HeroScript> = {
       "inspect the paused invoice review and fix only the real issue",
     rows: invoiceReviewRows,
   },
-  "bank-statement-workflow": {
-    sessionLead: "Create a workflow to extract data from bank statements",
-    rows: bankStatementWorkflowRows,
+  "claims-packet-workflow": {
+    sessionLead: "Publish the claims packet workflow after a final run check",
+    rows: claimsPacketWorkflowRows,
   },
 };
 
@@ -825,24 +825,22 @@ function ClaudeCodeLogo({ style, ...props }: ComponentProps<"svg">) {
 
 function ClaudeCodeIntro() {
   return (
-    <div className="px-6 pt-[21px] pb-[18px] max-sm:px-[15px] max-sm:pt-[15px] max-sm:pb-[14px]">
-      <div className="flex items-center gap-5">
+    <div className="px-5 py-[14px] max-sm:px-[13px] max-sm:py-3">
+      <div className="flex min-w-0 items-center gap-4 font-mono max-sm:gap-3">
         <ClaudeCodeLogo
-          className="mcp-hero-accent h-10 w-16 shrink-0 max-sm:h-8 max-sm:w-12"
+          className="mcp-hero-accent h-8 w-12 shrink-0 max-sm:h-7 max-sm:w-10"
           aria-hidden={true}
         />
-        <div className="min-w-0 font-mono">
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span className="mcp-hero-strong text-[15px] font-semibold max-sm:text-[13px]">
-              Claude Code
-            </span>
-            <span className="mcp-hero-muted text-[13px] max-sm:text-[12px]">
-              v2.1.3
-            </span>
-          </div>
-          <p className="mcp-hero-muted mt-2 text-[13.5px] max-sm:text-[12px]">
+        <div className="flex min-w-0 items-baseline gap-2 whitespace-nowrap">
+          <span className="mcp-hero-strong text-[15px] font-semibold max-sm:text-[13px]">
+            Claude Code
+          </span>
+          <span className="mcp-hero-muted text-[13px] max-sm:text-[12px]">
+            v2.1.3
+          </span>
+          <span className="mcp-hero-muted text-[13px] max-sm:text-[12px]">
             Opus 4.7
-          </p>
+          </span>
         </div>
       </div>
     </div>
@@ -895,13 +893,13 @@ export function HeroTerminal() {
 
   return (
     <div className="mcp-hero-panel relative max-w-full min-w-0 overflow-hidden rounded-md border">
-      <div className="mcp-hero-titlebar relative flex items-center border-b p-2">
-        <div className="flex items-center gap-2.5">
-          <span className="size-2.5 rounded-full bg-[#ff5f57]" />
-          <span className="size-2.5 rounded-full bg-[#ffbd2e]" />
-          <span className="size-2.5 rounded-full bg-[#28c840]" />
+      <div className="mcp-hero-titlebar relative flex items-center border-b px-2 py-1.5">
+        <div className="flex items-center gap-2">
+          <span className="size-2 rounded-full bg-[#ff5f57]" />
+          <span className="size-2 rounded-full bg-[#ffbd2e]" />
+          <span className="size-2 rounded-full bg-[#28c840]" />
         </div>
-        <div className="mcp-hero-window-title pointer-events-none absolute inset-x-16 text-center font-mono text-[13px] leading-none tracking-[0.04em]">
+        <div className="mcp-hero-window-title pointer-events-none absolute inset-x-14 text-center font-mono text-[11px] leading-none tracking-normal">
           Terminal
         </div>
       </div>
@@ -913,7 +911,7 @@ export function HeroTerminal() {
           ref={streamRef}
           className="mcp-hero-window relative min-h-0 flex-1 overflow-hidden"
         >
-          <div className="mcp-hero-stream px-6 py-[18px] font-mono text-[13.5px] leading-[1.55] max-sm:px-[15px] max-sm:py-[14px] max-sm:text-[12px]">
+          <div className="mcp-hero-stream px-6 pt-[18px] pb-3 font-mono text-[13.5px] leading-[1.55] max-sm:px-[15px] max-sm:pt-[14px] max-sm:pb-2 max-sm:text-[12px]">
             <div className="mcp-hero-session-lead mb-5">
               &gt; {activeHeroScript.sessionLead}
             </div>

@@ -27,8 +27,8 @@ export function DrawerCardTile({
     card.id === "studio_evals" ||
     card.id === "k_llms_consensus" ||
     card.id === "human_in_loop"
-      ? "relative z-10 shrink-0 px-3 pt-4 pb-0 sm:px-4 sm:pt-6 sm:pb-0"
-      : "relative z-10 shrink-0 p-3 pb-0 sm:p-4 sm:pb-0";
+      ? "relative z-10 shrink-0 px-2.5 pt-3 pb-0 max-sm:gap-0 max-sm:pb-2! sm:px-4 sm:pt-6 sm:pb-0"
+      : "relative z-10 shrink-0 p-3 pb-0 max-sm:gap-0 max-sm:pb-2! sm:p-4 sm:pb-0";
 
   return (
     <Card
@@ -40,8 +40,19 @@ export function DrawerCardTile({
       )}
     >
       <CardHeader className={headerClassName}>
-        <div className="flex flex-col gap-1 pl-1 sm:pl-2">
-          <CardTitle className={cn(titleClassName)}>{card.title}</CardTitle>
+        <div className="flex flex-col gap-1 pl-0.5 sm:pl-2">
+          {card.mobileTitle ? (
+            <>
+              <CardTitle className={cn(titleClassName, "sm:hidden")}>
+                {card.mobileTitle}
+              </CardTitle>
+              <CardTitle className={cn(titleClassName, "hidden sm:block")}>
+                {card.title}
+              </CardTitle>
+            </>
+          ) : (
+            <CardTitle className={cn(titleClassName)}>{card.title}</CardTitle>
+          )}
           {card.subtitle && (
             <p className="text-muted-foreground font-[family-name:var(--font-dm-sans)] text-xs leading-relaxed font-normal md:text-sm">
               {card.subtitle}

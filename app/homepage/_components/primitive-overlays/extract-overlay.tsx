@@ -3,9 +3,8 @@ import type { CSSProperties } from "react";
 import { BAND, mono, PAD, primitive, transparent } from "./kit";
 
 // /extract — pull structured JSON from the document using a schema.
-// We draw crisp highlight rectangles exactly on real fields, tag each with
-// its schema key, and dock a compact JSON snippet in the corner to show the
-// captured output.
+// We draw crisp highlight rectangles exactly on real fields and tag each with
+// its schema key.
 
 const INK = primitive.ink;
 const MID = primitive.text;
@@ -84,7 +83,6 @@ function KeyTag({
 export function ExtractOverlay() {
   const sources: ReadonlyArray<{
     key: string;
-    value: string;
     box: {
       top: number;
       height: number;
@@ -94,25 +92,21 @@ export function ExtractOverlay() {
       color?: string;
       radius?: number;
     };
-    tag: { top: number; left?: number; right?: number; style?: CSSProperties };
-    valueColor: string;
+    tag: { top?: number; left?: number; right?: number; style?: CSSProperties };
   }> = [
     {
       key: "invoice_id",
-      value: "#2042",
       box: {
-        top: BAND.header + 2.1,
-        height: 3,
+        top: BAND.header + 6.2,
+        height: 3.1,
         right: PAD - 1.2,
-        width: "8.8%",
+        width: "13.2%",
         color: MID,
       },
-      tag: { top: BAND.header + 2.25, right: PAD + 8.7 },
-      valueColor: primitive.muted,
+      tag: { right: PAD + 13.6 },
     },
     {
       key: "bill_to",
-      value: "Northwind",
       box: {
         top: BAND.parties - 2.5,
         height: 12.5,
@@ -120,90 +114,72 @@ export function ExtractOverlay() {
         width: "44%",
       },
       tag: { top: BAND.parties - 6.3, left: PAD - 2 },
-      valueColor: primitive.muted,
     },
     {
       key: "issued_at",
-      value: "Mar 4",
       box: {
         top: BAND.parties - 0.2,
-        height: 2.2,
+        height: 2.7,
         right: PAD - 1,
-        width: "13.5%",
+        width: "24.8%",
         color: MID,
       },
-      tag: { top: BAND.parties - 0.15, right: PAD + 13.8 },
-      valueColor: primitive.muted,
+      tag: { right: PAD + 25 },
     },
     {
       key: "due_date",
-      value: "Apr 3",
       box: {
-        top: BAND.parties + 2.1,
-        height: 2.2,
+        top: BAND.parties + 4.7,
+        height: 2.7,
         right: PAD - 1,
-        width: "13.5%",
+        width: "24.8%",
         color: MID,
       },
-      tag: { top: BAND.parties + 2.15, right: PAD + 13.8 },
-      valueColor: primitive.muted,
+      tag: { right: PAD + 25 },
     },
     {
       key: "terms",
-      value: "Net 30",
       box: {
-        top: BAND.parties + 4.4,
-        height: 2.2,
+        top: BAND.parties + 9.6,
+        height: 2.7,
         right: PAD - 1,
-        width: "8.5%",
+        width: "15.2%",
         color: MID,
       },
-      tag: { top: BAND.parties + 4.45, right: PAD + 8.8 },
-      valueColor: primitive.muted,
+      tag: { right: PAD + 15.4 },
     },
     {
       key: "line_item",
-      value: "USB-C cable",
       box: {
-        top: BAND.row2 - 0.5,
-        height: 2.6,
-        left: PAD + 7.1,
-        width: "15.5%",
+        top: BAND.row2 - 0.1,
+        height: 3.5,
+        left: PAD + 15.7,
+        width: "24%",
         color: MID,
       },
-      tag: { top: BAND.row2 - 2.35, left: PAD + 7.1 },
-      valueColor: primitive.muted,
+      tag: { top: BAND.row2 - 3.9, left: PAD + 15.7 },
     },
     {
       key: "amount",
-      value: "$96",
       box: {
-        top: BAND.row2 - 0.5,
-        height: 2.6,
+        top: BAND.row2 - 0.1,
+        height: 3.5,
         right: PAD - 1.2,
         width: "7.4%",
         color: MID,
       },
-      tag: { top: BAND.row2 - 0.45, right: PAD + 7.8 },
-      valueColor: primitive.muted,
+      tag: { right: PAD + 7.8 },
     },
     {
       key: "total",
-      value: "$691",
       box: {
-        top: BAND.total + 0.1,
-        height: 2.8,
+        top: BAND.total + 1.2,
+        height: 3.9,
         right: PAD - 1.2,
-        width: "8.6%",
+        width: "10.2%",
       },
-      tag: { top: BAND.total + 0.15, right: PAD + 9 },
-      valueColor: INK,
+      tag: { right: PAD + 10.4 },
     },
-  ];
-
-  // JSON output panel — compact captured-data card docked low-left.
-  const pairs: ReadonlyArray<readonly [string, string, string]> = [
-    ...sources.map(({ key, value, valueColor }) => [key, value, valueColor] as const),
   ];
 
   return (
@@ -211,54 +187,11 @@ export function ExtractOverlay() {
       {sources.map(({ key, box, tag }) => (
         <div key={key}>
           <FieldBox {...box} />
-          <KeyTag {...tag}>{key}</KeyTag>
+          <KeyTag {...tag} top={tag.top ?? box.top}>
+            {key}
+          </KeyTag>
         </div>
       ))}
-
-      {/* captured JSON output panel */}
-      <div
-        style={{
-          position: "absolute",
-          left: `${PAD - 1}%`,
-          bottom: "3.2%",
-          width: "48%",
-          background: primitive.panel,
-          border: `1px solid ${primitive.lineStrong}`,
-          borderRadius: "5px",
-          padding: "4.5px 6px",
-          boxShadow: primitive.softShadow,
-          zIndex: 3,
-        }}
-      >
-        <div
-          style={mono(5.8, primitive.muted, {
-            letterSpacing: "0.06em",
-            marginBottom: "2px",
-          })}
-        >
-          {"{ extracted }"}
-        </div>
-        {pairs.map(([k, v, vColor]) => (
-          <div
-            key={k}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: "7px",
-              lineHeight: 1.32,
-            }}
-          >
-            <span style={mono(5.9, MID)}>{`"${k}"`}</span>
-            <span
-              style={mono(5.9, vColor, {
-                fontWeight: vColor === INK ? 600 : 400,
-              })}
-            >
-              {`"${v}"`}
-            </span>
-          </div>
-        ))}
-      </div>
     </>
   );
 }

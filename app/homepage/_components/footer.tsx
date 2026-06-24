@@ -3,6 +3,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 import { FooterCookiePreferencesButton } from "./footer-cookie-preferences-button";
+import { FooterThemeSelector } from "./footer-theme-selector";
 import { type FooterContent, type LinkItem } from "./homepage-types";
 import {
   focusRing,
@@ -141,6 +142,7 @@ export function MarketingFooter({ content }: { content: FooterContent }) {
 
         <div className="mt-6 flex min-h-8 flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <StatusIndicator status={content.status} />
+          <FooterThemeSelector options={content.themeOptions} />
         </div>
       </MarketingContainer>
     </footer>

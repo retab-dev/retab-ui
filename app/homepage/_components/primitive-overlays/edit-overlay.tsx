@@ -68,12 +68,17 @@ export function EditOverlay() {
       </EditableField>
 
       <EditableField
-        top={BAND.parties + 1.6}
+        top={BAND.parties + 4.2}
         right={PAD - 1.4}
-        width="21%"
+        width="24%"
         style={{ minHeight: "3.4%" }}
       >
-        <span style={mono(6.5, primitive.ink, { lineHeight: 1 })}>
+        <span
+          style={mono(6.5, primitive.ink, {
+            lineHeight: 1,
+            whiteSpace: "nowrap",
+          })}
+        >
           Apr 10, 2024
         </span>
       </EditableField>
@@ -109,17 +114,7 @@ export function EditOverlay() {
       >
         {/* label is preserved exactly as the document renders it */}
         <span style={mono(7, primitive.ink, { fontWeight: 600 })}>Total</span>
-        <span style={{ display: "flex", alignItems: "baseline", gap: "4px" }}>
-          {/* old value, ghosted + struck */}
-          <span
-            style={mono(7, primitive.muted, {
-              textDecoration: "line-through",
-              textDecorationColor: primitive.lineStrong,
-            })}
-          >
-            $691
-          </span>
-          {/* new value being typed in place */}
+        <span style={{ display: "flex", alignItems: "baseline" }}>
           <span style={{ display: "flex", alignItems: "center" }}>
             <span style={mono(7.5, primitive.ink, { fontWeight: 600 })}>
               $715

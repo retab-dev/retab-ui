@@ -49,6 +49,11 @@ export function transparent(color: string, amount: number): string {
   return `color-mix(in srgb, ${color} ${amount}%, transparent)`;
 }
 
+export const PRIMITIVE_STAGE = {
+  width: 210,
+  height: 297,
+} as const;
+
 export const mono = (
   size: number,
   color: string,
@@ -131,6 +136,55 @@ export function Chip({
     >
       {children}
     </div>
+  );
+}
+
+export function PrimitiveStage({ children }: { children: ReactNode }) {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      preserveAspectRatio="none"
+      style={{
+        display: "block",
+        height: "100%",
+        inset: 0,
+        position: "absolute",
+        width: "100%",
+      }}
+      viewBox={`0 0 ${PRIMITIVE_STAGE.width} ${PRIMITIVE_STAGE.height}`}
+    >
+      <foreignObject
+        height={PRIMITIVE_STAGE.height}
+        width={PRIMITIVE_STAGE.width}
+        x={0}
+        y={0}
+      >
+        <div
+          style={{
+            height: "100%",
+            overflow: "hidden",
+            position: "relative",
+            width: "100%",
+          }}
+        >
+          {children}
+        </div>
+      </foreignObject>
+    </svg>
+  );
+}
+
+export function PrimitiveBackdrop() {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        background: primitive.overlayFade,
+        backdropFilter: "saturate(0.9)",
+      }}
+    />
   );
 }
 
@@ -246,7 +300,7 @@ export function UniversalDocument() {
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: "3px",
+              gap: "8px",
               width: "42%",
             }}
           >
@@ -257,10 +311,18 @@ export function UniversalDocument() {
             ].map(([k, v]) => (
               <div
                 key={k}
-                style={{ display: "flex", justifyContent: "space-between" }}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  lineHeight: 1,
+                }}
               >
-                <span style={mono(6.5, primitive.muted)}>{k}</span>
-                <span style={mono(6.5, primitive.mid)}>{v}</span>
+                <span style={mono(6.5, primitive.muted, { lineHeight: 1 })}>
+                  {k}
+                </span>
+                <span style={mono(6.5, primitive.mid, { lineHeight: 1 })}>
+                  {v}
+                </span>
               </div>
             ))}
           </div>

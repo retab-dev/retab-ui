@@ -59,12 +59,10 @@ const K_LLMS_CONSENSUS_PALETTE = buildTonePalette(
   DEFAULT_K_LLMS_CONSENSUS_PALETTE,
 );
 
-const SOURCE_NODE_LEFT = 24;
 const COMPACT_SOURCE_NODE_WIDTH = 270;
 const SOURCE_NODE_PADDING = 10;
-const SOURCE_JSON_RIGHT_X =
-  SOURCE_NODE_LEFT + COMPACT_SOURCE_NODE_WIDTH - SOURCE_NODE_PADDING;
 const CONSENSUS_NODE_LEFT = 396;
+const DESKTOP_CARD_TITLE_LEFT = 24;
 
 const SCHEMA_FIELDS = [
   "loan_amount",
@@ -245,23 +243,40 @@ const sourceNodes = [
   { title: "Extraction C", code: SOURCE_EXAMPLES.c, y: 532 },
 ] as const;
 
+const compactExtractionLines = [
+  "bg-success/55",
+  "bg-success/55",
+  "bg-info/55",
+] as const;
+
+const compactExtractionValues = ["value 1", "value 1", "value 2"] as const;
+
 function ConsensusStaticCanvas({
+  className = "",
+  containerWidth,
   height,
   markerId,
   scale,
   tone,
 }: {
+  className?: string;
+  containerWidth: number;
   height: number;
   markerId: string;
   scale: number;
   tone: CardTone;
 }) {
   const palette = K_LLMS_CONSENSUS_PALETTE[tone];
+  const canvasLeft = (containerWidth - CANVAS_WIDTH * scale) / 2;
+  const sourceNodeLeft =
+    (DESKTOP_CARD_TITLE_LEFT - canvasLeft) / scale - SOURCE_NODE_PADDING;
+  const sourceJsonRightX =
+    sourceNodeLeft + COMPACT_SOURCE_NODE_WIDTH - SOURCE_NODE_PADDING;
 
   return (
     <div
       data-consensus-canvas
-      className="absolute top-1/2 left-1/2 origin-center"
+      className={`absolute top-1/2 left-1/2 origin-center ${className}`}
       style={{
         width: CANVAS_WIDTH,
         height,
@@ -288,7 +303,7 @@ function ConsensusStaticCanvas({
         </defs>
         <path
           className={palette.edgeClassName}
-          d={`M${SOURCE_JSON_RIGHT_X} 112 C336 112 344 306 ${CONSENSUS_NODE_LEFT} 334`}
+          d={`M${sourceJsonRightX} 112 C336 112 344 306 ${CONSENSUS_NODE_LEFT} 334`}
           fill="none"
           markerEnd={`url(#${markerId})`}
           stroke="currentColor"
@@ -299,7 +314,7 @@ function ConsensusStaticCanvas({
         />
         <path
           className={palette.edgeClassName}
-          d={`M${SOURCE_JSON_RIGHT_X} 366 C326 366 346 398 ${CONSENSUS_NODE_LEFT} 398`}
+          d={`M${sourceJsonRightX} 366 C326 366 346 398 ${CONSENSUS_NODE_LEFT} 398`}
           fill="none"
           markerEnd={`url(#${markerId})`}
           stroke="currentColor"
@@ -310,7 +325,7 @@ function ConsensusStaticCanvas({
         />
         <path
           className={palette.edgeClassName}
-          d={`M${SOURCE_JSON_RIGHT_X} 620 C336 620 344 492 ${CONSENSUS_NODE_LEFT} 462`}
+          d={`M${sourceJsonRightX} 620 C336 620 344 492 ${CONSENSUS_NODE_LEFT} 462`}
           fill="none"
           markerEnd={`url(#${markerId})`}
           stroke="currentColor"
@@ -325,7 +340,7 @@ function ConsensusStaticCanvas({
         <div
           className="absolute"
           key={sourceNode.title}
-          style={{ top: sourceNode.y, left: SOURCE_NODE_LEFT }}
+          style={{ top: sourceNode.y, left: sourceNodeLeft }}
         >
           <SourceNode
             data={{
@@ -343,6 +358,54 @@ function ConsensusStaticCanvas({
         style={{ left: CONSENSUS_NODE_LEFT }}
       >
         <ConsensusNode data={{ title: "Likelihoods", tone, isCompact: true }} />
+      </div>
+    </div>
+  );
+}
+
+function CompactConsensusCanvas({ className = "" }: { className?: string }) {
+  return (
+    <div
+      className={`absolute inset-x-2 top-0 bottom-2 flex min-h-0 flex-col justify-start ${className}`}
+    >
+      <div className="grid shrink-0 gap-1.5">
+        {sourceNodes.map((sourceNode, index) => (
+          <div
+            className="border-border bg-card/95 rounded-sm border px-2 py-1.5 shadow-sm"
+            key={sourceNode.title}
+          >
+            <div className="mb-1 flex items-center justify-between gap-1">
+              <span className="text-foreground/85 truncate text-[9px] leading-none font-medium">
+                {sourceNode.title}
+              </span>
+              <span className="bg-muted text-muted-foreground rounded-sm px-1 font-mono text-[8px] leading-3">
+                {compactExtractionValues[index]}
+              </span>
+            </div>
+            <div
+              className={`h-1 rounded-sm ${compactExtractionLines[index]}`}
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="border-muted-foreground/55 mx-auto min-h-6 w-px flex-1 border-l border-dashed" />
+
+      <div className="border-border bg-card/95 shrink-0 rounded-sm border px-2 py-2 shadow-sm">
+        <div className="mb-1.5 flex items-center justify-between gap-1">
+          <span>Likelihoods</span>
+          <span className="bg-muted text-muted-foreground rounded-sm px-1 font-mono text-[8px] leading-3">
+            0.67%
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-1">
+          {compactExtractionLines.map((lineClassName, index) => (
+            <span
+              className={`h-1 rounded-sm ${lineClassName}`}
+              key={`${lineClassName}-${index}`}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -411,7 +474,10 @@ export function KLlmsConsensusArt({ tone = "default" }: { tone?: CardTone }) {
           ref={containerRef}
           className="absolute inset-0 overflow-hidden rounded-sm"
         >
+          <CompactConsensusCanvas className="sm:hidden" />
           <ConsensusStaticCanvas
+            className="hidden sm:block"
+            containerWidth={containerSize.width}
             height={CANVAS_HEIGHT}
             markerId={markerId}
             scale={canvasScale}

@@ -81,8 +81,6 @@ export type ProductVisualContent = {
     | "enterprise";
 };
 
-export type LatestMetric = readonly [label: string, value: string];
-
 export type FeaturedLatestCard = {
   readonly id: string;
   readonly label: string;
@@ -97,11 +95,10 @@ export type SecondaryLatestCardTone = "light" | "dark";
 
 export type SecondaryLatestCardVisual =
   | {
-      readonly kind: "metrics";
-      readonly metrics: readonly LatestMetric[];
+      readonly kind: "retab-ui";
     }
   | {
-      readonly kind: "sandbox";
+      readonly kind: "enterprise-dots";
     };
 
 export type SecondaryLatestCard = {

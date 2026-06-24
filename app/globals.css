@@ -394,6 +394,30 @@
   }
 }
 
+@keyframes enterprise-dot-drift {
+  0%,
+  100% {
+    opacity: 0.16;
+    transform: translate3d(0, 0, 0) scale(0.84);
+  }
+
+  32% {
+    opacity: 0.56;
+    transform: translate3d(var(--dot-x-1), var(--dot-y-1), 0) scale(1);
+  }
+
+  68% {
+    opacity: 0.34;
+    transform: translate3d(var(--dot-x-2), var(--dot-y-2), 0) scale(0.92);
+  }
+}
+
+.homepage-enterprise-dot {
+  animation: enterprise-dot-drift var(--dot-duration, 6.8s) ease-in-out infinite
+    both;
+  will-change: opacity, transform;
+}
+
 .workflow-demo-graph-node {
   opacity: 0;
   animation: workflow-demo-fade-in 520ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -413,10 +437,16 @@
 
 @media (prefers-reduced-motion: reduce) {
   .workflow-demo-graph-node,
-  .workflow-demo-graph-edge {
+  .workflow-demo-graph-edge,
+  .homepage-enterprise-dot {
     animation: none !important;
     opacity: 1 !important;
     filter: none !important;
+  }
+
+  .homepage-enterprise-dot {
+    opacity: 0.4 !important;
+    transform: none !important;
   }
 }
 

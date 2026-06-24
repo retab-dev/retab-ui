@@ -19,6 +19,7 @@ export type CardTone = "default" | "warm";
 export type CardItem = {
   id: string;
   title: string;
+  mobileTitle?: string;
   subtitle?: string;
   theme: CardTheme;
   row: CardRow;

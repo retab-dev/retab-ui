@@ -7,7 +7,7 @@ export function LogoStrip({ logos }: { logos: readonly LogoContent[] }) {
   const repeatedLogos = [...logos, ...logos];
 
   return (
-    <div className="relative z-10 w-full overflow-hidden pb-12 md:pt-6 md:pb-10">
+    <div className="relative z-10 w-full overflow-hidden pb-12 max-md:-mx-6 max-md:w-[calc(100%+3rem)] md:pt-6 md:pb-10">
       <ul className="sr-only">
         {logos.map((logo) => (
           <li key={logo.id}>{logo.label}</li>

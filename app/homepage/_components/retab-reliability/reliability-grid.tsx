@@ -17,18 +17,18 @@ const reliabilityCards = [
   {
     id: "human_in_loop",
     title: "Review-based validation",
+    mobileTitle: "Reviews",
     theme: "human_in_loop",
     row: 8,
   },
 ] satisfies readonly CardItem[];
 
-const cardClassName =
-  "h-full min-h-64 border border-border shadow-sm sm:min-h-0";
-const evalsCardClassName = `${cardClassName} bg-card`;
-const consensusCardClassName = `${cardClassName} bg-card sm:row-span-2`;
-const validationCardClassName = `${cardClassName} bg-card`;
+const cardClassName = "h-full min-h-0 border border-border shadow-sm";
+const evalsCardClassName = `${cardClassName} col-start-2 row-start-1 bg-card`;
+const consensusCardClassName = `${cardClassName} col-start-1 row-start-1 row-span-2 bg-card`;
+const validationCardClassName = `${cardClassName} col-start-2 row-start-2 bg-card`;
 const titleClassName =
-  "max-w-[98%] text-base leading-[1.02] font-normal tracking-normal text-foreground sm:text-lg";
+  "max-w-[98%] text-[15px] leading-[1.04] font-normal tracking-normal break-words text-foreground sm:text-lg sm:leading-[1.02]";
 
 function getCardClassName(card: CardItem) {
   if (card.id === "k_llms_consensus") {
@@ -47,7 +47,7 @@ export function RetabReliabilityGrid() {
   return (
     <div
       aria-hidden="true"
-      className="grid w-full grid-cols-1 gap-3 sm:aspect-[16/11] sm:grid-cols-2 sm:grid-rows-2 sm:gap-4"
+      className="grid aspect-[4/3] w-full grid-cols-2 grid-rows-2 gap-3 sm:aspect-[16/11] sm:gap-4"
     >
       {reliabilityCards.map((card) => (
         <DrawerCardTile

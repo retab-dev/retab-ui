@@ -1,11 +1,13 @@
+import type { CSSProperties } from "react";
+
 import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 
 import { featuredLatestCard, secondaryLatestCards } from "./homepage-content";
+import { LatestConstellationCanvas } from "./latest-constellation";
 import {
   type FeaturedLatestCard as FeaturedLatestCardContent,
-  type LatestMetric,
   type SecondaryLatestCard as SecondaryLatestCardContent,
   type SecondaryLatestCardVisual,
 } from "./homepage-types";
@@ -17,30 +19,97 @@ const latestCardClass = cn(
   focusRing,
 );
 
-const metricCardClass =
-  "min-w-0 border-border bg-card/90 p-3 sm:flex sm:h-12 sm:items-center sm:justify-between sm:rounded-md sm:border sm:px-4 sm:py-0 sm:shadow-sm";
-
 const secondaryLatestCardClass = cn(
   latestCardClass,
   "min-h-72 flex-col p-5 sm:p-6 md:aspect-video lg:h-homepage-latest-card lg:min-h-0 lg:aspect-auto",
 );
 
-const metricRowLayoutClasses = [
-  "border-r border-b sm:border",
-  "border-b sm:border sm:w-56",
-  "border-r sm:border sm:ml-40 sm:w-56",
-  "sm:ml-auto sm:w-40",
+const enterpriseDots = [
+  { x: 18, y: 38, delay: 0, duration: 6.4, dx1: -8, dy1: 7, dx2: 9, dy2: -5 },
+  { x: 28, y: 28, delay: 420, duration: 7.1, dx1: 7, dy1: -6, dx2: -9, dy2: 5 },
+  { x: 39, y: 36, delay: 860, duration: 6.8, dx1: -5, dy1: -8, dx2: 7, dy2: 8 },
+  {
+    x: 52,
+    y: 24,
+    delay: 180,
+    duration: 7.6,
+    dx1: 10,
+    dy1: 5,
+    dx2: -6,
+    dy2: -7,
+  },
+  {
+    x: 66,
+    y: 34,
+    delay: 1040,
+    duration: 6.9,
+    dx1: -7,
+    dy1: 6,
+    dx2: 8,
+    dy2: -6,
+  },
+  {
+    x: 78,
+    y: 26,
+    delay: 640,
+    duration: 7.4,
+    dx1: 6,
+    dy1: 9,
+    dx2: -10,
+    dy2: -4,
+  },
+  {
+    x: 24,
+    y: 56,
+    delay: 1320,
+    duration: 7.8,
+    dx1: 9,
+    dy1: -5,
+    dx2: -7,
+    dy2: 6,
+  },
+  { x: 38, y: 66, delay: 260, duration: 6.6, dx1: -9, dy1: -7, dx2: 6, dy2: 5 },
+  {
+    x: 54,
+    y: 56,
+    delay: 1480,
+    duration: 7.2,
+    dx1: 8,
+    dy1: 6,
+    dx2: -5,
+    dy2: -9,
+  },
+  {
+    x: 70,
+    y: 64,
+    delay: 920,
+    duration: 6.7,
+    dx1: -6,
+    dy1: -9,
+    dx2: 10,
+    dy2: 4,
+  },
+  {
+    x: 84,
+    y: 52,
+    delay: 1560,
+    duration: 7.5,
+    dx1: 5,
+    dy1: 7,
+    dx2: -8,
+    dy2: -6,
+  },
 ] as const;
 
 export function LatestSection() {
   return (
     <section
       className="relative z-10 mt-16 md:mt-24 lg:mt-36"
-      aria-label="Latest Vercel updates"
+      aria-label="Latest Retab updates"
     >
       <SectionHeader
         title="Latest"
-        description="Recent launches, events, and updates shaping what's next on Vercel."
+        description="Recent product updates and releases from Retab."
       />
       <div className="mt-16 grid gap-5 lg:mt-20 lg:grid-cols-2 lg:items-stretch">
         <FeaturedLatestCardLink card={featuredLatestCard} />
@@ -64,16 +133,15 @@ function FeaturedLatestCardLink({ card }: { card: FeaturedLatestCardContent }) {
         "aspect-video w-full items-center justify-center lg:aspect-auto lg:h-full",
       )}
     >
-      <img
-        src={card.imageSrc}
-        width={690}
-        height={576}
-        alt=""
-        aria-hidden="true"
-        loading="lazy"
-        decoding="async"
-        className="absolute inset-0 size-full object-contain"
-      />
+      <LatestConstellationCanvas />
+      <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-3.5 px-6 text-center">
+        <span className="text-foreground text-3xl font-semibold tracking-tight sm:text-4xl">
+          Blog
+        </span>
+        <span className="text-muted-foreground text-sm">
+          Retab&apos;s engineering blog
+        </span>
+      </div>
     </Link>
   );
 }
@@ -108,61 +176,94 @@ function SecondaryLatestVisual({
   visual: SecondaryLatestCardVisual;
 }) {
   switch (visual.kind) {
-    case "metrics":
-      return <WorkflowMetricStrip metrics={visual.metrics} />;
-    case "sandbox":
-      return <SandboxGraphic />;
+    case "retab-ui":
+      return <RetabUiGraphic />;
+    case "enterprise-dots":
+      return <EnterpriseDotsGraphic />;
   }
 }
 
-function WorkflowMetricStrip({
-  metrics,
-}: {
-  metrics: readonly LatestMetric[];
-}) {
-  return (
-    <dl
-      aria-hidden="true"
-      className="border-border bg-card/90 absolute top-5 right-5 left-5 z-0 grid max-w-md grid-cols-2 overflow-hidden rounded-md border font-mono text-xs opacity-80 shadow-sm backdrop-blur transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none sm:top-10 sm:right-10 sm:left-auto sm:w-96 sm:grid-cols-1 sm:gap-4 sm:overflow-visible sm:border-0 sm:bg-transparent sm:shadow-none sm:backdrop-blur-none"
-    >
-      {metrics.map(([label, value], index) => (
-        <div
-          key={label}
-          className={cn(metricCardClass, metricRowLayoutClasses[index])}
-        >
-          <dt className="text-muted-foreground truncate">{label}</dt>
-          <dd className="text-foreground mt-2 sm:mt-0">
-            <MetricValue value={value} />
-          </dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-function MetricValue({ value }: { value: string }) {
-  if (!value.endsWith("ms")) {
-    return <span className="font-semibold">{value}</span>;
-  }
-
-  return (
-    <>
-      <span className="font-semibold">{value.slice(0, -2)}</span>
-      <span className="text-muted-foreground">ms</span>
-    </>
-  );
-}
-
-function SandboxGraphic() {
+function RetabUiGraphic() {
   return (
     <div
       aria-hidden="true"
-      className="absolute inset-0 z-0 overflow-hidden opacity-70 transition-opacity duration-300 group-hover:opacity-90 group-focus-visible:opacity-90 motion-reduce:transition-none"
+      className="absolute inset-0 z-0 overflow-hidden opacity-80 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
     >
-      <div className="from-background via-muted to-background absolute inset-0 bg-gradient-to-br" />
-      <div className="border-border/50 bg-card/40 absolute top-8 right-8 h-24 w-40 rounded-full border blur-sm" />
-      <div className="border-border/60 bg-card/55 absolute top-14 right-20 h-20 w-20 rotate-45 border shadow-xl" />
-      <div className="via-border absolute right-10 bottom-8 h-px w-56 bg-gradient-to-r from-transparent to-transparent" />
+      <div className="absolute inset-0 bg-white" />
+      <div className="absolute top-5 right-5 left-5 grid max-w-md grid-cols-[minmax(0,0.82fr)_minmax(0,1fr)] gap-3 font-mono text-xs sm:top-10 sm:right-10 sm:left-auto sm:w-96">
+        <div className="border-border/70 bg-background/80 flex min-w-0 flex-col rounded-md border shadow-sm backdrop-blur">
+          <div className="border-border/70 text-muted-foreground flex h-8 items-center gap-2 border-b px-2">
+            <span className="bg-foreground/20 h-3 w-3 rounded-sm" />
+            <span className="truncate">file-viewer.tsx</span>
+          </div>
+          <div className="space-y-2 p-2">
+            <div className="border-border/70 bg-card h-14 rounded border" />
+            <div className="grid grid-cols-3 gap-1.5">
+              <span className="bg-foreground/15 h-2 rounded" />
+              <span className="bg-foreground/10 h-2 rounded" />
+              <span className="bg-foreground/15 h-2 rounded" />
+            </div>
+          </div>
+        </div>
+        <div className="grid min-w-0 gap-2">
+          <div className="border-border/70 bg-background/80 rounded-md border p-2 shadow-sm backdrop-blur">
+            <div className="grid grid-cols-3 gap-1.5">
+              <span className="bg-foreground/20 h-2 rounded" />
+              <span className="bg-foreground/10 h-2 rounded" />
+              <span className="bg-foreground/15 h-2 rounded" />
+            </div>
+            <div className="border-border/60 mt-2 grid grid-cols-3 gap-px overflow-hidden rounded border">
+              {Array.from({ length: 9 }).map((_, index) => (
+                <span
+                  key={index}
+                  className={cn(
+                    "bg-card h-4",
+                    index % 2 === 0 && "bg-muted/60",
+                  )}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="border-border/70 bg-background/80 grid grid-cols-2 gap-2 rounded-md border p-2 shadow-sm backdrop-blur">
+            <span className="border-border/60 bg-card h-8 rounded border" />
+            <span className="border-border/60 bg-card h-8 rounded border" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EnterpriseDotsGraphic() {
+  return (
+    <div
+      aria-hidden="true"
+      className="absolute inset-0 z-0 overflow-hidden opacity-75 transition-opacity duration-300 group-hover:opacity-95 group-focus-visible:opacity-95 motion-reduce:transition-none"
+    >
+      <div className="absolute inset-0 bg-white" />
+      <div className="absolute top-8 right-8 h-36 w-64 sm:top-12 sm:right-14">
+        {enterpriseDots.map((dot, index) => (
+          <span
+            key={`${dot.x}-${dot.y}`}
+            className={cn(
+              "homepage-enterprise-dot bg-foreground/50 absolute size-1.5 rounded-full",
+              index % 3 === 0 && "size-2",
+            )}
+            style={
+              {
+                "--dot-duration": `${dot.duration}s`,
+                "--dot-x-1": `${dot.dx1}px`,
+                "--dot-x-2": `${dot.dx2}px`,
+                "--dot-y-1": `${dot.dy1}px`,
+                "--dot-y-2": `${dot.dy2}px`,
+                animationDelay: `${dot.delay}ms`,
+                left: `${dot.x}%`,
+                top: `${dot.y}%`,
+              } as CSSProperties
+            }
+          />
+        ))}
+      </div>
     </div>
   );
 }

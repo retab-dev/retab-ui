@@ -81,6 +81,12 @@ function AgentsVisual() {
           flex: 1 1 0;
           height: auto;
         }
+
+        @media (max-width: 640px) {
+          .mcp-product-terminal .mcp-hero-panel {
+            aspect-ratio: 32 / 27;
+          }
+        }
       `}</style>
     </div>
   );
@@ -90,13 +96,13 @@ function EnterpriseVisual() {
   return (
     <div
       aria-hidden="true"
-      className="border-border bg-card relative aspect-[4/5] w-full overflow-hidden rounded-md border shadow-sm sm:aspect-[16/11]"
+      className="border-border bg-card relative aspect-[10/11] w-full overflow-hidden rounded-md border shadow-sm sm:aspect-[16/11]"
     >
       <div className="bg-card absolute inset-0" />
       <div className="absolute inset-0 overflow-hidden">
         <EnterpriseFlowingLines />
 
-        <div className="border-border/80 bg-card absolute top-1/2 left-1/2 z-10 flex w-[min(90%,32rem)] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3 rounded-md border p-4 text-center shadow-sm sm:w-[30rem] md:top-[43%] md:gap-4 md:p-6">
+        <div className="border-border/80 bg-card/60 absolute top-1/2 left-1/2 z-10 flex w-[min(90%,32rem)] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3 rounded-md border p-4 text-center shadow-sm backdrop-blur-[1px] sm:w-[30rem] md:top-[43%] md:gap-4 md:p-6">
           <div className="border-border bg-background flex size-12 items-center justify-center rounded-md border shadow-sm sm:size-14">
             <LockKeyhole
               aria-hidden="true"
@@ -129,7 +135,7 @@ function EnterpriseVisual() {
         <div className="absolute right-5 bottom-5 left-5 z-20 hidden grid-cols-3 gap-3 md:grid">
           {enterpriseControls.map(([label, detail]) => (
             <div
-              className="border-border bg-card/95 rounded-md border p-4 text-left shadow-sm"
+              className="border-border bg-card/60 rounded-md border p-4 text-left shadow-sm backdrop-blur-[1px]"
               key={label}
             >
               <p className="text-foreground text-sm font-medium">{label}</p>

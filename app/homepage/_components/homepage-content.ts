@@ -316,41 +316,35 @@ export const productLanes = [
 ] as const satisfies readonly ProductLaneContent[];
 
 export const featuredLatestCard = {
-  id: "ship-26",
-  label: "Ship 26",
-  title: "Ship",
-  badge: "26",
-  href: vercelHref("/ship"),
+  id: "blog",
+  label: "Blog",
+  title: "Blog",
+  badge: "",
+  href: vercelHref("/blog"),
   imageSrc:
     "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/ship-26-homepage.svg",
-  alt: "Vercel Ship 26 conference",
+  alt: "Retab's engineering blog",
 } as const satisfies FeaturedLatestCard;
 
 export const secondaryLatestCards = [
   {
-    id: "workflows",
-    label: "Workflows",
-    body: "Pause for minutes or months, then resume from that exact point.",
-    href: vercelHref("/workflows"),
+    id: "retab-ui",
+    label: "@retab/ui",
+    body: "Open-source UI components for your document workflows",
+    href: vercelHref("/docs/components"),
     tone: "light",
     visual: {
-      kind: "metrics",
-      metrics: [
-        ["workflow()", "420ms"],
-        ["gen()", "252ms"],
-        ["eval()", "168ms"],
-        ["pub()", "168ms"],
-      ],
+      kind: "retab-ui",
     },
   },
   {
-    id: "sandbox",
-    label: "Sandbox",
-    body: "The safest way to run code you didn't write.",
-    href: vercelHref("/sandbox"),
+    id: "enterprise-features",
+    label: "Enterprise features",
+    body: "Security, privacy, and deployment controls for production document workflows.",
+    href: vercelHref("/product/pricing"),
     tone: "light",
     visual: {
-      kind: "sandbox",
+      kind: "enterprise-dots",
     },
   },
 ] as const satisfies readonly SecondaryLatestCard[];

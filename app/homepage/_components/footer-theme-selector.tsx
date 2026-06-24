@@ -70,7 +70,7 @@ export function FooterThemeSelector({
     <fieldset
       role="radiogroup"
       aria-label="Select a display theme"
-      className="border-border bg-card inline-flex h-6 rounded-full border shadow-sm"
+      className="border-border bg-card inline-flex h-6 w-fit shrink-0 rounded-full border shadow-sm"
     >
       <legend className="sr-only">Select a display theme</legend>
       {options.map((option, index) => {

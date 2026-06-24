@@ -15,7 +15,7 @@ import {
 import { Maximize, Minus, Plus } from "lucide-react";
 import "@xyflow/react/dist/style.css";
 
-import { useMountEffect } from "@/hooks/useMountEffect";
+import { KeyedRunner } from "@/hooks/KeyedRunner";
 
 import { WorkflowDemoNode } from "./workflow-demo-node";
 import {
@@ -33,6 +33,10 @@ interface WorkflowDemoCanvasProps {
   onNodesChange: (changes: NodeChange<DemoNode>[]) => void;
 }
 
+const workflowDemoFitPadding = 0.08;
+const workflowDemoFitMinZoom = 0.12;
+const workflowDemoMinZoom = 0.1;
+
 function WorkflowDemoFitViewRunner({
   nodes,
   fitView,
@@ -42,25 +46,58 @@ function WorkflowDemoFitViewRunner({
   fitView: ReturnType<typeof useReactFlow>["fitView"];
   reactFlowWrapperRef: React.RefObject<HTMLDivElement | null>;
 }) {
-  const hasInitialFitViewRef = useRef(false);
+  const fitKey = nodes.length > 0 ? `workflow-demo-fit-${nodes.length}` : null;
 
-  useMountEffect(() => {
-    if (hasInitialFitViewRef.current || nodes.length === 0) return;
+  if (!fitKey) return null;
 
-    const timer = setTimeout(() => {
-      const wrapperRect = reactFlowWrapperRef.current?.getBoundingClientRect();
-      if (!wrapperRect || wrapperRect.width <= 0 || wrapperRect.height <= 0) {
-        return;
-      }
+  return (
+    <KeyedRunner
+      key={fitKey}
+      effect={() => {
+        const wrapper = reactFlowWrapperRef.current;
+        if (!wrapper) return;
 
-      hasInitialFitViewRef.current = true;
-      fitView({ padding: 0.08, duration: 200, minZoom: 0.34 });
-    }, 50);
+        let frameId: number | null = null;
+        const settleTimerIds: number[] = [];
 
-    return () => clearTimeout(timer);
-  });
+        const fitCanvas = (duration: number) => {
+          const wrapperRect = wrapper.getBoundingClientRect();
+          if (wrapperRect.width <= 0 || wrapperRect.height <= 0) return;
 
-  return null;
+          void fitView({
+            padding: workflowDemoFitPadding,
+            duration,
+            minZoom: workflowDemoFitMinZoom,
+          });
+        };
+
+        const scheduleFitCanvas = (duration: number) => {
+          if (frameId !== null) window.cancelAnimationFrame(frameId);
+          frameId = window.requestAnimationFrame(() => {
+            frameId = null;
+            fitCanvas(duration);
+          });
+        };
+
+        scheduleFitCanvas(180);
+        settleTimerIds.push(
+          window.setTimeout(() => scheduleFitCanvas(180), 120),
+          window.setTimeout(() => scheduleFitCanvas(0), 360),
+        );
+
+        const resizeObserver = new ResizeObserver(() => {
+          scheduleFitCanvas(0);
+        });
+        resizeObserver.observe(wrapper);
+
+        return () => {
+          resizeObserver.disconnect();
+          if (frameId !== null) window.cancelAnimationFrame(frameId);
+          settleTimerIds.forEach((timerId) => window.clearTimeout(timerId));
+        };
+      }}
+    />
+  );
 }
 
 function WorkflowViewportControls() {
@@ -71,7 +108,12 @@ function WorkflowViewportControls() {
     [
       "Fit view",
       Maximize,
-      () => void fitView({ padding: 0.08, duration: 180, minZoom: 0.34 }),
+      () =>
+        void fitView({
+          padding: workflowDemoFitPadding,
+          duration: 180,
+          minZoom: workflowDemoFitMinZoom,
+        }),
     ],
   ] as const;
 
@@ -116,11 +158,6 @@ export function WorkflowDemoCanvas({
 
   return (
     <div ref={reactFlowWrapperRef} className="relative h-full w-full">
-      <WorkflowDemoFitViewRunner
-        fitView={fitView}
-        nodes={nodes}
-        reactFlowWrapperRef={reactFlowWrapperRef}
-      />
       <ReactFlow<DemoNode, DemoEdge>
         nodes={nodes}
         edges={edges}
@@ -130,6 +167,7 @@ export function WorkflowDemoCanvas({
         elementsSelectable
         nodesFocusable
         edgesFocusable
+        onlyRenderVisibleElements={false}
         panOnDrag
         autoPanOnNodeDrag={false}
         zoomOnScroll
@@ -143,8 +181,11 @@ export function WorkflowDemoCanvas({
         snapToGrid
         snapGrid={[12, 12]}
         fitView
-        fitViewOptions={{ padding: 0.08, minZoom: 0.34 }}
-        minZoom={0.24}
+        fitViewOptions={{
+          padding: workflowDemoFitPadding,
+          minZoom: workflowDemoFitMinZoom,
+        }}
+        minZoom={workflowDemoMinZoom}
         maxZoom={1.4}
         deleteKeyCode={null}
         className="workflow-demo-canvas bg-card h-full w-full"
@@ -158,6 +199,11 @@ export function WorkflowDemoCanvas({
           className="opacity-20 dark:opacity-30"
         />
       </ReactFlow>
+      <WorkflowDemoFitViewRunner
+        fitView={fitView}
+        nodes={nodes}
+        reactFlowWrapperRef={reactFlowWrapperRef}
+      />
       <WorkflowViewportControls />
     </div>
   );
