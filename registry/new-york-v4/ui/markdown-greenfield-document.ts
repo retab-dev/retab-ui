@@ -265,9 +265,8 @@ function createMarkdownGreenfieldBlocks({
       (sourceRange
         ? text.slice(sourceRange.startOffset, sourceRange.endOffset)
         : "");
-    const sourceMetrics = markdownGreenfieldSourceMetricsForText(
-      normalizedSourceText,
-    );
+    const sourceMetrics =
+      markdownGreenfieldSourceMetricsForText(normalizedSourceText);
     const line = sourceRange?.startLine ?? unified.sourceMap.lineCount;
     const block: MarkdownGreenfieldBlock = {
       hastChildren: [child],

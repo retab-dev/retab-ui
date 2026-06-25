@@ -888,8 +888,7 @@
           "type": "registry:lib",
           "target": "@lib/viewer-source.ts"
         }
-      ],
-      "registryDependencies": []
+      ]
     },
     {
       "name": "docx-document-resource",
@@ -922,8 +921,7 @@
           "type": "registry:lib",
           "target": "@lib/viewer-source.ts"
         }
-      ],
-      "registryDependencies": []
+      ]
     },
     {
       "name": "csv-viewer",
@@ -947,11 +945,6 @@
           "path": "registry/new-york-v4/ui/csv-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/csv-viewer.tsx"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-viewer-internal.tsx",
-          "type": "registry:ui",
-          "target": "@ui/file-viewer-internal.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/file-viewer-core.ts",
@@ -1321,11 +1314,6 @@
           "target": "@ui/docx-viewer.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/file-viewer-internal.tsx",
-          "type": "registry:ui",
-          "target": "@ui/file-viewer-internal.tsx"
-        },
-        {
           "path": "registry/new-york-v4/ui/file-viewer-core.ts",
           "type": "registry:ui",
           "target": "@ui/file-viewer-core.ts"
@@ -1443,11 +1431,6 @@
           "target": "@ui/image-viewer.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/file-viewer-internal.tsx",
-          "type": "registry:ui",
-          "target": "@ui/file-viewer-internal.tsx"
-        },
-        {
           "path": "registry/new-york-v4/ui/file-viewer-core.ts",
           "type": "registry:ui",
           "target": "@ui/file-viewer-core.ts"
@@ -1549,9 +1532,6 @@
       "type": "registry:ui",
       "title": "Layout Blocks",
       "description": "A provider-agnostic layout inspection component for OCR output: normalize Google Document AI, AWS Textract, or Azure Document Intelligence into shared blocks, lines, and words, then review them over the source page with virtualized rows, confidence filtering, and precise overlays.",
-      "dependencies": [
-        "@tanstack/react-virtual@^3.13.12"
-      ],
       "registryDependencies": [
         "@retab/document-evidence",
         "@retab/file-viewer",
@@ -1831,11 +1811,6 @@
           "target": "@ui/xlsx-viewer.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/file-viewer-internal.tsx",
-          "type": "registry:ui",
-          "target": "@ui/file-viewer-internal.tsx"
-        },
-        {
           "path": "registry/new-york-v4/ui/file-viewer-core.ts",
           "type": "registry:ui",
           "target": "@ui/file-viewer-core.ts"
@@ -2025,7 +2000,9 @@
       "dependencies": [
         "lucide-react",
         "marked@18.0.5",
-        "dompurify@3.4.9"
+        "dompurify@3.4.9",
+        "@radix-ui/react-slot@^1.1.1",
+        "class-variance-authority@^0.7.1"
       ],
       "registryDependencies": [
         "@retab/utils",
@@ -2040,7 +2017,9 @@
         "@retab/text-viewer-chenglou",
         "@retab/markdown-viewer",
         "@retab/viewer-controls",
-        "@retab/skeleton"
+        "@retab/skeleton",
+        "separator",
+        "@retab/spinner"
       ],
       "files": [
         {
@@ -2049,19 +2028,24 @@
           "target": "@ui/file-viewer.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/file-viewer-internal.tsx",
+          "path": "registry/new-york-v4/ui/file-viewer-body.tsx",
           "type": "registry:ui",
-          "target": "@ui/file-viewer-internal.tsx"
+          "target": "@ui/file-viewer-body.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/file-viewer-document.tsx",
+          "path": "registry/new-york-v4/ui/file-viewer-context.tsx",
           "type": "registry:ui",
-          "target": "@ui/file-viewer-document.tsx"
+          "target": "@ui/file-viewer-context.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/file-viewer-route.tsx",
+          "path": "registry/new-york-v4/ui/file-viewer-controls-context.ts",
           "type": "registry:ui",
-          "target": "@ui/file-viewer-route.tsx"
+          "target": "@ui/file-viewer-controls-context.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-controls-store.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-controls-store.ts"
         },
         {
           "path": "registry/new-york-v4/ui/file-viewer-core.ts",
@@ -2069,9 +2053,119 @@
           "target": "@ui/file-viewer-core.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/file-viewer-csv-viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-csv-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-document.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-document.tsx"
+        },
+        {
           "path": "registry/new-york-v4/ui/file-viewer-fallback.tsx",
           "type": "registry:ui",
           "target": "@ui/file-viewer-fallback.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-frame.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-frame.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-header.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-header.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-html-viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-html-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-preview.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-preview.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-provider.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-provider.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-resource-state.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-resource-state.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-route.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-route.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-state.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-state.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-text-resource.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-text-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-body.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-body.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-chrome.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-chrome.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-diagnostics.ts",
+          "type": "registry:ui",
+          "target": "@ui/viewer-diagnostics.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-header-outlet.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-header-outlet.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-internals.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-internals.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-measurement.ts",
+          "type": "registry:ui",
+          "target": "@ui/viewer-measurement.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-root.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-root.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-sidebar.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-sidebar.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-surface.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-surface.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-types.ts",
+          "type": "registry:ui",
+          "target": "@ui/viewer-types.ts"
         },
         {
           "path": "registry/new-york-v4/ui/viewer-zoom.tsx",
@@ -2089,19 +2183,9 @@
           "target": "@ui/viewer-lru-cache.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/file-viewer-text-resource.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-viewer-text-resource.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-viewer-html-viewer.tsx",
-          "type": "registry:ui",
-          "target": "@ui/file-viewer-html-viewer.tsx"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-viewer-csv-viewer.tsx",
-          "type": "registry:ui",
-          "target": "@ui/file-viewer-csv-viewer.tsx"
+          "path": "registry/new-york-v4/lib/pdf-viewer-diagnostics.ts",
+          "type": "registry:lib",
+          "target": "@lib/pdf-viewer-diagnostics.ts"
         },
         {
           "path": "registry/new-york-v4/lib/viewer-download-actions.ts",
@@ -2137,7 +2221,6 @@
       "description": "A document workspace over a flat object-store manifest with list, grid, columns, lazy folders, generated thumbnails, and FileViewer previews.",
       "dependencies": [
         "lucide-react",
-        "@tanstack/react-virtual",
         "@pierre/trees@1.0.0-beta.4"
       ],
       "registryDependencies": [
@@ -4048,6 +4131,11 @@
           "path": "components/json-form/virtual-list.tsx",
           "type": "registry:component",
           "target": "@components/json-form/virtual-list.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/measured-row-virtualization.ts",
+          "type": "registry:ui",
+          "target": "@ui/measured-row-virtualization.ts"
         }
       ],
       "categories": [
@@ -4058,7 +4146,6 @@
         "@radix-ui/react-checkbox@^1.1.3",
         "@radix-ui/react-label@^2.1.1",
         "@radix-ui/react-slot@^1.1.1",
-        "@tanstack/react-virtual@^3.13.12",
         "lucide-react@^0.460.0"
       ]
     },
@@ -4070,7 +4157,6 @@
       "dependencies": [
         "react-hook-form",
         "json-schema",
-        "@tanstack/react-virtual",
         "@radix-ui/react-checkbox@^1.1.3",
         "@radix-ui/react-label@^2.1.1",
         "@radix-ui/react-slot@^1.1.1",
@@ -4286,6 +4372,11 @@
           "path": "components/json-form/virtual-list.tsx",
           "type": "registry:component",
           "target": "@components/json-form/virtual-list.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/measured-row-virtualization.ts",
+          "type": "registry:ui",
+          "target": "@ui/measured-row-virtualization.ts"
         }
       ],
       "categories": [
@@ -4302,7 +4393,6 @@
         "@radix-ui/react-checkbox@^1.1.3",
         "@radix-ui/react-label@^2.1.1",
         "@radix-ui/react-slot@^1.1.1",
-        "@tanstack/react-virtual@^3.13.12",
         "lucide-react@^0.460.0"
       ],
       "registryDependencies": [
@@ -4479,6 +4569,11 @@
           "path": "components/json-form/virtual-list.tsx",
           "type": "registry:component",
           "target": "@components/json-form/virtual-list.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/measured-row-virtualization.ts",
+          "type": "registry:ui",
+          "target": "@ui/measured-row-virtualization.ts"
         }
       ],
       "categories": [
@@ -4696,8 +4791,7 @@
       "description": "A document workspace over a flat object-store manifest with list, grid, columns, generated thumbnails, and persistent file previews.",
       "dependencies": [
         "lucide-react",
-        "@pierre/trees",
-        "@tanstack/react-virtual"
+        "@pierre/trees"
       ],
       "registryDependencies": [
         "@retab/file-system"
@@ -4947,18 +5041,22 @@
       "type": "registry:ui",
       "title": "Interactive item list",
       "description": "A virtualized listbox interaction primitive for preview, selection, keyboard navigation, and visible-item reporting.",
-      "dependencies": [
-        "@tanstack/react-virtual@^3.13.12"
-      ],
       "registryDependencies": [
         "@retab/scroll-area",
-        "@retab/utils"
+        "@retab/utils",
+        "@retab/effect-key",
+        "@retab/use-keyed-layout-effect"
       ],
       "files": [
         {
           "path": "registry/new-york-v4/ui/interactive-item-list.tsx",
           "type": "registry:ui",
           "target": "@ui/interactive-item-list.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/measured-row-virtualization.ts",
+          "type": "registry:ui",
+          "target": "@ui/measured-row-virtualization.ts"
         }
       ]
     },
@@ -5137,6 +5235,31 @@
           "target": "@ui/code-viewer-syntax.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/code-viewer-syntax-protocol.ts",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-syntax-protocol.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/code-viewer-syntax-prism.ts",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-syntax-prism.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/code-viewer-syntax-worker.ts",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-syntax-worker.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/code-viewer-syntax.worker.ts",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-syntax.worker.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/code-viewer-prism-components.d.ts",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-prism-components.d.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/code-viewer-syntax-style.tsx",
           "type": "registry:ui",
           "target": "@ui/code-viewer-syntax-style.tsx"
@@ -5254,11 +5377,6 @@
           "path": "registry/new-york-v4/ui/text-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/text-viewer.tsx"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-viewer-internal.tsx",
-          "type": "registry:ui",
-          "target": "@ui/file-viewer-internal.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/file-viewer-core.ts",

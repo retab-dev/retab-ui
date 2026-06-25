@@ -21,11 +21,16 @@ import {
 } from "./markdown-greenfield-layout";
 import { MarkdownGreenfieldChunkRenderer } from "./markdown-greenfield-renderer";
 import {
+  createMarkdownGreenfieldVisibleProjection,
+  getMarkdownGreenfieldProjectedVisibleFrames,
   getMarkdownGreenfieldScrollAnchor,
   getMarkdownGreenfieldScrollTopForLineRange,
-  getMarkdownGreenfieldVisibleFrames,
+  getMarkdownGreenfieldVisibleProjection,
+  getMarkdownGreenfieldVisibleRange,
+  isMarkdownGreenfieldVisibleProjectionSameWindow,
   resolveMarkdownGreenfieldScrollAnchor,
   type MarkdownGreenfieldScrollAnchor,
+  type MarkdownGreenfieldVisibleProjection,
 } from "./markdown-greenfield-virtualizer";
 import type {
   MarkdownHastElement,
@@ -50,11 +55,16 @@ const DEFAULT_VIEWPORT_WIDTH = 900;
 const INITIAL_CONTENT_WIDTH = 820;
 const VIEWER_HORIZONTAL_PADDING = 32;
 const OVERSCAN_PX = 800;
+const NATIVE_FIND_TEXT_BATCH_CHUNKS = 16;
+const NATIVE_FIND_TEXT_CACHE_LIMIT = 512;
+const NATIVE_FIND_TEXT_IDLE_MIN_REMAINING_MS = 4;
 const MARKDOWN_GREENFIELD_HIGHLIGHT_STYLE = {
   backgroundColor:
     "color-mix(in oklab, var(--foreground) 8%, var(--background))",
   boxShadow: "inset 2px 0 0 0 var(--primary)",
 } satisfies React.CSSProperties;
+
+const nativeFindTextCache = new Map<string, string>();
 
 type MarkdownIdleWindow = Window &
   typeof globalThis & {
@@ -69,6 +79,16 @@ type ViewportSize = {
 
 type MarkdownScrollToLineOptions = ScrollToOptions & {
   preferredChunkId?: string | null;
+};
+
+type NativeFindTextRecord = {
+  chunk: MarkdownGreenfieldChunk;
+  text: string;
+};
+
+type NativeFindTextState = {
+  entries: readonly NativeFindTextRecord[];
+  key: string | null;
 };
 
 export type MarkdownViewerProps = TextViewerProps & {
@@ -120,20 +140,22 @@ export function MarkdownGreenfieldContent({
   const downloadAction = download ? resource.originalDownload : null;
   const [downloadError, setDownloadError] = React.useState("");
   const [fontScale, setFontScale] = React.useState(1);
-  const [measuredHeights, setMeasuredHeights] = React.useState(
-    () => new Map<string, number>(),
-  );
   const [measuredHeightsRevision, setMeasuredHeightsRevision] =
     React.useState(0);
-  const [scrollTop, setScrollTop] = React.useState(0);
   const [viewportSize, setViewportSize] = React.useState<ViewportSize>({
     height: 0,
     width: 0,
   });
   const [contentWidth, setContentWidth] = React.useState(INITIAL_CONTENT_WIDTH);
+  const documentRef = React.useRef(document);
+  const measuredHeightsRef = React.useRef(new Map<string, number>());
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
   const scrollTopRef = React.useRef(0);
   const scrollFrameRef = React.useRef<number | null>(null);
+  const frameChunksRef = React.useRef<readonly MarkdownGreenfieldChunkFrame[]>(
+    [],
+  );
+  const viewportHeightRef = React.useRef(DEFAULT_VIEWPORT_HEIGHT);
   const pendingMeasuredHeightsRef = React.useRef(new Map<string, number>());
   const measuredHeightFrameRef = React.useRef<number | null>(null);
   const pendingAnchorRef = React.useRef<MarkdownGreenfieldScrollAnchor | null>(
@@ -150,7 +172,7 @@ export function MarkdownGreenfieldContent({
         chunk: MarkdownGreenfieldChunk,
         context: MarkdownGreenfieldMeasurementContext,
       ) =>
-        measuredHeights.get(
+        measuredHeightsRef.current.get(
           measuredHeightKey({
             chunk,
             context,
@@ -159,7 +181,7 @@ export function MarkdownGreenfieldContent({
         ),
       cacheKey: `${documentMeasurementId}:${measuredHeightsRevision}`,
     }),
-    [documentMeasurementId, measuredHeights, measuredHeightsRevision],
+    [documentMeasurementId, measuredHeightsRevision],
   );
   const frame = React.useMemo(
     () =>
@@ -171,21 +193,66 @@ export function MarkdownGreenfieldContent({
       }),
     [contentWidth, document, fontScale, measuredHeightLookup],
   );
+  documentRef.current = document;
+  frameChunksRef.current = frame.chunks;
+  viewportHeightRef.current = viewportHeight;
   const highlightRange = React.useMemo(
     () => normalizeTextLineRange(highlight, document.lineCount),
     [document.lineCount, highlight],
   );
   const visibleHighlightRange = highlightRange;
-  const visibleFrames = React.useMemo(
-    () =>
-      getMarkdownGreenfieldVisibleFrames({
+  const [visibleProjection, setVisibleProjection] =
+    React.useState<MarkdownGreenfieldVisibleProjection>(() =>
+      getMarkdownGreenfieldVisibleProjection({
         frames: frame.chunks,
         overscanPx: OVERSCAN_PX,
-        scrollTop,
+        scrollTop: scrollTopRef.current,
         viewportHeight,
       }),
-    [frame.chunks, scrollTop, viewportHeight],
+    );
+  const visibleProjectionRef = React.useRef(visibleProjection);
+  const visibleFrames = React.useMemo(
+    () =>
+      getMarkdownGreenfieldProjectedVisibleFrames({
+        frames: frame.chunks,
+        projection: visibleProjection,
+      }),
+    [frame.chunks, visibleProjection],
   );
+  const projectVisibleProjection = React.useCallback(() => {
+    const frames = frameChunksRef.current;
+    const nextRange = getMarkdownGreenfieldVisibleRange({
+      frames,
+      overscanPx: OVERSCAN_PX,
+      scrollTop: scrollTopRef.current,
+      viewportHeight: viewportHeightRef.current,
+    });
+    const currentProjection = visibleProjectionRef.current;
+    if (
+      isMarkdownGreenfieldVisibleProjectionSameWindow({
+        frames,
+        projection: currentProjection,
+        range: nextRange,
+      })
+    ) {
+      if (
+        currentProjection.range.start !== nextRange.start ||
+        currentProjection.range.end !== nextRange.end
+      ) {
+        visibleProjectionRef.current = {
+          frameIds: currentProjection.frameIds,
+          range: nextRange,
+        };
+      }
+      return;
+    }
+    const nextProjection = createMarkdownGreenfieldVisibleProjection({
+      frames,
+      range: nextRange,
+    });
+    visibleProjectionRef.current = nextProjection;
+    setVisibleProjection(nextProjection);
+  }, []);
   const captureAnchor = React.useCallback(() => {
     // Read the live scroll position from the DOM rather than the `scrollTop`
     // state, which lags behind during fast scrolling. Capturing a stale value
@@ -194,15 +261,18 @@ export function MarkdownGreenfieldContent({
     const liveScrollTop =
       viewportRef.current?.scrollTop ?? scrollTopRef.current;
     pendingAnchorRef.current = getMarkdownGreenfieldScrollAnchor({
-      frames: frame.chunks,
+      frames: frameChunksRef.current,
       scrollTop: liveScrollTop,
     });
-  }, [frame.chunks]);
-
-  const commitScrollTop = React.useCallback((nextScrollTop: number) => {
-    scrollTopRef.current = nextScrollTop;
-    setScrollTop(nextScrollTop);
   }, []);
+
+  const commitScrollTop = React.useCallback(
+    (nextScrollTop: number) => {
+      scrollTopRef.current = nextScrollTop;
+      projectVisibleProjection();
+    },
+    [projectVisibleProjection],
+  );
 
   const scheduleScrollTop = React.useCallback(
     (nextScrollTop: number) => {
@@ -225,17 +295,16 @@ export function MarkdownGreenfieldContent({
     const pending = pendingMeasuredHeightsRef.current;
     if (!pending.size) return;
     pendingMeasuredHeightsRef.current = new Map();
-    setMeasuredHeights((current) => {
-      let next: Map<string, number> | null = null;
-      for (const [key, height] of pending) {
-        if (Math.abs((current.get(key) ?? 0) - height) < 1) continue;
-        next ??= new Map(current);
-        next.set(key, height);
-      }
-      if (!next) return current;
+    let didChange = false;
+    const measuredHeights = measuredHeightsRef.current;
+    for (const [key, height] of pending) {
+      if (Math.abs((measuredHeights.get(key) ?? 0) - height) < 1) continue;
+      measuredHeights.set(key, height);
+      didChange = true;
+    }
+    if (didChange) {
       setMeasuredHeightsRevision((revision) => revision + 1);
-      return next;
-    });
+    }
   }, []);
 
   const scheduleMeasuredHeightsFlush = React.useCallback(() => {
@@ -249,7 +318,8 @@ export function MarkdownGreenfieldContent({
   }, [flushMeasuredHeights]);
 
   useKeyedLayoutEffect(joinEffectKey([commitScrollTop, document]), () => {
-    setMeasuredHeights(new Map());
+    measuredHeightsRef.current = new Map();
+    pendingMeasuredHeightsRef.current = new Map();
     setMeasuredHeightsRevision((revision) => revision + 1);
     commitScrollTop(0);
     viewportRef.current?.scrollTo({ left: 0, top: 0 });
@@ -358,6 +428,13 @@ export function MarkdownGreenfieldContent({
     commitScrollTop(nextScrollTop);
   });
 
+  useKeyedLayoutEffect(
+    joinEffectKey(["markdown-visible-range", frame.chunks, viewportHeight]),
+    () => {
+      projectVisibleProjection();
+    },
+  );
+
   const scrollToLineRange = React.useCallback(
     (
       range: ReturnType<typeof normalizeTextLineRange>,
@@ -365,16 +442,18 @@ export function MarkdownGreenfieldContent({
     ) => {
       const viewport = viewportRef.current;
       if (!viewport || !range) return;
+      const currentDocument = documentRef.current;
 
       const preferredChunkId =
         options?.preferredChunkId ??
-        findMarkdownGreenfieldChunkBySourceLine(document, range.start)?.id;
+        findMarkdownGreenfieldChunkBySourceLine(currentDocument, range.start)
+          ?.id;
       const top = getMarkdownGreenfieldScrollTopForLineRange({
-        chunks: document.chunks,
-        frames: frame.chunks,
+        chunks: currentDocument.chunks,
+        frames: frameChunksRef.current,
         preferredChunkId,
         range,
-        viewportHeight: viewport.clientHeight || viewportHeight,
+        viewportHeight: viewport.clientHeight || viewportHeightRef.current,
       });
       if (top == null) return;
       viewport.scrollTo({
@@ -384,14 +463,12 @@ export function MarkdownGreenfieldContent({
       });
       commitScrollTop(top);
     },
-    [commitScrollTop, document, frame.chunks, viewportHeight],
+    [commitScrollTop],
   );
 
-  // A stable handle to the latest scrollToLineRange. The callback's identity
-  // changes on every layout change (its deps include frame.chunks), so effects
-  // that should fire only when their *target* changes must not depend on it
-  // directly — otherwise each measurement re-runs them and yanks the viewport
-  // back to the highlight/search/hash target while the reader is scrolling.
+  // A stable handle to the latest scrollToLineRange. Target-driven effects use
+  // this ref so layout measurement changes cannot yank the viewport back to a
+  // highlight/search/hash target while the reader is scrolling.
   const scrollToLineRangeRef = React.useRef(scrollToLineRange);
   useKeyedLayoutEffect(joinEffectKey([scrollToLineRange]), () => {
     scrollToLineRangeRef.current = scrollToLineRange;
@@ -645,18 +722,22 @@ function NativeFindIndex({
     options?: MarkdownScrollToLineOptions,
   ) => void;
 }) {
+  const entries = useBatchedNativeFindTextEntries(chunks);
   return (
     <div
       aria-hidden="true"
       className="pointer-events-none absolute top-0 left-0 h-px w-px overflow-hidden opacity-0"
       data-slot="markdown-native-find-index"
+      data-native-find-indexed-chunks={entries.length}
+      data-native-find-total-chunks={chunks.length}
     >
-      {chunks.map((chunk) => (
+      {entries.map(({ chunk, text }) => (
         <NativeFindEntry
           key={chunk.id}
           chunk={chunk}
           lineCount={lineCount}
           scrollToLineRange={scrollToLineRange}
+          text={text}
         />
       ))}
     </div>
@@ -667,6 +748,7 @@ function NativeFindEntry({
   chunk,
   lineCount,
   scrollToLineRange,
+  text,
 }: {
   chunk: MarkdownGreenfieldChunk;
   lineCount: number;
@@ -674,9 +756,9 @@ function NativeFindEntry({
     range: ReturnType<typeof normalizeTextLineRange>,
     options?: MarkdownScrollToLineOptions,
   ) => void;
+  text: string;
 }) {
   const ref = React.useRef<HTMLSpanElement | null>(null);
-  const text = nativeFindTextForChunk(chunk);
 
   useKeyedLayoutEffect(
     joinEffectKey([
@@ -727,17 +809,127 @@ function NativeFindEntry({
   );
 }
 
-function nativeFindTextForChunk(chunk: MarkdownGreenfieldChunk) {
-  return chunk.hastChildren.map(nativeFindTextForHastNode).join(" ").trim();
+function useBatchedNativeFindTextEntries(
+  chunks: readonly MarkdownGreenfieldChunk[],
+) {
+  const buildKey = React.useMemo(
+    () => joinEffectKey(["native-find-text", chunks]),
+    [chunks],
+  );
+  const [state, setState] = React.useState<NativeFindTextState>({
+    entries: [],
+    key: null,
+  });
+
+  useKeyedMountEffect(buildKey, () => {
+    let isCancelled = false;
+    let cancelScheduledBatch: (() => void) | null = null;
+    let index = 0;
+    const entries: NativeFindTextRecord[] = [];
+
+    setState({ entries: [], key: buildKey });
+
+    const runBatch = (deadline?: IdleDeadline) => {
+      cancelScheduledBatch = null;
+      if (isCancelled) return;
+
+      let processed = 0;
+      while (
+        index < chunks.length &&
+        shouldBuildNativeFindTextInCurrentBatch(deadline, processed)
+      ) {
+        const chunk = chunks[index];
+        index += 1;
+        if (!chunk) continue;
+        entries.push({
+          chunk,
+          text: cachedNativeFindTextForChunk(chunk),
+        });
+        processed += 1;
+      }
+
+      if (processed > 0) {
+        setState({ entries: entries.slice(), key: buildKey });
+      }
+      if (index < chunks.length) {
+        cancelScheduledBatch = scheduleNativeFindTextBatch(runBatch);
+      }
+    };
+
+    cancelScheduledBatch = scheduleNativeFindTextBatch(runBatch);
+    return () => {
+      isCancelled = true;
+      cancelScheduledBatch?.();
+    };
+  });
+
+  return state.key === buildKey ? state.entries : [];
 }
 
-function nativeFindTextForHastNode(node: MarkdownHastNode): string {
-  if (node.type === "text" && typeof node.value === "string") return node.value;
-  const element = node as MarkdownHastElement;
-  if (!element || element.type !== "element") return "";
+function shouldBuildNativeFindTextInCurrentBatch(
+  deadline: IdleDeadline | undefined,
+  processed: number,
+) {
+  if (processed === 0) return true;
+  if (processed >= NATIVE_FIND_TEXT_BATCH_CHUNKS) return false;
+  if (!deadline) return true;
+  return deadline.timeRemaining() > NATIVE_FIND_TEXT_IDLE_MIN_REMAINING_MS;
+}
 
-  if (element.tagName === "script" || element.tagName === "style") return "";
-  return element.children.map(nativeFindTextForHastNode).join(" ");
+function scheduleNativeFindTextBatch(
+  callback: (deadline?: IdleDeadline) => void,
+) {
+  if (typeof window === "undefined") return null;
+  const browserWindow = window as MarkdownIdleWindow;
+  if (browserWindow.requestIdleCallback) {
+    const idleId = browserWindow.requestIdleCallback(callback, {
+      timeout: 250,
+    });
+    return () => browserWindow.cancelIdleCallback?.(idleId);
+  }
+
+  const timeoutId = browserWindow.setTimeout(() => callback(), 0);
+  return () => browserWindow.clearTimeout(timeoutId);
+}
+
+function cachedNativeFindTextForChunk(chunk: MarkdownGreenfieldChunk) {
+  const cacheKey = joinEffectKey(["native-find-text", chunk]);
+  const cached = nativeFindTextCache.get(cacheKey);
+  if (cached !== undefined || nativeFindTextCache.has(cacheKey)) {
+    nativeFindTextCache.delete(cacheKey);
+    nativeFindTextCache.set(cacheKey, cached ?? "");
+    return cached ?? "";
+  }
+
+  const text = nativeFindTextForChunk(chunk);
+  nativeFindTextCache.set(cacheKey, text);
+  while (nativeFindTextCache.size > NATIVE_FIND_TEXT_CACHE_LIMIT) {
+    const oldestKey = nativeFindTextCache.keys().next().value;
+    if (!oldestKey) break;
+    nativeFindTextCache.delete(oldestKey);
+  }
+  return text;
+}
+
+function nativeFindTextForChunk(chunk: MarkdownGreenfieldChunk) {
+  const text: string[] = [];
+  const stack = [...chunk.hastChildren].reverse();
+  while (stack.length) {
+    const node = stack.pop();
+    if (!node) continue;
+    if (node.type === "text" && typeof node.value === "string") {
+      text.push(node.value);
+      continue;
+    }
+
+    const element = node as MarkdownHastElement;
+    if (!element || element.type !== "element") continue;
+    if (element.tagName === "script" || element.tagName === "style") continue;
+    for (let index = element.children.length - 1; index >= 0; index -= 1) {
+      stack.push(element.children[index]!);
+    }
+  }
+  return text.join(" ").trim();
 }
 
 function DownloadError({ message }: { message: string }) {

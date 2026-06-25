@@ -2,8 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import type { MarkdownGreenfieldChunkFrame } from "@/registry/new-york-v4/ui/markdown-greenfield-layout";
 import {
+  createMarkdownGreenfieldVisibleProjection,
+  getMarkdownGreenfieldProjectedVisibleFrames,
   getMarkdownGreenfieldScrollAnchor,
   getMarkdownGreenfieldScrollTopForLineRange,
+  getMarkdownGreenfieldVisibleFrames,
+  getMarkdownGreenfieldVisibleRange,
+  isMarkdownGreenfieldVisibleProjectionSameWindow,
   resolveMarkdownGreenfieldScrollAnchor,
 } from "@/registry/new-york-v4/ui/markdown-greenfield-virtualizer";
 
@@ -28,6 +33,94 @@ function frame(
 }
 
 describe("pretext markdown greenfield virtualizer", () => {
+  it("projects the visible range with the same overscan semantics as frame slicing", () => {
+    const frames = Array.from({ length: 8 }, (_, index) =>
+      frame(`chunk-${index}`, index, index * 100, 100, index + 1, index + 1),
+    );
+    const range = getMarkdownGreenfieldVisibleRange({
+      frames,
+      overscanPx: 100,
+      scrollTop: 300,
+      viewportHeight: 200,
+    });
+
+    expect(range).toEqual({ start: 2, end: 6 });
+    expect(
+      getMarkdownGreenfieldVisibleFrames({
+        frames,
+        overscanPx: 100,
+        scrollTop: 300,
+        viewportHeight: 200,
+      }),
+    ).toEqual(frames.slice(range.start, range.end));
+  });
+
+  it("projects an empty visible range for an empty frame list", () => {
+    expect(
+      getMarkdownGreenfieldVisibleRange({
+        frames: [],
+        overscanPx: 100,
+        scrollTop: 0,
+        viewportHeight: 200,
+      }),
+    ).toEqual({ start: 0, end: 0 });
+  });
+
+  it("treats same visible chunk identity as a projection no-op", () => {
+    const frames = [
+      frame("chunk-a", 0, 0, 100, 1, 1),
+      frame("chunk-b", 1, 100, 100, 2, 2),
+      frame("chunk-c", 2, 200, 100, 3, 3),
+      frame("chunk-d", 3, 300, 100, 4, 4),
+    ];
+    const projection = createMarkdownGreenfieldVisibleProjection({
+      frames,
+      range: { start: 1, end: 3 },
+    });
+    const shiftedFrames = [
+      frame("chunk-x", 0, 0, 50, 1, 1),
+      frame("chunk-a", 1, 50, 100, 2, 2),
+      frame("chunk-b", 2, 150, 100, 3, 3),
+      frame("chunk-c", 3, 250, 100, 4, 4),
+      frame("chunk-d", 4, 350, 100, 5, 5),
+    ];
+
+    expect(
+      isMarkdownGreenfieldVisibleProjectionSameWindow({
+        frames: shiftedFrames,
+        projection,
+        range: { start: 2, end: 4 },
+      }),
+    ).toBe(true);
+    expect(
+      getMarkdownGreenfieldProjectedVisibleFrames({
+        frames: shiftedFrames,
+        projection,
+      }).map((item) => item.id),
+    ).toEqual(["chunk-b", "chunk-c"]);
+  });
+
+  it("detects materially changed visible chunk identity", () => {
+    const frames = [
+      frame("chunk-a", 0, 0, 100, 1, 1),
+      frame("chunk-b", 1, 100, 100, 2, 2),
+      frame("chunk-c", 2, 200, 100, 3, 3),
+      frame("chunk-d", 3, 300, 100, 4, 4),
+    ];
+    const projection = createMarkdownGreenfieldVisibleProjection({
+      frames,
+      range: { start: 1, end: 3 },
+    });
+
+    expect(
+      isMarkdownGreenfieldVisibleProjectionSameWindow({
+        frames,
+        projection,
+        range: { start: 2, end: 4 },
+      }),
+    ).toBe(false);
+  });
+
   it("anchors scroll by chunk identity instead of numeric index", () => {
     const anchor = getMarkdownGreenfieldScrollAnchor({
       frames: [

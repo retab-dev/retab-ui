@@ -10,8 +10,13 @@ import {
 } from "./markdown-greenfield-document";
 
 export const MARKDOWN_GREENFIELD_ASYNC_DOCUMENT_MIN_CHARS = 60_000;
-const MARKDOWN_GREENFIELD_DOCUMENT_WORKER_ENABLED = true;
+export const MARKDOWN_GREENFIELD_DOCUMENT_WORKER_LOCAL_STORAGE_KEY =
+  "retab:markdown-document-worker";
+export const MARKDOWN_GREENFIELD_DOCUMENT_WORKER_SEARCH_PARAM =
+  "markdownDocumentWorker";
+
 const MARKDOWN_GREENFIELD_DOCUMENT_WORKER_READY_TIMEOUT_MS = 800;
+const MARKDOWN_GREENFIELD_DOCUMENT_ENTRY_CACHE_LIMIT = 16;
 
 type MarkdownIdleWindow = Window &
   typeof globalThis & {
@@ -34,6 +39,7 @@ type MarkdownDocumentEntry = {
 type MarkdownDocumentWorkerRequest = {
   id: number;
   text: string;
+  type: "parse";
 };
 
 type MarkdownDocumentWorkerResponse =
@@ -47,6 +53,7 @@ type MarkdownDocumentWorkerResponse =
       type: "result";
     }
   | {
+      failure: "clone_failed" | "parse_failed";
       id: number;
       message: string;
       ok: false;
@@ -102,22 +109,28 @@ function getMarkdownDocumentEntry(text: string) {
     text,
   };
   markdownDocumentEntries.set(key, entry);
-  while (markdownDocumentEntries.size > 16) {
-    const oldestKey = markdownDocumentEntries.keys().next().value;
-    if (!oldestKey || oldestKey === key) break;
-    markdownDocumentEntries.delete(oldestKey);
-  }
+  evictMarkdownDocumentEntries(key);
   return entry;
+}
+
+function evictMarkdownDocumentEntries(currentKey: string) {
+  for (const [key, entry] of markdownDocumentEntries) {
+    if (
+      markdownDocumentEntries.size <=
+      MARKDOWN_GREENFIELD_DOCUMENT_ENTRY_CACHE_LIMIT
+    ) {
+      return;
+    }
+    if (key === currentKey || entry.listeners.size > 0) continue;
+    markdownDocumentEntries.delete(key);
+  }
 }
 
 function startMarkdownDocumentEntry(entry: MarkdownDocumentEntry) {
   if (entry.started || entry.state.status !== "pending") return;
   entry.started = true;
 
-  if (
-    MARKDOWN_GREENFIELD_DOCUMENT_WORKER_ENABLED &&
-    typeof Worker !== "undefined"
-  ) {
+  if (typeof Worker !== "undefined" && isMarkdownDocumentWorkerEnabled()) {
     try {
       startMarkdownDocumentWorker(entry);
       return;
@@ -137,44 +150,62 @@ function startMarkdownDocumentWorker(entry: MarkdownDocumentEntry) {
   );
   const id = nextMarkdownDocumentWorkerRequestId++;
   let isSettled = false;
-  const readyTimeoutId = window.setTimeout(() => {
-    fallBackToMainThread();
-  }, MARKDOWN_GREENFIELD_DOCUMENT_WORKER_READY_TIMEOUT_MS);
 
   const fallBackToMainThread = () => {
     if (isSettled) return;
     isSettled = true;
     window.clearTimeout(readyTimeoutId);
+    if (!isCurrentMarkdownDocumentEntry(entry)) {
+      worker.terminate();
+      return;
+    }
     worker.terminate();
     startMarkdownDocumentFallback(entry);
   };
+  const readyTimeoutId = window.setTimeout(() => {
+    fallBackToMainThread();
+  }, MARKDOWN_GREENFIELD_DOCUMENT_WORKER_READY_TIMEOUT_MS);
 
-  worker.onmessage = (event: MessageEvent<MarkdownDocumentWorkerResponse>) => {
-    if (event.data.type === "ready") {
+  worker.onmessage = (event: MessageEvent<unknown>) => {
+    const message = markdownDocumentWorkerResponseFromValue(event.data);
+    if (!message) {
+      fallBackToMainThread();
+      return;
+    }
+
+    if (message.type === "ready") {
       window.clearTimeout(readyTimeoutId);
       try {
         worker.postMessage({
           id,
           text: entry.text,
+          type: "parse",
         } satisfies MarkdownDocumentWorkerRequest);
       } catch {
         fallBackToMainThread();
       }
       return;
     }
-    if (event.data.id !== id || isSettled) return;
+    if (message.id !== id || isSettled) {
+      return;
+    }
     isSettled = true;
     window.clearTimeout(readyTimeoutId);
     worker.terminate();
-    if (event.data.ok) {
+    if (!isCurrentMarkdownDocumentEntry(entry)) return;
+    if (message.ok) {
       publishMarkdownDocumentState(entry, {
-        document: freezeMarkdownGreenfieldDocument(event.data.document),
+        document: freezeMarkdownGreenfieldDocument(message.document),
         status: "ready",
       });
       return;
     }
+    if (message.failure === "clone_failed") {
+      startMarkdownDocumentFallback(entry);
+      return;
+    }
     publishMarkdownDocumentState(entry, {
-      error: new Error(event.data.message),
+      error: new Error(message.message),
       status: "failed",
     });
   };
@@ -184,6 +215,7 @@ function startMarkdownDocumentWorker(entry: MarkdownDocumentEntry) {
 
 function startMarkdownDocumentFallback(entry: MarkdownDocumentEntry) {
   scheduleMarkdownDocumentTask(() => {
+    if (!isCurrentMarkdownDocumentEntry(entry)) return;
     try {
       publishMarkdownDocumentState(entry, {
         document: createMarkdownGreenfieldDocument(entry.text),
@@ -204,17 +236,106 @@ function startMarkdownDocumentFallback(entry: MarkdownDocumentEntry) {
 function scheduleMarkdownDocumentTask(callback: () => void) {
   if (typeof window === "undefined") return;
   const browserWindow = window as MarkdownIdleWindow;
-  if (browserWindow.requestIdleCallback) {
-    browserWindow.requestIdleCallback(callback, { timeout: 120 });
+  const runWhenIdle = () => {
+    if (browserWindow.requestIdleCallback) {
+      browserWindow.requestIdleCallback(callback, { timeout: 120 });
+      return;
+    }
+    browserWindow.setTimeout(callback, 0);
+  };
+
+  if (browserWindow.requestAnimationFrame) {
+    browserWindow.requestAnimationFrame(() => {
+      browserWindow.setTimeout(runWhenIdle, 0);
+    });
     return;
   }
-  browserWindow.setTimeout(callback, 0);
+  browserWindow.setTimeout(runWhenIdle, 0);
 }
 
 function publishMarkdownDocumentState(
   entry: MarkdownDocumentEntry,
   state: MarkdownDocumentState,
 ) {
+  if (!isCurrentMarkdownDocumentEntry(entry)) return;
   entry.state = state;
   for (const listener of entry.listeners) listener();
+}
+
+function isCurrentMarkdownDocumentEntry(entry: MarkdownDocumentEntry) {
+  const current = markdownDocumentEntries.get(entry.key);
+  return current === entry && current.text === entry.text;
+}
+
+function isMarkdownDocumentWorkerEnabled() {
+  if (typeof window === "undefined") return false;
+  const urlFlag = readMarkdownDocumentWorkerSearchFlag(window.location.search);
+  if (urlFlag != null) return urlFlag;
+  return readMarkdownDocumentWorkerStorageFlag() ?? true;
+}
+
+function readMarkdownDocumentWorkerSearchFlag(search: string) {
+  try {
+    const value = new URLSearchParams(search).get(
+      MARKDOWN_GREENFIELD_DOCUMENT_WORKER_SEARCH_PARAM,
+    );
+    return markdownDocumentWorkerFlagValue(value);
+  } catch {
+    return null;
+  }
+}
+
+function readMarkdownDocumentWorkerStorageFlag() {
+  try {
+    return markdownDocumentWorkerFlagValue(
+      window.localStorage.getItem(
+        MARKDOWN_GREENFIELD_DOCUMENT_WORKER_LOCAL_STORAGE_KEY,
+      ),
+    );
+  } catch {
+    return null;
+  }
+}
+
+function markdownDocumentWorkerFlagValue(value: string | null) {
+  if (value == null) return null;
+  switch (value.trim().toLowerCase()) {
+    case "1":
+    case "true":
+    case "yes":
+    case "on":
+    case "worker":
+      return true;
+    case "0":
+    case "false":
+    case "no":
+    case "off":
+    case "main":
+      return false;
+    default:
+      return null;
+  }
+}
+
+function markdownDocumentWorkerResponseFromValue(
+  value: unknown,
+): MarkdownDocumentWorkerResponse | null {
+  if (!value || typeof value !== "object") return null;
+  const response = value as Partial<MarkdownDocumentWorkerResponse>;
+  if (response.type === "ready") return { type: "ready" };
+  if (response.type !== "result" || typeof response.id !== "number") {
+    return null;
+  }
+  if (response.ok === true && response.document) {
+    return response as MarkdownDocumentWorkerResponse;
+  }
+  if (
+    response.ok === false &&
+    (response.failure === "clone_failed" ||
+      response.failure === "parse_failed") &&
+    typeof response.message === "string"
+  ) {
+    return response as MarkdownDocumentWorkerResponse;
+  }
+  return null;
 }

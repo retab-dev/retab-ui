@@ -48,6 +48,13 @@ export const MARKDOWN_GREENFIELD_BASE_FONT_PX = 15.5;
 // Tailwind v4's default spacing unit (0.25rem). Scaling it with the zoom
 // fontScale keeps padding/margins proportional to the body text.
 export const MARKDOWN_GREENFIELD_BASE_SPACING_REM = 0.25;
+const MARKDOWN_CODE_VIRTUALIZATION_LINE_THRESHOLD = 100;
+const MARKDOWN_CODE_VIRTUALIZED_OVERSCAN_LINES = 12;
+const MARKDOWN_CODE_VIRTUALIZED_VIEWPORT_HEIGHT_PX = 512;
+const MARKDOWN_CODE_VIRTUALIZED_LINE_HEIGHT_FALLBACK_PX = 24;
+const MARKDOWN_RENDERED_CHUNK_CACHE_LIMIT = 96;
+
+const markdownRenderedChunkCache = new Map<string, React.ReactNode>();
 
 export const MarkdownGreenfieldChunkRenderer = React.memo(
   function MarkdownGreenfieldChunkRenderer({
@@ -71,18 +78,13 @@ export const MarkdownGreenfieldChunkRenderer = React.memo(
     }, [onContentReady]);
     const renderedChildren = React.useMemo(
       () =>
-        renderHastChildren(
-          chunk.hastChildren,
+        renderCachedHastChunkChildren(
+          chunk,
           searchQuery,
           activeMatchOccurrence,
           { urlFragmentNavigation },
         ),
-      [
-        activeMatchOccurrence,
-        chunk.hastChildren,
-        searchQuery,
-        urlFragmentNavigation,
-      ],
+      [activeMatchOccurrence, chunk, searchQuery, urlFragmentNavigation],
     );
 
     useKeyedLayoutEffect(joinEffectKey([chunk.id, notifyContentReady]), () => {
@@ -122,6 +124,37 @@ export const MarkdownGreenfieldChunkRenderer = React.memo(
   },
 );
 
+function renderCachedHastChunkChildren(
+  chunk: MarkdownGreenfieldChunk,
+  searchQuery?: string,
+  activeMatchOccurrence?: number,
+  options: { urlFragmentNavigation: boolean } = {
+    urlFragmentNavigation: true,
+  },
+) {
+  const normalizedQuery = normalizeMarkdownSearchQuery(searchQuery);
+  const cacheKey = joinEffectKey([
+    "markdown-rendered-chunk",
+    chunk,
+    normalizedQuery,
+    normalizedQuery ? (activeMatchOccurrence ?? -1) : -1,
+    options.urlFragmentNavigation,
+  ]);
+  const cached = readRenderedChunkCache(cacheKey);
+  if (cached !== undefined || markdownRenderedChunkCache.has(cacheKey)) {
+    return cached;
+  }
+
+  const rendered = renderHastChildrenUncached({
+    activeMatchOccurrence,
+    children: chunk.hastChildren,
+    normalizedQuery,
+    urlFragmentNavigation: options.urlFragmentNavigation,
+  });
+  writeRenderedChunkCache(cacheKey, rendered);
+  return rendered;
+}
+
 function renderHastChildren(
   children: readonly MarkdownHastNode[],
   searchQuery?: string,
@@ -130,15 +163,33 @@ function renderHastChildren(
     urlFragmentNavigation: true,
   },
 ) {
+  return renderHastChildrenUncached({
+    activeMatchOccurrence,
+    children,
+    normalizedQuery: normalizeMarkdownSearchQuery(searchQuery),
+    urlFragmentNavigation: options.urlFragmentNavigation,
+  });
+}
+
+function renderHastChildrenUncached({
+  activeMatchOccurrence,
+  children,
+  normalizedQuery,
+  urlFragmentNavigation,
+}: {
+  activeMatchOccurrence?: number;
+  children: readonly MarkdownHastNode[];
+  normalizedQuery: string;
+  urlFragmentNavigation: boolean;
+}) {
   const root: MarkdownHastRoot = {
     type: "root",
     children: children.map(cloneHastNode),
   };
-  if (!options.urlFragmentNavigation) {
+  if (!urlFragmentNavigation) {
     suppressDomFragmentIds(root.children);
   }
 
-  const normalizedQuery = searchQuery?.trim().toLowerCase();
   if (normalizedQuery) {
     // The counter tracks rendered occurrences in document order so the one at
     // activeMatchOccurrence (the chunk-local index of the toolbar's current
@@ -158,6 +209,29 @@ function renderHastChildren(
     passKeys: true,
     passNode: true,
   });
+}
+
+function readRenderedChunkCache(key: string) {
+  if (!markdownRenderedChunkCache.has(key)) return undefined;
+  const rendered = markdownRenderedChunkCache.get(key);
+  markdownRenderedChunkCache.delete(key);
+  markdownRenderedChunkCache.set(key, rendered);
+  return rendered;
+}
+
+function writeRenderedChunkCache(key: string, rendered: React.ReactNode) {
+  markdownRenderedChunkCache.set(key, rendered);
+  while (
+    markdownRenderedChunkCache.size > MARKDOWN_RENDERED_CHUNK_CACHE_LIMIT
+  ) {
+    const oldestKey = markdownRenderedChunkCache.keys().next().value;
+    if (!oldestKey) break;
+    markdownRenderedChunkCache.delete(oldestKey);
+  }
+}
+
+function normalizeMarkdownSearchQuery(searchQuery: string | undefined) {
+  return searchQuery?.trim().toLowerCase() ?? "";
 }
 
 const markdownComponents = {
@@ -968,8 +1042,7 @@ function MarkdownCodeBlock({
 }) {
   const [copyFailed, setCopyFailed] = React.useState(false);
   const title = metadata.title || language;
-  const sourceLines = source.split("\n");
-  const shikiLines = useShikiCodeLines(source, language, sourceLines.length);
+  const sourceLines = React.useMemo(() => source.split("\n"), [source]);
   const lineNumberStart = metadata.lineNumberStart ?? 1;
   const lineNumberMaxDigits = String(
     lineNumberStart + Math.max(0, sourceLines.length - 1),
@@ -1033,83 +1106,14 @@ function MarkdownCodeBlock({
           />
         </span>
       </figcaption>
-      <pre
-        aria-label={`${language} code source`}
-        className="overflow-x-auto p-3 [overflow-wrap:normal] [&_code]:min-w-max"
-        data-pretext-code-source=""
-        role="region"
-        tabIndex={0}
-        onKeyDown={handleHorizontalScrollKeyDown}
-      >
-        <code
-          aria-label={
-            metadata.showLineNumbers
-              ? `${language} numbered code lines`
-              : undefined
-          }
-          className={[
-            "block font-mono text-[0.9em] leading-[1.45]",
-            metadata.showLineNumbers
-              ? "[counter-reset:line] before:content-[counter(line)]"
-              : "",
-            metadata.highlightedLines.size
-              ? "[&>[data-highlighted-line]]:bg-primary/10"
-              : "",
-            metadata.highlightPattern
-              ? "[&_[data-highlighted-chars]]:bg-primary/20 [&_[data-highlighted-chars]]:rounded"
-              : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          data-language={language}
-          data-line-numbers={metadata.showLineNumbers ? "" : undefined}
-          data-line-numbers-max-digits={
-            metadata.showLineNumbers ? lineNumberMaxDigits : undefined
-          }
-          role={metadata.showLineNumbers ? "list" : undefined}
-          style={
-            metadata.showLineNumbers
-              ? { counterSet: `line ${lineNumberStart - 1}` }
-              : undefined
-          }
-        >
-          {sourceLines.map((line, index) => {
-            const lineNumber = lineNumberStart + index;
-            const diffKind = diffLineKind(line);
-            return (
-              <span
-                key={index}
-                aria-label={
-                  metadata.showLineNumbers ? `Line ${lineNumber}` : undefined
-                }
-                className={[
-                  "block min-h-5 whitespace-pre",
-                  diffKind === "add" ? "bg-emerald-500/10" : "",
-                  diffKind === "remove" ? "bg-red-500/10" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                data-highlighted-line={
-                  metadata.highlightedLines.has(index + 1) ? "" : undefined
-                }
-                data-line=""
-                data-pretext-code-diff-line={diffKind ?? undefined}
-                data-pretext-code-line-number={
-                  metadata.showLineNumbers ? lineNumber : undefined
-                }
-                role={metadata.showLineNumbers ? "listitem" : undefined}
-              >
-                {renderCodeLine({
-                  fallbackLanguage: language,
-                  line,
-                  pattern: metadata.highlightPattern,
-                  shikiLine: shikiLines?.[index],
-                })}
-              </span>
-            );
-          })}
-        </code>
-      </pre>
+      <MarkdownCodeSource
+        language={language}
+        lineNumberMaxDigits={lineNumberMaxDigits}
+        lineNumberStart={lineNumberStart}
+        metadata={metadata}
+        source={source}
+        sourceLines={sourceLines}
+      />
       {metadata.caption ? (
         <figcaption
           className="text-muted-foreground border-t px-3 py-2 text-[0.9em]"
@@ -1120,6 +1124,388 @@ function MarkdownCodeBlock({
       ) : null}
     </figure>
   );
+}
+
+type MarkdownCodeMetadata = ReturnType<typeof readCodeMetadata>;
+type MarkdownCodeShikiLine = Parameters<typeof renderCodeLine>[0]["shikiLine"];
+
+const MarkdownCodeSource = React.memo(function MarkdownCodeSource({
+  language,
+  lineNumberMaxDigits,
+  lineNumberStart,
+  metadata,
+  source,
+  sourceLines,
+}: {
+  language: string;
+  lineNumberMaxDigits: number;
+  lineNumberStart: number;
+  metadata: MarkdownCodeMetadata;
+  source: string;
+  sourceLines: readonly string[];
+}) {
+  const shikiLines = useShikiCodeLines(source, language, sourceLines.length);
+  const isVirtualized =
+    sourceLines.length > MARKDOWN_CODE_VIRTUALIZATION_LINE_THRESHOLD;
+
+  if (isVirtualized) {
+    return (
+      <MarkdownVirtualizedCodeSource
+        language={language}
+        lineNumberMaxDigits={lineNumberMaxDigits}
+        lineNumberStart={lineNumberStart}
+        metadata={metadata}
+        shikiLines={shikiLines}
+        sourceLines={sourceLines}
+      />
+    );
+  }
+
+  return (
+    <pre
+      aria-label={`${language} code source`}
+      className="overflow-x-auto p-3 [overflow-wrap:normal] [&_code]:min-w-max"
+      data-pretext-code-source=""
+      role="region"
+      tabIndex={0}
+      onKeyDown={handleHorizontalScrollKeyDown}
+    >
+      <code
+        {...markdownCodeElementProps({
+          language,
+          lineNumberMaxDigits,
+          lineNumberStart,
+          metadata,
+        })}
+      >
+        {sourceLines.map((line, index) => (
+          <MarkdownCodeLine
+            key={index}
+            index={index}
+            language={language}
+            line={line}
+            lineNumberStart={lineNumberStart}
+            metadata={metadata}
+            shikiLine={shikiLines?.[index]}
+          />
+        ))}
+      </code>
+    </pre>
+  );
+});
+
+function MarkdownVirtualizedCodeSource({
+  language,
+  lineNumberMaxDigits,
+  lineNumberStart,
+  metadata,
+  shikiLines,
+  sourceLines,
+}: {
+  language: string;
+  lineNumberMaxDigits: number;
+  lineNumberStart: number;
+  metadata: MarkdownCodeMetadata;
+  shikiLines: readonly MarkdownCodeShikiLine[] | null;
+  sourceLines: readonly string[];
+}) {
+  const preRef = React.useRef<HTMLPreElement | null>(null);
+  const codeRef = React.useRef<HTMLElement | null>(null);
+  const [scrollTop, setScrollTop] = React.useState(0);
+  const [lineHeight, setLineHeight] = React.useState(
+    MARKDOWN_CODE_VIRTUALIZED_LINE_HEIGHT_FALLBACK_PX,
+  );
+  const [viewportHeight, setViewportHeight] = React.useState(
+    MARKDOWN_CODE_VIRTUALIZED_VIEWPORT_HEIGHT_PX,
+  );
+  const start = Math.max(
+    0,
+    Math.floor(scrollTop / lineHeight) -
+      MARKDOWN_CODE_VIRTUALIZED_OVERSCAN_LINES,
+  );
+  const end = Math.min(
+    sourceLines.length,
+    Math.ceil((scrollTop + viewportHeight) / lineHeight) +
+      MARKDOWN_CODE_VIRTUALIZED_OVERSCAN_LINES,
+  );
+  const mountedLines = sourceLines.slice(start, end);
+  const lineWidthCh = React.useMemo(
+    () => widestMarkdownCodeLineWidthCh(sourceLines),
+    [sourceLines],
+  );
+
+  useKeyedLayoutEffect(joinEffectKey([language, sourceLines.length]), () => {
+    const updateMetrics = () => {
+      const measuredLineHeight = measureMarkdownCodeLineHeight(codeRef.current);
+      if (measuredLineHeight > 0) {
+        setLineHeight((current) =>
+          Math.abs(current - measuredLineHeight) > 0.5
+            ? measuredLineHeight
+            : current,
+        );
+      }
+      const measuredViewportHeight = preRef.current?.clientHeight ?? 0;
+      if (measuredViewportHeight > 0) {
+        setViewportHeight((current) =>
+          Math.abs(current - measuredViewportHeight) > 0.5
+            ? measuredViewportHeight
+            : current,
+        );
+      }
+    };
+
+    updateMetrics();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(updateMetrics);
+    if (preRef.current) observer.observe(preRef.current);
+    if (codeRef.current) observer.observe(codeRef.current);
+    return () => observer.disconnect();
+  });
+
+  return (
+    <pre
+      ref={preRef}
+      aria-label={`${language} code source`}
+      className="max-h-[32rem] overflow-auto overflow-x-auto p-3 [overflow-wrap:normal] [&_code]:min-w-max"
+      data-pretext-code-line-count={sourceLines.length}
+      data-pretext-code-mounted-lines={mountedLines.length}
+      data-pretext-code-source=""
+      data-pretext-code-virtualized=""
+      role="region"
+      tabIndex={0}
+      onKeyDown={handleHorizontalScrollKeyDown}
+      onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
+    >
+      <code
+        ref={codeRef}
+        {...markdownCodeElementProps({
+          language,
+          lineNumberMaxDigits,
+          lineNumberStart,
+          metadata,
+          start,
+          virtualized: true,
+        })}
+        style={markdownVirtualizedCodeCanvasStyle({
+          language,
+          lineNumberStart,
+          lineWidthCh,
+          metadata,
+          start,
+          totalLines: sourceLines.length,
+        })}
+      >
+        {mountedLines.map((line, offset) => {
+          const index = start + offset;
+          return (
+            <MarkdownCodeLine
+              key={index}
+              index={index}
+              language={language}
+              line={line}
+              lineNumberStart={lineNumberStart}
+              metadata={metadata}
+              shikiLine={shikiLines?.[index]}
+              totalLines={sourceLines.length}
+              virtualized
+            />
+          );
+        })}
+      </code>
+    </pre>
+  );
+}
+
+function MarkdownCodeLine({
+  index,
+  language,
+  line,
+  lineNumberStart,
+  metadata,
+  shikiLine,
+  totalLines,
+  virtualized = false,
+}: {
+  index: number;
+  language: string;
+  line: string;
+  lineNumberStart: number;
+  metadata: MarkdownCodeMetadata;
+  shikiLine: MarkdownCodeShikiLine;
+  totalLines?: number;
+  virtualized?: boolean;
+}) {
+  const lineNumber = lineNumberStart + index;
+  const diffKind = diffLineKind(line);
+  return (
+    <span
+      aria-label={metadata.showLineNumbers ? `Line ${lineNumber}` : undefined}
+      aria-posinset={
+        metadata.showLineNumbers && virtualized ? index + 1 : undefined
+      }
+      aria-setsize={
+        metadata.showLineNumbers && virtualized ? totalLines : undefined
+      }
+      className={[
+        markdownCodeLineClassName(diffKind),
+        virtualized ? "absolute right-0 left-0" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      data-highlighted-line={
+        metadata.highlightedLines.has(index + 1) ? "" : undefined
+      }
+      data-line=""
+      data-pretext-code-diff-line={diffKind ?? undefined}
+      data-pretext-code-line-number={
+        metadata.showLineNumbers ? lineNumber : undefined
+      }
+      role={metadata.showLineNumbers ? "listitem" : undefined}
+      style={
+        virtualized
+          ? {
+              height: "var(--markdown-code-line-height)",
+              top: `calc(${index} * var(--markdown-code-line-height))`,
+            }
+          : undefined
+      }
+    >
+      {renderCodeLine({
+        fallbackLanguage: language,
+        line,
+        pattern: metadata.highlightPattern,
+        shikiLine,
+      })}
+    </span>
+  );
+}
+
+function markdownCodeElementProps({
+  language,
+  lineNumberMaxDigits,
+  lineNumberStart,
+  metadata,
+  start = 0,
+  virtualized = false,
+}: {
+  language: string;
+  lineNumberMaxDigits: number;
+  lineNumberStart: number;
+  metadata: MarkdownCodeMetadata;
+  start?: number;
+  virtualized?: boolean;
+}) {
+  return {
+    "aria-label": metadata.showLineNumbers
+      ? `${language} numbered code lines`
+      : undefined,
+    className: [
+      "block font-mono text-[0.9em] leading-[1.45]",
+      virtualized ? "relative" : "",
+      metadata.showLineNumbers
+        ? "[counter-reset:line] before:content-[counter(line)]"
+        : "",
+      metadata.highlightedLines.size
+        ? "[&>[data-highlighted-line]]:bg-primary/10"
+        : "",
+      metadata.highlightPattern
+        ? "[&_[data-highlighted-chars]]:bg-primary/20 [&_[data-highlighted-chars]]:rounded"
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" "),
+    "data-language": language,
+    "data-line-numbers": metadata.showLineNumbers ? "" : undefined,
+    "data-line-numbers-max-digits": metadata.showLineNumbers
+      ? lineNumberMaxDigits
+      : undefined,
+    "data-pretext-code-virtualized": virtualized ? "" : undefined,
+    role: metadata.showLineNumbers ? "list" : undefined,
+    style: metadata.showLineNumbers
+      ? { counterSet: `line ${lineNumberStart + start - 1}` }
+      : undefined,
+  };
+}
+
+function markdownVirtualizedCodeCanvasStyle({
+  language,
+  lineNumberStart,
+  lineWidthCh,
+  metadata,
+  start,
+  totalLines,
+}: {
+  language: string;
+  lineNumberStart: number;
+  lineWidthCh: number;
+  metadata: MarkdownCodeMetadata;
+  start: number;
+  totalLines: number;
+}): React.CSSProperties {
+  return {
+    "--markdown-code-line-height": markdownCodeLineHeightCss(language),
+    counterSet: metadata.showLineNumbers
+      ? `line ${lineNumberStart + start - 1}`
+      : undefined,
+    height: `calc(${Math.max(totalLines, 1)} * var(--markdown-code-line-height))`,
+    minWidth: markdownCodeMinWidth(lineWidthCh, metadata.showLineNumbers),
+  } as React.CSSProperties;
+}
+
+function markdownCodeLineClassName(diffKind: ReturnType<typeof diffLineKind>) {
+  return [
+    "block min-h-5 box-border whitespace-pre",
+    diffKind === "add" ? "bg-emerald-500/10" : "",
+    diffKind === "remove" ? "bg-red-500/10" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function markdownCodeLineHeightCss(language: string) {
+  return language === "text" || language === "plaintext"
+    ? "0.95em"
+    : "calc(1.45em + var(--spacing) * 1)";
+}
+
+function markdownCodeMinWidth(lineWidthCh: number, showLineNumbers: boolean) {
+  const contentWidth = `${Math.max(1, lineWidthCh)}ch`;
+  return showLineNumbers
+    ? `max(100%, calc(${contentWidth} + var(--spacing) * 22))`
+    : `max(100%, ${contentWidth})`;
+}
+
+function widestMarkdownCodeLineWidthCh(lines: readonly string[]) {
+  return lines.reduce(
+    (widest, line) => Math.max(widest, markdownCodeLineWidthCh(line)),
+    1,
+  );
+}
+
+function markdownCodeLineWidthCh(line: string) {
+  let width = 0;
+  for (const character of line) {
+    if (character === "\t") {
+      width += 4 - (width % 4);
+    } else {
+      width += 1;
+    }
+  }
+  return width;
+}
+
+function measureMarkdownCodeLineHeight(code: HTMLElement | null) {
+  if (!code) return 0;
+  const sample = document.createElement("span");
+  sample.className = markdownCodeLineClassName(null);
+  sample.dataset.line = "";
+  sample.style.position = "absolute";
+  sample.style.visibility = "hidden";
+  sample.textContent = " ";
+  code.appendChild(sample);
+  const height = sample.getBoundingClientRect().height || sample.offsetHeight;
+  sample.remove();
+  return height;
 }
 
 function MarkdownMeasuredDiagram({

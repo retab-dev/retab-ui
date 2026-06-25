@@ -10,6 +10,113 @@ export type MarkdownGreenfieldScrollAnchor = {
   chunkHeightPx: number;
 };
 
+export type MarkdownGreenfieldVisibleRange = {
+  start: number;
+  end: number;
+};
+
+export type MarkdownGreenfieldVisibleProjection = {
+  frameIds: readonly string[];
+  range: MarkdownGreenfieldVisibleRange;
+};
+
+export function getMarkdownGreenfieldVisibleRange({
+  frames,
+  overscanPx,
+  scrollTop,
+  viewportHeight,
+}: {
+  frames: readonly MarkdownGreenfieldChunkFrame[];
+  overscanPx: number;
+  scrollTop: number;
+  viewportHeight: number;
+}): MarkdownGreenfieldVisibleRange {
+  if (!frames.length) return { start: 0, end: 0 };
+  const start = firstFrameWithBottomAfter(
+    frames,
+    Math.max(0, scrollTop - overscanPx),
+  );
+  const end = firstFrameWithTopAtOrAfter(
+    frames,
+    scrollTop + viewportHeight + overscanPx,
+  );
+  return { start, end: Math.max(start + 1, end) };
+}
+
+export function createMarkdownGreenfieldVisibleProjection({
+  frames,
+  range,
+}: {
+  frames: readonly MarkdownGreenfieldChunkFrame[];
+  range: MarkdownGreenfieldVisibleRange;
+}): MarkdownGreenfieldVisibleProjection {
+  return {
+    frameIds: frames.slice(range.start, range.end).map((frame) => frame.id),
+    range,
+  };
+}
+
+export function getMarkdownGreenfieldVisibleProjection({
+  frames,
+  overscanPx,
+  scrollTop,
+  viewportHeight,
+}: {
+  frames: readonly MarkdownGreenfieldChunkFrame[];
+  overscanPx: number;
+  scrollTop: number;
+  viewportHeight: number;
+}): MarkdownGreenfieldVisibleProjection {
+  return createMarkdownGreenfieldVisibleProjection({
+    frames,
+    range: getMarkdownGreenfieldVisibleRange({
+      frames,
+      overscanPx,
+      scrollTop,
+      viewportHeight,
+    }),
+  });
+}
+
+export function getMarkdownGreenfieldProjectedVisibleFrames({
+  frames,
+  projection,
+}: {
+  frames: readonly MarkdownGreenfieldChunkFrame[];
+  projection: MarkdownGreenfieldVisibleProjection;
+}) {
+  const rangedFrames = frames.slice(
+    projection.range.start,
+    projection.range.end,
+  );
+  if (frameIdsEqual(rangedFrames, projection.frameIds)) return rangedFrames;
+
+  const framesById = new Map(frames.map((frame) => [frame.id, frame]));
+  return projection.frameIds.flatMap((frameId) => {
+    const frame = framesById.get(frameId);
+    return frame ? [frame] : [];
+  });
+}
+
+export function isMarkdownGreenfieldVisibleProjectionSameWindow({
+  frames,
+  projection,
+  range,
+}: {
+  frames: readonly MarkdownGreenfieldChunkFrame[];
+  projection: MarkdownGreenfieldVisibleProjection;
+  range: MarkdownGreenfieldVisibleRange;
+}) {
+  const nextLength = range.end - range.start;
+  if (projection.frameIds.length !== nextLength) return false;
+  for (let offset = 0; offset < nextLength; offset += 1) {
+    if (frames[range.start + offset]?.id !== projection.frameIds[offset]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export function getMarkdownGreenfieldVisibleFrames({
   frames,
   overscanPx,
@@ -21,16 +128,13 @@ export function getMarkdownGreenfieldVisibleFrames({
   scrollTop: number;
   viewportHeight: number;
 }) {
-  if (!frames.length) return [];
-  const start = firstFrameWithBottomAfter(
+  const range = getMarkdownGreenfieldVisibleRange({
     frames,
-    Math.max(0, scrollTop - overscanPx),
-  );
-  const end = firstFrameWithTopAtOrAfter(
-    frames,
-    scrollTop + viewportHeight + overscanPx,
-  );
-  return frames.slice(start, Math.max(start + 1, end));
+    overscanPx,
+    scrollTop,
+    viewportHeight,
+  });
+  return frames.slice(range.start, range.end);
 }
 
 export function getMarkdownGreenfieldScrollAnchor({
@@ -185,4 +289,15 @@ function firstFrameWithTopAtOrAfter(
     else low = mid + 1;
   }
   return low;
+}
+
+function frameIdsEqual(
+  frames: readonly MarkdownGreenfieldChunkFrame[],
+  frameIds: readonly string[],
+) {
+  if (frames.length !== frameIds.length) return false;
+  for (let index = 0; index < frames.length; index += 1) {
+    if (frames[index]?.id !== frameIds[index]) return false;
+  }
+  return true;
 }
