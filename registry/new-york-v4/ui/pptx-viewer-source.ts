@@ -34,6 +34,10 @@ export interface PptxSourceRenderInput extends PptxBitmapCacheInput {
   priority?: PptxSlideRenderPriority;
 }
 
+export interface PptxSourceDrawCachedBitmapInput extends PptxBitmapCacheInput {
+  canvas: HTMLCanvasElement;
+}
+
 export type PptxRenderResult =
   | { status: "rendered" }
   | { status: "cancelled" }
@@ -42,6 +46,9 @@ export type PptxRenderResult =
 export interface PptxSource extends Disposable {
   slideCount: number;
   baseSize: PptxSize;
+  drawCachedBitmap(
+    input: PptxSourceDrawCachedBitmapInput,
+  ): PptxRenderResult | null;
   renderSlide(input: PptxSourceRenderInput): Promise<PptxRenderResult>;
   hasBitmap(input: PptxBitmapCacheInput): boolean;
   retain(): PptxSourceRelease;
@@ -76,6 +83,15 @@ class RendererSource implements PptxSource {
     return this.bitmaps.get(getPptxBitmapCacheKey(input)) !== undefined;
   }
 
+  drawCachedBitmap(
+    input: PptxSourceDrawCachedBitmapInput,
+  ): PptxRenderResult | null {
+    if (this.disposed) return null;
+    const cached = this.bitmaps.get(getPptxBitmapCacheKey(input));
+    if (!cached) return null;
+    return drawPptxBitmap(input.canvas, cached.bitmap);
+  }
+
   renderSlide(input: PptxSourceRenderInput): Promise<PptxRenderResult> {
     if (this.disposed) {
       return Promise.resolve({
@@ -106,10 +122,10 @@ class RendererSource implements PptxSource {
     }
 
     const bitmapKey = getPptxBitmapCacheKey(input);
-    const cached = this.bitmaps.get(bitmapKey);
-    if (cached) {
+    if (this.hasBitmap(input)) {
       if (!isRenderLive(input)) return Promise.resolve({ status: "cancelled" });
-      return Promise.resolve(drawCachedBitmap(input.canvas, cached.bitmap));
+      const cached = this.drawCachedBitmap(input);
+      if (cached) return Promise.resolve(cached);
     }
 
     const snapshot = this.bitmapSnapshots.get(bitmapKey);
@@ -174,6 +190,8 @@ class RendererSource implements PptxSource {
   }
 
   private takeNextTask() {
+    this.pruneStaleQueuedTasks();
+
     let bestIndex = -1;
     let bestRank: PptxRenderRank | null = null;
     for (let index = 0; index < this.queue.length; index += 1) {
@@ -190,6 +208,18 @@ class RendererSource implements PptxSource {
     return task ?? null;
   }
 
+  private pruneStaleQueuedTasks() {
+    const liveQueue: PptxQueuedRender[] = [];
+    for (const task of this.queue) {
+      if (isRenderLive(task.input)) {
+        liveQueue.push(task);
+      } else {
+        task.resolve({ status: "cancelled" });
+      }
+    }
+    this.queue = liveQueue;
+  }
+
   private async runTask(task: PptxQueuedRender) {
     if (this.disposed) {
       task.resolve({ status: "cancelled" });
@@ -200,15 +230,15 @@ class RendererSource implements PptxSource {
       return;
     }
 
-    const cached = this.bitmaps.get(task.bitmapKey);
+    const cached = this.drawCachedBitmap(task.input);
     if (cached) {
-      task.resolve(drawCachedBitmap(task.input.canvas, cached.bitmap));
+      task.resolve(cached);
       return;
     }
 
-    const snapshot = this.bitmapSnapshots.get(task.bitmapKey);
-    if (snapshot) {
-      task.resolve(this.renderAfterSnapshot(task.input, snapshot));
+    const pendingSnapshot = this.bitmapSnapshots.get(task.bitmapKey);
+    if (pendingSnapshot) {
+      task.resolve(this.renderAfterSnapshot(task.input, pendingSnapshot));
       return;
     }
 
@@ -231,7 +261,8 @@ class RendererSource implements PptxSource {
       return;
     }
 
-    this.scheduleBitmapSnapshot(task);
+    const snapshot = this.scheduleBitmapSnapshot(task);
+    this.resolveQueuedBitmapDuplicates(task.bitmapKey, snapshot);
     task.resolve({ status: "rendered" });
   }
 
@@ -243,8 +274,8 @@ class RendererSource implements PptxSource {
       () => {
         if (this.disposed) return { status: "cancelled" };
         if (!isRenderLive(input)) return { status: "cancelled" };
-        const cached = this.bitmaps.get(getPptxBitmapCacheKey(input));
-        if (cached) return drawCachedBitmap(input.canvas, cached.bitmap);
+        const cached = this.drawCachedBitmap(input);
+        if (cached) return cached;
         return this.renderSlide(input);
       },
       () => {
@@ -263,6 +294,24 @@ class RendererSource implements PptxSource {
         this.bitmapSnapshots.delete(task.bitmapKey);
       }
     });
+    return snapshot;
+  }
+
+  private resolveQueuedBitmapDuplicates(
+    bitmapKey: string,
+    snapshot: Promise<void>,
+  ) {
+    const remainingQueue: PptxQueuedRender[] = [];
+    for (const queued of this.queue) {
+      if (queued.bitmapKey !== bitmapKey) {
+        remainingQueue.push(queued);
+      } else if (isRenderLive(queued.input)) {
+        queued.resolve(this.renderAfterSnapshot(queued.input, snapshot));
+      } else {
+        queued.resolve({ status: "cancelled" });
+      }
+    }
+    this.queue = remainingQueue;
   }
 
   private async captureBitmap(task: PptxQueuedRender) {
@@ -298,7 +347,13 @@ type PptxRenderRank = {
 function getRenderRank(task: PptxQueuedRender): PptxRenderRank {
   const priority = task.input.priority;
   return {
-    visibility: priority?.isCurrentSlide ? 0 : priority?.isInViewport ? 1 : 2,
+    visibility: priority?.isCurrentSlide
+      ? 0
+      : priority?.isInViewport
+        ? 1
+        : priority?.isScrollLead
+          ? 2
+          : 3,
     distance:
       priority && Number.isFinite(priority.distanceFromReadingMarker)
         ? Math.max(0, priority.distanceFromReadingMarker)
@@ -509,7 +564,7 @@ function isValidRenderScale(renderScale: number) {
   return Number.isFinite(renderScale) && renderScale > 0;
 }
 
-function drawCachedBitmap(
+function drawPptxBitmap(
   canvas: HTMLCanvasElement,
   bitmap: ImageBitmap,
 ): PptxRenderResult {

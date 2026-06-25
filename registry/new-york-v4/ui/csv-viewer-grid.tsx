@@ -24,6 +24,10 @@ import type { CsvCellAddress } from "./csv-viewer-state";
 import { CsvStyleScope } from "./csv-viewer-style-scope";
 import { fixedGridColumnWidths } from "./fixed-grid-columns";
 import { getFixedGridCanvasStyle } from "./fixed-grid-layout";
+import {
+  FixedGridNativeFindIndex,
+  type FixedGridNativeFindCellAddress,
+} from "./fixed-grid-native-find-index";
 import { FixedGridRowWindow } from "./fixed-grid-row-window";
 import { getFixedGridRowStyle } from "./fixed-grid-row-style";
 import { buildVirtualGridTemplate } from "./fixed-grid-template";
@@ -69,6 +73,7 @@ const JUMP_ROW_OVERSCAN = 0;
 const SMALL_TABLE_ROW_LIMIT = 200;
 const SMALL_TABLE_COLUMN_LIMIT = 8;
 const WORKER_SORT_ROW_THRESHOLD = 20_000;
+const CSV_NATIVE_FIND_MAX_INDEXED_CELLS = 1_000_000;
 
 export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
   function CsvGrid(
@@ -255,6 +260,26 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       rowCount,
       virtualRows: virtualRowWindow.items,
     });
+    const shouldIndexNativeFind =
+      rowCount > 0 &&
+      columnCount > 0 &&
+      (shouldVirtualizeRows || shouldVirtualizeColumns);
+    const nativeFindCellText = React.useCallback(
+      (displayRowIndex: number, columnIndex: number) =>
+        rowAt(displayRowIndex)?.[columnIndex] ?? "",
+      [rowAt],
+    );
+    const scrollToNativeFindCell = React.useCallback(
+      ({ rowIndex, columnIndex }: FixedGridNativeFindCellAddress) => {
+        scrollToCell({
+          rowIndex,
+          columnIndex,
+          behavior: "auto",
+          align: "center",
+        });
+      },
+      [scrollToCell],
+    );
 
     useKeyedMountEffect(
       joinEffectKey([
@@ -294,6 +319,15 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
           style={fillHeight ? undefined : { height, maxHeight: "100%" }}
         >
           <style>{CSV_SCROLLBAR_CSS}</style>
+          <FixedGridNativeFindIndex
+            rowCount={rowCount}
+            columnCount={columnCount}
+            getCellText={nativeFindCellText}
+            onCellMatch={scrollToNativeFindCell}
+            dataSlot="csv-native-find-index"
+            enabled={shouldIndexNativeFind}
+            maxIndexedCells={CSV_NATIVE_FIND_MAX_INDEXED_CELLS}
+          />
           <FixedGridViewport scrollRef={setViewportRef} dataSlot="csv-body">
             <div
               style={getFixedGridCanvasStyle({

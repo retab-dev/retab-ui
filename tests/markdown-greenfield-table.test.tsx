@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 
 import * as React from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MarkdownViewer } from "@/components/ui/markdown-viewer";
@@ -106,5 +112,74 @@ describe("pretext markdown greenfield tables", () => {
     fireEvent.keyDown(region, { key: "ArrowRight" });
 
     expect(scroller?.scrollLeft).toBe(50);
+  });
+
+  it("virtualizes large tables while preserving copy and native find reveal", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    const header = "| " + ["A", "B", "C", "D"].join(" | ") + " |";
+    const divider =
+      "| " + Array.from({ length: 4 }, () => "---").join(" | ") + " |";
+    const rows = Array.from({ length: 140 }, (_, rowIndex) => {
+      const cells = Array.from(
+        { length: 4 },
+        (_, columnIndex) => `r${rowIndex + 1}c${columnIndex + 1}`,
+      );
+      return "| " + cells.join(" | ") + " |";
+    });
+    const { container } = render(
+      <MarkdownViewer
+        controls={false}
+        source={markdownSource([header, divider, ...rows].join("\n"))}
+      />,
+    );
+    const table = container.querySelector<HTMLElement>(
+      "[data-markdown-table-virtualized]",
+    );
+    const scroller = container.querySelector<HTMLElement>(
+      "[data-markdown-table-scroll]",
+    );
+
+    expect(table).toBeTruthy();
+    expect(table?.getAttribute("aria-rowcount")).toBe("141");
+    expect(
+      Number(table?.getAttribute("data-markdown-table-mounted-rows")),
+    ).toBeLessThan(80);
+    expect(screen.getByRole("cell", { name: "r1c1" })).toBeTruthy();
+    expect(screen.queryByRole("cell", { name: "r120c3" })).toBeNull();
+
+    Object.defineProperty(scroller, "clientHeight", {
+      configurable: true,
+      value: 144,
+    });
+    scroller!.scrollTop = 120 * 36;
+    fireEvent.scroll(scroller!);
+
+    await waitFor(() => {
+      expect(screen.getByRole("cell", { name: "r120c3" })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy table as TSV" }));
+
+    expect(writeText).toHaveBeenCalledWith(
+      expect.stringContaining("r140c1\tr140c2\tr140c3\tr140c4"),
+    );
+
+    const findEntry = Array.from(
+      container.querySelectorAll<HTMLElement>(
+        "[data-markdown-table-native-find-entry]",
+      ),
+    ).at(-1);
+    expect(findEntry?.getAttribute("hidden")).toBe("until-found");
+
+    fireEvent(findEntry!, new Event("beforematch"));
+
+    expect(scroller?.scrollTop).toBe(136 * 36);
+    await waitFor(() => {
+      expect(screen.getByRole("cell", { name: "r140c4" })).toBeTruthy();
+    });
   });
 });

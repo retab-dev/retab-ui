@@ -22,10 +22,19 @@ import {
 import { PptxViewerFallback } from "@/registry/new-york-v4/ui/pptx-viewer-fallback";
 import { createPptxScrollActivity } from "@/registry/new-york-v4/ui/pptx-viewer-scroll";
 import {
+  createPptxWindowFromScrollPosition,
   createPptxSlideLayout,
+  getPptxLogicalScrollTop,
+  getPptxPhysicalScrollHeight,
   getPptxRenderedSlideWindow,
+  getPptxRenderSlides,
   getPptxSlideAtScrollMarker,
   getPptxVirtualSlides,
+  PPTX_RENDER_FIT_PERFECTLY_OVERSCAN_PX,
+  PPTX_RENDER_WINDOW_OVERSCAN_PX,
+  PPTX_SCROLL_REBASE_CONTAINER_PX,
+  PPTX_SCROLL_REBASE_TARGET_PX,
+  resolvePptxPhysicalScrollPosition,
   usePptxVisibleSlide,
 } from "@/registry/new-york-v4/ui/pptx-viewer-visible-slide";
 import { usePptxZoom } from "@/registry/new-york-v4/ui/pptx-viewer-zoom";
@@ -218,6 +227,106 @@ describe("pptx slide scroll layout", () => {
         }),
       ]),
     });
+  });
+
+  it("creates a centered pixel render window", () => {
+    expect(
+      createPptxWindowFromScrollPosition({
+        overscanPx: 1000,
+        scrollHeight: 10_000,
+        scrollTop: 5_000,
+        viewportHeight: 720,
+      }),
+    ).toEqual({ top: 4000, bottom: 6720 });
+  });
+
+  it("creates a smaller fit-perfectly window for large jumps", () => {
+    expect(
+      createPptxWindowFromScrollPosition({
+        fitPerfectly: true,
+        fitPerfectlyOverscanPx: PPTX_RENDER_FIT_PERFECTLY_OVERSCAN_PX,
+        overscanPx: 1000,
+        scrollHeight: 10_000,
+        scrollTop: 5_000,
+        viewportHeight: 720,
+      }),
+    ).toEqual({ top: 4968, bottom: 5784 });
+  });
+
+  it("renders the centered Pierre-sized pixel window by default", () => {
+    const layout = createPptxSlideLayout({
+      baseSize: { width: 960, height: 720 },
+      zoomScale: 1,
+      rotation: 0,
+      slideCount: 20,
+      slideGap: 16,
+      slidePadding: 16,
+    });
+
+    expect(
+      getPptxRenderSlides({
+        layout,
+        scrollTop: 16 + 9 * 736,
+        viewportHeight: 720,
+      }).map((slide) => slide.slideNumber),
+    ).toEqual([8, 9, 10, 11, 12]);
+    expect(PPTX_RENDER_WINDOW_OVERSCAN_PX).toBe(1000);
+  });
+
+  it("renders a tight fit-perfectly pixel window", () => {
+    const layout = createPptxSlideLayout({
+      baseSize: { width: 960, height: 720 },
+      zoomScale: 1,
+      rotation: 0,
+      slideCount: 20,
+      slideGap: 16,
+      slidePadding: 16,
+    });
+
+    expect(
+      getPptxRenderSlides({
+        fitPerfectly: true,
+        layout,
+        scrollTop: 16 + 9 * 736,
+        viewportHeight: 720,
+      }).map((slide) => slide.slideNumber),
+    ).toEqual([9, 10, 11]);
+  });
+
+  it("caps huge physical scroll height and maps it back to logical scroll", () => {
+    const layout = createPptxSlideLayout({
+      baseSize: { width: 960, height: 720 },
+      zoomScale: 1,
+      rotation: 0,
+      slideCount: 50_000,
+      slideGap: 16,
+      slidePadding: 16,
+    });
+    const position = resolvePptxPhysicalScrollPosition({
+      logicalScrollTop: 20_000_000,
+      scrollPageOffset: 0,
+      totalHeight: layout.totalHeight,
+      viewportHeight: 720,
+    });
+
+    expect(
+      getPptxPhysicalScrollHeight({
+        totalHeight: layout.totalHeight,
+        viewportHeight: 720,
+      }),
+    ).toBe(PPTX_SCROLL_REBASE_CONTAINER_PX);
+    expect(position).toEqual({
+      physicalScrollTop: PPTX_SCROLL_REBASE_TARGET_PX,
+      scrollPageOffset: 18_000_000,
+    });
+    expect(
+      getPptxLogicalScrollTop({
+        physicalScrollTop: position.physicalScrollTop,
+        scrollPageOffset: position.scrollPageOffset,
+        totalHeight: layout.totalHeight,
+        viewportHeight: 720,
+      }),
+    ).toBe(20_000_000);
   });
 });
 

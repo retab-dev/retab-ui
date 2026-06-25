@@ -270,6 +270,7 @@ export async function createTiffFrameSource(
   createWorker: TiffWorkerFactory,
   maxDecodedFrames: number,
   signal?: AbortSignal,
+  maxDecodedPixels?: number,
 ): Promise<FrameSource> {
   const client = new TiffWorkerClient(createWorker);
   const frames = await client.init(buffer, signal);
@@ -278,6 +279,7 @@ export async function createTiffFrameSource(
       kind: "tiff",
       frames,
       maxDecodedFrames,
+      maxDecodedPixels,
       decode: (frameIndex) => client.decode(frameIndex),
       cancelDecode: (frameIndex, reason) =>
         client.cancelDecode(frameIndex, reason),

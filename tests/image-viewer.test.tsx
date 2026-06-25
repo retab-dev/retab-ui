@@ -2230,7 +2230,7 @@ describe("TiffWorkerClient", () => {
 });
 
 describe("ImageFrame rendering lifecycle", () => {
-  it("mounts the visible window and keeps retained TIFF prefetch frames bounded", async () => {
+  it("caps scheduled TIFF frame renders inside the sticky render window", async () => {
     stubObservableLayout({
       frameListWidth: 132,
       clientHeight: 200,
@@ -2250,15 +2250,24 @@ describe("ImageFrame rendering lifecycle", () => {
     const { container } = view;
 
     expect(await screen.findByText("Page 1 of 100")).toBeTruthy();
+    expect(
+      container.querySelector('[data-slot="image-frame-sticky-window"]'),
+    ).toBeTruthy();
+    expect(
+      container.querySelector('[data-slot="image-frame-window-before"]'),
+    ).toBeTruthy();
+    expect(
+      container.querySelector('[data-slot="image-frame-window-after"]'),
+    ).toBeTruthy();
     await waitFor(() => {
       expect(
         container.querySelectorAll("[data-slot='image-frame']"),
-      ).toHaveLength(6);
+      ).toHaveLength(4);
     });
     const initialDecodeFrames = workers[0].posts.flatMap((post) =>
       post.message.type === "decodeFrame" ? [post.message.frameIndex] : [],
     );
-    expect(initialDecodeFrames.slice(0, 6)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(initialDecodeFrames.slice(0, 4)).toEqual([0, 1, 2, 3]);
 
     const viewport = container.querySelector(
       '[data-slot="scroll-area-viewport"]',
@@ -2276,27 +2285,22 @@ describe("ImageFrame rendering lifecycle", () => {
     await act(async () => {
       fireEvent.scroll(viewport);
       await new Promise((resolve) => requestAnimationFrame(resolve));
+      await new Promise((resolve) => requestAnimationFrame(resolve));
     });
 
     await waitFor(() => {
       const mountedFrameNumbers = Array.from(
         container.querySelectorAll<HTMLElement>("[data-slot='image-frame']"),
       ).map((frame) => Number(frame.dataset.frameNumber));
-      expect(mountedFrameNumbers.slice(0, 10)).toEqual([
-        46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
-      ]);
+      expect(mountedFrameNumbers).toEqual([46, 47, 48, 49]);
       expect(mountedFrameNumbers.length).toBeLessThanOrEqual(16);
-      expect(mountedFrameNumbers).toEqual(
-        expect.arrayContaining([1, 2, 3, 4, 5, 6]),
-      );
+      expect(mountedFrameNumbers).not.toEqual(expect.arrayContaining([1]));
     });
     const decodeFrames = workers[0].posts.flatMap((post) =>
       post.message.type === "decodeFrame" ? [post.message.frameIndex] : [],
     );
-    expect(decodeFrames.slice(0, 6)).toEqual([0, 1, 2, 3, 4, 5]);
-    expect(decodeFrames).toEqual(
-      expect.arrayContaining([45, 46, 47, 48, 49, 50, 51, 52, 53, 54]),
-    );
+    expect(decodeFrames.slice(0, 4)).toEqual([0, 1, 2, 3]);
+    expect(decodeFrames).toEqual(expect.arrayContaining([45, 46, 47, 48]));
   });
 
   it("draws an observed frame at device-pixel size and releases it on unmount", async () => {
@@ -2337,6 +2341,48 @@ describe("ImageFrame rendering lifecycle", () => {
 
     unmount();
     expect(release).toHaveBeenCalledWith(0);
+  });
+
+  it("does not clear the canvas for same-size redraws", async () => {
+    stubObservableLayout();
+    const context = stubCanvasContext();
+    const widthSetter = vi.spyOn(HTMLCanvasElement.prototype, "width", "set");
+    const heightSetter = vi.spyOn(HTMLCanvasElement.prototype, "height", "set");
+    const decodedBitmap = bitmap(50, 20);
+    const source = createImageSourceForTests(
+      "image",
+      [{ width: 50, height: 20 }],
+      vi.fn(() => Promise.resolve(decodedBitmap)),
+    );
+
+    const view = render(
+      <ImageFrame
+        source={source}
+        frameIndex={0}
+        scale={1}
+        rotation={0}
+        onFrameRenderTiming={() => {}}
+      />,
+    );
+    await waitFor(() => expect(context.drawImage).toHaveBeenCalledTimes(1));
+
+    widthSetter.mockClear();
+    heightSetter.mockClear();
+    context.drawImage.mockClear();
+
+    view.rerender(
+      <ImageFrame
+        source={source}
+        frameIndex={0}
+        scale={1}
+        rotation={0}
+        onFrameRenderTiming={() => {}}
+      />,
+    );
+
+    await waitFor(() => expect(context.drawImage).toHaveBeenCalledTimes(1));
+    expect(widthSetter).not.toHaveBeenCalled();
+    expect(heightSetter).not.toHaveBeenCalled();
   });
 
   it("releases and closes a pending frame decode after unmount", async () => {

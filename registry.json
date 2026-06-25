@@ -1115,6 +1115,11 @@
           "path": "registry/new-york-v4/ui/fixed-grid-row-window.tsx",
           "type": "registry:ui",
           "target": "@ui/fixed-grid-row-window.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/fixed-grid-native-find-index.tsx",
+          "type": "registry:ui",
+          "target": "@ui/fixed-grid-native-find-index.tsx"
         }
       ]
     },
@@ -1999,6 +2004,11 @@
           "path": "registry/new-york-v4/ui/fixed-grid-row-window.tsx",
           "type": "registry:ui",
           "target": "@ui/fixed-grid-row-window.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/fixed-grid-native-find-index.tsx",
+          "type": "registry:ui",
+          "target": "@ui/fixed-grid-native-find-index.tsx"
         }
       ]
     },

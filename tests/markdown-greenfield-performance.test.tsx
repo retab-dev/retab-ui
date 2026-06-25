@@ -165,7 +165,7 @@ describe("pretext markdown greenfield performance boundaries", () => {
     ).toBeTruthy();
   });
 
-  it("renders huge GFM tables as bounded hostile previews instead of mounting every cell", () => {
+  it("renders huge simple GFM tables as bounded virtual tables", () => {
     const header = "| " + ["A", "B", "C", "D", "E", "F"].join(" | ") + " |";
     const divider =
       "| " + Array.from({ length: 6 }, () => "---").join(" | ") + " |";
@@ -181,20 +181,24 @@ describe("pretext markdown greenfield performance boundaries", () => {
     const { container } = render(
       <MarkdownViewer controls={false} source={markdownSource(markdown)} />,
     );
-    const fallback = container.querySelector<HTMLElement>(
-      "[data-markdown-hostile-fallback]",
+    const table = container.querySelector<HTMLElement>(
+      "[data-markdown-table-virtualized]",
     );
 
     expect(model.blocks).toHaveLength(1);
     expect(model.blocks[0]?.kind).toBe("table");
-    expect(model.blocks[0]?.isHostile).toBe(true);
-    expect(fallback).toBeTruthy();
-    expect(container.querySelector("[data-markdown-table]")).toBeNull();
+    expect(model.blocks[0]?.isHostile).toBe(false);
     expect(
-      Number(fallback?.getAttribute("data-markdown-hostile-mounted-lines")),
-    ).toBeLessThan(120);
+      container.querySelector("[data-markdown-hostile-fallback]"),
+    ).toBeNull();
+    expect(table).toBeTruthy();
+    expect(table?.getAttribute("aria-rowcount")).toBe("361");
+    expect(table?.getAttribute("aria-colcount")).toBe("6");
     expect(
-      screen.getByRole("button", { name: "Copy large Markdown block source" }),
+      Number(table?.getAttribute("data-markdown-table-mounted-rows")),
+    ).toBeLessThan(80);
+    expect(
+      container.querySelector("[data-markdown-table-spacer-row]"),
     ).toBeTruthy();
   });
 

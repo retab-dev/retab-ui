@@ -90,12 +90,14 @@ export interface FrameSource {
 
 interface BitmapCacheOptions {
   maxDecodedFrames: number;
+  maxDecodedPixels?: number;
 }
 
 export class BitmapCache {
   private readonly bitmaps = new Map<number, ImageBitmap>();
   private readonly pinnedFrameCounts = new Map<number, number>();
   private readonly frameRecency: number[] = [];
+  private decodedPixels = 0;
 
   constructor(private readonly options: BitmapCacheOptions) {}
 
@@ -108,7 +110,13 @@ export class BitmapCache {
   set(frameIndex: number, bitmap: ImageBitmap) {
     const previousBitmap = this.bitmaps.get(frameIndex);
     if (previousBitmap && previousBitmap !== bitmap) {
+      this.decodedPixels -= imageBitmapPixels(previousBitmap);
       closeBitmap(previousBitmap);
+    }
+    if (!previousBitmap) {
+      this.decodedPixels += imageBitmapPixels(bitmap);
+    } else if (previousBitmap !== bitmap) {
+      this.decodedPixels += imageBitmapPixels(bitmap);
     }
     this.bitmaps.set(frameIndex, bitmap);
     this.touch(frameIndex);
@@ -146,6 +154,7 @@ export class BitmapCache {
     this.bitmaps.clear();
     this.pinnedFrameCounts.clear();
     this.frameRecency.length = 0;
+    this.decodedPixels = 0;
   }
 
   private touch(frameIndex: number) {
@@ -156,12 +165,25 @@ export class BitmapCache {
 
   private evict() {
     for (const frameIndex of [...this.frameRecency]) {
-      if (this.bitmaps.size <= this.options.maxDecodedFrames) break;
+      if (
+        this.bitmaps.size <= this.options.maxDecodedFrames &&
+        this.decodedPixels <= this.maxDecodedPixels
+      ) {
+        break;
+      }
       if (this.isPinned(frameIndex)) continue;
-      closeBitmap(this.bitmaps.get(frameIndex));
+      const bitmap = this.bitmaps.get(frameIndex);
+      if (bitmap) {
+        this.decodedPixels -= imageBitmapPixels(bitmap);
+        closeBitmap(bitmap);
+      }
       this.bitmaps.delete(frameIndex);
       this.frameRecency.splice(this.frameRecency.indexOf(frameIndex), 1);
     }
+  }
+
+  private get maxDecodedPixels() {
+    return this.options.maxDecodedPixels ?? Number.POSITIVE_INFINITY;
   }
 }
 
@@ -171,6 +193,7 @@ interface CreateFrameSourceOptions {
   decode(frameIndex: number): Promise<ImageBitmap>;
   cancelDecode?: (frameIndex: number, reason: Error) => void;
   maxDecodedFrames: number;
+  maxDecodedPixels?: number;
   initialBitmaps?: readonly InitialBitmap[];
   onDispose?: (reason: Error) => void;
 }
@@ -192,6 +215,7 @@ export function createFrameSource({
   decode,
   cancelDecode,
   maxDecodedFrames,
+  maxDecodedPixels,
   initialBitmaps = [],
   onDispose,
 }: CreateFrameSourceOptions): FrameSource {
@@ -201,7 +225,7 @@ export function createFrameSource({
     closeInitialBitmaps(initialBitmaps);
     throw error;
   }
-  const bitmapCache = new BitmapCache({ maxDecodedFrames });
+  const bitmapCache = new BitmapCache({ maxDecodedFrames, maxDecodedPixels });
   const inflightDecodes = new Map<number, InflightFrameDecode>();
   let disposed = false;
 
@@ -333,14 +357,20 @@ export async function createNativeImageFrameSource(
   bytes: ArrayBuffer,
   contentType: string | null,
   maxDecodedFrames: number,
+  maxDecodedPixels?: number,
 ): Promise<FrameSource> {
   const blob = new Blob([bytes], { type: contentType ?? "" });
-  return createNativeImageFrameSourceFromBlob(blob, maxDecodedFrames);
+  return createNativeImageFrameSourceFromBlob(
+    blob,
+    maxDecodedFrames,
+    maxDecodedPixels,
+  );
 }
 
 export async function createNativeImageFrameSourceFromBlob(
   blob: Blob,
   maxDecodedFrames: number,
+  maxDecodedPixels?: number,
 ): Promise<FrameSource> {
   let probe: ImageBitmap;
   try {
@@ -358,6 +388,7 @@ export async function createNativeImageFrameSourceFromBlob(
     kind: "native-image",
     frames,
     maxDecodedFrames,
+    maxDecodedPixels,
     initialBitmaps: [{ frameIndex: 0, bitmap: probe }],
     decode: () => createImageBitmap(blob),
   });
@@ -401,6 +432,11 @@ export function closeBitmap(bitmap: ImageBitmap | undefined) {
   } catch {
     // Disposal must stay idempotent across browser edges and test doubles.
   }
+}
+
+function imageBitmapPixels(bitmap: ImageBitmap) {
+  const pixels = bitmap.width * bitmap.height;
+  return Number.isFinite(pixels) && pixels > 0 ? pixels : 0;
 }
 
 function toImageDecodeError(error: unknown): ViewerFormatError {

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 
 import {
   clamp,
@@ -12,6 +12,16 @@ import {
 } from "./pptx-viewer-core";
 
 const PPTX_READING_MARKER_RATIO = 0.2;
+export const PPTX_RENDER_FIT_PERFECTLY_OVERSCAN_PX = 32;
+export const PPTX_RENDER_WINDOW_OVERSCAN_PX = 1000;
+export const PPTX_SCROLL_REBASE_CONTAINER_PX = 12_000_000;
+export const PPTX_SCROLL_REBASE_TRIGGER_PX = 1_000_000;
+export const PPTX_SCROLL_REBASE_TARGET_PX = 2_000_000;
+export const PPTX_SCROLL_REBASE_TARGET_BOTTOM_PX =
+  PPTX_SCROLL_REBASE_CONTAINER_PX - PPTX_SCROLL_REBASE_TARGET_PX;
+export const PPTX_SCROLL_REBASE_THRESHOLD_PX =
+  PPTX_SCROLL_REBASE_CONTAINER_PX - PPTX_SCROLL_REBASE_TRIGGER_PX;
+export const PPTX_SCROLL_POSITION_EPSILON = 1;
 
 export interface PptxSlideLayout {
   slideCount: number;
@@ -38,6 +48,24 @@ export interface PptxRenderedSlideWindow {
   height: number;
   slides: Array<PptxVirtualSlide & { windowTop: number }>;
   stickyInset: number;
+}
+
+export interface PptxRenderPixelWindow {
+  bottom: number;
+  top: number;
+}
+
+export interface PptxScrollMetrics {
+  physicalScrollHeight: number;
+  physicalScrollTop: number;
+  scrollPageOffset: number;
+  scrollTop: number;
+  viewportHeight: number;
+}
+
+export interface PptxScrollRebasePosition {
+  physicalScrollTop: number;
+  scrollPageOffset: number;
 }
 
 export interface PptxSlideLayoutInput {
@@ -178,23 +206,66 @@ export function getPptxVirtualSlides({
   );
 }
 
+export function getPptxRenderSlides({
+  fitPerfectly = false,
+  fitPerfectlyOverscanPx = PPTX_RENDER_FIT_PERFECTLY_OVERSCAN_PX,
+  layout,
+  overscanPx = PPTX_RENDER_WINDOW_OVERSCAN_PX,
+  scrollTop,
+  viewportHeight,
+}: {
+  fitPerfectly?: boolean;
+  fitPerfectlyOverscanPx?: number;
+  layout: PptxSlideLayout;
+  overscanPx?: number;
+  scrollTop: number;
+  viewportHeight: number;
+}): PptxVirtualSlide[] {
+  if (layout.slideCount === 0) return [];
+
+  const window = createPptxWindowFromScrollPosition({
+    fitPerfectly,
+    fitPerfectlyOverscanPx,
+    overscanPx,
+    scrollHeight: layout.totalHeight,
+    scrollTop,
+    viewportHeight,
+  });
+
+  return getPptxSlidesInRange({
+    layout,
+    startOffset: window.top,
+    endOffset: window.bottom,
+  });
+}
+
 export function getPptxRenderedSlideWindow({
   layout,
+  physicalScrollHeight = layout.totalHeight,
+  scrollPageOffset = 0,
   slides,
   viewportHeight,
 }: {
   layout: PptxSlideLayout;
+  physicalScrollHeight?: number;
+  scrollPageOffset?: number;
   slides: readonly PptxVirtualSlide[];
   viewportHeight: number;
 }): PptxRenderedSlideWindow | null {
   const renderedSlides = [...slides].sort((a, b) => a.index - b.index);
   if (renderedSlides.length === 0) return null;
 
-  const beforeHeight = renderedSlides[0]?.top ?? 0;
+  const logicalBeforeHeight = renderedSlides[0]?.top ?? 0;
   const windowBottom = Math.max(
     ...renderedSlides.map((slide) => slide.top + slide.height),
   );
-  const height = Math.max(0, windowBottom - beforeHeight);
+  const height = Math.max(0, windowBottom - logicalBeforeHeight);
+  const beforeHeight = getPptxPagedLayoutTop({
+    logicalTop: logicalBeforeHeight,
+    scrollPageOffset,
+    totalHeight: layout.totalHeight,
+    viewportHeight,
+  });
   const safeViewportHeight =
     Number.isFinite(viewportHeight) && viewportHeight > 0
       ? viewportHeight
@@ -205,14 +276,227 @@ export function getPptxRenderedSlideWindow({
     safeViewportHeight > 0 ? -Math.max(0, height - safeViewportHeight) : 0;
 
   return {
-    afterHeight: Math.max(0, layout.totalHeight - windowBottom),
+    afterHeight: Math.max(
+      0,
+      safeSize(physicalScrollHeight) - beforeHeight - height,
+    ),
     beforeHeight,
     height,
     slides: renderedSlides.map((slide) => ({
       ...slide,
-      windowTop: slide.top - beforeHeight,
+      windowTop: slide.top - logicalBeforeHeight,
     })),
     stickyInset,
+  };
+}
+
+export function createPptxWindowFromScrollPosition({
+  fitPerfectly = false,
+  fitPerfectlyOverscanPx = 0,
+  overscanPx,
+  scrollHeight,
+  scrollTop,
+  viewportHeight,
+}: {
+  fitPerfectly?: boolean;
+  fitPerfectlyOverscanPx?: number;
+  overscanPx: number;
+  scrollHeight: number;
+  scrollTop: number;
+  viewportHeight: number;
+}): PptxRenderPixelWindow {
+  const safeOverscanPx = safePadding(overscanPx);
+  const safeScrollHeight = safeSize(scrollHeight);
+  const safeScrollTop = Math.max(0, finiteNumber(scrollTop));
+  const safeViewportHeight = Math.max(0, finiteNumber(viewportHeight));
+  const windowHeight = safeViewportHeight + safeOverscanPx * 2;
+  const fitPerfectlyOverscan = safePadding(fitPerfectlyOverscanPx);
+  const effectiveHeight = fitPerfectly
+    ? safeViewportHeight + fitPerfectlyOverscan * 2
+    : windowHeight;
+
+  if (windowHeight >= safeScrollHeight || fitPerfectly) {
+    const fitScrollTop = Math.min(safeScrollTop, safeScrollHeight);
+    const top = Math.max(fitScrollTop - fitPerfectlyOverscan, 0);
+    const bottom = Math.min(fitScrollTop + effectiveHeight, safeScrollHeight);
+    return {
+      bottom: Math.ceil(Math.max(bottom, top)),
+      top: Math.floor(Math.max(0, top)),
+    };
+  }
+
+  const scrollCenter = safeScrollTop + safeViewportHeight / 2;
+  let top = scrollCenter - windowHeight / 2;
+  let bottom = top + windowHeight;
+
+  if (top < 0) {
+    top = 0;
+    bottom = windowHeight;
+  }
+  if (bottom > safeScrollHeight) {
+    bottom = safeScrollHeight;
+    top = safeScrollHeight - windowHeight;
+  }
+
+  return {
+    bottom: Math.ceil(Math.max(bottom, top)),
+    top: Math.floor(Math.max(0, top)),
+  };
+}
+
+export function getPptxPhysicalScrollHeight({
+  totalHeight,
+  viewportHeight,
+}: {
+  totalHeight: number;
+  viewportHeight: number;
+}) {
+  const safeTotalHeight = safeSize(totalHeight);
+  return shouldRebasePptxScroll({
+    totalHeight: safeTotalHeight,
+    viewportHeight,
+  })
+    ? Math.min(safeTotalHeight, PPTX_SCROLL_REBASE_CONTAINER_PX)
+    : safeTotalHeight;
+}
+
+export function getPptxLogicalScrollTop({
+  physicalScrollTop,
+  scrollPageOffset,
+  totalHeight,
+  viewportHeight,
+}: {
+  physicalScrollTop: number;
+  scrollPageOffset: number;
+  totalHeight: number;
+  viewportHeight: number;
+}) {
+  return clamp(
+    finiteNumber(physicalScrollTop) + safePadding(scrollPageOffset),
+    0,
+    getPptxMaxLogicalScrollTop({ totalHeight, viewportHeight }),
+  );
+}
+
+export function resolvePptxPhysicalScrollPosition({
+  logicalScrollTop,
+  scrollPageOffset,
+  totalHeight,
+  viewportHeight,
+}: {
+  logicalScrollTop: number;
+  scrollPageOffset: number;
+  totalHeight: number;
+  viewportHeight: number;
+}): PptxScrollRebasePosition {
+  const safeLogicalScrollTop = clamp(
+    finiteNumber(logicalScrollTop),
+    0,
+    getPptxMaxLogicalScrollTop({ totalHeight, viewportHeight }),
+  );
+
+  if (!shouldRebasePptxScroll({ totalHeight, viewportHeight })) {
+    return {
+      physicalScrollTop: clamp(
+        safeLogicalScrollTop,
+        0,
+        getPptxMaxPhysicalScrollTop({ totalHeight, viewportHeight }),
+      ),
+      scrollPageOffset: 0,
+    };
+  }
+
+  const currentPageOffset = clampPptxScrollPageOffset({
+    scrollPageOffset,
+    totalHeight,
+    viewportHeight,
+  });
+  const physicalScrollTop = safeLogicalScrollTop - currentPageOffset;
+  const maxPhysicalScrollTop = getPptxMaxPhysicalScrollTop({
+    totalHeight,
+    viewportHeight,
+  });
+  const maxPageOffset = getPptxMaxScrollPageOffset({
+    totalHeight,
+    viewportHeight,
+  });
+  const shouldMoveDown =
+    physicalScrollTop > PPTX_SCROLL_REBASE_THRESHOLD_PX &&
+    currentPageOffset < maxPageOffset;
+  const shouldMoveUp =
+    physicalScrollTop < PPTX_SCROLL_REBASE_TRIGGER_PX && currentPageOffset > 0;
+
+  if (
+    physicalScrollTop < 0 ||
+    physicalScrollTop > maxPhysicalScrollTop ||
+    shouldMoveDown ||
+    shouldMoveUp
+  ) {
+    return resolvePptxScrollPageWindow({
+      logicalScrollTop: safeLogicalScrollTop,
+      preferredPhysicalScrollTop: shouldMoveUp
+        ? Math.min(PPTX_SCROLL_REBASE_TARGET_BOTTOM_PX, maxPhysicalScrollTop)
+        : PPTX_SCROLL_REBASE_TARGET_PX,
+      totalHeight,
+      viewportHeight,
+    });
+  }
+
+  return {
+    physicalScrollTop: roundPptxScrollPixel(
+      clamp(physicalScrollTop, 0, maxPhysicalScrollTop),
+    ),
+    scrollPageOffset: currentPageOffset,
+  };
+}
+
+export function getPptxPagedLayoutTop({
+  logicalTop,
+  scrollPageOffset,
+  totalHeight,
+  viewportHeight,
+}: {
+  logicalTop: number;
+  scrollPageOffset: number;
+  totalHeight: number;
+  viewportHeight: number;
+}) {
+  if (!shouldRebasePptxScroll({ totalHeight, viewportHeight })) {
+    return finiteNumber(logicalTop);
+  }
+  return Math.max(0, finiteNumber(logicalTop) - safePadding(scrollPageOffset));
+}
+
+export function readPptxScrollMetrics({
+  scrollPageOffset,
+  totalHeight,
+  viewportElement,
+}: {
+  scrollPageOffset: number;
+  totalHeight: number;
+  viewportElement: HTMLDivElement | null;
+}): PptxScrollMetrics {
+  const viewportHeight = viewportElement?.clientHeight ?? 0;
+  const physicalScrollTop = viewportElement?.scrollTop ?? 0;
+  const physicalScrollHeight = getPptxPhysicalScrollHeight({
+    totalHeight,
+    viewportHeight,
+  });
+  const isRebased = physicalScrollHeight < totalHeight;
+
+  return {
+    physicalScrollHeight,
+    physicalScrollTop,
+    scrollPageOffset: isRebased ? scrollPageOffset : 0,
+    scrollTop: isRebased
+      ? getPptxLogicalScrollTop({
+          physicalScrollTop,
+          scrollPageOffset,
+          totalHeight,
+          viewportHeight,
+        })
+      : Math.max(0, physicalScrollTop),
+    viewportHeight,
   };
 }
 
@@ -226,6 +510,7 @@ export function usePptxVisibleSlide({
   const lastReportedSlide = React.useRef(0);
   const lastVisibleSlideCallback = React.useRef(onVisibleSlideChange);
   const committedLayoutRef = React.useRef(layout);
+  const scrollPageOffsetRef = React.useRef(0);
   const layoutEffectKey = getPptxSlideLayoutKey(layout);
 
   if (lastVisibleSlideCallback.current !== onVisibleSlideChange) {
@@ -233,7 +518,64 @@ export function usePptxVisibleSlide({
     lastReportedSlide.current = 0;
   }
 
-  useKeyedMountEffect(layoutEffectKey, () => {
+  const getScrollMetrics = React.useCallback(
+    () =>
+      readPptxScrollMetrics({
+        scrollPageOffset: scrollPageOffsetRef.current,
+        totalHeight: layout.totalHeight,
+        viewportElement: scrollViewportRef.current,
+      }),
+    [layout.totalHeight],
+  );
+
+  const syncPhysicalScrollPosition = React.useCallback(
+    (viewport: HTMLDivElement) => {
+      const metrics = readPptxScrollMetrics({
+        scrollPageOffset: scrollPageOffsetRef.current,
+        totalHeight: layout.totalHeight,
+        viewportElement: viewport,
+      });
+      if (metrics.physicalScrollHeight >= layout.totalHeight) {
+        scrollPageOffsetRef.current = 0;
+        return {
+          ...metrics,
+          scrollPageOffset: 0,
+        };
+      }
+
+      const position = resolvePptxPhysicalScrollPosition({
+        logicalScrollTop: metrics.scrollTop,
+        scrollPageOffset: metrics.scrollPageOffset,
+        totalHeight: layout.totalHeight,
+        viewportHeight: metrics.viewportHeight,
+      });
+      scrollPageOffsetRef.current = position.scrollPageOffset;
+      setViewportPhysicalScrollTop(viewport, position.physicalScrollTop);
+
+      return {
+        ...metrics,
+        physicalScrollTop: position.physicalScrollTop,
+        scrollPageOffset: position.scrollPageOffset,
+      };
+    },
+    [layout.totalHeight],
+  );
+
+  const scrollViewportToLogicalTop = React.useCallback(
+    (viewport: HTMLDivElement, targetTop: number) => {
+      const position = resolvePptxPhysicalScrollPosition({
+        logicalScrollTop: targetTop,
+        scrollPageOffset: scrollPageOffsetRef.current,
+        totalHeight: layout.totalHeight,
+        viewportHeight: viewport.clientHeight,
+      });
+      scrollPageOffsetRef.current = position.scrollPageOffset;
+      setViewportPhysicalScrollTop(viewport, position.physicalScrollTop);
+    },
+    [layout.totalHeight],
+  );
+
+  useKeyedLayoutEffect(layoutEffectKey, () => {
     const previousLayout = committedLayoutRef.current;
     committedLayoutRef.current = layout;
 
@@ -242,23 +584,44 @@ export function usePptxVisibleSlide({
     const viewport = scrollViewportRef.current;
     if (!viewport) return;
 
-    const anchor = capturePptxReadingAnchor(previousLayout, viewport);
+    const previousLogicalScrollTop = getPptxLogicalScrollTop({
+      physicalScrollTop: viewport.scrollTop,
+      scrollPageOffset: scrollPageOffsetRef.current,
+      totalHeight: previousLayout.totalHeight,
+      viewportHeight: viewport.clientHeight,
+    });
+    const anchor = capturePptxReadingAnchor(
+      previousLayout,
+      viewport,
+      previousLogicalScrollTop,
+    );
     if (!anchor) return;
 
-    restorePptxReadingAnchor(layout, viewport, anchor);
+    const targetTop = getPptxReadingAnchorScrollTop(layout, viewport, anchor);
+    if (targetTop != null) scrollViewportToLogicalTop(viewport, targetTop);
   });
 
   const handleScroll = React.useCallback(() => {
     const viewport = scrollViewportRef.current;
     if (!viewport) return;
 
-    const scrollable = viewport.scrollHeight - viewport.clientHeight;
+    const metrics = syncPhysicalScrollPosition(viewport);
+    const isRebased = metrics.physicalScrollHeight < layout.totalHeight;
+    const scrollable = isRebased
+      ? layout.totalHeight - metrics.viewportHeight
+      : viewport.scrollHeight - metrics.viewportHeight;
     onScrollProgressChange?.(
-      scrollable > 0 ? clamp(viewport.scrollTop / scrollable, 0, 1) : 0,
+      scrollable > 0
+        ? clamp(
+            (isRebased ? metrics.scrollTop : viewport.scrollTop) / scrollable,
+            0,
+            1,
+          )
+        : 0,
     );
 
     const markerScrollTop =
-      viewport.scrollTop + viewport.clientHeight * PPTX_READING_MARKER_RATIO;
+      metrics.scrollTop + metrics.viewportHeight * PPTX_READING_MARKER_RATIO;
     const visibleSlide = getPptxSlideAtScrollMarker(layout, markerScrollTop);
 
     if (visibleSlide && visibleSlide !== lastReportedSlide.current) {
@@ -266,9 +629,14 @@ export function usePptxVisibleSlide({
       setCurrentSlide(visibleSlide);
       onVisibleSlideChange?.(visibleSlide);
     }
-  }, [layout, onScrollProgressChange, onVisibleSlideChange]);
+  }, [
+    layout,
+    onScrollProgressChange,
+    onVisibleSlideChange,
+    syncPhysicalScrollPosition,
+  ]);
 
-  return { currentSlide, handleScroll, scrollViewportRef };
+  return { currentSlide, getScrollMetrics, handleScroll, scrollViewportRef };
 }
 
 function getPptxSlideLayoutKey(layout: PptxSlideLayout) {
@@ -286,12 +654,13 @@ function getPptxSlideLayoutKey(layout: PptxSlideLayout) {
 function capturePptxReadingAnchor(
   layout: PptxSlideLayout,
   viewport: HTMLDivElement,
+  scrollTop: number,
 ): PptxReadingAnchor | null {
   if (layout.slideCount === 0) return null;
-  if (viewport.scrollTop <= 0) return { kind: "top" };
+  if (scrollTop <= 0) return { kind: "top" };
 
   const markerScrollTop =
-    viewport.scrollTop + viewport.clientHeight * PPTX_READING_MARKER_RATIO;
+    scrollTop + viewport.clientHeight * PPTX_READING_MARKER_RATIO;
   const slideNumber = getPptxSlideAtScrollMarker(layout, markerScrollTop);
   const slideTop = getPptxSlideTop(layout, slideNumber - 1);
   if (layout.slideHeight <= 0) return null;
@@ -303,17 +672,18 @@ function capturePptxReadingAnchor(
   };
 }
 
-function restorePptxReadingAnchor(
+function getPptxReadingAnchorScrollTop(
   layout: PptxSlideLayout,
   viewport: HTMLDivElement,
   anchor: PptxReadingAnchor,
 ) {
   if (anchor.kind === "top") {
-    viewport.scrollTop = 0;
-    return;
+    return 0;
   }
 
-  if (anchor.slideNumber < 1 || anchor.slideNumber > layout.slideCount) return;
+  if (anchor.slideNumber < 1 || anchor.slideNumber > layout.slideCount) {
+    return null;
+  }
 
   const slideTop = getPptxSlideTop(layout, anchor.slideNumber - 1);
   const targetTop =
@@ -321,7 +691,7 @@ function restorePptxReadingAnchor(
     layout.slideHeight * anchor.yPercent -
     viewport.clientHeight * PPTX_READING_MARKER_RATIO;
   const maxScrollTop = Math.max(0, layout.totalHeight - viewport.clientHeight);
-  viewport.scrollTop = clamp(targetTop, 0, maxScrollTop);
+  return clamp(targetTop, 0, maxScrollTop);
 }
 
 function arePptxSlideLayoutsEqual(
@@ -337,4 +707,195 @@ function arePptxSlideLayoutsEqual(
     previousLayout.slideStride === nextLayout.slideStride &&
     previousLayout.totalHeight === nextLayout.totalHeight
   );
+}
+
+function getPptxSlidesInRange({
+  layout,
+  startOffset,
+  endOffset,
+}: {
+  layout: PptxSlideLayout;
+  startOffset: number;
+  endOffset: number;
+}) {
+  const safeStartOffset = Math.max(0, finiteNumber(startOffset));
+  const safeEndOffset = Math.max(safeStartOffset, finiteNumber(endOffset));
+  const firstIndex = getPptxSlideIndexAtOffset(layout, safeStartOffset);
+  const lastIndex = getPptxSlideIndexAtOffset(layout, safeEndOffset);
+
+  return createPptxSlideRange(layout, firstIndex, lastIndex);
+}
+
+function createPptxSlideRange(
+  layout: PptxSlideLayout,
+  firstIndex: number,
+  lastIndex: number,
+) {
+  if (layout.slideCount === 0 || lastIndex < firstIndex) return [];
+
+  return Array.from(
+    { length: lastIndex - firstIndex + 1 },
+    (_, offset): PptxVirtualSlide => {
+      const index = firstIndex + offset;
+      const slideNumber = index + 1;
+      return {
+        height: layout.slideHeight,
+        index,
+        key: String(slideNumber),
+        slideNumber,
+        top: getPptxSlideTop(layout, index),
+        width: layout.slideWidth,
+      };
+    },
+  );
+}
+
+function getPptxSlideIndexAtOffset(layout: PptxSlideLayout, offset: number) {
+  if (layout.slideCount === 0 || layout.slideStride <= 0) return 0;
+
+  return clamp(
+    Math.floor(
+      (finiteNumber(offset) - layout.slideTopPadding) / layout.slideStride,
+    ),
+    0,
+    layout.slideCount - 1,
+  );
+}
+
+function shouldRebasePptxScroll({
+  totalHeight,
+  viewportHeight,
+}: {
+  totalHeight: number;
+  viewportHeight: number;
+}) {
+  return (
+    getPptxMaxLogicalScrollTop({ totalHeight, viewportHeight }) >
+    PPTX_SCROLL_REBASE_THRESHOLD_PX
+  );
+}
+
+function getPptxMaxLogicalScrollTop({
+  totalHeight,
+  viewportHeight,
+}: {
+  totalHeight: number;
+  viewportHeight: number;
+}) {
+  return Math.max(
+    safeSize(totalHeight) - Math.max(0, finiteNumber(viewportHeight)),
+    0,
+  );
+}
+
+function getPptxMaxPhysicalScrollTop({
+  totalHeight,
+  viewportHeight,
+}: {
+  totalHeight: number;
+  viewportHeight: number;
+}) {
+  return Math.max(
+    getPptxPhysicalScrollHeight({ totalHeight, viewportHeight }) -
+      Math.max(0, finiteNumber(viewportHeight)),
+    0,
+  );
+}
+
+function getPptxMaxScrollPageOffset({
+  totalHeight,
+  viewportHeight,
+}: {
+  totalHeight: number;
+  viewportHeight: number;
+}) {
+  return Math.max(
+    getPptxMaxLogicalScrollTop({ totalHeight, viewportHeight }) -
+      getPptxMaxPhysicalScrollTop({ totalHeight, viewportHeight }),
+    0,
+  );
+}
+
+function clampPptxScrollPageOffset({
+  scrollPageOffset,
+  totalHeight,
+  viewportHeight,
+}: {
+  scrollPageOffset: number;
+  totalHeight: number;
+  viewportHeight: number;
+}) {
+  return clamp(
+    safePadding(scrollPageOffset),
+    0,
+    getPptxMaxScrollPageOffset({ totalHeight, viewportHeight }),
+  );
+}
+
+function resolvePptxScrollPageWindow({
+  logicalScrollTop,
+  preferredPhysicalScrollTop,
+  totalHeight,
+  viewportHeight,
+}: {
+  logicalScrollTop: number;
+  preferredPhysicalScrollTop: number;
+  totalHeight: number;
+  viewportHeight: number;
+}): PptxScrollRebasePosition {
+  let physicalScrollTop = roundPptxScrollPixel(
+    clamp(
+      finiteNumber(preferredPhysicalScrollTop),
+      0,
+      getPptxMaxPhysicalScrollTop({ totalHeight, viewportHeight }),
+    ),
+  );
+  let scrollPageOffset = clampPptxScrollPageOffset({
+    scrollPageOffset: logicalScrollTop - physicalScrollTop,
+    totalHeight,
+    viewportHeight,
+  });
+
+  physicalScrollTop = roundPptxScrollPixel(
+    clamp(
+      logicalScrollTop - scrollPageOffset,
+      0,
+      getPptxMaxPhysicalScrollTop({ totalHeight, viewportHeight }),
+    ),
+  );
+  scrollPageOffset = clampPptxScrollPageOffset({
+    scrollPageOffset: logicalScrollTop - physicalScrollTop,
+    totalHeight,
+    viewportHeight,
+  });
+
+  return { physicalScrollTop, scrollPageOffset };
+}
+
+function setViewportPhysicalScrollTop(
+  viewport: HTMLDivElement,
+  targetTop: number,
+) {
+  if (
+    Math.abs(viewport.scrollTop - targetTop) <= PPTX_SCROLL_POSITION_EPSILON
+  ) {
+    return;
+  }
+  viewport.scrollTop = targetTop;
+}
+
+function roundPptxScrollPixel(value: number) {
+  return Math.round(value);
+}
+
+function safeSize(value: number) {
+  return Math.max(0, finiteNumber(value));
+}
+
+function safePadding(value: number) {
+  return Math.max(0, finiteNumber(value));
+}
+
+function finiteNumber(value: number) {
+  return Number.isFinite(value) ? value : 0;
 }

@@ -20,7 +20,9 @@ const HOSTILE_CODE_LINE_COUNT = 400;
 const HOSTILE_HAST_NODE_COUNT = 3_000;
 const HOSTILE_HAST_DEPTH = 80;
 const HOSTILE_TEXT_LENGTH = 20_000;
-const HOSTILE_TABLE_CELL_COUNT = 2_000;
+const HOSTILE_TABLE_CELL_COUNT = 50_000;
+const HOSTILE_TABLE_HAST_NODE_COUNT = 120_000;
+const HOSTILE_TABLE_TEXT_LENGTH = 1_000_000;
 const DOCUMENT_CACHE_LIMIT = 24;
 
 const markdownGreenfieldDocumentCache = new Map<
@@ -91,6 +93,7 @@ export type MarkdownGreenfieldChunk = {
   id: string;
   index: number;
   isHostile: boolean;
+  nativeFindText: string;
   sourceEndLine: number;
   sourceLineCount: number;
   sourceRange: MarkdownSourceRange | null;
@@ -380,13 +383,15 @@ function createChunk(
         1,
         blocks.reduce((sum, block) => sum + block.sourceLineCount, 0),
       );
+  const hastChildren = blocks.flatMap((block) => block.hastChildren);
 
   return {
     blockIds: blocks.map((block) => block.id),
-    hastChildren: blocks.flatMap((block) => block.hastChildren),
+    hastChildren,
     id: `chunk-${index + 1}-${sourceStartLine}`,
     index,
     isHostile: blocks.some((block) => block.isHostile),
+    nativeFindText: nativeFindTextForHastChildren(hastChildren),
     sourceEndLine,
     sourceLineCount,
     sourceRange,
@@ -819,13 +824,17 @@ function isHostileMarkdownGreenfieldBlock({
   sourceLineCount: number;
   sourceText: string;
 }) {
+  if (kind === "table") {
+    if (sourceText.length > HOSTILE_TABLE_TEXT_LENGTH) return true;
+    if (countTableCells(child) > HOSTILE_TABLE_CELL_COUNT) return true;
+    if (countHastNodes(child) > HOSTILE_TABLE_HAST_NODE_COUNT) return true;
+    if (maxHastDepth(child) > HOSTILE_HAST_DEPTH) return true;
+    return false;
+  }
   if (sourceText.length > HOSTILE_TEXT_LENGTH) return true;
   if (countHastNodes(child) > HOSTILE_HAST_NODE_COUNT) return true;
   if (maxHastDepth(child) > HOSTILE_HAST_DEPTH) return true;
   if (kind === "code" && sourceLineCount > HOSTILE_CODE_LINE_COUNT) {
-    return true;
-  }
-  if (kind === "table" && countTableCells(child) > HOSTILE_TABLE_CELL_COUNT) {
     return true;
   }
   return false;
@@ -949,6 +958,27 @@ function extractHastText(node: MarkdownHastNode): string {
   const element = readHastElement(node);
   if (!element) return "";
   return element.children.map(extractHastText).join("");
+}
+
+function nativeFindTextForHastChildren(children: readonly MarkdownHastNode[]) {
+  const text: string[] = [];
+  const stack = [...children].reverse();
+  while (stack.length) {
+    const node = stack.pop();
+    if (!node) continue;
+    if (node.type === "text" && typeof node.value === "string") {
+      text.push(node.value);
+      continue;
+    }
+
+    const element = readHastElement(node);
+    if (!element) continue;
+    if (element.tagName === "script" || element.tagName === "style") continue;
+    for (let index = element.children.length - 1; index >= 0; index -= 1) {
+      stack.push(element.children[index]!);
+    }
+  }
+  return text.join(" ").trim();
 }
 
 function freezeMarkdownHastNode(node: unknown) {

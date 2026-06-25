@@ -32,10 +32,6 @@ import {
   type MarkdownGreenfieldScrollAnchor,
   type MarkdownGreenfieldVisibleProjection,
 } from "./markdown-greenfield-virtualizer";
-import type {
-  MarkdownHastElement,
-  MarkdownHastNode,
-} from "./markdown-hast-types";
 import { ScrollArea } from "./scroll-area";
 import { TextViewerControls, TextViewerFrame } from "./text-viewer-chrome";
 import { normalizeTextLineRange } from "./text-viewer-ranges";
@@ -58,15 +54,12 @@ const INITIAL_CONTENT_WIDTH = 820;
 const VIEWER_HORIZONTAL_PADDING = 32;
 const OVERSCAN_PX = 800;
 const NATIVE_FIND_TEXT_BATCH_CHUNKS = 16;
-const NATIVE_FIND_TEXT_CACHE_LIMIT = 512;
 const NATIVE_FIND_TEXT_IDLE_MIN_REMAINING_MS = 4;
 const MARKDOWN_GREENFIELD_HIGHLIGHT_STYLE = {
   backgroundColor:
     "color-mix(in oklab, var(--foreground) 8%, var(--background))",
   boxShadow: "inset 2px 0 0 0 var(--primary)",
 } satisfies React.CSSProperties;
-
-const nativeFindTextCache = new Map<string, string>();
 
 type MarkdownIdleWindow = Window &
   typeof globalThis & {
@@ -921,7 +914,7 @@ function useBatchedNativeFindTextEntries(
         if (!chunk) continue;
         entries.push({
           chunk,
-          text: cachedNativeFindTextForChunk(chunk),
+          text: chunk.nativeFindText,
         });
         processed += 1;
       }
@@ -968,46 +961,6 @@ function scheduleNativeFindTextBatch(
 
   const timeoutId = browserWindow.setTimeout(() => callback(), 0);
   return () => browserWindow.clearTimeout(timeoutId);
-}
-
-function cachedNativeFindTextForChunk(chunk: MarkdownGreenfieldChunk) {
-  const cacheKey = joinEffectKey(["native-find-text", chunk]);
-  const cached = nativeFindTextCache.get(cacheKey);
-  if (cached !== undefined || nativeFindTextCache.has(cacheKey)) {
-    nativeFindTextCache.delete(cacheKey);
-    nativeFindTextCache.set(cacheKey, cached ?? "");
-    return cached ?? "";
-  }
-
-  const text = nativeFindTextForChunk(chunk);
-  nativeFindTextCache.set(cacheKey, text);
-  while (nativeFindTextCache.size > NATIVE_FIND_TEXT_CACHE_LIMIT) {
-    const oldestKey = nativeFindTextCache.keys().next().value;
-    if (!oldestKey) break;
-    nativeFindTextCache.delete(oldestKey);
-  }
-  return text;
-}
-
-function nativeFindTextForChunk(chunk: MarkdownGreenfieldChunk) {
-  const text: string[] = [];
-  const stack = [...chunk.hastChildren].reverse();
-  while (stack.length) {
-    const node = stack.pop();
-    if (!node) continue;
-    if (node.type === "text" && typeof node.value === "string") {
-      text.push(node.value);
-      continue;
-    }
-
-    const element = node as MarkdownHastElement;
-    if (!element || element.type !== "element") continue;
-    if (element.tagName === "script" || element.tagName === "style") continue;
-    for (let index = element.children.length - 1; index >= 0; index -= 1) {
-      stack.push(element.children[index]!);
-    }
-  }
-  return text.join(" ").trim();
 }
 
 function DownloadError({ message }: { message: string }) {

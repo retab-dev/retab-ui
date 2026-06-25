@@ -233,6 +233,23 @@ describe("pretext markdown greenfield document", () => {
     ]);
   });
 
+  it("stores native find text on virtual chunks", () => {
+    const document = createMarkdownGreenfieldDocument(
+      [
+        "| Name | Status |",
+        "| --- | --- |",
+        "| Alpha | Ready |",
+        "",
+        "Visible paragraph.",
+      ].join("\n"),
+    );
+    const text = document.chunks[0]?.nativeFindText;
+
+    expect(text).toContain("Name");
+    expect(text).toContain("Alpha");
+    expect(text).toContain("Visible paragraph.");
+  });
+
   it("classifies rich AST-derived blocks before layout", () => {
     const document = createMarkdownGreenfieldDocument(
       [
@@ -370,6 +387,7 @@ describe("pretext markdown greenfield document", () => {
     const frozen = freezeMarkdownGreenfieldDocument(cloned);
 
     expect(Object.isFrozen(frozen)).toBe(true);
+    expect(frozen.chunks[0]?.nativeFindText).toContain("Repeated content.");
     expect(Object.isFrozen(frozen.blocks[0])).toBe(true);
     expect(Object.isFrozen(frozen.blocks[0]?.sourceLineLengths)).toBe(true);
     expect(Object.isFrozen(frozen.unified.hast)).toBe(true);

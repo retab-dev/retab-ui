@@ -68,6 +68,7 @@ function getPptxFirstSlide(
                       distanceFromReadingMarker: 0,
                       isCurrentSlide: true,
                       isInViewport: true,
+                      isScrollLead: true,
                     },
                   });
                   if (result.status === "failed") throw result.error;

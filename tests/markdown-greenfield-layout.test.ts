@@ -203,6 +203,7 @@ function createEstimatedHeightProbeDocument(
         id: "chunk-0",
         index: 0,
         isHostile: false,
+        nativeFindText: "A long paragraph. Another long paragraph.",
         sourceEndLine: 2,
         sourceLineCount: 2,
         sourceRange: null,

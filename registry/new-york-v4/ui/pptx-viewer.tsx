@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import {
   createViewerResource,
   type ViewerResource,
@@ -79,7 +80,7 @@ export function PptxResourceContent(props: PptxResourceContentProps) {
         resourceKey: resource.keys.resource,
         scale: props.scale,
         defaultScale: props.defaultScale,
-        eager: props.eager ?? true,
+        eager: props.eager ?? false,
       })}
       sourceKind={resource.sourceKind}
       onRetry={() => evictPptxSource(resource.content)}
@@ -118,7 +119,7 @@ function PptxViewerContent({
   onVisibleSlideChange,
   onScrollProgressChange,
   bare = false,
-  eager = true,
+  eager = false,
 }: Omit<PptxViewerProps, "source"> & { resource: ViewerResource }) {
   const source = useRetainedPptxSource(resource.content, onSourceLoadTiming);
   const downloadAction = download ? resource.originalDownload : null;
@@ -145,18 +146,50 @@ function PptxViewerContent({
       }),
     [source.baseSize, source.slideCount, zoomScale, rotation],
   );
-  const { currentSlide, handleScroll, scrollViewportRef } = usePptxVisibleSlide(
-    {
+  const { currentSlide, getScrollMetrics, handleScroll, scrollViewportRef } =
+    usePptxVisibleSlide({
       layout: slideLayout,
       onScrollProgressChange,
       onVisibleSlideChange,
-    },
-  );
+    });
+  const scrollInteractionRestoreRef = React.useRef<number | null>(null);
+  const scrollInteractionElementRef = React.useRef<HTMLElement | null>(null);
+
+  const suspendScrollInteractions = React.useCallback(() => {
+    const scrollElement = scrollViewportRef.current?.querySelector<HTMLElement>(
+      '[data-slot="pptx-slide-sticky-window"]',
+    );
+    if (!scrollElement) return;
+
+    if (scrollInteractionRestoreRef.current !== null) {
+      window.clearTimeout(scrollInteractionRestoreRef.current);
+    }
+    scrollInteractionElementRef.current = scrollElement;
+    scrollElement.style.pointerEvents = "none";
+    if (isMobileSafari()) {
+      scrollElement.style.overflowX = "hidden";
+    }
+    scrollInteractionRestoreRef.current = window.setTimeout(() => {
+      scrollInteractionRestoreRef.current = null;
+      restorePptxScrollInteractions(scrollInteractionElementRef.current);
+      scrollInteractionElementRef.current = null;
+    }, 120);
+  }, [scrollViewportRef]);
+
+  useMountEffect(() => () => {
+    if (scrollInteractionRestoreRef.current !== null) {
+      window.clearTimeout(scrollInteractionRestoreRef.current);
+      scrollInteractionRestoreRef.current = null;
+    }
+    restorePptxScrollInteractions(scrollInteractionElementRef.current);
+    scrollInteractionElementRef.current = null;
+  });
 
   const handleViewportScroll = React.useCallback(() => {
-    if (!eager) scrollActivity.handleScroll();
+    scrollActivity.handleScroll();
+    suspendScrollInteractions();
     handleScroll();
-  }, [eager, handleScroll, scrollActivity]);
+  }, [handleScroll, scrollActivity, suspendScrollInteractions]);
 
   return (
     <div
@@ -202,11 +235,28 @@ function PptxViewerContent({
               onSlideRenderTiming={onSlideRenderTiming}
               containerRef={containerRef}
               viewportRef={scrollViewportRef}
+              getScrollMetrics={getScrollMetrics}
               onScroll={handleViewportScroll}
             />
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function restorePptxScrollInteractions(element: HTMLElement | null) {
+  if (!element) return;
+  element.style.removeProperty("pointer-events");
+  element.style.removeProperty("overflow-x");
+}
+
+function isMobileSafari() {
+  if (typeof navigator === "undefined") return false;
+  const userAgent = navigator.userAgent;
+  return (
+    /Safari/i.test(userAgent) &&
+    /Mobile/i.test(userAgent) &&
+    !/CriOS|FxiOS|EdgiOS/i.test(userAgent)
   );
 }

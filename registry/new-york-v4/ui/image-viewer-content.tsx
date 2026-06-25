@@ -81,7 +81,9 @@ export function ImageViewerContent({
   );
   const {
     currentFrameNumber,
+    getScrollMetrics,
     handleScroll,
+    scrollToLogicalTop,
     scrollViewportRef,
     setScrollViewportRef,
   } = useVisibleFrame(
@@ -90,7 +92,12 @@ export function ImageViewerContent({
     onScrollProgressChange,
     onVisibleFrameChange,
   );
-  useImageViewerHandle(forwardedRef, scrollViewportRef, frameLayout);
+  useImageViewerHandle(
+    forwardedRef,
+    scrollViewportRef,
+    frameLayout,
+    scrollToLogicalTop,
+  );
 
   const frameCount = frameSource.frames.length;
   const countLabel =
@@ -157,6 +164,7 @@ export function ImageViewerContent({
               scale={scale}
               rotation={rotation}
               frameListRef={frameListRef}
+              getScrollMetrics={getScrollMetrics}
               viewportRef={setScrollViewportRef}
               onScroll={handleScroll}
               renderFrameOverlay={renderFrameOverlay}

@@ -20,20 +20,23 @@ import { type PptxSource } from "./pptx-viewer-source";
 import {
   createPptxSlideLayout,
   getPptxRenderedSlideWindow,
-  getPptxVirtualSlides,
+  getPptxRenderSlides,
+  readPptxScrollMetrics,
+  PPTX_RENDER_WINDOW_OVERSCAN_PX,
   type PptxSlideLayout,
+  type PptxScrollMetrics,
   type PptxVirtualSlide,
 } from "./pptx-viewer-visible-slide";
-import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 import { joinEffectKey } from "@/lib/effect-key";
 
 type SlideRenderState = "idle" | "rendering" | "rendered" | "failed";
+type PptxScrollDirection = -1 | 0 | 1;
 
 export const PPTX_SLIDE_GAP = 16;
 export const PPTX_SLIDE_PADDING = 16;
-const PPTX_SLIDE_OVERSCAN = 2;
 const PPTX_READING_MARKER_RATIO = 0.2;
+const PPTX_UPWARD_SCROLL_LEAD_PX = PPTX_RENDER_WINDOW_OVERSCAN_PX;
 
 export interface PptxSlideScrollerProps {
   source: PptxSource;
@@ -46,6 +49,7 @@ export interface PptxSlideScrollerProps {
   onSlideRenderTiming?: (timing: PptxSlideRenderTiming) => void;
   containerRef: React.Ref<HTMLDivElement>;
   viewportRef: React.Ref<HTMLDivElement>;
+  getScrollMetrics?: () => PptxScrollMetrics;
   onScroll: () => void;
 }
 
@@ -60,6 +64,7 @@ export function PptxSlideScroller({
   onSlideRenderTiming,
   containerRef,
   viewportRef,
+  getScrollMetrics,
   onScroll,
 }: PptxSlideScrollerProps) {
   const layout = React.useMemo(
@@ -79,20 +84,25 @@ export function PptxSlideScroller({
   const projectionFrameRef = React.useRef<number | null>(null);
   const projectionCacheRef = React.useRef<PptxSlideProjectionCache>({
     canvas: null,
+    hasMeasuredScroll: false,
+    lastScrollDirection: 0,
+    lastScrollTop: 0,
     resetKey: "",
     slides: new Map(),
     window: null,
   });
   const viewportElementRef = React.useRef<HTMLDivElement | null>(null);
+  const projectSlidesRef = React.useRef<() => void>(() => {});
   const layoutResetKey = `${layout.slideCount}:${layout.slideWidth}:${layout.slideHeight}:${layout.slideStride}:${layout.totalHeight}:${zoomScale}:${rotation}`;
 
   const projectSlides = React.useCallback(() => {
     projectionFrameRef.current = null;
-    projectPptxSlides({
+    const result = projectPptxSlides({
       activity,
       cache: projectionCacheRef.current,
       canvas: canvasRef.current,
       eager,
+      getScrollMetrics,
       layout,
       onSlideRenderTiming,
       renderSlideOverlay,
@@ -102,9 +112,19 @@ export function PptxSlideScroller({
       viewport: viewportElementRef.current,
       zoomScale,
     });
+    if (
+      result.fillOverscanNextFrame &&
+      projectionFrameRef.current === null &&
+      typeof requestAnimationFrame === "function"
+    ) {
+      projectionFrameRef.current = requestAnimationFrame(() =>
+        projectSlidesRef.current(),
+      );
+    }
   }, [
     activity,
     eager,
+    getScrollMetrics,
     layout,
     layoutResetKey,
     onSlideRenderTiming,
@@ -113,6 +133,7 @@ export function PptxSlideScroller({
     source,
     zoomScale,
   ]);
+  projectSlidesRef.current = projectSlides;
 
   const scheduleProjectSlides = React.useCallback(() => {
     if (projectionFrameRef.current !== null) return;
@@ -278,7 +299,7 @@ function PptxSlideCanvas({
     canvasElementRef.current = canvas;
   }, []);
 
-  useKeyedMountEffect(
+  useKeyedLayoutEffect(
     joinEffectKey([
       activity,
       eager,
@@ -297,13 +318,59 @@ function PptxSlideCanvas({
 
       let cancelled = false;
       const renderScale = zoomScale * pixelRatio;
-      const immediateCached = source.hasBitmap({ slideIndex, renderScale });
+      if (isProjectedLive && !isProjectedLive()) return;
+
+      const cachedResult = source.drawCachedBitmap({
+        canvas,
+        renderScale,
+        slideIndex,
+      });
+      if (cachedResult) {
+        notifySlideRenderTiming(getSlideRenderTiming?.(), {
+          cached: true,
+          durationMs: 0,
+          pixelRatio,
+          renderScale,
+          slideNumber: slideIndex + 1,
+          status: cachedResult.status,
+        });
+        if (cachedResult.status !== "cancelled") {
+          setRenderState(
+            cachedResult.status === "failed" ? "failed" : "rendered",
+          );
+        }
+        return () => {
+          cancelled = true;
+        };
+      }
+
       setRenderState("rendering");
 
       const start = () => {
         if (isProjectedLive && !isProjectedLive()) return;
         const startedAt = now();
         const startedCached = source.hasBitmap({ slideIndex, renderScale });
+        const cachedResult = source.drawCachedBitmap({
+          canvas,
+          renderScale,
+          slideIndex,
+        });
+        if (cachedResult) {
+          notifySlideRenderTiming(getSlideRenderTiming?.(), {
+            cached: true,
+            durationMs: now() - startedAt,
+            pixelRatio,
+            renderScale,
+            slideNumber: slideIndex + 1,
+            status: cachedResult.status,
+          });
+          if (cachedResult.status !== "cancelled") {
+            setRenderState(
+              cachedResult.status === "failed" ? "failed" : "rendered",
+            );
+          }
+          return;
+        }
         source
           .renderSlide({
             slideIndex,
@@ -339,12 +406,7 @@ function PptxSlideCanvas({
           });
       };
 
-      if (
-        shouldRenderImmediately ||
-        eager ||
-        immediateCached ||
-        !activity.isScrolling()
-      ) {
+      if (shouldRenderImmediately || eager || !activity.isScrolling()) {
         start();
         return () => {
           cancelled = true;
@@ -397,9 +459,16 @@ function now() {
 
 type PptxSlideProjectionCache = {
   canvas: HTMLDivElement | null;
+  hasMeasuredScroll: boolean;
+  lastScrollDirection: PptxScrollDirection;
+  lastScrollTop: number;
   resetKey: string;
   slides: Map<number, PptxProjectedSlide>;
   window: PptxSlideProjectionWindow | null;
+};
+
+type PptxSlideProjectionResult = {
+  fillOverscanNextFrame: boolean;
 };
 
 type PptxSlideProjectionWindow = {
@@ -434,6 +503,7 @@ function projectPptxSlides({
   cache,
   canvas,
   eager,
+  getScrollMetrics,
   layout,
   onSlideRenderTiming,
   renderSlideOverlay,
@@ -447,6 +517,7 @@ function projectPptxSlides({
   cache: PptxSlideProjectionCache;
   canvas: HTMLDivElement | null;
   eager: boolean;
+  getScrollMetrics?: () => PptxScrollMetrics;
   layout: PptxSlideLayout;
   onSlideRenderTiming?: (timing: PptxSlideRenderTiming) => void;
   renderSlideOverlay?: (props: PptxSlideOverlayProps) => React.ReactNode;
@@ -455,8 +526,8 @@ function projectPptxSlides({
   source: PptxSource;
   viewport: HTMLDivElement | null;
   zoomScale: number;
-}) {
-  if (!canvas) return;
+}): PptxSlideProjectionResult {
+  if (!canvas) return { fillOverscanNextFrame: false };
 
   if (cache.canvas !== canvas) {
     disposePptxSlideProjectionCache(cache);
@@ -464,28 +535,58 @@ function projectPptxSlides({
   }
 
   const sourceKey = getPptxProjectionSourceKey(source);
-  setPptxStyle(canvas, "contain", "layout style");
-  setPptxPixelStyle(canvas, "height", layout.totalHeight);
-  setPptxPixelStyle(canvas, "min-width", layout.slideWidth);
 
   if (cache.resetKey !== `${sourceKey}:${resetKey}`) {
     disposePptxSlideProjectionCache(cache);
     cache.resetKey = `${sourceKey}:${resetKey}`;
   }
 
-  const scrollTop = viewport?.scrollTop ?? 0;
   const viewportHeight =
     viewport?.clientHeight || viewport?.getBoundingClientRect().height || 0;
-  const virtualSlides = getPptxVirtualSlides({
+  const metrics =
+    getScrollMetrics?.() ??
+    readPptxScrollMetrics({
+      scrollPageOffset: 0,
+      totalHeight: layout.totalHeight,
+      viewportElement: viewport,
+    });
+  const measuredScrollDirection = getPptxScrollDirection({
+    canMeasureDirection: cache.hasMeasuredScroll,
+    previousScrollTop: cache.lastScrollTop,
+    scrollTop: metrics.scrollTop,
+  });
+  const scrollDirection =
+    measuredScrollDirection === 0
+      ? cache.lastScrollDirection
+      : measuredScrollDirection;
+  if (measuredScrollDirection !== 0) {
+    cache.lastScrollDirection = measuredScrollDirection;
+  }
+  const fitPerfectly = shouldFitPptxPerfectly({
+    canFitPerfectly: cache.hasMeasuredScroll,
+    previousScrollTop: cache.lastScrollTop,
+    scrollTop: metrics.scrollTop,
+    viewportHeight: metrics.viewportHeight,
+  });
+  cache.hasMeasuredScroll = true;
+  cache.lastScrollTop = metrics.scrollTop;
+
+  setPptxStyle(canvas, "contain", "layout style");
+  setPptxPixelStyle(canvas, "height", metrics.physicalScrollHeight);
+  setPptxPixelStyle(canvas, "min-width", layout.slideWidth);
+
+  const virtualSlides = getPptxRenderSlides({
+    fitPerfectly,
     layout,
-    overscanSlides: PPTX_SLIDE_OVERSCAN,
-    scrollTop,
-    viewportHeight,
+    scrollTop: metrics.scrollTop,
+    viewportHeight: metrics.viewportHeight || viewportHeight,
   });
   const renderedWindow = getPptxRenderedSlideWindow({
     layout,
+    physicalScrollHeight: metrics.physicalScrollHeight,
+    scrollPageOffset: metrics.scrollPageOffset,
     slides: virtualSlides,
-    viewportHeight,
+    viewportHeight: metrics.viewportHeight || viewportHeight,
   });
   const visibleSlideIndexes = new Set(
     virtualSlides.map((virtualSlide) => virtualSlide.index),
@@ -500,12 +601,12 @@ function projectPptxSlides({
 
   if (!renderedWindow) {
     syncPptxProjectionWindow(projectionWindow, {
-      afterHeight: layout.totalHeight,
+      afterHeight: metrics.physicalScrollHeight,
       beforeHeight: 0,
       height: 0,
       stickyInset: 0,
     });
-    return;
+    return { fillOverscanNextFrame: fitPerfectly };
   }
 
   syncPptxProjectionWindow(projectionWindow, renderedWindow);
@@ -523,8 +624,9 @@ function projectPptxSlides({
       projectedSlide,
       priority: getPptxSlideRenderPriority({
         layout,
-        scrollTop,
-        viewportHeight,
+        scrollDirection,
+        scrollTop: metrics.scrollTop,
+        viewportHeight: metrics.viewportHeight || viewportHeight,
         virtualSlide,
       }),
       renderSlideOverlay,
@@ -541,6 +643,8 @@ function projectPptxSlides({
     );
     previousShell = projectedSlide.shell;
   }
+
+  return { fillOverscanNextFrame: fitPerfectly };
 }
 
 function createPptxProjectedSlide(virtualSlide: PptxVirtualSlide) {
@@ -701,6 +805,7 @@ function renderPptxProjectedSlide({
     eager,
     priority.isCurrentSlide,
     priority.isInViewport,
+    priority.isScrollLead,
   ].join("\u0000");
   const shouldRender =
     projectedSlide.renderKey !== renderKey ||
@@ -732,18 +837,24 @@ function renderPptxProjectedSlide({
       }
       isProjectedLive={() => projectedSlide.isLive}
       priority={priority}
-      shouldRenderImmediately={priority.isCurrentSlide || priority.isInViewport}
+      shouldRenderImmediately={
+        priority.isCurrentSlide ||
+        priority.isInViewport ||
+        priority.isScrollLead
+      }
     />,
   );
 }
 
 function getPptxSlideRenderPriority({
   layout,
+  scrollDirection,
   scrollTop,
   viewportHeight,
   virtualSlide,
 }: {
   layout: PptxSlideLayout;
+  scrollDirection: PptxScrollDirection;
   scrollTop: number;
   viewportHeight: number;
   virtualSlide: PptxVirtualSlide;
@@ -758,14 +869,36 @@ function getPptxSlideRenderPriority({
   const slideTop = virtualSlide.top;
   const slideBottom = slideTop + virtualSlide.height;
   const viewportBottom = safeScrollTop + safeViewportHeight;
+  const isInViewport = slideBottom > safeScrollTop && slideTop < viewportBottom;
 
   return {
     distanceFromReadingMarker: Math.abs(
       slideTop + virtualSlide.height / 2 - marker,
     ),
     isCurrentSlide: marker >= slideTop && marker < slideBottom,
-    isInViewport: slideBottom > safeScrollTop && slideTop < viewportBottom,
+    isInViewport,
+    isScrollLead:
+      scrollDirection < 0 &&
+      !isInViewport &&
+      slideTop < safeScrollTop &&
+      slideBottom > safeScrollTop - PPTX_UPWARD_SCROLL_LEAD_PX,
   };
+}
+
+function getPptxScrollDirection({
+  canMeasureDirection,
+  previousScrollTop,
+  scrollTop,
+}: {
+  canMeasureDirection: boolean;
+  previousScrollTop: number;
+  scrollTop: number;
+}): PptxScrollDirection {
+  if (!canMeasureDirection) return 0;
+  const delta = scrollTop - previousScrollTop;
+  if (delta < -1) return -1;
+  if (delta > 1) return 1;
+  return 0;
 }
 
 function disposePptxSlideProjectionCache(cache: PptxSlideProjectionCache) {
@@ -773,10 +906,32 @@ function disposePptxSlideProjectionCache(cache: PptxSlideProjectionCache) {
     disposePptxProjectedSlide(projectedSlide);
   }
   cache.slides.clear();
+  cache.hasMeasuredScroll = false;
+  cache.lastScrollDirection = 0;
+  cache.lastScrollTop = 0;
   cache.window?.before.remove();
   cache.window?.sticky.remove();
   cache.window?.after.remove();
   cache.window = null;
+}
+
+function shouldFitPptxPerfectly({
+  canFitPerfectly,
+  previousScrollTop,
+  scrollTop,
+  viewportHeight,
+}: {
+  canFitPerfectly: boolean;
+  previousScrollTop: number;
+  scrollTop: number;
+  viewportHeight: number;
+}) {
+  return (
+    canFitPerfectly &&
+    viewportHeight > 0 &&
+    Math.abs(scrollTop - previousScrollTop) >
+      viewportHeight + PPTX_RENDER_WINDOW_OVERSCAN_PX * 2
+  );
 }
 
 function disposePptxProjectedSlide(projectedSlide: PptxProjectedSlide) {

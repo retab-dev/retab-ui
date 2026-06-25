@@ -29,6 +29,7 @@ import {
 import { PptxRendererError } from "@/registry/new-york-v4/ui/pptx-viewer-renderer";
 import { createPptxScrollActivity } from "@/registry/new-york-v4/ui/pptx-viewer-scroll";
 import { PptxSlideScroller } from "@/registry/new-york-v4/ui/pptx-viewer-slide";
+import { createPptxSlideLayout } from "@/registry/new-york-v4/ui/pptx-viewer-visible-slide";
 import {
   evictPptxSource,
   getPptxSource,
@@ -208,10 +209,18 @@ function createFakePptxSource({
   hasBitmap?: boolean;
   slideCount?: number;
 } = {}) {
+  const hasBitmapMock = vi.fn(
+    (_input?: { renderScale: number; slideIndex: number }) => hasBitmap,
+  );
+  const drawCachedBitmapMock = vi.fn(
+    (input: { renderScale: number; slideIndex: number }) =>
+      hasBitmapMock(input) ? { status: "rendered" as const } : null,
+  );
   return {
     baseSize: { height: 720, width: 960 },
     dispose: vi.fn(),
-    hasBitmap: vi.fn(() => hasBitmap),
+    drawCachedBitmap: drawCachedBitmapMock,
+    hasBitmap: hasBitmapMock,
     renderSlide: vi.fn(
       async (): Promise<PptxRenderResult> => ({ status: "rendered" }),
     ),
@@ -554,6 +563,17 @@ describe("PptxViewer helpers", () => {
     await waitFor(() => {
       expect(source.hasBitmap({ renderScale: 1, slideIndex: 0 })).toBe(true);
     });
+    const immediateCanvas = document.createElement("canvas");
+    expect(
+      source.drawCachedBitmap({
+        canvas: immediateCanvas,
+        renderScale: 1,
+        slideIndex: 0,
+      }),
+    ).toEqual({ status: "rendered" });
+    expect(immediateCanvas.width).toBe(960);
+    expect(immediateCanvas.height).toBe(720);
+
     await expect(
       source.renderSlide({
         canvas: secondCanvas,
@@ -629,6 +649,36 @@ describe("PptxViewer helpers", () => {
       error: expect.objectContaining({ kind: "render_failed" }),
       status: "failed",
     });
+    expect(pptxMock.renderSlide).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not draw cached bitmaps into stale render requests", async () => {
+    const source = await getPptxSource(
+      pptxUrlResource("/stale-cached-bitmap.pptx"),
+    );
+
+    await expect(
+      source.renderSlide({
+        canvas: document.createElement("canvas"),
+        renderScale: 1,
+        slideIndex: 0,
+      }),
+    ).resolves.toEqual({ status: "rendered" });
+    await waitFor(() => {
+      expect(source.hasBitmap({ renderScale: 1, slideIndex: 0 })).toBe(true);
+    });
+
+    drawImageMock.mockClear();
+
+    await expect(
+      source.renderSlide({
+        canvas: document.createElement("canvas"),
+        isLive: () => false,
+        renderScale: 1,
+        slideIndex: 0,
+      }),
+    ).resolves.toEqual({ status: "cancelled" });
+    expect(drawImageMock).not.toHaveBeenCalled();
     expect(pptxMock.renderSlide).toHaveBeenCalledTimes(1);
   });
 
@@ -1649,6 +1699,7 @@ describe("PptxViewer", () => {
       expect(renderedSlideIndexes(source)).toEqual([0]);
     });
     source.renderSlide.mockClear();
+    source.drawCachedBitmap.mockClear();
     onSlideRenderTiming.mockClear();
     hasBitmap = true;
 
@@ -1657,7 +1708,12 @@ describe("PptxViewer", () => {
     });
 
     await waitFor(() => {
-      expect(renderedSlideIndexes(source)).toEqual([1, 2]);
+      expect(source.renderSlide).not.toHaveBeenCalled();
+      expect(
+        (
+          source.drawCachedBitmap.mock.calls as Array<[{ slideIndex: number }]>
+        ).map(([call]) => call.slideIndex),
+      ).toEqual([1, 2]);
       expect(onSlideRenderTiming).toHaveBeenCalledWith(
         expect.objectContaining({
           cached: true,
@@ -2769,6 +2825,74 @@ describe("PptxViewer", () => {
     expect(new Set(renderedSlideIndexes(source))).toEqual(new Set([0, 1, 2]));
   });
 
+  it("pre-renders the upstream edge while scrolling up", async () => {
+    const frameCallbacks: FrameRequestCallback[] = [];
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      vi.fn((callback: FrameRequestCallback) => {
+        frameCallbacks.push(callback);
+        return frameCallbacks.length;
+      }),
+    );
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+
+    const { activity } = createManualPptxActivity();
+    const source = createFakePptxSource({ slideCount: 20 });
+    const layout = createPptxSlideLayout({
+      baseSize: source.baseSize,
+      rotation: 0,
+      slideCount: source.slideCount,
+      slideGap: 16,
+      slidePadding: 16,
+      zoomScale: 1,
+    });
+    let scrollTop = 16 + 9 * 736;
+
+    render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        layout={layout}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        getScrollMetrics={() => ({
+          physicalScrollHeight: layout.totalHeight,
+          physicalScrollTop: scrollTop,
+          scrollPageOffset: 0,
+          scrollTop,
+          viewportHeight: 720,
+        })}
+        onScroll={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(renderedSlideIndexes(source)).toEqual([9]);
+    });
+
+    source.renderSlide.mockClear();
+    scrollTop = 16 + 8 * 736;
+
+    const viewport = document.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]',
+    );
+    expect(viewport).toBeTruthy();
+    fireEvent.scroll(viewport!);
+
+    await act(async () => {
+      frameCallbacks.shift()?.(0);
+    });
+
+    await waitFor(() => {
+      const slideIndexes = new Set(renderedSlideIndexes(source));
+      expect(slideIndexes.has(8)).toBe(true);
+      expect(slideIndexes.has(7)).toBe(true);
+    });
+  });
+
   it("does not run deferred slide renders after unmount", async () => {
     const { activity, runIdle } = createManualPptxActivity();
     const source = createFakePptxSource({ slideCount: 20 });
@@ -2827,7 +2951,8 @@ describe("PptxViewer", () => {
     );
 
     expect(eagerSource.renderSlide).toHaveBeenCalledTimes(1);
-    expect(cachedSource.renderSlide).toHaveBeenCalledTimes(1);
+    expect(cachedSource.drawCachedBitmap).toHaveBeenCalled();
+    expect(cachedSource.renderSlide).not.toHaveBeenCalled();
   });
 
   it("uses a native PPTX scroll viewport while preserving the viewport slot", () => {
@@ -2994,6 +3119,129 @@ describe("PptxViewer", () => {
     expect(shell?.style.transform).toBe("translate(-50%, 1472px)");
   });
 
+  it("renders a fit-perfectly window for a large jump and fills overscan on the next frame", async () => {
+    const source = createFakePptxSource({ slideCount: 20 });
+    const activity = createManualPptxActivity(false).activity;
+    const layout = createPptxSlideLayout({
+      baseSize: source.baseSize,
+      zoomScale: 1,
+      rotation: 0,
+      slideCount: source.slideCount,
+      slideGap: 16,
+      slidePadding: 16,
+    });
+    const frameCallbacks: FrameRequestCallback[] = [];
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      frameCallbacks.push(callback);
+      return frameCallbacks.length;
+    });
+    let scrollTop = 0;
+
+    render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        layout={layout}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        getScrollMetrics={() => ({
+          physicalScrollHeight: layout.totalHeight,
+          physicalScrollTop: scrollTop,
+          scrollPageOffset: 0,
+          scrollTop,
+          viewportHeight: 720,
+        })}
+        onScroll={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(
+        document.querySelector(
+          '[data-slot="pptx-slide"][data-slide-number="1"]',
+        ),
+      ).toBeTruthy();
+    });
+
+    const viewport = document.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]',
+    );
+    expect(viewport).toBeTruthy();
+    scrollTop = 16 + 9 * 736;
+    setElementNumberProperty(viewport!, "clientHeight", 720);
+    setElementNumberProperty(viewport!, "scrollTop", scrollTop);
+    fireEvent.scroll(viewport!);
+
+    expect(frameCallbacks).toHaveLength(1);
+    await act(async () => {
+      frameCallbacks.shift()?.(0);
+    });
+
+    await waitFor(() => {
+      expect(
+        document.querySelector(
+          '[data-slot="pptx-slide"][data-slide-number="9"]',
+        ),
+      ).toBeTruthy();
+      expect(
+        document.querySelector(
+          '[data-slot="pptx-slide"][data-slide-number="11"]',
+        ),
+      ).toBeTruthy();
+    });
+    expect(
+      document.querySelector('[data-slot="pptx-slide"][data-slide-number="8"]'),
+    ).toBeNull();
+    expect(
+      document.querySelector(
+        '[data-slot="pptx-slide"][data-slide-number="12"]',
+      ),
+    ).toBeNull();
+    expect(frameCallbacks).toHaveLength(1);
+
+    await act(async () => {
+      frameCallbacks.shift()?.(16);
+    });
+
+    await waitFor(() => {
+      expect(
+        document.querySelector(
+          '[data-slot="pptx-slide"][data-slide-number="8"]',
+        ),
+      ).toBeTruthy();
+      expect(
+        document.querySelector(
+          '[data-slot="pptx-slide"][data-slide-number="12"]',
+        ),
+      ).toBeTruthy();
+    });
+  });
+
+  it("temporarily suppresses sticky slide window interactions while scrolling", async () => {
+    pptxMock.getSlideCount.mockReturnValue(20);
+
+    await renderPptx(<PptxViewer source={pptxUrlSource("/scrolling.pptx")} />);
+
+    const viewport = document.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]',
+    );
+    const sticky = await waitFor(() => {
+      const element = document.querySelector<HTMLElement>(
+        '[data-slot="pptx-slide-sticky-window"]',
+      );
+      expect(element).toBeTruthy();
+      return element!;
+    });
+
+    expect(viewport).toBeTruthy();
+    fireEvent.scroll(viewport!);
+
+    expect(sticky.style.pointerEvents).toBe("none");
+  });
+
   it("renders virtual slides without constructing IntersectionObserver", async () => {
     vi.stubGlobal("IntersectionObserver", undefined);
     const source = createFakePptxSource();
@@ -3105,6 +3353,13 @@ describe("PptxViewer", () => {
         activity={activity}
         containerRef={vi.fn()}
         viewportRef={vi.fn()}
+        getScrollMetrics={() => ({
+          physicalScrollHeight: 14736,
+          physicalScrollTop: 0,
+          scrollPageOffset: 0,
+          scrollTop: 0,
+          viewportHeight: 720,
+        })}
         onScroll={vi.fn()}
       />,
     );

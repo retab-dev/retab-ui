@@ -48,6 +48,7 @@ export interface PptxBitmapCacheInput {
 export interface PptxSlideRenderPriority {
   isCurrentSlide: boolean;
   isInViewport: boolean;
+  isScrollLead: boolean;
   distanceFromReadingMarker: number;
 }
 

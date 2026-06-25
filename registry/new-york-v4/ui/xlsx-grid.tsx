@@ -6,6 +6,10 @@ import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { xlsxColumnLabel, type XlsxCell } from "@/lib/xlsx-workbook";
 import { fixedGridColumnWidths } from "@/components/ui/fixed-grid-columns";
 import { getFixedGridCanvasStyle } from "@/components/ui/fixed-grid-layout";
+import {
+  FixedGridNativeFindIndex,
+  type FixedGridNativeFindCellAddress,
+} from "@/registry/new-york-v4/ui/fixed-grid-native-find-index";
 import { FixedGridRowWindow } from "@/components/ui/fixed-grid-row-window";
 import type { GridCellCoordinate } from "@/components/ui/fixed-grid-selection";
 import { buildVirtualGridTemplate } from "@/components/ui/fixed-grid-template";
@@ -42,6 +46,7 @@ const ROW_OVERSCAN = 4;
 const JUMP_ROW_OVERSCAN = 0;
 const COLUMN_OVERSCAN = 2;
 const JUMP_COLUMN_OVERSCAN = 0;
+const XLSX_NATIVE_FIND_MAX_INDEXED_CELLS = 250_000;
 
 export interface XlsxScrollRequest {
   sheetIndex: number;
@@ -186,6 +191,22 @@ export function XlsxGrid({
     rowCount: safeRowCount,
     virtualRows: virtualRowWindow.items,
   });
+  const nativeFindCellText = React.useCallback(
+    (rowIndex: number, columnIndex: number) =>
+      getCell(rowIndex, columnIndex).text,
+    [getCell],
+  );
+  const scrollToNativeFindCell = React.useCallback(
+    ({ rowIndex, columnIndex }: FixedGridNativeFindCellAddress) => {
+      scrollToCell({
+        rowIndex,
+        columnIndex,
+        behavior: "auto",
+        align: "center",
+      });
+    },
+    [scrollToCell],
+  );
 
   useKeyedMountEffect(
     joinEffectKey([
@@ -228,6 +249,14 @@ export function XlsxGrid({
         className="relative min-h-0 flex-1"
       >
         <style>{XLSX_SCROLLBAR_CSS}</style>
+        <FixedGridNativeFindIndex
+          rowCount={safeRowCount}
+          columnCount={safeColumnCount}
+          getCellText={nativeFindCellText}
+          onCellMatch={scrollToNativeFindCell}
+          dataSlot="xlsx-native-find-index"
+          maxIndexedCells={XLSX_NATIVE_FIND_MAX_INDEXED_CELLS}
+        />
         <FixedGridViewport
           scrollRef={setScrollElement}
           dataSlot="xlsx-body"

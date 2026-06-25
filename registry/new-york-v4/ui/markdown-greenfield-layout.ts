@@ -17,7 +17,9 @@ const MONO_LINE_HEIGHT = 20;
 const APPROX_BODY_CHAR_WIDTH = 7.9;
 const APPROX_MONO_CHAR_WIDTH = 7.8;
 export const MARKDOWN_GREENFIELD_LAYOUT_POLICY_VERSION =
-  "greenfield-layout-rich-blocks-v4";
+  "greenfield-layout-rich-blocks-v5";
+const MARKDOWN_TABLE_VIRTUALIZATION_ROW_THRESHOLD = 80;
+const MARKDOWN_TABLE_VIRTUALIZED_HEIGHT = 640;
 const LAYOUT_CACHE_LIMIT = 64;
 const ESTIMATED_HEIGHT_CACHE_LIMIT = 12;
 
@@ -238,6 +240,9 @@ function estimateMarkdownGreenfieldBlockHeight({
   }
   if (block.kind === "table") {
     const rows = Math.max(2, block.sourceLineCount);
+    if (rows >= MARKDOWN_TABLE_VIRTUALIZATION_ROW_THRESHOLD) {
+      return MARKDOWN_TABLE_VIRTUALIZED_HEIGHT * fontScale;
+    }
     return (48 + rows * 36) * fontScale;
   }
   if (block.kind === "image") return 280 * fontScale;

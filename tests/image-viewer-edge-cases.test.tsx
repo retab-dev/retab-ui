@@ -564,6 +564,27 @@ describe("BitmapCache", () => {
     cache.dispose();
     for (const b of bitmaps) expect(b.close).toHaveBeenCalledTimes(1);
   });
+
+  it("evicts least-recently-used unpinned bitmaps past the pixel budget", () => {
+    const cache = new BitmapCache({
+      maxDecodedFrames: 10,
+      maxDecodedPixels: 20_000,
+    });
+    const a = bitmap(100, 100);
+    const b = bitmap(100, 100);
+    const c = bitmap(100, 100);
+
+    cache.set(0, a);
+    cache.set(1, b);
+    cache.get(0);
+    cache.set(2, c);
+
+    expect(b.close).toHaveBeenCalledTimes(1);
+    expect(cache.has(0)).toBe(true);
+    expect(cache.has(1)).toBe(false);
+    expect(cache.has(2)).toBe(true);
+    cache.dispose();
+  });
 });
 
 // ──────────────────────────────────────────────────────────────────────────

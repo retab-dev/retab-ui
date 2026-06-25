@@ -22,6 +22,7 @@ import type {
 } from "@/lib/viewer-resource";
 
 const DEFAULT_MAX_DECODED_FRAMES = 16;
+const DEFAULT_MAX_DECODED_PIXELS = 64_000_000;
 const DEFAULT_UNCLAIMED_SOURCE_TIMEOUT_MS = 30_000;
 const DEFAULT_RELEASED_SOURCE_TIMEOUT_MS = 10_000;
 const TIFF_SIGNATURE_BYTE_COUNT = 4;
@@ -53,6 +54,7 @@ interface FrameSourceEntry {
 
 interface FrameSourceManagerOptions {
   maxDecodedFrames?: number;
+  maxDecodedPixels?: number;
   releasedSourceTimeoutMs?: number;
   unclaimedSourceTimeoutMs?: number;
 }
@@ -60,12 +62,15 @@ interface FrameSourceManagerOptions {
 export class FrameSourceManager {
   private readonly entries = new Map<string, FrameSourceEntry>();
   private readonly maxDecodedFrames: number;
+  private readonly maxDecodedPixels: number;
   private readonly releasedSourceTimeoutMs: number;
   private readonly unclaimedSourceTimeoutMs: number;
 
   constructor(options: FrameSourceManagerOptions = {}) {
     this.maxDecodedFrames =
       options.maxDecodedFrames ?? DEFAULT_MAX_DECODED_FRAMES;
+    this.maxDecodedPixels =
+      options.maxDecodedPixels ?? DEFAULT_MAX_DECODED_PIXELS;
     this.releasedSourceTimeoutMs =
       options.releasedSourceTimeoutMs ?? DEFAULT_RELEASED_SOURCE_TIMEOUT_MS;
     this.unclaimedSourceTimeoutMs =
@@ -182,6 +187,7 @@ export class FrameSourceManager {
         createTiffWorker,
         this.maxDecodedFrames,
         signal,
+        this.maxDecodedPixels,
       );
     }
 
@@ -189,6 +195,7 @@ export class FrameSourceManager {
       return createNativeImageFrameSourceFromBlob(
         await content.readBlob({ signal }),
         this.maxDecodedFrames,
+        this.maxDecodedPixels,
       );
     }
 
@@ -247,10 +254,15 @@ export class FrameSourceManager {
         createTiffWorker,
         this.maxDecodedFrames,
         signal,
+        this.maxDecodedPixels,
       );
     }
 
-    return createNativeImageFrameSourceFromBlob(blob, this.maxDecodedFrames);
+    return createNativeImageFrameSourceFromBlob(
+      blob,
+      this.maxDecodedFrames,
+      this.maxDecodedPixels,
+    );
   }
 }
 

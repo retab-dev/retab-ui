@@ -118,6 +118,37 @@ function csvBlobSource(text: string, identityKey: string) {
   });
 }
 
+function runNativeFindIndexImmediately() {
+  vi.stubGlobal(
+    "requestIdleCallback",
+    (
+      callback: (deadline: {
+        didTimeout: boolean;
+        timeRemaining: () => number;
+      }) => void,
+    ) => {
+      callback({ didTimeout: false, timeRemaining: () => 50 });
+      return 1;
+    },
+  );
+  vi.stubGlobal("cancelIdleCallback", vi.fn());
+}
+
+function selectNativeFindText(element: HTMLElement, text: string) {
+  const offset = element.textContent?.indexOf(text) ?? -1;
+  expect(offset).toBeGreaterThanOrEqual(0);
+
+  const textNode = element.firstChild;
+  expect(textNode?.nodeType).toBe(Node.TEXT_NODE);
+
+  const range = document.createRange();
+  range.setStart(textNode!, offset);
+  range.setEnd(textNode!, offset + text.length);
+  const selection = document.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+}
+
 function csvStreamResponse(parts: string[]) {
   const encoder = new TextEncoder();
   return responseFromStream(
@@ -548,6 +579,82 @@ describe("CsvViewer", () => {
     expect(rowWindow?.style.marginTop).toBe("");
     expect(rowWindow?.style.height).not.toBe(`${250 * 33}px`);
     expect(screen.getByText("value-1")).toBeTruthy();
+  });
+
+  it("indexes virtualized cells for native browser find and scrolls to the matched cell", async () => {
+    runNativeFindIndexImmediately();
+    const columns = Array.from(
+      { length: 12 },
+      (_, index) => `col-${index + 1}`,
+    );
+    const needle = "needle-offscreen-cell";
+    const rows = Array.from({ length: 250 }, (_, rowIndex) =>
+      columns.map((_, columnIndex) =>
+        rowIndex === 249 && columnIndex === 10
+          ? needle
+          : `r${rowIndex}-c${columnIndex}`,
+      ),
+    );
+
+    const { container } = render(
+      <CsvViewer
+        source={{
+          kind: "table",
+          table: {
+            columns,
+            rows,
+          },
+        }}
+        controls={false}
+      />,
+    );
+
+    const index = await waitFor(() => {
+      const element = container.querySelector<HTMLElement>(
+        '[data-slot="csv-native-find-index"]',
+      );
+      expect(element).toBeTruthy();
+      return element!;
+    });
+    expect(index.getAttribute("data-native-find-indexed-cells")).toBe("3000");
+    expect(
+      csvRows(container).some((row) => row.textContent?.includes(needle)),
+    ).toBe(false);
+
+    const entry = Array.from(
+      index.querySelectorAll<HTMLElement>("[data-native-find-start-row]"),
+    ).find((element) => element.textContent?.includes(needle));
+    expect(entry).toBeTruthy();
+    expect(entry?.getAttribute("hidden")).toBe("until-found");
+
+    const viewport = container.querySelector(
+      '[data-slot="csv-body"]',
+    ) as HTMLDivElement | null;
+    expect(viewport).toBeTruthy();
+    Object.defineProperty(viewport, "clientHeight", {
+      configurable: true,
+      value: 100,
+    });
+    Object.defineProperty(viewport, "clientWidth", {
+      configurable: true,
+      value: 360,
+    });
+    const scrollTo = vi.fn();
+    Object.defineProperty(viewport, "scrollTo", {
+      configurable: true,
+      value: scrollTo,
+    });
+
+    selectNativeFindText(entry!, needle);
+    act(() => {
+      entry!.dispatchEvent(new Event("beforematch"));
+    });
+
+    expect(scrollTo).toHaveBeenCalledWith({
+      top: 8183.5,
+      left: 1710,
+      behavior: "auto",
+    });
   });
 
   it("renders horizontally virtualized columns after scrolling", async () => {

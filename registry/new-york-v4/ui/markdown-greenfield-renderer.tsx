@@ -53,6 +53,12 @@ const MARKDOWN_CODE_VIRTUALIZATION_LINE_THRESHOLD = 100;
 const MARKDOWN_CODE_VIRTUALIZED_OVERSCAN_LINES = 12;
 const MARKDOWN_CODE_VIRTUALIZED_VIEWPORT_HEIGHT_PX = 512;
 const MARKDOWN_CODE_VIRTUALIZED_LINE_HEIGHT_FALLBACK_PX = 24;
+const MARKDOWN_TABLE_VIRTUALIZATION_ROW_THRESHOLD = 80;
+const MARKDOWN_TABLE_VIRTUALIZATION_CELL_THRESHOLD = 600;
+const MARKDOWN_TABLE_VIRTUALIZED_ROW_HEIGHT_PX = 36;
+const MARKDOWN_TABLE_VIRTUALIZED_VIEWPORT_HEIGHT_PX = 560;
+const MARKDOWN_TABLE_VIRTUALIZED_OVERSCAN_ROWS = 8;
+const MARKDOWN_TABLE_NATIVE_FIND_ROWS_PER_ENTRY = 8;
 const MARKDOWN_RENDERED_CHUNK_CACHE_LIMIT = 96;
 
 const markdownRenderedChunkCache = new Map<string, React.ReactNode>();
@@ -820,39 +826,7 @@ const markdownComponents = {
   var: ({ node: _node, ...props }: any) => (
     <var {...props} className="font-mono italic" data-pretext-raw-inline="" />
   ),
-  table: ({ node, style, ...props }: any) => {
-    const table = readHastElement(node);
-    const ariaColumnCount = tableColumnCount(table);
-    const columnCount = ariaColumnCount ?? 0;
-    return (
-      <div
-        aria-label="Markdown table"
-        className="group relative my-4 overflow-hidden rounded-lg border"
-        data-markdown-table-region=""
-        role="region"
-        tabIndex={0}
-        onKeyDown={handleHorizontalScrollKeyDown}
-      >
-        <TableCopyButton />
-        <div className="overflow-x-auto" data-markdown-table-scroll="">
-          <table
-            {...props}
-            aria-colcount={ariaColumnCount}
-            aria-rowcount={tableRowCount(table)}
-            className="w-full border-collapse text-[0.85em]"
-            data-markdown-table=""
-            style={{
-              ...style,
-              minWidth:
-                columnCount >= 4
-                  ? `${Math.max(640, columnCount * 160)}px`
-                  : style?.minWidth,
-            }}
-          />
-        </div>
-      </div>
-    );
-  },
+  table: MarkdownTable,
   tbody: ({ node: _node, ...props }: any) => <tbody {...props} />,
   td: ({ align, node, ...props }: any) => {
     const resolvedAlign = align ?? readHastElement(node)?.properties?.align;
@@ -1971,6 +1945,10 @@ function readDataProperty(node: unknown, property: string) {
   return typeof value === "string" ? value : "";
 }
 
+function readStringProperty(value: unknown) {
+  return typeof value === "string" ? value : null;
+}
+
 function readTrustedDataProperty(node: unknown, property: string) {
   if (!isTrustedPretextComponentNode(node)) return "";
   return readDataProperty(node, property);
@@ -2226,6 +2204,489 @@ function extractHastNodeText(
   return element.children.map(extractHastNodeText).join("");
 }
 
+type MarkdownTableModel = {
+  caption: MarkdownHastElement | null;
+  captionText: string;
+  cellCount: number;
+  columnCount: number;
+  rows: MarkdownTableRowModel[];
+  tsv: string;
+};
+
+type MarkdownTableRowModel = {
+  cells: MarkdownTableCellModel[];
+  key: string;
+  rowIndex: number;
+};
+
+type MarkdownTableCellModel = {
+  align: MarkdownTableCellAlign | null;
+  children: readonly MarkdownHastNode[];
+  columnIndex: number;
+  headerId: string | null;
+  headers: string | null;
+  isHeader: boolean;
+  key: string;
+  text: string;
+};
+
+type MarkdownTableCellAlign = "center" | "char" | "justify" | "left" | "right";
+
+type MarkdownTableFindEntry = {
+  key: string;
+  rowIndex: number;
+  text: string;
+};
+
+function MarkdownTable({ node, style, ...props }: any) {
+  const table = readHastElement(node);
+  const model = React.useMemo(() => readMarkdownTableModel(table), [table]);
+  if (model && shouldVirtualizeMarkdownTable(model)) {
+    return <MarkdownVirtualTable model={model} style={style} />;
+  }
+
+  const ariaColumnCount = model?.columnCount ?? tableColumnCount(table);
+  const columnCount = ariaColumnCount ?? 0;
+  return (
+    <div
+      aria-label="Markdown table"
+      className="group relative my-4 overflow-hidden rounded-lg border"
+      data-markdown-table-region=""
+      role="region"
+      tabIndex={0}
+      onKeyDown={handleHorizontalScrollKeyDown}
+    >
+      <TableCopyButton copyText={model?.tsv} />
+      <div className="overflow-x-auto" data-markdown-table-scroll="">
+        <table
+          {...props}
+          aria-colcount={ariaColumnCount}
+          aria-rowcount={model?.rows.length ?? tableRowCount(table)}
+          className="w-full border-collapse text-[0.85em]"
+          data-markdown-table=""
+          style={{
+            ...style,
+            minWidth: markdownTableMinWidth(columnCount, style?.minWidth),
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function MarkdownVirtualTable({
+  model,
+  style,
+}: {
+  model: MarkdownTableModel;
+  style?: React.CSSProperties;
+}) {
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
+  const scrollFrameRef = React.useRef<number | null>(null);
+  const [viewport, setViewport] = React.useState({
+    height: MARKDOWN_TABLE_VIRTUALIZED_VIEWPORT_HEIGHT_PX,
+    scrollTop: 0,
+  });
+  const visibleWindow = React.useMemo(
+    () =>
+      markdownVirtualTableVisibleWindow({
+        rowCount: model.rows.length,
+        scrollTop: viewport.scrollTop,
+        viewportHeight: viewport.height,
+      }),
+    [model.rows.length, viewport.height, viewport.scrollTop],
+  );
+  const visibleRows = React.useMemo(
+    () => model.rows.slice(visibleWindow.start, visibleWindow.end),
+    [model.rows, visibleWindow.end, visibleWindow.start],
+  );
+  const findEntries = React.useMemo(
+    () => markdownTableFindEntries(model.rows),
+    [model.rows],
+  );
+  const updateViewport = React.useCallback(() => {
+    const element = scrollRef.current;
+    if (!element) return;
+    setViewport({
+      height:
+        element.clientHeight || MARKDOWN_TABLE_VIRTUALIZED_VIEWPORT_HEIGHT_PX,
+      scrollTop: element.scrollTop,
+    });
+  }, []);
+  const handleScroll = React.useCallback(() => {
+    if (scrollFrameRef.current != null) return;
+    scrollFrameRef.current = requestAnimationFrame(() => {
+      scrollFrameRef.current = null;
+      updateViewport();
+    });
+  }, [updateViewport]);
+  const revealRow = React.useCallback((rowIndex: number) => {
+    const top = rowIndex * MARKDOWN_TABLE_VIRTUALIZED_ROW_HEIGHT_PX;
+    scrollRef.current?.scrollTo?.({ behavior: "auto", top });
+    if (scrollRef.current) scrollRef.current.scrollTop = top;
+    setViewport((current) => ({
+      height: scrollRef.current?.clientHeight || current.height,
+      scrollTop: top,
+    }));
+  }, []);
+
+  useKeyedLayoutEffect(
+    joinEffectKey(["markdown-virtual-table-viewport", model.rows.length]),
+    () => {
+      updateViewport();
+      return () => {
+        if (scrollFrameRef.current != null) {
+          cancelAnimationFrame(scrollFrameRef.current);
+        }
+      };
+    },
+  );
+
+  return (
+    <div
+      aria-label="Markdown table"
+      className="group relative my-4 overflow-hidden rounded-lg border"
+      data-markdown-table-region=""
+      data-markdown-table-virtualized-region=""
+      role="region"
+      tabIndex={0}
+      onKeyDown={handleHorizontalScrollKeyDown}
+    >
+      <TableCopyButton copyText={model.tsv} />
+      <div
+        ref={scrollRef}
+        className="max-h-[560px] overflow-auto"
+        data-markdown-table-scroll=""
+        onScroll={handleScroll}
+      >
+        <table
+          aria-colcount={model.columnCount}
+          aria-rowcount={model.rows.length}
+          className="w-full border-collapse text-[0.85em]"
+          data-markdown-table=""
+          data-markdown-table-mounted-rows={visibleRows.length}
+          data-markdown-table-total-rows={model.rows.length}
+          data-markdown-table-virtualized=""
+          style={{
+            ...style,
+            minWidth: markdownTableMinWidth(model.columnCount, style?.minWidth),
+          }}
+        >
+          {model.caption ? (
+            <caption className="text-muted-foreground bg-background sticky top-0 z-20 caption-top px-3 py-2 text-left font-medium">
+              {renderHastChildren(model.caption.children)}
+            </caption>
+          ) : null}
+          <tbody>
+            {visibleWindow.start > 0 ? (
+              <MarkdownVirtualTableSpacerRow
+                columnCount={model.columnCount}
+                height={
+                  visibleWindow.start * MARKDOWN_TABLE_VIRTUALIZED_ROW_HEIGHT_PX
+                }
+              />
+            ) : null}
+            {visibleRows.map((row) => (
+              <MarkdownVirtualTableRow key={row.key} row={row} />
+            ))}
+            {visibleWindow.end < model.rows.length ? (
+              <MarkdownVirtualTableSpacerRow
+                columnCount={model.columnCount}
+                height={
+                  (model.rows.length - visibleWindow.end) *
+                  MARKDOWN_TABLE_VIRTUALIZED_ROW_HEIGHT_PX
+                }
+              />
+            ) : null}
+          </tbody>
+        </table>
+        <MarkdownVirtualTableNativeFindIndex
+          entries={findEntries}
+          revealRow={revealRow}
+        />
+      </div>
+    </div>
+  );
+}
+
+function MarkdownVirtualTableRow({ row }: { row: MarkdownTableRowModel }) {
+  return (
+    <tr
+      aria-rowindex={row.rowIndex + 1}
+      className="border-b"
+      data-markdown-table-row=""
+      data-pretext-table-row-index={row.rowIndex + 1}
+      style={{
+        height: MARKDOWN_TABLE_VIRTUALIZED_ROW_HEIGHT_PX,
+      }}
+    >
+      {row.cells.map((cell) => (
+        <MarkdownVirtualTableCell key={cell.key} cell={cell} />
+      ))}
+    </tr>
+  );
+}
+
+function MarkdownVirtualTableCell({ cell }: { cell: MarkdownTableCellModel }) {
+  const Cell = cell.isHeader ? "th" : "td";
+  return (
+    <Cell
+      align={cell.align ?? undefined}
+      aria-colindex={cell.columnIndex + 1}
+      className={markdownTableCellClassName({
+        align: cell.align,
+        isHeader: cell.isHeader,
+      })}
+      data-markdown-table-cell=""
+      data-pretext-table-column-index={cell.columnIndex + 1}
+      headers={cell.isHeader ? undefined : (cell.headers ?? undefined)}
+      id={cell.headerId ?? undefined}
+      scope={cell.isHeader ? "col" : undefined}
+    >
+      <span className="block truncate">
+        {renderHastChildren(cell.children)}
+      </span>
+    </Cell>
+  );
+}
+
+function MarkdownVirtualTableSpacerRow({
+  columnCount,
+  height,
+}: {
+  columnCount: number;
+  height: number;
+}) {
+  return (
+    <tr aria-hidden="true" data-markdown-table-spacer-row="">
+      <td colSpan={columnCount} style={{ height, padding: 0 }} />
+    </tr>
+  );
+}
+
+function MarkdownVirtualTableNativeFindIndex({
+  entries,
+  revealRow,
+}: {
+  entries: readonly MarkdownTableFindEntry[];
+  revealRow: (rowIndex: number) => void;
+}) {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute top-0 left-0 h-px w-px overflow-hidden opacity-0"
+      data-markdown-table-native-find-index=""
+      data-markdown-table-native-find-entries={entries.length}
+    >
+      {entries.map((entry) => (
+        <MarkdownVirtualTableNativeFindEntry
+          key={entry.key}
+          entry={entry}
+          revealRow={revealRow}
+        />
+      ))}
+    </div>
+  );
+}
+
+function MarkdownVirtualTableNativeFindEntry({
+  entry,
+  revealRow,
+}: {
+  entry: MarkdownTableFindEntry;
+  revealRow: (rowIndex: number) => void;
+}) {
+  const ref = React.useRef<HTMLSpanElement | null>(null);
+
+  useKeyedLayoutEffect(joinEffectKey([entry.key, entry.rowIndex]), () => {
+    const element = ref.current;
+    if (!element) return;
+    element.setAttribute("hidden", "until-found");
+
+    const handleBeforeMatch = () => {
+      revealRow(entry.rowIndex);
+      requestAnimationFrame(() => {
+        element.setAttribute("hidden", "until-found");
+      });
+    };
+
+    element.addEventListener("beforematch", handleBeforeMatch);
+    return () => {
+      element.removeEventListener("beforematch", handleBeforeMatch);
+    };
+  });
+
+  return (
+    <span
+      ref={ref}
+      className="absolute top-0 left-0 block h-px w-px overflow-hidden whitespace-pre"
+      data-markdown-table-native-find-entry=""
+      data-markdown-table-native-find-row={entry.rowIndex + 1}
+    >
+      {entry.text || " "}
+    </span>
+  );
+}
+
+function readMarkdownTableModel(
+  table: MarkdownHastElement | null,
+): MarkdownTableModel | null {
+  if (!table) return null;
+  const caption = table.children
+    .map(readHastElement)
+    .find(
+      (child): child is MarkdownHastElement => child?.tagName === "caption",
+    );
+  const rows = tableRows(table).map((row, rowIndex) =>
+    readMarkdownTableRowModel(row, rowIndex),
+  );
+  if (!rows.length) return null;
+
+  const columnCount = rows.reduce(
+    (max, row) => Math.max(max, row.cells.length),
+    0,
+  );
+  const cellCount = rows.reduce((sum, row) => sum + row.cells.length, 0);
+  return {
+    caption: caption ?? null,
+    captionText: normalizeTableCellText(extractHastNodeText(caption)),
+    cellCount,
+    columnCount,
+    rows,
+    tsv: serializeMarkdownTableModelAsTsv(rows),
+  };
+}
+
+function readMarkdownTableRowModel(
+  row: MarkdownHastElement,
+  rowIndex: number,
+): MarkdownTableRowModel {
+  return {
+    cells: tableCells(row).map((cell, columnIndex) =>
+      readMarkdownTableCellModel(cell, rowIndex, columnIndex),
+    ),
+    key: `row-${rowIndex}`,
+    rowIndex,
+  };
+}
+
+function readMarkdownTableCellModel(
+  cell: MarkdownHastElement,
+  rowIndex: number,
+  columnIndex: number,
+): MarkdownTableCellModel {
+  return {
+    align: readMarkdownTableCellAlign(cell.properties?.align),
+    children: cell.children,
+    columnIndex,
+    headerId: readStringProperty(cell.properties?.id),
+    headers: readStringProperty(cell.properties?.headers),
+    isHeader: cell.tagName === "th",
+    key: `cell-${rowIndex}-${columnIndex}`,
+    text: normalizeTableCellText(extractHastNodeText(cell)),
+  };
+}
+
+function readMarkdownTableCellAlign(
+  value: unknown,
+): MarkdownTableCellAlign | null {
+  return value === "center" ||
+    value === "char" ||
+    value === "justify" ||
+    value === "left" ||
+    value === "right"
+    ? value
+    : null;
+}
+
+function shouldVirtualizeMarkdownTable(model: MarkdownTableModel) {
+  return (
+    model.rows.length >= MARKDOWN_TABLE_VIRTUALIZATION_ROW_THRESHOLD ||
+    model.cellCount >= MARKDOWN_TABLE_VIRTUALIZATION_CELL_THRESHOLD
+  );
+}
+
+function markdownVirtualTableVisibleWindow({
+  rowCount,
+  scrollTop,
+  viewportHeight,
+}: {
+  rowCount: number;
+  scrollTop: number;
+  viewportHeight: number;
+}) {
+  const visibleStart = Math.max(
+    0,
+    Math.floor(scrollTop / MARKDOWN_TABLE_VIRTUALIZED_ROW_HEIGHT_PX) -
+      MARKDOWN_TABLE_VIRTUALIZED_OVERSCAN_ROWS,
+  );
+  const visibleCount =
+    Math.ceil(viewportHeight / MARKDOWN_TABLE_VIRTUALIZED_ROW_HEIGHT_PX) +
+    MARKDOWN_TABLE_VIRTUALIZED_OVERSCAN_ROWS * 2;
+  return {
+    end: Math.min(rowCount, visibleStart + Math.max(1, visibleCount)),
+    start: visibleStart,
+  };
+}
+
+function markdownTableFindEntries(
+  rows: readonly MarkdownTableRowModel[],
+): MarkdownTableFindEntry[] {
+  const entries: MarkdownTableFindEntry[] = [];
+  for (
+    let rowIndex = 0;
+    rowIndex < rows.length;
+    rowIndex += MARKDOWN_TABLE_NATIVE_FIND_ROWS_PER_ENTRY
+  ) {
+    const chunkRows = rows.slice(
+      rowIndex,
+      rowIndex + MARKDOWN_TABLE_NATIVE_FIND_ROWS_PER_ENTRY,
+    );
+    entries.push({
+      key: `table-find-${rowIndex}`,
+      rowIndex,
+      text: chunkRows
+        .map((row) => row.cells.map((cell) => cell.text).join("\t"))
+        .join("\n"),
+    });
+  }
+  return entries;
+}
+
+function serializeMarkdownTableModelAsTsv(
+  rows: readonly MarkdownTableRowModel[],
+) {
+  return rows
+    .map((row) => row.cells.map((cell) => cell.text).join("\t"))
+    .join("\n");
+}
+
+function markdownTableMinWidth(
+  columnCount: number,
+  fallback: React.CSSProperties["minWidth"],
+) {
+  return columnCount >= 4 ? `${Math.max(640, columnCount * 160)}px` : fallback;
+}
+
+function markdownTableCellClassName({
+  align,
+  isHeader,
+}: {
+  align: string | null;
+  isHeader: boolean;
+}) {
+  return [
+    "min-w-0 border-r px-3 py-1.5 last:border-r-0",
+    isHeader
+      ? "border-b bg-muted/55 text-left font-medium"
+      : "border-t align-top",
+    align === "center" ? "text-center" : "",
+    align === "right" ? "text-right tabular-nums" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function handleHorizontalScrollKeyDown(
   event: React.KeyboardEvent<HTMLElement>,
 ) {
@@ -2262,6 +2723,33 @@ function tableColumnCount(table: MarkdownHastElement | null) {
   }).length;
 }
 
+function tableRows(element: MarkdownHastElement) {
+  const rows: MarkdownHastElement[] = [];
+  for (const child of element.children) {
+    const childElement = readHastElement(child);
+    if (!childElement) continue;
+    if (childElement.tagName === "tr") {
+      rows.push(childElement);
+    } else if (
+      childElement.tagName === "thead" ||
+      childElement.tagName === "tbody" ||
+      childElement.tagName === "tfoot"
+    ) {
+      rows.push(...tableRows(childElement));
+    }
+  }
+  return rows;
+}
+
+function tableCells(row: MarkdownHastElement) {
+  return row.children
+    .map(readHastElement)
+    .filter(
+      (child): child is MarkdownHastElement =>
+        child?.tagName === "td" || child?.tagName === "th",
+    );
+}
+
 function countDescendantElements(
   element: MarkdownHastElement,
   tagName: string,
@@ -2294,7 +2782,7 @@ function findDescendantElement(
 
 // A subtle hover copy affordance in the table's top-right corner, replacing the
 // persistent chrome bar so the table reads as a clean document table.
-function TableCopyButton() {
+function TableCopyButton({ copyText }: { copyText?: string }) {
   const [copied, setCopied] = React.useState(false);
   return (
     <button
@@ -2302,7 +2790,7 @@ function TableCopyButton() {
       className="bg-background/90 text-muted-foreground hover:text-foreground absolute top-2 right-2 z-10 inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium opacity-0 shadow-sm backdrop-blur-sm transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
       type="button"
       onClick={(event) => {
-        copyTable(event.currentTarget);
+        copyTable(event.currentTarget, copyText);
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1200);
       }}
@@ -2317,16 +2805,14 @@ function TableCopyButton() {
   );
 }
 
-function copyTable(button: HTMLButtonElement) {
+function copyTable(button: HTMLButtonElement, copyText?: string) {
   const region = button.closest('[role="region"]');
-  const table = region?.querySelector("table");
-  if (!table) return;
 
   const selection = window.getSelection();
   const selectedText =
     selection &&
     selection.rangeCount > 0 &&
-    table.contains(selection.anchorNode)
+    region?.contains(selection.anchorNode)
       ? selection.toString()
       : "";
   if (selectedText.trim()) {
@@ -2334,6 +2820,13 @@ function copyTable(button: HTMLButtonElement) {
     return;
   }
 
+  if (copyText != null) {
+    void navigator.clipboard?.writeText(copyText);
+    return;
+  }
+
+  const table = region?.querySelector("table");
+  if (!table) return;
   void navigator.clipboard?.writeText(serializeTableAsTsv(table));
 }
 

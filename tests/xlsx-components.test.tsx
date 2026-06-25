@@ -76,6 +76,37 @@ function xlsxCellByText(text: string) {
   return cell!;
 }
 
+function runNativeFindIndexImmediately() {
+  vi.stubGlobal(
+    "requestIdleCallback",
+    (
+      callback: (deadline: {
+        didTimeout: boolean;
+        timeRemaining: () => number;
+      }) => void,
+    ) => {
+      callback({ didTimeout: false, timeRemaining: () => 50 });
+      return 1;
+    },
+  );
+  vi.stubGlobal("cancelIdleCallback", vi.fn());
+}
+
+function selectNativeFindText(element: HTMLElement, text: string) {
+  const offset = element.textContent?.indexOf(text) ?? -1;
+  expect(offset).toBeGreaterThanOrEqual(0);
+
+  const textNode = element.firstChild;
+  expect(textNode?.nodeType).toBe(Node.TEXT_NODE);
+
+  const range = document.createRange();
+  range.setStart(textNode!, offset);
+  range.setEnd(textNode!, offset + text.length);
+  const selection = document.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+}
+
 function mockSheetTabMetrics({
   clientWidth,
   scrollWidth,
@@ -934,6 +965,58 @@ describe("XlsxGrid", () => {
     expect(scrollTo).toHaveBeenCalledWith({
       top: 548,
       left: 1032,
+      behavior: "auto",
+    });
+  });
+
+  it("indexes virtualized sheet cells for native browser find and scrolls to the matched cell", async () => {
+    runNativeFindIndexImmediately();
+    const { scrollTo } = mockElementMetrics({
+      clientHeight: 80,
+      clientWidth: 240,
+    });
+    const needle = "xlsx-offscreen-needle";
+
+    const { container } = render(
+      <XlsxGrid
+        rowCount={250}
+        columnCount={20}
+        sheetName="Find"
+        getCell={(rowIndex, columnIndex) => ({
+          text:
+            rowIndex === 240 && columnIndex === 15
+              ? needle
+              : `r${rowIndex}-c${columnIndex}`,
+          numeric: false,
+        })}
+        scale={1}
+        isolateStyles={false}
+      />,
+    );
+
+    const index = await waitFor(() => {
+      const element = container.querySelector<HTMLElement>(
+        '[data-slot="xlsx-native-find-index"]',
+      );
+      expect(element).toBeTruthy();
+      return element!;
+    });
+    expect(index.getAttribute("data-native-find-indexed-cells")).toBe("5000");
+
+    const entry = Array.from(
+      index.querySelectorAll<HTMLElement>("[data-native-find-start-row]"),
+    ).find((element) => element.textContent?.includes(needle));
+    expect(entry).toBeTruthy();
+    expect(entry?.getAttribute("hidden")).toBe("until-found");
+
+    selectNativeFindText(entry!, needle);
+    act(() => {
+      entry!.dispatchEvent(new Event("beforematch"));
+    });
+
+    expect(scrollTo).toHaveBeenCalledWith({
+      top: 6694,
+      left: 1864,
       behavior: "auto",
     });
   });

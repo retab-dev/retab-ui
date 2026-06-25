@@ -4,6 +4,7 @@ import * as React from "react";
 import { createRoot, type Root } from "react-dom/client";
 
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import {
   ImageSourceDisposedError,
@@ -25,16 +26,22 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 import {
   getImageFrameLayout,
-  getVisibleImageFrameNumbers,
+  getImagePhysicalScrollHeight,
+  getImageRenderedFrameWindow,
+  useImageFrameVirtualization,
   type ImageFrameLayout,
   type ImageFrameLayoutModel,
+  type ImageFrameVirtualizationScrollMetrics,
+  type ImageRenderedFrameLayout,
+  type ImageRenderedFrameWindow,
 } from "./image-viewer-virtualization";
 import { joinEffectKey } from "@/lib/effect-key";
 
 const IMAGE_SCROLL_IDLE_MS = 120;
-const IMAGE_PREFETCH_AHEAD_FRAMES = 2;
 const IMAGE_RETAINED_DECODED_PIXEL_BUDGET = 24_000_000;
 const IMAGE_RETAINED_RENDERED_PIXEL_BUDGET = 32_000_000;
+const IMAGE_FRAME_RENDER_CONCURRENCY = 4;
+const IMAGE_LOW_PRIORITY_FRAME_RENDER_CONCURRENCY = 1;
 
 type ImageRenderQuality = "high" | "low";
 
@@ -59,6 +66,7 @@ export interface ImageFrameScrollerProps {
   scale: number;
   rotation: QuarterTurn;
   frameListRef: React.Ref<HTMLDivElement>;
+  getScrollMetrics?: () => ImageFrameVirtualizationScrollMetrics;
   viewportRef: React.Ref<HTMLDivElement>;
   onScroll: () => void;
   renderFrameOverlay?: ImageViewerProps["renderFrameOverlay"];
@@ -136,8 +144,16 @@ function ImageFrameCanvas({
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      canvas.width = Math.max(1, Math.floor(frameRect.width * dpr));
-      canvas.height = Math.max(1, Math.floor(frameRect.height * dpr));
+      const canvasWidth = Math.max(1, Math.floor(frameRect.width * dpr));
+      const canvasHeight = Math.max(1, Math.floor(frameRect.height * dpr));
+      const previousCanvas = resizeImageCanvas(
+        canvas,
+        canvasWidth,
+        canvasHeight,
+      );
+      if (previousCanvas) {
+        preserveCanvasImage(ctx, previousCanvas, canvasWidth, canvasHeight);
+      }
 
       let cancelled = false;
       let settled = false;
@@ -177,6 +193,7 @@ function ImageFrameCanvas({
               drawWidth,
               drawHeight,
             );
+            canvas.dataset.imageFrameRendered = "true";
           } finally {
             ctx.restore();
           }
@@ -234,6 +251,7 @@ export function ImageFrameScroller({
   scale,
   rotation,
   frameListRef,
+  getScrollMetrics,
   viewportRef,
   onScroll,
   renderFrameOverlay,
@@ -243,15 +261,15 @@ export function ImageFrameScroller({
   const projectionFrameRef = React.useRef<number | null>(null);
   const idleTimerRef = React.useRef<number | null>(null);
   const viewportElementRef = React.useRef<HTMLDivElement | null>(null);
+  const [viewportElement, setViewportElement] =
+    React.useState<HTMLDivElement | null>(null);
   const projectionCacheRef = React.useRef<ImageFrameProjectionCache>({
     clock: 0,
     frames: new Map(),
     resetKey: "",
   });
   const scrollStateRef = React.useRef({
-    direction: 1,
     isScrolling: false,
-    scrollTop: 0,
   });
   const sourceKey = getImageProjectionSourceKey(source);
   const layoutResetKey = [
@@ -262,33 +280,100 @@ export function ImageFrameScroller({
     scale,
     rotation,
   ].join("\u0000");
+  const {
+    scrollPageOffset,
+    visibleFrameNumbers,
+    renderFrameNumbers,
+    preloadFrameNumbers,
+    measureVisibleFrames,
+  } = useImageFrameVirtualization({
+    getScrollMetrics,
+    layout,
+    resetKey: layoutResetKey,
+    viewportElement,
+  });
+  const viewportHeight = viewportElement?.clientHeight ?? 0;
+  const physicalScrollHeight = getImagePhysicalScrollHeight({
+    totalHeight: layout.totalHeight,
+    viewportHeight,
+  });
+  const renderedWindow = React.useMemo(
+    () =>
+      getImageRenderedFrameWindow({
+        frameNumbers: renderFrameNumbers,
+        layout,
+        physicalScrollHeight,
+        scrollPageOffset,
+        viewportHeight,
+      }),
+    [
+      layout,
+      physicalScrollHeight,
+      renderFrameNumbers,
+      scrollPageOffset,
+      viewportHeight,
+    ],
+  );
+  const imageDevicePixelRatio = getImageDevicePixelRatio();
+  const lowPriorityFrameNumbers = React.useMemo(
+    () => [...renderFrameNumbers, ...preloadFrameNumbers],
+    [preloadFrameNumbers, renderFrameNumbers],
+  );
+  const {
+    activeFrameNumbers,
+    onFrameRenderTiming: handleScheduledFrameRenderTiming,
+  } = useImageFrameRenderScheduler({
+    frameNumbers: visibleFrameNumbers,
+    lowPriorityFrameNumbers,
+    scale,
+    rotation,
+    pixelRatio: imageDevicePixelRatio,
+    resetKey: layoutResetKey,
+    maxRunning: IMAGE_FRAME_RENDER_CONCURRENCY,
+    maxLowPriorityRunning: IMAGE_LOW_PRIORITY_FRAME_RENDER_CONCURRENCY,
+  });
+  const handleFrameRenderTiming = React.useCallback(
+    (timing: ImageFrameRenderTiming) => {
+      handleScheduledFrameRenderTiming(timing);
+      onFrameRenderTiming?.(timing);
+    },
+    [handleScheduledFrameRenderTiming, onFrameRenderTiming],
+  );
 
   const projectFrames = React.useCallback(() => {
     projectionFrameRef.current = null;
     projectImageFrames({
+      activeFrameNumbers,
       cache: projectionCacheRef.current,
       canvas: canvasRef.current,
       layout,
-      onFrameRenderTiming,
+      onFrameRenderTiming: handleFrameRenderTiming,
+      preloadFrameNumbers,
       renderFrameOverlay,
       renderQuality: scrollStateRef.current.isScrolling ? "low" : "high",
+      renderedWindow,
+      renderFrameNumbers,
       resetKey: layoutResetKey,
       rotation,
       scale,
-      scrollDirection: scrollStateRef.current.direction,
       source,
       sourceKey,
-      viewport: viewportElementRef.current,
+      visibleFrameNumbers,
     });
   }, [
+    activeFrameNumbers,
+    handleFrameRenderTiming,
     layout,
     layoutResetKey,
-    onFrameRenderTiming,
+    preloadFrameNumbers,
     renderFrameOverlay,
+    renderedWindow,
+    renderFrameNumbers,
     rotation,
     scale,
     source,
     sourceKey,
+    visibleFrameNumbers,
   ]);
 
   const scheduleProjectFrames = React.useCallback(() => {
@@ -322,7 +407,7 @@ export function ImageFrameScroller({
   const setViewportRef = React.useCallback(
     (element: HTMLDivElement | null) => {
       viewportElementRef.current = element;
-      if (element) scrollStateRef.current.scrollTop = element.scrollTop;
+      setViewportElement(element);
       assignImageRef(viewportRef, element);
     },
     [viewportRef],
@@ -334,17 +419,8 @@ export function ImageFrameScroller({
 
   const handleScroll = React.useCallback(() => {
     onScroll();
-    const viewport = viewportElementRef.current;
-    const scrollTop = viewport?.scrollTop ?? 0;
-    const previousScrollTop = scrollStateRef.current.scrollTop;
-    if (scrollTop > previousScrollTop) {
-      scrollStateRef.current.direction = 1;
-    } else if (scrollTop < previousScrollTop) {
-      scrollStateRef.current.direction = -1;
-    }
-    scrollStateRef.current.scrollTop = scrollTop;
+    measureVisibleFrames();
     scrollStateRef.current.isScrolling = true;
-    scheduleProjectFrames();
 
     if (idleTimerRef.current !== null) {
       window.clearTimeout(idleTimerRef.current);
@@ -354,27 +430,74 @@ export function ImageFrameScroller({
       scrollStateRef.current.isScrolling = false;
       scheduleProjectFrames();
     }, IMAGE_SCROLL_IDLE_MS);
-  }, [onScroll, scheduleProjectFrames]);
+  }, [measureVisibleFrames, onScroll, scheduleProjectFrames]);
 
   return (
     <ScrollArea
       className="min-h-0 flex-1"
       viewportRef={setViewportRef}
-      viewportProps={{ onScroll: handleScroll }}
+      viewportProps={{
+        onScroll: handleScroll,
+        style: { overflowAnchor: "none" },
+      }}
     >
       <div
         ref={frameListRef}
         className="relative min-h-full w-full"
-        style={{ height: layout.totalHeight }}
+        data-slot="image-viewer-fit-width-measure"
       >
         <div
-          ref={setCanvasRef}
-          className="relative mx-auto h-full w-full"
-          data-slot="image-frame-virtual-canvas"
+          className="relative mx-auto"
+          data-slot="image-viewer-document"
           style={{
+            contain: "layout style",
+            height: physicalScrollHeight,
             minWidth: layout.maxFrameWidth + layout.padding * 2,
           }}
-        />
+        >
+          {renderedWindow ? (
+            <>
+              <div
+                aria-hidden
+                data-slot="image-frame-window-before"
+                style={{
+                  contain: "layout size",
+                  height: renderedWindow.beforeHeight,
+                }}
+              />
+              <div
+                className="sticky"
+                data-slot="image-frame-sticky-window"
+                style={{
+                  bottom: renderedWindow.stickyInset,
+                  contain: "layout style inline-size",
+                  height: renderedWindow.height,
+                  isolation: "isolate",
+                  top: renderedWindow.stickyInset,
+                }}
+              >
+                <div
+                  ref={setCanvasRef}
+                  className="relative mx-auto h-full w-full"
+                  data-slot="image-frame-virtual-canvas"
+                  style={{
+                    contain: "layout style",
+                    height: renderedWindow.height,
+                    minWidth: layout.maxFrameWidth + layout.padding * 2,
+                  }}
+                />
+              </div>
+              <div
+                aria-hidden
+                data-slot="image-frame-window-after"
+                style={{
+                  contain: "layout size",
+                  height: renderedWindow.afterHeight,
+                }}
+              />
+            </>
+          ) : null}
+        </div>
       </div>
     </ScrollArea>
   );
@@ -404,90 +527,342 @@ const imageProjectionCallbackKeys = new WeakMap<
 let nextImageProjectionSourceKey = 1;
 let nextImageProjectionCallbackKey = 1;
 
+type ImageFrameRenderRequest = {
+  frameNumber: number;
+  pixelRatio: number;
+  renderScale: number;
+  rotation: QuarterTurn;
+};
+
+function useImageFrameRenderScheduler({
+  frameNumbers,
+  lowPriorityFrameNumbers = [],
+  scale,
+  rotation,
+  pixelRatio,
+  resetKey,
+  maxRunning = IMAGE_FRAME_RENDER_CONCURRENCY,
+  maxLowPriorityRunning = IMAGE_LOW_PRIORITY_FRAME_RENDER_CONCURRENCY,
+}: {
+  frameNumbers: readonly number[];
+  lowPriorityFrameNumbers?: readonly number[];
+  scale: number;
+  rotation: QuarterTurn;
+  pixelRatio: number;
+  resetKey: unknown;
+  maxRunning?: number;
+  maxLowPriorityRunning?: number;
+}) {
+  const renderScale = scale * pixelRatio;
+  const requestedRenders = React.useMemo<ImageFrameRenderRequest[]>(
+    () =>
+      mergeImageFrameNumbers(frameNumbers).map((frameNumber) => ({
+        frameNumber,
+        pixelRatio,
+        renderScale,
+        rotation,
+      })),
+    [frameNumbers, pixelRatio, renderScale, rotation],
+  );
+  const lowPriorityRequestedRenders = React.useMemo<
+    ImageFrameRenderRequest[]
+  >(() => {
+    const primaryFrameNumberSet = new Set(frameNumbers);
+    return mergeImageFrameNumbers(lowPriorityFrameNumbers)
+      .filter((frameNumber) => !primaryFrameNumberSet.has(frameNumber))
+      .map((frameNumber) => ({
+        frameNumber,
+        pixelRatio,
+        renderScale,
+        rotation,
+      }));
+  }, [
+    frameNumbers,
+    lowPriorityFrameNumbers,
+    pixelRatio,
+    renderScale,
+    rotation,
+  ]);
+  const allRequestedRenders = React.useMemo(
+    () => [...requestedRenders, ...lowPriorityRequestedRenders],
+    [lowPriorityRequestedRenders, requestedRenders],
+  );
+  const requestedRendersRef = React.useRef(allRequestedRenders);
+  const resetKeyRef = React.useRef(resetKey);
+  const renderContextRef = React.useRef({ rotation });
+  useKeyedLayoutEffect(
+    joinEffectKey([allRequestedRenders, resetKey, rotation]),
+    () => {
+      requestedRendersRef.current = allRequestedRenders;
+      resetKeyRef.current = resetKey;
+      renderContextRef.current = { rotation };
+    },
+  );
+
+  const [state, setState] = React.useState<{
+    renderedByKey: ReadonlyMap<string, ImageFrameRenderRequest>;
+    resetKey: unknown;
+  }>(() => ({ renderedByKey: new Map(), resetKey }));
+  const emptyRenderedByKey = React.useMemo<
+    ReadonlyMap<string, ImageFrameRenderRequest>
+  >(() => new Map(), []);
+  const renderedByKey = Object.is(state.resetKey, resetKey)
+    ? state.renderedByKey
+    : emptyRenderedByKey;
+
+  useKeyedMountEffect(joinEffectKey([allRequestedRenders, resetKey]), () => {
+    setState((previousState) => {
+      if (!Object.is(previousState.resetKey, resetKey)) {
+        return { renderedByKey: new Map(), resetKey };
+      }
+
+      const renderedByKey = new Map<string, ImageFrameRenderRequest>();
+      for (const [key, rendered] of previousState.renderedByKey) {
+        if (
+          allRequestedRenders.some((request) =>
+            doesRenderedImageFrameSatisfyRequest(rendered, request),
+          )
+        ) {
+          renderedByKey.set(key, rendered);
+        }
+      }
+
+      return areImageRenderMapsEqual(previousState.renderedByKey, renderedByKey)
+        ? previousState
+        : { renderedByKey, resetKey };
+    });
+  });
+
+  const activeFrameNumbers = React.useMemo(() => {
+    const renderedFrameNumbers: number[] = [];
+    const pendingFrameNumbers: number[] = [];
+    const lowPriorityRenderedFrameNumbers: number[] = [];
+    const lowPriorityPendingFrameNumbers: number[] = [];
+
+    for (const request of requestedRenders) {
+      if (isImageRenderRequestSatisfied(request, renderedByKey)) {
+        renderedFrameNumbers.push(request.frameNumber);
+      } else {
+        pendingFrameNumbers.push(request.frameNumber);
+      }
+    }
+    for (const request of lowPriorityRequestedRenders) {
+      if (isImageRenderRequestSatisfied(request, renderedByKey)) {
+        lowPriorityRenderedFrameNumbers.push(request.frameNumber);
+      } else {
+        lowPriorityPendingFrameNumbers.push(request.frameNumber);
+      }
+    }
+
+    const activePrimaryFrameNumbers = [
+      ...renderedFrameNumbers,
+      ...pendingFrameNumbers.slice(0, Math.max(1, maxRunning)),
+    ];
+    const activeLowPriorityFrameNumbers =
+      pendingFrameNumbers.length > 0
+        ? lowPriorityRenderedFrameNumbers
+        : [
+            ...lowPriorityRenderedFrameNumbers,
+            ...lowPriorityPendingFrameNumbers.slice(
+              0,
+              Math.max(0, maxLowPriorityRunning),
+            ),
+          ];
+
+    return mergeImageFrameNumbers([
+      ...activePrimaryFrameNumbers,
+      ...activeLowPriorityFrameNumbers,
+    ]);
+  }, [
+    lowPriorityRequestedRenders,
+    maxLowPriorityRunning,
+    maxRunning,
+    renderedByKey,
+    requestedRenders,
+  ]);
+
+  const onFrameRenderTiming = React.useCallback(
+    (timing: ImageFrameRenderTiming) => {
+      const rendered: ImageFrameRenderRequest = {
+        frameNumber: timing.frameNumber,
+        pixelRatio: timing.pixelRatio,
+        renderScale: timing.renderScale,
+        rotation: renderContextRef.current.rotation,
+      };
+      const key = getImageFrameRenderKey(rendered);
+
+      setState((previousState) => {
+        const resetKey = resetKeyRef.current;
+        const previousRenderedByKey = Object.is(
+          previousState.resetKey,
+          resetKey,
+        )
+          ? previousState.renderedByKey
+          : new Map<string, ImageFrameRenderRequest>();
+        const nextRenderedByKey = new Map(previousRenderedByKey);
+
+        if (
+          timing.status === "rendered" &&
+          requestedRendersRef.current.some((request) =>
+            doesRenderedImageFrameSatisfyRequest(rendered, request),
+          )
+        ) {
+          nextRenderedByKey.set(key, rendered);
+        } else {
+          nextRenderedByKey.delete(key);
+        }
+
+        return areImageRenderMapsEqual(previousRenderedByKey, nextRenderedByKey)
+          ? previousState
+          : { renderedByKey: nextRenderedByKey, resetKey };
+      });
+    },
+    [],
+  );
+
+  return { activeFrameNumbers, onFrameRenderTiming };
+}
+
+function mergeImageFrameNumbers(frameNumbers: readonly number[]) {
+  return [...new Set(frameNumbers)].sort((left, right) => left - right);
+}
+
+function getImageFrameRenderKey({
+  frameNumber,
+  pixelRatio,
+  renderScale,
+  rotation,
+}: ImageFrameRenderRequest) {
+  return `${frameNumber}:${renderScale}:${rotation}:${pixelRatio}`;
+}
+
+function isImageRenderRequestSatisfied(
+  request: ImageFrameRenderRequest,
+  renderedByKey: ReadonlyMap<string, ImageFrameRenderRequest>,
+) {
+  for (const rendered of renderedByKey.values()) {
+    if (doesRenderedImageFrameSatisfyRequest(rendered, request)) return true;
+  }
+  return false;
+}
+
+function doesRenderedImageFrameSatisfyRequest(
+  rendered: ImageFrameRenderRequest,
+  request: ImageFrameRenderRequest,
+) {
+  return (
+    rendered.frameNumber === request.frameNumber &&
+    rendered.renderScale === request.renderScale &&
+    rendered.rotation === request.rotation &&
+    rendered.pixelRatio >= request.pixelRatio
+  );
+}
+
+function areImageRenderMapsEqual(
+  left: ReadonlyMap<string, ImageFrameRenderRequest>,
+  right: ReadonlyMap<string, ImageFrameRenderRequest>,
+) {
+  if (left.size !== right.size) return false;
+  for (const [key, value] of left) {
+    if (right.get(key) !== value) return false;
+  }
+  return true;
+}
+
 function projectImageFrames({
+  activeFrameNumbers,
   cache,
   canvas,
   layout,
   onFrameRenderTiming,
+  preloadFrameNumbers,
   renderFrameOverlay,
   renderQuality,
+  renderedWindow,
+  renderFrameNumbers,
   resetKey,
   rotation,
   scale,
-  scrollDirection,
   source,
   sourceKey,
-  viewport,
+  visibleFrameNumbers,
 }: {
+  activeFrameNumbers: readonly number[];
   cache: ImageFrameProjectionCache;
   canvas: HTMLDivElement | null;
   layout: ImageFrameLayoutModel;
   onFrameRenderTiming?: ImageViewerProps["onFrameRenderTiming"];
+  preloadFrameNumbers: readonly number[];
   renderFrameOverlay?: ImageViewerProps["renderFrameOverlay"];
   renderQuality: ImageRenderQuality;
+  renderedWindow: ImageRenderedFrameWindow | null;
+  renderFrameNumbers: readonly number[];
   resetKey: string;
   rotation: QuarterTurn;
   scale: number;
-  scrollDirection: number;
   source: FrameSource;
   sourceKey: number;
-  viewport: HTMLDivElement | null;
+  visibleFrameNumbers: readonly number[];
 }) {
-  if (!canvas) return;
-
   if (cache.resetKey !== resetKey) {
     disposeImageFrameProjectionCache(cache);
     cache.resetKey = resetKey;
   }
+  if (!canvas || !renderedWindow) return;
 
   cache.clock += 1;
-  const viewportHeight =
-    viewport?.clientHeight || viewport?.getBoundingClientRect().height || 0;
-  const visibleFrameNumbers = getVisibleImageFrameNumbers({
-    layout,
-    scrollTop: viewport?.scrollTop ?? 0,
-    viewportHeight,
-  });
-  const visibleFrameIndexes = new Set<number>();
+  const activeFrameNumberSet = new Set(activeFrameNumbers);
+  const renderedFrameNumberSet = new Set(renderFrameNumbers);
+  const visibleFrameNumberSet = new Set(visibleFrameNumbers);
+  const activePreloadFrameNumbers = activeFrameNumbers.filter(
+    (frameNumber) => !renderedFrameNumberSet.has(frameNumber),
+  );
+  const retainedFrameIndexes = new Set<number>();
 
   let previousShell: HTMLElement | null = null;
-  for (const frameNumber of visibleFrameNumbers) {
-    const frame = getImageFrameLayout(layout, frameNumber);
-    if (!frame) continue;
-    visibleFrameIndexes.add(frame.frameIndex);
-    const projectedFrame =
-      cache.frames.get(frame.frameIndex) ?? createProjectedImageFrame(frame);
+  for (const frame of renderedWindow.frames) {
+    retainedFrameIndexes.add(frame.frameIndex);
+    const existingFrame = cache.frames.get(frame.frameIndex);
+    if (!existingFrame && !activeFrameNumberSet.has(frame.frameNumber))
+      continue;
+    const projectedFrame = existingFrame ?? createProjectedImageFrame(frame);
     projectedFrame.lastSeen = cache.clock;
     projectedFrame.decodedPixels = frameDecodedPixels(source, frame.frameIndex);
     projectedFrame.renderedPixels = frameRenderedPixels(frame);
-    patchProjectedImageFrame(projectedFrame.shell, frame);
-    renderProjectedImageFrame({
+    patchProjectedImageFrame({
       frame,
-      onFrameRenderTiming,
-      projectedFrame,
-      renderFrameOverlay,
-      renderQuality,
-      rotation,
-      scale,
-      source,
-      sourceKey,
+      isVisible: visibleFrameNumberSet.has(frame.frameNumber),
+      shell: projectedFrame.shell,
     });
+    if (activeFrameNumberSet.has(frame.frameNumber)) {
+      renderProjectedImageFrame({
+        frame,
+        onFrameRenderTiming,
+        projectedFrame,
+        renderFrameOverlay,
+        renderQuality,
+        rotation,
+        scale,
+        source,
+        sourceKey,
+      });
+    }
     cache.frames.set(frame.frameIndex, projectedFrame);
     placeProjectedImageFrame(canvas, projectedFrame.shell, previousShell);
     previousShell = projectedFrame.shell;
   }
 
+  detachUnrenderedImageFrames(cache, retainedFrameIndexes);
   schedulePrefetchImageFrames({
-    frameNumbers: visibleFrameNumbers,
+    frameNumbers: activePreloadFrameNumbers,
     layout,
-    scrollDirection,
     source,
   });
-  evictImageFrameProjectionCache(cache, visibleFrameIndexes);
+  evictImageFrameProjectionCache(cache, retainedFrameIndexes);
 }
 
 function createProjectedImageFrame(
-  frame: ImageFrameLayout,
+  frame: ImageRenderedFrameLayout,
 ): ProjectedImageFrame {
   const shell = document.createElement("div");
   shell.className = "absolute top-0 left-1/2";
@@ -505,9 +880,22 @@ function createProjectedImageFrame(
   };
 }
 
-function patchProjectedImageFrame(shell: HTMLElement, frame: ImageFrameLayout) {
+function patchProjectedImageFrame({
+  frame,
+  isVisible,
+  shell,
+}: {
+  frame: ImageRenderedFrameLayout;
+  isVisible: boolean;
+  shell: HTMLElement;
+}) {
   shell.dataset.virtualFrameNumber = String(frame.frameNumber);
-  setImageStyle(shell, "transform", `translate(-50%, ${frame.offsetTop}px)`);
+  if (isVisible) {
+    shell.dataset.visible = "";
+  } else {
+    delete shell.dataset.visible;
+  }
+  setImageStyle(shell, "transform", `translate(-50%, ${frame.windowTop}px)`);
   setImagePixelStyle(shell, "width", frame.width);
   setImagePixelStyle(shell, "height", frame.height);
 }
@@ -523,7 +911,7 @@ function renderProjectedImageFrame({
   source,
   sourceKey,
 }: {
-  frame: ImageFrameLayout;
+  frame: ImageRenderedFrameLayout;
   onFrameRenderTiming?: ImageViewerProps["onFrameRenderTiming"];
   projectedFrame: ProjectedImageFrame;
   renderFrameOverlay?: ImageViewerProps["renderFrameOverlay"];
@@ -584,6 +972,16 @@ function placeProjectedImageFrame(
   canvas.insertBefore(shell, nextSibling);
 }
 
+function detachUnrenderedImageFrames(
+  cache: ImageFrameProjectionCache,
+  retainedFrameIndexes: ReadonlySet<number>,
+) {
+  for (const [frameIndex, frame] of cache.frames) {
+    if (retainedFrameIndexes.has(frameIndex)) continue;
+    frame.shell.remove();
+  }
+}
+
 function evictImageFrameProjectionCache(
   cache: ImageFrameProjectionCache,
   visibleFrameIndexes: ReadonlySet<number>,
@@ -624,7 +1022,6 @@ function evictImageFrameProjectionCache(
 type ImageFramePrefetchInput = {
   frameNumbers: readonly number[];
   layout: ImageFrameLayoutModel;
-  scrollDirection: number;
   source: FrameSource;
 };
 
@@ -640,25 +1037,11 @@ function schedulePrefetchImageFrames(input: ImageFramePrefetchInput) {
 function prefetchImageFrames({
   frameNumbers,
   layout,
-  scrollDirection,
   source,
 }: ImageFramePrefetchInput) {
   if (frameNumbers.length === 0) return;
-  const edgeFrameNumber =
-    scrollDirection >= 0
-      ? frameNumbers[frameNumbers.length - 1]
-      : frameNumbers[0];
-  const prefetchFrameNumbers: number[] = [];
-
-  for (let offset = 1; offset <= IMAGE_PREFETCH_AHEAD_FRAMES; offset += 1) {
-    const frameNumber =
-      edgeFrameNumber + offset * (scrollDirection >= 0 ? 1 : -1);
-    if (frameNumber < 1 || frameNumber > layout.frameCount) continue;
-    prefetchFrameNumbers.push(frameNumber);
-  }
-
   source.prefetch(
-    prefetchFrameNumbers.flatMap((frameNumber) => {
+    frameNumbers.flatMap((frameNumber) => {
       const frame = getImageFrameLayout(layout, frameNumber);
       return frame ? [frame.frameIndex] : [];
     }),
@@ -720,6 +1103,49 @@ function getImageProjectionCallbackKey(
   nextImageProjectionCallbackKey += 1;
   imageProjectionCallbackKeys.set(callback, key);
   return key;
+}
+
+function resizeImageCanvas(
+  canvas: HTMLCanvasElement,
+  width: number,
+  height: number,
+) {
+  if (canvas.width === width && canvas.height === height) return null;
+  const shouldPreserve = canvas.dataset.imageFrameRendered === "true";
+  const previousCanvas =
+    shouldPreserve && canvas.width > 0 && canvas.height > 0
+      ? copyCanvasContents(canvas)
+      : null;
+  if (canvas.width !== width) canvas.width = width;
+  if (canvas.height !== height) canvas.height = height;
+  return previousCanvas;
+}
+
+function copyCanvasContents(canvas: HTMLCanvasElement) {
+  const copy = document.createElement("canvas");
+  copy.width = canvas.width;
+  copy.height = canvas.height;
+  const context = copy.getContext("2d");
+  if (!context) return null;
+  try {
+    context.drawImage(canvas, 0, 0);
+  } catch {
+    return null;
+  }
+  return copy;
+}
+
+function preserveCanvasImage(
+  context: CanvasRenderingContext2D,
+  source: CanvasImageSource,
+  width: number,
+  height: number,
+) {
+  try {
+    context.drawImage(source, 0, 0, width, height);
+  } catch {
+    /* Best-effort preservation must not fail the real frame render. */
+  }
 }
 
 function getImageDevicePixelRatio() {
