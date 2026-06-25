@@ -2,7 +2,10 @@
 
 import * as React from "react";
 
-import { getFixedGridRowWindowStyle } from "@/components/ui/fixed-grid-layout";
+import {
+  getFixedGridInverseRowWindowStyle,
+  getFixedGridRowWindowStyle,
+} from "@/components/ui/fixed-grid-layout";
 import { useFixedRowVirtualization } from "@/components/ui/fixed-grid-virtualization";
 import { joinJsonFormPath } from "@/components/json-form/path-codec";
 import {
@@ -60,7 +63,11 @@ export function FixedArrayTableBody({
   renderItem: (index: number, rowTopPx: number) => React.ReactNode;
 }) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
-  const { virtualRows, totalRowSize } = useFixedRowVirtualization({
+  const {
+    virtualRowWindow,
+    totalRowSize,
+    viewportClientHeight,
+  } = useFixedRowVirtualization({
     rowCount: fields.length,
     rowSize: TABLE_ROW_HEIGHT,
     rowOverscan: TABLE_ROW_OVERSCAN,
@@ -83,20 +90,32 @@ export function FixedArrayTableBody({
         })}
         className="[contain:layout_paint_style]"
       >
-        {virtualRows.map((virtualRow, slotIndex) => {
-          const isEditingRow = activeEditorPath?.startsWith(
-            `${joinJsonFormPath(name, virtualRow.index)}.`,
-          );
-          return (
-            <React.Fragment
-              key={
-                isEditingRow ? fields[virtualRow.index].id : `slot-${slotIndex}`
-              }
-            >
-              {renderItem(virtualRow.index, virtualRow.start)}
-            </React.Fragment>
-          );
-        })}
+        <div
+          data-slot="json-form-table-row-window"
+          style={getFixedGridInverseRowWindowStyle({
+            height: virtualRowWindow.size,
+            minWidth: "100%",
+            top: virtualRowWindow.start,
+            viewportHeight: viewportClientHeight,
+          })}
+        >
+          {virtualRowWindow.items.map((virtualRow, slotIndex) => {
+            const isEditingRow = activeEditorPath?.startsWith(
+              `${joinJsonFormPath(name, virtualRow.index)}.`,
+            );
+            return (
+              <React.Fragment
+                key={
+                  isEditingRow
+                    ? fields[virtualRow.index].id
+                    : `slot-${slotIndex}`
+                }
+              >
+                {renderItem(virtualRow.index, virtualRow.start)}
+              </React.Fragment>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

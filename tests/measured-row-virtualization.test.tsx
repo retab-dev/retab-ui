@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import * as React from "react";
+import type * as React from "react";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -8,6 +8,7 @@ import * as PublicMeasuredRowVirtualization from "@/components/ui/measured-row-v
 import {
   buildMeasuredRowOffsets,
   getMeasuredRowVirtualItems,
+  measuredRowVirtualItemWindow,
   measuredRowScrollTopForIndex,
   useMeasuredRowVirtualization,
 } from "@/registry/new-york-v4/ui/measured-row-virtualization";
@@ -26,6 +27,9 @@ describe("measured row virtualization", () => {
     );
     expect(PublicMeasuredRowVirtualization.getMeasuredRowVirtualItems).toBe(
       getMeasuredRowVirtualItems,
+    );
+    expect(PublicMeasuredRowVirtualization.measuredRowVirtualItemWindow).toBe(
+      measuredRowVirtualItemWindow,
     );
     expect(PublicMeasuredRowVirtualization.measuredRowScrollTopForIndex).toBe(
       measuredRowScrollTopForIndex,
@@ -89,6 +93,30 @@ describe("measured row virtualization", () => {
       { index: 2, key: "row-2", start: 68, size: 30, end: 98 },
       { index: 3, key: "row-3", start: 98, size: 50, end: 148 },
     ]);
+  });
+
+  it("converts measured virtual rows into a relative row window", () => {
+    expect(
+      measuredRowVirtualItemWindow([
+        { index: 2, key: "row-2", start: 68, size: 30, end: 98 },
+        { index: 3, key: "row-3", start: 98, size: 50, end: 148 },
+      ]),
+    ).toEqual({
+      end: 148,
+      items: [
+        { index: 2, key: "row-2", start: 0, size: 30, end: 30 },
+        { index: 3, key: "row-3", start: 30, size: 50, end: 80 },
+      ],
+      size: 80,
+      start: 68,
+    });
+
+    expect(measuredRowVirtualItemWindow([])).toEqual({
+      end: 0,
+      items: [],
+      size: 0,
+      start: 0,
+    });
   });
 
   it("caps hostile overscan without dropping the visible rows", () => {
@@ -183,6 +211,9 @@ describe("measured row virtualization", () => {
     );
 
     expect(result.current.totalSize).toBe(100);
+    expect(result.current.viewportClientHeight).toBe(30);
+    expect(result.current.virtualRowWindow.start).toBe(0);
+    expect(result.current.virtualRowWindow.items[0]?.start).toBe(0);
     expect(result.current.virtualRows.map((row) => row.index)).toEqual([
       0, 1, 2,
     ]);
@@ -219,6 +250,8 @@ describe("measured row virtualization", () => {
     expect(result.current.virtualRows.map((row) => row.index)).toEqual([
       4, 5, 6,
     ]);
+    expect(result.current.virtualRowWindow.start).toBe(40);
+    expect(result.current.virtualRowWindow.items[0]?.start).toBe(0);
   });
 
   it("measures rows, updates total size, and preserves anchored scroll", () => {

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { getFixedGridInverseRowWindowStyle } from "@/components/ui/fixed-grid-layout";
 import { useMeasuredRowVirtualization } from "@/components/ui/measured-row-virtualization";
 
 export function VirtualList({
@@ -22,7 +23,12 @@ export function VirtualList({
     (index: number) => fields[index]?.id ?? index,
     [fields],
   );
-  const { measureRow, totalSize, virtualRows } = useMeasuredRowVirtualization({
+  const {
+    measureRow,
+    totalSize,
+    viewportClientHeight,
+    virtualRowWindow,
+  } = useMeasuredRowVirtualization({
     count: fields.length,
     estimateSize: estimateSize + gap,
     getItemKey,
@@ -32,24 +38,36 @@ export function VirtualList({
 
   return (
     <div ref={parentRef} style={{ maxHeight }} className="overflow-y-auto">
-      <div style={{ height: totalSize, position: "relative" }}>
-        {virtualRows.map((virtualRow) => (
-          <div
-            key={virtualRow.key}
-            data-index={virtualRow.index}
-            ref={(element) => measureRow(virtualRow.index, element)}
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              transform: `translateY(${virtualRow.start}px)`,
-              paddingBottom: gap,
-            }}
-          >
-            {renderItem(virtualRow.index)}
-          </div>
-        ))}
+      <div
+        data-slot="json-form-virtual-list-spacer"
+        style={{ height: totalSize, position: "relative" }}
+      >
+        <div
+          data-slot="json-form-virtual-list-row-window"
+          style={getFixedGridInverseRowWindowStyle({
+            height: virtualRowWindow.size,
+            top: virtualRowWindow.start,
+            viewportHeight: viewportClientHeight,
+          })}
+        >
+          {virtualRowWindow.items.map((virtualRow) => (
+            <div
+              key={virtualRow.key}
+              data-index={virtualRow.index}
+              ref={(element) => measureRow(virtualRow.index, element)}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                transform: `translateY(${virtualRow.start}px)`,
+                paddingBottom: gap,
+              }}
+            >
+              {renderItem(virtualRow.index)}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -17,6 +17,13 @@ export interface MeasuredRowVirtualItem {
   end: number;
 }
 
+export interface MeasuredRowVirtualItemWindow {
+  end: number;
+  items: MeasuredRowVirtualItem[];
+  size: number;
+  start: number;
+}
+
 export interface MeasuredRowOffsets {
   starts: number[];
   totalSize: number;
@@ -110,6 +117,24 @@ export function getMeasuredRowVirtualItems({
       end: rowStart + size,
     };
   });
+}
+
+export function measuredRowVirtualItemWindow(
+  items: readonly MeasuredRowVirtualItem[],
+): MeasuredRowVirtualItemWindow {
+  const start = items[0]?.start ?? 0;
+  const end = items.length ? items[items.length - 1]!.end : start;
+
+  return {
+    end,
+    items: items.map((item) => ({
+      ...item,
+      start: item.start - start,
+      end: item.end - start,
+    })),
+    size: Math.max(0, end - start),
+    start,
+  };
 }
 
 export function measuredRowScrollTopForIndex({
@@ -332,11 +357,13 @@ export function useMeasuredRowVirtualization({
   );
 
   const rowSizes = React.useMemo(
-    () =>
-      Array.from(
+    () => {
+      void version;
+      return Array.from(
         { length: safeCount },
         (_, index) => measuredSizesRef.current.get(index) ?? safeEstimateSize,
-      ),
+      );
+    },
     [safeCount, safeEstimateSize, version],
   );
   const offsets = React.useMemo(
@@ -370,6 +397,10 @@ export function useMeasuredRowVirtualization({
       viewport.scrollTop,
       viewportHeight,
     ],
+  );
+  const virtualRowWindow = React.useMemo(
+    () => measuredRowVirtualItemWindow(virtualRows),
+    [virtualRows],
   );
   const scrollToIndex = React.useCallback(
     (index: number, options?: MeasuredRowScrollTarget) => {
@@ -406,6 +437,8 @@ export function useMeasuredRowVirtualization({
     measureRow,
     scrollToIndex,
     totalSize: offsets.totalSize,
+    viewportClientHeight: viewportHeight,
+    virtualRowWindow,
     virtualRows,
   };
 }

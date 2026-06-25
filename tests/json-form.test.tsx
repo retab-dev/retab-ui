@@ -1186,6 +1186,46 @@ describe("JsonForm arrays", () => {
     expect(getTableDataCell("Date 2003-06-01")).toBeTruthy();
   });
 
+  it("uses an inverse-sticky row window for virtualized scalar-object arrays", () => {
+    const { container } = renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          rows: {
+            type: "array",
+            title: "Rows",
+            items: {
+              type: "object",
+              properties: {
+                code: { type: "string", title: "Code" },
+                count: { type: "integer", title: "Count" },
+              },
+            },
+          },
+        },
+      },
+      defaultValues: {
+        rows: Array.from({ length: 501 }, (_, index) => ({
+          code: `row-${index}`,
+          count: index,
+        })),
+      },
+      defaultOpenPaths: ["rows"],
+    });
+
+    const rowWindow = container.querySelector<HTMLElement>(
+      '[data-slot="json-form-table-row-window"]',
+    );
+    const spacer = rowWindow?.parentElement;
+    const firstRow = container.querySelector<HTMLElement>('[data-index="0"]');
+
+    expect(rowWindow?.style.position).toBe("sticky");
+    expect(rowWindow?.style.marginTop).toBe("0px");
+    expect(rowWindow?.style.height).not.toBe(`${501 * 44}px`);
+    expect(spacer?.style.height).toBe(`${501 * 44}px`);
+    expect(firstRow?.style.transform).toBe("translate3d(0, 0px, 0)");
+  });
+
   it("shows an empty array state and appends the correct empty object", async () => {
     const { submit } = renderJsonForm({
       schema: {

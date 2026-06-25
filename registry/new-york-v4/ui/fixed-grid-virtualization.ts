@@ -293,12 +293,18 @@ export function useFixedRowVirtualization({
   const rangeRef = React.useRef(range);
   const rafRef = React.useRef(0);
   const totalRowSize = fixedTotalSize(rowCount, rowSize);
+  const [viewportClientHeight, setViewportClientHeight] = React.useState(() =>
+    fixedViewportMetric(initialViewportHeight),
+  );
 
   const setMeasuredRange = React.useCallback((next: typeof range) => {
     const current = rangeRef.current;
     if (current.start === next.start && current.end === next.end) return;
     rangeRef.current = next;
     setRange(next);
+  }, []);
+  const setMeasuredViewportHeight = React.useCallback((next: number) => {
+    setViewportClientHeight((current) => (current === next ? current : next));
   }, []);
 
   const measure = React.useCallback(() => {
@@ -319,6 +325,7 @@ export function useFixedRowVirtualization({
       scrollElement.clientHeight > 0
         ? scrollElement.clientHeight
         : fixedViewportMetric(initialViewportHeight);
+    setMeasuredViewportHeight(viewportHeight);
     const firstVisibleRow = clamp(
       Math.floor(scrollTop / safeRowSize),
       0,
@@ -370,6 +377,7 @@ export function useFixedRowVirtualization({
     rowSize,
     resolvedScrollElement,
     setMeasuredRange,
+    setMeasuredViewportHeight,
   ]);
 
   useKeyedLayoutEffect(joinEffectKey([measure]), () => {
@@ -421,6 +429,10 @@ export function useFixedRowVirtualization({
       }),
     [range, rowSize],
   );
+  const virtualRowWindow = React.useMemo(
+    () => fixedVirtualItemWindow(virtualRows),
+    [virtualRows],
+  );
 
   const scrollToRow = React.useCallback(
     ({
@@ -447,7 +459,9 @@ export function useFixedRowVirtualization({
 
   return {
     virtualRows,
+    virtualRowWindow,
     totalRowSize,
+    viewportClientHeight,
     scrollToRow,
   };
 }

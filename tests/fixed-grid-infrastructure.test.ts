@@ -2501,6 +2501,9 @@ describe("fixed grid virtualization math", () => {
     expect(result.current.virtualRows.map((row) => row.index)).toEqual([
       39, 40, 41, 42, 43,
     ]);
+    expect(result.current.viewportClientHeight).toBe(60);
+    expect(result.current.virtualRowWindow.start).toBe(780);
+    expect(result.current.virtualRowWindow.items[0]?.start).toBe(0);
   });
 
   it("reattaches row-only measurement when the scroll ref element changes", () => {
