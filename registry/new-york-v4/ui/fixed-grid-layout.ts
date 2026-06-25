@@ -38,6 +38,42 @@ export function getFixedGridRowWindowStyle({
   };
 }
 
+export function getFixedGridInverseRowOffsetStyle({
+  height,
+  minWidth,
+}: {
+  height: CssLength;
+  minWidth?: CssLength;
+}): React.CSSProperties {
+  return {
+    ...cssLengthProperty("height", height),
+    ...cssLengthProperty("minWidth", minWidth),
+  };
+}
+
+export function getFixedGridInverseStickyRowWindowStyle({
+  height,
+  minWidth,
+  viewportHeight,
+}: {
+  height: number;
+  minWidth?: CssLength;
+  viewportHeight: number;
+}): React.CSSProperties {
+  const stickyOffset = fixedGridInverseStickyOffset({
+    viewportSize: viewportHeight,
+    windowSize: height,
+  });
+
+  return {
+    position: "sticky",
+    ...cssLengthProperty("height", height),
+    ...cssLengthProperty("minWidth", minWidth),
+    top: `${stickyOffset}px`,
+    bottom: `${stickyOffset}px`,
+  };
+}
+
 export function getFixedGridInverseRowWindowStyle({
   height,
   minWidth,

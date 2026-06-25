@@ -5,7 +5,8 @@ import type { JSONSchema7 } from "json-schema";
 
 import {
   getFixedGridCanvasStyle,
-  getFixedGridInverseRowWindowStyle,
+  getFixedGridInverseRowOffsetStyle,
+  getFixedGridInverseStickyRowWindowStyle,
 } from "@/components/ui/fixed-grid-layout";
 import { FixedGridViewport } from "@/components/ui/fixed-grid-viewport";
 import {
@@ -264,12 +265,14 @@ export const SingleFileVirtualizedTable =
         );
       }, []);
       const headerScrollRef = useRef<HTMLDivElement>(null);
+      const rowOffsetRef = useRef<HTMLTableSectionElement>(null);
       const rowWindowRef = useRef<HTMLTableSectionElement>(null);
       const viewportClientHeightRef = useRef(0);
       const rowPolicy = useJsonTableRowPolicy({
         isJsonEditable,
         projectedRows,
         rowHeightPx,
+        rowOffsetRef,
         rowWindowRef,
         schemaVisibleColumns,
         viewportHeightRef: viewportClientHeightRef,
@@ -379,13 +382,22 @@ export const SingleFileVirtualizedTable =
               }}
             >
               <TableBody
+                ref={rowOffsetRef}
+                aria-hidden="true"
+                data-slot="json-table-row-offset"
+                className="bg-background w-full shrink-0"
+                style={getFixedGridInverseRowOffsetStyle({
+                  height: virtualRowWindow.start,
+                  minWidth: "100%",
+                })}
+              />
+              <TableBody
                 ref={rowWindowRef}
                 data-slot="json-table-row-window"
                 className="bg-background w-full"
-                style={getFixedGridInverseRowWindowStyle({
+                style={getFixedGridInverseStickyRowWindowStyle({
                   height: virtualRowWindow.size,
                   minWidth: "100%",
-                  top: virtualRowWindow.start,
                   viewportHeight: viewportClientHeight,
                 })}
               >

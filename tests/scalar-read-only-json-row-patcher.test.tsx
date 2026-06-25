@@ -33,9 +33,11 @@ describe("scalar read-only JSON row patcher", () => {
       { rowIndex: 1, cells: ["row 1", "2"] },
       { rowIndex: 2, cells: ["row 2", "3"] },
     ]);
+    const rowOffset = buildRowOffset();
     const state = createPatchState();
     const { result } = renderHook(() =>
       useScalarReadOnlyJsonRowPatcher({
+        rowOffsetRef: { current: rowOffset },
         rowWindowRef: { current: rowWindow },
         getState: () => state,
       }),
@@ -50,8 +52,9 @@ describe("scalar read-only JSON row patcher", () => {
       "translate3d(0, 10px, 0)",
       "translate3d(0, 20px, 0)",
     ]);
+    expect(rowOffset.style.height).toBe("30px");
     expect(rowWindow.style.position).toBe("sticky");
-    expect(rowWindow.style.marginTop).toBe("30px");
+    expect(rowWindow.style.marginTop).toBe("");
     expect(rowWindow.style.height).toBe("30px");
     expect(rowWindow.style.top).toBe("-10px");
     expect(rowWindow.style.bottom).toBe("-10px");
@@ -66,10 +69,12 @@ describe("scalar read-only JSON row patcher", () => {
       { rowIndex: 1, cells: ["row 1", "2"] },
       { rowIndex: 2, cells: ["row 2", "3"] },
     ]);
+    const rowOffset = buildRowOffset();
     const onDiagnostic = vi.fn();
     const state = createPatchState();
     const { result } = renderHook(() =>
       useScalarReadOnlyJsonRowPatcher({
+        rowOffsetRef: { current: rowOffset },
         rowWindowRef: { current: rowWindow },
         getState: () => state,
         onDiagnostic,
@@ -92,16 +97,19 @@ describe("scalar read-only JSON row patcher", () => {
       { rowIndex: 3, cells: ["row 3", "4"] },
       { rowIndex: 4, cells: ["row 4", "5"] },
     ]);
+    const rowOffset = buildRowOffset();
     const state = createPatchState();
     const { result } = renderHook(() =>
       useScalarReadOnlyJsonRowPatcher({
+        rowOffsetRef: { current: rowOffset },
         rowWindowRef: { current: rowWindow },
         getState: () => state,
       }),
     );
 
     expect(result.current.patch(createJumpViewport())).toBe("handled");
-    expect(rowWindow.style.marginTop).toBe("30px");
+    expect(rowOffset.style.height).toBe("30px");
+    expect(rowWindow.style.marginTop).toBe("");
 
     result.current.resync([
       { index: 0, start: 0, size: 10, end: 10 },
@@ -133,7 +141,8 @@ describe("scalar read-only JSON row patcher", () => {
       "translate3d(0, 30px, 0)",
       "translate3d(0, 40px, 0)",
     ]);
-    expect(rowWindow.style.marginTop).toBe("0px");
+    expect(rowOffset.style.height).toBe("0px");
+    expect(rowWindow.style.marginTop).toBe("");
     expect(rowWindow.style.height).toBe("50px");
     expect(rowWindow.style.top).toBe("-30px");
     expect(rowWindow.style.bottom).toBe("-30px");
@@ -147,6 +156,7 @@ describe("scalar read-only JSON row patcher", () => {
       { rowIndex: 1, cells: ["row 1", "2", "true"] },
       { rowIndex: 2, cells: ["row 2", "3", "false"] },
     ]);
+    const rowOffset = buildRowOffset();
     const state = createPatchState({
       visibleColumns: [
         visibleColumn("name"),
@@ -156,6 +166,7 @@ describe("scalar read-only JSON row patcher", () => {
     });
     const { result } = renderHook(() =>
       useScalarReadOnlyJsonRowPatcher({
+        rowOffsetRef: { current: rowOffset },
         rowWindowRef: { current: rowWindow },
         getState: () => state,
       }),
@@ -182,6 +193,7 @@ describe("scalar read-only JSON row patcher", () => {
       { rowIndex: 1, cells: ["row 1", "2"] },
       { rowIndex: 2, cells: ["row 2", "3"] },
     ]);
+    const rowOffset = buildRowOffset();
     const firstText = rowWindow.querySelector(
       '[data-slot="json-table-read-only-cell"] [data-slot="data-cell-value"]',
     );
@@ -190,6 +202,7 @@ describe("scalar read-only JSON row patcher", () => {
     const state = createPatchState();
     const { result } = renderHook(() =>
       useScalarReadOnlyJsonRowPatcher({
+        rowOffsetRef: { current: rowOffset },
         rowWindowRef: { current: rowWindow },
         getState: () => state,
         onDiagnostic,
@@ -210,10 +223,12 @@ describe("scalar read-only JSON row patcher", () => {
       { rowIndex: 1, cells: ["row 1", "2"] },
       { rowIndex: 2, cells: ["row 2", "3"] },
     ]);
+    const rowOffset = buildRowOffset();
     const onDiagnostic = vi.fn();
     const state = createPatchState();
     const { result } = renderHook(() =>
       useScalarReadOnlyJsonRowPatcher({
+        rowOffsetRef: { current: rowOffset },
         rowWindowRef: { current: rowWindow },
         getState: () => state,
         onDiagnostic,
@@ -332,6 +347,10 @@ function buildRowWindow(rows: Array<{ rowIndex: number; cells: string[] }>) {
     rowWindow.append(rowElement);
   }
   return rowWindow;
+}
+
+function buildRowOffset() {
+  return document.createElement("tbody");
 }
 
 function rowHandles(rowWindow: HTMLElement) {

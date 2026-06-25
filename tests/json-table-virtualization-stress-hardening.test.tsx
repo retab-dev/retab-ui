@@ -517,6 +517,14 @@ function rowWindow(container: HTMLElement) {
   return element;
 }
 
+function rowOffset(container: HTMLElement) {
+  const element = container.querySelector<HTMLElement>(
+    '[data-slot="json-table-row-offset"]',
+  );
+  if (!element) throw new Error("Missing JSON table row offset");
+  return element;
+}
+
 describe("json table virtualization stress hardening", () => {
   it("mounts editable header and body column windows for the current horizontal viewport", async () => {
     const restoreAnimationFrame = installSynchronousAnimationFrame();
@@ -760,10 +768,11 @@ describe("json table virtualization stress hardening", () => {
         expect(row(view.container, 3).style.transform).toBe(
           `translate3d(0, ${rowHeightPx}px, 0)`,
         );
-        expect(rowWindow(view.container).style.position).toBe("sticky");
-        expect(rowWindow(view.container).style.marginTop).toBe(
+        expect(rowOffset(view.container).style.height).toBe(
           `${rowHeightPx * 2}px`,
         );
+        expect(rowWindow(view.container).style.position).toBe("sticky");
+        expect(rowWindow(view.container).style.marginTop).toBe("");
       } finally {
         restoreAnimationFrame();
       }
@@ -787,8 +796,9 @@ describe("json table virtualization stress hardening", () => {
       await scrollToRow(view.container, 9);
 
       await waitFor(() =>
-        expect(rowWindow(view.container).style.marginTop).toBe("0px"),
+        expect(rowOffset(view.container).style.height).toBe("0px"),
       );
+      expect(rowWindow(view.container).style.marginTop).toBe("");
       expect(row(view.container, 0).hidden).toBe(false);
       expect(row(view.container, 0).style.transform).toBe(
         "translate3d(0, 0px, 0)",

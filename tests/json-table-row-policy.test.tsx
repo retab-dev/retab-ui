@@ -11,6 +11,7 @@ const projectedRows: ProjectedRow[] = [];
 const schemaVisibleColumns: VisibleColumn[] = [];
 
 function renderRowPolicy(isJsonEditable: boolean) {
+  const rowOffsetRef = { current: null };
   const rowWindowRef = { current: null };
   const viewportHeightRef = { current: 0 };
 
@@ -19,6 +20,7 @@ function renderRowPolicy(isJsonEditable: boolean) {
       isJsonEditable,
       projectedRows,
       rowHeightPx: 32,
+      rowOffsetRef,
       rowWindowRef,
       schemaVisibleColumns,
       viewportHeightRef,

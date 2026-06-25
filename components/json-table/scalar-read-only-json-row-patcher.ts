@@ -70,10 +70,12 @@ const MINIMUM_PATCH_VISIBLE_ROWS = 1;
 const TEXT_NODE = 3;
 
 export function useScalarReadOnlyJsonRowPatcher({
+  rowOffsetRef,
   rowWindowRef,
   getState,
   onDiagnostic,
 }: {
+  rowOffsetRef: React.RefObject<HTMLElement | null>;
   rowWindowRef: React.RefObject<HTMLElement | null>;
   getState: () => ScalarReadOnlyJsonRowPatchState;
   onDiagnostic?: (diagnostic: ScalarReadOnlyJsonRowPatchDiagnostic) => void;
@@ -91,6 +93,8 @@ export function useScalarReadOnlyJsonRowPatcher({
 
       const rowWindow = rowWindowRef.current;
       if (!rowWindow) return;
+      const rowOffset = rowOffsetRef.current;
+      if (!rowOffset) return;
 
       const cache = readRowHandles(rowWindow);
       rowHandleCacheRef.current = cache;
@@ -101,12 +105,12 @@ export function useScalarReadOnlyJsonRowPatcher({
         return;
       }
 
-      setRowWindowGeometry(cache.rowWindow, nextRowWindow, {
+      setRowWindowGeometry(rowOffset, cache.rowWindow, nextRowWindow, {
         viewportHeight: state.viewportHeight,
       });
       patchRows(cache.rows, nextRowWindow.items, state);
     },
-    [getState, rowWindowRef],
+    [getState, rowOffsetRef, rowWindowRef],
   );
 
   const patch = React.useCallback(
@@ -122,6 +126,14 @@ export function useScalarReadOnlyJsonRowPatcher({
 
       const rowWindow = rowWindowRef.current;
       if (!rowWindow) {
+        recordPatchDiagnostic(onDiagnostic, {
+          reason: "missing-row-window",
+          rowsPatched: 0,
+        });
+        return "pass";
+      }
+      const rowOffset = rowOffsetRef.current;
+      if (!rowOffset) {
         recordPatchDiagnostic(onDiagnostic, {
           reason: "missing-row-window",
           rowsPatched: 0,
@@ -175,7 +187,7 @@ export function useScalarReadOnlyJsonRowPatcher({
       }
 
       const nextRowWindow = fixedVirtualItemWindow(nextRows);
-      setRowWindowGeometry(cache.rowWindow, nextRowWindow, {
+      setRowWindowGeometry(rowOffset, cache.rowWindow, nextRowWindow, {
         viewportHeight: viewport.clientHeight,
       });
       const rowsPatched = patchRows(cache.rows, nextRowWindow.items, state);
@@ -186,7 +198,7 @@ export function useScalarReadOnlyJsonRowPatcher({
 
       return "handled";
     },
-    [getState, onDiagnostic, rowWindowRef],
+    [getState, onDiagnostic, rowOffsetRef, rowWindowRef],
   );
 
   return React.useMemo(
@@ -413,6 +425,7 @@ function setRowHidden(row: JsonRowHandle, isHidden: boolean) {
 }
 
 function setRowWindowGeometry(
+  rowOffsetElement: HTMLElement,
   rowWindowElement: HTMLElement,
   rowWindow: ReturnType<typeof fixedVirtualItemWindow>,
   { viewportHeight }: { viewportHeight: number },
@@ -421,9 +434,10 @@ function setRowWindowGeometry(
     viewportSize: viewportHeight,
     windowSize: rowWindow.size,
   });
+  setStyleValue(rowOffsetElement.style, "height", `${rowWindow.start}px`);
   setStyleValue(rowWindowElement.style, "position", "sticky");
   setStyleValue(rowWindowElement.style, "height", `${rowWindow.size}px`);
-  setStyleValue(rowWindowElement.style, "margin-top", `${rowWindow.start}px`);
+  setStyleValue(rowWindowElement.style, "margin-top", "");
   setStyleValue(rowWindowElement.style, "top", `${stickyOffset}px`);
   setStyleValue(rowWindowElement.style, "bottom", `${stickyOffset}px`);
 }

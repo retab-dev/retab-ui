@@ -23,6 +23,7 @@ export function useJsonTableRowPolicy({
   isJsonEditable,
   projectedRows,
   rowHeightPx,
+  rowOffsetRef,
   rowWindowRef,
   schemaVisibleColumns,
   viewportHeightRef,
@@ -30,6 +31,7 @@ export function useJsonTableRowPolicy({
   isJsonEditable: boolean;
   projectedRows: ProjectedRow[];
   rowHeightPx: number;
+  rowOffsetRef: React.RefObject<HTMLElement | null>;
   rowWindowRef: React.RefObject<HTMLElement | null>;
   schemaVisibleColumns: VisibleColumn[];
   viewportHeightRef: React.RefObject<number>;
@@ -52,6 +54,7 @@ export function useJsonTableRowPolicy({
     ]);
 
   const scalarReadOnlyRowPatcher = useScalarReadOnlyJsonRowPatcher({
+    rowOffsetRef,
     rowWindowRef,
     getState: getScalarReadOnlyRowPatchState,
   });
