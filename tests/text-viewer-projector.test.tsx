@@ -147,7 +147,10 @@ function tableDocument(rowCount: number) {
   };
 }
 
-function preparedBlockBase(sourceStartLine: number, sourceEndLine = sourceStartLine) {
+function preparedBlockBase(
+  sourceStartLine: number,
+  sourceEndLine = sourceStartLine,
+) {
   return {
     contentLeft: 0,
     listDepth: 0,
@@ -202,7 +205,9 @@ function tableCell(text: string): PreparedTableCell {
   };
 }
 
-function preparedDocument(blocks: PreparedDocument["blocks"]): PreparedDocument {
+function preparedDocument(
+  blocks: PreparedDocument["blocks"],
+): PreparedDocument {
   return {
     blocks,
     mode: "markdown",
@@ -253,6 +258,35 @@ describe("text-viewer chenglou projector", () => {
     expect(replaceChildren).not.toHaveBeenCalled();
     expect(insertBefore).not.toHaveBeenCalled();
     expect(append).not.toHaveBeenCalled();
+  });
+
+  it("keeps leading document padding visible in the first projected window", () => {
+    const canvas = document.createElement("div");
+    const { frame, preparedDocument } = ruleDocument(10);
+    const leadingPadding = 16;
+    const paddedFrame = textDocumentFrame(
+      frame.frames.map((item) => ({
+        ...item,
+        bottom: item.bottom + leadingPadding,
+        top: item.top + leadingPadding,
+      })),
+    );
+
+    project({
+      canvas,
+      frame: paddedFrame,
+      preparedDocument,
+      scrollTop: 0,
+      viewportHeight: 40,
+    });
+
+    const before = canvas.querySelector<HTMLElement>(
+      '[data-slot="text-sticky-before-buffer"]',
+    );
+    const firstRow = projectedRows(canvas)[0] as HTMLElement | undefined;
+
+    expect(before?.style.height).toBe("0px");
+    expect(firstRow?.style.transform).toBe("translateY(16px)");
   });
 
   it("mounts projected rows inside an inverse sticky rendered window", () => {

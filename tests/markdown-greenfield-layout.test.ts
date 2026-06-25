@@ -9,7 +9,7 @@ import {
 } from "@/registry/new-york-v4/ui/markdown-greenfield-layout";
 
 describe("pretext markdown greenfield layout", () => {
-  it("keeps the first rendered chunk below the viewer chrome", () => {
+  it("sets the first chunk inset to match the chunk side padding", () => {
     const document = createMarkdownGreenfieldDocument(
       ["# Spaced", "", "The first content block needs breathing room."].join(
         "\n",
@@ -26,8 +26,8 @@ describe("pretext markdown greenfield layout", () => {
       },
     });
 
-    expect(frame.chunks[0]?.top).toBe(48);
-    expect(frame.totalHeight).toBe(48 + measuredHeight + 32);
+    expect(frame.chunks[0]?.top).toBe(32);
+    expect(frame.totalHeight).toBe(32 + measuredHeight + 32);
   });
 
   it("caches immutable layout frames by document, width, scale, and measurements", () => {

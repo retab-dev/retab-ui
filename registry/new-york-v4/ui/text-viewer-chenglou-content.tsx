@@ -737,7 +737,8 @@ export function projectRows({
   const viewportBottom = scrollTop + viewportHeight + TEXT_VIEWER_OVERSCAN_PX;
   const stickyWindow = getTextInverseStickyWindow({
     renderedBottom: virtualItems.at(-1)?.end ?? 0,
-    renderedTop: virtualItems[0]?.start ?? 0,
+    renderedTop:
+      virtualItems[0]?.index === 0 ? 0 : (virtualItems[0]?.start ?? 0),
     totalHeight: frame.totalHeight,
     viewportHeight,
   });

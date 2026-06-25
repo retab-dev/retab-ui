@@ -219,7 +219,8 @@ export function MarkdownGreenfieldContent({
     () =>
       getTextInverseStickyWindow({
         renderedBottom: visibleFrames.at(-1)?.bottom ?? 0,
-        renderedTop: visibleFrames[0]?.top ?? 0,
+        renderedTop:
+          visibleFrames[0]?.index === 0 ? 0 : (visibleFrames[0]?.top ?? 0),
         totalHeight: frame.totalHeight,
         viewportHeight,
       }),
