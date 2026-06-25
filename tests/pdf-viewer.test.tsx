@@ -2593,12 +2593,18 @@ describe("PdfViewer", () => {
     expect(doc.pages[3].render).not.toHaveBeenCalled();
   });
 
-  it("re-renders canvases with pdfjs when remounting pages", async () => {
+  it("draws cached page bitmaps before refreshing pdfjs on remount", async () => {
+    const drawImage = vi.fn();
+    const setTransform = vi.fn();
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      drawImage,
+      setTransform,
+    } as never);
     const onPageRenderTiming = vi.fn();
     const doc = makeDoc(
       Array.from({ length: 8 }, () => [100, 1000] as [number, number]),
     );
-    doc.pages[0].render.mockImplementationOnce(() => {
+    doc.pages[0].render.mockImplementation(() => {
       const task = {
         promise: Promise.resolve(),
         cancel: vi.fn(),
@@ -2619,6 +2625,17 @@ describe("PdfViewer", () => {
     });
 
     await waitFor(() => expect(doc.pages[0].render).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(onPageRenderTiming).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pageNumber: 1,
+          source: "pdfjs",
+          status: "rendered",
+        }),
+      ),
+    );
+    drawImage.mockClear();
+    onPageRenderTiming.mockClear();
 
     const viewport = document.querySelector<HTMLElement>(
       "[data-slot='scroll-area-viewport']",
@@ -2651,6 +2668,16 @@ describe("PdfViewer", () => {
     await waitFor(() =>
       expect(document.querySelector("[data-pdf-page-number='1']")).toBeTruthy(),
     );
+    await waitFor(() =>
+      expect(onPageRenderTiming).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pageNumber: 1,
+          source: "cache",
+          status: "rendered",
+        }),
+      ),
+    );
+    expect(drawImage).toHaveBeenCalled();
     await waitFor(() => expect(doc.pages[0].render).toHaveBeenCalledTimes(2));
     await waitFor(() =>
       expect(onPageRenderTiming).toHaveBeenCalledWith(
@@ -2801,13 +2828,10 @@ describe("PdfViewer", () => {
     ).toBeNull();
   });
 
-  it("renders the visible window directly without a concurrency scheduler", async () => {
-    const doc = makeDoc([
-      [100, 200],
-      [100, 200],
-      [100, 200],
-      [100, 200],
-    ]);
+  it("caps initial page canvas work through the render scheduler", async () => {
+    const doc = makeDoc(
+      Array.from({ length: 12 }, () => [100, 200] as [number, number]),
+    );
     pdfjsMock.docs.set("/render-budget.pdf", doc);
 
     await act(async () => {
@@ -2818,13 +2842,14 @@ describe("PdfViewer", () => {
         />,
       );
     });
-    await findByTextContent("Page 1 of 4");
+    await findByTextContent("Page 1 of 12");
 
     await waitFor(() => expect(pdfjsMock.renderTasks).toHaveLength(4));
     expect(doc.pages[0].render).toHaveBeenCalledTimes(1);
     expect(doc.pages[1].render).toHaveBeenCalledTimes(1);
     expect(doc.pages[2].render).toHaveBeenCalledTimes(1);
     expect(doc.pages[3].render).toHaveBeenCalledTimes(1);
+    expect(doc.pages[4].render).not.toHaveBeenCalled();
   });
 
   it("keeps tiny rendered page canvases drawable", async () => {
@@ -3396,7 +3421,11 @@ describe("PdfViewer", () => {
         );
       });
 
-      await waitFor(() => expect(scrollTo).toHaveBeenCalled());
+      await waitFor(() =>
+        expect(scrollTo).toHaveBeenCalledWith(
+          expect.objectContaining({ behavior: "auto" }),
+        ),
+      );
     } finally {
       restore();
     }
@@ -3505,14 +3534,17 @@ describe("PdfViewer", () => {
           onSelectPage={onSelectPage}
         />,
       );
-      await screen.findByText("2");
+      await screen.findByText("12");
       const rail = document.querySelector(
         '[data-slot="pdf-viewer-thumbnails"]',
       )!;
 
       fireEvent.pointerEnter(rail);
-      fireEvent.click(screen.getByRole("button", { name: "Page 2" }));
-      expect(onSelectPage).toHaveBeenCalledWith(2);
+      fireEvent.click(screen.getByRole("button", { name: "Page 12" }));
+      expect(onSelectPage).toHaveBeenCalledWith(12);
+      expect(scrollTo).toHaveBeenCalledWith(
+        expect.objectContaining({ behavior: "smooth" }),
+      );
       scrollTo.mockClear();
 
       view.rerender(
@@ -3524,7 +3556,11 @@ describe("PdfViewer", () => {
         />,
       );
 
-      await waitFor(() => expect(scrollTo).toHaveBeenCalled());
+      await waitFor(() =>
+        expect(scrollTo).toHaveBeenCalledWith(
+          expect.objectContaining({ behavior: "auto" }),
+        ),
+      );
     } finally {
       restore();
     }

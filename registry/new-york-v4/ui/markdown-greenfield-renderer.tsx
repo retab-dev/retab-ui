@@ -18,9 +18,10 @@ import {
 import {
   diffLineKind,
   isSafeHighlightedCodeLine,
+  MARKDOWN_CODE_HIGHLIGHT_STYLES,
   normalizeCodeLanguage,
   renderCodeLine,
-  useShikiCodeLines,
+  useMarkdownCodeLineHtml,
 } from "./markdown-greenfield-code-highlight";
 import { MarkdownGreenfieldDiagram } from "./markdown-greenfield-diagram";
 import type { MarkdownGreenfieldChunk } from "./markdown-greenfield-document";
@@ -1111,7 +1112,6 @@ function MarkdownCodeBlock({
         lineNumberMaxDigits={lineNumberMaxDigits}
         lineNumberStart={lineNumberStart}
         metadata={metadata}
-        source={source}
         sourceLines={sourceLines}
       />
       {metadata.caption ? (
@@ -1127,26 +1127,29 @@ function MarkdownCodeBlock({
 }
 
 type MarkdownCodeMetadata = ReturnType<typeof readCodeMetadata>;
-type MarkdownCodeShikiLine = Parameters<typeof renderCodeLine>[0]["shikiLine"];
 
 const MarkdownCodeSource = React.memo(function MarkdownCodeSource({
   language,
   lineNumberMaxDigits,
   lineNumberStart,
   metadata,
-  source,
   sourceLines,
 }: {
   language: string;
   lineNumberMaxDigits: number;
   lineNumberStart: number;
   metadata: MarkdownCodeMetadata;
-  source: string;
   sourceLines: readonly string[];
 }) {
-  const shikiLines = useShikiCodeLines(source, language, sourceLines.length);
   const isVirtualized =
     sourceLines.length > MARKDOWN_CODE_VIRTUALIZATION_LINE_THRESHOLD;
+  const lineHtmlByIndex = useMarkdownCodeLineHtml({
+    end: isVirtualized ? 0 : sourceLines.length,
+    highlightPattern: metadata.highlightPattern,
+    language,
+    sourceLines,
+    start: 0,
+  });
 
   if (isVirtualized) {
     return (
@@ -1155,42 +1158,46 @@ const MarkdownCodeSource = React.memo(function MarkdownCodeSource({
         lineNumberMaxDigits={lineNumberMaxDigits}
         lineNumberStart={lineNumberStart}
         metadata={metadata}
-        shikiLines={shikiLines}
         sourceLines={sourceLines}
       />
     );
   }
 
   return (
-    <pre
-      aria-label={`${language} code source`}
-      className="overflow-x-auto p-3 [overflow-wrap:normal] [&_code]:min-w-max"
-      data-pretext-code-source=""
-      role="region"
-      tabIndex={0}
-      onKeyDown={handleHorizontalScrollKeyDown}
-    >
-      <code
-        {...markdownCodeElementProps({
-          language,
-          lineNumberMaxDigits,
-          lineNumberStart,
-          metadata,
-        })}
+    <>
+      <style data-pretext-code-highlight-styles="">
+        {MARKDOWN_CODE_HIGHLIGHT_STYLES}
+      </style>
+      <pre
+        aria-label={`${language} code source`}
+        className="overflow-x-auto p-3 [overflow-wrap:normal] [&_code]:min-w-max"
+        data-pretext-code-source=""
+        role="region"
+        tabIndex={0}
+        onKeyDown={handleHorizontalScrollKeyDown}
       >
-        {sourceLines.map((line, index) => (
-          <MarkdownCodeLine
-            key={index}
-            index={index}
-            language={language}
-            line={line}
-            lineNumberStart={lineNumberStart}
-            metadata={metadata}
-            shikiLine={shikiLines?.[index]}
-          />
-        ))}
-      </code>
-    </pre>
+        <code
+          {...markdownCodeElementProps({
+            language,
+            lineNumberMaxDigits,
+            lineNumberStart,
+            metadata,
+          })}
+        >
+          {sourceLines.map((line, index) => (
+            <MarkdownCodeLine
+              key={index}
+              index={index}
+              language={language}
+              line={line}
+              lineHtml={lineHtmlByIndex.get(index)}
+              lineNumberStart={lineNumberStart}
+              metadata={metadata}
+            />
+          ))}
+        </code>
+      </pre>
+    </>
   );
 });
 
@@ -1199,14 +1206,12 @@ function MarkdownVirtualizedCodeSource({
   lineNumberMaxDigits,
   lineNumberStart,
   metadata,
-  shikiLines,
   sourceLines,
 }: {
   language: string;
   lineNumberMaxDigits: number;
   lineNumberStart: number;
   metadata: MarkdownCodeMetadata;
-  shikiLines: readonly MarkdownCodeShikiLine[] | null;
   sourceLines: readonly string[];
 }) {
   const preRef = React.useRef<HTMLPreElement | null>(null);
@@ -1233,6 +1238,13 @@ function MarkdownVirtualizedCodeSource({
     () => widestMarkdownCodeLineWidthCh(sourceLines),
     [sourceLines],
   );
+  const lineHtmlByIndex = useMarkdownCodeLineHtml({
+    end,
+    highlightPattern: metadata.highlightPattern,
+    language,
+    sourceLines,
+    start,
+  });
 
   useKeyedLayoutEffect(joinEffectKey([language, sourceLines.length]), () => {
     const updateMetrics = () => {
@@ -1263,56 +1275,61 @@ function MarkdownVirtualizedCodeSource({
   });
 
   return (
-    <pre
-      ref={preRef}
-      aria-label={`${language} code source`}
-      className="max-h-[32rem] overflow-auto overflow-x-auto p-3 [overflow-wrap:normal] [&_code]:min-w-max"
-      data-pretext-code-line-count={sourceLines.length}
-      data-pretext-code-mounted-lines={mountedLines.length}
-      data-pretext-code-source=""
-      data-pretext-code-virtualized=""
-      role="region"
-      tabIndex={0}
-      onKeyDown={handleHorizontalScrollKeyDown}
-      onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
-    >
-      <code
-        ref={codeRef}
-        {...markdownCodeElementProps({
-          language,
-          lineNumberMaxDigits,
-          lineNumberStart,
-          metadata,
-          start,
-          virtualized: true,
-        })}
-        style={markdownVirtualizedCodeCanvasStyle({
-          language,
-          lineNumberStart,
-          lineWidthCh,
-          metadata,
-          start,
-          totalLines: sourceLines.length,
-        })}
+    <>
+      <style data-pretext-code-highlight-styles="">
+        {MARKDOWN_CODE_HIGHLIGHT_STYLES}
+      </style>
+      <pre
+        ref={preRef}
+        aria-label={`${language} code source`}
+        className="max-h-[32rem] overflow-auto overflow-x-auto p-3 [overflow-wrap:normal] [&_code]:min-w-max"
+        data-pretext-code-line-count={sourceLines.length}
+        data-pretext-code-mounted-lines={mountedLines.length}
+        data-pretext-code-source=""
+        data-pretext-code-virtualized=""
+        role="region"
+        tabIndex={0}
+        onKeyDown={handleHorizontalScrollKeyDown}
+        onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
       >
-        {mountedLines.map((line, offset) => {
-          const index = start + offset;
-          return (
-            <MarkdownCodeLine
-              key={index}
-              index={index}
-              language={language}
-              line={line}
-              lineNumberStart={lineNumberStart}
-              metadata={metadata}
-              shikiLine={shikiLines?.[index]}
-              totalLines={sourceLines.length}
-              virtualized
-            />
-          );
-        })}
-      </code>
-    </pre>
+        <code
+          ref={codeRef}
+          {...markdownCodeElementProps({
+            language,
+            lineNumberMaxDigits,
+            lineNumberStart,
+            metadata,
+            start,
+            virtualized: true,
+          })}
+          style={markdownVirtualizedCodeCanvasStyle({
+            language,
+            lineNumberStart,
+            lineWidthCh,
+            metadata,
+            start,
+            totalLines: sourceLines.length,
+          })}
+        >
+          {mountedLines.map((line, offset) => {
+            const index = start + offset;
+            return (
+              <MarkdownCodeLine
+                key={index}
+                index={index}
+                language={language}
+                line={line}
+                lineHtml={lineHtmlByIndex.get(index)}
+                lineNumberStart={lineNumberStart}
+                metadata={metadata}
+                totalLines={sourceLines.length}
+                virtualized
+              />
+            );
+          })}
+        </code>
+      </pre>
+    </>
   );
 }
 
@@ -1320,18 +1337,18 @@ function MarkdownCodeLine({
   index,
   language,
   line,
+  lineHtml,
   lineNumberStart,
   metadata,
-  shikiLine,
   totalLines,
   virtualized = false,
 }: {
   index: number;
   language: string;
   line: string;
+  lineHtml: string | undefined;
   lineNumberStart: number;
   metadata: MarkdownCodeMetadata;
-  shikiLine: MarkdownCodeShikiLine;
   totalLines?: number;
   virtualized?: boolean;
 }) {
@@ -1373,8 +1390,8 @@ function MarkdownCodeLine({
       {renderCodeLine({
         fallbackLanguage: language,
         line,
+        lineHtml,
         pattern: metadata.highlightPattern,
-        shikiLine,
       })}
     </span>
   );

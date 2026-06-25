@@ -7,6 +7,8 @@ Prism.manual = true;
 const coreLanguages = new Set(["css", "javascript", "markup"]);
 const languageLoaders: Record<string, () => Promise<unknown>> = {
   bash: () => import("prismjs/components/prism-bash"),
+  diff: () => import("prismjs/components/prism-diff"),
+  dockerfile: () => import("prismjs/components/prism-docker"),
   go: () => import("prismjs/components/prism-go"),
   java: () => import("prismjs/components/prism-java"),
   json: () => import("prismjs/components/prism-json"),
@@ -14,6 +16,7 @@ const languageLoaders: Record<string, () => Promise<unknown>> = {
   markdown: () => import("prismjs/components/prism-markdown"),
   python: () => import("prismjs/components/prism-python"),
   rust: () => import("prismjs/components/prism-rust"),
+  ruby: () => import("prismjs/components/prism-ruby"),
   sql: () => import("prismjs/components/prism-sql"),
   tsx: async () => {
     await Promise.all([

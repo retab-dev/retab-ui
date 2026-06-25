@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import type { ViewerResource } from "@/lib/viewer-resource";
@@ -22,7 +23,11 @@ import {
 } from "./code-viewer-scale";
 import { createCodeSyntax } from "./code-viewer-syntax";
 import { useCodeViewerSyntaxStyle } from "./code-viewer-syntax-style";
-import type { CodeViewerHandle, CodeViewerProps } from "./code-viewer-types";
+import type {
+  CodeLineRange,
+  CodeViewerHandle,
+  CodeViewerProps,
+} from "./code-viewer-types";
 import { CodeViewerViewport } from "./code-viewer-viewport";
 import { normalizeTextLineRange } from "./line-ranges";
 import {
@@ -37,7 +42,20 @@ type CodeReadingAnchor = {
   offsetPx: number;
 };
 
+type NativeFindCodeChunk = {
+  endLine: number;
+  startLine: number;
+  text: string;
+};
+
+type CodeIdleWindow = Window &
+  typeof globalThis & {
+    cancelIdleCallback?: Window["cancelIdleCallback"];
+    requestIdleCallback?: Window["requestIdleCallback"];
+  };
+
 const CODE_VIEWER_DEFERRED_SYNTAX_LINE_COUNT = 500;
+const CODE_VIEWER_NATIVE_FIND_CHUNK_SIZE = 128;
 
 export function CodeViewerContent({
   resource,
@@ -158,45 +176,19 @@ export function CodeViewerContent({
     },
   );
 
-  React.useImperativeHandle(
-    forwardedRef ?? null,
-    () => ({
-      scrollToLineRange: (range, options) => {
-        const viewportElement = viewportRef.current;
-        const normalizedRange = normalizeTextLineRange(range, textLines.length);
-        if (!viewportElement || !normalizedRange) return;
-
-        projector.scrollToLogical({
-          behavior: options?.behavior ?? "smooth",
-          lineCount: textLines.length,
-          lineHeight,
-          logicalScrollTop: scrollTopForLineRangeMetrics({
-            startLine: normalizedRange.start,
-            endLine: normalizedRange.end,
-            lineHeight,
-            paddingStart: CODE_VIEWER_BLOCK_PADDING,
-            viewportHeight: viewportElement.clientHeight,
-          }),
-          viewport: viewportElement,
-        });
-      },
-      getViewportElement: () => viewportRef.current,
-    }),
-    [lineHeight, projector, textLines.length],
-  );
-
-  useKeyedMountEffect(
-    joinEffectKey(["code-highlight-scroll", highlightRange, lineHeight]),
-    () => {
+  const scrollLineRange = React.useCallback(
+    (range: CodeLineRange | null, options?: ScrollToOptions) => {
       const viewportElement = viewportRef.current;
-      if (!viewportElement || !highlightRange) return;
+      const normalizedRange = normalizeTextLineRange(range, textLines.length);
+      if (!viewportElement || !normalizedRange) return;
+
       projector.scrollToLogical({
-        behavior: "smooth",
+        behavior: options?.behavior ?? "smooth",
         lineCount: textLines.length,
         lineHeight,
         logicalScrollTop: scrollTopForLineRangeMetrics({
-          startLine: highlightRange.start,
-          endLine: highlightRange.end,
+          startLine: normalizedRange.start,
+          endLine: normalizedRange.end,
           lineHeight,
           paddingStart: CODE_VIEWER_BLOCK_PADDING,
           viewportHeight: viewportElement.clientHeight,
@@ -204,14 +196,32 @@ export function CodeViewerContent({
         viewport: viewportElement,
       });
     },
+    [lineHeight, projector, textLines.length],
+  );
+
+  React.useImperativeHandle(
+    forwardedRef ?? null,
+    () => ({
+      scrollToLineRange: scrollLineRange,
+      getViewportElement: () => viewportRef.current,
+    }),
+    [scrollLineRange],
+  );
+
+  useKeyedMountEffect(
+    joinEffectKey(["code-highlight-scroll", highlightRange, scrollLineRange]),
+    () => {
+      if (!highlightRange) return;
+      scrollLineRange(highlightRange, { behavior: "smooth" });
+    },
   );
 
   const project = React.useCallback(() => {
     const rowHost = rowHostRef.current;
     const viewport = viewportRef.current;
-    if (!rowHost || !viewport) return;
+    if (!rowHost || !viewport) return false;
 
-    projector.project({
+    return projector.project({
       contentIdentity,
       gutterWidth,
       highlightRange,
@@ -286,6 +296,11 @@ export function CodeViewerContent({
           onResetZoom={onResetZoom}
         />
       ) : null}
+      <DeferredNativeFindIndex
+        lineCount={textLines.length}
+        lines={textLines}
+        scrollToLineRange={scrollLineRange}
+      />
       <CodeViewerViewport
         fontScale={fontScale}
         gutterWidth={gutterWidth}
@@ -297,6 +312,163 @@ export function CodeViewerContent({
       />
     </CodeViewerFrame>
   );
+}
+
+function DeferredNativeFindIndex({
+  lines,
+  lineCount,
+  scrollToLineRange,
+}: {
+  lines: readonly string[];
+  lineCount: number;
+  scrollToLineRange: (
+    range: CodeLineRange | null,
+    options?: ScrollToOptions,
+  ) => void;
+}) {
+  const [isReady, setIsReady] = React.useState(false);
+
+  useKeyedMountEffect(joinEffectKey(["code-native-find", lines]), () => {
+    setIsReady(false);
+    const show = () => setIsReady(true);
+    if (typeof window === "undefined") return;
+    const browserWindow = window as CodeIdleWindow;
+    if (browserWindow.requestIdleCallback && browserWindow.cancelIdleCallback) {
+      const idleId = browserWindow.requestIdleCallback(show, { timeout: 400 });
+      return () => browserWindow.cancelIdleCallback?.(idleId);
+    }
+    const timeoutId = browserWindow.setTimeout(show, 80);
+    return () => browserWindow.clearTimeout(timeoutId);
+  });
+
+  if (!isReady) return null;
+  return (
+    <NativeFindIndex
+      lineCount={lineCount}
+      lines={lines}
+      scrollToLineRange={scrollToLineRange}
+    />
+  );
+}
+
+function NativeFindIndex({
+  lines,
+  lineCount,
+  scrollToLineRange,
+}: {
+  lines: readonly string[];
+  lineCount: number;
+  scrollToLineRange: (
+    range: CodeLineRange | null,
+    options?: ScrollToOptions,
+  ) => void;
+}) {
+  const entries = React.useMemo(() => chunkNativeFindLines(lines), [lines]);
+
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none h-0 w-0 overflow-hidden opacity-0"
+      data-native-find-indexed-chunks={entries.length}
+      data-native-find-indexed-lines={lines.length}
+      data-slot="code-native-find-index"
+    >
+      {entries.map((entry) => (
+        <NativeFindEntry
+          key={entry.startLine}
+          entry={entry}
+          lineCount={lineCount}
+          scrollToLineRange={scrollToLineRange}
+        />
+      ))}
+    </div>
+  );
+}
+
+function NativeFindEntry({
+  entry,
+  lineCount,
+  scrollToLineRange,
+}: {
+  entry: NativeFindCodeChunk;
+  lineCount: number;
+  scrollToLineRange: (
+    range: CodeLineRange | null,
+    options?: ScrollToOptions,
+  ) => void;
+}) {
+  const ref = React.useRef<HTMLSpanElement | null>(null);
+
+  useKeyedLayoutEffect(
+    joinEffectKey([
+      "code-native-find-entry",
+      entry.startLine,
+      entry.endLine,
+      lineCount,
+      scrollToLineRange,
+    ]),
+    () => {
+      const element = ref.current;
+      if (!element) return;
+      element.setAttribute("hidden", "until-found");
+
+      const handleBeforeMatch = () => {
+        scrollToLineRange(
+          normalizeTextLineRange(
+            {
+              end: entry.endLine,
+              start: entry.startLine,
+            },
+            lineCount,
+          ),
+          { behavior: "auto" },
+        );
+        if (typeof requestAnimationFrame === "function") {
+          requestAnimationFrame(() => {
+            element.setAttribute("hidden", "until-found");
+          });
+          return;
+        }
+        element.setAttribute("hidden", "until-found");
+      };
+
+      element.addEventListener("beforematch", handleBeforeMatch);
+      return () => {
+        element.removeEventListener("beforematch", handleBeforeMatch);
+      };
+    },
+  );
+
+  return (
+    <span
+      ref={ref}
+      className="block h-px w-px overflow-hidden whitespace-pre"
+      data-native-find-end-line={entry.endLine}
+      data-native-find-start-line={entry.startLine}
+    >
+      {entry.text || " "}
+    </span>
+  );
+}
+
+function chunkNativeFindLines(lines: readonly string[]): NativeFindCodeChunk[] {
+  const chunks: NativeFindCodeChunk[] = [];
+  for (
+    let startIndex = 0;
+    startIndex < lines.length;
+    startIndex += CODE_VIEWER_NATIVE_FIND_CHUNK_SIZE
+  ) {
+    const endIndex = Math.min(
+      lines.length,
+      startIndex + CODE_VIEWER_NATIVE_FIND_CHUNK_SIZE,
+    );
+    chunks.push({
+      endLine: endIndex,
+      startLine: startIndex + 1,
+      text: lines.slice(startIndex, endIndex).join("\n"),
+    });
+  }
+  return chunks;
 }
 
 function useCodeControlsRegistration({

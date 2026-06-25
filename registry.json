@@ -5186,7 +5186,8 @@
         "@retab/skeleton",
         "@retab/utils",
         "@retab/viewer-controls",
-        "@retab/use-mount-effect"
+        "@retab/use-mount-effect",
+        "@retab/use-keyed-layout-effect"
       ],
       "files": [
         {
@@ -5343,6 +5344,11 @@
           "path": "registry/new-york-v4/ui/code-viewer-long-lines.ts",
           "type": "registry:ui",
           "target": "@ui/code-viewer-long-lines.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-viewer-scroll-interactions.ts",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-scroll-interactions.ts"
         }
       ],
       "devDependencies": [
@@ -5373,7 +5379,7 @@
         "remark-parse",
         "remark-rehype",
         "remark-smartypants",
-        "shiki",
+        "prismjs@^1.30.0",
         "unified",
         "vfile"
       ],
@@ -5572,7 +5578,40 @@
           "path": "registry/new-york-v4/ui/text-viewer-scroll-interactions.ts",
           "type": "registry:ui",
           "target": "@ui/text-viewer-scroll-interactions.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/code-viewer-syntax-prism.ts",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-syntax-prism.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/code-viewer-syntax-protocol.ts",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-syntax-protocol.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-greenfield-code-highlight-html.ts",
+          "type": "registry:ui",
+          "target": "@ui/markdown-greenfield-code-highlight-html.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-greenfield-code-highlight-protocol.ts",
+          "type": "registry:ui",
+          "target": "@ui/markdown-greenfield-code-highlight-protocol.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-greenfield-code-highlight.worker.ts",
+          "type": "registry:ui",
+          "target": "@ui/markdown-greenfield-code-highlight.worker.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/code-viewer-prism-components.d.ts",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-prism-components.d.ts"
         }
+      ],
+      "devDependencies": [
+        "@types/prismjs@^1.26.6"
       ]
     },
     {
@@ -5620,7 +5659,7 @@
         "remark-parse",
         "remark-rehype",
         "remark-smartypants",
-        "shiki",
+        "prismjs@^1.30.0",
         "unified",
         "vfile"
       ],
@@ -5800,7 +5839,40 @@
           "path": "registry/new-york-v4/ui/text-viewer-scroll-interactions.ts",
           "type": "registry:ui",
           "target": "@ui/text-viewer-scroll-interactions.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/code-viewer-syntax-prism.ts",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-syntax-prism.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/code-viewer-syntax-protocol.ts",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-syntax-protocol.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-greenfield-code-highlight-html.ts",
+          "type": "registry:ui",
+          "target": "@ui/markdown-greenfield-code-highlight-html.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-greenfield-code-highlight-protocol.ts",
+          "type": "registry:ui",
+          "target": "@ui/markdown-greenfield-code-highlight-protocol.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-greenfield-code-highlight.worker.ts",
+          "type": "registry:ui",
+          "target": "@ui/markdown-greenfield-code-highlight.worker.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/code-viewer-prism-components.d.ts",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-prism-components.d.ts"
         }
+      ],
+      "devDependencies": [
+        "@types/prismjs@^1.26.6"
       ]
     },
     {

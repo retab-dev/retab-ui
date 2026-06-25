@@ -22,6 +22,14 @@ import {
 import { PdfPage } from "./pdf-viewer-page";
 import { usePdfPageSizes } from "./pdf-viewer-page-sizes";
 import {
+  usePdfRenderedPageCache,
+  type PdfRenderedPageCache,
+} from "./pdf-viewer-render-cache";
+import {
+  PDF_SCROLLING_PAGE_RENDER_CONCURRENCY,
+  usePdfPageRenderScheduler,
+} from "./pdf-viewer-render-scheduler";
+import {
   getPdfPageDevicePixelRatio,
   useMeasuredElementWidth,
   usePdfScale,
@@ -137,7 +145,7 @@ function PdfViewerInner({
   onVisiblePageChange,
   onScrollProgressChange,
   onPageRenderTiming,
-  performanceOptions: _performanceOptions,
+  performanceOptions,
   bare = false,
   forwardedRef,
 }: PdfResourceContentProps & {
@@ -201,6 +209,7 @@ function PdfViewerInner({
     scrollPageOffset,
     visiblePageNumbers,
     renderPageNumbers,
+    preloadPageNumbers,
     measureVisiblePages,
   } = usePdfPageVirtualization({
     getScrollMetrics,
@@ -213,6 +222,33 @@ function PdfViewerInner({
       (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1,
     mode: "settled",
   });
+  const renderedPageCache = usePdfRenderedPageCache(document);
+  const shouldUseRenderedPageCache =
+    performanceOptions?.renderedPageCache !== false;
+  const {
+    activePageNumbers: activeRenderPageNumbers,
+    onPageRenderTiming: handleScheduledPageRenderTiming,
+  } = usePdfPageRenderScheduler({
+    pageNumbers: visiblePageNumbers,
+    lowPriorityPageNumbers:
+      performanceOptions?.directionAwarePreRender === false
+        ? []
+        : [...renderPageNumbers, ...preloadPageNumbers],
+    scale: resolvedScale,
+    rotation,
+    devicePixelRatio: pageDevicePixelRatio,
+    resetKey: document,
+    maxRunning: PDF_SCROLLING_PAGE_RENDER_CONCURRENCY,
+    maxLowPriorityRunning:
+      performanceOptions?.directionAwarePreRender === false ? 0 : 1,
+  });
+  const handlePageRenderTiming = React.useCallback(
+    (timing: PdfPageRenderTiming) => {
+      handleScheduledPageRenderTiming(timing);
+      onPageRenderTiming?.(timing);
+    },
+    [handleScheduledPageRenderTiming, onPageRenderTiming],
+  );
   const scrollInteractionRestoreRef = React.useRef<number | null>(null);
   const scrollInteractionElementRef = React.useRef<HTMLElement | null>(null);
 
@@ -333,7 +369,11 @@ function PdfViewerInner({
                   totalHeight: pageLayout.totalHeight,
                   viewportHeight: viewportElement?.clientHeight ?? 0,
                 })}
+                activeRenderPageNumbers={activeRenderPageNumbers}
                 renderPageNumbers={renderPageNumbers}
+                renderCache={
+                  shouldUseRenderedPageCache ? renderedPageCache : undefined
+                }
                 scrollPageOffset={scrollPageOffset}
                 visiblePageNumbers={visiblePageNumbers}
                 viewportHeight={viewportElement?.clientHeight ?? 0}
@@ -341,7 +381,7 @@ function PdfViewerInner({
                 rotation={rotation}
                 scale={resolvedScale}
                 devicePixelRatio={pageDevicePixelRatio}
-                onPageRenderTiming={onPageRenderTiming}
+                onPageRenderTiming={handlePageRenderTiming}
                 setPageSize={setPageSize}
               />
             </ScrollArea>
@@ -469,7 +509,9 @@ type PdfDocumentPagesLayerProps = {
   document: PdfDocument;
   layout: PdfPageLayoutModel;
   physicalScrollHeight: number;
+  activeRenderPageNumbers: readonly number[];
   renderPageNumbers: readonly number[];
+  renderCache?: PdfRenderedPageCache;
   scrollPageOffset: number;
   visiblePageNumbers: readonly number[];
   viewportHeight: number;
@@ -486,7 +528,9 @@ function PdfDocumentPagesLayer({
   document,
   layout,
   physicalScrollHeight,
+  activeRenderPageNumbers,
   renderPageNumbers,
+  renderCache,
   scrollPageOffset,
   visiblePageNumbers,
   viewportHeight,
@@ -500,6 +544,10 @@ function PdfDocumentPagesLayer({
   const visiblePageNumberSet = React.useMemo(
     () => new Set(visiblePageNumbers),
     [visiblePageNumbers],
+  );
+  const activeRenderPageNumberSet = React.useMemo(
+    () => new Set(activeRenderPageNumbers),
+    [activeRenderPageNumbers],
   );
   const renderedWindow = React.useMemo(
     () =>
@@ -580,18 +628,23 @@ function PdfDocumentPagesLayer({
                       minHeight: page.height,
                     }}
                   >
-                    <React.Suspense fallback={<PageSkeleton />}>
-                      <PdfPage
-                        document={document}
-                        pageNumber={page.pageNumber}
-                        scale={scale}
-                        rotation={rotation}
-                        devicePixelRatio={devicePixelRatio}
-                        renderOverlay={renderPageOverlay}
-                        onRenderTiming={onPageRenderTiming}
-                        onSize={setPageSize}
-                      />
-                    </React.Suspense>
+                    {activeRenderPageNumberSet.has(page.pageNumber) ? (
+                      <React.Suspense fallback={<PageSkeleton />}>
+                        <PdfPage
+                          document={document}
+                          pageNumber={page.pageNumber}
+                          scale={scale}
+                          rotation={rotation}
+                          devicePixelRatio={devicePixelRatio}
+                          renderCache={renderCache}
+                          renderOverlay={renderPageOverlay}
+                          onRenderTiming={onPageRenderTiming}
+                          onSize={setPageSize}
+                        />
+                      </React.Suspense>
+                    ) : (
+                      <PageSkeleton />
+                    )}
                   </div>
                 ))}
               </div>

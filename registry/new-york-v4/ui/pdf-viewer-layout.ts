@@ -2,6 +2,8 @@ import type { PdfPageSize } from "./pdf-viewer-types";
 
 export const PDF_PAGE_GAP = 16;
 export const PDF_PAGE_PADDING = 16;
+export const PDF_RENDER_FIT_PERFECTLY_OVERSCAN_PX =
+  PDF_PAGE_GAP + PDF_PAGE_PADDING;
 export const PDF_RENDER_WINDOW_OVERSCAN_PX = 1000;
 export const PDF_VISIBLE_PAGE_OVERSCAN = 2;
 export const PDF_PRELOAD_PAGE_OVERSCAN = 4;
@@ -183,11 +185,15 @@ export function getPdfVisiblePageNumbers({
 }
 
 export function getPdfRenderPageNumbers({
+  fitPerfectly = false,
+  fitPerfectlyOverscanPx = PDF_RENDER_FIT_PERFECTLY_OVERSCAN_PX,
   layout,
   overscanPx = PDF_RENDER_WINDOW_OVERSCAN_PX,
   scrollTop,
   viewportHeight,
 }: {
+  fitPerfectly?: boolean;
+  fitPerfectlyOverscanPx?: number;
   layout: PdfPageLayoutModel;
   overscanPx?: number;
   scrollTop: number;
@@ -196,6 +202,8 @@ export function getPdfRenderPageNumbers({
   if (layout.pageCount === 0) return [];
 
   const window = createWindowFromScrollPosition({
+    fitPerfectly,
+    fitPerfectlyOverscanPx,
     overscanPx,
     scrollHeight: layout.totalHeight,
     scrollTop,
@@ -282,11 +290,15 @@ export function getPdfRenderedPageWindow({
 }
 
 export function createWindowFromScrollPosition({
+  fitPerfectly = false,
+  fitPerfectlyOverscanPx = 0,
   overscanPx,
   scrollHeight,
   scrollTop,
   viewportHeight,
 }: {
+  fitPerfectly?: boolean;
+  fitPerfectlyOverscanPx?: number;
   overscanPx: number;
   scrollHeight: number;
   scrollTop: number;
@@ -297,9 +309,19 @@ export function createWindowFromScrollPosition({
   const safeScrollTop = Math.max(0, finiteNumber(scrollTop));
   const safeViewportHeight = Math.max(0, finiteNumber(viewportHeight));
   const windowHeight = safeViewportHeight + safeOverscanPx * 2;
+  const fitPerfectlyOverscan = safePadding(fitPerfectlyOverscanPx);
+  const effectiveHeight = fitPerfectly
+    ? safeViewportHeight + fitPerfectlyOverscan * 2
+    : windowHeight;
 
-  if (windowHeight >= safeScrollHeight) {
-    return { bottom: safeScrollHeight, top: 0 };
+  if (windowHeight >= safeScrollHeight || fitPerfectly) {
+    const fitScrollTop = Math.min(safeScrollTop, safeScrollHeight);
+    const top = Math.max(fitScrollTop - fitPerfectlyOverscan, 0);
+    const bottom = Math.min(fitScrollTop + effectiveHeight, safeScrollHeight);
+    return {
+      bottom: Math.ceil(Math.max(bottom, top)),
+      top: Math.floor(Math.max(0, top)),
+    };
   }
 
   const scrollCenter = safeScrollTop + safeViewportHeight / 2;

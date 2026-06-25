@@ -12,14 +12,13 @@ import {
 import { joinEffectKey } from "@/lib/effect-key";
 
 export const THUMBNAIL_FOLLOW_MARGIN = 24;
-export const THUMBNAIL_PROGRAMMATIC_SCROLL_WINDOW_MS = 120;
 
 type ThumbnailFollowSuspension = "none" | "pointer" | "user-scroll";
 
 interface ThumbnailFollowState {
   suspension: ThumbnailFollowSuspension;
   currentPage: number | null;
-  lastProgrammaticScrollAt: number;
+  programmaticScrollCount: number;
 }
 
 export function useThumbnailRailFollow({
@@ -36,11 +35,11 @@ export function useThumbnailRailFollow({
   const stateRef = React.useRef<ThumbnailFollowState>({
     suspension: "none",
     currentPage: null,
-    lastProgrammaticScrollAt: 0,
+    programmaticScrollCount: 0,
   });
 
   const scrollPageIntoView = React.useCallback(
-    (page: number) => {
+    (page: number, behavior: ScrollBehavior) => {
       const normalizedPage = normalizeThumbnailPage(page, layout.pageCount);
       if (normalizedPage == null) return;
 
@@ -69,8 +68,8 @@ export function useThumbnailRailFollow({
         Math.max(0, item.top - viewport.clientHeight / 2 + item.height / 2),
       );
 
-      stateRef.current.lastProgrammaticScrollAt = performance.now();
-      viewport.scrollTo?.({ top: targetTop, behavior: "smooth" });
+      stateRef.current.programmaticScrollCount += 1;
+      viewport.scrollTo?.({ top: targetTop, behavior });
     },
     [layout, viewportRef],
   );
@@ -82,14 +81,14 @@ export function useThumbnailRailFollow({
     const state = stateRef.current;
     if (state.suspension !== "none") return;
 
-    scrollPageIntoView(page);
+    scrollPageIntoView(page, "auto");
   }, [currentPage, layout.pageCount, scrollPageIntoView]);
 
   useKeyedMountEffect(joinEffectKey(["thumbnail-reset", resetKey]), () => {
     const state = stateRef.current;
     state.suspension = "none";
     state.currentPage = null;
-    state.lastProgrammaticScrollAt = 0;
+    state.programmaticScrollCount = 0;
   });
 
   useKeyedMountEffect(
@@ -122,15 +121,17 @@ export function useThumbnailRailFollow({
   const onPageActivate = React.useCallback(
     (pageNumber: number) => {
       stateRef.current.suspension = "none";
-      scrollPageIntoView(pageNumber);
+      scrollPageIntoView(pageNumber, "smooth");
     },
     [scrollPageIntoView],
   );
 
   const onScroll = React.useCallback(() => {
     const state = stateRef.current;
-    const elapsed = performance.now() - state.lastProgrammaticScrollAt;
-    if (elapsed < THUMBNAIL_PROGRAMMATIC_SCROLL_WINDOW_MS) return;
+    if (state.programmaticScrollCount > 0) {
+      state.programmaticScrollCount -= 1;
+      return;
+    }
 
     state.suspension = "user-scroll";
   }, []);

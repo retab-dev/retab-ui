@@ -12,6 +12,7 @@ import {
   getPdfVisiblePageNumbers,
   PDF_PAGE_GAP,
   PDF_PAGE_PADDING,
+  PDF_RENDER_FIT_PERFECTLY_OVERSCAN_PX,
   PDF_RENDER_WINDOW_OVERSCAN_PX,
   PDF_SCROLL_REBASE_CONTAINER_PX,
   PDF_SCROLL_REBASE_TARGET_PX,
@@ -220,6 +221,19 @@ describe("pdf viewer layout", () => {
         viewportHeight: 200,
       }),
     ).toEqual({ top: 4000, bottom: 6200 });
+  });
+
+  it("creates a smaller fit-perfectly render window for large jumps", () => {
+    expect(
+      createWindowFromScrollPosition({
+        fitPerfectly: true,
+        fitPerfectlyOverscanPx: PDF_RENDER_FIT_PERFECTLY_OVERSCAN_PX,
+        overscanPx: 1000,
+        scrollHeight: 10_000,
+        scrollTop: 5_000,
+        viewportHeight: 200,
+      }),
+    ).toEqual({ top: 4968, bottom: 5264 });
   });
 
   it("renders the centered Pierre-sized pixel window by default", () => {

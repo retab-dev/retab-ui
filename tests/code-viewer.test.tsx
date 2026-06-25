@@ -228,8 +228,22 @@ function captureAnchorClicks() {
         href: this.getAttribute("href"),
         download: this.download,
       });
-    });
+  });
   return { click, clicks };
+}
+
+function mockUserAgent(userAgent: string) {
+  const originalUserAgent = navigator.userAgent;
+  Object.defineProperty(navigator, "userAgent", {
+    configurable: true,
+    value: userAgent,
+  });
+  return () => {
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      value: originalUserAgent,
+    });
+  };
 }
 
 function codeVirtualLinesForTest({
@@ -994,7 +1008,7 @@ describe("code-viewer-projector", () => {
     textLines: string[];
     viewport: HTMLDivElement;
   }) {
-    projector.project({
+    return projector.project({
       contentIdentity,
       gutterWidth,
       highlightRange,
@@ -1006,6 +1020,15 @@ describe("code-viewer-projector", () => {
       textLines,
       viewport,
     });
+  }
+
+  function getRowsByLineNumber(rowHost: HTMLPreElement) {
+    return new Map(
+      Array.from(rowHost.children, (row) => [
+        Number((row as HTMLElement).dataset.lineNumber),
+        row,
+      ]),
+    );
   }
 
   it("creates only the visible virtual rows and does not duplicate repeated projection", () => {
@@ -1280,6 +1303,36 @@ describe("code-viewer-projector", () => {
     expect(rowHost.querySelector('[data-line-number="106"]')).toBeTruthy();
   });
 
+  it("preserves every overlapping row node across a one-line scroll", () => {
+    const { rowHost, viewport } = createProjectionElements();
+    const textLines = createProjectionLines(1_000);
+    viewport.scrollTop = 3_000;
+    const projector = project({ rowHost, textLines, viewport });
+    const previousRowsByLineNumber = getRowsByLineNumber(rowHost);
+    const previousLineNumbers = [...previousRowsByLineNumber.keys()];
+    const firstPreviousLine = previousLineNumbers[0]!;
+    const lastPreviousLine = previousLineNumbers.at(-1)!;
+
+    viewport.scrollTop += 20;
+    projectAgain({ projector, rowHost, textLines, viewport });
+
+    const nextRowsByLineNumber = getRowsByLineNumber(rowHost);
+    const nextLineNumbers = [...nextRowsByLineNumber.keys()];
+    expect(nextLineNumbers[0]).toBe(firstPreviousLine + 1);
+    expect(nextLineNumbers.at(-1)).toBe(lastPreviousLine + 1);
+    expect(nextRowsByLineNumber.has(firstPreviousLine)).toBe(false);
+    expect(nextRowsByLineNumber.get(lastPreviousLine + 1)).toBeTruthy();
+    for (
+      let lineNumber = firstPreviousLine + 1;
+      lineNumber <= lastPreviousLine;
+      lineNumber += 1
+    ) {
+      expect(nextRowsByLineNumber.get(lineNumber)).toBe(
+        previousRowsByLineNumber.get(lineNumber),
+      );
+    }
+  });
+
   it("falls back to a full visible-window rebuild when mounted DOM is invalid", () => {
     const { rowHost, viewport } = createProjectionElements();
     const textLines = createProjectionLines();
@@ -1313,6 +1366,32 @@ describe("code-viewer-projector", () => {
     expect(rowHost.querySelector('[data-line-number="5"]')).toBeNull();
     expect(rowHost.querySelector('[data-line-number="150"]')).toBeTruthy();
     expect(rowHost.textContent).toContain("line 150");
+  });
+
+  it("renders a minimal window for large jumps and fills overscan on the next projection", () => {
+    const { rowHost, viewport } = createProjectionElements();
+    const textLines = createProjectionLines(2_000);
+    const projector = project({ rowHost, textLines, viewport });
+    const fullWindowRowCount = rowHost.children.length;
+
+    viewport.scrollTop = 6_000;
+    const needsFill = projectAgain({ projector, rowHost, textLines, viewport });
+    const minimalWindowRowCount = rowHost.children.length;
+
+    expect(needsFill).toBe(true);
+    expect(minimalWindowRowCount).toBeLessThan(fullWindowRowCount);
+    expect(rowHost.querySelector('[data-line-number="300"]')).toBeTruthy();
+
+    const secondNeedsFill = projectAgain({
+      projector,
+      rowHost,
+      textLines,
+      viewport,
+    });
+
+    expect(secondNeedsFill).toBe(false);
+    expect(rowHost.children.length).toBeGreaterThan(minimalWindowRowCount);
+    expect(rowHost.querySelector('[data-line-number="300"]')).toBeTruthy();
   });
 
   it("does not rebuild token content for highlight or layout changes", () => {
@@ -3175,6 +3254,9 @@ describe("CodeViewer", () => {
 
   it("disables row pointer events while scroll projection catches up", () => {
     vi.useFakeTimers();
+    const restoreUserAgent = mockUserAgent(
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    );
     vi.stubGlobal(
       "requestAnimationFrame",
       vi.fn((callback: FrameRequestCallback) =>
@@ -3208,19 +3290,76 @@ describe("CodeViewer", () => {
       if (!viewportElement || !rowHost) return;
 
       expect(viewportElement.style.overflowAnchor).toBe("none");
+      expect(rowHost.parentElement).toBeInstanceOf(HTMLElement);
+      const renderWindow = rowHost.parentElement as HTMLElement;
+      rowHost.style.pointerEvents = "auto";
+      renderWindow.style.overflowX = "scroll";
 
       fireEvent.scroll(viewportElement);
 
       expect(rowHost.style.pointerEvents).toBe("none");
+      expect(renderWindow.style.overflowX).toBe("hidden");
 
       act(() => {
         vi.advanceTimersByTime(120);
       });
 
-      expect(rowHost.style.pointerEvents).toBe("");
+      expect(rowHost.style.pointerEvents).toBe("auto");
+      expect(renderWindow.style.overflowX).toBe("scroll");
     } finally {
+      restoreUserAgent();
       vi.useRealTimers();
     }
+  });
+
+  it("indexes offscreen code for native browser find", async () => {
+    const viewerRef = React.createRef<CodeViewerHandle>();
+    const lines = Array.from({ length: 200 }, (_, index) =>
+      index === 149 ? "needle line 150" : `line ${index + 1}`,
+    );
+    const { container } = render(
+      <CodeViewer
+        ref={viewerRef}
+        source={textSource(lines.join("\n"))}
+        controls={false}
+      />,
+    );
+
+    const index = await waitFor(() => {
+      const node = container.querySelector<HTMLElement>(
+        '[data-slot="code-native-find-index"]',
+      );
+      expect(node).toBeTruthy();
+      return node as HTMLElement;
+    });
+    const entry = index.querySelector<HTMLElement>(
+      '[data-native-find-start-line="129"]',
+    );
+    const viewportElement = viewerRef.current?.getViewportElement();
+
+    expect(index.getAttribute("data-native-find-indexed-lines")).toBe("200");
+    expect(index.getAttribute("data-native-find-indexed-chunks")).toBe("2");
+    expect(entry?.getAttribute("data-native-find-end-line")).toBe("200");
+    expect(entry?.textContent).toContain("needle line 150");
+    expect(entry?.getAttribute("hidden")).toBe("until-found");
+    expect(viewportElement).not.toBeNull();
+    if (!entry || !viewportElement) return;
+
+    Object.defineProperty(viewportElement, "clientHeight", {
+      configurable: true,
+      value: 100,
+    });
+    const scrollTo = vi.fn();
+    viewportElement.scrollTo = scrollTo;
+
+    fireEvent(entry, new Event("beforematch"));
+
+    expect(scrollTo).toHaveBeenCalledWith(
+      expect.objectContaining({ behavior: "auto" }),
+    );
+    expect((scrollTo.mock.calls[0]?.[0] as ScrollToOptions).top).toBeGreaterThan(
+      0,
+    );
   });
 
   it("scrolls to a virtualized line that is not currently mounted", () => {
@@ -3968,7 +4107,8 @@ describe("code-viewer implementation boundaries", () => {
 
     expect(schedulerSource).toContain("requestAnimationFrame");
     expect(schedulerSource).toContain("ResizeObserver");
-    expect(schedulerSource).toContain("pointerEvents");
+    expect(schedulerSource).toContain("suspendTextViewerScrollInteractions");
+    expect(schedulerSource).toContain("restoreTextViewerScrollInteractions");
   });
 
   it("keeps resource cache keys private to the resource module", () => {

@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createPdfPageLayout,
   getPdfPageLayout,
+  getPdfRenderPageNumbers,
 } from "@/registry/new-york-v4/ui/pdf-viewer-layout";
 import { usePdfPageVirtualization } from "@/registry/new-york-v4/ui/pdf-viewer-virtualization";
 import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
@@ -120,6 +121,103 @@ describe("usePdfPageVirtualization", () => {
 
     await waitFor(() =>
       expect(screen.getByTestId("pages").textContent).toBe("7,8,9,10,11,12,13"),
+    );
+  });
+
+  it("renders a fit-perfectly window for a large jump and fills overscan on the next frame", async () => {
+    const layout = createPdfPageLayout({
+      pageCount: 100,
+      defaultPageSize: { width: 100, height: 200 },
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    });
+    const page40Top = getPdfPageLayout(layout, 40)!.offsetTop;
+    const frameCallbacks: FrameRequestCallback[] = [];
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        frameCallbacks.push(callback);
+        return frameCallbacks.length;
+      });
+    vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
+
+    const harnessState = {
+      viewportElement: null as HTMLDivElement | null,
+      measureVisiblePages: null as (() => void) | null,
+    };
+
+    function Harness() {
+      const [viewport] = React.useState(
+        () =>
+          ({
+            scrollTop: 0,
+            clientHeight: 200,
+          }) as HTMLDivElement,
+      );
+      const result = usePdfPageVirtualization({
+        layout,
+        viewportElement: viewport,
+      });
+
+      useKeyedLayoutEffect(
+        joinEffectKey([result.measureVisiblePages, viewport]),
+        () => {
+          harnessState.viewportElement = viewport;
+          harnessState.measureVisiblePages = result.measureVisiblePages;
+        },
+      );
+
+      return (
+        <output data-testid="render">
+          {result.renderPageNumbers.join(",")}
+        </output>
+      );
+    }
+
+    render(<Harness />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("render").textContent).toBe(
+        getPdfRenderPageNumbers({
+          layout,
+          scrollTop: 0,
+          viewportHeight: 200,
+        }).join(","),
+      ),
+    );
+
+    harnessState.viewportElement!.scrollTop = page40Top;
+    act(() => {
+      harnessState.measureVisiblePages!();
+    });
+
+    expect(requestAnimationFrame).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      frameCallbacks[0]?.(0);
+    });
+
+    expect(screen.getByTestId("render").textContent).toBe(
+      getPdfRenderPageNumbers({
+        fitPerfectly: true,
+        layout,
+        scrollTop: page40Top,
+        viewportHeight: 200,
+      }).join(","),
+    );
+    expect(requestAnimationFrame).toHaveBeenCalledTimes(2);
+
+    act(() => {
+      frameCallbacks[1]?.(16);
+    });
+
+    expect(screen.getByTestId("render").textContent).toBe(
+      getPdfRenderPageNumbers({
+        layout,
+        scrollTop: page40Top,
+        viewportHeight: 200,
+      }).join(","),
     );
   });
 

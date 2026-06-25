@@ -5,6 +5,7 @@ import {
   getPdfPreloadPageNumbers,
   getPdfRenderPageNumbers,
   getPdfVisiblePageNumbers,
+  PDF_RENDER_WINDOW_OVERSCAN_PX,
   type PdfPageLayoutModel,
 } from "./pdf-viewer-layout";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
@@ -36,10 +37,13 @@ export function usePdfPageVirtualization({
   viewportElement: HTMLDivElement | null;
 }) {
   const measureFrameRef = React.useRef(0);
+  const hasMeasuredScrollRef = React.useRef(false);
   const lastMeasuredResetKeyRef = React.useRef<unknown>(resetKey);
-  const getCurrentVisiblePageNumbers = React.useCallback((): PdfPageWindow => {
-    const metrics =
-      Object.is(lastMeasuredResetKeyRef.current, resetKey) && getScrollMetrics
+  const lastMeasuredScrollTopRef = React.useRef(0);
+  const getCurrentScrollMetrics =
+    React.useCallback((): PdfPageVirtualizationScrollMetrics => {
+      return Object.is(lastMeasuredResetKeyRef.current, resetKey) &&
+        getScrollMetrics
         ? getScrollMetrics()
         : {
             scrollPageOffset: 0,
@@ -48,26 +52,38 @@ export function usePdfPageVirtualization({
               : 0,
             viewportHeight: viewportElement?.clientHeight ?? 0,
           };
-    const renderPageNumbers = getPdfRenderPageNumbers({
-      layout,
-      scrollTop: metrics.scrollTop,
-      viewportHeight: metrics.viewportHeight,
-    });
-
-    return {
-      scrollPageOffset: metrics.scrollPageOffset,
-      visiblePageNumbers: getPdfVisiblePageNumbers({
+    }, [getScrollMetrics, resetKey, viewportElement]);
+  const getPageWindow = React.useCallback(
+    (
+      metrics: PdfPageVirtualizationScrollMetrics,
+      fitPerfectly = false,
+    ): PdfPageWindow => {
+      const renderPageNumbers = getPdfRenderPageNumbers({
+        fitPerfectly,
         layout,
         scrollTop: metrics.scrollTop,
         viewportHeight: metrics.viewportHeight,
-      }),
-      renderPageNumbers,
-      preloadPageNumbers: getPdfPreloadPageNumbers({
-        layout,
+      });
+
+      return {
+        scrollPageOffset: metrics.scrollPageOffset,
+        visiblePageNumbers: getPdfVisiblePageNumbers({
+          layout,
+          scrollTop: metrics.scrollTop,
+          viewportHeight: metrics.viewportHeight,
+        }),
         renderPageNumbers,
-      }),
-    };
-  }, [getScrollMetrics, layout, resetKey, viewportElement]);
+        preloadPageNumbers: getPdfPreloadPageNumbers({
+          layout,
+          renderPageNumbers,
+        }),
+      };
+    },
+    [layout],
+  );
+  const getCurrentVisiblePageNumbers = React.useCallback((): PdfPageWindow => {
+    return getPageWindow(getCurrentScrollMetrics());
+  }, [getCurrentScrollMetrics, getPageWindow]);
   const getResetPageWindow = React.useCallback(() => {
     const viewportHeight = viewportElement?.clientHeight ?? 0;
     const renderPageNumbers = getPdfRenderPageNumbers({
@@ -108,8 +124,19 @@ export function usePdfPageVirtualization({
 
   const measureVisiblePagesNow = React.useCallback(() => {
     measureFrameRef.current = 0;
-    const nextPageWindow = getCurrentVisiblePageNumbers();
+    const metrics = getCurrentScrollMetrics();
+    const fitPerfectly = shouldFitPdfPerfectly({
+      canFitPerfectly:
+        hasMeasuredScrollRef.current &&
+        Object.is(lastMeasuredResetKeyRef.current, resetKey),
+      previousScrollTop: lastMeasuredScrollTopRef.current,
+      scrollTop: metrics.scrollTop,
+      viewportHeight: metrics.viewportHeight,
+    });
+    const nextPageWindow = getPageWindow(metrics, fitPerfectly);
     lastMeasuredResetKeyRef.current = resetKey;
+    lastMeasuredScrollTopRef.current = metrics.scrollTop;
+    hasMeasuredScrollRef.current = true;
     setState((previousState) =>
       Object.is(previousState.layout, layout) &&
       Object.is(previousState.resetKey, resetKey) &&
@@ -117,7 +144,12 @@ export function usePdfPageVirtualization({
         ? previousState
         : { layout, resetKey, pageWindow: nextPageWindow },
     );
-  }, [getCurrentVisiblePageNumbers, layout, resetKey]);
+    if (fitPerfectly && measureFrameRef.current === 0) {
+      measureFrameRef.current = requestAnimationFrame(() =>
+        measureVisiblePagesNowRef.current(),
+      );
+    }
+  }, [getCurrentScrollMetrics, getPageWindow, layout, resetKey]);
   const measureVisiblePagesNowRef = React.useRef(measureVisiblePagesNow);
   useKeyedLayoutEffect(joinEffectKey([measureVisiblePagesNow]), () => {
     measureVisiblePagesNowRef.current = measureVisiblePagesNow;
@@ -181,5 +213,24 @@ function arePageNumbersEqual(
   if (previousPageNumbers.length !== nextPageNumbers.length) return false;
   return previousPageNumbers.every(
     (pageNumber, index) => pageNumber === nextPageNumbers[index],
+  );
+}
+
+function shouldFitPdfPerfectly({
+  canFitPerfectly,
+  previousScrollTop,
+  scrollTop,
+  viewportHeight,
+}: {
+  canFitPerfectly: boolean;
+  previousScrollTop: number;
+  scrollTop: number;
+  viewportHeight: number;
+}) {
+  return (
+    canFitPerfectly &&
+    viewportHeight > 0 &&
+    Math.abs(scrollTop - previousScrollTop) >
+      viewportHeight + PDF_RENDER_WINDOW_OVERSCAN_PX * 2
   );
 }

@@ -62,6 +62,9 @@ function migratedPrimitiveForSpecifier(specifier: string) {
 const markdownFiles = [
   "registry/new-york-v4/ui/markdown-viewer.tsx",
   "registry/new-york-v4/ui/markdown-greenfield-code-highlight.tsx",
+  "registry/new-york-v4/ui/markdown-greenfield-code-highlight-html.ts",
+  "registry/new-york-v4/ui/markdown-greenfield-code-highlight-protocol.ts",
+  "registry/new-york-v4/ui/markdown-greenfield-code-highlight.worker.ts",
   "registry/new-york-v4/ui/markdown-greenfield-content.tsx",
   "registry/new-york-v4/ui/markdown-greenfield-diagram.tsx",
   "registry/new-york-v4/ui/markdown-greenfield-document.ts",
@@ -83,11 +86,16 @@ const markdownViewerSupportFiles = [
   "registry/new-york-v4/ui/viewer-error.tsx",
   "registry/new-york-v4/ui/text-viewer-layout.ts",
   "registry/new-york-v4/ui/text-viewer-ranges.ts",
+  "registry/new-york-v4/ui/text-viewer-scroll-interactions.ts",
   "registry/new-york-v4/ui/line-ranges.ts",
   "registry/new-york-v4/ui/text-viewer-resource.ts",
   "registry/new-york-v4/ui/plain-text-resource.ts",
   "registry/new-york-v4/ui/text-viewer-scale.ts",
   "registry/new-york-v4/ui/text-viewer-types.ts",
+  "registry/new-york-v4/ui/text-viewer-virtualization.ts",
+  "registry/new-york-v4/ui/code-viewer-prism-components.d.ts",
+  "registry/new-york-v4/ui/code-viewer-syntax-prism.ts",
+  "registry/new-york-v4/ui/code-viewer-syntax-protocol.ts",
   "registry/new-york-v4/lib/viewer-source.ts",
   "registry/new-york-v4/lib/viewer-resource.ts",
   "registry/new-york-v4/lib/viewer-download-actions.ts",
@@ -442,6 +450,7 @@ async function createShadcnSmokeProject({
     `${JSON.stringify(
       {
         type: "module",
+        packageManager: "pnpm@11.7.0",
         dependencies: Object.fromEntries(
           Array.from(dependencies).sort(([left], [right]) =>
             left.localeCompare(right),
@@ -642,7 +651,7 @@ describe("Markdown architecture", () => {
       "remark-parse",
       "remark-rehype",
       "remark-smartypants",
-      "shiki",
+      "prismjs@^1.30.0",
       "unified",
       "vfile",
     ]);
@@ -888,7 +897,6 @@ describe("Markdown architecture", () => {
     expect(imports).not.toContain("./markdown-document-layout");
     expect(imports).not.toContain("./markdown-document-virtualizer");
     expect(imports).not.toContain("./text-viewer-layout");
-    expect(imports).not.toContain("./text-viewer-virtualization");
   });
 
   it("keeps Markdown parsing inside the unified pipeline", () => {

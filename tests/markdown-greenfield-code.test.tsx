@@ -11,6 +11,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MarkdownViewer } from "@/components/ui/markdown-viewer";
+import { resetMarkdownCodeHighlightForTests } from "@/registry/new-york-v4/ui/markdown-greenfield-code-highlight";
 
 function markdownSource(text: string) {
   return {
@@ -22,6 +23,7 @@ function markdownSource(text: string) {
 }
 
 beforeEach(() => {
+  resetMarkdownCodeHighlightForTests();
   Object.defineProperty(HTMLElement.prototype, "scrollTo", {
     configurable: true,
     value: vi.fn(),
@@ -34,11 +36,12 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  resetMarkdownCodeHighlightForTests();
   vi.restoreAllMocks();
 });
 
 describe("pretext markdown greenfield code blocks", () => {
-  it("renders Shiki syntax tokens without changing the source lines", async () => {
+  it("renders Prism syntax token HTML without changing the source lines", async () => {
     const { container } = render(
       <MarkdownViewer
         controls={false}
@@ -55,19 +58,16 @@ describe("pretext markdown greenfield code blocks", () => {
 
     expect(screen.getByRole("group", { name: "ts code block" })).toBeTruthy();
     await waitFor(() => {
-      expect(container.querySelector("[data-shiki-token]")).toBeTruthy();
+      expect(container.querySelector(".cv-token-keyword")).toBeTruthy();
     });
 
-    const shikiTokens = Array.from(
-      container.querySelectorAll<HTMLElement>("[data-shiki-token]"),
-    );
-    expect(shikiTokens.map((token) => token.textContent).join("")).toContain(
+    expect(container.querySelector("[data-line]")?.textContent).toBe(
       "const answer = 42",
     );
-    expect(shikiTokens[0]?.getAttribute("style")).toContain("--shiki-light");
-    expect(shikiTokens[0]?.className).toContain(
-      "dark:text-[var(--shiki-dark)]",
+    expect(container.querySelector(".cv-token-comment")?.textContent).toBe(
+      "// stable comment",
     );
+    expect(container.querySelector("[data-shiki-token]")).toBeNull();
     expect(
       Array.from(container.querySelectorAll("[data-line]")).map((line) =>
         line.textContent?.trimEnd(),
@@ -90,7 +90,7 @@ describe("pretext markdown greenfield code blocks", () => {
     );
 
     await waitFor(() => {
-      expect(container.querySelector("[data-shiki-token]")).toBeTruthy();
+      expect(container.querySelector(".cv-token-keyword")).toBeTruthy();
     });
     expect(
       container.querySelector("[data-highlighted-line]")?.textContent,
@@ -124,7 +124,7 @@ describe("pretext markdown greenfield code blocks", () => {
     );
 
     await waitFor(() => {
-      expect(container.querySelector("[data-shiki-token]")).toBeTruthy();
+      expect(container.querySelector(".cv-token-keyword")).toBeTruthy();
     });
     expect(
       Array.from(container.querySelectorAll("[data-highlighted-line]")).map(
@@ -199,5 +199,33 @@ describe("pretext markdown greenfield code blocks", () => {
     await waitFor(() => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(source);
     });
+  });
+
+  it("escapes worker-highlighted code HTML before injecting it", async () => {
+    const { container } = render(
+      <MarkdownViewer
+        controls={false}
+        source={markdownSource(
+          [
+            "```html",
+            '<script>alert("x")</script><span data-test="safe">&</span>',
+            "```",
+          ].join("\n"),
+        )}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(
+        container.querySelector("[data-pretext-code-line-html]"),
+      ).toBeTruthy();
+    });
+    const line = container.querySelector("[data-line]");
+
+    expect(line?.textContent).toBe(
+      '<script>alert("x")</script><span data-test="safe">&</span>',
+    );
+    expect(line?.querySelector("script")).toBeNull();
+    expect(line?.querySelector("[data-test='safe']")).toBeNull();
   });
 });

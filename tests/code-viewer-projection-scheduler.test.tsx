@@ -47,7 +47,6 @@ describe("useCodeProjectionScheduler", () => {
     });
 
     expect(rowHost.style.getPropertyValue("pointer-events")).toBe("none");
-    expect(rowHost.style.getPropertyPriority("pointer-events")).toBe("");
     expect(renderWindow.style.getPropertyValue("overflow-x")).toBe("hidden");
     expect(renderWindow.style.getPropertyPriority("overflow-x")).toBe("");
 

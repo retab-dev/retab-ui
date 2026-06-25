@@ -17,7 +17,7 @@ export function useCodeProjectionScheduler({
   rowHostRef,
   viewportRef,
 }: {
-  project: () => void;
+  project: () => boolean | void;
   rowHostRef?: React.RefObject<HTMLPreElement | null>;
   viewportRef: React.RefObject<HTMLDivElement | null>;
 }) {
@@ -28,18 +28,28 @@ export function useCodeProjectionScheduler({
 
   const scheduleProjection = React.useCallback(() => {
     if (scheduledProjectionRef.current) return;
-    scheduledProjectionRef.current = requestAnimationFrame(() => {
-      scheduledProjectionRef.current = 0;
-      project();
-    });
+    const runProjection = () => {
+      scheduledProjectionRef.current = requestAnimationFrame(() => {
+        scheduledProjectionRef.current = 0;
+        if (project()) {
+          runProjection();
+        }
+      });
+    };
+    runProjection();
   }, [project]);
 
-  useKeyedMountEffect(joinEffectKey(["code-project", project]), () => {
-    project();
-    return () => {
-      cancelScheduledProjection(scheduledProjectionRef);
-    };
-  });
+  useKeyedMountEffect(
+    joinEffectKey(["code-project", project, scheduleProjection]),
+    () => {
+      if (project()) {
+        scheduleProjection();
+      }
+      return () => {
+        cancelScheduledProjection(scheduledProjectionRef);
+      };
+    },
+  );
 
   useKeyedMountEffect(
     joinEffectKey([

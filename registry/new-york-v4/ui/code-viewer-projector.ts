@@ -45,7 +45,7 @@ export type CodeProjectionInput = CodeProjectionIdentity & {
 
 export type CodeProjector = {
   getLogicalScrollTop(input: CodeProjectionScrollInput): number;
-  project(input: CodeProjectionInput): void;
+  project(input: CodeProjectionInput): boolean;
   scrollToLogical(input: CodeProjectionScrollToInput): void;
   destroy(): void;
 };
@@ -97,6 +97,7 @@ type LastProjection = CodeProjectionIdentity & {
   renderedWindowHeight: number;
   renderedWindowStickyOffset: number;
   renderedWindowTop: number;
+  logicalScrollTop: number;
   scrollPageOffset: number;
   totalHeight: string;
   visibleEnd: number;
@@ -135,7 +136,7 @@ export function createCodeProjector(
   let metrics = options.metrics;
   let rowHost: HTMLPreElement | null = null;
   let recycledRows: CodeRowCache[] = [];
-  let rows: Array<CodeRowCache | undefined> = [];
+  const rowsByLineIndex = new Map<number, CodeRowCache>();
   let scrollPageOffset = 0;
   let visibleRange: VisibleRange | null = null;
 
@@ -174,6 +175,7 @@ export function createCodeProjector(
         viewport: input.viewport,
       });
       const viewportHeight = codeViewportHeight(input.viewport);
+      const previousProjection = lastProjection;
       const logicalScrollTop = getCodeLogicalScrollTop({
         physicalScrollTop: input.viewport.scrollTop,
         scrollPageOffset,
@@ -200,11 +202,18 @@ export function createCodeProjector(
         viewportHeight,
       });
       const totalHeight = `${physicalTotalSize}px`;
+      const fitPerfectly = shouldFitCodePerfectly({
+        previousProjection,
+        logicalScrollTop,
+        viewportHeight,
+      });
 
       const virtualWindow = getCodeVirtualLineWindow({
         lineCount: input.textLines.length,
         lineHeight: input.lineHeight,
-        overscanPx: CODE_VIEWER_OVERSCAN_PX,
+        overscanPx: fitPerfectly
+          ? getCodeFitPerfectlyOverscanPx(input.lineHeight)
+          : CODE_VIEWER_OVERSCAN_PX,
         paddingStart: CODE_VIEWER_BLOCK_PADDING,
         scrollTop: logicalScrollTop,
         viewportHeight,
@@ -221,6 +230,7 @@ export function createCodeProjector(
       const nextVisibleRange = codeVisibleRange(visibleLines);
       const nextProjection = codeLastProjection({
         input,
+        logicalScrollTop,
         renderedWindow,
         scrollPageOffset,
         totalHeight,
@@ -232,7 +242,7 @@ export function createCodeProjector(
         isRenderedDomValid(nextVisibleRange)
       ) {
         incrementMetric(metrics, "noops");
-        return;
+        return false;
       }
       lastProjection = nextProjection;
       setMetric(metrics, "visibleStart", nextVisibleRange.start);
@@ -254,6 +264,7 @@ export function createCodeProjector(
         visibleLines,
       });
       visibleRange = nextVisibleRange;
+      return fitPerfectly;
     },
     scrollToLogical(input) {
       const totalSize = codeTotalSize(input);
@@ -399,11 +410,11 @@ export function createCodeProjector(
   }
 
   function clearRows() {
-    for (const row of rows) {
-      if (row) recycleCodeRow(row);
+    for (const row of rowsByLineIndex.values()) {
+      recycleCodeRow(row);
     }
     rowHost?.replaceChildren();
-    rows = [];
+    rowsByLineIndex.clear();
     lastProjection = null;
     visibleRange = null;
   }
@@ -420,12 +431,12 @@ export function createCodeProjector(
       index < Math.max(start, end);
       index++
     ) {
-      const row = rows[index];
+      const row = rowsByLineIndex.get(index);
       if (!row) continue;
       row.row.remove();
       incrementMetric(metrics, "rowsRemoved");
       recycleCodeRow(row);
-      rows[index] = undefined;
+      rowsByLineIndex.delete(index);
     }
   }
 
@@ -437,7 +448,7 @@ export function createCodeProjector(
     for (let offset = 0; offset < expectedLength; offset += 1) {
       const index = range.start + offset;
       const element = rowHost.children[offset];
-      const row = rows[index];
+      const row = rowsByLineIndex.get(index);
       if (!(element instanceof HTMLDivElement) || row?.row !== element) {
         return false;
       }
@@ -482,7 +493,7 @@ export function createCodeProjector(
       text,
     });
 
-    let row = rows[visibleLine.index];
+    let row = rowsByLineIndex.get(visibleLine.index);
     if (!row) {
       row = recycledRows.pop();
       if (row) {
@@ -491,7 +502,7 @@ export function createCodeProjector(
         row = createCodeRow();
         incrementMetric(metrics, "rowsCreated");
       }
-      rows[visibleLine.index] = row;
+      rowsByLineIndex.set(visibleLine.index, row);
     }
 
     setStyleValue(row.row.style, "height", `${visibleLine.size}px`);
@@ -535,12 +546,14 @@ export function createCodeProjector(
 
 function codeLastProjection({
   input,
+  logicalScrollTop,
   renderedWindow,
   scrollPageOffset,
   totalHeight,
   visibleRange,
 }: {
   input: CodeProjectionInput;
+  logicalScrollTop: number;
   renderedWindow: CodeRenderedWindow;
   scrollPageOffset: number;
   totalHeight: string;
@@ -551,6 +564,7 @@ function codeLastProjection({
     highlightIdentity: codeHighlightIdentity(input.highlightRange),
     horizontalScrollLeft: input.viewport.scrollLeft,
     layoutIdentity: input.layoutIdentity,
+    logicalScrollTop,
     renderedWindowHeight: renderedWindow.height,
     renderedWindowStickyOffset: renderedWindow.stickyOffset,
     renderedWindowTop: renderedWindow.top,
@@ -621,6 +635,29 @@ function codeTotalSize({
 
 function codeViewportHeight(viewport: HTMLDivElement) {
   return viewport.clientHeight || CODE_VIEWER_INITIAL_VIEWPORT_HEIGHT;
+}
+
+function shouldFitCodePerfectly({
+  previousProjection,
+  logicalScrollTop,
+  viewportHeight,
+}: {
+  previousProjection: LastProjection | null;
+  logicalScrollTop: number;
+  viewportHeight: number;
+}) {
+  if (!previousProjection) return false;
+  return (
+    Math.abs(logicalScrollTop - previousProjection.logicalScrollTop) >
+    viewportHeight + CODE_VIEWER_OVERSCAN_PX * 2
+  );
+}
+
+function getCodeFitPerfectlyOverscanPx(lineHeight: number) {
+  return Math.max(
+    CODE_VIEWER_BLOCK_PADDING,
+    Number.isFinite(lineHeight) ? lineHeight : 0,
+  );
 }
 
 function codeRenderedWindow({

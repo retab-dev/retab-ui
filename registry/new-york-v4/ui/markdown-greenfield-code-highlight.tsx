@@ -2,6 +2,102 @@
 
 import * as React from "react";
 
+import {
+  ensureCodePrismLanguage,
+  tokenizeCodeLine as tokenizePrismCodeLine,
+} from "./code-viewer-syntax-prism";
+import { shouldTokenizeCodeLine } from "./code-viewer-syntax-protocol";
+import { markdownCodeTokensToHtml } from "./markdown-greenfield-code-highlight-html";
+import {
+  MARKDOWN_CODE_HIGHLIGHT_BATCH_SIZE,
+  MARKDOWN_CODE_HIGHLIGHT_CACHE_LIMIT,
+  MARKDOWN_CODE_HIGHLIGHT_RENDERER_VERSION,
+  type MarkdownCodeHighlightLineRequest,
+  type MarkdownCodeHighlightLineResult,
+  type MarkdownCodeHighlightWorkerRequest,
+  type MarkdownCodeHighlightWorkerResponse,
+} from "./markdown-greenfield-code-highlight-protocol";
+
+export const MARKDOWN_CODE_HIGHLIGHT_STYLES = `
+.cv-token-comment { color: var(--cv-token-comment, #6e7781); font-style: italic; }
+.cv-token-property,
+.cv-token-tag,
+.cv-token-attr-name,
+.cv-token-symbol { color: var(--cv-token-property, #0550ae); }
+.cv-token-string,
+.cv-token-char,
+.cv-token-attr-value,
+.cv-token-url,
+.cv-token-regex { color: var(--cv-token-string, #0a7d33); }
+.cv-token-number { color: var(--cv-token-number, #b5690c); }
+.cv-token-keyword,
+.cv-token-boolean,
+.cv-token-null,
+.cv-token-constant,
+.cv-token-atrule,
+.cv-token-important { color: var(--cv-token-keyword, #8250df); }
+.cv-token-function,
+.cv-token-class-name,
+.cv-token-builtin { color: var(--cv-token-function, #8250df); }
+.cv-token-variable { color: var(--cv-token-variable, #953800); }
+.cv-token-punctuation,
+.cv-token-operator { color: var(--cv-token-punctuation, color-mix(in oklab, var(--foreground) 55%, transparent)); }
+.dark .cv-token-comment { color: var(--cv-token-comment, #8b949e); }
+.dark .cv-token-property,
+.dark .cv-token-tag,
+.dark .cv-token-attr-name,
+.dark .cv-token-symbol { color: var(--cv-token-property, #6cb6ff); }
+.dark .cv-token-string,
+.dark .cv-token-char,
+.dark .cv-token-attr-value,
+.dark .cv-token-url,
+.dark .cv-token-regex { color: var(--cv-token-string, #8ddb8c); }
+.dark .cv-token-number { color: var(--cv-token-number, #e3b341); }
+.dark .cv-token-keyword,
+.dark .cv-token-boolean,
+.dark .cv-token-null,
+.dark .cv-token-constant,
+.dark .cv-token-atrule,
+.dark .cv-token-important { color: var(--cv-token-keyword, #dcbdfb); }
+.dark .cv-token-function,
+.dark .cv-token-class-name,
+.dark .cv-token-builtin { color: var(--cv-token-function, #d2a8ff); }
+.dark .cv-token-variable { color: var(--cv-token-variable, #ffa657); }
+`;
+
+type MarkdownCodeLineHtmlRequest = MarkdownCodeHighlightLineRequest & {
+  highlightPattern: string;
+  key: string;
+  languageId: string;
+};
+
+type MarkdownCodeHighlightTaskHandle =
+  | { id: number; kind: "idle" }
+  | { id: number; kind: "timeout" };
+
+type MarkdownCodeHighlightIdleWindow = Window &
+  typeof globalThis & {
+    cancelIdleCallback?: Window["cancelIdleCallback"];
+    requestIdleCallback?: Window["requestIdleCallback"];
+  };
+
+const resolvedMarkdownCodeLineHtml = new Map<string, string | null>();
+const pendingMarkdownCodeLineHtml = new Map<
+  string,
+  MarkdownCodeLineHtmlRequest
+>();
+const markdownCodeLineHtmlSubscribers = new Map<string, Set<() => void>>();
+const activeWorkerRequests = new Map<
+  number,
+  readonly MarkdownCodeLineHtmlRequest[]
+>();
+
+let markdownCodeHighlightFlushHandle: MarkdownCodeHighlightTaskHandle | null =
+  null;
+let markdownCodeHighlightWorker: Worker | null = null;
+let isMarkdownCodeHighlightWorkerFailed = false;
+let markdownCodeHighlightRequestId = 0;
+
 export function isSafeHighlightedCodeLine(line: number) {
   return Number.isInteger(line) && line > 0 && line <= 100_000;
 }
@@ -33,21 +129,21 @@ export function diffLineKind(line: string) {
 export function renderCodeLine({
   fallbackLanguage,
   line,
+  lineHtml,
   pattern,
-  shikiLine,
 }: {
   fallbackLanguage: string;
   line: string;
+  lineHtml: string | undefined;
   pattern: string;
-  shikiLine: readonly ShikiCodeToken[] | undefined;
 }) {
-  if (shikiLine) {
-    return renderShikiCodeLine({
-      fallbackLanguage,
-      line,
-      pattern,
-      tokens: shikiLine,
-    });
+  if (lineHtml !== undefined) {
+    return (
+      <span
+        data-pretext-code-line-html=""
+        dangerouslySetInnerHTML={{ __html: lineHtml }}
+      />
+    );
   }
   if (!pattern) return renderFallbackCodeTokens(line || " ", fallbackLanguage);
   const index = line.indexOf(pattern);
@@ -64,139 +160,395 @@ export function renderCodeLine({
   );
 }
 
-function renderShikiCodeLine({
-  fallbackLanguage,
+export function useMarkdownCodeLineHtml({
+  end,
+  highlightPattern,
+  language,
+  sourceLines,
+  start,
+}: {
+  end: number;
+  highlightPattern: string;
+  language: string;
+  sourceLines: readonly string[];
+  start: number;
+}) {
+  const requests = React.useMemo(
+    () =>
+      createMarkdownCodeLineHtmlRequests({
+        end,
+        highlightPattern,
+        language,
+        sourceLines,
+        start,
+      }),
+    [end, highlightPattern, language, sourceLines, start],
+  );
+  const subscribe = React.useCallback(
+    (onStoreChange: () => void) => {
+      for (const request of requests) {
+        let subscribers = markdownCodeLineHtmlSubscribers.get(request.key);
+        if (!subscribers) {
+          subscribers = new Set();
+          markdownCodeLineHtmlSubscribers.set(request.key, subscribers);
+        }
+        subscribers.add(onStoreChange);
+        ensureMarkdownCodeLineHtml(request);
+      }
+      return () => {
+        for (const request of requests) {
+          const subscribers = markdownCodeLineHtmlSubscribers.get(request.key);
+          if (!subscribers) continue;
+          subscribers.delete(onStoreChange);
+          if (!subscribers.size) {
+            markdownCodeLineHtmlSubscribers.delete(request.key);
+          }
+        }
+      };
+    },
+    [requests],
+  );
+  const getSnapshot = React.useCallback(
+    () =>
+      requests
+        .map((request) =>
+          resolvedMarkdownCodeLineHtml.has(request.key) ? "1" : "0",
+        )
+        .join(""),
+    [requests],
+  );
+  const resolvedVersion = React.useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    () => "",
+  );
+
+  return React.useMemo(() => {
+    void resolvedVersion;
+    const htmlByIndex = new Map<number, string>();
+    for (const request of requests) {
+      const html = resolvedMarkdownCodeLineHtml.get(request.key);
+      if (typeof html === "string") htmlByIndex.set(request.index, html);
+    }
+    return htmlByIndex;
+  }, [requests, resolvedVersion]);
+}
+
+function createMarkdownCodeLineHtmlRequests({
+  end,
+  highlightPattern,
+  language,
+  sourceLines,
+  start,
+}: {
+  end: number;
+  highlightPattern: string;
+  language: string;
+  sourceLines: readonly string[];
+  start: number;
+}) {
+  const languageId = prismLanguageForMarkdownCode(language);
+  if (!languageId) return [];
+
+  const requests: MarkdownCodeLineHtmlRequest[] = [];
+  const boundedStart = Math.max(0, Math.min(start, sourceLines.length));
+  const boundedEnd = Math.max(boundedStart, Math.min(end, sourceLines.length));
+  for (let index = boundedStart; index < boundedEnd; index += 1) {
+    const line = sourceLines[index] ?? "";
+    requests.push({
+      highlightPattern,
+      index,
+      key: markdownCodeLineHtmlKey({
+        highlightPattern,
+        languageId,
+        line,
+      }),
+      languageId,
+      line,
+    });
+  }
+  return requests;
+}
+
+function ensureMarkdownCodeLineHtml(request: MarkdownCodeLineHtmlRequest) {
+  if (
+    resolvedMarkdownCodeLineHtml.has(request.key) ||
+    pendingMarkdownCodeLineHtml.has(request.key)
+  ) {
+    return;
+  }
+  pendingMarkdownCodeLineHtml.set(request.key, request);
+  scheduleMarkdownCodeHighlightFlush();
+}
+
+function scheduleMarkdownCodeHighlightFlush() {
+  if (markdownCodeHighlightFlushHandle) return;
+  markdownCodeHighlightFlushHandle = scheduleMarkdownCodeHighlightTask(() => {
+    markdownCodeHighlightFlushHandle = null;
+    flushPendingMarkdownCodeHighlights();
+  });
+}
+
+function flushPendingMarkdownCodeHighlights() {
+  const firstRequest = pendingMarkdownCodeLineHtml.values().next().value;
+  if (!firstRequest) return;
+
+  const requests: MarkdownCodeLineHtmlRequest[] = [];
+  for (const request of pendingMarkdownCodeLineHtml.values()) {
+    if (
+      request.languageId !== firstRequest.languageId ||
+      request.highlightPattern !== firstRequest.highlightPattern
+    ) {
+      continue;
+    }
+    pendingMarkdownCodeLineHtml.delete(request.key);
+    requests.push(request);
+    if (requests.length >= MARKDOWN_CODE_HIGHLIGHT_BATCH_SIZE) break;
+  }
+
+  if (requests.length === 0) return;
+  if (canUseMarkdownCodeHighlightWorker()) {
+    requestMarkdownCodeHighlightWorker(requests);
+  } else {
+    void highlightMarkdownCodeLinesOnMainThread(requests);
+  }
+  if (pendingMarkdownCodeLineHtml.size > 0)
+    scheduleMarkdownCodeHighlightFlush();
+}
+
+function canUseMarkdownCodeHighlightWorker() {
+  return (
+    !isMarkdownCodeHighlightWorkerFailed &&
+    typeof Worker !== "undefined" &&
+    typeof window !== "undefined"
+  );
+}
+
+function requestMarkdownCodeHighlightWorker(
+  requests: readonly MarkdownCodeLineHtmlRequest[],
+) {
+  const worker = getMarkdownCodeHighlightWorker();
+  if (!worker) {
+    void highlightMarkdownCodeLinesOnMainThread(requests);
+    return;
+  }
+
+  markdownCodeHighlightRequestId += 1;
+  const requestId = markdownCodeHighlightRequestId;
+  activeWorkerRequests.set(requestId, requests);
+  const firstRequest = requests[0]!;
+  const request: MarkdownCodeHighlightWorkerRequest = {
+    generation: MARKDOWN_CODE_HIGHLIGHT_RENDERER_VERSION,
+    highlightPattern: firstRequest.highlightPattern,
+    languageId: firstRequest.languageId,
+    lines: requests.map(({ index, line }) => ({ index, line })),
+    requestId,
+    type: "highlight",
+  };
+  worker.postMessage(request);
+}
+
+function getMarkdownCodeHighlightWorker() {
+  if (markdownCodeHighlightWorker) return markdownCodeHighlightWorker;
+  try {
+    markdownCodeHighlightWorker = new Worker(
+      new URL(
+        "./markdown-greenfield-code-highlight.worker.ts",
+        import.meta.url,
+      ),
+      { type: "module" },
+    );
+    markdownCodeHighlightWorker.onmessage = (
+      event: MessageEvent<MarkdownCodeHighlightWorkerResponse>,
+    ) => handleMarkdownCodeHighlightWorkerMessage(event.data);
+    markdownCodeHighlightWorker.onerror = () =>
+      failMarkdownCodeHighlightWorker();
+    markdownCodeHighlightWorker.onmessageerror = () =>
+      failMarkdownCodeHighlightWorker();
+    return markdownCodeHighlightWorker;
+  } catch {
+    isMarkdownCodeHighlightWorkerFailed = true;
+    return null;
+  }
+}
+
+function handleMarkdownCodeHighlightWorkerMessage(
+  message: MarkdownCodeHighlightWorkerResponse,
+) {
+  const requests = activeWorkerRequests.get(message.requestId);
+  if (
+    !requests ||
+    message.generation !== MARKDOWN_CODE_HIGHLIGHT_RENDERER_VERSION
+  ) {
+    return;
+  }
+  activeWorkerRequests.delete(message.requestId);
+  if (message.type === "error") {
+    resolveMarkdownCodeLineHtmlRequests(
+      requests.map((request) => ({ html: null, index: request.index })),
+      requests,
+    );
+    return;
+  }
+  resolveMarkdownCodeLineHtmlRequests(message.results, requests);
+}
+
+function failMarkdownCodeHighlightWorker() {
+  const activeRequests = Array.from(activeWorkerRequests.values()).flat();
+  activeWorkerRequests.clear();
+  markdownCodeHighlightWorker?.terminate();
+  markdownCodeHighlightWorker = null;
+  isMarkdownCodeHighlightWorkerFailed = true;
+  if (activeRequests.length) {
+    void highlightMarkdownCodeLinesOnMainThread(activeRequests);
+  }
+}
+
+async function highlightMarkdownCodeLinesOnMainThread(
+  requests: readonly MarkdownCodeLineHtmlRequest[],
+) {
+  const firstRequest = requests[0];
+  if (!firstRequest) return;
+  try {
+    await ensureCodePrismLanguage(firstRequest.languageId);
+    resolveMarkdownCodeLineHtmlRequests(
+      requests.map((request) => ({
+        html: shouldTokenizeCodeLine(request.line)
+          ? markdownCodeTokensToHtml({
+              highlightPattern: request.highlightPattern,
+              line: request.line,
+              tokens: tokenizePrismCodeLine(request.languageId, request.line),
+            })
+          : null,
+        index: request.index,
+      })),
+      requests,
+    );
+  } catch {
+    resolveMarkdownCodeLineHtmlRequests(
+      requests.map((request) => ({ html: null, index: request.index })),
+      requests,
+    );
+  }
+}
+
+function resolveMarkdownCodeLineHtmlRequests(
+  results: readonly MarkdownCodeHighlightLineResult[],
+  requests: readonly MarkdownCodeLineHtmlRequest[],
+) {
+  const requestsByIndex = new Map(
+    requests.map((request) => [request.index, request] as const),
+  );
+  const resolvedKeys: string[] = [];
+  for (const result of results) {
+    const request = requestsByIndex.get(result.index);
+    if (!request) continue;
+    resolvedMarkdownCodeLineHtml.set(request.key, result.html);
+    resolvedKeys.push(request.key);
+  }
+  trimMarkdownCodeLineHtmlCache();
+  notifyMarkdownCodeLineHtmlSubscribers(resolvedKeys);
+}
+
+function notifyMarkdownCodeLineHtmlSubscribers(keys: readonly string[]) {
+  const subscribers = new Set<() => void>();
+  for (const key of keys) {
+    for (const subscriber of markdownCodeLineHtmlSubscribers.get(key) ?? []) {
+      subscribers.add(subscriber);
+    }
+  }
+  for (const subscriber of subscribers) subscriber();
+}
+
+function trimMarkdownCodeLineHtmlCache() {
+  while (
+    resolvedMarkdownCodeLineHtml.size > MARKDOWN_CODE_HIGHLIGHT_CACHE_LIMIT
+  ) {
+    const oldestKey = resolvedMarkdownCodeLineHtml.keys().next().value;
+    if (oldestKey === undefined) break;
+    resolvedMarkdownCodeLineHtml.delete(oldestKey);
+  }
+}
+
+function scheduleMarkdownCodeHighlightTask(callback: () => void) {
+  if (typeof window === "undefined") {
+    const id = setTimeout(callback, 0) as unknown as number;
+    return { id, kind: "timeout" as const };
+  }
+  const browserWindow = window as MarkdownCodeHighlightIdleWindow;
+  if (browserWindow.requestIdleCallback) {
+    return {
+      id: browserWindow.requestIdleCallback(callback, { timeout: 120 }),
+      kind: "idle" as const,
+    };
+  }
+  return {
+    id: browserWindow.setTimeout(callback, 0),
+    kind: "timeout" as const,
+  };
+}
+
+export function resetMarkdownCodeHighlightForTests() {
+  resolvedMarkdownCodeLineHtml.clear();
+  pendingMarkdownCodeLineHtml.clear();
+  markdownCodeLineHtmlSubscribers.clear();
+  activeWorkerRequests.clear();
+  if (markdownCodeHighlightFlushHandle) {
+    cancelMarkdownCodeHighlightTask(markdownCodeHighlightFlushHandle);
+  }
+  markdownCodeHighlightFlushHandle = null;
+  markdownCodeHighlightWorker?.terminate();
+  markdownCodeHighlightWorker = null;
+  isMarkdownCodeHighlightWorkerFailed = false;
+  markdownCodeHighlightRequestId = 0;
+}
+
+function cancelMarkdownCodeHighlightTask(
+  handle: MarkdownCodeHighlightTaskHandle,
+) {
+  if (typeof window === "undefined") {
+    clearTimeout(handle.id);
+    return;
+  }
+  const browserWindow = window as MarkdownCodeHighlightIdleWindow;
+  if (handle.kind === "idle") {
+    browserWindow.cancelIdleCallback?.(handle.id);
+    return;
+  }
+  browserWindow.clearTimeout(handle.id);
+}
+
+function markdownCodeLineHtmlKey({
+  highlightPattern,
+  languageId,
   line,
-  pattern,
-  tokens,
 }: {
-  fallbackLanguage: string;
+  highlightPattern: string;
+  languageId: string;
   line: string;
-  pattern: string;
-  tokens: readonly ShikiCodeToken[];
 }) {
-  if (!tokens.length) return " ";
-  if (!pattern) return renderShikiCodeTokens(tokens);
-
-  const highlightStart = line.indexOf(pattern);
-  if (highlightStart < 0) return renderShikiCodeTokens(tokens);
-
-  return renderShikiCodeTokensWithHighlight({
-    fallbackLanguage,
-    highlightEnd: highlightStart + pattern.length,
-    highlightStart,
-    tokens,
-  });
+  return [
+    MARKDOWN_CODE_HIGHLIGHT_RENDERER_VERSION,
+    languageId,
+    highlightPattern,
+    line,
+  ].join("\0");
 }
 
-function renderShikiCodeTokens(tokens: readonly ShikiCodeToken[]) {
-  return tokens.map((token, index) => (
-    <span
-      key={index}
-      className="text-[var(--shiki-light)] dark:text-[var(--shiki-dark)]"
-      data-pretext-code-token="shiki"
-      data-shiki-token=""
-      style={shikiTokenStyle(token)}
-    >
-      {token.content}
-    </span>
-  ));
-}
-
-function renderShikiCodeTokensWithHighlight({
-  fallbackLanguage,
-  highlightEnd,
-  highlightStart,
-  tokens,
-}: {
-  fallbackLanguage: string;
-  highlightEnd: number;
-  highlightStart: number;
-  tokens: readonly ShikiCodeToken[];
-}) {
-  const rendered: React.ReactNode[] = [];
-  let cursor = 0;
-
-  tokens.forEach((token, tokenIndex) => {
-    const tokenStart = cursor;
-    const tokenEnd = cursor + token.content.length;
-    cursor = tokenEnd;
-
-    if (tokenEnd <= highlightStart || tokenStart >= highlightEnd) {
-      rendered.push(
-        <span
-          key={tokenIndex}
-          className="text-[var(--shiki-light)] dark:text-[var(--shiki-dark)]"
-          data-pretext-code-token="shiki"
-          data-shiki-token=""
-          style={shikiTokenStyle(token)}
-        >
-          {token.content}
-        </span>,
-      );
-      return;
-    }
-
-    const before = token.content.slice(
-      0,
-      Math.max(0, highlightStart - tokenStart),
-    );
-    const highlighted = token.content.slice(
-      Math.max(0, highlightStart - tokenStart),
-      Math.min(token.content.length, highlightEnd - tokenStart),
-    );
-    const after = token.content.slice(
-      Math.min(token.content.length, highlightEnd - tokenStart),
-    );
-
-    if (before) {
-      rendered.push(
-        <span
-          key={`${tokenIndex}-before`}
-          className="text-[var(--shiki-light)] dark:text-[var(--shiki-dark)]"
-          data-pretext-code-token="shiki"
-          data-shiki-token=""
-          style={shikiTokenStyle(token)}
-        >
-          {before}
-        </span>,
-      );
-    }
-    if (highlighted) {
-      rendered.push(
-        <span key={`${tokenIndex}-highlight`} data-highlighted-chars="">
-          <span
-            className="text-[var(--shiki-light)] dark:text-[var(--shiki-dark)]"
-            data-pretext-code-token="shiki"
-            data-shiki-token=""
-            style={shikiTokenStyle(token)}
-          >
-            {highlighted}
-          </span>
-        </span>,
-      );
-    }
-    if (after) {
-      rendered.push(
-        <span
-          key={`${tokenIndex}-after`}
-          className="text-[var(--shiki-light)] dark:text-[var(--shiki-dark)]"
-          data-pretext-code-token="shiki"
-          data-shiki-token=""
-          style={shikiTokenStyle(token)}
-        >
-          {after}
-        </span>,
-      );
-    }
-  });
-
-  if (rendered.length) return rendered;
-  return renderFallbackCodeTokens(" ", fallbackLanguage);
+function prismLanguageForMarkdownCode(language: string) {
+  const aliases: Record<string, string> = {
+    dockerfile: "dockerfile",
+    js: "javascript",
+    shell: "bash",
+    ts: "typescript",
+  };
+  const languageId = aliases[language] ?? language;
+  if (languageId === "text" || languageId === "plaintext") return "";
+  return languageId;
 }
 
 function renderFallbackCodeTokens(line: string, language: string) {
-  const tokens = tokenizeCodeLine(line, language);
+  const tokens = tokenizeFallbackCodeLine(line, language);
   if (!tokens.length) return " ";
   return tokens.map((token, index) =>
     token.kind === "plain" ? (
@@ -213,212 +565,12 @@ function renderFallbackCodeTokens(line: string, language: string) {
   );
 }
 
-type ShikiCodeToken = {
-  content: string;
-  darkColor: string;
-  fontStyle: number | undefined;
-  lightColor: string;
-};
-
-type RawShikiToken = {
-  content?: unknown;
-  variants?: {
-    dark?: {
-      color?: unknown;
-      fontStyle?: unknown;
-    };
-    light?: {
-      color?: unknown;
-      fontStyle?: unknown;
-    };
-  };
-};
-
-const shikiCodeLineCache = new Map<
-  string,
-  Promise<ShikiCodeToken[][] | null>
->();
-const resolvedShikiCodeLines = new Map<string, ShikiCodeToken[][] | null>();
-const shikiCodeLineSubscribersByKey = new Map<string, Set<() => void>>();
-
-function ensureShikiCodeLines(args: {
-  cacheKey: string;
-  expectedLineCount: number;
-  language: string;
-  source: string;
-}) {
-  if (resolvedShikiCodeLines.has(args.cacheKey)) return;
-  void getShikiCodeLines(args).then((lines) => {
-    resolvedShikiCodeLines.set(args.cacheKey, lines);
-    while (resolvedShikiCodeLines.size > 128) {
-      const oldestKey = resolvedShikiCodeLines.keys().next().value;
-      if (oldestKey === undefined) break;
-      resolvedShikiCodeLines.delete(oldestKey);
-    }
-    notifyShikiCodeLineSubscribers(args.cacheKey);
-  });
-}
-
-// Shiki tokenization is an asynchronous external system (a dynamically imported
-// highlighter with a shared resolved-value cache). The viewer subscribes to
-// that cache with useSyncExternalStore — the React-idiomatic way to read an
-// external store — rather than driving the load from an effect. The snapshot
-// returns a stable reference (the cached array, or null while pending) so
-// rendering stays progressive: plain source first, highlighted once resolved.
-export function useShikiCodeLines(
-  source: string,
-  language: string,
-  expectedLineCount: number,
-) {
-  const cacheKey = `${language}\0${source}`;
-  const subscribe = React.useCallback(
-    (onStoreChange: () => void) => {
-      const subscribers =
-        shikiCodeLineSubscribersByKey.get(cacheKey) ?? new Set();
-      subscribers.add(onStoreChange);
-      shikiCodeLineSubscribersByKey.set(cacheKey, subscribers);
-      ensureShikiCodeLines({ cacheKey, expectedLineCount, language, source });
-      return () => {
-        subscribers.delete(onStoreChange);
-        if (!subscribers.size) shikiCodeLineSubscribersByKey.delete(cacheKey);
-      };
-    },
-    [cacheKey, expectedLineCount, language, source],
-  );
-  const getSnapshot = React.useCallback(
-    () =>
-      resolvedShikiCodeLines.has(cacheKey)
-        ? (resolvedShikiCodeLines.get(cacheKey) ?? null)
-        : null,
-    [cacheKey],
-  );
-  return React.useSyncExternalStore(subscribe, getSnapshot, () => null);
-}
-
-function notifyShikiCodeLineSubscribers(cacheKey: string) {
-  const subscribers = shikiCodeLineSubscribersByKey.get(cacheKey);
-  if (!subscribers) return;
-  for (const notify of subscribers) notify();
-}
-
-function getShikiCodeLines({
-  cacheKey,
-  expectedLineCount,
-  language,
-  source,
-}: {
-  cacheKey: string;
-  expectedLineCount: number;
-  language: string;
-  source: string;
-}) {
-  let cached = shikiCodeLineCache.get(cacheKey);
-  if (!cached) {
-    cached = loadShikiCodeLines({ expectedLineCount, language, source });
-    shikiCodeLineCache.set(cacheKey, cached);
-    trimShikiCodeLineCache();
-  }
-  return cached;
-}
-
-async function loadShikiCodeLines({
-  expectedLineCount,
-  language,
-  source,
-}: {
-  expectedLineCount: number;
-  language: string;
-  source: string;
-}) {
-  try {
-    const shiki = await import("shiki");
-    const lines = (await (shiki.codeToTokensWithThemes as any)(source, {
-      lang: shikiLanguageFor(language),
-      themes: {
-        dark: "github-dark",
-        light: "github-light-default",
-      },
-    })) as RawShikiToken[][];
-
-    return normalizeShikiCodeLines(lines, expectedLineCount);
-  } catch {
-    return null;
-  }
-}
-
-function normalizeShikiCodeLines(
-  lines: RawShikiToken[][],
-  expectedLineCount: number,
-) {
-  return Array.from({ length: expectedLineCount }, (_, index) =>
-    normalizeShikiCodeLine(lines[index] ?? []),
-  );
-}
-
-function normalizeShikiCodeLine(tokens: RawShikiToken[]): ShikiCodeToken[] {
-  return tokens
-    .map((token) => {
-      const content = typeof token.content === "string" ? token.content : "";
-      const lightColor = readShikiTokenColor(token, "light");
-      const darkColor = readShikiTokenColor(token, "dark");
-      if (!content || !lightColor || !darkColor) return null;
-      return {
-        content,
-        darkColor,
-        fontStyle: readShikiTokenFontStyle(token),
-        lightColor,
-      };
-    })
-    .filter((token): token is ShikiCodeToken => token != null);
-}
-
-function readShikiTokenColor(token: RawShikiToken, variant: "dark" | "light") {
-  const color = token.variants?.[variant]?.color;
-  return typeof color === "string" && /^#[0-9a-f]{6,8}$/i.test(color)
-    ? color
-    : "";
-}
-
-function readShikiTokenFontStyle(token: RawShikiToken) {
-  const fontStyle =
-    typeof token.variants?.light?.fontStyle === "number"
-      ? token.variants.light.fontStyle
-      : undefined;
-  return fontStyle && Number.isFinite(fontStyle) ? fontStyle : undefined;
-}
-
-function shikiTokenStyle(token: ShikiCodeToken) {
-  return {
-    "--shiki-dark": token.darkColor,
-    "--shiki-light": token.lightColor,
-    fontStyle: token.fontStyle === 1 ? "italic" : undefined,
-  } as React.CSSProperties;
-}
-
-function shikiLanguageFor(language: string) {
-  const aliases: Record<string, string> = {
-    dockerfile: "docker",
-    js: "javascript",
-    shell: "bash",
-    ts: "typescript",
-  };
-  return aliases[language] ?? language;
-}
-
-function trimShikiCodeLineCache() {
-  while (shikiCodeLineCache.size > 64) {
-    const oldestKey = shikiCodeLineCache.keys().next().value;
-    if (!oldestKey) break;
-    shikiCodeLineCache.delete(oldestKey);
-  }
-}
-
 type CodeToken = {
   kind: "comment" | "keyword" | "literal" | "number" | "plain" | "string";
   value: string;
 };
 
-function tokenizeCodeLine(line: string, language: string): CodeToken[] {
+function tokenizeFallbackCodeLine(line: string, language: string): CodeToken[] {
   if (!line) return [];
   if (language === "diff") return tokenizeDiffLine(line);
   if (language === "json") return tokenizeJsonLikeLine(line);

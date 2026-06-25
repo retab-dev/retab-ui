@@ -4,6 +4,12 @@ import { readPdfPageResource } from "@/lib/pdf-document-resource";
 import type { PdfDocumentProxy } from "@/lib/pdf-document-types";
 
 import { getPdfCanvasPixelSize } from "./pdf-viewer-canvas";
+import {
+  readPdfRenderedPageCache,
+  writePdfRenderedPageCache,
+  type PdfRenderedPageCache,
+  type PdfRenderedPageSignature,
+} from "./pdf-viewer-render-cache";
 import { toPdfRenderFailedError } from "./pdf-viewer-render-error";
 import type {
   PageOverlayProps,
@@ -14,34 +20,31 @@ import type {
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { joinEffectKey } from "@/lib/effect-key";
 
-type PdfRenderedPage = {
-  pageNumber: number;
-  scale: number;
-  rotation: number;
-  devicePixelRatio: number;
-  viewportWidth: number;
-  viewportHeight: number;
-};
+type PdfRenderedPage = PdfRenderedPageSignature;
 
-export function PdfPage({
-  document,
-  pageNumber,
-  scale,
-  rotation,
-  devicePixelRatio,
-  renderOverlay,
-  onRenderTiming,
-  onSize,
-}: {
+type PdfPageProps = {
   document: PdfDocumentProxy;
   pageNumber: number;
   scale: number;
   rotation: number;
   devicePixelRatio: number;
+  renderCache?: PdfRenderedPageCache;
   renderOverlay?: (props: PageOverlayProps) => React.ReactNode;
   onRenderTiming?: (timing: PdfPageRenderTiming) => void;
   onSize?: (pageNumber: number, size: PdfPageSize) => void;
-}) {
+};
+
+export const PdfPage = React.memo(function PdfPage({
+  document,
+  pageNumber,
+  scale,
+  rotation,
+  devicePixelRatio,
+  renderCache,
+  renderOverlay,
+  onRenderTiming,
+  onSize,
+}: PdfPageProps) {
   const page = readPdfPageResource(document, pageNumber);
   const intrinsicViewport = React.useMemo(
     () => page.getViewport({ scale: 1, rotation: page.rotate ?? 0 }),
@@ -95,13 +98,10 @@ export function PdfPage({
       }
 
       const startedAt = readNow();
-      let didReportRenderTiming = false;
       const reportRenderTiming = (
         status: PdfPageRenderStatus,
         source?: PdfPageRenderTiming["source"],
       ) => {
-        if (didReportRenderTiming) return;
-        didReportRenderTiming = true;
         onRenderTiming?.({
           pageNumber,
           scale,
@@ -122,15 +122,31 @@ export function PdfPage({
         return;
       }
 
-      markCanvasRenderStatus(canvas, renderSignature, "pending");
-      canvas.width = getPdfCanvasPixelSize(
+      const canvasWidth = getPdfCanvasPixelSize(
         renderSignature.viewportWidth,
         devicePixelRatio,
       );
-      canvas.height = getPdfCanvasPixelSize(
+      const canvasHeight = getPdfCanvasPixelSize(
         renderSignature.viewportHeight,
         devicePixelRatio,
       );
+      const cachedPage = readPdfRenderedPageCache(renderCache, renderSignature);
+      const previousCanvas =
+        cachedPage == null ? copyCanvasContents(canvas) : null;
+
+      resizeCanvas(canvas, canvasWidth, canvasHeight);
+      if (cachedPage) {
+        drawCanvasImage(context, cachedPage.canvas, canvasWidth, canvasHeight);
+        renderedPageRef.current = renderSignature;
+        markCanvasRenderStatus(canvas, renderSignature, "rendered", "cache");
+        reportRenderTiming("rendered", "cache");
+      } else {
+        if (previousCanvas) {
+          drawCanvasImage(context, previousCanvas, canvasWidth, canvasHeight);
+        }
+        markCanvasRenderStatus(canvas, renderSignature, "pending");
+      }
+
       let renderTask: ReturnType<typeof page.render>;
       try {
         renderTask = page.render({
@@ -149,15 +165,23 @@ export function PdfPage({
         return;
       }
       let isActive = true;
+      let didFinishPdfRender = false;
       renderTask.promise.then(
         () => {
           if (!isActive) return;
+          didFinishPdfRender = true;
           renderedPageRef.current = renderSignature;
+          writePdfRenderedPageCache({
+            cache: renderCache,
+            rendered: renderSignature,
+            sourceCanvas: canvas,
+          });
           markCanvasRenderStatus(canvas, renderSignature, "rendered", "pdfjs");
           reportRenderTiming("rendered", "pdfjs");
         },
         (error) => {
           if (!isActive) return;
+          didFinishPdfRender = true;
           markCanvasRenderStatus(canvas, renderSignature, "failed");
           reportRenderTiming("failed");
           setRenderError(toPdfRenderFailedError(error));
@@ -165,10 +189,12 @@ export function PdfPage({
       );
       return () => {
         isActive = false;
-        if (!didReportRenderTiming) {
+        if (!didFinishPdfRender) {
+          renderTask.cancel();
+        }
+        if (!didFinishPdfRender && !cachedPage) {
           markCanvasRenderStatus(canvas, renderSignature, "cancelled");
           reportRenderTiming("cancelled");
-          renderTask.cancel();
         }
       };
     },
@@ -177,6 +203,7 @@ export function PdfPage({
       onRenderTiming,
       page,
       pageNumber,
+      renderCache,
       rotation,
       scale,
       viewport,
@@ -208,6 +235,59 @@ export function PdfPage({
       ) : null}
     </div>
   );
+}, arePdfPagePropsEqual);
+
+function arePdfPagePropsEqual(
+  previous: PdfPageProps,
+  next: PdfPageProps,
+) {
+  return (
+    previous.document === next.document &&
+    previous.pageNumber === next.pageNumber &&
+    previous.scale === next.scale &&
+    previous.rotation === next.rotation &&
+    previous.devicePixelRatio === next.devicePixelRatio &&
+    previous.renderCache === next.renderCache &&
+    previous.renderOverlay === next.renderOverlay &&
+    previous.onRenderTiming === next.onRenderTiming &&
+    previous.onSize === next.onSize
+  );
+}
+
+function resizeCanvas(
+  canvas: HTMLCanvasElement,
+  width: number,
+  height: number,
+) {
+  if (canvas.width !== width) canvas.width = width;
+  if (canvas.height !== height) canvas.height = height;
+}
+
+function copyCanvasContents(canvas: HTMLCanvasElement) {
+  if (canvas.width <= 0 || canvas.height <= 0) return null;
+
+  const snapshot = document.createElement("canvas");
+  snapshot.width = canvas.width;
+  snapshot.height = canvas.height;
+  const context = snapshot.getContext("2d");
+  if (!context || typeof context.drawImage !== "function") return null;
+
+  context.drawImage(canvas, 0, 0);
+  return snapshot;
+}
+
+function drawCanvasImage(
+  context: CanvasRenderingContext2D,
+  image: HTMLCanvasElement,
+  width: number,
+  height: number,
+) {
+  if (typeof context.setTransform === "function") {
+    context.setTransform(1, 0, 0, 1, 0, 0);
+  }
+  if (typeof context.drawImage === "function") {
+    context.drawImage(image, 0, 0, width, height);
+  }
 }
 
 function markCanvasRenderStatus(
