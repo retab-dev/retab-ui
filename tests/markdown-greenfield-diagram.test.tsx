@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from "node:fs";
 import * as React from "react";
 import {
   act,
@@ -14,6 +15,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MarkdownViewer } from "@/components/ui/markdown-viewer";
 import { resetMarkdownMermaidRendererForTests } from "@/registry/new-york-v4/ui/markdown-greenfield-diagram";
 import { MarkdownGreenfieldChunkRenderer } from "@/registry/new-york-v4/ui/markdown-greenfield-renderer";
+
+const MMDR_WASM_BYTES = readFileSync("public/vendor/mmdr/typst_mmdr.wasm");
 
 vi.mock("mermaid", () => ({
   default: {
@@ -55,8 +58,33 @@ function markdownSource(text: string) {
   };
 }
 
+function disableMmdrFetchForTests() {
+  Object.defineProperty(window, "fetch", {
+    configurable: true,
+    value: undefined,
+  });
+}
+
+function copyMmdrWasmBuffer() {
+  return new Uint8Array(MMDR_WASM_BYTES).buffer;
+}
+
+function stubMmdrWasmFetch() {
+  const fetch = vi.fn(async () => ({
+    arrayBuffer: vi.fn(async () => copyMmdrWasmBuffer()),
+    ok: true,
+    status: 200,
+  }));
+  Object.defineProperty(window, "fetch", {
+    configurable: true,
+    value: fetch,
+  });
+  return fetch;
+}
+
 beforeEach(() => {
   resetMarkdownMermaidRendererForTests();
+  disableMmdrFetchForTests();
   Object.defineProperty(HTMLElement.prototype, "scrollTo", {
     configurable: true,
     value: vi.fn(),
@@ -69,6 +97,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  disableMmdrFetchForTests();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
@@ -116,6 +145,60 @@ describe("pretext markdown greenfield diagrams", () => {
     expect(svg.querySelector("style")).toBeNull();
     expect(node?.getAttribute("style")).toBeNull();
     expect(edge?.getAttribute("style")).toBeNull();
+  });
+
+  it("uses mmdr WASM before Mermaid JS when the renderer asset is available", async () => {
+    const mermaid = (await import("mermaid")).default;
+    vi.mocked(mermaid.render).mockClear();
+    const mmdrFetch = stubMmdrWasmFetch();
+    const { container } = render(
+      <MarkdownViewer
+        controls={false}
+        source={markdownSource(
+          "```mermaid\ngraph LR\n  Input[Markdown]-->Render[mmdr]\n  Render-->Svg[SVG]\n```",
+        )}
+      />,
+    );
+
+    const svg = await screen.findByRole("img", { name: "Mermaid diagram" });
+    const diagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]',
+    );
+
+    await waitFor(() => expect(diagram?.dataset.diagramRenderer).toBe("mmdr"));
+    expect(mmdrFetch).toHaveBeenCalledWith("/vendor/mmdr/typst_mmdr.wasm");
+    expect(svg.getAttribute("data-pretext-sanitized-mermaid")).toBe("");
+    expect(svg.outerHTML).toContain("var(--mmdr");
+    expect(mermaid.render).not.toHaveBeenCalled();
+  });
+
+  it("falls back to Mermaid JS when mmdr cannot load", async () => {
+    const mermaid = (await import("mermaid")).default;
+    vi.mocked(mermaid.render).mockClear();
+    Object.defineProperty(window, "fetch", {
+      configurable: true,
+      value: vi.fn(async () => ({
+        arrayBuffer: vi.fn(async () => new ArrayBuffer(0)),
+        ok: false,
+        status: 404,
+      })),
+    });
+    const { container } = render(
+      <MarkdownViewer
+        controls={false}
+        source={markdownSource(
+          "```mermaid\ngraph TD\n  fallback-source-->B\n```",
+        )}
+      />,
+    );
+
+    await screen.findByTestId("mock-mermaid-svg");
+    const diagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]',
+    );
+
+    expect(diagram?.dataset.diagramRenderer).toBe("mermaid");
+    expect(mermaid.render).toHaveBeenCalledTimes(1);
   });
 
   it("renders Mermaid only after an observed diagram approaches the viewport", async () => {

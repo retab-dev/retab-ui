@@ -10,6 +10,26 @@ const MERMAID_MAX_SOURCE_LENGTH = 12_000;
 const MERMAID_CACHE_LIMIT = 64;
 const MERMAID_SCOPED_CACHE_LIMIT = 128;
 const MERMAID_VIEWPORT_ROOT_MARGIN = "640px 0px";
+const MMDR_VERSION = "0.2.2";
+const MMDR_WASM_URL = "/vendor/mmdr/typst_mmdr.wasm";
+const MMDR_BASE_THEME = "modern";
+const MMDR_LAYOUT = "";
+
+const MMDR_THEME = {
+  background: "transparent",
+  cluster_bkg: "transparent",
+  cluster_border: "var(--mmdr-border)",
+  edge_label_background: "transparent",
+  font_family: "Inter, ui-sans-serif, system-ui, sans-serif",
+  font_size: 16,
+  line_color: "var(--mmdr-line)",
+  primary_border_color: "var(--mmdr-border)",
+  primary_color: "var(--mmdr-node-fill)",
+  primary_text_color: "var(--mmdr-text)",
+  secondary_color: "var(--mmdr-node-fill)",
+  tertiary_color: "var(--mmdr-node-fill)",
+} as const;
+const MMDR_THEME_JSON = JSON.stringify(MMDR_THEME);
 
 const MERMAID_CONFIG = {
   flowchart: {
@@ -35,9 +55,23 @@ const MERMAID_CONFIG = {
   },
 } as const;
 
+const DIAGRAM_CACHE_CONFIG_KEY = JSON.stringify({
+  mermaid: MERMAID_CONFIG,
+  mmdr: {
+    baseTheme: MMDR_BASE_THEME,
+    theme: MMDR_THEME,
+    version: MMDR_VERSION,
+  },
+});
 const MERMAID_CACHE_CONFIG_KEY = JSON.stringify(MERMAID_CONFIG);
 
 const MERMAID_VIEWER_STYLES = `
+[data-pretext-mermaid-svg] {
+  --mmdr-border: var(--border);
+  --mmdr-line: var(--muted-foreground);
+  --mmdr-node-fill: color-mix(in srgb, var(--background) 88%, var(--foreground) 12%);
+  --mmdr-text: var(--foreground);
+}
 [data-pretext-mermaid-svg] svg {
   color: var(--foreground);
   display: block;
@@ -120,6 +154,20 @@ type MermaidApi = {
   render: (id: string, source: string) => Promise<{ svg: string }>;
 };
 
+type MmdrApi = {
+  render: (source: string) => string;
+};
+
+type MmdrExports = {
+  memory: WebAssembly.Memory;
+  render: (
+    sourceLength: number,
+    baseThemeLength: number,
+    themeLength: number,
+    layoutLength: number,
+  ) => number;
+};
+
 type MermaidRenderJob = {
   reject: (reason: unknown) => void;
   resolve: (state: DiagramState) => void;
@@ -135,6 +183,8 @@ type MermaidIdleWindow = Window &
   };
 
 let mermaidApiPromise: Promise<MermaidApi> | null = null;
+let mmdrApiPromise: Promise<MmdrApi> | null = null;
+let isMmdrUnavailable = false;
 let mermaidInitializedConfigKey = "";
 let isMermaidRenderQueueRunning = false;
 const mermaidRenderQueue: MermaidRenderJob[] = [];
@@ -144,14 +194,17 @@ export function resetMarkdownMermaidRendererForTests() {
   mermaidScopedSvgCache.clear();
   mermaidRenderQueue.length = 0;
   mermaidApiPromise = null;
+  mmdrApiPromise = null;
+  isMmdrUnavailable = false;
   mermaidInitializedConfigKey = "";
   isMermaidRenderQueueRunning = false;
 }
 
+type DiagramRenderer = "basic" | "mermaid" | "mmdr";
 type DiagramState =
   | { status: "failed"; message: string }
   | { status: "loading" }
-  | { status: "ready"; svg: string };
+  | { renderer: DiagramRenderer; status: "ready"; svg: string };
 type ReadyDiagramState = Extract<DiagramState, { status: "ready" }>;
 
 // A per-instance async store for one diagram's mermaid render. Kept per
@@ -217,7 +270,7 @@ export function MarkdownGreenfieldDiagram({
       if (!limitMessage && store.key !== renderKey) {
         store.key = renderKey;
         store.result = null;
-        void renderMermaidDiagram(source, elementId).then((result) => {
+        void renderDiagram(source, elementId).then((result) => {
           if (store.key !== renderKey) return;
           store.result = result;
           for (const listener of store.listeners) listener();
@@ -256,6 +309,9 @@ export function MarkdownGreenfieldDiagram({
       aria-label={title || "Mermaid diagram"}
       className="group bg-muted/30 my-5 min-h-40 overflow-hidden rounded-md border"
       data-diagram-language="mermaid"
+      data-diagram-renderer={
+        state.status === "ready" ? state.renderer : undefined
+      }
       data-diagram-reserved-height={bodyHeight}
       data-diagram-state={state.status}
       data-pretext-component={componentName}
@@ -437,27 +493,27 @@ function DiagramCopyButton({
   );
 }
 
-async function renderMermaidDiagram(
+async function renderDiagram(
   source: string,
   id: string,
 ): Promise<DiagramState> {
-  const state = await getCachedMermaidDiagram(source);
+  const state = await getCachedDiagram(source);
   if (state.status !== "ready") return state;
-  const scopedKey = `${MERMAID_CACHE_CONFIG_KEY}\0${id}\0${source}`;
+  const scopedKey = `${DIAGRAM_CACHE_CONFIG_KEY}\0${state.renderer}\0${id}\0${source}`;
   let svg = mermaidScopedSvgCache.get(scopedKey);
   if (!svg) {
     svg = scopeCachedMermaidSvg(state.svg, id);
     mermaidScopedSvgCache.set(scopedKey, svg);
     trimMapToLimit(mermaidScopedSvgCache, MERMAID_SCOPED_CACHE_LIMIT);
   }
-  return { status: "ready", svg };
+  return { renderer: state.renderer, status: "ready", svg };
 }
 
-function getCachedMermaidDiagram(source: string) {
-  const key = `${MERMAID_CACHE_CONFIG_KEY}\0${source}`;
+function getCachedDiagram(source: string) {
+  const key = `${DIAGRAM_CACHE_CONFIG_KEY}\0${source}`;
   let cached = mermaidDiagramCache.get(key);
   if (!cached) {
-    cached = enqueueMermaidRender(() => loadMermaidDiagram(source));
+    cached = enqueueMermaidRender(() => loadDiagram(source));
     mermaidDiagramCache.set(key, cached);
     trimMapToLimit(mermaidDiagramCache, MERMAID_CACHE_LIMIT);
   }
@@ -508,6 +564,25 @@ function waitForMermaidRenderSlot() {
   });
 }
 
+async function loadDiagram(source: string): Promise<DiagramState> {
+  const mmdrState = await loadMmdrDiagram(source);
+  if (mmdrState.status === "ready") return mmdrState;
+  return loadMermaidDiagram(source);
+}
+
+async function loadMmdrDiagram(source: string): Promise<DiagramState> {
+  try {
+    const mmdr = await loadMmdrApi();
+    return {
+      renderer: "mmdr",
+      status: "ready",
+      svg: sanitizeSvg(mmdr.render(source)),
+    };
+  } catch {
+    return { status: "failed", message: "mmdr unavailable" };
+  }
+}
+
 async function loadMermaidDiagram(source: string): Promise<DiagramState> {
   try {
     const mermaid = await loadMermaidApi();
@@ -515,7 +590,11 @@ async function loadMermaidDiagram(source: string): Promise<DiagramState> {
       `markdown-diagram-cache-${hashMermaidSource(source)}`,
       source,
     );
-    return { status: "ready", svg: sanitizeSvg(result.svg) };
+    return {
+      renderer: "mermaid",
+      status: "ready",
+      svg: sanitizeSvg(result.svg),
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Invalid diagram";
     if (!/getBBox|layout|force-basic-fallback/i.test(message)) {
@@ -523,6 +602,20 @@ async function loadMermaidDiagram(source: string): Promise<DiagramState> {
     }
     return renderBasicMermaidDiagram(source);
   }
+}
+
+async function loadMmdrApi() {
+  if (!canUseMmdrRenderer()) {
+    throw new Error("mmdr is unavailable in this runtime");
+  }
+  if (isMmdrUnavailable) {
+    throw new Error("mmdr failed to load");
+  }
+  mmdrApiPromise ??= instantiateMmdrApi().catch((error) => {
+    isMmdrUnavailable = true;
+    throw error;
+  });
+  return mmdrApiPromise;
 }
 
 async function loadMermaidApi() {
@@ -535,6 +628,84 @@ async function loadMermaidApi() {
     mermaidInitializedConfigKey = MERMAID_CACHE_CONFIG_KEY;
   }
   return mermaid;
+}
+
+function canUseMmdrRenderer() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.fetch === "function" &&
+    typeof WebAssembly !== "undefined" &&
+    typeof TextDecoder !== "undefined" &&
+    typeof TextEncoder !== "undefined"
+  );
+}
+
+async function instantiateMmdrApi(): Promise<MmdrApi> {
+  let instance: WebAssembly.Instance | null = null;
+  let currentArgs: Uint8Array[] = [];
+  let currentResult: Uint8Array | null = null;
+  const imports = {
+    typst_env: {
+      wasm_minimal_protocol_send_result_to_host(
+        pointer: number,
+        length: number,
+      ) {
+        if (!instance) return;
+        const memory = new Uint8Array(
+          (instance.exports as unknown as MmdrExports).memory.buffer,
+        );
+        currentResult = memory.slice(pointer, pointer + length);
+      },
+      wasm_minimal_protocol_write_args_to_buffer(pointer: number) {
+        if (!instance) return;
+        const memory = new Uint8Array(
+          (instance.exports as unknown as MmdrExports).memory.buffer,
+        );
+        let offset = pointer;
+        for (const arg of currentArgs) {
+          memory.set(arg, offset);
+          offset += arg.length;
+        }
+      },
+    },
+  };
+  const response = await window.fetch(MMDR_WASM_URL);
+  if (!response.ok) {
+    throw new Error(`Failed to load mmdr renderer: ${response.status}`);
+  }
+  const wasm = await WebAssembly.instantiate(
+    await response.arrayBuffer(),
+    imports,
+  );
+  instance = wasm.instance;
+  const exports = instance.exports as unknown as MmdrExports;
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+
+  return {
+    render(source: string) {
+      currentArgs = [
+        encoder.encode(source),
+        encoder.encode(MMDR_BASE_THEME),
+        encoder.encode(MMDR_THEME_JSON),
+        encoder.encode(MMDR_LAYOUT),
+      ];
+      currentResult = null;
+      const status = exports.render(
+        currentArgs[0]?.length ?? 0,
+        currentArgs[1]?.length ?? 0,
+        currentArgs[2]?.length ?? 0,
+        currentArgs[3]?.length ?? 0,
+      );
+      const result = decoder.decode(currentResult ?? new Uint8Array());
+      currentArgs = [];
+      currentResult = null;
+      if (status !== 0) {
+        throw new Error(result || "mmdr failed to render the diagram");
+      }
+      return result;
+    },
+  };
 }
 
 function scopeCachedMermaidSvg(svg: string, idPrefix: string) {
@@ -587,6 +758,7 @@ function renderBasicMermaidDiagram(source: string): ReadyDiagramState {
       ? '<path d="M20 20h20v20H20z"/><path d="M44 20h20v20H44z"/><path d="M68 20h20v20H68z"/>'
       : "";
   return {
+    renderer: "basic",
     status: "ready",
     svg: `<svg role="img" aria-label="Mermaid diagram" data-pretext-basic-mermaid="${kind}" viewBox="0 0 720 160" width="100%" height="160" xmlns="http://www.w3.org/2000/svg"><rect width="720" height="160" rx="8" fill="currentColor" opacity="0.05"/>${piePaths}<text x="24" y="82" fill="currentColor" font-family="monospace" font-size="16">${escaped}</text></svg>`,
   };

@@ -86,6 +86,7 @@ try {
         snapshot.chunkCount > 0 &&
         snapshot.chunkCount <= 8 &&
         snapshot.diagrams.length >= 3 &&
+        snapshot.diagrams.some((diagram) => diagram.renderer === "mmdr") &&
         snapshot.diagrams.every((diagram) => diagram.state === "ready") &&
         snapshot.diagrams.every((diagram) => diagram.hasSvg) &&
         !snapshot.hasDiagramError &&
@@ -172,6 +173,7 @@ try {
         snapshot.isDark &&
         snapshot.contrastRatio >= 3 &&
         snapshot.diagrams.length >= 3 &&
+        snapshot.diagrams.some((diagram) => diagram.renderer === "mmdr") &&
         snapshot.diagrams.every((diagram) => diagram.state === "ready") &&
         snapshot.diagrams.every((diagram) => diagram.hasThemeStyle) &&
         snapshot.diagrams.every((diagram) => !diagram.hasSvgStyle) &&
@@ -555,6 +557,7 @@ function snapshotExpression() {
       height: Math.round(rect.height),
       labelFill: label ? getComputedStyle(label).fill : null,
       nodeFill: node ? getComputedStyle(node).fill : null,
+      renderer: element.getAttribute("data-diagram-renderer"),
       state: element.getAttribute("data-diagram-state"),
       width: Math.round(rect.width),
     }
