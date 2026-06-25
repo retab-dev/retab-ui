@@ -2,7 +2,10 @@
 
 import * as React from "react";
 
-import type { FixedGridRowScrollStrategy } from "@/components/ui/fixed-grid-virtualization";
+import type {
+  FixedGridRowScrollStrategy,
+  FixedGridVirtualItem,
+} from "@/components/ui/fixed-grid-virtualization";
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types";
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection";
 import {
@@ -12,6 +15,7 @@ import {
 
 export type JsonTableRowPolicy = {
   invalidateRows: () => void;
+  resyncRows: (virtualRows: FixedGridVirtualItem[]) => void;
   rowScrollStrategy: FixedGridRowScrollStrategy | undefined;
 };
 
@@ -21,12 +25,14 @@ export function useJsonTableRowPolicy({
   rowHeightPx,
   rowWindowRef,
   schemaVisibleColumns,
+  viewportHeightRef,
 }: {
   isJsonEditable: boolean;
   projectedRows: ProjectedRow[];
   rowHeightPx: number;
   rowWindowRef: React.RefObject<HTMLElement | null>;
   schemaVisibleColumns: VisibleColumn[];
+  viewportHeightRef: React.RefObject<number>;
 }): JsonTableRowPolicy {
   const getScalarReadOnlyRowPatchState =
     React.useCallback((): ScalarReadOnlyJsonRowPatchState => {
@@ -34,9 +40,16 @@ export function useJsonTableRowPolicy({
         isEnabled: !isJsonEditable,
         projectedRows,
         rowHeightPx,
+        viewportHeight: viewportHeightRef.current,
         visibleColumns: schemaVisibleColumns,
       };
-    }, [isJsonEditable, projectedRows, rowHeightPx, schemaVisibleColumns]);
+    }, [
+      isJsonEditable,
+      projectedRows,
+      rowHeightPx,
+      schemaVisibleColumns,
+      viewportHeightRef,
+    ]);
 
   const scalarReadOnlyRowPatcher = useScalarReadOnlyJsonRowPatcher({
     rowWindowRef,
@@ -53,8 +66,16 @@ export function useJsonTableRowPolicy({
   return React.useMemo(
     () => ({
       invalidateRows: scalarReadOnlyRowPatcher.invalidate,
+      resyncRows: isJsonEditable
+        ? scalarReadOnlyRowPatcher.invalidate
+        : scalarReadOnlyRowPatcher.resync,
       rowScrollStrategy,
     }),
-    [scalarReadOnlyRowPatcher.invalidate, rowScrollStrategy],
+    [
+      isJsonEditable,
+      scalarReadOnlyRowPatcher.invalidate,
+      scalarReadOnlyRowPatcher.resync,
+      rowScrollStrategy,
+    ],
   );
 }

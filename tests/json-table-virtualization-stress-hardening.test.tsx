@@ -191,6 +191,7 @@ function StressTable({
   visiblePaths,
   onPatch,
   applyPatches,
+  jsonEditMode,
   overscan,
   jumpOverscan,
 }: {
@@ -198,6 +199,7 @@ function StressTable({
   visiblePaths: string[];
   onPatch: (patch: Record<string, unknown>) => void;
   applyPatches: boolean;
+  jsonEditMode: "editable" | "readOnly";
   overscan: number;
   jumpOverscan: number;
 }) {
@@ -238,7 +240,7 @@ function StressTable({
       setStopAt={vi.fn()}
       draggedItemKeyRef={{ current: null }}
       draggedItemParentPathRef={{ current: null }}
-      jsonEditMode="editable"
+      jsonEditMode={jsonEditMode}
       schemaEditMode="readOnly"
       projectedRows={projectedRows}
       visibleColumns={visiblePaths.map(visibleColumn)}
@@ -265,6 +267,7 @@ function renderStressTable({
     "lines.*.shipped_at",
   ],
   applyPatches = true,
+  jsonEditMode = "editable",
   overscan = 1,
   jumpOverscan = overscan,
   onPatch = vi.fn(),
@@ -272,6 +275,7 @@ function renderStressTable({
   rowCount?: number;
   visiblePaths?: string[];
   applyPatches?: boolean;
+  jsonEditMode?: "editable" | "readOnly";
   overscan?: number;
   jumpOverscan?: number;
   onPatch?: (patch: Record<string, unknown>) => void;
@@ -282,6 +286,7 @@ function renderStressTable({
       visiblePaths={visiblePaths}
       onPatch={onPatch}
       applyPatches={applyPatches}
+      jsonEditMode={jsonEditMode}
       overscan={overscan}
       jumpOverscan={jumpOverscan}
     />,
@@ -764,6 +769,40 @@ describe("json table virtualization stress hardening", () => {
       }
     },
   );
+
+  it("resyncs read-only scalar rows after an imperative vertical patch settles", async () => {
+    const restoreAnimationFrame = installSynchronousAnimationFrame();
+    const view = renderStressTable({
+      jsonEditMode: "readOnly",
+      rowCount: 64,
+      visiblePaths: ["lines.*.name", "lines.*.amount"],
+      overscan: 12,
+      jumpOverscan: 12,
+    });
+
+    try {
+      await waitForCell(view.container, "lines.0.name");
+      setViewportHeight(view.container, 64);
+
+      await scrollToRow(view.container, 9);
+
+      await waitFor(() =>
+        expect(rowWindow(view.container).style.marginTop).toBe("0px"),
+      );
+      expect(row(view.container, 0).hidden).toBe(false);
+      expect(row(view.container, 0).style.transform).toBe(
+        "translate3d(0, 0px, 0)",
+      );
+      expect(cell(view.container, "lines.0.name").textContent).toContain(
+        "line 0",
+      );
+      expect(cell(view.container, "lines.9.name").textContent).toContain(
+        "line 9",
+      );
+    } finally {
+      restoreAnimationFrame();
+    }
+  });
 
   it("commits a dirty text editor when it scrolls out and does not patch the next visible row", async () => {
     const restoreAnimationFrame = installSynchronousAnimationFrame();

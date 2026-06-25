@@ -84,6 +84,63 @@ describe("scalar read-only JSON row patcher", () => {
     });
   });
 
+  it("resyncs stale row slots and row-window geometry after an imperative patch", () => {
+    const rowWindow = buildRowWindow([
+      { rowIndex: 0, cells: ["row 0", "1"] },
+      { rowIndex: 1, cells: ["row 1", "2"] },
+      { rowIndex: 2, cells: ["row 2", "3"] },
+      { rowIndex: 3, cells: ["row 3", "4"] },
+      { rowIndex: 4, cells: ["row 4", "5"] },
+    ]);
+    const state = createPatchState();
+    const { result } = renderHook(() =>
+      useScalarReadOnlyJsonRowPatcher({
+        rowWindowRef: { current: rowWindow },
+        getState: () => state,
+      }),
+    );
+
+    expect(result.current.patch(createJumpViewport())).toBe("handled");
+    expect(rowWindow.style.marginTop).toBe("30px");
+
+    result.current.resync([
+      { index: 0, start: 0, size: 10, end: 10 },
+      { index: 1, start: 10, size: 10, end: 20 },
+      { index: 2, start: 20, size: 10, end: 30 },
+      { index: 3, start: 30, size: 10, end: 40 },
+      { index: 4, start: 40, size: 10, end: 50 },
+    ]);
+
+    const rows = rowHandles(rowWindow);
+    expect(rows.map((row) => row.dataset.index)).toEqual([
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+    ]);
+    expect(rows.map((row) => row.hidden)).toEqual([
+      false,
+      false,
+      false,
+      false,
+      false,
+    ]);
+    expect(rows.map((row) => row.style.transform)).toEqual([
+      "translate3d(0, 0px, 0)",
+      "translate3d(0, 10px, 0)",
+      "translate3d(0, 20px, 0)",
+      "translate3d(0, 30px, 0)",
+      "translate3d(0, 40px, 0)",
+    ]);
+    expect(rowWindow.style.marginTop).toBe("0px");
+    expect(rowWindow.style.height).toBe("50px");
+    expect(rowWindow.style.top).toBe("-30px");
+    expect(rowWindow.style.bottom).toBe("-30px");
+    expect(rowText(rows[0]!)).toEqual(["row 0", "1"]);
+    expect(rowText(rows[4]!)).toEqual(["row 4", "5"]);
+  });
+
   it("patches boolean cells instead of rejecting the row", () => {
     const rowWindow = buildRowWindow([
       { rowIndex: 0, cells: ["row 0", "1", "false"] },
@@ -187,6 +244,7 @@ function createPatchState(
       projectedRow(rowIndex),
     ),
     rowHeightPx: 10,
+    viewportHeight: 20,
     visibleColumns: [visibleColumn("name"), visibleColumn("amount")],
     ...overrides,
   };
@@ -211,7 +269,6 @@ function projectedRow(rowIndex: number): ProjectedRow {
       {
         key: "name",
         value: `row ${rowIndex}`,
-        displayValue: `row ${rowIndex}`,
         templateFieldPath: "name",
         materializedFieldPath: "name",
         arrayIndexes: [],
@@ -219,7 +276,6 @@ function projectedRow(rowIndex: number): ProjectedRow {
       {
         key: "amount",
         value: rowIndex + 1,
-        displayValue: String(rowIndex + 1),
         templateFieldPath: "amount",
         materializedFieldPath: "amount",
         arrayIndexes: [],
@@ -227,7 +283,6 @@ function projectedRow(rowIndex: number): ProjectedRow {
       {
         key: "is_paid",
         value: rowIndex % 2 === 1,
-        displayValue: rowIndex % 2 === 1 ? "true" : "false",
         templateFieldPath: "is_paid",
         materializedFieldPath: "is_paid",
         arrayIndexes: [],

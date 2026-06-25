@@ -10,6 +10,7 @@ import {
   type FixedGridViewport,
 } from "@/components/ui/fixed-grid-virtualization";
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types";
+import { jsonTableDisplayText } from "@/components/json-table/json-table-display-value";
 import { markJsonTableProfile } from "@/components/json-table/json-table-profiler";
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection";
 
@@ -255,7 +256,10 @@ function displayTextForCell(
   const fieldMetadata = column?.fieldMetadata;
   if (!materializedFieldPath || !fieldMetadata) return "";
 
-  return projectedCell.displayValue || emptyDisplayText(fieldMetadata.kind);
+  const displayText =
+    projectedCell.displayValue ??
+    jsonTableDisplayText({ fieldMetadata, jsonValue: projectedCell.value });
+  return displayText || emptyDisplayText(fieldMetadata.kind);
 }
 
 function emptyDisplayText(kind: string) {

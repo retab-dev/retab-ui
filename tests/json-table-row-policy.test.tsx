@@ -12,6 +12,7 @@ const schemaVisibleColumns: VisibleColumn[] = [];
 
 function renderRowPolicy(isJsonEditable: boolean) {
   const rowWindowRef = { current: null };
+  const viewportHeightRef = { current: 0 };
 
   return renderHook(() =>
     useJsonTableRowPolicy({
@@ -20,6 +21,7 @@ function renderRowPolicy(isJsonEditable: boolean) {
       rowHeightPx: 32,
       rowWindowRef,
       schemaVisibleColumns,
+      viewportHeightRef,
     }),
   );
 }
@@ -29,6 +31,7 @@ describe("useJsonTableRowPolicy", () => {
     const { result } = renderRowPolicy(true);
 
     expect(result.current.rowScrollStrategy).toBeUndefined();
+    expect(() => result.current.resyncRows([])).not.toThrow();
   });
 
   it("installs the read-only DOM patch strategy only for read-only tables", () => {

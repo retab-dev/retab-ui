@@ -265,12 +265,14 @@ export const SingleFileVirtualizedTable =
       }, []);
       const headerScrollRef = useRef<HTMLDivElement>(null);
       const rowWindowRef = useRef<HTMLTableSectionElement>(null);
+      const viewportClientHeightRef = useRef(0);
       const rowPolicy = useJsonTableRowPolicy({
         isJsonEditable,
         projectedRows,
         rowHeightPx,
         rowWindowRef,
         schemaVisibleColumns,
+        viewportHeightRef: viewportClientHeightRef,
       });
       const {
         renderedColumnWindow,
@@ -291,6 +293,7 @@ export const SingleFileVirtualizedTable =
         scrollElement,
         scrollRef,
       });
+      viewportClientHeightRef.current = viewportClientHeight;
 
       useKeyedLayoutEffect(
         joinEffectKey([
@@ -300,7 +303,7 @@ export const SingleFileVirtualizedTable =
           projectedRows,
         ]),
         () => {
-          rowPolicy.invalidateRows();
+          rowPolicy.resyncRows(virtualRows);
         },
       );
       recordJsonTableRender("SingleFileVirtualizedTable", document.id, {
