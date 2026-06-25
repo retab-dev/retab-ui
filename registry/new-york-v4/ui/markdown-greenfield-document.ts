@@ -79,6 +79,8 @@ export type MarkdownGreenfieldBlock = {
   isGenerated: boolean;
   isHostile: boolean;
   kind: MarkdownGreenfieldBlockKind;
+  sourceLineCount: number;
+  sourceLineLengths: readonly number[];
   sourceRange: MarkdownSourceRange | null;
   sourceText: string;
 };
@@ -90,6 +92,7 @@ export type MarkdownGreenfieldChunk = {
   index: number;
   isHostile: boolean;
   sourceEndLine: number;
+  sourceLineCount: number;
   sourceRange: MarkdownSourceRange | null;
   sourceStartLine: number;
   sourceText: string;
@@ -135,7 +138,6 @@ function createUncachedMarkdownGreenfieldDocument(
     blocks,
     unified,
   });
-  freezeMarkdownHastNode(unified.hast);
 
   return freezeMarkdownGreenfieldDocument({
     blocks,
@@ -258,6 +260,14 @@ function createMarkdownGreenfieldBlocks({
       range: sourceRange,
       sourceMap: unified.sourceMap,
     });
+    const normalizedSourceText =
+      sourceText ||
+      (sourceRange
+        ? text.slice(sourceRange.startOffset, sourceRange.endOffset)
+        : "");
+    const sourceMetrics = markdownGreenfieldSourceMetricsForText(
+      normalizedSourceText,
+    );
     const line = sourceRange?.startLine ?? unified.sourceMap.lineCount;
     const block: MarkdownGreenfieldBlock = {
       hastChildren: [child],
@@ -267,20 +277,20 @@ function createMarkdownGreenfieldBlocks({
       isHostile: isHostileMarkdownGreenfieldBlock({
         child,
         kind,
-        sourceText,
+        sourceLineCount: sourceMetrics.sourceLineCount,
+        sourceText: normalizedSourceText,
       }),
       kind,
+      sourceLineCount: sourceMetrics.sourceLineCount,
+      sourceLineLengths: sourceMetrics.sourceLineLengths,
       sourceRange,
-      sourceText:
-        sourceText ||
-        (sourceRange
-          ? text.slice(sourceRange.startOffset, sourceRange.endOffset)
-          : ""),
+      sourceText: normalizedSourceText,
     };
     blocks.push(block);
   }
 
   if (!blocks.length) {
+    const sourceMetrics = markdownGreenfieldSourceMetricsForText(text);
     blocks.push({
       hastChildren: [],
       id: "block-1-empty",
@@ -288,6 +298,8 @@ function createMarkdownGreenfieldBlocks({
       isGenerated: true,
       isHostile: false,
       kind: "paragraph",
+      sourceLineCount: sourceMetrics.sourceLineCount,
+      sourceLineLengths: sourceMetrics.sourceLineLengths,
       sourceRange: {
         endLine: 1,
         endOffset: text.length,
@@ -325,7 +337,7 @@ function createMarkdownGreenfieldChunks({
       continue;
     }
 
-    const nextLineCount = lineCountForBlocks([...current, block]);
+    const nextLineCount = lineCountForBlocks(current, block);
     const startsNewChunk =
       current.length > 0 &&
       block.kind === "heading" &&
@@ -363,6 +375,12 @@ function createChunk(
     sourceRange?.endLine ??
     blocks[blocks.length - 1]?.sourceRange?.endLine ??
     sourceStartLine;
+  const sourceLineCount = sourceRange
+    ? sourceEndLine - sourceStartLine + 1
+    : Math.max(
+        1,
+        blocks.reduce((sum, block) => sum + block.sourceLineCount, 0),
+      );
 
   return {
     blockIds: blocks.map((block) => block.id),
@@ -371,6 +389,7 @@ function createChunk(
     index,
     isHostile: blocks.some((block) => block.isHostile),
     sourceEndLine,
+    sourceLineCount,
     sourceRange,
     sourceStartLine,
     sourceText: sourceRange
@@ -793,19 +812,18 @@ function hasClassName(element: MarkdownHastElement, className: string) {
 function isHostileMarkdownGreenfieldBlock({
   child,
   kind,
+  sourceLineCount,
   sourceText,
 }: {
   child: MarkdownHastNode;
   kind: MarkdownGreenfieldBlockKind;
+  sourceLineCount: number;
   sourceText: string;
 }) {
   if (sourceText.length > HOSTILE_TEXT_LENGTH) return true;
   if (countHastNodes(child) > HOSTILE_HAST_NODE_COUNT) return true;
   if (maxHastDepth(child) > HOSTILE_HAST_DEPTH) return true;
-  if (
-    kind === "code" &&
-    sourceText.split(/\r\n|[\n\r\u2028\u2029]/).length > HOSTILE_CODE_LINE_COUNT
-  ) {
+  if (kind === "code" && sourceLineCount > HOSTILE_CODE_LINE_COUNT) {
     return true;
   }
   if (kind === "table" && countTableCells(child) > HOSTILE_TABLE_CELL_COUNT) {
@@ -831,17 +849,34 @@ function maxHastDepth(node: MarkdownHastNode): number {
   return 1 + Math.max(...element.children.map(maxHastDepth));
 }
 
-function lineCountForBlocks(blocks: readonly MarkdownGreenfieldBlock[]) {
-  const ranges = blocks
-    .map((block) => block.sourceRange)
-    .filter((range): range is MarkdownSourceRange => Boolean(range));
-  if (!ranges.length) return blocks.length;
+function lineCountForBlocks(
+  blocks: readonly MarkdownGreenfieldBlock[],
+  nextBlock: MarkdownGreenfieldBlock,
+) {
+  let fallbackLineCount = 0;
+  let sourceEndLine = 0;
+  let sourceStartLine = 0;
 
-  return (
-    Math.max(...ranges.map((range) => range.endLine)) -
-    Math.min(...ranges.map((range) => range.startLine)) +
-    1
-  );
+  for (const block of blocks) {
+    fallbackLineCount += block.sourceLineCount;
+    const range = block.sourceRange;
+    if (!range) continue;
+    sourceStartLine = sourceStartLine
+      ? Math.min(sourceStartLine, range.startLine)
+      : range.startLine;
+    sourceEndLine = Math.max(sourceEndLine, range.endLine);
+  }
+  fallbackLineCount += nextBlock.sourceLineCount;
+  const nextRange = nextBlock.sourceRange;
+  if (nextRange) {
+    sourceStartLine = sourceStartLine
+      ? Math.min(sourceStartLine, nextRange.startLine)
+      : nextRange.startLine;
+    sourceEndLine = Math.max(sourceEndLine, nextRange.endLine);
+  }
+
+  if (!sourceStartLine) return Math.max(1, fallbackLineCount);
+  return sourceEndLine - sourceStartLine + 1;
 }
 
 function countTableCells(node: MarkdownHastNode): number {
@@ -855,6 +890,33 @@ function countTableCells(node: MarkdownHastNode): number {
       0,
     )
   );
+}
+
+function markdownGreenfieldSourceMetricsForText(sourceText: string) {
+  const sourceLineLengths: number[] = [];
+  let sourceLineLength = 0;
+
+  for (let index = 0; index < sourceText.length; index += 1) {
+    const charCode = sourceText.charCodeAt(index);
+    if (charCode === 13) {
+      sourceLineLengths.push(sourceLineLength);
+      sourceLineLength = 0;
+      if (sourceText.charCodeAt(index + 1) === 10) index += 1;
+      continue;
+    }
+    if (charCode === 10 || charCode === 0x2028 || charCode === 0x2029) {
+      sourceLineLengths.push(sourceLineLength);
+      sourceLineLength = 0;
+      continue;
+    }
+    sourceLineLength += 1;
+  }
+
+  sourceLineLengths.push(sourceLineLength);
+  return {
+    sourceLineCount: sourceLineLengths.length,
+    sourceLineLengths,
+  };
 }
 
 function readHastElement(node: unknown): MarkdownHastElement | null {
@@ -907,12 +969,14 @@ function freezeMarkdownHastNode(node: unknown) {
   Object.freeze(node);
 }
 
-function freezeMarkdownGreenfieldDocument(
+export function freezeMarkdownGreenfieldDocument(
   document: MarkdownGreenfieldDocument,
 ) {
+  freezeMarkdownHastNode(document.unified.hast);
   for (const block of document.blocks) {
     if (block.sourceRange) Object.freeze(block.sourceRange);
     Object.freeze(block.hastChildren);
+    Object.freeze(block.sourceLineLengths);
     Object.freeze(block);
   }
   for (const chunk of document.chunks) {

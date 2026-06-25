@@ -4,12 +4,13 @@ import * as React from "react";
 
 import {
   createMarkdownGreenfieldDocument,
+  freezeMarkdownGreenfieldDocument,
   markdownGreenfieldDocumentTextKey,
   type MarkdownGreenfieldDocument,
 } from "./markdown-greenfield-document";
 
 export const MARKDOWN_GREENFIELD_ASYNC_DOCUMENT_MIN_CHARS = 60_000;
-const MARKDOWN_GREENFIELD_DOCUMENT_WORKER_ENABLED = false;
+const MARKDOWN_GREENFIELD_DOCUMENT_WORKER_ENABLED = true;
 const MARKDOWN_GREENFIELD_DOCUMENT_WORKER_READY_TIMEOUT_MS = 800;
 
 type MarkdownIdleWindow = Window &
@@ -131,7 +132,7 @@ function startMarkdownDocumentEntry(entry: MarkdownDocumentEntry) {
 
 function startMarkdownDocumentWorker(entry: MarkdownDocumentEntry) {
   const worker = new Worker(
-    new URL("./markdown-greenfield-document.worker", import.meta.url),
+    new URL("./markdown-greenfield-document.worker.ts", import.meta.url),
     { type: "module" },
   );
   const id = nextMarkdownDocumentWorkerRequestId++;
@@ -151,10 +152,14 @@ function startMarkdownDocumentWorker(entry: MarkdownDocumentEntry) {
   worker.onmessage = (event: MessageEvent<MarkdownDocumentWorkerResponse>) => {
     if (event.data.type === "ready") {
       window.clearTimeout(readyTimeoutId);
-      worker.postMessage({
-        id,
-        text: entry.text,
-      } satisfies MarkdownDocumentWorkerRequest);
+      try {
+        worker.postMessage({
+          id,
+          text: entry.text,
+        } satisfies MarkdownDocumentWorkerRequest);
+      } catch {
+        fallBackToMainThread();
+      }
       return;
     }
     if (event.data.id !== id || isSettled) return;
@@ -163,7 +168,7 @@ function startMarkdownDocumentWorker(entry: MarkdownDocumentEntry) {
     worker.terminate();
     if (event.data.ok) {
       publishMarkdownDocumentState(entry, {
-        document: event.data.document,
+        document: freezeMarkdownGreenfieldDocument(event.data.document),
         status: "ready",
       });
       return;

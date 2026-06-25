@@ -8,6 +8,7 @@ import {
   findMarkdownGreenfieldChunkBySourceLine,
   findMarkdownGreenfieldChunkBySourceOffset,
   findMarkdownGreenfieldFragmentTargetById,
+  freezeMarkdownGreenfieldDocument,
 } from "@/registry/new-york-v4/ui/markdown-greenfield-document";
 import type {
   MarkdownHastElement,
@@ -265,6 +266,22 @@ describe("pretext markdown greenfield document", () => {
     expect(document.blocks[0]?.sourceText).toContain("title: Rich Blocks");
   });
 
+  it("stores source line metrics on blocks and chunks", () => {
+    const markdown = ["```ts", "const a = 1", "const b = 2", "```"].join(
+      "\r\n",
+    );
+    const document = createMarkdownGreenfieldDocument(markdown);
+    const codeBlock = document.blocks.find((block) => block.kind === "code");
+
+    expect(codeBlock?.sourceLineCount).toBe(4);
+    expect(codeBlock?.sourceLineLengths).toEqual(
+      codeBlock?.sourceText
+        .split(/\r\n|[\n\r\u2028\u2029]/)
+        .map((line) => line.length),
+    );
+    expect(document.chunks[0]?.sourceLineCount).toBe(document.lineCount);
+  });
+
   it("maps source lines, source offsets, and fragment blocks to virtual chunks", () => {
     const markdown = [
       "# Start",
@@ -335,10 +352,28 @@ describe("pretext markdown greenfield document", () => {
     expect(Object.isFrozen(first)).toBe(true);
     expect(Object.isFrozen(first.blocks)).toBe(true);
     expect(Object.isFrozen(first.blocks[0])).toBe(true);
+    expect(Object.isFrozen(first.blocks[0]?.sourceLineLengths)).toBe(true);
     expect(Object.isFrozen(first.chunks)).toBe(true);
     expect(() => {
       (first.blocks as unknown[]).push(first.blocks[0]);
     }).toThrow();
+  });
+
+  it("refreezes worker-cloned document models", () => {
+    const document = createMarkdownGreenfieldDocument(
+      ["# Worker Clone", "", "Repeated content."].join("\n"),
+    );
+    const cloned = structuredClone(document);
+
+    expect(Object.isFrozen(cloned)).toBe(false);
+
+    const frozen = freezeMarkdownGreenfieldDocument(cloned);
+
+    expect(Object.isFrozen(frozen)).toBe(true);
+    expect(Object.isFrozen(frozen.blocks[0])).toBe(true);
+    expect(Object.isFrozen(frozen.blocks[0]?.sourceLineLengths)).toBe(true);
+    expect(Object.isFrozen(frozen.unified.hast)).toBe(true);
+    expect(Object.isFrozen(frozen.unified.hast.children)).toBe(true);
   });
 
   it("treats pathological AST nesting as hostile before rendering", () => {

@@ -17,7 +17,7 @@ const MONO_LINE_HEIGHT = 20;
 const APPROX_BODY_CHAR_WIDTH = 7.9;
 const APPROX_MONO_CHAR_WIDTH = 7.8;
 export const MARKDOWN_GREENFIELD_LAYOUT_POLICY_VERSION =
-  "greenfield-layout-rich-blocks-v3";
+  "greenfield-layout-rich-blocks-v4";
 const LAYOUT_CACHE_LIMIT = 64;
 
 const markdownGreenfieldLayoutDocumentIds = new WeakMap<
@@ -177,10 +177,7 @@ function estimateMarkdownGreenfieldBlockHeight({
 }) {
   if (block.kind === "thematicBreak") return 36 * fontScale;
   if (block.kind === "frontmatter") {
-    const lines = Math.max(
-      1,
-      block.sourceText.split(/\r\n|[\n\r\u2028\u2029]/).length,
-    );
+    const lines = Math.max(1, block.sourceLineCount);
     return (72 + lines * MONO_LINE_HEIGHT) * fontScale;
   }
   if (block.kind === "footnotes")
@@ -192,14 +189,11 @@ function estimateMarkdownGreenfieldBlockHeight({
   if (block.kind === "math") return 120 * fontScale;
   if (block.kind === "component") return 160 * fontScale;
   if (block.kind === "code") {
-    const lines = Math.max(
-      1,
-      block.sourceText.split(/\r\n|[\n\r\u2028\u2029]/).length,
-    );
+    const lines = Math.max(1, block.sourceLineCount);
     return 48 * fontScale + lines * MONO_LINE_HEIGHT * fontScale;
   }
   if (block.kind === "table") {
-    const rows = Math.max(2, (block.sourceText.match(/\n/g)?.length ?? 1) + 1);
+    const rows = Math.max(2, block.sourceLineCount);
     return (48 + rows * 36) * fontScale;
   }
   if (block.kind === "image") return 280 * fontScale;
@@ -213,13 +207,11 @@ function estimateTextBlock(
   fontScale: number,
   multiplier: number,
 ) {
-  const text = block.sourceText || " ";
   const charWidth =
     block.kind === "code" ? APPROX_MONO_CHAR_WIDTH : APPROX_BODY_CHAR_WIDTH;
   const columns = Math.max(12, Math.floor(textWidth / (charWidth * fontScale)));
-  const sourceLines = text.split(/\r\n|[\n\r\u2028\u2029]/);
-  const visualLines = sourceLines.reduce(
-    (sum, line) => sum + Math.max(1, Math.ceil(line.length / columns)),
+  const visualLines = block.sourceLineLengths.reduce(
+    (sum, lineLength) => sum + Math.max(1, Math.ceil(lineLength / columns)),
     0,
   );
   return (
