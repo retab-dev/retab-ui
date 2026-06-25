@@ -17,7 +17,7 @@ import type { SegmentAnchor } from "@/components/ui/segmented-document-model";
 import { useSegmentedDocumentViewport } from "@/components/ui/segmented-document-provider";
 
 const SOURCE_HIGHLIGHT_CLASS =
-  "pointer-events-none absolute z-10 rounded-[2px] border border-primary/70 bg-primary/12 shadow-[0_4px_16px_rgb(0_0_0_/_8%)]";
+  "pointer-events-none absolute z-10 rounded-[2px] border border-blue-500/80 bg-blue-500/15 shadow-[0_4px_16px_rgb(37_99_235_/_18%)]";
 
 type AnchorWithBounds = SegmentAnchor & {
   bounds: NonNullable<SegmentAnchor["bounds"]>;
@@ -89,6 +89,7 @@ export function useSegmentedPdfSourceOverlay(link: SegmentedSourceLink) {
           {anchors.map((anchor) => (
             <PdfHighlight
               key={anchor.id}
+              className={SOURCE_HIGHLIGHT_CLASS}
               area={{
                 left: anchor.bounds.x * 100,
                 top: anchor.bounds.y * 100,
