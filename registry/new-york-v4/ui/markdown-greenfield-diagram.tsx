@@ -7,6 +7,9 @@ import { joinEffectKey } from "@/lib/effect-key";
 
 const MERMAID_MAX_LINES = 160;
 const MERMAID_MAX_SOURCE_LENGTH = 12_000;
+const MERMAID_CACHE_LIMIT = 64;
+const MERMAID_SCOPED_CACHE_LIMIT = 128;
+const MERMAID_VIEWPORT_ROOT_MARGIN = "640px 0px";
 
 const MERMAID_CONFIG = {
   flowchart: {
@@ -19,10 +22,131 @@ const MERMAID_CONFIG = {
   },
   startOnLoad: false,
   suppressErrorRendering: true,
-  theme: "default",
+  theme: "base",
+  themeVariables: {
+    background: "transparent",
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    lineColor: "#64748b",
+    primaryBorderColor: "#94a3b8",
+    primaryColor: "#f8fafc",
+    primaryTextColor: "#0f172a",
+    secondaryColor: "#ecfeff",
+    tertiaryColor: "#f0fdf4",
+  },
 } as const;
 
+const MERMAID_CACHE_CONFIG_KEY = JSON.stringify(MERMAID_CONFIG);
+
+const MERMAID_VIEWER_STYLES = `
+[data-pretext-mermaid-svg] svg {
+  color: var(--foreground);
+  display: block;
+  height: auto;
+  margin-inline: auto;
+  max-width: 100%;
+}
+[data-pretext-mermaid-svg] rect.background {
+  fill: transparent;
+  stroke: none;
+}
+[data-pretext-mermaid-svg] .node rect,
+[data-pretext-mermaid-svg] .node polygon,
+[data-pretext-mermaid-svg] .node circle,
+[data-pretext-mermaid-svg] .node ellipse,
+[data-pretext-mermaid-svg] .node path,
+[data-pretext-mermaid-svg] .basic.label-container,
+[data-pretext-mermaid-svg] .label-container,
+[data-pretext-mermaid-svg] .actor,
+[data-pretext-mermaid-svg] .entityBox,
+[data-pretext-mermaid-svg] .state,
+[data-pretext-mermaid-svg] .classGroup rect,
+[data-pretext-mermaid-svg] .requirement,
+[data-pretext-mermaid-svg] .requirementBox,
+[data-pretext-mermaid-svg] .element,
+[data-pretext-mermaid-svg] .cluster rect,
+[data-pretext-mermaid-svg] .note,
+[data-pretext-mermaid-svg] .task {
+  fill: color-mix(in srgb, var(--background) 88%, var(--foreground) 12%);
+  stroke: var(--border);
+  stroke-width: 1px;
+}
+[data-pretext-mermaid-svg] .cluster rect,
+[data-pretext-mermaid-svg] .section,
+[data-pretext-mermaid-svg] .grid .tick line {
+  fill: color-mix(in srgb, var(--background) 94%, var(--foreground) 6%);
+  stroke: var(--border);
+}
+[data-pretext-mermaid-svg] text,
+[data-pretext-mermaid-svg] tspan,
+[data-pretext-mermaid-svg] .label,
+[data-pretext-mermaid-svg] .label text,
+[data-pretext-mermaid-svg] .nodeLabel,
+[data-pretext-mermaid-svg] .edgeLabel,
+[data-pretext-mermaid-svg] .actor,
+[data-pretext-mermaid-svg] .messageText,
+[data-pretext-mermaid-svg] .noteText,
+[data-pretext-mermaid-svg] .taskText,
+[data-pretext-mermaid-svg] .sectionTitle,
+[data-pretext-mermaid-svg] .titleText {
+  color: var(--foreground);
+  fill: var(--foreground);
+}
+[data-pretext-mermaid-svg] .edgePath path,
+[data-pretext-mermaid-svg] .flowchart-link,
+[data-pretext-mermaid-svg] .messageLine0,
+[data-pretext-mermaid-svg] .messageLine1,
+[data-pretext-mermaid-svg] .actor-line,
+[data-pretext-mermaid-svg] .relation,
+[data-pretext-mermaid-svg] .transition,
+[data-pretext-mermaid-svg] line {
+  fill: none;
+  stroke: var(--muted-foreground);
+}
+[data-pretext-mermaid-svg] marker path,
+[data-pretext-mermaid-svg] marker polygon,
+[data-pretext-mermaid-svg] marker circle,
+[data-pretext-mermaid-svg] .marker,
+[data-pretext-mermaid-svg] .arrowMarkerPath {
+  fill: var(--muted-foreground);
+  stroke: var(--muted-foreground);
+}
+`;
+
 const mermaidDiagramCache = new Map<string, Promise<DiagramState>>();
+const mermaidScopedSvgCache = new Map<string, string>();
+
+type MermaidApi = {
+  initialize?: (config: typeof MERMAID_CONFIG) => void;
+  render: (id: string, source: string) => Promise<{ svg: string }>;
+};
+
+type MermaidRenderJob = {
+  reject: (reason: unknown) => void;
+  resolve: (state: DiagramState) => void;
+  run: () => Promise<DiagramState>;
+};
+
+type MermaidIdleWindow = Window &
+  typeof globalThis & {
+    requestIdleCallback?: (
+      callback: () => void,
+      options?: { timeout?: number },
+    ) => number;
+  };
+
+let mermaidApiPromise: Promise<MermaidApi> | null = null;
+let mermaidInitializedConfigKey = "";
+let isMermaidRenderQueueRunning = false;
+const mermaidRenderQueue: MermaidRenderJob[] = [];
+
+export function resetMarkdownMermaidRendererForTests() {
+  mermaidDiagramCache.clear();
+  mermaidScopedSvgCache.clear();
+  mermaidRenderQueue.length = 0;
+  mermaidApiPromise = null;
+  mermaidInitializedConfigKey = "";
+  isMermaidRenderQueueRunning = false;
+}
 
 type DiagramState =
   | { status: "failed"; message: string }
@@ -71,6 +195,10 @@ export function MarkdownGreenfieldDiagram({
     : undefined;
   const describedBy =
     [descriptionId, captionId].filter(Boolean).join(" ") || undefined;
+  const [figureRef, isRenderEligible] = useMermaidRenderEligibility({
+    disabled: Boolean(limitMessage),
+    source,
+  });
 
   // Derive the displayed state: a limit message fails immediately; otherwise the
   // state follows this instance's async mermaid store (loading until resolved).
@@ -79,7 +207,8 @@ export function MarkdownGreenfieldDiagram({
     storeRef.current = { key: "", listeners: new Set(), result: null };
   }
   const store = storeRef.current;
-  const renderKey = limitMessage ? "" : `${elementId}\0${source}`;
+  const renderKey =
+    limitMessage || !isRenderEligible ? "" : `${elementId}\0${source}`;
   const subscribe = React.useCallback(
     (onStoreChange: () => void) => {
       store.listeners.add(onStoreChange);
@@ -122,6 +251,7 @@ export function MarkdownGreenfieldDiagram({
 
   return (
     <figure
+      ref={figureRef}
       aria-describedby={describedBy}
       aria-label={title || "Mermaid diagram"}
       className="group bg-muted/30 my-5 min-h-40 overflow-hidden rounded-md border"
@@ -185,7 +315,16 @@ export function MarkdownGreenfieldDiagram({
         tabIndex={0}
       >
         {state.status === "ready" ? (
-          <div dangerouslySetInnerHTML={{ __html: state.svg }} />
+          <>
+            <style data-pretext-mermaid-styles="">
+              {MERMAID_VIEWER_STYLES}
+            </style>
+            <div
+              className="text-foreground"
+              data-pretext-mermaid-svg=""
+              dangerouslySetInnerHTML={{ __html: state.svg }}
+            />
+          </>
         ) : (
           <>
             {state.status === "failed" ? (
@@ -218,6 +357,47 @@ export function MarkdownGreenfieldDiagram({
       ) : null}
     </figure>
   );
+}
+
+function useMermaidRenderEligibility({
+  disabled,
+  source,
+}: {
+  disabled: boolean;
+  source: string;
+}) {
+  const ref = React.useRef<HTMLElement | null>(null);
+  const [isEligible, setIsEligible] = React.useState(
+    () => !disabled && typeof IntersectionObserver === "undefined",
+  );
+
+  useKeyedLayoutEffect(joinEffectKey([disabled, source]), () => {
+    if (disabled) {
+      setIsEligible(false);
+      return;
+    }
+    if (typeof IntersectionObserver === "undefined") {
+      setIsEligible(true);
+      return;
+    }
+    const element = ref.current;
+    if (!element) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry?.isIntersecting && (entry?.intersectionRatio ?? 0) <= 0) {
+          return;
+        }
+        setIsEligible(true);
+        observer.disconnect();
+      },
+      { root: null, rootMargin: MERMAID_VIEWPORT_ROOT_MARGIN },
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  });
+
+  return [ref, isEligible] as const;
 }
 
 function DiagramCopyButton({
@@ -262,31 +442,75 @@ async function renderMermaidDiagram(
   id: string,
 ): Promise<DiagramState> {
   const state = await getCachedMermaidDiagram(source);
-  return state.status === "ready"
-    ? { status: "ready", svg: scopeCachedMermaidSvg(state.svg, id) }
-    : state;
+  if (state.status !== "ready") return state;
+  const scopedKey = `${MERMAID_CACHE_CONFIG_KEY}\0${id}\0${source}`;
+  let svg = mermaidScopedSvgCache.get(scopedKey);
+  if (!svg) {
+    svg = scopeCachedMermaidSvg(state.svg, id);
+    mermaidScopedSvgCache.set(scopedKey, svg);
+    trimMapToLimit(mermaidScopedSvgCache, MERMAID_SCOPED_CACHE_LIMIT);
+  }
+  return { status: "ready", svg };
 }
 
 function getCachedMermaidDiagram(source: string) {
-  const key = `${MERMAID_CONFIG.theme}\0${source}`;
+  const key = `${MERMAID_CACHE_CONFIG_KEY}\0${source}`;
   let cached = mermaidDiagramCache.get(key);
   if (!cached) {
-    cached = loadMermaidDiagram(source);
+    cached = enqueueMermaidRender(() => loadMermaidDiagram(source));
     mermaidDiagramCache.set(key, cached);
-    while (mermaidDiagramCache.size > 64) {
-      const oldestKey = mermaidDiagramCache.keys().next().value;
-      if (!oldestKey) break;
-      mermaidDiagramCache.delete(oldestKey);
-    }
+    trimMapToLimit(mermaidDiagramCache, MERMAID_CACHE_LIMIT);
   }
   return cached;
 }
 
+function enqueueMermaidRender(run: () => Promise<DiagramState>) {
+  return new Promise<DiagramState>((resolve, reject) => {
+    mermaidRenderQueue.push({ reject, resolve, run });
+    void drainMermaidRenderQueue();
+  });
+}
+
+async function drainMermaidRenderQueue() {
+  if (isMermaidRenderQueueRunning) return;
+  isMermaidRenderQueueRunning = true;
+  try {
+    for (;;) {
+      const job = mermaidRenderQueue.shift();
+      if (!job) return;
+      try {
+        await waitForMermaidRenderSlot();
+        job.resolve(await job.run());
+      } catch (error) {
+        job.reject(error);
+      }
+    }
+  } finally {
+    isMermaidRenderQueueRunning = false;
+  }
+}
+
+function waitForMermaidRenderSlot() {
+  if (typeof window === "undefined") return Promise.resolve();
+  const idleWindow = window as MermaidIdleWindow;
+  if (typeof idleWindow.requestIdleCallback === "function") {
+    return new Promise<void>((resolve) => {
+      idleWindow.requestIdleCallback?.(() => resolve(), { timeout: 250 });
+    });
+  }
+  if (typeof window.requestAnimationFrame === "function") {
+    return new Promise<void>((resolve) => {
+      window.requestAnimationFrame(() => resolve());
+    });
+  }
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, 0);
+  });
+}
+
 async function loadMermaidDiagram(source: string): Promise<DiagramState> {
   try {
-    const mermaidModule = await import("mermaid");
-    const mermaid = mermaidModule.default;
-    mermaid.initialize?.(MERMAID_CONFIG);
+    const mermaid = await loadMermaidApi();
     const result = await mermaid.render(
       `markdown-diagram-cache-${hashMermaidSource(source)}`,
       source,
@@ -299,6 +523,18 @@ async function loadMermaidDiagram(source: string): Promise<DiagramState> {
     }
     return renderBasicMermaidDiagram(source);
   }
+}
+
+async function loadMermaidApi() {
+  mermaidApiPromise ??= import("mermaid").then(
+    (mermaidModule) => mermaidModule.default as MermaidApi,
+  );
+  const mermaid = await mermaidApiPromise;
+  if (mermaidInitializedConfigKey !== MERMAID_CACHE_CONFIG_KEY) {
+    mermaid.initialize?.(MERMAID_CONFIG);
+    mermaidInitializedConfigKey = MERMAID_CACHE_CONFIG_KEY;
+  }
+  return mermaid;
 }
 
 function scopeCachedMermaidSvg(svg: string, idPrefix: string) {
@@ -366,6 +602,12 @@ function sanitizeSvg(svg: string) {
     return fallback.status === "ready" ? fallback.svg : "";
   }
 
+  root.setAttribute("role", "img");
+  if (!root.getAttribute("aria-label")) {
+    root.setAttribute("aria-label", "Mermaid diagram");
+  }
+  root.setAttribute("data-pretext-sanitized-mermaid", "");
+
   for (const element of Array.from(root.querySelectorAll("*"))) {
     const tagName = element.tagName.toLowerCase();
     if (
@@ -421,6 +663,14 @@ function sanitizeSvg(svg: string) {
   return new XMLSerializer()
     .serializeToString(root)
     .replace(/^<svg\b([^>]*)\brole="([^"]*)"([^>]*)>/, '<svg role="$2"$1$3>');
+}
+
+function trimMapToLimit<K, V>(map: Map<K, V>, limit: number) {
+  while (map.size > limit) {
+    const oldestKey = map.keys().next().value;
+    if (oldestKey === undefined) break;
+    map.delete(oldestKey);
+  }
 }
 
 function isSafeSvgReference(value: string) {

@@ -18,6 +18,7 @@ import {
   MarkdownViewer,
   type TextViewerHandle,
 } from "@/components/ui/markdown-viewer";
+import { resetMarkdownMermaidRendererForTests } from "@/registry/new-york-v4/ui/markdown-greenfield-diagram";
 
 vi.mock("mermaid", () => ({
   default: {
@@ -149,6 +150,7 @@ function createDeferred<T>() {
 }
 
 beforeEach(() => {
+  resetMarkdownMermaidRendererForTests();
   Object.defineProperty(HTMLElement.prototype, "scrollTo", {
     configurable: true,
     value: vi.fn(function scrollTo(
@@ -3005,7 +3007,6 @@ describe("MarkdownViewer", () => {
 
   it("initializes Mermaid with the strict viewer security policy", async () => {
     const mermaid = (await import("mermaid")).default;
-    vi.mocked(mermaid.initialize).mockClear();
     const source = [
       "graph TD",
       "  A-->B",
@@ -3032,6 +3033,10 @@ describe("MarkdownViewer", () => {
         }),
         startOnLoad: false,
         suppressErrorRendering: true,
+        theme: "base",
+        themeVariables: expect.objectContaining({
+          background: "transparent",
+        }),
       }),
     );
   });

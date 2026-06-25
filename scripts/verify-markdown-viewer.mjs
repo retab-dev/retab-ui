@@ -173,6 +173,8 @@ try {
         snapshot.contrastRatio >= 3 &&
         snapshot.diagrams.length >= 3 &&
         snapshot.diagrams.every((diagram) => diagram.state === "ready") &&
+        snapshot.diagrams.every((diagram) => diagram.hasThemeStyle) &&
+        snapshot.diagrams.every((diagram) => !diagram.hasSvgStyle) &&
         !snapshot.hasDocumentOverflow,
       viewport: { height: 720, mobile: false, width: 1280 },
     })
@@ -535,9 +537,24 @@ function snapshotExpression() {
     document.querySelectorAll('[data-diagram-language="mermaid"]')
   ).map((element) => {
     const rect = element.getBoundingClientRect()
+    const svg = element.querySelector("svg")
+    const node = svg?.querySelector(
+      ".label-container, .node rect, .node polygon, .actor, .state, .classGroup rect"
+    )
+    const edge = svg?.querySelector(
+      ".flowchart-link, .edgePath path, .messageLine0, .messageLine1, .relation"
+    )
+    const label = svg?.querySelector("text, tspan, .label, .nodeLabel")
     return {
+      edgeStroke: edge ? getComputedStyle(edge).stroke : null,
       hasSvg: Boolean(element.querySelector("svg")),
+      hasSvgStyle: Boolean(svg?.querySelector("style")),
+      hasThemeStyle: Boolean(
+        element.querySelector("[data-pretext-mermaid-styles]")
+      ),
       height: Math.round(rect.height),
+      labelFill: label ? getComputedStyle(label).fill : null,
+      nodeFill: node ? getComputedStyle(node).fill : null,
       state: element.getAttribute("data-diagram-state"),
       width: Math.round(rect.width),
     }
