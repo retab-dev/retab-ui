@@ -94,6 +94,7 @@ function JsonFormSourcesContent({
         fileName: "jane-doe-bank-statement-5-pages.pdf",
       }}
       defaultOpen
+      mode="inline"
       className="bg-background h-full min-h-[680px]"
     >
       <FileViewerHeader>
@@ -123,7 +124,7 @@ function JsonFormSourcesContent({
           aria-label="Source-linked fields"
           side="right"
           width="420px"
-          className="flex flex-shrink-0 flex-col border-l"
+          className="bg-background flex flex-shrink-0 flex-col border-l"
         >
           <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">
             <h2 className="text-sm font-medium">Source-linked data</h2>
