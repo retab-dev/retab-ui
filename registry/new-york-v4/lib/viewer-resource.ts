@@ -389,21 +389,33 @@ function internUrlResourceContent(
     directUrl: source.url,
     payload: { kind: "url", url: source.url },
     readBlob: async ({ cache, signal } = {}) => {
-      const response = await fetchResource(source.url, { cache, signal });
+      const response = await fetchResource(
+        source.url,
+        cache ? { cache, signal } : { signal },
+      );
       validateFullContentResponse(response);
       return readResponseBlob(response);
     },
     readBytes: async ({ cache, signal } = {}) => {
-      const response = await fetchResource(source.url, { cache, signal });
+      const response = await fetchResource(
+        source.url,
+        cache ? { cache, signal } : { signal },
+      );
       validateFullContentResponse(response);
       return readResponseArrayBuffer(response);
     },
     readText: async ({ cache, signal, maxBytes, maxLines } = {}) => {
-      const response = await fetchResource(source.url, { cache, signal });
+      const response = await fetchResource(
+        source.url,
+        cache ? { cache, signal } : { signal },
+      );
       return readBoundedResponseText(response, { maxBytes, maxLines });
     },
     readStream: async ({ cache, signal } = {}) => {
-      const response = await fetchResource(source.url, { cache, signal });
+      const response = await fetchResource(
+        source.url,
+        cache ? { cache, signal } : { signal },
+      );
       validateFullContentResponse(response);
       if (!response.body) {
         if (response.status === 204 || response.status === 205) {
@@ -419,11 +431,14 @@ function internUrlResourceContent(
     readRange: async (range, { cache, signal } = {}) => {
       validateByteRange(range);
       const { start, end } = range;
-      const response = await fetchResource(source.url, {
-        cache,
+      const init = {
         signal,
         headers: { Range: `bytes=${start}-${end}` },
-      });
+      };
+      const response = await fetchResource(
+        source.url,
+        cache ? { ...init, cache } : init,
+      );
       const buffer = await readResponseArrayBuffer(response);
       const contentRange = parseContentRange(
         response.headers.get("content-range"),

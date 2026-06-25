@@ -297,8 +297,11 @@ export function useCsvResourceState({
     const runResourceStream = async () => {
       if (csvResource.kind !== "resource") return;
       try {
+        const cache =
+          csvResource.content.payload.kind === "url" ? "no-store" : undefined;
         runMainThread(
           await csvResource.content.readStream({
+            cache,
             signal: controller.signal,
           }),
         );
