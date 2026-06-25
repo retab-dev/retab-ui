@@ -537,6 +537,12 @@ describe("CsvViewer", () => {
     expect(screen.getByRole("table").getAttribute("aria-rowcount")).toBe("251");
     expect(csvRows(container).length).toBeLessThan(250);
     expect(csvRows(container).length).toBeGreaterThan(0);
+    const rowWindow = container.querySelector<HTMLElement>(
+      '[data-slot="csv-row-window"]',
+    );
+    expect(rowWindow?.style.position).toBe("sticky");
+    expect(rowWindow?.style.marginTop).toBe("0px");
+    expect(rowWindow?.style.height).not.toBe(`${250 * 33}px`);
     expect(screen.getByText("value-1")).toBeTruthy();
   });
 

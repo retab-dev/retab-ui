@@ -1142,11 +1142,12 @@ describe("code-viewer-projector", () => {
   });
 
   it("reconstructs full selected text for truncated long-row copies", () => {
-    const { rowHost, viewport } = createProjectionElements();
+    const { rowHost, scrollSpacer, viewport } = createProjectionElements();
     const longLine =
       "a".repeat(CODE_VIEWER_LONG_LINE_RENDER_MAX) +
       "MIDDLE_SHOULD_COPY" +
       "z".repeat(1024);
+    document.body.append(scrollSpacer);
     project({ rowHost, textLines: [longLine], viewport });
 
     const content = rowHost.querySelector<HTMLElement>(
@@ -1171,6 +1172,7 @@ describe("code-viewer-projector", () => {
       ).toBe(longLine);
     } finally {
       selection?.removeAllRanges();
+      scrollSpacer.remove();
     }
   });
 

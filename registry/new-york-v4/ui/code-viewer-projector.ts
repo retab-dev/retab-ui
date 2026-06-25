@@ -111,8 +111,6 @@ type CodeRenderedWindow = {
 };
 
 const MAX_RECYCLED_CODE_ROWS = 512;
-const CODE_LONG_LINE_MIN_LENGTH = 20_000;
-const CODE_LONG_LINE_OVERSCAN_CHARS = 128;
 
 export function createCodeProjectionMetrics(): CodeProjectionMetrics {
   return {
@@ -480,10 +478,8 @@ export function createCodeProjector(
       isHighlighted ? "highlighted" : "",
     ].join("\u0000");
     const contentIdentity = codeRowContentIdentity({
-      lineHeight: input.lineHeight,
       syntax: input.syntax,
       text,
-      viewport: input.viewport,
     });
 
     let row = rows[visibleLine.index];
@@ -526,12 +522,10 @@ export function createCodeProjector(
     if (row.contentIdentity !== contentIdentity) {
       row.contentIdentity = contentIdentity;
       patchCodeRowContent({
-        lineHeight: input.lineHeight,
         metrics,
         row,
         syntax: input.syntax,
         text,
-        viewport: input.viewport,
       });
     }
 

@@ -2,11 +2,9 @@ import type * as React from "react";
 
 type CssLength = number | string;
 type CssLengthProperty =
-  | "bottom"
   | "height"
   | "marginTop"
   | "minWidth"
-  | "top"
   | "width";
 
 export function getFixedGridCanvasStyle({
@@ -61,8 +59,8 @@ export function getFixedGridInverseRowWindowStyle({
     ...cssLengthProperty("height", height),
     ...cssLengthProperty("marginTop", top),
     ...cssLengthProperty("minWidth", minWidth),
-    ...cssLengthProperty("top", stickyOffset),
-    ...cssLengthProperty("bottom", stickyOffset),
+    top: `${stickyOffset}px`,
+    bottom: `${stickyOffset}px`,
   };
 }
 

@@ -38,10 +38,15 @@ describe("CSV row patcher", () => {
       "4",
     ]);
     expect(rows.map((row) => row.style.transform)).toEqual([
-      "translate3d(0, 50px, 0)",
-      "translate3d(0, 60px, 0)",
-      "translate3d(0, 70px, 0)",
+      "translate3d(0, 0px, 0)",
+      "translate3d(0, 10px, 0)",
+      "translate3d(0, 20px, 0)",
     ]);
+    expect(rowWindow.style.position).toBe("sticky");
+    expect(rowWindow.style.marginTop).toBe("50px");
+    expect(rowWindow.style.height).toBe("30px");
+    expect(rowWindow.style.top).toBe("-10px");
+    expect(rowWindow.style.bottom).toBe("-10px");
     expect(rowText(rows[0]!)).toEqual(["6", "r5c0", "r5c1"]);
     expect(rowText(rows[1]!)).toEqual(["7", "r6c0", "r6c1"]);
     expect(rowText(rows[2]!)).toEqual(["8", "r7c0", "r7c1"]);
@@ -127,10 +132,12 @@ describe("CSV row patcher", () => {
 
     expect(rows.map((row) => row.hidden)).toEqual([false, false, false]);
     expect(rows.map((row) => row.style.transform)).toEqual([
-      "translate3d(0, 50px, 0)",
-      "translate3d(0, 60px, 0)",
-      "translate3d(0, 70px, 0)",
+      "translate3d(0, 0px, 0)",
+      "translate3d(0, 10px, 0)",
+      "translate3d(0, 20px, 0)",
     ]);
+    expect(rowWindow.style.marginTop).toBe("50px");
+    expect(rowWindow.style.height).toBe("30px");
     expect(rows.map((row) => rowText(row))).toEqual([
       ["6", "r5c0", "r5c1"],
       ["7", "r6c0", "r6c1"],
@@ -192,6 +199,7 @@ function createPatchState(
       { index: 1, widthPx: 100 },
     ],
     effectiveRowHeight: 10,
+    viewportHeight: 20,
     rowOrder: null,
     shouldVirtualizeRows: true,
     rowStore: createCsvRowStoreFromRows(

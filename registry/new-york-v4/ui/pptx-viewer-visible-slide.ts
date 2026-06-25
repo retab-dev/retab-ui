@@ -32,6 +32,14 @@ export interface PptxVirtualSlide {
   width: number;
 }
 
+export interface PptxRenderedSlideWindow {
+  afterHeight: number;
+  beforeHeight: number;
+  height: number;
+  slides: Array<PptxVirtualSlide & { windowTop: number }>;
+  stickyInset: number;
+}
+
 export interface PptxSlideLayoutInput {
   baseSize: PptxSize;
   zoomScale: number;
@@ -168,6 +176,40 @@ export function getPptxVirtualSlides({
       };
     },
   );
+}
+
+export function getPptxRenderedSlideWindow({
+  layout,
+  slides,
+  viewportHeight,
+}: {
+  layout: PptxSlideLayout;
+  slides: readonly PptxVirtualSlide[];
+  viewportHeight: number;
+}): PptxRenderedSlideWindow | null {
+  const renderedSlides = [...slides].sort((a, b) => a.index - b.index);
+  if (renderedSlides.length === 0) return null;
+
+  const beforeHeight = renderedSlides[0]?.top ?? 0;
+  const windowBottom = Math.max(
+    ...renderedSlides.map((slide) => slide.top + slide.height),
+  );
+  const height = Math.max(0, windowBottom - beforeHeight);
+  const safeViewportHeight =
+    Number.isFinite(viewportHeight) && viewportHeight > 0 ? viewportHeight : 0;
+  const stickyInset =
+    safeViewportHeight > 0 ? -Math.max(0, height - safeViewportHeight) : 0;
+
+  return {
+    afterHeight: Math.max(0, layout.totalHeight - windowBottom),
+    beforeHeight,
+    height,
+    slides: renderedSlides.map((slide) => ({
+      ...slide,
+      windowTop: slide.top - beforeHeight,
+    })),
+    stickyInset,
+  };
 }
 
 export function usePptxVisibleSlide({

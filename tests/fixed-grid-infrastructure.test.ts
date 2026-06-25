@@ -1805,6 +1805,8 @@ describe("fixed grid virtualization math", () => {
 
     expect(result.current.virtualRows[0]?.index).toBe(50);
     expect(result.current.virtualRows.at(-1)?.index).toBe(82);
+    expect(result.current.virtualRowWindow.start).toBe(500);
+    expect(result.current.virtualRowWindow.items[0]?.start).toBe(0);
     expect(result.current.columnItems[0]?.index).toBe(40);
     expect(result.current.columnItems.at(-1)?.index).toBe(48);
     expect(result.current.leftPad).toBe(400);
