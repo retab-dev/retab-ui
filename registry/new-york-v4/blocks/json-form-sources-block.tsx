@@ -10,6 +10,8 @@ import {
   FileViewerControls,
   FileViewerHeader,
   FileViewerMeta,
+  FileViewerSidebar,
+  FileViewerSidebarTrigger,
   FileViewerSurface,
   FileViewerTitle,
 } from "@/components/ui/file-viewer";
@@ -27,12 +29,6 @@ import {
   useSegmentedPdfSourceOverlay,
   useSegmentedPdfViewerHandle,
 } from "@/components/ui/source-segmented-document-overlays";
-import {
-  ViewerBody,
-  ViewerRoot,
-  ViewerSidebar,
-  ViewerSurface,
-} from "@/components/ui/viewer";
 import { JsonForm } from "@/components/json-form/json-form";
 import sourcesSample from "@/components/viewers/sample-data/json-form-sources.json";
 
@@ -91,54 +87,46 @@ function JsonFormSourcesContent({
   const form = useForm<Record<string, unknown>>({ defaultValues: extraction });
 
   return (
-    <ViewerRoot className="bg-background h-full min-h-[680px]">
-      <ViewerBody>
-        <ViewerSurface className="relative">
-          <FileViewer
-            source={{
-              kind: "url",
-              url: PDF_URL,
-              fileName: "jane-doe-bank-statement-5-pages.pdf",
-            }}
-            className="h-full"
-          >
-            <FileViewerHeader>
-              <FileViewerTitle />
-              <FileViewerMeta />
-              <FileViewerControls />
-            </FileViewerHeader>
-            <PdfViewerProvider>
-              <FileViewerBody>
-                <FileViewerSurface>
-                  <PdfViewerPages
-                    ref={setPdfViewerHandle}
-                    bare
-                    className="h-full"
-                    onScrollProgressChange={
-                      documentHandlers.onScrollProgressChange
-                    }
-                    onVisiblePageChange={documentHandlers.onCurrentPageChange}
-                    renderPageOverlay={renderPageOverlay}
-                  />
-                </FileViewerSurface>
-              </FileViewerBody>
-            </PdfViewerProvider>
-          </FileViewer>
+    <FileViewer
+      source={{
+        kind: "url",
+        url: PDF_URL,
+        fileName: "jane-doe-bank-statement-5-pages.pdf",
+      }}
+      defaultOpen
+      className="bg-background h-full min-h-[680px]"
+    >
+      <FileViewerHeader>
+        <FileViewerSidebarTrigger className="-ml-1" />
+        <FileViewerTitle />
+        <FileViewerMeta />
+        <FileViewerControls />
+      </FileViewerHeader>
+      <FileViewerBody>
+        <FileViewerSurface className="relative">
+          <PdfViewerProvider>
+            <PdfViewerPages
+              ref={setPdfViewerHandle}
+              bare
+              className="h-full"
+              onScrollProgressChange={documentHandlers.onScrollProgressChange}
+              onVisiblePageChange={documentHandlers.onCurrentPageChange}
+              renderPageOverlay={renderPageOverlay}
+            />
+          </PdfViewerProvider>
           <SourceIndicator
             path={link.activeSourcePath}
-            found={!!link.activeAnchor}
-            className="top-12"
+            found={!!link.activeSegment}
           />
-        </ViewerSurface>
-        <ViewerSidebar
-          aria-label="Extracted data sources"
+        </FileViewerSurface>
+        <FileViewerSidebar
+          aria-label="Source-linked fields"
           side="right"
-          collapsible="none"
           width="420px"
-          className="border-l"
+          className="flex flex-shrink-0 flex-col border-l"
         >
           <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">
-            <h2 className="text-sm font-medium">Extracted data</h2>
+            <h2 className="text-sm font-medium">Source-linked data</h2>
             <span className="text-muted-foreground ml-auto text-xs">
               Hover a field to see its source
             </span>
@@ -153,8 +141,8 @@ function JsonFormSourcesContent({
               />
             </div>
           </ScrollArea>
-        </ViewerSidebar>
-      </ViewerBody>
-    </ViewerRoot>
+        </FileViewerSidebar>
+      </FileViewerBody>
+    </FileViewer>
   );
 }
