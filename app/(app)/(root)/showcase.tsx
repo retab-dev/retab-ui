@@ -36,8 +36,8 @@ function ShowcaseItem({
  * Home showcase grid.
  *
  * Two-column layout (single column on mobile), one primitive per cell:
- *   row 1 — Schema Builder · File Viewer
- *   row 2 — File Thumbnail · JSON Form
+ *   row 1 — File Thumbnail · File Viewer
+ *   row 2 — Schema Builder · JSON Form
  *   row 3 — JSON Table     · Sources
  *
  * `items-start` keeps each cell top-aligned so cards keep their natural height
@@ -55,23 +55,23 @@ export function HomeShowcase() {
               style={{ "--showcase-header-h": "4rem" } as React.CSSProperties}
             >
               <ShowcaseItem
-                title="Schema Builder"
-                description="Visual JSON Schema editor for shaping the structure your extractions follow."
-                headerClassName="min-h-(--showcase-header-h)"
+                title="File Thumbnail"
+                description="Real first-page previews for PDFs, Office files, images, and text — rendered client-side."
               >
-                <div className="bg-card max-h-[640px] overflow-auto rounded-xl border p-4 shadow-sm">
-                  <RetabSchemaBuilderDemo showJsonTab={false} />
+                <div className="overflow-hidden rounded-xl border shadow-sm">
+                  <FileThumbnailFormatsGrid />
                 </div>
               </ShowcaseItem>
 
               <FileViewerShowcase />
 
               <ShowcaseItem
-                title="File Thumbnail"
-                description="Real first-page previews for PDFs, Office files, images, and text — rendered client-side."
+                title="Schema Builder"
+                description="Visual JSON Schema editor for shaping the structure your extractions follow."
+                headerClassName="min-h-(--showcase-header-h)"
               >
-                <div className="overflow-hidden rounded-xl border shadow-sm">
-                  <FileThumbnailFormatsGrid />
+                <div className="bg-card max-h-[640px] overflow-auto rounded-xl border p-4 shadow-sm">
+                  <RetabSchemaBuilderDemo showJsonTab={false} />
                 </div>
               </ShowcaseItem>
 
