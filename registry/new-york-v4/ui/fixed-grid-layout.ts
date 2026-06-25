@@ -73,7 +73,11 @@ export function fixedGridInverseStickyOffset({
   viewportSize: number;
   windowSize: number;
 }) {
-  return -Math.max(0, safeCssNumber(windowSize) - safeCssNumber(viewportSize));
+  const offset = Math.max(
+    0,
+    safeCssNumber(windowSize) - safeCssNumber(viewportSize),
+  );
+  return offset === 0 ? 0 : -offset;
 }
 
 function formatCssLength(value: CssLength | undefined) {

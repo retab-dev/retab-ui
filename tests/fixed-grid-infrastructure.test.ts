@@ -35,7 +35,9 @@ import {
   fixedGridColumnWidths,
 } from "@/registry/new-york-v4/ui/fixed-grid-columns";
 import {
+  fixedGridInverseStickyOffset,
   getFixedGridCanvasStyle,
+  getFixedGridInverseRowWindowStyle,
   getFixedGridRowWindowStyle,
 } from "@/registry/new-york-v4/ui/fixed-grid-layout";
 import { getFixedGridRowStyle } from "@/registry/new-york-v4/ui/fixed-grid-row-style";
@@ -48,6 +50,7 @@ import { buildVirtualGridTemplate } from "@/registry/new-york-v4/ui/fixed-grid-t
 import { FixedGridViewport } from "@/registry/new-york-v4/ui/fixed-grid-viewport";
 import {
   fixedScrollOffset,
+  fixedVirtualItemWindow,
   fixedVirtualItems,
   useFixedGridVirtualization,
   useFixedRowPool,
@@ -94,6 +97,9 @@ describe("fixed grid public entrypoints", () => {
     expect(PublicFixedGridLayout.getFixedGridRowWindowStyle).toBe(
       getFixedGridRowWindowStyle,
     );
+    expect(PublicFixedGridLayout.getFixedGridInverseRowWindowStyle).toBe(
+      getFixedGridInverseRowWindowStyle,
+    );
     expect(PublicFixedGridRowStyle.getFixedGridRowStyle).toBe(
       getFixedGridRowStyle,
     );
@@ -109,6 +115,9 @@ describe("fixed grid public entrypoints", () => {
     );
     expect(PublicFixedGridVirtualization.fixedVirtualItems).toBe(
       fixedVirtualItems,
+    );
+    expect(PublicFixedGridVirtualization.fixedVirtualItemWindow).toBe(
+      fixedVirtualItemWindow,
     );
     expect(PublicFixedGridVirtualization.useFixedGridVirtualization).toBe(
       useFixedGridVirtualization,
@@ -239,6 +248,30 @@ describe("fixed grid layout styles", () => {
       height: "calc(100% - 40px)",
       minWidth: "600px",
     });
+  });
+
+  it("formats inverse-sticky row-window geometry", () => {
+    expect(
+      getFixedGridInverseRowWindowStyle({
+        height: 160,
+        minWidth: 600,
+        top: 480,
+        viewportHeight: 60,
+      }),
+    ).toEqual({
+      position: "sticky",
+      height: "160px",
+      marginTop: "480px",
+      minWidth: "600px",
+      top: "-100px",
+      bottom: "-100px",
+    });
+    expect(
+      fixedGridInverseStickyOffset({
+        windowSize: 40,
+        viewportSize: 60,
+      }),
+    ).toBe(0);
   });
 
   it("preserves zero and decimal CSS lengths", () => {
@@ -1189,6 +1222,31 @@ describe("fixed grid virtualization math", () => {
       { index: 9, start: 180, size: 20, end: 200 },
       { index: 10, start: 200, size: 20, end: 220 },
     ]);
+  });
+
+  it("builds relative row items for an inverse-sticky rendered window", () => {
+    expect(
+      fixedVirtualItemWindow([
+        { index: 2, start: 40, size: 20, end: 60 },
+        { index: 3, start: 60, size: 20, end: 80 },
+        { index: 4, start: 80, size: 20, end: 100 },
+      ]),
+    ).toEqual({
+      start: 40,
+      end: 100,
+      size: 60,
+      items: [
+        { index: 2, start: 0, size: 20, end: 20 },
+        { index: 3, start: 20, size: 20, end: 40 },
+        { index: 4, start: 40, size: 20, end: 60 },
+      ],
+    });
+    expect(fixedVirtualItemWindow([])).toEqual({
+      start: 0,
+      end: 0,
+      size: 0,
+      items: [],
+    });
   });
 
   it("uses a minimum visible count before the viewport is measurable", () => {

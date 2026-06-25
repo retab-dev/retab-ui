@@ -93,6 +93,7 @@ type VisibleRange = {
 
 type LastProjection = CodeProjectionIdentity & {
   highlightIdentity: string;
+  horizontalScrollLeft: number;
   renderedWindowHeight: number;
   renderedWindowStickyOffset: number;
   renderedWindowTop: number;
@@ -110,6 +111,8 @@ type CodeRenderedWindow = {
 };
 
 const MAX_RECYCLED_CODE_ROWS = 512;
+const CODE_LONG_LINE_MIN_LENGTH = 20_000;
+const CODE_LONG_LINE_OVERSCAN_CHARS = 128;
 
 export function createCodeProjectionMetrics(): CodeProjectionMetrics {
   return {
@@ -477,8 +480,10 @@ export function createCodeProjector(
       isHighlighted ? "highlighted" : "",
     ].join("\u0000");
     const contentIdentity = codeRowContentIdentity({
+      lineHeight: input.lineHeight,
       syntax: input.syntax,
       text,
+      viewport: input.viewport,
     });
 
     let row = rows[visibleLine.index];
@@ -521,10 +526,12 @@ export function createCodeProjector(
     if (row.contentIdentity !== contentIdentity) {
       row.contentIdentity = contentIdentity;
       patchCodeRowContent({
+        lineHeight: input.lineHeight,
         metrics,
         row,
         syntax: input.syntax,
         text,
+        viewport: input.viewport,
       });
     }
 
@@ -548,6 +555,7 @@ function codeLastProjection({
   return {
     contentIdentity: input.contentIdentity,
     highlightIdentity: codeHighlightIdentity(input.highlightRange),
+    horizontalScrollLeft: input.viewport.scrollLeft,
     layoutIdentity: input.layoutIdentity,
     renderedWindowHeight: renderedWindow.height,
     renderedWindowStickyOffset: renderedWindow.stickyOffset,
@@ -568,6 +576,7 @@ function isSameCodeProjection(previous: LastProjection, next: LastProjection) {
   return (
     previous.contentIdentity === next.contentIdentity &&
     previous.highlightIdentity === next.highlightIdentity &&
+    previous.horizontalScrollLeft === next.horizontalScrollLeft &&
     previous.layoutIdentity === next.layoutIdentity &&
     previous.renderedWindowHeight === next.renderedWindowHeight &&
     previous.renderedWindowStickyOffset === next.renderedWindowStickyOffset &&

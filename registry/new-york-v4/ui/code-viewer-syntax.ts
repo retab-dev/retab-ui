@@ -320,12 +320,14 @@ export function createCodeSyntax(
       return;
     }
 
+    let didFinishWorkerRequest = false;
     let releaseWorker: CodeSyntaxWorkerRelease | null = null;
     releaseWorker = requestCodeSyntaxWorkerTokens({
       createWorker: workerFactory,
       languageId,
       lines: uncachedLines,
       onDone: () => {
+        didFinishWorkerRequest = true;
         if (releaseWorker) workerReleases.delete(releaseWorker);
         scheduleTokenization();
       },
@@ -340,7 +342,7 @@ export function createCodeSyntax(
         if (cacheAsyncLineTokens(line, tokens)) queueTokenChangeNotification();
       },
     });
-    workerReleases.add(releaseWorker);
+    if (!didFinishWorkerRequest) workerReleases.add(releaseWorker);
     scheduleTokenization();
   }
 
@@ -382,7 +384,12 @@ export function createCodeSyntax(
       if (pendingLine == null) break;
       pendingLines.delete(pendingLine);
 
-      if (!getGlobalLineTokens(languageId, pendingLine)) {
+      const cachedTokens = getGlobalLineTokens(languageId, pendingLine);
+      if (cachedTokens) {
+        hasPendingTokenChanges =
+          cacheAsyncLineTokens(pendingLine, cachedTokens) ||
+          hasPendingTokenChanges;
+      } else {
         const tokens = tokenizeCodeLine(languageId, pendingLine);
         if (tokens) {
           hasPendingTokenChanges =
@@ -468,6 +475,15 @@ export function createCodeSyntax(
 
 export function clearCodeSyntaxGlobalTokenCacheForTests() {
   globalTokenCache.clear();
+  for (const pool of globalWorkerPools) {
+    cancelCodeSyntaxWorkerPoolDispatch(pool);
+    for (const slot of pool.slots) {
+      slot.worker.terminate();
+    }
+    pool.slots = [];
+    pool.pendingJobs.clear();
+    pool.jobsByKey.clear();
+  }
 }
 
 function shouldUseWorker(options: CodeSyntaxOptions) {
@@ -492,17 +508,305 @@ function setGlobalLineTokens(
   tokens: readonly CodeTokenLeaf[],
 ) {
   const key = codeGlobalTokenCacheKey(languageId, line);
+  const cachedTokens = getGlobalLineTokens(languageId, line);
+  if (cachedTokens && areCodeTokenLeavesEqual(cachedTokens, tokens)) {
+    return cachedTokens;
+  }
+
   globalTokenCache.delete(key);
   globalTokenCache.set(key, tokens);
   while (globalTokenCache.size > CODE_GLOBAL_TOKEN_CACHE_LIMIT) {
     const firstKey = globalTokenCache.keys().next().value;
-    if (firstKey === undefined) return;
+    if (firstKey === undefined) return tokens;
     globalTokenCache.delete(firstKey);
   }
+  return tokens;
 }
 
 function codeGlobalTokenCacheKey(languageId: string, line: string) {
   return `${languageId}\0${line}`;
+}
+
+function requestCodeSyntaxWorkerTokens({
+  createWorker,
+  languageId,
+  lines,
+  onDone,
+  onError,
+  onTokens,
+}: {
+  createWorker: CodeSyntaxWorkerFactory;
+  languageId: string;
+  lines: readonly string[];
+  onDone: () => void;
+  onError: (line: string) => void;
+  onTokens: (line: string, tokens: readonly CodeTokenLeaf[]) => void;
+}): CodeSyntaxWorkerRelease {
+  const pool = getCodeSyntaxWorkerPool(createWorker);
+  const subscription: CodeSyntaxWorkerSubscription = {
+    isReleased: false,
+    onDone,
+    onError,
+    onTokens,
+    pendingCount: 0,
+  };
+  const jobs: CodeSyntaxWorkerJob[] = [];
+
+  for (const line of lines) {
+    const cachedTokens = getGlobalLineTokens(languageId, line);
+    if (cachedTokens) {
+      onTokens(line, cachedTokens);
+      continue;
+    }
+
+    const key = codeGlobalTokenCacheKey(languageId, line);
+    let job = pool.jobsByKey.get(key);
+    if (!job) {
+      job = {
+        key,
+        languageId,
+        line,
+        status: "pending",
+        subscribers: new Set(),
+      };
+      pool.jobsByKey.set(key, job);
+      pool.pendingJobs.set(key, job);
+    }
+    job.subscribers.add(subscription);
+    subscription.pendingCount += 1;
+    jobs.push(job);
+  }
+
+  if (subscription.pendingCount === 0) {
+    onDone();
+    return () => undefined;
+  }
+
+  scheduleCodeSyntaxWorkerPoolDispatch(pool);
+
+  return () => {
+    if (subscription.isReleased) return;
+    subscription.isReleased = true;
+    for (const job of jobs) {
+      releaseCodeSyntaxWorkerSubscription(pool, job, subscription);
+    }
+  };
+}
+
+function getCodeSyntaxWorkerPool(createWorker: CodeSyntaxWorkerFactory) {
+  let pool = globalWorkerPoolsByFactory.get(createWorker);
+  if (!pool) {
+    pool = {
+      createWorker,
+      dispatchHandle: null,
+      jobsByKey: new Map(),
+      maxWorkers:
+        createWorker === createCodeSyntaxWorker
+          ? CODE_GLOBAL_WORKER_POOL_SIZE
+          : 1,
+      pendingJobs: new Map(),
+      requestId: 0,
+      slots: [],
+    };
+    globalWorkerPoolsByFactory.set(createWorker, pool);
+    globalWorkerPools.add(pool);
+  }
+  return pool;
+}
+
+function scheduleCodeSyntaxWorkerPoolDispatch(pool: CodeSyntaxWorkerPool) {
+  if (pool.pendingJobs.size === 0 || pool.dispatchHandle) return;
+  pool.dispatchHandle = scheduleCodeSyntaxTask(() => {
+    pool.dispatchHandle = null;
+    dispatchCodeSyntaxWorkerPool(pool);
+  });
+}
+
+function cancelCodeSyntaxWorkerPoolDispatch(pool: CodeSyntaxWorkerPool) {
+  if (!pool.dispatchHandle) return;
+  cancelCodeSyntaxTask(pool.dispatchHandle);
+  pool.dispatchHandle = null;
+}
+
+function dispatchCodeSyntaxWorkerPool(pool: CodeSyntaxWorkerPool) {
+  while (pool.pendingJobs.size > 0) {
+    const slot = getIdleCodeSyntaxWorkerSlot(pool);
+    if (!slot) return;
+
+    const jobs = takeCodeSyntaxWorkerJobs(pool, CODE_WORKER_TOKENIZE_BATCH_SIZE);
+    if (jobs.length === 0) return;
+
+    pool.requestId += 1;
+    const requestId = pool.requestId;
+    const languageId = jobs[0]?.languageId ?? "";
+    const batch: CodeSyntaxWorkerBatch = {
+      generation: requestId,
+      jobs,
+      languageId,
+      requestId,
+    };
+    slot.activeBatch = batch;
+
+    const request: CodeSyntaxWorkerRequest = {
+      type: "tokenize",
+      generation: batch.generation,
+      languageId,
+      lines: jobs.map((job) => job.line),
+      requestId,
+    };
+    slot.worker.postMessage(request);
+  }
+}
+
+function getIdleCodeSyntaxWorkerSlot(pool: CodeSyntaxWorkerPool) {
+  const idleSlot = pool.slots.find((slot) => !slot.activeBatch);
+  if (idleSlot) return idleSlot;
+  if (pool.slots.length >= pool.maxWorkers) return null;
+
+  try {
+    const slot: CodeSyntaxWorkerSlot = {
+      activeBatch: null,
+      worker: pool.createWorker(),
+    };
+    slot.worker.onmessage = (event: MessageEvent<CodeSyntaxWorkerResponse>) => {
+      handleCodeSyntaxWorkerPoolMessage(pool, slot, event.data);
+    };
+    slot.worker.onerror = () => {
+      handleCodeSyntaxWorkerPoolFailure(pool, slot);
+    };
+    slot.worker.onmessageerror = () => {
+      handleCodeSyntaxWorkerPoolFailure(pool, slot);
+    };
+    pool.slots.push(slot);
+    return slot;
+  } catch {
+    failPendingCodeSyntaxWorkerJobs(pool);
+    return null;
+  }
+}
+
+function takeCodeSyntaxWorkerJobs(
+  pool: CodeSyntaxWorkerPool,
+  limit: number,
+) {
+  const firstJob = pool.pendingJobs.values().next().value;
+  if (!firstJob) return [];
+
+  const jobs: CodeSyntaxWorkerJob[] = [];
+  for (const job of pool.pendingJobs.values()) {
+    if (job.languageId !== firstJob.languageId) continue;
+    pool.pendingJobs.delete(job.key);
+    job.status = "active";
+    jobs.push(job);
+    if (jobs.length >= limit) break;
+  }
+  return jobs;
+}
+
+function handleCodeSyntaxWorkerPoolMessage(
+  pool: CodeSyntaxWorkerPool,
+  slot: CodeSyntaxWorkerSlot,
+  message: CodeSyntaxWorkerResponse,
+) {
+  const batch = slot.activeBatch;
+  if (
+    !batch ||
+    message.generation !== batch.generation ||
+    message.languageId !== batch.languageId ||
+    message.requestId !== batch.requestId
+  ) {
+    return;
+  }
+
+  slot.activeBatch = null;
+
+  if (message.type === "error") {
+    terminateCodeSyntaxWorkerSlot(pool, slot);
+    finishCodeSyntaxWorkerJobsWithError(pool, batch.jobs);
+    scheduleCodeSyntaxWorkerPoolDispatch(pool);
+    return;
+  }
+
+  const resultsByLine = new Map(
+    message.results.map((result) => [result.line, result.tokens] as const),
+  );
+
+  for (const job of batch.jobs) {
+    pool.jobsByKey.delete(job.key);
+    const tokens = resultsByLine.get(job.line) ?? null;
+    if (tokens) setGlobalLineTokens(job.languageId, job.line, tokens);
+    for (const subscriber of job.subscribers) {
+      if (!subscriber.isReleased && tokens) {
+        subscriber.onTokens(job.line, tokens);
+      }
+      completeCodeSyntaxWorkerSubscription(subscriber);
+    }
+    job.subscribers.clear();
+  }
+
+  dispatchCodeSyntaxWorkerPool(pool);
+}
+
+function handleCodeSyntaxWorkerPoolFailure(
+  pool: CodeSyntaxWorkerPool,
+  slot: CodeSyntaxWorkerSlot,
+) {
+  const batch = slot.activeBatch;
+  slot.activeBatch = null;
+  terminateCodeSyntaxWorkerSlot(pool, slot);
+  if (batch) finishCodeSyntaxWorkerJobsWithError(pool, batch.jobs);
+  scheduleCodeSyntaxWorkerPoolDispatch(pool);
+}
+
+function terminateCodeSyntaxWorkerSlot(
+  pool: CodeSyntaxWorkerPool,
+  slot: CodeSyntaxWorkerSlot,
+) {
+  slot.worker.terminate();
+  pool.slots = pool.slots.filter((candidate) => candidate !== slot);
+}
+
+function failPendingCodeSyntaxWorkerJobs(pool: CodeSyntaxWorkerPool) {
+  const jobs = Array.from(pool.pendingJobs.values());
+  pool.pendingJobs.clear();
+  finishCodeSyntaxWorkerJobsWithError(pool, jobs);
+}
+
+function finishCodeSyntaxWorkerJobsWithError(
+  pool: CodeSyntaxWorkerPool,
+  jobs: readonly CodeSyntaxWorkerJob[],
+) {
+  for (const job of jobs) {
+    pool.jobsByKey.delete(job.key);
+    pool.pendingJobs.delete(job.key);
+    for (const subscriber of job.subscribers) {
+      if (!subscriber.isReleased) subscriber.onError(job.line);
+      completeCodeSyntaxWorkerSubscription(subscriber);
+    }
+    job.subscribers.clear();
+  }
+}
+
+function releaseCodeSyntaxWorkerSubscription(
+  pool: CodeSyntaxWorkerPool,
+  job: CodeSyntaxWorkerJob,
+  subscriber: CodeSyntaxWorkerSubscription,
+) {
+  job.subscribers.delete(subscriber);
+  if (job.subscribers.size > 0 || job.status === "active") return;
+  pool.pendingJobs.delete(job.key);
+  pool.jobsByKey.delete(job.key);
+}
+
+function completeCodeSyntaxWorkerSubscription(
+  subscriber: CodeSyntaxWorkerSubscription,
+) {
+  if (subscriber.isReleased) return;
+  subscriber.pendingCount -= 1;
+  if (subscriber.pendingCount <= 0) {
+    subscriber.isReleased = true;
+    subscriber.onDone();
+  }
 }
 
 function scheduleCodeSyntaxTask(

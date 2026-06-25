@@ -82,8 +82,13 @@ export function getCodeLongLineSelectionText({
 
 function rangeIntersectsNode(range: Range, node: Node) {
   try {
-    return range.intersectsNode(node);
+    if (range.intersectsNode(node)) return true;
   } catch {
-    return false;
+    // Detached test DOM can make intersectsNode throw even when the selected
+    // content is plainly inside the row.
   }
+  return (
+    node === range.commonAncestorContainer ||
+    node.contains(range.commonAncestorContainer)
+  );
 }
