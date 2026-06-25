@@ -2,8 +2,10 @@
 
 import * as React from "react";
 
+import { fixedGridInverseStickyOffset } from "@/components/ui/fixed-grid-layout";
 import {
   fixedVirtualItems,
+  fixedVirtualItemWindow,
   type FixedGridJumpViewportResult,
   type FixedGridViewport,
 } from "@/components/ui/fixed-grid-virtualization";
@@ -15,11 +17,13 @@ export interface ScalarReadOnlyJsonRowPatchState {
   isEnabled: boolean;
   projectedRows: ProjectedRow[];
   rowHeightPx: number;
+  viewportHeight: number;
   visibleColumns: VisibleColumn[];
 }
 
 export interface ScalarReadOnlyJsonRowPatcher {
   patch: (viewport: FixedGridViewport) => FixedGridJumpViewportResult;
+  resync: (virtualRows: ReturnType<typeof fixedVirtualItems>) => void;
   invalidate: () => void;
 }
 
@@ -78,6 +82,31 @@ export function useScalarReadOnlyJsonRowPatcher({
   const invalidate = React.useCallback(() => {
     rowHandleCacheRef.current = null;
   }, []);
+
+  const resync = React.useCallback(
+    (virtualRows: ReturnType<typeof fixedVirtualItems>) => {
+      const state = getState();
+      if (!state.isEnabled) return;
+
+      const rowWindow = rowWindowRef.current;
+      if (!rowWindow) return;
+
+      const cache = readRowHandles(rowWindow);
+      rowHandleCacheRef.current = cache;
+      if (cache.rows.length === 0) return;
+
+      const nextRowWindow = fixedVirtualItemWindow(virtualRows);
+      if (!canPatchRowHandles(cache.rows, nextRowWindow.items, state)) {
+        return;
+      }
+
+      setRowWindowGeometry(cache.rowWindow, nextRowWindow, {
+        viewportHeight: state.viewportHeight,
+      });
+      patchRows(cache.rows, nextRowWindow.items, state);
+    },
+    [getState, rowWindowRef],
+  );
 
   const patch = React.useCallback(
     (viewport: FixedGridViewport): FixedGridJumpViewportResult => {
@@ -144,7 +173,11 @@ export function useScalarReadOnlyJsonRowPatcher({
         return "pass";
       }
 
-      const rowsPatched = patchRows(cache.rows, nextRows, state);
+      const nextRowWindow = fixedVirtualItemWindow(nextRows);
+      setRowWindowGeometry(cache.rowWindow, nextRowWindow, {
+        viewportHeight: viewport.clientHeight,
+      });
+      const rowsPatched = patchRows(cache.rows, nextRowWindow.items, state);
       recordPatchDiagnostic(onDiagnostic, {
         reason: "handled",
         rowsPatched,
@@ -155,7 +188,10 @@ export function useScalarReadOnlyJsonRowPatcher({
     [getState, onDiagnostic, rowWindowRef],
   );
 
-  return React.useMemo(() => ({ invalidate, patch }), [invalidate, patch]);
+  return React.useMemo(
+    () => ({ invalidate, patch, resync }),
+    [invalidate, patch, resync],
+  );
 }
 
 function patchRows(
@@ -370,4 +406,30 @@ function setRowHidden(row: JsonRowHandle, isHidden: boolean) {
   if (row.isHidden === isHidden) return;
   row.element.hidden = isHidden;
   row.isHidden = isHidden;
+}
+
+function setRowWindowGeometry(
+  rowWindowElement: HTMLElement,
+  rowWindow: ReturnType<typeof fixedVirtualItemWindow>,
+  { viewportHeight }: { viewportHeight: number },
+) {
+  const stickyOffset = fixedGridInverseStickyOffset({
+    viewportSize: viewportHeight,
+    windowSize: rowWindow.size,
+  });
+  setStyleValue(rowWindowElement.style, "position", "sticky");
+  setStyleValue(rowWindowElement.style, "height", `${rowWindow.size}px`);
+  setStyleValue(rowWindowElement.style, "margin-top", `${rowWindow.start}px`);
+  setStyleValue(rowWindowElement.style, "top", `${stickyOffset}px`);
+  setStyleValue(rowWindowElement.style, "bottom", `${stickyOffset}px`);
+}
+
+function setStyleValue(
+  style: CSSStyleDeclaration,
+  propertyName: string,
+  value: string,
+) {
+  if (style.getPropertyValue(propertyName) !== value) {
+    style.setProperty(propertyName, value);
+  }
 }

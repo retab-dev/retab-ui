@@ -5,7 +5,7 @@ import type { JSONSchema7 } from "json-schema";
 
 import {
   getFixedGridCanvasStyle,
-  getFixedGridRowWindowStyle,
+  getFixedGridInverseRowWindowStyle,
 } from "@/components/ui/fixed-grid-layout";
 import { FixedGridViewport } from "@/components/ui/fixed-grid-viewport";
 import {
@@ -272,19 +272,25 @@ export const SingleFileVirtualizedTable =
         rowWindowRef,
         schemaVisibleColumns,
       });
-      const { renderedColumnWindow, totalRowSize, totalWidth, virtualRows } =
-        useJsonTableViewportModel({
-          columnWidth,
-          isJsonEditable,
-          jumpOverscan,
-          overscan,
-          rowCount,
-          rowHeightPx,
-          rowScrollStrategy: rowPolicy.rowScrollStrategy,
-          schemaVisibleColumns,
-          scrollElement,
-          scrollRef,
-        });
+      const {
+        renderedColumnWindow,
+        totalRowSize,
+        totalWidth,
+        viewportClientHeight,
+        virtualRowWindow,
+        virtualRows,
+      } = useJsonTableViewportModel({
+        columnWidth,
+        isJsonEditable,
+        jumpOverscan,
+        overscan,
+        rowCount,
+        rowHeightPx,
+        rowScrollStrategy: rowPolicy.rowScrollStrategy,
+        schemaVisibleColumns,
+        scrollElement,
+        scrollRef,
+      });
 
       useKeyedLayoutEffect(
         joinEffectKey([
@@ -364,17 +370,23 @@ export const SingleFileVirtualizedTable =
               aria-rowcount={rowCount}
               data-slot="table"
               className="bg-background relative flex w-full flex-col rounded-none"
-              style={getFixedGridCanvasStyle({ minWidth: totalWidth })}
+              style={{
+                ...getFixedGridCanvasStyle({ minWidth: totalWidth }),
+                height: totalRowSize,
+              }}
             >
               <TableBody
                 ref={rowWindowRef}
-                className="bg-background relative w-full"
-                style={getFixedGridRowWindowStyle({
-                  height: totalRowSize,
+                data-slot="json-table-row-window"
+                className="bg-background w-full"
+                style={getFixedGridInverseRowWindowStyle({
+                  height: virtualRowWindow.size,
                   minWidth: "100%",
+                  top: virtualRowWindow.start,
+                  viewportHeight: viewportClientHeight,
                 })}
               >
-                {virtualRows.map((virtualRow, slotIndex) => {
+                {virtualRowWindow.items.map((virtualRow, slotIndex) => {
                   // Editable mode keeps row identity so focused editor state
                   // cannot move to another document row. Read-only mode reuses
                   // visible row shells to avoid replacement spikes while

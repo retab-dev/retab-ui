@@ -46,10 +46,15 @@ describe("scalar read-only JSON row patcher", () => {
     const rows = rowHandles(rowWindow);
     expect(rows.map((row) => row.dataset.index)).toEqual(["3", "4", "5"]);
     expect(rows.map((row) => row.style.transform)).toEqual([
-      "translate3d(0, 30px, 0)",
-      "translate3d(0, 40px, 0)",
-      "translate3d(0, 50px, 0)",
+      "translate3d(0, 0px, 0)",
+      "translate3d(0, 10px, 0)",
+      "translate3d(0, 20px, 0)",
     ]);
+    expect(rowWindow.style.position).toBe("sticky");
+    expect(rowWindow.style.marginTop).toBe("30px");
+    expect(rowWindow.style.height).toBe("30px");
+    expect(rowWindow.style.top).toBe("-10px");
+    expect(rowWindow.style.bottom).toBe("-10px");
     expect(rowText(rows[0]!)).toEqual(["row 3", "4"]);
     expect(rowText(rows[1]!)).toEqual(["row 4", "5"]);
     expect(rowText(rows[2]!)).toEqual(["row 5", "6"]);

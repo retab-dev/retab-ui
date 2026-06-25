@@ -504,6 +504,14 @@ function bodyTable(container: HTMLElement) {
   return table;
 }
 
+function rowWindow(container: HTMLElement) {
+  const element = container.querySelector<HTMLElement>(
+    '[data-slot="json-table-row-window"]',
+  );
+  if (!element) throw new Error("Missing JSON table row window");
+  return element;
+}
+
 describe("json table virtualization stress hardening", () => {
   it("mounts editable header and body column windows for the current horizontal viewport", async () => {
     const restoreAnimationFrame = installSynchronousAnimationFrame();
@@ -745,7 +753,11 @@ describe("json table virtualization stress hardening", () => {
         expect(row(view.container, 3).style.height).toBe(`${rowHeightPx}px`);
         expect(row(view.container, 3).style.minHeight).toBe(`${rowHeightPx}px`);
         expect(row(view.container, 3).style.transform).toBe(
-          `translate3d(0, ${rowHeightPx * 3}px, 0)`,
+          `translate3d(0, ${rowHeightPx}px, 0)`,
+        );
+        expect(rowWindow(view.container).style.position).toBe("sticky");
+        expect(rowWindow(view.container).style.marginTop).toBe(
+          `${rowHeightPx * 2}px`,
         );
       } finally {
         restoreAnimationFrame();

@@ -7,6 +7,7 @@ import {
   useFixedGridVirtualization,
   type FixedGridRowScrollStrategy,
   type FixedGridVirtualItem,
+  type FixedGridVirtualItemWindow,
 } from "@/components/ui/fixed-grid-virtualization";
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types";
 import type { JsonTableRenderedColumnWindow } from "@/components/json-table/json-table-rendered-column-window";
@@ -24,6 +25,8 @@ export type JsonTableViewportModel = {
   renderedColumnWindow: JsonTableRenderedColumnWindow;
   totalRowSize: number;
   totalWidth: number;
+  viewportClientHeight: number;
+  virtualRowWindow: FixedGridVirtualItemWindow;
   virtualRows: FixedGridVirtualItem[];
 };
 
@@ -66,6 +69,8 @@ export function useJsonTableViewportModel({
     columnItems: renderedBodyColumnItems,
     leftPad: leftPadWidthPx,
     rightPad: rightPadWidthPx,
+    viewportClientHeight,
+    virtualRowWindow,
     virtualRows,
     totalRowSize,
   } = useFixedGridVirtualization({
@@ -96,8 +101,17 @@ export function useJsonTableViewportModel({
       renderedColumnWindow,
       totalRowSize,
       totalWidth,
+      viewportClientHeight,
+      virtualRowWindow,
       virtualRows,
     }),
-    [renderedColumnWindow, totalRowSize, totalWidth, virtualRows],
+    [
+      renderedColumnWindow,
+      totalRowSize,
+      totalWidth,
+      viewportClientHeight,
+      virtualRowWindow,
+      virtualRows,
+    ],
   );
 }
