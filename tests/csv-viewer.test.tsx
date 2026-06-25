@@ -1549,7 +1549,7 @@ describe("CsvViewer URL source loading", () => {
     expect(await screen.findByText("2")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith("/cache-sensitive.csv", {
       cache: "no-store",
-      signal: undefined,
+      signal: expect.any(AbortSignal),
     });
   });
 
