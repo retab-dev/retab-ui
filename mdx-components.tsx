@@ -22,6 +22,7 @@ import { ComponentPreview } from "@/components/component-preview";
 import { ComponentSource } from "@/components/component-source";
 import { CopyButton } from "@/components/copy-button";
 import { DocsMdxCodeBlock } from "@/components/docs-code-block";
+import { FileViewerStructureSketches } from "@/components/file-viewer-structure-sketches";
 import { getIconForLanguageExtension } from "@/components/icons";
 import { MermaidDiagram } from "@/components/mermaid-diagram";
 
@@ -328,6 +329,7 @@ export const mdxComponents = {
   DocsMdxCodeBlock,
   ComponentSource,
   ComponentPreview,
+  FileViewerStructureSketches,
   MermaidDiagram,
   Link: ({ className, ...props }: React.ComponentProps<typeof Link>) => (
     <Link

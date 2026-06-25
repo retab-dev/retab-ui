@@ -264,7 +264,11 @@ export function FileViewerDemo() {
  * description would sit), so the viewer box top-aligns with the neighbouring
  * Schema Builder card. The header is given a fixed height shared with that card.
  */
-export function FileViewerShowcase() {
+export function FileViewerShowcase({
+  showTitle = true,
+}: {
+  showTitle?: boolean;
+}) {
   const idPrefix = React.useId();
   const [active, setActive] = React.useState<DemoFileKey>(
     SHOWCASE_INITIAL_FILE_KEY,
@@ -273,8 +277,15 @@ export function FileViewerShowcase() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex min-h-(--showcase-header-h) flex-col gap-1.5">
-        <h3 className="text-foreground text-sm font-medium">File Viewer</h3>
+      <div
+        className={cn(
+          "flex flex-col gap-1.5",
+          showTitle && "min-h-(--showcase-header-h)",
+        )}
+      >
+        {showTitle ? (
+          <h3 className="text-foreground text-sm font-medium">File Viewer</h3>
+        ) : null}
         <FileTabs
           activeFileKey={active}
           idPrefix={idPrefix}

@@ -10,6 +10,7 @@
 
 @import "tw-animate-css";
 @import "katex/dist/katex.min.css";
+@import "@xyflow/react/dist/base.css";
 @import "./shadcn-tailwind.css";
 @import "./legacy-themes.css";
 
@@ -20,6 +21,31 @@
 @import "../registry/styles/style-mira.css" layer(base);
 @import "../registry/styles/style-luma.css" layer(base);
 @import "../registry/styles/style-sera.css" layer(base);
+
+.file-viewer-structure-flow .react-flow__nodes {
+  position: absolute;
+  inset: 0;
+}
+
+.file-viewer-structure-flow {
+  --file-viewer-diagram-arrow: oklch(70.8% 0 0);
+}
+
+.dark .file-viewer-structure-flow {
+  --file-viewer-diagram-arrow: oklch(55.6% 0 0);
+}
+
+.file-viewer-structure-flow .react-flow__edges svg {
+  color: var(--file-viewer-diagram-arrow);
+}
+
+.file-viewer-structure-flow .react-flow__node {
+  position: absolute;
+}
+
+.file-viewer-structure-flow .react-flow__handle {
+  pointer-events: none;
+}
 
 @custom-variant style-vega (&:where(.style-vega *));
 @custom-variant style-nova (&:where(.style-nova *));
