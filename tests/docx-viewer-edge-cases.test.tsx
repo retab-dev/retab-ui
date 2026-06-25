@@ -26,6 +26,7 @@ import {
   DocxViewer,
   type DocxViewerHandle,
 } from "@/registry/new-york-v4/ui/docx-viewer";
+import { resetDocxRenderCacheForTests } from "@/registry/new-york-v4/ui/docx-viewer-render-cache";
 import {
   DOCX_PAGE_GAP_PX,
   DOCX_READING_MARKER_RATIO,
@@ -280,6 +281,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   resetDocxDocumentResourceCacheForTests();
+  resetDocxRenderCacheForTests();
   clearViewerResourceRegistryForTests();
   if (originalGetAnimations) {
     Object.defineProperty(HTMLElement.prototype, "getAnimations", {

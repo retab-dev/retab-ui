@@ -23,6 +23,7 @@ import {
   DocxViewer,
   type DocxViewerHandle,
 } from "@/registry/new-york-v4/ui/docx-viewer";
+import { resetDocxRenderCacheForTests } from "@/registry/new-york-v4/ui/docx-viewer-render-cache";
 import {
   DOCX_PAGE_GAP_PX,
   DOCX_READING_MARKER_RATIO,
@@ -391,6 +392,12 @@ function installRenderedDocumentWithExternalTable(host: HTMLElement) {
   host.replaceChildren(externalTable, wrapper);
 }
 
+function installRenderedDocumentWithCanvas(host: HTMLElement) {
+  installRenderedDocument(host);
+  const firstPage = host.querySelector<HTMLElement>("section.docx");
+  firstPage?.append(document.createElement("canvas"));
+}
+
 async function renderDocx(ui: React.ReactElement) {
   let view!: ReturnType<typeof render>;
   await act(async () => {
@@ -449,6 +456,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   resetDocxDocumentResourceCacheForTests();
+  resetDocxRenderCacheForTests();
   clearViewerResourceRegistryForTests();
   if (originalGetAnimations) {
     Object.defineProperty(HTMLElement.prototype, "getAnimations", {
@@ -744,7 +752,7 @@ describe("DocxViewer", () => {
     expect(createObjectURL).not.toHaveBeenCalled();
   });
 
-  it("shares fetched bytes for matching source identities across mounted viewers", async () => {
+  it("shares fetched bytes and rendered output for matching source identities across mounted viewers", async () => {
     await renderDocx(
       <div>
         <DocxViewer source={docxUrlSource("/shared.docx")} />
@@ -753,6 +761,57 @@ describe("DocxViewer", () => {
     );
 
     expect(await screen.findAllByText("Page 1 of 2")).toHaveLength(2);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(docxMock.renderAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it("reuses cached rendered output across remounts", async () => {
+    const highlights = new Map<string, MockHighlight>();
+    installHighlightApi(highlights);
+
+    const first = await renderDocx(
+      <DocxViewer source={docxUrlSource("/cached-remount.docx")} />,
+    );
+    await waitForRenderedDocx();
+
+    first.unmount();
+
+    await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/cached-remount.docx")}
+        highlight={{ kind: "text", text: "revenue increased" }}
+      />,
+    );
+
+    expect(await screen.findByText("Page 1 of 2")).toBeTruthy();
+    expect(screen.getByText("Target cell")).toBeTruthy();
+    await waitFor(() => {
+      expect([...highlights.values()][0]?.ranges[0]?.toString()).toBe(
+        "revenue increased",
+      );
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(docxMock.renderAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not cache render output that contains non-clone-safe DOM", async () => {
+    docxMock.renderAsync.mockImplementation(async (buffer, host) => {
+      docxMock.renderedBuffers.push(buffer);
+      installRenderedDocumentWithCanvas(host);
+    });
+
+    const first = await renderDocx(
+      <DocxViewer source={docxUrlSource("/uncacheable-canvas.docx")} />,
+    );
+    await waitForRenderedDocx();
+
+    first.unmount();
+
+    await renderDocx(
+      <DocxViewer source={docxUrlSource("/uncacheable-canvas.docx")} />,
+    );
+
+    expect(await screen.findByText("Page 1 of 2")).toBeTruthy();
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(docxMock.renderAsync).toHaveBeenCalledTimes(2);
   });

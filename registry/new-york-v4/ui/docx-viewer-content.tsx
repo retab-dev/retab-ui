@@ -23,7 +23,7 @@ import {
   commitDocxRender,
   projectDocxPages,
   loadDocxPreview,
-  renderDocxPreview,
+  renderCachedDocxPreview,
   type DocxRenderedDocument,
 } from "./docx-viewer-render";
 import { useDocxViewerScale } from "./docx-viewer-scale";
@@ -66,6 +66,7 @@ export function DocxViewerContent({
   const buffer = React.use(
     getDocxDocumentResource(resource.content, { retainRejected: true }),
   );
+  const renderCacheKey = resource.content.key;
   const [containerWidth, setContainerWidth] = React.useState<number | null>(
     null,
   );
@@ -177,7 +178,13 @@ export function DocxViewerContent({
   }, [handleScroll, projectVisiblePages]);
 
   useKeyedMountEffect(
-    joinEffectKey(["docx-render", buffer, docxPreviewPromise, resetScroll]),
+    joinEffectKey([
+      "docx-render",
+      buffer,
+      docxPreviewPromise,
+      renderCacheKey,
+      resetScroll,
+    ]),
     () => {
       const host = hostRef.current;
       if (!host) return;
@@ -190,11 +197,17 @@ export function DocxViewerContent({
       virtualDocumentRef.current = null;
       resetScroll();
       host.replaceChildren();
-      renderDocxPreview(buffer, docxPreviewPromise)
-        .then((renderHost) => {
+      renderCachedDocxPreview({
+        buffer,
+        cacheKey: renderCacheKey,
+        docxPreviewPromise,
+        getScale: () => scaleRef.current,
+      })
+        .then(({ pageSizes, renderHost }) => {
           if (cancelled) return;
           const result = commitDocxRender({
             host,
+            pageSizes,
             renderHost,
             scale: scaleRef.current,
           });

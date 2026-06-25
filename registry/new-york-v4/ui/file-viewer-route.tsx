@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 import { type ViewerResource } from "@/lib/viewer-resource";
 import {
   fileViewerDiagnostic,
@@ -19,6 +21,10 @@ import {
 import { CsvFileContent } from "./file-viewer-csv-viewer";
 import { UnsupportedCard } from "./file-viewer-fallback";
 import { HtmlFileContent } from "./file-viewer-html-viewer";
+import {
+  getFileViewerPrewarmTarget,
+  scheduleFileViewerRendererPrewarm,
+} from "./file-viewer-prewarm";
 
 const PdfResourceContent = React.lazy(() =>
   import("@/components/ui/pdf-viewer").then((m) => ({
@@ -192,6 +198,23 @@ export function FileViewerRoute({
   const isTextSource = descriptor.source.kind === "text";
 
   const renderer = RENDERERS[category];
+  const textSourceAllowed =
+    !isTextSource || TEXT_SOURCE_CATEGORIES.has(category);
+  const isRouteRenderable = Boolean(renderer) && textSourceAllowed;
+  const prewarmTarget = getFileViewerPrewarmTarget({
+    descriptor,
+    isRouteRenderable,
+  });
+  useKeyedMountEffect(
+    prewarmTarget
+      ? joinEffectKey(["file-viewer-renderer-prewarm", prewarmTarget])
+      : null,
+    () => {
+      if (!prewarmTarget) return;
+      return scheduleFileViewerRendererPrewarm(prewarmTarget);
+    },
+  );
+
   const routeDetails = {
     bare,
     category,
@@ -202,10 +225,10 @@ export function FileViewerRoute({
     source: summarizeViewerSource(descriptor.source),
     descriptor: summarizeViewerDescriptor(descriptor),
   };
-  if (renderer && (!isTextSource || TEXT_SOURCE_CATEGORIES.has(category))) {
+  if (renderer && textSourceAllowed) {
     fileViewerDiagnostic("debug", "file_viewer_route_renderer_selected", {
       ...routeDetails,
-      textSourceAllowed: !isTextSource || TEXT_SOURCE_CATEGORIES.has(category),
+      textSourceAllowed,
     });
     return renderer({
       descriptor,
@@ -222,7 +245,7 @@ export function FileViewerRoute({
 
   fileViewerDiagnostic("warn", "file_viewer_route_unsupported", {
     ...routeDetails,
-    textSourceAllowed: !isTextSource || TEXT_SOURCE_CATEGORIES.has(category),
+    textSourceAllowed,
   });
   return (
     <UnsupportedCard

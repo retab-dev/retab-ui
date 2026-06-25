@@ -34,12 +34,13 @@ export const markdownComponents: Components = {
   li: ({ node: _node, ...props }) => (
     <li className="leading-relaxed" {...props} />
   ),
-  a: ({ node: _node, href, children, ...props }) =>
-    href ? (
+  a: ({ node: _node, href, children, ...props }) => {
+    const safeHref = sanitizePageMarkdownUrl(href ?? "");
+    return safeHref ? (
       <a
         className="text-primary font-medium underline underline-offset-2"
         {...props}
-        href={href}
+        href={safeHref}
         target="_blank"
         rel="noopener noreferrer"
       >
@@ -47,9 +48,16 @@ export const markdownComponents: Components = {
       </a>
     ) : (
       <span>{children}</span>
-    ),
-  img: ({ node: _node, src, alt, ...props }) =>
-    src ? <img {...props} src={src} alt={alt} /> : <span>{alt}</span>,
+    );
+  },
+  img: ({ node: _node, src, alt, ...props }) => {
+    const safeSrc = sanitizePageMarkdownUrl(typeof src === "string" ? src : "");
+    return safeSrc ? (
+      <img {...props} src={safeSrc} alt={alt} />
+    ) : (
+      <span>{alt}</span>
+    );
+  },
   strong: ({ node: _node, ...props }) => (
     <strong className="font-semibold" {...props} />
   ),
@@ -95,3 +103,22 @@ export const markdownComponents: Components = {
     />
   ),
 };
+
+function sanitizePageMarkdownUrl(value: string): string {
+  const colon = value.indexOf(":");
+  const questionMark = value.indexOf("?");
+  const numberSign = value.indexOf("#");
+  const slash = value.indexOf("/");
+
+  if (
+    colon === -1 ||
+    (slash !== -1 && colon > slash) ||
+    (questionMark !== -1 && colon > questionMark) ||
+    (numberSign !== -1 && colon > numberSign) ||
+    /^(https?|ircs?|mailto|xmpp)$/i.test(value.slice(0, colon))
+  ) {
+    return value;
+  }
+
+  return "";
+}

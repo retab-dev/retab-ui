@@ -13,6 +13,14 @@ import {
   type DocxPageLayout,
   type DocxPageWindow,
 } from "./docx-viewer-layout";
+import {
+  readDocxRenderCache,
+  readPendingDocxRenderCache,
+  writeDocxRenderCache,
+  writePendingDocxRenderCache,
+  type DocxPageSize,
+  type DocxRenderCacheHit,
+} from "./docx-viewer-render-cache";
 
 let docxPromise: Promise<typeof DocxPreview> | null = null;
 
@@ -47,12 +55,63 @@ export async function renderDocxPreview(
   return renderHost;
 }
 
+export async function renderCachedDocxPreview({
+  buffer,
+  cacheKey,
+  docxPreviewPromise = loadDocxPreview(),
+  getScale,
+}: {
+  buffer: ArrayBuffer;
+  cacheKey: string;
+  docxPreviewPromise?: Promise<typeof DocxPreview>;
+  getScale: () => number;
+}): Promise<DocxRenderCacheHit> {
+  const cached = readDocxRenderCache(cacheKey);
+  if (cached) return cached;
+
+  const pending = readPendingDocxRenderCache(cacheKey);
+  if (pending) {
+    const pendingEntry = await pending;
+    if (pendingEntry) {
+      return {
+        pageSizes: pendingEntry.pageSizes,
+        renderHost: pendingEntry.renderHost.cloneNode(true) as HTMLElement,
+      };
+    }
+  }
+
+  const renderPromise = renderDocxPreview(buffer, docxPreviewPromise).then(
+    (renderHost) => {
+      const pageSizes = collectDocxPageSizes(renderHost, getScale());
+      const cacheEntry = writeDocxRenderCache({
+        key: cacheKey,
+        pageSizes,
+        renderHost,
+      });
+
+      return { cacheEntry, pageSizes, renderHost };
+    },
+  );
+  writePendingDocxRenderCache(
+    cacheKey,
+    renderPromise.then((result) => result.cacheEntry),
+  );
+
+  const result = await renderPromise;
+  return {
+    pageSizes: result.pageSizes,
+    renderHost: result.renderHost,
+  };
+}
+
 export function commitDocxRender({
   host,
+  pageSizes,
   renderHost,
   scale,
 }: {
   host: HTMLElement;
+  pageSizes?: readonly DocxPageSize[];
   renderHost: HTMLElement;
   scale: number;
 }) {
@@ -75,11 +134,15 @@ export function commitDocxRender({
     });
   }
   const z = scale || 1;
-  const sizes = pages.map((el) => pageSize(el, z));
+  const sizes =
+    pageSizes && pageSizes.length === pages.length
+      ? pageSizes
+      : pages.map((el) => pageSize(el, z));
   pages.forEach((el, i) => {
     el.dataset.pageNumber = String(i + 1);
     el.style.contentVisibility = "auto";
-    el.style.containIntrinsicSize = `${sizes[i][0]}px ${sizes[i][1]}px`;
+    const [width, height] = sizes[i]!;
+    el.style.containIntrinsicSize = `${width}px ${height}px`;
   });
   const pageLayout = createDocxPageLayout(sizes);
   const before = document.createElement("div");
@@ -183,6 +246,17 @@ export function projectDocxPages(
 
   document.mountedStart = start;
   document.mountedEnd = end;
+}
+
+function collectDocxPageSizes(
+  renderHost: HTMLElement,
+  scale: number,
+): readonly DocxPageSize[] {
+  const pages = Array.from(
+    renderHost.querySelectorAll<HTMLElement>(".docx-wrapper > section.docx"),
+  );
+  const z = scale || 1;
+  return pages.map((el) => pageSize(el, z));
 }
 
 function pageSize(el: HTMLElement, scale: number) {

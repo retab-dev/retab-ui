@@ -5,70 +5,11 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { joinEffectKey } from "@/lib/effect-key";
-
-type MermaidApi = {
-  initialize: (config: Record<string, unknown>) => void;
-  render: (
-    id: string,
-    chart: string,
-  ) => Promise<{ svg: string; bindFunctions?: (element: Element) => void }>;
-};
-
-declare global {
-  interface Window {
-    mermaid?: MermaidApi;
-  }
-}
-
-let mermaidScriptPromise: Promise<MermaidApi> | null = null;
-
-function loadMermaid() {
-  if (typeof window === "undefined") {
-    return Promise.reject(new Error("Mermaid can only render in the browser."));
-  }
-
-  if (window.mermaid) {
-    return Promise.resolve(window.mermaid);
-  }
-
-  mermaidScriptPromise ??= new Promise<MermaidApi>((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>(
-      'script[data-mermaid="true"]',
-    );
-
-    if (existing) {
-      existing.addEventListener("load", () => {
-        if (window.mermaid) {
-          resolve(window.mermaid);
-        } else {
-          reject(new Error("Mermaid failed to load."));
-        }
-      });
-      existing.addEventListener("error", () =>
-        reject(new Error("Mermaid failed to load.")),
-      );
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js";
-    script.async = true;
-    script.dataset.mermaid = "true";
-    script.addEventListener("load", () => {
-      if (window.mermaid) {
-        resolve(window.mermaid);
-      } else {
-        reject(new Error("Mermaid failed to load."));
-      }
-    });
-    script.addEventListener("error", () =>
-      reject(new Error("Mermaid failed to load.")),
-    );
-    document.head.appendChild(script);
-  });
-
-  return mermaidScriptPromise;
-}
+import {
+  MERMAID_VIEWER_STYLES,
+  renderDiagram,
+  type DiagramState,
+} from "@/registry/new-york-v4/ui/mermaid-renderer";
 
 export function MermaidDiagram({
   chart,
@@ -78,50 +19,35 @@ export function MermaidDiagram({
   className?: string;
 }) {
   const reactId = React.useId();
-  const [svg, setSvg] = React.useState<string | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
+  const [state, setState] = React.useState<DiagramState>({
+    status: "loading",
+  });
 
   useKeyedMountEffect(joinEffectKey([chart, reactId]), () => {
     let cancelled = false;
     const renderId = `mermaid-${reactId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
 
-    async function renderDiagram() {
+    async function renderCurrentDiagram() {
+      setState({ status: "loading" });
       try {
-        const mermaid = await loadMermaid();
-
-        mermaid.initialize({
-          startOnLoad: false,
-          securityLevel: "strict",
-          theme: "base",
-          themeVariables: {
-            background: "transparent",
-            primaryColor: "#f8fafc",
-            primaryTextColor: "#0f172a",
-            primaryBorderColor: "#94a3b8",
-            lineColor: "#64748b",
-            secondaryColor: "#ecfeff",
-            tertiaryColor: "#f0fdf4",
-            fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-          },
-        });
-
-        const result = await mermaid.render(renderId, chart);
+        const result = await renderDiagram(chart, renderId);
         if (!cancelled) {
-          setSvg(result.svg);
-          setError(null);
+          setState(result);
         }
       } catch (renderError) {
         if (!cancelled) {
-          setError(
-            renderError instanceof Error
-              ? renderError.message
-              : "Unable to render Mermaid diagram.",
-          );
+          setState({
+            status: "failed",
+            message:
+              renderError instanceof Error
+                ? renderError.message
+                : "Unable to render Mermaid diagram.",
+          });
         }
       }
     }
 
-    renderDiagram();
+    renderCurrentDiagram();
 
     return () => {
       cancelled = true;
@@ -134,15 +60,26 @@ export function MermaidDiagram({
         "bg-muted/20 my-6 overflow-x-auto rounded-lg border p-4",
         className,
       )}
+      data-diagram-language="mermaid"
+      data-diagram-renderer={
+        state.status === "ready" ? state.renderer : undefined
+      }
+      data-diagram-state={state.status}
     >
-      {svg ? (
-        <div
-          className="[&_svg]:mx-auto [&_svg]:h-auto [&_svg]:max-w-full"
-          dangerouslySetInnerHTML={{ __html: svg }}
-        />
+      {state.status === "ready" ? (
+        <>
+          <style data-pretext-mermaid-styles="">{MERMAID_VIEWER_STYLES}</style>
+          <div
+            className="text-foreground [&_svg]:mx-auto [&_svg]:h-auto [&_svg]:max-w-full"
+            data-pretext-mermaid-svg=""
+            dangerouslySetInnerHTML={{ __html: state.svg }}
+          />
+        </>
       ) : (
         <pre className="overflow-x-auto text-xs leading-relaxed">
-          <code>{error ? `${error}\n\n${chart}` : chart}</code>
+          <code>
+            {state.status === "failed" ? `${state.message}\n\n${chart}` : chart}
+          </code>
         </pre>
       )}
     </div>

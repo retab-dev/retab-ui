@@ -1,9 +1,8 @@
 "use client";
 
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import * as React from "react";
 
-import { markdownComponents } from "@/components/viewers/page-markdown/page-markdown-components";
+import { projectPageMarkdown } from "@/components/viewers/page-markdown/page-markdown-projection";
 import { type PageMarkdownViewMode } from "@/components/viewers/page-markdown/page-markdown-types";
 
 export function PageMarkdownContent({
@@ -21,19 +20,28 @@ export function PageMarkdownContent({
         className="text-foreground/90 font-mono leading-relaxed whitespace-pre-wrap"
         style={{ fontSize: `${12 * scale}px` }}
       >
-        {markdown}
+        <PageMarkdownText markdown={markdown} />
       </pre>
     );
   }
 
   return (
     <div className="leading-relaxed" style={{ fontSize: `${14 * scale}px` }}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={markdownComponents}
-      >
-        {markdown}
-      </ReactMarkdown>
+      <PageMarkdownRenderedProjection markdown={markdown} />
     </div>
   );
 }
+
+const PageMarkdownText = React.memo(function PageMarkdownText({
+  markdown,
+}: {
+  markdown: string;
+}) {
+  return markdown;
+});
+
+const PageMarkdownRenderedProjection = React.memo(
+  function PageMarkdownRenderedProjection({ markdown }: { markdown: string }) {
+    return projectPageMarkdown(markdown);
+  },
+);

@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetDocxDocumentResourceCacheForTests } from "@/lib/docx-document-resource";
 import { clearViewerResourceRegistryForTests } from "@/registry/new-york-v4/lib/viewer-resource";
 import { DocxViewer } from "@/registry/new-york-v4/ui/docx-viewer";
+import { resetDocxRenderCacheForTests } from "@/registry/new-york-v4/ui/docx-viewer-render-cache";
 
 const docxPreviewMock = vi.hoisted(() => ({
   shouldFailImport: false,
@@ -112,6 +113,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   resetDocxDocumentResourceCacheForTests();
+  resetDocxRenderCacheForTests();
   clearViewerResourceRegistryForTests();
   if (originalGetAnimations) {
     Object.defineProperty(HTMLElement.prototype, "getAnimations", {

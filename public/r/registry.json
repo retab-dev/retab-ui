@@ -584,6 +584,11 @@
           "path": "registry/new-york-v4/ui/json-inspector.tsx",
           "type": "registry:ui",
           "target": "@ui/json-inspector.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/json-inspector-highlight.ts",
+          "type": "registry:ui",
+          "target": "@ui/json-inspector-highlight.ts"
         }
       ]
     },
@@ -1115,6 +1120,11 @@
           "path": "registry/new-york-v4/ui/fixed-grid-row-window.tsx",
           "type": "registry:ui",
           "target": "@ui/fixed-grid-row-window.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/fixed-grid-native-find-index.tsx",
+          "type": "registry:ui",
+          "target": "@ui/fixed-grid-native-find-index.tsx"
         }
       ]
     },
@@ -1407,6 +1417,16 @@
           "path": "registry/new-york-v4/ui/viewer-error.tsx",
           "type": "registry:ui",
           "target": "@ui/viewer-error.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/docx-viewer-render-cache.ts",
+          "type": "registry:ui",
+          "target": "@ui/docx-viewer-render-cache.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-lru-cache.ts",
+          "type": "registry:ui",
+          "target": "@ui/viewer-lru-cache.ts"
         }
       ]
     },
@@ -1999,6 +2019,11 @@
           "path": "registry/new-york-v4/ui/fixed-grid-row-window.tsx",
           "type": "registry:ui",
           "target": "@ui/fixed-grid-row-window.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/fixed-grid-native-find-index.tsx",
+          "type": "registry:ui",
+          "target": "@ui/fixed-grid-native-find-index.tsx"
         }
       ]
     },
@@ -2111,6 +2136,11 @@
           "path": "registry/new-york-v4/ui/file-viewer-route.tsx",
           "type": "registry:ui",
           "target": "@ui/file-viewer-route.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-prewarm.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-prewarm.ts"
         },
         {
           "path": "registry/new-york-v4/ui/file-viewer-state.tsx",
@@ -3731,7 +3761,11 @@
         "lucide-react",
         "react-markdown",
         "remark-gfm",
-        "rehype-raw"
+        "rehype-raw",
+        "hast-util-to-jsx-runtime@^2.3.6",
+        "remark-parse@^11.0.0",
+        "remark-rehype@^11.1.2",
+        "unified@^11.0.5"
       ],
       "registryDependencies": [
         "@retab/file-viewer",
@@ -3844,6 +3878,11 @@
           "path": "components/viewers/sample-data/parse.json",
           "type": "registry:file",
           "target": "@components/viewers/sample-data/parse.json"
+        },
+        {
+          "path": "components/viewers/page-markdown/page-markdown-projection.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/page-markdown/page-markdown-projection.tsx"
         }
       ],
       "categories": [
@@ -5608,6 +5647,11 @@
           "path": "registry/new-york-v4/ui/code-viewer-prism-components.d.ts",
           "type": "registry:ui",
           "target": "@ui/code-viewer-prism-components.d.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/mermaid-renderer.ts",
+          "type": "registry:ui",
+          "target": "@ui/mermaid-renderer.ts"
         }
       ],
       "devDependencies": [
@@ -5869,6 +5913,11 @@
           "path": "registry/new-york-v4/ui/code-viewer-prism-components.d.ts",
           "type": "registry:ui",
           "target": "@ui/code-viewer-prism-components.d.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/mermaid-renderer.ts",
+          "type": "registry:ui",
+          "target": "@ui/mermaid-renderer.ts"
         }
       ],
       "devDependencies": [

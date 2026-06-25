@@ -9,11 +9,19 @@ import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 import { joinEffectKey } from "@/lib/effect-key";
 
+import {
+  createJsonInspectorLineHtmlCache,
+  type JsonInspectorLineHtmlCache,
+} from "./json-inspector-highlight";
+
 const SMALL_JSON_LINE_LIMIT = 500;
 const VIRTUAL_LINE_HEIGHT = 20;
 const VIRTUAL_OVERSCAN = 8;
 const INITIAL_VIEWPORT_HEIGHT = 480;
 const MAX_RENDERED_LINES = 500;
+const VIRTUAL_JSON_LINE_STYLE: React.CSSProperties = {
+  height: VIRTUAL_LINE_HEIGHT,
+};
 
 /**
  * A small copy-to-clipboard button. Shows a transient check on success; style
@@ -52,88 +60,14 @@ export function CopyButton({
   );
 }
 
-/** Lightweight JSON syntax highlighting that respects the theme. */
-function colorizeJsonLine(line: string): React.ReactNode {
-  const patterns: { regex: RegExp; className: string }[] = [
-    {
-      regex: /"([^"]+)"(?=\s*:)/g,
-      className: "text-violet-600 dark:text-violet-400",
-    },
-    { regex: /"([^"]*)"/g, className: "text-amber-700 dark:text-amber-400" },
-    {
-      regex: /\b(true|false)\b/g,
-      className: "text-emerald-600 dark:text-emerald-400",
-    },
-    { regex: /\bnull\b/g, className: "text-muted-foreground" },
-    {
-      regex: /\b(\d+\.?\d*)\b/g,
-      className: "text-blue-600 dark:text-blue-400",
-    },
-  ];
-
-  const spans: {
-    start: number;
-    end: number;
-    className: string;
-    text: string;
-  }[] = [];
-
-  for (const { regex, className } of patterns) {
-    const re = new RegExp(regex.source, "g");
-    let match: RegExpExecArray | null;
-    while ((match = re.exec(line)) !== null) {
-      const start = match.index;
-      const end = start + match[0].length;
-      const overlaps = spans.some((s) => !(start >= s.end || end <= s.start));
-      if (!overlaps) {
-        spans.push({ start, end, className, text: match[0] });
-      }
-    }
+function useJsonLineHtml() {
+  const cacheRef = React.useRef<JsonInspectorLineHtmlCache | null>(null);
+  if (!cacheRef.current) {
+    cacheRef.current = createJsonInspectorLineHtmlCache();
   }
+  const cache = cacheRef.current;
 
-  if (spans.length === 0) {
-    return <span className="text-foreground/70">{line}</span>;
-  }
-
-  spans.sort((a, b) => a.start - b.start);
-  const elements: React.ReactNode[] = [];
-  let lastEnd = 0;
-  for (const span of spans) {
-    if (span.start > lastEnd) {
-      elements.push(
-        <span key={`t-${lastEnd}`} className="text-foreground/70">
-          {line.slice(lastEnd, span.start)}
-        </span>,
-      );
-    }
-    elements.push(
-      <span key={`s-${span.start}`} className={span.className}>
-        {span.text}
-      </span>,
-    );
-    lastEnd = span.end;
-  }
-  if (lastEnd < line.length) {
-    elements.push(
-      <span key={`t-${lastEnd}`} className="text-foreground/70">
-        {line.slice(lastEnd)}
-      </span>,
-    );
-  }
-  return elements;
-}
-
-function useJsonLineFragments() {
-  const cacheRef = React.useRef(new Map<string, React.ReactNode>());
-
-  return React.useCallback((line: string) => {
-    const cached = cacheRef.current.get(line);
-    if (cached) return cached;
-
-    const fragments = colorizeJsonLine(line);
-    cacheRef.current.set(line, fragments);
-    return fragments;
-  }, []);
+  return React.useCallback((line: string) => cache.get(line), [cache]);
 }
 
 function jsonLineWindow({
@@ -182,20 +116,40 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+const JsonInspectorHighlightedLine = React.memo(
+  function JsonInspectorHighlightedLine({
+    html,
+    lineIndex,
+    virtual = false,
+  }: {
+    html: string;
+    lineIndex?: number;
+    virtual?: boolean;
+  }) {
+    return (
+      <div
+        data-json-line-index={lineIndex}
+        dangerouslySetInnerHTML={{ __html: html }}
+        style={virtual ? VIRTUAL_JSON_LINE_STYLE : undefined}
+      />
+    );
+  },
+);
+
 function JsonInspectorLines({ lines }: { lines: string[] }) {
-  const fragmentsForLine = useJsonLineFragments();
+  const htmlForLine = useJsonLineHtml();
 
   return (
     <pre className="p-3 font-mono text-xs leading-5">
       {lines.map((line, i) => (
-        <div key={i}>{fragmentsForLine(line)}</div>
+        <JsonInspectorHighlightedLine key={i} html={htmlForLine(line)} />
       ))}
     </pre>
   );
 }
 
 function VirtualJsonInspectorLines({ lines }: { lines: string[] }) {
-  const fragmentsForLine = useJsonLineFragments();
+  const htmlForLine = useJsonLineHtml();
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
   const frameRef = React.useRef(0);
   const [windowRange, setWindowRange] = React.useState(() =>
@@ -276,13 +230,12 @@ function VirtualJsonInspectorLines({ lines }: { lines: string[] }) {
           {visibleLines.map((line, offset) => {
             const lineIndex = windowRange.start + offset;
             return (
-              <div
+              <JsonInspectorHighlightedLine
                 key={lineIndex}
-                data-json-line-index={lineIndex}
-                style={{ height: VIRTUAL_LINE_HEIGHT }}
-              >
-                {fragmentsForLine(line)}
-              </div>
+                html={htmlForLine(line)}
+                lineIndex={lineIndex}
+                virtual
+              />
             );
           })}
         </div>
