@@ -6,7 +6,8 @@ import type {
   MarkdownGreenfieldDocument,
 } from "./markdown-greenfield-document";
 
-const DOCUMENT_PADDING_Y = 32;
+const DOCUMENT_PADDING_TOP = 48;
+const DOCUMENT_PADDING_BOTTOM = 32;
 const CHUNK_PADDING_X = 32;
 const MIN_CHUNK_HEIGHT = 64;
 // Tuned to the rendered typography (15.5px body at leading-relaxed ≈ 25px,
@@ -17,7 +18,7 @@ const MONO_LINE_HEIGHT = 20;
 const APPROX_BODY_CHAR_WIDTH = 7.9;
 const APPROX_MONO_CHAR_WIDTH = 7.8;
 export const MARKDOWN_GREENFIELD_LAYOUT_POLICY_VERSION =
-  "greenfield-layout-rich-blocks-v5";
+  "greenfield-layout-rich-blocks-v6";
 const MARKDOWN_TABLE_VIRTUALIZATION_ROW_THRESHOLD = 80;
 const MARKDOWN_TABLE_VIRTUALIZED_HEIGHT = 640;
 const LAYOUT_CACHE_LIMIT = 64;
@@ -110,7 +111,7 @@ export function layoutMarkdownGreenfieldDocument({
     document,
   });
   const chunks: MarkdownGreenfieldChunkFrame[] = [];
-  let y = DOCUMENT_PADDING_Y;
+  let y = DOCUMENT_PADDING_TOP;
 
   for (const [chunkIndex, chunk] of document.chunks.entries()) {
     const estimatedHeight = estimatedHeights[chunkIndex] ?? MIN_CHUNK_HEIGHT;
@@ -138,7 +139,7 @@ export function layoutMarkdownGreenfieldDocument({
 
   const frame = freezeMarkdownGreenfieldFrame({
     chunks,
-    totalHeight: chunks.length ? y + DOCUMENT_PADDING_Y : 0,
+    totalHeight: chunks.length ? y + DOCUMENT_PADDING_BOTTOM : 0,
     width,
   });
   if (shouldCacheFrame) {

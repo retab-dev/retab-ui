@@ -9,6 +9,27 @@ import {
 } from "@/registry/new-york-v4/ui/markdown-greenfield-layout";
 
 describe("pretext markdown greenfield layout", () => {
+  it("keeps the first rendered chunk below the viewer chrome", () => {
+    const document = createMarkdownGreenfieldDocument(
+      ["# Spaced", "", "The first content block needs breathing room."].join(
+        "\n",
+      ),
+    );
+    const measuredHeight = 120;
+    const frame = layoutMarkdownGreenfieldDocument({
+      contentWidth: 720,
+      document,
+      fontScale: 1,
+      measuredHeights: {
+        cacheKey: "fixed-height",
+        get: () => measuredHeight,
+      },
+    });
+
+    expect(frame.chunks[0]?.top).toBe(48);
+    expect(frame.totalHeight).toBe(48 + measuredHeight + 32);
+  });
+
   it("caches immutable layout frames by document, width, scale, and measurements", () => {
     const document = createMarkdownGreenfieldDocument(
       [
