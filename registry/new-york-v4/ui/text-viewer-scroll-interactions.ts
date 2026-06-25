@@ -7,7 +7,7 @@ import { joinEffectKey } from "@/lib/effect-key";
 
 export const TEXT_SCROLL_INTERACTION_RESTORE_DELAY_MS = 120;
 
-type ScrollInteractionSnapshot = {
+export type ScrollInteractionSnapshot = {
   overflowTarget: HTMLElement | null;
   overflowX: InlineStyleSnapshot | null;
   pointerEvents: InlineStyleSnapshot;

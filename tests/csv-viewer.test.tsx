@@ -1532,6 +1532,27 @@ describe("CsvViewer URL source loading", () => {
     ]);
   });
 
+  it("bypasses the browser cache for URL CSV reads", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(response("a,b\n1,2")));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <CsvViewer
+        source={{
+          kind: "url",
+          url: "/cache-sensitive.csv",
+          fileName: "cache-sensitive.csv",
+        }}
+      />,
+    );
+
+    expect(await screen.findByText("2")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith("/cache-sensitive.csv", {
+      cache: "no-store",
+      signal: undefined,
+    });
+  });
+
   it("ignores stale URL loads after the source changes", async () => {
     const slow = deferred<Response>();
     const fetchMock = vi.fn((url: string) => {

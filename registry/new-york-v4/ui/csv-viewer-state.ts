@@ -300,10 +300,11 @@ export function useCsvResourceState({
         const cache =
           csvResource.content.payload.kind === "url" ? "no-store" : undefined;
         runMainThread(
-          await csvResource.content.readStream({
-            cache,
-            signal: controller.signal,
-          }),
+          await csvResource.content.readStream(
+            cache
+              ? { cache, signal: controller.signal }
+              : { signal: controller.signal },
+          ),
         );
       } catch (error) {
         onError(error);

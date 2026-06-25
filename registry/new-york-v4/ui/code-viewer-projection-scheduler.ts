@@ -5,6 +5,12 @@ import * as React from "react";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 
 import { joinEffectKey } from "@/lib/effect-key";
+import {
+  restoreTextViewerScrollInteractions,
+  suspendTextViewerScrollInteractions,
+  TEXT_SCROLL_INTERACTION_RESTORE_DELAY_MS,
+  type ScrollInteractionSnapshot,
+} from "./text-viewer-scroll-interactions";
 
 export function useCodeProjectionScheduler({
   project,
@@ -17,6 +23,8 @@ export function useCodeProjectionScheduler({
 }) {
   const scheduledProjectionRef = React.useRef(0);
   const scrollInteractionRestoreRef = React.useRef(0);
+  const scrollInteractionSnapshotRef =
+    React.useRef<ScrollInteractionSnapshot | null>(null);
 
   const scheduleProjection = React.useCallback(() => {
     if (scheduledProjectionRef.current) return;
@@ -45,14 +53,18 @@ export function useCodeProjectionScheduler({
       if (!viewport) return;
 
       const handleScroll = () => {
-        suspendCodeScrollInteractions(rowHostRef?.current);
+        suspendTextViewerScrollInteractions({
+          getInteractionTarget: () => rowHostRef?.current,
+          getOverflowTarget: () => rowHostRef?.current?.parentElement,
+          snapshotRef: scrollInteractionSnapshotRef,
+        });
         if (scrollInteractionRestoreRef.current) {
           window.clearTimeout(scrollInteractionRestoreRef.current);
         }
         scrollInteractionRestoreRef.current = window.setTimeout(() => {
           scrollInteractionRestoreRef.current = 0;
-          restoreCodeScrollInteractions(rowHostRef?.current);
-        }, 120);
+          restoreTextViewerScrollInteractions(scrollInteractionSnapshotRef);
+        }, TEXT_SCROLL_INTERACTION_RESTORE_DELAY_MS);
         scheduleProjection();
       };
 
@@ -73,7 +85,7 @@ export function useCodeProjectionScheduler({
           window.clearTimeout(scrollInteractionRestoreRef.current);
           scrollInteractionRestoreRef.current = 0;
         }
-        restoreCodeScrollInteractions(rowHostRef?.current);
+        restoreTextViewerScrollInteractions(scrollInteractionSnapshotRef);
       };
     },
   );
@@ -83,28 +95,4 @@ function cancelScheduledProjection(ref: React.MutableRefObject<number>) {
   if (!ref.current) return;
   cancelAnimationFrame(ref.current);
   ref.current = 0;
-}
-
-function suspendCodeScrollInteractions(rowHost: HTMLPreElement | null | undefined) {
-  if (!rowHost) return;
-  rowHost.style.pointerEvents = "none";
-  if (isMobileSafari()) {
-    rowHost.parentElement?.style.setProperty("overflow-x", "hidden");
-  }
-}
-
-function restoreCodeScrollInteractions(rowHost: HTMLPreElement | null | undefined) {
-  if (!rowHost) return;
-  rowHost.style.removeProperty("pointer-events");
-  rowHost.parentElement?.style.removeProperty("overflow-x");
-}
-
-function isMobileSafari() {
-  if (typeof navigator === "undefined") return false;
-  const userAgent = navigator.userAgent;
-  return (
-    /Safari/i.test(userAgent) &&
-    /Mobile/i.test(userAgent) &&
-    !/CriOS|FxiOS|EdgiOS/i.test(userAgent)
-  );
 }
