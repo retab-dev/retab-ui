@@ -6,7 +6,7 @@ import type { ViewerResource } from "@/lib/viewer-resource";
 
 import { MarkdownGreenfieldContent } from "./markdown-greenfield-content";
 import { PlainTextViewerFrame } from "./plain-text-viewer-frame";
-import { ChenglouTextViewerContent } from "./text-viewer-chenglou-content";
+import { TextViewerContent } from "./text-viewer-chenglou-content";
 import { TextViewerFallback } from "./text-viewer-chrome";
 import { resolveTextViewerMode } from "./text-viewer-layout";
 import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types";
@@ -117,5 +117,5 @@ function TextViewerRoutedContent(props: RoutedTextViewerContentProps) {
     return <MarkdownGreenfieldContent {...props} source={source} />;
   }
 
-  return <ChenglouTextViewerContent {...props} mode="text" source={source} />;
+  return <TextViewerContent {...props} mode="text" source={source} />;
 }

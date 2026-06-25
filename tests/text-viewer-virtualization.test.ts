@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildTextVirtualOffsets,
   getTextScrollAnchor,
+  getTextInverseStickyWindow,
   getTextVirtualItems,
   textScrollTopForItem,
 } from "@/registry/new-york-v4/ui/text-viewer-virtualization";
@@ -133,6 +134,24 @@ describe("text viewer variable virtualization", () => {
     ).toEqual({
       index: 1,
       offsetWithinLine: 7,
+    });
+  });
+
+  it("builds an inverse-sticky window with explicit before and after buffers", () => {
+    expect(
+      getTextInverseStickyWindow({
+        renderedTop: 1200,
+        renderedBottom: 2600,
+        totalHeight: 5000,
+        viewportHeight: 640,
+      }),
+    ).toEqual({
+      afterHeight: 2400,
+      beforeHeight: 1200,
+      renderedBottom: 2600,
+      renderedHeight: 1400,
+      renderedTop: 1200,
+      stickyOffset: -760,
     });
   });
 });

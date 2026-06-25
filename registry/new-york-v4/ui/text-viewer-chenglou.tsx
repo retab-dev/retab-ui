@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import { PlainTextViewerFrame } from "./plain-text-viewer-frame";
-import { ChenglouTextViewerContent } from "./text-viewer-chenglou-content";
+import { TextViewerContent } from "./text-viewer-chenglou-content";
 import { TextViewerFallback } from "./text-viewer-chrome";
 import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types";
 
@@ -17,7 +17,7 @@ export const ChenglouTextViewer = React.forwardRef<
       forwardedRef={ref}
       clientFallbackPolicy="always"
       Fallback={TextViewerFallback}
-      Content={ChenglouTextViewerContent}
+      Content={TextViewerContent}
     />
   );
 });

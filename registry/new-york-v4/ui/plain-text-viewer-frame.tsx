@@ -31,6 +31,7 @@ import { ViewerErrorBoundary } from "./viewer-error";
 
 type TextResourceSource = UrlViewerSource | BlobViewerSource | TextSource;
 type ClientFallbackPolicy = "always" | "non-inline-source";
+type ContentResetPolicy = "content" | "inline-retry";
 
 export interface PlainTextViewerFrameProps<
   THandle,
@@ -40,6 +41,7 @@ export interface PlainTextViewerFrameProps<
   resource?: ViewerResource;
   forwardedRef: React.ForwardedRef<THandle>;
   clientFallbackPolicy: ClientFallbackPolicy;
+  contentResetPolicy?: ContentResetPolicy;
   Fallback: React.ComponentType<PlainTextViewerFallbackProps>;
   Content: React.ComponentType<
     TProps & {
@@ -73,6 +75,7 @@ export function PlainTextViewerFrame<
   resource: resourceProp,
   forwardedRef,
   clientFallbackPolicy,
+  contentResetPolicy = "content",
   Fallback,
   Content,
 }: PlainTextViewerFrameProps<THandle, TProps>) {
@@ -98,6 +101,10 @@ export function PlainTextViewerFrame<
     contentBaseKey,
     retryVersion,
   );
+  const suspenseResetKey =
+    contentResetPolicy === "inline-retry" && resource.sourceKind === "text"
+      ? String(retryVersion)
+      : contentResetKey;
 
   if (
     !isClient &&
@@ -134,7 +141,7 @@ export function PlainTextViewerFrame<
       }
     >
       <React.Suspense
-        key={contentResetKey}
+        key={suspenseResetKey}
         fallback={
           <Fallback
             className={props.className}

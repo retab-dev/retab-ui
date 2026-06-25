@@ -69,6 +69,7 @@ export function CodeViewerViewport({
           data-code-scroll-spacer=""
           className="relative w-max min-w-full font-mono"
           style={{
+            contain: "layout style",
             fontSize,
             height: physicalTotalSize,
             lineHeight: `${lineHeight}px`,
@@ -76,11 +77,23 @@ export function CodeViewerViewport({
           }}
         >
           <div
+            aria-hidden
+            data-code-render-offset=""
+            style={{
+              contain: "layout size",
+              height: 0,
+            }}
+          />
+          <div
             data-code-render-window=""
             className="w-full"
             style={{
               bottom: 0,
+              contain: "layout style inline-size",
+              display: "flex",
+              flexDirection: "column",
               height: physicalTotalSize,
+              isolation: "isolate",
               position: "sticky",
               top: 0,
             }}

@@ -700,11 +700,16 @@ function syncCodeScrollLayers({
   }
 
   const height = `${renderedWindow.height}px`;
+  const top = `${renderedWindow.top}px`;
   const stickyOffset = `${renderedWindow.stickyOffset}px`;
+  const offsetElement = getCodeRenderedWindowOffsetElement(
+    renderedWindowElement,
+  );
 
   setStyleValue(rowHost.style, "height", height);
+  if (offsetElement) setStyleValue(offsetElement.style, "height", top);
   setStyleValue(renderedWindowElement.style, "height", height);
-  setStyleValue(renderedWindowElement.style, "margin-top", `${renderedWindow.top}px`);
+  setStyleValue(renderedWindowElement.style, "margin-top", "");
   setStyleValue(renderedWindowElement.style, "top", stickyOffset);
   setStyleValue(renderedWindowElement.style, "bottom", stickyOffset);
 
@@ -718,6 +723,17 @@ function getCodeRenderedWindowElement(rowHost: HTMLPreElement) {
   if (
     element instanceof HTMLElement &&
     element.dataset.codeRenderWindow != null
+  ) {
+    return element;
+  }
+  return null;
+}
+
+function getCodeRenderedWindowOffsetElement(renderedWindowElement: HTMLElement) {
+  const element = renderedWindowElement.previousElementSibling;
+  if (
+    element instanceof HTMLElement &&
+    element.dataset.codeRenderOffset != null
   ) {
     return element;
   }

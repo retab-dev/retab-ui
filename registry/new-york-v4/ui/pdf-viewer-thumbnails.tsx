@@ -10,7 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 import {
   buildPdfThumbnailLayout,
   PDF_THUMBNAIL_INITIAL_VIEWPORT_HEIGHT,
-  PDF_THUMBNAIL_OVERSCAN,
+  PDF_THUMBNAIL_OVERSCAN_PX,
   type PdfThumbnailShape,
 } from "./pdf-thumbnail-layout";
 import { PdfThumbnailRailViewport } from "./pdf-thumbnail-rail";
@@ -129,7 +129,7 @@ function PdfThumbnailRailInner({
   const thumbnailWindow = usePdfThumbnailWindow({
     layout,
     viewportRef,
-    overscan: PDF_THUMBNAIL_OVERSCAN,
+    overscanPx: PDF_THUMBNAIL_OVERSCAN_PX,
     initialViewportHeight: PDF_THUMBNAIL_INITIAL_VIEWPORT_HEIGHT,
   });
   const follow = useThumbnailRailFollow({
@@ -161,6 +161,7 @@ function PdfThumbnailRailInner({
       doc={doc}
       layout={layout}
       visibleItems={thumbnailWindow.visibleItems}
+      viewportHeight={thumbnailWindow.viewportHeight}
       currentPage={currentPage}
       viewportRef={viewportRef}
       onSelectPage={onSelectPage}

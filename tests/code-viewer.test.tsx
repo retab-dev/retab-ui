@@ -490,7 +490,7 @@ describe("code-viewer-syntax", () => {
     );
   });
 
-  it("creates a fresh token cache for each syntax instance", async () => {
+  it("shares the token cache across syntax instances", async () => {
     const resource = createViewerResource(
       textSource('{"name":"retab"}', "app.json"),
     );
@@ -502,7 +502,7 @@ describe("code-viewer-syntax", () => {
     });
     await Promise.all([firstSyntax.preload?.(), secondSyntax.preload?.()]);
 
-    expect(firstSyntax.getLineTokens('{"name":"retab"}')).not.toBe(
+    expect(firstSyntax.getLineTokens('{"name":"retab"}')).toBe(
       secondSyntax.getLineTokens('{"name":"retab"}'),
     );
   });
@@ -798,7 +798,7 @@ describe("code-viewer-syntax", () => {
       });
       vi.runOnlyPendingTimers();
 
-      expect(worker.terminate).toHaveBeenCalledTimes(1);
+      expect(worker.terminate).not.toHaveBeenCalled();
       expect(onTokensChanged).not.toHaveBeenCalled();
       expect(syntax.getLineTokens("{}")).toBeNull();
     } finally {
@@ -903,12 +903,14 @@ describe("code-viewer-projector", () => {
 
   function createProjectionElements() {
     const rowHost = document.createElement("pre");
+    const renderOffset = document.createElement("div");
     const renderWindow = document.createElement("div");
     const scrollSpacer = document.createElement("div");
     const viewport = document.createElement("div");
 
+    renderOffset.dataset.codeRenderOffset = "";
     renderWindow.dataset.codeRenderWindow = "";
-    scrollSpacer.append(renderWindow);
+    scrollSpacer.append(renderOffset, renderWindow);
     renderWindow.append(rowHost);
 
     Object.defineProperty(viewport, "clientHeight", {
@@ -916,7 +918,7 @@ describe("code-viewer-projector", () => {
       value: 20,
     });
 
-    return { renderWindow, rowHost, scrollSpacer, viewport };
+    return { renderOffset, renderWindow, rowHost, scrollSpacer, viewport };
   }
 
   function createProjectionLines(lineCount = 500) {
@@ -1024,13 +1026,14 @@ describe("code-viewer-projector", () => {
   });
 
   it("places rows inside an inverse-sticky rendered window", () => {
-    const { renderWindow, rowHost, scrollSpacer, viewport } =
+    const { renderOffset, renderWindow, rowHost, scrollSpacer, viewport } =
       createProjectionElements();
     const textLines = createProjectionLines();
     const projector = project({ rowHost, textLines, viewport });
 
     expect(scrollSpacer.style.height).toBe("10016px");
-    expect(renderWindow.style.marginTop).toBe("8px");
+    expect(renderOffset.style.height).toBe("8px");
+    expect(renderWindow.style.marginTop).toBe("");
     expect(renderWindow.style.height).toBe("2020px");
     expect(renderWindow.style.top).toBe("-2000px");
     expect(renderWindow.style.bottom).toBe("-2000px");
@@ -1044,7 +1047,8 @@ describe("code-viewer-projector", () => {
     viewport.scrollTop = 1100;
     projectAgain({ projector, rowHost, textLines, viewport });
 
-    expect(renderWindow.style.marginTop).toBe("88px");
+    expect(renderOffset.style.height).toBe("88px");
+    expect(renderWindow.style.marginTop).toBe("");
     expect(renderWindow.style.height).toBe("2040px");
     expect(renderWindow.style.top).toBe("-2020px");
     expect(renderWindow.style.bottom).toBe("-2020px");
@@ -3146,14 +3150,23 @@ describe("CodeViewer", () => {
     const scrollSpacer = container.querySelector<HTMLElement>(
       "[data-code-scroll-spacer]",
     );
+    const renderOffset = container.querySelector<HTMLElement>(
+      "[data-code-render-offset]",
+    );
     const renderWindow = container.querySelector<HTMLElement>(
       "[data-code-render-window]",
     );
     const rowHost = container.querySelector("pre");
 
     expect(scrollSpacer?.style.height).toBe("200016px");
+    expect(scrollSpacer?.style.contain).toBe("layout style");
+    expect(renderOffset?.style.height).toBe("8px");
     expect(renderWindow?.style.position).toBe("sticky");
-    expect(renderWindow?.style.marginTop).toBe("8px");
+    expect(renderWindow?.style.contain).toBe("layout style inline-size");
+    expect(renderWindow?.style.display).toBe("flex");
+    expect(renderWindow?.style.flexDirection).toBe("column");
+    expect(renderWindow?.style.isolation).toBe("isolate");
+    expect(renderWindow?.style.marginTop).toBe("");
     expect(renderWindow?.style.height).toBe("2600px");
     expect(renderWindow?.style.top).toBe("-2000px");
     expect(renderWindow?.style.bottom).toBe("-2000px");
@@ -3942,6 +3955,7 @@ describe("code-viewer implementation boundaries", () => {
     expect(projectorSource).not.toContain("React");
 
     expect(viewportSource).toContain("<pre");
+    expect(viewportSource).toContain("data-code-render-offset");
     expect(viewportSource).toContain("data-code-render-window");
     expect(viewportSource).toContain('position: "sticky"');
     expect(viewportSource).toContain("overflowAnchor");

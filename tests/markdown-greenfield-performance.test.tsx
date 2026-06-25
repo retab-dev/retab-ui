@@ -22,6 +22,10 @@ function markdownSource(text: string) {
   };
 }
 
+function inlinePx(value: string) {
+  return Number.parseFloat(value.replace("px", ""));
+}
+
 beforeEach(() => {
   Object.defineProperty(HTMLElement.prototype, "scrollTo", {
     configurable: true,
@@ -56,6 +60,60 @@ describe("pretext markdown greenfield performance boundaries", () => {
     expect(mountedChunks.length).toBeGreaterThan(0);
     expect(mountedChunks.length).toBeLessThan(model.chunks.length);
     expect(mountedChunks.length).toBeLessThanOrEqual(8);
+  });
+
+  it("renders Markdown chunks inside a buffered inverse-sticky window", () => {
+    const markdown = Array.from({ length: 180 }, (_, index) =>
+      [`## Section ${index + 1}`, "", `Paragraph ${index + 1}.`].join("\n"),
+    ).join("\n\n");
+    const { container } = render(
+      <MarkdownViewer controls={false} source={markdownSource(markdown)} />,
+    );
+    const canvas = container.querySelector<HTMLElement>(
+      '[data-slot="markdown-virtual-canvas"]',
+    );
+    const beforeBuffer = container.querySelector<HTMLElement>(
+      '[data-slot="markdown-sticky-before-buffer"]',
+    );
+    const stickyWindow = container.querySelector<HTMLElement>(
+      '[data-slot="markdown-sticky-window"]',
+    );
+    const stickyContent = container.querySelector<HTMLElement>(
+      '[data-slot="markdown-sticky-content"]',
+    );
+    const afterBuffer = container.querySelector<HTMLElement>(
+      '[data-slot="markdown-sticky-after-buffer"]',
+    );
+
+    expect(beforeBuffer).toBeTruthy();
+    expect(stickyWindow).toBeTruthy();
+    expect(stickyContent).toBeTruthy();
+    expect(afterBuffer).toBeTruthy();
+    expect(beforeBuffer?.style.contain).toBe("layout size");
+    expect(stickyWindow?.style.position).toBe("sticky");
+    expect(stickyWindow?.style.contain).toBe("layout style inline-size");
+    expect(stickyWindow?.style.display).toBe("flex");
+    expect(stickyWindow?.style.flexDirection).toBe("column");
+    expect(stickyWindow?.style.isolation).toBe("isolate");
+    expect(stickyWindow?.style.marginTop).toBe("");
+    expect(stickyWindow?.style.top).toBe(stickyWindow?.style.bottom);
+    expect(stickyWindow?.style.height).toBe(stickyContent?.style.height);
+    expect(afterBuffer?.style.contain).toBe("layout size");
+
+    const beforeHeight = inlinePx(beforeBuffer!.style.height);
+    const stickyHeight = inlinePx(stickyWindow!.style.height);
+    const afterHeight = inlinePx(afterBuffer!.style.height);
+    const canvasHeight = inlinePx(canvas!.style.height);
+    const stickyOffset = inlinePx(stickyWindow!.style.top);
+
+    expect(beforeHeight).toBeGreaterThan(0);
+    expect(stickyHeight).toBeGreaterThan(640);
+    expect(afterHeight).toBeGreaterThan(0);
+    expect(beforeHeight + stickyHeight + afterHeight).toBeCloseTo(
+      canvasHeight,
+      3,
+    );
+    expect(stickyOffset).toBe(-(stickyHeight - 640));
   });
 
   it("renders huge code fences as copyable virtualized hostile previews", () => {

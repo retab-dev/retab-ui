@@ -21,6 +21,7 @@ import {
 } from "@/lib/viewer-source";
 
 export interface ResourceReadOptions {
+  cache?: RequestCache;
   signal?: AbortSignal;
 }
 
@@ -387,22 +388,22 @@ function internUrlResourceContent(
   const content = resourceContentBase(source, keys, {
     directUrl: source.url,
     payload: { kind: "url", url: source.url },
-    readBlob: async ({ signal } = {}) => {
-      const response = await fetchResource(source.url, { signal });
+    readBlob: async ({ cache, signal } = {}) => {
+      const response = await fetchResource(source.url, { cache, signal });
       validateFullContentResponse(response);
       return readResponseBlob(response);
     },
-    readBytes: async ({ signal } = {}) => {
-      const response = await fetchResource(source.url, { signal });
+    readBytes: async ({ cache, signal } = {}) => {
+      const response = await fetchResource(source.url, { cache, signal });
       validateFullContentResponse(response);
       return readResponseArrayBuffer(response);
     },
-    readText: async ({ signal, maxBytes, maxLines } = {}) => {
-      const response = await fetchResource(source.url, { signal });
+    readText: async ({ cache, signal, maxBytes, maxLines } = {}) => {
+      const response = await fetchResource(source.url, { cache, signal });
       return readBoundedResponseText(response, { maxBytes, maxLines });
     },
-    readStream: async ({ signal } = {}) => {
-      const response = await fetchResource(source.url, { signal });
+    readStream: async ({ cache, signal } = {}) => {
+      const response = await fetchResource(source.url, { cache, signal });
       validateFullContentResponse(response);
       if (!response.body) {
         if (response.status === 204 || response.status === 205) {
@@ -415,10 +416,11 @@ function internUrlResourceContent(
       }
       return response.body;
     },
-    readRange: async (range, { signal } = {}) => {
+    readRange: async (range, { cache, signal } = {}) => {
       validateByteRange(range);
       const { start, end } = range;
       const response = await fetchResource(source.url, {
+        cache,
         signal,
         headers: { Range: `bytes=${start}-${end}` },
       });

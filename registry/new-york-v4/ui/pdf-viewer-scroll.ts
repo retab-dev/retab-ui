@@ -3,7 +3,10 @@ import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import {
   findPdfPageByOffset,
+  getPdfLogicalScrollTop,
   getPdfPageLayout,
+  getPdfPhysicalScrollHeight,
+  resolvePdfPhysicalScrollPosition,
   type PdfPageLayoutModel,
 } from "./pdf-viewer-layout";
 import { clamp } from "./pdf-viewer-scale";
@@ -47,6 +50,14 @@ type PdfScrollIntent =
 type PdfResolvedPageAreaTarget = {
   top: number;
   left?: number;
+};
+
+type PdfScrollMetrics = {
+  physicalScrollHeight: number;
+  physicalScrollTop: number;
+  scrollPageOffset: number;
+  scrollTop: number;
+  viewportHeight: number;
 };
 
 export function usePdfScrollActivity() {
@@ -224,6 +235,7 @@ export function usePdfScroll({
   const viewportElementRef = React.useRef<HTMLDivElement | null>(null);
   const lastReportedPageRef = React.useRef(0);
   const scrollFrameRef = React.useRef(0);
+  const scrollPageOffsetRef = React.useRef(0);
   const viewportResetKeyRef = React.useRef<unknown>(resetKey);
   const didMountResetEffectRef = React.useRef(false);
   const scrollIntent = usePdfScrollIntentController();
@@ -240,8 +252,9 @@ export function usePdfScroll({
   const resetViewportForKey = React.useCallback(
     (element: HTMLDivElement, key: unknown) => {
       viewportResetKeyRef.current = key;
+      scrollPageOffsetRef.current = 0;
       scrollIntent.reset();
-      setViewportScrollTop(element, 0);
+      setViewportPhysicalScrollTop(element, 0);
       element.scrollTo?.({ top: 0, behavior: "auto" });
     },
     [scrollIntent],
@@ -258,20 +271,138 @@ export function usePdfScroll({
     [resetKey, resetViewportForKey],
   );
 
+  const readScrollMetrics = React.useCallback(
+    () =>
+      readPdfScrollMetrics({
+        scrollPageOffset: scrollPageOffsetRef.current,
+        totalHeight: layout.totalHeight,
+        viewportElement: viewportElementRef.current,
+      }),
+    [layout.totalHeight],
+  );
+
+  const syncPhysicalScrollPosition = React.useCallback(
+    (viewportElement: HTMLDivElement) => {
+      const metrics = readPdfScrollMetrics({
+        scrollPageOffset: scrollPageOffsetRef.current,
+        totalHeight: layout.totalHeight,
+        viewportElement,
+      });
+      if (metrics.physicalScrollHeight >= layout.totalHeight) {
+        scrollPageOffsetRef.current = 0;
+        return {
+          ...metrics,
+          scrollPageOffset: 0,
+        };
+      }
+
+      const position = resolvePdfPhysicalScrollPosition({
+        logicalScrollTop: metrics.scrollTop,
+        scrollPageOffset: metrics.scrollPageOffset,
+        totalHeight: layout.totalHeight,
+        viewportHeight: metrics.viewportHeight,
+      });
+      scrollPageOffsetRef.current = position.scrollPageOffset;
+      setViewportPhysicalScrollTop(
+        viewportElement,
+        position.physicalScrollTop,
+      );
+
+      return {
+        ...metrics,
+        physicalScrollTop: position.physicalScrollTop,
+        scrollPageOffset: position.scrollPageOffset,
+      };
+    },
+    [layout.totalHeight],
+  );
+
+  const scrollViewportToLogicalTop = React.useCallback(
+    (
+      viewportElement: HTMLDivElement,
+      targetTop: number,
+      options?: ScrollToOptions,
+    ) => {
+      const position = resolvePdfPhysicalScrollPosition({
+        logicalScrollTop: targetTop,
+        scrollPageOffset: scrollPageOffsetRef.current,
+        totalHeight: layout.totalHeight,
+        viewportHeight: viewportElement.clientHeight,
+      });
+      scrollPageOffsetRef.current = position.scrollPageOffset;
+      scrollViewportToPhysicalTop(viewportElement, position.physicalScrollTop, {
+        behavior: "auto",
+        ...options,
+      });
+    },
+    [layout.totalHeight],
+  );
+
+  const scrollViewportToPageAreaTarget = React.useCallback(
+    (
+      viewportElement: HTMLDivElement,
+      target: PdfResolvedPageAreaTarget,
+      options: ScrollToOptions,
+    ) => {
+      const physicalScrollHeight = getPdfPhysicalScrollHeight({
+        totalHeight: layout.totalHeight,
+        viewportHeight: viewportElement.clientHeight,
+      });
+      const position =
+        physicalScrollHeight < layout.totalHeight
+          ? resolvePdfPhysicalScrollPosition({
+              logicalScrollTop: target.top,
+              scrollPageOffset: scrollPageOffsetRef.current,
+              totalHeight: layout.totalHeight,
+              viewportHeight: viewportElement.clientHeight,
+            })
+          : {
+              physicalScrollTop: Math.max(0, target.top),
+              scrollPageOffset: 0,
+            };
+      const hasTopChange =
+        Math.abs(viewportElement.scrollTop - position.physicalScrollTop) >
+        PDF_SCROLL_POSITION_EPSILON;
+      const hasLeftChange =
+        target.left != null &&
+        Math.abs(viewportElement.scrollLeft - target.left) >
+          PDF_SCROLL_POSITION_EPSILON;
+
+      if (!hasTopChange && !hasLeftChange) return;
+
+      scrollPageOffsetRef.current = position.scrollPageOffset;
+      viewportElement.scrollTo({
+        top: position.physicalScrollTop,
+        ...(target.left == null ? null : { left: target.left }),
+        ...options,
+      });
+    },
+    [layout.totalHeight],
+  );
+
   const measureScroll = React.useCallback(() => {
     scrollFrameRef.current = 0;
     const viewportElement = viewportElementRef.current;
     if (!viewportElement) return;
 
-    const scrollable =
-      viewportElement.scrollHeight - viewportElement.clientHeight;
+    const metrics = syncPhysicalScrollPosition(viewportElement);
+    const isRebased = metrics.physicalScrollHeight < layout.totalHeight;
+    const scrollable = isRebased
+      ? layout.totalHeight - metrics.viewportHeight
+      : viewportElement.scrollHeight - metrics.viewportHeight;
     const progress =
-      scrollable > 0 ? clamp(viewportElement.scrollTop / scrollable, 0, 1) : 0;
+      scrollable > 0
+        ? clamp(
+            (isRebased ? metrics.scrollTop : viewportElement.scrollTop) /
+              scrollable,
+            0,
+            1,
+          )
+        : 0;
     onScrollProgressChange?.(progress);
 
     const markerOffset =
-      viewportElement.scrollTop +
-      viewportElement.clientHeight * PDF_READING_MARKER_RATIO;
+      metrics.scrollTop + metrics.viewportHeight * PDF_READING_MARKER_RATIO;
     const visiblePage = findPdfPageByOffset(layout, markerOffset);
 
     if (
@@ -294,6 +425,7 @@ export function usePdfScroll({
     onVisiblePageChange,
     pageCount,
     resetKey,
+    syncPhysicalScrollPosition,
   ]);
   const measureScrollRef = React.useRef(measureScroll);
   useKeyedLayoutEffect(joinEffectKey([measureScroll]), () => {
@@ -304,7 +436,15 @@ export function usePdfScroll({
   const committedResetKeyRef = React.useRef<unknown>(resetKey);
 
   useKeyedLayoutEffect(
-    joinEffectKey([layout, pageCount, resetKey, scrollIntent]),
+    joinEffectKey([
+      layout,
+      pageCount,
+      resetKey,
+      scrollIntent,
+      scrollViewportToLogicalTop,
+      scrollViewportToPageAreaTarget,
+      syncPhysicalScrollPosition,
+    ]),
     () => {
       const previousLayout = committedLayoutRef.current;
       const previousResetKey = committedResetKeyRef.current;
@@ -319,11 +459,13 @@ export function usePdfScroll({
 
       const activeIntent = scrollIntent.current();
       if (activeIntent.kind === "programmatic") {
+        const metrics = syncPhysicalScrollPosition(viewportElement);
         const target = getPdfPageAreaScrollTarget(
           viewportElement,
           layout,
           pageCount,
           activeIntent.target,
+          metrics.scrollTop,
         );
         if (!target) return;
 
@@ -341,14 +483,36 @@ export function usePdfScroll({
         return;
       }
 
-      const anchor = capturePdfReadingAnchor(previousLayout, viewportElement);
+      const previousLogicalScrollTop = getPdfLogicalScrollTop({
+        physicalScrollTop: viewportElement.scrollTop,
+        scrollPageOffset: scrollPageOffsetRef.current,
+        totalHeight: previousLayout.totalHeight,
+        viewportHeight: viewportElement.clientHeight,
+      });
+      const anchor = capturePdfReadingAnchor(
+        previousLayout,
+        viewportElement,
+        previousLogicalScrollTop,
+      );
       if (!anchor) return;
 
-      restorePdfReadingAnchor(layout, viewportElement, anchor);
+      const targetTop = getPdfReadingAnchorScrollTop(
+        layout,
+        viewportElement,
+        anchor,
+      );
+      if (targetTop != null) {
+        scrollViewportToLogicalTop(viewportElement, targetTop);
+      }
     },
   );
 
   const handleScroll = React.useCallback(() => {
+    const viewportElement = viewportElementRef.current;
+    if (viewportElement) {
+      syncPhysicalScrollPosition(viewportElement);
+    }
+
     const activeIntent = scrollIntent.current();
     if (activeIntent.kind === "programmatic") {
       scrollIntent.scheduleProgrammaticCompletion(activeIntent.sequence);
@@ -360,7 +524,7 @@ export function usePdfScroll({
     scrollFrameRef.current = requestAnimationFrame(() =>
       measureScrollRef.current(),
     );
-  }, [scrollIntent]);
+  }, [scrollIntent, syncPhysicalScrollPosition]);
 
   useKeyedMountEffect(joinEffectKey([resetKey, resetViewportForKey]), () => {
     if (!didMountResetEffectRef.current) {
@@ -421,7 +585,13 @@ export function usePdfScroll({
     (target: PdfPageAreaTarget, options?: ScrollToOptions) => {
       const viewportElement = viewportElementRef.current;
       const pageAreaTarget = viewportElement
-        ? getPdfPageAreaScrollTarget(viewportElement, layout, pageCount, target)
+        ? getPdfPageAreaScrollTarget(
+            viewportElement,
+            layout,
+            pageCount,
+            target,
+            readScrollMetrics().scrollTop,
+          )
         : null;
       if (!viewportElement || !pageAreaTarget) return;
 
@@ -437,7 +607,13 @@ export function usePdfScroll({
       });
       scrollIntent.scheduleProgrammaticCompletion(intent.sequence);
     },
-    [layout, pageCount, scrollIntent],
+    [
+      layout,
+      pageCount,
+      readScrollMetrics,
+      scrollIntent,
+      scrollViewportToPageAreaTarget,
+    ],
   );
   const scrollToPage = React.useCallback(
     (pageNumber: number, options?: ScrollToOptions) => {
@@ -467,6 +643,7 @@ export function usePdfScroll({
     setViewportElement,
     measureScroll,
     handleScroll,
+    getScrollMetrics: readScrollMetrics,
     scrollToPage,
     scrollToPageArea,
     getViewportElement,
@@ -478,6 +655,7 @@ function getPdfPageAreaScrollTarget(
   layout: PdfPageLayoutModel,
   pageCount: number,
   target: PdfPageAreaTarget,
+  scrollTop: number,
 ): PdfResolvedPageAreaTarget | null {
   const pageNumber = target.pageNumber;
   if (pageNumber < 1 || pageNumber > pageCount) return null;
@@ -492,18 +670,16 @@ function getPdfPageAreaScrollTarget(
     pageLayout.offsetTop + (targetTopPercent / 100) * pageLayout.height;
   const areaBottom =
     areaTop + ((targetHeightPercent ?? 0) / 100) * pageLayout.height;
-  const visibleTop = viewportElement.scrollTop + PDF_SCROLL_TARGET_HEADROOM;
+  const visibleTop = scrollTop + PDF_SCROLL_TARGET_HEADROOM;
   const visibleBottom =
-    viewportElement.scrollTop +
-    viewportElement.clientHeight -
-    PDF_SCROLL_TARGET_HEADROOM;
+    scrollTop + viewportElement.clientHeight - PDF_SCROLL_TARGET_HEADROOM;
   let targetTop = areaTop - PDF_SCROLL_TARGET_HEADROOM;
 
   if (targetHeightPercent != null && areaTop >= visibleTop) {
     targetTop =
       areaBottom > visibleBottom
         ? areaBottom - viewportElement.clientHeight + PDF_SCROLL_TARGET_HEADROOM
-        : viewportElement.scrollTop;
+        : scrollTop;
   }
 
   const targetLeft = getPdfPageAreaScrollLeft(viewportElement, layout, {
@@ -516,28 +692,6 @@ function getPdfPageAreaScrollTarget(
     top: Math.max(0, targetTop),
     ...(targetLeft == null ? null : { left: targetLeft }),
   };
-}
-
-function scrollViewportToPageAreaTarget(
-  viewportElement: HTMLDivElement,
-  target: PdfResolvedPageAreaTarget,
-  options: ScrollToOptions,
-) {
-  const hasTopChange =
-    Math.abs(viewportElement.scrollTop - target.top) >
-    PDF_SCROLL_POSITION_EPSILON;
-  const hasLeftChange =
-    target.left != null &&
-    Math.abs(viewportElement.scrollLeft - target.left) >
-      PDF_SCROLL_POSITION_EPSILON;
-
-  if (!hasTopChange && !hasLeftChange) return;
-
-  viewportElement.scrollTo({
-    top: target.top,
-    ...(target.left == null ? null : { left: target.left }),
-    ...options,
-  });
 }
 
 function copyPdfPageAreaTarget(target: PdfPageAreaTarget): PdfPageAreaTarget {
@@ -602,13 +756,14 @@ function normalizeOptionalPercent(value: number | undefined) {
 function capturePdfReadingAnchor(
   layout: PdfPageLayoutModel,
   viewportElement: HTMLDivElement,
+  scrollTop: number,
 ): PdfReadingAnchor | null {
   if (layout.pageCount === 0) return null;
-  if (viewportElement.scrollTop <= 0) return { kind: "top" };
+  if (scrollTop <= 0) return { kind: "top" };
 
   const viewportHeight = viewportElement.clientHeight;
   const markerOffset =
-    viewportElement.scrollTop + viewportHeight * PDF_READING_MARKER_RATIO;
+    scrollTop + viewportHeight * PDF_READING_MARKER_RATIO;
   const pageNumber = findPdfPageByOffset(layout, markerOffset);
   const pageLayout = getPdfPageLayout(layout, pageNumber);
   if (!pageLayout || pageLayout.height <= 0) return null;
@@ -624,18 +779,17 @@ function capturePdfReadingAnchor(
   };
 }
 
-function restorePdfReadingAnchor(
+function getPdfReadingAnchorScrollTop(
   layout: PdfPageLayoutModel,
   viewportElement: HTMLDivElement,
   anchor: PdfReadingAnchor,
 ) {
   if (anchor.kind === "top") {
-    setViewportScrollTop(viewportElement, 0);
-    return;
+    return 0;
   }
 
   const pageLayout = getPdfPageLayout(layout, anchor.pageNumber);
-  if (!pageLayout) return;
+  if (!pageLayout) return null;
 
   const viewportHeight = viewportElement.clientHeight;
   const targetTop =
@@ -646,10 +800,66 @@ function restorePdfReadingAnchor(
     0,
     layout.totalHeight - viewportElement.clientHeight,
   );
-  setViewportScrollTop(viewportElement, clamp(targetTop, 0, maxScrollTop));
+  return clamp(targetTop, 0, maxScrollTop);
 }
 
-function setViewportScrollTop(
+function readPdfScrollMetrics({
+  scrollPageOffset,
+  totalHeight,
+  viewportElement,
+}: {
+  scrollPageOffset: number;
+  totalHeight: number;
+  viewportElement: HTMLDivElement | null;
+}): PdfScrollMetrics {
+  const viewportHeight = viewportElement?.clientHeight ?? 0;
+  const physicalScrollTop = viewportElement?.scrollTop ?? 0;
+  const physicalScrollHeight = getPdfPhysicalScrollHeight({
+    totalHeight,
+    viewportHeight,
+  });
+  const isRebased = physicalScrollHeight < totalHeight;
+
+  return {
+    physicalScrollHeight,
+    physicalScrollTop,
+    scrollPageOffset: isRebased ? scrollPageOffset : 0,
+    scrollTop: isRebased
+      ? getPdfLogicalScrollTop({
+          physicalScrollTop,
+          scrollPageOffset,
+          totalHeight,
+          viewportHeight,
+        })
+      : Math.max(0, physicalScrollTop),
+    viewportHeight,
+  };
+}
+
+function scrollViewportToPhysicalTop(
+  viewportElement: HTMLDivElement,
+  targetTop: number,
+  options: ScrollToOptions,
+) {
+  if (
+    Math.abs(viewportElement.scrollTop - targetTop) <=
+    PDF_SCROLL_POSITION_EPSILON
+  ) {
+    return;
+  }
+
+  if (typeof viewportElement.scrollTo === "function") {
+    viewportElement.scrollTo({
+      top: targetTop,
+      ...options,
+    });
+    return;
+  }
+
+  setViewportPhysicalScrollTop(viewportElement, targetTop);
+}
+
+function setViewportPhysicalScrollTop(
   viewportElement: HTMLDivElement,
   targetTop: number,
 ) {

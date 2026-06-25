@@ -44,6 +44,7 @@ import {
   resolvedTextViewerBounds,
 } from "./text-viewer-resource";
 import { clampTextViewerScale } from "./text-viewer-scale";
+import { useTextViewerScrollInteractions } from "./text-viewer-scroll-interactions";
 import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types";
 import { getTextInverseStickyWindow } from "./text-viewer-virtualization";
 import type { ViewerDownloadErrorHandler } from "./viewer-download";
@@ -151,6 +152,7 @@ export function MarkdownGreenfieldContent({
   const documentRef = React.useRef(document);
   const measuredHeightsRef = React.useRef(new Map<string, number>());
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
+  const stickyWindowRef = React.useRef<HTMLDivElement | null>(null);
   const scrollTopRef = React.useRef(0);
   const scrollFrameRef = React.useRef<number | null>(null);
   const frameChunksRef = React.useRef<readonly MarkdownGreenfieldChunkFrame[]>(
@@ -300,6 +302,18 @@ export function MarkdownGreenfieldContent({
     },
     [commitScrollTop],
   );
+  const handleViewportScroll = React.useCallback(
+    (viewport: HTMLElement) => scheduleScrollTop(viewport.scrollTop),
+    [scheduleScrollTop],
+  );
+  const getScrollInteractionTarget = React.useCallback(
+    () => stickyWindowRef.current,
+    [],
+  );
+  const getScrollOverflowTarget = React.useCallback(
+    () => stickyWindowRef.current,
+    [],
+  );
 
   const flushMeasuredHeights = React.useCallback(() => {
     measuredHeightFrameRef.current = null;
@@ -349,6 +363,13 @@ export function MarkdownGreenfieldContent({
     ) {
       cancelAnimationFrame(measuredHeightFrameRef.current);
     }
+  });
+
+  useTextViewerScrollInteractions({
+    getInteractionTarget: getScrollInteractionTarget,
+    getOverflowTarget: getScrollOverflowTarget,
+    onScroll: handleViewportScroll,
+    viewportRef,
   });
 
   useKeyedLayoutEffect("mount", () => {
@@ -607,7 +628,6 @@ export function MarkdownGreenfieldContent({
         viewportProps={{
           onClickCapture: (event) =>
             handleRenderedClick({ document, event, scrollToLineRange }),
-          onScroll: (event) => scheduleScrollTop(event.currentTarget.scrollTop),
         }}
       >
         <div
@@ -640,13 +660,21 @@ export function MarkdownGreenfieldContent({
               <div
                 aria-hidden="true"
                 data-slot="markdown-sticky-before-buffer"
-                style={{ height: stickyWindow.beforeHeight }}
+                style={{
+                  contain: "layout size",
+                  height: stickyWindow.beforeHeight,
+                }}
               />
               <div
+                ref={stickyWindowRef}
                 data-slot="markdown-sticky-window"
                 style={{
                   bottom: stickyWindow.stickyOffset,
+                  contain: "layout style inline-size",
+                  display: "flex",
+                  flexDirection: "column",
                   height: stickyWindow.renderedHeight,
+                  isolation: "isolate",
                   left: 0,
                   overflow: "visible",
                   position: "sticky",
@@ -701,7 +729,10 @@ export function MarkdownGreenfieldContent({
               <div
                 aria-hidden="true"
                 data-slot="markdown-sticky-after-buffer"
-                style={{ height: stickyWindow.afterHeight }}
+                style={{
+                  contain: "layout size",
+                  height: stickyWindow.afterHeight,
+                }}
               />
             </>
           ) : (

@@ -49,8 +49,9 @@ Implemented in the follow-up Pierre transfer pass:
 - overlap-aware projector patching that trims only leaving edge rows and keeps
   overlapped row DOM stable
 - inverse sticky rendered-window shell: a full-height scroll spacer contains a
-  sticky rendered range whose negative top/bottom offsets keep the last mounted
-  content pinned to the viewport edge if JavaScript projection lags
+  normal-flow rendered-range offset followed by a sticky rendered range whose
+  negative top/bottom offsets keep the last mounted content pinned to the
+  viewport edge if JavaScript projection lags
 - DOM validity checks that fall back to a full visible-window rebuild only when
   mounted rows are corrupt or the logical scroll page changes
 - scroll interaction polish: row-layer pointer-event suppression during scroll,
@@ -60,15 +61,44 @@ Implemented in the follow-up Pierre transfer pass:
   corrupt-DOM fallback, inverse sticky geometry, public imperative scrolling,
   and scroll interaction polish
 
+Implemented in the final Pierre completion pass:
+
+- fixed-line sparse position checkpoints through
+  `CODE_VIEWER_LINE_CHECKPOINT_INTERVAL`, `getCodeLineCheckpoint()`,
+  `getCodeLineIndexAtOffset()`, and `getCodeLineIndexAfterOffset()`
+- parsed string detachment for bounded line slices from large source strings in
+  `text-viewer-resource.ts`
+- bounded long-line rendering through `code-viewer-long-lines.ts`: extremely
+  long rows render as head/tail previews, skip syntax tokenization, avoid full
+  text DOM duplication, and preserve full-line copy from `textLines`
+- global Prism token LRU sharing through `CODE_GLOBAL_TOKEN_CACHE_LIMIT`, so
+  repeated line text across syntax instances reuses token leaves
+- a shared syntax worker pool keyed by worker factory, with request
+  deduplication, bounded workers for the default worker factory, subscriber
+  release on syntax destroy, and global cache fill from worker responses
+- code-viewer shell pooling for inline text source changes: the viewport and
+  row-host shell stay mounted while the projector clears and repaints rows by
+  `contentIdentity`
+- URL and Blob source changes remain content-keyed so stale previously rendered
+  text is not left visible while a new remote payload is pending
+
 Intentionally not implemented:
 
-- Pierre-style variable-height measurement and sparse checkpoints, because the
-  Retab code viewer keeps fixed line height and `whitespace-pre`.
+- Pierre-style variable-height measurement, because the Retab code viewer keeps
+  fixed line height and `whitespace-pre`. The fixed-line equivalent is the
+  checkpoint mapper above; there are no runtime measured deltas to maintain.
 - `IntersectionObserver` visibility, because fixed scroll math is cheaper and
   deterministic.
 - fit-perfectly large-jump rendering, because existing tests do not show large
   jump work as the current limiting factor.
-- Shiki full-file AST highlighting and the global Shiki worker pool, by request.
+- Shiki full-file AST highlighting. The adopted transfer is the equivalent
+  cache/pool architecture around the existing Prism line-token highlighter.
+- true horizontal virtualization. Pierre also does not do horizontal
+  virtualization; the adopted mitigation is bounded preview rendering plus
+  full-copy reconstruction for extremely long lines.
+- Pierre's shared options object with getters for thousands of file/diff
+  instances. Retab has one code viewer instance boundary, so adding an options
+  indirection would create API surface without reducing work.
 
 Verification history:
 
@@ -325,8 +355,9 @@ In `CodeView.ts`:
 This is a useful trick when content height can grow into tens of millions of
 pixels.
 
-Retab currently sets the actual DOM height to the whole fixed-line total. With
-default limits:
+Retab now has this scaffold even though default limits remain modest. The
+projector uses a capped physical scroll size and maps `viewport.scrollTop`
+through a logical `scrollPageOffset`. With default limits:
 
 ```txt
 10,000 lines * 20 px + 16 px padding = 200,016 px
@@ -338,8 +369,9 @@ That is far below the range where paged rebasing is needed. At maximum zoom:
 10,000 lines * 100 px + 16 px padding = 1,000,016 px
 ```
 
-Still acceptable. Paged rebasing becomes relevant only if we raise `maxLines`
-or allow callers to push the code viewer into 100,000+ line documents.
+Still acceptable. The scaffold is therefore mostly defensive today, but it is
+already in place if `maxLines` grows or callers push the code viewer into
+100,000+ line documents.
 
 ### Measured Layout Correction
 
@@ -359,7 +391,8 @@ Pierre uses:
 The sparse checkpoint pattern lets deep lookups resume near the target instead
 of replaying variable-height layout from the top of the file.
 
-Retab intentionally avoids this complexity in `CodeViewer` by using:
+Retab intentionally avoids the variable-height part of this complexity in
+`CodeViewer` by using:
 
 - `whitespace-pre`
 - fixed line height
@@ -368,7 +401,9 @@ Retab intentionally avoids this complexity in `CodeViewer` by using:
 - no per-line measured height
 
 That constraint is valuable. It makes scroll-to-line and visible-window math
-constant time without checkpoints.
+constant time. The adopted checkpoint helper is a fixed-line equivalent: it
+stores sparse arithmetic anchors for deep offset-to-line lookup without adding
+measured row state or dirty layout propagation.
 
 ### Element Pooling
 
@@ -380,8 +415,10 @@ Pierre pools `diffs-container` shell elements. That pool has:
 - invalidation when themes or shared options change
 
 Retab's rows are simpler and already pooled through `MAX_RECYCLED_CODE_ROWS`.
-There is no expensive custom element shell to preserve. Copying Pierre's full
-pool lifecycle would add complexity without much benefit.
+The code viewer now also keeps the viewport/render-window/row-host shell mounted
+for inline source changes, letting the projector clear and repaint rows by
+`contentIdentity`. It does not copy Pierre's Shadow DOM/custom-element shell
+pool because there is no expensive custom element lifecycle to amortize.
 
 ### Worker-Backed Highlighting
 
@@ -397,10 +434,10 @@ Pierre's worker path is materially different from Retab's Prism path.
 - primes highlight caches for pending scroll targets
 - invalidates caches on render option changes
 
-This is the most transferable Pierre trick. Retab already renders plain text
-first and patches syntax later, but the tokenization still runs on the main
-thread. Moving tokenization to a worker would preserve the current UX while
-reducing main-thread risk.
+This is the most transferable Pierre trick. Retab keeps Prism instead of Shiki,
+but now applies the same architecture shape: plain text first, worker-backed
+tokenization when available, fallback main-thread tokenization, request
+deduplication, a shared worker pool, and a bounded global token LRU.
 
 ### Partial Rendering And Buffers
 
@@ -414,8 +451,12 @@ Pierre render ranges include:
 This is important because Pierre often renders a slice of a file or diff inside
 an item wrapper while preserving the item's full virtual height.
 
-Retab uses absolute positioned rows instead. It does not need buffer spacers per
-file because each rendered line is positioned at its global line offset.
+Retab now uses a rendered-window shell rather than per-file buffer spacers. The
+full scroll spacer owns total height, a normal-flow offset element places the
+sticky region at the active pixel range, and the sticky render window owns only
+the rendered range height. Rows are positioned relative to that render window,
+so overlapped rows remain stable and entering rows are only prepended/appended
+at the edges.
 
 ### IntersectionObserver Visibility
 
@@ -433,14 +474,14 @@ deterministic, and easier to test.
 | Fixed metric window math | Already applied | Keep for code viewer. |
 | RAF scroll scheduling | Already applied | Keep. |
 | Same-window projection no-op | Already applied | Keep tests as invariants. |
-| Row/element pooling | Already applied at row level | Keep current row pool. Do not copy shell generation pooling. |
+| Row/element pooling | Applied at row level and inline shell level | Keep current row pool and code-viewer inline shell pooling. Do not copy Shadow DOM generation pooling. |
 | Plain first, syntax later | Already applied | Keep. |
 | Worker-backed syntax | Applied | Keep behind the existing syntax contract with main-thread fallback. |
-| AST/LRU highlight cache | Partially analogous line token cache | Keep per-viewer line cache; add bounded global LRU only if metrics justify it. |
+| AST/LRU highlight cache | Applied as global Prism line-token LRU | Keep bounded global token cache; do not switch to Shiki unless semantic highlighting becomes a requirement. |
 | Lazy language/theme loading | Applied | Keep dynamic grammar loading and plain-first rendering. |
 | Paged scroll rebasing | Applied | Keep capped physical scroll plus logical offset mapping. |
-| Sparse layout checkpoints | Not needed | Reject unless wrapping or annotations are added. |
-| Measured layout reconciliation | Not needed | Reject for current fixed-line viewer. |
+| Sparse layout checkpoints | Applied as fixed-line checkpoints | Keep arithmetic checkpoint helpers; reject measured checkpoint state unless wrapping or annotations are added. |
+| Measured layout reconciliation | Fixed-line invariant | Reject for current fixed-line viewer. |
 | Buffer before/after slices | Applied as rendered-window shell | Use the sticky rendered window instead of per-row buffer DOM. |
 | IntersectionObserver visibility | Not needed | Reject for code-only fixed rows. |
 | Fit-perfectly large jump mode | Applied via inverse sticky | Browser blank-frame verification remains pending. |
@@ -914,16 +955,19 @@ Adding measurement would:
 
 The current fixed-height constraint is a feature.
 
-### Sparse Checkpoints
+### Variable Sparse Checkpoints
 
-Sparse checkpoints are excellent for Pierre because a deep line position may
-depend on thousands of earlier measured rows. Retab line position is:
+Variable sparse checkpoints are excellent for Pierre because a deep line
+position may depend on thousands of earlier measured rows. Retab line position
+is:
 
 ```txt
 paddingStart + lineIndex * lineHeight
 ```
 
-No checkpoint can beat that.
+The code viewer now has fixed-line checkpoint helpers for parity with the
+Pierre pattern, but it does not keep measured checkpoint state. There is no
+variable geometry for a checkpoint tree to reconcile.
 
 ### IntersectionObserver Visibility
 
@@ -963,12 +1007,19 @@ Completed order:
 4. Register the new syntax files in the shadcn registry item.
 5. Expand tests around lazy syntax, worker syntax, stale worker responses, and
    projection metrics.
+6. Add centered pixel windows, inverse sticky rendered-region shell, huge-scroll
+   rebasing, and overlap-aware partial row patching.
+7. Add parsed line detachment, fixed-line checkpoints, long-line preview/copy
+   mitigation, global Prism token LRU, shared worker pooling, and inline
+   code-viewer shell pooling.
 
 Remaining conditional order:
 
 1. Calibrate overscan with browser metrics.
-2. Consider fit-perfectly large jumps if metrics require it.
-3. Add paged scroll rebasing only if file limits grow.
+2. Consider true variable-height measurement only if wrapping, inline
+   annotations, or comments are introduced.
+3. Consider Shiki only if semantic multi-line grammar fidelity becomes more
+   important than the current Prism line-token cost/profile.
 
 ## Test Plan
 
@@ -1032,9 +1083,10 @@ The ideal final code viewer is:
 - plain-readable before highlighting completes
 - measured in browser-level scroll scenarios
 - bounded by default file limits
-- prepared for huge scroll ranges only when product requirements demand it
+- prepared for huge scroll ranges through logical/physical scroll rebasing
 
 The Pierre lesson is not "build a bigger virtualizer." The lesson is "put the
-right work in the right loop." Retab already does that for row projection. The
-remaining work is to keep syntax and future huge-file support out of the scroll
-loop as carefully as Pierre keeps Shiki and variable layout out of theirs.
+right work in the right loop." Retab now does that for row projection, scroll
+geometry, syntax decoration, source line preparation, and pathological long
+lines while preserving the simpler fixed-line model that makes this viewer
+faster than a general mixed-content diff virtualizer.

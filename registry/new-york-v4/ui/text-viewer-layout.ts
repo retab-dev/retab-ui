@@ -26,6 +26,7 @@ import { splitTextLines } from "./text-viewer-resource";
 export type TextViewerMode = "markdown" | "text";
 
 export interface TextStyleConfig {
+  fontEpoch?: number;
   fontScale: number;
 }
 
@@ -295,10 +296,8 @@ const LINE_RANGE_MATERIALIZED_LINE_CACHE_LIMIT = 1024;
 const LINE_RANGE_CHECKPOINT_CACHE_LIMIT = 128;
 const LINE_RANGE_CHECKPOINT_INTERVAL = 64;
 const markerWidthCache = new Map<string, number>();
-const preparedTextDocumentCache = new Map<
-  string,
-  { document: PreparedTextDocument; text: string }
->();
+const preparedTextDocumentCache = new Map<string, PreparedTextDocument>();
+const preparedTextLineSourceIds = new WeakMap<readonly string[], number>();
 const textDocumentFrameCache = new WeakMap<
   PreparedTextDocument,
   Map<string, TextDocumentFrame>
@@ -311,6 +310,7 @@ const codeLineRangeCaches = new WeakMap<
   PreparedCodeTextBlock,
   Map<string, CodeLineRangeCache>
 >();
+let nextPreparedTextLineSourceId = 1;
 
 type RichInlineLineRangeCache = {
   checkpoints: Array<LineRangeCheckpoint<RichInlineCursor>>;
@@ -344,24 +344,37 @@ export function resolveTextViewerMode({
 }
 
 export function createPreparedTextDocument({
+  lines,
   mode,
   text,
   style,
 }: {
+  lines?: readonly string[];
   mode: TextViewerMode;
   text: string;
   style: TextStyleConfig;
 }): PreparedTextDocument {
-  const cacheKey = preparedTextDocumentCacheKey({ mode, text, style });
+  const sourceLines = mode === "text" ? lines : undefined;
+  const cacheKey = preparedTextDocumentCacheKey({
+    lines: sourceLines,
+    mode,
+    text,
+    style,
+  });
   const cached = preparedTextDocumentCache.get(cacheKey);
-  if (cached?.text === text) {
+  if (cached) {
     preparedTextDocumentCache.delete(cacheKey);
     preparedTextDocumentCache.set(cacheKey, cached);
-    return cached.document;
+    return cached;
   }
 
-  const document = createUncachedPreparedTextDocument({ mode, text, style });
-  preparedTextDocumentCache.set(cacheKey, { document, text });
+  const document = createUncachedPreparedTextDocument({
+    lines: sourceLines,
+    mode,
+    text,
+    style,
+  });
+  preparedTextDocumentCache.set(cacheKey, document);
   trimPreparedTextDocumentCache();
   return document;
 }
@@ -371,44 +384,64 @@ export function clearPreparedTextDocumentCacheForTests() {
 }
 
 function createUncachedPreparedTextDocument({
+  lines,
   mode,
   text,
   style,
 }: {
+  lines?: readonly string[];
   mode: TextViewerMode;
   text: string;
   style: TextStyleConfig;
 }): PreparedTextDocument {
-  const sourceLineCount = splitTextLines(text).length;
+  const sourceLines = mode === "text" ? lines : undefined;
+  const sourceLineCount = sourceLines?.length ?? splitTextLines(text).length;
   const blocks =
     mode === "markdown"
       ? parseMarkdownBlocks(text, style)
-      : buildPlainTextBlocks(text, style);
+      : buildPlainTextBlocks(sourceLines ?? splitTextLines(text), style);
 
   return {
     blocks,
     mode,
     sourceLineCount,
-    wordCount: countTextWords(text),
+    wordCount: sourceLines
+      ? countTextLineWords(sourceLines)
+      : countTextWords(text),
   };
 }
 
 function preparedTextDocumentCacheKey({
+  lines,
   mode,
   text,
   style,
 }: {
+  lines?: readonly string[];
   mode: TextViewerMode;
   text: string;
   style: TextStyleConfig;
 }) {
+  const sourceKey = lines
+    ? ["lines", preparedTextLineSourceId(lines), lines.length]
+    : ["text", text.length, hashTextForPreparedDocument(text)];
   return [
     PREPARED_TEXT_DOCUMENT_CACHE_VERSION,
     mode,
+    style.fontEpoch ?? 0,
     safeScale(style.fontScale),
-    text.length,
-    hashTextForPreparedDocument(text),
+    ...sourceKey,
   ].join("\u0000");
+}
+
+function preparedTextLineSourceId(lines: readonly string[]) {
+  const cached = preparedTextLineSourceIds.get(lines);
+  if (cached !== undefined) return cached;
+
+  const id = nextPreparedTextLineSourceId;
+  nextPreparedTextLineSourceId += 1;
+  preparedTextLineSourceIds.set(lines, id);
+  return id;
 }
 
 function trimPreparedTextDocumentCache() {
@@ -1176,7 +1209,7 @@ function parseMarkdownBlocks(
       style,
     });
   } catch {
-    return buildPlainTextBlocks(markdown, style);
+    return buildPlainTextBlocks(splitTextLines(markdown), style);
   }
 }
 
@@ -1427,10 +1460,9 @@ function parseBlockTokens(
 }
 
 function buildPlainTextBlocks(
-  text: string,
+  lines: readonly string[],
   style: TextStyleConfig,
 ): PreparedTextBlock[] {
-  const lines = splitTextLines(text);
   const blocks: PreparedTextBlock[] = [];
   let run: string[] = [];
   let runStartLine = 1;
@@ -2666,6 +2698,10 @@ function stripSingleTrailingNewline(text: string) {
 function countTextWords(text: string) {
   const matches = text.trim().match(/\S+/g);
   return matches?.length ?? 0;
+}
+
+function countTextLineWords(lines: readonly string[]) {
+  return lines.reduce((count, line) => count + countTextWords(line), 0);
 }
 
 function hashTextForPreparedDocument(text: string) {

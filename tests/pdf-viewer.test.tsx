@@ -34,6 +34,9 @@ import {
 import {
   buildPdfThumbnailLayout,
   getPdfThumbnailLayoutItem,
+  getPdfThumbnailPixelWindow,
+  getPdfThumbnailRenderedWindow,
+  getVisiblePdfThumbnailItems,
   PDF_THUMBNAIL_LABEL_AND_GAP_HEIGHT,
 } from "@/registry/new-york-v4/ui/pdf-thumbnail-layout";
 import {
@@ -394,6 +397,73 @@ describe("PdfViewer", () => {
       height: 50 + PDF_THUMBNAIL_LABEL_AND_GAP_HEIGHT,
       top: 50 + PDF_THUMBNAIL_LABEL_AND_GAP_HEIGHT,
     });
+  });
+
+  it("selects thumbnails from a centered pixel window", () => {
+    const layout = buildPdfThumbnailLayout({
+      pageCount: 20,
+      width: 50,
+    });
+    const window = {
+      layout,
+      viewportHeight: 200,
+      overscanPx: 100,
+    };
+
+    expect(getPdfThumbnailPixelWindow({ ...window, scrollTop: 0 })).toEqual({
+      bottom: 400,
+      top: 0,
+    });
+    expect(getPdfThumbnailPixelWindow({ ...window, scrollTop: 445 })).toEqual({
+      bottom: 745,
+      top: 345,
+    });
+    expect(getPdfThumbnailPixelWindow({ ...window, scrollTop: 1580 })).toEqual({
+      bottom: 1780,
+      top: 1380,
+    });
+    expect(
+      getVisiblePdfThumbnailItems({
+        ...window,
+        scrollTop: 0,
+      }).map((item) => item.pageNumber),
+    ).toEqual([1, 2, 3, 4, 5]);
+    expect(
+      getVisiblePdfThumbnailItems({
+        ...window,
+        scrollTop: 445,
+      }).map((item) => item.pageNumber),
+    ).toEqual([4, 5, 6, 7, 8, 9]);
+  });
+
+  it("builds inverse-sticky rendered thumbnail window geometry", () => {
+    const layout = buildPdfThumbnailLayout({
+      pageCount: 10,
+      width: 50,
+    });
+    const visibleItems = [
+      getPdfThumbnailLayoutItem(layout, 3)!,
+      getPdfThumbnailLayoutItem(layout, 4)!,
+      getPdfThumbnailLayoutItem(layout, 5)!,
+    ];
+
+    const renderedWindow = getPdfThumbnailRenderedWindow({
+      layout,
+      visibleItems,
+      viewportHeight: 100,
+    });
+
+    expect(renderedWindow).toMatchObject({
+      beforeHeight: 178,
+      renderedTop: 178,
+      renderedBottom: 445,
+      height: 267,
+      stickyInset: -167,
+      afterHeight: 445,
+    });
+    expect(renderedWindow?.items.map((item) => item.windowTop)).toEqual([
+      0, 89, 178,
+    ]);
   });
 
   it("bounds concurrent thumbnail page metric requests", async () => {
@@ -1116,14 +1186,45 @@ describe("PdfViewer", () => {
       100,
     );
     expect(document.querySelectorAll("canvas").length).toBeLessThan(100);
-    expect(
-      document.querySelector<HTMLElement>(
-        '[data-slot="scroll-area-viewport"]',
-      )?.style.overflowAnchor,
-    ).toBe("none");
-    expect(
-      document.querySelector('[data-slot="pdf-page-sticky-window"]'),
-    ).toBeTruthy();
+    const viewport = document.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]',
+    );
+    const documentSlot = document.querySelector<HTMLElement>(
+      '[data-slot="pdf-viewer-document"]',
+    );
+    const beforeSpacer = document.querySelector<HTMLElement>(
+      '[data-slot="pdf-page-window-before"]',
+    );
+    const stickyWindow = document.querySelector<HTMLElement>(
+      '[data-slot="pdf-page-sticky-window"]',
+    );
+    const renderWindow = document.querySelector<HTMLElement>(
+      '[data-slot="pdf-page-window"]',
+    );
+    const afterSpacer = document.querySelector<HTMLElement>(
+      '[data-slot="pdf-page-window-after"]',
+    );
+
+    expect(viewport?.style.overflowAnchor).toBe("none");
+    expect(documentSlot?.getAttribute("style")).toContain(
+      "contain: layout style",
+    );
+    expect(beforeSpacer?.getAttribute("style")).toContain(
+      "contain: layout size",
+    );
+    expect(stickyWindow?.getAttribute("style")).toContain(
+      "contain: layout style inline-size",
+    );
+    expect(stickyWindow?.getAttribute("style")).toContain("isolation: isolate");
+    expect(renderWindow?.getAttribute("style")).toContain(
+      "contain: layout style",
+    );
+    expect(afterSpacer?.getAttribute("style")).toContain(
+      "contain: layout size",
+    );
+
+    fireEvent.scroll(viewport!);
+    expect(stickyWindow?.style.pointerEvents).toBe("none");
   });
 
   it("does not keep rejected document loads cached for the same source", async () => {
@@ -2428,7 +2529,7 @@ describe("PdfViewer", () => {
       expect(viewport).toBeTruthy();
       Object.defineProperty(viewport, "scrollTop", {
         configurable: true,
-        value: 1032,
+        value: 1532,
       });
 
       fireEvent.scroll(viewport!);
@@ -3429,7 +3530,7 @@ describe("PdfViewer", () => {
     }
   });
 
-  it("does not auto-scroll thumbnails while the user is scrolling the rail", async () => {
+  it("keeps user-scrolled thumbnails free until the current page changes", async () => {
     vi.stubGlobal("IntersectionObserver", undefined);
     const now = vi.spyOn(performance, "now").mockReturnValue(1000);
     const { restore, scrollTo } = stubElementScrollTo();
@@ -3457,11 +3558,19 @@ describe("PdfViewer", () => {
         document.querySelector('[data-slot="pdf-viewer-thumbnails"]')!,
       );
       scrollTo.mockClear();
+      const rail = document.querySelector(
+        '[data-slot="pdf-viewer-thumbnails"]',
+      )!;
+
+      fireEvent.pointerLeave(rail);
+      fireEvent.pointerEnter(rail);
+      fireEvent.pointerLeave(rail);
+      expect(scrollTo).not.toHaveBeenCalled();
 
       view.rerender(
         <PdfThumbnailRail
           resource={pdfUrlResource("/thumbnail-user-scroll-follow.pdf")}
-          currentPage={50}
+          currentPage={1}
           thumbnailWidth={50}
         />,
       );
@@ -3471,6 +3580,16 @@ describe("PdfViewer", () => {
       });
 
       expect(scrollTo).not.toHaveBeenCalled();
+
+      view.rerender(
+        <PdfThumbnailRail
+          resource={pdfUrlResource("/thumbnail-user-scroll-follow.pdf")}
+          currentPage={50}
+          thumbnailWidth={50}
+        />,
+      );
+
+      await waitFor(() => expect(scrollTo).toHaveBeenCalled());
     } finally {
       now.mockRestore();
       restore();
@@ -3500,6 +3619,48 @@ describe("PdfViewer", () => {
     expect(document.querySelectorAll("[data-index]").length).toBeLessThan(96);
     expect(document.querySelectorAll("canvas").length).toBeLessThan(96);
     expect(pdfjsMock.renderTasks.length).toBeLessThan(96);
+    expect(
+      document.querySelector('[data-slot="pdf-thumbnail-sticky-window"]'),
+    ).toBeTruthy();
+
+    const rail = document.querySelector<HTMLElement>(
+      '[data-slot="pdf-viewer-thumbnails"]',
+    );
+    const documentSlot = document.querySelector<HTMLElement>(
+      '[data-slot="pdf-thumbnail-document"]',
+    );
+    const beforeSpacer = document.querySelector<HTMLElement>(
+      '[data-slot="pdf-thumbnail-window-before"]',
+    );
+    const stickyWindow = document.querySelector<HTMLElement>(
+      '[data-slot="pdf-thumbnail-sticky-window"]',
+    );
+    const renderWindow = document.querySelector<HTMLElement>(
+      '[data-slot="pdf-thumbnail-window"]',
+    );
+    const afterSpacer = document.querySelector<HTMLElement>(
+      '[data-slot="pdf-thumbnail-window-after"]',
+    );
+
+    expect(rail?.style.overflowAnchor).toBe("none");
+    expect(documentSlot?.getAttribute("style")).toContain(
+      "contain: layout style",
+    );
+    expect(beforeSpacer?.getAttribute("style")).toContain(
+      "contain: layout size",
+    );
+    expect(stickyWindow?.getAttribute("style")).toContain(
+      "contain: layout style inline-size",
+    );
+    expect(stickyWindow?.getAttribute("style")).toContain(
+      "isolation: isolate",
+    );
+    expect(renderWindow?.getAttribute("style")).toContain(
+      "contain: layout style",
+    );
+    expect(afterSpacer?.getAttribute("style")).toContain(
+      "contain: layout size",
+    );
   });
 
   it("cancels thumbnail render tasks when thumbnails unmount", async () => {

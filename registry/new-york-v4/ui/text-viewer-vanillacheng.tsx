@@ -5,7 +5,7 @@ import * as React from "react";
 import type { ViewerResource } from "@/lib/viewer-resource";
 
 import { PlainTextViewerFrame } from "./plain-text-viewer-frame";
-import { ChenglouTextViewerContent } from "./text-viewer-chenglou-content";
+import { TextViewerContent } from "./text-viewer-chenglou-content";
 import { TextViewerFallback } from "./text-viewer-chrome";
 import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types";
 
@@ -31,5 +31,5 @@ function VanillaChengTextViewerContent(
     forwardedRef?: React.ForwardedRef<TextViewerHandle>;
   },
 ) {
-  return <ChenglouTextViewerContent {...props} projection="vanillacheng" />;
+  return <TextViewerContent {...props} projection="vanillacheng" />;
 }

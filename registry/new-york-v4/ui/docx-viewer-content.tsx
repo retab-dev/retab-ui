@@ -14,17 +14,23 @@ import {
 } from "./docx-viewer-chrome";
 import { DOCX_SCOPED_STYLES, toDocxFormatError } from "./docx-viewer-core";
 import { useDocxHighlight } from "./docx-viewer-highlight";
-import type { DocxPageLayout } from "./docx-viewer-layout";
+import {
+  createDocxPageWindowForPage,
+  createDocxPageWindowFromScroll,
+  type DocxPageLayout,
+} from "./docx-viewer-layout";
 import {
   commitDocxRender,
+  projectDocxPages,
   loadDocxPreview,
   renderDocxPreview,
+  type DocxRenderedDocument,
 } from "./docx-viewer-render";
 import { useDocxViewerScale } from "./docx-viewer-scale";
 import { useDocxViewerScroll } from "./docx-viewer-scroll";
 import {
   buildDocxRenderIndex,
-  resolveDocxTarget,
+  resolveDocxTargetHit,
   type DocxRenderIndex,
 } from "./docx-viewer-targets";
 import type {
@@ -133,6 +139,43 @@ export function DocxViewerContent({
 
   const hostRef = React.useRef<HTMLDivElement | null>(null);
   const renderIndexRef = React.useRef<DocxRenderIndex | null>(null);
+  const virtualDocumentRef = React.useRef<DocxRenderedDocument | null>(null);
+  const projectVisiblePages = React.useCallback(() => {
+    const virtualDocument = virtualDocumentRef.current;
+    const viewport = scrollViewportRef.current;
+    if (!virtualDocument || !viewport) return;
+    projectDocxPages(
+      virtualDocument,
+      createDocxPageWindowFromScroll({
+        layout: virtualDocument.pageLayout,
+        scale: scaleRef.current,
+        scrollTop: viewport.scrollTop,
+        viewportHeight: viewport.clientHeight,
+      }),
+    );
+  }, [scrollViewportRef]);
+  const projectTargetPage = React.useCallback(
+    (pageNumber: number) => {
+      const virtualDocument = virtualDocumentRef.current;
+      const viewport = scrollViewportRef.current;
+      if (!virtualDocument || !viewport) return;
+      projectDocxPages(
+        virtualDocument,
+        createDocxPageWindowForPage({
+          layout: virtualDocument.pageLayout,
+          pageIndex: pageNumber - 1,
+          scale: scaleRef.current,
+          viewportHeight: viewport.clientHeight,
+        }),
+      );
+    },
+    [scrollViewportRef],
+  );
+  const handleViewportScroll = React.useCallback(() => {
+    projectVisiblePages();
+    handleScroll();
+  }, [handleScroll, projectVisiblePages]);
+
   useKeyedMountEffect(
     joinEffectKey(["docx-render", buffer, docxPreviewPromise, resetScroll]),
     () => {
@@ -144,6 +187,7 @@ export function DocxViewerContent({
       setRenderIndex(null);
       setPageLayout(null);
       renderIndexRef.current = null;
+      virtualDocumentRef.current = null;
       resetScroll();
       host.replaceChildren();
       renderDocxPreview(buffer, docxPreviewPromise)
@@ -154,7 +198,12 @@ export function DocxViewerContent({
             renderHost,
             scale: scaleRef.current,
           });
-          const nextRenderIndex = buildDocxRenderIndex(host);
+          virtualDocumentRef.current = result.virtualDocument;
+          projectVisiblePages();
+          const nextRenderIndex = buildDocxRenderIndex(
+            host,
+            result.virtualDocument.pages,
+          );
           renderIndexRef.current = nextRenderIndex;
           setRenderIndex(nextRenderIndex);
           setNumPages(result.numPages);
@@ -183,7 +232,9 @@ export function DocxViewerContent({
   useKeyedMountEffect(
     joinEffectKey(["docx-content-measure", measureScroll, ready, scale]),
     () => {
-      if (ready) measureScroll();
+      if (!ready) return;
+      projectVisiblePages();
+      measureScroll();
     },
   );
 
@@ -212,7 +263,10 @@ export function DocxViewerContent({
       scrollToTarget: (target, options) => {
         const index = renderIndexRef.current;
         if (!index) return;
-        const node = resolveDocxTarget(index, target)?.startContainer;
+        const hit = resolveDocxTargetHit(index, target);
+        if (!hit) return;
+        projectTargetPage(hit.pageNumber);
+        const node = hit.startContainer;
         const el =
           node?.nodeType === Node.ELEMENT_NODE
             ? (node as HTMLElement)
@@ -226,7 +280,7 @@ export function DocxViewerContent({
       },
       getViewportElement: () => scrollViewportRef.current,
     }),
-    [scrollViewportRef],
+    [projectTargetPage, scrollViewportRef],
   );
 
   return (
@@ -261,7 +315,7 @@ export function DocxViewerContent({
         <ScrollArea
           className="min-h-0 flex-1"
           viewportRef={scrollViewportRef}
-          viewportProps={{ onScroll: handleScroll }}
+          viewportProps={{ onScroll: handleViewportScroll }}
         >
           <div ref={containerRef} className="flex flex-col items-center p-4">
             {!ready ? <DocxSkeleton /> : null}

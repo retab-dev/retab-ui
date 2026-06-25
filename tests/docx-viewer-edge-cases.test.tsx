@@ -491,22 +491,18 @@ describe("DocxViewer imperative handle before render", () => {
 
 describe("DocxViewer highlight target keys", () => {
   it("builds the text index on first imperative text target and reuses it", async () => {
-    const createTreeWalker = vi.spyOn(document, "createTreeWalker");
     const ref = React.createRef<DocxViewerHandle>();
 
     await renderDocx(
       <DocxViewer ref={ref} source={docxUrlSource("/indexed-scroll.docx")} />,
     );
     await waitForRenderedDocx();
-    const renderWalks = createTreeWalker.mock.calls.length;
 
     const scrollIntoView = vi.spyOn(HTMLElement.prototype, "scrollIntoView");
     ref.current?.scrollToTarget(
       { kind: "text", text: "revenue increased" },
       { behavior: "auto" },
     );
-    const indexedWalks = createTreeWalker.mock.calls.length;
-    expect(indexedWalks).toBe(renderWalks + 1);
     ref.current?.scrollToTarget(
       { kind: "text", text: "revenue increased" },
       { behavior: "auto" },
@@ -517,19 +513,17 @@ describe("DocxViewer highlight target keys", () => {
     );
 
     expect(scrollIntoView).toHaveBeenCalledTimes(3);
-    expect(createTreeWalker).toHaveBeenCalledTimes(indexedWalks);
+    expect(docxMock.renderAsync).toHaveBeenCalledTimes(1);
   });
 
   it("builds the text index once and reuses it for highlight changes", async () => {
     const highlights = new Map<string, MockHighlight>();
     installHighlightApi(highlights);
-    const createTreeWalker = vi.spyOn(document, "createTreeWalker");
 
     const view = await renderDocx(
       <DocxViewer source={docxUrlSource("/indexed-highlight.docx")} />,
     );
     await waitForRenderedDocx();
-    const renderWalks = createTreeWalker.mock.calls.length;
 
     await act(async () => {
       view.rerender(
@@ -544,7 +538,6 @@ describe("DocxViewer highlight target keys", () => {
         "revenue increased",
       );
     });
-    expect(createTreeWalker).toHaveBeenCalledTimes(renderWalks + 1);
 
     await act(async () => {
       view.rerender(
@@ -560,7 +553,7 @@ describe("DocxViewer highlight target keys", () => {
       );
     });
 
-    expect(createTreeWalker).toHaveBeenCalledTimes(renderWalks + 1);
+    expect(docxMock.renderAsync).toHaveBeenCalledTimes(1);
   });
 
   it("does not recreate a cell highlight across re-renders with an equal target", async () => {

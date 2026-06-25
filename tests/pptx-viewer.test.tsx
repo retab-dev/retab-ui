@@ -2918,6 +2918,82 @@ describe("PptxViewer", () => {
     expect(new Set(renderedSlideIndexes(source))).toEqual(new Set([0, 1, 2]));
   });
 
+  it("places projected slide shells inside an inverse-sticky rendered window", async () => {
+    const source = createFakePptxSource({ slideCount: 20 });
+    const activity = createManualPptxActivity(false).activity;
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(0);
+      return 1;
+    });
+
+    render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />,
+    );
+
+    const viewport = document.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]',
+    );
+    expect(viewport).toBeTruthy();
+    expect(viewport?.style.overflowAnchor).toBe("none");
+    setElementNumberProperty(viewport!, "clientHeight", 720);
+    setElementNumberProperty(viewport!, "scrollTop", 16 + 9 * 736);
+    fireEvent.scroll(viewport!);
+
+    await waitFor(() => {
+      expect(
+        document.querySelector(
+          '[data-slot="pptx-slide"][data-slide-number="10"]',
+        ),
+      ).toBeTruthy();
+    });
+
+    const canvas = document.querySelector<HTMLElement>(
+      '[data-slot="pptx-slide-virtual-canvas"]',
+    );
+    const before = document.querySelector<HTMLElement>(
+      '[data-slot="pptx-slide-window-before"]',
+    );
+    const sticky = document.querySelector<HTMLElement>(
+      '[data-slot="pptx-slide-sticky-window"]',
+    );
+    const content = document.querySelector<HTMLElement>(
+      '[data-slot="pptx-slide-sticky-content"]',
+    );
+    const after = document.querySelector<HTMLElement>(
+      '[data-slot="pptx-slide-window-after"]',
+    );
+    const shell = document.querySelector<HTMLElement>(
+      '[data-slot="pptx-slide-slot"][data-virtual-slide-number="10"]',
+    );
+
+    expect(canvas?.style.height).toBe("14736px");
+    expect(canvas?.style.contain).toBe("layout style");
+    expect(before?.style.height).toBe("5168px");
+    expect(before?.style.contain).toBe("layout size");
+    expect(sticky?.style.position).toBe("sticky");
+    expect(sticky?.style.contain).toBe("layout style inline-size");
+    expect(sticky?.style.display).toBe("flex");
+    expect(sticky?.style.flexDirection).toBe("column");
+    expect(sticky?.style.isolation).toBe("isolate");
+    expect(sticky?.style.top).toBe("-2944px");
+    expect(sticky?.style.bottom).toBe("-2944px");
+    expect(sticky?.style.height).toBe("3664px");
+    expect(content?.style.height).toBe("3664px");
+    expect(after?.style.height).toBe("5904px");
+    expect(after?.style.contain).toBe("layout size");
+    expect(shell?.parentElement).toBe(content);
+    expect(shell?.style.transform).toBe("translate(-50%, 1472px)");
+  });
+
   it("renders virtual slides without constructing IntersectionObserver", async () => {
     vi.stubGlobal("IntersectionObserver", undefined);
     const source = createFakePptxSource();
@@ -3077,7 +3153,7 @@ describe("PptxViewer", () => {
       '[data-slot="pptx-slide-slot"]',
     );
     expect(shell?.style.top).toBe("");
-    expect(shell?.style.transform).toBe("translate(-50%, 16px)");
+    expect(shell?.style.transform).toBe("translate(-50%, 0px)");
   });
 
   it("does not render slides after a virtual shell leaves the window", async () => {

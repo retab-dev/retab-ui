@@ -163,6 +163,43 @@ describe("public TextViewer prose cutover", () => {
     ).toBeLessThan(120);
   });
 
+  it("indexes plain text lines for native browser find", async () => {
+    const { container } = render(
+      <TextViewer
+        source={textSource("alpha\nneedle line\nomega")}
+        controls={false}
+      />,
+    );
+
+    const index = await waitFor(() => {
+      const node = container.querySelector<HTMLElement>(
+        '[data-slot="text-native-find-index"]',
+      );
+      expect(node).toBeTruthy();
+      return node as HTMLElement;
+    });
+    const entry = index.querySelector<HTMLElement>(
+      '[data-native-find-start-line="1"]',
+    );
+    const viewport = container.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]',
+    );
+
+    expect(index.getAttribute("data-native-find-indexed-lines")).toBe("3");
+    expect(index.getAttribute("data-native-find-indexed-chunks")).toBe("1");
+    expect(entry?.getAttribute("data-native-find-end-line")).toBe("3");
+    expect(entry?.textContent).toContain("needle line");
+    expect(entry?.getAttribute("hidden")).toBe("until-found");
+    expect(viewport).toBeTruthy();
+
+    fireEvent(entry!, new Event("beforematch"));
+
+    await waitFor(() => {
+      expect(viewport!.scrollTop).toBeGreaterThan(0);
+    });
+    expect(entry?.getAttribute("hidden")).toBe("until-found");
+  });
+
   it("groups hard-wrapped plain text into paragraph blocks", () => {
     const source = Array.from(
       { length: 5 },

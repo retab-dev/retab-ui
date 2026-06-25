@@ -247,6 +247,7 @@ describe("text-viewer chenglou projector", () => {
     expect(metrics.noops).toBe(1);
     expect(metrics.rowsCreated).toBe(firstRows.length);
     expect(metrics.visibleStart).toBe(0);
+    expect(metrics.visibleEnd).toBe(35);
     expect(metrics.visibleEnd).toBe(firstRows.length);
     expect(projectedRows(canvas)).toEqual(firstRows);
     expect(replaceChildren).not.toHaveBeenCalled();
@@ -262,7 +263,7 @@ describe("text-viewer chenglou projector", () => {
       canvas,
       frame,
       preparedDocument,
-      scrollTop: 600,
+      scrollTop: 1200,
       viewportHeight: 40,
     });
 
@@ -278,10 +279,16 @@ describe("text-viewer chenglou projector", () => {
     const firstRow = projectedRows(canvas)[0] as HTMLElement | undefined;
 
     expect(stickyWindow?.style.position).toBe("sticky");
+    expect(stickyWindow?.style.contain).toBe("layout style inline-size");
+    expect(stickyWindow?.style.display).toBe("flex");
+    expect(stickyWindow?.style.flexDirection).toBe("column");
+    expect(stickyWindow?.style.isolation).toBe("isolate");
     expect(stickyWindow?.style.top).toBe(stickyWindow?.style.bottom);
     expect(stickyWindow?.style.top).toMatch(/^-/);
     expect(before?.style.height).not.toBe("0px");
+    expect(before?.style.contain).toBe("layout size");
     expect(after?.style.height).not.toBe("0px");
+    expect(after?.style.contain).toBe("layout size");
     expect(firstRow?.style.transform).toBe("translateY(0px)");
   });
 

@@ -19,6 +19,7 @@ import { type PptxScrollActivity } from "./pptx-viewer-scroll";
 import { type PptxSource } from "./pptx-viewer-source";
 import {
   createPptxSlideLayout,
+  getPptxRenderedSlideWindow,
   getPptxVirtualSlides,
   type PptxSlideLayout,
   type PptxVirtualSlide,
@@ -77,8 +78,10 @@ export function PptxSlideScroller({
   const canvasRef = React.useRef<HTMLDivElement | null>(null);
   const projectionFrameRef = React.useRef<number | null>(null);
   const projectionCacheRef = React.useRef<PptxSlideProjectionCache>({
+    canvas: null,
     resetKey: "",
     slides: new Map(),
+    window: null,
   });
   const viewportElementRef = React.useRef<HTMLDivElement | null>(null);
   const layoutResetKey = `${layout.slideCount}:${layout.slideWidth}:${layout.slideHeight}:${layout.slideStride}:${layout.totalHeight}:${zoomScale}:${rotation}`;
@@ -159,6 +162,7 @@ export function PptxSlideScroller({
         className="focus-visible:ring-ring focus-visible:ring-offset-background h-full overflow-auto rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
         data-slot="scroll-area-viewport"
         onScroll={handleScroll}
+        style={{ overflowAnchor: "none" }}
       >
         <div
           ref={setCanvasRef}
@@ -392,8 +396,17 @@ function now() {
 }
 
 type PptxSlideProjectionCache = {
+  canvas: HTMLDivElement | null;
   resetKey: string;
   slides: Map<number, PptxProjectedSlide>;
+  window: PptxSlideProjectionWindow | null;
+};
+
+type PptxSlideProjectionWindow = {
+  after: HTMLDivElement;
+  before: HTMLDivElement;
+  content: HTMLDivElement;
+  sticky: HTMLDivElement;
 };
 
 type PptxProjectedSlide = {
@@ -445,7 +458,13 @@ function projectPptxSlides({
 }) {
   if (!canvas) return;
 
+  if (cache.canvas !== canvas) {
+    disposePptxSlideProjectionCache(cache);
+    cache.canvas = canvas;
+  }
+
   const sourceKey = getPptxProjectionSourceKey(source);
+  setPptxStyle(canvas, "contain", "layout style");
   setPptxPixelStyle(canvas, "height", layout.totalHeight);
   setPptxPixelStyle(canvas, "min-width", layout.slideWidth);
 
@@ -463,9 +482,15 @@ function projectPptxSlides({
     scrollTop,
     viewportHeight,
   });
+  const renderedWindow = getPptxRenderedSlideWindow({
+    layout,
+    slides: virtualSlides,
+    viewportHeight,
+  });
   const visibleSlideIndexes = new Set(
     virtualSlides.map((virtualSlide) => virtualSlide.index),
   );
+  const projectionWindow = ensurePptxProjectionWindow(cache, canvas);
 
   for (const [slideIndex, projectedSlide] of cache.slides) {
     if (visibleSlideIndexes.has(slideIndex)) continue;
@@ -473,8 +498,20 @@ function projectPptxSlides({
     cache.slides.delete(slideIndex);
   }
 
+  if (!renderedWindow) {
+    syncPptxProjectionWindow(projectionWindow, {
+      afterHeight: layout.totalHeight,
+      beforeHeight: 0,
+      height: 0,
+      stickyInset: 0,
+    });
+    return;
+  }
+
+  syncPptxProjectionWindow(projectionWindow, renderedWindow);
+
   let previousShell: HTMLElement | null = null;
-  for (const virtualSlide of virtualSlides) {
+  for (const virtualSlide of renderedWindow.slides) {
     const projectedSlide =
       cache.slides.get(virtualSlide.index) ??
       createPptxProjectedSlide(virtualSlide);
@@ -497,7 +534,11 @@ function projectPptxSlides({
       zoomScale,
     });
     cache.slides.set(virtualSlide.index, projectedSlide);
-    placePptxProjectedSlide(canvas, projectedSlide.shell, previousShell);
+    placePptxProjectedSlide(
+      projectionWindow.content,
+      projectedSlide.shell,
+      previousShell,
+    );
     previousShell = projectedSlide.shell;
   }
 }
@@ -521,9 +562,13 @@ function createPptxProjectedSlide(virtualSlide: PptxVirtualSlide) {
 
 function patchPptxProjectedSlide(
   shell: HTMLElement,
-  virtualSlide: PptxVirtualSlide,
+  virtualSlide: PptxVirtualSlide & { windowTop: number },
 ) {
-  setPptxStyle(shell, "transform", `translate(-50%, ${virtualSlide.top}px)`);
+  setPptxStyle(
+    shell,
+    "transform",
+    `translate(-50%, ${virtualSlide.windowTop}px)`,
+  );
   setPptxPixelStyle(shell, "width", virtualSlide.width);
   setPptxPixelStyle(shell, "height", virtualSlide.height);
 }
@@ -548,13 +593,79 @@ function setPptxPixelStyle(
   setPptxStyle(element, property, `${value}px`);
 }
 
-function setPptxStyle(
-  element: HTMLElement,
-  property: "height" | "min-width" | "transform" | "width",
-  value: string,
-) {
+function setPptxStyle(element: HTMLElement, property: string, value: string) {
   if (element.style.getPropertyValue(property) === value) return;
   element.style.setProperty(property, value);
+}
+
+function ensurePptxProjectionWindow(
+  cache: PptxSlideProjectionCache,
+  canvas: HTMLDivElement,
+): PptxSlideProjectionWindow {
+  const existing = cache.window;
+  if (existing?.before.parentElement === canvas) return existing;
+
+  const before = document.createElement("div");
+  const sticky = document.createElement("div");
+  const content = document.createElement("div");
+  const after = document.createElement("div");
+
+  before.dataset.slot = "pptx-slide-window-before";
+  sticky.dataset.slot = "pptx-slide-sticky-window";
+  content.dataset.slot = "pptx-slide-sticky-content";
+  after.dataset.slot = "pptx-slide-window-after";
+
+  before.style.contain = "layout size";
+  sticky.style.position = "sticky";
+  sticky.style.left = "0";
+  sticky.style.width = "100%";
+  sticky.style.overflow = "visible";
+  sticky.style.contain = "layout style inline-size";
+  sticky.style.isolation = "isolate";
+  sticky.style.display = "flex";
+  sticky.style.flexDirection = "column";
+  content.style.position = "relative";
+  content.style.width = "100%";
+  after.style.contain = "layout size";
+
+  sticky.append(content);
+  canvas.replaceChildren(before, sticky, after);
+
+  cache.window = { after, before, content, sticky };
+  return cache.window;
+}
+
+function syncPptxProjectionWindow(
+  projectionWindow: PptxSlideProjectionWindow,
+  renderedWindow: {
+    afterHeight: number;
+    beforeHeight: number;
+    height: number;
+    stickyInset: number;
+  },
+) {
+  setPptxPixelStyle(
+    projectionWindow.before,
+    "height",
+    renderedWindow.beforeHeight,
+  );
+  setPptxStyle(
+    projectionWindow.sticky,
+    "top",
+    `${renderedWindow.stickyInset}px`,
+  );
+  setPptxStyle(
+    projectionWindow.sticky,
+    "bottom",
+    `${renderedWindow.stickyInset}px`,
+  );
+  setPptxPixelStyle(projectionWindow.sticky, "height", renderedWindow.height);
+  setPptxPixelStyle(projectionWindow.content, "height", renderedWindow.height);
+  setPptxPixelStyle(
+    projectionWindow.after,
+    "height",
+    renderedWindow.afterHeight,
+  );
 }
 
 function renderPptxProjectedSlide({
@@ -662,6 +773,10 @@ function disposePptxSlideProjectionCache(cache: PptxSlideProjectionCache) {
     disposePptxProjectedSlide(projectedSlide);
   }
   cache.slides.clear();
+  cache.window?.before.remove();
+  cache.window?.sticky.remove();
+  cache.window?.after.remove();
+  cache.window = null;
 }
 
 function disposePptxProjectedSlide(projectedSlide: PptxProjectedSlide) {

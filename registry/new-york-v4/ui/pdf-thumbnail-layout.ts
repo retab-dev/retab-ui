@@ -1,4 +1,4 @@
-export const PDF_THUMBNAIL_OVERSCAN = 16;
+export const PDF_THUMBNAIL_OVERSCAN_PX = 1000;
 export const PDF_THUMBNAIL_INITIAL_VIEWPORT_HEIGHT = 680;
 export const PDF_THUMBNAIL_DEFAULT_ASPECT = 4 / 3;
 export const PDF_THUMBNAIL_LABEL_AND_GAP_HEIGHT = 22;
@@ -30,6 +30,26 @@ export interface PdfThumbnailLayout {
   metricByPageNumber: ReadonlyMap<number, PdfThumbnailPageMetric>;
   prefixHeightDeltas: readonly PdfThumbnailHeightDelta[];
   totalHeight: number;
+}
+
+export interface PdfThumbnailRenderedWindowItem
+  extends PdfThumbnailLayoutItem {
+  windowTop: number;
+}
+
+export interface PdfThumbnailRenderedWindow {
+  afterHeight: number;
+  beforeHeight: number;
+  height: number;
+  items: readonly PdfThumbnailRenderedWindowItem[];
+  renderedBottom: number;
+  renderedTop: number;
+  stickyInset: number;
+}
+
+export interface PdfThumbnailPixelWindow {
+  bottom: number;
+  top: number;
 }
 
 interface PdfThumbnailHeightDelta {
@@ -117,29 +137,121 @@ export function getVisiblePdfThumbnailItems({
   layout,
   scrollTop,
   viewportHeight,
-  overscan,
+  overscanPx,
 }: {
   layout: PdfThumbnailLayout;
   scrollTop: number;
   viewportHeight: number;
-  overscan: number;
+  overscanPx: number;
 }) {
   if (layout.pageCount === 0) return [];
 
-  const visibleStart = Math.max(0, scrollTop);
-  const visibleEnd = Math.max(visibleStart, visibleStart + viewportHeight);
-  const firstVisiblePage = findPdfThumbnailPageByOffset(layout, visibleStart);
-  const lastVisiblePage = findPdfThumbnailPageByOffset(layout, visibleEnd);
-  const startPage = Math.max(1, firstVisiblePage - overscan);
-  const endPage = Math.min(layout.pageCount, lastVisiblePage + overscan);
+  const window = getPdfThumbnailPixelWindow({
+    layout,
+    scrollTop,
+    viewportHeight,
+    overscanPx,
+  });
+  const firstVisiblePage = findPdfThumbnailPageByOffset(layout, window.top);
+  const lastVisiblePage = findPdfThumbnailPageByOffset(layout, window.bottom);
   const items: PdfThumbnailLayoutItem[] = [];
 
-  for (let pageNumber = startPage; pageNumber <= endPage; pageNumber += 1) {
+  for (
+    let pageNumber = firstVisiblePage;
+    pageNumber <= lastVisiblePage;
+    pageNumber += 1
+  ) {
     const item = getPdfThumbnailLayoutItem(layout, pageNumber);
     if (item) items.push(item);
   }
 
   return items;
+}
+
+export function getPdfThumbnailPixelWindow({
+  layout,
+  scrollTop,
+  viewportHeight,
+  overscanPx,
+}: {
+  layout: PdfThumbnailLayout;
+  scrollTop: number;
+  viewportHeight: number;
+  overscanPx: number;
+}): PdfThumbnailPixelWindow {
+  const scrollHeight = normalizeSize(layout.totalHeight, 0);
+  const safeViewportHeight = normalizeSize(viewportHeight, 0);
+  const safeOverscanPx = normalizeSize(overscanPx, 0);
+  const windowHeight = safeViewportHeight + safeOverscanPx * 2;
+
+  if (windowHeight >= scrollHeight) {
+    return {
+      bottom: scrollHeight,
+      top: 0,
+    };
+  }
+
+  const scrollCenter =
+    Math.max(0, finiteNumber(scrollTop)) + safeViewportHeight / 2;
+  let top = scrollCenter - windowHeight / 2;
+  let bottom = top + windowHeight;
+
+  if (top < 0) {
+    top = 0;
+    bottom = windowHeight;
+  }
+  if (bottom > scrollHeight) {
+    bottom = scrollHeight;
+    top = scrollHeight - windowHeight;
+  }
+
+  return {
+    bottom: Math.ceil(Math.max(bottom, top)),
+    top: Math.floor(Math.max(0, top)),
+  };
+}
+
+export function getPdfThumbnailRenderedWindow({
+  layout,
+  visibleItems,
+  viewportHeight,
+}: {
+  layout: PdfThumbnailLayout;
+  visibleItems: readonly PdfThumbnailLayoutItem[];
+  viewportHeight: number;
+}): PdfThumbnailRenderedWindow | null {
+  if (visibleItems.length === 0 || layout.totalHeight <= 0) return null;
+
+  const safeViewportHeight = Math.max(1, normalizeSize(viewportHeight, 1));
+  let renderedTop = layout.totalHeight;
+  let renderedBottom = 0;
+
+  for (const item of visibleItems) {
+    renderedTop = Math.min(renderedTop, item.top);
+    renderedBottom = Math.max(renderedBottom, item.top + item.height);
+  }
+
+  renderedTop = clamp(renderedTop, 0, layout.totalHeight);
+  renderedBottom = clamp(
+    Math.max(renderedTop, renderedBottom),
+    renderedTop,
+    layout.totalHeight,
+  );
+
+  const height = renderedBottom - renderedTop;
+
+  return {
+    afterHeight: Math.max(0, layout.totalHeight - renderedBottom),
+    beforeHeight: renderedTop,
+    height,
+    items: visibleItems.map((item) => ({
+      ...item,
+      windowTop: item.top - renderedTop,
+    })),
+    renderedBottom,
+    renderedTop,
+    stickyInset: -Math.max(0, height - safeViewportHeight),
+  };
 }
 
 export function findPdfThumbnailPageByOffset(
@@ -272,4 +384,12 @@ function normalizeWidth(width: number) {
 
 function normalizeSize(value: number, fallback: number) {
   return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function finiteNumber(value: number) {
+  return Number.isFinite(value) ? value : 0;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
 }

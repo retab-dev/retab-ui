@@ -196,7 +196,11 @@ export function getPptxRenderedSlideWindow({
   );
   const height = Math.max(0, windowBottom - beforeHeight);
   const safeViewportHeight =
-    Number.isFinite(viewportHeight) && viewportHeight > 0 ? viewportHeight : 0;
+    Number.isFinite(viewportHeight) && viewportHeight > 0
+      ? viewportHeight
+      : layout.slideHeight > 0
+        ? layout.slideHeight
+        : 0;
   const stickyInset =
     safeViewportHeight > 0 ? -Math.max(0, height - safeViewportHeight) : 0;
 

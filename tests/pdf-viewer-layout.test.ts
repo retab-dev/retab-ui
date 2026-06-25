@@ -1,15 +1,21 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  createWindowFromScrollPosition,
   createPdfPageLayout,
   findPdfPageByOffset,
+  getPdfLogicalScrollTop,
   getPdfPageLayout,
+  getPdfPhysicalScrollHeight,
   getPdfRenderedPageWindow,
   getPdfRenderPageNumbers,
   getPdfVisiblePageNumbers,
   PDF_PAGE_GAP,
   PDF_PAGE_PADDING,
-  PDF_RENDER_PAGE_OVERSCAN,
+  PDF_RENDER_WINDOW_OVERSCAN_PX,
+  PDF_SCROLL_REBASE_CONTAINER_PX,
+  PDF_SCROLL_REBASE_TARGET_PX,
+  resolvePdfPhysicalScrollPosition,
 } from "@/registry/new-york-v4/ui/pdf-viewer-layout";
 
 const pageSize = { width: 100, height: 200 };
@@ -205,7 +211,18 @@ describe("pdf viewer layout", () => {
     ).toEqual([397, 398, 399, 400, 401, 402, 403]);
   });
 
-  it("renders two pages of lookahead by default", () => {
+  it("creates a centered pixel render window", () => {
+    expect(
+      createWindowFromScrollPosition({
+        overscanPx: 1000,
+        scrollHeight: 10_000,
+        scrollTop: 5_000,
+        viewportHeight: 200,
+      }),
+    ).toEqual({ top: 4000, bottom: 6200 });
+  });
+
+  it("renders the centered Pierre-sized pixel window by default", () => {
     const layout = createPdfPageLayout({
       pageCount: 585,
       defaultPageSize: pageSize,
@@ -222,8 +239,8 @@ describe("pdf viewer layout", () => {
         scrollTop: page400!.offsetTop,
         viewportHeight: 200,
       }),
-    ).toEqual([398, 399, 400, 401, 402]);
-    expect(PDF_RENDER_PAGE_OVERSCAN).toBe(2);
+    ).toEqual([395, 396, 397, 398, 399, 400, 401, 402, 403, 404, 405]);
+    expect(PDF_RENDER_WINDOW_OVERSCAN_PX).toBe(1000);
   });
 
   it("builds an inverse-sticky rendered page window", () => {
@@ -280,6 +297,66 @@ describe("pdf viewer layout", () => {
         viewportHeight: 100,
       }),
     ).toBeNull();
+  });
+
+  it("rebases rendered page windows into the physical scroll scaffold", () => {
+    const layout = createPdfPageLayout({
+      pageCount: 100_000,
+      defaultPageSize: pageSize,
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    });
+    const page400 = getPdfPageLayout(layout, 400)!;
+    const scrollPageOffset = 80_000;
+
+    const window = getPdfRenderedPageWindow({
+      layout,
+      pageNumbers: [400, 401],
+      physicalScrollHeight: 120_000,
+      scrollPageOffset,
+      viewportHeight: 200,
+    });
+
+    expect(window?.beforeHeight).toBe(page400.offsetTop - scrollPageOffset);
+    expect(window?.afterHeight).toBe(
+      120_000 - (window!.beforeHeight + window!.height),
+    );
+    expect(window?.pages[0]).toMatchObject({
+      pageNumber: 400,
+      windowTop: 0,
+    });
+  });
+
+  it("caps huge physical scroll height while preserving logical scroll", () => {
+    const totalHeight = 40_000_000;
+    const viewportHeight = 600;
+    const logicalScrollTop = 15_000_000;
+
+    const physicalScrollHeight = getPdfPhysicalScrollHeight({
+      totalHeight,
+      viewportHeight,
+    });
+    const position = resolvePdfPhysicalScrollPosition({
+      logicalScrollTop,
+      scrollPageOffset: 0,
+      totalHeight,
+      viewportHeight,
+    });
+
+    expect(physicalScrollHeight).toBe(PDF_SCROLL_REBASE_CONTAINER_PX);
+    expect(position.physicalScrollTop).toBe(PDF_SCROLL_REBASE_TARGET_PX);
+    expect(position.scrollPageOffset).toBe(
+      logicalScrollTop - PDF_SCROLL_REBASE_TARGET_PX,
+    );
+    expect(
+      getPdfLogicalScrollTop({
+        physicalScrollTop: position.physicalScrollTop,
+        scrollPageOffset: position.scrollPageOffset,
+        totalHeight,
+        viewportHeight,
+      }),
+    ).toBe(logicalScrollTop);
   });
 
   it("clips the visible page window at document edges", () => {

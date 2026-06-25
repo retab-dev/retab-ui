@@ -35,7 +35,7 @@ import {
 } from "./text-viewer-layout";
 import { isLineInRange, normalizeTextLineRange } from "./text-viewer-ranges";
 import {
-  readTextResource,
+  readTextDocument,
   resolvedTextViewerBounds,
 } from "./text-viewer-resource";
 import { clampTextViewerScale } from "./text-viewer-scale";
@@ -51,16 +51,18 @@ import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 import { joinEffectKey } from "@/lib/effect-key";
 import { patchKeyedDomChildren } from "./text-viewer-dom-projection";
+import { useTextViewerScrollInteractions } from "./text-viewer-scroll-interactions";
 
 const TEXT_VIEWER_HORIZONTAL_PADDING = 16;
 const TEXT_VIEWER_DEFAULT_VIEWPORT_HEIGHT = 600;
 const TEXT_VIEWER_DEFAULT_VIEWPORT_WIDTH = 800;
 const TEXT_VIEWER_INITIAL_TEXT_WIDTH = 768;
-const TEXT_VIEWER_OVERSCAN_PX = 320;
+const TEXT_VIEWER_OVERSCAN_PX = 800;
 const TEXT_VIEWER_HIGHLIGHT_BACKGROUND =
   "color-mix(in oklab, var(--foreground) 8%, var(--background))";
 const TEXT_VIEWER_HIGHLIGHT_ACCENT_SHADOW = "inset 2px 0 0 0 var(--primary)";
 const TEXT_VIEWER_MAX_RECYCLED_ROWS = 512;
+const TEXT_VIEWER_NATIVE_FIND_CHUNK_SIZE = 128;
 
 type CachedRow = {
   renderKey: string;
@@ -117,6 +119,18 @@ type ViewportSize = {
   width: number;
 };
 
+type NativeFindTextChunk = {
+  endLine: number;
+  startLine: number;
+  text: string;
+};
+
+type TextIdleWindow = Window &
+  typeof globalThis & {
+    cancelIdleCallback?: Window["cancelIdleCallback"];
+    requestIdleCallback?: Window["requestIdleCallback"];
+  };
+
 export function createTextProjectionMetrics(): TextProjectionMetrics {
   return {
     noops: 0,
@@ -152,7 +166,7 @@ export function createTextProjectionCache({
   };
 }
 
-export function ChenglouTextViewerContent({
+export function TextViewerContent({
   resource,
   className,
   controls = true,
@@ -175,15 +189,17 @@ export function ChenglouTextViewerContent({
     () => resolvedTextViewerBounds({ maxBytes, maxLines }),
     [maxBytes, maxLines],
   );
-  const text = React.useMemo(
+  const textDocument = React.useMemo(
     () =>
-      readTextResource({
+      readTextDocument({
         bounds,
         content: resource.content,
         retryVersion,
       }),
     [bounds, resource.content, retryVersion],
   );
+  const text = textDocument.text;
+  const textLines = textDocument.lines;
   const mode = React.useMemo(
     () =>
       forcedMode ??
@@ -221,11 +237,12 @@ export function ChenglouTextViewerContent({
   const preparedDocument = React.useMemo(
     () =>
       createPreparedTextDocument({
+        lines: mode === "text" ? textLines : undefined,
         mode,
-        style: { fontScale: 1 },
+        style: { fontEpoch, fontScale: 1 },
         text,
       }),
-    [fontEpoch, mode, text],
+    [fontEpoch, mode, text, textLines],
   );
   const frame = React.useMemo(
     () =>
@@ -283,6 +300,16 @@ export function ChenglouTextViewerContent({
       },
     );
   }, [projectCurrentRows]);
+  const getScrollInteractionTarget = React.useCallback(
+    () =>
+      projectionCacheRef.current.projectionWindow?.sticky ?? canvasRef.current,
+    [],
+  );
+  const getScrollOverflowTarget = React.useCallback(
+    () =>
+      projectionCacheRef.current.projectionWindow?.sticky ?? canvasRef.current,
+    [],
+  );
 
   useKeyedLayoutEffect("mount", () => {
     const scrollElement = viewportRef.current;
@@ -310,17 +337,11 @@ export function ChenglouTextViewerContent({
     };
   });
 
-  useKeyedLayoutEffect(joinEffectKey([scheduleProjectRows]), () => {
-    const scrollElement = viewportRef.current;
-    if (!scrollElement) return;
-
-    scrollElement.addEventListener("scroll", scheduleProjectRows, {
-      passive: true,
-    });
-
-    return () => {
-      scrollElement.removeEventListener("scroll", scheduleProjectRows);
-    };
+  useTextViewerScrollInteractions({
+    getInteractionTarget: getScrollInteractionTarget,
+    getOverflowTarget: getScrollOverflowTarget,
+    onScroll: scheduleProjectRows,
+    viewportRef,
   });
 
   useKeyedLayoutEffect(
@@ -485,19 +506,180 @@ export function ChenglouTextViewerContent({
         viewportProps={{ onClickCapture: scrollMarkdownFragment }}
         viewportRef={viewportRef}
       >
-        <div
-          ref={canvasRef}
-          className="relative min-w-0"
-          data-slot="text-virtual-canvas"
-          data-projection={projection}
-          style={{
-            height: frame.totalHeight,
-            minWidth: viewportWidth,
-          }}
-        />
+        <div className="relative min-w-0" style={{ minWidth: viewportWidth }}>
+          {mode === "text" ? (
+            <DeferredNativeFindIndex
+              lineCount={preparedDocument.sourceLineCount}
+              lines={textLines}
+              scrollToLineRange={scrollLineRange}
+            />
+          ) : null}
+          <div
+            ref={canvasRef}
+            className="relative min-w-0"
+            data-slot="text-virtual-canvas"
+            data-projection={projection}
+            style={{
+              height: frame.totalHeight,
+              minWidth: viewportWidth,
+            }}
+          />
+        </div>
       </ScrollArea>
     </TextViewerFrame>
   );
+}
+
+function DeferredNativeFindIndex({
+  lines,
+  lineCount,
+  scrollToLineRange,
+}: {
+  lines: readonly string[];
+  lineCount: number;
+  scrollToLineRange: (
+    range: ReturnType<typeof normalizeTextLineRange>,
+    options?: ScrollToOptions,
+  ) => void;
+}) {
+  const [isReady, setIsReady] = React.useState(false);
+
+  useKeyedMountEffect(joinEffectKey([lines]), () => {
+    setIsReady(false);
+    const show = () => setIsReady(true);
+    if (typeof window === "undefined") return;
+    const browserWindow = window as TextIdleWindow;
+    if (browserWindow.requestIdleCallback && browserWindow.cancelIdleCallback) {
+      const idleId = browserWindow.requestIdleCallback(show, { timeout: 400 });
+      return () => browserWindow.cancelIdleCallback?.(idleId);
+    }
+    const timeoutId = browserWindow.setTimeout(show, 80);
+    return () => browserWindow.clearTimeout(timeoutId);
+  });
+
+  if (!isReady) return null;
+  return (
+    <NativeFindIndex
+      lineCount={lineCount}
+      lines={lines}
+      scrollToLineRange={scrollToLineRange}
+    />
+  );
+}
+
+function NativeFindIndex({
+  lines,
+  lineCount,
+  scrollToLineRange,
+}: {
+  lines: readonly string[];
+  lineCount: number;
+  scrollToLineRange: (
+    range: ReturnType<typeof normalizeTextLineRange>,
+    options?: ScrollToOptions,
+  ) => void;
+}) {
+  const entries = React.useMemo(() => chunkNativeFindLines(lines), [lines]);
+
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute top-0 left-0 h-px w-px overflow-hidden opacity-0"
+      data-native-find-indexed-chunks={entries.length}
+      data-native-find-indexed-lines={lines.length}
+      data-slot="text-native-find-index"
+    >
+      {entries.map((entry) => (
+        <NativeFindEntry
+          key={entry.startLine}
+          entry={entry}
+          lineCount={lineCount}
+          scrollToLineRange={scrollToLineRange}
+        />
+      ))}
+    </div>
+  );
+}
+
+function NativeFindEntry({
+  entry,
+  lineCount,
+  scrollToLineRange,
+}: {
+  entry: NativeFindTextChunk;
+  lineCount: number;
+  scrollToLineRange: (
+    range: ReturnType<typeof normalizeTextLineRange>,
+    options?: ScrollToOptions,
+  ) => void;
+}) {
+  const ref = React.useRef<HTMLSpanElement | null>(null);
+
+  useKeyedLayoutEffect(
+    joinEffectKey([
+      entry.startLine,
+      entry.endLine,
+      lineCount,
+      scrollToLineRange,
+    ]),
+    () => {
+      const element = ref.current;
+      if (!element) return;
+      element.setAttribute("hidden", "until-found");
+
+      const handleBeforeMatch = () => {
+        scrollToLineRange(
+          normalizeTextLineRange(
+            {
+              end: entry.endLine,
+              start: entry.startLine,
+            },
+            lineCount,
+          ),
+          { behavior: "auto" },
+        );
+        requestAnimationFrame(() => {
+          element.setAttribute("hidden", "until-found");
+        });
+      };
+
+      element.addEventListener("beforematch", handleBeforeMatch);
+      return () => {
+        element.removeEventListener("beforematch", handleBeforeMatch);
+      };
+    },
+  );
+
+  return (
+    <span
+      ref={ref}
+      className="absolute top-0 left-0 block h-px w-px overflow-hidden whitespace-pre"
+      data-native-find-end-line={entry.endLine}
+      data-native-find-start-line={entry.startLine}
+    >
+      {entry.text || " "}
+    </span>
+  );
+}
+
+function chunkNativeFindLines(lines: readonly string[]): NativeFindTextChunk[] {
+  const chunks: NativeFindTextChunk[] = [];
+  for (
+    let startIndex = 0;
+    startIndex < lines.length;
+    startIndex += TEXT_VIEWER_NATIVE_FIND_CHUNK_SIZE
+  ) {
+    const endIndex = Math.min(
+      lines.length,
+      startIndex + TEXT_VIEWER_NATIVE_FIND_CHUNK_SIZE,
+    );
+    chunks.push({
+      endLine: endIndex,
+      startLine: startIndex + 1,
+      text: lines.slice(startIndex, endIndex).join("\n"),
+    });
+  }
+  return chunks;
 }
 
 export function projectRows({
@@ -710,12 +892,18 @@ function ensureProjectionWindow(
   content.dataset.slot = "text-sticky-content";
   after.dataset.slot = "text-sticky-after-buffer";
 
+  before.style.contain = "layout size";
   sticky.style.position = "sticky";
   sticky.style.left = "0";
   sticky.style.width = "100%";
   sticky.style.overflow = "visible";
+  sticky.style.contain = "layout style inline-size";
+  sticky.style.isolation = "isolate";
+  sticky.style.display = "flex";
+  sticky.style.flexDirection = "column";
   content.style.position = "relative";
   content.style.width = "100%";
+  after.style.contain = "layout size";
 
   sticky.append(content);
   canvas.replaceChildren(before, sticky, after);

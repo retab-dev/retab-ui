@@ -17,6 +17,7 @@ interface PdfThumbnailWindowMetrics {
 }
 
 export interface PdfThumbnailWindow {
+  viewportHeight: number;
   visibleItems: readonly PdfThumbnailLayoutItem[];
   totalHeight: number;
 }
@@ -24,12 +25,12 @@ export interface PdfThumbnailWindow {
 export function usePdfThumbnailWindow({
   layout,
   viewportRef,
-  overscan,
+  overscanPx,
   initialViewportHeight,
 }: {
   layout: PdfThumbnailLayout;
   viewportRef: React.RefObject<HTMLElement | null>;
-  overscan: number;
+  overscanPx: number;
   initialViewportHeight: number;
 }): PdfThumbnailWindow {
   const [metrics, setMetrics] = React.useState<PdfThumbnailWindowMetrics>({
@@ -101,14 +102,15 @@ export function usePdfThumbnailWindow({
 
   return React.useMemo(
     () => ({
+      viewportHeight: metrics.viewportHeight,
       visibleItems: getVisiblePdfThumbnailItems({
         layout,
         scrollTop: metrics.scrollTop,
         viewportHeight: metrics.viewportHeight,
-        overscan,
+        overscanPx,
       }),
       totalHeight: layout.totalHeight,
     }),
-    [layout, metrics, overscan],
+    [layout, metrics, overscanPx],
   );
 }

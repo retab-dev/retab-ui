@@ -3,7 +3,6 @@
 import * as React from "react";
 
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
-import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import {
   getPdfThumbnailLayoutItem,
@@ -14,14 +13,13 @@ import { joinEffectKey } from "@/lib/effect-key";
 
 export const THUMBNAIL_FOLLOW_MARGIN = 24;
 export const THUMBNAIL_PROGRAMMATIC_SCROLL_WINDOW_MS = 120;
-export const THUMBNAIL_USER_SCROLL_IDLE_MS = 400;
 
 type ThumbnailFollowSuspension = "none" | "pointer" | "user-scroll";
 
 interface ThumbnailFollowState {
   suspension: ThumbnailFollowSuspension;
+  currentPage: number | null;
   lastProgrammaticScrollAt: number;
-  idleTimer: number | null;
 }
 
 export function useThumbnailRailFollow({
@@ -37,8 +35,8 @@ export function useThumbnailRailFollow({
 }) {
   const stateRef = React.useRef<ThumbnailFollowState>({
     suspension: "none",
+    currentPage: null,
     lastProgrammaticScrollAt: 0,
-    idleTimer: null,
   });
 
   const scrollPageIntoView = React.useCallback(
@@ -90,35 +88,36 @@ export function useThumbnailRailFollow({
   useKeyedMountEffect(joinEffectKey(["thumbnail-reset", resetKey]), () => {
     const state = stateRef.current;
     state.suspension = "none";
+    state.currentPage = null;
     state.lastProgrammaticScrollAt = 0;
-    if (state.idleTimer != null) {
-      window.clearTimeout(state.idleTimer);
-      state.idleTimer = null;
-    }
   });
 
   useKeyedMountEffect(
     joinEffectKey(["thumbnail-follow", followNow, resetKey]),
     () => {
+      const page = normalizeThumbnailPage(currentPage, layout.pageCount);
+      const state = stateRef.current;
+      const pageChanged = state.currentPage !== page;
+
+      state.currentPage = page;
+      if (state.suspension === "user-scroll" && pageChanged) {
+        state.suspension = "none";
+      }
+
       followNow();
     },
   );
 
-  useMountEffect(() => {
-    const state = stateRef.current;
-    return () => {
-      if (state.idleTimer != null) window.clearTimeout(state.idleTimer);
-    };
-  });
-
   const onPointerEnter = React.useCallback(() => {
+    if (stateRef.current.suspension === "user-scroll") return;
     stateRef.current.suspension = "pointer";
   }, []);
 
   const onPointerLeave = React.useCallback(() => {
+    if (stateRef.current.suspension !== "pointer") return;
     stateRef.current.suspension = "none";
     followNow();
-  }, [followNow, resetKey]);
+  }, [followNow]);
 
   const onPageActivate = React.useCallback(
     (pageNumber: number) => {
@@ -134,13 +133,7 @@ export function useThumbnailRailFollow({
     if (elapsed < THUMBNAIL_PROGRAMMATIC_SCROLL_WINDOW_MS) return;
 
     state.suspension = "user-scroll";
-    if (state.idleTimer != null) window.clearTimeout(state.idleTimer);
-    state.idleTimer = window.setTimeout(() => {
-      state.suspension = "none";
-      state.idleTimer = null;
-      followNow();
-    }, THUMBNAIL_USER_SCROLL_IDLE_MS);
-  }, [followNow]);
+  }, []);
 
   return {
     onPageActivate,

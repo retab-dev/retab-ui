@@ -519,6 +519,17 @@ describe("FileThumbnail helpers", () => {
     await expect(
       getThumbnailText(thumbnailFileMeta(file), file.content, "fallback-csv"),
     ).resolves.toContain("EMEA");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      cache: "no-store",
+      headers: { Range: `bytes=0-${TEXT_THUMBNAIL_MAX_BYTES - 1}` },
+    });
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+      cache: "no-store",
+    });
+    expect(
+      new Headers(fetchMock.mock.calls[1]?.[1]?.headers).has("Range"),
+    ).toBe(false);
   });
 
   it("wraps format failures while preserving resource failures", async () => {
@@ -1269,9 +1280,13 @@ describe("FileThumbnail", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      cache: "no-store",
       headers: { Range: `bytes=0-${TEXT_THUMBNAIL_MAX_BYTES - 1}` },
     });
     expect(fetchMock.mock.calls[1]?.[1]).toBeDefined();
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+      cache: "no-store",
+    });
     expect(
       new Headers(fetchMock.mock.calls[1]?.[1]?.headers).has("Range"),
     ).toBe(false);
@@ -1315,7 +1330,11 @@ describe("FileThumbnail", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      cache: "no-store",
       headers: { Range: `bytes=0-${TEXT_THUMBNAIL_MAX_BYTES - 1}` },
+    });
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+      cache: "no-store",
     });
     expect(
       new Headers(fetchMock.mock.calls[1]?.[1]?.headers).has("Range"),

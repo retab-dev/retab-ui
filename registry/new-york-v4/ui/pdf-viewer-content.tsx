@@ -15,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 import {
   createPdfPageLayout,
+  getPdfPhysicalScrollHeight,
   getPdfRenderedPageWindow,
   type PdfPageLayoutModel,
 } from "./pdf-viewer-layout";
@@ -43,6 +44,7 @@ import {
 } from "./viewer-controls";
 import { ViewerErrorBoundary } from "./viewer-error";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import { joinEffectKey } from "@/lib/effect-key";
 
 export type PdfViewerContentProps = {
@@ -187,6 +189,7 @@ function PdfViewerInner({
     scrollToPage,
     scrollToPageArea,
     getViewportElement,
+    getScrollMetrics,
   } = usePdfScroll({
     pageCount: document.numPages,
     layout: pageLayout,
@@ -194,17 +197,24 @@ function PdfViewerInner({
     onVisiblePageChange,
     onScrollProgressChange,
   });
-  const { visiblePageNumbers, renderPageNumbers, measureVisiblePages } =
-    usePdfPageVirtualization({
-      layout: pageLayout,
-      resetKey: document,
-      viewportElement,
-    });
+  const {
+    scrollPageOffset,
+    visiblePageNumbers,
+    renderPageNumbers,
+    measureVisiblePages,
+  } = usePdfPageVirtualization({
+    getScrollMetrics,
+    layout: pageLayout,
+    resetKey: document,
+    viewportElement,
+  });
   const pageDevicePixelRatio = getPdfPageDevicePixelRatio({
     devicePixelRatio:
       (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1,
     mode: "settled",
   });
+  const scrollInteractionRestoreRef = React.useRef<number | null>(null);
+  const scrollInteractionElementRef = React.useRef<HTMLElement | null>(null);
 
   usePdfDocumentControlsRegistration({
     currentPage,
@@ -231,10 +241,41 @@ function PdfViewerInner({
     },
   );
 
+  const suspendScrollInteractions = React.useCallback(() => {
+    const scrollElement = viewportElement?.querySelector<HTMLElement>(
+      '[data-slot="pdf-page-sticky-window"]',
+    );
+    if (!scrollElement) return;
+
+    if (scrollInteractionRestoreRef.current !== null) {
+      window.clearTimeout(scrollInteractionRestoreRef.current);
+    }
+    scrollInteractionElementRef.current = scrollElement;
+    scrollElement.style.pointerEvents = "none";
+    if (isMobileSafari()) {
+      scrollElement.style.overflowX = "hidden";
+    }
+    scrollInteractionRestoreRef.current = window.setTimeout(() => {
+      scrollInteractionRestoreRef.current = null;
+      restorePdfScrollInteractions(scrollInteractionElementRef.current);
+      scrollInteractionElementRef.current = null;
+    }, 120);
+  }, [viewportElement]);
+
+  useMountEffect(() => () => {
+    if (scrollInteractionRestoreRef.current !== null) {
+      window.clearTimeout(scrollInteractionRestoreRef.current);
+      scrollInteractionRestoreRef.current = null;
+    }
+    restorePdfScrollInteractions(scrollInteractionElementRef.current);
+    scrollInteractionElementRef.current = null;
+  });
+
   const handleViewportScroll = React.useCallback(() => {
+    suspendScrollInteractions();
     handleScroll();
     measureVisiblePages();
-  }, [handleScroll, measureVisiblePages]);
+  }, [handleScroll, measureVisiblePages, suspendScrollInteractions]);
 
   React.useImperativeHandle(
     forwardedRef ?? null,
@@ -288,7 +329,12 @@ function PdfViewerInner({
                 containerRef={containerRef}
                 document={document}
                 layout={pageLayout}
+                physicalScrollHeight={getPdfPhysicalScrollHeight({
+                  totalHeight: pageLayout.totalHeight,
+                  viewportHeight: viewportElement?.clientHeight ?? 0,
+                })}
                 renderPageNumbers={renderPageNumbers}
+                scrollPageOffset={scrollPageOffset}
                 visiblePageNumbers={visiblePageNumbers}
                 viewportHeight={viewportElement?.clientHeight ?? 0}
                 renderPageOverlay={renderPageOverlay}
@@ -303,6 +349,22 @@ function PdfViewerInner({
         </div>
       </div>
     </div>
+  );
+}
+
+function restorePdfScrollInteractions(element: HTMLElement | null) {
+  if (!element) return;
+  element.style.removeProperty("pointer-events");
+  element.style.removeProperty("overflow-x");
+}
+
+function isMobileSafari() {
+  if (typeof navigator === "undefined") return false;
+  const userAgent = navigator.userAgent;
+  return (
+    /Safari/i.test(userAgent) &&
+    /Mobile/i.test(userAgent) &&
+    !/CriOS|FxiOS|EdgiOS/i.test(userAgent)
   );
 }
 
@@ -406,7 +468,9 @@ type PdfDocumentPagesLayerProps = {
   containerRef: React.RefCallback<HTMLDivElement>;
   document: PdfDocument;
   layout: PdfPageLayoutModel;
+  physicalScrollHeight: number;
   renderPageNumbers: readonly number[];
+  scrollPageOffset: number;
   visiblePageNumbers: readonly number[];
   viewportHeight: number;
   renderPageOverlay?: (props: PageOverlayProps) => React.ReactNode;
@@ -421,7 +485,9 @@ function PdfDocumentPagesLayer({
   containerRef,
   document,
   layout,
+  physicalScrollHeight,
   renderPageNumbers,
+  scrollPageOffset,
   visiblePageNumbers,
   viewportHeight,
   renderPageOverlay,
@@ -440,9 +506,17 @@ function PdfDocumentPagesLayer({
       getPdfRenderedPageWindow({
         layout,
         pageNumbers: renderPageNumbers,
+        physicalScrollHeight,
+        scrollPageOffset,
         viewportHeight,
       }),
-    [layout, renderPageNumbers, viewportHeight],
+    [
+      layout,
+      physicalScrollHeight,
+      renderPageNumbers,
+      scrollPageOffset,
+      viewportHeight,
+    ],
   );
 
   return (
@@ -455,7 +529,8 @@ function PdfDocumentPagesLayer({
         data-slot="pdf-viewer-document"
         className="relative mx-auto"
         style={{
-          height: layout.totalHeight,
+          contain: "layout style",
+          height: physicalScrollHeight,
           minWidth: layout.maxPageWidth,
         }}
       >
@@ -464,21 +539,29 @@ function PdfDocumentPagesLayer({
             <div
               aria-hidden
               data-slot="pdf-page-window-before"
-              style={{ height: renderedWindow.beforeHeight }}
+              style={{
+                contain: "layout size",
+                height: renderedWindow.beforeHeight,
+              }}
             />
             <div
               data-slot="pdf-page-sticky-window"
               className="sticky"
               style={{
                 bottom: renderedWindow.stickyInset,
+                contain: "layout style inline-size",
                 height: renderedWindow.height,
+                isolation: "isolate",
                 top: renderedWindow.stickyInset,
               }}
             >
               <div
                 data-slot="pdf-page-window"
                 className="relative"
-                style={{ height: renderedWindow.height }}
+                style={{
+                  contain: "layout style",
+                  height: renderedWindow.height,
+                }}
               >
                 {renderedWindow.pages.map((page) => (
                   <div
@@ -516,7 +599,10 @@ function PdfDocumentPagesLayer({
             <div
               aria-hidden
               data-slot="pdf-page-window-after"
-              style={{ height: renderedWindow.afterHeight }}
+              style={{
+                contain: "layout size",
+                height: renderedWindow.afterHeight,
+              }}
             />
           </>
         ) : null}

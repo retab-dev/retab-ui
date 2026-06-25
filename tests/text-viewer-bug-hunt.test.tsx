@@ -365,6 +365,35 @@ describe("createPreparedTextDocument (plain text)", () => {
     expect(prepareText("a\nb\nc\n").sourceLineCount).toBe(4);
   });
 
+  it("can prepare plain text from an existing line array", () => {
+    const lines = ["alpha", "beta"];
+    const document = createPreparedTextDocument({
+      lines,
+      mode: "text",
+      style: STYLE,
+      text: "raw text that should not be split for plain text",
+    });
+    const cached = createPreparedTextDocument({
+      lines,
+      mode: "text",
+      style: STYLE,
+      text: "different raw text that should not affect the detached-line path",
+    });
+
+    expect(cached).toBe(document);
+    expect(document.sourceLineCount).toBe(2);
+    expect(document.wordCount).toBe(2);
+    expect(document.blocks).toHaveLength(2);
+    expect(document.blocks.map((block) => block.sourceStartLine)).toEqual([
+      1, 2,
+    ]);
+    expect(
+      document.blocks.map((block) =>
+        block.kind === "inline" ? block.fallbackText : "",
+      ),
+    ).toEqual(["alpha", "beta"]);
+  });
+
   it("counts words ignoring surrounding whitespace", () => {
     expect(prepareText("  the quick   brown\nfox  ").wordCount).toBe(4);
     expect(prepareText("   ").wordCount).toBe(0);

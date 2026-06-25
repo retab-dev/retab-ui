@@ -582,7 +582,7 @@ function requestCodeSyntaxWorkerTokens({
     return () => undefined;
   }
 
-  scheduleCodeSyntaxWorkerPoolDispatch(pool);
+  dispatchCodeSyntaxWorkerPool(pool);
 
   return () => {
     if (subscription.isReleased) return;

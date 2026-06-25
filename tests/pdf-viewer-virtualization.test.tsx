@@ -123,6 +123,56 @@ describe("usePdfPageVirtualization", () => {
     );
   });
 
+  it("uses logical scroll metrics for the centered render window", async () => {
+    const layout = createPdfPageLayout({
+      pageCount: 585,
+      defaultPageSize: { width: 100, height: 200 },
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    });
+    const page400Top = getPdfPageLayout(layout, 400)!.offsetTop;
+
+    function Harness() {
+      const [viewport] = React.useState(
+        () =>
+          ({
+            scrollTop: 2_000,
+            clientHeight: 200,
+          }) as HTMLDivElement,
+      );
+      const result = usePdfPageVirtualization({
+        getScrollMetrics: () => ({
+          scrollPageOffset: page400Top - viewport.scrollTop,
+          scrollTop: page400Top,
+          viewportHeight: viewport.clientHeight,
+        }),
+        layout,
+        viewportElement: viewport,
+      });
+
+      return (
+        <>
+          <output data-testid="offset">{result.scrollPageOffset}</output>
+          <output data-testid="render">
+            {result.renderPageNumbers.join(",")}
+          </output>
+        </>
+      );
+    }
+
+    render(<Harness />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("render").textContent).toBe(
+        "395,396,397,398,399,400,401,402,403,404,405",
+      ),
+    );
+    expect(screen.getByTestId("offset").textContent).toBe(
+      String(page400Top - 2_000),
+    );
+  });
+
   it("ignores a pending measurement from a previous layout after rerender", async () => {
     const initialLayout = createPdfPageLayout({
       pageCount: 20,

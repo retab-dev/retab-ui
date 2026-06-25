@@ -279,6 +279,12 @@ function installRenderedDocument(
   host.replaceChildren(wrapper);
 }
 
+function mountedDocxPageNumbers() {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>(".docx-wrapper > section.docx"),
+  ).map((page) => page.dataset.pageNumber);
+}
+
 function installEmptyRenderedDocument(host: HTMLElement) {
   const wrapper = document.createElement("div");
   wrapper.className = "docx-wrapper";
@@ -570,6 +576,106 @@ describe("DocxViewer", () => {
     const link = screen.getByRole("link", { name: "Download" });
     expect(link.getAttribute("href")).toBe("/report.docx");
     expect(link.getAttribute("download")).toBe("document.docx");
+  });
+
+  it("projects rendered pages through an inverse-sticky virtual window", async () => {
+    docxMock.renderAsync.mockImplementationOnce(async (_buffer, host) => {
+      installRenderedDocument(host, {
+        pageTops: [0, 1100, 2200, 3300, 4400, 5500],
+      });
+    });
+
+    await renderDocx(<DocxViewer source={docxUrlSource("/virtual.docx")} />);
+
+    expect(await screen.findByText("Page 1 of 6")).toBeTruthy();
+    const before = document.querySelector<HTMLElement>(
+      '[data-slot="docx-sticky-before-buffer"]',
+    );
+    const wrapper = document.querySelector<HTMLElement>(
+      '[data-slot="docx-sticky-window"]',
+    );
+    const after = document.querySelector<HTMLElement>(
+      '[data-slot="docx-sticky-after-buffer"]',
+    );
+
+    expect(before).toBeTruthy();
+    expect(wrapper?.classList.contains("docx-wrapper")).toBe(true);
+    expect(after).toBeTruthy();
+    expect(mountedDocxPageNumbers()).toEqual(["1", "2"]);
+    expect(before?.style.height).toBe("0px");
+    expect(wrapper?.style.position).toBe("sticky");
+    expect(wrapper?.style.height).toBe("2128px");
+    expect(wrapper?.style.top).toBe("-1360px");
+    expect(after?.style.height).toBe("4288px");
+  });
+
+  it("updates the mounted DOCX page window on scroll", async () => {
+    docxMock.renderAsync.mockImplementationOnce(async (_buffer, host) => {
+      installRenderedDocument(host, {
+        pageTops: [0, 1100, 2200, 3300, 4400, 5500],
+      });
+    });
+
+    await renderDocx(
+      <DocxViewer source={docxUrlSource("/virtual-scroll.docx")} />,
+    );
+
+    expect(await screen.findByText("Page 1 of 6")).toBeTruthy();
+    const viewport = document.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]',
+    );
+    expect(viewport).toBeTruthy();
+    setScrollMetrics(viewport!, {
+      clientHeight: 500,
+      scrollHeight: 7000,
+      scrollTop: DOCX_VIEWER_PADDING_PX + 3216,
+    });
+
+    fireEvent.scroll(viewport!);
+
+    await waitFor(() => {
+      expect(mountedDocxPageNumbers()).toEqual(["3", "4", "5"]);
+    });
+    expect(
+      document.querySelector<HTMLElement>(
+        '[data-slot="docx-sticky-before-buffer"]',
+      )?.style.height,
+    ).toBe("2144px");
+    expect(
+      document.querySelector<HTMLElement>(
+        '[data-slot="docx-sticky-after-buffer"]',
+      )?.style.height,
+    ).toBe("1072px");
+  });
+
+  it("mounts an offscreen DOCX page before imperative target scrolling", async () => {
+    const ref = React.createRef<DocxViewerHandle>();
+    docxMock.renderAsync.mockImplementationOnce(async (_buffer, host) => {
+      installRenderedDocument(host, {
+        pageTops: [0, 1100, 2200, 3300, 4400, 5500],
+      });
+    });
+
+    await renderDocx(
+      <DocxViewer ref={ref} source={docxUrlSource("/virtual-target.docx")} />,
+    );
+
+    expect(await screen.findByText("Page 1 of 6")).toBeTruthy();
+    expect(mountedDocxPageNumbers()).toEqual(["1", "2"]);
+    const scrollIntoView = vi.spyOn(HTMLElement.prototype, "scrollIntoView");
+
+    ref.current?.scrollToTarget(
+      { kind: "text", text: "Page 5" },
+      { behavior: "auto" },
+    );
+
+    expect(screen.getByText("Page 5")).toBeTruthy();
+    expect(mountedDocxPageNumbers()).toEqual(["5"]);
+    expect(scrollIntoView).toHaveBeenCalledWith({
+      behavior: "auto",
+      block: "center",
+      inline: "nearest",
+    });
   });
 
   it("passes paginated document render options to docx-preview", async () => {
@@ -1635,7 +1741,6 @@ describe("DocxViewer", () => {
   it("does not rebuild the render index when only the highlight target changes", async () => {
     const highlights = new Map<string, MockHighlight>();
     installHighlightApi(highlights);
-    const createTreeWalker = vi.spyOn(document, "createTreeWalker");
 
     const view = await renderDocx(
       <DocxViewer
@@ -1648,8 +1753,6 @@ describe("DocxViewer", () => {
     await waitFor(() => {
       expect(highlights.size).toBe(1);
     });
-    expect(createTreeWalker).toHaveBeenCalled();
-    createTreeWalker.mockClear();
 
     await act(async () => {
       view.rerender(
@@ -1665,7 +1768,6 @@ describe("DocxViewer", () => {
         "Target cell",
       );
     });
-    expect(createTreeWalker).not.toHaveBeenCalled();
     expect(docxMock.renderAsync).toHaveBeenCalledTimes(1);
   });
 

@@ -267,7 +267,7 @@ export function useCsvResourceState({
           typeof Worker !== "undefined"
         ) {
           void csvResource.content
-            .readBlob({ signal: controller.signal })
+            .readBlob({ cache: "no-store", signal: controller.signal })
             .then((blob) =>
               parseCsvInWorker({
                 source: blob,

@@ -23,7 +23,9 @@ import { PptxViewerFallback } from "@/registry/new-york-v4/ui/pptx-viewer-fallba
 import { createPptxScrollActivity } from "@/registry/new-york-v4/ui/pptx-viewer-scroll";
 import {
   createPptxSlideLayout,
+  getPptxRenderedSlideWindow,
   getPptxSlideAtScrollMarker,
+  getPptxVirtualSlides,
   usePptxVisibleSlide,
 } from "@/registry/new-york-v4/ui/pptx-viewer-visible-slide";
 import { usePptxZoom } from "@/registry/new-york-v4/ui/pptx-viewer-zoom";
@@ -171,6 +173,51 @@ describe("pptx slide scroll layout", () => {
     expect(getPptxSlideAtScrollMarker(layout, 1487)).toBe(2);
     expect(getPptxSlideAtScrollMarker(layout, 1488)).toBe(3);
     expect(getPptxSlideAtScrollMarker(layout, 9999)).toBe(3);
+  });
+
+  it("builds an inverse-sticky rendered window from virtual slides", () => {
+    const layout = createPptxSlideLayout({
+      baseSize: { width: 960, height: 720 },
+      zoomScale: 1,
+      rotation: 0,
+      slideCount: 20,
+      slideGap: 16,
+      slidePadding: 16,
+    });
+    const virtualSlides = getPptxVirtualSlides({
+      layout,
+      overscanSlides: 2,
+      scrollTop: 16 + 9 * 736,
+      viewportHeight: 720,
+    });
+
+    expect(
+      getPptxRenderedSlideWindow({ layout, slides: [], viewportHeight: 720 }),
+    ).toBeNull();
+    expect(
+      getPptxRenderedSlideWindow({
+        layout,
+        slides: virtualSlides,
+        viewportHeight: 720,
+      }),
+    ).toEqual({
+      afterHeight: 5904,
+      beforeHeight: 5168,
+      height: 3664,
+      stickyInset: -2944,
+      slides: expect.arrayContaining([
+        expect.objectContaining({
+          slideNumber: 8,
+          top: 5168,
+          windowTop: 0,
+        }),
+        expect.objectContaining({
+          slideNumber: 12,
+          top: 8112,
+          windowTop: 2944,
+        }),
+      ]),
+    });
   });
 });
 

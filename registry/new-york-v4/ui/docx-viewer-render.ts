@@ -8,9 +8,24 @@ import {
   DOCX_RENDER_OPTIONS,
   positivePixel,
 } from "./docx-viewer-core";
-import { createDocxPageLayout } from "./docx-viewer-layout";
+import {
+  createDocxPageLayout,
+  type DocxPageLayout,
+  type DocxPageWindow,
+} from "./docx-viewer-layout";
 
 let docxPromise: Promise<typeof DocxPreview> | null = null;
+
+export interface DocxRenderedDocument {
+  after: HTMLDivElement;
+  before: HTMLDivElement;
+  mountedEnd: number;
+  mountedStart: number;
+  pageLayout: DocxPageLayout;
+  pages: readonly HTMLElement[];
+  sticky: HTMLElement;
+  wrapper: HTMLElement;
+}
 
 export function loadDocxPreview() {
   if (!docxPromise) {
@@ -41,6 +56,14 @@ export function commitDocxRender({
   renderHost: HTMLElement;
   scale: number;
 }) {
+  const wrapper = renderHost.querySelector<HTMLElement>(".docx-wrapper");
+  if (!wrapper) {
+    throw new ViewerFormatError({
+      format: "docx",
+      kind: "render_failed",
+      message: "DOCX render produced no pages.",
+    });
+  }
   const pages = Array.from(
     renderHost.querySelectorAll<HTMLElement>(".docx-wrapper > section.docx"),
   );
@@ -59,12 +82,107 @@ export function commitDocxRender({
     el.style.containIntrinsicSize = `${sizes[i][0]}px ${sizes[i][1]}px`;
   });
   const pageLayout = createDocxPageLayout(sizes);
-  host.replaceChildren(...Array.from(renderHost.childNodes));
+  const before = document.createElement("div");
+  const after = document.createElement("div");
+  before.dataset.slot = "docx-sticky-before-buffer";
+  wrapper.dataset.slot = "docx-sticky-window";
+  after.dataset.slot = "docx-sticky-after-buffer";
+  before.setAttribute("aria-hidden", "true");
+  after.setAttribute("aria-hidden", "true");
+  wrapper.style.position = "sticky";
+  wrapper.style.left = "0";
+  wrapper.style.overflow = "visible";
+  wrapper.style.width = "100%";
+
+  const staticNodes = Array.from(renderHost.childNodes).filter(
+    (node) => node !== wrapper,
+  );
+  wrapper.replaceChildren();
+  host.replaceChildren(...staticNodes, before, wrapper, after);
+
+  const virtualDocument: DocxRenderedDocument = {
+    after,
+    before,
+    mountedEnd: 0,
+    mountedStart: 0,
+    pageLayout,
+    pages,
+    sticky: wrapper,
+    wrapper,
+  };
   return {
     numPages: pages.length,
     pageWidth: pages.length ? sizes[0][0] : null,
     pageLayout,
+    virtualDocument,
   };
+}
+
+export function projectDocxPages(
+  document: DocxRenderedDocument,
+  window: DocxPageWindow,
+) {
+  document.before.style.height = `${window.beforeHeight}px`;
+  document.after.style.height = `${window.afterHeight}px`;
+  document.sticky.style.top = `${window.stickyOffset}px`;
+  document.sticky.style.bottom = `${window.stickyOffset}px`;
+  document.sticky.style.height = `${window.renderedHeight}px`;
+
+  const start = window.startIndex;
+  const end = window.endIndex;
+  if (start === document.mountedStart && end === document.mountedEnd) return;
+
+  if (
+    document.mountedEnd <= document.mountedStart ||
+    end <= start ||
+    end <= document.mountedStart ||
+    start >= document.mountedEnd
+  ) {
+    document.wrapper.replaceChildren(...document.pages.slice(start, end));
+    document.mountedStart = start;
+    document.mountedEnd = end;
+    return;
+  }
+
+  for (
+    let index = document.mountedStart;
+    index < Math.min(start, document.mountedEnd);
+    index += 1
+  ) {
+    document.pages[index]?.remove();
+  }
+  for (
+    let index = Math.max(end, document.mountedStart);
+    index < document.mountedEnd;
+    index += 1
+  ) {
+    document.pages[index]?.remove();
+  }
+
+  if (start < document.mountedStart) {
+    const fragment = globalThis.document.createDocumentFragment();
+    for (let index = start; index < document.mountedStart; index += 1) {
+      const page = document.pages[index];
+      if (page) fragment.append(page);
+    }
+    document.wrapper.insertBefore(fragment, document.wrapper.firstChild);
+  }
+
+  if (end > document.mountedEnd) {
+    const fragment = globalThis.document.createDocumentFragment();
+    for (
+      let index = Math.max(document.mountedEnd, start);
+      index < end;
+      index += 1
+    ) {
+      const page = document.pages[index];
+      if (page) fragment.append(page);
+    }
+    document.wrapper.append(fragment);
+  }
+
+  document.mountedStart = start;
+  document.mountedEnd = end;
 }
 
 function pageSize(el: HTMLElement, scale: number) {

@@ -2,9 +2,16 @@ import type { PdfPageSize } from "./pdf-viewer-types";
 
 export const PDF_PAGE_GAP = 16;
 export const PDF_PAGE_PADDING = 16;
-export const PDF_RENDER_PAGE_OVERSCAN = 2;
+export const PDF_RENDER_WINDOW_OVERSCAN_PX = 1000;
 export const PDF_VISIBLE_PAGE_OVERSCAN = 2;
 export const PDF_PRELOAD_PAGE_OVERSCAN = 4;
+export const PDF_SCROLL_REBASE_CONTAINER_PX = 12_000_000;
+export const PDF_SCROLL_REBASE_TRIGGER_PX = 1_000_000;
+export const PDF_SCROLL_REBASE_TARGET_PX = 2_000_000;
+export const PDF_SCROLL_REBASE_TARGET_BOTTOM_PX =
+  PDF_SCROLL_REBASE_CONTAINER_PX - PDF_SCROLL_REBASE_TARGET_PX;
+export const PDF_SCROLL_REBASE_THRESHOLD_PX =
+  PDF_SCROLL_REBASE_CONTAINER_PX - PDF_SCROLL_REBASE_TRIGGER_PX;
 
 export type PdfPageLayout = {
   pageNumber: number;
@@ -23,6 +30,16 @@ export type PdfRenderedPageWindow = {
   height: number;
   pages: readonly PdfRenderedPageLayout[];
   stickyInset: number;
+};
+
+export type PdfRenderPixelWindow = {
+  bottom: number;
+  top: number;
+};
+
+export type PdfScrollRebasePosition = {
+  physicalScrollTop: number;
+  scrollPageOffset: number;
 };
 
 export type PdfMeasuredPageLayout = {
@@ -167,22 +184,29 @@ export function getPdfVisiblePageNumbers({
 
 export function getPdfRenderPageNumbers({
   layout,
+  overscanPx = PDF_RENDER_WINDOW_OVERSCAN_PX,
   scrollTop,
   viewportHeight,
-  overscanPages = PDF_RENDER_PAGE_OVERSCAN,
 }: {
   layout: PdfPageLayoutModel;
+  overscanPx?: number;
   scrollTop: number;
   viewportHeight: number;
-  overscanPages?: number;
 }) {
   if (layout.pageCount === 0) return [];
 
+  const window = createWindowFromScrollPosition({
+    overscanPx,
+    scrollHeight: layout.totalHeight,
+    scrollTop,
+    viewportHeight,
+  });
+
   return getPdfPageNumbersInRange({
     layout,
-    startOffset: scrollTop,
-    endOffset: scrollTop + viewportHeight,
-    overscanPages,
+    startOffset: window.top,
+    endOffset: window.bottom,
+    overscanPages: 0,
   });
 }
 
@@ -208,10 +232,14 @@ export function getPdfPreloadPageNumbers({
 export function getPdfRenderedPageWindow({
   layout,
   pageNumbers,
+  physicalScrollHeight = layout.totalHeight,
+  scrollPageOffset = 0,
   viewportHeight,
 }: {
   layout: PdfPageLayoutModel;
   pageNumbers: readonly number[];
+  physicalScrollHeight?: number;
+  scrollPageOffset?: number;
   viewportHeight: number;
 }): PdfRenderedPageWindow | null {
   const pages = pageNumbers
@@ -221,26 +249,196 @@ export function getPdfRenderedPageWindow({
 
   if (pages.length === 0) return null;
 
-  const beforeHeight = pages[0].offsetTop;
+  const logicalBeforeHeight = pages[0].offsetTop;
   const windowBottom = Math.max(
     ...pages.map((page) => page.offsetTop + page.height),
   );
-  const height = Math.max(0, windowBottom - beforeHeight);
+  const height = Math.max(0, windowBottom - logicalBeforeHeight);
+  const beforeHeight = getPdfPagedLayoutTop({
+    logicalTop: logicalBeforeHeight,
+    scrollPageOffset,
+    totalHeight: layout.totalHeight,
+    viewportHeight,
+  });
   const safeViewportHeight =
     Number.isFinite(viewportHeight) && viewportHeight > 0 ? viewportHeight : 0;
+  const safePhysicalScrollHeight = Math.max(
+    0,
+    finiteNumber(physicalScrollHeight),
+  );
   const stickyInset =
     safeViewportHeight > 0 ? -Math.max(0, height - safeViewportHeight) : 0;
 
   return {
-    afterHeight: Math.max(0, layout.totalHeight - windowBottom),
+    afterHeight: Math.max(0, safePhysicalScrollHeight - beforeHeight - height),
     beforeHeight,
     height,
     pages: pages.map((page) => ({
       ...page,
-      windowTop: page.offsetTop - beforeHeight,
+      windowTop: page.offsetTop - logicalBeforeHeight,
     })),
     stickyInset,
   };
+}
+
+export function createWindowFromScrollPosition({
+  overscanPx,
+  scrollHeight,
+  scrollTop,
+  viewportHeight,
+}: {
+  overscanPx: number;
+  scrollHeight: number;
+  scrollTop: number;
+  viewportHeight: number;
+}): PdfRenderPixelWindow {
+  const safeOverscanPx = safePadding(overscanPx);
+  const safeScrollHeight = Math.max(0, finiteNumber(scrollHeight));
+  const safeScrollTop = Math.max(0, finiteNumber(scrollTop));
+  const safeViewportHeight = Math.max(0, finiteNumber(viewportHeight));
+  const windowHeight = safeViewportHeight + safeOverscanPx * 2;
+
+  if (windowHeight >= safeScrollHeight) {
+    return { bottom: safeScrollHeight, top: 0 };
+  }
+
+  const scrollCenter = safeScrollTop + safeViewportHeight / 2;
+  let top = scrollCenter - windowHeight / 2;
+  let bottom = top + windowHeight;
+
+  if (top < 0) {
+    top = 0;
+    bottom = windowHeight;
+  }
+  if (bottom > safeScrollHeight) {
+    bottom = safeScrollHeight;
+    top = safeScrollHeight - windowHeight;
+  }
+
+  return {
+    bottom: Math.ceil(Math.max(bottom, top)),
+    top: Math.floor(Math.max(0, top)),
+  };
+}
+
+export function getPdfPhysicalScrollHeight({
+  totalHeight,
+  viewportHeight,
+}: {
+  totalHeight: number;
+  viewportHeight: number;
+}) {
+  const safeTotalHeight = safeSize(totalHeight);
+  return shouldRebasePdfScroll({ totalHeight: safeTotalHeight, viewportHeight })
+    ? Math.min(safeTotalHeight, PDF_SCROLL_REBASE_CONTAINER_PX)
+    : safeTotalHeight;
+}
+
+export function getPdfLogicalScrollTop({
+  physicalScrollTop,
+  scrollPageOffset,
+  totalHeight,
+  viewportHeight,
+}: {
+  physicalScrollTop: number;
+  scrollPageOffset: number;
+  totalHeight: number;
+  viewportHeight: number;
+}) {
+  return clamp(
+    finiteNumber(physicalScrollTop) + safePadding(scrollPageOffset),
+    0,
+    getPdfMaxLogicalScrollTop({ totalHeight, viewportHeight }),
+  );
+}
+
+export function resolvePdfPhysicalScrollPosition({
+  logicalScrollTop,
+  scrollPageOffset,
+  totalHeight,
+  viewportHeight,
+}: {
+  logicalScrollTop: number;
+  scrollPageOffset: number;
+  totalHeight: number;
+  viewportHeight: number;
+}): PdfScrollRebasePosition {
+  const safeLogicalScrollTop = clamp(
+    finiteNumber(logicalScrollTop),
+    0,
+    getPdfMaxLogicalScrollTop({ totalHeight, viewportHeight }),
+  );
+
+  if (!shouldRebasePdfScroll({ totalHeight, viewportHeight })) {
+    return {
+      physicalScrollTop: clamp(
+        safeLogicalScrollTop,
+        0,
+        getPdfMaxPhysicalScrollTop({ totalHeight, viewportHeight }),
+      ),
+      scrollPageOffset: 0,
+    };
+  }
+
+  const currentPageOffset = clampPdfScrollPageOffset({
+    scrollPageOffset,
+    totalHeight,
+    viewportHeight,
+  });
+  const physicalScrollTop = safeLogicalScrollTop - currentPageOffset;
+  const maxPhysicalScrollTop = getPdfMaxPhysicalScrollTop({
+    totalHeight,
+    viewportHeight,
+  });
+  const maxPageOffset = getPdfMaxScrollPageOffset({
+    totalHeight,
+    viewportHeight,
+  });
+  const shouldMoveDown =
+    physicalScrollTop > PDF_SCROLL_REBASE_THRESHOLD_PX &&
+    currentPageOffset < maxPageOffset;
+  const shouldMoveUp =
+    physicalScrollTop < PDF_SCROLL_REBASE_TRIGGER_PX && currentPageOffset > 0;
+
+  if (
+    physicalScrollTop < 0 ||
+    physicalScrollTop > maxPhysicalScrollTop ||
+    shouldMoveDown ||
+    shouldMoveUp
+  ) {
+    return resolvePdfScrollPageWindow({
+      logicalScrollTop: safeLogicalScrollTop,
+      preferredPhysicalScrollTop: shouldMoveUp
+        ? Math.min(PDF_SCROLL_REBASE_TARGET_BOTTOM_PX, maxPhysicalScrollTop)
+        : PDF_SCROLL_REBASE_TARGET_PX,
+      totalHeight,
+      viewportHeight,
+    });
+  }
+
+  return {
+    physicalScrollTop: roundPdfScrollPixel(
+      clamp(physicalScrollTop, 0, maxPhysicalScrollTop),
+    ),
+    scrollPageOffset: currentPageOffset,
+  };
+}
+
+export function getPdfPagedLayoutTop({
+  logicalTop,
+  scrollPageOffset,
+  totalHeight,
+  viewportHeight,
+}: {
+  logicalTop: number;
+  scrollPageOffset: number;
+  totalHeight: number;
+  viewportHeight: number;
+}) {
+  if (!shouldRebasePdfScroll({ totalHeight, viewportHeight })) {
+    return finiteNumber(logicalTop);
+  }
+  return Math.max(0, finiteNumber(logicalTop) - safePadding(scrollPageOffset));
 }
 
 function getPdfPageNumbersInRange({
@@ -264,6 +462,116 @@ function getPdfPageNumbersInRange({
   return createPageNumberRange(firstPage, lastPage);
 }
 
+function shouldRebasePdfScroll({
+  totalHeight,
+  viewportHeight,
+}: {
+  totalHeight: number;
+  viewportHeight: number;
+}) {
+  return (
+    getPdfMaxLogicalScrollTop({ totalHeight, viewportHeight }) >
+    PDF_SCROLL_REBASE_THRESHOLD_PX
+  );
+}
+
+function getPdfMaxLogicalScrollTop({
+  totalHeight,
+  viewportHeight,
+}: {
+  totalHeight: number;
+  viewportHeight: number;
+}) {
+  return Math.max(
+    safeSize(totalHeight) - Math.max(0, finiteNumber(viewportHeight)),
+    0,
+  );
+}
+
+function getPdfMaxPhysicalScrollTop({
+  totalHeight,
+  viewportHeight,
+}: {
+  totalHeight: number;
+  viewportHeight: number;
+}) {
+  return Math.max(
+    getPdfPhysicalScrollHeight({ totalHeight, viewportHeight }) -
+      Math.max(0, finiteNumber(viewportHeight)),
+    0,
+  );
+}
+
+function getPdfMaxScrollPageOffset({
+  totalHeight,
+  viewportHeight,
+}: {
+  totalHeight: number;
+  viewportHeight: number;
+}) {
+  return Math.max(
+    getPdfMaxLogicalScrollTop({ totalHeight, viewportHeight }) -
+      getPdfMaxPhysicalScrollTop({ totalHeight, viewportHeight }),
+    0,
+  );
+}
+
+function clampPdfScrollPageOffset({
+  scrollPageOffset,
+  totalHeight,
+  viewportHeight,
+}: {
+  scrollPageOffset: number;
+  totalHeight: number;
+  viewportHeight: number;
+}) {
+  return clamp(
+    safePadding(scrollPageOffset),
+    0,
+    getPdfMaxScrollPageOffset({ totalHeight, viewportHeight }),
+  );
+}
+
+function resolvePdfScrollPageWindow({
+  logicalScrollTop,
+  preferredPhysicalScrollTop,
+  totalHeight,
+  viewportHeight,
+}: {
+  logicalScrollTop: number;
+  preferredPhysicalScrollTop: number;
+  totalHeight: number;
+  viewportHeight: number;
+}): PdfScrollRebasePosition {
+  let physicalScrollTop = roundPdfScrollPixel(
+    clamp(
+      finiteNumber(preferredPhysicalScrollTop),
+      0,
+      getPdfMaxPhysicalScrollTop({ totalHeight, viewportHeight }),
+    ),
+  );
+  let scrollPageOffset = clampPdfScrollPageOffset({
+    scrollPageOffset: logicalScrollTop - physicalScrollTop,
+    totalHeight,
+    viewportHeight,
+  });
+
+  physicalScrollTop = roundPdfScrollPixel(
+    clamp(
+      logicalScrollTop - scrollPageOffset,
+      0,
+      getPdfMaxPhysicalScrollTop({ totalHeight, viewportHeight }),
+    ),
+  );
+  scrollPageOffset = clampPdfScrollPageOffset({
+    scrollPageOffset: logicalScrollTop - physicalScrollTop,
+    totalHeight,
+    viewportHeight,
+  });
+
+  return { physicalScrollTop, scrollPageOffset };
+}
+
 function createPageNumberRange(firstPage: number, lastPage: number) {
   if (lastPage < firstPage) return [];
 
@@ -283,6 +591,28 @@ function getRenderedPageSize(
     width: Math.round((isRotated ? pageSize.height : pageSize.width) * scale),
     height: Math.round((isRotated ? pageSize.width : pageSize.height) * scale),
   };
+}
+
+function finiteNumber(value: number) {
+  return Number.isFinite(value) ? value : 0;
+}
+
+function roundPdfScrollPixel(value: number) {
+  if (typeof window === "undefined") return Math.round(value);
+  const ratio = window.devicePixelRatio || 1;
+  return Math.round(value * ratio) / ratio;
+}
+
+function safePadding(value: number) {
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function safeSize(value: number) {
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function getPdfPageOffsetTop(layout: PdfPageLayoutModel, pageNumber: number) {

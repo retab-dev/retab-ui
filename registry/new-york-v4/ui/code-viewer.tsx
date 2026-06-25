@@ -21,6 +21,7 @@ export const CodeViewer = React.forwardRef<CodeViewerHandle, CodeViewerProps>(
         props={props}
         forwardedRef={ref}
         clientFallbackPolicy="always"
+        contentResetPolicy="inline-retry"
         Fallback={CodeViewerFallback}
         Content={CodeViewerContent}
       />

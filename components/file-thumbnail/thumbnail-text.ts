@@ -46,10 +46,10 @@ export function getThumbnailText(
     timedThumbnail(`text:fetch ${shortName(meta)}`, async () => {
       if (meta.sourceKind === "url" || content.sourceKind === "url") {
         try {
-          return await readThumbnailTextRange(content);
+          return await readThumbnailTextRange(content, "no-store");
         } catch (error) {
           if (shouldReadTextStreamPrefix(error)) {
-            return readThumbnailTextStreamPrefix(content);
+            return readThumbnailTextStreamPrefix(content, "no-store");
           }
           throw error;
         }
@@ -86,16 +86,27 @@ function resourceErrorCandidate(error: unknown):
   return error as { kind?: unknown; status?: unknown };
 }
 
-async function readThumbnailTextRange(content: ThumbnailTextContent) {
-  const range = await content.readRange({
+async function readThumbnailTextRange(
+  content: ThumbnailTextContent,
+  cache?: RequestCache,
+) {
+  const rangeRequest = {
     start: 0,
     end: TEXT_THUMBNAIL_MAX_BYTES - 1,
-  });
+  };
+  const range = cache
+    ? await content.readRange(rangeRequest, { cache })
+    : await content.readRange(rangeRequest);
   return new TextDecoder().decode(range.buffer);
 }
 
-async function readThumbnailTextStreamPrefix(content: ThumbnailTextContent) {
-  const stream = await content.readStream();
+async function readThumbnailTextStreamPrefix(
+  content: ThumbnailTextContent,
+  cache?: RequestCache,
+) {
+  const stream = cache
+    ? await content.readStream({ cache })
+    : await content.readStream();
   const reader = stream.getReader();
   const decoder = new TextDecoder();
   let remainingBytes = TEXT_THUMBNAIL_MAX_BYTES;
