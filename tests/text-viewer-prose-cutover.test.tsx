@@ -156,6 +156,9 @@ describe("public TextViewer prose cutover", () => {
       container.querySelector('[data-slot="text-virtual-canvas"]'),
     ).toBeTruthy();
     expect(
+      container.querySelector('[data-slot="text-sticky-window"]'),
+    ).toBeTruthy();
+    expect(
       container.querySelectorAll('[data-slot="text-line"]').length,
     ).toBeLessThan(120);
   });

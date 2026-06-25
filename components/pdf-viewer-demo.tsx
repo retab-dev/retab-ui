@@ -3,13 +3,16 @@
 import {
   FileViewer,
   FileViewerBody,
-  FileViewerControls,
   FileViewerHeader,
-  FileViewerMeta,
+  FileViewerHeaderEnd,
+  FileViewerHeaderStart,
+  FileViewerIdentity,
+  FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarTrigger,
   FileViewerSurface,
-  FileViewerTitle,
+  FileViewerToolbar,
+  FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import {
   PdfViewerPages,
@@ -27,33 +30,35 @@ export function PdfViewerDemo() {
   return (
     // A 96-page NVIDIA 10-K so the continuous-scroll virtualization shows at scale.
     <div className="h-[600px] min-h-0">
-      <FileViewer
-        source={PDF_SOURCE}
-        defaultOpen
-        mode="inline"
-        className="h-full"
-      >
-        <PdfViewerProvider>
-          <FileViewerHeader>
-            <FileViewerSidebarTrigger className="-ml-1" />
-            <FileViewerTitle />
-            <FileViewerMeta />
-            <FileViewerControls />
-          </FileViewerHeader>
-          <FileViewerBody>
-            <FileViewerSidebar
-              aria-label="PDF pages"
-              width="4.5rem"
-              className="border-r"
-            >
-              <PdfViewerThumbnails thumbnailWidth={60} />
-            </FileViewerSidebar>
-            <FileViewerSurface>
-              <PdfViewerPages bare className="h-full" />
-            </FileViewerSurface>
-          </FileViewerBody>
-        </PdfViewerProvider>
-      </FileViewer>
+      <FileViewerProvider source={PDF_SOURCE} defaultSidebarOpen>
+        <FileViewer sidebarMode="inline" className="h-full">
+          <PdfViewerProvider>
+            <FileViewerHeader>
+              <FileViewerHeaderStart>
+                <FileViewerSidebarTrigger className="-ml-1" />
+                <FileViewerIdentity />
+              </FileViewerHeaderStart>
+              <FileViewerHeaderEnd>
+                <FileViewerToolbar />
+              </FileViewerHeaderEnd>
+            </FileViewerHeader>
+            <FileViewerBody>
+              <FileViewerSidebar
+                aria-label="PDF pages"
+                width="4.5rem"
+                className="border-r"
+              >
+                <PdfViewerThumbnails thumbnailWidth={60} />
+              </FileViewerSidebar>
+              <FileViewerSurface>
+                <FileViewerViewport>
+                  <PdfViewerPages bare className="h-full" />
+                </FileViewerViewport>
+              </FileViewerSurface>
+            </FileViewerBody>
+          </PdfViewerProvider>
+        </FileViewer>
+      </FileViewerProvider>
     </div>
   );
 }

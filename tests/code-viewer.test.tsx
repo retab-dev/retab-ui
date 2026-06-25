@@ -24,13 +24,40 @@ import {
   type CodeViewerHandle,
 } from "@/registry/new-york-v4/ui/code-viewer";
 import { scrollTopForLineRangeMetrics } from "@/registry/new-york-v4/ui/code-viewer-layout";
-import { createCodeProjector } from "@/registry/new-york-v4/ui/code-viewer-projector";
+import {
+  CODE_VIEWER_LONG_LINE_RENDER_MAX,
+  getCodeLineRenderText,
+  getCodeLongLineSelectionText,
+} from "@/registry/new-york-v4/ui/code-viewer-long-lines";
+import {
+  createCodeProjectionMetrics,
+  createCodeProjector,
+} from "@/registry/new-york-v4/ui/code-viewer-projector";
 import {
   CODE_VIEWER_BASE_LINE_PX,
+  CODE_VIEWER_BLOCK_PADDING,
   CODE_VIEWER_INITIAL_VIEWPORT_HEIGHT,
-  CODE_VIEWER_OVERSCAN,
+  CODE_VIEWER_LINE_CHECKPOINT_INTERVAL,
+  CODE_VIEWER_OVERSCAN_PX,
+  CODE_VIEWER_SCROLL_REBASE_CONTAINER_PX,
+  CODE_VIEWER_SCROLL_REBASE_TARGET_PX,
 } from "@/registry/new-york-v4/ui/code-viewer-scale";
-import { createCodeSyntax } from "@/registry/new-york-v4/ui/code-viewer-syntax";
+import {
+  clearCodeSyntaxGlobalTokenCacheForTests,
+  CODE_GLOBAL_TOKEN_CACHE_LIMIT,
+  createCodeSyntax,
+  type CodeSyntax,
+} from "@/registry/new-york-v4/ui/code-viewer-syntax";
+import {
+  getCodeLineCheckpoint,
+  getCodeLineIndexAfterOffset,
+  getCodeLineIndexAtOffset,
+  getCodeLogicalScrollTop,
+  getCodePhysicalScrollSize,
+  getCodeVirtualLines,
+  getCodeVirtualTotalSize,
+  resolveCodePhysicalScrollPosition,
+} from "@/registry/new-york-v4/ui/code-viewer-virtualization";
 import {
   isLineInRange,
   normalizeTextLineRange,
@@ -40,11 +67,16 @@ import {
   clearTextViewerResourceCacheForTests,
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
+  detachTextLine,
   MAX_TEXT_RESOURCE_CACHE_ENTRIES,
+  prepareTextDocument,
   readTextDocument,
   readTextResource,
   resolvedTextViewerBounds,
+  shouldDetachTextLine,
   splitTextLines,
+  TEXT_LINE_DETACHMENT_MAX_LINE_LENGTH,
+  TEXT_LINE_DETACHMENT_SOURCE_MIN_LENGTH,
   TextViewerInvalidBoundsError,
   TextViewerTooLargeError,
   toTextFormatError,
@@ -200,12 +232,34 @@ function captureAnchorClicks() {
   return { click, clicks };
 }
 
+function codeVirtualLinesForTest({
+  lineCount,
+  lineHeight = CODE_VIEWER_BASE_LINE_PX,
+  scrollTop = 0,
+  viewportHeight = CODE_VIEWER_INITIAL_VIEWPORT_HEIGHT,
+}: {
+  lineCount: number;
+  lineHeight?: number;
+  scrollTop?: number;
+  viewportHeight?: number;
+}) {
+  return getCodeVirtualLines({
+    lineCount,
+    lineHeight,
+    overscanPx: CODE_VIEWER_OVERSCAN_PX,
+    paddingStart: CODE_VIEWER_BLOCK_PADDING,
+    scrollTop,
+    viewportHeight,
+  });
+}
+
 beforeEach(() => {
   mockObjectUrls();
 });
 
 afterEach(() => {
   cleanup();
+  clearCodeSyntaxGlobalTokenCacheForTests();
   clearTextViewerResourceCacheForTests();
   clearViewerResourceRegistryForTests();
   vi.restoreAllMocks();
@@ -225,6 +279,92 @@ async function readResourceAfterSuspense(
     throw thrown;
   }
 }
+
+describe("code-viewer-virtualization", () => {
+  it("uses a centered pixel window with Pierre-sized overscan", () => {
+    const initialLines = codeVirtualLinesForTest({
+      lineCount: 500,
+      scrollTop: 0,
+      viewportHeight: 20,
+    });
+    const scrolledLines = codeVirtualLinesForTest({
+      lineCount: 500,
+      scrollTop: 1100,
+      viewportHeight: 20,
+    });
+
+    expect(initialLines[0]?.index).toBe(0);
+    expect(initialLines).toHaveLength(101);
+    expect(scrolledLines[0]?.index).toBe(4);
+    expect(scrolledLines.at(-1)?.index).toBe(105);
+  });
+
+  it("uses sparse fixed-line checkpoints for deep position lookups", () => {
+    const lineHeight = CODE_VIEWER_BASE_LINE_PX;
+    const targetLine = CODE_VIEWER_LINE_CHECKPOINT_INTERVAL * 3 + 17;
+    const offset = CODE_VIEWER_BLOCK_PADDING + targetLine * lineHeight + 9;
+    const checkpoint = getCodeLineCheckpoint({
+      lineCount: 1_000_000,
+      lineHeight,
+      offset,
+    });
+
+    expect(checkpoint).toEqual({
+      index: CODE_VIEWER_LINE_CHECKPOINT_INTERVAL * 3,
+      start:
+        CODE_VIEWER_BLOCK_PADDING +
+        CODE_VIEWER_LINE_CHECKPOINT_INTERVAL * 3 * lineHeight,
+    });
+    expect(
+      getCodeLineIndexAtOffset({
+        lineCount: 1_000_000,
+        lineHeight,
+        offset,
+      }),
+    ).toBe(targetLine);
+    expect(
+      getCodeLineIndexAfterOffset({
+        lineCount: 1_000_000,
+        lineHeight,
+        offset,
+      }),
+    ).toBe(targetLine + 1);
+  });
+
+  it("caps huge physical scroll containers and preserves logical scroll", () => {
+    const totalSize = getCodeVirtualTotalSize({
+      lineCount: 2_000_000,
+      lineHeight: CODE_VIEWER_BASE_LINE_PX,
+    });
+    const viewportHeight = CODE_VIEWER_INITIAL_VIEWPORT_HEIGHT;
+    const logicalScrollTop = 15_000_000;
+
+    const physicalSize = getCodePhysicalScrollSize({
+      totalSize,
+      viewportHeight,
+    });
+    const position = resolveCodePhysicalScrollPosition({
+      logicalScrollTop,
+      scrollPageOffset: 0,
+      totalSize,
+      viewportHeight,
+    });
+
+    expect(physicalSize).toBe(CODE_VIEWER_SCROLL_REBASE_CONTAINER_PX);
+    expect(position.physicalScrollTop).toBe(CODE_VIEWER_SCROLL_REBASE_TARGET_PX);
+    expect(position.scrollPageOffset).toBe(
+      logicalScrollTop - CODE_VIEWER_SCROLL_REBASE_TARGET_PX,
+    );
+    expect(
+      getCodeLogicalScrollTop({
+        physicalScrollTop: position.physicalScrollTop,
+        scrollPageOffset: position.scrollPageOffset,
+        totalSize,
+        viewportHeight,
+      }),
+    ).toBe(logicalScrollTop);
+  });
+});
 
 describe("text-viewer-ranges", () => {
   it("clamps valid ranges and swaps reversed ranges", () => {
@@ -303,12 +443,40 @@ describe("code-viewer-layout", () => {
   });
 });
 
+describe("code-viewer-long-lines", () => {
+  it("renders extremely long lines as bounded head and tail previews", () => {
+    const middle = "MIDDLE_SHOULD_NOT_RENDER";
+    const text =
+      "a".repeat(CODE_VIEWER_LONG_LINE_RENDER_MAX) +
+      middle +
+      "z".repeat(1024);
+
+    const renderText = getCodeLineRenderText(text);
+
+    expect(renderText.isTruncated).toBe(true);
+    expect(renderText.text.length).toBeLessThan(text.length);
+    expect(renderText.text).toContain("chars omitted");
+    expect(renderText.text).not.toContain(middle);
+    expect(renderText.text.startsWith("a".repeat(64))).toBe(true);
+    expect(renderText.text.endsWith("z".repeat(64))).toBe(true);
+  });
+
+  it("leaves normal lines unmodified", () => {
+    expect(getCodeLineRenderText("short line")).toEqual({
+      isTruncated: false,
+      omittedCharacterCount: 0,
+      text: "short line",
+    });
+  });
+});
+
 describe("code-viewer-syntax", () => {
-  it("detects JSON from the file name and returns stable cached tokens", () => {
+  it("detects JSON from the file name and returns stable cached tokens", async () => {
     const resource = createViewerResource(
       textSource('{"name":"retab"}', "app.json"),
     );
-    const syntax = createCodeSyntax(resource);
+    const syntax = createCodeSyntax(resource, { syntaxMode: "main-thread" });
+    await syntax.preload?.();
     const firstTokens = syntax.getLineTokens('{"name":"retab"}');
     const secondTokens = syntax.getLineTokens('{"name":"retab"}');
 
@@ -322,12 +490,17 @@ describe("code-viewer-syntax", () => {
     );
   });
 
-  it("creates a fresh token cache for each syntax instance", () => {
+  it("creates a fresh token cache for each syntax instance", async () => {
     const resource = createViewerResource(
       textSource('{"name":"retab"}', "app.json"),
     );
-    const firstSyntax = createCodeSyntax(resource);
-    const secondSyntax = createCodeSyntax(resource);
+    const firstSyntax = createCodeSyntax(resource, {
+      syntaxMode: "main-thread",
+    });
+    const secondSyntax = createCodeSyntax(resource, {
+      syntaxMode: "main-thread",
+    });
+    await Promise.all([firstSyntax.preload?.(), secondSyntax.preload?.()]);
 
     expect(firstSyntax.getLineTokens('{"name":"retab"}')).not.toBe(
       secondSyntax.getLineTokens('{"name":"retab"}'),
@@ -340,25 +513,78 @@ describe("code-viewer-syntax", () => {
     );
     const jsonResource = createViewerResource(textSource("{}", "app.json"));
     const plainSyntax = createCodeSyntax(plainResource);
-    const jsonSyntax = createCodeSyntax(jsonResource);
+    const jsonSyntax = createCodeSyntax(jsonResource, {
+      syntaxMode: "main-thread",
+    });
 
     expect(plainSyntax.identity).toBe("plain");
     expect(plainSyntax.getLineTokens("plain")).toBeNull();
     expect(jsonSyntax.getLineTokens("")).toBeNull();
     expect(jsonSyntax.getLineTokens("x".repeat(2001))).toBeNull();
+    expect(plainSyntax.getLineVersion("plain")).toBe(0);
+    expect(jsonSyntax.getLineVersion("")).toBe(0);
   });
 
-  it("batches deferred tokenization before notifying syntax changes", () => {
+  it("returns plain text until a lazy grammar is ready", async () => {
+    const resource = createViewerResource(textSource("fn main() {}", "app.rs"));
+    const syntax = createCodeSyntax(resource, { syntaxMode: "main-thread" });
+
+    expect(syntax.identity).toBe("rust");
+    expect(syntax.getLineTokens("fn main() {}")).toBeNull();
+
+    await syntax.preload?.();
+
+    expect(syntax.getLineTokens("fn main() {}")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "keyword", text: "fn" }),
+      ]),
+    );
+  });
+
+  it("increments deferred line versions only when async tokens change", async () => {
+    const resource = createViewerResource(textSource("{}", "app.json"));
+    const syntax = createCodeSyntax(resource, {
+      deferTokens: true,
+      syntaxMode: "main-thread",
+    });
+    await syntax.preload?.();
     vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", undefined);
     vi.stubGlobal("requestIdleCallback", undefined);
     vi.stubGlobal("cancelIdleCallback", undefined);
 
+    try {
+      expect(syntax.getLineVersion('{"row":1}')).toBe(0);
+      expect(syntax.getLineTokens('{"row":1}')).toBeNull();
+      vi.runAllTimers();
+
+      expect(syntax.getLineVersion('{"row":1}')).toBe(1);
+      expect(syntax.getLineTokens('{"row":1}')).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ kind: "property", text: '"row"' }),
+        ]),
+      );
+      expect(syntax.getLineVersion('{"row":1}')).toBe(1);
+      expect(syntax.getLineVersion('{"row":2}')).toBe(0);
+    } finally {
+      syntax.destroy?.();
+      vi.useRealTimers();
+    }
+  });
+
+  it("batches deferred tokenization before notifying syntax changes", async () => {
     const resource = createViewerResource(textSource("{}", "app.json"));
     const onTokensChanged = vi.fn();
     const syntax = createCodeSyntax(resource, {
       deferTokens: true,
       onTokensChanged,
+      syntaxMode: "main-thread",
     });
+    await syntax.preload?.();
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", undefined);
+    vi.stubGlobal("requestIdleCallback", undefined);
+    vi.stubGlobal("cancelIdleCallback", undefined);
     const lines = Array.from(
       { length: 25 },
       (_, index) => `{"row":${index + 1}}`,
@@ -391,19 +617,313 @@ describe("code-viewer-syntax", () => {
       vi.useRealTimers();
     }
   });
+
+  it("coalesces worker tokenization and caches worker responses", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", undefined);
+    vi.stubGlobal("requestIdleCallback", undefined);
+    vi.stubGlobal("cancelIdleCallback", undefined);
+
+    const worker = new FakeSyntaxWorker();
+    const resource = createViewerResource(textSource("{}", "app.json"));
+    const onTokensChanged = vi.fn();
+    const syntax = createCodeSyntax(resource, {
+      createWorker: () => worker as unknown as Worker,
+      onTokensChanged,
+      syntaxMode: "worker",
+    });
+
+    try {
+      expect(syntax.getLineTokens('{"row":1}')).toBeNull();
+      expect(syntax.getLineTokens('{"row":1}')).toBeNull();
+
+      vi.runOnlyPendingTimers();
+
+      expect(worker.requests).toHaveLength(1);
+      expect(worker.requests[0]?.lines).toEqual(['{"row":1}']);
+
+      worker.emit({
+        type: "tokens",
+        generation: worker.requests[0]!.generation,
+        languageId: "json",
+        requestId: worker.requests[0]!.requestId,
+        results: [
+          {
+            line: '{"row":1}',
+            tokens: [{ kind: "property", text: '"row"' }],
+          },
+        ],
+      });
+
+      expect(syntax.getLineTokens('{"row":1}')).toEqual([
+        { kind: "property", text: '"row"' },
+      ]);
+      expect(syntax.getLineVersion('{"row":1}')).toBe(1);
+      expect(syntax.getLineVersion('{"row":2}')).toBe(0);
+      expect(onTokensChanged).not.toHaveBeenCalled();
+
+      vi.runOnlyPendingTimers();
+
+      expect(onTokensChanged).toHaveBeenCalledTimes(1);
+
+      worker.emit({
+        type: "tokens",
+        generation: worker.requests[0]!.generation,
+        languageId: "json",
+        requestId: worker.requests[0]!.requestId,
+        results: [
+          {
+            line: '{"row":1}',
+            tokens: [{ kind: "property", text: '"row"' }],
+          },
+        ],
+      });
+      vi.runOnlyPendingTimers();
+
+      expect(syntax.getLineVersion('{"row":1}')).toBe(1);
+      expect(onTokensChanged).toHaveBeenCalledTimes(1);
+    } finally {
+      syntax.destroy?.();
+      vi.useRealTimers();
+    }
+  });
+
+  it("reuses highlighted line tokens across syntax instances", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", undefined);
+    vi.stubGlobal("requestIdleCallback", undefined);
+    vi.stubGlobal("cancelIdleCallback", undefined);
+
+    const firstWorker = new FakeSyntaxWorker();
+    const resource = createViewerResource(textSource("{}", "app.json"));
+    const firstSyntax = createCodeSyntax(resource, {
+      createWorker: () => firstWorker as unknown as Worker,
+      syntaxMode: "worker",
+    });
+
+    try {
+      expect(firstSyntax.getLineTokens('{"shared":true}')).toBeNull();
+      vi.runOnlyPendingTimers();
+      firstWorker.emit({
+        type: "tokens",
+        generation: firstWorker.requests[0]!.generation,
+        languageId: "json",
+        requestId: firstWorker.requests[0]!.requestId,
+        results: [
+          {
+            line: '{"shared":true}',
+            tokens: [{ kind: "property", text: '"shared"' }],
+          },
+        ],
+      });
+
+      const secondWorker = new FakeSyntaxWorker();
+      const secondSyntax = createCodeSyntax(resource, {
+        createWorker: () => secondWorker as unknown as Worker,
+        syntaxMode: "worker",
+      });
+
+      expect(secondSyntax.getLineTokens('{"shared":true}')).toEqual([
+        { kind: "property", text: '"shared"' },
+      ]);
+      vi.runOnlyPendingTimers();
+      expect(secondWorker.requests).toHaveLength(0);
+
+      secondSyntax.destroy?.();
+    } finally {
+      firstSyntax.destroy?.();
+      vi.useRealTimers();
+    }
+  });
+
+  it("evicts old highlighted line tokens from the bounded global cache", async () => {
+    const resource = createViewerResource(textSource("{}", "app.json"));
+    const syntax = createCodeSyntax(resource, { syntaxMode: "main-thread" });
+    await syntax.preload?.();
+    const evictedLine = '{"line":"evicted"}';
+
+    try {
+      expect(syntax.getLineTokens(evictedLine)).toBeTruthy();
+      for (let index = 0; index < CODE_GLOBAL_TOKEN_CACHE_LIMIT; index += 1) {
+        expect(syntax.getLineTokens(`{"line":${index}}`)).toBeTruthy();
+      }
+
+      vi.useFakeTimers();
+      vi.stubGlobal("requestAnimationFrame", undefined);
+      vi.stubGlobal("requestIdleCallback", undefined);
+      vi.stubGlobal("cancelIdleCallback", undefined);
+      const worker = new FakeSyntaxWorker();
+      const secondSyntax = createCodeSyntax(resource, {
+        createWorker: () => worker as unknown as Worker,
+        syntaxMode: "worker",
+      });
+
+      expect(secondSyntax.getLineTokens(evictedLine)).toBeNull();
+      vi.runOnlyPendingTimers();
+      expect(worker.requests[0]?.lines).toEqual([evictedLine]);
+      expect(secondSyntax.getLineTokens(`{"line":999}`)).toBeTruthy();
+
+      secondSyntax.destroy?.();
+    } finally {
+      syntax.destroy?.();
+      vi.useRealTimers();
+    }
+  });
+
+  it("ignores stale worker responses after destroy", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", undefined);
+    vi.stubGlobal("requestIdleCallback", undefined);
+    vi.stubGlobal("cancelIdleCallback", undefined);
+
+    const worker = new FakeSyntaxWorker();
+    const resource = createViewerResource(textSource("{}", "app.json"));
+    const onTokensChanged = vi.fn();
+    const syntax = createCodeSyntax(resource, {
+      createWorker: () => worker as unknown as Worker,
+      onTokensChanged,
+      syntaxMode: "worker",
+    });
+
+    try {
+      expect(syntax.getLineTokens("{}")).toBeNull();
+      vi.runOnlyPendingTimers();
+      syntax.destroy?.();
+      worker.emit({
+        type: "tokens",
+        generation: worker.requests[0]!.generation,
+        languageId: "json",
+        requestId: worker.requests[0]!.requestId,
+        results: [{ line: "{}", tokens: [{ kind: "punctuation", text: "{" }] }],
+      });
+      vi.runOnlyPendingTimers();
+
+      expect(worker.terminate).toHaveBeenCalledTimes(1);
+      expect(onTokensChanged).not.toHaveBeenCalled();
+      expect(syntax.getLineTokens("{}")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("falls back to main-thread tokenization when the worker fails", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", undefined);
+    vi.stubGlobal("requestIdleCallback", undefined);
+    vi.stubGlobal("cancelIdleCallback", undefined);
+
+    const worker = new FakeSyntaxWorker();
+    const resource = createViewerResource(
+      textSource("const value = true;", "app.js"),
+    );
+    const syntax = createCodeSyntax(resource, {
+      createWorker: () => worker as unknown as Worker,
+      syntaxMode: "worker",
+    });
+
+    try {
+      expect(syntax.getLineTokens("const value = true;")).toBeNull();
+      vi.runOnlyPendingTimers();
+
+      expect(worker.requests).toHaveLength(1);
+
+      worker.fail();
+      vi.runOnlyPendingTimers();
+
+      expect(worker.terminate).toHaveBeenCalledTimes(1);
+      expect(syntax.getLineTokens("const value = true;")).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ kind: "keyword", text: "const" }),
+          expect.objectContaining({ kind: "boolean", text: "true" }),
+        ]),
+      );
+    } finally {
+      syntax.destroy?.();
+      vi.useRealTimers();
+    }
+  });
 });
 
+class FakeSyntaxWorker {
+  onerror: ((event: ErrorEvent) => void) | null = null;
+  onmessage:
+    | ((event: MessageEvent<Parameters<FakeSyntaxWorker["emit"]>[0]>) => void)
+    | null = null;
+  requests: Array<{
+    generation: number;
+    languageId: string;
+    lines: string[];
+    requestId: number;
+    type: "tokenize";
+  }> = [];
+  terminate = vi.fn();
+
+  postMessage(
+    request: FakeSyntaxWorker["requests"][number],
+  ): void {
+    this.requests.push(request);
+  }
+
+  emit(message: {
+    generation: number;
+    languageId: string;
+    requestId: number;
+    results: Array<{
+      line: string;
+      tokens: Array<{ kind: string; text: string }> | null;
+    }>;
+    type: "tokens";
+  }) {
+    this.onmessage?.({ data: message } as MessageEvent<
+      Parameters<FakeSyntaxWorker["emit"]>[0]
+    >);
+  }
+
+  fail() {
+    this.onerror?.({} as ErrorEvent);
+  }
+}
+
 describe("code-viewer-projector", () => {
+  function codeSyntaxDouble({
+    getLineTokens = () => null,
+    getLineVersion = () => 0,
+    identity = "plain",
+  }: {
+    getLineTokens?: CodeSyntax["getLineTokens"];
+    getLineVersion?: CodeSyntax["getLineVersion"];
+    identity?: string;
+  } = {}): CodeSyntax {
+    return {
+      getLineTokens,
+      getLineVersion,
+      identity,
+    };
+  }
+
   function createProjectionElements() {
     const rowHost = document.createElement("pre");
+    const renderWindow = document.createElement("div");
+    const scrollSpacer = document.createElement("div");
     const viewport = document.createElement("div");
+
+    renderWindow.dataset.codeRenderWindow = "";
+    scrollSpacer.append(renderWindow);
+    renderWindow.append(rowHost);
 
     Object.defineProperty(viewport, "clientHeight", {
       configurable: true,
       value: 20,
     });
 
-    return { rowHost, viewport };
+    return { renderWindow, rowHost, scrollSpacer, viewport };
+  }
+
+  function createProjectionLines(lineCount = 500) {
+    return Array.from(
+      { length: lineCount },
+      (_, index) => `line ${index + 1}`,
+    );
   }
 
   function project({
@@ -412,11 +932,10 @@ describe("code-viewer-projector", () => {
     highlightRange = null,
     lineHeight = 20,
     layoutIdentity = `${lineHeight}\u0000${gutterWidth}`,
+    metrics,
     rowHost,
-    syntax = {
-      identity: "plain",
-      getLineTokens: () => null,
-    },
+    syntax = codeSyntaxDouble(),
+    syntaxIdentity = syntax.identity,
     textLines,
     viewport,
   }: {
@@ -425,17 +944,14 @@ describe("code-viewer-projector", () => {
     highlightRange?: ReturnType<typeof normalizeTextLineRange>;
     layoutIdentity?: string;
     lineHeight?: number;
+    metrics?: ReturnType<typeof createCodeProjectionMetrics>;
     rowHost: HTMLPreElement;
-    syntax?: {
-      identity: string;
-      getLineTokens(
-        line: string,
-      ): readonly { kind: string; text: string }[] | null;
-    };
+    syntax?: CodeSyntax;
+    syntaxIdentity?: string;
     textLines: string[];
     viewport: HTMLDivElement;
   }) {
-    const projector = createCodeProjector();
+    const projector = createCodeProjector({ metrics });
     projector.project({
       contentIdentity,
       gutterWidth,
@@ -444,7 +960,7 @@ describe("code-viewer-projector", () => {
       lineHeight,
       rowHost,
       syntax,
-      syntaxIdentity: syntax.identity,
+      syntaxIdentity,
       textLines,
       viewport,
     });
@@ -459,10 +975,8 @@ describe("code-viewer-projector", () => {
     lineHeight = 20,
     projector,
     rowHost,
-    syntax = {
-      identity: "plain",
-      getLineTokens: () => null,
-    },
+    syntax = codeSyntaxDouble(),
+    syntaxIdentity = syntax.identity,
     textLines,
     viewport,
   }: {
@@ -473,12 +987,8 @@ describe("code-viewer-projector", () => {
     lineHeight?: number;
     projector: ReturnType<typeof createCodeProjector>;
     rowHost: HTMLPreElement;
-    syntax?: {
-      identity: string;
-      getLineTokens(
-        line: string,
-      ): readonly { kind: string; text: string }[] | null;
-    };
+    syntax?: CodeSyntax;
+    syntaxIdentity?: string;
     textLines: string[];
     viewport: HTMLDivElement;
   }) {
@@ -490,7 +1000,7 @@ describe("code-viewer-projector", () => {
       lineHeight,
       rowHost,
       syntax,
-      syntaxIdentity: syntax.identity,
+      syntaxIdentity,
       textLines,
       viewport,
     });
@@ -498,25 +1008,57 @@ describe("code-viewer-projector", () => {
 
   it("creates only the visible virtual rows and does not duplicate repeated projection", () => {
     const { rowHost, viewport } = createProjectionElements();
-    const textLines = Array.from(
-      { length: 100 },
-      (_, index) => `line ${index + 1}`,
-    );
+    const textLines = createProjectionLines();
     const projector = project({ rowHost, textLines, viewport });
     const firstRows = Array.from(rowHost.children);
 
     projectAgain({ projector, rowHost, textLines, viewport });
 
-    expect(firstRows).toHaveLength(49);
+    expect(firstRows).toHaveLength(
+      codeVirtualLinesForTest({
+        lineCount: textLines.length,
+        viewportHeight: viewport.clientHeight,
+      }).length,
+    );
     expect(Array.from(rowHost.children)).toEqual(firstRows);
+  });
+
+  it("places rows inside an inverse-sticky rendered window", () => {
+    const { renderWindow, rowHost, scrollSpacer, viewport } =
+      createProjectionElements();
+    const textLines = createProjectionLines();
+    const projector = project({ rowHost, textLines, viewport });
+
+    expect(scrollSpacer.style.height).toBe("10016px");
+    expect(renderWindow.style.marginTop).toBe("8px");
+    expect(renderWindow.style.height).toBe("2020px");
+    expect(renderWindow.style.top).toBe("-2000px");
+    expect(renderWindow.style.bottom).toBe("-2000px");
+    expect(rowHost.style.height).toBe("2020px");
+    expect(
+      (
+        rowHost.querySelector('[data-line-number="1"]') as HTMLElement | null
+      )?.style.transform,
+    ).toBe("translateY(0px)");
+
+    viewport.scrollTop = 1100;
+    projectAgain({ projector, rowHost, textLines, viewport });
+
+    expect(renderWindow.style.marginTop).toBe("88px");
+    expect(renderWindow.style.height).toBe("2040px");
+    expect(renderWindow.style.top).toBe("-2020px");
+    expect(renderWindow.style.bottom).toBe("-2020px");
+    expect(rowHost.style.height).toBe("2040px");
+    expect(
+      (
+        rowHost.querySelector('[data-line-number="5"]') as HTMLElement | null
+      )?.style.transform,
+    ).toBe("translateY(0px)");
   });
 
   it("removes rows that leave the visible range", () => {
     const { rowHost, viewport } = createProjectionElements();
-    const textLines = Array.from(
-      { length: 100 },
-      (_, index) => `line ${index + 1}`,
-    );
+    const textLines = createProjectionLines();
     const projector = project({ rowHost, textLines, viewport });
 
     viewport.scrollTop = 80 * 20;
@@ -553,10 +1095,10 @@ describe("code-viewer-projector", () => {
 
     project({
       rowHost,
-      syntax: {
+      syntax: codeSyntaxDouble({
         identity: "json",
         getLineTokens: () => [{ kind: "string", text: '"value"' }],
-      },
+      }),
       textLines: ['"value"'],
       viewport,
     });
@@ -564,6 +1106,72 @@ describe("code-viewer-projector", () => {
     expect(rowHost.querySelector(".cv-token-string")?.textContent).toBe(
       '"value"',
     );
+  });
+
+  it("renders extremely long rows as plain previews without syntax work", () => {
+    const { rowHost, viewport } = createProjectionElements();
+    const middle = "MIDDLE_SHOULD_NOT_RENDER";
+    const longLine =
+      "a".repeat(CODE_VIEWER_LONG_LINE_RENDER_MAX) +
+      middle +
+      "z".repeat(1024);
+    const getLineTokens = vi.fn(() => [{ kind: "string", text: longLine }]);
+
+    project({
+      rowHost,
+      syntax: codeSyntaxDouble({
+        getLineTokens,
+        identity: "json",
+      }),
+      textLines: [longLine],
+      viewport,
+    });
+
+    const row = rowHost.querySelector<HTMLElement>('[data-line-number="1"]');
+    const content = row?.children[1] as HTMLElement | undefined;
+
+    expect(getLineTokens).not.toHaveBeenCalled();
+    expect(row?.dataset.codeLineTruncated).toBe("");
+    expect(content?.dataset.codeLineTruncated).toBe("");
+    expect(content?.textContent?.length).toBeLessThan(longLine.length);
+    expect(content?.textContent).toContain("chars omitted");
+    expect(content?.textContent).not.toContain(middle);
+    expect(content?.textContent?.startsWith("a".repeat(64))).toBe(true);
+    expect(content?.textContent?.endsWith("z".repeat(64))).toBe(true);
+    expect(rowHost.querySelector(".cv-token-string")).toBeNull();
+  });
+
+  it("reconstructs full selected text for truncated long-row copies", () => {
+    const { rowHost, viewport } = createProjectionElements();
+    const longLine =
+      "a".repeat(CODE_VIEWER_LONG_LINE_RENDER_MAX) +
+      "MIDDLE_SHOULD_COPY" +
+      "z".repeat(1024);
+    project({ rowHost, textLines: [longLine], viewport });
+
+    const content = rowHost.querySelector<HTMLElement>(
+      "span[data-code-line-truncated]",
+    );
+    expect(content).toBeTruthy();
+    if (!content) return;
+
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(content);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
+    try {
+      expect(
+        getCodeLongLineSelectionText({
+          rowHost,
+          selection,
+          textLines: [longLine],
+        }),
+      ).toBe(longLine);
+    } finally {
+      selection?.removeAllRanges();
+    }
   });
 
   it("marks line number gutters as presentational and non-copy content", () => {
@@ -595,12 +1203,35 @@ describe("code-viewer-projector", () => {
     expect(textContent).not.toHaveBeenCalled();
   });
 
+  it("records projection metrics without changing row behavior", () => {
+    const { rowHost, viewport } = createProjectionElements();
+    const metrics = createCodeProjectionMetrics();
+    const textLines = createProjectionLines();
+    const projector = project({ metrics, rowHost, textLines, viewport });
+
+    expect(metrics.projections).toBe(1);
+    expect(metrics.noops).toBe(0);
+    expect(metrics.rowsCreated).toBe(rowHost.children.length);
+    expect(metrics.rowsReused).toBe(0);
+    expect(metrics.visibleStart).toBe(0);
+    expect(metrics.visibleEnd).toBe(rowHost.children.length);
+
+    projectAgain({ projector, rowHost, textLines, viewport });
+
+    expect(metrics.projections).toBe(2);
+    expect(metrics.noops).toBe(1);
+
+    viewport.scrollTop = 80 * 20;
+    projectAgain({ projector, rowHost, textLines, viewport });
+
+    expect(metrics.projections).toBe(3);
+    expect(metrics.rowsRemoved).toBeGreaterThan(0);
+    expect(metrics.rowsReused).toBeGreaterThan(0);
+  });
+
   it("does no row work when scrolling inside the same virtual window", () => {
     const { rowHost, viewport } = createProjectionElements();
-    const textLines = Array.from(
-      { length: 100 },
-      (_, index) => `line ${index + 1}`,
-    );
+    const textLines = createProjectionLines();
     const projector = project({ rowHost, textLines, viewport });
     const insertBefore = vi.spyOn(Node.prototype, "insertBefore");
     const removeChild = vi.spyOn(Node.prototype, "removeChild");
@@ -616,10 +1247,7 @@ describe("code-viewer-projector", () => {
 
   it("still patches rows when scrolling to a different virtual window", () => {
     const { rowHost, viewport } = createProjectionElements();
-    const textLines = Array.from(
-      { length: 100 },
-      (_, index) => `line ${index + 1}`,
-    );
+    const textLines = createProjectionLines();
     const projector = project({ rowHost, textLines, viewport });
     const insertBefore = vi.spyOn(Node.prototype, "insertBefore");
 
@@ -630,31 +1258,64 @@ describe("code-viewer-projector", () => {
     expect(rowHost.querySelector('[data-line-number="80"]')).toBeTruthy();
   });
 
+  it("preserves overlapping row DOM while prepending and appending entering rows", () => {
+    const { rowHost, viewport } = createProjectionElements();
+    const textLines = createProjectionLines();
+    const projector = project({ rowHost, textLines, viewport });
+    const preservedRow = rowHost.querySelector('[data-line-number="10"]');
+
+    expect(preservedRow).toBeTruthy();
+
+    viewport.scrollTop = 1100;
+    projectAgain({ projector, rowHost, textLines, viewport });
+
+    expect(rowHost.querySelector('[data-line-number="1"]')).toBeNull();
+    expect(rowHost.querySelector('[data-line-number="10"]')).toBe(preservedRow);
+    expect(rowHost.querySelector('[data-line-number="106"]')).toBeTruthy();
+  });
+
+  it("falls back to a full visible-window rebuild when mounted DOM is invalid", () => {
+    const { rowHost, viewport } = createProjectionElements();
+    const textLines = createProjectionLines();
+    const metrics = createCodeProjectionMetrics();
+    const projector = project({ metrics, rowHost, textLines, viewport });
+    const initialRowCount = rowHost.children.length;
+    const firstRow = rowHost.firstElementChild as HTMLElement | null;
+
+    expect(firstRow).toBeTruthy();
+    firstRow?.setAttribute("data-line-index", "corrupt");
+
+    viewport.scrollTop = 1100;
+    projectAgain({ projector, rowHost, textLines, viewport });
+
+    expect(metrics.rowsRemoved).toBe(initialRowCount);
+    expect(rowHost.firstElementChild?.getAttribute("data-line-index")).toBe("4");
+    expect(rowHost.querySelector('[data-line-number="10"]')).toBeTruthy();
+  });
+
   it("reuses detached row nodes when jumping to a new virtual window", () => {
     const { rowHost, viewport } = createProjectionElements();
-    const textLines = Array.from(
-      { length: 100 },
-      (_, index) => `line ${index + 1}`,
-    );
+    viewport.scrollTop = 1100;
+    const textLines = createProjectionLines();
     const projector = project({ rowHost, textLines, viewport });
     const createElement = vi.spyOn(document, "createElement");
 
-    viewport.scrollTop = 80 * 20;
+    viewport.scrollTop = 3000;
     projectAgain({ projector, rowHost, textLines, viewport });
 
     expect(createElement).not.toHaveBeenCalled();
-    expect(rowHost.querySelector('[data-line-number="1"]')).toBeNull();
-    expect(rowHost.querySelector('[data-line-number="80"]')).toBeTruthy();
-    expect(rowHost.textContent).toContain("line 80");
+    expect(rowHost.querySelector('[data-line-number="5"]')).toBeNull();
+    expect(rowHost.querySelector('[data-line-number="150"]')).toBeTruthy();
+    expect(rowHost.textContent).toContain("line 150");
   });
 
   it("does not rebuild token content for highlight or layout changes", () => {
     const { rowHost, viewport } = createProjectionElements();
     const textLines = ['"value"'];
-    const syntax = {
+    const syntax = codeSyntaxDouble({
       identity: "json",
       getLineTokens: () => [{ kind: "string", text: '"value"' }],
-    };
+    });
     const projector = project({ rowHost, syntax, textLines, viewport });
     const token = rowHost.querySelector(".cv-token-string");
     const replaceChildren = vi.spyOn(Element.prototype, "replaceChildren");
@@ -682,15 +1343,78 @@ describe("code-viewer-projector", () => {
     expect(replaceChildren).not.toHaveBeenCalled();
   });
 
+  it("does not rebuild row content for syntax notifications without line version changes", () => {
+    const { rowHost, viewport } = createProjectionElements();
+    const textLines = ["one", "two"];
+    const syntax = codeSyntaxDouble({
+      identity: "json",
+      getLineTokens: () => null,
+      getLineVersion: () => 0,
+    });
+    const projector = project({ rowHost, syntax, textLines, viewport });
+    const replaceChildren = vi.spyOn(Element.prototype, "replaceChildren");
+    const textContent = vi.spyOn(Node.prototype, "textContent", "set");
+
+    projectAgain({
+      projector,
+      rowHost,
+      syntax,
+      syntaxIdentity: "json\u0000batch-1",
+      textLines,
+      viewport,
+    });
+
+    expect(replaceChildren).not.toHaveBeenCalled();
+    expect(textContent).not.toHaveBeenCalled();
+  });
+
+  it("rebuilds only rows whose syntax line version changed", () => {
+    const { rowHost, viewport } = createProjectionElements();
+    const textLines = ["one", "two"];
+    const lineVersions = new Map([
+      ["one", 0],
+      ["two", 0],
+    ]);
+    const highlightedLines = new Set<string>();
+    const syntax = codeSyntaxDouble({
+      identity: "json",
+      getLineTokens: (line) =>
+        highlightedLines.has(line) ? [{ kind: "string", text: line }] : null,
+      getLineVersion: (line) => lineVersions.get(line) ?? 0,
+    });
+    const projector = project({ rowHost, syntax, textLines, viewport });
+    const replaceChildren = vi.spyOn(Element.prototype, "replaceChildren");
+
+    highlightedLines.add("one");
+    lineVersions.set("one", 1);
+    projectAgain({
+      projector,
+      rowHost,
+      syntax,
+      syntaxIdentity: "json\u0000batch-1",
+      textLines,
+      viewport,
+    });
+
+    expect(replaceChildren).toHaveBeenCalledTimes(1);
+    expect(
+      rowHost.querySelector('[data-line-number="1"] .cv-token-string')
+        ?.textContent,
+    ).toBe("one");
+    expect(
+      rowHost.querySelector('[data-line-number="2"] .cv-token-string'),
+    ).toBeNull();
+  });
+
   it("rebuilds token content when syntax identity changes", () => {
     const { rowHost, viewport } = createProjectionElements();
     const textLines = ['"value"'];
     const projector = project({
       rowHost,
-      syntax: {
+      syntax: codeSyntaxDouble({
         identity: "plain",
         getLineTokens: () => null,
-      },
+      }),
       textLines,
       viewport,
     });
@@ -699,10 +1423,10 @@ describe("code-viewer-projector", () => {
     projectAgain({
       projector,
       rowHost,
-      syntax: {
+      syntax: codeSyntaxDouble({
         identity: "json",
         getLineTokens: () => [{ kind: "string", text: '"value"' }],
-      },
+      }),
       textLines,
       viewport,
     });
@@ -745,6 +1469,51 @@ describe("text-viewer-resource", () => {
       "four",
       "",
     ]);
+  });
+
+  it("matches the canonical line-break pattern while preparing detached line documents", () => {
+    const text = [
+      "one",
+      "two\rthree",
+      "four\r\nfive",
+      "six\u2028seven",
+      "eight\u2029",
+    ].join("\n");
+    const expected = text.split(/\r\n|[\n\r\u2028\u2029]/g);
+    const document = prepareTextDocument(text, {
+      maxBytes: new TextEncoder().encode(text).byteLength,
+      maxLines: expected.length,
+    });
+
+    expect(splitTextLines(text)).toEqual(expected);
+    expect(document.lines).toEqual(expected);
+    expect(document.text).toBe(text);
+    expect(document.lineCount).toBe(expected.length);
+  });
+
+  it("copies only bounded line slices away from very large source strings", () => {
+    const sourceLength = TEXT_LINE_DETACHMENT_SOURCE_MIN_LENGTH;
+
+    expect(
+      shouldDetachTextLine({
+        lineLength: 8,
+        sourceLength: sourceLength - 1,
+      }),
+    ).toBe(false);
+    expect(
+      shouldDetachTextLine({
+        lineLength: 8,
+        sourceLength,
+      }),
+    ).toBe(true);
+    expect(
+      shouldDetachTextLine({
+        lineLength: TEXT_LINE_DETACHMENT_MAX_LINE_LENGTH + 1,
+        sourceLength,
+      }),
+    ).toBe(false);
+    expect(detachTextLine("abc")).toBe("abc");
+    expect(detachTextLine("")).toBe("");
   });
 
   it("caches prepared inline text documents by content identity and bounds", () => {
@@ -1871,7 +2640,7 @@ describe("CodeViewer", () => {
     expect(screen.getByText("beta")).toBeTruthy();
   });
 
-  it("highlights JSON tokens without changing line text", () => {
+  it("highlights JSON tokens without changing line text", async () => {
     const { container } = render(
       <CodeViewer
         source={textSource(
@@ -1885,14 +2654,18 @@ describe("CodeViewer", () => {
     expect(line?.textContent).toContain(
       '{"enabled":true,"rollout":25,"owner":"viewer"}',
     );
-    expect(line?.querySelector(".cv-token-property")?.textContent).toBe(
-      '"enabled"',
-    );
-    expect(line?.querySelector(".cv-token-boolean")?.textContent).toBe("true");
-    expect(line?.querySelector(".cv-token-number")?.textContent).toBe("25");
-    expect(line?.querySelector(".cv-token-string")?.textContent).toBe(
-      '"viewer"',
-    );
+    await waitFor(() => {
+      expect(line?.querySelector(".cv-token-property")?.textContent).toBe(
+        '"enabled"',
+      );
+      expect(line?.querySelector(".cv-token-boolean")?.textContent).toBe(
+        "true",
+      );
+      expect(line?.querySelector(".cv-token-number")?.textContent).toBe("25");
+      expect(line?.querySelector(".cv-token-string")?.textContent).toBe(
+        '"viewer"',
+      );
+    });
   });
 
   it("defers syntax tokenization for large highlighted files", async () => {
@@ -1938,6 +2711,39 @@ describe("CodeViewer", () => {
         ".cv-token-string,.cv-token-property,.cv-token-keyword,.cv-token-number,.cv-token-punctuation",
       ),
     ).toBeNull();
+  });
+
+  it("copies the complete source line from a bounded long-line preview", () => {
+    const longLine =
+      "a".repeat(CODE_VIEWER_LONG_LINE_RENDER_MAX) +
+      "MIDDLE_SHOULD_COPY" +
+      "z".repeat(1024);
+    const { container } = render(
+      <CodeViewer source={textSource(longLine, "long-line.txt")} />,
+    );
+    const content = container.querySelector<HTMLElement>(
+      "span[data-code-line-truncated]",
+    );
+    expect(content).toBeTruthy();
+    if (!content) return;
+
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(content);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
+    const clipboardData = { setData: vi.fn() };
+    try {
+      fireEvent.copy(content, { clipboardData });
+    } finally {
+      selection?.removeAllRanges();
+    }
+
+    expect(clipboardData.setData).toHaveBeenCalledWith(
+      "text/plain",
+      longLine,
+    );
   });
 
   it("keeps controls accessible by name", () => {
@@ -1989,12 +2795,18 @@ describe("CodeViewer", () => {
     const { container, rerender } = render(
       <CodeViewer source={textSource("one\ntwo")} />,
     );
+    const rowHost = container.querySelector("pre");
+    const renderWindow = container.querySelector("[data-code-render-window]");
 
     expect(screen.getByText("2 lines")).toBeTruthy();
     expect(container.querySelector('[data-line-number="2"]')).toBeTruthy();
 
     rerender(<CodeViewer source={textSource("solo")} />);
 
+    expect(container.querySelector("pre")).toBe(rowHost);
+    expect(container.querySelector("[data-code-render-window]")).toBe(
+      renderWindow,
+    );
     expect(screen.getByText("1 line")).toBeTruthy();
     expect(screen.getByText("solo")).toBeTruthy();
     expect(screen.queryByText("two")).toBeNull();
@@ -2308,15 +3120,92 @@ describe("CodeViewer", () => {
       />,
     );
 
-    const expectedInitialWindow =
-      Math.ceil(
-        CODE_VIEWER_INITIAL_VIEWPORT_HEIGHT / CODE_VIEWER_BASE_LINE_PX,
-      ) +
-      CODE_VIEWER_OVERSCAN * 2;
+    const expectedInitialWindow = codeVirtualLinesForTest({
+      lineCount: 10_000,
+    }).length;
 
     expect(container.querySelectorAll("[data-line-number]")).toHaveLength(
       expectedInitialWindow,
     );
+  });
+
+  it("uses an inverse-sticky rendered window inside the full scroll spacer", () => {
+    const { container } = render(
+      <CodeViewer
+        source={textSource(
+          Array.from(
+            { length: 10_000 },
+            (_, index) => `line ${index + 1}`,
+          ).join("\n"),
+        )}
+        controls={false}
+      />,
+    );
+    const scrollSpacer = container.querySelector<HTMLElement>(
+      "[data-code-scroll-spacer]",
+    );
+    const renderWindow = container.querySelector<HTMLElement>(
+      "[data-code-render-window]",
+    );
+    const rowHost = container.querySelector("pre");
+
+    expect(scrollSpacer?.style.height).toBe("200016px");
+    expect(renderWindow?.style.position).toBe("sticky");
+    expect(renderWindow?.style.marginTop).toBe("8px");
+    expect(renderWindow?.style.height).toBe("2600px");
+    expect(renderWindow?.style.top).toBe("-2000px");
+    expect(renderWindow?.style.bottom).toBe("-2000px");
+    expect(rowHost?.style.height).toBe("2600px");
+  });
+
+  it("disables row pointer events while scroll projection catches up", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      vi.fn((callback: FrameRequestCallback) =>
+        window.setTimeout(() => callback(0), 0),
+      ),
+    );
+    vi.stubGlobal(
+      "cancelAnimationFrame",
+      vi.fn((handle: number) => window.clearTimeout(handle)),
+    );
+    const viewerRef = React.createRef<CodeViewerHandle>();
+
+    try {
+      const { container } = render(
+        <CodeViewer
+          ref={viewerRef}
+          source={textSource(
+            Array.from(
+              { length: 10_000 },
+              (_, index) => `line ${index + 1}`,
+            ).join("\n"),
+          )}
+          controls={false}
+        />,
+      );
+      const viewportElement = viewerRef.current?.getViewportElement();
+      const rowHost = container.querySelector("pre");
+
+      expect(viewportElement).not.toBeNull();
+      expect(rowHost).not.toBeNull();
+      if (!viewportElement || !rowHost) return;
+
+      expect(viewportElement.style.overflowAnchor).toBe("none");
+
+      fireEvent.scroll(viewportElement);
+
+      expect(rowHost.style.pointerEvents).toBe("none");
+
+      act(() => {
+        vi.advanceTimersByTime(120);
+      });
+
+      expect(rowHost.style.pointerEvents).toBe("");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("scrolls to a virtualized line that is not currently mounted", () => {
@@ -2994,6 +3883,12 @@ describe("code-viewer implementation boundaries", () => {
     const syntaxSource = readRegistryFile(
       "registry/new-york-v4/ui/code-viewer-syntax.ts",
     );
+    const syntaxPrismSource = readRegistryFile(
+      "registry/new-york-v4/ui/code-viewer-syntax-prism.ts",
+    );
+    const syntaxWorkerSource = readRegistryFile(
+      "registry/new-york-v4/ui/code-viewer-syntax.worker.ts",
+    );
     const projectorSource = readRegistryFile(
       "registry/new-york-v4/ui/code-viewer-projector.ts",
     );
@@ -3019,20 +3914,35 @@ describe("code-viewer implementation boundaries", () => {
     expect(contentSource).toContain("useCodeProjectionScheduler");
     expect(contentSource).toContain("useCodeViewerSyntaxStyle");
 
-    expect(syntaxSource).toContain("Prism");
     expect(syntaxSource).toContain("createCodeSyntax");
+    expect(syntaxSource).toContain("createCodeSyntaxWorker");
+    expect(syntaxSource).toContain("ensureCodePrismLanguage");
     expect(syntaxSource).toContain("kind:");
+    expect(syntaxPrismSource).toContain("Prism");
+    expect(syntaxPrismSource).toContain("prism-json");
+    expect(syntaxPrismSource).not.toContain('import "prismjs/components');
+    expect(syntaxWorkerSource).toContain("tokenizeInWorker");
+    expect(syntaxWorkerSource).not.toContain("document");
 
     expect(projectorSource).toContain("createCodeProjector");
+    expect(projectorSource).toContain("createCodeProjectionMetrics");
     expect(projectorSource).toContain("document.createElement");
     expect(projectorSource).toContain("contentIdentity");
     expect(projectorSource).toContain("layoutIdentity");
+    expect(projectorSource).toContain("getCodePagedLayoutTop");
+    expect(projectorSource).toContain("applyPartialRender");
+    expect(projectorSource).toContain("dataset.lineIndex");
+    expect(projectorSource).toContain("syncCodeScrollLayers");
+    expect(projectorSource).toContain("getCodeRenderedWindowElement");
     expect(projectorSource).toContain("syncVisibleRowOrder");
     expect(projectorSource).not.toContain("visibleRows");
     expect(projectorSource).not.toContain("reset(");
     expect(projectorSource).not.toContain("React");
 
     expect(viewportSource).toContain("<pre");
+    expect(viewportSource).toContain("data-code-render-window");
+    expect(viewportSource).toContain('position: "sticky"');
+    expect(viewportSource).toContain("overflowAnchor");
     expect(viewportSource).toContain("ref={rowHostRef}");
     expect(viewportSource).not.toContain("createCodeSyntax");
     expect(viewportSource).not.toContain("createCodeProjector");
@@ -3042,6 +3952,7 @@ describe("code-viewer implementation boundaries", () => {
 
     expect(schedulerSource).toContain("requestAnimationFrame");
     expect(schedulerSource).toContain("ResizeObserver");
+    expect(schedulerSource).toContain("pointerEvents");
   });
 
   it("keeps resource cache keys private to the resource module", () => {

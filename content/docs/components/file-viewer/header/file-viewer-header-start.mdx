@@ -1,0 +1,36 @@
+---
+title: FileViewerHeaderStart
+description: The left header slot for file identity and optional sidebar trigger.
+component: true
+---
+
+`FileViewerHeaderStart` is the flexible start slot inside
+`FileViewerHeader`. Put the sidebar trigger and file identity here.
+
+```tsx
+<FileViewerHeaderStart>
+  <FileViewerSidebarTrigger />
+  <FileViewerIdentity />
+</FileViewerHeaderStart>
+```
+
+## Behavior
+
+- Renders a `data-slot="file-viewer-header-start"` element.
+- Takes the available header width with `flex-1` and keeps long file names
+  truncating instead of pushing controls out.
+- In `headerMode="outlets"`, projects its content to the `identity` header
+  outlet when both header outlets are mounted.
+- Keep passive file identity here. Workflow actions should usually live in
+  `FileViewerHeaderEnd`.
+
+## API Reference
+
+| Prop       | Type                          | Description                                |
+| ---------- | ----------------------------- | ------------------------------------------ |
+| `children` | `React.ReactNode`             | Usually trigger plus `FileViewerIdentity`. |
+| `...props` | `React.ComponentProps<"div">` | Standard div props; `className` is merged. |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer-header.tsx" />

@@ -1,0 +1,43 @@
+---
+title: FileViewerStates
+description: Empty, loading, unavailable, error, and unsupported file states.
+component: true
+---
+
+File Viewer exposes state components for custom routes and workflow-owned file
+surfaces. They share one visual grammar and stable `data-slot` attributes.
+
+```tsx
+<FileViewerErrorState
+  error={error}
+  retry
+  onRetry={reload}
+  download={download}
+/>
+```
+
+## Components
+
+| Component                    | Use For                                            |
+| ---------------------------- | -------------------------------------------------- |
+| `FileViewerLoadingState`     | A file is still loading or being prepared.         |
+| `FileViewerUnavailableState` | The source exists but cannot be fetched right now. |
+| `FileViewerEmptyState`       | No file is selected.                               |
+| `FileViewerErrorState`       | A renderer or resource load failed.                |
+| `FileViewerUnsupportedState` | The file type has no preview route.                |
+
+## Behavior
+
+- All state components accept `title`, `description`, `icon`, `action`,
+  `className`, and standard `div` props.
+- `FileViewerLoadingState` renders `aria-busy="true"` and a default skeleton.
+- `FileViewerErrorState` derives user-facing copy from the error and can render
+  retry and download actions when useful.
+- `FileViewerUnsupportedState` can render a download action for files that
+  cannot be previewed.
+- The state frame uses `data-slot="file-viewer-*-state"` plus shared state
+  title, description, icon, skeleton, and action slots.
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer.tsx" />

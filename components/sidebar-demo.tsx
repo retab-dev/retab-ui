@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import { meanConfidence, toSegments } from "@/lib/segments";
-import { FileViewer } from "@/components/ui/file-viewer";
+import { FileViewerPreview } from "@/components/ui/file-viewer";
 import { SegmentSidebar } from "@/components/ui/segment-sidebar";
 import { useSegmentInteraction } from "@/components/ui/use-segment-interaction";
 import {
@@ -75,8 +75,7 @@ export function ViewerSidebarDemo() {
             />
           </ViewerSidebar>
           <ViewerSurface className="bg-background">
-            <FileViewer
-              bare
+            <FileViewerPreview
               className="h-full"
               source={{
                 kind: "url",

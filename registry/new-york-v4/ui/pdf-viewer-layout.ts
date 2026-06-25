@@ -13,6 +13,18 @@ export type PdfPageLayout = {
   offsetTop: number;
 };
 
+export type PdfRenderedPageLayout = PdfPageLayout & {
+  windowTop: number;
+};
+
+export type PdfRenderedPageWindow = {
+  afterHeight: number;
+  beforeHeight: number;
+  height: number;
+  pages: readonly PdfRenderedPageLayout[];
+  stickyInset: number;
+};
+
 export type PdfMeasuredPageLayout = {
   pageNumber: number;
   width: number;
@@ -191,6 +203,44 @@ export function getPdfPreloadPageNumbers({
   const lastPage = Math.min(layout.pageCount, lastRenderPage + overscanPages);
 
   return createPageNumberRange(firstPage, lastPage);
+}
+
+export function getPdfRenderedPageWindow({
+  layout,
+  pageNumbers,
+  viewportHeight,
+}: {
+  layout: PdfPageLayoutModel;
+  pageNumbers: readonly number[];
+  viewportHeight: number;
+}): PdfRenderedPageWindow | null {
+  const pages = pageNumbers
+    .map((pageNumber) => getPdfPageLayout(layout, pageNumber))
+    .filter((page): page is PdfPageLayout => Boolean(page))
+    .sort((a, b) => a.pageNumber - b.pageNumber);
+
+  if (pages.length === 0) return null;
+
+  const beforeHeight = pages[0].offsetTop;
+  const windowBottom = Math.max(
+    ...pages.map((page) => page.offsetTop + page.height),
+  );
+  const height = Math.max(0, windowBottom - beforeHeight);
+  const safeViewportHeight =
+    Number.isFinite(viewportHeight) && viewportHeight > 0 ? viewportHeight : 0;
+  const stickyInset =
+    safeViewportHeight > 0 ? -Math.max(0, height - safeViewportHeight) : 0;
+
+  return {
+    afterHeight: Math.max(0, layout.totalHeight - windowBottom),
+    beforeHeight,
+    height,
+    pages: pages.map((page) => ({
+      ...page,
+      windowTop: page.offsetTop - beforeHeight,
+    })),
+    stickyInset,
+  };
 }
 
 function getPdfPageNumbersInRange({

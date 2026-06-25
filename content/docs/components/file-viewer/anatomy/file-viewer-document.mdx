@@ -6,11 +6,13 @@ component: true
 
 `FileViewerDocument` renders the active file route. It is the leaf that chooses
 PDF, image, CSV, text, Markdown, HTML, email, Office, or another supported
-renderer from the current `FileViewer` source.
+renderer from the current `FileViewerProvider` source.
 
 ```tsx
 <FileViewerSurface>
-  <FileViewerDocument />
+  <FileViewerViewport>
+    <FileViewerDocument />
+  </FileViewerViewport>
 </FileViewerSurface>
 ```
 
@@ -22,8 +24,10 @@ renderer from the current `FileViewer` source.
   PDF page never ships the spreadsheet engine.
 - Renders behind `Suspense` (showing a category-shaped skeleton while the
   renderer loads) and an error boundary that resets when the file changes.
+- Must be rendered inside `FileViewerViewport`, which provides the measurement
+  boundary used by renderers and diagnostics.
 - Keep renderer-specific controls inside the renderer. They register upward and
-  appear through `FileViewerControls`, so the document needs no control props.
+  appear through `FileViewerToolbar`, so the document needs no control props.
 
 ## API Reference
 

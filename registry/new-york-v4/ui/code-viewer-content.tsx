@@ -11,7 +11,8 @@ import {
   codeViewerControlsState,
   CodeViewerFrame,
 } from "./code-viewer-chrome";
-import { scrollLineRangeMetricsIntoView } from "./code-viewer-layout";
+import { scrollTopForLineRangeMetrics } from "./code-viewer-layout";
+import { getCodeLongLineSelectionText } from "./code-viewer-long-lines";
 import { useCodeProjectionScheduler } from "./code-viewer-projection-scheduler";
 import { createCodeProjector } from "./code-viewer-projector";
 import {
@@ -117,11 +118,12 @@ export function CodeViewerContent({
       pendingScrollAnchorRef.current = captureCodeReadingAnchor({
         lineCount: textLines.length,
         lineHeight,
+        projector,
         viewportElement: viewportRef.current,
       });
       setFontScale(clampedScale);
     },
-    [fontScale, lineHeight, textLines.length],
+    [fontScale, lineHeight, projector, textLines.length],
   );
 
   const zoom = React.useCallback(
@@ -143,10 +145,15 @@ export function CodeViewerContent({
       if (!anchor || !viewportElement) return;
 
       pendingScrollAnchorRef.current = null;
-      viewportElement.scrollTop = restoreCodeReadingAnchor({
-        anchor,
+      projector.scrollToLogical({
         lineCount: textLines.length,
         lineHeight,
+        logicalScrollTop: restoreCodeReadingAnchor({
+          anchor,
+          lineCount: textLines.length,
+          lineHeight,
+        }),
+        viewport: viewportElement,
       });
     },
   );
@@ -155,27 +162,46 @@ export function CodeViewerContent({
     forwardedRef ?? null,
     () => ({
       scrollToLineRange: (range, options) => {
-        scrollLineRangeMetricsIntoView({
-          viewportElement: viewportRef.current,
-          range: normalizeTextLineRange(range, textLines.length),
+        const viewportElement = viewportRef.current;
+        const normalizedRange = normalizeTextLineRange(range, textLines.length);
+        if (!viewportElement || !normalizedRange) return;
+
+        projector.scrollToLogical({
+          behavior: options?.behavior ?? "smooth",
+          lineCount: textLines.length,
           lineHeight,
-          paddingStart: CODE_VIEWER_BLOCK_PADDING,
-          options,
+          logicalScrollTop: scrollTopForLineRangeMetrics({
+            startLine: normalizedRange.start,
+            endLine: normalizedRange.end,
+            lineHeight,
+            paddingStart: CODE_VIEWER_BLOCK_PADDING,
+            viewportHeight: viewportElement.clientHeight,
+          }),
+          viewport: viewportElement,
         });
       },
       getViewportElement: () => viewportRef.current,
     }),
-    [lineHeight, textLines.length],
+    [lineHeight, projector, textLines.length],
   );
 
   useKeyedMountEffect(
     joinEffectKey(["code-highlight-scroll", highlightRange, lineHeight]),
     () => {
-      scrollLineRangeMetricsIntoView({
-        viewportElement: viewportRef.current,
-        range: highlightRange,
+      const viewportElement = viewportRef.current;
+      if (!viewportElement || !highlightRange) return;
+      projector.scrollToLogical({
+        behavior: "smooth",
+        lineCount: textLines.length,
         lineHeight,
-        paddingStart: CODE_VIEWER_BLOCK_PADDING,
+        logicalScrollTop: scrollTopForLineRangeMetrics({
+          startLine: highlightRange.start,
+          endLine: highlightRange.end,
+          lineHeight,
+          paddingStart: CODE_VIEWER_BLOCK_PADDING,
+          viewportHeight: viewportElement.clientHeight,
+        }),
+        viewport: viewportElement,
       });
     },
   );
@@ -209,8 +235,27 @@ export function CodeViewerContent({
     textLines,
   ]);
 
+  const copyLongLineSelection = React.useCallback(
+    (event: React.ClipboardEvent<HTMLPreElement>) => {
+      const rowHost = rowHostRef.current;
+      if (!rowHost) return;
+
+      const selectedText = getCodeLongLineSelectionText({
+        rowHost,
+        selection: window.getSelection(),
+        textLines,
+      });
+      if (selectedText == null) return;
+
+      event.clipboardData.setData("text/plain", selectedText);
+      event.preventDefault();
+    },
+    [textLines],
+  );
+
   useCodeProjectionScheduler({
     project,
+    rowHostRef,
     viewportRef,
   });
 
@@ -242,11 +287,11 @@ export function CodeViewerContent({
         />
       ) : null}
       <CodeViewerViewport
-        contentIdentity={contentIdentity}
         fontScale={fontScale}
         gutterWidth={gutterWidth}
         lineCount={textLines.length}
         lineHeight={lineHeight}
+        onCopy={copyLongLineSelection}
         rowHostRef={rowHostRef}
         viewportRef={viewportRef}
       />
@@ -296,15 +341,21 @@ function useCodeControlsRegistration({
 function captureCodeReadingAnchor({
   lineCount,
   lineHeight,
+  projector,
   viewportElement,
 }: {
   lineCount: number;
   lineHeight: number;
+  projector: ReturnType<typeof createCodeProjector>;
   viewportElement: HTMLDivElement | null;
 }): CodeReadingAnchor | null {
   if (!viewportElement || lineCount <= 0 || lineHeight <= 0) return null;
 
-  const scrollTop = Math.max(0, viewportElement.scrollTop);
+  const scrollTop = projector.getLogicalScrollTop({
+    lineCount,
+    lineHeight,
+    viewport: viewportElement,
+  });
   const contentTop = Math.max(0, scrollTop - CODE_VIEWER_BLOCK_PADDING);
   const lineIndex = Math.min(
     lineCount - 1,

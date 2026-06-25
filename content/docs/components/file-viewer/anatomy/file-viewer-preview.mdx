@@ -1,0 +1,38 @@
+---
+title: FileViewerPreview
+description: The one-line routed preview shell for embedding a single file.
+component: true
+---
+
+`FileViewerPreview` is the compact File Viewer entry point. It creates the
+provider, frame, surface, viewport, and routed document for a single file.
+
+```tsx
+<FileViewerPreview source={source} className="h-full" />
+```
+
+## Behavior
+
+- Renders `FileViewerProvider`, `FileViewer`, `FileViewerSurface`,
+  `FileViewerViewport`, and `FileViewerDocument` for you.
+- Uses `FileViewerDocument controls="local"` so renderer controls stay inside
+  the routed document instead of requiring a header toolbar.
+- Does not render `FileViewerHeader` or `FileViewerSidebar`. Use the composed
+  anatomy when you need a header, navigation rail, or workflow chrome.
+- Is the right leaf for nested attachment previews where a parent viewer already
+  owns the surrounding surface.
+
+## API Reference
+
+| Prop                | Type                | Description                                        |
+| ------------------- | ------------------- | -------------------------------------------------- |
+| `source`            | `ViewerSource`      | The file source. Required.                         |
+| `category`          | `FileCategory`      | Force a renderer category instead of detecting it. |
+| `fallbackFrameSize` | `{ width; height }` | Initial frame size for image-like fallbacks.       |
+| `fallbackSlideSize` | `{ width; height }` | Initial slide size for presentation fallbacks.     |
+| `isolateStyles`     | `boolean`           | Scope document styles where supported.             |
+| `className`         | `string`            | Class on the preview frame.                        |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer-preview.tsx" />

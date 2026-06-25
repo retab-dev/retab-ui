@@ -3,13 +3,16 @@
 import {
   FileViewer,
   FileViewerBody,
-  FileViewerControls,
   FileViewerHeader,
-  FileViewerMeta,
+  FileViewerHeaderEnd,
+  FileViewerHeaderStart,
+  FileViewerIdentity,
+  FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarTrigger,
   FileViewerSurface,
-  FileViewerTitle,
+  FileViewerToolbar,
+  FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import {
   PdfViewerPages,
@@ -33,28 +36,35 @@ const PDF_SOURCE = {
 export function PdfThumbnailsBlock() {
   return (
     <div className="bg-background h-full min-h-[680px]">
-      <FileViewer source={PDF_SOURCE} defaultOpen className="h-full">
-        <PdfViewerProvider>
-          <FileViewerHeader>
-            <FileViewerSidebarTrigger className="-ml-1" />
-            <FileViewerTitle />
-            <FileViewerMeta />
-            <FileViewerControls />
-          </FileViewerHeader>
-          <FileViewerBody>
-            <FileViewerSidebar
-              aria-label="PDF pages"
-              width="4.5rem"
-              className="border-r"
-            >
-              <PdfViewerThumbnails thumbnailWidth={60} />
-            </FileViewerSidebar>
-            <FileViewerSurface>
-              <PdfViewerPages bare className="h-full" />
-            </FileViewerSurface>
-          </FileViewerBody>
-        </PdfViewerProvider>
-      </FileViewer>
+      <FileViewerProvider source={PDF_SOURCE} defaultSidebarOpen>
+        <FileViewer className="h-full">
+          <PdfViewerProvider>
+            <FileViewerHeader>
+              <FileViewerHeaderStart>
+                <FileViewerSidebarTrigger className="-ml-1" />
+                <FileViewerIdentity />
+              </FileViewerHeaderStart>
+              <FileViewerHeaderEnd>
+                <FileViewerToolbar />
+              </FileViewerHeaderEnd>
+            </FileViewerHeader>
+            <FileViewerBody>
+              <FileViewerSidebar
+                aria-label="PDF pages"
+                width="4.5rem"
+                className="border-r"
+              >
+                <PdfViewerThumbnails thumbnailWidth={60} />
+              </FileViewerSidebar>
+              <FileViewerSurface>
+                <FileViewerViewport>
+                  <PdfViewerPages bare className="h-full" />
+                </FileViewerViewport>
+              </FileViewerSurface>
+            </FileViewerBody>
+          </PdfViewerProvider>
+        </FileViewer>
+      </FileViewerProvider>
     </div>
   );
 }

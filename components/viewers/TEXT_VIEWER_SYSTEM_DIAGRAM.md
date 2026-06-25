@@ -226,11 +226,11 @@ flowchart TD
     HighlightInput["highlight prop\n1-based inclusive line range or null"]
     NormalizeRange["normalizeTextLineRange(range, lineCount)\nfinite values only\ntruncates decimals\naccepts reversed ranges\nclamps to document\nreturns null for fully out-of-range or empty docs"]
     FontScale["fontScale state\nbase font 12px\nbase line 20px\nmin 0.25x\nmax 5x\nzoom factor 1.2"]
-    Virtualizer["@tanstack/react-virtual useVirtualizer\ncount = textLines.length\nscroll element = ScrollArea viewport\nestimateSize = lineHeight\noverscan = 24\npaddingStart/End = 8\ninitialRect 800x600"]
-    MeasureEffect["effect: lineVirtualizer.measure()\nreruns when lineHeight changes"]
+    Virtualizer["local text row virtualizer\ncount = textLines.length\nscroll element = ScrollArea viewport\nlineHeight offsets\noverscan = 24\npaddingStart/End = 8\ninitial viewport 800x600"]
+    MeasureEffect["layout effect reads scroll viewport\nreruns when lineHeight changes"]
     InitialVirtualLines["createInitialTextVirtualLines\nused before virtualizer measures\nwindow = initial viewport lines + overscan * 2"]
     Gutter["gutterWidth\nString(lineCount).length + 1 ch"]
-    Pre["pre.relative.w-max.min-w-full.font-mono\nfontSize = 12 * fontScale\nlineHeight = 20 * fontScale\nheight = virtualizer.getTotalSize()"]
+    Pre["pre.relative.w-max.min-w-full.font-mono\nfontSize = 12 * fontScale\nlineHeight = 20 * fontScale\nheight = virtualizer totalSize"]
     TextLineNode["TextLine absolute row\ndata-line-number\nleft gutter + whitespace-pre text\nblank lines render as a space\nhighlight adds bg-primary/12 and ring"]
     IsLineInRange["isLineInRange(lineNumber, normalizedRange)"]
   end
@@ -437,8 +437,8 @@ flowchart TD
 11. The optional highlight range is normalized against the final line count:
     invalid or fully out-of-document ranges become `null`, reversed ranges are
     accepted, and partial overlaps are clamped.
-12. `useVirtualizer` renders only the mounted line window plus 24 lines of
-    overscan. Before measurement, `createInitialTextVirtualLines` renders an
+12. The local text row virtualizer renders only the mounted line window plus 24
+    lines of overscan. Before measurement, `createInitialTextVirtualLines` renders an
     initial viewport-sized window so the first paint is not blank.
 13. Each virtual line is absolutely positioned inside a `pre`, receives a stable
     `data-line-number`, renders a gutter, preserves whitespace, and applies

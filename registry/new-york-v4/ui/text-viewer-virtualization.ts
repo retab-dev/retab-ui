@@ -52,6 +52,15 @@ export interface TextFrameScrollAnchor {
   offsetWithinFrame: number;
 }
 
+export interface TextInverseStickyWindow {
+  afterHeight: number;
+  beforeHeight: number;
+  renderedBottom: number;
+  renderedHeight: number;
+  renderedTop: number;
+  stickyOffset: number;
+}
+
 export function buildTextVirtualOffsets({
   itemSizes,
   paddingStart = 0,
@@ -284,6 +293,37 @@ export function getTextFrameVirtualItems({
   });
 }
 
+export function getTextInverseStickyWindow({
+  renderedBottom,
+  renderedTop,
+  totalHeight,
+  viewportHeight,
+}: {
+  renderedBottom: number;
+  renderedTop: number;
+  totalHeight: number;
+  viewportHeight: number;
+}): TextInverseStickyWindow {
+  const safeTotalHeight = safeOffset(totalHeight);
+  const safeViewportHeight = Math.max(1, safeSize(viewportHeight));
+  const top = clamp(safeOffset(renderedTop), 0, safeTotalHeight);
+  const bottom = clamp(
+    Math.max(top, safeOffset(renderedBottom)),
+    top,
+    safeTotalHeight,
+  );
+  const renderedHeight = bottom - top;
+
+  return {
+    afterHeight: Math.max(0, safeTotalHeight - bottom),
+    beforeHeight: top,
+    renderedBottom: bottom,
+    renderedHeight,
+    renderedTop: top,
+    stickyOffset: -Math.max(0, renderedHeight - safeViewportHeight),
+  };
+}
+
 export function getTextFrameScrollAnchor({
   frames,
   scrollTop,
@@ -460,4 +500,8 @@ function safeOffset(value: number) {
 
 function safeSize(value: number | undefined) {
   return Number.isFinite(value) && value != null && value > 0 ? value : 0;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
 }

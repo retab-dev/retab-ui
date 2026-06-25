@@ -27,6 +27,17 @@ export type PageTreeSidebarGroup = {
   sections?: PageTreeSidebarSection[];
 };
 
+const COMPONENT_SIDEBAR_EXCLUDED_PAGE_URLS = new Set([
+  "/docs/components/data-cell",
+  "/docs/components/parse-viewer",
+]);
+
+const COMPONENT_SIDEBAR_IGNORED_SEPARATOR_NAMES = new Set(["File Intake"]);
+
+function isComponentSidebarExcludedPage(page: PageTreePage) {
+  return COMPONENT_SIDEBAR_EXCLUDED_PAGE_URLS.has(page.url);
+}
+
 // Recursively find all pages in a folder tree.
 export function getAllPagesFromFolder(folder: PageTreeFolder): PageTreePage[] {
   const pages: PageTreePage[] = [];
@@ -69,7 +80,9 @@ export function getPagesFromFolder(
     // Fallback: include nested component pages so the components index can act
     // as the complete jump list, including PDF Viewer subpages.
     return getAllPagesFromFolder(folder).filter(
-      (page) => !page.url.endsWith("/components"),
+      (page) =>
+        !page.url.endsWith("/components") &&
+        !isComponentSidebarExcludedPage(page),
     );
   }
 
@@ -78,7 +91,9 @@ export function getPagesFromFolder(
   // renderer pages.
   const directPages = folder.children.filter(
     (child): child is PageTreePage =>
-      child.type === "page" && !child.url.endsWith("/components"),
+      child.type === "page" &&
+      !child.url.endsWith("/components") &&
+      !isComponentSidebarExcludedPage(child),
   );
 
   return directPages;
@@ -108,6 +123,10 @@ export function getSidebarGroupsFromFolder(
 
   for (const child of folder.children) {
     if (child.type === "separator") {
+      if (COMPONENT_SIDEBAR_IGNORED_SEPARATOR_NAMES.has(String(child.name))) {
+        continue;
+      }
+
       groups.push({
         id: child.$id ?? `${folder.$id ?? "components"}-${groups.length}`,
         name: child.name ?? folder.name,
@@ -117,17 +136,25 @@ export function getSidebarGroupsFromFolder(
     }
 
     if (child.type === "page" && !child.url.endsWith("/components")) {
+      if (isComponentSidebarExcludedPage(child)) {
+        continue;
+      }
+
       groups[groups.length - 1]?.pages.push(child);
       continue;
     }
 
     if (child.type === "folder") {
       const currentGroup = groups[groups.length - 1];
-      const folderPages = getPagesFromFolder(child, currentBase);
+      const folderPages = getPagesFromFolder(child, currentBase).filter(
+        (page) => !isComponentSidebarExcludedPage(page),
+      );
       const sections = child.children
         .filter((nested): nested is PageTreeFolder => nested.type === "folder")
         .map((nested) => {
-          const sectionPages = getPagesFromFolder(nested, currentBase);
+          const sectionPages = getPagesFromFolder(nested, currentBase).filter(
+            (page) => !isComponentSidebarExcludedPage(page),
+          );
           const sectionIndexPage = sectionPages.find(
             (page) => page.name === nested.name,
           );

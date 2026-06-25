@@ -6,12 +6,17 @@ import { Key, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ViewerSource } from "@/lib/viewer-source";
 import {
-  FileViewer,
   FileViewerBody,
-  FileViewerControls,
   FileViewerHeader,
+  FileViewerHeaderEnd,
+  FileViewerHeaderStart,
+  FileViewerIdentity,
+  FileViewerLegend,
+  FileViewer,
+  FileViewerProvider,
   FileViewerSurface,
-  FileViewerTitle,
+  FileViewerToolbar,
+  FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import { PageRibbon } from "@/components/ui/page-ribbon";
 import { SegmentLegend } from "@/components/ui/segment-legend";
@@ -43,6 +48,7 @@ type PartitionViewerHeaderState = {
   interaction: SegmentViewportController["interaction"];
   legendSegments: PartitionViewerModel["legendSegments"];
   navigation: SegmentViewportController["navigation"];
+  pageCount: number;
 };
 
 type PartitionViewerRibbonState = {
@@ -96,6 +102,7 @@ function usePartitionViewerHeader(): PartitionViewerHeaderState {
     interaction: viewport.interaction,
     legendSegments: model.legendSegments,
     navigation: viewport.navigation,
+    pageCount: model.pageCount,
   };
 }
 
@@ -210,16 +217,29 @@ export function PartitionViewerHeaderMeta({
 }: {
   className?: string;
 }) {
-  const { legendSegments } = usePartitionViewerHeader();
+  const { currentPage, legendSegments, pageCount } = usePartitionViewerHeader();
+  const text = formatHeaderPageLabel({ currentPage, pageCount });
 
-  if (legendSegments.length === 0) return null;
+  if (legendSegments.length === 0 || !text) return null;
 
   return (
     <span className={cn("text-muted-foreground shrink-0 text-xs", className)}>
-      {legendSegments.length} segment
-      {legendSegments.length === 1 ? "" : "s"}
+      {text}
     </span>
   );
+}
+
+function formatHeaderPageLabel({
+  currentPage,
+  pageCount,
+}: {
+  currentPage: number | null;
+  pageCount: number;
+}) {
+  if (pageCount <= 0) return null;
+
+  const page = Math.min(Math.max(currentPage ?? 1, 1), pageCount);
+  return `Page ${page}`;
 }
 
 export function PartitionViewerLegend({ className }: { className?: string }) {
@@ -278,7 +298,7 @@ export function PartitionViewerDocument({
   if (!hasOutput) return <PartitionViewerEmptyState />;
 
   return document ? (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">{document}</div>
+    <FileViewerViewport>{document}</FileViewerViewport>
   ) : (
     <div className="flex h-full flex-1 items-center justify-center">
       <span className="text-muted-foreground text-sm">
@@ -324,20 +344,34 @@ export function PartitionViewer({
 }: PartitionViewerProps) {
   return (
     <PartitionViewerProvider result={result} isProcessing={isProcessing}>
-      <FileViewer source={source} className="bg-background h-full flex-1">
-        <FileViewerHeader>
-          <FileViewerTitle />
-          <PartitionViewerHeaderMeta />
-          <FileViewerControls />
-        </FileViewerHeader>
-        <FileViewerBody>
-          <FileViewerSurface>
-            <PartitionViewerLegend className="border-b px-3 py-2" />
-            <PartitionViewerRibbon />
-            <PartitionViewerDocument document={document} />
-          </FileViewerSurface>
-        </FileViewerBody>
-      </FileViewer>
+      <FileViewerProvider source={source} headerMode="outlets">
+        <FileViewer className="bg-background">
+          <PartitionViewerFileHeader />
+          <FileViewerBody>
+            <FileViewerSurface>
+              <FileViewerLegend>
+                <PartitionViewerLegend className="px-3 py-2" />
+              </FileViewerLegend>
+              <PartitionViewerRibbon />
+              <PartitionViewerDocument document={document} />
+            </FileViewerSurface>
+          </FileViewerBody>
+        </FileViewer>
+      </FileViewerProvider>
     </PartitionViewerProvider>
+  );
+}
+
+function PartitionViewerFileHeader() {
+  return (
+    <FileViewerHeader>
+      <FileViewerHeaderStart>
+        <FileViewerIdentity meta="hidden" />
+        <PartitionViewerHeaderMeta />
+      </FileViewerHeaderStart>
+      <FileViewerHeaderEnd>
+        <FileViewerToolbar />
+      </FileViewerHeaderEnd>
+    </FileViewerHeader>
   );
 }

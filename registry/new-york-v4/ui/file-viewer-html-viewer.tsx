@@ -269,12 +269,12 @@ function SandboxedDoc({
   scale?: number;
 }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-auto bg-white">
+    <div className="bg-document flex min-h-0 flex-1 flex-col overflow-auto">
       <iframe
         sandbox=""
         srcDoc={createHtmlViewerSrcDoc(html)}
         title={title}
-        className="h-full min-h-0 w-full flex-1 border-0 bg-white"
+        className="bg-document h-full min-h-0 w-full flex-1 border-0"
         style={{ zoom: scale }}
       />
     </div>

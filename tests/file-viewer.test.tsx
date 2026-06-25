@@ -16,16 +16,19 @@ import { inferCsvDialect } from "@/lib/csv";
 import { createViewerResource } from "@/lib/viewer-resource";
 import * as FileViewerModule from "@/registry/new-york-v4/ui/file-viewer";
 import {
-  FileViewer,
   FileViewerBody,
-  FileViewerControls,
   FileViewerDocument,
   FileViewerHeader,
-  FileViewerMeta,
   FileViewerSurface,
-  FileViewerTitle,
+  FileViewerViewport,
   useFileViewerResource,
 } from "@/registry/new-york-v4/ui/file-viewer";
+import {
+  FileViewerControls,
+  FileViewerHarness as FileViewer,
+  FileViewerMeta,
+  FileViewerTitle,
+} from "./file-viewer-test-harness";
 import {
   descriptorResetKey,
   detectCategory,
@@ -223,7 +226,7 @@ describe("FileViewer detection helpers", () => {
     expect(
       resolveFileDescriptor({
         source: urlSource("/files/export", undefined, "text/csv"),
-        as: "text",
+        category: "text",
       }),
     ).toMatchObject({
       displayName: "/files/export",
@@ -352,6 +355,14 @@ describe("FileViewer detection helpers", () => {
       "registry/new-york-v4/ui/file-viewer.tsx",
       "utf8",
     );
+    const fileViewerFrameSource = readFileSync(
+      "registry/new-york-v4/ui/file-viewer-frame.tsx",
+      "utf8",
+    );
+    const fileViewerPreviewSource = readFileSync(
+      "registry/new-york-v4/ui/file-viewer-preview.tsx",
+      "utf8",
+    );
     const documentSource = readFileSync(
       "registry/new-york-v4/ui/file-viewer-document.tsx",
       "utf8",
@@ -422,9 +433,9 @@ describe("FileViewer detection helpers", () => {
     expect(fallbackSource).not.toContain("downloadAction?:");
     expect(fallbackSource).not.toContain("createHrefDownloadAction");
     expect(zoomSource).not.toContain("ZoomActionsSkeleton");
-    expect(fileViewerSource).toContain("<ViewerRoot");
-    expect(fileViewerSource).toContain("<FileViewerHeader");
-    expect(fileViewerSource).toContain("<FileViewerSurface");
+    expect(fileViewerFrameSource).toContain("<ViewerRoot");
+    expect(fileViewerPreviewSource).toContain("<FileViewerSurface");
+    expect(fileViewerPreviewSource).toContain("<FileViewerDocument");
     expect(csvAdapterSource).toMatch(/resource: ViewerResource/);
     expect(csvAdapterSource).not.toContain("ResourceDocShell");
     expect(csvAdapterSource).not.toMatch(/\bfileName:\s*string\b/);
@@ -438,14 +449,18 @@ describe("FileViewer detection helpers", () => {
       expect.arrayContaining([
         "FileViewer",
         "FileViewerBody",
-        "FileViewerControls",
         "FileViewerDocument",
         "FileViewerHeader",
-        "FileViewerMeta",
+        "FileViewerHeaderEnd",
+        "FileViewerHeaderStart",
+        "FileViewerIdentity",
+        "FileViewerProvider",
+        "FileViewerPreview",
         "FileViewerSidebar",
         "FileViewerSidebarTrigger",
         "FileViewerSurface",
-        "FileViewerTitle",
+        "FileViewerToolbar",
+        "FileViewerViewport",
         "detectCategory",
         "useFileViewerResource",
       ]),
@@ -455,7 +470,9 @@ describe("FileViewer detection helpers", () => {
     expect(exports).not.toContain("FileHeaderMeta");
     expect(exports).not.toContain("FileHeaderTitle");
     expect(exports).not.toContain("FileViewerDocumentRenderer");
-    expect(exports).not.toContain("FileViewerProvider");
+    expect(exports).not.toContain("FileViewerControls");
+    expect(exports).not.toContain("FileViewerMeta");
+    expect(exports).not.toContain("FileViewerTitle");
     expect(exports).not.toContain("InternalFileViewerDocument");
     expect(exports).not.toContain("FileViewerRoute");
     expect(exports).not.toContain("useOptionalFileViewerResource");
@@ -471,7 +488,7 @@ describe("FileViewer detection helpers", () => {
 
   it("requires FileViewerDocument to be rendered inside FileViewer", () => {
     expect(() => render(<FileViewerDocument />)).toThrow(
-      "File viewer parts must be used within FileViewer.",
+      "FileViewerDocument must be rendered inside FileViewerViewport.",
     );
   });
 
@@ -480,7 +497,9 @@ describe("FileViewer detection helpers", () => {
       <FileViewer source={urlSource("/files/default.pdf", "default.pdf")} />,
     );
 
-    expect(container.querySelector('[data-slot="viewer-root"]')).toBeTruthy();
+    expect(
+      container.querySelector('[data-slot="file-viewer-root"]'),
+    ).toBeTruthy();
     expect(
       container.querySelector('[data-slot="file-viewer-header"]'),
     ).toBeTruthy();
@@ -491,7 +510,7 @@ describe("FileViewer detection helpers", () => {
       container.querySelector('[data-slot="file-viewer-surface"]'),
     ).toBeTruthy();
     expect(
-      container.querySelectorAll('[data-slot="file-viewer-controls"]'),
+      container.querySelectorAll('[data-slot="file-viewer-toolbar"]'),
     ).toHaveLength(1);
     expect(screen.getByText("default.pdf")).toBeTruthy();
     expect(screen.getByText("pdf")).toBeTruthy();
@@ -511,7 +530,9 @@ describe("FileViewer detection helpers", () => {
         <FileViewerHeader />
         <FileViewerBody>
           <FileViewerSurface>
-            <FileViewerDocument className="composed-file" />
+            <FileViewerViewport>
+              <FileViewerDocument className="composed-file" />
+            </FileViewerViewport>
           </FileViewerSurface>
         </FileViewerBody>
       </FileViewer>,
@@ -520,7 +541,9 @@ describe("FileViewer detection helpers", () => {
     expect(
       container.querySelector('[data-slot="file-viewer-header"]'),
     ).toBeTruthy();
-    expect(container.querySelector('[data-slot="viewer-root"]')).toBeTruthy();
+    expect(
+      container.querySelector('[data-slot="file-viewer-root"]'),
+    ).toBeTruthy();
     expect(screen.getByText("composed.pdf")).toBeTruthy();
     expect(screen.getByText("pdf")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Download" })).toBeTruthy();
@@ -528,7 +551,7 @@ describe("FileViewer detection helpers", () => {
     expect(pdfRouteMock.props).toHaveLength(1);
     expect(pdfRouteMock.props[0]).toMatchObject({
       bare: true,
-      className: "composed-file",
+      className: "h-full composed-file",
       controls: false,
       download: true,
     });
@@ -814,7 +837,13 @@ describe("FileViewer detection helpers", () => {
             <FileViewerTitle />
             <FileViewerControls />
           </FileViewerHeader>
-          <FileViewerDocument />
+          <FileViewerBody>
+            <FileViewerSurface>
+              <FileViewerViewport>
+                <FileViewerDocument />
+              </FileViewerViewport>
+            </FileViewerSurface>
+          </FileViewerBody>
           {register ? <RegisterControls /> : null}
         </FileViewer>
       );
@@ -951,7 +980,6 @@ describe("FileViewer text rendering", () => {
       expect(await screen.findByText(text)).toBeTruthy();
       expect(props).toHaveLength(1);
       expect(props[0]).toMatchObject({
-        className: "viewer-frame",
         bare: true,
         controls: true,
         download: true,
@@ -974,7 +1002,9 @@ describe("FileViewer text rendering", () => {
     );
 
     expect(await screen.findByText("Mock PDF viewer")).toBeTruthy();
-    expect(container.querySelector('[data-slot="viewer-root"]')).toBeNull();
+    expect(
+      container.querySelector('[data-slot="file-viewer-root"]'),
+    ).toBeTruthy();
     expect(
       container.querySelector('[data-slot="file-viewer-header"]'),
     ).toBeNull();
@@ -983,7 +1013,6 @@ describe("FileViewer text rendering", () => {
     ).toBeNull();
     expect(pdfRouteMock.props.at(-1)).toMatchObject({
       bare: true,
-      className: "viewer-frame",
       controls: true,
       download: true,
     });
@@ -1576,7 +1605,7 @@ describe("FileViewer text rendering", () => {
   it("renders an unsupported fallback with a download link", () => {
     render(<FileViewer source={urlSource("/archive.zip", "archive.zip")} />);
 
-    expect(screen.getByText(/No preview for/)).toBeTruthy();
+    expect(screen.getByText(/No preview is available/)).toBeTruthy();
     expect(screen.getAllByRole("link", { name: "Download" })).toHaveLength(1);
     expect(
       screen.getByRole("link", { name: "Download" }).getAttribute("download"),
@@ -1588,7 +1617,7 @@ describe("FileViewer text rendering", () => {
       <FileViewer source={urlSource("/archive.zip", "archive.zip")} bare />,
     );
 
-    expect(screen.getByText(/No preview for/)).toBeTruthy();
+    expect(screen.getByText(/No preview is available/)).toBeTruthy();
     expect(
       container.querySelector('[data-slot="file-viewer-header"]'),
     ).toBeNull();

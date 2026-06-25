@@ -28,6 +28,13 @@ export interface FixedGridRowPoolSlot {
   isHidden: boolean;
 }
 
+export interface FixedGridVirtualItemWindow {
+  end: number;
+  items: FixedGridVirtualItem[];
+  size: number;
+  start: number;
+}
+
 export interface FixedGridScrollTarget {
   rowIndex: number;
   columnIndex: number;
@@ -153,6 +160,10 @@ export function useFixedGridVirtualization({
       minimumRenderedRows,
     ],
   );
+  const virtualRowWindow = React.useMemo(
+    () => fixedVirtualItemWindow(virtualRows),
+    [virtualRows],
+  );
 
   const columnWindow = React.useMemo<{
     columnItems: FixedGridColumnItem[];
@@ -217,27 +228,31 @@ export function useFixedGridVirtualization({
     }: FixedGridScrollTarget) => {
       const scrollElement = scrollRef.current;
       if (!scrollElement) return;
-      scrollElement.scrollTo({
-        top: fixedScrollOffset({
-          index: rowIndex,
-          itemSize: rowSize,
-          viewportSize: scrollElement.clientHeight,
-          align,
-        }),
-        left: fixedScrollOffset({
-          index: columnIndex,
-          itemSize: columnSize,
-          viewportSize: scrollElement.clientWidth,
-          align,
-        }),
-        behavior,
+      const top = fixedScrollOffset({
+        index: rowIndex,
+        itemSize: rowSize,
+        viewportSize: scrollElement.clientHeight,
+        align,
       });
+      const left = fixedScrollOffset({
+        index: columnIndex,
+        itemSize: columnSize,
+        viewportSize: scrollElement.clientWidth,
+        align,
+      });
+      if (typeof scrollElement.scrollTo === "function") {
+        scrollElement.scrollTo({ top, left, behavior });
+      } else {
+        scrollElement.scrollTop = top;
+        scrollElement.scrollLeft = left;
+      }
     },
     [columnSize, rowSize, scrollRef],
   );
 
   return {
     virtualRows,
+    virtualRowWindow,
     totalRowSize,
     totalColumnSize,
     scrollToCell,
@@ -415,15 +430,17 @@ export function useFixedRowVirtualization({
     }: FixedRowScrollTarget) => {
       const scrollElement = scrollRef.current;
       if (!scrollElement) return;
-      scrollElement.scrollTo({
-        top: fixedScrollOffset({
-          index: rowIndex,
-          itemSize: rowSize,
-          viewportSize: scrollElement.clientHeight,
-          align,
-        }),
-        behavior,
+      const top = fixedScrollOffset({
+        index: rowIndex,
+        itemSize: rowSize,
+        viewportSize: scrollElement.clientHeight,
+        align,
       });
+      if (typeof scrollElement.scrollTo === "function") {
+        scrollElement.scrollTo({ top, behavior });
+      } else {
+        scrollElement.scrollTop = top;
+      }
     },
     [rowSize, scrollRef],
   );
@@ -818,6 +835,24 @@ export function fixedVirtualItems({
       end: itemStart + size,
     };
   });
+}
+
+export function fixedVirtualItemWindow(
+  items: readonly FixedGridVirtualItem[],
+): FixedGridVirtualItemWindow {
+  const start = items[0]?.start ?? 0;
+  const end = items.length ? items[items.length - 1]!.end : start;
+
+  return {
+    end,
+    items: items.map((item) => ({
+      ...item,
+      start: item.start - start,
+      end: item.end - start,
+    })),
+    size: Math.max(0, end - start),
+    start,
+  };
 }
 
 function capVirtualRange({

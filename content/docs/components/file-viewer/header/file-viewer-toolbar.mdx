@@ -1,0 +1,36 @@
+---
+title: FileViewerToolbar
+description: The renderer-registered operational controls in the File Viewer header.
+component: true
+---
+
+`FileViewerToolbar` renders controls registered by the active renderer: page or
+slide position, zoom, rotate, loading state, downloads, and extra actions.
+
+```tsx
+<FileViewerToolbar extra={<ApproveButton />} />
+```
+
+## Behavior
+
+- Reads registered controls from file viewer context. The header stays
+  file-type agnostic.
+- Falls back to the original file download action when the active renderer has
+  not registered its own downloads.
+- Allows workflow actions through `extra`; this is merged with any
+  renderer-registered `extra`.
+- Renders `data-slot="file-viewer-toolbar"` and
+  `data-file-viewer-controls="ready"` when a renderer has registered controls.
+- Does not render file identity. Use `FileViewerIdentity` for file name and
+  passive metadata.
+
+## API Reference
+
+| Prop       | Type                                           | Description                                    |
+| ---------- | ---------------------------------------------- | ---------------------------------------------- |
+| `extra`    | `React.ReactNode`                              | File-scoped actions beside renderer controls.  |
+| `...props` | `ViewerControls` props except registered state | Standard toolbar props; `className` is merged. |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer-header.tsx" />

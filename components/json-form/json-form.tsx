@@ -67,7 +67,7 @@ export type { JsonFormTextInput } from "@/components/json-form/scalar-control";
  *    a dense editable table (one row per item, one column per field) instead of
  *    a stack of bordered cards.
  *  - **Virtualization.** Long arrays (card *or* table mode) window their rows
- *    through `@tanstack/react-virtual`, so only the visible items are in the DOM.
+ *    through local row virtualizers, so only the visible items are in the DOM.
  *  - **Isolated re-renders.** Each row subscribes to its own field state, so a
  *    keystroke in one item never re-renders its siblings.
  */

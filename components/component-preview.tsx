@@ -15,6 +15,7 @@ import { DropzoneDemo } from "@/components/dropzone-demo";
 import { EmailViewerDemo } from "@/components/email-viewer-demo";
 import { FileThumbnailDemo } from "@/components/file-thumbnail-demo";
 import { FileThumbnailFormatsDemo } from "@/components/file-thumbnail-formats-demo";
+import { FileThumbnailTooltipDemo } from "@/components/file-thumbnail-tooltip-demo";
 import { FileViewerDemo } from "@/components/file-viewer-demo";
 import { HtmlViewerDemo } from "@/components/html-viewer-demo";
 import { ImageViewerDemo } from "@/components/image-viewer-demo";
@@ -231,6 +232,10 @@ const REGISTRY = {
   "file-thumbnail-formats-demo": {
     component: FileThumbnailFormatsDemo,
     src: "components/file-thumbnail-formats-demo.tsx",
+  },
+  "file-thumbnail-tooltip-demo": {
+    component: FileThumbnailTooltipDemo,
+    src: "components/file-thumbnail-tooltip-demo.tsx",
   },
   "json-form-demo": {
     component: JsonFormDemo,

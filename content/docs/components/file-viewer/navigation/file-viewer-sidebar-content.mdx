@@ -1,0 +1,50 @@
+---
+title: FileViewerSidebarContent
+description: Layout primitives for sections inside a FileViewerSidebar rail.
+component: true
+---
+
+`FileViewerSidebarContent` and the sidebar section primitives give a rail a
+consistent internal layout. They do not define row semantics; domain components
+such as `SegmentSidebar` or `AttachmentSidebar` own those.
+
+```tsx
+<FileViewerSidebar aria-label="Document navigation">
+  <FileViewerSidebarContent>
+    <FileViewerSidebarSection>
+      <FileViewerSidebarSectionHeader>
+        <FileViewerSidebarSectionTitle>Pages</FileViewerSidebarSectionTitle>
+        <FileViewerSidebarSectionAction aria-label="Refresh pages" />
+      </FileViewerSidebarSectionHeader>
+      <FileViewerSidebarSectionContent>
+        <FileViewerThumbnails />
+      </FileViewerSidebarSectionContent>
+    </FileViewerSidebarSection>
+  </FileViewerSidebarContent>
+</FileViewerSidebar>
+```
+
+## Components
+
+| Component                         | Use For                                       |
+| --------------------------------- | --------------------------------------------- |
+| `FileViewerSidebarContent`        | Scrollable rail body.                         |
+| `FileViewerSidebarSection`        | Padded semantic section.                      |
+| `FileViewerSidebarSectionHeader`  | Section title/action row.                     |
+| `FileViewerSidebarSectionTitle`   | Truncating section title.                     |
+| `FileViewerSidebarSectionAction`  | Small icon action inside the section header.  |
+| `FileViewerSidebarSectionContent` | Section body for rows, thumbnails, or fields. |
+| `FileViewerSidebarSeparator`      | Rail separator with File Viewer spacing.      |
+
+## Behavior
+
+- These primitives render stable `data-slot="file-viewer-sidebar-*"`
+  attributes for styling and tests.
+- `FileViewerSidebarSectionAction` supports `asChild` for custom button-like
+  controls.
+- Use these when creating a new rail grammar. Use `SidebarList*` when the rail
+  needs menu-like grouped rows.
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer-body.tsx" />

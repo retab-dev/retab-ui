@@ -29,15 +29,24 @@ import {
   type DocxViewerHandle,
 } from "@/components/ui/docx-viewer";
 import {
-  FileViewer,
   FileViewerBody,
-  FileViewerControls,
   FileViewerHeader,
-  FileViewerMeta,
+  FileViewerHeaderEnd,
+  FileViewerHeaderStart,
+  FileViewerIdentity,
+  FileViewer,
+  FileViewerProvider,
   FileViewerSidebar,
+  FileViewerSidebarContent,
+  FileViewerSidebarSection,
+  FileViewerSidebarSectionContent,
+  FileViewerSidebarSectionHeader,
+  FileViewerSidebarSectionTitle,
   FileViewerSidebarTrigger,
   FileViewerSurface,
-  FileViewerTitle,
+  FileViewerToolbar,
+  FileViewerViewport,
+  type ViewerSource,
   useFileViewerResource,
 } from "@/components/ui/file-viewer";
 import {
@@ -46,7 +55,6 @@ import {
   type ImageViewerHandle,
 } from "@/components/ui/image-viewer";
 import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   SegmentedDocumentProvider,
   useSegmentedDocumentViewport,
@@ -100,10 +108,44 @@ const PDF_SOURCE = {
   fileName: "jane-doe-bank-statement-5-pages.pdf",
 };
 const IMAGE_URL = "/samples/an-image-is-worth-16x16-words-page-1.png";
-const TEXT_URL = "/samples/extraction-run.log";
 const XLSX_URL = "/samples/nvidia-financials-fy2024.xlsx";
 const DOCX_URL = "/samples/quarterly-business-review.docx";
 
+const TEXT_TEXT = [
+  "[retab] extraction run",
+  "run_id=run_3xK9b2QvT7",
+  "tenant=acme-corp environment=prod",
+  "received file bank-statement.pdf (80.1 KB)",
+  "sha256=4f1a...c0de",
+  "mime=application/pdf",
+  "detected document_type=bank_statement",
+  "confidence=0.984",
+  "page_count=4",
+  "preprocessing started",
+  "rasterizing pages at 192 dpi",
+  "ocr blocks=324",
+  "table candidates=7",
+  "classification completed",
+  "extraction started",
+  "model=retab-large n_consensus=3",
+  "schema=bank_statement_v2 fields=18",
+  "run 1 completed",
+  "run 2 completed",
+  "run 3 completed",
+  "merged 3 runs, mean_likelihood=0.91",
+  "field transactions.7.amount low agreement (0.58)",
+  "source grounding started",
+  "source grounding completed",
+  "review hints generated",
+  "16/18 fields grounded",
+  "low confidence fields queued",
+  "human review required=false",
+  "assigned to queue=finance-ops",
+  "prompt_tokens=14820 completion_tokens=2110",
+  "total_tokens=16930",
+  "run status=completed",
+  "duration_ms=11842",
+].join("\n");
 const CSV_TEXT = `region,quarter,revenue,customers,nrr
 North America,Q1,1240000,48,1.12
 North America,Q2,1510000,61,1.21
@@ -117,8 +159,8 @@ const IMAGE_SOURCE = {
   fileName: "an-image-is-worth-16x16-words-page-1.png",
 };
 const TEXT_SOURCE = {
-  kind: "url" as const,
-  url: TEXT_URL,
+  kind: "text" as const,
+  text: TEXT_TEXT,
   fileName: "extraction-run.log",
 };
 const CSV_SOURCE = {
@@ -146,9 +188,7 @@ type SourceExtraction = {
   values: Record<string, unknown>;
 };
 
-type SourceLinkedViewerSource = React.ComponentProps<
-  typeof FileViewer
->["source"];
+type SourceLinkedViewerSource = ViewerSource;
 
 // Build a JSON form's inputs from a flat field array. The schema property names
 // match the source-map keys used for json-form hover and click interactions.
@@ -233,10 +273,13 @@ function fieldsToSegmentedFields(fields: readonly FlatField[]) {
 function SourceLinkedFileHeader() {
   return (
     <FileViewerHeader>
-      <FileViewerSidebarTrigger className="-ml-1" />
-      <FileViewerTitle />
-      <FileViewerMeta />
-      <FileViewerControls />
+      <FileViewerHeaderStart>
+        <FileViewerSidebarTrigger className="-ms-1" />
+        <FileViewerIdentity />
+      </FileViewerHeaderStart>
+      <FileViewerHeaderEnd>
+        <FileViewerToolbar />
+      </FileViewerHeaderEnd>
     </FileViewerHeader>
   );
 }
@@ -253,26 +296,30 @@ function SourceLinkedViewer({
   source: SourceLinkedViewerSource;
 }) {
   return (
-    <FileViewer source={source} defaultOpen className="bg-background h-full">
-      <SourceLinkedFileHeader />
-      <FileViewerBody>
-        <FileViewerSurface className="relative">
-          {children}
-          <SourceIndicator
-            path={link.activeSourcePath}
-            found={!!link.activeSegment}
-          />
-        </FileViewerSurface>
-        <FileViewerSidebar
-          aria-label="Source-linked fields"
-          side="right"
-          width="420px"
-          className="flex flex-shrink-0 flex-col border-l"
-        >
-          <SourcesForm extraction={extraction} link={link} />
-        </FileViewerSidebar>
-      </FileViewerBody>
-    </FileViewer>
+    <FileViewerProvider source={source} headerMode="outlets" defaultSidebarOpen>
+      <FileViewer className="bg-background" sidebarSide="right">
+        <SourceLinkedFileHeader />
+        <FileViewerBody>
+          <FileViewerSurface className="relative">
+            <FileViewerViewport>{children}</FileViewerViewport>
+            <SourceIndicator
+              path={link.activeSourcePath}
+              found={!!link.activeSegment}
+            />
+          </FileViewerSurface>
+          <FileViewerSidebar
+            aria-label="Source-linked fields"
+            side="right"
+            width="420px"
+            className="flex flex-shrink-0 flex-col border-l"
+          >
+            <FileViewerSidebarContent>
+              <SourcesForm extraction={extraction} link={link} />
+            </FileViewerSidebarContent>
+          </FileViewerSidebar>
+        </FileViewerBody>
+      </FileViewer>
+    </FileViewerProvider>
   );
 }
 
@@ -290,19 +337,16 @@ function SourcesForm({
   // `json-form` is source-aware: pass the link and every field becomes a
   // hoverable card that reports its path. No per-field wiring needed.
   return (
-    <>
-      <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">
-        <h2 className="text-sm font-medium">Source-linked data</h2>
-        <span className="text-muted-foreground ml-auto text-xs">
-          Hover a field to see its source
-        </span>
-      </div>
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="p-4">
-          <JsonForm form={form} schema={extraction.schema} sourceLink={link} />
-        </div>
-      </ScrollArea>
-    </>
+    <FileViewerSidebarSection>
+      <FileViewerSidebarSectionHeader>
+        <FileViewerSidebarSectionTitle>
+          Source fields
+        </FileViewerSidebarSectionTitle>
+      </FileViewerSidebarSectionHeader>
+      <FileViewerSidebarSectionContent>
+        <JsonForm form={form} schema={extraction.schema} sourceLink={link} />
+      </FileViewerSidebarSectionContent>
+    </FileViewerSidebarSection>
   );
 }
 
@@ -727,14 +771,6 @@ export function SourcesViewerBlock() {
           ) : null,
         )}
       </div>
-    </div>
-  );
-}
-
-export function SourcesViewerPdfBlock() {
-  return (
-    <div className="bg-background flex h-full min-h-[680px] flex-col">
-      <PdfTab />
     </div>
   );
 }

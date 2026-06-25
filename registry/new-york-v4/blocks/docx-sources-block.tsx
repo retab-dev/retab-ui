@@ -11,12 +11,16 @@ import { DocxViewer, type DocxViewerHandle } from "@/components/ui/docx-viewer";
 import {
   FileViewer,
   FileViewerBody,
-  FileViewerControls,
   FileViewerHeader,
-  FileViewerMeta,
+  FileViewerHeaderEnd,
+  FileViewerHeaderStart,
+  FileViewerIdentity,
+  FileViewerProvider,
   FileViewerSidebar,
+  FileViewerSidebarContent,
   FileViewerSurface,
-  FileViewerTitle,
+  FileViewerToolbar,
+  FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import { SegmentedDocumentProvider } from "@/components/ui/segmented-document-provider";
 import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link";
@@ -95,41 +99,50 @@ function DocxSourcesContent({
   const highlight = sourceToDocxHighlight(activeSource);
 
   return (
-    <FileViewer
-      source={DOCX_SOURCE}
-      className="bg-background h-full min-h-[680px]"
-    >
-      <FileViewerHeader>
-        <FileViewerTitle />
-        <FileViewerMeta />
-        <FileViewerControls />
-      </FileViewerHeader>
-      <FileViewerBody>
-        <FileViewerSurface className="relative">
-          <DocxViewer
-            ref={viewerRef}
-            source={DOCX_SOURCE}
-            bare
-            className="h-full"
-            controls={false}
-            highlight={highlight}
-          />
-          <SourceIndicator
-            path={link.activeSourcePath}
-            found={!!activeSource}
-          />
-        </FileViewerSurface>
-        <FileViewerSidebar
-          aria-label="Source fields"
-          side="right"
-          collapsible="none"
-          width="360px"
-          className="border-l"
-        >
-          <SourceFieldList fields={FIELDS} link={link} />
-        </FileViewerSidebar>
-      </FileViewerBody>
-    </FileViewer>
+    <FileViewerProvider source={DOCX_SOURCE} defaultSidebarOpen>
+      <FileViewer
+        className="bg-background h-full min-h-[680px]"
+        sidebarSide="right"
+      >
+        <FileViewerHeader>
+          <FileViewerHeaderStart>
+            <FileViewerIdentity />
+          </FileViewerHeaderStart>
+          <FileViewerHeaderEnd>
+            <FileViewerToolbar />
+          </FileViewerHeaderEnd>
+        </FileViewerHeader>
+        <FileViewerBody>
+          <FileViewerSurface className="relative">
+            <FileViewerViewport>
+              <DocxViewer
+                ref={viewerRef}
+                source={DOCX_SOURCE}
+                bare
+                className="h-full"
+                controls={false}
+                highlight={highlight}
+              />
+            </FileViewerViewport>
+            <SourceIndicator
+              path={link.activeSourcePath}
+              found={!!activeSource}
+            />
+          </FileViewerSurface>
+          <FileViewerSidebar
+            aria-label="Source fields"
+            side="right"
+            collapsible="none"
+            width="360px"
+            className="border-l"
+          >
+            <FileViewerSidebarContent>
+              <SourceFieldList fields={FIELDS} link={link} />
+            </FileViewerSidebarContent>
+          </FileViewerSidebar>
+        </FileViewerBody>
+      </FileViewer>
+    </FileViewerProvider>
   );
 }
 

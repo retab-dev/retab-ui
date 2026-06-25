@@ -5,11 +5,14 @@ import * as React from "react";
 import {
   FileViewer,
   FileViewerBody,
-  FileViewerControls,
   FileViewerHeader,
-  FileViewerMeta,
+  FileViewerHeaderEnd,
+  FileViewerHeaderStart,
+  FileViewerIdentity,
+  FileViewerProvider,
   FileViewerSurface,
-  FileViewerTitle,
+  FileViewerToolbar,
+  FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer";
 import { EmailViewerDemo } from "@/components/email-viewer-demo";
@@ -137,24 +140,28 @@ export function ClassificationViewerDemo() {
 
 function ClassificationPdfDocument() {
   return (
-    <FileViewer
-      source={loanApplicationSource}
-      className="h-full rounded-none border-0 bg-transparent"
-    >
-      <PdfViewerProvider>
-        <FileViewerHeader>
-          <FileViewerTitle />
-          <FileViewerMeta />
-          <FileViewerControls />
-        </FileViewerHeader>
-        <ClassifierViewerLegend />
-        <FileViewerBody>
-          <FileViewerSurface>
-            <PdfViewerPages bare className="h-full" />
-          </FileViewerSurface>
-        </FileViewerBody>
-      </PdfViewerProvider>
-    </FileViewer>
+    <FileViewerProvider source={loanApplicationSource}>
+      <FileViewer className="h-full rounded-none border-0 bg-transparent">
+        <PdfViewerProvider>
+          <FileViewerHeader>
+            <FileViewerHeaderStart>
+              <FileViewerIdentity />
+            </FileViewerHeaderStart>
+            <FileViewerHeaderEnd>
+              <FileViewerToolbar />
+            </FileViewerHeaderEnd>
+          </FileViewerHeader>
+          <ClassifierViewerLegend />
+          <FileViewerBody>
+            <FileViewerSurface>
+              <FileViewerViewport>
+                <PdfViewerPages bare className="h-full" />
+              </FileViewerViewport>
+            </FileViewerSurface>
+          </FileViewerBody>
+        </PdfViewerProvider>
+      </FileViewer>
+    </FileViewerProvider>
   );
 }
 

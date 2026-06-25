@@ -5,7 +5,9 @@ import * as React from "react";
 import type { CsvCellAddress } from "./csv-viewer-state";
 import { csvCellClassName } from "./csv-viewer-cell-classes";
 import type { CsvRowStore } from "./csv-row-store";
+import { fixedGridInverseStickyOffset } from "./fixed-grid-layout";
 import {
+  fixedVirtualItemWindow,
   fixedVirtualItems,
   type FixedGridColumnItem,
   type FixedGridJumpViewportResult,
@@ -17,6 +19,7 @@ export interface CsvRowPatchState {
   activeCell: CsvCellAddress | null;
   columnItems: FixedGridColumnItem[];
   effectiveRowHeight: number;
+  viewportHeight: number;
   rowOrder: number[] | null;
   shouldVirtualizeRows: boolean;
   rowStore: CsvRowStore;
@@ -85,7 +88,10 @@ export function useCsvRowPatcher({
       const cache = readRowHandles(rowWindow);
       rowHandleCacheRef.current = cache;
       if (cache.rows.length === 0) return;
-      patchRows(cache.rows, virtualRows, getState());
+      const state = getState();
+      const window = fixedVirtualItemWindow(virtualRows);
+      setRowWindowGeometry(rowWindow, window, state.viewportHeight);
+      patchRows(cache.rows, window.items, state);
     },
     [getState, rowWindowRef],
   );
@@ -128,7 +134,9 @@ export function useCsvRowPatcher({
         return "pass";
       }
 
-      patchRows(cache.rows, nextRows, state);
+      const window = fixedVirtualItemWindow(nextRows);
+      setRowWindowGeometry(rowWindow, window, viewport.clientHeight);
+      patchRows(cache.rows, window.items, state);
 
       return "handled";
     },
@@ -282,4 +290,30 @@ function setRowHidden(row: CsvRowHandle, isHidden: boolean) {
   if (row.isHidden === isHidden) return;
   row.element.hidden = isHidden;
   row.isHidden = isHidden;
+}
+
+function setRowWindowGeometry(
+  rowWindow: HTMLDivElement,
+  window: ReturnType<typeof fixedVirtualItemWindow>,
+  viewportHeight: number,
+) {
+  const stickyOffset = fixedGridInverseStickyOffset({
+    viewportSize: viewportHeight,
+    windowSize: window.size,
+  });
+  setStyleValue(rowWindow.style, "position", "sticky");
+  setStyleValue(rowWindow.style, "height", `${window.size}px`);
+  setStyleValue(rowWindow.style, "margin-top", `${window.start}px`);
+  setStyleValue(rowWindow.style, "top", `${stickyOffset}px`);
+  setStyleValue(rowWindow.style, "bottom", `${stickyOffset}px`);
+}
+
+function setStyleValue(
+  style: CSSStyleDeclaration,
+  propertyName: string,
+  value: string,
+) {
+  if (style.getPropertyValue(propertyName) !== value) {
+    style.setProperty(propertyName, value);
+  }
 }

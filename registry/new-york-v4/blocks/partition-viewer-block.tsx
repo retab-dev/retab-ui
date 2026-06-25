@@ -1,12 +1,17 @@
 "use client";
 
 import {
-  FileViewer,
   FileViewerBody,
-  FileViewerControls,
   FileViewerHeader,
+  FileViewerHeaderEnd,
+  FileViewerHeaderStart,
+  FileViewerIdentity,
+  FileViewerLegend,
+  FileViewer,
+  FileViewerProvider,
   FileViewerSurface,
-  FileViewerTitle,
+  FileViewerToolbar,
+  FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer";
 import type { PartitionResult } from "@/components/viewers/lib/partition-types";
@@ -51,22 +56,32 @@ export function PartitionViewerBlock() {
   return (
     <div className="bg-background flex h-full min-h-[680px] flex-col">
       <PartitionViewerProvider result={PARTITION_RESULT}>
-        <FileViewer source={source} className="bg-background h-full flex-1">
-          <PdfViewerProvider>
-            <FileViewerHeader>
-              <FileViewerTitle />
-              <PartitionViewerHeaderMeta />
-              <FileViewerControls />
-            </FileViewerHeader>
-            <FileViewerBody>
-              <FileViewerSurface>
-                <PartitionViewerLegend className="border-b px-3 py-2" />
-                <PartitionViewerRibbon />
-                <PartitionSourceDocument />
-              </FileViewerSurface>
-            </FileViewerBody>
-          </PdfViewerProvider>
-        </FileViewer>
+        <FileViewerProvider source={source}>
+          <FileViewer className="bg-background">
+            <PdfViewerProvider>
+              <FileViewerHeader>
+                <FileViewerHeaderStart>
+                  <FileViewerIdentity meta="hidden" />
+                  <PartitionViewerHeaderMeta />
+                </FileViewerHeaderStart>
+                <FileViewerHeaderEnd>
+                  <FileViewerToolbar />
+                </FileViewerHeaderEnd>
+              </FileViewerHeader>
+              <FileViewerBody>
+                <FileViewerSurface>
+                  <FileViewerLegend>
+                    <PartitionViewerLegend className="px-3 py-2" />
+                  </FileViewerLegend>
+                  <PartitionViewerRibbon />
+                  <FileViewerViewport>
+                    <PartitionSourceDocument />
+                  </FileViewerViewport>
+                </FileViewerSurface>
+              </FileViewerBody>
+            </PdfViewerProvider>
+          </FileViewer>
+        </FileViewerProvider>
       </PartitionViewerProvider>
     </div>
   );

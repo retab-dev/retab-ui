@@ -31,8 +31,7 @@ UI thread. Cells are then read synchronously off that compact form.
 npx shadcn@latest add @retab/xlsx-viewer
 ```
 
-This pulls in `@e965/xlsx` (a patched, dependency-free SheetJS build on npm) and
-`@tanstack/react-virtual` for windowing.
+This pulls in `@e965/xlsx` (a patched, dependency-free SheetJS build on npm).
 
 ## Usage
 
@@ -58,9 +57,9 @@ Switch sheets with the tab strip along the bottom; zoom scales the whole grid
   service, and no UI freeze. The worker flattens each sheet to sorted non-empty
   cell indexes, a text blob, and transferable typed arrays, so crossing the worker
   boundary avoids cloning every cell object.
-- **Row + column virtualization.** Built on `@tanstack/react-virtual`: only the
-  visible window of cells is rendered, with a 30-cell overscan to avoid blank
-  flashes while scrolling, and rows that stay in view are skipped on re-render.
+- **Row + column virtualization.** Built on Retab's local fixed-grid
+  virtualizer: only the visible window of cells is rendered, with tight overscan
+  and pooled rows to avoid blank flashes while scrolling.
 - **Synchronous cell reads.** Each visible cell is resolved against the sparse
   index and then read as a string slice off the compact sheet — no per-cell
   objects and no dense `rows * columns` text matrix.

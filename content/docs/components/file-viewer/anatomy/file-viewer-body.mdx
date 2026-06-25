@@ -11,7 +11,9 @@ between optional file-scoped navigation and the main file surface.
 <FileViewerBody>
   <FileViewerSidebar aria-label="PDF pages" />
   <FileViewerSurface>
-    <FileViewerDocument />
+    <FileViewerViewport>
+      <FileViewerDocument />
+    </FileViewerViewport>
   </FileViewerSurface>
 </FileViewerBody>
 ```
@@ -21,7 +23,9 @@ A body can also hold a surface alone, with no sidebar:
 ```tsx
 <FileViewerBody>
   <FileViewerSurface>
-    <FileViewerDocument />
+    <FileViewerViewport>
+      <FileViewerDocument />
+    </FileViewerViewport>
   </FileViewerSurface>
 </FileViewerBody>
 ```
@@ -32,9 +36,9 @@ A body can also hold a surface alone, with no sidebar:
   below the header and lays out the sidebar beside the surface.
 - It is purely structural: it does not know whether the sidebar contains
   thumbnails, attachments, segments, or source fields, and it does not own
-  sidebar open/collapse state — that lives on `FileViewer`.
-- Sidebar placement (side, width, inline vs. overlay) is resolved from the root
-  and the `FileViewerSidebar` inside the body.
+  sidebar open/collapse state — that lives on `FileViewerProvider`.
+- Sidebar placement (side, width, inline vs. overlay) is resolved from
+  `FileViewer` and the `FileViewerSidebar` inside the body.
 
 ## API Reference
 

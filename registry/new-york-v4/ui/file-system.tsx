@@ -5,7 +5,7 @@ import { AlertCircle, FileQuestion, RefreshCw } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { FileViewer } from "@/components/ui/file-viewer";
+import { FileViewerPreview } from "@/components/ui/file-viewer";
 import { Spinner } from "@/components/ui/spinner";
 
 import {
@@ -175,9 +175,8 @@ function FileSystemDefaultSelectionContent({
               }
             />
           ) : sourceState.status === "ready" ? (
-            <FileViewer
+            <FileViewerPreview
               source={sourceState.source}
-              bare
               className="size-full min-h-0"
             />
           ) : sourceState.status === "unavailable" ? (

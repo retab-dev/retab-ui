@@ -7,7 +7,9 @@ import { segmentsPageCount, toSegments, type Segment } from "@/lib/segments";
 import {
   FileViewer,
   FileViewerBody,
+  FileViewerProvider,
   FileViewerSurface,
+  FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import { PageRibbon } from "@/components/ui/page-ribbon";
 import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer";
@@ -201,26 +203,29 @@ function Cell({
                 {preset.slot === "top" ? legend : null}
                 <div className="relative flex min-h-0 flex-1">
                   <div className="relative min-h-0 flex-1">
-                    <FileViewer
+                    <FileViewerProvider
                       source={{
                         kind: "url",
                         url: PDF_URL,
                         fileName: "an-image-is-worth-16x16-words.pdf",
                       }}
-                      className="h-full"
                     >
-                      <PdfViewerProvider>
-                        <FileViewerBody>
-                          <FileViewerSurface>
-                            <PdfViewerPages
-                              bare
-                              onVisiblePageChange={setCurrentPage}
-                              className="h-full"
-                            />
-                          </FileViewerSurface>
-                        </FileViewerBody>
-                      </PdfViewerProvider>
-                    </FileViewer>
+                      <FileViewer className="h-full">
+                        <PdfViewerProvider>
+                          <FileViewerBody>
+                            <FileViewerSurface>
+                              <FileViewerViewport>
+                                <PdfViewerPages
+                                  bare
+                                  onVisiblePageChange={setCurrentPage}
+                                  className="h-full"
+                                />
+                              </FileViewerViewport>
+                            </FileViewerSurface>
+                          </FileViewerBody>
+                        </PdfViewerProvider>
+                      </FileViewer>
+                    </FileViewerProvider>
                     {preset.slot === "overlay" ? (
                       <div className="pointer-events-none absolute inset-x-3 top-3 z-10 [&>*]:pointer-events-auto">
                         {legend}

@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronRight, Folder } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -11,6 +10,7 @@ import type { FileSystemBrowserController } from "./file-system-browser-controll
 import { folderHasChildren, pathParent } from "./file-system-index";
 import { FileSystemThumbnail } from "./file-system-thumbnail";
 import type { FileSystemEntry } from "./file-system-types";
+import { useFixedRowVirtualization } from "./fixed-grid-virtualization";
 import { useFileSystemRovingFocus } from "./use-file-system-roving-focus";
 
 const COLUMN_ROW_HEIGHT = 32;
@@ -84,25 +84,13 @@ function FileSystemColumn({
     () => browser.index.children.get(path) ?? [],
     [browser.index.children, path],
   );
-  const virtualizer = useVirtualizer({
-    count: entries.length,
-    estimateSize: () => COLUMN_ROW_HEIGHT,
-    getScrollElement: () => viewportRef.current,
-    overscan: 10,
+  const { scrollToRow, totalRowSize, virtualRows } = useFixedRowVirtualization({
+    rowCount: entries.length,
+    rowSize: COLUMN_ROW_HEIGHT,
+    rowOverscan: 10,
+    initialViewportHeight: 560,
+    scrollRef: viewportRef,
   });
-  const virtualRows = virtualizer.getVirtualItems();
-  const renderedRows = virtualRows.length
-    ? virtualRows.map((row) => ({
-        entry: entries[row.index],
-        start: row.start,
-      }))
-    : entries.map((entry, index) => ({
-        entry,
-        start: index * COLUMN_ROW_HEIGHT,
-      }));
-  const totalSize = virtualRows.length
-    ? virtualizer.getTotalSize()
-    : entries.length * COLUMN_ROW_HEIGHT;
   const rovingFocus = useFileSystemRovingFocus({
     entries,
     getScrollIndex: (entry) =>
@@ -114,7 +102,9 @@ function FileSystemColumn({
       }
     },
     scrollToIndex: (index) => {
-      if (index !== -1) virtualizer.scrollToIndex(index);
+      if (index !== -1) {
+        scrollToRow({ rowIndex: index, align: "center", behavior: "auto" });
+      }
     },
     selectedPath: browser.selectedPath,
   });
@@ -188,18 +178,23 @@ function FileSystemColumn({
     >
       <div ref={viewportRef} className="h-full overflow-auto p-1.5">
         {entries.length ? (
-          <div className="relative" style={{ height: totalSize }}>
-            {renderedRows.map(({ entry, start }) => (
-              <FileSystemColumnRow
-                key={entry.path}
-                controller={controller}
-                entry={entry}
-                ref={(element) => {
-                  rovingFocus.registerEntryRef(entry.path, element);
-                }}
-                style={{ transform: `translateY(${start}px)` }}
-              />
-            ))}
+          <div className="relative" style={{ height: totalRowSize }}>
+            {virtualRows.map((virtualRow) => {
+              const entry = entries[virtualRow.index];
+              if (!entry) return null;
+
+              return (
+                <FileSystemColumnRow
+                  key={entry.path}
+                  controller={controller}
+                  entry={entry}
+                  ref={(element) => {
+                    rovingFocus.registerEntryRef(entry.path, element);
+                  }}
+                  style={{ transform: `translateY(${virtualRow.start}px)` }}
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="text-muted-foreground px-2 py-1.5 text-xs">

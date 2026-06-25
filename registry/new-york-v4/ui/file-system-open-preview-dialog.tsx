@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FileViewer } from "@/components/ui/file-viewer";
+import { FileViewerPreview } from "@/components/ui/file-viewer";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -118,5 +118,5 @@ function FileSystemOpenPreviewMessage({
 }
 
 function FileSystemOpenPreviewViewer({ source }: { source: ViewerSource }) {
-  return <FileViewer source={source} bare className="size-full min-h-0" />;
+  return <FileViewerPreview source={source} className="size-full min-h-0" />;
 }

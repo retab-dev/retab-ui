@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
 
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useMeasuredRowVirtualization } from "./measured-row-virtualization";
 
 export type InteractiveItemListItem = {
   id: string;
@@ -19,12 +19,6 @@ export type InteractiveItemListRenderState = {
 
 const DEFAULT_ESTIMATE_SIZE = 72;
 const ROW_PADDING = 12;
-
-type InteractiveItemListVirtualRow = {
-  index: number;
-  key: React.Key;
-  start: number;
-};
 
 function requestFrame(callback: () => void) {
   if (typeof window !== "undefined" && window.requestAnimationFrame) {
@@ -69,25 +63,21 @@ export function InteractiveItemList<Item extends InteractiveItemListItem>({
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
   const optionRefs = React.useRef(new Map<string, HTMLButtonElement>());
   const visibleItemIdRef = React.useRef<string | null>(null);
-  const virtualizer = useVirtualizer({
-    count: items.length,
-    estimateSize: () => estimateSize,
-    getItemKey: (index) => items[index]?.id ?? index,
-    getScrollElement: () => viewportRef.current,
-    overscan: 8,
-  });
-  const virtualRows: InteractiveItemListVirtualRow[] =
-    virtualizer.getVirtualItems().length > 0
-      ? virtualizer.getVirtualItems()
-      : items.map((item, index) => ({
-          index,
-          key: item.id,
-          start: index * estimateSize,
-        }));
-  const totalSize = Math.max(
-    virtualizer.getTotalSize(),
-    items.length * estimateSize,
+  const getItemKey = React.useCallback(
+    (index: number) => items[index]?.id ?? index,
+    [items],
   );
+  const { measureRow, scrollToIndex, totalSize, virtualRows } =
+    useMeasuredRowVirtualization({
+      count: items.length,
+      estimateSize,
+      getItemKey,
+      initialViewportHeight: 600,
+      overscan: 8,
+      paddingEnd: ROW_PADDING,
+      paddingStart: ROW_PADDING,
+      scrollRef: viewportRef,
+    });
 
   const firstEnabledIndex = React.useCallback(
     () => items.findIndex((item) => !item.disabled),
@@ -119,12 +109,12 @@ export function InteractiveItemList<Item extends InteractiveItemListItem>({
     (index: number) => {
       const item = items[index];
       if (!item || item.disabled) return;
-      virtualizer.scrollToIndex(index);
+      scrollToIndex(index, { align: "center", behavior: "auto" });
       requestFrame(() => {
         optionRefs.current.get(item.id)?.focus();
       });
     },
-    [items, virtualizer],
+    [items, scrollToIndex],
   );
 
   const reportVisibleItem = React.useCallback(() => {
@@ -133,10 +123,9 @@ export function InteractiveItemList<Item extends InteractiveItemListItem>({
     if (!viewport) return;
 
     const marker = viewport.scrollTop + ROW_PADDING;
-    const virtualItems = virtualizer.getVirtualItems();
     const virtualItem =
-      virtualItems.find((row) => row.start + row.size >= marker) ??
-      virtualItems[0];
+      virtualRows.find((row) => row.start + row.size >= marker) ??
+      virtualRows[0];
     const fallbackIndex = Math.min(
       items.length - 1,
       Math.max(0, Math.floor(marker / estimateSize)),
@@ -146,7 +135,7 @@ export function InteractiveItemList<Item extends InteractiveItemListItem>({
 
     visibleItemIdRef.current = item.id;
     onVisibleItemChange(item);
-  }, [estimateSize, items, onVisibleItemChange, virtualizer]);
+  }, [estimateSize, items, onVisibleItemChange, virtualRows]);
 
   const handleViewportScroll = React.useCallback(() => {
     requestFrame(reportVisibleItem);
@@ -164,7 +153,7 @@ export function InteractiveItemList<Item extends InteractiveItemListItem>({
           role="listbox"
           aria-label={ariaLabel}
           className="relative"
-          style={{ height: totalSize + ROW_PADDING * 2 }}
+          style={{ height: totalSize }}
         >
           {virtualRows.map((virtualRow) => {
             const item = items[virtualRow.index];
@@ -177,11 +166,11 @@ export function InteractiveItemList<Item extends InteractiveItemListItem>({
             return (
               <div
                 key={virtualRow.key}
-                ref={virtualizer.measureElement}
+                ref={(element) => measureRow(virtualRow.index, element)}
                 data-index={virtualRow.index}
                 className="absolute top-0 right-3 left-3 pb-2 [contain:layout_paint]"
                 style={{
-                  transform: `translateY(${virtualRow.start + ROW_PADDING}px)`,
+                  transform: `translateY(${virtualRow.start}px)`,
                 }}
               >
                 <button

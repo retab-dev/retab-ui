@@ -4,7 +4,14 @@ import * as React from "react";
 
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source";
-import { FileViewer } from "@/components/ui/file-viewer";
+import {
+  FileViewerBody,
+  FileViewerDocument,
+  FileViewer,
+  FileViewerProvider,
+  FileViewerSurface,
+  FileViewerViewport,
+} from "@/components/ui/file-viewer";
 import {
   PdfViewerPages,
   PdfViewerProvider,
@@ -84,18 +91,30 @@ function SourceDocumentRenderer({
 
   if (canPreviewEditViewerDocument(document)) {
     return (
-      <FileViewer source={source} className="h-full">
-        <PdfViewerProvider>
-          <PdfViewerPages
-            ref={setPdfViewerHandle}
-            bare
-            className="h-full"
-            onScrollProgressChange={documentHandlers.onScrollProgressChange}
-            onVisiblePageChange={documentHandlers.onCurrentPageChange}
-            renderPageOverlay={showPreview ? renderPageOverlay : undefined}
-          />
-        </PdfViewerProvider>
-      </FileViewer>
+      <FileViewerProvider source={source}>
+        <FileViewer>
+          <PdfViewerProvider>
+            <FileViewerBody>
+              <FileViewerSurface>
+                <FileViewerViewport>
+                  <PdfViewerPages
+                    ref={setPdfViewerHandle}
+                    bare
+                    className="h-full"
+                    onScrollProgressChange={
+                      documentHandlers.onScrollProgressChange
+                    }
+                    onVisiblePageChange={documentHandlers.onCurrentPageChange}
+                    renderPageOverlay={
+                      showPreview ? renderPageOverlay : undefined
+                    }
+                  />
+                </FileViewerViewport>
+              </FileViewerSurface>
+            </FileViewerBody>
+          </PdfViewerProvider>
+        </FileViewer>
+      </FileViewerProvider>
     );
   }
 
@@ -105,7 +124,7 @@ function SourceDocumentRenderer({
     );
   }
 
-  return <FileViewer source={source} bare className="h-full" />;
+  return <EditFileViewerDocument source={source} />;
 }
 
 function FilledDocumentRenderer({
@@ -118,7 +137,27 @@ function FilledDocumentRenderer({
     return <NoDocumentState message="Document preview is unavailable." />;
   }
 
-  return <FileViewer source={source} bare className="h-full" />;
+  return <EditFileViewerDocument source={source} />;
+}
+
+function EditFileViewerDocument({
+  source,
+}: {
+  source: UrlViewerSource | BlobViewerSource;
+}) {
+  return (
+    <FileViewerProvider source={source}>
+      <FileViewer>
+        <FileViewerBody>
+          <FileViewerSurface>
+            <FileViewerViewport>
+              <FileViewerDocument />
+            </FileViewerViewport>
+          </FileViewerSurface>
+        </FileViewerBody>
+      </FileViewer>
+    </FileViewerProvider>
+  );
 }
 
 function useDocumentViewerSource(

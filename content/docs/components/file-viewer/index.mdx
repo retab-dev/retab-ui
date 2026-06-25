@@ -35,11 +35,11 @@ and `@chenglou/pretext` for the wrapped Text and Markdown surfaces.
 ## Usage
 
 ```tsx
-import { FileViewer } from "@/components/ui/file-viewer";
+import { FileViewerPreview } from "@/components/ui/file-viewer";
 
 export function Example() {
   return (
-    <FileViewer
+    <FileViewerPreview
       source={{ kind: "url", url: "/report.pdf", fileName: "report.pdf" }}
     />
   );
@@ -48,71 +48,86 @@ export function Example() {
 
 `source.fileName` drives type detection and the download button. If you only
 have a URL, the URL is used for display and its basename is used for downloads;
-pass `source.mimeType` when the extension is missing or ambiguous, or `as` to
-force a category.
+pass `source.mimeType` when the extension is missing or ambiguous, or
+`category` to force a category.
 
 ## Composition Boundaries
 
-`FileViewer` is a file router and file-scoped composition root. Do not use it to
-own workflow semantics. Do use its named anatomy when a file-backed surface
-needs sidebars, composed panes, or file-scoped navigation.
+`FileViewerProvider` is the file router and file-scoped provider stack.
+`FileViewer` is the frame beneath it. Do not use either one to own workflow
+semantics. Do use the named anatomy when a file-backed surface needs sidebars,
+composed panes, or file-scoped navigation.
 
 Use the file viewer parts when a workflow needs one file header above domain
 chrome:
 
 ```tsx
-<FileViewer source={source} defaultOpen>
-  <FileViewerHeader>
-    <FileViewerSidebarTrigger />
-    <FileViewerTitle />
-    <FileViewerMeta />
-    <FileViewerControls />
-  </FileViewerHeader>
-  <FileViewerBody>
-    <FileViewerSidebar aria-label="Document sections" />
-    <FileViewerSurface>
-      <FileViewerDocument />
-    </FileViewerSurface>
-  </FileViewerBody>
-</FileViewer>
+<FileViewerProvider source={source} defaultSidebarOpen>
+  <FileViewer>
+    <FileViewerHeader>
+      <FileViewerHeaderStart>
+        <FileViewerSidebarTrigger />
+        <FileViewerIdentity />
+      </FileViewerHeaderStart>
+      <FileViewerHeaderEnd>
+        <FileViewerToolbar />
+      </FileViewerHeaderEnd>
+    </FileViewerHeader>
+    <FileViewerBody>
+      <FileViewerSidebar aria-label="Document sections" />
+      <FileViewerSurface>
+        <FileViewerViewport>
+          <FileViewerDocument />
+        </FileViewerViewport>
+      </FileViewerSurface>
+    </FileViewerBody>
+  </FileViewer>
+</FileViewerProvider>
 ```
 
-`FileViewerTitle` answers what file this is, `FileViewerMeta` renders passive
-facts, and `FileViewerControls` renders operational controls registered by the
-active file renderer. `FileViewerDocument` is the routed file renderer.
+`FileViewerIdentity` answers what file this is, and `FileViewerToolbar` renders
+operational controls registered by the active file renderer.
+`FileViewerDocument` is the routed file renderer.
 
 See [Anatomy](/docs/components/file-viewer/anatomy) for the compound API and
 [Sidebar](/docs/components/file-viewer/navigation) for file-scoped navigation.
 
-Use the easy shell for the common case:
+Use the preview shell for the common case:
 
 ```tsx
-<FileViewer source={source} />
+<FileViewerPreview source={source} />
 ```
 
 Use the composed shell when the file surface needs file-scoped sidebars or
 custom header composition:
 
 ```tsx
-<FileViewer source={source}>
-  <FileViewerHeader>
-    <FileViewerTitle />
-    <FileViewerMeta />
-    <FileViewerControls />
-  </FileViewerHeader>
-  <FileViewerBody>
-    <FileViewerSurface>
-      <FileViewerDocument />
-    </FileViewerSurface>
-  </FileViewerBody>
-</FileViewer>
+<FileViewerProvider source={source}>
+  <FileViewer>
+    <FileViewerHeader>
+      <FileViewerHeaderStart>
+        <FileViewerIdentity />
+      </FileViewerHeaderStart>
+      <FileViewerHeaderEnd>
+        <FileViewerToolbar />
+      </FileViewerHeaderEnd>
+    </FileViewerHeader>
+    <FileViewerBody>
+      <FileViewerSurface>
+        <FileViewerViewport>
+          <FileViewerDocument />
+        </FileViewerViewport>
+      </FileViewerSurface>
+    </FileViewerBody>
+  </FileViewer>
+</FileViewerProvider>
 ```
 
-Use `FileViewer bare` only for standalone nested leaf previews where the parent
+Use `FileViewerPreview` for standalone nested leaf previews where the parent
 already owns the surrounding surface:
 
 ```tsx
-<FileViewer source={attachment.source} bare />
+<FileViewerPreview source={attachment.source} />
 ```
 
 ## Supported types
@@ -156,14 +171,14 @@ File Viewer primitives.
 
 ## API Reference
 
-| Prop                | Type                                | Description                                                                                       |
-| ------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `source`            | `ViewerSource`                      | Canonical file source. URL, Blob, and text sources carry file metadata with the payload identity. |
-| `as`                | `FileCategory`                      | Force a category, bypassing detection.                                                            |
-| `bare`              | `boolean`                           | Drop the outer border/background so the viewer fills its container.                               |
-| `className`         | `string`                            | Optional class on the viewer root element.                                                        |
-| `fallbackFrameSize` | `{ width: number; height: number }` | Intrinsic first-frame size for image and TIFF loading skeletons.                                  |
-| `fallbackSlideSize` | `{ width: number; height: number }` | Intrinsic first-slide size for PPTX loading skeletons.                                            |
+| Prop                 | Owner                | Description                                                                                       |
+| -------------------- | -------------------- | ------------------------------------------------------------------------------------------------- |
+| `source`             | `FileViewerProvider` | Canonical file source. URL, Blob, and text sources carry file metadata with the payload identity. |
+| `category`           | `FileViewerProvider` | Force a category, bypassing detection.                                                            |
+| `defaultSidebarOpen` | `FileViewerProvider` | Initial sidebar open state for composed viewers.                                                  |
+| `sidebarMode`        | `FileViewer`         | `"auto"`, `"inline"`, or `"overlay"` sidebar layout mode.                                         |
+| `sidebarSide`        | `FileViewer`         | Which side the sidebar mounts on.                                                                 |
+| `className`          | `FileViewer`         | Optional class on the viewer root element.                                                        |
 
 The `detectCategory(fileName, mimeType?)` helper is also exported if you need to
 branch on the resolved category yourself.

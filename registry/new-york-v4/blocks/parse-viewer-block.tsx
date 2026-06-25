@@ -6,7 +6,9 @@ import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import {
   FileViewer,
   FileViewerBody,
+  FileViewerProvider,
   FileViewerSurface,
+  FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import {
   PdfViewerPages,
@@ -14,13 +16,11 @@ import {
   type PdfViewerHandle,
 } from "@/components/ui/pdf-viewer";
 import {
-  ViewerBody,
-  ViewerHeader,
-  ViewerRoot,
-  ViewerSidebar,
-  ViewerSidebarTrigger,
-  ViewerSurface,
-} from "@/components/ui/viewer";
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+import { ViewerBody, ViewerRoot, ViewerSurface } from "@/components/ui/viewer";
 import type { ParseResponse } from "@/components/viewers/lib/parse-types";
 import {
   ParseViewerHeader,
@@ -31,7 +31,6 @@ import {
 import parseSample from "@/components/viewers/sample-data/parse.json";
 
 const PDF_URL = "/samples/bank-statement-x4uhhi7t.pdf";
-const PDF_FILE_NAME = "bank-statement.pdf";
 
 // A parse of the bank-statement sample: per-page, LLM-ready markdown with the
 // transactions reconstructed as a table.
@@ -49,39 +48,29 @@ export function ParseViewerBlock() {
   return (
     <div className="bg-background flex h-full min-h-[680px] flex-col">
       <ParseViewerProvider result={PARSE_RESULT}>
-        <ViewerRoot defaultOpen className="bg-background h-full flex-1">
-          <ParseViewerBlockHeader />
-          <ViewerBody className="flex-col md:flex-row">
-            <ViewerSurface className="relative">
-              <ParseSourceDocument />
-            </ViewerSurface>
-            <ViewerSidebar
-              aria-label="Parsed document content"
-              side="right"
-              width="420px"
-              className="bg-background max-h-[42%] min-h-[240px] border-t md:max-h-none md:max-w-[50%] md:border-t-0 md:border-l"
+        <ViewerRoot className="bg-background h-full flex-1">
+          <ParseViewerHeader />
+          <ViewerBody>
+            <ResizablePanelGroup
+              orientation="horizontal"
+              className="min-h-0 flex-1"
             >
-              <ParseViewerMarkdown />
-            </ViewerSidebar>
+              <ResizablePanel defaultSize={52} minSize={28}>
+                <ViewerSurface className="h-full">
+                  <ParseSourceDocument />
+                </ViewerSurface>
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={48} minSize={28}>
+                <ViewerSurface className="h-full">
+                  <ParseViewerMarkdown />
+                </ViewerSurface>
+              </ResizablePanel>
+            </ResizablePanelGroup>
           </ViewerBody>
         </ViewerRoot>
       </ParseViewerProvider>
     </div>
-  );
-}
-
-function ParseViewerBlockHeader() {
-  return (
-    <ViewerHeader className="flex min-h-10 flex-wrap items-center gap-2 px-2 py-1 sm:flex-nowrap sm:py-0">
-      <div className="flex h-8 min-w-0 items-center gap-2">
-        <ViewerSidebarTrigger className="-ml-1" />
-        <span className="text-foreground min-w-0 truncate text-sm font-medium">
-          {PDF_FILE_NAME}
-        </span>
-        <span className="text-muted-foreground shrink-0 text-xs">pdf</span>
-      </div>
-      <ParseViewerHeader className="ml-0 min-w-0 border-b-0 bg-transparent sm:ml-auto" />
-    </ViewerHeader>
   );
 }
 
@@ -100,28 +89,31 @@ function ParseSourceDocument() {
   });
 
   return (
-    <FileViewer
+    <FileViewerProvider
       source={{
         kind: "url",
         url: PDF_URL,
-        fileName: PDF_FILE_NAME,
+        fileName: "bank-statement.pdf",
       }}
-      className="h-full"
     >
-      <PdfViewerProvider>
-        <FileViewerBody>
-          <FileViewerSurface>
-            <PdfViewerPages
-              ref={viewerRef}
-              bare
-              onVisiblePageChange={document.onCurrentPageChange}
-              onScrollProgressChange={document.onScrollProgressChange}
-              className="h-full"
-            />
-          </FileViewerSurface>
-        </FileViewerBody>
-      </PdfViewerProvider>
-    </FileViewer>
+      <FileViewer>
+        <PdfViewerProvider>
+          <FileViewerBody>
+            <FileViewerSurface>
+              <FileViewerViewport>
+                <PdfViewerPages
+                  ref={viewerRef}
+                  bare
+                  onVisiblePageChange={document.onCurrentPageChange}
+                  onScrollProgressChange={document.onScrollProgressChange}
+                  className="h-full"
+                />
+              </FileViewerViewport>
+            </FileViewerSurface>
+          </FileViewerBody>
+        </PdfViewerProvider>
+      </FileViewer>
+    </FileViewerProvider>
   );
 }
 

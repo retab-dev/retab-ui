@@ -3,47 +3,60 @@ title: Anatomy
 description: "The compound File Viewer structure: root, header, body, sidebar slot, surface, and routed document."
 ---
 
-`FileViewer` is both the easy API and the composition root. The common case is
-one line:
+`FileViewerPreview` is the one-line preview shell:
 
 ```tsx
-<FileViewer source={source} />
+<FileViewerPreview source={source} />
 ```
 
 When the file surface needs its own header, sidebar, or surrounding workflow
 chrome, compose the same primitive parts explicitly:
 
 ```tsx
-<FileViewer source={source} defaultOpen>
-  <FileViewerHeader>
-    <FileViewerSidebarTrigger />
-    <FileViewerTitle />
-    <FileViewerMeta />
-    <FileViewerControls />
-  </FileViewerHeader>
+<FileViewerProvider source={source} defaultSidebarOpen>
+  <FileViewer>
+    <FileViewerHeader>
+      <FileViewerHeaderStart>
+        <FileViewerSidebarTrigger />
+        <FileViewerIdentity />
+      </FileViewerHeaderStart>
+      <FileViewerHeaderEnd>
+        <FileViewerToolbar />
+      </FileViewerHeaderEnd>
+    </FileViewerHeader>
 
-  <FileViewerBody>
-    <FileViewerSidebar aria-label="Document navigation">
-      <FileViewerThumbnails />
-    </FileViewerSidebar>
+    <FileViewerBody>
+      <FileViewerSidebar aria-label="Document navigation">
+        <FileViewerThumbnails />
+      </FileViewerSidebar>
 
-    <FileViewerSurface>
-      <FileViewerDocument />
-    </FileViewerSurface>
-  </FileViewerBody>
-</FileViewer>
+      <FileViewerSurface>
+        <FileViewerViewport>
+          <FileViewerDocument />
+        </FileViewerViewport>
+      </FileViewerSurface>
+    </FileViewerBody>
+  </FileViewer>
+</FileViewerProvider>
 ```
 
 ## Boundaries
 
-- `FileViewer` owns file identity, source loading, route detection, sidebar
-  state, and the file-scoped provider.
+- `FileViewerProvider` owns file identity, source loading, route detection,
+  sidebar open state, and the file-scoped provider stack.
+- `FileViewer` owns the spatial frame: layout, sidebar mode, side, and
+  breakpoint behavior.
+- `FileViewerPreview` composes the provider, frame, surface, viewport, and
+  routed document for the one-line preview case.
 - `FileViewerHeader` owns the full-width file row.
 - `FileViewerBody` owns the horizontal layout under the header.
 - `FileViewerSidebar` is the optional navigation slot. It does not decide what
   the rows mean.
 - `FileViewerSurface` owns the main file surface beside the sidebar.
+- `FileViewerViewport` owns the measured viewport boundary inside the surface.
 - `FileViewerDocument` renders the routed file renderer.
+- `FileViewerStates` provide the shared loading, empty, unavailable, error, and
+  unsupported surfaces.
 
 Navigation components live inside `FileViewerSidebar`. They are not part of the
 irreducible shell:
@@ -58,15 +71,16 @@ irreducible shell:
 </FileViewerSidebar>
 ```
 
-Use `FileViewer bare` only for a nested file leaf when a parent viewer already
-owns the surrounding frame:
+Use `FileViewerPreview` for a nested file leaf when a parent viewer already owns
+the surrounding frame:
 
 ```tsx
-<FileViewer source={attachment.source} bare />
+<FileViewerPreview source={attachment.source} />
 ```
 
 ## Mental model
 
-File Viewer owns file identity and anatomy. `ViewerFrame` or the host surface
-owns the outer frame. Renderers own pixels. Navigation owns movement inside the
-file surface. Workflow viewers own domain semantics outside the file.
+File Viewer separates provider state from spatial anatomy. `FileViewerProvider`
+owns file identity and routing state. `FileViewer` owns the frame inside the
+host surface. Renderers own pixels. Navigation owns movement inside the file
+surface. Workflow viewers own domain semantics outside the file.

@@ -57,32 +57,39 @@ const attachments = [
 Use `AttachmentSidebar` as the content grammar inside the viewer rail:
 
 ```tsx
-<FileViewer source={selected.source} defaultOpen sidebarSide="right">
-  <FileViewerHeader>
-    <FileViewerSidebarTrigger />
-    <FileViewerTitle />
-    <FileViewerMeta />
-    <FileViewerControls />
-  </FileViewerHeader>
-  <FileViewerBody>
-    <FileViewerSurface>
-      <FileViewerDocument />
-    </FileViewerSurface>
-    <FileViewerSidebar
-      aria-label="Email attachments"
-      side="right"
-      width="20rem"
-    >
-      <AttachmentSidebar
-        items={attachments}
-        selectedId={selectedId}
-        onSelect={setSelectedId}
+<FileViewerProvider source={selected.source} defaultSidebarOpen>
+  <FileViewer sidebarSide="right">
+    <FileViewerHeader>
+      <FileViewerHeaderStart>
+        <FileViewerSidebarTrigger />
+        <FileViewerIdentity />
+      </FileViewerHeaderStart>
+      <FileViewerHeaderEnd>
+        <FileViewerToolbar />
+      </FileViewerHeaderEnd>
+    </FileViewerHeader>
+    <FileViewerBody>
+      <FileViewerSurface>
+        <FileViewerViewport>
+          <FileViewerDocument />
+        </FileViewerViewport>
+      </FileViewerSurface>
+      <FileViewerSidebar
+        aria-label="Email attachments"
         side="right"
         width="20rem"
-      />
-    </FileViewerSidebar>
-  </FileViewerBody>
-</FileViewer>
+      >
+        <AttachmentSidebar
+          items={attachments}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          side="right"
+          width="20rem"
+        />
+      </FileViewerSidebar>
+    </FileViewerBody>
+  </FileViewer>
+</FileViewerProvider>
 ```
 
 To add domain-specific groups before the attachment list, pass children:

@@ -10,12 +10,12 @@ import {
 } from "@/lib/viewer-source";
 
 export type { FileCategory, ViewerSource };
-export type FileViewerDocumentChrome = "shell" | "standalone";
 export type FileViewerFallbackSize = { width: number; height: number };
+export type FileViewerControlsPlacement = "toolbar" | "local" | "none";
 
-export interface FileViewerProps {
+export interface FileViewerCoreProps {
   source: ViewerSource;
-  as?: FileCategory;
+  category?: FileCategory;
   className?: string;
   /** Intrinsic first-frame size for image/TIFF loading skeletons. */
   fallbackFrameSize?: FileViewerFallbackSize;
@@ -28,11 +28,11 @@ export type FileDescriptor = ViewerDescriptor;
 
 export function resolveFileDescriptor({
   source,
-  as,
-}: FileViewerProps): FileDescriptor {
+  category,
+}: FileViewerCoreProps): FileDescriptor {
   return resolveViewerDescriptor({
     source,
-    category: as,
+    category,
   });
 }
 

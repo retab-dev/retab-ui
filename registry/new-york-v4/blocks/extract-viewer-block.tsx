@@ -5,16 +5,27 @@ import { useForm } from "react-hook-form";
 
 import type { Source } from "@/lib/document-source";
 import {
-  FileViewer,
   FileViewerBody,
+  FileViewerHeader,
+  FileViewerHeaderEnd,
+  FileViewerHeaderStart,
+  FileViewer,
+  FileViewerProvider,
+  FileViewerSidebar,
+  FileViewerSidebarContent,
+  FileViewerSidebarSection,
+  FileViewerSidebarSectionContent,
+  FileViewerSidebarSectionHeader,
+  FileViewerSidebarSectionTitle,
+  FileViewerSidebarTrigger,
   FileViewerSurface,
+  FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import {
   PdfViewerPages,
   PdfViewerProvider,
   type PdfDocumentSource,
 } from "@/components/ui/pdf-viewer";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   SegmentedDocumentProvider,
   useSegmentedDocumentViewport,
@@ -26,14 +37,6 @@ import {
   useSegmentedPdfSourceOverlay,
   useSegmentedPdfViewerHandle,
 } from "@/components/ui/source-segmented-document-overlays";
-import {
-  ViewerBody,
-  ViewerHeader,
-  ViewerRoot,
-  ViewerSidebar,
-  ViewerSidebarTrigger,
-  ViewerSurface,
-} from "@/components/ui/viewer";
 import { JsonForm } from "@/components/json-form/json-form";
 import extractSample from "@/components/viewers/sample-data/extract.json";
 
@@ -104,52 +107,63 @@ function ExtractViewerContent() {
   const form = useForm<Record<string, unknown>>({ defaultValues });
 
   return (
-    <ViewerRoot defaultOpen className="bg-background h-full min-h-[680px]">
-      <ViewerHeader className="flex min-h-10 items-center gap-2 px-2">
-        <ViewerSidebarTrigger />
-        <h2 className="min-w-0 truncate text-sm font-medium">Extracted data</h2>
-        <span className="text-muted-foreground ml-auto text-xs">
-          {FIELDS.length} fields
-        </span>
-      </ViewerHeader>
-      <ViewerBody>
-        <ViewerSurface className="relative">
-          <FileViewer source={PDF_SOURCE} className="h-full">
-            <PdfViewerProvider>
-              <FileViewerBody>
-                <FileViewerSurface>
-                  <PdfViewerPages
-                    ref={setPdfViewerHandle}
-                    bare
-                    className="h-full"
-                    onScrollProgressChange={
-                      documentHandlers.onScrollProgressChange
-                    }
-                    onVisiblePageChange={documentHandlers.onCurrentPageChange}
-                    renderPageOverlay={renderPageOverlay}
-                  />
-                </FileViewerSurface>
-              </FileViewerBody>
-            </PdfViewerProvider>
-          </FileViewer>
-          <SourceIndicator
-            path={link.activeSourcePath}
-            found={!!link.activeAnchor}
-          />
-        </ViewerSurface>
-        <ViewerSidebar
-          aria-label="Extracted fields"
-          side="right"
-          width="240px"
-          className="flex flex-shrink-0 flex-col border-l"
-        >
-          <ScrollArea className="min-h-0 flex-1">
-            <div className="p-4">
-              <JsonForm form={form} schema={schema} sourceLink={link} />
-            </div>
-          </ScrollArea>
-        </ViewerSidebar>
-      </ViewerBody>
-    </ViewerRoot>
+    <FileViewerProvider source={PDF_SOURCE} defaultSidebarOpen>
+      <FileViewer className="bg-background min-h-[680px]" sidebarSide="right">
+        <FileViewerHeader className="flex min-h-10 items-center gap-2 px-2">
+          <FileViewerHeaderStart>
+            <FileViewerSidebarTrigger />
+            <h2 className="min-w-0 truncate text-sm font-medium">
+              Extracted data
+            </h2>
+          </FileViewerHeaderStart>
+          <FileViewerHeaderEnd>
+            <span className="text-muted-foreground text-xs">
+              {FIELDS.length} fields
+            </span>
+          </FileViewerHeaderEnd>
+        </FileViewerHeader>
+        <FileViewerBody>
+          <FileViewerSurface className="relative">
+            <FileViewerViewport>
+              <PdfViewerProvider>
+                <PdfViewerPages
+                  ref={setPdfViewerHandle}
+                  bare
+                  className="h-full"
+                  onScrollProgressChange={
+                    documentHandlers.onScrollProgressChange
+                  }
+                  onVisiblePageChange={documentHandlers.onCurrentPageChange}
+                  renderPageOverlay={renderPageOverlay}
+                />
+              </PdfViewerProvider>
+            </FileViewerViewport>
+            <SourceIndicator
+              path={link.activeSourcePath}
+              found={!!link.activeAnchor}
+            />
+          </FileViewerSurface>
+          <FileViewerSidebar
+            aria-label="Extracted fields"
+            side="right"
+            width="240px"
+            className="flex flex-shrink-0 flex-col border-l"
+          >
+            <FileViewerSidebarContent>
+              <FileViewerSidebarSection>
+                <FileViewerSidebarSectionHeader>
+                  <FileViewerSidebarSectionTitle>
+                    Source fields
+                  </FileViewerSidebarSectionTitle>
+                </FileViewerSidebarSectionHeader>
+                <FileViewerSidebarSectionContent>
+                  <JsonForm form={form} schema={schema} sourceLink={link} />
+                </FileViewerSidebarSectionContent>
+              </FileViewerSidebarSection>
+            </FileViewerSidebarContent>
+          </FileViewerSidebar>
+        </FileViewerBody>
+      </FileViewer>
+    </FileViewerProvider>
   );
 }

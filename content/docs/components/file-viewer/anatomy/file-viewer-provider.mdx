@@ -1,0 +1,57 @@
+---
+title: FileViewerProvider
+description: The file-scoped provider stack for source identity, routing state, controls, and sidebar open state.
+component: true
+---
+
+`FileViewerProvider` is the state owner for a composed file viewer. It resolves
+the source into a file resource, provides renderer controls registration, and
+owns the controlled or uncontrolled sidebar open state.
+
+```tsx
+<FileViewerProvider source={source} defaultSidebarOpen>
+  <FileViewer>
+    <FileViewerHeader />
+    <FileViewerBody>
+      <FileViewerSidebar aria-label="Document navigation" />
+      <FileViewerSurface>
+        <FileViewerViewport>
+          <FileViewerDocument />
+        </FileViewerViewport>
+      </FileViewerSurface>
+    </FileViewerBody>
+  </FileViewer>
+</FileViewerProvider>
+```
+
+## Behavior
+
+- Owns source identity, category resolution, fallback sizes, and style isolation
+  for renderer routes.
+- Provides the file resource context consumed by `FileViewerIdentity`,
+  `FileViewerToolbar`, and `FileViewerDocument`.
+- Owns sidebar open state through `defaultSidebarOpen`, or through controlled
+  `sidebarOpen` and `onSidebarOpenChange`.
+- Provides the renderer controls registration layer used by active renderers to
+  surface zoom, position, rotate, downloads, loading, and extra actions.
+- Does not render DOM. `FileViewer` is the frame that turns this provider state
+  into layout.
+
+## API Reference
+
+| Prop                  | Type                      | Description                                                           |
+| --------------------- | ------------------------- | --------------------------------------------------------------------- |
+| `source`              | `ViewerSource`            | The file source. Required.                                            |
+| `category`            | `FileCategory`            | Force a renderer category instead of detecting it.                    |
+| `fallbackFrameSize`   | `{ width; height }`       | Initial frame size for image-like fallbacks.                          |
+| `fallbackSlideSize`   | `{ width; height }`       | Initial slide size for presentation fallbacks.                        |
+| `isolateStyles`       | `boolean`                 | Scope document styles away from host page styles where supported.     |
+| `headerMode`          | `"inline" \| "outlets"`   | Render header inline or through viewer header outlets.                |
+| `defaultSidebarOpen`  | `boolean`                 | Initial sidebar open state for uncontrolled viewers.                  |
+| `sidebarOpen`         | `boolean`                 | Controlled sidebar open state.                                        |
+| `onSidebarOpenChange` | `(open: boolean) => void` | Fired when the frame requests a sidebar state change.                 |
+| `children`            | `React.ReactNode`         | Usually a `FileViewer` frame with header, body, sidebar, and surface. |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer-provider.tsx" />

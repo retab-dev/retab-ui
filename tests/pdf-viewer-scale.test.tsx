@@ -49,7 +49,7 @@ describe("pdf-viewer-scale", () => {
     ).toBe(2);
     expect(
       getPdfPageDevicePixelRatio({ devicePixelRatio: 3, mode: "scrolling" }),
-    ).toBe(1);
+    ).toBe(2);
     expect(
       getPdfPageDevicePixelRatio({
         devicePixelRatio: Number.NaN,

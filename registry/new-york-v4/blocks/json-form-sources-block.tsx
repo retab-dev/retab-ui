@@ -7,13 +7,16 @@ import { extractionSourcesToSourceMap } from "@/lib/document-source";
 import {
   FileViewer,
   FileViewerBody,
-  FileViewerControls,
   FileViewerHeader,
-  FileViewerMeta,
+  FileViewerHeaderEnd,
+  FileViewerHeaderStart,
+  FileViewerIdentity,
+  FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarTrigger,
   FileViewerSurface,
-  FileViewerTitle,
+  FileViewerToolbar,
+  FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -87,63 +90,74 @@ function JsonFormSourcesContent({
   const form = useForm<Record<string, unknown>>({ defaultValues: extraction });
 
   return (
-    <FileViewer
+    <FileViewerProvider
       source={{
         kind: "url",
         url: PDF_URL,
         fileName: "jane-doe-bank-statement-5-pages.pdf",
       }}
-      defaultOpen
-      mode="inline"
-      className="bg-background h-full min-h-[680px]"
+      defaultSidebarOpen
     >
-      <FileViewerHeader>
-        <FileViewerSidebarTrigger className="-ml-1" />
-        <FileViewerTitle />
-        <FileViewerMeta />
-        <FileViewerControls />
-      </FileViewerHeader>
-      <FileViewerBody>
-        <FileViewerSurface className="relative">
-          <PdfViewerProvider>
-            <PdfViewerPages
-              ref={setPdfViewerHandle}
-              bare
-              className="h-full"
-              onScrollProgressChange={documentHandlers.onScrollProgressChange}
-              onVisiblePageChange={documentHandlers.onCurrentPageChange}
-              renderPageOverlay={renderPageOverlay}
-            />
-          </PdfViewerProvider>
-          <SourceIndicator
-            path={link.activeSourcePath}
-            found={!!link.activeSegment}
-          />
-        </FileViewerSurface>
-        <FileViewerSidebar
-          aria-label="Source-linked fields"
-          side="right"
-          width="420px"
-          className="bg-background flex flex-shrink-0 flex-col border-l"
-        >
-          <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">
-            <h2 className="text-sm font-medium">Source-linked data</h2>
-            <span className="text-muted-foreground ml-auto text-xs">
-              Hover a field to see its source
-            </span>
-          </div>
-          <ScrollArea className="min-h-0 flex-1">
-            <div className="p-4">
-              <JsonForm
-                form={form}
-                schema={schema}
-                sourceLink={link}
-                defaultOpenPaths={defaultOpenPaths}
+      <FileViewer
+        sidebarMode="inline"
+        sidebarSide="right"
+        className="bg-background h-full min-h-[680px]"
+      >
+        <PdfViewerProvider>
+          <FileViewerHeader>
+            <FileViewerHeaderStart>
+              <FileViewerSidebarTrigger className="-ml-1" />
+              <FileViewerIdentity />
+            </FileViewerHeaderStart>
+            <FileViewerHeaderEnd>
+              <FileViewerToolbar />
+            </FileViewerHeaderEnd>
+          </FileViewerHeader>
+          <FileViewerBody>
+            <FileViewerSurface className="relative">
+              <FileViewerViewport>
+                <PdfViewerPages
+                  ref={setPdfViewerHandle}
+                  bare
+                  className="h-full"
+                  onScrollProgressChange={
+                    documentHandlers.onScrollProgressChange
+                  }
+                  onVisiblePageChange={documentHandlers.onCurrentPageChange}
+                  renderPageOverlay={renderPageOverlay}
+                />
+              </FileViewerViewport>
+              <SourceIndicator
+                path={link.activeSourcePath}
+                found={!!link.activeSegment}
               />
-            </div>
-          </ScrollArea>
-        </FileViewerSidebar>
-      </FileViewerBody>
-    </FileViewer>
+            </FileViewerSurface>
+            <FileViewerSidebar
+              aria-label="Source-linked fields"
+              side="right"
+              width="420px"
+              className="bg-background flex flex-shrink-0 flex-col border-l"
+            >
+              <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">
+                <h2 className="text-sm font-medium">Source-linked data</h2>
+                <span className="text-muted-foreground ml-auto text-xs">
+                  Hover a field to see its source
+                </span>
+              </div>
+              <ScrollArea className="min-h-0 flex-1">
+                <div className="p-4">
+                  <JsonForm
+                    form={form}
+                    schema={schema}
+                    sourceLink={link}
+                    defaultOpenPaths={defaultOpenPaths}
+                  />
+                </div>
+              </ScrollArea>
+            </FileViewerSidebar>
+          </FileViewerBody>
+        </PdfViewerProvider>
+      </FileViewer>
+    </FileViewerProvider>
   );
 }

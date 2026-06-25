@@ -30,28 +30,34 @@ your bundler (Vite, webpack, or Turbopack) — there is no runtime CDN call.
 ## Viewer composition
 
 ```tsx
-<FileViewer
+<FileViewerProvider
   source={{ kind: "url", url, fileName: "document.pdf" }}
-  defaultOpen
-  mode="inline"
+  defaultSidebarOpen
 >
-  <PdfViewerProvider>
-    <FileViewerHeader>
-      <FileViewerSidebarTrigger />
-      <FileViewerTitle />
-      <FileViewerMeta />
-      <FileViewerControls />
-    </FileViewerHeader>
-    <FileViewerBody>
-      <FileViewerSidebar aria-label="PDF pages">
-        <PdfViewerThumbnails />
-      </FileViewerSidebar>
-      <FileViewerSurface>
-        <PdfViewerPages />
-      </FileViewerSurface>
-    </FileViewerBody>
-  </PdfViewerProvider>
-</FileViewer>
+  <FileViewer sidebarMode="inline">
+    <PdfViewerProvider>
+      <FileViewerHeader>
+        <FileViewerHeaderStart>
+          <FileViewerSidebarTrigger />
+          <FileViewerIdentity />
+        </FileViewerHeaderStart>
+        <FileViewerHeaderEnd>
+          <FileViewerToolbar />
+        </FileViewerHeaderEnd>
+      </FileViewerHeader>
+      <FileViewerBody>
+        <FileViewerSidebar aria-label="PDF pages">
+          <PdfViewerThumbnails />
+        </FileViewerSidebar>
+        <FileViewerSurface>
+          <FileViewerViewport>
+            <PdfViewerPages />
+          </FileViewerViewport>
+        </FileViewerSurface>
+      </FileViewerBody>
+    </PdfViewerProvider>
+  </FileViewer>
+</FileViewerProvider>
 ```
 
 The hierarchy is visible in JSX: `FileViewer*` parts own file layout, the PDF
@@ -105,23 +111,33 @@ export function Example() {
 You can compose workflow chrome around the PDF surface with the same primitives:
 
 ```tsx
-<FileViewer source={{ kind: "url", url, fileName: "document.pdf" }} defaultOpen>
-  <PdfViewerProvider>
-    <FileViewerHeader>
-      <FileViewerTitle />
-      <FileViewerMeta />
-      <FileViewerControls />
-    </FileViewerHeader>
-    <FileViewerBody>
-      <FileViewerSidebar aria-label="Workflow pages">
-        <PageRibbon />
-      </FileViewerSidebar>
-      <FileViewerSurface>
-        <PdfViewerPages bare className="h-full" />
-      </FileViewerSurface>
-    </FileViewerBody>
-  </PdfViewerProvider>
-</FileViewer>
+<FileViewerProvider
+  source={{ kind: "url", url, fileName: "document.pdf" }}
+  defaultSidebarOpen
+>
+  <FileViewer>
+    <PdfViewerProvider>
+      <FileViewerHeader>
+        <FileViewerHeaderStart>
+          <FileViewerIdentity />
+        </FileViewerHeaderStart>
+        <FileViewerHeaderEnd>
+          <FileViewerToolbar />
+        </FileViewerHeaderEnd>
+      </FileViewerHeader>
+      <FileViewerBody>
+        <FileViewerSidebar aria-label="Workflow pages">
+          <PageRibbon />
+        </FileViewerSidebar>
+        <FileViewerSurface>
+          <FileViewerViewport>
+            <PdfViewerPages bare className="h-full" />
+          </FileViewerViewport>
+        </FileViewerSurface>
+      </FileViewerBody>
+    </PdfViewerProvider>
+  </FileViewer>
+</FileViewerProvider>
 ```
 
 ### Bounding-box overlays

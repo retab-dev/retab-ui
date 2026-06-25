@@ -41,7 +41,7 @@ export function GridTable({
 }) {
   const colCount = Math.max(1, ...rows.map((r) => r.length));
   return (
-    <div className="absolute inset-0 overflow-hidden bg-white text-slate-700">
+    <div className="absolute inset-0 overflow-hidden bg-white text-slate-700 dark:bg-slate-950 dark:text-slate-300">
       <table
         className="border-collapse leading-tight"
         style={{
@@ -57,10 +57,10 @@ export function GridTable({
                 <td
                   key={c}
                   className={cn(
-                    "truncate border-r border-b border-slate-200 px-1 py-0.5 last:border-r-0",
+                    "truncate border-r border-b border-slate-200 px-1 py-0.5 last:border-r-0 dark:border-slate-800",
                     headerRow && r === 0
-                      ? "bg-slate-50 font-semibold text-slate-900"
-                      : "text-slate-700",
+                      ? "bg-slate-50 font-semibold text-slate-900 dark:bg-slate-900/70 dark:text-slate-100"
+                      : "text-slate-700 dark:text-slate-300",
                   )}
                 >
                   {row[c] ?? ""}

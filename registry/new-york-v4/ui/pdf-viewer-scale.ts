@@ -4,8 +4,9 @@ export const MIN_PDF_SCALE = 0.25;
 export const MAX_PDF_SCALE = 5;
 export const PDF_ZOOM_STEP = 1.2;
 export const PDF_PAGE_HORIZONTAL_PADDING = 32;
-export const PDF_PAGE_SCROLLING_MAX_DEVICE_PIXEL_RATIO = 1;
 export const PDF_PAGE_SETTLED_MAX_DEVICE_PIXEL_RATIO = 2;
+export const PDF_PAGE_SCROLLING_MAX_DEVICE_PIXEL_RATIO =
+  PDF_PAGE_SETTLED_MAX_DEVICE_PIXEL_RATIO;
 
 export type PdfPageDprMode = "scrolling" | "settled";
 
@@ -34,7 +35,7 @@ export function getPdfFitWidthScale(
 
 export function getPdfPageDevicePixelRatio({
   devicePixelRatio,
-  mode,
+  mode: _mode,
 }: {
   devicePixelRatio: number;
   mode: PdfPageDprMode;
@@ -43,12 +44,10 @@ export function getPdfPageDevicePixelRatio({
     Number.isFinite(devicePixelRatio) && devicePixelRatio > 0
       ? devicePixelRatio
       : 1;
-  const maxDevicePixelRatio =
-    mode === "scrolling"
-      ? PDF_PAGE_SCROLLING_MAX_DEVICE_PIXEL_RATIO
-      : PDF_PAGE_SETTLED_MAX_DEVICE_PIXEL_RATIO;
-
-  return Math.min(normalizedDevicePixelRatio, maxDevicePixelRatio);
+  return Math.min(
+    normalizedDevicePixelRatio,
+    PDF_PAGE_SETTLED_MAX_DEVICE_PIXEL_RATIO,
+  );
 }
 
 export function useMeasuredElementWidth() {

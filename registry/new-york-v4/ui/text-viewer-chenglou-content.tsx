@@ -43,11 +43,14 @@ import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types";
 import {
   getTextFrameScrollAnchor,
   getTextFrameVirtualItems,
+  getTextInverseStickyWindow,
   type TextFrameScrollAnchor,
+  type TextInverseStickyWindow,
 } from "./text-viewer-virtualization";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 import { joinEffectKey } from "@/lib/effect-key";
+import { patchKeyedDomChildren } from "./text-viewer-dom-projection";
 
 const TEXT_VIEWER_HORIZONTAL_PADDING = 16;
 const TEXT_VIEWER_DEFAULT_VIEWPORT_HEIGHT = 600;
@@ -57,17 +60,45 @@ const TEXT_VIEWER_OVERSCAN_PX = 320;
 const TEXT_VIEWER_HIGHLIGHT_BACKGROUND =
   "color-mix(in oklab, var(--foreground) 8%, var(--background))";
 const TEXT_VIEWER_HIGHLIGHT_ACCENT_SHADOW = "inset 2px 0 0 0 var(--primary)";
+const TEXT_VIEWER_MAX_RECYCLED_ROWS = 512;
 
 type CachedRow = {
   renderKey: string;
   row: HTMLDivElement;
+  visibleWindowKey: string;
 };
 
-type ProjectionCache = {
+type ProjectionWindow = {
+  after: HTMLDivElement;
+  before: HTMLDivElement;
+  content: HTMLDivElement;
+  sticky: HTMLDivElement;
+};
+
+export type TextProjectionMetrics = {
+  noops: number;
+  projections: number;
+  rowContentPatches: number;
+  rowLayoutPatches: number;
+  rowPoolSize: number;
+  rowsCreated: number;
+  rowsDropped: number;
+  rowsRemoved: number;
+  rowsReused: number;
+  visibleEnd: number;
+  visibleStart: number;
+};
+
+export type ProjectionCache = {
+  canvas: HTMLDivElement | null;
   frame: TextDocumentFrame | null;
+  hasProjection: boolean;
+  metrics?: TextProjectionMetrics;
   mountedEnd: number;
   mountedStart: number;
   preparedDocument: ReturnType<typeof createPreparedTextDocument> | null;
+  projectionWindow: ProjectionWindow | null;
+  recycledRows: CachedRow[];
   rows: Array<CachedRow | undefined>;
 };
 
@@ -85,6 +116,41 @@ type ViewportSize = {
   height: number;
   width: number;
 };
+
+export function createTextProjectionMetrics(): TextProjectionMetrics {
+  return {
+    noops: 0,
+    projections: 0,
+    rowContentPatches: 0,
+    rowLayoutPatches: 0,
+    rowPoolSize: 0,
+    rowsCreated: 0,
+    rowsDropped: 0,
+    rowsRemoved: 0,
+    rowsReused: 0,
+    visibleEnd: 0,
+    visibleStart: 0,
+  };
+}
+
+export function createTextProjectionCache({
+  metrics,
+}: {
+  metrics?: TextProjectionMetrics;
+} = {}): ProjectionCache {
+  return {
+    canvas: null,
+    frame: null,
+    hasProjection: false,
+    metrics,
+    mountedEnd: 0,
+    mountedStart: 0,
+    preparedDocument: null,
+    projectionWindow: null,
+    recycledRows: [],
+    rows: [],
+  };
+}
 
 export function ChenglouTextViewerContent({
   resource,
@@ -131,13 +197,9 @@ export function ChenglouTextViewerContent({
   const [fontScale, setFontScale] = React.useState(1);
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
   const canvasRef = React.useRef<HTMLDivElement | null>(null);
-  const projectionCacheRef = React.useRef<ProjectionCache>({
-    frame: null,
-    mountedEnd: 0,
-    mountedStart: 0,
-    preparedDocument: null,
-    rows: [],
-  });
+  const projectionCacheRef = React.useRef<ProjectionCache>(
+    createTextProjectionCache(),
+  );
   const pendingScrollAnchorRef = React.useRef<TextFrameScrollAnchor | null>(
     null,
   );
@@ -419,7 +481,7 @@ export function ChenglouTextViewerContent({
       <ScrollArea
         className="bg-background min-h-0 flex-1"
         orientation="vertical"
-        viewportClassName="bg-background"
+        viewportClassName="bg-background [overflow-anchor:none]"
         viewportProps={{ onClickCapture: scrollMarkdownFragment }}
         viewportRef={viewportRef}
       >
@@ -438,7 +500,7 @@ export function ChenglouTextViewerContent({
   );
 }
 
-function projectRows({
+export function projectRows({
   cache,
   canvas,
   contentWidth,
@@ -457,18 +519,22 @@ function projectRows({
   scrollTop: number;
   viewportHeight: number;
 }) {
+  incrementTextMetric(cache.metrics, "projections");
   if (!canvas) return;
 
-  if (cache.frame !== frame || cache.preparedDocument !== preparedDocument) {
-    canvas.replaceChildren();
-    cache.frame = frame;
-    cache.mountedEnd = 0;
-    cache.mountedStart = 0;
-    cache.preparedDocument = preparedDocument;
-    cache.rows = [];
+  if (cache.canvas !== canvas) {
+    clearCachedRows(cache, cache.canvas);
+    cache.canvas = canvas;
   }
 
-  canvas.style.height = `${frame.totalHeight}px`;
+  if (cache.frame !== frame || cache.preparedDocument !== preparedDocument) {
+    clearCachedRows(cache, canvas);
+    cache.frame = frame;
+    cache.preparedDocument = preparedDocument;
+  }
+
+  const totalHeight = `${frame.totalHeight}px`;
+  setStyleValue(canvas.style, "height", totalHeight);
   const virtualItems = getTextFrameVirtualItems({
     frames: frame.frames,
     overscanPx: TEXT_VIEWER_OVERSCAN_PX,
@@ -479,10 +545,79 @@ function projectRows({
   const end = virtualItems.length
     ? virtualItems[virtualItems.length - 1]!.index + 1
     : start;
+  setTextMetric(cache.metrics, "visibleStart", start);
+  setTextMetric(cache.metrics, "visibleEnd", end);
   const previousStart = cache.mountedStart;
   const previousEnd = cache.mountedEnd;
   const overlapStart = Math.max(start, previousStart);
   const overlapEnd = Math.min(end, previousEnd);
+  const viewportTop = scrollTop - TEXT_VIEWER_OVERSCAN_PX;
+  const viewportBottom = scrollTop + viewportHeight + TEXT_VIEWER_OVERSCAN_PX;
+  const stickyWindow = getTextInverseStickyWindow({
+    renderedBottom: virtualItems.at(-1)?.end ?? 0,
+    renderedTop: virtualItems[0]?.start ?? 0,
+    totalHeight: frame.totalHeight,
+    viewportHeight,
+  });
+  const projectionWindow = ensureProjectionWindow(cache, canvas);
+  syncProjectionWindow(projectionWindow, stickyWindow);
+
+  const project = (index: number) => {
+    const block = preparedDocument.blocks[index];
+    const blockFrame = frame.frames[index];
+    if (!block || !blockFrame) return null;
+    const cachedRow = prepareRow({
+      block,
+      cache,
+      contentWidth,
+      frame: blockFrame,
+      highlightRange,
+      index,
+      renderedTop: stickyWindow.renderedTop,
+      viewportBottom,
+      viewportTop,
+    });
+    projectRowNode(
+      cachedRow.row,
+      blockFrame,
+      stickyWindow.renderedTop,
+      cache.metrics,
+    );
+    return cachedRow.row;
+  };
+
+  if (
+    cache.hasProjection &&
+    previousStart === start &&
+    previousEnd === end &&
+    isRenderedDomValid(cache, projectionWindow.content, start, end)
+  ) {
+    if (
+      areCachedRowsUnchanged({
+        cache,
+        contentWidth,
+        frame,
+        highlightRange,
+        preparedDocument,
+        renderedTop: stickyWindow.renderedTop,
+        start,
+        end,
+        viewportBottom,
+        viewportTop,
+      })
+    ) {
+      incrementTextMetric(cache.metrics, "noops");
+      return;
+    }
+
+    for (let index = start; index < end; index++) {
+      project(index);
+    }
+    cache.hasProjection = true;
+    cache.mountedStart = start;
+    cache.mountedEnd = end;
+    return;
+  }
 
   for (
     let index = previousStart;
@@ -495,30 +630,10 @@ function projectRows({
     removeCachedRow(cache, index);
   }
 
-  const viewportTop = scrollTop - TEXT_VIEWER_OVERSCAN_PX;
-  const viewportBottom = scrollTop + viewportHeight + TEXT_VIEWER_OVERSCAN_PX;
-  const project = (index: number) => {
-    const block = preparedDocument.blocks[index];
-    const blockFrame = frame.frames[index];
-    if (!block || !blockFrame) return null;
-    const cachedRow = prepareRow({
-      block,
-      cache,
-      contentWidth,
-      frame: blockFrame,
-      highlightRange,
-      index,
-      viewportBottom,
-      viewportTop,
-    });
-    projectRowNode(cachedRow.row, blockFrame);
-    return cachedRow.row;
-  };
-
   if (overlapStart >= overlapEnd) {
     for (let index = start; index < end; index++) {
       const row = project(index);
-      if (row && row.parentNode === null) canvas.append(row);
+      if (row && row.parentNode === null) projectionWindow.content.append(row);
     }
   } else {
     let anchorRow = cache.rows[overlapStart]?.row ?? null;
@@ -526,9 +641,12 @@ function projectRows({
       const row = project(index);
       if (!row) continue;
       if (anchorRow === null) {
-        if (row.parentNode === null) canvas.append(row);
-      } else if (row.parentNode !== canvas || row.nextSibling !== anchorRow) {
-        canvas.insertBefore(row, anchorRow);
+        if (row.parentNode === null) projectionWindow.content.append(row);
+      } else if (
+        row.parentNode !== projectionWindow.content ||
+        row.nextSibling !== anchorRow
+      ) {
+        projectionWindow.content.insertBefore(row, anchorRow);
       }
       anchorRow = row;
     }
@@ -539,19 +657,112 @@ function projectRows({
 
     for (let index = overlapEnd; index < end; index++) {
       const row = project(index);
-      if (row && row.parentNode === null) canvas.append(row);
+      if (row && row.parentNode === null) projectionWindow.content.append(row);
     }
   }
 
   cache.mountedStart = start;
   cache.mountedEnd = end;
+  cache.hasProjection = true;
 }
 
 function removeCachedRow(cache: ProjectionCache, index: number) {
   const cachedRow = cache.rows[index];
   if (!cachedRow) return;
   cachedRow.row.remove();
+  incrementTextMetric(cache.metrics, "rowsRemoved");
+  recycleCachedRow(cache, cachedRow);
   cache.rows[index] = undefined;
+}
+
+function clearCachedRows(
+  cache: ProjectionCache,
+  canvas: HTMLDivElement | null,
+) {
+  for (const cachedRow of cache.rows) {
+    if (!cachedRow) continue;
+    cachedRow.row.remove();
+    incrementTextMetric(cache.metrics, "rowsRemoved");
+    recycleCachedRow(cache, cachedRow);
+  }
+  canvas?.replaceChildren();
+  cache.hasProjection = false;
+  cache.mountedEnd = 0;
+  cache.mountedStart = 0;
+  cache.projectionWindow = null;
+  cache.rows = [];
+}
+
+function ensureProjectionWindow(
+  cache: ProjectionCache,
+  canvas: HTMLDivElement,
+): ProjectionWindow {
+  const existing = cache.projectionWindow;
+  if (existing?.before.parentElement === canvas) return existing;
+
+  const before = document.createElement("div");
+  const sticky = document.createElement("div");
+  const content = document.createElement("div");
+  const after = document.createElement("div");
+
+  before.dataset.slot = "text-sticky-before-buffer";
+  sticky.dataset.slot = "text-sticky-window";
+  content.dataset.slot = "text-sticky-content";
+  after.dataset.slot = "text-sticky-after-buffer";
+
+  sticky.style.position = "sticky";
+  sticky.style.left = "0";
+  sticky.style.width = "100%";
+  sticky.style.overflow = "visible";
+  content.style.position = "relative";
+  content.style.width = "100%";
+
+  sticky.append(content);
+  canvas.replaceChildren(before, sticky, after);
+
+  cache.projectionWindow = {
+    after,
+    before,
+    content,
+    sticky,
+  };
+  return cache.projectionWindow;
+}
+
+function syncProjectionWindow(
+  projectionWindow: ProjectionWindow,
+  stickyWindow: TextInverseStickyWindow,
+) {
+  setStyleValue(
+    projectionWindow.before.style,
+    "height",
+    `${stickyWindow.beforeHeight}px`,
+  );
+  setStyleValue(
+    projectionWindow.sticky.style,
+    "top",
+    `${stickyWindow.stickyOffset}px`,
+  );
+  setStyleValue(
+    projectionWindow.sticky.style,
+    "bottom",
+    `${stickyWindow.stickyOffset}px`,
+  );
+  setStyleValue(
+    projectionWindow.sticky.style,
+    "height",
+    `${stickyWindow.renderedHeight}px`,
+  );
+  setStyleValue(
+    projectionWindow.content.style,
+    "height",
+    `${stickyWindow.renderedHeight}px`,
+  );
+  setStyleValue(
+    projectionWindow.after.style,
+    "height",
+    `${stickyWindow.afterHeight}px`,
+  );
 }
 
 function prepareRow({
@@ -561,6 +772,7 @@ function prepareRow({
   frame,
   highlightRange,
   index,
+  renderedTop,
   viewportBottom,
   viewportTop,
 }: {
@@ -570,15 +782,13 @@ function prepareRow({
   frame: TextBlockFrame;
   highlightRange: ReturnType<typeof normalizeTextLineRange>;
   index: number;
+  renderedTop: number;
   viewportBottom: number;
   viewportTop: number;
 }): CachedRow {
   let cachedRow = cache.rows[index];
   if (!cachedRow) {
-    cachedRow = {
-      renderKey: "",
-      row: document.createElement("div"),
-    };
+    cachedRow = acquireCachedRow(cache);
     cache.rows[index] = cachedRow;
   }
 
@@ -587,16 +797,33 @@ function prepareRow({
     contentWidth,
     frame,
     highlightRange,
-    viewportBottom,
-    viewportTop,
   });
+  const visibleWindowKey = blockVisibleWindowKey(
+    frame,
+    viewportTop,
+    viewportBottom,
+  );
   if (cachedRow.renderKey !== renderKey) {
     cachedRow.renderKey = renderKey;
+    cachedRow.visibleWindowKey = visibleWindowKey;
+    incrementTextMetric(cache.metrics, "rowContentPatches");
     renderRowContent({
       block,
       contentWidth,
       frame,
       highlightRange,
+      renderedTop,
+      row: cachedRow.row,
+      viewportBottom,
+      viewportTop,
+    });
+  } else if (cachedRow.visibleWindowKey !== visibleWindowKey) {
+    cachedRow.visibleWindowKey = visibleWindowKey;
+    incrementTextMetric(cache.metrics, "rowContentPatches");
+    patchRowContent({
+      block,
+      contentWidth,
+      frame,
       row: cachedRow.row,
       viewportBottom,
       viewportTop,
@@ -605,9 +832,173 @@ function prepareRow({
   return cachedRow;
 }
 
-function projectRowNode(row: HTMLDivElement, frame: TextBlockFrame) {
-  row.style.height = `${frame.height}px`;
-  row.style.transform = `translateY(${frame.top}px)`;
+function acquireCachedRow(cache: ProjectionCache): CachedRow {
+  const cachedRow = cache.recycledRows.pop();
+  if (cachedRow) {
+    incrementTextMetric(cache.metrics, "rowsReused");
+    setTextMetric(cache.metrics, "rowPoolSize", cache.recycledRows.length);
+    return cachedRow;
+  }
+
+  incrementTextMetric(cache.metrics, "rowsCreated");
+  return {
+    renderKey: "",
+    row: document.createElement("div"),
+    visibleWindowKey: "",
+  };
+}
+
+function recycleCachedRow(cache: ProjectionCache, cachedRow: CachedRow) {
+  cachedRow.renderKey = "";
+  cachedRow.visibleWindowKey = "";
+  cachedRow.row.replaceChildren();
+
+  if (cache.recycledRows.length >= TEXT_VIEWER_MAX_RECYCLED_ROWS) {
+    incrementTextMetric(cache.metrics, "rowsDropped");
+    setTextMetric(cache.metrics, "rowPoolSize", cache.recycledRows.length);
+    return;
+  }
+
+  cache.recycledRows.push(cachedRow);
+  setTextMetric(cache.metrics, "rowPoolSize", cache.recycledRows.length);
+}
+
+function projectRowNode(
+  row: HTMLDivElement,
+  frame: TextBlockFrame,
+  renderedTop: number,
+  metrics: TextProjectionMetrics | undefined,
+) {
+  let didPatch = false;
+  didPatch =
+    setStyleValue(row.style, "height", `${frame.height}px`) || didPatch;
+  didPatch =
+    setStyleValue(
+      row.style,
+      "transform",
+      `translateY(${frame.top - renderedTop}px)`,
+    ) || didPatch;
+  if (didPatch) {
+    incrementTextMetric(metrics, "rowLayoutPatches");
+  }
+}
+
+function areCachedRowsUnchanged({
+  cache,
+  contentWidth,
+  frame,
+  highlightRange,
+  preparedDocument,
+  renderedTop,
+  start,
+  end,
+  viewportBottom,
+  viewportTop,
+}: {
+  cache: ProjectionCache;
+  contentWidth: number;
+  frame: TextDocumentFrame;
+  highlightRange: ReturnType<typeof normalizeTextLineRange>;
+  preparedDocument: ReturnType<typeof createPreparedTextDocument>;
+  renderedTop: number;
+  start: number;
+  end: number;
+  viewportBottom: number;
+  viewportTop: number;
+}) {
+  for (let index = start; index < end; index++) {
+    const block = preparedDocument.blocks[index];
+    const blockFrame = frame.frames[index];
+    const cachedRow = cache.rows[index];
+    if (!block || !blockFrame || !cachedRow) return false;
+    if (!isRowLayoutValid(cachedRow.row, blockFrame, renderedTop)) {
+      return false;
+    }
+    if (
+      cachedRow.renderKey !==
+      rowRenderKey({
+        block,
+        contentWidth,
+        frame: blockFrame,
+        highlightRange,
+      })
+    ) {
+      return false;
+    }
+    if (
+      cachedRow.visibleWindowKey !==
+      blockVisibleWindowKey(blockFrame, viewportTop, viewportBottom)
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function isRenderedDomValid(
+  cache: ProjectionCache,
+  canvas: HTMLDivElement,
+  start: number,
+  end: number,
+) {
+  const expectedLength = Math.max(0, end - start);
+  if (canvas.children.length !== expectedLength) return false;
+
+  for (let offset = 0; offset < expectedLength; offset++) {
+    const index = start + offset;
+    const element = canvas.children[offset];
+    const cachedRow = cache.rows[index];
+    if (!(element instanceof HTMLDivElement) || cachedRow?.row !== element) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function isRowLayoutValid(
+  row: HTMLDivElement,
+  frame: TextBlockFrame,
+  renderedTop: number,
+) {
+  return (
+    row.style.height === `${frame.height}px` &&
+    row.style.transform === `translateY(${frame.top - renderedTop}px)`
+  );
+}
+
+function setStyleValue(
+  style: CSSStyleDeclaration,
+  propertyName: string,
+  value: string,
+) {
+  if (style.getPropertyValue(propertyName) === value) return false;
+  style.setProperty(propertyName, value);
+  return true;
+}
+
+function incrementTextMetric(
+  metrics: TextProjectionMetrics | undefined,
+  key:
+    | "noops"
+    | "projections"
+    | "rowContentPatches"
+    | "rowLayoutPatches"
+    | "rowsCreated"
+    | "rowsDropped"
+    | "rowsRemoved"
+    | "rowsReused",
+) {
+  if (!metrics) return;
+  metrics[key] += 1;
+}
+
+function setTextMetric(
+  metrics: TextProjectionMetrics | undefined,
+  key: "rowPoolSize" | "visibleEnd" | "visibleStart",
+  value: number,
+) {
+  if (!metrics) return;
+  metrics[key] = value;
 }
 
 function rowRenderKey({
@@ -615,15 +1006,11 @@ function rowRenderKey({
   contentWidth,
   frame,
   highlightRange,
-  viewportBottom,
-  viewportTop,
 }: {
   block: PreparedTextBlock;
   contentWidth: number;
   frame: TextBlockFrame;
   highlightRange: ReturnType<typeof normalizeTextLineRange>;
-  viewportBottom: number;
-  viewportTop: number;
 }) {
   return [
     block.kind,
@@ -631,9 +1018,7 @@ function rowRenderKey({
     frame.height,
     frame.top,
     frame.scale,
-    highlightRange?.start ?? "",
-    highlightRange?.end ?? "",
-    blockVisibleWindowKey(frame, viewportTop, viewportBottom),
+    textFrameIsHighlighted(frame, highlightRange) ? "highlighted" : "",
   ].join(":");
 }
 
@@ -642,6 +1027,7 @@ function renderRowContent({
   contentWidth,
   frame,
   highlightRange,
+  renderedTop,
   row,
   viewportBottom,
   viewportTop,
@@ -650,6 +1036,7 @@ function renderRowContent({
   contentWidth: number;
   frame: TextBlockFrame;
   highlightRange: ReturnType<typeof normalizeTextLineRange>;
+  renderedTop: number;
   row: HTMLDivElement;
   viewportBottom: number;
   viewportTop: number;
@@ -688,7 +1075,7 @@ function renderRowContent({
   row.style.paddingLeft = "16px";
   row.style.paddingRight = "16px";
   row.style.height = `${frame.height}px`;
-  row.style.transform = `translateY(${frame.top}px)`;
+  row.style.transform = `translateY(${frame.top - renderedTop}px)`;
   row.style.backgroundColor = isHighlighted
     ? TEXT_VIEWER_HIGHLIGHT_BACKGROUND
     : "";
@@ -744,6 +1131,72 @@ function renderRowContent({
   }
 }
 
+function patchRowContent({
+  block,
+  contentWidth,
+  frame,
+  row,
+  viewportBottom,
+  viewportTop,
+}: {
+  block: PreparedTextBlock;
+  contentWidth: number;
+  frame: TextBlockFrame;
+  row: HTMLDivElement;
+  viewportBottom: number;
+  viewportTop: number;
+}) {
+  switch (block.kind) {
+    case "inline": {
+      const linesNode = row.querySelector<HTMLElement>(
+        '[data-slot="text-inline-lines"]',
+      );
+      if (!linesNode) return;
+      patchInlineBlockLines({
+        block,
+        contentWidth,
+        frame: frame as InlineTextBlockFrame,
+        linesNode,
+        viewportBottom,
+        viewportTop,
+      });
+      break;
+    }
+    case "code": {
+      const code = row.querySelector<HTMLElement>(
+        '[data-slot="text-code-lines"]',
+      );
+      if (!code) return;
+      patchCodeBlockLines({
+        block,
+        code,
+        contentWidth,
+        frame: frame as CodeTextBlockFrame,
+        viewportBottom,
+        viewportTop,
+      });
+      break;
+    }
+    case "table": {
+      const tbody = row.querySelector<HTMLTableSectionElement>(
+        '[data-slot="text-table-body"]',
+      );
+      if (!tbody) return;
+      patchTableBodyRows({
+        block,
+        frame: frame as TableTextBlockFrame,
+        tbody,
+        viewportBottom,
+        viewportTop,
+      });
+      break;
+    }
+    case "image":
+    case "rule":
+      break;
+  }
+}
+
 function applyRowSemantics(
   row: HTMLDivElement,
   block: PreparedTextBlock,
@@ -788,11 +1241,50 @@ function renderInlineBlock({
   viewportBottom: number;
   viewportTop: number;
 }) {
+  const linesNode = document.createElement("div");
+  linesNode.dataset.slot = "text-inline-lines";
+  row.append(linesNode);
+  patchInlineBlockLines({
+    block,
+    contentWidth,
+    frame,
+    linesNode,
+    viewportBottom,
+    viewportTop,
+  });
+}
+
+function patchInlineBlockLines({
+  block,
+  contentWidth,
+  frame,
+  linesNode,
+  viewportBottom,
+  viewportTop,
+}: {
+  block: PreparedInlineTextBlock;
+  contentWidth: number;
+  frame: InlineTextBlockFrame;
+  linesNode: HTMLElement;
+  viewportBottom: number;
+  viewportTop: number;
+}) {
   const lineWindow = getInlineVisibleLineWindow({
     frame,
     viewportBottom,
     viewportTop,
   });
+  if (!lineWindow) {
+    patchKeyedDomChildren({
+      createElement: () => document.createElement("div"),
+      getKey: () => "",
+      items: [],
+      parent: linesNode,
+      updateElement: () => {},
+    });
+    return;
+  }
+
   const lines = materializeInlineVisibleLines({
     block,
     frame,
@@ -802,38 +1294,71 @@ function renderInlineBlock({
     viewportTop,
   });
 
-  for (const line of lines) {
-    const lineRow = document.createElement("div");
-    lineRow.className = "absolute flex w-max items-center gap-0";
-    lineRow.style.height = `${frame.lineHeight}px`;
-    lineRow.style.left = `${16 + frame.contentLeft}px`;
-    lineRow.style.top = `${line.top}px`;
-    lineRow.style.transform = `scale(${frame.scale})`;
-    lineRow.style.transformOrigin = "left top";
+  patchKeyedDomChildren({
+    createElement: () => document.createElement("div"),
+    getKey: (item) => String(item.lineIndex),
+    items: lines.map((line) => ({
+      line,
+      lineIndex: line.lineIndex,
+    })),
+    parent: linesNode,
+    updateElement: (lineRow, item) => {
+      lineRow.className = "absolute flex w-max items-center gap-0";
+      lineRow.dataset.lineIndex = String(item.lineIndex);
+      lineRow.dataset.slot = "text-inline-line";
+      lineRow.style.height = `${frame.lineHeight}px`;
+      lineRow.style.left = `${16 + frame.contentLeft}px`;
+      lineRow.style.top = `${item.line.top}px`;
+      lineRow.style.transform = `scale(${frame.scale})`;
+      lineRow.style.transformOrigin = "left top";
 
-    for (const fragment of line.fragments) {
-      const node = fragment.href
-        ? document.createElement("a")
-        : document.createElement("span");
-      node.className = fragment.className;
-      node.textContent = fragment.text;
-      node.style.font = fragment.font;
-      node.style.letterSpacing = "0";
-      if (fragment.leadingGap > 0) {
-        node.style.marginLeft = `${fragment.leadingGap}px`;
-      }
-      if (node instanceof HTMLAnchorElement && fragment.href) {
-        node.href = fragment.href;
-        if (!isLocalFragmentHref(fragment.href)) {
-          node.rel = "noopener noreferrer";
-          node.target = "_blank";
+      const renderKey = inlineLineRenderKey(item.line);
+      if (lineRow.dataset.renderKey === renderKey) return;
+      lineRow.dataset.renderKey = renderKey;
+      lineRow.replaceChildren();
+
+      for (const fragment of item.line.fragments) {
+        const node = fragment.href
+          ? document.createElement("a")
+          : document.createElement("span");
+        node.className = fragment.className;
+        node.textContent = fragment.text;
+        node.style.font = fragment.font;
+        node.style.letterSpacing = "0";
+        if (fragment.leadingGap > 0) {
+          node.style.marginLeft = `${fragment.leadingGap}px`;
         }
-        if (fragment.title) node.title = fragment.title;
+        if (node instanceof HTMLAnchorElement && fragment.href) {
+          node.href = fragment.href;
+          if (!isLocalFragmentHref(fragment.href)) {
+            node.rel = "noopener noreferrer";
+            node.target = "_blank";
+          }
+          if (fragment.title) node.title = fragment.title;
+        }
+        lineRow.append(node);
       }
-      lineRow.append(node);
-    }
-    row.append(lineRow);
-  }
+    },
+  });
+}
+
+function inlineLineRenderKey(
+  line: ReturnType<typeof materializeInlineVisibleLines>[number],
+) {
+  return [
+    line.top,
+    line.width,
+    ...line.fragments.map((fragment) =>
+      [
+        fragment.className,
+        fragment.font,
+        fragment.href ?? "",
+        fragment.leadingGap,
+        fragment.text,
+        fragment.title ?? "",
+      ].join("\u0001"),
+    ),
+  ].join("\u0002");
 }
 
 function renderCodeBlock({
@@ -851,19 +1376,6 @@ function renderCodeBlock({
   viewportBottom: number;
   viewportTop: number;
 }) {
-  const lineWindow = getCodeVisibleLineWindow({
-    frame,
-    viewportBottom,
-    viewportTop,
-  });
-  const lines = materializeCodeVisibleLines({
-    block,
-    contentWidth,
-    frame,
-    lineWindow,
-    viewportBottom,
-    viewportTop,
-  });
   const pre = document.createElement("pre");
   pre.className =
     "absolute overflow-hidden rounded-md border bg-muted text-foreground";
@@ -872,22 +1384,86 @@ function renderCodeBlock({
   pre.style.width = `${frame.width}px`;
 
   const code = document.createElement("code");
-  for (const { line, top } of lines) {
-    const span = document.createElement("span");
-    span.className = "absolute font-mono whitespace-pre";
-    span.textContent = line.text;
-    span.style.font = block.font;
-    span.style.left = "12px";
-    span.style.lineHeight = `${frame.lineHeight}px`;
-    span.style.top = `${top}px`;
-    span.style.transform = `scale(${frame.scale})`;
-    span.style.transformOrigin = "left top";
-    code.append(span);
-  }
+  code.dataset.slot = "text-code-lines";
+  patchCodeBlockLines({
+    block,
+    code,
+    contentWidth,
+    frame,
+    viewportBottom,
+    viewportTop,
+  });
 
   pre.append(code);
   row.append(pre);
   appendCodeBlockToolbar({ block, frame, row });
+}
+
+function patchCodeBlockLines({
+  block,
+  code,
+  contentWidth,
+  frame,
+  viewportBottom,
+  viewportTop,
+}: {
+  block: PreparedCodeTextBlock;
+  code: HTMLElement;
+  contentWidth: number;
+  frame: CodeTextBlockFrame;
+  viewportBottom: number;
+  viewportTop: number;
+}) {
+  const lineWindow = getCodeVisibleLineWindow({
+    frame,
+    viewportBottom,
+    viewportTop,
+  });
+  if (!lineWindow) {
+    patchKeyedDomChildren({
+      createElement: () => document.createElement("span"),
+      getKey: () => "",
+      items: [],
+      parent: code,
+      updateElement: () => {},
+    });
+    return;
+  }
+
+  const lines = materializeCodeVisibleLines({
+    block,
+    contentWidth,
+    frame,
+    lineWindow,
+    viewportBottom,
+    viewportTop,
+  });
+
+  patchKeyedDomChildren({
+    createElement: () => document.createElement("span"),
+    getKey: (item) => String(item.lineIndex),
+    items: lines.map((line) => ({
+      line,
+      lineIndex: line.lineIndex,
+    })),
+    parent: code,
+    updateElement: (span, item) => {
+      span.className = "absolute font-mono whitespace-pre";
+      span.dataset.lineIndex = String(item.lineIndex);
+      span.dataset.slot = "text-code-line";
+      span.style.font = block.font;
+      span.style.left = "12px";
+      span.style.lineHeight = `${frame.lineHeight}px`;
+      span.style.top = `${item.line.top}px`;
+      span.style.transform = `scale(${frame.scale})`;
+      span.style.transformOrigin = "left top";
+
+      const renderKey = `${item.line.top}\u0001${item.line.line.text}`;
+      if (span.dataset.renderKey === renderKey) return;
+      span.dataset.renderKey = renderKey;
+      span.textContent = item.line.line.text;
+    },
+  });
 }
 
 function appendCodeBlockToolbar({
@@ -1036,11 +1612,6 @@ function renderTableBlock({
   viewportBottom: number;
   viewportTop: number;
 }) {
-  const rowWindow = getTableVisibleRowWindow({
-    frame,
-    viewportBottom,
-    viewportTop,
-  });
   const headerIdPrefix = `markdown-table-${frame.sourceStartLine}-${frame.sourceEndLine}`;
   const wrapper = document.createElement("div");
   wrapper.className =
@@ -1094,46 +1665,190 @@ function renderTableBlock({
   table.append(thead);
 
   const tbody = document.createElement("tbody");
-  appendSpacerRow(tbody, rowWindow.beforeHeight, block.header.length);
-  for (
-    let rowIndex = rowWindow.startIndex;
-    rowIndex < rowWindow.endIndex;
-    rowIndex++
-  ) {
-    const tableRow = document.createElement("tr");
-    tableRow.dataset.sourceLine = String(frame.rowSourceStartLines[rowIndex]);
-    tableRow.style.height = `${frame.rowHeights[rowIndex] ?? 0}px`;
-    const sourceRow = block.rows[rowIndex] ?? [];
-    for (let cellIndex = 0; cellIndex < block.header.length; cellIndex++) {
-      const td = document.createElement("td");
-      td.className = "border-t px-3.5 py-1.5 align-top text-foreground";
-      td.headers = `${headerIdPrefix}-column-${cellIndex}`;
-      td.style.textAlign = block.alignments[cellIndex] ?? "left";
-      appendTableCellContent(td, sourceRow[cellIndex]);
-      tableRow.append(td);
-    }
-    tbody.append(tableRow);
-  }
-  appendSpacerRow(tbody, rowWindow.afterHeight, block.header.length);
+  tbody.dataset.slot = "text-table-body";
+  patchTableBodyRows({
+    block,
+    frame,
+    tbody,
+    viewportBottom,
+    viewportTop,
+  });
   table.append(tbody);
   scroller.append(table);
   wrapper.append(scroller);
   row.append(wrapper);
 }
 
-function appendSpacerRow(
-  tbody: HTMLTableSectionElement,
-  height: number,
+type TableBodyProjectionItem =
+  | {
+      height: number;
+      kind: "spacer";
+      slot: "after" | "before";
+    }
+  | {
+      kind: "row";
+      rowIndex: number;
+    };
+
+function patchTableBodyRows({
+  block,
+  frame,
+  tbody,
+  viewportBottom,
+  viewportTop,
+}: {
+  block: PreparedTableTextBlock;
+  frame: TableTextBlockFrame;
+  tbody: HTMLTableSectionElement;
+  viewportBottom: number;
+  viewportTop: number;
+}) {
+  const rowWindow = getTableVisibleRowWindow({
+    frame,
+    viewportBottom,
+    viewportTop,
+  });
+  const items: TableBodyProjectionItem[] = [];
+  if (rowWindow.beforeHeight > 0) {
+    items.push({
+      height: rowWindow.beforeHeight,
+      kind: "spacer",
+      slot: "before",
+    });
+  }
+  for (
+    let rowIndex = rowWindow.startIndex;
+    rowIndex < rowWindow.endIndex;
+    rowIndex++
+  ) {
+    items.push({ kind: "row", rowIndex });
+  }
+  if (rowWindow.afterHeight > 0) {
+    items.push({
+      height: rowWindow.afterHeight,
+      kind: "spacer",
+      slot: "after",
+    });
+  }
+
+  const headerIdPrefix = `markdown-table-${frame.sourceStartLine}-${frame.sourceEndLine}`;
+  patchKeyedDomChildren({
+    createElement: () => document.createElement("tr"),
+    getKey: (item) =>
+      item.kind === "spacer" ? `spacer:${item.slot}` : `row:${item.rowIndex}`,
+    items,
+    parent: tbody,
+    updateElement: (tableRow, item) => {
+      if (item.kind === "spacer") {
+        updateTableSpacerRow(tableRow, item, block.header.length);
+        return;
+      }
+
+      updateTableDataRow({
+        alignments: block.alignments,
+        cellCount: block.header.length,
+        frame,
+        headerIdPrefix,
+        row: tableRow,
+        rowIndex: item.rowIndex,
+        sourceRow: block.rows[item.rowIndex] ?? [],
+      });
+    },
+  });
+}
+
+function updateTableSpacerRow(
+  row: HTMLTableRowElement,
+  item: Extract<TableBodyProjectionItem, { kind: "spacer" }>,
   colSpan: number,
 ) {
-  if (height <= 0) return;
-  const row = document.createElement("tr");
+  row.dataset.slot = "text-table-spacer";
+  delete row.dataset.rowIndex;
+  delete row.dataset.sourceLine;
   row.setAttribute("aria-hidden", "true");
-  row.style.height = `${height}px`;
+  row.style.height = `${item.height}px`;
+
+  const renderKey = `spacer:${item.height}:${colSpan}`;
+  if (row.dataset.renderKey === renderKey) return;
+  row.dataset.renderKey = renderKey;
   const cell = document.createElement("td");
   cell.colSpan = colSpan || 1;
-  row.append(cell);
-  tbody.append(row);
+  row.replaceChildren(cell);
+}
+
+function updateTableDataRow({
+  alignments,
+  cellCount,
+  frame,
+  headerIdPrefix,
+  row,
+  rowIndex,
+  sourceRow,
+}: {
+  alignments: PreparedTableTextBlock["alignments"];
+  cellCount: number;
+  frame: TableTextBlockFrame;
+  headerIdPrefix: string;
+  row: HTMLTableRowElement;
+  rowIndex: number;
+  sourceRow: PreparedTableCell[];
+}) {
+  row.dataset.rowIndex = String(rowIndex);
+  row.dataset.slot = "text-table-row";
+  row.dataset.sourceLine = String(frame.rowSourceStartLines[rowIndex]);
+  row.removeAttribute("aria-hidden");
+  row.style.height = `${frame.rowHeights[rowIndex] ?? 0}px`;
+
+  const renderKey = tableDataRowRenderKey({
+    alignments,
+    cellCount,
+    frame,
+    rowIndex,
+    sourceRow,
+  });
+  if (row.dataset.renderKey === renderKey) return;
+  row.dataset.renderKey = renderKey;
+  row.replaceChildren();
+
+  for (let cellIndex = 0; cellIndex < cellCount; cellIndex++) {
+    const td = document.createElement("td");
+    td.className = "border-t px-3.5 py-1.5 align-top text-foreground";
+    td.headers = `${headerIdPrefix}-column-${cellIndex}`;
+    td.style.textAlign = alignments[cellIndex] ?? "left";
+    appendTableCellContent(td, sourceRow[cellIndex]);
+    row.append(td);
+  }
+}
+
+function tableDataRowRenderKey({
+  alignments,
+  cellCount,
+  frame,
+  rowIndex,
+  sourceRow,
+}: {
+  alignments: PreparedTableTextBlock["alignments"];
+  cellCount: number;
+  frame: TableTextBlockFrame;
+  rowIndex: number;
+  sourceRow: PreparedTableCell[];
+}) {
+  const cells = Array.from({ length: cellCount }, (_, cellIndex) => {
+    const cell = sourceRow[cellIndex];
+    return [
+      alignments[cellIndex] ?? "left",
+      cell?.className ?? "",
+      cell?.href ?? "",
+      cell?.text ?? "",
+      cell?.title ?? "",
+    ].join("\u0001");
+  });
+  return [
+    rowIndex,
+    frame.rowHeights[rowIndex] ?? 0,
+    frame.rowSourceStartLines[rowIndex] ?? "",
+    ...cells,
+  ].join("\u0002");
 }
 
 function appendTableCellContent(

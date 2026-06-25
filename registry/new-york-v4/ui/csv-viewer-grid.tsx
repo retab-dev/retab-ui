@@ -24,6 +24,7 @@ import type { CsvCellAddress } from "./csv-viewer-state";
 import { CsvStyleScope } from "./csv-viewer-style-scope";
 import { fixedGridColumnWidths } from "./fixed-grid-columns";
 import {
+  getFixedGridInverseRowWindowStyle,
   getFixedGridCanvasStyle,
   getFixedGridRowWindowStyle,
 } from "./fixed-grid-layout";
@@ -158,11 +159,13 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
     const effectiveColumnWidth = Math.max(1, Math.round(COLUMN_WIDTH * scale));
     const effectiveRowNumberWidth = Math.round(ROW_NUMBER_WIDTH * scale);
     const columnItemsRef = React.useRef<FixedGridColumnItem[]>([]);
+    const viewportClientHeightRef = React.useRef(0);
     const getRowPatchState = React.useCallback(
       (): CsvRowPatchState => ({
         activeCell: activeCell ?? null,
         columnItems: columnItemsRef.current,
         effectiveRowHeight,
+        viewportHeight: viewportClientHeightRef.current,
         rowStore,
         rowOrder,
         shouldVirtualizeRows,
@@ -189,6 +192,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       totalRowSize,
       totalColumnSize,
       columnItems,
+      virtualRowWindow,
       leftPad,
       rightPad,
       scrollToCell,
@@ -210,6 +214,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
     });
 
     columnItemsRef.current = columnItems;
+    viewportClientHeightRef.current = viewportClientHeight;
 
     React.useImperativeHandle(
       ref ?? null,
@@ -249,7 +254,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
     const rowPoolSlots = useFixedRowPool({
       minimumPoolSize: minimumRowPoolSize,
       rowCount,
-      virtualRows,
+      virtualRows: virtualRowWindow.items,
     });
 
     useKeyedMountEffect(
@@ -339,26 +344,35 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
                 statusNode
               ) : shouldVirtualizeRows ? (
                 <div
-                  ref={rowWindowRef}
                   role="rowgroup"
                   style={getFixedGridRowWindowStyle({ height: totalRowSize })}
                 >
-                  {rowPoolSlots.map((slot) => (
-                    <CsvRowSlot
-                      key={slot.slotIndex}
-                      slot={slot}
-                      sourceRowCount={rowCount}
-                      rowAt={rowAt}
-                      rowIndexAt={rowIndexAt}
-                      gridTemplate={gridTemplate}
-                      rowHeight={effectiveRowHeight}
-                      columnOffset={columnOffset}
-                      columnItems={columnItems}
-                      leftPad={leftPad}
-                      rightPad={rightPad}
-                      activeCell={activeCell}
-                    />
-                  ))}
+                  <div
+                    ref={rowWindowRef}
+                    data-slot="csv-row-window"
+                    style={getFixedGridInverseRowWindowStyle({
+                      height: virtualRowWindow.size,
+                      top: virtualRowWindow.start,
+                      viewportHeight: viewportClientHeight,
+                    })}
+                  >
+                    {rowPoolSlots.map((slot) => (
+                      <CsvRowSlot
+                        key={slot.slotIndex}
+                        slot={slot}
+                        sourceRowCount={rowCount}
+                        rowAt={rowAt}
+                        rowIndexAt={rowIndexAt}
+                        gridTemplate={gridTemplate}
+                        rowHeight={effectiveRowHeight}
+                        columnOffset={columnOffset}
+                        columnItems={columnItems}
+                        leftPad={leftPad}
+                        rightPad={rightPad}
+                        activeCell={activeCell}
+                      />
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <div role="rowgroup">

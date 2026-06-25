@@ -1,49 +1,42 @@
-import Prism from "prismjs";
-
 import type { ViewerResource } from "@/lib/viewer-resource";
 
-// A curated set of common languages ships by default. Add another by importing
-// its Prism component here (or at your app entry) and adding a row to
-// LANGUAGE_BY_EXTENSION:
-//   import "prismjs/components/prism-kotlin"
-//   const LANGUAGE_BY_EXTENSION = { ...; kt: "kotlin" }
-//
-// markup (html/xml), css, and javascript are part of Prism core. The order of
-// these imports matters: tsx extends jsx + typescript, so both load first.
-import "prismjs/components/prism-json";
-import "prismjs/components/prism-typescript";
-import "prismjs/components/prism-jsx";
-import "prismjs/components/prism-tsx";
-import "prismjs/components/prism-python";
-import "prismjs/components/prism-yaml";
-import "prismjs/components/prism-bash";
-import "prismjs/components/prism-sql";
-import "prismjs/components/prism-go";
-import "prismjs/components/prism-rust";
-import "prismjs/components/prism-java";
-import "prismjs/components/prism-markdown";
+import {
+  type CodeSyntaxWorkerRequest,
+  type CodeSyntaxWorkerResponse,
+  type CodeTokenLeaf,
+  shouldTokenizeCodeLine,
+} from "./code-viewer-syntax-protocol";
+import {
+  ensureCodePrismLanguage,
+  isCodePrismLanguageLoaded,
+  isCodePrismLanguageSupported,
+  tokenizeCodeLine,
+} from "./code-viewer-syntax-prism";
+import { createCodeSyntaxWorker } from "./code-viewer-syntax-worker";
 
-Prism.manual = true;
-
-export type CodeTokenLeaf = {
-  kind: string;
-  text: string;
-};
+export type { CodeTokenLeaf } from "./code-viewer-syntax-protocol";
 
 export type CodeSyntax = {
   identity: string;
   destroy?: () => void;
+  getLineVersion(line: string): number;
   getLineTokens(line: string): readonly CodeTokenLeaf[] | null;
+  preload?: () => Promise<void>;
 };
+
+export type CodeSyntaxMode = "auto" | "main-thread" | "worker";
 
 export type CodeSyntaxOptions = {
   deferTokens?: boolean;
   onTokensChanged?: () => void;
+  syntaxMode?: CodeSyntaxMode;
+  createWorker?: () => Worker;
 };
 
-const CODE_LINE_TOKENIZE_MAX = 2000;
 const CODE_DEFERRED_TOKENIZE_BATCH_SIZE = 12;
 const CODE_DEFERRED_TOKENIZE_BUDGET_MS = 6;
+export const CODE_GLOBAL_TOKEN_CACHE_LIMIT = 1024;
+const CODE_WORKER_TOKENIZE_BATCH_SIZE = 64;
 
 type CodeSyntaxIdleWindow = Window &
   typeof globalThis & {
@@ -59,8 +52,60 @@ type CodeSyntaxTaskDeadline = {
   timeRemaining?: () => number;
 };
 
-// File extension -> Prism language id. The one piece of knowledge the viewer
-// owns; Prism does not map extensions to languages. This is the single seam.
+type CodeSyntaxNotifyHandle = { id: number };
+
+type CodeSyntaxWorkerFactory = () => Worker;
+
+type CodeSyntaxWorkerRelease = () => void;
+
+type CodeSyntaxWorkerSubscription = {
+  isReleased: boolean;
+  onDone: () => void;
+  onError: (line: string) => void;
+  onTokens: (line: string, tokens: readonly CodeTokenLeaf[]) => void;
+  pendingCount: number;
+};
+
+type CodeSyntaxWorkerJob = {
+  key: string;
+  languageId: string;
+  line: string;
+  status: "active" | "pending";
+  subscribers: Set<CodeSyntaxWorkerSubscription>;
+};
+
+type CodeSyntaxWorkerBatch = {
+  generation: number;
+  jobs: CodeSyntaxWorkerJob[];
+  languageId: string;
+  requestId: number;
+};
+
+type CodeSyntaxWorkerSlot = {
+  activeBatch: CodeSyntaxWorkerBatch | null;
+  worker: Worker;
+};
+
+type CodeSyntaxWorkerPool = {
+  createWorker: CodeSyntaxWorkerFactory;
+  dispatchHandle: CodeSyntaxTaskHandle | null;
+  jobsByKey: Map<string, CodeSyntaxWorkerJob>;
+  maxWorkers: number;
+  pendingJobs: Map<string, CodeSyntaxWorkerJob>;
+  requestId: number;
+  slots: CodeSyntaxWorkerSlot[];
+};
+
+const globalTokenCache = new Map<string, readonly CodeTokenLeaf[]>();
+const globalWorkerPoolsByFactory = new WeakMap<
+  CodeSyntaxWorkerFactory,
+  CodeSyntaxWorkerPool
+>();
+const globalWorkerPools = new Set<CodeSyntaxWorkerPool>();
+const CODE_GLOBAL_WORKER_POOL_SIZE = 2;
+
+// File extension -> Prism language id. Prism does not map extensions to
+// languages, so the viewer keeps the small explicit map.
 const LANGUAGE_BY_EXTENSION: Record<string, string> = {
   json: "json",
   json5: "json",
@@ -164,63 +209,171 @@ export function createCodeSyntax(
   resource: ViewerResource,
   options: CodeSyntaxOptions = {},
 ): CodeSyntax {
-  const languageId = codeLanguageId(resource);
-  const grammar = languageId ? (Prism.languages[languageId] ?? null) : null;
-  if (!languageId || !grammar) {
+  const detectedLanguageId = codeLanguageId(resource);
+  if (!detectedLanguageId || !isCodePrismLanguageSupported(detectedLanguageId)) {
     return {
       identity: "plain",
+      getLineVersion: () => 0,
       getLineTokens: () => null,
     };
   }
-  const prismGrammar = grammar;
+  const languageId = detectedLanguageId;
 
-  const tokenCache = new Map<string, readonly CodeTokenLeaf[]>();
+  const tokenVersions = new Map<string, number>();
+  const asyncTokenSnapshots = new Map<string, readonly CodeTokenLeaf[]>();
   const pendingLines = new Set<string>();
+  const workerReleases = new Set<CodeSyntaxWorkerRelease>();
+  const workerFactory = options.createWorker ?? createCodeSyntaxWorker;
+  const useWorker = shouldUseWorker(options);
   let flushHandle: CodeSyntaxTaskHandle | null = null;
-  let hasPendingTokenChanges = false;
+  let notifyHandle: CodeSyntaxNotifyHandle | null = null;
+  let grammarPromise: Promise<void> | null = null;
+  let isGrammarReady = isCodePrismLanguageLoaded(languageId);
+  let isGrammarFailed = false;
+  let isWorkerFailed = false;
   let isDestroyed = false;
+  let hasPendingTokenChanges = false;
+
+  if (!useWorker) {
+    void preloadMainThreadGrammar();
+  }
 
   return {
-    destroy: () => {
-      isDestroyed = true;
-      pendingLines.clear();
-      if (flushHandle) {
-        cancelCodeSyntaxTask(flushHandle);
-        flushHandle = null;
-      }
-    },
+    destroy,
+    getLineVersion,
+    getLineTokens,
     identity: languageId,
-    getLineTokens: (line) => {
-      if (line.length === 0 || line.length > CODE_LINE_TOKENIZE_MAX)
-        return null;
-
-      const cachedTokens = tokenCache.get(line);
-      if (cachedTokens) return cachedTokens;
-
-      if (options.deferTokens) {
-        scheduleDeferredTokenization(line);
-        return null;
-      }
-
-      const tokens = flattenCodeTokens(Prism.tokenize(line, prismGrammar));
-      tokenCache.set(line, tokens);
-      return tokens;
-    },
+    preload: preloadMainThreadGrammar,
   };
 
-  function scheduleDeferredTokenization(line: string) {
+  function destroy() {
+    isDestroyed = true;
+    pendingLines.clear();
+    cancelFlush();
+    cancelNotification();
+    for (const releaseWorker of workerReleases) {
+      releaseWorker();
+    }
+    workerReleases.clear();
+  }
+
+  function getLineVersion(line: string) {
+    return tokenVersions.get(line) ?? 0;
+  }
+
+  function getLineTokens(line: string) {
+    if (isDestroyed) return null;
+    if (!shouldTokenizeCodeLine(line) || isGrammarFailed) return null;
+
+    const cachedTokens = getGlobalLineTokens(languageId, line);
+    if (cachedTokens) return cachedTokens;
+
+    if (!shouldTokenizeInWorker() && isGrammarReady && !options.deferTokens) {
+      const tokens = tokenizeCodeLine(languageId, line);
+      if (tokens) {
+        return setGlobalLineTokens(languageId, line, tokens);
+      }
+    }
+
     pendingLines.add(line);
-    scheduleDeferredTokenFlush();
+    scheduleTokenization();
+    return null;
   }
 
-  function scheduleDeferredTokenFlush() {
-    if (flushHandle || isDestroyed) return;
-    flushHandle = scheduleCodeSyntaxTask(flushDeferredTokenBatch);
+  function scheduleTokenization() {
+    if (isDestroyed || pendingLines.size === 0) return;
+    if (shouldTokenizeInWorker()) {
+      scheduleWorkerTokenization();
+      return;
+    }
+    scheduleMainThreadTokenization();
   }
 
-  function flushDeferredTokenBatch(deadline?: CodeSyntaxTaskDeadline) {
+  function scheduleWorkerTokenization() {
+    if (!shouldTokenizeInWorker() || flushHandle) return;
+    flushHandle = scheduleCodeSyntaxTask(() => {
+      flushHandle = null;
+      flushWorkerTokenBatch();
+    });
+  }
+
+  function flushWorkerTokenBatch() {
+    if (!shouldTokenizeInWorker() || isDestroyed) return;
+
+    const lines = takePendingLines(CODE_WORKER_TOKENIZE_BATCH_SIZE);
+    if (lines.length === 0) return;
+
+    const uncachedLines: string[] = [];
+    let didCacheTokens = false;
+    for (const line of lines) {
+      const cachedTokens = getGlobalLineTokens(languageId, line);
+      if (cachedTokens) {
+        didCacheTokens =
+          cacheAsyncLineTokens(line, cachedTokens) || didCacheTokens;
+      } else {
+        uncachedLines.push(line);
+      }
+    }
+    if (didCacheTokens) queueTokenChangeNotification();
+    if (uncachedLines.length === 0) {
+      scheduleTokenization();
+      return;
+    }
+
+    let releaseWorker: CodeSyntaxWorkerRelease | null = null;
+    releaseWorker = requestCodeSyntaxWorkerTokens({
+      createWorker: workerFactory,
+      languageId,
+      lines: uncachedLines,
+      onDone: () => {
+        if (releaseWorker) workerReleases.delete(releaseWorker);
+        scheduleTokenization();
+      },
+      onError: (line) => {
+        if (isDestroyed) return;
+        isWorkerFailed = true;
+        pendingLines.add(line);
+        scheduleMainThreadTokenization();
+      },
+      onTokens: (line, tokens) => {
+        if (isDestroyed) return;
+        if (cacheAsyncLineTokens(line, tokens)) queueTokenChangeNotification();
+      },
+    });
+    workerReleases.add(releaseWorker);
+    scheduleTokenization();
+  }
+
+  function scheduleMainThreadTokenization() {
+    if (isDestroyed || flushHandle || isGrammarFailed) return;
+    if (!isGrammarReady) {
+      void preloadMainThreadGrammar();
+      return;
+    }
+    flushHandle = scheduleCodeSyntaxTask(flushMainThreadTokenBatch);
+  }
+
+  async function preloadMainThreadGrammar() {
+    if (shouldTokenizeInWorker() || isGrammarReady || isGrammarFailed) return;
+    if (!grammarPromise) {
+      grammarPromise = ensureCodePrismLanguage(languageId)
+        .then(() => {
+          if (isDestroyed) return;
+          isGrammarReady = true;
+          scheduleMainThreadTokenization();
+        })
+        .catch(() => {
+          if (isDestroyed) return;
+          isGrammarFailed = true;
+          pendingLines.clear();
+        });
+    }
+    await grammarPromise;
+  }
+
+  function flushMainThreadTokenBatch(deadline?: CodeSyntaxTaskDeadline) {
     flushHandle = null;
-    if (isDestroyed) return;
+    if (isDestroyed || isGrammarFailed || !isGrammarReady) return;
 
     const startedAt = codeSyntaxNow();
     let processedLineCount = 0;
@@ -229,12 +382,12 @@ export function createCodeSyntax(
       if (pendingLine == null) break;
       pendingLines.delete(pendingLine);
 
-      if (!tokenCache.has(pendingLine)) {
-        hasPendingTokenChanges = true;
-        tokenCache.set(
-          pendingLine,
-          flattenCodeTokens(Prism.tokenize(pendingLine, prismGrammar)),
-        );
+      if (!getGlobalLineTokens(languageId, pendingLine)) {
+        const tokens = tokenizeCodeLine(languageId, pendingLine);
+        if (tokens) {
+          hasPendingTokenChanges =
+            cacheAsyncLineTokens(pendingLine, tokens) || hasPendingTokenChanges;
+        }
       }
 
       processedLineCount += 1;
@@ -250,15 +403,106 @@ export function createCodeSyntax(
     }
 
     if (pendingLines.size > 0) {
-      scheduleDeferredTokenFlush();
+      scheduleMainThreadTokenization();
       return;
     }
 
     if (hasPendingTokenChanges) {
       hasPendingTokenChanges = false;
-      options.onTokensChanged?.();
+      queueTokenChangeNotification();
     }
   }
+
+  function takePendingLines(limit: number) {
+    const lines: string[] = [];
+    for (const line of pendingLines) {
+      pendingLines.delete(line);
+      lines.push(line);
+      if (lines.length >= limit) break;
+    }
+    return lines;
+  }
+
+  function cacheAsyncLineTokens(
+    line: string,
+    tokens: readonly CodeTokenLeaf[],
+  ) {
+    const cachedTokens = setGlobalLineTokens(languageId, line, tokens);
+    const previousTokens = asyncTokenSnapshots.get(line);
+    if (
+      previousTokens &&
+      areCodeTokenLeavesEqual(previousTokens, cachedTokens)
+    ) {
+      return false;
+    }
+
+    asyncTokenSnapshots.set(line, cachedTokens);
+    tokenVersions.set(line, (tokenVersions.get(line) ?? 0) + 1);
+    return true;
+  }
+
+  function shouldTokenizeInWorker() {
+    return useWorker && !isWorkerFailed;
+  }
+
+  function queueTokenChangeNotification() {
+    if (isDestroyed || notifyHandle) return;
+    notifyHandle = scheduleCodeSyntaxNotification(() => {
+      notifyHandle = null;
+      if (!isDestroyed) options.onTokensChanged?.();
+    });
+  }
+
+  function cancelFlush() {
+    if (!flushHandle) return;
+    cancelCodeSyntaxTask(flushHandle);
+    flushHandle = null;
+  }
+
+  function cancelNotification() {
+    if (!notifyHandle) return;
+    cancelCodeSyntaxNotification(notifyHandle);
+    notifyHandle = null;
+  }
+}
+
+export function clearCodeSyntaxGlobalTokenCacheForTests() {
+  globalTokenCache.clear();
+}
+
+function shouldUseWorker(options: CodeSyntaxOptions) {
+  if (options.syntaxMode === "main-thread") return false;
+  if (options.syntaxMode === "worker") return true;
+  return typeof Worker !== "undefined";
+}
+
+function getGlobalLineTokens(languageId: string, line: string) {
+  const key = codeGlobalTokenCacheKey(languageId, line);
+  const tokens = globalTokenCache.get(key);
+  if (!tokens) return null;
+
+  globalTokenCache.delete(key);
+  globalTokenCache.set(key, tokens);
+  return tokens;
+}
+
+function setGlobalLineTokens(
+  languageId: string,
+  line: string,
+  tokens: readonly CodeTokenLeaf[],
+) {
+  const key = codeGlobalTokenCacheKey(languageId, line);
+  globalTokenCache.delete(key);
+  globalTokenCache.set(key, tokens);
+  while (globalTokenCache.size > CODE_GLOBAL_TOKEN_CACHE_LIMIT) {
+    const firstKey = globalTokenCache.keys().next().value;
+    if (firstKey === undefined) return;
+    globalTokenCache.delete(firstKey);
+  }
+}
+
+function codeGlobalTokenCacheKey(languageId: string, line: string) {
+  return `${languageId}\0${line}`;
 }
 
 function scheduleCodeSyntaxTask(
@@ -285,6 +529,35 @@ function cancelCodeSyntaxTask(handle: CodeSyntaxTaskHandle) {
     return;
   }
   browserWindow.clearTimeout(handle.id);
+}
+
+function scheduleCodeSyntaxNotification(
+  callback: () => void,
+): CodeSyntaxNotifyHandle {
+  return { id: window.setTimeout(callback, 0) };
+}
+
+function cancelCodeSyntaxNotification(handle: CodeSyntaxNotifyHandle) {
+  window.clearTimeout(handle.id);
+}
+
+function areCodeTokenLeavesEqual(
+  first: readonly CodeTokenLeaf[],
+  second: readonly CodeTokenLeaf[],
+) {
+  if (first === second) return true;
+  if (first.length !== second.length) return false;
+  for (let index = 0; index < first.length; index += 1) {
+    const firstLeaf = first[index];
+    const secondLeaf = second[index];
+    if (
+      firstLeaf?.kind !== secondLeaf?.kind ||
+      firstLeaf?.text !== secondLeaf?.text
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function shouldYieldDeferredTokenization({
@@ -316,27 +589,4 @@ function codeLanguageId(resource: ViewerResource): string | null {
     .split(";")[0]
     .trim();
   return (mimeType && LANGUAGE_BY_MIME[mimeType]) ?? null;
-}
-
-function flattenCodeTokens(
-  tokens: Array<string | Prism.Token>,
-  parentKind = "",
-  leaves: CodeTokenLeaf[] = [],
-): readonly CodeTokenLeaf[] {
-  for (const token of tokens) {
-    if (typeof token === "string") {
-      leaves.push({ kind: parentKind, text: token });
-    } else if (Array.isArray(token.content)) {
-      flattenCodeTokens(
-        token.content as Array<string | Prism.Token>,
-        token.type,
-        leaves,
-      );
-    } else if (typeof token.content === "string") {
-      leaves.push({ kind: token.type, text: token.content });
-    } else {
-      flattenCodeTokens([token.content as Prism.Token], token.type, leaves);
-    }
-  }
-  return leaves;
 }

@@ -8,28 +8,35 @@ component: true
 `FileViewerHeader`, a toolbar, or another file-scoped control surface.
 
 ```tsx
-<FileViewer source={source} defaultOpen>
-  <FileViewerHeader>
-    <FileViewerSidebarTrigger />
-    <FileViewerTitle />
-    <FileViewerMeta />
-    <FileViewerControls />
-  </FileViewerHeader>
-  <FileViewerBody>
-    <FileViewerSidebar aria-label="PDF pages" />
-    <FileViewerSurface>
-      <FileViewerDocument />
-    </FileViewerSurface>
-  </FileViewerBody>
-</FileViewer>
+<FileViewerProvider source={source} defaultSidebarOpen>
+  <FileViewer>
+    <FileViewerHeader>
+      <FileViewerHeaderStart>
+        <FileViewerSidebarTrigger />
+        <FileViewerIdentity />
+      </FileViewerHeaderStart>
+      <FileViewerHeaderEnd>
+        <FileViewerToolbar />
+      </FileViewerHeaderEnd>
+    </FileViewerHeader>
+    <FileViewerBody>
+      <FileViewerSidebar aria-label="PDF pages" />
+      <FileViewerSurface>
+        <FileViewerViewport>
+          <FileViewerDocument />
+        </FileViewerViewport>
+      </FileViewerSurface>
+    </FileViewerBody>
+  </FileViewer>
+</FileViewerProvider>
 ```
 
 ## Behavior
 
 - Renders a `data-slot="file-viewer-sidebar-trigger"` button that flips the
-  open/collapsed state owned by the surrounding `FileViewer`.
-- Targets the **nearest** `FileViewer` scope — nested file viewers each keep
-  their own sidebar state.
+  open/collapsed state supplied by the surrounding `FileViewerProvider`.
+- Targets the **nearest** `FileViewer` frame — nested file viewers each keep
+  their own provider-backed sidebar state.
 - It is a thin wrapper over the button primitive, so it accepts the usual
   `variant`, `size`, `className`, and `onClick` props; the toggle runs before
   any `onClick` you pass.

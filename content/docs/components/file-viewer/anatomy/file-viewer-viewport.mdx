@@ -1,0 +1,37 @@
+---
+title: FileViewerViewport
+description: The measured viewport boundary inside FileViewerSurface.
+component: true
+---
+
+`FileViewerViewport` is the measured boundary for routed documents. It must live
+inside `FileViewerSurface`, and `FileViewerDocument` must live inside it.
+
+```tsx
+<FileViewerSurface>
+  <FileViewerViewport>
+    <FileViewerDocument />
+  </FileViewerViewport>
+</FileViewerSurface>
+```
+
+## Behavior
+
+- Renders a `data-slot="file-viewer-viewport"` element.
+- Publishes `--file-viewer-viewport-width` and
+  `--file-viewer-viewport-height` when measurement is available.
+- Gives renderers a stable surface for sizing, virtualization, and diagnostics.
+- Throws in development when it is rendered outside `FileViewerSurface`.
+- Use `useFileViewerViewportSize` when a custom file surface needs the measured
+  viewport element, width, height, or measurement state.
+
+## API Reference
+
+| Prop       | Type                                          | Description                                     |
+| ---------- | --------------------------------------------- | ----------------------------------------------- |
+| `children` | `React.ReactNode`                             | Usually `FileViewerDocument`.                   |
+| `...props` | `React.ComponentProps<typeof ViewerViewport>` | Standard viewport props; `className` is merged. |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer-body.tsx" />

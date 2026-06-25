@@ -4,8 +4,8 @@ description: The optional file-scoped rail beside the file surface.
 component: true
 ---
 
-`FileViewerSidebar` is the spatial slot for file navigation. It owns placement,
-width, side, collapse behavior, and the accessible rail label.
+`FileViewerSidebar` is the spatial slot for file navigation. It owns the rail
+shell: width, side override, collapse behavior, and the accessible rail label.
 
 ```tsx
 <FileViewerSidebar aria-label="Document sections" width="18rem">
@@ -19,25 +19,26 @@ width, side, collapse behavior, and the accessible rail label.
 
 ## Behavior
 
-- Renders a `data-slot="file-viewer-sidebar"` rail and reads its open/collapsed
-  state from `FileViewer` — toggle it with `FileViewerSidebarTrigger`.
+- Renders a `data-slot="file-viewer-sidebar"` rail. Open/collapsed state is
+  owned by `FileViewerProvider` and passed through the surrounding
+  `FileViewer`; toggle it with `FileViewerSidebarTrigger`.
 - The content owns row semantics; the sidebar only owns _where_ the rail lives
   and _how_ it opens. Drop in any navigation: thumbnails, attachments, segments,
   or source fields.
 - `width` and `side` set the rail shell; whether it renders inline or as an
-  overlay is resolved from the root's `mode`/`inlineBreakpoint` and available
-  width.
+  overlay is resolved from the surrounding `FileViewer`'s
+  `sidebarMode`/`inlineBreakpoint` and available width.
 - Always pass `aria-label` — the rail is a landmark and needs an accessible name.
 
 ## API Reference
 
-| Prop          | Type                            | Description                                                      |
-| ------------- | ------------------------------- | ---------------------------------------------------------------- |
-| `aria-label`  | `string`                        | Accessible name for the navigation rail. Recommended.            |
-| `width`       | `string`                        | Rail width (e.g. `"18rem"`). Sets the `--viewer-sidebar-width`.  |
-| `side`        | `"left" \| "right"`             | Which side the rail mounts on. Falls back to the root's setting. |
-| `collapsible` | `"offcanvas" \| "none"`         | Whether the rail can collapse off-canvas.                        |
-| `...props`    | `React.ComponentProps<"aside">` | Standard `aside` props; `className` is forwarded.                |
+| Prop          | Type                            | Description                                                            |
+| ------------- | ------------------------------- | ---------------------------------------------------------------------- |
+| `aria-label`  | `string`                        | Accessible name for the navigation rail. Recommended.                  |
+| `width`       | `string`                        | Rail width (e.g. `"18rem"`). Sets the `--viewer-sidebar-width`.        |
+| `side`        | `"left" \| "right"`             | Which side the rail mounts on. Falls back to `FileViewer.sidebarSide`. |
+| `collapsible` | `"offcanvas" \| "none"`         | Whether the rail can collapse off-canvas.                              |
+| `...props`    | `React.ComponentProps<"aside">` | Standard `aside` props; `className` is forwarded.                      |
 
 ## Source
 

@@ -14,9 +14,10 @@ use the app-shell `SidebarProvider` pattern for these rails.
 
 ## Viewer Sidebar Example
 
-This is the shape used across file-backed viewers: `FileViewerSidebar` owns
-placement, width, collapse state, and the accessible rail label. The navigation
-component inside the rail owns the row model and interaction. Here,
+This is the shape used across file-backed viewers: `FileViewerProvider` owns
+sidebar open state, `FileViewer` owns mode resolution, and
+`FileViewerSidebar` owns the rail shell and accessible rail label. The
+navigation component inside the rail owns the row model and interaction. Here,
 `SegmentSidebar` owns section rows while `FileViewerDocument` owns the document
 surface.
 
@@ -25,35 +26,44 @@ surface.
 ## Composition
 
 ```tsx
-<FileViewer source={source} defaultOpen mode="auto">
-  <FileViewerHeader>
-    <FileViewerSidebarTrigger />
-    <FileViewerTitle />
-    <FileViewerMeta />
-    <FileViewerControls />
-  </FileViewerHeader>
-  <FileViewerBody>
-    <FileViewerSidebar aria-label="Document sections" width="18rem">
-      <SegmentSidebar
-        segments={segments}
-        interaction={interaction}
-        currentPage={currentPage}
-        onSelect={(segment) => scrollToPage(segment.pages[0])}
-      />
-    </FileViewerSidebar>
-    <FileViewerSurface>
-      <FileViewerDocument />
-    </FileViewerSurface>
-  </FileViewerBody>
-</FileViewer>
+<FileViewerProvider source={source} defaultSidebarOpen>
+  <FileViewer sidebarMode="auto">
+    <FileViewerHeader>
+      <FileViewerHeaderStart>
+        <FileViewerSidebarTrigger />
+        <FileViewerIdentity />
+      </FileViewerHeaderStart>
+      <FileViewerHeaderEnd>
+        <FileViewerToolbar />
+      </FileViewerHeaderEnd>
+    </FileViewerHeader>
+    <FileViewerBody>
+      <FileViewerSidebar aria-label="Document sections" width="18rem">
+        <SegmentSidebar
+          segments={segments}
+          interaction={interaction}
+          currentPage={currentPage}
+          onSelect={(segment) => scrollToPage(segment.pages[0])}
+        />
+      </FileViewerSidebar>
+      <FileViewerSurface>
+        <FileViewerViewport>
+          <FileViewerDocument />
+        </FileViewerViewport>
+      </FileViewerSurface>
+    </FileViewerBody>
+  </FileViewer>
+</FileViewerProvider>
 ```
 
 ## Ownership Boundary
 
-- `FileViewer` owns sidebar state, mode resolution, trigger wiring, and the
+- `FileViewerProvider` owns sidebar open state and controlled/uncontrolled
+  state props.
+- `FileViewer` owns sidebar mode resolution, trigger wiring, and the
   single-primary-sidebar contract.
-- `FileViewerSidebar` owns spatial placement, width, side, collapse behavior,
-  and the rail's accessible label.
+- `FileViewerSidebar` owns spatial placement, width, side override, collapse
+  behavior, and the rail's accessible label.
 - `FileViewerSurface` owns the main file surface beside the rail.
 - `SidebarList*` owns providerless grouped-row grammar inside a rail.
 - `SegmentSidebar` owns segment row state, preview interaction, current-page
@@ -81,26 +91,37 @@ Use a named domain sidebar when the rows have semantics:
 Use raw `SidebarList*` primitives only when you are creating a new domain rail
 and need grouped rows without app-sidebar behavior.
 
+Use `FileViewerSidebarContent` and the sidebar section primitives when a custom
+rail needs File Viewer spacing but not menu semantics. Use
+`FileViewerSourceList` and the source primitives when rows represent files,
+fields, evidence, or unavailable sources.
+
 ## Sidebar Modes
 
-`FileViewer mode="auto"` starts in overlay mode until the viewer has a measured
-width, then resolves to inline or overlay. Use fixed modes only when a workflow
-requires it:
+`FileViewer sidebarMode="auto"` starts in overlay mode until the viewer has a
+measured width, then resolves to inline or overlay. Use fixed modes only when a
+workflow requires it:
 
 ```tsx
-<FileViewer source={source} defaultOpen mode="inline" sidebarSide="right">
-  <FileViewerBody>
-    <FileViewerSurface />
-    <FileViewerSidebar aria-label="Attachments" width="20rem">
-      <AttachmentSidebar items={attachments} selectedId={selectedId} />
-    </FileViewerSidebar>
-  </FileViewerBody>
-</FileViewer>
+<FileViewerProvider source={source} defaultSidebarOpen>
+  <FileViewer sidebarMode="inline" sidebarSide="right">
+    <FileViewerBody>
+      <FileViewerSurface>
+        <FileViewerViewport>
+          <FileViewerDocument />
+        </FileViewerViewport>
+      </FileViewerSurface>
+      <FileViewerSidebar aria-label="Attachments" width="20rem">
+        <AttachmentSidebar items={attachments} selectedId={selectedId} />
+      </FileViewerSidebar>
+    </FileViewerBody>
+  </FileViewer>
+</FileViewerProvider>
 ```
 
 `FileViewerSidebarTrigger` is disabled until a `FileViewerSidebar` registers
-with the nearest `FileViewer`. In overlay mode, Escape closes the sidebar and
-focus returns to the trigger.
+with the nearest `FileViewer` frame. In overlay mode, Escape closes the sidebar
+and focus returns to the trigger.
 
 ## Structural Attributes
 
@@ -121,4 +142,4 @@ Put domain meaning in the named rail component and accessible label:
 
 ## Source
 
-<ComponentSource src="registry/new-york-v4/ui/sidebar.tsx" />
+<ComponentSource src="registry/new-york-v4/ui/file-viewer-body.tsx" />

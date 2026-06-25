@@ -4,12 +4,16 @@ import type { Source } from "@/lib/document-source";
 import {
   FileViewer,
   FileViewerBody,
-  FileViewerControls,
   FileViewerHeader,
-  FileViewerMeta,
+  FileViewerHeaderEnd,
+  FileViewerHeaderStart,
+  FileViewerIdentity,
+  FileViewerProvider,
   FileViewerSidebar,
+  FileViewerSidebarContent,
   FileViewerSurface,
-  FileViewerTitle,
+  FileViewerToolbar,
+  FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import { ImageViewer } from "@/components/ui/image-viewer";
 import {
@@ -70,43 +74,56 @@ function ImageSourcesContent() {
   const setImageViewerHandle = useSegmentedImageViewerHandle();
 
   return (
-    <FileViewer
+    <FileViewerProvider
       source={IMAGE_SOURCE}
-      className="bg-background h-full min-h-[680px]"
+      fallbackFrameSize={{ width: 1224, height: 1584 }}
+      defaultSidebarOpen
     >
-      <FileViewerHeader>
-        <FileViewerTitle />
-        <FileViewerMeta />
-        <FileViewerControls />
-      </FileViewerHeader>
-      <FileViewerBody>
-        <FileViewerSurface className="relative">
-          <ImageViewer
-            ref={setImageViewerHandle}
-            source={IMAGE_SOURCE}
-            bare
-            className="h-full"
-            controls={false}
-            fallbackFrameSize={{ width: 1224, height: 1584 }}
-            onScrollProgressChange={documentHandlers.onScrollProgressChange}
-            onVisibleFrameChange={documentHandlers.onCurrentPageChange}
-            renderFrameOverlay={renderFrameOverlay}
-          />
-          <SourceIndicator
-            path={link.activeSourcePath}
-            found={!!link.activeAnchor}
-          />
-        </FileViewerSurface>
-        <FileViewerSidebar
-          aria-label="Source fields"
-          side="right"
-          collapsible="none"
-          width="360px"
-          className="border-l"
-        >
-          <SourceFieldList fields={FIELDS} link={link} />
-        </FileViewerSidebar>
-      </FileViewerBody>
-    </FileViewer>
+      <FileViewer
+        className="bg-background h-full min-h-[680px]"
+        sidebarSide="right"
+      >
+        <FileViewerHeader>
+          <FileViewerHeaderStart>
+            <FileViewerIdentity />
+          </FileViewerHeaderStart>
+          <FileViewerHeaderEnd>
+            <FileViewerToolbar />
+          </FileViewerHeaderEnd>
+        </FileViewerHeader>
+        <FileViewerBody>
+          <FileViewerSurface className="relative">
+            <FileViewerViewport>
+              <ImageViewer
+                ref={setImageViewerHandle}
+                source={IMAGE_SOURCE}
+                bare
+                className="h-full"
+                controls={false}
+                fallbackFrameSize={{ width: 1224, height: 1584 }}
+                onScrollProgressChange={documentHandlers.onScrollProgressChange}
+                onVisibleFrameChange={documentHandlers.onCurrentPageChange}
+                renderFrameOverlay={renderFrameOverlay}
+              />
+            </FileViewerViewport>
+            <SourceIndicator
+              path={link.activeSourcePath}
+              found={!!link.activeAnchor}
+            />
+          </FileViewerSurface>
+          <FileViewerSidebar
+            aria-label="Source fields"
+            side="right"
+            collapsible="none"
+            width="360px"
+            className="border-l"
+          >
+            <FileViewerSidebarContent>
+              <SourceFieldList fields={FIELDS} link={link} />
+            </FileViewerSidebarContent>
+          </FileViewerSidebar>
+        </FileViewerBody>
+      </FileViewer>
+    </FileViewerProvider>
   );
 }

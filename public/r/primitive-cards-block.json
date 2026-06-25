@@ -15,7 +15,7 @@
     },
     {
       "path": "components/viewers/lib/classify-types.ts",
-      "content": "// Classification result shape for the classifier viewer.\n\n/** Decision shape accepted by the viewer — works with new and legacy types. */\nexport interface ClassifyResult {\n  category: string;\n  reasoning?: string;\n}\n",
+      "content": "// Classification result shape for the classifier viewer.\n\nexport interface ClassifyResult {\n  category: string;\n  reasoning?: string;\n  candidates?: readonly ClassifyCandidate[];\n}\n\nexport interface ClassifyCandidate {\n  category: string;\n  description?: string;\n}\n",
       "type": "registry:lib",
       "target": "@components/viewers/lib/classify-types.ts"
     },

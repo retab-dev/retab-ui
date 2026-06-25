@@ -10,7 +10,9 @@ domain-owned file surface.
 
 ```tsx
 <FileViewerSurface>
-  <FileViewerDocument />
+  <FileViewerViewport>
+    <FileViewerDocument />
+  </FileViewerViewport>
 </FileViewerSurface>
 ```
 
@@ -29,6 +31,8 @@ example a provider-bound PDF page list:
   the sidebar and scrolls its own content.
 - It holds exactly one file surface. Split panes and side-by-side comparisons
   belong to the parent workflow, not to a second surface inside one body.
+- Wrap `FileViewerDocument` in `FileViewerViewport`; the viewport provides the
+  measurement boundary used by routed renderers.
 - It is layout only — it does not read the file source. The content it wraps
   (the routed document, or a renderer surface) owns rendering.
 

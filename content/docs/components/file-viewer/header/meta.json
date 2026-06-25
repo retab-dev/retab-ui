@@ -1,4 +1,10 @@
 {
   "title": "Header",
-  "pages": ["index"]
+  "pages": [
+    "index",
+    "file-viewer-header-start",
+    "file-viewer-header-end",
+    "file-viewer-identity",
+    "file-viewer-toolbar"
+  ]
 }

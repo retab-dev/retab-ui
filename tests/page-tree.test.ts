@@ -167,6 +167,23 @@ describe("getPagesFromFolder (components folder)", () => {
       "/docs/components/misc",
     ]);
   });
+
+  it("excludes retired direct component pages from the fallback jump list", () => {
+    const components = folder({
+      $id: "components",
+      name: "Components",
+      children: [
+        page("/docs/components/data-cell", "Data Cell"),
+        page("/docs/components/json-form", "JSON Form"),
+        page("/docs/components/parse-viewer", "Parse Viewer"),
+        page("/docs/components/file-thumbnail", "File Thumbnail"),
+      ],
+    });
+
+    expect(getPagesFromFolder(components, "missing").map((p) => p.url)).toEqual(
+      ["/docs/components/json-form", "/docs/components/file-thumbnail"],
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -397,6 +414,35 @@ describe("getSidebarGroupsFromFolder", () => {
     expect(resultViewers?.pages.map((p) => p.name)).toEqual([
       "Classification Viewer",
       "Partition Viewer",
+    ]);
+  });
+
+  it("hides retired component pages and folds stale File Intake pages into Forms & Data", () => {
+    const components = folder({
+      $id: "components",
+      name: "Components",
+      children: [
+        separator("Forms & Data"),
+        page("/docs/components/data-cell", "Data Cell"),
+        page("/docs/components/json-form", "JSON Form"),
+        page("/docs/components/json-table", "JSON Table"),
+        page("/docs/components/schema-builder", "Schema Builder"),
+        page("/docs/components/parse-viewer", "Parse Viewer"),
+        separator("File Intake"),
+        page("/docs/components/dropzone", "Dropzone"),
+        page("/docs/components/file-thumbnail", "File Thumbnail"),
+      ],
+    });
+
+    const groups = getSidebarGroupsFromFolder(components, "radix");
+
+    expect(groups.map((g) => g.name)).toEqual(["Forms & Data"]);
+    expect(groups[0]?.pages.map((p) => p.name)).toEqual([
+      "JSON Form",
+      "JSON Table",
+      "Schema Builder",
+      "Dropzone",
+      "File Thumbnail",
     ]);
   });
 });

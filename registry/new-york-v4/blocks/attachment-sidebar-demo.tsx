@@ -10,14 +10,17 @@ import {
 import {
   FileViewer,
   FileViewerBody,
-  FileViewerControls,
   FileViewerDocument,
   FileViewerHeader,
-  FileViewerMeta,
+  FileViewerHeaderEnd,
+  FileViewerHeaderStart,
+  FileViewerIdentity,
+  FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarTrigger,
   FileViewerSurface,
-  FileViewerTitle,
+  FileViewerToolbar,
+  FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import {
   SidebarListButton,
@@ -80,59 +83,63 @@ export function AttachmentSidebarExample() {
 
   return (
     <div className="not-prose bg-background h-[620px] overflow-hidden rounded-xl border">
-      <FileViewer
-        key={selectedId}
-        source={source}
-        defaultOpen
-        mode="inline"
-        sidebarSide="right"
-        className="bg-background h-full"
-      >
-        <FileViewerHeader>
-          <FileViewerSidebarTrigger className="-ml-1" />
-          <FileViewerTitle />
-          <FileViewerMeta />
-          <FileViewerControls />
-        </FileViewerHeader>
-        <FileViewerBody>
-          <FileViewerSurface>
-            <FileViewerDocument />
-          </FileViewerSurface>
-          <FileViewerSidebar
-            aria-label="Message attachments"
-            side="right"
-            width="20rem"
-            className="border-l"
-          >
-            <AttachmentSidebar
-              items={attachments}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
+      <FileViewerProvider key={selectedId} source={source} defaultSidebarOpen>
+        <FileViewer
+          sidebarMode="inline"
+          sidebarSide="right"
+          className="bg-background h-full"
+        >
+          <FileViewerHeader>
+            <FileViewerHeaderStart>
+              <FileViewerSidebarTrigger className="-ml-1" />
+              <FileViewerIdentity />
+            </FileViewerHeaderStart>
+            <FileViewerHeaderEnd>
+              <FileViewerToolbar />
+            </FileViewerHeaderEnd>
+          </FileViewerHeader>
+          <FileViewerBody>
+            <FileViewerSurface>
+              <FileViewerViewport>
+                <FileViewerDocument />
+              </FileViewerViewport>
+            </FileViewerSurface>
+            <FileViewerSidebar
+              aria-label="Message attachments"
               side="right"
               width="20rem"
-              className="border-l-0"
+              className="border-l"
             >
-              <SidebarListGroup>
-                <SidebarListGroupLabel>Message</SidebarListGroupLabel>
-                <SidebarListGroupContent>
-                  <SidebarListMenu>
-                    <SidebarListMenuItem>
-                      <SidebarListButton
-                        isActive={selectedId === "body"}
-                        onClick={() => {
-                          setSelectedId("body");
-                        }}
-                      >
-                        Body
-                      </SidebarListButton>
-                    </SidebarListMenuItem>
-                  </SidebarListMenu>
-                </SidebarListGroupContent>
-              </SidebarListGroup>
-            </AttachmentSidebar>
-          </FileViewerSidebar>
-        </FileViewerBody>
-      </FileViewer>
+              <AttachmentSidebar
+                items={attachments}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+                side="right"
+                width="20rem"
+                className="border-l-0"
+              >
+                <SidebarListGroup>
+                  <SidebarListGroupLabel>Message</SidebarListGroupLabel>
+                  <SidebarListGroupContent>
+                    <SidebarListMenu>
+                      <SidebarListMenuItem>
+                        <SidebarListButton
+                          isActive={selectedId === "body"}
+                          onClick={() => {
+                            setSelectedId("body");
+                          }}
+                        >
+                          Body
+                        </SidebarListButton>
+                      </SidebarListMenuItem>
+                    </SidebarListMenu>
+                  </SidebarListGroupContent>
+                </SidebarListGroup>
+              </AttachmentSidebar>
+            </FileViewerSidebar>
+          </FileViewerBody>
+        </FileViewer>
+      </FileViewerProvider>
     </div>
   );
 }

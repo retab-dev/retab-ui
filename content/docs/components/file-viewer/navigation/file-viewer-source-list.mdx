@@ -1,0 +1,62 @@
+---
+title: FileViewerSourceList
+description: Source row and field primitives for file-scoped navigation rails.
+component: true
+---
+
+`FileViewerSourceList` and the source primitives are for source-linked file
+navigation: extraction fields, source files, evidence rows, or unavailable
+sources inside a `FileViewerSidebar`.
+
+```tsx
+<FileViewerSourceList>
+  <FileViewerSourceItem>
+    <FileViewerSourceTrigger isActive>
+      Invoice total
+      <FileViewerSourceBadge>2</FileViewerSourceBadge>
+    </FileViewerSourceTrigger>
+    <FileViewerSourceAction aria-label="Open source" showOnHover />
+  </FileViewerSourceItem>
+</FileViewerSourceList>
+```
+
+Use field cards when a source row needs label/value/status structure:
+
+```tsx
+<FileViewerFieldSource isActive>
+  <FileViewerFieldSourceLabel>Total</FileViewerFieldSourceLabel>
+  <FileViewerFieldSourceValue>$1,240.00</FileViewerFieldSourceValue>
+  <FileViewerFieldSourceStatus tone="success">
+    Matched
+  </FileViewerFieldSourceStatus>
+</FileViewerFieldSource>
+```
+
+## Components
+
+| Component                     | Use For                                           |
+| ----------------------------- | ------------------------------------------------- |
+| `FileViewerSourceList`        | `ul` wrapper for source rows.                     |
+| `FileViewerSourceItem`        | `li` row wrapper and hover group.                 |
+| `FileViewerSourceTrigger`     | Selectable row button with active/unavailable UI. |
+| `FileViewerSourceBadge`       | Small count or status badge inside a row.         |
+| `FileViewerSourceAction`      | Row action, optionally revealed on hover.         |
+| `FileViewerFieldSource`       | Card-like source field container.                 |
+| `FileViewerFieldSourceLabel`  | Field label.                                      |
+| `FileViewerFieldSourceValue`  | Field value.                                      |
+| `FileViewerFieldSourceStatus` | Field status badge.                               |
+
+## Behavior
+
+- `FileViewerSourceTrigger` supports `asChild`, `isActive`, `isUnavailable`,
+  `size`, and `variant`.
+- `FileViewerSourceAction` supports `asChild`, `showOnHover`, `size`, and
+  `variant`.
+- Badge and status tones use the same tone set: `default`, `destructive`,
+  `muted`, `success`, and `warning`.
+- These primitives are presentation and interaction shell only. The caller owns
+  row identity, selection state, scrolling, and domain meaning.
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer-body.tsx" />

@@ -1,20 +1,22 @@
 "use client";
 
 import {
+  layoutNextLineRange,
   materializeLineRange,
   measureLineStats,
   measureNaturalWidth,
   prepareWithSegments,
-  walkLineRanges,
+  type LayoutCursor,
   type LayoutLine,
   type PreparedTextWithSegments,
 } from "@chenglou/pretext";
 import {
+  layoutNextRichInlineLineRange,
   materializeRichInlineLineRange,
   measureRichInlineStats,
   prepareRichInline,
-  walkRichInlineLineRanges,
   type PreparedRichInline,
+  type RichInlineCursor,
   type RichInlineLine,
 } from "@chenglou/pretext/rich-inline";
 import { marked, type Token, type Tokens } from "marked";
@@ -185,11 +187,13 @@ export interface InlineFragmentLayout {
 
 export interface InlineLineLayout {
   fragments: InlineFragmentLayout[];
+  lineIndex: number;
   top: number;
   width: number;
 }
 
 export interface CodeLineLayout {
+  lineIndex: number;
   line: LayoutLine;
   top: number;
 }
@@ -285,11 +289,43 @@ const EMPTY_MARK_STATE: MarkState = {
 };
 const PREPARED_TEXT_DOCUMENT_CACHE_LIMIT = 32;
 const PREPARED_TEXT_DOCUMENT_CACHE_VERSION = "prepared-text-v1";
+const TEXT_DOCUMENT_FRAME_CACHE_LIMIT = 12;
+const LINE_RANGE_WIDTH_CACHE_LIMIT = 8;
+const LINE_RANGE_MATERIALIZED_LINE_CACHE_LIMIT = 1024;
+const LINE_RANGE_CHECKPOINT_CACHE_LIMIT = 128;
+const LINE_RANGE_CHECKPOINT_INTERVAL = 64;
 const markerWidthCache = new Map<string, number>();
 const preparedTextDocumentCache = new Map<
   string,
   { document: PreparedTextDocument; text: string }
 >();
+const textDocumentFrameCache = new WeakMap<
+  PreparedTextDocument,
+  Map<string, TextDocumentFrame>
+>();
+const inlineLineRangeCaches = new WeakMap<
+  PreparedInlineTextBlock,
+  Map<string, RichInlineLineRangeCache>
+>();
+const codeLineRangeCaches = new WeakMap<
+  PreparedCodeTextBlock,
+  Map<string, CodeLineRangeCache>
+>();
+
+type RichInlineLineRangeCache = {
+  checkpoints: Array<LineRangeCheckpoint<RichInlineCursor>>;
+  lines: Map<number, RichInlineLine>;
+};
+
+type CodeLineRangeCache = {
+  checkpoints: Array<LineRangeCheckpoint<LayoutCursor>>;
+  lines: Map<number, LayoutLine>;
+};
+
+type LineRangeCheckpoint<Cursor> = {
+  cursor: Cursor;
+  lineIndex: number;
+};
 
 export function resolveTextViewerMode({
   fileName,
@@ -383,6 +419,208 @@ function trimPreparedTextDocumentCache() {
   }
 }
 
+function getTextDocumentFrameCache(document: PreparedTextDocument) {
+  let cache = textDocumentFrameCache.get(document);
+  if (!cache) {
+    cache = new Map();
+    textDocumentFrameCache.set(document, cache);
+  }
+  return cache;
+}
+
+function textDocumentFrameCacheKey({
+  contentWidth,
+  fontScale,
+}: {
+  contentWidth: number;
+  fontScale: number;
+}) {
+  return [contentWidth, fontScale].join("\u0000");
+}
+
+function getRichInlineLineRangeCache(
+  block: PreparedInlineTextBlock,
+  lineWidth: number,
+) {
+  let blockCache = inlineLineRangeCaches.get(block);
+  if (!blockCache) {
+    blockCache = new Map();
+    inlineLineRangeCaches.set(block, blockCache);
+  }
+
+  const cacheKey = textLineWidthCacheKey(lineWidth);
+  let cache = blockCache.get(cacheKey);
+  if (cache) {
+    setBoundedCacheEntry(
+      blockCache,
+      cacheKey,
+      cache,
+      LINE_RANGE_WIDTH_CACHE_LIMIT,
+    );
+    return cache;
+  }
+
+  cache = {
+    checkpoints: [
+      {
+        cursor: { graphemeIndex: 0, itemIndex: 0, segmentIndex: 0 },
+        lineIndex: 0,
+      },
+    ],
+    lines: new Map(),
+  };
+  setBoundedCacheEntry(
+    blockCache,
+    cacheKey,
+    cache,
+    LINE_RANGE_WIDTH_CACHE_LIMIT,
+  );
+  return cache;
+}
+
+function getCodeLineRangeCache(
+  block: PreparedCodeTextBlock,
+  innerWidth: number,
+) {
+  let blockCache = codeLineRangeCaches.get(block);
+  if (!blockCache) {
+    blockCache = new Map();
+    codeLineRangeCaches.set(block, blockCache);
+  }
+
+  const cacheKey = textLineWidthCacheKey(innerWidth);
+  let cache = blockCache.get(cacheKey);
+  if (cache) {
+    setBoundedCacheEntry(
+      blockCache,
+      cacheKey,
+      cache,
+      LINE_RANGE_WIDTH_CACHE_LIMIT,
+    );
+    return cache;
+  }
+
+  cache = {
+    checkpoints: [
+      {
+        cursor: { graphemeIndex: 0, segmentIndex: 0 },
+        lineIndex: 0,
+      },
+    ],
+    lines: new Map(),
+  };
+  setBoundedCacheEntry(
+    blockCache,
+    cacheKey,
+    cache,
+    LINE_RANGE_WIDTH_CACHE_LIMIT,
+  );
+  return cache;
+}
+
+function textLineWidthCacheKey(width: number) {
+  return String(width);
+}
+
+function setBoundedCacheEntry<K, V>(
+  cache: Map<K, V>,
+  key: K,
+  value: V,
+  limit: number,
+) {
+  cache.delete(key);
+  cache.set(key, value);
+  while (cache.size > limit) {
+    const firstKey = cache.keys().next().value;
+    if (firstKey === undefined) return;
+    cache.delete(firstKey);
+  }
+}
+
+function touchCacheEntry<K, V>(cache: Map<K, V>, key: K, value: V) {
+  cache.delete(key);
+  cache.set(key, value);
+}
+
+function trimMaterializedLineCache<Line>(cache: Map<number, Line>) {
+  while (cache.size > LINE_RANGE_MATERIALIZED_LINE_CACHE_LIMIT) {
+    const firstKey = cache.keys().next().value;
+    if (firstKey === undefined) return;
+    cache.delete(firstKey);
+  }
+}
+
+function nearestLineRangeCheckpoint<Cursor>(
+  checkpoints: readonly LineRangeCheckpoint<Cursor>[],
+  lineIndex: number,
+) {
+  let low = 0;
+  let high = checkpoints.length - 1;
+  let match = checkpoints[0]!;
+
+  while (low <= high) {
+    const middle = Math.floor((low + high) / 2);
+    const checkpoint = checkpoints[middle]!;
+    if (checkpoint.lineIndex <= lineIndex) {
+      match = checkpoint;
+      low = middle + 1;
+    } else {
+      high = middle - 1;
+    }
+  }
+
+  return match;
+}
+
+function maybeStoreLineRangeCheckpoint<Cursor>(
+  checkpoints: Array<LineRangeCheckpoint<Cursor>>,
+  lineIndex: number,
+  cursor: Cursor,
+  force = false,
+) {
+  if (
+    !force &&
+    (lineIndex === 0 || lineIndex % LINE_RANGE_CHECKPOINT_INTERVAL !== 0)
+  ) {
+    return;
+  }
+
+  let low = 0;
+  let high = checkpoints.length - 1;
+  while (low <= high) {
+    const middle = Math.floor((low + high) / 2);
+    const checkpoint = checkpoints[middle]!;
+    if (checkpoint.lineIndex === lineIndex) {
+      checkpoints[middle] = { cursor, lineIndex };
+      return;
+    }
+    if (checkpoint.lineIndex < lineIndex) {
+      low = middle + 1;
+    } else {
+      high = middle - 1;
+    }
+  }
+  checkpoints.splice(low, 0, { cursor, lineIndex });
+  while (checkpoints.length > LINE_RANGE_CHECKPOINT_CACHE_LIMIT) {
+    checkpoints.splice(checkpoints.length > 1 ? 1 : 0, 1);
+  }
+}
+
+function cloneLayoutCursor(cursor: LayoutCursor): LayoutCursor {
+  return {
+    graphemeIndex: cursor.graphemeIndex,
+    segmentIndex: cursor.segmentIndex,
+  };
+}
+
+function cloneRichInlineCursor(cursor: RichInlineCursor): RichInlineCursor {
+  return {
+    graphemeIndex: cursor.graphemeIndex,
+    itemIndex: cursor.itemIndex,
+    segmentIndex: cursor.segmentIndex,
+  };
+}
+
 export function layoutTextDocument({
   contentWidth,
   document,
@@ -394,6 +632,13 @@ export function layoutTextDocument({
 }): TextDocumentFrame {
   const safeContentWidth = safeWidth(contentWidth);
   const safeFontScale = safeScale(fontScale);
+  const cacheKey = textDocumentFrameCacheKey({
+    contentWidth: safeContentWidth,
+    fontScale: safeFontScale,
+  });
+  const cachedFrame = getTextDocumentFrameCache(document).get(cacheKey);
+  if (cachedFrame) return cachedFrame;
+
   const frames: TextBlockFrame[] = [];
   let y = DOCUMENT_PADDING_Y;
 
@@ -411,11 +656,18 @@ export function layoutTextDocument({
     y = frame.bottom;
   }
 
-  return {
+  const frame = {
     frames,
     totalHeight: y + DOCUMENT_PADDING_Y,
     width: safeContentWidth,
   };
+  setBoundedCacheEntry(
+    getTextDocumentFrameCache(document),
+    cacheKey,
+    frame,
+    TEXT_DOCUMENT_FRAME_CACHE_LIMIT,
+  );
+  return frame;
 }
 
 export function materializeInlineVisibleLines({
@@ -442,27 +694,24 @@ export function materializeInlineVisibleLines({
     return [
       {
         fragments: fallbackInlineFragments(block),
+        lineIndex: 0,
         top: 0,
         width: frame.usedWidth,
       },
     ];
   }
 
-  const lines: InlineLineLayout[] = [];
   const lineWidth = safeWidth((maxWidth - frame.contentLeft) / frame.scale);
-  let lineIndex = 0;
-  walkRichInlineLineRanges(block.flow, lineWidth, (range) => {
-    if (lineIndex >= window.firstLine && lineIndex <= window.lastLine) {
-      const line = materializeRichInlineLineRange(block.flow!, range);
-      lines.push({
-        fragments: richInlineFragments(block, line),
-        top: lineIndex * frame.lineHeight,
-        width: line.width * frame.scale,
-      });
-    }
-    lineIndex++;
-  });
-  return lines;
+  return getRichInlineMaterializedLineWindow({
+    block,
+    lineWidth,
+    window,
+  }).map(({ line, lineIndex }) => ({
+    fragments: richInlineFragments(block, line),
+    lineIndex,
+    top: lineIndex * frame.lineHeight,
+    width: line.width * frame.scale,
+  }));
 }
 
 export function materializeCodeVisibleLines({
@@ -488,6 +737,7 @@ export function materializeCodeVisibleLines({
   if (!block.prepared) {
     return [
       {
+        lineIndex: 0,
         line: {
           end: { graphemeIndex: 0, segmentIndex: 0 },
           start: { graphemeIndex: 0, segmentIndex: 0 },
@@ -499,22 +749,269 @@ export function materializeCodeVisibleLines({
     ];
   }
 
-  const lines: CodeLineLayout[] = [];
   const boxWidth = safeWidth(contentWidth - frame.contentLeft);
   const innerWidth = safeWidth(
     (boxWidth - CODE_BLOCK_PADDING_X * 2) / frame.scale,
   );
-  let lineIndex = 0;
-  walkLineRanges(block.prepared, innerWidth, (range) => {
-    if (lineIndex >= window.firstLine && lineIndex <= window.lastLine) {
-      lines.push({
-        line: materializeLineRange(block.prepared!, range),
-        top: CODE_BLOCK_PADDING_Y + lineIndex * frame.lineHeight,
-      });
+  return getCodeMaterializedLineWindow({
+    block,
+    innerWidth,
+    window,
+  }).map(({ line, lineIndex }) => ({
+    lineIndex,
+    line,
+    top: CODE_BLOCK_PADDING_Y + lineIndex * frame.lineHeight,
+  }));
+}
+
+function getRichInlineMaterializedLineWindow({
+  block,
+  lineWidth,
+  window,
+}: {
+  block: PreparedInlineTextBlock;
+  lineWidth: number;
+  window: TextLineWindow;
+}) {
+  if (!block.flow) return [];
+
+  const cache = getRichInlineLineRangeCache(block, lineWidth);
+  const materializedLines = new Map<number, RichInlineLine>();
+  let firstMissing = Number.POSITIVE_INFINITY;
+  let lastMissing = -1;
+
+  for (
+    let lineIndex = window.firstLine;
+    lineIndex <= window.lastLine;
+    lineIndex++
+  ) {
+    const cachedLine = cache.lines.get(lineIndex);
+    if (cachedLine) {
+      touchCacheEntry(cache.lines, lineIndex, cachedLine);
+      materializedLines.set(lineIndex, cachedLine);
+      continue;
     }
-    lineIndex++;
-  });
+
+    firstMissing = Math.min(firstMissing, lineIndex);
+    lastMissing = lineIndex;
+  }
+
+  if (lastMissing >= firstMissing) {
+    fillRichInlineMaterializedLineCache({
+      cache,
+      flow: block.flow,
+      lineWidth,
+      materializedLines,
+      window: {
+        firstLine: firstMissing,
+        lastLine: lastMissing,
+      },
+    });
+  }
+
+  const lines: Array<{ line: RichInlineLine; lineIndex: number }> = [];
+  for (
+    let lineIndex = window.firstLine;
+    lineIndex <= window.lastLine;
+    lineIndex++
+  ) {
+    const line = materializedLines.get(lineIndex);
+    if (line) lines.push({ line, lineIndex });
+  }
+
+  trimMaterializedLineCache(cache.lines);
   return lines;
+}
+
+function fillRichInlineMaterializedLineCache({
+  cache,
+  flow,
+  lineWidth,
+  materializedLines,
+  window,
+}: {
+  cache: RichInlineLineRangeCache;
+  flow: PreparedRichInline;
+  lineWidth: number;
+  materializedLines: Map<number, RichInlineLine>;
+  window: TextLineWindow;
+}) {
+  const checkpoint = nearestLineRangeCheckpoint(
+    cache.checkpoints,
+    window.firstLine,
+  );
+  let cursor = cloneRichInlineCursor(checkpoint.cursor);
+
+  for (
+    let lineIndex = checkpoint.lineIndex;
+    lineIndex <= window.lastLine;
+    lineIndex++
+  ) {
+    const cachedLine = cache.lines.get(lineIndex);
+    if (cachedLine) {
+      cursor = cloneRichInlineCursor(cachedLine.end);
+      if (lineIndex >= window.firstLine) {
+        touchCacheEntry(cache.lines, lineIndex, cachedLine);
+        materializedLines.set(lineIndex, cachedLine);
+      }
+      maybeStoreLineRangeCheckpoint(
+        cache.checkpoints,
+        lineIndex + 1,
+        cloneRichInlineCursor(cachedLine.end),
+        true,
+      );
+      continue;
+    }
+
+    const range = layoutNextRichInlineLineRange(flow, lineWidth, cursor);
+    if (!range) return;
+
+    const nextCursor = cloneRichInlineCursor(range.end);
+    const nextLineIndex = lineIndex + 1;
+    if (lineIndex >= window.firstLine) {
+      const line = materializeRichInlineLineRange(flow, range);
+      cache.lines.set(lineIndex, line);
+      materializedLines.set(lineIndex, line);
+      maybeStoreLineRangeCheckpoint(
+        cache.checkpoints,
+        lineIndex,
+        cloneRichInlineCursor(cursor),
+        true,
+      );
+    }
+    maybeStoreLineRangeCheckpoint(
+      cache.checkpoints,
+      nextLineIndex,
+      nextCursor,
+      lineIndex >= window.firstLine,
+    );
+    cursor = nextCursor;
+  }
+}
+
+function getCodeMaterializedLineWindow({
+  block,
+  innerWidth,
+  window,
+}: {
+  block: PreparedCodeTextBlock;
+  innerWidth: number;
+  window: TextLineWindow;
+}) {
+  if (!block.prepared) return [];
+
+  const cache = getCodeLineRangeCache(block, innerWidth);
+  const materializedLines = new Map<number, LayoutLine>();
+  let firstMissing = Number.POSITIVE_INFINITY;
+  let lastMissing = -1;
+
+  for (
+    let lineIndex = window.firstLine;
+    lineIndex <= window.lastLine;
+    lineIndex++
+  ) {
+    const cachedLine = cache.lines.get(lineIndex);
+    if (cachedLine) {
+      touchCacheEntry(cache.lines, lineIndex, cachedLine);
+      materializedLines.set(lineIndex, cachedLine);
+      continue;
+    }
+
+    firstMissing = Math.min(firstMissing, lineIndex);
+    lastMissing = lineIndex;
+  }
+
+  if (lastMissing >= firstMissing) {
+    fillCodeMaterializedLineCache({
+      cache,
+      innerWidth,
+      materializedLines,
+      prepared: block.prepared,
+      window: {
+        firstLine: firstMissing,
+        lastLine: lastMissing,
+      },
+    });
+  }
+
+  const lines: Array<{ line: LayoutLine; lineIndex: number }> = [];
+  for (
+    let lineIndex = window.firstLine;
+    lineIndex <= window.lastLine;
+    lineIndex++
+  ) {
+    const line = materializedLines.get(lineIndex);
+    if (line) lines.push({ line, lineIndex });
+  }
+
+  trimMaterializedLineCache(cache.lines);
+  return lines;
+}
+
+function fillCodeMaterializedLineCache({
+  cache,
+  innerWidth,
+  materializedLines,
+  prepared,
+  window,
+}: {
+  cache: CodeLineRangeCache;
+  innerWidth: number;
+  materializedLines: Map<number, LayoutLine>;
+  prepared: PreparedTextWithSegments;
+  window: TextLineWindow;
+}) {
+  const checkpoint = nearestLineRangeCheckpoint(
+    cache.checkpoints,
+    window.firstLine,
+  );
+  let cursor = cloneLayoutCursor(checkpoint.cursor);
+
+  for (
+    let lineIndex = checkpoint.lineIndex;
+    lineIndex <= window.lastLine;
+    lineIndex++
+  ) {
+    const cachedLine = cache.lines.get(lineIndex);
+    if (cachedLine) {
+      cursor = cloneLayoutCursor(cachedLine.end);
+      if (lineIndex >= window.firstLine) {
+        touchCacheEntry(cache.lines, lineIndex, cachedLine);
+        materializedLines.set(lineIndex, cachedLine);
+      }
+      maybeStoreLineRangeCheckpoint(
+        cache.checkpoints,
+        lineIndex + 1,
+        cloneLayoutCursor(cachedLine.end),
+        true,
+      );
+      continue;
+    }
+
+    const range = layoutNextLineRange(prepared, cursor, innerWidth);
+    if (!range) return;
+
+    const nextCursor = cloneLayoutCursor(range.end);
+    const nextLineIndex = lineIndex + 1;
+    if (lineIndex >= window.firstLine) {
+      const line = materializeLineRange(prepared, range);
+      cache.lines.set(lineIndex, line);
+      materializedLines.set(lineIndex, line);
+      maybeStoreLineRangeCheckpoint(
+        cache.checkpoints,
+        lineIndex,
+        cloneLayoutCursor(cursor),
+        true,
+      );
+    }
+    maybeStoreLineRangeCheckpoint(
+      cache.checkpoints,
+      nextLineIndex,
+      nextCursor,
+      lineIndex >= window.firstLine,
+    );
+    cursor = nextCursor;
+  }
 }
 
 export function getInlineVisibleLineWindow({

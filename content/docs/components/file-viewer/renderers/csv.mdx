@@ -1,14 +1,14 @@
 ---
 title: CSV
-description: A virtualized CSV/TSV table with sortable columns, built on TanStack Virtual.
+description: A virtualized CSV/TSV table with sortable columns, built on Retab's fixed-grid virtualizer.
 component: true
 ---
 
 The CSV Viewer renders CSV or TSV text as a sortable, virtualized table. It renders
-straight from the raw rows — the table model and sorting are hand-rolled, with no
-table library — and uses [TanStack Virtual](https://tanstack.com/virtual) for row and
-column virtualization, so it stays smooth with tens of thousands of rows. Parsing is
-handled by a small, dependency-free RFC 4180 parser.
+straight from the raw rows — the table model, sorting, and fixed-grid
+virtualization are hand-rolled, with no table library — so it stays smooth with
+tens of thousands of rows. Parsing is handled by a small, dependency-free RFC
+4180 parser.
 
 <ComponentPreview name="csv-viewer-demo" contentClassName="p-0" />
 
@@ -52,7 +52,7 @@ const data = parseCsv(text, { delimiter: "\t" }); // { columns, rows }
 
 ## Features
 
-- **Virtualized rows _and_ columns** — only the visible window of cells is rendered (`@tanstack/react-virtual`), so wide and tall tables stay fast.
+- **Virtualized rows _and_ columns** — only the visible window of cells is rendered by the local fixed-grid virtualizer, so wide and tall tables stay fast.
 - **Sortable columns** — click a header to sort. Sorting keeps only a lightweight array of row indices, so the raw rows are never copied.
 - **Sticky header and row numbers**, horizontal scroll for wide tables.
 - **Self-contained, incremental parser** — handles quoted fields, escaped quotes, and delimiters/newlines inside quotes, across chunk boundaries.

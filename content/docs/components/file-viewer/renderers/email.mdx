@@ -59,10 +59,10 @@ A `ViewerSidebarTrigger` always targets the nearest `ViewerRoot`, so the nested
 message owns its own trigger, sidebar state, and sidebar label.
 
 Attachments are file leaves, not nested compound viewers. Render them through
-`FileViewer bare` inside the current surface:
+`FileViewerPreview` inside the current surface:
 
 ```tsx
-<FileViewer source={attachment.source} bare className="h-full" />
+<FileViewerPreview source={attachment.source} className="h-full" />
 ```
 
 Do not nest `ViewerRoot` just to add another controls row or border:
@@ -71,7 +71,7 @@ Do not nest `ViewerRoot` just to add another controls row or border:
 // Avoid: this creates another spatial viewer without another domain viewer.
 <ViewerSurface>
   <ViewerRoot>
-    <FileViewer source={attachment.source} bare />
+    <FileViewerPreview source={attachment.source} />
   </ViewerRoot>
 </ViewerSurface>
 ```

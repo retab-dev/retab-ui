@@ -7,11 +7,14 @@ import { cn } from "@/lib/utils";
 import {
   FileViewer,
   FileViewerBody,
-  FileViewerControls,
   FileViewerHeader,
-  FileViewerMeta,
+  FileViewerHeaderEnd,
+  FileViewerHeaderStart,
+  FileViewerIdentity,
+  FileViewerProvider,
   FileViewerSurface,
-  FileViewerTitle,
+  FileViewerToolbar,
+  FileViewerViewport,
 } from "./file-viewer";
 import {
   PdfResourceContent,
@@ -98,33 +101,41 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
       ...pagesProps
     } = props;
     return (
-      <FileViewer
-        source={source}
-        className={cn(
-          "h-full",
-          bare && "rounded-none border-0 bg-transparent",
-          className,
-        )}
-      >
-        <PdfViewerProvider>
-          <FileViewerHeader>
-            <FileViewerTitle />
-            <FileViewerMeta />
-            {controls ? <FileViewerControls /> : null}
-          </FileViewerHeader>
-          <FileViewerBody>
-            <FileViewerSurface>
-              <PdfViewerPages
-                {...pagesProps}
-                bare
-                className="h-full"
-                download={download}
-                ref={ref}
-              />
-            </FileViewerSurface>
-          </FileViewerBody>
-        </PdfViewerProvider>
-      </FileViewer>
+      <FileViewerProvider source={source}>
+        <FileViewer
+          className={cn(
+            "h-full",
+            bare && "rounded-none border-0 bg-transparent",
+            className,
+          )}
+        >
+          <PdfViewerProvider>
+            <FileViewerHeader>
+              <FileViewerHeaderStart>
+                <FileViewerIdentity />
+              </FileViewerHeaderStart>
+              {controls ? (
+                <FileViewerHeaderEnd>
+                  <FileViewerToolbar />
+                </FileViewerHeaderEnd>
+              ) : null}
+            </FileViewerHeader>
+            <FileViewerBody>
+              <FileViewerSurface>
+                <FileViewerViewport>
+                  <PdfViewerPages
+                    {...pagesProps}
+                    bare
+                    className="h-full"
+                    download={download}
+                    ref={ref}
+                  />
+                </FileViewerViewport>
+              </FileViewerSurface>
+            </FileViewerBody>
+          </PdfViewerProvider>
+        </FileViewer>
+      </FileViewerProvider>
     );
   },
 );

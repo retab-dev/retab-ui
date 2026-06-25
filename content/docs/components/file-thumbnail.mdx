@@ -72,6 +72,14 @@ When you already have a generated preview, pass it directly:
 Use `state="loading"` or `state="error"` when an external thumbnail pipeline is
 in charge of the preview lifecycle.
 
+## File Tooltip Example
+
+Keep `TooltipContent` padding-free when the tooltip is only a larger file
+preview. The tooltip body can be just `FileThumbnail`, with the trigger owning
+the file name and accessible label.
+
+<ComponentPreview name="file-thumbnail-tooltip-demo" />
+
 ## Useful Behaviors
 
 - Accepts browser `File` objects, URL sources, Blob sources, text sources,

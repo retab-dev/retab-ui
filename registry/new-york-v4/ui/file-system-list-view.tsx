@@ -5,7 +5,6 @@ import {
   createFileTreeIconResolver,
   getBuiltInSpriteSheet,
 } from "@pierre/trees";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { AlertCircle, ChevronDown, ChevronRight, Folder } from "lucide-react";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { useMountEffect } from "@/hooks/use-mount-effect";
@@ -21,6 +20,7 @@ import {
   formatFileSystemDate,
   formatFileSystemSize,
 } from "./file-system-utils";
+import { useFixedRowVirtualization } from "./fixed-grid-virtualization";
 
 type FileSystemListRow =
   | {
@@ -85,27 +85,13 @@ export function FileSystemListView({
       expandedPaths,
     ],
   );
-  const virtualizer = useVirtualizer({
-    count: rows.length,
-    estimateSize: () => LIST_ROW_HEIGHT,
-    getScrollElement: () => parentRef.current,
-    initialRect: { height: 560, width: 720 },
-    overscan: 12,
+  const { virtualRows, totalRowSize } = useFixedRowVirtualization({
+    rowCount: rows.length,
+    rowSize: LIST_ROW_HEIGHT,
+    rowOverscan: 12,
+    initialViewportHeight: 560,
+    scrollRef: parentRef,
   });
-  const virtualRows = virtualizer.getVirtualItems();
-  const renderedRows =
-    virtualRows.length > 0
-      ? virtualRows
-      : rows.slice(0, 32).map((row, index) => ({
-          index,
-          key: row.id,
-          size: LIST_ROW_HEIGHT,
-          start: index * LIST_ROW_HEIGHT,
-        }));
-  const totalSize = Math.max(
-    virtualizer.getTotalSize(),
-    rows.length * LIST_ROW_HEIGHT,
-  );
   const entryRows = React.useMemo(
     () =>
       rows.filter(
@@ -247,8 +233,11 @@ export function FileSystemListView({
         onKeyDown={handleKeyDown}
         className="min-h-0 flex-1 overflow-auto outline-none"
       >
-        <div className="relative min-w-[42rem]" style={{ height: totalSize }}>
-          {renderedRows.map((virtualRow) => {
+        <div
+          className="relative min-w-[42rem]"
+          style={{ height: totalRowSize }}
+        >
+          {virtualRows.map((virtualRow) => {
             const row = rows[virtualRow.index];
             if (!row) return null;
 

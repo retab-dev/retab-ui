@@ -45,6 +45,7 @@ import {
 } from "./text-viewer-resource";
 import { clampTextViewerScale } from "./text-viewer-scale";
 import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types";
+import { getTextInverseStickyWindow } from "./text-viewer-virtualization";
 import type { ViewerDownloadErrorHandler } from "./viewer-download";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
@@ -218,6 +219,16 @@ export function MarkdownGreenfieldContent({
         projection: visibleProjection,
       }),
     [frame.chunks, visibleProjection],
+  );
+  const stickyWindow = React.useMemo(
+    () =>
+      getTextInverseStickyWindow({
+        renderedBottom: visibleFrames.at(-1)?.bottom ?? 0,
+        renderedTop: visibleFrames[0]?.top ?? 0,
+        totalHeight: frame.totalHeight,
+        viewportHeight,
+      }),
+    [frame.totalHeight, viewportHeight, visibleFrames],
   );
   const projectVisibleProjection = React.useCallback(() => {
     const frames = frameChunksRef.current;
@@ -625,38 +636,74 @@ export function MarkdownGreenfieldContent({
               Preparing Markdown...
             </div>
           ) : document.text.trim() ? (
-            visibleFrames.map((chunkFrame) => {
-              const chunk = document.chunks[chunkFrame.index];
-              if (!chunk) return null;
-              return (
-                <ChunkFrame
-                  key={chunk.id}
-                  chunk={chunk}
-                  frame={chunkFrame}
-                  highlightRange={visibleHighlightRange}
-                  highlighted={chunkIntersectsLineRange({
-                    chunkFrame,
-                    range: visibleHighlightRange,
-                  })}
-                  measurementKey={measuredHeightKey({
-                    chunk,
-                    context: {
-                      fontScale,
-                      policyVersion: MARKDOWN_GREENFIELD_LAYOUT_POLICY_VERSION,
-                      width: Math.max(1, contentWidth),
-                    },
-                    documentMeasurementId,
-                  })}
-                  onMeasuredHeight={recordMeasuredHeight}
+            <>
+              <div
+                aria-hidden="true"
+                data-slot="markdown-sticky-before-buffer"
+                style={{ height: stickyWindow.beforeHeight }}
+              />
+              <div
+                data-slot="markdown-sticky-window"
+                style={{
+                  bottom: stickyWindow.stickyOffset,
+                  height: stickyWindow.renderedHeight,
+                  left: 0,
+                  overflow: "visible",
+                  position: "sticky",
+                  top: stickyWindow.stickyOffset,
+                  width: "100%",
+                }}
+              >
+                <div
+                  data-slot="markdown-sticky-content"
+                  style={{
+                    height: stickyWindow.renderedHeight,
+                    position: "relative",
+                    width: "100%",
+                  }}
                 >
-                  <MarkdownGreenfieldChunkRenderer
-                    chunk={chunk}
-                    fontScale={fontScale}
-                    urlFragmentNavigation={urlFragmentNavigation}
-                  />
-                </ChunkFrame>
-              );
-            })
+                  {visibleFrames.map((chunkFrame) => {
+                    const chunk = document.chunks[chunkFrame.index];
+                    if (!chunk) return null;
+                    return (
+                      <ChunkFrame
+                        key={chunk.id}
+                        chunk={chunk}
+                        frame={chunkFrame}
+                        highlightRange={visibleHighlightRange}
+                        highlighted={chunkIntersectsLineRange({
+                          chunkFrame,
+                          range: visibleHighlightRange,
+                        })}
+                        measurementKey={measuredHeightKey({
+                          chunk,
+                          context: {
+                            fontScale,
+                            policyVersion:
+                              MARKDOWN_GREENFIELD_LAYOUT_POLICY_VERSION,
+                            width: Math.max(1, contentWidth),
+                          },
+                          documentMeasurementId,
+                        })}
+                        renderedTop={stickyWindow.renderedTop}
+                        onMeasuredHeight={recordMeasuredHeight}
+                      >
+                        <MarkdownGreenfieldChunkRenderer
+                          chunk={chunk}
+                          fontScale={fontScale}
+                          urlFragmentNavigation={urlFragmentNavigation}
+                        />
+                      </ChunkFrame>
+                    );
+                  })}
+                </div>
+              </div>
+              <div
+                aria-hidden="true"
+                data-slot="markdown-sticky-after-buffer"
+                style={{ height: stickyWindow.afterHeight }}
+              />
+            </>
           ) : (
             <div
               aria-label="Empty Markdown document"
@@ -952,6 +999,7 @@ function ChunkFrame({
   highlightRange,
   highlighted,
   measurementKey,
+  renderedTop,
   onMeasuredHeight,
 }: {
   children: React.ReactNode;
@@ -960,6 +1008,7 @@ function ChunkFrame({
   highlightRange: { end: number; start: number } | null;
   highlighted: boolean;
   measurementKey: string;
+  renderedTop: number;
   onMeasuredHeight: (chunk: MarkdownGreenfieldChunk, height: number) => void;
 }) {
   const ref = React.useRef<HTMLDivElement | null>(null);
@@ -1001,7 +1050,7 @@ function ChunkFrame({
       data-source-start-line={frame.sourceStartLine}
       role={highlighted ? "region" : undefined}
       style={{
-        top: frame.top,
+        top: frame.top - renderedTop,
         ...(highlighted ? MARKDOWN_GREENFIELD_HIGHLIGHT_STYLE : null),
       }}
     >

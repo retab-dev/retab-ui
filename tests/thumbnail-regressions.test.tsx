@@ -328,7 +328,7 @@ afterEach(() => {
 });
 
 describe("thumbnail table styling", () => {
-  it("keeps CSV and XLSX table text readable inside dark UI", () => {
+  it("themes CSV and XLSX table thumbnails inside dark UI", () => {
     const { container } = render(
       <div className="dark">
         <GridTable
@@ -341,12 +341,17 @@ describe("thumbnail table styling", () => {
       </div>,
     );
 
+    const surface = container.querySelector("div.absolute");
     const cells = Array.from(container.querySelectorAll("td"));
+    expect(surface?.className).toContain("dark:bg-slate-950");
+    expect(surface?.className).toContain("dark:text-slate-300");
     expect(cells).toHaveLength(4);
     expect(cells[0].className).toContain("text-slate-900");
-    expect(cells[0].className).not.toContain("text-foreground");
+    expect(cells[0].className).toContain("dark:bg-slate-900/70");
+    expect(cells[0].className).toContain("dark:text-slate-100");
     expect(cells[2].className).toContain("text-slate-700");
-    expect(cells[2].className).not.toContain("text-foreground");
+    expect(cells[2].className).toContain("dark:border-slate-800");
+    expect(cells[2].className).toContain("dark:text-slate-300");
   });
 });
 

@@ -3,7 +3,13 @@
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
-import { FileViewer } from "@/components/ui/file-viewer";
+import {
+  FileViewer,
+  FileViewerBody,
+  FileViewerProvider,
+  FileViewerSurface,
+  FileViewerViewport,
+} from "@/components/ui/file-viewer";
 import {
   PdfViewerPages,
   PdfViewerProvider,
@@ -259,22 +265,32 @@ function OcrLayoutBlocksContent({
       <ViewerBody>
         <ViewerSurface>
           {pdfSource.source ? (
-            <FileViewer source={pdfSource.source} className="h-full">
-              <PdfViewerProvider>
-                <PdfViewerPages
-                  ref={setPdfViewerHandle}
-                  bare
-                  className="h-full"
-                  onScrollProgressChange={
-                    segmentedViewport.documentHandlers.onScrollProgressChange
-                  }
-                  onVisiblePageChange={
-                    segmentedViewport.documentHandlers.onCurrentPageChange
-                  }
-                  renderPageOverlay={renderPageOverlay}
-                />
-              </PdfViewerProvider>
-            </FileViewer>
+            <FileViewerProvider source={pdfSource.source}>
+              <FileViewer className="h-full">
+                <PdfViewerProvider>
+                  <FileViewerBody>
+                    <FileViewerSurface>
+                      <FileViewerViewport>
+                        <PdfViewerPages
+                          ref={setPdfViewerHandle}
+                          bare
+                          className="h-full"
+                          onScrollProgressChange={
+                            segmentedViewport.documentHandlers
+                              .onScrollProgressChange
+                          }
+                          onVisiblePageChange={
+                            segmentedViewport.documentHandlers
+                              .onCurrentPageChange
+                          }
+                          renderPageOverlay={renderPageOverlay}
+                        />
+                      </FileViewerViewport>
+                    </FileViewerSurface>
+                  </FileViewerBody>
+                </PdfViewerProvider>
+              </FileViewer>
+            </FileViewerProvider>
           ) : (
             <div className="bg-muted/20 text-muted-foreground grid h-full place-items-center p-6 text-sm">
               {pdfSource.error ?? "Preparing OCR pages..."}

@@ -56,7 +56,13 @@ export function ViewerBlocks({ blockId }: { blockId: ViewerBlockId }) {
     return null;
   }
 
-  return <ViewerBlockPreview key={activeBlock.id} block={activeBlock} />;
+  return (
+    <div className="space-y-8">
+      {getViewerBlocksForPage(activeBlock).map((block) => (
+        <ViewerBlockPreview key={block.id} block={block} />
+      ))}
+    </div>
+  );
 }
 
 export function ViewerBlockTabs() {
@@ -103,6 +109,13 @@ export function ViewerBlockTabs() {
 
 function getBlockHref(blockId: ViewerBlockId) {
   return `/blocks/${blockId}`;
+}
+
+function getViewerBlocksForPage(activeBlock: ViewerBlockWithComponent) {
+  if (activeBlock.id !== "file-system") return [activeBlock];
+  return viewerBlocks.filter((block) =>
+    block.categories.includes("file-system"),
+  );
 }
 
 function ViewerBlockPreview({ block }: { block: ViewerBlockWithComponent }) {

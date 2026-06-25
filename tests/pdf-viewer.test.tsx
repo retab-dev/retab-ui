@@ -21,14 +21,16 @@ import {
   createViewerResource,
 } from "@/registry/new-york-v4/lib/viewer-resource";
 import {
-  FileViewer,
   FileViewerBody,
-  FileViewerControls,
   FileViewerHeader,
   FileViewerSidebar,
   FileViewerSurface,
-  FileViewerTitle,
 } from "@/registry/new-york-v4/ui/file-viewer";
+import {
+  FileViewerControls,
+  FileViewerHarness as FileViewer,
+  FileViewerTitle,
+} from "./file-viewer-test-harness";
 import {
   buildPdfThumbnailLayout,
   getPdfThumbnailLayoutItem,
@@ -844,12 +846,12 @@ describe("PdfViewer", () => {
     await findByTextContent("Page 1 of 1");
 
     const root = document.querySelector<HTMLElement>(
-      '[data-slot="viewer-root"]',
+      '[data-slot="file-viewer-root"]',
     );
     expect(root).toBeTruthy();
-    expect(document.querySelectorAll('[data-slot="viewer-root"]')).toHaveLength(
-      1,
-    );
+    expect(
+      document.querySelectorAll('[data-slot="file-viewer-root"]'),
+    ).toHaveLength(1);
     expect(root?.children[0]?.getAttribute("data-slot")).toBe(
       "file-viewer-header",
     );
@@ -1114,6 +1116,14 @@ describe("PdfViewer", () => {
       100,
     );
     expect(document.querySelectorAll("canvas").length).toBeLessThan(100);
+    expect(
+      document.querySelector<HTMLElement>(
+        '[data-slot="scroll-area-viewport"]',
+      )?.style.overflowAnchor,
+    ).toBe("none");
+    expect(
+      document.querySelector('[data-slot="pdf-page-sticky-window"]'),
+    ).toBeTruthy();
   });
 
   it("does not keep rejected document loads cached for the same source", async () => {
@@ -2370,7 +2380,7 @@ describe("PdfViewer", () => {
     expect(renderCall.transform).toEqual([2, 0, 0, 2, 0, 0]);
   });
 
-  it("renders newly visible pages at scrolling DPR before sharpening after scroll idle", async () => {
+  it("renders newly visible pages at final DPR without sharpening after scroll idle", async () => {
     const doc = makeDoc([
       [100, 1000],
       [100, 1000],
@@ -2428,28 +2438,23 @@ describe("PdfViewer", () => {
       });
 
       expect(doc.pages[3].render).toHaveBeenCalledTimes(1);
-      const scrollingCall = doc.pages[3].render.mock.calls[0]?.[0];
-      const scrollingCanvas = scrollingCall.canvas as HTMLCanvasElement;
-      expect(scrollingCanvas.width).toBe(100);
-      expect(scrollingCanvas.height).toBe(1000);
-      expect(scrollingCall.transform).toBeUndefined();
+      const renderCall = doc.pages[3].render.mock.calls[0]?.[0];
+      const canvas = renderCall.canvas as HTMLCanvasElement;
+      expect(canvas.width).toBe(200);
+      expect(canvas.height).toBe(2000);
+      expect(renderCall.transform).toEqual([2, 0, 0, 2, 0, 0]);
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(120);
       });
 
-      expect(doc.pages[3].render).toHaveBeenCalledTimes(2);
-      const settledCall = doc.pages[3].render.mock.calls[1]?.[0];
-      const settledCanvas = settledCall.canvas as HTMLCanvasElement;
-      expect(settledCanvas.width).toBe(200);
-      expect(settledCanvas.height).toBe(2000);
-      expect(settledCall.transform).toEqual([2, 0, 0, 2, 0, 0]);
+      expect(doc.pages[3].render).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it("pre-renders past the settled render window after it finishes", async () => {
+  it("does not pre-render past the visible render window", async () => {
     const doc = makeDoc([
       [100, 1000],
       [100, 1000],
@@ -2481,55 +2486,14 @@ describe("PdfViewer", () => {
     await waitFor(() => expect(doc.pages[0].render).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(doc.pages[1].render).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(doc.pages[2].render).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(doc.pages[3].render).toHaveBeenCalledTimes(1));
-  });
-
-  it("can disable direction-aware pre-render for benchmark comparisons", async () => {
-    const doc = makeDoc([
-      [100, 1000],
-      [100, 1000],
-      [100, 1000],
-      [100, 1000],
-    ]);
-    const makeResolvedRenderTask = () => {
-      const task = {
-        promise: Promise.resolve(),
-        cancel: vi.fn(),
-      };
-      pdfjsMock.renderTasks.push(task);
-      return task;
-    };
-    doc.pages[0].render.mockImplementationOnce(makeResolvedRenderTask);
-    doc.pages[1].render.mockImplementationOnce(makeResolvedRenderTask);
-    doc.pages[2].render.mockImplementationOnce(makeResolvedRenderTask);
-    pdfjsMock.docs.set("/direction-pre-render-disabled.pdf", doc);
-
-    await act(async () => {
-      render(
-        <PdfViewer
-          source={pdfUrlSource("/direction-pre-render-disabled.pdf")}
-          defaultScale={1}
-          performanceOptions={{ directionAwarePreRender: false }}
-        />,
-      );
-    });
-
-    await waitFor(() => expect(doc.pages[0].render).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(doc.pages[1].render).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(doc.pages[2].render).toHaveBeenCalledTimes(1));
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
-
     expect(doc.pages[3].render).not.toHaveBeenCalled();
   });
 
-  it("reuses cached rendered canvases when remounting pages", async () => {
-    const drawImage = vi.fn();
+  it("re-renders canvases with pdfjs when remounting pages", async () => {
     const onPageRenderTiming = vi.fn();
-    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
-      drawImage,
-    } as never);
     const doc = makeDoc(
       Array.from({ length: 8 }, () => [100, 1000] as [number, number]),
     );
@@ -2574,7 +2538,7 @@ describe("PdfViewer", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     await waitFor(() =>
-      expect(document.querySelector("[data-page-number='1']")).toBeNull(),
+      expect(document.querySelector("[data-pdf-page-number='1']")).toBeNull(),
     );
 
     scrollTop = 0;
@@ -2584,14 +2548,14 @@ describe("PdfViewer", () => {
     });
 
     await waitFor(() =>
-      expect(document.querySelector("[data-page-number='1']")).toBeTruthy(),
+      expect(document.querySelector("[data-pdf-page-number='1']")).toBeTruthy(),
     );
-    expect(doc.pages[0].render).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(doc.pages[0].render).toHaveBeenCalledTimes(2));
     await waitFor(() =>
       expect(onPageRenderTiming).toHaveBeenCalledWith(
         expect.objectContaining({
           pageNumber: 1,
-          source: "cache",
+          source: "pdfjs",
           status: "rendered",
         }),
       ),
@@ -2646,7 +2610,7 @@ describe("PdfViewer", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     await waitFor(() =>
-      expect(document.querySelector("[data-page-number='1']")).toBeNull(),
+      expect(document.querySelector("[data-pdf-page-number='1']")).toBeNull(),
     );
 
     scrollTop = 0;
@@ -2656,7 +2620,7 @@ describe("PdfViewer", () => {
     });
 
     await waitFor(() =>
-      expect(document.querySelector("[data-page-number='1']")).toBeTruthy(),
+      expect(document.querySelector("[data-pdf-page-number='1']")).toBeTruthy(),
     );
     await waitFor(() => expect(doc.pages[0].render).toHaveBeenCalledTimes(2));
   });
@@ -2708,12 +2672,12 @@ describe("PdfViewer", () => {
     );
   });
 
-  it("preloads page metrics beyond render lookahead without rendering those canvases", async () => {
+  it("does not mount off-window page slots before those pages render", async () => {
     const doc = makeDoc([
       [100, 200],
       [100, 200],
-      [400, 500],
       [100, 200],
+      [400, 500],
     ]);
     pdfjsMock.docs.set("/metric-preload.pdf", doc);
 
@@ -2727,20 +2691,16 @@ describe("PdfViewer", () => {
     });
     await findByTextContent("Page 1 of 4");
 
-    await waitFor(() => expect(doc.getPage).toHaveBeenCalledWith(3));
-    await waitFor(() =>
-      expect(
-        document.querySelector<HTMLElement>("[data-page-number='3']")?.style
-          .width,
-      ).toBe("2000px"),
-    );
-
     expect(doc.pages[0].render).toHaveBeenCalledTimes(1);
     expect(doc.pages[1].render).toHaveBeenCalledTimes(1);
-    expect(doc.pages[2].render).not.toHaveBeenCalled();
+    expect(doc.pages[2].render).toHaveBeenCalledTimes(1);
+    expect(doc.pages[3].render).not.toHaveBeenCalled();
+    expect(
+      document.querySelector<HTMLElement>("[data-page-number='4']"),
+    ).toBeNull();
   });
 
-  it("bounds simultaneous visible page canvas renders", async () => {
+  it("renders the visible window directly without a concurrency scheduler", async () => {
     const doc = makeDoc([
       [100, 200],
       [100, 200],
@@ -2759,10 +2719,11 @@ describe("PdfViewer", () => {
     });
     await findByTextContent("Page 1 of 4");
 
-    await waitFor(() => expect(pdfjsMock.renderTasks).toHaveLength(2));
+    await waitFor(() => expect(pdfjsMock.renderTasks).toHaveLength(4));
     expect(doc.pages[0].render).toHaveBeenCalledTimes(1);
     expect(doc.pages[1].render).toHaveBeenCalledTimes(1);
-    expect(doc.pages[2].render).not.toHaveBeenCalled();
+    expect(doc.pages[2].render).toHaveBeenCalledTimes(1);
+    expect(doc.pages[3].render).toHaveBeenCalledTimes(1);
   });
 
   it("keeps tiny rendered page canvases drawable", async () => {

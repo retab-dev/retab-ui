@@ -3,7 +3,20 @@
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
-import { FileViewer } from "@/components/ui/file-viewer";
+import {
+  FileViewer,
+  FileViewerBody,
+  FileViewerDocument,
+  FileViewerHeader,
+  FileViewerHeaderEnd,
+  FileViewerHeaderStart,
+  FileViewerIdentity,
+  FileViewerPreview,
+  FileViewerProvider,
+  FileViewerSurface,
+  FileViewerToolbar,
+  FileViewerViewport,
+} from "@/components/ui/file-viewer";
 import {
   LONG_TEXT_SAMPLE,
   LONG_TEXT_SAMPLE_FILE_NAME,
@@ -180,9 +193,8 @@ function FileCanvas({
   showFileHeader?: boolean;
 }) {
   const source = React.useMemo(() => getFileSource(file), [file]);
-  const fileViewerProps = {
+  const fileViewerResourceProps = {
     source,
-    className: "h-full",
     fallbackFrameSize: file.fallbackFrameSize,
     fallbackSlideSize: file.fallbackSlideSize,
     isolateStyles: true,
@@ -196,9 +208,31 @@ function FileCanvas({
       className="bg-background h-[min(680px,calc(100svh-10rem))] min-h-[420px] w-full overflow-hidden rounded-xl border shadow-sm"
     >
       {showFileHeader ? (
-        <FileViewer key={file.file} {...fileViewerProps} />
+        <FileViewerProvider key={file.file} {...fileViewerResourceProps}>
+          <FileViewer className="h-full">
+            <FileViewerHeader>
+              <FileViewerHeaderStart>
+                <FileViewerIdentity />
+              </FileViewerHeaderStart>
+              <FileViewerHeaderEnd>
+                <FileViewerToolbar />
+              </FileViewerHeaderEnd>
+            </FileViewerHeader>
+            <FileViewerBody>
+              <FileViewerSurface>
+                <FileViewerViewport>
+                  <FileViewerDocument />
+                </FileViewerViewport>
+              </FileViewerSurface>
+            </FileViewerBody>
+          </FileViewer>
+        </FileViewerProvider>
       ) : (
-        <FileViewer key={file.file} {...fileViewerProps} bare />
+        <FileViewerPreview
+          key={file.file}
+          {...fileViewerResourceProps}
+          className="h-full"
+        />
       )}
     </div>
   );

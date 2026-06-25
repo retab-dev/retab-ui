@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { Folder } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -12,6 +11,7 @@ import { FileSystemThumbnail } from "./file-system-thumbnail";
 import type { FileSystemEntry } from "./file-system-types";
 import { useFileSystemRovingFocus } from "./use-file-system-roving-focus";
 import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { useFixedRowVirtualization } from "./fixed-grid-virtualization";
 
 const TILE_MIN_WIDTH = 124;
 const TILE_HEIGHT = 132;
@@ -43,22 +43,13 @@ export function FileSystemGridView({
   });
 
   const rowCount = Math.ceil(entries.length / columnCount);
-  const virtualizer = useVirtualizer({
-    count: rowCount,
-    estimateSize: () => TILE_HEIGHT,
-    getScrollElement: () => viewportRef.current,
-    overscan: 5,
+  const { scrollToRow, totalRowSize, virtualRows } = useFixedRowVirtualization({
+    rowCount,
+    rowSize: TILE_HEIGHT,
+    rowOverscan: 5,
+    initialViewportHeight: 560,
+    scrollRef: viewportRef,
   });
-  const virtualRows = virtualizer.getVirtualItems();
-  const renderedRows = virtualRows.length
-    ? virtualRows.map((row) => ({ index: row.index, start: row.start }))
-    : Array.from({ length: rowCount }, (_, index) => ({
-        index,
-        start: index * TILE_HEIGHT,
-      }));
-  const totalSize = virtualRows.length
-    ? virtualizer.getTotalSize()
-    : rowCount * TILE_HEIGHT;
   const rovingFocus = useFileSystemRovingFocus({
     entries,
     getScrollIndex: (entry) => {
@@ -70,7 +61,9 @@ export function FileSystemGridView({
     },
     onSelect: browser.selectEntry,
     scrollToIndex: (index) => {
-      if (index !== -1) virtualizer.scrollToIndex(index);
+      if (index !== -1) {
+        scrollToRow({ rowIndex: index, align: "center", behavior: "auto" });
+      }
     },
     selectedPath: browser.selectedPath,
   });
@@ -131,8 +124,8 @@ export function FileSystemGridView({
         "aria-label": "Files",
       }}
     >
-      <div className="relative" style={{ height: totalSize }}>
-        {renderedRows.map((row) => {
+      <div className="relative" style={{ height: totalRowSize }}>
+        {virtualRows.map((row) => {
           const rowEntries = entries.slice(
             row.index * columnCount,
             row.index * columnCount + columnCount,

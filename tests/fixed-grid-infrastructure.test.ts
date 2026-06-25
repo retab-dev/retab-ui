@@ -2089,6 +2089,45 @@ describe("fixed grid virtualization math", () => {
     });
   });
 
+  it("scrolls grid cells when scrollTo is unavailable", () => {
+    const scroller = document.createElement("div");
+    defineViewportMetric(scroller, "clientHeight", 100);
+    defineHorizontalViewportMetric(scroller, "clientWidth", 200);
+    defineScrollMetric(scroller, "scrollTop", 0);
+    defineScrollMetric(scroller, "scrollLeft", 0);
+    Object.defineProperty(scroller, "scrollTo", {
+      configurable: true,
+      value: undefined,
+    });
+
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLElement | null>;
+    const { result } = renderHook(() =>
+      useFixedGridVirtualization({
+        rowCount: 100,
+        columnCount: 100,
+        rowSize: 20,
+        columnSize: 50,
+        rowOverscan: 2,
+        columnOverscan: 2,
+        scrollRef,
+      }),
+    );
+
+    act(() => {
+      result.current.scrollToCell({
+        rowIndex: 10,
+        columnIndex: 5,
+        align: "end",
+        behavior: "auto",
+      });
+    });
+
+    expect(scroller.scrollTop).toBe(120);
+    expect(scroller.scrollLeft).toBe(100);
+  });
+
   it("preserves the semantic grid anchor when item sizes change", () => {
     const scroller = document.createElement("div");
     defineViewportMetric(scroller, "clientHeight", 30);
@@ -2613,6 +2652,38 @@ describe("fixed grid virtualization math", () => {
       top: 160,
       behavior: "auto",
     });
+  });
+
+  it("scrolls row-only targets when scrollTo is unavailable", () => {
+    const scroller = document.createElement("div");
+    defineViewportMetric(scroller, "clientHeight", 100);
+    defineScrollMetric(scroller, "scrollTop", 0);
+    Object.defineProperty(scroller, "scrollTo", {
+      configurable: true,
+      value: undefined,
+    });
+
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLElement | null>;
+    const { result } = renderHook(() =>
+      useFixedRowVirtualization({
+        rowCount: 100,
+        rowSize: 20,
+        rowOverscan: 2,
+        scrollRef,
+      }),
+    );
+
+    act(() => {
+      result.current.scrollToRow({
+        rowIndex: 10,
+        align: "center",
+        behavior: "auto",
+      });
+    });
+
+    expect(scroller.scrollTop).toBe(160);
   });
 
   it("cancels pending row-only measurements on unmount", () => {

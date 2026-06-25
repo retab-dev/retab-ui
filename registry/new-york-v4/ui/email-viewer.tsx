@@ -27,7 +27,7 @@ import type {
   MimePartPath,
 } from "./email-viewer-types";
 import { FileThumbnail } from "./file-thumbnail";
-import { FileViewer } from "./file-viewer";
+import { FileViewerPreview } from "./file-viewer";
 import {
   ViewerBody,
   ViewerHeader,
@@ -351,11 +351,10 @@ export function EmailViewerContent() {
   }
 
   return (
-    <FileViewer
+    <FileViewerPreview
       key={content.node.path.join("/")}
       source={content.file.source}
-      as={content.file.category}
-      bare
+      category={content.file.category}
       className="size-full min-h-0"
     />
   );

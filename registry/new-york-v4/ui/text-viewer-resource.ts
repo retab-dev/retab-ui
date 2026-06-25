@@ -13,6 +13,8 @@ import type {
 export const DEFAULT_MAX_BYTES = 1_000_000;
 export const DEFAULT_MAX_LINES = 10_000;
 export const MAX_TEXT_RESOURCE_CACHE_ENTRIES = 64;
+export const TEXT_LINE_DETACHMENT_SOURCE_MIN_LENGTH = 64 * 1024;
+export const TEXT_LINE_DETACHMENT_MAX_LINE_LENGTH = 16 * 1024;
 
 export interface TextViewerBounds {
   maxBytes?: number;
@@ -122,7 +124,25 @@ export function assertTextWithinBounds(
 // into several visual lines, but highlighting and scroll APIs stay source-line
 // based.
 export function splitTextLines(text: string) {
-  return text.split(/\r\n|[\n\r\u2028\u2029]/g);
+  return splitTextLinesForDocument(text).lines;
+}
+
+export function shouldDetachTextLine({
+  lineLength,
+  sourceLength,
+}: {
+  lineLength: number;
+  sourceLength: number;
+}) {
+  return (
+    sourceLength >= TEXT_LINE_DETACHMENT_SOURCE_MIN_LENGTH &&
+    lineLength > 0 &&
+    lineLength <= TEXT_LINE_DETACHMENT_MAX_LINE_LENGTH
+  );
+}
+
+export function detachTextLine(line: string) {
+  return line.length === 0 ? line : ` ${line}`.slice(1);
 }
 
 export function readTextResource({
@@ -178,10 +198,9 @@ export function prepareTextDocument(
     throw new TextViewerTooLargeError("bytes");
   }
 
-  const lines = splitTextLines(text);
-  if (lines.length > bounds.maxLines) {
-    throw new TextViewerTooLargeError("lines");
-  }
+  const lines = splitTextLinesForDocument(text, {
+    maxLines: bounds.maxLines,
+  }).lines;
 
   return {
     lineCount: lines.length,
@@ -192,6 +211,57 @@ export function prepareTextDocument(
 
 function inlineTextResource(content: ViewerContentPayload) {
   return content.payload.kind === "text" ? content.payload.text : null;
+}
+
+function splitTextLinesForDocument(
+  text: string,
+  options: { maxLines?: number } = {},
+) {
+  const maxLines = options.maxLines ?? Number.POSITIVE_INFINITY;
+  const lines: string[] = [];
+  let lineStart = 0;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const breakLength = textLineBreakLength(text, index);
+    if (breakLength === 0) continue;
+
+    appendTextLine(lines, text, lineStart, index, maxLines);
+    index += breakLength - 1;
+    lineStart = index + 1;
+  }
+
+  appendTextLine(lines, text, lineStart, text.length, maxLines);
+  return { lines };
+}
+
+function appendTextLine(
+  lines: string[],
+  text: string,
+  start: number,
+  end: number,
+  maxLines: number,
+) {
+  if (lines.length >= maxLines) {
+    throw new TextViewerTooLargeError("lines");
+  }
+
+  const line = text.slice(start, end);
+  lines.push(
+    shouldDetachTextLine({
+      lineLength: end - start,
+      sourceLength: text.length,
+    })
+      ? detachTextLine(line)
+      : line,
+  );
+}
+
+function textLineBreakLength(text: string, index: number) {
+  const code = text.charCodeAt(index);
+  if (code === 0x0d) {
+    return text.charCodeAt(index + 1) === 0x0a ? 2 : 1;
+  }
+  return code === 0x0a || code === 0x2028 || code === 0x2029 ? 1 : 0;
 }
 
 function getInlineTextDocument({

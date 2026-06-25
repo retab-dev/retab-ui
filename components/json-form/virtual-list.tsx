@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
+
+import { useMeasuredRowVirtualization } from "@/components/ui/measured-row-virtualization";
 
 export function VirtualList({
   fields,
@@ -17,21 +18,26 @@ export function VirtualList({
   gap?: number;
 }) {
   const parentRef = React.useRef<HTMLDivElement>(null);
-  const virtualizer = useVirtualizer({
+  const getItemKey = React.useCallback(
+    (index: number) => fields[index]?.id ?? index,
+    [fields],
+  );
+  const { measureRow, totalSize, virtualRows } = useMeasuredRowVirtualization({
     count: fields.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => estimateSize + gap,
+    estimateSize: estimateSize + gap,
+    getItemKey,
     overscan: 8,
+    scrollRef: parentRef,
   });
 
   return (
     <div ref={parentRef} style={{ maxHeight }} className="overflow-y-auto">
-      <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
-        {virtualizer.getVirtualItems().map((virtualRow) => (
+      <div style={{ height: totalSize, position: "relative" }}>
+        {virtualRows.map((virtualRow) => (
           <div
-            key={fields[virtualRow.index].id}
+            key={virtualRow.key}
             data-index={virtualRow.index}
-            ref={virtualizer.measureElement}
+            ref={(element) => measureRow(virtualRow.index, element)}
             style={{
               position: "absolute",
               top: 0,

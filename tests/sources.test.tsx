@@ -53,16 +53,18 @@ import {
 } from "@/registry/new-york-v4/ui/docx-source";
 import type { DocxViewerHandle } from "@/registry/new-york-v4/ui/docx-viewer";
 import {
-  FileViewer,
   FileViewerBody,
-  FileViewerControls,
   FileViewerHeader,
-  FileViewerMeta,
   FileViewerSidebar,
   FileViewerSidebarTrigger,
   FileViewerSurface,
-  FileViewerTitle,
 } from "@/registry/new-york-v4/ui/file-viewer";
+import {
+  FileViewerControls,
+  FileViewerHarness as FileViewer,
+  FileViewerMeta,
+  FileViewerTitle,
+} from "./file-viewer-test-harness";
 import {
   imageAnchorToTarget,
   renderImageSourceOverlay,

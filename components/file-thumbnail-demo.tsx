@@ -53,7 +53,7 @@ export function FileThumbnailDemo() {
             className="w-full"
           />
         </Cell>
-        <Cell label="Custom content" hint="previewContent">
+        <Cell label="Custom" hint="previewContent">
           <FileThumbnail
             file={{ name: "photo.png", type: "image/png" }}
             thumbnailShape="square"

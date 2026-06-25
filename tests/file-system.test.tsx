@@ -11,7 +11,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ViewerSource } from "@/lib/viewer-source";
-import { FileViewer } from "@/components/ui/file-viewer";
+import { FileViewerPreview } from "@/components/ui/file-viewer";
 import {
   FileSystem,
   FileSystemBrowser,
@@ -36,6 +36,9 @@ import {
 
 vi.mock("@/components/ui/file-viewer", () => ({
   FileViewer: ({ source }: { source: { fileName?: string } }) => (
+    <div data-testid="file-viewer">viewer:{source.fileName}</div>
+  ),
+  FileViewerPreview: ({ source }: { source: { fileName?: string } }) => (
     <div data-testid="file-viewer">viewer:{source.fileName}</div>
   ),
 }));
@@ -98,7 +101,7 @@ function SelectedFileViewer() {
         if (!entry) return <div>No file selected</div>;
         if (entry.kind === "folder") return <div>{entry.name}</div>;
         if (sourceState.status === "ready") {
-          return <FileViewer source={sourceState.source} bare />;
+          return <FileViewerPreview source={sourceState.source} />;
         }
         return <div>{sourceState.status}</div>;
       }}
@@ -237,7 +240,11 @@ describe("FileSystem", () => {
     expect(surface).toBeTruthy();
     expect(body?.children[0]).toBe(sidebar);
     expect(body?.children[1]).toBe(surface);
-    expect(sidebar?.getAttribute("aria-label")).toBe("Files");
+    expect(
+      sidebar
+        ?.querySelector('[data-slot="viewer-sidebar-container"]')
+        ?.getAttribute("aria-label"),
+    ).toBe("Files");
     expect(root?.style.getPropertyValue("--viewer-sidebar-width")).toBe(
       "min(22rem, 85vw)",
     );

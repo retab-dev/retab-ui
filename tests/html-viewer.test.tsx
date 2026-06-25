@@ -12,8 +12,8 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createViewerResource } from "@/lib/viewer-resource";
-import { FileViewer } from "@/registry/new-york-v4/ui/file-viewer";
 import { HtmlFileContent } from "@/registry/new-york-v4/ui/file-viewer-html-viewer";
+import { FileViewerHarness as FileViewer } from "./file-viewer-test-harness";
 
 function response(body: string, init: ResponseInit = {}) {
   return new Response(body, init);

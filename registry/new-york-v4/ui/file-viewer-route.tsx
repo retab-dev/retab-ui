@@ -3,12 +3,17 @@
 import * as React from "react";
 
 import { type ViewerResource } from "@/lib/viewer-resource";
+import {
+  fileViewerDiagnostic,
+  summarizeViewerDescriptor,
+  summarizeViewerSource,
+} from "@/lib/pdf-viewer-diagnostics";
 
 import {
   isProseTextDescriptor,
   type FileCategory,
+  type FileViewerControlsPlacement,
   type FileDescriptor,
-  type FileViewerDocumentChrome,
   type FileViewerFallbackSize,
 } from "./file-viewer-core";
 import { CsvFileContent } from "./file-viewer-csv-viewer";
@@ -57,13 +62,13 @@ const CodeTextViewer = React.lazy(() =>
 );
 
 export type FileViewerRouteProps = {
-  bare?: boolean;
   className?: string;
-  documentChrome: FileViewerDocumentChrome;
+  controls: FileViewerControlsPlacement;
   descriptor: FileDescriptor;
   descriptorSignal: AbortSignal;
   fallbackFrameSize?: FileViewerFallbackSize;
   fallbackSlideSize?: FileViewerFallbackSize;
+  frame?: "contained" | "none";
   isolateStyles: boolean;
   resource: ViewerResource;
 };
@@ -173,8 +178,8 @@ const RENDERERS: Partial<
 export function FileViewerRoute({
   descriptor,
   className,
-  documentChrome,
-  bare = false,
+  controls,
+  frame = "contained",
   isolateStyles,
   descriptorSignal,
   fallbackFrameSize,
@@ -182,17 +187,32 @@ export function FileViewerRoute({
   resource,
 }: FileViewerRouteProps) {
   const { category } = descriptor;
-  const standalone = documentChrome === "standalone";
+  const bare = frame === "none";
+  const localControls = controls === "local";
   const isTextSource = descriptor.source.kind === "text";
 
   const renderer = RENDERERS[category];
+  const routeDetails = {
+    bare,
+    category,
+    controls,
+    hasRenderer: Boolean(renderer),
+    isTextSource,
+    isolateStyles,
+    source: summarizeViewerSource(descriptor.source),
+    descriptor: summarizeViewerDescriptor(descriptor),
+  };
   if (renderer && (!isTextSource || TEXT_SOURCE_CATEGORIES.has(category))) {
+    fileViewerDiagnostic("debug", "file_viewer_route_renderer_selected", {
+      ...routeDetails,
+      textSourceAllowed: !isTextSource || TEXT_SOURCE_CATEGORIES.has(category),
+    });
     return renderer({
       descriptor,
       resource,
       className,
       bare,
-      controls: standalone,
+      controls: localControls,
       fallbackFrameSize,
       fallbackSlideSize,
       isolateStyles,
@@ -200,12 +220,16 @@ export function FileViewerRoute({
     });
   }
 
+  fileViewerDiagnostic("warn", "file_viewer_route_unsupported", {
+    ...routeDetails,
+    textSourceAllowed: !isTextSource || TEXT_SOURCE_CATEGORIES.has(category),
+  });
   return (
     <UnsupportedCard
       resource={resource}
       className={className}
       bare={bare}
-      showDownload={standalone}
+      showDownload={localControls}
     />
   );
 }

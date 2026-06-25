@@ -3,14 +3,17 @@
 import {
   FileViewer,
   FileViewerBody,
-  FileViewerControls,
   FileViewerDocument,
   FileViewerHeader,
-  FileViewerMeta,
+  FileViewerHeaderEnd,
+  FileViewerHeaderStart,
+  FileViewerIdentity,
+  FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarTrigger,
   FileViewerSurface,
-  FileViewerTitle,
+  FileViewerToolbar,
+  FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import {
   SidebarListButton,
@@ -32,53 +35,55 @@ const source = {
 export function FileViewerHeaderExample() {
   return (
     <div className="not-prose bg-background h-[560px] overflow-hidden rounded-xl border">
-      <FileViewer
-        source={source}
-        defaultOpen
-        mode="inline"
-        className="bg-background h-full"
-      >
-        <FileViewerHeader>
-          <FileViewerSidebarTrigger className="-ml-1" />
-          <FileViewerTitle />
-          <FileViewerMeta />
-          <FileViewerControls />
-        </FileViewerHeader>
-        <FileViewerBody>
-          <FileViewerSidebar
-            aria-label="Review sections"
-            width="18rem"
-            className="bg-sidebar border-r"
-          >
-            <SidebarListHeader className="border-b px-3 py-2 text-xs font-medium">
-              Review queue
-            </SidebarListHeader>
-            <SidebarListContent>
-              <SidebarListGroup>
-                <SidebarListGroupLabel>Sections</SidebarListGroupLabel>
-                <SidebarListGroupContent>
-                  <SidebarListMenu>
-                    <SidebarListMenuItem>
-                      <SidebarListButton isActive>
-                        Executive summary
-                      </SidebarListButton>
-                    </SidebarListMenuItem>
-                    <SidebarListMenuItem>
-                      <SidebarListButton>Risk factors</SidebarListButton>
-                    </SidebarListMenuItem>
-                    <SidebarListMenuItem>
-                      <SidebarListButton>Financials</SidebarListButton>
-                    </SidebarListMenuItem>
-                  </SidebarListMenu>
-                </SidebarListGroupContent>
-              </SidebarListGroup>
-            </SidebarListContent>
-          </FileViewerSidebar>
-          <FileViewerSurface>
-            <FileViewerDocument />
-          </FileViewerSurface>
-        </FileViewerBody>
-      </FileViewer>
+      <FileViewerProvider source={source} defaultSidebarOpen>
+        <FileViewer sidebarMode="inline" className="bg-background h-full">
+          <FileViewerHeader>
+            <FileViewerHeaderStart>
+              <FileViewerSidebarTrigger className="-ml-1" />
+              <FileViewerIdentity />
+            </FileViewerHeaderStart>
+            <FileViewerHeaderEnd>
+              <FileViewerToolbar />
+            </FileViewerHeaderEnd>
+          </FileViewerHeader>
+          <FileViewerBody>
+            <FileViewerSidebar
+              aria-label="Review sections"
+              width="18rem"
+              className="bg-sidebar border-r"
+            >
+              <SidebarListHeader className="border-b px-3 py-2 text-xs font-medium">
+                Review queue
+              </SidebarListHeader>
+              <SidebarListContent>
+                <SidebarListGroup>
+                  <SidebarListGroupLabel>Sections</SidebarListGroupLabel>
+                  <SidebarListGroupContent>
+                    <SidebarListMenu>
+                      <SidebarListMenuItem>
+                        <SidebarListButton isActive>
+                          Executive summary
+                        </SidebarListButton>
+                      </SidebarListMenuItem>
+                      <SidebarListMenuItem>
+                        <SidebarListButton>Risk factors</SidebarListButton>
+                      </SidebarListMenuItem>
+                      <SidebarListMenuItem>
+                        <SidebarListButton>Financials</SidebarListButton>
+                      </SidebarListMenuItem>
+                    </SidebarListMenu>
+                  </SidebarListGroupContent>
+                </SidebarListGroup>
+              </SidebarListContent>
+            </FileViewerSidebar>
+            <FileViewerSurface>
+              <FileViewerViewport>
+                <FileViewerDocument />
+              </FileViewerViewport>
+            </FileViewerSurface>
+          </FileViewerBody>
+        </FileViewer>
+      </FileViewerProvider>
     </div>
   );
 }

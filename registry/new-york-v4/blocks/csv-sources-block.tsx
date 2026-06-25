@@ -14,12 +14,16 @@ import {
 import {
   FileViewer,
   FileViewerBody,
-  FileViewerControls,
   FileViewerHeader,
-  FileViewerMeta,
+  FileViewerHeaderEnd,
+  FileViewerHeaderStart,
+  FileViewerIdentity,
+  FileViewerProvider,
   FileViewerSidebar,
+  FileViewerSidebarContent,
   FileViewerSurface,
-  FileViewerTitle,
+  FileViewerToolbar,
+  FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import { SegmentedDocumentProvider } from "@/components/ui/segmented-document-provider";
 import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link";
@@ -98,42 +102,51 @@ function CsvSourcesContent({
   const activeCell = sourceToCsvCell(activeSource);
 
   return (
-    <FileViewer
-      source={CSV_SOURCE}
-      className="bg-background h-full min-h-[680px]"
-    >
-      <FileViewerHeader>
-        <FileViewerTitle />
-        <FileViewerMeta />
-        <FileViewerControls />
-      </FileViewerHeader>
-      <FileViewerBody>
-        <FileViewerSurface className="relative">
-          <CsvViewerDocument
-            ref={viewerRef}
-            source={CSV_SOURCE}
-            fillHeight
-            className="h-full"
-            controls={false}
-            activeCell={activeCell}
-          />
-          <SourceIndicator
-            path={link.activeSourcePath}
-            found={!!activeSource}
-            className="top-2"
-          />
-        </FileViewerSurface>
-        <FileViewerSidebar
-          aria-label="Source fields"
-          side="right"
-          collapsible="none"
-          width="360px"
-          className="border-l"
-        >
-          <SourceFieldList fields={FIELDS} link={link} />
-        </FileViewerSidebar>
-      </FileViewerBody>
-    </FileViewer>
+    <FileViewerProvider source={CSV_SOURCE} defaultSidebarOpen>
+      <FileViewer
+        className="bg-background h-full min-h-[680px]"
+        sidebarSide="right"
+      >
+        <FileViewerHeader>
+          <FileViewerHeaderStart>
+            <FileViewerIdentity />
+          </FileViewerHeaderStart>
+          <FileViewerHeaderEnd>
+            <FileViewerToolbar />
+          </FileViewerHeaderEnd>
+        </FileViewerHeader>
+        <FileViewerBody>
+          <FileViewerSurface className="relative">
+            <FileViewerViewport>
+              <CsvViewerDocument
+                ref={viewerRef}
+                source={CSV_SOURCE}
+                fillHeight
+                className="h-full"
+                controls={false}
+                activeCell={activeCell}
+              />
+            </FileViewerViewport>
+            <SourceIndicator
+              path={link.activeSourcePath}
+              found={!!activeSource}
+              className="top-2"
+            />
+          </FileViewerSurface>
+          <FileViewerSidebar
+            aria-label="Source fields"
+            side="right"
+            collapsible="none"
+            width="360px"
+            className="border-l"
+          >
+            <FileViewerSidebarContent>
+              <SourceFieldList fields={FIELDS} link={link} />
+            </FileViewerSidebarContent>
+          </FileViewerSidebar>
+        </FileViewerBody>
+      </FileViewer>
+    </FileViewerProvider>
   );
 }
 

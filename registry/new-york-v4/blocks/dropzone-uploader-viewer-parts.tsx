@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropzone";
 import { formatFileSize } from "@/components/ui/file-size-format";
 import { FileThumbnail } from "@/components/ui/file-thumbnail";
-import { FileViewer } from "@/components/ui/file-viewer";
+import { FileViewerPreview } from "@/components/ui/file-viewer";
 import {
   ViewerHeader,
   ViewerRoot,
@@ -336,7 +336,10 @@ export function FileIntakeViewerSurface() {
   return (
     <ViewerSurface className="min-h-[24rem]">
       {viewerSource ? (
-        <FileViewer source={viewerSource} bare className="size-full min-h-0" />
+        <FileViewerPreview
+          source={viewerSource}
+          className="size-full min-h-0"
+        />
       ) : (
         <FileIntakeViewerEmptyState
           getEmptySurfaceProps={getEmptySurfaceProps}

@@ -44,8 +44,14 @@ import {
 import {
   getTextFrameScrollAnchor,
   getTextFrameVirtualItems,
+  getTextInverseStickyWindow,
   type TextFrameGeometry,
 } from "@/registry/new-york-v4/ui/text-viewer-virtualization";
+import {
+  createTextProjectionCache,
+  createTextProjectionMetrics,
+  projectRows,
+} from "@/registry/new-york-v4/ui/text-viewer-chenglou-content";
 
 // Canvas text measurement is unavailable in jsdom; the layout code falls back
 // to estimates when getContext throws. Stub it so the pure-layout tests don't
@@ -620,6 +626,20 @@ describe("layoutTextDocument", () => {
     }
   });
 
+  it("reuses document frames for identical width and scale inputs", () => {
+    const doc = prepareText("alpha\nbeta");
+    const first = layoutTextDocument({ contentWidth: 600, document: doc });
+    const second = layoutTextDocument({ contentWidth: 600, document: doc });
+    const zoomed = layoutTextDocument({
+      contentWidth: 600,
+      document: doc,
+      fontScale: 1.2,
+    });
+
+    expect(second).toBe(first);
+    expect(zoomed).not.toBe(first);
+  });
+
   it("keeps every inline block at least one line tall", () => {
     const doc = prepareText("a\n\nb");
     const frame = layoutTextDocument({ contentWidth: 600, document: doc });
@@ -847,6 +867,26 @@ describe("getTextFrameVirtualItems", () => {
   });
 });
 
+describe("getTextInverseStickyWindow", () => {
+  it("keeps full-document scroll height while sticking the rendered range by negative offsets", () => {
+    expect(
+      getTextInverseStickyWindow({
+        renderedBottom: 900,
+        renderedTop: 300,
+        totalHeight: 2000,
+        viewportHeight: 200,
+      }),
+    ).toEqual({
+      afterHeight: 1100,
+      beforeHeight: 300,
+      renderedBottom: 900,
+      renderedHeight: 600,
+      renderedTop: 300,
+      stickyOffset: -400,
+    });
+  });
+});
+
 describe("getTextFrameScrollAnchor", () => {
   const frames: TextFrameGeometry[] = Array.from({ length: 5 }, (_, i) => ({
     top: i * 100,
@@ -1024,6 +1064,7 @@ describe("materialize visible lines (fallback paths)", () => {
       viewportBottom: 10000,
     });
     expect(lines).toHaveLength(1);
+    expect(lines[0]!.lineIndex).toBe(0);
     expect(lines[0]!.top).toBe(0);
     expect(lines[0]!.fragments.map((f) => f.text).join("")).toContain(
       "Hello world",
@@ -1060,6 +1101,7 @@ describe("materialize visible lines (fallback paths)", () => {
       viewportBottom: 10000,
     });
     expect(lines).toHaveLength(1);
+    expect(lines[0]!.lineIndex).toBe(0);
     expect(lines[0]!.line.text).toContain("line1");
     expect(lines[0]!.line.text).toContain("line3");
   });

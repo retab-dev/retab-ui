@@ -4,6 +4,7 @@ import {
   createPdfPageLayout,
   findPdfPageByOffset,
   getPdfPageLayout,
+  getPdfRenderedPageWindow,
   getPdfRenderPageNumbers,
   getPdfVisiblePageNumbers,
   PDF_PAGE_GAP,
@@ -223,6 +224,62 @@ describe("pdf viewer layout", () => {
       }),
     ).toEqual([398, 399, 400, 401, 402]);
     expect(PDF_RENDER_PAGE_OVERSCAN).toBe(2);
+  });
+
+  it("builds an inverse-sticky rendered page window", () => {
+    const layout = createPdfPageLayout({
+      pageCount: 5,
+      defaultPageSize: pageSize,
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    });
+
+    const window = getPdfRenderedPageWindow({
+      layout,
+      pageNumbers: [2, 3],
+      viewportHeight: 100,
+    });
+
+    expect(window).toMatchObject({
+      beforeHeight: PDF_PAGE_PADDING + 200 + PDF_PAGE_GAP,
+      height: 200 + PDF_PAGE_GAP + 200,
+      stickyInset: -(200 + PDF_PAGE_GAP + 200 - 100),
+    });
+    expect(window?.afterHeight).toBe(
+      layout.totalHeight -
+        (PDF_PAGE_PADDING + 200 + PDF_PAGE_GAP + 200 + PDF_PAGE_GAP + 200),
+    );
+    expect(window?.pages).toEqual([
+      expect.objectContaining({ pageNumber: 2, windowTop: 0 }),
+      expect.objectContaining({
+        pageNumber: 3,
+        windowTop: 200 + PDF_PAGE_GAP,
+      }),
+    ]);
+    expect(
+      (window?.beforeHeight ?? 0) +
+        (window?.height ?? 0) +
+        (window?.afterHeight ?? 0),
+    ).toBe(layout.totalHeight);
+  });
+
+  it("omits the rendered page window when no requested pages are valid", () => {
+    const layout = createPdfPageLayout({
+      pageCount: 2,
+      defaultPageSize: pageSize,
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    });
+
+    expect(
+      getPdfRenderedPageWindow({
+        layout,
+        pageNumbers: [10],
+        viewportHeight: 100,
+      }),
+    ).toBeNull();
   });
 
   it("clips the visible page window at document edges", () => {

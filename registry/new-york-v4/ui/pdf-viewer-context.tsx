@@ -8,7 +8,7 @@ import {
 } from "@/lib/viewer-resource";
 import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source";
 
-import { useOptionalFileViewerResource } from "./file-viewer-internal";
+import { useOptionalFileViewerResource } from "./file-viewer-resource-state";
 import {
   PdfResourceContent,
   type PdfViewerContentProps,

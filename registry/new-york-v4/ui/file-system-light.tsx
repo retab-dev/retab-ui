@@ -11,7 +11,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { FileViewer } from "@/components/ui/file-viewer";
+import { FileViewerPreview } from "@/components/ui/file-viewer";
 import {
   ViewerBody,
   ViewerHeader,
@@ -173,9 +173,8 @@ export function FileSystemLight({
         </ViewerSidebar>
         <ViewerSurface>
           {selectedFile ? (
-            <FileViewer
+            <FileViewerPreview
               source={selectedFile.source}
-              bare
               className="size-full min-h-0"
             />
           ) : (

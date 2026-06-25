@@ -74,6 +74,9 @@ describe("TextViewer Markdown routing", () => {
       container.querySelector('[data-slot="markdown-virtual-canvas"]'),
     ).toBeTruthy();
     expect(
+      container.querySelector('[data-slot="markdown-sticky-window"]'),
+    ).toBeTruthy();
+    expect(
       container.querySelector('[data-slot="text-virtual-canvas"]'),
     ).toBeNull();
 

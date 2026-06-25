@@ -52,7 +52,7 @@ URL and Blob sources use the same bounded text resource path as the Code Viewer:
 
 - **Natural wrapping** — prose stays within the viewport instead of forcing horizontal scrolling.
 - **Pretext layout** — line heights are predicted from text, font, width, and line-height without mounting rows for measurement.
-- **Custom virtualization** — variable-height source lines are windowed with local offset math, not TanStack Virtual.
+- **Custom virtualization** — variable-height source lines are windowed with local offset math.
 - **Stable source-line addressing** — `highlight` and `scrollToLineRange` still use 1-based inclusive source-line ranges.
 - **Prose chrome** — the controls shows word count, text scale controls, and downloads from the source resource.
 - **Markdown stays separate** — `.md`, `.markdown`, and `text/markdown` sources route through the dedicated Markdown Viewer, not through Text Viewer markdown mode.

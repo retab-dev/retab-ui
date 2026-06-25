@@ -100,11 +100,11 @@ describe("text and code thumbnails", () => {
     expect(view.queryByText("1")).toBeNull();
   });
 
-  it("keeps text thumbnails on a light paper surface in dark mode", async () => {
+  it("themes text thumbnails inside dark UI", async () => {
     const resource = textResource({
       fileName: "dark-mode-notes.txt",
       key: "text-dark-mode",
-      text: "Dark app chrome should not invert the thumbnail page.",
+      text: "Dark app chrome should theme the thumbnail page.",
     });
 
     renderThumbnail(
@@ -114,14 +114,14 @@ describe("text and code thumbnails", () => {
     );
 
     const prose = await screen.findByText(
-      "Dark app chrome should not invert the thumbnail page.",
+      "Dark app chrome should theme the thumbnail page.",
     );
     const thumbnail = prose.closest('[data-slot="text-thumbnail"]');
 
     expect(thumbnail?.classList.contains("bg-white")).toBe(true);
     expect(thumbnail?.classList.contains("text-slate-700")).toBe(true);
-    expect(thumbnail?.classList.contains("bg-card")).toBe(false);
-    expect(thumbnail?.classList.contains("text-foreground/80")).toBe(false);
+    expect(thumbnail?.classList.contains("dark:bg-slate-950")).toBe(true);
+    expect(thumbnail?.classList.contains("dark:text-slate-300")).toBe(true);
   });
 
   it("normalizes CRLF prose in text thumbnails", async () => {
@@ -154,6 +154,11 @@ describe("text and code thumbnails", () => {
     expect(
       view.container.querySelector('[data-slot="text-thumbnail-empty"]'),
     ).not.toBeNull();
+    expect(
+      view.container
+        .querySelector('[data-slot="text-thumbnail-empty"]')
+        ?.classList.contains("dark:bg-slate-950"),
+    ).toBe(true);
     expect(view.queryByText("1")).toBeNull();
   });
 

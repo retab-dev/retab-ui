@@ -3,33 +3,43 @@
 import * as React from "react";
 
 import { CODE_GUTTER_BACKGROUND } from "./code-viewer-projector";
-import { CODE_VIEWER_BASE_FONT_PX } from "./code-viewer-scale";
-import { getCodeVirtualTotalSize } from "./code-viewer-virtualization";
+import {
+  CODE_VIEWER_BASE_FONT_PX,
+  CODE_VIEWER_INITIAL_VIEWPORT_HEIGHT,
+} from "./code-viewer-scale";
+import {
+  getCodePhysicalScrollSize,
+  getCodeVirtualTotalSize,
+} from "./code-viewer-virtualization";
 import { ScrollArea } from "./scroll-area";
 
 const CODE_VIEWER_DEFAULT_VIEWPORT_WIDTH = 800;
 
 export function CodeViewerViewport({
-  contentIdentity,
   fontScale,
   gutterWidth,
   lineCount,
   lineHeight,
+  onCopy,
   rowHostRef,
   viewportRef,
 }: {
-  contentIdentity: string;
   fontScale: number;
   gutterWidth: string;
   lineCount: number;
   lineHeight: number;
+  onCopy?: React.ClipboardEventHandler<HTMLPreElement>;
   rowHostRef: React.RefObject<HTMLPreElement | null>;
   viewportRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const fontSize = `${CODE_VIEWER_BASE_FONT_PX * fontScale}px`;
-  const totalHeight = getCodeVirtualTotalSize({
+  const totalSize = getCodeVirtualTotalSize({
     lineCount,
     lineHeight,
+  });
+  const physicalTotalSize = getCodePhysicalScrollSize({
+    totalSize,
+    viewportHeight: CODE_VIEWER_INITIAL_VIEWPORT_HEIGHT,
   });
 
   return (
@@ -50,27 +60,43 @@ export function CodeViewerViewport({
           fontSize,
         }}
       />
-      <ScrollArea className="absolute inset-0 z-10" viewportRef={viewportRef}>
+      <ScrollArea
+        className="absolute inset-0 z-10"
+        viewportProps={{ style: { overflowAnchor: "none" } }}
+        viewportRef={viewportRef}
+      >
         <div
+          data-code-scroll-spacer=""
           className="relative w-max min-w-full font-mono"
           style={{
             fontSize,
-            height: totalHeight,
+            height: physicalTotalSize,
             lineHeight: `${lineHeight}px`,
             minWidth: CODE_VIEWER_DEFAULT_VIEWPORT_WIDTH,
           }}
         >
-          <pre
-            key={contentIdentity}
-            ref={rowHostRef}
-            className="relative w-full"
-            suppressHydrationWarning
+          <div
+            data-code-render-window=""
+            className="w-full"
             style={{
-              fontSize,
-              height: totalHeight,
-              lineHeight: `${lineHeight}px`,
+              bottom: 0,
+              height: physicalTotalSize,
+              position: "sticky",
+              top: 0,
             }}
-          />
+          >
+            <pre
+              onCopy={onCopy}
+              ref={rowHostRef}
+              className="relative w-full"
+              suppressHydrationWarning
+              style={{
+                fontSize,
+                height: physicalTotalSize,
+                lineHeight: `${lineHeight}px`,
+              }}
+            />
+          </div>
         </div>
       </ScrollArea>
     </div>

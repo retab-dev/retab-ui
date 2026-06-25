@@ -8,13 +8,20 @@ import { segmentsPageCount, toSegments } from "@/lib/segments";
 import { cn } from "@/lib/utils";
 import type { ViewerSource } from "@/lib/viewer-source";
 import {
-  FileViewer,
   FileViewerBody,
-  FileViewerControls,
   FileViewerHeader,
+  FileViewerHeaderEnd,
+  FileViewerHeaderStart,
+  FileViewerIdentity,
+  FileViewerLegend,
+  FileViewer,
+  FileViewerProvider,
+  FileViewerSidebar,
+  FileViewerSidebarContent,
   FileViewerSidebarTrigger,
   FileViewerSurface,
-  FileViewerTitle,
+  FileViewerToolbar,
+  FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import { SegmentLegend } from "@/components/ui/segment-legend";
 import { SegmentPageRail } from "@/components/ui/segment-page-rail";
@@ -31,11 +38,7 @@ import {
   type SegmentDocumentHandle,
   type SegmentViewportController,
 } from "@/components/ui/use-segment-viewport-controller";
-import {
-  ViewerHeader,
-  ViewerSidebar,
-  ViewerSidebarTrigger,
-} from "@/components/ui/viewer";
+import { ViewerHeader } from "@/components/ui/viewer";
 import { type SplitView } from "@/components/viewers/lib/split-types";
 
 export interface SplitDocumentHandlers {
@@ -52,7 +55,7 @@ export interface SplitViewerProps {
 }
 
 export type SplitViewerSidebarProps = React.ComponentProps<
-  typeof ViewerSidebar
+  typeof FileViewerSidebar
 >;
 
 export function SplitViewer({
@@ -63,27 +66,39 @@ export function SplitViewer({
 }: SplitViewerProps) {
   return (
     <SplitViewerProvider result={result} isProcessing={isProcessing}>
-      <FileViewer
+      <FileViewerProvider
         source={source}
-        defaultOpen
-        mode="inline"
-        className="bg-background h-full flex-1"
+        headerMode="outlets"
+        defaultSidebarOpen
       >
-        <FileViewerHeader>
-          <FileViewerSidebarTrigger className="-ml-1" />
-          <FileViewerTitle />
-          <SplitViewerHeaderMeta />
-          <FileViewerControls />
-        </FileViewerHeader>
-        <FileViewerBody>
-          <SplitViewerSidebar />
-          <FileViewerSurface>
-            <SplitViewerLegend className="border-b px-3 py-2" />
-            <SplitViewerDocument document={document} />
-          </FileViewerSurface>
-        </FileViewerBody>
-      </FileViewer>
+        <FileViewer className="bg-background" sidebarMode="inline">
+          <SplitViewerFileHeader />
+          <FileViewerBody>
+            <SplitViewerSidebar />
+            <FileViewerSurface>
+              <FileViewerLegend>
+                <SplitViewerLegend className="px-3 py-2" />
+              </FileViewerLegend>
+              <SplitViewerDocument document={document} />
+            </FileViewerSurface>
+          </FileViewerBody>
+        </FileViewer>
+      </FileViewerProvider>
     </SplitViewerProvider>
+  );
+}
+
+function SplitViewerFileHeader() {
+  return (
+    <FileViewerHeader>
+      <FileViewerHeaderStart>
+        <FileViewerSidebarTrigger />
+        <FileViewerIdentity meta="hidden" />
+      </FileViewerHeaderStart>
+      <FileViewerHeaderEnd>
+        <FileViewerToolbar />
+      </FileViewerHeaderEnd>
+    </FileViewerHeader>
   );
 }
 
@@ -265,7 +280,7 @@ export function SplitViewerHeader() {
       <div className="flex min-h-10 items-center justify-between gap-3 px-3 py-2">
         <div className="flex items-center gap-2 text-sm font-medium">
           {hasOutput && pageCount > 0 ? (
-            <ViewerSidebarTrigger className="-ml-1" />
+            <FileViewerSidebarTrigger className="-ml-1" />
           ) : null}
           <Scissors className="text-muted-foreground size-4" />
           <span>{title}</span>
@@ -280,22 +295,6 @@ export function SplitViewerHeader() {
   );
 }
 
-export function SplitViewerHeaderMeta({ className }: { className?: string }) {
-  const { hasOutput, isProcessing, pageCount, segments } =
-    useSplitViewerHeader();
-  const text = hasOutput
-    ? `${segments.length} segment${segments.length === 1 ? "" : "s"} · ${pageCount} page${pageCount === 1 ? "" : "s"}`
-    : isProcessing
-      ? "Splitting"
-      : "Split viewer";
-
-  return (
-    <span className={cn("text-muted-foreground shrink-0 text-xs", className)}>
-      {text}
-    </span>
-  );
-}
-
 export function SplitViewerSidebar({
   children,
   className,
@@ -307,14 +306,16 @@ export function SplitViewerSidebar({
   if (!hasOutput || pageCount <= 0) return null;
 
   return (
-    <ViewerSidebar
+    <FileViewerSidebar
       aria-label={ariaLabel}
       width={width}
       className={cn("border-r", className)}
       {...props}
     >
-      {children ?? <SplitViewerPageRail />}
-    </ViewerSidebar>
+      <FileViewerSidebarContent className="p-0">
+        {children ?? <SplitViewerPageRail />}
+      </FileViewerSidebarContent>
+    </FileViewerSidebar>
   );
 }
 
@@ -362,7 +363,7 @@ export function SplitViewerDocument({ document }: { document?: ReactNode }) {
   }
 
   return document ? (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">{document}</div>
+    <FileViewerViewport>{document}</FileViewerViewport>
   ) : (
     <div className="flex h-full flex-1 items-center justify-center">
       <span className="text-muted-foreground text-sm">

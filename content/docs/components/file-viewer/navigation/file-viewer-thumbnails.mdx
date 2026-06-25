@@ -9,24 +9,31 @@ page-like units. PDF exposes this through `PdfViewerThumbnails`; other page
 renderers should follow the same sidebar contract.
 
 ```tsx
-<FileViewer source={source} defaultOpen>
-  <PdfViewerProvider>
-    <FileViewerHeader>
-      <FileViewerSidebarTrigger />
-      <FileViewerTitle />
-      <FileViewerMeta />
-      <FileViewerControls />
-    </FileViewerHeader>
-    <FileViewerBody>
-      <FileViewerSidebar aria-label="PDF pages">
-        <PdfViewerThumbnails />
-      </FileViewerSidebar>
-      <FileViewerSurface>
-        <PdfViewerPages />
-      </FileViewerSurface>
-    </FileViewerBody>
-  </PdfViewerProvider>
-</FileViewer>
+<FileViewerProvider source={source} defaultSidebarOpen>
+  <FileViewer>
+    <PdfViewerProvider>
+      <FileViewerHeader>
+        <FileViewerHeaderStart>
+          <FileViewerSidebarTrigger />
+          <FileViewerIdentity />
+        </FileViewerHeaderStart>
+        <FileViewerHeaderEnd>
+          <FileViewerToolbar />
+        </FileViewerHeaderEnd>
+      </FileViewerHeader>
+      <FileViewerBody>
+        <FileViewerSidebar aria-label="PDF pages">
+          <PdfViewerThumbnails />
+        </FileViewerSidebar>
+        <FileViewerSurface>
+          <FileViewerViewport>
+            <PdfViewerPages />
+          </FileViewerViewport>
+        </FileViewerSurface>
+      </FileViewerBody>
+    </PdfViewerProvider>
+  </FileViewer>
+</FileViewerProvider>
 ```
 
 ## Behavior

@@ -6,12 +6,16 @@ import type { Source } from "@/lib/document-source";
 import {
   FileViewer,
   FileViewerBody,
-  FileViewerControls,
   FileViewerHeader,
-  FileViewerMeta,
+  FileViewerHeaderEnd,
+  FileViewerHeaderStart,
+  FileViewerIdentity,
+  FileViewerProvider,
   FileViewerSidebar,
+  FileViewerSidebarContent,
   FileViewerSurface,
-  FileViewerTitle,
+  FileViewerToolbar,
+  FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import { SegmentedDocumentProvider } from "@/components/ui/segmented-document-provider";
 import { useSegmentedSourceFieldLink } from "@/components/ui/source-field-link";
@@ -89,42 +93,51 @@ function TextSourcesContent({
   const highlight = sourceToTextHighlight(activeSource);
 
   return (
-    <FileViewer
-      source={TEXT_SOURCE}
-      className="bg-background h-full min-h-[680px]"
-    >
-      <FileViewerHeader>
-        <FileViewerTitle />
-        <FileViewerMeta />
-        <FileViewerControls />
-      </FileViewerHeader>
-      <FileViewerBody>
-        <FileViewerSurface className="relative">
-          <TextViewer
-            ref={viewerRef}
-            source={TEXT_SOURCE}
-            bare
-            className="h-full"
-            controls={false}
-            highlight={highlight}
-            mode="text"
-          />
-          <SourceIndicator
-            path={link.activeSourcePath}
-            found={!!activeSource}
-          />
-        </FileViewerSurface>
-        <FileViewerSidebar
-          aria-label="Source fields"
-          side="right"
-          collapsible="none"
-          width="360px"
-          className="border-l"
-        >
-          <SourceFieldList fields={FIELDS} link={link} />
-        </FileViewerSidebar>
-      </FileViewerBody>
-    </FileViewer>
+    <FileViewerProvider source={TEXT_SOURCE} defaultSidebarOpen>
+      <FileViewer
+        className="bg-background h-full min-h-[680px]"
+        sidebarSide="right"
+      >
+        <FileViewerHeader>
+          <FileViewerHeaderStart>
+            <FileViewerIdentity />
+          </FileViewerHeaderStart>
+          <FileViewerHeaderEnd>
+            <FileViewerToolbar />
+          </FileViewerHeaderEnd>
+        </FileViewerHeader>
+        <FileViewerBody>
+          <FileViewerSurface className="relative">
+            <FileViewerViewport>
+              <TextViewer
+                ref={viewerRef}
+                source={TEXT_SOURCE}
+                bare
+                className="h-full"
+                controls={false}
+                highlight={highlight}
+                mode="text"
+              />
+            </FileViewerViewport>
+            <SourceIndicator
+              path={link.activeSourcePath}
+              found={!!activeSource}
+            />
+          </FileViewerSurface>
+          <FileViewerSidebar
+            aria-label="Source fields"
+            side="right"
+            collapsible="none"
+            width="360px"
+            className="border-l"
+          >
+            <FileViewerSidebarContent>
+              <SourceFieldList fields={FIELDS} link={link} />
+            </FileViewerSidebarContent>
+          </FileViewerSidebar>
+        </FileViewerBody>
+      </FileViewer>
+    </FileViewerProvider>
   );
 }
 

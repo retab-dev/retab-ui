@@ -3,12 +3,9 @@
   "pages": [
     "index",
     "---Forms & Data---",
-    "data-cell",
     "json-form",
     "json-table",
     "schema-builder",
-    "parse-viewer",
-    "---File Intake---",
     "dropzone",
     "file-thumbnail",
     "---File Viewer---",

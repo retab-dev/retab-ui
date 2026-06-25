@@ -203,6 +203,20 @@ function fileContent(file: string): string {
   return readFileSync(join(repoRoot, file), "utf8");
 }
 
+function viewerImplementationContent(): string {
+  return [
+    "registry/new-york-v4/ui/viewer-root.tsx",
+    "registry/new-york-v4/ui/viewer-body.tsx",
+    "registry/new-york-v4/ui/viewer-chrome.tsx",
+    "registry/new-york-v4/ui/viewer-sidebar.tsx",
+    "registry/new-york-v4/ui/viewer-surface.tsx",
+    "registry/new-york-v4/ui/viewer-internals.tsx",
+    "registry/new-york-v4/ui/viewer-types.ts",
+  ]
+    .map(fileContent)
+    .join("\n");
+}
+
 function compactWhitespace(content: string): string {
   return content.replace(/\s+/g, " ");
 }
@@ -567,9 +581,11 @@ describe("viewer architecture", () => {
   it("keeps raw React context objects private outside shadcn primitives", () => {
     const allowedContextTypeExports = new Set([
       "registry/new-york-v4/ui/viewer.tsx",
+      "registry/new-york-v4/ui/file-viewer-context.tsx",
     ]);
     const allowedContextConstExports = new Set([
       "registry/new-york-v4/ui/sidebar.tsx",
+      "registry/new-york-v4/ui/file-viewer-context.tsx",
     ]);
 
     for (const file of architectureSourceFiles()) {
@@ -665,14 +681,28 @@ describe("viewer architecture", () => {
   });
 
   it("keeps generic viewer primitives to spatial parts and sidebar control", () => {
-    const content = fileContent("registry/new-york-v4/ui/viewer.tsx");
+    const content = viewerImplementationContent();
+    const publicEntrypoint = fileContent("registry/new-york-v4/ui/viewer.tsx");
     const rootProps =
       content.match(/export type ViewerRootProps = [\s\S]*?\n\}/)?.[0] ?? "";
     const sidebarTriggerProps =
       content.match(/export type ViewerSidebarTriggerProps = [^\n]+/)?.[0] ??
       "";
+    const publicValueExports = [
+      ...namedReExports(publicEntrypoint, "./viewer-body", { typeOnly: false }),
+      ...namedReExports(publicEntrypoint, "./viewer-chrome", {
+        typeOnly: false,
+      }),
+      ...namedReExports(publicEntrypoint, "./viewer-root", { typeOnly: false }),
+      ...namedReExports(publicEntrypoint, "./viewer-sidebar", {
+        typeOnly: false,
+      }),
+      ...namedReExports(publicEntrypoint, "./viewer-surface", {
+        typeOnly: false,
+      }),
+    ];
 
-    expect(exportedFunctions(content).sort()).toEqual(
+    expect(publicValueExports.sort()).toEqual(
       [
         "ViewerBody",
         "ViewerFrame",
@@ -681,6 +711,7 @@ describe("viewer architecture", () => {
         "ViewerSidebar",
         "ViewerSidebarTrigger",
         "ViewerSurface",
+        "ViewerViewport",
         "useOptionalViewerSidebar",
         "useViewerSidebar",
       ].sort(),
@@ -782,7 +813,7 @@ describe("viewer architecture", () => {
   });
 
   it("keeps structural viewer parts non-polymorphic until evidence proves the need", () => {
-    const content = fileContent("registry/new-york-v4/ui/viewer.tsx");
+    const content = viewerImplementationContent();
 
     for (const component of [
       "ViewerRoot",
@@ -818,19 +849,19 @@ describe("viewer architecture", () => {
   });
 
   it("keeps viewer slots anatomical and viewer data attributes state-only", () => {
-    const content = fileContent("registry/new-york-v4/ui/viewer.tsx");
+    const content = viewerImplementationContent();
 
     for (const slot of [
       "viewer-root",
       "viewer-frame",
       "viewer-header",
       "viewer-body",
-      "viewer-sidebar",
       "viewer-surface",
       "viewer-sidebar-trigger",
     ]) {
       expect(content).toContain(`data-slot="${slot}"`);
     }
+    expect(content).toContain('?? "viewer-sidebar"');
 
     for (const attribute of [
       "data-viewer-sidebar-mode",
@@ -854,28 +885,32 @@ describe("viewer architecture", () => {
   });
 
   it("keeps public viewer sidebar hooks on the public context", () => {
-    const content = fileContent("registry/new-york-v4/ui/viewer.tsx");
+    const content = viewerImplementationContent();
 
     expect(content).toContain("const ViewerSidebarStateContext =");
     expect(content).toContain("const ViewerSidebarRegistrationContext =");
+    expect(content).not.toContain("export const ViewerSidebarStateContext");
+    expect(content).not.toContain(
+      "export const ViewerSidebarRegistrationContext",
+    );
     expect(content).not.toContain("toPublicViewerSidebarContext");
     expect(content).not.toContain("publicSidebar");
     expect(content).not.toContain("useViewerSidebarInternal");
     const publicSidebarContext =
       content.match(
-        /export type ViewerSidebarContextValue = \{[\s\S]*?\n\}/,
+        /export type ViewerSidebarStateValue = \{[\s\S]*?\n\}/,
       )?.[0] ?? "";
     const privateSidebarContext =
       content.match(
-        /type ViewerSidebarRegistrationContextValue = \{[\s\S]*?\n\}/,
+        /type ViewerSidebarRegistrationState = \{[\s\S]*?\n\}/,
       )?.[0] ?? "";
     expect(publicSidebarContext).not.toContain("sidebarId");
     expect(privateSidebarContext).toContain("sidebarId: string");
     expect(content).toMatch(
-      /export function useViewerSidebar\(\): ViewerSidebarContextValue \{[\s\S]*?React\.useContext\(ViewerSidebarStateContext\)[\s\S]*?return context[\s\S]*?\}/,
+      /export function useViewerSidebar\(\): ViewerSidebarStateValue \{[\s\S]*?return useViewerSidebarState\("useViewerSidebar"\)[\s\S]*?\}/,
     );
     expect(content).toMatch(
-      /function useViewerSidebarRegistrationContext\([\s\S]*?consumer: string[\s\S]*?\): ViewerSidebarRegistrationContextValue \{[\s\S]*?React\.useContext\(ViewerSidebarRegistrationContext\)/,
+      /function useViewerSidebarRegistrationContext\([\s\S]*?consumer: string[\s\S]*?\): ViewerSidebarRegistrationState \{[\s\S]*?useOptionalViewerSidebarRegistration\(\)/,
     );
   });
 
@@ -965,10 +1000,19 @@ describe("viewer architecture", () => {
         );
       }
     }
-    const fileViewer = fileContent("registry/new-york-v4/ui/file-viewer.tsx");
-    expect(fileViewer).toContain("<ViewerRoot");
-    expect(fileViewer).toContain("<ViewerBody");
-    expect(fileViewer).toContain("<ViewerSurface");
+    const fileViewerFrame = fileContent(
+      "registry/new-york-v4/ui/file-viewer-frame.tsx",
+    );
+    const fileViewerBody = fileContent(
+      "registry/new-york-v4/ui/file-viewer-body.tsx",
+    );
+    const fileViewerPreview = fileContent(
+      "registry/new-york-v4/ui/file-viewer-preview.tsx",
+    );
+    expect(fileViewerFrame).toContain("<ViewerRoot");
+    expect(fileViewerBody).toContain("<ViewerBody");
+    expect(fileViewerBody).toContain("<ViewerSurface");
+    expect(fileViewerPreview).toContain("<FileViewerDocument");
 
     const pdfTypeFiles = [
       "registry/new-york-v4/ui/pdf-viewer.tsx",
@@ -1152,12 +1196,6 @@ describe("viewer architecture", () => {
     const fileViewerSource = fileContent(
       "registry/new-york-v4/ui/file-viewer.tsx",
     );
-    const internalFileViewerSource = fileContent(
-      "registry/new-york-v4/ui/file-viewer-internal.tsx",
-    );
-    const documentFileViewerSource = fileContent(
-      "registry/new-york-v4/ui/file-viewer-document.tsx",
-    );
     const routeFileViewerSource = fileContent(
       "registry/new-york-v4/ui/file-viewer-route.tsx",
     );
@@ -1165,47 +1203,36 @@ describe("viewer architecture", () => {
       publicFileViewerItem.files.find(
         (file) => file.path === "registry/new-york-v4/ui/file-viewer.tsx",
       )?.content ?? "";
-    const publicInternalFileViewerSource =
-      publicFileViewerItem.files.find(
-        (file) =>
-          file.path === "registry/new-york-v4/ui/file-viewer-internal.tsx",
-      )?.content ?? "";
-    const publicDocumentFileViewerSource =
-      publicFileViewerItem.files.find(
-        (file) =>
-          file.path === "registry/new-york-v4/ui/file-viewer-document.tsx",
-      )?.content ?? "";
     const publicRouteFileViewerSource =
       publicFileViewerItem.files.find(
         (file) => file.path === "registry/new-york-v4/ui/file-viewer-route.tsx",
       )?.content ?? "";
+    const listedPaths = (fileViewerItem?.files ?? []).map((file) => file.path);
+    const requiredSplitFiles = [
+      "registry/new-york-v4/ui/file-viewer.tsx",
+      "registry/new-york-v4/ui/file-viewer-body.tsx",
+      "registry/new-york-v4/ui/file-viewer-context.tsx",
+      "registry/new-york-v4/ui/file-viewer-document.tsx",
+      "registry/new-york-v4/ui/file-viewer-frame.tsx",
+      "registry/new-york-v4/ui/file-viewer-header.tsx",
+      "registry/new-york-v4/ui/file-viewer-preview.tsx",
+      "registry/new-york-v4/ui/file-viewer-provider.tsx",
+      "registry/new-york-v4/ui/file-viewer-resource-state.ts",
+      "registry/new-york-v4/ui/file-viewer-route.tsx",
+      "registry/new-york-v4/ui/file-viewer-state.tsx",
+      "registry/new-york-v4/ui/viewer.tsx",
+      "registry/new-york-v4/ui/viewer-root.tsx",
+      "registry/new-york-v4/ui/viewer-body.tsx",
+      "registry/new-york-v4/ui/viewer-chrome.tsx",
+      "registry/new-york-v4/ui/viewer-sidebar.tsx",
+      "registry/new-york-v4/ui/viewer-surface.tsx",
+      "registry/new-york-v4/ui/viewer-types.ts",
+    ];
 
     expect(fileViewerItem).toBeTruthy();
-    expect(fileViewerItem?.files ?? []).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          path: "registry/new-york-v4/ui/file-viewer-internal.tsx",
-        }),
-        expect.objectContaining({
-          path: "registry/new-york-v4/ui/file-viewer-document.tsx",
-        }),
-        expect.objectContaining({
-          path: "registry/new-york-v4/ui/file-viewer-route.tsx",
-        }),
-        expect.objectContaining({
-          path: "registry/new-york-v4/ui/file-viewer-fallback.tsx",
-        }),
-        expect.objectContaining({
-          path: "registry/new-york-v4/ui/viewer-zoom.tsx",
-        }),
-      ]),
-    );
-    expect(fileViewerItem?.files ?? []).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          path: "registry/new-york-v4/ui/file-viewer-chrome.tsx",
-        }),
-      ]),
+    expect(listedPaths).toEqual(expect.arrayContaining(requiredSplitFiles));
+    expect(listedPaths).not.toContain(
+      "registry/new-york-v4/ui/file-viewer-internal.tsx",
     );
     expect(fileViewerItem?.registryDependencies ?? []).toContain(
       "@retab/markdown-viewer",
@@ -1225,204 +1252,20 @@ describe("viewer architecture", () => {
     expect(routeFileViewerSource).toContain(
       'import("@/components/ui/markdown-viewer")',
     );
-    expect(fileViewerSource).not.toContain(
-      "export function FileViewerProvider",
+    expect(publicFileViewerSource).not.toContain(
+      'import("@/components/ui/markdown-viewer")',
     );
-    expect(fileViewerSource).not.toContain("export type FileViewerProvider");
-    expect(fileViewerSource).not.toContain("type FileViewerProviderProps");
-    expect(fileViewerSource).not.toContain("FileViewerFrameProps");
-    expect(fileViewerSource).toContain("export type FileViewerRootProps");
-    expect(fileViewerSource).toContain("export function FileViewerBody");
-    expect(fileViewerSource).toContain('from "./file-viewer-document"');
+    expect(publicRouteFileViewerSource).toContain(
+      'import("@/components/ui/markdown-viewer")',
+    );
     expect(fileViewerSource).toMatch(
-      /export \{[\s\S]*FileViewerDocument[\s\S]*\} from "\.\/file-viewer-document"/,
+      /export {[\s\S]*FileViewerProvider[\s\S]*} from "\.\/file-viewer-provider"/,
     );
-    expect(fileViewerSource).not.toContain(
-      "export function FileViewerDocument",
+    expect(fileViewerSource).toMatch(
+      /export {[\s\S]*FileViewerPreview[\s\S]*} from "\.\/file-viewer-preview"/,
     );
-    expect(fileViewerSource).not.toContain(
-      "export function FileViewerDocumentRenderer",
-    );
-    expect(fileViewerSource).not.toContain(
-      "export function InternalFileViewerDocument",
-    );
-    expect(fileViewerSource).toContain("export function FileViewerHeader");
-    expect(fileViewerSource).toContain("export function FileViewerTitle");
-    expect(fileViewerSource).toContain("export function FileViewerMeta");
-    expect(fileViewerSource).toContain("export function FileViewerControls");
-    expect(fileViewerSource).toContain("export function FileViewerSidebar");
-    expect(fileViewerSource).toContain("export function FileViewerSurface");
-    expect(fileViewerSource).not.toContain("export const FileHeader");
-    expect(fileViewerSource).not.toContain("export type FileHeader");
-    expect(fileViewerSource).not.toContain("actions?:");
-    expect(fileViewerSource).not.toContain("FileHeaderActions");
-    expect(
-      namedReExports(fileViewerSource, "./file-viewer-internal", {
-        typeOnly: false,
-      }),
-    ).toEqual(["useFileViewerResource"]);
-    expect(fileViewerSource).not.toMatch(
-      /export \{[\s\S]*FileViewerProvider[\s\S]*\} from "\.\/file-viewer-internal"/,
-    );
-    expect(fileViewerSource).not.toContain(
-      "export function useOptionalFileViewerResource",
-    );
-    expect(fileViewerSource).not.toContain(
-      "export function useFileViewerResource",
-    );
-    expect(fileViewerSource).not.toMatch(/\bexport function useFileViewer\(/);
-    expect(fileViewerSource).not.toContain(
-      "export function useFileViewerHeader",
-    );
-    expect(fileViewerSource).not.toContain("export function useFileViewerBody");
-    expect(fileViewerSource).not.toContain("export type FileViewerState");
-    expect(fileViewerSource).not.toContain("export type FileViewerHeaderState");
-    expect(fileViewerSource).not.toContain("export type FileViewerBodyState");
-    expect(fileViewerSource).not.toContain("function useFileViewerContext");
-    expect(fileViewerSource).not.toContain("function useFileViewerDocument");
-    expect(fileViewerSource).not.toContain("} = useFileViewerDocument()");
-    expect(fileViewerSource).not.toContain("FileErrorBoundary");
-    expect(fileViewerSource).not.toContain("ViewerFallback");
-    expect(fileViewerSource).not.toContain("React.Suspense");
-    expect(fileViewerSource).not.toContain("descriptorSignal");
-    expect(fileViewerSource).not.toContain("FileViewerRoute");
-    expect(documentFileViewerSource).toContain(
-      "export function FileViewerDocument",
-    );
-    expect(documentFileViewerSource).not.toContain(
-      "export function InternalFileViewerDocument",
-    );
-    expect(documentFileViewerSource).not.toContain(
-      "FileViewerDocumentRenderer",
-    );
-    // The document reads context directly rather than through a pass-through
-    // selector hook (useFileViewerDocument was inlined).
-    expect(documentFileViewerSource).not.toContain(
-      "function useFileViewerDocument",
-    );
-    expect(documentFileViewerSource).toContain("useFileViewerContext()");
-    expect(documentFileViewerSource).toContain("FileErrorBoundary");
-    expect(documentFileViewerSource).toContain("ViewerFallback");
-    expect(documentFileViewerSource).toContain("React.Suspense");
-    expect(documentFileViewerSource).toContain("descriptorSignal");
-    expect(documentFileViewerSource).toContain('from "./file-viewer-route"');
-    expect(documentFileViewerSource).toContain("<FileViewerRoute");
-    // Header parts read context directly; the useFileViewer/useFileViewerHeader
-    // pass-through selectors were inlined.
-    expect(fileViewerSource).not.toContain("function useFileViewerHeader");
-    expect(fileViewerSource).toContain("useFileViewerContext()");
-    expect(fileViewerSource).not.toContain("CsvFileContent");
-    expect(fileViewerSource).not.toContain("HtmlFileContent");
-    expect(routeFileViewerSource).toContain("CsvFileContent");
-    expect(routeFileViewerSource).toContain("HtmlFileContent");
-    expect(fileViewerSource).not.toContain("CsvDocViewer");
-    expect(fileViewerSource).not.toContain("HtmlDocViewer");
-    expect(routeFileViewerSource).toContain("export function FileViewerRoute");
-    expect(fileViewerSource).toContain("<FileViewerProvider");
-    expect(fileViewerSource).toContain("<FileViewerBody");
-    expect(internalFileViewerSource).toContain("function useDescriptorSignal");
-    expect(internalFileViewerSource).toContain(
-      "export function useFileViewerContext",
-    );
-    expect(internalFileViewerSource).toContain(
-      "export function useOptionalFileViewerResource",
-    );
-    expect(internalFileViewerSource).toContain(
-      "export function useFileViewerResource",
-    );
-    expect(internalFileViewerSource).toContain(
-      "export function FileViewerProvider",
-    );
-    expect(publicFileViewerSource).not.toContain(
-      'import("@/components/ui/markdown-viewer")',
-    );
-    expect(publicRouteFileViewerSource).toContain(
-      'import("@/components/ui/markdown-viewer")',
-    );
-    expect(publicFileViewerSource).not.toContain(
-      "export function FileViewerProvider",
-    );
-    expect(publicFileViewerSource).not.toContain(
-      "type FileViewerProviderProps",
-    );
-    expect(publicFileViewerSource).not.toContain("FileViewerFrameProps");
-    expect(publicFileViewerSource).toContain("export type FileViewerRootProps");
-    expect(publicFileViewerSource).toContain("export function FileViewerBody");
-    expect(publicFileViewerSource).toMatch(
-      /export \{[\s\S]*FileViewerDocument[\s\S]*\} from "\.\/file-viewer-document"/,
-    );
-    expect(publicFileViewerSource).not.toContain(
-      "export function FileViewerDocumentRenderer",
-    );
-    expect(publicFileViewerSource).not.toContain(
-      "export function InternalFileViewerDocument",
-    );
-    expect(publicFileViewerSource).toContain(
-      "export function FileViewerHeader",
-    );
-    expect(publicFileViewerSource).toContain(
-      "export function FileViewerControls",
-    );
-    expect(publicFileViewerSource).not.toContain("export const FileHeader");
-    expect(publicFileViewerSource).not.toContain("export type FileHeader");
-    expect(
-      namedReExports(publicFileViewerSource, "./file-viewer-internal", {
-        typeOnly: false,
-      }),
-    ).toEqual(["useFileViewerResource"]);
-    expect(publicFileViewerSource).not.toMatch(
-      /export \{[\s\S]*FileViewerProvider[\s\S]*\} from "\.\/file-viewer-internal"/,
-    );
-    expect(publicFileViewerSource).not.toContain(
-      "export function useOptionalFileViewerResource",
-    );
-    expect(publicFileViewerSource).not.toContain(
-      "export function useFileViewerResource",
-    );
-    expect(publicFileViewerSource).not.toMatch(
-      /\bexport function useFileViewer\(/,
-    );
-    expect(publicFileViewerSource).not.toContain(
-      "export function useFileViewerHeader",
-    );
-    expect(publicFileViewerSource).not.toContain(
-      "export function useFileViewerBody",
-    );
-    expect(publicFileViewerSource).not.toContain("export type FileViewerState");
-    expect(publicFileViewerSource).not.toContain("FileErrorBoundary");
-    expect(publicFileViewerSource).not.toContain("ViewerFallback");
-    expect(publicFileViewerSource).not.toContain("React.Suspense");
-    expect(publicFileViewerSource).not.toContain("descriptorSignal");
-    expect(publicFileViewerSource).not.toContain("FileViewerRoute");
-    expect(publicFileViewerSource).not.toContain("markdown-document-viewer");
-    expect(publicFileViewerSource).not.toContain("CsvFileContent");
-    expect(publicDocumentFileViewerSource).toContain(
-      "export function FileViewerDocument",
-    );
-    expect(publicDocumentFileViewerSource).not.toContain(
-      "export function InternalFileViewerDocument",
-    );
-    expect(publicDocumentFileViewerSource).not.toContain(
-      "FileViewerDocumentRenderer",
-    );
-    expect(publicDocumentFileViewerSource).toContain("FileErrorBoundary");
-    expect(publicDocumentFileViewerSource).toContain("ViewerFallback");
-    expect(publicDocumentFileViewerSource).toContain("React.Suspense");
-    expect(publicDocumentFileViewerSource).toContain("descriptorSignal");
-    expect(publicDocumentFileViewerSource).toContain(
-      'from "./file-viewer-route"',
-    );
-    expect(publicDocumentFileViewerSource).toContain("<FileViewerRoute");
-    expect(publicRouteFileViewerSource).toContain(
-      "export function FileViewerRoute",
-    );
-    expect(publicRouteFileViewerSource).toContain("CsvFileContent");
-    expect(publicInternalFileViewerSource).toContain(
-      "export function useOptionalFileViewerResource",
-    );
-    expect(publicInternalFileViewerSource).toContain(
-      "export function FileViewerProvider",
-    );
+    expect(fileViewerSource).not.toContain("file-viewer-internal");
+    expect(publicFileViewerSource).not.toContain("file-viewer-internal");
   });
 
   it("keeps FileViewer document chrome ownership explicit", () => {
@@ -1453,30 +1296,30 @@ describe("viewer architecture", () => {
       expect(source).not.toContain("leafControls");
     }
 
-    expect(fileViewerSource).toContain('documentChrome="standalone"');
-    expect(fileViewerSource).toContain("<FileViewerDocument />");
+    expect(fileViewerSource).toContain('from "./file-viewer-document"');
     expect(fileViewerSource).not.toContain("<FileViewerDocument bare");
     expect(documentFileViewerSource).toContain(
       "export type FileViewerDocumentProps = {",
     );
     expect(documentFileViewerSource).toContain("className?: string");
+    expect(documentFileViewerSource).toContain(
+      "controls?: FileViewerControlsPlacement",
+    );
+    expect(documentFileViewerSource).toContain(
+      "FileViewerDocument must be rendered inside FileViewerViewport.",
+    );
     expect(documentFileViewerSource).not.toContain('"bare" | "className"');
     expect(documentFileViewerSource).not.toContain(
       "export function FileViewerDocument({ bare",
     );
-    expect(documentFileViewerSource).toContain("documentChrome");
-    expect(
-      fileContent("registry/new-york-v4/ui/file-viewer-internal.tsx"),
-    ).toContain('documentChrome = "shell"');
     expect(
       fileContent("registry/new-york-v4/ui/file-viewer-core.ts"),
-    ).toContain(
-      'export type FileViewerDocumentChrome = "shell" | "standalone"',
-    );
-    // Chrome is derived from a single boolean and passed as explicit props,
+    ).toContain('export type FileViewerControlsPlacement = "toolbar"');
+    // Chrome is derived from explicit frame/control props,
     // not assembled into per-call chrome structs.
+    expect(routeFileViewerSource).toContain('const bare = frame === "none"');
     expect(routeFileViewerSource).toContain(
-      'const standalone = documentChrome === "standalone"',
+      'const localControls = controls === "local"',
     );
     expect(routeFileViewerSource).not.toContain("fileViewerRouteChrome");
     expect(routeFileViewerSource).not.toContain("rendererChrome");
@@ -1541,7 +1384,7 @@ describe("viewer architecture", () => {
     // The unsupported fallback exposes download only in standalone chrome.
     expectEveryRouteOpeningContains(
       "UnsupportedCard",
-      "showDownload={standalone}",
+      "showDownload={localControls}",
     );
 
     expect(
@@ -1760,14 +1603,17 @@ describe("viewer architecture", () => {
       {
         file: "registry/new-york-v4/ui/pdf-viewer.tsx",
         symbols: [
+          "<FileViewerProvider",
           "<FileViewer",
           "<PdfViewerProvider",
           "<FileViewerHeader",
-          "<FileViewerTitle",
-          "<FileViewerMeta",
-          "<FileViewerControls",
+          "<FileViewerHeaderStart",
+          "<FileViewerIdentity",
+          "<FileViewerHeaderEnd",
+          "<FileViewerToolbar",
           "<FileViewerBody",
           "<FileViewerSurface",
+          "<FileViewerViewport",
           "<PdfViewerPages",
         ],
       },
@@ -1788,15 +1634,13 @@ describe("viewer architecture", () => {
         file: "components/viewers/split/split-viewer.tsx",
         symbols: [
           "<SplitViewerProvider",
+          "<FileViewerProvider",
           "<FileViewer",
-          "<FileViewerHeader",
-          "<FileViewerSidebarTrigger",
-          "<FileViewerTitle",
-          "<SplitViewerHeaderMeta",
-          "<FileViewerControls",
+          "<SplitViewerFileHeader",
           "<FileViewerBody",
           "<SplitViewerSidebar",
           "<FileViewerSurface",
+          "<FileViewerLegend",
           "<SplitViewerLegend",
           "<SplitViewerDocument",
         ],
@@ -1851,13 +1695,12 @@ describe("viewer architecture", () => {
         file: "components/viewers/partition/partition-viewer.tsx",
         symbols: [
           "<PartitionViewerProvider",
+          "<FileViewerProvider",
           "<FileViewer",
-          "<FileViewerHeader",
-          "<FileViewerTitle",
-          "<PartitionViewerHeaderMeta",
-          "<FileViewerControls",
+          "<PartitionViewerFileHeader",
           "<FileViewerBody",
           "<FileViewerSurface",
+          "<FileViewerLegend",
           "<PartitionViewerLegend",
           "<PartitionViewerRibbon",
           "<PartitionViewerDocument",
@@ -2233,17 +2076,18 @@ describe("viewer architecture", () => {
     expectJsxTagsInOrder(
       "registry/new-york-v4/blocks/pdf-thumbnails-block.tsx",
       [
+        "<FileViewerProvider",
         "<FileViewer",
         "<PdfViewerProvider",
         "<FileViewerHeader",
         "<FileViewerSidebarTrigger",
-        "<FileViewerTitle",
-        "<FileViewerMeta",
-        "<FileViewerControls",
+        "<FileViewerIdentity",
+        "<FileViewerToolbar",
         "<FileViewerBody",
         "<FileViewerSidebar",
         "<PdfViewerThumbnails",
         "<FileViewerSurface",
+        "<FileViewerViewport",
         "<PdfViewerPages",
       ],
     );
@@ -2576,7 +2420,7 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/ui/file-system-pierre-light-tree.tsx",
     );
     expect(existsSync(join(repoRoot, listModelPath))).toBe(false);
-    expect(listView).toContain("useVirtualizer");
+    expect(listView).toContain("useFixedRowVirtualization");
     expect(listView).toContain("FileSystemListEntryRow");
     expect(listView).toContain("FileSystemBrowserController");
     expect(listView).toContain("fileActions.openPreview");
@@ -2868,11 +2712,15 @@ describe("viewer architecture", () => {
     expectJsxTagsInOrder("registry/new-york-v4/blocks/parse-viewer-block.tsx", [
       "<ParseViewerProvider",
       "<ViewerRoot",
-      "<ParseViewerBlockHeader",
+      "<ParseViewerHeader",
       "<ViewerBody",
+      "<ResizablePanelGroup",
+      "<ResizablePanel",
       "<ViewerSurface",
       "<ParseSourceDocument",
-      "<ViewerSidebar",
+      "<ResizableHandle",
+      "<ResizablePanel",
+      "<ViewerSurface",
       "<ParseViewerMarkdown",
     ]);
     expectJsxTagsInOrder(
@@ -2882,9 +2730,9 @@ describe("viewer architecture", () => {
         "<FileViewer",
         "<PdfViewerProvider",
         "<FileViewerHeader",
-        "<FileViewerTitle",
+        "<FileViewerIdentity",
         "<PartitionViewerHeaderMeta",
-        "<FileViewerControls",
+        "<FileViewerToolbar",
         "<FileViewerBody",
         "<FileViewerSurface",
         "<PartitionViewerLegend",
@@ -2920,7 +2768,6 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/blocks/xlsx-sources-block.tsx",
     ];
     const forbiddenPatterns = [
-      /\bFileViewerProvider\b/,
       /\buseFileViewerResource\b/,
       /\bImageResourceContent\b/,
       /\bDocxResourceContent\b/,
@@ -2949,14 +2796,15 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/blocks/sources-viewer-block.tsx",
     );
     for (const tag of [
+      "<FileViewerProvider",
       "<FileViewer",
       "<FileViewerHeader",
       "<FileViewerSidebarTrigger",
-      "<FileViewerTitle",
-      "<FileViewerMeta",
-      "<FileViewerControls",
+      "<FileViewerIdentity",
+      "<FileViewerToolbar",
       "<FileViewerBody",
       "<FileViewerSurface",
+      "<FileViewerViewport",
       "<FileViewerSidebar",
     ]) {
       expect(sourcesViewerBlock).toContain(tag);
@@ -2978,7 +2826,6 @@ describe("viewer architecture", () => {
     expect(sourcesViewerBlock).toContain("CsvViewerGrid");
     expect(sourcesViewerBlock).toContain("XlsxViewerWorkbook");
     expect(sourcesViewerBlock).toContain("DocxViewerDocument");
-    expect(sourcesViewerBlock).not.toContain("FileViewerProvider");
     expect(sourcesViewerBlock).not.toContain("file-viewer-internal");
     expect(sourcesViewerBlock).not.toContain("ImageResourceContent");
     expect(sourcesViewerBlock).not.toContain("DocxResourceContent");
@@ -2999,7 +2846,6 @@ describe("viewer architecture", () => {
       /\bslots\.(?:left|right|top|bottom|overlay)\b/,
       /\bslots=\{/,
       /\brenderDocument\b/,
-      /\bFileViewerProvider\b/,
       /\bFileViewerRoute\b/,
       /\bInternalFileViewerDocument\b/,
       /\bFileViewerDocumentRenderer\b/,
@@ -3208,6 +3054,7 @@ describe("viewer architecture", () => {
       for (const element of jsxOpeningElements(file)) {
         if (element.tag === "ViewerSidebar") {
           if (file === "registry/new-york-v4/ui/file-viewer.tsx") continue;
+          if (file === "registry/new-york-v4/ui/file-viewer-body.tsx") continue;
           if (
             !element.attributes.includes("aria-label") &&
             !element.attributes.includes("aria-labelledby")
@@ -3268,14 +3115,17 @@ describe("viewer architecture", () => {
     const registrySource = fileContent("registry.json");
 
     expect(compactSidebarDoc).toContain(
-      "`FileViewerSidebar` owns spatial placement, width, side, collapse behavior, and the rail's accessible label.",
+      "`FileViewerProvider` owns sidebar open state, `FileViewer` owns mode resolution",
+    );
+    expect(compactSidebarDoc).toContain(
+      "`FileViewerSidebar` owns spatial placement, width, side override, collapse behavior, and the rail's accessible label.",
     );
     expect(sidebarDoc).toContain(
       "Put domain meaning in the named rail component and accessible label",
     );
     expect(sidebarDoc).toContain('data-slot="file-viewer-header"');
     expect(compactSidebarDoc).toContain(
-      "`FileViewerSidebarTrigger` is disabled until a `FileViewerSidebar` registers with the nearest `FileViewer`.",
+      "`FileViewerSidebarTrigger` is disabled until a `FileViewerSidebar` registers with the nearest `FileViewer` frame.",
     );
     expect(sidebarDoc).not.toContain("semantic wrapper");
     expect(sidebarDoc).not.toContain("data-viewer-purpose");
@@ -3340,22 +3190,126 @@ describe("viewer architecture", () => {
       '<EmailViewer message={nestedMessage} className="h-full"',
     );
     expect(emailViewerDoc).toContain(
-      "<FileViewer source={attachment.source} bare",
+      "<FileViewerPreview source={attachment.source}",
     );
     expect(emailViewerDoc).toContain(
       "Do not nest `ViewerRoot` just to add another controls row or border",
     );
 
-    expect(fileViewerDoc).toContain("Use the easy shell for the common case:");
+    expect(fileViewerDoc).toContain(
+      "Use the preview shell for the common case:",
+    );
     expect(fileViewerDoc).toContain(
       "Use the composed shell when the file surface needs file-scoped sidebars",
     );
     expect(fileViewerDoc).toContain(
-      "Use `FileViewer bare` only for standalone nested leaf previews",
+      "Use `FileViewerPreview` for standalone nested leaf previews",
     );
     expect(fileViewerDoc).not.toContain(
       "`FileViewer bare` removes the spatial frame when children are supplied.",
     );
+  });
+
+  it("documents FileViewer public subcomponent groups", () => {
+    const docs = [
+      "content/docs/components/file-viewer/index.mdx",
+      "content/docs/components/file-viewer/anatomy/index.mdx",
+      "content/docs/components/file-viewer/anatomy/file-viewer-provider.mdx",
+      "content/docs/components/file-viewer/anatomy/file-viewer.mdx",
+      "content/docs/components/file-viewer/anatomy/file-viewer-preview.mdx",
+      "content/docs/components/file-viewer/anatomy/file-viewer-header.mdx",
+      "content/docs/components/file-viewer/anatomy/file-viewer-body.mdx",
+      "content/docs/components/file-viewer/anatomy/file-viewer-sidebar.mdx",
+      "content/docs/components/file-viewer/anatomy/file-viewer-surface.mdx",
+      "content/docs/components/file-viewer/anatomy/file-viewer-viewport.mdx",
+      "content/docs/components/file-viewer/anatomy/file-viewer-document.mdx",
+      "content/docs/components/file-viewer/anatomy/file-viewer-states.mdx",
+      "content/docs/components/file-viewer/header/index.mdx",
+      "content/docs/components/file-viewer/header/file-viewer-header-start.mdx",
+      "content/docs/components/file-viewer/header/file-viewer-header-end.mdx",
+      "content/docs/components/file-viewer/header/file-viewer-identity.mdx",
+      "content/docs/components/file-viewer/header/file-viewer-toolbar.mdx",
+      "content/docs/components/file-viewer/navigation/index.mdx",
+      "content/docs/components/file-viewer/navigation/file-viewer-sidebar-trigger.mdx",
+      "content/docs/components/file-viewer/navigation/file-viewer-sidebar-content.mdx",
+      "content/docs/components/file-viewer/navigation/file-viewer-source-list.mdx",
+    ]
+      .map(fileContent)
+      .join("\n");
+    const anatomyMeta = fileContent(
+      "content/docs/components/file-viewer/anatomy/meta.json",
+    );
+    const headerMeta = fileContent(
+      "content/docs/components/file-viewer/header/meta.json",
+    );
+    const navigationMeta = fileContent(
+      "content/docs/components/file-viewer/navigation/meta.json",
+    );
+
+    for (const page of [
+      "file-viewer-provider",
+      "file-viewer-preview",
+      "file-viewer-viewport",
+      "file-viewer-states",
+    ]) {
+      expect(anatomyMeta).toContain(`"${page}"`);
+    }
+
+    for (const page of [
+      "file-viewer-header-start",
+      "file-viewer-header-end",
+      "file-viewer-identity",
+      "file-viewer-toolbar",
+    ]) {
+      expect(headerMeta).toContain(`"${page}"`);
+    }
+
+    for (const page of [
+      "file-viewer-sidebar-content",
+      "file-viewer-source-list",
+    ]) {
+      expect(navigationMeta).toContain(`"${page}"`);
+    }
+
+    for (const component of [
+      "FileViewerProvider",
+      "FileViewer",
+      "FileViewerPreview",
+      "FileViewerHeader",
+      "FileViewerHeaderStart",
+      "FileViewerHeaderEnd",
+      "FileViewerIdentity",
+      "FileViewerToolbar",
+      "FileViewerBody",
+      "FileViewerSidebar",
+      "FileViewerSidebarContent",
+      "FileViewerSidebarSection",
+      "FileViewerSidebarSectionHeader",
+      "FileViewerSidebarSectionTitle",
+      "FileViewerSidebarSectionAction",
+      "FileViewerSidebarSectionContent",
+      "FileViewerSidebarSeparator",
+      "FileViewerSurface",
+      "FileViewerViewport",
+      "FileViewerDocument",
+      "FileViewerLoadingState",
+      "FileViewerUnavailableState",
+      "FileViewerEmptyState",
+      "FileViewerErrorState",
+      "FileViewerUnsupportedState",
+      "FileViewerSourceList",
+      "FileViewerSourceItem",
+      "FileViewerSourceTrigger",
+      "FileViewerSourceBadge",
+      "FileViewerSourceAction",
+      "FileViewerFieldSource",
+      "FileViewerFieldSourceLabel",
+      "FileViewerFieldSourceValue",
+      "FileViewerFieldSourceStatus",
+      "FileViewerSidebarTrigger",
+    ]) {
+      expect(docs, `${component} must be documented`).toContain(component);
+    }
   });
 
   it("keeps evidence and document-anchor pure after removing anchored provider", () => {
@@ -3708,6 +3662,9 @@ describe("viewer architecture", () => {
       expect.objectContaining({
         path: "registry/new-york-v4/ui/interactive-item-list.tsx",
       }),
+      expect.objectContaining({
+        path: "registry/new-york-v4/ui/measured-row-virtualization.ts",
+      }),
     ]);
     expect(itemsByName.get("source-evidence")?.files).toEqual([
       expect.objectContaining({
@@ -3869,12 +3826,15 @@ describe("viewer architecture", () => {
         symbols: [
           "<SegmentedDocumentProvider",
           "<ExtractViewerContent",
-          "<ViewerRoot",
-          "<ViewerBody",
-          "<ViewerSurface",
+          "<FileViewerProvider",
+          "<FileViewer",
+          "<FileViewerHeader",
+          "<FileViewerBody",
+          "<FileViewerSurface",
+          "<FileViewerViewport",
           "<PdfViewerProvider",
           "<PdfViewerPages",
-          "<ViewerSidebar",
+          "<FileViewerSidebar",
           "<JsonForm",
         ],
       },
@@ -3886,7 +3846,12 @@ describe("viewer architecture", () => {
           "<ViewerRoot",
           "<ViewerBody",
           "<ViewerSurface",
+          "<FileViewerProvider",
+          "<FileViewer",
           "<PdfViewerProvider",
+          "<FileViewerBody",
+          "<FileViewerSurface",
+          "<FileViewerViewport",
           "<PdfViewerPages",
           "<ViewerSidebar",
           "<LayoutBlocksPanel",
@@ -4192,16 +4157,20 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/blocks/json-form-sources-block.tsx",
       [
         "<SegmentedDocumentProvider",
-        "<ViewerRoot",
-        "<ViewerBody",
-        "<ViewerSurface",
-        "<ViewerSidebar",
+        "<FileViewerProvider",
+        "<FileViewer",
+        "<PdfViewerProvider",
+        "<FileViewerHeader",
+        "<FileViewerBody",
+        "<FileViewerSurface",
+        "<FileViewerViewport",
+        "<FileViewerSidebar",
         "<JsonForm",
       ],
     );
     expect(
       fileContent("registry/new-york-v4/blocks/json-form-sources-block.tsx"),
-    ).toContain('aria-label="Extracted data sources"');
+    ).toContain('aria-label="Source-linked fields"');
   });
 
   it("teaches compound viewer composition before easy APIs", () => {

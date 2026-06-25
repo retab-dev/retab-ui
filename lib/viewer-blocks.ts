@@ -428,11 +428,11 @@ export const VIEWER_BLOCKS = [
     description:
       "A purified composition experiment: Pierre's file tree in a ViewerSidebar, with the selected source rendered by FileViewer in the ViewerSurface.",
     command: getRegistryAddCommand("fslight-block"),
-    docsHref: "/docs/components/file-system",
+    docsHref: "/blocks/file-system",
     viewHref: "/view/blocks/fslight",
     previewHeightClassName: "h-[680px]",
-    featured: true,
     categories: ["file-system"],
+    isStandaloneTab: false,
   },
   {
     id: "primitive-cards",
@@ -445,6 +445,7 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/primitive-cards",
     featured: true,
     categories: ["run-cards"],
+    isStandaloneTab: false,
   },
   {
     id: "pdf-thumbnails",

@@ -1,19 +1,22 @@
 "use client";
 
 import {
-  FileViewer,
   FileViewerBody,
-  FileViewerControls,
   FileViewerHeader,
+  FileViewerHeaderEnd,
+  FileViewerHeaderStart,
+  FileViewerIdentity,
+  FileViewerLegend,
+  FileViewer,
+  FileViewerProvider,
   FileViewerSidebarTrigger,
   FileViewerSurface,
-  FileViewerTitle,
+  FileViewerToolbar,
 } from "@/components/ui/file-viewer";
 import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer";
 import type { SplitView } from "@/components/viewers/lib/split-types";
 import {
   SplitViewerDocument,
-  SplitViewerHeaderMeta,
   SplitViewerLegend,
   SplitViewerProvider,
   SplitViewerSidebar,
@@ -49,27 +52,30 @@ export function SplitViewerBlock() {
   return (
     <div className="bg-background flex h-full min-h-[680px] flex-col">
       <SplitViewerProvider result={SPLIT_RESULT}>
-        <FileViewer
-          source={source}
-          defaultOpen
-          className="bg-background h-full flex-1"
-        >
-          <PdfViewerProvider>
-            <FileViewerHeader>
-              <FileViewerSidebarTrigger className="-ml-1" />
-              <FileViewerTitle />
-              <SplitViewerHeaderMeta />
-              <FileViewerControls />
-            </FileViewerHeader>
-            <FileViewerBody>
-              <SplitViewerSidebar />
-              <FileViewerSurface>
-                <SplitViewerLegend className="border-b px-3 py-2" />
-                <SplitViewerDocument document={<SplitViewerPdfDocument />} />
-              </FileViewerSurface>
-            </FileViewerBody>
-          </PdfViewerProvider>
-        </FileViewer>
+        <FileViewerProvider source={source} defaultSidebarOpen>
+          <FileViewer className="bg-background">
+            <PdfViewerProvider>
+              <FileViewerHeader>
+                <FileViewerHeaderStart>
+                  <FileViewerSidebarTrigger className="-ms-1" />
+                  <FileViewerIdentity meta="hidden" />
+                </FileViewerHeaderStart>
+                <FileViewerHeaderEnd>
+                  <FileViewerToolbar />
+                </FileViewerHeaderEnd>
+              </FileViewerHeader>
+              <FileViewerBody>
+                <SplitViewerSidebar />
+                <FileViewerSurface>
+                  <FileViewerLegend>
+                    <SplitViewerLegend className="px-3 py-2" />
+                  </FileViewerLegend>
+                  <SplitViewerDocument document={<SplitViewerPdfDocument />} />
+                </FileViewerSurface>
+              </FileViewerBody>
+            </PdfViewerProvider>
+          </FileViewer>
+        </FileViewerProvider>
       </SplitViewerProvider>
     </div>
   );

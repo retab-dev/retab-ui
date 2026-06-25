@@ -2,11 +2,15 @@
 
 import * as React from "react";
 
+import {
+  fileViewerDiagnostic,
+  summarizeViewerDescriptor,
+  summarizeViewerError,
+  summarizeViewerResource,
+} from "@/lib/pdf-viewer-diagnostics";
 import { cn } from "@/lib/utils";
 import type { ViewerResource } from "@/lib/viewer-resource";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ViewerDownloadButton } from "@/components/ui/viewer-download";
-import { ViewerErrorState } from "@/components/ui/viewer-error";
 
 import { CodeViewerFallback } from "./code-viewer-chrome";
 import { DocxViewerFallback } from "./docx-viewer-chrome";
@@ -15,6 +19,11 @@ import {
   type FileDescriptor,
   type FileViewerFallbackSize,
 } from "./file-viewer-core";
+import {
+  FileViewerErrorState,
+  FileViewerLoadingState,
+  FileViewerUnsupportedState,
+} from "./file-viewer-state";
 import { ImageViewerFallback } from "./image-viewer-chrome";
 import { PdfViewerFallback } from "./pdf-viewer-states";
 import { PptxViewerFallback } from "./pptx-viewer-fallback";
@@ -26,7 +35,7 @@ export function UnsupportedCard({
   resource,
   className,
   bare,
-  message = "No preview for",
+  message,
   showDownload = true,
 }: {
   resource: ViewerResource;
@@ -36,30 +45,18 @@ export function UnsupportedCard({
   showDownload?: boolean;
 }) {
   return (
-    <div
+    <FileViewerUnsupportedState
       className={cn(
-        "flex flex-col items-center justify-center gap-3 p-8 text-center",
         bare ? "bg-muted/20 h-full" : "bg-muted/30 min-h-64 rounded-xl border",
         className,
       )}
-      data-slot="file-viewer"
-    >
-      <p className="text-muted-foreground text-sm">
-        {message}{" "}
-        <span className="text-foreground font-medium">
-          {resource.fileName}.
-        </span>
-      </p>
-      {showDownload ? (
-        <ViewerDownloadButton
-          action={resource.originalDownload}
-          variant="outline"
-          size="sm"
-          className=""
-          showLabel
-        />
-      ) : null}
-    </div>
+      description={
+        message ?? `No preview is available for ${resource.fileName}.`
+      }
+      download={resource.originalDownload}
+      fileName={resource.fileName}
+      showDownload={showDownload}
+    />
   );
 }
 
@@ -174,15 +171,21 @@ export function ViewerFallback({
 
   // Unsupported / unknown categories: a neutral page-sheet placeholder.
   return (
-    <div
-      data-slot="file-viewer-document-fallback"
+    <FileViewerLoadingState
+      description={null}
+      icon={null}
+      title={null}
       className={cn(
-        "flex min-h-0 flex-col overflow-hidden",
+        "flex min-h-0 flex-col items-stretch justify-start gap-0 overflow-hidden p-0 text-left",
         bare ? "bg-muted/20 h-full" : "bg-muted/20 min-h-64",
         className,
       )}
     >
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div
+        data-file-viewer-slot="document-fallback"
+        data-slot="file-viewer-document-fallback"
+        className="min-h-0 flex-1 overflow-hidden"
+      >
         <div className="flex flex-col items-center p-4">
           <Skeleton
             aria-hidden
@@ -191,7 +194,7 @@ export function ViewerFallback({
           />
         </div>
       </div>
-    </div>
+    </FileViewerLoadingState>
   );
 }
 
@@ -287,6 +290,10 @@ export class FileErrorBoundary extends React.Component<
 
   componentDidUpdate(prev: { resetKey?: unknown }) {
     if (prev.resetKey !== this.props.resetKey && this.state.error) {
+      fileViewerDiagnostic("debug", "file_viewer_error_boundary_reset", {
+        descriptor: summarizeViewerDescriptor(this.props.descriptor),
+        resource: summarizeViewerResource(this.props.resource),
+      });
       this.setState({ error: null });
     }
   }
@@ -295,10 +302,18 @@ export class FileErrorBoundary extends React.Component<
     return { error };
   }
 
+  componentDidCatch(error: unknown) {
+    fileViewerDiagnostic("error", "file_viewer_error_boundary_caught", {
+      descriptor: summarizeViewerDescriptor(this.props.descriptor),
+      resource: summarizeViewerResource(this.props.resource),
+      error: summarizeViewerError(error),
+    });
+  }
+
   render() {
     if (this.state.error != null) {
       return (
-        <ViewerErrorState
+        <FileViewerErrorState
           error={this.state.error}
           format="file"
           sourceKind={this.props.resource.sourceKind}

@@ -2,11 +2,15 @@
   "title": "Anatomy",
   "pages": [
     "index",
+    "file-viewer-provider",
     "file-viewer",
+    "file-viewer-preview",
     "file-viewer-header",
     "file-viewer-body",
     "file-viewer-sidebar",
     "file-viewer-surface",
-    "file-viewer-document"
+    "file-viewer-viewport",
+    "file-viewer-document",
+    "file-viewer-states"
   ]
 }

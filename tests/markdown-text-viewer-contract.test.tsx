@@ -12,12 +12,12 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CodeViewer } from "@/components/ui/code-viewer";
-import { FileViewer } from "@/components/ui/file-viewer";
 import { TextViewer } from "@/components/ui/text-viewer";
 import {
   createPreparedTextDocument,
   layoutTextDocument,
 } from "@/registry/new-york-v4/ui/text-viewer-layout";
+import { FileViewerHarness as FileViewer } from "./file-viewer-test-harness";
 
 function textSource(text: string, fileName = "notes.txt", mimeType?: string) {
   return { kind: "text" as const, text, fileName, mimeType };

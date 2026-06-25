@@ -20,8 +20,8 @@ npx shadcn@latest add @retab/file-viewer
 ## Example
 
 The header stays file-type agnostic. The active renderer registers controls
-into `FileViewerControls`, while `FileViewerHeader` owns the title, metadata, and
-sidebar trigger.
+into `FileViewerToolbar`, while `FileViewerIdentity` owns file name and passive
+metadata.
 
 <ComponentPreview name="file-viewer-header-demo" />
 
@@ -33,28 +33,38 @@ The compact default composition is enough when there is no sidebar:
 import {
   FileViewer,
   FileViewerBody,
-  FileViewerControls,
   FileViewerDocument,
   FileViewerHeader,
-  FileViewerMeta,
+  FileViewerHeaderEnd,
+  FileViewerHeaderStart,
+  FileViewerIdentity,
+  FileViewerProvider,
   FileViewerSurface,
-  FileViewerTitle,
+  FileViewerToolbar,
+  FileViewerViewport,
 } from "@/components/ui/file-viewer";
 
 export function Example() {
   return (
-    <FileViewer source={source}>
-      <FileViewerHeader>
-        <FileViewerTitle />
-        <FileViewerMeta />
-        <FileViewerControls />
-      </FileViewerHeader>
-      <FileViewerBody>
-        <FileViewerSurface>
-          <FileViewerDocument />
-        </FileViewerSurface>
-      </FileViewerBody>
-    </FileViewer>
+    <FileViewerProvider source={source}>
+      <FileViewer>
+        <FileViewerHeader>
+          <FileViewerHeaderStart>
+            <FileViewerIdentity />
+          </FileViewerHeaderStart>
+          <FileViewerHeaderEnd>
+            <FileViewerToolbar />
+          </FileViewerHeaderEnd>
+        </FileViewerHeader>
+        <FileViewerBody>
+          <FileViewerSurface>
+            <FileViewerViewport>
+              <FileViewerDocument />
+            </FileViewerViewport>
+          </FileViewerSurface>
+        </FileViewerBody>
+      </FileViewer>
+    </FileViewerProvider>
   );
 }
 ```
@@ -62,87 +72,112 @@ export function Example() {
 When the body contains `FileViewerSidebar`, place the trigger before the title:
 
 ```tsx
-<FileViewer source={source} defaultOpen>
-  <FileViewerHeader>
-    <FileViewerSidebarTrigger />
-    <FileViewerTitle />
-    <FileViewerMeta />
-    <FileViewerControls />
-  </FileViewerHeader>
-  <FileViewerBody>
-    <FileViewerSidebar aria-label="Document sections" width="18rem" />
-    <FileViewerSurface>
-      <FileViewerDocument />
-    </FileViewerSurface>
-  </FileViewerBody>
-</FileViewer>
+<FileViewerProvider source={source} defaultSidebarOpen>
+  <FileViewer>
+    <FileViewerHeader>
+      <FileViewerHeaderStart>
+        <FileViewerSidebarTrigger />
+        <FileViewerIdentity />
+      </FileViewerHeaderStart>
+      <FileViewerHeaderEnd>
+        <FileViewerToolbar />
+      </FileViewerHeaderEnd>
+    </FileViewerHeader>
+    <FileViewerBody>
+      <FileViewerSidebar aria-label="Document sections" width="18rem" />
+      <FileViewerSurface>
+        <FileViewerViewport>
+          <FileViewerDocument />
+        </FileViewerViewport>
+      </FileViewerSurface>
+    </FileViewerBody>
+  </FileViewer>
+</FileViewerProvider>
 ```
 
 `FileViewerHeader` can also be rendered without children. In that case it uses
-the default title/meta/controls composition:
+the default identity/toolbar composition:
 
 ```tsx
-<FileViewer source={source}>
-  <FileViewerHeader />
-  <FileViewerBody>
-    <FileViewerSurface>
-      <FileViewerDocument />
-    </FileViewerSurface>
-  </FileViewerBody>
-</FileViewer>
+<FileViewerProvider source={source}>
+  <FileViewer>
+    <FileViewerHeader />
+    <FileViewerBody>
+      <FileViewerSurface>
+        <FileViewerViewport>
+          <FileViewerDocument />
+        </FileViewerViewport>
+      </FileViewerSurface>
+    </FileViewerBody>
+  </FileViewer>
+</FileViewerProvider>
 ```
 
 ## Parts
 
-The header is composed from four context-aware parts. None of them take a
-`source` prop — each reads what it needs from the file viewer state.
+The header is composed from small context-aware parts. None of them take a
+`source` prop; each reads what it needs from the file viewer state or from the
+surrounding viewer frame.
 
-### FileViewerTitle
+| Component                  | Role                                            |
+| -------------------------- | ----------------------------------------------- |
+| `FileViewerHeaderStart`    | Left slot for sidebar trigger and identity.     |
+| `FileViewerHeaderEnd`      | Right slot for toolbar and file-scoped actions. |
+| `FileViewerIdentity`       | File name and optional passive metadata.        |
+| `FileViewerToolbar`        | Renderer-registered operational controls.       |
+| `FileViewerSidebarTrigger` | Sidebar toggle; documented under Navigation.    |
 
-Renders the current file display name and is the primary file identity in the
-header.
+### FileViewerHeaderStart
+
+The left slot keeps the sidebar trigger and identity aligned while preserving
+space for truncating file names.
 
 ```tsx
-<FileViewerTitle />
+<FileViewerHeaderStart>
+  <FileViewerSidebarTrigger />
+  <FileViewerIdentity />
+</FileViewerHeaderStart>
 ```
 
-- Reads `descriptor.displayName` from file-viewer context — it takes no `source`
-  or name prop of its own.
-- Renders a `data-slot="file-viewer-title"` element with a truncating label and a
-  native `title` tooltip, so long file names clip cleanly and stay readable on
-  hover.
+### FileViewerHeaderEnd
+
+The right slot keeps renderer controls and file-scoped actions aligned at the
+end of the row.
+
+```tsx
+<FileViewerHeaderEnd>
+  <FileViewerToolbar />
+</FileViewerHeaderEnd>
+```
+
+### FileViewerIdentity
+
+Renders the current file display name and optional passive metadata.
+
+```tsx
+<FileViewerIdentity />
+```
+
+- Reads `descriptor.displayName`, MIME type, and category from file-viewer
+  context. It takes no `source` or name prop of its own.
+- Renders a `data-slot="file-viewer-identity"` element with truncating labels,
+  so long file names clip cleanly.
 - Do not add a decorative file icon beside the title. The file name carries the
   identity; metadata and controls provide the surrounding context.
 
-### FileViewerMeta
-
-Renders passive facts about the current file — its MIME type or category — beside
-the title. It never carries actions.
-
-```tsx
-<FileViewerTitle />
-<FileViewerMeta />
-```
-
-- Resolves its text from context as `resource.mimeType`, falling back to the
-  descriptor's MIME type, then the detected category.
-- Renders **nothing** when there is no metadata to show, so it never leaves an
-  empty gap in the header.
-- Renders a `data-slot="file-viewer-meta"` element with muted, truncating text.
-
-### FileViewerControls
+### FileViewerToolbar
 
 Renders operational controls registered by the active renderer: page position,
 zoom, rotate, retry, copy, and download.
 
 ```tsx
-<FileViewerControls />
+<FileViewerToolbar />
 ```
 
 Add workflow actions beside the renderer controls with `extra`:
 
 ```tsx
-<FileViewerControls extra={<ApproveButton />} />
+<FileViewerToolbar extra={<ApproveButton />} />
 ```
 
 - Reads the registered control set (`position`, `zoom`, `rotate`, `loading`,
@@ -151,7 +186,7 @@ Add workflow actions beside the renderer controls with `extra`:
 - Download defaults to the file's original download action. A renderer can
   register its own `downloads` (and registering an empty list hides the download
   button entirely).
-- Renders a `data-slot="file-viewer-controls"` row, right-aligned in the header.
+- Renders a `data-slot="file-viewer-toolbar"` row, right-aligned in the header.
 - The `extra` prop is merged with any renderer-registered extras, so workflow
   actions can sit beside the renderer's own controls.
 
@@ -166,7 +201,7 @@ contains a sidebar.
 
 The header does not know whether the document is a PDF, spreadsheet, image, or
 email. Renderer-specific controls register into the file viewer state and appear
-through `FileViewerControls`.
+through `FileViewerToolbar`.
 
 ## Layout Rule
 
@@ -174,9 +209,12 @@ Keep title and metadata on the left, controls on the right:
 
 ```tsx
 <FileViewerHeader>
-  <FileViewerTitle />
-  <FileViewerMeta />
-  <FileViewerControls />
+  <FileViewerHeaderStart>
+    <FileViewerIdentity />
+  </FileViewerHeaderStart>
+  <FileViewerHeaderEnd>
+    <FileViewerToolbar />
+  </FileViewerHeaderEnd>
 </FileViewerHeader>
 ```
 
@@ -188,14 +226,15 @@ metadata and controls are enough.
 | Component                  | Props                                             |
 | -------------------------- | ------------------------------------------------- |
 | `FileViewerHeader`         | `React.ComponentProps<typeof ViewerHeader>`       |
-| `FileViewerTitle`          | `React.ComponentProps<"div">`                     |
-| `FileViewerMeta`           | `React.ComponentProps<"span">`                    |
-| `FileViewerControls`       | `ViewerControls` props except registered controls |
+| `FileViewerHeaderStart`    | `React.ComponentProps<"div">`                     |
+| `FileViewerHeaderEnd`      | `React.ComponentProps<"div">`                     |
+| `FileViewerIdentity`       | `React.ComponentProps<"div">`                     |
+| `FileViewerToolbar`        | `ViewerControls` props except registered controls |
 | `FileViewerSidebarTrigger` | `ViewerSidebarTrigger` props                      |
 
-`FileViewerControls` receives renderer-registered `title`, `subtitle`,
-`position`, `zoom`, `rotate`, and `downloads` from file-viewer state. Pass
-`extra` for workflow actions that should sit beside renderer controls.
+`FileViewerToolbar` receives renderer-registered `position`, `zoom`, `rotate`,
+`downloads`, `loading`, and `extra` from file-viewer state. Pass `extra` for
+workflow actions that should sit beside renderer controls.
 
 ## Source
 
