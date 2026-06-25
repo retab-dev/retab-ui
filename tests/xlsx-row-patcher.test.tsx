@@ -15,6 +15,7 @@ afterEach(() => {
 
 describe("XLSX row patcher", () => {
   it("patches pooled row text, numeric state, active state, and transforms in place", () => {
+    const rowOffset = document.createElement("div");
     const rowWindow = buildRowWindow([
       {
         ariaRowIndex: "1",
@@ -47,6 +48,7 @@ describe("XLSX row patcher", () => {
     });
     const { result } = renderHook(() =>
       useXlsxRowPatcher({
+        rowOffsetRef: { current: rowOffset },
         rowWindowRef: { current: rowWindow },
         getState: () => state,
       }),
@@ -57,10 +59,15 @@ describe("XLSX row patcher", () => {
     const rows = rowHandles(rowWindow);
     expect(rows).toEqual(originalRows);
     expect(rows.map((row) => row.style.transform)).toEqual([
-      "translate3d(0, 120px, 0)",
-      "translate3d(0, 144px, 0)",
-      "translate3d(0, 168px, 0)",
+      "translate3d(0, 0px, 0)",
+      "translate3d(0, 24px, 0)",
+      "translate3d(0, 48px, 0)",
     ]);
+    expect(rowOffset.style.height).toBe("120px");
+    expect(rowWindow.style.position).toBe("sticky");
+    expect(rowWindow.style.height).toBe("72px");
+    expect(rowWindow.style.top).toBe("-24px");
+    expect(rowWindow.style.bottom).toBe("-24px");
     expect(rowText(rows[0]!)).toEqual(["6", "r5c0", "500"]);
     expect(rowText(rows[1]!)).toEqual(["7", "r6c0", "600"]);
     expect(rowText(rows[2]!)).toEqual(["8", "r7c0", "700"]);
@@ -77,6 +84,7 @@ describe("XLSX row patcher", () => {
   });
 
   it("does not mutate per-cell row indexes, titles, or stable classes during fast scroll patches", () => {
+    const rowOffset = document.createElement("div");
     const rowWindow = buildRowWindow([
       {
         ariaRowIndex: "1",
@@ -115,6 +123,7 @@ describe("XLSX row patcher", () => {
     const state = createPatchState();
     const { result } = renderHook(() =>
       useXlsxRowPatcher({
+        rowOffsetRef: { current: rowOffset },
         rowWindowRef: { current: rowWindow },
         getState: () => state,
       }),
@@ -137,6 +146,7 @@ describe("XLSX row patcher", () => {
   });
 
   it("resyncs rows hidden by the fast path back to the canonical window", () => {
+    const rowOffset = document.createElement("div");
     const rowWindow = buildRowWindow([
       {
         ariaRowIndex: "1",
@@ -182,6 +192,7 @@ describe("XLSX row patcher", () => {
     const state = createPatchState();
     const { result } = renderHook(() =>
       useXlsxRowPatcher({
+        rowOffsetRef: { current: rowOffset },
         rowWindowRef: { current: rowWindow },
         getState: () => state,
       }),
@@ -213,17 +224,20 @@ describe("XLSX row patcher", () => {
       false,
     ]);
     expect(rows.map((row) => row.style.transform)).toEqual([
+      "translate3d(0, 0px, 0)",
+      "translate3d(0, 24px, 0)",
+      "translate3d(0, 48px, 0)",
       "translate3d(0, 72px, 0)",
       "translate3d(0, 96px, 0)",
-      "translate3d(0, 120px, 0)",
-      "translate3d(0, 144px, 0)",
-      "translate3d(0, 168px, 0)",
     ]);
+    expect(rowOffset.style.height).toBe("72px");
+    expect(rowWindow.style.height).toBe("120px");
     expect(rowText(rows[3]!)).toEqual(["7", "r6c0", "600"]);
     expect(rowText(rows[4]!)).toEqual(["8", "r7c0", "700"]);
   });
 
   it("declines the fast path after the active cell changes", () => {
+    const rowOffset = document.createElement("div");
     const rowWindow = buildRowWindow([
       {
         ariaRowIndex: "1",
@@ -253,6 +267,7 @@ describe("XLSX row patcher", () => {
     const state = createPatchState();
     const { result } = renderHook(() =>
       useXlsxRowPatcher({
+        rowOffsetRef: { current: rowOffset },
         rowWindowRef: { current: rowWindow },
         getState: () => state,
       }),
@@ -267,6 +282,7 @@ describe("XLSX row patcher", () => {
   });
 
   it("declines the fast path after horizontal columns change", () => {
+    const rowOffset = document.createElement("div");
     const rowWindow = buildRowWindow([
       {
         ariaRowIndex: "1",
@@ -296,6 +312,7 @@ describe("XLSX row patcher", () => {
     const state = createPatchState();
     const { result } = renderHook(() =>
       useXlsxRowPatcher({
+        rowOffsetRef: { current: rowOffset },
         rowWindowRef: { current: rowWindow },
         getState: () => state,
       }),
@@ -330,6 +347,7 @@ function createPatchState(
     rowCount: 20,
     rowHeight: 24,
     sheetName: "Sheet",
+    viewportHeight: 48,
     ...overrides,
   };
 }

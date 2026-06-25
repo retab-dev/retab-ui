@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { getFixedGridInverseRowWindowStyle } from "@/components/ui/fixed-grid-layout";
+import { FixedGridRowWindow } from "@/components/ui/fixed-grid-row-window";
 import { useMeasuredRowVirtualization } from "@/components/ui/measured-row-virtualization";
 
 export function VirtualList({
@@ -23,52 +23,43 @@ export function VirtualList({
     (index: number) => fields[index]?.id ?? index,
     [fields],
   );
-  const {
-    measureRow,
-    totalSize,
-    viewportClientHeight,
-    virtualRowWindow,
-  } = useMeasuredRowVirtualization({
-    count: fields.length,
-    estimateSize: estimateSize + gap,
-    getItemKey,
-    overscan: 8,
-    scrollRef: parentRef,
-  });
+  const { measureRow, totalSize, viewportClientHeight, virtualRowWindow } =
+    useMeasuredRowVirtualization({
+      count: fields.length,
+      estimateSize: estimateSize + gap,
+      getItemKey,
+      overscan: 8,
+      scrollRef: parentRef,
+    });
 
   return (
     <div ref={parentRef} style={{ maxHeight }} className="overflow-y-auto">
-      <div
+      <FixedGridRowWindow
         data-slot="json-form-virtual-list-spacer"
-        style={{ height: totalSize, position: "relative" }}
+        totalSize={totalSize}
+        virtualRowWindow={virtualRowWindow}
+        viewportHeight={viewportClientHeight}
+        offsetDataSlot="json-form-virtual-list-row-offset"
+        windowDataSlot="json-form-virtual-list-row-window"
       >
-        <div
-          data-slot="json-form-virtual-list-row-window"
-          style={getFixedGridInverseRowWindowStyle({
-            height: virtualRowWindow.size,
-            top: virtualRowWindow.start,
-            viewportHeight: viewportClientHeight,
-          })}
-        >
-          {virtualRowWindow.items.map((virtualRow) => (
-            <div
-              key={virtualRow.key}
-              data-index={virtualRow.index}
-              ref={(element) => measureRow(virtualRow.index, element)}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                transform: `translateY(${virtualRow.start}px)`,
-                paddingBottom: gap,
-              }}
-            >
-              {renderItem(virtualRow.index)}
-            </div>
-          ))}
-        </div>
-      </div>
+        {virtualRowWindow.items.map((virtualRow) => (
+          <div
+            key={virtualRow.key}
+            data-index={virtualRow.index}
+            ref={(element) => measureRow(virtualRow.index, element)}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              transform: `translateY(${virtualRow.start}px)`,
+              paddingBottom: gap,
+            }}
+          >
+            {renderItem(virtualRow.index)}
+          </div>
+        ))}
+      </FixedGridRowWindow>
     </div>
   );
 }

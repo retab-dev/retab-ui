@@ -3,18 +3,10 @@
 import React, { useCallback, useRef, useState } from "react";
 import type { JSONSchema7 } from "json-schema";
 
-import {
-  getFixedGridCanvasStyle,
-  getFixedGridInverseRowOffsetStyle,
-  getFixedGridInverseStickyRowWindowStyle,
-} from "@/components/ui/fixed-grid-layout";
+import { getFixedGridCanvasStyle } from "@/components/ui/fixed-grid-layout";
+import { FixedGridRowWindow } from "@/components/ui/fixed-grid-row-window";
 import { FixedGridViewport } from "@/components/ui/fixed-grid-viewport";
-import {
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { JsonTableHeaderCell } from "@/components/json-table/header-cell";
 import type { JsonTableCellCommitHandler } from "@/components/json-table/json-table-cell-commit";
 import type {
@@ -371,82 +363,69 @@ export const SingleFileVirtualizedTable =
             className="w-full flex-1 overflow-auto"
             onScroll={handleBodyScroll}
           >
-            <table
+            <FixedGridRowWindow
+              as="table"
+              offsetAs="tbody"
+              windowAs="tbody"
               aria-colcount={schemaVisibleColumns.length}
               aria-rowcount={rowCount}
               data-slot="table"
               className="bg-background relative flex w-full flex-col rounded-none"
-              style={{
-                ...getFixedGridCanvasStyle({ minWidth: totalWidth }),
-                height: totalRowSize,
-              }}
+              minWidth={totalWidth}
+              rowMinWidth="100%"
+              totalSize={totalRowSize}
+              virtualRowWindow={virtualRowWindow}
+              viewportHeight={viewportClientHeight}
+              rowOffsetRef={rowOffsetRef}
+              rowWindowRef={rowWindowRef}
+              offsetDataSlot="json-table-row-offset"
+              offsetClassName="bg-background w-full shrink-0"
+              windowDataSlot="json-table-row-window"
+              windowClassName="bg-background w-full"
             >
-              <TableBody
-                ref={rowOffsetRef}
-                aria-hidden="true"
-                data-slot="json-table-row-offset"
-                className="bg-background w-full shrink-0"
-                style={getFixedGridInverseRowOffsetStyle({
-                  height: virtualRowWindow.start,
-                  minWidth: "100%",
-                })}
-              />
-              <TableBody
-                ref={rowWindowRef}
-                data-slot="json-table-row-window"
-                className="bg-background w-full"
-                style={getFixedGridInverseStickyRowWindowStyle({
-                  height: virtualRowWindow.size,
-                  minWidth: "100%",
-                  viewportHeight: viewportClientHeight,
-                })}
-              >
-                {virtualRowWindow.items.map((virtualRow, slotIndex) => {
-                  // Editable mode keeps row identity so focused editor state
-                  // cannot move to another document row. Read-only mode reuses
-                  // visible row shells to avoid replacement spikes while
-                  // scrolling through large tables.
-                  const rowIdx = virtualRow.index;
-                  const rowKey = isJsonEditable
-                    ? `row-${rowIdx}`
-                    : `slot-${slotIndex}`;
-                  const projectedRow = projectedRows[rowIdx];
-                  return (
-                    <SingleFileFormRow
-                      key={rowKey}
-                      rowIdx={rowIdx}
-                      rowTopPx={virtualRow.start}
-                      document={document}
-                      projectedRow={projectedRow}
-                      schema={schema}
-                      renderedColumnWindow={renderedColumnWindow}
-                      rowHeightPx={rowHeightPx}
-                      primitiveActiveCellStore={
-                        editSession.primitiveActiveCellStore
-                      }
-                      primitiveEditStore={primitiveEditStore}
-                      setPrimitiveActiveCell={
-                        editSession.setPrimitiveActiveCell
-                      }
-                      structuredEditSession={editSession.structuredEditSession}
-                      startStructuredEditSession={
-                        editSession.startStructuredEditSession
-                      }
-                      setStructuredEditSessionOverlayOpen={
-                        editSession.setStructuredEditSessionOverlayOpen
-                      }
-                      closeStructuredEditSession={
-                        editSession.closeStructuredEditSession
-                      }
-                      onCellHoverStart={onCellHoverStart}
-                      onCellHoverEnd={onCellHoverEnd}
-                      onCellCommit={onCellCommit}
-                      isJsonEditable={isJsonEditable}
-                    />
-                  );
-                })}
-              </TableBody>
-            </table>
+              {virtualRowWindow.items.map((virtualRow, slotIndex) => {
+                // Editable mode keeps row identity so focused editor state
+                // cannot move to another document row. Read-only mode reuses
+                // visible row shells to avoid replacement spikes while
+                // scrolling through large tables.
+                const rowIdx = virtualRow.index;
+                const rowKey = isJsonEditable
+                  ? `row-${rowIdx}`
+                  : `slot-${slotIndex}`;
+                const projectedRow = projectedRows[rowIdx];
+                return (
+                  <SingleFileFormRow
+                    key={rowKey}
+                    rowIdx={rowIdx}
+                    rowTopPx={virtualRow.start}
+                    document={document}
+                    projectedRow={projectedRow}
+                    schema={schema}
+                    renderedColumnWindow={renderedColumnWindow}
+                    rowHeightPx={rowHeightPx}
+                    primitiveActiveCellStore={
+                      editSession.primitiveActiveCellStore
+                    }
+                    primitiveEditStore={primitiveEditStore}
+                    setPrimitiveActiveCell={editSession.setPrimitiveActiveCell}
+                    structuredEditSession={editSession.structuredEditSession}
+                    startStructuredEditSession={
+                      editSession.startStructuredEditSession
+                    }
+                    setStructuredEditSessionOverlayOpen={
+                      editSession.setStructuredEditSessionOverlayOpen
+                    }
+                    closeStructuredEditSession={
+                      editSession.closeStructuredEditSession
+                    }
+                    onCellHoverStart={onCellHoverStart}
+                    onCellHoverEnd={onCellHoverEnd}
+                    onCellCommit={onCellCommit}
+                    isJsonEditable={isJsonEditable}
+                  />
+                );
+              })}
+            </FixedGridRowWindow>
           </FixedGridViewport>
         </div>
       );

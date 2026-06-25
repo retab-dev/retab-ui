@@ -38,16 +38,22 @@ describe("JsonForm VirtualList", () => {
     expect(screen.getByTestId("field-field-0")).toBeTruthy();
     expect(screen.getByTestId("field-field-37")).toBeTruthy();
     expect(screen.queryByTestId("field-field-80")).toBeNull();
-    const spacer = screen.getByTestId("field-field-0").closest(
-      '[data-slot="json-form-virtual-list-spacer"]',
-    ) as HTMLDivElement;
-    const rowWindow = screen.getByTestId("field-field-0").closest(
-      '[data-slot="json-form-virtual-list-row-window"]',
-    ) as HTMLDivElement;
+    const spacer = screen
+      .getByTestId("field-field-0")
+      .closest('[data-slot="json-form-virtual-list-spacer"]') as HTMLDivElement;
+    const rowWindow = screen
+      .getByTestId("field-field-0")
+      .closest(
+        '[data-slot="json-form-virtual-list-row-window"]',
+      ) as HTMLDivElement;
+    const rowOffset = spacer.querySelector<HTMLDivElement>(
+      '[data-slot="json-form-virtual-list-row-offset"]',
+    );
     expect(spacer.style.height).toBe("4000px");
     expect(spacer.style.position).toBe("relative");
+    expect(rowOffset?.style.height).toBe("0px");
     expect(rowWindow.style.position).toBe("sticky");
-    expect(rowWindow.style.marginTop).toBe("0px");
+    expect(rowWindow.style.marginTop).toBe("");
     expect(rowWindow.style.height).not.toBe("4000px");
   });
 
@@ -85,13 +91,20 @@ describe("JsonForm VirtualList", () => {
       expect(screen.getByTestId("field-field-50")).toBeTruthy();
     });
     expect(screen.queryByTestId("field-field-0")).toBeNull();
-    const rowWindow = screen.getByTestId("field-field-50").closest(
-      '[data-slot="json-form-virtual-list-row-window"]',
-    ) as HTMLDivElement;
+    const rowWindow = screen
+      .getByTestId("field-field-50")
+      .closest(
+        '[data-slot="json-form-virtual-list-row-window"]',
+      ) as HTMLDivElement;
+    const rowOffset = container.querySelector<HTMLDivElement>(
+      '[data-slot="json-form-virtual-list-row-offset"]',
+    );
+    expect(rowOffset?.style.height).toBe("840px");
     expect(rowWindow.style.position).toBe("sticky");
-    expect(rowWindow.style.marginTop).toBe("840px");
-    expect(screen.getByTestId("field-field-50").parentElement?.style.transform)
-      .toBe("translateY(160px)");
+    expect(rowWindow.style.marginTop).toBe("");
+    expect(
+      screen.getByTestId("field-field-50").parentElement?.style.transform,
+    ).toBe("translateY(160px)");
   });
 
   it("keeps row state keyed by field id across reorders", () => {

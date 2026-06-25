@@ -5,10 +5,8 @@ import * as React from "react";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { xlsxColumnLabel, type XlsxCell } from "@/lib/xlsx-workbook";
 import { fixedGridColumnWidths } from "@/components/ui/fixed-grid-columns";
-import {
-  getFixedGridCanvasStyle,
-  getFixedGridRowWindowStyle,
-} from "@/components/ui/fixed-grid-layout";
+import { getFixedGridCanvasStyle } from "@/components/ui/fixed-grid-layout";
+import { FixedGridRowWindow } from "@/components/ui/fixed-grid-row-window";
 import type { GridCellCoordinate } from "@/components/ui/fixed-grid-selection";
 import { buildVirtualGridTemplate } from "@/components/ui/fixed-grid-template";
 import { FixedGridViewport } from "@/components/ui/fixed-grid-viewport";
@@ -85,7 +83,9 @@ export function XlsxGrid({
   const fontSize = XLSX_BASE_FONT_SIZE * safeScale;
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
+  const rowOffsetRef = React.useRef<HTMLDivElement>(null);
   const rowWindowRef = React.useRef<HTMLDivElement>(null);
+  const viewportClientHeightRef = React.useRef(0);
   const setScrollElement = React.useCallback(
     (element: HTMLDivElement | null) => {
       scrollRef.current = element;
@@ -103,10 +103,12 @@ export function XlsxGrid({
       rowCount: safeRowCount,
       rowHeight,
       sheetName,
+      viewportHeight: viewportClientHeightRef.current,
     }),
     [activeCell, getCell, rowHeight, safeColumnCount, safeRowCount, sheetName],
   );
   const rowPatcher = useXlsxRowPatcher({
+    rowOffsetRef,
     rowWindowRef,
     getState: getRowPatchState,
   });
@@ -120,6 +122,7 @@ export function XlsxGrid({
     totalRowSize,
     totalColumnSize,
     columnItems: virtualColumnItems,
+    virtualRowWindow,
     leftPad,
     rightPad,
     scrollToCell,
@@ -137,6 +140,7 @@ export function XlsxGrid({
     rowScrollStrategy,
     scrollRef,
   });
+  viewportClientHeightRef.current = viewportClientHeight;
 
   const requestNonce = scrollRequest?.nonce;
   useKeyedMountEffect(
@@ -180,7 +184,7 @@ export function XlsxGrid({
   const rowPoolSlots = useFixedRowPool({
     minimumPoolSize: minimumRowPoolSize,
     rowCount: safeRowCount,
-    virtualRows,
+    virtualRows: virtualRowWindow.items,
   });
 
   useKeyedMountEffect(
@@ -265,9 +269,14 @@ export function XlsxGrid({
               <Spacer width={rightPad} />
             </div>
 
-            <div
-              ref={rowWindowRef}
-              style={getFixedGridRowWindowStyle({ height: totalRowSize })}
+            <FixedGridRowWindow
+              rowOffsetRef={rowOffsetRef}
+              rowWindowRef={rowWindowRef}
+              totalSize={totalRowSize}
+              virtualRowWindow={virtualRowWindow}
+              viewportHeight={viewportClientHeight}
+              offsetDataSlot="xlsx-row-offset"
+              windowDataSlot="xlsx-row-window"
             >
               {rowPoolSlots.map((slot) => (
                 <XlsxGridRowSlot
@@ -283,7 +292,7 @@ export function XlsxGrid({
                   activeCell={activeCell ?? null}
                 />
               ))}
-            </div>
+            </FixedGridRowWindow>
           </div>
         </FixedGridViewport>
         <HeaderAwareScrollbar scrollRef={scrollRef} headerHeight={rowHeight} />

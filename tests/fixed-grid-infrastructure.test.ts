@@ -16,6 +16,7 @@ import * as PublicFixedGridBenchmark from "@/components/ui/fixed-grid-benchmark"
 import * as PublicFixedGridColumns from "@/components/ui/fixed-grid-columns";
 import * as PublicFixedGridLayout from "@/components/ui/fixed-grid-layout";
 import * as PublicFixedGridRowStyle from "@/components/ui/fixed-grid-row-style";
+import * as PublicFixedGridRowWindow from "@/components/ui/fixed-grid-row-window";
 import * as PublicFixedGridSelection from "@/components/ui/fixed-grid-selection";
 import * as PublicFixedGridTemplate from "@/components/ui/fixed-grid-template";
 import * as PublicFixedGridViewport from "@/components/ui/fixed-grid-viewport";
@@ -37,10 +38,15 @@ import {
 import {
   fixedGridInverseStickyOffset,
   getFixedGridCanvasStyle,
+  getFixedGridInverseRowOffsetStyle,
   getFixedGridInverseRowWindowStyle,
+  getFixedGridInverseRowWindowStyles,
+  getFixedGridInverseStickyRowWindowStyle,
   getFixedGridRowWindowStyle,
+  setFixedGridInverseRowWindowGeometry,
 } from "@/registry/new-york-v4/ui/fixed-grid-layout";
 import { getFixedGridRowStyle } from "@/registry/new-york-v4/ui/fixed-grid-row-style";
+import { FixedGridRowWindow } from "@/registry/new-york-v4/ui/fixed-grid-row-window";
 import {
   gridCellKey,
   isSameGridCell,
@@ -102,6 +108,9 @@ describe("fixed grid public entrypoints", () => {
     );
     expect(PublicFixedGridRowStyle.getFixedGridRowStyle).toBe(
       getFixedGridRowStyle,
+    );
+    expect(PublicFixedGridRowWindow.FixedGridRowWindow).toBe(
+      FixedGridRowWindow,
     );
     expect(PublicFixedGridSelection.gridCellKey).toBe(gridCellKey);
     expect(PublicFixedGridSelection.isSameGridCell).toBe(isSameGridCell);
@@ -252,6 +261,54 @@ describe("fixed grid layout styles", () => {
 
   it("formats inverse-sticky row-window geometry", () => {
     expect(
+      getFixedGridInverseRowOffsetStyle({
+        height: 480,
+        minWidth: 600,
+      }),
+    ).toEqual({
+      height: "480px",
+      minWidth: "600px",
+    });
+    expect(
+      getFixedGridInverseStickyRowWindowStyle({
+        height: 160,
+        minWidth: 600,
+        viewportHeight: 60,
+      }),
+    ).toEqual({
+      position: "sticky",
+      height: "160px",
+      minWidth: "600px",
+      top: "-100px",
+      bottom: "-100px",
+    });
+    expect(
+      getFixedGridInverseRowWindowStyles({
+        totalSize: 1200,
+        minWidth: 800,
+        rowMinWidth: 600,
+        viewportHeight: 60,
+        window: { start: 480, size: 160 },
+      }),
+    ).toEqual({
+      spacerStyle: {
+        position: "relative",
+        height: "1200px",
+        minWidth: "800px",
+      },
+      offsetStyle: {
+        height: "480px",
+        minWidth: "600px",
+      },
+      windowStyle: {
+        position: "sticky",
+        height: "160px",
+        minWidth: "600px",
+        top: "-100px",
+        bottom: "-100px",
+      },
+    });
+    expect(
       getFixedGridInverseRowWindowStyle({
         height: 160,
         minWidth: 600,
@@ -272,6 +329,66 @@ describe("fixed grid layout styles", () => {
         viewportSize: 60,
       }),
     ).toBe(0);
+  });
+
+  it("patches inverse-sticky row-window geometry imperatively", () => {
+    const rowOffset = document.createElement("div");
+    const rowWindow = document.createElement("div");
+    rowWindow.style.marginTop = "999px";
+
+    setFixedGridInverseRowWindowGeometry({
+      rowOffsetElement: rowOffset,
+      rowWindowElement: rowWindow,
+      viewportHeight: 60,
+      window: { start: 480, size: 160 },
+    });
+
+    expect(rowOffset.style.height).toBe("480px");
+    expect(rowWindow.style.position).toBe("sticky");
+    expect(rowWindow.style.height).toBe("160px");
+    expect(rowWindow.style.marginTop).toBe("");
+    expect(rowWindow.style.top).toBe("-100px");
+    expect(rowWindow.style.bottom).toBe("-100px");
+  });
+
+  it("renders the default inverse-sticky row-window component", () => {
+    const rowOffsetRef = React.createRef<HTMLElement>();
+    const rowWindowRef = React.createRef<HTMLElement>();
+
+    const { container } = render(
+      React.createElement(
+        FixedGridRowWindow,
+        {
+          "data-slot": "fixed-grid-row-spacer",
+          rowOffsetRef,
+          rowWindowRef,
+          totalSize: 1200,
+          virtualRowWindow: { start: 480, size: 160 },
+          viewportHeight: 60,
+          windowDataSlot: "fixed-grid-row-window",
+        },
+        React.createElement("div", { "data-slot": "fixed-grid-row" }),
+      ),
+    );
+
+    const spacer = container.querySelector<HTMLElement>(
+      '[data-slot="fixed-grid-row-spacer"]',
+    );
+    const rowWindow = container.querySelector<HTMLElement>(
+      '[data-slot="fixed-grid-row-window"]',
+    );
+
+    expect(spacer?.style.position).toBe("relative");
+    expect(spacer?.style.height).toBe("1200px");
+    expect(rowOffsetRef.current?.style.height).toBe("480px");
+    expect(rowWindowRef.current).toBe(rowWindow);
+    expect(rowWindow?.style.position).toBe("sticky");
+    expect(rowWindow?.style.height).toBe("160px");
+    expect(rowWindow?.style.top).toBe("-100px");
+    expect(rowWindow?.style.bottom).toBe("-100px");
+    expect(
+      rowWindow?.querySelector('[data-slot="fixed-grid-row"]'),
+    ).toBeTruthy();
   });
 
   it("preserves zero and decimal CSS lengths", () => {

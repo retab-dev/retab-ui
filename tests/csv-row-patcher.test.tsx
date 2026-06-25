@@ -16,6 +16,7 @@ afterEach(() => {
 
 describe("CSV row patcher", () => {
   it("patches pooled row text and transforms without touching aria row indexes", () => {
+    const rowOffset = document.createElement("div");
     const rowWindow = buildRowWindow([
       { ariaRowIndex: "2", rowNumber: "1", cells: ["r0c0", "r0c1"] },
       { ariaRowIndex: "3", rowNumber: "2", cells: ["r1c0", "r1c1"] },
@@ -24,6 +25,7 @@ describe("CSV row patcher", () => {
     const state = createPatchState();
     const { result } = renderHook(() =>
       useCsvRowPatcher({
+        rowOffsetRef: { current: rowOffset },
         rowWindowRef: { current: rowWindow },
         getState: () => state,
       }),
@@ -43,7 +45,8 @@ describe("CSV row patcher", () => {
       "translate3d(0, 20px, 0)",
     ]);
     expect(rowWindow.style.position).toBe("sticky");
-    expect(rowWindow.style.marginTop).toBe("50px");
+    expect(rowOffset.style.height).toBe("50px");
+    expect(rowWindow.style.marginTop).toBe("");
     expect(rowWindow.style.height).toBe("30px");
     expect(rowWindow.style.top).toBe("-10px");
     expect(rowWindow.style.bottom).toBe("-10px");
@@ -53,6 +56,7 @@ describe("CSV row patcher", () => {
   });
 
   it("keeps the fast path while a cell is active and patches the active class", () => {
+    const rowOffset = document.createElement("div");
     const rowWindow = buildRowWindow([
       { ariaRowIndex: "2", rowNumber: "1", cells: ["r0c0", "r0c1"] },
       { ariaRowIndex: "3", rowNumber: "2", cells: ["r1c0", "r1c1"] },
@@ -63,6 +67,7 @@ describe("CSV row patcher", () => {
     });
     const { result } = renderHook(() =>
       useCsvRowPatcher({
+        rowOffsetRef: { current: rowOffset },
         rowWindowRef: { current: rowWindow },
         getState: () => state,
       }),
@@ -78,6 +83,7 @@ describe("CSV row patcher", () => {
   });
 
   it("keeps the fast path at a stable non-zero horizontal offset", () => {
+    const rowOffset = document.createElement("div");
     const rowWindow = buildRowWindow([
       { ariaRowIndex: "2", rowNumber: "1", cells: ["r0c0", "r0c1"] },
       { ariaRowIndex: "3", rowNumber: "2", cells: ["r1c0", "r1c1"] },
@@ -85,6 +91,7 @@ describe("CSV row patcher", () => {
     ]);
     const { result } = renderHook(() =>
       useCsvRowPatcher({
+        rowOffsetRef: { current: rowOffset },
         rowWindowRef: { current: rowWindow },
         getState: () => createPatchState(),
       }),
@@ -96,6 +103,7 @@ describe("CSV row patcher", () => {
   });
 
   it("resync restores canonical visibility a stale patch left hidden", () => {
+    const rowOffset = document.createElement("div");
     const rowWindow = buildRowWindow([
       { ariaRowIndex: "2", rowNumber: "1", cells: ["r0c0", "r0c1"] },
       { ariaRowIndex: "3", rowNumber: "2", cells: ["r1c0", "r1c1"] },
@@ -103,6 +111,7 @@ describe("CSV row patcher", () => {
     ]);
     const { result } = renderHook(() =>
       useCsvRowPatcher({
+        rowOffsetRef: { current: rowOffset },
         rowWindowRef: { current: rowWindow },
         getState: () => createPatchState(),
       }),
@@ -136,7 +145,8 @@ describe("CSV row patcher", () => {
       "translate3d(0, 10px, 0)",
       "translate3d(0, 20px, 0)",
     ]);
-    expect(rowWindow.style.marginTop).toBe("50px");
+    expect(rowOffset.style.height).toBe("50px");
+    expect(rowWindow.style.marginTop).toBe("");
     expect(rowWindow.style.height).toBe("30px");
     expect(rows.map((row) => rowText(row))).toEqual([
       ["6", "r5c0", "r5c1"],
@@ -146,6 +156,7 @@ describe("CSV row patcher", () => {
   });
 
   it("resync hides pooled rows beyond the canonical window", () => {
+    const rowOffset = document.createElement("div");
     const rowWindow = buildRowWindow([
       { ariaRowIndex: "2", rowNumber: "1", cells: ["r0c0", "r0c1"] },
       { ariaRowIndex: "3", rowNumber: "2", cells: ["r1c0", "r1c1"] },
@@ -153,6 +164,7 @@ describe("CSV row patcher", () => {
     ]);
     const { result } = renderHook(() =>
       useCsvRowPatcher({
+        rowOffsetRef: { current: rowOffset },
         rowWindowRef: { current: rowWindow },
         getState: () => createPatchState(),
       }),
@@ -168,6 +180,7 @@ describe("CSV row patcher", () => {
   });
 
   it("declines the fast path when required text nodes are missing", () => {
+    const rowOffset = document.createElement("div");
     const rowWindow = buildRowWindow([
       { ariaRowIndex: "2", rowNumber: "1", cells: ["r0c0", "r0c1"] },
       { ariaRowIndex: "3", rowNumber: "2", cells: ["r1c0", "r1c1"] },
@@ -180,6 +193,7 @@ describe("CSV row patcher", () => {
     const state = createPatchState();
     const { result } = renderHook(() =>
       useCsvRowPatcher({
+        rowOffsetRef: { current: rowOffset },
         rowWindowRef: { current: rowWindow },
         getState: () => state,
       }),

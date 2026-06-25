@@ -5,7 +5,7 @@ import * as React from "react";
 import type { CsvCellAddress } from "./csv-viewer-state";
 import { csvCellClassName } from "./csv-viewer-cell-classes";
 import type { CsvRowStore } from "./csv-row-store";
-import { fixedGridInverseStickyOffset } from "./fixed-grid-layout";
+import { setFixedGridInverseRowWindowGeometry } from "./fixed-grid-layout";
 import {
   fixedVirtualItemWindow,
   fixedVirtualItems,
@@ -56,9 +56,11 @@ const MINIMUM_PATCH_VISIBLE_ROWS = 1;
 const TEXT_NODE = 3;
 
 export function useCsvRowPatcher({
+  rowOffsetRef,
   rowWindowRef,
   getState,
 }: {
+  rowOffsetRef: React.RefObject<HTMLDivElement | null>;
   rowWindowRef: React.RefObject<HTMLDivElement | null>;
   getState: () => CsvRowPatchState;
 }): CsvRowPatcher {
@@ -85,15 +87,22 @@ export function useCsvRowPatcher({
     (virtualRows: FixedGridVirtualItem[]) => {
       const rowWindow = rowWindowRef.current;
       if (!rowWindow) return;
+      const rowOffset = rowOffsetRef.current;
+      if (!rowOffset) return;
       const cache = readRowHandles(rowWindow);
       rowHandleCacheRef.current = cache;
       if (cache.rows.length === 0) return;
       const state = getState();
       const window = fixedVirtualItemWindow(virtualRows);
-      setRowWindowGeometry(rowWindow, window, state.viewportHeight);
+      setFixedGridInverseRowWindowGeometry({
+        rowOffsetElement: rowOffset,
+        rowWindowElement: rowWindow,
+        viewportHeight: state.viewportHeight,
+        window,
+      });
       patchRows(cache.rows, window.items, state);
     },
-    [getState, rowWindowRef],
+    [getState, rowOffsetRef, rowWindowRef],
   );
 
   const patch = React.useCallback(
@@ -103,6 +112,8 @@ export function useCsvRowPatcher({
 
       const rowWindow = rowWindowRef.current;
       if (!rowWindow) return "pass";
+      const rowOffset = rowOffsetRef.current;
+      if (!rowOffset) return "pass";
 
       const cache =
         rowHandleCacheRef.current?.rowWindow === rowWindow
@@ -135,12 +146,17 @@ export function useCsvRowPatcher({
       }
 
       const window = fixedVirtualItemWindow(nextRows);
-      setRowWindowGeometry(rowWindow, window, viewport.clientHeight);
+      setFixedGridInverseRowWindowGeometry({
+        rowOffsetElement: rowOffset,
+        rowWindowElement: rowWindow,
+        viewportHeight: viewport.clientHeight,
+        window,
+      });
       patchRows(cache.rows, window.items, state);
 
       return "handled";
     },
-    [getState, rowWindowRef],
+    [getState, rowOffsetRef, rowWindowRef],
   );
 
   return React.useMemo(
@@ -290,30 +306,4 @@ function setRowHidden(row: CsvRowHandle, isHidden: boolean) {
   if (row.isHidden === isHidden) return;
   row.element.hidden = isHidden;
   row.isHidden = isHidden;
-}
-
-function setRowWindowGeometry(
-  rowWindow: HTMLDivElement,
-  window: ReturnType<typeof fixedVirtualItemWindow>,
-  viewportHeight: number,
-) {
-  const stickyOffset = fixedGridInverseStickyOffset({
-    viewportSize: viewportHeight,
-    windowSize: window.size,
-  });
-  setStyleValue(rowWindow.style, "position", "sticky");
-  setStyleValue(rowWindow.style, "height", `${window.size}px`);
-  setStyleValue(rowWindow.style, "margin-top", `${window.start}px`);
-  setStyleValue(rowWindow.style, "top", `${stickyOffset}px`);
-  setStyleValue(rowWindow.style, "bottom", `${stickyOffset}px`);
-}
-
-function setStyleValue(
-  style: CSSStyleDeclaration,
-  propertyName: string,
-  value: string,
-) {
-  if (style.getPropertyValue(propertyName) !== value) {
-    style.setProperty(propertyName, value);
-  }
 }

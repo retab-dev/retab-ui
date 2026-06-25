@@ -1,11 +1,12 @@
 import type * as React from "react";
 
-type CssLength = number | string;
-type CssLengthProperty =
-  | "height"
-  | "marginTop"
-  | "minWidth"
-  | "width";
+export type CssLength = number | string;
+type CssLengthProperty = "height" | "marginTop" | "minWidth" | "width";
+
+export interface FixedGridInverseRowWindowGeometry {
+  size: number;
+  start: number;
+}
 
 export function getFixedGridCanvasStyle({
   width,
@@ -74,6 +75,40 @@ export function getFixedGridInverseStickyRowWindowStyle({
   };
 }
 
+export function getFixedGridInverseRowWindowStyles({
+  minWidth,
+  rowMinWidth,
+  totalSize,
+  viewportHeight,
+  window,
+}: {
+  minWidth?: CssLength;
+  rowMinWidth?: CssLength;
+  totalSize: CssLength;
+  viewportHeight: number;
+  window: FixedGridInverseRowWindowGeometry;
+}): {
+  offsetStyle: React.CSSProperties;
+  spacerStyle: React.CSSProperties;
+  windowStyle: React.CSSProperties;
+} {
+  return {
+    offsetStyle: getFixedGridInverseRowOffsetStyle({
+      height: window.start,
+      minWidth: rowMinWidth,
+    }),
+    spacerStyle: getFixedGridRowWindowStyle({
+      height: totalSize,
+      minWidth,
+    }),
+    windowStyle: getFixedGridInverseStickyRowWindowStyle({
+      height: window.size,
+      minWidth: rowMinWidth,
+      viewportHeight,
+    }),
+  };
+}
+
 export function getFixedGridInverseRowWindowStyle({
   height,
   minWidth,
@@ -114,6 +149,34 @@ export function fixedGridInverseStickyOffset({
   return offset === 0 ? 0 : -offset;
 }
 
+export function setFixedGridInverseRowWindowGeometry({
+  rowOffsetElement,
+  rowWindowElement,
+  viewportHeight,
+  window,
+}: {
+  rowOffsetElement: HTMLElement;
+  rowWindowElement: HTMLElement;
+  viewportHeight: number;
+  window: FixedGridInverseRowWindowGeometry;
+}) {
+  const offsetStyle = getFixedGridInverseRowOffsetStyle({
+    height: window.start,
+  });
+  const windowStyle = getFixedGridInverseStickyRowWindowStyle({
+    height: window.size,
+    viewportHeight,
+  });
+  patchStyleProperties(rowOffsetElement.style, offsetStyle, ["height"]);
+  patchStyleProperties(rowWindowElement.style, windowStyle, [
+    "position",
+    "height",
+    "top",
+    "bottom",
+  ]);
+  setStyleValue(rowWindowElement.style, "margin-top", "");
+}
+
 function formatCssLength(value: CssLength | undefined) {
   if (typeof value === "string") return value.trim() ? value : undefined;
   if (typeof value !== "number") return value;
@@ -130,4 +193,30 @@ function cssLengthProperty<Property extends CssLengthProperty>(
 
 function safeCssNumber(value: number) {
   return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function patchStyleProperties(
+  style: CSSStyleDeclaration,
+  values: React.CSSProperties,
+  properties: string[],
+) {
+  for (const property of properties) {
+    const value = values[property as keyof React.CSSProperties];
+    setStyleValue(
+      style,
+      property,
+      typeof value === "number" ? `${value}px` : value,
+    );
+  }
+}
+
+function setStyleValue(
+  style: CSSStyleDeclaration,
+  propertyName: string,
+  value: unknown,
+) {
+  const nextValue = typeof value === "string" ? value : "";
+  if (style.getPropertyValue(propertyName) !== nextValue) {
+    style.setProperty(propertyName, nextValue);
+  }
 }

@@ -3,8 +3,12 @@
 import * as React from "react";
 
 import type { XlsxCell } from "@/lib/xlsx-workbook";
+import { setFixedGridInverseRowWindowGeometry } from "@/components/ui/fixed-grid-layout";
 import type { GridCellCoordinate } from "@/components/ui/fixed-grid-selection";
-import { fixedVirtualItems } from "@/components/ui/fixed-grid-virtualization";
+import {
+  fixedVirtualItemWindow,
+  fixedVirtualItems,
+} from "@/components/ui/fixed-grid-virtualization";
 import type {
   FixedGridJumpViewportResult,
   FixedGridViewport,
@@ -20,6 +24,7 @@ export interface XlsxRowPatchState {
   rowCount: number;
   rowHeight: number;
   sheetName: string;
+  viewportHeight: number;
 }
 
 export interface XlsxRowPatcher {
@@ -70,9 +75,11 @@ const ACTIVE_CLASSES = [
 ];
 
 export function useXlsxRowPatcher({
+  rowOffsetRef,
   rowWindowRef,
   getState,
 }: {
+  rowOffsetRef: React.RefObject<HTMLDivElement | null>;
   rowWindowRef: React.RefObject<HTMLDivElement | null>;
   getState: () => XlsxRowPatchState;
 }): XlsxRowPatcher {
@@ -86,16 +93,25 @@ export function useXlsxRowPatcher({
     (virtualRows: FixedGridVirtualItem[]) => {
       const rowWindow = rowWindowRef.current;
       if (!rowWindow) return;
+      const rowOffset = rowOffsetRef.current;
+      if (!rowOffset) return;
       const state = getState();
       const cache = readRowHandles(rowWindow, state, {
         scrollLeft: 0,
       });
+      const window = fixedVirtualItemWindow(virtualRows);
       if (cache.rows.length > 0) {
-        patchRows(cache.rows, virtualRows, state);
+        setFixedGridInverseRowWindowGeometry({
+          rowOffsetElement: rowOffset,
+          rowWindowElement: rowWindow,
+          viewportHeight: state.viewportHeight,
+          window,
+        });
+        patchRows(cache.rows, window.items, state);
       }
       rowHandleCacheRef.current = null;
     },
-    [getState, rowWindowRef],
+    [getState, rowOffsetRef, rowWindowRef],
   );
 
   const patch = React.useCallback(
@@ -105,6 +121,8 @@ export function useXlsxRowPatcher({
 
       const rowWindow = rowWindowRef.current;
       if (!rowWindow) return "pass";
+      const rowOffset = rowOffsetRef.current;
+      if (!rowOffset) return "pass";
 
       const cache =
         rowHandleCacheRef.current?.rowWindow === rowWindow
@@ -137,11 +155,18 @@ export function useXlsxRowPatcher({
         return "pass";
       }
 
-      patchRows(cache.rows, nextRows, state);
+      const window = fixedVirtualItemWindow(nextRows);
+      setFixedGridInverseRowWindowGeometry({
+        rowOffsetElement: rowOffset,
+        rowWindowElement: rowWindow,
+        viewportHeight: viewport.clientHeight,
+        window,
+      });
+      patchRows(cache.rows, window.items, state);
 
       return "handled";
     },
-    [getState, rowWindowRef],
+    [getState, rowOffsetRef, rowWindowRef],
   );
 
   return React.useMemo(

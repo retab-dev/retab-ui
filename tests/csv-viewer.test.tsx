@@ -540,8 +540,12 @@ describe("CsvViewer", () => {
     const rowWindow = container.querySelector<HTMLElement>(
       '[data-slot="csv-row-window"]',
     );
+    const rowOffset = container.querySelector<HTMLElement>(
+      '[data-slot="csv-row-offset"]',
+    );
+    expect(rowOffset?.style.height).toBe("0px");
     expect(rowWindow?.style.position).toBe("sticky");
-    expect(rowWindow?.style.marginTop).toBe("0px");
+    expect(rowWindow?.style.marginTop).toBe("");
     expect(rowWindow?.style.height).not.toBe(`${250 * 33}px`);
     expect(screen.getByText("value-1")).toBeTruthy();
   });

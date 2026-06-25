@@ -1216,11 +1216,15 @@ describe("JsonForm arrays", () => {
     const rowWindow = container.querySelector<HTMLElement>(
       '[data-slot="json-form-table-row-window"]',
     );
+    const rowOffset = container.querySelector<HTMLElement>(
+      '[data-slot="json-form-table-row-offset"]',
+    );
     const spacer = rowWindow?.parentElement;
     const firstRow = container.querySelector<HTMLElement>('[data-index="0"]');
 
+    expect(rowOffset?.style.height).toBe("0px");
     expect(rowWindow?.style.position).toBe("sticky");
-    expect(rowWindow?.style.marginTop).toBe("0px");
+    expect(rowWindow?.style.marginTop).toBe("");
     expect(rowWindow?.style.height).not.toBe(`${501 * 44}px`);
     expect(spacer?.style.height).toBe(`${501 * 44}px`);
     expect(firstRow?.style.transform).toBe("translate3d(0, 0px, 0)");

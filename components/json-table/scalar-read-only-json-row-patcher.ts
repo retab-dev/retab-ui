@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { fixedGridInverseStickyOffset } from "@/components/ui/fixed-grid-layout";
+import { setFixedGridInverseRowWindowGeometry } from "@/components/ui/fixed-grid-layout";
 import {
   fixedVirtualItems,
   fixedVirtualItemWindow,
@@ -105,8 +105,11 @@ export function useScalarReadOnlyJsonRowPatcher({
         return;
       }
 
-      setRowWindowGeometry(rowOffset, cache.rowWindow, nextRowWindow, {
+      setFixedGridInverseRowWindowGeometry({
+        rowOffsetElement: rowOffset,
+        rowWindowElement: cache.rowWindow,
         viewportHeight: state.viewportHeight,
+        window: nextRowWindow,
       });
       patchRows(cache.rows, nextRowWindow.items, state);
     },
@@ -187,8 +190,11 @@ export function useScalarReadOnlyJsonRowPatcher({
       }
 
       const nextRowWindow = fixedVirtualItemWindow(nextRows);
-      setRowWindowGeometry(rowOffset, cache.rowWindow, nextRowWindow, {
+      setFixedGridInverseRowWindowGeometry({
+        rowOffsetElement: rowOffset,
+        rowWindowElement: cache.rowWindow,
         viewportHeight: viewport.clientHeight,
+        window: nextRowWindow,
       });
       const rowsPatched = patchRows(cache.rows, nextRowWindow.items, state);
       recordPatchDiagnostic(onDiagnostic, {
@@ -422,32 +428,4 @@ function setRowHidden(row: JsonRowHandle, isHidden: boolean) {
   if (row.isHidden === isHidden) return;
   row.element.hidden = isHidden;
   row.isHidden = isHidden;
-}
-
-function setRowWindowGeometry(
-  rowOffsetElement: HTMLElement,
-  rowWindowElement: HTMLElement,
-  rowWindow: ReturnType<typeof fixedVirtualItemWindow>,
-  { viewportHeight }: { viewportHeight: number },
-) {
-  const stickyOffset = fixedGridInverseStickyOffset({
-    viewportSize: viewportHeight,
-    windowSize: rowWindow.size,
-  });
-  setStyleValue(rowOffsetElement.style, "height", `${rowWindow.start}px`);
-  setStyleValue(rowWindowElement.style, "position", "sticky");
-  setStyleValue(rowWindowElement.style, "height", `${rowWindow.size}px`);
-  setStyleValue(rowWindowElement.style, "margin-top", "");
-  setStyleValue(rowWindowElement.style, "top", `${stickyOffset}px`);
-  setStyleValue(rowWindowElement.style, "bottom", `${stickyOffset}px`);
-}
-
-function setStyleValue(
-  style: CSSStyleDeclaration,
-  propertyName: string,
-  value: string,
-) {
-  if (style.getPropertyValue(propertyName) !== value) {
-    style.setProperty(propertyName, value);
-  }
 }

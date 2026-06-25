@@ -2,10 +2,7 @@
 
 import * as React from "react";
 
-import {
-  getFixedGridInverseRowWindowStyle,
-  getFixedGridRowWindowStyle,
-} from "@/components/ui/fixed-grid-layout";
+import { FixedGridRowWindow } from "@/components/ui/fixed-grid-row-window";
 import { useFixedRowVirtualization } from "@/components/ui/fixed-grid-virtualization";
 import { joinJsonFormPath } from "@/components/json-form/path-codec";
 import {
@@ -63,17 +60,14 @@ export function FixedArrayTableBody({
   renderItem: (index: number, rowTopPx: number) => React.ReactNode;
 }) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
-  const {
-    virtualRowWindow,
-    totalRowSize,
-    viewportClientHeight,
-  } = useFixedRowVirtualization({
-    rowCount: fields.length,
-    rowSize: TABLE_ROW_HEIGHT,
-    rowOverscan: TABLE_ROW_OVERSCAN,
-    jumpRowOverscan: TABLE_JUMP_ROW_OVERSCAN,
-    scrollRef,
-  });
+  const { virtualRowWindow, totalRowSize, viewportClientHeight } =
+    useFixedRowVirtualization({
+      rowCount: fields.length,
+      rowSize: TABLE_ROW_HEIGHT,
+      rowOverscan: TABLE_ROW_OVERSCAN,
+      jumpRowOverscan: TABLE_JUMP_ROW_OVERSCAN,
+      scrollRef,
+    });
   useArrayTableScrollActivity(scrollRef, scrollHandlers);
 
   return (
@@ -83,40 +77,31 @@ export function FixedArrayTableBody({
       className="overflow-y-auto"
       style={{ maxHeight: TABLE_MAX_HEIGHT }}
     >
-      <div
-        style={getFixedGridRowWindowStyle({
-          height: totalRowSize,
-          minWidth: "100%",
-        })}
+      <FixedGridRowWindow
+        totalSize={totalRowSize}
+        minWidth="100%"
+        rowMinWidth="100%"
+        virtualRowWindow={virtualRowWindow}
+        viewportHeight={viewportClientHeight}
+        offsetDataSlot="json-form-table-row-offset"
+        windowDataSlot="json-form-table-row-window"
         className="[contain:layout_paint_style]"
       >
-        <div
-          data-slot="json-form-table-row-window"
-          style={getFixedGridInverseRowWindowStyle({
-            height: virtualRowWindow.size,
-            minWidth: "100%",
-            top: virtualRowWindow.start,
-            viewportHeight: viewportClientHeight,
-          })}
-        >
-          {virtualRowWindow.items.map((virtualRow, slotIndex) => {
-            const isEditingRow = activeEditorPath?.startsWith(
-              `${joinJsonFormPath(name, virtualRow.index)}.`,
-            );
-            return (
-              <React.Fragment
-                key={
-                  isEditingRow
-                    ? fields[virtualRow.index].id
-                    : `slot-${slotIndex}`
-                }
-              >
-                {renderItem(virtualRow.index, virtualRow.start)}
-              </React.Fragment>
-            );
-          })}
-        </div>
-      </div>
+        {virtualRowWindow.items.map((virtualRow, slotIndex) => {
+          const isEditingRow = activeEditorPath?.startsWith(
+            `${joinJsonFormPath(name, virtualRow.index)}.`,
+          );
+          return (
+            <React.Fragment
+              key={
+                isEditingRow ? fields[virtualRow.index].id : `slot-${slotIndex}`
+              }
+            >
+              {renderItem(virtualRow.index, virtualRow.start)}
+            </React.Fragment>
+          );
+        })}
+      </FixedGridRowWindow>
     </div>
   );
 }
