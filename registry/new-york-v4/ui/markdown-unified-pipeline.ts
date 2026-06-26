@@ -17,6 +17,7 @@ import { VFile } from "vfile";
 
 import type {
   MarkdownHastElement,
+  MarkdownHastNode,
   MarkdownHastRoot,
 } from "./markdown-hast-types";
 import { createMarkdownSourceMap } from "./markdown-source-map";
@@ -128,6 +129,61 @@ const MARKDOWN_KATEX_OPTIONS = {
   strict: "ignore",
   trust: false,
 } as const;
+const MARKDOWN_KATEX_RENDER_CACHE_LIMIT = 512;
+const MARKDOWN_KATEX_RENDER_CACHE_RENDERER = "rehype-katex@7.0.1";
+const MARKDOWN_KATEX_RENDER_CACHE_CONFIG = markdownKatexConfigKey(
+  MARKDOWN_KATEX_OPTIONS,
+);
+
+type MarkdownHastParent = MarkdownHastElement | MarkdownHastRoot;
+
+type MarkdownKatexCacheMode = "display" | "inline";
+
+type MarkdownKatexCacheEntry = {
+  message?: MarkdownKatexCacheMessage;
+  nodes: MarkdownHastNode[];
+};
+
+type MarkdownKatexCacheMessage = {
+  reason: string;
+  ruleId?: string | null;
+  source?: string | null;
+};
+
+type MarkdownKatexMatch = {
+  displayMode: boolean;
+  messagePosition?: MarkdownHastElement["position"];
+  mode: MarkdownKatexCacheMode;
+  scope: MarkdownHastElement;
+  source: string;
+};
+
+type MarkdownKatexRenderMiss = {
+  endMarkerId: string;
+  key: string;
+  messagePosition?: MarkdownHastElement["position"];
+  startMarkerId: string;
+};
+
+type MarkdownKatexRenderPlaceholder = {
+  key: string;
+  messagePosition?: MarkdownHastElement["position"];
+  placeholderId: string;
+};
+
+type MarkdownKatexCachedMessageReplay = {
+  message: MarkdownKatexCacheMessage;
+  messagePosition?: MarkdownHastElement["position"];
+};
+
+type MarkdownKatexRenderState = {
+  cachedMessages: MarkdownKatexCachedMessageReplay[];
+  firstMissByKey: Map<string, MarkdownKatexRenderMiss>;
+  firstMisses: MarkdownKatexRenderMiss[];
+  nextMarkerId: number;
+  placeholders: MarkdownKatexRenderPlaceholder[];
+  renderedByKey: Map<string, MarkdownKatexCacheEntry>;
+};
 
 type MarkdownMdastProcessor = ReturnType<typeof createMarkdownMdastProcessor>;
 type MarkdownHastProcessor = ReturnType<typeof createMarkdownHastProcessor>;
@@ -137,6 +193,13 @@ let defaultMarkdownHastProcessor: MarkdownHastProcessor | null = null;
 let markdownUnifiedSanitizeSchema: ReturnType<
   typeof createUncachedMarkdownUnifiedSanitizeSchema
 > | null = null;
+const markdownKatexRenderCache = new Map<string, MarkdownKatexCacheEntry>();
+const markdownKatexRenderCacheStats = {
+  hits: 0,
+  misses: 0,
+  sameDocumentHits: 0,
+  writes: 0,
+};
 
 export function createMarkdownUnifiedDocument(
   markdown: string,
@@ -204,7 +267,7 @@ function createMarkdownHastProcessor() {
     .use(rehypeSanitize, getMarkdownUnifiedSanitizeSchema())
     .use(rehypeMarkdownTrustedMetadata)
     .use(rehypeMarkdownSafeInputs)
-    .use(rehypeKatex, MARKDOWN_KATEX_OPTIONS);
+    .use(rehypeMarkdownCachedKatex, MARKDOWN_KATEX_OPTIONS);
 }
 
 function getMarkdownUnifiedSanitizeSchema() {
@@ -566,6 +629,460 @@ function visitMarkdownMdastNodes(
   for (const child of node.children ?? []) {
     visitMarkdownMdastNodes(child, visitor);
   }
+}
+
+function rehypeMarkdownCachedKatex(options: typeof MARKDOWN_KATEX_OPTIONS) {
+  const renderKatex = rehypeKatex(options);
+
+  return function transform(tree: MarkdownHastRoot, file: VFile) {
+    const state: MarkdownKatexRenderState = {
+      cachedMessages: [],
+      firstMissByKey: new Map(),
+      firstMisses: [],
+      nextMarkerId: 1,
+      placeholders: [],
+      renderedByKey: new Map(),
+    };
+    prepareMarkdownKatexRenderCache(tree, state);
+    const firstKatexMessageIndex = file.messages.length;
+    renderKatex(tree as never, file);
+    finishMarkdownKatexRenderCache(tree, file, state, firstKatexMessageIndex);
+  };
+}
+
+function prepareMarkdownKatexRenderCache(
+  parent: MarkdownHastParent,
+  state: MarkdownKatexRenderState,
+) {
+  let index = 0;
+  while (index < parent.children.length) {
+    const child = parent.children[index]!;
+    const element = readHastElement(child);
+    if (!element) {
+      index += 1;
+      continue;
+    }
+
+    const match = readMarkdownKatexMatch(element);
+    if (!match) {
+      prepareMarkdownKatexRenderCache(element, state);
+      index += 1;
+      continue;
+    }
+
+    const key = markdownKatexRenderCacheKey(match);
+    const cached = readMarkdownKatexRenderCache(key);
+    if (cached) {
+      parent.children.splice(index, 1, ...cloneMarkdownHastNodes(cached.nodes));
+      if (cached.message) {
+        state.cachedMessages.push({
+          message: cached.message,
+          messagePosition: match.messagePosition,
+        });
+      }
+      markdownKatexRenderCacheStats.hits += 1;
+      index += cached.nodes.length;
+      continue;
+    }
+
+    if (state.firstMissByKey.has(key)) {
+      const placeholder = createMarkdownKatexPlaceholder(state);
+      parent.children[index] = placeholder;
+      state.placeholders.push({
+        key,
+        messagePosition: match.messagePosition,
+        placeholderId: readStringProperty(
+          placeholder.properties?.dataPretextKatexCachePlaceholder,
+        ),
+      });
+      markdownKatexRenderCacheStats.sameDocumentHits += 1;
+      index += 1;
+      continue;
+    }
+
+    const startMarker = createMarkdownKatexMarker(state, "start");
+    const endMarker = createMarkdownKatexMarker(state, "end");
+    const miss: MarkdownKatexRenderMiss = {
+      endMarkerId: readStringProperty(
+        endMarker.properties?.dataPretextKatexCacheMarker,
+      ),
+      key,
+      messagePosition: match.messagePosition,
+      startMarkerId: readStringProperty(
+        startMarker.properties?.dataPretextKatexCacheMarker,
+      ),
+    };
+    state.firstMissByKey.set(key, miss);
+    state.firstMisses.push(miss);
+    markdownKatexRenderCacheStats.misses += 1;
+    parent.children.splice(index, 1, startMarker, match.scope, endMarker);
+    index += 3;
+  }
+}
+
+function finishMarkdownKatexRenderCache(
+  tree: MarkdownHastRoot,
+  file: VFile,
+  state: MarkdownKatexRenderState,
+  firstKatexMessageIndex: number,
+) {
+  const katexMessages = file.messages
+    .slice(firstKatexMessageIndex)
+    .filter((message) => message.source === "rehype-katex");
+  const usedMessageIndexes = new Set<number>();
+
+  for (const miss of state.firstMisses) {
+    const renderedNodes = readRenderedMarkdownKatexNodes(tree, miss);
+    if (!renderedNodes) continue;
+    const message = readMarkdownKatexMessageForMiss({
+      messages: katexMessages,
+      miss,
+      usedMessageIndexes,
+    });
+    const entry = {
+      message,
+      nodes: cloneMarkdownHastNodes(renderedNodes),
+    };
+    state.renderedByKey.set(miss.key, entry);
+    writeMarkdownKatexRenderCache(miss.key, entry);
+  }
+
+  for (const placeholder of state.placeholders) {
+    const cached =
+      state.renderedByKey.get(placeholder.key) ??
+      readMarkdownKatexRenderCache(placeholder.key);
+    if (!cached) continue;
+    replaceMarkdownKatexPlaceholder(
+      tree,
+      placeholder.placeholderId,
+      cloneMarkdownHastNodes(cached.nodes),
+    );
+    replayMarkdownKatexCacheMessage(file, placeholder, cached.message);
+  }
+
+  for (const cachedMessage of state.cachedMessages) {
+    replayMarkdownKatexCacheMessage(file, cachedMessage, cachedMessage.message);
+  }
+}
+
+function readMarkdownKatexMatch(
+  element: MarkdownHastElement,
+): MarkdownKatexMatch | null {
+  if (element.tagName === "pre") {
+    const code = element.children.map(readHastElement).find((child) => {
+      return (
+        child?.tagName === "code" && hasArrayClassName(child, "language-math")
+      );
+    });
+    if (code) {
+      return {
+        displayMode: true,
+        messagePosition: code.position,
+        mode: "display",
+        scope: element,
+        source: extractMarkdownKatexText(element),
+      };
+    }
+  }
+
+  const languageMath = hasArrayClassName(element, "language-math");
+  const mathDisplay = hasArrayClassName(element, "math-display");
+  const mathInline = hasArrayClassName(element, "math-inline");
+  if (!languageMath && !mathDisplay && !mathInline) return null;
+
+  return {
+    displayMode: mathDisplay,
+    messagePosition: element.position,
+    mode: mathDisplay ? "display" : "inline",
+    scope: element,
+    source: extractMarkdownKatexText(element),
+  };
+}
+
+function createMarkdownKatexMarker(
+  state: MarkdownKatexRenderState,
+  side: "end" | "start",
+): MarkdownHastElement {
+  const id = `${side}-${state.nextMarkerId}`;
+  state.nextMarkerId += 1;
+  return {
+    type: "element",
+    tagName: "span",
+    properties: {
+      dataPretextKatexCacheMarker: id,
+      hidden: true,
+    },
+    children: [],
+  };
+}
+
+function createMarkdownKatexPlaceholder(
+  state: MarkdownKatexRenderState,
+): MarkdownHastElement {
+  const id = `placeholder-${state.nextMarkerId}`;
+  state.nextMarkerId += 1;
+  return {
+    type: "element",
+    tagName: "span",
+    properties: {
+      dataPretextKatexCachePlaceholder: id,
+      hidden: true,
+    },
+    children: [],
+  };
+}
+
+function readRenderedMarkdownKatexNodes(
+  parent: MarkdownHastParent,
+  miss: MarkdownKatexRenderMiss,
+): MarkdownHastNode[] | null {
+  const startIndex = parent.children.findIndex((child) =>
+    isMarkdownKatexMarker(child, miss.startMarkerId),
+  );
+  if (startIndex >= 0) {
+    const endIndex = parent.children.findIndex((child, index) => {
+      return (
+        index > startIndex && isMarkdownKatexMarker(child, miss.endMarkerId)
+      );
+    });
+    if (endIndex < 0) return null;
+    const renderedNodes = parent.children.slice(startIndex + 1, endIndex);
+    parent.children.splice(
+      startIndex,
+      endIndex - startIndex + 1,
+      ...renderedNodes,
+    );
+    return renderedNodes;
+  }
+
+  for (const child of parent.children) {
+    const element = readHastElement(child);
+    if (!element) continue;
+    const renderedNodes = readRenderedMarkdownKatexNodes(element, miss);
+    if (renderedNodes) return renderedNodes;
+  }
+  return null;
+}
+
+function replaceMarkdownKatexPlaceholder(
+  parent: MarkdownHastParent,
+  placeholderId: string,
+  nodes: MarkdownHastNode[],
+): boolean {
+  const index = parent.children.findIndex((child) =>
+    isMarkdownKatexPlaceholder(child, placeholderId),
+  );
+  if (index >= 0) {
+    parent.children.splice(index, 1, ...nodes);
+    return true;
+  }
+
+  for (const child of parent.children) {
+    const element = readHastElement(child);
+    if (
+      element &&
+      replaceMarkdownKatexPlaceholder(element, placeholderId, nodes)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function readMarkdownKatexMessageForMiss({
+  messages,
+  miss,
+  usedMessageIndexes,
+}: {
+  messages: readonly VFile["messages"][number][];
+  miss: MarkdownKatexRenderMiss;
+  usedMessageIndexes: Set<number>;
+}): MarkdownKatexCacheMessage | undefined {
+  const start = miss.messagePosition?.start;
+  const exactIndex = messages.findIndex((message, index) => {
+    return (
+      !usedMessageIndexes.has(index) &&
+      message.line === start?.line &&
+      (start?.column == null || message.column === start.column)
+    );
+  });
+  const hasPosition = start?.line != null || start?.column != null;
+  if (exactIndex < 0 && hasPosition) return undefined;
+  const fallbackIndex =
+    exactIndex >= 0
+      ? exactIndex
+      : messages.findIndex((_, index) => !usedMessageIndexes.has(index));
+  if (fallbackIndex < 0) return undefined;
+
+  usedMessageIndexes.add(fallbackIndex);
+  const message = messages[fallbackIndex]!;
+  return {
+    reason: message.reason,
+    ruleId: message.ruleId,
+    source: message.source,
+  };
+}
+
+function replayMarkdownKatexCacheMessage(
+  file: VFile,
+  target: { messagePosition?: MarkdownHastElement["position"] },
+  message: MarkdownKatexCacheMessage | undefined,
+) {
+  if (!message) return;
+  file.message(message.reason, {
+    place: target.messagePosition as never,
+    ruleId: message.ruleId ?? undefined,
+    source: message.source ?? undefined,
+  });
+}
+
+function isMarkdownKatexMarker(node: MarkdownHastNode, id: string) {
+  return (
+    readStringProperty(
+      readHastElement(node)?.properties?.dataPretextKatexCacheMarker,
+    ) === id
+  );
+}
+
+function isMarkdownKatexPlaceholder(node: MarkdownHastNode, id: string) {
+  return (
+    readStringProperty(
+      readHastElement(node)?.properties?.dataPretextKatexCachePlaceholder,
+    ) === id
+  );
+}
+
+function readMarkdownKatexRenderCache(key: string) {
+  const entry = markdownKatexRenderCache.get(key);
+  if (!entry) return null;
+  markdownKatexRenderCache.delete(key);
+  markdownKatexRenderCache.set(key, entry);
+  return entry;
+}
+
+function writeMarkdownKatexRenderCache(
+  key: string,
+  entry: MarkdownKatexCacheEntry,
+) {
+  markdownKatexRenderCache.set(key, entry);
+  markdownKatexRenderCacheStats.writes += 1;
+  while (markdownKatexRenderCache.size > MARKDOWN_KATEX_RENDER_CACHE_LIMIT) {
+    const oldestKey = markdownKatexRenderCache.keys().next().value;
+    if (!oldestKey) break;
+    markdownKatexRenderCache.delete(oldestKey);
+  }
+}
+
+function markdownKatexRenderCacheKey(match: MarkdownKatexMatch) {
+  return JSON.stringify([
+    MARKDOWN_KATEX_RENDER_CACHE_RENDERER,
+    MARKDOWN_KATEX_RENDER_CACHE_CONFIG,
+    match.mode,
+    match.displayMode,
+    match.source,
+  ]);
+}
+
+function markdownKatexConfigKey(options: Record<string, unknown>) {
+  return JSON.stringify(
+    Object.fromEntries(
+      Object.entries(options).sort(([left], [right]) =>
+        left.localeCompare(right),
+      ),
+    ),
+  );
+}
+
+function extractMarkdownKatexText(node: MarkdownHastNode): string {
+  if (node.type === "text" && typeof node.value === "string") return node.value;
+  const element = readHastElement(node);
+  if (!element) return "";
+  return element.children.map(extractMarkdownKatexText).join("");
+}
+
+function cloneMarkdownHastNodes(nodes: readonly MarkdownHastNode[]) {
+  return nodes.map(cloneMarkdownHastNode);
+}
+
+function cloneMarkdownHastNode(node: MarkdownHastNode): MarkdownHastNode {
+  if (node.type === "text") {
+    return {
+      ...node,
+      position: node.position
+        ? cloneMarkdownPosition(node.position)
+        : undefined,
+    };
+  }
+  const element = readHastElement(node);
+  if (element) {
+    return {
+      ...element,
+      children: cloneMarkdownHastNodes(element.children),
+      position: element.position
+        ? cloneMarkdownPosition(element.position)
+        : undefined,
+      properties: element.properties
+        ? cloneMarkdownProperties(element.properties)
+        : undefined,
+    };
+  }
+  const children = "children" in node ? node.children : undefined;
+  return {
+    ...node,
+    children: children ? cloneMarkdownHastNodes(children) : undefined,
+    position: node.position ? cloneMarkdownPosition(node.position) : undefined,
+  };
+}
+
+function cloneMarkdownPosition(
+  position: NonNullable<MarkdownHastNode["position"]>,
+) {
+  return {
+    end: position.end ? { ...position.end } : undefined,
+    start: position.start ? { ...position.start } : undefined,
+  };
+}
+
+function cloneMarkdownProperties(properties: Record<string, unknown>) {
+  const next: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(properties)) {
+    next[key] = Array.isArray(value) ? [...value] : value;
+  }
+  return next;
+}
+
+function readHastElement(node: unknown): MarkdownHastElement | null {
+  return node &&
+    typeof node === "object" &&
+    (node as MarkdownHastElement).type === "element"
+    ? (node as MarkdownHastElement)
+    : null;
+}
+
+function hasArrayClassName(element: MarkdownHastElement, className: string) {
+  const value = element.properties?.className;
+  return Array.isArray(value) && value.includes(className);
+}
+
+function readStringProperty(value: unknown) {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value.filter(Boolean).join(" ");
+  return "";
+}
+
+export function resetMarkdownMathRenderCacheForTests() {
+  markdownKatexRenderCache.clear();
+  markdownKatexRenderCacheStats.hits = 0;
+  markdownKatexRenderCacheStats.misses = 0;
+  markdownKatexRenderCacheStats.sameDocumentHits = 0;
+  markdownKatexRenderCacheStats.writes = 0;
+}
+
+export function getMarkdownMathRenderCacheStatsForTests() {
+  return {
+    ...markdownKatexRenderCacheStats,
+    size: markdownKatexRenderCache.size,
+  };
 }
 
 function readGithubAlertMarker(paragraph: MarkdownMdastParagraph) {

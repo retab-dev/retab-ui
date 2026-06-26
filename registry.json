@@ -2118,6 +2118,11 @@
           "target": "@ui/file-viewer-html-viewer.tsx"
         },
         {
+          "path": "registry/new-york-v4/ui/file-viewer-html-srcdoc-cache.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-html-srcdoc-cache.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/file-viewer-preview.tsx",
           "type": "registry:ui",
           "target": "@ui/file-viewer-preview.tsx"
@@ -3602,6 +3607,36 @@
           "path": "registry/new-york-v4/ui/utif.d.ts",
           "type": "registry:ui",
           "target": "@ui/utif.d.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/docx-viewer-core.ts",
+          "type": "registry:ui",
+          "target": "@ui/docx-viewer-core.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/docx-viewer-layout.ts",
+          "type": "registry:ui",
+          "target": "@ui/docx-viewer-layout.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/docx-viewer-render-cache.ts",
+          "type": "registry:ui",
+          "target": "@ui/docx-viewer-render-cache.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/docx-viewer-render.ts",
+          "type": "registry:ui",
+          "target": "@ui/docx-viewer-render.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-viewer-canvas.ts",
+          "type": "registry:ui",
+          "target": "@ui/pdf-viewer-canvas.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-viewer-render-cache.ts",
+          "type": "registry:ui",
+          "target": "@ui/pdf-viewer-render-cache.ts"
         }
       ],
       "dependencies": [
@@ -3883,6 +3918,16 @@
           "path": "components/viewers/page-markdown/page-markdown-projection.tsx",
           "type": "registry:component",
           "target": "@components/viewers/page-markdown/page-markdown-projection.tsx"
+        },
+        {
+          "path": "components/viewers/page-markdown/page-markdown-projection-parser.ts",
+          "type": "registry:component",
+          "target": "@components/viewers/page-markdown/page-markdown-projection-parser.ts"
+        },
+        {
+          "path": "components/viewers/page-markdown/page-markdown-projection-protocol.ts",
+          "type": "registry:component",
+          "target": "@components/viewers/page-markdown/page-markdown-projection-protocol.ts"
         }
       ],
       "categories": [

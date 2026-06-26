@@ -1,11 +1,11 @@
-import * as React from "react";
-
-import { useMountEffect } from "@/hooks/use-mount-effect";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 
 export const PDF_RENDERED_PAGE_CACHE_MAX_ENTRIES = 16;
 export const PDF_RENDERED_PAGE_CACHE_MAX_PIXELS = 24_000_000;
 
 export type PdfRenderedPageSignature = {
+  documentKey: string;
   pageNumber: number;
   scale: number;
   rotation: number;
@@ -26,20 +26,34 @@ export type PdfRenderedPageCacheEntry = PdfRenderedPageSignature & {
   pixels: number;
 };
 
-export function usePdfRenderedPageCache(resetKey: unknown) {
-  const cacheRef = React.useRef<PdfRenderedPageCache>({
+type PdfRenderedPageCacheRecord = {
+  cache: PdfRenderedPageCache;
+  retainCount: number;
+  resetKey: unknown;
+};
+
+const objectCacheRecords = new WeakMap<object, PdfRenderedPageCacheRecord>();
+const primitiveCacheRecords = new Map<unknown, PdfRenderedPageCacheRecord>();
+
+export function createPdfRenderedPageCache(
+  resetKey: unknown,
+): PdfRenderedPageCache {
+  return {
     clock: 0,
     entries: new Map(),
     resetKey,
+  };
+}
+
+export function usePdfRenderedPageCache(resetKey: unknown) {
+  const record = getPdfRenderedPageCacheRecord(resetKey);
+
+  useKeyedMountEffect(joinEffectKey([record]), () => {
+    record.retainCount += 1;
+    return () => releasePdfRenderedPageCacheRecord(record);
   });
-  if (!Object.is(cacheRef.current.resetKey, resetKey)) {
-    clearPdfRenderedPageCache(cacheRef.current);
-    cacheRef.current.resetKey = resetKey;
-  }
 
-  useMountEffect(() => () => clearPdfRenderedPageCache(cacheRef.current));
-
-  return cacheRef.current;
+  return record.cache;
 }
 
 export function readPdfRenderedPageCache(
@@ -53,9 +67,8 @@ export function readPdfRenderedPageCache(
     if (!doesRenderedPageSatisfyRequest(entry, requested)) continue;
     if (
       !bestEntry ||
-      entry.devicePixelRatio < bestEntry.devicePixelRatio ||
-      (entry.devicePixelRatio === bestEntry.devicePixelRatio &&
-        entry.lastUsed > bestEntry.lastUsed)
+      entry.pixels < bestEntry.pixels ||
+      (entry.pixels === bestEntry.pixels && entry.lastUsed > bestEntry.lastUsed)
     ) {
       bestEntry = entry;
     }
@@ -148,17 +161,20 @@ function doesRenderedPageSatisfyRequest(
   requested: PdfRenderedPageSignature,
 ) {
   return (
+    rendered.documentKey === requested.documentKey &&
     rendered.pageNumber === requested.pageNumber &&
-    rendered.scale === requested.scale &&
     rendered.rotation === requested.rotation &&
-    rendered.viewportWidth === requested.viewportWidth &&
-    rendered.viewportHeight === requested.viewportHeight &&
+    rendered.scale >= requested.scale &&
+    rendered.viewportWidth >= requested.viewportWidth &&
+    rendered.viewportHeight >= requested.viewportHeight &&
+    hasMatchingPageAspectRatio(rendered, requested) &&
     rendered.devicePixelRatio >= requested.devicePixelRatio
   );
 }
 
 function getPdfRenderedPageCacheKey(rendered: PdfRenderedPageSignature) {
   return [
+    rendered.documentKey,
     rendered.pageNumber,
     rendered.scale,
     rendered.rotation,
@@ -166,4 +182,49 @@ function getPdfRenderedPageCacheKey(rendered: PdfRenderedPageSignature) {
     rendered.viewportWidth,
     rendered.viewportHeight,
   ].join(":");
+}
+
+function getPdfRenderedPageCacheRecord(
+  resetKey: unknown,
+): PdfRenderedPageCacheRecord {
+  const records = isObjectCacheKey(resetKey)
+    ? objectCacheRecords
+    : primitiveCacheRecords;
+  const cached = records.get(resetKey as never);
+  if (cached) return cached;
+
+  const record: PdfRenderedPageCacheRecord = {
+    cache: createPdfRenderedPageCache(resetKey),
+    retainCount: 0,
+    resetKey,
+  };
+  records.set(resetKey as never, record);
+  return record;
+}
+
+function releasePdfRenderedPageCacheRecord(record: PdfRenderedPageCacheRecord) {
+  record.retainCount = Math.max(0, record.retainCount - 1);
+  if (record.retainCount > 0) return;
+
+  clearPdfRenderedPageCache(record.cache);
+  if (isObjectCacheKey(record.resetKey)) {
+    objectCacheRecords.delete(record.resetKey);
+  } else {
+    primitiveCacheRecords.delete(record.resetKey);
+  }
+}
+
+function isObjectCacheKey(value: unknown): value is object {
+  return (
+    (typeof value === "object" && value !== null) || typeof value === "function"
+  );
+}
+
+function hasMatchingPageAspectRatio(
+  rendered: PdfRenderedPageSignature,
+  requested: PdfRenderedPageSignature,
+) {
+  const renderedRatio = rendered.viewportWidth / rendered.viewportHeight;
+  const requestedRatio = requested.viewportWidth / requested.viewportHeight;
+  return Math.abs(renderedRatio - requestedRatio) < 0.0001;
 }

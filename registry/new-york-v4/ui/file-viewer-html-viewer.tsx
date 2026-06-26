@@ -9,6 +9,7 @@ import {
 } from "@/lib/viewer-resource";
 
 import { ViewerFallback } from "./file-viewer-fallback";
+import { getHtmlViewerSrcDoc } from "./file-viewer-html-srcdoc-cache";
 import { loadTextResource } from "./file-viewer-text-resource";
 import { isAbortError } from "./viewer-abortable-request";
 import { useViewerControlsRegistration } from "./viewer-controls";
@@ -20,43 +21,6 @@ type HtmlLoadState =
   | { status: "loading"; key: unknown }
   | { status: "loaded"; key: unknown; html: string }
   | { status: "error"; key: unknown; error: unknown };
-
-const HTML_VIEWER_DOCUMENT_STYLE = `<style data-retab-html-viewer-padding>
-html {
-  background: white;
-}
-body {
-  box-sizing: border-box;
-  margin: 0;
-  min-width: 0;
-  padding: 1rem;
-}
-body > :first-child {
-  margin-block-start: 0;
-}
-body > :last-child {
-  margin-block-end: 0;
-}
-</style>`;
-
-function createHtmlViewerSrcDoc(html: string) {
-  const headOpenTag = /<head(?:\s[^>]*)?>/i;
-  const htmlOpenTag = /<html(?:\s[^>]*)?>/i;
-
-  if (headOpenTag.test(html)) {
-    return html.replace(
-      headOpenTag,
-      (tag) => `${tag}${HTML_VIEWER_DOCUMENT_STYLE}`,
-    );
-  }
-  if (htmlOpenTag.test(html)) {
-    return html.replace(
-      htmlOpenTag,
-      (tag) => `${tag}<head>${HTML_VIEWER_DOCUMENT_STYLE}</head>`,
-    );
-  }
-  return `${HTML_VIEWER_DOCUMENT_STYLE}${html}`;
-}
 
 export function HtmlFileContent({
   resource,
@@ -208,7 +172,12 @@ function HtmlFileContentFrame({
       {controls ? (
         <HtmlContentToolbar scale={scale} zoom={zoom} reset={reset} />
       ) : null}
-      <SandboxedDoc html={html} title={fileName} scale={scale} />
+      <SandboxedDoc
+        contentKey={resource.content.key}
+        html={html}
+        title={fileName}
+        scale={scale}
+      />
     </div>
   );
 }
@@ -260,23 +229,90 @@ function HtmlContentToolbar({
 }
 
 function SandboxedDoc({
+  contentKey,
   html,
   title,
   scale = 1,
 }: {
+  contentKey: string;
   html: string;
   title: string;
   scale?: number;
 }) {
+  const { containerRef, shouldMountIframe } =
+    useLazySandboxedIframeMount(contentKey);
+  const srcDoc = React.useMemo(
+    () =>
+      shouldMountIframe
+        ? getHtmlViewerSrcDoc({
+            contentKey,
+            html,
+          })
+        : "",
+    [contentKey, html, shouldMountIframe],
+  );
+
   return (
-    <div className="bg-document flex min-h-0 flex-1 flex-col overflow-auto">
-      <iframe
-        sandbox=""
-        srcDoc={createHtmlViewerSrcDoc(html)}
-        title={title}
-        className="bg-document h-full min-h-0 w-full flex-1 border-0"
-        style={{ zoom: scale }}
-      />
+    <div
+      ref={containerRef}
+      className="bg-document flex min-h-0 flex-1 flex-col overflow-auto"
+    >
+      {shouldMountIframe ? (
+        <iframe
+          sandbox=""
+          srcDoc={srcDoc}
+          title={title}
+          className="bg-document h-full min-h-0 w-full flex-1 border-0"
+          style={{ zoom: scale }}
+        />
+      ) : null}
     </div>
   );
+}
+
+function useLazySandboxedIframeMount(resetKey: string) {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [shouldMountIframe, setShouldMountIframe] = React.useState(false);
+  const mountEffectKey = shouldMountIframe
+    ? null
+    : joinEffectKey(["html-iframe-visible", resetKey]);
+
+  useKeyedMountEffect(mountEffectKey, () => {
+    if (typeof IntersectionObserver === "undefined") {
+      setShouldMountIframe(true);
+      return;
+    }
+
+    const node = containerRef.current;
+    if (!node) {
+      setShouldMountIframe(true);
+      return;
+    }
+
+    let observer: IntersectionObserver | null = null;
+    try {
+      observer = new IntersectionObserver(
+        (entries) => {
+          if (
+            entries.some(
+              (entry) => entry.isIntersecting || entry.intersectionRatio > 0,
+            )
+          ) {
+            setShouldMountIframe(true);
+            observer?.disconnect();
+          }
+        },
+        { rootMargin: "512px" },
+      );
+    } catch {
+      setShouldMountIframe(true);
+      return;
+    }
+
+    observer.observe(node);
+
+    return () => observer.disconnect();
+  });
+
+  return { containerRef, shouldMountIframe };
 }

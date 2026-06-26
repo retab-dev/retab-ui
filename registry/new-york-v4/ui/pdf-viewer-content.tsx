@@ -364,6 +364,7 @@ function PdfViewerInner({
               <PdfDocumentPagesLayer
                 containerRef={containerRef}
                 document={document}
+                documentKey={content.key}
                 layout={pageLayout}
                 physicalScrollHeight={getPdfPhysicalScrollHeight({
                   totalHeight: pageLayout.totalHeight,
@@ -507,6 +508,7 @@ function usePdfDocumentControlsRegistration({
 type PdfDocumentPagesLayerProps = {
   containerRef: React.RefCallback<HTMLDivElement>;
   document: PdfDocument;
+  documentKey: string;
   layout: PdfPageLayoutModel;
   physicalScrollHeight: number;
   activeRenderPageNumbers: readonly number[];
@@ -526,6 +528,7 @@ type PdfDocumentPagesLayerProps = {
 function PdfDocumentPagesLayer({
   containerRef,
   document,
+  documentKey,
   layout,
   physicalScrollHeight,
   activeRenderPageNumbers,
@@ -618,9 +621,7 @@ function PdfDocumentPagesLayer({
                     data-slot="pdf-page-slot"
                     data-page-number={page.pageNumber}
                     data-visible={
-                      visiblePageNumberSet.has(page.pageNumber)
-                        ? ""
-                        : undefined
+                      visiblePageNumberSet.has(page.pageNumber) ? "" : undefined
                     }
                     style={{
                       top: page.windowTop,
@@ -632,6 +633,7 @@ function PdfDocumentPagesLayer({
                       <React.Suspense fallback={<PageSkeleton />}>
                         <PdfPage
                           document={document}
+                          documentKey={documentKey}
                           pageNumber={page.pageNumber}
                           scale={scale}
                           rotation={rotation}

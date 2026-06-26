@@ -10,19 +10,24 @@ import {
   PdfThumbnailSkeleton,
 } from "./pdf-thumbnail-canvas";
 import type { PdfThumbnailLayoutItem } from "./pdf-thumbnail-layout";
+import type { PdfRenderedPageCache } from "./pdf-viewer-render-cache";
 
 export function PdfThumbnailItem({
   doc,
+  documentKey,
   item,
   active,
   itemId,
   onSelectPage,
+  renderCache,
 }: {
   doc: PdfDocumentProxy;
+  documentKey: string;
   item: PdfThumbnailLayoutItem;
   active: boolean;
   itemId: string;
   onSelectPage?: (pageNumber: number) => void;
+  renderCache?: PdfRenderedPageCache;
 }) {
   return (
     <button
@@ -45,7 +50,9 @@ export function PdfThumbnailItem({
         <React.Suspense fallback={<PdfThumbnailSkeleton />}>
           <PdfThumbnailCanvas
             doc={doc}
+            documentKey={documentKey}
             pageNumber={item.pageNumber}
+            renderCache={renderCache}
             width={item.imageWidth}
           />
         </React.Suspense>

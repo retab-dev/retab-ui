@@ -12,6 +12,7 @@ import {
   type PdfThumbnailLayout,
   type PdfThumbnailLayoutItem,
 } from "./pdf-thumbnail-layout";
+import type { PdfRenderedPageCache } from "./pdf-viewer-render-cache";
 
 export function getPdfThumbnailItemId(pageNumber: number) {
   return `pdf-thumbnail-page-${pageNumber}`;
@@ -19,6 +20,7 @@ export function getPdfThumbnailItemId(pageNumber: number) {
 
 export function PdfThumbnailRailViewport({
   doc,
+  documentKey,
   layout,
   visibleItems,
   viewportHeight,
@@ -30,8 +32,10 @@ export function PdfThumbnailRailViewport({
   onPointerLeave,
   onScroll,
   className,
+  renderCache,
 }: {
   doc: PdfDocumentProxy;
+  documentKey: string;
   layout: PdfThumbnailLayout;
   visibleItems: readonly PdfThumbnailLayoutItem[];
   viewportHeight: number;
@@ -43,6 +47,7 @@ export function PdfThumbnailRailViewport({
   onPointerLeave?: () => void;
   onScroll?: () => void;
   className?: string;
+  renderCache?: PdfRenderedPageCache;
 }) {
   const activePage = normalizeThumbnailPage(currentPage, layout.pageCount);
   const handleKeyDown = React.useCallback(
@@ -143,10 +148,12 @@ export function PdfThumbnailRailViewport({
                   >
                     <PdfThumbnailItem
                       doc={doc}
+                      documentKey={documentKey}
                       item={item}
                       active={activePage === item.pageNumber}
                       itemId={getPdfThumbnailItemId(item.pageNumber)}
                       onSelectPage={handleSelectPage}
+                      renderCache={renderCache}
                     />
                   </li>
                 ))}

@@ -2,18 +2,26 @@
 
 import * as React from "react";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PageMarkdownContent } from "@/components/viewers/page-markdown/page-markdown-content";
+import { createPageMarkdownProjectionTree } from "@/components/viewers/page-markdown/page-markdown-projection-parser";
 import {
   clearPageMarkdownProjectionCacheForTests,
   isPlainPageMarkdown,
+  preloadPageMarkdownProjection,
   projectPageMarkdown,
+  readCachedPageMarkdownProjection,
 } from "@/components/viewers/page-markdown/page-markdown-projection";
+import {
+  type PageMarkdownProjectionWorkerRequest,
+  type PageMarkdownProjectionWorkerResponse,
+} from "@/components/viewers/page-markdown/page-markdown-projection-protocol";
 
 afterEach(() => {
   cleanup();
   clearPageMarkdownProjectionCacheForTests();
+  vi.unstubAllGlobals();
 });
 
 describe("page markdown projection", () => {
@@ -35,7 +43,7 @@ describe("page markdown projection", () => {
     expect(isPlainPageMarkdown("```ts\nconst total = 10\n```")).toBe(false);
   });
 
-  it("renders GFM through the page projection", () => {
+  it("renders GFM through the page projection", async () => {
     render(
       <PageMarkdownContent
         markdown={[
@@ -52,13 +60,74 @@ describe("page markdown projection", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { name: "Statement" })).toBeTruthy();
+    expect(
+      await screen.findByRole("heading", { name: "Statement" }),
+    ).toBeTruthy();
     expect(screen.getByText("Reviewed")).toBeTruthy();
     expect(screen.getByRole("table")).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "Amount" })).toBeTruthy();
   });
 
-  it("keeps raw HTML escaped and unsafe URLs inert", () => {
+  it("keeps cold parsed markdown out of the first rendered pass", async () => {
+    vi.stubGlobal("Worker", undefined);
+
+    render(
+      <PageMarkdownContent
+        markdown={["# Deferred page", "", "Parsed after render"].join("\n")}
+        mode="rendered"
+        scale={1}
+      />,
+    );
+
+    expect(screen.queryByRole("heading", { name: "Deferred page" })).toBeNull();
+    expect(
+      await screen.findByRole("heading", { name: "Deferred page" }),
+    ).toBeTruthy();
+  });
+
+  it("preloads parsed markdown through a worker-backed projection cache", async () => {
+    const requests: PageMarkdownProjectionWorkerRequest[] = [];
+
+    class ProjectionWorker {
+      onerror: ((event: ErrorEvent) => void) | null = null;
+      onmessage:
+        | ((event: MessageEvent<PageMarkdownProjectionWorkerResponse>) => void)
+        | null = null;
+
+      postMessage(message: PageMarkdownProjectionWorkerRequest) {
+        requests.push(message);
+        queueMicrotask(() => {
+          this.onmessage?.({
+            data: {
+              id: message.id,
+              ok: true,
+              projection: createPageMarkdownProjectionTree(message.markdown),
+              type: "projected",
+            },
+          } as MessageEvent<PageMarkdownProjectionWorkerResponse>);
+        });
+      }
+
+      terminate() {}
+    }
+
+    vi.stubGlobal("Worker", ProjectionWorker as unknown as typeof Worker);
+
+    const markdown = "# Worker page\n\n- projected";
+    const preload = preloadPageMarkdownProjection(markdown);
+
+    expect(readCachedPageMarkdownProjection(markdown)).toBeNull();
+    await preload;
+
+    expect(requests).toHaveLength(1);
+    render(
+      <PageMarkdownContent markdown={markdown} mode="rendered" scale={1} />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Worker page" })).toBeTruthy();
+  });
+
+  it("keeps raw HTML escaped and unsafe URLs inert", async () => {
     const { container } = render(
       <PageMarkdownContent
         markdown={[
@@ -72,7 +141,7 @@ describe("page markdown projection", () => {
       />,
     );
 
-    const link = screen.getByRole("link", { name: "Retab" });
+    const link = await screen.findByRole("link", { name: "Retab" });
     expect(link.getAttribute("href")).toBe("https://retab.com");
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.getAttribute("rel")).toBe("noopener noreferrer");

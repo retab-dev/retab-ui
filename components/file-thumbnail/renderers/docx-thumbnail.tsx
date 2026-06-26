@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import type * as DocxPreview from "docx-preview";
 
 import { getDocxDocumentResource } from "@/lib/docx-document-resource";
 import type { ViewerResource } from "@/lib/viewer-resource";
+import { renderCachedDocxPreview } from "@/components/ui/docx-viewer-render";
 import {
   Surface,
   useElementWidth,
@@ -16,12 +16,6 @@ import {
   timedThumbnail,
 } from "@/components/file-thumbnail/thumbnail-profile";
 import { useThumbnailResource } from "@/components/file-thumbnail/thumbnail-resource";
-
-let docxLib: Promise<typeof DocxPreview> | null = null;
-function loadDocxPreview() {
-  if (!docxLib) docxLib = import("docx-preview");
-  return docxLib;
-}
 
 const DOCX_PAGE_W = 816; // US Letter at 96dpi
 const DOCX_THUMBNAIL_PAGE_STYLE = {
@@ -48,15 +42,13 @@ export function DocxFirstPage({ resource }: { resource: ViewerResource }) {
           () =>
             timedThumbnail(`docx:render ${shortName(resource)}`, async () => {
               if (!active) return;
-              const docx = await loadDocxPreview();
-              if (!active) return;
-              el.innerHTML = "";
-              await docx.renderAsync(bytes.slice(0), el, undefined, {
-                inWrapper: true,
-                breakPages: true,
-                ignoreLastRenderedPageBreak: false,
-                experimental: true,
+              const { renderHost } = await renderCachedDocxPreview({
+                buffer: () => bytes.slice(0),
+                cacheKey: resource.content.key,
+                getScale: () => 1,
               });
+              if (!active) return;
+              commitDocxThumbnailRender(el, renderHost);
             }),
         ),
       ).catch((error) => {
@@ -90,4 +82,20 @@ export function DocxFirstPage({ resource }: { resource: ViewerResource }) {
       </div>
     </Surface>
   );
+}
+
+function commitDocxThumbnailRender(host: HTMLElement, renderHost: HTMLElement) {
+  const wrapper = renderHost.querySelector<HTMLElement>(".docx-wrapper");
+  const firstPage = renderHost.querySelector<HTMLElement>(
+    ".docx-wrapper > section.docx",
+  );
+  if (!wrapper || !firstPage) {
+    throw new Error("DOCX render produced no pages.");
+  }
+
+  const staticNodes = Array.from(renderHost.childNodes).filter(
+    (node) => node !== wrapper,
+  );
+  wrapper.replaceChildren(firstPage);
+  host.replaceChildren(...staticNodes, wrapper);
 }

@@ -2690,6 +2690,65 @@ describe("PdfViewer", () => {
     );
   });
 
+  it("reuses a rendered viewer page bitmap for later thumbnails", async () => {
+    const drawImage = vi.fn();
+    const setTransform = vi.fn();
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      drawImage,
+      setTransform,
+    } as never);
+    const resource = pdfUrlResource("/viewer-thumbnail-cache.pdf");
+    const doc = makeDoc([[100, 200]]);
+    doc.pages[0].render.mockImplementation(() => {
+      const task = {
+        promise: Promise.resolve(),
+        cancel: vi.fn(),
+      };
+      pdfjsMock.renderTasks.push(task);
+      return task;
+    });
+    pdfjsMock.docs.set("/viewer-thumbnail-cache.pdf", doc);
+
+    function Harness({ showThumbnails }: { showThumbnails: boolean }) {
+      return (
+        <ViewerRoot className="h-[420px]">
+          <ViewerBody>
+            <ViewerSidebar width="9rem">
+              {showThumbnails ? (
+                <PdfThumbnailRail resource={resource} thumbnailWidth={50} />
+              ) : null}
+            </ViewerSidebar>
+            <ViewerSurface>
+              <PdfResourceContent resource={resource} defaultScale={1} />
+            </ViewerSurface>
+          </ViewerBody>
+        </ViewerRoot>
+      );
+    }
+
+    const view = render(<Harness showThumbnails={false} />);
+    await waitFor(() => expect(doc.pages[0].render).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(
+        document.querySelector("[data-pdf-render-source='pdfjs']"),
+      ).toBeTruthy(),
+    );
+
+    drawImage.mockClear();
+    view.rerender(<Harness showThumbnails />);
+
+    await waitFor(() =>
+      expect(document.querySelector("[aria-label='Page 1']")).toBeTruthy(),
+    );
+    await waitFor(() =>
+      expect(
+        document.querySelector("[data-pdf-render-source='cache']"),
+      ).toBeTruthy(),
+    );
+    expect(doc.pages[0].render).toHaveBeenCalledTimes(1);
+    expect(drawImage).toHaveBeenCalled();
+  });
+
   it("can disable rendered page cache for benchmark comparisons", async () => {
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
       drawImage: vi.fn(),
@@ -3688,9 +3747,7 @@ describe("PdfViewer", () => {
     expect(stickyWindow?.getAttribute("style")).toContain(
       "contain: layout style inline-size",
     );
-    expect(stickyWindow?.getAttribute("style")).toContain(
-      "isolation: isolate",
-    );
+    expect(stickyWindow?.getAttribute("style")).toContain("isolation: isolate");
     expect(renderWindow?.getAttribute("style")).toContain(
       "contain: layout style",
     );

@@ -24,6 +24,7 @@ type PdfRenderedPage = PdfRenderedPageSignature;
 
 type PdfPageProps = {
   document: PdfDocumentProxy;
+  documentKey: string;
   pageNumber: number;
   scale: number;
   rotation: number;
@@ -36,6 +37,7 @@ type PdfPageProps = {
 
 export const PdfPage = React.memo(function PdfPage({
   document,
+  documentKey,
   pageNumber,
   scale,
   rotation,
@@ -83,6 +85,7 @@ export const PdfPage = React.memo(function PdfPage({
     (canvas: HTMLCanvasElement | null) => {
       if (!canvas) return;
       const renderSignature = {
+        documentKey,
         pageNumber,
         scale,
         rotation,
@@ -200,6 +203,7 @@ export const PdfPage = React.memo(function PdfPage({
     },
     [
       devicePixelRatio,
+      documentKey,
       onRenderTiming,
       page,
       pageNumber,
@@ -237,12 +241,10 @@ export const PdfPage = React.memo(function PdfPage({
   );
 }, arePdfPagePropsEqual);
 
-function arePdfPagePropsEqual(
-  previous: PdfPageProps,
-  next: PdfPageProps,
-) {
+function arePdfPagePropsEqual(previous: PdfPageProps, next: PdfPageProps) {
   return (
     previous.document === next.document &&
+    previous.documentKey === next.documentKey &&
     previous.pageNumber === next.pageNumber &&
     previous.scale === next.scale &&
     previous.rotation === next.rotation &&
@@ -311,6 +313,7 @@ function areRenderedPagesEqual(
 ) {
   return (
     rendered.pageNumber === requested.pageNumber &&
+    rendered.documentKey === requested.documentKey &&
     rendered.scale === requested.scale &&
     rendered.rotation === requested.rotation &&
     rendered.devicePixelRatio === requested.devicePixelRatio &&

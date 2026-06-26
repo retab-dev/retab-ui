@@ -12,6 +12,11 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createViewerResource } from "@/lib/viewer-resource";
+import {
+  clearHtmlViewerSrcDocCacheForTests,
+  getHtmlViewerSrcDoc,
+  htmlViewerSrcDocCacheStatsForTests,
+} from "@/registry/new-york-v4/ui/file-viewer-html-srcdoc-cache";
 import { HtmlFileContent } from "@/registry/new-york-v4/ui/file-viewer-html-viewer";
 import { FileViewerHarness as FileViewer } from "./file-viewer-test-harness";
 
@@ -140,6 +145,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  clearHtmlViewerSrcDocCacheForTests();
   cleanup();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -361,6 +367,57 @@ describe("HtmlFileContent", () => {
     expect(iframe.getAttribute("title")).toBe("inline.html");
     expect(screen.queryByText(/No preview for/)).toBeNull();
     expect(screen.getByRole("button", { name: "Download" })).toBeTruthy();
+  });
+
+  it("mounts sandboxed iframes after the HTML viewer becomes visible", async () => {
+    let observerCallback: IntersectionObserverCallback | null = null;
+    const observed: Element[] = [];
+
+    class TestIntersectionObserver {
+      readonly root = null;
+      readonly rootMargin = "0px";
+      readonly thresholds = [];
+
+      constructor(callback: IntersectionObserverCallback) {
+        observerCallback = callback;
+      }
+
+      observe(target: Element) {
+        observed.push(target);
+      }
+
+      unobserve() {}
+
+      disconnect() {}
+
+      takeRecords() {
+        return [];
+      }
+    }
+
+    vi.stubGlobal("IntersectionObserver", TestIntersectionObserver);
+
+    const { container } = render(
+      <FileViewer source={htmlTextSource("<p>lazy iframe</p>")} />,
+    );
+
+    await waitFor(() => expect(observed).toHaveLength(1));
+    expect(container.querySelector("iframe")).toBeNull();
+
+    await act(async () => {
+      observerCallback?.(
+        [
+          {
+            intersectionRatio: 1,
+            isIntersecting: true,
+            target: observed[0],
+          } as IntersectionObserverEntry,
+        ],
+        {} as IntersectionObserver,
+      );
+    });
+
+    expectIframeSrcDoc(await findIframe(container), "<p>lazy iframe</p>");
   });
 
   it("downloads inline HTML text sources from the controls", async () => {
@@ -731,6 +788,73 @@ describe("HtmlFileContent", () => {
         iframeSrcDocIncludes(iframe, "<p>shared</p>"),
       ),
     ).toBe(true);
+  });
+
+  it("caches wrapped iframe srcDoc by content key and source HTML identity", () => {
+    clearHtmlViewerSrcDocCacheForTests();
+
+    const first = getHtmlViewerSrcDoc({
+      contentKey: "shared-content",
+      html: "<p>first cached</p>",
+    });
+    const cachedFirst = getHtmlViewerSrcDoc({
+      contentKey: "shared-content",
+      html: "<p>first cached</p>",
+    });
+    const second = getHtmlViewerSrcDoc({
+      contentKey: "shared-content",
+      html: "<p>second cached</p>",
+    });
+
+    expect(cachedFirst).toBe(first);
+    expect(second).toContain("<p>second cached</p>");
+    expect(second).not.toContain("<p>first cached</p>");
+    expect(htmlViewerSrcDocCacheStatsForTests()).toEqual({
+      contentKeys: 1,
+      hits: 1,
+      identities: 2,
+      misses: 2,
+    });
+  });
+
+  it("reuses cached wrapped iframe srcDoc across repeated mounts", async () => {
+    clearHtmlViewerSrcDocCacheForTests();
+    const resource = htmlTextResource(
+      "<main><h1>Cached document</h1></main>",
+      "cached.html",
+    );
+
+    const first = render(
+      <HtmlFileContent
+        resource={resource}
+        descriptorSignal={new AbortController().signal}
+      />,
+    );
+
+    expectIframeSrcDoc(await findIframe(first.container), "Cached document");
+    expect(htmlViewerSrcDocCacheStatsForTests()).toEqual({
+      contentKeys: 1,
+      hits: 0,
+      identities: 1,
+      misses: 1,
+    });
+
+    first.unmount();
+
+    const second = render(
+      <HtmlFileContent
+        resource={resource}
+        descriptorSignal={new AbortController().signal}
+      />,
+    );
+
+    expectIframeSrcDoc(await findIframe(second.container), "Cached document");
+    expect(htmlViewerSrcDocCacheStatsForTests()).toEqual({
+      contentKeys: 1,
+      hits: 1,
+      identities: 1,
+      misses: 1,
+    });
   });
 
   it("keeps a shared HTML fetch alive until every subscriber unmounts", async () => {

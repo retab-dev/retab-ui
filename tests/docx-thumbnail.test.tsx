@@ -4,8 +4,8 @@
 // covered by a structural "live code" assertion; this exercises the actual
 // render path: that it renders the first page, hands docx-preview a *copy* of the
 // shared cached bytes (so the viewer's cached ArrayBuffer is never detached by
-// jszip), applies the fit-to-frame scale, uses the thumbnail-specific render
-// options, and surfaces render failures as a ViewerFormatError.
+// jszip), applies the fit-to-frame scale, reuses the shared DOCX render cache,
+// and surfaces render failures as a ViewerFormatError.
 
 import * as React from "react";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
@@ -18,10 +18,12 @@ import {
 import { isViewerFormatError } from "@/lib/viewer-errors";
 import { DocxFirstPage } from "@/components/file-thumbnail/renderers/docx-thumbnail";
 import { clearThumbnailCachesForTests } from "@/components/file-thumbnail/thumbnail-test-reset";
+import { DocxResourceContent } from "@/components/ui/docx-viewer";
 import {
   clearViewerResourceRegistryForTests,
   createViewerResource,
 } from "@/registry/new-york-v4/lib/viewer-resource";
+import { resetDocxRenderCacheForTests } from "@/registry/new-york-v4/ui/docx-viewer-render-cache";
 
 const docxMock = vi.hoisted(() => ({
   renderAsync: vi.fn(),
@@ -33,15 +35,25 @@ vi.mock("docx-preview", () => ({
 }));
 
 let observedWidth = 320;
+const originalGetAnimations = HTMLElement.prototype.getAnimations;
 
 class ResizeObserverMock {
   private callback: ResizeObserverCallback;
   constructor(callback: ResizeObserverCallback) {
     this.callback = callback;
   }
-  observe() {
+  observe(target: Element) {
+    Object.defineProperty(target, "clientWidth", {
+      configurable: true,
+      value: observedWidth,
+    });
     this.callback(
-      [{ contentRect: { width: observedWidth } } as ResizeObserverEntry],
+      [
+        {
+          contentRect: { width: observedWidth },
+          target,
+        } as ResizeObserverEntry,
+      ],
       this as unknown as ResizeObserver,
     );
   }
@@ -97,6 +109,14 @@ async function renderThumb(
   return view;
 }
 
+async function renderViewer(resource = docxResource()) {
+  let view!: ReturnType<typeof render>;
+  await act(async () => {
+    view = render(<DocxResourceContent resource={resource} controls={false} />);
+  });
+  return view;
+}
+
 beforeEach(() => {
   observedWidth = 320;
   docxMock.calls.length = 0;
@@ -110,11 +130,24 @@ beforeEach(() => {
       page.className = "docx";
       page.textContent = "First page body";
       wrapper.append(page);
+      const secondPage = document.createElement("section");
+      secondPage.className = "docx";
+      secondPage.textContent = "Second page body";
+      wrapper.append(secondPage);
       host.replaceChildren(wrapper);
     },
   );
 
   vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+  vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+    callback(0);
+    return 1;
+  });
+  vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => undefined);
+  Object.defineProperty(HTMLElement.prototype, "getAnimations", {
+    configurable: true,
+    value: vi.fn(() => []),
+  });
   vi.stubGlobal(
     "fetch",
     vi.fn(() => Promise.resolve(response(Uint8Array.of(7, 8, 9, 10)))),
@@ -124,8 +157,17 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   resetDocxDocumentResourceCacheForTests();
+  resetDocxRenderCacheForTests();
   clearViewerResourceRegistryForTests();
   clearThumbnailCachesForTests();
+  if (originalGetAnimations) {
+    Object.defineProperty(HTMLElement.prototype, "getAnimations", {
+      configurable: true,
+      value: originalGetAnimations,
+    });
+  } else {
+    Reflect.deleteProperty(HTMLElement.prototype, "getAnimations");
+  }
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
@@ -135,6 +177,7 @@ describe("DocxFirstPage", () => {
     await renderThumb();
 
     expect(await screen.findByText("First page body")).toBeTruthy();
+    expect(screen.queryByText("Second page body")).toBeNull();
     await waitFor(() => {
       expect(docxMock.renderAsync).toHaveBeenCalledTimes(1);
     });
@@ -160,7 +203,7 @@ describe("DocxFirstPage", () => {
     expect(new Uint8Array(cached)).toEqual(new Uint8Array([7, 8, 9, 10]));
   });
 
-  it("uses the thumbnail render options (no headers/footers/footnotes)", async () => {
+  it("uses shared viewer render options when populating the render cache", async () => {
     await renderThumb(docxResource("/options.docx"));
 
     await waitFor(() => {
@@ -171,7 +214,68 @@ describe("DocxFirstPage", () => {
       breakPages: true,
       ignoreLastRenderedPageBreak: false,
       experimental: true,
+      renderHeaders: true,
+      renderFooters: true,
+      renderFootnotes: true,
     });
+  });
+
+  it("seeds the shared render cache without leaking extra pages into the thumbnail", async () => {
+    const resource = docxResource("/thumbnail-seeds-cache.docx");
+    const thumb = await renderThumb(resource);
+
+    expect(await screen.findByText("First page body")).toBeTruthy();
+    expect(screen.queryByText("Second page body")).toBeNull();
+
+    thumb.unmount();
+    await renderViewer(resource);
+
+    expect(await screen.findByText("Second page body")).toBeTruthy();
+    expect(docxMock.renderAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it("reuses an existing viewer render cache for the thumbnail", async () => {
+    const resource = docxResource("/viewer-seeds-cache.docx");
+    const viewer = await renderViewer(resource);
+
+    expect(await screen.findByText("Second page body")).toBeTruthy();
+    viewer.unmount();
+
+    await renderThumb(resource);
+
+    expect(await screen.findByText("First page body")).toBeTruthy();
+    expect(screen.queryByText("Second page body")).toBeNull();
+    expect(docxMock.renderAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not seed the shared render cache with non-clone-safe DOM", async () => {
+    docxMock.renderAsync.mockImplementation(
+      async (buffer, host, _styleMap, options) => {
+        docxMock.calls.push({ buffer, options });
+        const wrapper = document.createElement("div");
+        wrapper.className = "docx-wrapper";
+        const page = document.createElement("section");
+        page.className = "docx";
+        page.textContent = "Unsafe first page";
+        page.append(document.createElement("canvas"));
+        wrapper.append(page);
+        const secondPage = document.createElement("section");
+        secondPage.className = "docx";
+        secondPage.textContent = "Unsafe second page";
+        wrapper.append(secondPage);
+        host.replaceChildren(wrapper);
+      },
+    );
+    const resource = docxResource("/unsafe-cache.docx");
+    const thumb = await renderThumb(resource);
+
+    expect(await screen.findByText("Unsafe first page")).toBeTruthy();
+    thumb.unmount();
+
+    await renderViewer(resource);
+
+    expect(await screen.findByText("Unsafe second page")).toBeTruthy();
+    expect(docxMock.renderAsync).toHaveBeenCalledTimes(2);
   });
 
   it("scales the page to the measured frame width", async () => {

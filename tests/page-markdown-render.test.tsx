@@ -20,6 +20,7 @@ import {
   PageMarkdownPane,
   type PageMarkdownPaneHandle,
 } from "@/components/viewers/page-markdown/page-markdown-pane";
+import { PageMarkdownPageFrame } from "@/components/viewers/page-markdown/page-markdown-page-frame";
 import {
   PageMarkdownViewer,
   PageMarkdownViewerContent,
@@ -324,6 +325,42 @@ describe("PageMarkdownViewer", () => {
     expect(screen.getByText("Page 1 of 2")).toBeTruthy();
     expect(await screen.findByText("First page")).toBeTruthy();
     expect(await screen.findByText("Second page")).toBeTruthy();
+  });
+
+  it("reports page size after async rendered projection resolves without ResizeObserver", async () => {
+    vi.stubGlobal("ResizeObserver", undefined);
+    vi.stubGlobal("Worker", undefined);
+    const onSize = vi.fn();
+    let measuredPageHeight = 600;
+    Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
+      configurable: true,
+      get() {
+        return (this as HTMLElement).dataset.slot === "page-markdown-page"
+          ? measuredPageHeight
+          : 0;
+      },
+    });
+
+    render(
+      <PageMarkdownPageFrame
+        estimatedHeight={600}
+        markdown={["# Async measured page", "", "Body"].join("\n")}
+        mode="rendered"
+        onSize={onSize}
+        pageNumber={1}
+        scale={1}
+      />,
+    );
+
+    expect(onSize).toHaveBeenCalledWith(1, 600);
+    measuredPageHeight = 1200;
+    expect(
+      await screen.findByRole("heading", { name: "Async measured page" }),
+    ).toBeTruthy();
+
+    await waitFor(() => {
+      expect(onSize).toHaveBeenCalledWith(1, 1200);
+    });
   });
 
   it("handles ResizeObserver callbacks when requestAnimationFrame is unavailable", async () => {

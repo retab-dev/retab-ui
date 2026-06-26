@@ -20,6 +20,7 @@ import { usePdfThumbnailDocument } from "./use-pdf-thumbnail-document";
 import { usePdfThumbnailPageMetrics } from "./use-pdf-thumbnail-page-metrics";
 import { usePdfThumbnailWindow } from "./use-pdf-thumbnail-window";
 import { useThumbnailRailFollow } from "./use-thumbnail-rail-follow";
+import { usePdfRenderedPageCache } from "./pdf-viewer-render-cache";
 import { ViewerErrorBoundary } from "./viewer-error";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { joinEffectKey } from "@/lib/effect-key";
@@ -81,7 +82,7 @@ export function PdfThumbnailRail({
 
   return (
     <ViewerErrorBoundary
-      className={cn("h-full", className)}
+      className="h-full"
       download={resource.originalDownload}
       format="pdf"
       onRetry={() => clearPdfDocumentResource(resource.content)}
@@ -89,14 +90,14 @@ export function PdfThumbnailRail({
       sourceKind={resource.sourceKind}
       variant="inline"
     >
-      <React.Suspense fallback={<ThumbnailsFallback />}>
+      <React.Suspense fallback={<ThumbnailsFallback className={className} />}>
         <PdfThumbnailRailInner
           currentPage={currentPage}
           onSelectPage={onSelectPage}
           resource={resource}
           thumbnailShape={thumbnailShape}
           thumbnailWidth={thumbnailWidth}
-          className="h-full"
+          className={cn("h-full", className)}
         />
       </React.Suspense>
     </ViewerErrorBoundary>
@@ -112,6 +113,7 @@ function PdfThumbnailRailInner({
   className,
 }: PdfThumbnailRailProps) {
   const doc = usePdfThumbnailDocument(resource);
+  const renderCache = usePdfRenderedPageCache(doc);
   const pageMetrics = usePdfThumbnailPageMetrics(doc, doc);
   const { metricByPageNumber, pageCount, requestPageMetrics } = pageMetrics;
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
@@ -159,6 +161,7 @@ function PdfThumbnailRailInner({
   return (
     <PdfThumbnailRailViewport
       doc={doc}
+      documentKey={resource.content.key}
       layout={layout}
       visibleItems={thumbnailWindow.visibleItems}
       viewportHeight={thumbnailWindow.viewportHeight}
@@ -170,6 +173,7 @@ function PdfThumbnailRailInner({
       onPointerLeave={follow.onPointerLeave}
       onScroll={follow.onScroll}
       className={className}
+      renderCache={renderCache}
     />
   );
 }

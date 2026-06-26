@@ -35,6 +35,8 @@ export interface DocxRenderedDocument {
   wrapper: HTMLElement;
 }
 
+type DocxRenderBuffer = ArrayBuffer | (() => ArrayBuffer);
+
 export function loadDocxPreview() {
   if (!docxPromise) {
     docxPromise = import("docx-preview").catch((error) => {
@@ -58,10 +60,10 @@ export async function renderDocxPreview(
 export async function renderCachedDocxPreview({
   buffer,
   cacheKey,
-  docxPreviewPromise = loadDocxPreview(),
+  docxPreviewPromise,
   getScale,
 }: {
-  buffer: ArrayBuffer;
+  buffer: DocxRenderBuffer;
   cacheKey: string;
   docxPreviewPromise?: Promise<typeof DocxPreview>;
   getScale: () => number;
@@ -80,18 +82,19 @@ export async function renderCachedDocxPreview({
     }
   }
 
-  const renderPromise = renderDocxPreview(buffer, docxPreviewPromise).then(
-    (renderHost) => {
-      const pageSizes = collectDocxPageSizes(renderHost, getScale());
-      const cacheEntry = writeDocxRenderCache({
-        key: cacheKey,
-        pageSizes,
-        renderHost,
-      });
+  const renderPromise = renderDocxPreview(
+    resolveDocxRenderBuffer(buffer),
+    docxPreviewPromise ?? loadDocxPreview(),
+  ).then((renderHost) => {
+    const pageSizes = collectDocxPageSizes(renderHost, getScale());
+    const cacheEntry = writeDocxRenderCache({
+      key: cacheKey,
+      pageSizes,
+      renderHost,
+    });
 
-      return { cacheEntry, pageSizes, renderHost };
-    },
-  );
+    return { cacheEntry, pageSizes, renderHost };
+  });
   writePendingDocxRenderCache(
     cacheKey,
     renderPromise.then((result) => result.cacheEntry),
@@ -102,6 +105,10 @@ export async function renderCachedDocxPreview({
     pageSizes: result.pageSizes,
     renderHost: result.renderHost,
   };
+}
+
+function resolveDocxRenderBuffer(buffer: DocxRenderBuffer) {
+  return typeof buffer === "function" ? buffer() : buffer;
 }
 
 export function commitDocxRender({

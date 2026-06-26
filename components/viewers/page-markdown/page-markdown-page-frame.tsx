@@ -25,14 +25,19 @@ export const PageMarkdownPageFrame = React.memo(function PageMarkdownPageFrame({
   pageNumber: number;
   scale: number;
 }) {
+  const pageElementRef = React.useRef<HTMLDivElement | null>(null);
+  const reportSize = React.useCallback(() => {
+    const pageElement = pageElementRef.current;
+    if (!pageElement) return;
+
+    const height = pageElement.offsetHeight;
+    if (height > 0) onSize(pageNumber, height);
+  }, [onSize, pageNumber]);
   const pageRef = React.useCallback(
     (pageElement: HTMLDivElement | null) => {
+      pageElementRef.current = pageElement;
       if (!pageElement) return;
 
-      const reportSize = () => {
-        const height = pageElement.offsetHeight;
-        if (height > 0) onSize(pageNumber, height);
-      };
       reportSize();
 
       if (typeof ResizeObserver !== "function") return;
@@ -41,7 +46,7 @@ export const PageMarkdownPageFrame = React.memo(function PageMarkdownPageFrame({
       observer.observe(pageElement);
       return () => observer.disconnect();
     },
-    [onSize, pageNumber],
+    [reportSize],
   );
 
   const pageWidth = PAGE_MARKDOWN_PAGE_WIDTH * scale;
@@ -62,7 +67,12 @@ export const PageMarkdownPageFrame = React.memo(function PageMarkdownPageFrame({
         paddingBlock: `${pagePaddingY}px`,
       }}
     >
-      <PageMarkdownContent markdown={markdown} mode={mode} scale={scale} />
+      <PageMarkdownContent
+        markdown={markdown}
+        mode={mode}
+        onRenderedContentChange={reportSize}
+        scale={scale}
+      />
     </div>
   );
 });
