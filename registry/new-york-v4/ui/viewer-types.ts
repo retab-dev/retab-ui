@@ -29,6 +29,50 @@ export type ViewerDocumentLayoutModel<Anchor> = {
   inlineSize: number;
 };
 
+export type ViewerDocumentPhysicalScrollPosition = {
+  physicalScrollTop: number;
+  scrollPageOffset: number;
+};
+
+export type ViewerDocumentResolvedScrollTarget = {
+  left?: number;
+  top: number;
+};
+
+export type ViewerDocumentScrollMapper = {
+  getLogicalScrollTop: (input: {
+    blockSize: number;
+    physicalScrollTop: number;
+    scrollPageOffset: number;
+    viewportBlockSize: number;
+  }) => number;
+  getPhysicalScrollSize: (input: {
+    blockSize: number;
+    viewportBlockSize: number;
+  }) => number;
+  resolvePhysicalScrollPosition: (input: {
+    blockSize: number;
+    logicalScrollTop: number;
+    scrollPageOffset: number;
+    viewportBlockSize: number;
+  }) => ViewerDocumentPhysicalScrollPosition;
+};
+
+export type ViewerDocumentScrollMetrics = {
+  physicalScrollSize: number;
+  physicalScrollTop: number;
+  scrollPageOffset: number;
+  scrollTop: number;
+  viewportBlockSize: number;
+};
+
+export type ViewerDocumentScrollTargetResolver<Anchor, Target> = (input: {
+  layout: ViewerDocumentLayoutModel<Anchor>;
+  scrollTop: number;
+  target: Target;
+  viewportElement: HTMLDivElement;
+}) => ViewerDocumentResolvedScrollTarget | null;
+
 export type ViewerSidebarLayoutSnapshot = {
   isTransitioning: boolean;
   mode: ViewerSidebarMode;

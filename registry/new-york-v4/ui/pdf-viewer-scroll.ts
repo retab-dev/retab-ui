@@ -11,6 +11,13 @@ import {
 } from "./pdf-viewer-layout";
 import { clamp } from "./pdf-viewer-scale";
 import type { PdfPageAreaTarget } from "./pdf-viewer-types";
+import type {
+  ViewerDocumentScrollMapper,
+  ViewerDocumentScrollMetrics,
+  ViewerDocumentScrollTargetResolver,
+  ViewerDocumentLayoutModel,
+} from "./viewer-types";
+import { useViewerDocumentScroll } from "./viewer-document-scroll";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 import { joinEffectKey } from "@/lib/effect-key";
@@ -19,7 +26,6 @@ const PDF_SCROLL_TARGET_HEADROOM = 48;
 const PDF_SCROLL_TARGET_INLINE_HEADROOM = 32;
 const PDF_READING_MARKER_RATIO = 0.2;
 const PDF_SCROLL_IDLE_MS = 120;
-const PDF_SCROLL_POSITION_EPSILON = 1;
 
 type PdfReadingAnchor =
   | {
@@ -29,22 +35,6 @@ type PdfReadingAnchor =
       kind: "page";
       pageNumber: number;
       yPercent: number;
-    };
-
-type PdfScrollIntent =
-  | {
-      kind: "idle";
-    }
-  | {
-      kind: "user";
-    }
-  | {
-      kind: "programmatic";
-      behavior: ScrollBehavior;
-      sequence: number;
-      target: PdfPageAreaTarget;
-      targetTop: number;
-      targetLeft?: number;
     };
 
 type PdfResolvedPageAreaTarget = {
@@ -58,6 +48,40 @@ type PdfScrollMetrics = {
   scrollPageOffset: number;
   scrollTop: number;
   viewportHeight: number;
+};
+
+type PdfDocumentLayoutModel = ViewerDocumentLayoutModel<PdfReadingAnchor>;
+
+const PDF_DOCUMENT_SCROLL_MAPPER: ViewerDocumentScrollMapper = {
+  getLogicalScrollTop: ({
+    blockSize,
+    physicalScrollTop,
+    scrollPageOffset,
+    viewportBlockSize,
+  }) =>
+    getPdfLogicalScrollTop({
+      physicalScrollTop,
+      scrollPageOffset,
+      totalHeight: blockSize,
+      viewportHeight: viewportBlockSize,
+    }),
+  getPhysicalScrollSize: ({ blockSize, viewportBlockSize }) =>
+    getPdfPhysicalScrollHeight({
+      totalHeight: blockSize,
+      viewportHeight: viewportBlockSize,
+    }),
+  resolvePhysicalScrollPosition: ({
+    blockSize,
+    logicalScrollTop,
+    scrollPageOffset,
+    viewportBlockSize,
+  }) =>
+    resolvePdfPhysicalScrollPosition({
+      logicalScrollTop,
+      scrollPageOffset,
+      totalHeight: blockSize,
+      viewportHeight: viewportBlockSize,
+    }),
 };
 
 export function usePdfScrollActivity() {
@@ -96,129 +120,6 @@ export function usePdfScrollActivity() {
   return { isScrolling, scrollDirection, handleScrollActivity };
 }
 
-function usePdfScrollIntentController() {
-  const scrollIntentRef = React.useRef<PdfScrollIntent>({ kind: "idle" });
-  const scrollIntentSequenceRef = React.useRef(0);
-  const programmaticScrollIdleTimeoutRef = React.useRef<ReturnType<
-    typeof setTimeout
-  > | null>(null);
-
-  const clearProgrammaticScrollIdleTimeout = React.useCallback(() => {
-    if (programmaticScrollIdleTimeoutRef.current) {
-      clearTimeout(programmaticScrollIdleTimeoutRef.current);
-      programmaticScrollIdleTimeoutRef.current = null;
-    }
-  }, []);
-
-  const reset = React.useCallback(() => {
-    clearProgrammaticScrollIdleTimeout();
-    scrollIntentRef.current = { kind: "idle" };
-  }, [clearProgrammaticScrollIdleTimeout]);
-
-  const completeProgrammatic = React.useCallback(
-    (sequence: number) => {
-      if (
-        scrollIntentRef.current.kind === "programmatic" &&
-        scrollIntentRef.current.sequence === sequence
-      ) {
-        scrollIntentRef.current = { kind: "idle" };
-      }
-      clearProgrammaticScrollIdleTimeout();
-    },
-    [clearProgrammaticScrollIdleTimeout],
-  );
-
-  const scheduleProgrammaticCompletion = React.useCallback(
-    (sequence: number) => {
-      clearProgrammaticScrollIdleTimeout();
-      programmaticScrollIdleTimeoutRef.current = setTimeout(() => {
-        completeProgrammatic(sequence);
-      }, PDF_SCROLL_IDLE_MS);
-    },
-    [clearProgrammaticScrollIdleTimeout, completeProgrammatic],
-  );
-
-  const markUser = React.useCallback(() => {
-    clearProgrammaticScrollIdleTimeout();
-    scrollIntentRef.current = { kind: "user" };
-  }, [clearProgrammaticScrollIdleTimeout]);
-
-  const startProgrammatic = React.useCallback(
-    ({
-      behavior,
-      resolvedTarget,
-      target,
-    }: {
-      behavior: ScrollBehavior;
-      resolvedTarget: PdfResolvedPageAreaTarget;
-      target: PdfPageAreaTarget;
-    }) => {
-      const sequence = scrollIntentSequenceRef.current + 1;
-      scrollIntentSequenceRef.current = sequence;
-      clearProgrammaticScrollIdleTimeout();
-
-      const intent: Extract<PdfScrollIntent, { kind: "programmatic" }> = {
-        kind: "programmatic",
-        behavior,
-        sequence,
-        target: copyPdfPageAreaTarget(target),
-        targetTop: resolvedTarget.top,
-        targetLeft: resolvedTarget.left,
-      };
-      scrollIntentRef.current = intent;
-      return intent;
-    },
-    [clearProgrammaticScrollIdleTimeout],
-  );
-
-  const updateProgrammaticTarget = React.useCallback(
-    (
-      intent: Extract<PdfScrollIntent, { kind: "programmatic" }>,
-      target: PdfResolvedPageAreaTarget,
-    ) => {
-      const targetChanged =
-        Math.abs(intent.targetTop - target.top) > PDF_SCROLL_POSITION_EPSILON ||
-        Math.abs((intent.targetLeft ?? 0) - (target.left ?? 0)) >
-          PDF_SCROLL_POSITION_EPSILON;
-      const nextIntent = {
-        ...intent,
-        targetTop: target.top,
-        targetLeft: target.left,
-      };
-      scrollIntentRef.current = nextIntent;
-      return { intent: nextIntent, targetChanged };
-    },
-    [],
-  );
-
-  useKeyedMountEffect(
-    joinEffectKey([clearProgrammaticScrollIdleTimeout]),
-    () => () => {
-      clearProgrammaticScrollIdleTimeout();
-    },
-  );
-
-  return React.useMemo(
-    () => ({
-      completeProgrammatic,
-      current: () => scrollIntentRef.current,
-      markUser,
-      reset,
-      scheduleProgrammaticCompletion,
-      startProgrammatic,
-      updateProgrammaticTarget,
-    }),
-    [
-      completeProgrammatic,
-      markUser,
-      reset,
-      scheduleProgrammaticCompletion,
-      startProgrammatic,
-      updateProgrammaticTarget,
-    ],
-  );
-}
-
 export function usePdfScroll({
   pageCount,
   layout,
@@ -232,15 +133,9 @@ export function usePdfScroll({
   onVisiblePageChange?: (page: number) => void;
   onScrollProgressChange?: (progress: number) => void;
 }) {
-  const viewportElementRef = React.useRef<HTMLDivElement | null>(null);
   const lastReportedPageRef = React.useRef(0);
   const scrollFrameRef = React.useRef(0);
-  const scrollPageOffsetRef = React.useRef(0);
-  const viewportResetKeyRef = React.useRef<unknown>(resetKey);
   const didMountResetEffectRef = React.useRef(false);
-  const scrollIntent = usePdfScrollIntentController();
-  const [viewportElement, setViewportElementState] =
-    React.useState<HTMLDivElement | null>(null);
   const [currentPageState, setCurrentPageState] = React.useState<{
     resetKey: unknown;
     page: number;
@@ -248,145 +143,56 @@ export function usePdfScroll({
   const currentPage = Object.is(currentPageState.resetKey, resetKey)
     ? currentPageState.page
     : 1;
-
-  const resetViewportForKey = React.useCallback(
-    (element: HTMLDivElement, key: unknown) => {
-      viewportResetKeyRef.current = key;
-      scrollPageOffsetRef.current = 0;
-      scrollIntent.reset();
-      setViewportPhysicalScrollTop(element, 0);
-      element.scrollTo?.({ top: 0, behavior: "auto" });
-    },
-    [scrollIntent],
+  const documentLayout = React.useMemo(
+    () => createPdfDocumentLayoutModel(layout),
+    [layout],
   );
-
-  const setViewportElement = React.useCallback(
-    (element: HTMLDivElement | null) => {
-      viewportElementRef.current = element;
-      if (element && !Object.is(viewportResetKeyRef.current, resetKey)) {
-        resetViewportForKey(element, resetKey);
-      }
-      setViewportElementState(element);
-    },
-    [resetKey, resetViewportForKey],
-  );
-
-  const readScrollMetrics = React.useCallback(
-    () =>
-      readPdfScrollMetrics({
-        scrollPageOffset: scrollPageOffsetRef.current,
-        totalHeight: layout.totalHeight,
-        viewportElement: viewportElementRef.current,
-      }),
-    [layout.totalHeight],
-  );
-
-  const syncPhysicalScrollPosition = React.useCallback(
-    (viewportElement: HTMLDivElement, totalHeight = layout.totalHeight) => {
-      const metrics = readPdfScrollMetrics({
-        scrollPageOffset: scrollPageOffsetRef.current,
-        totalHeight,
+  const resolveScrollTarget = React.useCallback<
+    ViewerDocumentScrollTargetResolver<PdfReadingAnchor, PdfPageAreaTarget>
+  >(
+    ({ scrollTop, target, viewportElement }) =>
+      getPdfPageAreaScrollTarget(
         viewportElement,
-      });
-      if (metrics.physicalScrollHeight >= totalHeight) {
-        scrollPageOffsetRef.current = 0;
-        return {
-          ...metrics,
-          scrollPageOffset: 0,
-        };
-      }
-
-      const position = resolvePdfPhysicalScrollPosition({
-        logicalScrollTop: metrics.scrollTop,
-        scrollPageOffset: metrics.scrollPageOffset,
-        totalHeight,
-        viewportHeight: metrics.viewportHeight,
-      });
-      scrollPageOffsetRef.current = position.scrollPageOffset;
-      setViewportPhysicalScrollTop(viewportElement, position.physicalScrollTop);
-
-      return {
-        ...metrics,
-        physicalScrollTop: position.physicalScrollTop,
-        scrollPageOffset: position.scrollPageOffset,
-      };
-    },
-    [layout.totalHeight],
+        layout,
+        pageCount,
+        target,
+        scrollTop,
+      ),
+    [layout, pageCount],
   );
+  const documentScroll = useViewerDocumentScroll({
+    copyScrollTarget: copyPdfPageAreaTarget,
+    layout: documentLayout,
+    resetKey,
+    resolveScrollTarget,
+    scrollMapper: PDF_DOCUMENT_SCROLL_MAPPER,
+  });
+  const getScrollMetrics = React.useCallback(() => {
+    const metrics = documentScroll.getScrollMetrics();
+    return toPdfScrollMetrics(metrics);
+  }, [documentScroll]);
+  const viewportElement = documentScroll.viewportElement;
 
-  const scrollViewportToLogicalTop = React.useCallback(
-    (
-      viewportElement: HTMLDivElement,
-      targetTop: number,
-      options?: ScrollToOptions,
-    ) => {
-      const position = resolvePdfPhysicalScrollPosition({
-        logicalScrollTop: targetTop,
-        scrollPageOffset: scrollPageOffsetRef.current,
-        totalHeight: layout.totalHeight,
-        viewportHeight: viewportElement.clientHeight,
-      });
-      scrollPageOffsetRef.current = position.scrollPageOffset;
-      scrollViewportToPhysicalTop(viewportElement, position.physicalScrollTop, {
-        behavior: "auto",
-        ...options,
-      });
-    },
-    [layout.totalHeight],
-  );
-
-  const scrollViewportToPageAreaTarget = React.useCallback(
-    (
-      viewportElement: HTMLDivElement,
-      target: PdfResolvedPageAreaTarget,
-      options: ScrollToOptions,
-    ) => {
-      const physicalScrollHeight = getPdfPhysicalScrollHeight({
-        totalHeight: layout.totalHeight,
-        viewportHeight: viewportElement.clientHeight,
-      });
-      const position =
-        physicalScrollHeight < layout.totalHeight
-          ? resolvePdfPhysicalScrollPosition({
-              logicalScrollTop: target.top,
-              scrollPageOffset: scrollPageOffsetRef.current,
-              totalHeight: layout.totalHeight,
-              viewportHeight: viewportElement.clientHeight,
-            })
-          : {
-              physicalScrollTop: Math.max(0, target.top),
-              scrollPageOffset: 0,
-            };
-      const hasTopChange =
-        Math.abs(viewportElement.scrollTop - position.physicalScrollTop) >
-        PDF_SCROLL_POSITION_EPSILON;
-      const hasLeftChange =
-        target.left != null &&
-        Math.abs(viewportElement.scrollLeft - target.left) >
-          PDF_SCROLL_POSITION_EPSILON;
-
-      if (!hasTopChange && !hasLeftChange) return;
-
-      scrollPageOffsetRef.current = position.scrollPageOffset;
-      viewportElement.scrollTo({
-        top: position.physicalScrollTop,
-        ...(target.left == null ? null : { left: target.left }),
-        ...options,
-      });
-    },
-    [layout.totalHeight],
-  );
+  const resetCurrentPage = React.useCallback(() => {
+    lastReportedPageRef.current = 0;
+    setCurrentPageState((previousState) =>
+      Object.is(previousState.resetKey, resetKey) && previousState.page === 1
+        ? previousState
+        : { resetKey, page: 1 },
+    );
+  }, [resetKey]);
 
   const measureScroll = React.useCallback(() => {
     scrollFrameRef.current = 0;
-    const viewportElement = viewportElementRef.current;
+    const viewportElement = documentScroll.getViewportElement();
     if (!viewportElement) return;
 
-    const metrics = syncPhysicalScrollPosition(viewportElement);
-    const isRebased = metrics.physicalScrollHeight < layout.totalHeight;
+    const metrics = documentScroll.syncScrollPosition();
+    if (!metrics) return;
+    const isRebased = metrics.physicalScrollSize < documentLayout.blockSize;
     const scrollable = isRebased
-      ? layout.totalHeight - metrics.viewportHeight
-      : viewportElement.scrollHeight - metrics.viewportHeight;
+      ? documentLayout.blockSize - metrics.viewportBlockSize
+      : viewportElement.scrollHeight - metrics.viewportBlockSize;
     const progress =
       scrollable > 0
         ? clamp(
@@ -399,7 +205,7 @@ export function usePdfScroll({
     onScrollProgressChange?.(progress);
 
     const markerOffset =
-      metrics.scrollTop + metrics.viewportHeight * PDF_READING_MARKER_RATIO;
+      metrics.scrollTop + metrics.viewportBlockSize * PDF_READING_MARKER_RATIO;
     const visiblePage = findPdfPageByOffset(layout, markerOffset);
     if (
       visiblePage >= 1 &&
@@ -416,200 +222,41 @@ export function usePdfScroll({
       onVisiblePageChange?.(visiblePage);
     }
   }, [
+    documentLayout,
+    documentScroll,
     layout,
     onScrollProgressChange,
     onVisiblePageChange,
     pageCount,
     resetKey,
-    syncPhysicalScrollPosition,
   ]);
   const measureScrollRef = React.useRef(measureScroll);
   useKeyedLayoutEffect(joinEffectKey([measureScroll]), () => {
     measureScrollRef.current = measureScroll;
   });
 
-  const committedLayoutRef = React.useRef(layout);
-  const committedResetKeyRef = React.useRef<unknown>(resetKey);
-
-  useKeyedLayoutEffect(
-    joinEffectKey([
-      layout,
-      pageCount,
-      resetKey,
-      scrollIntent,
-      scrollViewportToLogicalTop,
-      scrollViewportToPageAreaTarget,
-      syncPhysicalScrollPosition,
-    ]),
-    () => {
-      const previousLayout = committedLayoutRef.current;
-      const previousResetKey = committedResetKeyRef.current;
-      committedLayoutRef.current = layout;
-      committedResetKeyRef.current = resetKey;
-
-      if (!Object.is(previousResetKey, resetKey)) return;
-      if (Object.is(previousLayout, layout)) return;
-
-      const viewportElement = viewportElementRef.current;
-      if (!viewportElement) return;
-
-      const activeIntent = scrollIntent.current();
-      if (activeIntent.kind === "programmatic") {
-        const metrics = syncPhysicalScrollPosition(viewportElement);
-        const target = getPdfPageAreaScrollTarget(
-          viewportElement,
-          layout,
-          pageCount,
-          activeIntent.target,
-          metrics.scrollTop,
-        );
-        if (!target) return;
-
-        const { intent, targetChanged } = scrollIntent.updateProgrammaticTarget(
-          activeIntent,
-          target,
-        );
-
-        if (targetChanged) {
-          scrollViewportToPageAreaTarget(viewportElement, target, {
-            behavior: intent.behavior,
-          });
-          scrollIntent.scheduleProgrammaticCompletion(intent.sequence);
-        }
-        return;
-      }
-
-      const previousLogicalScrollTop = getPdfLogicalScrollTop({
-        physicalScrollTop: viewportElement.scrollTop,
-        scrollPageOffset: scrollPageOffsetRef.current,
-        totalHeight: previousLayout.totalHeight,
-        viewportHeight: viewportElement.clientHeight,
-      });
-      const anchor = capturePdfReadingAnchor(
-        previousLayout,
-        viewportElement,
-        previousLogicalScrollTop,
-      );
-      if (!anchor) return;
-
-      const targetTop = getPdfReadingAnchorScrollTop(
-        layout,
-        viewportElement,
-        anchor,
-      );
-      if (targetTop != null) {
-        scrollViewportToLogicalTop(viewportElement, targetTop);
-      }
-    },
-  );
-
   const handleScroll = React.useCallback(() => {
-    const viewportElement = viewportElementRef.current;
-    if (viewportElement) {
-      syncPhysicalScrollPosition(viewportElement);
-    }
-
-    const activeIntent = scrollIntent.current();
-    if (activeIntent.kind === "programmatic") {
-      scrollIntent.scheduleProgrammaticCompletion(activeIntent.sequence);
-    } else {
-      scrollIntent.markUser();
-    }
+    documentScroll.handleScroll();
 
     if (scrollFrameRef.current) return;
     scrollFrameRef.current = requestAnimationFrame(() =>
       measureScrollRef.current(),
     );
-  }, [scrollIntent, syncPhysicalScrollPosition]);
+  }, [documentScroll]);
 
-  useKeyedMountEffect(joinEffectKey([resetKey, resetViewportForKey]), () => {
+  useKeyedMountEffect(joinEffectKey([resetCurrentPage]), () => {
     if (!didMountResetEffectRef.current) {
       didMountResetEffectRef.current = true;
       return;
     }
-    lastReportedPageRef.current = 0;
-    setCurrentPageState((previousState) =>
-      Object.is(previousState.resetKey, resetKey) && previousState.page === 1
-        ? previousState
-        : { resetKey, page: 1 },
-    );
-    const viewportElement = viewportElementRef.current;
-    if (viewportElement) {
-      resetViewportForKey(viewportElement, resetKey);
-    }
-  });
-
-  useKeyedMountEffect(joinEffectKey([scrollIntent, viewportElement]), () => {
-    const viewportElement = viewportElementRef.current;
-    if (!viewportElement) return;
-
-    const handleScrollEnd = () => {
-      const activeIntent = scrollIntent.current();
-      if (activeIntent.kind === "programmatic") {
-        scrollIntent.completeProgrammatic(activeIntent.sequence);
-      } else {
-        scrollIntent.reset();
-      }
-    };
-
-    viewportElement.addEventListener?.("wheel", scrollIntent.markUser, {
-      passive: true,
-    });
-    viewportElement.addEventListener?.("touchstart", scrollIntent.markUser, {
-      passive: true,
-    });
-    viewportElement.addEventListener?.("pointerdown", scrollIntent.markUser);
-    viewportElement.addEventListener?.("keydown", scrollIntent.markUser);
-    viewportElement.addEventListener?.("scrollend", handleScrollEnd);
-
-    return () => {
-      viewportElement.removeEventListener?.("wheel", scrollIntent.markUser);
-      viewportElement.removeEventListener?.(
-        "touchstart",
-        scrollIntent.markUser,
-      );
-      viewportElement.removeEventListener?.(
-        "pointerdown",
-        scrollIntent.markUser,
-      );
-      viewportElement.removeEventListener?.("keydown", scrollIntent.markUser);
-      viewportElement.removeEventListener?.("scrollend", handleScrollEnd);
-    };
+    resetCurrentPage();
   });
 
   const scrollToPageArea = React.useCallback(
     (target: PdfPageAreaTarget, options?: ScrollToOptions) => {
-      const viewportElement = viewportElementRef.current;
-      const pageAreaTarget = viewportElement
-        ? getPdfPageAreaScrollTarget(
-            viewportElement,
-            layout,
-            pageCount,
-            target,
-            readScrollMetrics().scrollTop,
-          )
-        : null;
-      if (!viewportElement || !pageAreaTarget) return;
-
-      const behavior = options?.behavior ?? "smooth";
-      const intent = scrollIntent.startProgrammatic({
-        behavior,
-        resolvedTarget: pageAreaTarget,
-        target,
-      });
-      scrollViewportToPageAreaTarget(viewportElement, pageAreaTarget, {
-        behavior: "smooth",
-        ...options,
-      });
-      scrollIntent.scheduleProgrammaticCompletion(intent.sequence);
+      documentScroll.scrollToTarget(target, options);
     },
-    [
-      layout,
-      pageCount,
-      readScrollMetrics,
-      scrollIntent,
-      scrollViewportToPageAreaTarget,
-    ],
+    [documentScroll],
   );
   const scrollToPage = React.useCallback(
     (pageNumber: number, options?: ScrollToOptions) => {
@@ -617,11 +264,6 @@ export function usePdfScroll({
     },
     [scrollToPageArea],
   );
-  const getViewportElement = React.useCallback(
-    () => viewportElementRef.current,
-    [],
-  );
-
   useKeyedMountEffect(joinEffectKey([measureScroll]), () => {
     if (scrollFrameRef.current) {
       cancelAnimationFrame(scrollFrameRef.current);
@@ -636,13 +278,13 @@ export function usePdfScroll({
   return {
     currentPage,
     viewportElement,
-    setViewportElement,
+    setViewportElement: documentScroll.setViewportElement,
     measureScroll,
     handleScroll,
-    getScrollMetrics: readScrollMetrics,
+    getScrollMetrics,
     scrollToPage,
     scrollToPageArea,
-    getViewportElement,
+    getViewportElement: documentScroll.getViewportElement,
   };
 }
 
@@ -749,16 +391,32 @@ function normalizeOptionalPercent(value: number | undefined) {
   return clamp(value, 0, 100);
 }
 
+function createPdfDocumentLayoutModel(
+  layout: PdfPageLayoutModel,
+): PdfDocumentLayoutModel {
+  return {
+    blockSize: layout.totalHeight,
+    captureReadingAnchor: (input) => capturePdfReadingAnchor(layout, input),
+    getReadingAnchorScrollTop: (target) =>
+      getPdfReadingAnchorScrollTop(layout, target),
+    inlineSize: layout.maxPageWidth,
+  };
+}
+
 function capturePdfReadingAnchor(
   layout: PdfPageLayoutModel,
-  viewportElement: HTMLDivElement,
-  scrollTop: number,
+  {
+    scrollTop,
+    viewportBlockSize,
+  }: {
+    scrollTop: number;
+    viewportBlockSize: number;
+  },
 ): PdfReadingAnchor | null {
   if (layout.pageCount === 0) return null;
   if (scrollTop <= 0) return { kind: "top" };
 
-  const viewportHeight = viewportElement.clientHeight;
-  const markerOffset = scrollTop + viewportHeight * PDF_READING_MARKER_RATIO;
+  const markerOffset = scrollTop + viewportBlockSize * PDF_READING_MARKER_RATIO;
   const pageNumber = findPdfPageByOffset(layout, markerOffset);
   const pageLayout = getPdfPageLayout(layout, pageNumber);
   if (!pageLayout || pageLayout.height <= 0) return null;
@@ -776,8 +434,13 @@ function capturePdfReadingAnchor(
 
 function getPdfReadingAnchorScrollTop(
   layout: PdfPageLayoutModel,
-  viewportElement: HTMLDivElement,
-  anchor: PdfReadingAnchor,
+  {
+    anchor,
+    viewportBlockSize,
+  }: {
+    anchor: PdfReadingAnchor;
+    viewportBlockSize: number;
+  },
 ) {
   if (anchor.kind === "top") {
     return 0;
@@ -786,84 +449,22 @@ function getPdfReadingAnchorScrollTop(
   const pageLayout = getPdfPageLayout(layout, anchor.pageNumber);
   if (!pageLayout) return null;
 
-  const viewportHeight = viewportElement.clientHeight;
   const targetTop =
     pageLayout.offsetTop +
     pageLayout.height * anchor.yPercent -
-    viewportHeight * PDF_READING_MARKER_RATIO;
-  const maxScrollTop = Math.max(
-    0,
-    layout.totalHeight - viewportElement.clientHeight,
-  );
+    viewportBlockSize * PDF_READING_MARKER_RATIO;
+  const maxScrollTop = Math.max(0, layout.totalHeight - viewportBlockSize);
   return clamp(targetTop, 0, maxScrollTop);
 }
 
-function readPdfScrollMetrics({
-  scrollPageOffset,
-  totalHeight,
-  viewportElement,
-}: {
-  scrollPageOffset: number;
-  totalHeight: number;
-  viewportElement: HTMLDivElement | null;
-}): PdfScrollMetrics {
-  const viewportHeight = viewportElement?.clientHeight ?? 0;
-  const physicalScrollTop = viewportElement?.scrollTop ?? 0;
-  const physicalScrollHeight = getPdfPhysicalScrollHeight({
-    totalHeight,
-    viewportHeight,
-  });
-  const isRebased = physicalScrollHeight < totalHeight;
-
+function toPdfScrollMetrics(
+  metrics: ViewerDocumentScrollMetrics,
+): PdfScrollMetrics {
   return {
-    physicalScrollHeight,
-    physicalScrollTop,
-    scrollPageOffset: isRebased ? scrollPageOffset : 0,
-    scrollTop: isRebased
-      ? getPdfLogicalScrollTop({
-          physicalScrollTop,
-          scrollPageOffset,
-          totalHeight,
-          viewportHeight,
-        })
-      : Math.max(0, physicalScrollTop),
-    viewportHeight,
+    physicalScrollHeight: metrics.physicalScrollSize,
+    physicalScrollTop: metrics.physicalScrollTop,
+    scrollPageOffset: metrics.scrollPageOffset,
+    scrollTop: metrics.scrollTop,
+    viewportHeight: metrics.viewportBlockSize,
   };
-}
-
-function scrollViewportToPhysicalTop(
-  viewportElement: HTMLDivElement,
-  targetTop: number,
-  options: ScrollToOptions,
-) {
-  if (
-    Math.abs(viewportElement.scrollTop - targetTop) <=
-    PDF_SCROLL_POSITION_EPSILON
-  ) {
-    return;
-  }
-
-  if (typeof viewportElement.scrollTo === "function") {
-    viewportElement.scrollTo({
-      top: targetTop,
-      ...options,
-    });
-    return;
-  }
-
-  setViewportPhysicalScrollTop(viewportElement, targetTop);
-}
-
-function setViewportPhysicalScrollTop(
-  viewportElement: HTMLDivElement,
-  targetTop: number,
-) {
-  if (
-    Math.abs(viewportElement.scrollTop - targetTop) <=
-    PDF_SCROLL_POSITION_EPSILON
-  ) {
-    return;
-  }
-
-  viewportElement.scrollTop = targetTop;
 }

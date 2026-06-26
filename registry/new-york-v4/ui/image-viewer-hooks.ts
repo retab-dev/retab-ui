@@ -19,12 +19,18 @@ import {
   type ImageFrameVirtualizationScrollMetrics,
   type ImageFrameLayoutModel,
 } from "./image-viewer-virtualization";
+import type {
+  ViewerDocumentLayoutModel,
+  ViewerDocumentScrollMapper,
+  ViewerDocumentScrollMetrics,
+  ViewerDocumentScrollTargetResolver,
+} from "./viewer-types";
+import { useViewerDocumentScroll } from "./viewer-document-scroll";
 import { joinEffectKey } from "@/lib/effect-key";
 
 const IMAGE_SCROLL_HEADROOM = 48;
 const IMAGE_READING_MARKER_RATIO = 0.2;
 const IMAGE_VIEWER_HORIZONTAL_PADDING = 32;
-const IMAGE_SCROLL_POSITION_EPSILON = 1;
 
 /** Bounds for the viewer's zoom range, shared by fit-width and the controls. */
 export const MIN_VIEWER_SCALE = 0.25;
@@ -142,9 +148,45 @@ type ImageReadingAnchor =
       yPercent: number;
     };
 
-type ImageScrollMetrics = ImageFrameVirtualizationScrollMetrics & {
-  physicalScrollHeight: number;
-  physicalScrollTop: number;
+type ImageFrameArea = Parameters<ImageViewerHandle["scrollToFrameArea"]>[1];
+
+type ImageFrameAreaTarget = {
+  area: ImageFrameArea;
+  frameNumber: number;
+};
+
+type ImageDocumentLayoutModel = ViewerDocumentLayoutModel<ImageReadingAnchor>;
+
+const IMAGE_DOCUMENT_SCROLL_MAPPER: ViewerDocumentScrollMapper = {
+  getLogicalScrollTop: ({
+    blockSize,
+    physicalScrollTop,
+    scrollPageOffset,
+    viewportBlockSize,
+  }) =>
+    getImageLogicalScrollTop({
+      physicalScrollTop,
+      scrollPageOffset,
+      totalHeight: blockSize,
+      viewportHeight: viewportBlockSize,
+    }),
+  getPhysicalScrollSize: ({ blockSize, viewportBlockSize }) =>
+    getImagePhysicalScrollHeight({
+      totalHeight: blockSize,
+      viewportHeight: viewportBlockSize,
+    }),
+  resolvePhysicalScrollPosition: ({
+    blockSize,
+    logicalScrollTop,
+    scrollPageOffset,
+    viewportBlockSize,
+  }) =>
+    resolveImagePhysicalScrollPosition({
+      logicalScrollTop,
+      scrollPageOffset,
+      totalHeight: blockSize,
+      viewportHeight: viewportBlockSize,
+    }),
 };
 
 export function useVisibleFrame(
@@ -154,146 +196,39 @@ export function useVisibleFrame(
   onVisibleFrameChange: ImageViewerProps["onVisibleFrameChange"],
 ) {
   const [currentFrameNumber, setCurrentFrameNumber] = React.useState(1);
-  const scrollViewportRef = React.useRef<HTMLDivElement | null>(null);
-  const [scrollViewportElement, setScrollViewportElement] =
-    React.useState<HTMLDivElement | null>(null);
   const lastReportedFrameNumber = React.useRef(0);
-  const scrollPageOffsetRef = React.useRef(0);
-  const committedLayoutRef = React.useRef(layout);
-  const committedResetKeyRef = React.useRef<unknown>(resetKey);
-
-  useKeyedMountEffect(joinEffectKey(["image-visible-reset", resetKey]), () => {
-    lastReportedFrameNumber.current = 0;
-    scrollPageOffsetRef.current = 0;
-    setCurrentFrameNumber(1);
-    const viewport = scrollViewportRef.current;
-    if (viewport) {
-      setViewportPhysicalScrollTop(viewport, 0);
-      viewport.scrollTo?.({ top: 0, behavior: "auto" });
-    }
-  });
-
-  const setScrollViewportRef = React.useCallback(
-    (element: HTMLDivElement | null) => {
-      scrollViewportRef.current = element;
-      setScrollViewportElement(element);
-    },
-    [],
+  const documentLayout = React.useMemo(
+    () => createImageDocumentLayoutModel(layout),
+    [layout],
   );
-
-  const readScrollMetrics = React.useCallback(
+  const resolveScrollTarget = React.useCallback<
+    ViewerDocumentScrollTargetResolver<ImageReadingAnchor, ImageFrameAreaTarget>
+  >(({ target }) => getImageFrameAreaScrollTarget(layout, target), [layout]);
+  const documentScroll = useViewerDocumentScroll({
+    copyScrollTarget: copyImageFrameAreaTarget,
+    layout: documentLayout,
+    resetKey,
+    resolveScrollTarget,
+    scrollMapper: IMAGE_DOCUMENT_SCROLL_MAPPER,
+  });
+  const getScrollMetrics = React.useCallback(
     () =>
-      readImageScrollMetrics({
-        scrollPageOffset: scrollPageOffsetRef.current,
-        totalHeight: layout.totalHeight,
-        viewportElement: scrollViewportRef.current,
-      }),
-    [layout.totalHeight],
+      toImageFrameVirtualizationScrollMetrics(
+        documentScroll.getScrollMetrics(),
+      ),
+    [documentScroll],
   );
-
-  const syncPhysicalScrollPosition = React.useCallback(
-    (viewport: HTMLDivElement) => {
-      const metrics = readImageScrollMetrics({
-        scrollPageOffset: scrollPageOffsetRef.current,
-        totalHeight: layout.totalHeight,
-        viewportElement: viewport,
-      });
-      if (metrics.physicalScrollHeight >= layout.totalHeight) {
-        scrollPageOffsetRef.current = 0;
-        return {
-          ...metrics,
-          scrollPageOffset: 0,
-        };
-      }
-
-      const position = resolveImagePhysicalScrollPosition({
-        logicalScrollTop: metrics.scrollTop,
-        scrollPageOffset: metrics.scrollPageOffset,
-        totalHeight: layout.totalHeight,
-        viewportHeight: metrics.viewportHeight,
-      });
-      scrollPageOffsetRef.current = position.scrollPageOffset;
-      setViewportPhysicalScrollTop(viewport, position.physicalScrollTop);
-
-      return {
-        ...metrics,
-        physicalScrollTop: position.physicalScrollTop,
-        scrollPageOffset: position.scrollPageOffset,
-      };
-    },
-    [layout.totalHeight],
-  );
-
-  const scrollViewportToLogicalTop = React.useCallback(
-    (
-      viewport: HTMLDivElement,
-      targetTop: number,
-      options?: ScrollToOptions,
-    ) => {
-      const physicalScrollHeight = getImagePhysicalScrollHeight({
-        totalHeight: layout.totalHeight,
-        viewportHeight: viewport.clientHeight,
-      });
-      const position =
-        physicalScrollHeight < layout.totalHeight
-          ? resolveImagePhysicalScrollPosition({
-              logicalScrollTop: targetTop,
-              scrollPageOffset: scrollPageOffsetRef.current,
-              totalHeight: layout.totalHeight,
-              viewportHeight: viewport.clientHeight,
-            })
-          : {
-              physicalScrollTop: Math.max(0, targetTop),
-              scrollPageOffset: 0,
-            };
-      scrollPageOffsetRef.current = position.scrollPageOffset;
-      scrollViewportToPhysicalTop(viewport, position.physicalScrollTop, {
-        behavior: "auto",
-        ...options,
-      });
-    },
-    [layout.totalHeight],
-  );
-
-  useKeyedMountEffect(joinEffectKey(["image-anchor", layout, resetKey]), () => {
-    const previousLayout = committedLayoutRef.current;
-    const previousResetKey = committedResetKeyRef.current;
-    committedLayoutRef.current = layout;
-    committedResetKeyRef.current = resetKey;
-
-    if (!Object.is(previousResetKey, resetKey)) return;
-    if (Object.is(previousLayout, layout)) return;
-
-    const viewport = scrollViewportRef.current;
-    if (!viewport) return;
-
-    const previousLogicalScrollTop = getImageLogicalScrollTop({
-      physicalScrollTop: viewport.scrollTop,
-      scrollPageOffset: scrollPageOffsetRef.current,
-      totalHeight: previousLayout.totalHeight,
-      viewportHeight: viewport.clientHeight,
-    });
-    const anchor = captureImageReadingAnchor(
-      previousLayout,
-      viewport,
-      previousLogicalScrollTop,
-    );
-    if (!anchor) return;
-
-    const targetTop = getImageReadingAnchorScrollTop(layout, viewport, anchor);
-    if (targetTop != null) {
-      scrollViewportToLogicalTop(viewport, targetTop);
-    }
-  });
 
   const handleScroll = React.useCallback(() => {
-    const viewport = scrollViewportRef.current;
+    const viewport = documentScroll.getViewportElement();
     if (!viewport) return;
-    const metrics = syncPhysicalScrollPosition(viewport);
-    const isRebased = metrics.physicalScrollHeight < layout.totalHeight;
+    documentScroll.handleScroll();
+
+    const metrics = documentScroll.getScrollMetrics();
+    const isRebased = metrics.physicalScrollSize < documentLayout.blockSize;
     const scrollable = isRebased
-      ? layout.totalHeight - metrics.viewportHeight
-      : viewport.scrollHeight - metrics.viewportHeight;
+      ? documentLayout.blockSize - metrics.viewportBlockSize
+      : viewport.scrollHeight - metrics.viewportBlockSize;
     const progress =
       scrollable > 0
         ? clamp01(
@@ -305,7 +240,7 @@ export function useVisibleFrame(
     const frameNumber = getCurrentImageFrameNumber({
       layout,
       scrollTop: metrics.scrollTop,
-      viewportHeight: metrics.viewportHeight,
+      viewportHeight: metrics.viewportBlockSize,
     });
     if (frameNumber && frameNumber !== lastReportedFrameNumber.current) {
       lastReportedFrameNumber.current = frameNumber;
@@ -313,37 +248,55 @@ export function useVisibleFrame(
       onVisibleFrameChange?.(frameNumber);
     }
   }, [
+    documentLayout,
+    documentScroll,
     layout,
     onScrollProgressChange,
     onVisibleFrameChange,
-    syncPhysicalScrollPosition,
   ]);
+
+  const scrollToFrameArea = React.useCallback(
+    (frameNumber: number, area: ImageFrameArea, options?: ScrollToOptions) => {
+      documentScroll.scrollToTarget({ area, frameNumber }, options);
+    },
+    [documentScroll],
+  );
+
+  useKeyedMountEffect(joinEffectKey(["image-visible-reset", resetKey]), () => {
+    lastReportedFrameNumber.current = 0;
+    setCurrentFrameNumber(1);
+  });
 
   return {
     currentFrameNumber,
-    getScrollMetrics: readScrollMetrics,
+    getScrollMetrics,
+    getViewportElement: documentScroll.getViewportElement,
     handleScroll,
-    scrollToLogicalTop: scrollViewportToLogicalTop,
-    scrollViewportElement,
-    scrollViewportRef,
-    setScrollViewportRef,
+    scrollToFrameArea,
+    scrollViewportElement: documentScroll.viewportElement,
+    setScrollViewportRef: documentScroll.setViewportElement,
   };
 }
 
 function captureImageReadingAnchor(
   layout: ImageFrameLayoutModel,
-  viewport: HTMLDivElement,
-  scrollTop: number,
+  {
+    scrollTop,
+    viewportBlockSize,
+  }: {
+    scrollTop: number;
+    viewportBlockSize: number;
+  },
 ): ImageReadingAnchor | null {
   if (layout.frameCount === 0) return null;
   if (scrollTop <= 0) return { kind: "top" };
 
   const markerOffset =
-    scrollTop + viewport.clientHeight * IMAGE_READING_MARKER_RATIO;
+    scrollTop + viewportBlockSize * IMAGE_READING_MARKER_RATIO;
   const frameNumber = getCurrentImageFrameNumber({
     layout,
     scrollTop,
-    viewportHeight: viewport.clientHeight,
+    viewportHeight: viewportBlockSize,
   });
   const frame = getImageFrameLayout(layout, frameNumber);
   if (!frame || frame.height <= 0) return null;
@@ -357,8 +310,13 @@ function captureImageReadingAnchor(
 
 function getImageReadingAnchorScrollTop(
   layout: ImageFrameLayoutModel,
-  viewport: HTMLDivElement,
-  anchor: ImageReadingAnchor,
+  {
+    anchor,
+    viewportBlockSize,
+  }: {
+    anchor: ImageReadingAnchor;
+    viewportBlockSize: number;
+  },
 ): number | null {
   if (anchor.kind === "top") {
     return 0;
@@ -370,98 +328,80 @@ function getImageReadingAnchorScrollTop(
   const targetTop =
     frame.offsetTop +
     frame.height * anchor.yPercent -
-    viewport.clientHeight * IMAGE_READING_MARKER_RATIO;
-  const maxScrollTop = Math.max(0, layout.totalHeight - viewport.clientHeight);
+    viewportBlockSize * IMAGE_READING_MARKER_RATIO;
+  const maxScrollTop = Math.max(0, layout.totalHeight - viewportBlockSize);
   return Math.min(maxScrollTop, Math.max(0, targetTop));
 }
 
 export function useImageViewerHandle(
   forwardedRef: React.ForwardedRef<ImageViewerHandle> | undefined,
-  scrollViewportRef: React.RefObject<HTMLDivElement | null>,
-  layout: ImageFrameLayoutModel,
-  scrollToLogicalTop: (
-    viewport: HTMLDivElement,
-    targetTop: number,
+  getViewportElement: () => HTMLDivElement | null,
+  scrollToFrameArea: (
+    frameNumber: number,
+    area: ImageFrameArea,
     options?: ScrollToOptions,
   ) => void,
 ) {
   React.useImperativeHandle(
     forwardedRef ?? null,
     () => ({
-      scrollToFrameArea: (frameNumber, area, options) => {
-        const areaTop = normalizeFrameAreaPercent(area.top);
-        if (areaTop == null) return;
-        const viewport = scrollViewportRef.current;
-        const frame = getImageFrameLayout(layout, frameNumber);
-        if (!viewport || !frame) return;
-        const targetTop =
-          frame.offsetTop +
-          (areaTop / 100) * frame.height -
-          IMAGE_SCROLL_HEADROOM;
-        scrollToLogicalTop(viewport, Math.max(0, targetTop), {
-          behavior: "smooth",
-          ...options,
-        });
-      },
-      getViewportElement: () => scrollViewportRef.current,
+      scrollToFrameArea,
+      getViewportElement,
     }),
-    [layout, scrollToLogicalTop, scrollViewportRef],
+    [getViewportElement, scrollToFrameArea],
   );
 }
 
-function readImageScrollMetrics({
-  scrollPageOffset,
-  totalHeight,
-  viewportElement,
-}: {
-  scrollPageOffset: number;
-  totalHeight: number;
-  viewportElement: HTMLDivElement | null;
-}): ImageScrollMetrics {
-  const viewportHeight = viewportElement?.clientHeight ?? 0;
-  const physicalScrollTop = viewportElement?.scrollTop ?? 0;
-  const physicalScrollHeight = getImagePhysicalScrollHeight({
-    totalHeight,
-    viewportHeight,
-  });
+function createImageDocumentLayoutModel(
+  layout: ImageFrameLayoutModel,
+): ImageDocumentLayoutModel {
   return {
-    physicalScrollHeight,
-    physicalScrollTop,
-    scrollPageOffset,
-    scrollTop: getImageLogicalScrollTop({
-      physicalScrollTop,
-      scrollPageOffset,
-      totalHeight,
-      viewportHeight,
-    }),
-    viewportHeight,
+    blockSize: layout.totalHeight,
+    captureReadingAnchor: (input) => captureImageReadingAnchor(layout, input),
+    getReadingAnchorScrollTop: (target) =>
+      getImageReadingAnchorScrollTop(layout, target),
+    inlineSize: layout.maxFrameWidth,
   };
 }
 
-function setViewportPhysicalScrollTop(
-  viewport: HTMLDivElement,
-  physicalScrollTop: number,
+function getImageFrameAreaScrollTarget(
+  layout: ImageFrameLayoutModel,
+  target: ImageFrameAreaTarget,
 ) {
-  if (
-    Math.abs(viewport.scrollTop - physicalScrollTop) <=
-    IMAGE_SCROLL_POSITION_EPSILON
-  ) {
-    return;
-  }
-  viewport.scrollTop = physicalScrollTop;
+  const areaTop = normalizeFrameAreaPercent(target.area.top);
+  if (areaTop == null) return null;
+
+  const frame = getImageFrameLayout(layout, target.frameNumber);
+  if (!frame) return null;
+
+  return {
+    top: Math.max(
+      0,
+      frame.offsetTop + (areaTop / 100) * frame.height - IMAGE_SCROLL_HEADROOM,
+    ),
+  };
 }
 
-function scrollViewportToPhysicalTop(
-  viewport: HTMLDivElement,
-  physicalScrollTop: number,
-  options?: ScrollToOptions,
-) {
-  if (typeof viewport.scrollTo === "function") {
-    viewport.scrollTo({
-      top: physicalScrollTop,
-      ...options,
-    });
-    return;
-  }
-  viewport.scrollTop = physicalScrollTop;
+function copyImageFrameAreaTarget(
+  target: ImageFrameAreaTarget,
+): ImageFrameAreaTarget {
+  return {
+    frameNumber: target.frameNumber,
+    area: {
+      top: target.area.top,
+      left: target.area.left,
+      width: target.area.width,
+      height: target.area.height,
+    },
+  };
+}
+
+function toImageFrameVirtualizationScrollMetrics(
+  metrics: ViewerDocumentScrollMetrics,
+): ImageFrameVirtualizationScrollMetrics {
+  return {
+    scrollPageOffset: metrics.scrollPageOffset,
+    scrollTop: metrics.scrollTop,
+    viewportHeight: metrics.viewportBlockSize,
+  };
 }
