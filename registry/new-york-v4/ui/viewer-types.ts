@@ -8,6 +8,27 @@ export type ViewerSidebarSide = "left" | "right";
 export type ViewerSidebarCollapsible = "offcanvas" | "none";
 export type ViewerDocumentFrameAlign = "start" | "center" | "end";
 
+export type ViewerDocumentReadingAnchorInput = {
+  scrollTop: number;
+  viewportBlockSize: number;
+};
+
+export type ViewerDocumentReadingAnchorTarget<Anchor> = {
+  anchor: Anchor;
+  viewportBlockSize: number;
+};
+
+export type ViewerDocumentLayoutModel<Anchor> = {
+  blockSize: number;
+  captureReadingAnchor: (
+    input: ViewerDocumentReadingAnchorInput,
+  ) => Anchor | null;
+  getReadingAnchorScrollTop: (
+    target: ViewerDocumentReadingAnchorTarget<Anchor>,
+  ) => number | null;
+  inlineSize: number;
+};
+
 export type ViewerSidebarLayoutSnapshot = {
   isTransitioning: boolean;
   mode: ViewerSidebarMode;
