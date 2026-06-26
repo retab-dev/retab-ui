@@ -4736,7 +4736,7 @@
       "name": "dropzone-block",
       "type": "registry:block",
       "title": "Dropzone",
-      "description": "A file-uploader lab proving the headless dropzone primitive across default, non-button, native-button, controlled, validation-only, custom grid, uploader-viewer, and disabled surfaces.",
+      "description": "A file-uploader lab proving the headless dropzone primitive across default, non-button, native-button, controlled, validation-only, custom grid, upload progress, uploader-viewer, and disabled surfaces.",
       "dependencies": [
         "lucide-react"
       ],
@@ -4872,6 +4872,11 @@
           "path": "registry/new-york-v4/blocks/dropzone-required-packet-slots.tsx",
           "type": "registry:component",
           "target": "@components/blocks/dropzone-required-packet-slots.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-upload-progress-queue.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-upload-progress-queue.tsx"
         }
       ],
       "categories": [
@@ -6447,6 +6452,37 @@
           "path": "registry/new-york-v4/blocks/dropzone-media-transcript-queue.tsx",
           "type": "registry:component",
           "target": "@components/blocks/dropzone-media-transcript-queue.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-example-shared.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-example-shared.tsx"
+        }
+      ],
+      "categories": [
+        "dropzone"
+      ]
+    },
+    {
+      "name": "dropzone-upload-progress-queue",
+      "type": "registry:block",
+      "title": "Upload Progress Queue",
+      "description": "A dropzone-backed upload queue with per-file loading bars keyed by the admitted file ids.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "@retab/dropzone",
+        "@retab/file-size-format",
+        "@retab/utils",
+        "@retab/use-keyed-mount-effect",
+        "@retab/use-mount-effect"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-upload-progress-queue.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-upload-progress-queue.tsx"
         },
         {
           "path": "registry/new-york-v4/blocks/dropzone-example-shared.tsx",

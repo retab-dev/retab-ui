@@ -9,6 +9,7 @@ export {
 } from "./file-viewer-core";
 export {
   FileViewerBody,
+  FileViewerDocumentFrame,
   FileViewerFieldSource,
   FileViewerFieldSourceLabel,
   FileViewerFieldSourceStatus,
@@ -32,6 +33,7 @@ export {
   useFileViewerViewportSize,
   useOptionalFileViewerViewportSize,
   type FileViewerBodyProps,
+  type FileViewerDocumentFrameProps,
   type FileViewerFieldSourceLabelProps,
   type FileViewerFieldSourceProps,
   type FileViewerFieldSourceStatusProps,

@@ -42,6 +42,7 @@ export function ViewerSidebar({
     registerSidebar,
     rootId,
     sidebarState,
+    sidebarGapTransition,
   } = registrationContext;
   const reactId = React.useId();
   const instanceId = `${reactId}-viewer-sidebar-instance`;
@@ -239,7 +240,9 @@ export function ViewerSidebar({
           namespacedSlotNames?.gap,
         )}
         className={cn(
-          "relative h-full w-(--viewer-sidebar-width) flex-shrink-0 transition-[width] duration-200 ease-out",
+          "relative h-full w-(--viewer-sidebar-width) flex-shrink-0",
+          sidebarGapTransition === "width" &&
+            "transition-[width] duration-200 ease-out",
           collapsible === "offcanvas" && mode === "overlay" && "w-0",
           collapsible === "offcanvas" && mode === "inline" && !open && "w-0",
         )}

@@ -25,14 +25,23 @@
 .file-viewer-structure-flow .react-flow__nodes {
   position: absolute;
   inset: 0;
+  z-index: 1;
 }
 
 .file-viewer-structure-flow {
-  --file-viewer-diagram-arrow: oklch(70.8% 0 0);
+  --file-viewer-diagram-arrow: oklch(72% 0 0);
+}
+
+html:not(.dark) .file-viewer-structure-flow {
+  --file-viewer-diagram-arrow: oklch(55.6% 0 0);
 }
 
 .dark .file-viewer-structure-flow {
-  --file-viewer-diagram-arrow: oklch(55.6% 0 0);
+  --file-viewer-diagram-arrow: oklch(72% 0 0);
+}
+
+.file-viewer-structure-flow .react-flow__edges {
+  z-index: 2;
 }
 
 .file-viewer-structure-flow .react-flow__edges svg {

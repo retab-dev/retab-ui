@@ -42,9 +42,7 @@ const DynamicRetabSchemaBuilderDemo = dynamic(
 );
 const DynamicJsonFormDemo = dynamic(
   () =>
-    import("@/components/json-form-demo").then(
-      (module) => module.JsonFormDemo,
-    ),
+    import("@/components/json-form-demo").then((module) => module.JsonFormDemo),
   { loading: ShowcasePreviewFallback, ssr: false },
 );
 const DynamicJsonTableDemo = dynamic(
@@ -114,8 +112,9 @@ const HOME_SHOWCASE_PANELS = {
 } satisfies Record<HomeShowcaseItemId, React.ComponentType>;
 
 export function HomeShowcase() {
-  const [activeItemId, setActiveItemId] =
-    React.useState<HomeShowcaseItemId>(DEFAULT_HOME_SHOWCASE_ITEM_ID);
+  const [activeItemId, setActiveItemId] = React.useState<HomeShowcaseItemId>(
+    DEFAULT_HOME_SHOWCASE_ITEM_ID,
+  );
   const activeItem =
     HOME_SHOWCASE_ITEMS.find((item) => item.id === activeItemId) ??
     HOME_SHOWCASE_ITEMS[0];
@@ -210,7 +209,7 @@ function HomeShowcaseTabs({
 
 function SourcesViewerShowcasePanel() {
   return (
-    <div className="h-[680px] overflow-hidden rounded-xl border shadow-sm">
+    <div className="h-[680px] overflow-hidden rounded-xl border shadow-sm [&_[data-file-viewer-slot=legend]]:hidden">
       <DynamicJsonFormSourcesBlock />
     </div>
   );

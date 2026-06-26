@@ -23,7 +23,6 @@ import {
   SourceFieldList,
   type SourceField,
 } from "@/components/ui/source-field-list";
-import { SourceIndicator } from "@/components/ui/source-indicator";
 import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model";
 import {
   sourceToTextHighlight,
@@ -107,7 +106,7 @@ function TextSourcesContent({
           </FileViewerHeaderEnd>
         </FileViewerHeader>
         <FileViewerBody>
-          <FileViewerSurface className="relative">
+          <FileViewerSurface>
             <FileViewerViewport>
               <TextViewer
                 ref={viewerRef}
@@ -119,10 +118,6 @@ function TextSourcesContent({
                 mode="text"
               />
             </FileViewerViewport>
-            <SourceIndicator
-              path={link.activeSourcePath}
-              found={!!activeSource}
-            />
           </FileViewerSurface>
           <FileViewerSidebar
             aria-label="Source fields"

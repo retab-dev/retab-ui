@@ -7,12 +7,14 @@ import * as React from "react";
 import { ViewerBody } from "./viewer-body";
 import { ViewerSidebar } from "./viewer-sidebar";
 import {
+  ViewerDocumentFrame,
   ViewerSurface,
   ViewerViewport,
   useOptionalViewerSurfaceMeasurement,
 } from "./viewer-surface";
 import type {
   ViewerBodyProps,
+  ViewerDocumentFrameProps,
   ViewerSidebarProps,
   ViewerSurfaceProps,
   ViewerViewportProps,
@@ -22,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { Separator } from "./separator";
 
 export type FileViewerBodyProps = ViewerBodyProps;
+export type FileViewerDocumentFrameProps = ViewerDocumentFrameProps;
 export type FileViewerFieldSourceProps = React.ComponentProps<"div"> & {
   isActive?: boolean;
   isUnavailable?: boolean;
@@ -154,6 +157,20 @@ export function FileViewerLegend({
       data-file-viewer-slot="legend"
       data-slot="file-viewer-legend"
       className={cn("min-w-0 flex-shrink-0 border-b", className)}
+      {...props}
+    />
+  );
+}
+
+export function FileViewerDocumentFrame({
+  className,
+  ...props
+}: FileViewerDocumentFrameProps) {
+  return (
+    <ViewerDocumentFrame
+      data-file-viewer-slot="document-frame"
+      data-slot="file-viewer-document-frame"
+      className={className}
       {...props}
     />
   );

@@ -108,7 +108,7 @@ export function ViewerBlockTabs() {
 }
 
 function getBlockHref(blockId: ViewerBlockId) {
-  return `/blocks/${blockId}`;
+  return `/examples/${blockId}`;
 }
 
 function getViewerBlocksForPage(activeBlock: ViewerBlockWithComponent) {

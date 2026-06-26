@@ -25,12 +25,12 @@ export async function generateMetadata({
   if (!block) return {};
 
   return {
-    title: `${block.title} Block`,
+    title: `${block.title} Example`,
     description: block.description,
   };
 }
 
-export default async function BlocksPage({
+export default async function ExamplesPage({
   params,
 }: {
   params: Promise<{ block: string }>;

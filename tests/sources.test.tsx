@@ -1883,7 +1883,7 @@ describe("source UI components", () => {
     expect(
       screen.getByRole("heading", { name: "Invoice fields" }).textContent,
     ).toBe("Invoice fields");
-    expect(screen.getByText("2 fields").textContent).toBe("2 fields");
+    expect(screen.getByText("total").textContent).toBe("total");
     expect(screen.getByText("$120.00").textContent).toBe("$120.00");
     expect(screen.getByText("Page 2").textContent).toBe("Page 2");
 
@@ -1962,7 +1962,9 @@ describe("source UI components", () => {
     );
 
     expect(screen.getByRole("heading", { name: "No fields" })).toBeTruthy();
-    expect(screen.getByText("0 fields").textContent).toBe("0 fields");
+    expect(
+      screen.getByText("Hover a field to see its source").textContent,
+    ).toBe("Hover a field to see its source");
     expect(screen.getByText("No fields.")).toBeTruthy();
     expect(screen.queryAllByRole("option")).toHaveLength(0);
     expect(
@@ -1986,7 +1988,6 @@ describe("source UI components", () => {
       />,
     );
 
-    expect(screen.getByText("2 fields").textContent).toBe("2 fields");
     expect(
       screen.getByRole("option", { name: /date/i }).getAttribute("data-active"),
     ).toBe("true");
@@ -2001,7 +2002,6 @@ describe("source UI components", () => {
       />,
     );
 
-    expect(screen.getByText("2 fields").textContent).toBe("2 fields");
     expect(screen.queryByRole("option", { name: /date/i })).toBeNull();
     expect(
       screen
@@ -2010,21 +2010,24 @@ describe("source UI components", () => {
     ).toBe("false");
   });
 
-  it("SourceIndicator renders empty, found, and missing-source states", () => {
+  it("SourceIndicator renders idle and active source path states", () => {
     const { container, rerender } = render(
       <SourceIndicator path={null} found={false} emptyHint="Pick a field" />,
     );
-    expect(container.firstElementChild?.className).toContain("top-3");
-    expect(container.firstElementChild?.className).not.toContain("top-12");
+    expect(container.firstElementChild?.getAttribute("data-slot")).toBe(
+      "source-indicator",
+    );
+    expect(container.firstElementChild?.className).toContain("min-h-8");
+    expect(container.firstElementChild?.className).not.toContain("absolute");
     expect(screen.getByText("Pick a field").textContent).toBe("Pick a field");
 
     rerender(<SourceIndicator path="owner.name" found label="Field source" />);
-    expect(screen.getByText("Field source").textContent).toBe("Field source");
+    expect(screen.queryByText("Field source")).toBeNull();
     expect(screen.getByText("owner.name").textContent).toBe("owner.name");
 
     rerender(<SourceIndicator path="owner.email" found={false} />);
     expect(screen.getByText("owner.email").textContent).toBe("owner.email");
-    expect(screen.getByText("· no source").textContent).toBe("· no source");
+    expect(screen.queryByText("· no source")).toBeNull();
   });
 
   it("SourceIndicator treats an empty string path as an active root source", () => {
@@ -2032,11 +2035,11 @@ describe("source UI components", () => {
       <SourceIndicator path="" found label="Root source" />,
     );
 
-    expect(screen.getByText("Root source").textContent).toBe("Root source");
-    expect(screen.queryByText("Hover a field to view its source")).toBeNull();
+    expect(screen.queryByText("Root source")).toBeNull();
+    expect(screen.queryByText("Hover a field to see its source")).toBeNull();
     expect(screen.queryByText("· no source")).toBeNull();
 
     rerender(<SourceIndicator path="" found={false} />);
-    expect(screen.getByText("· no source").textContent).toBe("· no source");
+    expect(screen.queryByText("· no source")).toBeNull();
   });
 });

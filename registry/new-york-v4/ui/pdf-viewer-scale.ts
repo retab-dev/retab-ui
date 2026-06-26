@@ -24,13 +24,12 @@ export function clampPdfScale(value: number) {
 export function getPdfFitWidthScale(
   containerWidth: number | null,
   pageWidth: number,
+  inlinePadding = PDF_PAGE_HORIZONTAL_PADDING,
 ) {
   if (!containerWidth || !Number.isFinite(containerWidth) || pageWidth <= 0) {
     return 1;
   }
-  return clampPdfScale(
-    (containerWidth - PDF_PAGE_HORIZONTAL_PADDING) / pageWidth,
-  );
+  return clampPdfScale((containerWidth - inlinePadding) / pageWidth);
 }
 
 export function getPdfPageDevicePixelRatio({
@@ -87,12 +86,14 @@ export function usePdfScale({
   onScaleChange,
   containerWidth,
   pageWidth,
+  fitWidthInlinePadding,
   resetKey,
 }: {
   controlledScale?: number;
   defaultScale?: number;
   onScaleChange?: (scale: number | null) => void;
   containerWidth: number | null;
+  fitWidthInlinePadding?: number;
   pageWidth: number;
   resetKey?: unknown;
 }) {
@@ -112,7 +113,12 @@ export function usePdfScale({
     ? uncontrolledScaleState.requestedScale
     : initialRequestedScale;
   const isControlledScale = controlledScale !== undefined;
-  const fitWidthScale = getPdfFitWidthScale(containerWidth, pageWidth);
+  const isFitWidth = !isControlledScale && uncontrolledRequestedScale == null;
+  const fitWidthScale = getPdfFitWidthScale(
+    containerWidth,
+    pageWidth,
+    fitWidthInlinePadding,
+  );
   const resolvedScale = isControlledScale
     ? clampPdfScale(controlledScale)
     : (uncontrolledRequestedScale ?? fitWidthScale);
@@ -150,6 +156,7 @@ export function usePdfScale({
 
   return {
     resolvedScale,
+    isFitWidth,
     zoomIn,
     zoomOut,
     fitWidth,

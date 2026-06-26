@@ -13,7 +13,10 @@ export type FileViewerLayout = "fill" | "intrinsic";
 export type FileViewerProps = React.ComponentProps<"div"> &
   Pick<
     ViewerRootProps,
-    "inlineBreakpoint" | "sidebarCollapsible" | "sidebarSide"
+    | "inlineBreakpoint"
+    | "sidebarCollapsible"
+    | "sidebarGapTransition"
+    | "sidebarSide"
   > & {
     layout?: FileViewerLayout;
     sidebarMode?: ViewerRootProps["mode"];
@@ -34,6 +37,7 @@ export function FileViewer({
   inlineBreakpoint,
   layout = "fill",
   sidebarCollapsible,
+  sidebarGapTransition,
   sidebarMode,
   sidebarSide,
   ...props
@@ -64,6 +68,7 @@ export function FileViewer({
       onOpenChange={context.sidebarOpenProps.onOpenChange}
       open={context.sidebarOpenProps.open}
       sidebarCollapsible={sidebarCollapsible}
+      sidebarGapTransition={sidebarGapTransition}
       sidebarSide={sidebarSide}
       {...props}
     >

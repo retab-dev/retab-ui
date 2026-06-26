@@ -21,6 +21,7 @@ import { NonButtonTrigger } from "@/registry/new-york-v4/blocks/dropzone-non-but
 import { PinboardDropSurface } from "@/registry/new-york-v4/blocks/dropzone-pinboard-drop-surface";
 import { RequiredPacketSlots } from "@/registry/new-york-v4/blocks/dropzone-required-packet-slots";
 import { SpreadsheetImportCard } from "@/registry/new-york-v4/blocks/dropzone-spreadsheet-import-card";
+import { UploadProgressQueue } from "@/registry/new-york-v4/blocks/dropzone-upload-progress-queue";
 import { ValidationOnly } from "@/registry/new-york-v4/blocks/dropzone-validation-only";
 import { EditViewerBlock } from "@/registry/new-york-v4/blocks/edit-viewer-block";
 import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block";
@@ -66,6 +67,7 @@ export const VIEWER_BLOCK_COMPONENTS = {
   "dropzone-validation-only": ValidationOnly,
   "dropzone-custom-thumbnail-grid": CustomThumbnailGrid,
   "dropzone-media-transcript-queue": MediaTranscriptQueue,
+  "dropzone-upload-progress-queue": UploadProgressQueue,
   "dropzone-avatar-image-slot": AvatarImageSlot,
   "dropzone-spreadsheet-import": SpreadsheetImportCard,
   "dropzone-evidence-timeline": EvidenceTimeline,

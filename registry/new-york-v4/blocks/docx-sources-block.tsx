@@ -28,7 +28,6 @@ import {
   SourceFieldList,
   type SourceField,
 } from "@/components/ui/source-field-list";
-import { SourceIndicator } from "@/components/ui/source-indicator";
 import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model";
 import docxSample from "@/components/viewers/sample-data/docx-sources.json";
 
@@ -113,7 +112,7 @@ function DocxSourcesContent({
           </FileViewerHeaderEnd>
         </FileViewerHeader>
         <FileViewerBody>
-          <FileViewerSurface className="relative">
+          <FileViewerSurface>
             <FileViewerViewport>
               <DocxViewer
                 ref={viewerRef}
@@ -124,10 +123,6 @@ function DocxSourcesContent({
                 highlight={highlight}
               />
             </FileViewerViewport>
-            <SourceIndicator
-              path={link.activeSourcePath}
-              found={!!activeSource}
-            />
           </FileViewerSurface>
           <FileViewerSidebar
             aria-label="Source fields"

@@ -42,9 +42,9 @@ type DiagramDefinition = {
   heightClassName?: string;
   nodes: DiagramNode[];
 };
+type DiagramSelection = "all" | "sidebar" | "structure";
 
 const DIAGRAM_ARROW_COLOR = "currentColor";
-const TARGET_HANDLE_OFFSET = -9;
 
 const STRUCTURE_NODES = [
   calloutNode("provider-label", "<FileViewerProvider />", 32, 54, 172, 24),
@@ -65,14 +65,14 @@ const STRUCTURE_NODES = [
 ] satisfies DiagramNode[];
 
 const STRUCTURE_EDGES = [
-  labelEdge("provider-label", "root", "right-source", "left-target"),
+  labelEdge("provider-label", "root", "right-source", "left-target-top"),
   labelEdge("root-label", "root", "bottom-source", "top-target"),
   labelEdge("header-label", "header", "left-source", "right-target"),
   labelEdge("sidebar-label", "sidebar", "right-source", "left-target"),
-  labelEdge("surface-label", "surface", "left-source", "right-target"),
+  labelEdge("surface-label", "surface", "left-source", "right-target-top"),
   labelEdge("viewport-label", "viewport", "left-source", "right-target"),
-  labelEdge("body-label", "body", "right-source", "left-target"),
-  labelEdge("document-label", "document", "left-source", "right-target"),
+  labelEdge("body-label", "body", "right-source", "left-target-bottom"),
+  labelEdge("document-label", "document", "left-source", "bottom-target"),
 ] satisfies DiagramEdge[];
 
 const SIDEBAR_NODES = [
@@ -126,34 +126,71 @@ const nodeTypes = {
   diagramNode: DiagramNodeComponent,
 };
 
-export function FileViewerStructureSketches() {
+export function FileViewerStructureSketches({
+  className,
+  diagrams = "all",
+  fitViewPadding = 0.08,
+  frameClassName,
+}: {
+  className?: string;
+  diagrams?: DiagramSelection;
+  fitViewPadding?: number;
+  frameClassName?: string;
+}) {
+  const selectedDiagrams =
+    diagrams === "structure"
+      ? [DIAGRAMS[0]]
+      : diagrams === "sidebar"
+        ? [DIAGRAMS[1]]
+        : DIAGRAMS;
+
   return (
-    <div className="not-prose my-6 space-y-6">
-      {DIAGRAMS.map((diagram) => (
-        <DiagramFrame key={diagram.ariaLabel} diagram={diagram} />
+    <div className={cn("not-prose my-6 space-y-6", className)}>
+      {selectedDiagrams.map((diagram) => (
+        <DiagramFrame
+          key={diagram.ariaLabel}
+          className={frameClassName}
+          diagram={diagram}
+          fitViewPadding={fitViewPadding}
+        />
       ))}
     </div>
   );
 }
 
-function DiagramFrame({ diagram }: { diagram: DiagramDefinition }) {
+function DiagramFrame({
+  className,
+  diagram,
+  fitViewPadding,
+}: {
+  className?: string;
+  diagram: DiagramDefinition;
+  fitViewPadding: number;
+}) {
   return (
     <figure
       aria-label={diagram.ariaLabel}
       className={cn(
         "overflow-hidden rounded-lg border bg-[#fbfbfb] dark:bg-[#0b0b0b]",
         diagram.heightClassName ?? "h-[17.5rem] sm:h-[25rem]",
+        className,
       )}
     >
       <ReactFlowProvider>
-        <StaticDiagramFlow diagram={diagram} />
+        <StaticDiagramFlow diagram={diagram} fitViewPadding={fitViewPadding} />
       </ReactFlowProvider>
       <figcaption className="sr-only">{diagram.ariaLabel}</figcaption>
     </figure>
   );
 }
 
-function StaticDiagramFlow({ diagram }: { diagram: DiagramDefinition }) {
+function StaticDiagramFlow({
+  diagram,
+  fitViewPadding,
+}: {
+  diagram: DiagramDefinition;
+  fitViewPadding: number;
+}) {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const nodesInitialized = useNodesInitialized();
   const { fitView } = useReactFlow<DiagramNode, DiagramEdge>();
@@ -167,7 +204,7 @@ function StaticDiagramFlow({ diagram }: { diagram: DiagramDefinition }) {
     const runFitView = () => {
       window.cancelAnimationFrame(animationFrame);
       animationFrame = window.requestAnimationFrame(() => {
-        void fitView({ duration: 0, padding: 0.08 });
+        void fitView({ duration: 0, padding: fitViewPadding });
       });
     };
 
@@ -180,7 +217,7 @@ function StaticDiagramFlow({ diagram }: { diagram: DiagramDefinition }) {
       window.cancelAnimationFrame(animationFrame);
       observer.disconnect();
     };
-  }, [fitView, nodesInitialized]);
+  }, [fitView, fitViewPadding, nodesInitialized]);
 
   return (
     <div ref={containerRef} className="h-full w-full">
@@ -190,7 +227,7 @@ function StaticDiagramFlow({ diagram }: { diagram: DiagramDefinition }) {
         edges={diagram.edges}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.08 }}
+        fitViewOptions={{ padding: fitViewPadding }}
         minZoom={0.2}
         maxZoom={1.6}
         nodesDraggable={false}
@@ -258,9 +295,33 @@ function NodeShell({
       <DiagramHandle id="top-target" type="target" position={Position.Top} />
       <DiagramHandle id="left-target" type="target" position={Position.Left} />
       <DiagramHandle
+        id="left-target-top"
+        type="target"
+        position={Position.Left}
+        style={{ top: "30%" }}
+      />
+      <DiagramHandle
+        id="left-target-bottom"
+        type="target"
+        position={Position.Left}
+        style={{ top: "70%" }}
+      />
+      <DiagramHandle
         id="right-target"
         type="target"
         position={Position.Right}
+      />
+      <DiagramHandle
+        id="right-target-top"
+        type="target"
+        position={Position.Right}
+        style={{ top: "30%" }}
+      />
+      <DiagramHandle
+        id="right-target-bottom"
+        type="target"
+        position={Position.Right}
+        style={{ top: "70%" }}
       />
       <DiagramHandle
         id="bottom-target"
@@ -286,11 +347,13 @@ function NodeShell({
 
 function DiagramHandle({
   id,
-  position,
   type,
+  position,
+  style,
 }: {
   id: string;
   position: Position;
+  style?: React.CSSProperties;
   type: "source" | "target";
 }) {
   return (
@@ -299,27 +362,9 @@ function DiagramHandle({
       className="size-1 opacity-0"
       type={type}
       position={position}
-      style={handleStyle(type, position)}
+      style={style}
     />
   );
-}
-
-function handleStyle(
-  type: "source" | "target",
-  position: Position,
-): React.CSSProperties | undefined {
-  if (type === "source") return undefined;
-
-  switch (position) {
-    case Position.Top:
-      return { top: TARGET_HANDLE_OFFSET };
-    case Position.Right:
-      return { right: TARGET_HANDLE_OFFSET };
-    case Position.Bottom:
-      return { bottom: TARGET_HANDLE_OFFSET };
-    case Position.Left:
-      return { left: TARGET_HANDLE_OFFSET };
-  }
 }
 
 function diagramNode(
@@ -371,21 +416,22 @@ function labelEdge(
     targetHandle,
     focusable: false,
     selectable: false,
+    zIndex: 20,
     markerEnd: {
       type: MarkerType.ArrowClosed,
       color: DIAGRAM_ARROW_COLOR,
       markerUnits: "userSpaceOnUse",
-      strokeWidth: 1.5,
-      width: 12,
-      height: 12,
+      strokeWidth: 1.3,
+      width: 9,
+      height: 9,
     },
     style: {
       stroke: DIAGRAM_ARROW_COLOR,
       strokeDasharray: "5 6",
       strokeLinecap: "round",
-      strokeWidth: 1.4,
+      strokeWidth: 1.3,
     },
-    className: "opacity-75 drop-shadow-[0_0_0_rgba(0,0,0,0)]",
+    className: "opacity-[0.82] drop-shadow-[0_0_0_rgba(0,0,0,0)]",
   };
 }
 

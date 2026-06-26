@@ -7,16 +7,24 @@ import {
   FileViewer,
   FileViewerBody,
   FileViewerDocument,
+  FileViewerDocumentFrame,
   FileViewerHeader,
   FileViewerHeaderEnd,
   FileViewerHeaderStart,
   FileViewerIdentity,
   FileViewerPreview,
   FileViewerProvider,
+  FileViewerSidebar,
+  FileViewerSidebarTrigger,
   FileViewerSurface,
   FileViewerToolbar,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
+import {
+  PdfViewerPages,
+  PdfViewerProvider,
+  PdfViewerThumbnails,
+} from "@/components/ui/pdf-viewer";
 import {
   LONG_TEXT_SAMPLE,
   LONG_TEXT_SAMPLE_FILE_NAME,
@@ -69,6 +77,14 @@ const DOCS_DEMO_FILES = FILES.filter((file) => file.label !== "Code").map(
 const SHOWCASE_INITIAL_FILE_KEY =
   SHOWCASE_FILES.find((file) => file.label === "Text")?.file ??
   SHOWCASE_FILES[0].file;
+const PDF_SHOWCASE_SIDEBAR_WIDTH = 128;
+const PDF_SHOWCASE_SIDEBAR_WIDTH_STYLE = `${PDF_SHOWCASE_SIDEBAR_WIDTH}px`;
+const PDF_SHOWCASE_VIEWER_CLASS_NAME = [
+  "h-full",
+  "[&_[data-slot=file-viewer-sidebar-container]]:!ease-linear",
+  "[&_[data-slot=file-viewer-sidebar-gap]]:!ease-linear",
+].join(" ");
+const PDF_SHOWCASE_PAGES_CLASS_NAME = "h-full";
 
 function getActiveFile(files: readonly DemoFile[], active: DemoFileKey) {
   return files.find((file) => file.file === active) ?? files[0];
@@ -186,11 +202,15 @@ function getFileSource(file: DemoFile) {
 function FileCanvas({
   file,
   idPrefix,
+  className,
   showFileHeader = true,
+  showPdfSidebar = false,
 }: {
   file: DemoFile;
   idPrefix: string;
+  className?: string;
   showFileHeader?: boolean;
+  showPdfSidebar?: boolean;
 }) {
   const source = React.useMemo(() => getFileSource(file), [file]);
   const fileViewerResourceProps = {
@@ -205,9 +225,57 @@ function FileCanvas({
       id={`${idPrefix}-${file.file}-panel`}
       role="tabpanel"
       aria-labelledby={`${idPrefix}-${file.file}-tab`}
-      className="bg-background h-[min(680px,calc(100svh-10rem))] min-h-[420px] w-full overflow-hidden rounded-xl border shadow-sm"
+      className={cn(
+        "bg-background h-[min(680px,calc(100svh-10rem))] min-h-[420px] w-full overflow-hidden rounded-xl border shadow-sm",
+        className,
+      )}
     >
-      {showFileHeader ? (
+      {showPdfSidebar && file.label === "PDF" ? (
+        <FileViewerProvider
+          key={file.file}
+          {...fileViewerResourceProps}
+          defaultSidebarOpen
+        >
+          <FileViewer
+            className={PDF_SHOWCASE_VIEWER_CLASS_NAME}
+            sidebarMode="inline"
+          >
+            <PdfViewerProvider>
+              <FileViewerHeader>
+                <FileViewerHeaderStart>
+                  <FileViewerSidebarTrigger />
+                  <FileViewerIdentity />
+                </FileViewerHeaderStart>
+                <FileViewerHeaderEnd>
+                  <FileViewerToolbar />
+                </FileViewerHeaderEnd>
+              </FileViewerHeader>
+              <FileViewerBody>
+                <FileViewerSidebar
+                  aria-label="PDF pages"
+                  width={PDF_SHOWCASE_SIDEBAR_WIDTH_STYLE}
+                  className="border-r bg-transparent"
+                >
+                  <PdfViewerThumbnails
+                    thumbnailWidth={72}
+                    className="[scrollbar-width:none] bg-transparent [&::-webkit-scrollbar]:hidden"
+                  />
+                </FileViewerSidebar>
+                <FileViewerSurface>
+                  <FileViewerViewport>
+                    <FileViewerDocumentFrame align="center">
+                      <PdfViewerPages
+                        bare
+                        className={PDF_SHOWCASE_PAGES_CLASS_NAME}
+                      />
+                    </FileViewerDocumentFrame>
+                  </FileViewerViewport>
+                </FileViewerSurface>
+              </FileViewerBody>
+            </PdfViewerProvider>
+          </FileViewer>
+        </FileViewerProvider>
+      ) : showFileHeader ? (
         <FileViewerProvider key={file.file} {...fileViewerResourceProps}>
           <FileViewer className="h-full">
             <FileViewerHeader>
@@ -265,13 +333,22 @@ export function FileViewerDemo() {
  * Schema Builder card. The header is given a fixed height shared with that card.
  */
 export function FileViewerShowcase({
+  canvasClassName,
+  initialFileLabel,
+  showPdfSidebar = false,
   showTitle = true,
 }: {
+  canvasClassName?: string;
+  initialFileLabel?: string;
+  showPdfSidebar?: boolean;
   showTitle?: boolean;
 }) {
   const idPrefix = React.useId();
-  const [active, setActive] = React.useState<DemoFileKey>(
-    SHOWCASE_INITIAL_FILE_KEY,
+  const [active, setActive] = React.useState<DemoFileKey>(() =>
+    initialFileLabel
+      ? (SHOWCASE_FILES.find((file) => file.label === initialFileLabel)?.file ??
+        SHOWCASE_INITIAL_FILE_KEY)
+      : SHOWCASE_INITIAL_FILE_KEY,
   );
   const activeFile = getActiveFile(SHOWCASE_FILES, active);
 
@@ -296,6 +373,8 @@ export function FileViewerShowcase({
       <FileCanvas
         file={activeFile}
         idPrefix={idPrefix}
+        className={canvasClassName}
+        showPdfSidebar={showPdfSidebar}
         showFileHeader={false}
       />
     </div>

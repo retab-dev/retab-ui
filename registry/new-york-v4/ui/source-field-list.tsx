@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type { SourceFieldLink } from "@/components/ui/source-field-link";
 
 import { InteractiveItemList } from "./interactive-item-list";
+import { SourceIndicator } from "./source-indicator";
 import {
   sourceFieldToEvidenceItem,
   type SourceEvidenceField,
@@ -51,12 +52,13 @@ export function SourceFieldList({
       className={cn("flex min-h-0 flex-1 flex-col", className)}
     >
       <div className="flex h-10 flex-shrink-0 items-center border-b px-4">
-        <h2 id={titleId} className="text-sm font-medium">
+        <h2 id={titleId} className="sr-only">
           {title}
         </h2>
-        <span className="text-muted-foreground ml-auto text-xs tabular-nums">
-          {fields.length} fields
-        </span>
+        <SourceIndicator
+          path={link.activeSourcePath}
+          className="min-h-0 flex-1 px-0 py-0"
+        />
       </div>
       <InteractiveItemList
         aria-label={title}

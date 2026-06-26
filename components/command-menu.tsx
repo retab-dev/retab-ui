@@ -280,7 +280,7 @@ export function CommandMenu({
 
     return (
       <CommandGroup
-        heading="Blocks"
+        heading="Examples"
         className="p-0! **:data-[slot=command-group-label]:p-3!"
       >
         {blocks.map((block) => (

@@ -300,19 +300,16 @@ function SourceLinkedViewer({
       <FileViewer className="bg-background" sidebarSide="right">
         <SourceLinkedFileHeader />
         <FileViewerBody>
-          <FileViewerSurface className="relative">
+          <FileViewerSurface>
             <FileViewerViewport>{children}</FileViewerViewport>
-            <SourceIndicator
-              path={link.activeSourcePath}
-              found={!!link.activeSegment}
-            />
           </FileViewerSurface>
           <FileViewerSidebar
             aria-label="Source-linked fields"
             side="right"
             width="420px"
-            className="flex flex-shrink-0 flex-col border-l"
+            className="bg-background flex flex-shrink-0 flex-col border-l"
           >
+            <SourcesFormHeader link={link} />
             <FileViewerSidebarContent>
               <SourcesForm extraction={extraction} link={link} />
             </FileViewerSidebarContent>
@@ -320,6 +317,20 @@ function SourceLinkedViewer({
         </FileViewerBody>
       </FileViewer>
     </FileViewerProvider>
+  );
+}
+
+function SourcesFormHeader({ link }: { link: SourceFieldLink }) {
+  return (
+    <FileViewerSidebarSectionHeader className="bg-background sticky top-0 z-20 flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">
+      <FileViewerSidebarSectionTitle className="sr-only">
+        Source fields
+      </FileViewerSidebarSectionTitle>
+      <SourceIndicator
+        path={link.activeSourcePath}
+        className="min-h-0 flex-1 px-0 py-0"
+      />
+    </FileViewerSidebarSectionHeader>
   );
 }
 
@@ -337,12 +348,10 @@ function SourcesForm({
   // `json-form` is source-aware: pass the link and every field becomes a
   // hoverable card that reports its path. No per-field wiring needed.
   return (
-    <FileViewerSidebarSection>
-      <FileViewerSidebarSectionHeader>
-        <FileViewerSidebarSectionTitle>
-          Source fields
-        </FileViewerSidebarSectionTitle>
-      </FileViewerSidebarSectionHeader>
+    <FileViewerSidebarSection className="p-4">
+      <FileViewerSidebarSectionTitle className="sr-only">
+        Source fields
+      </FileViewerSidebarSectionTitle>
       <FileViewerSidebarSectionContent>
         <JsonForm form={form} schema={extraction.schema} sourceLink={link} />
       </FileViewerSidebarSectionContent>

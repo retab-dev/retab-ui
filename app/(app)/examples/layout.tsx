@@ -5,7 +5,7 @@ import {
 } from "@/components/page-header";
 import { ViewerBlockTabs } from "@/components/viewer-blocks";
 
-export default function BlocksLayout({
+export default function ExamplesLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -14,7 +14,7 @@ export default function BlocksLayout({
     <div className="flex flex-1 flex-col">
       <PageHeader>
         <PageHeaderHeading className="max-w-4xl">
-          Viewer blocks
+          Examples
         </PageHeaderHeading>
         <PageHeaderDescription>
           Document viewers composed from shared file, source, sidebar, and

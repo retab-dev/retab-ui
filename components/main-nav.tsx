@@ -30,7 +30,7 @@ export function MainNav({
                 <Link
                   href={item.href}
                   data-active={
-                    item.href === "/blocks"
+                    item.href === "/examples"
                       ? pathname.startsWith(item.href)
                       : pathname === item.href
                   }

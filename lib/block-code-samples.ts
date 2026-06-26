@@ -24,7 +24,7 @@ export type LoadedBlockCodeFile = {
 const appRoot = process.cwd();
 
 // Load one block's source files from registry.json so the Code view stays in
-// sync with what `shadcn add` would install without bloating the /blocks page.
+// sync with what `shadcn add` would install without bloating the /examples page.
 export async function getLoadedBlockCodeFiles(
   blockId: string,
 ): Promise<LoadedBlockCodeFile[] | null> {

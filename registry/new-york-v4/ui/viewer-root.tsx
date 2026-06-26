@@ -84,6 +84,7 @@ export function ViewerRoot({
   inlineBreakpoint = VIEWER_SIDEBAR_INLINE_BREAKPOINT,
   sidebarSide = "left",
   sidebarCollapsible = "offcanvas",
+  sidebarGapTransition = "width",
   stateNamespace,
   ...props
 }: ViewerRootProps) {
@@ -357,6 +358,7 @@ export function ViewerRoot({
         registerSidebar,
         rootId,
         sidebarId,
+        sidebarGapTransition,
         sidebarSide: resolvedSidebarSide,
         setLastTriggerElement,
         stateNamespace,
@@ -370,6 +372,7 @@ export function ViewerRoot({
         registerSidebar,
         rootId,
         sidebarId,
+        sidebarGapTransition,
         sidebarSide,
         setLastTriggerElement,
         stateNamespace,

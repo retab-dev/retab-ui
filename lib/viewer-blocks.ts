@@ -1,4 +1,4 @@
-// Metadata for the document-viewer blocks showcased on /blocks. Each block id
+// Metadata for the document-viewer examples showcased on /examples. Each block id
 // maps to a self-contained component (see components/viewer-block-component-registry.tsx)
 // and to a registry item named `<id>-viewer-block` (see registry.json), whose
 // source files feed the Code view.
@@ -99,7 +99,7 @@ export const VIEWER_BLOCKS = [
     description:
       "Every source-backed format in one viewer — PDF, image, text, CSV, Excel, and Word — each shown as a JSON form beside its source document. Tabs switch the file format; segmented source interaction drives hover, selection, and source navigation.",
     command: getRegistryAddCommand("sources-viewer-block"),
-    docsHref: "/blocks/sources-viewer",
+    docsHref: "/examples/sources-viewer",
     viewHref: "/view/blocks/sources-viewer",
     featured: true,
     previewHeightClassName: "h-[724px]",
@@ -112,7 +112,7 @@ export const VIEWER_BLOCKS = [
     description:
       "Extracted fields beside the source PDF, linked by their sources — hover or select a field to highlight where its value came from and scroll the page to it. Built on the document-source model and the PDF viewer's scrollToPageArea handle.",
     command: getRegistryAddCommand("extract-viewer-block"),
-    docsHref: "/blocks/sources-viewer",
+    docsHref: "/examples/sources-viewer",
     viewHref: "/view/blocks/extract",
     categories: [],
     isStandaloneTab: false,
@@ -124,7 +124,7 @@ export const VIEWER_BLOCKS = [
     description:
       "Extracted fields linked to a scanned page image — hover a field to highlight its image_bbox region. The source-link abstraction over the image viewer.",
     command: getRegistryAddCommand("image-sources-block"),
-    docsHref: "/blocks/sources-viewer",
+    docsHref: "/examples/sources-viewer",
     viewHref: "/view/blocks/image-sources",
     categories: [],
     isStandaloneTab: false,
@@ -136,7 +136,7 @@ export const VIEWER_BLOCKS = [
     description:
       "Values extracted from a log file linked to the lines they came from — hover a field to highlight its line range. The source-link abstraction over a line-based text viewer.",
     command: getRegistryAddCommand("text-sources-block"),
-    docsHref: "/blocks/sources-viewer",
+    docsHref: "/examples/sources-viewer",
     viewHref: "/view/blocks/text-sources",
     categories: [],
     isStandaloneTab: false,
@@ -148,7 +148,7 @@ export const VIEWER_BLOCKS = [
     description:
       "Extracted values linked to spreadsheet cells — hover a field to highlight its cell and scroll to it. The source-link abstraction over the CSV viewer's cell handle.",
     command: getRegistryAddCommand("csv-sources-block"),
-    docsHref: "/blocks/sources-viewer",
+    docsHref: "/examples/sources-viewer",
     viewHref: "/view/blocks/csv-sources",
     categories: [],
     isStandaloneTab: false,
@@ -160,7 +160,7 @@ export const VIEWER_BLOCKS = [
     description:
       "Extracted values linked to spreadsheet cells across sheets — hover a field to switch to its sheet, highlight the cell, and scroll to it. The source-link abstraction over the xlsx viewer.",
     command: getRegistryAddCommand("xlsx-sources-block"),
-    docsHref: "/blocks/sources-viewer",
+    docsHref: "/examples/sources-viewer",
     viewHref: "/view/blocks/xlsx-sources",
     categories: [],
     isStandaloneTab: false,
@@ -172,7 +172,7 @@ export const VIEWER_BLOCKS = [
     description:
       "Extracted values linked back into a Word document — hover a field to highlight its text and scroll to it. The source-link abstraction over the docx viewer, locating text spans by content match and table cells by index.",
     command: getRegistryAddCommand("docx-sources-block"),
-    docsHref: "/blocks/sources-viewer",
+    docsHref: "/examples/sources-viewer",
     viewHref: "/view/blocks/docx-sources",
     categories: [],
     isStandaloneTab: false,
@@ -184,7 +184,7 @@ export const VIEWER_BLOCKS = [
     description:
       "Extraction rendered as a JSON form beside the source PDF — hover a form field to highlight where its value came from through segmented-document state.",
     command: getRegistryAddCommand("json-form-sources-block"),
-    docsHref: "/blocks/sources-viewer",
+    docsHref: "/examples/sources-viewer",
     viewHref: "/view/blocks/json-form-sources",
     previewHeightClassName: "h-[680px]",
     categories: ["primitives"],
@@ -309,6 +309,19 @@ export const VIEWER_BLOCKS = [
     isStandaloneTab: false,
   },
   {
+    id: "dropzone-upload-progress-queue",
+    registryName: "dropzone-upload-progress-queue",
+    title: "Upload Progress Queue",
+    description:
+      "A dropzone-backed upload queue with per-file loading bars keyed by the admitted file ids.",
+    command: getRegistryAddCommand("dropzone-upload-progress-queue"),
+    docsHref: "/docs/components/dropzone",
+    viewHref: "/view/blocks/dropzone-upload-progress-queue",
+    previewHeightClassName: "h-[360px]",
+    categories: ["dropzone"],
+    isStandaloneTab: false,
+  },
+  {
     id: "dropzone-avatar-image-slot",
     registryName: "dropzone-avatar-image-slot",
     title: "Avatar Image Slot",
@@ -428,7 +441,7 @@ export const VIEWER_BLOCKS = [
     description:
       "A purified composition experiment: Pierre's file tree in a ViewerSidebar, with the selected source rendered by FileViewer in the ViewerSurface.",
     command: getRegistryAddCommand("fslight-block"),
-    docsHref: "/blocks/file-system",
+    docsHref: "/examples/file-system",
     viewHref: "/view/blocks/fslight",
     previewHeightClassName: "h-[680px]",
     categories: ["file-system"],
@@ -491,10 +504,10 @@ export function getViewerBlockHrefForRegistryName(registryName: string) {
   const block = VIEWER_BLOCKS.find(
     (item) => item.registryName === registryName,
   );
-  if (!block) return "/blocks";
+  if (!block) return "/examples";
   const metadata: ViewerBlockConfig = block;
   if (metadata.isStandaloneTab === false) {
     return metadata.docsHref;
   }
-  return `/blocks/${block.id}`;
+  return `/examples/${block.id}`;
 }

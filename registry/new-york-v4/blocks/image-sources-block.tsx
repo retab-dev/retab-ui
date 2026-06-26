@@ -25,7 +25,6 @@ import {
   SourceFieldList,
   type SourceField,
 } from "@/components/ui/source-field-list";
-import { SourceIndicator } from "@/components/ui/source-indicator";
 import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model";
 import {
   useSegmentedImageSourceOverlay,
@@ -92,7 +91,7 @@ function ImageSourcesContent() {
           </FileViewerHeaderEnd>
         </FileViewerHeader>
         <FileViewerBody>
-          <FileViewerSurface className="relative">
+          <FileViewerSurface>
             <FileViewerViewport>
               <ImageViewer
                 ref={setImageViewerHandle}
@@ -106,10 +105,6 @@ function ImageSourcesContent() {
                 renderFrameOverlay={renderFrameOverlay}
               />
             </FileViewerViewport>
-            <SourceIndicator
-              path={link.activeSourcePath}
-              found={!!link.activeAnchor}
-            />
           </FileViewerSurface>
           <FileViewerSidebar
             aria-label="Source fields"

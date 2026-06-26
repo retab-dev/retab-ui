@@ -6,6 +6,7 @@ import {
   EvidenceTimeline,
   MediaTranscriptQueue,
   SpreadsheetImportCard,
+  UploadProgressQueue,
 } from "./dropzone-file-examples";
 import { DefaultFileUploaderExample } from "./dropzone-file-uploader-example";
 import { DropzoneFileViewerExample } from "./dropzone-file-viewer-example";
@@ -34,6 +35,7 @@ export function DropzoneShowcase() {
       <CustomThumbnailGrid className="col-span-12 xl:col-span-8" />
       <DropzoneFileViewerExample className="col-span-12 xl:col-span-8" />
       <MediaTranscriptQueue className="col-span-12 md:col-span-6 xl:col-span-4" />
+      <UploadProgressQueue className="col-span-12 xl:col-span-8" />
       <AvatarImageSlot className="col-span-12 md:col-span-6 xl:col-span-4" />
       <SpreadsheetImportCard className="col-span-12 md:col-span-6 xl:col-span-4" />
       <EvidenceTimeline className="col-span-12 xl:col-span-8" />

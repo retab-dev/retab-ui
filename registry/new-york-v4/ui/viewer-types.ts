@@ -2,9 +2,11 @@ import type * as React from "react";
 
 export type ViewerSidebarMode = "inline" | "overlay";
 export type ViewerSidebarRequestedMode = "auto" | ViewerSidebarMode;
+export type ViewerSidebarGapTransition = "width" | "none";
 export type ViewerSidebarState = "expanded" | "collapsed";
 export type ViewerSidebarSide = "left" | "right";
 export type ViewerSidebarCollapsible = "offcanvas" | "none";
+export type ViewerDocumentFrameAlign = "start" | "center" | "end";
 
 export type ViewerSidebarStateValue = {
   state: ViewerSidebarState;
@@ -23,6 +25,7 @@ export type ViewerRootProps = React.ComponentProps<"div"> & {
   onOpenChange?: (open: boolean) => void;
   open?: boolean;
   sidebarCollapsible?: ViewerSidebarCollapsible;
+  sidebarGapTransition?: ViewerSidebarGapTransition;
   sidebarSide?: ViewerSidebarSide;
   stateNamespace?: ViewerStateAttributeNamespace;
 };
@@ -32,6 +35,10 @@ export type ViewerHeaderProps = React.ComponentProps<"div">;
 export type ViewerBodyProps = React.ComponentProps<"div">;
 export type ViewerSurfaceProps = React.ComponentProps<"div">;
 export type ViewerViewportProps = React.ComponentProps<"div">;
+export type ViewerDocumentFrameProps = React.ComponentProps<"div"> & {
+  align?: ViewerDocumentFrameAlign;
+  maxInlineSize?: React.CSSProperties["maxInlineSize"];
+};
 
 export type ViewerStateAttributeNamespace = {
   prefix: string;
@@ -64,6 +71,7 @@ export type ViewerSidebarRegistrationState = {
   registerSidebar: (registration: ViewerSidebarRegistration) => () => void;
   rootId: string;
   sidebarId: string;
+  sidebarGapTransition: ViewerSidebarGapTransition;
   sidebarSide: ViewerSidebarSide;
   setLastTriggerElement: (element: HTMLElement | null) => void;
   stateNamespace?: ViewerStateAttributeNamespace;

@@ -39,11 +39,11 @@ import {
 } from "@/components/schema-editor/top-level-editor-controller";
 
 const LazyImportExportMenuItems = React.lazy(() =>
-  import(
-    "@/components/schema-editor/optional/import-export/import-export-menu-items"
-  ).then((module) => ({
-    default: module.ImportExportMenuItems,
-  })),
+  import("@/components/schema-editor/optional/import-export/import-export-menu-items").then(
+    (module) => ({
+      default: module.ImportExportMenuItems,
+    }),
+  ),
 );
 
 export function TopLevelEditor({
@@ -134,7 +134,7 @@ export function TopLevelEditor({
       <div className="pb-2">
         <div className="flex items-start justify-between">
           <Textarea
-            className="text-muted-foreground m-0 max-h-64 min-h-6 resize-none rounded-none border-none p-0 text-sm font-normal shadow-none outline-none focus-visible:ring-0 md:text-sm"
+            className="text-muted-foreground placeholder:text-muted-foreground/70 m-0 max-h-64 min-h-6 resize-none rounded-none border-none bg-transparent p-0 text-sm font-normal shadow-none outline-none focus-visible:ring-0 md:text-sm dark:bg-transparent"
             value={controller.currentDescription}
             placeholder="Add a description to your schema"
             onChange={(event) => {

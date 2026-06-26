@@ -50,10 +50,12 @@ import {
   ViewerControls,
   type ViewerControlsState,
 } from "./viewer-controls";
+import { useOptionalViewerDocumentFrame } from "./viewer-surface";
 import { ViewerErrorBoundary } from "./viewer-error";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import { joinEffectKey } from "@/lib/effect-key";
+import type { ViewerDocumentFrameAlign } from "./viewer-types";
 
 export type PdfViewerContentProps = {
   className?: string;
@@ -153,19 +155,22 @@ function PdfViewerInner({
 }) {
   const content = resource.content;
   const document = readPdfDocumentResource(content);
+  const documentFrame = useOptionalViewerDocumentFrame();
   usePdfDocumentResourceLifecycle(content, document);
 
   const firstPageSize = usePdfFirstPageSize(document);
   const { ref: containerRef, width: containerWidth } =
     useMeasuredElementWidth();
+  const fitWidthContainerWidth = documentFrame?.inlineSize ?? containerWidth;
   const { rotation, rotateClockwise } = usePdfDocumentRotation(document);
   const fitPageWidth =
     rotation % 180 === 0 ? firstPageSize.width : firstPageSize.height;
-  const { resolvedScale, zoomIn, zoomOut, fitWidth } = usePdfScale({
+  const { resolvedScale, isFitWidth, zoomIn, zoomOut, fitWidth } = usePdfScale({
     controlledScale,
     defaultScale,
     onScaleChange,
-    containerWidth,
+    containerWidth: fitWidthContainerWidth,
+    fitWidthInlinePadding: documentFrame ? 0 : undefined,
     pageWidth: fitPageWidth,
     resetKey: document,
   });
@@ -365,6 +370,8 @@ function PdfViewerInner({
                 containerRef={containerRef}
                 document={document}
                 documentKey={content.key}
+                documentFrameAlign={documentFrame?.align ?? null}
+                isFitWidth={isFitWidth}
                 layout={pageLayout}
                 physicalScrollHeight={getPdfPhysicalScrollHeight({
                   totalHeight: pageLayout.totalHeight,
@@ -509,6 +516,8 @@ type PdfDocumentPagesLayerProps = {
   containerRef: React.RefCallback<HTMLDivElement>;
   document: PdfDocument;
   documentKey: string;
+  documentFrameAlign: ViewerDocumentFrameAlign | null;
+  isFitWidth: boolean;
   layout: PdfPageLayoutModel;
   physicalScrollHeight: number;
   activeRenderPageNumbers: readonly number[];
@@ -529,6 +538,8 @@ function PdfDocumentPagesLayer({
   containerRef,
   document,
   documentKey,
+  documentFrameAlign,
+  isFitWidth,
   layout,
   physicalScrollHeight,
   activeRenderPageNumbers,
@@ -569,99 +580,195 @@ function PdfDocumentPagesLayer({
       viewportHeight,
     ],
   );
+  const isInsideDocumentFrame = documentFrameAlign !== null;
+  const shouldScaleToDocumentFrame = isInsideDocumentFrame && isFitWidth;
+  const layoutWidth = Math.max(1, layout.maxPageWidth);
+  const layoutHeight = Math.max(1, physicalScrollHeight);
+  const documentFrameStyle = shouldScaleToDocumentFrame
+    ? ({
+        "--pdf-viewer-layout-height": `${layoutHeight}px`,
+        "--pdf-viewer-layout-width": `${layoutWidth}px`,
+        "--pdf-viewer-visual-scale":
+          "calc(100cqw / var(--pdf-viewer-layout-width))",
+      } as React.CSSProperties)
+    : undefined;
+  const visualFrameStyle = shouldScaleToDocumentFrame
+    ? ({
+        height:
+          "calc(var(--pdf-viewer-layout-height) * var(--pdf-viewer-visual-scale))",
+      } as React.CSSProperties)
+    : undefined;
+  const documentStyle = shouldScaleToDocumentFrame
+    ? ({
+        ...getPdfFramedDocumentPositionStyle(documentFrameAlign),
+        contain: "layout style",
+        height: physicalScrollHeight,
+        minWidth: "var(--pdf-viewer-layout-width)",
+        transform: "scale(var(--pdf-viewer-visual-scale))",
+        width: "var(--pdf-viewer-layout-width)",
+        willChange: "transform",
+      } as React.CSSProperties)
+    : ({
+        contain: "layout style",
+        height: physicalScrollHeight,
+        minWidth: layout.maxPageWidth,
+        width: layout.maxPageWidth,
+      } as React.CSSProperties);
+
+  const documentContent = (
+    <div
+      data-slot="pdf-viewer-document"
+      className={cn(
+        "relative",
+        !shouldScaleToDocumentFrame &&
+          getPdfDocumentFrameAlignClass(documentFrameAlign),
+      )}
+      style={documentStyle}
+    >
+      {renderedWindow ? (
+        <>
+          <div
+            aria-hidden
+            data-slot="pdf-page-window-before"
+            style={{
+              contain: "layout size",
+              height: renderedWindow.beforeHeight,
+            }}
+          />
+          <div
+            data-slot="pdf-page-sticky-window"
+            className="sticky"
+            style={{
+              bottom: renderedWindow.stickyInset,
+              contain: "layout style inline-size",
+              height: renderedWindow.height,
+              isolation: "isolate",
+              top: renderedWindow.stickyInset,
+            }}
+          >
+            <div
+              data-slot="pdf-page-window"
+              className="relative"
+              style={{
+                contain: "layout style",
+                height: renderedWindow.height,
+              }}
+            >
+              {renderedWindow.pages.map((page) => (
+                <div
+                  key={page.pageNumber}
+                  className="absolute left-1/2 flex -translate-x-1/2 items-center justify-center"
+                  data-slot="pdf-page-slot"
+                  data-page-number={page.pageNumber}
+                  data-visible={
+                    visiblePageNumberSet.has(page.pageNumber) ? "" : undefined
+                  }
+                  style={{
+                    top: page.windowTop,
+                    width: page.width,
+                    minHeight: page.height,
+                  }}
+                >
+                  {activeRenderPageNumberSet.has(page.pageNumber) ? (
+                    <React.Suspense fallback={<PageSkeleton />}>
+                      <PdfPage
+                        document={document}
+                        documentKey={documentKey}
+                        pageNumber={page.pageNumber}
+                        scale={scale}
+                        rotation={rotation}
+                        devicePixelRatio={devicePixelRatio}
+                        renderCache={renderCache}
+                        renderOverlay={renderPageOverlay}
+                        onRenderTiming={onPageRenderTiming}
+                        onSize={setPageSize}
+                      />
+                    </React.Suspense>
+                  ) : (
+                    <PageSkeleton />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div
+            aria-hidden
+            data-slot="pdf-page-window-after"
+            style={{
+              contain: "layout size",
+              height: renderedWindow.afterHeight,
+            }}
+          />
+        </>
+      ) : null}
+    </div>
+  );
 
   return (
     <div
       ref={containerRef}
       data-slot="pdf-viewer-fit-width-measure"
-      className="relative min-w-0"
+      className={cn(
+        "relative min-w-0",
+        isInsideDocumentFrame && "h-full w-full",
+        shouldScaleToDocumentFrame && "[container-type:inline-size]",
+      )}
+      style={documentFrameStyle}
     >
-      <div
-        data-slot="pdf-viewer-document"
-        className="relative mx-auto"
-        style={{
-          contain: "layout style",
-          height: physicalScrollHeight,
-          minWidth: layout.maxPageWidth,
-        }}
-      >
-        {renderedWindow ? (
-          <>
-            <div
-              aria-hidden
-              data-slot="pdf-page-window-before"
-              style={{
-                contain: "layout size",
-                height: renderedWindow.beforeHeight,
-              }}
-            />
-            <div
-              data-slot="pdf-page-sticky-window"
-              className="sticky"
-              style={{
-                bottom: renderedWindow.stickyInset,
-                contain: "layout style inline-size",
-                height: renderedWindow.height,
-                isolation: "isolate",
-                top: renderedWindow.stickyInset,
-              }}
-            >
-              <div
-                data-slot="pdf-page-window"
-                className="relative"
-                style={{
-                  contain: "layout style",
-                  height: renderedWindow.height,
-                }}
-              >
-                {renderedWindow.pages.map((page) => (
-                  <div
-                    key={page.pageNumber}
-                    className="absolute left-1/2 flex -translate-x-1/2 items-center justify-center"
-                    data-slot="pdf-page-slot"
-                    data-page-number={page.pageNumber}
-                    data-visible={
-                      visiblePageNumberSet.has(page.pageNumber) ? "" : undefined
-                    }
-                    style={{
-                      top: page.windowTop,
-                      width: page.width,
-                      minHeight: page.height,
-                    }}
-                  >
-                    {activeRenderPageNumberSet.has(page.pageNumber) ? (
-                      <React.Suspense fallback={<PageSkeleton />}>
-                        <PdfPage
-                          document={document}
-                          documentKey={documentKey}
-                          pageNumber={page.pageNumber}
-                          scale={scale}
-                          rotation={rotation}
-                          devicePixelRatio={devicePixelRatio}
-                          renderCache={renderCache}
-                          renderOverlay={renderPageOverlay}
-                          onRenderTiming={onPageRenderTiming}
-                          onSize={setPageSize}
-                        />
-                      </React.Suspense>
-                    ) : (
-                      <PageSkeleton />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div
-              aria-hidden
-              data-slot="pdf-page-window-after"
-              style={{
-                contain: "layout size",
-                height: renderedWindow.afterHeight,
-              }}
-            />
-          </>
-        ) : null}
-      </div>
+      {shouldScaleToDocumentFrame ? (
+        <div
+          data-slot="pdf-viewer-document-visual-frame"
+          className="relative w-full"
+          style={visualFrameStyle}
+        >
+          {documentContent}
+        </div>
+      ) : (
+        documentContent
+      )}
     </div>
   );
+}
+
+function getPdfDocumentFrameAlignClass(align: ViewerDocumentFrameAlign | null) {
+  switch (align) {
+    case "center":
+    case null:
+      return "mx-auto";
+    case "end":
+      return "ml-auto";
+    case "start":
+      return "mr-auto";
+  }
+}
+
+function getPdfFramedDocumentPositionStyle(
+  align: ViewerDocumentFrameAlign | null,
+): React.CSSProperties {
+  const baseStyle = {
+    position: "absolute",
+    top: 0,
+  } satisfies React.CSSProperties;
+
+  switch (align) {
+    case "center":
+      return {
+        ...baseStyle,
+        left: "calc((100% - var(--pdf-viewer-layout-width)) / 2)",
+        transformOrigin: "top center",
+      };
+    case "end":
+      return {
+        ...baseStyle,
+        right: 0,
+        transformOrigin: "top right",
+      };
+    case "start":
+    case null:
+      return {
+        ...baseStyle,
+        left: 0,
+        transformOrigin: "top left",
+      };
+  }
 }

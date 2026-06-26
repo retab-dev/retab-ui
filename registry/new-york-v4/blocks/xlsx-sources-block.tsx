@@ -23,7 +23,6 @@ import {
   SourceFieldList,
   type SourceField,
 } from "@/components/ui/source-field-list";
-import { SourceIndicator } from "@/components/ui/source-indicator";
 import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model";
 import {
   sourceToXlsxCell,
@@ -107,7 +106,7 @@ function XlsxSourcesContent({
           </FileViewerHeaderEnd>
         </FileViewerHeader>
         <FileViewerBody>
-          <FileViewerSurface className="relative">
+          <FileViewerSurface>
             <FileViewerViewport>
               <XlsxViewer
                 ref={viewerRef}
@@ -118,10 +117,6 @@ function XlsxSourcesContent({
                 activeCell={activeCell}
               />
             </FileViewerViewport>
-            <SourceIndicator
-              path={link.activeSourcePath}
-              found={!!activeSource}
-            />
           </FileViewerSurface>
           <FileViewerSidebar
             aria-label="Source fields"

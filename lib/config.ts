@@ -15,12 +15,16 @@ export const siteConfig = {
       label: "Docs",
     },
     {
+      href: "/files",
+      label: "FileViewer",
+    },
+    {
       href: "/docs/components",
       label: "Components",
     },
     {
-      href: "/blocks",
-      label: "Blocks",
+      href: "/examples",
+      label: "Examples",
     },
   ],
 };

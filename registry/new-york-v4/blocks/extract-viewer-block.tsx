@@ -123,7 +123,7 @@ function ExtractViewerContent() {
           </FileViewerHeaderEnd>
         </FileViewerHeader>
         <FileViewerBody>
-          <FileViewerSurface className="relative">
+          <FileViewerSurface>
             <FileViewerViewport>
               <PdfViewerProvider>
                 <PdfViewerPages
@@ -138,10 +138,6 @@ function ExtractViewerContent() {
                 />
               </PdfViewerProvider>
             </FileViewerViewport>
-            <SourceIndicator
-              path={link.activeSourcePath}
-              found={!!link.activeAnchor}
-            />
           </FileViewerSurface>
           <FileViewerSidebar
             aria-label="Extracted fields"
@@ -152,9 +148,13 @@ function ExtractViewerContent() {
             <FileViewerSidebarContent>
               <FileViewerSidebarSection>
                 <FileViewerSidebarSectionHeader>
-                  <FileViewerSidebarSectionTitle>
+                  <FileViewerSidebarSectionTitle className="sr-only">
                     Source fields
                   </FileViewerSidebarSectionTitle>
+                  <SourceIndicator
+                    path={link.activeSourcePath}
+                    className="min-h-0 flex-1 px-0 py-0"
+                  />
                 </FileViewerSidebarSectionHeader>
                 <FileViewerSidebarSectionContent>
                   <JsonForm form={form} schema={schema} sourceLink={link} />

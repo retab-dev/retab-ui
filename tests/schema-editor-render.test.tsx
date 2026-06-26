@@ -126,6 +126,20 @@ describe("SchemaBuilder renders (integration smoke)", () => {
     expect(typeTrigger?.parentElement?.className).toContain("pr-1");
   });
 
+  it("keeps the root description visually quiet in dark mode", () => {
+    renderEditor(sample);
+
+    const descriptionInput = screen.getByPlaceholderText(
+      "Add a description to your schema",
+    );
+
+    expect(descriptionInput.className).toContain("dark:bg-transparent");
+    expect(descriptionInput.className).not.toContain("dark:bg-input/30");
+    expect(descriptionInput.className).toContain(
+      "placeholder:text-muted-foreground/70",
+    );
+  });
+
   it("renders nested objects and $defs without crashing", () => {
     renderEditor({
       type: "object",

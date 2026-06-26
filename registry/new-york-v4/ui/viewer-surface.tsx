@@ -17,10 +17,80 @@ import { useOptionalViewerRootDiagnostics } from "./viewer-root";
 import { warnViewerDevelopmentOnce } from "./viewer-diagnostics";
 import { useStableElementSize } from "./viewer-measurement";
 import type {
+  ViewerDocumentFrameAlign,
+  ViewerDocumentFrameProps,
   ViewerSurfaceMeasurement,
   ViewerSurfaceProps,
   ViewerViewportProps,
 } from "./viewer-types";
+
+export type ViewerDocumentFrameState = {
+  align: ViewerDocumentFrameAlign;
+  element: HTMLDivElement | null;
+  inlineSize: number | null;
+};
+
+const ViewerDocumentFrameContext =
+  React.createContext<ViewerDocumentFrameState | null>(null);
+
+function getDocumentFrameAlignClass(align: ViewerDocumentFrameAlign) {
+  switch (align) {
+    case "center":
+      return "mx-auto";
+    case "end":
+      return "ml-auto";
+    case "start":
+      return "mr-auto";
+  }
+}
+
+export function useOptionalViewerDocumentFrame(): ViewerDocumentFrameState | null {
+  return React.useContext(ViewerDocumentFrameContext);
+}
+
+export function ViewerDocumentFrame({
+  align = "start",
+  children,
+  className,
+  maxInlineSize,
+  style,
+  ...props
+}: ViewerDocumentFrameProps) {
+  const size = useStableElementSize<HTMLDivElement>({
+    retainLastNonZero: true,
+  });
+  const value = React.useMemo<ViewerDocumentFrameState>(
+    () => ({
+      align,
+      element: size.element,
+      inlineSize: size.width,
+    }),
+    [align, size.element, size.width],
+  );
+
+  return (
+    <ViewerDocumentFrameContext.Provider value={value}>
+      <div
+        ref={size.setElement}
+        data-slot="viewer-document-frame"
+        className={cn(
+          "[container-type:inline-size] relative flex h-full min-h-0 w-full min-w-0 flex-1 flex-col",
+          getDocumentFrameAlignClass(align),
+          className,
+        )}
+        style={
+          {
+            maxInlineSize,
+            ...style,
+          } as React.CSSProperties
+        }
+        {...props}
+      >
+        {children}
+      </div>
+    </ViewerDocumentFrameContext.Provider>
+  );
+}
 
 function useViewerSurfaceMeasurementValue(): ViewerSurfaceMeasurement {
   const size = useStableElementSize<HTMLDivElement>({

@@ -31,7 +31,6 @@ import {
   SourceFieldList,
   type SourceField,
 } from "@/components/ui/source-field-list";
-import { SourceIndicator } from "@/components/ui/source-indicator";
 import { createSourcesSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model";
 import csvSample from "@/components/viewers/sample-data/csv-sources.json";
 
@@ -116,7 +115,7 @@ function CsvSourcesContent({
           </FileViewerHeaderEnd>
         </FileViewerHeader>
         <FileViewerBody>
-          <FileViewerSurface className="relative">
+          <FileViewerSurface>
             <FileViewerViewport>
               <CsvViewerDocument
                 ref={viewerRef}
@@ -127,11 +126,6 @@ function CsvSourcesContent({
                 activeCell={activeCell}
               />
             </FileViewerViewport>
-            <SourceIndicator
-              path={link.activeSourcePath}
-              found={!!activeSource}
-              className="top-2"
-            />
           </FileViewerSurface>
           <FileViewerSidebar
             aria-label="Source fields"
