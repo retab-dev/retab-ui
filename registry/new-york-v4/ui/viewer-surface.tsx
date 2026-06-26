@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 import { cn } from "@/lib/utils";
 
 import {
@@ -40,6 +42,15 @@ export type ViewerDocumentFrameLayoutTransition = {
   subscribe: (listener: () => void) => () => void;
 };
 
+export type ViewerDocumentFrameLayout = {
+  activeInlineSize: number | null;
+  isTransitioning: boolean;
+  maxInlineSize: number | null;
+  progress: number;
+  settledInlineSize: number | null;
+  targetInlineSize: number | null;
+};
+
 export type ViewerDocumentFrameState = {
   align: ViewerDocumentFrameAlign;
   element: HTMLDivElement | null;
@@ -63,6 +74,74 @@ function getDocumentFrameAlignClass(align: ViewerDocumentFrameAlign) {
 
 export function useOptionalViewerDocumentFrame(): ViewerDocumentFrameState | null {
   return React.useContext(ViewerDocumentFrameContext);
+}
+
+export function useViewerDocumentFrameLayout({
+  documentFrame,
+  fallbackInlineSize,
+}: {
+  documentFrame: ViewerDocumentFrameState | null;
+  fallbackInlineSize: number | null;
+}): ViewerDocumentFrameLayout {
+  const layoutTransition = documentFrame?.layoutTransition ?? null;
+  const snapshotCacheRef = React.useRef<ViewerDocumentFrameLayout | null>(null);
+  const subscribe = React.useCallback(
+    (listener: () => void) =>
+      layoutTransition ? layoutTransition.subscribe(listener) : () => {},
+    [layoutTransition],
+  );
+  const getSnapshot = React.useCallback(() => {
+    const sample = layoutTransition?.getSnapshot();
+    const nextLayout = sample
+      ? createViewerDocumentFrameLayoutFromSample(sample)
+      : createViewerDocumentFrameFallbackLayout(fallbackInlineSize);
+    const previousLayout = snapshotCacheRef.current;
+
+    if (
+      previousLayout &&
+      areViewerDocumentFrameLayoutsEqual(previousLayout, nextLayout)
+    ) {
+      return previousLayout;
+    }
+
+    snapshotCacheRef.current = nextLayout;
+    return nextLayout;
+  }, [fallbackInlineSize, layoutTransition]);
+  const activeLayout = React.useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getSnapshot,
+  );
+  const [settledInlineSize, setSettledInlineSize] = React.useState<
+    number | null
+  >(() => activeLayout.activeInlineSize);
+
+  useKeyedLayoutEffect(
+    joinEffectKey([
+      "viewer-document-frame-layout:settled-inline-size",
+      activeLayout.activeInlineSize,
+      activeLayout.isTransitioning,
+      layoutTransition,
+    ]),
+    () => {
+      if (activeLayout.isTransitioning) return;
+
+      setSettledInlineSize((currentInlineSize) =>
+        currentInlineSize === activeLayout.activeInlineSize
+          ? currentInlineSize
+          : activeLayout.activeInlineSize,
+      );
+    },
+  );
+
+  return React.useMemo(
+    () => ({
+      ...activeLayout,
+      settledInlineSize:
+        settledInlineSize ?? activeLayout.activeInlineSize ?? null,
+    }),
+    [activeLayout, settledInlineSize],
+  );
 }
 
 export function ViewerDocumentFrame({
@@ -112,6 +191,52 @@ export function ViewerDocumentFrame({
         {children}
       </div>
     </ViewerDocumentFrameContext.Provider>
+  );
+}
+
+function createViewerDocumentFrameLayoutFromSample(
+  sample: ViewerDocumentFrameLayoutTransitionSample,
+): ViewerDocumentFrameLayout {
+  return {
+    activeInlineSize: sample.inlineSize,
+    isTransitioning: sample.isTransitioning,
+    maxInlineSize: sample.maxInlineSize,
+    progress: sample.progress,
+    settledInlineSize: null,
+    targetInlineSize: sample.targetInlineSize,
+  };
+}
+
+function createViewerDocumentFrameFallbackLayout(
+  fallbackInlineSize: number | null,
+): ViewerDocumentFrameLayout {
+  const inlineSize =
+    fallbackInlineSize != null &&
+    Number.isFinite(fallbackInlineSize) &&
+    fallbackInlineSize > 0
+      ? fallbackInlineSize
+      : null;
+
+  return {
+    activeInlineSize: inlineSize,
+    isTransitioning: false,
+    maxInlineSize: inlineSize,
+    progress: inlineSize == null ? 0 : 1,
+    settledInlineSize: inlineSize,
+    targetInlineSize: inlineSize,
+  };
+}
+
+function areViewerDocumentFrameLayoutsEqual(
+  previousLayout: ViewerDocumentFrameLayout,
+  nextLayout: ViewerDocumentFrameLayout,
+) {
+  return (
+    previousLayout.activeInlineSize === nextLayout.activeInlineSize &&
+    previousLayout.isTransitioning === nextLayout.isTransitioning &&
+    previousLayout.maxInlineSize === nextLayout.maxInlineSize &&
+    previousLayout.progress === nextLayout.progress &&
+    previousLayout.targetInlineSize === nextLayout.targetInlineSize
   );
 }
 
