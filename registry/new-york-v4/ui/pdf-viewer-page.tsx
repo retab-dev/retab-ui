@@ -27,6 +27,7 @@ type PdfPageProps = {
   documentKey: string;
   pageNumber: number;
   scale: number;
+  renderScale?: number;
   rotation: number;
   devicePixelRatio: number;
   renderCache?: PdfRenderedPageCache;
@@ -40,6 +41,7 @@ export const PdfPage = React.memo(function PdfPage({
   documentKey,
   pageNumber,
   scale,
+  renderScale,
   rotation,
   devicePixelRatio,
   renderCache,
@@ -68,13 +70,22 @@ export const PdfPage = React.memo(function PdfPage({
     },
   );
 
-  const viewport = React.useMemo(
+  const displayViewport = React.useMemo(
     () =>
       page.getViewport({
         scale,
         rotation: ((page.rotate ?? 0) + rotation) % 360,
       }),
     [page, rotation, scale],
+  );
+  const resolvedRenderScale = renderScale ?? scale;
+  const renderViewport = React.useMemo(
+    () =>
+      page.getViewport({
+        scale: resolvedRenderScale,
+        rotation: ((page.rotate ?? 0) + rotation) % 360,
+      }),
+    [page, resolvedRenderScale, rotation],
   );
   const [renderError, setRenderError] = React.useState<unknown>(null);
   if (renderError) throw renderError;
@@ -87,15 +98,15 @@ export const PdfPage = React.memo(function PdfPage({
       const renderSignature = {
         documentKey,
         pageNumber,
-        scale,
+        scale: resolvedRenderScale,
         rotation,
         devicePixelRatio,
-        viewportWidth: viewport.width,
-        viewportHeight: viewport.height,
+        viewportWidth: renderViewport.width,
+        viewportHeight: renderViewport.height,
       } satisfies PdfRenderedPage;
       if (
         renderedPageRef.current &&
-        areRenderedPagesEqual(renderedPageRef.current, renderSignature)
+        doesRenderedPageSatisfyRequest(renderedPageRef.current, renderSignature)
       ) {
         return;
       }
@@ -107,7 +118,7 @@ export const PdfPage = React.memo(function PdfPage({
       ) => {
         onRenderTiming?.({
           pageNumber,
-          scale,
+          scale: resolvedRenderScale,
           rotation,
           devicePixelRatio,
           status,
@@ -134,28 +145,36 @@ export const PdfPage = React.memo(function PdfPage({
         devicePixelRatio,
       );
       const cachedPage = readPdfRenderedPageCache(renderCache, renderSignature);
-      const previousCanvas =
-        cachedPage == null ? copyCanvasContents(canvas) : null;
-
-      resizeCanvas(canvas, canvasWidth, canvasHeight);
       if (cachedPage) {
+        resizeCanvas(canvas, canvasWidth, canvasHeight);
         drawCanvasImage(context, cachedPage.canvas, canvasWidth, canvasHeight);
         renderedPageRef.current = renderSignature;
         markCanvasRenderStatus(canvas, renderSignature, "rendered", "cache");
         reportRenderTiming("rendered", "cache");
-      } else {
-        if (previousCanvas) {
-          drawCanvasImage(context, previousCanvas, canvasWidth, canvasHeight);
-        }
-        markCanvasRenderStatus(canvas, renderSignature, "pending");
+        return;
+      }
+
+      markCanvasRenderStatus(canvas, renderSignature, "pending");
+
+      const renderCanvas = canvas.ownerDocument.createElement("canvas");
+      renderCanvas.width = canvasWidth;
+      renderCanvas.height = canvasHeight;
+      const renderContext = renderCanvas.getContext("2d");
+      if (!renderContext) {
+        markCanvasRenderStatus(canvas, renderSignature, "failed");
+        reportRenderTiming("failed");
+        setRenderError(
+          toPdfRenderFailedError(new Error("Canvas 2D context unavailable.")),
+        );
+        return;
       }
 
       let renderTask: ReturnType<typeof page.render>;
       try {
         renderTask = page.render({
-          canvas,
-          canvasContext: context,
-          viewport,
+          canvas: renderCanvas,
+          canvasContext: renderContext,
+          viewport: renderViewport,
           transform:
             devicePixelRatio !== 1
               ? [devicePixelRatio, 0, 0, devicePixelRatio, 0, 0]
@@ -173,11 +192,13 @@ export const PdfPage = React.memo(function PdfPage({
         () => {
           if (!isActive) return;
           didFinishPdfRender = true;
+          resizeCanvas(canvas, canvasWidth, canvasHeight);
+          drawCanvasImage(context, renderCanvas, canvasWidth, canvasHeight);
           renderedPageRef.current = renderSignature;
           writePdfRenderedPageCache({
             cache: renderCache,
             rendered: renderSignature,
-            sourceCanvas: canvas,
+            sourceCanvas: renderCanvas,
           });
           markCanvasRenderStatus(canvas, renderSignature, "rendered", "pdfjs");
           reportRenderTiming("rendered", "pdfjs");
@@ -195,7 +216,7 @@ export const PdfPage = React.memo(function PdfPage({
         if (!didFinishPdfRender) {
           renderTask.cancel();
         }
-        if (!didFinishPdfRender && !cachedPage) {
+        if (!didFinishPdfRender) {
           markCanvasRenderStatus(canvas, renderSignature, "cancelled");
           reportRenderTiming("cancelled");
         }
@@ -208,30 +229,30 @@ export const PdfPage = React.memo(function PdfPage({
       page,
       pageNumber,
       renderCache,
+      renderViewport,
+      resolvedRenderScale,
       rotation,
-      scale,
-      viewport,
     ],
   );
 
   return (
     <div
       className="ring-border relative shadow-sm ring-1"
-      style={{ width: viewport.width, height: viewport.height }}
+      style={{ width: displayViewport.width, height: displayViewport.height }}
       data-slot="pdf-page"
       data-page={pageNumber}
     >
       <canvas
         ref={canvasRef}
-        style={{ width: viewport.width, height: viewport.height }}
+        style={{ width: displayViewport.width, height: displayViewport.height }}
         className="block bg-white"
       />
       {renderOverlay ? (
         <div className="pointer-events-none absolute inset-0">
           {renderOverlay({
             pageNumber,
-            width: viewport.width,
-            height: viewport.height,
+            width: displayViewport.width,
+            height: displayViewport.height,
             scale,
             rotation,
           })}
@@ -247,6 +268,7 @@ function arePdfPagePropsEqual(previous: PdfPageProps, next: PdfPageProps) {
     previous.documentKey === next.documentKey &&
     previous.pageNumber === next.pageNumber &&
     previous.scale === next.scale &&
+    previous.renderScale === next.renderScale &&
     previous.rotation === next.rotation &&
     previous.devicePixelRatio === next.devicePixelRatio &&
     previous.renderCache === next.renderCache &&
@@ -263,19 +285,6 @@ function resizeCanvas(
 ) {
   if (canvas.width !== width) canvas.width = width;
   if (canvas.height !== height) canvas.height = height;
-}
-
-function copyCanvasContents(canvas: HTMLCanvasElement) {
-  if (canvas.width <= 0 || canvas.height <= 0) return null;
-
-  const snapshot = document.createElement("canvas");
-  snapshot.width = canvas.width;
-  snapshot.height = canvas.height;
-  const context = snapshot.getContext("2d");
-  if (!context || typeof context.drawImage !== "function") return null;
-
-  context.drawImage(canvas, 0, 0);
-  return snapshot;
 }
 
 function drawCanvasImage(
@@ -307,19 +316,29 @@ function markCanvasRenderStatus(
   }
 }
 
-function areRenderedPagesEqual(
+function doesRenderedPageSatisfyRequest(
   rendered: PdfRenderedPage,
   requested: PdfRenderedPage,
 ) {
   return (
-    rendered.pageNumber === requested.pageNumber &&
     rendered.documentKey === requested.documentKey &&
-    rendered.scale === requested.scale &&
+    rendered.pageNumber === requested.pageNumber &&
     rendered.rotation === requested.rotation &&
-    rendered.devicePixelRatio === requested.devicePixelRatio &&
-    rendered.viewportWidth === requested.viewportWidth &&
-    rendered.viewportHeight === requested.viewportHeight
+    rendered.scale >= requested.scale &&
+    rendered.viewportWidth >= requested.viewportWidth &&
+    rendered.viewportHeight >= requested.viewportHeight &&
+    hasMatchingPageAspectRatio(rendered, requested) &&
+    rendered.devicePixelRatio >= requested.devicePixelRatio
   );
+}
+
+function hasMatchingPageAspectRatio(
+  rendered: PdfRenderedPage,
+  requested: PdfRenderedPage,
+) {
+  const renderedRatio = rendered.viewportWidth / rendered.viewportHeight;
+  const requestedRatio = requested.viewportWidth / requested.viewportHeight;
+  return Math.abs(renderedRatio - requestedRatio) < 0.0001;
 }
 
 function readNow() {

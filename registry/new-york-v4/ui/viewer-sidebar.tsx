@@ -207,10 +207,28 @@ export function ViewerSidebar({
       sidebarState: state,
     },
   );
-
-  return (
-    <div
-      data-slot={frameSlot}
+  const frameAttributes = {
+    "data-slot": frameSlot,
+    "data-collapsible": collapsible,
+    "data-mode": mode,
+    "data-side": side,
+    "data-state": state,
+    "data-viewer-sidebar-mode": mode,
+    "data-viewer-sidebar-open": open ? "true" : "false",
+    "data-viewer-sidebar-state": state,
+    "data-viewer-slot": "sidebar",
+    ...createViewerSlotAttributes(
+      registrationContext.stateNamespace,
+      "sidebar",
+      namespacedSlot,
+    ),
+    ...namespacedSidebarStateAttributes,
+  };
+  const sidebarElement = (
+    <aside
+      ref={sidebarRef}
+      id={sidebarId}
+      data-slot={slotNames?.container ?? "viewer-sidebar-container"}
       data-collapsible={collapsible}
       data-mode={mode}
       data-side={side}
@@ -218,13 +236,92 @@ export function ViewerSidebar({
       data-viewer-sidebar-mode={mode}
       data-viewer-sidebar-open={open ? "true" : "false"}
       data-viewer-sidebar-state={state}
-      data-viewer-slot="sidebar"
+      data-viewer-slot="sidebar-container"
       {...createViewerSlotAttributes(
         registrationContext.stateNamespace,
         "sidebar",
-        namespacedSlot,
+        namespacedSlotNames?.container,
       )}
       {...namespacedSidebarStateAttributes}
+      className={cn(
+        "z-30 flex w-(--viewer-sidebar-width) min-w-0 overflow-hidden",
+        mode === "inline" &&
+          "relative h-full min-w-(--viewer-sidebar-width) flex-shrink-0 transition-none data-[viewer-sidebar-transitions=ready]:transition-[translate,width,border-color] data-[viewer-sidebar-transitions=ready]:duration-200 data-[viewer-sidebar-transitions=ready]:ease-out",
+        mode === "overlay" &&
+          "absolute inset-y-0 transition-none data-[viewer-sidebar-transitions=ready]:transition-[translate,width,border-color] data-[viewer-sidebar-transitions=ready]:duration-200 data-[viewer-sidebar-transitions=ready]:ease-out",
+        collapsible === "offcanvas" &&
+          mode === "inline" &&
+          !open &&
+          side === "left" &&
+          "pointer-events-none -translate-x-full border-transparent",
+        collapsible === "offcanvas" &&
+          mode === "inline" &&
+          !open &&
+          side === "right" &&
+          "pointer-events-none translate-x-full border-transparent",
+        mode === "overlay" && side === "left" && "left-0",
+        mode === "overlay" && side === "right" && "right-0",
+        collapsible === "offcanvas" && mode === "overlay" && "shadow-lg",
+        collapsible === "offcanvas" &&
+          mode === "overlay" &&
+          !open &&
+          side === "left" &&
+          "pointer-events-none -translate-x-full border-transparent",
+        collapsible === "offcanvas" &&
+          mode === "overlay" &&
+          !open &&
+          side === "right" &&
+          "pointer-events-none translate-x-full border-transparent",
+        className,
+      )}
+      style={
+        {
+          ...styleWithoutWidth,
+          "--viewer-sidebar-width": width,
+        } as React.CSSProperties
+      }
+      {...sidebarProps}
+      {...hiddenProps}
+    >
+      <div
+        data-slot={slotNames?.inner ?? "viewer-sidebar-inner"}
+        data-viewer-slot="sidebar-inner"
+        {...createViewerSlotAttributes(
+          registrationContext.stateNamespace,
+          "sidebar",
+          namespacedSlotNames?.inner,
+        )}
+        className={cn(
+          "flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden",
+          innerClassName,
+        )}
+      >
+        {children}
+      </div>
+    </aside>
+  );
+
+  if (mode === "inline") {
+    return (
+      <div
+        {...frameAttributes}
+        className={cn(
+          "group/viewer-sidebar relative z-30 min-h-0 w-(--viewer-sidebar-width) flex-shrink-0 overflow-hidden",
+          sidebarGapTransition === "width" &&
+            "transition-[width] duration-200 ease-out",
+          collapsible === "offcanvas" && !open && "w-0",
+          side === "right" && "order-last",
+        )}
+        style={frameStyle}
+      >
+        {sidebarElement}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      {...frameAttributes}
       className={cn(
         "group/viewer-sidebar relative z-30 min-h-0 flex-shrink-0",
         side === "right" && "order-last",
@@ -244,68 +341,9 @@ export function ViewerSidebar({
           sidebarGapTransition === "width" &&
             "transition-[width] duration-200 ease-out",
           collapsible === "offcanvas" && mode === "overlay" && "w-0",
-          collapsible === "offcanvas" && mode === "inline" && !open && "w-0",
         )}
       />
-      <aside
-        ref={sidebarRef}
-        id={sidebarId}
-        data-slot={slotNames?.container ?? "viewer-sidebar-container"}
-        data-collapsible={collapsible}
-        data-mode={mode}
-        data-side={side}
-        data-state={state}
-        data-viewer-sidebar-mode={mode}
-        data-viewer-sidebar-open={open ? "true" : "false"}
-        data-viewer-sidebar-state={state}
-        data-viewer-slot="sidebar-container"
-        {...createViewerSlotAttributes(
-          registrationContext.stateNamespace,
-          "sidebar",
-          namespacedSlotNames?.container,
-        )}
-        {...namespacedSidebarStateAttributes}
-        className={cn(
-          "absolute inset-y-0 z-30 flex w-(--viewer-sidebar-width) min-w-0 overflow-hidden",
-          "transition-none data-[viewer-sidebar-transitions=ready]:transition-[translate,width,border-color] data-[viewer-sidebar-transitions=ready]:duration-200 data-[viewer-sidebar-transitions=ready]:ease-out",
-          side === "left" && "left-0",
-          side === "right" && "right-0",
-          collapsible === "offcanvas" && mode === "overlay" && "shadow-lg",
-          collapsible === "offcanvas" &&
-            !open &&
-            side === "left" &&
-            "pointer-events-none -translate-x-full border-transparent",
-          collapsible === "offcanvas" &&
-            !open &&
-            side === "right" &&
-            "pointer-events-none translate-x-full border-transparent",
-          className,
-        )}
-        style={
-          {
-            ...styleWithoutWidth,
-            "--viewer-sidebar-width": width,
-          } as React.CSSProperties
-        }
-        {...sidebarProps}
-        {...hiddenProps}
-      >
-        <div
-          data-slot={slotNames?.inner ?? "viewer-sidebar-inner"}
-          data-viewer-slot="sidebar-inner"
-          {...createViewerSlotAttributes(
-            registrationContext.stateNamespace,
-            "sidebar",
-            namespacedSlotNames?.inner,
-          )}
-          className={cn(
-            "flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden",
-            innerClassName,
-          )}
-        >
-          {children}
-        </div>
-      </aside>
+      {sidebarElement}
     </div>
   );
 }

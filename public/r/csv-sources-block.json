@@ -27,6 +27,8 @@
       "target": "@components/viewers/sample-data/csv-sources.json"
     }
   ],
-  "categories": ["primitives"],
+  "categories": [
+    "primitives"
+  ],
   "type": "registry:block"
 }

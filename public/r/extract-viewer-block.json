@@ -224,6 +224,8 @@
       "target": "@ui/measured-row-virtualization.ts"
     }
   ],
-  "categories": ["primitives"],
+  "categories": [
+    "primitives"
+  ],
   "type": "registry:block"
 }

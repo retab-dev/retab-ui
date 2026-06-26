@@ -266,6 +266,8 @@
       "target": "@ui/measured-row-virtualization.ts"
     }
   ],
-  "categories": ["sources"],
+  "categories": [
+    "sources"
+  ],
   "type": "registry:block"
 }

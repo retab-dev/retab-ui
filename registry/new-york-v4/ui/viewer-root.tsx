@@ -402,6 +402,7 @@ export function ViewerRoot({
           )}
           style={
             {
+              overflowAnchor: "none",
               ...style,
               "--viewer-sidebar-width": sidebarWidth,
             } as React.CSSProperties

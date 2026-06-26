@@ -89,6 +89,7 @@ export type PdfResourceContentProps = PdfViewerContentProps & {
 type PdfDocument = ReturnType<typeof readPdfDocumentResource>;
 type PdfDocumentContent = ViewerResource["content"];
 type PdfPageSizeSetter = ReturnType<typeof usePdfPageSizes>["setPageSize"];
+const PDF_FIT_WIDTH_RENDER_SCALE_SETTLE_MS = 220;
 
 export const PdfResourceContent = React.forwardRef<
   PdfViewerHandle,
@@ -174,6 +175,16 @@ function PdfViewerInner({
     pageWidth: fitPageWidth,
     resetKey: document,
   });
+  const renderScaleResetKey = joinEffectKey([
+    content.key,
+    rotation,
+    isFitWidth,
+  ]);
+  const renderScale = useDeferredPdfRenderScale({
+    enabled: isFitWidth,
+    resetKey: renderScaleResetKey,
+    scale: resolvedScale,
+  });
 
   const { pageSizeByNumber, setPageSize } = usePdfPageSizes(document);
   const pageLayout = React.useMemo(
@@ -239,7 +250,7 @@ function PdfViewerInner({
       performanceOptions?.directionAwarePreRender === false
         ? []
         : [...renderPageNumbers, ...preloadPageNumbers],
-    scale: resolvedScale,
+    scale: renderScale,
     rotation,
     devicePixelRatio: pageDevicePixelRatio,
     resetKey: document,
@@ -388,6 +399,7 @@ function PdfViewerInner({
                 renderPageOverlay={renderPageOverlay}
                 rotation={rotation}
                 scale={resolvedScale}
+                renderScale={renderScale}
                 devicePixelRatio={pageDevicePixelRatio}
                 onPageRenderTiming={handlePageRenderTiming}
                 setPageSize={setPageSize}
@@ -452,6 +464,47 @@ function usePdfDocumentRotation(document: PdfDocument) {
   }, [document]);
 
   return { rotation, rotateClockwise };
+}
+
+function useDeferredPdfRenderScale({
+  enabled,
+  resetKey,
+  scale,
+}: {
+  enabled: boolean;
+  resetKey: string;
+  scale: number;
+}) {
+  const [state, setState] = React.useState<{
+    resetKey: string;
+    scale: number;
+  }>(() => ({ resetKey, scale }));
+  const hasFreshState = state.resetKey === resetKey;
+  const renderScale = enabled && hasFreshState ? state.scale : scale;
+
+  useKeyedMountEffect(
+    joinEffectKey([enabled, resetKey, scale, state.resetKey, state.scale]),
+    () => {
+      if (!enabled || !hasFreshState) {
+        setState((current) =>
+          current.resetKey === resetKey && current.scale === scale
+            ? current
+            : { resetKey, scale },
+        );
+        return;
+      }
+
+      if (state.scale === scale) return;
+
+      const timeout = window.setTimeout(() => {
+        setState({ resetKey, scale });
+      }, PDF_FIT_WIDTH_RENDER_SCALE_SETTLE_MS);
+
+      return () => window.clearTimeout(timeout);
+    },
+  );
+
+  return renderScale;
 }
 
 function usePdfDocumentControlsRegistration({
@@ -529,6 +582,7 @@ type PdfDocumentPagesLayerProps = {
   renderPageOverlay?: (props: PageOverlayProps) => React.ReactNode;
   rotation: number;
   scale: number;
+  renderScale: number;
   devicePixelRatio: number;
   onPageRenderTiming?: (timing: PdfPageRenderTiming) => void;
   setPageSize: PdfPageSizeSetter;
@@ -551,6 +605,7 @@ function PdfDocumentPagesLayer({
   renderPageOverlay,
   rotation,
   scale,
+  renderScale,
   devicePixelRatio,
   onPageRenderTiming,
   setPageSize,
@@ -676,6 +731,7 @@ function PdfDocumentPagesLayer({
                         documentKey={documentKey}
                         pageNumber={page.pageNumber}
                         scale={scale}
+                        renderScale={renderScale}
                         rotation={rotation}
                         devicePixelRatio={devicePixelRatio}
                         renderCache={renderCache}

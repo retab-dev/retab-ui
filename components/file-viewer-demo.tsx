@@ -81,6 +81,7 @@ const PDF_SHOWCASE_SIDEBAR_WIDTH = 128;
 const PDF_SHOWCASE_SIDEBAR_WIDTH_STYLE = `${PDF_SHOWCASE_SIDEBAR_WIDTH}px`;
 const PDF_SHOWCASE_VIEWER_CLASS_NAME = [
   "h-full",
+  "[&_[data-slot=file-viewer-sidebar]]:!ease-linear",
   "[&_[data-slot=file-viewer-sidebar-container]]:!ease-linear",
   "[&_[data-slot=file-viewer-sidebar-gap]]:!ease-linear",
 ].join(" ");

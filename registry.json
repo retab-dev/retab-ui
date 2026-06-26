@@ -5080,7 +5080,8 @@
         "@retab/interactive-item-list",
         "@retab/source-field-link",
         "@retab/source-evidence",
-        "@retab/utils"
+        "@retab/utils",
+        "@retab/source-indicator"
       ],
       "files": [
         {
