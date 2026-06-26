@@ -57,19 +57,193 @@ URL and Blob sources use the same bounded text resource path as the Code Viewer:
 - **Prose chrome** — the controls shows word count, text scale controls, and downloads from the source resource.
 - **Markdown stays separate** — `.md`, `.markdown`, and `text/markdown` sources route through the dedicated Markdown Viewer, not through Text Viewer markdown mode.
 
-## Markdown Boundary
+## Architecture Report
 
-Markdown is no longer a Text Viewer rendering mode in File Viewer routing.
-Markdown files and inline Markdown sources use
-[`MarkdownViewer`](/docs/components/file-viewer/renderers/markdown), which owns the
-React/GFM document semantics, Rendered/Text toggle, safe raw HTML policy,
-alerts, diagrams, frontmatter, tables, footnotes, and restricted component
-markdown.
+The Text Viewer is built around one constraint: very long prose must wrap like
+normal text without making React own thousands of measured DOM rows. The viewer
+therefore splits the system into a deterministic document model, a pure layout
+pass, and an imperative DOM projection pass. React owns the resource lifecycle,
+controls, sizing state, error boundaries, and scroll APIs. The scroll surface
+itself is projected into a small DOM window that can be patched every animation
+frame without remounting the full document.
 
-Use Text Viewer for prose payloads such as notes, transcripts, extracted text,
-and other wrapped source text where Markdown syntax should be shown literally
-or is not part of the file contract. `.mdx` files are source files and route to
-the Code Viewer in the File Viewer.
+### Resource Layer
+
+`TextViewer` starts in a shared plain-text frame. The frame creates or receives a
+`ViewerResource`, wraps the render path in `Suspense`, maps load and render
+errors into viewer errors, and exposes retry behavior. URL, Blob, and inline
+text sources all pass through the same bounded resource reader, so the rendering
+layer always receives a prepared text payload with:
+
+- the full text string;
+- stable source lines;
+- a source line count;
+- byte and line-limit validation.
+
+The source line array is the viewer's addressing model. Visual wrapping may turn
+one source line into many visible lines, but `highlight` and
+`scrollToLineRange` stay source-line based. That is why a caller can scroll to
+line 8000 before that part of the document has ever been mounted.
+
+### Preparation
+
+The preparation step converts raw text into a `PreparedTextDocument`. For plain
+text, it builds prose blocks from source lines and joins hard-wrapped paragraph
+runs when the lines look like extracted prose instead of logs, records, or
+source-like data. Empty lines remain addressable blocks so source-line mapping
+does not drift.
+
+The prepared document stores block-level data instead of DOM:
+
+- inline text blocks hold rich inline flows, fallback text, source-line ranges,
+  heading metadata, list metadata, quote rails, fonts, links, and class names;
+- code blocks hold monospace layout input and copyable fallback text;
+- image, rule, and table blocks hold explicit geometry inputs;
+- every block carries `sourceStartLine` and `sourceEndLine`.
+
+Preparation is cached with a small LRU keyed by mode, font epoch, style, source
+identity, and text hash. Reopening or rerendering the same text does not rebuild
+the document model unless the content or font metrics changed.
+
+### Pretext Layout
+
+Pretext is the text-layout engine under the viewer. Instead of mounting text and
+asking the browser how tall it became, the viewer prepares text into Pretext
+flows and asks Pretext how many wrapped visual lines fit in a given width.
+
+The layout pass receives a prepared document, a content width, and a font scale.
+It produces a `TextDocumentFrame`:
+
+- one frame per logical block;
+- each frame has `top`, `bottom`, `height`, `scale`, and source-line range;
+- inline and code frames include line counts and line height;
+- table frames include column widths, row heights, row offsets, and total table
+  width;
+- the document receives a single `totalHeight`.
+
+That frame is enough to build a real scroll range without rendering the whole
+document. Layout is cached per prepared document, content width, and font scale,
+which makes zoom and resize deterministic and keeps repeat layouts cheap.
+
+### Scroll Geometry
+
+The scroll container contains a single virtual canvas whose height is the
+document's `totalHeight`. The browser therefore sees a normal continuous scroll
+range, while the viewer only mounts the blocks near the viewport.
+
+On each projection, the viewer binary-searches the frame list to find blocks
+intersecting the viewport plus pixel overscan. The result is a contiguous frame
+window, not a page model. This is important for prose: scrolling never crosses
+page boundaries, and large blocks can still be partially materialized.
+
+Before a width or zoom change, the viewer captures a scroll anchor from the
+current frame index and offset inside that frame. After relayout, it restores
+`scrollTop` from the matching new frame. This keeps the reading position stable
+even when wrapping changes every downstream height.
+
+### Inverse Sticky Projection
+
+The mounted DOM window uses an inverse-sticky structure:
+
+- a before spacer represents the unmounted height above the window;
+- a sticky window contains the mounted rows;
+- an after spacer represents the unmounted height below the window.
+
+The sticky window is offset with a negative sticky position when the rendered
+window is taller than the viewport. This lets the projected rows stay visually
+locked to the scroll position while still living in a small, local DOM subtree.
+Rows inside the sticky content are absolutely positioned relative to the
+rendered window, so their transforms are small local offsets instead of large
+document offsets.
+
+This is the core trick that makes small scrolls feel stable. The browser owns
+the real scrollbar and scroll momentum, while the viewer patches a compact
+projection window around the current scroll position.
+
+### DOM Projection
+
+The Text Viewer does not re-render React children on every scroll. Scroll events
+schedule one `requestAnimationFrame` projection. The projection function:
+
+- computes the visible frame window;
+- synchronizes the inverse-sticky spacers;
+- reuses existing row nodes where the old and new windows overlap;
+- recycles removed rows into a bounded pool;
+- patches row layout only when height or transform changed;
+- patches row content only when the row render key or inner visible window
+  changed.
+
+Each row has a render key derived from block kind, content width, frame height,
+frame top, scale, and highlight state. If that key is unchanged, the row can
+usually stay as-is. For very tall blocks, the row can remain mounted while only
+its internal visible line or row window changes.
+
+### Line Materialization
+
+Pretext gives the viewer another level of virtualization inside large blocks.
+Inline and code blocks do not materialize every wrapped line. The viewer derives
+a visible visual-line window from the block frame and viewport, then asks
+Pretext to materialize only those lines.
+
+Line materialization uses per-block, per-width caches:
+
+- materialized line caches keep recently visible visual lines;
+- checkpoint caches store Pretext cursors at regular line intervals;
+- when a missing line range is needed, layout resumes from the nearest
+  checkpoint instead of from the beginning of the block.
+
+This matters for long paragraphs and long code-like blocks. The document can
+have a huge logical block, but scrolling through it only computes the visual
+lines that are close to the viewport.
+
+Tables use the same idea with row windows. The table frame stores row offsets,
+and the renderer patches only the body rows near the viewport while preserving
+the table header, column widths, and copy behavior.
+
+### Native Find
+
+Virtualized text usually breaks browser find because most text is not mounted.
+The Text Viewer solves this with a deferred hidden native-find index for plain
+text mode. After the viewer becomes idle, it creates hidden chunks of source
+text. Browser `beforematch` events map a found chunk back to a source-line
+range, scroll that range into view, and then hide the chunk again.
+
+The index is chunked by source lines instead of by visual rows, so it remains
+small enough for long documents while preserving browser search behavior.
+
+### Controls And Interactions
+
+The chrome is shared with the text/code viewer family. It shows word count,
+zoom controls, reset zoom, and download actions. Zoom updates `fontScale`,
+captures the current scroll anchor, relayouts the document, and restores the
+anchored reading position.
+
+During active scrolling, the viewer temporarily disables pointer events on the
+projection target. On mobile Safari it also hides horizontal overflow on the
+interaction target. This prevents expensive hover, hit-testing, and nested
+overflow work from competing with scroll projection, then restores the original
+inline styles shortly after scrolling stops.
+
+### Why It Is Fast
+
+The Text Viewer is fast because every expensive operation is either pure,
+bounded, cached, or delayed:
+
+- text loading is bounded by byte and line limits;
+- source lines are stable and reused;
+- document preparation is cached;
+- Pretext computes wrap geometry from data instead of DOM measurement;
+- document layout is cached by width and scale;
+- visible block lookup uses frame geometry instead of DOM queries;
+- scroll updates are coalesced into one animation-frame projection;
+- row nodes are reused and recycled;
+- large rows materialize only their visible visual lines;
+- browser find indexing is deferred until idle;
+- React owns state transitions, not the per-scroll row patch loop.
+
+The result is a continuous prose surface with normal wrapping, stable line
+addressing, zoom, highlights, native find support, and long-document scroll
+performance without paying the cost of a full React tree for the whole file.
 
 ## Text And Code
 
