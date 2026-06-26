@@ -68,7 +68,14 @@ export function ViewerSidebar({
   } as React.CSSProperties;
   const inlineFrameStyle = {
     ...frameStyle,
-    width: open ? "var(--viewer-sidebar-width)" : "0px",
+    width:
+      sidebarGapTransition === "width"
+        ? `calc(var(--viewer-sidebar-width) * var(--viewer-sidebar-progress, ${
+            open ? 1 : 0
+          }))`
+        : open
+          ? "var(--viewer-sidebar-width)"
+          : "0px",
   } as React.CSSProperties;
   const ariaLabel = sidebarProps["aria-label"];
   const ariaLabelledBy = sidebarProps["aria-labelledby"];
@@ -300,8 +307,6 @@ export function ViewerSidebar({
         {...frameAttributes}
         className={cn(
           "group/viewer-sidebar relative z-30 min-h-0 flex-shrink-0 overflow-hidden transition-none",
-          sidebarGapTransition === "width" &&
-            "data-[viewer-sidebar-transitions=ready]:transition-[width] data-[viewer-sidebar-transitions=ready]:duration-200 data-[viewer-sidebar-transitions=ready]:ease-linear",
           side === "right" && "order-last",
         )}
         style={inlineFrameStyle}

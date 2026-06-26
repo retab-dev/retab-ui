@@ -282,13 +282,13 @@ export function usePdfScroll({
   );
 
   const syncPhysicalScrollPosition = React.useCallback(
-    (viewportElement: HTMLDivElement) => {
+    (viewportElement: HTMLDivElement, totalHeight = layout.totalHeight) => {
       const metrics = readPdfScrollMetrics({
         scrollPageOffset: scrollPageOffsetRef.current,
-        totalHeight: layout.totalHeight,
+        totalHeight,
         viewportElement,
       });
-      if (metrics.physicalScrollHeight >= layout.totalHeight) {
+      if (metrics.physicalScrollHeight >= totalHeight) {
         scrollPageOffsetRef.current = 0;
         return {
           ...metrics,
@@ -299,14 +299,11 @@ export function usePdfScroll({
       const position = resolvePdfPhysicalScrollPosition({
         logicalScrollTop: metrics.scrollTop,
         scrollPageOffset: metrics.scrollPageOffset,
-        totalHeight: layout.totalHeight,
+        totalHeight,
         viewportHeight: metrics.viewportHeight,
       });
       scrollPageOffsetRef.current = position.scrollPageOffset;
-      setViewportPhysicalScrollTop(
-        viewportElement,
-        position.physicalScrollTop,
-      );
+      setViewportPhysicalScrollTop(viewportElement, position.physicalScrollTop);
 
       return {
         ...metrics,
@@ -404,7 +401,6 @@ export function usePdfScroll({
     const markerOffset =
       metrics.scrollTop + metrics.viewportHeight * PDF_READING_MARKER_RATIO;
     const visiblePage = findPdfPageByOffset(layout, markerOffset);
-
     if (
       visiblePage >= 1 &&
       visiblePage <= pageCount &&
@@ -762,8 +758,7 @@ function capturePdfReadingAnchor(
   if (scrollTop <= 0) return { kind: "top" };
 
   const viewportHeight = viewportElement.clientHeight;
-  const markerOffset =
-    scrollTop + viewportHeight * PDF_READING_MARKER_RATIO;
+  const markerOffset = scrollTop + viewportHeight * PDF_READING_MARKER_RATIO;
   const pageNumber = findPdfPageByOffset(layout, markerOffset);
   const pageLayout = getPdfPageLayout(layout, pageNumber);
   if (!pageLayout || pageLayout.height <= 0) return null;

@@ -31,6 +31,7 @@ import {
 } from "./pdf-viewer-render-scheduler";
 import {
   getPdfPageDevicePixelRatio,
+  getPdfFitWidthScale,
   useMeasuredElementWidth,
   usePdfScale,
 } from "./pdf-viewer-scale";
@@ -53,6 +54,7 @@ import {
 import { useOptionalViewerDocumentFrame } from "./viewer-surface";
 import { ViewerErrorBoundary } from "./viewer-error";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import { joinEffectKey } from "@/lib/effect-key";
 import type { ViewerDocumentFrameAlign } from "./viewer-types";
@@ -89,7 +91,6 @@ export type PdfResourceContentProps = PdfViewerContentProps & {
 type PdfDocument = ReturnType<typeof readPdfDocumentResource>;
 type PdfDocumentContent = ViewerResource["content"];
 type PdfPageSizeSetter = ReturnType<typeof usePdfPageSizes>["setPageSize"];
-const PDF_FIT_WIDTH_RENDER_SCALE_SETTLE_MS = 220;
 
 export const PdfResourceContent = React.forwardRef<
   PdfViewerHandle,
@@ -162,7 +163,10 @@ function PdfViewerInner({
   const firstPageSize = usePdfFirstPageSize(document);
   const { ref: containerRef, width: containerWidth } =
     useMeasuredElementWidth();
-  const fitWidthContainerWidth = documentFrame?.inlineSize ?? containerWidth;
+  const fitWidthContainerWidth = usePdfSettledFitWidthContainerWidth({
+    documentFrame,
+    measuredWidth: documentFrame?.inlineSize ?? containerWidth,
+  });
   const { rotation, rotateClockwise } = usePdfDocumentRotation(document);
   const fitPageWidth =
     rotation % 180 === 0 ? firstPageSize.width : firstPageSize.height;
@@ -175,15 +179,26 @@ function PdfViewerInner({
     pageWidth: fitPageWidth,
     resetKey: document,
   });
+  const displayFitWidthContainerWidth = usePdfVisualFitWidthContainerWidth({
+    documentFrame,
+    enabled: Boolean(documentFrame && isFitWidth),
+    fallbackWidth: fitWidthContainerWidth,
+  });
+  const displayScale =
+    isFitWidth && documentFrame
+      ? getPdfFitWidthScale(displayFitWidthContainerWidth, fitPageWidth, 0)
+      : resolvedScale;
   const renderScaleResetKey = joinEffectKey([
     content.key,
     rotation,
     isFitWidth,
   ]);
-  const renderScale = useDeferredPdfRenderScale({
+  const renderScale = usePdfPreparedFitWidthRenderScale({
+    documentFrame,
     enabled: isFitWidth,
+    fallbackScale: resolvedScale,
+    pageWidth: fitPageWidth,
     resetKey: renderScaleResetKey,
-    scale: resolvedScale,
   });
 
   const { pageSizeByNumber, setPageSize } = usePdfPageSizes(document);
@@ -193,14 +208,14 @@ function PdfViewerInner({
         pageCount: document.numPages,
         defaultPageSize: firstPageSize,
         pageSizeByNumber,
-        scale: resolvedScale,
+        scale: displayScale,
         rotation,
       }),
     [
       document.numPages,
+      displayScale,
       firstPageSize,
       pageSizeByNumber,
-      resolvedScale,
       rotation,
     ],
   );
@@ -283,9 +298,9 @@ function PdfViewerInner({
   useKeyedMountEffect(
     joinEffectKey([
       document.numPages,
+      displayScale,
       measureScroll,
       rotation,
-      resolvedScale,
       viewportElement,
     ]),
     () => {
@@ -382,7 +397,6 @@ function PdfViewerInner({
                 document={document}
                 documentKey={content.key}
                 documentFrameAlign={documentFrame?.align ?? null}
-                isFitWidth={isFitWidth}
                 layout={pageLayout}
                 physicalScrollHeight={getPdfPhysicalScrollHeight({
                   totalHeight: pageLayout.totalHeight,
@@ -398,7 +412,7 @@ function PdfViewerInner({
                 viewportHeight={viewportElement?.clientHeight ?? 0}
                 renderPageOverlay={renderPageOverlay}
                 rotation={rotation}
-                scale={resolvedScale}
+                scale={displayScale}
                 renderScale={renderScale}
                 devicePixelRatio={pageDevicePixelRatio}
                 onPageRenderTiming={handlePageRenderTiming}
@@ -466,45 +480,125 @@ function usePdfDocumentRotation(document: PdfDocument) {
   return { rotation, rotateClockwise };
 }
 
-function useDeferredPdfRenderScale({
+function usePdfPreparedFitWidthRenderScale({
+  documentFrame,
   enabled,
+  fallbackScale,
+  pageWidth,
   resetKey,
-  scale,
 }: {
+  documentFrame: ReturnType<typeof useOptionalViewerDocumentFrame>;
   enabled: boolean;
+  fallbackScale: number;
+  pageWidth: number;
   resetKey: string;
-  scale: number;
 }) {
   const [state, setState] = React.useState<{
     resetKey: string;
     scale: number;
-  }>(() => ({ resetKey, scale }));
-  const hasFreshState = state.resetKey === resetKey;
-  const renderScale = enabled && hasFreshState ? state.scale : scale;
+  }>(() => ({ resetKey, scale: fallbackScale }));
 
-  useKeyedMountEffect(
-    joinEffectKey([enabled, resetKey, scale, state.resetKey, state.scale]),
+  useKeyedLayoutEffect(
+    joinEffectKey([
+      documentFrame?.layoutTransition,
+      enabled,
+      fallbackScale,
+      pageWidth,
+      resetKey,
+    ]),
     () => {
-      if (!enabled || !hasFreshState) {
+      const layoutTransition = documentFrame?.layoutTransition;
+      if (!enabled || !layoutTransition) {
         setState((current) =>
-          current.resetKey === resetKey && current.scale === scale
+          current.resetKey === resetKey && current.scale === fallbackScale
             ? current
-            : { resetKey, scale },
+            : { resetKey, scale: fallbackScale },
         );
         return;
       }
 
-      if (state.scale === scale) return;
+      const syncTargetScale = () => {
+        const sample = layoutTransition.getSnapshot();
+        const targetScale = sample
+          ? getPdfFitWidthScale(sample.maxInlineSize, pageWidth, 0)
+          : fallbackScale;
 
-      const timeout = window.setTimeout(() => {
-        setState({ resetKey, scale });
-      }, PDF_FIT_WIDTH_RENDER_SCALE_SETTLE_MS);
+        setState((current) =>
+          current.resetKey === resetKey && current.scale === targetScale
+            ? current
+            : { resetKey, scale: targetScale },
+        );
+      };
 
-      return () => window.clearTimeout(timeout);
+      syncTargetScale();
+      return layoutTransition.subscribe(syncTargetScale);
     },
   );
 
-  return renderScale;
+  return enabled && state.resetKey === resetKey ? state.scale : fallbackScale;
+}
+
+function usePdfSettledFitWidthContainerWidth({
+  documentFrame,
+  measuredWidth,
+}: {
+  documentFrame: ReturnType<typeof useOptionalViewerDocumentFrame>;
+  measuredWidth: number | null;
+}) {
+  const layoutTransition = documentFrame?.layoutTransition ?? null;
+  const [settledWidth, setSettledWidth] = React.useState<number | null>(
+    () => measuredWidth,
+  );
+
+  useKeyedLayoutEffect(joinEffectKey([layoutTransition, measuredWidth]), () => {
+    if (!layoutTransition) {
+      setSettledWidth((currentWidth) =>
+        currentWidth === measuredWidth ? currentWidth : measuredWidth,
+      );
+      return;
+    }
+
+    const commitSettledWidth = () => {
+      const sample = layoutTransition.getSnapshot();
+      if (sample?.isTransitioning) return;
+
+      const nextWidth = sample?.inlineSize ?? measuredWidth;
+      setSettledWidth((currentWidth) =>
+        currentWidth === nextWidth ? currentWidth : nextWidth,
+      );
+    };
+
+    commitSettledWidth();
+    return layoutTransition.subscribe(commitSettledWidth);
+  });
+
+  return settledWidth ?? measuredWidth;
+}
+
+function usePdfVisualFitWidthContainerWidth({
+  documentFrame,
+  enabled,
+  fallbackWidth,
+}: {
+  documentFrame: ReturnType<typeof useOptionalViewerDocumentFrame>;
+  enabled: boolean;
+  fallbackWidth: number | null;
+}) {
+  const layoutTransition = documentFrame?.layoutTransition ?? null;
+  const subscribe = React.useCallback(
+    (listener: () => void) =>
+      enabled && layoutTransition
+        ? layoutTransition.subscribe(listener)
+        : () => {},
+    [enabled, layoutTransition],
+  );
+  const getSnapshot = React.useCallback(() => {
+    if (!enabled || !layoutTransition) return fallbackWidth ?? 0;
+
+    return layoutTransition.getSnapshot()?.inlineSize ?? fallbackWidth ?? 0;
+  }, [enabled, fallbackWidth, layoutTransition]);
+
+  return React.useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
 function usePdfDocumentControlsRegistration({
@@ -570,7 +664,6 @@ type PdfDocumentPagesLayerProps = {
   document: PdfDocument;
   documentKey: string;
   documentFrameAlign: ViewerDocumentFrameAlign | null;
-  isFitWidth: boolean;
   layout: PdfPageLayoutModel;
   physicalScrollHeight: number;
   activeRenderPageNumbers: readonly number[];
@@ -593,7 +686,6 @@ function PdfDocumentPagesLayer({
   document,
   documentKey,
   documentFrameAlign,
-  isFitWidth,
   layout,
   physicalScrollHeight,
   activeRenderPageNumbers,
@@ -636,47 +728,19 @@ function PdfDocumentPagesLayer({
     ],
   );
   const isInsideDocumentFrame = documentFrameAlign !== null;
-  const shouldScaleToDocumentFrame = isInsideDocumentFrame && isFitWidth;
-  const layoutWidth = Math.max(1, layout.maxPageWidth);
-  const layoutHeight = Math.max(1, physicalScrollHeight);
-  const documentFrameStyle = shouldScaleToDocumentFrame
-    ? ({
-        "--pdf-viewer-layout-height": `${layoutHeight}px`,
-        "--pdf-viewer-layout-width": `${layoutWidth}px`,
-        "--pdf-viewer-visual-scale":
-          "calc(100cqw / var(--pdf-viewer-layout-width))",
-      } as React.CSSProperties)
-    : undefined;
-  const visualFrameStyle = shouldScaleToDocumentFrame
-    ? ({
-        height:
-          "calc(var(--pdf-viewer-layout-height) * var(--pdf-viewer-visual-scale))",
-      } as React.CSSProperties)
-    : undefined;
-  const documentStyle = shouldScaleToDocumentFrame
-    ? ({
-        ...getPdfFramedDocumentPositionStyle(documentFrameAlign),
-        contain: "layout style",
-        height: physicalScrollHeight,
-        minWidth: "var(--pdf-viewer-layout-width)",
-        transform: "scale(var(--pdf-viewer-visual-scale))",
-        width: "var(--pdf-viewer-layout-width)",
-        willChange: "transform",
-      } as React.CSSProperties)
-    : ({
-        contain: "layout style",
-        height: physicalScrollHeight,
-        minWidth: layout.maxPageWidth,
-        width: layout.maxPageWidth,
-      } as React.CSSProperties);
+  const documentStyle = {
+    contain: "layout style",
+    height: physicalScrollHeight,
+    minWidth: layout.maxPageWidth,
+    width: layout.maxPageWidth,
+  } satisfies React.CSSProperties;
 
   const documentContent = (
     <div
       data-slot="pdf-viewer-document"
       className={cn(
         "relative",
-        !shouldScaleToDocumentFrame &&
-          getPdfDocumentFrameAlignClass(documentFrameAlign),
+        getPdfDocumentFrameAlignClass(documentFrameAlign),
       )}
       style={documentStyle}
     >
@@ -767,21 +831,9 @@ function PdfDocumentPagesLayer({
       className={cn(
         "relative min-w-0",
         isInsideDocumentFrame && "h-full w-full",
-        shouldScaleToDocumentFrame && "[container-type:inline-size]",
       )}
-      style={documentFrameStyle}
     >
-      {shouldScaleToDocumentFrame ? (
-        <div
-          data-slot="pdf-viewer-document-visual-frame"
-          className="relative w-full"
-          style={visualFrameStyle}
-        >
-          {documentContent}
-        </div>
-      ) : (
-        documentContent
-      )}
+      {documentContent}
     </div>
   );
 }
@@ -795,36 +847,5 @@ function getPdfDocumentFrameAlignClass(align: ViewerDocumentFrameAlign | null) {
       return "ml-auto";
     case "start":
       return "mr-auto";
-  }
-}
-
-function getPdfFramedDocumentPositionStyle(
-  align: ViewerDocumentFrameAlign | null,
-): React.CSSProperties {
-  const baseStyle = {
-    position: "absolute",
-    top: 0,
-  } satisfies React.CSSProperties;
-
-  switch (align) {
-    case "center":
-      return {
-        ...baseStyle,
-        left: "calc((100% - var(--pdf-viewer-layout-width)) / 2)",
-        transformOrigin: "top center",
-      };
-    case "end":
-      return {
-        ...baseStyle,
-        right: 0,
-        transformOrigin: "top right",
-      };
-    case "start":
-    case null:
-      return {
-        ...baseStyle,
-        left: 0,
-        transformOrigin: "top left",
-      };
   }
 }

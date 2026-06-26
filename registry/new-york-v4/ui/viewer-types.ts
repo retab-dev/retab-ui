@@ -8,6 +8,33 @@ export type ViewerSidebarSide = "left" | "right";
 export type ViewerSidebarCollapsible = "offcanvas" | "none";
 export type ViewerDocumentFrameAlign = "start" | "center" | "end";
 
+export type ViewerSidebarLayoutSnapshot = {
+  isTransitioning: boolean;
+  mode: ViewerSidebarMode;
+  open: boolean;
+  progress: number;
+  sidebarGapTransition: ViewerSidebarGapTransition;
+  sidebarWidth: number;
+  side: ViewerSidebarSide;
+  state: ViewerSidebarState;
+};
+
+export type ViewerSidebarLayoutStore = {
+  getSnapshot: () => ViewerSidebarLayoutSnapshot;
+  setTarget: (target: ViewerSidebarLayoutTarget) => void;
+  subscribe: (listener: () => void) => () => void;
+};
+
+export type ViewerSidebarLayoutTarget = {
+  mode: ViewerSidebarMode;
+  open: boolean;
+  rootElement: HTMLElement | null;
+  sidebarElement: HTMLElement | null;
+  sidebarGapTransition: ViewerSidebarGapTransition;
+  side: ViewerSidebarSide;
+  state: ViewerSidebarState;
+};
+
 export type ViewerSidebarStateValue = {
   state: ViewerSidebarState;
   open: boolean;
@@ -67,6 +94,7 @@ export type ViewerSidebarRegistrationState = {
   defaultSidebarSide: ViewerSidebarSide;
   getRootElement: () => HTMLElement | null;
   hasSidebar: boolean;
+  layoutStore: ViewerSidebarLayoutStore;
   sidebarState: ViewerSidebarStateValue;
   registerSidebar: (registration: ViewerSidebarRegistration) => () => void;
   rootId: string;

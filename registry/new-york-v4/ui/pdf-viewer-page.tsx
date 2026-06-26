@@ -147,8 +147,13 @@ export const PdfPage = React.memo(function PdfPage({
       );
       const cachedPage = readPdfRenderedPageCache(renderCache, renderSignature);
       if (cachedPage) {
-        resizeCanvas(canvas, canvasWidth, canvasHeight);
-        drawCanvasImage(context, cachedPage.canvas, canvasWidth, canvasHeight);
+        replaceCanvasImage(
+          canvas,
+          context,
+          cachedPage.canvas,
+          canvasWidth,
+          canvasHeight,
+        );
         renderedPageRef.current = renderSignature;
         markCanvasRenderStatus(canvas, renderSignature, "rendered", "cache");
         reportRenderTiming("rendered", "cache");
@@ -159,16 +164,27 @@ export const PdfPage = React.memo(function PdfPage({
         renderCache,
         renderSignature,
       );
-      if (previewPage) {
-        resizeCanvas(canvas, canvasWidth, canvasHeight);
-        drawCanvasImage(context, previewPage.canvas, canvasWidth, canvasHeight);
+      const canKeepRenderedPageVisible =
+        renderedPageRef.current !== null &&
+        canRenderedPageStayVisibleWhilePending(
+          renderedPageRef.current,
+          renderSignature,
+        );
+      if (previewPage && !canKeepRenderedPageVisible) {
+        replaceCanvasImage(
+          canvas,
+          context,
+          previewPage.canvas,
+          canvasWidth,
+          canvasHeight,
+        );
         markCanvasRenderStatus(
           canvas,
           renderSignature,
           "pending",
           "cache-preview",
         );
-      } else if (!renderedPageRef.current) {
+      } else if (!canKeepRenderedPageVisible) {
         resizeCanvas(canvas, canvasWidth, canvasHeight);
         markCanvasRenderStatus(canvas, renderSignature, "pending");
       } else {
@@ -211,8 +227,13 @@ export const PdfPage = React.memo(function PdfPage({
         () => {
           if (!isActive) return;
           didFinishPdfRender = true;
-          resizeCanvas(canvas, canvasWidth, canvasHeight);
-          drawCanvasImage(context, renderCanvas, canvasWidth, canvasHeight);
+          replaceCanvasImage(
+            canvas,
+            context,
+            renderCanvas,
+            canvasWidth,
+            canvasHeight,
+          );
           renderedPageRef.current = renderSignature;
           writePdfRenderedPageCache({
             cache: renderCache,
@@ -320,6 +341,33 @@ function drawCanvasImage(
   }
 }
 
+function replaceCanvasImage(
+  canvas: HTMLCanvasElement,
+  context: CanvasRenderingContext2D,
+  image: HTMLCanvasElement,
+  width: number,
+  height: number,
+) {
+  if (canvas.width === width && canvas.height === height) {
+    drawCanvasImage(context, image, width, height);
+    return;
+  }
+
+  const swapCanvas = canvas.ownerDocument.createElement("canvas");
+  swapCanvas.width = width;
+  swapCanvas.height = height;
+  const swapContext = swapCanvas.getContext("2d");
+  if (swapContext) {
+    drawCanvasImage(swapContext, image, width, height);
+    resizeCanvas(canvas, width, height);
+    drawCanvasImage(context, swapCanvas, width, height);
+    return;
+  }
+
+  resizeCanvas(canvas, width, height);
+  drawCanvasImage(context, image, width, height);
+}
+
 function markCanvasRenderStatus(
   canvas: HTMLCanvasElement,
   rendered: PdfRenderedPage,
@@ -348,6 +396,18 @@ function doesRenderedPageSatisfyRequest(
     rendered.viewportHeight >= requested.viewportHeight &&
     hasMatchingPageAspectRatio(rendered, requested) &&
     rendered.devicePixelRatio >= requested.devicePixelRatio
+  );
+}
+
+function canRenderedPageStayVisibleWhilePending(
+  rendered: PdfRenderedPage,
+  requested: PdfRenderedPage,
+) {
+  return (
+    rendered.documentKey === requested.documentKey &&
+    rendered.pageNumber === requested.pageNumber &&
+    rendered.rotation === requested.rotation &&
+    hasMatchingPageAspectRatio(rendered, requested)
   );
 }
 

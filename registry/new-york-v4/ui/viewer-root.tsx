@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import {
   createViewerStateAttributes,
   createViewerPortalContainmentAttributes,
+  createViewerSidebarLayoutStore,
   elementContainsTarget,
   readViewerElementSize,
   resolveMeasuredSidebarMode,
@@ -101,6 +102,10 @@ export function ViewerRoot({
   const lastTriggerElementRef = React.useRef<HTMLElement | null>(null);
   const registeredSidebarRef = React.useRef<ViewerSidebarRegistration | null>(
     null,
+  );
+  const sidebarLayoutStore = React.useMemo(
+    () => createViewerSidebarLayoutStore(),
+    [],
   );
   const [registeredSidebar, setRegisteredSidebar] =
     React.useState<ViewerSidebarRegistration | null>(null);
@@ -212,6 +217,29 @@ export function ViewerRoot({
   const sidebarId = registeredSidebar?.id ?? fallbackSidebarId;
   const resolvedSidebarSide = registeredSidebar?.side ?? sidebarSide;
   const sidebarWidth = registeredSidebar?.width ?? VIEWER_SIDEBAR_WIDTH;
+  useKeyedLayoutEffect(
+    joinEffectKey([
+      effectiveOpen,
+      registeredSidebar?.element,
+      resolvedSidebarMode,
+      resolvedSidebarSide,
+      rootRef.current,
+      sidebarGapTransition,
+      sidebarLayoutStore,
+      state,
+    ]),
+    () => {
+      sidebarLayoutStore.setTarget({
+        mode: resolvedSidebarMode,
+        open: effectiveOpen,
+        rootElement: rootRef.current,
+        sidebarElement: registeredSidebar?.element ?? null,
+        sidebarGapTransition,
+        side: resolvedSidebarSide,
+        state,
+      });
+    },
+  );
   const namespacedRootStateAttributes = createViewerStateAttributes(
     stateNamespace,
     "root",
@@ -354,6 +382,7 @@ export function ViewerRoot({
         defaultSidebarSide: sidebarSide,
         getRootElement,
         hasSidebar,
+        layoutStore: sidebarLayoutStore,
         sidebarState: sidebarStateContext,
         registerSidebar,
         rootId,
@@ -368,6 +397,7 @@ export function ViewerRoot({
         sidebarCollapsible,
         resolvedSidebarSide,
         sidebarStateContext,
+        sidebarLayoutStore,
         getRootElement,
         registerSidebar,
         rootId,

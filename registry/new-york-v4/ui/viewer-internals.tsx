@@ -9,6 +9,9 @@ import type {
   ViewerDataAttributes,
   ViewerPortalContainmentAttributes,
   ViewerSidebarStateValue,
+  ViewerSidebarLayoutSnapshot,
+  ViewerSidebarLayoutStore,
+  ViewerSidebarLayoutTarget,
   ViewerSidebarRegistrationState,
   ViewerSidebarRequestedMode,
   ViewerSidebarMode,
@@ -24,6 +27,18 @@ export const VIEWER_ROOT_ID_ATTRIBUTE = "data-viewer-root-id";
 export const VIEWER_PORTAL_ROOT_ID_ATTRIBUTE = "data-viewer-portal-root-id";
 
 const VIEWER_SIDEBAR_MODE_HYSTERESIS = 16;
+const VIEWER_SIDEBAR_LAYOUT_TRANSITION_MS = 200;
+
+const DEFAULT_VIEWER_SIDEBAR_LAYOUT_SNAPSHOT: ViewerSidebarLayoutSnapshot = {
+  isTransitioning: false,
+  mode: "overlay",
+  open: false,
+  progress: 0,
+  sidebarGapTransition: "width",
+  sidebarWidth: 0,
+  side: "left",
+  state: "collapsed",
+};
 
 const ViewerSidebarStateContext =
   React.createContext<ViewerSidebarStateValue | null>(null);
@@ -111,6 +126,128 @@ export function useOptionalViewerSurfaceMeasurementContext(): ViewerSurfaceMeasu
 
 export function useViewerViewportPresence(): boolean {
   return React.useContext(ViewerViewportPresenceContext);
+}
+
+export function createViewerSidebarLayoutStore(): ViewerSidebarLayoutStore {
+  const listeners = new Set<() => void>();
+  let animationFrame = 0;
+  let didInitialize = false;
+  let snapshot = DEFAULT_VIEWER_SIDEBAR_LAYOUT_SNAPSHOT;
+
+  const notify = () => {
+    for (const listener of listeners) listener();
+  };
+
+  const commitSnapshot = (
+    nextSnapshot: ViewerSidebarLayoutSnapshot,
+    rootElement: HTMLElement | null,
+  ) => {
+    snapshot = nextSnapshot;
+    writeViewerSidebarProgress(rootElement, nextSnapshot.progress);
+    notify();
+  };
+
+  const stopAnimation = () => {
+    if (!animationFrame) return;
+    cancelAnimationFrame(animationFrame);
+    animationFrame = 0;
+  };
+
+  return {
+    getSnapshot: () => snapshot,
+    setTarget: (target) => {
+      stopAnimation();
+
+      const sidebarWidth = readViewerSidebarLayoutWidth(target);
+      const targetProgress =
+        target.mode === "inline" && target.open ? 1 : 0;
+      const hasSidebarElement = target.sidebarElement !== null;
+      const nextBaseSnapshot: ViewerSidebarLayoutSnapshot = {
+        isTransitioning: false,
+        mode: target.mode,
+        open: target.open,
+        progress: snapshot.progress,
+        sidebarGapTransition: target.sidebarGapTransition,
+        sidebarWidth,
+        side: target.side,
+        state: target.state,
+      };
+      if (!hasSidebarElement) {
+        didInitialize = false;
+        commitSnapshot(
+          {
+            ...nextBaseSnapshot,
+            progress: targetProgress,
+          },
+          target.rootElement,
+        );
+        return;
+      }
+
+      const shouldAnimate =
+        didInitialize &&
+        snapshot.mode === target.mode &&
+        target.mode === "inline" &&
+        target.sidebarGapTransition === "width" &&
+        snapshot.sidebarWidth > 0 &&
+        sidebarWidth > 0 &&
+        Math.abs(snapshot.progress - targetProgress) > 0.001;
+
+      didInitialize = true;
+
+      if (!shouldAnimate) {
+        commitSnapshot(
+          {
+            ...nextBaseSnapshot,
+            progress: targetProgress,
+          },
+          target.rootElement,
+        );
+        return;
+      }
+
+      const startProgress = snapshot.progress;
+      const startedAt = readViewerNow();
+
+      const tick = () => {
+        animationFrame = 0;
+        const elapsed = readViewerNow() - startedAt;
+        const progressRatio = clampViewerRatio(
+          elapsed / VIEWER_SIDEBAR_LAYOUT_TRANSITION_MS,
+        );
+        const progress =
+          startProgress + (targetProgress - startProgress) * progressRatio;
+
+        commitSnapshot(
+          {
+            ...nextBaseSnapshot,
+            isTransitioning: progressRatio < 1,
+            progress,
+          },
+          target.rootElement,
+        );
+
+        if (progressRatio < 1) {
+          animationFrame = requestAnimationFrame(tick);
+        }
+      };
+
+      commitSnapshot(
+        {
+          ...nextBaseSnapshot,
+          isTransitioning: true,
+        },
+        target.rootElement,
+      );
+      animationFrame = requestAnimationFrame(tick);
+    },
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
 }
 
 export function resolveSidebarMode({
@@ -245,6 +382,34 @@ export function readViewerElementSize(element: HTMLElement | null) {
     height: rect?.height || element.clientHeight || 0,
     width: rect?.width || element.clientWidth || 0,
   };
+}
+
+function readViewerSidebarLayoutWidth({
+  sidebarElement,
+}: ViewerSidebarLayoutTarget) {
+  const elementSize = readViewerElementSize(sidebarElement);
+  return Number.isFinite(elementSize.width) && elementSize.width > 0
+    ? elementSize.width
+    : 0;
+}
+
+function writeViewerSidebarProgress(
+  rootElement: HTMLElement | null,
+  progress: number,
+) {
+  rootElement?.style.setProperty(
+    "--viewer-sidebar-progress",
+    String(clampViewerRatio(progress)),
+  );
+}
+
+function readViewerNow() {
+  return typeof performance === "undefined" ? Date.now() : performance.now();
+}
+
+function clampViewerRatio(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(1, Math.max(0, value));
 }
 
 export function elementContainsTarget(

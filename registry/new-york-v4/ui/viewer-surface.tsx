@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   findClosestViewerBody,
   readViewerElementSize,
+  useOptionalViewerSidebarRegistration,
   useOptionalViewerSurfaceMeasurementContext,
   useViewerDevelopmentLayoutWarning,
   useViewerViewportPresence,
@@ -19,15 +20,31 @@ import { useStableElementSize } from "./viewer-measurement";
 import type {
   ViewerDocumentFrameAlign,
   ViewerDocumentFrameProps,
+  ViewerSidebarLayoutSnapshot,
+  ViewerSidebarLayoutStore,
   ViewerSurfaceMeasurement,
   ViewerSurfaceProps,
   ViewerViewportProps,
 } from "./viewer-types";
 
+export type ViewerDocumentFrameLayoutTransitionSample = {
+  inlineSize: number;
+  isTransitioning: boolean;
+  maxInlineSize: number;
+  progress: number;
+  targetInlineSize: number;
+};
+
+export type ViewerDocumentFrameLayoutTransition = {
+  getSnapshot: () => ViewerDocumentFrameLayoutTransitionSample | null;
+  subscribe: (listener: () => void) => () => void;
+};
+
 export type ViewerDocumentFrameState = {
   align: ViewerDocumentFrameAlign;
   element: HTMLDivElement | null;
   inlineSize: number | null;
+  layoutTransition: ViewerDocumentFrameLayoutTransition | null;
 };
 
 const ViewerDocumentFrameContext =
@@ -59,13 +76,19 @@ export function ViewerDocumentFrame({
   const size = useStableElementSize<HTMLDivElement>({
     retainLastNonZero: true,
   });
+  const sidebarRegistration = useOptionalViewerSidebarRegistration();
+  const layoutTransition = useViewerDocumentFrameLayoutTransition({
+    element: size.element,
+    layoutStore: sidebarRegistration?.layoutStore ?? null,
+  });
   const value = React.useMemo<ViewerDocumentFrameState>(
     () => ({
       align,
       element: size.element,
       inlineSize: size.width,
+      layoutTransition,
     }),
-    [align, size.element, size.width],
+    [align, layoutTransition, size.element, size.width],
   );
 
   return (
@@ -90,6 +113,133 @@ export function ViewerDocumentFrame({
       </div>
     </ViewerDocumentFrameContext.Provider>
   );
+}
+
+function useViewerDocumentFrameLayoutTransition({
+  element,
+  layoutStore,
+}: {
+  element: HTMLDivElement | null;
+  layoutStore: ViewerSidebarLayoutStore | null;
+}): ViewerDocumentFrameLayoutTransition | null {
+  const getSnapshot = React.useCallback(() => {
+    if (!element || !layoutStore) return null;
+
+    return getViewerDocumentFrameLayoutTransitionSample(
+      element,
+      layoutStore.getSnapshot(),
+    );
+  }, [element, layoutStore]);
+
+  const subscribe = React.useCallback(
+    (listener: () => void) => {
+      if (!layoutStore) return () => {};
+      return layoutStore.subscribe(listener);
+    },
+    [layoutStore],
+  );
+
+  return React.useMemo(() => {
+    if (!element || !layoutStore) return null;
+    return { getSnapshot, subscribe };
+  }, [element, getSnapshot, layoutStore, subscribe]);
+}
+
+function getViewerDocumentFrameLayoutTransitionSample(
+  element: HTMLDivElement,
+  sidebar: ViewerSidebarLayoutSnapshot,
+): ViewerDocumentFrameLayoutTransitionSample | null {
+  const inlineSize = getViewerDocumentFrameVisualInlineSize(element, sidebar);
+  const targetInlineSize = getViewerDocumentFrameTargetInlineSize(
+    element,
+    sidebar,
+  );
+  if (inlineSize === null) return null;
+
+  return {
+    inlineSize,
+    isTransitioning: sidebar.isTransitioning,
+    maxInlineSize: getViewerDocumentFrameMaxInlineSize(element, sidebar),
+    progress: sidebar.progress,
+    targetInlineSize: targetInlineSize ?? inlineSize,
+  };
+}
+
+function getViewerDocumentFrameTargetInlineSize(
+  element: HTMLDivElement,
+  sidebar: ViewerSidebarLayoutSnapshot,
+) {
+  const targetProgress =
+    sidebar.mode === "inline" && sidebar.open && sidebar.sidebarWidth > 0
+      ? 1
+      : 0;
+
+  return getViewerDocumentFrameVisualInlineSize(element, {
+    ...sidebar,
+    progress: targetProgress,
+  });
+}
+
+function getViewerDocumentFrameMaxInlineSize(
+  element: HTMLDivElement,
+  sidebar: ViewerSidebarLayoutSnapshot,
+) {
+  const collapsedInlineSize = getViewerDocumentFrameVisualInlineSize(element, {
+    ...sidebar,
+    progress: 0,
+  });
+  const expandedInlineSize = getViewerDocumentFrameVisualInlineSize(element, {
+    ...sidebar,
+    progress: sidebar.mode === "inline" && sidebar.sidebarWidth > 0 ? 1 : 0,
+  });
+
+  return Math.max(
+    collapsedInlineSize ?? 0,
+    expandedInlineSize ?? 0,
+    getViewerDocumentFrameVisualInlineSize(element, sidebar) ?? 0,
+    1,
+  );
+}
+
+function getViewerDocumentFrameVisualInlineSize(
+  element: HTMLDivElement,
+  sidebar: ViewerSidebarLayoutSnapshot,
+) {
+  const measuredFrameWidth = readViewerElementSize(element).width;
+
+  if (
+    sidebar.mode !== "inline" ||
+    sidebar.sidebarGapTransition !== "width" ||
+    sidebar.sidebarWidth <= 0
+  ) {
+    return measuredFrameWidth > 0 ? measuredFrameWidth : null;
+  }
+
+  const bodyElement = findClosestViewerBody(element);
+  const measuredBodyWidth = readViewerElementSize(bodyElement).width;
+  const bodyWidth =
+    measuredBodyWidth > 0
+      ? measuredBodyWidth
+      : measuredFrameWidth + sidebar.sidebarWidth * sidebar.progress;
+  const availableWidth = Math.max(
+    1,
+    bodyWidth - sidebar.sidebarWidth * sidebar.progress,
+  );
+  const maxInlineSize = readViewerDocumentFrameMaxInlineSize(element);
+
+  return maxInlineSize == null
+    ? availableWidth
+    : Math.min(availableWidth, maxInlineSize);
+}
+
+function readViewerDocumentFrameMaxInlineSize(element: HTMLElement) {
+  if (typeof window === "undefined") return null;
+
+  const value = window.getComputedStyle(element).maxInlineSize;
+  if (!value || value === "none") return null;
+
+  const size = Number.parseFloat(value);
+  return Number.isFinite(size) && size > 0 ? size : null;
 }
 
 function useViewerSurfaceMeasurementValue(): ViewerSurfaceMeasurement {
