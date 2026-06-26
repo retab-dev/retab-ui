@@ -241,7 +241,7 @@ function PageStack({
 }) {
   return (
     <div
-      className="bg-background absolute right-8 left-8 rounded-md border border-border shadow-sm will-change-transform sm:right-14 sm:left-14"
+      className="bg-background border-border absolute right-8 left-8 rounded-md border shadow-sm will-change-transform sm:right-14 sm:left-14"
       style={{
         height: STACK_HEIGHT,
         opacity,
