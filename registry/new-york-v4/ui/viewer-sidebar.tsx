@@ -49,6 +49,7 @@ export function ViewerSidebar({
   const generatedSidebarId = `${reactId}-viewer-sidebar`;
   const sidebarId = idProp ?? generatedSidebarId;
   const sidebarRef = React.useRef<HTMLElement | null>(null);
+  const [transitionsReady, setTransitionsReady] = React.useState(false);
   const collapsible = collapsibleProp ?? defaultSidebarCollapsible;
   const side = sideProp ?? defaultSidebarSide;
   const open = collapsible === "none" ? true : sidebarState.open;
@@ -64,6 +65,10 @@ export function ViewerSidebar({
   const frameStyle = {
     ...customProperties,
     "--viewer-sidebar-width": width,
+  } as React.CSSProperties;
+  const inlineFrameStyle = {
+    ...frameStyle,
+    width: open ? "var(--viewer-sidebar-width)" : "0px",
   } as React.CSSProperties;
   const ariaLabel = sidebarProps["aria-label"];
   const ariaLabelledBy = sidebarProps["aria-labelledby"];
@@ -118,19 +123,13 @@ export function ViewerSidebar({
       typeof window === "undefined" ||
       typeof window.requestAnimationFrame !== "function"
     ) {
-      sidebarRef.current?.setAttribute(
-        "data-viewer-sidebar-transitions",
-        "ready",
-      );
+      setTransitionsReady(true);
       return;
     }
     let secondFrame = 0;
     const firstFrame = window.requestAnimationFrame(() => {
       secondFrame = window.requestAnimationFrame(() => {
-        sidebarRef.current?.setAttribute(
-          "data-viewer-sidebar-transitions",
-          "ready",
-        );
+        setTransitionsReady(true);
       });
     });
 
@@ -213,6 +212,7 @@ export function ViewerSidebar({
     "data-mode": mode,
     "data-side": side,
     "data-state": state,
+    "data-viewer-sidebar-transitions": transitionsReady ? "ready" : undefined,
     "data-viewer-sidebar-mode": mode,
     "data-viewer-sidebar-open": open ? "true" : "false",
     "data-viewer-sidebar-state": state,
@@ -233,6 +233,7 @@ export function ViewerSidebar({
       data-mode={mode}
       data-side={side}
       data-state={state}
+      data-viewer-sidebar-transitions={transitionsReady ? "ready" : undefined}
       data-viewer-sidebar-mode={mode}
       data-viewer-sidebar-open={open ? "true" : "false"}
       data-viewer-sidebar-state={state}
@@ -246,19 +247,11 @@ export function ViewerSidebar({
       className={cn(
         "z-30 flex w-(--viewer-sidebar-width) min-w-0 overflow-hidden",
         mode === "inline" &&
-          "relative h-full min-w-(--viewer-sidebar-width) flex-shrink-0 transition-none data-[viewer-sidebar-transitions=ready]:transition-[translate,width,border-color] data-[viewer-sidebar-transitions=ready]:duration-200 data-[viewer-sidebar-transitions=ready]:ease-out",
+          "absolute inset-y-0 h-full min-w-(--viewer-sidebar-width) flex-shrink-0",
+        mode === "inline" && side === "left" && "right-0",
+        mode === "inline" && side === "right" && "left-0",
         mode === "overlay" &&
           "absolute inset-y-0 transition-none data-[viewer-sidebar-transitions=ready]:transition-[translate,width,border-color] data-[viewer-sidebar-transitions=ready]:duration-200 data-[viewer-sidebar-transitions=ready]:ease-out",
-        collapsible === "offcanvas" &&
-          mode === "inline" &&
-          !open &&
-          side === "left" &&
-          "pointer-events-none -translate-x-full border-transparent",
-        collapsible === "offcanvas" &&
-          mode === "inline" &&
-          !open &&
-          side === "right" &&
-          "pointer-events-none translate-x-full border-transparent",
         mode === "overlay" && side === "left" && "left-0",
         mode === "overlay" && side === "right" && "right-0",
         collapsible === "offcanvas" && mode === "overlay" && "shadow-lg",
@@ -306,13 +299,12 @@ export function ViewerSidebar({
       <div
         {...frameAttributes}
         className={cn(
-          "group/viewer-sidebar relative z-30 min-h-0 w-(--viewer-sidebar-width) flex-shrink-0 overflow-hidden",
+          "group/viewer-sidebar relative z-30 min-h-0 flex-shrink-0 overflow-hidden transition-none",
           sidebarGapTransition === "width" &&
-            "transition-[width] duration-200 ease-out",
-          collapsible === "offcanvas" && !open && "w-0",
+            "data-[viewer-sidebar-transitions=ready]:transition-[width] data-[viewer-sidebar-transitions=ready]:duration-200 data-[viewer-sidebar-transitions=ready]:ease-linear",
           side === "right" && "order-last",
         )}
-        style={frameStyle}
+        style={inlineFrameStyle}
       >
         {sidebarElement}
       </div>

@@ -30,7 +30,7 @@ export type PdfPageSize = {
 };
 
 export type PdfPageRenderStatus = "rendered" | "cancelled" | "failed";
-export type PdfPageRenderSource = "cache" | "pdfjs";
+export type PdfPageRenderSource = "cache" | "cache-preview" | "pdfjs";
 
 export type PdfPageRenderTiming = {
   pageNumber: number;

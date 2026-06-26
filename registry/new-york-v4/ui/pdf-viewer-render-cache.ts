@@ -3,6 +3,7 @@ import { joinEffectKey } from "@/lib/effect-key";
 
 export const PDF_RENDERED_PAGE_CACHE_MAX_ENTRIES = 16;
 export const PDF_RENDERED_PAGE_CACHE_MAX_PIXELS = 24_000_000;
+export const PDF_RENDERED_PAGE_PREVIEW_MIN_SCALE_RATIO = 0.5;
 
 export type PdfRenderedPageSignature = {
   documentKey: string;
@@ -70,6 +71,26 @@ export function readPdfRenderedPageCache(
       entry.pixels < bestEntry.pixels ||
       (entry.pixels === bestEntry.pixels && entry.lastUsed > bestEntry.lastUsed)
     ) {
+      bestEntry = entry;
+    }
+  }
+
+  if (!bestEntry) return null;
+  cache.clock += 1;
+  bestEntry.lastUsed = cache.clock;
+  return bestEntry;
+}
+
+export function readPdfRenderedPageCachePreview(
+  cache: PdfRenderedPageCache | undefined,
+  requested: PdfRenderedPageSignature,
+) {
+  if (!cache) return null;
+
+  let bestEntry: PdfRenderedPageCacheEntry | null = null;
+  for (const entry of cache.entries.values()) {
+    if (!doesRenderedPageMatchPreview(entry, requested)) continue;
+    if (!bestEntry || entry.pixels > bestEntry.pixels) {
       bestEntry = entry;
     }
   }
@@ -169,6 +190,22 @@ function doesRenderedPageSatisfyRequest(
     rendered.viewportHeight >= requested.viewportHeight &&
     hasMatchingPageAspectRatio(rendered, requested) &&
     rendered.devicePixelRatio >= requested.devicePixelRatio
+  );
+}
+
+function doesRenderedPageMatchPreview(
+  rendered: PdfRenderedPageSignature,
+  requested: PdfRenderedPageSignature,
+) {
+  return (
+    rendered.documentKey === requested.documentKey &&
+    rendered.pageNumber === requested.pageNumber &&
+    rendered.rotation === requested.rotation &&
+    rendered.viewportWidth >=
+      requested.viewportWidth * PDF_RENDERED_PAGE_PREVIEW_MIN_SCALE_RATIO &&
+    rendered.viewportHeight >=
+      requested.viewportHeight * PDF_RENDERED_PAGE_PREVIEW_MIN_SCALE_RATIO &&
+    hasMatchingPageAspectRatio(rendered, requested)
   );
 }
 

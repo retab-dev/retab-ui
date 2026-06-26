@@ -9,7 +9,7 @@ test("PDF thumbnail sidebar co-scrolls with the document and thumbnail clicks", 
 }) => {
   await page.goto(DEMO_PATH);
 
-  const viewerRoot = page.locator('[data-slot="viewer-root"]');
+  const viewerRoot = page.locator('[data-slot="file-viewer-root"]');
   const pdfViewer = viewerRoot.locator('[data-slot="pdf-viewer"]');
   const documentViewport = pdfViewer.locator(
     '[data-slot="scroll-area-viewport"]',
@@ -48,9 +48,11 @@ test("PDF thumbnail sidebar toggles from the viewer header with pointer and keyb
 }) => {
   await page.goto(DEMO_PATH);
 
-  const viewerRoot = page.locator('[data-slot="viewer-root"]');
+  const viewerRoot = page.locator('[data-slot="file-viewer-root"]');
   const trigger = viewerRoot.getByRole("button", { name: "Toggle sidebar" });
-  const sidebar = viewerRoot.locator('[data-slot="viewer-sidebar"]');
+  const sidebar = viewerRoot.locator(
+    '[data-slot="file-viewer-sidebar-container"]',
+  );
 
   await expect(viewerRoot).toBeVisible();
   await expect(sidebar).toHaveAttribute("aria-label", "PDF pages");
@@ -78,14 +80,21 @@ test("PDF thumbnail sidebar uses overlay dismissal on narrow viewports", async (
   await page.setViewportSize({ width: 520, height: 760 });
   await page.goto(DEMO_PATH);
 
-  const viewerRoot = page.locator('[data-slot="viewer-root"]');
+  const viewerRoot = page.locator('[data-slot="file-viewer-root"]');
   const trigger = viewerRoot.getByRole("button", { name: "Toggle sidebar" });
-  const sidebar = viewerRoot.locator('[data-slot="viewer-sidebar"]');
+  const sidebarFrame = viewerRoot.locator('[data-slot="file-viewer-sidebar"]');
+  const sidebar = viewerRoot.locator(
+    '[data-slot="file-viewer-sidebar-container"]',
+  );
 
   await expect(viewerRoot).toBeVisible();
-  await expect(sidebar).toHaveAttribute("data-viewer-sidebar-mode", "overlay");
+  await expect(sidebarFrame).toHaveAttribute(
+    "data-viewer-sidebar-mode",
+    "overlay",
+  );
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
 
+  await trigger.focus();
   await page.keyboard.press("Escape");
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
   await expect(sidebar).toHaveAttribute("aria-hidden", "true");

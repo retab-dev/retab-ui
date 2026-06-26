@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createPdfRenderedPageCache,
   readPdfRenderedPageCache,
+  readPdfRenderedPageCachePreview,
   writePdfRenderedPageCache,
   type PdfRenderedPageSignature,
 } from "@/registry/new-york-v4/ui/pdf-viewer-render-cache";
@@ -83,6 +84,46 @@ describe("pdf rendered page cache", () => {
     expect(readPdfRenderedPageCache(cache, signature())).toBeNull();
     expect(
       readPdfRenderedPageCache(cache, signature({ documentKey: "doc-b" })),
+    ).toBeNull();
+  });
+
+  it("serves a close lower-resolution same-page bitmap as a resize preview", () => {
+    const cache = createPdfRenderedPageCache("doc-a");
+    writePdfRenderedPageCache({
+      cache,
+      rendered: signature({
+        scale: 0.8,
+        viewportWidth: 80,
+        viewportHeight: 160,
+      }),
+      sourceCanvas: canvas(80, 160),
+    });
+
+    const cached = readPdfRenderedPageCachePreview(cache, signature());
+
+    expect(cached).not.toBeNull();
+    expect(cached?.canvas.width).toBe(80);
+    expect(cached?.canvas.height).toBe(160);
+  });
+
+  it("does not stretch thumbnail-resolution or cross-document bitmaps as resize previews", () => {
+    const cache = createPdfRenderedPageCache("doc-a");
+    writePdfRenderedPageCache({
+      cache,
+      rendered: signature({
+        scale: 0.1,
+        viewportWidth: 10,
+        viewportHeight: 20,
+      }),
+      sourceCanvas: canvas(10, 20),
+    });
+
+    expect(readPdfRenderedPageCachePreview(cache, signature())).toBeNull();
+    expect(
+      readPdfRenderedPageCachePreview(
+        cache,
+        signature({ documentKey: "doc-b" }),
+      ),
     ).toBeNull();
   });
 });

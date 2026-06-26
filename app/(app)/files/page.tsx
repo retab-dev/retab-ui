@@ -136,7 +136,7 @@ export default function FilesPage() {
                 aria-hidden="true"
               />
               <h1 className="text-foreground text-4xl font-semibold tracking-tight text-balance md:text-5xl lg:text-6xl">
-                A file viewer component
+                The universal file viewer
               </h1>
               <p className="text-muted-foreground mb-2 max-w-[740px] text-base leading-7 text-pretty md:text-lg lg:text-xl">
                 <code className="text-foreground">FileViewer</code> is a

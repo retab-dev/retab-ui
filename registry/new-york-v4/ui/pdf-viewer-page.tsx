@@ -6,6 +6,7 @@ import type { PdfDocumentProxy } from "@/lib/pdf-document-types";
 import { getPdfCanvasPixelSize } from "./pdf-viewer-canvas";
 import {
   readPdfRenderedPageCache,
+  readPdfRenderedPageCachePreview,
   writePdfRenderedPageCache,
   type PdfRenderedPageCache,
   type PdfRenderedPageSignature,
@@ -154,7 +155,25 @@ export const PdfPage = React.memo(function PdfPage({
         return;
       }
 
-      markCanvasRenderStatus(canvas, renderSignature, "pending");
+      const previewPage = readPdfRenderedPageCachePreview(
+        renderCache,
+        renderSignature,
+      );
+      if (previewPage) {
+        resizeCanvas(canvas, canvasWidth, canvasHeight);
+        drawCanvasImage(context, previewPage.canvas, canvasWidth, canvasHeight);
+        markCanvasRenderStatus(
+          canvas,
+          renderSignature,
+          "pending",
+          "cache-preview",
+        );
+      } else if (!renderedPageRef.current) {
+        resizeCanvas(canvas, canvasWidth, canvasHeight);
+        markCanvasRenderStatus(canvas, renderSignature, "pending");
+      } else {
+        markCanvasRenderStatus(canvas, renderSignature, "pending");
+      }
 
       const renderCanvas = canvas.ownerDocument.createElement("canvas");
       renderCanvas.width = canvasWidth;
