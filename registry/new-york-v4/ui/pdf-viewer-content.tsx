@@ -51,10 +51,12 @@ import {
   ViewerControls,
   type ViewerControlsState,
 } from "./viewer-controls";
-import { useOptionalViewerDocumentFrame } from "./viewer-surface";
+import {
+  useOptionalViewerDocumentFrame,
+  useViewerDocumentFrameLayout,
+} from "./viewer-surface";
 import { ViewerErrorBoundary } from "./viewer-error";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
-import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import { joinEffectKey } from "@/lib/effect-key";
 import type { ViewerDocumentFrameAlign } from "./viewer-types";
@@ -163,10 +165,11 @@ function PdfViewerInner({
   const firstPageSize = usePdfFirstPageSize(document);
   const { ref: containerRef, width: containerWidth } =
     useMeasuredElementWidth();
-  const fitWidthContainerWidth = usePdfSettledFitWidthContainerWidth({
+  const documentFrameLayout = useViewerDocumentFrameLayout({
     documentFrame,
-    measuredWidth: documentFrame?.inlineSize ?? containerWidth,
+    fallbackInlineSize: documentFrame?.inlineSize ?? containerWidth,
   });
+  const fitWidthContainerWidth = documentFrameLayout.settledInlineSize;
   const { rotation, rotateClockwise } = usePdfDocumentRotation(document);
   const fitPageWidth =
     rotation % 180 === 0 ? firstPageSize.width : firstPageSize.height;
@@ -179,26 +182,19 @@ function PdfViewerInner({
     pageWidth: fitPageWidth,
     resetKey: document,
   });
-  const displayFitWidthContainerWidth = usePdfVisualFitWidthContainerWidth({
-    documentFrame,
-    enabled: Boolean(documentFrame && isFitWidth),
-    fallbackWidth: fitWidthContainerWidth,
-  });
   const displayScale =
     isFitWidth && documentFrame
-      ? getPdfFitWidthScale(displayFitWidthContainerWidth, fitPageWidth, 0)
+      ? getPdfFitWidthScale(
+          documentFrameLayout.activeInlineSize,
+          fitPageWidth,
+          0,
+        )
       : resolvedScale;
-  const renderScaleResetKey = joinEffectKey([
-    content.key,
-    rotation,
-    isFitWidth,
-  ]);
-  const renderScale = usePdfPreparedFitWidthRenderScale({
-    documentFrame,
-    enabled: isFitWidth,
+  const renderScale = getPdfPreparedFitWidthRenderScale({
+    enabled: Boolean(documentFrame && isFitWidth),
     fallbackScale: resolvedScale,
+    maxInlineSize: documentFrameLayout.maxInlineSize,
     pageWidth: fitPageWidth,
-    resetKey: renderScaleResetKey,
   });
 
   const { pageSizeByNumber, setPageSize } = usePdfPageSizes(document);
@@ -480,125 +476,20 @@ function usePdfDocumentRotation(document: PdfDocument) {
   return { rotation, rotateClockwise };
 }
 
-function usePdfPreparedFitWidthRenderScale({
-  documentFrame,
+function getPdfPreparedFitWidthRenderScale({
   enabled,
   fallbackScale,
+  maxInlineSize,
   pageWidth,
-  resetKey,
 }: {
-  documentFrame: ReturnType<typeof useOptionalViewerDocumentFrame>;
   enabled: boolean;
   fallbackScale: number;
+  maxInlineSize: number | null;
   pageWidth: number;
-  resetKey: string;
 }) {
-  const [state, setState] = React.useState<{
-    resetKey: string;
-    scale: number;
-  }>(() => ({ resetKey, scale: fallbackScale }));
-
-  useKeyedLayoutEffect(
-    joinEffectKey([
-      documentFrame?.layoutTransition,
-      enabled,
-      fallbackScale,
-      pageWidth,
-      resetKey,
-    ]),
-    () => {
-      const layoutTransition = documentFrame?.layoutTransition;
-      if (!enabled || !layoutTransition) {
-        setState((current) =>
-          current.resetKey === resetKey && current.scale === fallbackScale
-            ? current
-            : { resetKey, scale: fallbackScale },
-        );
-        return;
-      }
-
-      const syncTargetScale = () => {
-        const sample = layoutTransition.getSnapshot();
-        const targetScale = sample
-          ? getPdfFitWidthScale(sample.maxInlineSize, pageWidth, 0)
-          : fallbackScale;
-
-        setState((current) =>
-          current.resetKey === resetKey && current.scale === targetScale
-            ? current
-            : { resetKey, scale: targetScale },
-        );
-      };
-
-      syncTargetScale();
-      return layoutTransition.subscribe(syncTargetScale);
-    },
-  );
-
-  return enabled && state.resetKey === resetKey ? state.scale : fallbackScale;
-}
-
-function usePdfSettledFitWidthContainerWidth({
-  documentFrame,
-  measuredWidth,
-}: {
-  documentFrame: ReturnType<typeof useOptionalViewerDocumentFrame>;
-  measuredWidth: number | null;
-}) {
-  const layoutTransition = documentFrame?.layoutTransition ?? null;
-  const [settledWidth, setSettledWidth] = React.useState<number | null>(
-    () => measuredWidth,
-  );
-
-  useKeyedLayoutEffect(joinEffectKey([layoutTransition, measuredWidth]), () => {
-    if (!layoutTransition) {
-      setSettledWidth((currentWidth) =>
-        currentWidth === measuredWidth ? currentWidth : measuredWidth,
-      );
-      return;
-    }
-
-    const commitSettledWidth = () => {
-      const sample = layoutTransition.getSnapshot();
-      if (sample?.isTransitioning) return;
-
-      const nextWidth = sample?.inlineSize ?? measuredWidth;
-      setSettledWidth((currentWidth) =>
-        currentWidth === nextWidth ? currentWidth : nextWidth,
-      );
-    };
-
-    commitSettledWidth();
-    return layoutTransition.subscribe(commitSettledWidth);
-  });
-
-  return settledWidth ?? measuredWidth;
-}
-
-function usePdfVisualFitWidthContainerWidth({
-  documentFrame,
-  enabled,
-  fallbackWidth,
-}: {
-  documentFrame: ReturnType<typeof useOptionalViewerDocumentFrame>;
-  enabled: boolean;
-  fallbackWidth: number | null;
-}) {
-  const layoutTransition = documentFrame?.layoutTransition ?? null;
-  const subscribe = React.useCallback(
-    (listener: () => void) =>
-      enabled && layoutTransition
-        ? layoutTransition.subscribe(listener)
-        : () => {},
-    [enabled, layoutTransition],
-  );
-  const getSnapshot = React.useCallback(() => {
-    if (!enabled || !layoutTransition) return fallbackWidth ?? 0;
-
-    return layoutTransition.getSnapshot()?.inlineSize ?? fallbackWidth ?? 0;
-  }, [enabled, fallbackWidth, layoutTransition]);
-
-  return React.useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  return enabled && maxInlineSize != null
+    ? getPdfFitWidthScale(maxInlineSize, pageWidth, 0)
+    : fallbackScale;
 }
 
 function usePdfDocumentControlsRegistration({
