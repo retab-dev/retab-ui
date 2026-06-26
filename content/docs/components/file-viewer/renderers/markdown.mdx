@@ -1,14 +1,20 @@
 ---
 title: Markdown
-description: The continuous, virtualized Markdown viewer — one document-wide unified pipeline parses Markdown once, then visible HAST slices project into React.
+description: The continuous, virtualized Markdown viewer - one document-wide unified pipeline parses Markdown once, then visible HAST slices project into React.
 component: true
 ---
 
-The Markdown Viewer is the File Viewer's Markdown renderer. It renders Markdown
-as a single continuous document surface built on the Chenglou/Pretext text
-layout path: a document-wide unified Markdown pipeline owns Markdown semantics,
-chunking stays internal to virtualization, and the viewer projects visible HAST
-slices into React.
+The Markdown Viewer is the File Viewer's Markdown renderer. It turns a URL,
+Blob, or inline Markdown source into one continuous reading surface: Markdown
+semantics are resolved once for the full document, then the viewer projects only
+the visible HAST chunks into React.
+
+It is not a thin wrapper around `react-markdown`, and it is not the Text
+Viewer's Pretext line layout. The text viewer family uses
+`@chenglou/pretext` for source-line layout; the Markdown Viewer uses
+unified/remark/rehype for Markdown semantics, then reuses shared text-viewer
+chrome, resource bounds, scroll interaction helpers, and inverse-sticky
+virtualization math.
 
 <ComponentPreview name="markdown-viewer-demo" />
 
@@ -37,7 +43,8 @@ export function Example() {
 }
 ```
 
-URL and Blob sources use the same bounded text resource path as the Text Viewer:
+URL and Blob sources use the same bounded text resource path as the Text
+Viewer:
 
 ```tsx
 <MarkdownViewer
@@ -50,10 +57,294 @@ URL and Blob sources use the same bounded text resource path as the Text Viewer:
 />
 ```
 
+## Architecture Report
+
+The runtime path is intentionally split into narrow stages:
+
+| Stage              | Owner                                     | Output                                     |
+| ------------------ | ----------------------------------------- | ------------------------------------------ |
+| Source loading     | `PlainTextViewerFrame` and text resources | Bounded UTF-8 text plus download metadata  |
+| Markdown semantics | `markdown-unified-pipeline.ts`            | Full-document MDAST, HAST, messages, map   |
+| Document model     | `markdown-greenfield-document.ts`         | Blocks, chunks, headings, fragment targets |
+| Layout             | `markdown-greenfield-layout.ts`           | Estimated/measured chunk frames            |
+| Projection         | `markdown-greenfield-virtualizer.ts`      | Visible frame IDs and scroll anchors       |
+| Rendering          | `markdown-greenfield-renderer.tsx`        | React elements for the visible HAST slices |
+| Diagrams           | `markdown-greenfield-diagram.tsx`         | Lazy, bounded SVG diagram surfaces         |
+
+That separation is what lets the viewer feel like a normal document while
+behaving like a virtualized renderer. Markdown is parsed once, document-wide
+features resolve before slicing, and the DOM only contains the chunk window
+near the viewport.
+
+### Runtime Flow
+
+`MarkdownViewer` is a small public wrapper. It delegates to
+`PlainTextViewerFrame`, which resolves URL, Blob, and inline text sources,
+applies byte/line bounds, and then mounts `MarkdownGreenfieldContent`.
+
+`MarkdownGreenfieldContent` owns the reader state:
+
+- It reads the bounded text resource and asks `useMarkdownGreenfieldDocument`
+  for the parsed document.
+- Small documents parse synchronously through the shared document cache.
+- Large documents parse asynchronously once they cross the worker threshold,
+  using `markdown-greenfield-document.worker.ts` when available and falling back
+  to an idle main-thread task when the worker cannot be used.
+- While parsing is pending, the viewer mounts a cheap pending document so the
+  chrome and scroll surface stay stable.
+
+The result is a `MarkdownGreenfieldDocument`, not a React tree. React rendering
+is deliberately deferred until the virtualizer knows which chunks are near the
+viewport.
+
+### Unified Pipeline
+
+The Markdown semantic pipeline lives in one place:
+`markdown-unified-pipeline.ts`.
+
+It builds a cached unified processor with:
+
+- `remark-parse`
+- `remark-directive`
+- `remark-gfm`
+- `remark-breaks`
+- `remark-math`
+- `remark-gemoji`
+- Retab prose transforms, GitHub alerts, definition lists, restricted
+  components, code metadata, and trusted image metadata
+- `remark-rehype`
+- `rehype-raw`
+- `rehype-slug`
+- `rehype-sanitize`
+- Retab safe-input and trusted-metadata passes
+- cached KaTeX rendering
+
+The important rule is that Markdown semantics finish before virtualization.
+Reference links, footnotes, heading slugs, raw HTML sanitization, component
+metadata, GFM tables, task lists, math, and alerts are all resolved against the
+whole document. Virtualization never parses a partial Markdown slice.
+
+The pipeline also creates a source map. Later stages use it to attach source
+line and offset metadata to rendered blocks, to scroll `highlight` ranges into
+view, and to map native find hits back to real source lines.
+
+### Document Model
+
+`markdown-greenfield-document.ts` converts the full HAST root into a stable
+document model:
+
+- `blocks` are semantic top-level units such as headings, paragraphs, lists,
+  tables, code, math, frontmatter, raw HTML, images, diagrams, components, and
+  footnotes.
+- Every block records a stable ID, source range, source text, source line
+  lengths, generated/source-backed status, and a hostile-content flag.
+- `chunks` group adjacent blocks into bounded render units. The target is about
+  42 source lines, with a hard split around 64 source lines, and hostile blocks
+  are isolated into their own chunks.
+- `headings` and `fragmentTargets` come from the same full-document slug model
+  that produced rendered heading IDs.
+- The document is frozen and cached by text key, so repeated mounts can reuse
+  the same parsed model.
+
+Chunks are an internal implementation detail. They are not pages, and the user
+never sees page labels, page gutters, or page frames.
+
+### Layout
+
+`markdown-greenfield-layout.ts` turns chunks into a vertical frame list. The
+first pass is deterministic and cheap:
+
+- Paragraph-like blocks estimate visual lines from source line lengths,
+  available width, font scale, and tuned character widths.
+- Code blocks use mono line-height estimates.
+- Tables, images, math, components, diagrams, frontmatter, and hostile blocks
+  have bounded type-specific estimates.
+- Very large tables reserve a virtualized-table height rather than estimating
+  every row into the document flow.
+
+Once real chunks mount, `ChunkFrame` reports measured heights with
+`ResizeObserver`. Those measurements are keyed by document, chunk, width, zoom,
+and layout policy version, then folded back into the layout frame on the next
+animation frame.
+
+The measured-height loop is conservative: it ignores sub-pixel noise, batches
+updates, and only compensates scroll position for height changes entirely above
+the live viewport. That is what prevents newly measured rich content from
+pulling the reader back toward the top.
+
+### Virtualization
+
+The viewer uses a custom chunk virtualizer rather than page virtualization.
+`markdown-greenfield-virtualizer.ts` does binary searches over the chunk frame
+list to find the pixel-overscanned visible range.
+
+The mounted DOM has three main pieces:
+
+- a before spacer
+- one sticky render window
+- an after spacer
+
+The sticky window uses the shared inverse-sticky math from
+`text-viewer-virtualization.ts`. The scroll container keeps the full document
+height, while the expensive React subtree stays small and sticky inside the
+viewport. As the reader scrolls, the virtualizer swaps the projected chunk IDs
+inside that sticky window.
+
+The projection stores frame IDs as well as numeric indices. If measurements
+change while the user is scrolling, the viewer can keep rendering the same
+semantic window instead of blinking through an index-only mismatch.
+
+### Scroll Anchors
+
+Scroll is source-aware and chunk-aware:
+
+- `scrollToLineRange` normalizes 1-based inclusive line ranges, finds the
+  owning chunk, estimates the line offset inside that chunk, and scrolls the
+  real viewport.
+- Hash navigation resolves a fragment to the document-owned target, then jumps
+  through the same source-line scroll path.
+- Width changes, zoom changes, and other intentional reflows capture a chunk
+  anchor before layout changes and restore the relative offset inside that
+  chunk afterward.
+- Measurement-driven reflows apply only the height delta for measured chunks
+  entirely above the viewport.
+
+The browser's native scroll anchoring is disabled for the Markdown viewport so
+it does not fight the component's own anchor model.
+
+### Rendering
+
+`markdown-greenfield-renderer.tsx` renders only the visible chunks. Each chunk
+passes its HAST children through `hast-util-to-jsx-runtime` with a component map
+that owns the polished Markdown UI.
+
+The renderer is responsible for:
+
+- safe links with internal, relative, email, root, fragment, and external-link
+  behavior
+- safe image and video surfaces with loading, ready, failed, and blocked states
+- GitHub alert blockquotes
+- directive callouts
+- restricted component markdown
+- frontmatter
+- footnotes
+- GFM task lists
+- raw HTML tags allowed by the sanitizer
+- math surfaces
+- code blocks
+- tables
+- diagrams
+
+Rendered chunk output is cached by chunk identity, search state, active match,
+and fragment-ID policy. That keeps small scrolls from rebuilding JSX for chunks
+that remain in the visible window.
+
+### Code And Tables
+
+Long code and table blocks have their own inner virtualization, because a single
+Markdown block can be much larger than the document chunk size.
+
+Code blocks render as labelled source regions with normalized language labels,
+copy actions, titles, captions, line numbers, highlighted lines, and diff line
+styling. Once a code block crosses the line threshold, it mounts only the
+visible source lines inside a fixed-height source canvas.
+
+Tables render GFM alignment, scoped headers, row/column metadata, inline cell
+Markdown, keyboard-scrollable horizontal overflow, and TSV copy. Large tables
+switch to a fixed-height virtualized body with row windows, so a large table
+does not force React to mount every cell in the document.
+
+### Mermaid Diagrams
+
+Mermaid fenced blocks and restricted `Diagram` components render through
+`MarkdownGreenfieldDiagram`.
+
+The diagram path is intentionally lazy and bounded:
+
+- source size and line-count limits reject oversized diagrams before rendering
+- an `IntersectionObserver` waits until the diagram is near the viewport
+- a reserved height keeps the Markdown layout stable while rendering
+- a per-instance external store prevents cross-diagram notification fan-out
+- source and SVG copy buttons live in the same labelled figure surface
+
+The renderer prefers local `mmdr` WASM (`/vendor/mmdr/typst_mmdr.wasm`) for
+fast Mermaid-to-SVG rendering. If `mmdr` cannot load or cannot render a source,
+the pipeline falls back to Mermaid JS. Recoverable Mermaid layout failures can
+fall back again to simple sanitized SVG summaries for known diagram kinds.
+
+Every SVG path is sanitized before mounting. Active SVG tags, embedded
+resources, SVG links, animation, style surfaces, and clobbering IDs are removed
+or rewritten before the HTML reaches the DOM.
+
+### Search And Native Find
+
+Toolbar search is source-backed: matches are computed against the full raw
+Markdown source, not only against mounted React chunks. Previous/next navigation
+wraps through the result set and scrolls through the same source-line addressing
+path used by `highlight`.
+
+Browser-native find gets an additional bridge. The viewer builds inert
+offscreen text records for chunks in idle batches. When the browser reveals a
+virtual hit through `beforematch`, the bridge scrolls the real Markdown viewport
+to the owning source range so the rendered chunk can mount.
+
+### Safety Model
+
+The viewer treats Markdown as user content:
+
+- raw HTML is parsed with `rehype-raw` but narrowed through
+  `rehype-sanitize`
+- user-authored `id` and `name` attributes are clobber-prefixed
+- raw user HTML cannot retain internal component metadata
+- unsafe links degrade to text
+- unsafe images and media render blocked states
+- SVG, SVGZ, data, and unsafe schemes are blocked for Markdown media
+- arbitrary MDX, import/export statements, spread props, expression props,
+  event handlers, namespaced components, and remote components do not execute
+
+Unsupported syntax becomes inert source-like output or a diagnostic fallback,
+never executable DOM.
+
+### Performance Model
+
+The fast path works because expensive work is bounded:
+
+- Markdown is parsed once per document text key, not per visible chunk.
+- Large documents can parse outside the initial render path.
+- Layout starts with cheap block-aware estimates.
+- Real measurements are batched and cached.
+- The virtual window mounts only pixel-overscanned chunks.
+- The inverse-sticky window preserves one continuous scroll height without
+  keeping all chunks in the DOM.
+- Expensive subtrees such as large code blocks and tables virtualize internally.
+- Mermaid diagrams render lazily near the viewport and prefer local `mmdr`
+  WASM before Mermaid JS.
+- Hostile chunks render bounded source previews instead of full rich subtrees.
+- File Viewer can prewarm the Markdown renderer on idle when routing predicts a
+  Markdown document.
+
+The result is a continuous document that behaves like normal Markdown to the
+reader, but has the rendering cost profile of a small, measured viewport.
+
+### Pretext Boundary
+
+The Markdown Viewer does not directly import or execute `@chenglou/pretext`.
+
+Pretext matters to the broader viewer system because the Text Viewer and
+line-oriented text/code paths use it for wrapped source-line preparation,
+layout, and materialization. Markdown borrows the successful architecture
+shape - prepare a stable model, lay it out cheaply, materialize only the
+visible projection, and correct layout with anchors - but it applies that shape
+to a unified/HAST Markdown tree instead of to Pretext line records.
+
+The shared pieces are viewer chrome, bounded text resource loading,
+source-line range types, scroll interaction helpers, zoom clamping, and the
+inverse-sticky virtual window helper.
+
 ## Design
 
 One continuous text/document layout, with virtualization as an internal
-implementation detail — no page count, page frame, or page delimiter is ever
+implementation detail - no page count, page frame, or page delimiter is ever
 part of the Markdown user experience. Markdown is parsed once with unified
 (GFM, math, directives, raw HTML handling, and sanitization) before visible
 chunks are projected, so document-wide semantics such as reference links and
@@ -63,7 +354,7 @@ footnotes resolve before the viewer slices the HAST.
 
 - **Continuous rendering** - no page count, page frame, or page delimiter should be part of the Markdown user experience.
 - **Document-wide Markdown semantics** - Markdown is parsed once with unified, GFM, math, directives, raw HTML handling, and sanitization before visible chunks are projected.
-- **Pretext layout** - visible chunks start from block-aware, Pretext-informed height estimates, then measured heights feed back into the virtual frame.
+- **Block-aware layout** - visible chunks start from deterministic block-aware height estimates, then measured heights feed back into the virtual frame.
 - **Always rendered** - Markdown is always shown as rendered output; there is no source/text view mode.
 - **Markdown-first routing** - sources are parsed as Markdown even when the file extension is generic text.
 - **Source-line addressing** - `highlight` and `scrollToLineRange` keep using 1-based inclusive source-line ranges.
@@ -86,8 +377,8 @@ footnotes resolve before the viewer slices the HAST.
 - Links and images use a dedicated safe URL policy. Unsafe links degrade to text, unsafe images render blocked media states, and Markdown images reject unsafe schemes plus SVG/SVGZ resources. Absolute HTTP(S) links open with `noopener noreferrer`, show an aria-hidden external-link cue, and expose stable link-kind/link-form markers; fragment, relative, root-relative, and email links stay in the current browsing context.
 - Safe raw HTML is parsed through `rehype-raw`, narrowed by `rehype-sanitize`, and rendered through styled React components for supported static tags such as `details`, `summary`, `figure`, `figcaption`, `caption`, `dl`, `dt`, `dd`, `mark`, `kbd`, `q`, `ins`, `abbr`, `time`, `cite`, `dfn`, `small`, `var`, `samp`, `sub`, and `sup`. User-authored raw HTML cannot retain internal component metadata, and raw `id` / `name` values are clobber-prefixed by the sanitizer while generated viewer IDs remain stable.
 - GFM autolink literals, bare email autolinks, strikethrough, soft line breaks, ordered-list starts, non-editable task-list checkboxes, nested lists, and reference links/images render through document-wide GFM semantics. Conservative definition-list shorthand renders as semantic `dl` / `dt` / `dd` markup.
-- Mermaid fenced blocks and restricted `Diagram` components render through the Mermaid package in a bounded diagram surface. Loading, ready, oversized, and failed states stay inside the same labelled keyboard-scrollable region, rendered SVG is sanitized before mounting, and source/SVG copy controls are available where applicable.
-- Inline and block math render through `remark-math` and KaTeX with untrusted input and bounded expansion.
+- Mermaid fenced blocks and restricted `Diagram` components prefer local `mmdr` WASM and fall back to Mermaid JS in a bounded diagram surface. Loading, ready, oversized, and failed states stay inside the same labelled keyboard-scrollable region, rendered SVG is sanitized before mounting, and source/SVG copy controls are available where applicable.
+- Inline and block math render through `remark-math` and cached KaTeX with untrusted input and bounded expansion.
 - GFM footnotes render with labelled references, labelled backrefs, bidirectional fragment targets, a labelled footnotes section, and document-wide definition resolution across virtual chunks.
 - Fenced code blocks render in labelled, horizontally scrollable source regions with normalized language labels, token styling, title/caption metadata, line numbers, highlighted lines, diff line styling, and copy controls. Mermaid fences are routed to the diagram surface.
 - GFM tables render with inline cell Markdown, alignment, a keyboard-focusable horizontal scroll region, row/column counts, scoped header cells, and a TSV copy action.
@@ -102,14 +393,15 @@ footnotes resolve before the viewer slices the HAST.
 | Document flow       | Continuous Markdown document flow                                                                                                       | Continuous text-oriented flow  |
 | Virtualization unit | Internal Markdown chunks with no visible page model                                                                                     | Source/text rows and blocks    |
 | Markdown renderer   | Document-wide unified/GFM pipeline with visible HAST projection                                                                         | Viewer-owned Markdown subset   |
-| Geometry strategy   | Pretext-informed block estimates plus measured chunk heights                                                                            | Pretext line/block estimates   |
-| Tables              | GFM tables with inline cell Markdown, alignment, horizontal scroll, scoped headers, row/column counts, and TSV copy                     | Basic Markdown table path      |
+| Geometry strategy   | Block-aware estimates plus measured chunk heights                                                                                       | Pretext line/block estimates   |
+| Tables              | GFM tables with inline cell Markdown, alignment, horizontal scroll, scoped headers, row/column counts, row virtualization, and TSV copy | Basic Markdown table path      |
 | Code blocks         | Labelled source blocks with normalized labels, token styling, title, caption, line numbers, highlights, diff styling, and copy controls | Source-like fallback path      |
 | Frontmatter         | First-class YAML/TOML blocks with raw source plus conservative scalar/list metadata summary                                             | Source text behavior           |
 | GitHub alerts       | `> [!NOTE]` style alert surfaces                                                                                                        | Not first-class                |
 | Component markdown  | Restricted component registry only                                                                                                      | Not first-class                |
 | Raw HTML            | Narrow sanitized static HTML policy                                                                                                     | Inert/source-oriented fallback |
 | Fragment navigation | Model-owned heading IDs drive DOM IDs and virtual scroll                                                                                | Source-line oriented           |
+| Mermaid diagrams    | Lazy mmdr-first SVG rendering with Mermaid JS fallback                                                                                  | Not first-class                |
 
 ## Unsupported Syntax
 
@@ -121,14 +413,14 @@ props, spread props, event handlers, invalid enum values, remote or namespaced
 components, and unsafe directive props render as inert diagnostic fallbacks with
 source previews. Import/export statements render as inert source-like text.
 
-Mermaid rendering uses the Mermaid package with strict security settings,
-disabled flowchart HTML labels, bounded source size, and source-derived reserved
-height inside the viewer diagram surface. Recoverable layout/package failures
-fall back to a simple sanitized SVG summary for known diagram kinds. The SVG
-mount boundary denies active tags, embedded resources, SVG links, animation, and
-style surfaces, and prefixes clobbering SVG `id` / `name` values before
-mounting. Invalid diagrams or browser rendering failures stay contained in a
-non-crashing error/source surface.
+Mermaid rendering prefers local `mmdr` WASM, then falls back to Mermaid JS with
+strict security settings, disabled flowchart HTML labels, bounded source size,
+and source-derived reserved height inside the viewer diagram surface.
+Recoverable layout/package failures fall back to a simple sanitized SVG summary
+for known diagram kinds. The SVG mount boundary denies active tags, embedded
+resources, SVG links, animation, and style surfaces, and prefixes clobbering SVG
+`id` / `name` values before mounting. Invalid diagrams or browser rendering
+failures stay contained in a non-crashing error/source surface.
 
 Large hostile blocks are isolated and rendered through bounded source previews,
 so pathological code fences, tables, raw HTML, or nested AST payloads do not
@@ -182,3 +474,7 @@ export function Example() {
 `scrollToLineRange(range, options?)` scrolls any normalized source-line range
 into view, even when that source line is outside the currently mounted virtual
 window.
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/markdown-viewer.tsx" />
