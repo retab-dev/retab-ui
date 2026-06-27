@@ -35,7 +35,13 @@ export function PdfViewerFallback({
 }
 
 export function PageSkeleton() {
-  return <Skeleton className="size-full rounded-md" />;
+  return (
+    <div
+      aria-hidden
+      className="ring-border size-full rounded-none bg-white shadow-sm ring-1"
+      data-slot="pdf-page-skeleton"
+    />
+  );
 }
 
 function PageAspectSkeleton() {

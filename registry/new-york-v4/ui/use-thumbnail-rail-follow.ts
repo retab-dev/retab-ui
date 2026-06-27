@@ -13,11 +13,16 @@ import { joinEffectKey } from "@/lib/effect-key";
 
 export const THUMBNAIL_FOLLOW_MARGIN = 24;
 
-type ThumbnailFollowSuspension = "none" | "pointer" | "user-scroll";
+type ThumbnailFollowSuspension =
+  | { kind: "none" }
+  | { kind: "pointer" }
+  | { kind: "user-scroll" }
+  | { kind: "rail-navigation"; targetPage: number };
 
 interface ThumbnailFollowState {
   suspension: ThumbnailFollowSuspension;
   currentPage: number | null;
+  isPointerInside: boolean;
   programmaticScrollCount: number;
 }
 
@@ -33,21 +38,22 @@ export function useThumbnailRailFollow({
   resetKey: unknown;
 }) {
   const stateRef = React.useRef<ThumbnailFollowState>({
-    suspension: "none",
+    suspension: { kind: "none" },
     currentPage: null,
+    isPointerInside: false,
     programmaticScrollCount: 0,
   });
 
   const scrollPageIntoView = React.useCallback(
     (page: number, behavior: ScrollBehavior) => {
       const normalizedPage = normalizeThumbnailPage(page, layout.pageCount);
-      if (normalizedPage == null) return;
+      if (normalizedPage == null) return false;
 
       const viewport = viewportRef.current;
-      if (!viewport) return;
+      if (!viewport) return false;
 
       const item = getPdfThumbnailLayoutItem(layout, normalizedPage);
-      if (!item) return;
+      if (!item) return false;
 
       const top = item.top - viewport.scrollTop;
       const bottom = top + item.height;
@@ -57,7 +63,9 @@ export function useThumbnailRailFollow({
         item.top <= THUMBNAIL_FOLLOW_MARGIN &&
         viewport.scrollTop <= THUMBNAIL_FOLLOW_MARGIN;
 
-      if ((top >= minTop || isAtDocumentStart) && bottom <= maxBottom) return;
+      if ((top >= minTop || isAtDocumentStart) && bottom <= maxBottom) {
+        return false;
+      }
 
       const maxScrollTop = Math.max(
         0,
@@ -68,8 +76,11 @@ export function useThumbnailRailFollow({
         Math.max(0, item.top - viewport.clientHeight / 2 + item.height / 2),
       );
 
-      stateRef.current.programmaticScrollCount += 1;
+      if (stateRef.current.suspension.kind !== "rail-navigation") {
+        stateRef.current.programmaticScrollCount += 1;
+      }
       viewport.scrollTo?.({ top: targetTop, behavior });
+      return true;
     },
     [layout, viewportRef],
   );
@@ -79,15 +90,16 @@ export function useThumbnailRailFollow({
     if (page == null) return;
 
     const state = stateRef.current;
-    if (state.suspension !== "none") return;
+    if (state.suspension.kind !== "none") return;
 
     scrollPageIntoView(page, "auto");
   }, [currentPage, layout.pageCount, scrollPageIntoView]);
 
   useKeyedMountEffect(joinEffectKey(["thumbnail-reset", resetKey]), () => {
     const state = stateRef.current;
-    state.suspension = "none";
+    state.suspension = { kind: "none" };
     state.currentPage = null;
+    state.isPointerInside = false;
     state.programmaticScrollCount = 0;
   });
 
@@ -99,8 +111,15 @@ export function useThumbnailRailFollow({
       const pageChanged = state.currentPage !== page;
 
       state.currentPage = page;
-      if (state.suspension === "user-scroll" && pageChanged) {
-        state.suspension = "none";
+      if (state.suspension.kind === "rail-navigation") {
+        if (page === state.suspension.targetPage) {
+          state.suspension = getIdleSuspension(state);
+        }
+        return;
+      }
+
+      if (state.suspension.kind === "user-scroll" && pageChanged) {
+        state.suspension = { kind: "none" };
       }
 
       followNow();
@@ -108,22 +127,38 @@ export function useThumbnailRailFollow({
   );
 
   const onPointerEnter = React.useCallback(() => {
-    if (stateRef.current.suspension === "user-scroll") return;
-    stateRef.current.suspension = "pointer";
+    const state = stateRef.current;
+    state.isPointerInside = true;
+    if (
+      state.suspension.kind === "user-scroll" ||
+      state.suspension.kind === "rail-navigation"
+    ) {
+      return;
+    }
+    state.suspension = { kind: "pointer" };
   }, []);
 
   const onPointerLeave = React.useCallback(() => {
-    if (stateRef.current.suspension !== "pointer") return;
-    stateRef.current.suspension = "none";
+    const state = stateRef.current;
+    state.isPointerInside = false;
+    if (state.suspension.kind !== "pointer") return;
+    state.suspension = { kind: "none" };
     followNow();
   }, [followNow]);
 
   const onPageActivate = React.useCallback(
     (pageNumber: number) => {
-      stateRef.current.suspension = "none";
-      scrollPageIntoView(pageNumber, "smooth");
+      const targetPage = normalizeThumbnailPage(pageNumber, layout.pageCount);
+      if (targetPage == null) return;
+
+      const state = stateRef.current;
+      state.suspension =
+        state.currentPage === targetPage
+          ? getIdleSuspension(state)
+          : { kind: "rail-navigation", targetPage };
+      scrollPageIntoView(targetPage, "smooth");
     },
-    [scrollPageIntoView],
+    [layout.pageCount, scrollPageIntoView],
   );
 
   const onScroll = React.useCallback(() => {
@@ -133,7 +168,9 @@ export function useThumbnailRailFollow({
       return;
     }
 
-    state.suspension = "user-scroll";
+    if (state.suspension.kind === "rail-navigation") return;
+
+    state.suspension = { kind: "user-scroll" };
   }, []);
 
   return {
@@ -142,4 +179,10 @@ export function useThumbnailRailFollow({
     onPointerLeave,
     onScroll,
   };
+}
+
+function getIdleSuspension(
+  state: Pick<ThumbnailFollowState, "isPointerInside">,
+): ThumbnailFollowSuspension {
+  return state.isPointerInside ? { kind: "pointer" } : { kind: "none" };
 }

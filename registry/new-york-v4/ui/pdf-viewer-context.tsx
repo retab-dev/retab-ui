@@ -46,6 +46,8 @@ const PdfViewerContext = React.createContext<PdfViewerContextValue | null>(
   null,
 );
 
+const PDF_THUMBNAIL_SMOOTH_SCROLL_MAX_PAGE_DELTA = 8;
+
 function usePdfViewerContext(
   consumer = "PdfViewer parts",
 ): PdfViewerContextValue {
@@ -61,8 +63,16 @@ export function usePdfViewerThumbnails(): PdfViewerThumbnailsState {
     "usePdfViewerThumbnails",
   );
   const onSelectPage = React.useCallback(
-    (page: number) => viewerHandle?.scrollToPage(page),
-    [viewerHandle],
+    (page: number) => {
+      const pageDelta = currentPage == null ? 0 : Math.abs(page - currentPage);
+      viewerHandle?.scrollToPage(page, {
+        behavior:
+          pageDelta > PDF_THUMBNAIL_SMOOTH_SCROLL_MAX_PAGE_DELTA
+            ? "auto"
+            : "smooth",
+      });
+    },
+    [currentPage, viewerHandle],
   );
 
   return {

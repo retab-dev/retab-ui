@@ -3,7 +3,7 @@ import { joinEffectKey } from "@/lib/effect-key";
 
 export const PDF_RENDERED_PAGE_CACHE_MAX_ENTRIES = 16;
 export const PDF_RENDERED_PAGE_CACHE_MAX_PIXELS = 24_000_000;
-export const PDF_RENDERED_PAGE_PREVIEW_MIN_SCALE_RATIO = 0.5;
+export const PDF_RENDERED_PAGE_PREVIEW_MIN_SCALE_RATIO = 0.08;
 
 export type PdfRenderedPageSignature = {
   documentKey: string;
