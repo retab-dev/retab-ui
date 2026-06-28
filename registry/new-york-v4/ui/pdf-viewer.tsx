@@ -11,8 +11,8 @@ import {
   FileViewerHeaderEnd,
   FileViewerHeaderStart,
   FileViewerIdentity,
+  FileViewerInset,
   FileViewerProvider,
-  FileViewerSurface,
   FileViewerToolbar,
   FileViewerViewport,
 } from "./file-viewer";
@@ -121,7 +121,7 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
               ) : null}
             </FileViewerHeader>
             <FileViewerBody>
-              <FileViewerSurface>
+              <FileViewerInset>
                 <FileViewerViewport>
                   <PdfViewerPages
                     {...pagesProps}
@@ -131,7 +131,7 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
                     ref={ref}
                   />
                 </FileViewerViewport>
-              </FileViewerSurface>
+              </FileViewerInset>
             </FileViewerBody>
           </PdfViewerProvider>
         </FileViewer>

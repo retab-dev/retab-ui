@@ -28,9 +28,14 @@ type RawMeasuredSize = {
 };
 
 function readElementSize(element: HTMLElement): RawMeasuredSize {
+  const rect =
+    typeof element.getBoundingClientRect === "function"
+      ? element.getBoundingClientRect()
+      : null;
+
   return {
-    height: element.clientHeight,
-    width: element.clientWidth,
+    height: rect?.height || element.clientHeight,
+    width: rect?.width || element.clientWidth,
   };
 }
 

@@ -22,7 +22,6 @@ type ThumbnailFollowSuspension =
 interface ThumbnailFollowState {
   suspension: ThumbnailFollowSuspension;
   currentPage: number | null;
-  isPointerInside: boolean;
   programmaticScrollCount: number;
 }
 
@@ -40,7 +39,6 @@ export function useThumbnailRailFollow({
   const stateRef = React.useRef<ThumbnailFollowState>({
     suspension: { kind: "none" },
     currentPage: null,
-    isPointerInside: false,
     programmaticScrollCount: 0,
   });
 
@@ -99,7 +97,6 @@ export function useThumbnailRailFollow({
     const state = stateRef.current;
     state.suspension = { kind: "none" };
     state.currentPage = null;
-    state.isPointerInside = false;
     state.programmaticScrollCount = 0;
   });
 
@@ -112,8 +109,9 @@ export function useThumbnailRailFollow({
 
       state.currentPage = page;
       if (state.suspension.kind === "rail-navigation") {
-        if (page === state.suspension.targetPage) {
-          state.suspension = getIdleSuspension(state);
+        if (pageChanged || page === state.suspension.targetPage) {
+          state.suspension = { kind: "none" };
+          followNow();
         }
         return;
       }
@@ -128,7 +126,6 @@ export function useThumbnailRailFollow({
 
   const onPointerEnter = React.useCallback(() => {
     const state = stateRef.current;
-    state.isPointerInside = true;
     if (
       state.suspension.kind === "user-scroll" ||
       state.suspension.kind === "rail-navigation"
@@ -140,7 +137,6 @@ export function useThumbnailRailFollow({
 
   const onPointerLeave = React.useCallback(() => {
     const state = stateRef.current;
-    state.isPointerInside = false;
     if (state.suspension.kind !== "pointer") return;
     state.suspension = { kind: "none" };
     followNow();
@@ -154,7 +150,7 @@ export function useThumbnailRailFollow({
       const state = stateRef.current;
       state.suspension =
         state.currentPage === targetPage
-          ? getIdleSuspension(state)
+          ? { kind: "none" }
           : { kind: "rail-navigation", targetPage };
       scrollPageIntoView(targetPage, "smooth");
     },
@@ -179,10 +175,4 @@ export function useThumbnailRailFollow({
     onPointerLeave,
     onScroll,
   };
-}
-
-function getIdleSuspension(
-  state: Pick<ThumbnailFollowState, "isPointerInside">,
-): ThumbnailFollowSuspension {
-  return state.isPointerInside ? { kind: "pointer" } : { kind: "none" };
 }

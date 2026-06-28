@@ -250,9 +250,9 @@ function useManualFrames() {
 
 describe("PdfViewer — rotation × fit-width interactions", () => {
   it("only swaps the fit-width axis at 90°/270°, not at 180°", async () => {
-    // A 100×200 page in an 832px column.
-    // Upright fit: (832 - 32) / 100 = 8 → clamped to 5 → 500%.
-    // Rotated 90°: width axis becomes the page height 200 → 800 / 200 = 400%.
+    // A 100×200 page in an 832px FileViewerInset column.
+    // Upright fit: 832 / 100 = 8.32 → clamped to 5 → 500%.
+    // Rotated 90°: width axis becomes the page height 200 → 832 / 200 = 416%.
     // Rotated 180°: upright again (no swap) → back to 500%.
     pdfjsMock.docs.set("/rotate-fit-axis.pdf", makeDoc([[100, 200]]));
 
@@ -262,7 +262,7 @@ describe("PdfViewer — rotation × fit-width interactions", () => {
     expect(await screen.findByText("500%")).toBeTruthy();
 
     fireEvent.click(screen.getByLabelText("Rotate"));
-    expect(await screen.findByText("400%")).toBeTruthy();
+    expect(await screen.findByText("416%")).toBeTruthy();
 
     fireEvent.click(screen.getByLabelText("Rotate"));
     expect(await screen.findByText("500%")).toBeTruthy();
@@ -291,7 +291,7 @@ describe("PdfViewer — rotation × fit-width interactions", () => {
   it("fits the rotated axis when clearing a manual zoom after rotating", async () => {
     // 100×200 page. Start zoomed (manual 200%), rotate 90° (still manual 200%),
     // then Fit width: the fit must use the now-horizontal axis (page height 200)
-    // → (832 - 32) / 200 = 400%, not the upright 500%.
+    // → 832 / 200 = 416%, not the upright 500%.
     pdfjsMock.docs.set("/zoom-rotate-fit.pdf", makeDoc([[100, 200]]));
 
     await act(async () => {
@@ -308,7 +308,7 @@ describe("PdfViewer — rotation × fit-width interactions", () => {
     expect(await screen.findByText("200%")).toBeTruthy();
 
     fireEvent.click(screen.getByLabelText("Fit width"));
-    expect(await screen.findByText("400%")).toBeTruthy();
+    expect(await screen.findByText("416%")).toBeTruthy();
   });
 
   it("clamps a non-finite controlled scale to the maximum in the controls", async () => {

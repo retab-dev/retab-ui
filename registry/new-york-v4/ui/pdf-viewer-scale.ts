@@ -54,21 +54,24 @@ export function useMeasuredElementWidth() {
 
   const ref = React.useCallback((element: HTMLDivElement | null) => {
     if (!element) return;
-    setWidth(element.clientWidth);
-    if (typeof ResizeObserver === "undefined") return;
 
     let frame = 0;
-    let latestWidth = element.clientWidth;
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        latestWidth = (entry.target as HTMLElement).clientWidth;
-      }
+    const measure = () => {
       if (frame) return;
       frame = requestAnimationFrame(() => {
         frame = 0;
-        setWidth(latestWidth);
+        setWidth(element.clientWidth);
       });
-    });
+    };
+
+    measure();
+    if (typeof ResizeObserver === "undefined") {
+      return () => {
+        if (frame) cancelAnimationFrame(frame);
+      };
+    }
+
+    const observer = new ResizeObserver(measure);
 
     observer.observe(element);
     return () => {

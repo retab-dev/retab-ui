@@ -6,10 +6,10 @@ component: true
 
 `FileViewerSidebar` is the optional rail inside `FileViewerBody`. It belongs to
 the File Viewer frame: `FileViewer`, `FileViewerHeader`, `FileViewerBody`,
-`FileViewerSidebar`, and `FileViewerSurface`.
+`FileViewerSidebar`, and `FileViewerInset`.
 
 Use it for document-adjacent panels: page sections, attachments, source fields,
-thumbnails, and other workflow rails that sit beside a viewer surface. Do not
+thumbnails, and other workflow rails that sit beside a viewer inset. Do not
 use the app-shell `SidebarProvider` pattern for these rails.
 
 ## Viewer Sidebar Example
@@ -19,7 +19,7 @@ sidebar open state, `FileViewer` owns mode resolution, and
 `FileViewerSidebar` owns the rail shell and accessible rail label. The
 navigation component inside the rail owns the row model and interaction. Here,
 `SegmentSidebar` owns section rows while `FileViewerDocument` owns the document
-surface.
+renderer.
 
 <ComponentPreview name="viewer-sidebar-demo" />
 
@@ -46,11 +46,11 @@ surface.
           onSelect={(segment) => scrollToPage(segment.pages[0])}
         />
       </FileViewerSidebar>
-      <FileViewerSurface>
+      <FileViewerInset>
         <FileViewerViewport>
           <FileViewerDocument />
         </FileViewerViewport>
-      </FileViewerSurface>
+      </FileViewerInset>
     </FileViewerBody>
   </FileViewer>
 </FileViewerProvider>
@@ -60,11 +60,12 @@ surface.
 
 - `FileViewerProvider` owns sidebar open state and controlled/uncontrolled
   state props.
-- `FileViewer` owns sidebar mode resolution, trigger wiring, and the
-  single-primary-sidebar contract.
-- `FileViewerSidebar` owns spatial placement, width, side override, collapse
-  behavior, and the rail's accessible label.
-- `FileViewerSurface` owns the main file surface beside the rail.
+- `FileViewer` owns sidebar mode resolution, trigger wiring, the
+  single-primary-sidebar contract, and the sidebar layout transition marker.
+- `FileViewerSidebar` owns spatial placement, declared width, side override,
+  collapse behavior, and the rail's accessible label.
+- `FileViewerInset` owns the main file inset and document frame beside the
+  rail.
 - `SidebarList*` owns providerless grouped-row grammar inside a rail.
 - `SegmentSidebar` owns segment row state, preview interaction, current-page
   highlighting, and select callbacks.
@@ -106,11 +107,11 @@ workflow requires it:
 <FileViewerProvider source={source} defaultSidebarOpen>
   <FileViewer sidebarMode="inline" sidebarSide="right">
     <FileViewerBody>
-      <FileViewerSurface>
+      <FileViewerInset>
         <FileViewerViewport>
           <FileViewerDocument />
         </FileViewerViewport>
-      </FileViewerSurface>
+      </FileViewerInset>
       <FileViewerSidebar aria-label="Attachments" width="20rem">
         <AttachmentSidebar items={attachments} selectedId={selectedId} />
       </FileViewerSidebar>
@@ -123,22 +124,33 @@ workflow requires it:
 with the nearest `FileViewer` frame. In overlay mode, Escape closes the sidebar
 and focus returns to the trigger.
 
+For inline rails, keep the default `sidebarGapTransition="width"` when the
+document should resize with the rail. The sidebar width, gap width, and inset
+document frame then move to the same target inline size. CSS performs the
+linear interpolation, while renderers use the transition marker for anchoring
+and virtualization.
+
 ## Structural Attributes
 
 File Viewer sidebar primitives expose stable attributes for local styling and
 tests:
 
 - `data-slot="file-viewer-header"`, `file-viewer-body`,
-  `file-viewer-sidebar`, `file-viewer-surface`, and
+  `file-viewer-sidebar`, `file-viewer-inset`, and
   `file-viewer-sidebar-trigger`;
-- `data-viewer-sidebar-mode="inline" | "overlay"`;
-- `data-viewer-sidebar-open="true" | "false"`;
-- `data-viewer-sidebar-state="expanded" | "collapsed"`;
+- `data-file-viewer-sidebar-mode="inline" | "overlay"`;
+- `data-file-viewer-sidebar-open="true" | "false"`;
+- `data-file-viewer-sidebar-state="expanded" | "collapsed"`;
+- `data-file-viewer-sidebar-side="left" | "right"`;
 - `data-collapsible` and `data-side`.
 
 Put domain meaning in the named rail component and accessible label:
 `aria-label="Document sections"`, `aria-label="Email attachments"`, or
 `aria-label="Source fields"`.
+
+The lower-level shared viewer primitives also emit `data-viewer-*` attributes,
+but file-viewer examples and app-level styling should prefer the namespaced
+`data-file-viewer-*` contract.
 
 ## Source
 

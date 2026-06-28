@@ -19,7 +19,7 @@ import {
   FileViewerSidebar,
   FileViewerSidebarContent,
   FileViewerSidebarTrigger,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerToolbar,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
@@ -75,12 +75,12 @@ export function SplitViewer({
           <SplitViewerFileHeader />
           <FileViewerBody>
             <SplitViewerSidebar />
-            <FileViewerSurface>
+            <FileViewerInset>
               <FileViewerLegend>
                 <SplitViewerLegend className="px-3 py-2" />
               </FileViewerLegend>
               <SplitViewerDocument document={document} />
-            </FileViewerSurface>
+            </FileViewerInset>
           </FileViewerBody>
         </FileViewer>
       </FileViewerProvider>

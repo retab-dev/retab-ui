@@ -57,7 +57,7 @@ import {
   FileViewerHeader,
   FileViewerSidebar,
   FileViewerSidebarTrigger,
-  FileViewerSurface,
+  FileViewerInset,
 } from "@/registry/new-york-v4/ui/file-viewer";
 import {
   FileViewerControls,
@@ -309,9 +309,9 @@ function SourcesViewerSidebarProbe() {
         <FileViewerControls />
       </FileViewerHeader>
       <FileViewerBody>
-        <FileViewerSurface data-testid="source-document-surface">
+        <FileViewerInset data-testid="source-document-surface">
           Document
-        </FileViewerSurface>
+        </FileViewerInset>
         <FileViewerSidebar
           aria-label="Source-linked fields"
           data-testid="source-sidebar"

@@ -334,11 +334,11 @@ function CompositionCode() {
       <FileViewerToolbar />
     </FileViewerHeader>
     <FileViewerBody>
-      <FileViewerSurface>
+      <FileViewerInset>
         <FileViewerViewport>
           <FileViewerDocument />
         </FileViewerViewport>
-      </FileViewerSurface>
+      </FileViewerInset>
     </FileViewerBody>
   </FileViewer>
 </FileViewerProvider>`}</code>

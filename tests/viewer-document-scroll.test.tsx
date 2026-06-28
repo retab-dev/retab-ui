@@ -75,6 +75,49 @@ describe("useViewerDocumentScroll", () => {
     await waitFor(() => expect(viewport.element.scrollTop).toBe(420));
   });
 
+  it("preserves the cached reading anchor when a shorter layout clamps DOM scroll first", async () => {
+    const viewport = createControlledViewport({
+      clientHeight: 100,
+      scrollTop: 1500,
+    });
+    const api = {
+      handleScroll: null as (() => void) | null,
+    };
+
+    function Harness({
+      blockSize,
+      isTransitioning,
+    }: {
+      blockSize: number;
+      isTransitioning: boolean;
+    }) {
+      const scroll = useViewerDocumentScroll<TestAnchor, TestTarget>({
+        layout: createLayout(blockSize, isTransitioning),
+        resetKey: "same-document",
+        scrollMapper: SIMPLE_SCROLL_MAPPER,
+      });
+      api.handleScroll = scroll.handleScroll;
+
+      useMountEffect(() => {
+        scroll.setViewportElement(viewport.element);
+        return () => scroll.setViewportElement(null);
+      });
+
+      return null;
+    }
+
+    const view = render(<Harness blockSize={2000} isTransitioning={false} />);
+
+    act(() => {
+      api.handleScroll?.();
+    });
+    viewport.element.scrollTop = 400;
+
+    view.rerender(<Harness blockSize={1000} isTransitioning />);
+
+    await waitFor(() => expect(viewport.element.scrollTop).toBe(740));
+  });
+
   it("retargets active programmatic scroll when layout block size changes", async () => {
     const viewport = createControlledViewport({
       clientHeight: 100,
@@ -167,6 +210,7 @@ describe("useViewerDocumentScroll", () => {
 
 function createLayout(
   blockSize: number,
+  isTransitioning = false,
 ): ViewerDocumentLayoutModel<TestAnchor> {
   return {
     blockSize,
@@ -182,6 +226,7 @@ function createLayout(
         ? 0
         : anchor.value * blockSize - viewportBlockSize * 0.2,
     inlineSize: 100,
+    isTransitioning,
   };
 }
 

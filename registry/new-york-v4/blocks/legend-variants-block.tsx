@@ -8,7 +8,7 @@ import {
   FileViewer,
   FileViewerBody,
   FileViewerProvider,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import { PageRibbon } from "@/components/ui/page-ribbon";
@@ -213,7 +213,7 @@ function Cell({
                       <FileViewer className="h-full">
                         <PdfViewerProvider>
                           <FileViewerBody>
-                            <FileViewerSurface>
+                            <FileViewerInset>
                               <FileViewerViewport>
                                 <PdfViewerPages
                                   bare
@@ -221,7 +221,7 @@ function Cell({
                                   className="h-full"
                                 />
                               </FileViewerViewport>
-                            </FileViewerSurface>
+                            </FileViewerInset>
                           </FileViewerBody>
                         </PdfViewerProvider>
                       </FileViewer>

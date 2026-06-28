@@ -7,7 +7,7 @@ import {
   FileViewer,
   FileViewerBody,
   FileViewerProvider,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import {
@@ -269,7 +269,7 @@ function OcrLayoutBlocksContent({
               <FileViewer className="h-full">
                 <PdfViewerProvider>
                   <FileViewerBody>
-                    <FileViewerSurface>
+                    <FileViewerInset>
                       <FileViewerViewport>
                         <PdfViewerPages
                           ref={setPdfViewerHandle}
@@ -286,7 +286,7 @@ function OcrLayoutBlocksContent({
                           renderPageOverlay={renderPageOverlay}
                         />
                       </FileViewerViewport>
-                    </FileViewerSurface>
+                    </FileViewerInset>
                   </FileViewerBody>
                 </PdfViewerProvider>
               </FileViewer>

@@ -49,11 +49,11 @@ your bundler (Vite, webpack, or Turbopack) — there is no runtime CDN call.
         <FileViewerSidebar aria-label="PDF pages">
           <PdfViewerThumbnails />
         </FileViewerSidebar>
-        <FileViewerSurface>
+        <FileViewerInset>
           <FileViewerViewport>
             <PdfViewerPages />
           </FileViewerViewport>
-        </FileViewerSurface>
+        </FileViewerInset>
       </FileViewerBody>
     </PdfViewerProvider>
   </FileViewer>
@@ -67,6 +67,12 @@ and controls, and `PdfViewerPages` renders the document pages. When
 standalone PDF provider compositions can still pass `source` directly.
 `PdfViewerThumbnails` is the provider-bound thumbnail adapter. It reads the
 resource, current page, and page-jump command from `PdfViewerProvider`.
+
+Keep `PdfViewerPages` inside `FileViewerViewport`, and keep that viewport
+inside `FileViewerInset`. Fit-to-width scale, virtual page height, and scroll
+anchoring consume the inset's document-frame layout. If a PDF page list is
+mounted in a raw flex surface, the pane can resize before the PDF page geometry
+updates.
 
 For non-provider compositions, use the controlled rail directly:
 
@@ -87,7 +93,7 @@ controls the sidebar shell. `thumbnailShape` preserves page aspect with
 ## Usage
 
 `PdfViewer` is the easy API. It is the preassembled PDF viewer with
-`FileViewerHeader`, `FileViewerBody`, `FileViewerSurface`, and
+`FileViewerHeader`, `FileViewerBody`, `FileViewerInset`, and
 `PdfViewerPages`. Compose `PdfViewerThumbnails` inside `FileViewerSidebar` when
 a thumbnail rail is needed.
 
@@ -129,11 +135,11 @@ You can compose workflow chrome around the PDF surface with the same primitives:
         <FileViewerSidebar aria-label="Workflow pages">
           <PageRibbon />
         </FileViewerSidebar>
-        <FileViewerSurface>
+        <FileViewerInset>
           <FileViewerViewport>
             <PdfViewerPages bare className="h-full" />
           </FileViewerViewport>
-        </FileViewerSurface>
+        </FileViewerInset>
       </FileViewerBody>
     </PdfViewerProvider>
   </FileViewer>
@@ -175,6 +181,10 @@ inside `renderPageOverlay` (the overlay layer is already `position: absolute`):
 When `scale` is omitted, the viewer fits the page width to its container until
 the user manually zooms. Use `defaultScale` to seed that uncontrolled zoom state,
 or pass `scale` with `onScaleChange` to control zoom from a parent.
+
+In composed file viewers, fit-to-width uses the nearest `FileViewerInset`
+document frame. During inline sidebar transitions, the visible page boxes follow
+that frame immediately; PDF.js canvas resolution can catch up separately.
 
 ```tsx
 const [scale, setScale] = React.useState<number | null>(1)

@@ -51,7 +51,7 @@ const STRUCTURE_NODES = [
   calloutNode("root-label", "<FileViewer />", 300, 18, 118, 24),
   calloutNode("header-label", "<FileViewerHeader />", 512, 80, 172, 24),
   calloutNode("sidebar-label", "<FileViewerSidebar />", 46, 174, 166, 24),
-  calloutNode("surface-label", "<FileViewerSurface />", 514, 176, 172, 24),
+  calloutNode("inset-label", "<FileViewerInset />", 514, 176, 172, 24),
   calloutNode("viewport-label", "<FileViewerViewport />", 514, 246, 178, 24),
   calloutNode("body-label", "<FileViewerBody />", 62, 302, 142, 24),
   calloutNode("document-label", "<FileViewerDocument />", 494, 326, 188, 24),
@@ -59,7 +59,7 @@ const STRUCTURE_NODES = [
   diagramNode("header", "Header", "header", 266, 90, 188, 44),
   diagramNode("body", "", "body", 266, 150, 188, 168),
   diagramNode("sidebar", "Sidebar", "sidebar", 284, 170, 66, 126),
-  diagramNode("surface", "", "surface", 364, 170, 72, 126),
+  diagramNode("inset", "", "surface", 364, 170, 72, 126),
   diagramNode("viewport", "", "viewport", 376, 194, 48, 76),
   diagramNode("document", "", "document", 385, 222, 30, 28),
 ] satisfies DiagramNode[];
@@ -69,7 +69,7 @@ const STRUCTURE_EDGES = [
   labelEdge("root-label", "root", "bottom-source", "top-target"),
   labelEdge("header-label", "header", "left-source", "right-target"),
   labelEdge("sidebar-label", "sidebar", "right-source", "left-target"),
-  labelEdge("surface-label", "surface", "left-source", "right-target-top"),
+  labelEdge("inset-label", "inset", "left-source", "right-target-top"),
   labelEdge("viewport-label", "viewport", "left-source", "right-target"),
   labelEdge("body-label", "body", "right-source", "left-target-bottom"),
   labelEdge("document-label", "document", "left-source", "bottom-target"),
@@ -80,8 +80,8 @@ const SIDEBAR_NODES = [
   calloutNode("registration-label", "one registered sidebar", 444, 48, 198, 24),
   calloutNode("rows-label", "domain rail owns rows", 76, 362, 186, 24),
   calloutNode(
-    "surface-label",
-    "file pixels stay in surface",
+    "inset-label",
+    "file pixels stay in inset",
     424,
     362,
     224,
@@ -97,7 +97,7 @@ const SIDEBAR_NODES = [
   calloutNode("sidebar-title", "FileViewer", 155, 216, 104, 16),
   diagramNode("thumbs", "Thumbnails", "row", 154, 240, 104, 16),
   diagramNode("segments", "Segments", "row", 154, 260, 104, 16),
-  diagramNode("surface", "Surface", "surface", 306, 202, 256, 84),
+  diagramNode("inset", "Inset", "surface", 306, 202, 256, 84),
   diagramNode("viewport", "", "viewport", 332, 216, 204, 56),
   diagramNode("document", "Document", "document", 382, 228, 104, 32),
 ] satisfies DiagramNode[];
@@ -106,7 +106,7 @@ const SIDEBAR_EDGES = [
   labelEdge("trigger-label", "trigger", "bottom-source", "top-target"),
   labelEdge("registration-label", "header", "bottom-source", "top-target"),
   labelEdge("rows-label", "segments", "top-source", "bottom-target"),
-  labelEdge("surface-label", "document", "top-source", "bottom-target"),
+  labelEdge("inset-label", "document", "top-source", "bottom-target"),
 ] satisfies DiagramEdge[];
 
 const DIAGRAMS = [

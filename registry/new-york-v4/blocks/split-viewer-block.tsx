@@ -10,7 +10,7 @@ import {
   FileViewer,
   FileViewerProvider,
   FileViewerSidebarTrigger,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerToolbar,
 } from "@/components/ui/file-viewer";
 import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer";
@@ -66,12 +66,12 @@ export function SplitViewerBlock() {
               </FileViewerHeader>
               <FileViewerBody>
                 <SplitViewerSidebar />
-                <FileViewerSurface>
+                <FileViewerInset>
                   <FileViewerLegend>
                     <SplitViewerLegend className="px-3 py-2" />
                   </FileViewerLegend>
                   <SplitViewerDocument document={<SplitViewerPdfDocument />} />
-                </FileViewerSurface>
+                </FileViewerInset>
               </FileViewerBody>
             </PdfViewerProvider>
           </FileViewer>

@@ -1,6 +1,6 @@
 ---
 title: FileViewer
-description: The File Viewer frame that consumes provider state and owns the file surface layout.
+description: The File Viewer frame that consumes provider state and owns file layout.
 component: true
 ---
 
@@ -36,11 +36,11 @@ The composed form gives you the same file-scoped context with explicit slots:
     </FileViewerHeader>
     <FileViewerBody>
       <FileViewerSidebar aria-label="Document navigation" />
-      <FileViewerSurface>
+      <FileViewerInset>
         <FileViewerViewport>
           <FileViewerDocument />
         </FileViewerViewport>
-      </FileViewerSurface>
+      </FileViewerInset>
     </FileViewerBody>
   </FileViewer>
 </FileViewerProvider>
@@ -60,11 +60,15 @@ Use `FileViewerPreview` to embed a single file inside your own layout:
   one.
 - **Single source of truth.** The resolved descriptor and resource are shared
   through context, so every part reads the same identity — there is no prop
-  drilling between header, sidebar, and surface.
+  drilling between header, sidebar, and inset.
 - **Sidebar state.** The provider owns open/collapsed state
   (`defaultSidebarOpen`, or controlled `sidebarOpen`/`onSidebarOpenChange`);
   `FileViewer` passes that state into the frame and owns layout props such as
   `sidebarMode`, `sidebarSide`, `sidebarCollapsible`, and `inlineBreakpoint`.
+- **Deterministic geometry.** Inline sidebar transitions publish one target
+  inline size and a transition marker. `FileViewerSidebar`, `FileViewerInset`,
+  and fit-to-width renderers move to that target together while CSS owns the
+  interpolation.
 - **Ownership boundary.** `FileViewerProvider` owns file concerns only: source
   loading, type routing, download identity, sidebar state, and renderer control
   registration. Workflow semantics belong outside it.
@@ -83,6 +87,8 @@ Use `FileViewerPreview` to embed a single file inside your own layout:
 | `inlineBreakpoint`    | `FileViewer`         | Width in px above which `auto` mode renders the sidebar inline.       |
 | `sidebarSide`         | `FileViewer`         | Which side the sidebar mounts on.                                     |
 | `sidebarCollapsible`  | `FileViewer`         | Whether the sidebar can collapse off-canvas.                          |
+| `sidebarGapTransition` | `FileViewer`        | `"width"` for smooth inline resize, or `"none"` for an instant gap.   |
+| `layout`              | `FileViewer`         | `"fill"` to occupy the host, or `"intrinsic"` for caller-owned sizing. |
 
 ## Source
 

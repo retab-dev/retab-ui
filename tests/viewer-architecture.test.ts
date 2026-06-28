@@ -1006,12 +1006,27 @@ describe("viewer architecture", () => {
     const fileViewerBody = fileContent(
       "registry/new-york-v4/ui/file-viewer-body.tsx",
     );
+    const fileViewerEntrypoint = fileContent(
+      "registry/new-york-v4/ui/file-viewer.tsx",
+    );
     const fileViewerPreview = fileContent(
       "registry/new-york-v4/ui/file-viewer-preview.tsx",
     );
     expect(fileViewerFrame).toContain("<ViewerRoot");
     expect(fileViewerBody).toContain("<ViewerBody");
     expect(fileViewerBody).toContain("<ViewerSurface");
+    expect(fileViewerBody).toContain("const FileViewerInsetContext");
+    expect(fileViewerBody).toContain(
+      "FileViewerViewport must be rendered inside FileViewerInset.",
+    );
+    expect(fileViewerBody).not.toContain(
+      "export function FileViewerSurface",
+    );
+    expect(fileViewerBody).not.toContain(
+      "export function FileViewerDocumentFrame",
+    );
+    expect(fileViewerEntrypoint).not.toContain("FileViewerSurface");
+    expect(fileViewerEntrypoint).not.toContain("FileViewerDocumentFrame");
     expect(fileViewerPreview).toContain("<FileViewerDocument");
 
     const pdfTypeFiles = [
@@ -1612,7 +1627,7 @@ describe("viewer architecture", () => {
           "<FileViewerHeaderEnd",
           "<FileViewerToolbar",
           "<FileViewerBody",
-          "<FileViewerSurface",
+          "<FileViewerInset",
           "<FileViewerViewport",
           "<PdfViewerPages",
         ],
@@ -1639,7 +1654,7 @@ describe("viewer architecture", () => {
           "<SplitViewerFileHeader",
           "<FileViewerBody",
           "<SplitViewerSidebar",
-          "<FileViewerSurface",
+          "<FileViewerInset",
           "<FileViewerLegend",
           "<SplitViewerLegend",
           "<SplitViewerDocument",
@@ -1699,7 +1714,7 @@ describe("viewer architecture", () => {
           "<FileViewer",
           "<PartitionViewerFileHeader",
           "<FileViewerBody",
-          "<FileViewerSurface",
+          "<FileViewerInset",
           "<FileViewerLegend",
           "<PartitionViewerLegend",
           "<PartitionViewerRibbon",
@@ -2086,7 +2101,7 @@ describe("viewer architecture", () => {
         "<FileViewerBody",
         "<FileViewerSidebar",
         "<PdfViewerThumbnails",
-        "<FileViewerSurface",
+        "<FileViewerInset",
         "<FileViewerViewport",
         "<PdfViewerPages",
       ],
@@ -2734,7 +2749,7 @@ describe("viewer architecture", () => {
         "<PartitionViewerHeaderMeta",
         "<FileViewerToolbar",
         "<FileViewerBody",
-        "<FileViewerSurface",
+        "<FileViewerInset",
         "<PartitionViewerLegend",
         "<PartitionViewerRibbon",
         "<PartitionSourceDocument",
@@ -2750,8 +2765,8 @@ describe("viewer architecture", () => {
         if (!element.descendantTags.includes("FileViewerBody")) {
           violations.push(`${file}:${element.line} missing FileViewerBody`);
         }
-        if (!element.descendantTags.includes("FileViewerSurface")) {
-          violations.push(`${file}:${element.line} missing FileViewerSurface`);
+        if (!element.descendantTags.includes("FileViewerInset")) {
+          violations.push(`${file}:${element.line} missing FileViewerInset`);
         }
       }
     }
@@ -2781,8 +2796,8 @@ describe("viewer architecture", () => {
       expect(content, `${file} renders FileViewerBody`).toContain(
         "<FileViewerBody",
       );
-      expect(content, `${file} renders FileViewerSurface`).toContain(
-        "<FileViewerSurface",
+      expect(content, `${file} renders FileViewerInset`).toContain(
+        "<FileViewerInset",
       );
       expect(content, `${file} renders FileViewerSidebar`).toContain(
         "<FileViewerSidebar",
@@ -2803,7 +2818,7 @@ describe("viewer architecture", () => {
       "<FileViewerIdentity",
       "<FileViewerToolbar",
       "<FileViewerBody",
-      "<FileViewerSurface",
+      "<FileViewerInset",
       "<FileViewerViewport",
       "<FileViewerSidebar",
     ]) {
@@ -3118,7 +3133,7 @@ describe("viewer architecture", () => {
       "`FileViewerProvider` owns sidebar open state, `FileViewer` owns mode resolution",
     );
     expect(compactSidebarDoc).toContain(
-      "`FileViewerSidebar` owns spatial placement, width, side override, collapse behavior, and the rail's accessible label.",
+      "`FileViewerSidebar` owns spatial placement, declared width, side override, collapse behavior, and the rail's accessible label.",
     );
     expect(sidebarDoc).toContain(
       "Put domain meaning in the named rail component and accessible label",
@@ -3220,7 +3235,7 @@ describe("viewer architecture", () => {
       "content/docs/components/file-viewer/anatomy/file-viewer-header.mdx",
       "content/docs/components/file-viewer/anatomy/file-viewer-body.mdx",
       "content/docs/components/file-viewer/anatomy/file-viewer-sidebar.mdx",
-      "content/docs/components/file-viewer/anatomy/file-viewer-surface.mdx",
+      "content/docs/components/file-viewer/anatomy/file-viewer-inset.mdx",
       "content/docs/components/file-viewer/anatomy/file-viewer-viewport.mdx",
       "content/docs/components/file-viewer/anatomy/file-viewer-document.mdx",
       "content/docs/components/file-viewer/anatomy/file-viewer-states.mdx",
@@ -3289,7 +3304,7 @@ describe("viewer architecture", () => {
       "FileViewerSidebarSectionAction",
       "FileViewerSidebarSectionContent",
       "FileViewerSidebarSeparator",
-      "FileViewerSurface",
+      "FileViewerInset",
       "FileViewerViewport",
       "FileViewerDocument",
       "FileViewerLoadingState",
@@ -3830,7 +3845,7 @@ describe("viewer architecture", () => {
           "<FileViewer",
           "<FileViewerHeader",
           "<FileViewerBody",
-          "<FileViewerSurface",
+          "<FileViewerInset",
           "<FileViewerViewport",
           "<PdfViewerProvider",
           "<PdfViewerPages",
@@ -3850,7 +3865,7 @@ describe("viewer architecture", () => {
           "<FileViewer",
           "<PdfViewerProvider",
           "<FileViewerBody",
-          "<FileViewerSurface",
+          "<FileViewerInset",
           "<FileViewerViewport",
           "<PdfViewerPages",
           "<ViewerSidebar",
@@ -4125,7 +4140,7 @@ describe("viewer architecture", () => {
         "<SegmentedDocumentProvider",
         "<FileViewer",
         "<FileViewerBody",
-        "<FileViewerSurface",
+        "<FileViewerInset",
         "<FileViewerSidebar",
         "<SourceFieldList",
       ]);
@@ -4144,7 +4159,7 @@ describe("viewer architecture", () => {
         "<SegmentedDocumentProvider",
         "<FileViewer",
         "<FileViewerBody",
-        "<FileViewerSurface",
+        "<FileViewerInset",
         "<FileViewerSidebar",
         "<SourceFieldList",
       ],
@@ -4159,11 +4174,12 @@ describe("viewer architecture", () => {
         "<SegmentedDocumentProvider",
         "<FileViewerProvider",
         "<FileViewer",
-        "<PdfViewerProvider",
         "<FileViewerHeader",
         "<FileViewerBody",
-        "<FileViewerSurface",
+        "<FileViewerInset",
         "<FileViewerViewport",
+        "<PdfViewerProvider",
+        "<PdfViewerPages",
         "<FileViewerSidebar",
         "<JsonForm",
       ],

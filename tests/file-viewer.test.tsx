@@ -19,7 +19,7 @@ import {
   FileViewerBody,
   FileViewerDocument,
   FileViewerHeader,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerViewport,
   useFileViewerResource,
 } from "@/registry/new-york-v4/ui/file-viewer";
@@ -434,7 +434,7 @@ describe("FileViewer detection helpers", () => {
     expect(fallbackSource).not.toContain("createHrefDownloadAction");
     expect(zoomSource).not.toContain("ZoomActionsSkeleton");
     expect(fileViewerFrameSource).toContain("<ViewerRoot");
-    expect(fileViewerPreviewSource).toContain("<FileViewerSurface");
+    expect(fileViewerPreviewSource).toContain("<FileViewerInset");
     expect(fileViewerPreviewSource).toContain("<FileViewerDocument");
     expect(csvAdapterSource).toMatch(/resource: ViewerResource/);
     expect(csvAdapterSource).not.toContain("ResourceDocShell");
@@ -458,7 +458,7 @@ describe("FileViewer detection helpers", () => {
         "FileViewerPreview",
         "FileViewerSidebar",
         "FileViewerSidebarTrigger",
-        "FileViewerSurface",
+        "FileViewerInset",
         "FileViewerToolbar",
         "FileViewerViewport",
         "detectCategory",
@@ -507,7 +507,7 @@ describe("FileViewer detection helpers", () => {
       container.querySelector('[data-slot="file-viewer-body"]'),
     ).toBeTruthy();
     expect(
-      container.querySelector('[data-slot="file-viewer-surface"]'),
+      container.querySelector('[data-slot="file-viewer-inset"]'),
     ).toBeTruthy();
     expect(
       container.querySelectorAll('[data-slot="file-viewer-toolbar"]'),
@@ -529,11 +529,11 @@ describe("FileViewer detection helpers", () => {
       <FileViewer source={urlSource("/files/composed.pdf", "composed.pdf")}>
         <FileViewerHeader />
         <FileViewerBody>
-          <FileViewerSurface>
+          <FileViewerInset>
             <FileViewerViewport>
               <FileViewerDocument className="composed-file" />
             </FileViewerViewport>
-          </FileViewerSurface>
+          </FileViewerInset>
         </FileViewerBody>
       </FileViewer>,
     );
@@ -838,11 +838,11 @@ describe("FileViewer detection helpers", () => {
             <FileViewerControls />
           </FileViewerHeader>
           <FileViewerBody>
-            <FileViewerSurface>
+            <FileViewerInset>
               <FileViewerViewport>
                 <FileViewerDocument />
               </FileViewerViewport>
-            </FileViewerSurface>
+            </FileViewerInset>
           </FileViewerBody>
           {register ? <RegisterControls /> : null}
         </FileViewer>

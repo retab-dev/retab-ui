@@ -27,17 +27,20 @@ export type PdfPageVirtualizationScrollMetrics = {
 
 export function usePdfPageVirtualization({
   getScrollMetrics,
+  isLayoutTransitioning = false,
   layout,
   resetKey,
   viewportElement,
 }: {
   getScrollMetrics?: () => PdfPageVirtualizationScrollMetrics;
+  isLayoutTransitioning?: boolean;
   layout: PdfPageLayoutModel;
   resetKey?: unknown;
   viewportElement: HTMLDivElement | null;
 }) {
   const measureFrameRef = React.useRef(0);
   const hasMeasuredScrollRef = React.useRef(false);
+  const lastMeasuredLayoutRef = React.useRef(layout);
   const lastMeasuredResetKeyRef = React.useRef<unknown>(resetKey);
   const lastMeasuredScrollTopRef = React.useRef(0);
   const getCurrentScrollMetrics =
@@ -119,7 +122,12 @@ export function usePdfPageVirtualization({
     Object.is(state.layout, layout) && Object.is(state.resetKey, resetKey)
       ? state.pageWindow
       : Object.is(state.resetKey, resetKey)
-        ? getCurrentVisiblePageNumbers()
+        ? createTransitionPageWindow({
+            currentPageWindow: getCurrentVisiblePageNumbers(),
+            isLayoutTransitioning,
+            layout,
+            previousPageWindow: state.pageWindow,
+          })
         : getResetPageWindow();
 
   const measureVisiblePagesNow = React.useCallback(() => {
@@ -128,28 +136,43 @@ export function usePdfPageVirtualization({
     const fitPerfectly = shouldFitPdfPerfectly({
       canFitPerfectly:
         hasMeasuredScrollRef.current &&
+        Object.is(lastMeasuredLayoutRef.current, layout) &&
         Object.is(lastMeasuredResetKeyRef.current, resetKey),
       previousScrollTop: lastMeasuredScrollTopRef.current,
       scrollTop: metrics.scrollTop,
       viewportHeight: metrics.viewportHeight,
     });
-    const nextPageWindow = getPageWindow(metrics, fitPerfectly);
+    const currentPageWindow = getPageWindow(metrics, fitPerfectly);
+    lastMeasuredLayoutRef.current = layout;
     lastMeasuredResetKeyRef.current = resetKey;
     lastMeasuredScrollTopRef.current = metrics.scrollTop;
     hasMeasuredScrollRef.current = true;
-    setState((previousState) =>
-      Object.is(previousState.layout, layout) &&
-      Object.is(previousState.resetKey, resetKey) &&
-      arePageWindowsEqual(previousState.pageWindow, nextPageWindow)
+    setState((previousState) => {
+      const nextPageWindow = createTransitionPageWindow({
+        currentPageWindow,
+        isLayoutTransitioning,
+        layout,
+        previousPageWindow: previousState.pageWindow,
+      });
+
+      return Object.is(previousState.layout, layout) &&
+        Object.is(previousState.resetKey, resetKey) &&
+        arePageWindowsEqual(previousState.pageWindow, nextPageWindow)
         ? previousState
-        : { layout, resetKey, pageWindow: nextPageWindow },
-    );
+        : { layout, resetKey, pageWindow: nextPageWindow };
+    });
     if (fitPerfectly && measureFrameRef.current === 0) {
       measureFrameRef.current = requestAnimationFrame(() =>
         measureVisiblePagesNowRef.current(),
       );
     }
-  }, [getCurrentScrollMetrics, getPageWindow, layout, resetKey]);
+  }, [
+    getCurrentScrollMetrics,
+    getPageWindow,
+    isLayoutTransitioning,
+    layout,
+    resetKey,
+  ]);
   const measureVisiblePagesNowRef = React.useRef(measureVisiblePagesNow);
   useKeyedLayoutEffect(joinEffectKey([measureVisiblePagesNow]), () => {
     measureVisiblePagesNowRef.current = measureVisiblePagesNow;
@@ -183,6 +206,49 @@ export function usePdfPageVirtualization({
     preloadPageNumbers: pageWindow.preloadPageNumbers,
     measureVisiblePages,
   };
+}
+
+function createTransitionPageWindow({
+  currentPageWindow,
+  isLayoutTransitioning,
+  layout,
+  previousPageWindow,
+}: {
+  currentPageWindow: PdfPageWindow;
+  isLayoutTransitioning: boolean;
+  layout: PdfPageLayoutModel;
+  previousPageWindow: PdfPageWindow;
+}): PdfPageWindow {
+  if (!isLayoutTransitioning) return currentPageWindow;
+
+  return {
+    scrollPageOffset: currentPageWindow.scrollPageOffset,
+    visiblePageNumbers: mergePageNumbers(
+      layout,
+      previousPageWindow.visiblePageNumbers,
+      currentPageWindow.visiblePageNumbers,
+    ),
+    renderPageNumbers: mergePageNumbers(
+      layout,
+      previousPageWindow.renderPageNumbers,
+      currentPageWindow.renderPageNumbers,
+    ),
+    preloadPageNumbers: mergePageNumbers(
+      layout,
+      previousPageWindow.preloadPageNumbers,
+      currentPageWindow.preloadPageNumbers,
+    ),
+  };
+}
+
+function mergePageNumbers(
+  layout: PdfPageLayoutModel,
+  previousPageNumbers: readonly number[],
+  currentPageNumbers: readonly number[],
+) {
+  return Array.from(new Set([...previousPageNumbers, ...currentPageNumbers]))
+    .filter((pageNumber) => pageNumber >= 1 && pageNumber <= layout.pageCount)
+    .sort((a, b) => a - b);
 }
 
 function arePageWindowsEqual(

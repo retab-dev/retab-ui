@@ -13,6 +13,7 @@ import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import {
   getPdfDocumentResource,
+  getPdfPageResource,
   resetPdfDocumentResourceCacheForTests,
 } from "@/lib/pdf-document-resource";
 import {
@@ -24,7 +25,8 @@ import {
   FileViewerBody,
   FileViewerHeader,
   FileViewerSidebar,
-  FileViewerSurface,
+  FileViewerInset,
+  FileViewerViewport,
 } from "@/registry/new-york-v4/ui/file-viewer";
 import {
   FileViewerControls,
@@ -48,6 +50,11 @@ import {
   type PdfViewerHandle,
 } from "@/registry/new-york-v4/ui/pdf-viewer";
 import {
+  createPdfPageLayout,
+  getPdfPageLayout,
+} from "@/registry/new-york-v4/ui/pdf-viewer-layout";
+import { PdfPage } from "@/registry/new-york-v4/ui/pdf-viewer-page";
+import {
   PdfThumbnailRail,
   PdfViewerThumbnails,
 } from "@/registry/new-york-v4/ui/pdf-viewer-thumbnails";
@@ -63,7 +70,6 @@ import {
   ViewerBody,
   ViewerRoot,
   ViewerSidebar,
-  ViewerSurface,
 } from "@/registry/new-york-v4/ui/viewer";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { joinEffectKey } from "@/lib/effect-key";
@@ -141,6 +147,53 @@ function makeDoc(pageSizes: Array<[number, number]>) {
 
 function findByTextContent(text: string) {
   return screen.findByText((_, element) => element?.textContent === text);
+}
+
+function getExpectedPreservedPdfScrollTop({
+  pageCount,
+  pageNumber,
+  pageSize,
+  previousScale,
+  nextScale,
+  scrollTop,
+  viewportHeight,
+}: {
+  pageCount: number;
+  pageNumber: number;
+  pageSize: { width: number; height: number };
+  previousScale: number;
+  nextScale: number;
+  scrollTop: number;
+  viewportHeight: number;
+}) {
+  const previousLayout = createPdfPageLayout({
+    pageCount,
+    defaultPageSize: pageSize,
+    pageSizeByNumber: new Map(),
+    scale: previousScale,
+    rotation: 0,
+  });
+  const nextLayout = createPdfPageLayout({
+    pageCount,
+    defaultPageSize: pageSize,
+    pageSizeByNumber: new Map(),
+    scale: nextScale,
+    rotation: 0,
+  });
+  const previousPage = getPdfPageLayout(previousLayout, pageNumber);
+  const nextPage = getPdfPageLayout(nextLayout, pageNumber);
+  if (!previousPage || !nextPage) {
+    throw new Error("Expected test page layout to exist.");
+  }
+
+  const readingMarkerOffset = viewportHeight * 0.2;
+  const pageAnchorRatio =
+    (scrollTop + readingMarkerOffset - previousPage.offsetTop) /
+    previousPage.height;
+
+  return (
+    nextPage.offsetTop + nextPage.height * pageAnchorRatio - readingMarkerOffset
+  );
 }
 
 function stubElementScrollTo() {
@@ -845,6 +898,59 @@ describe("PdfViewer", () => {
     expect(screen.queryByText("Page 1 of 1")).toBeNull();
   });
 
+  it("resizes the page frame without restarting prepared canvas renders", async () => {
+    const page = makePage(100, 200);
+    const pdfDocument = {
+      numPages: 1,
+      getPage: vi.fn(() => Promise.resolve(page)),
+      destroy: vi.fn(() => Promise.resolve()),
+    };
+
+    let view!: ReturnType<typeof render>;
+    await act(async () => {
+      view = render(
+        <React.Suspense fallback={null}>
+          <PdfPage
+            document={pdfDocument}
+            documentKey="prepared-page"
+            pageNumber={1}
+            scale={1}
+            renderScale={2}
+            rotation={0}
+            devicePixelRatio={1}
+          />
+        </React.Suspense>,
+      );
+    });
+
+    await waitFor(() => expect(page.render).toHaveBeenCalledTimes(1));
+    const renderTask = pdfjsMock.renderTasks[0];
+    const frame = document.querySelector<HTMLElement>(
+      '[data-slot="pdf-page"]',
+    );
+    expect(frame?.style.width).toBe("100px");
+    expect(frame?.style.height).toBe("200px");
+
+    view.rerender(
+      <React.Suspense fallback={null}>
+        <PdfPage
+          document={pdfDocument}
+          documentKey="prepared-page"
+          pageNumber={1}
+          scale={1.5}
+          renderScale={2}
+          rotation={0}
+          devicePixelRatio={1}
+        />
+      </React.Suspense>,
+    );
+
+    await waitFor(() => expect(frame?.style.width).toBe("150px"));
+    expect(frame?.style.height).toBe("300px");
+    expect(page.render).toHaveBeenCalledTimes(1);
+    expect(renderTask.cancel).not.toHaveBeenCalled();
+  });
+
   it("treats scale as controlled and reports controls scale requests", async () => {
     pdfjsMock.docs.set("/controlled.pdf", makeDoc([[100, 200]]));
     const onScaleChange = vi.fn();
@@ -933,7 +1039,7 @@ describe("PdfViewer", () => {
       '[data-slot="file-viewer-body"]',
     );
     expect(
-      body?.querySelector(':scope > [data-slot="file-viewer-surface"]'),
+      body?.querySelector(':scope > [data-slot="file-viewer-inset"]'),
     ).toBeTruthy();
     expect(
       root?.querySelector(
@@ -942,12 +1048,15 @@ describe("PdfViewer", () => {
     ).toBeTruthy();
   });
 
-  it("fits width from a stable viewport wrapper instead of the scaled document", async () => {
+  it("fits width from the document frame instead of the scaled document", async () => {
     pdfjsMock.docs.set("/stable-fit-width.pdf", makeDoc([[400, 800]]));
 
     Object.defineProperty(HTMLElement.prototype, "clientWidth", {
       configurable: true,
       get() {
+        if (this.dataset.slot === "file-viewer-document-frame") {
+          return 600;
+        }
         if (this.dataset.slot === "pdf-viewer-fit-width-measure") {
           return 332;
         }
@@ -962,7 +1071,7 @@ describe("PdfViewer", () => {
       render(<PdfViewer source={pdfUrlSource("/stable-fit-width.pdf")} />);
     });
 
-    expect(await screen.findByText("75%")).toBeTruthy();
+    expect(await screen.findByText("150%")).toBeTruthy();
   });
 
   it("preserves the visible page when fit-width changes after a surface resize", async () => {
@@ -976,7 +1085,7 @@ describe("PdfViewer", () => {
         [400, 800],
       ]),
     );
-    let measuredWidth = 232;
+    let frameWidth = 200;
     const resizeCallbacks = new Map<Element, ResizeObserverCallback>();
 
     vi.stubGlobal(
@@ -1000,8 +1109,8 @@ describe("PdfViewer", () => {
     Object.defineProperty(HTMLElement.prototype, "clientWidth", {
       configurable: true,
       get() {
-        if (this.dataset.slot === "pdf-viewer-fit-width-measure") {
-          return measuredWidth;
+        if (this.dataset.slot === "file-viewer-document-frame") {
+          return frameWidth;
         }
         return 832;
       },
@@ -1026,15 +1135,15 @@ describe("PdfViewer", () => {
 
     await findByTextContent("Page 3 of 5");
 
-    const measureElement = document.querySelector<HTMLElement>(
-      "[data-slot='pdf-viewer-fit-width-measure']",
+    const frameElement = document.querySelector<HTMLElement>(
+      "[data-slot='file-viewer-document-frame']",
     );
-    expect(measureElement).toBeTruthy();
+    expect(frameElement).toBeTruthy();
 
-    measuredWidth = 432;
+    frameWidth = 400;
     await act(async () => {
-      resizeCallbacks.get(measureElement!)?.(
-        [{ target: measureElement! } as unknown as ResizeObserverEntry],
+      resizeCallbacks.get(frameElement!)?.(
+        [{ target: frameElement! } as unknown as ResizeObserverEntry],
         {} as ResizeObserver,
       );
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -1042,7 +1151,17 @@ describe("PdfViewer", () => {
 
     expect(await screen.findByText("100%")).toBeTruthy();
     expect(await findByTextContent("Page 3 of 5")).toBeTruthy();
-    expect(viewport!.scrollTop).toBe(1888);
+    expect(viewport!.scrollTop).toBe(
+      getExpectedPreservedPdfScrollTop({
+        pageNumber: 3,
+        pageSize: { width: 400, height: 800 },
+        pageCount: 5,
+        previousScale: 0.5,
+        nextScale: 1,
+        scrollTop: 908,
+        viewportHeight: viewport!.clientHeight,
+      }),
+    );
   });
 
   it("returns uncontrolled manual zoom back to fit width", async () => {
@@ -1062,7 +1181,7 @@ describe("PdfViewer", () => {
     expect(await screen.findByText("120%")).toBeTruthy();
 
     fireEvent.click(screen.getByLabelText("Fit width"));
-    expect(await screen.findByText("200%")).toBeTruthy();
+    expect(await screen.findByText("208%")).toBeTruthy();
   });
 
   it("preserves the visible page when manual zoom changes the layout", async () => {
@@ -1105,7 +1224,17 @@ describe("PdfViewer", () => {
 
     expect(await screen.findByText("120%")).toBeTruthy();
     expect(await findByTextContent("Page 3 of 5")).toBeTruthy();
-    expect(viewport!.scrollTop).toBe(2064);
+    expect(viewport!.scrollTop).toBeCloseTo(
+      getExpectedPreservedPdfScrollTop({
+        pageNumber: 3,
+        pageSize: { width: 400, height: 800 },
+        pageCount: 5,
+        previousScale: 1,
+        nextScale: 1.2,
+        scrollTop: 1708,
+        viewportHeight: viewport!.clientHeight,
+      }),
+    );
   });
 
   it("uses the rotated page width for fit-width scale", async () => {
@@ -1115,11 +1244,11 @@ describe("PdfViewer", () => {
       render(<PdfViewer source={pdfUrlSource("/rotated-fit-width.pdf")} />);
     });
 
-    expect(await screen.findByText("200%")).toBeTruthy();
+    expect(await screen.findByText("208%")).toBeTruthy();
 
     fireEvent.click(screen.getByLabelText("Rotate"));
 
-    expect(await screen.findByText("100%")).toBeTruthy();
+    expect(await screen.findByText("104%")).toBeTruthy();
   });
 
   it("clamps invalid controlled scale values before rendering and requesting zoom", async () => {
@@ -1588,10 +1717,10 @@ describe("PdfViewer", () => {
       );
     });
 
-    expect(await screen.findByText("200%")).toBeTruthy();
+    expect(await screen.findByText("208%")).toBeTruthy();
 
     fireEvent.click(screen.getByLabelText("Zoom in"));
-    expect(await screen.findByText("240%")).toBeTruthy();
+    expect(await screen.findByText("250%")).toBeTruthy();
 
     await act(async () => {
       view.rerender(
@@ -1599,7 +1728,7 @@ describe("PdfViewer", () => {
       );
     });
 
-    expect(await screen.findByText("400%")).toBeTruthy();
+    expect(await screen.findByText("416%")).toBeTruthy();
   });
 
   it("does not render a new document with the previous document rotation", async () => {
@@ -2206,9 +2335,9 @@ describe("PdfViewer", () => {
             </FileViewerHeader>
             <FileViewerBody>
               <FileViewerSidebar>Composed sidebar</FileViewerSidebar>
-              <FileViewerSurface>
+              <FileViewerInset>
                 <PdfViewerPages bare className="h-full" />
-              </FileViewerSurface>
+              </FileViewerInset>
             </FileViewerBody>
           </PdfViewerProvider>
         </FileViewer>,
@@ -2232,6 +2361,12 @@ describe("PdfViewer", () => {
         [100, 200],
       ]),
     );
+    const pdfDocument = await getPdfDocumentResource(
+      pdfUrlContent("/detached-header-performance.pdf"),
+    );
+    await Promise.all(
+      [1, 2].map((pageNumber) => getPdfPageResource(pdfDocument, pageNumber)),
+    );
     const counts = {
       thumbnailMounts: 0,
     };
@@ -2243,24 +2378,26 @@ describe("PdfViewer", () => {
       return <PdfViewerThumbnails thumbnailWidth={64} />;
     }
 
-    render(
-      <FileViewer source={source} defaultOpen>
-        <PdfViewerProvider>
-          <FileViewerHeader>
-            <FileViewerTitle />
-            <FileViewerControls />
-          </FileViewerHeader>
-          <FileViewerBody>
-            <FileViewerSidebar aria-label="PDF pages">
-              <CountingThumbnails />
-            </FileViewerSidebar>
-            <FileViewerSurface>
-              <PdfViewerPages bare className="h-full" defaultScale={1} />
-            </FileViewerSurface>
-          </FileViewerBody>
-        </PdfViewerProvider>
-      </FileViewer>,
-    );
+    await act(async () => {
+      render(
+        <FileViewer source={source} defaultOpen>
+          <PdfViewerProvider>
+            <FileViewerHeader>
+              <FileViewerTitle />
+              <FileViewerControls />
+            </FileViewerHeader>
+            <FileViewerBody>
+              <FileViewerSidebar aria-label="PDF pages">
+                <CountingThumbnails />
+              </FileViewerSidebar>
+              <FileViewerInset>
+                <PdfViewerPages bare className="h-full" defaultScale={1} />
+              </FileViewerInset>
+            </FileViewerBody>
+          </PdfViewerProvider>
+        </FileViewer>,
+      );
+    });
 
     await findByTextContent("Page 1 of 2");
     await screen.findByRole("button", { name: "Page 1" });
@@ -2285,6 +2422,14 @@ describe("PdfViewer", () => {
         [100, 200],
       ]),
     );
+    const pdfDocument = await getPdfDocumentResource(
+      pdfUrlContent("/scroll-composed-performance.pdf"),
+    );
+    await Promise.all(
+      [1, 2, 3].map((pageNumber) =>
+        getPdfPageResource(pdfDocument, pageNumber),
+      ),
+    );
     const counts = {
       thumbnailMounts: 0,
     };
@@ -2296,24 +2441,26 @@ describe("PdfViewer", () => {
       return <PdfViewerThumbnails thumbnailWidth={64} />;
     }
 
-    render(
-      <FileViewer source={source} defaultOpen>
-        <PdfViewerProvider>
-          <FileViewerHeader>
-            <FileViewerTitle />
-            <FileViewerControls />
-          </FileViewerHeader>
-          <FileViewerBody>
-            <FileViewerSidebar aria-label="PDF pages">
-              <CountingThumbnails />
-            </FileViewerSidebar>
-            <FileViewerSurface>
-              <PdfViewerPages bare className="h-full" />
-            </FileViewerSurface>
-          </FileViewerBody>
-        </PdfViewerProvider>
-      </FileViewer>,
-    );
+    await act(async () => {
+      render(
+        <FileViewer source={source} defaultOpen>
+          <PdfViewerProvider>
+            <FileViewerHeader>
+              <FileViewerTitle />
+              <FileViewerControls />
+            </FileViewerHeader>
+            <FileViewerBody>
+              <FileViewerSidebar aria-label="PDF pages">
+                <CountingThumbnails />
+              </FileViewerSidebar>
+              <FileViewerInset>
+                <PdfViewerPages bare className="h-full" />
+              </FileViewerInset>
+            </FileViewerBody>
+          </PdfViewerProvider>
+        </FileViewer>,
+      );
+    });
 
     await findByTextContent("Page 1 of 3");
     await screen.findByRole("button", { name: "Page 1" });
@@ -2593,7 +2740,7 @@ describe("PdfViewer", () => {
     expect(doc.pages[3].render).not.toHaveBeenCalled();
   });
 
-  it("draws cached page bitmaps before refreshing pdfjs on remount", async () => {
+  it("draws cached page bitmaps on remount without refreshing pdfjs", async () => {
     const drawImage = vi.fn();
     const setTransform = vi.fn();
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
@@ -2678,15 +2825,16 @@ describe("PdfViewer", () => {
       ),
     );
     expect(drawImage).toHaveBeenCalled();
-    await waitFor(() => expect(doc.pages[0].render).toHaveBeenCalledTimes(2));
-    await waitFor(() =>
-      expect(onPageRenderTiming).toHaveBeenCalledWith(
-        expect.objectContaining({
-          pageNumber: 1,
-          source: "pdfjs",
-          status: "rendered",
-        }),
-      ),
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(doc.pages[0].render).toHaveBeenCalledTimes(1);
+    expect(onPageRenderTiming).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        pageNumber: 1,
+        source: "pdfjs",
+        status: "rendered",
+      }),
     );
   });
 
@@ -2718,9 +2866,11 @@ describe("PdfViewer", () => {
                 <PdfThumbnailRail resource={resource} thumbnailWidth={50} />
               ) : null}
             </ViewerSidebar>
-            <ViewerSurface>
-              <PdfResourceContent resource={resource} defaultScale={1} />
-            </ViewerSurface>
+            <FileViewerInset>
+              <FileViewerViewport>
+                <PdfResourceContent resource={resource} defaultScale={1} />
+              </FileViewerViewport>
+            </FileViewerInset>
           </ViewerBody>
         </ViewerRoot>
       );
@@ -3096,9 +3246,11 @@ describe("PdfViewer", () => {
           <ViewerSidebar width="9rem">
             <PdfThumbnailRail resource={resource} />
           </ViewerSidebar>
-          <ViewerSurface>
-            <PdfResourceContent resource={resource} />
-          </ViewerSurface>
+          <FileViewerInset>
+            <FileViewerViewport>
+              <PdfResourceContent resource={resource} />
+            </FileViewerViewport>
+          </FileViewerInset>
         </ViewerBody>
       </ViewerRoot>,
     );

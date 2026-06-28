@@ -14,11 +14,11 @@ owns the controlled or uncontrolled sidebar open state.
     <FileViewerHeader />
     <FileViewerBody>
       <FileViewerSidebar aria-label="Document navigation" />
-      <FileViewerSurface>
+      <FileViewerInset>
         <FileViewerViewport>
           <FileViewerDocument />
         </FileViewerViewport>
-      </FileViewerSurface>
+      </FileViewerInset>
     </FileViewerBody>
   </FileViewer>
 </FileViewerProvider>
@@ -50,7 +50,7 @@ owns the controlled or uncontrolled sidebar open state.
 | `defaultSidebarOpen`  | `boolean`                 | Initial sidebar open state for uncontrolled viewers.                  |
 | `sidebarOpen`         | `boolean`                 | Controlled sidebar open state.                                        |
 | `onSidebarOpenChange` | `(open: boolean) => void` | Fired when the frame requests a sidebar state change.                 |
-| `children`            | `React.ReactNode`         | Usually a `FileViewer` frame with header, body, sidebar, and surface. |
+| `children`            | `React.ReactNode`         | Usually a `FileViewer` frame with header, body, sidebar, and inset. |
 
 ## Source
 

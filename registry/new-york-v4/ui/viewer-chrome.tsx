@@ -9,6 +9,7 @@ import { Button } from "./button";
 import { Spinner } from "./spinner";
 import {
   isAriaDisabled,
+  useViewerSidebarState,
   useViewerSidebarRegistrationContext,
 } from "./viewer-internals";
 import type { ViewerFrameProps, ViewerHeaderProps } from "./viewer-types";
@@ -60,12 +61,12 @@ export function ViewerSidebarTrigger({
 }: ViewerSidebarTriggerProps) {
   const {
     hasSidebar,
-    sidebarState,
     rootId,
     sidebarId,
     sidebarSide,
     setLastTriggerElement,
   } = useViewerSidebarRegistrationContext("ViewerSidebarTrigger");
+  const sidebarState = useViewerSidebarState("ViewerSidebarTrigger");
   const { canToggleSidebar, open, state, toggleSidebar } = sidebarState;
   const isDisabled = Boolean(
     disabled || loading || isAriaDisabled(ariaDisabled) || !canToggleSidebar,

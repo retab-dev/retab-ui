@@ -7,6 +7,7 @@ export type ViewerSidebarState = "expanded" | "collapsed";
 export type ViewerSidebarSide = "left" | "right";
 export type ViewerSidebarCollapsible = "offcanvas" | "none";
 export type ViewerDocumentFrameAlign = "start" | "center" | "end";
+export type ViewerGeometryTransitionPhase = "idle" | "sliding";
 
 export type ViewerDocumentReadingAnchorInput = {
   scrollTop: number;
@@ -27,6 +28,7 @@ export type ViewerDocumentLayoutModel<Anchor> = {
     target: ViewerDocumentReadingAnchorTarget<Anchor>,
   ) => number | null;
   inlineSize: number;
+  isTransitioning?: boolean;
 };
 
 export type ViewerDocumentPhysicalScrollPosition = {
@@ -73,29 +75,36 @@ export type ViewerDocumentScrollTargetResolver<Anchor, Target> = (input: {
   viewportElement: HTMLDivElement;
 }) => ViewerDocumentResolvedScrollTarget | null;
 
-export type ViewerSidebarLayoutSnapshot = {
+export type ViewerGeometrySnapshot = {
+  bodyInlineSize: number;
+  documentInlineSize: number;
+  hasMeasuredBody: boolean;
   isTransitioning: boolean;
   mode: ViewerSidebarMode;
   open: boolean;
   progress: number;
   sidebarGapTransition: ViewerSidebarGapTransition;
+  sidebarInlineSize: number;
   sidebarWidth: number;
   side: ViewerSidebarSide;
   state: ViewerSidebarState;
+  transitionPhase: ViewerGeometryTransitionPhase;
 };
 
-export type ViewerSidebarLayoutStore = {
-  getSnapshot: () => ViewerSidebarLayoutSnapshot;
-  setTarget: (target: ViewerSidebarLayoutTarget) => void;
+export type ViewerGeometryStore = {
+  getSnapshot: () => ViewerGeometrySnapshot;
+  setTarget: (target: ViewerGeometryTarget) => void;
   subscribe: (listener: () => void) => () => void;
 };
 
-export type ViewerSidebarLayoutTarget = {
+export type ViewerGeometryTarget = {
+  bodyElement: HTMLElement | null;
   mode: ViewerSidebarMode;
   open: boolean;
   rootElement: HTMLElement | null;
   sidebarElement: HTMLElement | null;
   sidebarGapTransition: ViewerSidebarGapTransition;
+  sidebarWidth: number;
   side: ViewerSidebarSide;
   state: ViewerSidebarState;
 };
@@ -148,6 +157,7 @@ export type ViewerSidebarRegistration = {
   instanceId: string;
   side: ViewerSidebarSide;
   width: string;
+  widthPixels: number;
 };
 
 export type ViewerPortalContainmentAttributes = {
@@ -157,10 +167,10 @@ export type ViewerPortalContainmentAttributes = {
 export type ViewerSidebarRegistrationState = {
   defaultSidebarCollapsible: ViewerSidebarCollapsible;
   defaultSidebarSide: ViewerSidebarSide;
+  geometryStore: ViewerGeometryStore;
   getRootElement: () => HTMLElement | null;
   hasSidebar: boolean;
-  layoutStore: ViewerSidebarLayoutStore;
-  sidebarState: ViewerSidebarStateValue;
+  registerBody: (element: HTMLElement) => () => void;
   registerSidebar: (registration: ViewerSidebarRegistration) => () => void;
   rootId: string;
   sidebarId: string;

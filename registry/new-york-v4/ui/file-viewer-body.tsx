@@ -14,7 +14,7 @@ import {
 } from "./viewer-surface";
 import type {
   ViewerBodyProps,
-  ViewerDocumentFrameProps,
+  ViewerDocumentFrameAlign,
   ViewerSidebarProps,
   ViewerSurfaceProps,
   ViewerViewportProps,
@@ -24,7 +24,13 @@ import { cn } from "@/lib/utils";
 import { Separator } from "./separator";
 
 export type FileViewerBodyProps = ViewerBodyProps;
-export type FileViewerDocumentFrameProps = ViewerDocumentFrameProps;
+export type FileViewerInsetProps = ViewerSurfaceProps &
+  {
+    align?: ViewerDocumentFrameAlign;
+    documentFrameClassName?: string;
+    documentFrameStyle?: React.CSSProperties;
+    maxInlineSize?: React.CSSProperties["maxInlineSize"];
+  };
 export type FileViewerFieldSourceProps = React.ComponentProps<"div"> & {
   isActive?: boolean;
   isUnavailable?: boolean;
@@ -47,7 +53,6 @@ export type FileViewerSidebarSectionTitleProps = React.ComponentProps<"h3">;
 export type FileViewerSidebarSeparatorProps = React.ComponentProps<
   typeof Separator
 >;
-export type FileViewerSurfaceProps = ViewerSurfaceProps;
 export type FileViewerSourceActionProps = React.ComponentProps<"button"> & {
   asChild?: boolean;
   showOnHover?: boolean;
@@ -70,6 +75,7 @@ export type FileViewerViewportSize = {
 };
 
 const FileViewerBodyContext = React.createContext(false);
+const FileViewerInsetContext = React.createContext(false);
 
 const fileViewerSourceTriggerVariants = cva(
   "peer/source-trigger ring-ring flex w-full min-w-0 items-center gap-2 overflow-hidden rounded-md text-left text-sm outline-hidden transition-[background-color,color,box-shadow] focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:font-medium [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
@@ -162,37 +168,42 @@ export function FileViewerLegend({
   );
 }
 
-export function FileViewerDocumentFrame({
+export function FileViewerInset({
+  align = "start",
+  children,
   className,
+  documentFrameClassName,
+  documentFrameStyle,
+  maxInlineSize,
   ...props
-}: FileViewerDocumentFrameProps) {
+}: FileViewerInsetProps) {
   return (
-    <ViewerDocumentFrame
-      data-file-viewer-slot="document-frame"
-      data-slot="file-viewer-document-frame"
-      className={className}
-      {...props}
-    />
-  );
-}
-
-export function FileViewerSurface({
-  className,
-  ...props
-}: FileViewerSurfaceProps) {
-  return (
-    <ViewerSurface
-      data-file-viewer-slot="surface"
-      data-slot="file-viewer-surface"
-      className={className}
-      {...props}
-    />
+    <FileViewerInsetContext.Provider value={true}>
+      <ViewerSurface
+        data-file-viewer-slot="inset"
+        data-slot="file-viewer-inset"
+        className={cn("h-full", className)}
+        {...props}
+      >
+        <ViewerDocumentFrame
+          align={align}
+          data-file-viewer-slot="document-frame"
+          data-slot="file-viewer-document-frame"
+          className={documentFrameClassName}
+          maxInlineSize={maxInlineSize}
+          style={documentFrameStyle}
+        >
+          {children}
+        </ViewerDocumentFrame>
+      </ViewerSurface>
+    </FileViewerInsetContext.Provider>
   );
 }
 
 export function useOptionalFileViewerViewportSize(): FileViewerViewportSize | null {
+  const isInsideInset = React.useContext(FileViewerInsetContext);
   const measurement = useOptionalViewerSurfaceMeasurement();
-  if (!measurement) return null;
+  if (!isInsideInset || !measurement) return null;
   return {
     element: measurement.viewportElement,
     hasMeasured: measurement.hasMeasured,
@@ -205,7 +216,7 @@ export function useFileViewerViewportSize(): FileViewerViewportSize {
   const size = useOptionalFileViewerViewportSize();
   if (!size) {
     throw new Error(
-      "useFileViewerViewportSize must be used within FileViewerSurface.",
+      "useFileViewerViewportSize must be used within FileViewerInset.",
     );
   }
   return size;
@@ -553,11 +564,12 @@ export const FileViewerViewport = React.forwardRef<
   HTMLDivElement,
   FileViewerViewportProps
 >(function FileViewerViewport({ style, ...props }, ref) {
+  const isInsideInset = React.useContext(FileViewerInsetContext);
   const measurement = useOptionalViewerSurfaceMeasurement();
 
-  if (process.env.NODE_ENV !== "production" && !measurement) {
+  if (process.env.NODE_ENV !== "production" && !isInsideInset) {
     throw new Error(
-      "FileViewerViewport must be rendered inside FileViewerSurface.",
+      "FileViewerViewport must be rendered inside FileViewerInset.",
     );
   }
 

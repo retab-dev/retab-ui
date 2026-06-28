@@ -39,7 +39,7 @@ import {
   FileViewerHeaderStart,
   FileViewerIdentity,
   FileViewerProvider,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerToolbar,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
@@ -57,11 +57,11 @@ export function Example() {
           </FileViewerHeaderEnd>
         </FileViewerHeader>
         <FileViewerBody>
-          <FileViewerSurface>
+          <FileViewerInset>
             <FileViewerViewport>
               <FileViewerDocument />
             </FileViewerViewport>
-          </FileViewerSurface>
+          </FileViewerInset>
         </FileViewerBody>
       </FileViewer>
     </FileViewerProvider>
@@ -85,11 +85,11 @@ When the body contains `FileViewerSidebar`, place the trigger before the title:
     </FileViewerHeader>
     <FileViewerBody>
       <FileViewerSidebar aria-label="Document sections" width="18rem" />
-      <FileViewerSurface>
+      <FileViewerInset>
         <FileViewerViewport>
           <FileViewerDocument />
         </FileViewerViewport>
-      </FileViewerSurface>
+      </FileViewerInset>
     </FileViewerBody>
   </FileViewer>
 </FileViewerProvider>
@@ -103,11 +103,11 @@ the default identity/toolbar composition:
   <FileViewer>
     <FileViewerHeader />
     <FileViewerBody>
-      <FileViewerSurface>
+      <FileViewerInset>
         <FileViewerViewport>
           <FileViewerDocument />
         </FileViewerViewport>
-      </FileViewerSurface>
+      </FileViewerInset>
     </FileViewerBody>
   </FileViewer>
 </FileViewerProvider>

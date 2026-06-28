@@ -13,6 +13,8 @@ import {
   pickCssCustomProperties,
   readViewerElementSize,
   useViewerDevelopmentLayoutWarning,
+  useViewerSidebarState,
+  useViewerGeometrySnapshot,
   useViewerSidebarRegistrationContext,
   VIEWER_SIDEBAR_WIDTH,
 } from "./viewer-internals";
@@ -35,15 +37,17 @@ export function ViewerSidebar({
 }: ViewerSidebarProps) {
   const registrationContext =
     useViewerSidebarRegistrationContext("ViewerSidebar");
+  const sidebarState = useViewerSidebarState("ViewerSidebar");
   const {
     defaultSidebarCollapsible,
     defaultSidebarSide,
     getRootElement,
     registerSidebar,
     rootId,
-    sidebarState,
     sidebarGapTransition,
+    geometryStore,
   } = registrationContext;
+  const geometry = useViewerGeometrySnapshot(geometryStore);
   const reactId = React.useId();
   const instanceId = `${reactId}-viewer-sidebar-instance`;
   const generatedSidebarId = `${reactId}-viewer-sidebar`;
@@ -55,7 +59,15 @@ export function ViewerSidebar({
   const open = collapsible === "none" ? true : sidebarState.open;
   const state: ViewerSidebarState = open ? "expanded" : "collapsed";
   const mode = sidebarState.mode;
+  const visualOpen = mode === "inline" ? geometry.open : open;
+  const visualState: ViewerSidebarState = visualOpen
+    ? "expanded"
+    : "collapsed";
   const isCollapsed = collapsible !== "none" && !open;
+  const isOpening =
+    collapsible !== "none" &&
+    open &&
+    geometry.isTransitioning;
   const frameSlot = props["data-slot"] ?? "viewer-sidebar";
   const sidebarProps = { ...props };
   delete sidebarProps["data-slot"];
@@ -68,14 +80,9 @@ export function ViewerSidebar({
   } as React.CSSProperties;
   const inlineFrameStyle = {
     ...frameStyle,
-    width:
-      sidebarGapTransition === "width"
-        ? `calc(var(--viewer-sidebar-width) * var(--viewer-sidebar-progress, ${
-            open ? 1 : 0
-          }))`
-        : open
-          ? "var(--viewer-sidebar-width)"
-          : "0px",
+    flexBasis: `${geometry.sidebarInlineSize}px`,
+    maxWidth: `${geometry.sidebarInlineSize}px`,
+    width: `${geometry.sidebarInlineSize}px`,
   } as React.CSSProperties;
   const ariaLabel = sidebarProps["aria-label"];
   const ariaLabelledBy = sidebarProps["aria-labelledby"];
@@ -169,6 +176,7 @@ export function ViewerSidebar({
         instanceId,
         side,
         width,
+        widthPixels: resolveViewerSidebarWidthPixels(element, width),
       });
     },
   );
@@ -196,7 +204,24 @@ export function ViewerSidebar({
     },
   );
 
-  const hiddenProps = isCollapsed
+  useKeyedLayoutEffect(
+    isCollapsed
+      ? joinEffectKey([
+          "viewer-sidebar:move-focus-on-close",
+          getRootElement,
+          sidebarId,
+        ])
+      : null,
+    () => {
+      moveFocusOutOfViewerSidebar(
+        sidebarRef.current,
+        getRootElement(),
+        sidebarId,
+      );
+    },
+  );
+
+  const hiddenProps = isCollapsed || isOpening
     ? ({
         "aria-hidden": true,
         inert: true,
@@ -208,9 +233,9 @@ export function ViewerSidebar({
     {
       sidebarCollapsible: collapsible,
       sidebarMode: mode,
-      sidebarOpen: open,
+      sidebarOpen: visualOpen,
       sidebarSide: side,
-      sidebarState: state,
+      sidebarState: visualState,
     },
   );
   const frameAttributes = {
@@ -218,11 +243,11 @@ export function ViewerSidebar({
     "data-collapsible": collapsible,
     "data-mode": mode,
     "data-side": side,
-    "data-state": state,
+    "data-state": visualState,
     "data-viewer-sidebar-transitions": transitionsReady ? "ready" : undefined,
     "data-viewer-sidebar-mode": mode,
-    "data-viewer-sidebar-open": open ? "true" : "false",
-    "data-viewer-sidebar-state": state,
+    "data-viewer-sidebar-open": visualOpen ? "true" : "false",
+    "data-viewer-sidebar-state": visualState,
     "data-viewer-slot": "sidebar",
     ...createViewerSlotAttributes(
       registrationContext.stateNamespace,
@@ -239,11 +264,11 @@ export function ViewerSidebar({
       data-collapsible={collapsible}
       data-mode={mode}
       data-side={side}
-      data-state={state}
+      data-state={visualState}
       data-viewer-sidebar-transitions={transitionsReady ? "ready" : undefined}
       data-viewer-sidebar-mode={mode}
-      data-viewer-sidebar-open={open ? "true" : "false"}
-      data-viewer-sidebar-state={state}
+      data-viewer-sidebar-open={visualOpen ? "true" : "false"}
+      data-viewer-sidebar-state={visualState}
       data-viewer-slot="sidebar-container"
       {...createViewerSlotAttributes(
         registrationContext.stateNamespace,
@@ -251,28 +276,29 @@ export function ViewerSidebar({
         namespacedSlotNames?.container,
       )}
       {...namespacedSidebarStateAttributes}
-      className={cn(
-        "z-30 flex w-(--viewer-sidebar-width) min-w-0 overflow-hidden",
-        mode === "inline" &&
-          "absolute inset-y-0 h-full min-w-(--viewer-sidebar-width) flex-shrink-0",
+        className={cn(
+          className,
+          "z-30 flex w-(--viewer-sidebar-width) min-w-0 overflow-hidden",
+          mode === "inline" &&
+            "absolute inset-y-0 h-full min-w-(--viewer-sidebar-width) flex-shrink-0 transition-none",
         mode === "inline" && side === "left" && "right-0",
         mode === "inline" && side === "right" && "left-0",
         mode === "overlay" &&
-          "absolute inset-y-0 transition-none data-[viewer-sidebar-transitions=ready]:transition-[translate,width,border-color] data-[viewer-sidebar-transitions=ready]:duration-200 data-[viewer-sidebar-transitions=ready]:ease-out",
+          "absolute inset-y-0 transition-none data-[viewer-sidebar-transitions=ready]:transition-[translate,width,border-color] data-[viewer-sidebar-transitions=ready]:duration-150 data-[viewer-sidebar-transitions=ready]:ease-out",
         mode === "overlay" && side === "left" && "left-0",
         mode === "overlay" && side === "right" && "right-0",
         collapsible === "offcanvas" && mode === "overlay" && "shadow-lg",
+        isCollapsed && "pointer-events-none",
         collapsible === "offcanvas" &&
           mode === "overlay" &&
-          !open &&
+          !visualOpen &&
           side === "left" &&
           "pointer-events-none -translate-x-full border-transparent",
         collapsible === "offcanvas" &&
           mode === "overlay" &&
-          !open &&
+          !visualOpen &&
           side === "right" &&
           "pointer-events-none translate-x-full border-transparent",
-        className,
       )}
       style={
         {
@@ -336,11 +362,108 @@ export function ViewerSidebar({
         className={cn(
           "relative h-full w-(--viewer-sidebar-width) flex-shrink-0",
           sidebarGapTransition === "width" &&
-            "transition-[width] duration-200 ease-out",
+            "transition-[width] duration-150 ease-out",
           collapsible === "offcanvas" && mode === "overlay" && "w-0",
         )}
       />
       {sidebarElement}
     </div>
   );
+}
+
+function moveFocusOutOfViewerSidebar(
+  sidebarElement: HTMLElement | null,
+  rootElement: HTMLElement | null,
+  sidebarId: string,
+) {
+  if (typeof document === "undefined" || !sidebarElement) return;
+
+  const activeElement = document.activeElement;
+  if (
+    !(activeElement instanceof HTMLElement) ||
+    !sidebarElement.contains(activeElement)
+  ) {
+    return;
+  }
+
+  const trigger = findViewerSidebarTrigger(rootElement, sidebarId);
+  if (trigger) {
+    trigger.focus({ preventScroll: true });
+    return;
+  }
+
+  activeElement.blur();
+}
+
+function findViewerSidebarTrigger(
+  rootElement: HTMLElement | null,
+  sidebarId: string,
+) {
+  if (!rootElement) return null;
+
+  for (const element of rootElement.querySelectorAll<HTMLElement>(
+    "[aria-controls]",
+  )) {
+    if (element.getAttribute("aria-controls") === sidebarId) {
+      return element;
+    }
+  }
+
+  return null;
+}
+
+function resolveViewerSidebarWidthPixels(element: HTMLElement, width: string) {
+  const declaredWidth = parseViewerSidebarCssLength(width, element);
+  if (declaredWidth !== null) return declaredWidth;
+
+  if (typeof window !== "undefined") {
+    const computedWidth = parseViewerSidebarCssLength(
+      window.getComputedStyle(element).width,
+      element,
+    );
+    if (computedWidth !== null) return computedWidth;
+  }
+
+  const measuredWidth = readViewerElementSize(element).width;
+  return Number.isFinite(measuredWidth) && measuredWidth > 0
+    ? measuredWidth
+    : 0;
+}
+
+function parseViewerSidebarCssLength(value: string, element: HTMLElement) {
+  const trimmedValue = value.trim();
+  const length = Number.parseFloat(trimmedValue);
+  if (!Number.isFinite(length) || length <= 0) return null;
+
+  if (trimmedValue.endsWith("px")) return length;
+  if (trimmedValue.endsWith("rem")) {
+    return length * readRootFontSize();
+  }
+  if (trimmedValue.endsWith("em")) {
+    return length * readElementFontSize(element);
+  }
+
+  return null;
+}
+
+function readRootFontSize() {
+  if (typeof window === "undefined") return 16;
+
+  const rootFontSize = Number.parseFloat(
+    window.getComputedStyle(document.documentElement).fontSize,
+  );
+  return Number.isFinite(rootFontSize) && rootFontSize > 0
+    ? rootFontSize
+    : 16;
+}
+
+function readElementFontSize(element: HTMLElement) {
+  if (typeof window === "undefined") return 16;
+
+  const elementFontSize = Number.parseFloat(
+    window.getComputedStyle(element).fontSize,
+  );
+  return Number.isFinite(elementFontSize) && elementFontSize > 0
+    ? elementFontSize
+    : readRootFontSize();
 }

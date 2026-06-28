@@ -189,6 +189,7 @@ describe("usePdfScroll", () => {
     });
     const initialPage = getPdfPageLayout(initialLayout, 10)!;
     const nextPage = getPdfPageLayout(nextLayout, 10)!;
+    const readingMarkerOffset = 200 * 0.2;
     const viewport = {
       scrollTop: initialPage.offsetTop + 50,
       clientHeight: 200,
@@ -197,8 +198,9 @@ describe("usePdfScroll", () => {
     } as HTMLDivElement;
     const expectedScrollTop =
       nextPage.offsetTop +
-      nextPage.height * ((50 + 200 * 0.2) / initialPage.height) -
-      200 * 0.2;
+      nextPage.height *
+        ((50 + readingMarkerOffset) / initialPage.height) -
+      readingMarkerOffset;
 
     function Harness({ layout }: { layout: typeof initialLayout }) {
       const result = usePdfScroll({

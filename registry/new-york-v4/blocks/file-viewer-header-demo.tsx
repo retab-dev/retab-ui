@@ -11,7 +11,7 @@ import {
   FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarTrigger,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerToolbar,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
@@ -76,11 +76,11 @@ export function FileViewerHeaderExample() {
                 </SidebarListGroup>
               </SidebarListContent>
             </FileViewerSidebar>
-            <FileViewerSurface>
+            <FileViewerInset>
               <FileViewerViewport>
                 <FileViewerDocument />
               </FileViewerViewport>
-            </FileViewerSurface>
+            </FileViewerInset>
           </FileViewerBody>
         </FileViewer>
       </FileViewerProvider>

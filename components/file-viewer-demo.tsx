@@ -7,16 +7,15 @@ import {
   FileViewer,
   FileViewerBody,
   FileViewerDocument,
-  FileViewerDocumentFrame,
   FileViewerHeader,
   FileViewerHeaderEnd,
   FileViewerHeaderStart,
   FileViewerIdentity,
+  FileViewerInset,
   FileViewerPreview,
   FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarTrigger,
-  FileViewerSurface,
   FileViewerToolbar,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
@@ -257,16 +256,14 @@ function FileCanvas({
                     className="[scrollbar-width:none] bg-transparent [&::-webkit-scrollbar]:hidden"
                   />
                 </FileViewerSidebar>
-                <FileViewerSurface>
+                <FileViewerInset align="center">
                   <FileViewerViewport>
-                    <FileViewerDocumentFrame align="center">
-                      <PdfViewerPages
-                        bare
-                        className={PDF_SHOWCASE_PAGES_CLASS_NAME}
-                      />
-                    </FileViewerDocumentFrame>
+                    <PdfViewerPages
+                      bare
+                      className={PDF_SHOWCASE_PAGES_CLASS_NAME}
+                    />
                   </FileViewerViewport>
-                </FileViewerSurface>
+                </FileViewerInset>
               </FileViewerBody>
             </PdfViewerProvider>
           </FileViewer>
@@ -283,11 +280,11 @@ function FileCanvas({
               </FileViewerHeaderEnd>
             </FileViewerHeader>
             <FileViewerBody>
-              <FileViewerSurface>
+              <FileViewerInset>
                 <FileViewerViewport>
                   <FileViewerDocument />
                 </FileViewerViewport>
-              </FileViewerSurface>
+              </FileViewerInset>
             </FileViewerBody>
           </FileViewer>
         </FileViewerProvider>

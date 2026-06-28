@@ -9,7 +9,7 @@ import {
   FileViewerDocument,
   FileViewer,
   FileViewerProvider,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import {
@@ -95,7 +95,7 @@ function SourceDocumentRenderer({
         <FileViewer>
           <PdfViewerProvider>
             <FileViewerBody>
-              <FileViewerSurface>
+              <FileViewerInset>
                 <FileViewerViewport>
                   <PdfViewerPages
                     ref={setPdfViewerHandle}
@@ -110,7 +110,7 @@ function SourceDocumentRenderer({
                     }
                   />
                 </FileViewerViewport>
-              </FileViewerSurface>
+              </FileViewerInset>
             </FileViewerBody>
           </PdfViewerProvider>
         </FileViewer>
@@ -149,11 +149,11 @@ function EditFileViewerDocument({
     <FileViewerProvider source={source}>
       <FileViewer>
         <FileViewerBody>
-          <FileViewerSurface>
+          <FileViewerInset>
             <FileViewerViewport>
               <FileViewerDocument />
             </FileViewerViewport>
-          </FileViewerSurface>
+          </FileViewerInset>
         </FileViewerBody>
       </FileViewer>
     </FileViewerProvider>

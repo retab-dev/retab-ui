@@ -1,6 +1,6 @@
 ---
 title: Anatomy
-description: "The compound File Viewer structure: root, header, body, sidebar slot, surface, and routed document."
+description: "The compound File Viewer structure: root, header, body, sidebar slot, inset, viewport, and routed document."
 ---
 
 `FileViewerPreview` is the one-line preview shell:
@@ -9,7 +9,7 @@ description: "The compound File Viewer structure: root, header, body, sidebar sl
 <FileViewerPreview source={source} />
 ```
 
-When the file surface needs its own header, sidebar, or surrounding workflow
+When the file needs its own header, sidebar, or surrounding workflow
 chrome, compose the same primitive parts explicitly:
 
 ```tsx
@@ -30,11 +30,11 @@ chrome, compose the same primitive parts explicitly:
         <FileViewerThumbnails />
       </FileViewerSidebar>
 
-      <FileViewerSurface>
+      <FileViewerInset>
         <FileViewerViewport>
           <FileViewerDocument />
         </FileViewerViewport>
-      </FileViewerSurface>
+      </FileViewerInset>
     </FileViewerBody>
   </FileViewer>
 </FileViewerProvider>
@@ -46,14 +46,14 @@ chrome, compose the same primitive parts explicitly:
   sidebar open state, and the file-scoped provider stack.
 - `FileViewer` owns the spatial frame: layout, sidebar mode, side, and
   breakpoint behavior.
-- `FileViewerPreview` composes the provider, frame, surface, viewport, and
+- `FileViewerPreview` composes the provider, frame, inset, viewport, and
   routed document for the one-line preview case.
 - `FileViewerHeader` owns the full-width file row.
 - `FileViewerBody` owns the horizontal layout under the header.
 - `FileViewerSidebar` is the optional navigation slot. It does not decide what
   the rows mean.
-- `FileViewerSurface` owns the main file surface beside the sidebar.
-- `FileViewerViewport` owns the measured viewport boundary inside the surface.
+- `FileViewerInset` owns the main file inset beside the sidebar.
+- `FileViewerViewport` owns the measured viewport boundary inside the inset.
 - `FileViewerDocument` renders the routed file renderer.
 - `FileViewerStates` provide the shared loading, empty, unavailable, error, and
   unsupported surfaces.

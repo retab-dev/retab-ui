@@ -12,10 +12,10 @@ import {
   FileViewerHeaderEnd,
   FileViewerHeaderStart,
   FileViewerIdentity,
+  FileViewerInset,
   FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarTrigger,
-  FileViewerSurface,
   FileViewerToolbar,
   FileViewerViewport,
   type ViewerSource,
@@ -147,6 +147,7 @@ function JsonFormSourcesContent({
   const setPdfViewerHandle = useSegmentedPdfViewerHandle();
   const setImageViewerHandle = useSegmentedImageViewerHandle();
   const form = useForm<Record<string, unknown>>({ defaultValues: extraction });
+  const { documentHandlers } = useSegmentedDocumentViewport();
 
   return (
     <FileViewerProvider source={source} defaultSidebarOpen>
@@ -155,115 +156,73 @@ function JsonFormSourcesContent({
         sidebarSide="right"
         className="bg-background h-full min-h-[680px]"
       >
-        {documentKind === "pdf" ? (
-          <PdfViewerProvider>
-            <JsonFormSourcesShell
-              defaultOpenPaths={defaultOpenPaths}
-              form={form}
-              link={link}
-              schema={schema}
-            >
-              {({ viewportHandlers }) => (
-                <PdfViewerPages
-                  ref={setPdfViewerHandle}
+        <FileViewerHeader>
+          <FileViewerHeaderStart>
+            <FileViewerSidebarTrigger className="-ml-1" />
+            <FileViewerIdentity />
+          </FileViewerHeaderStart>
+          <FileViewerHeaderEnd>
+            <FileViewerToolbar />
+          </FileViewerHeaderEnd>
+        </FileViewerHeader>
+        <FileViewerBody>
+          <FileViewerInset>
+            <FileViewerViewport>
+              {documentKind === "pdf" ? (
+                <PdfViewerProvider>
+                  <PdfViewerPages
+                    ref={setPdfViewerHandle}
+                    bare
+                    className="h-full"
+                    onScrollProgressChange={
+                      documentHandlers.onScrollProgressChange
+                    }
+                    onVisiblePageChange={documentHandlers.onCurrentPageChange}
+                    renderPageOverlay={renderPageOverlay}
+                  />
+                </PdfViewerProvider>
+              ) : (
+                <FileResourceImageViewer
+                  ref={setImageViewerHandle}
                   bare
                   className="h-full"
+                  controls={false}
+                  fallbackFrameSize={fallbackFrameSize}
                   onScrollProgressChange={
-                    viewportHandlers.onScrollProgressChange
+                    documentHandlers.onScrollProgressChange
                   }
-                  onVisiblePageChange={viewportHandlers.onCurrentPageChange}
-                  renderPageOverlay={renderPageOverlay}
+                  onVisibleFrameChange={documentHandlers.onCurrentPageChange}
+                  renderFrameOverlay={renderFrameOverlay}
                 />
               )}
-            </JsonFormSourcesShell>
-          </PdfViewerProvider>
-        ) : (
-          <JsonFormSourcesShell
-            defaultOpenPaths={defaultOpenPaths}
-            form={form}
-            link={link}
-            schema={schema}
+            </FileViewerViewport>
+          </FileViewerInset>
+          <FileViewerSidebar
+            aria-label="Source-linked fields"
+            side="right"
+            width="420px"
+            className="bg-background flex flex-shrink-0 flex-col border-l"
           >
-            {({ viewportHandlers }) => (
-              <FileResourceImageViewer
-                ref={setImageViewerHandle}
-                bare
-                className="h-full"
-                controls={false}
-                fallbackFrameSize={fallbackFrameSize}
-                onScrollProgressChange={viewportHandlers.onScrollProgressChange}
-                onVisibleFrameChange={viewportHandlers.onCurrentPageChange}
-                renderFrameOverlay={renderFrameOverlay}
-              />
-            )}
-          </JsonFormSourcesShell>
-        )}
-      </FileViewer>
-    </FileViewerProvider>
-  );
-}
-
-function JsonFormSourcesShell({
-  children,
-  defaultOpenPaths,
-  form,
-  link,
-  schema,
-}: {
-  children: (input: {
-    viewportHandlers: ReturnType<
-      typeof useSegmentedDocumentViewport
-    >["documentHandlers"];
-  }) => React.ReactNode;
-  defaultOpenPaths?: readonly string[];
-  form: ReturnType<typeof useForm<Record<string, unknown>>>;
-  link: ReturnType<typeof useSegmentedSourceFieldLink>;
-  schema: JSONSchema7;
-}) {
-  const { documentHandlers } = useSegmentedDocumentViewport();
-
-  return (
-    <>
-      <FileViewerHeader>
-        <FileViewerHeaderStart>
-          <FileViewerSidebarTrigger className="-ml-1" />
-          <FileViewerIdentity />
-        </FileViewerHeaderStart>
-        <FileViewerHeaderEnd>
-          <FileViewerToolbar />
-        </FileViewerHeaderEnd>
-      </FileViewerHeader>
-      <FileViewerBody>
-        <FileViewerSurface>
-          <FileViewerViewport>
-            {children({ viewportHandlers: documentHandlers })}
-          </FileViewerViewport>
-        </FileViewerSurface>
-        <FileViewerSidebar
-          aria-label="Source-linked fields"
-          side="right"
-          width="420px"
-          className="bg-background flex flex-shrink-0 flex-col border-l"
-        >
-          <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">
-            <SourceIndicator
-              path={link.activeSourcePath}
-              className="min-h-0 flex-1 px-0 py-0"
-            />
-          </div>
-          <ScrollArea className="min-h-0 flex-1">
-            <div className="p-4">
-              <JsonForm
-                form={form}
-                schema={schema}
-                sourceLink={link}
-                defaultOpenPaths={defaultOpenPaths}
+            <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">
+              <SourceIndicator
+                path={link.activeSourcePath}
+                className="min-h-0 flex-1 px-0 py-0"
               />
             </div>
-          </ScrollArea>
-        </FileViewerSidebar>
-      </FileViewerBody>
-    </>
+            <ScrollArea className="min-h-0 flex-1">
+              <div className="p-4">
+                <JsonForm
+                  form={form}
+                  schema={schema}
+                  sourceLink={link}
+                  defaultOpenPaths={defaultOpenPaths}
+                />
+              </div>
+            </ScrollArea>
+          </FileViewerSidebar>
+        </FileViewerBody>
+      </FileViewer>
+    </FileViewerProvider>
   );
 }
 

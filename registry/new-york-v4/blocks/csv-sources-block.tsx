@@ -21,7 +21,7 @@ import {
   FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarContent,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerToolbar,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
@@ -115,7 +115,7 @@ function CsvSourcesContent({
           </FileViewerHeaderEnd>
         </FileViewerHeader>
         <FileViewerBody>
-          <FileViewerSurface>
+          <FileViewerInset>
             <FileViewerViewport>
               <CsvViewerDocument
                 ref={viewerRef}
@@ -126,7 +126,7 @@ function CsvSourcesContent({
                 activeCell={activeCell}
               />
             </FileViewerViewport>
-          </FileViewerSurface>
+          </FileViewerInset>
           <FileViewerSidebar
             aria-label="Source fields"
             side="right"

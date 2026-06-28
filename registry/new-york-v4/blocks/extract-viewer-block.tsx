@@ -18,7 +18,7 @@ import {
   FileViewerSidebarSectionHeader,
   FileViewerSidebarSectionTitle,
   FileViewerSidebarTrigger,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import {
@@ -123,7 +123,7 @@ function ExtractViewerContent() {
           </FileViewerHeaderEnd>
         </FileViewerHeader>
         <FileViewerBody>
-          <FileViewerSurface>
+          <FileViewerInset>
             <FileViewerViewport>
               <PdfViewerProvider>
                 <PdfViewerPages
@@ -138,7 +138,7 @@ function ExtractViewerContent() {
                 />
               </PdfViewerProvider>
             </FileViewerViewport>
-          </FileViewerSurface>
+          </FileViewerInset>
           <FileViewerSidebar
             aria-label="Extracted fields"
             side="right"

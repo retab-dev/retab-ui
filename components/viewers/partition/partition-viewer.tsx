@@ -14,7 +14,7 @@ import {
   FileViewerLegend,
   FileViewer,
   FileViewerProvider,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerToolbar,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
@@ -348,13 +348,13 @@ export function PartitionViewer({
         <FileViewer className="bg-background">
           <PartitionViewerFileHeader />
           <FileViewerBody>
-            <FileViewerSurface>
+            <FileViewerInset>
               <FileViewerLegend>
                 <PartitionViewerLegend className="px-3 py-2" />
               </FileViewerLegend>
               <PartitionViewerRibbon />
               <PartitionViewerDocument document={document} />
-            </FileViewerSurface>
+            </FileViewerInset>
           </FileViewerBody>
         </FileViewer>
       </FileViewerProvider>

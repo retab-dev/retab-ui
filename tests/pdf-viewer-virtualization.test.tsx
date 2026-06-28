@@ -7,6 +7,7 @@ import {
   createPdfPageLayout,
   getPdfPageLayout,
   getPdfRenderPageNumbers,
+  getPdfVisiblePageNumbers,
 } from "@/registry/new-york-v4/ui/pdf-viewer-layout";
 import { usePdfPageVirtualization } from "@/registry/new-york-v4/ui/pdf-viewer-virtualization";
 import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
@@ -219,6 +220,216 @@ describe("usePdfPageVirtualization", () => {
         viewportHeight: 200,
       }).join(","),
     );
+  });
+
+  it("does not fit perfectly for a large scroll delta caused by a layout change", async () => {
+    const initialLayout = createPdfPageLayout({
+      pageCount: 100,
+      defaultPageSize: { width: 100, height: 200 },
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    });
+    const nextLayout = createPdfPageLayout({
+      pageCount: 100,
+      defaultPageSize: { width: 100, height: 320 },
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    });
+    const initialPage40Top = getPdfPageLayout(initialLayout, 40)!.offsetTop;
+    const nextPage40Top = getPdfPageLayout(nextLayout, 40)!.offsetTop;
+    const frameCallbacks: FrameRequestCallback[] = [];
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        frameCallbacks.push(callback);
+        return frameCallbacks.length;
+      });
+    vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
+
+    function Harness({
+      layout,
+      scrollTop,
+    }: {
+      layout: typeof initialLayout;
+      scrollTop: number;
+    }) {
+      const [viewport] = React.useState(
+        () =>
+          ({
+            scrollTop: 0,
+            clientHeight: 200,
+          }) as HTMLDivElement,
+      );
+      const result = usePdfPageVirtualization({
+        getScrollMetrics: () => ({
+          scrollPageOffset: 0,
+          scrollTop,
+          viewportHeight: viewport.clientHeight,
+        }),
+        layout,
+        viewportElement: viewport,
+      });
+
+      return (
+        <output data-testid="render">
+          {result.renderPageNumbers.join(",")}
+        </output>
+      );
+    }
+
+    const view = render(
+      <Harness layout={initialLayout} scrollTop={initialPage40Top} />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("render").textContent).toBe(
+        getPdfRenderPageNumbers({
+          layout: initialLayout,
+          scrollTop: initialPage40Top,
+          viewportHeight: 200,
+        }).join(","),
+      ),
+    );
+
+    view.rerender(<Harness layout={nextLayout} scrollTop={nextPage40Top} />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(requestAnimationFrame).toHaveBeenCalledTimes(0);
+    expect(screen.getByTestId("render").textContent).toBe(
+      getPdfRenderPageNumbers({
+        layout: nextLayout,
+        scrollTop: nextPage40Top,
+        viewportHeight: 200,
+      }).join(","),
+    );
+    expect(screen.getByTestId("render").textContent).not.toBe(
+      getPdfRenderPageNumbers({
+        fitPerfectly: true,
+        layout: nextLayout,
+        scrollTop: nextPage40Top,
+        viewportHeight: 200,
+      }).join(","),
+    );
+  });
+
+  it("retains the previous and current page windows during a layout transition", async () => {
+    const initialLayout = createPdfPageLayout({
+      pageCount: 20,
+      defaultPageSize: { width: 100, height: 200 },
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    });
+    const nextLayout = createPdfPageLayout({
+      pageCount: 20,
+      defaultPageSize: { width: 100, height: 420 },
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    });
+    const viewportHeight = 200;
+    const initialScrollTop = getPdfPageLayout(initialLayout, 10)!.offsetTop;
+    const nextScrollTop = getPdfPageLayout(nextLayout, 10)!.offsetTop;
+
+    function Harness({
+      isLayoutTransitioning = false,
+      layout,
+      scrollTop,
+    }: {
+      isLayoutTransitioning?: boolean;
+      layout: typeof initialLayout;
+      scrollTop: number;
+    }) {
+      const [viewport] = React.useState(
+        () =>
+          ({
+            scrollTop: 0,
+            clientHeight: viewportHeight,
+          }) as HTMLDivElement,
+      );
+      const result = usePdfPageVirtualization({
+        getScrollMetrics: () => ({
+          scrollPageOffset: 0,
+          scrollTop,
+          viewportHeight: viewport.clientHeight,
+        }),
+        isLayoutTransitioning,
+        layout,
+        viewportElement: viewport,
+      });
+
+      return (
+        <>
+          <output data-testid="visible">
+            {result.visiblePageNumbers.join(",")}
+          </output>
+          <output data-testid="render">
+            {result.renderPageNumbers.join(",")}
+          </output>
+        </>
+      );
+    }
+
+    const view = render(
+      <Harness layout={initialLayout} scrollTop={initialScrollTop} />,
+    );
+
+    const initialVisible = getPdfVisiblePageNumbers({
+      layout: initialLayout,
+      scrollTop: initialScrollTop,
+      viewportHeight,
+    });
+    const initialRender = getPdfRenderPageNumbers({
+      layout: initialLayout,
+      scrollTop: initialScrollTop,
+      viewportHeight,
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId("visible").textContent).toBe(
+        initialVisible.join(","),
+      ),
+    );
+    expect(screen.getByTestId("render").textContent).toBe(
+      initialRender.join(","),
+    );
+
+    const nextVisible = getPdfVisiblePageNumbers({
+      layout: nextLayout,
+      scrollTop: nextScrollTop,
+      viewportHeight,
+    });
+    const nextRender = getPdfRenderPageNumbers({
+      layout: nextLayout,
+      scrollTop: nextScrollTop,
+      viewportHeight,
+    });
+
+    view.rerender(
+      <Harness
+        isLayoutTransitioning
+        layout={nextLayout}
+        scrollTop={nextScrollTop}
+      />,
+    );
+
+    expect(screen.getByTestId("visible").textContent).toBe(
+      mergeExpectedPageNumbers(initialVisible, nextVisible).join(","),
+    );
+    expect(screen.getByTestId("render").textContent).toBe(
+      mergeExpectedPageNumbers(initialRender, nextRender).join(","),
+    );
+
+    view.rerender(<Harness layout={nextLayout} scrollTop={nextScrollTop} />);
+
+    expect(screen.getByTestId("visible").textContent).toBe(
+      nextVisible.join(","),
+    );
+    expect(screen.getByTestId("render").textContent).toBe(nextRender.join(","));
   });
 
   it("uses logical scroll metrics for the centered render window", async () => {
@@ -444,3 +655,12 @@ describe("usePdfPageVirtualization", () => {
     expect(snapshots.at(-1)).toBe("1,2,3,4");
   });
 });
+
+function mergeExpectedPageNumbers(
+  previousPageNumbers: readonly number[],
+  currentPageNumbers: readonly number[],
+) {
+  return Array.from(new Set([...previousPageNumbers, ...currentPageNumbers]))
+    .filter((pageNumber) => pageNumber >= 1)
+    .sort((a, b) => a - b);
+}

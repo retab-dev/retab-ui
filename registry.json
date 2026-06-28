@@ -1210,6 +1210,11 @@
           "target": "@ui/viewer-document-scroll.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/viewer-document-geometry.ts",
+          "type": "registry:ui",
+          "target": "@ui/viewer-document-geometry.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/pdf-viewer-layout.ts",
           "type": "registry:ui",
           "target": "@ui/pdf-viewer-layout.ts"
@@ -1564,6 +1569,11 @@
           "path": "registry/new-york-v4/ui/viewer-types.ts",
           "type": "registry:ui",
           "target": "@ui/viewer-types.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-document-geometry.ts",
+          "type": "registry:ui",
+          "target": "@ui/viewer-document-geometry.ts"
         }
       ]
     },

@@ -121,12 +121,14 @@ export function usePdfScrollActivity() {
 }
 
 export function usePdfScroll({
+  isLayoutTransitioning = false,
   pageCount,
   layout,
   resetKey,
   onVisiblePageChange,
   onScrollProgressChange,
 }: {
+  isLayoutTransitioning?: boolean;
   pageCount: number;
   layout: PdfPageLayoutModel;
   resetKey?: unknown;
@@ -144,8 +146,8 @@ export function usePdfScroll({
     ? currentPageState.page
     : 1;
   const documentLayout = React.useMemo(
-    () => createPdfDocumentLayoutModel(layout),
-    [layout],
+    () => createPdfDocumentLayoutModel(layout, isLayoutTransitioning),
+    [isLayoutTransitioning, layout],
   );
   const resolveScrollTarget = React.useCallback<
     ViewerDocumentScrollTargetResolver<PdfReadingAnchor, PdfPageAreaTarget>
@@ -393,6 +395,7 @@ function normalizeOptionalPercent(value: number | undefined) {
 
 function createPdfDocumentLayoutModel(
   layout: PdfPageLayoutModel,
+  isTransitioning: boolean,
 ): PdfDocumentLayoutModel {
   return {
     blockSize: layout.totalHeight,
@@ -400,6 +403,7 @@ function createPdfDocumentLayoutModel(
     getReadingAnchorScrollTop: (target) =>
       getPdfReadingAnchorScrollTop(layout, target),
     inlineSize: layout.maxPageWidth,
+    isTransitioning,
   };
 }
 
@@ -416,8 +420,8 @@ function capturePdfReadingAnchor(
   if (layout.pageCount === 0) return null;
   if (scrollTop <= 0) return { kind: "top" };
 
-  const markerOffset = scrollTop + viewportBlockSize * PDF_READING_MARKER_RATIO;
-  const pageNumber = findPdfPageByOffset(layout, markerOffset);
+  const anchorOffset = scrollTop + getPdfReadingAnchorOffset(viewportBlockSize);
+  const pageNumber = findPdfPageByOffset(layout, anchorOffset);
   const pageLayout = getPdfPageLayout(layout, pageNumber);
   if (!pageLayout || pageLayout.height <= 0) return null;
 
@@ -425,7 +429,7 @@ function capturePdfReadingAnchor(
     kind: "page",
     pageNumber,
     yPercent: clamp(
-      (markerOffset - pageLayout.offsetTop) / pageLayout.height,
+      (anchorOffset - pageLayout.offsetTop) / pageLayout.height,
       0,
       1,
     ),
@@ -452,9 +456,13 @@ function getPdfReadingAnchorScrollTop(
   const targetTop =
     pageLayout.offsetTop +
     pageLayout.height * anchor.yPercent -
-    viewportBlockSize * PDF_READING_MARKER_RATIO;
+    getPdfReadingAnchorOffset(viewportBlockSize);
   const maxScrollTop = Math.max(0, layout.totalHeight - viewportBlockSize);
   return clamp(targetTop, 0, maxScrollTop);
+}
+
+function getPdfReadingAnchorOffset(viewportBlockSize: number) {
+  return Math.max(0, viewportBlockSize * PDF_READING_MARKER_RATIO);
 }
 
 function toPdfScrollMetrics(

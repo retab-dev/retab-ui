@@ -10,7 +10,7 @@ import {
   FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarTrigger,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerToolbar,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
@@ -50,11 +50,11 @@ export function PdfViewerDemo() {
               >
                 <PdfViewerThumbnails thumbnailWidth={60} />
               </FileViewerSidebar>
-              <FileViewerSurface>
+              <FileViewerInset>
                 <FileViewerViewport>
                   <PdfViewerPages bare className="h-full" />
                 </FileViewerViewport>
-              </FileViewerSurface>
+              </FileViewerInset>
             </FileViewerBody>
           </PdfViewerProvider>
         </FileViewer>

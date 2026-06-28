@@ -8,7 +8,7 @@
     "file-viewer-header",
     "file-viewer-body",
     "file-viewer-sidebar",
-    "file-viewer-surface",
+    "file-viewer-inset",
     "file-viewer-viewport",
     "file-viewer-document",
     "file-viewer-states"

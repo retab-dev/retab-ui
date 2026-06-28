@@ -13,7 +13,7 @@ import {
   FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarContent,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerToolbar,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
@@ -106,7 +106,7 @@ function TextSourcesContent({
           </FileViewerHeaderEnd>
         </FileViewerHeader>
         <FileViewerBody>
-          <FileViewerSurface>
+          <FileViewerInset>
             <FileViewerViewport>
               <TextViewer
                 ref={viewerRef}
@@ -118,7 +118,7 @@ function TextSourcesContent({
                 mode="text"
               />
             </FileViewerViewport>
-          </FileViewerSurface>
+          </FileViewerInset>
           <FileViewerSidebar
             aria-label="Source fields"
             side="right"

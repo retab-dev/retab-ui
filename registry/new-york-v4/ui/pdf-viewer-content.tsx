@@ -160,6 +160,11 @@ function PdfViewerInner({
   const content = resource.content;
   const document = readPdfDocumentResource(content);
   const documentFrame = useOptionalViewerDocumentFrame();
+  if (!documentFrame) {
+    throw new Error(
+      "PdfResourceContent must be rendered inside FileViewerInset. Use <FileViewerInset><FileViewerViewport><PdfViewerPages /></FileViewerViewport></FileViewerInset>.",
+    );
+  }
   usePdfDocumentResourceLifecycle(content, document);
 
   const firstPageSize = usePdfFirstPageSize(document);
@@ -193,6 +198,7 @@ function PdfViewerInner({
   const renderScale = getPdfPreparedFitWidthRenderScale({
     enabled: Boolean(documentFrame && isFitWidth),
     fallbackScale: resolvedScale,
+    isTransitioning: documentFrameLayout.isTransitioning,
     maxInlineSize: documentFrameLayout.maxInlineSize,
     pageWidth: fitPageWidth,
   });
@@ -226,6 +232,7 @@ function PdfViewerInner({
     getViewportElement,
     getScrollMetrics,
   } = usePdfScroll({
+    isLayoutTransitioning: documentFrameLayout.isTransitioning,
     pageCount: document.numPages,
     layout: pageLayout,
     resetKey: document,
@@ -240,6 +247,7 @@ function PdfViewerInner({
     measureVisiblePages,
   } = usePdfPageVirtualization({
     getScrollMetrics,
+    isLayoutTransitioning: documentFrameLayout.isTransitioning,
     layout: pageLayout,
     resetKey: document,
     viewportElement,
@@ -406,6 +414,7 @@ function PdfViewerInner({
                 scrollPageOffset={scrollPageOffset}
                 visiblePageNumbers={visiblePageNumbers}
                 viewportHeight={viewportElement?.clientHeight ?? 0}
+                isLayoutTransitioning={documentFrameLayout.isTransitioning}
                 renderPageOverlay={renderPageOverlay}
                 rotation={rotation}
                 scale={displayScale}
@@ -479,15 +488,17 @@ function usePdfDocumentRotation(document: PdfDocument) {
 function getPdfPreparedFitWidthRenderScale({
   enabled,
   fallbackScale,
+  isTransitioning,
   maxInlineSize,
   pageWidth,
 }: {
   enabled: boolean;
   fallbackScale: number;
+  isTransitioning: boolean;
   maxInlineSize: number | null;
   pageWidth: number;
 }) {
-  return enabled && maxInlineSize != null
+  return enabled && !isTransitioning && maxInlineSize != null
     ? getPdfFitWidthScale(maxInlineSize, pageWidth, 0)
     : fallbackScale;
 }
@@ -563,6 +574,7 @@ type PdfDocumentPagesLayerProps = {
   scrollPageOffset: number;
   visiblePageNumbers: readonly number[];
   viewportHeight: number;
+  isLayoutTransitioning: boolean;
   renderPageOverlay?: (props: PageOverlayProps) => React.ReactNode;
   rotation: number;
   scale: number;
@@ -585,6 +597,7 @@ function PdfDocumentPagesLayer({
   scrollPageOffset,
   visiblePageNumbers,
   viewportHeight,
+  isLayoutTransitioning,
   renderPageOverlay,
   rotation,
   scale,
@@ -629,6 +642,8 @@ function PdfDocumentPagesLayer({
   const documentContent = (
     <div
       data-slot="pdf-viewer-document"
+      data-viewer-document-flip-layer=""
+      data-layout-transitioning={isLayoutTransitioning ? "" : undefined}
       className={cn(
         "relative",
         getPdfDocumentFrameAlignClass(documentFrameAlign),
@@ -668,6 +683,9 @@ function PdfDocumentPagesLayer({
                 <div
                   key={page.pageNumber}
                   className="absolute left-1/2 flex -translate-x-1/2 items-center justify-center"
+                  data-layout-transitioning={
+                    isLayoutTransitioning ? "" : undefined
+                  }
                   data-slot="pdf-page-slot"
                   data-page-number={page.pageNumber}
                   data-visible={
@@ -687,6 +705,7 @@ function PdfDocumentPagesLayer({
                         pageNumber={page.pageNumber}
                         scale={scale}
                         renderScale={renderScale}
+                        isLayoutTransitioning={isLayoutTransitioning}
                         rotation={rotation}
                         devicePixelRatio={devicePixelRatio}
                         renderCache={renderCache}

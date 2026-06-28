@@ -18,7 +18,7 @@ import {
   FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarTrigger,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerToolbar,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
@@ -99,11 +99,11 @@ export function AttachmentSidebarExample() {
             </FileViewerHeaderEnd>
           </FileViewerHeader>
           <FileViewerBody>
-            <FileViewerSurface>
+            <FileViewerInset>
               <FileViewerViewport>
                 <FileViewerDocument />
               </FileViewerViewport>
-            </FileViewerSurface>
+            </FileViewerInset>
             <FileViewerSidebar
               aria-label="Message attachments"
               side="right"

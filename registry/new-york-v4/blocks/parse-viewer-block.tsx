@@ -7,7 +7,7 @@ import {
   FileViewer,
   FileViewerBody,
   FileViewerProvider,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import {
@@ -99,7 +99,7 @@ function ParseSourceDocument() {
       <FileViewer>
         <PdfViewerProvider>
           <FileViewerBody>
-            <FileViewerSurface>
+            <FileViewerInset>
               <FileViewerViewport>
                 <PdfViewerPages
                   ref={viewerRef}
@@ -109,7 +109,7 @@ function ParseSourceDocument() {
                   className="h-full"
                 />
               </FileViewerViewport>
-            </FileViewerSurface>
+            </FileViewerInset>
           </FileViewerBody>
         </PdfViewerProvider>
       </FileViewer>

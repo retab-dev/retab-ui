@@ -30,10 +30,11 @@ export interface PdfViewerProviderProps {
 
 type PdfViewerContextValue = {
   currentPage: number | null;
+  isViewerReady: boolean;
   resource: ViewerResource;
   setCurrentPage: (page: number | null) => void;
   setViewerHandle: (handle: PdfViewerHandle | null) => void;
-  viewerHandle: PdfViewerHandle | null;
+  viewerHandleRef: React.RefObject<PdfViewerHandle | null>;
 };
 
 type PdfDocumentPagesState = {
@@ -59,25 +60,24 @@ function usePdfViewerContext(
 }
 
 export function usePdfViewerThumbnails(): PdfViewerThumbnailsState {
-  const { currentPage, resource, viewerHandle } = usePdfViewerContext(
-    "usePdfViewerThumbnails",
-  );
+  const { currentPage, isViewerReady, resource, viewerHandleRef } =
+    usePdfViewerContext("usePdfViewerThumbnails");
   const onSelectPage = React.useCallback(
     (page: number) => {
       const pageDelta = currentPage == null ? 0 : Math.abs(page - currentPage);
-      viewerHandle?.scrollToPage(page, {
+      viewerHandleRef.current?.scrollToPage(page, {
         behavior:
           pageDelta > PDF_THUMBNAIL_SMOOTH_SCROLL_MAX_PAGE_DELTA
             ? "auto"
             : "smooth",
       });
     },
-    [currentPage, viewerHandle],
+    [currentPage, viewerHandleRef],
   );
 
   return {
     currentPage,
-    onSelectPage: viewerHandle ? onSelectPage : undefined,
+    onSelectPage: isViewerReady ? onSelectPage : undefined,
     resource,
   };
 }
@@ -137,17 +137,27 @@ export function PdfViewerProvider({
     );
   }, [fileViewerResource, source]);
   const [currentPage, setCurrentPage] = React.useState<number | null>(null);
-  const [viewerHandle, setViewerHandle] =
-    React.useState<PdfViewerHandle | null>(null);
+  const viewerHandleRef = React.useRef<PdfViewerHandle | null>(null);
+  const [isViewerReady, setIsViewerReady] = React.useState(false);
+  const setViewerHandle = React.useCallback((handle: PdfViewerHandle | null) => {
+    viewerHandleRef.current = handle;
+    const nextIsViewerReady = handle !== null;
+    setIsViewerReady((currentIsViewerReady) =>
+      currentIsViewerReady === nextIsViewerReady
+        ? currentIsViewerReady
+        : nextIsViewerReady,
+    );
+  }, []);
   const value = React.useMemo<PdfViewerContextValue>(
     () => ({
       currentPage,
+      isViewerReady,
       resource,
       setCurrentPage,
       setViewerHandle,
-      viewerHandle,
+      viewerHandleRef,
     }),
-    [currentPage, resource, viewerHandle],
+    [currentPage, isViewerReady, resource, setViewerHandle],
   );
 
   return (

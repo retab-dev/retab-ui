@@ -22,6 +22,11 @@ import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { joinEffectKey } from "@/lib/effect-key";
 
 type PdfRenderedPage = PdfRenderedPageSignature;
+type PdfDocumentPage = ReturnType<typeof readPdfPageResource>;
+type PdfViewportSize = {
+  width: number;
+  height: number;
+};
 
 type PdfPageProps = {
   document: PdfDocumentProxy;
@@ -29,6 +34,7 @@ type PdfPageProps = {
   pageNumber: number;
   scale: number;
   renderScale?: number;
+  isLayoutTransitioning?: boolean;
   rotation: number;
   devicePixelRatio: number;
   renderCache?: PdfRenderedPageCache;
@@ -37,12 +43,24 @@ type PdfPageProps = {
   onSize?: (pageNumber: number, size: PdfPageSize) => void;
 };
 
+type PdfPageCanvasProps = {
+  documentKey: string;
+  page: PdfDocumentPage;
+  pageNumber: number;
+  renderScale: number;
+  rotation: number;
+  devicePixelRatio: number;
+  renderCache?: PdfRenderedPageCache;
+  onRenderTiming?: (timing: PdfPageRenderTiming) => void;
+};
+
 export const PdfPage = React.memo(function PdfPage({
   document,
   documentKey,
   pageNumber,
   scale,
   renderScale,
+  isLayoutTransitioning,
   rotation,
   devicePixelRatio,
   renderCache,
@@ -71,22 +89,67 @@ export const PdfPage = React.memo(function PdfPage({
     },
   );
 
-  const displayViewport = React.useMemo(
+  const displaySize = React.useMemo(
     () =>
-      page.getViewport({
+      getPdfDisplayViewportSize({
+        intrinsicViewport,
+        rotation,
         scale,
-        rotation: ((page.rotate ?? 0) + rotation) % 360,
       }),
-    [page, rotation, scale],
+    [intrinsicViewport, rotation, scale],
   );
   const resolvedRenderScale = renderScale ?? scale;
+
+  return (
+    <div
+      className="ring-border relative shadow-sm ring-1"
+      data-layout-transitioning={isLayoutTransitioning ? "" : undefined}
+      style={{ width: displaySize.width, height: displaySize.height }}
+      data-slot="pdf-page"
+      data-page={pageNumber}
+    >
+      <PdfPageCanvas
+        documentKey={documentKey}
+        page={page}
+        pageNumber={pageNumber}
+        renderScale={resolvedRenderScale}
+        rotation={rotation}
+        devicePixelRatio={devicePixelRatio}
+        renderCache={renderCache}
+        onRenderTiming={onRenderTiming}
+      />
+      {renderOverlay ? (
+        <div className="pointer-events-none absolute inset-0">
+          {renderOverlay({
+            pageNumber,
+            width: displaySize.width,
+            height: displaySize.height,
+            scale,
+            rotation,
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}, arePdfPagePropsEqual);
+
+const PdfPageCanvas = React.memo(function PdfPageCanvas({
+  documentKey,
+  page,
+  pageNumber,
+  renderScale,
+  rotation,
+  devicePixelRatio,
+  renderCache,
+  onRenderTiming,
+}: PdfPageCanvasProps) {
   const renderViewport = React.useMemo(
     () =>
       page.getViewport({
-        scale: resolvedRenderScale,
+        scale: renderScale,
         rotation: ((page.rotate ?? 0) + rotation) % 360,
       }),
-    [page, resolvedRenderScale, rotation],
+    [page, renderScale, rotation],
   );
   const [renderError, setRenderError] = React.useState<unknown>(null);
   if (renderError) throw renderError;
@@ -99,7 +162,7 @@ export const PdfPage = React.memo(function PdfPage({
       const renderSignature = {
         documentKey,
         pageNumber,
-        scale: resolvedRenderScale,
+        scale: renderScale,
         rotation,
         devicePixelRatio,
         viewportWidth: renderViewport.width,
@@ -119,7 +182,7 @@ export const PdfPage = React.memo(function PdfPage({
       ) => {
         onRenderTiming?.({
           pageNumber,
-          scale: resolvedRenderScale,
+          scale: renderScale,
           rotation,
           devicePixelRatio,
           status,
@@ -194,6 +257,8 @@ export const PdfPage = React.memo(function PdfPage({
       const renderCanvas = canvas.ownerDocument.createElement("canvas");
       renderCanvas.width = canvasWidth;
       renderCanvas.height = canvasHeight;
+      renderCanvas.style.width = `${renderViewport.width}px`;
+      renderCanvas.style.height = `${renderViewport.height}px`;
       const renderContext = renderCanvas.getContext("2d");
       if (!renderContext) {
         markCanvasRenderStatus(canvas, renderSignature, "failed");
@@ -269,38 +334,20 @@ export const PdfPage = React.memo(function PdfPage({
       page,
       pageNumber,
       renderCache,
+      renderScale,
       renderViewport,
-      resolvedRenderScale,
       rotation,
     ],
   );
 
   return (
-    <div
-      className="ring-border relative shadow-sm ring-1"
-      style={{ width: displayViewport.width, height: displayViewport.height }}
-      data-slot="pdf-page"
-      data-page={pageNumber}
-    >
-      <canvas
-        ref={canvasRef}
-        style={{ width: displayViewport.width, height: displayViewport.height }}
-        className="block bg-white"
-      />
-      {renderOverlay ? (
-        <div className="pointer-events-none absolute inset-0">
-          {renderOverlay({
-            pageNumber,
-            width: displayViewport.width,
-            height: displayViewport.height,
-            scale,
-            rotation,
-          })}
-        </div>
-      ) : null}
-    </div>
+    <canvas
+      ref={canvasRef}
+      style={{ width: "100%", height: "100%" }}
+      className="block bg-white"
+    />
   );
-}, arePdfPagePropsEqual);
+}, arePdfPageCanvasPropsEqual);
 
 function arePdfPagePropsEqual(previous: PdfPageProps, next: PdfPageProps) {
   return (
@@ -309,6 +356,7 @@ function arePdfPagePropsEqual(previous: PdfPageProps, next: PdfPageProps) {
     previous.pageNumber === next.pageNumber &&
     previous.scale === next.scale &&
     previous.renderScale === next.renderScale &&
+    previous.isLayoutTransitioning === next.isLayoutTransitioning &&
     previous.rotation === next.rotation &&
     previous.devicePixelRatio === next.devicePixelRatio &&
     previous.renderCache === next.renderCache &&
@@ -316,6 +364,44 @@ function arePdfPagePropsEqual(previous: PdfPageProps, next: PdfPageProps) {
     previous.onRenderTiming === next.onRenderTiming &&
     previous.onSize === next.onSize
   );
+}
+
+function arePdfPageCanvasPropsEqual(
+  previous: PdfPageCanvasProps,
+  next: PdfPageCanvasProps,
+) {
+  return (
+    previous.documentKey === next.documentKey &&
+    previous.page === next.page &&
+    previous.pageNumber === next.pageNumber &&
+    previous.renderScale === next.renderScale &&
+    previous.rotation === next.rotation &&
+    previous.devicePixelRatio === next.devicePixelRatio &&
+    previous.renderCache === next.renderCache &&
+    previous.onRenderTiming === next.onRenderTiming
+  );
+}
+
+function getPdfDisplayViewportSize({
+  intrinsicViewport,
+  rotation,
+  scale,
+}: {
+  intrinsicViewport: PdfViewportSize;
+  rotation: number;
+  scale: number;
+}): PdfViewportSize {
+  const isRotated = normalizePdfRotation(rotation) % 180 !== 0;
+  return {
+    width:
+      (isRotated ? intrinsicViewport.height : intrinsicViewport.width) * scale,
+    height:
+      (isRotated ? intrinsicViewport.width : intrinsicViewport.height) * scale,
+  };
+}
+
+function normalizePdfRotation(rotation: number) {
+  return ((rotation % 360) + 360) % 360;
 }
 
 function resizeCanvas(

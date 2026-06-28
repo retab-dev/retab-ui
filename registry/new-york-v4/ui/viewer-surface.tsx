@@ -22,40 +22,25 @@ import { useStableElementSize } from "./viewer-measurement";
 import type {
   ViewerDocumentFrameAlign,
   ViewerDocumentFrameProps,
-  ViewerSidebarLayoutSnapshot,
-  ViewerSidebarLayoutStore,
+  ViewerGeometryStore,
   ViewerSurfaceMeasurement,
   ViewerSurfaceProps,
   ViewerViewportProps,
+  ViewerGeometrySnapshot,
 } from "./viewer-types";
-
-export type ViewerDocumentFrameLayoutTransitionSample = {
-  inlineSize: number;
-  isTransitioning: boolean;
-  maxInlineSize: number;
-  progress: number;
-  targetInlineSize: number;
-};
-
-export type ViewerDocumentFrameLayoutTransition = {
-  getSnapshot: () => ViewerDocumentFrameLayoutTransitionSample | null;
-  subscribe: (listener: () => void) => () => void;
-};
 
 export type ViewerDocumentFrameLayout = {
   activeInlineSize: number | null;
   isTransitioning: boolean;
   maxInlineSize: number | null;
-  progress: number;
   settledInlineSize: number | null;
-  targetInlineSize: number | null;
 };
 
 export type ViewerDocumentFrameState = {
   align: ViewerDocumentFrameAlign;
   element: HTMLDivElement | null;
+  geometryStore: ViewerGeometryStore | null;
   inlineSize: number | null;
-  layoutTransition: ViewerDocumentFrameLayoutTransition | null;
 };
 
 const ViewerDocumentFrameContext =
@@ -83,19 +68,25 @@ export function useViewerDocumentFrameLayout({
   documentFrame: ViewerDocumentFrameState | null;
   fallbackInlineSize: number | null;
 }): ViewerDocumentFrameLayout {
-  const layoutTransition = documentFrame?.layoutTransition ?? null;
+  const element = documentFrame?.element ?? null;
+  const geometryStore = documentFrame?.geometryStore ?? null;
   const snapshotCacheRef = React.useRef<ViewerDocumentFrameLayout | null>(null);
   const subscribe = React.useCallback(
     (listener: () => void) =>
-      layoutTransition ? layoutTransition.subscribe(listener) : () => {},
-    [layoutTransition],
+      geometryStore ? geometryStore.subscribe(listener) : () => {},
+    [geometryStore],
   );
   const getSnapshot = React.useCallback(() => {
-    const sample = layoutTransition?.getSnapshot();
-    const nextLayout = sample
-      ? createViewerDocumentFrameLayoutFromSample(sample)
-      : createViewerDocumentFrameFallbackLayout(fallbackInlineSize);
+    const geometry = geometryStore?.getSnapshot() ?? null;
     const previousLayout = snapshotCacheRef.current;
+    const nextLayout =
+      geometry && geometry.hasMeasuredBody
+        ? createViewerDocumentFrameLayoutFromGeometry({
+            element,
+            fallbackInlineSize,
+            geometry,
+          })
+        : createViewerDocumentFrameFallbackLayout(fallbackInlineSize);
 
     if (
       previousLayout &&
@@ -106,7 +97,7 @@ export function useViewerDocumentFrameLayout({
 
     snapshotCacheRef.current = nextLayout;
     return nextLayout;
-  }, [fallbackInlineSize, layoutTransition]);
+  }, [element, fallbackInlineSize, geometryStore]);
   const activeLayout = React.useSyncExternalStore(
     subscribe,
     getSnapshot,
@@ -121,7 +112,7 @@ export function useViewerDocumentFrameLayout({
       "viewer-document-frame-layout:settled-inline-size",
       activeLayout.activeInlineSize,
       activeLayout.isTransitioning,
-      layoutTransition,
+      geometryStore,
     ]),
     () => {
       if (activeLayout.isTransitioning) return;
@@ -133,7 +124,6 @@ export function useViewerDocumentFrameLayout({
       );
     },
   );
-
   return React.useMemo(
     () => ({
       ...activeLayout,
@@ -156,18 +146,14 @@ export function ViewerDocumentFrame({
     retainLastNonZero: true,
   });
   const sidebarRegistration = useOptionalViewerSidebarRegistration();
-  const layoutTransition = useViewerDocumentFrameLayoutTransition({
-    element: size.element,
-    layoutStore: sidebarRegistration?.layoutStore ?? null,
-  });
   const value = React.useMemo<ViewerDocumentFrameState>(
     () => ({
       align,
       element: size.element,
+      geometryStore: sidebarRegistration?.geometryStore ?? null,
       inlineSize: size.width,
-      layoutTransition,
     }),
-    [align, layoutTransition, size.element, size.width],
+    [align, sidebarRegistration?.geometryStore, size.element, size.width],
   );
 
   return (
@@ -194,16 +180,48 @@ export function ViewerDocumentFrame({
   );
 }
 
-function createViewerDocumentFrameLayoutFromSample(
-  sample: ViewerDocumentFrameLayoutTransitionSample,
-): ViewerDocumentFrameLayout {
+function createViewerDocumentFrameLayoutFromGeometry({
+  element,
+  fallbackInlineSize,
+  geometry,
+}: {
+  element: HTMLDivElement | null;
+  fallbackInlineSize: number | null;
+  geometry: ViewerGeometrySnapshot;
+}): ViewerDocumentFrameLayout {
+  const maxCssInlineSize = element
+    ? readViewerDocumentFrameMaxInlineSize(element)
+    : null;
+  const measuredFrameInlineSize =
+    fallbackInlineSize != null &&
+    Number.isFinite(fallbackInlineSize) &&
+    fallbackInlineSize > 0
+      ? fallbackInlineSize
+      : null;
+  const usesSidebarGeometry =
+    geometry.sidebarWidth > 0 ||
+    geometry.sidebarInlineSize > 0 ||
+    geometry.isTransitioning;
+  const activeSourceInlineSize = usesSidebarGeometry
+    ? geometry.documentInlineSize
+    : (measuredFrameInlineSize ?? geometry.documentInlineSize);
+  const maxSourceInlineSize = usesSidebarGeometry
+    ? Math.max(geometry.bodyInlineSize, activeSourceInlineSize)
+    : activeSourceInlineSize;
+  const activeInlineSize = constrainViewerDocumentFrameInlineSize(
+    activeSourceInlineSize,
+    maxCssInlineSize,
+  );
+  const maxInlineSize = constrainViewerDocumentFrameInlineSize(
+    maxSourceInlineSize,
+    maxCssInlineSize,
+  );
+
   return {
-    activeInlineSize: sample.inlineSize,
-    isTransitioning: sample.isTransitioning,
-    maxInlineSize: sample.maxInlineSize,
-    progress: sample.progress,
+    activeInlineSize,
+    isTransitioning: geometry.isTransitioning,
+    maxInlineSize,
     settledInlineSize: null,
-    targetInlineSize: sample.targetInlineSize,
   };
 }
 
@@ -221,9 +239,7 @@ function createViewerDocumentFrameFallbackLayout(
     activeInlineSize: inlineSize,
     isTransitioning: false,
     maxInlineSize: inlineSize,
-    progress: inlineSize == null ? 0 : 1,
     settledInlineSize: inlineSize,
-    targetInlineSize: inlineSize,
   };
 }
 
@@ -234,127 +250,8 @@ function areViewerDocumentFrameLayoutsEqual(
   return (
     previousLayout.activeInlineSize === nextLayout.activeInlineSize &&
     previousLayout.isTransitioning === nextLayout.isTransitioning &&
-    previousLayout.maxInlineSize === nextLayout.maxInlineSize &&
-    previousLayout.progress === nextLayout.progress &&
-    previousLayout.targetInlineSize === nextLayout.targetInlineSize
+    previousLayout.maxInlineSize === nextLayout.maxInlineSize
   );
-}
-
-function useViewerDocumentFrameLayoutTransition({
-  element,
-  layoutStore,
-}: {
-  element: HTMLDivElement | null;
-  layoutStore: ViewerSidebarLayoutStore | null;
-}): ViewerDocumentFrameLayoutTransition | null {
-  const getSnapshot = React.useCallback(() => {
-    if (!element || !layoutStore) return null;
-
-    return getViewerDocumentFrameLayoutTransitionSample(
-      element,
-      layoutStore.getSnapshot(),
-    );
-  }, [element, layoutStore]);
-
-  const subscribe = React.useCallback(
-    (listener: () => void) => {
-      if (!layoutStore) return () => {};
-      return layoutStore.subscribe(listener);
-    },
-    [layoutStore],
-  );
-
-  return React.useMemo(() => {
-    if (!element || !layoutStore) return null;
-    return { getSnapshot, subscribe };
-  }, [element, getSnapshot, layoutStore, subscribe]);
-}
-
-function getViewerDocumentFrameLayoutTransitionSample(
-  element: HTMLDivElement,
-  sidebar: ViewerSidebarLayoutSnapshot,
-): ViewerDocumentFrameLayoutTransitionSample | null {
-  const inlineSize = getViewerDocumentFrameVisualInlineSize(element, sidebar);
-  const targetInlineSize = getViewerDocumentFrameTargetInlineSize(
-    element,
-    sidebar,
-  );
-  if (inlineSize === null) return null;
-
-  return {
-    inlineSize,
-    isTransitioning: sidebar.isTransitioning,
-    maxInlineSize: getViewerDocumentFrameMaxInlineSize(element, sidebar),
-    progress: sidebar.progress,
-    targetInlineSize: targetInlineSize ?? inlineSize,
-  };
-}
-
-function getViewerDocumentFrameTargetInlineSize(
-  element: HTMLDivElement,
-  sidebar: ViewerSidebarLayoutSnapshot,
-) {
-  const targetProgress =
-    sidebar.mode === "inline" && sidebar.open && sidebar.sidebarWidth > 0
-      ? 1
-      : 0;
-
-  return getViewerDocumentFrameVisualInlineSize(element, {
-    ...sidebar,
-    progress: targetProgress,
-  });
-}
-
-function getViewerDocumentFrameMaxInlineSize(
-  element: HTMLDivElement,
-  sidebar: ViewerSidebarLayoutSnapshot,
-) {
-  const collapsedInlineSize = getViewerDocumentFrameVisualInlineSize(element, {
-    ...sidebar,
-    progress: 0,
-  });
-  const expandedInlineSize = getViewerDocumentFrameVisualInlineSize(element, {
-    ...sidebar,
-    progress: sidebar.mode === "inline" && sidebar.sidebarWidth > 0 ? 1 : 0,
-  });
-
-  return Math.max(
-    collapsedInlineSize ?? 0,
-    expandedInlineSize ?? 0,
-    getViewerDocumentFrameVisualInlineSize(element, sidebar) ?? 0,
-    1,
-  );
-}
-
-function getViewerDocumentFrameVisualInlineSize(
-  element: HTMLDivElement,
-  sidebar: ViewerSidebarLayoutSnapshot,
-) {
-  const measuredFrameWidth = readViewerElementSize(element).width;
-
-  if (
-    sidebar.mode !== "inline" ||
-    sidebar.sidebarGapTransition !== "width" ||
-    sidebar.sidebarWidth <= 0
-  ) {
-    return measuredFrameWidth > 0 ? measuredFrameWidth : null;
-  }
-
-  const bodyElement = findClosestViewerBody(element);
-  const measuredBodyWidth = readViewerElementSize(bodyElement).width;
-  const bodyWidth =
-    measuredBodyWidth > 0
-      ? measuredBodyWidth
-      : measuredFrameWidth + sidebar.sidebarWidth * sidebar.progress;
-  const availableWidth = Math.max(
-    1,
-    bodyWidth - sidebar.sidebarWidth * sidebar.progress,
-  );
-  const maxInlineSize = readViewerDocumentFrameMaxInlineSize(element);
-
-  return maxInlineSize == null
-    ? availableWidth
-    : Math.min(availableWidth, maxInlineSize);
 }
 
 function readViewerDocumentFrameMaxInlineSize(element: HTMLElement) {
@@ -365,6 +262,19 @@ function readViewerDocumentFrameMaxInlineSize(element: HTMLElement) {
 
   const size = Number.parseFloat(value);
   return Number.isFinite(size) && size > 0 ? size : null;
+}
+
+function constrainViewerDocumentFrameInlineSize(
+  inlineSize: number,
+  maxInlineSize: number | null,
+) {
+  const safeInlineSize =
+    Number.isFinite(inlineSize) && inlineSize > 0 ? inlineSize : 0;
+  const constrainedInlineSize =
+    maxInlineSize == null
+      ? safeInlineSize
+      : Math.min(safeInlineSize, maxInlineSize);
+  return constrainedInlineSize > 0 ? constrainedInlineSize : null;
 }
 
 function useViewerSurfaceMeasurementValue(): ViewerSurfaceMeasurement {

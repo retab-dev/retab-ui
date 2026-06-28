@@ -9,7 +9,7 @@ import {
   FileViewerLegend,
   FileViewer,
   FileViewerProvider,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerToolbar,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
@@ -69,7 +69,7 @@ export function PartitionViewerBlock() {
                 </FileViewerHeaderEnd>
               </FileViewerHeader>
               <FileViewerBody>
-                <FileViewerSurface>
+                <FileViewerInset>
                   <FileViewerLegend>
                     <PartitionViewerLegend className="px-3 py-2" />
                   </FileViewerLegend>
@@ -77,7 +77,7 @@ export function PartitionViewerBlock() {
                   <FileViewerViewport>
                     <PartitionSourceDocument />
                   </FileViewerViewport>
-                </FileViewerSurface>
+                </FileViewerInset>
               </FileViewerBody>
             </PdfViewerProvider>
           </FileViewer>

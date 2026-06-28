@@ -18,7 +18,7 @@ import {
   FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarContent,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerToolbar,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
@@ -112,7 +112,7 @@ function DocxSourcesContent({
           </FileViewerHeaderEnd>
         </FileViewerHeader>
         <FileViewerBody>
-          <FileViewerSurface>
+          <FileViewerInset>
             <FileViewerViewport>
               <DocxViewer
                 ref={viewerRef}
@@ -123,7 +123,7 @@ function DocxSourcesContent({
                 highlight={highlight}
               />
             </FileViewerViewport>
-          </FileViewerSurface>
+          </FileViewerInset>
           <FileViewerSidebar
             aria-label="Source fields"
             side="right"

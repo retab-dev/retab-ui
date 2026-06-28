@@ -13,7 +13,7 @@ import {
   FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarContent,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerToolbar,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
@@ -106,7 +106,7 @@ function XlsxSourcesContent({
           </FileViewerHeaderEnd>
         </FileViewerHeader>
         <FileViewerBody>
-          <FileViewerSurface>
+          <FileViewerInset>
             <FileViewerViewport>
               <XlsxViewer
                 ref={viewerRef}
@@ -117,7 +117,7 @@ function XlsxSourcesContent({
                 activeCell={activeCell}
               />
             </FileViewerViewport>
-          </FileViewerSurface>
+          </FileViewerInset>
           <FileViewerSidebar
             aria-label="Source fields"
             side="right"

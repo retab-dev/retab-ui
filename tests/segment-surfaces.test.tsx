@@ -2051,7 +2051,7 @@ describe("split segment composition", () => {
     expect(sidebar?.className).not.toContain("bg-background");
     expect(sidebar?.className).not.toContain("absolute");
     const surface = body?.querySelector<HTMLElement>(
-      ':scope > [data-slot="file-viewer-surface"]',
+      ':scope > [data-slot="file-viewer-inset"]',
     );
     expect(surface).toBeTruthy();
     expect(

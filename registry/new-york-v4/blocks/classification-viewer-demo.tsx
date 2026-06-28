@@ -11,7 +11,7 @@ import {
   FileViewerHeaderStart,
   FileViewerIdentity,
   FileViewerProvider,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerToolbar,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
@@ -83,11 +83,11 @@ function ClassificationPdfDocument() {
           </FileViewerHeader>
           <ClassifierViewerLegend />
           <FileViewerBody>
-            <FileViewerSurface>
+            <FileViewerInset>
               <FileViewerViewport>
                 <PdfViewerPages bare className="h-full" />
               </FileViewerViewport>
-            </FileViewerSurface>
+            </FileViewerInset>
           </FileViewerBody>
         </PdfViewerProvider>
       </FileViewer>

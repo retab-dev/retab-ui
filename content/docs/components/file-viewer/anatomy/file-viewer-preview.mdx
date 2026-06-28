@@ -5,7 +5,7 @@ component: true
 ---
 
 `FileViewerPreview` is the compact File Viewer entry point. It creates the
-provider, frame, surface, viewport, and routed document for a single file.
+provider, frame, inset, viewport, and routed document for a single file.
 
 ```tsx
 <FileViewerPreview source={source} className="h-full" />
@@ -13,7 +13,7 @@ provider, frame, surface, viewport, and routed document for a single file.
 
 ## Behavior
 
-- Renders `FileViewerProvider`, `FileViewer`, `FileViewerSurface`,
+- Renders `FileViewerProvider`, `FileViewer`, `FileViewerInset`,
   `FileViewerViewport`, and `FileViewerDocument` for you.
 - Uses `FileViewerDocument controls="local"` so renderer controls stay inside
   the routed document instead of requiring a header toolbar.

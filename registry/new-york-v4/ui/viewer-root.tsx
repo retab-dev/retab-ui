@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import {
   createViewerStateAttributes,
   createViewerPortalContainmentAttributes,
-  createViewerSidebarLayoutStore,
+  createViewerGeometryStore,
   elementContainsTarget,
   readViewerElementSize,
   resolveMeasuredSidebarMode,
@@ -62,14 +62,15 @@ export function useOptionalViewerRootDiagnostics(): ViewerRootDiagnostics | null
   const context = useOptionalViewerSidebarRegistration();
   if (!context) return null;
 
+  const geometry = context.geometryStore.getSnapshot();
   return {
     getRootElement: context.getRootElement,
     layoutSignature: [
       context.hasSidebar ? "sidebar" : "no-sidebar",
       context.sidebarSide,
-      context.sidebarState.mode,
-      context.sidebarState.open ? "open" : "closed",
-      context.sidebarState.state,
+      geometry.mode,
+      geometry.open ? "open" : "closed",
+      geometry.state,
     ].join(":"),
     rootId: context.rootId,
   };
@@ -103,12 +104,13 @@ export function ViewerRoot({
   const registeredSidebarRef = React.useRef<ViewerSidebarRegistration | null>(
     null,
   );
-  const sidebarLayoutStore = React.useMemo(
-    () => createViewerSidebarLayoutStore(),
-    [],
-  );
+  const bodyElementRef = React.useRef<HTMLElement | null>(null);
+  const geometryStore = React.useMemo(() => createViewerGeometryStore(), []);
   const [registeredSidebar, setRegisteredSidebar] =
     React.useState<ViewerSidebarRegistration | null>(null);
+  const [bodyElement, setBodyElement] = React.useState<HTMLElement | null>(
+    null,
+  );
   const [resolvedSidebarMode, setResolvedSidebarMode] =
     React.useState<ViewerSidebarMode>(() =>
       resolveSidebarMode({
@@ -117,6 +119,35 @@ export function ViewerRoot({
         inlineBreakpoint,
       }),
     );
+
+  const commitViewerGeometryTarget = React.useCallback(
+    (nextOpen: boolean) => {
+      const sidebarRegistration = registeredSidebarRef.current;
+      const nextEffectiveOpen =
+        sidebarRegistration?.collapsible === "none" ? true : nextOpen;
+      const nextState: ViewerSidebarState = nextEffectiveOpen
+        ? "expanded"
+        : "collapsed";
+
+      geometryStore.setTarget({
+        bodyElement: bodyElementRef.current,
+        mode: resolvedSidebarMode,
+        open: nextEffectiveOpen,
+        rootElement: rootRef.current,
+        sidebarElement: sidebarRegistration?.element ?? null,
+        sidebarGapTransition,
+        sidebarWidth: sidebarRegistration?.widthPixels ?? 0,
+        side: sidebarRegistration?.side ?? sidebarSide,
+        state: nextState,
+      });
+    },
+    [
+      geometryStore,
+      resolvedSidebarMode,
+      sidebarGapTransition,
+      sidebarSide,
+    ],
+  );
 
   useKeyedLayoutEffect(joinEffectKey([inlineBreakpoint, mode]), () => {
     if (mode !== "auto") {
@@ -166,13 +197,15 @@ export function ViewerRoot({
         return;
       }
 
+      commitViewerGeometryTarget(nextOpen);
+
       if (!isControlled) {
         openRef.current = nextOpen;
         setInternalOpen(nextOpen);
       }
       onOpenChange?.(nextOpen);
     },
-    [isControlled, onOpenChange, open],
+    [commitViewerGeometryTarget, isControlled, onOpenChange, open],
   );
 
   const registerSidebar = React.useCallback(
@@ -204,6 +237,16 @@ export function ViewerRoot({
     },
     [],
   );
+  const registerBody = React.useCallback((element: HTMLElement) => {
+    bodyElementRef.current = element;
+    setBodyElement(element);
+
+    return () => {
+      if (bodyElementRef.current !== element) return;
+      bodyElementRef.current = null;
+      setBodyElement(null);
+    };
+  }, []);
 
   const toggleSidebar = React.useCallback(() => {
     setOpen((currentOpen) => !currentOpen);
@@ -217,27 +260,53 @@ export function ViewerRoot({
   const sidebarId = registeredSidebar?.id ?? fallbackSidebarId;
   const resolvedSidebarSide = registeredSidebar?.side ?? sidebarSide;
   const sidebarWidth = registeredSidebar?.width ?? VIEWER_SIDEBAR_WIDTH;
+
   useKeyedLayoutEffect(
     joinEffectKey([
       effectiveOpen,
       registeredSidebar?.element,
+      registeredSidebar?.widthPixels,
+      bodyElement,
       resolvedSidebarMode,
       resolvedSidebarSide,
       rootRef.current,
       sidebarGapTransition,
-      sidebarLayoutStore,
+      geometryStore,
       state,
     ]),
     () => {
-      sidebarLayoutStore.setTarget({
+      geometryStore.setTarget({
+        bodyElement,
         mode: resolvedSidebarMode,
         open: effectiveOpen,
         rootElement: rootRef.current,
         sidebarElement: registeredSidebar?.element ?? null,
         sidebarGapTransition,
+        sidebarWidth: registeredSidebar?.widthPixels ?? 0,
         side: resolvedSidebarSide,
         state,
       });
+    },
+  );
+  useKeyedLayoutEffect(
+    bodyElement
+      ? joinEffectKey([bodyElement, commitViewerGeometryTarget, effectiveOpen])
+      : null,
+    () => {
+      if (!bodyElement) return;
+      const ResizeObserverConstructor = globalThis.ResizeObserver;
+      if (typeof ResizeObserverConstructor === "undefined") {
+        commitViewerGeometryTarget(effectiveOpen);
+        return;
+      }
+
+      const observer = new ResizeObserverConstructor(() => {
+        commitViewerGeometryTarget(effectiveOpen);
+      });
+      observer.observe(bodyElement);
+      commitViewerGeometryTarget(effectiveOpen);
+
+      return () => observer.disconnect();
     },
   );
   const namespacedRootStateAttributes = createViewerStateAttributes(
@@ -380,10 +449,10 @@ export function ViewerRoot({
       () => ({
         defaultSidebarCollapsible: sidebarCollapsible,
         defaultSidebarSide: sidebarSide,
+        geometryStore,
         getRootElement,
         hasSidebar,
-        layoutStore: sidebarLayoutStore,
-        sidebarState: sidebarStateContext,
+        registerBody,
         registerSidebar,
         rootId,
         sidebarId,
@@ -393,12 +462,12 @@ export function ViewerRoot({
         stateNamespace,
       }),
       [
+        geometryStore,
         hasSidebar,
         sidebarCollapsible,
         resolvedSidebarSide,
-        sidebarStateContext,
-        sidebarLayoutStore,
         getRootElement,
+        registerBody,
         registerSidebar,
         rootId,
         sidebarId,

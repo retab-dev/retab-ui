@@ -14,7 +14,7 @@ import {
   FileViewerIdentity,
   FileViewerProvider,
   FileViewerPreview,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerToolbar,
   FileViewerViewport,
   useFileViewerResource,
@@ -86,11 +86,11 @@ export function FileViewerHarness({
           <>
             <FileViewerHeader />
             <FileViewerBody>
-              <FileViewerSurface>
+              <FileViewerInset>
                 <FileViewerViewport>
                   <FileViewerDocument />
                 </FileViewerViewport>
-              </FileViewerSurface>
+              </FileViewerInset>
             </FileViewerBody>
           </>
         )}
@@ -142,7 +142,7 @@ export {
   FileViewerIdentity,
   FileViewerProvider,
   FileViewerPreview,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerToolbar,
   FileViewerViewport,
 };

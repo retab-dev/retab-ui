@@ -43,7 +43,7 @@ import {
   FileViewerSidebarSectionHeader,
   FileViewerSidebarSectionTitle,
   FileViewerSidebarTrigger,
-  FileViewerSurface,
+  FileViewerInset,
   FileViewerToolbar,
   FileViewerViewport,
   type ViewerSource,
@@ -300,9 +300,9 @@ function SourceLinkedViewer({
       <FileViewer className="bg-background" sidebarSide="right">
         <SourceLinkedFileHeader />
         <FileViewerBody>
-          <FileViewerSurface>
+          <FileViewerInset>
             <FileViewerViewport>{children}</FileViewerViewport>
-          </FileViewerSurface>
+          </FileViewerInset>
           <FileViewerSidebar
             aria-label="Source-linked fields"
             side="right"

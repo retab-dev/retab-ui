@@ -1,0 +1,58 @@
+---
+title: FileViewerInset
+description: The geometry-aware content inset beside an optional sidebar.
+component: true
+---
+
+`FileViewerInset` is the primary content slot inside `FileViewerBody`. It is
+the sibling of `FileViewerSidebar` and owns the geometry contract between
+sidebar motion and document rendering.
+
+```tsx
+<FileViewerInset>
+  <FileViewerViewport>
+    <FileViewerDocument />
+  </FileViewerViewport>
+</FileViewerInset>
+```
+
+It can also host a renderer's own document instead of the routed document — for
+example a provider-bound PDF page list:
+
+```tsx
+<FileViewerInset>
+  <FileViewerViewport>
+    <PdfViewerPages />
+  </FileViewerViewport>
+</FileViewerInset>
+```
+
+## Behavior
+
+- Renders a `data-slot="file-viewer-inset"` region that takes the space beside
+  the sidebar.
+- Renders the internal `data-slot="file-viewer-document-frame"` boundary used
+  for alignment, max inline size, and renderer layout.
+- Provides the document-frame layout context used by fit-to-width renderers
+  while inline sidebars open and close.
+- Wrap `FileViewerDocument` or provider-bound renderer parts in
+  `FileViewerViewport`.
+- It does not read the file source. The routed document or renderer part owns
+  rendering.
+- Use it for routed documents and paginated renderers instead of composing a
+  raw surface manually.
+
+## API Reference
+
+| Prop                     | Type                                   | Description                                      |
+| ------------------------ | -------------------------------------- | ------------------------------------------------ |
+| `children`               | `React.ReactNode`                      | The document viewport and optional local chrome. |
+| `align`                  | `"start" \| "center" \| "end"`         | Alignment for the document frame.                |
+| `maxInlineSize`          | `React.CSSProperties["maxInlineSize"]` | Optional max inline size for the document frame. |
+| `documentFrameClassName` | `string`                               | Class name for the internal document frame.      |
+| `documentFrameStyle`     | `React.CSSProperties`                  | Style for the internal document frame.           |
+| `...props`               | `React.ComponentProps<"div">`          | Standard inset props; `className` is forwarded.  |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer.tsx" />

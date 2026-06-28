@@ -232,6 +232,7 @@ describe("viewer primitives", () => {
     const header = screen.getByTestId("header");
     const body = screen.getByTestId("body");
     const sidebar = screen.getByTestId("sidebar");
+    const sidebarFrame = sidebar.closest('[data-viewer-slot="sidebar"]');
     const surface = screen.getByTestId("surface");
     const legend = screen.getByTestId("legend");
 
@@ -287,7 +288,7 @@ describe("viewer primitives", () => {
     expect(
       Array.from(root.children).map((child) => child.getAttribute("data-slot")),
     ).toEqual(["viewer-header", "viewer-body"]);
-    expect(sidebar.parentElement).toBe(body);
+    expect(sidebarFrame?.parentElement).toBe(body);
     expect(legend.closest('[data-slot="viewer-surface"]')).toBe(surface);
     expect(body.className).toContain("relative");
     expect(sidebar.className).toContain("absolute");
@@ -320,6 +321,7 @@ describe("viewer primitives", () => {
     const header = screen.getByTestId("header");
     const body = screen.getByTestId("body");
     const sidebar = screen.getByTestId("sidebar");
+    const sidebarFrame = sidebar.closest('[data-viewer-slot="sidebar"]');
     const surface = screen.getByTestId("surface");
 
     mockElementRect(header, {
@@ -338,7 +340,8 @@ describe("viewer primitives", () => {
       width: 800,
       height: 368,
     });
-    mockElementRect(sidebar, {
+    expect(sidebarFrame).toBeInstanceOf(HTMLElement);
+    mockElementRect(sidebarFrame as HTMLElement, {
       top: 52,
       bottom: 420,
       left: 0,
@@ -355,14 +358,15 @@ describe("viewer primitives", () => {
       height: 368,
     });
 
-    expect(sidebar.parentElement).toBe(body);
+    expect(sidebarFrame?.parentElement).toBe(body);
     expect(surface.parentElement).toBe(body);
-    expect(sidebar.className).toContain("relative");
-    expect(sidebar.className).not.toContain("absolute");
+    expect(sidebarFrame?.className).toContain("relative");
+    expect(sidebarFrame?.className).not.toContain("absolute");
+    expect(sidebar.className).toContain("absolute");
 
     const headerRect = header.getBoundingClientRect();
     const bodyRect = body.getBoundingClientRect();
-    const sidebarRect = sidebar.getBoundingClientRect();
+    const sidebarRect = (sidebarFrame as HTMLElement).getBoundingClientRect();
     const surfaceRect = surface.getBoundingClientRect();
 
     expect(sidebarRect.top).toBe(bodyRect.top);
@@ -398,6 +402,7 @@ describe("viewer primitives", () => {
         "mode",
         "open",
         "setOpen",
+        "side",
         "state",
         "toggleSidebar",
       ].sort(),
@@ -1022,6 +1027,7 @@ describe("viewer primitives", () => {
       screen.getByTestId("sidebar").getAttribute("aria-hidden"),
     ).toBeNull();
 
+    screen.getByTestId("trigger").focus();
     fireEvent.keyDown(document, { key: "Escape" });
 
     expect(screen.getByTestId("trigger").getAttribute("aria-expanded")).toBe(
@@ -1448,7 +1454,7 @@ describe("viewer primitives", () => {
     }
   });
 
-  it("marks sidebar transitions ready after two animation frames", () => {
+  it("marks sidebar transitions ready after two animation frames", async () => {
     const originalRequestAnimationFrame = window.requestAnimationFrame;
     const originalCancelAnimationFrame = window.cancelAnimationFrame;
     const frameCallbacks: FrameRequestCallback[] = [];
@@ -1470,19 +1476,27 @@ describe("viewer primitives", () => {
       );
 
       const sidebar = screen.getByTestId("sidebar");
+      await waitFor(() => {
+        expect(frameCallbacks.length).toBeGreaterThan(0);
+      });
+
       expect(sidebar.hasAttribute("data-viewer-sidebar-transitions")).toBe(
         false,
       );
 
       act(() => {
-        frameCallbacks.shift()?.(0);
+        for (const callback of frameCallbacks.splice(0)) {
+          callback(0);
+        }
       });
       expect(sidebar.hasAttribute("data-viewer-sidebar-transitions")).toBe(
         false,
       );
 
       act(() => {
-        frameCallbacks.shift()?.(16);
+        for (const callback of frameCallbacks.splice(0)) {
+          callback(16);
+        }
       });
       expect(sidebar.getAttribute("data-viewer-sidebar-transitions")).toBe(
         "ready",
@@ -1523,7 +1537,7 @@ describe("viewer primitives", () => {
       );
       expect(sidebar.className).toContain("transition-none");
       expect(sidebar.className).toContain(
-        "data-[viewer-sidebar-transitions=ready]:transition-[translate,margin-left,margin-right,border-color]",
+        "data-[viewer-sidebar-transitions=ready]:transition-[translate,width,border-color]",
       );
     } finally {
       window.requestAnimationFrame = originalRequestAnimationFrame;

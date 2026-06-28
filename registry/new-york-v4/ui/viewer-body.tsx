@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 import { cn } from "@/lib/utils";
 
 import {
@@ -16,6 +18,9 @@ import type { ViewerBodyProps } from "./viewer-types";
 
 export function ViewerBody({ className, ...props }: ViewerBodyProps) {
   const bodyRef = React.useRef<HTMLDivElement | null>(null);
+  const [bodyElement, setBodyElement] = React.useState<HTMLDivElement | null>(
+    null,
+  );
   const sidebarState = useOptionalViewerSidebar();
   const sidebarRegistration = useOptionalViewerSidebarRegistration();
   const namespacedBodyStateAttributes = createViewerStateAttributes(
@@ -66,10 +71,28 @@ export function ViewerBody({ className, ...props }: ViewerBodyProps) {
       bodyRef.current,
     ],
   });
+  const setBodyRef = React.useCallback((element: HTMLDivElement | null) => {
+    bodyRef.current = element;
+    setBodyElement(element);
+  }, []);
+
+  useKeyedLayoutEffect(
+    bodyElement && sidebarRegistration
+      ? joinEffectKey([
+          "viewer-body:register-geometry",
+          bodyElement,
+          sidebarRegistration.registerBody,
+        ])
+      : null,
+    () => {
+      if (!bodyElement || !sidebarRegistration) return;
+      return sidebarRegistration.registerBody(bodyElement);
+    },
+  );
 
   return (
     <div
-      ref={bodyRef}
+      ref={setBodyRef}
       data-slot="viewer-body"
       data-viewer-has-sidebar={
         sidebarRegistration?.hasSidebar === true ? "true" : "false"
