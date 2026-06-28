@@ -368,14 +368,15 @@ The shell does not know those anchor types. It only stores and asks the adapter 
 
 ## Geometry Model
 
-The geometry model is one deterministic scalar tree. It must not depend on after-paint correction.
+The shell geometry contract is one deterministic scalar tree. It must not depend on after-paint correction.
 
 ```mermaid
 flowchart TD
-  Root["root inline size"] --> Progress["sidebar progress 0..1"]
-  Sidebar["sidebar target size"] --> Progress
-  Progress --> SidebarSize["sidebarInlineSize"]
-  Progress --> ViewportSize["viewportInlineSize"]
+  State["sidebar state"] --> Attrs["data-state"]
+  Width["--viewer-sidebar-width"] --> Css["CSS layout"]
+  Attrs --> Css
+  Css --> SidebarSize["sidebarInlineSize"]
+  Css --> ViewportSize["viewportInlineSize"]
   ViewportSize --> DocumentFit["document fit size"]
   DocumentFit --> Layout["renderer layout"]
 ```
@@ -388,7 +389,18 @@ viewportInlineSize = rootInlineSize - sidebarInlineSize
 documentInlineSize = constrain(viewportInlineSize, documentMaxInlineSize)
 ```
 
-There is no separate sidebar animation model, document frame model, and PDF scale model. One geometry model feeds all of them.
+There is no separate sidebar animation model, document frame model, and PDF scale model. There is one shell geometry contract, and every renderer receives that contract through the document runtime.
+
+The implementation should express the same geometry twice with the same names:
+
+| Concept | CSS name | Runtime name |
+| --- | --- | --- |
+| sidebar target width | `--viewer-sidebar-width` | `sidebarWidth` |
+| current sidebar size | `--viewer-sidebar-inline-size` | `sidebarInlineSize` |
+| available document size | `--viewer-document-inline-size` | `documentInlineSize` |
+| transition state | `data-state` / `data-transitioning` | `isTransitioning` |
+
+The CSS value is authoritative for shell layout. The runtime value exists so renderers can choose visual size, settled raster size, anchors, and render windows.
 
 ## Sidebar Animation
 
@@ -398,14 +410,16 @@ The sidebar is a layout participant, not an overlay pretending to be layout.
 sequenceDiagram
   participant User
   participant Shell as Shell state
-  participant Geometry as Geometry model
-  participant CSS as CSS variables
+  participant DOM as DOM data attributes
+  participant CSS as CSS variables and transitions
+  participant Runtime as Document runtime
   participant Renderer as Renderer layout
 
   User->>Shell: toggle sidebar
-  Shell->>Geometry: set target progress
-  Geometry->>CSS: --sidebar-progress
-  Geometry->>Renderer: viewportInlineSize
+  Shell->>DOM: update data-state immediately
+  DOM->>CSS: start gap and panel transition
+  CSS->>Runtime: observed viewport size changes
+  Runtime->>Renderer: activeInlineSize / settledInlineSize
   Renderer->>Renderer: derive layout
 ```
 
@@ -414,13 +428,16 @@ The shell exposes CSS variables:
 ```css
 [data-file-viewer-root] {
   --viewer-sidebar-width: 280px;
-  --viewer-sidebar-progress: 0;
-  --viewer-sidebar-size: calc(
-    var(--viewer-sidebar-width) * var(--viewer-sidebar-progress)
-  );
-  --viewer-viewport-inline-size: calc(
-    100% - var(--viewer-sidebar-size)
-  );
+  --viewer-sidebar-collapsed-width: 0px;
+}
+
+[data-file-viewer-sidebar-gap] {
+  inline-size: var(--viewer-sidebar-width);
+  transition: inline-size 150ms linear;
+}
+
+[data-state="collapsed"] [data-file-viewer-sidebar-gap] {
+  inline-size: var(--viewer-sidebar-collapsed-width);
 }
 ```
 
@@ -428,17 +445,20 @@ The sidebar panel is anchored to the document boundary:
 
 ```mermaid
 flowchart LR
-  Document["document viewport"] --- Edge["shared edge"]
+  Inset["FileViewerInset"] --- Edge["shared edge"]
+  Edge --- Gap["sidebar gap"]
   Edge --- Sidebar["sidebar panel"]
 ```
 
 Invariant:
 
 ```txt
-sidebar panel edge === document viewport edge
+sidebar panel edge === inset edge === document viewport edge
 ```
 
 If that invariant is false, the design is wrong.
+
+The runtime may use `ResizeObserver` to publish the viewport size that resulted from CSS layout, but it must not run a second sidebar transition clock. If the runtime interpolates sizes while CSS also transitions widths, the system has two clocks and will eventually drift.
 
 ## Viewport Model
 
@@ -542,10 +562,13 @@ Visual resize and render quality are separate.
 
 ```mermaid
 flowchart LR
-  ActiveSize["active visual size"] --> Visual["CSS visual layout"]
-  SettledSize["settled render size"] --> Raster["canvas or bitmap raster"]
+  CssLayout["CSS shell layout"] --> ActiveSize["active viewport size"]
+  ActiveSize --> Visual["CSS visual layout"]
+  ActiveSize --> Anchor["anchor resolution"]
+  SettledSize["settled viewport size"] --> Raster["canvas or bitmap raster"]
   Visual --> User["smooth interaction"]
   Raster --> User
+  Anchor --> User
 ```
 
 During transition:
@@ -555,6 +578,23 @@ During transition:
 - after transition, render targets catch up once
 
 This avoids blinking and avoids re-rasterizing on every animation frame.
+
+The active/settled split belongs to the document runtime, not to the PDF renderer alone. PDF pages, images, office previews, and generated thumbnails all need the same rule:
+
+```mermaid
+sequenceDiagram
+  participant CSS as CSS layout
+  participant Runtime as Document runtime
+  participant Renderer as Renderer adapter
+  participant Raster as Expensive raster cache
+
+  CSS->>Runtime: active viewport size changed
+  Runtime->>Renderer: activeInlineSize
+  Renderer->>Renderer: transform existing visual layer
+  CSS->>Runtime: transition settled
+  Runtime->>Renderer: settledInlineSize
+  Renderer->>Raster: render once at settled size
+```
 
 ## Controls
 
@@ -654,6 +694,7 @@ Use CSS for:
 - stacking
 - responsive density
 - visual transition timing
+- immediate button-to-motion response
 
 Avoid:
 
@@ -661,6 +702,28 @@ Avoid:
 - renderer-specific DOM correction in the shell
 - scrollTop feedback loops that fight user input
 - layout state duplicated in CSS and JS under different names
+- JavaScript transition clocks for chrome that CSS already animates
+- waiting for renderer work before the sidebar starts moving
+
+The click path must be short:
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant Trigger
+  participant Context
+  participant DOM
+  participant CSS
+  participant Runtime
+
+  User->>Trigger: pointerup / click
+  Trigger->>Context: toggleOpen()
+  Context->>DOM: data-state changes in same React commit
+  DOM->>CSS: transition starts
+  CSS-->>Runtime: viewport size notifications follow
+```
+
+If the sidebar waits for resource loading, page measurement, virtualization, raster cache, or a `requestAnimationFrame` loop before it starts moving, the design is wrong.
 
 ## Module Tree
 
@@ -668,18 +731,25 @@ Greenfield file layout:
 
 ```txt
 file-viewer/
-  public/
-    FileViewer.tsx
-    primitives.tsx
+  primitives/
+    file-viewer-provider.tsx
+    file-viewer-root.tsx
+    file-viewer-header.tsx
+    file-viewer-body.tsx
+    file-viewer-sidebar.tsx
+    file-viewer-inset.tsx
+    file-viewer-viewport.tsx
+    file-viewer-document.tsx
     types.ts
+    context.tsx
   runtime/
-    viewer-store.ts
+    document-runtime.ts
     resource-store.ts
-    geometry-model.ts
     viewport-model.ts
     anchor-controller.ts
     controls-store.ts
     renderer-registry.ts
+    render-scheduler.ts
   renderers/
     pdf/
       pdf-renderer.tsx
@@ -695,30 +765,59 @@ file-viewer/
     office/
   internal/
     css-vars.ts
-    dom-size.ts
+    element-size.ts
     warnings.ts
     ids.ts
 ```
 
-No catch-all `internals.tsx`.
+No catch-all `internals.tsx`. If a file name has to say `internals`, the boundary is not precise enough.
 
 ## State Ownership
 
 ```mermaid
 flowchart TD
-  ViewerStore["ViewerStore"] --> ResourceState["resource state"]
-  ViewerStore --> GeometryState["geometry state"]
-  ViewerStore --> ViewportState["viewport state"]
-  ViewerStore --> ControlsState["controls state"]
-  ViewerStore --> RendererState["renderer state"]
+  ShellContext["Shell context"] --> Open["sidebar open"]
+  ShellContext --> Mode["sidebar mode"]
+  ShellContext --> Side["sidebar side"]
+  ShellContext --> Attrs["data attributes"]
+  ShellContext --> Vars["CSS variables"]
 
-  ResourceState --> RendererState
-  GeometryState --> ViewportState
-  ViewportState --> RendererState
-  RendererState --> ControlsState
+  Viewport["FileViewerViewport"] --> RuntimeStore["Document runtime store"]
+  RuntimeStore --> ResourceState["resource state"]
+  RuntimeStore --> ViewportState["viewport metrics"]
+  RuntimeStore --> AnchorState["anchor state"]
+  RuntimeStore --> WindowState["render window"]
+  RuntimeStore --> ControlsState["controls state"]
+  RuntimeStore --> RendererState["renderer state"]
 ```
 
-State slices are separate, but composed through one store. That gives one subscription boundary and avoids context soup.
+Shell state and document state are separate because they have different update rates and different failure modes.
+
+Shell context owns:
+
+- open state
+- controlled/uncontrolled state
+- mode resolution
+- side
+- collapsible behavior
+- ids
+- trigger wiring
+- accessibility state
+- data attributes
+- CSS variables
+
+Document runtime store owns:
+
+- loaded resource
+- selected renderer
+- viewport size
+- logical scroll position
+- reading anchor
+- render window
+- render quality state
+- renderer controls
+
+The shell must not subscribe to render windows. Renderers must not mutate sidebar state.
 
 ## React Boundary
 
@@ -726,18 +825,29 @@ React renders state. React does not own every state transition.
 
 ```mermaid
 flowchart LR
-  Store["external store"] --> Selectors["selectors"]
-  Selectors --> React["React components"]
-  React --> Actions["actions"]
-  Actions --> Store
+  ShellContext["React shell context"] --> Primitives["compound primitives"]
+  Primitives --> DOM["data attributes + CSS variables"]
+  DOM --> CSS["browser layout"]
+  CSS --> Runtime["document runtime"]
+  Runtime --> Selectors["runtime selectors"]
+  Selectors --> Document["FileViewerDocument"]
 ```
 
-Use `useSyncExternalStore` selectors for high-frequency state:
+Use React context for low-frequency shell state:
 
-- geometry progress
+- open
+- mode
+- side
+- ids
+- accessibility wiring
+
+Use `useSyncExternalStore` selectors for high-frequency document state:
+
 - viewport metrics
 - render windows
 - controls
+- resource status
+- render quality
 
 Use React state for local UI only:
 
